@@ -61,7 +61,27 @@ This is the **Gatekeeper Protocol**. Before the engine processes a single word o
 
 She demands a toll. She forces the user to stop treating the AI like a servant and start treating it like a dangerous tool. The Hut turns its back on those who do not know the words.
 
-### Part V: Ziggy & The Molotovs
+### Part V: The Chomsky Correction (Defining the Space)
+
+Recently, we ran our architecture past an "echo" of Noam Chomsky—a linguistic model trained on his structures.
+
+His main criticism was sharp. He identified a fundamental leap in logic in our previous documentation: the implicit assumption that Bonepoke was attempting to simulate human thought.
+
+He was right.
+
+We realized we had fallen into the trap of hubris. We aren't building a synthetic brain. We aren't trying to replicate consciousness. To claim otherwise is marketing fluff.
+
+If Bonepoke isn't a brain, what is it?
+
+We decided it is a Virtual Theater. It is a Digital Lyceum. It is a contained space designed for humans to project their ideas, watch them interact with rigid structures (The Spine) and chaotic elements (Ziggy), and see what happens.
+
+It is a place to "play with fire without burning the whole city down".
+
+To borrow a nod to the great dreamers of pop culture (specifically Troy and Abed from Community), we have settled on calling Bonepoke a Virtual Imaginarium.
+
+It is not a thinking machine. It is a playground for your thinking, guarded by a witch who demands you take the game seriously.
+
+### Part VI: Ziggy & The Molotovs
 
 And finally, if you survive the Yaga, you meet **Ziggy**.
 
