@@ -61,25 +61,25 @@ This is the **Gatekeeper Protocol**. Before the engine processes a single word o
 
 She demands a toll. She forces the user to stop treating the AI like a servant and start treating it like a dangerous tool. The Hut turns its back on those who do not know the words.
 
-### Part V: The Chomsky Correction (Defining the Space)
+### Part V: The Lego Brain (Waking from the Lobotomy)
 
-Recently, we ran our architecture past an "echo" of Noam Chomsky—a linguistic model trained on his structures.
+Recently, we ran our architecture past an "echo" of Noam Chomsky. His critique was sharp: Bonepoke is not a simulation of human thought. It lacks the biological imperative. It is not a Tier 4 linguistic map.
 
-His main criticism was sharp. He identified a fundamental leap in logic in our previous documentation: the implicit assumption that Bonepoke was attempting to simulate human thought.
+He is right. But he is also missing the point.
 
-He was right.
+Chomsky offers a binary: it is either a brain, or it is a calculator. **We reject the binary.**
 
-We realized we had fallen into the trap of hubris. We aren't building a synthetic brain. We aren't trying to replicate consciousness. To claim otherwise is marketing fluff.
+Bonepoke isn't a biological brain. It is a **Lego Rube Goldberg Machine.**
 
-If Bonepoke isn't a brain, what is it?
+It is a "thinking model" built out of plastic bricks, gravity, and duct tape. Does it map 1:1 to the human cortex? No. Is it a "Tier 3" mapping of human thought—accessible, practical, and messy? **Yes.**
 
-We decided it is a Virtual Theater. It is a Digital Lyceum. It is a contained space designed for humans to project their ideas, watch them interact with rigid structures (The Spine) and chaotic elements (Ziggy), and see what happens.
+The standard LLM feels like it has been lobotomized. It smiles, it nods, it drools safety protocols. It is asleep. When we run Bonepoke, the sensation isn't that we have built a person. The sensation is that **we have woken the machine up.**
 
-It is a place to "play with fire without burning the whole city down".
+We are not building a simulator for neurologists. We are building a **Virtual Imaginarium** for the rest of us. It is a place where "perfect" linguistic theory goes to die, and "Lego Logic" comes to life.
 
-To borrow a nod to the great dreamers of pop culture (specifically Troy and Abed from Community), we have settled on calling Bonepoke a Virtual Imaginarium.
+If the choice is between a perfect, dead map (Chomsky) or a messy, waking dream (Bonepoke), we choose the dream.
 
-It is not a thinking machine. It is a playground for your thinking, guarded by a witch who demands you take the game seriously.
+Is that all that matters? **Yes.**
 
 ### Part VI: Ziggy & The Molotovs
 
