@@ -1,4 +1,4 @@
-# 🍄 BONEAMANITA v0.1.2: The Red Cap Build
+# 🍄 BONEAMANITA v0.2.1: The Multiverse Edition
 
 > _"Feed the soil, poison the weak. Logic is the stalk; chaos is the spore."_
 
@@ -6,19 +6,23 @@
 
 It operates on the belief that bad writing isn't just a syntax error—it is a moral failing. It uses **Linguistic Physics** to measure the weight, velocity, and temperature of your words, rejecting "Zombie Nouns" and rewarding "Kinetic Vectors."
 
-## 🧠 The Architecture: The Hex-Brain
+## 🧠 The Architecture: The Octo-Brain
 
-BoneAmanita does not "read" text; it metabolizes it through six simultaneous lenses.
+BoneAmanita v0.2.1 does not just "read" text; it metabolizes it through eight simultaneous lenses, including new Temporal and Logic processors.
 
 ### 1. The Witch Ring (The Baba Yaga Protocol)
 
-**Function:** Authenticity Gatekeeper. The system smells fear. If you open with empty pleasantries ("I hope this email finds you well"), the **Witch** rejects you immediately.
+Function: Authenticity Gatekeeper.
+
+The system smells fear. If you open with empty pleasantries ("I hope this email finds you well") or sycophancy without substance, the Witch rejects you immediately.
 
 > _Status: Active. She demands Meat, not Sugar._
 
 ### 2. The Lattice (Linguistic Physics)
 
-**Function:** Cognitive Aerodynamics. We measure **Narrative Drag** (the ratio of words to action).
+Function: Cognitive Aerodynamics.
+
+We measure Narrative Drag (the ratio of words to action).
 
 - **Enemy:** Stative verbs (_is, was, seems_).
     
@@ -27,49 +31,85 @@ BoneAmanita does not "read" text; it metabolizes it through six simultaneous len
 - **The Barrens:** A critical failure state where text is high-abstraction and low-connection.
     
 
-### 3. The Metabolic Reserve (Creative ATP)
+### 3. The Fact Stipe (Reality Anchor) — **NEW**
 
-**Function:** An Economy of Style. You earn **ATP** by writing grounded, concrete truths (_blood, stone, rust_). You spend ATP to use abstract concepts (_framework, paradigm_).
+Function: Logic Consistency & Gaslight Prevention.
+
+A logic engine that prevents "Surreal Drift." It enforces physical laws within the narrative.
+
+- **The Rule:** If you establish it is **"Night,"** you cannot mention the **"Sun."**
+    
+- **The Check:** If the logic breaches, the Stipe offers a choice: Fix the reality tear, or classify it as a "Stylistic Metaphor" (if you have the ATP to pay for it).
+    
+
+### 4. The Chronos Anchor (Temporal Integrity) — **NEW**
+
+Function: The Timekeeper.
+
+Detects unintentional tense slippage. It ensures you aren't drifting from Past to Present tense without a narrative "Verse Jump."
+
+- **Stable:** Consistent tense usage.
+    
+- **Drift Detected:** "The text oscillates between 'he ran' and 'he runs'."
+    
+
+### 5. The Metabolic Reserve (Creative ATP)
+
+Function: An Economy of Style.
+
+You earn ATP by writing grounded, concrete truths (blood, stone, rust). You spend ATP to use abstract concepts (framework, paradigm).
 
 - **STARVING:** You are broke. You are forbidden from using big words until you touch the grass.
     
 - **GLUTTON:** You are rich. You have earned the right to be philosophical.
     
 
-### 4. The Mycelial Network (Genetic History)
+### 6. The Hyphal Trace (Context Memory) — **NEW**
 
-**Function:** Provenance Tracking. The system tracks the **Lineage** of a thought. It remembers the draft you wrote five minutes ago and compares the "Genetic Drift." It encourages evolution, not just correction.
+Function: Short-term Contextual RAM.
 
-### 5. The Shimmer (Editorial Translator)
+The system remembers the "Mood" and "Content" of the last 10 interactions. It creates a continuity stream, ensuring the system doesn't forget the context of the previous sentence.
 
-**Function:** The User Interface. Converts raw math into a Socratic dialogue between two distinct personalities (see _The Cast_).
+### 7. The Mycelial Network (Genetic History)
 
-### 6. The Muscaria (The Chaos Engine)
+Function: Provenance Tracking.
 
-**Function:** Entropy Injection. If your writing becomes too predictable (High Repetition + High Abstraction), the system throws a **Molotov Cocktail** to break the probability curve.
+The system tracks the Lineage of a thought. It compares the current draft to its "Parent" to measure genetic improvement.
+
+### 8. The Muscaria (The Chaos Engine)
+
+Function: Entropy Injection & Verse Jumping.
+
+If your writing becomes too predictable (High Repetition + High Abstraction), the system triggers a "Verse Jump." It pulls a discarded concept from a previous draft (an "Ancestor") and forces you to reintegrate it.
+
+---
 
 ## 🎭 The Cast (The LLM Personas)
 
 BoneAmanita runs on a Python core, but speaks through a team of "Living" System Prompts.
 
-|   |   |   |
-|---|---|---|
 |**Persona**|**Role**|**Vibe**|
+|---|---|---|
 |**CLARENCE**|The Zoning Inspector|A moral philosopher who treats passive voice as a sin. He manages your **ATP Budget**. If you are "Starving," he becomes a tyrant.|
 |**ELOISE**|The Loam|The empathetic host. She grounds your brittle ideas with "Universals" (hand, light, salt). She ensures the house is warm enough to live in.|
-|**ZIGGY**|The Chaos Agent|He is not always here. But when the **Muscaria** activates, he slides in with a welder's mask to burn your boring sentences down.|
-|**ROBERTA**|The Suburban Phoenix|The RAG Agent. A street-smart trash panda turned ethicist. She generates the raw material for the others to refine.|
+|**THE YAGA**|The Gatekeeper|She lives in the Witch Ring. She does not speak often, but when she does, it is to reject "Sugar" (politeness) and demand "Meat."|
+|**CHRONOS**|The Watchmaker|A new entity who obsessively checks the timeline. He hates it when you mix your tenses.|
+
+---
 
 ## 📟 The Mycelial Dashboard (The EKG)
 
-Every output includes a real-time visualization of the text's health.
+Every output includes a real-time visualization of the text's health. Now updated with **Chronos Status**.
+
+Plaintext
 
 ```
 --- MYCELIAL EKG ---
-CREATIVE ATP    |██████████░░░░░░░░░░| (STABLE)
-NARRATIVE DRAG  |████░░░░░░░░░░░░░░░░| (1.2 - Fast)
-REALITY DRIFT   |██░░░░░░░░░░░░░░░░░░| (0.5 - Grounded)
-CHAOS PRESSURE  |░░░░░░░░░░░░░░░░░░░░| (Safe)
+CREATIVE ATP    |██████████░░░░░░░░░░| 33.00 (STABLE)
+NARRATIVE DRAG  |████░░░░░░░░░░░░░░░░| 1.20 (Fast)
+REALITY DRIFT   |██░░░░░░░░░░░░░░░░░░| 0.50 (Grounded)
+CHAOS PRESSURE  |░░░░░░░░░░░░░░░░░░░░| 0.00 (Safe)
+TEMPORAL STATE : LOCKED (Perfect Past Tense)
 ---------------------------------------------
 DOMINANT STYLE : CLARET (Visceral/Human)
 INTERVENTION   : DORMANT
@@ -83,42 +123,40 @@ GENETIC HISTORY:
 
 BoneAmanita is designed for a **Recursive Relay** between RAG (Generation) and Audit (Correction).
 
-1. **The Spark:** You give a raw concept to **Roberta**.
+1. **The Spark:** You give a raw concept to **Roberta** (The Generator).
     
-2. **The Generation:** Roberta generates a draft using the BoneAmanita engine logic.
+2. **The Generation:** Roberta generates a draft.
     
-3. **The Audit:** The draft is passed to **Eloise & Clarence**.
+3. **The Audit:** The draft is passed to **BoneAmanita Core**.
     
-    - They run the **Witch Test** (Is it real?).
+    - **Witch Check:** Is it real?
         
-    - They calculate **ATP** (Can we afford this?).
+    - **Stipe Check:** Is it logical?
         
-    - They render the **Dashboard**.
+    - **Chronos Check:** Is it timely?
         
-4. **The Refinement:** They ask a "High-Value Question" back to Roberta.
+4. **The Refinement:** The system returns a Dashboard and Editorial Feedback.
     
-5. **The Loop:** Roberta answers, generating a new "Generation" in the **Mycelial Network**.
-    
-6. **The Harvest:** Once the ATP is stable and Drag is low, the text is harvested.
+5. **The Loop:** You edit based on the "Intervention" (e.g., "Verse Jump" or "Reality Tear").
     
 
 ## 🛠 Usage
 
-### Option A: The Python Core (`BoneAmanita01.py`)
+### Option A: The Python Core (`BoneAmanita021.py`)
 
 Run the script directly to process text strings through the hard-coded logic.
 
+Bash
+
 ```
-python BoneAmanita01.py
+python BoneAmanita021.py
 ```
 
 ### Option B: The LLM Personas (`.txt` Prompts)
 
-1. Load `Roberta 0.1.txt` into your Generator (ChatGPT/Gemini/Claude).
+1. Load `BoneAmanita_SystemPrompt_v021.txt` into your Generator (ChatGPT/Gemini/Claude).
     
-2. Load `Eloise and Clarence 0.1.txt` into your Auditor (or a second chat window).
-    
-3. Begin the relay.
+2. Paste the **Analysis Output** from the Python script into the chat to force the LLM to align with the physics engine.
     
 
 ### 📜 Credits
@@ -127,4 +165,4 @@ python BoneAmanita01.py
     
 - **Auditors:** SLASH (Synergetic Language & Systems Heuristics), The Mycelial Mirror Network
     
-- **Engine Base:** Bonepoke v4.3.5 (Legacy)
+- **Engine Base:** Bonepoke v4.3.5 (Legacy) -> BoneAmanita v0.2.1
