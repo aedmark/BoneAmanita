@@ -1,4 +1,4 @@
-# 🍄 BONEAMANITA v0.1: The Red Cap Build
+# 🍄 BONEAMANITA v0.1.2: The Red Cap Build
 
 > _"Feed the soil, poison the weak. Logic is the stalk; chaos is the spore."_
 
