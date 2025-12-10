@@ -6,47 +6,39 @@
 
 It operates on the belief that bad writing isn't just a syntax error—it is a moral failing. It uses **Linguistic Physics** to measure the weight, velocity, and temperature of your words, rejecting "Zombie Nouns" and rewarding "Kinetic Vectors."
 
-## 🧠 The Architecture: The Octo-Brain
+## 🧠 The Architecture: The Mycelial Stack
 
-BoneAmanita v0.2.1 does not just "read" text; it metabolizes it through eight simultaneous lenses, including new Temporal and Logic processors.
+BoneAmanita v0.2.1 metabolizes text through nine simultaneous lenses.
 
 ### 1. The Witch Ring (The Baba Yaga Protocol)
 
-Function: Authenticity Gatekeeper.
-
-The system smells fear. If you open with empty pleasantries ("I hope this email finds you well") or sycophancy without substance, the Witch rejects you immediately.
+**Function:** Authenticity Gatekeeper. The system smells fear. If you open with empty pleasantries ("I hope this email finds you well") or sycophancy without substance, the **Witch** rejects you immediately.
 
 > _Status: Active. She demands Meat, not Sugar._
 
 ### 2. The Lattice (Linguistic Physics)
 
-Function: Cognitive Aerodynamics.
-
-We measure Narrative Drag (the ratio of words to action).
+**Function:** Cognitive Aerodynamics. We measure **Narrative Drag** (the ratio of words to action).
 
 - **Enemy:** Stative verbs (_is, was, seems_).
     
 - **Ally:** Kinetic verbs (_run, break, devour_).
     
-- **The Barrens:** A critical failure state where text is high-abstraction and low-connection.
+- **The Barrens:** A failure state of High Abstraction + Low Connection.
     
 
 ### 3. The Fact Stipe (Reality Anchor) — **NEW**
 
-Function: Logic Consistency & Gaslight Prevention.
-
-A logic engine that prevents "Surreal Drift." It enforces physical laws within the narrative.
+**Function:** Logic Consistency & Gaslight Prevention. A logic engine that prevents "Surreal Drift." It enforces physical laws within the narrative.
 
 - **The Rule:** If you establish it is **"Night,"** you cannot mention the **"Sun."**
     
-- **The Check:** If the logic breaches, the Stipe offers a choice: Fix the reality tear, or classify it as a "Stylistic Metaphor" (if you have the ATP to pay for it).
+- **The Check:** If logic breaches, the Stipe offers a choice: Fix the reality tear, or classify it as a "Stylistic Metaphor" (if you have the ATP to pay for it).
     
 
 ### 4. The Chronos Anchor (Temporal Integrity) — **NEW**
 
-Function: The Timekeeper.
-
-Detects unintentional tense slippage. It ensures you aren't drifting from Past to Present tense without a narrative "Verse Jump."
+**Function:** The Timekeeper. Detects unintentional tense slippage. It ensures you aren't drifting from Past to Present tense without a narrative "Verse Jump."
 
 - **Stable:** Consistent tense usage.
     
@@ -55,32 +47,33 @@ Detects unintentional tense slippage. It ensures you aren't drifting from Past t
 
 ### 5. The Metabolic Reserve (Creative ATP)
 
-Function: An Economy of Style.
-
-You earn ATP by writing grounded, concrete truths (blood, stone, rust). You spend ATP to use abstract concepts (framework, paradigm).
+**Function:** An Economy of Style. You earn **ATP** by writing grounded, concrete truths (_blood, stone, rust_). You spend ATP to use abstract concepts (_framework, paradigm_).
 
 - **STARVING:** You are broke. You are forbidden from using big words until you touch the grass.
     
 - **GLUTTON:** You are rich. You have earned the right to be philosophical.
     
 
-### 6. The Hyphal Trace (Context Memory) — **NEW**
+### 6. The Shimmer (Editorial Translator)
 
-Function: Short-term Contextual RAM.
+**Function:** The Translation Layer. Raw data is cold; the Shimmer warms it up. It translates the hard metrics of the Physics Engine into the "Voices" of the system.
 
-The system remembers the "Mood" and "Content" of the last 10 interactions. It creates a continuity stream, ensuring the system doesn't forget the context of the previous sentence.
+- **Harvest Status:** Categorizes text as **Seed** (Draft), **Bloom** (Developing), or **Fruit** (Polished).
+    
+- **The Bridge:** Converts `Drag: 4.5` into **Clarence** screaming about structural integrity.
+    
 
-### 7. The Mycelial Network (Genetic History)
+### 7. The Hyphal Trace (Context Memory) — **NEW**
 
-Function: Provenance Tracking.
+**Function:** Short-term Contextual RAM. The system remembers the "Mood" and "Content" of the last 10 interactions. It creates a continuity stream, ensuring the system doesn't forget the context of the previous sentence.
 
-The system tracks the Lineage of a thought. It compares the current draft to its "Parent" to measure genetic improvement.
+### 8. The Mycelial Network (Genetic History)
 
-### 8. The Muscaria (The Chaos Engine)
+**Function:** Provenance Tracking. The system tracks the **Lineage** of a thought. It compares the current draft to its "Parent" to measure genetic improvement.
 
-Function: Entropy Injection & Verse Jumping.
+### 9. The Muscaria (The Chaos Engine)
 
-If your writing becomes too predictable (High Repetition + High Abstraction), the system triggers a "Verse Jump." It pulls a discarded concept from a previous draft (an "Ancestor") and forces you to reintegrate it.
+**Function:** Entropy Injection & Verse Jumping. If your writing becomes too predictable (High Repetition + High Abstraction), the system triggers a **"Verse Jump."** It pulls a discarded concept from a previous draft (an "Ancestor") and forces you to reintegrate it.
 
 ---
 
