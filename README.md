@@ -137,7 +137,7 @@ python BoneAmanita035.py
 
 ### Step 2: Summon the Auditors
 
-1.  Load the **Eloise and Clarence** persona into your LLM of choice (ChatGPT/Gemini/Claude), or **Roberta** into your favorite RAG model (we like NotebookLM), or **SLASH** if you want to do a little coding.
+1.  Load the **Eloise and Clarence** persona into your LLM of choice (ChatGPT/Gemini/Claude), or **Roberta** into your favorite RAG model (we like NotebookLM).
 2.  Paste the **Analysis Output** from Step 1 into the chat.
 3.  Watch as the LLM personifies the data.
 
