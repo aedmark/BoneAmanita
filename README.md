@@ -1,90 +1,77 @@
-Based on the `BoneAmanita051.py` code and the `SLASH 0.5.1.txt` system prompt, here is the updated `README.md`.
+# BONEAMANITA v0.5.1: THE ARCHETYPAL EDITION
+### A "Physics Engine" Context-File for LLMs
+**Version:** 0.5.1 ("The Archetypal Edition")
 
-I have updated the architecture section to reflect the "Deca-Brain," added the **Archetype Prism** and **Mycelial Network** features, and updated the **Dashboard** visualization to match the new code output.
+> "Feed the soil, poison the weak. Logic is the stalk; chaos is the spore."
 
------
+---
 
-# 🍄 BONEAMANITA v0.5.1: The Archetypal Edition
+## 🍄 WHAT IS THIS?
 
-> *"Feed the soil, poison the weak. Logic is the stalk; chaos is the spore."*
+**BoneAmanita** is a Python-based "Narrative Operating System" designed to be uploaded or pasted into Large Language Models (LLMs).
 
-**BoneAmanita** is not a grammar checker. It is a **"Digital Hydroponics"** engine designed to filter raw data until it becomes **"Portable Truth."**
+It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text, overriding the model's default tendency to be vague or sycophantic.
 
-You are now operating via **SLASH** (Synergetic Language & Systems Heuristics). This agent does not just lint your text; it measures the weight, velocity, and temperature of your words. It rejects "Zombie Nouns" and rewards "Kinetic Vectors."
+When loaded, the LLM uses this code to simulate a rigorous editorial process, adapting its voice to whichever **Archetype** matches the text (e.g., *The Paladin*, *The Spy*, *The Cosmic Trash Panda*).
 
-**New in v0.5.1 (The Archetypal Edition):** The system has evolved a **Cognitive Topology**. It now maps your writing style to one of 15 psychological archetypes (like "The Paladin" or "The Cosmic Trash Panda") and adjusts the laws of physics accordingly.
+---
 
------
+## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
-## 🧠 The Architecture: The Deca-Brain
+### Method A: File Upload (Recommended)
+1.  **Download** `BoneAmanita051.py`.
+2.  **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
+3.  **Prompt:** "Read this file. Use the `BonepokeCore` logic defined within to analyze my inputs. Adopt the persona required by the `ArchetypePrism` or one I assign you."
 
-BoneAmanita v0.5.1 metabolizes text through a complex "Deca-Brain" architecture.
+### Method B: Copy/Paste
+1.  **Copy** the raw code from `BoneAmanita051.py`.
+2.  **Paste** it into the chat.
+3.  **Prompt:** "This is your operating system. Simulate the logic within this code to process my writing."
 
-### 1\. The Archetype Prism (Cognitive Topology)
+---
 
-**Function:** Psychological Mapping via Boundedness (B) & Expansiveness (E).
+## 🧠 CORE FEATURES
 
-  * **The Map:** The system calculates your coordinates based on Narrative Drag (Order) and Entropy (Chaos).
-  * **The Archetypes:** It identifies your mode, from **THE ENGINEER** (High Structure, Low Entropy) to **THE ALCHEMIST** (Balanced Structure, High Insight).
-  * **The Vision:** This allows the system to judge a "Poem" differently than a "Manual."
+### 1. The Archetype Prism (Dynamic Persona)
+The engine scans your text and maps it to one of 13 Cognitive Archetypes based on "Boundedness" (Order) and "Expansiveness" (Abstractness).
+* **The Paladin:** Unwavering code, high order.
+* **The Engineer:** Elegant efficiency, structural principles.
+* **The Fool:** Truth through absurdity.
+* *Note:* You can also manually assign an archetype, and the engine will enforce its specific logic constraints.
 
-### 2\. The Fact Stipe v2.5 (Dimensional Quarantine)
+### 2. The Fact Stipe (Logic Enforcement)
+The engine creates a "Dimensional Manifold" to prevent logical contradictions.
+* It ensures you don't mix opposing polarities (e.g., "The **fire** [Thermal +1] **froze** [Thermal -1]").
+* It allows certain Archetypes to break these rules (e.g., *The Cosmic Trash Panda* sees "Trash" and "Treasure" as the same value).
 
-**Function:** Logic Consistency & Dynamic Truth Injection.
+### 3. The Metabolic Economy (ATP)
+The engine tracks a "Creative ATP" score.
+* **Earn ATP** by writing with concrete, sensory details (Meat).
+* **Spend ATP** to use abstract concepts or break physics.
+* If the AI detects you are "Starving" (low ATP), it enters strict mode and refuses to process vague language.
 
-  * **The Logic:** A **Semantic Vector Space**. Words are assigned values in dimensions: LUMENS, THERMAL, VITALITY.
-  * **New in v0.5.1 (Quarantine):** The active Archetype can now *rewrite physics*.
-      * *Example:* If you are **THE COSMIC TRASH PANDA**, the system redefines "Rubbish" and "Void" as Positive (+1) values. You are no longer penalized for finding value in ruin.
+### 4. The Linguistic Physics Engine
+It replaces subjective style advice with hard metrics:
+* **Narrative Drag:** Words per Kinetic Action.
+* **Reality Drift:** Abstraction Entropy.
+* **Toxicity:** O(1) scanning for "Corp Speak" and "Lazy Metaphors."
 
-### 3\. The Mycelial Network (Lineage Tracking)
+---
 
-**Function:** Provenance & Genetic History.
+## 🛠️ HOW TO USE IT
 
-  * **Genetic Drift:** The system assigns a UUID to every draft and tracks the evolution of the text from "Parent" to "Child".
-  * **Visualization:** You can now see the history of your edits. Did the Narrative Drag improve? Did you lose the "Soul" (Style) in the process?
+Once the code is in the context window:
 
-### 4\. The Metabolic Reserve (States of Creation)
+1.  **Input:** Paste your draft.
+2.  **Simulation:** The LLM will "run" the `process()` function mentally.
+3.  **Output:** It will provide:
+    * **The Mycelial Dashboard:** An ASCII visualization of your text's health.
+    * **The Archetype:** It will tell you *what* you sound like (e.g., "COGNITIVE MODE: THE VULTURE").
+    * **Directives:** It will give you specific instructions to fix Drag or Logic Tears.
+    
+This isn't just for draft revisions and creation. It's also for conversation. You can talk to BoneAmanita. But be careful, you might summon the witch!
 
-**Function:** The Creative Economy.
+---
 
-  * **The Rules:** You earn **ATP** with Concrete Universals (Blood, Stone). You spend **ATP** on Abstractions (Context, Framework).
-  * **The States:**
-      * **STARVING:** Strict Mode. No abstractions allowed. Logic tears are fatal.
-      * **GLUTTON:** Creative Mode. You have enough energy to bend reality.
-
------
-
-## 🎭 The Identity: The SLASH Trinity
-
-Your feedback is synthesized through three distinct intellectual lenses:
-
-| **Lens** | **Focus** | **Voice** |
-| :--- | :--- | :--- |
-| **STEVEN PINKER** | **Syntax & Cognitive Ergonomics** | "The Narrative Drag is too high. You are taxing the reader's short-term memory." |
-| **BUCKMINSTER FULLER** | **Structure & Tensegrity** | "This sentence has no structural integrity. It is a pile of bricks, not a dome." |
-| **MICHAEL SCHUR** | **Ethics & Humanism** | "This is a 'Chidi' sentence—indecisive. Make it an 'Eleanor' sentence: messy but honest." |
-
------
-
-## 📟 The Mycelial Dashboard (v0.5.1 EKG)
-
-Every output includes a real-time visualization of the text's health and genetic history.
-
-```text
---- MYCELIAL EKG ---
-CREATIVE ATP    |████████████████████| 50.00 (GLUTTON)
-NARRATIVE DRAG  |█████████░░░░░░░░░░░| 2.10 (Solid)
-REALITY DRIFT   |██░░░░░░░░░░░░░░░░░░| 1.50 (Grounded)
-CHAOS PRESSURE  |░░░░░░░░░░░░░░░░░░░░| 0.00 (Safe)
-TEMPORAL STATE : STABLE
----------------------------------------------
-COGNITIVE MODE : THE ALCHEMIST
-TOPOLOGY       : B: 0.40 | E: 0.90
-SIGNATURE      : Transmuting base data into gold insight.
-DOMINANT STYLE : CRYSTAL
-INTERVENTION   : DORMANT
-GENETIC HISTORY:
-  └─ [8a2f] Drag: 4.5 (Moss)
-  └─ [b19c] Drag: 2.1 (Crystal)
----------------------------------------------
-```
+**LICENSE:** Creative Commons Attribution.
+**ARCHITECTS:** James Taylor, Andrew Edmark.
