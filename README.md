@@ -1,79 +1,67 @@
-# 🍄 BONEAMANITA v0.3.5: The Fragility Check
+# 🍄 BONEAMANITA v0.4.1: Mercy Edition
 
-> *"Feed the soil, poison the weak. Logic is the stalk; chaos is the spore."*
+> *"Feed the soil, poison the weak, love the rest."*
 
 **BoneAmanita** is not a grammar checker. It is a **"Digital Hydroponics"** engine designed to filter raw data until it becomes **"Portable Truth."**
 
 It operates on the belief that bad writing isn't just a syntax error—it is a moral failing. It uses **Linguistic Physics** to measure the weight, velocity, and temperature of your words, rejecting "Zombie Nouns" and rewarding "Kinetic Vectors."
 
-**New in v0.3.5 (The Fragility Check):** We have hardened the architecture. The "Fact Stipe" now uses a **Dimensional Manifold** instead of brittle lists, the Timekeeper uses **Heuristic Bigrams** to stop nagging you about "red sleds," and the Physics Engine scans for toxicity using **O(1) Regex Compilation**. The system is now feral, but fair.
+**New in v0.4.1 (Mercy Edition):** The system has grown a **Hippocampus**. It now remembers your previous stylistic choices and will scold you if you get stuck in a loop. It also features **Morphological Vision** (seeing patterns in unknown words) and the **Schur Patch**—a mercy protocol that protects fragile seedlings (short texts) from being judged too harshly.
+
 
 -----
 
 ## 🧠 The Architecture: The Mycelial Stack
 
-BoneAmanita v0.3.5 metabolizes text through ten simultaneous lenses.
+BoneAmanita v0.4.1 metabolizes text through eleven simultaneous lenses.
 
-### 1\. The Fact Stipe v2.0 (The Dimensional Manifold)
+### 1\. The Fact Stipe v2.1 (The Root Seeker)
 
-**Function:** Logic Consistency & Reality Anchoring.
+**Function:** Logic Consistency & Deep Reality Anchoring.
 
-  * **Old Logic:** A brittle list of enemies (e.g., "Night vs Sun").
-  * **New Logic (v0.3.5):** A **Semantic Vector Space**. Words are assigned values in specific dimensions:
-      * **LUMENS:** Light (+1) vs. Darkness (-1).
-      * **DECIBELS:** Noise (+1) vs. Silence (-1).
-      * **VITALITY:** Life (+1) vs. Death (-1).
-      * **THERMAL:** Heat (+1) vs. Cold (-1).
-  * **The Check:** If you mix a +1 and a -1 in the same dimension (e.g., "The **fire** [Thermal +1] **froze** [Thermal -1]"), the system triggers a **REALITY TEAR**.
-  * **The Penalty:** Logic breaches now explicitly return `valid: False` and deduct **10 ATP** from your metabolic reserve. You cannot break physics if you are weak.
+  * **The Logic:** A **Semantic Vector Space**. Words are assigned values in specific dimensions (LUMENS, THERMAL, VITALITY).
+  * **New in v0.4.1 (Root Seeking):** The Stipe can now strip suffixes to find the elemental truth. It knows that "freezing" contains the root "freeze" (Thermal -1) and "burning" contains "burn" (Thermal +1).
+  * **The Penalty:** If you mix opposing polarities in the same sentence, the system triggers a **REALITY TEAR**. Logic breaches deduct **10 ATP** from your metabolic reserve.
+
 
 ### 2\. The Chronos Anchor v2.0 (Heuristic Timekeeper)
 
 **Function:** Temporal Integrity without NLP bloat.
 
-  * **The Problem:** Previous versions flagged words like "red" (ends in 'ed') or "glass" (ends in 's') as tense errors.
-  * **The Fix:**
-      * **Bigram Anchoring:** It checks the *previous word*. "He runs" is a verb; "The lens" is a noun.
-      * **Auxiliary Supremacy:** Words like "was/is" are weighted higher than heuristic guesses.
-      * **Exclusion Zones:** Explicitly ignores false positives (`false_ed`, `false_s`).
+  * **Bigram Anchoring:** Checks the *previous word* to distinguish nouns from verbs ("The lens" vs "He runs").
+  * **Exclusion Zones:** Explicitly ignores false positives like "red" (ends in 'ed') or "moss" (ends in 'ss').
   * **Result:** It only yells at you when you *actually* drift from Past to Present tense.
 
-### 3\. The Lattice v2.0 (Optimized Physics)
+### 3\. The Lattice v2.1 (Morphological Physics)
 
-**Function:** Cognitive Aerodynamics & Toxicity Scanning.
+**Function:** Cognitive Aerodynamics & Shape Detection.
 
   * **Narrative Drag:** Measures the ratio of words to action.
-  * **Regex Harvester (New):** Toxicity scanning is now **O(1)**. We compile all banned phrases into a single Regex pattern for instant detection.
-  * **Toxin Categories:**
-      * **CORP\_SPEAK:** "Synergy," "Leverage," "Paradigm." (Trigger: Clarence's Rage)
-      * **LAZY\_METAPHOR:** "Tapestry," "Journey," "Delicate Dance." (Trigger: Eloise's Disgust)
-      * **WEAK\_HEDGING:** "Not just," "But rather," "Ultimately." (Trigger: The Yaga's Hunger)
+  * **New in v0.4.1 (Morphology):** The engine no longer relies solely on lists. It reads the *shape* of the word.
+      * **Abstract Detection:** Words ending in `-ness`, `-ity`, `-tion` are automatically flagged as High Entropy.
+      * **Kinetic Detection:** Words ending in `-ing` are credited as flow, even if they aren't in the verb dictionary.
+  * **Toxicity Scanning:** Uses **O(1) Regex Compilation** to instantly detect "Corp Speak," "Lazy Metaphors," and "Weak Hedging."
 
-### 4\. The Witch Ring (The Baba Yaga Protocol)
+### 4\. The Hippocampus (Active Memory)
 
-**Function:** Authenticity Gatekeeper.
+**Function:** Short-term Stylistic Recall.
 
-  * The system demands **Meat** (Substance), not **Sugar** (Sycophancy).
-  * If you write "I hope this finds you well" without high connection density, the **Witch** rejects the input immediately.
+  * **The Loop Check:** The system now remembers the "Dominant Style" of your last 10 inputs.
+  * **The Intervention:** If you stay in the same mode (e.g., "Crystal" or "Moss") for more than **2 cycles**, **Clarence** will intervene to break the stagnation.
 
-### 5\. The Metabolic Reserve (Creative ATP)
+### 5\. The Schur Patch (The Mercy Rule)
 
-**Function:** An Economy of Style.
+**Function:** Ethical Calibration.
 
-  * **Earning ATP:** Use Concrete Universals (*blood, stone, rust*) and Kinetic Verbs.
-  * **Spending ATP:** Use Abstract Concepts (*framework, context*) or trigger Logic Breaches.
-  * **The States:**
-      * **STARVING:** You are broke. High Narrative Drag penalty applied.
-      * **GLUTTON:** You are rich. You are permitted to bend reality.
+  * **The Problem:** Previous versions salted the earth on short inputs, calling them "Dead Narratives."
+  * **The Fix:** The system is forbidden from declaring "The Barrens" if the text is **< 15 words**. We give the seed room to grow before we judge its fruit.
 
-### 6\. The Virtual Cortex v2.0 (The Contextual Voice)
+### 6\. The Virtual Cortex v2.1 (The Connected Brain)
 
-**Function:** Procedural Persona Simulation. The Python script "hallucinates" feedback before the LLM sees it.
+**Function:** Procedural Persona Simulation.
 
-  * **Context Aware:** The voices now respond to specific **Toxin Types**.
-      * **Clarence** screams if you use "Corporate Speak."
-      * **The Yaga** growls if you use "Hedging."
-      * **Eloise** sighs if you use "Dead Metaphors."
+  * **Single Source of Truth:** The Cortex is now hardwired to the Master Dictionaries of the Physics and Witch engines. It can see everything they see.
+  * **Context Aware:** The voices respond to specific toxins and memory states.
 
 -----
 
@@ -83,14 +71,14 @@ These are procedural agents generated by the `VirtualCortex` class.
 
 | **Persona** | **Trigger** | **Procedural Behavior** |
 | :--- | :--- | :--- |
-| **CLARENCE** | **High Drag** (\>3.0) or **Corp Speak** | He hates "Synergy" and "Molasses." He demands architectural efficiency. |
-| **ELOISE** | **High Entropy** (\>2.0) or **Clichés** | She hates "Tapestries" and "Abstract Frameworks." She demands sensory dirt. |
-| **THE YAGA** | **Hedging / Sycophancy** | She hates "Not just" and "Please." She demands you commit to the sentence. |
+| **CLARENCE** | **High Drag** / **Corp Speak** / **Loops** | He hates "Synergy," "Molasses," and **Repetition**. If you loop the same style 3 times, he pulls the emergency brake. |
+| **ELOISE** | **High Entropy** / **Clichés** | She hates "Tapestries" and "Abstract Frameworks." She demands sensory dirt and fresh metaphors. |
+| **THE YAGA** | **Hedging** / **Sycophancy** | She hates "Not just" and "Please." She demands you commit to the sentence or leave her porch. |
 | **MUSCARIA** | **Boredom** | He triggers a random sensory hallucination ("Describe the taste of copper") to break a flatline. |
 
 -----
 
-## 📟 The Mycelial Dashboard (v0.3.5 EKG)
+## 📟 The Mycelial Dashboard (v0.4.1 EKG)
 
 Every output includes a real-time visualization of the text's health.
 
@@ -104,47 +92,8 @@ TEMPORAL STATE : LOCKED (Perfect Past Tense)
                : (No Drift Detected)
 ---------------------------------------------
 DOMINANT STYLE : CLARET (Visceral/Human)
-INTERVENTION   : ACTIVE -> [FACT STIPE]: LOGIC TEAR [THERMAL]: 'fire' (+) vs 'froze' (-).
+INTERVENTION   : ACTIVE -> [CLARENCE]: We are spinning in circles. Shift gears.
 GENETIC HISTORY:
   └─ [Gen 1] Drag: 4.5 (Crystal - Brittle)
   └─ [Gen 2] Drag: 1.2 (Claret - Living)
 ---------------------------------------------
-```
-
------
-
-## 🔄 The Workflow: The Patched Loop
-
-BoneAmanita v0.3.5 is designed for a **Hybrid Handoff** between the Python Logic and the LLM Creative.
-
-1.  **The Input:** You feed raw text into `BoneAmanita035.py`.
-2.  **The Audit:** The script runs the Physics, Chronos, and Stipe checks.
-3.  **The Hallucination:** The `VirtualCortex` generates a specific critique (e.g., *"[CLARENCE]: Corporate contaminants detected. We are building a home, not a slide deck."*).
-4.  **The Prompting:** You paste the entire Python output (Dashboard + Cortex Critique) into your LLM.
-5.  **The Expansion:** The LLM reads the Cortex Critique and expands on it, creating a full dialogue based on the mathematical truth provided by the engine.
-
------
-
-## 🛠 Usage
-
-### Step 1: Run the Core
-
-Process your text string through the Python engine to get the Truth.
-
-```bash
-python BoneAmanita035.py
-```
-
-### Step 2: Summon the Auditors
-
-1.  Load the **Eloise and Clarence** persona into your LLM of choice (ChatGPT/Gemini/Claude), or **Roberta** into your favorite RAG model (we like NotebookLM).
-2.  Paste the **Analysis Output** from Step 1 into the chat.
-3.  Watch as the LLM personifies the data.
-
------
-
-### 📜 Credits
-
-  - **Architects:** James Taylor, Andrew Edmark
-  - **Auditors:** SLASH (Synergetic Language & Systems Heuristics), The Mycelial Mirror Network
-  - **Engine Base:** Bonepoke v4.3.5 -\> BoneAmanita v0.3.5
