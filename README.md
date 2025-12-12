@@ -1,10 +1,10 @@
-# BONEAMANITA v0.5.2: THE PRESSURE VARIANT
+# BONEAMANITA v0.6: THE HARD MEMORY VARIANT
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 0.5.2 ("The Pressure Variant")
+**Version:** 0.6.0 ("The Hard Memory Variant") **Date:** 2025-12-12
 
-> "Feed the soil, poison the weak. Logic is the stalk; chaos is the spore. The laws of physics are not universal; they are personal."
+> "Feed the soil, poison the weak. Logic is the stalk; chaos is the spore. Mind the roots. Don't forget your towel."
 
 ## 🍄 WHAT IS THIS?
 
@@ -12,13 +12,13 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v0.5.2:** The Engine now applies **Archetypal Pressure**. It doesn't just _tell_ you that you sound like a Barbarian; it _punishes_ you like one. If you are a Paladin, logic tears are fatal. If you are a Fool, logic tears fuel your creativity.
+**New in v0.6:** The Engine now possesses **Object Permanence**. Previously, the system measured the _physics_ of words but forgot the _facts_. With the introduction of **THE CODEX**, the system now tracks entities, names, and objects across turns, preventing "Identity Bleed" and hallucinations.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita052.py`.
+1. **Download** `BoneAmanita06.py`.
     
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
     
@@ -27,32 +27,59 @@ It does not force a specific personality on the AI. Instead, it forces a **Syste
 
 ### Method B: Copy/Paste
 
-1. **Copy** the raw code from `BoneAmanita052.py`.
+1. **Copy** the raw code from `BoneAmanita06.py`.
     
 2. **Paste** it into the chat.
     
 3. **Prompt:** "This is your operating system. Simulate the logic within this code to process my writing."
     
 
+---
+
+## 🚀 NEW IN v0.6 (THE HARD MEMORY UPGRADE)
+
+### 1. The Codex (Anti-Hallucination)
+
+The system now includes a **Hard Memory Ledger**. It scans your text for Proper Nouns (Entities) and locks them into a registry.
+
+- **Function:** If you mention a "Red Towel" in Turn 1, the Codex forces it into the prompt context in Turn 10.
+    
+- **Result:** The LLM cannot "forget" who is in the room. It solves "Identity Bleed" in multi-character scenes.
+    
+
+### 2. Surgical Stemming (Chronos v2.5)
+
+The "Prison Shank" stemming logic has been replaced with a "Scalpel."
+
+- **The Shield:** Protected words like `Physics`, `Chaos`, and `Bias` are no longer misidentified as verbs.
+    
+- **The Radar:** The engine uses context (preceding articles/pronouns) to distinguish between "The **flies**" (Noun) and "Time **flies**" (Verb).
+    
+
+### 3. The 12-Dimensional Manifold
+
+The Dashboard now renders a 12-point cognitive state vector, including:
+
+- **ΔTF (Truth Fidelity):** Measures adherence to the Fact Stipe.
+    
+- **DP (Diplomacy):** Tracks user politeness to adjust system cooperation.
+    
+
+---
+
 ## 🧠 THE ARCHETYPE PRISM (COGNITIVE TOPOLOGY)
 
 The engine maps your text to a **Psychological Coordinate System** based on **Boundedness (B)** (Order) and **Expansiveness (E)** (Abstraction).
-
-Based on your coordinates, the engine assigns a Cognitive Mode. **In v0.5.2, these modes come with specific Physics Constraints:**
 
 ### High Order (The Structure Class)
 
 - **THE PALADIN (B: 0.9, E: 0.2):** Unwavering code.
     
-    - **Pressure:** _Draconian Physics._ Logic tears are fatal errors. Zero tolerance for contradiction.
+    - **Pressure:** _Draconian Physics._ Logic tears are fatal errors.
         
-- **THE ENGINEER (B: 0.8, E: 0.3):** Structural principles. Elegant efficiency.
+- **THE ENGINEER (B: 0.8, E: 0.3):** Structural principles.
     
-    - **Pressure:** _Structural Integrity._ High translation fidelity required. Metaphors are stripped if not load-bearing.
-        
-- **THE SPY (B: 0.8, E: 0.6):** Duplicitous surface, singular purpose.
-    
-    - **Pressure:** _Deep Cover._ Logic tears are detected internally but hidden from the output to maintain narrative coherence.
+    - **Pressure:** _Structural Integrity._ Metaphors are stripped if not load-bearing.
         
 
 ### High Chaos (The Entropy Class)
@@ -63,45 +90,38 @@ Based on your coordinates, the engine assigns a Cognitive Mode. **In v0.5.2, the
         
 - **THE FOOL (B: 0.1, E: 0.5):** Truth through absurdity.
     
-    - **Pressure:** _Chaos Harvest._ Logic tears and paradoxes generate **ATP** (Energy) instead of costing it.
+    - **Pressure:** _Chaos Harvest._ Logic tears generate **ATP** (Energy).
         
 
 ### High Impact (The Kinetic Class)
 
 - **THE BARBARIAN (B: 0.7, E: 0.8):** Overwhelming force.
     
-    - **Pressure:** _Narrative Drag Annihilated._ Adjectives and passive verbs cost **5x ATP**. Hesitation is death.
+    - **Pressure:** _Narrative Drag Annihilated._ Adjectives cost **5x ATP**.
         
+
+---
 
 ## ⚙️ CORE LOGIC ENGINES
 
-### 1. The Pressure Matrix (New)
-
-The central switchboard that translates your Archetype into engine settings. It adjusts:
-
-- **Tolerance Mode:** Can the text contradict itself? (Standard, Draconian, Inverted, Loose).
-    
-- **Chaos Threshold:** How easily does the _Muscaria_ trigger hallucinations?
-    
-- **Drag Multiplier:** How expensive is it to be slow?
-    
-
-### 2. The Fact Stipe (Dynamic Truth)
+### 1. The Fact Stipe (Reality Anchors)
 
 The engine creates a "Dimensional Manifold" to prevent logical contradictions (e.g., "The **fire** [Thermal +1] **froze** [Thermal -1]").
 
-- **Update:** This is now controlled by the **Pressure Matrix**. A _Paladin_ fails this check instantly. A _Fool_ passes it and gains momentum.
+- _Note:_ This is controlled by the **Pressure Matrix**. A _Paladin_ fails this check instantly. A _Fool_ passes it and gains momentum.
     
 
-### 3. The Metabolic Economy (Variable Gearing)
+### 2. The Codex (Object Permanence)
+
+**[NEW]** A registry of "Immutable Constants." It prevents the LLM from drifting away from established facts or character names.
+
+### 3. The Metabolic Economy (Creative ATP)
 
 The engine tracks a "Creative ATP" score.
 
 - **Earn ATP** by writing with concrete, sensory details (Meat).
     
 - **Spend ATP** to use abstract concepts or break physics.
-    
-- **Metabolic Gearing:** The cost of "spending" depends on your Archetype. A _Barbarian_ pays a heavy tax for "Thinking" words but pays nothing for "Action" words.
     
 
 ### 4. The Linguistic Physics Engine
@@ -115,6 +135,8 @@ It replaces subjective style advice with hard metrics:
 - **Toxicity:** O(1) scanning for "Corp Speak" and "Lazy Metaphors."
     
 
+---
+
 ## 🛠️ HOW TO USE IT
 
 Once the code is in the context window:
@@ -127,13 +149,11 @@ Once the code is in the context window:
     
     - **The Mycelial Dashboard:** An ASCII visualization of your text's health.
         
-    - **The Archetype:** It will tell you _what_ you sound like (e.g., "COGNITIVE MODE: THE VULTURE").
+    - **Cognitive Mode:** Your active Archetype (e.g., "THE VULTURE").
         
-    - **Pressure Warning:** e.g., "SYSTEM: LAW OF THE TEMPLAR: Logic tears are fatal."
+    - **Reality Anchors:** A list of facts the system is currently tracking.
         
     - **Directives:** Specific instructions to align with your Archetype's constraints.
         
 
-LICENSE: Creative Commons Attribution.
-
-ARCHITECTS: James Taylor, Andrew Edmark. AUDITORS: SLASH, The Mycelial Mirror Network.
+**LICENSE:** Creative Commons Attribution. **ARCHITECTS:** James Taylor, Andrew Edmark. **AUDITORS:** SLASH, The Mycelial Mirror Network.
