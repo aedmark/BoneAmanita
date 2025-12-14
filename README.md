@@ -1,10 +1,10 @@
-# BONEAMANITA v0.6: THE HARD MEMORY VARIANT
+# BONEAMANITA v0.6.2: THE FULLER BUILD
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 0.6.0 ("The Hard Memory Variant") **Date:** 2025-12-12
+**Version:** 0.6.2 ("The Fuller Build") **Date:** 2025-12-14
 
-> "Feed the soil, poison the weak. Logic is the stalk; chaos is the spore. Mind the roots. Don't forget your towel."
+> "Feed the soil, poison the weak. Logic is the stalk; chaos is the spore. Ephemeralize."
 
 ## 🍄 WHAT IS THIS?
 
@@ -12,13 +12,13 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v0.6:** The Engine now possesses **Object Permanence**. Previously, the system measured the _physics_ of words but forgot the _facts_. With the introduction of **THE CODEX**, the system now tracks entities, names, and objects across turns, preventing "Identity Bleed" and hallucinations.
+**New in v0.6.2 ("The Fuller Build"):** The engine has been "ephemeralized." We have dissolved the administrative layers (The Pressure Matrix, The 12D Hypercube) and integrated their logic directly into the worker classes. The result is a leaner, faster, and more potent diagnostic tool.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita06.py`.
+1. **Download** `BoneAmanita062.py`.
     
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
     
@@ -27,7 +27,7 @@ It does not force a specific personality on the AI. Instead, it forces a **Syste
 
 ### Method B: Copy/Paste
 
-1. **Copy** the raw code from `BoneAmanita06.py`.
+1. **Copy** the raw code from `BoneAmanita062.py`.
     
 2. **Paste** it into the chat.
     
@@ -36,34 +36,38 @@ It does not force a specific personality on the AI. Instead, it forces a **Syste
 
 ---
 
-## 🚀 NEW IN v0.6 (THE HARD MEMORY UPGRADE)
+## 🚀 NEW IN v0.6.2 (THE FULLER UPGRADE)
 
-### 1. The Codex (Anti-Hallucination)
+### 1. The Integrated Pinker Scan (Physics v2.0)
 
-The system now includes a **Hard Memory Ledger**. It scans your text for Proper Nouns (Entities) and locks them into a registry.
+The core physics loop has been surgically streamlined.
 
-- **Function:** If you mention a "Red Towel" in Turn 1, the Codex forces it into the prompt context in Turn 10.
+- **The Scalpel:** A new `_classify_token` method separates "Identification" from "Scoring."
     
-- **Result:** The LLM cannot "forget" who is in the room. It solves "Identity Bleed" in multi-character scenes.
-    
-
-### 2. Surgical Stemming (Chronos v2.5)
-
-The "Prison Shank" stemming logic has been replaced with a "Scalpel."
-
-- **The Shield:** Protected words like `Physics`, `Chaos`, and `Bias` are no longer misidentified as verbs.
-    
-- **The Radar:** The engine uses context (preceding articles/pronouns) to distinguish between "The **flies**" (Noun) and "Time **flies**" (Verb).
+- **The Look-Ahead:** The engine now intelligently identifies **Structural Action**. "The stone **is falling**" is now correctly identified as Kinetic (Active), not Stative (Passive), reducing false positives for Narrative Drag.
     
 
-### 3. The 12-Dimensional Manifold
+### 2. The Archetype Prism (Integrated Pressure)
 
-The Dashboard now renders a 12-point cognitive state vector, including:
+We have vaporized the "Pressure Matrix" class.
 
-- **ΔTF (Truth Fidelity):** Measures adherence to the Fact Stipe.
+- **Direct Control:** Physics tolerances (how much logic breaking is allowed) are now defined directly within the Archetype's DNA.
     
-- **DP (Diplomacy):** Tracks user politeness to adjust system cooperation.
+- **The 13 Topologies:** The system maps your text to one of **13 Cognitive Archetypes** (e.g., _The Paladin_, _The Spy_, _The Cosmic Trash Panda_) and applies their unique physics constraints immediately.
     
+
+### 3. The Mycelial EKG (Dashboard v3)
+
+The "12-Dimensional Manifold" has been composted.
+
+- **Visual Clarity:** The Dashboard now renders a clean, high-contrast "EKG" of your narrative health.
+    
+- **Key Metrics:** Focuses exclusively on **Creative ATP**, **Narrative Drag**, **Reality Drift**, and **Chaos Pressure**.
+    
+
+### 4. The Codex (Object Permanence)
+
+_Retained from v0.6.0_ The system includes a **Hard Memory Ledger**. It scans your text for Proper Nouns (Entities) and locks them into a registry, preventing "Identity Bleed" and hallucinations in long conversations.
 
 ---
 
@@ -90,7 +94,7 @@ The engine maps your text to a **Psychological Coordinate System** based on **Bo
         
 - **THE FOOL (B: 0.1, E: 0.5):** Truth through absurdity.
     
-    - **Pressure:** _Chaos Harvest._ Logic tears generate **ATP** (Energy).
+    - **Pressure:** _Chaos Harvest._ Logic tears generate **ATP** (Energy) instead of costing it.
         
 
 ### High Impact (The Kinetic Class)
@@ -108,12 +112,12 @@ The engine maps your text to a **Psychological Coordinate System** based on **Bo
 
 The engine creates a "Dimensional Manifold" to prevent logical contradictions (e.g., "The **fire** [Thermal +1] **froze** [Thermal -1]").
 
-- _Note:_ This is controlled by the **Pressure Matrix**. A _Paladin_ fails this check instantly. A _Fool_ passes it and gains momentum.
+- _Note:_ The tolerance for these contradictions is now controlled by the active **Archetype**. A _Paladin_ fails this check instantly. A _Spy_ masks it.
     
 
 ### 2. The Codex (Object Permanence)
 
-**[NEW]** A registry of "Immutable Constants." It prevents the LLM from drifting away from established facts or character names.
+A registry of "Immutable Constants." It prevents the LLM from drifting away from established facts or character names.
 
 ### 3. The Metabolic Economy (Creative ATP)
 
@@ -147,11 +151,11 @@ Once the code is in the context window:
     
 3. **Output:** It will provide:
     
-    - **The Mycelial Dashboard:** An ASCII visualization of your text's health.
+    - **The Mycelial EKG:** An ASCII visualization of your text's health.
         
     - **Cognitive Mode:** Your active Archetype (e.g., "THE VULTURE").
         
-    - **Reality Anchors:** A list of facts the system is currently tracking.
+    - **Intervention:** Specific feedback from the voices (Clarence, Eloise, The Yaga).
         
     - **Directives:** Specific instructions to align with your Archetype's constraints.
         
