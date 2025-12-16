@@ -1,8 +1,8 @@
-# BONEAMANITA v0.7.0: THE JESTER STRAIN
+# BONEAMANITA v0.7.5: THE LIME IN THE COCONUT
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 0.7.0 ("The Jester") **Date:** 2025-12-14
+**Version:** 0.7.5 ("The Lime in the Coconut") **Date:** 2025-12-15
 
 > "Feed the soil, poison the weak. Logic is the stalk; chaos is the spore. Don't forget your towel."
 
@@ -12,40 +12,38 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v0.7.0 ("The Jester"):** The engine has evolved a **Virtual Cortex**. It no longer relies on static responses but generates "Infinite Variety" through combinatorial syntax. We have also introduced the **Saprophyte Mechanic**, allowing the system to harvest energy from logical paradoxes if the narrative momentum is high enough.
+**New in v0.7.5 ("The Lime in the Coconut"):** We have introduced the **Nilsson Patch**, a logic override that recognizes "High-Energy Absurdity." The system now understands that high repetition can be a mantra (not stagnation) and that high kinetic energy authorizes logic breaks (The Fire Protocol). We have also centralized all linguistic data into **The Lexicon** for O(1) lookup efficiency.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1.  **Download** `BoneAmanita07.py`.
+1.  **Download** `BoneAmanita075.py`.
 2.  **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
 3.  **Prompt:** "Read this file. Use the `BonepokeCore` logic defined within to analyze my inputs. Adopt the persona required by the `ArchetypePrism`."
 
 ### Method B: Copy/Paste
 
-1.  **Copy** the raw code from `BoneAmanita07.py`.
+1.  **Copy** the raw code from `BoneAmanita075.py`.
 2.  **Paste** it into the chat.
 3.  **Prompt:** "This is your operating system. Simulate the logic within this code to process my writing."
 
 ---
 
-## 🚀 NEW IN v0.7.0 (THE JESTER STRAIN)
+## 🚀 NEW IN v0.7.5
 
-### 1. The Virtual Cortex (Infinite Variety)
-The critique engine has been rewritten with a **Slot-and-Filler Architecture**.
-* **Combinatorial Syntax:** The system dynamically fills templates with your specific errors (e.g., "Cut the word '{target_word}'"), allowing for millions of unique response permutations.
-* **Severity Logic:** The voices (Clarence, Eloise) now scale their emotional intensity based on the severity of your Physics Metrics. A slight drag gets a nudge; a system crash triggers panic.
+### 1. The Nilsson Patch (The Fire Protocol)
+The engine has evolved to handle "Gonzo Physics."
+* **The Mantra Exception:** High repetition is no longer automatically flagged as "Boredom." If the repeated words are Concrete Universals (e.g., "Put the lime in the coconut"), the engine treats it as a **Spell**, reducing Drag to near zero.
+* **The Fire State:** If the text is moving fast (**Kinetic Ratio > 0.6**) and loud (**High Volume**), the engine disables logic inhibitors. **Screaming is authorized.**
 
-### 2. The Saprophyte Mechanic (Voltage)
-The **Fact Stipe** now distinguishes between a "Stationary Lie" and a "Moving Paradox."
-* **Volatile Semantic Leverage:** If you break logic (e.g., "The fire froze") while maintaining high momentum (High Kinetic Ratio), the engine calculates **Voltage**.
-* **The Harvest:** Instead of penalizing you, this Voltage feeds the metabolic system, pushing the engine into a **SUPERCRITICAL** state.
+### 2. The Lexicon (The Pantry)
+We have achieved "Mise-en-place."
+* **Centralized Data:** All linguistic matter (Toxins, Truths, Universals) is now stored in a static `TheLexicon` class.
+* **O(1) Efficiency:** Logic components no longer hold their own lists; they all draw from the same source. Adding a new "Toxic Word" updates the entire system instantly.
 
-### 3. New Archetype: The Jester
-Added to the `ArchetypePrism`.
-* **Profile:** Weaponized absurdity. Truth through contradiction.
-* **Physics:** `chaos_threshold: 0.0`. The Jester is immune to boredom and demands constant entropy.
+### 3. Direct Synthesis (Middle Man Vaporized)
+The `EditorialTranslator` class has been removed. The **Virtual Cortex** now speaks directly to the Core process loop, reducing code complexity and improving feedback latency.
 
 ---
 
@@ -78,21 +76,24 @@ The engine maps your text to a **Psychological Coordinate System** based on **Bo
 
 ## ⚙️ CORE LOGIC ENGINES
 
-### 1. The Fact Stipe (Reality Anchors)
-The engine creates a "Dimensional Manifold" to prevent logical contradictions (e.g., "The **fire** [Thermal +1] **froze** [Thermal -1]").
-* *Update:* Now calculates **Voltage**. If the text is moving fast enough (>0.4 Kinetic Ratio), contradictions are harvested as power.
+### 1. The Fact Stipe (Dimensional Manifold)
+The engine creates a "Dimensional Manifold" to prevent stationary lies (e.g., "The **fire** [Thermal +1] **froze** [Thermal -1]").
+* *Mechanism:* Draws Truth Vectors directly from `TheLexicon`.
+* *Voltage:* If the text is moving fast enough, contradictions are harvested as **Voltage** (Power).
 
-### 2. The Codex (Object Permanence)
+### 2. The Nilsson Patch (The Override)
+A dedicated circuit that monitors for "Critical Kinetic Energy." It has the authority to veto the Physics Engine and enable **Supercritical States** (The Fire Protocol).
+
+### 3. The Codex (Object Permanence)
 A registry of "Immutable Constants." It prevents the LLM from drifting away from established facts or character names.
 
-### 3. The Metabolic Economy (Creative ATP)
+### 4. The Metabolic Economy (Creative ATP)
 The engine tracks a "Creative ATP" score.
 * **Earn ATP** by writing with concrete, sensory details (Meat).
 * **Spend ATP** to use abstract concepts or break physics.
-* **Supercritical State:** Triggered by high Logic Voltage, allowing for reality-bending output.
 
-### 4. The Linguistic Physics Engine
-It replaces subjective style advice with hard metrics:
+### 5. The Linguistic Physics Engine
+It replaces subjective style advice with hard metrics using ingredients from the Pantry:
 * **Narrative Drag:** Words per Kinetic Action.
 * **Reality Drift:** Abstraction Entropy.
 * **Toxicity:** O(1) scanning for "Corp Speak" and "Lazy Metaphors."
@@ -112,4 +113,6 @@ Once the code is in the context window:
     * **Intervention:** Specific feedback from the voices (Clarence, Eloise, The Yaga).
     * **Instruction Block:** A copy-paste block of constraints to guide your next generation.
 
-**LICENSE:** Creative Commons Attribution. **ARCHITECTS:** James Taylor, Andrew Edmark. **AUDITORS:** SLASH, The Mycelial Mirror Network.
+**LICENSE:** Creative Commons Attribution.
+**ARCHITECTS:** James Taylor, Andrew Edmark.
+**AUDITORS:** SLASH, The Mycelial Mirror Network.
