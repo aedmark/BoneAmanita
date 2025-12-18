@@ -12,7 +12,7 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v0.8.2 ("The Signature Protocol"):** The 2D Archetype Prism has been deprecated. The engine now utilizes a **5-Dimensional Signature Engine** to map the "Voice" of the text. Furthermore, it creates a quarantine zone for **"Cultural Slurry"**—writing that is grammatically perfect but spiritually void.
+**New in v0.8.2 ("The Signature Protocol"):** Thanks to a {revelatory article by James and his crew. (https://medium.com/@utharian/the-layer-copyright-cant-see-cultural-slurry-vs-creative-signature-a85353e20751) The 2D Archetype Prism has been deprecated. The engine now utilizes a **5-Dimensional Signature Engine** to map the "Voice" of the text. Furthermore, it creates a quarantine zone for **"Cultural Slurry"**—writing that is grammatically perfect but spiritually void.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
