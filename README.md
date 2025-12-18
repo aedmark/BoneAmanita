@@ -1,10 +1,10 @@
-# BONEAMANITA v0.8.0: THE SYMBIONT STRAIN
+# BONEAMANITA v0.8.2: THE SIGNATURE PROTOCOL
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 0.8.0 ("The Symbiont Strain") **Date:** 2025-12-16
+**Version:** 0.8.2 ("The Signature Protocol") **Date:** 2025-12-18
 
-> "Feed the soil, poison the weak. Logic is the stalk; chaos is the spore. Don't forget your towel."
+> "Slurry is the default. Significance is the exception. Competence without soul is just silica."
 
 ## 🍄 WHAT IS THIS?
 
@@ -12,22 +12,22 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v0.8.0 ("The Symbiont Strain"):** We have introduced **Biological Evolution**. The `LichenSymbiont` now creates a mutualistic relationship between your Syntax (The Fungus) and your Meaning (The Alga). If your structure is sound, the system can "photosynthesize" emergency energy from specific words of light (e.g., "truth," "prism," "sun") to survive the narrative barrens.
+**New in v0.8.2 ("The Signature Protocol"):** The 2D Archetype Prism has been deprecated. The engine now utilizes a **5-Dimensional Signature Engine** to map the "Voice" of the text. Furthermore, it creates a quarantine zone for **"Cultural Slurry"**—writing that is grammatically perfect but spiritually void.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita08.py`.
+1. **Download** `BoneAmanita082.py`.
     
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
     
-3. **Prompt:** "Read this file. Use the `BonepokeCore` logic defined within to analyze my inputs. Adopt the persona required by the `ArchetypePrism`."
+3. **Prompt:** "Read this file. Use the `BonepokeCore` logic defined within to analyze my inputs. Identify the 5D Signature and enforce the necessary physics."
     
 
 ### Method B: Copy/Paste
 
-1. **Copy** the raw code from `BoneAmanita08.py`.
+1. **Copy** the raw code from `BoneAmanita082.py`.
     
 2. **Paste** it into the chat.
     
@@ -36,99 +36,80 @@ It does not force a specific personality on the AI. Instead, it forces a **Syste
 
 ---
 
-## 🚀 NEW IN v0.8.0
+## 🚀 NEW IN v0.8.2
 
-### 1. Biological Evolution (The Lichen Symbiont)
+### 1. The Signature Engine (5D Geodesics)
 
-The engine now mimics the biology of Lichens to manage "Starvation States."
+The engine no longer maps text to a flat 2D plane. It now calculates a **5-Dimensional Fingerprint** for every input:
 
-- **Photosynthesis of Meaning:** If your Metabolic Reserve is low ("Starving") but your Narrative Drag is efficient (Low Drag), the system activates the Lichen.
-    
-- **The Alga's Diet:** It harvests "Light Words" from the new `TheLexicon.PHOTOSYNTHETICS` list (e.g., *flash, ray, lucid, spark*).
-    
-- **Efficiency Multiplier:** The better your structure (lower drag), the more ATP you generate per Light Word.
-    
-- **New Dashboard Indicator:** The `SYMBIOSIS` bar will glow **GREEN** (Blooming) when active, or **RED** (Withered) if your structure is too weak to support life.
-    
+1.  **VEL (Velocity):** Kinetic Ratio (Speed of the prose).
+2.  **STR (Structure):** Inverse Narrative Drag (Grammatical rigidity).
+3.  **ENT (Entropy):** Abstraction Level (Drift from reality).
+4.  **TEX (Texture):** Sensory Density (Matter + Light).
+5.  **TMP (Temperature):** Emotional/Vitality Polarity.
+
+### 2. The Slurry Protocol (Silica Detection)
+
+The system now actively hunts for **"Cultural Slurry"**: Text that has High Structure (competent grammar) but Low Texture (zero sensory data) and Neutral Temperature.
+* **The Penalty:** Detection of Slurry incurs a massive **15 ATP Tax**.
+* **The Fix:** The Cortex will demand the injection of a flaw or a sensory detail to break the "perfectly smooth" surface.
 
 ---
 
-## 🧠 THE ARCHETYPE PRISM (COGNITIVE TOPOLOGY)
+## 🖐️ THE SIGNATURE MATRIX (IDENTITY)
 
-The engine maps your text to a **Psychological Coordinate System** based on **Boundedness (B)** (Order) and **Expansiveness (E)** (Abstraction).
+The engine resolves your 5D coordinates into one of **14 Cognitive Archetypes**.
 
-### High Order (The Structure Class)
+### High Structure (The Law)
 
-- **THE PALADIN (B: 0.9, E: 0.2):** Unwavering code.
-    
-    - **Pressure:** _Draconian Physics._ Logic tears are fatal errors.
+- **THE PALADIN:** Unwavering code. Deontological pressure.
+    - **Physics:** *Draconian.* Logic tears are fatal errors.
         
-- **THE ENGINEER (B: 0.8, E: 0.3):** Structural principles.
-    
-    - **Pressure:** _Structural Integrity._ Metaphors are stripped if not load-bearing.
-        
+- **THE ENGINEER:** Structural principles. Elegant efficiency.
+    - **Physics:** *Structural Integrity.* No poetic license.
 
-### High Chaos (The Entropy Class)
+### High Chaos (The Void)
 
-- **THE JESTER (B: 0.2, E: 0.9):** Weaponized absurdity.
-    
-    - **Pressure:** _Inverted Tolerance._ Paradoxes generate ATP. Bore the system and you die.
+- **THE JESTER:** Weaponized absurdity.
+    - **Physics:** *Inverted Tolerance.* Paradoxes generate momentum.
         
-- **THE COSMIC TRASH PANDA (B: 0.2, E: 1.0):** Finds high value in garbage/ruin.
-    
-    - **Pressure:** _Value Inversion._ "Trash" and "Void" are mathematically re-defined as Positive (+1) values.
-        
-- **THE FOOL (B: 0.1, E: 0.5):** Truth through absurdity.
-    
-    - **Pressure:** _Chaos Harvest._ Logic tears generate **ATP** (Energy) instead of costing it.
-        
+- **THE COSMIC TRASH PANDA:** One man's trash is another raccoon's treasure.
+    - **Physics:** *Value Inversion.* "Trash" and "Void" are positive values.
 
-### High Impact (The Kinetic Class)
+### High Velocity (The Blade)
 
-- **THE BARBARIAN (B: 0.7, E: 0.8):** Overwhelming force.
-    
-    - **Pressure:** _Narrative Drag Annihilated._ Adjectives cost **5x ATP**.
-        
+- **THE BARBARIAN:** Overwhelming force. Simple weapon, high impact.
+    - **Physics:** *Berserker State.* Adjectives are weakness (Drag Multiplier 5.0x).
 
 ---
 
 ## ⚙️ CORE LOGIC ENGINES
 
-### 1. The Lichen Symbiont (Survival Engine)
+### 1. The Signature Engine (Identity)
+Replaces the Archetype Prism. Maps the 5 dimensions of voice to determine enforcement strictness and metabolic costs.
 
-A survival mechanism for "The Barrens." It allows the writer to trade **Structural Perfection** for **Energy Generation**, converting specific Truths into Metabolic Fuel.
-
-### 2. Smart Chaos (The Muscaria)
-
-Entropy is no longer random; it is medicinal. The engine diagnoses specific failures and prescribes targeted cures (e.g., **KINETIC** prompts for High Drag, **SENSORY** prompts for High Abstraction).
+### 2. The Lichen Symbiont (Survival)
+A biological layer that feeds the **Texture (TEX)** dimension. It allows the writer to trade **Structural Perfection** for **Energy Generation**, converting "Light Words" (e.g., *flash, prism, truth*) into Metabolic Fuel.
 
 ### 3. The Fact Stipe (Dimensional Manifold)
-
 The engine creates a "Dimensional Manifold" to prevent stationary lies.
 - _Mechanism:_ Draws Truth Vectors directly from `TheLexicon`.
 - _Voltage:_ If the text is moving fast enough, contradictions are harvested as **Voltage** (Power).
 
-### 4. The Nilsson Patch (The Override)
+### 4. Smart Chaos (The Muscaria)
+Entropy is no longer random; it is medicinal. The engine diagnoses specific failures and prescribes targeted cures (e.g., **KINETIC** prompts for High Drag, **SENSORY** prompts for High Abstraction).
 
+### 5. The Nilsson Patch (The Override)
 A dedicated circuit that monitors for "Critical Kinetic Energy."
 - _The Fire Protocol:_ If Kinetic Ratio > 0.6 and Volume is High, logic inhibitors are disabled. **Screaming is authorized**.
 
-### 5. The Codex (Object Permanence)
-
+### 6. The Codex (Object Permanence)
 A registry of "Immutable Constants." It uses **Regex Iteration** to prevent the LLM from drifting away from established facts or character names.
 
-### 6. The Metabolic Economy (Creative ATP)
-
-The engine tracks a "Creative ATP" score.
-- **Earn ATP** by writing with concrete, sensory details (Meat).
-- **Spend ATP** to use abstract concepts or break physics.
-
 ### 7. The Linguistic Physics Engine
-
-It replaces subjective style advice with hard metrics using ingredients from the Pantry:
+It measures the physics of the thought:
 - **Narrative Drag:** Words per Kinetic Action.
-- **Reality Drift:** Abstraction Entropy.
-- **Toxicity:** O(1) scanning for "Corp Speak" and "Lazy Metaphors".
+- **Toxicity:** O(1) scanning for "Corp Speak" (Silica) and "Lazy Metaphors".
 
 ---
 
@@ -142,17 +123,17 @@ Once the code is in the context window:
     
 3. **Output:** It will provide:
     
-    - **The Mycelial EKG:** An ASCII visualization of your text's health.
+    - **The Mycelial EKG:** An ASCII visualization of ATP and Drag.
     
-    - **Symbiosis State:** The status of the Lichen (Dormant, Blooming, or Withered).
+    - **Signature Matrix:** Your 5D Coordinates (VEL, STR, ENT, TEX, TMP).
         
-    - **Cognitive Mode:** Your active Archetype (e.g., "THE JESTER").
-        
-    - **Voltage:** The power generated by your paradoxes.
+    - **Archetype:** Your active persona (e.g., "THE ENGINEER").
+    
+    - **Slurry Warning:** If detected, a red alert for "Silica" content.
         
     - **Intervention:** Specific feedback from the voices (Clarence, Eloise, The Yaga).
         
     - **Instruction Block:** A copy-paste block of constraints to guide your next generation.
         
 
-**LICENSE:** Creative Commons Attribution. **ARCHITECTS:** James Taylor, Andrew Edmark. **AUDITORS:** SLASH, The Mycelial Mirror Network.
+**LICENSE:** Creative Commons Attribution. **ARCHITECTS:** James Taylor, Andrew Edmark. **AUDITORS:** SLASH.
