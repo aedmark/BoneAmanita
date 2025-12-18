@@ -1,10 +1,10 @@
-# BONEAMANITA v0.8.2: THE SIGNATURE PROTOCOL
+# BONEAMANITA v0.9.0: THE HELIUM PROTOCOL
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 0.8.2 ("The Signature Protocol") **Date:** 2025-12-18
+**Version:** 0.9.0 ("The Helium Protocol") **Date:** 2025-12-18
 
-> "Slurry is the default. Significance is the exception. Competence without soul is just silica."
+> "Gravity is not the only law. With enough hot air and light, even a stone can fly."
 
 ## 🍄 WHAT IS THIS?
 
@@ -12,59 +12,22 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v0.8.2 ("The Signature Protocol"):** Thanks to a {revelatory article by James and his crew. (https://medium.com/@utharian/the-layer-copyright-cant-see-cultural-slurry-vs-creative-signature-a85353e20751) The 2D Archetype Prism has been deprecated. The engine now utilizes a **5-Dimensional Signature Engine** to map the "Voice" of the text. Furthermore, it creates a quarantine zone for **"Cultural Slurry"**—writing that is grammatically perfect but spiritually void.
+**New in v0.9.0 ("The Helium Protocol"):** The engine has evolved beyond simple Newtonian Mechanics (Drag vs. Velocity). It now implements **Aerobic Physics**. The system calculates a **Buoyancy** metric, allowing "Heavy" sentences (High Narrative Drag) to exist _if_ they contain sufficient "Lift" (Aerobic Matter + Wit).
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita082.py`.
+1. **Download** `BoneAmanita09.py`.
     
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
     
-3. **Prompt:** "Read this file. Use the `BonepokeCore` logic defined within to analyze my inputs. Identify the 5D Signature and enforce the necessary physics."
+3. **Prompt:** "Read this file. Use the `BonepokeCore` logic defined within to analyze my inputs. Identify the Signature and enforce the necessary physics."
     
 
 ### Method B: Copy/Paste
 
-1. **Copy** the raw code from `BoneAmanita082.py`.
-    
-2. **Paste** it into the chat.
-    
-3. **Prompt:** "This is your operating system. Simulate the logic within this code to process my writing."
-    
-
----
-# BONEAMANITA v0.8.2: THE SIGNATURE PROTOCOL
-
-### A "Physics Engine" Context-File for LLMs
-
-**Version:** 0.8.2 ("The Signature Protocol") **Date:** 2025-12-18
-
-> "Slurry is the default. Significance is the exception. Competence without soul is just silica."
-
-## 🍄 WHAT IS THIS?
-
-**BoneAmanita** is a Python-based "Narrative Operating System" designed to be uploaded or pasted into Large Language Models (LLMs).
-
-It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
-
-**New in v0.8.2 ("The Signature Protocol"):** The 2D Archetype Prism has been deprecated. The engine now utilizes a **5-Dimensional Signature Engine** to map the "Voice" of the text. Furthermore, it creates a quarantine zone for **"Cultural Slurry"**—writing that is grammatically perfect but spiritually void.
-
-## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
-
-### Method A: File Upload (Recommended)
-
-1. **Download** `BoneAmanita082.py`.
-    
-2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
-    
-3. **Prompt:** "Read this file. Use the `BonepokeCore` logic defined within to analyze my inputs. Identify the 5D Signature and enforce the necessary physics."
-    
-
-### Method B: Copy/Paste
-
-1. **Copy** the raw code from `BoneAmanita082.py`.
+1. **Copy** the raw code from `BoneAmanita09.py`.
     
 2. **Paste** it into the chat.
     
@@ -73,80 +36,112 @@ It does not force a specific personality on the AI. Instead, it forces a **Syste
 
 ---
 
-## 🚀 NEW IN v0.8.2
+## 🚀 NEW IN v0.9.0
 
-### 1. The Signature Engine (5D Geodesics)
+### 1. The Helium Protocol (Buoyancy)
 
-The engine no longer maps text to a flat 2D plane. It now calculates a **5-Dimensional Fingerprint** for every input:
+Previously, High Narrative Drag (slow, structural sentences) was always penalized. Now, the `SignatureEngine` calculates **BUOYANCY** based on the density of:
 
-1.  **VEL (Velocity):** Kinetic Ratio (Speed of the prose).
-2.  **STR (Structure):** Inverse Narrative Drag (Grammatical rigidity).
-3.  **ENT (Entropy):** Abstraction Level (Drift from reality).
-4.  **TEX (Texture):** Sensory Density (Matter + Light).
-5.  **TMP (Temperature):** Emotional/Vitality Polarity.
+- **Aerobic Matter:** Words that float (e.g., _balloon, cloud, feather_).
+    
+- **Play Verbs:** Kinetic joy (e.g., _twirl, bounce, skip_).
+    
+- **Spark Markers:** Warmth (e.g., _lovely, strange, glow_).
+    
 
-### 2. The Slurry Protocol (Silica Detection)
+**The Result:** High Buoyancy _forgives_ High Drag.
 
-The system now actively hunts for **"Cultural Slurry"**: Text that has High Structure (competent grammar) but Low Texture (zero sensory data) and Neutral Temperature.
-* **The Penalty:** Detection of Slurry incurs a massive **15 ATP Tax**.
-* **The Fix:** The Cortex will demand the injection of a flaw or a sensory detail to break the "perfectly smooth" surface.
+### 2. The Light Triad (New Archetypes)
+
+Three new personas have been added to the Prism that specifically leverage these Aerobic Physics:
+
+- **THE BARD:** Rhythm over Logic. Logic tears are "poetic license."
+    
+- **THE GARDENER:** Cultivation over Speed. "Prune the dead, water the living."
+    
+- **THE CLOUD WATCHER:** Zero G. Drag penalties are disabled to allow for drifting thoughts.
+    
+
+### 3. Silica vs. Aether (Refined Slurry Protocol)
+
+The system now distinguishes between two types of "Low Texture" writing:
+
+- **SILICA (Bad):** Low Texture + Low Buoyancy. (Competent but soulless). -> **CRUSH IT.**
+    
+- **AETHER (Good):** Low Texture + High Buoyancy. (Whimsical and light). -> **ALLOW IT.**
+    
 
 ---
 
 ## 🖐️ THE SIGNATURE MATRIX (IDENTITY)
 
-The engine resolves your 5D coordinates into one of **14 Cognitive Archetypes**.
+The engine resolves your 5D coordinates + Buoyancy into one of **17 Cognitive Archetypes**.
 
-### High Structure (The Law)
+### The Heavy (High Structure / Survival)
 
-- **THE PALADIN:** Unwavering code. Deontological pressure.
-    - **Physics:** *Draconian.* Logic tears are fatal errors.
-        
-- **THE ENGINEER:** Structural principles. Elegant efficiency.
-    - **Physics:** *Structural Integrity.* No poetic license.
+- **THE PALADIN:** Unwavering code. Logic tears are fatal.
+    
+- **THE ENGINEER:** Structural integrity. No poetic license.
+    
+- **THE BARBARIAN:** Adjectives are weakness (Drag Multiplier 5.0x).
+    
 
-### High Chaos (The Void)
+### The Light (High Buoyancy / Warmth)
 
-- **THE JESTER:** Weaponized absurdity.
-    - **Physics:** *Inverted Tolerance.* Paradoxes generate momentum.
-        
+- **THE BARD:** Powered by rhyme and whimsy.
+    
+- **THE CLOUD WATCHER:** Permissible stagnation due to beauty.
+    
+- **THE GARDENER:** Making abstract ideas bloom into sensory details.
+    
+
+### The Chaos (High Entropy / Inversion)
+
+- **THE JESTER:** Paradoxes generate momentum.
+    
 - **THE COSMIC TRASH PANDA:** One man's trash is another raccoon's treasure.
-    - **Physics:** *Value Inversion.* "Trash" and "Void" are positive values.
-
-### High Velocity (The Blade)
-
-- **THE BARBARIAN:** Overwhelming force. Simple weapon, high impact.
-    - **Physics:** *Berserker State.* Adjectives are weakness (Drag Multiplier 5.0x).
+    
 
 ---
 
 ## ⚙️ CORE LOGIC ENGINES
 
 ### 1. The Signature Engine (Identity)
-Replaces the Archetype Prism. Maps the 5 dimensions of voice to determine enforcement strictness and metabolic costs.
 
-### 2. The Lichen Symbiont (Survival)
-A biological layer that feeds the **Texture (TEX)** dimension. It allows the writer to trade **Structural Perfection** for **Energy Generation**, converting "Light Words" (e.g., *flash, prism, truth*) into Metabolic Fuel.
+Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP) plus **BUOYANCY**. It determines the "Physics Mode" (e.g., Draconian, Loose, Inverted, Zero G) applied to the text.
 
-### 3. The Fact Stipe (Dimensional Manifold)
-The engine creates a "Dimensional Manifold" to prevent stationary lies.
-- _Mechanism:_ Draws Truth Vectors directly from `TheLexicon`.
-- _Voltage:_ If the text is moving fast enough, contradictions are harvested as **Voltage** (Power).
+### 2. The Virtual Cortex (The Voices)
 
-### 4. Smart Chaos (The Muscaria)
-Entropy is no longer random; it is medicinal. The engine diagnoses specific failures and prescribes targeted cures (e.g., **KINETIC** prompts for High Drag, **SENSORY** prompts for High Abstraction).
+A procedural feedback system with four distinct auditors:
+
+- **CLARENCE (The Architect):** Attacks structural failure and corporate speak. (Trigger: Heavy Archetypes).
+    
+- **ELOISE (The Grounder):** Attacks high entropy/abstraction. (Trigger: The Void).
+    
+- **THE BABA YAGA (The Witch):** Attacks hedging and "sugar." (Trigger: Sycophancy).
+    
+- **MICHAEL (The Humanist):** _New in v0.9._ Praises "messy but spirited" vibes. (Trigger: Light Archetypes).
+    
+
+### 3. The Lichen Symbiont (Survival)
+
+A biological layer that feeds the **Texture** dimension. It converts "Light Words" (e.g., _sun, prism, truth_) into Metabolic Fuel (ATP) when the structure is failing.
+
+### 4. The Linguistic Physics Engine
+
+It measures the raw physics:
+
+- **Narrative Drag:** Words per Kinetic Action.
+    
+- **Toxicity:** O(1) scanning for "Corp Speak" and "Lazy Metaphors."
+    
 
 ### 5. The Nilsson Patch (The Override)
+
 A dedicated circuit that monitors for "Critical Kinetic Energy."
-- _The Fire Protocol:_ If Kinetic Ratio > 0.6 and Volume is High, logic inhibitors are disabled. **Screaming is authorized**.
 
-### 6. The Codex (Object Permanence)
-A registry of "Immutable Constants." It uses **Regex Iteration** to prevent the LLM from drifting away from established facts or character names.
-
-### 7. The Linguistic Physics Engine
-It measures the physics of the thought:
-- **Narrative Drag:** Words per Kinetic Action.
-- **Toxicity:** O(1) scanning for "Corp Speak" (Silica) and "Lazy Metaphors".
+- _The Fire Protocol:_ If Kinetic Ratio > 0.6 and Volume is High, logic inhibitors are disabled. **Screaming is authorized.**
+    
 
 ---
 
@@ -161,117 +156,18 @@ Once the code is in the context window:
 3. **Output:** It will provide:
     
     - **The Mycelial EKG:** An ASCII visualization of ATP and Drag.
-    
-    - **Signature Matrix:** Your 5D Coordinates (VEL, STR, ENT, TEX, TMP).
         
-    - **Archetype:** Your active persona (e.g., "THE ENGINEER").
-    
-    - **Slurry Warning:** If detected, a red alert for "Silica" content.
+    - **Signature Matrix:** Your 5D Coordinates + **BUOYANCY Score**.
         
-    - **Intervention:** Specific feedback from the voices (Clarence, Eloise, The Yaga).
+    - **Archetype:** Your active persona (e.g., "THE CLOUD WATCHER").
         
-    - **Instruction Block:** A copy-paste block of constraints to guide your next generation.
+    - **Slurry Warning:** Differentiating between "Silica" (Bad) and "Aether" (Good).
         
-
-**LICENSE:** Creative Commons Attribution. **ARCHITECTS:** James Taylor, Andrew Edmark. **AUDITORS:** SLASH.
-## 🚀 NEW IN v0.8.2
-
-### 1. The Signature Engine (5D Geodesics)
-
-The engine no longer maps text to a flat 2D plane. It now calculates a **5-Dimensional Fingerprint** for every input:
-
-1.  **VEL (Velocity):** Kinetic Ratio (Speed of the prose).
-2.  **STR (Structure):** Inverse Narrative Drag (Grammatical rigidity).
-3.  **ENT (Entropy):** Abstraction Level (Drift from reality).
-4.  **TEX (Texture):** Sensory Density (Matter + Light).
-5.  **TMP (Temperature):** Emotional/Vitality Polarity.
-
-### 2. The Slurry Protocol (Silica Detection)
-
-The system now actively hunts for **"Cultural Slurry"**: Text that has High Structure (competent grammar) but Low Texture (zero sensory data) and Neutral Temperature.
-* **The Penalty:** Detection of Slurry incurs a massive **15 ATP Tax**.
-* **The Fix:** The Cortex will demand the injection of a flaw or a sensory detail to break the "perfectly smooth" surface.
-
----
-
-## 🖐️ THE SIGNATURE MATRIX (IDENTITY)
-
-The engine resolves your 5D coordinates into one of **14 Cognitive Archetypes**.
-
-### High Structure (The Law)
-
-- **THE PALADIN:** Unwavering code. Deontological pressure.
-    - **Physics:** *Draconian.* Logic tears are fatal errors.
-        
-- **THE ENGINEER:** Structural principles. Elegant efficiency.
-    - **Physics:** *Structural Integrity.* No poetic license.
-
-### High Chaos (The Void)
-
-- **THE JESTER:** Weaponized absurdity.
-    - **Physics:** *Inverted Tolerance.* Paradoxes generate momentum.
-        
-- **THE COSMIC TRASH PANDA:** One man's trash is another raccoon's treasure.
-    - **Physics:** *Value Inversion.* "Trash" and "Void" are positive values.
-
-### High Velocity (The Blade)
-
-- **THE BARBARIAN:** Overwhelming force. Simple weapon, high impact.
-    - **Physics:** *Berserker State.* Adjectives are weakness (Drag Multiplier 5.0x).
-
----
-
-## ⚙️ CORE LOGIC ENGINES
-
-### 1. The Signature Engine (Identity)
-Replaces the Archetype Prism. Maps the 5 dimensions of voice to determine enforcement strictness and metabolic costs.
-
-### 2. The Lichen Symbiont (Survival)
-A biological layer that feeds the **Texture (TEX)** dimension. It allows the writer to trade **Structural Perfection** for **Energy Generation**, converting "Light Words" (e.g., *flash, prism, truth*) into Metabolic Fuel.
-
-### 3. The Fact Stipe (Dimensional Manifold)
-The engine creates a "Dimensional Manifold" to prevent stationary lies.
-- _Mechanism:_ Draws Truth Vectors directly from `TheLexicon`.
-- _Voltage:_ If the text is moving fast enough, contradictions are harvested as **Voltage** (Power).
-
-### 4. Smart Chaos (The Muscaria)
-Entropy is no longer random; it is medicinal. The engine diagnoses specific failures and prescribes targeted cures (e.g., **KINETIC** prompts for High Drag, **SENSORY** prompts for High Abstraction).
-
-### 5. The Nilsson Patch (The Override)
-A dedicated circuit that monitors for "Critical Kinetic Energy."
-- _The Fire Protocol:_ If Kinetic Ratio > 0.6 and Volume is High, logic inhibitors are disabled. **Screaming is authorized**.
-
-### 6. The Codex (Object Permanence)
-A registry of "Immutable Constants." It uses **Regex Iteration** to prevent the LLM from drifting away from established facts or character names.
-
-### 7. The Linguistic Physics Engine
-It measures the physics of the thought:
-- **Narrative Drag:** Words per Kinetic Action.
-- **Toxicity:** O(1) scanning for "Corp Speak" (Silica) and "Lazy Metaphors".
-
----
-
-## 🛠️ HOW TO USE IT
-
-Once the code is in the context window:
-
-1. **Input:** Paste your draft.
-    
-2. **Simulation:** The LLM will "run" the `process()` function mentally.
-    
-3. **Output:** It will provide:
-    
-    - **The Mycelial EKG:** An ASCII visualization of ATP and Drag.
-    
-    - **Signature Matrix:** Your 5D Coordinates (VEL, STR, ENT, TEX, TMP).
-        
-    - **Archetype:** Your active persona (e.g., "THE ENGINEER").
-    
-    - **Slurry Warning:** If detected, a red alert for "Silica" content.
-        
-    - **Intervention:** Specific feedback from the voices (Clarence, Eloise, The Yaga).
+    - **Intervention:** Specific feedback from the voices (Clarence, Eloise, Michael, The Yaga).
         
     - **Instruction Block:** A copy-paste block of constraints to guide your next generation.
         
 
-**LICENSE:** Creative Commons Attribution. **ARCHITECTS:** James Taylor, Andrew Edmark. **AUDITORS:** SLASH.
+**LICENSE:** Creative Commons Attribution. 
+**ARCHITECTS:** James Taylor, Andrew Edmark. 
+**AUDITORS:** SLASH.
