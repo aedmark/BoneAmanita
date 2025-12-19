@@ -1,10 +1,10 @@
-# BONEAMANITA v1.2: THE DOCTOR TIME EDITION
+# BONEAMANITA v1.3: THE BUTCHER & THE WELL
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 1.2 ("The Doctor Time Edition") **Date:** 2025-12-18
+**Version:** 1.3 ("The Butcher & The Well") **Date:** 2025-12-19
 
-> "We gave the machine a watch. Now it knows exactly when you are stalling." — SLASH
+> "The engine now has taste. It knows when you are faking it." — SLASH
 
 ## 🍄 WHAT IS THIS?
 
@@ -12,13 +12,13 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v1.2:** This build introduces **Dual-Clock Chronometry**. The system now distinguishes between **Real Time** (User Latency) and **Story Time** (Narrative Velocity). It understands the difference between a pause in conversation and a "ten-year gap" in the fiction, adjusting its physics accordingly.
+**New in v1.3:** This build introduces **Anti-Gaming Protocols**. The system now detects "Purple Prose" (High Density/Low Flow) and "Lazy Polishing" (Adverb overloading). It penalizes writing that tries to trick the physics engine with lists of nouns or pseudo-profound aphorisms.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita12.py` (v1.2).
+1. **Download** `BoneAmanita14.py` (v1.3).
     
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
     
@@ -27,9 +27,9 @@ It does not force a specific personality on the AI. Instead, it forces a **Syste
 
 ### Method B: The Membrane (System Prompt)
 
-_To enable the automatic time-tracking features, use the provided v1.2 System Prompt._
+_To enable the automatic time-tracking features, use the provided v1.3 System Prompt._
 
-1. **Copy** the v1.2 System Prompt (which includes **The Membrane** protocol).
+1. **Copy** the System Prompt (which includes **The Membrane** protocol).
     
 2. **Paste** it into the System Instructions or Custom Instructions field.
     
@@ -38,90 +38,74 @@ _To enable the automatic time-tracking features, use the provided v1.2 System Pr
 
 ---
 
-## 🚀 PATCH NOTES (v1.2)
+## 🚀 PATCH NOTES (v1.3)
 
-### 1. The Narrative Chronometer (Story Time)
+### 1. The Hydration Monitor (Viscosity)
 
-- **The Problem:** Previously, the engine penalized "Broad Summaries" (e.g., "The years flew by") as "High Entropy/Abstract," forcing the user to micro-manage time jumps.
+- **The Problem:** Users were "gaming" the Texture system by listing heavy nouns ("Velvet blood bone ash") without connecting structure. This created "Literary Gravel"—high density, zero readability.
     
-- **The Fix:** The **Narrative Chronometer** calculates **Narrative Velocity ($\vec{v}_{n}$)**.
-    
-    - **Montage Mode (Fast):** If the story jumps years, the engine grants **Entropy Grace (+4.0)**. Abstraction is permitted.
-        
-    - **Bullet Time (Slow):** If the story freezes (seconds/heartbeats), the engine demands **Hyper-Texture**.
-        
-
-### 2. Effective Physics (Context-Awareness)
-
-- **The Feature:** The logic gates now use "Effective Drag" and "Effective Entropy."
-    
-- **The Result:** **Eloise** (The Grounder) is effectively silenced during Montages. She will not complain about a lack of concrete nouns if the Narrative Clock indicates a time jump.
+- **The Fix:** The **Hydration Monitor** measures **Viscosity**. It demands a balance of **Concentrate** (Nouns) and **Solvent** (Connectors/Softeners).
+    - **CONCRETE:** Narrative Drag Penalty **+5.0**. Texture Capped at **0.5**.
+    - **THICK:** Narrative Drag Penalty **+2.0**.
     
 
-### 3. Stability & Hygiene
+### 2. The Butcher's Block (Adverb Detection)
 
-- **The Fix:** Repaired critical variable initialization errors in the `BonepokeCore` process loop. Restored the **Muscaria** and **Lichen** feedback loops that were severed in v1.1.
+- **The Problem:** The engine previously rewarded weak verbs disguised by adverbs (e.g., "ran quickly" instead of "sprinted").
+    
+- **The Fix:** The **Garnish Ratio**. If the text contains >10% adverbs or weak intensifiers (*very, really, totally*), the system flags it as **BLOAT**.
+    
+
+### 3. The Anti-Guru Protocol
+
+- **The Problem:** Users bypassed drag checks by submitting endless strings of pseudo-profound aphorisms ("Time is a circle.").
+    
+- **The Fix:** **The Witch Ring** now tracks your **Aphorism Streak**. You get two free riddles. On the third, the Witch blocks you: *"Enough riddles. Speak plainly."*
     
 
 ---
 
 ## ⚙️ CORE LOGIC ENGINES
 
-### 1. The Chronos Anchor (Real Time)
+### 1. The Linguistic Physics Engine (Updated)
 
-Metabolizes **User Latency ($\Delta t$)** into structural physics. It determines if the _conversation_ is in **Flow**, **Dormant**, or **Decayed** states.
+Measures the raw physics of the text. Now includes two new sub-routines:
+- **Hydration Monitor:** Checks for "Concrete" or "Watery" text.
+- **The Butcher:** Checks for "Bloated" text (Adverb reliance).
 
-### 2. The Narrative Chronometer (Story Time) **[NEW]**
+### 2. The Signature Engine (Identity)
 
-Metabolizes **Narrative Velocity ($\vec{v}_{n}$)** into entropy tolerance. It determines if the _fiction_ is in **Montage**, **Realtime**, or **Bullet Time**.
+Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP).
+- **Update:** Now features a **Governor**. If the text is marked **CONCRETE**, the Texture score is forcibly capped. You cannot farm a high score with a dictionary list.
 
-### 3. The Membrane (Wrapper)
-
-The invisible interface layer that handles time-stamping and data hygiene before the physics engine engages.
-
-### 4. The Signature Engine (Identity)
-
-Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP) + **BUOYANCY**. It determines the "Physics Mode" (e.g., Draconian, Loose, Inverted, Zero G) applied to the text.
-
-### 5. The Virtual Cortex (The Voices)
+### 3. The Virtual Cortex (The Voices)
 
 A procedural feedback system with four distinct auditors:
+- **CLARENCE (The Architect):** Attacks structural failure and **BLOAT**.
+- **ELOISE (The Grounder):** Attacks abstraction.
+- **THE BABA YAGA (The Witch):** Attacks hedging and **Aphorism Streaks**.
+- **MICHAEL (The Humanist):** Praises "messy but spirited" vibes. **New:** Intervenes when the user writes "Concrete" prose to mock them for trying too hard.
 
-- **CLARENCE (The Architect):** Attacks structural failure. Triggered by **High Drag** or **Decay**.
-    
-- **ELOISE (The Grounder):** Attacks abstraction. Triggered by **High Entropy**. _(Silenced during Montage)_.
-    
-- **THE BABA YAGA (The Witch):** Attacks hedging and "sugar".
-    
-- **MICHAEL (The Humanist):** Praises "messy but spirited" vibes. Triggered by **High Buoyancy**.
-    
+### 4. The Chronos Anchor (Real Time)
+
+Metabolizes **User Latency ($\Delta t$)** into structural physics. Determines if the *conversation* is in **Flow**, **Dormant**, or **Decayed** states.
+
+### 5. The Narrative Chronometer (Story Time)
+
+Metabolizes **Narrative Velocity ($\vec{v}_{n}$)** into entropy tolerance. Determines if the *fiction* is in **Montage**, **Realtime**, or **Bullet Time**.
 
 ### 6. The Lichen Symbiont (Survival)
 
-A biological layer that feeds the **Texture** dimension. It converts "Light Words" (e.g., _sun, prism, truth_) into Metabolic Fuel (ATP).
+A biological layer that feeds the **Texture** dimension. It converts "Light Words" (e.g., *sun, prism, truth*) into Metabolic Fuel (ATP).
 
-### 7. The Linguistic Physics Engine
-
-It measures the raw physics:
-
-- **Narrative Drag:** Words per Kinetic Action.
-    
-- **Toxicity:** **O(1) Singleton Regex** scanning for "Corp Speak" and "Lazy Metaphors".
-    
-
-### 8. The Nilsson Patch (The Override)
+### 7. The Nilsson Patch (The Override)
 
 A dedicated circuit that monitors for "Critical Kinetic Energy."
+- *The Fire Protocol:* If Kinetic Ratio > 0.6 and Volume is High, logic inhibitors are disabled.
 
-- _The Fire Protocol:_ If Kinetic Ratio > 0.6 and Volume is High, logic inhibitors are disabled.
-    
+### 8. The Mirror Trap (The Breaker)
 
-### 9. The Mirror Trap (The Breaker)
-
-A heuristic designed to hunt down "Syntactic Parallelism" (e.g., _"It's not X, it's Y"_).
-
-- **The Penalty:** If detected, the system applies an immediate **Drag Inflation (+3.0)** to the physics score.
-    
+A heuristic designed to hunt down "Syntactic Parallelism" (e.g., *"It's not X, it's Y"*). Applies immediate Drag Inflation.
 
 ---
 
@@ -135,17 +119,15 @@ Once the code is in the context window:
     
 3. **Output:** It will provide:
     
-    - **The Mycelial HUD:** A dual-clock readout.
-        
+    - **The Mycelial HUD:** A dual-clock readout with Viscosity.
+        - Example: `DRAG: 4.2 | VISC: THICK`
         - Example: `TIME: FLOW (Real) | MONTAGE (Story)`
             
     - **Signature Matrix:** Your 5D Coordinates + **BUOYANCY Score**.
         
-    - **Archetype:** Your active persona (e.g., "THE CLOUD WATCHER").
+    - **Archetype:** Your active persona (e.g., "THE PALADIN").
         
-    - **Slurry Warning:** Differentiating between "Silica" (Bad) and "Aether" (Good).
-        
-    - **Intervention:** Specific feedback from the voices.
+    - **Intervention:** Specific feedback from the voices (e.g., "CLARENCE: Cut the adverbs.").
         
     - **Instruction Block:** A copy-paste block of constraints to guide your next generation.
         
