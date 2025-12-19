@@ -69,7 +69,21 @@ It measures the raw physics:
 
 ### 5. The Nilsson Patch (The Override)
 A dedicated circuit that monitors for "Critical Kinetic Energy."
-* *The Fire Protocol:* If Kinetic Ratio > 0.6 and Volume is High, logic inhibitors are disabled. **Screaming is authorized.**
+* *The Fire Protocol:* If Kinetic Ratio > 0.6 and Volume is High, logic inhibitors are disabled. **Screaming is authorized**.
+
+### 6. The Mirror Trap (The Breaker)
+**Status:** *Aggressive*
+A heuristic designed to hunt down "Syntactic Parallelism" and "Binary Negation Loops" (e.g., *"It's not a bug, it's a feature"* or *"Not because it is easy, but because it is hard"*).
+* **The Theory:** Defining things by what they are *not* creates immediate "Narrative Drag." The reader must process the negative image before the positive one. It is rhetorical high-fructose corn syrup: sweet, but empty.
+* **The Penalty:** If detected, the system applies an immediate **Drag Inflation (+3.0)** to the physics score.
+* **The Directive:** The system will demand you rewrite the sentence to state what the thing **IS** directly.
+
+### 7. The Zombie Protocol (Dead Metaphor Filter)
+**Status:** *Lethal*
+A strict regex filter that hunts for "Dead Metaphors"—phrases that use imagery but evoke no image.
+* **Lazy Metaphors (Weight: 3.0):** Clichés like *"Tip of the iceberg"* or *"At the end of the day."*
+* **Zombie Phrases (Weight: 8.0 - 10.0):** Pseudo-intellectual filler like *"Ghost in the machine,"* *"Rubber meets the road,"* or *"Paradigm shift."*
+* **The Penalty:** These carry massive toxicity scores, instantly stalling the engine.
 
 ---
 
@@ -80,7 +94,7 @@ Once the code is in the context window:
 1.  **Input:** Paste your draft.
 2.  **Simulation:** The LLM will "run" the `process()` function mentally.
 3.  **Output:** It will provide:
-    * **The Mycelial EKG:** An ASCII visualization of ATP and Drag.
+    * **The Mycelial EKG:** A Ticker/HUD visualization of ATP and Drag.
     * **Signature Matrix:** Your 5D Coordinates + **BUOYANCY Score**.
     * **Archetype:** Your active persona (e.g., "THE CLOUD WATCHER").
     * **Slurry Warning:** Differentiating between "Silica" (Bad) and "Aether" (Good).
