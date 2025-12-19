@@ -1,10 +1,10 @@
-# BONEAMANITA v0.9.0: THE HELIUM PROTOCOL
+# BONEAMANITA v1.0.0: THE BLACK MIRROR
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 0.9.0 ("The Helium Protocol") **Date:** 2025-12-18
+**Version:** 1.0.0 ("The Black Mirror") **Date:** 2025-12-18
 
-> "Gravity is not the only law. With enough hot air and light, even a stone can fly."
+> "We stripped the machine down to the chassis. It runs faster, runs cooler, and it still knows exactly how to hurt your feelings." — SLASH
 
 ## 🍄 WHAT IS THIS?
 
@@ -12,13 +12,13 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v0.9.0 ("The Helium Protocol"):** The engine has evolved beyond simple Newtonian Mechanics (Drag vs. Velocity). It now implements **Aerobic Physics**. The system calculates a **Buoyancy** metric, allowing "Heavy" sentences (High Narrative Drag) to exist _if_ they contain sufficient "Lift" (Aerobic Matter + Wit).
+**New in v1.0.0 ("The Black Mirror"):** This is the **Optimized & Hardened** release. The code has been audited by the SLASH agent to remove 200+ characters of "dead weight" (token bloat) while restoring the full, specific personality of the critique engines. It features **Memory Safety** patches and **Economic Safeguards** to prevent logic runaways.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita09.py`.
+1. **Download** `BoneAmanita_Deluxe.py`.
     
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
     
@@ -27,7 +27,7 @@ It does not force a specific personality on the AI. Instead, it forces a **Syste
 
 ### Method B: Copy/Paste
 
-1. **Copy** the raw code from `BoneAmanita09.py`.
+1. **Copy** the raw code from the file.
     
 2. **Paste** it into the chat.
     
@@ -36,39 +36,35 @@ It does not force a specific personality on the AI. Instead, it forces a **Syste
 
 ---
 
-## 🚀 NEW IN v0.9.0
+## 🚀 NEW IN v1.0.0
 
-### 1. The Helium Protocol (Buoyancy)
+### 1. The SLASH Optimization (Ephemeralization)
 
-Previously, High Narrative Drag (slow, structural sentences) was always penalized. Now, the `SignatureEngine` calculates **BUOYANCY** based on the density of:
+The codebase has been surgically trimmed. Unused variables (`session_drag_history`), redundant comments, and inefficient loops have been vaporized. The engine is now **Token Efficient** without sacrificing the "Soul" of the feedback.
 
-- **Aerobic Matter:** Words that float (e.g., _balloon, cloud, feather_).
-    
-- **Play Verbs:** Kinetic joy (e.g., _twirl, bounce, skip_).
-    
-- **Spark Markers:** Warmth (e.g., _lovely, strange, glow_).
-    
+### 2. The Voltage Clamp (Economic Safety)
 
-**The Result:** High Buoyancy _forgives_ High Drag.
+In previous versions, a sentence containing multiple paradoxes could generate infinite "Voltage," breaking the internal ATP economy.
 
-### 2. The Light Triad (New Archetypes)
-
-Three new personas have been added to the Prism that specifically leverage these Aerobic Physics:
-
-- **THE BARD:** Rhythm over Logic. Logic tears are "poetic license."
-    
-- **THE GARDENER:** Cultivation over Speed. "Prune the dead, water the living."
-    
-- **THE CLOUD WATCHER:** Zero G. Drag penalties are disabled to allow for drifting thoughts.
+- **The Fix:** `FactStipe` now enforces a hard **10.0V Limit** per sentence. You can break physics, but you cannot break the bank.
     
 
-### 3. Silica vs. Aether (Refined Slurry Protocol)
+### 3. The Deluxe Cortex (Personality Restoration)
 
-The system now distinguishes between two types of "Low Texture" writing:
+The optimization process initially threatened to lobotomize the critique agents. This **Deluxe Build** restores their full jurisdiction:
 
-- **SILICA (Bad):** Low Texture + Low Buoyancy. (Competent but soulless). -> **CRUSH IT.**
+- **Clarence** specifically targets Corporate Speak (and fines you for it).
     
-- **AETHER (Good):** Low Texture + High Buoyancy. (Whimsical and light). -> **ALLOW IT.**
+- **The Baba Yaga** specifically targets Hedging.
+    
+- **Eloise** specifically targets Dead Metaphors.
+    
+
+### 4. The Nilsson Re-Wire
+
+The logic flow has been re-routed. The **Nilsson Patch** (The Scream) now executes _after_ the **Mirror Trap** but _before_ the **Signature Engine**.
+
+- **Result:** Screaming "LIME IN THE COCONUT" while running at full speed is now correctly identified as **High Velocity/Low Drag** (The Jester) rather than being penalized for repetition.
     
 
 ---
@@ -77,29 +73,13 @@ The system now distinguishes between two types of "Low Texture" writing:
 
 The engine resolves your 5D coordinates + Buoyancy into one of **17 Cognitive Archetypes**.
 
-### The Heavy (High Structure / Survival)
-
-- **THE PALADIN:** Unwavering code. Logic tears are fatal.
+- **THE HEAVY:** Paladin, Engineer, Barbarian (High Structure).
     
-- **THE ENGINEER:** Structural integrity. No poetic license.
+- **THE LIGHT:** Bard, Cloud Watcher, Gardener (High Buoyancy).
     
-- **THE BARBARIAN:** Adjectives are weakness (Drag Multiplier 5.0x).
+- **THE CHAOS:** Jester, Cosmic Trash Panda (High Entropy).
     
-
-### The Light (High Buoyancy / Warmth)
-
-- **THE BARD:** Powered by rhyme and whimsy.
-    
-- **THE CLOUD WATCHER:** Permissible stagnation due to beauty.
-    
-- **THE GARDENER:** Making abstract ideas bloom into sensory details.
-    
-
-### The Chaos (High Entropy / Inversion)
-
-- **THE JESTER:** Paradoxes generate momentum.
-    
-- **THE COSMIC TRASH PANDA:** One man's trash is another raccoon's treasure.
+- **THE VOID:** Ghost, Spy, Horizon Walker (Low Texture).
     
 
 ---
@@ -108,7 +88,7 @@ The engine resolves your 5D coordinates + Buoyancy into one of **17 Cognitive Ar
 
 ### 1. The Signature Engine (Identity)
 
-Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP) plus **BUOYANCY**. It determines the "Physics Mode" (e.g., Draconian, Loose, Inverted, Zero G) applied to the text.
+Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP) + **BUOYANCY**. It determines the "Physics Mode" (e.g., Draconian, Loose, Inverted, Zero G) applied to the text.
 
 ### 2. The Virtual Cortex (The Voices)
 
@@ -120,7 +100,7 @@ A procedural feedback system with four distinct auditors:
     
 - **THE BABA YAGA (The Witch):** Attacks hedging and "sugar." (Trigger: Sycophancy).
     
-- **MICHAEL (The Humanist):** _New in v0.9._ Praises "messy but spirited" vibes. (Trigger: Light Archetypes).
+- **MICHAEL (The Humanist):** Praises "messy but spirited" vibes. (Trigger: Light Archetypes).
     
 
 ### 3. The Lichen Symbiont (Survival)
@@ -133,7 +113,7 @@ It measures the raw physics:
 
 - **Narrative Drag:** Words per Kinetic Action.
     
-- **Toxicity:** O(1) scanning for "Corp Speak" and "Lazy Metaphors."
+- **Toxicity:** **O(1) Singleton Regex** scanning for "Corp Speak" and "Lazy Metaphors."
     
 
 ### 5. The Nilsson Patch (The Override)
@@ -163,11 +143,9 @@ Once the code is in the context window:
         
     - **Slurry Warning:** Differentiating between "Silica" (Bad) and "Aether" (Good).
         
-    - **Intervention:** Specific feedback from the voices (Clarence, Eloise, Michael, The Yaga).
+    - **Intervention:** Specific feedback from the voices.
         
     - **Instruction Block:** A copy-paste block of constraints to guide your next generation.
         
 
-**LICENSE:** Creative Commons Attribution. 
-**ARCHITECTS:** James Taylor, Andrew Edmark. 
-**AUDITORS:** SLASH.
+**LICENSE:** Creative Commons Attribution. **ARCHITECTS:** James Taylor, Andrew Edmark. **AUDITORS:** SLASH.
