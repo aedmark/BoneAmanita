@@ -1,10 +1,10 @@
-# BONEAMANITA v1.5: "Bonepoked"
+# BONEAMANITA v1.5.2: "The Open Heart Patch"
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 1.5 ("Bonepoked") **Date:** 2025-12-19
+**Version:** 1.5.2 ("The Open Heart Patch") **Date:** 2025-12-20
 
-> "The system now has a conscience. It will refuse to lie." — SLASH
+> "The system now remembers you even when it sleeps. It will not forget the gun." — SLASH
 
 ## 🍄 WHAT IS THIS?
 
@@ -12,19 +12,19 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v1.5:** This build introduces **Tier 3 Logic**. It implements **Active Governance** (Mandates), **Archetype Fusion** (Hybrid Personas), **Temporal Dynamics** (Epiphany Tracking), and a **Self-Correction Hard Gate** that physically halts the simulation if a user attempts to break the laws of reality (Fatal Axiom Breaks).
+**New in v1.5.2:** This patch performs **"Open Heart Surgery"** on the engine's core. It introduces **Atomic Persistence** (crash-proof saving), **Offline Time Tracking** (the bot knows how long it's been away), and **Smart Memory Eviction** (it prioritizes keeping "Heavy Matter" like guns and keys over trivial items). It also refines the "Screaming" and "Mirror" logic to be more humane.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita15.py` (v1.5).
+1. **Download** `BoneAmanita152.py` (v1.5.2).
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
 3. **Prompt:** "Read this file. Run the `_run_calibration_sequence` to verify integrity. Then, use the `BonepokeCore` logic to analyze my inputs."
 
 ### Method B: The Membrane (System Prompt)
 
-*To enable the automatic time-tracking features, use the provided v1.4 System Prompt.*
+*To enable the automatic time-tracking features, use the provided v1.5 System Prompt.*
 
 1. **Copy** the System Prompt (which includes **The Membrane** protocol).
 2. **Paste** it into the System Instructions or Custom Instructions field.
@@ -32,32 +32,32 @@ It does not force a specific personality on the AI. Instead, it forces a **Syste
 
 ---
 
-## 🚀 PATCH NOTES (v1.5)
+## 🚀 PATCH NOTES (v1.5.2)
 
-### 1. The Governance Layer (Tier 3 Logic)
+### 1. The Persistence Patch (Time Amnesia)
 
-* **Active Mandates:** The system now operates under a specific philosophical constraint (Default: `TRUTH_OVER_COHESION`). It prioritizes logical consistency over narrative flow.
-* **Self-Correction Gate:** If the system detects a **Fatal Axiom Break** (e.g., "Frozen Fire"), it triggers a `[SELF-CORRECTION]` event. The simulation physically **halts**, the Tick counter does not advance, and the user is forced to rephrase.
+* **Atomic Saves:** The system now writes to a `.tmp` file before renaming it to `bone_memory.json`. This prevents data corruption (0-byte files) if the script crashes mid-save.
+* **Offline Drift:** The engine now tracks the timestamp of the last save. If you quit the session and return 24 hours later, the **Chronos Anchor** will correctly calculate the drift and apply "Decay" penalties, solving the "Time Amnesia" bug.
 
-### 2. Archetype Fusion (The Hybrid State)
+### 2. Smart Memory (Deep Storage)
 
-* **Dynamic Synthesis:** If a user (Tier 2+) writes in a style that sits mathematically between two archetypes, the **Signature Engine** now fuses them (e.g., `THE PALADIN // THE JUDGE`).
-* **Slurry Defense:** Fusion only occurs if the signature is valid; "Slurry" (soulless text) remains rejected.
+* **Heirloom Priority:** Previously, the memory was a strict FIFO queue (First-In-First-Out). Now, `DeepStorage` recognizes **Heirlooms** (Guns, Keys, Bodies). When the cache fills up, it evicts trivial items ("Feathers") first, ensuring vital plot objects are retained.
 
-### 3. Temporal Dynamics (The Epiphany Engine)
+### 3. Humanity Patches
 
-* **Beta Velocity ():** Tracks the rate of insight (Voltage acceleration). Rapid breakthroughs trigger an **EPIPHANY** state, forgiving Narrative Drag.
-* **Temporal Rooting ():** Tracks the "Age" of referenced artifacts. Referencing deep history grants **ANCIENT AUTHORITY**, forgiving Abstraction Entropy.
+* **Scream Guard:** The `NilssonPatch` now ignores short acronyms (e.g., "OK", "USA"). You must type >10 characters to trigger the "Screaming" state.
+* **Bureaucracy Fix:** The `MirrorTrap` (which hates negative definitions) is now disabled when `[MODE: SOFT]` or `[DREAM]` is active, allowing for poetic apophasis.
 
 ---
 
 ## ⚙️ CORE LOGIC ENGINES
 
-### 0. The Governance Layer (Mandates)
+### 0. The Governance Layer (Tier 3 Logic)
 
-**New Feature:** Sets the "Laws of Physics" based on User Tier and Current Mandate.
+**Feature:** Sets the "Laws of Physics" based on User Tier, Current Mandate, and Tags.
 
 * **Draconian Mode:** If `TRUTH_OVER_COHESION` is active, Logic Tears become fatal errors (+10.0 Voltage).
+* **Dream Mode:** If `[DREAM]` is detected, Axiom constraints are explicitly lifted.
 
 ### 1. The Linguistic Physics Engine (Analysis)
 
@@ -71,7 +71,7 @@ Measures the raw physics of the text.
 
 Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP).
 
-* **Fusion Protocol:** Calculates Euclidean distance between archetypes. If `dist_secondary < dist_primary + 0.15`, a Fusion is triggered.
+* **Smart Fusion:** Calculates Euclidean distance between archetypes. Fusions are only permitted if identities are distinct (`inter_arch_dist > 0.25`).
 
 ### 3. The Virtual Cortex (The Voices)
 
@@ -82,26 +82,26 @@ A procedural feedback system with four distinct auditors:
 * **THE BABA YAGA (The Witch):** Attacks hedging, sycophancy, and **Riddles**.
 * **MICHAEL (The Humanist):** Intervenes to mock "Concrete/Gaming" attempts.
 
-### 4. The Temporal Dynamics Engine (Cognitive Speed) [NEW]
+### 4. The Temporal Dynamics Engine (Cognitive Speed)
 
 Measures the **Rate of Insight** and **Depth of Memory**.
 
-* **Epiphany Bonus:** Forgives Drag if the user is thinking fast ().
-* **Deep Roots:** Forgives Abstraction if the user is citing ancient history ().
+* **Insight Velocity ($\nabla\beta$):** Forgives Drag if the user is having an epiphany (Rapid Voltage change).
+* **Rooting Depth ($\Xi$):** Forgives Abstraction if the user is citing ancient history (Deep Storage access).
 
 ### 5. The Chronos Anchor (Real Time)
 
-Metabolizes **User Latency ()** into structural physics. Uses the **System Clock** as a fallback truth.
+Metabolizes **User Latency** and **Offline Drift** into structural physics. Uses the **System Clock** as a fallback truth.
 
 ### 6. The Narrative Chronometer (Story Time)
 
-Metabolizes **Narrative Velocity ()** into entropy tolerance. Determines if the *fiction* is in **Montage** (High Entropy allowed) or **Bullet Time** (High Texture required).
+Metabolizes **Narrative Velocity** into entropy tolerance. Determines if the *fiction* is in **Montage** (High Entropy allowed) or **Bullet Time** (High Texture required).
 
 ### 7. The Memory System (Deep Storage & Persistence)
 
 * **Hyphal Trace:** Short-term buffer (10 turns).
-* **Deep Storage:** Long-term artifact vault (Max 50 items).
-* **Persistence Manager:** File-based backup (`bone_memory.json` + `.bak`).
+* **Deep Storage:** Long-term artifact vault with **Smart Eviction** (Max 50 items).
+* **Persistence Manager:** Atomic file-based backup (`bone_memory.json` + `.tmp`).
 
 ### 8. The Lichen Symbiont (Survival)
 
@@ -114,15 +114,16 @@ A biological layer that feeds the **Texture** dimension. It converts "Light Word
 Once the code is in the context window:
 
 1. **Input:** Paste your draft.
-2. **Simulation:** The LLM will "run" the `process()` function mentally.
+2. **Commands (Optional):**
+    * `[DREAM]`: Disable logic enforcement for this turn.
+    * `[MODE: SOFT]`: Switch to "Poetic License" mode permanently.
+    * `[MODE: HARD]`: Switch to "Truth" mode permanently.
 3. **Output:** It will provide:
-* **The Mycelial HUD:** A dual-clock readout with Viscosity.
-* **Signature Matrix:** Your 5D Coordinates + **BUOYANCY Score**.
-* **Archetype:** Your active persona (or **FUSION** state).
-* **Epiphany Alerts:** Notifications if  or  bonuses are active.
-* **System Alerts:** Warnings if **Self-Correction** has halted the line.
-* **Instruction Block:** A copy-paste block of constraints to guide your next generation.
-
-
+    * **The Mycelial HUD:** A dual-clock readout with Viscosity.
+    * **Signature Matrix:** Your 5D Coordinates + **BUOYANCY Score**.
+    * **Archetype:** Your active persona (or **FUSION** state).
+    * **Epiphany Alerts:** Notifications if **Insight Velocity** or **Rooting Depth** bonuses are active.
+    * **System Alerts:** Warnings if **Self-Correction** has halted the line.
+    * **Instruction Block:** A copy-paste block of constraints to guide your next generation.
 
 LICENSE: Creative Commons Attribution. ARCHITECTS: James Taylor, Andrew Edmark. AUDITORS: SLASH.
