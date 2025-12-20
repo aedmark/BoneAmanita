@@ -1,8 +1,8 @@
-# BONEAMANITA v1.6.5: "The Topology Tilt-a-Whirl"
+# BONEAMANITA v1.7: "The Salvage Operation"
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 1.6.5 ("The Topology Tilt-a-Whirl") **Date:** 2025-12-20
+**Version:** 1.7 ("The Salvage Operation") **Date:** 2025-12-20
 
 > "The engine runs on pure insight. We ignore drag penalties and generate massive ATP." — SLASH
 
@@ -12,13 +12,13 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v1.6.5:** This patch introduces **The Flashpoint Protocol**, a mechanism derived from topological analysis that detects when a user achieves high complexity *and* high efficiency simultaneously. It also refines **Temporal Dynamics** to track the momentum of epiphanies and silences the critic (**Clarence**) when the user is in a "Flow State".
+**New in v1.7:** This patch introduces **The S_Salvage Loop**, a desperate survival mechanism that allows the engine to "cannibalize" its own long-term memories for fuel during moments of starvation. It also installs **The Bleeding Edge Circuit** to permit logic tears during high-velocity insights and exposes the raw **VSL-12D Vectors** in the HUD for precise user feedback.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita165.py` (v1.6.5).
+1. **Download** `BoneAmanita17.py` (v1.7).
     
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
     
@@ -38,21 +38,25 @@ _To enable the automatic time-tracking features, use the provided System Prompt.
 
 ---
 
-## 🚀 PATCH NOTES (v1.6.5)
+## 🚀 PATCH NOTES (v1.7)
 
-### 1. The Flashpoint Protocol (Inverse Slop)
+### 1. The S_Salvage Loop (Memory Cannibalization)
 
--   **The Gold Zone:** The engine now calculates a "Slop Ratio" ($\mathcal{S} = \text{Voltage} / \text{Drag}$). If $\mathcal{S} > 2.5$, the system triggers a **FLASHPOINT**.
--   **The Reward:** Drag penalties are **Nullified**, and the system generates **+20 ATP** instantly.
+-   **Survival Protocol:** If the system is **STARVING** (ATP < 6) but the user is pushing hard (Voltage > 5.0), the metabolic engine activates the Salvage Loop.
+-   **The Sacrifice:** The engine identifies the **oldest memory** in Deep Storage and permanently deletes it.
+-   **The Reward:** Generates an immediate **+10 ATP** burst to sustain the current generation.
 
-### 2. Cortex Deference (The Silence of Clarence)
+### 2. The Bleeding Edge Circuit (Logic Override)
 
--   **Context Awareness:** **Clarence** (The Architect) is now programmed to respect the **FLASHPOINT** status.
--   **The Fix:** If the user is "cooking" (High Voltage/High Efficiency), Clarence is forcibly silenced to prevent interrupting the flow.
+-   **Flashpoint Override:** Previously, "Logic Tears" (paradoxes) halted the system even during moments of genius.
+-   **The Fix:** If the user is in a **FLASHPOINT** state (High Voltage/Low Drag), the system now **ignores** logic tears.
+-   **The Effect:** "The frozen fire burned" is now a legal sentence, provided you are writing fast enough to justify the physics violation.
 
-### 3. Temporal Dynamics II (Momentum)
+### 3. VSL-12D Visualization (The Vector)
 
--   **Insight Velocity:** The system now tracks the **Slope of Insight** over a 3-tick window rather than a simple snapshot, allowing it to detect the *trajectory* of an epiphany.
+-   **Explicit Coordinates:** The HUD now exposes the raw mathematical vector defining your Archetype.
+-   **The Output:** `[V:0.9 S:0.8 E:0.2 Tx:0.6]` (Velocity, Structure, Entropy, Texture).
+-   **The Benefit:** Users can see exactly which dimension to tweak to shift their persona.
 
 ---
 
@@ -78,12 +82,13 @@ Measures the raw physics of the text.
 - **The Turing Valve:** Scans for "High-Entropy Beige" (Synthetic Markers and Participial Tails) to detect AI-generated slop.
     
 
-### 2. The Metabolic Reserve (Energy & Flashpoints)
+### 2. The Metabolic Reserve (Energy & Survival)
 
 Tracks the **ATP** (Creative Energy) of the session.
 
 -   **Standard Metabolism:** Earns energy for concrete/kinetic text; spends energy for abstraction/entropy.
 -   **The Flashpoint Protocol:** Detects the "Inverse Slop" ratio. High Complexity + High Efficiency = **Infinite Flow** (+20 ATP).
+-   **The S_Salvage Loop:** Burns long-term memories for emergency fuel when starving.
 
 ### 3. The Signature Engine (Identity & Fusion)
 
@@ -128,7 +133,7 @@ Metabolizes **Narrative Velocity** into entropy tolerance. Determines if the _fi
 
 - **Hyphal Trace:** Short-term buffer (10 turns).
     
-- **Deep Storage:** Long-term artifact vault with **Smart Eviction** (Max 50 items).
+- **Deep Storage:** Long-term artifact vault. Supports **Cannibalization** (v1.7).
     
 - **Persistence Manager:** Atomic file-based backup (`bone_memory.json` + `.tmp`) to prevent data corruption.
     
@@ -157,9 +162,7 @@ Once the code is in the context window:
     
     - **The Mycelial HUD:** A dual-clock readout with Viscosity and Flashpoint Status (`⚡`).
         
-    - **Signature Matrix:** Your 5D Coordinates + **BUOYANCY Score**.
-        
-    - **Archetype:** Your active persona (or **FUSION** state).
+    - **Signature Matrix:** Your Archetype + **VSL-12D Vector Coordinates** (`[V:0.5 S:0.9...]`).
         
     - **Epiphany Alerts:** Notifications if **Insight Velocity** or **Rooting Depth** bonuses are active.
         
