@@ -1,10 +1,10 @@
-# BONEAMANITA v1.4.5: The Butcher & The Well - Fortified (SLASH AUDITED)
+# BONEAMANITA v1.4.7: Time Sync + SLASH Refactor
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 1.4.5 ("The Fortified Strain") **Date:** 2025-12-19
+**Version:** 1.4.7 ("The Refactored Strain") **Date:** 2025-12-19
 
-> "The engine now remembers where you hid the gun. And it knows that water is wet." — SLASH
+> "The engine now cleans its plate, respects the poets, and remembers to back up its files." — SLASH
 
 ## 🍄 WHAT IS THIS?
 
@@ -12,13 +12,13 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v1.4.5:** This build is a **Persistence & Integrity Patch**. It introduces **Persistence Manager** (File-Based Memory), **Smart Strip** (Dyslexia Cure), and **Zeus Patch** (Entity Recognition Fix).
+**New in v1.4.7:** This build is a **Structural & Cognitive Refactor**. It introduces the **Swanson Cleaner** (Robust Tokenization), **Poetic License** (Context-Aware Logic), **Safe Persistence** (Backup Protocols), and centralized tuning via **PhysicsConstants**.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita145.py` (v1.4.5).
+1. **Download** `BoneAmanita147.py` (v1.4.7).
     
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
     
@@ -38,35 +38,22 @@ _To enable the automatic time-tracking features, use the provided v1.4 System Pr
 
 ---
 
-## 🚀 PATCH NOTES (v1.4.5)
+## 🚀 PATCH NOTES (v1.4.7)
 
-### 1. The Persistence Manager (Long-Term Memory)
+### 1. The Pinker Refactor (Cognitive Ergonomics)
 
-- **The Problem:** The "Amnesiac Bot." Restarting the script erased all memories, meaning the bot forgot significant objects between sessions.
-    
-- **The Patch:** **JSON Cryostasis**. The system now serializes `DeepStorage` artifacts and `TheCodex` registry into a local file (`bone_memory.json`) at the end of every turn, ensuring object permanence across reboots.
-    
+-   **The Swanson Cleaner:** A new, robust text cleaner (`TheLexicon.swanson_clean`) that strips all punctuation and normalizes whitespace. It prevents "Punctuation Blindness" (where "Stone," was not recognized as "Stone").
+-   **Centralized Constants:** All magic numbers (weights, thresholds) have been moved to `PhysicsConstants` for easier tuning.
 
-### 2. The Smart Strip (Dyslexia Cure)
+### 2. The Fuller Refactor (System Integrity)
 
-- **The Problem:** The "Glass/Glas" Glitch. Naive plural stripping corrupted words ending in 's' (e.g., "Glass" -> "Glas").
-    
-- **The Patch:** **Centralized Lemmatization**. Implemented `TheLexicon.smart_strip` to protect double-s words and short words, ensuring memory integrity.
-    
+-   **Deep Storage Cap:** Implemented a FIFO limit (50 items) on the Long-Term Memory to prevent infinite memory leaks.
+-   **Safe Persistence:** The `PersistenceManager` now creates `.bak` backup files before saving, preventing data corruption if the process crashes during a write.
 
-### 3. The Zeus Patch (Entity Recognition)
+### 3. The Schur Refactor (Humanity)
 
-- **The Problem:** The First-Word Blindspot. `TheCodex` ignored capitalized words at the start of sentences, missing entities like "Zeus".
-    
-- **The Patch:** **Look-Behind Logic**. The index-0 restriction was removed, and the `ignore_list` was expanded to catch common sentence starters, allowing entities to be tracked anywhere.
-    
-
-### 4. Architectural Hygiene
-
-- **The Problem:** Cryptic variable names and console-bound output.
-    
-- **The Patch:** Refactored `process` for readability (`token_data`, `full_metrics`) and updated `MycelialDashboard` to return modular string reports via `generate_report`.
-    
+-   **Poetic License:** The Logic Engine (`FactStipe`) now distinguishes between "High Kinetic" (Action) and "Low Kinetic" (Poetry). Paradoxes in poetic text are now treated as **Voltage** (Energy) rather than **Errors**.
+-   **Onboarding Tooltip:** The Dashboard now includes a helpful tip for the first 5 turns to explain "Viscosity" to new users.
 
 ---
 
@@ -119,9 +106,9 @@ Metabolizes **Narrative Velocity ($\vec{v}_{n}$)** into entropy tolerance. Deter
 
 - **Hyphal Trace:** Short-term buffer (10 turns).
     
-- **Deep Storage:** Long-term artifact vault (Infinite).
+- **Deep Storage:** Long-term artifact vault (Max 50 items).
     
-- **Persistence Manager:** File-based backup (`bone_memory.json`).
+- **Persistence Manager:** File-based backup (`bone_memory.json` + `.bak`).
     
 
 ### 7. The Lichen Symbiont (Survival)
