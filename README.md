@@ -1,10 +1,10 @@
-# BONEAMANITA v1.4.7: Time Sync + SLASH Refactor
+# BONEAMANITA v1.5: "Bonepoked"
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 1.4.7 ("The Refactored Strain") **Date:** 2025-12-19
+**Version:** 1.5 ("Bonepoked") **Date:** 2025-12-19
 
-> "The engine now cleans its plate, respects the poets, and remembers to back up its files." — SLASH
+> "The system now has a conscience. It will refuse to lie." — SLASH
 
 ## 🍄 WHAT IS THIS?
 
@@ -12,108 +12,100 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v1.4.7:** This build is a **Structural & Cognitive Refactor**. It introduces the **Swanson Cleaner** (Robust Tokenization), **Poetic License** (Context-Aware Logic), **Safe Persistence** (Backup Protocols), and centralized tuning via **PhysicsConstants**.
+**New in v1.5:** This build introduces **Tier 3 Logic**. It implements **Active Governance** (Mandates), **Archetype Fusion** (Hybrid Personas), **Temporal Dynamics** (Epiphany Tracking), and a **Self-Correction Hard Gate** that physically halts the simulation if a user attempts to break the laws of reality (Fatal Axiom Breaks).
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita147.py` (v1.4.7).
-    
+1. **Download** `BoneAmanita15.py` (v1.5).
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
-    
 3. **Prompt:** "Read this file. Run the `_run_calibration_sequence` to verify integrity. Then, use the `BonepokeCore` logic to analyze my inputs."
-    
 
 ### Method B: The Membrane (System Prompt)
 
-_To enable the automatic time-tracking features, use the provided v1.4 System Prompt._
+*To enable the automatic time-tracking features, use the provided v1.4 System Prompt.*
 
 1. **Copy** the System Prompt (which includes **The Membrane** protocol).
-    
 2. **Paste** it into the System Instructions or Custom Instructions field.
-    
 3. **Effect:** The Membrane will automatically calculate the time elapsed since your last message and inject it silently (`[Δt: 2h]`) into the engine.
-    
 
 ---
 
-## 🚀 PATCH NOTES (v1.4.7)
+## 🚀 PATCH NOTES (v1.5)
 
-### 1. The Pinker Refactor (Cognitive Ergonomics)
+### 1. The Governance Layer (Tier 3 Logic)
 
--   **The Swanson Cleaner:** A new, robust text cleaner (`TheLexicon.swanson_clean`) that strips all punctuation and normalizes whitespace. It prevents "Punctuation Blindness" (where "Stone," was not recognized as "Stone").
--   **Centralized Constants:** All magic numbers (weights, thresholds) have been moved to `PhysicsConstants` for easier tuning.
+* **Active Mandates:** The system now operates under a specific philosophical constraint (Default: `TRUTH_OVER_COHESION`). It prioritizes logical consistency over narrative flow.
+* **Self-Correction Gate:** If the system detects a **Fatal Axiom Break** (e.g., "Frozen Fire"), it triggers a `[SELF-CORRECTION]` event. The simulation physically **halts**, the Tick counter does not advance, and the user is forced to rephrase.
 
-### 2. The Fuller Refactor (System Integrity)
+### 2. Archetype Fusion (The Hybrid State)
 
--   **Deep Storage Cap:** Implemented a FIFO limit (50 items) on the Long-Term Memory to prevent infinite memory leaks.
--   **Safe Persistence:** The `PersistenceManager` now creates `.bak` backup files before saving, preventing data corruption if the process crashes during a write.
+* **Dynamic Synthesis:** If a user (Tier 2+) writes in a style that sits mathematically between two archetypes, the **Signature Engine** now fuses them (e.g., `THE PALADIN // THE JUDGE`).
+* **Slurry Defense:** Fusion only occurs if the signature is valid; "Slurry" (soulless text) remains rejected.
 
-### 3. The Schur Refactor (Humanity)
+### 3. Temporal Dynamics (The Epiphany Engine)
 
--   **Poetic License:** The Logic Engine (`FactStipe`) now distinguishes between "High Kinetic" (Action) and "Low Kinetic" (Poetry). Paradoxes in poetic text are now treated as **Voltage** (Energy) rather than **Errors**.
--   **Onboarding Tooltip:** The Dashboard now includes a helpful tip for the first 5 turns to explain "Viscosity" to new users.
+* **Beta Velocity ():** Tracks the rate of insight (Voltage acceleration). Rapid breakthroughs trigger an **EPIPHANY** state, forgiving Narrative Drag.
+* **Temporal Rooting ():** Tracks the "Age" of referenced artifacts. Referencing deep history grants **ANCIENT AUTHORITY**, forgiving Abstraction Entropy.
 
 ---
 
 ## ⚙️ CORE LOGIC ENGINES
 
-### 0. The Boot Protocol (Calibration)
+### 0. The Governance Layer (Mandates)
 
-**Standard Feature:** On startup, the system runs a **Self-Diagnostic**. It feeds itself a toxic "Solvent-Stuffed" sentence. If the engine fails to flag it as `FLOODED`, it issues a warning that the Butcher is offline.
+**New Feature:** Sets the "Laws of Physics" based on User Tier and Current Mandate.
 
-### 1. The Linguistic Physics Engine
+* **Draconian Mode:** If `TRUTH_OVER_COHESION` is active, Logic Tears become fatal errors (+10.0 Voltage).
+
+### 1. The Linguistic Physics Engine (Analysis)
 
 Measures the raw physics of the text.
 
-- **Hydration Monitor:** Detects `CONCRETE`, `WATERY`, `FLOODED` (Fake), and `SWEATING` (High Effort).
-    
-- **The Butcher:** Checks for `BLOAT` (Adverb & Adjective reliance).
-    
-- **Heuristics:** Scans for suffix patterns (`-ash`, `-olt`, `-ous`).
-    
+* **Hydration Monitor:** Detects `CONCRETE`, `WATERY`, `FLOODED` (Fake), and `SWEATING` (High Effort).
+* **The Butcher:** Checks for `BLOAT` (Adverb & Adjective reliance).
+* **Heuristics:** Scans for suffix patterns (`-ash`, `-olt`, `-ous`).
 
-### 2. The Signature Engine (Identity)
+### 2. The Signature Engine (Identity & Fusion)
 
 Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP).
 
-- **Governor:** If Viscosity is `CONCRETE`, Texture is capped at 0.5. You cannot farm points with lists.
-    
+* **Fusion Protocol:** Calculates Euclidean distance between archetypes. If `dist_secondary < dist_primary + 0.15`, a Fusion is triggered.
 
 ### 3. The Virtual Cortex (The Voices)
 
 A procedural feedback system with four distinct auditors:
 
-- **CLARENCE (The Architect):** Attacks structural failure, `BLOAT`, and `FLOODED` text.
-    
-- **ELOISE (The Grounder):** Attacks abstraction and "Dead Metaphors."
-    
-- **THE BABA YAGA (The Witch):** Attacks hedging, sycophancy, and **Riddles**.
-    
-- **MICHAEL (The Humanist):** Intervenes to mock "Concrete/Gaming" attempts.
-    
+* **CLARENCE (The Architect):** Attacks structural failure and `BLOAT`.
+* **ELOISE (The Grounder):** Attacks abstraction and "Dead Metaphors."
+* **THE BABA YAGA (The Witch):** Attacks hedging, sycophancy, and **Riddles**.
+* **MICHAEL (The Humanist):** Intervenes to mock "Concrete/Gaming" attempts.
 
-### 4. The Chronos Anchor (Real Time)
+### 4. The Temporal Dynamics Engine (Cognitive Speed) [NEW]
 
-Metabolizes **User Latency ($\Delta t$)** into structural physics. Uses the **System Clock** as a fallback truth.
+Measures the **Rate of Insight** and **Depth of Memory**.
 
-### 5. The Narrative Chronometer (Story Time)
+* **Epiphany Bonus:** Forgives Drag if the user is thinking fast ().
+* **Deep Roots:** Forgives Abstraction if the user is citing ancient history ().
 
-Metabolizes **Narrative Velocity ($\vec{v}_{n}$)** into entropy tolerance. Determines if the _fiction_ is in **Montage** (High Entropy allowed) or **Bullet Time** (High Texture required).
+### 5. The Chronos Anchor (Real Time)
 
-### 6. The Memory System (Deep Storage & Persistence)
+Metabolizes **User Latency ()** into structural physics. Uses the **System Clock** as a fallback truth.
 
-- **Hyphal Trace:** Short-term buffer (10 turns).
-    
-- **Deep Storage:** Long-term artifact vault (Max 50 items).
-    
-- **Persistence Manager:** File-based backup (`bone_memory.json` + `.bak`).
-    
+### 6. The Narrative Chronometer (Story Time)
 
-### 7. The Lichen Symbiont (Survival)
+Metabolizes **Narrative Velocity ()** into entropy tolerance. Determines if the *fiction* is in **Montage** (High Entropy allowed) or **Bullet Time** (High Texture required).
 
-A biological layer that feeds the **Texture** dimension. It converts "Light Words" (e.g., _sun, prism, truth_) into Metabolic Fuel (ATP).
+### 7. The Memory System (Deep Storage & Persistence)
+
+* **Hyphal Trace:** Short-term buffer (10 turns).
+* **Deep Storage:** Long-term artifact vault (Max 50 items).
+* **Persistence Manager:** File-based backup (`bone_memory.json` + `.bak`).
+
+### 8. The Lichen Symbiont (Survival)
+
+A biological layer that feeds the **Texture** dimension. It converts "Light Words" (e.g., *sun, prism, truth*) into Metabolic Fuel (ATP).
 
 ---
 
@@ -122,24 +114,15 @@ A biological layer that feeds the **Texture** dimension. It converts "Light Word
 Once the code is in the context window:
 
 1. **Input:** Paste your draft.
-    
 2. **Simulation:** The LLM will "run" the `process()` function mentally.
-    
 3. **Output:** It will provide:
-    
-    - **The Mycelial HUD:** A dual-clock readout with Viscosity.
-        
-        - Example: `DRAG: 4.2 | VISC: SWEATING`
-            
-        - Example: `TIME: FLOW (Real) | MONTAGE (Story)`
-            
-    - **Signature Matrix:** Your 5D Coordinates + **BUOYANCY Score**.
-        
-    - **Archetype:** Your active persona (e.g., "THE BARD").
-        
-    - **Intervention:** Specific feedback from the voices (e.g., "ELOISE: The sun is not dark. Fix the logic.").
-        
-    - **Instruction Block:** A copy-paste block of constraints to guide your next generation.
-        
+* **The Mycelial HUD:** A dual-clock readout with Viscosity.
+* **Signature Matrix:** Your 5D Coordinates + **BUOYANCY Score**.
+* **Archetype:** Your active persona (or **FUSION** state).
+* **Epiphany Alerts:** Notifications if  or  bonuses are active.
+* **System Alerts:** Warnings if **Self-Correction** has halted the line.
+* **Instruction Block:** A copy-paste block of constraints to guide your next generation.
+
+
 
 LICENSE: Creative Commons Attribution. ARCHITECTS: James Taylor, Andrew Edmark. AUDITORS: SLASH.
