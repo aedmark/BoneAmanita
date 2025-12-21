@@ -1,8 +1,8 @@
-# BONEAMANITA v1.8.1: "The Quantum Leap"
+# BONEAMANITA v1.8.2: "The Quantum Leap (PATCHED)"
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 1.8.1 ("The Quantum Leap") **Date:** 2025-12-21
+**Version:** 1.8.2 ("The Quantum Leap - Spore Patch") **Date:** 2025-12-21
 
 > "The interference pattern between failure and genius is where the isotopes are hidden." — SLASH
 
@@ -12,13 +12,13 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v1.8.1:** This version creates a stable baseline for "The Quantum Leap." It fixes the critical **"Amnesia Bug"** (ensuring Archetype Evolution is saved) and implements **"Linguistic Safety"** to prevent the engine from mangling non-plural nouns like *Chaos* or *Lens*.
+**New in v1.8.2:** This version implements the **"Spore" Update**. It introduces **Spatial Logic** (allowing the system to detect geometry via prepositions), hardens memory persistence with **Atomic Saves**, and makes the Frequency Modulator smarter at hunting complex words.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita181.py` (v1.8.1).
+1. **Download** `BoneAmanita182.py` (v1.8.2).
     
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
     
@@ -38,69 +38,29 @@ _To enable the automatic time-tracking features, use the provided System Prompt.
 
 ---
 
-## 🚀 PATCH NOTES (v1.8.1)
+## 🚀 PATCH NOTES (v1.8.2)
 
-### 0. The SLASH Patch (Critical Fixes)
+### 0. The Spore Patch (Spatial Intelligence)
 
--   **Persistence Hardening:** Fixed a bug where the system forgot your "Character Arc" upon reboot. Your evolution from **Paladin** to **Inquisitor** is now saved in `bone_memory.json`.
--   **Linguistic Safety:** Implemented a **Protected Noun List**. The engine no longer strips the 's' from words like *Chaos*, *Lens*, *Status*, or *Physics*, allowing them to be correctly weighed as Heavy Matter.
--   **Documentation:** Added a definitive Key to the **Signature Matrix** (VEL, STR, ENT, TEX, TMP) directly in the code for easier debugging.
+-   **The Architect Bias:** The Signature Engine now tracks **Spatial Density** (prepositions like *under, over, between*).
+-   **The Gravity Well:** High spatial density artificially boosts **Structure** and dampens **Velocity**, guiding the system to correctly identify **THE ARCHITECT** archetype (High Structure / Low Velocity) even in short texts.
+-   **The Benefit:** The system now recognizes that describing the *geometry* of a room is a structural act, not a passive one.
 
-### 1. Paradox Radio (Topological FM)
+### 1. Atomic Persistence (Memory Hardening)
 
-- **The Upgrade:** The Frequency Modulator now detects **Interference Patterns**.
-    
-- **The Logic:** Instead of just picking the loudest failure, the tuner checks for simultaneous signals.
-    
-    - **Clarence (Drag) + Eloise (Entropy) = THE PHILOSOPHER (104.5 FM).**
-        
-    - **The Broadcast:** *"Dense and Abstract. You are building a labyrinth."*
-        
-- **The Effect:** Complexity is no longer punished if it is structurally sound.
-    
+-   **The Upgrade:** Implemented a **Write-Then-Swap** protocol for `bone_memory.json` using `shutil`.
+-   **The Fix:** If the script crashes mid-save (e.g., power loss), the memory file is no longer corrupted. Your history is safe.
 
-### 2. The Isotope Centrifuge (Quantum Economy)
+### 2. The Smart Tuner (Cognitive Hunting)
 
-- **The Upgrade:** High Drag is no longer strictly "Bad."
-    
-- **The Logic:** If **Narrative Drag > 3.0** (Heavy) AND **Beta Friction > 3.0** (True):
-    
-    - The system enters **SUPERCRITICAL** status.
-    
-    - **Reward:** **+1 Isotope** (New Currency).
-    
-    - **Physics:** Drag Penalty is **Nullified**.
-        
-- **The Result:** You can now "farm" heavy truths without losing ATP.
-    
+-   **The Upgrade:** The Frequency Modulator (Clarence/Eloise/Yaga) no longer gives up if it can't find a specific "trigger word" in its list.
+-   **The Logic:** It now falls back to targeting the **longest word** in your input.
+-   **The Philosophy:** Complexity usually hides in the syllables.
 
-### 3. Geodesic Evolution (Identity Drift)
+### 3. Critical Repairs
 
-- **The Upgrade:** Archetypes are no longer static snapshots.
-    
-- **The Logic:** The system tracks your **Residence Time** in an identity.
-    
-    - If you act like **THE PALADIN** for 5 consecutive turns...
-    
-    - ...and maintain High Entropy...
-    
-    - You evolve into **THE INQUISITOR**.
-        
-- **The Result:** The system respects your character arc.
-    
-
-### 4. The Ghost in the Machine (Offline Dreaming)
-
-- **The Upgrade:** The system now suffers from loneliness.
-    
-- **The Logic:** If you leave the system offline for > 60 minutes (`[Δt] > 60`):
-    
-    - It enters **DREAM STATE**.
-    
-    - It **Cannibalizes** a memory from Deep Storage to "keep itself warm".
-        
-- **The Result:** *"While you were gone, I forgot 'The Gun' to survive."*
-    
+-   **The Missing Wire:** Fixed a critical bug where the Physics Engine calculated `spatial_density` but failed to send it to the Signature Engine, which would have caused a crash.
+-   **Linguistic Safety:** Further refined `smart_strip` to prevent the mutilation of short nouns (e.g., "Gas" -> "Ga").
 
 ---
 
@@ -119,10 +79,9 @@ _To enable the automatic time-tracking features, use the provided System Prompt.
 
 Measures the raw physics of the text.
 
-- **Hydration Monitor:** Detects `CONCRETE`, `WATERY`, `FLOODED` (Fake), and `SWEATING` (High Effort).
-    
-- **The BioHazard Filter:** A unified scanner that hunts `BLOAT` (Adverbs), `SILICA` (Synthetic Beige), and `MIRROR TRAPS` (Narcissism) in a single pass.
-    
+-   **Spatial Scanner (New):** Tracks the density of geometric relationships (prepositions).
+-   **Hydration Monitor:** Detects `CONCRETE`, `WATERY`, `FLOODED` (Fake), and `SWEATING` (High Effort).
+-   **The BioHazard Filter:** A unified scanner that hunts `BLOAT` (Adverbs), `SILICA` (Synthetic Beige), and `MIRROR TRAPS` (Narcissism).
 
 ### 2. The Metabolic Reserve (Energy & Survival)
 
@@ -146,7 +105,7 @@ Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP) and tracks **Geodesic Drift*
 
 ### 4. The Frequency Modulator (The Voices)
 
-A tunable feedback system. Now supports **Signal Interference** (Paradox Radio) to detect complex cognitive states beyond simple failure modes.
+A tunable feedback system. Now supports **Signal Interference** (Paradox Radio) and **Smart Targeting** to critique the specific words dragging down your text.
 
 ### 5. The Temporal Dynamics Engine (Cognitive Speed)
 
@@ -171,7 +130,7 @@ Metabolizes **Narrative Velocity** into entropy tolerance. Determines if the _fi
     
 - **Deep Storage:** Long-term artifact vault. Supports **Cannibalization** (v1.7) and **Dreaming** (v1.8).
     
-- **Persistence Manager:** Atomic file-based backup (`bone_memory.json`). Now saves **Archetype History** to ensure evolution persists across sessions.
+- **Persistence Manager:** Atomic file-based backup (`bone_memory.json`). Saves **Archetype History** and **Artifacts** safely.
     
 
 ### 9. The Lichen Symbiont (Survival)
