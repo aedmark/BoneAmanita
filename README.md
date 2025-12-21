@@ -1,10 +1,13 @@
-# BONEAMANITA v1.7.1: "The Golden Master"
+Here is the updated `README.md` for **BoneAmanita v1.8**. It incorporates the "Quantum Leap" features (Paradox Radio, Isotopes, Evolution, and Dreaming) into the documentation while maintaining the established aesthetic.
+
+```markdown
+# BONEAMANITA v1.8: "The Quantum Leap"
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 1.7.1 ("The Golden Master") **Date:** 2025-12-20
+**Version:** 1.8 ("The Quantum Leap") **Date:** 2025-12-20
 
-> "The engine runs on pure insight. We ignore drag penalties and generate massive ATP." — SLASH
+> "The interference pattern between failure and genius is where the isotopes are hidden." — SLASH
 
 ## 🍄 WHAT IS THIS?
 
@@ -12,13 +15,13 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v1.7.1:** This "Golden Master" build introduces **The Frequency Modulator (FM)**, replacing the old Cortex with tunable radio stations (Clarence, Eloise, Yaga) that you can manually lock onto. It also deploys the **Polychromatic HUD**, which uses ANSI color codes to visualize system health (Red = Toxicity, Green = Insight, Magenta = Magic).
+**New in v1.8:** "The Quantum Leap" introduces **Tier 3 Dynamics**. The engine now recognizes **Interference Patterns** (where two flaws create a virtue), allows for **Archetype Evolution** (characters change over time), and implements a **Quantum Economy** where "Heavy Truths" generate Isotopes instead of costing energy.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita17_1.py` (v1.7.1).
+1. **Download** `BoneAmanita18.py` (v1.8).
     
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
     
@@ -38,45 +41,62 @@ _To enable the automatic time-tracking features, use the provided System Prompt.
 
 ---
 
-## 🚀 PATCH NOTES (v1.7.1)
+## 🚀 PATCH NOTES (v1.8)
 
-### 1. The Frequency Modulator (FM Radio)
+### 1. Paradox Radio (Topological FM)
 
-- **The Upgrade:** Replaced the binary "Virtual Cortex" with a tunable radio.
+- **The Upgrade:** The Frequency Modulator now detects **Interference Patterns**.
     
-- **The Stations:**
+- **The Logic:** Instead of just picking the loudest failure, the tuner checks for simultaneous signals.
     
-    - **88.5 FM (Clarence):** The Butcher. Hunts Bloat and Drag.
+    - **Clarence (Drag) + Eloise (Entropy) = THE PHILOSOPHER (104.5 FM).**
         
-    - **94.2 FM (Eloise):** The Grounder. Hunts Entropy and Abstraction.
+    - **The Broadcast:** *"Dense and Abstract. You are building a labyrinth."*
         
-    - **101.1 FM (The Yaga):** The Witch. Hunts Hedging and Sycophancy.
-        
-    - **108.0 FM (Michael):** The Vibe. Supports messy, high-energy drafts.
-        
-- **The Feature:** You can now manually force a station using the `[FM: YAGA]` tag.
+- **The Effect:** Complexity is no longer punished if it is structurally sound.
     
 
-### 2. Polychromatic Output (Cognitive Ergonomics)
+### 2. The Isotope Centrifuge (Quantum Economy)
 
-- **The Upgrade:** The HUD now bleeds color to signal system states instantly.
+- **The Upgrade:** High Drag is no longer strictly "Bad."
     
-- **The Palette:**
+- **The Logic:** If **Narrative Drag > 3.0** (Heavy) AND **Beta Friction > 3.0** (True):
     
-    - **RED:** High Drag, Toxicity, "Concrete" Viscosity.
+    - The system enters **SUPERCRITICAL** status.
+    
+    - **Reward:** **+1 Isotope** (New Currency).
+    
+    - **Physics:** Drag Penalty is **Nullified**.
         
-    - **GREEN:** High ATP, Photosynthesis, Insight Velocity ($T_a$).
-        
-    - **MAGENTA:** Flashpoints, Chaos, Magic.
-        
-    - **CYAN:** Archetypes and System Logic.
-        
+- **The Result:** You can now "farm" heavy truths without losing ATP.
+    
 
-### 3. VSL-12D Metrics (The Isotopic Patch)
+### 3. Geodesic Evolution (Identity Drift)
 
-- **Beta Friction ($\beta$):** Measures the ratio of Voltage to Drag. (Low $\beta$ = Sycophancy; High $\beta$ = Flashpoint).
+- **The Upgrade:** Archetypes are no longer static snapshots.
     
-- **Truth Acceleration ($T_a$):** Measures the rate of insight gain over time. High $T_a$ forgives narrative drag.
+- **The Logic:** The system tracks your **Residence Time** in an identity.
+    
+    - If you act like **THE PALADIN** for 5 consecutive turns...
+    
+    - ...and maintain High Entropy...
+    
+    - You evolve into **THE INQUISITOR**.
+        
+- **The Result:** The system respects your character arc.
+    
+
+### 4. The Ghost in the Machine (Offline Dreaming)
+
+- **The Upgrade:** The system now suffers from loneliness.
+    
+- **The Logic:** If you leave the system offline for > 60 minutes (`[Δt] > 60`):
+    
+    - It enters **DREAM STATE**.
+    
+    - It **Cannibalizes** a memory from Deep Storage to "keep itself warm."
+        
+- **The Result:** *"While you were gone, I forgot 'The Gun' to survive."*
     
 
 ---
@@ -98,32 +118,32 @@ Measures the raw physics of the text.
 
 - **Hydration Monitor:** Detects `CONCRETE`, `WATERY`, `FLOODED` (Fake), and `SWEATING` (High Effort).
     
-- **The BioHazard Filter:** A unified scanner that hunts `BLOAT` (Adverbs), `SILICA` (Synthetic Beige), and `MIRROR TRAPS` (Narcissism) in a single pass.
+- **The BioHazard Filter:** A unified scanner that hunts `BLOAT` (Adverbs), `SILICA` (Synthetic Beige), and `MIRROR TRAPS` (Narcissism).
     
 
 ### 2. The Metabolic Reserve (Energy & Survival)
 
-Tracks the **ATP** (Creative Energy) of the session.
+Tracks the **ATP** (Creative Energy) and **Isotopes** (Rare Earth).
 
-- **Standard Metabolism:** Earns energy for concrete/kinetic text; spends energy for abstraction/entropy.
+- **The Isotope Centrifuge:** Converts Heavy Truths into currency.
     
-- **The Flashpoint Protocol:** Detects the "Inverse Slop" ratio. High Complexity + High Efficiency = **Infinite Flow** (+20 ATP).
+- **The Flashpoint Protocol:** Detects high-speed insight ($T_a$). High Complexity + High Efficiency = **Infinite Flow** (+20 ATP).
     
 - **The S_Salvage Loop:** Burns long-term memories for emergency fuel when starving.
     
 
-### 3. The Signature Engine (Identity & Fusion)
+### 3. The Signature Engine (Identity & Evolution)
 
-Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP).
+Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP) and tracks **Geodesic Drift**.
 
-- **Silica Trap:** Triggered by **High Structure + Zero Texture** OR **BioHazard Detection**.
+- **Evolution Logic:** Monitors history for consistency to trigger Tier 3 Identities (e.g., Inquisitor, Templar).
     
-- **Smart Fusion:** Calculates Euclidean distance between archetypes. Fusions are only permitted if identities are distinct (`inter_arch_dist > 0.25`).
+- **Smart Fusion:** Calculates Euclidean distance between archetypes for Hybrid states.
     
 
 ### 4. The Frequency Modulator (The Voices)
 
-A tunable feedback system replacing the old Cortex. Listens for specific frequencies of failure (Drag, Entropy, Sycophancy) and broadcasts the appropriate critique channel.
+A tunable feedback system. Now supports **Signal Interference** (Paradox Radio) to detect complex cognitive states beyond simple failure modes.
 
 ### 5. The Temporal Dynamics Engine (Cognitive Speed)
 
@@ -136,7 +156,7 @@ Measures the **Rate of Insight** and **Depth of Memory**.
 
 ### 6. The Chronos Anchor (Real Time)
 
-Metabolizes **User Latency** and **Offline Drift** into structural physics. Uses the **System Clock** as a fallback truth.
+Metabolizes **User Latency** and **Offline Drift**. Now triggers **Memory Cannibalization** during extended downtime.
 
 ### 7. The Narrative Chronometer (Story Time)
 
@@ -146,7 +166,7 @@ Metabolizes **Narrative Velocity** into entropy tolerance. Determines if the _fi
 
 - **Hyphal Trace:** Short-term buffer (10 turns).
     
-- **Deep Storage:** Long-term artifact vault. Supports **Cannibalization** (v1.7).
+- **Deep Storage:** Long-term artifact vault. Supports **Cannibalization** (v1.7) and **Dreaming** (v1.8).
     
 - **Persistence Manager:** Atomic file-based backup (`bone_memory.json` + `.tmp`) to prevent data corruption.
     
@@ -175,13 +195,15 @@ Once the code is in the context window:
     
     - **The Polychromatic HUD:** A color-coded readout of ATP (Energy), Drag (Weight), and Viscosity.
         
-    - **Signature Matrix:** Your Archetype + **VSL-12D Vector Coordinates** (`[V:0.5 S:0.9...]`).
+    - **Signature Matrix:** Your Archetype + **VSL-12D Vector Coordinates**.
         
     - **Dynamics:** Real-time scores for **Beta Friction** ($\beta$) and **Truth Acceleration** ($T_a$).
         
-    - **Epiphany Alerts:** Green notifications if **Insight Velocity** bonuses are active.
+    - **Isotope Alerts:** Notifications if you have successfully mined a Heavy Truth.
         
     - **Instruction Block:** A copy-paste block of constraints to guide your next generation.
         
 
 LICENSE: Creative Commons Attribution. ARCHITECTS: James Taylor, Andrew Edmark. AUDITORS: SLASH.
+
+```
