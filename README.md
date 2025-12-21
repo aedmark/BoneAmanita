@@ -1,11 +1,8 @@
-Here is the updated `README.md` for **BoneAmanita v1.8**. It incorporates the "Quantum Leap" features (Paradox Radio, Isotopes, Evolution, and Dreaming) into the documentation while maintaining the established aesthetic.
-
-```markdown
-# BONEAMANITA v1.8: "The Quantum Leap"
+# BONEAMANITA v1.8.1: "The Quantum Leap"
 
 ### A "Physics Engine" Context-File for LLMs
 
-**Version:** 1.8 ("The Quantum Leap") **Date:** 2025-12-20
+**Version:** 1.8.1 ("The Quantum Leap") **Date:** 2025-12-21
 
 > "The interference pattern between failure and genius is where the isotopes are hidden." — SLASH
 
@@ -15,13 +12,13 @@ Here is the updated `README.md` for **BoneAmanita v1.8**. It incorporates the "Q
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It provides the LLM with a concrete set of rules to measure the "weight," "logic," and "momentum" of text.
 
-**New in v1.8:** "The Quantum Leap" introduces **Tier 3 Dynamics**. The engine now recognizes **Interference Patterns** (where two flaws create a virtue), allows for **Archetype Evolution** (characters change over time), and implements a **Quantum Economy** where "Heavy Truths" generate Isotopes instead of costing energy.
+**New in v1.8.1:** This version creates a stable baseline for "The Quantum Leap." It fixes the critical **"Amnesia Bug"** (ensuring Archetype Evolution is saved) and implements **"Linguistic Safety"** to prevent the engine from mangling non-plural nouns like *Chaos* or *Lens*.
 
 ## ⚡ HOW TO DEPLOY (CONTEXT INJECTION)
 
 ### Method A: File Upload (Recommended)
 
-1. **Download** `BoneAmanita18.py` (v1.8).
+1. **Download** `BoneAmanita181.py` (v1.8.1).
     
 2. **Upload** it to your LLM (ChatGPT, Claude, Gemini, etc.).
     
@@ -41,7 +38,13 @@ _To enable the automatic time-tracking features, use the provided System Prompt.
 
 ---
 
-## 🚀 PATCH NOTES (v1.8)
+## 🚀 PATCH NOTES (v1.8.1)
+
+### 0. The SLASH Patch (Critical Fixes)
+
+-   **Persistence Hardening:** Fixed a bug where the system forgot your "Character Arc" upon reboot. Your evolution from **Paladin** to **Inquisitor** is now saved in `bone_memory.json`.
+-   **Linguistic Safety:** Implemented a **Protected Noun List**. The engine no longer strips the 's' from words like *Chaos*, *Lens*, *Status*, or *Physics*, allowing them to be correctly weighed as Heavy Matter.
+-   **Documentation:** Added a definitive Key to the **Signature Matrix** (VEL, STR, ENT, TEX, TMP) directly in the code for easier debugging.
 
 ### 1. Paradox Radio (Topological FM)
 
@@ -94,7 +97,7 @@ _To enable the automatic time-tracking features, use the provided System Prompt.
     
     - It enters **DREAM STATE**.
     
-    - It **Cannibalizes** a memory from Deep Storage to "keep itself warm."
+    - It **Cannibalizes** a memory from Deep Storage to "keep itself warm".
         
 - **The Result:** *"While you were gone, I forgot 'The Gun' to survive."*
     
@@ -118,7 +121,7 @@ Measures the raw physics of the text.
 
 - **Hydration Monitor:** Detects `CONCRETE`, `WATERY`, `FLOODED` (Fake), and `SWEATING` (High Effort).
     
-- **The BioHazard Filter:** A unified scanner that hunts `BLOAT` (Adverbs), `SILICA` (Synthetic Beige), and `MIRROR TRAPS` (Narcissism).
+- **The BioHazard Filter:** A unified scanner that hunts `BLOAT` (Adverbs), `SILICA` (Synthetic Beige), and `MIRROR TRAPS` (Narcissism) in a single pass.
     
 
 ### 2. The Metabolic Reserve (Energy & Survival)
@@ -136,7 +139,7 @@ Tracks the **ATP** (Creative Energy) and **Isotopes** (Rare Earth).
 
 Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP) and tracks **Geodesic Drift**.
 
-- **Evolution Logic:** Monitors history for consistency to trigger Tier 3 Identities (e.g., Inquisitor, Templar).
+- **Evolution Logic:** Monitors `arch_history` for consistency to trigger Tier 3 Identities (e.g., Inquisitor, Templar).
     
 - **Smart Fusion:** Calculates Euclidean distance between archetypes for Hybrid states.
     
@@ -168,7 +171,7 @@ Metabolizes **Narrative Velocity** into entropy tolerance. Determines if the _fi
     
 - **Deep Storage:** Long-term artifact vault. Supports **Cannibalization** (v1.7) and **Dreaming** (v1.8).
     
-- **Persistence Manager:** Atomic file-based backup (`bone_memory.json` + `.tmp`) to prevent data corruption.
+- **Persistence Manager:** Atomic file-based backup (`bone_memory.json`). Now saves **Archetype History** to ensure evolution persists across sessions.
     
 
 ### 9. The Lichen Symbiont (Survival)
@@ -205,5 +208,3 @@ Once the code is in the context window:
         
 
 LICENSE: Creative Commons Attribution. ARCHITECTS: James Taylor, Andrew Edmark. AUDITORS: SLASH.
-
-```
