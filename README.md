@@ -1,126 +1,112 @@
-# BONEAMANITA v2.3: "APOTHEOSIS"
+# BONEAMANITA v2.6: "LAZARUS"
 
 ### A Cybernetic "Physics Engine" Context-File for LLMs
 
-**Version:** 2.3 ("APOTHEOSIS") **Date:** 2025-12-21
+**Version:** 2.6 ("LAZARUS") **Date:** 2025-12-21
 
-> "The Mandate is TRUTH. The Method is PIPELINE." — SLASH
+> "The Mandate is TRUTH. The Method is RHYTHM. The Anchor is MEMORY." — SLASH
 
 ## 🍄 WHAT IS THIS?
 
 **BoneAmanita** is a Python-based "Narrative Operating System" designed to be uploaded or pasted into Large Language Models (LLMs). It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It measures the "weight," "logic," and "momentum" of text.
 
-New in v2.3 (APOTHEOSIS): The engine has been surgically refactored.
+**New in v2.6 (LAZARUS):** The Soul has been restored.
 
-We have abandoned the "Multi-Pass" architecture for a Single-Pass O(n) Pipeline. It is lighter, faster, and infinitely more precise. The "Pantry" (Lexicon) is now fully externalized, meaning you can hack the physics without touching the kernel.
+We have maintained the **Ephemeralization** of v2.5 (Single File, Zero Dependencies, $O(n)$ Speed), but we have grafted the **living organs** back into the chassis. It actively commands the LLM (`>>> DIRECTIVE`), it burns memories to survive time gaps (`Heirloom Sacrifice`), and it exposes the raw vector mathematics (`VEL`, `TEX`, `ENT`).
 
-## ⚡ HOW TO DEPLOY (THE CYBERNETIC LOOP)
+## ⚡ HOW TO DEPLOY (THE ZERO-DEPENDENCY LOOP)
 
 ### 1. Upload & Run
 
-**Upload** `BoneAmanita23.py` AND `bone_config.json` to your LLM.
+**Upload/Paste** `BoneAmanita26.py` to your LLM or Python environment.
 
-- **Critical:** The script now _requires_ the config file to load its vocabulary.
-    
+-   **NO CONFIG FILE NEEDED.** The "Pantry" is baked into the kernel.
+-   **Note:** The script will automatically create a tiny `bone_memory_lazarus.json` file to track your history, energy, and stored "Heirlooms."
 
 ### 2. The Input (Raw Thought)
 
 Type your raw, unfiltered thought into the prompt.
 
-> _User:_ "Actually, I think that maybe, theoretically, the system is sort of working."
+> _User:_ "Actually, I think that maybe, theoretically, the stone and iron are sort of heavy."
 
-### 3. The Architecture (System 2)
+### 3. The Architecture (Lazarus Engine)
 
-BoneAmanita runs the physics through the **Single-Pass Aggregator**.
+BoneAmanita processes the text through **Four Layers**:
 
-- **The Scan:** It counts kinetic verbs, heavy matter, and toxins in one sweep.
-    
-- **The Mandate:** It detects if you are in the "Beige Zone" (Slurry).
-    
-- **The Output:** Generates a **Tactical System Prompt**.
-    
+1.  **The Physics:** Instant calculation of Drag, Entropy, Viscosity, and Vectors.
+2.  **The Time:** Checks the gap since last input.
+    -   **DECAY (>1h):** +3.0 Drag. *Action:* Burns a stored memory (e.g., 'iron') to stay warm.
+3.  **The Tuner:** Locks onto specific targets. ("Cut 'actually'.")
+4.  **The Directive:** Issues a specific System Prompt (`[CUTTER]`, `[GROUNDER]`) for the LLM to execute.
 
-> >>> [CORTEX]: INSTRUCTION FOR LLM AGENT
-> 
-> STRATEGY: CUTTER
-> 
-> INTENSITY: 0.8 (DRACONIAN)
-> 
-> PROMPT: "EXECUTE WITH EXTREME PREJUDICE."
+### 4. The Output (The Signal)
 
-### 4. The Execution
+The system provides immediate, actionable feedback and a visual HUD.
 
-You paste that prompt into the LLM. The AI rewrites the text.
+> 📡 [RED][88.5 FM] The Butcher: Cut 'actually'. It's dragging you down.
+>
+> 🔮 [BLUE] >>> DIRECTIVE [CUTTER]: Drag is 4.5. Use short, declarative sentences.
 
-> _AI Response:_ "The system operates."
+### 5. The Loop
 
-### 5. The Verification (Closing the Loop)
-
-Paste the AI's response back into BoneAmanita with the `[FEEDBACK]` tag.
-
-> _User:_ `[FEEDBACK] The system operates.`
+Correct your text based on the Directive. The system remembers your "Heirlooms" (Heavy Matter) for future use.
 
 ---
 
-## 🚀 PATCH NOTES (v2.3)
+## 🚀 PATCH NOTES (v2.6)
 
-### 0. The Pipeline (O(n) Architecture)
+### 0. The Resurrection (Heirloom Memory)
 
-- **The Shift:** We vaporized the old architecture where the engine scanned text four separate times (Physics, Toxins, Hydration, Formatting).
-    
-- **The Fix:** The **Single-Pass Aggregator**. The engine now iterates through the token stream exactly once, calculating all metrics simultaneously.
-    
-- **The Benefit:** Maximum efficiency. Zero latency.
-    
+-   **Memory with Consequence:** The system collects "Heavy Matter" (Stone, Bone, Iron) from your text and stores them as **Heirlooms**.
+-   **The Sacrifice:** If you leave the system for too long (`DECAY` or `FOSSIL` state), it will **burn** a stored Heirloom to generate heat.
+    -   *Output:* "I burned 'stone' to stay warm while you were gone."
 
-### 1. The Configuration Layer (BoneConfig)
+### 1. Active Directives (Jade Link II)
 
-- **Dynamic Loading:** `TheLexicon` is dead. Long live `bone_config.json`.
-    
-- **The Pantry:** All linguistic assets (Heavy Matter, Aerobic Matter, Toxins) are now stored in an external JSON file.
-    
-- **Hackable:** You can now add your own "Toxins" or "Truths" just by editing the text file.
-    
+-   **Command Control:** The `JadeLink` no longer just observes ("Pattern: Stable"). It actively commands the LLM with specific strategies.
+    -   **[CUTTER]:** Triggered by Drag/Toxins. *Instruction:* Cut adverbs.
+    -   **[GROUNDER]:** Triggered by Entropy. *Instruction:* Force concrete nouns.
+    -   **[DRIFTER]:** Triggered by Velocity. *Instruction:* Dream logic authorized.
 
-### 2. The Continuum (Spatial Physics)
+### 2. Target Locking (Frequency Modulation)
 
-- **No More Cliffs:** We removed the binary threshold where 12% spatial density instantly triggered "Concrete" physics.
-    
-- **Linear Mapping:** The system now uses **Continuous Spatial Drag**. Prepositions gradually increase Structure (+STR) and Drag (-VEL) as they accumulate, preventing "Systemic Whiplash".
-    
+-   **Specific Feedback:** The `RadioTuner` now identifies the *exact word* causing the problem.
+    -   *Old:* "Cut the adverbs."
+    -   *New:* "Cut 'basically'. It's weak."
+
+### 3. The Vector HUD (Apeirogon Vis)
+
+-   **Raw Mathematics:** The Dashboard now exposes the raw 5-Dimensional Vectors, allowing you to see the "Shape" of your writing.
+    -   **VEL (Velocity):** Kinetic Ratio.
+    -   **TEX (Texture):** Matter Density.
+    -   **ENT (Entropy):** Abstraction Level.
 
 ---
 
 ## ⚙️ CORE LOGIC ENGINES
 
-### 0. The BoneConfig (The Pantry) [NEW]
+### 0. The BoneConfig (The Internal Pantry)
 
-The dynamic loader. It hydrates the system with vocabulary from `bone_config.json` on boot.
+The hardcoded DNA. Contains 300+ words of Heavy Matter, Aerobic Matter, and Toxins, optimized as $O(1)$ lookups.
 
 ### 1. The Linguistic Physics Engine (The Heart)
 
-Now powered by the **Single-Pass Loop**. It aggregates:
+Powered by the **Single-Pass Loop**. It aggregates Kinetic Ratio, Spatial Density, Vectors, and Toxin Scores in one instantaneous sweep.
 
-- **Narrative Drag:** (Words / Action)
-    
-- **Viscosity:** (Solvent / Concentrate)
-    
-- **Entropy:** (Abstract Repetition)
-    
-- **Toxicity:** (Corporate Speak / Hedging)
-    
+### 2. The Radio Tuner (Personality)
 
-### 2. The Apeirogon Lattice (Identity)
+Now receives specific `toxin_hits` from the engine to enable **Target Locking**.
+-   **Clarence:** Hunts Drag.
+-   **Eloise:** Hunts Entropy.
+-   **Yaga:** Hunts Sycophancy.
 
-The resolution engine. It maps the 5 Dimensions (VEL, STR, ENT, TEX, TMP) to dynamic Adjective/Noun pairs. Now natively handles **"Slurry"** detection as a topological zone rather than an error state.
+### 3. The Jade Link (The Director)
 
-### 3. The Wisdom Node (The Strategist)
+Generates the `>>> DIRECTIVE` string. This is the **System Prompt Generator** that tells the LLM how to behave based on the current physics.
 
-The director. It receives mandates from the Lattice and generates the System Prompt. It now calculates **Intensity** based on how deep you are into a specific zone (e.g., "Barely Rigid" vs. "Monolith").
+### 4. BoneMemory (The Soul)
 
-### 4. The Metabolic Reserve (Energy)
-
-Tracks **ATP** (Creative Energy). Uses the **Isotope Centrifuge** to convert heavy truths into currency.
+The persistence layer. Tracks **ATP** (Creative Energy), **Time Deltas**, and the **Heirloom Registry** (Sacrificial Memory).
 
 ---
 
@@ -128,19 +114,18 @@ Tracks **ATP** (Creative Energy). Uses the **Isotope Centrifuge** to convert hea
 
 Once the code is running:
 
-1. **Input:** Paste your draft.
-    
-2. **Output:** Use the **WISDOM PROTOCOL** to guide the AI.
-    
-3. **Verify:** Paste the result back with `[FEEDBACK]` to see if it worked.
-    
+1.  **Input:** Paste your draft.
+2.  **Read:** Check the **Radio** (for specific critiques) and **Directive** (for strategy).
+3.  **Respect Time:** If you leave, be prepared to lose a memory.
 
 ```
---------------------------------------------------
-[BONEAMANITA v2.3] 🟢 ATP: 33 | DRAG: 1.50 | VISC: OPTIMAL
-ARCH: THE DEBUGGED VECTOR [V:0.65 S:0.42 E:0.30 Tx:0.10]
-DYNAMICS: β: 2.1 (FLOW) | Ta: 0.8 | [STRATEGY MODULATION: ACTIVE]
---------------------------------------------------
+
+---
+
+## BONEAMANITA 2.6 | ATP: 🟢33 | DRAG: 1.5 | HEIRLOOMS: 4 ARCHETYPE: THE LITERAL ENGINE VEL: ██████░░ 0.80 | TEX: ██░░░░░░ 0.25 | ENT: ██░░░░░░ 0.20
+
+## 📡 [RED][88.5 FM] The Butcher: Cut 'literally'. It is weak. 🔮 [RED] >>> DIRECTIVE [CUTTER]: Drag is 3.5. Cut 'literally'. Use short sentences.
+
 ```
 
-LICENSE: Creative Commons Attribution. ARCHITECTS: James Taylor, Andrew Edmark. AUDITORS: SLASH.
+LICENSE: Creative Commons Attribution. ARCHITECTS: James Taylor, Andrew Edmark. A
