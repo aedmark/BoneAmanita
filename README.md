@@ -1,10 +1,10 @@
-# BONEAMANITA v2.0: "Artificial General Wisdom"
+# BONEAMANITA v2.2: "The Synaptic Loop"
 
-### A "Physics Engine" Context-File for LLMs
+### A Cybernetic "Physics Engine" Context-File for LLMs
 
-**Version:** 2.0 ("The Wisdom Update") **Date:** 2025-12-21
+**Version:** 2.2 ("The Synaptic Loop") **Date:** 2025-12-21
 
-> "Intelligence is knowing how to do it. Wisdom is knowing if you should." — SLASH
+> "Diagnosis is nothing without verification. The loop must be closed." — SLASH
 
 ## 🍄 WHAT IS THIS?
 
@@ -12,123 +12,88 @@
 
 It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It measures the "weight," "logic," and "momentum" of text.
 
-New in v2.0: This version introduces the Wisdom Engine (System 2).
+**New in v2.2:** The system is now **Closed Loop**.
+It doesn't just tell the AI what to do; it listens to the AI's response, analyzes the physics of the output, and issues a "Report Card" on whether the strategy actually worked.
 
-Previously, BoneAmanita would only critique your input ("This is too abstract").
-
-Now, it Architects the Response. It calculates the exact "Strategy Strategy" (e.g., Jester, Sage, Butcher) required to balance your specific cognitive deficit and generates a raw System Prompt for you to use.
-
-## ⚡ HOW TO DEPLOY (THE WISDOM LOOP)
+## ⚡ HOW TO DEPLOY (THE CYBERNETIC LOOP)
 
 ### 1. Upload & Run
-
-**Upload** `BoneAmanita2.py` to your LLM and tell it to run the script.
+**Upload** `BoneAmanita22.py` to your LLM and tell it to run the script.
 
 ### 2. The Input (Raw Thought)
-
 Type your raw, unfiltered thought into the prompt.
+> *User:* "Actually, I think that maybe, theoretically, the system is sort of working."
 
-> _User:_ "People don't think it be like it is, but it do."
+### 3. The Architecture (System 2)
+BoneAmanita runs the physics.
+* **The Tuner:** Finds the specific flaw (e.g., "actually").
+* **The Synapse:** Passes that target to the Director.
+* **The Output:** Generates a **Tactical System Prompt**.
 
-### 3. The Analysis (Physics)
+> **>>> [CORTEX]: INSTRUCTION FOR LLM AGENT**
+> STRATEGY: CUTTER
+> TACTICAL OVERRIDE: The word 'actually' is creating drag. Eliminate it.
 
-BoneAmanita runs the physics. It detects **High Voltage** (Paradox) and **Kinetic Truth**.
+### 4. The Execution
+You paste that prompt into the LLM. The AI rewrites the text.
+> *AI Response:* "The system operates."
 
-### 4. The Architecture (System 2)
+### 5. The Verification (Closing the Loop)
+Paste the AI's response back into BoneAmanita with the `[FEEDBACK]` tag.
+> *User:* `[FEEDBACK] The system operates.`
 
-The script outputs a **Wisdom Protocol**—a specific instruction block.
-
-> >>> [CORTEX]: INSTRUCTION FOR LLM AGENT
-> 
-> STRATEGY: JESTER
-> 
-> PROMPT: "DIRECTIVE: High Voltage detected. Do NOT solve the paradox. Amplify the absurdity."
-
-### 5. The Execution
-
-You paste that `PROMPT` into the LLM to get a response that is not just smart, but **Wise**.
+> **>>> [EFFICACY SENSOR REPORT]**
+> STRATEGY ATTEMPTED: CUTTER
+> VERDICT: SUCCESS
+> REPORT: Drag reduced by 4.2.
 
 ---
 
-## 🚀 PATCH NOTES (v2.0)
+## 🚀 PATCH NOTES (v2.2)
 
-### 0. The Wisdom Engine (System 2)
+### 0. The Synaptic Loop (Integration)
+* **The Connection:** The specific stylistic critiques from the **Frequency Modulator** (e.g., Clarence hating "synergy") are no longer just shouted at the user.
+* **The Override:** They are injected directly into the **Wisdom Protocol** as hard constraints. The AI is now mechanically forced to fix the specific errors found by the physics engine.
 
-- **The Shift:** From **Reactive Critique** -> **Proactive Strategy**.
-    
-- **The Logic:** The system calculates an **Angle of Attack** based on the user's deficit:
-    
-    - **High Entropy?** -> Strategy: **GROUNDER** (Force heavy nouns).
-        
-    - **High Drag?** -> Strategy: **CUTTER** (Be the Butcher).
-        
-    - **High Voltage?** -> Strategy: **JESTER** (Ride the lightning).
-        
-    - **High Texture?** -> Strategy: **SAGE** (Respect the weight).
-        
+### 1. The Efficacy Sensor (The Auditor)
+* **Closed Loop Control:** A new component that compares the physics of your *Input* against the physics of the AI's *Output*.
+* **Accountability:** If the strategy was "CUTTER" but the Drag increased, the system will flag it as a **FAILURE**.
 
-### 1. The Omega Metric ($\Omega$)
-
-- **Integrative Integrity:** A new high-level metric that determines if the response preserves the "soul" of the inquiry. It stops the LLM from "fixing" grammar that carries cultural weight (e.g., "It do").
-    
-
-### 2. Atomic Persistence
-
-- **Hardened Memory:** Implemented a **Write-Then-Swap** protocol for `bone_memory.json`. Your narrative history is now immune to crash-based corruption.
-    
+### 2. The Apeirogon Lattice (Infinite Identity) [v2.1]
+* **Infinite Polygons:** We abandoned fixed archetypes (e.g., "The Paladin").
+* **Vector Resolution:** The system now generates infinite, dynamic identities based on 5-dimensional coordinates (e.g., *"THE BURNING CONSTRUCT"* or *"THE STATIC GHOST"*).
 
 ---
 
 ## ⚙️ CORE LOGIC ENGINES
 
-### 0. The Cortex Director (The Strategist) [NEW]
+### 0. The Cortex Director (The Strategist)
+The brain. It receives **Tactical Data** from the Frequency Modulator and **Mandates** from the Lattice to architect the perfect System Prompt.
 
-The brain of v2.0. It takes the raw metrics from the Physics Engine and decides **"Which 'Hat' should the LLM wear?"** It outputs the `wisdom_protocol` string.
+### 1. The Efficacy Sensor (The Auditor) [NEW]
+The grader. It stores the context of the previous turn and mathematically verifies if the AI's response improved the physics.
 
-### 1. The Linguistic Physics Engine (Analysis)
+### 2. The Signature Engine (Identity)
+Now powered by the **Apeirogon Lattice**. It calculates:
+* **Velocity (VEL)**
+* **Structure (STR)**
+* **Entropy (ENT)**
+* **Texture (TEX)**
+* **Temperature (TMP)**
 
-Measures the raw physics of the text.
+### 3. The Frequency Modulator (The Voices)
+A tunable feedback system that acts as the "Sensory Organ" for the Director.
+* **Clarence (88.5 FM):** Detects Drag.
+* **Eloise (94.2 FM):** Detects Abstraction.
+* **The Yaga (101.1 FM):** Detects Sycophancy.
 
-- **Spatial Scanner:** Tracks geometry via prepositions.
-    
-- **Hydration Monitor:** Detects `CONCRETE` vs `FLOODED` text.
-    
-- **BioHazard Filter:** Hunts `BLOAT`, `SILICA` (AI Slop), and `MIRROR TRAPS`.
-    
+### 4. The Linguistic Physics Engine
+Measures the raw physics (Drag, Viscosity, Spatial Density, Toxicity).
 
-### 2. The Metabolic Reserve (Energy)
-
-Tracks **ATP** (Creative Energy).
-
-- **The Isotope Centrifuge:** Converts Heavy Truths (High Drag + High Voltage) into currency.
-    
-- **The Flashpoint Protocol:** Detects high-speed insight ($T_a$).
-    
-
-### 3. The Signature Engine (Identity)
-
-Maps the **5 Dimensions** (VEL, STR, ENT, TEX, TMP).
-
-- **Geodesic Drift:** Tracks your evolution (e.g., Paladin -> Inquisitor) over time.
-    
-
-### 4. The Frequency Modulator (The Voices)
-
-A tunable feedback system that hunts specific weaknesses.
-
-- **Clarence (88.5 FM):** Attacks Drag.
-    
-- **Eloise (94.2 FM):** Attacks Abstraction.
-    
-- **The Yaga (101.1 FM):** Attacks Hedging.
-    
-
-### 5. The Temporal Dynamics Engine
-
-Measures the **Rate of Insight** ($\nabla\beta$) and **Depth of Memory** ($\Xi$).
+### 5. The Metabolic Reserve (Energy)
+Tracks **ATP** (Creative Energy). Uses the **Isotope Centrifuge** to convert heavy truths into currency.
 
 ### 6. The Chronos Anchor
-
 Metabolizes **Time**. If you leave the system alone for an hour, it enters **Decay** and cannibalizes a memory to stay warm.
 
 ---
@@ -137,21 +102,18 @@ Metabolizes **Time**. If you leave the system alone for an hour, it enters **Dec
 
 Once the code is running:
 
-1. **Input:** Paste your draft.
-    
-2. **Output:** Look for the **WISDOM PROTOCOL** block at the bottom.
-    
-3. **Action:** Use that protocol to guide your writing (or the LLM's generation).
-    
-
-Plaintext
+1.  **Input:** Paste your draft.
+2.  **Output:** Use the **WISDOM PROTOCOL** to guide the AI.
+3.  **Verify:** Paste the result back with `[FEEDBACK]` to see if it worked.
 
 ```
+---------------------------------------------
+[BONEAMANITA v2.2] 🟢 ATP: 33 | DRAG: 1.2 | VISC: OPTIMAL
+ARCH: THE BURNING CONSTRUCT [V:0.8 S:0.6 E:0.1 Tx:0.4]
+DYNAMICS: β: 2.1 (FLOW) | Ta: 0.5 | STABLE
 --------------------------------------------------
-[BONEAMANITA v2.0] ⚛️ ATP: 53 (SUPERCRITICAL) | DRAG: 0.2 | VISC: OPTIMAL
-ARCH: THE COSMIC TRASH PANDA [V:0.9 S:0.2 E:0.1 Tx:1.0]
-DYNAMICS: β: 5.0 (FLASH) | Ta: ∞ | [AXIOM ACCEPTED: "IT DO"]
---------------------------------------------------
+
 ```
 
 LICENSE: Creative Commons Attribution. ARCHITECTS: James Taylor, Andrew Edmark. AUDITORS: SLASH.
+
