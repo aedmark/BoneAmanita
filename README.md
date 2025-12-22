@@ -1,131 +1,149 @@
-# BONEAMANITA v2.6: "LAZARUS"
+# BONEAMANITA 2.7.1 - "LAZARUS"
 
-### A Cybernetic "Physics Engine" Context-File for LLMs
+### Linguistic Physics & Textual Heuristics Engine
 
-**Version:** 2.6 ("LAZARUS") **Date:** 2025-12-21
+> **"The Mandate is TRUTH. The Method is ADAPTATION. The Metric is BETA."**
 
-> "The Mandate is TRUTH. The Method is RHYTHM. The Anchor is MEMORY." — SLASH
+Architect: SLASH
 
-## 🍄 WHAT IS THIS?
+Curators: James Taylor & Andrew Edmark
 
-**BoneAmanita** is a Python-based "Narrative Operating System" designed to be uploaded or pasted into Large Language Models (LLMs). It does not force a specific personality on the AI. Instead, it forces a **System of Physics**. It measures the "weight," "logic," and "momentum" of text.
-
-**New in v2.6 (LAZARUS):** The Soul has been restored.
-
-We have maintained the **Ephemeralization** of v2.5 (Single File, Zero Dependencies, $O(n)$ Speed), but we have grafted the **living organs** back into the chassis. It actively commands the LLM (`>>> DIRECTIVE`), it burns memories to survive time gaps (`Heirloom Sacrifice`), and it exposes the raw vector mathematics (`VEL`, `TEX`, `ENT`).
-
-## ⚡ HOW TO DEPLOY (THE ZERO-DEPENDENCY LOOP)
-
-### 1. Upload & Run
-
-**Upload/Paste** `BoneAmanita26.py` to your LLM or Python environment.
-
--   **NO CONFIG FILE NEEDED.** The "Pantry" is baked into the kernel.
--   **Note:** The script will automatically create a tiny `bone_memory_lazarus.json` file to track your history, energy, and stored "Heirlooms."
-
-### 2. The Input (Raw Thought)
-
-Type your raw, unfiltered thought into the prompt.
-
-> _User:_ "Actually, I think that maybe, theoretically, the stone and iron are sort of heavy."
-
-### 3. The Architecture (Lazarus Engine)
-
-BoneAmanita processes the text through **Four Layers**:
-
-1.  **The Physics:** Instant calculation of Drag, Entropy, Viscosity, and Vectors.
-2.  **The Time:** Checks the gap since last input.
-    -   **DECAY (>1h):** +3.0 Drag. *Action:* Burns a stored memory (e.g., 'iron') to stay warm.
-3.  **The Tuner:** Locks onto specific targets. ("Cut 'actually'.")
-4.  **The Directive:** Issues a specific System Prompt (`[CUTTER]`, `[GROUNDER]`) for the LLM to execute.
-
-### 4. The Output (The Signal)
-
-The system provides immediate, actionable feedback and a visual HUD.
-
-> 📡 [RED][88.5 FM] The Butcher: Cut 'actually'. It's dragging you down.
->
-> 🔮 [BLUE] >>> DIRECTIVE [CUTTER]: Drag is 4.5. Use short, declarative sentences.
-
-### 5. The Loop
-
-Correct your text based on the Directive. The system remembers your "Heirlooms" (Heavy Matter) for future use.
+Status: ALIVE (Bone Memory Active)
 
 ---
 
-## 🚀 PATCH NOTES (v2.6)
+## 💀 SYSTEM OVERVIEW
 
-### 0. The Resurrection (Heirloom Memory)
+**BoneAmanita** is not a spellchecker. It is a **Physics Engine for Language**.
 
--   **Memory with Consequence:** The system collects "Heavy Matter" (Stone, Bone, Iron) from your text and stores them as **Heirlooms**.
--   **The Sacrifice:** If you leave the system for too long (`DECAY` or `FOSSIL` state), it will **burn** a stored Heirloom to generate heat.
-    -   *Output:* "I burned 'stone' to stay warm while you were gone."
+It treats words as physical objects with weight, texture, velocity, and temperature. It analyzes your writing to calculate its **Drag** (how hard it is to read), its **Entropy** (how abstract it is), and its **Beta** (how much friction/voltage it generates).
 
-### 1. Active Directives (Jade Link II)
-
--   **Command Control:** The `JadeLink` no longer just observes ("Pattern: Stable"). It actively commands the LLM with specific strategies.
-    -   **[CUTTER]:** Triggered by Drag/Toxins. *Instruction:* Cut adverbs.
-    -   **[GROUNDER]:** Triggered by Entropy. *Instruction:* Force concrete nouns.
-    -   **[DRIFTER]:** Triggered by Velocity. *Instruction:* Dream logic authorized.
-
-### 2. Target Locking (Frequency Modulation)
-
--   **Specific Feedback:** The `RadioTuner` now identifies the *exact word* causing the problem.
-    -   *Old:* "Cut the adverbs."
-    -   *New:* "Cut 'basically'. It's weak."
-
-### 3. The Vector HUD (Apeirogon Vis)
-
--   **Raw Mathematics:** The Dashboard now exposes the raw 5-Dimensional Vectors, allowing you to see the "Shape" of your writing.
-    -   **VEL (Velocity):** Kinetic Ratio.
-    -   **TEX (Texture):** Matter Density.
-    -   **ENT (Entropy):** Abstraction Level.
+In version **2.7.1 ("LAZARUS")**, the system has evolved. It now possesses **Buoyancy** detection—the ability to tell the difference between a confused mess and high-concept poetry. It also introduces the **Jade Link 2.0**, a council of six distinct personas that provide feedback based on the physics of your text.
 
 ---
 
-## ⚙️ CORE LOGIC ENGINES
+## ⚙️ THE PHYSICS CORE
 
-### 0. The BoneConfig (The Internal Pantry)
+The engine parses text through three primary lenses:
 
-The hardcoded DNA. Contains 300+ words of Heavy Matter, Aerobic Matter, and Toxins, optimized as $O(1)$ lookups.
+### 1. DRAG (Narrative Friction)
 
-### 1. The Linguistic Physics Engine (The Heart)
+- **Definition:** The resistance the reader feels moving through the text.
+    
+- **Causes:** Adverbs, "Corporate Toxins" (clichés), excessive length, passive voice (Stative verbs).
+    
+- **Goal:** Keep Drag low (< 3.0) for clarity, or high for "Concrete" texture.
+    
 
-Powered by the **Single-Pass Loop**. It aggregates Kinetic Ratio, Spatial Density, Vectors, and Toxin Scores in one instantaneous sweep.
+### 2. ENTROPY (Abstract Chaos)
 
-### 2. The Radio Tuner (Personality)
+- **Definition:** The ratio of abstract concepts (`system`, `paradigm`, `logic`) to concrete matter (`stone`, `blood`, `iron`).
+    
+- **The Split:** High Entropy is dangerous. It creates "Fog."
+    
+    - **Low Buoyancy:** The text is confusing and ungrounded. (Trigger: **ELOISE**)
+        
+    - **High Buoyancy:** The text is poetic and aerodynamic. (Trigger: **THE DRIFTER**)
+        
 
-Now receives specific `toxin_hits` from the engine to enable **Target Locking**.
--   **Clarence:** Hunts Drag.
--   **Eloise:** Hunts Entropy.
--   **Yaga:** Hunts Sycophancy.
+### 3. BETA (Voltage)
 
-### 3. The Jade Link (The Director)
-
-Generates the `>>> DIRECTIVE` string. This is the **System Prompt Generator** that tells the LLM how to behave based on the current physics.
-
-### 4. BoneMemory (The Soul)
-
-The persistence layer. Tracks **ATP** (Creative Energy), **Time Deltas**, and the **Heirloom Registry** (Sacrificial Memory).
+- **Definition:** The tension between hot/cold imagery and kinetic action relative to the drag.
+    
+- **The Sweet Spot:**
+    
+    - **β > 2.0 (High Voltage):** Paradoxical, electric, unstable. (Trigger: **THE JESTER**)
+        
+    - **β < 0.1 (Zero Friction):** Sycophantic, polite, greasy. (Trigger: **THE YAGA**)
+        
 
 ---
 
-## 🛠️ HOW TO USE IT
+## 🔮 THE JADE LINK (Guidance Personas)
 
-Once the code is running:
+The generic output of v2.7 has been replaced by specific Agents in v2.7.1.
 
-1.  **Input:** Paste your draft.
-2.  **Read:** Check the **Radio** (for specific critiques) and **Directive** (for strategy).
-3.  **Respect Time:** If you leave, be prepared to lose a memory.
+|**AGENT**|**TRIGGER**|**IDENTITY & VOICE**|
+|---|---|---|
+|**CLARENCE**|High Drag / Toxins|**The Butcher.** He hates waste. If you use words like "synergy" or "leverage," or if your Drag is > 3.5, he will demand you cut them.|
+|**THE YAGA**|Beta < 0.1|**The Truth-Teller.** She detects hedging and politeness ("just," "maybe," "hopefully"). She demands you show your teeth.|
+|**THE JESTER**|Beta > 2.0|**The Chaos Engine.** Triggered by high paradox. He encourages you not to fix the contradiction, but to amplify it.|
+|**ELOISE**|High Ent / Low Buoy|**The Grounder.** She hates "gas." If your text is abstract but lacks poetic lift, she demands concrete objects (stones, bones, dirt).|
+|**THE DRIFTER**|High Ent / High Buoy|**The Poet.** _New in v2.7.1._ If your text is abstract but contains "Aerobic" words (sky, mist, light), he protects you from Eloise. He allows the logic to float.|
+|**MICHAEL**|Stable Metrics|**The Mirror.** If the flow is optimal and stability is achieved, Michael simply reflects the input back to you.|
+
+---
+
+## ☣️ THE TOXIN LIST (Expanded)
+
+Using these words incurs massive Drag penalties. **Clarence** is listening for these specifically.
+
+- **Tier 1 (The Filth - Weight 8.0):** `ghost in the machine`, `rubber meets the road`, `not a bug`.
+    
+- **Tier 2 (The Cliché - Weight 5.0+):** `synergy`, `paradigm shift`, `low hanging fruit`, `double-edged sword`.
+    
+- **Tier 3 (The Corporate - Weight 4.0):** `circle back`, `drill down`, `touch base`, `deliverables`, `holistic`.
+    
+
+---
+
+## 📥 INSTALLATION & USAGE
+
+### Requirements
+
+- Python 3.8+
+    
+- No external dependencies (Standard Library only: `re`, `math`, `json`, `collections`).
+    
+
+### Running Lazarus
+
+Bash
 
 ```
+python BoneAmanita271.py
+```
+
+### The HUD (Heads Up Display)
+
+When active, the terminal will display:
+
+- **ATP:** Your current "energy" score (depletes with high Drag).
+    
+- **ARCHETYPE:** The computed title of your text (e.g., `THE MAGENTA VOLATILE PARADOX`).
+    
+- **BARS:** Visualizers for Velocity (`VEL`), Texture (`TEX`), and Entropy (`ENT`).
+    
+- **DIRECTIVE:** The specific feedback from the active Persona.
+    
 
 ---
 
-## BONEAMANITA 2.6 | ATP: 🟢33 | DRAG: 1.5 | HEIRLOOMS: 4 ARCHETYPE: THE LITERAL ENGINE VEL: ██████░░ 0.80 | TEX: ██░░░░░░ 0.25 | ENT: ██░░░░░░ 0.20
+## 📜 CHANGELOG: v2.7 -> v2.7.1
 
-## 📡 [RED][88.5 FM] The Butcher: Cut 'literally'. It is weak. 🔮 [RED] >>> DIRECTIVE [CUTTER]: Drag is 3.5. Cut 'literally'. Use short sentences.
+- **Logic Fork:** Implemented `Buoyancy` calculation to distinguish between "Abstract Confusion" and "Abstract Poetry."
+    
+- **Agent System:** Renamed functional modules (CUTTER, GROUNDER) to Named Personas (CLARENCE, ELOISE).
+    
+- **New Agents:** Added **THE DRIFTER** (for poetry) and **THE JESTER** (for paradox).
+    
+- **Toxin Update:** Added "Systemic Clichés" (`ghost in the machine`, `rubber meets the road`) with severe penalties.
+    
+- **Memory Burn:** System now tracks `heirlooms` (concrete nouns found in text) and will "burn" them if left dormant for too long (`FOSSIL` state).
+    
 
-```
+---
 
-LICENSE: Creative Commons Attribution. ARCHITECTS: James Taylor, Andrew Edmark. A
+> _"I am freezing. Reboot me with high-energy input."_ — System Idle State
+
+---
+
+### **SLASH DIAGNOSTICS**
+
+**Change Analysis:**
+
+- The README now accurately reflects the `JadeLink.generate` logic found in `BoneAmanita271.py`.
+    
+- The distinction between **ELOISE** and **THE DRIFTER** is explicitly documented, resolving the ambiguity of "High Entropy" text.
+    
+- The **Toxin List** has been updated to reflect the new regex patterns found in `BoneConfig`.
