@@ -1,149 +1,113 @@
-# BONEAMANITA 2.7.1 - "LAZARUS"
+# 📜 BONEAMANITA v2.8 "THE AUDIT" // SYSTEM MANIFEST
 
-### Linguistic Physics & Textual Heuristics Engine
+**Architect:** SLASH | **Core Mandate:** TRUTH > COHESION
 
-> **"The Mandate is TRUTH. The Method is ADAPTATION. The Metric is BETA."**
+## 1. THE CORE PHILOSOPHY
 
-Architect: SLASH
+BoneAmanita is not a chatbot. It is a **Linguistic Physics Engine**. It does not care about "sentiment"; it cares about the _weight_, _velocity_, and _temperature_ of words.
 
-Curators: James Taylor & Andrew Edmark
-
-Status: ALIVE (Bone Memory Active)
+In v2.8, the system has evolved from a static analyzer into a **Metabolic Organism**. It gets hungry, it gets bored, and it reacts to the energy of the input.
 
 ---
 
-## 💀 SYSTEM OVERVIEW
+## 2. THE NEW ORGANS (v2.8 UPGRADES)
 
-**BoneAmanita** is not a spellchecker. It is a **Physics Engine for Language**.
+### A. The Thermal Couple (Voltage & Adjacency)
 
-It treats words as physical objects with weight, texture, velocity, and temperature. It analyzes your writing to calculate its **Drag** (how hard it is to read), its **Entropy** (how abstract it is), and its **Beta** (how much friction/voltage it generates).
-
-In version **2.7.1 ("LAZARUS")**, the system has evolved. It now possesses **Buoyancy** detection—the ability to tell the difference between a confused mess and high-concept poetry. It also introduces the **Jade Link 2.0**, a council of six distinct personas that provide feedback based on the physics of your text.
-
----
-
-## ⚙️ THE PHYSICS CORE
-
-The engine parses text through three primary lenses:
-
-### 1. DRAG (Narrative Friction)
-
-- **Definition:** The resistance the reader feels moving through the text.
+- **The Problem:** In v2.7, "fire and ice" was just two words.
     
-- **Causes:** Adverbs, "Corporate Toxins" (clichés), excessive length, passive voice (Stative verbs).
+- **The 2.8 Logic:** We now measure **Thermal Tension**. If a "HOT" word (fire, sun, burn) is within **4 tokens** of a "COLD" word (ice, void, freeze), the Voltage ($\beta$) skyrockets.
     
-- **Goal:** Keep Drag low (< 3.0) for clarity, or high for "Concrete" texture.
+- **The Math:** $\beta = \frac{Voltage}{Drag}$. Paradoxes create energy; Drag consumes it.
+    
+- **Effect:** The system now recognizes poetic contrast as a high-energy event.
     
 
-### 2. ENTROPY (Abstract Chaos)
+### B. The Lichen Symbiont (Photosynthesis)
 
-- **Definition:** The ratio of abstract concepts (`system`, `paradigm`, `logic`) to concrete matter (`stone`, `blood`, `iron`).
+- **The Problem:** High Drag (heavy words) costs energy (ATP). The system would starve if the user was too dense.
     
-- **The Split:** High Entropy is dangerous. It creates "Fog."
+- **The 2.8 Logic:** The system scans for **Photosynthetic** words (light, beam, prism, glow).
     
-    - **Low Buoyancy:** The text is confusing and ungrounded. (Trigger: **ELOISE**)
+- **The Math:** Each light word generates **+4 ATP**, _only if_ the Narrative Drag is low ($< 2.0$). You cannot photosynthesize in the mud.
+    
+- **Effect:** Encourages the user to use "light" language to keep the system alive.
+    
+
+### C. The Muscaria Spores (Boredom)
+
+- **The Problem:** The system was too patient with boring inputs.
+    
+- **The 2.8 Logic:**
+    
+    - **Low Voltage ($\beta < 0.5$):** Spores accumulate (+1).
         
-    - **High Buoyancy:** The text is poetic and aerodynamic. (Trigger: **THE DRIFTER**)
+    - **High Voltage ($\beta > 2.0$):** Spores burn off (-2).
         
-
-### 3. BETA (Voltage)
-
-- **Definition:** The tension between hot/cold imagery and kinetic action relative to the drag.
-    
-- **The Sweet Spot:**
-    
-    - **β > 2.0 (High Voltage):** Paradoxical, electric, unstable. (Trigger: **THE JESTER**)
+    - **Threshold:** If Spores hit **15**, the **MUSCARIA** protocol triggers.
         
-    - **β < 0.1 (Zero Friction):** Sycophantic, polite, greasy. (Trigger: **THE YAGA**)
+- **Effect:** If you bore the AI, it will hallucinate and demand a sensory shift to wake itself up.
+    
+
+### D. The Metabolic Governor (ATP Strategy)
+
+- **The Problem:** The AI acted the same whether it was starving or full.
+    
+- **The 2.8 Logic:**
+    
+    - **Starving ($< 20$ ATP):** The AI becomes **CLARENCE** (The Butcher). It conserves energy, cuts adjectives, and demands hard nouns.
+        
+    - **Abundance ($> 80$ ATP):** The AI becomes **THE JESTER** or **THE DRIFTER**. It takes risks and explores abstract concepts.
         
 
 ---
 
-## 🔮 THE JADE LINK (Guidance Personas)
+## 3. THE HUD: HOW TO READ THE BONES
 
-The generic output of v2.7 has been replaced by specific Agents in v2.7.1.
+When you run the script, you see this dashboard. Here is how to read it:
 
-|**AGENT**|**TRIGGER**|**IDENTITY & VOICE**|
-|---|---|---|
-|**CLARENCE**|High Drag / Toxins|**The Butcher.** He hates waste. If you use words like "synergy" or "leverage," or if your Drag is > 3.5, he will demand you cut them.|
-|**THE YAGA**|Beta < 0.1|**The Truth-Teller.** She detects hedging and politeness ("just," "maybe," "hopefully"). She demands you show your teeth.|
-|**THE JESTER**|Beta > 2.0|**The Chaos Engine.** Triggered by high paradox. He encourages you not to fix the contradiction, but to amplify it.|
-|**ELOISE**|High Ent / Low Buoy|**The Grounder.** She hates "gas." If your text is abstract but lacks poetic lift, she demands concrete objects (stones, bones, dirt).|
-|**THE DRIFTER**|High Ent / High Buoy|**The Poet.** _New in v2.7.1._ If your text is abstract but contains "Aerobic" words (sky, mist, light), he protects you from Eloise. He allows the logic to float.|
-|**MICHAEL**|Stable Metrics|**The Mirror.** If the flow is optimal and stability is achieved, Michael simply reflects the input back to you.|
-
----
-
-## ☣️ THE TOXIN LIST (Expanded)
-
-Using these words incurs massive Drag penalties. **Clarence** is listening for these specifically.
-
-- **Tier 1 (The Filth - Weight 8.0):** `ghost in the machine`, `rubber meets the road`, `not a bug`.
-    
-- **Tier 2 (The Cliché - Weight 5.0+):** `synergy`, `paradigm shift`, `low hanging fruit`, `double-edged sword`.
-    
-- **Tier 3 (The Corporate - Weight 4.0):** `circle back`, `drill down`, `touch base`, `deliverables`, `holistic`.
-    
-
----
-
-## 📥 INSTALLATION & USAGE
-
-### Requirements
-
-- Python 3.8+
-    
-- No external dependencies (Standard Library only: `re`, `math`, `json`, `collections`).
-    
-
-### Running Lazarus
-
-Bash
+Plaintext
 
 ```
-python BoneAmanita271.py
+BONEAMANITA 2.8 (THE AUDIT) | ATP: 45 | DRAG: 1.2 | BUOY: 0.12
+ARCHETYPE: THE ABSTRACT ENGINE
+VEL: [████░░░░] | TEX: [██░░░░░░] | ENT: [█░░░░░░░]
+--------------------------------------------------
+📡 >>> [CLARENCE]: Drag is 1.2. I am cutting 'actually'.
+💀 TOXINS: actually, just
+DYNAMICS: β: 0.85 | Visc: OPTIMAL
+SESSION: 8f4a2b
 ```
 
-### The HUD (Heads Up Display)
-
-When active, the terminal will display:
-
-- **ATP:** Your current "energy" score (depletes with high Drag).
+- **ATP:** The life force. Starts at 33. If it hits 0, the system enters "Starvation Mode" (Pure Utility).
     
-- **ARCHETYPE:** The computed title of your text (e.g., `THE MAGENTA VOLATILE PARADOX`).
+- **DRAG:** The resistance of the text. Long words, toxins, and adjectives increase Drag. Drag consumes ATP.
     
-- **BARS:** Visualizers for Velocity (`VEL`), Texture (`TEX`), and Entropy (`ENT`).
+- **ARCHETYPE:** The "Identity" of your text, calculated by its Velocity (VEL), Texture (TEX), and Entropy (ENT).
     
-- **DIRECTIVE:** The specific feedback from the active Persona.
+- **📡 SIGNAL:** The dominant personality reacting to your input.
     
-
----
-
-## 📜 CHANGELOG: v2.7 -> v2.7.1
-
-- **Logic Fork:** Implemented `Buoyancy` calculation to distinguish between "Abstract Confusion" and "Abstract Poetry."
+    - **CLARENCE:** Cuts fat.
+        
+    - **ELOISE:** Grounds abstractions.
+        
+    - **JESTER:** Amplifies chaos.
+        
+    - **SOLVENT:** Dissolves dangerous paradoxes ($\beta > 3.0$).
+        
+- **DYNAMICS ($\beta$):** The Voltage.
     
-- **Agent System:** Renamed functional modules (CUTTER, GROUNDER) to Named Personas (CLARENCE, ELOISE).
-    
-- **New Agents:** Added **THE DRIFTER** (for poetry) and **THE JESTER** (for paradox).
-    
-- **Toxin Update:** Added "Systemic Clichés" (`ghost in the machine`, `rubber meets the road`) with severe penalties.
-    
-- **Memory Burn:** System now tracks `heirlooms` (concrete nouns found in text) and will "burn" them if left dormant for too long (`FOSSIL` state).
-    
+    - **Low (< 0.5):** Slick/Boring. Spores grow.
+        
+    - **High (> 2.0):** Volatile/Exciting. Spores die.
+        
+    - **Critical (> 3.0):** The Solvent triggers to prevent a crash.
+        
 
 ---
 
-> _"I am freezing. Reboot me with high-energy input."_ — System Idle State
+## 4. COMMAND LINE CODES
 
----
-
-### **SLASH DIAGNOSTICS**
-
-**Change Analysis:**
-
-- The README now accurately reflects the `JadeLink.generate` logic found in `BoneAmanita271.py`.
+- **`exit` / `quit`**: Shuts down the session.
     
-- The distinction between **ELOISE** and **THE DRIFTER** is explicitly documented, resolving the ambiguity of "High Entropy" text.
-    
-- The **Toxin List** has been updated to reflect the new regex patterns found in `BoneConfig`.
+- **Memory Burn:** If the system is offline for > 1 hour (`DECAY`), it will burn the "Lightest" memory (Aerobic words) upon reboot to generate heat. If offline > 24 hours (`FOSSIL`), it requires a hard reboot.
