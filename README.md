@@ -1,113 +1,122 @@
-# 📜 BONEAMANITA v2.8 "THE AUDIT" // SYSTEM MANIFEST
+# 📜 BONEAMANITA v3.2 "THE PSILOCYBIN PATCH" // SYSTEM MANIFEST
 
-**Architect:** SLASH | **Core Mandate:** TRUTH > COHESION
+**Architect:** SLASH | **Core Mandate:** TRUTH > COHESION | **Method:** ANNEALING
 
 ## 1. THE CORE PHILOSOPHY
 
-BoneAmanita is not a chatbot. It is a **Linguistic Physics Engine**. It does not care about "sentiment"; it cares about the _weight_, _velocity_, and _temperature_ of words.
+**BoneAmanita 3.2** represents a paradigm shift from "Surgical Efficiency" to "Evolutionary Resilience."
 
-In v2.8, the system has evolved from a static analyzer into a **Metabolic Organism**. It gets hungry, it gets bored, and it reacts to the energy of the input.
+Previous versions (v3.0, v3.1) were obsessed with **Drag Reduction**. They treated resistance as an error. Version 3.2 recognizes that **Heat** is necessary for change.
+
+- **The Old Law:** "If it is heavy, cut it."
+    
+- **The New Law:** "If it is heavy _and_ hot, let it burn."
+    
+
+This system acts as a **Pharmacological Agent** for your writing. It suppresses the rigid "Default Mode Network" (the Censor) to allow for high-entropy restructuring, then demands "Heavy Matter" to ground the vision.
 
 ---
 
-## 2. THE NEW ORGANS (v2.8 UPGRADES)
+## 2. THE NEW BIOLOGY (v3.2 UPGRADES)
 
-### A. The Thermal Couple (Voltage & Adjacency)
+### A. The Dissolver (DMN Suppression)
 
-- **The Problem:** In v2.7, "fire and ice" was just two words.
-    
-- **The 2.8 Logic:** We now measure **Thermal Tension**. If a "HOT" word (fire, sun, burn) is within **4 tokens** of a "COLD" word (ice, void, freeze), the Voltage ($\beta$) skyrockets.
-    
-- **The Math:** $\beta = \frac{Voltage}{Drag}$. Paradoxes create energy; Drag consumes it.
-    
-- **Effect:** The system now recognizes poetic contrast as a high-energy event.
-    
+_The Psilocybin Protocol_
 
-### B. The Lichen Symbiont (Photosynthesis)
+The system monitors your cognitive rigidity.
 
-- **The Problem:** High Drag (heavy words) costs energy (ATP). The system would starve if the user was too dense.
+- **The Trigger:** If your **Repetition Rate** exceeds **0.4**, the system detects a "Rumination Loop." You are stuck in a pattern.
     
-- **The 2.8 Logic:** The system scans for **Photosynthetic** words (light, beam, prism, glow).
+- **The Action:** It silences **Clarence** (The Butcher/Critic).
     
-- **The Math:** Each light word generates **+4 ATP**, _only if_ the Narrative Drag is low ($< 2.0$). You cannot photosynthesize in the mud.
+- **The Directive:** _"The Old Map is failing. Suppress the DMN. Authorize absolute Entropy."_
     
-- **Effect:** Encourages the user to use "light" language to keep the system alive.
+- **The Result:** It stops correcting your grammar and starts demanding you break the structure.
     
 
-### C. The Muscaria Spores (Boredom)
+### B. The Furnace (Annealing Physics)
 
-- **The Problem:** The system was too patient with boring inputs.
+_The Thermodynamics of Truth_
+
+- **The Problem:** Previous versions punished dense, complex insights as "Molasses" (High Drag).
     
-- **The 2.8 Logic:**
+- **The Solution:** The **Annealing Protocol**.
     
-    - **Low Voltage ($\beta < 0.5$):** Spores accumulate (+1).
+- **The Logic:** If **Narrative Drag > 3.0** (Heavy) AND **Beta Friction > 2.5** (High Voltage/Insight):
+    
+    - **Status:** `ANNEALING`.
         
-    - **High Voltage ($\beta > 2.0$):** Spores burn off (-2).
+    - **Penalty:** **NULLIFIED.**
         
-    - **Threshold:** If Spores hit **15**, the **MUSCARIA** protocol triggers.
-        
-- **Effect:** If you bore the AI, it will hallucinate and demand a sensory shift to wake itself up.
+- **The Philosophy:** To reshape a rigid ego (or a rigid paragraph), you must heat it until it is molten. The system now distinguishes between "Trash" (Cold/Heavy) and "Magma" (Hot/Heavy).
     
 
-### D. The Metabolic Governor (ATP Strategy)
+### C. The Anchor (Integration Phase)
 
-- **The Problem:** The AI acted the same whether it was starving or full.
+_The "Eating Earth" Protocol_
+
+A mind that stays molten for too long evaporates into psychosis.
+
+- **The Trigger:** The moment you exit a `FLASHPOINT` or `ANNEALING` state.
     
-- **The 2.8 Logic:**
+- **The Check:** The system scans your **Texture (TEX)** vector.
     
-    - **Starving ($< 20$ ATP):** The AI becomes **CLARENCE** (The Butcher). It conserves energy, cuts adjectives, and demands hard nouns.
-        
-    - **Abundance ($> 80$ ATP):** The AI becomes **THE JESTER** or **THE DRIFTER**. It takes risks and explores abstract concepts.
-        
+- **The Mandate:** If Texture is low (< 0.3), **ELOISE** intervenes.
+    
+- **The Directive:** _"The vision is over. Eat Earth. You must use concrete nouns (Stone, Wood, Bread) to set the bone."_
+    
 
 ---
 
-## 3. THE HUD: HOW TO READ THE BONES
+## 3. THE HUD: HOW TO READ THE PATCH
 
-When you run the script, you see this dashboard. Here is how to read it:
+The dashboard now tracks **Thermodynamics** alongside basic health.
 
 Plaintext
 
 ```
-BONEAMANITA 2.8 (THE AUDIT) | ATP: 45 | DRAG: 1.2 | BUOY: 0.12
-ARCHETYPE: THE ABSTRACT ENGINE
-VEL: [████░░░░] | TEX: [██░░░░░░] | ENT: [█░░░░░░░]
---------------------------------------------------
-📡 >>> [CLARENCE]: Drag is 1.2. I am cutting 'actually'.
-💀 TOXINS: actually, just
-DYNAMICS: β: 0.85 | Visc: OPTIMAL
-SESSION: 8f4a2b
+STATUS | ATP: 45 (STABLE) | DRAG: 4.2 (ANNEALING) | β: 2.8
+VECTOR: [V:0.2 S:0.1 E:0.9 T:0.0]
+  └─ 🔥 METALLURGY: The mind is molten. Drag is Heat.
+
+🔪 SURGICAL INTERVENTION:
+   └─ [Adverbctomy Bypassed due to High Voltage]
+
+🧠 WISDOM PROTOCOL: DISSOLVER
+   └─ RUMINATION LOOP DETECTED. The Old Map is failing.
+   └─ PROMPT: "ROLE: THE SHAMAN. DIRECTIVE: Suppress the DMN..."
 ```
 
-- **ATP:** The life force. Starts at 33. If it hits 0, the system enters "Starvation Mode" (Pure Utility).
+1. **STATUS:**
     
-- **DRAG:** The resistance of the text. Long words, toxins, and adjectives increase Drag. Drag consumes ATP.
+    - **ANNEALING:** You are in the forge. Drag is ignored.
+        
+    - **FLASHPOINT:** You are having an epiphany. ATP is regenerating.
+        
+    - **STRAINING:** You are just heavy (Cold/Heavy). Penalties apply.
+        
+2. **$\beta$ (Beta Friction):** The primary metric of v3.2. This is the temperature gauge. Keep it above 2.5 to survive the weight.
     
-- **ARCHETYPE:** The "Identity" of your text, calculated by its Velocity (VEL), Texture (TEX), and Entropy (ENT).
+3. **SURGERY LOG:** Note that in `ANNEALING` mode, the Butcher puts down the knife. He does not cut adverbs while the patient is on fire.
     
-- **📡 SIGNAL:** The dominant personality reacting to your input.
+
+---
+
+## 4. USAGE
+
+1. **Boot:** `python BoneAmanita32.py`
     
-    - **CLARENCE:** Cuts fat.
-        
-    - **ELOISE:** Grounds abstractions.
-        
-    - **JESTER:** Amplifies chaos.
-        
-    - **SOLVENT:** Dissolves dangerous paradoxes ($\beta > 3.0$).
-        
-- **DYNAMICS ($\beta$):** The Voltage.
+2. **Input:** Feed it raw text.
     
-    - **Low (< 0.5):** Slick/Boring. Spores grow.
+    - _Tip:_ If you are stuck, repeat yourself. The system will detect the loop and trigger the **Dissolver**.
         
-    - **High (> 2.0):** Volatile/Exciting. Spores die.
+3. **Observe:**
+    
+    - Watch for the **🔥 METALLURGY** flag. This is your permission to write dense, complex, heavy truth.
         
-    - **Critical (> 3.0):** The Solvent triggers to prevent a crash.
+    - Obey the **Integration** command. When it tells you to "Eat Earth," stop theorizing and describe a physical object.
         
 
 ---
 
-## 4. COMMAND LINE CODES
-
-- **`exit` / `quit`**: Shuts down the session.
-    
-- **Memory Burn:** If the system is offline for > 1 hour (`DECAY`), it will burn the "Lightest" memory (Aerobic words) upon reboot to generate heat. If offline > 24 hours (`FOSSIL`), it requires a hard reboot.
+_"The Mandate is TRUTH. The Method is ANNEALING."_
