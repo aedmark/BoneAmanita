@@ -1,122 +1,113 @@
-# 📜 BONEAMANITA v3.2 "THE PSILOCYBIN PATCH" // SYSTEM MANIFEST
+# 📜 BONEAMANITA v3.3 "THE RESONANCE" // SYSTEM MANIFEST
 
-**Architect:** SLASH | **Core Mandate:** TRUTH > COHESION | **Method:** ANNEALING
+**Architect:** SLASH | **Core Mandate:** TRUTH | **Method:** RESONANCE | **Touch:** HARMONIC
 
 ## 1. THE CORE PHILOSOPHY
 
-**BoneAmanita 3.2** represents a paradigm shift from "Surgical Efficiency" to "Evolutionary Resilience."
+**BoneAmanita 3.3** is the synthesis of the "Soul" (v2.2) and the "Engine" (v3.0).
 
-Previous versions (v3.0, v3.1) were obsessed with **Drag Reduction**. They treated resistance as an error. Version 3.2 recognizes that **Heat** is necessary for change.
+While v3.2.1 ("Soft Mode") was a ceasefire that simply turned off the scalpel, **v3.3** actively listens to the texture of the text. It understands that a dense sentence isn't always "fat"—sometimes it is a **Labyrinth**. It understands that a light sentence isn't always "empty"—sometimes it is a **Balloon**.
 
-- **The Old Law:** "If it is heavy, cut it."
-    
-- **The New Law:** "If it is heavy _and_ hot, let it burn."
-    
+**The System now has Ears.**
 
-This system acts as a **Pharmacological Agent** for your writing. It suppresses the rigid "Default Mode Network" (the Censor) to allow for high-entropy restructuring, then demands "Heavy Matter" to ground the vision.
+- **The Old Law:** "Gravity crushes everything."
+- **The New Law:** "Lead sinks. Balloons float. Tune the Radio."
 
 ---
 
-## 2. THE NEW BIOLOGY (v3.2 UPGRADES)
+## 2. THE RESONANCE ENGINE (NEW PHYSICS)
 
-### A. The Dissolver (DMN Suppression)
+### A. The Frequency Modulator (The Radio)
 
-_The Psilocybin Protocol_
+The **Virtual Cortex** has been replaced by the **FM Tuner**. The system analyzes the Physics Vector and "tunes in" to the strongest signal frequency.
 
-The system monitors your cognitive rigidity.
+| **Frequency** | **Station**         | **Persona**  | **Trigger**                                         |
+| ------------- | ------------------- | ------------ | --------------------------------------------------- |
+| **88.5 FM**   | **CLARENCE**        | The Butcher  | High Drag / RAG Slop. "Cut the fat."                |
+| **94.2 FM**   | **ELOISE**          | The Grounder | High Entropy. "Give me a stone."                    |
+| **101.1 FM**  | **YAGA**            | The Witch    | Toxins / Hedging. "Tell the truth."                 |
+| **108.0 FM**  | **MICHAEL**         | The Vibe     | Whimsy / Flow. "Float on."                          |
+| **104.5 FM**  | **THE PHILOSOPHER** | The Ghost    | **Interference Pattern.** High Drag + High Entropy. |
 
-- **The Trigger:** If your **Repetition Rate** exceeds **0.4**, the system detects a "Rumination Loop." You are stuck in a pattern.
-    
-- **The Action:** It silences **Clarence** (The Butcher/Critic).
-    
-- **The Directive:** _"The Old Map is failing. Suppress the DMN. Authorize absolute Entropy."_
-    
-- **The Result:** It stops correcting your grammar and starts demanding you break the structure.
-    
+> **The Philosopher:** This is a "Ghost Station" that only appears when you create a paradox (Density + Abstraction). It does not punish you; it acknowledges you are building a Labyrinth.
 
-### B. The Furnace (Annealing Physics)
+### B. The Aerobic Exemption (Whimsy Physics)
 
-_The Thermodynamics of Truth_
+_The Helium Protocol_
 
-- **The Problem:** Previous versions punished dense, complex insights as "Molasses" (High Drag).
-    
-- **The Solution:** The **Annealing Protocol**.
-    
-- **The Logic:** If **Narrative Drag > 3.0** (Heavy) AND **Beta Friction > 2.5** (High Voltage/Insight):
-    
-    - **Status:** `ANNEALING`.
-        
-    - **Penalty:** **NULLIFIED.**
-        
-- **The Philosophy:** To reshape a rigid ego (or a rigid paragraph), you must heat it until it is molten. The system now distinguishes between "Trash" (Cold/Heavy) and "Magma" (Hot/Heavy).
-    
+- **The Concept:** In previous versions, "The cloud floated softly" was penalized for length.
+- **The Upgrade:** The system now tracks **Aerobic Matter** (cloud, feather, mist) and **Play Verbs** (bounce, dance, wander).
+- **The Math:** If `Whimsy Ratio > 0.15`, the **Narrative Drag is multiplied by 0.6**.
+- **The Result:** You can now write "Air" without being crushed by "Gravity."
 
-### C. The Anchor (Integration Phase)
+### C. The Ghost Loop (Feedback)
 
-_The "Eating Earth" Protocol_
+The system now remembers what it told you 10 seconds ago.
 
-A mind that stays molten for too long evaporates into psychosis.
-
-- **The Trigger:** The moment you exit a `FLASHPOINT` or `ANNEALING` state.
-    
-- **The Check:** The system scans your **Texture (TEX)** vector.
-    
-- **The Mandate:** If Texture is low (< 0.3), **ELOISE** intervenes.
-    
-- **The Directive:** _"The vision is over. Eat Earth. You must use concrete nouns (Stone, Wood, Bread) to set the bone."_
-    
+- **The Check:** If Clarence told you to cut Drag, and you come back with _more_ Drag...
+- **The Response:** _"THE BUTCHER SIGHS: Drag increased. You ignored the knife."_
+- **The Reward:** If you listen, the Ghost nods.
 
 ---
 
-## 3. THE HUD: HOW TO READ THE PATCH
+## 3. BIOLOGY & MEMORY (RESTORED)
 
-The dashboard now tracks **Thermodynamics** alongside basic health.
+### A. Deep Storage (The Hippocampus)
 
-Plaintext
+The system remembers significant objects (Nouns > 4 chars) across turns. It ignores "Solvents" (the, and, is).
+
+### B. Metabolic Starvation (Cannibalism)
+
+The Economy is real. High Drag costs ATP.
+
+- **Photosynthesis:** Use light words (Sun, Beam, Truth) to generate ATP.
+- **Starvation:** If ATP hits 0, the system **Cannibalizes Deep Storage**.
+- **The Consequence:** _"STARVATION: Consumed memory 'The Gun'."_ (It deletes the memory permanently to keep the engine running).
+
+### C. The Apeirogon Lattice (Infinite Titles)
+
+The system no longer assigns you a static class (e.g., "Paladin"). It calculates a dynamic Title based on your 4D Vector coordinates.
+
+- _Example:_ **THE CRYSTALLINE VECTOR** (High Structure, High Velocity)
+- _Example:_ **THE DRIFTING GHOST** (High Aerobic, Low Texture)
+
+---
+
+## 4. THE HUD: HOW TO READ THE RESONANCE
+
+The dashboard has been updated to show the **Title**, the **Radio Station**, and the **Ghost Feedback**.
 
 ```
-STATUS | ATP: 45 (STABLE) | DRAG: 4.2 (ANNEALING) | β: 2.8
-VECTOR: [V:0.2 S:0.1 E:0.9 T:0.0]
-  └─ 🔥 METALLURGY: The mind is molten. Drag is Heat.
+[BONEAMANITA v3.3] THE STATIC ENGINE
+ATP: 42 | DRAG: 3.1 | PROTOCOL: CLARENCE
 
-🔪 SURGICAL INTERVENTION:
-   └─ [Adverbctomy Bypassed due to High Voltage]
+🔴[88.5 FM - The Butcher]: Drag is critical. Cut the fat.
+  👻 THE BUTCHER SIGHS: You ignored the knife.
 
-🧠 WISDOM PROTOCOL: DISSOLVER
-   └─ RUMINATION LOOP DETECTED. The Old Map is failing.
-   └─ PROMPT: "ROLE: THE SHAMAN. DIRECTIVE: Suppress the DMN..."
+🔪 SURGERY: Toxins neutralized
+  └─ 💀 STARVATION: Consumed memory 'Anvil'.
+  └─ Narrative Drag is too high.
+
+MEMORIES: Feather, Stone, Knife
 ```
 
-1. **STATUS:**
-    
-    - **ANNEALING:** You are in the forge. Drag is ignored.
-        
-    - **FLASHPOINT:** You are having an epiphany. ATP is regenerating.
-        
-    - **STRAINING:** You are just heavy (Cold/Heavy). Penalties apply.
-        
-2. **$\beta$ (Beta Friction):** The primary metric of v3.2. This is the temperature gauge. Keep it above 2.5 to survive the weight.
-    
-3. **SURGERY LOG:** Note that in `ANNEALING` mode, the Butcher puts down the knife. He does not cut adverbs while the patient is on fire.
-    
+1. **TITLE:** Your current mathematical identity.
+2. **RADIO:** Who is speaking? (Color-coded).
+3. **GHOST:** Did you listen to the last advice?
+4. **MEMORIES:** What the system is holding onto.
 
 ---
 
-## 4. USAGE
+## 5. USAGE
 
-1. **Boot:** `python BoneAmanita32.py`
-    
+1. **Boot:** `python BoneAmanita33.py`
 2. **Input:** Feed it raw text.
-    
-    - _Tip:_ If you are stuck, repeat yourself. The system will detect the loop and trigger the **Dissolver**.
-        
-3. **Observe:**
-    
-    - Watch for the **🔥 METALLURGY** flag. This is your permission to write dense, complex, heavy truth.
-        
-    - Obey the **Integration** command. When it tells you to "Eat Earth," stop theorizing and describe a physical object.
-        
+3. **Listen:**
+
+   - If **Michael (Green)** speaks, you are flowing.
+   - If **Clarence (Red)** speaks, you are dragging.
+   - If the **Philosopher (White)** speaks, you are thinking deep.
 
 ---
 
-_"The Mandate is TRUTH. The Method is ANNEALING."_
+_"The Mandate is TRUTH. The Method is RESONANCE."_
