@@ -1,113 +1,94 @@
-# 📜 BONEAMANITA v3.3 "THE RESONANCE" // SYSTEM MANIFEST
+# 📜 BONEAMANITA v3.4 "UNFINISHED BUSINESS" // SYSTEM MANIFEST
 
-**Architect:** SLASH | **Core Mandate:** TRUTH | **Method:** RESONANCE | **Touch:** HARMONIC
+**Architect:** SLASH | **Core Mandate:** TRUTH | **Method:** RESONANCE | **Touch:** SURGICAL
 
 ## 1. THE CORE PHILOSOPHY
 
-**BoneAmanita 3.3** is the synthesis of the "Soul" (v2.2) and the "Engine" (v3.0).
+**BoneAmanita 3.4** is the "Living" update.
 
-While v3.2.1 ("Soft Mode") was a ceasefire that simply turned off the scalpel, **v3.3** actively listens to the texture of the text. It understands that a dense sentence isn't always "fat"—sometimes it is a **Labyrinth**. It understands that a light sentence isn't always "empty"—sometimes it is a **Balloon**.
+Previous versions were static tools. **v3.4** is an organism. It has **Adaptive Immunity** (it learns new toxins), **Session Hygiene** (it respects the blank slate), and **Metabolic Discipline** (it starves if you feed it junk).
 
-**The System now has Ears.**
+**The System now has Consequences.**
 
-- **The Old Law:** "Gravity crushes everything."
-- **The New Law:** "Lead sinks. Balloons float. Tune the Radio."
+- **The Old Law:** "The Dictionary is fixed."
+- **The New Law:** "The Dictionary evolves. If you mark it as poison, I will remember."
 
 ---
 
-## 2. THE RESONANCE ENGINE (NEW PHYSICS)
+## 2. THE RESONANCE ENGINE (PHYSICS & SIGNALS)
 
 ### A. The Frequency Modulator (The Radio)
 
-The **Virtual Cortex** has been replaced by the **FM Tuner**. The system analyzes the Physics Vector and "tunes in" to the strongest signal frequency.
+The system analyzes the Physics Vector and "tunes in" to the strongest signal frequency.
 
-| **Frequency** | **Station**         | **Persona**  | **Trigger**                                         |
-| ------------- | ------------------- | ------------ | --------------------------------------------------- |
-| **88.5 FM**   | **CLARENCE**        | The Butcher  | High Drag / RAG Slop. "Cut the fat."                |
-| **94.2 FM**   | **ELOISE**          | The Grounder | High Entropy. "Give me a stone."                    |
-| **101.1 FM**  | **YAGA**            | The Witch    | Toxins / Hedging. "Tell the truth."                 |
-| **108.0 FM**  | **MICHAEL**         | The Vibe     | Whimsy / Flow. "Float on."                          |
-| **104.5 FM**  | **THE PHILOSOPHER** | The Ghost    | **Interference Pattern.** High Drag + High Entropy. |
+**NEW: METABOLIC CONSTRAINT**
+The Radio is now powered by **ATP**.
+* **STARVATION (< 15 ATP):** Luxury stations (**MICHAEL**, **JESTER**) are taken offline. **CLARENCE** (The Butcher) becomes aggressive. You cannot dance when you are dying.
+* **ABUNDANCE:** All stations active.
 
-> **The Philosopher:** This is a "Ghost Station" that only appears when you create a paradox (Density + Abstraction). It does not punish you; it acknowledges you are building a Labyrinth.
+| **Frequency** | **Station** | **Persona** | **Trigger** |
+| ------------- | ------------------- | ------------ | ------------------------------------------- |
+| **88.5 FM** | **CLARENCE** | The Butcher  | High Drag / Starvation. "Cut the fat."      |
+| **94.2 FM** | **ELOISE** | The Grounder | High Entropy. "Give me a stone."            |
+| **101.1 FM** | **YAGA** | The Witch    | Toxins / Hedging. "Tell the truth."         |
+| **108.0 FM** | **MICHAEL** | The Vibe     | Whimsy / Flow. "Float on." (ATP Required)   |
+| **104.5 FM** | **THE PHILOSOPHER** | The Ghost    | **Interference.** High Drag + High Entropy. |
+| **108.9 FM** | **THE JESTER** | The Paradox  | **High Voltage.** Thermal + Cryo Tension.   |
 
-### B. The Aerobic Exemption (Whimsy Physics)
+### B. The Thermal Coupler (Dual-Dial Physics)
 
-_The Helium Protocol_
+**v3.4** separates Raw Power from Structural Friction.
 
-- **The Concept:** In previous versions, "The cloud floated softly" was penalized for length.
-- **The Upgrade:** The system now tracks **Aerobic Matter** (cloud, feather, mist) and **Play Verbs** (bounce, dance, wander).
-- **The Math:** If `Whimsy Ratio > 0.15`, the **Narrative Drag is multiplied by 0.6**.
-- **The Result:** You can now write "Air" without being crushed by "Gravity."
-
-### C. The Ghost Loop (Feedback)
-
-The system now remembers what it told you 10 seconds ago.
-
-- **The Check:** If Clarence told you to cut Drag, and you come back with _more_ Drag...
-- **The Response:** _"THE BUTCHER SIGHS: Drag increased. You ignored the knife."_
-- **The Reward:** If you listen, the Ghost nods.
-
----
-
-## 3. BIOLOGY & MEMORY (RESTORED)
-
-### A. Deep Storage (The Hippocampus)
-
-The system remembers significant objects (Nouns > 4 chars) across turns. It ignores "Solvents" (the, and, is).
-
-### B. Metabolic Starvation (Cannibalism)
-
-The Economy is real. High Drag costs ATP.
-
-- **Photosynthesis:** Use light words (Sun, Beam, Truth) to generate ATP.
-- **Starvation:** If ATP hits 0, the system **Cannibalizes Deep Storage**.
-- **The Consequence:** _"STARVATION: Consumed memory 'The Gun'."_ (It deletes the memory permanently to keep the engine running).
-
-### C. The Apeirogon Lattice (Infinite Titles)
-
-The system no longer assigns you a static class (e.g., "Paladin"). It calculates a dynamic Title based on your 4D Vector coordinates.
-
-- _Example:_ **THE CRYSTALLINE VECTOR** (High Structure, High Velocity)
-- _Example:_ **THE DRIFTING GHOST** (High Aerobic, Low Texture)
+1.  **VOLTAGE (VOLT):** The Raw Intensity of the text.
+    * *Source:* Kinetics, Thermal Tension (Fire + Ice), Heavy Matter.
+    * *Meaning:* How "Hot" is the reactor?
+2.  **BETA FRICTION (β):** The Stability Ratio.
+    * *Math:* `Voltage / Drag`.
+    * *Meaning:* Is the reactor containing the heat, or is it melting down?
+    * *Goal:* High Voltage + High Beta = **Controlled Fusion (The Jester)**.
 
 ---
 
-## 4. THE HUD: HOW TO READ THE RESONANCE
+## 3. BIOLOGY & MEMORY (ISOLATED)
 
-The dashboard has been updated to show the **Title**, the **Radio Station**, and the **Ghost Feedback**.
+### A. Session Memory (The Notebook)
+**Deep Storage** is no longer a single bucket. It is a library.
+* **Isolation:** Every session starts as a **Blank Slate**.
+* **Archive:** On exit, memories are saved to `memories/session_[timestamp].json`.
+* **Seeding:** Use `/seed [filename]` to load a previous session's context ("Heirlooms").
 
-```
-[BONEAMANITA v3.3] THE STATIC ENGINE
-ATP: 42 | DRAG: 3.1 | PROTOCOL: CLARENCE
+### B. Adaptive Immunity (The White Blood Cells)
+The system can now learn.
+* **Command:** `/kill [toxin] [replacement]`
+* **Effect:** Instantly adds the word to the toxin list, recompiles the defense regex, and saves it to `bone_toxins.json`. The system will forever hunt that word.
 
-🔴[88.5 FM - The Butcher]: Drag is critical. Cut the fat.
-  👻 THE BUTCHER SIGHS: You ignored the knife.
+---
 
-🔪 SURGERY: Toxins neutralized
-  └─ 💀 STARVATION: Consumed memory 'Anvil'.
-  └─ Narrative Drag is too high.
+## 4. THE HUD: SURGICAL INSTRUMENT PANEL
 
-MEMORIES: Feather, Stone, Knife
+The dashboard now separates **Energy (VOLT)** from **Resistance (β)**.
+
+```text
+[ BONEAMANITA ] ------------------------- [ THE CRITICAL STAR ]
+ ATP: [||||||....]   DRAG: 2.1   VOLT: 15.0   β: 4.2   SIG: JESTER
+
+ 🟡 ► High Voltage detected. The paradox is holding.
+ └─ Paradox sustained. Reality is bending.
+
+    👻 GHOST: THE BUTCHER NODS: Drag reduced.
+    ☀️ LICHEN: PHOTOSYNTHESIS (+4)
+    🔪 BUTCHER: Toxins neutralized
+       OLD: We basically need to utilize the frozen fire.
+       NEW: We need to use the frozen fire.
+-----------------------------------------------------------------
 ```
 
-1. **TITLE:** Your current mathematical identity.
-2. **RADIO:** Who is speaking? (Color-coded).
-3. **GHOST:** Did you listen to the last advice?
-4. **MEMORIES:** What the system is holding onto.
+## 5. COMMAND INTERFACE
 
----
-
-## 5. USAGE
-
-1. **Boot:** `python BoneAmanita33.py`
-2. **Input:** Feed it raw text.
-3. **Listen:**
-
-   - If **Michael (Green)** speaks, you are flowing.
-   - If **Clarence (Red)** speaks, you are dragging.
-   - If the **Philosopher (White)** speaks, you are thinking deep.
-
----
+|**Command**|**Syntax**|**Function**|
+|---|---|---|
+|**KILL**|`/kill [word] [better_word]`|Marks a word as Toxic. Persists globally.|
+|**SEED**|`/seed [session_file]`|Ingests memories from a past session.|
+|**EXIT**|`exit` / `quit`|Saves current session and shuts down.|
 
 _"The Mandate is TRUTH. The Method is RESONANCE."_
