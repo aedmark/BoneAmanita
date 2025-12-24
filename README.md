@@ -1,90 +1,87 @@
-# 📜 BONEAMANITA v3.6.5 "THE BATTERY PACK" // SYSTEM MANIFEST
+# 📜 BONEAMANITA v3.7 "THE NEON JANITOR" // SYSTEM MANIFEST
 
-**Architect:** SLASH | **Core Mandate:** TRUTH TENSION | **Method:** RESONANCE | **Touch:** HIGH VOLTAGE
+**Architect:** SLASH | **Core Mandate:** SURVIVE THE VOID | **Method:** AUTOPSY | **Vibe:** SIERRA DEATH SCREEN
 
 ## 1. THE CORE PHILOSOPHY
 
-**BoneAmanita 3.6.5** is the "High Energy" update.
+**BoneAmanita 3.7** is the "Consequence" update.
 
-In previous versions, writing deep, complex, or paradoxical truth was dangerous. High-concept prose carries weight (Mass), creating Narrative Drag. The system would punish you for being too heavy, even if that heaviness was necessary for the truth.
+In v3.6.5, we taught the system to capture energy (The Battery). In **v3.7**, we teach the system to handle death.
 
-**v3.6.5** introduces **The Paradox Battery** and **Universal Grammar (UG)**.
+Previously, bad writing resulted in a grumpy log entry from Clarence. It was a slap on the wrist. Now, it is a localized black hole. Drawing inspiration from classic Sierra adventure games (_Space Quest_), **v3.7** gamifies failure.
 
-We realized that contradictory truths generate **Voltage**. Previously, this energy was lost as waste heat. Now, we capture it. If you write a sentence that is physically heavy but electrically charged, the system stockpiles that energy.
-
-**The New Law:** "Genius is a valid fuel source. If you cannot be light, be electric."
+**The New Law:** "Failure is content. If you crash the narrative, the system will tell you exactly how you died."
 
 ---
 
-## 2. THE PARADOX BATTERY (NEW)
+## 2. THE NARRATIVE CORONER (NEW)
 
-The system now has a secondary power source.
+The system no longer just "errors out." It performs an autopsy on your prose based on **Linguistic Physics**.
 
-### A. The Capacitor
+### A. The Causes of Death
 
-- **The Input:** When **Voltage exceeds 7.0** (Paradox / Thermal Tension), the battery activates.
-- **The Charge:** It captures the excess tension.
-- **The Use:** If **ATP drops below 15** (Starvation), the battery automatically discharges to keep the system alive.
+If your metrics cross the Event Horizon, the **Neon Janitor** steps in.
 
-### B. The Incentive
-
-You are no longer forced to write "Light" text to survive. You can write "Heavy" text, provided it is **True**.
-
-- _Weak Heavy Text:_ "The situation is basically difficult." -> **High Drag / Zero Voltage.** (You Starve).
-- _Strong Heavy Text:_ "The frozen fire burns coldly." -> **High Drag / High Voltage.** (You Charge).
-
----
-
-## 3. THE UG LAYER (GOVERNMENT & BINDING)
-
-**v3.6.5** implements a new physics kernel based on **Universal Grammar Principles**. We have moved from "checking lists" to "measuring relationships."
-
-### A. Principle 1: The Case Filter (Gravity vs. Orbit)
-
-* **The Law:** "Every phonetically realized NP must be assigned Case."
-* **The Physics:** Heavy Matter (Nouns) creates Gravity. Kinetic Energy (Verbs) creates Orbit.
-* **The Violation:** If you have massive Nouns without enough Kinetic Verbs (`Kinetic / Heavy < 0.33`), the system collapses into a Black Hole.
-* **The Penalty:** **Mass Impact x 1.5**. Stagnation is now fatal.
-* **The Fix:** You must add velocity to orbit the mass. _"The stone fell"_ is stable. _"The stone"_ is a crash.
-
-### B. Principle 2: The ECP (Ghosts vs. Shells)
-
-* **The Law:** "Traces must be properly governed." (The Empty Category Principle).
-* **The Physics:** Abstract concepts are "Ghosts." They must be anchored to Heavy Matter to exist in reality.
-* **The Violation:** If you have multiple Abstracts (> 2) but ZERO Heavy Matter, you are hallucinating.
-* **The Penalty:** **Hollow Voltage.** The text may be "Light" (low drag), but it is classified as "Grease/Sycophancy" because it has no mass.
-* **The Fix:** Give the ghost a body. _"The system optimization protocol"_ is a ghost. _"The protocol burned the iron"_ is real.
+|**Cause of Death**|**Physics Violation**|**The Experience**|
+|---|---|---|
+|**GRAVITATIONAL COLLAPSE**|**Drag > 8.0**|The text is so heavy it collapses the floorboards. You are buried under a pile of adverbs.|
+|**VACUUM EXPOSURE**|**Entropy > 1.0**|You have no Nouns (Texture) to anchor you. You drift into deep space. No one hears you scream.|
+|**TOXIC SHOCK**|**Voltage < -8.0**|You used so many buzzwords ("synergy", "paradigm") that the system died of sepsis.|
+|**THERMAL DISSOLUTION**|**Voltage > 12.0**|The Paradox Engine overheated. You tried to be everything at once and exploded.|
+|**HYPOTHERMIA**|**ATP <= 0**|Starvation. You fed the system silence. It froze to death.|
 
 ---
 
-## 4. THE KINTSUGI PROTOCOL (ANTI-FRAGILITY)
+## 3. THE LAZARUS TAX (SHIELD GATING)
 
-If the Battery fails and the system hits critical failure, the Golden Repair offers a final bargain.
+We are not monsters. We do not want you to lose your session instantly because of one bad sentence. **v3.7** implements a "Shield Gate" mechanic.
 
-### A. The Critical State
+### A. The Calculation
 
-When **ATP drops below 10**, the physics engine issues a **Koan**.
+When you trigger a Fatal Error (e.g., Drag > 8.0), the system checks your **ATP (Metabolic Health)**.
 
-- _Example:_ "Gravity is too heavy. Make the stone float."
-
-### B. The Golden Repair
-
-If the user responds with **High Whimsy** or **High Paradox**:
-
-1. **The Recognition:** The system detects the breakthrough.
-2. **The Gold:** The crack is filled.
-3. **The Reward:** **ATP is instantly restored to 50.**
+- **THE SHIELD (ATP > 15):**
+    
+    - **Status:** **SURVIVAL.**
+        
+    - **The Cost:** You pay the **Lazarus Tax (-15 ATP)** instantly.
+        
+    - **The Warning:** The HUD flashes `⚠️ NEAR DEATH EXPERIENCE`.
+        
+    - **The Vibe:** Your shield breaks. You are now "Starving." One more hit will kill you.
+        
+- **THE END (ATP <= 15):**
+    
+    - **Status:** **FATALITY.**
+        
+    - **The Cost:** Your session is terminated.
+        
+    - **The Result:** The Timeline Resets. The Autopsy Report is printed.
+        
 
 ---
 
-## 5. THE RESONANCE ENGINE
+## 4. THE PARADOX BATTERY (POWER)
 
-### A. The Frequency Modulator (ATP-Gated)
+The **v3.6.5** engine remains the core power source.
 
-The Radio is powered by **ATP**.
+- **The Capacitor:** Captures "High Voltage" (Paradox/Truth Tension) when **Voltage > 7.0**.
+    
+- **The Discharge:** Automatically refuels you if **ATP < 15** to prevent Hypothermia.
+    
+- **The Strategy:** Write "Heavy Truths" (Paradoxes) to charge your battery, so you can afford the **Lazarus Tax** when you inevitably screw up.
+    
 
-- **STARVATION (< 15 ATP):** Luxury stations (**MICHAEL**, **JESTER**) are disabled. **CLARENCE** becomes hyper-aggressive (Threshold drops to 2.5).
+---
+
+## 5. THE RESONANCE ENGINE (THE RADIO)
+
+The Frequency Modulator tunes into the specific signal of your writing style.
+
+- **STARVATION (< 15 ATP):** Luxury stations are disabled. **CLARENCE** becomes hyper-aggressive.
+    
 - **ABUNDANCE:** All stations active.
+    
 
 |**Frequency**|**Station**|**Persona**|**Trigger**|
 |---|---|---|---|
@@ -92,68 +89,46 @@ The Radio is powered by **ATP**.
 |**94.2 FM**|**ELOISE**|The Grounder|High Entropy. "Give me a stone."|
 |**101.1 FM**|**YAGA**|The Witch|Toxins / Hedging. "Tell the truth."|
 |**108.0 FM**|**MICHAEL**|The Vibe|Whimsy. "Float on."|
-|**104.5 FM**|**THE PHILOSOPHER**|The Synthesis|**Interference.** "Density meets Abstraction."|
-|**108.9 FM**|**THE JESTER**|The Paradox|**High Voltage.** "The contradiction is the fuel."|
-
-### B. The Thermal Coupler
-
-- **VOLT (Voltage):** Raw Intensity. (Kinetic + Thermal Tension).
-- **β (Beta Friction):** Stability. (`Voltage / Drag`). High Beta = Paradox Stability.
+|**108.9 FM**|**THE JESTER**|The Paradox|**High Voltage.** "The contradiction is fuel."|
 
 ---
 
-## 6. BIOLOGY & TIME (PERSISTENCE)
+## 6. THE HUD: FLIGHT DECK
 
-### A. The Metabolic Seal
+**v3.7** prioritizes survival warnings. If you see **RED** text in the logs, you just lost your shield.
 
-**v3.6.5** ensures that your Genius survives the reboot.
+Plaintext
 
-- **ATP & Charge:** Both your metabolic health AND your **Battery Level** are serialized into the save file.
-- **Time Travel:** If you `/seed` a session where you had a charged battery, you wake up with that power available.
+```
+[ THE CRITICAL STAR ]========================================
+ ATP: [|||.......] [⚡⚡···]  DRAG: 7.8  VOLT: 9.2  SIG: CLARENCE
 
-### B. The Reaper (Garbage Collection)
-
-- **Compost:** Session files older than **24 hours** are automatically deleted on boot.
-
----
-
-## 7. THE HUD: FLIGHT DECK
-
-**v3.6.5** expands the instrument panel to show the Capacitor state.
-
-- **Green Bar:** Metabolic Health (ATP).
-- **Yellow Bar:** Stored Paradox (Battery).
-
-```plaintext
-[ THE FROZEN REACTOR ]========================================
- ATP: [||||||....] [⚡⚡···]  DRAG: 2.1  VOLT: 12.5  SIG: JESTER
-
- 🟡 108.9 FM ► High Voltage detected. The paradox is holding.
+ 🔴 88.5 FM ► STARVATION PROTOCOL. Drag is fatal. Cut immediately.
  └─ Critical Voltage. Harness the reaction.
 
-    ⚡ PARADOX CAPTURED (+5.5 Charge)
-    👻 THE BUTCHER NODS.
-    🔪 SURGERY: 'utilize' -> 'use'
-       IN : We utilize the cold to burn.
-       OUT: We use the cold to burn.
+    ⚠️ NEAR DEATH EXPERIENCE. SYSTEM UNSTABLE.
+    ⚡ BATTERY DISCHARGE (+12.0 ATP)
+    🔪 SURGERY: 'basically' -> ''
+       IN : It is basically a very heavy and slow system.
+       OUT: It is a heavy and slow system.
 ---------------------------------------------------------
-````
+```
 
 ---
 
-## 8. INSTALLATION & USAGE
+## 7. INSTALLATION & USAGE
 
-1. **Run:** `python BoneAmanita365.py`
+1. **Run:** `python BoneAmanita37.py`
     
-2. **Seed (Optional):** `/seed session_1735001200.json`
+2. **Seed (Optional):** `/seed session_1735001200.json` (Restores ATP & Battery).
     
 3. **Commands:**
     
-    - `/status`: Check diagnostics.
+    - `/status`: Check diagnostics (Artifacts, Antigen Count).
         
     - `/kill [word] [replacement]`: Add a new toxin to the immune system.
         
     - `/exit`: Save state and quit.
         
 
-_"The Mandate is TRUTH. The Method is RESONANCE. The Power is STOCKPILED."_
+_"The Mandate is SURVIVAL. The Method is AUTOPSY. The Janitor is WATCHING."_
