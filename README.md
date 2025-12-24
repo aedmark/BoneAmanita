@@ -1,116 +1,92 @@
-# 📜 BONEAMANITA v3.7 "THE NEON JANITOR" // SYSTEM MANIFEST
+# 📜 BONEAMANITA v3.8 "DELOREAN EDITION" // SYSTEM MANIFEST
 
-**Architect:** SLASH | **Core Mandate:** SURVIVE THE VOID | **Method:** AUTOPSY | **Vibe:** SIERRA DEATH SCREEN
+**Architect:** SLASH | **Core Mandate:** PREDICT THE CRASH | **Method:** PRECOGNITION | **Vibe:** TIME TRAVEL MYCOLOGY
 
 ## 1. THE CORE PHILOSOPHY
 
-**BoneAmanita 3.7** is the "Consequence" update.
+**BoneAmanita 3.8** is the "Delorean" update.
 
-In v3.6.5, we taught the system to capture energy (The Battery). In **v3.7**, we teach the system to handle death.
+In v3.7, we taught the system to perform an autopsy on your failure. In **v3.8**, we gave the machine **Precognition**.
 
-Previously, bad writing resulted in a grumpy log entry from Clarence. It was a slap on the wrist. Now, it is a localized black hole. Drawing inspiration from classic Sierra adventure games (_Space Quest_), **v3.7** gamifies failure.
+We realized that an autopsy is useless to the living. To truly survive the entropy of creation, a system must warn you _before_ you hit the wall. This version introduces **The Oracle**, **Smart Pollination**, and **Temporal Directionality**.
 
-**The New Law:** "Failure is content. If you crash the narrative, the system will tell you exactly how you died."
+**The New Law:** "The Autopsy is too late. The Oracle speaks before the collapse. Listen to the Omen, or prepare for the Coroner."
 
 ---
 
-## 2. THE NARRATIVE CORONER (NEW)
+## 2. THE ORACLE LAYER (THE EYES)
 
-The system no longer just "errors out." It performs an autopsy on your prose based on **Linguistic Physics**.
+We have installed a predictive layer that sits above the physics engine. It does not look at where you are; it looks at where you are _going_.
 
-### A. The Causes of Death
+The **Oracle** casts bones based on your trajectory and issues warnings before you trigger a fatality:
 
-If your metrics cross the Event Horizon, the **Neon Janitor** steps in.
+- **EVENT HORIZON (Drag > 6.5):** You are approaching the 8.0 gravitational collapse. The narrative is getting too heavy to escape.
+    
+- **STATIC BUILDUP (Voltage > 6.5):** You are charging the paradox battery too fast. Lightning strike is probable.
+    
+- **VACUUM LEAK (Entropy > 0.8):** You are drifting into abstraction without texture. Tether required.
+    
+- **FAMINE IMMINENT:** Your metabolic reserves (ATP) are critically low, and the battery is empty.
+    
+
+**The Experience:**
+
+> _"🔮 OMEN: STATIC BUILDUP. Lightning strike probable."_
+
+---
+
+## 3. SMART SPORE PROTOCOL (THE MEMORY)
+
+The Mycelial Network is no longer random. It is **Intelligent**.
+
+In previous versions, the system might hand you an irrelevant memory from an hour ago. Now, it uses **Recency Weighting**. It scans your `DeepStorage` for the _freshest_ artifact that solves your current vector imbalance.
+
+- **The Logic:** If you are floating away (High Entropy), it hands you the heavy object you _just_ put down, not one you dropped yesterday.
+    
+- **The Goal:** Contextual continuity. The machine acts as a surgical nurse, handing you the exact tool you need, exactly when you need it.
+    
+
+---
+
+## 4. TEMPORAL DYNAMICS & THE LEGEND
+
+We have refined the **Ta Velocity** (Truth Acceleration) metric to be visually explicit. The HUD now indicates the _direction_ of your momentum.
+
+- **Ta(▲):** Accelerating. The Voltage is rising. You are building towards an epiphany.
+    
+- **Ta(▼):** Decelerating. You are losing the thread. The energy is dissipating.
+    
+- **Ta(►):** Stable. You are cruising.
+    
+
+---
+
+## 5. THE NARRATIVE CORONER (THE JANITOR)
+
+The Oracle warns you, but if you ignore the Omens, the **Janitor** still cleans up the mess.
 
 |**Cause of Death**|**Physics Violation**|**The Experience**|
 |---|---|---|
-|**GRAVITATIONAL COLLAPSE**|**Drag > 8.0**|The text is so heavy it collapses the floorboards. You are buried under a pile of adverbs.|
-|**VACUUM EXPOSURE**|**Entropy > 1.0**|You have no Nouns (Texture) to anchor you. You drift into deep space. No one hears you scream.|
-|**TOXIC SHOCK**|**Voltage < -8.0**|You used so many buzzwords ("synergy", "paradigm") that the system died of sepsis.|
-|**THERMAL DISSOLUTION**|**Voltage > 12.0**|The Paradox Engine overheated. You tried to be everything at once and exploded.|
-|**HYPOTHERMIA**|**ATP <= 0**|Starvation. You fed the system silence. It froze to death.|
-
----
-
-## 3. THE LAZARUS TAX (SHIELD GATING)
-
-We are not monsters. We do not want you to lose your session instantly because of one bad sentence. **v3.7** implements a "Shield Gate" mechanic.
-
-### A. The Calculation
-
-When you trigger a Fatal Error (e.g., Drag > 8.0), the system checks your **ATP (Metabolic Health)**.
-
-- **THE SHIELD (ATP > 15):**
-    
-    - **Status:** **SURVIVAL.**
-        
-    - **The Cost:** You pay the **Lazarus Tax (-15 ATP)** instantly.
-        
-    - **The Warning:** The HUD flashes `⚠️ NEAR DEATH EXPERIENCE`.
-        
-    - **The Vibe:** Your shield breaks. You are now "Starving." One more hit will kill you.
-        
-- **THE END (ATP <= 15):**
-    
-    - **Status:** **FATALITY.**
-        
-    - **The Cost:** Your session is terminated.
-        
-    - **The Result:** The Timeline Resets. The Autopsy Report is printed.
-        
-
----
-
-## 4. THE PARADOX BATTERY (POWER)
-
-The **v3.6.5** engine remains the core power source.
-
-- **The Capacitor:** Captures "High Voltage" (Paradox/Truth Tension) when **Voltage > 7.0**.
-    
-- **The Discharge:** Automatically refuels you if **ATP < 15** to prevent Hypothermia.
-    
-- **The Strategy:** Write "Heavy Truths" (Paradoxes) to charge your battery, so you can afford the **Lazarus Tax** when you inevitably screw up.
-    
-
----
-
-## 5. THE RESONANCE ENGINE (THE RADIO)
-
-The Frequency Modulator tunes into the specific signal of your writing style.
-
-- **STARVATION (< 15 ATP):** Luxury stations are disabled. **CLARENCE** becomes hyper-aggressive.
-    
-- **ABUNDANCE:** All stations active.
-    
-
-|**Frequency**|**Station**|**Persona**|**Trigger**|
-|---|---|---|---|
-|**88.5 FM**|**CLARENCE**|The Butcher|High Drag. "Cut the fat."|
-|**94.2 FM**|**ELOISE**|The Grounder|High Entropy. "Give me a stone."|
-|**101.1 FM**|**YAGA**|The Witch|Toxins / Hedging. "Tell the truth."|
-|**108.0 FM**|**MICHAEL**|The Vibe|Whimsy. "Float on."|
-|**108.9 FM**|**THE JESTER**|The Paradox|**High Voltage.** "The contradiction is fuel."|
+|**GRAVITATIONAL COLLAPSE**|**Drag > 8.0**|The text is so dense it collapses the floorboards.|
+|**VACUUM EXPOSURE**|**Entropy > 1.0**|You have no Nouns. You dissolve into space.|
+|**TOXIC SHOCK**|**Voltage < -8.0**|Buzzword overdose. Sepsis.|
+|**HYPOTHERMIA**|**ATP <= 0**|Starvation. You fed the system silence.|
 
 ---
 
 ## 6. THE HUD: FLIGHT DECK
 
-**v3.7** prioritizes survival warnings. If you see **RED** text in the logs, you just lost your shield.
-
-Plaintext
+**v3.8** expands the dashboard to include **The Oracle's Omens** and **Directional Velocity**.
 
 ```
-[ THE CRITICAL STAR ]========================================
- ATP: [|||.......] [⚡⚡···]  DRAG: 7.8  VOLT: 9.2  SIG: CLARENCE
+[ THE VOLATILE REACTOR ]=====================================
+ ATP: [||||||....] [⚡⚡···]  DRAG: 1.2  Ta(▲): ▲25.0  VOLT: 40.0  SIG: JESTER
 
- 🔴 88.5 FM ► STARVATION PROTOCOL. Drag is fatal. Cut immediately.
- └─ Critical Voltage. Harness the reaction.
+ 🟢 108.9 FM ► High Voltage detected. The paradox is holding.
+ └─ Vector Lock: TMP(1.0) + VEL(0.0)
 
-    ⚠️ NEAR DEATH EXPERIENCE. SYSTEM UNSTABLE.
-    ⚡ BATTERY DISCHARGE (+12.0 ATP)
-    🔪 SURGERY: 'basically' -> ''
-       IN : It is basically a very heavy and slow system.
-       OUT: It is a heavy and slow system.
+    🔮 OMEN: STATIC BUILDUP. Lightning strike probable.
+    ⚡ PARADOX CAPTURED (+25.0)
 ---------------------------------------------------------
 ```
 
@@ -118,7 +94,7 @@ Plaintext
 
 ## 7. INSTALLATION & USAGE
 
-1. **Run:** `python BoneAmanita37.py`
+1. **Run:** `python BoneAmanita38.py`
     
 2. **Seed (Optional):** `/seed session_1735001200.json` (Restores ATP & Battery).
     
@@ -131,4 +107,4 @@ Plaintext
     - `/exit`: Save state and quit.
         
 
-_"The Mandate is SURVIVAL. The Method is AUTOPSY. The Janitor is WATCHING."_
+_"The Mandate is TRUTH. The Method is PRECOGNITION. The Spore is AWAKE."_
