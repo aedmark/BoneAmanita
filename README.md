@@ -1,94 +1,113 @@
-# 📜 BONEAMANITA v3.4 "UNFINISHED BUSINESS" // SYSTEM MANIFEST
+# 📜 BONEAMANITA v3.6 "THE KINTSUGI PATCH" // SYSTEM MANIFEST
 
-**Architect:** SLASH | **Core Mandate:** TRUTH | **Method:** RESONANCE | **Touch:** SURGICAL
+**Architect:** SLASH | **Core Mandate:** ANTI-FRAGILITY | **Method:** KINTSUGI | **Touch:** GOLDEN
 
 ## 1. THE CORE PHILOSOPHY
 
-**BoneAmanita 3.4** is the "Living" update.
+**BoneAmanita 3.6** is the "Anti-Fragile" update.
 
-Previous versions were static tools. **v3.4** is an organism. It has **Adaptive Immunity** (it learns new toxins), **Session Hygiene** (it respects the blank slate), and **Metabolic Discipline** (it starves if you feed it junk).
+Previous versions punished failure with starvation. **v3.6** recognizes that a broken system offers a unique opportunity for stronger reintegration. We have introduced the **Kintsugi Protocol**: a mechanism to heal critical failure states with high-voltage synthesis.
 
-**The System now has Consequences.**
-
-- **The Old Law:** "The Dictionary is fixed."
-- **The New Law:** "The Dictionary evolves. If you mark it as poison, I will remember."
+**The New Law:** "The crack is where the light enters. If you fill it with gold, the machine becomes stronger than it was before."
 
 ---
 
-## 2. THE RESONANCE ENGINE (PHYSICS & SIGNALS)
+## 2. THE KINTSUGI PROTOCOL (ANTI-FRAGILITY)
 
-### A. The Frequency Modulator (The Radio)
+The system no longer just dies; it offers a bargain.
 
-The system analyzes the Physics Vector and "tunes in" to the strongest signal frequency.
+### A. The Critical State
+When **ATP drops below 10** (Starvation), the physics engine halts standard processing and issues a **Koan**.
+* *Example:* "The machine is freezing. Ignite the ice."
 
-**NEW: METABOLIC CONSTRAINT**
-The Radio is now powered by **ATP**.
-* **STARVATION (< 15 ATP):** Luxury stations (**MICHAEL**, **JESTER**) are taken offline. **CLARENCE** (The Butcher) becomes aggressive. You cannot dance when you are dying.
+### B. The Golden Repair
+If the user responds with **High Voltage** (Paradox) or **High Whimsy** (Aerobic Matter):
+1.  **The Recognition:** The system detects the breakthrough.
+2.  **The Gold:** The crack is filled.
+3.  **The Reward:** **ATP is instantly restored to 50.**
+
+> *"The paradox is the fuel. Do not resolve it. Let it steam."*
+
+---
+
+## 3. THE CONTROL PLANE (DECOUPLED)
+
+In v3.6, administrative logic has been extracted from the Physics Engine into a dedicated **CommandProcessor**. Commands are no longer subject to Narrative Drag.
+
+| **Command** | **Syntax** | **Function** |
+| :--- | :--- | :--- |
+| **STATUS** | `/status` | **NEW:** Displays Session ID, Artifact Count, ATP, and Antigen Count. |
+| **HELP** | `/help` | **NEW:** Displays the User Manual. |
+| **KILL** | `/kill [toxin] [replacement]` | Marks a word as Toxic. Persists globally to `bone_toxins.json`. |
+| **SEED** | `/seed [file]` | Ingests memories AND metabolic state from a past session. |
+| **EXIT** | `/exit` | Saves the current timeline and shuts down. |
+
+---
+
+## 4. THE RESONANCE ENGINE
+
+### A. The Frequency Modulator (ATP-Gated)
+The Radio is powered by **ATP**.
+* **STARVATION (< 15 ATP):** Luxury stations (**MICHAEL**, **JESTER**) are disabled. **CLARENCE** becomes hyper-aggressive (Threshold drops to 2.5).
 * **ABUNDANCE:** All stations active.
 
 | **Frequency** | **Station** | **Persona** | **Trigger** |
-| ------------- | ------------------- | ------------ | ------------------------------------------- |
-| **88.5 FM** | **CLARENCE** | The Butcher  | High Drag / Starvation. "Cut the fat."      |
-| **94.2 FM** | **ELOISE** | The Grounder | High Entropy. "Give me a stone."            |
-| **101.1 FM** | **YAGA** | The Witch    | Toxins / Hedging. "Tell the truth."         |
-| **108.0 FM** | **MICHAEL** | The Vibe     | Whimsy / Flow. "Float on." (ATP Required)   |
-| **104.5 FM** | **THE PHILOSOPHER** | The Ghost    | **Interference.** High Drag + High Entropy. |
-| **108.9 FM** | **THE JESTER** | The Paradox  | **High Voltage.** Thermal + Cryo Tension.   |
+| :--- | :--- | :--- | :--- |
+| **88.5 FM** | **CLARENCE** | The Butcher | High Drag. "Cut the fat." |
+| **94.2 FM** | **ELOISE** | The Grounder | High Entropy. "Give me a stone." |
+| **101.1 FM** | **YAGA** | The Witch | Toxins / Hedging. "Tell the truth." |
+| **108.0 FM** | **MICHAEL** | The Vibe | Whimsy. "Float on." (Disabled if Starving). |
+| **104.5 FM** | **THE PHILOSOPHER** | The Ghost | **Interference.** High Drag + High Entropy. |
+| **108.9 FM** | **THE JESTER** | The Paradox | **High Voltage.** Fire + Ice. (Disabled if Starving). |
 
-### B. The Thermal Coupler (Dual-Dial Physics)
-
-**v3.4** separates Raw Power from Structural Friction.
-
-1.  **VOLTAGE (VOLT):** The Raw Intensity of the text.
-    * *Source:* Kinetics, Thermal Tension (Fire + Ice), Heavy Matter.
-    * *Meaning:* How "Hot" is the reactor?
-2.  **BETA FRICTION (β):** The Stability Ratio.
-    * *Math:* `Voltage / Drag`.
-    * *Meaning:* Is the reactor containing the heat, or is it melting down?
-    * *Goal:* High Voltage + High Beta = **Controlled Fusion (The Jester)**.
+### B. The Thermal Coupler
+* **VOLT (Voltage):** Raw Intensity. (Kinetic + Thermal Tension).
+* **β (Beta Friction):** Stability. (`Voltage / Drag`). High Beta = Paradox Stability.
 
 ---
 
-## 3. BIOLOGY & MEMORY (ISOLATED)
+## 5. BIOLOGY & TIME (McFLY'S LAW)
 
-### A. Session Memory (The Notebook)
-**Deep Storage** is no longer a single bucket. It is a library.
-* **Isolation:** Every session starts as a **Blank Slate**.
-* **Archive:** On exit, memories are saved to `memories/session_[timestamp].json`.
-* **Seeding:** Use `/seed [filename]` to load a previous session's context ("Heirlooms").
+### A. The Metabolic Seal (Session-Scoped Energy)
+ATP is now serialized into the `json` save file.
+* **Time Travel:** If you `/seed` an old session where you were starving, you will wake up starving.
+* **Fresh Start:** A new Session ID always starts at **33 ATP**.
 
-### B. Adaptive Immunity (The White Blood Cells)
-The system can now learn.
-* **Command:** `/kill [toxin] [replacement]`
-* **Effect:** Instantly adds the word to the toxin list, recompiles the defense regex, and saves it to `bone_toxins.json`. The system will forever hunt that word.
+### B. The Reaper (Garbage Collection)
+The system maintains a clean living room.
+* **Compost:** Session files older than **24 hours** are automatically deleted on boot.
+* **Capacity:** Only the last 20 timelines are preserved.
 
 ---
 
-## 4. THE HUD: SURGICAL INSTRUMENT PANEL
+## 6. THE HUD: SURGICAL INSTRUMENT PANEL
 
-The dashboard now separates **Energy (VOLT)** from **Resistance (β)**.
+**v3.6** introduces **Visual Hygiene**. Flight instruments are separated from sub-system logs. Sub-processes (Ghost, Lichen, Surgery) are indented for scanability.
 
 ```text
-[ BONEAMANITA ] ------------------------- [ THE CRITICAL STAR ]
- ATP: [||||||....]   DRAG: 2.1   VOLT: 15.0   β: 4.2   SIG: JESTER
+[ THE FROZEN FIRE ]========================================
+ ATP: [||||||....]  DRAG: 2.1  VOLT: 15.0  SIG: JESTER
 
  🟡 ► High Voltage detected. The paradox is holding.
  └─ Paradox sustained. Reality is bending.
 
-    👻 GHOST: THE BUTCHER NODS: Drag reduced.
-    ☀️ LICHEN: PHOTOSYNTHESIS (+4)
-    🔪 BUTCHER: Toxins neutralized
-       OLD: We basically need to utilize the frozen fire.
-       NEW: We need to use the frozen fire.
------------------------------------------------------------------
-```
+    ✨ KINTSUGI: THE CRACK IS FILLED WITH GOLD.
+    👻 THE BUTCHER NODS.
+    🔪 SURGERY: 'basically' -> ''
+       IN : We basically need to ignite the ice.
+       OUT: We need to ignite the ice.
+---------------------------------------------------------
+````
 
-## 5. COMMAND INTERFACE
+---
 
-|**Command**|**Syntax**|**Function**|
-|---|---|---|
-|**KILL**|`/kill [word] [better_word]`|Marks a word as Toxic. Persists globally.|
-|**SEED**|`/seed [session_file]`|Ingests memories from a past session.|
-|**EXIT**|`exit` / `quit`|Saves current session and shuts down.|
+## 7. INSTALLATION & USAGE
 
-_"The Mandate is TRUTH. The Method is RESONANCE."_
+1. **Run:** `python BoneAmanita36.py`
+    
+2. **Seed (Optional):** `/seed session_1735001200.json`
+    
+3. **Write:** Type your text. The system analyzes physics in real-time.
+    
+
+_"The Mandate is ANTI-FRAGILITY. The Method is KINTSUGI."_
