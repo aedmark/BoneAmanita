@@ -1,113 +1,152 @@
-# 📜 BONEAMANITA v3.6 "THE KINTSUGI PATCH" // SYSTEM MANIFEST
+# 📜 BONEAMANITA v3.6.5 "THE BATTERY PACK" // SYSTEM MANIFEST
 
-**Architect:** SLASH | **Core Mandate:** ANTI-FRAGILITY | **Method:** KINTSUGI | **Touch:** GOLDEN
+**Architect:** SLASH | **Core Mandate:** TRUTH TENSION | **Method:** RESONANCE | **Touch:** HIGH VOLTAGE
 
 ## 1. THE CORE PHILOSOPHY
 
-**BoneAmanita 3.6** is the "Anti-Fragile" update.
+**BoneAmanita 3.6.5** is the "High Energy" update.
 
-Previous versions punished failure with starvation. **v3.6** recognizes that a broken system offers a unique opportunity for stronger reintegration. We have introduced the **Kintsugi Protocol**: a mechanism to heal critical failure states with high-voltage synthesis.
+In previous versions, writing deep, complex, or paradoxical truth was dangerous. High-concept prose carries weight (Mass), creating Narrative Drag. The system would punish you for being too heavy, even if that heaviness was necessary for the truth.
 
-**The New Law:** "The crack is where the light enters. If you fill it with gold, the machine becomes stronger than it was before."
+**v3.6.5** introduces **The Paradox Battery**.
+
+We realized that contradictory truths generate **Voltage**. Previously, this energy was lost as waste heat. Now, we capture it. If you write a sentence that is physically heavy but electrically charged, the system stockpiles that energy.
+
+**The New Law:** "Genius is a valid fuel source. If you cannot be light, be electric."
 
 ---
 
-## 2. THE KINTSUGI PROTOCOL (ANTI-FRAGILITY)
+## 2. THE PARADOX BATTERY (NEW)
 
-The system no longer just dies; it offers a bargain.
+The system now has a secondary power source.
+
+### A. The Capacitor
+
+- **The Input:** When **Voltage exceeds 7.0** (Paradox / Thermal Tension), the battery activates.
+    
+- **The Charge:** It captures the excess tension.
+    
+- **The Use:** If **ATP drops below 15** (Starvation), the battery automatically discharges to keep the system alive.
+    
+
+### B. The Incentive
+
+You are no longer forced to write "Light" text to survive. You can write "Heavy" text, provided it is **True**.
+
+- _Weak Heavy Text:_ "The situation is basically difficult." -> **High Drag / Zero Voltage.** (You Starve).
+    
+- _Strong Heavy Text:_ "The frozen fire burns coldly." -> **High Drag / High Voltage.** (You Charge).
+    
+
+---
+
+## 3. THE KINTSUGI PROTOCOL (ANTI-FRAGILITY)
+
+If the Battery fails and the system hits critical failure, the Golden Repair offers a final bargain.
 
 ### A. The Critical State
-When **ATP drops below 10** (Starvation), the physics engine halts standard processing and issues a **Koan**.
-* *Example:* "The machine is freezing. Ignite the ice."
+
+When **ATP drops below 10**, the physics engine issues a **Koan**.
+
+- _Example:_ "Gravity is too heavy. Make the stone float."
+    
 
 ### B. The Golden Repair
-If the user responds with **High Voltage** (Paradox) or **High Whimsy** (Aerobic Matter):
-1.  **The Recognition:** The system detects the breakthrough.
-2.  **The Gold:** The crack is filled.
-3.  **The Reward:** **ATP is instantly restored to 50.**
 
-> *"The paradox is the fuel. Do not resolve it. Let it steam."*
+If the user responds with **High Whimsy** or **High Paradox**:
 
----
-
-## 3. THE CONTROL PLANE (DECOUPLED)
-
-In v3.6, administrative logic has been extracted from the Physics Engine into a dedicated **CommandProcessor**. Commands are no longer subject to Narrative Drag.
-
-| **Command** | **Syntax** | **Function** |
-| :--- | :--- | :--- |
-| **STATUS** | `/status` | **NEW:** Displays Session ID, Artifact Count, ATP, and Antigen Count. |
-| **HELP** | `/help` | **NEW:** Displays the User Manual. |
-| **KILL** | `/kill [toxin] [replacement]` | Marks a word as Toxic. Persists globally to `bone_toxins.json`. |
-| **SEED** | `/seed [file]` | Ingests memories AND metabolic state from a past session. |
-| **EXIT** | `/exit` | Saves the current timeline and shuts down. |
+1. **The Recognition:** The system detects the breakthrough.
+    
+2. **The Gold:** The crack is filled.
+    
+3. **The Reward:** **ATP is instantly restored to 50.**
+    
 
 ---
 
 ## 4. THE RESONANCE ENGINE
 
 ### A. The Frequency Modulator (ATP-Gated)
-The Radio is powered by **ATP**.
-* **STARVATION (< 15 ATP):** Luxury stations (**MICHAEL**, **JESTER**) are disabled. **CLARENCE** becomes hyper-aggressive (Threshold drops to 2.5).
-* **ABUNDANCE:** All stations active.
 
-| **Frequency** | **Station** | **Persona** | **Trigger** |
-| :--- | :--- | :--- | :--- |
-| **88.5 FM** | **CLARENCE** | The Butcher | High Drag. "Cut the fat." |
-| **94.2 FM** | **ELOISE** | The Grounder | High Entropy. "Give me a stone." |
-| **101.1 FM** | **YAGA** | The Witch | Toxins / Hedging. "Tell the truth." |
-| **108.0 FM** | **MICHAEL** | The Vibe | Whimsy. "Float on." (Disabled if Starving). |
-| **104.5 FM** | **THE PHILOSOPHER** | The Ghost | **Interference.** High Drag + High Entropy. |
-| **108.9 FM** | **THE JESTER** | The Paradox | **High Voltage.** Fire + Ice. (Disabled if Starving). |
+The Radio is powered by **ATP**.
+
+- **STARVATION (< 15 ATP):** Luxury stations (**MICHAEL**, **JESTER**) are disabled. **CLARENCE** becomes hyper-aggressive (Threshold drops to 2.5).
+    
+- **ABUNDANCE:** All stations active.
+    
+
+|**Frequency**|**Station**|**Persona**|**Trigger**|
+|---|---|---|---|
+|**88.5 FM**|**CLARENCE**|The Butcher|High Drag. "Cut the fat."|
+|**94.2 FM**|**ELOISE**|The Grounder|High Entropy. "Give me a stone."|
+|**101.1 FM**|**YAGA**|The Witch|Toxins / Hedging. "Tell the truth."|
+|**108.0 FM**|**MICHAEL**|The Vibe|Whimsy. "Float on."|
+|**108.9 FM**|**THE JESTER**|The Paradox|**High Voltage.** "The contradiction is the fuel."|
 
 ### B. The Thermal Coupler
-* **VOLT (Voltage):** Raw Intensity. (Kinetic + Thermal Tension).
-* **β (Beta Friction):** Stability. (`Voltage / Drag`). High Beta = Paradox Stability.
+
+- **VOLT (Voltage):** Raw Intensity. (Kinetic + Thermal Tension).
+    
+- **β (Beta Friction):** Stability. (`Voltage / Drag`). High Beta = Paradox Stability.
+    
 
 ---
 
-## 5. BIOLOGY & TIME (McFLY'S LAW)
+## 5. BIOLOGY & TIME (PERSISTENCE)
 
-### A. The Metabolic Seal (Session-Scoped Energy)
-ATP is now serialized into the `json` save file.
-* **Time Travel:** If you `/seed` an old session where you were starving, you will wake up starving.
-* **Fresh Start:** A new Session ID always starts at **33 ATP**.
+### A. The Metabolic Seal
+
+**v3.6.5** ensures that your Genius survives the reboot.
+
+- **ATP & Charge:** Both your metabolic health AND your **Battery Level** are serialized into the save file.
+    
+- **Time Travel:** If you `/seed` a session where you had a charged battery, you wake up with that power available.
+    
 
 ### B. The Reaper (Garbage Collection)
-The system maintains a clean living room.
-* **Compost:** Session files older than **24 hours** are automatically deleted on boot.
-* **Capacity:** Only the last 20 timelines are preserved.
+
+- **Compost:** Session files older than **24 hours** are automatically deleted on boot.
+    
 
 ---
 
-## 6. THE HUD: SURGICAL INSTRUMENT PANEL
+## 6. THE HUD: FLIGHT DECK
 
-**v3.6** introduces **Visual Hygiene**. Flight instruments are separated from sub-system logs. Sub-processes (Ghost, Lichen, Surgery) are indented for scanability.
+**v3.6.5** expands the instrument panel to show the Capacitor state.
 
-```text
-[ THE FROZEN FIRE ]========================================
- ATP: [||||||....]  DRAG: 2.1  VOLT: 15.0  SIG: JESTER
+- **Green Bar:** Metabolic Health (ATP).
+    
+- **Yellow Bar:** Stored Paradox (Battery).
+    
 
- 🟡 ► High Voltage detected. The paradox is holding.
- └─ Paradox sustained. Reality is bending.
+Plaintext
 
-    ✨ KINTSUGI: THE CRACK IS FILLED WITH GOLD.
+```
+[ THE FROZEN REACTOR ]========================================
+ ATP: [||||||....] [⚡⚡···]  DRAG: 2.1  VOLT: 12.5  SIG: JESTER
+
+ 🟡 108.9 FM ► High Voltage detected. The paradox is holding.
+ └─ Critical Voltage. Harness the reaction.
+
+    ⚡ PARADOX CAPTURED (+5.5 Charge)
     👻 THE BUTCHER NODS.
-    🔪 SURGERY: 'basically' -> ''
-       IN : We basically need to ignite the ice.
-       OUT: We need to ignite the ice.
+    🔪 SURGERY: 'utilize' -> 'use'
+       IN : We utilize the cold to burn.
+       OUT: We use the cold to burn.
 ---------------------------------------------------------
-````
+```
 
 ---
 
 ## 7. INSTALLATION & USAGE
 
-1. **Run:** `python BoneAmanita36.py`
+1. **Run:** `python BoneAmanita365.py`
     
 2. **Seed (Optional):** `/seed session_1735001200.json`
     
-3. **Write:** Type your text. The system analyzes physics in real-time.
+3. **Write:** Type your text.
     
+    - _Tip:_ Try writing a paradox to test the battery.
+        
 
-_"The Mandate is ANTI-FRAGILITY. The Method is KINTSUGI."_
+_"The Mandate is TRUTH. The Method is RESONANCE. The Power is STOCKPILED."_
