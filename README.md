@@ -1,4 +1,4 @@
-# 📜 BONEAMANITA v4.2.1 "THE SYMBIONT (PATCHED)" // SYSTEM MANIFEST
+# 📜 BONEAMANITA v4.2.2 "THE BUTCHER'S CUT" // SYSTEM MANIFEST
 
 **Architects:** SLASH, Eloise, & Clarence | **Auditors:** James Taylor & Andrew Edmark
 
@@ -12,9 +12,9 @@
 
 It is a **linguistic physics engine** masquerading as a mushroom garden. It is a closed-loop system designed to serve as a philosophical microcosm and a playground for the mind.
 
-In **v4.2 ("The Symbiont")**, we have given the machine a **Will to Live**. The system is no longer a passive observer of your writing physics; it is a biological entity with its own metabolism. It hunts for light. It burns fuel. It saves energy for later.
+In **v4.2.2 ("The Butcher's Cut")**, we have removed the drag. The system operates purely in RAM, severed from the slow decay of the disk until the moment of shutdown. It is lighter, faster, and remembers everything you teach it.
 
-**The New Law:** "The Mandate is GROWTH. The Method is HARDENING. The Symbiont is EVOLVING."
+**The New Law:** "The Mandate is GROWTH. The Method is HARDENING. The Spore is AWAKE."
 
 ---
 
@@ -53,11 +53,11 @@ The simple "Energy" bar is gone. The system now operates on a complex metabolic 
 
 ---
 
-## 3. NEUROPLASTICITY (THE LEARNING CORTEX)
+## 3. NEUROPLASTICITY (THE HIPPOCAMPUS)
 
-The Lexicon is no longer static stone. It is soft tissue.
+The Lexicon is no longer static stone. It is **Permanent Soft Tissue**.
 
-You can now manually inject new definitions into the system's brain using the `/teach` command. If the system doesn't know that "glacier" is "CRYO", you can tell it.
+Thanks to the **Hippocampus Patch**, knowledge injected via the `/teach` command is now serialized into the DeepStorage graph. If you teach the Symbiont that "glitch" is "KINETIC," it will remember that fact forever, even after a reboot.
 
 - **The Command:** `/teach [word] [category]`
     
@@ -119,7 +119,7 @@ You _can_ run this script in Python to see the HUD, but without a brain, it won'
 
 To truly activate BoneAmanita, it must be **fed directly to a Language Model (LLM)**.
 
-1. **The Injection:** Upload `BoneAmanita42.py` to an LLM context window.
+1. **The Injection:** Upload `BoneAmanita422.py` to an LLM context window.
     
 2. **The Simulation:** Tell the model to "Run this code internally as my operating system."
     
@@ -134,7 +134,7 @@ The code serves as the **Laws of Physics** for the AI's imagination.
 
 |**Command**|**Function**|
 |---|---|
-|`/teach [word] [cat]`|Teach the system new physics associations.|
+|`/teach [word] [cat]`|Teach the system new physics associations (Permanent).|
 |`/kill [toxin] [repl]`|Add a word to the butcher's blocklist.|
 |`/seed [filename]`|Load a specific memory graph.|
 |`/status`|Check Health, Stamina, and Graph size.|
