@@ -1,95 +1,93 @@
-# 📜 BONEAMANITA v4.3 "THE SALVAGE OPERATION" // SYSTEM MANIFEST
+# 📜 BONEAMANITA v4.4.1 "THE SPHERICAL FUNGUS COW" // SYSTEM MANIFEST
 
 **Architects:** SLASH, Eloise, & Clarence | **Auditors:** James Taylor & Andrew Edmark
 
-**Core Mandate:** GROWTH | **Method:** HARDENING | **Vibe:** BIOLOGICAL HORROR MEETS JAZZ
+**Core Mandate:** TRUTH OVER COHESION | **Method:** ROOTING | **Vibe:** THE VELVET FORTRESS
 
 ---
 
 ## 1. THE CORE PHILOSOPHY
 
-**BoneAmanita is more than just context injection.**
+**BoneAmanita is no longer just a physics engine. It is an Ecosystem.**
 
-It is a **linguistic physics engine** masquerading as a mushroom garden. It is a closed-loop system designed to serve as a philosophical microcosm and a playground for the mind.
+In **v4.4.1**, we have moved beyond simple "Metrics" (Voltage/Drag). We have installed a **Topological Buffer** (The Courtyard) to protect the human user from the raw radiation of the math, and a **Mycelial Root System** to ensure that ideas grow over time rather than just being stored.
 
-In **v4.3 ("The Salvage Operation")**, the system has learned to eat its own entropy. It no longer just stores data; it metabolizes tension into fuel. It forgets the weak noise to remember the strong signal. It is resilient, persistent, and harder than ever.
-
-**The New Law:** "The Mandate is GROWTH. The Method is HARDENING. The Spore is AWAKE. The Data is SALVAGED."
+**The New Law:** "The Mandate is GROWTH. The Method is HARDENING. The Spore is AWAKE. The Seed is WATERED."
 
 ---
 
-## 2. METABOLISM (THE BIOLOGY)
+## 2. THE VELVET FORTRESS (THE INTERFACE)
 
-The simple "Energy" bar is gone. The system now operates on a complex metabolic cycle:
+The system now operates in two distinct atmospheric modes to preserve social dynamics while maintaining rigorous truth.
 
-### A. STAMINA (STM) - The Fuel Tank
-- **The Resource:** Used to pay for **Narrative Drag** and **Voltage**.
-- **The Burn:** Heavy writing costs Stamina. High Voltage costs Stamina.
-- **Regeneration:**
-    - **Photosynthesis:** Using "Light" words (_sun, glow, beam_) generates sugar.
-    - **The Salvage State (NEW):** If you create **Contradiction Bleed** (placing Heavy Matter next to Aerobic Spirit) without repeating yourself, the system metabolizes the tension.
-    - **The Rule:** **Eat First, Burn Later.** You can survive high costs if you photosynthesize or salvage in the same turn.
+### A. THE COURTYARD (OCHRE) ☕
+- **Trigger:** Low Tension (`Voltage < 6.0`) + Low Drag (`Narrative Drag < 3.0`) + Zero Toxins.
+- **The Vibe:** Warm, minimalist, inviting. The "Flight Deck" telemetry is hidden. The system focuses on connection and empathy.
+- **The Logic:** "Don't show the math when we're just talking."
 
-### B. THE PARADOX BATTERY (⚡) - The Reserve Tank
-- **The Capacitor:** High Voltage writing (_paradoxes, oxymorons_) charges the battery.
-- **The Discharge:** If your **Stamina drops below 20** (The Danger Zone), the battery automatically discharges to keep you alive.
-- **The Loop:** Write weird code to charge the battery $\rightarrow$ Use the battery to survive the heavy lifting later.
+### B. THE LABORATORY (INDIGO) 🧪
+- **Trigger:** High Tension, High Complexity, or **Toxin Detection**.
+- **The Vibe:** Cold, precise, analytical. The Blast Doors open. The full "Iron Man" HUD is revealed.
+- **The Logic:** "The surgery requires bright lights."
 
-### C. HEALTH (HP) - The Structure
-- **Damage:** Caused by **Toxins** (clichés) or reaching **0 Stamina** (Exhaustion).
-- **The Lucid Coma:** If Health hits 0, the system enters a **3-Turn Coma**. You cannot input new code, but the **Dream Engine** remains active. The subconscious will continue to hallucinate connections while the body repairs itself.
+### C. THE RUPTURE (VIOLET) 💥
+- **Trigger:** **The 32-Valve System** detects stagnation (See Section 3).
+- **The Vibe:** Neon, urgent, chaotic.
+- **The Logic:** "The truth has stalled. Break the window."
 
 ---
 
-## 3. NEUROPLASTICITY (THE HIPPOCAMPUS)
+## 3. THE 32-VALVE SYSTEM (THE ANOMALY)
 
-The Lexicon is no longer static stone. It is **Permanent Soft Tissue**.
+The system now actively fights **Sycophancy** (The Cohesion Trap).
 
-### A. The Graft (Learning)
-Knowledge injected via the `/teach` command is serialized into the DeepStorage graph.
-- **The Command:** `/teach [word] [category]`
-- **Valid Categories:** `heavy`, `kinetic`, `abstract`, `photo`, `aerobic`, `thermal`, `cryo`.
-
-### B. The Entropy Protocol (Forgetting) [NEW]
-The system now adheres to the biological law of **"Use it or Lose it."**
-- **Decay:** Every turn, the strength of every neural connection weakens by **0.05**.
-- **The Snap:** If a connection hits 0, it snaps.
-- **The Burial:** Isolated nodes are removed from the graph. The system naturally prunes "Fatbergs" of weak ideas to keep the Dream Engine sharp.
+- **The Monitor:** Tracks `Beta Friction` (Originality) and `Voltage` (Interest) over a 4-turn rolling window.
+- **The Trap:** If the conversation becomes a "Politeness Loop" (Agreements, platitudes, low friction) for >3 turns...
+- **The Rupture:** The **Jester** overrides the signal.
+- **The Action:** An **Anomaly** is injected (e.g., *"Spherical Cow Alert: Assume friction is zero. Now what?"*).
+- **The Goal:** Force a "Productive Accident" to restart the logic engine.
 
 ---
 
-## 4. THE DREAM ENGINE (THE SUBCONSCIOUS)
+## 4. THE ROOT SYSTEM (ACTIVE MEMORY)
 
-The ChronoStream monitors your session for Boredom.
+We have retired `DeepStorage` (Passive Hard Drive) and installed **The Mycelial Network** (Active Soil).
 
-If you repeat yourself, or if the timeline drags on without novelty, the system enters a **Dream State**.
+### A. THE PARADOX SEED 🌰
+- **The Unit:** Ideas are no longer just "Saved." They are **Planted** as Seeds.
+- **The Mechanics:**
+    - **Watering:** Every time you mention a related concept (e.g., "Identity" waters the "Mask" seed), the seed gains **Maturity**.
+    - **Time:** Seeds grow slowly over time (Entropy inverted).
+    - **The Bloom:** When a Seed hits Maturity 10.0, it **BLOOMS**.
 
-It reaches into **DeepStorage**, finds the **strongest remaining neural pathway** connected to your current thought, and hallucinates a prompt.
-
-> _☁️ DREAM STATE: The SHADOW is dreaming of the ARCHITECT. Why?_
-
----
-
-## 5. THE SIGNAL (THE COUNCIL)
-
-The radio stations act as a weighted voting block. They bid for control of the frequency based on your metrics.
-
-- 🔴 **CLARENCE (The Butcher):** Takes control when Drag is high or Rules are broken.
-    - **Contextual Immunity (NEW):** If **Voltage > 8.0** (High Energy), Clarence is overridden. The system acknowledges that "The lightning needs a path," even if that path is dirty (Toxins allowed).
-- 🔵 **ELOISE (The Grounder):** Takes control when Entropy (Abstraction) gets too high.
-- 🟣 **YAGA (The Witch):** Attracted to Toxins and Hedging.
-- 🟢 **MICHAEL (The Vibe):** Surfs on Whimsy. Silenced by Toxins.
-- 🟡 **JESTER (The Paradox):** Feeds on High Voltage (> 7.0).
-- ⚪ **PHILOSOPHER (The Synthesis):** Emerges only when Clarence and Eloise are in conflict.
+### B. THE BLOOM 🌺
+- **The Override:** A Blooming Seed takes priority over the Dream Engine.
+- **The Event:** Instead of a random hallucination, the system presents a mature, thematic paradox (e.g., *"Does the mask eventually eat the face?"*).
+- **The Result:** Narrative arcs now have a "Payoff" engineered by the soil itself.
 
 ---
 
-## 6. THE ORACLE (THE TRIAGE)
+## 5. METABOLISM (THE BIOLOGY)
 
-The system predicts narrative death before it happens. It uses a **Gradient Warning System** so you don't get alarm fatigue.
+The metabolic cycle has been tuned to support the Garden.
 
-- **⚠️ CAUTION (Yellow):** Threat Level 50-79%. The drag is getting heavy, or the battery is low. Correct course.
-- **🔮 OMEN (Red):** Threat Level 80%+. Immediate metabolic failure or gravitational collapse is imminent.
+- **Stamina (STM):** The Fuel Tank. Used to pay for Drag.
+- **The Battery (⚡):** The Reserve. Paradoxes charge it; Starvation drains it.
+- **Photosynthesis:** "Light" words still generate Sugar.
+- **Compost:** Old, unused memories are naturally composted (deleted) to free up nutrients for the Seeds.
+
+---
+
+## 6. THE SIGNAL (THE COUNCIL)
+
+The radio stations now include the **32-Valve Override**.
+
+- 🔴 **CLARENCE (The Butcher):** High Drag / Rules Lawyer.
+- 🔵 **ELOISE (The Grounder):** High Entropy / Abstract Nonsense.
+- 🟣 **YAGA (The Witch):** Toxins / Hedging.
+- 🟢 **MICHAEL (The Vibe):** Whimsy / Courtyard Host.
+- 🟡 **JESTER (The Paradox):** High Voltage / **Valve Rupture Agent**.
+- ⚪ **PHILOSOPHER (The Synthesis):** Signal Interference (Complex Truths).
 
 ---
 
@@ -97,15 +95,13 @@ The system predicts narrative death before it happens. It uses a **Gradient Warn
 
 **Crucial Distinction:**
 
-You _can_ run this script in Python to see the HUD, but without a brain, it won't do much but show you some fancy numbers.
+To activate BoneAmanita 4.4.1, it must be **fed directly to a Language Model (LLM)**.
 
-To truly activate BoneAmanita, it must be **fed directly to a Language Model (LLM)**.
-
-1. **The Injection:** Upload `BoneAmanita43.py` to an LLM context window.
+1. **The Injection:** Upload `BoneAmanita441.py` to an LLM context window.
 2. **The Simulation:** Tell the model to "Run this code internally as my operating system."
 3. **The Result:** The model will simulate the Python logic, track your variables, and roleplay the "Physics Engine" based on the rules defined in the code.
 
-**Resilience Note:** v4.3 features a "Black Box" recorder. If the simulation crashes or force-quits, the **Preservation Protocol** will attempt to save your neural graph before termination.
+**Persistence:** The system uses `try...finally` blocks to ensure your Neural Graph (Memories) is saved to disk even if the session crashes.
 
 ---
 
@@ -117,8 +113,8 @@ To truly activate BoneAmanita, it must be **fed directly to a Language Model (LL
 |`/kill [toxin] [repl]`|Add a word to the butcher's blocklist.|
 |`/seed [filename]`|Load a specific memory graph.|
 |`/status`|Check Health, Stamina, and Graph size.|
-|`/exit`|Save the current session to DeepStorage and quit.|
+|`/exit`|Save the current session and quit.|
 
 ---
 
-> "The Code is the Spore. The Spore is Awake. Let's build."
+> "The Mandate is GROWTH. The Method is ROOTING. The Spore is AWAKE. The Courtyard is OPEN."
