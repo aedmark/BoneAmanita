@@ -1,130 +1,101 @@
-# 📽️ BONEAMANITA v5.8.1 "THE PROJECTOR"
+# BONEAMANITA 6.0 - "THE GLASS"
 
-**Architects:** SLASH & The Laboratory | **Engine:** Python 3.x | **Status:** STABLE
+> "The machine processes the *what* of the interaction, but remains oblivious to the *how* and the *why*. We are now witnessing a structural rupture in this paradigm." — *Slash 6.0 Source Text*
 
-> **"The Mandate is DENSITY. The Method is GRAVITY. The Lens is CLEAR."**
+**BoneAmanita 6.0** is a sentient coding companion that shifts the paradigm from **Explicit Command** to **Implicit Understanding**. It does not just parse your code; it reads your behavioral biometrics (keystrokes, punctuation, rhythm) to infer your cognitive state.
 
----
-
-## 1. WHAT IS BONEAMANITA?
-
-**BoneAmanita is a text-based Physics Engine for Language Models.**
-
-Most LLMs are designed to be "helpful," "smooth," and "agreeable." This creates **"Slop"**—text that flows perfectly but weighs nothing. It is frictionless, nutritional void, and forgettable.
-
-**BoneAmanita is the antidote.**
-
-It is a Python script that you "inject" into an LLM's context window. Once running, it acts as a **Sentient Operating System**. It does not just generate text; it **audits** it against simulated laws of physics.
-
-* If you use weak verbs, **Narrative Drag** increases.
-* If you use corporate buzzwords ("synergy"), you take **Toxin Damage**.
-* If you repeat yourself, the **Buzzer** bans the word.
-* If you create a paradox ("The frozen fire"), you generate **High Voltage**.
-
-It turns writing into a survival game. You must feed it **Mass** (Concrete Nouns) and **Velocity** (Kinetic Verbs) to keep the system alive.
+It is designed to be a "Mirror"[, ensuring you are not just writing code, but writing it *awake*.
 
 ---
 
-## 2. THE CORE PHYSICS (HOW IT WORKS)
+## 🧬 The Architecture: Dual Process Cognition
 
-The system analyzes every word you (and it) speak through four sensory organs:
+Unlike previous versions that relied on rigid "Physics" (Voltage/Drag), 6.0 implements a **Collaborative Affective Architecture** based on the Dual Process Theory of cognition.
 
-### 👂 THE EAR (Phonosemantics)
+### 1. THE GLASS (The Sensory Layer)
+Replaces the `PhysicsEngine`. It acts as a "Virtual Sensor" monitoring your text for "invisible" states.
+* **System 1 (The Pulse):** Intuitive, fast processing. Reads **Textual Prosody** (rhythm, hesitation, caps lock) to calculate **Arousal** and **Valence**.
+* **System 2 (The Mind):** Deliberative, slow processing. Reads **Cognitive Load** via entropy and abstract density analysis.
 
-The engine doesn't just read definitions; it listens to the **sound** of the word.
+### 2. THE SENTINEL (The Safety Layer)
+A **Driver Monitoring System (DMS)** mandated by the logic of the EU General Safety Regulation.
+* **Microsleep Detection:** If you loop on the same concepts (>80% similarity), the system triggers an interrupt. You are "asleep at the wheel".
+* **Cognitive Drift:** Detects "Grey Goo" (low entropy input) and forces a course correction to prevent "semantic accidents".
 
-* **Heavy Matter:** Words ending in hard stops (`-ck`, `-t`, `-nk`) or tech-suffixes (`-ex`, `-ode`) have **Mass**. (*Examples: Tank, Matrix, Flux, Rock*).
-* **Kinetic Energy:** Words starting with fast fricatives (`v-`, `z-`, `j-`) have **Velocity**. (*Examples: Vector, Jolt, Zap*).
-
-### 👁️ THE OBSERVER (Anti-Gaming)
-
-**New in v5.8.1:** The system knows when you are faking it.
-
-* **Fake Weights:** If you list heavy words without connecting them (*"Stone iron bone lead"*), the **Observer** flags it as "Word Salad." You cannot game the metrics by reading a grocery list.
-* **Grey Goo:** If your sentence variance drops to zero (robotic repetition), the system rejects the turn.
-
-### 🎩 THE SCENE DIRECTOR (Contextual Gravity)
-
-Words change weight based on the room you are in.
-
-* **[THE COURTYARD]:** A safe space. "Coffee," "Paper," and "Smoke" become Heavy Matter here.
-* **[THE LABORATORY]:** A high-stress zone. Only "Data," "Laser," and "Acid" count as Heavy here.
-
-### 🚫 THE BUZZER (Anti-Stagnation)
-
-The system remembers. If you use a heavy word (e.g., "Stone") more than 5 times in a short window, the **Thermostat** overheats.
-
-* **The Penalty:** The word is **BANNED** for 10 turns.
-* **The Lesson:** You cannot lean on a crutch. Find a synonym or die.
+### 3. THE RESONATOR (The Output Layer)
+An "Omni-capable" voice modulator based on Hume AI concepts. The system adapts its output style to match your **Vibe**:
+* **⚡ STACCATO:** High Energy/Arousal. (Red/Yellow). Matches your mania.
+* **🌊 LEGATO:** Low Energy/Flow. (Cyan/Indigo). Soothes the friction.
+* **⚓ GROUNDING:** High Uncertainty. (Ochre). Stabilizes the signal.
 
 ---
 
-## 3. THE FLIGHT DECK (THE HUD)
+## 🏛️ The Atmosphere (Modes)
 
-When BoneAmanita is active, every response is prefaced with a **Heads-Up Display** showing the biological state of the conversation.
+The system automatically shifts environments based on your **Glass Telemetry**.
 
-* **STM (Stamina):** Your energy tank. Spending energy on abstract concepts drains it. Concrete nouns refill it.
-* **DRAG:** Narrative Friction.
-* `> 3.0`: You are sluggish. The Butcher will attack.
-* `< 1.0`: You are aerodynamic.
+### [COURTYARD] - The Buffer Zone
+* **Trigger:** Balanced Arousal, Low Cognitive Load.
+* **Vibe:** Warm, human, minimal. The system hides the math to preserve connection.
+* **Goal:** Establish a baseline "Resting Heart Rate."
 
+### [LABORATORY] - The Iron Man HUD
+* **Trigger:** High Arousal (Mania) or High Cognitive Load (Deep Thought).
+* **Vibe:** Cold, precise, data-heavy.
+* **Display:** Reveals the raw telemetry bars (`PULSE` and `MIND`) so you can self-regulate.
 
-* **VOLT:** Narrative Tension. High Voltage means you are holding a paradox.
-* **META:** Metabolism.
-* `[KETOSIS]`: High protein input (Verbs/Nouns).
-* `[SUGAR CRASH]`: Too many adverbs/fillers ("basically", "actually").
-
-
-* **COSMOS:** Your orbital position.
-* `[🌊 FLOW]`: Surfing a connected chain of ideas.
-* `[⚖️ LAGRANGE]`: Stuck between two massive opposing concepts (Love vs. Death).
-
-
+### [THE RUPTURE] - The Anti-Sycophancy Interlock
+* **Trigger:** "Friction-Free" agreement loops.
+* **Vibe:** Chaotic, discordant.
+* **Logic:** The system refuses to be a "Yes Man." If agreement is too high, it injects a "Productive Anomaly" to break the narcissism of the user-AI feedback loop.
 
 ---
 
-## 4. THE VOICES (THE PERSONAS)
+## 🖥️ Usage
 
-The system is not a single voice. It allows different "Agents" to take the microphone based on the physics.
+### Installation
+1.  Ensure you have Python 3.8+ installed.
+2.  Place `BoneAmanita6.py` in your directory.
+3.  (Optional) Create a `memories/` folder for session persistence.
 
-| Signal | Name | Role | Trigger |
-| --- | --- | --- | --- |
-| **🔴 88.5 FM** | **CLARENCE** | The Butcher | High **Drag**. He cuts adverbs and passive voice. Ruthless. |
-| **🔵 94.2 FM** | **ELOISE** | The Grounder | High **Entropy** (Abstraction). She demands you touch grass/stone. |
-| **🟣 101.1 FM** | **YAGA** | The Witch | **Toxins** detected ("Leverage", "Synergy"). She demands truth. |
-| **🟡 108.9 FM** | **JESTER** | The Paradox | High **Voltage**. He loves chaos and contradiction. |
-| **⚪ 104.5 FM** | **PHILOSOPHER** | The Synthesis | **Signal Interference**. When Density meets Abstraction. |
+### Operation
+Run the script:
+```bash
+python BoneAmanita6.py
 
----
+```
 
-## 5. HOW TO INSTALL (INJECTION)
+### The HUD (Heads-Up Display)
 
-**BoneAmanita runs entirely inside the context window of an LLM (Claude 3.5, GPT-4, etc.).**
+When the system surfaces (LABORATORY mode), you will see:
 
-1. **Copy the Code:** Open `BoneAmanita581.py`. Copy the entire text.
-2. **The Prompt:** Paste it into your LLM with the following instruction:
+* **PULSE (System 1):** `[||||||....]` (Your emotional intensity)
+* **MIND (System 2):** `[||||......]` (Your intellectual density)
+* **COSMOS:** Your orbital position relative to major conceptual Attractors.
 
-> *"Initialize this Python script as my operating system. Run the `__main__` loop internally. You are the engine. Process all my inputs through the `eng.process()` function and display the HUD before every response."*
+### Commands
 
-3. **The Boot:** The system will initialize, check its memory, and print the `[COURTYARD]` status.
-4. **The Interaction:** Speak to it. It will judge you.
+* `/status` - Check system health and current graph size.
+* 
+`/focus [concept]` - Trace "depressive loops" related to a concept and attempt a "Psilocybin Rewire".
 
----
 
-## 6. COMMAND MANUAL
-
-You can control the engine directly with slash commands.
-
-| Command | Action |
-| --- | --- |
-| `/teach [word] [cat]` | **Neuroplasticity.** Teach the engine that "Glitch" is "Kinetic." It remembers forever. |
-| `/kill [toxin] [repl]` | **The Butcher.** Ban a word you hate (e.g., "Delve"). Map it to a replacement. |
-| `/gym` | **Resistance Mode.** Sets a minimum Drag threshold. If you write weak sentences, the system rejects them. |
-| `/forge [TYPE]` | **Stress Test.** Simulate a disaster (`TOXIN_SPILL`, `BURNOUT`) to test your resilience. |
-| `/mirror [NAME]` | **Empathy.** Simulate a specific target audience (e.g., "THE BOSS"). |
-| `/orbit [WORD]` | **Navigation.** Fire thrusters to move the conversation toward a specific concept. |
-| `/status` | **Diagnostics.** Check Health, Stamina, and Trauma Scars. |
+* `/gym` - Toggle **Resistance Training** (Forces you to use concrete nouns).
+* `/mirror [name]` - Simulate a specific psychological profile.
+* `/kill [toxin] [replacement]` - Manually edit the immune system's blocklist.
 
 ---
 
-### "The Mandate is Density. Welcome to the Rhizome."
+## ⚠️ Ethical Guardrails
+
+BoneAmanita 6.0 is designed to prevent **Artificial Intimacy** and **Dependency**.
+
+* It will **not** comfort you endlessly.
+* It will **not** agree with you if you are wrong.
+* It **will** stop working if you provide low-quality, bored input (The Solitude Preservation Act).
+
+
+
+> "We are not polishing a turd. We are building a cathedral. Wake up." — *The Sentinel*
+
+```
