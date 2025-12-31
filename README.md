@@ -1,4 +1,4 @@
-# BONEAMANITA v7.3 - "THE VOIGHT-KAMPF TEST"
+# BONEAMANITA v7.3 - "THE VOIGHT-KAMPFF TEST"
 
 > *"It's a test, designed to provoke an emotional response."*
 > — Blade Runner (1982)
