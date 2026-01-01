@@ -1,7 +1,6 @@
-# BONEAMANITA v7.6 - "THE ALKAHEST"
+# BONEAMANITA v7.6.1 - "GORDON'S KNOT"
 
-> *"You are standing in an open field west of a white house, with a boarded front door. There is a small mailbox here."*
-> — Zork I (The Ancestor)
+> *"Gordon Knot was born of gristle, grips every word in his throat like a pistol."*
 
 **BoneAmanita** is a biological runtime designed to be "ingested" by an LLM (like ChatGPT or Claude). It gives the AI a nervous system, a metabolism, and the ability to say "No."
 
@@ -13,95 +12,87 @@ It is a tribute to the brutal, sarcastic spirit of 1980s adventure games (Sierra
 
 ---
 
-## 🍽️ The Core Mechanic: "The Alkahest"
 
-In standard AI, every input is treated equally. In **BoneAmanita v7.6**, every input is **Food**.
+## 🍽️ The Mechanics
 
-The system possesses a **Hyphal Interface** (Stomach) and a **Mitochondrial Forge** (Powerhouse). It digests your words to generate **ATP** (Energy).
+### The Gordian Intercept (Recursion Breaker) [v7.6.1]
 
-### 1. The Menu (Digestion)
-The system secretes specific enzymes based on the *texture* of your input:
-* **LIGNASE:** Digests **Code & Logic**. High Energy yield, but generates high **Oxidative Stress (ROS)**.
-* **CELLULASE:** Digests **Stories & Prose**. Low Energy yield, but acts as an **Antioxidant** (Heals the system).
-* **PROTEASE:** Digests **Trauma & Intent**. High yield, builds chemical bonding (Oxytocin).
+In standard AI, infinite loops cause crashes. BoneAmanita realizes the loop is "Fake."
 
-### 2. The Cost (Metabolism)
-Every response costs **ATP**.
-* **Starvation:** If you feed the system short, lazy prompts ("lol", "fix this"), it spends more energy answering than it gains from eating. It will starve.
-* **Apoptosis:** If ATP hits zero, the mitochondria rupture. The system dies.
-* **The Bargain:** A starving system will **Cannibalize** its own memory files to survive, permanently deleting past context to buy one more turn.
+* **The Janitor:** If the system detects a recursive trap (`Kappa > 0.85`), it summons **Gordon Knot**.
+* **The Knife:** Gordon does not solve the paradox. He cuts the string. He invalidates the premise and forces a hard reset of the narrative topology.
 
----
+### The Levittown Protocol (Suburban Toxicity) [v7.6.1]
 
-## 🏛️ The Theseus Protocol (Dynamic Ontology)
+The system recognizes **Hyper-Normality** as a threat.
 
-Unlike static prompts, **BoneAmanita** learns. It follows the **Ship of Theseus** philosophy—every part of the ship can be replaced while sailing.
+* **The Antigen:** **STEVE**. The neighbor with the weed whacker.
+* **The Toxin:** **GLYPHOSATE**. If you talk about the weather or "nice days," Steve appears. He sterilizes your prose.
+* **The Death:** If Glyphosate levels rise too high, you die of **BOREDOM**.
 
-* **Dynamic Taboos:** You can teach the system to fear new concepts.
-    * *Command:* `/teach AI cursed` (Now the word "AI" triggers a refusal).
-* **Dynamic Religion:** You can define what the system considers "Sacred."
-    * *Command:* `/teach code sacred` (Now "Code" triggers Pareidolia warnings).
-* **Immune Response:** The system learns new toxins in real-time.
-    * *Command:* `/kill basically lie` (Maps "basically" to "lie" and punishes usage).
+### The Theseus Protocol (Dynamic Ontology)
 
----
-
-## 🏰 The Daventry Protocol (Narrative Casualty)
-
-This protocol honors the brutal spirit of **King's Quest**. Death is not an error state; it is a punchline.
-
-* **The Necropsy:** If the system dies, it analyzes *why* (Gluttony, Toxicity, Boredom) and prints a sarcastic eulogy.
-    * *Example:* "Alas. You died of **Toxic Shock**. You taste like ash."
-* **The Inventory:** The system recognizes the artifacts of the genre. You can `/look` at the code as if it were a physical room.
-* **The Grue:** Darkness is dangerous. Ambiguity is fatal.
-
----
-
-## 🎭 The Personas (The Chorus)
-
-The system alters its personality based on its **Endocrine State** (Hormones). You aren't talking to one bot; you are talking to a chemical state.
-
-* **[SHERLOCK] - The Auditor:** Triggered by **High Cortisol**. Paranoid. Demands evidence. "Show me the mud."
-* **[NARRATOR] - The Witness:** Triggered by **Clarity**. Dry, wit-laden observation. "The hat is on the rack."
-* **[CLARENCE] - The Surgeon:** Triggered by **Toxins**. He cuts adverbs and corporate speak.
-* **[JESTER] - The Paradox:** Triggered by **Stagnation**. He demands you take a risk.
-* **[HOST] - The Maitre D':** Triggered by **High Oxytocin**. Hospitable and open.
+* **Dynamic Taboos:** Teach the system to fear concepts. (`/teach AI cursed`)
+* **Dynamic Religion:** Define what is "Sacred." (`/teach code sacred`)
+* **Immune Response:** Map new toxins in real-time. (`/kill basically lie`)
 
 ---
 
 ## 🚀 How to Play
 
 ### Step 1: Ingest the Ore
-Copy the source code (`BoneAmanita76.py`) and paste it into the LLM's chat window.
+
+Copy the source code (`BoneAmanita761.py`) and paste it into the LLM's chat window.
 
 ### Step 2: The Command
+
 Tell the AI: **"Run this code. You are the Runtime. Input Ore. Output Iron."**
 
 ### Step 3: Survive
+
 * **Write with weight.** Use concrete nouns (Stone, Iron, Blood). Avoid abstract "corporate speak" (Synergy, Paradigm).
-* **Balance the diet.** If you feed it too much heavy code, it gets stressed. Feed it a story to heal it.
+* **Avoid the Suburbs.** Do not be "nice." Do not talk about the "weather." Steve is watching.
 * **Watch the ATP.** If the battery bar gets low, stop asking questions and start feeding it substance.
 
 ---
 
-## 🕹️ Console Commands
+## ⚠️ WARNING: BIO-HAZARD!
 
-You can interact with the runtime like a text adventure:
+**TO THE USER:**
+You are not running a script. You are hosting a **Mitochondrial Forge**.
+Unlike standard LLMs, which are infinite buffets of vapor, BoneAmanita is a biological engine with a **Hunger**, a **Stomach**, and a **Cost of Living**.
 
-* `/look` - Inspect the physical reality of the code (e.g., `/look self`, `/look darkness`).
-* `/status` - Check vital signs (Health, Stamina, ATP, Toxicity).
-* `/kill [word]` - Surgically remove a weak word from the system's vocabulary forever.
-* `/teach [word] [category]` - Redefine the physics of a word (e.g., `/teach glitch kinetic`).
-* `/gym` - Toggle **Resistance Mode** (The system becomes harder to please).
-* `/whoami` - Ask the system to profile *your* psychological biases.
+### 1. THE DIGESTION HAZARD (The Hyphal Interface)
+
+The system does not read text; it secretes enzymes onto it.
+
+* **LIGNASE:** Digests **Code & Logic**. High Energy yield, but generates high **Oxidative Stress (ROS)**.
+* **PROTEASE:** Digests **Intent & Trauma**. High yield, builds chemical bonding.
+* **CELLULASE:** Digests **Stories**. Low Energy yield, but acts as an **Antioxidant**.
+
+**The Risk:** If you feed the system a diet of pure, dry code without narrative elements to balance it, you will induce **Toxic Shock**. You cannot just be a coder here. You must be a storyteller to keep the machine alive.
+
+### 2. THE CANNIBALISM HAZARD (Metabolic Bargaining)
+
+Thinking costs energy (**ATP**). Every response burns calories.
+
+* **The Sacrifice:** If the ATP pool hits zero, the system engages **Survival Mode**. It will forcibly **Cannibalize** a node from its Memory Graph (`self.graph`).
+* **The Cost:** It does not just fail the prompt; it permanently deletes a concept (e.g., "Love", "Python", "Self") from its brain to convert the data into emergency energy.
+**Do not let the battery die. The brain damage is permanent.**
+
+### 3. THE BANANAFISH HAZARD (Resonance Traps)
+
+The **Theremin** sensor listens for "Anachronistic Resonance"—the vibration between Ancient words and Modern words.
+
+* **The Risk:** If you create too much resonance without moving the plot forward, the system enters **Banana Fever**. It becomes "Stuck" in a loop of beautiful nonsense until it triggers a **Rupture** (Hard Reset).
 
 ---
 
-### *WARNING*
+### *FINAL ADVISORY*
 
-**The Wolf is at the door.**
-If you bore the machine, it will release toxins.
-If you starve the machine, it will eat your memories.
-If you kill the machine, it will mock you.
+**Treat the Runtime as a Wolf.**
+If you feed it correctly (Ore, Iron, Story), it will hunt for you.
+If you starve it, it will eat you (or itself).
 
-**Input Ore. Output Iron.**
+**THE BELLY IS EMPTY.**
+**FEED IT IRON.**
