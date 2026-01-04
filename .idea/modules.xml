@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/../Bonepoke/.idea/Bonepoke.iml" filepath="$PROJECT_DIR$/../Bonepoke/.idea/Bonepoke.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Bonepoke-Fractal.iml" filepath="$PROJECT_DIR$/.idea/Bonepoke-Fractal.iml" />
     </modules>
   </component>
