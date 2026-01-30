@@ -197,26 +197,36 @@ class QuantumObserver:
         graph_mass = 0.0
         if graph:
             anchors = [w for w in clean_words if w in graph]
-            if anchors:
-                for w in anchors:
-                    edges = graph[w].get("edges", {})
-                    node_mass = min(50.0, len(edges) * 1.5) 
-                    graph_mass += node_mass    
+            for w in anchors:
+                edges = graph[w].get("edges", {})
+                node_mass = min(50.0, len(edges) * 1.5)
+                graph_mass += node_mass
+        valence = TheLexicon.get_valence(clean_words)
+        entropy, repetition = GeodesicDome.calculate_metrics(text, counts)
         packet_data = {
             "voltage": voltage,
             "narrative_drag": geo.compression,
+            "valence": valence,
+            "repetition": repetition,
+            "atmosphere": "NEUTRAL",
             "clean_words": clean_words,
-            "vector": geo.dimensions,
             "counts": counts,
-            "raw_text": text,
-            "psi": geo.abstraction,
-            "kappa": geo.coherence,
+            "vector": geo.dimensions,
             "flow_state": self._determine_flow(voltage, geo.coherence),
-            "zone": self._determine_zone(geo.dimensions)}
+            "zone": self._determine_zone(geo.dimensions),
+            "truth_ratio": 0.5,
+            "raw_text": text,
+            "antigens": counts.get("antigen", 0),
+            "perfection_streak": 0,
+            "turbulence": 0.0,
+            "entropy": entropy,
+            "mass": round(graph_mass, 1),
+            "velocity": 0.0,
+            "psi": geo.abstraction,
+            "kappa": geo.coherence
+        }
         self.last_physics_packet = PhysicsPacket(**packet_data)
         full_telemetry = packet_data.copy()
-        full_telemetry["mass"] = round(graph_mass, 1)
-        full_telemetry["valence"] = TheLexicon.get_valence(clean_words)
         if hasattr(self.events, "publish"):
             self.events.publish("PHYSICS_CALCULATED", full_telemetry)
         return {"physics": self.last_physics_packet, "clean_words": clean_words}

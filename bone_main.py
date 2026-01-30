@@ -1,4 +1,4 @@
-""" BONEAMANITA 12.5.0 'THE LUCID TICK'
+""" BONEAMANITA 12.5.1 'THE SURGICAL STRIKE'
  Architects: SLASH, KISHO, The BonePoke Gods Humans: Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -7,14 +7,14 @@ from typing import Dict, Any, Optional
 from bone_bus import EventBus, Prisma, BoneConfig, SystemHealth, TheObserver, BonePresets
 from bone_commands import CommandProcessor
 from bone_data import TheAkashicRecord, TheLore
-from bone_village import TownHall, DeathGen
+from bone_village import TownHall, DeathGen, TheNavigator, ZenGarden, TheTinkerer
 from bone_lexicon import TheLexicon
 from bone_inventory import GordonKnot
 from bone_telemetry import TelemetryService
 from bone_personality import TheFolly, ChorusDriver, KintsugiProtocol, TherapyProtocol, TheBureau
 from bone_physics import CosmicDynamics, ZoneInertia
-from bone_body import SomaticLoop, NoeticLoop
-from bone_brain import TheCortex, LLMInterface
+from bone_body import SomaticLoop
+from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_soul import NarrativeSelf
 from bone_architect import BoneArchitect
 from bone_cycle import GeodesicOrchestrator
@@ -37,7 +37,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 12.5.0', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 12.5.1', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -140,13 +140,8 @@ class BoneAmanita:
     def _initialize_embryo(self):
         self.embryo = BoneArchitect.incubate(self.events, self.lex)
         self.embryo = BoneArchitect.awaken(self.embryo)
-        self.mind = self.embryo.mind
-        self.limbo = self.embryo.limbo
-        self.bio = self.embryo.bio
-        self.phys = self.embryo.physics
-        self.shimmer_state = self.embryo.shimmer
-        self.soul_legacy_data = self.embryo.soul_legacy
         self.gordon = GordonKnot()
+        self.soul_legacy_data = self.embryo.soul_legacy
 
     def _initialize_identity(self):
         self.soul = NarrativeSelf(self, self.events, memory_ref=self.mind.mem)
@@ -154,22 +149,22 @@ class BoneAmanita:
             self.soul.load_from_dict(self.soul_legacy_data)
 
     def _initialize_village(self):
-        self.town_hall = TownHall(self.gordon, self.events, self.shimmer_state)
-        self.navigator = self.town_hall.Navigator
-        self.tinkerer = self.town_hall.Tinkerer
-        self.almanac = self.town_hall.Almanac
-        self.mirror = self.town_hall.Mirror
-        self.zen = self.town_hall.ZenGarden
-        self.council = CouncilChamber()
-        self.repro = LiteraryReproduction()
-        self.projector = Projector()
-        self.kintsugi = KintsugiProtocol()
-        self.therapy = TherapyProtocol()
-        self.folly = TheFolly()
-        self.stabilizer = ZoneInertia()
-        self.director = ChorusDriver()
-        self.bureau = TheBureau()
-        self.cosmic = CosmicDynamics()
+        self.town_hall = TownHall(self.gordon, self.events, self.embryo.shimmer)
+        self.village = {
+            "town_hall": self.town_hall,
+            "council": CouncilChamber(),
+            "repro": LiteraryReproduction(),
+            "projector": Projector(),
+            "kintsugi": KintsugiProtocol(),
+            "therapy": TherapyProtocol(),
+            "folly": TheFolly(),
+            "stabilizer": ZoneInertia(),
+            "director": ChorusDriver(),
+            "bureau": TheBureau(),
+            "cosmic": CosmicDynamics(),
+            "navigator": TheNavigator(self.embryo.shimmer),
+            "zen": ZenGarden(self.events),
+            "tinkerer": TheTinkerer(self.gordon, self.events) }
         self.cmd = CommandProcessor(self, Prisma, self.lex, BoneConfig)
 
     def _initialize_cognition(self):
@@ -181,10 +176,25 @@ class BoneAmanita:
             provider=self.config.get("provider"),
             base_url=self.config.get("base_url"),
             api_key=self.config.get("api_key"),
-            model=self.config.get("model")
-        )
+            model=self.config.get("model"))
         self.cortex = TheCortex(self, llm_client=client)
         self.somatic = SomaticInterface(self)
+
+    def __getattr__(self, name):
+        if name == 'phys':
+            if hasattr(self, 'embryo') and self.embryo:
+                return self.embryo.physics
+            raise AttributeError("'BoneAmanita' has no embryo to retrieve 'phys' from.")
+        if hasattr(self, 'embryo') and self.embryo and hasattr(self.embryo, name):
+            return getattr(self.embryo, name)
+        if hasattr(self, 'town_hall') and self.town_hall and hasattr(self.town_hall, name):
+            return getattr(self.town_hall, name)
+        if hasattr(self, 'village') and name in self.village:
+            return self.village[name]
+        if hasattr(self, 'embryo') and self.embryo and hasattr(self.embryo, 'physics'):
+            if hasattr(self.embryo.physics, name):
+                return getattr(self.embryo.physics, name) 
+        raise AttributeError(f"'BoneAmanita' object has no attribute '{name}'")
 
     def _validate_state(self):
         BoneConfig.load_preset(BonePresets.ZEN_GARDEN)
@@ -206,56 +216,35 @@ class BoneAmanita:
         return sum(hist) / len(hist)
 
     def process_turn(self, user_message: str) -> Dict[str, Any]:
-        # Fuller Lens: Delegation. Let the specialized tool (Orchestrator) do the work.
         turn_start = self.observer.clock_in()
         self.observer.user_turns += 1
-
         if not user_message: user_message = ""
-
-        # 1. Check for Slash Commands (Shell Level)
         cmd_response = self._phase_check_commands(user_message)
         if cmd_response:
             return cmd_response
-
-        # 2. Ethical Audit (Safety Layer)
         if self._ethical_audit():
             self.events.log(f"{Prisma.WHT}MERCY SIGNAL: Trauma boards wiped.{Prisma.RST}", "SYS")
-
-        # 3. The Cycle (Delegate to GeodesicOrchestrator)
-        # SLASH FIX: Replaced manual logic with the proper Orchestrator call.
-        # This restores the 12-phase pipeline (Metabolism, Physics, Soul, etc.)
         try:
-            # We pass latency info if available, though Orchestrator calculates its own.
-            cortex_packet = self.cycle_controller.run_turn(user_message)
+            cortex_packet = self.cortex.process(user_input=user_message)
         except Exception as e:
-            # Fallback if the Cycle crashes and wasn't caught internally
             self.events.log(f"CYCLE CRITICAL FAILURE: {e}", "ERR")
             import traceback
             traceback.print_exc()
             return {
                 "ui": f"{Prisma.RED}REALITY FRACTURE: {e}{Prisma.RST}",
                 "logs": ["CRITICAL FAILURE"],
-                "metrics": self.get_metrics()
-            }
-
-        # 4. Metrics & Reporting (Post-Cycle)
+                "metrics": self.get_metrics()}
         duration = self.observer.clock_out(turn_start, "cycle")
-
-        # Check for Latency and adjust Renderer Mode (Feedback Loop)
         avg_cycle = self.observer.get_report().get("avg_cycle_sec", 0.0)
         reporter = self.cycle_controller.reporter
-
         if avg_cycle > 2.0 and reporter.current_mode != "PERFORMANCE":
             self.events.log(f"{Prisma.OCHRE}⚠️ HIGH LATENCY ({avg_cycle:.2f}s). Engaging Performance Mode.{Prisma.RST}", "SYS")
             reporter.switch_renderer("PERFORMANCE")
         elif avg_cycle < 0.5 and reporter.current_mode == "PERFORMANCE":
             self.events.log(f"{Prisma.GRN}⚡ LATENCY NOMINAL ({avg_cycle:.2f}s). Restoring High-Fidelity.{Prisma.RST}", "SYS")
             reporter.switch_renderer("STANDARD")
-
-        # 5. Persist Memory State
         if hasattr(self.mind, 'mem') and hasattr(self.mind.mem, 'session_trauma_vector'):
             self.mind.mem.session_trauma_vector = self.trauma_accum.copy()
-
         return cortex_packet
 
     def _phase_check_commands(self, user_message):
@@ -390,7 +379,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 12.5.0', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 12.5.1', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

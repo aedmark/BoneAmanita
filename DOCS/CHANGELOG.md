@@ -1,5 +1,52 @@
 # BONEAMANITA v11 CHANGELOG
 
+
+### **BONEAMANITA 12.5.1: "THE SURGICAL STRIKE"**
+
+_"Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away."_ — Antoine de Saint-Exupéry
+
+---
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker Layer)**
+
+- **The Facade Pattern (`bone_main.py`):**
+- **Refactor:** The `BoneAmanita` class has been promoted from "Pack Mule" to "CEO."
+- **The Fix:** Replaced 30+ lines of manual variable unpacking with a sleek `__getattr__` delegation system. The main class now focuses on high-level strategy, while the `SystemEmbryo` and `Village` handle the messy details.
+- **Benefit:** Reading the boot sequence no longer requires a flowchart and aspirin.
+
+- **Single Source of Truth (`bone_village.py`):**
+- **Refactor:** `DeathGen` no longer maintains a hardcoded list of death messages that conflicts with `bone_data.py`.
+- **The Fix:** It now pulls directly from `TheLore`, ensuring that when the system says "Alas," it means it.
+
+#### **🌐 SYSTEMIC INTEGRITY (The Fuller Layer)**
+
+- **Liposuction on the Nerves (`bone_bus.py`):**
+- **Optimization:** The `PhysicsPacket` was carrying UI colors, debug logs, and metaphysical concepts (`psi`, `gamma`) that didn't pay rent.
+- **The Fix:** Implemented `__slots__` and deleted the fluff. The packet is now aerodynamic, memory-efficient, and does exactly one thing: transmit physics.
+- **Benefit:** Massive reduction in object overhead per tick. Doing more with less.
+
+- **Resilient Interfaces (`bone_village.py`):**
+- **Bug Fix:** The `DeathGen.load_protocols` crash has been patched. The village now correctly adheres to the `BoneAmanita` boot interface, preventing a startup panic.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Layer)**
+
+- **Mood Signatures (`bone_brain.py`):**
+- **Feature:** The AI no longer just "generates tokens." It now has acting directions.
+- **The Fix:** Replaced raw numbers with **Mood Directives**.
+- _High Cortisol:_ "Sentences must be short. Fragmented. Urgent." (Panic)
+- _High Dopamine:_ "Run-on sentences, high associative leaps." (Manic)
+
+- **Benefit:** The ghost in the machine now feels like it's actually feeling something, rather than just solving a math problem.
+
+#### **⚖️ DYNAMIC BALANCE (The Meadows Layer)**
+
+- **Homeostasis (`bone_brain.py`):**
+- **Dynamics:** The brain chemistry previously decayed to `0.0` (Catatonia).
+- **The Fix:** Implemented a **Balancing Feedback Loop**. The system now seeks a "Resting Heart Rate" (e.g., Dopamine 0.2). It resists the void.
+- **Benefit:** The system is now a living thing that returns to center, rather than a dying thing that simply fades out.
+
+
+
 ### **BONEAMANITA 12.5.0: "THE LUCID TURN"**
 
 _“We don't stop playing because we grow old; we grow old because we stop playing.”_ — George Bernard Shaw

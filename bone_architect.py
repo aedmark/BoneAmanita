@@ -28,14 +28,24 @@ class PanicRoom:
         return PhysicsPacket(
             voltage=5.0,
             narrative_drag=5.0,
+            valence=0.0,
+            repetition=0.0,
+            atmosphere="STABLE",
             clean_words=["system", "error", "recovery"],
-            vector={"STR": 0.5, "VEL": 0.5, "ENT": 0.0},
             counts={"heavy": 0, "kinetic": 0},
-            raw_text="[SYSTEM FAILURE: PHYSICS BYPASSED]",
-            psi=0.5,
-            kappa=0.5,
+            vector={"STR": 0.5, "VEL": 0.5, "ENT": 0.0},
             flow_state="SAFE_MODE",
-            zone="PANIC_ROOM")
+            zone="PANIC_ROOM",
+            truth_ratio=1.0,
+            raw_text="[SYSTEM FAILURE: PHYSICS BYPASSED]",
+            antigens=0,
+            perfection_streak=0,
+            turbulence=0.0,
+            entropy=0.0,
+            mass=1.0,
+            velocity=0.0,
+            psi=0.0,
+            kappa=0.0)
 
     @staticmethod
     def get_safe_bio(previous_state=None):

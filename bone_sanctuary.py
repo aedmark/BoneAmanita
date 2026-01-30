@@ -16,6 +16,8 @@ class PIDController:
         self._integral = 0.0
 
     def update(self, measurement: float, dt: float = 1.0) -> float:
+        if dt is None:
+            dt = 1.0
         safe_dt = max(0.001, dt)
         error = self.setpoint - measurement
         self._integral += error * safe_dt

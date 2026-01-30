@@ -178,26 +178,51 @@ class TownHall:
         return f"CENSUS: {status} | {advice}"
 
 class DeathGen:
-    @staticmethod
-    def eulogy(physics, mito_state):
+    @classmethod
+    def load_protocols(cls):
+        """
+        FULLER: The initialization vector.
+        It verifies that the Death Data is accessible via TheLore.
+        """
         death_data = TheLore.get("DEATH")
         if not death_data:
-            return "💀 TERMINAL STATE. The simulation has ended."
-        cause = "TRAUMA" # Default
-        if mito_state.get("atp", 0) <= 0:
+            # Fallback if bone_data.py is empty or missing
+            print(f"{Prisma.RED}[DEATH]: Protocols missing. Loading default fallback.{Prisma.RST}")
+            default_death = {
+                "PREFIXES": ["System Halt."],
+                "CAUSES": {"DEFAULT": ["Unknown Error"]},
+                "VERDICTS": {"DEFAULT": ["The screen goes black."]}
+            }
+            TheLore.inject("DEATH", default_death)
+
+    @staticmethod
+    def eulogy(physics, mito_state) -> str:
+        death_data = TheLore.get("DEATH")
+        cause = "TRAUMA"  # Default
+        voltage = physics.get("voltage", 0)
+        drag = physics.get("narrative_drag", 0)
+        atp = mito_state.get("atp", 0) if isinstance(mito_state, dict) else getattr(mito_state, "atp_pool", 0)
+        if atp <= 0:
             cause = "STARVATION"
-        elif physics.get("voltage", 0) > 20.0:
-            cause = "GLUTTONY" # Exploded
+        elif voltage > 20.0:
+            cause = "GLUTTONY"  # Too much energy
         elif physics.get("counts", {}).get("antigen", 0) > 5:
             cause = "TOXICITY"
-        elif physics.get("narrative_drag", 0) > 8.0:
+        elif drag > 8.0:
             cause = "BOREDOM"
-        prefix = random.choice(death_data.get("PREFIXES", ["Alas."]))
-        specific_causes = death_data.get("CAUSES", {}).get(cause, ["System Failure"])
+        prefixes = death_data.get("PREFIXES", ["Alas."])
+        prefix = random.choice(prefixes)
+        specific_causes = death_data.get("CAUSES", {}).get(cause, ["General System Failure"])
         specific_cause = random.choice(specific_causes)
         verdict_type = "HEAVY"
-        if physics.get("voltage", 0) > 10.0: verdict_type = "LIGHT"
-        verdict = random.choice(death_data.get("VERDICTS", {}).get(verdict_type, ["It is done."]))
+        if voltage > 10.0: 
+            verdict_type = "LIGHT"
+        elif cause == "TOXICITY":
+            verdict_type = "TOXIC"
+        elif cause == "BOREDOM":
+            verdict_type = "BORING"
+        verdicts = death_data.get("VERDICTS", {}).get(verdict_type, ["It is done."])
+        verdict = random.choice(verdicts)
         return f"{prefix} CAUSE: {specific_cause}. {verdict}"
 
 TheNavigator = SimpleNavigator

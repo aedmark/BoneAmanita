@@ -437,124 +437,55 @@ class PhysicsPacket:
     narrative_drag: float = 0.0
     valence: float = 0.0
     repetition: float = 0.0
-    atmosphere: str = "VOID"
+    atmosphere: str = "NEUTRAL"
     clean_words: List[str] = field(default_factory=list)
     counts: Dict[str, int] = field(default_factory=dict)
     vector: Dict[str, float] = field(default_factory=dict)
-    psi: float = 0.0
-    kappa: float = 0.0
-    geodesic_mass: float = 0.0
-    beta_index: float = 1.0
-    gamma: float = 0.0
-    turbulence: float = 0.0
     flow_state: str = "LAMINAR"
     zone: str = "COURTYARD"
-    zone_color: str = "OCHRE"
     truth_ratio: float = 0.0
     raw_text: str = ""
     antigens: int = 0
     perfection_streak: int = 0
-    avg_viscosity: float = 0.0
-    E: float = 0.0
-    B: float = 0.0
-    humility_flag: bool = False
-    system_surge_event: bool = False
-    pain_signal: float = 0.0
-    manifold: str = "THE_MUD"
-    audit_trail: List[str] = field(default_factory=list)
-    raw_text_display: str = ""
+    turbulence: float = 0.0
     entropy: float = 0.0
-
-    def __getitem__(self, key):
-        return getattr(self, key, None)
-
-    def __setitem__(self, key, value): setattr(self, key, value)
-
-    def __contains__(self, key): return hasattr(self, key)
-
-    def get(self, key, default=None): return getattr(self, key, default)
-
-    def update(self, data: Dict):
-        for k, v in data.items():
-            if hasattr(self, k): setattr(self, k, v)
-
-    def snapshot(self) -> 'PhysicsPacket':
-        data = self.to_dict()
-        data['clean_words'] = list(self.clean_words)
-        data['counts'] = self.counts.copy()
-        data['vector'] = self.vector.copy()
-        data['audit_trail'] = list(self.audit_trail)
-        return PhysicsPacket(**data)
-
-    def diff(self, other: 'PhysicsPacket') -> Dict[str, Tuple[Any, Any]]:
-        deltas = {}
-        for f in fields(self):
-            key = f.name
-            curr = getattr(self, key)
-            if isinstance(other, dict):
-                prev = other.get(key)
-            elif hasattr(other, key):
-                prev = getattr(other, key)
-            else:
-                prev = None
-            if curr != prev:
-                if isinstance(curr, float) and isinstance(prev, float):
-                    if abs(curr - prev) < 0.001:
-                        continue
-                deltas[key] = (prev, curr)
-        return deltas
-
-    def diff_view(self, other: 'PhysicsPacket', indent: int = 3) -> str:
-        deltas = self.diff(other)
-        if not deltas:
-            return f"{' ' * indent}{Prisma.GRY}(No State Drift){Prisma.RST}"
-        lines = []
-        for key, (old, new) in deltas.items():
-            color = Prisma.CYN
-            arrow = "->"
-            if isinstance(new, (int, float)) and isinstance(old, (int, float)):
-                if new > old:
-                    color = Prisma.GRN
-                    arrow = "▲"
-                elif new < old:
-                    color = Prisma.RED
-                    arrow = "▼"
-            str_old = str(old)
-            str_new = str(new)
-            if len(str_old) > 20: str_old = str_old[:17] + "..."
-            if len(str_new) > 20: str_new = str_new[:17] + "..."
-            lines.append(f"{' ' * indent}{Prisma.GRY}{key}:{Prisma.RST} {str_old} {color}{arrow}{Prisma.RST} {str_new}")
-        return "\n".join(lines)
+    mass: float = 0.0
+    velocity: float = 0.0
+    psi: float = 0.0
+    kappa: float = 0.0
+    manifold: str = "DEFAULT"
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
-        valid_keys = {f.name for f in fields(cls)}
-        filtered_data = {k: v for k, v in data.items() if k in valid_keys}
-        return cls(**filtered_data)
+    def void_state(cls):
+        return cls(atmosphere="VOID", flow_state="LAMINAR", zone="VOID")
+
+    def snapshot(self) -> 'PhysicsPacket':
+        new_packet = copy.copy(self)
+        new_packet.clean_words = list(self.clean_words)
+        new_packet.counts = self.counts.copy()
+        new_packet.vector = self.vector.copy()
+        return new_packet
 
     def to_dict(self) -> Dict[str, Any]:
         return {f.name: getattr(self, f.name) for f in fields(self)}
-    
-    @staticmethod
-    def enforce_dict(packet: Any) -> Dict[str, Any]:
-        """ Schur: Look, just give me a dictionary. I don't care how you do it. """
-        if isinstance(packet, dict):
-            return packet
-        if hasattr(packet, "to_dict"):
-            return packet.to_dict()
-        if hasattr(packet, "__dict__"):
-            return packet.__dict__
-        return {}
 
-    @property
-    def electromagnetism(self) -> float:
-        return math.sqrt(self.E**2 + self.B**2)
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def __contains__(self, key):
+        return hasattr(self, key)
 
 @dataclass
 class CycleContext:
     input_text: str
     clean_words: List[str] = field(default_factory=list)
-    physics: PhysicsPacket = field(default_factory=PhysicsPacket)
+    physics: PhysicsPacket = field(default_factory=PhysicsPacket.void_state)
     logs: List[str] = field(default_factory=list)
     flux_log: List[Dict[str, Any]] = field(default_factory=list)
     is_alive: bool = True

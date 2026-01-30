@@ -62,8 +62,8 @@ class CycleStabilizer:
         self._adjust_setpoints(ctx, p)
         curr_v = self._get_metric(p, "voltage")
         curr_d = self._get_metric(p, "narrative_drag")
-        v_force = self.voltage_pid.update(curr_v, dt=None)
-        d_force = self.drag_pid.update(curr_d, dt=None)
+        v_force = self.voltage_pid.update(curr_v, dt=0.0)
+        d_force = self.drag_pid.update(curr_d, dt=0.0)
         corrections_made = False
         if abs(curr_v - self.voltage_pid.setpoint) > 6.0 and abs(v_force) > 0.05:
             new_v = max(0.0, curr_v + v_force)
@@ -329,13 +329,14 @@ class NavigationPhase(SimulationPhase):
         for log in grav_logs:
             ctx.log(log)
         physics["narrative_drag"] = new_drag
-        physics["narrative_drag"] = new_drag
         flinch_result = self.eng.gordon.check_flinch(ctx.clean_words, self.eng.tick_count)
         if flinch_result:
             if flinch_result.get("message"):
                 ctx.log(flinch_result["message"])
             if flinch_result.get("physics_effects"):
-                physics.update(flinch_result["physics_effects"])
+                for k, v in flinch_result["physics_effects"].items():
+                    if hasattr(physics, k):
+                        setattr(physics, k, v)
         current_loc, entry_msg = self.eng.navigator.locate(physics)
         if entry_msg: ctx.log(entry_msg)
         env_logs = self.eng.navigator.apply_environment(physics)

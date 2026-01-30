@@ -164,7 +164,8 @@ class GeodesicRenderer:
             raw_cat = e.get("category", "OTHER") or "OTHER"
             cat = str(raw_cat).upper()
             text = str(e.get("text", ""))
-            if is_warmup and cat in ["SYS", "BIO", "PSYCH", "OTHER"]: continue
+            if is_warmup and cat in ["SYS", "BIO", "PSYCH", "OTHER"] and "CRITICAL" not in text:
+                continue
             if "RUPTURE" in text or "DEATH" in text or "PANIC" in text: cat = "CRITICAL"
             if "NEUROPLASTICITY" in text:
                 plasticity_count += 1
@@ -194,7 +195,8 @@ class GeodesicRenderer:
             items = buckets[cat]
             if not items: continue
             composed.append(f"{Prisma.SLATE}   .{label} ({len(items)}){' ' * (30 - len(label))}{Prisma.RST}")
-            if len(items) > 4 and not BoneConfig.VERBOSE_LOGGING:
+            should_compress = len(items) > 4 and not BoneConfig.VERBOSE_LOGGING
+            if should_compress:
                 composed.extend([f"   {i}" for i in items[:3]])
                 composed.append(f"   {color}   ... and {len(items)-3} more.{Prisma.RST}")
             else:

@@ -157,10 +157,12 @@ class CouncilChamber:
         advice = []
         total_corrections = {}
         mandates = []
-        is_loop, h_msg, h_mandate = self.hofstadter.audit(text, physics)
+        is_loop, h_msg, h_mandate, h_corrections = self.hofstadter.audit(text, physics)
         if is_loop:
             advice.append(h_msg)
             if h_mandate: mandates.append(h_mandate)
+            for k, v in h_corrections.items():
+                total_corrections[k] = total_corrections.get(k, 0.0) + v
         is_lev, m_msg, corrections, m_mandate = self.meadows.audit(physics)
         if is_lev:
             advice.append(m_msg)

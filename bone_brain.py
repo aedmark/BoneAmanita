@@ -12,6 +12,7 @@ from bone_lexicon import TheLexicon
 from bone_translation import RosettaStone
 from bone_telemetry import TelemetryService, DecisionCrystal, BlackBoxReader
 from bone_physics import cosine_similarity
+from bone_personality import SynergeticLensArbiter
 
 @dataclass
 class BrainConfig:
@@ -29,16 +30,16 @@ class BrainConfig:
 
 @dataclass
 class ChemicalState:
-    dopamine: float = 0.0
-    cortisol: float = 0.0
-    adrenaline: float = 0.0
-    serotonin: float = 0.0
-
-    def decay(self, rate: float = 0.2):
-        self.dopamine = max(0.0, self.dopamine * (1.0 - rate))
-        self.cortisol = max(0.0, self.cortisol * (1.0 - rate))
-        self.adrenaline = max(0.0, self.adrenaline * (1.0 - rate))
-        self.serotonin = max(0.0, self.serotonin * (1.0 - rate))
+    dopamine: float = 0.2
+    cortisol: float = 0.1
+    adrenaline: float = 0.1
+    serotonin: float = 0.2
+    def homeostasis(self, rate: float = 0.1):
+        targets = {"dopamine": 0.2, "cortisol": 0.1, "adrenaline": 0.1, "serotonin": 0.3}
+        for attr, target in targets.items():
+            current = getattr(self, attr)
+            delta = (target - current) * rate
+            setattr(self, attr, current + delta)
 
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
         self.dopamine = (self.dopamine * (1.0 - weight)) + (new_state.get("DOP", 0.0) * weight)
@@ -111,12 +112,8 @@ class NeurotransmitterModulator:
     def __init__(self):
         self.current_chem = ChemicalState()
         self.last_tick = time.time()
-        self.lens_profiles = {
-            "SHERLOCK": {"cortisol_dampener": 0.2, "adrenaline_boost": 0.5},
-            "NATHAN": {"cortisol_dampener": 1.5, "adrenaline_boost": 1.5},
-            "JESTER": {"cortisol_dampener": 0.0, "adrenaline_boost": 2.0},
-            "NARRATOR": {"cortisol_dampener": 1.0, "adrenaline_boost": 1.0},
-            "GORDON": {"cortisol_dampener": 0.8, "adrenaline_boost": 0.8}}
+        self.BASE_TOKENS = 720
+        self.MAX_TOKENS = 4096
 
     def force_state(self, state_name: str):
         if state_name == "MANIC":
@@ -128,37 +125,46 @@ class NeurotransmitterModulator:
             self.current_chem.dopamine = 0.0
             self.current_chem.serotonin = 0.0
             self.current_chem.cortisol = 0.8
+        elif state_name == "ZEN":
+            self.current_chem.dopamine = 0.3
+            self.current_chem.serotonin = 0.9
+            self.current_chem.cortisol = 0.0
+            self.current_chem.adrenaline = 0.0
+
+    def get_mood_directive(self) -> str:
+        c = self.current_chem
+        if c.cortisol > 0.7 and c.adrenaline > 0.7:
+            return "Current Mood: PANIC. Sentences must be short. Fragmented. Urgent."
+        if c.dopamine > 0.8 and c.adrenaline > 0.5:
+            return "Current Mood: MANIC. Run-on sentences, high associative leaps, hyper-fixated."
+        if c.serotonin > 0.7:
+            return "Current Mood: LUCID. Calm, detached, seeing the connections clearly."
+        if c.cortisol > 0.6:
+            return "Current Mood: DEFENSIVE. Suspicious, brief, guarding information."
+        return "Current Mood: NEUTRAL. Observant and receptive."
 
     def modulate(self, incoming_chem: Dict[str, float], base_voltage: float, lens_name: str = "NARRATOR",
                  model_name: str = "") -> Dict[str, Any]:
-        decay_amount = BrainConfig.BASE_DECAY_RATE
-        self.current_chem.decay(rate=decay_amount)
+        self.current_chem.homeostasis(rate=BrainConfig.BASE_DECAY_RATE)
         plasticity = BrainConfig.BASE_PLASTICITY + (base_voltage * BrainConfig.VOLTAGE_SENSITIVITY)
         plasticity = max(0.1, min(BrainConfig.MAX_PLASTICITY, plasticity))
-        mixing_weight = min(0.5, plasticity)
-        self.current_chem.mix(incoming_chem, weight=mixing_weight)
-        base_temp = BrainConfig.BASE_TEMP
-        stress_dampener = self.current_chem.cortisol * 0.5
-        curiosity_boost = self.current_chem.dopamine * 0.4
-        final_temp = base_temp - stress_dampener + curiosity_boost
-        final_temp = max(0.1, min(1.5, final_temp))
-        base_tokens = 720
+        self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
+        c = self.current_chem
+        temp_delta = (c.dopamine * 0.5) - (c.cortisol * 0.4)
+        final_temp = max(0.1, min(1.5, BrainConfig.BASE_TEMP + temp_delta))
+        token_volatility = (c.adrenaline * 800) - (c.cortisol * 400)
+        final_tokens = int(max(100.0, min(float(self.MAX_TOKENS), self.BASE_TOKENS + token_volatility)))
+        freq_penalty = 0.0
+        if c.adrenaline > 0.5:
+            freq_penalty = 0.3
         params = {
             "temperature": round(final_temp, 2),
             "top_p": BrainConfig.BASE_TOP_P,
-            "frequency_penalty": 0.0,
+            "frequency_penalty": freq_penalty,
             "presence_penalty": 0.0,
-            "max_tokens": getattr(BoneConfig, "MAX_OUTPUT_TOKENS", 4096)}
-        effective_adrenaline = self.current_chem.adrenaline
-        if effective_adrenaline > 0.3:
-            extra_tokens = BrainConfig.ADRENALINE_RUSH * effective_adrenaline
-            params["max_tokens"] = int(base_tokens + extra_tokens)
-            params["frequency_penalty"] = 0.2
-        else:
-            params["max_tokens"] = base_tokens
+            "max_tokens": final_tokens}
         if "gemma" in model_name.lower() or "3" in model_name.lower():
             params["temperature"] = min(0.9, params["temperature"])
-        params["max_tokens"] = max(100, params["max_tokens"])
         return params
 
 

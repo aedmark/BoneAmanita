@@ -43,8 +43,7 @@ class RosettaStone:
             focus=focus,
             somatic_sensation=sensation,
             metaphor=metaphor,
-            internal_monologue_hint=hint,
-            color_code=color)
+            internal_monologue_hint=hint)
 
     @staticmethod
     def _derive_voltage_tone(v):

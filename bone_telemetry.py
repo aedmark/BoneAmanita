@@ -1,7 +1,7 @@
 """ bone_telemetry.py """
 
 import json, time, os, glob, uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Deque
 from collections import deque
 from dataclasses import dataclass, asdict, field
 from bone_bus import Prisma
