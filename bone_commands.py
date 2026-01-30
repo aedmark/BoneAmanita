@@ -1,5 +1,4 @@
-""" bone_commands.py
- 'The snake spits out its tail. The circle becomes a line.' """
+""" bone_commands.py - 'The snake spits out its tail. The circle becomes a line.' """
 
 import shlex
 from typing import Dict, Callable, List, Any, Tuple, Optional

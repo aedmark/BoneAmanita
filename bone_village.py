@@ -25,11 +25,13 @@ class TheTinkerer:
         vector = p.get("vector", {})
         for item in inventory_list:
             if item not in self.tool_confidence: self.tool_confidence[item] = 1.0
-            if voltage > 12.0:
+            is_manic = voltage > 12.0
+            is_coherent = p.get("kappa", 0.0) > 0.8
+            if is_manic or is_coherent:
                 self.tool_confidence[item] += 0.05
                 if self.tool_confidence[item] > 2.5:
                     self._attempt_ascension(item, inventory_list, vector)
-            elif drag > 5.0:
+            elif drag > 6.0:
                 self.tool_confidence[item] -= 0.02
                 if self.tool_confidence[item] < 0.2:
                     self.events.log(f"{Prisma.OCHRE}[TINKER] {item} is rusting.{Prisma.RST}", "SYS")

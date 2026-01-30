@@ -532,8 +532,19 @@ class PhysicsPacket:
         filtered_data = {k: v for k, v in data.items() if k in valid_keys}
         return cls(**filtered_data)
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return {f.name: getattr(self, f.name) for f in fields(self)}
+    
+    @staticmethod
+    def enforce_dict(packet: Any) -> Dict[str, Any]:
+        """ Schur: Look, just give me a dictionary. I don't care how you do it. """
+        if isinstance(packet, dict):
+            return packet
+        if hasattr(packet, "to_dict"):
+            return packet.to_dict()
+        if hasattr(packet, "__dict__"):
+            return packet.__dict__
+        return {}
 
     @property
     def electromagnetism(self) -> float:

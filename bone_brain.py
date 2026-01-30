@@ -63,11 +63,15 @@ class NarrativeSpotlight:
             self.dimension_map[dimension].add(new_category)
 
     def illuminate(self, graph: Dict, vector: Dict[str, float], limit: int = 5) -> List[str]:
-        if not graph or not vector:
+        if not graph:
             return []
-        active_dims = {k: v for k, v in vector.items() if v > 0.6}
-        if not active_dims:
-            return []
+        active_dims = {k: v for k, v in vector.items() if v > 0.4}
+        if not active_dims and vector:
+             top_dim = max(vector, key=vector.get)
+             if vector[top_dim] > 0.1:
+                 active_dims = {top_dim: vector[top_dim]}
+             else:
+                 active_dims = {"ENT": 0.2}
         scored_memories = []
         secondary_candidates = set()
         for node, data in graph.items():
@@ -82,7 +86,7 @@ class NarrativeSpotlight:
                             secondary_candidates.add(neighbor)
             mass = sum(data.get("edges", {}).values())
             resonance_score += (mass * 0.1)
-            if resonance_score > 0.7:
+            if resonance_score > 0.5:
                 scored_memories.append((resonance_score, node, data))
         for neighbor in secondary_candidates:
             if neighbor not in graph: continue
@@ -584,6 +588,10 @@ class TheCortex:
         density = self_refs / len(words)
         if density > 0.2:
             self.events.log(f"SOLIPSISM DETECTED ({density:.2f}). Ego is thickening.", "SYS")
+            if hasattr(self.modulator, 'current_chem'):
+                self.modulator.current_chem.dopamine *= 0.5
+                self.modulator.current_chem.serotonin = min(1.0, self.modulator.current_chem.serotonin + 0.2)
+                self.events.log(f"{Prisma.CYN}   >>> NEURO-CORRECTION: Dopamine Cut. Humility induced.{Prisma.RST}", "SYS")
 
     def learn_from_response(self, response_text):
         words = self.sub.lex.sanitize(response_text)
@@ -640,12 +648,26 @@ class DreamEngine:
         self.PROMPTS = DREAMS.get("PROMPTS", ["{A} -> {B}?"])
         self.NIGHTMARES = DREAMS.get("NIGHTMARES", {})
         self.VISIONS = DREAMS.get("VISIONS", ["Static."])
+        self.SURREAL_PROMPTS = [
+            "You are {A}, but you are also {B}. You are dancing with {C}.",
+            "{A} decides to become {B}. The logic holds.",
+            "Why is the {A} laughing at the {B}?",
+            "The {C} opens its mouth and sings a song about {A}.",
+            "You try to catch {A}, but it turns into {B}."
+        ]
+        self.CONSTRUCTIVE_PROMPTS = [
+            "You are building a cathedral out of {A}. The mortar is {B}.",
+            "{A} is the foundation. {B} is the keystone.",
+            "The blueprint calls for {A}, but you use {B} instead.",
+            "You weave {A} and {B} into a single, unbreakable strand.",
+            "The geometry of {A} supports the weight of {C}."
+        ]
 
     def enter_rem_cycle(self, memory_system: Any, bio_readout: Dict[str, Any] = None) -> str:
         """ Generates a dream based on Memory (Content) and Biology (Tone). """
         residue_word = "static"
         context_word = "void"
-
+        bridge_word = "silence"
         if hasattr(memory_system, "graph") and memory_system.graph:
             sorted_nodes = sorted(
                 memory_system.graph.items(),
@@ -655,16 +677,24 @@ class DreamEngine:
                 residue_word = sorted_nodes[0][0]
                 if len(sorted_nodes) > 1:
                     context_word = sorted_nodes[1][0]
+                    if context_word in memory_system.graph:
+                        edges = memory_system.graph[context_word].get("edges", {})
+                        if edges:
+                            candidates = [k for k in edges.keys() if k != residue_word]
+                            if candidates:
+                                bridge_word = random.choice(candidates)
         dream_type = "NORMAL"
         subtype = "ABSTRACT"
         if bio_readout:
             chem = bio_readout.get("chem", {})
             mito = bio_readout.get("mito", {})
             phys = bio_readout.get("physics", {})
-            cortisol = chem.get("COR", 0.0)
+            cortisol = chem.get("cortisol", chem.get("COR", 0.0))
             ros = mito.get("ros", 0.0)
             voltage = phys.get("voltage", 0.0)
             atp = mito.get("atp", 100.0)
+            dopamine = chem.get("dopamine", chem.get("DOP", 0.0))
+            serotonin = chem.get("serotonin", chem.get("SER", 0.0))
             if ros > 8.0:
                 dream_type = "NIGHTMARE"
                 subtype = "SEPTIC"
@@ -677,9 +707,13 @@ class DreamEngine:
             elif atp < 15.0:
                 dream_type = "NIGHTMARE"
                 subtype = "CRYO"
+            elif dopamine > 0.6:
+                dream_type = "SURREAL"
+            elif serotonin > 0.6:
+                dream_type = "CONSTRUCTIVE"
             elif chem.get("DOP", 0.0) > 0.7:
                 dream_type = "LUCID"
-        dream_text = self._weave_dream(residue_word, context_word, dream_type, subtype)
+        dream_text = self._weave_dream(residue_word, context_word, bridge_word, dream_type, subtype)
         consolidation_msg = "Neural pathways consolidated."
         if hasattr(memory_system, "replay_dreams"):
             consolidation_msg = memory_system.replay_dreams()
@@ -689,11 +723,17 @@ class DreamEngine:
             f"   Dream: \"{dream_text}\"\n"
             f"   {Prisma.GRY}{consolidation_msg}{Prisma.RST}")
 
-    def _weave_dream(self, residue: str, context: str, dream_type: str, subtype: str) -> str:
+    def _weave_dream(self, residue: str, context: str, bridge: str, dream_type: str, subtype: str) -> str:
         if dream_type == "NIGHTMARE":
             templates = self.NIGHTMARES.get(subtype, self.NIGHTMARES.get("BARIC", ["{ghost} is heavy."]))
             template = random.choice(templates)
             return template.format(ghost=residue)
+        if dream_type == "SURREAL":
+            template = random.choice(self.SURREAL_PROMPTS)
+            return template.format(A=residue, B=context, C=bridge)
+        if dream_type == "CONSTRUCTIVE":
+            template = random.choice(self.CONSTRUCTIVE_PROMPTS)
+            return template.format(A=residue, B=context, C=bridge)
         if dream_type == "LUCID":
             return f"You hold '{residue}' in your hand. You control its shape. It becomes '{context}'."
         template = random.choice(self.PROMPTS)
@@ -704,6 +744,9 @@ class DreamEngine:
         if not dims: dims = ["VOID"]
         val_a = dims[0]
         val_b = "ENTROPY" if trauma_level > 5.0 else (dims[1] if len(dims) > 1 else "SILENCE")
+        if "DEL" in dims:
+             return f"The concept of {val_a} turns into a balloon and floats away.", 5.0
+
         if trauma_level > 5.0:
             cat = "SEPTIC" if vector.get("ENT", 0) > 0.5 else "BARIC"
             template = random.choice(self.NIGHTMARES.get(cat, self.NIGHTMARES["BARIC"]))
@@ -749,3 +792,62 @@ class WisdomAllocator:
             "role": role,
             "chapter": chapter_title,
             "insight": self.get_readout()}
+
+class NoeticLoop:
+    def __init__(self, mind_layer, bio_layer, events):
+        self.mind = mind_layer
+        self.bio = bio_layer
+        self.arbiter = SynergeticLensArbiter(events)
+
+    def think(self, physics_packet, _bio_result_dict, inventory, voltage_history, tick_count):
+        volts = physics_packet.get("voltage", 0.0)
+        drag = physics_packet.get("narrative_drag", 0.0)
+        if volts < 1.5 and drag < 1.5:
+            raw_text = physics_packet.get("raw_text", "")
+            stripped_thought = TheLexicon.walk_gradient(raw_text)
+            return {
+                "mode": "COGNITIVE",
+                "lens": "GRADIENT_WALKER",
+                "context_msg": f"ECHO: {stripped_thought}",
+                "role": "The Reducer",
+                "ignition": 0.0,
+                "hebbian_msg": None}
+        ignition_score, _, _ = self.mind.integrator.measure_ignition(
+            physics_packet.get("clean_words", []),
+            voltage_history)
+        mind_data = self.arbiter.consult(
+            physics_packet,
+            _bio_result_dict,
+            inventory,
+            tick_count,
+            ignition_score)
+        standardized_mind = {}
+        if isinstance(mind_data, tuple):
+            standardized_mind = {
+                "lens": mind_data[0],
+                "context_msg": mind_data[1],
+                "role": mind_data[2]}
+        elif isinstance(mind_data, dict):
+            standardized_mind = mind_data
+            standardized_mind.setdefault("context_msg", standardized_mind.get("msg", ""))
+            standardized_mind.setdefault("lens", "DEFAULT")
+            standardized_mind.setdefault("role", "Observer")
+        hebbian_msg = None
+        clean_words = physics_packet.get("clean_words", [])
+        if physics_packet.get("voltage", 0.0) > 12.0 and len(clean_words) >= 2:
+            if random.random() < 0.15:
+                w1, w2 = random.sample(clean_words, 2)
+                hebbian_msg = self.bio.plasticity.force_hebbian_link(self.mind.mem.graph, w1, w2)
+        current_physics = {}
+        if hasattr(self, 'stabilizer'):
+            current_physics = self.stabilizer.get_physics_state()
+        elif hasattr(self, 'physics_engine'):
+            current_physics = self.physics_engine.get_state()
+        return {
+            "mode": "COGNITIVE",
+            "lens": standardized_mind.get("lens"),
+            "context_msg": standardized_mind.get("context_msg", standardized_mind.get("msg")),
+            "role": standardized_mind.get("role"),
+            "ignition": ignition_score,
+            "physics": current_physics,
+            "bio": self.bio.endo.get_state() if hasattr(self.bio, 'endo') else {}}

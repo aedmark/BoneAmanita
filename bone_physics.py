@@ -33,7 +33,7 @@ class TheGatekeeper:
         if not self._check_thermodynamics(ctx):
             return False, self._pack_refusal(ctx, "DARK_SYSTEM", "Energy critical. The inputs dissolve into the void.")
         if self._audit_bureaucracy(phys):
-            return False, self._pack_refusal(ctx, "VOGON_HOLD", self._get_bureaucracy_msg(ctx.input_text))
+             ctx.logs.append(f"{Prisma.OCHRE}⚠️ BUREAUCRATIC BYPASS: Form 27B/6 missing. Processing under protest.{Prisma.RST}")
         if not self._audit_tangibility(phys):
             return False, self._pack_refusal(ctx, "TANGIBILITY_FAIL", self._get_tangibility_msg(phys))
         if phys.counts.get("antigen", 0) > 2:
@@ -50,11 +50,25 @@ class TheGatekeeper:
         return True
 
     def _audit_bureaucracy(self, phys):
-        return phys.voltage < 5.0 and random.randint(1, 50) == 42
+        drag = phys.narrative_drag
+        if drag < 2.0:
+            return False
+        probability = (drag / 50.0) 
+        is_boring = phys.voltage < 5.0
+        if is_boring and random.random() < probability:
+            return True
+        return False
 
     def _audit_tangibility(self, phys):
         if phys.truth_ratio > 0.8: return True
-        density = (phys.counts.get("heavy", 0) + phys.counts.get("kinetic", 0)) / max(1, len(phys.clean_words))
+        mass_score = (
+            phys.counts.get("heavy", 0) + 
+            phys.counts.get("kinetic", 0) + 
+            phys.counts.get("constructive", 0) +
+            (phys.counts.get("play", 0) * 0.5)
+        )
+        
+        density = mass_score / max(1, len(phys.clean_words))
         required = 0.15 if self.eng.stamina > 15.0 else 0.05
         return density >= required
 
@@ -136,13 +150,12 @@ class GeodesicEngine:
                 (masses["constructive"] * config.PHYSICS.WEIGHT_CONSTRUCTIVE))
         tension = round(((raw_tension_mass / volume) * 25.0) * config.KINETIC_GAIN, 2)
         raw_friction = (counts.get("solvents", 0) * 0.2) + (counts.get("suburban", 0) * 2.0)
-        lift = (masses["play"] * 1.5) + (masses["kinetic"] * 0.5)
+        lift = (masses["play"] * 2.5) + (masses["kinetic"] * 0.5)
         raw_compression = ((raw_friction / volume) * 10.0) - ((lift / volume) * 10.0)
         compression = round(max(-5.0, min(config.PHYSICS.DRAG_HALT, raw_compression * config.SIGNAL_DRAG_MULTIPLIER)), 2)
         structural_mass = masses["heavy"] + masses["constructive"]
         coherence = min(1.0, structural_mass / max(1, config.SHAPLEY_MASS_THRESHOLD))
         abstraction = min(1.0, (masses["abstract"] / volume) + 0.2)
-
         return {
             "tension": tension,
             "compression": compression,
@@ -185,7 +198,10 @@ class QuantumObserver:
         if graph:
             anchors = [w for w in clean_words if w in graph]
             if anchors:
-                graph_mass = sum(sum(graph[w]["edges"].values()) for w in anchors)
+                for w in anchors:
+                    edges = graph[w].get("edges", {})
+                    node_mass = min(50.0, len(edges) * 1.5) 
+                    graph_mass += node_mass    
         packet_data = {
             "voltage": voltage,
             "narrative_drag": geo.compression,

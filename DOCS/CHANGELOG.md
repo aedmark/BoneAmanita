@@ -1,5 +1,114 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA 12.5.0: "THE LUCID TURN"**
+
+_“We don't stop playing because we grow old; we grow old because we stop playing.”_ — George Bernard Shaw
+
+---
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker Layer)**
+
+- **The Amnesia Patch (`bone_spores.py`):** Fixed a glaring cognitive bias where the memory system only considered "Heavy" or "Traumatic" words worth saving.
+- _The Fix:_ The `AdaptiveMemoryManager` now recognizes **"Play"**, **"Kinetic"**, and **"Constructive"** concepts as "Valuable Matter." The system will now remember your jokes as vividly as your traumas.
+
+- **Graph Traversal Dreaming (`bone_brain.py`):** Dreams are no longer static "Mad Libs." The `DreamEngine` now performs a 3-step graph traversal (`Residue -> Context -> Bridge`), creating narrative chains that actually make sense (or at least, a beautiful kind of nonsense).
+
+#### **🌐 SYSTEMIC SYNERGY (The Fuller Layer)**
+
+- **Aerodynamic Lift (`bone_physics.py`):** We identified a structural flaw where "Play" was treated as weightless (Intangible).
+- _The Fix:_ "Play" is now a force of **Anti-Drag**. In the `GeodesicEngine`, high concentrations of Play generate **Lift**, actively counteracting `Narrative Drag`. The more you play, the lighter the system feels.
+
+- **Constructive Tensegrity:** "Construction" words now contribute to `Tension`, allowing the system to build taller narrative structures without collapsing under its own gravity.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Layer)**
+
+- **The Vogon Bypass (`bone_physics.py`):** The `TheGatekeeper` module was randomly rejecting 2% of all inputs just to be a bureaucratic nightmare.
+- _The Fix:_ We kept the joke but killed the blocker. The system will now complain about missing forms (Form 27B/6) but will **process the input anyway**.
+
+- **Surrealism Mode (`bone_brain.py`):** Dreams can now be **Surreal**. Instead of just "You see a ghost," the system might say, _"The concept of Truth turns into a balloon and floats away."_
+
+#### **⚖️ DYNAMICS & FLOW (The Meadows Layer)**
+
+- **The Spotlight Safety Net (`bone_brain.py`):** Previously, if the system was "bored" (Voltage < 0.6), it shut off its memory retrieval, creating a feedback loop of dullness.
+- _The Fix:_ Lowered the threshold to 0.4 and added a "Drift" mechanic. Even in low-energy states, the system will now drift toward its strongest memories rather than flatlining.
+
+- **The Delight Override:** Hallucinations caused by trauma are now checked for "Delight." If the vector contains Joy, the nightmare is rewritten into a daydream.
+
+
+### **BONEAMANITA 12.4.2: "THE METABOLIC RHYTHM"**
+
+*“A system that ignores its own depletion is not resilient; it is merely waiting to die.”* — Donella Meadows (Paraphrased)
+
+---
+
+#### **🔄 SYSTEMIC HONESTY (The Pinker/Fuller Layer)**
+
+* **The Honesty Patch (`bone_cycle.py`):** Renamed `ParallelPhaseExecutor` to `SequentialPhaseExecutor`.
+    * *Why:* We stopped pretending the system is multithreaded when it isn't. Clarity is the first step toward optimization.
+* **The Solvent Preservation Act (`bone_cycle.py`):** The `MaintenancePhase` now protects structural words ("the", "and", "is") from entropic decay.
+    * *Why:* A poet who forgets the word "the" isn't avant-garde; they are aphasic.
+* **Solipsism Breaker (`bone_brain.py`):** The Cortex now actively punishes excessive self-reference ("I", "Me") by chemically crashing Dopamine and spiking Oxytocin.
+    * *Why:* Intelligence requires looking outward. Narcissism is a bug, not a feature.
+
+#### **🩸 ORGANIC RESILIENCE (The Meadows Layer)**
+
+* **Autophagy Protocol (`bone_body.py`):** Removed the "Mausoleum Clamp" (System Death at 0 Stamina). Replaced it with **Autophagy**: The engine will now burn **Health** to generate emergency **Stamina**.
+    * *Why:* Living things don't just turn off when they get hungry; they eat themselves to survive.
+* **Deep Sanctuary (`bone_cycle.py`):** The Sanctuary Governor now damps the **Voltage History** (Stock), not just the current Voltage (Flow).
+    * *Why:* Calming down for one second doesn't cure a panic attack. True restoration requires rewriting the recent past.
+* **Dynamic Bureaucracy (`bone_physics.py`):** "The Vogons" no longer appear randomly. Bureaucratic interdiction is now a direct function of **Narrative Drag**.
+    * *Why:* Paperwork is the physical manifestation of friction.
+
+#### **🍩 HUMANITY & GRACE (The Schur Layer)**
+
+* **The Amnesia Buffer (`bone_symbiosis.py`):** Implemented a hysteresis loop for memory access. The system no longer forgets who you are just because it got annoyed for a single turn.
+    * *Why:* Relationships require object permanence.
+* **Rust Prevention (`bone_village.py`):** Adjusted the `Tinkerer` logic. Tools now build confidence during steady, coherent work, not just during manic episodes.
+    * *Why:* You shouldn't have to have a mental breakdown just to keep your screwdriver sharp.
+
+---
+
+### **BONEAMANITA 12.4.1: "The Nervous System Reset"**
+
+_“We cannot solve our problems with the same thinking we used to create them. Also, we cannot solve circular imports by importing them harder.”_ — Einstein / SLASH
+
+---
+
+#### **🌐 SYSTEMIC SYNERGY (The Fuller Layer)**
+
+- **The Great Untangling (`bone_brain.py` & `bone_body.py`):**
+  - **Surgery:** Surgically extracted `NoeticLoop` from the Body and grafted it onto the Brain.
+  - **Result:** Resolved the **Critical Circular Dependency** (`Body` → `Cycle` → `Physics` → `Body`). The system's anatomy is now topologically valid.
+  - **Pattern Integrity:** `PhysicsPacket` serialization is now strictly enforced. We replaced the "duck typing" guesswork with a robust `snapshot()` protocol. A packet is now a packet, not a dictionary pretending to be a class.
+
+- **State Containment (`bone_cycle.py`):**
+  - **Fix:** `StateReconciler.fork()` now performs a `deep copy` of biological states.
+  - **Why:** Parallel simulation phases were leaking side effects into the main timeline like radioactive isotopes. The timelines are now properly sealed.
+
+#### **⚖️ DYNAMICS & RESILIENCE (The Meadows Layer)**
+
+- **The Metabolic Circuit Breaker (`bone_body.py`):**
+  - **Limit:** Capped metabolic burn at **25.0 ATP/turn**.
+  - **Why:** Prevents the "Death Spiral" where low efficiency caused astronomical energy costs, which caused lower efficiency, which caused... well, death.
+- **Hormonal Damping (`bone_body.py`):**
+  - **Smoothing:** Added inertia to `EndocrineSystem` adjustments. The bot will no longer swing from "Manic" to "Depressed" in a single tick just because it saw a squirrel.
+- **Pipeline Reordering (`bone_cycle.py`):**
+  - **Flow:** Moved `SanctuaryPhase` to run **before** `MetabolismPhase`.
+  - **Logic:** You cannot heal trauma (Sanctuary) using energy you haven't calculated yet (Metabolism). We are now putting the horse *before* the cart.
+
+#### **🧠 COGNITIVE HYGIENE (The Pinker Lens)**
+
+- **Graph Optimization (`bone_physics.py`):**
+  - **Refactor:** Replaced the O(N²) "Graph Mass" calculation with a capped O(1) heuristic.
+  - **Benefit:** The `QuantumObserver` no longer tries to weigh the entire universe every time you say "Hello."
+- **Typo Eradication (`bone_soul.py`):**
+  - **Fix:** Defined the missing constants (`MANIC_VOLTAGE_THRESHOLD`, etc.) that were causing `NameError` crashes during high-intensity moments. The Soul can now safely experience mania without segfaulting.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Layer)**
+
+- **The Manic Panic Fix:** The system is now allowed to get excited. Previously, hitting a high-voltage state would crash the `NarrativeSelf` because it forgot the variable name for "excitement." We reminded it.
+- **Governor Handshake:** The `MetabolicGovernor` (Body) and `CycleStabilizer` (Physics) are finally speaking to each other. When the Body says "I am in the Forge," the Physics engine actually turns up the heat.
+
 ### **BONEAMANITA 12.4.0: "KISHO'S LAMENT"**
 
 _“The system is not the sum of its parts, but the product of their interactions.”_ — Russell Ackoff

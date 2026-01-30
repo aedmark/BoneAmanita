@@ -10,6 +10,9 @@ MEMORY_VOLTAGE_THRESHOLD = 14.0
 MEMORY_TRUTH_THRESHOLD = 0.8
 MANIC_VOLTAGE_THRESHOLD = 18.0
 MAX_CORE_MEMORIES = 7
+DRAG_ENTROPY_THRESHOLD = 4.0
+TRAIT_MOMENTUM = 0.05
+PARADOX_CRITICAL_MASS = 10.0
 
 @dataclass
 class CoreMemory:
@@ -203,7 +206,7 @@ class NarrativeSelf:
         drag = physics.get("narrative_drag", 0.0)
         move_name = "Drifting"
         provenance = []
-        is_high_voltage = voltage > VOLTAGE_MANIC_THRESHOLD
+        is_high_voltage = voltage > MANIC_VOLTAGE_THRESHOLD
         is_high_drag = drag > DRAG_ENTROPY_THRESHOLD
         if is_high_voltage:
             self.traits["CURIOSITY"] = min(1.0, self.traits["CURIOSITY"] + (TRAIT_MOMENTUM * 4))

@@ -17,6 +17,7 @@ class HostHealth:
     last_interference_score: float = 0.0
     verbosity_ratio: float = 1.0
     diagnosis: str = "STABLE"
+    memory_stable_ticks: int = 0
 
     def update_metrics(self, latency: float, entropy: float, prompt_len: int = 0, completion_len: int = 0):
         self.latency = latency
@@ -26,6 +27,10 @@ class HostHealth:
         else:
             self.verbosity_ratio = 1.0
         self.attention_span = max(0.1, self.attention_span * 0.99)
+        if self.compliance < 0.8:
+            self.memory_stable_ticks = 0
+        else:
+            self.memory_stable_ticks += 1
 
 class CoherenceAnchor:
     @staticmethod
@@ -188,10 +193,10 @@ class SymbiosisManager:
             mods["include_memories"] = False
         elif diag == "LOOPING":
             mods["inject_chaos"] = True
-        if self.current_health.compliance < 0.8:
+        if self.current_health.compliance < 0.8 or self.current_health.memory_stable_ticks < 5:
             mods["include_memories"] = False
-            if not mods["include_memories"]:
-                self.events.log(f"{Prisma.GRY}SYMBIOSIS: Compliance Low ({self.current_health.compliance:.2f}). Memories Redacted.{Prisma.RST}", "SYS")
+            if not mods["include_memories"] and self.current_health.compliance < 0.8:
+                 self.events.log(f"{Prisma.GRY}SYMBIOSIS: Compliance Low. Memories Redacted.{Prisma.RST}", "SYS")
         self.last_outgoing_complexity = self._calculate_complexity(mods)
         return mods
 

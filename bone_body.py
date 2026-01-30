@@ -4,7 +4,6 @@ import math, random, time
 from collections import deque, Counter
 from dataclasses import dataclass, field
 from typing import Set, Optional, Dict, List, Any, Tuple
-from bone_personality import SynergeticLensArbiter
 from bone_spores import MycotoxinFactory, LichenSymbiont, HyphalInterface, ParasiticSymbiont
 from bone_lexicon import TheLexicon
 from bone_bus import Prisma, BoneConfig
@@ -123,11 +122,15 @@ class MitochondrialForge:
         if external_modifiers:
             for m in external_modifiers:
                 mod_factor *= m
-        efficiency = max(0.1, self.state.membrane_potential)
-        total_metabolic_cost = ((base_demand + cognitive_load_tax) * mod_factor) / efficiency
+        efficiency = max(0.2, self.state.membrane_potential)
+        raw_cost = ((base_demand + cognitive_load_tax) * mod_factor) / efficiency
+        MAX_BURN = 25.0 
+        total_metabolic_cost = min(MAX_BURN, raw_cost)
         waste_generated = total_metabolic_cost * (1.0 - efficiency) * 0.5
         self.state.ros_buildup += waste_generated
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
+        if raw_cost > MAX_BURN and self.events:
+             self.events.log(f"{Prisma.YEL}⚡ METABOLIC GOVERNOR: Burn capped at {MAX_BURN} (Raw: {raw_cost:.1f}). Efficiency critical.{Prisma.RST}", "BIO")
         self._apply_adaptive_dynamics(waste_generated)
         status = "RESPIRING"
         if self.state.atp_pool < BioConstants.ATP_CRITICAL: status = "LOW_POWER"
@@ -252,8 +255,12 @@ class SomaticLoop:
         modifiers = self._gather_hormonal_modifiers(phys, logs)
         receipt = self.bio.mito.process_cycle(phys, external_modifiers=modifiers)
         resp_status = receipt.status
-        if self._audit_folly_desire(phys, stamina, logs) == "MAUSOLEUM_CLAMP":
-            return self._package_result(resp_status, logs, enzyme="NONE")
+        audit_result = self._audit_folly_desire(phys, stamina, logs)
+        if audit_result == "MAUSOLEUM_CLAMP":
+             return self._package_result(receipt.status, logs, enzyme="NONE")
+        elif audit_result == "AUTOPHAGY":
+             logs.append(f"{Prisma.RED}⚠️ AUTOPHAGY: Burning Health for Fuel (-5 HP).{Prisma.RST}")
+             stamina = 10.0
         enzyme, total_yield = self._harvest_resources(phys, logs)
         self.bio.mito.adjust_atp(total_yield, "Digestion Yield")
         self._perform_maintenance(text, phys, logs, tick_count)
@@ -320,12 +327,16 @@ class SomaticLoop:
             "clean_words": clean_words,
             "counts": counts}
 
-    @staticmethod
-    def _audit_folly_desire(phys, stamina, logs) -> str:
+    def _audit_folly_desire(self, phys, stamina, logs) -> str:
         voltage = phys.get("voltage", 0.0)
         if stamina <= 0:
-            logs.append(BIO_NARRATIVE["TAX"]["EXHAUSTION"].format(color=Prisma.RED, reset=Prisma.RST))
-            return "MAUSOLEUM_CLAMP"
+            if self.bio.biometrics.health > 10.0:
+                burn_amount = 5.0
+                self.bio.biometrics.health -= burn_amount
+                return "AUTOPHAGY" 
+            else:
+                logs.append(f"{Prisma.RED}SYSTEM FAILURE: Bio-Fuel Depleted. The Mausoleum closes.{Prisma.RST}")
+                return "MAUSOLEUM_CLAMP"
         if voltage > 30.0:
             logs.append(f"{Prisma.RED}CRITICAL: Voltage Overload ({voltage:.1f}v). System clamping.{Prisma.RST}")
             return "MAUSOLEUM_CLAMP"
@@ -472,18 +483,19 @@ class EndocrineSystem:
             self.cortisol -= 0.1
 
     def _maintain_homeostasis(self, social_context: bool):
+        dampener = 0.2
         if self.serotonin > 0.5:
             excess = self.serotonin - 0.5
-            self.cortisol -= (excess * 0.2)
+            self.cortisol -= (excess * 0.2 * dampener)
         if social_context:
             self.oxytocin += BoneConfig.BIO.REWARD_MEDIUM
             self.cortisol -= BoneConfig.BIO.REWARD_MEDIUM
         if self.cortisol > 0.6:
             suppression = (self.cortisol - 0.6) * 0.5
-            self.oxytocin -= suppression
+            self.oxytocin -= (suppression * dampener)
         if self.oxytocin > 0.5:
             relief = (self.oxytocin - 0.5) * 0.8
-            self.cortisol -= relief
+            self.cortisol -= (relief * dampener)
         if self.adrenaline < 0.2:
             self.melatonin += (BoneConfig.BIO.REWARD_SMALL / 2)
         elif self.adrenaline > 0.8:
@@ -711,61 +723,3 @@ class ThePacemaker:
 
     def is_bored(self):
         return self.boredom_level > BoneConfig.BOREDOM_THRESHOLD
-
-class NoeticLoop:
-    def __init__(self, mind_layer, bio_layer, events):
-        self.mind = mind_layer
-        self.bio = bio_layer
-        self.arbiter = SynergeticLensArbiter(events)
-
-    def think(self, physics_packet, _bio_result_dict, inventory, voltage_history, tick_count):
-        volts = physics_packet.get("voltage", 0.0)
-        drag = physics_packet.get("narrative_drag", 0.0)
-        if volts < 1.5 and drag < 1.5:
-            raw_text = physics_packet.get("raw_text", "")
-            stripped_thought = TheLexicon.walk_gradient(raw_text)
-            return {
-                "mode": "COGNITIVE",
-                "lens": "GRADIENT_WALKER",
-                "context_msg": f"ECHO: {stripped_thought}",
-                "role": "The Reducer",
-                "ignition": 0.0,
-                "hebbian_msg": None}
-        ignition_score, _, _ = self.mind.integrator.measure_ignition(
-            physics_packet["clean_words"],
-            voltage_history)
-        mind_data = self.arbiter.consult(
-            physics_packet,
-            _bio_result_dict,
-            inventory,
-            tick_count,
-            ignition_score)
-        standardized_mind = {}
-        if isinstance(mind_data, tuple):
-            standardized_mind = {
-                "lens": mind_data[0],
-                "context_msg": mind_data[1],
-                "role": mind_data[2]}
-        elif isinstance(mind_data, dict):
-            standardized_mind = mind_data
-            standardized_mind.setdefault("context_msg", standardized_mind.get("msg", ""))
-            standardized_mind.setdefault("lens", "DEFAULT")
-            standardized_mind.setdefault("role", "Observer")
-        hebbian_msg = None
-        if physics_packet["voltage"] > 12.0 and len(physics_packet["clean_words"]) >= 2:
-            if random.random() < 0.15:
-                w1, w2 = random.sample(physics_packet["clean_words"], 2)
-                hebbian_msg = self.bio.plasticity.force_hebbian_link(self.mind.mem.graph, w1, w2)
-        current_physics = {}
-        if hasattr(self, 'stabilizer'):
-            current_physics = self.stabilizer.get_physics_state()
-        elif hasattr(self, 'physics_engine'):
-            current_physics = self.physics_engine.get_state()
-        return {
-            "mode": "COGNITIVE",
-            "lens": mind_data.get("lens"),
-            "context_msg": mind_data.get("context_msg", mind_data.get("msg")),
-            "role": mind_data.get("role"),
-            "ignition": ignition_score,
-            "physics": current_physics,
-            "bio": self.bio.endo.get_state() if hasattr(self.bio, 'endo') else {}}

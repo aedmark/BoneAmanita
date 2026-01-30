@@ -1,6 +1,6 @@
 """ bone_cycle.py = - 'The wheel turns, and ages come and pass.' - Jordan """
 
-import traceback, random, time, uuid, re
+import traceback, random, time, uuid, re, copy
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Tuple, List, Optional
 from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket
@@ -123,6 +123,10 @@ class SanctuaryPhase(SimulationPhase):
                 ctx.physics.voltage += v_corr
                 ctx.physics.narrative_drag += d_corr
                 ctx.record_flux("SANCTUARY", "voltage", old_v, ctx.physics.voltage, "GENTLE_NUDGE")
+                if hasattr(self.eng.phys.observer, 'voltage_history'):
+                    hist = self.eng.phys.observer.voltage_history
+                    if hist:
+                        hist[-1] = max(0.0, hist[-1] + v_corr)
         if in_safe_zone:
             self._enter_sanctuary(ctx)
             self._apply_restoration(ctx)
@@ -152,7 +156,11 @@ class MaintenancePhase(SimulationPhase):
     def run(self, ctx: CycleContext):
         if self.eng.tick_count % 10 != 0: return ctx
         try:
-            rotted = self.eng.lex.atrophy(self.eng.tick_count, 100)
+            solvents = {'the', 'and', 'is', 'a', 'of', 'to', 'in', 'it', 'i', 'you'}
+            try:
+                rotted = self.eng.lex.atrophy(self.eng.tick_count, 100, protected=solvents)
+            except TypeError:
+                rotted = self.eng.lex.atrophy(self.eng.tick_count, 100)
             if rotted:
                 for w in rotted:
                     self.eng.limbo.ghosts.append(f"👻{w.upper()}_ECHO")
@@ -193,6 +201,7 @@ class MetabolismPhase(SimulationPhase):
             physics, self.eng.phys.dynamics.voltage_history, self.eng.tick_count)
         if gov_msg:
             self.eng.events.log(gov_msg, "GOV")
+        physics["manifold"] = self.eng.bio.governor.mode
         bio_feedback = self._generate_feedback(physics)
         stress_mod = self.eng.bio.governor.get_stress_modifier(self.eng.tick_count)
         circadian_bias = self._check_circadian_rhythm()
@@ -519,7 +528,7 @@ class StateReconciler:
         new_ctx.clean_words = list(ctx.clean_words)
         new_ctx.logs = list(ctx.logs)
         new_ctx.flux_log = list(ctx.flux_log)
-        new_ctx.bio_result = ctx.bio_result.copy()
+        new_ctx.bio_result = copy.deepcopy(ctx.bio_result)
         new_ctx.world_state = ctx.world_state.copy()
         new_ctx.mind_state = ctx.mind_state.copy()
         return new_ctx
@@ -558,7 +567,7 @@ class SensationPhase(SimulationPhase):
         return ctx
 
 
-class ParallelPhaseExecutor:
+class PhaseExecutor:
     def execute_phases(self, simulator, ctx):
         pipeline_order = [
             "OBSERVE",
@@ -604,16 +613,16 @@ class CycleSimulator:
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.stabilizer = CycleStabilizer(self.eng.events)
-        self.executor = ParallelPhaseExecutor()
+        self.executor = PhaseExecutor()
         self.pipeline: List[SimulationPhase] = [
             ObservationPhase(engine_ref),
             MaintenancePhase(engine_ref),
             SensationPhase(engine_ref),
             GatekeeperPhase(engine_ref),
+            SanctuaryPhase(engine_ref),
             MetabolismPhase(engine_ref),
             RealityFilterPhase(engine_ref),
             NavigationPhase(engine_ref),
-            SanctuaryPhase(engine_ref),
             MachineryPhase(engine_ref),
             IntrusionPhase(engine_ref),
             SoulPhase(engine_ref),

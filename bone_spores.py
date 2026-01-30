@@ -22,7 +22,7 @@ class BoneJSONEncoder(json.JSONEncoder):
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors):
-        self.genome = "BONEAMANITA_12.4.2"
+        self.genome = "BONEAMANITA_12.5.0"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():
@@ -182,8 +182,12 @@ class AdaptiveMemoryManager:
         if word in existing_graph:
             return True
         gain = len(word) * 0.1
-        if word.upper() in TheLexicon.get("heavy"): offset = 0.5
-        elif word.upper() in TheLexicon.get("abstract"): offset = 0.4
+        u_word = word.upper()
+        if u_word in TheLexicon.get("heavy"): offset = 0.5
+        elif u_word in TheLexicon.get("abstract"): offset = 0.4
+        elif u_word in TheLexicon.get("play"): offset = 0.45
+        elif u_word in TheLexicon.get("constructive"): offset = 0.4
+        elif u_word in TheLexicon.get("kinetic"): offset = 0.3
         else: offset = 0.0
         gain += offset
         return gain > self.threshold
@@ -293,7 +297,15 @@ class MycelialNetwork:
             self.events.log(f"{Prisma.YEL}REJECTED: Input is too 'Optimized' (Avg Len: {avg_len:.1f}).{Prisma.RST}")
             return "MECHANICAL_STARVATION", []
         if avg_len > 5.0: resonance += 2.0
-        valuable_matter = (TheLexicon.get("heavy") | TheLexicon.get("thermal") | TheLexicon.get("cryo") | TheLexicon.get("abstract"))
+        valuable_matter = (
+            TheLexicon.get("heavy") | 
+            TheLexicon.get("thermal") | 
+            TheLexicon.get("cryo") | 
+            TheLexicon.get("abstract") |
+            TheLexicon.get("kinetic") |
+            TheLexicon.get("constructive") |
+            TheLexicon.get("play")
+        )
         filtered = [w for w in clean_words if w in valuable_matter or (len(w) > 4 and w not in TheLexicon.SOLVENTS)]
         self.cortical_stack.extend(filtered)
         base_rate = 0.5 * (resonance / 5.0)
