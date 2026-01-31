@@ -115,7 +115,8 @@ class MitochondrialForge:
 
     def process_cycle(self, physics_packet: dict, external_modifiers: List[float] = None) -> MetabolicReceipt:
         voltage = physics_packet.get("voltage", 0.0)
-        drag = physics_packet.get("narrative_drag", 0.0)
+        raw_drag = physics_packet.get("narrative_drag", 0.0)
+        drag = max(0.0, raw_drag)
         base_demand = max(0.1, voltage * 0.4)
         cognitive_load_tax = (drag ** 1.5) * 0.5
         mod_factor = 1.0
@@ -124,13 +125,13 @@ class MitochondrialForge:
                 mod_factor *= m
         efficiency = max(0.2, self.state.membrane_potential)
         raw_cost = ((base_demand + cognitive_load_tax) * mod_factor) / efficiency
-        MAX_BURN = 25.0 
+        MAX_BURN = 25.0
         total_metabolic_cost = min(MAX_BURN, raw_cost)
         waste_generated = total_metabolic_cost * (1.0 - efficiency) * 0.5
         self.state.ros_buildup += waste_generated
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
         if raw_cost > MAX_BURN and self.events:
-             self.events.log(f"{Prisma.YEL}⚡ METABOLIC GOVERNOR: Burn capped at {MAX_BURN} (Raw: {raw_cost:.1f}). Efficiency critical.{Prisma.RST}", "BIO")
+            self.events.log(f"{Prisma.YEL}⚡ METABOLIC GOVERNOR: Burn capped at {MAX_BURN} (Raw: {raw_cost:.1f}). Efficiency critical.{Prisma.RST}", "BIO")
         self._apply_adaptive_dynamics(waste_generated)
         status = "RESPIRING"
         if self.state.atp_pool < BioConstants.ATP_CRITICAL: status = "LOW_POWER"
