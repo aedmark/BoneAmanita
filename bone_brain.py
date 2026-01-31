@@ -765,6 +765,29 @@ class DreamEngine:
             content = template.format(A=val_a, B=val_b)
         return content, 0.0
 
+    def run_defragmentation(self, memory_system: Any, limit: int = 5) -> str:
+        if not hasattr(memory_system, "graph") or not memory_system.graph:
+            return "No memories to defrag."
+        graph = memory_system.graph
+        candidates = []
+        for node, data in graph.items():
+            mass = sum(data.get("edges", {}).values())
+            candidates.append((node, mass))
+        candidates.sort(key=lambda x: x[1])
+        pruned = []
+        count = 0
+        for node, mass in candidates:
+            if mass < 2.0 and count < limit:
+                del graph[node]
+                pruned.append(node)
+                count += 1
+            else:
+                break
+        if pruned:
+            joined = ", ".join(pruned[:3])
+            return f"DEFRAG: Pruned {len(pruned)} dead nodes ({joined}...). Neural load lightened."
+        return "DEFRAG: Memory structure is efficient. No pruning needed."
+
 class GlobalIntegrator:
     def __init__(self):
         self.global_coherence = 0.0

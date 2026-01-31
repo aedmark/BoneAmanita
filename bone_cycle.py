@@ -265,6 +265,8 @@ class MetabolismPhase(SimulationPhase):
                 ctx.last_dream = dream_packet
             else:
                 ctx.log(dream_packet)
+            defrag_log = self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
+            ctx.log(f"{Prisma.GRY}   {defrag_log}{Prisma.RST}")
             EMERGENCY_REBOOT_ATP = 33.0
             self.eng.bio.mito.state.atp_pool = EMERGENCY_REBOOT_ATP
             ctx.is_alive = True
@@ -478,6 +480,12 @@ class SoulPhase(SimulationPhase):
         self.eng.soul.pursue_obsession(ctx.physics)
         if self.eng.gordon.inventory:
             self.eng.tinkerer.audit_tool_use(ctx.physics, self.eng.gordon.inventory)
+        council_mandates = self._consult_council(self.eng.soul.traits)
+        if council_mandates:
+            ctx.council_mandates = getattr(ctx, "council_mandates", []) + council_mandates
+            for mandate in council_mandates:
+                ctx.log(mandate['log'])
+                self._execute_mandate(ctx, mandate)
         council_advice, adjustments, mandates = self.eng.council.convene(
             ctx.input_text, 
             ctx.physics, 
@@ -509,6 +517,37 @@ class SoulPhase(SimulationPhase):
                     setattr(ctx.physics, param, old_val + delta)
                     ctx.record_flux("SIMULATION", param, old_val, old_val + delta, "COUNCIL_MANDATE")
         return ctx
+
+    def _consult_council(self, traits: Dict[str, float]) -> List[Dict]:
+        mandates = []
+        if traits.get("CYNICISM", 0) > 0.8:
+            mandates.append({
+                "type": "LOCKDOWN",
+                "log": f"{Prisma.OCHRE}⚖️ COUNCIL: The Cynic holds the gavel. 'Stop doing things.' (Drag Increased).{Prisma.RST}",
+                "effect": {"narrative_drag": 5.0, "voltage": -5.0}
+            })
+        elif traits.get("HOPE", 0) > 0.8:
+            mandates.append({
+                "type": "STIMULUS",
+                "log": f"{Prisma.MAG}⚖️ COUNCIL: The Optimist filibustered. 'We can build it!' (Voltage Spiked).{Prisma.RST}",
+                "effect": {"voltage": 5.0, "narrative_drag": -2.0}
+            })
+        elif traits.get("DISCIPLINE", 0) > 0.8:
+            mandates.append({
+                "type": "STANDARDIZE",
+                "log": f"{Prisma.CYN}⚖️ COUNCIL: The Engineer demands efficiency. (Entropy Reduced).{Prisma.RST}",
+                "effect": {"kappa": -0.5, "beta_index": 1.0} # Forcing Laminar flow
+            })
+        return mandates
+
+    def _execute_mandate(self, ctx: CycleContext, mandate: Dict):
+        effects = mandate.get("effect", {})
+        for key, delta in effects.items():
+            if hasattr(ctx.physics, key):
+                current = getattr(ctx.physics, key)
+                setattr(ctx.physics, key, max(0.0, current + delta))
+            elif isinstance(ctx.physics, dict) and key in ctx.physics:
+                ctx.physics[key] = max(0.0, ctx.physics[key] + delta)
 
 class CognitionPhase(SimulationPhase):
     def __init__(self, engine_ref):

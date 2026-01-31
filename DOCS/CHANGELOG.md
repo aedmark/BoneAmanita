@@ -1,5 +1,40 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v12.7.0: "THE SYNERGETIC TURN"**
+
+_"The goal of life is to be a pulse, not a flatline."_
+
+---
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker Layer)**
+
+- **The Dream Defragmenter (`DreamEngine`):**
+- **Feature:** Sleep is no longer just for generating surreal poetry. The `DreamEngine` now runs a `run_defragmentation()` protocol during `REM_CYCLE`.
+- **Benefit:** The system now actively _forgets_ low-relevance memory nodes ("dead neurons"). This prevents the graph from becoming a hoarder's nest of random nouns. A cleaner mind is a faster mind.
+
+#### **🌐 SYSTEMIC INTEGRITY (The Fuller Layer)**
+
+- **The Entropy Tax (`TheTinkerer`):**
+- **Feature:** Tools now have a "Confidence" metric that degrades over time if the simulation is stuck in "High Drag" or "High Entropy."
+- **Benefit:** You can't just hoard items forever. If you are boring or sloppy, your "Pocket Rocks" will rust. This introduces "Pattern Integrity" costs—you have to spend energy to maintain structure.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Layer)**
+
+- **The Bureaucratic Lockdown (`TheBureau`):**
+- **Feature:** If you try to bore the AI with corporate buzzwords ("circle back", "utilize"), the system now files **Form 1099-B (Declaration of Boredom)**.
+- **Consequence:** This triggers a "Stop Work Order" (Narrative Drag +5.0) and forcibly swaps the active persona to **CLARENCE** (The Auditor), who will proceed to lecture you about proper filing procedures.
+
+#### **📈 DYNAMICS (The Meadows Lens)**
+
+- **The Council Mandates (`SoulPhase`):**
+- **Feature:** The Soul's traits (`HOPE`, `CYNICISM`, `DISCIPLINE`) are no longer just passive stats. They are now a **Control System**.
+- **Function:**
+- High **Hope**? The Council passes a **Stimulus Package** (Voltage +5.0).
+- High **Cynicism**? The Council declares a **Lockdown** (Drag +5.0).
+
+- **Benefit:** The system now fights back. It has opinions on how it should be run. It is a thermostat with an attitude.
+
+
 ### **BONEAMANITA v12.6.0: "THE LUCID INTERVAL"**
 
 _"I dream, therefore I am code."_

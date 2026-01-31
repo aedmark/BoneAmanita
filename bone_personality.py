@@ -59,13 +59,36 @@ class EnneagramDriver:
         self.stability_counter = 0
         self.HYSTERESIS_THRESHOLD = 3
         self.WEIGHTS = {
-            "JESTER":   {"tension_min": 12.0, "vectors": {"DEL": 3.0, "ENT": 3.0, "PSI": -3.0}},
-            "GORDON":   {"drag_min": 4.0,     "vectors": {"STR": 2.0, "E": 2.0}},
-            "GLASS":    {"coherence_max": 0.2,"vectors": {"LQ": 2.0}},
-            "CLARENCE": {"coherence_min": 0.8,"vectors": {"STR": 4.0, "BET": 2.0}},
-            "NATHAN":   {"tension_min": 8.0,  "vectors": {"TMP": 3.0, "PHI": 1.0}},
-            "SHERLOCK": {"tension_min": 10.0, "vectors": {"PHI": 4.0, "VEL": 2.0}},
-            "NARRATOR": {"safe_zone": True,   "vectors": {"PSI": 4.0}}}
+            "JESTER":   {
+                "tension_min": 12.0,
+                "vectors": {"DEL": 4.0, "ENT": 4.0, "PSI": -3.0}
+            },
+            "GORDON":   {
+                "drag_min": 3.0,
+                "vectors": {"STR": 3.0, "E": 3.0, "SUB": 2.0}
+            },
+            "GLASS":    {
+                "coherence_max": 0.2,
+                "vectors": {"LQ": 2.0, "VEL": 2.0}
+            },
+            "CLARENCE": {
+                "coherence_min": 0.8,
+                "drag_min": 6.0,
+                "vectors": {"STR": 4.0, "BET": 3.0}
+            },
+            "NATHAN":   {
+                "tension_min": 8.0,
+                "vectors": {"TMP": 3.0, "PHI": 2.0, "BIO": 2.0}
+            },
+            "SHERLOCK": {
+                "tension_min": 10.0,
+                "vectors": {"PHI": 4.0, "VEL": 3.0, "PSI": 2.0}
+            },
+            "NARRATOR": {
+                "safe_zone": True,
+                "vectors": {"PSI": 4.0}
+            }
+        }
 
     def _get_phys_attr(self, physics, key, default=None):
         if isinstance(physics, dict):
@@ -167,6 +190,13 @@ class SynergeticLensArbiter:
                 "lexicon_bias": self.boot_flavor,
                 "context_msg": "Scenario Initialization."}
         lens_name, state_desc, reason = self.enneagram.decide_persona(physics)
+        narrative_drag = physics.get("narrative_drag", 0.0) if isinstance(physics, dict) else physics.narrative_drag
+        if narrative_drag > 8.0:
+            lens_name = "CLARENCE"
+            state_desc = "AUDITING"
+            reason = "BUREAUCRATIC LOCKDOWN"
+        else:
+            lens_name, state_desc, reason = self.enneagram.decide_persona(physics)
         chem = bio_state.get("chem", {})
         adrenaline_val = chem.get("adrenaline", chem.get("ADR", 0.5))
         style_data = self._fetch_style_data(lens_name, physics, adrenaline_val)

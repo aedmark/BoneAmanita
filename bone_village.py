@@ -17,24 +17,30 @@ class TheTinkerer:
     def _normalize_physics(self, packet):
         if isinstance(packet, dict): return packet
         return getattr(packet, "__dict__", {})
-    
+
     def audit_tool_use(self, physics_packet, inventory_list, host_health: Any = None):
         p = self._normalize_physics(physics_packet)
         voltage = p.get("voltage", 0.0)
         drag = p.get("narrative_drag", 0.0)
         vector = p.get("vector", {})
+        entropy_level = vector.get("ENT", 0.0) + (drag * 0.1)
         for item in inventory_list:
-            if item not in self.tool_confidence: self.tool_confidence[item] = 1.0
+            if item not in self.tool_confidence:
+                self.tool_confidence[item] = 1.0
             is_manic = voltage > 12.0
             is_coherent = p.get("kappa", 0.0) > 0.8
             if is_manic or is_coherent:
                 self.tool_confidence[item] += 0.05
                 if self.tool_confidence[item] > 2.5:
                     self._attempt_ascension(item, inventory_list, vector)
-            elif drag > 6.0:
-                self.tool_confidence[item] -= 0.02
-                if self.tool_confidence[item] < 0.2:
-                    self.events.log(f"{Prisma.OCHRE}[TINKER] {item} is rusting.{Prisma.RST}", "SYS")
+            elif entropy_level > 0.3 or drag > 6.0:
+                decay_rate = 0.05 * (1.0 + entropy_level)
+                self.tool_confidence[item] -= decay_rate
+                if 0.1 < self.tool_confidence[item] < 0.2:
+                    self.events.log(f"{Prisma.OCHRE}[TINKER] Warning: {item} is rusting. (Confidence: {self.tool_confidence[item]:.2f}){Prisma.RST}", "SYS")
+                elif self.tool_confidence[item] <= 0.0:
+                    self.tool_confidence[item] = 0.0
+                    self.events.log(f"{Prisma.RED}[TINKER] JAMMED: {item} has seized up via Entropy.{Prisma.RST}", "SYS")
 
     def _attempt_ascension(self, old_name, inventory_list, vector):
         if "OF_" in old_name: return
