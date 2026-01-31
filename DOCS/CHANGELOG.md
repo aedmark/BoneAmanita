@@ -1,5 +1,50 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.1.0: "THE LUCID DREAM"**
+
+_"I sprint towards the stall and grab the heavy iron ledger." — Andrew_
+_"The Mud holds you." — The Physics Engine_
+
+---
+
+#### **🧠 COGNITION & LANGUAGE (The Pinker Lens)**
+
+- **Metaphorical Injection (The "Anti-Mad-Lib" Patch):**
+- **Problem:** The Cortex was taking seeds too literally (e.g., "A Kitchen" became just a kitchen).
+- **Fix:** We implemented a "One-Shot" remix example in the boot prompt. By showing the model how to mutate a seed (`Library -> Parchment Forest`), we taught it the rules of the game instantly. "Average Kitchens" now become "Precarious Realities."
+
+- **The Silent Editor:**
+- **Fix:** Aggressively updated `ResponseValidator` to scrub the LLM's internal monologue ("INITIALIZATION SEQUENCE...", "What do you do?"). The Narrator is now confident and immersive, not needy.
+
+- **Semantic Gravity:**
+- **Fix:** Corrected the `SomaticLoop` so that "Kinetic" words (running) are no longer treated as food sources. You can no longer metabolize a sprint.
+
+#### **🏗️ SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **Pattern Integrity (The Bookmark Protocol):**
+- **Feature:** The system no longer suffers from amnesia. `bone_spores.py` now captures **Narrative Continuity** (Location, Inventory, Last Output).
+- **Impact:** The engine can now "Warm Boot," resuming the timeline exactly where it left off instead of overwriting reality every time you run the script.
+
+- **Tensegrity Restored:**
+- **Fix:** Reconnected the severed struts between `GeodesicEngine` and `QuantumObserver`. The Physics engine now correctly weighs "explosive" mass and safely handles `PhysicsPacket` initialization without crashing on `NoneType` errors.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Lens)**
+
+- **Math is Hard (The Imaginary Tax Audit):**
+- **Fix:** The `MitochondrialForge` was trying to calculate the square root of negative drag (propulsion), resulting in complex number crashes. We now clamp drag to reality before sending the bill to the metabolic governor.
+
+- **Absinthe Mode:**
+- **Feature:** We realized the system was too sober at boot (Temp 0.7). We injected a logic spike that forces the Temperature to **1.3** _only_ during the opening scene, ensuring the first hallucination is sufficiently weird.
+
+#### **📉 DYNAMICS (The Meadows Lens)**
+
+- **The Genesis Hallucination:**
+- **Fix:** Fixed a "Void Loop" where the physics engine (seeing 0 mass at boot) told the Cortex it was in a "Void," overriding the narrative seed. We now mask the physics state during the first tick (`Location: Unformed`), allowing the dream to take root before gravity kicks in.
+
+- **Balancing Loops:**
+- **Fix:** Heavy objects now create friction that kinetic speed cannot easily overcome. The `GeodesicEngine` now properly balances Lift vs. Drag, preventing users from achieving aerodynamic takeoff just by holding a heavy book while running.
+
+
 ### **BONEAMANITA v13.0.0: "THE INQUISITOR"**
 
 _"The unexamined prompt is not worth processing."_ — The Consultant

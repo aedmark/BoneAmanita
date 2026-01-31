@@ -1,4 +1,4 @@
-""" BONEAMANITA 13.0.0
+""" BONEAMANITA 13.1.0
  Architects: SLASH, KISHO, The BonePoke Gods Humans: Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -37,7 +37,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 13.0.0', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 13.1.0', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -390,24 +390,13 @@ class BoneAmanita:
         archetypes = scenarios.get("ARCHETYPES", ["A quiet garden"])
         seed = random.choice(archetypes)
         print(f"{Prisma.CYN}[SYS] Seed Loaded: '{seed}'{Prisma.RST}")
-        boot_prompt = (
-            f"SYSTEM_BOOT_SEQUENCE. User: {self.user_name}. "
-            f"SEED: {seed}. "
-            "DIRECTIVE: Generate the opening scene for a text-based simulation."
-            "CRITICAL INSTRUCTION: Treat the SEED as a source of *inspiration* and *atmosphere*, "
-            "not a literal constraint. You are free to remix, re-interpret, or drastically pivot "
-            "the setting as long as the *emotional texture* of the seed remains. "
-            "If the seed is 'A Floating Market', you could give me a 'Digital Data Bazaar' or "
-            "'A Coral Reef Exchange', or 'A Small Shack on a Dinghy'. Surprise me. "
-            "Do not ask 'What do you do?'. Just set the scene."
-        )
-        cold_result = self.process_turn(f"SYSTEM_BOOT: {boot_prompt}")
+        cold_result = self.process_turn(f"SYSTEM_BOOT: {seed}")
         if cold_result.get("ui"):
             print(cold_result["ui"])
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 13.0.0', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 13.1.0', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

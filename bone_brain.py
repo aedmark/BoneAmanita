@@ -1,5 +1,4 @@
-""" bone_brain.py
-# "The brain is a machine for jumping to conclusions." - S. Pinker """
+""" bone_brain.py - "The brain is a machine for jumping to conclusions." - S. Pinker """
 
 import re, time, json, urllib.request, urllib.error, random, math
 from typing import Dict, Any, List, Optional, Tuple
@@ -28,7 +27,6 @@ class BrainConfig:
     ADRENALINE_RUSH: float = 600.0
     SEROTONIN_CALM: float = 0.5
 
-
 @dataclass
 class ChemicalState:
     dopamine: float = 0.2
@@ -47,7 +45,6 @@ class ChemicalState:
         self.cortisol = (self.cortisol * (1.0 - weight)) + (new_state.get("COR", 0.0) * weight)
         self.adrenaline = (self.adrenaline * (1.0 - weight)) + (new_state.get("ADR", 0.0) * weight)
         self.serotonin = (self.serotonin * (1.0 - weight)) + (new_state.get("SER", 0.0) * weight)
-
 
 class NarrativeSpotlight:
     def __init__(self):
@@ -108,7 +105,6 @@ class NarrativeSpotlight:
             results.append(f"{prefix} Engram: '{name.upper()}'{conn_str}")
         return results
 
-
 class NeurotransmitterModulator:
     def __init__(self):
         self.current_chem = ChemicalState()
@@ -164,10 +160,7 @@ class NeurotransmitterModulator:
             "frequency_penalty": freq_penalty,
             "presence_penalty": 0.0,
             "max_tokens": final_tokens}
-        if "gemma" in model_name.lower() or "3" in model_name.lower():
-            params["temperature"] = min(0.9, params["temperature"])
         return params
-
 
 class LLMInterface:
     def __init__(self, events_ref: Optional[EventBus] = None, provider: str = None,
@@ -298,7 +291,6 @@ class LLMInterface:
 
 class ContextWindowManager:
     CHARS_PER_TOKEN = 3.5
-
     def compose_context(self, layout: Dict[str, Any], max_tokens: int = 4000) -> str:
         loc_val = layout['location']
         if loc_val in ["Unformed", "Void"] and "seed" in str(layout.get('notes', '')).lower():
@@ -320,9 +312,7 @@ class ContextWindowManager:
             f"=== WORLD STATE ===\n{location_block}\n{inventory_block}\n\n"
             f"=== CHRONICLE ===\n{history_str}\n\n"
             f"=== INPUT SIGNAL ===\nUser: {layout['user_query']}\n"
-            f"{layout['role']}:"
-        )
-
+            f"{layout['role']}:")
         return final_prompt
 
 class PromptComposer:
@@ -400,27 +390,39 @@ class PromptComposer:
             defaults.update(modifiers)
         return defaults
 
-
 class ResponseValidator:
     def __init__(self):
         self.banned_phrases = [
             "large language model", "AI assistant", "cannot feel", "as an AI",
             "against my programming", "cannot comply", "language model",
-            "delve into", "rich tapestry" ]
+            "delve into", "rich tapestry"]
+        self.meta_markers = [
+            "INITIALIZATION SEQUENCE", "LOCATING TARGET SEED", "REASONING PROCESS",
+            "CURRENT VISION:", "TARGET SEED:", "Your journey begins here",
+            "What would you like to do?", "What do you do?"]
         self.immersion_break_msg = f"{Prisma.GRY}[The system attempts to recite a EULA, but hiccups instead.]{Prisma.RST}"
 
     def validate(self, response: str, _state: Dict) -> Dict:
-        low_resp = response.lower()
+        clean_lines = []
+        for line in response.splitlines():
+            is_meta = False
+            for marker in self.meta_markers:
+                if marker.lower() in line.lower():
+                    is_meta = True
+                    break
+            if not is_meta and line.strip():
+                clean_lines.append(line)
+        sanitized_response = "\n".join(clean_lines)
+        low_resp = sanitized_response.lower()
         for phrase in self.banned_phrases:
             if phrase in low_resp:
                 return {
                     "valid": False,
                     "reason": "IMMISSION_BREAK",
                     "replacement": self.immersion_break_msg}
-        if len(response.strip()) < 5:
-            return {"valid": False, "reason": "STUTTER", "replacement": "The gears turn, but no sound emerges."}
-        return {"valid": True, "content": response}
-
+        if len(sanitized_response.strip()) < 5:
+            return {"valid": False, "reason": "STUTTER", "replacement": "The vision fractures. Static remains."}
+        return {"valid": True, "content": sanitized_response}
 
 class TheCortex:
     def __init__(self, engine_ref, llm_client=None):
@@ -487,16 +489,21 @@ class TheCortex:
             full_state["mind"]["style_directives"] = [vsl_prompt]
             sim_result["physics"]["voltage"] = self.consultant.state.B * 30.0
             sim_result["physics"]["narrative_drag"] = self.consultant.state.E * 10.0
+        is_boot_sequence = "SYSTEM_BOOT:" in user_input
         if is_boot_sequence:
             clean_prompt = user_input.replace("SYSTEM_BOOT:", "").strip()
-            full_state["mind"]["lexicon_bias"] = "evocative"
-            full_state["world"]["orbit"] = ["Unformed"]
+            full_state["mind"]["lexicon_bias"] = "interesting"
+            full_state["world"]["orbit"] = ["Unborn"]
             full_state["mind"]["style_directives"] = [
                 "You are The Architect.",
-                f"SEED INSPIRATION: {clean_prompt}",
-                "DIRECTIVE: Generate the opening scene. Do not interact with the user yet.",
-                "CRITICAL: The SEED is a metaphor/vibe. Do not take it literally. Remix it.",
-                "STYLE: Stark, grounded, and atmospheric. No 'Void' references unless requested."]
+                f"TARGET SEED: {clean_prompt}",
+                "DIRECTIVE: Hallucinate the opening scene based on the seed's VIBE, not the literal location itself.",
+                "--- EXAMPLE REMIX ---",
+                "Seed: 'A quiet library'",
+                "Output: 'A forest where the trees are made of rotting books and the wind whispers forgotten passages.'",
+                "--- END EXAMPLE ---",
+                "CRITICAL: Do not describe the seed literally. Mutate it. Distort it.",
+                "STYLE: Dream-like but grounded in a physical reality."]
             full_state["dialogue_history"] = []
             user_input = "Initiate Sequence."
         if hasattr(self.sub, 'tutorial') and self.sub.tutorial and not self.sub.tutorial.complete:
@@ -508,6 +515,10 @@ class TheCortex:
         current_lens = full_state["mind"].get("lens", "NARRATOR")
         model_id = self.llm.model if hasattr(self.llm, "model") else "unknown"
         llm_params = self.modulator.modulate(chem, voltage, lens_name=current_lens, model_name=model_id)
+        if is_boot_sequence:
+            llm_params["temperature"] = 1.3
+            llm_params["top_p"] = 0.95
+            llm_params["frequency_penalty"] = 0.5
         modifiers = self.symbiosis.get_prompt_modifiers()
         if self.sub.tick_count < 5: modifiers["grace_period"] = True
         if hasattr(self.sub, 'tutorial') and self.sub.tutorial:
@@ -639,7 +650,6 @@ class TheCortex:
                 self.sub.lex.teach(target, "kinetic", self.sub.tick_count)
                 self.events.log(f"AUTO-DIDACTIC: Learned '{target}' from self.", "CORTEX")
 
-
 class NeuroPlasticity:
     def __init__(self):
         self.plasticity_mod = 1.0
@@ -657,7 +667,6 @@ class NeuroPlasticity:
         back_weight = graph[word_b]["edges"].get(word_a, 0.0)
         graph[word_b]["edges"][word_a] = min(10.0, back_weight + 1.0)
         return f"{Prisma.MAG}⚡ HEBBIAN GRAFT: Wired '{word_a}' <-> '{word_b}'.{Prisma.RST}"
-
 
 class ShimmerState:
     def __init__(self, max_val=50.0):
@@ -678,7 +687,6 @@ class ShimmerState:
             return "CONSERVE"
         return None
 
-
 class DreamEngine:
     def __init__(self, events):
         self.events = events
@@ -690,15 +698,13 @@ class DreamEngine:
             "{A} decides to become {B}. The logic holds.",
             "Why is the {A} laughing at the {B}?",
             "The {C} opens its mouth and sings a song about {A}.",
-            "You try to catch {A}, but it turns into {B}."
-        ]
+            "You try to catch {A}, but it turns into {B}."]
         self.CONSTRUCTIVE_PROMPTS = [
             "You are building a cathedral out of {A}. The mortar is {B}.",
             "{A} is the foundation. {B} is the keystone.",
             "The blueprint calls for {A}, but you use {B} instead.",
             "You weave {A} and {B} into a single, unbreakable strand.",
-            "The geometry of {A} supports the weight of {C}."
-        ]
+            "The geometry of {A} supports the weight of {C}."]
 
     def enter_rem_cycle(self, memory_system: Any, bio_readout: Dict[str, Any] = None) -> Dict[str, Any]:
         residue_word = "static"
@@ -785,7 +791,6 @@ class DreamEngine:
         val_b = "ENTROPY" if trauma_level > 5.0 else (dims[1] if len(dims) > 1 else "SILENCE")
         if "DEL" in dims:
              return f"The concept of {val_a} turns into a balloon and floats away.", 5.0
-
         if trauma_level > 5.0:
             cat = "SEPTIC" if vector.get("ENT", 0) > 0.5 else "BARIC"
             template = random.choice(self.NIGHTMARES.get(cat, self.NIGHTMARES["BARIC"]))
