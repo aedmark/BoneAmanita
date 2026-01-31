@@ -437,7 +437,7 @@ class MycelialNetwork:
         for n in nodes_to_remove: del self.graph[n]
         return f"📉 HOMEOSTATIC SCALING: Decayed {total_decayed} synapses. Pruned {pruned_count} weak connections."
 
-    def save(self, health, stamina, mutations, trauma_accum, joy_history, mitochondria_traits=None, antibodies=None, soul_data=None):
+    def save(self, health, stamina, mutations, trauma_accum, joy_history, mitochondria_traits=None, antibodies=None, soul_data=None, continuity=None):
         base_trauma = (BoneConfig.MAX_HEALTH - health) / BoneConfig.MAX_HEALTH
         final_vector = {k: min(1.0, v) for k, v in trauma_accum.items()}
         top_joy = sorted(joy_history, key=lambda x: x["resonance"], reverse=True)[:3]
@@ -453,6 +453,8 @@ class MycelialNetwork:
             final_vector[cause] = 1.0
         spore = SporeCasing(session_id=self.session_id, graph=self.graph, mutations=mutations, trauma=base_trauma, joy_vectors=top_joy)
         data = spore.__dict__
+        if continuity:
+            data["continuity"] = continuity
         data["cortical_stack"] = self.cortical_stack
         if antibodies: data["antibodies"] = antibodies
         data["trauma_vector"] = final_vector
@@ -476,7 +478,7 @@ class MycelialNetwork:
         data = self.loader.load_spore(target_file)
         if not data:
             self.events.log(f"{Prisma.RED}[MEMORY]: Spore file not found.{Prisma.RST}")
-            return None, set()
+            return None, set(), {}, None
         try:
             required_keys = ["meta", "trauma_vector", "core_graph"]
             if not all(k in data for k in required_keys):
@@ -593,7 +595,10 @@ class MycelialNetwork:
             soul_legacy = data.get("soul_legacy", {})
             if soul_legacy:
                 self.events.log(f"{Prisma.CYN}[GENETICS]: Detected Soul Legacy.{Prisma.RST}")
-            return data.get("mitochondria", {}), set(data.get("antibodies", [])), soul_legacy
+            continuity = data.get("continuity", None)
+            if continuity:
+                self.events.log(f"{Prisma.CYN}[CHRONOS]: Timeline bookmark found ({continuity.get('location', 'Unknown')}).{Prisma.RST}")
+            return data.get("mitochondria", {}), set(data.get("antibodies", [])), data.get("soul_legacy", {}), continuity
         except Exception as err:
             self.events.log(f"{Prisma.RED}[MEMORY]: Spore ingestion failed. {err}{Prisma.RST}")
             return None, set(), {}

@@ -224,7 +224,6 @@ class SemanticEndocrinologist:
 
 class SomaticLoop:
     _ENZYME_MAP = {
-        "kinetic": "PROTEASE",
         "static": "CELLULASE",
         "abstract": "DECRYPTASE",
         "natural": "LIGNASE",
@@ -354,18 +353,21 @@ class SomaticLoop:
         for word, count in word_counts.items():
             if len(word) < 4: continue
             category = TheLexicon.get_current_category(word)
+            if category in ["kinetic", "explosive"]:
+                continue
             if category == "antigen":
                 tax = 3.0 * count
                 cliche_tax_total += tax
                 continue
             if category and category != "void":
                 enzyme = self._map_category_to_enzyme(category)
-                found_enzymes.append(enzyme)
-                base_word_yield = 2.0 if len(word) > 7 else 1.0
-                damped_multiplier = 1.0 + math.log(count)
-                total_atp_yield += (base_word_yield * damped_multiplier)
-                if len(found_enzymes) <= 3:
-                    logs.append(f"{Prisma.GRN}[BIO]: Digested '{word}' (x{count}) -> {enzyme} (+{(base_word_yield * damped_multiplier):.1f} ATP){Prisma.RST}")
+                if enzyme != "AMYLASE":
+                    found_enzymes.append(enzyme)
+                    base_word_yield = 2.0 if len(word) > 7 else 1.0
+                    damped_multiplier = 1.0 + math.log(count)
+                    total_atp_yield += (base_word_yield * damped_multiplier)
+                    if len(found_enzymes) <= 3:
+                        logs.append(f"{Prisma.GRN}[BIO]: Digested '{word}' (x{count}) -> {enzyme} (+{(base_word_yield * damped_multiplier):.1f} ATP){Prisma.RST}")
         if cliche_tax_total > 0:
             total_atp_yield -= cliche_tax_total
             logs.append(f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX APPLIED. System drained by -{cliche_tax_total:.1f} ATP. (Reason: Antigen Detected){Prisma.RST}")

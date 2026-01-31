@@ -21,6 +21,7 @@ class SystemEmbryo:
     shimmer: Any
     is_gestating: bool = True
     soul_legacy: Optional[Dict] = None
+    continuity: Optional[Dict] = None
 
 class PanicRoom:
     @staticmethod
@@ -161,11 +162,12 @@ class BoneArchitect:
         inherited_traits = {}
         inherited_antibodies = set()
         soul_legacy = {}
+        continuity_data = None
         if load_result:
-            if isinstance(load_result, tuple):
-                if len(load_result) >= 1: inherited_traits = load_result[0]
-                if len(load_result) >= 2: inherited_antibodies = load_result[1]
-                if len(load_result) >= 3: soul_legacy = load_result[2]
+            if len(load_result) >= 1: inherited_traits = load_result[0]
+            if len(load_result) >= 2: inherited_antibodies = load_result[1]
+            if len(load_result) >= 3: soul_legacy = load_result[2]
+            if len(load_result) >= 4: continuity_data = load_result[3]
             events.log(f"{Prisma.CYN}[ARCHITECT]: Ancestral Spirit detected.{Prisma.RST}", "SYS")
         else:
             events.log(f"{Prisma.WHT}[ARCHITECT]: No ancestors found. A new lineage begins.{Prisma.RST}", "SYS")
@@ -173,6 +175,7 @@ class BoneArchitect:
         embryo.bio.mito.apply_inheritance(inherited_traits)
         embryo.bio.immune.active_antibodies = inherited_antibodies
         embryo.soul_legacy = soul_legacy
+        embryo.continuity = continuity_data
         embryo.is_gestating = False
         events.log(f"{Prisma.GRN}[ARCHITECT]: Embryo viable. Breaking the shell...{Prisma.RST}", "SYS")
         if hasattr(events, "set_dormancy"):

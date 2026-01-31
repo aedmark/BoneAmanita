@@ -271,6 +271,10 @@ class BoneAmanita:
     def trigger_death(self, last_phys) -> Dict:
         eulogy = DeathGen.eulogy(last_phys, self.bio.mito.state)
         death_log = [f"\n{Prisma.RED}SYSTEM HALT: {eulogy}{Prisma.RST}"]
+        continuity_packet = {
+            "location": self.cortex.gather_state(self.cortex.last_physics or {}).get("world", {}).get("orbit", ["Void"])[0],
+            "last_output": self.cortex.dialogue_buffer[-1] if self.cortex.dialogue_buffer else "Silence.",
+            "inventory": self.gordon.inventory}
         try:
             path = self.mind.mem.save(
                 health=0,
@@ -280,7 +284,8 @@ class BoneAmanita:
                 joy_history=[],
                 mitochondria_traits=self.bio.mito.adapt(0),
                 antibodies=list(self.bio.immune.active_antibodies),
-                soul_data=self.soul.to_dict())
+                soul_data=self.soul.to_dict(),
+                continuity=continuity_packet)
             death_log.append(f"{Prisma.WHT}   [LEGACY SAVED: {path}]{Prisma.RST}")
         except Exception as e:
             death_log.append(f"Save Failed: {e}")
@@ -369,6 +374,16 @@ class BoneAmanita:
 
     def engage_cold_boot(self):
         if self.tick_count > 0:
+            return
+        if self.embryo.continuity:
+            print(f"{Prisma.GRY}...Resuming Timeline...{Prisma.RST}")
+            loc = self.embryo.continuity.get("location", "Unknown")
+            last_scene = self.embryo.continuity.get("last_output", "")
+            saved_inv = self.embryo.continuity.get("inventory", [])
+            if saved_inv:
+                self.gordon.inventory = saved_inv
+            print(f"{Prisma.CYN}[SYS] Location Restored: '{loc}'{Prisma.RST}")
+            print(f"\n{Prisma.GRY}[PREVIOUSLY]: {last_scene.split('|')[-1].strip()}{Prisma.RST}\n")
             return
         print(f"{Prisma.GRY}...Synthesizing Initial Reality...{Prisma.RST}")
         scenarios = TheLore.get_instance().get("SCENARIOS", {})

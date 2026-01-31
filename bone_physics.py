@@ -143,16 +143,20 @@ class GeodesicEngine:
 
     @staticmethod
     def _calculate_forces(masses, counts, volume, config) -> Dict[str, float]:
+        total_kinetic = masses["kinetic"] + masses["explosive"]
         raw_tension_mass = (
                 (masses["heavy"] * config.PHYSICS.WEIGHT_HEAVY) +
-                (masses["kinetic"] * config.PHYSICS.WEIGHT_EXPLOSIVE) +
+                (total_kinetic * config.PHYSICS.WEIGHT_EXPLOSIVE) +
                 (masses["constructive"] * config.PHYSICS.WEIGHT_CONSTRUCTIVE))
         tension = round(((raw_tension_mass / volume) * 25.0) * config.KINETIC_GAIN, 2)
         raw_friction = (
                 (counts.get("solvents", 0) * 0.2) +
                 (counts.get("suburban", 0) * 2.0) +
-                (masses["heavy"] * 0.8))
-        lift = (masses["play"] * 2.5) + (masses["kinetic"] * 0.5)
+                (masses["heavy"] * 2.5))
+        kinetic_lift = total_kinetic * 0.5
+        if masses["heavy"] > 0:
+            kinetic_lift = kinetic_lift / (masses["heavy"] * 0.5 + 1.0)
+        lift = (masses["play"] * 2.5) + kinetic_lift
         raw_compression = ((raw_friction / volume) * 10.0) - ((lift / volume) * 10.0)
         compression = round(max(-5.0, min(config.PHYSICS.DRAG_HALT, raw_compression * config.SIGNAL_DRAG_MULTIPLIER)), 2)
         structural_mass = masses["heavy"] + masses["constructive"]

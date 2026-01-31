@@ -300,7 +300,11 @@ class ContextWindowManager:
     CHARS_PER_TOKEN = 3.5
 
     def compose_context(self, layout: Dict[str, Any], max_tokens: int = 4000) -> str:
-        location_block = f"CURRENT LOCATION: {layout['location']}"
+        loc_val = layout['location']
+        if loc_val in ["Unformed", "Void"] and "seed" in str(layout.get('notes', '')).lower():
+            location_block = "CURRENT LOCATION: [Establishing Reality...]"
+        else:
+            location_block = f"CURRENT LOCATION: {loc_val}"
         inventory_block = f"INVENTORY: {layout['inventory']}" if layout.get('inventory') else "INVENTORY: Empty"
         history_budget = max(1000, (max_tokens * 4) - 2000)
         recent_history = layout.get("history", [])
@@ -337,7 +341,7 @@ class PromptComposer:
         if chem.get("COR", 0) > 0.6: mood = "Defensive / Anxious"
         if chem.get("DOP", 0) > 0.6: mood = "Curious / Manic"
         vocab_bias = mind.get("lexicon_bias", "standard")
-        vocab_instruction = f"Flavor: Subtly influence word choice with '{vocab_bias}' themes, but prioritize clarity."
+        vocab_instruction = f"Flavor: Use '{vocab_bias}' concepts as subtle seasoning/texture. Do not force specific words."
         if vocab_bias == "standard":
             vocab_instruction = "Style: Standard, clear English."
         persona_directives = mind.get("style_directives", [])
@@ -350,7 +354,8 @@ class PromptComposer:
                 style_notes.extend(persona_directives)
         style_notes.extend([
             "Constraint: Be concise. Do NOT use 'As an AI'.",
-            "Constraint: If the user offers a concept, play with it. Don't just analyze it."])
+            "Constraint: If the user offers a concept, play with it. Don't just analyze it.",
+            "Directive: The 'Location' is a metaphorical seed. Hallucinate details that match its *vibe*, not just its literal definition."])
         if not any("inventory" in d.lower() for d in persona_directives):
             style_notes.append("Constraint: Do not recite the inventory list unless the user asks.")
         if modifiers.get("soften"):
@@ -475,7 +480,7 @@ class TheCortex:
         sim_result = self.sub.cycle_controller.run_turn(user_input)
         if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]:
             return sim_result
-        full_state = self._gather_state(sim_result)
+        full_state = self.gather_state(sim_result)
         if self.consultant and self.consultant.active:
             self.consultant.update_coordinates(user_input)
             vsl_prompt = self.consultant.get_system_prompt()
@@ -484,13 +489,16 @@ class TheCortex:
             sim_result["physics"]["narrative_drag"] = self.consultant.state.E * 10.0
         if is_boot_sequence:
             clean_prompt = user_input.replace("SYSTEM_BOOT:", "").strip()
+            full_state["mind"]["lexicon_bias"] = "evocative"
+            full_state["world"]["orbit"] = ["Unformed"]
             full_state["mind"]["style_directives"] = [
                 "You are The Architect.",
-                "Generate the initial scene based on the seed.",
-                "Do not interact with the user yet, just build the world.",
-                "STYLE: Stark, grounded, and concise. No fluff."]
+                f"SEED INSPIRATION: {clean_prompt}",
+                "DIRECTIVE: Generate the opening scene. Do not interact with the user yet.",
+                "CRITICAL: The SEED is a metaphor/vibe. Do not take it literally. Remix it.",
+                "STYLE: Stark, grounded, and atmospheric. No 'Void' references unless requested."]
             full_state["dialogue_history"] = []
-            user_input = clean_prompt
+            user_input = "Initiate Sequence."
         if hasattr(self.sub, 'tutorial') and self.sub.tutorial and not self.sub.tutorial.complete:
             stage_directions = self.sub.tutorial.get_stage_directions(user_input)
             if stage_directions:
@@ -574,7 +582,7 @@ class TheCortex:
         sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_response_text}{Prisma.RST}"
         return sim_result
 
-    def _gather_state(self, sim_result):
+    def gather_state(self, sim_result):
         current_tick = self.sub.tick_count if hasattr(self.sub, 'tick_count') else 0
         phys_packet = self.sub.phys.observer.last_physics_packet
         bio_state = {
