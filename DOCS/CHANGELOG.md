@@ -1,5 +1,36 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v12.8.0: "THE SLASH PROTOCOL"**
+
+_"We cannot impose our will upon a system; we can only listen to it and dance with it."_
+
+---
+
+#### **📈 DYNAMICS (The Meadows Lens)**
+
+- **The Compost Heap (`MaintenancePhase`):**
+  - **Feature:** Information is no longer destroyed; it is recycled. When words atrophy in the Lexicon, they are converted into a `soil_fertility` metric.
+  - **Benefit:** Closed-loop ecology. High soil fertility passively reduces `Narrative Drag` in future turns. The "death" of old concepts now fertilizes the growth of new ones.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Layer)**
+
+- **The Stop Work Order (`TheBureau`):**
+  - **Feature:** `TheBureau` no longer retreats during high-energy states. Instead, if `Voltage` exceeds 18.0 (Manic), it issues a **ZONING VIOLATION**.
+  - **Consequence:** The simulation triggers a "Stop Work Order," effectively halting the narrative until the user signs "Form 1040-EZ" (accepts reality). The bureaucracy is now a functional circuit breaker for hallucination.
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker Layer)**
+
+- **The Soul Vector (`TraitVector`):**
+  - **Feature:** Refactored the `NarrativeSelf` to use a semantic `TraitVector` class instead of a primitive dictionary. Replaced manual arithmetic (`traits['HOPE'] += 0.5`) with declarative grammar (`traits.adjust('hope', 0.5)`).
+  - **Benefit:** Clarity over cleverness. The code now describes *behavior* rather than *implementation*, reducing the cognitive load required to understand personality shifts.
+
+#### **🌐 SYSTEMIC INTEGRITY (The Fuller Layer)**
+
+- **The Gravity Well (`NarrativeSelf`):**
+  - **Feature:** The "Obsession" mechanic has been upgraded from a passive checklist to an active Tensegrity field.
+  - **Benefit:** Synergy. If the user aligns with the Soul's obsession, `Narrative Drag` is actively reduced (lubrication). If the obsession is neglected, `Voltage` increases (tension). The Soul now physically warps the simulation's physics engine.
+
+
 ### **BONEAMANITA v12.7.0: "THE SYNERGETIC TURN"**
 
 _"The goal of life is to be a pulse, not a flatline."_

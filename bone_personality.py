@@ -281,19 +281,21 @@ class TheBureau:
     def __init__(self):
         self.stamp_count = 0
         self.forms = NARRATIVE_DATA["BUREAU_FORMS"]
-        self.forms.append("Form 404: Void-Fill Application")
+        self.forms.extend(["Form 404: Void-Fill Application", "Form 1040-EZ: Existence Zoning", "STOP WORK ORDER"])
         self.responses = NARRATIVE_DATA["BUREAU_RESPONSES"]
         self.POLICY = {
             "27B-6": {"effect": "ESCALATE", "mod": {"narrative_drag": -3.0, "kappa": -0.2}, "atp": 0.0},
             "1099-B": {"effect": "STAGNATE", "mod": {"narrative_drag": 5.0, "voltage": -5.0}, "atp": 15.0},
             "Schedule C": {"effect": "TAX", "mod": {"voltage": -10.0}, "atp": 8.0},
             "Form W-2": {"effect": "NORMALIZE", "mod": {"beta_index": 1.0, "turbulence": 0.0}, "atp": 5.0},
-            "Form 404": {"effect": "NULLIFY", "mod": {"voltage": -20.0, "kappa": 1.0}, "atp": -5.0}}
+            "Form 404": {"effect": "NULLIFY", "mod": {"voltage": -20.0, "kappa": 1.0}, "atp": -5.0},
+            "ZONING_VIOLATION": {"effect": "LOCKDOWN", "mod": {"voltage": -100.0, "narrative_drag": 100.0}, "atp": -10.0}
+        }
         self.BUZZWORDS = {"synergy", "paradigm", "leverage", "utilize", "holistic", "bandwidth", "circle back"}
 
     def audit(self, physics, bio_state, context=None):
         if bio_state.get("health", 100.0) < 20.0:
-            return None
+            return None # Okay, we don't tax the dying. We aren't monsters.
         beige_threshold = 0.6
         if context:
             mode = context.get('mode', 'NORMAL')
@@ -302,14 +304,15 @@ class TheBureau:
         voltage = physics.get("voltage", 0.0)
         clean_words = physics.get("clean_words", [])
         toxin = physics.get("counts", {}).get("toxin", 0)
-        if toxin > 0 or voltage > 8.0:
-            return None
         buzz_hits = [w for w in clean_words if w in self.BUZZWORDS]
         suburban_words = [w for w in clean_words if w in TheLexicon.get("suburban") or w in TheLexicon.get("buffer")]
         beige_density = len(suburban_words) / max(1, len(clean_words))
         selected_form = None
         evidence = []
-        if buzz_hits:
+        if voltage > 18.0:
+            selected_form = "ZONING_VIOLATION"
+            evidence = ["Excessive Voltage", "Unlicensed Reality Construction"]
+        elif buzz_hits:
             selected_form = "Form 404"
             evidence = buzz_hits
         elif beige_density > beige_threshold:
@@ -324,14 +327,21 @@ class TheBureau:
         mod_log = []
         for k, v in policy["mod"].items():
             if k in physics:
-                physics[k] += v
+                new_val = physics[k] + v
+                if k == "voltage" and new_val < 0: new_val = 0.0
+                physics[k] = new_val
                 mod_log.append(f"{k} {v:+.1f}")
         full_form_name = next((f for f in self.forms if selected_form in f), selected_form)
         evidence_str = f"\n   {Prisma.RED}Evidence: {', '.join(evidence)}{Prisma.RST}" if evidence else ""
+        ui_msg = (f"{Prisma.GRY}🏢 THE BUREAU: {random.choice(self.responses)}{Prisma.RST}\n"
+                  f"   {Prisma.WHT}[Filed: {full_form_name}]{Prisma.RST}{evidence_str}")
+        if selected_form == "ZONING_VIOLATION":
+            ui_msg = (f"{Prisma.RED}🛑 STOP WORK ORDER 🛑{Prisma.RST}\n"
+                      f"   {Prisma.GRY}You are exceeding the licensed voltage for this district.{Prisma.RST}\n"
+                      f"   {Prisma.WHT}Please sign 'Form 1040-EZ' (Type: 'I accept reality') to restore service.{Prisma.RST}")
         return {
             "status": policy["effect"],
-            "ui": (f"{Prisma.GRY}🏢 THE BUREAU: {random.choice(self.responses)}{Prisma.RST}\n"
-                   f"   {Prisma.WHT}[Filed: {full_form_name}]{Prisma.RST}{evidence_str}"),
+            "ui": ui_msg,
             "log": f"BUREAUCRACY: Filed {selected_form}. Mods: {mod_log}.",
             "atp_gain": policy["atp"]}
 

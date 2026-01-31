@@ -76,6 +76,46 @@ class TheEditor:
             label = "THE EDITOR"
         return f"{color}[{label}]: Re: '{chapter_title}' - {comment}{Prisma.RST}"
 
+@dataclass
+class TraitVector:
+    curiosity: float = 0.5
+    cynicism: float = 0.5
+    hope: float = 0.5
+    discipline: float = 0.5
+    wisdom: float = 0.1
+
+    def __post_init__(self):
+        self._clamp_all()
+
+    def _clamp_all(self):
+        for field_name in self.__dataclass_fields__:
+            val = getattr(self, field_name)
+            setattr(self, field_name, max(0.0, min(1.0, val)))
+
+    def adjust(self, trait: str, delta: float):
+        trait = trait.lower()
+        if hasattr(self, trait):
+            current = getattr(self, trait)
+            setattr(self, trait, max(0.0, min(1.0, current + delta)))
+
+    def normalize(self, decay_rate: float = 0.002):
+        for field_name in self.__dataclass_fields__:
+            val = getattr(self, field_name)
+            if abs(val - 0.5) < decay_rate:
+                setattr(self, field_name, 0.5)
+            elif val > 0.5:
+                setattr(self, field_name, val - decay_rate)
+            elif val < 0.5:
+                setattr(self, field_name, val + decay_rate)
+
+    def to_dict(self):
+        return {k.upper(): getattr(self, k) for k in self.__dataclass_fields__}
+
+    @classmethod
+    def from_dict(cls, data: Dict):
+        clean_data = {k.lower(): v for k, v in data.items() if k.lower() in cls.__annotations__}
+        return cls(**clean_data)
+
 class NarrativeSelf:
     SYSTEM_NOISE = {
         "look", "help", "exit", "wait", "inventory", "status", "quit",
@@ -87,12 +127,7 @@ class NarrativeSelf:
         self.editor = TheEditor()
         self.chapters: List[str] = []
         self.core_memories: List[CoreMemory] = []
-        self.traits = {
-            "CURIOSITY": 0.5,
-            "CYNICISM": 0.5,
-            "HOPE": 0.5,
-            "DISCIPLINE": 0.5,
-            "WISDOM": 0.1}
+        self.traits = TraitVector()
         self.paradox_accum: float = 0.0
         self.archetype = "THE OBSERVER"
         self.current_obsession: Optional[str] = None
@@ -111,6 +146,18 @@ class NarrativeSelf:
             {"title": "Equilibrium Studies", "target": "aerobic", "negate": "thermal"}]
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("DREAM_COMPLETE", self._on_dream)
+
+    def _determine_archetype(self) -> str:
+        c = self.traits.curiosity
+        y = self.traits.cynicism
+        h = self.traits.hope
+        d = self.traits.discipline
+        if h > 0.7 and c > 0.6: return "THE POET"
+        if d > 0.7 and c > 0.6: return "THE ENGINEER"
+        if y > 0.7 and d > 0.6: return "THE CRITIC"
+        if y > 0.8 and h < 0.3: return "THE NIHILIST"
+        if c > 0.8:             return "THE EXPLORER"
+        return "THE OBSERVER"
 
     def _on_dream(self, payload):
         if not payload: return
@@ -139,20 +186,14 @@ class NarrativeSelf:
         elif self.archetype == "THE NIHILIST":
             buffs["voltage_mod"] = 0.5
             buffs["drag_mod"] = 0.5
-        wisdom_factor = self.traits.get("WISDOM", 0.0)
+        wisdom_factor = self.traits.wisdom
         if self.obsession_neglect > 5.0:
             mitigated_drag = 0.5 * (1.0 - wisdom_factor)
             buffs["drag_mod"] += mitigated_drag
         return buffs
 
     def _normalize_traits(self, decay_rate: float):
-        for k in self.traits:
-            if abs(self.traits[k] - 0.5) < decay_rate:
-                self.traits[k] = 0.5
-            elif self.traits[k] > 0.5:
-                self.traits[k] -= decay_rate
-            elif self.traits[k] < 0.5:
-                self.traits[k] += decay_rate
+        self.traits.normalize(decay_rate)
 
     def _prune_memories(self):
         if len(self.core_memories) <= MAX_CORE_MEMORIES:
@@ -176,24 +217,24 @@ class NarrativeSelf:
         if voltage > MEMORY_VOLTAGE_THRESHOLD and truth > MEMORY_TRUTH_THRESHOLD:
             clean_words = physics_packet.get("clean_words", [])
             flavor = "MANIC" if voltage > MANIC_VOLTAGE_THRESHOLD else "LUCID"
-            is_crisis = (self.traits["CYNICISM"] > 0.6 and self.traits["HOPE"] < 0.4) or ("void" in clean_words)
+            is_crisis = (self.traits.cynicism > 0.6 and self.traits.hope < 0.4) or ("void" in clean_words)
             lesson = "The world is loud."
             chem = bio_state.get("chem", {}) if bio_state else {}
             if chem.get("oxytocin", 0) > 0.6:
                 lesson = "We are not alone in this."
-                self.traits["HOPE"] = min(1.0, self.traits["HOPE"] + 0.3)
+                self.traits.adjust("hope", 0.3)
             elif chem.get("cortisol", 0) > 0.6:
                 lesson = "Survival is the only metric."
-                self.traits["DISCIPLINE"] = min(1.0, self.traits["DISCIPLINE"] + 0.3)
+                self.traits.adjust("discipline", 0.3)
             elif "love" in clean_words or "help" in clean_words:
                 lesson = "Connection is possible."
-                self.traits["HOPE"] = min(1.0, self.traits["HOPE"] + 0.2)
+                self.traits.adjust("hope", 0.2)
             elif "pain" in clean_words or "void" in clean_words:
                 lesson = "The void stares back."
-                self.traits["CYNICISM"] = min(1.0, self.traits["CYNICISM"] + 0.2)
+                self.traits.adjust("cynicism", 0.2)
             elif "why" in clean_words:
                 lesson = "The question remains."
-                self.traits["CURIOSITY"] = min(1.0, self.traits["CURIOSITY"] + 0.2)
+                self.traits.adjust("curiosity", 0.2)
             memory = CoreMemory(
                 timestamp=time.time(),
                 trigger_words=clean_words[:5],
@@ -221,32 +262,32 @@ class NarrativeSelf:
         is_high_voltage = voltage > MANIC_VOLTAGE_THRESHOLD
         is_high_drag = drag > DRAG_ENTROPY_THRESHOLD
         if is_high_voltage:
-            self.traits["CURIOSITY"] = min(1.0, self.traits["CURIOSITY"] + (TRAIT_MOMENTUM * 4))
-            self.traits["DISCIPLINE"] = max(0.0, self.traits["DISCIPLINE"] - (TRAIT_MOMENTUM * 2))
+            self.traits.adjust("curiosity", TRAIT_MOMENTUM * 4)
+            self.traits.adjust("discipline", -(TRAIT_MOMENTUM * 2))
             provenance.append("Voltage")
         if is_high_drag:
-            self.traits["CYNICISM"] = min(1.0, self.traits["CYNICISM"] + (TRAIT_MOMENTUM * 3))
-            self.traits["HOPE"] = max(0.0, self.traits["HOPE"] - (TRAIT_MOMENTUM * 3))
+            self.traits.adjust("cynicism", TRAIT_MOMENTUM * 3)
+            self.traits.adjust("hope", -(TRAIT_MOMENTUM * 3))
             provenance.append("Drag")
         if bio_state:
             chem = bio_state.get("chem", {})
             cort = chem.get("cortisol", 0.0)
             if cort > 0.4:
-                self.traits["CYNICISM"] = min(1.0, self.traits["CYNICISM"] + (cort * 0.1))
-                self.traits["HOPE"] = max(0.0, self.traits["HOPE"] - (cort * 0.05))
+                self.traits.adjust("cynicism", cort * 0.1)
+                self.traits.adjust("hope", -(cort * 0.05))
                 provenance.append("Cortisol")
             oxy = chem.get("oxytocin", 0.0)
             if oxy > 0.4:
-                self.traits["HOPE"] = min(1.0, self.traits["HOPE"] + (oxy * 0.1))
-                self.traits["CYNICISM"] = max(0.0, self.traits["CYNICISM"] - (oxy * 0.05))
+                self.traits.adjust("hope", oxy * 0.1)
+                self.traits.adjust("cynicism", -(oxy * 0.05))
                 provenance.append("Oxytocin")
             dop = chem.get("dopamine", 0.0)
             if dop > 0.4:
-                self.traits["CURIOSITY"] = min(1.0, self.traits["CURIOSITY"] + (dop * 0.1))
+                self.traits.adjust("curiosity", dop * 0.1)
                 provenance.append("Dopamine")
         if is_high_voltage and is_high_drag:
             self.paradox_accum += 1.0
-            self.traits["WISDOM"] = min(1.0, self.traits["WISDOM"] + (TRAIT_MOMENTUM * 5))
+            self.traits.adjust("wisdom", TRAIT_MOMENTUM * 5)
             move_name = "Vibrating (Paradox State)"
             if self.paradox_accum > PARADOX_CRITICAL_MASS:
                 move_name = "Transcending"
@@ -259,8 +300,8 @@ class NarrativeSelf:
         elif is_high_drag:
             move_name = "Enduring"
         elif 5.0 < voltage < 12.0 and drag < 2.0:
-            self.traits["WISDOM"] = min(1.0, self.traits["WISDOM"] + (TRAIT_MOMENTUM * 2))
-            self.traits["DISCIPLINE"] = min(1.0, self.traits["DISCIPLINE"] + TRAIT_MOMENTUM)
+            self.traits.adjust("wisdom", TRAIT_MOMENTUM * 2)
+            self.traits.adjust("discipline", TRAIT_MOMENTUM)
             move_name = "Flowing"
             provenance.append("Laminar")
         self._normalize_traits(0.002)
@@ -345,8 +386,8 @@ class NarrativeSelf:
         self.find_obsession(self.eng.lex)
         if self.current_obsession:
             flux = 0.05
-            self.traits["CURIOSITY"] = min(1.0, self.traits["CURIOSITY"] + flux)
-            self.traits["DISCIPLINE"] = max(0.0, self.traits["DISCIPLINE"] - flux)
+            self.traits.adjust("curiosity", flux)
+            self.traits.adjust("discipline", -flux)
             critique = self.editor.critique(f"The Shift to {self.current_obsession}")
             if hasattr(self, 'events'):
                 self.events.log(
@@ -360,34 +401,40 @@ class NarrativeSelf:
         if self.current_target_cat:
             hit = any(self.current_target_cat in w for w in clean_words)
         if hit:
+            current_drag = physics.get("narrative_drag", 0.0)
+            gravity_assist = 1.0 + (self.obsession_progress / 20.0)
+            physics["narrative_drag"] = max(0.0, current_drag - gravity_assist)
             self.obsession_progress += 10.0
             self.obsession_neglect = 0.0
-            return f"{Prisma.MAG}★ OBSESSION FULFILLED: You touched the '{self.current_obsession}'. (+Hope){Prisma.RST}"
+            return f"{Prisma.MAG}★ SYNERGY: You touched the '{self.current_obsession}'. The universe bends to help you. (Drag -{gravity_assist:.1f}){Prisma.RST}"
         self.obsession_neglect += 1.0
+        if self.obsession_neglect > 5.0:
+            current_voltage = physics.get("voltage", 0.0)
+            physics["voltage"] = current_voltage + 0.5
         if self.obsession_neglect > 10.0:
             old_obsession = self.current_obsession
-            self.chapters.append(f"The era of '{old_obsession}' ended quietly.")
+            self.chapters.append(f"The geodesic structure of '{old_obsession}' collapsed.")
             self._generate_new_obsession()
-            return f"{Prisma.GRY}∞ DRIFT: '{old_obsession}' has drifted away. A new interest takes hold.{Prisma.RST}"
+            return f"{Prisma.GRY}∞ ENTROPY: '{old_obsession}' failed due to lack of support. A new geometry forms.{Prisma.RST}"
         return None
 
     def integrate_dream(self, dream_type: str, residue: str):
         self.events.log(f"{Prisma.VIOLET}☾ DREAM INTEGRATION: Absorbing '{residue}' ({dream_type})...{Prisma.RST}", "SOUL")
         if dream_type == "NIGHTMARE":
-            self.traits["CYNICISM"] = min(1.0, self.traits["CYNICISM"] + 0.4)
-            self.traits["HOPE"] = max(0.0, self.traits["HOPE"] - 0.2)
+            self.traits.adjust("cynicism", 0.4)
+            self.traits.adjust("hope", -0.2)
             self.current_obsession = f"Surviving the {residue.title()}"
         elif dream_type == "LUCID":
-            self.traits["DISCIPLINE"] = min(1.0, self.traits["DISCIPLINE"] + 0.4)
-            self.traits["CURIOSITY"] = min(1.0, self.traits["CURIOSITY"] + 0.3)
+            self.traits.adjust("discipline", 0.4)
+            self.traits.adjust("curiosity", 0.3)
             self.current_obsession = f"Mastering {residue.title()}"
         elif dream_type == "SURREAL":
-            self.traits["WISDOM"] = min(1.0, self.traits["WISDOM"] + 0.3)
-            self.traits["DISCIPLINE"] = max(0.0, self.traits["DISCIPLINE"] - 0.3)
+            self.traits.adjust("wisdom", 0.3)
+            self.traits.adjust("discipline", -0.3)
             self.current_obsession = f"The Logic of {residue.title()}"
         elif dream_type == "CONSTRUCTIVE":
-            self.traits["HOPE"] = min(1.0, self.traits["HOPE"] + 0.4)
-            self.traits["CURIOSITY"] = max(0.0, self.traits["CURIOSITY"] - 0.1) # Less looking, more doing.
+            self.traits.adjust("hope", 0.4)
+            self.traits.adjust("curiosity", -0.1)
             self.current_obsession = f"Building the {residue.title()}"
         prev_arch = self.archetype
         self.archetype = self._determine_archetype()
@@ -424,7 +471,7 @@ class NarrativeSelf:
 
     def to_dict(self) -> Dict:
         return {
-            "traits": self.traits,
+            "traits": self.traits.to_dict(),
             "archetype": self.archetype,
             "paradox_accum": self.paradox_accum,
             "chapters": self.chapters,
@@ -438,7 +485,9 @@ class NarrativeSelf:
 
     def load_from_dict(self, data: Dict):
         if not data: return
-        self.traits = data.get("traits", self.traits)
+        trait_data = data.get("traits", {})
+        if trait_data:
+            self.traits = TraitVector.from_dict(trait_data)
         self.archetype = data.get("archetype", "THE OBSERVER")
         self.paradox_accum = data.get("paradox_accum", 0.0)
         self.chapters = data.get("chapters", [])

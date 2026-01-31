@@ -177,6 +177,8 @@ class MaintenancePhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "MAINTENANCE"
+        if not hasattr(self.eng, 'soil_fertility'):
+            self.eng.soil_fertility = 0.0
 
     def run(self, ctx: CycleContext):
         if self.eng.tick_count % 10 != 0: return ctx
@@ -187,10 +189,16 @@ class MaintenancePhase(SimulationPhase):
             except TypeError:
                 rotted = self.eng.lex.atrophy(self.eng.tick_count, 100)
             if rotted:
+                biomass = len(rotted) * 0.5
+                self.eng.soil_fertility = min(50.0, self.eng.soil_fertility + biomass)
                 for w in rotted:
                     self.eng.limbo.ghosts.append(f"👻{w.upper()}_ECHO")
                 example = rotted[0]
-                ctx.log(f"{Prisma.GRY}NEURO-PRUNING: {len(rotted)} concepts decayed (e.g., '{example}').{Prisma.RST}")
+                ctx.log(f"{Prisma.GRY}♻️ COMPOST: {len(rotted)} concepts decayed -> +{biomass:.1f} Fertility.{Prisma.RST}")
+            if self.eng.soil_fertility > 10.0:
+                drag_reduction = self.eng.soil_fertility * 0.05
+                ctx.physics["narrative_drag"] = max(0.0, ctx.physics.get("narrative_drag", 0.0) - drag_reduction)
+                ctx.log(f"{Prisma.GRN}🌱 FERTILE GROUND: The compost lowers drag by {drag_reduction:.2f}.{Prisma.RST}")
             self.eng.mind.mem.enforce_limits(self.eng.tick_count)
         except Exception as e:
             if BoneConfig.VERBOSE_LOGGING: print(f"Maintenance Error: {e}")
