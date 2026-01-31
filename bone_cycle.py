@@ -104,10 +104,13 @@ class ObservationPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "OBSERVE"
+
     def run(self, ctx: CycleContext):
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
         ctx.physics = gaze_result["physics"]
         ctx.clean_words = gaze_result["clean_words"]
+        current_voltage = ctx.physics.get("voltage", 0.0)
+        self.eng.phys.dynamics.commit(current_voltage)
         self.eng.tick_count += 1
         return ctx
 
@@ -694,8 +697,6 @@ class PhaseExecutor:
 class CycleSimulator:
     def __init__(self, engine_ref):
         self.eng = engine_ref
-        if not hasattr(self.eng, 'somatic'):
-            self.eng.somatic = SomaticInterface(self.eng)
         self.stabilizer = CycleStabilizer(self.eng.events)
         self.executor = PhaseExecutor()
         self.pipeline: List[SimulationPhase] = [

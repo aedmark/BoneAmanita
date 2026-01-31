@@ -11,25 +11,29 @@ class Projector:
 
     def render(self, physics_ctx, data_ctx, mind_ctx) -> str:
         physics = physics_ctx.get("physics", {})
-        title_data = data_ctx.get("title", {})
-        health = data_ctx.get("health", 100)
-        stamina = data_ctx.get("stamina", 100)
-        atp = data_ctx.get("bio", {}).get("atp") or 0
+        vsl_data = data_ctx.get("vsl_state")
+        if vsl_data:
+            header = self._render_vsl_hud(vsl_data)
+        else:
+            title_data = data_ctx.get("title", {})
+            health = data_ctx.get("health", 100)
+            stamina = data_ctx.get("stamina", 100)
+            atp = data_ctx.get("bio", {}).get("atp") or 0
+            hp_bar = self._bar(health, 100, 5, "█", Prisma.RED)
+            stm_bar = self._bar(stamina, 100, 5, "█", Prisma.GRN)
+            active_role = "NARRATOR"
+            if mind_ctx and len(mind_ctx) > 2:
+                active_role = str(mind_ctx[2]).upper()
+            header = (
+                f"♦ {active_role}  [HP: {hp_bar}] [STM: {stm_bar}] [ATP: {int(atp)}J] "
+                f"[V:{physics.get('voltage', 0):.1f}⚡] [D:{physics.get('narrative_drag', 0):.1f}⚓]")
         vectors = data_ctx.get("vectors", {})
-        hp_bar = self._bar(health, 100, 5, "█", Prisma.RED)
-        stm_bar = self._bar(stamina, 100, 5, "█", Prisma.GRN)
         vel = vectors.get("VEL", 0.0)
         str_v = vectors.get("STR", 0.0)
         ent = vectors.get("ENT", 0.0)
         phi = vectors.get("PHI", 0.0)
         tmp = vectors.get("TMP", 0.0)
-        psi = physics.get("psi", 0.0)
-        active_role = "NARRATOR"
-        if mind_ctx and len(mind_ctx) > 2:
-            active_role = str(mind_ctx[2]).upper()
-        header = (
-            f"♦ {active_role}  [HP: {hp_bar}] [STM: {stm_bar}] [ATP: {int(atp)}J] "
-            f"[V:{physics.get('voltage', 0):.1f}⚡] [D:{physics.get('narrative_drag', 0):.1f}⚓]")
+        psi = vectors.get("PSI", 0.0)
         vector_row = (
             f"VEL {vel:.1f} | STR {str_v:.1f} ENT {ent:.1f} | "
             f"PHI {phi:.1f} TMP {tmp:.1f} | PSI {psi:.1f}")
@@ -48,6 +52,18 @@ class Projector:
         ratio = max(0.0, min(1.0, val / max_val))
         fill = int(ratio * width)
         return f"{color}{char * fill}{Prisma.GRY}{char * (width - fill)}{Prisma.RST}"
+
+    def _render_vsl_hud(self, vsl_data) -> str:
+        arch = vsl_data.get("archetype", "UNKNOWN")
+        e_val = vsl_data.get("E", 0.0)
+        b_val = vsl_data.get("B", 0.0)
+        e_bar = self._bar(e_val, 1.0, 10, "░", Prisma.OCHRE)
+        b_bar = self._bar(b_val, 1.0, 10, "═", Prisma.CYN)
+        return (
+            f"{Prisma.CYN}╔════ VSL PROTOCOL ACTIVE ══════════════════════════════╗{Prisma.RST}\n"
+            f"║ ARCHETYPE: {Prisma.WHT}{arch.ljust(15)}{Prisma.RST} "
+            f"SATURATION (E): [{e_bar}] "
+            f"TENSION (B): [{b_bar}] ║")
 
 class GeodesicRenderer:
     def __init__(self, engine_ref, chroma_ref, strunk_ref, valve_ref):

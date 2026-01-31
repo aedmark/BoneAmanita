@@ -321,7 +321,9 @@ class LexiconService:
             cls._ANALYZER = LinguisticAnalyzer(cls._STORE)
             cls.compile_antigens()
             cls.SOLVENTS = cls._STORE.SOLVENTS
-            print(f"{Prisma.GRN}[LEXICON]: Systems Nominal. Vocabulary Loaded.{Prisma.RST}")
+            total_words = sum(len(s) for s in cls._STORE.VOCAB.values())
+            print(f"{Prisma.GRN}[LEXICON]: Systems Nominal. {total_words} words loaded.{Prisma.RST}")
+
         except Exception as e:
             cls._INITIALIZED = False
             print(f"{Prisma.RED}[LEXICON]: Initialization Failed: {e}{Prisma.RST}")
@@ -381,6 +383,16 @@ class LexiconService:
     @classmethod
     @_ensure_ready
     def classify(cls, word):
+        PRIORITY_ORDER = [
+            "heavy", "kinetic", "explosive", "thermal", "cryo",
+            "sacred", "antigen", "meat",
+            "play", "suburban", "abstract"]
+        known_cats = cls._STORE.get_categories_for_word(word)
+        if known_cats:
+            for p_cat in PRIORITY_ORDER:
+                if p_cat in known_cats:
+                    return p_cat, 1.0
+            return next(iter(known_cats)), 1.0
         return cls._ANALYZER.classify_word(word)
 
     @classmethod

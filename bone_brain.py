@@ -13,6 +13,7 @@ from bone_translation import RosettaStone
 from bone_telemetry import TelemetryService, DecisionCrystal, BlackBoxReader
 from bone_physics import cosine_similarity
 from bone_personality import SynergeticLensArbiter
+from bone_consultant import BoneConsultant
 
 @dataclass
 class BrainConfig:
@@ -339,17 +340,17 @@ class PromptComposer:
         vocab_instruction = f"Flavor: Subtly influence word choice with '{vocab_bias}' themes, but prioritize clarity."
         if vocab_bias == "standard":
             vocab_instruction = "Style: Standard, clear English."
-        style_notes = [
-            f"Voice: {role}.",
-            f"Current Mood: {mood}.",
-            vocab_instruction]
         persona_directives = mind.get("style_directives", [])
-        if persona_directives:
-            style_notes.extend(persona_directives)
+        is_vsl = any("VSL_PRIMER" in d for d in persona_directives)
+        if is_vsl:
+            style_notes = persona_directives
+        else:
+            style_notes = [f"Voice: {role}.", f"Current Mood: {mood}.", vocab_instruction]
+            if persona_directives:
+                style_notes.extend(persona_directives)
         style_notes.extend([
             "Constraint: Be concise. Do NOT use 'As an AI'.",
-            "Constraint: If the user offers a concept, play with it. Don't just analyze it."
-        ])
+            "Constraint: If the user offers a concept, play with it. Don't just analyze it."])
         if not any("inventory" in d.lower() for d in persona_directives):
             style_notes.append("Constraint: Do not recite the inventory list unless the user asks.")
         if modifiers.get("soften"):
@@ -426,6 +427,13 @@ class TheCortex:
         self.black_box = BlackBoxReader()
         self.boot_history = self.black_box.get_recent_history(limit=4)
         self.last_physics = {}
+        try:
+            from bone_consultant import BoneConsultant
+            self.consultant = BoneConsultant()
+        except ImportError:
+            self.consultant = None
+            if self.events:
+                self.events.log("⚠️ BoneConsultant module missing. VSL Protocol disabled.", "SYS")
         if llm_client:
             self.llm = llm_client
             if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None:
@@ -454,19 +462,33 @@ class TheCortex:
             self.dialogue_buffer.pop(0)
 
     def process(self, user_input: str) -> Dict[str, Any]:
+        if self.consultant:
+            if "/vsl start" in user_input.lower():
+                msg = self.consultant.engage()
+                self.events.log(msg, "VSL")
+                return {"ui": f"{Prisma.CYN}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.sub.get_metrics()}
+            if "/vsl stop" in user_input.lower():
+                msg = self.consultant.disengage()
+                self.events.log(msg, "VSL")
+                return {"ui": f"{Prisma.GRY}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.sub.get_metrics()}
         is_boot_sequence = "SYSTEM_BOOT:" in user_input
         sim_result = self.sub.cycle_controller.run_turn(user_input)
         if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]:
             return sim_result
         full_state = self._gather_state(sim_result)
+        if self.consultant and self.consultant.active:
+            self.consultant.update_coordinates(user_input)
+            vsl_prompt = self.consultant.get_system_prompt()
+            full_state["mind"]["style_directives"] = [vsl_prompt]
+            sim_result["physics"]["voltage"] = self.consultant.state.B * 30.0
+            sim_result["physics"]["narrative_drag"] = self.consultant.state.E * 10.0
         if is_boot_sequence:
             clean_prompt = user_input.replace("SYSTEM_BOOT:", "").strip()
             full_state["mind"]["style_directives"] = [
                 "You are The Architect.",
                 "Generate the initial scene based on the seed.",
                 "Do not interact with the user yet, just build the world.",
-                "Be evocative but concise."
-            ]
+                "STYLE: Stark, grounded, and concise. No fluff."]
             full_state["dialogue_history"] = []
             user_input = clean_prompt
         if hasattr(self.sub, 'tutorial') and self.sub.tutorial and not self.sub.tutorial.complete:

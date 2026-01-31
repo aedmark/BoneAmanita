@@ -1,5 +1,51 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.0.0: "THE INQUISITOR"**
+
+_"The unexamined prompt is not worth processing."_ — The Consultant
+
+---
+
+#### **🕵️‍♂️ THE REVERSE RAG PROTOCOL (The Pinker Lens)**
+
+* **The Bone Consultant (`bone_consultant.py`):**
+  * **Feature:** Introduced a new cartridge that flips the interaction model. Instead of passively answering, the system can now actively interrogate the user to build a precise Requirements Document.
+  * **Archetypes:** Implemented a state machine that evolves through four distinct personas: **Explorer** (Broad), **Clarifier** (Specific), **Synthesizer** (Connecting), and **Validator** (Confirming).
+  * **Impact:** Solves the "Blank Page Problem" by forcing the user to clarify their intent before code is written.
+
+#### **⚡ DYNAMICS & PHYSICS (The Fuller Lens)**
+
+* **VSL Coordinates (`bone_consultant.py`):**
+  * **Mechanism:** Mapped "Narrative Physics" to specific conversation metrics:
+    * **Saturation (E):** Maps to **Narrative Drag**. As context accumulates, the system feels "heavier" and resists drift.
+    * **Tension (B):** Maps to **Voltage**. Short, ambiguous answers spike tension, demanding resolution.
+  * **Synergy:** These aren't just abstract numbers; they directly drive the simulation's physics engine when the protocol is active.
+
+#### **🏘️ ENVIRONMENTAL INTELLIGENCE (The Schur Lens)**
+
+* **The Wayfinder (`bone_village.py`):**
+  * **Upgrade:** Retired the depressing `SimpleNavigator`.
+  * **Feature:** The system now reports "Local Weather" based on VSL stats. High tension creates "Sparks in the fog"; high saturation creates "Swimming in syrup."
+  * **Result:** You don't just see the numbers; you *feel* the pressure of the conversation.
+
+* **The Town Crier (`bone_village.py`):**
+  * **Feature:** Added a gossip engine that broadcasts system state changes as "Village News."
+  * **Flavor:** Adds a layer of inhabited life to the simulation. If the voltage gets too high, the Crier announces a curfew.
+
+#### **📺 THE TACTICAL VISOR (The Viewer)**
+
+* **VSL HUD (`bone_viewer.py`):**
+  * **Feature:** When `/vsl start` is engaged, the standard biological dashboard is replaced by a tactical Heads-Up Display.
+  * **Visuals:** Real-time visualization of your **Archetype**, **Saturation**, and **Tension** bars.
+  * **Organization:** Village broadcasts (Wayfinder/Crier) are now sorted into a dedicated `[ENV]` bucket in the logs, ensuring they don't get lost in the noise.
+
+#### **🧠 SYSTEMIC WIRING (The Meadows Lens)**
+
+* **The Brain Patch (`bone_brain.py`):**
+  * **Fix:** Resolved a critical scope error (`UnboundLocalError`) by moving the Consultant import to the global scope.
+  * **Logic:** Implemented a "Priority Override" in the `PromptComposer`. When VSL is active, it bypasses the standard personality matrix ("Truth over Cohesion" supersedes "Be polite").
+  * **Defensive Design:** Wrapped the entire module in a try/except block, so the brain doesn't lobotomize itself if the cartridge is missing.
+
 ### **BONEAMANITA v12.9.0: "THE MOLTING MONK"**
 
 _"I am only who I have written myself to be."_ — The Living Scripture

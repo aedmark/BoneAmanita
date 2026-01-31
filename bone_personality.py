@@ -166,12 +166,23 @@ class SynergeticLensArbiter:
         ])
 
     def consult(self, physics, bio_state, _inventory, current_tick, _ignition_score=0.0):
-        voltage = physics.get("voltage", 0.0) if isinstance(physics, dict) else physics.voltage
+        if physics is None:
+            return {
+                "lens": "NARRATOR",
+                "role": "The Void-Watcher",
+                "style_directives": ["System blind. Describe the darkness."],
+                "lexicon_bias": "abstract",
+                "context_msg": "PHYSICS_FAIL_SAFE"}
+        voltage = 0.0
+        if isinstance(physics, dict):
+            voltage = physics.get("voltage", 0.0)
+        else:
+            voltage = getattr(physics, "voltage", 0.0)
         if current_tick <= 2:
             self.current_focus = "NARRATOR"
             archetype = random.choice(SCENARIOS["ARCHETYPES"])
             bans = ", ".join(SCENARIOS["BANNED_CLICHES"])
-            gen_instruction = "IMMEDIATELY generate a vivid, specific location"
+            gen_instruction = "IMMEDIATELY establish a stark, physical reality based on the SEED (but do not copy it verbatim)"
             if current_tick > 0:
                 gen_instruction += " (OR describe the details of the current location if already established)"
             return {
@@ -179,14 +190,15 @@ class SynergeticLensArbiter:
                 "role": "The Architect [World Builder]",
                 "style_directives": [
                     "You are a creative, welcoming Game Master.",
-                    f"CREATIVE SPARK: {archetype}.",
+                    f"SEED INSPIRATION: {archetype}.",
+                    "CONSTRAINT: This seed is a starting point only. Remix it. Invert it. Subvert it. Do NOT output it verbatim.",
                     f"{gen_instruction}.",
-                    "STYLE: Simple, direct, and concrete",
-                    "Avoid flowery adjectives or 'purple prose'.",
-                    "Focus on physical reality over abstract metaphor.",
+                    "STYLE: Hemingway Mode. Subject-Verb-Object.",
+                    "NEGATIVE CONSTRAINT: NO PURPLE PROSE. Kill all adverbs. Limit adjectives to one per noun maximum.",
+                    "Focus on physical reality (texture, weight, smell) over abstract metaphor.",
                     "Do NOT mention the user's inventory, pockets, or stats.",
                     f"NEGATIVE CONSTRAINT: Avoid these overused tropes: {bans}.",
-                    "Be concrete. Be specific. Be Real. Be Honest. Have fun."],
+                    "Be concrete. Be specific. Be Real."],
                 "lexicon_bias": self.boot_flavor,
                 "context_msg": "Scenario Initialization."}
         lens_name, state_desc, reason = self.enneagram.decide_persona(physics)

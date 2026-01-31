@@ -44,6 +44,23 @@ class DecisionCrystal:
     def to_json(self):
         return json.dumps(asdict(self))
 
+    def explain_yourself(self) -> str:
+        volts = self.physics_state.get('voltage', 0.0)
+        drag = self.physics_state.get('narrative_drag', 0.0)
+        mood = "Neutral"
+        if volts > 20: mood = "Manic / High Energy"
+        elif volts < 5: mood = "Sedated / Low Energy"
+        texture = "Smooth"
+        if drag > 10: texture = "Viscous / Heavy"
+        elif drag < 2: texture = "Frictionless / Slippery"
+        archetype = self.active_archetype
+        return (
+            f"CAPTAIN'S LOG [{self.decision_id}]:\n"
+            f"   The system is currently {mood} and the narrative feels {texture}.\n"
+            f"   I am viewing this through the lens of '{archetype}'.\n"
+            f"   My primary directive right now is: {self.system_state}."
+        )
+
 @dataclass
 class PhaseTrace:
     phase_name: str
@@ -131,8 +148,9 @@ class TelemetryService:
     def __init__(self, session_id: str, log_dir: str = "telemetry"):
         self.session_id = session_id
         filepath = os.path.join(log_dir, f"trace_{session_id}.jsonl")
+        self.active_log = filepath
         self.manager = LogManager(filepath)
-        self.crystals: Deque[DecisionCrystal] = deque(maxlen=50) 
+        self.crystals: Deque[DecisionCrystal] = deque(maxlen=50)
         print(f"{Prisma.CYN}[TELEMETRY]: Observability Layer Active.{Prisma.RST}")
         print(f"{Prisma.GRY}   > Managed by LogManager at: {filepath}{Prisma.RST}")
 
@@ -143,9 +161,13 @@ class TelemetryService:
         return cls._INSTANCE
 
     @classmethod
-    def initialize(cls, session_id):
-        if cls._INSTANCE is None:
-            cls._INSTANCE = TelemetryService(session_id)
+    def initialize(cls, session_id: str):
+        if cls._INSTANCE: return cls._INSTANCE
+        base_dir = os.path.abspath(os.getcwd())
+        log_dir = os.path.join(base_dir, "telemetry")
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        cls._INSTANCE = TelemetryService(session_id, log_dir)
         return cls._INSTANCE
 
     @classmethod
@@ -172,6 +194,45 @@ class TelemetryService:
             reasoning=reasoning,
             outcome=outcome)
         self.manager.write(trace.to_json())
+
+    def report_last_thought(self):
+        try:
+            with open(self.active_log, 'r') as f:
+                lines = f.readlines()
+                if not lines: return
+                last_line = lines[-1]
+                data = json.loads(last_line)
+                crystal = DecisionCrystal(**data)
+                print(f"\n{Prisma.GRY}{crystal.explain_yourself()}{Prisma.RST}\n")
+        except Exception as e:
+            print(f"Could not decipher the black box: {e}")
+
+    def generate_session_summary(self) -> str:
+        if not hasattr(self, 'active_log') or not self.active_log or not os.path.exists(self.active_log):
+            return "Session Log Not Found."
+        try:
+            with open(self.active_log, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            if not lines: return "Session Empty."
+            count = len(lines)
+            try:
+                start_data = json.loads(lines[0])
+                end_data = json.loads(lines[-1])
+                start_time = start_data.get("timestamp", 0)
+                end_time = end_data.get("timestamp", 0)
+                duration = end_time - start_time
+            except:
+                duration = 0.0
+            velocity = (count / duration) if duration > 0 else 0.0
+            return (
+                f"\n{Prisma.CYN}=== SESSION DEBRIEF ==={Prisma.RST}\n"
+                f"⏱  Duration: {duration:.1f}s\n"
+                f"🧠 Thoughts Processed: {count}\n"
+                f"⚡ Mental Velocity: {velocity:.2f} cycles/sec\n"
+                f"📂 Log Saved: {os.path.basename(self.active_log)}\n"
+            )
+        except Exception as e:
+            return f"Could not generate summary: {e}"
 
     def _sanitize(self, data: Any, depth: int = 0, max_depth: int = 3) -> Any:
         if depth > max_depth:

@@ -117,6 +117,17 @@ class GeodesicVector:
     dimensions: Dict[str, float]
 
 class GeodesicEngine:
+    @staticmethod
+    def _weigh_mass(counts: Dict[str, int]) -> Dict[str, float]:
+        return {
+            "heavy": float(counts.get("heavy", 0)),
+            "kinetic": float(counts.get("kinetic", 0)),
+            "constructive": float(counts.get("constructive", 0)),
+            "abstract": float(counts.get("abstract", 0)),
+            "play": float(counts.get("play", 0)),
+            "social": float(counts.get("social", 0)),
+            "explosive": float(counts.get("explosive", 0))}
+
     @classmethod
     def collapse_wavefunction(cls, clean_words: List[str], counts: Dict[str, int], config) -> GeodesicVector:
         volume = max(1, len(clean_words))
@@ -128,19 +139,7 @@ class GeodesicEngine:
             compression=forces['compression'],
             coherence=forces['coherence'],
             abstraction=forces['abstraction'],
-            dimensions=dimensions
-        )
-
-    @staticmethod
-    def _weigh_mass(counts: Dict[str, int]) -> Dict[str, int]:
-        return {
-            "heavy": counts.get("heavy", 0),
-            "kinetic": counts.get("explosive", 0) + counts.get("kinetic", 0),
-            "constructive": counts.get("constructive", 0),
-            "abstract": counts.get("abstract", 0),
-            "play": counts.get("play", 0),
-            "social": counts.get("suburban", 0) + counts.get("solvents", 0)
-        }
+            dimensions=dimensions)
 
     @staticmethod
     def _calculate_forces(masses, counts, volume, config) -> Dict[str, float]:
@@ -149,7 +148,10 @@ class GeodesicEngine:
                 (masses["kinetic"] * config.PHYSICS.WEIGHT_EXPLOSIVE) +
                 (masses["constructive"] * config.PHYSICS.WEIGHT_CONSTRUCTIVE))
         tension = round(((raw_tension_mass / volume) * 25.0) * config.KINETIC_GAIN, 2)
-        raw_friction = (counts.get("solvents", 0) * 0.2) + (counts.get("suburban", 0) * 2.0)
+        raw_friction = (
+                (counts.get("solvents", 0) * 0.2) +
+                (counts.get("suburban", 0) * 2.0) +
+                (masses["heavy"] * 0.8))
         lift = (masses["play"] * 2.5) + (masses["kinetic"] * 0.5)
         raw_compression = ((raw_friction / volume) * 10.0) - ((lift / volume) * 10.0)
         compression = round(max(-5.0, min(config.PHYSICS.DRAG_HALT, raw_compression * config.SIGNAL_DRAG_MULTIPLIER)), 2)
@@ -160,13 +162,11 @@ class GeodesicEngine:
             "tension": tension,
             "compression": compression,
             "coherence": round(coherence, 3),
-            "abstraction": round(abstraction, 2)
-        }
+            "abstraction": round(abstraction, 2)}
 
     @staticmethod
     def _calculate_dimensions(masses, forces, counts, volume, config) -> Dict[str, float]:
         def norm(val): return min(1.0, val / volume)
-
         return {
             "VEL": norm(masses["kinetic"] * 2.0 - forces['compression']),
             "STR": norm(masses["heavy"] * 2.0 + masses["constructive"]),
@@ -175,8 +175,7 @@ class GeodesicEngine:
             "PSI": forces['abstraction'],
             "BET": norm(masses["social"] * 2.0),
             "DEL": norm(masses["play"] * 3.0),
-            "E":   norm(counts.get("solvents", 0))
-        }
+            "E":   norm(counts.get("solvents", 0))}
 
 class QuantumObserver:
     def __init__(self, events):
@@ -223,8 +222,7 @@ class QuantumObserver:
             "mass": round(graph_mass, 1),
             "velocity": 0.0,
             "psi": geo.abstraction,
-            "kappa": geo.coherence
-        }
+            "kappa": geo.coherence}
         self.last_physics_packet = PhysicsPacket(**packet_data)
         full_telemetry = packet_data.copy()
         if hasattr(self.events, "publish"):

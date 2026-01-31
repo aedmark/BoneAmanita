@@ -139,79 +139,105 @@ class MirrorGraph:
         return {"flavor": f"Reflecting {top_stat}", "drag_mult": 1.0}
 
 
-class SimpleNavigator:
+class TheWayfinder:
     def __init__(self, shimmer_ref):
         self.shimmer = shimmer_ref
-        self.zones = {
-            "THE_CONSTRUCT": (0, 5),
-            "THE_MUD": (6, 99),
-            "THE_FORGE": (0, 3)}
         self.current_loc = "THE_CONSTRUCT"
+        self.last_loc = None
+        self.weather_report = "Clear skies."
 
-    def report_position(self, physics: Dict) -> str:
-        drag = physics.get("narrative_drag", 0.0)
-        volt = physics.get("voltage", 0.0)
+    def _read_weather(self, volt, drag):
+        if volt > 20.0: return "The air is ionizing. Static discharge imminent."
+        if volt > 12.0: return "High pressure front. Sparks in the fog."
+        if drag > 8.0: return "Heavy atmosphere. Movement is like swimming in syrup."
+        if drag > 4.0: return "Fog rolling in. Visibility low."
+        if volt < 2.0 and drag < 1.0: return "Dead calm. The sails are slack."
+        return "Ideal conditions."
+
+    def locate(self, physics_packet: dict, host_health: Any = None) -> Tuple[str, Optional[str]]:
+        drag = physics_packet.get("narrative_drag", 0.0)
+        volt = physics_packet.get("voltage", 0.0)
+
         if volt > 12.0: self.current_loc = "THE_FORGE"
         elif drag > 5.0: self.current_loc = "THE_MUD"
         else: self.current_loc = "THE_CONSTRUCT"
-        return f"LOCATION: {self.current_loc} [D:{drag:.1f} V:{volt:.1f}]"
-
-    def locate(self, physics_packet: dict, host_health: Any = None) -> Tuple[str, Optional[str]]:
-        self.report_position(physics_packet)
-        return self.current_loc, None
+        msg = None
+        if self.current_loc != self.last_loc:
+            self.weather_report = self._read_weather(volt, drag)
+            msg = f"{Prisma.CYN}🗺️ WAYFINDER: Entering {self.current_loc}. {self.weather_report}{Prisma.RST}"
+            self.last_loc = self.current_loc
+        return self.current_loc, msg
 
     def apply_environment(self, physics_packet: dict) -> List[str]:
+        logs = []
         if self.current_loc == "THE_MUD":
             physics_packet["narrative_drag"] = max(physics_packet.get("narrative_drag", 0), 6.0)
-            return [f"{Prisma.OCHRE}The Mud holds you.{Prisma.RST}"]
-        return []
+            logs.append(f"{Prisma.OCHRE}The Mud holds you. (Drag floor set to 6.0){Prisma.RST}")
+        elif self.current_loc == "THE_FORGE":
+            physics_packet["voltage"] = max(physics_packet.get("voltage", 0), 12.0)
+            if random.random() < 0.2:
+                logs.append(f"{Prisma.RED}The Forge is hot. Ideas are malleable here.{Prisma.RST}")
+        return logs
 
     def strike_root(self, vector): return None
     def check_transplant_shock(self, vector): return None
 
+class TheTownCrier:
+    def __init__(self):
+        self.rumors = [
+            "I heard the Architect is planning a renovation.",
+            "The Tinkerer says the voltage is too high for the tools.",
+            "Someone saw a ghost in the Limbo Layer.",
+            "The Mud is getting thicker this time of year."]
+
+    def broadcast(self, physics: Dict) -> Optional[str]:
+        volt = physics.get("voltage", 0.0)
+        if volt > 15.0:
+            return f"{Prisma.YEL}📢 HEAR YE: Curfew in effect! The voltage is dangerous!{Prisma.RST}"
+        if random.random() < 0.05:
+            return f"{Prisma.GRY}📢 TOWN CRIER: {random.choice(self.rumors)}{Prisma.RST}"
+        return None
+
 class TownHall:
     def __init__(self, gordon_ref, events_ref, shimmer_ref):
         self.Tinkerer = TheTinkerer(gordon_ref, events_ref)
-        self.Navigator = SimpleNavigator(shimmer_ref)
+        self.Navigator = TheWayfinder(shimmer_ref)
         self.Almanac = TheAlmanac()
         self.Mirror = MirrorGraph(events_ref)
-        self.Cartographer = None
-        self.Journal = None
+        self.Crier = TheTownCrier()
         self.ZenGarden = ZenGarden(events_ref)
 
     def conduct_census(self, physics_snapshot, host_stats):
         status, advice = self.Almanac.diagnose(physics_snapshot, host_stats)
-        return f"CENSUS: {status} | {advice}"
+        news = self.Crier.broadcast(physics_snapshot)
+        report = f"CENSUS: {status} | {advice}"
+        if news:
+            report += f"\n{news}"
+        return report
 
 class DeathGen:
     @classmethod
     def load_protocols(cls):
-        """
-        FULLER: The initialization vector.
-        It verifies that the Death Data is accessible via TheLore.
-        """
         death_data = TheLore.get("DEATH")
         if not death_data:
-            # Fallback if bone_data.py is empty or missing
             print(f"{Prisma.RED}[DEATH]: Protocols missing. Loading default fallback.{Prisma.RST}")
             default_death = {
                 "PREFIXES": ["System Halt."],
                 "CAUSES": {"DEFAULT": ["Unknown Error"]},
-                "VERDICTS": {"DEFAULT": ["The screen goes black."]}
-            }
+                "VERDICTS": {"DEFAULT": ["The screen goes black."]}}
             TheLore.inject("DEATH", default_death)
 
     @staticmethod
     def eulogy(physics, mito_state) -> str:
         death_data = TheLore.get("DEATH")
-        cause = "TRAUMA"  # Default
+        cause = "TRAUMA"
         voltage = physics.get("voltage", 0)
         drag = physics.get("narrative_drag", 0)
         atp = mito_state.get("atp", 0) if isinstance(mito_state, dict) else getattr(mito_state, "atp_pool", 0)
         if atp <= 0:
             cause = "STARVATION"
         elif voltage > 20.0:
-            cause = "GLUTTONY"  # Too much energy
+            cause = "GLUTTONY"
         elif physics.get("counts", {}).get("antigen", 0) > 5:
             cause = "TOXICITY"
         elif drag > 8.0:
@@ -231,4 +257,4 @@ class DeathGen:
         verdict = random.choice(verdicts)
         return f"{prefix} CAUSE: {specific_cause}. {verdict}"
 
-TheNavigator = SimpleNavigator
+TheNavigator = TheWayfinder

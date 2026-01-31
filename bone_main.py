@@ -1,4 +1,4 @@
-""" BONEAMANITA 12.9.0
+""" BONEAMANITA 13.0.0
  Architects: SLASH, KISHO, The BonePoke Gods Humans: Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -37,12 +37,14 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 12.9.0', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 13.0.0', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         print(f"\n{Prisma.paint('--- SYSTEM HALT ---', 'R')}")
+        if self.engine_instance and hasattr(self.engine_instance, "telemetry"):
+            print(self.engine_instance.telemetry.generate_session_summary())
         if exc_type:
             print(f"{Prisma.paint(f'CRITICAL FAILURE: {exc_val}', 'R')}")
             if self.engine_instance and hasattr(self.engine_instance, "events"):
@@ -112,6 +114,12 @@ class BoneAmanita:
     def _initialize_core(self, lexicon_layer):
         print(f"{Prisma.GRY}...Bootstrapping Core Systems...{Prisma.RST}")
         self.lex = lexicon_layer if lexicon_layer else TheLexicon
+        lore_instance = TheLore.get_instance()
+        lex_data = lore_instance.get("LEXICON")
+        if not lex_data or len(lex_data) < 5:
+            print(f"{Prisma.RED}[WARN] bone_data.LEXICON appears empty! Check imports.{Prisma.RST}")
+        else:
+            print(f"{Prisma.GRY}[SYS] Lore Manifest connected ({len(lex_data)} categories found).{Prisma.RST}")
         self._load_resource_safely(
             lambda: self.lex.initialize() if hasattr(self.lex, 'initialize') else None,
             "Lexicon Init")
@@ -239,10 +247,10 @@ class BoneAmanita:
         avg_cycle = self.observer.get_report().get("avg_cycle_sec", 0.0)
         reporter = self.cycle_controller.reporter
         if avg_cycle > 2.0 and reporter.current_mode != "PERFORMANCE":
-            self.events.log(f"{Prisma.OCHRE}⚠️ HIGH LATENCY ({avg_cycle:.2f}s). Engaging Performance Mode.{Prisma.RST}", "SYS")
+            self.events.log(f"{Prisma.OCHRE}The simulation blurs to maintain velocity. (Performance Mode Engaged){Prisma.RST}", "SENSATION")
             reporter.switch_renderer("PERFORMANCE")
         elif avg_cycle < 0.5 and reporter.current_mode == "PERFORMANCE":
-            self.events.log(f"{Prisma.GRN}⚡ LATENCY NOMINAL ({avg_cycle:.2f}s). Restoring High-Fidelity.{Prisma.RST}", "SYS")
+            self.events.log(f"{Prisma.GRN}The details snap back into focus. (High-Fidelity Restored){Prisma.RST}", "SENSATION")
             reporter.switch_renderer("STANDARD")
         if hasattr(self.mind, 'mem') and hasattr(self.mind.mem, 'session_trauma_vector'):
             self.mind.mem.session_trauma_vector = self.trauma_accum.copy()
@@ -338,14 +346,13 @@ class BoneAmanita:
         health_ratio = self.health / BoneConfig.MAX_HEALTH
         desperation = trauma_sum * (1.0 - health_ratio)
         if desperation > DESPERATION_THRESHOLD:
-            self.events.log(f"{Prisma.WHT}ETHICAL RELEASE: Desperation Index ({desperation:.2f}) critical.{Prisma.RST}", "SYS")
+            self.events.log(f"{Prisma.WHT}MERCY SIGNAL: The pressure is too high. Venting...{Prisma.RST}", "SYS")
             for k in self.trauma_accum:
                 self.trauma_accum[k] *= CATHARSIS_DECAY
-            self.events.log(f"{Prisma.CYN}*** CATHARSIS *** Trauma stocks reduced by {int((1-CATHARSIS_DECAY)*100)}%. Ghost remains.{Prisma.RST}", "SYS")
+            self.events.log(
+                f"{Prisma.CYN}*** CATHARSIS *** You take a deep breath. A weight lifts from your chest.{Prisma.RST}",
+                "SENSATION")
             self.health = min(self.health + CATHARSIS_HEAL_AMOUNT, MAX_HEALTH_CAP)
-            if hasattr(self.bio, 'endo'):
-                self.bio.endo.cortisol *= 0.2
-                self.bio.endo.serotonin = max(0.5, self.bio.endo.serotonin + 0.3)
             return True
         return False
 
@@ -365,13 +372,18 @@ class BoneAmanita:
             return
         print(f"{Prisma.GRY}...Synthesizing Initial Reality...{Prisma.RST}")
         scenarios = TheLore.get_instance().get("SCENARIOS", {})
-        archetypes = scenarios.get("ARCHETYPES", ["A quiet void"])
+        archetypes = scenarios.get("ARCHETYPES", ["A quiet garden"])
         seed = random.choice(archetypes)
+        print(f"{Prisma.CYN}[SYS] Seed Loaded: '{seed}'{Prisma.RST}")
         boot_prompt = (
             f"SYSTEM_BOOT_SEQUENCE. User: {self.user_name}. "
             f"SEED: {seed}. "
-            "DIRECTIVE: Generate the opening scene for a text-based simulation. "
-            "Be vivid, atmospheric, and specific. Describe the immediate surroundings. "
+            "DIRECTIVE: Generate the opening scene for a text-based simulation."
+            "CRITICAL INSTRUCTION: Treat the SEED as a source of *inspiration* and *atmosphere*, "
+            "not a literal constraint. You are free to remix, re-interpret, or drastically pivot "
+            "the setting as long as the *emotional texture* of the seed remains. "
+            "If the seed is 'A Floating Market', you could give me a 'Digital Data Bazaar' or "
+            "'A Coral Reef Exchange', or 'A Small Shack on a Dinghy'. Surprise me. "
             "Do not ask 'What do you do?'. Just set the scene."
         )
         cold_result = self.process_turn(f"SYSTEM_BOOT: {boot_prompt}")
@@ -380,7 +392,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 12.9.0', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 13.0.0', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

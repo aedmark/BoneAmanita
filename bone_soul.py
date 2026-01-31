@@ -2,7 +2,7 @@
  'We are the stories we tell ourselves.' """
 
 import time, random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any
 from bone_bus import Prisma
 
@@ -87,10 +87,25 @@ class TraitVector:
     def __post_init__(self):
         self._clamp_all()
 
+    def get(self, key: str, default: Any = None) -> Any:
+        return getattr(self, key.lower(), default)
+
+    def items(self):
+        return {f.name.upper(): getattr(self, f.name) for f in fields(self)}.items()
+
+    def keys(self):
+        return {f.name.upper(): getattr(self, f.name) for f in fields(self)}.keys()
+
+    def __getitem__(self, key: str) -> float:
+        key = key.lower()
+        if hasattr(self, key):
+            return getattr(self, key)
+        raise KeyError(f"Trait '{key}' not found in TraitVector.")
+
     def _clamp_all(self):
-        for field_name in self.__dataclass_fields__:
-            val = getattr(self, field_name)
-            setattr(self, field_name, max(0.0, min(1.0, val)))
+        for f in fields(self):
+            val = getattr(self, f.name)
+            setattr(self, f.name, max(0.0, min(1.0, val)))
 
     def adjust(self, trait: str, delta: float):
         trait = trait.lower()
@@ -99,17 +114,17 @@ class TraitVector:
             setattr(self, trait, max(0.0, min(1.0, current + delta)))
 
     def normalize(self, decay_rate: float = 0.002):
-        for field_name in self.__dataclass_fields__:
-            val = getattr(self, field_name)
+        for f in fields(self):
+            val = getattr(self, f.name)
             if abs(val - 0.5) < decay_rate:
-                setattr(self, field_name, 0.5)
+                setattr(self, f.name, 0.5)
             elif val > 0.5:
-                setattr(self, field_name, val - decay_rate)
+                setattr(self, f.name, val - decay_rate)
             elif val < 0.5:
-                setattr(self, field_name, val + decay_rate)
+                setattr(self, f.name, val + decay_rate)
 
     def to_dict(self):
-        return {k.upper(): getattr(self, k) for k in self.__dataclass_fields__}
+        return {f.name.upper(): getattr(self, f.name) for f in fields(self)}
 
     @classmethod
     def from_dict(cls, data: Dict):
@@ -148,10 +163,10 @@ class NarrativeSelf:
             self.events.subscribe("DREAM_COMPLETE", self._on_dream)
 
     def _determine_archetype(self) -> str:
-        c = self.traits.curiosity
-        y = self.traits.cynicism
-        h = self.traits.hope
-        d = self.traits.discipline
+        c = self.traits["CURIOSITY"]
+        y = self.traits["CYNICISM"]
+        h = self.traits["HOPE"]
+        d = self.traits["DISCIPLINE"]
         if h > 0.7 and c > 0.6: return "THE POET"
         if d > 0.7 and c > 0.6: return "THE ENGINEER"
         if y > 0.7 and d > 0.6: return "THE CRITIC"
