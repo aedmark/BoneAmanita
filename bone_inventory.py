@@ -208,15 +208,26 @@ class GordonKnot:
         self._recalculate_tensegrity()
 
     def load_config(self):
-        starting_gear = GORDON.get("STARTING_INVENTORY", ["POCKET_ROCKS", "SILENT_KNIFE"])
+        starting_gear = GORDON.get("STARTING_INVENTORY", [])
+        if not starting_gear:
+            starting_gear = ["SILENT_KNIFE", "DUCT_TAPE", "SKELETON_KEY"]
         if not self.inventory or self.inventory == ["POCKET_ROCKS"]:
             self.inventory = list(starting_gear)
-        self.CRITICAL_ITEMS = {"SILENT_KNIFE"}
+        self.CRITICAL_ITEMS = {"SILENT_KNIFE", "SKELETON_KEY"}
+        for crit in self.CRITICAL_ITEMS:
+            if crit not in self.inventory:
+                self.inventory.append(crit)
         default_scars = GORDON.get("SCAR_TISSUE", {})
         if not self.scar_tissue:
             self.scar_tissue = default_scars
         raw_registry = GORDON.get("ITEM_REGISTRY", {})
         self.ITEM_REGISTRY = copy.deepcopy(raw_registry)
+        if "SKELETON_KEY" not in self.ITEM_REGISTRY:
+            self.ITEM_REGISTRY["SKELETON_KEY"] = {
+                "description": "An iron key that feels cold to the touch. It opens things that shouldn't be shut.",
+                "function": "UNLOCK",
+                "reflex_trigger": "ACCESS_DENIED",
+                "usage_msg": "Gordon unlocks the deadlock."}
         for name, data in self.ITEM_REGISTRY.items():
             data.setdefault("description", f"A mysterious {name.lower().replace('_', ' ')}.")
             data.setdefault("function", "NONE")
@@ -228,7 +239,8 @@ class GordonKnot:
         self.REFLEX_MAP = {
             "DRIFT_CRITICAL": lambda p: p.get("narrative_drag", 0) > 6.0,
             "KAPPA_CRITICAL": lambda p: p.get("kappa", 1.0) < 0.2,
-            "BOREDOM_CRITICAL": lambda p: p.get("repetition", 0.0) > 0.5}
+            "BOREDOM_CRITICAL": lambda p: p.get("repetition", 0.0) > 0.5,
+            "ACCESS_DENIED": lambda p: p.get("refusal_triggered", False) is True}
 
     def get_item_data(self, item_name: str) -> Dict:
         return self.ITEM_REGISTRY.get(item_name.upper(), UNKNOWN_ARTIFACT)

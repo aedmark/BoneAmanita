@@ -30,6 +30,7 @@ class CycleStabilizer:
         self.drag_pid = PIDController(
             kp=0.30, ki=0.05, kd=0.10, setpoint=1.5, output_limits=(-3.0, 3.0))
         self.last_phase: str = "INIT"
+        self.last_tick_time = time.time()
 
     def _normalize_physics(self, ctx: CycleContext):
         return ctx.physics
@@ -58,12 +59,16 @@ class CycleStabilizer:
         self.drag_pid.setpoint = target_cfg["drag"]
 
     def stabilize(self, ctx: CycleContext, current_phase: str):
+        now = time.time()
+        raw_dt = now - self.last_tick_time
+        self.last_tick_time = now
+        dt = max(0.001, min(1.0, raw_dt))
         p = self._normalize_physics(ctx)
         self._adjust_setpoints(ctx, p)
         curr_v = self._get_metric(p, "voltage")
         curr_d = self._get_metric(p, "narrative_drag")
-        v_force = self.voltage_pid.update(curr_v, dt=0.0)
-        d_force = self.drag_pid.update(curr_d, dt=0.0)
+        v_force = self.voltage_pid.update(curr_v, dt=dt)
+        d_force = self.drag_pid.update(curr_d, dt=dt)
         corrections_made = False
         if abs(curr_v - self.voltage_pid.setpoint) > 6.0 and abs(v_force) > 0.05:
             new_v = max(0.0, curr_v + v_force)
@@ -103,6 +108,26 @@ class ObservationPhase(SimulationPhase):
         ctx.physics = gaze_result["physics"]
         ctx.clean_words = gaze_result["clean_words"]
         self.eng.tick_count += 1
+        return ctx
+
+class IntentionPhase(SimulationPhase):
+    def __init__(self, engine_ref):
+        super().__init__(engine_ref)
+        self.name = "INTENTION"
+
+    def run(self, ctx: CycleContext):
+        physics = ctx.physics
+        clean = ctx.clean_words
+        if any(w in clean for w in ["analyze", "scan", "think", "query"]):
+            physics["narrative_drag"] = max(0.0, physics.get("narrative_drag", 0) - 1.0)
+            ctx.log(f"{Prisma.CYN}🧠 INTENTION: Focus engaged. Drag reduced.{Prisma.RST}")
+        if any(w in clean for w in ["error", "fail", "critical", "bug"]):
+            physics["voltage"] = min(20.0, physics.get("voltage", 0) + 2.0)
+            ctx.log(f"{Prisma.MAG}🧠 INTENTION: Bracing for impact. Voltage spiked.{Prisma.RST}")
+        current_atp = self.eng.bio.mito.state.atp_pool
+        if current_atp < 15.0:
+            physics["narrative_drag"] += 2.0
+            ctx.log(f"{Prisma.OCHRE}🧠 INTENTION: Low Energy. Conservation mode active.{Prisma.RST}")
         return ctx
 
 class SanctuaryPhase(SimulationPhase):
@@ -224,20 +249,22 @@ class MetabolismPhase(SimulationPhase):
         trigger = False
         reason = ""
         if current_atp < 5.0:
-            trigger = True
-            reason = "METABOLIC CRASH (Low ATP)"
+            trigger = True; reason = "METABOLIC CRASH (Low ATP)"
         elif tick > 0 and tick % 100 == 0:
-            trigger = True
-            reason = "CIRCADIAN CLEANUP"
+            trigger = True; reason = "CIRCADIAN CLEANUP"
         if trigger and hasattr(self.eng.mind, "dreamer"):
             phys_data = ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics
             bio_packet = {
                 "chem": ctx.bio_result.get("chemistry", {}),
                 "mito": {"ros": 0.0, "atp": current_atp},
                 "physics": phys_data}
-            dream_log = self.eng.mind.dreamer.enter_rem_cycle(self.eng.mind.mem, bio_readout=bio_packet)
+            dream_packet = self.eng.mind.dreamer.enter_rem_cycle(self.eng.mind.mem, bio_readout=bio_packet)
             ctx.log(f"\n{Prisma.VIOLET}[AUTO-SLEEP]: {reason} initiated.{Prisma.RST}")
-            ctx.log(dream_log)
+            if isinstance(dream_packet, dict):
+                ctx.log(dream_packet["log"])
+                ctx.last_dream = dream_packet
+            else:
+                ctx.log(dream_packet)
             EMERGENCY_REBOOT_ATP = 33.0
             self.eng.bio.mito.state.atp_pool = EMERGENCY_REBOOT_ATP
             ctx.is_alive = True
@@ -572,6 +599,7 @@ class PhaseExecutor:
     def execute_phases(self, simulator, ctx):
         pipeline_order = [
             "OBSERVE",
+            "INTENTION",
             "MAINTENANCE",
             "SENSATION",
             "GATEKEEP",
@@ -617,6 +645,7 @@ class CycleSimulator:
         self.executor = PhaseExecutor()
         self.pipeline: List[SimulationPhase] = [
             ObservationPhase(engine_ref),
+            IntentionPhase(engine_ref),
             MaintenancePhase(engine_ref),
             SensationPhase(engine_ref),
             GatekeeperPhase(engine_ref),
@@ -786,9 +815,14 @@ class GeodesicOrchestrator:
             snapshot = self.reporter.render_snapshot(ctx)
             snapshot["council_mandates"] = getattr(ctx, "council_mandates", [])
             snapshot["trace_id"] = cycle_id
+            if hasattr(ctx, "last_dream") and ctx.last_dream:
+                snapshot["dream"] = ctx.last_dream
+            snapshot["enzyme"] = ctx.bio_result.get("enzyme", "NONE")
             snapshot["enzyme"] = ctx.bio_result.get("enzyme", "NONE")
             snapshot["chemistry"] = ctx.bio_result.get("chemistry", {})
             snapshot["physics"] = ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics
+            if hasattr(self.eng, "soul"):
+                snapshot["soul"] = self.eng.soul.to_dict()
             if "ui" in snapshot:
                 self.symbiosis.monitor_host(latency, snapshot["ui"], len(user_message))
             return snapshot

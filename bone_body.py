@@ -349,9 +349,14 @@ class SomaticLoop:
         found_enzymes = []
         total_atp_yield = 1.0
         word_counts = Counter(clean_words)
+        cliche_tax_total = 0.0
         for word, count in word_counts.items():
             if len(word) < 4: continue
             category = TheLexicon.get_current_category(word)
+            if category == "antigen":
+                tax = 3.0 * count
+                cliche_tax_total += tax
+                continue
             if category and category != "void":
                 enzyme = self._map_category_to_enzyme(category)
                 found_enzymes.append(enzyme)
@@ -360,6 +365,9 @@ class SomaticLoop:
                 total_atp_yield += (base_word_yield * damped_multiplier)
                 if len(found_enzymes) <= 3:
                     logs.append(f"{Prisma.GRN}[BIO]: Digested '{word}' (x{count}) -> {enzyme} (+{(base_word_yield * damped_multiplier):.1f} ATP){Prisma.RST}")
+        if cliche_tax_total > 0:
+            total_atp_yield -= cliche_tax_total
+            logs.append(f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX APPLIED. System drained by -{cliche_tax_total:.1f} ATP. (Reason: Antigen Detected){Prisma.RST}")
         if phys.get("voltage", 0.0) > 8.0 and found_enzymes:
             found_enzymes.append("PROTEASE")
             total_atp_yield += 5.0

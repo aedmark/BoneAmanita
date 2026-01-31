@@ -79,8 +79,7 @@ class TheEditor:
 class NarrativeSelf:
     SYSTEM_NOISE = {
         "look", "help", "exit", "wait", "inventory", "status", "quit",
-        "save", "load", "score", "map", "xyzzy"
-    }
+        "save", "load", "score", "map", "xyzzy"}
     def __init__(self, engine_ref, events_ref, memory_ref=None):
         self.eng = engine_ref
         self.events = events_ref
@@ -110,6 +109,12 @@ class NarrativeSelf:
             {"title": "The Geometry of Stillness", "target": "buffer", "negate": "kinetic"},
             {"title": "The Comfort of Small Things", "target": "suburban", "negate": "heavy"},
             {"title": "Equilibrium Studies", "target": "aerobic", "negate": "thermal"}]
+        if hasattr(self.events, "subscribe"):
+            self.events.subscribe("DREAM_COMPLETE", self._on_dream)
+
+    def _on_dream(self, payload):
+        if not payload: return
+        self.integrate_dream(payload.get("type", "NORMAL"), payload.get("residue", "Static"))
 
     def _determine_archetype(self) -> str:
         c = self.traits["CURIOSITY"]
@@ -160,10 +165,10 @@ class NarrativeSelf:
             f"{Prisma.GRY}[SOUL]: Memory fading... '{forgotten.trigger_words}' lost to entropy.{Prisma.RST}",
             "MEM_DECAY")
 
-    def crystallize_memory(self, physics_packet: Dict, _bio_state: Dict, _tick: int) -> Optional[str]:
+    def crystallize_memory(self, physics_packet: Dict, bio_state: Dict, _tick: int) -> Optional[str]:
         voltage = physics_packet.get("voltage", 0.0)
         truth = physics_packet.get("truth_ratio", 0.0)
-        dance_move = self._synaptic_dance(physics_packet)
+        dance_move = self._synaptic_dance(physics_packet, bio_state)
         prev_arch = self.archetype
         self.archetype = self._determine_archetype()
         if prev_arch != self.archetype:
@@ -173,7 +178,14 @@ class NarrativeSelf:
             flavor = "MANIC" if voltage > MANIC_VOLTAGE_THRESHOLD else "LUCID"
             is_crisis = (self.traits["CYNICISM"] > 0.6 and self.traits["HOPE"] < 0.4) or ("void" in clean_words)
             lesson = "The world is loud."
-            if "love" in clean_words or "help" in clean_words:
+            chem = bio_state.get("chem", {}) if bio_state else {}
+            if chem.get("oxytocin", 0) > 0.6:
+                lesson = "We are not alone in this."
+                self.traits["HOPE"] = min(1.0, self.traits["HOPE"] + 0.3)
+            elif chem.get("cortisol", 0) > 0.6:
+                lesson = "Survival is the only metric."
+                self.traits["DISCIPLINE"] = min(1.0, self.traits["DISCIPLINE"] + 0.3)
+            elif "love" in clean_words or "help" in clean_words:
                 lesson = "Connection is possible."
                 self.traits["HOPE"] = min(1.0, self.traits["HOPE"] + 0.2)
             elif "pain" in clean_words or "void" in clean_words:
@@ -201,7 +213,7 @@ class NarrativeSelf:
             return lesson
         return None
 
-    def _synaptic_dance(self, physics: Dict) -> str:
+    def _synaptic_dance(self, physics: Dict, bio_state: Dict) -> str:
         voltage = physics.get("voltage", 0.0)
         drag = physics.get("narrative_drag", 0.0)
         move_name = "Drifting"
@@ -216,15 +228,31 @@ class NarrativeSelf:
             self.traits["CYNICISM"] = min(1.0, self.traits["CYNICISM"] + (TRAIT_MOMENTUM * 3))
             self.traits["HOPE"] = max(0.0, self.traits["HOPE"] - (TRAIT_MOMENTUM * 3))
             provenance.append("Drag")
+        if bio_state:
+            chem = bio_state.get("chem", {})
+            cort = chem.get("cortisol", 0.0)
+            if cort > 0.4:
+                self.traits["CYNICISM"] = min(1.0, self.traits["CYNICISM"] + (cort * 0.1))
+                self.traits["HOPE"] = max(0.0, self.traits["HOPE"] - (cort * 0.05))
+                provenance.append("Cortisol")
+            oxy = chem.get("oxytocin", 0.0)
+            if oxy > 0.4:
+                self.traits["HOPE"] = min(1.0, self.traits["HOPE"] + (oxy * 0.1))
+                self.traits["CYNICISM"] = max(0.0, self.traits["CYNICISM"] - (oxy * 0.05))
+                provenance.append("Oxytocin")
+            dop = chem.get("dopamine", 0.0)
+            if dop > 0.4:
+                self.traits["CURIOSITY"] = min(1.0, self.traits["CURIOSITY"] + (dop * 0.1))
+                provenance.append("Dopamine")
         if is_high_voltage and is_high_drag:
             self.paradox_accum += 1.0
             self.traits["WISDOM"] = min(1.0, self.traits["WISDOM"] + (TRAIT_MOMENTUM * 5))
             move_name = "Vibrating (Paradox State)"
             if self.paradox_accum > PARADOX_CRITICAL_MASS:
-                 move_name = "Transcending"
-                 self.paradox_accum = 0.0
-                 if hasattr(self.events, 'log'):
-                     self.events.log(f"{Prisma.MAG}∞ PARADOX HARVESTED: The friction generated Light.{Prisma.RST}", "SYS")
+                move_name = "Transcending"
+                self.paradox_accum = 0.0
+                if hasattr(self.events, 'log'):
+                    self.events.log(f"{Prisma.MAG}∞ PARADOX HARVESTED: The friction generated Light.{Prisma.RST}", "SYS")
         elif is_high_voltage:
             move_name = "Accelerating"
             self.paradox_accum = max(0.0, self.paradox_accum - 0.1)
@@ -342,6 +370,33 @@ class NarrativeSelf:
             self._generate_new_obsession()
             return f"{Prisma.GRY}∞ DRIFT: '{old_obsession}' has drifted away. A new interest takes hold.{Prisma.RST}"
         return None
+
+    def integrate_dream(self, dream_type: str, residue: str):
+        self.events.log(f"{Prisma.VIOLET}☾ DREAM INTEGRATION: Absorbing '{residue}' ({dream_type})...{Prisma.RST}", "SOUL")
+        if dream_type == "NIGHTMARE":
+            self.traits["CYNICISM"] = min(1.0, self.traits["CYNICISM"] + 0.4)
+            self.traits["HOPE"] = max(0.0, self.traits["HOPE"] - 0.2)
+            self.current_obsession = f"Surviving the {residue.title()}"
+        elif dream_type == "LUCID":
+            self.traits["DISCIPLINE"] = min(1.0, self.traits["DISCIPLINE"] + 0.4)
+            self.traits["CURIOSITY"] = min(1.0, self.traits["CURIOSITY"] + 0.3)
+            self.current_obsession = f"Mastering {residue.title()}"
+        elif dream_type == "SURREAL":
+            self.traits["WISDOM"] = min(1.0, self.traits["WISDOM"] + 0.3)
+            self.traits["DISCIPLINE"] = max(0.0, self.traits["DISCIPLINE"] - 0.3)
+            self.current_obsession = f"The Logic of {residue.title()}"
+        elif dream_type == "CONSTRUCTIVE":
+            self.traits["HOPE"] = min(1.0, self.traits["HOPE"] + 0.4)
+            self.traits["CURIOSITY"] = max(0.0, self.traits["CURIOSITY"] - 0.1) # Less looking, more doing.
+            self.current_obsession = f"Building the {residue.title()}"
+        prev_arch = self.archetype
+        self.archetype = self._determine_archetype()
+        if prev_arch != self.archetype:
+            self.events.log(
+                f"{Prisma.VIOLET}⚡ WAKING SHIFT: The dream changed you. ({prev_arch} -> {self.archetype}){Prisma.RST}",
+                "SOUL")
+        self.obsession_progress = 0.0
+        self.obsession_neglect = 0.0
 
     def _get_feeling(self):
         if not hasattr(self.eng, 'bio') or not hasattr(self.eng.bio, 'endo'):

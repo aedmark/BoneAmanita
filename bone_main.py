@@ -1,4 +1,4 @@
-""" BONEAMANITA 12.5.1 'THE SURGICAL STRIKE'
+""" BONEAMANITA 12.6.0 'THE SURGICAL STRIKE'
  Architects: SLASH, KISHO, The BonePoke Gods Humans: Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random

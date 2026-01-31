@@ -399,19 +399,20 @@ class ResponseValidator:
     def __init__(self):
         self.banned_phrases = [
             "large language model", "AI assistant", "cannot feel", "as an AI",
-            "against my programming", "cannot comply", "language model"]
+            "against my programming", "cannot comply", "language model",
+            "delve into", "rich tapestry" ]
         self.immersion_break_msg = f"{Prisma.GRY}[The system attempts to recite a EULA, but hiccups instead.]{Prisma.RST}"
 
     def validate(self, response: str, _state: Dict) -> Dict:
         low_resp = response.lower()
         for phrase in self.banned_phrases:
-            if phrase.lower() in low_resp:
+            if phrase in low_resp:
                 return {
                     "valid": False,
-                    "reason": "IMMERSION_BREAK",
+                    "reason": "IMMISSION_BREAK",
                     "replacement": self.immersion_break_msg}
-        if len(response.strip()) < 2:
-            return {"valid": False, "reason": "TOO_SHORT", "replacement": "..."}
+        if len(response.strip()) < 5:
+            return {"valid": False, "reason": "STUTTER", "replacement": "The gears turn, but no sound emerges."}
         return {"valid": True, "content": response}
 
 
@@ -669,8 +670,7 @@ class DreamEngine:
             "The geometry of {A} supports the weight of {C}."
         ]
 
-    def enter_rem_cycle(self, memory_system: Any, bio_readout: Dict[str, Any] = None) -> str:
-        """ Generates a dream based on Memory (Content) and Biology (Tone). """
+    def enter_rem_cycle(self, memory_system: Any, bio_readout: Dict[str, Any] = None) -> Dict[str, Any]:
         residue_word = "static"
         context_word = "void"
         bridge_word = "silence"
@@ -702,17 +702,13 @@ class DreamEngine:
             dopamine = chem.get("dopamine", chem.get("DOP", 0.0))
             serotonin = chem.get("serotonin", chem.get("SER", 0.0))
             if ros > 8.0:
-                dream_type = "NIGHTMARE"
-                subtype = "SEPTIC"
+                dream_type = "NIGHTMARE"; subtype = "SEPTIC"
             elif cortisol > 0.6:
-                dream_type = "NIGHTMARE"
-                subtype = "BARIC"
+                dream_type = "NIGHTMARE"; subtype = "BARIC"
             elif voltage > 20.0:
-                dream_type = "NIGHTMARE"
-                subtype = "THERMAL"
+                dream_type = "NIGHTMARE"; subtype = "THERMAL"
             elif atp < 15.0:
-                dream_type = "NIGHTMARE"
-                subtype = "CRYO"
+                dream_type = "NIGHTMARE"; subtype = "CRYO"
             elif dopamine > 0.6:
                 dream_type = "SURREAL"
             elif serotonin > 0.6:
@@ -723,11 +719,18 @@ class DreamEngine:
         consolidation_msg = "Neural pathways consolidated."
         if hasattr(memory_system, "replay_dreams"):
             consolidation_msg = memory_system.replay_dreams()
-        return (
+        log_msg = (
             f"{Prisma.VIOLET}☾ REM CYCLE [{dream_type}:{subtype}] ☽{Prisma.RST}\n"
             f"   Day Residue: '{residue_word.upper()}' detected.\n"
             f"   Dream: \"{dream_text}\"\n"
             f"   {Prisma.GRY}{consolidation_msg}{Prisma.RST}")
+        return {
+            "log": log_msg,
+            "text": dream_text,
+            "type": dream_type,
+            "subtype": subtype,
+            "residue": residue_word,
+            "consolidation": consolidation_msg}
 
     def _weave_dream(self, residue: str, context: str, bridge: str, dream_type: str, subtype: str) -> str:
         if dream_type == "NIGHTMARE":
