@@ -13,6 +13,7 @@ from bone_synesthesia import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
 from bone_sanctuary import SanctuaryGovernor, SANCTUARY, PIDController
 from bone_telemetry import TelemetryService
+from bone_translation import SomaticInterface
 
 class CycleStabilizer:
     MANIFOLD_CONFIGS = {
@@ -184,10 +185,11 @@ class MaintenancePhase(SimulationPhase):
         if self.eng.tick_count % 10 != 0: return ctx
         try:
             solvents = {'the', 'and', 'is', 'a', 'of', 'to', 'in', 'it', 'i', 'you'}
-            try:
-                rotted = self.eng.lex.atrophy(self.eng.tick_count, 100, protected=solvents)
-            except TypeError:
-                rotted = self.eng.lex.atrophy(self.eng.tick_count, 100)
+            rotted = self.eng.lex.atrophy(
+                self.eng.tick_count,
+                100,
+                protected=solvents
+            )
             if rotted:
                 biomass = len(rotted) * 0.5
                 self.eng.soil_fertility = min(50.0, self.eng.soil_fertility + biomass)
@@ -630,7 +632,11 @@ class SensationPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "SENSATION"
-        self.synesthesia = SynestheticCortex(self.eng.bio)
+        if hasattr(self.eng, 'somatic'):
+            self.synesthesia = self.eng.somatic
+        else:
+            self.synesthesia = SynestheticCortex(self.eng.bio)
+            self.eng.somatic = self.synesthesia
 
     def run(self, ctx: CycleContext):
         phys_data = ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics
@@ -688,6 +694,8 @@ class PhaseExecutor:
 class CycleSimulator:
     def __init__(self, engine_ref):
         self.eng = engine_ref
+        if not hasattr(self.eng, 'somatic'):
+            self.eng.somatic = SomaticInterface(self.eng)
         self.stabilizer = CycleStabilizer(self.eng.events)
         self.executor = PhaseExecutor()
         self.pipeline: List[SimulationPhase] = [

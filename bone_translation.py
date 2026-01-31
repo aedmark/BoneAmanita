@@ -29,7 +29,7 @@ class RosettaStone:
         focus = RosettaStone._derive_coherence_focus(coherence)
         chem_state = bio.get("chem", {})
         flavor = RosettaStone._apply_chemistry(tone, chem_state)
-        somatic_lib = TheLore.get("SOMATIC_LIBRARY")
+        somatic_lib = TheLore.get("SOMATIC_LIBRARY") or {}
         pacing_key = "HIGH" if voltage > 12 else "LOW"
         pacing_options = somatic_lib.get("PACING_RESERVOIR", {}).get(pacing_key, ["Normal"])
         pacing = random.choice(pacing_options)
@@ -38,7 +38,7 @@ class RosettaStone:
         metaphor = random.choice(meta_options)
         hint = f"Focus on the {sensation.lower()} nature of this moment."
         return SomaticState(
-            tone=tone,
+            tone=flavor,
             pacing=pacing,
             focus=focus,
             somatic_sensation=sensation,

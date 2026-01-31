@@ -234,15 +234,15 @@ class QuantumObserver:
     def _tally_categories(self, clean_words):
         counts = Counter()
         unknowns = []
-        target_cats = ["heavy", "explosive", "constructive", "abstract", "play", "suburban", "antigen"]
-        solvents = {"the", "is", "a", "and", "of"}
+        target_cats = {"heavy", "explosive", "constructive", "abstract", "play", "suburban", "antigen"}
         for w in clean_words:
-            if w in solvents:
+            if w in SOLVENT_WORDS:
                 counts["solvents"] += 1
                 continue
             found = False
-            for cat in target_cats:
-                if w in TheLexicon.get(cat):
+            known_cats = TheLexicon.get_categories_for_word(w)
+            for cat in known_cats:
+                if cat in target_cats:
                     counts[cat] += 1
                     found = True
             if not found:

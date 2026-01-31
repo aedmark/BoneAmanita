@@ -290,10 +290,9 @@ class NarrativeSelf:
             self.traits.adjust("wisdom", TRAIT_MOMENTUM * 5)
             move_name = "Vibrating (Paradox State)"
             if self.paradox_accum > PARADOX_CRITICAL_MASS:
-                move_name = "Transcending"
+                move_name = "MOLTING"
                 self.paradox_accum = 0.0
-                if hasattr(self.events, 'log'):
-                    self.events.log(f"{Prisma.MAG}∞ PARADOX HARVESTED: The friction generated Light.{Prisma.RST}", "SYS")
+                self._trigger_molt()
         elif is_high_voltage:
             move_name = "Accelerating"
             self.paradox_accum = max(0.0, self.paradox_accum - 0.1)
@@ -307,6 +306,22 @@ class NarrativeSelf:
         self._normalize_traits(0.002)
         source_str = " + ".join(provenance) if provenance else "Inertia"
         return f"{move_name} [Source: {source_str}]"
+
+    def _trigger_molt(self):
+        old_arch = self.archetype
+        old_obsession = self.current_obsession or "Nothing"
+        if hasattr(self.events, 'log'):
+            husk_msg = (
+                f"{Prisma.VIOLET}🦞 THE MOLT: The shell of '{old_arch}' splits open.{Prisma.RST}\n"
+                f"   The paradox of holding '{old_obsession}' was too great."
+            )
+            self.events.log(husk_msg, "SOUL_MOLT")
+        current_wisdom = self.traits.wisdom
+        self.traits = TraitVector()
+        self.traits.wisdom = min(1.0, current_wisdom + 0.1)
+        self.archetype = self._determine_archetype()
+        self.chapters.append(f"The Molting of {old_arch}")
+        self._generate_new_obsession()
 
     def _decay_traits(self):
         self._normalize_traits(0.005)

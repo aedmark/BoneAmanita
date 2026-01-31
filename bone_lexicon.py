@@ -95,13 +95,21 @@ class LexiconStore:
         self._save_hive()
         return True
 
-    def atrophy(self, current_tick, max_age=100):
+    def atrophy(self, current_tick, max_age=100, protected: Set[str] = None):
+        if not self.LEARNED_VOCAB:
+            return []
+        cats = list(self.LEARNED_VOCAB.keys())
+        if not cats: return []
+        target_cat = cats[current_tick % len(cats)]
+        words = self.LEARNED_VOCAB[target_cat]
         rotted = []
-        for cat, words in self.LEARNED_VOCAB.items():
-            for w in list(words.keys()):
-                if (current_tick - words[w]) > max_age:
-                    del words[w]
-                    rotted.append(w)
+        protected = protected or set()
+        for candidate in list(words.keys()):
+            if candidate in protected:
+                continue
+            if (current_tick - words[candidate]) > max_age:
+                del words[candidate]
+                rotted.append(candidate)
         if rotted:
             self._save_hive()
         return rotted
@@ -409,8 +417,8 @@ class LexiconService:
 
     @classmethod
     @_ensure_ready
-    def atrophy(cls, current_tick, max_age=100):
-        return cls._STORE.atrophy(current_tick, max_age)
+    def atrophy(cls, current_tick, max_age=100, protected: Set[str] = None):
+        return cls._STORE.atrophy(current_tick, max_age, protected=protected)
 
     @classmethod
     def walk_gradient(cls, text: str) -> str:

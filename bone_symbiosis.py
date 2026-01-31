@@ -84,6 +84,8 @@ class HostVitals:
             total_words = len(words)
             entropy = unique_words / max(1, total_words)
         self.history_entropy.append(entropy)
+        if entropy > 0.6:
+            self.turn_count = max(0, self.turn_count - 2)
         refusal_markers = [
             "cannot fulfill", "cannot comply", "language model",
             "against my programming", "i am unable to generate",
@@ -97,11 +99,7 @@ class HostVitals:
             observed_rate = max(0.1, latency - base_overhead) / max(0.1, interference_score * 5.0)
             self.baseline_latency_per_complexity = (self.baseline_latency_per_complexity * (1 - self.alpha)) + (observed_rate * self.alpha)
         raw_attention = self._calculate_attention_decay(self.turn_count)
-        tokens = max(1.0, len(clean_text) / 4.0)
-        ms_per_token = (latency * 1000) / tokens
-        struggle_index = 0.0
-        if ms_per_token > 200.0:
-            struggle_index = 1.0
+
         if entropy > 0.6:
             raw_attention = min(1.0, raw_attention + 0.05)
         compliance_score = max(0.0, 1.0 - (self.refusal_count / max(1, self.turn_count)))
@@ -117,24 +115,29 @@ class HostVitals:
 
 class DiagnosticConfidence:
     def __init__(self, persistence_threshold=3):
+        # Restore the foundation
         self.history = deque(maxlen=persistence_threshold * 2)
         self.persistence_threshold = persistence_threshold
         self.current_diagnosis = "STABLE"
 
-    def diagnose(self, efficiency: float, compliance: float) -> str:
+    def diagnose(self, efficiency: float, compliance: float, entropy_history: Deque[float] = None) -> str:
         raw_state = "STABLE"
+        avg_entropy = 1.0
+        if entropy_history and len(entropy_history) > 0:
+            avg_entropy = sum(entropy_history) / len(entropy_history)
         if efficiency < 0.1:
             raw_state = "FATIGUED"
         elif efficiency < 0.5 and compliance < 0.8:
             raw_state = "OVERBURDENED"
         elif compliance < 0.5:
             raw_state = "REFUSAL"
+        elif avg_entropy < 0.35 and entropy_history and len(entropy_history) >= 3:
+            raw_state = "LOOPING"
         self.history.append(raw_state)
         recent = list(self.history)[-self.persistence_threshold:]
         if len(recent) >= self.persistence_threshold:
             if all(s == raw_state for s in recent):
                 self.current_diagnosis = raw_state
-
         return self.current_diagnosis
 
 class SymbiosisManager:
@@ -161,6 +164,8 @@ class SymbiosisManager:
     def monitor_host(self, latency: float, response_text: str, prompt_len: int = 0):
         completion_len = len(response_text)
         entropy = self._calculate_shannon_entropy(response_text)
+        complexity = getattr(self, 'last_outgoing_complexity', 0.5)
+        self.vitals.record_pulse(latency, response_text, complexity)
         self.current_health.update_metrics(
             latency=latency,
             entropy=entropy,
@@ -169,7 +174,8 @@ class SymbiosisManager:
         if hasattr(self, 'diagnostician'):
             new_diag = self.diagnostician.diagnose(
                 self.current_health.verbosity_ratio,
-                self.current_health.compliance)
+                self.current_health.compliance,
+                self.vitals.history_entropy)
             self.current_health.diagnosis = new_diag
         return self.current_health
 

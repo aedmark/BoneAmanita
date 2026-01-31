@@ -15,6 +15,10 @@ class PIDController:
         self._prev_error = 0.0
         self._integral = 0.0
 
+    def reset(self):
+        self._prev_error = 0.0
+        self._integral = 0.0
+
     def update(self, measurement: float, dt: float = 1.0) -> float:
         if dt is None:
             dt = 1.0
@@ -83,9 +87,13 @@ class SanctuaryGovernor:
         curr_v = self._get_num(physics_packet, "voltage")
         curr_d = self._get_num(physics_packet, "narrative_drag")
         flow = self._get_val(physics_packet, "flow_state", "")
+        is_flow_state = (curr_d < 3.0 and curr_v > self.voltage_target)
         if curr_v > 18.0 or curr_d > 8.0 or flow in ["SUPERCONDUCTIVE", "HUBRIS_RISK"]:
             return 0.0, 0.0
-        v_corr = self.voltage_pid.update(curr_v, dt=1.0)
+        if is_flow_state:
+            v_corr = 0.0
+        else:
+            v_corr = self.voltage_pid.update(curr_v, dt=1.0)
         d_corr = self.drag_pid.update(curr_d, dt=1.0)
         v_delta = v_corr * 0.1
         d_delta = d_corr * 0.1
