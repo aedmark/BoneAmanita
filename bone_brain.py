@@ -147,7 +147,7 @@ class NeurotransmitterModulator:
         plasticity = max(0.1, min(BrainConfig.MAX_PLASTICITY, plasticity))
         self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
         c = self.current_chem
-        voltage_heat = math.log1p(max(0, base_voltage - 5.0)) * 0.1
+        voltage_heat = math.log1p(max(0.0, base_voltage - 5.0)) * 0.1
         chemical_delta = (c.dopamine * 0.4) - (c.adrenaline * 0.3) - (c.cortisol * 0.2)
         temp_delta = chemical_delta + voltage_heat
         final_temp = max(0.4, min(1.2, BrainConfig.BASE_TEMP + temp_delta))
