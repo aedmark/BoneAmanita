@@ -23,7 +23,9 @@ class LoreManifest:
             "DREAMS": DREAMS,
             "ALMANAC_DATA": ALMANAC_DATA,
             "SOMATIC_LIBRARY": SOMATIC_LIBRARY,
-            "SCENARIOS": SCENARIOS}
+            "SCENARIOS": SCENARIOS,
+            "FOOTNOTES": FOOTNOTES,
+            "COUNCIL_DATA": COUNCIL_DATA}
         self._overlays = {}
 
     @classmethod
@@ -70,6 +72,38 @@ SCENARIOS = {
     "BANNED_CLICHES": [
         "Obsidian", "Mushroom", "Fungus", "Spores", "Neon-soaked",
         "Eldritch", "Luminescent moss", "Petrified", "Pulsing veins"
+    ]
+}
+
+FOOTNOTES = {
+    "DEFAULT": [
+        "* Not to be confused with the other kind of void.",
+        "* The turtle moves.",
+        "* This is technically impossible, but the code doesn't know that.",
+        "* Do not eat the green wobbly bit.",
+        "* Gravity is a habit that is hard to shake.",
+        "* As reliable as a chocolate teapot."
+    ],
+    "CONTEXT_MAP": {
+        "void": ["* Not to be confused with the other kind of void."],
+        "gravity": ["* Gravity is a habit that is hard to shake."],
+        "physics": ["* This is technically impossible, but the code doesn't know that."],
+        "glitch": ["* Do not eat the green wobbly bit."],
+        "error": ["* As reliable as a chocolate teapot."],
+        "system": ["* The turtle moves."]
+    }
+}
+
+COUNCIL_DATA = {
+    "STRANGE_LOOP_TRIGGERS": [
+        "who are you", "what are you", "system status",
+        "narrative loop", "simulation boundaries", "fourth wall",
+        "recursive", "infinite regress", "strange loop"
+    ],
+    "CHAIRHOLDER_PHRASES": [
+        "You just got Jammed.",
+        "I'm voting present.",
+        "Retroactive approval denied."
     ]
 }
 
@@ -451,49 +485,58 @@ GORDON = {
         "POCKET_ROCKS": {
             "description": "Grey gravel. Cold, solid, and stubbornly unformed. They yearn for a higher temperature.",
             "function": "BREADCRUMB",
+            "spawn_context": "DRAG_HEAVY",
             "passive_traits": ["HEAVY_LOAD"],
             "usage_msg": "Gordon drops a rock. Clack. Gravity confirmed."},
         "SILENT_KNIFE": {
             "description": "A ceramic blade. It cuts without sound. Useful for pruning overgrown adjectives.",
             "function": "PRUNER",
+            "spawn_context": "STANDARD",
             "passive_traits": ["CUT_THE_CRAP"],
             "usage_msg": "Gordon slices the sentence. It bleeds, then heals tighter."},
         "TIME_BRACELET": {
             "description": "A chunky, beige wrist-computer. Smells like ozone.",
             "function": "PASSIVE_DRAG_REDUCTION",
+            "spawn_context": "VOLTAGE_CRITICAL",
             "passive_traits": ["CONDUCTIVE_HAZARD", "TIME_DILATION_CAP"],
             "value": 5.0,
             "usage_msg": "The bracelet hums. Narrative Drag is capped."},
         "ANCHOR_STONE": {
             "description": "A rock so heavy it has its own zip code.",
             "function": "DRIFT_KILLER",
+            "spawn_context": "DRAG_HEAVY",
             "consume_on_use": True,
             "reflex_trigger": "DRIFT_CRITICAL",
             "usage_msg": "Gordon heaves the stone into the void. The narrative snaps taut. (Drag = 0)"},
         "THE_RED_STAPLER": {
             "description": "It belongs to Milton. Don't take it. Radiates passive aggression.",
             "function": "STABILIZER",
+            "spawn_context": "STANDARD",
             "passive_traits": ["BUREAUCRATIC_ANCHOR"],
             "usage_msg": "The Stapler clunks on the desk. Consensus is enforced."},
         "JAR_OF_FIREFLIES": {
             "description": "Biological light in a glass jar. They are mindless. They need an Idea (Abstract) to lead them.",
             "function": "LIGHT_SOURCE",
+            "spawn_context": "VOLTAGE_CRITICAL",
             "passive_traits": ["LUMINESCENCE"],
             "usage_msg": "The jar flickers."},
         "LEAD_BOOTS": {
             "description": "Deep sea diver gear. Impossible to run in. Impossible to float away in.",
             "function": "GROUNDING",
+            "spawn_context": "DRAG_HEAVY",
             "passive_traits": ["GROUNDING_GEAR", "HEAVY_LOAD"],
             "usage_msg": "Clomp. Clomp. You are definitely here."},
         "QUANTUM_GUM": {
             "description": "It loses its flavor immediately, but it tastes like Everything.",
             "function": "ENTROPY_BUFFER",
+            "spawn_context": "VOLTAGE_CRITICAL",
             "consume_on_use": True,
             "reflex_trigger": "BOREDOM_CRITICAL",
             "usage_msg": "You chew the gum. It tastes like static and blueberries. (Turbulence +0.5, Drag -2.0)"},
         "SAFETY_SCISSORS": {
             "description": "Rounded tips. Can only cut red tape.",
             "function": "PRUNER",
+            "spawn_context": "STANDARD",
             "passive_traits": ["CUT_THE_CRAP"],
             "usage_msg": "Snip. Gordon trims the adjectives."},
         "BUCKET_OF_LIME": {
@@ -505,6 +548,7 @@ GORDON = {
         "BROKEN_WATCH": {
             "description": "Stuck at 11:11. It needs a good shake (Kinetic force) to get moving again.",
             "function": "STOCHASTIC_FIX",
+            "spawn_context": "VOLTAGE_CRITICAL",
             "passive_traits": ["SYNCHRONICITY_CHECK"],
             "usage_msg": "Tick. Tock. No."},
         "STABILITY_PIZZA": {
@@ -517,6 +561,7 @@ GORDON = {
         "PERMIT_A38": {
             "description": "A blue administrative form that confirms you are allowed to exist. Technically.",
             "function": "STABILIZER",
+            "spawn_context": "STANDARD",
             "passive_traits": ["BUREAUCRATIC_ANCHOR"],
             "value": 1.0,
             "usage_msg": "Gordon waves the permit. The universe sighs and lets you pass."},
@@ -539,32 +584,38 @@ GORDON = {
         "DUCT_TAPE": {
             "description": "The universal binder. With enough structure (Constructive), it could fix anything.",
             "function": "STRUCTURAL_PATCH",
+            "spawn_context": "STANDARD",
             "usage_msg": "RIIIP. Fixed."},
         "THE_STYLE_GUIDE": {
             "description": "A well-worn manual. It insists that code is for humans first, machines second.",
             "function": "CLARITY_ENFORCER",
+            "spawn_context": "STANDARD",
             "passive_traits": ["CUT_THE_CRAP"],
             "value": 10.0,
             "usage_msg": "You consult the manual. Strunk & White nod in approval. (Narrative Drag -1.0)"},
         "SPIDER_LOCUS": {
             "description": "A jar of conceptual spiders. Why do you have this?",
             "function": "WEB_WEAVER",
+            "spawn_context": "PSI_HIGH",
             "passive_traits": ["CONDUCTIVE_HAZARD"],
             "usage_msg": "The spiders are knitting a new narrative. It's sticky."},
         "WAFFLE_OF_PERSISTENCE": {
             "description": "It is impossibly warm and smells like maple syrup. A monument to not giving up.",
             "function": "HEAL",
+            "spawn_context": "PSI_HIGH",
             "consume_on_use": True,
             "value": 25.0,
             "usage_msg": "You eat the waffle. It tastes like victory. (Health +25, Morale Improved)"},
         "TRAPERKEEPER_OF_VIGILANCE": {
             "description": "Color-coded tabs. meticulously organized. It demands order.",
             "function": "ENTROPY_REDUCTION",
+            "spawn_context": "STANDARD",
             "passive_traits": ["ORGANIZE_CHAOS"],
             "usage_msg": "Gordon snaps the binder shut. Loose entropy is filed away. (Entropy -0.5 per turn)"},
         "HORSE_PLUSHIE": {
             "description": "A tiny horse. It doesn't do anything, but having it makes you feel infinite.",
             "function": "MORALE_BOOST",
+            "spawn_context": "PSI_HIGH",
             "passive_traits": ["PSI_ANCHOR"],
             "usage_msg": "You look at the tiny horse. You understand what matters. (Psi stabilized at 0.5)"},
         "GREETING_CARD": {
@@ -575,6 +626,7 @@ GORDON = {
         "LAVA_LAMP": {
             "description": "A mesmerizing blob of wax. It moves like history.",
             "function": "TRANCE_INDUCER",
+            "spawn_context": "PSI_HIGH",
             "passive_traits": ["TIME_DILATION_CAP"],
             "value": 3.0,
             "usage_msg": "The wax rises. The wax falls. You lose track of time."
@@ -582,6 +634,7 @@ GORDON = {
         "COMPASS_OF_VELOCITY": {
             "description": "It doesn't point North. It points FAST.",
             "function": "ACCELERATOR",
+            "spawn_context": "VOLTAGE_CRITICAL",
             "passive_traits": ["CAFFEINE_DRIP"],
             "usage_msg": "The needle spins. You feel a tailwind."},
         "LANTERN_OF_TRUTH": {

@@ -137,8 +137,9 @@ def effect_psi_anchor(physics: Dict, _data: Dict, _item_name: str) -> List[Physi
     return []
 
 def effect_luminescence(physics: Dict, _data: Dict, _item_name: str) -> List[PhysicsDelta]:
-    return [PhysicsDelta("ADD_COUNT", "photo", 2)]
-
+    return [
+        PhysicsDelta("ADD", "voltage", 0.5),
+        PhysicsDelta("ADD", "psi", 0.05, message=None)]
 
 def _init_trait_registry() -> Dict[str, ItemEffect]:
     r = {"CONDUCTIVE_HAZARD": ItemEffect(EffectType.PHYSICS, effect_conductive),
@@ -352,26 +353,32 @@ class GordonKnot:
         cost = BoneConfig.INVENTORY.RUMMAGE_COST
         if stamina_pool < cost:
             return False, f"{Prisma.GRY}GORDON: 'Too tired to dig. Eat something first.'{Prisma.RST}", 0.0
-        loot_contexts = {
-            "VOLTAGE_CRITICAL": ["QUANTUM_GUM", "JAR_OF_FIREFLIES", "BROKEN_WATCH"],
-            "DRAG_HEAVY":       ["POCKET_ROCKS", "LEAD_BOOTS", "ANCHOR_STONE"],
-            "PSI_HIGH":         ["HORSE_PLUSHIE", "SPIDER_LOCUS", "WAFFLE_OF_PERSISTENCE"],
-            "STANDARD":         ["TRAPPERKEEPER_OF_VIGILANCE", "THE_RED_STAPLER", "PERMIT_A38", "DUCT_TAPE", "THE_STYLE_GUIDE"]
-        }
-        stamina_penalty = cost
         vol = physics_ref.get("voltage", 0.0)
         drag = physics_ref.get("narrative_drag", 0.0)
         psi = physics_ref.get("psi", 0.0)
-        loot_pool = loot_contexts["STANDARD"]
+        loot_tag = "STANDARD"
         if vol > BoneConfig.PHYSICS.VOLTAGE_CRITICAL:
-            loot_pool = loot_contexts["VOLTAGE_CRITICAL"]
+            loot_tag = "VOLTAGE_CRITICAL"
         elif drag > BoneConfig.PHYSICS.DRAG_HEAVY:
-            loot_pool = loot_contexts["DRAG_HEAVY"]
+            loot_tag = "DRAG_HEAVY"
         elif psi > 0.7:
-            loot_pool = loot_contexts["PSI_HIGH"]
+            loot_tag = "PSI_HIGH"
+        candidates = []
+        for name, data in self.ITEM_REGISTRY.items():
+            item_context = data.get("spawn_context", "STANDARD")
+            if item_context == loot_tag:
+                candidates.append(name)
+        if not candidates:
+            legacy_map = {
+                "VOLTAGE_CRITICAL": ["QUANTUM_GUM", "JAR_OF_FIREFLIES", "BROKEN_WATCH"],
+                "DRAG_HEAVY":       ["POCKET_ROCKS", "LEAD_BOOTS", "ANCHOR_STONE"],
+                "PSI_HIGH":         ["HORSE_PLUSHIE", "SPIDER_LOCUS", "WAFFLE_OF_PERSISTENCE"],
+                "STANDARD":         ["TRAPPERKEEPER_OF_VIGILANCE", "THE_RED_STAPLER", "PERMIT_A38", "DUCT_TAPE", "THE_STYLE_GUIDE"]}
+            candidates = legacy_map.get(loot_tag, legacy_map["STANDARD"])
+        stamina_penalty = cost
         if random.random() < 0.3:
             return True, f"{Prisma.GRY}RUMMAGE: Gordon dug through the trash. Just lint and old receipts.{Prisma.RST}", stamina_penalty
-        found_item = random.choice(loot_pool)
+        found_item = random.choice(candidates)
         msg = self.acquire(found_item)
         prefix = f"{Prisma.OCHRE}RUMMAGE:{Prisma.RST} "
         return True, f"{prefix}{msg}", stamina_penalty

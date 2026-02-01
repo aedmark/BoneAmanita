@@ -58,7 +58,7 @@ class BlackBoxReader:
             if len(history) >= limit: break
             try:
                 with open(fpath, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()
+                    lines = deque(f, maxlen=limit * 2)
                     for line in reversed(lines):
                         if len(history) >= limit: break
                         try:
@@ -91,6 +91,7 @@ class TelemetryService:
         self.current_trace_file = os.path.join(
             self.log_dir, f"trace_{int(time.time())}.jsonl")
         self.active_crystal = None
+        self.session_start = time.time()
 
     @classmethod
     def get_tracer(cls):
@@ -121,6 +122,27 @@ class TelemetryService:
     def log_crystal(self, crystal: DecisionCrystal):
         self._write_line(crystal.crystallize())
 
+    def start_phase(self, phase_name: str, context: Any):
+        self.log_decision(
+            component=phase_name,
+            decision_type="PHASE_START",
+            inputs={"timestamp": time.time()},
+            reasoning="Phase execution initiated.",
+            outcome="RUNNING")
+
+    def end_phase(self, phase_name: str, ctx_before: Any, ctx_after: Any):
+        self.log_decision(
+            component=phase_name,
+            decision_type="PHASE_END",
+            inputs={"timestamp": time.time()},
+            reasoning="Phase execution completed.",
+            outcome="SUCCESS")
+
+    def finalize_cycle(self):
+        if self.active_crystal:
+            self.log_crystal(self.active_crystal)
+            self.active_crystal = None
+
     def _write_line(self, json_str: str):
         try:
             with open(self.current_trace_file, "a", encoding="utf-8") as f:
@@ -150,4 +172,7 @@ class TelemetryService:
 
     def generate_session_summary(self) -> str:
         count = len(self.trace_buffer)
-        return f"\n[TELEMETRY] Session ended. {count} decisions buffered in {self.current_trace_file}"
+        duration = time.time() - self.session_start
+        return (
+            f"\n[TELEMETRY] Session ended. {count} thoughts processed in {duration:.2f}s.\n"
+            f"            Trace: {self.current_trace_file}")

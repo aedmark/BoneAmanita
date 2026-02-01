@@ -29,20 +29,8 @@ class CycleStabilizer:
         self.last_phase: str = "INIT"
         self.last_tick_time = time.time()
 
-    def _normalize_physics(self, ctx: CycleContext):
-        return ctx.physics
-
-    def _get_metric(self, p: Any, key: str, default: float = 0.0) -> float:
-        return float(p.get(key, default))
-
-    def _get_state(self, p: Any, key: str, default: str = "") -> str:
-        return str(p.get(key, default))
-
-    def _set_metric(self, p: Any, key: str, value: float):
-        p[key] = value
-
-    def _adjust_setpoints(self, ctx: CycleContext, p: Any):
-        flow = self._get_state(p, "flow_state", "LAMINAR")
+    def _adjust_setpoints(self, ctx: CycleContext, p: Dict):
+        flow = str(p.get("flow_state", "LAMINAR"))
         manifold = "THE_CONSTRUCT"
         current_manifold = p.get("manifold") or manifold
         if current_manifold == "THE_CONSTRUCT":
@@ -61,14 +49,13 @@ class CycleStabilizer:
         raw_dt = now - self.last_tick_time
         self.last_tick_time = now
         dt = max(0.001, min(1.0, raw_dt))
+        p = ctx.physics
         soul_trying_to_scream = False
-        if hasattr(self.events, 'subscribers'):
-            if ctx.physics.get("voltage", 0) > 17.0 and ctx.physics.get("narrative_drag", 0) > 3.5:
-                soul_trying_to_scream = True
-        p = self._normalize_physics(ctx)
+        if p.get("voltage", 0) > 17.0 and p.get("narrative_drag", 0) > 3.5:
+            soul_trying_to_scream = True
         self._adjust_setpoints(ctx, p)
-        curr_v = self._get_metric(p, "voltage")
-        curr_d = self._get_metric(p, "narrative_drag")
+        curr_v = float(p.get("voltage", 0.0))
+        curr_d = float(p.get("narrative_drag", 0.0))
         v_force, d_force = self.governor.regulate(p, dt=dt)
         if soul_trying_to_scream:
             self.events.log(f"{Prisma.VIOLET}⚖️ STABILIZER: Yielding to Paradox. Drag dampeners disengaged.{Prisma.RST}", "SYS")
@@ -76,7 +63,7 @@ class CycleStabilizer:
         corrections_made = False
         if abs(curr_v - self.governor.voltage_pid.setpoint) > 6.0 and abs(v_force) > 0.05:
             new_v = max(0.0, curr_v + v_force)
-            self._set_metric(p, "voltage", new_v)
+            p["voltage"] = new_v
             if abs(v_force) > 0.1:
                 reason = "PID_DAMPENER" if v_force < 0 else "PID_EXCITATION"
                 ctx.record_flux(current_phase, "voltage", curr_v, new_v, reason)
@@ -85,7 +72,7 @@ class CycleStabilizer:
                 corrections_made = True
         if abs(curr_d - self.governor.drag_pid.setpoint) > 2.5 and abs(d_force) > 0.05:
             new_d = max(0.0, curr_d + d_force)
-            self._set_metric(p, "narrative_drag", new_d)
+            p["narrative_drag"] = new_d
             if abs(d_force) > 0.1:
                 reason = "PID_LUBRICATION" if d_force < 0 else "PID_BRAKING"
                 ctx.record_flux(current_phase, "narrative_drag", curr_d, new_d, reason)
@@ -535,7 +522,7 @@ class SoulPhase(SimulationPhase):
             mandates.append({
                 "type": "STANDARDIZE",
                 "log": f"{Prisma.CYN}⚖️ COUNCIL: The Engineer demands efficiency. (Entropy Reduced).{Prisma.RST}",
-                "effect": {"kappa": -0.5, "beta_index": 1.0} # Forcing Laminar flow
+                "effect": {"kappa": -0.5, "beta_index": 1.0}
             })
         return mandates
 
@@ -639,43 +626,27 @@ class SensationPhase(SimulationPhase):
 
 class PhaseExecutor:
     def execute_phases(self, simulator, ctx):
-        pipeline_order = [
-            "OBSERVE",
-            "INTENTION",
-            "MAINTENANCE",
-            "SENSATION",
-            "GATEKEEP",
-            "SANCTUARY",
-            "METABOLISM",
-            "NAVIGATION",
-            "MACHINERY",
-            "REALITY_FILTER",
-            "INTRUSION",
-            "SOUL",
-            "COGNITION"]
         reconciler = StateReconciler()
-        for phase_name in pipeline_order:
+        for phase in simulator.pipeline:
+            phase_name = phase.name
             if not simulator.check_circuit_breaker(phase_name):
                 continue
-            if phase_name not in ["OBSERVE", "MAINTENANCE", "SENSATION", "GATEKEEP", "SANCTUARY"]:
+            is_critical = phase_name in ["OBSERVE", "MAINTENANCE", "SENSATION", "GATEKEEP", "SANCTUARY"]
+            if not is_critical:
                 if ctx.refusal_triggered or ctx.is_bureaucratic:
                     break
-            phase = next((p for p in simulator.pipeline if p.name == phase_name), None)
-            if not phase:
-                continue
             sandbox = reconciler.fork(ctx)
             try:
                 self._run_single_safe(simulator, phase, sandbox)
                 reconciler.reconcile(ctx, sandbox)
             except Exception as e:
-                simulator.handle_phase_crash(ctx, phase.name, e)
+                simulator.handle_phase_crash(ctx, phase_name, e)
 
     def _run_single_safe(self, simulator, phase, sandbox):
         tracer = TelemetryService.get_tracer()
         tracer.start_phase(phase.name, sandbox)
         try:
             phase.run(sandbox)
-            # Meadows: Stabilize immediately after disturbance
             simulator.stabilizer.stabilize(sandbox, phase.name)
         finally:
             tracer.end_phase(phase.name, sandbox, sandbox)
@@ -694,9 +665,9 @@ class CycleSimulator:
             GatekeeperPhase(engine_ref),
             SanctuaryPhase(engine_ref, self.shared_governor),
             MetabolismPhase(engine_ref),
-            RealityFilterPhase(engine_ref),
             NavigationPhase(engine_ref),
             MachineryPhase(engine_ref),
+            RealityFilterPhase(engine_ref),
             IntrusionPhase(engine_ref),
             SoulPhase(engine_ref),
             CognitionPhase(engine_ref)]
@@ -751,7 +722,6 @@ class CycleReporter:
 
         self.current_mode = mode
 
-        # Only log if the engine is actually running (avoids spam during init)
         if hasattr(self.eng, 'tick_count') and self.eng.tick_count > 0:
             self.eng.events.log(f"VIEWPORT SHIFT: Switched to {mode} mode.", "SYS")
 

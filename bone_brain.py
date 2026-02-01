@@ -3,7 +3,7 @@
 import re, time, json, urllib.request, urllib.error, random, math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from bone_data import LENSES, DREAMS
+from bone_data import LENSES, DREAMS, SCENARIOS
 from bone_bus import Prisma, BoneConfig, EventBus
 from bone_symbiosis import SymbiosisManager
 from bone_spores import MycelialNetwork
@@ -346,6 +346,10 @@ class PromptComposer:
             style_notes = [f"Voice: {role}.", f"Current Mood: {mood}.", vocab_instruction]
             if persona_directives:
                 style_notes.extend(persona_directives)
+        banned_list = SCENARIOS.get("BANNED_CLICHES", [])
+        if banned_list:
+            banned_str = ", ".join(banned_list)
+            style_notes.append(f"NEGATIVE CONSTRAINT: Do not use these words/clichés: {banned_str}.")
         style_notes.extend([
             "Constraint: Be concise. Do NOT use 'As an AI'.",
             "Constraint: If the user offers a concept, play with it. Don't just analyze it.",
@@ -501,13 +505,10 @@ class TheCortex:
             full_state["mind"]["style_directives"] = [
                 "You are The Architect.",
                 f"TARGET SEED: {clean_prompt}",
-                "DIRECTIVE: Hallucinate the opening scene based on the seed's VIBE, not the literal location itself.",
-                "--- EXAMPLE REMIX ---",
-                "Seed: 'A quiet library'",
-                "Output: 'A forest where the trees are made of rotting books and the wind whispers forgotten passages.'",
-                "--- END EXAMPLE ---",
-                "CRITICAL: Do not describe the seed literally. Mutate it. Distort it.",
-                "STYLE: Dream-like but grounded in a physical reality."]
+                "DIRECTIVE: Do NOT describe the seed literally. Do not use the nouns in the seed title.",
+                "INSTEAD: Describe the *texture*, the *smell*, and the *emotional weight* of the space.",
+                "NEGATIVE CONSTRAINT: If the seed says 'Glass', do not use the word 'Glass'. Use 'brittle air' or 'sharp horizons'.",
+                "STYLE: High-Entropy. Abstract. Sensory. Avoid 'Obsidian' and 'Fractals'."]
             full_state["dialogue_history"] = []
             user_input = "Initiate Sequence."
         if hasattr(self.sub, 'tutorial') and self.sub.tutorial and not self.sub.tutorial.complete:

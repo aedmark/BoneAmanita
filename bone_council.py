@@ -3,14 +3,16 @@
 
 import random
 from bone_bus import Prisma, BoneConfig
+from bone_data import TheLore
+
 
 class TheStrangeLoop:
     def __init__(self):
         self.recursion_depth = 0
-        self.triggers = [
-            "who are you", "what are you", "system status",
-            "narrative loop", "simulation boundaries", "fourth wall",
-            "recursive", "infinite regress", "strange loop"]
+        lore = TheLore.get_instance()
+        c_data = lore.get("COUNCIL_DATA") or {}
+        self.triggers = c_data.get("STRANGE_LOOP_TRIGGERS", [
+            "who are you", "strange loop"])
 
     def audit(self, text: str, physics: dict) -> tuple[bool, str, dict, dict]:
         text_lower = text.lower()
@@ -85,20 +87,11 @@ class TheLeveragePoint:
 
 class TheFootnote:
     def __init__(self):
-        self.footnotes = [
-            "* Not to be confused with the other kind of void.",
-            "* The turtle moves.",
-            "* This is technically impossible, but the code doesn't know that.",
-            "* Do not eat the green wobbly bit.",
-            "* Gravity is a habit that is hard to shake.",
-            "* As reliable as a chocolate teapot."]
-        self.context_map = {
-            "void": ["* Not to be confused with the other kind of void."],
-            "gravity": ["* Gravity is a habit that is hard to shake."],
-            "physics": ["* This is technically impossible, but the code doesn't know that."],
-            "glitch": ["* Do not eat the green wobbly bit."],
-            "error": ["* As reliable as a chocolate teapot."],
-            "system": ["* The turtle moves."]}
+        lore = TheLore.get_instance()
+        data = lore.get("FOOTNOTES") or {}
+
+        self.footnotes = data.get("DEFAULT", ["* [Citation Needed]"])
+        self.context_map = data.get("CONTEXT_MAP", {})
 
     def commentary(self, log_text: str) -> str:
         chance = 0.1
@@ -107,14 +100,13 @@ class TheFootnote:
         if random.random() > chance:
             return log_text
         text_lower = log_text.lower()
-        note = None
-        triggers = list(self.context_map.keys())
-        random.shuffle(triggers)
-        for trigger in triggers:
+        candidates = []
+        for trigger, notes in self.context_map.items():
             if trigger in text_lower:
-                note = random.choice(self.context_map[trigger])
-                break
-        if not note:
+                candidates.extend(notes)
+        if candidates:
+            note = random.choice(candidates)
+        else:
             note = random.choice(self.footnotes)
         return f"{log_text}{Prisma.RST} {Prisma.GRY}{note}{Prisma.RST}"
 
@@ -122,7 +114,10 @@ class TheChairholder:
     def __init__(self):
         self.commitment_streak = 0
         self.grievance_threshold = 4
-        self.catchphrases = ["You just got Jammed.", "I'm voting present.", "Retroactive approval denied."]
+        lore = TheLore.get_instance()
+        c_data = lore.get("COUNCIL_DATA") or {}
+        self.catchphrases = c_data.get("CHAIRHOLDER_PHRASES", [
+            "You just got Jammed."])
 
     def audit(self, physics: dict, bio_state: dict) -> tuple[bool, str, dict, dict]:
         drag_endured = physics.get("narrative_drag", 0.0)

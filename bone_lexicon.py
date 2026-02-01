@@ -79,11 +79,7 @@ class LexiconStore:
     @lru_cache(maxsize=4096)
     def get_categories_for_word(self, word: str) -> Set[str]:
         w = word.lower()
-        cats = self.REVERSE_INDEX.get(w, set()).copy()
-        for cat, words in self.LEARNED_VOCAB.items():
-            if w in words:
-                cats.add(cat)
-        return cats
+        return self.REVERSE_INDEX.get(w, set()).copy()
 
     def teach(self, word, category, tick):
         w = word.lower()

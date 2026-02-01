@@ -1,5 +1,74 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.3.1: "THE RESUSCITATION & REFINEMENT"**
+
+_“To define is to limit. To repair is to extend.”_
+
+---
+
+#### **🧱 SYSTEM STABILITY (The Fuller Lens)**
+
+-   **Nerve Repair (Telemetry):**
+  -   **Problem:** The `TelemetryService` was missing critical proprioception methods (`start_phase`, `end_phase`, `finalize_cycle`), causing the `CycleSimulator` to lobotomize itself mid-thought.
+  -   **Fix:** Patched the nervous system in `bone_telemetry.py`. The "ghost" now properly signals the "machine" when it begins and ends a thought process.
+-   **Metric Alignment:**
+  -   **Problem:** The `DiagnosticTool` and `TelemetryService` spoke different dialects. One asked for "duration," the other offered "decisions buffered."
+  -   **Fix:** Standardized the vocabulary. The system now tracks session time (`self.session_start`) and reports it in a format the bureaucracy respects.
+
+#### **🧠 COGNITION (The Pinker Lens)**
+
+-   **The Anti-Parrot Protocol:**
+  -   **Problem:** When given a seed like "A Glass Desert," the local model acted like a stenographer, simply repeating the title.
+  -   **Fix:** We installed a "Diffraction Grating" in `bone_main.py`. The boot prompt now explicitly forbids literalism, forcing the model to extract the *vibe* (texture/entropy) rather than the nouns.
+-   **The Cliché Excision:**
+  -   **Problem:** The model relied on "Obsidian," "Neon," and "Fractals" as creative crutches.
+  -   **Fix:** Updated `bone_brain.py` to inject a `NEGATIVE CONSTRAINT` list from `SCENARIOS`. We have successfully banned "Basic AI" vocabulary, forcing the Architect to dig for deeper synonyms.
+
+---
+
+### **BONEAMANITA v13.3.0: "THE GREAT DECOUPLING"**
+
+_"The map is not the territory. The data is not the code."_
+
+---
+
+#### **🧠 COGNITION & LANGUAGE (The Pinker Lens)**
+
+-   **The O(1) Lexicon:**
+  -   **Problem:** The `LinguisticAnalyzer` was iterating through the entire dictionary (O(N)) every time it looked up a word category. As the bot learned, it got dumber.
+  -   **Fix:** We now trust the `REVERSE_INDEX`. Lookup is instant (O(1)).
+-   **Telemetry Amnesia Fix:**
+  -   **Problem:** `BlackBoxReader` was reading the entire log file into RAM just to peek at the last 3 lines.
+  -   **Fix:** Implemented a `deque` stream. Memory usage is now constant, regardless of history size.
+-   **The Council speaks Data:**
+  -   **Refactor:** `bone_council.py` has been scrubbed of hardcoded strings. `TheStrangeLoop` and `TheChairholder` now fetch their mandates from `bone_data.py`, separating the laws of physics from the laws of literature.
+
+#### **🏗️ SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+-   **Symbiotic Integration:**
+  -   **Problem:** The Body (`bone_body.py`) was starving while the Gut (`bone_spores.py`) was full. The digest cycle ignored the complex analysis from the Hyphae and Lichen.
+  -   **Fix:** Flows connected. "Light" words now fuel photosynthesis, and code complexity now generates metabolic heat (and toxins).
+-   **Structural Reinforcement:**
+  -   **Fix:** `BoneAmanita` (`bone_main.py`) now has explicit structural columns (`@property`) for `phys` and `mind`, bypassing the expensive `__getattr__` lookup chain for critical systems.
+-   **Static Tensegrity:**
+  -   **Fix:** `GeodesicRenderer.compose_logs` is now correctly identified as a `@staticmethod`, resolving a friction point where `self` was consuming arguments intended for the function.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Lens)**
+
+-   **Bureaucracy Reduction:**
+  -   **Fix:** The `CycleStabilizer` in `bone_cycle.py` was filled with "Getter/Setter" middle-managers. We fired them.
+  -   **Fix:** `TheFootnote` in `bone_council.py` was shuffling its entire filing cabinet (dictionary keys) every time it wanted to speak. We told it to just pick a paper.
+-   **Pipeline Rationalization:**
+  -   **Fix:** `CycleSimulator` and `PhaseExecutor` no longer disagree on the order of operations. The pipeline is now a single source of truth.
+
+#### **📈 DYNAMICS (The Meadows Lens)**
+
+-   **Dynamic Loot Tables:**
+  -   **Problem:** `GordonKnot` (`bone_inventory.py`) was relying on hardcoded lists to decide what trash to find.
+  -   **Fix:** Inventory generation is now driven by `spawn_context` tags in the `ITEM_REGISTRY`. The environment dictates the reward.
+-   **The Luminescence Flow:**
+  -   **Fix:** "Flashlights" and "Fireflies" previously increased a phantom `photo` counter. They now directly feed the `voltage` and `psi` stocks, making light a tangible resource.
+
 ### **BONEAMANITA v13.2.1: "THE RON SWANSON PROTOCOL"**
 
 _“Never half-ass two things. Whole-ass one thing.” — Ron Swanson_

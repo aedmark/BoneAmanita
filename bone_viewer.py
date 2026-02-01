@@ -100,7 +100,8 @@ class GeodesicRenderer:
         obsession = soul_ref.current_obsession or "Void"
         return f"{Prisma.GRY}--- Obsession: {obsession} ---{Prisma.RST}"
 
-    def compose_logs(self, logs: list, events: list, tick: int) -> List[str]:
+    @staticmethod
+    def compose_logs(logs: list, events: list, tick: int) -> List[str]:
         all_logs = [str(l) for l in logs if l is not None]
         for e in events:
             if e and e.get("text"):

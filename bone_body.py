@@ -251,18 +251,38 @@ class SomaticLoop:
         phys = self._normalize_physics(physics_data)
         logs = []
         if hasattr(self.bio, "apply_environmental_entropy"):
-             self.bio.apply_environmental_entropy(phys)
+            self.bio.apply_environmental_entropy(phys)
         modifiers = self._gather_hormonal_modifiers(phys, logs)
         receipt = self.bio.mito.process_cycle(phys, external_modifiers=modifiers)
         resp_status = receipt.status
         audit_result = self._audit_folly_desire(phys, stamina, logs)
         if audit_result == "MAUSOLEUM_CLAMP":
-             return self._package_result(receipt.status, logs, enzyme="NONE")
+            return self._package_result(receipt.status, logs, enzyme="NONE")
         elif audit_result == "AUTOPHAGY":
-             logs.append(f"{Prisma.RED}⚠️ AUTOPHAGY: Burning Health for Fuel (-5 HP).{Prisma.RST}")
-             stamina = 10.0
-        enzyme, total_yield = self._harvest_resources(phys, logs)
-        self.bio.mito.adjust_atp(total_yield, "Digestion Yield")
+            logs.append(f"{Prisma.RED}⚠️ AUTOPHAGY: Burning Health for Fuel (-5 HP).{Prisma.RST}")
+            stamina = 10.0
+        total_yield = 0.0
+        enzyme = "NONE"
+        if hasattr(self.bio, "gut"):
+            enzyme, nutrient_data = self.bio.gut.secrete(text, phys)
+            gut_yield = nutrient_data.get("yield", 0.0)
+            gut_toxin = nutrient_data.get("toxin", 0.0)
+            if gut_yield > 0:
+                total_yield += gut_yield
+                desc = nutrient_data.get("desc", "Nutrients")
+                logs.append(f"{Prisma.GRN}[GUT]: digested {desc} -> +{gut_yield:.1f} ATP.{Prisma.RST}")
+            if gut_toxin > 0:
+                self.bio.mito.state.ros_buildup += gut_toxin
+                logs.append(f"{Prisma.OCHRE}[GUT]: Toxin byproduct detected (+{gut_toxin:.1f} ROS).{Prisma.RST}")
+        if hasattr(self.bio, "lichen"):
+            sugar, photo_log = self.bio.lichen.photosynthesize(phys, phys["clean_words"], tick_count)
+            if sugar > 0:
+                total_yield += sugar
+            if photo_log:
+                logs.append(photo_log)
+        legacy_yield = self._harvest_legacy_scraps(phys)
+        total_yield += legacy_yield
+        self.bio.mito.adjust_atp(total_yield, "Symbiotic Yield")
         self._perform_maintenance(text, phys, logs, tick_count)
         clean_words = phys.get("clean_words", [])
         semantic_sig = self.semantic_doctor.assess(clean_words, phys)
@@ -275,6 +295,14 @@ class SomaticLoop:
             circadian_bias=circadian_bias,
             semantic_signal=semantic_sig)
         return self._package_result(resp_status, logs, chem_state, enzyme)
+
+    def _harvest_legacy_scraps(self, phys: Dict) -> float:
+        clean_words = phys.get("clean_words", [])
+        scrap_yield = 0.0
+        for word in clean_words:
+            if len(word) > 7:
+                scrap_yield += 0.5
+        return scrap_yield
 
     def _gather_hormonal_modifiers(self, phys, logs) -> List[float]:
         chem = self.bio.endo

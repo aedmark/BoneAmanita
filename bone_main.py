@@ -1,4 +1,4 @@
-""" BONEAMANITA 13.2.1
+""" BONEAMANITA 13.3.1
  Architects: SLASH, KISHO, The BonePoke Gods Humans: Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -37,7 +37,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 13.2.1', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 13.3.1', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -224,6 +224,18 @@ class BoneAmanita:
         if not hist: return 0.0
         return sum(hist) / len(hist)
 
+    @property
+    def phys(self):
+        if self.embryo:
+            return self.embryo.physics
+        return None
+
+    @property
+    def mind(self):
+        if self.embryo:
+            return self.embryo.mind
+        return None
+
     def process_turn(self, user_message: str) -> Dict[str, Any]:
         turn_start = self.observer.clock_in()
         self.observer.user_turns += 1
@@ -390,13 +402,19 @@ class BoneAmanita:
         archetypes = scenarios.get("ARCHETYPES", ["A quiet garden"])
         seed = random.choice(archetypes)
         print(f"{Prisma.CYN}[SYS] Seed Loaded: '{seed}'{Prisma.RST}")
-        cold_result = self.process_turn(f"SYSTEM_BOOT: {seed}")
+        boot_prompt = (
+            f"SYSTEM_BOOT: SEQUENCE START.\n"
+            f"SOURCE_SEED: '{seed}'\n"
+            f"DIRECTIVE: Do not use the seed text literally. Use it as a metaphorical anchor only. "
+            f"Generate a vivid, sensory opening log that captures the *vibe* of the seed without describing it directly. "
+            f"Focus on lighting, texture, and entropy.")
+        cold_result = self.process_turn(boot_prompt)
         if cold_result.get("ui"):
             print(cold_result["ui"])
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 13.2.1', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 13.3.1', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)
