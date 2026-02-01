@@ -4,7 +4,6 @@ import shlex
 from typing import Dict, Callable, List, Any, Tuple, Optional
 from dataclasses import dataclass
 
-
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
         self._eng = engine_ref

@@ -1,4 +1,5 @@
 """ bone_consultant.py - The Reverse RAG Protocol """
+
 from dataclasses import dataclass
 from typing import List, Dict, Optional
 
@@ -31,14 +32,11 @@ class BoneConsultant:
 
     def update_coordinates(self, user_text: str):
         word_count = len(user_text.split())
-
         self.state.E = min(1.0, self.state.E + (word_count * 0.005))
-
         if word_count < 10:
             self.state.B = min(1.0, self.state.B + 0.1)
         else:
             self.state.B = max(0.1, self.state.B - 0.05)
-
         self._check_phase_shift()
 
     def _check_phase_shift(self):

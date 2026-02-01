@@ -1,5 +1,4 @@
-""" bone_architect.py
- "We shape our buildings; thereafter they shape us." - Churchill """
+""" bone_architect.py - "We shape our buildings; thereafter they shape us." - Churchill """
 
 from typing import Tuple, Dict, Any, Optional
 from dataclasses import dataclass
@@ -79,8 +78,7 @@ class PanicRoom:
             "virtues": {"resilience": 1.0},
             "vices": {"amnesia": 1.0},
             "narrative_arc": "RECOVERY",
-            "xp": 0
-        }
+            "xp": 0}
 
     @staticmethod
     def get_safe_limbo():
@@ -88,8 +86,7 @@ class PanicRoom:
             "mood": "NEUTRAL",
             "volatility": 0.0,
             "mask": "DEFAULT",
-            "glitch_factor": 0.0
-        }
+            "glitch_factor": 0.0}
 
 class BoneArchitect:
     @staticmethod
@@ -105,7 +102,6 @@ class BoneArchitect:
             tracer=ViralTracer(_mem))
         mind.integrator = GlobalIntegrator()
         mind.wise = WisdomAllocator()
-
         return mind, limbo
 
     @staticmethod
@@ -132,8 +128,7 @@ class BoneArchitect:
             pulse=ThePacemaker(),
             dynamics=TemporalDynamics(),
             nav=TheNavigator(bio.shimmer),
-            tension=SurfaceTension()
-        )
+            tension=SurfaceTension())
 
     @staticmethod
     def incubate(events, lex) -> SystemEmbryo:

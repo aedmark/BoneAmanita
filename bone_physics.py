@@ -17,7 +17,6 @@ def cosine_similarity(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float
     if not denominator: return 0.0
     return numerator / denominator
 
-SOLVENT_WORDS = {'i', 'you', 'said', 'the', 'and', 'was', 'a', 'is', 'it'}
 MAX_SOLVENT_TOLERANCE = 40.0
 TEXT_LENGTH_SCALAR = 1500.0
 
@@ -237,8 +236,9 @@ class QuantumObserver:
         counts = Counter()
         unknowns = []
         target_cats = {"heavy", "explosive", "constructive", "abstract", "play", "suburban", "antigen"}
+        solvents = TheLexicon.SOLVENTS if hasattr(TheLexicon, 'SOLVENTS') else set()
         for w in clean_words:
-            if w in SOLVENT_WORDS:
+            if w in solvents:
                 counts["solvents"] += 1
                 continue
             found = False
@@ -323,7 +323,8 @@ class GeodesicDome:
         length = len(text)
         if length == 0: return 0.0, 0.0
         text_lower = text.lower()
-        solvent_hits = sum(text_lower.count(w) for w in SOLVENT_WORDS)
+        solvents = TheLexicon.SOLVENTS if hasattr(TheLexicon, 'SOLVENTS') else {'the', 'and', 'a'}
+        solvent_hits = sum(text_lower.count(w) for w in solvents)
         solvent_density = solvent_hits / max(1.0, (length / 5.0))
         raw_chaos = (length / TEXT_LENGTH_SCALAR)
         glue_factor = min(1.0, solvent_density * 2.0)

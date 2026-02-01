@@ -147,14 +147,17 @@ class NeurotransmitterModulator:
         plasticity = max(0.1, min(BrainConfig.MAX_PLASTICITY, plasticity))
         self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
         c = self.current_chem
-        voltage_heat = (base_voltage - 10.0) * 0.05
-        temp_delta = (c.dopamine * 0.5) - (c.cortisol * 0.4) + voltage_heat
-        final_temp = max(0.1, min(1.5, BrainConfig.BASE_TEMP + temp_delta))
-        token_volatility = (c.adrenaline * 800) - (c.cortisol * 400)
-        final_tokens = int(max(100.0, min(float(self.MAX_TOKENS), self.BASE_TOKENS + token_volatility)))
+        voltage_heat = math.log1p(max(0, base_voltage - 5.0)) * 0.1
+        chemical_delta = (c.dopamine * 0.4) - (c.adrenaline * 0.3) - (c.cortisol * 0.2)
+        temp_delta = chemical_delta + voltage_heat
+        final_temp = max(0.4, min(1.2, BrainConfig.BASE_TEMP + temp_delta))
+        token_volatility = (c.adrenaline * 600) - (c.cortisol * 300)
+        final_tokens = int(max(150.0, min(float(self.MAX_TOKENS), self.BASE_TOKENS + token_volatility)))
         freq_penalty = 0.0
         if c.adrenaline > 0.5:
-            freq_penalty = 0.3
+            freq_penalty = 0.4
+        elif c.dopamine > 0.7:
+            freq_penalty = 0.1
         params = {
             "temperature": round(final_temp, 2),
             "top_p": BrainConfig.BASE_TOP_P,

@@ -117,13 +117,13 @@ class MitochondrialForge:
         voltage = physics_packet.get("voltage", 0.0)
         raw_drag = physics_packet.get("narrative_drag", 0.0)
         drag = max(0.0, raw_drag)
-        base_demand = max(0.1, voltage * 0.4)
+        base_demand = max(0.1, math.log1p(voltage) * 1.5)
         cognitive_load_tax = (drag ** 1.5) * 0.5
         mod_factor = 1.0
         if external_modifiers:
             for m in external_modifiers:
                 mod_factor *= m
-        efficiency = max(0.2, self.state.membrane_potential)
+        efficiency = max(0.35, self.state.membrane_potential)
         raw_cost = ((base_demand + cognitive_load_tax) * mod_factor) / efficiency
         MAX_BURN = 25.0
         total_metabolic_cost = min(MAX_BURN, raw_cost)

@@ -20,6 +20,7 @@ class Prisma:
     OCHRE = "\033[33;2m"
     VIOLET = "\033[35;2m"
     SLATE = "\033[30;1m"
+
     _COLOR_MAP = {
         "R": RED, "G": GRN, "Y": YEL, "B": BLU,
         "M": MAG, "C": CYN, "W": WHT, "0": GRY,
@@ -27,28 +28,23 @@ class Prisma:
         "S": SLATE}
 
     @classmethod
-    def paint(cls, text, color_key="0"):
+    def paint(cls, text: str, color_key: str = "0") -> str:
         code = cls._COLOR_MAP.get(str(color_key).upper(), cls.WHT)
-        safe_text = str(text).replace(cls.RST, cls.RST + code)
-        return f"{code}{safe_text}{cls.RST}"
+        if str(text).endswith(cls.RST):
+            return f"{code}{text}"
+        return f"{code}{text}{cls.RST}"
 
     @classmethod
-    def strip(cls, text):
+    def strip(cls, text: str) -> str:
         clean = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         return clean.sub('', str(text))
 
     @classmethod
-    def tie_dye(cls, text):
+    def tie_dye(cls, text: str) -> str:
         colors = [cls.RED, cls.GRN, cls.YEL, cls.CYN, cls.MAG, cls.VIOLET, cls.OCHRE]
-        tokens = re.split(r'(\s+)', str(text))
-        painted = []
-        for token in tokens:
-            if not token.strip():
-                painted.append(token)
-            else:
-                c = random.choice(colors)
-                painted.append(f"{c}{token}{cls.RST}")
-        return "".join(painted)
+        return "".join(
+            f"{random.choice(colors)}{char}{cls.RST}" if char.strip() else char
+            for char in str(text))
 
 class EventBus:
     def __init__(self, max_memory=1024, max_gestation=500):
@@ -551,6 +547,7 @@ class MindSystem:
     dreamer: Any
     mirror: Any
     tracer: Any
+
 @dataclass
 class PhysSystem:
     observer: Any

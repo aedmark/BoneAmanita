@@ -341,8 +341,6 @@ class SimulationTracer:
 
         return f"INVESTIGATION: UNKNOWN SYMPTOM '{symptom}'. Suggest checking traces for recent exceptions."
 
-# [ADD TO END OF FILE]
-
 class BlackBoxReader:
     def __init__(self, log_dir="telemetry"):
         self.log_dir = log_dir
