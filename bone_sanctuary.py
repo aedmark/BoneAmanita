@@ -1,5 +1,4 @@
-""" bone_sanctuary.py
-    The Homeostatic Regulator for the Tragic Engine. """
+""" dev/bone_sanctuary.py """
 
 import time
 from bone_data import SANCTUARY
@@ -32,19 +31,19 @@ class PIDController:
         self._prev_error = error
         return output
 
-
 class SanctuaryGovernor:
     def __init__(self, events_ref):
         self.events = events_ref
-        self.voltage_target = getattr(SANCTUARY, "VOLTAGE_TARGET", 10.0)
-        self.drag_target = getattr(SANCTUARY, "DRAG_TARGET", 2.0)
+        self.defaults = {
+            "voltage": getattr(SANCTUARY, "VOLTAGE_TARGET", 10.0),
+            "drag": getattr(SANCTUARY, "DRAG_TARGET", 2.0)}
         self.voltage_pid = PIDController(
             kp=0.05, ki=0.01, kd=0.02,
-            setpoint=self.voltage_target,
+            setpoint=self.defaults["voltage"],
             output_limits=(-2.0, 2.0))
         self.drag_pid = PIDController(
             kp=0.08, ki=0.02, kd=0.03,
-            setpoint=self.drag_target,
+            setpoint=self.defaults["drag"],
             output_limits=(-1.0, 1.0))
         self.in_sanctuary = False
         self.consecutive_safe_ticks = 0
@@ -61,15 +60,34 @@ class SanctuaryGovernor:
         except (ValueError, TypeError):
             return float(default)
 
+    def recalibrate(self, target_voltage: float = None, target_drag: float = None):
+        if target_voltage is not None:
+            self.voltage_pid.setpoint = float(target_voltage)
+        else:
+            self.voltage_pid.setpoint = self.defaults["voltage"]
+        if target_drag is not None:
+            self.drag_pid.setpoint = float(target_drag)
+        else:
+            self.drag_pid.setpoint = self.defaults["drag"]
+
+    def regulate(self, physics_packet, dt: float = 1.0) -> tuple:
+        curr_v = self._get_num(physics_packet, "voltage")
+        curr_d = self._get_num(physics_packet, "narrative_drag")
+        v_force = self.voltage_pid.update(curr_v, dt=dt)
+        d_force = self.drag_pid.update(curr_d, dt=dt)
+        return v_force, d_force
+
     def assess(self, physics_packet):
         v = self._get_num(physics_packet, "voltage", 0.0)
         d = self._get_num(physics_packet, "narrative_drag", 0.0)
         t = self._get_num(physics_packet, "truth_ratio", 0.0)
+        v_target = self.voltage_pid.setpoint
+        d_target = self.drag_pid.setpoint
         v_tol = getattr(SANCTUARY, "VOLTAGE_TOLERANCE", 5.0) or 1.0
         d_tol = getattr(SANCTUARY, "DRAG_TOLERANCE", 2.0) or 1.0
         t_target = getattr(SANCTUARY, "TRUTH_TARGET", 0.8)
-        v_dist = abs(v - self.voltage_target) / v_tol
-        d_dist = abs(d - self.drag_target) / d_tol
+        v_dist = abs(v - v_target) / v_tol
+        d_dist = abs(d - d_target) / d_tol
         t_dist = abs(t - t_target) / 0.3
         avg_dist = (v_dist + d_dist + t_dist) / 3.0
         is_safe = avg_dist < 0.5
@@ -82,19 +100,3 @@ class SanctuaryGovernor:
             self.consecutive_safe_ticks = 0
             self.in_sanctuary = False
         return self.in_sanctuary, avg_dist
-
-    def calculate_correction(self, physics_packet) -> tuple:
-        curr_v = self._get_num(physics_packet, "voltage")
-        curr_d = self._get_num(physics_packet, "narrative_drag")
-        flow = self._get_val(physics_packet, "flow_state", "")
-        is_flow_state = (curr_d < 3.0 and curr_v > self.voltage_target)
-        if curr_v > 18.0 or curr_d > 8.0 or flow in ["SUPERCONDUCTIVE", "HUBRIS_RISK"]:
-            return 0.0, 0.0
-        if is_flow_state:
-            v_corr = 0.0
-        else:
-            v_corr = self.voltage_pid.update(curr_v, dt=1.0)
-        d_corr = self.drag_pid.update(curr_d, dt=1.0)
-        v_delta = v_corr * 0.1
-        d_delta = d_corr * 0.1
-        return v_delta, d_delta

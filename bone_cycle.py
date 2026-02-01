@@ -6,12 +6,12 @@ from typing import Dict, Any, Tuple, List, Optional
 from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket
 from bone_village import TownHall
 from bone_personality import TheBureau
-from bone_physics import ChromaScope, TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine
+from bone_physics import ChromaScope, TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine, GeodesicDome
 from bone_viewer import GeodesicRenderer, CachedRenderer, get_renderer
 from bone_architect import PanicRoom
 from bone_synesthesia import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
-from bone_sanctuary import SanctuaryGovernor, SANCTUARY, PIDController
+from bone_sanctuary import SanctuaryGovernor, SANCTUARY
 from bone_telemetry import TelemetryService
 from bone_translation import SomaticInterface
 
@@ -23,12 +23,9 @@ class CycleStabilizer:
         "DEFAULT":    {"voltage": 10.0, "drag": 1.5}}
     HIGH_ENERGY_STATES = {"SUPERCONDUCTIVE", "FLOW_BOOST", "HUBRIS_RISK"}
 
-    def __init__(self, events_ref):
+    def __init__(self, events_ref, governor_ref):
         self.events = events_ref
-        self.voltage_pid = PIDController(
-            kp=0.15, ki=0.02, kd=0.20, setpoint=10.0, output_limits=(-4.0, 4.0))
-        self.drag_pid = PIDController(
-            kp=0.30, ki=0.05, kd=0.10, setpoint=1.5, output_limits=(-3.0, 3.0))
+        self.governor = governor_ref
         self.last_phase: str = "INIT"
         self.last_tick_time = time.time()
 
@@ -53,10 +50,11 @@ class CycleStabilizer:
             if isinstance(world, dict):
                 orbit = world.get("orbit")
                 if orbit and isinstance(orbit, (list, tuple)):
-                    current_manifold = orbit[0]  
+                    current_manifold = orbit[0]
         target_cfg = self.MANIFOLD_CONFIGS.get(current_manifold, self.MANIFOLD_CONFIGS["DEFAULT"])
-        self.voltage_pid.setpoint = 20.0 if flow in self.HIGH_ENERGY_STATES else target_cfg["voltage"]
-        self.drag_pid.setpoint = target_cfg["drag"]
+        target_v = 20.0 if flow in self.HIGH_ENERGY_STATES else target_cfg["voltage"]
+        target_d = target_cfg["drag"]
+        self.governor.recalibrate(target_v, target_d)
 
     def stabilize(self, ctx: CycleContext, current_phase: str):
         now = time.time()
@@ -71,30 +69,28 @@ class CycleStabilizer:
         self._adjust_setpoints(ctx, p)
         curr_v = self._get_metric(p, "voltage")
         curr_d = self._get_metric(p, "narrative_drag")
-        v_force = self.voltage_pid.update(curr_v, dt=dt)
-        d_force = 0.0
-        if not soul_trying_to_scream:
-            d_force = self.drag_pid.update(curr_d, dt=dt)
-        else:
+        v_force, d_force = self.governor.regulate(p, dt=dt)
+        if soul_trying_to_scream:
             self.events.log(f"{Prisma.VIOLET}⚖️ STABILIZER: Yielding to Paradox. Drag dampeners disengaged.{Prisma.RST}", "SYS")
+            d_force = 0.0
         corrections_made = False
-        if abs(curr_v - self.voltage_pid.setpoint) > 6.0 and abs(v_force) > 0.05:
+        if abs(curr_v - self.governor.voltage_pid.setpoint) > 6.0 and abs(v_force) > 0.05:
             new_v = max(0.0, curr_v + v_force)
             self._set_metric(p, "voltage", new_v)
             if abs(v_force) > 0.1:
                 reason = "PID_DAMPENER" if v_force < 0 else "PID_EXCITATION"
                 ctx.record_flux(current_phase, "voltage", curr_v, new_v, reason)
                 if abs(v_force) > 1.5:
-                    self.events.log(f"{Prisma.GRY}⚖️ STABILIZER: Voltage corrected ({v_force:+.1f}v). Target: {self.voltage_pid.setpoint}{Prisma.RST}", "SYS")
+                    self.events.log(f"{Prisma.GRY}⚖️ STABILIZER: Voltage corrected ({v_force:+.1f}v). Target: {self.governor.voltage_pid.setpoint}{Prisma.RST}", "SYS")
                 corrections_made = True
-        if abs(curr_d - self.drag_pid.setpoint) > 2.5 and abs(d_force) > 0.05:
+        if abs(curr_d - self.governor.drag_pid.setpoint) > 2.5 and abs(d_force) > 0.05:
             new_d = max(0.0, curr_d + d_force)
             self._set_metric(p, "narrative_drag", new_d)
             if abs(d_force) > 0.1:
                 reason = "PID_LUBRICATION" if d_force < 0 else "PID_BRAKING"
                 ctx.record_flux(current_phase, "narrative_drag", curr_d, new_d, reason)
                 if d_force < -1.0:
-                    self.events.log(f"{Prisma.GRY}🛢️ STABILIZER: Grease applied. Drag reduced ({d_force:+.1f}). Target: {self.drag_pid.setpoint}{Prisma.RST}", "SYS")
+                    self.events.log(f"{Prisma.GRY}🛢️ STABILIZER: Grease applied. Drag reduced ({d_force:+.1f}). Target: {self.governor.drag_pid.setpoint}{Prisma.RST}", "SYS")
                 corrections_made = True
         self.last_phase = current_phase
         return corrections_made
@@ -142,28 +138,15 @@ class IntentionPhase(SimulationPhase):
         return ctx
 
 class SanctuaryPhase(SimulationPhase):
-    def __init__(self, engine_ref):
+    def __init__(self, engine_ref, governor_ref):
         super().__init__(engine_ref)
         self.name = "SANCTUARY"
-        self.governor = SanctuaryGovernor(self.eng.events)
+        self.governor = governor_ref
 
     def run(self, ctx: CycleContext):
         in_safe_zone, distance = self.governor.assess(ctx.physics)
         trauma_sum = sum(self.eng.trauma_accum.values())
-        if trauma_sum > 25.0:
-            return ctx
-        if trauma_sum < 15.0:
-            v_corr, d_corr = self.governor.calculate_correction(ctx.physics)
-            if abs(v_corr) > 0.001 or abs(d_corr) > 0.001:
-                old_v = ctx.physics.voltage
-                ctx.physics.voltage += v_corr
-                ctx.physics.narrative_drag += d_corr
-                ctx.record_flux("SANCTUARY", "voltage", old_v, ctx.physics.voltage, "GENTLE_NUDGE")
-                if hasattr(self.eng.phys.observer, 'voltage_history'):
-                    hist = self.eng.phys.observer.voltage_history
-                    if hist:
-                        hist[-1] = max(0.0, hist[-1] + v_corr)
-        if in_safe_zone:
+        if in_safe_zone and trauma_sum < 25.0:
             self._enter_sanctuary(ctx)
             self._apply_restoration(ctx)
         return ctx
@@ -198,8 +181,7 @@ class MaintenancePhase(SimulationPhase):
             rotted = self.eng.lex.atrophy(
                 self.eng.tick_count,
                 100,
-                protected=solvents
-            )
+                protected=solvents)
             if rotted:
                 biomass = len(rotted) * 0.5
                 self.eng.soil_fertility = min(50.0, self.eng.soil_fertility + biomass)
@@ -343,11 +325,7 @@ class RealityFilterPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "REALITY_FILTER"
-        self.TRIGRAMS = {
-            "VEL": ("☳", "ZHEN",  Prisma.GRN), "STR": ("☶", "GEN",   Prisma.SLATE),
-            "ENT": ("☵", "KAN",   Prisma.BLU), "PHI": ("☲", "LI",    Prisma.RED),
-            "PSI": ("☰", "QIAN",  Prisma.WHT), "BET": ("☴", "XUN",   Prisma.CYN),
-            "E":   ("☷", "KUN",   Prisma.OCHRE), "DEL": ("☱", "DUI",   Prisma.MAG)}
+        self.TRIGRAMS = GeodesicDome.TRIGRAM_MAP
 
     def run(self, ctx: CycleContext):
         reflection = self.eng.mind.mirror.get_reflection_modifiers()
@@ -355,7 +333,8 @@ class RealityFilterPhase(SimulationPhase):
         vector = ctx.physics.vector
         if vector:
             dom = max(vector, key=vector.get)
-            sym, name, color = self.TRIGRAMS.get(dom, self.TRIGRAMS["E"])
+            entry = self.TRIGRAMS.get(dom, self.TRIGRAMS["E"])
+            sym, name, _, color = entry
             ctx.world_state["trigram"] = {"symbol": sym, "name": name, "color": color}
             if random.random() < 0.05:
                 ctx.log(f"{color}I CHING: {sym} {name} is in the ascendant.{Prisma.RST}")
@@ -704,7 +683,8 @@ class PhaseExecutor:
 class CycleSimulator:
     def __init__(self, engine_ref):
         self.eng = engine_ref
-        self.stabilizer = CycleStabilizer(self.eng.events)
+        self.shared_governor = SanctuaryGovernor(self.eng.events)
+        self.stabilizer = CycleStabilizer(self.eng.events, self.shared_governor)
         self.executor = PhaseExecutor()
         self.pipeline: List[SimulationPhase] = [
             ObservationPhase(engine_ref),
@@ -712,7 +692,7 @@ class CycleSimulator:
             MaintenancePhase(engine_ref),
             SensationPhase(engine_ref),
             GatekeeperPhase(engine_ref),
-            SanctuaryPhase(engine_ref),
+            SanctuaryPhase(engine_ref, self.shared_governor),
             MetabolismPhase(engine_ref),
             RealityFilterPhase(engine_ref),
             NavigationPhase(engine_ref),
@@ -751,41 +731,29 @@ class CycleSimulator:
             ctx.mind_state = PanicRoom.get_safe_mind()
         ctx.log(f"{Prisma.RED}⚠ {phase_name} FAILURE: Switching to Panic Protocol.{Prisma.RST}")
 
-class StrunkWhite:
-    def sanitize(self, text: str) -> Tuple[str, Optional[str]]:
-        clean = re.sub(r'\n\s*\n', '\n\n', text)
-        banned = ["large language model", "AI assistant", "Obsidian"]
-        violation = None
-        for b in banned:
-            if b in clean.lower():
-                clean = clean.replace(b, "[REDACTED]")
-                violation = f"Style Violation: Used forbidden phrase '{b}'."
-        return clean, violation
-
 class CycleReporter:
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.vsl_chroma = ChromaScope()
-        self.strunk = StrunkWhite()
-        self.renderer = get_renderer(
-            self.eng,
-            self.vsl_chroma,
-            self.strunk,
-            None,
-            mode="STANDARD")
-        self.current_mode = "STANDARD"
+        self.renderer = None
+        self.current_mode = None
+        self.switch_renderer("STANDARD")
 
     def switch_renderer(self, mode: str):
-        if self.current_mode == mode:
+        if self.current_mode == mode and self.renderer is not None:
             return
         self.renderer = get_renderer(
             self.eng,
             self.vsl_chroma,
-            self.strunk,
+            None,
             getattr(self, 'valve', None),
             mode=mode)
+
         self.current_mode = mode
-        self.eng.events.log(f"VIEWPORT SHIFT: Switched to {mode} mode.", "SYS")
+
+        # Only log if the engine is actually running (avoids spam during init)
+        if hasattr(self.eng, 'tick_count') and self.eng.tick_count > 0:
+            self.eng.events.log(f"VIEWPORT SHIFT: Switched to {mode} mode.", "SYS")
 
     def render_snapshot(self, ctx: CycleContext) -> Dict[str, Any]:
         try:

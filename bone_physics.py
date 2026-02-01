@@ -303,20 +303,18 @@ class SurfaceTension:
         return False, text, None
 
 class GeodesicDome:
+    TRIGRAM_MAP = {
+        "VEL": ("☳", "ZHEN",  "Thunder",  Prisma.GRN),
+        "STR": ("☶", "GEN",   "Mountain", Prisma.SLATE),
+        "ENT": ("☵", "KAN",   "Water",    Prisma.BLU),
+        "PHI": ("☲", "LI",    "Fire",     Prisma.RED),
+        "PSI": ("☰", "QIAN",  "Heaven",   Prisma.WHT),
+        "BET": ("☴", "XUN",   "Wind",     Prisma.CYN),
+        "E":   ("☷", "KUN",   "Earth",    Prisma.OCHRE),
+        "DEL": ("☱", "DUI",   "Lake",     Prisma.MAG)}
+
     def __init__(self):
-        self.TRIGRAM_MAP = {
-            "VEL": ("☳", "ZHEN",  "Thunder",  Prisma.GRN),
-            "STR": ("☶", "GEN",   "Mountain", Prisma.SLATE),
-            "ENT": ("☵", "KAN",   "Water",    Prisma.BLU),
-            "PHI": ("☲", "LI",    "Fire",     Prisma.RED),
-            "PSI": ("☰", "QIAN",  "Heaven",   Prisma.WHT),
-            "BET": ("☴", "XUN",   "Wind",     Prisma.CYN),
-            "E":   ("☷", "KUN",   "Earth",    Prisma.OCHRE),
-            "DEL": ("☱", "DUI",   "Lake",     Prisma.MAG)}
-        self.TRIGRAM_MAP["TMP"] = self.TRIGRAM_MAP["PHI"]
-        self.TRIGRAM_MAP["TEX"] = self.TRIGRAM_MAP["STR"]
-        self.TRIGRAM_MAP["XI"]  = self.TRIGRAM_MAP["BET"]
-        self.TRIGRAM_MAP["LQ"]  = self.TRIGRAM_MAP["DEL"]
+        pass
 
     @staticmethod
     def calculate_metrics(text: str, counts: Dict[str, int] = None) -> Tuple[float, float]:

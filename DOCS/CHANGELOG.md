@@ -1,5 +1,49 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.2.1: "THE RON SWANSON PROTOCOL"**
+
+_“Never half-ass two things. Whole-ass one thing.” — Ron Swanson_
+_“Simplicity is the ultimate sophistication.” — Leonardo da Vinci_
+
+---
+
+#### **🧠 COGNITION & LANGUAGE (The Pinker Lens)**
+
+- **The Hippocampus Transplant:**
+- **Problem:** We lobotomized `bone_telemetry.py` by removing the `BlackBoxReader`, causing the brain to wake up with total amnesia.
+- **Fix:** Surgically re-attached the `BlackBoxReader` and the `log_crystal` nerve endings. The system can now remember its own thoughts across reboots.
+
+- **Vocabulary Synchronization:**
+- **Problem:** `bone_main.py` was trying to shake hands using `.initialize()`, but `bone_telemetry.py` only knew `.get_instance()`.
+- **Fix:** Implemented a translation layer (aliasing) so the Brain and the Nervous System speak the same dialect.
+
+#### **🏗️ SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **Governor Unification (Tensegrity):**
+- **Problem:** We had two separate `SanctuaryGovernor` instances fighting over the steering wheel—one in the `CycleStabilizer` and one in the `SanctuaryPhase`.
+- **Fix:** Implemented Dependency Injection. We now instantiate **one** Governor in the Simulator and pass it down to all subsystems. One truth, one target.
+
+- **Dead Weight Jettisoned:**
+- **Deleted:** The `StrunkWhite` class. It was a redundant censor doing work the Cortex had already finished. We deleted 50+ lines of code and lost zero functionality.
+- **Deleted:** The `CycleReporter`'s double-initialization logic. It now creates the renderer once and reuses it.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Layer)**
+
+- **The "Swanson" HUD:**
+- **Problem:** The old `bone_viewer` looked like a cyberpunk spreadsheet that exploded. Too many pipes `|`, brackets `[]`, and ASCII boxes.
+- **Fix:** Refactored `Projector` to be a tactical, minimalist readout. Health, Voltage, and Location are now spatially anchored and scan-able at a glance. No flowery prose in the UI.
+
+- **De-Dramatized Logs:**
+- **Problem:** `bone_machine.py` was writing poetry about "Fossilization" and "Amber" every tick.
+- **Fix:** Replaced melodramatic logging with clean, tactical status updates (`🛡️ DAMPENER`, `⚖️ REGULATOR`). The machine now speaks like a mechanic, not a poet.
+
+#### **📈 DYNAMICS (The Meadows Lens)**
+
+- **Continuity Loop Restored:**
+- **Problem:** The `SessionGuardian` in `bone_main.py` was calling `generate_session_summary` on exit, which we had accidentally deleted. This would have caused the system to crash _while trying to report a crash_.
+- **Fix:** Restored the summary logic. The exit ramp is now paved and safe.
+
+
 ### **BONEAMANITA v13.2.0: "THE DIAMOND SOUL"**
 
 _"Tension is the great integrity." — R. Buckminster Fuller_

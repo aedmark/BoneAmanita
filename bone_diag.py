@@ -1,6 +1,4 @@
-""" bone_diagnostic.py
- "The unexamined code is not worth executing."
- A structural stress-test for the BoneAmanita Engine.
+""" bone_diagnostic.py - "The unexamined code is not worth executing."
 """
 
 import sys

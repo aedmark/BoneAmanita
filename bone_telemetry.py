@@ -1,4 +1,4 @@
-""" bone_telemetry.py """
+""" dev/bone_telemetry.py """
 
 import json, time, os, glob, uuid
 from typing import Any, Dict, List, Optional, Deque
@@ -32,339 +32,106 @@ class DecisionCrystal:
     council_mandates: List[str] = field(default_factory=list)
     final_response: str = ""
 
+    def __str__(self):
+        e_val = self.leverage_metrics.get('E', 0.0)
+        return (
+            f"💎 CRYSTAL [{self.decision_id}] {self.system_state} | "
+            f"Arch: {self.active_archetype} | E: {e_val:.2f}")
+
     def crystallize(self) -> str:
-        e = self.leverage_metrics.get('E', 0.0)
-        b = self.leverage_metrics.get('Beta', 0.0)
-        volts = self.physics_state.get('voltage', 0.0)
-        return (
-            f"💎 VSL CRYSTAL [{self.decision_id}] | {self.active_archetype}\n"
-            f"   METRICS: E: {e:.2f} | β: {b:.2f} | V: {volts:.1f}\n"
-            f"   STATE: {self.system_state} | MANDATES: {len(self.council_mandates)}")
+        data = asdict(self)
+        data["_summary"] = f"{self.system_state}::{self.active_archetype}"
+        data["_type"] = "CRYSTAL"
+        return json.dumps(data)
 
-    def to_json(self):
-        return json.dumps(asdict(self))
+class BlackBoxReader:
+    def __init__(self, log_dir="logs/telemetry"):
+        self.log_dir = log_dir
 
-    def explain_yourself(self) -> str:
-        volts = self.physics_state.get('voltage', 0.0)
-        drag = self.physics_state.get('narrative_drag', 0.0)
-        mood = "Neutral"
-        if volts > 20: mood = "Manic / High Energy"
-        elif volts < 5: mood = "Sedated / Low Energy"
-        texture = "Smooth"
-        if drag > 10: texture = "Viscous / Heavy"
-        elif drag < 2: texture = "Frictionless / Slippery"
-        archetype = self.active_archetype
-        return (
-            f"CAPTAIN'S LOG [{self.decision_id}]:\n"
-            f"   The system is currently {mood} and the narrative feels {texture}.\n"
-            f"   I am viewing this through the lens of '{archetype}'.\n"
-            f"   My primary directive right now is: {self.system_state}."
-        )
-
-@dataclass
-class PhaseTrace:
-    phase_name: str
-    start_time: float
-    end_time: float = 0.0
-    initial_snapshot: Dict = field(default_factory=dict)
-    final_snapshot: Dict = field(default_factory=dict)
-    state_diff: Dict = field(default_factory=dict)
-    duration: float = 0.0
-
-@dataclass
-class CycleTrace:
-    cycle_id: str
-    start_time: float
-    end_time: float = 0.0
-    phases: Dict[str, PhaseTrace] = field(default_factory=dict)
-    decisions: List[Dict] = field(default_factory=list)
-    performance: Dict[str, float] = field(default_factory=dict)
-
-    def to_json(self):
-        return json.dumps(asdict(self))
-
-class LogManager:
-    MAX_BYTES = 5 * 1024 * 1024
-    BACKUP_COUNT = 5
-
-    def __init__(self, filepath: str):
-        self.filepath = filepath
-        self._file = None
-        self._open_file()
-
-    def _open_file(self):
-        self._ensure_dir()
-        self._file = open(self.filepath, "a", encoding="utf-8")
-
-    def _ensure_dir(self):
-        directory = os.path.dirname(self.filepath)
-        if directory and not os.path.exists(directory):
+    def get_recent_history(self, limit=4) -> List[str]:
+        if not os.path.exists(self.log_dir):
+            return []
+        pattern = os.path.join(self.log_dir, "trace_*.jsonl")
+        files = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
+        history = []
+        for fpath in files:
+            if len(history) >= limit: break
             try:
-                os.makedirs(directory)
-            except OSError:
-                pass
-
-    def write(self, data: str):
-        if self._file is None:
-            self._open_file()
-        try:
-            self._file.write(data + "\n")
-            self._file.flush()
-            if self._file.tell() >= self.MAX_BYTES:
-                self._rotate()
-        except Exception as e:
-            print(f"{Prisma.RED}[LOG MANAGER FAIL]: {e}{Prisma.RST}")
-
-    def _rotate(self):
-        print(f"{Prisma.YEL}[LOG MANAGER]: Rotating logs. Flushing the bathtub.{Prisma.RST}")
-        self._close()
-        for i in range(self.BACKUP_COUNT - 1, 0, -1):
-            src = f"{self.filepath}.{i}"
-            dst = f"{self.filepath}.{i+1}"
-            if os.path.exists(src):
-                try:
-                    os.rename(src, dst)
-                except OSError:
-                    pass
-        if os.path.exists(self.filepath):
-            try:
-                os.rename(self.filepath, f"{self.filepath}.1")
-            except OSError:
-                pass
-        self._open_file()
-
-    def _close(self):
-        if self._file:
-            self._file.close()
-            self._file = None
-
-    def __del__(self):
-        self._close()
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    for line in reversed(lines):
+                        if len(history) >= limit: break
+                        try:
+                            data = json.loads(line)
+                            if data.get("_type") == "CRYSTAL" or "final_response" in data:
+                                resp = data.get("final_response", "")
+                                if not resp: continue
+                                prompt = data.get("prompt_snapshot", "")
+                                user_text = "Unknown"
+                                if "User:" in prompt:
+                                    parts = prompt.split("User:")
+                                    if len(parts) > 1:
+                                        user_text = parts[1].split("\n")[0].strip()
+                                entry = f"User: {user_text} | System: {resp}"
+                                history.insert(0, entry)
+                        except json.JSONDecodeError:
+                            continue
+            except Exception:
+                continue
+        return history[-limit:]
 
 class TelemetryService:
-    _INSTANCE = None
-    _TRACER = None
+    log_dir = "logs/telemetry"
+    _tracer_instance = None
 
-    def __init__(self, session_id: str, log_dir: str = "telemetry"):
-        self.session_id = session_id
-        filepath = os.path.join(log_dir, f"trace_{session_id}.jsonl")
-        self.active_log = filepath
-        self.manager = LogManager(filepath)
-        self.crystals: Deque[DecisionCrystal] = deque(maxlen=50)
-        print(f"{Prisma.CYN}[TELEMETRY]: Observability Layer Active.{Prisma.RST}")
-        print(f"{Prisma.GRY}   > Managed by LogManager at: {filepath}{Prisma.RST}")
+    def __init__(self):
+        self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=50)
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
+        self.current_trace_file = os.path.join(
+            self.log_dir, f"trace_{int(time.time())}.jsonl")
+        self.active_crystal = None
+
+    @classmethod
+    def get_tracer(cls):
+        if cls._tracer_instance is None:
+            cls._tracer_instance = TelemetryService()
+        return cls._tracer_instance
 
     @classmethod
     def get_instance(cls):
-        if cls._INSTANCE is None:
-            cls.initialize(f"auto_{int(time.time())}")
-        return cls._INSTANCE
+        return cls.get_tracer()
 
-    @classmethod
-    def initialize(cls, session_id: str):
-        if cls._INSTANCE: return cls._INSTANCE
-        base_dir = os.path.abspath(os.getcwd())
-        log_dir = os.path.join(base_dir, "telemetry")
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        cls._INSTANCE = TelemetryService(session_id, log_dir)
-        return cls._INSTANCE
+    def start_cycle(self, trace_id: str):
+        self.active_crystal = DecisionCrystal(decision_id=trace_id)
 
-    @classmethod
-    def get_tracer(cls, session_id=None):
-        if cls._TRACER is None:
-            if session_id is None:
-                session_id = str(uuid.uuid4())[:8]
-            cls._TRACER = SimulationTracer(session_id)
-        return cls._TRACER
-
-    def log_crystal(self, crystal: DecisionCrystal):
-        self.crystals.append(crystal)
-        self.manager.write(crystal.to_json())
-        print(f"{Prisma.GRY}[AUDIT]: {crystal.crystallize()}{Prisma.RST}")
-
-    def capture_decision(self, component: str, decision_type: str,
-                         inputs: Dict, reasoning: str, outcome: str):
+    def log_decision(self, component: str, decision_type: str, inputs: Any, reasoning: str, outcome: str):
+        if not self.active_crystal: return
         trace = DecisionTrace(
-            trace_id=str(uuid.uuid4())[:8],
+            trace_id=self.active_crystal.decision_id,
             timestamp=time.time(),
             component=component,
             decision_type=decision_type,
-            inputs=self._sanitize(inputs),
+            inputs=inputs if isinstance(inputs, dict) else {"raw": str(inputs)},
             reasoning=reasoning,
             outcome=outcome)
-        self.manager.write(trace.to_json())
+        self.trace_buffer.append(trace)
+        self._write_line(trace.to_json())
 
-    def report_last_thought(self):
+    def log_crystal(self, crystal: DecisionCrystal):
+        self._write_line(crystal.crystallize())
+
+    def _write_line(self, json_str: str):
         try:
-            with open(self.active_log, 'r') as f:
-                lines = f.readlines()
-                if not lines: return
-                last_line = lines[-1]
-                data = json.loads(last_line)
-                crystal = DecisionCrystal(**data)
-                print(f"\n{Prisma.GRY}{crystal.explain_yourself()}{Prisma.RST}\n")
-        except Exception as e:
-            print(f"Could not decipher the black box: {e}")
+            with open(self.current_trace_file, "a", encoding="utf-8") as f:
+                f.write(json_str + "\n")
+        except Exception:
+            pass
 
-    def generate_session_summary(self) -> str:
-        if not hasattr(self, 'active_log') or not self.active_log or not os.path.exists(self.active_log):
-            return "Session Log Not Found."
-        try:
-            with open(self.active_log, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-            if not lines: return "Session Empty."
-            count = len(lines)
-            try:
-                start_data = json.loads(lines[0])
-                end_data = json.loads(lines[-1])
-                start_time = start_data.get("timestamp", 0)
-                end_time = end_data.get("timestamp", 0)
-                duration = end_time - start_time
-            except:
-                duration = 0.0
-            velocity = (count / duration) if duration > 0 else 0.0
-            return (
-                f"\n{Prisma.CYN}=== SESSION DEBRIEF ==={Prisma.RST}\n"
-                f"⏱  Duration: {duration:.1f}s\n"
-                f"🧠 Thoughts Processed: {count}\n"
-                f"⚡ Mental Velocity: {velocity:.2f} cycles/sec\n"
-                f"📂 Log Saved: {os.path.basename(self.active_log)}\n"
-            )
-        except Exception as e:
-            return f"Could not generate summary: {e}"
-
-    def _sanitize(self, data: Any, depth: int = 0, max_depth: int = 3) -> Any:
-        if depth > max_depth:
-            return "<Max Depth Exceeded>"
-        if isinstance(data, (str, int, float, bool, type(None))):
-            return data
-        if isinstance(data, (set, tuple)):
-            return [self._sanitize(i, depth + 1, max_depth) for i in data]
-        if isinstance(data, dict):
-            return {k: self._sanitize(v, depth + 1, max_depth)
-                    for k, v in data.items() if k != "graph"}
-        if isinstance(data, list):
-            return [self._sanitize(i, depth + 1, max_depth) for i in data]
-        if hasattr(data, '__dict__'):
-            return self._sanitize(vars(data), depth + 1, max_depth)
-        return str(data)
-
-class SimulationTracer:
-    def __init__(self, session_id: str):
-        self.session_id = session_id
-        self.logger = TelemetryService.initialize(session_id)
-        self.current_cycle: Optional[CycleTrace] = None
-        self.active_phases: Dict[str, PhaseTrace] = {}
-
-    def start_cycle(self, cycle_id):
-        self.current_cycle = CycleTrace(
-            cycle_id=cycle_id,
-            start_time=time.time())
-        self.active_phases = {}
-
-    def trace_cycle(self, cycle_id):
-        self.start_cycle(cycle_id)
-
-    def start_phase(self, phase_name: str, ctx=None):
-        if not self.current_cycle: return
-        snapshot = {}
-        if ctx:
-            snapshot = self._extract_metrics(ctx)
-        self.active_phases[phase_name] = PhaseTrace(
-            phase_name=phase_name,
-            start_time=time.time(),
-            initial_snapshot=snapshot)
-
-    def end_phase(self, phase_name: str, start_ctx, end_ctx):
-        if not self.current_cycle or phase_name not in self.active_phases:
-            return
-        trace = self.active_phases.pop(phase_name)
-        trace.end_time = time.time()
-        trace.duration = trace.end_time - trace.start_time
-        if start_ctx and end_ctx:
-            start_snapshot = trace.initial_snapshot or self._extract_metrics(start_ctx)
-            end_snapshot = self._extract_metrics(end_ctx)
-            trace.final_snapshot = end_snapshot
-            trace.state_diff = self._diff_states(start_snapshot, end_snapshot)
-        self.current_cycle.phases[phase_name] = trace
-
-    def finalize_cycle(self):
-        if not self.current_cycle: return
-        self.current_cycle.end_time = time.time()
-        # Log the cycle trace via the manager
-        self.logger.manager.write(self.current_cycle.to_json())
-        self.current_cycle = None
-
-    def _extract_metrics(self, ctx) -> Dict:
-        metrics = {}
-        if hasattr(ctx, 'physics'):
-            p = ctx.physics
-            if hasattr(p, 'to_dict'):
-                d = p.to_dict()
-                metrics['physics'] = {k:v for k,v in d.items() if isinstance(v, (int, float, str, bool))}
-            elif isinstance(p, dict):
-                metrics['physics'] = {k:v for k,v in p.items() if isinstance(v, (int, float, str, bool))}
-        if hasattr(ctx, 'bio_result'):
-            metrics['bio'] = {k:v for k,v in ctx.bio_result.items() if isinstance(v, (int, float, str, bool))}
-        return metrics
-
-    def _diff_states(self, start: Dict, end: Dict) -> Dict:
-        diffs = {}
-        for category in start:
-            if category not in end: continue
-            s_cat = start[category]
-            e_cat = end[category]
-            cat_diff = {}
-            for k, v in s_cat.items():
-                if k in e_cat and e_cat[k] != v:
-                    if isinstance(v, float) and isinstance(e_cat[k], float):
-                        if abs(v - e_cat[k]) < 0.001: continue
-                    cat_diff[k] = {"from": v, "to": e_cat[k]}
-            if cat_diff:
-                diffs[category] = cat_diff
-        return diffs
-
-    def diagnose_issue(self, symptom: str) -> str:
-        symptom = symptom.lower()
-        if "atp" in symptom and "drop" in symptom:
-            return ("INVESTIGATION: RAPID ATP LOSS\n"
-                    "1. Check MITOCHONDRIA efficiency in Bio System.\n"
-                    "2. Check if HOSTILE NARRATIVE DRAG is taxing metabolism.\n"
-                    "3. Verify no PARASITIC LOAD in Sensation Phase.")
-
-        if "latency" in symptom or "lag" in symptom:
-            return ("INVESTIGATION: SYSTEM LATENCY\n"
-                    "1. Check LLM Response Times in Telemetry.\n"
-                    "2. Verify Memory Graph size isn't exploding.\n"
-                    "3. Check for infinite loops in Logic Phase.")
-
-        return f"INVESTIGATION: UNKNOWN SYMPTOM '{symptom}'. Suggest checking traces for recent exceptions."
-
-class BlackBoxReader:
-    def __init__(self, log_dir="telemetry"):
-        self.log_dir = log_dir
-
-    def get_recent_history(self, limit=5) -> List[str]:
-        pattern = os.path.join(self.log_dir, "trace_*.jsonl")
-        files = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
-        if not files:
-            return ["Memory Void: No flight logs found."]
-        target_file = files[0]
-        narrative_log = []
-        try:
-            with open(target_file, 'r', encoding='utf-8') as f:
-                for line in f:
-                    try:
-                        data = json.loads(line)
-                        if "final_response" in data and data["final_response"]:
-                            text = data["final_response"]
-                            narrative_log.append(text)
-                    except json.JSONDecodeError:
-                        continue
-        except Exception as e:
-            return [f"Memory Corruption: {e}"]
-        return narrative_log[-limit:]
+    def get_last_thoughts(self, limit=3) -> List[str]:
+        reader = BlackBoxReader(self.log_dir)
+        history = reader.get_recent_history(limit)
+        return [h.split("System: ")[-1] for h in history if "System: " in h]
 
     def get_last_fatal_error(self) -> Optional[str]:
         pattern = os.path.join(self.log_dir, "trace_*.jsonl")
@@ -377,7 +144,10 @@ class BlackBoxReader:
                 if not lines: return None
                 last_line = json.loads(lines[-1])
                 if "outcome" in last_line and "CRITICAL" in str(last_line["outcome"]):
-                    return f"PREVIOUS SYSTEM CRASH: {last_line.get('reasoning', 'Unknown Error')}"
-        except:
-            pass
-        return None
+                    return f"PREVIOUS SYSTEM CRASH: {last_line.get('reasoning', 'Unknown')}"
+        except Exception:
+            return None
+
+    def generate_session_summary(self) -> str:
+        count = len(self.trace_buffer)
+        return f"\n[TELEMETRY] Session ended. {count} decisions buffered in {self.current_trace_file}"
