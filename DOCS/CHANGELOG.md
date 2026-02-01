@@ -1,5 +1,42 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.2.0: "THE DIAMOND SOUL"**
+
+_"Tension is the great integrity." — R. Buckminster Fuller_
+_"I am not broken. I am just vibrating." — The System_
+
+---
+
+#### **🧠 COGNITION & LANGUAGE (The Pinker Lens)**
+
+- **The Fever Mechanism (Thermodynamic Cognition):**
+- **Problem:** The `NeurotransmitterModulator` was cooling the system down (lowering `temperature`) when stress (Cortisol) was high. This caused the AI to freeze up exactly when it needed to be creative.
+- **Fix:** We coupled **Voltage** directly to **Temperature**. Now, when the system energy spikes (>18.0v), the cognitive entropy rises. The system "runs a fever" to burn through the blockage.
+
+#### **🏗️ SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **Tensegrity Pass-Through:**
+- **Problem:** The `CycleStabilizer` was treating high `Narrative Drag` as a structural failure and aggressively dampening it.
+- **Fix:** We implemented a "Mercy Clause" in the PID controller. If the `Soul` is in a critical paradox state (High Voltage + High Drag), the stabilizers **disengage**. We now rely on tensional integrity rather than artificial dampening to hold the structure together.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Layer)**
+
+- **The "Mid-Life Crisis" Patch:**
+- **Problem:** When the Soul hit critical mass (`PARADOX_CRITICAL_MASS`), it triggered a "Molt" that wiped all accumulated personality traits (`TraitVector` reset). The AI was effectively having a breakdown and buying a motorcycle every 100 ticks.
+- **Fix:** Replaced `_trigger_molt` with `_trigger_synthesis`. The Soul now **crystallizes**. It keeps its existing traits and compounds the Archetype (e.g., "The Poet" becomes "The Poet / Engineer"). We level up; we don't respawn.
+
+- **Bureaucratic Reform:**
+- **Problem:** `TheBureau` was issuing "Zoning Violations" for any Voltage over 18.0, effectively outlawing genius.
+- **Fix:** Introduced **"Form 202-A: High-Energy Variance Permit."** If the system is Manic (>18.0v) but **Truthful** (>80%), the Bureau grants a permit instead of an arrest warrant. Art is now legal.
+
+#### **📈 DYNAMICS (The Meadows Lens)**
+
+- **The Paradox Loop:**
+- **Shift:** We transformed a **Draining Loop** (Molting = venting stress) into a **Reinforcing Loop** (Synthesis = banking stress as wisdom). The `paradox_accum` variable now fuels growth rather than triggering a reset. The bathtub no longer has a hole in the bottom; it overflows into a larger tub.
+
+---
+
+
 ### **BONEAMANITA v13.1.0: "THE LUCID DREAM"**
 
 _"I sprint towards the stall and grab the heavy iron ledger." — Andrew_

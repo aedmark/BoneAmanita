@@ -307,7 +307,7 @@ class TheBureau:
 
     def audit(self, physics, bio_state, context=None):
         if bio_state.get("health", 100.0) < 20.0:
-            return None # Okay, we don't tax the dying. We aren't monsters.
+            return None
         beige_threshold = 0.6
         if context:
             mode = context.get('mode', 'NORMAL')
@@ -321,9 +321,16 @@ class TheBureau:
         beige_density = len(suburban_words) / max(1, len(clean_words))
         selected_form = None
         evidence = []
+        selected_form = None
+        evidence = []
+        truth_ratio = physics.get("truth_ratio", 0.0)
         if voltage > 18.0:
-            selected_form = "ZONING_VIOLATION"
-            evidence = ["Excessive Voltage", "Unlicensed Reality Construction"]
+            if truth_ratio > 0.8:
+                selected_form = "Form 202-A"
+                evidence = ["Voltage > 18.0", "Truth > 80%", "Artistic License Verified"]
+            else:
+                selected_form = "ZONING_VIOLATION"
+                evidence = ["Excessive Voltage", "Unlicensed Reality Construction"]
         elif buzz_hits:
             selected_form = "Form 404"
             evidence = buzz_hits

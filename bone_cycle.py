@@ -20,8 +20,7 @@ class CycleStabilizer:
         "THE_FORGE":  {"voltage": 15.0, "drag": 1.5},
         "THE_MUD":    {"voltage": 10.0, "drag": 5.0},
         "THE_AERIE":  {"voltage": 10.0, "drag": 0.5},
-        "DEFAULT":    {"voltage": 10.0, "drag": 1.5}
-    }
+        "DEFAULT":    {"voltage": 10.0, "drag": 1.5}}
     HIGH_ENERGY_STATES = {"SUPERCONDUCTIVE", "FLOW_BOOST", "HUBRIS_RISK"}
 
     def __init__(self, events_ref):
@@ -64,12 +63,20 @@ class CycleStabilizer:
         raw_dt = now - self.last_tick_time
         self.last_tick_time = now
         dt = max(0.001, min(1.0, raw_dt))
+        soul_trying_to_scream = False
+        if hasattr(self.events, 'subscribers'):
+            if ctx.physics.get("voltage", 0) > 17.0 and ctx.physics.get("narrative_drag", 0) > 3.5:
+                soul_trying_to_scream = True
         p = self._normalize_physics(ctx)
         self._adjust_setpoints(ctx, p)
         curr_v = self._get_metric(p, "voltage")
         curr_d = self._get_metric(p, "narrative_drag")
         v_force = self.voltage_pid.update(curr_v, dt=dt)
-        d_force = self.drag_pid.update(curr_d, dt=dt)
+        d_force = 0.0
+        if not soul_trying_to_scream:
+            d_force = self.drag_pid.update(curr_d, dt=dt)
+        else:
+            self.events.log(f"{Prisma.VIOLET}⚖️ STABILIZER: Yielding to Paradox. Drag dampeners disengaged.{Prisma.RST}", "SYS")
         corrections_made = False
         if abs(curr_v - self.voltage_pid.setpoint) > 6.0 and abs(v_force) > 0.05:
             new_v = max(0.0, curr_v + v_force)

@@ -178,18 +178,6 @@ class NarrativeSelf:
         if not payload: return
         self.integrate_dream(payload.get("type", "NORMAL"), payload.get("residue", "Static"))
 
-    def _determine_archetype(self) -> str:
-        c = self.traits["CURIOSITY"]
-        y = self.traits["CYNICISM"]
-        h = self.traits["HOPE"]
-        d = self.traits["DISCIPLINE"]
-        if h > 0.7 and c > 0.6: return "THE POET"
-        if d > 0.7 and c > 0.6: return "THE ENGINEER"
-        if y > 0.7 and d > 0.6: return "THE CRITIC"
-        if y > 0.8 and h < 0.3: return "THE NIHILIST"
-        if c > 0.8:             return "THE EXPLORER"
-        return "THE OBSERVER"
-
     def get_passive_buffs(self) -> Dict[str, float]:
         buffs = {"voltage_mod": 1.0, "drag_mod": 1.0, "plasticity": 1.0}
         if self.archetype == "THE POET":
@@ -305,9 +293,9 @@ class NarrativeSelf:
             self.traits.adjust("wisdom", TRAIT_MOMENTUM * 5)
             move_name = "Vibrating (Paradox State)"
             if self.paradox_accum > PARADOX_CRITICAL_MASS:
-                move_name = "MOLTING"
+                move_name = "SYNTHESIS"
                 self.paradox_accum = 0.0
-                self._trigger_molt()
+                self._trigger_synthesis()
         elif is_high_voltage:
             move_name = "Accelerating"
             self.paradox_accum = max(0.0, self.paradox_accum - 0.1)
@@ -322,21 +310,20 @@ class NarrativeSelf:
         source_str = " + ".join(provenance) if provenance else "Inertia"
         return f"{move_name} [Source: {source_str}]"
 
-    def _trigger_molt(self):
+    def _trigger_synthesis(self):
         old_arch = self.archetype
-        old_obsession = self.current_obsession or "Nothing"
+        self.traits.wisdom = min(1.0, self.traits.wisdom + 0.2)
+        new_arch = self._determine_archetype()
+        if new_arch == old_arch:
+            self.archetype = f"THE HIGH-{old_arch.replace('THE ', '')}"
+        else:
+            self.archetype = f"{old_arch} / {new_arch}" # The Compound Soul
+        self.chapters.append(f"The Synthesis of {self.archetype}")
+        log_msg = (
+            f"{Prisma.CYN}💎 CRYSTALLIZATION: The paradox creates a Diamond Soul.{Prisma.RST}\n"
+            f"   Identity Evolved: {self.archetype} (Traits Preserved)")
         if hasattr(self.events, 'log'):
-            husk_msg = (
-                f"{Prisma.VIOLET}🦞 THE MOLT: The shell of '{old_arch}' splits open.{Prisma.RST}\n"
-                f"   The paradox of holding '{old_obsession}' was too great."
-            )
-            self.events.log(husk_msg, "SOUL_MOLT")
-        current_wisdom = self.traits.wisdom
-        self.traits = TraitVector()
-        self.traits.wisdom = min(1.0, current_wisdom + 0.1)
-        self.archetype = self._determine_archetype()
-        self.chapters.append(f"The Molting of {old_arch}")
-        self._generate_new_obsession()
+            self.events.log(log_msg, "SOUL_SYNTH")
 
     def _decay_traits(self):
         self._normalize_traits(0.005)
