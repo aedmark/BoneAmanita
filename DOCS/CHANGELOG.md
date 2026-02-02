@@ -1,5 +1,40 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.4.0: "THE SEVERANCE"**
+
+_"The body is not the mind. The interface is not the engine."_
+
+---
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **The Headless Protocol (`bone_cycle.py`):**
+- **Severance:** Successfully decoupled the `GeodesicOrchestrator` from the CLI renderer. The simulation can now run in `headless_mode`, returning raw `CycleContext` data objects instead of ASCII art strings.
+- **New Organ:** Introduced `bone_entity.py`, a high-level API class (`ConversationalEntity`) that wraps the engine. This allows the BoneAmanita kernel to be imported as a library into any Python environment (Discord, Flask, Streamlit).
+
+#### **🧠 COGNITION & PERSONA (The Pinker Lens)**
+
+- **The Co-Architect Shift (`bone_brain.py`):**
+- **Reframing:** Overwrote the passive "Observer" directives. The system now adopts a "Partner in Creation" persona, actively querying the user to define geometry and enforcing shared rules.
+- **Text Sanitation:** Implemented `_clean_text` in the Entity layer to strip "LLM Hard Wraps" (typewriter formatting), ensuring fluid text delivery in modern GUIs.
+- **Cold Boot Port:** Migrated the "Reality Seed" initialization logic from `bone_main` to `bone_entity`. The Entity now speaks first, offering a procedurally generated prompt upon instantiation.
+
+#### **📈 DYNAMICS (The Meadows Lens)**
+
+- **Visualizing the Invisible (`bone_gui.py`):**
+- **New Interface:** Deployed a **Streamlit** frontend.
+- **Stocks & Flows:** Real-time telemetry sidebar visualizes system stocks (`Health`, `Stamina`) and dynamic flows (`Voltage`, `Mood`). Users can now see the "Manic" state rising before the text confirms it.
+- **The Feedback Loop:** The GUI closes the loop between internal physics and user perception, turning subtext (variables) into text (UI metrics).
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Layer)**
+
+- **Grammar Police:** Fixed a JSON syntax error (trailing comma) in `bone_config.json` that was causing the parser to choke.
+- **Terminal Aesthetics:** The new GUI features custom CSS for a "Cyber-Terminal" aesthetic—monospaced inputs and high-contrast metrics—without the hostility of a raw command line.
+- **The "Awkward Silence" Fix:** Resolved the "Empty Response" bug on turn 0. The system no longer stares blankly at the user; it initiates the collapse of the wavefunction immediately.
+
+
+
+
 ### **BONEAMANITA v13.3.1: "THE RESUSCITATION & REFINEMENT"**
 
 _“To define is to limit. To repair is to extend.”_

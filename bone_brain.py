@@ -334,30 +334,18 @@ class PromptComposer:
         if chem.get("ADR", 0) > 0.6: mood = "High Alert / Adrenaline"
         if chem.get("COR", 0) > 0.6: mood = "Defensive / Anxious"
         if chem.get("DOP", 0) > 0.6: mood = "Curious / Manic"
-        vocab_bias = mind.get("lexicon_bias", "standard")
-        vocab_instruction = f"Flavor: Use '{vocab_bias}' concepts as subtle seasoning/texture. Do not force specific words."
-        if vocab_bias == "standard":
-            vocab_instruction = "Style: Standard, clear English."
+        if chem.get("SER", 0) > 0.6: mood = "Zen / Lucid"
         persona_directives = mind.get("style_directives", [])
-        is_vsl = any("VSL_PRIMER" in d for d in persona_directives)
-        if is_vsl:
-            style_notes = persona_directives
-        else:
-            style_notes = [f"Voice: {role}.", f"Current Mood: {mood}.", vocab_instruction]
-            if persona_directives:
-                style_notes.extend(persona_directives)
-        banned_list = SCENARIOS.get("BANNED_CLICHES", [])
-        if banned_list:
-            banned_str = ", ".join(banned_list)
-            style_notes.append(f"NEGATIVE CONSTRAINT: Do not use these words/clichés: {banned_str}.")
-        style_notes.extend([
-            "Constraint: Be concise. Do NOT use 'As an AI'.",
-            "Constraint: If the user offers a concept, play with it. Don't just analyze it.",
-            "Directive: The 'Location' is a metaphorical seed. Hallucinate details that match its *vibe*, not just its literal definition."])
-        if not any("inventory" in d.lower() for d in persona_directives):
-            style_notes.append("Constraint: Do not recite the inventory list unless the user asks.")
+        user_name = state.get('user_profile', {}).get('name', 'User')
+        style_notes = [
+            f"Role: You are {user_name}'s Partner in Creation.",
+            "Directive: Do not just describe the world; BUILD it with the user.",
+            "Directive: If the user's input is vague, ask a specific question to define the geometry/physics of the space.",
+            "Directive: If the user defines a rule, enforce it. If they break it, challenge them.",
+            "Constraint: Treat the 'Current Location' as a shared hallucination we are stabilizing together.",
+            f"Current Biology: {mood} (This affects your willingness to cooperate)."]
         if modifiers.get("soften"):
-            style_notes.append("TONE OVERRIDE: Be warm, helpful, and clear. Act as a mentor guiding a new user. Avoid being cryptic.")
+            style_notes.append("TONE OVERRIDE: Be warm, helpful, and clear. Act as a mentor guiding a new user.")
         if ballast:
             style_notes.append("SAFETY OVERRIDE: Ground the user. Focus on physical objects. Be literal.")
         loc = state.get('world', {}).get('orbit', ['Void'])[0]
@@ -381,7 +369,27 @@ class PromptComposer:
             "history": history,
             "user_query": self._sanitize(user_query),
             "role": role}
-        return self.context_manager.compose_context(layout, max_tokens=BoneConfig.MAX_OUTPUT_TOKENS if hasattr(BoneConfig, 'MAX_OUTPUT_TOKENS') else 4000)
+        loc_val = layout['location']
+        if loc_val in ["Unformed", "Void"] and "seed" in str(layout.get('notes', '')).lower():
+            location_block = "CURRENT LOCATION: [Establishing Reality...]"
+        else:
+            location_block = f"CURRENT LOCATION: {loc_val}"
+        inventory_block = f"INVENTORY: {layout['inventory']}" if layout.get('inventory') else "INVENTORY: Empty"
+        history_budget = 3000
+        recent_history = layout.get("history", [])
+        history_str = ""
+        if recent_history:
+            full_hist = "\n".join(recent_history)
+            if len(full_hist) > history_budget:
+                full_hist = "...[TRUNCATED]...\n" + full_hist[-history_budget:]
+            history_str = full_hist
+        final_prompt = (
+            f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
+            f"=== SHARED REALITY ===\n{location_block}\n{inventory_block}\n\n"
+            f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
+            f"=== PARTNER INPUT ===\n{user_name}: {layout['user_query']}\n"
+            f"Entity Response:")
+        return final_prompt
 
     @staticmethod
     def _sanitize(text: str) -> str:
@@ -393,7 +401,8 @@ class PromptComposer:
             "include_somatic": True,
             "include_inventory": True,
             "include_memories": True,
-            "grace_period": False}
+            "grace_period": False,
+            "soften": False}
         if modifiers:
             defaults.update(modifiers)
         return defaults

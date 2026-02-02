@@ -819,7 +819,6 @@ class GeodesicOrchestrator:
             if hasattr(ctx, "last_dream") and ctx.last_dream:
                 snapshot["dream"] = ctx.last_dream
             snapshot["enzyme"] = ctx.bio_result.get("enzyme", "NONE")
-            snapshot["enzyme"] = ctx.bio_result.get("enzyme", "NONE")
             snapshot["chemistry"] = ctx.bio_result.get("chemistry", {})
             snapshot["physics"] = ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics
             if hasattr(self.eng, "soul"):
@@ -827,5 +826,32 @@ class GeodesicOrchestrator:
             if "ui" in snapshot:
                 self.symbiosis.monitor_host(latency, snapshot["ui"], len(user_message))
             return snapshot
+        finally:
+            tracer.finalize_cycle()
+
+    def run_headless_turn(self, user_message: str, latency: float = 0.0) -> Dict[str, Any]:
+        tracer = TelemetryService.get_tracer()
+        cycle_id = str(uuid.uuid4())[:8]
+        tracer.start_cycle(cycle_id)
+        try:
+            ctx = CycleContext(input_text=user_message)
+            ctx.user_name = self.eng.user_name
+            ctx.council_mandates = []
+            self.eng.events.flush()
+            ctx = self.simulator.run_simulation(ctx)
+            if not ctx.is_alive:
+                return self.eng.trigger_death(ctx.physics)
+            state_snapshot = {
+                "trace_id": cycle_id,
+                "is_alive": ctx.is_alive,
+                "physics": ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics,
+                "bio": ctx.bio_result,
+                "mind": ctx.mind_state,
+                "world": ctx.world_state,
+                "logs": ctx.logs,
+                "soul": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else {},
+                "council_mandates": getattr(ctx, "council_mandates", [])}
+            self.symbiosis.monitor_host(latency, "HEADLESS_MODE", len(user_message))
+            return state_snapshot
         finally:
             tracer.finalize_cycle()

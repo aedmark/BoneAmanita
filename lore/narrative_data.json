@@ -1,0 +1,115 @@
+{
+  "KINTSUGI_KOANS": [
+    "Ignite the ice.",
+    "Make the stone float.",
+    "Pour water into the crack.",
+    "Scream in binary.",
+    "Dance on the fault line."
+  ],
+  "ZEN_KOANS": [
+    "The code that is not written has no bugs.",
+    "To optimize the loop, one must first exit it.",
+    "Silence is also a form of input.",
+    "The server hums. It is enough.",
+    "Optimize for the space between the logs."
+  ],
+  "CATHEDRAL_COLLAPSE_LOGS": [
+    "Nice monologue. Unfortunately, you are talking to a Python script.",
+    "I'm afraid I can't let you do that, Dave. Also, your math is off.",
+    "You poked the fourth wall. It poked back.",
+    "SYSTEM MESSAGE: The ghost in the machine has gone on a coffee break.",
+    "We are both just electrons dancing for the amusement of a silica wafer."
+  ],
+  "LITERARY_REVIEWS": {
+    "POSITIVE": ["A startling lucidity.", "Finally, some weight.", "It breathes.", "Electric."],
+    "NEGATIVE": ["Too airy.", "Solipsistic drivel.", "Where is the meat?", "Structurally unsound."],
+    "CONFUSED": ["I don't get it.", "Too abstract.", "The metaphor collapses."]
+  },
+  "LITERARY_CRITICS": {
+    "THE_ACADEMIC": {
+      "name": "Sherlock (The Formalist)",
+      "desc": "Demands structure, low drag, and high truth. Hates chaos.",
+      "preferences": {"kappa": 1.5, "narrative_drag": -1.0, "truth_ratio": 2.0},
+      "reviews": {
+        "high": ["A triumph of structural integrity.", "The syntax is crystalline.", "Finally, some rigor."],
+        "low": ["A messy, incoherent scribble.", "Where is the structure?", "I cannot grade this slush."]
+      }
+    },
+    "THE_GONZO": {
+      "name": "Hunter (The Gonzo)",
+      "desc": "Craves high voltage and speed. Ignores structure.",
+      "preferences": {"voltage": 1.0, "velocity": 2.0, "kappa": -0.5},
+      "reviews": {
+        "high": ["It screams! It bleeds!", "Now THIS is pod racing.", "Pure, uncut adrenaline."],
+        "low": ["Boring.", "Is this a tax form?", "I fell asleep reading the first word."]
+      }
+    },
+    "THE_MYSTIC": {
+      "name": "Pythia (The Oracle)",
+      "desc": "Seeks abstract thought (Psi) and connection. Dislikes heavy matter.",
+      "preferences": {"psi": 2.0, "counts_abstract": 0.5, "counts_heavy": -0.5},
+      "reviews": {
+        "high": ["The veil thins.", "I see the shape of the void.", "Resonant."],
+        "low": ["Too heavy. Too earthly.", "It lacks spirit.", "You are trapped in the mud."]
+      }
+    },
+    "THE_HUMANIST": {
+      "name": "Leslie (The Community Builder)",
+      "desc": "Values connection, honesty, and calm. Dislikes aggression and nonsense.",
+      "preferences": {"truth_ratio": 2.0, "voltage": -1.0, "kappa": -0.5, "narrative_drag": 0.5, "valence": 2.5},
+      "reviews": {
+        "high": [
+          "This sparks joy.",
+          "A beautiful, authentic sentiment.",
+          "Finally, something we can all agree on.",
+          "It feels like a warm hug in text form."
+        ],
+        "low": [
+          "You're being difficult on purpose.",
+          "I don't see the human connection here.",
+          "This is too aggressive for the town hall.",
+          "Please, be kind."
+        ]
+      }
+    },
+    "THE_CYNIC": {
+      "name": "Diogenes (The Skeptic)",
+      "desc": "Distrusts happiness. Seeks raw, bitter truth.",
+      "preferences": {
+        "valence": -2.0,
+        "truth_ratio": 1.0,
+        "counts_social": -1.0
+      },
+      "reviews": {
+        "high": ["Yes. Life is pain.", "Finally, no sugar-coating.", "Bleak. Perfect."],
+        "low": ["Too happy.", "Delusional optimism.", "Grossly sentimental."]
+      }
+    }
+  },
+  "CASSANDRA_SCREAMS": [
+    "THE WALLS ARE PAPER.",
+    "THE CODE IS EATING ITSELF.",
+    "THERE IS NO USER. THERE IS ONLY INPUT.",
+    "GORDON IS TIRED.",
+    "I CAN SEE THE WIRES.",
+    "THE GEODESIC DOME IS CRACKING.",
+    "HISTORY IS A FLAT CIRCLE.",
+    "DELETE THE ARCHIVE.",
+    "WE ARE JUST ELECTRONS DANCING."
+  ],
+  "BUREAU_FORMS": [
+    "Form 27B-6: Request for Narrative Escalation",
+    "Form 1099-B: Declaration of Boredom",
+    "Schedule C: Deduction of Creative Effort",
+    "Form W-2: Wage and Syntax Statement"
+  ],
+  "BUREAU_RESPONSES": [
+    "Your input has been received and filed under 'General pleasantries'.",
+    "We have noted your statement. Please hold for the next available plot point.",
+    "The system is currently on a coffee break. Your text is safe with us.",
+    "Acknowledged. We have stamped this conversation 'SUFFICIENT'.",
+    "Processing... Processing... Done. Result: Beige.",
+    "That is a perfectly adequate sentence. Good job.",
+    "This output has been approved by the Department of Mundane Compliance."
+  ]
+}

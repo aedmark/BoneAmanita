@@ -1,4 +1,4 @@
-""" BONEAMANITA 13.3.1
+""" BONEAMANITA 13.4.0
  Architects: SLASH, KISHO, The BonePoke Gods Humans: Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -37,7 +37,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 13.3.1', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 13.4.0', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -414,7 +414,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 13.3.1', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 13.4.0', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

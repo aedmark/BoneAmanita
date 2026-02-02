@@ -1,5 +1,6 @@
 """ bone_data.py - The Living Mythology """
-
+import json
+import os
 import random
 from typing import Dict, Any, Tuple, cast, List
 from bone_bus import Prisma
@@ -7,26 +8,26 @@ from bone_bus import Prisma
 class LoreManifest:
     _INSTANCE = None
 
-    def __init__(self):
-        self._registry = {
-            "BIO_NARRATIVE": BIO_NARRATIVE,
-            "LENSES": LENSES,
-            "NARRATIVE_DATA": NARRATIVE_DATA,
-            "STYLE_CRIMES": STYLE_CRIMES,
-            "GENETICS": GENETICS,
-            "LEXICON": LEXICON,
-            "ITEM_GENERATION": ITEM_GENERATION,
-            "GORDON": GORDON,
-            "GORDON_LOGS": GORDON_LOGS,
-            "DEATH": DEATH,
-            "SEEDS": SEEDS,
-            "DREAMS": DREAMS,
-            "ALMANAC_DATA": ALMANAC_DATA,
-            "SOMATIC_LIBRARY": SOMATIC_LIBRARY,
-            "SCENARIOS": SCENARIOS,
-            "FOOTNOTES": FOOTNOTES,
-            "COUNCIL_DATA": COUNCIL_DATA}
+    class LoreManifest:
+        _INSTANCE = None
+
+    def __init__(self, data_path="lore/"):
+        self.data_path = data_path
+        self._registry = {}
         self._overlays = {}
+        self.bootstrap_json()
+
+    def bootstrap_json(self):
+        if not os.path.exists(self.data_path):
+            print(f"{Prisma.RED}[ERR]: Lore directory not found!{Prisma.RST}")
+            return
+
+        for filename in os.listdir(self.data_path):
+            if filename.endswith(".json"):
+                category = filename.replace(".json", "").upper()
+                with open(os.path.join(self.data_path, filename), 'r') as f:
+                    self._registry[category] = json.load(f)
+        print(f"{Prisma.CYN}[AKASHIC]: {len(self._registry)} Lore Categories manifested.{Prisma.RST}")
 
     @classmethod
     def get_instance(cls):
