@@ -1,5 +1,33 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.5.1: "THE TENSEGRITY TUNE-UP"**
+
+_"To attain knowledge, add things every day. To attain wisdom, remove things every day."_ — Lao Tzu
+
+---
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **Vestigial Organ Removal (`bone_physics.py`):**
+  - **Deleted:** The `TemporalDynamics` class.
+  - **Rationale:** It was an evolutionary dead end. The `QuantumObserver` was already tracking voltage history; keeping a separate class for a simple deque was a violation of ephemeralization.
+- **Class Unrolling:**
+  - **Exploded:** `GeodesicDome` (a static class) has been dissolved into module-level functions (`calculate_metrics`) and constants. It was just a module wearing a trench coat.
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker Lens)**
+
+- **Telemetry Repair (`bone_main.py`):**
+  - **Fix:** `get_avg_voltage()` was trying to read from the deleted `dynamics` module (a "phantom limb" error). Re-routed the neural pathway to `self.phys.observer.voltage_history`.
+- **Configuration Hygiene (`bone_data.py`):**
+  - **Moved:** The `SANCTUARY` configuration block was evicted from the data loader and moved to `BonePresets` in `bone_bus.py`, where it belongs.
+
+#### **⚙️ DYNAMICS (The Meadows Lens)**
+
+- **Dependency Pruning (`bone_architect.py`):**
+  - **Update:** The `BoneArchitect` no longer attempts to instantiate the non-existent `TemporalDynamics` when building the physics engine. The `PhysSystem` dataclass has been updated to reflect this leaner reality.
+
+---
+
 ### **BONEAMANITA v13.5.0: "THE GREAT CONDENSATION"**
 
 _"Simplicity is the ultimate sophistication."_ — Leonardo da Vinci (and the BoneAmanita Cleanup Crew)

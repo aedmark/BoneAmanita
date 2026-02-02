@@ -227,7 +227,7 @@ class BoneAmanita:
             print(f"{Prisma.RED}   > {resource_name} skipped (Error: {e}){Prisma.RST}")
 
     def get_avg_voltage(self):
-        hist = self.phys.dynamics.voltage_history
+        hist = self.phys.observer.voltage_history
         if not hist: return 0.0
         return sum(hist) / len(hist)
 

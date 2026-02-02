@@ -3,10 +3,9 @@
 import json, os, random
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List
-from bone_data import TheLore, SANCTUARY
-from bone_bus import EventBus
+from bone_data import TheLore
+from bone_bus import EventBus, BonePresets
 
-# Load Lore Data specific to Personalities
 SCENARIOS = TheLore.get("scenarios") or {"ARCHETYPES": ["Void"], "BANNED_CLICHES": []}
 LENSES = TheLore.get("lenses") or {}
 
@@ -76,7 +75,7 @@ class EnneagramDriver:
         scores = {k: 0.0 for k in self.WEIGHTS.keys()}
         scores["NARRATOR"] += 2.0
         is_safe_metrics = (4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5)
-        if p_zone == SANCTUARY.ZONE or is_safe_metrics:
+        if p_zone == BonePresets.SANCTUARY.ZONE or is_safe_metrics:
             scores["NARRATOR"] += 6.0; scores["JESTER"] += 3.0; scores["GORDON"] -= 2.0
         for persona, criteria in self.WEIGHTS.items():
             if "tension_min" in criteria and p_vol > criteria["tension_min"]: scores[persona] += 3.0

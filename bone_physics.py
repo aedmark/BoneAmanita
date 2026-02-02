@@ -32,7 +32,7 @@ class TheGatekeeper:
         if not self._check_thermodynamics(ctx):
             return False, self._pack_refusal(ctx, "DARK_SYSTEM", "Energy critical. The inputs dissolve into the void.")
         if self._audit_bureaucracy(phys):
-             ctx.logs.append(f"{Prisma.OCHRE}⚠️ BUREAUCRATIC BYPASS: Form 27B/6 missing. Processing under protest.{Prisma.RST}")
+            ctx.logs.append(f"{Prisma.OCHRE}⚠️ BUREAUCRATIC BYPASS: Form 27B/6 missing. Processing under protest.{Prisma.RST}")
         if not self._audit_tangibility(phys):
             return False, self._pack_refusal(ctx, "TANGIBILITY_FAIL", self._get_tangibility_msg(phys))
         if phys.counts.get("antigen", 0) > 2:
@@ -52,7 +52,7 @@ class TheGatekeeper:
         drag = phys.narrative_drag
         if drag < 2.0:
             return False
-        probability = (drag / 50.0) 
+        probability = (drag / 50.0)
         is_boring = phys.voltage < 5.0
         if is_boring and random.random() < probability:
             return True
@@ -61,12 +61,10 @@ class TheGatekeeper:
     def _audit_tangibility(self, phys):
         if phys.truth_ratio > 0.8: return True
         mass_score = (
-            phys.counts.get("heavy", 0) + 
-            phys.counts.get("kinetic", 0) + 
-            phys.counts.get("constructive", 0) +
-            (phys.counts.get("play", 0) * 0.5)
-        )
-        
+                phys.counts.get("heavy", 0) +
+                phys.counts.get("kinetic", 0) +
+                phys.counts.get("constructive", 0) +
+                (phys.counts.get("play", 0) * 0.5))
         density = mass_score / max(1, len(phys.clean_words))
         required = 0.15 if self.eng.stamina > 15.0 else 0.05
         return density >= required
@@ -90,22 +88,6 @@ class TheGatekeeper:
         suggestion = random.choice(["stone", "iron", "bone", "mud"])
         return (f"{Prisma.OCHRE}TANGIBILITY VIOLATION: Concepts too airy.{Prisma.RST}\n"
                 f"   {Prisma.GRY}Anchor them with mass (e.g., {suggestion}).{Prisma.RST}")
-
-class TemporalDynamics:
-    def __init__(self):
-        self.voltage_history = []
-        self.window = 3
-    def commit(self, voltage):
-        self.voltage_history.append(voltage)
-        if len(self.voltage_history) > self.window:
-            self.voltage_history.pop(0)
-    def get_velocity(self):
-        if len(self.voltage_history) < 2:
-            return 0.0
-        return round(
-            (self.voltage_history[-1] - self.voltage_history[0])
-            / len(self.voltage_history),
-            2,)
 
 @dataclass
 class GeodesicVector:
@@ -180,6 +162,50 @@ class GeodesicEngine:
             "DEL": norm(masses["play"] * 3.0),
             "E":   norm(counts.get("solvents", 0))}
 
+TRIGRAM_MAP = {
+    "VEL": ("☳", "ZHEN",  "Thunder",  Prisma.GRN),
+    "STR": ("☶", "GEN",   "Mountain", Prisma.SLATE),
+    "ENT": ("☵", "KAN",   "Water",    Prisma.BLU),
+    "PHI": ("☲", "LI",    "Fire",     Prisma.RED),
+    "PSI": ("☰", "QIAN",  "Heaven",   Prisma.WHT),
+    "BET": ("☴", "XUN",   "Wind",     Prisma.CYN),
+    "E":   ("☷", "KUN",   "Earth",    Prisma.OCHRE),
+    "DEL": ("☱", "DUI",   "Lake",     Prisma.MAG)}
+
+def calculate_metrics(text: str, counts: Dict[str, int] = None) -> Tuple[float, float]:
+    length = len(text)
+    if length == 0: return 0.0, 0.0
+    text_lower = text.lower()
+    solvents = TheLexicon.SOLVENTS if hasattr(TheLexicon, 'SOLVENTS') else {'the', 'and', 'a'}
+    solvent_hits = sum(text_lower.count(w) for w in solvents)
+    solvent_density = solvent_hits / max(1.0, (length / 5.0))
+    raw_chaos = (length / TEXT_LENGTH_SCALAR)
+    glue_factor = min(1.0, solvent_density * 2.0)
+    e_metric = min(1.0, raw_chaos * (1.0 - (glue_factor * 0.8)))
+    c_count = sum(1 for char in text if char in '!?%@#$;,')
+    heavy_words = 0
+    if counts:
+        heavy_words = counts.get("heavy", 0) + counts.get("constructive", 0) + counts.get("sacred", 0)
+    structure_score = c_count + (heavy_words * 2)
+    beta_index = min(1.0, math.log1p(structure_score + 1) / math.log1p(length * 0.1 + 1))
+    if length < 50:
+        beta_index *= (length / 50.0)
+    return round(e_metric, 3), round(beta_index, 3)
+
+def resolve_trigram(vector: Dict[str, float]) -> Dict[str, Any]:
+    if not vector:
+        return {"symbol": "☷", "name": "KUN", "color": Prisma.OCHRE, "vector": "E"}
+    dominant_vec = max(vector, key=vector.get)
+    if vector[dominant_vec] < 0.2:
+        dominant_vec = "E"
+    symbol, name, concept, color = TRIGRAM_MAP.get(dominant_vec, TRIGRAM_MAP["E"])
+    return {
+        "symbol": symbol,
+        "name": name,
+        "concept": concept,
+        "color": color,
+        "vector": dominant_vec}
+
 class QuantumObserver:
     def __init__(self, events):
         self.events = events
@@ -204,7 +230,7 @@ class QuantumObserver:
                 node_mass = min(50.0, len(edges) * 1.5)
                 graph_mass += node_mass
         valence = TheLexicon.get_valence(clean_words)
-        entropy, repetition = GeodesicDome.calculate_metrics(text, counts)
+        entropy, repetition = calculate_metrics(text, counts)
         packet_data = {
             "voltage": voltage,
             "narrative_drag": geo.compression,
@@ -302,54 +328,6 @@ class SurfaceTension:
             return True, f"{prefix} {text}", "VOLTAGE_DAMPENER"
         return False, text, None
 
-class GeodesicDome:
-    TRIGRAM_MAP = {
-        "VEL": ("☳", "ZHEN",  "Thunder",  Prisma.GRN),
-        "STR": ("☶", "GEN",   "Mountain", Prisma.SLATE),
-        "ENT": ("☵", "KAN",   "Water",    Prisma.BLU),
-        "PHI": ("☲", "LI",    "Fire",     Prisma.RED),
-        "PSI": ("☰", "QIAN",  "Heaven",   Prisma.WHT),
-        "BET": ("☴", "XUN",   "Wind",     Prisma.CYN),
-        "E":   ("☷", "KUN",   "Earth",    Prisma.OCHRE),
-        "DEL": ("☱", "DUI",   "Lake",     Prisma.MAG)}
-
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def calculate_metrics(text: str, counts: Dict[str, int] = None) -> Tuple[float, float]:
-        length = len(text)
-        if length == 0: return 0.0, 0.0
-        text_lower = text.lower()
-        solvents = TheLexicon.SOLVENTS if hasattr(TheLexicon, 'SOLVENTS') else {'the', 'and', 'a'}
-        solvent_hits = sum(text_lower.count(w) for w in solvents)
-        solvent_density = solvent_hits / max(1.0, (length / 5.0))
-        raw_chaos = (length / TEXT_LENGTH_SCALAR)
-        glue_factor = min(1.0, solvent_density * 2.0)
-        e_metric = min(1.0, raw_chaos * (1.0 - (glue_factor * 0.8)))
-        c_count = sum(1 for char in text if char in '!?%@#$;,')
-        heavy_words = 0
-        if counts:
-            heavy_words = counts.get("heavy", 0) + counts.get("constructive", 0) + counts.get("sacred", 0)
-        structure_score = c_count + (heavy_words * 2)
-        beta_index = min(1.0, math.log1p(structure_score + 1) / math.log1p(length * 0.1 + 1))
-        if length < 50:
-            beta_index *= (length / 50.0)
-        return round(e_metric, 3), round(beta_index, 3)
-
-    def resolve_trigram(self, vector: Dict[str, float]) -> Dict[str, Any]:
-        if not vector:
-            return {"symbol": "☷", "name": "KUN", "color": Prisma.OCHRE, "vector": "E"}
-        dominant_vec = max(vector, key=vector.get)
-        if vector[dominant_vec] < 0.2:
-            dominant_vec = "E"
-        symbol, name, concept, color = self.TRIGRAM_MAP.get(dominant_vec, self.TRIGRAM_MAP["E"])
-        return {
-            "symbol": symbol,
-            "name": name,
-            "concept": concept,
-            "color": color,
-            "vector": dominant_vec}
 
 class ChromaScope:
     PALETTE = {

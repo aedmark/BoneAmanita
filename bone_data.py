@@ -67,14 +67,3 @@ class LoreManifest:
             print(f"{Prisma.CYN}[LORE]: Flushed entire Lore cache.{Prisma.RST}")
 
 TheLore = LoreManifest.get_instance()
-
-class SANCTUARY:
-    VOLTAGE_TARGET = 7.0
-    VOLTAGE_TOLERANCE = 3.0
-    DRAG_TARGET = 2.0
-    DRAG_TOLERANCE = 1.5
-    TRUTH_TARGET = 0.7
-    E_TARGET = 0.4
-    B_TARGET = 0.5
-    ZONE = "SANCTUARY"
-    COLOR = Prisma.GRN

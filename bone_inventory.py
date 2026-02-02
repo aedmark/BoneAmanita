@@ -8,7 +8,6 @@ from enum import Enum, auto
 from bone_bus import Prisma, BoneConfig
 from bone_data import TheLore
 
-
 class EffectType(Enum):
     PHYSICS = auto()
     SEMANTIC = auto()
@@ -499,8 +498,11 @@ class GordonKnot:
         req_type = data.get("requires", "thermal")
         clean_words = physics_ref.get("clean_words", [])
         if lexicon is None:
-            from bone_lexicon import TheLexicon as lexicon
-        source = [w for w in clean_words if w in lexicon.get(req_type)]
+            lex_data = TheLore.get("LEXICON") or {}
+            target_words = set(lex_data.get(req_type, []))
+        else:
+            target_words = lexicon.get(req_type)
+        source = [w for w in clean_words if w in target_words]
         if not source:
             return False, f"{Prisma.CYN}🧊 STASIS LOCK: {item_name} is frozen. Apply {req_type.upper()} words to thaw.{Prisma.RST}"
         if data.get("consume_on_use") and item_name in self.inventory:

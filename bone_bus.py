@@ -112,6 +112,16 @@ class BonePresets:
         "BIO.ATP_STARVATION": 20.0,
         "COUNCIL.MANIC_VOLTAGE_TRIGGER": 12.0,
         "CHANCE.RARE": 0.20}
+    SANCTUARY = {
+        "VOLTAGE_TARGET": 7.0,
+        "VOLTAGE_TOLERANCE": 3.0,
+        "DRAG_TARGET": 2.0,
+        "DRAG_TOLERANCE": 1.5,
+        "TRUTH_TARGET": 0.7,
+        "E_TARGET": 0.4,
+        "B_TARGET": 0.5,
+        "ZONE": "SANCTUARY",
+        "COLOR": Prisma.GRN}
 
 class BoneConfig:
     GRAVITY_WELL_THRESHOLD = 15.0
@@ -555,7 +565,6 @@ class PhysSystem:
     crucible: Any
     theremin: Any
     pulse: Any
-    dynamics: Any
     nav: Any
     gate: Optional[Any] = None
     tension: Optional[Any] = None

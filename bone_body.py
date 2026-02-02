@@ -47,6 +47,12 @@ class BioConstants:
     DOPAMINE_SATIETY = 0.7
     CORTISOL_STRESS = 0.6
     ADRENALINE_SURGE = 0.6
+    GOV_VOLTAGE_CRITICAL = 25.0
+    GOV_VOLTAGE_HIGH = 15.0
+    GOV_VOLTAGE_MED = 10.0
+    GOV_VOLTAGE_LOW = 5.0
+    GOV_DRAG_HIGH = 4.0
+    GOV_DRAG_LOW = 2.0
 
 @dataclass
 class BioSystem:
@@ -653,10 +659,9 @@ class MetabolicGovernor:
 
     def shift(self, physics: Dict, _voltage_history: List[float], current_tick: int = 0) -> Optional[str]:
         gov_text = self.narrative_data.get("GOVERNOR", {})
-
         if self.manual_override:
             current_voltage = physics.get("voltage", 0.0)
-            if current_voltage > 25.0:
+            if current_voltage > BioConstants.GOV_VOLTAGE_CRITICAL:
                 self.manual_override = False
                 return gov_text.get("OVERRIDE_CLEARED", "OVERRIDE CLEARED: VOLTAGE CRITICAL")
             return None
@@ -665,30 +670,29 @@ class MetabolicGovernor:
         beta = physics.get("beta_index", 0.0)
         if current_tick <= 5:
             physics["voltage"] = min(physics.get("voltage", 0.0), 8.0)
-        if current_voltage > 15.0 and beta > 1.5:
+        if current_voltage > BioConstants.GOV_VOLTAGE_HIGH and beta > 1.5:
             if self.mode != "SANCTUARY":
                 self.mode = "SANCTUARY"
                 physics["narrative_drag"] = 0.0
                 tmpl = gov_text.get("SANCTUARY", "{color}SANCTUARY ACTIVE{reset}")
                 return tmpl.format(color=Prisma.GRN, beta=beta, reset=Prisma.RST)
-        if current_voltage > 10.0:
+        if current_voltage > BioConstants.GOV_VOLTAGE_MED:
             if self.mode != "FORGE":
                 self.mode = "FORGE"
                 tmpl = gov_text.get("FORGE", "{color}FORGE ACTIVE{reset}")
                 return tmpl.format(color=Prisma.RED, volts=current_voltage, reset=Prisma.RST)
-        if drag > 4.0 > current_voltage:
+        if drag > BioConstants.GOV_DRAG_HIGH > current_voltage:
             if self.mode != "LABORATORY":
                 self.mode = "LABORATORY"
                 tmpl = gov_text.get("LAB", "{color}LAB ACTIVE{reset}")
                 return tmpl.format(color=Prisma.CYN, reset=Prisma.RST)
         if self.mode != "COURTYARD":
-            if current_voltage < 5.0 and drag < 2.0:
+            if current_voltage < BioConstants.GOV_VOLTAGE_LOW and drag < BioConstants.GOV_DRAG_LOW:
                 self.mode = "COURTYARD"
                 tmpl = gov_text.get("CLEAR", "{color}SYSTEM CLEAR{reset}")
                 return tmpl.format(color=Prisma.GRN, reset=Prisma.RST)
         return None
 
-# ... [ViralTracer and ThePacemaker remain unchanged] ...
 class ViralTracer:
     def __init__(self, mem):
         self.mem = mem

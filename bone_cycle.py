@@ -3,15 +3,15 @@
 import traceback, random, time, uuid, re, copy
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Tuple, List, Optional
-from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket
+from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket, BonePresets
 from bone_village import TownHall
 from bone_protocols import TheBureau
-from bone_physics import ChromaScope, TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine, GeodesicDome
+from bone_physics import ChromaScope, TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine, TRIGRAM_MAP
 from bone_viewer import GeodesicRenderer, CachedRenderer, get_renderer
 from bone_architect import PanicRoom
 from bone_soul import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
-from bone_village import SanctuaryGovernor, SANCTUARY
+from bone_village import SanctuaryGovernor
 from bone_telemetry import TelemetryService, DecisionCrystal, BlackBoxReader
 from bone_lexicon import SomaticInterface
 
@@ -153,11 +153,11 @@ class SanctuaryPhase(SimulationPhase):
         return ctx
 
     def _enter_sanctuary(self, ctx: CycleContext):
-        _set_p(ctx.physics, "zone", getattr(SANCTUARY, "ZONE", "SANCTUARY"))
-        _set_p(ctx.physics, "zone_color", getattr(SANCTUARY, "COLOR_NAME", "GRN"))
+        _set_p(ctx.physics, "zone", getattr(BonePresets.SANCTUARY, "ZONE", "SANCTUARY"))
+        _set_p(ctx.physics, "zone_color", getattr(BonePresets.SANCTUARY, "COLOR_NAME", "GRN"))
         _set_p(ctx.physics, "flow_state", "LAMINAR")
         if random.random() < 0.1:
-            color = getattr(SANCTUARY, 'COLOR', Prisma.GRN)
+            color = getattr(BonePresets.SANCTUARY, 'COLOR', Prisma.GRN)
             ctx.log(f"{color}![☀️] SANCTUARY: Breathing space.{Prisma.RST}")
 
     def _apply_restoration(self, ctx: CycleContext):
@@ -327,7 +327,7 @@ class RealityFilterPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "REALITY_FILTER"
-        self.TRIGRAMS = GeodesicDome.TRIGRAM_MAP
+        self.TRIGRAMS = TRIGRAM_MAP
 
     def run(self, ctx: CycleContext):
         reflection = self.eng.mind.mirror.get_reflection_modifiers()

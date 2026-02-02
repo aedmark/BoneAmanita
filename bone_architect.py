@@ -8,7 +8,7 @@ from bone_spores import MycotoxinFactory, LichenSymbiont, HyphalInterface, Paras
 from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, ViralTracer, ThePacemaker
 from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity, GlobalIntegrator, WisdomAllocator
 from bone_protocols import LimboLayer
-from bone_physics import TemporalDynamics, QuantumObserver, SurfaceTension
+from bone_physics import QuantumObserver, SurfaceTension # [REMOVED] TemporalDynamics
 from bone_machine import TheCrucible, TheForge, TheTheremin
 
 @dataclass
@@ -126,7 +126,7 @@ class BoneArchitect:
             crucible=TheCrucible(),
             theremin=TheTheremin(),
             pulse=ThePacemaker(),
-            dynamics=TemporalDynamics(),
+            # [REMOVED] dynamics=TemporalDynamics()
             nav=TheNavigator(bio.shimmer),
             tension=SurfaceTension())
 

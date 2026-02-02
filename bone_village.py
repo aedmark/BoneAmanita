@@ -2,13 +2,12 @@
 
 import random, time
 from typing import List, Dict, Any, Tuple, Optional
-from bone_bus import Prisma, BoneConfig
+from bone_bus import Prisma, BoneConfig, BonePresets
 from bone_lexicon import TheLexicon
 from bone_protocols import ZenGarden
 from bone_drivers import UserProfile
 from bone_akashic import TheAkashicRecord
 from bone_data import TheLore
-from bone_data import SANCTUARY
 
 class TheTinkerer:
     def __init__(self, gordon_ref, events_ref):
@@ -289,8 +288,8 @@ class SanctuaryGovernor:
     def __init__(self, events_ref):
         self.events = events_ref
         self.defaults = {
-            "voltage": getattr(SANCTUARY, "VOLTAGE_TARGET", 10.0),
-            "drag": getattr(SANCTUARY, "DRAG_TARGET", 2.0)}
+            "voltage": getattr(BonePresets.SANCTUARY, "VOLTAGE_TARGET", 10.0),
+            "drag": getattr(BonePresets.SANCTUARY, "DRAG_TARGET", 2.0)}
         self.voltage_pid = PIDController(
             kp=0.05, ki=0.01, kd=0.02,
             setpoint=self.defaults["voltage"],
@@ -337,9 +336,9 @@ class SanctuaryGovernor:
         t = self._get_num(physics_packet, "truth_ratio", 0.0)
         v_target = self.voltage_pid.setpoint
         d_target = self.drag_pid.setpoint
-        v_tol = getattr(SANCTUARY, "VOLTAGE_TOLERANCE", 5.0) or 1.0
-        d_tol = getattr(SANCTUARY, "DRAG_TOLERANCE", 2.0) or 1.0
-        t_target = getattr(SANCTUARY, "TRUTH_TARGET", 0.8)
+        v_tol = getattr(BonePresets.SANCTUARY, "VOLTAGE_TOLERANCE", 5.0) or 1.0
+        d_tol = getattr(BonePresets.SANCTUARY, "DRAG_TOLERANCE", 2.0) or 1.0
+        t_target = getattr(BonePresets.SANCTUARY, "TRUTH_TARGET", 0.8)
         v_dist = abs(v - v_target) / v_tol
         d_dist = abs(d - d_target) / d_tol
         t_dist = abs(t - t_target) / 0.3
@@ -349,7 +348,7 @@ class SanctuaryGovernor:
             self.consecutive_safe_ticks += 1
             if self.consecutive_safe_ticks >= 3 and not self.in_sanctuary:
                 self.in_sanctuary = True
-                self.events.log(f"{getattr(SANCTUARY, 'COLOR', Prisma.GRN)}![☀️] SANCTUARY: The air is calm here.{Prisma.RST}", "SYS")
+                self.events.log(f"{getattr(BonePresets.SANCTUARY, 'COLOR', Prisma.GRN)}![☀️] SANCTUARY: The air is calm here.{Prisma.RST}", "SYS")
         else:
             self.consecutive_safe_ticks = 0
             self.in_sanctuary = False

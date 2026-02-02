@@ -3,6 +3,7 @@
 import shlex
 from typing import Dict, Callable, List, Any, Tuple, Optional
 from dataclasses import dataclass
+from bone_data import TheLore
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
@@ -132,9 +133,32 @@ class CommandProcessor:
         return self.registry.execute(text)
 
     def _cmd_help(self, _parts):
-        lines = [f"\n{self.P.CYN}:: BONEAMANITA HELP ::{self.P.RST}"]
+        lines = [
+            f"\n{self.P.CYN}/// BONEAMANITA 13.5.0 TERMINAL ///{self.P.RST}",
+            f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n"]
+        structure = {
+            "SURVIVAL":    ["/status", "/inventory", "/look"],
+            "PROTOCOL":    ["/save", "/mode", "/exit", "/help"],
+            "MYSTICISM":   ["/soul", "/map"],
+            "MAINTENANCE": ["/debug", "/reload"]}
+        buckets = {k: [] for k in structure.keys()}
+        buckets["UNCATEGORIZED"] = []
         for cmd, desc in self.registry.help_text.items():
-            lines.append(f"{self.P.WHT}{cmd:<12}{self.P.RST} {desc}")
+            found = False
+            for cat, members in structure.items():
+                if cmd in members:
+                    buckets[cat].append((cmd, desc))
+                    found = True
+                    break
+            if not found:
+                buckets["UNCATEGORIZED"].append((cmd, desc))
+        for cat, cmds in buckets.items():
+            if not cmds: continue
+            lines.append(f"{self.P.WHT}[{cat}]{self.P.RST}")
+            for cmd, desc in cmds:
+                lines.append(f"  {self.P.CYN}{cmd:<12}{self.P.RST} {desc}")
+            lines.append("")
+        lines.append(f"{self.P.GRY}>> Use wisely. Entropy is watching.{self.P.RST}")
         self.interface.log("\n".join(lines))
         return True
 
@@ -199,7 +223,6 @@ class CommandProcessor:
         return True
 
     def _cmd_reload(self, parts):
-        from bone_data import TheLore
         if len(parts) > 1:
             target = parts[1].upper()
             TheLore.flush_cache(target)
