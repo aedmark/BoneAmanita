@@ -126,6 +126,7 @@ class CommandProcessor:
         self.registry.register("/exit", self._cmd_exit, "Shutdown")
         self.registry.register("/soul", self._cmd_soul, "Introspection")
         self.registry.register("/look", self._cmd_look, "Observe environment")
+        self.registry.register("/reload", self._cmd_reload, "Hot-reload Lore")
 
     def execute(self, text: str):
         return self.registry.execute(text)
@@ -195,4 +196,15 @@ class CommandProcessor:
             self.interface.log(result["ui"])
         else:
             self.interface.log("Blindness. The engine cannot see.")
+        return True
+
+    def _cmd_reload(self, parts):
+        from bone_data import TheLore
+        if len(parts) > 1:
+            target = parts[1].upper()
+            TheLore.flush_cache(target)
+            self.interface.log(f"Reloaded {target}.")
+        else:
+            TheLore.flush_cache()
+            self.interface.log("Reloaded all Lore.")
         return True

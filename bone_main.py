@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, Any, Optional
 from bone_bus import EventBus, Prisma, BoneConfig, SystemHealth, TheObserver, BonePresets
 from bone_commands import CommandProcessor
-from bone_data import TheAkashicRecord, TheLore
+from bone_data import TheLore
 from bone_village import TownHall, DeathGen, TheNavigator, ZenGarden, TheTinkerer
 from bone_lexicon import TheLexicon
 from bone_inventory import GordonKnot
@@ -22,6 +22,7 @@ from bone_viewer import Projector, GeodesicRenderer
 from bone_translation import SomaticInterface
 from bone_council import CouncilChamber
 from bone_spores import LiteraryReproduction
+from bone_akashic import TheAkashicRecord
 
 @dataclass
 class HostStats:
@@ -30,7 +31,13 @@ class HostStats:
 
 def bootstrap_systems():
     print(f"{Prisma.GRY}...Bootstrapping Sub-Systems...{Prisma.RST}")
-    TheLore.get_instance()
+    lore = TheLore.get_instance()
+    critical_files = ["LEXICON", "scenarios"]
+    for cat in critical_files:
+        if lore.get(cat) is None:
+            print(f"{Prisma.RED}[CRITICAL]: '{cat}' data missing! System may be unstable.{Prisma.RST}")
+        else:
+            print(f"{Prisma.GRY}[SYS] Checked {cat}... OK.{Prisma.RST}")
 
 class SessionGuardian:
     def __init__(self, engine_ref):

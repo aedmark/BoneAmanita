@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional, Any, cast, Callable
 from enum import Enum, auto
 from bone_bus import Prisma, BoneConfig
-from bone_data import GORDON_LOGS, GORDON
+from bone_data import TheLore
 
 
 class EffectType(Enum):
@@ -14,14 +14,12 @@ class EffectType(Enum):
     SEMANTIC = auto()
     HYBRID = auto()
 
-
 @dataclass
 class ItemEffect:
     effect_type: EffectType
     physics_handler: Optional[Any] = None
     semantic_instr: Optional[str] = None
     priority: int = 50
-
 
 @dataclass
 class PhysicsDelta:
@@ -41,7 +39,6 @@ class TensegrityState:
     lift: float = 0.0
     volume: float = 0.0
     is_collapsed: bool = False
-
 
 def effect_conductive(physics: Dict, _data: Dict, item_name: str) -> List[PhysicsDelta]:
     voltage = physics.get("voltage", 0.0)
@@ -175,7 +172,6 @@ def _init_trait_registry() -> Dict[str, ItemEffect]:
 
 TRAIT_REGISTRY = _init_trait_registry()
 
-
 @dataclass
 class GordonKnot:
     integrity: float = 65.0
@@ -209,7 +205,8 @@ class GordonKnot:
         self._recalculate_tensegrity()
 
     def load_config(self):
-        starting_gear = GORDON.get("STARTING_INVENTORY", [])
+        gordon_data = TheLore.get("GORDON") or {}
+        starting_gear = gordon_data.get("STARTING_INVENTORY", [])
         if not starting_gear:
             starting_gear = ["SILENT_KNIFE", "DUCT_TAPE", "SKELETON_KEY"]
         if not self.inventory or self.inventory == ["POCKET_ROCKS"]:
@@ -218,10 +215,10 @@ class GordonKnot:
         for crit in self.CRITICAL_ITEMS:
             if crit not in self.inventory:
                 self.inventory.append(crit)
-        default_scars = GORDON.get("SCAR_TISSUE", {})
+        default_scars = gordon_data.get("SCAR_TISSUE", {})
         if not self.scar_tissue:
             self.scar_tissue = default_scars
-        raw_registry = GORDON.get("ITEM_REGISTRY", {})
+        raw_registry = gordon_data.get("ITEM_REGISTRY", {})
         self.ITEM_REGISTRY = copy.deepcopy(raw_registry)
         if "SKELETON_KEY" not in self.ITEM_REGISTRY:
             self.ITEM_REGISTRY["SKELETON_KEY"] = {
@@ -305,13 +302,14 @@ class GordonKnot:
             logs.append(cling_msg)
         all_deltas: List[PhysicsDelta] = []
         turbulence = physics_ref.get("turbulence", 0.0)
+        logs_data = TheLore.get("GORDON_LOGS") or {"FUMBLE": ["{item} slipped."]}
         if turbulence > BoneConfig.INVENTORY.TURBULENCE_THRESHOLD:
             if random.random() < BoneConfig.INVENTORY.TURBULENCE_FUMBLE_CHANCE and self.inventory:
                 droppable = [i for i in self.inventory if i not in self.CRITICAL_ITEMS]
                 if droppable:
                     dropped = random.choice(droppable)
                     if self.safe_remove_item(dropped):
-                        template = random.choice(GORDON_LOGS["FUMBLE"])
+                        template = random.choice(logs_data.get("FUMBLE", ["{item} fell."]))
                         msg = template.format(item=dropped)
                         logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
         for item_name in self.inventory:

@@ -7,7 +7,7 @@ from typing import Set, Optional, Dict, List, Any, Tuple
 from bone_spores import MycotoxinFactory, LichenSymbiont, HyphalInterface, ParasiticSymbiont
 from bone_lexicon import TheLexicon
 from bone_bus import Prisma, BoneConfig
-from bone_data import BIO_NARRATIVE
+from bone_data import TheLore
 
 @dataclass
 class Biometrics:
@@ -238,6 +238,21 @@ class SomaticLoop:
         self.gordon = gordon_ref
         self.folly = folly_ref
         self.events = events_ref
+
+        # CORRECTED: Properly load the BIO_NARRATIVE data
+        self.narrative_data = TheLore.get("BIO_NARRATIVE") or {}
+
+        # Fallback if data missing
+        if not self.narrative_data:
+            print(f"{Prisma.RED}[BODY]: Warning - BIO_NARRATIVE missing.{Prisma.RST}")
+            self.narrative_data = {"symptoms": {}, "organs": {}, "GLIMMER": {}, "GOVERNOR": {}}
+
+        # CRITICAL FIX: Inject data into subsystems that were instantiated elsewhere
+        if hasattr(self.bio, 'endo'):
+            self.bio.endo.narrative_data = self.narrative_data
+        if hasattr(self.bio, 'governor'):
+            self.bio.governor.narrative_data = self.narrative_data
+
         self.semantic_doctor = SemanticEndocrinologist(memory_ref, lexicon_ref)
         self.enzyme_map = getattr(BoneConfig.BIO, "ENZYME_MAP", SomaticLoop._ENZYME_MAP) if hasattr(BoneConfig, "BIO") else SomaticLoop._ENZYME_MAP
 
@@ -361,7 +376,7 @@ class SomaticLoop:
             if self.bio.biometrics.health > 10.0:
                 burn_amount = 5.0
                 self.bio.biometrics.health -= burn_amount
-                return "AUTOPHAGY" 
+                return "AUTOPHAGY"
             else:
                 logs.append(f"{Prisma.RED}SYSTEM FAILURE: Bio-Fuel Depleted. The Mausoleum closes.{Prisma.RST}")
                 return "MAUSOLEUM_CLAMP"
@@ -443,6 +458,9 @@ class EndocrineSystem:
     adrenaline: float = 0.0
     melatonin: float = 0.0
     glimmers: int = 0
+    # CORRECTED: Added field to hold narrative data
+    narrative_data: Dict = field(default_factory=dict, repr=False)
+
     _REACTION_MAP = {
         "PROTEASE":   {"ADR": BoneConfig.BIO.REWARD_MEDIUM},
         "CELLULASE":  {"COR": -BoneConfig.BIO.REWARD_MEDIUM, "OXY": BoneConfig.BIO.REWARD_SMALL},
@@ -455,23 +473,26 @@ class EndocrineSystem:
     def _clamp(val: float) -> float:
         return max(0.0, min(1.0, val))
 
-    @staticmethod
-    def calculate_circadian_bias() -> Tuple[Dict[str, float], Optional[str]]:
+    def calculate_circadian_bias(self) -> Tuple[Dict[str, float], Optional[str]]:
         hour = time.localtime().tm_hour
         bias = {"COR": 0.0, "SER": 0.0, "MEL": 0.0}
+
+        # Safely access narrative data
+        circadian_text = self.narrative_data.get("CIRCADIAN", {})
+
         if 6 <= hour < 10:
             bias["COR"] = 0.1
-            msg = BIO_NARRATIVE["CIRCADIAN"]["DAWN"]
+            msg = circadian_text.get("DAWN", "Sunrise.")
         elif 10 <= hour < 18:
             bias["SER"] = 0.1
-            msg = BIO_NARRATIVE["CIRCADIAN"]["SOLAR"]
+            msg = circadian_text.get("SOLAR", "High Noon.")
         elif 18 <= hour < 23:
             bias["MEL"] = 0.1
-            msg = BIO_NARRATIVE["CIRCADIAN"]["TWILIGHT"]
+            msg = circadian_text.get("TWILIGHT", "Sunset.")
         else:
             bias["MEL"] = 0.3
             bias["COR"] = -0.1
-            msg = BIO_NARRATIVE["CIRCADIAN"]["LUNAR"]
+            msg = circadian_text.get("LUNAR", "Night.")
         return bias, msg
 
     def _apply_enzyme_reaction(self, enzyme_type: str, harvest_hits: int):
@@ -541,18 +562,20 @@ class EndocrineSystem:
             self.melatonin = 0.0
 
     def check_for_glimmer(self, feedback: Dict, harvest_hits: int) -> Optional[str]:
+        glimmer_text = self.narrative_data.get("GLIMMER", {})
+
         if feedback.get("INTEGRITY", 0) > 0.85:
             self.glimmers += 1
             self.serotonin += 0.2
-            return BIO_NARRATIVE["GLIMMER"]["INTEGRITY"]
+            return glimmer_text.get("INTEGRITY", "You feel whole.")
         if feedback.get("NOVELTY", 0) > 0.8:
             self.glimmers += 1
             self.dopamine += 0.1
-            return BIO_NARRATIVE["GLIMMER"].get("DISCOVERY", "GLIMMER: A spark of the new.")
+            return glimmer_text.get("DISCOVERY", "GLIMMER: A spark of the new.")
         if harvest_hits > 2 and self.dopamine > 0.7:
             self.glimmers += 1
             self.oxytocin += 0.2
-            return BIO_NARRATIVE["GLIMMER"]["ENTHUSIASM"]
+            return glimmer_text.get("ENTHUSIASM", "The work feels good.")
         return None
 
     def metabolize(self, feedback: Dict, health: float, stamina: float, ros_level: float = 0.0,
@@ -599,6 +622,8 @@ class MetabolicGovernor:
     drag_floor: float = 2.0
     manual_override: bool = False
     birth_tick: float = field(default_factory=time.time)
+    # CORRECTED: Added field to hold narrative data
+    narrative_data: Dict = field(default_factory=dict, repr=False)
 
     @staticmethod
     def get_stress_modifier(tick_count):
@@ -617,18 +642,23 @@ class MetabolicGovernor:
 
     def set_override(self, target_mode):
         valid = {"COURTYARD", "LABORATORY", "FORGE", "SANCTUARY"}
+        gov_text = self.narrative_data.get("GOVERNOR", {})
+
         if target_mode in valid:
             self.mode = target_mode
             self.manual_override = True
-            return BIO_NARRATIVE["GOVERNOR"]["OVERRIDE"].format(mode=target_mode)
-        return BIO_NARRATIVE["GOVERNOR"]["INVALID"]
+            msg_tmpl = gov_text.get("OVERRIDE", "MANUAL OVERRIDE: {mode}")
+            return msg_tmpl.format(mode=target_mode)
+        return gov_text.get("INVALID", "Invalid Mode Override.")
 
     def shift(self, physics: Dict, _voltage_history: List[float], current_tick: int = 0) -> Optional[str]:
+        gov_text = self.narrative_data.get("GOVERNOR", {})
+
         if self.manual_override:
             current_voltage = physics.get("voltage", 0.0)
             if current_voltage > 25.0:
                 self.manual_override = False
-                return BIO_NARRATIVE["GOVERNOR"].get("OVERRIDE_CLEARED", "OVERRIDE CLEARED: VOLTAGE CRITICAL")
+                return gov_text.get("OVERRIDE_CLEARED", "OVERRIDE CLEARED: VOLTAGE CRITICAL")
             return None
         current_voltage = physics.get("voltage", 0.0)
         drag = physics.get("narrative_drag", 0.0)
@@ -639,25 +669,26 @@ class MetabolicGovernor:
             if self.mode != "SANCTUARY":
                 self.mode = "SANCTUARY"
                 physics["narrative_drag"] = 0.0
-                return BIO_NARRATIVE["GOVERNOR"]["SANCTUARY"].format(
-                    color=Prisma.GRN, beta=beta, reset=Prisma.RST)
+                tmpl = gov_text.get("SANCTUARY", "{color}SANCTUARY ACTIVE{reset}")
+                return tmpl.format(color=Prisma.GRN, beta=beta, reset=Prisma.RST)
         if current_voltage > 10.0:
             if self.mode != "FORGE":
                 self.mode = "FORGE"
-                return BIO_NARRATIVE["GOVERNOR"]["FORGE"].format(
-                    color=Prisma.RED, volts=current_voltage, reset=Prisma.RST)
+                tmpl = gov_text.get("FORGE", "{color}FORGE ACTIVE{reset}")
+                return tmpl.format(color=Prisma.RED, volts=current_voltage, reset=Prisma.RST)
         if drag > 4.0 > current_voltage:
             if self.mode != "LABORATORY":
                 self.mode = "LABORATORY"
-                return BIO_NARRATIVE["GOVERNOR"]["LAB"].format(
-                    color=Prisma.CYN, reset=Prisma.RST)
+                tmpl = gov_text.get("LAB", "{color}LAB ACTIVE{reset}")
+                return tmpl.format(color=Prisma.CYN, reset=Prisma.RST)
         if self.mode != "COURTYARD":
             if current_voltage < 5.0 and drag < 2.0:
                 self.mode = "COURTYARD"
-                return BIO_NARRATIVE["GOVERNOR"]["CLEAR"].format(
-                    color=Prisma.GRN, reset=Prisma.RST)
+                tmpl = gov_text.get("CLEAR", "{color}SYSTEM CLEAR{reset}")
+                return tmpl.format(color=Prisma.GRN, reset=Prisma.RST)
         return None
 
+# ... [ViralTracer and ThePacemaker remain unchanged] ...
 class ViralTracer:
     def __init__(self, mem):
         self.mem = mem

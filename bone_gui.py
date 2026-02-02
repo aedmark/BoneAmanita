@@ -1,7 +1,4 @@
-"""
-bone_gui.py - The Visual Cortex
-Architects: SLASH & You
-"""
+""" bone_gui.py - The Visual Cortex """
 
 import streamlit as st
 import time
@@ -28,10 +25,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 if "entity" not in st.session_state:
-    with st.spinner("Waking the Entity..."):
+    with st.status("Initializing System Kernel...", expanded=True) as status:
+        st.write("Waking the Entity...")
         st.session_state.entity = ConversationalEntity(user_name="Architect")
-
         boot_packet = st.session_state.entity.boot_system()
+        st.write("Loading Neural Weights...")
         st.session_state.messages = []
         st.session_state.messages.append({"role": "assistant", "content": boot_packet["text"]})
         st.session_state.meta = {
@@ -40,13 +38,14 @@ if "entity" not in st.session_state:
             "location": boot_packet["location"],
             "health": boot_packet["health"],
             "stamina": boot_packet["stamina"]}
+        status.update(label="System Online", state="complete", expanded=False)
 with st.sidebar:
     st.title("BoneAmanita v13.4")
     st.divider()
     col1, col2 = st.columns(2)
-    col1.metric("VOLTAGE", f"{st.session_state.meta['voltage']:.1f}v")
-    col2.metric("MOOD", st.session_state.meta['mood'])
-    st.metric("LOCATION", st.session_state.meta['location'])
+    col1.metric("VOLTAGE", f"{st.session_state.meta.get('voltage', 0.0):.1f}v")
+    col2.metric("MOOD", st.session_state.meta.get('mood', 'Booting'))
+    st.metric("LOCATION", st.session_state.meta.get('location', 'Void'))
     st.divider()
     st.write("BIO.STATUS")
     health_val = st.session_state.meta.get('health', 100.0)
@@ -64,8 +63,9 @@ if prompt := st.chat_input("Enter signal..."):
     with st.chat_message("user"):
         st.markdown(prompt)
     with st.chat_message("assistant"):
-        with st.spinner("Calculating..."):
+        with st.status("Processing Signal...", expanded=True) as status:
             response_packet = st.session_state.entity.talk(prompt)
+            st.write("Synthesizing response...")
             message_placeholder = st.empty()
             full_response = response_packet["text"]
             st.session_state.meta = {
@@ -74,6 +74,7 @@ if prompt := st.chat_input("Enter signal..."):
                 "location": response_packet.get("location", "Unknown"),
                 "health": response_packet.get("health", 100.0),
                 "stamina": response_packet.get("stamina", 100.0)}
+            status.update(label="Transmission Received", state="complete", expanded=False)
             message_placeholder.markdown(full_response)
     st.session_state.messages.append({"role": "assistant", "content": full_response})
     st.rerun()

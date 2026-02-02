@@ -4,7 +4,7 @@ import json, math, os, random, time, tempfile
 from collections import deque
 from typing import List, Tuple, Optional, Dict
 from bone_lexicon import TheLexicon
-from bone_data import SEEDS, TheLore
+from bone_data import TheLore
 from bone_bus import EventBus, Prisma, BoneConfig
 from bone_village import ParadoxSeed, TheAlmanac
 
@@ -214,8 +214,11 @@ class MycelialNetwork:
     def load_seeds(self):
         loaded_seeds = []
         try:
-            for item in SEEDS:
-                seed = ParadoxSeed(item["question"], set(item["triggers"]))
+            raw_seeds = TheLore.get("seeds") or []
+            for item in raw_seeds:
+                q = item.get("question", "Undefined Paradox")
+                t = set(item.get("triggers", []))
+                seed = ParadoxSeed(q, t)
                 loaded_seeds.append(seed)
             self.events.log(f"{Prisma.GRY}[SYSTEM]: Paradox Seeds loaded ({len(loaded_seeds)} active) from Data Core.{Prisma.RST}")
         except Exception as e:

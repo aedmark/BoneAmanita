@@ -3,7 +3,7 @@
 import re, time, json, urllib.request, urllib.error, random, math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from bone_data import LENSES, DREAMS, SCENARIOS
+from bone_data import TheLore
 from bone_bus import Prisma, BoneConfig, EventBus
 from bone_symbiosis import SymbiosisManager
 from bone_spores import MycelialNetwork
@@ -704,21 +704,14 @@ class ShimmerState:
 class DreamEngine:
     def __init__(self, events):
         self.events = events
-        self.PROMPTS = DREAMS.get("PROMPTS", ["{A} -> {B}?"])
-        self.NIGHTMARES = DREAMS.get("NIGHTMARES", {})
-        self.VISIONS = DREAMS.get("VISIONS", ["Static."])
-        self.SURREAL_PROMPTS = [
-            "You are {A}, but you are also {B}. You are dancing with {C}.",
-            "{A} decides to become {B}. The logic holds.",
-            "Why is the {A} laughing at the {B}?",
-            "The {C} opens its mouth and sings a song about {A}.",
-            "You try to catch {A}, but it turns into {B}."]
-        self.CONSTRUCTIVE_PROMPTS = [
-            "You are building a cathedral out of {A}. The mortar is {B}.",
-            "{A} is the foundation. {B} is the keystone.",
-            "The blueprint calls for {A}, but you use {B} instead.",
-            "You weave {A} and {B} into a single, unbreakable strand.",
-            "The geometry of {A} supports the weight of {C}."]
+        dreams_data = TheLore.get("dreams") or {}
+        self.PROMPTS = dreams_data.get("PROMPTS", ["{A} -> {B}?"])
+        self.NIGHTMARES = dreams_data.get("NIGHTMARES", {})
+        self.VISIONS = dreams_data.get("VISIONS", ["Static."])
+        self.SURREAL_PROMPTS = dreams_data.get("SURREAL", [
+            "You are {A}, but you are also {B}. You are dancing with {C}."])
+        self.CONSTRUCTIVE_PROMPTS = dreams_data.get("CONSTRUCTIVE", [
+            "You are building a cathedral out of {A}. The mortar is {B}."])
 
     def enter_rem_cycle(self, memory_system: Any, bio_readout: Dict[str, Any] = None) -> Dict[str, Any]:
         residue_word = "static"
@@ -804,10 +797,10 @@ class DreamEngine:
         val_a = dims[0]
         val_b = "ENTROPY" if trauma_level > 5.0 else (dims[1] if len(dims) > 1 else "SILENCE")
         if "DEL" in dims:
-             return f"The concept of {val_a} turns into a balloon and floats away.", 5.0
+            return f"The concept of {val_a} turns into a balloon and floats away.", 5.0
         if trauma_level > 5.0:
             cat = "SEPTIC" if vector.get("ENT", 0) > 0.5 else "BARIC"
-            template = random.choice(self.NIGHTMARES.get(cat, self.NIGHTMARES["BARIC"]))
+            template = random.choice(self.NIGHTMARES.get(cat, self.NIGHTMARES.get("BARIC", ["{ghost} is heavy."])))
             content = template.format(ghost=val_a)
         else:
             template = random.choice(self.PROMPTS)

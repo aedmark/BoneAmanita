@@ -3,11 +3,15 @@
 import json, os, random, time
 from collections import deque
 from typing import Dict, Tuple, Optional, Counter
-from bone_data import LENSES, NARRATIVE_DATA, SCENARIOS
+from bone_data import TheLore
 from bone_bus import EventBus
 from bone_lexicon import TheLexicon
 from bone_bus import Prisma, BoneConfig
 from bone_data import SANCTUARY
+
+SCENARIOS = TheLore.get("scenarios") or {"ARCHETYPES": ["Void"], "BANNED_CLICHES": []}
+LENSES = TheLore.get("lenses") or {}
+NARRATIVE_DATA = TheLore.get("narrative_data") or {}
 
 class UserProfile:
     def __init__(self, name="USER"):
@@ -130,8 +134,7 @@ class EnneagramDriver:
             "CLARENCE": "RIGID",
             "NATHAN": "WIRED",
             "SHERLOCK": "FOCUSED",
-            "NARRATOR": "OBSERVING"
-        }
+            "NARRATOR": "OBSERVING"}
         state_desc = state_map.get(winner, "ACTIVE")
         return winner, state_desc, reason
 
@@ -162,8 +165,7 @@ class SynergeticLensArbiter:
         self.last_reason = "System Init"
         self.boot_flavor = random.choice([
             "heavy", "kinetic", "abstract", "photo",
-            "aerobic", "thermal", "cryo", "sacred", "play", "suburban"
-        ])
+            "aerobic", "thermal", "cryo", "sacred", "play", "suburban"])
 
     def consult(self, physics, bio_state, _inventory, current_tick, _ignition_score=0.0):
         if physics is None:
@@ -180,8 +182,9 @@ class SynergeticLensArbiter:
             voltage = getattr(physics, "voltage", 0.0)
         if current_tick <= 2:
             self.current_focus = "NARRATOR"
-            archetype = random.choice(SCENARIOS["ARCHETYPES"])
-            bans = ", ".join(SCENARIOS["BANNED_CLICHES"])
+            archetypes = SCENARIOS.get("ARCHETYPES", ["The Void"])
+            archetype = random.choice(archetypes)
+            bans = ", ".join(SCENARIOS.get("BANNED_CLICHES", []))
             gen_instruction = "IMMEDIATELY establish a stark, physical reality based on the SEED (but do not copy it verbatim)"
             if current_tick > 0:
                 gen_instruction += " (OR describe the details of the current location if already established)"
@@ -193,7 +196,7 @@ class SynergeticLensArbiter:
                     f"SEED INSPIRATION: {archetype}.",
                     "CONSTRAINT: This seed is a starting point only. Remix it. Invert it. Subvert it. Do NOT output it verbatim.",
                     f"{gen_instruction}.",
-                    "STYLE: Hemingway Mode. Subject-Verb-Object.",
+                    "STYLE: Modernized Hemingway Mode.",
                     "NEGATIVE CONSTRAINT: NO PURPLE PROSE. Kill all adverbs. Limit adjectives to one per noun maximum.",
                     "Focus on physical reality (texture, weight, smell) over abstract metaphor.",
                     "Do NOT mention the user's inventory, pockets, or stats.",
@@ -258,8 +261,7 @@ class ZenGarden:
         self.max_streak = 0
         self.pebbles_collected = 0
         self.koans = NARRATIVE_DATA.get("ZEN_KOANS", [
-            "The code that is not written has no bugs."
-        ])
+            "The code that is not written has no bugs."])
 
     def raking_the_sand(self, physics: Dict, bio: Dict) -> Tuple[float, Optional[str]]:
         voltage = physics.get("voltage", 0.0)
@@ -292,17 +294,16 @@ class ZenGarden:
 class TheBureau:
     def __init__(self):
         self.stamp_count = 0
-        self.forms = NARRATIVE_DATA["BUREAU_FORMS"]
+        self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 1A"]).copy()
         self.forms.extend(["Form 404: Void-Fill Application", "Form 1040-EZ: Existence Zoning", "STOP WORK ORDER"])
-        self.responses = NARRATIVE_DATA["BUREAU_RESPONSES"]
+        self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
         self.POLICY = {
             "27B-6": {"effect": "ESCALATE", "mod": {"narrative_drag": -3.0, "kappa": -0.2}, "atp": 0.0},
             "1099-B": {"effect": "STAGNATE", "mod": {"narrative_drag": 5.0, "voltage": -5.0}, "atp": 15.0},
             "Schedule C": {"effect": "TAX", "mod": {"voltage": -10.0}, "atp": 8.0},
             "Form W-2": {"effect": "NORMALIZE", "mod": {"beta_index": 1.0, "turbulence": 0.0}, "atp": 5.0},
             "Form 404": {"effect": "NULLIFY", "mod": {"voltage": -20.0, "kappa": 1.0}, "atp": -5.0},
-            "ZONING_VIOLATION": {"effect": "LOCKDOWN", "mod": {"voltage": -100.0, "narrative_drag": 100.0}, "atp": -10.0}
-        }
+            "ZONING_VIOLATION": {"effect": "LOCKDOWN", "mod": {"voltage": -100.0, "narrative_drag": 100.0}, "atp": -10.0}}
         self.BUZZWORDS = {"synergy", "paradigm", "leverage", "utilize", "holistic", "bandwidth", "circle back"}
 
     def audit(self, physics, bio_state, context=None):
@@ -412,7 +413,7 @@ class KintsugiProtocol:
     def __init__(self):
         self.active_koan = None
         self.repairs_count = 0
-        self.koans = NARRATIVE_DATA["KINTSUGI_KOANS"]
+        self.koans = NARRATIVE_DATA.get("KINTSUGI_KOANS", ["The crack is where the light enters."])
         self.gold_reserves = 5.0
 
     def check_integrity(self, stamina):
@@ -576,7 +577,7 @@ class ChorusDriver:
             "SHERLOCK": (vec.get("PHI", 0) * 0.5) + (vec.get("VEL", 0) * 0.3) + (1.0 - vec.get("BET", 0)) * 0.2,
             "NATHAN": (vec.get("TMP", 0) * 0.6) + (vec.get("E", 0) * 0.4),
             "JESTER": (vec.get("DEL", 0) * 0.4) + (vec.get("LQ", 0) * 0.3) + (vec.get("ENT", 0) * 0.3),
-            "CLARENCE": (vec.get("STR", 0) * 0.5) + (vec.get("BET", 0) * 0.5), # Fixed here
+            "CLARENCE": (vec.get("STR", 0) * 0.5) + (vec.get("BET", 0) * 0.5),
             "NARRATOR": (vec.get("PSI", 0) * 0.7) + (1.0 - vec.get("VEL", 0)) * 0.3}
         total = sum(lens_weights.values())
         if total <= 0.001: return "SYSTEM INSTRUCTION: Vector silence. Default to NARRATOR.", ["NARRATOR"]

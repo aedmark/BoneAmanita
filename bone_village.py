@@ -5,7 +5,8 @@ from typing import List, Dict, Any, Tuple, Optional
 from bone_bus import Prisma, BoneConfig
 from bone_lexicon import TheLexicon
 from bone_personality import UserProfile, ZenGarden
-from bone_data import TheAkashicRecord, TheLore
+from bone_akashic import TheAkashicRecord
+from bone_data import TheLore
 
 class TheTinkerer:
     def __init__(self, gordon_ref, events_ref):
@@ -51,7 +52,6 @@ class TheTinkerer:
             if hasattr(self.gordon, "ITEM_REGISTRY"):
                 self.gordon.ITEM_REGISTRY[new_name] = new_data
             self.events.log(f"{Prisma.MAG}✨ ASCENSION: {old_name} -> {new_name}{Prisma.RST}", "AKASHIC")
-
 
 class ParadoxSeed:
     def __init__(self, question, triggers):
@@ -111,11 +111,9 @@ class TheAlmanac:
             "HIGH_DRAG": "Movement",
             "HIGH_VOLTAGE": "Grounding",
             "HIGH_LATENCY": "Patience",
-            "BALANCED": "Growth"
-        }
+            "BALANCED": "Growth"}
         key = condition.split()[0]
         return seeds.get(key, "Hope")
-
 
 class MirrorGraph:
     def __init__(self, events_ref):
@@ -126,10 +124,8 @@ class MirrorGraph:
     def reflect(self, physics: Dict):
         txt = physics.get("raw_text", "")
         volt = physics.get("voltage", 0.0)
-
         if "!" in txt or volt > 12.0: self.stats["WAR"] += 0.1
         if "?" in txt: self.stats["ART"] += 0.1
-
         total = sum(self.stats.values())
         if total > 5.0:
             for k in self.stats: self.stats[k] *= 0.8
@@ -137,7 +133,6 @@ class MirrorGraph:
     def get_reflection_modifiers(self) -> Dict:
         top_stat = max(self.stats, key=self.stats.get) if self.stats else "NEUTRAL"
         return {"flavor": f"Reflecting {top_stat}", "drag_mult": 1.0}
-
 
 class TheWayfinder:
     def __init__(self, shimmer_ref):
@@ -157,7 +152,6 @@ class TheWayfinder:
     def locate(self, physics_packet: dict, host_health: Any = None) -> Tuple[str, Optional[str]]:
         drag = physics_packet.get("narrative_drag", 0.0)
         volt = physics_packet.get("voltage", 0.0)
-
         if volt > 12.0: self.current_loc = "THE_FORGE"
         elif drag > 5.0: self.current_loc = "THE_MUD"
         else: self.current_loc = "THE_CONSTRUCT"
@@ -180,15 +174,18 @@ class TheWayfinder:
         return logs
 
     def strike_root(self, vector): return None
+
     def check_transplant_shock(self, vector): return None
 
 class TheTownCrier:
     def __init__(self):
-        self.rumors = [
-            "I heard the Architect is planning a renovation.",
-            "The Tinkerer says the voltage is too high for the tools.",
-            "Someone saw a ghost in the Limbo Layer.",
-            "The Mud is getting thicker this time of year."]
+        pass
+
+    @property
+    def rumors(self) -> List[str]:
+        return TheLore.get("narrative_data", "RUMORS") or [
+            "The air is silent.",
+            "The Crier has lost their notes."]
 
     def broadcast(self, physics: Dict) -> Optional[str]:
         volt = physics.get("voltage", 0.0)

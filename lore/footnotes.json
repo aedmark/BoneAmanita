@@ -1,0 +1,18 @@
+{
+    "DEFAULT": [
+        "* Not to be confused with the other kind of void.",
+        "* The turtle moves.",
+        "* This is technically impossible, but the code doesn't know that.",
+        "* Do not eat the green wobbly bit.",
+        "* Gravity is a habit that is hard to shake.",
+        "* As reliable as a chocolate teapot."
+    ],
+    "CONTEXT_MAP": {
+        "void": ["* Not to be confused with the other kind of void."],
+        "gravity": ["* Gravity is a habit that is hard to shake."],
+        "physics": ["* This is technically impossible, but the code doesn't know that."],
+        "glitch": ["* Do not eat the green wobbly bit."],
+        "error": ["* As reliable as a chocolate teapot."],
+        "system": ["* The turtle moves."]
+    }
+}

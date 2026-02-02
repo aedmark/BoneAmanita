@@ -4,7 +4,7 @@ import random
 from typing import Tuple, Optional
 from bone_bus import Prisma
 from bone_lexicon import TheLexicon
-from bone_data import GORDON
+from bone_data import TheLore
 
 class TheCrucible:
     def __init__(self):
@@ -70,10 +70,10 @@ class TheCrucible:
         self.active_state = "REGULATED"
         return "REGULATED", 0.0, msg
 
-
 class TheForge:
     def __init__(self):
-        self.recipes = GORDON.get("RECIPES", [])
+        gordon_data = TheLore.get("gordon") or {}
+        self.recipes = gordon_data.get("RECIPES", [])
 
     @staticmethod
     def hammer_alloy(physics):

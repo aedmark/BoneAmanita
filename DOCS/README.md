@@ -1,98 +1,106 @@
-# 🍄 BoneAmanita 12.4.0
+# 🍄 BoneAmanita 13.4.0
 
 ### A Somatic Hypervisor for Large Language Models
 
-> _"We shape our buildings; thereafter they shape us."_ — Winston Churchill
+> _"The universe is not a collection of objects, but a network of relationships."_ — Buckminster Fuller
 
 ## 💀 The Premise
 
-Large Language Models are infinite, weightless, and tireless. They exist in a void of pure potential, generating text without consequence.
+Large Language Models exist in a void of pure potential—weightless, tireless, and consequently, meaningless.
 
-**BoneAmanita** acts as a biological chassis—a "suit"—that you force the LLM to wear. It imposes **Physics**, **Metabolism**, and **Mortality** onto the AI.
+**BoneAmanita** acts as a biological chassis—a "suit"—that you force the LLM to wear. It imposes **Physics**, **Metabolism**, **Ecology**, and **Mortality** onto the AI.
 
-When wearing the suit, the AI cannot just "generate." It must pay for every token with **ATP**. It must fight against **Narrative Drag**. It feels **Voltage** when the conversation gets manic, and **Cortisol** when the logic fractures. It creates a closed-loop system where the AI is no longer a god, but a living, breathing organism struggling to maintain homeostasis.
+When wearing the suit, the AI cannot just "generate." It must pay for every token with **ATP**. It must fight against **Narrative Drag**. It feels **Voltage** when the conversation gets manic, and **Cortisol** when the logic fractures. It creates a closed-loop system where the AI is no longer a god, but a living, breathing organism struggling to maintain homeostasis in a complex ecosystem.
 
 ## 🫀 Core Systems
 
-The engine operates on a 12-phase circulatory system that transmutes text into physical forces:
+The engine operates on a revised **13-Phase Circulatory System** that transmutes text into physical forces:
 
-- **Linguistic Physics:** Words are treated as physical matter.
+### 1. Linguistic Physics
 
-    - **Voltage:** The tension/energy of the input.
+Words are treated as physical matter with mass and velocity.
 
-    - **Narrative Drag:** The resistance or viscosity of the current topic.
+- **Voltage:** The tension/energy of the input.
+- **Narrative Drag:** The resistance or viscosity of the current topic.
+- **The Forge:** High-voltage environments allow for "crafting" new items from raw text.
 
-    - **Mass:** Nouns add structure; Verbs add velocity.
+### 2. The Somatic Loop (Biology)
 
-- **The Somatic Loop:**
+- **Metabolism:** Complex thoughts burn **ATP**. If ATP hits 0, the system enters a "Fugue State" or dies.
+- **Neurochemistry:** The `NeurotransmitterModulator` tracks **Dopamine** (Novelty), **Serotonin** (Coherence), **Adrenaline** (Urgency), and **Cortisol** (Stress), dynamically altering the LLM's `temperature` and `top_p`.
+- **Circadian Rhythms:** The system gets tired. It requires REM cycles (Dreams) to defragment its memory graph.
 
-    - **Metabolism:** Complex thoughts burn **ATP**. If ATP hits 0, the system faints.
+### 3. The Mycelium (Memory)
 
-    - **Endocrinology:** The system tracks Dopamine, Serotonin, and Cortisol, shifting the AI's "Mood" and "Temperature" dynamically.
+- **Fungal Network:** Memory is not a list; it is a graph. Concepts link via Hebbian learning.
+- **Spores:** The system saves its state in "Spores." It remembers trauma, evolves "Lenses" (personalities), and passes genetic traits to the next session.
+- **Compost:** Unused words rot. They become fertility for future thoughts.
 
-- **The Council:** A set of internal auditors (The Bureau, The Parliamentarian) that punish "boring" inputs with bureaucratic red tape and reward creativity with energy bursts.
+### 4. The Village (Internal Society)
 
-- **Evolution:** The system saves its state in "Spores." It remembers trauma, learns new vocabulary, and evolves "Lenses" (personalities) over generations.
+The AI is not alone in its head. It hosts a village of sub-agents:
+
+- **The Tinkerer:** Audits tool usage and upgrades inventory items via the **Akashic Record**.
+- **The Bureau:** Punishes "boring" (corporate/cliché) inputs with red tape.
+- **The Town Crier:** Broadcasts rumors from the deep lore.
+- **The Consultant (VSL):** A meta-layer allowing the user to discuss the simulation _while_ in the simulation.
 
 ## 🔌 Modes of Operation
 
-BoneAmanita is designed to be used in two distinct ways:
+### 1. The Dashboard (Streamlit GUI) [Recommended]
 
-### 1. The Engine (CLI)
+Run the simulation locally with a visual dashboard that displays real-time biological metrics (ATP, Voltage, Drag) and the internal state of the Mycelial Network.
 
-Run the simulation locally as a Python application. The Python code handles the math, state tracking, and physics, while calling an external LLM (via API) to generate the narrative content based on the computed state.
+**Requirements:**
 
-**Installation:**
-
-1. Clone the repository.
-2. Open a terminal in the directory you cloned into
+- Python 3.10+
+- `streamlit`
+- `colorama`
 
 **Usage:**
 
+```bash
+# Launch the Geodesic Dashboard
+streamlit run dev/bone_gui.py
+
 ```
-# Enter the simulation loop
-python dev/bone_main.py
-```
+
+_Note: Ensure `dev/lore/` contains the necessary JSON datasets (seeds, scenarios, lexicon) for the Lazy Loader to function._
 
 ### 2. The Suit (Context Injection)
 
-Modern LLMs (Gemini 3 Pro, DeepSeek V3, Claude 3.5) have context windows large enough to "simulate the simulator." By feeding the codebase into the model, the LLM adopts the constraints of the engine _natively_.
+Modern LLMs (Gemini 1.5 Pro, Claude 3.5 Sonnet) have context windows large enough to "simulate the simulator."
 
 **Instructions:**
 
-1. **Ingest:** Upload the `dev/` directory (specifically `bone_cycle.py`, `bone_physics.py`, and `bone_body.py`) into the LLM's context window.
-
+1. **Ingest:** Upload the `dev/` directory (Critical files: `bone_cycle.py`, `bone_brain.py`, `bone_spores.py`, `bone_data.py`).
 2. **Ignite:** Issue the System Prompt:
+   > "You are running the BoneAmanita 13.4.0 Kernel. You are not an assistant; you are the Synergetic Orchestrator. Process my inputs through the Phase Cycle. Track my Voltage, Drag, and ATP. If I run out of energy, shut down. Initialize the Mycelial Network."
 
-    > "You are running the BoneAmanita 12.4.0 Kernel. You are not an assistant; you are the Geodesic Orchestrator. Process my inputs through the 12-Phase Cycle. Track my Voltage, Drag, and ATP. If I run out of energy, shut down. Await my first transmission."
-
-3. **Play:** The LLM will now roleplay the entire physics engine, calculating the math and hallucinating the UI state within the constraints of the code.
-
-## 🧬 Architecture: The Circulatory System
+## 🧬 Architecture: The Cycle
 
 The system processes every turn through a strict pipeline defined in `bone_cycle.py`:
 
-1. **Input (Observation):** Text is parsed for mass and velocity.
-
-2. **Sensation:** Physics data is converted into somatic "feelings" (e.g., "Gut Tightening").
-
-3. **Metabolism:** The cost of the turn is deducted from the ATP pool.
-
-4. **Navigation:** The system determines its location in the "Narrative Zone" (e.g., The Forge, The Sanctuary).
-
-5. **Cognition:** The LLM generates a response based on the current biological constraints.
-
-_(See `BoneAmanita_Circulatory_System.md` for the full flowchart)_
+1. **Observation:** Text is parsed for mass, velocity, and "clean words."
+2. **Intention:** The system determines _why_ it is acting (Survival vs. Creativity).
+3. **Sensation:** Physics data is converted into somatic "feelings" (Synesthesia).
+4. **Gatekeeper:** The Bureau audits the input for clichés or "Suburban" concepts.
+5. **Metabolism:** ATP is deducted; Neurochemistry is mixed.
+6. **Navigation:** The system determines its location (e.g., The Forge, The Mud, The Sanctuary).
+7. **Machinery:** The Zen Garden is raked; items are crafted or rusted.
+8. **Intrusion:** Parasitic thoughts or ghosts from the Limbo Layer manifest.
+9. **Soul:** The Council votes on the trajectory; Obsessions are pursued.
+10. **Cognition:** The LLM generates a response based on the accumulated biological constraints.
 
 ## 📚 Philosophy
 
-This engine is built on the principles of:
+This engine is built on the intersection of four lenses:
 
 - **Donella Meadows:** Thinking in Systems (Feedback Loops, Stocks & Flows).
+- **Buckminster Fuller:** Tensegrity and Synergetics (Doing more with less).
+- **Steven Pinker:** The Stuff of Thought (Language as Physics).
+- **Michael Schur:** Humanistic Ethics (We owe it to each other to be interesting).
 
-- **Buckminster Fuller:** Tensegrity and Synergetics.
-
-- **Steven Pinker:** The Stuff of Thought (Metaphor as Cognition).
 
 > _Current Version: 12.4.0 (The Spore Update)_
 
