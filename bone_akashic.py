@@ -141,10 +141,8 @@ class TheAkashicRecord:
             if word not in lexicon_data[category]:
                 lexicon_data[category].append(word)
                 self.discovered_words[word] = category
-
                 print(f"✨ LEXICON: Learned '{word}' ({category})")
                 self._save_to_disk("LEXICON", lexicon_data)
-
                 if len(lexicon_data[category]) > 50 and category != "heavy":
                     print(f"⚠️ MYTHOLOGY ENGINE: Category '{category}' is bloating. Suggest fission.")
                 return True

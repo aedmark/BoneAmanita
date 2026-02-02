@@ -7,7 +7,7 @@ from bone_village import MirrorGraph, TheNavigator
 from bone_spores import MycotoxinFactory, LichenSymbiont, HyphalInterface, ParasiticSymbiont, MycelialNetwork
 from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, ViralTracer, ThePacemaker
 from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity, GlobalIntegrator, WisdomAllocator
-from bone_personality import LimboLayer
+from bone_protocols import LimboLayer
 from bone_physics import TemporalDynamics, QuantumObserver, SurfaceTension
 from bone_machine import TheCrucible, TheForge, TheTheremin
 

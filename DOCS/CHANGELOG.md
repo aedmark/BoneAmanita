@@ -1,5 +1,35 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.5.0: "THE GREAT CONDENSATION"**
+
+_"Simplicity is the ultimate sophistication."_ — Leonardo da Vinci (and the BoneAmanita Cleanup Crew)
+
+---
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **Ephemeralization (File Deletion):**
+  - **Deleted:** `dev/bone_sanctuary.py`, `dev/bone_translation.py`, and `dev/bone_synesthesia.py`.
+  - **Rationale:** We detected "Sprawl." These modules were effectively micro-services that didn't need to be micro. They have been absorbed by their parent organs to reduce import overhead and cognitive switching costs.
+
+#### **🏙️ VILLAGE DYNAMICS (The Meadows Lens)**
+
+- **The Village Merger (`bone_village.py`):**
+  - **Sanctuary Integration:** The `Sanctuary` logic—responsible for regulating Voltage and Narrative Drag—has been folded into the `Village`. The `TownHall` now directly enforces safety protocols rather than outsourcing them to a distant "Sanctuary" module.
+  - **Tensegrity:** This closes the feedback loop between *Governance* (Village) and *Stability* (Sanctuary).
+
+#### **📖 LINGUISTICS (The Pinker Lens)**
+
+- **The Unified Dictionary (`bone_lexicon.py`):**
+  - **Translation Layer:** The `SomaticInterface` and `RosettaStone` classes have migrated into `TheLexicon`.
+  - **Logic:** We realized that *interpreting* a signal is inseparable from *defining* it. The Lexicon now handles both storage (Vocabulary) and processing (Translation), ensuring that definitions and their somatic effects never drift apart.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Lens)**
+
+- **Soulful Sensing (`bone_soul.py`):**
+  - **Synesthesia Graft:** The code that turns numbers into colors (Synesthesia) now lives inside the `Soul`.
+  - **The Vibe:** Previously, the Soul had to ask the Synesthesia module how it felt. Now, the Soul just *feels*. If Dopamine spikes, the Soul paints it `Prisma.CYN` directly. It’s cleaner, faster, and 20% more poetic.
+
 ### **BONEAMANITA v13.4.0: "THE SEVERANCE"**
 
 _"The body is not the mind. The interface is not the engine."_

@@ -1,4 +1,4 @@
-""" BONEAMANITA 13.4.0
+""" BONEAMANITA 13.5.0
  Architects: SLASH, KISHO, The BonePoke Gods Humans: Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -7,11 +7,12 @@ from typing import Dict, Any, Optional
 from bone_bus import EventBus, Prisma, BoneConfig, SystemHealth, TheObserver, BonePresets
 from bone_commands import CommandProcessor
 from bone_data import TheLore
-from bone_village import TownHall, DeathGen, TheNavigator, ZenGarden, TheTinkerer
-from bone_lexicon import TheLexicon
+from bone_village import TownHall, DeathGen, TheNavigator, TheTinkerer
+from bone_lexicon import TheLexicon, SomaticInterface
 from bone_inventory import GordonKnot
 from bone_telemetry import TelemetryService
-from bone_personality import TheFolly, ChorusDriver, KintsugiProtocol, TherapyProtocol, TheBureau
+from bone_protocols import TheFolly, KintsugiProtocol, TherapyProtocol, TheBureau, ZenGarden
+from bone_drivers import ChorusDriver
 from bone_physics import CosmicDynamics, ZoneInertia
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
@@ -19,7 +20,6 @@ from bone_soul import NarrativeSelf
 from bone_architect import BoneArchitect
 from bone_cycle import GeodesicOrchestrator
 from bone_viewer import Projector, GeodesicRenderer
-from bone_translation import SomaticInterface
 from bone_council import CouncilChamber
 from bone_spores import LiteraryReproduction
 from bone_akashic import TheAkashicRecord
@@ -44,7 +44,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 13.4.0', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 13.5.0', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -421,7 +421,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 13.4.0', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 13.5.0', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

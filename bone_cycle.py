@@ -5,15 +5,15 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Tuple, List, Optional
 from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket
 from bone_village import TownHall
-from bone_personality import TheBureau
+from bone_protocols import TheBureau
 from bone_physics import ChromaScope, TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine, GeodesicDome
 from bone_viewer import GeodesicRenderer, CachedRenderer, get_renderer
 from bone_architect import PanicRoom
-from bone_synesthesia import SynestheticCortex
+from bone_soul import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
-from bone_sanctuary import SanctuaryGovernor, SANCTUARY
+from bone_village import SanctuaryGovernor, SANCTUARY
 from bone_telemetry import TelemetryService, DecisionCrystal, BlackBoxReader
-from bone_translation import SomaticInterface
+from bone_lexicon import SomaticInterface
 
 def _get_p(p, key, default=None):
     if isinstance(p, dict):

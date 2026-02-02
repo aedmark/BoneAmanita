@@ -1,4 +1,4 @@
-# 🍄 BoneAmanita 13.4.0
+# 🍄 BoneAmanita 13.4.0 README
 
 ### A Somatic Hypervisor for Large Language Models
 

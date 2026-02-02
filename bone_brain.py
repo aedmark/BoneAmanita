@@ -7,12 +7,10 @@ from bone_data import TheLore
 from bone_bus import Prisma, BoneConfig, EventBus
 from bone_symbiosis import SymbiosisManager
 from bone_spores import MycelialNetwork
-from bone_lexicon import TheLexicon
-from bone_translation import RosettaStone
+from bone_lexicon import TheLexicon, RosettaStone
 from bone_telemetry import TelemetryService, DecisionCrystal, BlackBoxReader
 from bone_physics import cosine_similarity
-from bone_personality import SynergeticLensArbiter
-from bone_consultant import BoneConsultant
+from bone_drivers import SynergeticLensArbiter, BoneConsultant
 
 @dataclass
 class BrainConfig:
@@ -452,12 +450,12 @@ class TheCortex:
         self.boot_history = self.black_box.get_recent_history(limit=4)
         self.last_physics = {}
         try:
-            from bone_consultant import BoneConsultant
+            from bone_personality import BoneConsultant
             self.consultant = BoneConsultant()
         except ImportError:
             self.consultant = None
             if self.events:
-                self.events.log("⚠️ BoneConsultant module missing. VSL Protocol disabled.", "SYS")
+                self.events.log("⚠️ BoneConsultant not found in Personality. VSL Protocol disabled.", "SYS")
         if llm_client:
             self.llm = llm_client
             if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None:
