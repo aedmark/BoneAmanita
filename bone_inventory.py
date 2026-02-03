@@ -29,7 +29,7 @@ class PhysicsDelta:
 
 UNKNOWN_ARTIFACT = {
     "description": "Unknown Artifact",
-    "function": "NONE",
+    "function": "MISC",
     "usage_msg": "It does nothing."}
 
 @dataclass

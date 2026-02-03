@@ -10,7 +10,8 @@ from functools import lru_cache
 
 class LexiconStore:
     HIVE_FILENAME = "cortex_hive.json"
-    _TRANSLATOR = str.maketrans(string.punctuation, " " * len(string.punctuation))
+    _PUNCTUATION = string.punctuation.replace("_", "")
+    _TRANSLATOR = str.maketrans(_PUNCTUATION, " " * len(_PUNCTUATION))
 
     def __init__(self):
         self.categories = {
@@ -127,7 +128,8 @@ class LexiconStore:
 class LinguisticAnalyzer:
     def __init__(self, store_ref):
         self.store = store_ref
-        self._TRANSLATOR = str.maketrans(string.punctuation, " " * len(string.punctuation))
+        punct = string.punctuation.replace("_", "")
+        self._TRANSLATOR = str.maketrans(punct, " " * len(punct))
         self.PHONETICS = {
             "PLOSIVE": set("bdgkpt"),
             "FRICATIVE": set("fthszsh"),
@@ -392,7 +394,7 @@ class LexiconService:
             cls.ANTIGEN_REGEX = None
             return
         patterns = sorted(replacements.keys(), key=len, reverse=True)
-        escaped = [re.escape(p) for p in patterns]
+        escaped = [re.escape(str(p)) for p in patterns]
         cls.ANTIGEN_REGEX = re.compile('|'.join(escaped), re.IGNORECASE)
 
     @classmethod

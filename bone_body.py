@@ -9,6 +9,17 @@ from bone_lexicon import TheLexicon
 from bone_bus import Prisma, BoneConfig
 from bone_data import TheLore
 
+def _get_val(obj, key, default=0.0):
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+def _set_val(obj, key, value):
+    if isinstance(obj, dict):
+        obj[key] = value
+    else:
+        setattr(obj, key, value)
+
 @dataclass
 class Biometrics:
     health: float
@@ -70,6 +81,8 @@ class BioSystem:
 
     def apply_environmental_entropy(self, physics_packet):
         base_entropy = 2.0
+        def _g(obj, k, d=0.0):
+            return obj.get(k, d) if isinstance(obj, dict) else getattr(obj, k, d)
         if isinstance(physics_packet, dict):
             em_field = physics_packet.get("electromagnetism", 0.0)
             if em_field == 0.0:
@@ -78,6 +91,11 @@ class BioSystem:
                 em_field = math.sqrt(e**2 + b**2)
         else:
             em_field = getattr(physics_packet, "electromagnetism", 0.0)
+            if em_field == 0.0:
+                e = getattr(physics_packet, "E", 0.0)
+                b = getattr(physics_packet, "B", 0.0)
+                em_field = math.sqrt(e**2 + b**2)
+
         shield_strength = min(0.8, em_field * 0.1)
         effective_entropy = base_entropy * (1.0 - shield_strength)
         thermal_feedback = 0.0
@@ -120,8 +138,8 @@ class MitochondrialForge:
             self.events.log(f"[ATP]: {reason} ({delta:+.1f})", "BIO")
 
     def process_cycle(self, physics_packet: dict, external_modifiers: List[float] = None) -> MetabolicReceipt:
-        voltage = physics_packet.get("voltage", 0.0)
-        raw_drag = physics_packet.get("narrative_drag", 0.0)
+        voltage = _get_val(physics_packet, "voltage", 0.0)
+        raw_drag = _get_val(physics_packet, "narrative_drag", 0.0)
         drag = max(0.0, raw_drag)
         base_demand = max(0.1, math.log1p(voltage) * 1.5)
         cognitive_load_tax = (drag ** 1.5) * 0.5
@@ -221,7 +239,7 @@ class SemanticEndocrinologist:
             hits = sum(1 for w in clean_words if w in self.mem.graph)
             resonance_score = min(1.0, hits / max(1, len(clean_words)))
         valence_score = self.lex.get_valence(clean_words)
-        coherence_score = physics.get("kappa", 0.5)
+        coherence_score = _get_val(physics, "kappa", 0.5)
         return SemanticSignal(
             novelty=novelty_score,
             resonance=resonance_score,
@@ -332,7 +350,7 @@ class SomaticLoop:
             logs.append(f"{Prisma.YEL}[BIO]: Adrenaline Surge. Pain ignored.{Prisma.RST}")
         if chem.dopamine > 0.7:
             modifiers.append(0.8)
-        voltage = phys.get("voltage", 0.0)
+        voltage = _get_val(phys, "voltage", 0.0)
         if voltage > 15.0:
             modifiers.append(1.2)
             logs.append(f"{Prisma.MAG}[BIO]: Voltage Gap ({voltage:.1f}v). Wires heating up.{Prisma.RST}")
@@ -371,7 +389,7 @@ class SomaticLoop:
             "counts": counts}
 
     def _audit_folly_desire(self, phys, stamina, logs) -> str:
-        voltage = phys.get("voltage", 0.0)
+        voltage = _get_val(phys, "voltage", 0.0)
         if stamina <= 0:
             if self.bio.biometrics.health > 10.0:
                 burn_amount = 5.0
@@ -418,7 +436,7 @@ class SomaticLoop:
         if cliche_tax_total > 0:
             total_atp_yield -= cliche_tax_total
             logs.append(f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX APPLIED. System drained by -{cliche_tax_total:.1f} ATP. (Reason: Antigen Detected){Prisma.RST}")
-        if phys.get("voltage", 0.0) > 8.0 and found_enzymes:
+        if _get_val(phys, "voltage", 0.0) > 8.0 and found_enzymes:
             found_enzymes.append("PROTEASE")
             total_atp_yield += 5.0
         if not found_enzymes:
@@ -433,7 +451,7 @@ class SomaticLoop:
     def _perform_maintenance(text: str, phys: Dict, logs: List[str], tick: int):
         if len(text) > 1000:
             logs.append(f"{Prisma.GRY}[MAINTENANCE]: Large input buffer detected. Flushed.{Prisma.RST}")
-        drag = phys.get("narrative_drag", 0.0)
+        drag = _get_val(phys, "narrative_drag", 0.0)
         if drag > 8.0 and tick % 10 == 0:
             logs.append(f"{Prisma.OCHRE}[MAINTENANCE]: Clearing sludge from intake valves (Drag {drag:.1f}).{Prisma.RST}")
 
@@ -654,21 +672,29 @@ class MetabolicGovernor:
 
     def shift(self, physics: Dict, _voltage_history: List[float], current_tick: int = 0) -> Optional[str]:
         gov_text = self.narrative_data.get("GOVERNOR", {})
+
+        def _get(p, k, d=0.0):
+            return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
+
+        def _set(p, k, v):
+            if isinstance(p, dict): p[k] = v
+            else: setattr(p, k, v)
+
         if self.manual_override:
-            current_voltage = physics.get("voltage", 0.0)
+            current_voltage = _get(physics, "voltage", 0.0)
             if current_voltage > BioConstants.GOV_VOLTAGE_CRITICAL:
                 self.manual_override = False
                 return gov_text.get("OVERRIDE_CLEARED", "OVERRIDE CLEARED: VOLTAGE CRITICAL")
             return None
-        current_voltage = physics.get("voltage", 0.0)
-        drag = physics.get("narrative_drag", 0.0)
-        beta = physics.get("beta_index", 0.0)
+        current_voltage = _get(physics, "voltage", 0.0)
+        drag = _get(physics, "narrative_drag", 0.0)
+        beta = _get(physics, "beta_index", 0.0)
         if current_tick <= 5:
-            physics["voltage"] = min(physics.get("voltage", 0.0), 8.0)
+            _set(physics, "voltage", min(current_voltage, 8.0))
         if current_voltage > BioConstants.GOV_VOLTAGE_HIGH and beta > 1.5:
             if self.mode != "SANCTUARY":
                 self.mode = "SANCTUARY"
-                physics["narrative_drag"] = 0.0
+                _set(physics, "narrative_drag", 0.0)
                 tmpl = gov_text.get("SANCTUARY", "{color}SANCTUARY ACTIVE{reset}")
                 return tmpl.format(color=Prisma.GRN, beta=beta, reset=Prisma.RST)
         if current_voltage > BioConstants.GOV_VOLTAGE_MED:

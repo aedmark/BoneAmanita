@@ -254,13 +254,13 @@ class BoneConsultant:
 
     def _check_phase_shift(self):
         if self.state.archetype == "EXPLORER" and self.state.E > 0.3:
-            self.state.archetype = "CLARIFIER";
+            self.state.archetype = "CLARIFIER"
             self.state.B = 0.6
         elif self.state.archetype == "CLARIFIER" and self.state.E > 0.6:
-            self.state.archetype = "SYNTHESIZER";
+            self.state.archetype = "SYNTHESIZER"
             self.state.B = 0.4
         elif self.state.archetype == "SYNTHESIZER" and self.state.E > 0.85:
-            self.state.archetype = "VALIDATOR";
+            self.state.archetype = "VALIDATOR"
             self.state.B = 0.2
 
     def get_system_prompt(self) -> str:

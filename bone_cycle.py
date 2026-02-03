@@ -119,7 +119,11 @@ class ObservationPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
-        ctx.physics = gaze_result["physics"]
+        new_physics = gaze_result["physics"]
+        if hasattr(new_physics, "to_dict"):
+            for k, v in new_physics.to_dict().items():
+                if hasattr(ctx.physics, k):
+                    setattr(ctx.physics, k, v)
         ctx.clean_words = gaze_result["clean_words"]
         current_voltage = _get_p(ctx.physics, "voltage", 0.0)
         self.eng.phys.dynamics.commit(current_voltage)
@@ -694,6 +698,7 @@ class PhaseExecutor:
     def _run_single_safe(self, simulator, phase, sandbox):
         tracer = TelemetryService.get_tracer()
         tracer.start_phase(phase.name, sandbox)
+        # noinspection PyTypeChecker
         wrapped_physics = PhysicsSandbox.create(sandbox.physics)
         sandbox.physics = wrapped_physics
         try:

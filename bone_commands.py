@@ -225,12 +225,6 @@ class CommandProcessor:
         self.interface.log(nav_report)
         return True
 
-    def _cmd_mode(self, parts):
-        if len(parts) < 2: return True
-        if self.tax.levy("MODE_SWITCH", {"stamina": 10.0}):
-            self.interface.log(f"Switched to {parts[1].upper()} (Simulated)")
-        return True
-
     def _cmd_debug(self, _parts):
         self.interface.Config.VERBOSE_LOGGING = not self.interface.Config.VERBOSE_LOGGING
         self.interface.log(f"Debug Mode: {self.interface.Config.VERBOSE_LOGGING}")

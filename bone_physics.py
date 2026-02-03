@@ -346,8 +346,13 @@ class ChromaScope:
         "VIOLET": (Prisma.VIOLET, "DEL", "LQ"),
         "EMERALD":(Prisma.GRN,    "XI",  "BET"),
         "CRIMSON":(Prisma.RED,    "VEL", "ENT")}
+
     def modulate(self, text, vector):
+        if not vector:
+            return f"{Prisma.GRY}{text}{Prisma.RST}"
         sorted_vecs = sorted(vector.items(), key=lambda x: abs(x[1] - 0.5), reverse=True)
+        if not sorted_vecs:
+            return f"{Prisma.GRY}{text}{Prisma.RST}"
         primary_dim = sorted_vecs[0][0]
         selected_color = Prisma.GRY
         for color_name, (code, d1, d2) in self.PALETTE.items():
