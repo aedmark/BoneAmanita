@@ -41,9 +41,9 @@ class CycleStabilizer:
         self.last_tick_time = time.time()
 
     def _adjust_setpoints(self, ctx: CycleContext, p: Any):
-        flow = str(_get_p(p, "flow_state", "LAMINAR"))
+        flow = str(getattr(p, "flow_state", "LAMINAR"))
         manifold = "THE_CONSTRUCT"
-        current_manifold = _get_p(p, "manifold") or manifold
+        current_manifold = getattr(p, "manifold", None) or manifold
         if current_manifold == "THE_CONSTRUCT":
             world = getattr(ctx, "world_state", {})
             if isinstance(world, dict):
@@ -62,11 +62,11 @@ class CycleStabilizer:
         dt = max(0.001, min(1.0, raw_dt))
         p = ctx.physics
         soul_trying_to_scream = False
-        if _get_p(p, "voltage", 0) > 17.0 and _get_p(p, "narrative_drag", 0) > 3.5:
+        if p.voltage > 17.0 and p.narrative_drag > 3.5:
             soul_trying_to_scream = True
         self._adjust_setpoints(ctx, p)
-        curr_v = float(_get_p(p, "voltage", 0.0))
-        curr_d = float(_get_p(p, "narrative_drag", 0.0))
+        curr_v = p.voltage
+        curr_d = p.narrative_drag
         v_force, d_force = self.governor.regulate(p, dt=dt)
         if soul_trying_to_scream:
             self.events.log(f"{Prisma.VIOLET}⚖️ STABILIZER: Yielding to Paradox. Drag dampeners disengaged.{Prisma.RST}", "SYS")
@@ -74,7 +74,7 @@ class CycleStabilizer:
         corrections_made = False
         if abs(curr_v - self.governor.voltage_pid.setpoint) > 6.0 and abs(v_force) > 0.05:
             new_v = max(0.0, curr_v + v_force)
-            _set_p(p, "voltage", new_v)
+            p.voltage = new_v
             if abs(v_force) > 0.1:
                 reason = "PID_DAMPENER" if v_force < 0 else "PID_EXCITATION"
                 ctx.record_flux(current_phase, "voltage", curr_v, new_v, reason)
@@ -83,7 +83,7 @@ class CycleStabilizer:
                 corrections_made = True
         if abs(curr_d - self.governor.drag_pid.setpoint) > 2.5 and abs(d_force) > 0.05:
             new_d = max(0.0, curr_d + d_force)
-            _set_p(p, "narrative_drag", new_d)
+            p.narrative_drag = new_d
             if abs(d_force) > 0.1:
                 reason = "PID_LUBRICATION" if d_force < 0 else "PID_BRAKING"
                 ctx.record_flux(current_phase, "narrative_drag", curr_d, new_d, reason)
@@ -124,17 +124,14 @@ class IntentionPhase(SimulationPhase):
         physics = ctx.physics
         clean = ctx.clean_words
         if any(w in clean for w in ["analyze", "scan", "think", "query"]):
-            current = _get_p(physics, "narrative_drag", 0)
-            _set_p(physics, "narrative_drag", max(0.0, current - 1.0))
+            physics.narrative_drag = max(0.0, physics.narrative_drag - 1.0)
             ctx.log(f"{Prisma.CYN}🧠 INTENTION: Focus engaged. Drag reduced.{Prisma.RST}")
         if any(w in clean for w in ["error", "fail", "critical", "bug"]):
-            current_v = _get_p(physics, "voltage", 0)
-            _set_p(physics, "voltage", min(20.0, current_v + 2.0))
+            physics.voltage = min(20.0, physics.voltage + 2.0)
             ctx.log(f"{Prisma.MAG}🧠 INTENTION: Bracing for impact. Voltage spiked.{Prisma.RST}")
         current_atp = self.eng.bio.mito.state.atp_pool
         if current_atp < 15.0:
-            current_drag = _get_p(physics, "narrative_drag", 0)
-            _set_p(physics, "narrative_drag", current_drag + 2.0)
+            physics.narrative_drag += 2.0
             ctx.log(f"{Prisma.OCHRE}🧠 INTENTION: Low Energy. Conservation mode active.{Prisma.RST}")
         return ctx
 
@@ -179,22 +176,19 @@ class MaintenancePhase(SimulationPhase):
         if self.eng.tick_count % 10 != 0: return ctx
         try:
             solvents = {'the', 'and', 'is', 'a', 'of', 'to', 'in', 'it', 'i', 'you'}
-            rotted = self.eng.lex.atrophy(
-                self.eng.tick_count,
-                100,
-                protected=solvents)
+            rotted = self.eng.lex.atrophy(self.eng.tick_count, 100, protected=solvents)
             if rotted:
                 biomass = len(rotted) * 0.5
                 self.eng.soil_fertility = min(50.0, self.eng.soil_fertility + biomass)
                 for w in rotted:
                     self.eng.limbo.ghosts.append(f"👻{w.upper()}_ECHO")
-                example = rotted[0]
                 ctx.log(f"{Prisma.GRY}♻️ COMPOST: {len(rotted)} concepts decayed -> +{biomass:.1f} Fertility.{Prisma.RST}")
+
             if self.eng.soil_fertility > 10.0:
                 drag_reduction = self.eng.soil_fertility * 0.05
-                current_drag = _get_p(ctx.physics, "narrative_drag", 0.0)
-                _set_p(ctx.physics, "narrative_drag", max(0.0, current_drag - drag_reduction))
+                ctx.physics.narrative_drag = max(0.0, ctx.physics.narrative_drag - drag_reduction)
                 ctx.log(f"{Prisma.GRN}🌱 FERTILE GROUND: The compost lowers drag by {drag_reduction:.2f}.{Prisma.RST}")
+
             self.eng.mind.mem.enforce_limits(self.eng.tick_count)
         except Exception as e:
             if BoneConfig.VERBOSE_LOGGING: print(f"Maintenance Error: {e}")
@@ -227,11 +221,17 @@ class MetabolismPhase(SimulationPhase):
     def run(self, ctx: CycleContext):
         physics = ctx.physics
         gov_msg = self.eng.bio.governor.shift(
-            physics, self.eng.phys.dynamics.voltage_history, self.eng.tick_count)
+            physics,
+            self.eng.phys.dynamics.voltage_history, self.eng.tick_count)
         if gov_msg:
             self.eng.events.log(gov_msg, "GOV")
-        _set_p(physics, "manifold", self.eng.bio.governor.mode)
-        bio_feedback = self._generate_feedback(physics)
+        physics.manifold = self.eng.bio.governor.mode
+        max_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
+        bio_feedback = {
+            "INTEGRITY": physics.truth_ratio,
+            "STATIC": physics.repetition,
+            "FORCE": physics.voltage / max_v,
+            "BETA": physics.beta_index}
         stress_mod = self.eng.bio.governor.get_stress_modifier(self.eng.tick_count)
         circadian_bias = self._check_circadian_rhythm()
         ctx.bio_result = self.eng.soma.digest_cycle(
@@ -296,7 +296,7 @@ class MetabolismPhase(SimulationPhase):
         return None
 
     def _audit_hubris(self, ctx, physics):
-        hubris_hit, hubris_msg, event_type = self.eng.phys.tension.audit_hubris(physics)
+        hubris_hit, hubris_msg, event_type = self.eng.phys.tension.audit_hubris(physics.to_dict())
         if hubris_hit:
             ctx.log(hubris_msg)
             if event_type == "FLOW_BOOST":
@@ -331,9 +331,8 @@ class RealityFilterPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         reflection = self.eng.mind.mirror.get_reflection_modifiers()
-        current_drag = _get_p(ctx.physics, "narrative_drag", 0)
-        _set_p(ctx.physics, "narrative_drag", current_drag * reflection["drag_mult"])
-        vector = _get_p(ctx.physics, "vector")
+        ctx.physics.narrative_drag *= reflection["drag_mult"]
+        vector = ctx.physics.vector
         if vector:
             dom = max(vector, key=vector.get)
             entry = self.TRIGRAMS.get(dom, self.TRIGRAMS["E"])
@@ -350,33 +349,27 @@ class NavigationPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         physics = ctx.physics
-        if self.eng.tick_count == 3:
-            ctx.log(self.eng.navigator.strike_root(_get_p(physics, "vector", {})))
-        shock = self.eng.navigator.check_transplant_shock(_get_p(physics, "vector", {}))
-        if shock:
-            _set_p(physics, "narrative_drag", _get_p(physics, "narrative_drag", 0) + 1.0)
-            ctx.log(shock)
-        new_drag, grav_logs = self.eng.gordon.check_gravity(_get_p(physics, "narrative_drag", 0), _get_p(physics, "psi", 0))
+        new_drag, grav_logs = self.eng.gordon.check_gravity(physics.narrative_drag, physics.psi)
         for log in grav_logs:
             ctx.log(log)
-        _set_p(physics, "narrative_drag", new_drag)
+        physics.narrative_drag = new_drag
         flinch_result = self.eng.gordon.check_flinch(ctx.clean_words, self.eng.tick_count)
         if flinch_result:
             if flinch_result.get("message"):
                 ctx.log(flinch_result["message"])
             if flinch_result.get("physics_effects"):
                 for k, v in flinch_result["physics_effects"].items():
-                    _set_p(physics, k, v)
-        current_loc, entry_msg = self.eng.navigator.locate(physics)
+                    setattr(physics, k, v)
+        current_loc, entry_msg = self.eng.navigator.locate(physics.to_dict())
         if entry_msg: ctx.log(entry_msg)
         env_logs = self.eng.navigator.apply_environment(physics)
         for e_log in env_logs: ctx.log(e_log)
         orbit_state, drag_pen, orbit_msg = self.eng.cosmic.analyze_orbit(self.eng.mind.mem, ctx.clean_words)
-        raw_zone = _get_p(physics, "zone", "COURTYARD")
-        stabilized_zone = self.eng.stabilizer.stabilize(raw_zone, physics, (orbit_state, drag_pen))
+        raw_zone = getattr(physics, "zone", "COURTYARD")
+        stabilized_zone = self.eng.stabilizer.stabilize(raw_zone, physics.to_dict(), (orbit_state, drag_pen))
         adjusted_drag = self.eng.stabilizer.override_cosmic_drag(drag_pen, stabilized_zone)
-        _set_p(physics, "zone", stabilized_zone)
-        self.eng.apply_cosmic_physics(physics, orbit_state, adjusted_drag)
+        physics.zone = stabilized_zone
+        self.eng.apply_cosmic_physics(physics.to_dict(), orbit_state, adjusted_drag)
         ctx.world_state["orbit"] = orbit_state
         if orbit_msg: ctx.log(orbit_msg)
         return ctx
@@ -388,34 +381,34 @@ class MachineryPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         physics = ctx.physics
-        eff_boost, zen_msg = self.eng.zen.raking_the_sand(physics, ctx.bio_result)
+        eff_boost, zen_msg = self.eng.zen.raking_the_sand(physics.to_dict(), ctx.bio_result)
         if zen_msg: ctx.log(zen_msg)
         if eff_boost > 0:
             current_eff = self.eng.bio.mito.state.efficiency_mod
             self.eng.bio.mito.state.membrane_potential = min(2.0, current_eff + (eff_boost * 0.1))
         if self.eng.gordon.inventory:
-            is_craft, craft_msg, old_item, new_item = self.eng.phys.forge.attempt_crafting(physics, self.eng.gordon.inventory)
+            is_craft, craft_msg, old_item, new_item = self.eng.phys.forge.attempt_crafting(physics.to_dict(), self.eng.gordon.inventory)
             if is_craft:
                 ctx.log(craft_msg)
                 if hasattr(self.eng, 'akashic'):
-                    vec = _get_p(physics, "vector")
+                    vec = physics.vector
                     catalyst_cat = max(vec, key=vec.get) if vec else "void"
                     self.eng.akashic.track_successful_forge(old_item, catalyst_cat, new_item)
                 if old_item in self.eng.gordon.inventory:
                     self.eng.gordon.inventory.remove(old_item)
                 ctx.log(self.eng.gordon.acquire(new_item))
-        transmute_msg = self.eng.phys.forge.transmute(physics)
+        transmute_msg = self.eng.phys.forge.transmute(physics.to_dict())
         if transmute_msg: ctx.log(transmute_msg)
-        _, forge_msg, new_item = self.eng.phys.forge.hammer_alloy(physics)
+        _, forge_msg, new_item = self.eng.phys.forge.hammer_alloy(physics.to_dict())
         if forge_msg: ctx.log(forge_msg)
         if new_item: ctx.log(self.eng.gordon.acquire(new_item))
-        _, _, theremin_msg, t_crit = self.eng.phys.theremin.listen(physics, self.eng.bio.governor.mode)
+        _, _, theremin_msg, t_crit = self.eng.phys.theremin.listen(physics.to_dict(), self.eng.bio.governor.mode)
         if theremin_msg: ctx.log(theremin_msg)
         if t_crit == "AIRSTRIKE":
             damage = 25.0
             self.eng.health -= damage
             ctx.log(f"{Prisma.RED}*** CRITICAL THEREMIN DISCHARGE *** -{damage} HP{Prisma.RST}")
-        c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(physics)
+        c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(physics.to_dict())
         if c_msg: ctx.log(c_msg)
         if c_state == "MELTDOWN":
             self.eng.health -= c_val
@@ -427,7 +420,7 @@ class IntrusionPhase(SimulationPhase):
         self.name = "INTRUSION"
 
     def run(self, ctx: CycleContext):
-        phys_data = ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics
+        phys_data = ctx.physics.to_dict()
         p_active, p_log = self.eng.bio.parasite.infect(phys_data, self.eng.stamina)
         if p_active: ctx.log(p_log)
         if self.eng.limbo.ghosts:
@@ -435,8 +428,9 @@ class IntrusionPhase(SimulationPhase):
                 ctx.logs[-1] = self.eng.limbo.haunt(ctx.logs[-1])
             else:
                 ctx.log(self.eng.limbo.haunt("The air is heavy."))
-        drag = _get_p(ctx.physics, "narrative_drag", 0.0)
-        kappa = _get_p(ctx.physics, "kappa", 0.5)
+        drag = ctx.physics.narrative_drag
+        kappa = ctx.physics.kappa
+
         if (drag > 4.0 or kappa < 0.3) and ctx.clean_words:
             start_node = random.choice(ctx.clean_words)
             loop_path = self.eng.mind.tracer.inject(start_node)
@@ -445,12 +439,12 @@ class IntrusionPhase(SimulationPhase):
                 if rewire_msg:
                     ctx.log(f"{Prisma.CYN}🦠 IMMUNE SYSTEM: {rewire_msg}{Prisma.RST}")
                     self.eng.bio.endo.dopamine += 0.2
-                    _set_p(ctx.physics, "narrative_drag", max(0.0, drag - 2.0))
+                    ctx.physics.narrative_drag = max(0.0, drag - 2.0)
         trauma_sum = sum(self.eng.trauma_accum.values())
         is_bored = self.eng.phys.pulse.is_bored()
         if (trauma_sum > 10.0 or is_bored) and random.random() < 0.2:
             dream_text, relief = self.eng.mind.dreamer.hallucinate(
-                _get_p(ctx.physics, "vector"),
+                ctx.physics.vector,
                 trauma_level=trauma_sum)
             prefix = "💭 NIGHTMARE" if trauma_sum > 10.0 else "💭 DAYDREAM"
             ctx.log(f"{Prisma.VIOLET}{prefix}: {dream_text}{Prisma.RST}")
@@ -465,8 +459,7 @@ class IntrusionPhase(SimulationPhase):
         is_p, p_msg = self.eng.check_pareidolia(ctx.clean_words)
         if is_p:
             ctx.log(p_msg)
-            psi = _get_p(ctx.physics, "psi", 0)
-            _set_p(ctx.physics, "psi", min(1.0, psi + 3.0))
+            ctx.physics.psi = min(1.0, ctx.physics.psi + 3.0)
         return ctx
 
 class SoulPhase(SimulationPhase):
@@ -475,14 +468,14 @@ class SoulPhase(SimulationPhase):
         self.name = "SOUL"
 
     def run(self, ctx: CycleContext):
-        lesson = self.eng.soul.crystallize_memory(ctx.physics, ctx.bio_result, self.eng.tick_count)
+        lesson = self.eng.soul.crystallize_memory(ctx.physics.to_dict(), ctx.bio_result, self.eng.tick_count)
         if lesson:
             ctx.log(f"{Prisma.VIOLET}   (The lesson '{lesson}' echoes in the chamber.){Prisma.RST}")
         if not self.eng.soul.current_obsession:
             self.eng.soul.find_obsession(self.eng.lex)
-        self.eng.soul.pursue_obsession(ctx.physics)
+        self.eng.soul.pursue_obsession(ctx.physics.to_dict())
         if self.eng.gordon.inventory:
-            self.eng.tinkerer.audit_tool_use(ctx.physics, self.eng.gordon.inventory)
+            self.eng.tinkerer.audit_tool_use(ctx.physics.to_dict(), self.eng.gordon.inventory)
         council_mandates = self._consult_council(self.eng.soul.traits)
         if council_mandates:
             ctx.council_mandates = getattr(ctx, "council_mandates", []) + council_mandates
@@ -491,7 +484,7 @@ class SoulPhase(SimulationPhase):
                 self._execute_mandate(ctx, mandate)
         council_advice, adjustments, mandates = self.eng.council.convene(
             ctx.input_text,
-            ctx.physics,
+            ctx.physics.to_dict(),
             ctx.bio_result)
         if mandates:
             if not hasattr(ctx, 'council_mandates'): ctx.council_mandates = []
@@ -505,14 +498,14 @@ class SoulPhase(SimulationPhase):
                 self.eng.bio.governor.set_override(target)
                 ctx.log(f"{Prisma.RED}⚖️ COUNCIL ORDER: Emergency Shift to {target}.{Prisma.RST}")
             elif action == "CIRCUIT_BREAKER":
-                _set_p(ctx.physics, "voltage", 0.0)
-                _set_p(ctx.physics, "narrative_drag", 20.0)
+                ctx.physics.voltage = 0.0
+                ctx.physics.narrative_drag = 20.0
                 ctx.log(f"{Prisma.RED}⚖️ COUNCIL ORDER: Circuit Breaker Tripped. Voltage dump.{Prisma.RST}")
         if adjustments:
             for param, delta in adjustments.items():
-                old_val = _get_p(ctx.physics, param, 0.0)
+                old_val = getattr(ctx.physics, param, 0.0)
                 new_val = old_val + delta
-                _set_p(ctx.physics, param, new_val)
+                setattr(ctx.physics, param, new_val)
                 ctx.record_flux("SIMULATION", param, old_val, new_val, "COUNCIL_MANDATE")
         return ctx
 
@@ -538,8 +531,8 @@ class SoulPhase(SimulationPhase):
     def _execute_mandate(self, ctx: CycleContext, mandate: Dict):
         effects = mandate.get("effect", {})
         for key, delta in effects.items():
-            current = _get_p(ctx.physics, key, 0.0)
-            _set_p(ctx.physics, key, max(0.0, current + delta))
+            current = getattr(ctx.physics, key, 0.0)
+            setattr(ctx.physics, key, max(0.0, current + delta))
 
 class CognitionPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -547,7 +540,7 @@ class CognitionPhase(SimulationPhase):
         self.name = "COGNITION"
 
     def run(self, ctx: CycleContext):
-        self.eng.mind.mem.encode(ctx.clean_words, ctx.physics, "GEODESIC")
+        self.eng.mind.mem.encode(ctx.clean_words, ctx.physics.to_dict(), "GEODESIC")
         if ctx.is_alive and ctx.clean_words:
             max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
             current_h = max(0.0, self.eng.health)
@@ -555,7 +548,7 @@ class CognitionPhase(SimulationPhase):
             bury_msg, new_wells = self.eng.mind.mem.bury(
                 ctx.clean_words,
                 self.eng.tick_count,
-                resonance=_get_p(ctx.physics, "voltage", 5.0),
+                resonance=ctx.physics.voltage,
                 desperation_level=desperation)
             if bury_msg:
                 prefix = f"{Prisma.YEL}⚠️ MEMORY:{Prisma.RST}" if "SATURATION" in bury_msg else f"{Prisma.RED}🍖 DONNER PROTOCOL:{Prisma.RST}"
@@ -563,7 +556,7 @@ class CognitionPhase(SimulationPhase):
             if new_wells:
                 ctx.log(f"{Prisma.CYN}🌌 GRAVITY WELL FORMED: {new_wells}{Prisma.RST}")
         ctx.mind_state = self.eng.noetic.think(
-            ctx.physics,
+            ctx.physics.to_dict(),
             ctx.bio_result,
             self.eng.gordon.inventory,
             self.eng.phys.dynamics.voltage_history,

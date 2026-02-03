@@ -44,8 +44,8 @@ class TheGatekeeper:
     def _check_thermodynamics(self, ctx):
         if hasattr(ctx, "bio_snapshot") and ctx.bio_snapshot:
             return ctx.bio_snapshot.get("atp", 10.0) > 1.0
-        if hasattr(self.eng, "get_vital_metric"):
-            return self.eng.get_vital_metric("atp") > 1.0
+        if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
+            return self.eng.bio.mito.state.atp_pool > 1.0
         return True
 
     def _audit_bureaucracy(self, phys):
@@ -230,12 +230,12 @@ class QuantumObserver:
                 node_mass = min(50.0, len(edges) * 1.5)
                 graph_mass += node_mass
         valence = TheLexicon.get_valence(clean_words)
-        entropy, repetition = calculate_metrics(text, counts)
+        e_metric, beta_val = calculate_metrics(text, counts)
         packet_data = {
             "voltage": voltage,
             "narrative_drag": geo.compression,
             "valence": valence,
-            "repetition": repetition,
+            "repetition": 0.0,
             "atmosphere": "NEUTRAL",
             "clean_words": clean_words,
             "counts": counts,
@@ -247,7 +247,8 @@ class QuantumObserver:
             "antigens": counts.get("antigen", 0),
             "perfection_streak": 0,
             "turbulence": 0.0,
-            "entropy": entropy,
+            "entropy": e_metric,
+            "beta_index": beta_val,
             "mass": round(graph_mass, 1),
             "velocity": 0.0,
             "psi": geo.abstraction,
@@ -261,7 +262,10 @@ class QuantumObserver:
     def _tally_categories(self, clean_words):
         counts = Counter()
         unknowns = []
-        target_cats = {"heavy", "explosive", "constructive", "abstract", "play", "suburban", "antigen"}
+        target_cats = {
+            "heavy", "explosive", "constructive", "abstract", "play", "suburban",
+            "antigen", "kinetic", "thermal", "cryo", "social", "sacred", "meat",
+            "buffer", "diversion"}
         solvents = TheLexicon.SOLVENTS if hasattr(TheLexicon, 'SOLVENTS') else set()
         for w in clean_words:
             if w in solvents:

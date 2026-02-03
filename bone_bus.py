@@ -255,7 +255,13 @@ class BoneConfig:
             valid_data, log = cls._validate_ranges(data)
             for key, value in valid_data.items():
                 if hasattr(cls, key):
-                    setattr(cls, key, value)
+                    target_attr = getattr(cls, key)
+                    if isinstance(target_attr, type) and isinstance(value, dict):
+                        for sub_key, sub_val in value.items():
+                            if hasattr(target_attr, sub_key):
+                                setattr(target_attr, sub_key, sub_val)
+                    else:
+                        setattr(cls, key, value)
             return True, f"Configuration loaded. {log}"
         except Exception as e:
             return False, f"Config load failed: {e}"
@@ -460,6 +466,7 @@ class PhysicsPacket:
     psi: float = 0.0
     kappa: float = 0.0
     manifold: str = "DEFAULT"
+    beta_index: float = 0.0
 
     @classmethod
     def void_state(cls):

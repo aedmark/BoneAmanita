@@ -1,5 +1,36 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.6.0: "THE VISCERAL REALITY UPDATE"**
+
+_"The eye sees only what the mind is prepared to comprehend."_ — Robertson Davies
+
+---
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **Config Lobotomy Cured (`bone_bus.py`):**
+  - **Fix:** `BoneConfig.load_from_file` no longer ruthlessly overwrites nested configuration classes (like `PHYSICS`) with raw dictionaries. It now performs a surgical, recursive update, preserving the structural integrity of your constants.
+- **Tensegrity Reinforcement (`bone_bus.py`):**
+  - **Added:** The `PhysicsPacket` dataclass now explicitly carries the `beta_index` metric. This structural strut supports the weight of the biological feedback loop, preventing "Phantom Limb" crashes in the metabolic cycle.
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker Lens)**
+
+- **Semantic Governance (`bone_body.py`):**
+  - **Refactor:** The `MetabolicGovernor` has been weaned off "magic numbers" (e.g., `25.0`, `15.0`). It now speaks the clear language of `BioConstants` (e.g., `GOV_VOLTAGE_CRITICAL`), making the rules of your biology readable and predictable.
+- **Cycle De-Cluttering (`bone_cycle.py`):**
+  - **Pruned:** Removed the defensive `_get_p` and `_set_p` wrapper functions. The simulation now trusts its own object types, improving readability and slightly reducing CPU overhead (ephemeralization).
+  - **Dead Code Removal:** Amputated the non-functional `strike_root` and `check_transplant_shock` calls in `NavigationPhase`.
+
+#### **⚙️ DYNAMICS (The Meadows Lens)**
+
+- **Curing Sensory Blindness (`bone_physics.py`):**
+  - **Fix:** The `QuantumObserver`'s retina (`target_cats`) was expanded. It can now actually "see" `kinetic`, `thermal`, `cryo`, and `social` concepts, allowing the physics engine to generate heat and velocity from language.
+  - **Restoration:** Restored the lost `_trigger_learning` method. The system no longer crashes when encountering the unknown; it learns.
+- **The Metabolic Bridge (`bone_cycle.py`):**
+  - **Fix:** Connected the `beta_index` from Physics directly to the Biology engine. The `MetabolismPhase` no longer grasps at a missing metric, ensuring stress and rewards are calculated based on true text complexity.
+- **Gatekeeper Stability (`bone_physics.py`):**
+  - **Fix:** The `TheGatekeeper` no longer hallucinates a `get_vital_metric` method on the engine. It now checks the mitochondrial battery directly.
+
 ### **BONEAMANITA v13.5.1: "THE TENSEGRITY TUNE-UP"**
 
 _"To attain knowledge, add things every day. To attain wisdom, remove things every day."_ — Lao Tzu
