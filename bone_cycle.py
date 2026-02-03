@@ -14,6 +14,7 @@ from bone_symbiosis import SymbiosisManager
 from bone_village import SanctuaryGovernor
 from bone_telemetry import TelemetryService, DecisionCrystal, BlackBoxReader
 from bone_lexicon import SomaticInterface
+from bone_drivers import ArchetypeArbiter
 
 def _get_p(p, key, default=None):
     if isinstance(p, dict):
@@ -183,12 +184,10 @@ class MaintenancePhase(SimulationPhase):
                 for w in rotted:
                     self.eng.limbo.ghosts.append(f"👻{w.upper()}_ECHO")
                 ctx.log(f"{Prisma.GRY}♻️ COMPOST: {len(rotted)} concepts decayed -> +{biomass:.1f} Fertility.{Prisma.RST}")
-
             if self.eng.soil_fertility > 10.0:
                 drag_reduction = self.eng.soil_fertility * 0.05
                 ctx.physics.narrative_drag = max(0.0, ctx.physics.narrative_drag - drag_reduction)
                 ctx.log(f"{Prisma.GRN}🌱 FERTILE GROUND: The compost lowers drag by {drag_reduction:.2f}.{Prisma.RST}")
-
             self.eng.mind.mem.enforce_limits(self.eng.tick_count)
         except Exception as e:
             if BoneConfig.VERBOSE_LOGGING: print(f"Maintenance Error: {e}")
@@ -430,7 +429,6 @@ class IntrusionPhase(SimulationPhase):
                 ctx.log(self.eng.limbo.haunt("The air is heavy."))
         drag = ctx.physics.narrative_drag
         kappa = ctx.physics.kappa
-
         if (drag > 4.0 or kappa < 0.3) and ctx.clean_words:
             start_node = random.choice(ctx.clean_words)
             loop_path = self.eng.mind.tracer.inject(start_node)
@@ -534,6 +532,27 @@ class SoulPhase(SimulationPhase):
             current = getattr(ctx.physics, key, 0.0)
             setattr(ctx.physics, key, max(0.0, current + delta))
 
+class ArbitrationPhase(SimulationPhase):
+    def __init__(self, engine_ref):
+        super().__init__(engine_ref)
+        self.name = "ARBITRATION"
+        if not hasattr(self.eng, 'arbiter'):
+            self.eng.arbiter = ArchetypeArbiter()
+
+    def run(self, ctx: CycleContext):
+        phys_lens, _, _ = self.eng.drivers.enneagram.decide_persona(ctx.physics)
+        soul_arch = self.eng.soul.archetype
+        mandates = getattr(ctx, "council_mandates", [])
+        final_lens, source, opinion = self.eng.arbiter.arbitrate(
+            physics_lens=phys_lens,
+            soul_archetype=soul_arch,
+            council_mandates=mandates)
+        ctx.active_lens = final_lens
+        if source != "PHYSICS_VECTOR":
+            ctx.log(f"{Prisma.MAG}⚖️ {opinion}{Prisma.RST}")
+        self.eng.drivers.lens_arbiter.current_focus = final_lens
+        return ctx
+
 class CognitionPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -588,6 +607,10 @@ class StateReconciler:
         new_ctx.bio_result = copy.deepcopy(ctx.bio_result)
         new_ctx.world_state = ctx.world_state.copy()
         new_ctx.mind_state = ctx.mind_state.copy()
+        if hasattr(ctx, 'reality_stack'):
+            new_ctx.reality_stack = copy.deepcopy(ctx.reality_stack)
+        if hasattr(ctx, 'active_lens'):
+            new_ctx.active_lens = ctx.active_lens
         return new_ctx
 
     @staticmethod
@@ -607,6 +630,8 @@ class StateReconciler:
         canonical.world_state = sandbox.world_state
         canonical.mind_state = sandbox.mind_state
         canonical.clean_words = sandbox.clean_words
+        if hasattr(sandbox, 'active_lens'):
+            canonical.active_lens = sandbox.active_lens
 
 class SensationPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -673,6 +698,7 @@ class CycleSimulator:
             RealityFilterPhase(engine_ref),
             IntrusionPhase(engine_ref),
             SoulPhase(engine_ref),
+            ArbitrationPhase(engine_ref),
             CognitionPhase(engine_ref)]
 
     def run_simulation(self, ctx: CycleContext) -> CycleContext:
@@ -808,6 +834,8 @@ class GeodesicOrchestrator:
         tracer.start_cycle(cycle_id)
         try:
             ctx = CycleContext(input_text=user_message)
+            if hasattr(self.eng, 'reality_stack'):
+                ctx.reality_stack = self.eng.reality_stack
             ctx.user_name = self.eng.user_name
             ctx.council_mandates = []
             self.eng.events.flush()

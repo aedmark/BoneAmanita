@@ -4,7 +4,7 @@
 import os, time, json, uuid, urllib.request, urllib.error, random
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
-from bone_bus import EventBus, Prisma, BoneConfig, SystemHealth, TheObserver, BonePresets
+from bone_bus import EventBus, Prisma, BoneConfig, SystemHealth, TheObserver, BonePresets, RealityStack
 from bone_commands import CommandProcessor
 from bone_data import TheLore
 from bone_village import TownHall, DeathGen, TheNavigator, TheTinkerer
@@ -151,6 +151,7 @@ class BoneAmanita:
         self.system_health = SystemHealth()
         self.observer = TheObserver()
         self.system_health.link_observer(self.observer)
+        self.reality_stack = RealityStack()
         self.soil_fertility = 0.0
 
     def _initialize_embryo(self):

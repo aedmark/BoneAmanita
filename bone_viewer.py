@@ -8,14 +8,17 @@ class Projector:
     def __init__(self):
         self.width = 60
 
-    def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple) -> str:
+    def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1) -> str:
         physics = physics_ctx.get("physics", {})
         status_line = self._render_vital_strip(data_ctx, mind_ctx)
         physics_line = self._render_physics_strip(physics, data_ctx.get("vectors", {}))
         zone = physics.get("zone", "UNKNOWN")
         lens = mind_ctx[0] if mind_ctx else "RAW"
-        context_line = f"{Prisma.GRY}📍 {zone} // 👁️ {lens}{Prisma.RST}"
-        div = f"{Prisma.GRY}{'─'*60}{Prisma.RST}"
+        depth_map = {0: "TERMINAL", 1: "SIM", 2: "VILLAGE", 3: "DEBUG", 4: "DEEP_CX"}
+        depth_label = depth_map.get(reality_depth, "UNKNOWN")
+        depth_marker = f"{Prisma.VIOLET}[D{reality_depth}:{depth_label}]{Prisma.RST}"
+        context_line = f"{Prisma.GRY}📍 {zone} // 👁️ {lens}{Prisma.RST} // {depth_marker}"
+        div = f"{Prisma.GRY}{'─' * 60}{Prisma.RST}"
         return f"{status_line}\n{physics_line}\n{context_line}\n{div}"
 
     def _render_vital_strip(self, data: Dict, mind: tuple) -> str:
@@ -90,10 +93,14 @@ class GeodesicRenderer:
             "stamina": self.eng.stamina,
             "bio": bio,
             "vectors": physics.get("vector", {})}
+        current_depth = 1
+        if hasattr(ctx, "reality_stack"):
+            current_depth = ctx.reality_stack.current_depth
         return self.projector.render(
             {"physics": physics},
             data_ctx,
-            mind_tuple)
+            mind_tuple,
+            reality_depth=current_depth)
 
     def render_soul_strip(self, soul_ref) -> str:
         if not soul_ref: return ""

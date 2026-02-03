@@ -7,64 +7,64 @@ from bone_data import TheLore
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
-        self._eng = engine_ref
+        self.eng = engine_ref
         self.P = prisma_ref
         self.Config = config_ref
 
     def log(self, text: str, category: str = "CMD"):
-        if hasattr(self._eng, "events"):
-            self._eng.events.log(text, category)
+        if hasattr(self.eng, "events"):
+            self.eng.events.log(text, category)
         else:
             print(f"[{category}] {text}")
 
     def trigger_visual_cortex(self) -> Optional[Dict]:
-        if hasattr(self._eng, "process_turn"):
-            return self._eng.process_turn("LOOK")
+        if hasattr(self.eng, "process_turn"):
+            return self.eng.process_turn("LOOK")
         return None
 
     def modify_resource(self, resource: str, delta: float):
         if resource == "stamina":
-            self._eng.stamina = max(0.0, self._eng.stamina + delta)
+            self.eng.stamina = max(0.0, self.eng.stamina + delta)
         elif resource == "atp":
-            if hasattr(self._eng, "bio"):
-                self._eng.bio.mito.state.atp_pool = max(0.0, self._eng.bio.mito.state.atp_pool + delta)
+            if hasattr(self.eng, "bio"):
+                self.eng.bio.mito.state.atp_pool = max(0.0, self.eng.bio.mito.state.atp_pool + delta)
 
     def get_resource(self, resource: str) -> float:
-        if resource == "stamina": return self._eng.stamina
-        if resource == "atp": return self._eng.bio.mito.state.atp_pool
-        if resource == "health": return self._eng.health
+        if resource == "stamina": return self.eng.stamina
+        if resource == "atp": return self.eng.bio.mito.state.atp_pool
+        if resource == "health": return self.eng.health
         return 0.0
 
     def save_state(self) -> str:
-        if hasattr(self._eng, "mind") and hasattr(self._eng.mind, "mem"):
-            return self._eng.mind.mem.save(health=self._eng.health, stamina=self._eng.stamina)
+        if hasattr(self.eng, "mind") and hasattr(self.eng.mind, "mem"):
+            return self.eng.mind.mem.save(health=self.eng.health, stamina=self.eng.stamina)
         return "Error: Memory system not found."
 
     def get_vitals(self) -> Dict[str, float]:
         return {
-            "health": self._eng.health,
-            "stamina": self._eng.stamina,
-            "atp": self._eng.bio.mito.state.atp_pool,
+            "health": self.eng.health,
+            "stamina": self.eng.stamina,
+            "atp": self.eng.bio.mito.state.atp_pool,
             "max_health": getattr(self.Config, "MAX_HEALTH", 100.0),
             "max_stamina": getattr(self.Config, "MAX_STAMINA", 100.0)}
 
     def get_inventory(self) -> List[str]:
-        if hasattr(self._eng, "gordon"):
-            return getattr(self._eng.gordon, "inventory", [])
+        if hasattr(self.eng, "gordon"):
+            return getattr(self.eng.gordon, "inventory", [])
         return []
 
     def get_navigation_report(self) -> str:
-        if not hasattr(self._eng, "town_hall") or not hasattr(self._eng, "phys"):
+        if not hasattr(self.eng, "town_hall") or not hasattr(self.eng, "phys"):
             return "Navigation Offline."
-        nav = getattr(self._eng.town_hall, "Navigator", None)
-        packet = self._eng.phys.tension.last_physics_packet
+        nav = getattr(self.eng.town_hall, "Navigator", None)
+        packet = self.eng.phys.tension.last_physics_packet
 
         if nav and packet:
             return nav.report_position(packet)
         return "Navigation Systems Unresponsive."
 
     def get_soul_status(self) -> Optional[str]:
-        soul = getattr(self._eng, "soul", None)
+        soul = getattr(self.eng, "soul", None)
         if soul:
             return soul.get_soul_state()
         return None
@@ -130,11 +130,20 @@ class CommandProcessor:
         self.registry.register("/reload", self._cmd_reload, "Hot-reload Lore")
 
     def execute(self, text: str):
+        if hasattr(self.interface.eng, "reality_stack"):
+            stack = self.interface.eng.reality_stack
+            rules = stack.get_grammar_rules()
+            if not rules.get("allow_commands", True):
+                if hasattr(self.interface, 'log'):
+                    self.interface.log(
+                        f"{self.P.RED}COMMAND REJECTED: Reality Depth {stack.current_depth} prohibits administrative override.{self.P.RST}",
+                        "ERR")
+                return True
         return self.registry.execute(text)
 
     def _cmd_help(self, _parts):
         lines = [
-            f"\n{self.P.CYN}/// BONEAMANITA 13.5.0 TERMINAL ///{self.P.RST}",
+            f"\n{self.P.CYN}/// BONEAMANITA 13.7.0 TERMINAL ///{self.P.RST}",
             f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n"]
         structure = {
             "SURVIVAL":    ["/status", "/inventory", "/look"],

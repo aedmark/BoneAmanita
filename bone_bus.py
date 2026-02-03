@@ -494,6 +494,47 @@ class PhysicsPacket:
     def __contains__(self, key):
         return hasattr(self, key)
 
+
+class RealityLayer:
+    TERMINAL = 0
+    SIMULATION = 1
+    VILLAGE = 2
+    DEBUG = 3
+    DEEP_CX = 4
+
+class RealityStack:
+    def __init__(self):
+        self._stack = [RealityLayer.SIMULATION]
+        self._lock = False
+
+    @property
+    def current_depth(self) -> int:
+        return self._stack[-1]
+
+    def dive(self, layer: int) -> bool:
+        if self._lock: return False
+        if layer > self.current_depth:
+            self._stack.append(layer)
+            return True
+        return False
+
+    def surface(self) -> int:
+        if self._lock: return self.current_depth
+        if len(self._stack) > 1:
+            return self._stack.pop()
+        return self._stack[0]
+
+    def stabilize_at(self, layer: int):
+        self._stack = [layer]
+
+    def get_grammar_rules(self) -> Dict[str, bool]:
+        depth = self.current_depth
+        return {
+            "allow_narrative": depth == RealityLayer.SIMULATION,
+            "allow_commands": depth <= RealityLayer.VILLAGE,
+            "allow_meta": depth >= RealityLayer.DEBUG,
+            "raw_output": depth == RealityLayer.DEEP_CX}
+
 @dataclass
 class CycleContext:
     input_text: str
@@ -513,6 +554,8 @@ class CycleContext:
     bureau_ui: str = ""
     user_profile: Dict = field(default_factory=lambda: {"name": "TRAVELER", "confidence": 0})
     last_impulse: Any = None
+    reality_stack: RealityStack = field(default_factory=RealityStack)
+    active_lens: str = "NARRATOR"
 
     @property
     def user_name(self):
@@ -554,7 +597,9 @@ class CycleContext:
             is_bureaucratic=self.is_bureaucratic,
             bureau_ui=self.bureau_ui,
             timestamp=self.timestamp,
-            last_impulse=self.last_impulse)
+            last_impulse=self.last_impulse,
+            reality_stack=copy.deepcopy(self.reality_stack),
+            active_lens=self.active_lens)
         return new_ctx
 
 @dataclass
