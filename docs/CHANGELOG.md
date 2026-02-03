@@ -1,5 +1,45 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.7.0: "THE ONTOLOGICAL STACK"**
+
+_"Reality is that which, when you stop believing in it, doesn't go away."_ — Philip K. Dick
+
+---
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **The Vertical Axis (`bone_bus.py`):**
+- **New Organ:** Introduced the `RealityStack`. The simulation is no longer a flat plane; it has **Depth**.
+- **Layers:** Defined 5 ontological states: `TERMINAL` (0), `SIMULATION` (1), `VILLAGE` (2), `DEBUG` (3), and `DEEP_CX` (4).
+
+- **State Persistence (`bone_main.py`):**
+- **Fix:** The Reality Stack is anchored in the `BoneAmanita` kernel, not the ephemeral `CycleContext`. The system now remembers "where" it is, even after the tick ends.
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker Lens)**
+
+- **The Supreme Court (`bone_drivers.py`):**
+- **New Organ:** Deployed the `ArchetypeArbiter`.
+- **Logic:** Replaced the "whoever yells loudest" persona logic with a strict judicial hierarchy: `Council Mandate` > `User Override` > `Soul Evolution` > `Physics Vector`.
+- **Impact:** The "Body" (Physics) can no longer hijack the "Mind" (Soul) without a compelling reason.
+
+- **Pre-Cognitive Sentencing (`bone_cycle.py`):**
+- **New Phase:** Inserted the `ArbitrationPhase`. Identity disputes are now resolved _before_ the `CognitionPhase` begins. The LLM knows exactly who it is before it generates a single token.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Lens)**
+
+- **Depth Perception (`bone_viewer.py`):**
+- **UI Update:** The Geodesic Viewport now displays the current Reality Depth (e.g., `[D1:SIM]`, `[D3:DEBUG]`). You can now see the metaphysical walls.
+
+- **Security Clearance (`bone_commands.py`):**
+- **Feature:** Administrative commands (`/debug`, `/mode`) are now gated by depth. If you are trapped in a Deep Context nightmare (Layer 4), the console will reject your attempts to cheat your way out.
+
+#### **⚙️ DYNAMICS (The Meadows Lens)**
+
+- **Judicial Transparency:**
+- **Feedback:** When the Arbiter overrides a natural reflex (e.g., forcing "The Narrator" during a high-voltage panic), it logs a `⚖️ RULING` event. The system explains its own repression.
+
+---
+
 ### **BONEAMANITA v13.6.0: "THE VISCERAL REALITY UPDATE"**
 
 _"The eye sees only what the mind is prepared to comprehend."_ — Robertson Davies

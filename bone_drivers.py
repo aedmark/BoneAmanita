@@ -4,7 +4,8 @@ import json, os, random
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional
 from bone_data import TheLore
-from bone_bus import EventBus, BonePresets
+from bone_bus import EventBus, BonePresets, ArchetypeArbiter
+from bone_metaphysics import CongruenceValidator
 
 SCENARIOS = TheLore.get("scenarios") or {"ARCHETYPES": ["Void"], "BANNED_CLICHES": []}
 LENSES = TheLore.get("lenses") or {}
@@ -74,7 +75,7 @@ class EnneagramDriver:
         scores = {k: 0.0 for k in self.WEIGHTS.keys()}
         scores["NARRATOR"] += 2.0
         is_safe_metrics = (4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5)
-        if p_zone == BonePresets.SANCTUARY.ZONE or is_safe_metrics:
+        if p_zone == BonePresets.SANCTUARY.get("ZONE") or is_safe_metrics:
             scores["NARRATOR"] += 6.0; scores["JESTER"] += 3.0; scores["GORDON"] -= 2.0
         for persona, criteria in self.WEIGHTS.items():
             if "tension_min" in criteria and p_vol > criteria["tension_min"]: scores[persona] += 3.0
@@ -145,10 +146,17 @@ class SynergeticLensArbiter:
         chem = bio_state.get("chem", {})
         adrenaline_val = chem.get("adrenaline", chem.get("ADR", 0.5))
         style_data = self._fetch_style_data(lens_name, physics, adrenaline_val)
-        self.current_focus = lens_name; self.last_reason = reason
+        phi = getattr(physics, "phi", 1.0)
+        if phi < 0.6:
+            style_data["directives"].append(
+                f"WARNING: COGNITIVE DISSOCIATION (Phi={phi:.2f}). REALIGN WORDS WITH BIO-STATE.")
+            style_data["msg"] += " [SYSTEM UNSTABLE]"
+        self.current_focus = lens_name
+        self.last_reason = reason
         return {
             "lens": lens_name, "role": f"{style_data['role_name']} [{state_desc}]",
-            "style_directives": style_data['directives'], "lexicon_bias": style_data['vocab'], "context_msg": style_data['msg']}
+            "style_directives": style_data['directives'], "lexicon_bias": style_data['vocab'],
+            "context_msg": style_data['msg']}
 
     def _fetch_style_data(self, lens, p, adrenaline_val):
         if lens not in LENSES: lens = "NARRATOR"
@@ -267,52 +275,3 @@ DIRECTIVES:
             "SYNTHESIZER": "Connect the dots. Mirror back understanding.",
             "VALIDATOR": "Verify gaps. Confirm the final spec."}
         return desc.get(self.state.archetype, "Observe.")
-
-
-class ArchetypeArbiter:
-    PRIORITY_ORDER = [
-        "COUNCIL_MANDATE",
-        "USER_OVERRIDE",
-        "SOUL_EVOLUTION",
-        "PHYSICS_VECTOR"]
-
-    def __init__(self):
-        self.last_ruling = "NARRATOR"
-        self.lock_duration = 0
-
-    def arbitrate(self,
-                  physics_lens: str,
-                  soul_archetype: str,
-                  council_mandates: List[Dict],
-                  user_override: Optional[str] = None) -> Tuple[str, str, str]:
-        if self.lock_duration > 0:
-            self.lock_duration -= 1
-            return self.last_ruling, "LOCKED", "Previous Ruling Persists"
-        candidates = {"PHYSICS_VECTOR": physics_lens}
-        soul_map = {
-            "THE POET": "NARRATOR", "THE ENGINEER": "CLARENCE",
-            "THE CRITIC": "SHERLOCK", "THE NIHILIST": "GLASS",
-            "THE EXPLORER": "GORDON", "THE OBSERVER": "NARRATOR",
-            "THE HIGH-OBSERVER": "NARRATOR", "THE HIGH-POET": "JESTER"}
-        candidates["SOUL_EVOLUTION"] = soul_map.get(soul_archetype, "NARRATOR")
-        if user_override:
-            candidates["USER_OVERRIDE"] = user_override
-        for mandate in council_mandates:
-            if mandate.get("action") == "FORCE_LENS":
-                candidates["COUNCIL_MANDATE"] = mandate.get("value")
-                self.lock_duration = mandate.get("duration", 0)
-                break
-        winning_source = "PHYSICS_VECTOR"
-        winning_lens = physics_lens
-        for source in self.PRIORITY_ORDER:
-            if source in candidates:
-                val = candidates[source]
-                if val:
-                    winning_source = source
-                    winning_lens = val
-                    break
-        self.last_ruling = winning_lens
-        opinion = f"RULING: {winning_lens} via {winning_source}."
-        if winning_source == "PHYSICS_VECTOR" and soul_archetype != "THE OBSERVER":
-            opinion += f" (Soul '{soul_archetype}' overruled by immediate physical pressure)."
-        return winning_lens, winning_source, opinion

@@ -3,7 +3,8 @@
 import traceback, random, time, uuid, re, copy
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Tuple, List, Optional
-from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket, BonePresets
+from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket, BonePresets, ArchetypeArbiter
+from bone_metaphysics import CongruenceValidator
 from bone_village import TownHall
 from bone_protocols import TheBureau
 from bone_physics import ChromaScope, TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine, TRIGRAM_MAP
@@ -14,7 +15,6 @@ from bone_symbiosis import SymbiosisManager
 from bone_village import SanctuaryGovernor
 from bone_telemetry import TelemetryService, DecisionCrystal, BlackBoxReader
 from bone_lexicon import SomaticInterface
-from bone_drivers import ArchetypeArbiter
 
 def _get_p(p, key, default=None):
     if isinstance(p, dict):
@@ -550,7 +550,7 @@ class ArbitrationPhase(SimulationPhase):
         ctx.active_lens = final_lens
         if source != "PHYSICS_VECTOR":
             ctx.log(f"{Prisma.MAG}⚖️ {opinion}{Prisma.RST}")
-        self.eng.drivers.lens_arbiter.current_focus = final_lens
+        self.eng.drivers.current_focus = final_lens
         return ctx
 
 class CognitionPhase(SimulationPhase):
@@ -778,6 +778,10 @@ class CycleReporter:
         if feedback["warnings"]:
             for warn in feedback["warnings"]:
                 ctx.logs.append(f"{Prisma.OCHRE}⚠️ WARNING: {warn}{Prisma.RST}")
+        if hasattr(ctx, 'validator') and ctx.validator:
+            phi = ctx.validator.last_phi
+            color = Prisma.GRN if phi > 0.8 else Prisma.RED
+            ctx.logs.append(f"{color}Φ RESONANCE: {phi:.3f}{Prisma.RST}")
 
     def _inject_somatic_pulse(self, ctx: CycleContext):
         impulse = getattr(ctx, "last_impulse", None)
@@ -834,12 +838,20 @@ class GeodesicOrchestrator:
         tracer.start_cycle(cycle_id)
         try:
             ctx = CycleContext(input_text=user_message)
+            ctx.validator = CongruenceValidator()
             if hasattr(self.eng, 'reality_stack'):
                 ctx.reality_stack = self.eng.reality_stack
             ctx.user_name = self.eng.user_name
             ctx.council_mandates = []
             self.eng.events.flush()
             ctx = self.simulator.run_simulation(ctx)
+            if hasattr(ctx, 'validator') and ctx.validator:
+                last_log = ctx.logs[-1] if ctx.logs else ""
+                ctx.validator.calculate_resonance(last_log, ctx)
+                if hasattr(ctx.physics, "phi"):
+                    ctx.physics.phi = ctx.validator.last_phi
+                else:
+                    setattr(ctx.physics, "phi", ctx.validator.last_phi)
             if not ctx.is_alive:
                 return self.eng.trigger_death(ctx.physics)
             snapshot = self.reporter.render_snapshot(ctx)

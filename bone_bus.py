@@ -511,14 +511,14 @@ class RealityStack:
     def current_depth(self) -> int:
         return self._stack[-1]
 
-    def dive(self, layer: int) -> bool:
+    def push_layer(self, layer: int, context: Any = None) -> bool:
         if self._lock: return False
-        if layer > self.current_depth:
+        if layer == RealityLayer.DEBUG or layer == self.current_depth + 1:
             self._stack.append(layer)
             return True
         return False
 
-    def surface(self) -> int:
+    def pop_layer(self) -> int:
         if self._lock: return self.current_depth
         if len(self._stack) > 1:
             return self._stack.pop()
@@ -556,6 +556,7 @@ class CycleContext:
     last_impulse: Any = None
     reality_stack: RealityStack = field(default_factory=RealityStack)
     active_lens: str = "NARRATOR"
+    validator: Any = None
 
     @property
     def user_name(self):
@@ -620,3 +621,36 @@ class PhysSystem:
     nav: Any
     gate: Optional[Any] = None
     tension: Optional[Any] = None
+    dynamics: Any = None
+
+@dataclass
+class StateSandbox:
+    phase_name: str
+    physics_copy: Dict[str, Any]
+    bio_copy: Dict[str, Any]
+    logs: List[str] = field(default_factory=list)
+    changes_committed: bool = False
+
+    def commit(self, target_context: 'CycleContext'):
+        if self.changes_committed: return
+        target_context.logs.extend(self.logs)
+        for k, v in self.physics_copy.items():
+            if hasattr(target_context.physics, k):
+                setattr(target_context.physics, k, v)
+        self.changes_committed = True
+
+class ArchetypeArbiter:
+    def arbitrate(self, physics_lens: str, soul_archetype: str, council_mandates: List[Dict]) -> Tuple[str, str, str]:
+        for mandate in council_mandates:
+            if mandate.get("type") == "LOCKDOWN":
+                return "THE CENSOR", "COUNCIL", "Martial Law declared. Identity suppressed."
+            if mandate.get("type") == "FORCE_MODE":
+                return "THE MACHINE", "COUNCIL", "Bureaucratic override active."
+
+        if "/" in soul_archetype:
+            return soul_archetype, "SOUL", f"The Diamond Soul refracts the physics ({soul_archetype})."
+
+        if physics_lens in ["THE MANIC", "THE VOID"]:
+            return physics_lens, "PHYSICS", f"Environment is too loud. You are {physics_lens}."
+
+        return soul_archetype, "SOUL", "The Soul guides the lens."

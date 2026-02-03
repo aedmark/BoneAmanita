@@ -415,6 +415,12 @@ class ZoneInertia:
         return cosmic_drag_penalty
 
 class CosmicDynamics:
+    def __init__(self):
+        self.voltage_history = deque(maxlen=20)
+
+    def commit(self, voltage: float):
+        self.voltage_history.append(voltage)
+
     @staticmethod
     def analyze_orbit(network, clean_words):
         if not clean_words or not network.graph:

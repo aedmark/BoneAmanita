@@ -12,7 +12,7 @@ from bone_lexicon import TheLexicon, SomaticInterface
 from bone_inventory import GordonKnot
 from bone_telemetry import TelemetryService
 from bone_protocols import TheFolly, KintsugiProtocol, TherapyProtocol, TheBureau, ZenGarden
-from bone_drivers import ChorusDriver
+from bone_drivers import ChorusDriver, SynergeticLensArbiter
 from bone_physics import CosmicDynamics, ZoneInertia
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
@@ -167,6 +167,7 @@ class BoneAmanita:
 
     def _initialize_village(self):
         self.town_hall = TownHall(self.gordon, self.events, self.embryo.shimmer)
+        self.drivers = SynergeticLensArbiter(self.events)
         self.village = {
             "town_hall": self.town_hall,
             "council": CouncilChamber(),
@@ -181,8 +182,10 @@ class BoneAmanita:
             "cosmic": CosmicDynamics(),
             "navigator": TheNavigator(self.embryo.shimmer),
             "zen": ZenGarden(self.events),
-            "tinkerer": TheTinkerer(self.gordon, self.events) }
+            "tinkerer": TheTinkerer(self.gordon, self.events)}
         self.cmd = CommandProcessor(self, Prisma, self.lex, BoneConfig)
+        if self.phys:
+            self.phys.dynamics = self.village["cosmic"]
 
     def _initialize_cognition(self):
         self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.folly, self.events)
