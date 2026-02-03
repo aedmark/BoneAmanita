@@ -1,5 +1,30 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.8.0: "THE GOVERNED SOUL"**
+
+_"Freedom is not the absence of structure, but the presence of a net."_
+
+---
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **The Sandbox (`bone_bus.py`):**
+  - **New Class:** Introduced `PhysicsSandbox`. Phases no longer mutate the raw Physics Packet directly; they operate on a transparent proxy that logs every change.
+  - **Benefit:** If a phase crashes, the engine can now unwrap the sandbox and discard the corrupted state, preventing a total system spiral.
+
+- **The Governor (`bone_cycle.py`):**
+  - **Stabilizer Upgrade:** The `CycleStabilizer` now continuously enforces global `BoneConfig` limits.
+  - **Fix:** Previously, the PID controller could fight against the Config limits (e.g., trying to push Voltage to 15.0 when the limit was 10.0). It now respects the hard ceiling.
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker Lens)**
+
+- **The Consultant (`bone_main.py`):**
+  - **Hired:** The `BoneConsultant` (VSL Driver) is now officially instantiated in the kernel.
+  - **Integration:** Connected to the `CognitionPhase`. It now adjusts its "E/B" (Exploration/Bureaucracy) coordinates based on real-time bio-state and text density.
+
+- **Mode Switching (`bone_commands.py`):**
+  - **Reconciliation:** The `/mode` command (e.g., `/mode ZEN_GARDEN`) now actively clamps the current physics state to the new preset's limits immediately, rather than waiting for natural decay.
+
 ### **BONEAMANITA v13.7.0: "THE ONTOLOGICAL STACK"**
 
 _"Reality is that which, when you stop believing in it, doesn't go away."_ — Philip K. Dick

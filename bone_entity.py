@@ -1,11 +1,23 @@
 """ bone_entity.py - The Interface for the Conversational Partner """
 
-import json
-import random
-import re
+import json, random, re
+from dataclasses import dataclass, asdict
 from typing import Dict, Any
 from bone_main import BoneAmanita, Prisma
 from bone_data import TheLore
+
+
+@dataclass
+class EntityResponse:
+    text: str
+    mood: str
+    voltage: float
+    location: str
+    health: float
+    stamina: float
+
+    def __getitem__(self, item):
+        return getattr(self, item)
 
 class ConversationalEntity:
     def __init__(self, user_name="Traveler", save_file="bone_config.json"):
@@ -51,25 +63,25 @@ class ConversationalEntity:
         cleaned_reply = self._clean_text(raw_reply)
         return self._pack_response(cleaned_reply, full_packet)
 
-    def _pack_response(self, text, packet=None) -> Dict[str, Any]:
+    def _pack_response(self, text, packet=None) -> EntityResponse:
         if not packet:
-            return {
-                "text": text,
-                "voltage": 0.0,
-                "mood": "Neutral",
-                "location": "Restored",
-                "health": self.engine.health,
-                "stamina": self.engine.stamina}
+            return EntityResponse(
+                text=text,
+                mood="Neutral",
+                voltage=0.0,
+                location="Restored",
+                health=self.engine.health,
+                stamina=self.engine.stamina)
         phys = packet.get("physics", {})
         bio = packet.get("bio", {})
         world = packet.get("world", {})
-        return {
-            "text": text,
-            "voltage": phys.get("voltage", 0.0) if isinstance(phys, dict) else 0.0,
-            "health": self.engine.health,
-            "stamina": self.engine.stamina,
-            "mood": self._derive_mood(bio),
-            "location": world.get("orbit", ["Unknown"])[0]}
+        return EntityResponse(
+            text=text,
+            mood=self._derive_mood(bio),
+            voltage=phys.get("voltage", 0.0) if isinstance(phys, dict) else 0.0,
+            location=world.get("orbit", ["Unknown"])[0],
+            health=self.engine.health,
+            stamina=self.engine.stamina)
 
     def _clean_text(self, text: str) -> str:
         no_hard_wraps = re.sub(r'(?<!\n)\n(?!\n)', ' ', text)

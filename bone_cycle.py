@@ -3,7 +3,7 @@
 import traceback, random, time, uuid, re, copy
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Tuple, List, Optional
-from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket, BonePresets, ArchetypeArbiter
+from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket, BonePresets, ArchetypeArbiter, PhysicsSandbox
 from bone_metaphysics import CongruenceValidator
 from bone_village import TownHall
 from bone_protocols import TheBureau
@@ -73,6 +73,16 @@ class CycleStabilizer:
             self.events.log(f"{Prisma.VIOLET}⚖️ STABILIZER: Yielding to Paradox. Drag dampeners disengaged.{Prisma.RST}", "SYS")
             d_force = 0.0
         corrections_made = False
+        MAX_V = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
+        MIN_V = getattr(BoneConfig.PHYSICS, "VOLTAGE_FLOOR", 0.0)
+        if abs(curr_v - self.governor.voltage_pid.setpoint) > 6.0 and abs(v_force) > 0.05:
+            raw_new_v = curr_v + v_force
+            new_v = max(MIN_V, min(MAX_V, raw_new_v))
+            p.voltage = new_v
+            if abs(v_force) > 0.1:
+                reason = "PID_DAMPENER" if v_force < 0 else "PID_EXCITATION"
+                if new_v != raw_new_v: reason += "_CLAMPED"
+                ctx.record_flux(current_phase, "voltage", curr_v, new_v, reason)
         if abs(curr_v - self.governor.voltage_pid.setpoint) > 6.0 and abs(v_force) > 0.05:
             new_v = max(0.0, curr_v + v_force)
             p.voltage = new_v
@@ -559,6 +569,8 @@ class CognitionPhase(SimulationPhase):
         self.name = "COGNITION"
 
     def run(self, ctx: CycleContext):
+        if hasattr(self.eng, 'consultant'):
+            self.eng.consultant.update_coordinates(ctx.input_text, ctx.bio_result, ctx.physics)
         self.eng.mind.mem.encode(ctx.clean_words, ctx.physics.to_dict(), "GEODESIC")
         if ctx.is_alive and ctx.clean_words:
             max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
@@ -673,10 +685,23 @@ class PhaseExecutor:
     def _run_single_safe(self, simulator, phase, sandbox):
         tracer = TelemetryService.get_tracer()
         tracer.start_phase(phase.name, sandbox)
+        wrapped_physics = PhysicsSandbox.create(sandbox.physics)
+        sandbox.physics = wrapped_physics
         try:
             phase.run(sandbox)
             simulator.stabilizer.stabilize(sandbox, phase.name)
         finally:
+            sandbox.physics = wrapped_physics.packet
+            for mod in wrapped_physics.get_modification_log():
+                val_old = mod['old']
+                val_new = mod['new']
+                if isinstance(val_old, (int, float)) and isinstance(val_new, (int, float)):
+                    sandbox.record_flux(
+                        phase=phase.name,
+                        metric=mod['key'],
+                        initial=float(val_old),
+                        final=float(val_new),
+                        reason=mod['reason'])
             tracer.end_phase(phase.name, sandbox, sandbox)
 
 class CycleSimulator:

@@ -1,4 +1,4 @@
-""" BONEAMANITA 13.6.0
+""" BONEAMANITA 13.8.0
  Architects: SLASH, KISHO, The BonePoke Gods Humans: Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from typing import Dict, Any, Optional
 from bone_bus import EventBus, Prisma, BoneConfig, SystemHealth, TheObserver, BonePresets, RealityStack
 from bone_commands import CommandProcessor
-from bone_data import TheLore
+from bone_data import TheLore, LoreCategory
 from bone_village import TownHall, DeathGen, TheNavigator, TheTinkerer
 from bone_lexicon import TheLexicon, SomaticInterface
 from bone_inventory import GordonKnot
 from bone_telemetry import TelemetryService
 from bone_protocols import TheFolly, KintsugiProtocol, TherapyProtocol, TheBureau, ZenGarden
-from bone_drivers import ChorusDriver, SynergeticLensArbiter
+from bone_drivers import ChorusDriver, SynergeticLensArbiter, BoneConsultant
 from bone_physics import CosmicDynamics, ZoneInertia
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
@@ -32,19 +32,19 @@ class HostStats:
 def bootstrap_systems():
     print(f"{Prisma.GRY}...Bootstrapping Sub-Systems...{Prisma.RST}")
     lore = TheLore.get_instance()
-    critical_files = ["LEXICON", "scenarios"]
+    critical_files = [LoreCategory.LEXICON, LoreCategory.SCENARIOS]
     for cat in critical_files:
-        if lore.get(cat) is None:
-            print(f"{Prisma.RED}[CRITICAL]: '{cat}' data missing! System may be unstable.{Prisma.RST}")
+        if lore.get(cat.value) is None:
+            print(f"{Prisma.RED}[CRITICAL]: '{cat.name}' data missing! System may be unstable.{Prisma.RST}")
         else:
-            print(f"{Prisma.GRY}[SYS] Checked {cat}... OK.{Prisma.RST}")
+            print(f"{Prisma.GRY}[SYS] Checked {cat.name}... OK.{Prisma.RST}")
 
 class SessionGuardian:
     def __init__(self, engine_ref):
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 13.6.0', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 13.8.0', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -116,6 +116,7 @@ class BoneAmanita:
         self._initialize_identity()
         self._initialize_village()
         self._initialize_cognition()
+        self.host_stats = HostStats(latency=0.0, efficiency_index=1.0)
         self._validate_state()
 
     def _initialize_core(self, lexicon_layer):
@@ -168,6 +169,7 @@ class BoneAmanita:
     def _initialize_village(self):
         self.town_hall = TownHall(self.gordon, self.events, self.embryo.shimmer)
         self.drivers = SynergeticLensArbiter(self.events)
+        self.consultant = BoneConsultant()
         self.village = {
             "town_hall": self.town_hall,
             "council": CouncilChamber(),
@@ -267,6 +269,13 @@ class BoneAmanita:
                 "logs": ["CRITICAL FAILURE"],
                 "metrics": self.get_metrics()}
         duration = self.observer.clock_out(turn_start, "cycle")
+        resource_sum = self.health + self.stamina
+        self.host_stats.latency = duration
+        self.host_stats.efficiency_index = resource_sum / (duration + 0.01)
+        if self.host_stats.efficiency_index < 50.0:
+            self.events.log(
+                f"{Prisma.OCHRE}[LAG]: System viscosity high. Efficiency: {self.host_stats.efficiency_index:.1f}{Prisma.RST}",
+                "PERF")
         avg_cycle = self.observer.get_report().get("avg_cycle_sec", 0.0)
         reporter = self.cycle_controller.reporter
         if avg_cycle > 2.0 and reporter.current_mode != "PERFORMANCE":
@@ -425,7 +434,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 13.6.0', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 13.8.0', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

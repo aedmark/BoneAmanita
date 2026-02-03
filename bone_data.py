@@ -1,9 +1,15 @@
 """ bone_data.py - The Living Mythology (Lazy Loaded) """
-import json
-import os
-import random
+import json, os, random
+from enum import Enum
 from typing import Dict, Any, Tuple, cast, List, Optional
 from bone_bus import Prisma
+
+class LoreCategory(Enum):
+    LEXICON = "LEXICON"
+    SCENARIOS = "scenarios"
+    GORDON = "gordon"
+    GENETICS = "genetics"
+    DEATH = "death"
 
 class LoreManifest:
     _INSTANCE = None

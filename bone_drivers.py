@@ -4,7 +4,7 @@ import json, os, random
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional
 from bone_data import TheLore
-from bone_bus import EventBus, BonePresets, ArchetypeArbiter
+from bone_bus import EventBus, BonePresets, ArchetypeArbiter, PhysicsPacket
 from bone_metaphysics import CongruenceValidator
 
 SCENARIOS = TheLore.get("scenarios") or {"ARCHETYPES": ["Void"], "BANNED_CLICHES": []}
@@ -221,6 +221,7 @@ class VSLState:
     B: float = 0.3
     history: List[str] = field(default_factory=list)
 
+
 class BoneConsultant:
     STAGES = ["EXPLORER", "CLARIFIER", "SYNTHESIZER", "VALIDATOR"]
 
@@ -237,22 +238,30 @@ class BoneConsultant:
         self.active = False
         return "VSL PROTOCOL STANDBY."
 
-    def update_coordinates(self, user_text: str):
+    def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None,
+                           physics: Optional[PhysicsPacket] = None):
         word_count = len(user_text.split())
         self.state.E = min(1.0, self.state.E + (word_count * 0.005))
+        if bio_state and 'fatigue' in bio_state:
+            self.state.E = max(self.state.E, bio_state['fatigue'] * 0.3)
         if word_count < 10:
             self.state.B = min(1.0, self.state.B + 0.1)
         else:
             self.state.B = max(0.1, self.state.B - 0.05)
+        if physics and hasattr(physics, 'beta_index'):
+            self.state.B = (self.state.B * 0.7) + (physics.beta_index * 0.3)
         self._check_phase_shift()
 
     def _check_phase_shift(self):
         if self.state.archetype == "EXPLORER" and self.state.E > 0.3:
-            self.state.archetype = "CLARIFIER"; self.state.B = 0.6
+            self.state.archetype = "CLARIFIER";
+            self.state.B = 0.6
         elif self.state.archetype == "CLARIFIER" and self.state.E > 0.6:
-            self.state.archetype = "SYNTHESIZER"; self.state.B = 0.4
+            self.state.archetype = "SYNTHESIZER";
+            self.state.B = 0.4
         elif self.state.archetype == "SYNTHESIZER" and self.state.E > 0.85:
-            self.state.archetype = "VALIDATOR"; self.state.B = 0.2
+            self.state.archetype = "VALIDATOR";
+            self.state.B = 0.2
 
     def get_system_prompt(self) -> str:
         return f"""

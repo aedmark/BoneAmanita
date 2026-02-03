@@ -246,6 +246,18 @@ class BoneConfig:
         return False, None
 
     @classmethod
+    def reconcile_state(cls, physics_packet: 'PhysicsPacket'):
+        if physics_packet.voltage > cls.PHYSICS.VOLTAGE_MAX:
+            physics_packet.voltage = cls.PHYSICS.VOLTAGE_MAX
+        if physics_packet.voltage < cls.PHYSICS.VOLTAGE_FLOOR:
+            physics_packet.voltage = cls.PHYSICS.VOLTAGE_FLOOR
+        if physics_packet.narrative_drag < cls.PHYSICS.DRAG_FLOOR:
+            physics_packet.narrative_drag = cls.PHYSICS.DRAG_FLOOR
+        if physics_packet.narrative_drag > cls.PHYSICS.DRAG_HALT:
+            physics_packet.narrative_drag = cls.PHYSICS.DRAG_HALT
+        return physics_packet
+
+    @classmethod
     def load_from_file(cls, filepath="bone_config.json"):
         if not os.path.exists(filepath):
             return False, "Config file not found. Using defaults."
@@ -494,6 +506,40 @@ class PhysicsPacket:
     def __contains__(self, key):
         return hasattr(self, key)
 
+@dataclass
+class PhysicsSandbox:
+    packet: PhysicsPacket
+    original_snapshot: PhysicsPacket
+    modifications: List[Dict[str, Any]] = field(default_factory=list)
+
+    @classmethod
+    def create(cls, packet: PhysicsPacket) -> 'PhysicsSandbox':
+        return cls(packet=packet, original_snapshot=packet.snapshot())
+
+    def apply_delta(self, key: str, value: Any, reason: str = ""):
+        old = getattr(self.packet, key, None)
+        setattr(self.packet, key, value)
+        self.modifications.append({
+            "key": key,
+            "old": old,
+            "new": value,
+            "reason": reason})
+
+    def get_modification_log(self) -> List[Dict]:
+        return self.modifications
+
+    def rollback(self):
+        for f in fields(self.original_snapshot):
+            setattr(self.packet, f.name, getattr(self.original_snapshot, f.name))
+
+    def __getattr__(self, name):
+        return getattr(self.packet, name)
+
+    def __setattr__(self, name, value):
+        if name in ['packet', 'original_snapshot', 'modifications']:
+            super().__setattr__(name, value)
+        else:
+            self.apply_delta(name, value, reason="AUTO_TRACE")
 
 class RealityLayer:
     TERMINAL = 0

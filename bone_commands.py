@@ -4,6 +4,7 @@ import shlex
 from typing import Dict, Callable, List, Any, Tuple, Optional
 from dataclasses import dataclass
 from bone_data import TheLore
+from bone_bus import BonePresets
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
@@ -143,7 +144,7 @@ class CommandProcessor:
 
     def _cmd_help(self, _parts):
         lines = [
-            f"\n{self.P.CYN}/// BONEAMANITA 13.7.0 TERMINAL ///{self.P.RST}",
+            f"\n{self.P.CYN}/// BONEAMANITA 13.8.0 TERMINAL ///{self.P.RST}",
             f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n"]
         structure = {
             "SURVIVAL":    ["/status", "/inventory", "/look"],
@@ -181,6 +182,28 @@ class CommandProcessor:
             f"Health:  {bar(v['health'], v['max_health'], self.P.RED)} {v['health']:.0f}\n"
             f"Stamina: {bar(v['stamina'], v['max_stamina'], self.P.GRN)} {v['stamina']:.0f}\n"
             f"Energy:  {bar(v['atp'], 200, self.P.YEL)} {v['atp']:.0f}")
+        return True
+
+    def _cmd_mode(self, parts):
+        if len(parts) < 2:
+            self.interface.log("Usage: /mode [ZEN_GARDEN | THUNDERDOME | SANCTUARY]")
+            return True
+        mode_name = parts[1].upper()
+        if not hasattr(BonePresets, mode_name):
+            self.interface.log(f"{self.P.RED}Unknown mode: {mode_name}.{self.P.RST}")
+            return True
+        if self.tax.levy("MODE_SWITCH", {"stamina": 10.0}):
+            preset = getattr(BonePresets, mode_name)
+            logs = self.interface.Config.load_preset(preset)
+            for log in logs:
+                self.interface.log(log)
+            phys_packet = None
+            if hasattr(self.interface.eng, "phys") and hasattr(self.interface.eng.phys, "tension"):
+                phys_packet = getattr(self.interface.eng.phys.tension, "last_physics_packet", None)
+            if phys_packet:
+                self.interface.Config.reconcile_state(phys_packet)
+                self.interface.log(f"{self.P.CYN}State reconciled to {mode_name} parameters.{self.P.RST}")
+            self.interface.log(f"Switched to {mode_name}.")
         return True
 
     def _cmd_save(self, _parts):
