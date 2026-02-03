@@ -1,0 +1,24 @@
+{
+	"PROMPTS": [
+		"The {A} is dreaming of the {B}. Why?",
+		"Bridge the gap between {A} and {B}.",
+		"I see {A} inside the {B}. Explain.",
+		"The shadow of {A} falls on {B}.",
+		"{A} + {B} = ?"
+	],
+	"NIGHTMARES": {
+		"THERMAL": [
+			"The sun is too close.",
+			"Wires fusing under skin.",
+			"A library burning in reverse."
+		],
+		"CRYO": ["The ink is freezing.", "Walking through white static.", "A heartbeat slowing down."],
+		"SEPTIC": ["Black oil in the water.", "The words are tasting sour.", "Eating ash and dust."],
+		"BARIC": ["The sky is made of lead.", "Crushed by the atmosphere.", "Falling forever."]
+	},
+	"VISIONS": [
+		"A bridge building itself.",
+		"The root drinking the stone.",
+		"The geometry of forgiveness."
+	]
+}

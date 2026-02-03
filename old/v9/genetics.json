@@ -1,0 +1,51 @@
+{
+  "MUTATIONS": {
+    "HEAVY": {
+      "trait": "DENSITY",
+      "mod": { "SIGNAL_DRAG_MULTIPLIER": 1.5, "MAX_VOLTAGE": 30.0 }
+    },
+    "KINETIC": {
+      "trait": "VELOCITY",
+      "mod": { "STAMINA_REGEN": 10.0, "SIGNAL_DRAG_MULTIPLIER": 0.8 }
+    },
+    "ABSTRACT": {
+      "trait": "GHOST",
+      "mod": { "PSI_MOD": 0.8, "VOID_THRESHOLD": 0.05 }
+    },
+    "THERMAL": {
+      "trait": "FEVER",
+      "mod": { "FLASHPOINT_THRESHOLD": 4.0, "MAX_ROS": 150.0 }
+    },
+    "CRYO": {
+      "trait": "STASIS",
+      "mod": { "MAX_MEMORY_CAPACITY": 100, "STAMINA_REGEN": 2.0 }
+    }
+  },
+  "JOY_CLADE": {
+    "KINETIC": {
+      "title": "THE DYNAMO",
+      "desc": "Infinite Motion.",
+      "buff": { "STAMINA_REGEN": 10.0, "KINETIC_GAIN": 2.0 }
+    },
+    "HEAVY": {
+      "title": "THE MOUNTAIN",
+      "desc": "Unmovable Object.",
+      "buff": { "MAX_DRAG_LIMIT": 9.0, "GRAVITY_WELL_THRESHOLD": 8.0 }
+    },
+    "ABSTRACT": {
+      "title": "THE ORACLE",
+      "desc": "All Seeing.",
+      "buff": { "VOID_THRESHOLD": 0.01, "PRIORITY_LEARNING_RATE": 3.0 }
+    },
+    "THERMAL": {
+      "title": "THE PHOENIX",
+      "desc": "Reborn in Fire.",
+      "buff": { "FLASHPOINT_THRESHOLD": 12.0, "ANVIL_TRIGGER_VOLTAGE": 5.0 }
+    },
+    "CRYO": {
+      "title": "THE VAULT",
+      "desc": "Perfect Memory.",
+      "buff": { "MAX_MEMORY_CAPACITY": 100, "MAX_REPETITION_LIMIT": 0.8 }
+    }
+  }
+}

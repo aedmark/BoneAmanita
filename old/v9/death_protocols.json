@@ -1,0 +1,16 @@
+{
+  "PREFIXES": ["Alas,", "Tragic.", "System Halt.", "CRITICAL FAILURE:", "Well, that happened.", "Oh dear.", "As prophesied,"],
+  "CAUSES": {
+    "TOXICITY": ["Toxic Shock", "Septicemia", "Bad Vibes", "Radiation Poisoning", "Ink Poisoning"],
+    "STARVATION": ["Metabolic Collapse", "Famine", "Battery Drain", "Entropy Death", "Heat Death"],
+    "TRAUMA": ["Blunt Force", "Laceration", "Heartbreak", "System Shock", "Existential Dread"],
+    "GLUTTONY": ["Indigestion", "Bloat", "Overflow", "Greed", "Compaction"],
+    "BOREDOM": ["Small Talk", "The HOA", "A 30-Year Mortgage", "Lawn Care Accident", "Aggressive Edging"]
+  },
+  "VERDICTS": {
+    "HEAVY": ["Your logic was too dense.", "You choked on the syntax.", "Gravity crushed you."],
+    "LIGHT": ["You floated away.", "There was no substance to hold you.", "Vapor lock."],
+    "TOXIC": ["You are poisonous.", "The immune system rejected you.", "You taste like ash."],
+    "BORING": ["The audience left.", "You bored the machine to death.", "Stagnation is fatal."]
+  }
+}

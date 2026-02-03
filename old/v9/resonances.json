@@ -1,0 +1,16 @@
+{
+  "DIMENSIONS": {
+    "VEL": [[0.0, "STASIS"], [0.3, "DRIFT"], [0.6, "DRIVE"], [0.9, "BALLISTIC"]],
+    "STR": [[0.0, "VAPOR"], [0.3, "WEB"], [0.6, "LATTICE"], [0.9, "MONOLITH"]],
+    "ENT": [[0.0, "CONCRETE"], [0.3, "ROOTED"], [0.6, "CONCEPT"], [0.9, "VOID"]],
+    "TEX": [[0.0, "ETHER"], [0.3, "SILK"], [0.6, "GRAIN"], [0.9, "LEAD"]],
+    "TMP": [[0.0, "ZERO"], [0.3, "WARM"], [0.6, "RADIANT"], [0.9, "NOVA"]]
+  },
+  "NOUNS": {
+    "VEL": ["ANCHOR", "WANDERER", "ENGINE", "VECTOR"],
+    "STR": ["MIST", "WEB", "FRAME", "FORTRESS"],
+    "ENT": ["STONE", "TREE", "IDEA", "DREAM"],
+    "TEX": ["GHOST", "GLASS", "IRON", "LEAD"],
+    "TMP": ["SPARK", "PYRE", "REACTOR", "STAR"]
+  }
+}
