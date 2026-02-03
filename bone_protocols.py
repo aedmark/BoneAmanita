@@ -2,7 +2,7 @@
 
 import random, json
 from collections import deque, Counter
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, Any
 from bone_data import TheLore
 from bone_bus import Prisma, BoneConfig
 from bone_lexicon import TheLexicon
@@ -18,13 +18,14 @@ class ZenGarden:
         self.pebbles_collected = 0
         self.koans = NARRATIVE_DATA.get("ZEN_KOANS", ["The code that is not written has no bugs."])
 
-    def raking_the_sand(self, physics: Dict, bio: Dict) -> Tuple[float, Optional[str]]:
-        def _get(p, k, d=0.0):
-            return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
-
-        voltage = _get(physics, "voltage", 0.0)
-        drag = _get(physics, "narrative_drag", 0.0)
-        counts = _get(physics, "counts", {})
+    def raking_the_sand(self, physics: Any, bio: Dict) -> Tuple[float, Optional[str]]:
+        def extract_coordinate(p, key, fallback):
+            if isinstance(p, dict):
+                return p.get(key, fallback)
+            return getattr(p, key, fallback)
+        voltage = extract_coordinate(physics, "voltage", 0.0)
+        drag = extract_coordinate(physics, "narrative_drag", 0.0)
+        counts = extract_coordinate(physics, "counts", {})
         toxin = counts.get("toxin", 0) if isinstance(counts, dict) else 0
         cortisol = bio.get("chem", {}).get("COR", 0.0)
         is_stable = (2.0 <= voltage <= 12.0) and (drag <= 4.0) and (toxin == 0) and (cortisol < 0.4)
@@ -66,61 +67,62 @@ class TheBureau:
 
     def audit(self, physics, bio_state, context=None):
         if bio_state.get("health", 100.0) < 20.0: return None
-
-        def _get(p, k, d=0.0):
-            return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
-
-        def _set(p, k, v):
-            if isinstance(p, dict): p[k] = v
-            else: setattr(p, k, v)
-
-        def _has(p, k):
-            if isinstance(p, dict): return k in p
-            return hasattr(p, k)
-
+        def fetch_data(p, key, fallback):
+            return p.get(key, fallback) if isinstance(p, dict) else getattr(p, key, fallback)
+        def update_state(p, key, value):
+            if isinstance(p, dict): p[key] = value
+            else: setattr(p, key, value)
+        def check_presence(p, key):
+            return key in p if isinstance(p, dict) else hasattr(p, key)
         beige_threshold = 0.6
         if context:
             mode = context.get('mode', 'NORMAL')
             if mode in ['DEBUG', 'ARCHITECT', 'SURGERY']: beige_threshold = 0.85
             elif mode == 'POETRY': beige_threshold = 0.3
-
-        voltage = _get(physics, "voltage", 0.0)
-        clean_words = _get(physics, "clean_words", [])
-        counts = _get(physics, "counts", {})
+        voltage = fetch_data(physics, "voltage", 0.0)
+        clean_words = fetch_data(physics, "clean_words", [])
+        counts = fetch_data(physics, "counts", {})
         toxin = counts.get("toxin", 0) if isinstance(counts, dict) else 0
-
         buzz_hits = [w for w in clean_words if w in self.BUZZWORDS]
         suburban_words = [w for w in clean_words if w in TheLexicon.get("suburban") or w in TheLexicon.get("buffer")]
         beige_density = len(suburban_words) / max(1, len(clean_words))
         selected_form = None; evidence = []
-        truth_ratio = _get(physics, "truth_ratio", 0.0)
-
+        truth_ratio = fetch_data(physics, "truth_ratio", 0.0)
         if voltage > 18.0:
             if truth_ratio > 0.8: selected_form = "Form 202-A"; evidence = ["Voltage > 18.0", "Truth > 80%", "Artistic License Verified"]
             else: selected_form = "ZONING_VIOLATION"; evidence = ["Excessive Voltage", "Unlicensed Reality Construction"]
         elif buzz_hits: selected_form = "Form 404"; evidence = buzz_hits
         elif beige_density > beige_threshold: selected_form = "1099-B" if len(suburban_words) > 2 else "Form W-2"; evidence = list(set(suburban_words))[:3]
         elif voltage < 2.0 and len(clean_words) > 2: selected_form = "Schedule C"
-
         if not selected_form: return None
         self.stamp_count += 1
         policy = self.POLICY.get(selected_form, self.POLICY["Form W-2"])
+        entropy = fetch_data(physics, "entropy", 0.0)
+        chaos_tax = entropy * BoneConfig.METABOLISM.BUREAU_ENTROPY_SCALAR
+        base_atp = policy["atp"]
+        final_atp = base_atp - chaos_tax
         mod_log = []
-
         for k, v in policy["mod"].items():
-            if _has(physics, k):
-                old_val = _get(physics, k, 0.0)
+            if check_presence(physics, k):
+                old_val = fetch_data(physics, k, 0.0)
                 new_val = old_val + v
                 if k == "voltage" and new_val < 0: new_val = 0.0
-                _set(physics, k, new_val)
+                update_state(physics, k, new_val)
                 mod_log.append(f"{k} {v:+.1f}")
-
         full_form_name = next((f for f in self.forms if selected_form in f), selected_form)
         evidence_str = f"\n   {Prisma.RED}Evidence: {', '.join(evidence)}{Prisma.RST}" if evidence else ""
         ui_msg = f"{Prisma.GRY}🏢 THE BUREAU: {random.choice(self.responses)}{Prisma.RST}\n   {Prisma.WHT}[Filed: {full_form_name}]{Prisma.RST}{evidence_str}"
         if selected_form == "ZONING_VIOLATION":
             ui_msg = f"{Prisma.RED}🛑 STOP WORK ORDER 🛑{Prisma.RST}\n   {Prisma.GRY}You are exceeding the licensed voltage for this district.{Prisma.RST}\n   {Prisma.WHT}Please sign 'Form 1040-EZ' (Type: 'I accept reality') to restore service.{Prisma.RST}"
-        return {"status": policy["effect"], "ui": ui_msg, "log": f"BUREAUCRACY: Filed {selected_form}. Mods: {mod_log}.", "atp_gain": policy["atp"]}
+        entropy_status = ""
+        if entropy > 0.5:
+            entropy_status = f"\n   {Prisma.OCHRE}METABOLIC FRICTION: Entropy ({entropy:.2f}) increased processing cost by {chaos_tax:.1f} ATP.{Prisma.RST}"
+            ui_msg += entropy_status
+        return {
+            "status": policy["effect"],
+            "ui": ui_msg,
+            "log": f"BUREAUCRACY: Filed {selected_form}. Chaos Tax: -{chaos_tax:.1f}. Final: {final_atp:.1f}",
+            "atp_gain": final_atp}
 
 
 class TherapyProtocol:
@@ -128,24 +130,33 @@ class TherapyProtocol:
         self.streaks = {k: 0 for k in BoneConfig.TRAUMA_VECTOR.keys()}
         self.HEALING_THRESHOLD = 5
 
-    def check_progress(self, phys, stamina, current_trauma_accum):
-        def _get(p, k, d=0.0):
-            return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
-
-        counts = _get(phys, "counts", {})
-        vector = _get(phys, "vector", {})
-        voltage = _get(phys, "voltage", 0.0)
-        drag = _get(phys, "narrative_drag", 0.0)
-
+    def check_progress(self, phys, stamina, current_trauma_accum, qualia=None):
+        def fetch_diagnostic(p, key, fallback):
+            return p.get(key, fallback) if isinstance(p, dict) else getattr(p, key, fallback)
+        resonance_boost = 1
+        if qualia and qualia.tone == "Resonant":
+            resonance_boost = 2
+        counts = fetch_diagnostic(phys, "counts", {})
+        vector = fetch_diagnostic(phys, "vector", {})
+        voltage = fetch_diagnostic(phys, "voltage", 0.0)
+        drag = fetch_diagnostic(phys, "narrative_drag", 0.0)
         healed_types = []
-        if counts.get("toxin", 0) == 0 and vector.get("STR", 0.0) > 0.3: self.streaks["SEPTIC"] += 1
-        else: self.streaks["SEPTIC"] = 0
-        if stamina > 40 and counts.get("photo", 0) > 0: self.streaks["CRYO"] += 1
-        else: self.streaks["CRYO"] = 0
-        if 2.0 <= voltage <= 7.0: self.streaks["THERMAL"] += 1
-        else: self.streaks["THERMAL"] = 0
-        if drag < 2.0 and vector.get("VEL", 0.0) > 0.5: self.streaks["BARIC"] += 1
-        else: self.streaks["BARIC"] = 0
+        if counts.get("toxin", 0) == 0 and vector.get("STR", 0.0) > 0.3:
+            self.streaks["SEPTIC"] += resonance_boost
+        else:
+            self.streaks["SEPTIC"] = 0
+        if stamina > 40 and counts.get("photo", 0) > 0:
+            self.streaks["CRYO"] += resonance_boost
+        else:
+            self.streaks["CRYO"] = 0
+        if 2.0 <= voltage <= 7.0:
+            self.streaks["THERMAL"] += resonance_boost
+        else:
+            self.streaks["THERMAL"] = 0
+        if drag < 2.0 and vector.get("VEL", 0.0) > 0.5:
+            self.streaks["BARIC"] += resonance_boost
+        else:
+            self.streaks["BARIC"] = 0
         for trauma_type, streak in self.streaks.items():
             if streak >= self.HEALING_THRESHOLD:
                 self.streaks[trauma_type] = 0
@@ -179,23 +190,26 @@ class KintsugiProtocol:
             return True, self.active_koan
         return False, None
 
-    def attempt_repair(self, phys, trauma_accum, soul_ref=None):
+    def attempt_repair(self, phys, trauma_accum, soul_ref=None, qualia=None):
         if not self.active_koan: return None
-
-        def _get(p, k, d=0.0):
-            return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
-
-        voltage = _get(phys, "voltage", 0.0)
-        clean = _get(phys, "clean_words", [])
-
+        def fetch_metric(p, key, fallback):
+            return p.get(key, fallback) if isinstance(p, dict) else getattr(p, key, fallback)
+        voltage = fetch_metric(phys, "voltage", 0.0)
+        clean = fetch_metric(phys, "clean_words", [])
+        has_somatic_resonance = False
+        if qualia:
+            resonance_triggers = ["Golden Glow", "Chest Softening", "Warmth (Resonance)"]
+            if any(trigger in qualia.somatic_sensation for trigger in resonance_triggers):
+                has_somatic_resonance = True
         play_count = sum(1 for w in clean if w in TheLexicon.get("play") or w in TheLexicon.get("abstract"))
-        total = max(1, len(clean)); whimsy_score = play_count / total
+        total = max(1, len(clean))
+        whimsy_score = play_count / total
         pathway = self.PATH_SCAR
-        if voltage > 15.0 and whimsy_score > 0.5: pathway = self.PATH_ALCHEMY
-        elif voltage > self.REPAIR_VOLTAGE_MIN and whimsy_score > self.WHIMSY_THRESHOLD: pathway = self.PATH_INTEGRATION
+        if (voltage > 15.0 and whimsy_score > 0.5) or has_somatic_resonance:
+            pathway = self.PATH_ALCHEMY
+        elif voltage > self.REPAIR_VOLTAGE_MIN and whimsy_score > self.WHIMSY_THRESHOLD:
+            pathway = self.PATH_INTEGRATION
         result = self._execute_pathway(pathway, trauma_accum, soul_ref, voltage)
-        old_koan = self.active_koan; self.active_koan = None; self.repairs_count += 1
-        result["detail"] = f"'{old_koan}' resolved via {pathway}. (V: {voltage:.1f} | Whimsy: {whimsy_score:.2f})"
         return result
 
     def _execute_pathway(self, pathway, trauma_accum, soul_ref, voltage):

@@ -56,9 +56,10 @@ class TheGatekeeper:
         if hasattr(self.eng, "host_stats") and self.eng.host_stats:
             if self.eng.host_stats.efficiency_index < 0.8:
                 efficiency_penalty = 0.4
-        probability = (drag / 50.0) + efficiency_penalty
+        entropy_friction = getattr(phys, "entropy", 0.0) * 0.3
+        probability = (drag / 50.0) + efficiency_penalty + entropy_friction
         is_boring = phys.voltage < 5.0
-        if (is_boring or efficiency_penalty > 0) and random.random() < probability:
+        if (is_boring or efficiency_penalty > 0 or entropy_friction > 0.15) and random.random() < probability:
             return True
         return False
 
@@ -476,3 +477,28 @@ class CosmicDynamics:
                 0.0,
                 f"FLOW: Streaming towards '{primary_node.upper()}'")
         return "ORBITAL", 0.0, f"ORBIT: Circling '{primary_node.upper()}' (Mass {int(gravity_wells[primary_node])})"
+
+
+def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> PhysicsPacket:
+    feedback = physics_packet.snapshot()
+    tone_effects = {
+        "Urgent": {"velocity": 0.3, "narrative_drag": -0.5, "voltage": 0.5},
+        "Strained": {"narrative_drag": 1.2, "voltage": -0.3, "kappa": -0.1},
+        "Vibrating": {"entropy": 0.2, "voltage": 0.2, "psi": 0.1},
+        "Resonant": {"valence": 0.3, "beta_index": 0.1, "kappa": 0.2},
+        "Steady": {}}
+    effects = tone_effects.get(qualia.tone, {})
+    for key, delta in effects.items():
+        if hasattr(feedback, key):
+            current = getattr(feedback, key)
+            setattr(feedback, key, current + delta)
+    if "Gut Tightening" in qualia.somatic_sensation:
+        feedback.narrative_drag += 0.7
+    if "Electric Vibration" in qualia.somatic_sensation:
+        feedback.voltage += 0.8
+    if "Golden Glow" in qualia.somatic_sensation:
+        feedback.valence += 0.5
+        feedback.psi += 0.2
+    feedback.voltage = max(BoneConfig.PHYSICS.VOLTAGE_FLOOR, min(feedback.voltage, BoneConfig.PHYSICS.VOLTAGE_MAX))
+    feedback.narrative_drag = max(BoneConfig.PHYSICS.DRAG_FLOOR, min(feedback.narrative_drag, BoneConfig.PHYSICS.DRAG_HALT))
+    return feedback

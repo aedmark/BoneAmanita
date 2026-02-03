@@ -6,6 +6,7 @@ from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple
 from bone_bus import Prisma, BoneConfig
 from bone_lexicon import TheLexicon
+from bone_akashic import TheAkashicRecord
 
 MEMORY_VOLTAGE_THRESHOLD = 14.0
 MEMORY_TRUTH_THRESHOLD = 0.8
@@ -206,9 +207,20 @@ class NarrativeSelf:
         self.core_memories.sort(key=lambda m: m.impact_voltage)
         forgotten = self.core_memories.pop(0)
         self.core_memories.append(newest)
-        self.events.log(
-            f"{Prisma.GRY}[SOUL]: Memory fading... '{forgotten.trigger_words}' lost to entropy.{Prisma.RST}",
-            "MEM_DECAY")
+        if hasattr(self.eng, 'akashic'):
+            mem_dict = {
+                "lesson": forgotten.lesson,
+                "trigger_words": forgotten.trigger_words,
+                "voltage": forgotten.impact_voltage,
+                "timestamp": forgotten.timestamp}
+            self.eng.akashic.store_ghost_echo(mem_dict)
+            self.events.log(
+                f"{Prisma.VIOLET}[SOUL]: Memory '{forgotten.lesson}' recedes into the Shadow Stock.{Prisma.RST}",
+                "AKASHIC_SHADOW")
+        else:
+            self.events.log(
+                f"{Prisma.GRY}[SOUL]: Memory fading... '{forgotten.trigger_words}' lost to entropy.{Prisma.RST}",
+                "MEM_DECAY")
 
     def crystallize_memory(self, physics_packet: Dict, bio_state: Dict, _tick: int) -> Optional[str]:
         voltage = physics_packet.get("voltage", 0.0)
@@ -255,6 +267,10 @@ class NarrativeSelf:
                 f"   {Prisma.GRY}Genealogy: {dance_move}{Prisma.RST}")
             self.events.log(log_msg, "SOUL")
             self.events.log(self.editor.critique(chapter_title, stress_mode=is_crisis), "EDIT")
+            if hasattr(self.eng, 'akashic'):
+                self.eng.akashic.record_interaction(
+                    lenses_active=[self.archetype],
+                    ingredients_used=clean_words)
             return lesson
         return None
 
@@ -318,7 +334,7 @@ class NarrativeSelf:
         if new_arch == old_arch:
             self.archetype = f"THE HIGH-{old_arch.replace('THE ', '')}"
         else:
-            self.archetype = f"{old_arch} / {new_arch}" # The Compound Soul
+            self.archetype = f"{old_arch} / {new_arch}"
         self.chapters.append(f"The Synthesis of {self.archetype}")
         log_msg = (
             f"{Prisma.CYN}💎 CRYSTALLIZATION: The paradox creates a Diamond Soul.{Prisma.RST}\n"
@@ -537,8 +553,6 @@ class Qualia:
     internal_monologue_hint: str
 
 class SynestheticCortex:
-    SENSITIVITY = 0.1
-
     def __init__(self, bio_ref):
         self.bio = bio_ref
         self.last_reflex = None
@@ -548,18 +562,24 @@ class SynestheticCortex:
         if hasattr(physics, "to_dict"): return physics.to_dict()
         return getattr(physics, "__dict__", {})
 
-    def perceive(self, physics: Dict, text: str = "", latency: float = 0.0) -> BiologicalImpulse:
+    def perceive(self, physics: Dict, traits: Any = None, text: str = "", latency: float = 0.0) -> BiologicalImpulse:
         physics = self._normalize_physics(physics)
         impulse = BiologicalImpulse()
+        base_sens = getattr(BoneConfig.BIO, "CORTEX_SENSITIVITY", 0.1)
+        if traits:
+            dynamic_sensitivity = base_sens * (1.0 + traits.curiosity - traits.discipline)
+            dynamic_sensitivity = max(0.0, dynamic_sensitivity)
+        else:
+            dynamic_sensitivity = base_sens
         valence = physics.get("valence", 0.0)
         clean_words = physics.get("clean_words", [])
         counts = physics.get("counts", {})
         is_toxic = False
         if valence < -0.5:
-            impulse.cortisol_delta += abs(valence) * self.SENSITIVITY
+            impulse.cortisol_delta += abs(valence) * dynamic_sensitivity
         if counts.get("antigen", 0) > 0:
-            raw_tox = counts["antigen"] * 0.2
-            impulse.cortisol_delta += min(0.4, raw_tox)
+            raw_tox = counts["antigen"] * (BoneConfig.TOXIN_WEIGHT * 0.2)
+            impulse.cortisol_delta += min(BoneConfig.TOXIN_WEIGHT * 0.4, raw_tox)
             impulse.somatic_reflex = "Shiver (Rejection)"
             is_toxic = True
         if physics.get("narrative_drag", 0) > 8.0:
@@ -567,7 +587,7 @@ class SynestheticCortex:
             impulse.stamina_impact -= 2.0
         if not is_toxic:
             if valence > 0.4:
-                impulse.oxytocin_delta += valence * self.SENSITIVITY
+                impulse.oxytocin_delta += valence * dynamic_sensitivity
             if counts.get("suburban", 0) > 0:
                 impulse.oxytocin_delta += 0.05
             if counts.get("sacred", 0) > 0:

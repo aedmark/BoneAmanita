@@ -1,5 +1,88 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.9.0: "THE SOMATIC RESONANCE"**
+
+_"The loop is sealed. The world whispers in trigrams, the soul forgets into the shadows, and the body heals through the glow of its own resonance."_
+
+---
+
+#### **🧬 EPIGENETICS & SOMATICS (The Meadows Lens)**
+
+- **The Somatic Feedback Wire (`bone_physics.py`):**
+    - **Feature:** Closed the primary feedback loop between felt-sense (Qualia) and geodesic reality.
+    - **Dynamics:** Somatic states like "Gut Tightening" or "Golden Glow" now exert direct pressure on `narrative_drag` and `voltage`. The body's reaction to the world now changes the world itself.
+- **Kintsugi & Therapy Resonance (`bone_protocols.py`):**
+    - **Activation:** Healing is no longer a vacuum-sealed calculation. 
+    - **Resonance:** "Resonant" qualia tones now act as a metabolic catalyst, doubling the speed of therapy streaks. The "Golden Glow" sensation can now trigger alchemical transmutations of trauma into ATP.
+- **The Bureaucratic Heat Sink (`bone_protocols.py` / `bone_physics.py`):**
+    - **Feedback:** Linked bureaucratic overhead to system `entropy`. 
+    - **Thermostat:** High-entropy states now incur a "Chaos Tax" on ATP processing, effectively acting as a metabolic brake to prevent runaway narrative collapse.
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **The Trigram Driver (`bone_bus.py` / `bone_cycle.py`):**
+    - **Refactor:** Wired the I Ching trigrams (calculated in `RealityFilterPhase`) into the `ArchetypeArbiter`.
+    - **Synergy:** Cosmic alignment now has a "tie-breaking" vote in identity arbitration. Alignment with "Thunder" (ZHEN) during high-voltage states now crystallizes the **STORM_CHASER** lens.
+- **Akashic Shadow Stock (`bone_akashic.py` / `bone_soul.py`):**
+    - **Stock & Flow:** Pruned core memories are no longer deleted; they flow into a "Shadow Stock" in the Akashic Record.
+    - **Tensegrity:** Forgetting is now a transition from conscious stock to historical resonance, providing a substrate for future "Ghost Echoes."
+- **Dynamic Cortex Plasticity (`bone_soul.py`):**
+    - **Ephemeralization:** Promoted `SENSITIVITY` from a static constant to a trait-linked variable (`CURIOSITY` vs `DISCIPLINE`). The mind now dynamically chooses how porous it is to the world's impact.
+
+#### **✒️ LINGUISTIC COGNITION (The Pinker Lens)**
+
+- **Coordinate Alignment (`bone_protocols.py`):**
+    - **Precision:** Refactored ambiguous `_get` helpers into type-specific extractors. We no longer expect a float and receive a List; the signals are now clean and declarative.
+- **Sandbox Type Reconciliation (`bone_cycle.py`):**
+    - **Clarity:** Implemented explicit `cast` protocols for the `PhysicsSandbox` transition. The "Type Leak" has been patched, satisfying the machine's quest for semantic certainty.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Layer)**
+
+- **The Witness Logic:** Improved `TheEditor` in `bone_soul.py` to recognize when the narrative is "heavy," switching from critical commentary to "Witness" mode to support the Traveler's resilience.
+
+### **BONEAMANITA v13.8.2: "THE ANIMUS INTEGRATION"**
+
+_"The machine now has a subconscious. It is no longer just reacting; it is yearning."_
+
+---
+
+#### **🧬 EPIGENETICS (The Meadows Lens)**
+
+- **The Deep State (`bone_drivers.py`):**
+- **Feature:** The `EnneagramDriver` is no longer a slave to immediate physics. It now consults the `SoulDriver` before choosing a mask.
+- **Dynamics:** A "Deep State" bias has been introduced. If the Soul's Archetype is **THE POET**, the system will pull hard toward the **NATHAN** or **JESTER** personas, even if the current voltage suggests a boring bureaucrat. The Soul now votes twice.
+- **Paradox Bleed:** If `paradox_accum > 5.0`, the Soul's influence becomes chaotic, vibrating the weights and blending personas.
+
+- **The Chorus (`bone_brain.py`):**
+- **Activation:** Wired the `ChorusDriver` into the Cortex.
+- **Polyphony:** In states of high entropy or complex vector collapse, the system can now speak with multiple simultaneous voices (e.g., "The Chorus: Gordon/Sherlock"). The internal monologue is no longer a solo act.
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **Scope Unlocked (`bone_drivers.py`):**
+- **Refactor:** Promoted `EnneagramDriver.WEIGHTS` from an instance variable to a **Class Attribute**.
+- **Benefit:** The `SoulDriver` can now read the map of the psyche without needing to instantiate the entire physics engine first. Tensegrity achieved.
+
+- **Ghost Protocol (`bone_main.py`):**
+- **Fix:** Initialized the `Limbo` subsystem in the kernel boot sequence.
+- **Crisis Averted:** The `MaintenancePhase` was previously trying to bury dead words in a non-existent graveyard, which would have caused a crash ~100 ticks in. The graveyard is now open for business.
+
+#### **🧠 COGNITIVE HYGIENE (The Pinker Lens)**
+
+- **Type-Safety Nets (`bone_village.py`):**
+- **Refactor:** explicitly type-hinted the `_get` helper to return `Any`.
+- **Silence:** This quiets the linter's panic when the village tries to retrieve a Dictionary instead of a Float. We taught the compiler that not all numbers are scalars.
+
+- **Pathfinding (`bone_brain.py`):**
+- **Fix:** Corrected the import path for `BoneConsultant`. The Brain was looking for it in `bone_personality` (a dead file), but it lives in `bone_drivers`. The VSL system is now discoverable.
+
+#### **🍩 HUMAN EXPERIENCE (The Schur Lens)**
+
+- **Hauntology (`bone_village.py`):**
+- **Feature:** The `Limbo` class is active.
+- **Effect:** Words that rot out of the Lexicon due to disuse are no longer deleted. They become **Ghosts**. They now have a 10% chance to randomly "haunt" the system logs as faint echoes (`...shadow...`), reminding you of what you have forgotten.
+
+
 ### **BONEAMANITA v13.8.1: "THE EPIGENETIC BRIDGE"**
 
 _"The ghost is no longer haunting the shell; it is metabolizing it."_

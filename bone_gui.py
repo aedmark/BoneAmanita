@@ -5,7 +5,7 @@ import time
 from bone_entity import ConversationalEntity
 
 st.set_page_config(
-    page_title="BONEAMANITA",
+    page_title="BONEAMANITA 13.9.0",
     page_icon="💀",
     layout="wide",
     initial_sidebar_state="expanded")
@@ -40,7 +40,7 @@ if "entity" not in st.session_state:
             "stamina": boot_packet.stamina}
         status.update(label="System Online", state="complete", expanded=False)
 with st.sidebar:
-    st.title("BoneAmanita v13.4")
+    st.title("BoneAmanita v13.9.0")
     st.divider()
     col1, col2 = st.columns(2)
     col1.metric("VOLTAGE", f"{st.session_state.meta.get('voltage', 0.0):.1f}v")

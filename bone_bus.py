@@ -174,6 +174,7 @@ class BoneConfig:
         ROS_GENERATION_FACTOR = 0.08
         PHOTOSYNTHESIS_GAIN = 3.0
         TURBULENCE_TAX = 4.0
+        BUREAU_ENTROPY_SCALAR = 20.0
 
     class PHYSICS:
         VOLTAGE_FLOOR = 2.0
@@ -216,6 +217,7 @@ class BoneConfig:
         REWARD_MEDIUM = 0.10
         REWARD_LARGE = 0.15
         DECAY_RATE = 0.01
+        CORTEX_SENSITIVITY = 0.1
 
     class CHANCE:
         RARE = 0.05
@@ -686,17 +688,24 @@ class StateSandbox:
         self.changes_committed = True
 
 class ArchetypeArbiter:
-    def arbitrate(self, physics_lens: str, soul_archetype: str, council_mandates: List[Dict]) -> Tuple[str, str, str]:
+    def arbitrate(self, physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Dict = None) -> Tuple[str, str, str]:
         for mandate in council_mandates:
             if mandate.get("type") == "LOCKDOWN":
                 return "THE CENSOR", "COUNCIL", "Martial Law declared. Identity suppressed."
             if mandate.get("type") == "FORCE_MODE":
                 return "THE MACHINE", "COUNCIL", "Bureaucratic override active."
-
         if "/" in soul_archetype:
             return soul_archetype, "SOUL", f"The Diamond Soul refracts the physics ({soul_archetype})."
-
+        if trigram:
+            name = trigram.get("name")
+            if name == "ZHEN" and physics_lens == "THE MANIC":
+                return "THE STORM_CHASER", "COSMIC", "Thunder resonates with the mania. Destiny accelerates the signal."
+            if name == "LI" and soul_archetype == "THE POET":
+                return "THE ILLUMINATOR", "COSMIC", "The Fire of Heaven ignites the Poet's vision."
+            if name == "KAN" and physics_lens == "THE VOID":
+                return "THE DEEP_DIVER", "COSMIC", "The Water of the Abyss pulls you deeper into the void."
+            if name == "QIAN" and soul_archetype == "THE ENGINEER":
+                return "THE ARCHITECT", "COSMIC", "Heavenly alignment grants the Engineer perfect clarity."
         if physics_lens in ["THE MANIC", "THE VOID"]:
             return physics_lens, "PHYSICS", f"Environment is too loud. You are {physics_lens}."
-
         return soul_archetype, "SOUL", "The Soul guides the lens."

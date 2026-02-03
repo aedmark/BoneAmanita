@@ -1,4 +1,4 @@
-""" BONEAMANITA 13.8.0
+""" BONEAMANITA 13.9.0
  Architects: SLASH, KISHO, The BonePoke Gods Humans: Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 from bone_bus import EventBus, Prisma, BoneConfig, SystemHealth, TheObserver, BonePresets, RealityStack
 from bone_commands import CommandProcessor
 from bone_data import TheLore, LoreCategory
-from bone_village import TownHall, DeathGen, TheNavigator, TheTinkerer
+from bone_village import TownHall, DeathGen, TheNavigator, TheTinkerer, Limbo
 from bone_lexicon import TheLexicon, SomaticInterface
 from bone_inventory import GordonKnot
 from bone_telemetry import TelemetryService
@@ -44,7 +44,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 13.8.0', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 13.9.0', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -170,6 +170,7 @@ class BoneAmanita:
         self.town_hall = TownHall(self.gordon, self.events, self.embryo.shimmer)
         self.drivers = SynergeticLensArbiter(self.events)
         self.consultant = BoneConsultant()
+        self.limbo = Limbo()
         self.village = {
             "town_hall": self.town_hall,
             "council": CouncilChamber(),
@@ -434,7 +435,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 13.8.0', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 13.9.0', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

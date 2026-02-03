@@ -2,12 +2,12 @@
 
 import traceback, random, time, uuid, re, copy
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Any, Tuple, List, Optional
+from typing import Dict, Any, Tuple, List, Optional, cast
 from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket, BonePresets, ArchetypeArbiter, PhysicsSandbox
 from bone_metaphysics import CongruenceValidator
 from bone_village import TownHall
 from bone_protocols import TheBureau
-from bone_physics import ChromaScope, TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine, TRIGRAM_MAP
+from bone_physics import ChromaScope, TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine, apply_somatic_feedback, TRIGRAM_MAP
 from bone_viewer import GeodesicRenderer, CachedRenderer, get_renderer
 from bone_architect import PanicRoom
 from bone_soul import SynestheticCortex
@@ -326,17 +326,26 @@ class MetabolismPhase(SimulationPhase):
                 ctx.log(f"   {Prisma.RED}IMPACT TRAUMA: -{damage} HP.{Prisma.RST}")
 
     def _apply_healing(self, ctx):
+        impulse = getattr(ctx, "last_impulse", None)
+        qualia = self.eng.somatic.get_current_qualia(impulse)
         is_cracked, koan = self.eng.kintsugi.check_integrity(self.eng.stamina)
         if is_cracked:
             ctx.log(f"{Prisma.YEL}🏺 KINTSUGI ACTIVATED: Vessel cracking.{Prisma.RST}")
             ctx.log(f"   {Prisma.WHT}KOAN: {koan}{Prisma.RST}")
         if self.eng.kintsugi.active_koan:
-            repair = self.eng.kintsugi.attempt_repair(ctx.physics, self.eng.trauma_accum)
+            repair = self.eng.kintsugi.attempt_repair(
+                ctx.physics,
+                self.eng.trauma_accum,
+                soul_ref=self.eng.soul,
+                qualia=qualia)
             if repair and repair["success"]:
                 ctx.log(repair["msg"])
                 self.eng.stamina = min(BoneConfig.MAX_STAMINA, self.eng.stamina + 20.0)
-                ctx.log(f"   {Prisma.GRN}STAMINA RESTORED (+20.0){Prisma.RST}")
-        healed = self.eng.therapy.check_progress(ctx.physics, self.eng.stamina, self.eng.trauma_accum)
+        healed = self.eng.therapy.check_progress(
+            ctx.physics,
+            self.eng.stamina,
+            self.eng.trauma_accum,
+            qualia=qualia)
         if healed:
             joined = ", ".join(healed)
             ctx.log(f"{Prisma.GRN}❤️ THERAPY STREAK: Healing [{joined}]. Health +5.{Prisma.RST}")
@@ -560,13 +569,17 @@ class ArbitrationPhase(SimulationPhase):
             self.eng.arbiter = ArchetypeArbiter()
 
     def run(self, ctx: CycleContext):
-        phys_lens, _, _ = self.eng.drivers.enneagram.decide_persona(ctx.physics)
+        phys_lens, _, _ = self.eng.drivers.enneagram.decide_persona(
+            ctx.physics,
+            soul_ref=self.eng.soul)
         soul_arch = self.eng.soul.archetype
         mandates = getattr(ctx, "council_mandates", [])
+        current_trigram = ctx.world_state.get("trigram", None)  #
         final_lens, source, opinion = self.eng.arbiter.arbitrate(
             physics_lens=phys_lens,
             soul_archetype=soul_arch,
-            council_mandates=mandates)
+            council_mandates=mandates,
+            trigram=current_trigram)
         ctx.active_lens = final_lens
         if source != "PHYSICS_VECTOR":
             ctx.log(f"{Prisma.MAG}⚖️ {opinion}{Prisma.RST}")
@@ -601,7 +614,8 @@ class CognitionPhase(SimulationPhase):
             ctx.bio_result,
             self.eng.gordon.inventory,
             self.eng.phys.dynamics.voltage_history,
-            self.eng.tick_count)
+            self.eng.tick_count,
+            soul_ref=self.eng.soul)
         thought = ctx.mind_state.get("context_msg", ctx.mind_state.get("thought"))
         if thought:
             ctx.log(thought)
@@ -670,8 +684,13 @@ class SensationPhase(SimulationPhase):
         current_latency = 0.0
         if hasattr(self.eng, "host_stats"):
             current_latency = self.eng.host_stats.latency
-        impulse = self.synesthesia.perceive(phys_data, latency=current_latency)
+        impulse = self.synesthesia.perceive(
+            phys_data,
+            traits=self.eng.soul.traits,
+            latency=current_latency)
         ctx.last_impulse = impulse
+        qualia = self.synesthesia.get_current_qualia(impulse)
+        ctx.physics = apply_somatic_feedback(ctx.physics, qualia)
         self.synesthesia.apply_impulse(impulse)
         if impulse.stamina_impact != 0:
             self.eng.stamina = max(0.0, self.eng.stamina + impulse.stamina_impact)
@@ -698,8 +717,8 @@ class PhaseExecutor:
     def _run_single_safe(self, simulator, phase, sandbox):
         tracer = TelemetryService.get_tracer()
         tracer.start_phase(phase.name, sandbox)
-        # noinspection PyTypeChecker
-        wrapped_physics = PhysicsSandbox.create(sandbox.physics)
+        current_packet = cast(PhysicsPacket, cast(object, sandbox.physics))
+        wrapped_physics = PhysicsSandbox.create(current_packet)
         sandbox.physics = wrapped_physics
         try:
             phase.run(sandbox)

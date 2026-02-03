@@ -46,27 +46,29 @@ class UserProfile:
                     self.confidence = data.get("confidence", 0)
             except (IOError, json.JSONDecodeError): pass
 
+
 class EnneagramDriver:
+    WEIGHTS = {
+        "JESTER": {"tension_min": 12.0, "vectors": {"DEL": 4.0, "ENT": 4.0, "PSI": -3.0}},
+        "GORDON": {"drag_min": 3.0, "vectors": {"STR": 3.0, "E": 3.0, "SUB": 2.0}},
+        "GLASS": {"coherence_max": 0.2, "vectors": {"LQ": 2.0, "VEL": 2.0}},
+        "CLARENCE": {"coherence_min": 0.8, "drag_min": 6.0, "vectors": {"STR": 4.0, "BET": 3.0}},
+        "NATHAN": {"tension_min": 8.0, "vectors": {"TMP": 3.0, "PHI": 2.0, "BIO": 2.0}},
+        "SHERLOCK": {"tension_min": 10.0, "vectors": {"PHI": 4.0, "VEL": 3.0, "PSI": 2.0}},
+        "NARRATOR": {"safe_zone": True, "vectors": {"PSI": 4.0}}}
+
     def __init__(self, events_ref):
         self.events = events_ref
         self.current_persona = "NARRATOR"
         self.pending_persona = None
         self.stability_counter = 0
         self.HYSTERESIS_THRESHOLD = 3
-        self.WEIGHTS = {
-            "JESTER":   {"tension_min": 12.0, "vectors": {"DEL": 4.0, "ENT": 4.0, "PSI": -3.0}},
-            "GORDON":   {"drag_min": 3.0, "vectors": {"STR": 3.0, "E": 3.0, "SUB": 2.0}},
-            "GLASS":    {"coherence_max": 0.2, "vectors": {"LQ": 2.0, "VEL": 2.0}},
-            "CLARENCE": {"coherence_min": 0.8, "drag_min": 6.0, "vectors": {"STR": 4.0, "BET": 3.0}},
-            "NATHAN":   {"tension_min": 8.0, "vectors": {"TMP": 3.0, "PHI": 2.0, "BIO": 2.0}},
-            "SHERLOCK": {"tension_min": 10.0, "vectors": {"PHI": 4.0, "VEL": 3.0, "PSI": 2.0}},
-            "NARRATOR": {"safe_zone": True, "vectors": {"PSI": 4.0}}}
 
     def _get_phys_attr(self, physics, key, default=None):
         if isinstance(physics, dict): return physics.get(key, default)
         return getattr(physics, key, default)
 
-    def _calculate_raw_persona(self, physics) -> Tuple[str, str, str]:
+    def _calculate_raw_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
         p_vec = self._get_phys_attr(physics, "vector", {})
         p_vol = self._get_phys_attr(physics, "voltage", 0.0)
         p_drag = self._get_phys_attr(physics, "narrative_drag", 0.0)
@@ -76,7 +78,9 @@ class EnneagramDriver:
         scores["NARRATOR"] += 2.0
         is_safe_metrics = (4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5)
         if p_zone == BonePresets.SANCTUARY.get("ZONE") or is_safe_metrics:
-            scores["NARRATOR"] += 6.0; scores["JESTER"] += 3.0; scores["GORDON"] -= 2.0
+            scores["NARRATOR"] += 6.0
+            scores["JESTER"] += 3.0
+            scores["GORDON"] -= 2.0
         for persona, criteria in self.WEIGHTS.items():
             if "tension_min" in criteria and p_vol > criteria["tension_min"]: scores[persona] += 3.0
             if "drag_min" in criteria and p_drag > criteria["drag_min"]: scores[persona] += 5.0
@@ -84,23 +88,31 @@ class EnneagramDriver:
             if "coherence_max" in criteria and p_coh < criteria["coherence_max"]: scores[persona] += 4.0
             for dim, weight in criteria.get("vectors", {}).items():
                 if p_vec.get(dim, 0.0) > 0.2: scores[persona] += p_vec.get(dim, 0.0) * weight
+        if soul_ref:
+            soul_driver = SoulDriver(soul_ref)
+            influence = soul_driver.get_influence()
+            for persona, weight in influence.items():
+                scores[persona] += weight * 2.0
         winner = max(scores, key=scores.get)
         reason = f"Winner: {winner} ({scores[winner]:.1f}) [V:{p_vol:.1f} D:{p_drag:.1f}]"
         state_map = {"JESTER": "MANIC", "GORDON": "TIRED", "GLASS": "FRAGILE", "CLARENCE": "RIGID",
                      "NATHAN": "WIRED", "SHERLOCK": "FOCUSED", "NARRATOR": "OBSERVING"}
         return winner, state_map.get(winner, "ACTIVE"), reason
 
-    def decide_persona(self, physics) -> Tuple[str, str, str]:
-        candidate, state_desc, reason = self._calculate_raw_persona(physics)
+    def decide_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
+        candidate, state_desc, reason = self._calculate_raw_persona(physics, soul_ref)
         if candidate == self.current_persona:
             self.stability_counter = 0
             self.pending_persona = None
             return self.current_persona, state_desc, reason
-        if candidate == self.pending_persona: self.stability_counter += 1
-        else: self.pending_persona = candidate; self.stability_counter = 1
+        if candidate == self.pending_persona:
+            self.stability_counter += 1
+        else:
+            self.pending_persona = candidate; self.stability_counter = 1
         if self.stability_counter >= self.HYSTERESIS_THRESHOLD:
             self.current_persona = candidate
-            self.stability_counter = 0; self.pending_persona = None
+            self.stability_counter = 0
+            self.pending_persona = None
             return self.current_persona, state_desc, f"SHIFT: {reason}"
         return self.current_persona, "STABLE", f"Resisting {candidate} ({self.stability_counter}/{self.HYSTERESIS_THRESHOLD})"
 
@@ -112,7 +124,7 @@ class SynergeticLensArbiter:
         self.last_reason = "System Init"
         self.boot_flavor = random.choice(["heavy", "kinetic", "abstract", "photo", "aerobic", "thermal", "cryo", "sacred", "play", "suburban"])
 
-    def consult(self, physics, bio_state, _inventory, current_tick, _ignition_score=0.0):
+    def consult(self, physics, bio_state, _inventory, current_tick, _ignition_score=0.0, soul_ref=None):
         if physics is None:
             return {"lens": "NARRATOR", "role": "The Void-Watcher", "style_directives": ["System blind. Describe the darkness."], "lexicon_bias": "abstract", "context_msg": "PHYSICS_FAIL_SAFE"}
         voltage = physics.get("voltage", 0.0) if isinstance(physics, dict) else getattr(physics, "voltage", 0.0)
@@ -139,7 +151,7 @@ class SynergeticLensArbiter:
             state_desc = "LOCKED"
             reason = self.last_reason
         else:
-            lens_name, state_desc, reason = self.enneagram.decide_persona(physics)
+            lens_name, state_desc, reason = self.enneagram.decide_persona(physics, soul_ref=soul_ref)
         narrative_drag = physics.get("narrative_drag", 0.0) if isinstance(physics, dict) else physics.narrative_drag
         if narrative_drag > 8.0:
             lens_name = "CLARENCE"; state_desc = "AUDITING"; reason = "BUREAUCRATIC LOCKDOWN"
@@ -284,3 +296,32 @@ DIRECTIVES:
             "SYNTHESIZER": "Connect the dots. Mirror back understanding.",
             "VALIDATOR": "Verify gaps. Confirm the final spec."}
         return desc.get(self.state.archetype, "Observe.")
+
+
+class SoulDriver:
+    ARCHETYPE_TO_PERSONA_WEIGHT = {
+        "THE POET": {"NATHAN": 0.8, "JESTER": 0.4, "NARRATOR": 0.6},
+        "THE ENGINEER": {"GORDON": 0.9, "CLARENCE": 0.7, "SHERLOCK": 0.5},
+        "THE NIHILIST": {"NARRATOR": 0.9, "CLARENCE": 0.3, "JESTER": -0.5},
+        "THE CRITIC": {"CLARENCE": 0.8, "SHERLOCK": 0.6, "GORDON": 0.2},
+        "THE EXPLORER": {"NATHAN": 0.7, "JESTER": 0.5, "SHERLOCK": 0.6},
+        "THE OBSERVER": {"NARRATOR": 1.0, "GORDON": 0.2}}
+
+    def __init__(self, soul_ref):
+        self.soul = soul_ref
+
+    def get_influence(self) -> Dict[str, float]:
+        base_weights = {persona: 0.0 for persona in EnneagramDriver.WEIGHTS.keys()}
+        if not self.soul:
+            return base_weights
+        archetype = getattr(self.soul, "archetype", "THE OBSERVER")
+        mapping = self.ARCHETYPE_TO_PERSONA_WEIGHT.get(archetype, {"NARRATOR": 1.0})
+        for persona, weight in mapping.items():
+            if persona in base_weights:
+                base_weights[persona] += weight
+        paradox = getattr(self.soul, "paradox_accum", 0.0)
+        if paradox > 5.0:
+            chaos_factor = min(0.5, (paradox - 5.0) * 0.05)
+            for persona in base_weights:
+                base_weights[persona] += random.uniform(-chaos_factor, chaos_factor)
+        return base_weights

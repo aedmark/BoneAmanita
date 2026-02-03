@@ -10,11 +10,11 @@ from bone_akashic import TheAkashicRecord
 from bone_data import TheLore
 
 
-def _get(p, k, d=0.0):
+def _get(p: Any, k: str, d: Any = 0.0) -> Any:
     if p is None: return d
     return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
 
-def _get_float(p, k, d=0.0) -> float:
+def _get_float(p: Any, k: str, d: float = 0.0) -> float:
     val = _get(p, k, d)
     try:
         return float(val)
@@ -41,21 +41,16 @@ class TheTinkerer:
         voltage = _get_float(p, "voltage", 0.0)
         drag = _get_float(p, "narrative_drag", 0.0)
         vector = _get(p, "vector", {})
-
         ent_val = 0.0
         if isinstance(vector, dict):
             ent_val = float(vector.get("ENT", 0.0))
-
         entropy_level = ent_val + (drag * 0.1)
-
         for item in inventory_list:
             if item not in self.tool_confidence:
                 self.tool_confidence[item] = 1.0
-
             is_manic = voltage > 12.0
             kappa = _get_float(p, "kappa", 0.0)
             is_coherent = kappa > 0.8
-
             if is_manic or is_coherent:
                 self.tool_confidence[item] += 0.05
                 if self.tool_confidence[item] > 2.5:
@@ -385,3 +380,16 @@ class SanctuaryGovernor:
             self.consecutive_safe_ticks = 0
             self.in_sanctuary = False
         return self.in_sanctuary, avg_dist
+
+
+class Limbo:
+    def __init__(self):
+        self.ghosts: List[str] = []
+
+    def haunt(self, text: str) -> str:
+        if not self.ghosts:
+            return text
+        if random.random() < 0.1:
+            ghost_word = random.choice(self.ghosts)
+            return f"{text} ...{ghost_word.lower()}..."
+        return text

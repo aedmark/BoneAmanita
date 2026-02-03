@@ -453,12 +453,13 @@ class TheCortex:
         self.boot_history = self.black_box.get_recent_history(limit=4)
         self.last_physics = {}
         try:
-            from bone_personality import BoneConsultant
             self.consultant = BoneConsultant()
-        except ImportError:
+            if self.events:
+                self.events.log("[INIT]: VSL Consultant loaded from Drivers.", "SYS")
+        except ImportError as e:
             self.consultant = None
             if self.events:
-                self.events.log("⚠️ BoneConsultant not found in Personality. VSL Protocol disabled.", "SYS")
+                self.events.log(f"⚠️ BoneConsultant import failed: {e}", "SYS")
         if llm_client:
             self.llm = llm_client
             if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None:
@@ -627,17 +628,22 @@ class TheCortex:
             phys_packet,
             bio_state,
             inventory,
-            current_tick)
+            current_tick,
+            soul_ref=self.sub.soul)
         if isinstance(mind_data, tuple):
             mind_data = {
                 "lens": mind_data[0],
                 "role": mind_data[2],
                 "style_directives": ["Neutral tone."],
                 "lexicon_bias": "abstract"}
+        if hasattr(self.sub, 'director'):
+            chorus_instr, active_voices = self.sub.director.generate_chorus_instruction(phys_packet.to_dict())
+            if len(active_voices) > 1 and "NARRATOR" not in active_voices:
+                mind_data["style_directives"].append(chorus_instr)
+                mind_data["role"] = f"The Chorus ({'/'.join(active_voices)})"
         active_history = self.dialogue_buffer
         if not active_history and self.boot_history:
             active_history = [f"[PREVIOUSLY]: {entry}" for entry in self.boot_history]
-
         return {
             "bio": bio_state,
             "physics": phys_packet,
@@ -882,7 +888,7 @@ class NoeticLoop:
         self.bio = bio_layer
         self.arbiter = SynergeticLensArbiter(events)
 
-    def think(self, physics_packet, _bio_result_dict, inventory, voltage_history, tick_count):
+    def think(self, physics_packet, _bio_result_dict, inventory, voltage_history, tick_count, soul_ref=None):
         volts = physics_packet.get("voltage", 0.0)
         drag = physics_packet.get("narrative_drag", 0.0)
         if volts < 1.5 and drag < 1.5:
@@ -895,15 +901,17 @@ class NoeticLoop:
                 "role": "The Reducer",
                 "ignition": 0.0,
                 "hebbian_msg": None}
-        ignition_score, _, _ = self.mind.integrator.measure_ignition(
-            physics_packet.get("clean_words", []),
+        clean_words = physics_packet.get("clean_words", [])
+        ignition_score, coherence, _ = self.mind.integrator.measure_ignition(
+            clean_words,
             voltage_history)
         mind_data = self.arbiter.consult(
             physics_packet,
             _bio_result_dict,
             inventory,
             tick_count,
-            ignition_score)
+            soul_ref=soul_ref,
+            _ignition_score=ignition_score)
         standardized_mind = {}
         if isinstance(mind_data, tuple):
             standardized_mind = {

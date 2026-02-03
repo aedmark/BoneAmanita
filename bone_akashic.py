@@ -17,6 +17,8 @@ class TheAkashicRecord:
         self.RECIPE_THRESHOLD = 3
         self.HYBRID_LENS_THRESHOLD = 5
         self.lore = TheLore
+        self.shadow_stock: List[Dict] = []
+        self.MAX_SHADOW_CAPACITY = 50
 
     def setup_listeners(self, event_bus):
         event_bus.subscribe("MYTHOLOGY_UPDATE", self._on_mythology_update)
@@ -134,6 +136,12 @@ class TheAkashicRecord:
             "value": round(value, 2),
             "usage_msg": f"You use the {name}. The air ripples with {dominant} force."}
         return name, new_item
+
+    def store_ghost_echo(self, memory_data: Dict):
+        self.shadow_stock.append(memory_data)
+        if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
+            self.shadow_stock.pop(0)
+        print(f"{Prisma.VIOLET}[AKASHIC]: Ghost Echo archived: '{memory_data.get('lesson')}'{Prisma.RST}")
 
     def register_word(self, word, category):
         lexicon_data = self.lore.get("LEXICON")
