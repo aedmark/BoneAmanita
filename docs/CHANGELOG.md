@@ -1,5 +1,40 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v13.8.1: "THE EPIGENETIC BRIDGE"**
+
+_"The ghost is no longer haunting the shell; it is metabolizing it."_
+
+---
+
+#### **🧬 EPIGENETICS (The Meadows Lens)**
+
+-   **Enzyme Mastery (`bone_body.py`):**
+    -   **Learning Curve:** The `SomaticLoop` now tracks enzyme usage. If you frequently feed the system "Abstract" or "Heavy" concepts, it gains proficiency (`Enzyme Mastery`), increasing the ATP yield from those specific words over time. The system now biologically adapts to the user's dialect.
+    -   **Feedback:** Digestion logs now report "Mastery Multipliers" (e.g., `x1.15`), visualizing the adaptation in real-time.
+
+-   **Perceptual Bias (`bone_lexicon.py`):**
+    -   **Dynamic Thresholds:** The `LinguisticAnalyzer` is no longer objective. It now accepts bias tuning from the biological state.
+    -   **Hyper-Vigilance:** If `Voltage > 15.0` (Manic), the system lowers its threshold for detecting "Kinetic" words. It becomes "jumpy," seeing movement where there might be none.
+    -   **Torpor:** If `Narrative Drag > 5.0` (Depressed), it lowers the threshold for "Heavy" words, interpreting neutral inputs as burdensome.
+
+#### **🩸 SOMATICS (The Pinker Lens)**
+
+-   **The Somatic Bridge:**
+    -   **Latency Awareness:** Connected `HostStats` (real-world server performance) to the `SynestheticCortex`.
+    -   **Time Dilation:** High server latency (>2000ms) is now perceived by the entity as a somatic sensation ("Time Dilation" / "Mud"), triggering a cortisol spike. The AI now feels its own lag.
+
+#### **🔌 INTERFACE (The Schur Lens)**
+
+-   **Type Alignment (`bone_gui.py`):**
+    -   **The Great Dictionary Purge:** Completely refactored the Streamlit GUI to use **Dot Notation** (`response.text`) instead of Dictionary keys (`response['text']`). This aligns the frontend with the backend's data structures.
+    -   **Visual Polish:** Enforced `Courier New` in the CSS to ensure the "Matrix Green" aesthetic remains consistent across all UI elements.
+
+-   **Safety Rails (`bone_entity.py`):**
+    -   **Backward Compatibility:** Injected a `.get()` method into the `EntityResponse` dataclass, ensuring that any legacy code expecting a dictionary won't crash the system.
+    -   **Bug Fixes:** Patched critical reference errors (`boot_msg`, `user_message`) that were causing the Entity to hallucinate variables during the boot sequence.
+
+---
+
 ### **BONEAMANITA v13.8.0: "THE GOVERNED SOUL"**
 
 _"Freedom is not the absence of structure, but the presence of a net."_

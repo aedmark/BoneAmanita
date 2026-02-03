@@ -52,9 +52,13 @@ class TheGatekeeper:
         drag = phys.narrative_drag
         if drag < 2.0:
             return False
-        probability = (drag / 50.0)
+        efficiency_penalty = 0.0
+        if hasattr(self.eng, "host_stats") and self.eng.host_stats:
+            if self.eng.host_stats.efficiency_index < 0.8:
+                efficiency_penalty = 0.4
+        probability = (drag / 50.0) + efficiency_penalty
         is_boring = phys.voltage < 5.0
-        if is_boring and random.random() < probability:
+        if (is_boring or efficiency_penalty > 0) and random.random() < probability:
             return True
         return False
 
@@ -130,15 +134,17 @@ class GeodesicEngine:
                 (total_kinetic * config.PHYSICS.WEIGHT_EXPLOSIVE) +
                 (masses["constructive"] * config.PHYSICS.WEIGHT_CONSTRUCTIVE))
         tension = round(((raw_tension_mass / volume) * 25.0) * config.KINETIC_GAIN, 2)
+        shear_rate = total_kinetic / volume
         raw_friction = (
                 (counts.get("solvents", 0) * 0.2) +
                 (counts.get("suburban", 0) * 2.0) +
                 (masses["heavy"] * 2.5))
+        dynamic_viscosity = raw_friction / (1.0 + (shear_rate * 2.0))
         kinetic_lift = total_kinetic * 0.5
         if masses["heavy"] > 0:
             kinetic_lift = kinetic_lift / (masses["heavy"] * 0.5 + 1.0)
         lift = (masses["play"] * 2.5) + kinetic_lift
-        raw_compression = ((raw_friction / volume) * 10.0) - ((lift / volume) * 10.0)
+        raw_compression = ((dynamic_viscosity / volume) * 10.0) - ((lift / volume) * 10.0)
         compression = round(max(-5.0, min(config.PHYSICS.DRAG_HALT, raw_compression * config.SIGNAL_DRAG_MULTIPLIER)), 2)
         structural_mass = masses["heavy"] + masses["constructive"]
         coherence = min(1.0, structural_mass / max(1, config.SHAPLEY_MASS_THRESHOLD))

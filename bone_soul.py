@@ -548,7 +548,7 @@ class SynestheticCortex:
         if hasattr(physics, "to_dict"): return physics.to_dict()
         return getattr(physics, "__dict__", {})
 
-    def perceive(self, physics: Dict, text: str = "") -> BiologicalImpulse:
+    def perceive(self, physics: Dict, text: str = "", latency: float = 0.0) -> BiologicalImpulse:
         physics = self._normalize_physics(physics)
         impulse = BiologicalImpulse()
         valence = physics.get("valence", 0.0)
@@ -579,6 +579,10 @@ class SynestheticCortex:
             if physics.get("voltage", 0) > 12.0 and physics.get("kappa", 0) > 0.5:
                 impulse.dopamine_delta += 0.15
                 impulse.somatic_reflex = "Buzz (Excitement)"
+        if latency > 2.0:
+            impulse.stamina_impact -= (latency * 0.5)
+            impulse.cortisol_delta += 0.05
+            impulse.somatic_reflex = "Time Dilation (Lag)."
         k_count = counts.get("kinetic", 0) + counts.get("explosive", 0)
         if k_count > 0:
             adr_boost = min(0.4, k_count * 0.08)

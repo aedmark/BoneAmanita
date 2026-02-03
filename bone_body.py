@@ -244,23 +244,17 @@ class SomaticLoop:
         self.gordon = gordon_ref
         self.folly = folly_ref
         self.events = events_ref
-
-        # CORRECTED: Properly load the BIO_NARRATIVE data
         self.narrative_data = TheLore.get("BIO_NARRATIVE") or {}
-
-        # Fallback if data missing
         if not self.narrative_data:
             print(f"{Prisma.RED}[BODY]: Warning - BIO_NARRATIVE missing.{Prisma.RST}")
             self.narrative_data = {"symptoms": {}, "organs": {}, "GLIMMER": {}, "GOVERNOR": {}}
-
-        # CRITICAL FIX: Inject data into subsystems that were instantiated elsewhere
         if hasattr(self.bio, 'endo'):
             self.bio.endo.narrative_data = self.narrative_data
         if hasattr(self.bio, 'governor'):
             self.bio.governor.narrative_data = self.narrative_data
-
         self.semantic_doctor = SemanticEndocrinologist(memory_ref, lexicon_ref)
         self.enzyme_map = getattr(BoneConfig.BIO, "ENZYME_MAP", SomaticLoop._ENZYME_MAP) if hasattr(BoneConfig, "BIO") else SomaticLoop._ENZYME_MAP
+        self.enzyme_mastery = {v: 0.0 for v in self.enzyme_map.values()}
 
     def digest_cycle(self, text: str, physics_data: Any, feedback: Dict,
                      health: float, stamina: float, stress_modifier: float,
@@ -412,11 +406,15 @@ class SomaticLoop:
                 enzyme = self._map_category_to_enzyme(category)
                 if enzyme != "AMYLASE":
                     found_enzymes.append(enzyme)
+                    current_mastery = self.enzyme_mastery.get(enzyme, 0.0)
+                    mastery_bonus = 1.0 + (current_mastery * 0.1)
                     base_word_yield = 2.0 if len(word) > 7 else 1.0
                     damped_multiplier = 1.0 + math.log(count)
-                    total_atp_yield += (base_word_yield * damped_multiplier)
+                    final_yield = (base_word_yield * damped_multiplier) * mastery_bonus
+                    total_atp_yield += final_yield
+                    self.enzyme_mastery[enzyme] = min(5.0, current_mastery + 0.02)
                     if len(found_enzymes) <= 3:
-                        logs.append(f"{Prisma.GRN}[BIO]: Digested '{word}' (x{count}) -> {enzyme} (+{(base_word_yield * damped_multiplier):.1f} ATP){Prisma.RST}")
+                        logs.append(f"{Prisma.GRN}[BIO]: Digested '{word}' -> {enzyme} (Mastery x{mastery_bonus:.2f}) -> +{final_yield:.1f} ATP.{Prisma.RST}")
         if cliche_tax_total > 0:
             total_atp_yield -= cliche_tax_total
             logs.append(f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX APPLIED. System drained by -{cliche_tax_total:.1f} ATP. (Reason: Antigen Detected){Prisma.RST}")
@@ -464,7 +462,6 @@ class EndocrineSystem:
     adrenaline: float = 0.0
     melatonin: float = 0.0
     glimmers: int = 0
-    # CORRECTED: Added field to hold narrative data
     narrative_data: Dict = field(default_factory=dict, repr=False)
 
     _REACTION_MAP = {
@@ -483,7 +480,6 @@ class EndocrineSystem:
         hour = time.localtime().tm_hour
         bias = {"COR": 0.0, "SER": 0.0, "MEL": 0.0}
 
-        # Safely access narrative data
         circadian_text = self.narrative_data.get("CIRCADIAN", {})
 
         if 6 <= hour < 10:
@@ -628,7 +624,6 @@ class MetabolicGovernor:
     drag_floor: float = 2.0
     manual_override: bool = False
     birth_tick: float = field(default_factory=time.time)
-    # CORRECTED: Added field to hold narrative data
     narrative_data: Dict = field(default_factory=dict, repr=False)
 
     @staticmethod

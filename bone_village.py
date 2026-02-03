@@ -188,7 +188,9 @@ class TheTownCrier:
             "The air is silent.",
             "The Crier has lost their notes."]
 
-    def broadcast(self, physics: Dict) -> Optional[str]:
+    def broadcast(self, physics: Dict, host_stats: Any = None) -> Optional[str]:
+        if host_stats and getattr(host_stats, "latency", 0.0) > 4.0:
+            return f"{Prisma.OCHRE}📢 TOWN CRIER: The time-winds are blowing slow today! (High Latency){Prisma.RST}"
         volt = physics.get("voltage", 0.0)
         if volt > 15.0:
             return f"{Prisma.YEL}📢 HEAR YE: Curfew in effect! The voltage is dangerous!{Prisma.RST}"
@@ -207,7 +209,7 @@ class TownHall:
 
     def conduct_census(self, physics_snapshot, host_stats):
         status, advice = self.Almanac.diagnose(physics_snapshot, host_stats)
-        news = self.Crier.broadcast(physics_snapshot)
+        news = self.Crier.broadcast(physics_snapshot, host_stats)
         report = f"CENSUS: {status} | {advice}"
         if news:
             report += f"\n{news}"

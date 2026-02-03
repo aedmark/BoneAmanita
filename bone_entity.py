@@ -2,10 +2,9 @@
 
 import json, random, re
 from dataclasses import dataclass, asdict
-from typing import Dict, Any
+from typing import Dict, Any, Union
 from bone_main import BoneAmanita, Prisma
 from bone_data import TheLore
-
 
 @dataclass
 class EntityResponse:
@@ -19,6 +18,9 @@ class EntityResponse:
     def __getitem__(self, item):
         return getattr(self, item)
 
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
 class ConversationalEntity:
     def __init__(self, user_name="Traveler", save_file="bone_config.json"):
         try:
@@ -31,7 +33,7 @@ class ConversationalEntity:
         self.user_name = user_name
         print(f"{Prisma.CYN}[ENTITY]: Systems Online. Connected to {config.get('provider', 'mock')}.{Prisma.RST}")
 
-    def boot_system(self) -> Dict[str, Any]:
+    def boot_system(self) -> EntityResponse:
         if self.engine.embryo.continuity:
             last_output = self.engine.embryo.continuity.get("last_output", "System restored.")
             return self._pack_response(last_output)
@@ -45,14 +47,22 @@ class ConversationalEntity:
             f"Generate a vivid, sensory opening log that captures the *vibe* of the seed without describing it directly. "
             f"Focus on lighting, texture, and entropy.")
 
-        return self.talk(boot_prompt)
+        boot_packet = self.engine.process_turn(boot_prompt)
+        boot_msg = "System Online."
+        if self.engine.cortex.dialogue_buffer:
+             last_entry = self.engine.cortex.dialogue_buffer[-1]
+             if "System:" in last_entry:
+                 boot_msg = last_entry.split("System:")[-1].strip()
+             else:
+                 boot_msg = last_entry
+        return self._pack_response(boot_msg, boot_packet)
 
-    def talk(self, user_message: str) -> Dict[str, Any]:
+    def talk(self, user_input: str) -> EntityResponse:
         if hasattr(self.engine.cycle_controller, "run_headless_turn"):
-            sim_result = self.engine.cycle_controller.run_headless_turn(user_message)
+            sim_result = self.engine.cycle_controller.run_headless_turn(user_input)
         else:
-            sim_result = self.engine.cycle_controller.run_turn(user_message)
-        full_packet = self.engine.process_turn(user_message)
+            sim_result = self.engine.cycle_controller.run_turn(user_input)
+        full_packet = self.engine.process_turn(user_input)
         raw_reply = ""
         if self.engine.cortex.dialogue_buffer:
             last_entry = self.engine.cortex.dialogue_buffer[-1]

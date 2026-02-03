@@ -140,6 +140,14 @@ class LinguisticAnalyzer:
             "ABSTRACT": ("tion", "ism", "ence", "ance", "ity", "ology", "ness", "ment", "idea"),
             "SUBURBAN": ("norm", "comm", "stand", "pol", "reg", "mod"),
             "VITAL": ("viv", "vita", "spir", "anim", "bio", "luc", "lum", "phot", "phon", "surg", "bloom")}
+        self.thresholds = {
+            "heavy_density": 0.55,
+            "play_vitality": 0.6,
+            "kinetic_flow": 0.6}
+        self.biases = {
+            "heavy": 1.0,
+            "play": 1.0,
+            "kinetic": 1.0}
 
     def measure_viscosity(self, word: str) -> float:
         if not word: return 0.0
@@ -226,11 +234,14 @@ class LinguisticAnalyzer:
         length_mod = 1.0 if len(w) > 5 else 1.5
         final_density = (density_score / len(w)) * length_mod
         final_vitality = (vitality_score / len(w)) * length_mod
-        if final_density > 0.55:
+        heavy_thresh = self.thresholds["heavy_density"] * self.biases["heavy"]
+        play_thresh = self.thresholds["play_vitality"] * self.biases["play"]
+        kinetic_thresh = self.thresholds["kinetic_flow"] * self.biases["kinetic"]
+        if final_density > heavy_thresh:
             return "heavy", round(final_density, 2)
-        if final_vitality > 0.6:
+        if final_vitality > play_thresh:
             return "play", round(final_vitality, 2)
-        if (flow_score / len(w)) > 0.6:
+        if (flow_score / len(w)) > kinetic_thresh:
             return "kinetic", 0.5
         return None, 0.0
 
@@ -254,6 +265,18 @@ class LinguisticAnalyzer:
             score += val
         normalized = score / max(1.0, len(words) * 0.5)
         return max(-1.0, min(1.0, normalized))
+
+    def tune_sensitivity(self, voltage: float, drag: float):
+        if voltage > 15.0:
+            self.biases["kinetic"] = 0.8
+        elif voltage < 5.0:
+            self.biases["kinetic"] = 1.2
+        else:
+            self.biases["kinetic"] = 1.0
+        if drag > 5.0:
+            self.biases["heavy"] = 0.8
+        else:
+            self.biases["heavy"] = 1.0
 
 class SemanticField:
     def __init__(self, analyzer_ref):
@@ -445,6 +468,12 @@ class LexiconService:
     def learn_antigen(cls, word: str, replacement: str = ""):
         cls._STORE.ANTIGEN_REPLACEMENTS[word] = replacement
         cls.compile_antigens()
+
+    @classmethod
+    @_ensure_ready
+    def tune_perception(cls, voltage: float, narrative_drag: float):
+        if cls._ANALYZER:
+            cls._ANALYZER.tune_sensitivity(voltage, narrative_drag)
 
 TheLexicon = LexiconService
 

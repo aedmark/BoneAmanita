@@ -229,6 +229,12 @@ class MetabolismPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         physics = ctx.physics
+        if hasattr(self.eng, "host_stats"):
+            eff = self.eng.host_stats.efficiency_index
+            if eff < 0.8:
+                tax = (1.0 - eff) * 5.0
+                self.eng.bio.mito.state.atp_pool -= tax
+                ctx.log(f"{Prisma.OCHRE}⚡ METABOLIC TAX: System strain burns {tax:.1f} ATP.{Prisma.RST}")
         gov_msg = self.eng.bio.governor.shift(
             physics,
             self.eng.phys.dynamics.voltage_history, self.eng.tick_count)
@@ -657,7 +663,10 @@ class SensationPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         phys_data = ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics
-        impulse = self.synesthesia.perceive(phys_data)
+        current_latency = 0.0
+        if hasattr(self.eng, "host_stats"):
+            current_latency = self.eng.host_stats.latency
+        impulse = self.synesthesia.perceive(phys_data, latency=current_latency)
         ctx.last_impulse = impulse
         self.synesthesia.apply_impulse(impulse)
         if impulse.stamina_impact != 0:

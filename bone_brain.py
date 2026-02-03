@@ -139,8 +139,11 @@ class NeurotransmitterModulator:
         return "Current Mood: NEUTRAL. Observant and receptive."
 
     def modulate(self, incoming_chem: Dict[str, float], base_voltage: float, lens_name: str = "NARRATOR",
-                 model_name: str = "") -> Dict[str, Any]:
+                 model_name: str = "", latency_penalty: float = 0.0) -> Dict[str, Any]:
         self.current_chem.homeostasis(rate=BrainConfig.BASE_DECAY_RATE)
+        if latency_penalty > 2.0:
+            self.current_chem.cortisol += 0.1
+            self.current_chem.adrenaline += 0.05
         plasticity = BrainConfig.BASE_PLASTICITY + (base_voltage * BrainConfig.VOLTAGE_SENSITIVITY)
         plasticity = max(0.1, min(BrainConfig.MAX_PLASTICITY, plasticity))
         self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
@@ -526,7 +529,15 @@ class TheCortex:
         chem = full_state["bio"].get("chem", {})
         current_lens = full_state["mind"].get("lens", "NARRATOR")
         model_id = self.llm.model if hasattr(self.llm, "model") else "unknown"
-        llm_params = self.modulator.modulate(chem, voltage, lens_name=current_lens, model_name=model_id)
+        current_latency = 0.0
+        if hasattr(self.sub, "host_stats"):
+            current_latency = self.sub.host_stats.latency
+        llm_params = self.modulator.modulate(
+            chem,
+            voltage,
+            lens_name=current_lens,
+            model_name=model_id,
+            latency_penalty=current_latency)
         if is_boot_sequence:
             llm_params["temperature"] = 1.3
             llm_params["top_p"] = 0.95

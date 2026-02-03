@@ -17,7 +17,7 @@ st.markdown("""
         font-family: 'Courier New', monospace;
     }
     .stMarkdown {
-        font-family: 'Helvetica', sans-serif;
+        font-family: 'Courier New', monospace;
     }
     div[data-testid="stMetricValue"] {
         font-size: 1.2rem; 
@@ -31,13 +31,13 @@ if "entity" not in st.session_state:
         boot_packet = st.session_state.entity.boot_system()
         st.write("Loading Neural Weights...")
         st.session_state.messages = []
-        st.session_state.messages.append({"role": "assistant", "content": boot_packet["text"]})
+        st.session_state.messages.append({"role": "assistant", "content": boot_packet.text})
         st.session_state.meta = {
-            "mood": boot_packet["mood"],
-            "voltage": boot_packet["voltage"],
-            "location": boot_packet["location"],
-            "health": boot_packet["health"],
-            "stamina": boot_packet["stamina"]}
+            "mood": boot_packet.mood,
+            "voltage": boot_packet.voltage,
+            "location": boot_packet.location,
+            "health": boot_packet.health,
+            "stamina": boot_packet.stamina}
         status.update(label="System Online", state="complete", expanded=False)
 with st.sidebar:
     st.title("BoneAmanita v13.4")
@@ -54,7 +54,7 @@ with st.sidebar:
     if st.button("EMERGENCY SAVE", type="primary"):
         save_msg = st.session_state.entity.save()
         st.success(save_msg)
-st.title("BONEAMANITA // TERMINAL")
+st.title("BONEAMANITA 13.8.0")
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -67,13 +67,14 @@ if prompt := st.chat_input("Enter signal..."):
             response_packet = st.session_state.entity.talk(prompt)
             st.write("Synthesizing response...")
             message_placeholder = st.empty()
-            full_response = response_packet["text"]
+            full_response = response_packet.text  # Was: response_packet["text"]
             st.session_state.meta = {
-                "mood": response_packet.get("mood", "Neutral"),
-                "voltage": response_packet.get("voltage", 0.0),
-                "location": response_packet.get("location", "Unknown"),
-                "health": response_packet.get("health", 100.0),
-                "stamina": response_packet.get("stamina", 100.0)}
+                "mood": response_packet.mood,  # Was: .get("mood", "Neutral")
+                "voltage": response_packet.voltage,  # Was: .get("voltage", 0.0)
+                "location": response_packet.location,  # Was: .get("location", "Unknown")
+                "health": response_packet.health,  # Was: .get("health", 100.0)
+                "stamina": response_packet.stamina  # Was: .get("stamina", 100.0)
+            }
             status.update(label="Transmission Received", state="complete", expanded=False)
             message_placeholder.markdown(full_response)
     st.session_state.messages.append({"role": "assistant", "content": full_response})
