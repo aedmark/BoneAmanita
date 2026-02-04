@@ -1,7 +1,7 @@
 """ bone_metaphysics.py - The Unwritten Core & Cognitive Instrumentation """
 
 from typing import Dict, Any, List, Optional
-from bone_bus import Prisma, BoneConfig, RealityLayer
+from bone_core import Prisma, BoneConfig, RealityLayer
 
 class CongruenceValidator:
     def __init__(self):

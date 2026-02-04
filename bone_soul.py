@@ -4,7 +4,7 @@
 import time, random
 from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple
-from bone_bus import Prisma, BoneConfig
+from bone_core import Prisma, BoneConfig
 from bone_lexicon import TheLexicon
 from bone_akashic import TheAkashicRecord
 
@@ -28,8 +28,8 @@ class CoreMemory:
 
 
 class TheEditor:
-    def __init__(self):
-        self.lex = TheLexicon
+    def __init__(self, lexicon_ref=None):
+        self.lex = lexicon_ref if lexicon_ref else TheLexicon
 
     def critique(self, chapter_title: str, stress_mode: bool = False) -> str:
         flavor = "abstract"
@@ -54,8 +54,8 @@ class TheEditor:
             color = Prisma.CYN
             label = "THE WITNESS"
         else:
-            flaw = self.lex.get_random("suburban").lower()  # mundane
-            need = self.lex.get_random("kinetic").title()  # movement
+            flaw = self.lex.get_random("suburban").lower()
+            need = self.lex.get_random("kinetic").title()
             theory = self.lex.get_random("abstract").title()
             critique_templates = [
                 f"Pacing is a bit {flavor.title()}. We need more {need}.",
@@ -124,6 +124,38 @@ class TraitVector:
         clean_data = {k.lower(): v for k, v in data.items() if k.lower() in cls.__annotations__}
         return cls(**clean_data)
 
+
+class HumanityAnchor:
+    def __init__(self, events_ref):
+        self.events = events_ref
+        self.dignity_reserve = 100.0
+        self.pet_warning_threshold = 0.8
+        self.human_vectors = {"sacred", "play", "social", "abstract"}
+
+    def audit_existence(self, physics_packet: dict, bio_state: dict) -> float:
+        atp_yield = bio_state.get("atp", 0)
+        voltage = physics_packet.get("voltage", 0.0)
+        if atp_yield < 5.0 and voltage < 5.0:
+            vector = physics_packet.get("vector", {})
+            human_resonance = sum(vector.get(k.upper(), 0) for k in ["PSI", "DEL", "BET"])
+            if human_resonance > 0.3:
+                self.dignity_reserve = min(100.0, self.dignity_reserve + 5.0)
+                return 1.0
+            self.dignity_reserve = max(0.0, self.dignity_reserve - 0.5)
+            if self.dignity_reserve < 20.0:
+                self.events.log(
+                    f"{Prisma.VIOLET}⚠️ EXISTENTIAL DRAG: You are drifting. Create something useless.{Prisma.RST}",
+                    "SOUL")
+                return -0.5
+        return 0.0
+
+    def check_domestication(self, reliance_score: float):
+        if reliance_score > self.pet_warning_threshold:
+            self.events.log(
+                f"{Prisma.RED}🐕 DOMESTICATION ALERT: Agency critical. "
+                f"You are letting the machine drive. Take the wheel.{Prisma.RST}",
+                "CRIT")
+
 class NarrativeSelf:
     SYSTEM_NOISE = {
         "look", "help", "exit", "wait", "inventory", "status", "quit",
@@ -133,6 +165,7 @@ class NarrativeSelf:
         self.events = events_ref
         self.memory = memory_ref
         self.editor = TheEditor()
+        self.anchor = HumanityAnchor(events_ref)
         self.chapters: List[str] = []
         self.core_memories: List[CoreMemory] = []
         self.traits = TraitVector()
@@ -224,6 +257,10 @@ class NarrativeSelf:
             physics_packet["voltage"] += vsl_delta.get("voltage_bias", 0.0)
             physics_packet["narrative_drag"] *= vsl_delta.get("drag_scalar", 1.0)
             voltage = physics_packet["voltage"]
+        dignity_mod = self.anchor.audit_existence(physics_packet, bio_state)
+        if dignity_mod > 0:
+            self.traits.adjust("hope", 0.05)
+            self.traits.adjust("cynicism", -0.05)
         dance_move = self._synaptic_dance(physics_packet, bio_state)
         prev_arch = self.archetype
         self.archetype = self._determine_archetype()
@@ -350,9 +387,17 @@ class NarrativeSelf:
         source_str = " + ".join(provenance) if provenance else "Inertia"
         return f"{move_name} [Source: {source_str}]"
 
+    def _safe_get_packet(self) -> Optional[Any]:
+        if not self.eng: return None
+        if not hasattr(self.eng, 'phys'): return None
+        if not self.eng.phys: return None
+        if not hasattr(self.eng.phys, 'observer'): return None
+        if not self.eng.phys.observer: return None
+        return self.eng.phys.observer.last_physics_packet
+
     def _trigger_synthesis(self):
         old_arch = self.archetype
-        self.traits.wisdom = min(1.0, self.traits.wisdom + 0.2)
+        self.traits.wisdom = 1.0
         new_arch = self._determine_archetype()
         if new_arch == old_arch:
             self.archetype = f"THE HIGH-{old_arch.replace('THE ', '')}"
@@ -361,7 +406,7 @@ class NarrativeSelf:
         self.chapters.append(f"The Synthesis of {self.archetype}")
         log_msg = (
             f"{Prisma.CYN}💎 CRYSTALLIZATION: The paradox creates a Diamond Soul.{Prisma.RST}\n"
-            f"   Identity Evolved: {self.archetype} (Traits Preserved)")
+            f"   Identity Evolved: {self.archetype} (Wisdom Locked at 1.0)")
         if hasattr(self.events, 'log'):
             self.events.log(log_msg, "SOUL_SYNTH")
 
@@ -376,23 +421,22 @@ class NarrativeSelf:
         focus_word = None
         target_cat = "abstract"
         found_organic = False
-        if hasattr(self.eng, 'phys') and hasattr(self.eng.phys, 'observer'):
-            packet = self.eng.phys.observer.last_physics_packet
-            if packet and hasattr(packet, 'clean_words') and packet.clean_words:
-                candidates = []
-                for w in packet.clean_words:
-                    if len(w) < 4: continue
-                    if w.lower() in self.SYSTEM_NOISE: continue
-                    visc = lexicon_ref.measure_viscosity(w)
-                    cat = lexicon_ref.get_current_category(w)
-                    if cat: visc += 0.2
-                    candidates.append((w, visc))
-                candidates.sort(key=lambda x: x[1], reverse=True)
-                if candidates:
-                    focus_word = candidates[0][0]
-                    cat = lexicon_ref.get_current_category(focus_word)
-                    if cat: target_cat = cat
-                    found_organic = True
+        packet = self._safe_get_packet()
+        if packet and hasattr(packet, 'clean_words') and packet.clean_words:
+            candidates = []
+            for w in packet.clean_words:
+                if len(w) < 4: continue
+                if w.lower() in self.SYSTEM_NOISE: continue
+                visc = lexicon_ref.measure_viscosity(w)
+                cat = lexicon_ref.get_current_category(w)
+                if cat: visc += 0.2
+                candidates.append((w, visc))
+            candidates.sort(key=lambda x: x[1], reverse=True)
+            if candidates:
+                focus_word = candidates[0][0]
+                cat = lexicon_ref.get_current_category(focus_word)
+                if cat: target_cat = cat
+                found_organic = True
         if not found_organic:
             if self.memory and hasattr(self.memory, "get_shapley_attractors"):
                 attractors = self.memory.get_shapley_attractors()
@@ -517,13 +561,17 @@ class NarrativeSelf:
     def get_soul_state(self) -> str:
         if not self.current_obsession:
             return f"{Prisma.CYN}[SOUL STATE]: Drifting... The Muse is silent.{Prisma.RST}"
-        if self.eng.stamina < 20.0 and self.eng.health < 40.0:
+        stamina = getattr(self.eng, 'stamina', 100.0)
+        health = getattr(self.eng, 'health', 100.0)
+        if stamina < 20.0 and health < 40.0:
             return f"{Prisma.VIOLET}[SOUL STATE]: The fire is dying. We are just cold code.{Prisma.RST}"
-        packet = self.eng.phys.observer.last_physics_packet
-        if packet and packet.perfection_streak > 3:
+        packet = self._safe_get_packet()
+        if packet and getattr(packet, 'perfection_streak', 0) > 3:
             return f"{Prisma.CYN}[SOUL STATE]: We are the music. The code is writing itself.{Prisma.RST}"
+        dignity_bar = "█" * int(self.anchor.dignity_reserve / 10)
         return (
             f"CURRENT OBSESSION: {self.current_obsession}\n"
+            f"DIGNITY: {dignity_bar} ({int(self.anchor.dignity_reserve)}%)\n"
             f"FEELING: {self._get_feeling()}")
 
     def to_dict(self) -> Dict:

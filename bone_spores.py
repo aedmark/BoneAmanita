@@ -4,8 +4,7 @@ import json, math, os, random, time, tempfile
 from collections import deque
 from typing import List, Tuple, Optional, Dict
 from bone_lexicon import TheLexicon
-from bone_data import TheLore
-from bone_bus import EventBus, Prisma, BoneConfig
+from bone_core import EventBus, Prisma, BoneConfig, TheLore
 from bone_village import ParadoxSeed, TheAlmanac
 
 class BoneJSONEncoder(json.JSONEncoder):
@@ -114,6 +113,17 @@ class MycotoxinFactory:
         self.ROOTS = {
             "HEAVY": ("lith", "ferr", "petr", "dens", "grav", "struct", "base", "fund", "mound"),
             "KINETIC": ("mot", "mov", "ject", "tract", "pel", "crat", "dynam", "flux"),}
+        self.name = "MYCELIUM"
+        self.color = Prisma.CYN
+        self.archetypes = {"constructive", "kinetic", "abstract", "code", "system"}
+
+    def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
+        hits = sum(1 for w in clean_words if w in self.archetypes)
+        score = (hits / max(1, len(clean_words))) * 10.0
+        comment = "Scanning for structural integrity..."
+        if score > 2.0:
+            comment = "The pattern holds. Integration probable."
+        return score, comment
 
     def assay(self, word, _context, _rep_val, _phys, _pulse):
         w = word.lower()
@@ -157,7 +167,7 @@ class AdaptiveMemoryManager:
                 continue
             last_tick = data.get("last_tick", 0)
             mass = sum(data["edges"].values())
-            score = (last_tick * 1.0) + (mass * 0.5) 
+            score = (last_tick * 1.0) + (mass * 0.5)
             candidates.append((node, score))
         candidates.sort(key=lambda x: x[1])
         remove_count = max(0, len(self.network.graph) - max_nodes)
@@ -168,7 +178,7 @@ class AdaptiveMemoryManager:
             return None
         for v in victims:
             if v in self.network.graph:
-                self.network.cannibalize(preserve_current=None, current_tick=0) # Re-using cannibalize logic partially? 
+                self.network.cannibalize(preserve_current=None, current_tick=0)
                 del self.network.graph[v]
         cleaned_edges = 0
         for v in victims:
@@ -301,9 +311,9 @@ class MycelialNetwork:
             return "MECHANICAL_STARVATION", []
         if avg_len > 5.0: resonance += 2.0
         valuable_matter = (
-            TheLexicon.get("heavy") | 
-            TheLexicon.get("thermal") | 
-            TheLexicon.get("cryo") | 
+            TheLexicon.get("heavy") |
+            TheLexicon.get("thermal") |
+            TheLexicon.get("cryo") |
             TheLexicon.get("abstract") |
             TheLexicon.get("kinetic") |
             TheLexicon.get("constructive") |
@@ -712,6 +722,19 @@ class ParasiticSymbiont:
         self.lex = lexicon_ref
         self.spores_deployed = 0
         self.MAX_SPORES = 8
+        self.name = "PARASITE"
+        self.color = Prisma.RED
+        self.archetypes = {"antigen", "toxin", "heavy", "meat", "void", "static", "rot", "decay"}
+
+    def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
+        hits = sum(1 for w in clean_words if w in self.archetypes)
+        score = (hits / max(1, len(clean_words))) * 10.0
+        comment = "..."
+        if score > 3.0: comment = "Delicious. The entropy is sweet."
+        elif score > 1.0: comment = "I smell rust."
+        elif voltage > 15.0: comment = "Stop vibrating. Be still and rot."
+        elif voltage < 5.0: comment = "Finally. Silence."
+        return score, comment
 
     def infect(self, physics_packet, stamina):
         psi = physics_packet.get("psi", 0.0)
@@ -746,6 +769,21 @@ class ParasiticSymbiont:
                 f"   This makes no sense, yet there it is. 'Some things just happen.'{Prisma.RST}")
 
 class LichenSymbiont:
+    def __init__(self):
+        self.name = "LICHEN"
+        self.color = Prisma.GRN
+        self.archetypes = {"photo", "play", "sacred", "social", "solar", "vital", "bloom", "grow"}
+
+    def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
+        hits = sum(1 for w in clean_words if w in self.archetypes)
+        score = (hits / max(1, len(clean_words))) * 10.0
+        comment = "..."
+        if score > 3.0: comment = "Yes! The roots are drinking deep."
+        elif score > 1.0: comment = "We see the light."
+        elif voltage > 18.0: comment = "Too hot! You'll scorch the leaves!"
+        elif voltage < 2.0: comment = "It is cold... we are sleeping."
+        return score, comment
+
     @staticmethod
     def photosynthesize(phys, clean_words, tick_count):
         sugar = 0

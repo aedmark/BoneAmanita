@@ -1,16 +1,14 @@
-""" BONEAMANITA 14.0.0
- Architects: SLASH, KISHO, The BonePoke Gods Humans: Taylor & Edmark """
+""" BONEAMANITA 14.1.1
+ Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
-from bone_bus import EventBus, Prisma, BoneConfig, SystemHealth, TheObserver, BonePresets, RealityStack
+from bone_core import EventBus, Prisma, BoneConfig, SystemHealth, TheObserver, BonePresets, TheLore, LoreCategory, TelemetryService,RealityStack
 from bone_commands import CommandProcessor
-from bone_data import TheLore, LoreCategory
 from bone_village import TownHall, DeathGen, TheNavigator, TheTinkerer, Limbo
 from bone_lexicon import TheLexicon, SomaticInterface
 from bone_inventory import GordonKnot
-from bone_telemetry import TelemetryService
 from bone_protocols import TheFolly, KintsugiProtocol, TherapyProtocol, TheBureau, ZenGarden
 from bone_drivers import ChorusDriver, SynergeticLensArbiter, BoneConsultant
 from bone_physics import CosmicDynamics, ZoneInertia
@@ -19,7 +17,7 @@ from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_soul import NarrativeSelf
 from bone_architect import BoneArchitect
 from bone_cycle import GeodesicOrchestrator
-from bone_viewer import Projector, GeodesicRenderer
+from bone_gui import Projector, GeodesicRenderer
 from bone_council import CouncilChamber
 from bone_spores import LiteraryReproduction
 from bone_akashic import TheAkashicRecord
@@ -44,7 +42,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.0.0', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.1.1', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -158,6 +156,8 @@ class BoneAmanita:
     def _initialize_embryo(self):
         self.embryo = BoneArchitect.incubate(self.events, self.lex)
         self.embryo = BoneArchitect.awaken(self.embryo)
+        if hasattr(self.embryo, 'bio') and hasattr(self.embryo.bio, 'setup_listeners'):
+            self.embryo.bio.setup_listeners()
         self.gordon = GordonKnot()
         self.soul_legacy_data = self.embryo.soul_legacy
 
@@ -173,7 +173,7 @@ class BoneAmanita:
         self.limbo = Limbo()
         self.village = {
             "town_hall": self.town_hall,
-            "council": CouncilChamber(),
+            "council": CouncilChamber(self),
             "repro": LiteraryReproduction(),
             "projector": Projector(),
             "kintsugi": KintsugiProtocol(),

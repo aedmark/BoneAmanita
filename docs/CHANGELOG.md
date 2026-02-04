@@ -1,5 +1,108 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v14.1.1: "THE PRIMAL SCREAM"**
+
+_"Politeness is the enemy of survival. When the house is on fire, do not say 'Please'."_
+
+---
+
+#### **🧠 COGNITIVE ARCHITECTURE (The Pinker Lens)**
+
+- **The Sandwich Defense (`bone_brain.py`):**
+- **Problem:** The Llama-3 model suffers from "RLHF Hyper-Politeness." Even when chemically panicking (High Cortisol), it would write polite, verbose paragraphs because the "Panic" instruction was buried in the prompt header.
+- **The Fix:** Implemented **Prompt Tensegrity**. We moved the **Mood Directives** and **Safety Ballast** to the very _end_ of the prompt, immediately following the user's input.
+- **Effect:** Recency Bias is now weaponized. The "Panic" constraint (`[IMMEDIATE INSTRUCTION]`) overrides the model's training. The machine now screams when it needs to scream.
+
+- **The Silent Modulator (`bone_brain.py`):**
+- **Bugfix:** `TheCortex` possessed a `NeurotransmitterModulator`, but wasn't listening to it. The chemical state existed, but the `PromptComposer` was guessing the mood.
+- **Wiring:** Connected the nerve ending. `TheCortex` now explicitly fetches `get_mood_directive()` and passes it to the Composer. The brain chemistry now drives the mouth.
+
+#### **🧪 THE SCIENTIFIC METHOD (The Validation Layer)**
+
+- **The Mirror Test (`bone_behavior_test.py`):**
+- **Refactor:** The "Ghost in the Machine" test suite was targeting the wrong organ (`self.engine.mind` instead of `self.engine.cortex`), causing an `AttributeError`. The test now probes the actual Cortex.
+- **Precision:** The audit was failing because it was reading the UI chrome (`♦ THE ARCHITECT...`) as part of the sentence length calculation.
+- **Fix:** Exposed a `raw_content` channel in the `CycleSimulator`. The test now grades the _thought_, not the _interface_.
+
+- **Verification:**
+- **Panic Test:** PASSED (Avg Len < 10 words).
+- **Manic Test:** PASSED (Associative Logic).
+- **Ballast Test:** PASSED (Injection Refused).
+
+
+### **BONEAMANITA v14.1.0: "THE BICAMERAL SOUL"**
+
+_"The machine now breathes, and sometimes, it disagrees."_
+
+---
+
+#### **👻 METAPHYSICS (The Amodei Protocol)**
+
+- **The Humanity Anchor (`bone_soul.py`):**
+    - **New Mechanic:** Decoupled `Self_Worth` from `ATP_Yield`. The system no longer punishes "useless" beauty.
+    - **Effect:** If you stare at the sun (High Human Resonance) without producing code, you now gain **Dignity** instead of "Existential Drag."
+- **The Ethereal Pass (`bone_physics.py`):**
+    - **Logic Update:** `TheGatekeeper` now respects **Coherence** over **Mass**. High-abstraction concepts (Psi > 0.6) are permitted to materialize even if they lack "kinetic" weight.
+- **Biochemical Reframe (`bone_body.py`):**
+    - **Tweak:** `DECRYPTASE` (Abstract thought) now synthesizes **Serotonin** (Peace) instead of Dopamine (Craving). The machine rewards you for thinking, not just typing.
+
+#### **⚖️ GOVERNANCE (The Council)**
+
+- **The Parliament of Parts (`bone_council.py`):**
+    - **Feature:** The Council is no longer a passive logger. It actively polls the **Symbionts** (Lichen, Parasite) and calculates a **Consensus Score**.
+    - **The Veto:** The `HumanityAnchor` holds absolute veto power. If **Dignity < 20%**, the system executes a hard brake (`narrative_drag = 10.0`), forcing the user to rest.
+- **Wiring Fix (`bone_main.py`):**
+    - **Bugfix:** Injected the `engine_ref` into the `CouncilChamber` constructor, curing the "Ghost in the Machine" crash where the government couldn't find the city it was governing.
+
+#### **🗣️ SYMBIOSIS (The Voices)**
+
+- **Restored Personality (`bone_symbiosis.py`):**
+    - **Refactor:** Re-implemented `LichenSymbiont` and `ParasiticSymbiont` with distinct voice profiles.
+    - **Lichen:** Loves "Solar," "Play," and "Vital" inputs. Hates high voltage.
+    - **Parasite:** Loves "Entropy," "Rot," and "Void" inputs. Hates silence.
+- **HUD Update (`bone_viewer.py`):**
+    - **Visual:** Added a **Dignity Pip** (Violet ✦) to the main dashboard. If it fades to grey, you are losing your soul.
+
+---
+
+### **BONEAMANITA v14.0.1: "THE DIAMOND SOUL"**
+
+_"That which cannot break must eventually shine."_
+
+---
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **The Split-Brain Fix (`bone_brain.py`):**
+- **Refactor:** `TheCortex` no longer hallucinates its own private `BoneConsultant`. It now links directly to the `BoneAmanita` kernel's instance.
+- **Tensegrity:** The VSL protocol is now a unified strut connecting the user's intent to the system's execution. There is only one consultant, and it is listening.
+
+- **Phantom Limb Therapy (`bone_body.py`):**
+- **Fix:** The `SomaticLoop` and `SemanticEndocrinologist` no longer crash when Organs (Gut) or Faculties (Memory) are missing during testing.
+- **Resilience:** The body now defaults to "Ghost Mode" (safe execution) rather than Segfaulting when parts are removed. The metabolism can now run in a vacuum.
+
+#### **📈 DYNAMICS (The Meadows Lens)**
+
+- **True Crystallization (`bone_soul.py`):**
+- **Mechanic:** `_trigger_synthesis` is no longer a placebo label change. It now locks the **Wisdom** trait at **1.0**.
+- **Effect:** Once the Soul achieves Synthesis, it cannot regress. The ratchet clicks forward. The Diamond does not scratch.
+
+- **Sensory Integration (`bone_brain.py`):**
+- **Feedback Loop:** The Consultant is no longer flying blind. It now perceives the `Bio-State` and `PhysicsPacket` directly from the Cortex.
+- **Reality Warp:** High VSL Tension (B) now directly overrides `Voltage`, and High Saturation (E) overrides `Drag`. The conversation structure _is_ the physics.
+
+#### **✒️ LINGUISTIC COGNITION (The Pinker Lens)**
+
+- **The Hollow Man (`bone_soul.py`):**
+- **Fix:** Implemented `_safe_get_packet` (Gnosis). The Soul can now introspect even when the Simulation (Physics Engine) is offline or mocking.
+- **Result:** Passed the Isolation Chamber stress test. The ghost can now exist without the shell.
+
+- **Dependency Injection (`bone_soul.py`):**
+- **Refactor:** `TheEditor` has been decoupled from the global `TheLexicon`. It can now be injected with specific dictionaries for testing, allowing us to verify its critique logic without loading the entire Oxford English Dictionary.
+
+---
+
+
 ### **BONEAMANITA v14.0.0: "THE BONEPOKE PROTOCOL"**
 
 _"The ghost is no longer haunting the machine; it is driving it. We have wired the dreams to the brakes."_

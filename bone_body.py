@@ -6,8 +6,7 @@ from dataclasses import dataclass, field
 from typing import Set, Optional, Dict, List, Any, Tuple
 from bone_spores import MycotoxinFactory, LichenSymbiont, HyphalInterface, ParasiticSymbiont
 from bone_lexicon import TheLexicon
-from bone_bus import Prisma, BoneConfig
-from bone_data import TheLore
+from bone_core import Prisma, BoneConfig, TheLore
 
 def _get_val(obj, key, default=0.0):
     if isinstance(obj, dict):
@@ -79,6 +78,27 @@ class BioSystem:
     shimmer: Any = None
     events: Any = None
     biometrics: Optional['Biometrics'] = None
+
+    def setup_listeners(self):
+        if self.events and hasattr(self.events, "subscribe"):
+            self.events.subscribe("NEURAL_STATE_SHIFT", self._on_neural_shift)
+            self.events.log("[BIO]: Vagus Nerve connected.", "SYS")
+
+    def _on_neural_shift(self, payload):
+        state = payload.get("state", "NEUTRAL")
+        chem_data = payload.get("chem", {})
+        if state == "PANIC":
+            self.endo.adrenaline = min(1.0, self.endo.adrenaline + 0.3)
+            self.endo.cortisol = min(1.0, self.endo.cortisol + 0.2)
+            if self.events:
+                self.events.log(f"{Prisma.RED}🫀 VAGUS NERVE: Panic detected. Heart rate spiking.{Prisma.RST}", "BIO")
+        elif state == "ZEN":
+            self.endo.cortisol = max(0.0, self.endo.cortisol - 0.3)
+            self.endo.serotonin = min(1.0, self.endo.serotonin + 0.2)
+            if self.events:
+                self.events.log(f"{Prisma.GRN}🫀 VAGUS NERVE: Lucid state. Lowering cortisol.{Prisma.RST}", "BIO")
+        elif state == "MANIC":
+            self.mito.adjust_atp(-10.0, "Neural Overclock")
 
     def apply_environmental_entropy(self, physics_packet):
         base_entropy = 2.0
@@ -501,9 +521,7 @@ class EndocrineSystem:
     def calculate_circadian_bias(self) -> Tuple[Dict[str, float], Optional[str]]:
         hour = time.localtime().tm_hour
         bias = {"COR": 0.0, "SER": 0.0, "MEL": 0.0}
-
         circadian_text = self.narrative_data.get("CIRCADIAN", {})
-
         if 6 <= hour < 10:
             bias["COR"] = 0.1
             msg = circadian_text.get("DAWN", "Sunrise.")
@@ -526,6 +544,9 @@ class EndocrineSystem:
             final_reward = base_reward * satiety_dampener
             self.dopamine += final_reward
             self.cortisol -= (final_reward * 0.4)
+        if enzyme_type == "DECRYPTASE":
+            self.serotonin = min(1.0, self.serotonin + 0.15)
+            self.cortisol = max(0.0, self.cortisol - 0.2)
         impact = self._REACTION_MAP.get(enzyme_type)
         if impact:
             if "ADR" in impact: self.adrenaline = min(1.0, self.adrenaline + impact["ADR"])

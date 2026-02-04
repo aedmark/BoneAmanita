@@ -2,13 +2,11 @@
 
 import random, time
 from typing import List, Dict, Any, Tuple, Optional
-from bone_bus import Prisma, BoneConfig, BonePresets
+from bone_core import Prisma, BoneConfig, BonePresets, TheLore
 from bone_lexicon import TheLexicon
 from bone_protocols import ZenGarden
 from bone_drivers import UserProfile
 from bone_akashic import TheAkashicRecord
-from bone_data import TheLore
-
 
 def _get(p: Any, k: str, d: Any = 0.0) -> Any:
     if p is None: return d

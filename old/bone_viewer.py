@@ -2,7 +2,7 @@
 
 import time
 from typing import Dict, List, Any, Optional
-from bone_bus import Prisma, BoneConfig
+from bone_core import Prisma, BoneConfig
 
 class Projector:
     def __init__(self):
@@ -25,12 +25,16 @@ class Projector:
         health = data.get("health", 100)
         stamina = data.get("stamina", 100)
         atp = data.get("bio", {}).get("atp") or 0
+        dignity = data.get("dignity", 100)
         hp_bar = self._mini_bar(health, 100, 4, Prisma.RED)
         stm_bar = self._mini_bar(stamina, 100, 4, Prisma.GRN)
+        dig_color = Prisma.VIOLET if dignity > 50 else Prisma.GRY
+        dig_icon = "✦" if dignity > 80 else "✧"
         role = str(mind[2]).upper() if mind and len(mind) > 2 else "OBSERVER"
         return (
             f"{Prisma.WHT}♦ {role}{Prisma.RST}   "
             f"HP {hp_bar}  STM {stm_bar}  "
+            f"{dig_color}{dig_icon} {int(dignity)}%{Prisma.RST}  "
             f"{Prisma.YEL}ATP {int(atp)}{Prisma.RST}")
 
     def _render_physics_strip(self, physics: Dict, vectors: Dict) -> str:
@@ -88,10 +92,14 @@ class GeodesicRenderer:
         mind = ctx.mind_state
         bio = ctx.bio_result
         mind_tuple = (mind.get("lens"), mind.get("thought"), mind.get("role"))
+        dignity_val = 100.0
+        if hasattr(self.eng, 'soul') and hasattr(self.eng.soul, 'anchor'):
+            dignity_val = self.eng.soul.anchor.dignity_reserve
         data_ctx = {
             "health": self.eng.health,
             "stamina": self.eng.stamina,
             "bio": bio,
+            "dignity": dignity_val,
             "vectors": physics.get("vector", {})}
         current_depth = 1
         if hasattr(ctx, "reality_stack"):

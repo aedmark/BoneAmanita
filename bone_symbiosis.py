@@ -5,7 +5,8 @@ import math
 from dataclasses import dataclass
 from typing import Dict, Deque, Counter
 from collections import deque
-from bone_bus import Prisma
+from bone_core import Prisma
+from bone_lexicon import TheLexicon
 
 @dataclass
 class HostHealth:
@@ -115,7 +116,6 @@ class HostVitals:
 
 class DiagnosticConfidence:
     def __init__(self, persistence_threshold=3):
-        # Restore the foundation
         self.history = deque(maxlen=persistence_threshold * 2)
         self.persistence_threshold = persistence_threshold
         self.current_diagnosis = "STABLE"
@@ -220,3 +220,55 @@ class SymbiosisManager:
         soul = current_state.get("soul", {})
         phys = current_state.get("physics", {})
         return CoherenceAnchor.compress_anchor(soul, phys)
+
+class SymbiontVoice:
+    def __init__(self, name, color, archetypes):
+        self.name = name
+        self.color = color
+        self.archetypes = archetypes
+
+    def opine(self, clean_words: list, voltage: float) -> tuple[float, str]:
+        hits = sum(1 for w in clean_words if w in self.archetypes)
+        score = (hits / max(1, len(clean_words))) * 10.0
+        return score, self._get_comment(score, voltage)
+
+    def _get_comment(self, score, voltage):
+        return "..."
+
+class LichenSymbiont(SymbiontVoice):
+    def __init__(self):
+        super().__init__("LICHEN", Prisma.GRN, {"photo", "play", "sacred", "social", "solar", "vital", "bloom", "grow"})
+
+    def photosynthesize(self, physics, words, tick):
+        return 5.0, None
+
+    def _get_comment(self, score, voltage):
+        if score > 3.0: return "Yes! The roots are drinking deep."
+        if score > 1.0: return "We see the light."
+        if voltage > 18.0: return "Too hot! You'll scorch the leaves!"
+        if voltage < 2.0: return "It is cold... we are sleeping."
+        return "..."
+
+class ParasiticSymbiont(SymbiontVoice):
+    def __init__(self):
+        super().__init__("PARASITE", Prisma.RED, {"antigen", "toxin", "heavy", "meat", "void", "static", "rot", "decay"})
+
+    def _get_comment(self, score, voltage):
+        if score > 3.0: return "Delicious. The entropy is sweet."
+        if score > 1.0: return "I smell rust."
+        if voltage > 15.0: return "Stop vibrating. Be still and rot."
+        if voltage < 5.0: return "Finally. Silence."
+        return "..."
+
+class MycotoxinFactory(SymbiontVoice):
+    def __init__(self):
+        super().__init__("MYCELIUM", Prisma.CYN, {"constructive", "kinetic", "abstract", "code", "system"})
+
+    def _get_comment(self, score, voltage):
+        if score > 2.0: return "The pattern holds. Integration probable."
+        return "Scanning for structural integrity..."
+
+def get_symbiont(type_name):
+    if type_name == "LICHEN": return LichenSymbiont()
+    if type_name == "PARASITE": return ParasiticSymbiont()
+    return MycotoxinFactory()

@@ -3,8 +3,7 @@
 import shlex
 from typing import Dict, Callable, List, Any, Tuple, Optional
 from dataclasses import dataclass
-from bone_data import TheLore
-from bone_bus import BonePresets
+from bone_core import BonePresets, TheLore
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):

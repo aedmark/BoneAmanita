@@ -3,8 +3,7 @@
 import random, json
 from collections import deque, Counter
 from typing import Dict, Tuple, Optional, Any
-from bone_data import TheLore
-from bone_bus import Prisma, BoneConfig
+from bone_core import Prisma, BoneConfig, TheLore
 from bone_lexicon import TheLexicon
 
 NARRATIVE_DATA = TheLore.get("narrative_data") or {}

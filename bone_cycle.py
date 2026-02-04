@@ -3,17 +3,16 @@
 import traceback, random, time, uuid, re, copy
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Tuple, List, Optional, cast
-from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket, BonePresets, ArchetypeArbiter, PhysicsSandbox
+from bone_core import Prisma, BoneConfig, CycleContext, PhysicsPacket, TelemetryService, DecisionCrystal, BlackBoxReader, BonePresets, ArchetypeArbiter, PhysicsSandbox
 from bone_metaphysics import CongruenceValidator
 from bone_village import TownHall
 from bone_protocols import TheBureau
 from bone_physics import TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine, apply_somatic_feedback, TRIGRAM_MAP
-from bone_viewer import GeodesicRenderer, CachedRenderer, get_renderer
+from bone_gui import GeodesicRenderer, CachedRenderer, get_renderer
 from bone_architect import PanicRoom
 from bone_soul import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
 from bone_village import SanctuaryGovernor
-from bone_telemetry import TelemetryService, DecisionCrystal, BlackBoxReader
 from bone_lexicon import SomaticInterface
 
 def _get_p(p, key, default=None):
@@ -429,6 +428,8 @@ class MachineryPhase(SimulationPhase):
             damage = 25.0
             self.eng.health -= damage
             ctx.log(f"{Prisma.RED}*** CRITICAL THEREMIN DISCHARGE *** -{damage} HP{Prisma.RST}")
+            if hasattr(self.eng.events, "publish"):
+                self.eng.events.publish("AIRSTRIKE", {"damage": damage, "source": "THEREMIN"})
         c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(physics.to_dict())
         if c_msg: ctx.log(c_msg)
         if c_state == "MELTDOWN":

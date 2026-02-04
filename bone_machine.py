@@ -2,9 +2,8 @@
 
 import random
 from typing import Tuple, Optional
-from bone_bus import Prisma
+from bone_core import Prisma, TheLore
 from bone_lexicon import TheLexicon
-from bone_data import TheLore
 
 class TheCrucible:
     def __init__(self):

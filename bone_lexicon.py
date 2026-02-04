@@ -1,11 +1,9 @@
-""" bone_lexicon.py - The Global Dictionary
- 'Words are things, I'm convinced.' - Maya Angelou """
+""" bone_lexicon.py - The Global Dictionary """
 
 import json, random, re, string, time, unicodedata, os
 from dataclasses import dataclass, field
 from typing import Tuple, Dict, Set, Optional, List, Any
-from bone_bus import BoneConfig, Prisma
-from bone_data import TheLore
+from bone_core import BoneConfig, Prisma, TheLore
 from functools import lru_cache
 
 class LexiconStore:
@@ -157,8 +155,11 @@ class LinguisticAnalyzer:
         if w in self.store.SOLVENTS: return 0.1
         length_score = min(1.0, len(w) / 12.0)
         stops = sum(1 for c in w if c in self.PHONETICS["PLOSIVE"])
-        stop_score = min(1.0, stops / 4.0)
-        return (length_score * 0.6) + (stop_score * 0.4)
+        flow = sum(1 for c in w if c in self.PHONETICS["LIQUID"] or c in self.PHONETICS["VOWELS"])
+        stop_score = min(1.0, stops / 3.0)
+        flow_score = min(1.0, flow / 4.0)
+        substance_score = max(stop_score, flow_score)
+        return (length_score * 0.5) + (substance_score * 0.5)
 
     @staticmethod
     def get_turbulence(words: List[str]) -> float:

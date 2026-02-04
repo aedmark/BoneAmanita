@@ -5,8 +5,7 @@ import random, copy
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional, Any, cast, Callable
 from enum import Enum, auto
-from bone_bus import Prisma, BoneConfig
-from bone_data import TheLore
+from bone_core import Prisma, BoneConfig, TheLore
 
 class EffectType(Enum):
     PHYSICS = auto()

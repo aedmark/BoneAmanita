@@ -3,8 +3,8 @@
 import json, random, re
 from dataclasses import dataclass, asdict
 from typing import Dict, Any, Union
-from bone_main import BoneAmanita, Prisma
-from bone_data import TheLore
+from bone_main import BoneAmanita
+from bone_core import TheLore, Prisma
 
 @dataclass
 class EntityResponse:

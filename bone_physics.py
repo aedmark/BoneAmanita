@@ -6,7 +6,7 @@ from typing import Dict, List, Any, Tuple, Optional, Union
 from collections import Counter, deque
 from dataclasses import dataclass, field
 from bone_lexicon import TheLexicon
-from bone_bus import Prisma, BoneConfig, PhysicsPacket, CycleContext
+from bone_core import Prisma, BoneConfig, PhysicsPacket, CycleContext
 
 def cosine_similarity(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float:
     intersection = set(vec_a.keys()) & set(vec_b.keys())
@@ -52,6 +52,10 @@ class TheGatekeeper:
                 phys.counts.get("kinetic", 0) +
                 phys.counts.get("constructive", 0) +
                 (phys.counts.get("play", 0) * 0.5))
+        ether_score = phys.counts.get("abstract", 0) + phys.counts.get("sacred", 0)
+        coherence = phys.kappa  # Geodesic coherence
+        if ether_score > 2 and coherence > 0.6:
+            return True
         density = mass_score / max(1, len(phys.clean_words))
         required = 0.15 if self.eng.stamina > 15.0 else 0.05
         return density >= required

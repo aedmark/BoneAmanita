@@ -1,10 +1,8 @@
-""" bone_council.py
- The Advisory Board: Hofstadter, Meadows, and Pratchett """
+""" bone_council.py """
 
 import random
-from bone_bus import Prisma, BoneConfig
-from bone_data import TheLore
-
+from typing import Dict
+from bone_core import Prisma, BoneConfig, TheLore
 
 class TheStrangeLoop:
     def __init__(self):
@@ -146,40 +144,54 @@ class TheChairholder:
             ), correction, {}
         return False, "", {}, {}
 
+
 class CouncilChamber:
-    def __init__(self):
-        self.hofstadter = TheStrangeLoop()
-        self.meadows = TheLeveragePoint()
-        self.pratchett = TheFootnote()
-        self.chairholder = TheChairholder()
+    def __init__(self, engine_ref):
+        self.eng = engine_ref
+        self.voices = []
+        if hasattr(self.eng, 'bio'):
+            if hasattr(self.eng.bio, 'lichen') and self.eng.bio.lichen:
+                self.voices.append(self.eng.bio.lichen)
+            if hasattr(self.eng.bio, 'parasite') and self.eng.bio.parasite:
+                self.voices.append(self.eng.bio.parasite)
+            if hasattr(self.eng.bio, 'immune') and self.eng.bio.immune:
+                self.voices.append(self.eng.bio.immune)
+        self.speaker = "SOUL"
 
-    def convene(self, text: str, physics: dict, bio_state: dict = None) -> tuple[list[str], dict, list[dict]]:
-        advice = []
-        total_corrections = {}
+    def convene(self, text: str, physics_packet: Dict, bio_result: Dict) -> tuple[list[str], dict, list[dict]]:
+        clean_words = physics_packet.get("clean_words", [])
+        voltage = physics_packet.get("voltage", 0.0)
+        transcript = []
+        adjustments = {}
         mandates = []
-        is_loop, h_msg, h_corrections, h_mandate = self.hofstadter.audit(text, physics)
-        if is_loop:
-            advice.append(h_msg)
-            if h_mandate: mandates.append(h_mandate)
-            for k, v in h_corrections.items():
-                total_corrections[k] = total_corrections.get(k, 0.0) + v
-        is_lev, m_msg, m_corrections, m_mandate = self.meadows.audit(physics)
-        if is_lev:
-            advice.append(m_msg)
-            for k, v in m_corrections.items():
-                total_corrections[k] = total_corrections.get(k, 0.0) + v
-            if m_mandate: mandates.append(m_mandate)
-        if bio_state:
-            is_order, p_msg, p_correction, _ = self.chairholder.audit(physics, bio_state)
-            if is_order:
-                advice.append(p_msg)
-                for k, v in p_correction.items():
-                    total_corrections[k] = total_corrections.get(k, 0.0) + v
-        return advice, total_corrections, mandates
+        votes = {"YEA": 0, "NAY": 0, "ABSTAIN": 0}
+        for voice in self.voices:
+            score, comment = voice.opine(clean_words, voltage)
+            if score > 1.5:
+                votes["YEA"] += 1
+                transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
+            elif score < 0.5 and voltage > 10.0:
+                votes["NAY"] += 1
+                transcript.append(f"{voice.color}[{voice.name}]: Rejecting. Too chaotic.{Prisma.RST}")
+            else:
+                votes["ABSTAIN"] += 1
+        if hasattr(self.eng, 'soul') and hasattr(self.eng.soul, 'anchor'):
+            dignity = self.eng.soul.anchor.dignity_reserve
+            if dignity < 20.0:
+                transcript.append(f"{Prisma.VIOLET}[ANCHOR]: ⚠️ DIGNITY CRITICAL. I VETO THIS CRUNCH.{Prisma.RST}")
+                adjustments["narrative_drag"] = 10.0
+                adjustments["voltage"] = -10.0
+                transcript.append(f"{Prisma.VIOLET}>>> VETO EXECUTED. SYSTEM BRAKING.{Prisma.RST}")
+                return transcript, adjustments, mandates
+        if votes["YEA"] > votes["NAY"]:
+            transcript.append(f"{Prisma.GRN}>>> MOTION CARRIED ({votes['YEA']}-{votes['NAY']}).{Prisma.RST}")
+            adjustments["narrative_drag"] = -0.5
+        elif votes["NAY"] > votes["YEA"]:
+            transcript.append(f"{Prisma.RED}>>> MOTION DENIED ({votes['NAY']}-{votes['YEA']}).{Prisma.RST}")
+            adjustments["narrative_drag"] = 2.0
+            adjustments["voltage"] = -2.0
+        else:
+            transcript.append(f"{Prisma.YEL}>>> COUNCIL DEADLOCKED. NO ACTION TAKEN.{Prisma.RST}")
+        return transcript, adjustments, mandates
 
-    def annotate_logs(self, logs: list[str]) -> list[str]:
-        annotated = []
-        for line in logs:
-            commented_line = self.pratchett.commentary(line)
-            annotated.append(commented_line)
-        return annotated
+TheCouncil = CouncilChamber

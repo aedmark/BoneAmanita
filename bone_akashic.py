@@ -3,8 +3,7 @@ import json
 import os
 import random
 from typing import Dict, Any, Tuple, cast, List
-from bone_bus import Prisma
-from bone_data import TheLore, LoreManifest
+from bone_core import Prisma, TheLore, LoreManifest
 
 class TheAkashicRecord:
     def __init__(self):
