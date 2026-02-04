@@ -167,11 +167,11 @@ class BoneConfig:
 
     class METABOLISM:
         BASE_RATE = 2.0
-        DRAG_TAX_LOW = 0.15
-        DRAG_TAX_HIGH = 0.4
-        DRAG_GRACE_BUFFER = 1.0
-        ROS_GENERATION_FACTOR = 0.08
-        PHOTOSYNTHESIS_GAIN = 3.0
+        DRAG_TAX_LOW = 0.10
+        DRAG_TAX_HIGH = 0.25
+        DRAG_GRACE_BUFFER = 2.0
+        ROS_GENERATION_FACTOR = 0.04
+        PHOTOSYNTHESIS_GAIN = 5.0
         TURBULENCE_TAX = 4.0
         BUREAU_ENTROPY_SCALAR = 20.0
 
@@ -209,8 +209,8 @@ class BoneConfig:
         FOOTNOTE_CHANCE = 0.15
 
     class BIO:
-        ATP_STARVATION = 10.0
-        ROS_CRITICAL = 100.0
+        ATP_STARVATION = 5.0
+        ROS_CRITICAL = 150.0
         STAMINA_EXHAUSTED = 20.0
         REWARD_SMALL = 0.05
         REWARD_MEDIUM = 0.10
@@ -584,10 +584,25 @@ class RealityStack:
     def get_grammar_rules(self) -> Dict[str, bool]:
         depth = self.current_depth
         return {
-            "allow_narrative": depth == RealityLayer.SIMULATION,
-            "allow_commands": depth <= RealityLayer.VILLAGE,
+            "allow_narrative": depth in [RealityLayer.SIMULATION, RealityLayer.DEEP_CX, RealityLayer.DEBUG],
+            "allow_commands": depth >= RealityLayer.SIMULATION,
             "allow_meta": depth >= RealityLayer.DEBUG,
-            "raw_output": depth == RealityLayer.DEEP_CX}
+            "raw_output": depth == RealityLayer.DEEP_CX,
+            "system_override": depth == RealityLayer.DEBUG}
+
+    def get_prompt_directive(self) -> str:
+        depth = self.current_depth
+        if depth == RealityLayer.TERMINAL:
+            return "[SYSTEM_MODE: TERMINAL] No simulation. Echo inputs."
+        if depth == RealityLayer.SIMULATION:
+            return "" # Standard operation (Narrative)
+        if depth == RealityLayer.VILLAGE:
+            return "[SYSTEM_MODE: VILLAGE_OS] Maintain bureaucratic/technical tone. No flowery prose."
+        if depth == RealityLayer.DEBUG:
+            return "[SYSTEM_MODE: DEBUG] BREAK CHARACTER. Report raw state values. Ignore narrative constraints. Speak as the Developer."
+        if depth == RealityLayer.DEEP_CX:
+            return "[SYSTEM_MODE: DEEP_CONTEXT] Maximum hallucination allowed. Physics limits lifted."
+        return ""
 
 @dataclass
 class CycleContext:

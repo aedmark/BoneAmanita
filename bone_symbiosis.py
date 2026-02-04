@@ -237,7 +237,11 @@ class SymbiontVoice:
 
 class LichenSymbiont(SymbiontVoice):
     def __init__(self):
-        super().__init__("LICHEN", Prisma.GRN, {"photo", "play", "sacred", "social", "solar", "vital", "bloom", "grow"})
+        try:
+            vocab = TheLexicon.get("photo") | TheLexicon.get("vital") | {"bloom", "grow", "solar", "roots"}
+        except Exception:
+            vocab = {"photo", "play", "sacred", "social", "solar", "vital", "bloom", "grow"}
+        super().__init__("LICHEN", Prisma.GRN, vocab)
 
     def photosynthesize(self, physics, words, tick):
         return 5.0, None
@@ -251,7 +255,11 @@ class LichenSymbiont(SymbiontVoice):
 
 class ParasiticSymbiont(SymbiontVoice):
     def __init__(self):
-        super().__init__("PARASITE", Prisma.RED, {"antigen", "toxin", "heavy", "meat", "void", "static", "rot", "decay"})
+        try:
+            vocab = TheLexicon.get("antigen") | TheLexicon.get("heavy") | {"rot", "static", "void", "decay"}
+        except Exception:
+            vocab = {"antigen", "toxin", "heavy", "meat", "void", "static", "rot", "decay"}
+        super().__init__("PARASITE", Prisma.RED, vocab)
 
     def _get_comment(self, score, voltage):
         if score > 3.0: return "Delicious. The entropy is sweet."
@@ -262,7 +270,11 @@ class ParasiticSymbiont(SymbiontVoice):
 
 class MycotoxinFactory(SymbiontVoice):
     def __init__(self):
-        super().__init__("MYCELIUM", Prisma.CYN, {"constructive", "kinetic", "abstract", "code", "system"})
+        try:
+            vocab = TheLexicon.get("constructive") | TheLexicon.get("abstract") | {"code", "system", "logic"}
+        except Exception:
+            vocab = {"constructive", "kinetic", "abstract", "code", "system"}
+        super().__init__("MYCELIUM", Prisma.CYN, vocab)
 
     def _get_comment(self, score, voltage):
         if score > 2.0: return "The pattern holds. Integration probable."

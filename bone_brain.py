@@ -309,8 +309,7 @@ class PromptComposer:
     def __init__(self):
         pass
 
-    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False,
-                modifiers: Dict[str, bool] = None, mood_override: str = "") -> str:
+    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None, mood_override: str = "") -> str:
         modifiers = self._normalize_modifiers(modifiers)
         mind = state.get("mind", {})
         role = mind.get("role", "The Observer")
@@ -324,6 +323,7 @@ class PromptComposer:
             if chem.get("COR", 0) > 0.6: mood_note = "Current Biology: Defensive / Anxious"
             if chem.get("DOP", 0) > 0.6: mood_note = "Current Biology: Curious / Manic"
             if chem.get("SER", 0) > 0.6: mood_note = "Current Biology: Zen / Lucid"
+        reality_directive = state.get("reality_directive", "")
         user_name = state.get('user_profile', {}).get('name', 'User')
         style_notes = [
             f"Role: You are {user_name}'s Partner in Creation.",
@@ -332,6 +332,8 @@ class PromptComposer:
             "Directive: If the user defines a rule, enforce it. If they break it, challenge them.",
             "Constraint: Treat the 'Current Location' as a shared hallucination we are stabilizing together.",
             mood_note]
+        if reality_directive:
+            style_notes.insert(0, f"*** PRIORITY OVERRIDE: {reality_directive} ***")
         if modifiers.get("soften"):
             style_notes.append("TONE OVERRIDE: Be warm, helpful, and clear. Act as a mentor guiding a new user.")
         loc = state.get('world', {}).get('orbit', ['Void'])[0]
@@ -357,6 +359,7 @@ class PromptComposer:
             f"{system_injection}"
             f"Entity Response:")
         return final_prompt
+
     @staticmethod
     def _sanitize(text: str) -> str:
         safe = text.replace('"""', "'''").replace('```', "'''")
@@ -616,10 +619,14 @@ class TheCortex:
         active_history = self.dialogue_buffer
         if not active_history and self.boot_history:
             active_history = [f"[PREVIOUSLY]: {entry}" for entry in self.boot_history]
+        reality_directive = ""
+        if hasattr(self.sub, 'reality_stack'):
+            reality_directive = self.sub.reality_stack.get_prompt_directive()
         return {
             "bio": bio_state,
             "physics": phys_packet,
             "mind": mind_data,
+            "reality_directive": reality_directive,
             "dialogue_history": active_history,
             "user_profile": self.sub.mind.mirror.profile.__dict__,
             "world": {"orbit": sim_result.get("world_state", {}).get("orbit", ["Void"])},
@@ -650,6 +657,10 @@ class TheCortex:
             target = random.choice(unknowns)
             if len(target) > 4:
                 self.sub.lex.teach(target, "kinetic", self.sub.tick_count)
+                if self.events:
+                    self.events.publish("MYTHOLOGY_UPDATE", {
+                        "word": target,
+                        "category": "kinetic"})
                 self.events.log(f"AUTO-DIDACTIC: Learned '{target}' from self.", "CORTEX")
 
 class NeuroPlasticity:

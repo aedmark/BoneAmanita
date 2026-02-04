@@ -1,10 +1,10 @@
-""" BONEAMANITA 14.1.1
+""" BONEAMANITA 14.2.0
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
-from bone_core import EventBus, Prisma, BoneConfig, SystemHealth, TheObserver, BonePresets, TheLore, LoreCategory, TelemetryService,RealityStack
+from bone_core import EventBus, Prisma, BoneConfig, RealityLayer, SystemHealth, TheObserver, BonePresets, TheLore, LoreCategory, TelemetryService,RealityStack
 from bone_commands import CommandProcessor
 from bone_village import TownHall, DeathGen, TheNavigator, TheTinkerer, Limbo
 from bone_lexicon import TheLexicon, SomaticInterface
@@ -42,12 +42,17 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.1.1', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.2.0', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         print(f"\n{Prisma.paint('--- SYSTEM HALT ---', 'R')}")
+        if self.engine_instance:
+            try:
+                self.engine_instance.shutdown()
+            except Exception as e:
+                print(f"Error during graceful shutdown: {e}")
         if self.engine_instance and hasattr(self.engine_instance, "telemetry"):
             print(self.engine_instance.telemetry.generate_session_summary())
         if exc_type:
@@ -254,13 +259,24 @@ class BoneAmanita:
         turn_start = self.observer.clock_in()
         self.observer.user_turns += 1
         if not user_message: user_message = ""
-        cmd_response = self._phase_check_commands(user_message)
-        if cmd_response:
-            return cmd_response
+        if user_message.startswith("//"):
+            return self._handle_meta_command(user_message)
+        rules = self.reality_stack.get_grammar_rules()
+        if rules["allow_commands"]:
+            cmd_response = self._phase_check_commands(user_message)
+            if cmd_response:
+                return cmd_response
+        if not rules["allow_narrative"]:
+            return {
+                "ui": f"{Prisma.paint('REALITY HALT', 'R')}: Narrative engine suppressed by current depth ({self.reality_stack.current_depth}).",
+                "logs": [], "metrics": self.get_metrics()}
         if self._ethical_audit():
             self.events.log(f"{Prisma.WHT}MERCY SIGNAL: Trauma boards wiped.{Prisma.RST}", "SYS")
         try:
             cortex_packet = self.cortex.process(user_input=user_message)
+            if rules["system_override"] and "ui" in cortex_packet:
+                debug_footer = f"\n{Prisma.paint(f'--- DEBUG: {self.get_metrics()} ---', '0')}"
+                cortex_packet["ui"] += debug_footer
         except Exception as e:
             self.events.log(f"CYCLE CRITICAL FAILURE: {e}", "ERR")
             import traceback
@@ -432,9 +448,56 @@ class BoneAmanita:
         if cold_result.get("ui"):
             print(cold_result["ui"])
 
+    def shutdown(self):
+        print(f"{Prisma.GRY}...Broadcasting SYSTEM_HALT...{Prisma.RST}")
+        self.events.publish("SYSTEM_HALT", {"tick": self.tick_count})
+        time.sleep(0.1)
+        if hasattr(self, 'akashic') and hasattr(self.akashic, 'save_all'):
+            self.akashic.save_all()
+        elif hasattr(self, 'akashic') and hasattr(self.akashic, '_save_to_disk'):
+            try:
+                print(f"{Prisma.GRY}[AKASHIC]: Force-saving...{Prisma.RST}")
+                self.akashic.save_to_disk("manifest", {})
+            except Exception as e:
+                print(f"{Prisma.RED}[AKASHIC]: Save failed: {e}{Prisma.RST}")
+
+    def _handle_meta_command(self, text: str) -> Dict[str, Any]:
+        parts = text.strip().split()
+        cmd = parts[0].lower()
+        logs = []
+        ui_msg = ""
+        if cmd == "//layer":
+            if len(parts) < 2:
+                ui_msg = f"Current Layer: {self.reality_stack.current_depth}"
+            else:
+                sub = parts[1].lower()
+                from bone_core import RealityLayer
+                if sub == "push" and len(parts) > 2:
+                    val = int(parts[2])
+                    if self.reality_stack.push_layer(val):
+                        ui_msg = f"Stack Pushed: Now at {val}"
+                    else:
+                        ui_msg = "Stack Push Failed (Locked?)"
+                elif sub == "pop":
+                    prev = self.reality_stack.pop_layer()
+                    ui_msg = f"Stack Popped. Returned to {self.reality_stack.current_depth}"
+                elif sub == "debug":
+                    self.reality_stack.push_layer(RealityLayer.DEBUG)
+                    ui_msg = f"{Prisma.paint('DEBUG MODE ENGAGED', 'M')}"
+                elif sub == "sim":
+                    self.reality_stack.stabilize_at(RealityLayer.SIMULATION)
+                    ui_msg = f"{Prisma.paint('SIMULATION RESTORED', 'C')}"
+        elif cmd == "//inject":
+            payload = " ".join(parts[1:])
+            self.events.log(payload, "INJECT")
+            ui_msg = f"Injected: '{payload}'"
+        else:
+            ui_msg = f"Unknown Meta-Command: {cmd}"
+        return {"ui": f"{Prisma.GRY}[META] {ui_msg}{Prisma.RST}", "logs": logs, "metrics": self.get_metrics()}
+
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 14.0.0', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 14.2.0', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

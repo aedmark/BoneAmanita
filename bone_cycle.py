@@ -410,10 +410,12 @@ class MachineryPhase(SimulationPhase):
             is_craft, craft_msg, old_item, new_item = self.eng.phys.forge.attempt_crafting(physics.to_dict(), self.eng.gordon.inventory)
             if is_craft:
                 ctx.log(craft_msg)
-                if hasattr(self.eng, 'akashic'):
-                    vec = physics.vector
-                    catalyst_cat = max(vec, key=vec.get) if vec else "void"
-                    self.eng.akashic.track_successful_forge(old_item, catalyst_cat, new_item)
+                vec = physics.vector
+                catalyst_cat = max(vec, key=vec.get) if vec else "void"
+                self.eng.events.publish("FORGE_SUCCESS", {
+                    "ingredient": old_item,
+                    "catalyst": catalyst_cat,
+                    "result": new_item})
                 if old_item in self.eng.gordon.inventory:
                     self.eng.gordon.inventory.remove(old_item)
                 ctx.log(self.eng.gordon.acquire(new_item))
@@ -575,6 +577,8 @@ class ArbitrationPhase(SimulationPhase):
             council_mandates=mandates,
             trigram=current_trigram)
         ctx.active_lens = final_lens
+        self.eng.events.publish("LENS_INTERACTION", {
+            "lenses": [phys_lens, soul_arch]})
         if source != "PHYSICS_VECTOR":
             ctx.log(f"{Prisma.MAG}⚖️ {opinion}{Prisma.RST}")
         self.eng.drivers.current_focus = final_lens

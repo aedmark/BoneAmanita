@@ -18,10 +18,24 @@ class TheAkashicRecord:
         self.lore = TheLore
         self.shadow_stock: List[Dict] = []
         self.MAX_SHADOW_CAPACITY = 50
+        self._load_mythos_state()
 
     def setup_listeners(self, event_bus):
         event_bus.subscribe("MYTHOLOGY_UPDATE", self._on_mythology_update)
+        event_bus.subscribe("LENS_INTERACTION", self._on_lens_interaction)
+        event_bus.subscribe("FORGE_SUCCESS", self._on_forge_event)
         print(f"{Prisma.CYN}[AKASHIC]: Listening for mythic resonance...{Prisma.RST}")
+
+    def _on_lens_interaction(self, payload):
+        lenses = payload.get("lenses", [])
+        if lenses:
+            self.record_interaction(lenses)
+
+    def _on_forge_event(self, payload):
+        self.track_successful_forge(
+            payload.get("ingredient"),
+            payload.get("catalyst"),
+            payload.get("result"))
 
     def _on_mythology_update(self, payload):
         if not payload or not isinstance(payload, dict): return
@@ -30,7 +44,15 @@ class TheAkashicRecord:
         if word and category:
             self.register_word(word, category)
 
-    def _save_to_disk(self, category: str, data: Any):
+    def save_all(self):
+        mythos_data = {
+            "lens_cooccurrence": {f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
+            "ingredient_affinity": self.ingredient_affinity,
+            "shadow_stock": self.shadow_stock}
+        self.save_to_disk("MYTHOS", mythos_data)
+        print(f"{Prisma.CYN}[AKASHIC]: Mythos state preserved.{Prisma.RST}")
+
+    def save_to_disk(self, category: str, data: Any):
         directory = LoreManifest.DATA_DIR
         filename = f"{category.lower()}.json"
         path = os.path.join(directory, filename)
@@ -41,6 +63,17 @@ class TheAkashicRecord:
             self.lore.inject(category, data)
         except Exception as e:
             print(f"{Prisma.RED}[AKASHIC]: Failed to write {filename}: {e}{Prisma.RST}")
+
+    def _load_mythos_state(self):
+        data = self.lore.get("MYTHOS")
+        if not data: return
+        raw_cooc = data.get("lens_cooccurrence", {})
+        for k, v in raw_cooc.items():
+            if "|" in k:
+                parts = k.split("|")
+                self.lens_cooccurrence[(parts[0], parts[1])] = v
+        self.ingredient_affinity = data.get("ingredient_affinity", {})
+        self.shadow_stock = data.get("shadow_stock", [])
 
     def record_interaction(self, lenses_active: list, ingredients_used: list = None):
         if len(lenses_active) >= 2:
@@ -82,7 +115,7 @@ class TheAkashicRecord:
             "derived_from": [lens_a, lens_b]}
         print(f"✨ MYTHOLOGY ENGINE: A new lens has formed: {new_key}")
         lenses_data[new_key] = new_lens
-        self._save_to_disk("LENSES", lenses_data)
+        self.save_to_disk("LENSES", lenses_data)
         self.lens_cooccurrence[(lens_a, lens_b)] = 0
 
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
@@ -101,7 +134,7 @@ class TheAkashicRecord:
         current_recipes.append(new_recipe)
         print(f"✨ MYTHOLOGY ENGINE: A new recipe has been codified: {ingredient} + {catalyst}")
         gordon_data["RECIPES"] = current_recipes
-        self._save_to_disk("GORDON", gordon_data)
+        self.save_to_disk("GORDON", gordon_data)
 
     def propose_new_category(self, word_list, category_name):
         lexicon_data = self.lore.get("LEXICON")
@@ -115,7 +148,7 @@ class TheAkashicRecord:
                 updated = True
         if updated:
             print(f"✨ MYTHOLOGY ENGINE: The Lexicon expands. New Category: '{category_name.upper()}'")
-            self._save_to_disk("LEXICON", lexicon_data)
+            self.save_to_disk("LEXICON", lexicon_data)
 
     @staticmethod
     def forge_new_item(vector_data, ITEM_GENERATION=None):
@@ -167,7 +200,7 @@ class TheAkashicRecord:
                 lexicon_data[category].append(word)
                 self.discovered_words[word] = category
                 print(f"✨ LEXICON: Learned '{word}' ({category})")
-                self._save_to_disk("LEXICON", lexicon_data)
+                self.save_to_disk("LEXICON", lexicon_data)
                 if len(lexicon_data[category]) > 50 and category != "heavy":
                     print(f"⚠️ MYTHOLOGY ENGINE: Category '{category}' is bloating. Suggest fission.")
                 return True
