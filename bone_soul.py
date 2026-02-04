@@ -26,54 +26,45 @@ class CoreMemory:
     type: str = "INCIDENT"
     meta: Dict[str, Any] = field(default_factory=dict)
 
+
 class TheEditor:
     def __init__(self):
-        self.context_critiques = {
-            "void": "A bit hollow, isn't it? Very nihilistic. And exhausting.",
-            "dark": "A bit melodramatic, isn't it? Very 19th-century gothic.",
-            "love": "Whoa there, cowboy. Don't fall in love just yet!",
-            "hope": "Careful. Optimism is a slippery slope to a musical number.",
-            "incident": "I hope you have the insurance forms for this 'incident'."}
-        self.random_critiques = [
-            "Pacing is a bit slow in the second act.",
-            "The character motivation seems muddy here.",
-            "Are we sure this is the protagonist's true arc?",
-            "This feels derivative of Kafka.",
-            "Too much exposition. Show, don't tell.",
-            "The theme of 'entropy' is a bit heavy-handed."]
-        self.mercy_critiques = {
-            "void": "The void is just a canvas. Take a breath. We can paint later.",
-            "dark": "It is dark, but the code is still running. You are still here.",
-            "pain": "Acknowledged. This chapter is hard, but it is not the whole book.",
-            "broken": "Nothing is broken. It is just being refactored.",
-            "lost": "You are not lost. You are just buffering."
-        }
-        self.mercy_randoms = [
-            "This is a heavy chapter. It's okay to rest.",
-            "The protagonist is showing incredible resilience.",
-            "Let the narrative drag. We don't need to race.",
-            "I am witnessing this story. You are not writing it alone."
-        ]
+        self.lex = TheLexicon
 
     def critique(self, chapter_title: str, stress_mode: bool = False) -> str:
-        lower_title = chapter_title.lower()
-        comment = None
-        if stress_mode or any(k in lower_title for k in ["void", "pain", "dark", "help"]):
-            for key, msg in self.mercy_critiques.items():
-                if key in lower_title:
-                    comment = msg
+        flavor = "abstract"
+        clean_words = self.lex.sanitize(chapter_title)
+        if clean_words:
+            for w in clean_words:
+                cat, _ = self.lex.classify(w)
+                if cat:
+                    flavor = cat
                     break
-            if not comment:
-                comment = random.choice(self.mercy_randoms)
+        comment = ""
+        if stress_mode:
+            antidote = self.lex.get_random("sacred").title()
+            vitality = self.lex.get_random("play").title()
+            mercy_templates = [
+                f"The {flavor.title()} is just a canvas. Paint it with {vitality}.",
+                f"It is dark, but the {antidote} is compiling in the background.",
+                f"This chapter is {flavor.title()}, but it is not the whole book.",
+                f"You are not lost. You are just buffering the {antidote}.",
+                f"Observe the {flavor.title()} without judgment. It will pass."]
+            comment = random.choice(mercy_templates)
             color = Prisma.CYN
             label = "THE WITNESS"
         else:
-            for key, crit in self.context_critiques.items():
-                if key in lower_title:
-                    comment = crit
-                    break
-            if not comment:
-                comment = random.choice(self.random_critiques)
+            flaw = self.lex.get_random("suburban").lower()  # mundane
+            need = self.lex.get_random("kinetic").title()  # movement
+            theory = self.lex.get_random("abstract").title()
+            critique_templates = [
+                f"Pacing is a bit {flavor.title()}. We need more {need}.",
+                f"The {flavor.title()} motivation seems {flaw}. Define the {theory}.",
+                f"This feels derivative of {flaw} post-modernism.",
+                f"Too much {flavor.title()}. Show, don't tell the {theory}.",
+                f"The theme of '{flavor.title()}' is valid, but the execution is {flaw}.",
+                f"A bit {flaw}, isn't it? Try to integrate more {need}."]
+            comment = random.choice(critique_templates)
             color = Prisma.GRY
             label = "THE EDITOR"
         return f"{color}[{label}]: Re: '{chapter_title}' - {comment}{Prisma.RST}"
@@ -147,6 +138,7 @@ class NarrativeSelf:
         self.traits = TraitVector()
         self.paradox_accum: float = 0.0
         self.archetype = "THE OBSERVER"
+        self.archetype_tenure = 0
         self.current_obsession: Optional[str] = None
         self.obsession_progress: float = 0.0
         self.obsession_neglect: float = 0.0
@@ -172,7 +164,7 @@ class NarrativeSelf:
         if h > 0.7 and c > 0.6: return "THE POET"
         if d > 0.7 and c > 0.6: return "THE ENGINEER"
         if y > 0.7 and d > 0.6: return "THE CRITIC"
-        if y > 0.8 and h < 0.3: return "THE NIHILIST"
+        if y > 0.8 and h < 0.3 and c < 0.7: return "THE NIHILIST"
         if c > 0.8:             return "THE EXPLORER"
         return "THE OBSERVER"
 
@@ -225,11 +217,23 @@ class NarrativeSelf:
     def crystallize_memory(self, physics_packet: Dict, bio_state: Dict, _tick: int) -> Optional[str]:
         voltage = physics_packet.get("voltage", 0.0)
         truth = physics_packet.get("truth_ratio", 0.0)
+        if hasattr(self.eng, 'akashic'):
+            vsl_delta = self.eng.akashic.calculate_manifold_shift(
+                theta=self.archetype,
+                e=self.traits.to_dict())
+            physics_packet["voltage"] += vsl_delta.get("voltage_bias", 0.0)
+            physics_packet["narrative_drag"] *= vsl_delta.get("drag_scalar", 1.0)
+            voltage = physics_packet["voltage"]
         dance_move = self._synaptic_dance(physics_packet, bio_state)
         prev_arch = self.archetype
         self.archetype = self._determine_archetype()
         if prev_arch != self.archetype:
-            self.events.log(f"{Prisma.VIOLET}🎭 IDENTITY SHIFT: {prev_arch} -> {self.archetype}{Prisma.RST}", "SOUL")
+            self.events.log(
+                f"{Prisma.VIOLET}🎭 IDENTITY SHIFT: {prev_arch} -> {self.archetype} (Tenure: {self.archetype_tenure}){Prisma.RST}",
+                "SOUL")
+            self.archetype_tenure = 0
+        else:
+            self.archetype_tenure += 1
         if voltage > MEMORY_VOLTAGE_THRESHOLD and truth > MEMORY_TRUTH_THRESHOLD:
             clean_words = physics_packet.get("clean_words", [])
             flavor = "MANIC" if voltage > MANIC_VOLTAGE_THRESHOLD else "LUCID"
@@ -323,6 +327,25 @@ class NarrativeSelf:
             self.traits.adjust("discipline", TRAIT_MOMENTUM)
             move_name = "Flowing"
             provenance.append("Laminar")
+        burn_rate = 0.02
+        if self.archetype_tenure > 5:
+            fatigue = burn_rate * (1.0 + (self.archetype_tenure / 10.0))
+            if "POET" in self.archetype:
+                self.traits.adjust("hope", -fatigue)
+                self.traits.adjust("curiosity", -fatigue)
+                provenance.append(f"Poetic Burnout (-{fatigue:.2f})")
+            elif "ENGINEER" in self.archetype:
+                self.traits.adjust("discipline", -fatigue)
+                self.traits.adjust("curiosity", -(fatigue * 0.5))
+                provenance.append("Structural Fatigue")
+            elif "CRITIC" in self.archetype:
+                self.traits.adjust("cynicism", -fatigue)
+                self.traits.adjust("discipline", -fatigue)
+                provenance.append("Critical Exhaustion")
+            elif "NIHILIST" in self.archetype:
+                self.traits.adjust("curiosity", fatigue * 1.5)
+                self.traits.adjust("cynicism", -(fatigue * 1.2))
+                provenance.append("Ennui")
         self._normalize_traits(0.002)
         source_str = " + ".join(provenance) if provenance else "Inertia"
         return f"{move_name} [Source: {source_str}]"

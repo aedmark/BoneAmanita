@@ -83,9 +83,10 @@ class ParadoxSeed:
 
     def water(self, current_words):
         if self.bloomed: return False
-        overlap = sum(1 for w in current_words if w in self.triggers)
-        if overlap > 0:
-            self.maturity += (overlap * 0.1)
+        word_set = set(current_words)
+        overlap = self.triggers.intersection(word_set)
+        if overlap:
+            self.maturity += (len(overlap) * 0.1)
             if self.maturity >= 1.0:
                 self.bloomed = True
                 return True
@@ -233,9 +234,22 @@ class TownHall:
         self.Tinkerer = TheTinkerer(gordon_ref, events_ref)
         self.Navigator = TheWayfinder(shimmer_ref)
         self.Almanac = TheAlmanac()
-        self.Mirror = MirrorGraph(events_ref)
         self.Crier = TheTownCrier()
-        self.ZenGarden = ZenGarden(events_ref)
+        self.seeds: List[ParadoxSeed] = []
+
+    def sow_seed(self, question: str, triggers: List[str]):
+        new_seed = ParadoxSeed(question, triggers)
+        self.seeds.append(new_seed)
+        return f"Seed planted: '{question}'"
+
+    def tend_garden(self, clean_words: List[str]) -> List[str]:
+        logs = []
+        active_seeds = [s for s in self.seeds if not s.bloomed]
+        for seed in active_seeds:
+            if seed.water(clean_words):
+                logs.append(seed.bloom())
+        self.seeds = [s for s in self.seeds if not s.bloomed]
+        return logs
 
     def conduct_census(self, physics_snapshot, host_stats):
         status, advice = self.Almanac.diagnose(physics_snapshot, host_stats)

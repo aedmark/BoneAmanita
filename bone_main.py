@@ -1,4 +1,4 @@
-""" BONEAMANITA 13.9.0
+""" BONEAMANITA 14.0.0
  Architects: SLASH, KISHO, The BonePoke Gods Humans: Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -44,7 +44,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 13.9.0', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.0.0', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -269,10 +269,9 @@ class BoneAmanita:
                 "ui": f"{Prisma.RED}REALITY FRACTURE: {e}{Prisma.RST}",
                 "logs": ["CRITICAL FAILURE"],
                 "metrics": self.get_metrics()}
-        duration = self.observer.clock_out(turn_start, "cycle")
-        resource_sum = self.health + self.stamina
-        self.host_stats.latency = duration
-        self.host_stats.efficiency_index = resource_sum / (duration + 0.01)
+        self.observer.clock_out(turn_start, "cycle")
+        self.host_stats.latency = self.observer.last_cycle_duration
+        self.host_stats.efficiency_index = self.observer.calculate_efficiency(self.health, self.stamina)
         if self.host_stats.efficiency_index < 50.0:
             self.events.log(
                 f"{Prisma.OCHRE}[LAG]: System viscosity high. Efficiency: {self.host_stats.efficiency_index:.1f}{Prisma.RST}",
@@ -435,7 +434,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 13.9.0', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 14.0.0', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

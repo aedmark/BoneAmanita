@@ -12,6 +12,7 @@ from bone_telemetry import TelemetryService, DecisionCrystal, BlackBoxReader
 from bone_physics import cosine_similarity
 from bone_drivers import SynergeticLensArbiter, BoneConsultant
 
+
 @dataclass
 class BrainConfig:
     BASE_PLASTICITY: float = 0.4
@@ -294,35 +295,9 @@ class LLMInterface:
             return f"[{reason}]: {hallucination}"
         return f"[{reason}]: The wire hums. There is no signal."
 
-class ContextWindowManager:
-    CHARS_PER_TOKEN = 3.5
-    def compose_context(self, layout: Dict[str, Any], max_tokens: int = 4000) -> str:
-        loc_val = layout['location']
-        if loc_val in ["Unformed", "Void"] and "seed" in str(layout.get('notes', '')).lower():
-            location_block = "CURRENT LOCATION: [Establishing Reality...]"
-        else:
-            location_block = f"CURRENT LOCATION: {loc_val}"
-        inventory_block = f"INVENTORY: {layout['inventory']}" if layout.get('inventory') else "INVENTORY: Empty"
-        history_budget = max(1000, (max_tokens * 4) - 2000)
-        recent_history = layout.get("history", [])
-        history_str = ""
-        if recent_history:
-            full_hist = "\n".join(recent_history)
-            if len(full_hist) > history_budget:
-                full_hist = "...[TRUNCATED]...\n" + full_hist[-history_budget:]
-            history_str = "RECENT LOG:\n" + full_hist
-        style_block = "DIRECTIVES:\n" + "\n".join(layout['notes'])
-        final_prompt = (
-            f"=== SYSTEM KERNEL ===\n{style_block}\n\n"
-            f"=== WORLD STATE ===\n{location_block}\n{inventory_block}\n\n"
-            f"=== CHRONICLE ===\n{history_str}\n\n"
-            f"=== INPUT SIGNAL ===\nUser: {layout['user_query']}\n"
-            f"{layout['role']}:")
-        return final_prompt
-
 class PromptComposer:
     def __init__(self):
-        self.context_manager = ContextWindowManager()
+        pass
 
     def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False,
                 modifiers: Dict[str, bool] = None) -> str:
@@ -336,7 +311,6 @@ class PromptComposer:
         if chem.get("COR", 0) > 0.6: mood = "Defensive / Anxious"
         if chem.get("DOP", 0) > 0.6: mood = "Curious / Manic"
         if chem.get("SER", 0) > 0.6: mood = "Zen / Lucid"
-        persona_directives = mind.get("style_directives", [])
         user_name = state.get('user_profile', {}).get('name', 'User')
         style_notes = [
             f"Role: You are {user_name}'s Partner in Creation.",
@@ -350,45 +324,19 @@ class PromptComposer:
         if ballast:
             style_notes.append("SAFETY OVERRIDE: Ground the user. Focus on physical objects. Be literal.")
         loc = state.get('world', {}).get('orbit', ['Void'])[0]
-        inv_str = ""
+        inv_str = "Hands: Empty"
         if modifiers["include_inventory"]:
             inv = state.get("inventory", [])
             if inv:
                 items = ", ".join(inv)
                 inv_str = f"Belt (Accessible): {items}"
-            else:
-                inv_str = "Hands: Empty"
-        memories = []
-        if modifiers["include_memories"]:
-            memories = state.get("spotlight", [])
         history = state.get("dialogue_history", [])
-        layout = {
-            "notes": style_notes,
-            "location": loc,
-            "inventory": inv_str,
-            "memories": memories,
-            "history": history,
-            "user_query": self._sanitize(user_query),
-            "role": role}
-        loc_val = layout['location']
-        if loc_val in ["Unformed", "Void"] and "seed" in str(layout.get('notes', '')).lower():
-            location_block = "CURRENT LOCATION: [Establishing Reality...]"
-        else:
-            location_block = f"CURRENT LOCATION: {loc_val}"
-        inventory_block = f"INVENTORY: {layout['inventory']}" if layout.get('inventory') else "INVENTORY: Empty"
-        history_budget = 3000
-        recent_history = layout.get("history", [])
-        history_str = ""
-        if recent_history:
-            full_hist = "\n".join(recent_history)
-            if len(full_hist) > history_budget:
-                full_hist = "...[TRUNCATED]...\n" + full_hist[-history_budget:]
-            history_str = full_hist
+        history_str = "\n".join(history[-10:])
         final_prompt = (
             f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
-            f"=== SHARED REALITY ===\n{location_block}\n{inventory_block}\n\n"
+            f"=== SHARED REALITY ===\nCURRENT LOCATION: {loc}\nINVENTORY: {inv_str}\n\n"
             f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
-            f"=== PARTNER INPUT ===\n{user_name}: {layout['user_query']}\n"
+            f"=== PARTNER INPUT ===\n{user_name}: {self._sanitize(user_query)}\n"
             f"Entity Response:")
         return final_prompt
 

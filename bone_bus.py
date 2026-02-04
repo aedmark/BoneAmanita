@@ -370,6 +370,7 @@ class TheObserver:
         self.user_turns = 0
         self.LATENCY_WARNING = 5.0
         self.CYCLE_WARNING = 8.0
+        self.last_cycle_duration = 0.0
 
     @staticmethod
     def clock_in():
@@ -379,9 +380,15 @@ class TheObserver:
         duration = time.time() - start_time
         if metric_type == "cycle":
             self.cycle_times.append(duration)
+            self.last_cycle_duration = duration
         elif metric_type == "llm":
             self.llm_latencies.append(duration)
         return duration
+
+    def calculate_efficiency(self, health: float, stamina: float) -> float:
+        duration = max(0.01, self.last_cycle_duration)
+        resource_sum = health + stamina
+        return resource_sum / duration
 
     def log_error(self, module_name):
         self.error_counts[module_name] += 1

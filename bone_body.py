@@ -65,17 +65,18 @@ class BioConstants:
     GOV_DRAG_HIGH = 4.0
     GOV_DRAG_LOW = 2.0
 
+
 @dataclass
 class BioSystem:
     mito: 'MitochondrialForge'
     endo: 'EndocrineSystem'
-    immune: MycotoxinFactory
-    lichen: LichenSymbiont
-    gut: HyphalInterface
-    plasticity: Any
     governor: 'MetabolicGovernor'
-    shimmer: Any
-    parasite: ParasiticSymbiont
+    immune: Optional[MycotoxinFactory] = None
+    lichen: Optional[LichenSymbiont] = None
+    gut: Optional[HyphalInterface] = None
+    parasite: Optional[ParasiticSymbiont] = None
+    plasticity: Any = None
+    shimmer: Any = None
     events: Any = None
     biometrics: Optional['Biometrics'] = None
 
@@ -231,14 +232,20 @@ class SemanticEndocrinologist:
     def assess(self, clean_words: List[str], physics: Dict) -> SemanticSignal:
         if not clean_words:
             return SemanticSignal()
-        cortical_set = set(self.mem.cortical_stack)
+        cortical_set = set()
+        graph_ref = {}
+        if self.mem:
+            cortical_set = set(getattr(self.mem, "cortical_stack", []))
+            graph_ref = getattr(self.mem, "graph", {})
         novel_count = sum(1 for w in clean_words if len(w) > 4 and w not in cortical_set)
         novelty_score = min(1.0, novel_count / max(1, len(clean_words)))
         resonance_score = 0.0
-        if self.mem.graph:
-            hits = sum(1 for w in clean_words if w in self.mem.graph)
+        if graph_ref:
+            hits = sum(1 for w in clean_words if w in graph_ref)
             resonance_score = min(1.0, hits / max(1, len(clean_words)))
-        valence_score = self.lex.get_valence(clean_words)
+        valence_score = 0.0
+        if self.lex and hasattr(self.lex, "get_valence"):
+            valence_score = self.lex.get_valence(clean_words)
         coherence_score = _get_val(physics, "kappa", 0.5)
         return SemanticSignal(
             novelty=novelty_score,
@@ -264,11 +271,12 @@ class SomaticLoop:
         self.events = events_ref
         self.narrative_data = TheLore.get("BIO_NARRATIVE") or {}
         if not self.narrative_data:
-            print(f"{Prisma.RED}[BODY]: Warning - BIO_NARRATIVE missing.{Prisma.RST}")
+            if hasattr(self.events, 'log'):
+                self.events.log(f"{Prisma.OCHRE}[BODY]: Warning - BIO_NARRATIVE missing.{Prisma.RST}", "SYS")
             self.narrative_data = {"symptoms": {}, "organs": {}, "GLIMMER": {}, "GOVERNOR": {}}
-        if hasattr(self.bio, 'endo'):
+        if getattr(self.bio, 'endo', None):
             self.bio.endo.narrative_data = self.narrative_data
-        if hasattr(self.bio, 'governor'):
+        if getattr(self.bio, 'governor', None):
             self.bio.governor.narrative_data = self.narrative_data
         self.semantic_doctor = SemanticEndocrinologist(memory_ref, lexicon_ref)
         self.enzyme_map = getattr(BoneConfig.BIO, "ENZYME_MAP", SomaticLoop._ENZYME_MAP) if hasattr(BoneConfig, "BIO") else SomaticLoop._ENZYME_MAP
@@ -283,7 +291,7 @@ class SomaticLoop:
         stamina = max(0.0, min(100.0, stamina))
         phys = self._normalize_physics(physics_data)
         logs = []
-        if hasattr(self.bio, "apply_environmental_entropy"):
+        if self.bio.events and hasattr(self.bio, "apply_environmental_entropy"):
             self.bio.apply_environmental_entropy(phys)
         modifiers = self._gather_hormonal_modifiers(phys, logs)
         receipt = self.bio.mito.process_cycle(phys, external_modifiers=modifiers)
@@ -296,8 +304,8 @@ class SomaticLoop:
             stamina = 10.0
         total_yield = 0.0
         enzyme = "NONE"
-        if hasattr(self.bio, "gut"):
-            enzyme, nutrient_data = self.bio.gut.secrete(text, phys)
+        if self.bio.gut:
+            gut_enzyme, nutrient_data = self.bio.gut.secrete(text, phys)
             gut_yield = nutrient_data.get("yield", 0.0)
             gut_toxin = nutrient_data.get("toxin", 0.0)
             if gut_yield > 0:
@@ -306,15 +314,19 @@ class SomaticLoop:
                 logs.append(f"{Prisma.GRN}[GUT]: digested {desc} -> +{gut_yield:.1f} ATP.{Prisma.RST}")
             if gut_toxin > 0:
                 self.bio.mito.state.ros_buildup += gut_toxin
-                logs.append(f"{Prisma.OCHRE}[GUT]: Toxin byproduct detected (+{gut_toxin:.1f} ROS).{Prisma.RST}")
-        if hasattr(self.bio, "lichen"):
+                logs.append(f"{Prisma.OCHRE}[GUT]: Toxin detected (+{gut_toxin:.1f} ROS).{Prisma.RST}")
+            if gut_enzyme != "NONE":
+                enzyme = gut_enzyme
+        if self.bio.lichen:
             sugar, photo_log = self.bio.lichen.photosynthesize(phys, phys["clean_words"], tick_count)
             if sugar > 0:
                 total_yield += sugar
             if photo_log:
                 logs.append(photo_log)
-        legacy_yield = self._harvest_legacy_scraps(phys)
-        total_yield += legacy_yield
+        soma_enzyme, soma_yield = self._harvest_resources(phys, logs)
+        total_yield += soma_yield
+        if enzyme == "NONE":
+            enzyme = soma_enzyme
         self.bio.mito.adjust_atp(total_yield, "Symbiotic Yield")
         self._perform_maintenance(text, phys, logs, tick_count)
         clean_words = phys.get("clean_words", [])
@@ -328,14 +340,6 @@ class SomaticLoop:
             circadian_bias=circadian_bias,
             semantic_signal=semantic_sig)
         return self._package_result(resp_status, logs, chem_state, enzyme)
-
-    def _harvest_legacy_scraps(self, phys: Dict) -> float:
-        clean_words = phys.get("clean_words", [])
-        scrap_yield = 0.0
-        for word in clean_words:
-            if len(word) > 7:
-                scrap_yield += 0.5
-        return scrap_yield
 
     def _gather_hormonal_modifiers(self, phys, logs) -> List[float]:
         chem = self.bio.endo
@@ -434,8 +438,8 @@ class SomaticLoop:
                     if len(found_enzymes) <= 3:
                         logs.append(f"{Prisma.GRN}[BIO]: Digested '{word}' -> {enzyme} (Mastery x{mastery_bonus:.2f}) -> +{final_yield:.1f} ATP.{Prisma.RST}")
         if cliche_tax_total > 0:
-            total_atp_yield -= cliche_tax_total
-            logs.append(f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX APPLIED. System drained by -{cliche_tax_total:.1f} ATP. (Reason: Antigen Detected){Prisma.RST}")
+            total_atp_yield = max(0.0, total_atp_yield - cliche_tax_total)
+            logs.append(f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX: System drained by -{cliche_tax_total:.1f} ATP. (Antigens Detected){Prisma.RST}")
         if _get_val(phys, "voltage", 0.0) > 8.0 and found_enzymes:
             found_enzymes.append("PROTEASE")
             total_atp_yield += 5.0

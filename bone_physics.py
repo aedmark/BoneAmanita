@@ -25,14 +25,11 @@ class TheGatekeeper:
         self.eng = engine_ref
         self.lex = engine_ref.mind.lex
         self.mem = engine_ref.mind.mem
-        self.bureaucracy_active = False
 
     def check_entry(self, ctx: CycleContext) -> Tuple[bool, Optional[Dict]]:
         phys = ctx.physics
         if not self._check_thermodynamics(ctx):
             return False, self._pack_refusal(ctx, "DARK_SYSTEM", "Energy critical. The inputs dissolve into the void.")
-        if self._audit_bureaucracy(phys):
-            ctx.logs.append(f"{Prisma.OCHRE}⚠️ BUREAUCRATIC BYPASS: Form 27B/6 missing. Processing under protest.{Prisma.RST}")
         if not self._audit_tangibility(phys):
             return False, self._pack_refusal(ctx, "TANGIBILITY_FAIL", self._get_tangibility_msg(phys))
         if phys.counts.get("antigen", 0) > 2:
@@ -47,21 +44,6 @@ class TheGatekeeper:
         if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
             return self.eng.bio.mito.state.atp_pool > 1.0
         return True
-
-    def _audit_bureaucracy(self, phys):
-        drag = phys.narrative_drag
-        if drag < 2.0:
-            return False
-        efficiency_penalty = 0.0
-        if hasattr(self.eng, "host_stats") and self.eng.host_stats:
-            if self.eng.host_stats.efficiency_index < 0.8:
-                efficiency_penalty = 0.4
-        entropy_friction = getattr(phys, "entropy", 0.0) * 0.3
-        probability = (drag / 50.0) + efficiency_penalty + entropy_friction
-        is_boring = phys.voltage < 5.0
-        if (is_boring or efficiency_penalty > 0 or entropy_friction > 0.15) and random.random() < probability:
-            return True
-        return False
 
     def _audit_tangibility(self, phys):
         if phys.truth_ratio > 0.8: return True
@@ -84,10 +66,6 @@ class TheGatekeeper:
             "ui": ui_msg,
             "logs": ctx.logs + [ui_msg],
             "metrics": self.eng.get_metrics()}
-
-    def _get_bureaucracy_msg(self, text):
-        return (f"{Prisma.OCHRE}🛑 BUREAUCRATIC HALT (Form 27B/6 Missing){Prisma.RST}\n"
-                f"   Processing of '{text}' suspended pending review.")
 
     def _get_tangibility_msg(self, phys):
         suggestion = random.choice(["stone", "iron", "bone", "mud"])
@@ -341,25 +319,17 @@ class SurfaceTension:
 
 
 class ChromaScope:
-    PALETTE = {
-        "INDIGO": (Prisma.INDIGO, "STR", "PHI"),
-        "OCHRE":  (Prisma.OCHRE,  "TMP", "E"),
-        "VIOLET": (Prisma.VIOLET, "DEL", "LQ"),
-        "EMERALD":(Prisma.GRN,    "XI",  "BET"),
-        "CRIMSON":(Prisma.RED,    "VEL", "ENT")}
-
     def modulate(self, text, vector):
         if not vector:
             return f"{Prisma.GRY}{text}{Prisma.RST}"
-        sorted_vecs = sorted(vector.items(), key=lambda x: abs(x[1] - 0.5), reverse=True)
+        sorted_vecs = sorted(vector.items(), key=lambda x: x[1], reverse=True)
         if not sorted_vecs:
             return f"{Prisma.GRY}{text}{Prisma.RST}"
         primary_dim = sorted_vecs[0][0]
-        selected_color = Prisma.GRY
-        for color_name, (code, d1, d2) in self.PALETTE.items():
-            if primary_dim == d1 or primary_dim == d2:
-                selected_color = code
-                break
+        if primary_dim in TRIGRAM_MAP:
+            selected_color = TRIGRAM_MAP[primary_dim][3]
+        else:
+            selected_color = Prisma.GRY
         if "sorry" in text.lower():
             return f"{Prisma.OCHRE}{text}{Prisma.RST}"
         return f"{selected_color}{text}{Prisma.RST}"

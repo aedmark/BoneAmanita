@@ -7,7 +7,7 @@ from bone_bus import Prisma, BoneConfig, CycleContext, PhysicsPacket, BonePreset
 from bone_metaphysics import CongruenceValidator
 from bone_village import TownHall
 from bone_protocols import TheBureau
-from bone_physics import ChromaScope, TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine, apply_somatic_feedback, TRIGRAM_MAP
+from bone_physics import TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine, apply_somatic_feedback, TRIGRAM_MAP
 from bone_viewer import GeodesicRenderer, CachedRenderer, get_renderer
 from bone_architect import PanicRoom
 from bone_soul import SynestheticCortex
@@ -62,45 +62,33 @@ class CycleStabilizer:
         self.last_tick_time = now
         dt = max(0.001, min(1.0, raw_dt))
         p = ctx.physics
-        soul_trying_to_scream = False
-        if p.voltage > 17.0 and p.narrative_drag > 3.5:
-            soul_trying_to_scream = True
         self._adjust_setpoints(ctx, p)
         curr_v = p.voltage
         curr_d = p.narrative_drag
         v_force, d_force = self.governor.regulate(p, dt=dt)
-        if soul_trying_to_scream:
-            self.events.log(f"{Prisma.VIOLET}⚖️ STABILIZER: Yielding to Paradox. Drag dampeners disengaged.{Prisma.RST}", "SYS")
-            d_force = 0.0
+        if p.voltage > 17.0 and p.narrative_drag > 3.5:
+            d_force = min(d_force, 0.0)
         corrections_made = False
         MAX_V = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
         MIN_V = getattr(BoneConfig.PHYSICS, "VOLTAGE_FLOOR", 0.0)
-        if abs(curr_v - self.governor.voltage_pid.setpoint) > 6.0 and abs(v_force) > 0.05:
+        if abs(v_force) > 0.01:
             raw_new_v = curr_v + v_force
             new_v = max(MIN_V, min(MAX_V, raw_new_v))
             p.voltage = new_v
-            if abs(v_force) > 0.1:
-                reason = "PID_DAMPENER" if v_force < 0 else "PID_EXCITATION"
-                if new_v != raw_new_v: reason += "_CLAMPED"
-                ctx.record_flux(current_phase, "voltage", curr_v, new_v, reason)
-        if abs(curr_v - self.governor.voltage_pid.setpoint) > 6.0 and abs(v_force) > 0.05:
-            new_v = max(0.0, curr_v + v_force)
-            p.voltage = new_v
-            if abs(v_force) > 0.1:
+            if abs(v_force) > 0.5:
                 reason = "PID_DAMPENER" if v_force < 0 else "PID_EXCITATION"
                 ctx.record_flux(current_phase, "voltage", curr_v, new_v, reason)
-                if abs(v_force) > 1.5:
-                    self.events.log(f"{Prisma.GRY}⚖️ STABILIZER: Voltage corrected ({v_force:+.1f}v). Target: {self.governor.voltage_pid.setpoint}{Prisma.RST}", "SYS")
-                corrections_made = True
-        if abs(curr_d - self.governor.drag_pid.setpoint) > 2.5 and abs(d_force) > 0.05:
+                if abs(v_force) > 1.0:
+                    self.events.log(
+                        f"{Prisma.GRY}⚖️ STABILIZER: Voltage active correction ({v_force:+.2f}v).{Prisma.RST}", "SYS")
+            corrections_made = True
+        if abs(d_force) > 0.01:
             new_d = max(0.0, curr_d + d_force)
             p.narrative_drag = new_d
-            if abs(d_force) > 0.1:
+            if abs(d_force) > 0.5:
                 reason = "PID_LUBRICATION" if d_force < 0 else "PID_BRAKING"
                 ctx.record_flux(current_phase, "narrative_drag", curr_d, new_d, reason)
-                if d_force < -1.0:
-                    self.events.log(f"{Prisma.GRY}🛢️ STABILIZER: Grease applied. Drag reduced ({d_force:+.1f}). Target: {self.governor.drag_pid.setpoint}{Prisma.RST}", "SYS")
-                corrections_made = True
+            corrections_made = True
         self.last_phase = current_phase
         return corrections_made
 
@@ -188,6 +176,10 @@ class MaintenancePhase(SimulationPhase):
             self.eng.soil_fertility = 0.0
 
     def run(self, ctx: CycleContext):
+        if hasattr(self.eng, 'town_hall'):
+            blooms = self.eng.town_hall.tend_garden(ctx.clean_words)
+            for bloom in blooms:
+                ctx.log(bloom)
         if self.eng.tick_count % 10 != 0: return ctx
         try:
             solvents = {'the', 'and', 'is', 'a', 'of', 'to', 'in', 'it', 'i', 'you'}
@@ -197,7 +189,8 @@ class MaintenancePhase(SimulationPhase):
                 self.eng.soil_fertility = min(50.0, self.eng.soil_fertility + biomass)
                 for w in rotted:
                     self.eng.limbo.ghosts.append(f"👻{w.upper()}_ECHO")
-                ctx.log(f"{Prisma.GRY}♻️ COMPOST: {len(rotted)} concepts decayed -> +{biomass:.1f} Fertility.{Prisma.RST}")
+                ctx.log(
+                    f"{Prisma.GRY}♻️ COMPOST: {len(rotted)} concepts decayed -> +{biomass:.1f} Fertility.{Prisma.RST}")
             if self.eng.soil_fertility > 10.0:
                 drag_reduction = self.eng.soil_fertility * 0.05
                 ctx.physics.narrative_drag = max(0.0, ctx.physics.narrative_drag - drag_reduction)
@@ -574,7 +567,7 @@ class ArbitrationPhase(SimulationPhase):
             soul_ref=self.eng.soul)
         soul_arch = self.eng.soul.archetype
         mandates = getattr(ctx, "council_mandates", [])
-        current_trigram = ctx.world_state.get("trigram", None)  #
+        current_trigram = ctx.world_state.get("trigram", None)
         final_lens, source, opinion = self.eng.arbiter.arbitrate(
             physics_lens=phys_lens,
             soul_archetype=soul_arch,

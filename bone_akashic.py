@@ -143,6 +143,24 @@ class TheAkashicRecord:
             self.shadow_stock.pop(0)
         print(f"{Prisma.VIOLET}[AKASHIC]: Ghost Echo archived: '{memory_data.get('lesson')}'{Prisma.RST}")
 
+    def calculate_manifold_shift(self, theta: str, e: Dict[str, float]) -> Dict[str, float]:
+        delta = {"voltage_bias": 0.0, "drag_scalar": 1.0}
+        archetype_bias = {
+            "THE POET": {"v": 2.0, "d": 0.8},
+            "THE ENGINEER": {"v": -1.0, "d": 1.2},
+            "THE NIHILIST": {"v": -5.0, "d": 2.0},
+            "THE MANIC": {"v": 10.0, "d": 0.5},
+            "THE OBSERVER": {"v": 0.0, "d": 1.0},
+            "THE CRITIC": {"v": -2.0, "d": 1.5}}
+        base = archetype_bias.get(theta, archetype_bias["THE OBSERVER"])
+        tension = e.get("DISCIPLINE", 0.5)
+        vitality = e.get("HOPE", 0.5)
+        lambda_val = (1.0 + tension) * vitality
+        delta["voltage_bias"] = base["v"] * lambda_val
+        flow_state = (e.get("CURIOSITY", 0.5) + vitality) / 2.0
+        delta["drag_scalar"] = base["d"] * (1.5 - flow_state)
+        return delta
+
     def register_word(self, word, category):
         lexicon_data = self.lore.get("LEXICON")
         if category in lexicon_data:
