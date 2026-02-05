@@ -103,6 +103,7 @@ class SimulationPhase:
     def run(self, ctx: CycleContext) -> CycleContext:
         raise NotImplementedError
 
+
 class ObservationPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -110,14 +111,23 @@ class ObservationPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
-        new_physics = gaze_result["physics"]
-        if hasattr(new_physics, "to_dict"):
-            for k, v in new_physics.to_dict().items():
-                if hasattr(ctx.physics, k):
-                    setattr(ctx.physics, k, v)
+        input_phys = gaze_result["physics"]
+        meta_keys = ["clean_words", "counts", "vector", "valence", "entropy", "beta_index", "raw_text", "antigens",
+                     "psi", "kappa", "zone", "flow_state"]
+        for k in meta_keys:
+            if hasattr(input_phys, k) and hasattr(ctx.physics, k):
+                setattr(ctx.physics, k, getattr(input_phys, k))
+        curr_v = ctx.physics.voltage
+        input_v = getattr(input_phys, "voltage", 0.0)
+        if input_v > curr_v:
+            ctx.physics.voltage = (curr_v * 0.8) + (input_v * 0.2)
+        else:
+            ctx.physics.voltage = (curr_v * 0.95) + (input_v * 0.05)
+        curr_d = ctx.physics.narrative_drag
+        input_d = getattr(input_phys, "narrative_drag", 0.0)
+        ctx.physics.narrative_drag = (curr_d * 0.9) + (input_d * 0.1)
         ctx.clean_words = gaze_result["clean_words"]
-        current_voltage = _get_p(ctx.physics, "voltage", 0.0)
-        self.eng.phys.dynamics.commit(current_voltage)
+        self.eng.phys.dynamics.commit(ctx.physics.voltage)
         self.eng.tick_count += 1
         return ctx
 
@@ -285,7 +295,7 @@ class MetabolismPhase(SimulationPhase):
     def _apply_economic_stimulus(self, ctx: CycleContext, efficiency: float):
         raw_tax = 0.0
         if efficiency < 0.8:
-            raw_tax = (1.0 - efficiency) * 5.0
+            raw_tax = min(1.5, (1.0 - efficiency) * 2.0)
         stimulus = self.bailout_pid.update(efficiency)
         adjusted_tax = max(0.0, raw_tax - stimulus)
         if adjusted_tax > 0.0:
@@ -940,24 +950,26 @@ class CycleReporter:
     def _inject_flux_readout(ctx: CycleContext):
         if not ctx.flux_log:
             return
-        flux_lines = []
+        significant_flux = []
         for entry in ctx.flux_log[-5:]:
-            m = entry['metric'].upper()
-            d = entry['delta']
             r = entry['reason']
+            d = abs(entry['delta'])
+            if r in ["AUTO_TRACE", "PID_BRAKING", "PID_EXCITATION", "PID_DAMPENER"]:
+                if d < 5.0: continue
+            m = entry['metric'].upper()
             icon = "⚡" if m == "VOLTAGE" else "⚓"
-            color = Prisma.GRN if d > 0 else Prisma.RED
-            arrow = "▲" if d > 0 else "▼"
+            color = Prisma.GRN if entry['delta'] > 0 else Prisma.RED
+            arrow = "▲" if entry['delta'] > 0 else "▼"
             line = (
                 f"{Prisma.GRY}[FLUX]{Prisma.RST} "
                 f"{icon} {m[:3]} {entry['initial']:.1f} "
-                f"{color}{arrow} {abs(d):.1f}{Prisma.RST} -> "
+                f"{color}{arrow} {d:.1f}{Prisma.RST} -> "
                 f"{Prisma.WHT}{entry['final']:.1f}{Prisma.RST} "
                 f"({r})")
-            flux_lines.append(line)
-        if flux_lines:
+            significant_flux.append(line)
+        if significant_flux:
             ctx.logs.insert(0, "")
-            for line in reversed(flux_lines):
+            for line in reversed(significant_flux):
                 ctx.logs.insert(0, line)
             ctx.logs.insert(0, f"{Prisma.CYN}--- LIVE STATE MIRROR ---{Prisma.RST}")
 

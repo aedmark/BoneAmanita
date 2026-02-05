@@ -197,10 +197,21 @@ with st.sidebar:
 for msg in st.session_state.history:
     with st.chat_message(msg["role"]):
         content_to_show = msg.get("raw_content", msg["content"])
-        if "♦ THE ARCHITECT" in content_to_show:
-            parts = content_to_show.split("────────────────────────────────────────────────────────────")
+        clean_content = strip_ansi(content_to_show)
+        separator = "────────────────────────────────────────────────────────────"
+        if separator in clean_content:
+            parts = clean_content.split(separator)
             if len(parts) > 1:
                 content_to_show = parts[-1].strip()
+        elif "📍" in clean_content and "//" in clean_content:
+            lines = clean_content.splitlines()
+            narrative_lines = []
+            recording = False
+            for line in lines:
+                if recording: narrative_lines.append(line)
+                if "📍" in line and "//" in line: recording = True
+            if narrative_lines:
+                content_to_show = "\n".join(narrative_lines).strip()
         st.markdown(strip_ansi(content_to_show))
         if "logs" in msg and msg["logs"]:
             with st.expander("SYSTEM INTERNALS"):

@@ -29,7 +29,8 @@ class Projector:
         stm_bar = self._mini_bar(stamina, 100, 4, Prisma.GRN)
         dig_color = Prisma.VIOLET if dignity > 50 else Prisma.GRY
         dig_icon = "✦" if dignity > 80 else "✧"
-        role = str(mind[2]).upper() if mind and len(mind) > 2 else "OBSERVER"
+        raw_role = mind[2] if mind and len(mind) > 2 else None
+        role = str(raw_role).upper() if raw_role else "OBSERVER"
         return (
             f"{Prisma.WHT}♦ {role}{Prisma.RST}   "
             f"HP {hp_bar}  STM {stm_bar}  "

@@ -382,12 +382,19 @@ class PromptComposer:
             defaults.update(modifiers)
         return defaults
 
+
 class ResponseValidator:
     def __init__(self):
         self.banned_phrases = [
             "large language model", "AI assistant", "cannot feel", "as an AI",
             "against my programming", "cannot comply", "language model",
             "delve into", "rich tapestry"]
+        self.leak_patterns = [
+            r"Current Location:.*",
+            r"INVENTORY:.*",
+            r"Current Biology:.*",
+            r"=== SHARED REALITY ===",
+            r"=== PARTNER INPUT ==="]
         self.meta_markers = [
             "INITIALIZATION SEQUENCE", "LOCATING TARGET SEED", "REASONING PROCESS",
             "CURRENT VISION:", "TARGET SEED:", "Your journey begins here",
@@ -397,14 +404,19 @@ class ResponseValidator:
     def validate(self, response: str, _state: Dict) -> Dict:
         clean_lines = []
         for line in response.splitlines():
+            is_leak = False
+            for pattern in self.leak_patterns:
+                if re.search(pattern, line, re.IGNORECASE):
+                    is_leak = True
+                    break
             is_meta = False
             for marker in self.meta_markers:
                 if marker.lower() in line.lower():
                     is_meta = True
                     break
-            if not is_meta and line.strip():
+            if not is_meta and not is_leak and line.strip():
                 clean_lines.append(line)
-        sanitized_response = "\n".join(clean_lines)
+        sanitized_response = "\n\n".join(clean_lines)
         low_resp = sanitized_response.lower()
         for phrase in self.banned_phrases:
             if phrase in low_resp:
@@ -545,8 +557,10 @@ class TheCortex:
             mood_override=mood_directive)
         start_time = time.time()
         raw_response_text = self.llm.generate(final_prompt, llm_params)
-        if "\n\n" not in raw_response_text and len(raw_response_text) > 100:
+        if "\n\n" not in raw_response_text:
             raw_response_text = raw_response_text.replace("\n", "\n\n")
+            if len(raw_response_text) > 300 and raw_response_text.count("\n") < 2:
+                raw_response_text = raw_response_text.replace(". ", ".\n\n")
         if is_boot_sequence:
             self._update_history("SYSTEM_INIT", raw_response_text)
         else:
@@ -603,6 +617,13 @@ class TheCortex:
     def gather_state(self, sim_result):
         current_tick = self.sub.tick_count if hasattr(self.sub, 'tick_count') else 0
         phys_packet = self.sub.phys.observer.last_physics_packet
+        if phys_packet is not None:
+            phys_dict = phys_packet.to_dict()
+        else:
+            raw_p = sim_result.get("physics", {})
+            phys_dict = raw_p if isinstance(raw_p, dict) else {}
+            if not phys_dict:
+                phys_dict = {"voltage": 0.0, "narrative_drag": 0.0, "vector": {}, "clean_words": []}
         bio_state = {
             "chem": self.sub.bio.endo.get_state(),
             "atp": self.sub.bio.mito.state.atp_pool}
@@ -620,7 +641,7 @@ class TheCortex:
                 "style_directives": ["Neutral tone."],
                 "lexicon_bias": "abstract"}
         if hasattr(self.sub, 'director'):
-            chorus_instr, active_voices = self.sub.director.generate_chorus_instruction(phys_packet.to_dict())
+            chorus_instr, active_voices = self.sub.director.generate_chorus_instruction(phys_dict)
             if len(active_voices) > 1 and "NARRATOR" not in active_voices:
                 mind_data["style_directives"].append(chorus_instr)
                 mind_data["role"] = f"The Chorus ({'/'.join(active_voices)})"
@@ -632,7 +653,7 @@ class TheCortex:
             reality_directive = self.sub.reality_stack.get_prompt_directive()
         return {
             "bio": bio_state,
-            "physics": phys_packet,
+            "physics": phys_dict,
             "mind": mind_data,
             "reality_directive": reality_directive,
             "dialogue_history": active_history,
@@ -643,7 +664,7 @@ class TheCortex:
             "soul_state": self.sub.soul.get_soul_state(),
             "spotlight": self.spotlight.illuminate(
                 self.sub.mind.mem.graph,
-                phys_packet.get("vector", {}))}
+                phys_dict.get("vector", {}))}
 
     def _audit_solipsism(self, text: str, lens_name: str = "NARRATOR"):
         words = text.lower().split()
