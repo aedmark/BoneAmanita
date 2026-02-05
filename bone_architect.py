@@ -8,7 +8,7 @@ from bone_spores import MycotoxinFactory, LichenSymbiont, HyphalInterface, Paras
 from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, ViralTracer, ThePacemaker
 from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity, GlobalIntegrator, WisdomAllocator
 from bone_protocols import LimboLayer
-from bone_physics import QuantumObserver, SurfaceTension # [REMOVED] TemporalDynamics
+from bone_physics import QuantumObserver, SurfaceTension
 from bone_machine import TheCrucible, TheForge, TheTheremin
 
 @dataclass
@@ -37,7 +37,7 @@ class PanicRoom:
             flow_state="SAFE_MODE",
             zone="PANIC_ROOM",
             truth_ratio=1.0,
-            raw_text="[SYSTEM FAILURE: PHYSICS BYPASSED]",
+            raw_text="[SYSTEM FAILURE]: Physics Engine yeeted. Welcome to the Void.",
             antigens=0,
             perfection_streak=0,
             turbulence=0.0,
@@ -45,7 +45,10 @@ class PanicRoom:
             mass=1.0,
             velocity=0.0,
             psi=0.0,
-            kappa=0.0)
+            kappa=0.0,
+            beta_index=1.0,
+            phi=0.0,
+            manifold="BUNKER")
 
     @staticmethod
     def get_safe_bio(previous_state=None):
@@ -91,7 +94,7 @@ class PanicRoom:
 class BoneArchitect:
     @staticmethod
     def _construct_mind(events, lex) -> Tuple[MindSystem, LimboLayer]:
-        _mem = MycelialNetwork(events)
+        _mem = MycelialNetwork(events, None, None)
         limbo = LimboLayer()
         _mem.cleanup_old_sessions(limbo)
         mind = MindSystem(
@@ -126,9 +129,9 @@ class BoneArchitect:
             crucible=TheCrucible(),
             theremin=TheTheremin(),
             pulse=ThePacemaker(),
-            # [REMOVED] dynamics=TemporalDynamics()
             nav=TheNavigator(bio.shimmer),
-            tension=SurfaceTension())
+            tension=SurfaceTension(),
+            dynamics=None)
 
     @staticmethod
     def incubate(events, lex) -> SystemEmbryo:
@@ -158,7 +161,7 @@ class BoneArchitect:
         inherited_antibodies = set()
         soul_legacy = {}
         continuity_data = None
-        if load_result:
+        if load_result and isinstance(load_result, (list, tuple)):
             if len(load_result) >= 1: inherited_traits = load_result[0]
             if len(load_result) >= 2: inherited_antibodies = load_result[1]
             if len(load_result) >= 3: soul_legacy = load_result[2]
@@ -166,7 +169,7 @@ class BoneArchitect:
             events.log(f"{Prisma.CYN}[ARCHITECT]: Ancestral Spirit detected.{Prisma.RST}", "SYS")
         else:
             events.log(f"{Prisma.WHT}[ARCHITECT]: No ancestors found. A new lineage begins.{Prisma.RST}", "SYS")
-        embryo.bio.mito.state.mother_hash = embryo.mind.mem.session_id
+        embryo.bio.mito.state.mother_hash = getattr(embryo.mind.mem, "session_id", "GENESIS")
         embryo.bio.mito.apply_inheritance(inherited_traits)
         embryo.bio.immune.active_antibodies = inherited_antibodies
         embryo.soul_legacy = soul_legacy

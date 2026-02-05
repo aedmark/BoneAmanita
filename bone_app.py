@@ -5,7 +5,7 @@ import time
 from bone_entity import ConversationalEntity
 
 st.set_page_config(
-    page_title="BONEAMANITA 14.2.0",
+    page_title="BONEAMANITA 14.2.2",
     page_icon="💀",
     layout="wide",
     initial_sidebar_state="expanded")
@@ -48,7 +48,7 @@ if "entity" not in st.session_state:
             st.error(f"Critical Boot Error: {e}")
             st.stop()
 with st.sidebar:
-    st.title("BoneAmanita v14.2.0")
+    st.title("BoneAmanita v14.2.2")
     st.divider()
     if "meta" in st.session_state:
         col1, col2 = st.columns(2)
@@ -66,7 +66,7 @@ with st.sidebar:
         if "entity" in st.session_state:
             save_msg = st.session_state.entity.save()
             st.success(save_msg)
-st.title("BONEAMANITA 14.2.0")
+st.title("BONEAMANITA 14.2.2")
 if "messages" in st.session_state:
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):

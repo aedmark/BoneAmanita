@@ -28,10 +28,13 @@ def _set_p(p, key, value):
 
 class CycleStabilizer:
     MANIFOLD_CONFIGS = {
-        "THE_FORGE":  {"voltage": 15.0, "drag": 1.5},
-        "THE_MUD":    {"voltage": 10.0, "drag": 5.0},
-        "THE_AERIE":  {"voltage": 10.0, "drag": 0.5},
-        "DEFAULT":    {"voltage": 10.0, "drag": 1.5}}
+        "THE_FORGE": {"voltage": 15.0, "drag": 1.5},
+        "THE_MUD": {"voltage": 10.0, "drag": 5.0},
+        "THE_AERIE": {"voltage": 10.0, "drag": 0.5},
+        "LABORATORY": {"voltage": 12.0, "drag": 1.0},
+        "COURTYARD": {"voltage": 8.0, "drag": 2.0},
+        "DEFAULT": {"voltage": 10.0, "drag": 1.5}}
+
     HIGH_ENERGY_STATES = {"SUPERCONDUCTIVE", "FLOW_BOOST", "HUBRIS_RISK"}
 
     def __init__(self, events_ref, governor_ref):
@@ -42,16 +45,16 @@ class CycleStabilizer:
 
     def _adjust_setpoints(self, ctx: CycleContext, p: Any):
         flow = str(getattr(p, "flow_state", "LAMINAR"))
-        manifold = "THE_CONSTRUCT"
-        current_manifold = getattr(p, "manifold", None) or manifold
-        if current_manifold == "THE_CONSTRUCT":
+        current_manifold = getattr(p, "manifold", "THE_CONSTRUCT")
+        if current_manifold in ["THE_CONSTRUCT", "DEFAULT", "None"]:
             world = getattr(ctx, "world_state", {})
             if isinstance(world, dict):
                 orbit = world.get("orbit")
-                if orbit and isinstance(orbit, (list, tuple)):
+                if orbit and isinstance(orbit, (list, tuple)) and orbit[0]:
                     current_manifold = orbit[0]
         target_cfg = self.MANIFOLD_CONFIGS.get(current_manifold, self.MANIFOLD_CONFIGS["DEFAULT"])
-        target_v = 20.0 if flow in self.HIGH_ENERGY_STATES else target_cfg["voltage"]
+        base_max_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
+        target_v = base_max_v if flow in self.HIGH_ENERGY_STATES else target_cfg["voltage"]
         target_d = target_cfg["drag"]
         self.governor.recalibrate(target_v, target_d)
 
@@ -137,6 +140,7 @@ class IntentionPhase(SimulationPhase):
             ctx.log(f"{Prisma.OCHRE}🧠 INTENTION: Low Energy. Conservation mode active.{Prisma.RST}")
         return ctx
 
+
 class SanctuaryPhase(SimulationPhase):
     def __init__(self, engine_ref, governor_ref):
         super().__init__(engine_ref)
@@ -149,6 +153,8 @@ class SanctuaryPhase(SimulationPhase):
         if in_safe_zone and trauma_sum < 25.0:
             self._enter_sanctuary(ctx)
             self._apply_restoration(ctx)
+            if random.random() < 0.3:
+                self._trigger_dream(ctx)
         return ctx
 
     def _enter_sanctuary(self, ctx: CycleContext):
@@ -166,6 +172,20 @@ class SanctuaryPhase(SimulationPhase):
             self.eng.bio.endo.serotonin = min(1.0, self.eng.bio.endo.serotonin + 0.05)
         for key in list(self.eng.trauma_accum.keys()):
             self.eng.trauma_accum[key] = max(0.0, self.eng.trauma_accum[key] - 0.1)
+
+    def _trigger_dream(self, ctx: CycleContext):
+        if not hasattr(self.eng.mind, "dreamer"):
+            return
+        bio_packet = {
+            "chem": self.eng.bio.endo.get_state(),
+            "mito": {"atp": self.eng.bio.mito.state.atp_pool, "ros": self.eng.bio.mito.state.ros_buildup},
+            "physics": ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics}
+        dream_packet = self.eng.mind.dreamer.enter_rem_cycle(
+            self.eng.mind.mem,
+            bio_readout=bio_packet)
+        if isinstance(dream_packet, dict):
+            ctx.log(dream_packet.get("log", "The mind wanders..."))
+            ctx.last_dream = dream_packet
 
 class MaintenancePhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -263,18 +283,22 @@ class MetabolismPhase(SimulationPhase):
         tick = self.eng.tick_count
         trigger = False
         reason = ""
-        if current_atp < 5.0:
-            trigger = True; reason = "METABOLIC CRASH (Low ATP)"
+        starvation_line = getattr(BoneConfig.BIO, "ATP_STARVATION", 5.0)
+        collapse_threshold = max(1.0, starvation_line * 0.5)
+        if current_atp < collapse_threshold:
+            trigger = True
+            reason = f"METABOLIC CRASH (ATP < {collapse_threshold:.1f})"
         elif tick > 0 and tick % 100 == 0:
-            trigger = True; reason = "CIRCADIAN CLEANUP"
+            trigger = True
+            reason = "CIRCADIAN CLEANUP"
         if trigger and hasattr(self.eng.mind, "dreamer"):
             phys_data = ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics
             bio_packet = {
                 "chem": ctx.bio_result.get("chemistry", {}),
                 "mito": {"ros": 0.0, "atp": current_atp},
                 "physics": phys_data}
-            dream_packet = self.eng.mind.dreamer.enter_rem_cycle(self.eng.mind.mem, bio_readout=bio_packet)
             ctx.log(f"\n{Prisma.VIOLET}[AUTO-SLEEP]: {reason} initiated.{Prisma.RST}")
+            dream_packet = self.eng.mind.dreamer.enter_rem_cycle(self.eng.mind.mem, bio_readout=bio_packet)
             if isinstance(dream_packet, dict):
                 ctx.log(dream_packet["log"])
                 ctx.last_dream = dream_packet
@@ -282,12 +306,14 @@ class MetabolismPhase(SimulationPhase):
                 ctx.log(dream_packet)
             defrag_log = self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
             ctx.log(f"{Prisma.GRY}   {defrag_log}{Prisma.RST}")
-            EMERGENCY_REBOOT_ATP = 33.0
-            self.eng.bio.mito.state.atp_pool = EMERGENCY_REBOOT_ATP
+            max_atp = getattr(BoneConfig, "MAX_ATP", 100.0)
+            reboot_val = max_atp * 0.33
+            self.eng.bio.mito.state.atp_pool = reboot_val
             ctx.is_alive = True
             ctx.bio_result["respiration"] = "REM_CYCLE"
-            ctx.bio_result["atp"] = EMERGENCY_REBOOT_ATP
-            ctx.log(f"{Prisma.GRN}   (Microsleep / Defibrillator Active. ATP stabilized at 33.0){Prisma.RST}")
+            ctx.bio_result["atp"] = reboot_val
+            ctx.log(
+                f"{Prisma.GRN}   (Microsleep / Defibrillator Active. ATP stabilized at {reboot_val:.1f}){Prisma.RST}")
 
     @staticmethod
     def _generate_feedback(physics):
@@ -427,9 +453,10 @@ class MachineryPhase(SimulationPhase):
         _, _, theremin_msg, t_crit = self.eng.phys.theremin.listen(physics.to_dict(), self.eng.bio.governor.mode)
         if theremin_msg: ctx.log(theremin_msg)
         if t_crit == "AIRSTRIKE":
-            damage = 25.0
+            max_hp = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+            damage = max_hp * 0.25
             self.eng.health -= damage
-            ctx.log(f"{Prisma.RED}*** CRITICAL THEREMIN DISCHARGE *** -{damage} HP{Prisma.RST}")
+            ctx.log(f"{Prisma.RED}*** CRITICAL THEREMIN DISCHARGE *** -{damage:.1f} HP{Prisma.RST}")
             if hasattr(self.eng.events, "publish"):
                 self.eng.events.publish("AIRSTRIKE", {"damage": damage, "source": "THEREMIN"})
         c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(physics.to_dict())

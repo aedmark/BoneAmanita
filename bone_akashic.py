@@ -173,6 +173,7 @@ class TheAkashicRecord:
         self.shadow_stock.append(memory_data)
         if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
             self.shadow_stock.pop(0)
+        self.save_all()
         print(f"{Prisma.VIOLET}[AKASHIC]: Ghost Echo archived: '{memory_data.get('lesson')}'{Prisma.RST}")
 
     def calculate_manifold_shift(self, theta: str, e: Dict[str, float]) -> Dict[str, float]:

@@ -20,6 +20,7 @@ def cosine_similarity(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float
 MAX_SOLVENT_TOLERANCE = 40.0
 TEXT_LENGTH_SCALAR = 1500.0
 
+
 class TheGatekeeper:
     def __init__(self, engine_ref):
         self.eng = engine_ref
@@ -39,10 +40,11 @@ class TheGatekeeper:
         return True, None
 
     def _check_thermodynamics(self, ctx):
+        threshold = getattr(BoneConfig.BIO, "ATP_STARVATION", 5.0) * 0.5
         if hasattr(ctx, "bio_snapshot") and ctx.bio_snapshot:
-            return ctx.bio_snapshot.get("atp", 10.0) > 1.0
+            return ctx.bio_snapshot.get("atp", 10.0) > threshold
         if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
-            return self.eng.bio.mito.state.atp_pool > 1.0
+            return self.eng.bio.mito.state.atp_pool > threshold
         return True
 
     def _audit_tangibility(self, phys):
@@ -53,7 +55,7 @@ class TheGatekeeper:
                 phys.counts.get("constructive", 0) +
                 (phys.counts.get("play", 0) * 0.5))
         ether_score = phys.counts.get("abstract", 0) + phys.counts.get("sacred", 0)
-        coherence = phys.kappa  # Geodesic coherence
+        coherence = phys.kappa
         if ether_score > 2 and coherence > 0.6:
             return True
         density = mass_score / max(1, len(phys.clean_words))
@@ -111,12 +113,20 @@ class GeodesicEngine:
 
     @staticmethod
     def _calculate_forces(masses, counts, volume, config) -> Dict[str, float]:
+        phys_conf = getattr(config, "PHYSICS", None)
+        w_heavy = getattr(phys_conf, "WEIGHT_HEAVY", 2.0)
+        w_explosive = getattr(phys_conf, "WEIGHT_EXPLOSIVE", 3.0)
+        w_constructive = getattr(phys_conf, "WEIGHT_CONSTRUCTIVE", 1.5)
+        drag_halt = getattr(phys_conf, "DRAG_HALT", 10.0)
+        k_gain = getattr(config, "KINETIC_GAIN", 1.0)
+        drag_mult = getattr(config, "SIGNAL_DRAG_MULTIPLIER", 1.0)
+        shapley_thresh = getattr(config, "SHAPLEY_MASS_THRESHOLD", 5.0)
         total_kinetic = masses["kinetic"] + masses["explosive"]
         raw_tension_mass = (
-                (masses["heavy"] * config.PHYSICS.WEIGHT_HEAVY) +
-                (total_kinetic * config.PHYSICS.WEIGHT_EXPLOSIVE) +
-                (masses["constructive"] * config.PHYSICS.WEIGHT_CONSTRUCTIVE))
-        tension = round(((raw_tension_mass / volume) * 25.0) * config.KINETIC_GAIN, 2)
+                (masses["heavy"] * w_heavy) +
+                (total_kinetic * w_explosive) +
+                (masses["constructive"] * w_constructive))
+        tension = round(((raw_tension_mass / volume) * 25.0) * k_gain, 2)
         shear_rate = total_kinetic / volume
         raw_friction = (
                 (counts.get("solvents", 0) * 0.2) +
@@ -128,9 +138,9 @@ class GeodesicEngine:
             kinetic_lift = kinetic_lift / (masses["heavy"] * 0.5 + 1.0)
         lift = (masses["play"] * 2.5) + kinetic_lift
         raw_compression = ((dynamic_viscosity / volume) * 10.0) - ((lift / volume) * 10.0)
-        compression = round(max(-5.0, min(config.PHYSICS.DRAG_HALT, raw_compression * config.SIGNAL_DRAG_MULTIPLIER)), 2)
+        compression = round(max(-5.0, min(drag_halt, raw_compression * drag_mult)), 2)
         structural_mass = masses["heavy"] + masses["constructive"]
-        coherence = min(1.0, structural_mass / max(1, config.SHAPLEY_MASS_THRESHOLD))
+        coherence = min(1.0, structural_mass / max(1, shapley_thresh))
         abstraction = min(1.0, (masses["abstract"] / volume) + 0.2)
         return {
             "tension": tension,

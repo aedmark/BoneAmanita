@@ -26,7 +26,6 @@ class CoreMemory:
     type: str = "INCIDENT"
     meta: Dict[str, Any] = field(default_factory=dict)
 
-
 class TheEditor:
     def __init__(self, lexicon_ref=None):
         self.lex = lexicon_ref if lexicon_ref else TheLexicon
@@ -237,7 +236,9 @@ class NarrativeSelf:
                 "lesson": forgotten.lesson,
                 "trigger_words": forgotten.trigger_words,
                 "voltage": forgotten.impact_voltage,
-                "timestamp": forgotten.timestamp}
+                "timestamp": forgotten.timestamp,
+                "archetype": self.archetype,
+                "chapter_context": self.chapters[-1] if self.chapters else "Genesis"}
             self.eng.akashic.store_ghost_echo(mem_dict)
             self.events.log(
                 f"{Prisma.VIOLET}[SOUL]: Memory '{forgotten.lesson}' recedes into the Shadow Stock.{Prisma.RST}",

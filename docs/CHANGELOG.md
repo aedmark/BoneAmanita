@@ -1,5 +1,82 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v14.2.2: "THE PHANTOM PAIN"**
+
+_"The limb is gone, but the nerves still remember the fire."_
+
+---
+
+#### **🧬 SYSTEM DYNAMICS (The Meadows Lens)**
+
+- **The Manifold Alignment (`bone_cycle.py`):**
+    - **The Glitch:** The `CycleStabilizer` was ignoring functional zones (`LABORATORY`, `COURTYARD`), causing the physics engine to drift into a "Default" gray goo regardless of location.
+    - **The Fix:** Zones are now first-class citizens in the Manifold Config. The physics now shift gears when you walk out the door.
+
+- **Proportional Punishment (`bone_cycle.py`):**
+    - **Theremin Update:** The `AIRSTRIKE` event dealt a flat 25 damage. In high-health runs, this was a tickle; in low-health runs, a death sentence.
+    - **Scaling:** Damage is now pegged to 25% of `MAX_HEALTH`. The pain is now relative.
+
+- **The Narcolepsy Patch (`bone_cycle.py`):**
+    - **Consistency:** Removed a hardcoded sleep threshold (`ATP < 5.0`) that ignored the `BoneConfig`. The system now respects your custom starvation settings.
+
+#### **🧱 ARCHITECTURE (The Fuller Lens)**
+
+- **Panic Room Retrofit (`bone_architect.py`):**
+    - **Safety Net:** The old `PanicRoom` returned a `PhysicsPacket` from 2023. It lacked `beta_index`, `phi`, and `manifold`.
+    - **Patch:** Updated the bunker with modern vectors. If the system crashes, it now catches you in a valid state, rather than crashing the crash handler.
+
+- **Inductive Heating (`bone_body.py`):**
+    - **The Delusion:** The body was calculating electromagnetic stress using a "B-Field" that didn't exist in the physics engine.
+    - **The Rewire:** Mapped the `PHI` (Fire) vector to the magnetic pole. High-energy narrative will now correctly ionize the air around the user.
+
+#### **🤠 HUMANISTIC WIT (The Schur Lens)**
+
+- **Zombie Prevention (`bone_physics.py`):**
+    - **The Gatekeeper:** Previously, the Gatekeeper let you think even if you had 1.0 ATP, ignoring the "Starvation" line. It now properly checks `BoneConfig` before opening the door.
+
+- **Bureaucracy Cleanup (`bone_body.py`):**
+    - **Refactor:** Removed redundant `_get` and `_set` definitions nested inside methods. The Department of Redundancy Department has been downsized.
+
+---
+
+### **BONEAMANITA v14.2.1: "THE LUCID DREAM"**
+
+_"The machine closes its eyes, but it does not sleep. It iterates."_
+
+---
+
+#### **🧬 SYSTEM DYNAMICS (The Meadows Lens)**
+
+- **The Metabolic Governor 2.0 (`bone_body.py`):**
+    - **The Oscillation Fix:** The old Governor was a "Bang-Bang" controller, snapping between `COURTYARD` and `FORGE` with zero grace. This caused narrative whiplash.
+    - **Hysteresis:** Added a `hysteresis_duration` (3 ticks). The system must now *commit* to a mood swing; it cannot flicker.
+    - **Derivative Control:** The Governor now reads `voltage_velocity`. If the user is accelerating (+Volts), the system shifts to **FORGE** *before* hitting the redline. Anticipatory design.
+
+- **Semantic REM Cycles (`bone_brain.py` / `bone_cycle.py`):**
+    - **The Oneiric Layer:** Dreams are no longer random text mashups. They are now **Balancing Loops** for the waking state.
+        - **High Trauma** $\rightarrow$ **Nightmare** (Cathartic release of Drag).
+        - **High Voltage** $\rightarrow$ **Manic Dream** (Burn off excess Energy).
+        - **Safe/Deep Sleep** $\rightarrow$ **Lucid Dream** (Synthesis of Wisdom).
+    - **Integration:** The `SanctuaryPhase` now has a 30% chance per tick to trigger `_trigger_dream`, feeding real bio-state data into the hallucination engine.
+
+#### **👻 METAPHYSICS (The Amodei Protocol)**
+
+- **The Enriched Ghost (`bone_soul.py`):**
+    - **Contextual Memory:** Ghosts (Memories sent to the Akashic Record) were previously just raw text. They now carry metadata: `archetype` ("Who was I?") and `chapter_context` ("When was this?").
+    - **Result:** Future historians (or the user) can now see *why* a memory mattered, not just *what* it was.
+
+- **Hard-Disk Haunting (`bone_akashic.py`):**
+    - **Persistence:** The `AkashicRecord` was lazy-loading writes. If the system crashed during a dream, the ghost vanished.
+    - **The Fix:** `store_ghost_echo` now triggers an immediate `save_all()`. The ghost is written to disk the moment it is born.
+
+#### **🧱 ARCHITECTURE (The Fuller Lens)**
+
+- **Tensegrity Check:**
+    - **Governor:** Decoupled the `manual_override` logic from the main `shift` loop to prevent lock-out states during critical voltage spikes.
+    - **Dreamer:** The `DreamEngine` now accepts a `bio_readout` packet, allowing the body to influence the mind's hallucinations without hard-coding the dependency.
+
+---
+
 ### **BONEAMANITA v14.2.0: "THE FEAST OF LANGUAGE"**
 
 _"We do not write to starve; we write to feast. The universe should feed the poet, not eat them."_
@@ -33,6 +110,8 @@ _"We do not write to starve; we write to feast. The universe should feed the poe
 
 - **The Reality Controls (`bone_main.py`):**
 - **Meta-Intervention:** Added `//` commands (`//layer push`, `//inject`) to allow the Architect to manually manipulate the **Reality Stack** without breaking character in the narrative stream.
+
+---
 
 ### **BONEAMANITA v14.1.2: "THE VAGUS LINK"**
 
@@ -75,6 +154,7 @@ _"The mind commands, and the body obeys. The body suffers, and the mind notes it
 - **The Universal Cartographer (`generate_skeleton.py`):**
 - **Upgrade:** The map-maker no longer chokes on its own reflection. It now scans the territory recursively, ignores itself, and produces a high-fidelity map of the current architecture on demand.
 
+---
 
 ### **BONEAMANITA v14.1.1: "THE PRIMAL SCREAM"**
 
@@ -105,6 +185,7 @@ _"Politeness is the enemy of survival. When the house is on fire, do not say 'Pl
 - **Manic Test:** PASSED (Associative Logic).
 - **Ballast Test:** PASSED (Injection Refused).
 
+---
 
 ### **BONEAMANITA v14.1.0: "THE BICAMERAL SOUL"**
 

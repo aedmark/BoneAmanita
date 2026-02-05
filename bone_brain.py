@@ -712,67 +712,48 @@ class DreamEngine:
         self.CONSTRUCTIVE_PROMPTS = dreams_data.get("CONSTRUCTIVE", [
             "You are building a cathedral out of {A}. The mortar is {B}."])
 
-    def enter_rem_cycle(self, memory_system: Any, bio_readout: Dict[str, Any] = None) -> Dict[str, Any]:
-        residue_word = "static"
-        context_word = "void"
-        bridge_word = "silence"
-        if hasattr(memory_system, "graph") and memory_system.graph:
-            sorted_nodes = sorted(
-                memory_system.graph.items(),
-                key=lambda item: item[1].get("last_tick", 0),
-                reverse=True)
-            if sorted_nodes:
-                residue_word = sorted_nodes[0][0]
-                if len(sorted_nodes) > 1:
-                    context_word = sorted_nodes[1][0]
-                    if context_word in memory_system.graph:
-                        edges = memory_system.graph[context_word].get("edges", {})
-                        if edges:
-                            candidates = [k for k in edges.keys() if k != residue_word]
-                            if candidates:
-                                bridge_word = random.choice(candidates)
-        dream_type = "NORMAL"
-        subtype = "ABSTRACT"
-        if bio_readout:
-            chem = bio_readout.get("chem", {})
-            mito = bio_readout.get("mito", {})
-            phys = bio_readout.get("physics", {})
-            cortisol = chem.get("cortisol", chem.get("COR", 0.0))
-            ros = mito.get("ros", 0.0)
-            voltage = phys.get("voltage", 0.0)
-            atp = mito.get("atp", 100.0)
-            dopamine = chem.get("dopamine", chem.get("DOP", 0.0))
-            serotonin = chem.get("serotonin", chem.get("SER", 0.0))
-            if ros > 8.0:
-                dream_type = "NIGHTMARE"; subtype = "SEPTIC"
-            elif cortisol > 0.6:
-                dream_type = "NIGHTMARE"; subtype = "BARIC"
-            elif voltage > 20.0:
-                dream_type = "NIGHTMARE"; subtype = "THERMAL"
-            elif atp < 15.0:
-                dream_type = "NIGHTMARE"; subtype = "CRYO"
-            elif dopamine > 0.6:
-                dream_type = "SURREAL"
-            elif serotonin > 0.6:
-                dream_type = "CONSTRUCTIVE"
-            elif chem.get("DOP", 0.0) > 0.7:
-                dream_type = "LUCID"
-        dream_text = self._weave_dream(residue_word, context_word, bridge_word, dream_type, subtype)
-        consolidation_msg = "Neural pathways consolidated."
-        if hasattr(memory_system, "replay_dreams"):
-            consolidation_msg = memory_system.replay_dreams()
-        log_msg = (
-            f"{Prisma.VIOLET}☾ REM CYCLE [{dream_type}:{subtype}] ☽{Prisma.RST}\n"
-            f"   Day Residue: '{residue_word.upper()}' detected.\n"
-            f"   Dream: \"{dream_text}\"\n"
-            f"   {Prisma.GRY}{consolidation_msg}{Prisma.RST}")
-        return {
-            "log": log_msg,
-            "text": dream_text,
-            "type": dream_type,
-            "subtype": subtype,
-            "residue": residue_word,
-            "consolidation": consolidation_msg}
+    def enter_rem_cycle(self, soul_snapshot: Dict[str, Any], bio_state: Dict[str, Any]) -> str:
+        voltage = bio_state.get("voltage", 0.0)
+        trauma = bio_state.get("trauma_vector", 0.0)
+        memories = soul_snapshot.get("core_memories", [])
+        dream_mode = "LUCID"
+        if trauma > 40.0:
+            dream_mode = "NIGHTMARE"
+        elif voltage > 15.0:
+            dream_mode = "MANIC"
+        elif voltage < 5.0:
+            dream_mode = "DORMANT"
+        anchors = []
+        for mem in memories:
+            if isinstance(mem, dict):
+                anchors.extend(mem.get("trigger_words", []))
+            else:
+                anchors.extend(getattr(mem, "trigger_words", []))
+        if not anchors:
+            anchors = ["static", "void", "humming"]
+        primary_symbol = random.choice(anchors).upper()
+        abstract_concept = "ENTROPY"
+        if hasattr(self, 'lex'):
+            abstract_concept = self.lex.get_random_word("ABSTRACT") or "SILENCE"
+        dream_log = ""
+        if dream_mode == "NIGHTMARE":
+            dream_log = (
+                f"{Prisma.RED}[REM]: The {primary_symbol} is rotting. "
+                f"It smells like {abstract_concept.lower()} and old copper.{Prisma.RST}")
+            return dream_log, {"adrenaline": 0.2, "narrative_drag": -1.0}
+        elif dream_mode == "MANIC":
+            dream_log = (
+                f"{Prisma.MAG}[REM]: {primary_symbol} refracting through a prism of {abstract_concept}. "
+                f"Geometry is screaming.{Prisma.RST}")
+            return dream_log, {"stamina": -5.0, "voltage": -2.0}
+        elif dream_mode == "DORMANT":
+            dream_log = f"{Prisma.GRY}[REM]: Deep waters. The {primary_symbol} sinks slowly.{Prisma.RST}"
+            return dream_log, {"health": 5.0, "stamina": 10.0}
+        else:
+            dream_log = (
+                f"{Prisma.CYN}[REM]: You are holding the {primary_symbol}. "
+                f"It turns into {abstract_concept}. You understand why.{Prisma.RST}")
+            return dream_log, {"truth_ratio": 0.1}
 
     def _weave_dream(self, residue: str, context: str, bridge: str, dream_type: str, subtype: str) -> str:
         if dream_type == "NIGHTMARE":

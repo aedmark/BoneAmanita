@@ -102,26 +102,22 @@ class BioSystem:
 
     def apply_environmental_entropy(self, physics_packet):
         base_entropy = 2.0
-        def _g(obj, k, d=0.0):
-            return obj.get(k, d) if isinstance(obj, dict) else getattr(obj, k, d)
-        if isinstance(physics_packet, dict):
-            em_field = physics_packet.get("electromagnetism", 0.0)
-            if em_field == 0.0:
-                e = physics_packet.get("E", 0.0)
-                b = physics_packet.get("B", 0.0)
-                em_field = math.sqrt(e**2 + b**2)
+        em_field = 0.0
+        if hasattr(physics_packet, "vector") and physics_packet.vector:
+            vec = physics_packet.vector
+            e_val = vec.get("E", 0.0)
+            b_val = vec.get("PHI", 0.0)
+            em_field = math.sqrt(e_val**2 + b_val**2)
         else:
-            em_field = getattr(physics_packet, "electromagnetism", 0.0)
-            if em_field == 0.0:
-                e = getattr(physics_packet, "E", 0.0)
-                b = getattr(physics_packet, "B", 0.0)
-                em_field = math.sqrt(e**2 + b**2)
-
+            e_val = _get_val(physics_packet, "E", 0.0)
+            b_val = _get_val(physics_packet, "B", 0.0)
+            em_field = math.sqrt(e_val**2 + b_val**2)
         shield_strength = min(0.8, em_field * 0.1)
         effective_entropy = base_entropy * (1.0 - shield_strength)
         thermal_feedback = 0.0
-        if em_field > 8.0:
-            thermal_feedback = (em_field - 8.0) * 1.5
+        HEAT_THRESHOLD = 0.8
+        if em_field > HEAT_THRESHOLD:
+            thermal_feedback = (em_field - HEAT_THRESHOLD) * 5.0
             if self.events:
                 self.events.log(f"{Prisma.RED}⚠ INDUCTIVE HEATING: The air is ionizing around you.{Prisma.RST}", "BIO_WARN")
         total_drain = effective_entropy + thermal_feedback
@@ -312,7 +308,7 @@ class SomaticLoop:
         phys = self._normalize_physics(physics_data)
         logs = []
         if self.bio.events and hasattr(self.bio, "apply_environmental_entropy"):
-            self.bio.apply_environmental_entropy(phys)
+            self.bio.apply_environmental_entropy(physics_data)
         modifiers = self._gather_hormonal_modifiers(phys, logs)
         receipt = self.bio.mito.process_cycle(phys, external_modifiers=modifiers)
         resp_status = receipt.status
@@ -505,7 +501,6 @@ class EndocrineSystem:
     melatonin: float = 0.0
     glimmers: int = 0
     narrative_data: Dict = field(default_factory=dict, repr=False)
-
     _REACTION_MAP = {
         "PROTEASE":   {"ADR": BoneConfig.BIO.REWARD_MEDIUM},
         "CELLULASE":  {"COR": -BoneConfig.BIO.REWARD_MEDIUM, "OXY": BoneConfig.BIO.REWARD_SMALL},
@@ -658,6 +653,7 @@ class EndocrineSystem:
             "ADR": round(self.adrenaline, 2),
             "MEL": round(self.melatonin, 2)}
 
+
 @dataclass
 class MetabolicGovernor:
     mode: str = "COURTYARD"
@@ -668,6 +664,8 @@ class MetabolicGovernor:
     manual_override: bool = False
     birth_tick: float = field(default_factory=time.time)
     narrative_data: Dict = field(default_factory=dict, repr=False)
+    last_shift_tick: int = 0
+    hysteresis_duration: int = 3
 
     @staticmethod
     def get_stress_modifier(tick_count):
@@ -679,7 +677,7 @@ class MetabolicGovernor:
     def calculate_stress(health: float, ros_buildup: float) -> float:
         base_stress = 1.0
         if health < 50.0:
-            base_stress += (50.0 - health) * 0.02
+            base_stress += (50.0 - health) * 0.01
         if ros_buildup > 50.0:
             base_stress += (ros_buildup - 50.0) * 0.01
         return round(min(3.0, base_stress), 2)
@@ -687,7 +685,6 @@ class MetabolicGovernor:
     def set_override(self, target_mode):
         valid = {"COURTYARD", "LABORATORY", "FORGE", "SANCTUARY"}
         gov_text = self.narrative_data.get("GOVERNOR", {})
-
         if target_mode in valid:
             self.mode = target_mode
             self.manual_override = True
@@ -697,47 +694,51 @@ class MetabolicGovernor:
 
     def shift(self, physics: Dict, _voltage_history: List[float], current_tick: int = 0) -> Optional[str]:
         gov_text = self.narrative_data.get("GOVERNOR", {})
-
-        def _get(p, k, d=0.0):
-            return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
-
-        def _set(p, k, v):
-            if isinstance(p, dict): p[k] = v
-            else: setattr(p, k, v)
-
+        current_voltage = _get_val(physics, "voltage", 0.0)
         if self.manual_override:
-            current_voltage = _get(physics, "voltage", 0.0)
             if current_voltage > BioConstants.GOV_VOLTAGE_CRITICAL:
                 self.manual_override = False
                 return gov_text.get("OVERRIDE_CLEARED", "OVERRIDE CLEARED: VOLTAGE CRITICAL")
             return None
-        current_voltage = _get(physics, "voltage", 0.0)
-        drag = _get(physics, "narrative_drag", 0.0)
-        beta = _get(physics, "beta_index", 0.0)
+        time_since_shift = current_tick - self.last_shift_tick
+        is_locked = time_since_shift < self.hysteresis_duration
+        if is_locked and current_voltage < BioConstants.GOV_VOLTAGE_HIGH:
+            return None
+        drag = _get_val(physics, "narrative_drag", 0.0)
+        beta = _get_val(physics, "beta_index", 0.0)
+        voltage_velocity = 0.0
+        if len(_voltage_history) >= 2:
+            voltage_velocity = _voltage_history[-1] - _voltage_history[-2]
+        proposed_mode = self.mode
+        log_msg = None
         if current_tick <= 5:
-            _set(physics, "voltage", min(current_voltage, 8.0))
-        if current_voltage > BioConstants.GOV_VOLTAGE_HIGH and beta > 1.5:
-            if self.mode != "SANCTUARY":
-                self.mode = "SANCTUARY"
-                _set(physics, "narrative_drag", 0.0)
+            _set_val(physics, "voltage", min(current_voltage, 8.0))
+            proposed_mode = "COURTYARD"
+        elif current_voltage > BioConstants.GOV_VOLTAGE_HIGH and beta > 1.5:
+            proposed_mode = "SANCTUARY"
+            _set_val(physics, "narrative_drag", 0.0)
+        elif current_voltage > BioConstants.GOV_VOLTAGE_MED or (current_voltage > 8.0 and voltage_velocity > 1.0):
+            proposed_mode = "FORGE"
+        elif drag > BioConstants.GOV_DRAG_HIGH > current_voltage:
+            proposed_mode = "LABORATORY"
+        elif current_voltage < BioConstants.GOV_VOLTAGE_LOW and drag < BioConstants.GOV_DRAG_LOW:
+            proposed_mode = "COURTYARD"
+        if proposed_mode != self.mode:
+            self.mode = proposed_mode
+            self.last_shift_tick = current_tick
+            if self.mode == "SANCTUARY":
                 tmpl = gov_text.get("SANCTUARY", "{color}SANCTUARY ACTIVE{reset}")
-                return tmpl.format(color=Prisma.GRN, beta=beta, reset=Prisma.RST)
-        if current_voltage > BioConstants.GOV_VOLTAGE_MED:
-            if self.mode != "FORGE":
-                self.mode = "FORGE"
+                log_msg = tmpl.format(color=Prisma.GRN, beta=beta, reset=Prisma.RST)
+            elif self.mode == "FORGE":
                 tmpl = gov_text.get("FORGE", "{color}FORGE ACTIVE{reset}")
-                return tmpl.format(color=Prisma.RED, volts=current_voltage, reset=Prisma.RST)
-        if drag > BioConstants.GOV_DRAG_HIGH > current_voltage:
-            if self.mode != "LABORATORY":
-                self.mode = "LABORATORY"
+                log_msg = tmpl.format(color=Prisma.RED, volts=current_voltage, reset=Prisma.RST)
+            elif self.mode == "LABORATORY":
                 tmpl = gov_text.get("LAB", "{color}LAB ACTIVE{reset}")
-                return tmpl.format(color=Prisma.CYN, reset=Prisma.RST)
-        if self.mode != "COURTYARD":
-            if current_voltage < BioConstants.GOV_VOLTAGE_LOW and drag < BioConstants.GOV_DRAG_LOW:
-                self.mode = "COURTYARD"
+                log_msg = tmpl.format(color=Prisma.CYN, reset=Prisma.RST)
+            elif self.mode == "COURTYARD":
                 tmpl = gov_text.get("CLEAR", "{color}SYSTEM CLEAR{reset}")
-                return tmpl.format(color=Prisma.GRN, reset=Prisma.RST)
-        return None
+                log_msg = tmpl.format(color=Prisma.GRN, reset=Prisma.RST)
+        return log_msg
 
 class ViralTracer:
     def __init__(self, mem):
