@@ -166,13 +166,16 @@ class MitochondrialForge:
                 mod_factor *= m
         efficiency = max(0.35, self.state.membrane_potential)
         raw_cost = ((base_demand + cognitive_load_tax) * mod_factor) / efficiency
-        MAX_BURN = 25.0
-        total_metabolic_cost = min(MAX_BURN, raw_cost)
+        total_metabolic_cost = raw_cost
         waste_generated = total_metabolic_cost * (1.0 - efficiency) * 0.5
         self.state.ros_buildup += waste_generated
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
-        if raw_cost > MAX_BURN and self.events:
-            self.events.log(f"{Prisma.YEL}⚡ METABOLIC GOVERNOR: Burn capped at {MAX_BURN} (Raw: {raw_cost:.1f}). Efficiency critical.{Prisma.RST}", "BIO")
+        if total_metabolic_cost > 30.0:
+            self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.01)
+            if self.events:
+                self.events.log(
+                    f"{Prisma.RED}🔥 THERMAL RUNAWAY: Burn ({total_metabolic_cost:.1f}) melted mitochondrial lining.{Prisma.RST}",
+                    "BIO_CRIT")
         self._apply_adaptive_dynamics(waste_generated)
         status = "RESPIRING"
         if self.state.atp_pool < BioConstants.ATP_CRITICAL: status = "LOW_POWER"
@@ -784,13 +787,10 @@ class ViralTracer:
         node_b = loop_path[1]
         if node_b in self.mem.graph[node_a]["edges"]:
             self.mem.graph[node_a]["edges"][node_b] = 0
-        sensory = TheLexicon.harvest("photo")
-        action = TheLexicon.harvest("kinetic")
-        if isinstance(sensory, dict) or isinstance(action, dict):
-            sensory = "light"
-            action = "move"
-        if sensory == "void" or action == "void":
-            return "GRAFT FAILED: The patients' vocabulary is too limited for a breakthrough."
+        sensory = TheLexicon.get_random("photo") or "light"
+        action = TheLexicon.get_random("kinetic") or "move"
+        if sensory == "void": sensory = "glimmer"
+        if action == "void": action = "drift"
         if node_a not in self.mem.graph:
             self.mem.graph[node_a] = {"edges": {}, "last_tick": 0}
         self.mem.graph[node_a]["edges"][sensory] = 5

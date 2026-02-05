@@ -8,6 +8,7 @@ from bone_core import Prisma, BoneConfig
 from bone_lexicon import TheLexicon
 from bone_akashic import TheAkashicRecord
 
+
 MEMORY_VOLTAGE_THRESHOLD = 14.0
 MEMORY_TRUTH_THRESHOLD = 0.8
 MANIC_VOLTAGE_THRESHOLD = 18.0

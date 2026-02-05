@@ -177,6 +177,7 @@ class GordonKnot:
     scar_tissue: Dict[str, float] = field(default_factory=dict)
     last_flinch_turn: int = -10
     physics_state: TensegrityState = field(default_factory=TensegrityState)
+    events: Optional[Any] = field(default=None, repr=False)
     active_effect_cache: List[Tuple] = field(default_factory=list, init=False)
     ITEM_REGISTRY: Dict = field(default_factory=dict, init=False)
     CRITICAL_ITEMS: set = field(default_factory=set, init=False)
@@ -417,45 +418,70 @@ class GordonKnot:
 
     def check_gravity(self, current_drift: float, psi: float) -> Tuple[float, List[str]]:
         messages = []
-        new_drift = current_drift
+        if not self.physics_state:
+            self._recalculate_tensegrity()
+        total_mass = self.physics_state.mass
+        levitation_offset = psi * 5.0
+        effective_mass = max(0.0, total_mass - levitation_offset)
+        new_drift = max(current_drift, effective_mass)
+        if effective_mass > 4.0 and current_drift < effective_mass:
+            messages.append(
+                f"{Prisma.OCHRE}BURDEN: Inventory mass ({effective_mass:.1f}kg) anchors the narrative.{Prisma.RST}")
         for item in self.inventory:
             data = self.get_item_data(item)
             if data.get("function") == "GRAVITY_BUFFER" and new_drift > 0.5:
                 force = data.get("value", 2.0)
-                cost = data.get("cost_value", 0.0)
-                if data.get("cost") == "INTEGRITY":
-                    self.integrity -= cost
                 new_drift = max(0.0, new_drift - force)
-                messages.append(f"![🪨](https://fonts.gstatic.com/s/e/notoemoji/16.0/1faa8/32.png) {item}: {data.get('usage_msg', 'Drift Reduced.')}")
+                messages.append(
+                    f"![🪨]{item}: {data.get('usage_msg', 'Drift Reduced.')}")
         if psi > 0.8 and new_drift > 4.0:
             new_drift = max(4.0, new_drift - 1.0)
             messages.append("WIND WOLVES: The logic is howling. You grip the roof.")
         return new_drift, messages
 
     def check_flinch(self, clean_words: List[str], current_turn: int) -> Optional[Dict]:
-        if (current_turn - self.last_flinch_turn) < 10:
+        if (current_turn - self.last_flinch_turn) < 5:
             return None
-        hits = [w for w in clean_words if w.upper() in self.pain_memory]
-        if not hits:
-            return None
-        self.last_flinch_turn = current_turn
-        trigger = hits[0].upper()
-        sensitivity = self.scar_tissue.get(trigger, 0.5)
-        if sensitivity > 0.8:
-            self.scar_tissue[trigger] = min(1.0, sensitivity + 0.1)
-            return {
-                "message": f"{Prisma.RED}PTSD TRIGGER: '{trigger}' sent Gordon into a flashback. He dropped the keys.{Prisma.RST}",
-                "physics_effects": {"narrative_drag": 5.0, "voltage": 15.0}}
-        elif sensitivity > 0.4:
-            self.scar_tissue[trigger] = min(1.0, sensitivity + 0.05)
-            return {
-                "message": f"{Prisma.OCHRE}SCAR TISSUE: Gordon flinches at '{trigger}'. Hands are shaking.{Prisma.RST}",
-                "physics_effects": {"narrative_drag": 2.0}}
-        else:
-            self.scar_tissue[trigger] = max(0.0, sensitivity - 0.05)
-            return {
-                "message": f"{Prisma.GRY}CALLOUS: '{trigger}' hit an old scar. Gordon ignores it.{Prisma.RST}",
-                "physics_effects": {}}
+        result = {"message": "", "physics_effects": {}}
+        triggered = False
+        raw_text = " ".join(clean_words)
+        if len(raw_text) > 5 and raw_text.isupper():
+            result["message"] = f"{Prisma.YEL}FLINCH: The system recoils from the noise (ALL CAPS).{Prisma.RST}"
+            result["physics_effects"]["voltage"] = 25.0
+            result["physics_effects"]["turbulence"] = 1.0
+            triggered = True
+        if not triggered:
+            hits = [w for w in clean_words if w.upper() in self.pain_memory]
+            if hits:
+                trigger = hits[0].upper()
+                sensitivity = self.scar_tissue.get(trigger, 0.5)
+                if sensitivity > 0.8:
+                    self.scar_tissue[trigger] = min(1.0, sensitivity + 0.1)
+                    result[
+                        "message"] = f"{Prisma.RED}PTSD TRIGGER: '{trigger}' sent Gordon into a flashback.{Prisma.RST}"
+                    result["physics_effects"]["narrative_drag"] = 5.0
+                    result["physics_effects"]["voltage"] = 15.0
+                    triggered = True
+                elif sensitivity > 0.4:
+                    self.scar_tissue[trigger] = min(1.0, sensitivity + 0.05)
+                    result["message"] = f"{Prisma.OCHRE}SCAR TISSUE: Gordon flinches at '{trigger}'.{Prisma.RST}"
+                    result["physics_effects"]["narrative_drag"] = 2.0
+                    triggered = True
+                else:
+                    self.scar_tissue[trigger] = max(0.0, sensitivity - 0.05)
+        if triggered:
+            self.last_flinch_turn = current_turn
+            if self.inventory and random.random() < 0.2:
+                droppable = [i for i in self.inventory if i not in self.CRITICAL_ITEMS]
+                if droppable:
+                    dropped = random.choice(droppable)
+                    if self.safe_remove_item(dropped):
+                        result[
+                            "message"] += f"\n   {Prisma.RED}CLATTER: You dropped '{dropped}' in the panic.{Prisma.RST}"
+                        if self.events:
+                            self.events.publish("ITEM_LOST", {"item": dropped, "reason": "FLINCH"})
+            return result
+        return None
 
     def learn_scar(self, toxic_words: List[str], damage: float, current_integrity: Optional[float] = None) -> Optional[str]:
         integrity_val = current_integrity if current_integrity is not None else self.integrity

@@ -96,16 +96,22 @@ class LexiconStore:
             return []
         cats = list(self.LEARNED_VOCAB.keys())
         if not cats: return []
-        target_cat = cats[current_tick % len(cats)]
+        target_cat = random.choice(cats)
         words = self.LEARNED_VOCAB[target_cat]
         rotted = []
         protected = protected or set()
-        for candidate in list(words.keys()):
+        candidates = list(words.keys())
+        sample_size = max(5, len(candidates) // 10)
+        audit_batch = random.sample(candidates, min(len(candidates), sample_size))
+        for candidate in audit_batch:
             if candidate in protected:
                 continue
-            if (current_tick - words[candidate]) > max_age:
-                del words[candidate]
-                rotted.append(candidate)
+            age = current_tick - words[candidate]
+            if age > max_age:
+                death_probability = 1.0 if age > (max_age * 2) else 0.2
+                if random.random() < death_probability:
+                    del words[candidate]
+                    rotted.append(candidate)
         if rotted:
             self._save_hive()
         return rotted

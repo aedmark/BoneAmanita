@@ -1,5 +1,76 @@
 # BONEAMANITA v11 CHANGELOG
 
+### **BONEAMANITA v14.2.4: "THE ATOMIC INCISION"**
+
+_"The system must distinguish between the voice of the god and the voice of the believer, lest it worship itself to death."_
+
+---
+
+#### **🧬 SYSTEM DYNAMICS (The Meadows Lens)**
+
+- **The Ouroboros Loop (`bone_cycle.py` / `bone_main.py`):**
+- **The Death Spiral:** The system was treating its own `SYSTEM_BOOT` sequence as a User Action. This triggered a massive ATP tax (-34.8) and created false "ghosts" in the memory graph before the user even typed a word.
+- **The Fix:** Implemented the `is_system_event` flag. The `PhaseExecutor` now strictly skips `METABOLISM` and `OBSERVE` phases during administrative tasks. The system no longer eats its own tail.
+
+- **The Metabolic Bypass (`bone_cycle.py`):**
+- **The Conservation:** By creating a "Tax-Free" lane for system outputs, we ensure the user enters the simulation with full reserves (`100.0` Health / `100.0` Stamina), rather than starting in a deficit caused by the narrator's verbosity.
+
+#### **🧠 COGNITIVE ARCHITECTURE (The Pinker Lens)**
+
+- **The Visual Cortex Fracture (`bone_brain.py` / `bone_app.py`):**
+- **The Blur:** Streamlit and the CLI were crushing the LLM's output into dense walls of text because the model lazily outputted single newlines.
+- **The Fix:** Enforced **Cognitive Ease** via regex aggression. We now mechanically explode single newlines `(?<!\n)\n(?!\n)` into double newlines before rendering.
+- **The Result:** Space is restored. The narrative breathes.
+
+#### **🧱 ARCHITECTURE (The Fuller Lens)**
+
+- **Atomic State (`bone_core.py`):**
+- **The Marker:** Added `is_system_event` to the `CycleContext` dataclass.
+- **The Result:** A reliable, atomic signal that propagates from the Kernel (`bone_main`) down to the Geodesics (`bone_cycle`), ensuring state purity during administrative tasks.
+
+- **Wiring Repairs (`bone_main.py`):**
+- **The Propagation:** Updated `engage_cold_boot` and `process_turn` to accept and pass the atomic flag. The nerves are now properly insulated.
+
+---
+
+### **BONEAMANITA v14.2.3: "THE GHOST IN THE GOVERNOR"**
+
+_"Memory is not a static archive; it is a metabolic process. We must feed the ghosts we wish to keep."_
+
+---
+
+#### **🧬 SYSTEM DYNAMICS (The Meadows Lens)**
+
+- **The Federal Reserve (`bone_cycle.py`):**
+- **The Death Spiral:** Identified a Reinforcing Feedback Loop () where low efficiency triggered high taxes, which drained ATP, which lowered efficiency further. The system was taxing itself to death during panic attacks.
+- **The Fix:** Installed a `PIDController` in the `MetabolismPhase`. The Governor now prints "Stimulus Checks" (ATP Subsidies) when efficiency plummets, creating a Balancing Loop () that arrests the crash before necrosis sets in.
+
+- **Thermodynamic Reality (`bone_body.py`):**
+- **The Cheat:** The `MitochondrialForge` had a safety cap (`MAX_BURN = 25.0`). High-voltage manic episodes were being subsidized by physics that didn't exist.
+- **The Uncapping:** Removed the safety valve. Thermodynamics is now absolute. If you run at 50v, you will burn 50 ATP. Added **Thermal Runaway**: burns > 30.0 now permanently damage mitochondrial lining.
+
+#### **🧱 ARCHITECTURE (The Fuller Lens)**
+
+- **Semantic Reconnection (`bone_village.py` / `bone_main.py`):**
+- **The Split Brain:** `TheTinkerer` was writing to a local, private `AkashicRecord`. Artifacts created in the village were invisible to the Soul.
+- **The Wire:** Injecting the central `Akashic` instance into the Village. When a tool ascends, the global mythos now updates synchronously.
+
+- **The Prometheus Patch (`bone_akashic.py`):**
+- **The Crash:** `forge_new_item` was a static method dependent on external data tables. If called without them (as the Tinkerer did), it crashed the simulation.
+- **The Self-Reliance:** Converted to an instance method. The method now checks `TheLore` for missing generation tables and synthesizes fallbacks if the archives are empty.
+
+#### **🧠 LINGUISTIC COGNITION (The Pinker Lens)**
+
+- **Synaptic Retention (`bone_lexicon.py`):**
+- **The Lobotomy:** The `atrophy` mechanism was deterministic and ruthless, wiping entire categories every 100 ticks. The system had Alzheimer's by design.
+- **The Mercy:** Switched to **Probabilistic Auditing**. The system now samples only 10% of a category, and old words have an 80% survival chance. Memories now fade gracefully rather than vanishing.
+
+- **Psilocybin Unbound (`bone_body.py`):**
+- **The Typos:** `ViralTracer` was trying to "harvest" the string "photo" instead of fetching words _from_ the category. "Rewired" thoughts always defaulted to "light" and "move".
+- **The Fix:** Switched to `get_random()`. The system now cures ruminative loops with actual poetry (e.g., "Anxiety" "Glimmer" "Drift").
+
+---
+
 ### **BONEAMANITA v14.2.2: "THE PHANTOM PAIN"**
 
 _"The limb is gone, but the nerves still remember the fire."_

@@ -47,7 +47,6 @@ class PanicRoom:
             psi=0.0,
             kappa=0.0,
             beta_index=1.0,
-            phi=0.0,
             manifold="BUNKER")
 
     @staticmethod

@@ -150,16 +150,26 @@ class TheAkashicRecord:
             print(f"✨ MYTHOLOGY ENGINE: The Lexicon expands. New Category: '{category_name.upper()}'")
             self.save_to_disk("LEXICON", lexicon_data)
 
-    @staticmethod
-    def forge_new_item(vector_data, ITEM_GENERATION=None):
+    def forge_new_item(self, vector_data, ITEM_GENERATION=None):
+        if ITEM_GENERATION is None:
+            gordon_data = self.lore.get("GORDON") or {}
+            ITEM_GENERATION = gordon_data.get("ITEM_GENERATION", {})
+        if not ITEM_GENERATION or "PREFIXES" not in ITEM_GENERATION:
+            ITEM_GENERATION = {
+                "PREFIXES": {"void": ["Null"]},
+                "BASES": {"default": ["Object"]},
+                "SUFFIXES": {"void": ["of Void"]}}
+        if not vector_data: vector_data = {"void": 1.0}
         dominant = max(vector_data, key=vector_data.get)
         if dominant not in ITEM_GENERATION["PREFIXES"]: dominant = "void"
         prefix = random.choice(ITEM_GENERATION["PREFIXES"].get(dominant, ["Strange"]))
-        base_type = random.choice(list(ITEM_GENERATION["BASES"].keys()))
-        base_name = random.choice(ITEM_GENERATION["BASES"][base_type])
+        bases = ITEM_GENERATION.get("BASES", {})
+        if not bases: bases = {"default": ["Artifact"]}
+        base_type = random.choice(list(bases.keys()))
+        base_name = random.choice(bases[base_type])
         suffix = random.choice(ITEM_GENERATION["SUFFIXES"].get(dominant, ["of Mystery"]))
         name = f"{prefix.upper()} {base_name.upper()} {suffix.upper()}"
-        value = vector_data[dominant] * 10.0
+        value = vector_data.get(dominant, 0.0) * 10.0
         description = f"A procedurally generated artifact. It vibrates with {dominant} energy."
         new_item = {
             "description": description,

@@ -607,6 +607,7 @@ class RealityStack:
 @dataclass
 class CycleContext:
     input_text: str
+    is_system_event: bool = False
     clean_words: List[str] = field(default_factory=list)
     physics: PhysicsPacket = field(default_factory=PhysicsPacket.void_state)
     logs: List[str] = field(default_factory=list)

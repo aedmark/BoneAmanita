@@ -1,5 +1,5 @@
 """ bone_village.py - 'It takes a village... to raise a simulation.' """
-
+import math
 import random, time
 from typing import List, Dict, Any, Tuple, Optional
 from bone_core import Prisma, BoneConfig, BonePresets, TheLore
@@ -24,11 +24,11 @@ def _set(p, k, v):
     else: setattr(p, k, v)
 
 class TheTinkerer:
-    def __init__(self, gordon_ref, events_ref):
+    def __init__(self, gordon_ref, events_ref, akashic_ref):
         self.gordon = gordon_ref
         self.events = events_ref
         self.tool_confidence = {}
-        self.akashic = TheAkashicRecord()
+        self.akashic = akashic_ref
 
     def _normalize_physics(self, packet):
         if isinstance(packet, dict): return packet
@@ -228,8 +228,8 @@ class TheTownCrier:
         return None
 
 class TownHall:
-    def __init__(self, gordon_ref, events_ref, shimmer_ref):
-        self.Tinkerer = TheTinkerer(gordon_ref, events_ref)
+    def __init__(self, gordon_ref, events_ref, shimmer_ref, akashic_ref):
+        self.Tinkerer = TheTinkerer(gordon_ref, events_ref, akashic_ref)
         self.Navigator = TheWayfinder(shimmer_ref)
         self.Almanac = TheAlmanac()
         self.Crier = TheTownCrier()
@@ -309,90 +309,61 @@ class DeathGen:
 
 TheNavigator = TheWayfinder
 
+
 class PIDController:
-    def __init__(self, kp: float, ki: float, kd: float, setpoint: float = 0.0, output_limits: tuple = (-5.0, 5.0)):
+    def __init__(self, kp, ki, kd, setpoint, output_limits=(-10.0, 10.0)):
         self.kp = kp
         self.ki = ki
         self.kd = kd
         self.setpoint = setpoint
-        self.output_min, self.output_max = output_limits
-        self._prev_error = 0.0
+        self.min_out, self.max_out = output_limits
         self._integral = 0.0
+        self._last_error = 0.0
 
     def reset(self):
-        self._prev_error = 0.0
         self._integral = 0.0
+        self._last_error = 0.0
 
     def update(self, measurement: float, dt: float = 1.0) -> float:
-        if dt is None: dt = 1.0
-        safe_dt = max(0.001, dt)
+        if dt <= 0.0: return 0.0
         error = self.setpoint - measurement
-        self._integral += error * safe_dt
-        self._integral = max(self.output_min, min(self.output_max, self._integral))
-        derivative = (error - self._prev_error) / safe_dt
+        self._integral += error * dt
+        self._integral = max(self.min_out, min(self.max_out, self._integral))
+        derivative = (error - self._last_error) / dt
         output = (self.kp * error) + (self.ki * self._integral) + (self.kd * derivative)
-        output = max(self.output_min, min(self.output_max, output))
-        self._prev_error = error
-        return output
+        self._last_error = error
+        return max(self.min_out, min(self.max_out, output))
+
 
 class SanctuaryGovernor:
     def __init__(self, events_ref):
         self.events = events_ref
-        self.defaults = {
-            "voltage": getattr(BonePresets.SANCTUARY, "VOLTAGE_TARGET", 10.0),
-            "drag": getattr(BonePresets.SANCTUARY, "DRAG_TARGET", 2.0)}
-        self.voltage_pid = PIDController(
-            kp=0.05, ki=0.01, kd=0.02,
-            setpoint=self.defaults["voltage"],
-            output_limits=(-2.0, 2.0))
-        self.drag_pid = PIDController(
-            kp=0.08, ki=0.02, kd=0.03,
-            setpoint=self.defaults["drag"],
-            output_limits=(-1.0, 1.0))
-        self.in_sanctuary = False
-        self.consecutive_safe_ticks = 0
+        self.mode = "DEFAULT"
+        self.voltage_pid = PIDController(kp=0.8, ki=0.1, kd=0.05, setpoint=10.0)
+        self.drag_pid = PIDController(kp=0.4, ki=0.2, kd=0.1, setpoint=1.0)
 
-    def recalibrate(self, target_voltage: float = None, target_drag: float = None):
-        if target_voltage is not None:
-            self.voltage_pid.setpoint = float(target_voltage)
-        else:
-            self.voltage_pid.setpoint = self.defaults["voltage"]
-        if target_drag is not None:
-            self.drag_pid.setpoint = float(target_drag)
-        else:
-            self.drag_pid.setpoint = self.defaults["drag"]
+    def shift(self, physics_packet, voltage_history, tick_count):
+        return "GOVERNOR_MAINTAIN"
 
-    def regulate(self, physics_packet, dt: float = 1.0) -> tuple:
-        curr_v = _get_float(physics_packet, "voltage")
-        curr_d = _get_float(physics_packet, "narrative_drag")
-        v_force = self.voltage_pid.update(curr_v, dt=dt)
-        d_force = self.drag_pid.update(curr_d, dt=dt)
+    def recalibrate(self, target_voltage: float, target_drag: float):
+        self.voltage_pid.setpoint = target_voltage
+        self.drag_pid.setpoint = target_drag
+
+    def regulate(self, physics, dt: float) -> Tuple[float, float]:
+        v_force = self.voltage_pid.update(physics.voltage, dt)
+        d_force = self.drag_pid.update(physics.narrative_drag, dt)
         return v_force, d_force
 
-    def assess(self, physics_packet):
-        v = _get_float(physics_packet, "voltage", 0.0)
-        d = _get_float(physics_packet, "narrative_drag", 0.0)
-        t = _get_float(physics_packet, "truth_ratio", 0.0)
-        v_target = self.voltage_pid.setpoint
-        d_target = self.drag_pid.setpoint
-        v_tol = float(getattr(BonePresets.SANCTUARY, "VOLTAGE_TOLERANCE", 5.0) or 1.0)
-        d_tol = float(getattr(BonePresets.SANCTUARY, "DRAG_TOLERANCE", 2.0) or 1.0)
-        t_target = float(getattr(BonePresets.SANCTUARY, "TRUTH_TARGET", 0.8))
-        v_dist = abs(v - v_target) / v_tol
-        d_dist = abs(d - d_target) / d_tol
-        t_dist = abs(t - t_target) / 0.3
-        avg_dist = (v_dist + d_dist + t_dist) / 3.0
-        is_safe = avg_dist < 0.5
-        if is_safe:
-            self.consecutive_safe_ticks += 1
-            if self.consecutive_safe_ticks >= 3 and not self.in_sanctuary:
-                self.in_sanctuary = True
-                self.events.log(f"{getattr(BonePresets.SANCTUARY, 'COLOR', Prisma.GRN)}![☀️] SANCTUARY: The air is calm here.{Prisma.RST}", "SYS")
-        else:
-            self.consecutive_safe_ticks = 0
-            self.in_sanctuary = False
-        return self.in_sanctuary, avg_dist
-
+    def assess(self, physics_packet) -> Tuple[bool, float]:
+        curr_v = _get_float(physics_packet, "voltage", 0.0)
+        curr_d = _get_float(physics_packet, "narrative_drag", 0.0)
+        target_v = self.voltage_pid.setpoint
+        target_d = self.drag_pid.setpoint
+        dist_v = abs(curr_v - target_v)
+        dist_d = abs(curr_d - target_d)
+        is_safe = (dist_v < 2.0) and (dist_d < 1.0)
+        distance = math.sqrt(dist_v ** 2 + dist_d ** 2)
+        return is_safe, distance
 
 class Limbo:
     def __init__(self):

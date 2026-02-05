@@ -163,7 +163,7 @@ class BoneAmanita:
         self.embryo = BoneArchitect.awaken(self.embryo)
         if hasattr(self.embryo, 'bio') and hasattr(self.embryo.bio, 'setup_listeners'):
             self.embryo.bio.setup_listeners()
-        self.gordon = GordonKnot()
+        self.gordon = GordonKnot(events=self.events)
         self.soul_legacy_data = self.embryo.soul_legacy
 
     def _initialize_identity(self):
@@ -172,7 +172,7 @@ class BoneAmanita:
             self.soul.load_from_dict(self.soul_legacy_data)
 
     def _initialize_village(self):
-        self.town_hall = TownHall(self.gordon, self.events, self.embryo.shimmer)
+        self.town_hall = TownHall(self.gordon, self.events, self.embryo.shimmer, self.akashic)
         self.drivers = SynergeticLensArbiter(self.events)
         self.consultant = BoneConsultant()
         self.limbo = Limbo()
@@ -190,7 +190,7 @@ class BoneAmanita:
             "cosmic": CosmicDynamics(),
             "navigator": TheNavigator(self.embryo.shimmer),
             "zen": ZenGarden(self.events),
-            "tinkerer": TheTinkerer(self.gordon, self.events)}
+            "tinkerer": TheTinkerer(self.gordon, self.events, self.akashic)}
         self.cmd = CommandProcessor(self, Prisma, self.lex, BoneConfig)
         if self.phys:
             self.phys.dynamics = self.village["cosmic"]
@@ -255,7 +255,7 @@ class BoneAmanita:
             return self.embryo.mind
         return None
 
-    def process_turn(self, user_message: str) -> Dict[str, Any]:
+    def process_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         turn_start = self.observer.clock_in()
         self.observer.user_turns += 1
         if not user_message: user_message = ""
@@ -273,7 +273,7 @@ class BoneAmanita:
         if self._ethical_audit():
             self.events.log(f"{Prisma.WHT}MERCY SIGNAL: Trauma boards wiped.{Prisma.RST}", "SYS")
         try:
-            cortex_packet = self.cortex.process(user_input=user_message)
+            cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
             if rules["system_override"] and "ui" in cortex_packet:
                 debug_footer = f"\n{Prisma.paint(f'--- DEBUG: {self.get_metrics()} ---', '0')}"
                 cortex_packet["ui"] += debug_footer
@@ -420,9 +420,9 @@ class BoneAmanita:
     def check_pareidolia(words):
         return BoneConfig.check_pareidolia(words)
 
-    def engage_cold_boot(self):
+    def engage_cold_boot(self) -> Optional[Dict[str, Any]]:
         if self.tick_count > 0:
-            return
+            return None
         if self.embryo.continuity:
             print(f"{Prisma.GRY}...Resuming Timeline...{Prisma.RST}")
             loc = self.embryo.continuity.get("location", "Unknown")
@@ -430,9 +430,8 @@ class BoneAmanita:
             saved_inv = self.embryo.continuity.get("inventory", [])
             if saved_inv:
                 self.gordon.inventory = saved_inv
-            print(f"{Prisma.CYN}[SYS] Location Restored: '{loc}'{Prisma.RST}")
-            print(f"\n{Prisma.GRY}[PREVIOUSLY]: {last_scene.split('|')[-1].strip()}{Prisma.RST}\n")
-            return
+            resume_text = f"**RESUMING TIMELINE**\nLocation: {loc}\n\n{last_scene}"
+            return {"ui": resume_text, "logs": ["Timeline Restored."]}
         print(f"{Prisma.GRY}...Synthesizing Initial Reality...{Prisma.RST}")
         scenarios = TheLore.get_instance().get("SCENARIOS", {})
         archetypes = scenarios.get("ARCHETYPES", ["A quiet garden"])
@@ -444,9 +443,10 @@ class BoneAmanita:
             f"DIRECTIVE: Do not use the seed text literally. Use it as a metaphorical anchor only. "
             f"Generate a vivid, sensory opening log that captures the *vibe* of the seed without describing it directly. "
             f"Focus on lighting, texture, and entropy.")
-        cold_result = self.process_turn(boot_prompt)
+        cold_result = self.process_turn(boot_prompt, is_system=True)
         if cold_result.get("ui"):
             print(cold_result["ui"])
+        return cold_result
 
     def shutdown(self):
         print(f"{Prisma.GRY}...Broadcasting SYSTEM_HALT...{Prisma.RST}")

@@ -328,9 +328,15 @@ class PromptComposer:
         style_notes = [
             f"Role: You are {user_name}'s Partner in Creation.",
             "Directive: Do not just describe the world; BUILD it with the user.",
-            "Directive: If the user's input is vague, ask a specific question to define the geometry/physics of the space.",
-            "Directive: If the user defines a rule, enforce it. If they break it, challenge them.",
-            "Constraint: Treat the 'Current Location' as a shared hallucination we are stabilizing together.",
+            "Directive: If the user's input is vague, ask a specific question.",
+            "Directive: If the user defines a rule, enforce it. If they break it themselves, call them out.",
+            "Constraint: Treat the 'Current Location' as a shared space. Stay grounded",
+            "CRITICAL: Enforce the use of Markdown formatting for readability.",
+            "   - Use **Bold** for key objects or intense sensations.",
+            "   - Use `Code` for technical/system readouts.",
+            "   - Use ### Headers for location changes or major shifts.",
+            "   - IMPORTANT: Use DOUBLE NEWLINES between every paragraph or code block.",
+            "   - Never output a wall of text. Break big thoughts into smaller, simpler chunks.",
             mood_note]
         if reality_directive:
             style_notes.insert(0, f"*** PRIORITY OVERRIDE: {reality_directive} ***")
@@ -462,7 +468,7 @@ class TheCortex:
         if len(self.dialogue_buffer) > self.MAX_HISTORY:
             self.dialogue_buffer.pop(0)
 
-    def process(self, user_input: str) -> Dict[str, Any]:
+    def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
         if self.consultant:
             if "/vsl start" in user_input.lower():
                 msg = self.consultant.engage()
@@ -473,7 +479,7 @@ class TheCortex:
                 self.events.log(msg, "VSL")
                 return {"ui": f"{Prisma.GRY}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.sub.get_metrics()}
         is_boot_sequence = "SYSTEM_BOOT:" in user_input
-        sim_result = self.sub.cycle_controller.run_turn(user_input)
+        sim_result = self.sub.cycle_controller.run_turn(user_input, is_system=is_system)
         if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]:
             return sim_result
         full_state = self.gather_state(sim_result)
@@ -539,6 +545,8 @@ class TheCortex:
             mood_override=mood_directive)
         start_time = time.time()
         raw_response_text = self.llm.generate(final_prompt, llm_params)
+        if "\n\n" not in raw_response_text and len(raw_response_text) > 100:
+            raw_response_text = raw_response_text.replace("\n", "\n\n")
         if is_boot_sequence:
             self._update_history("SYSTEM_INIT", raw_response_text)
         else:

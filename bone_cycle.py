@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Tuple, List, Optional, cast
 from bone_core import Prisma, BoneConfig, CycleContext, PhysicsPacket, TelemetryService, DecisionCrystal, BlackBoxReader, BonePresets, ArchetypeArbiter, PhysicsSandbox
 from bone_metaphysics import CongruenceValidator
-from bone_village import TownHall
+from bone_village import TownHall, PIDController
 from bone_protocols import TheBureau
 from bone_physics import TheGatekeeper, QuantumObserver, ChromaScope, GeodesicEngine, apply_somatic_feedback, TRIGRAM_MAP
 from bone_gui import GeodesicRenderer, CachedRenderer, get_renderer
@@ -60,15 +60,16 @@ class CycleStabilizer:
 
     def stabilize(self, ctx: CycleContext, current_phase: str):
         now = time.time()
-        raw_dt = now - self.last_tick_time
+        dt = max(0.001, min(1.0, now - self.last_tick_time))
         self.last_tick_time = now
-        dt = max(0.001, min(1.0, raw_dt))
         p = ctx.physics
         self._adjust_setpoints(ctx, p)
         curr_v = p.voltage
         curr_d = p.narrative_drag
         v_force, d_force = self.governor.regulate(p, dt=dt)
-        if p.voltage > 17.0 and p.narrative_drag > 3.5:
+        CRITICAL_VOLT = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
+        CRITICAL_DRAG = getattr(BoneConfig.PHYSICS, "DRAG_CRITICAL", 8.0)
+        if p.voltage > CRITICAL_VOLT and p.narrative_drag > (CRITICAL_DRAG * 0.5):
             d_force = min(d_force, 0.0)
         corrections_made = False
         MAX_V = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
@@ -242,15 +243,18 @@ class MetabolismPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "METABOLISM"
+        self.bailout_pid = PIDController(
+            kp=5.0, ki=1.0, kd=2.0,
+            setpoint=1.0,
+            output_limits=(0.0, 10.0))
 
     def run(self, ctx: CycleContext):
+        if ctx.is_system_event:
+            return ctx
         physics = ctx.physics
         if hasattr(self.eng, "host_stats"):
-            eff = self.eng.host_stats.efficiency_index
-            if eff < 0.8:
-                tax = (1.0 - eff) * 5.0
-                self.eng.bio.mito.state.atp_pool -= tax
-                ctx.log(f"{Prisma.OCHRE}⚡ METABOLIC TAX: System strain burns {tax:.1f} ATP.{Prisma.RST}")
+            efficiency = self.eng.host_stats.efficiency_index
+            self._apply_economic_stimulus(ctx, efficiency)
         gov_msg = self.eng.bio.governor.shift(
             physics,
             self.eng.phys.dynamics.voltage_history, self.eng.tick_count)
@@ -277,6 +281,22 @@ class MetabolismPhase(SimulationPhase):
         self._apply_healing(ctx)
         self._check_narcolepsy(ctx)
         return ctx
+
+    def _apply_economic_stimulus(self, ctx: CycleContext, efficiency: float):
+        raw_tax = 0.0
+        if efficiency < 0.8:
+            raw_tax = (1.0 - efficiency) * 5.0
+        stimulus = self.bailout_pid.update(efficiency)
+        adjusted_tax = max(0.0, raw_tax - stimulus)
+        if adjusted_tax > 0.0:
+            self.eng.bio.mito.state.atp_pool -= adjusted_tax
+            subsidy = raw_tax - adjusted_tax
+            msg = f"{Prisma.OCHRE}⚡ METABOLIC TAX: System strain burns {adjusted_tax:.1f} ATP.{Prisma.RST}"
+            if subsidy > 0.1:
+                msg += f" {Prisma.GRY}(System subsidized {subsidy:.1f} cost){Prisma.RST}"
+            ctx.log(msg)
+        elif raw_tax > 0.0 and adjusted_tax == 0.0:
+            ctx.log(f"{Prisma.GRN}🛡️ METABOLIC SHIELD: Emergency Stimulus negated {raw_tax:.1f} ATP tax.{Prisma.RST}")
 
     def _check_narcolepsy(self, ctx: CycleContext):
         current_atp = self.eng.bio.mito.state.atp_pool
@@ -388,6 +408,7 @@ class RealityFilterPhase(SimulationPhase):
                 ctx.log(f"{color}I CHING: {sym} {name} is in the ascendant.{Prisma.RST}")
         return ctx
 
+
 class NavigationPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -395,30 +416,45 @@ class NavigationPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         physics = ctx.physics
-        new_drag, grav_logs = self.eng.gordon.check_gravity(physics.narrative_drag, physics.psi)
+        new_drag, grav_logs = self.eng.gordon.check_gravity(
+            current_drift=physics.narrative_drag,
+            psi=physics.psi)
+        physics.narrative_drag = new_drag
         for log in grav_logs:
             ctx.log(log)
-        physics.narrative_drag = new_drag
-        flinch_result = self.eng.gordon.check_flinch(ctx.clean_words, self.eng.tick_count)
+        flinch_result = self.eng.gordon.check_flinch(
+            clean_words=ctx.clean_words,
+            current_turn=self.eng.tick_count)
         if flinch_result:
             if flinch_result.get("message"):
                 ctx.log(flinch_result["message"])
-            if flinch_result.get("physics_effects"):
-                for k, v in flinch_result["physics_effects"].items():
+            effects = flinch_result.get("physics_effects", {})
+            for k, v in effects.items():
+                if hasattr(physics, k):
                     setattr(physics, k, v)
-        current_loc, entry_msg = self.eng.navigator.locate(physics.to_dict())
-        if entry_msg: ctx.log(entry_msg)
+        phys_dict = physics.to_dict()
+        current_loc, entry_msg = self.eng.navigator.locate(phys_dict, self.eng.host_stats)
+        if entry_msg:
+            ctx.log(entry_msg)
         env_logs = self.eng.navigator.apply_environment(physics)
-        for e_log in env_logs: ctx.log(e_log)
-        orbit_state, drag_pen, orbit_msg = self.eng.cosmic.analyze_orbit(self.eng.mind.mem, ctx.clean_words)
+        for e_log in env_logs:
+            ctx.log(e_log)
+        orbit_state, drag_pen, orbit_msg = self.eng.cosmic.analyze_orbit(
+            self.eng.mind.mem,
+            ctx.clean_words)
+        if orbit_msg:
+            ctx.log(orbit_msg)
         raw_zone = getattr(physics, "zone", "COURTYARD")
-        stabilized_zone = self.eng.stabilizer.stabilize(raw_zone, physics.to_dict(), (orbit_state, drag_pen))
-        adjusted_drag = self.eng.stabilizer.override_cosmic_drag(drag_pen, stabilized_zone)
+        stabilized_zone = self.eng.stabilizer.stabilize(
+            proposed_zone=raw_zone,
+            physics=phys_dict,
+            cosmic_state=(orbit_state, drag_pen))
         physics.zone = stabilized_zone
-        self.eng.apply_cosmic_physics(physics.to_dict(), orbit_state, adjusted_drag)
+        adjusted_drag = self.eng.stabilizer.override_cosmic_drag(drag_pen, stabilized_zone)
+        self.eng.apply_cosmic_physics(phys_dict, orbit_state, adjusted_drag)
         ctx.world_state["orbit"] = orbit_state
-        if orbit_msg: ctx.log(orbit_msg)
         return ctx
+
 
 class MachineryPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -426,44 +462,63 @@ class MachineryPhase(SimulationPhase):
         self.name = "MACHINERY"
 
     def run(self, ctx: CycleContext):
+        if ctx.is_system_event:
+            return ctx
         physics = ctx.physics
-        eff_boost, zen_msg = self.eng.zen.raking_the_sand(physics.to_dict(), ctx.bio_result)
-        if zen_msg: ctx.log(zen_msg)
+        phys_dict = physics.to_dict()
+        eff_boost, zen_msg = self.eng.zen.raking_the_sand(phys_dict, ctx.bio_result)
+        if zen_msg:
+            ctx.log(zen_msg)
         if eff_boost > 0:
             current_eff = self.eng.bio.mito.state.efficiency_mod
             self.eng.bio.mito.state.membrane_potential = min(2.0, current_eff + (eff_boost * 0.1))
         if self.eng.gordon.inventory:
-            is_craft, craft_msg, old_item, new_item = self.eng.phys.forge.attempt_crafting(physics.to_dict(), self.eng.gordon.inventory)
-            if is_craft:
-                ctx.log(craft_msg)
-                vec = physics.vector
-                catalyst_cat = max(vec, key=vec.get) if vec else "void"
-                self.eng.events.publish("FORGE_SUCCESS", {
-                    "ingredient": old_item,
-                    "catalyst": catalyst_cat,
-                    "result": new_item})
-                if old_item in self.eng.gordon.inventory:
-                    self.eng.gordon.inventory.remove(old_item)
-                ctx.log(self.eng.gordon.acquire(new_item))
-        transmute_msg = self.eng.phys.forge.transmute(physics.to_dict())
-        if transmute_msg: ctx.log(transmute_msg)
-        _, forge_msg, new_item = self.eng.phys.forge.hammer_alloy(physics.to_dict())
-        if forge_msg: ctx.log(forge_msg)
-        if new_item: ctx.log(self.eng.gordon.acquire(new_item))
-        _, _, theremin_msg, t_crit = self.eng.phys.theremin.listen(physics.to_dict(), self.eng.bio.governor.mode)
-        if theremin_msg: ctx.log(theremin_msg)
+            self._process_crafting(ctx, phys_dict)
+        transmute_msg = self.eng.phys.forge.transmute(phys_dict)
+        if transmute_msg:
+            ctx.log(transmute_msg)
+        _, forge_msg, new_item = self.eng.phys.forge.hammer_alloy(phys_dict)
+        if forge_msg:
+            ctx.log(forge_msg)
+        if new_item:
+            ctx.log(self.eng.gordon.acquire(new_item))
+        _, _, theremin_msg, t_crit = self.eng.phys.theremin.listen(
+            phys_dict,
+            self.eng.bio.governor.mode)
+        if theremin_msg:
+            ctx.log(theremin_msg)
         if t_crit == "AIRSTRIKE":
-            max_hp = getattr(BoneConfig, "MAX_HEALTH", 100.0)
-            damage = max_hp * 0.25
-            self.eng.health -= damage
-            ctx.log(f"{Prisma.RED}*** CRITICAL THEREMIN DISCHARGE *** -{damage:.1f} HP{Prisma.RST}")
-            if hasattr(self.eng.events, "publish"):
-                self.eng.events.publish("AIRSTRIKE", {"damage": damage, "source": "THEREMIN"})
-        c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(physics.to_dict())
-        if c_msg: ctx.log(c_msg)
+            self._handle_airstrike(ctx)
+        c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(phys_dict)
+        if c_msg:
+            ctx.log(c_msg)
         if c_state == "MELTDOWN":
             self.eng.health -= c_val
         return ctx
+
+    def _process_crafting(self, ctx, phys_dict):
+        is_craft, craft_msg, old_item, new_item = self.eng.phys.forge.attempt_crafting(
+            phys_dict,
+            self.eng.gordon.inventory)
+        if is_craft:
+            ctx.log(craft_msg)
+            vec = ctx.physics.vector
+            catalyst_cat = max(vec, key=vec.get) if vec else "void"
+            self.eng.events.publish("FORGE_SUCCESS", {
+                "ingredient": old_item,
+                "catalyst": catalyst_cat,
+                "result": new_item})
+            if old_item in self.eng.gordon.inventory:
+                self.eng.gordon.inventory.remove(old_item)
+            ctx.log(self.eng.gordon.acquire(new_item))
+
+    def _handle_airstrike(self, ctx):
+        max_hp = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+        damage = max_hp * 0.25
+        self.eng.health -= damage
+        ctx.log(f"{Prisma.RED}*** CRITICAL THEREMIN DISCHARGE *** -{damage:.1f} HP{Prisma.RST}")
+        if hasattr(self.eng.events, "publish"):
+            self.eng.events.publish("AIRSTRIKE", {"damage": damage, "source": "THEREMIN"})
 
 class IntrusionPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -518,6 +573,8 @@ class SoulPhase(SimulationPhase):
         self.name = "SOUL"
 
     def run(self, ctx: CycleContext):
+        if ctx.is_system_event:
+            return ctx
         lesson = self.eng.soul.crystallize_memory(ctx.physics.to_dict(), ctx.bio_result, self.eng.tick_count)
         if lesson:
             ctx.log(f"{Prisma.VIOLET}   (The lesson '{lesson}' echoes in the chamber.){Prisma.RST}")
@@ -724,8 +781,11 @@ class SensationPhase(SimulationPhase):
 class PhaseExecutor:
     def execute_phases(self, simulator, ctx):
         reconciler = StateReconciler()
+        SYSTEM_SKIP_LIST = ["OBSERVE", "METABOLISM", "INTRUSION", "MAINTENANCE", "SENSATION"]
         for phase in simulator.pipeline:
             phase_name = phase.name
+            if ctx.is_system_event and phase_name in SYSTEM_SKIP_LIST:
+                continue
             if not simulator.check_circuit_breaker(phase_name):
                 continue
             is_critical = phase_name in ["OBSERVE", "MAINTENANCE", "SENSATION", "GATEKEEP", "SANCTUARY"]
@@ -915,12 +975,12 @@ class GeodesicOrchestrator:
         self.reporter = CycleReporter(engine_ref)
         self.symbiosis = SymbiosisManager(self.eng.events)
 
-    def run_turn(self, user_message: str, latency: float = 0.0) -> Dict[str, Any]:
+    def run_turn(self, user_message: str, latency: float = 0.0, is_system: bool = False) -> Dict[str, Any]:
         tracer = TelemetryService.get_tracer()
         cycle_id = str(uuid.uuid4())[:8]
         tracer.start_cycle(cycle_id)
         try:
-            ctx = CycleContext(input_text=user_message)
+            ctx = CycleContext(input_text=user_message, is_system_event=is_system)
             ctx.validator = CongruenceValidator()
             if hasattr(self.eng, 'reality_stack'):
                 ctx.reality_stack = self.eng.reality_stack
