@@ -3,7 +3,7 @@
 import traceback, random, time, uuid, re, copy
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Tuple, List, Optional, cast
-from bone_core import Prisma, BoneConfig, CycleContext, PhysicsPacket, TelemetryService, DecisionCrystal, BlackBoxReader, BonePresets, ArchetypeArbiter, PhysicsSandbox
+from bone_core import Prisma, BoneConfig, CycleContext, PhysicsPacket, TelemetryService, DecisionCrystal, BonePresets, ArchetypeArbiter, PhysicsSandbox
 from bone_metaphysics import CongruenceValidator
 from bone_village import TownHall, PIDController
 from bone_protocols import TheBureau
@@ -112,16 +112,13 @@ class ObservationPhase(SimulationPhase):
     def run(self, ctx: CycleContext):
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
         input_phys = gaze_result["physics"]
-        meta_keys = ["clean_words", "counts", "vector", "valence", "entropy", "beta_index", "raw_text", "antigens", "psi", "kappa", "zone", "flow_state"]
-        for k in meta_keys:
-            if hasattr(input_phys, k) and hasattr(ctx.physics, k):
+        for k in ["clean_words", "counts", "vector", "valence", "entropy", "beta_index", "raw_text", "antigens", "psi", "kappa", "zone", "flow_state"]:
+            if hasattr(input_phys, k):
                 setattr(ctx.physics, k, getattr(input_phys, k))
         curr_v = max(0.1, ctx.physics.voltage)
         input_v = getattr(input_phys, "voltage", 0.0)
-        if input_v > curr_v:
-            ctx.physics.voltage = (curr_v * 0.8) + (input_v * 0.2)
-        else:
-            ctx.physics.voltage = (curr_v * 0.95) + (input_v * 0.05)
+        blend_factor = 0.2 if input_v > curr_v else 0.05
+        ctx.physics.voltage = (curr_v * (1.0 - blend_factor)) + (input_v * blend_factor)
         curr_d = max(0.1, ctx.physics.narrative_drag)
         input_d = getattr(input_phys, "narrative_drag", 0.0)
         ctx.physics.narrative_drag = (curr_d * 0.9) + (input_d * 0.1)
@@ -712,54 +709,6 @@ class CognitionPhase(SimulationPhase):
             ctx.log(thought)
         return ctx
 
-class StateReconciler:
-    @staticmethod
-    def fork(ctx: CycleContext) -> CycleContext:
-        new_ctx = CycleContext(input_text=ctx.input_text)
-        new_ctx.user_profile = ctx.user_profile
-        new_ctx.is_alive = ctx.is_alive
-        new_ctx.refusal_triggered = ctx.refusal_triggered
-        new_ctx.is_bureaucratic = ctx.is_bureaucratic
-        new_ctx.timestamp = ctx.timestamp
-        new_ctx.bureau_ui = ctx.bureau_ui
-        if hasattr(ctx.physics, "snapshot"):
-            new_ctx.physics = ctx.physics.snapshot()
-        elif hasattr(ctx.physics, "copy"):
-            new_ctx.physics = ctx.physics.copy()
-        else:
-            new_ctx.physics = copy.deepcopy(ctx.physics)
-        new_ctx.clean_words = list(ctx.clean_words)
-        new_ctx.logs = list(ctx.logs)
-        new_ctx.flux_log = list(ctx.flux_log)
-        new_ctx.bio_result = copy.deepcopy(ctx.bio_result)
-        new_ctx.world_state = ctx.world_state.copy()
-        new_ctx.mind_state = ctx.mind_state.copy()
-        if hasattr(ctx, 'reality_stack'):
-            new_ctx.reality_stack = copy.deepcopy(ctx.reality_stack)
-        if hasattr(ctx, 'active_lens'):
-            new_ctx.active_lens = ctx.active_lens
-        return new_ctx
-
-    @staticmethod
-    def reconcile(canonical: CycleContext, sandbox: CycleContext, engine_ref=None):
-        canonical.physics = sandbox.physics
-        new_logs = sandbox.logs[len(canonical.logs):]
-        if new_logs:
-            canonical.logs.extend(new_logs)
-        new_flux = sandbox.flux_log[len(canonical.flux_log):]
-        if new_flux:
-            canonical.flux_log.extend(new_flux)
-        canonical.is_alive = sandbox.is_alive
-        canonical.refusal_triggered = sandbox.refusal_triggered
-        canonical.is_bureaucratic = sandbox.is_bureaucratic
-        canonical.bureau_ui = sandbox.bureau_ui
-        canonical.bio_result = sandbox.bio_result
-        canonical.world_state = sandbox.world_state
-        canonical.mind_state = sandbox.mind_state
-        canonical.clean_words = sandbox.clean_words
-        if hasattr(sandbox, 'active_lens'):
-            canonical.active_lens = sandbox.active_lens
-
 class SensationPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -789,7 +738,6 @@ class SensationPhase(SimulationPhase):
 
 class PhaseExecutor:
     def execute_phases(self, simulator, ctx):
-        reconciler = StateReconciler()
         SYSTEM_SKIP_LIST = ["OBSERVE", "METABOLISM", "INTRUSION", "MAINTENANCE", "SENSATION"]
         for phase in simulator.pipeline:
             phase_name = phase.name
@@ -801,35 +749,41 @@ class PhaseExecutor:
             if not is_critical:
                 if ctx.refusal_triggered or ctx.is_bureaucratic:
                     break
-            sandbox = reconciler.fork(ctx)
-            try:
-                self._run_single_safe(simulator, phase, sandbox)
-                reconciler.reconcile(ctx, sandbox)
-            except Exception as e:
-                simulator.handle_phase_crash(ctx, phase_name, e)
+                sandbox = copy.deepcopy(ctx)
+                try:
+                    self._run_single_safe(simulator, phase, sandbox)
+                    ctx = sandbox
+                except Exception as e:
+                    simulator.handle_phase_crash(ctx, phase_name, e)
+            else:
+                try:
+                    self._run_single_safe(simulator, phase, ctx)
+                except Exception as e:
+                    simulator.handle_phase_crash(ctx, phase_name, e)
+        return ctx
 
-    def _run_single_safe(self, simulator, phase, sandbox):
+    def _run_single_safe(self, simulator, phase, target_ctx):
         tracer = TelemetryService.get_tracer()
-        tracer.start_phase(phase.name, sandbox)
-        current_packet = cast(PhysicsPacket, cast(object, sandbox.physics))
+        tracer.start_phase(phase.name, target_ctx)
+        current_packet = cast(PhysicsPacket, cast(object, target_ctx.physics))
         wrapped_physics = PhysicsSandbox.create(current_packet)
-        sandbox.physics = wrapped_physics
+        target_ctx.physics = wrapped_physics
         try:
-            phase.run(sandbox)
-            simulator.stabilizer.stabilize(sandbox, phase.name)
+            phase.run(target_ctx)
+            simulator.stabilizer.stabilize(target_ctx, phase.name)
         finally:
-            sandbox.physics = wrapped_physics.packet
+            target_ctx.physics = wrapped_physics.packet
             for mod in wrapped_physics.get_modification_log():
                 val_old = mod['old']
                 val_new = mod['new']
                 if isinstance(val_old, (int, float)) and isinstance(val_new, (int, float)):
-                    sandbox.record_flux(
+                    target_ctx.record_flux(
                         phase=phase.name,
                         metric=mod['key'],
                         initial=float(val_old),
                         final=float(val_new),
                         reason=mod['reason'])
-            tracer.end_phase(phase.name, sandbox, sandbox)
+            tracer.end_phase(phase.name, target_ctx, target_ctx)
 
 class CycleSimulator:
     def __init__(self, engine_ref):
@@ -854,8 +808,7 @@ class CycleSimulator:
             CognitionPhase(engine_ref)]
 
     def run_simulation(self, ctx: CycleContext) -> CycleContext:
-        reconciler = StateReconciler()
-        self.executor.execute_phases(self, ctx)
+        ctx = self.executor.execute_phases(self, ctx)
         return ctx
 
     def check_circuit_breaker(self, phase_name: str) -> bool:
@@ -987,6 +940,12 @@ class GeodesicOrchestrator:
         self.symbiosis = SymbiosisManager(self.eng.events)
 
     def run_turn(self, user_message: str, latency: float = 0.0, is_system: bool = False) -> Dict[str, Any]:
+        if not is_system and len(user_message.strip()) < 3:
+            return {
+                "type": "SNAPSHOT",
+                "ui": f"{Prisma.GRY}(System ignores the stutter...){Prisma.RST}",
+                "metrics": self.eng.get_metrics(),
+                "logs": ["Input too short. Cycle skipped."]}
         tracer = TelemetryService.get_tracer()
         cycle_id = str(uuid.uuid4())[:8]
         tracer.start_cycle(cycle_id)

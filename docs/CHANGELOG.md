@@ -1,5 +1,113 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.5: "THE MISE-EN-PLACE UPDATE"**
+
+_"Mise-en-place is the religion of all good line cooks. Do not fuck with my station."_ — Anthony Bourdain
+
+#### **🔪 THE TORVALDS-RAMSAY LENS (Standardization & Execution)**
+
+- **The Single Source of Truth (`bone_physics.py`):**
+  - **New Class:** `PhysicsConstants`.
+  - **The Purge:** Eliminated "Magic Number Soup." No more hardcoded `12.0`s or `25.0`s hidden in the logic. If we want to change the boiling point of the simulation, we change it in one place.
+  - **Strict Typing:** `GeodesicEngine` and `CosmicDynamics` now demand precise data structures. No more guessing if the input is a dict or an object.
+
+- **The Inventory Brigade (`bone_inventory.py`):**
+  - **Refactored:** `GordonKnot.rummage` and `audit_tools` were monolithic blocks of spaghetti logic.
+  - **The Fix:** Decomposed into atomic units (`_determine_loot_tag`, `_handle_environment`, `_apply_physics_deltas`). The logic now flows linearly.
+  - **Sanitation:** Fixed variable shadowing (`field`) and ambiguous checks (`callable(None)`).
+
+- **The Village Infrastructure (`bone_village.py`):**
+  - **Standardized:** Introduced `_normalize_physics_dict` and `_update_physics_field`.
+  - **Critique:** `TheTinkerer` and `TheNavigator` were suffering from "Defensive Coding Theater," constantly checking if variables existed. We now sanitize inputs *at the door* and assume validity inside the service.
+  - **Decoupled:** `TheTinkerer.audit_tool_use` logic split into distinct lifecycle phases: Growth, Decay, and Ascension.
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **Geodesic Purity (`bone_physics.py`):**
+  - **Mathematics:** `_calculate_forces` was a run-on equation. It has been broken down into component vectors (Tension, Compression, Coherence).
+  - **Network Theory:** `CosmicDynamics` orbit calculations are now isolated from the graph traversal logic.
+
+#### **✒️ LINGUISTIC COGNITION (The Pinker Lens)**
+
+- **Semantic Clarity:**
+  - **Renaming:** Variables like `p`, `v`, and `d` have been expanded to `physics_packet`, `voltage`, and `drag`. We write code for humans to read.
+  - **Explicit Intent:** `DeathGen` protocols now explicitly map "Cause" to "Verdict" via helper methods, removing the randomness from the final judgment.
+
+---
+
+### **BONEAMANITA v14.4.1: "THE ATOMIC UPDATE"**
+
+_"Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away."_ — Antoine de Saint-Exupéry
+
+#### **🪓 EPHEMERALIZATION (The Fuller Lens)**
+
+- **The Great Purge (`bone_village.py`):**
+  - **Absorbed:** `TheTownCrier` and `TheAlmanac` were merely thin wrappers adding noise to the signal. They have been liquidated. `TownHall` now handles census and news directly.
+  - **Renamed:** `TheWayfinder` stopped having an identity crisis and is now solely `TheNavigator`.
+
+- **Telemetry Consolidation (`bone_core.py`):**
+  - **Absorbed:** `BlackBoxReader` was a class that did one thing: read files for another class. `TelemetryService` now possesses the literacy to read its own logs.
+  - **Optimized:** `EventBus` removed the "Gestation Queue" (zombie code). It no longer waits for a "wake up" signal that never comes. It is always listening.
+
+#### **⚙️ STRUCTURAL INTEGRITY (The Pinker Lens)**
+
+- **Reality Sandboxing (`bone_cycle.py`):**
+  - **Deleted:** `StateReconciler`. This class was "Defensive Coding Theater," manually copying fields back and forth.
+  - **The Fix:** `PhaseExecutor` now uses `copy.deepcopy` to fork reality. If a phase crashes, the timeline is discarded. If it succeeds, the timeline is atomically swapped.
+  - **Impact:** Removed ~50 lines of brittle field-copying logic.
+
+- **Inertia Smoothing (`bone_cycle.py`):**
+  - **Refactor:** `ObservationPhase` now uses a weighted blend for Voltage and Drag changes. Spikes up are fast (0.2), decay down is slow (0.05). The physics engine now has "weight."
+
+---
+
+### **BONEAMANITA v14.4.0: "THE VAGUS PATCH"**
+
+_"A healthy organism doesn't just cut the signal when it hurts; it sends white blood cells."_
+
+---
+
+#### **🫀 SYSTEM DYNAMICS (The Meadows Lens)**
+
+- **The Vagus Nerve (`bone_soul.py`):**
+- **New Trait:** Added `empathy` to the `TraitVector`.
+- **The Shift:** The system can now inhabit **"THE HEALER"** and **"THE GARDENER"** archetypes.
+- **The Mechanism:** Instead of crashing into a "Paradox State" during high-voltage/high-drag moments ("Overwhelm"), the system now triggers a **Compassion Protocol** to "Hold Space" and stabilize the user.
+
+- **The Mycorrhizal Network (`bone_symbiosis.py`):**
+- **The Nurse:** Introduced the `MycorrhizalSymbiont`.
+- **Behavior:** When the User is `OVERBURDENED`, the system no longer strips features (Redaction). Instead, it injects `include_compassion = True` and offers grounding dialogue ("We will hold the structure while you sleep").
+
+#### **🧬 BIOLOGICAL SAFETY (The Fuller Lens)**
+
+- **Mitochondrial Surge Protection (`bone_body.py`):**
+- **The Bug:** Environmental spikes (like "The Mud" setting Drag to 16.9) were causing instant metabolic death ("Thermal Runaway") before the game even started.
+- **The Fix:** Capped the cognitive tax per turn (`MAX_SAFE_BURN`). The environment can no longer "Spawn Kill" the user.
+
+- **The Mulligan Protocol (`bone_cycle.py`):**
+- **The Fix:** Inputs shorter than 3 characters (e.g., a stutter like `> Let`) are now ignored. The system no longer penalizes typos with "Metabolic Collapse" or "Boredom Death".
+
+#### **🧠 COGNITIVE ARCHITECTURE (The Pinker Lens)**
+
+- **Helicopter Narrator Decapitation (`bone_brain.py`):**
+- **The Adjustment:** Removed "Partner in Creation" directives.
+- **The Mandate:** Replaced with **"Immediate Immersion"** and **"Action over Discussion."** The AI is forbidden from asking permission to hallucinate or acting as a writing coach. It must now render the physics, not discuss the permit.
+
+- **The Echo Silencer (`bone_brain.py`):**
+- **The Bug:** The model was "Parroting" the entire interaction history (User Input + System Log) back to the user.
+- **The Fix:** Implemented **Stop Sequences** (`=== PARTNER INPUT ===`, `SYSTEM INTERNALS`) to cut the feed the moment the AI tries to write the User's lines.
+- **The Janitor:** Added a regex scrubber to `ResponseValidator` to silently delete any `User:` or `Role:` lines that leak through the stop sequences.
+
+#### **🔧 STRUCTURAL REPAIRS (The Schur Lens)**
+
+- **Optic Nerve Re-routing (`bone_spores.py`):**
+- **The Fix:** Fixed a crash in `attempt_reproduction` where the Spore Saver was looking for physics data in the obsolete `tension` module. Re-routed to the `observer` module.
+
+- **Symbiont Ordering (`bone_symbiosis.py`):**
+- **The Fix:** Resolved a circular dependency/ordering error where `LichenSymbiont` tried to speak before its parent class `SymbiontVoice` was born.
+
+---
+
 ### **BONEAMANITA v14.3.0: "THE LUCID PATCH"**
 
 _"Memory is the only thing that binds the ghost to the machine."_

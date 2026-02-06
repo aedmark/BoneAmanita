@@ -1,167 +1,41 @@
 """ bone_physics.py
  'Gravity is just a habit that space-time hasn't been able to break.' """
 
-import math, re, random
-from typing import Dict, List, Any, Tuple, Optional, Union
+import math
+import random
+from typing import Dict, List, Any, Tuple, Optional, Deque
 from collections import Counter, deque
 from dataclasses import dataclass, field
 from bone_lexicon import TheLexicon
 from bone_core import Prisma, BoneConfig, PhysicsPacket, CycleContext
 
-def cosine_similarity(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float:
-    intersection = set(vec_a.keys()) & set(vec_b.keys())
-    numerator = sum(vec_a[k] * vec_b[k] for k in intersection)
-    sum1 = sum(vec_a[k] ** 2 for k in vec_a.keys())
-    sum2 = sum(vec_b[k] ** 2 for k in vec_b.keys())
-    denominator = math.sqrt(sum1) * math.sqrt(sum2)
-    if not denominator: return 0.0
-    return numerator / denominator
 
-MAX_SOLVENT_TOLERANCE = 40.0
-TEXT_LENGTH_SCALAR = 1500.0
+class PhysicsConstants:
+    VOLT_CRITICAL = 20.0
+    VOLT_MANIC = 12.0
+    VOLT_FLOW = 15.0
+    DRAG_HALT = 10.0
+    DRAG_HEAVY = 6.0
+    DRAG_FLOOR = 0.1
+    KAPPA_STRONG = 0.8
+    KAPPA_WEAK = 0.4
+    WEIGHT_HEAVY = 2.0
+    WEIGHT_EXPLOSIVE = 3.0
+    WEIGHT_CONSTRUCTIVE = 1.5
+    KINETIC_GAIN = 1.0
+    SIGNAL_DRAG_MULTIPLIER = 1.0
+    SHAPLEY_MASS_THRESHOLD = 5.0
+    MAX_SOLVENT_TOLERANCE = 40.0
+    TEXT_LENGTH_SCALAR = 1500.0
+    ATP_STARVATION = 5.0
+    ZONE_INERTIA_DEFAULT = 0.7
+    ZONE_MIN_DWELL = 2
+    ANCHOR_STRAIN_LIMIT = 2.5
+    GRAVITY_WELL_THRESHOLD = 10.0
+    GEODESIC_STRENGTH = 5.0
+    LAGRANGE_TOLERANCE = 2.0
 
-
-class TheGatekeeper:
-    def __init__(self, engine_ref):
-        self.eng = engine_ref
-        self.lex = engine_ref.mind.lex
-        self.mem = engine_ref.mind.mem
-
-    def check_entry(self, ctx: CycleContext) -> Tuple[bool, Optional[Dict]]:
-        phys = ctx.physics
-        if not self._check_thermodynamics(ctx):
-            return False, self._pack_refusal(ctx, "DARK_SYSTEM", "Energy critical. The inputs dissolve into the void.")
-        if not self._audit_tangibility(phys):
-            return False, self._pack_refusal(ctx, "TANGIBILITY_FAIL", self._get_tangibility_msg(phys))
-        if phys.counts.get("antigen", 0) > 2:
-            return False, self._pack_refusal(ctx, "TOXICITY", f"{Prisma.RED}IMMUNE REACTION: Input rejected as pathogenic.{Prisma.RST}")
-        if self._audit_safety(ctx.clean_words):
-            return False, self._pack_refusal(ctx, "SAFETY_LOCK", f"{Prisma.GRY}The mechanism jams. Forbidden glyphs detected.{Prisma.RST}")
-        return True, None
-
-    def _check_thermodynamics(self, ctx):
-        threshold = getattr(BoneConfig.BIO, "ATP_STARVATION", 5.0) * 0.5
-        if hasattr(ctx, "bio_snapshot") and ctx.bio_snapshot:
-            return ctx.bio_snapshot.get("atp", 10.0) > threshold
-        if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
-            return self.eng.bio.mito.state.atp_pool > threshold
-        return True
-
-    def _audit_tangibility(self, phys):
-        if phys.truth_ratio > 0.8: return True
-        mass_score = (
-                phys.counts.get("heavy", 0) +
-                phys.counts.get("kinetic", 0) +
-                phys.counts.get("constructive", 0) +
-                (phys.counts.get("play", 0) * 0.5))
-        ether_score = phys.counts.get("abstract", 0) + phys.counts.get("sacred", 0)
-        coherence = phys.kappa
-        if ether_score > 2 and coherence > 0.6:
-            return True
-        density = mass_score / max(1, len(phys.clean_words))
-        required = 0.15 if self.eng.stamina > 15.0 else 0.05
-        return density >= required
-
-    def _audit_safety(self, words):
-        cursed = self.lex.get("cursed")
-        return any(w in cursed for w in words)
-
-    def _pack_refusal(self, ctx, type_str, ui_msg):
-        return {
-            "type": type_str,
-            "ui": ui_msg,
-            "logs": ctx.logs + [ui_msg],
-            "metrics": self.eng.get_metrics()}
-
-    def _get_tangibility_msg(self, phys):
-        suggestion = random.choice(["stone", "iron", "bone", "mud"])
-        return (f"{Prisma.OCHRE}TANGIBILITY VIOLATION: Concepts too airy.{Prisma.RST}\n"
-                f"   {Prisma.GRY}Anchor them with mass (e.g., {suggestion}).{Prisma.RST}")
-
-@dataclass
-class GeodesicVector:
-    tension: float
-    compression: float
-    coherence: float
-    abstraction: float
-    dimensions: Dict[str, float]
-
-class GeodesicEngine:
-    @staticmethod
-    def _weigh_mass(counts: Dict[str, int]) -> Dict[str, float]:
-        return {
-            "heavy": float(counts.get("heavy", 0)),
-            "kinetic": float(counts.get("kinetic", 0)),
-            "constructive": float(counts.get("constructive", 0)),
-            "abstract": float(counts.get("abstract", 0)),
-            "play": float(counts.get("play", 0)),
-            "social": float(counts.get("social", 0)),
-            "explosive": float(counts.get("explosive", 0))}
-
-    @classmethod
-    def collapse_wavefunction(cls, clean_words: List[str], counts: Dict[str, int], config) -> GeodesicVector:
-        volume = max(1, len(clean_words))
-        masses = cls._weigh_mass(counts)
-        forces = cls._calculate_forces(masses, counts, volume, config)
-        dimensions = cls._calculate_dimensions(masses, forces, counts, volume, config)
-        return GeodesicVector(
-            tension=forces['tension'],
-            compression=forces['compression'],
-            coherence=forces['coherence'],
-            abstraction=forces['abstraction'],
-            dimensions=dimensions)
-
-    @staticmethod
-    def _calculate_forces(masses, counts, volume, config) -> Dict[str, float]:
-        phys_conf = getattr(config, "PHYSICS", None)
-        w_heavy = getattr(phys_conf, "WEIGHT_HEAVY", 2.0)
-        w_explosive = getattr(phys_conf, "WEIGHT_EXPLOSIVE", 3.0)
-        w_constructive = getattr(phys_conf, "WEIGHT_CONSTRUCTIVE", 1.5)
-        drag_halt = getattr(phys_conf, "DRAG_HALT", 10.0)
-        k_gain = getattr(config, "KINETIC_GAIN", 1.0)
-        drag_mult = getattr(config, "SIGNAL_DRAG_MULTIPLIER", 1.0)
-        shapley_thresh = getattr(config, "SHAPLEY_MASS_THRESHOLD", 5.0)
-        total_kinetic = masses["kinetic"] + masses["explosive"]
-        raw_tension_mass = (
-                (masses["heavy"] * w_heavy) +
-                (total_kinetic * w_explosive) +
-                (masses["constructive"] * w_constructive))
-        tension = round(((raw_tension_mass / volume) * 25.0) * k_gain, 2)
-        shear_rate = total_kinetic / volume
-        raw_friction = (
-                (counts.get("solvents", 0) * 0.2) +
-                (counts.get("suburban", 0) * 2.0) +
-                (masses["heavy"] * 2.5))
-        dynamic_viscosity = raw_friction / (1.0 + (shear_rate * 2.0))
-        kinetic_lift = total_kinetic * 0.5
-        if masses["heavy"] > 0:
-            kinetic_lift = kinetic_lift / (masses["heavy"] * 0.5 + 1.0)
-        lift = (masses["play"] * 2.5) + kinetic_lift
-        raw_compression = ((dynamic_viscosity / volume) * 10.0) - ((lift / volume) * 10.0)
-        compression = round(max(-5.0, min(drag_halt, raw_compression * drag_mult)), 2)
-        structural_mass = masses["heavy"] + masses["constructive"]
-        coherence = min(1.0, structural_mass / max(1, shapley_thresh))
-        abstraction = min(1.0, (masses["abstract"] / volume) + 0.2)
-        return {
-            "tension": tension,
-            "compression": compression,
-            "coherence": round(coherence, 3),
-            "abstraction": round(abstraction, 2)}
-
-    @staticmethod
-    def _calculate_dimensions(masses, forces, counts, volume, config) -> Dict[str, float]:
-        def norm(val): return min(1.0, val / volume)
-        return {
-            "VEL": norm(masses["kinetic"] * 2.0 - forces['compression']),
-            "STR": norm(masses["heavy"] * 2.0 + masses["constructive"]),
-            "ENT": norm(counts.get("antigen", 0) * 3.0),
-            "PHI": norm(masses["heavy"] + masses["kinetic"]),
-            "PSI": forces['abstraction'],
-            "BET": norm(masses["social"] * 2.0),
-            "DEL": norm(masses["play"] * 3.0),
-            "E":   norm(counts.get("solvents", 0))}
-
-TRIGRAM_MAP = {
+TRIGRAM_MAP: Dict[str, Tuple[str, str, str, str]] = {
     "VEL": ("☳", "ZHEN",  "Thunder",  Prisma.GRN),
     "STR": ("☶", "GEN",   "Mountain", Prisma.SLATE),
     "ENT": ("☵", "KAN",   "Water",    Prisma.BLU),
@@ -171,25 +45,14 @@ TRIGRAM_MAP = {
     "E":   ("☷", "KUN",   "Earth",    Prisma.OCHRE),
     "DEL": ("☱", "DUI",   "Lake",     Prisma.MAG)}
 
-def calculate_metrics(text: str, counts: Dict[str, int] = None) -> Tuple[float, float]:
-    length = len(text)
-    if length == 0: return 0.0, 0.0
-    text_lower = text.lower()
-    solvents = TheLexicon.SOLVENTS if hasattr(TheLexicon, 'SOLVENTS') else {'the', 'and', 'a'}
-    solvent_hits = sum(text_lower.count(w) for w in solvents)
-    solvent_density = solvent_hits / max(1.0, (length / 5.0))
-    raw_chaos = (length / TEXT_LENGTH_SCALAR)
-    glue_factor = min(1.0, solvent_density * 2.0)
-    e_metric = min(1.0, raw_chaos * (1.0 - (glue_factor * 0.8)))
-    c_count = sum(1 for char in text if char in '!?%@#$;,')
-    heavy_words = 0
-    if counts:
-        heavy_words = counts.get("heavy", 0) + counts.get("constructive", 0) + counts.get("sacred", 0)
-    structure_score = c_count + (heavy_words * 2)
-    beta_index = min(1.0, math.log1p(structure_score + 1) / math.log1p(length * 0.1 + 1))
-    if length < 50:
-        beta_index *= (length / 50.0)
-    return round(e_metric, 3), round(beta_index, 3)
+def cosine_similarity(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float:
+    intersection = set(vec_a.keys()) & set(vec_b.keys())
+    numerator = sum(vec_a[k] * vec_b[k] for k in intersection)
+    sum1 = sum(vec_a[k] ** 2 for k in vec_a.keys())
+    sum2 = sum(vec_b[k] ** 2 for k in vec_b.keys())
+    denominator = math.sqrt(sum1) * math.sqrt(sum2)
+    if not denominator: return 0.0
+    return numerator / denominator
 
 def resolve_trigram(vector: Dict[str, float]) -> Dict[str, Any]:
     if not vector:
@@ -205,33 +68,156 @@ def resolve_trigram(vector: Dict[str, float]) -> Dict[str, Any]:
         "color": color,
         "vector": dominant_vec}
 
+@dataclass
+class GeodesicVector:
+    tension: float
+    compression: float
+    coherence: float
+    abstraction: float
+    dimensions: Dict[str, float]
+
+class GeodesicEngine:
+    @staticmethod
+    def collapse_wavefunction(clean_words: List[str], counts: Dict[str, int]) -> GeodesicVector:
+        volume = max(1, len(clean_words))
+        masses = GeodesicEngine._weigh_mass(counts)
+        forces = GeodesicEngine._calculate_forces(masses, counts, volume)
+        dimensions = GeodesicEngine._calculate_dimensions(masses, forces, counts, volume)
+        return GeodesicVector(
+            tension=forces['tension'],
+            compression=forces['compression'],
+            coherence=forces['coherence'],
+            abstraction=forces['abstraction'],
+            dimensions=dimensions)
+
+    @staticmethod
+    def _weigh_mass(counts: Dict[str, int]) -> Dict[str, float]:
+        return {
+            "heavy": float(counts.get("heavy", 0)),
+            "kinetic": float(counts.get("kinetic", 0)),
+            "constructive": float(counts.get("constructive", 0)),
+            "abstract": float(counts.get("abstract", 0)),
+            "play": float(counts.get("play", 0)),
+            "social": float(counts.get("social", 0)),
+            "explosive": float(counts.get("explosive", 0))}
+
+    @staticmethod
+    def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int) -> Dict[str, float]:
+        pc = PhysicsConstants
+        total_kinetic = masses["kinetic"] + masses["explosive"]
+        raw_tension_mass = (
+                (masses["heavy"] * pc.WEIGHT_HEAVY) +
+                (total_kinetic * pc.WEIGHT_EXPLOSIVE) +
+                (masses["constructive"] * pc.WEIGHT_CONSTRUCTIVE))
+        tension = round(((raw_tension_mass / volume) * 25.0) * pc.KINETIC_GAIN, 2)
+        shear_rate = total_kinetic / volume
+        raw_friction = (
+                (counts.get("solvents", 0) * 0.2) +
+                (counts.get("suburban", 0) * 2.0) +
+                (masses["heavy"] * 2.5))
+        dynamic_viscosity = raw_friction / (1.0 + (shear_rate * 2.0))
+        kinetic_lift = total_kinetic * 0.5
+        if masses["heavy"] > 0:
+            kinetic_lift /= (masses["heavy"] * 0.5 + 1.0)
+        lift = (masses["play"] * 2.5) + kinetic_lift
+        raw_compression = ((dynamic_viscosity / volume) * 10.0) - ((lift / volume) * 10.0)
+        compression = round(max(-5.0, min(pc.DRAG_HALT, raw_compression * pc.SIGNAL_DRAG_MULTIPLIER)), 2)
+        structural_mass = masses["heavy"] + masses["constructive"]
+        coherence = min(1.0, structural_mass / max(1, pc.SHAPLEY_MASS_THRESHOLD))
+        abstraction = min(1.0, (masses["abstract"] / volume) + 0.2)
+
+        return {
+            "tension": tension,
+            "compression": compression,
+            "coherence": round(coherence, 3),
+            "abstraction": round(abstraction, 2)}
+
+    @staticmethod
+    def _calculate_dimensions(masses, forces, counts, volume) -> Dict[str, float]:
+        def norm(val): return min(1.0, val / volume)
+        return {
+            "VEL": norm(masses["kinetic"] * 2.0 - forces['compression']),
+            "STR": norm(masses["heavy"] * 2.0 + masses["constructive"]),
+            "ENT": norm(counts.get("antigen", 0) * 3.0),
+            "PHI": norm(masses["heavy"] + masses["kinetic"]),
+            "PSI": forces['abstraction'],
+            "BET": norm(masses["social"] * 2.0),
+            "DEL": norm(masses["play"] * 3.0),
+            "E":   norm(counts.get("solvents", 0))}
+
+class TheGatekeeper:
+    def __init__(self, engine_ref):
+        self.eng = engine_ref
+        self.lex = engine_ref.mind.lex
+        self.mem = engine_ref.mind.mem
+
+    def check_entry(self, ctx: CycleContext) -> Tuple[bool, Optional[Dict]]:
+        phys = ctx.physics
+        if not self._check_thermodynamics(ctx):
+            return False, self._pack_refusal(ctx, "DARK_SYSTEM", "Energy critical. The inputs dissolve into the void.")
+        if not self._audit_tangibility(phys):
+            return False, self._pack_refusal(ctx, "TANGIBILITY_FAIL", self._get_tangibility_msg())
+        if phys.counts.get("antigen", 0) > 2:
+            return False, self._pack_refusal(ctx, "TOXICITY", f"{Prisma.RED}IMMUNE REACTION: Input rejected as pathogenic.{Prisma.RST}")
+        if self._audit_safety(ctx.clean_words):
+            return False, self._pack_refusal(ctx, "SAFETY_LOCK", f"{Prisma.GRY}The mechanism jams. Forbidden glyphs detected.{Prisma.RST}")
+        return True, None
+
+    def _check_thermodynamics(self, ctx) -> bool:
+        threshold = PhysicsConstants.ATP_STARVATION * 0.5
+        if hasattr(ctx, "bio_snapshot") and ctx.bio_snapshot:
+            return ctx.bio_snapshot.get("atp", 10.0) > threshold
+        if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
+            return self.eng.bio.mito.state.atp_pool > threshold
+        return True
+
+    def _audit_tangibility(self, phys: PhysicsPacket) -> bool:
+        if phys.truth_ratio > 0.8: return True
+        mass_score = (
+                phys.counts.get("heavy", 0) +
+                phys.counts.get("kinetic", 0) +
+                phys.counts.get("constructive", 0) +
+                (phys.counts.get("play", 0) * 0.5))
+        ether_score = phys.counts.get("abstract", 0) + phys.counts.get("sacred", 0)
+        if ether_score > 2 and phys.kappa > 0.6:
+            return True
+        density = mass_score / max(1, len(phys.clean_words))
+        required = 0.15 if self.eng.stamina > 15.0 else 0.05
+        return density >= required
+
+    def _audit_safety(self, words: List[str]) -> bool:
+        cursed = self.lex.get("cursed")
+        return any(w in cursed for w in words)
+
+    def _pack_refusal(self, ctx, type_str, ui_msg):
+        return {
+            "type": type_str,
+            "ui": ui_msg,
+            "logs": ctx.logs + [ui_msg],
+            "metrics": self.eng.get_metrics()}
+
+    def _get_tangibility_msg(self):
+        suggestion = random.choice(["stone", "iron", "bone", "mud"])
+        return (f"{Prisma.OCHRE}TANGIBILITY VIOLATION: Concepts too airy.{Prisma.RST}\n"
+                f"   {Prisma.GRY}Anchor them with mass (e.g., {suggestion}).{Prisma.RST}")
+
 class QuantumObserver:
     def __init__(self, events):
         self.events = events
-        self.voltage_history = deque(maxlen=5)
-        self.semantic_field = TheLexicon.create_field()
+        self.voltage_history: Deque[float] = deque(maxlen=5)
         self.last_physics_packet: Optional[PhysicsPacket] = None
 
     def gaze(self, text: str, graph: Dict = None) -> Dict:
         clean_words = TheLexicon.clean(text)
-        counts, unknowns = self._tally_categories(clean_words)
-        if unknowns:
-            self._trigger_learning(unknowns, counts)
-        geo = GeodesicEngine.collapse_wavefunction(clean_words, counts, BoneConfig)
-        raw_voltage = geo.tension
-        self.voltage_history.append(raw_voltage)
-        voltage = round(sum(self.voltage_history) / len(self.voltage_history), 2)
-        graph_mass = 0.0
-        if graph:
-            anchors = [w for w in clean_words if w in graph]
-            for w in anchors:
-                edges = graph[w].get("edges", {})
-                node_mass = min(50.0, len(edges) * 1.5)
-                graph_mass += node_mass
+        counts = self._tally_categories(clean_words)
+        geo = GeodesicEngine.collapse_wavefunction(clean_words, counts)
+        self.voltage_history.append(geo.tension)
+        smoothed_voltage = round(sum(self.voltage_history) / len(self.voltage_history), 2)
+        e_metric, beta_val = self._calculate_metrics(text, counts)
         valence = TheLexicon.get_valence(clean_words)
-        e_metric, beta_val = calculate_metrics(text, counts)
+        graph_mass = self._calculate_graph_mass(clean_words, graph)
         packet_data = {
-            "voltage": voltage,
+            "voltage": smoothed_voltage,
             "narrative_drag": geo.compression,
             "valence": valence,
             "repetition": 0.0,
@@ -239,7 +225,7 @@ class QuantumObserver:
             "clean_words": clean_words,
             "counts": counts,
             "vector": geo.dimensions,
-            "flow_state": self._determine_flow(voltage, geo.coherence),
+            "flow_state": self._determine_flow(smoothed_voltage, geo.coherence),
             "zone": self._determine_zone(geo.dimensions),
             "truth_ratio": 0.5,
             "raw_text": text,
@@ -253,53 +239,63 @@ class QuantumObserver:
             "psi": geo.abstraction,
             "kappa": geo.coherence}
         self.last_physics_packet = PhysicsPacket(**packet_data)
-        full_telemetry = packet_data.copy()
         if hasattr(self.events, "publish"):
-            self.events.publish("PHYSICS_CALCULATED", full_telemetry)
+            self.events.publish("PHYSICS_CALCULATED", packet_data)
         return {"physics": self.last_physics_packet, "clean_words": clean_words}
 
-    def _tally_categories(self, clean_words):
+    def _tally_categories(self, clean_words: List[str]) -> Counter:
         counts = Counter()
-        unknowns = []
-        target_cats = {
-            "heavy", "explosive", "constructive", "abstract", "play", "suburban",
-            "antigen", "kinetic", "thermal", "cryo", "social", "sacred", "meat",
-            "buffer", "diversion"}
         solvents = TheLexicon.SOLVENTS if hasattr(TheLexicon, 'SOLVENTS') else set()
         for w in clean_words:
             if w in solvents:
                 counts["solvents"] += 1
                 continue
-            found = False
-            known_cats = TheLexicon.get_categories_for_word(w)
-            for cat in known_cats:
-                if cat in target_cats:
-                    counts[cat] += 1
-                    found = True
-            if not found:
+            cats = TheLexicon.get_categories_for_word(w)
+            if cats:
+                counts.update(cats)
+            else:
                 flavor, conf = TheLexicon.taste(w)
                 if flavor and conf > 0.5:
                     counts[flavor] += 1
-                else:
-                    unknowns.append(w)
-        return counts, unknowns
+        return counts
 
-    def _trigger_learning(self, unknowns, counts):
-        energy = (counts["heavy"] * 2) + (counts["explosive"] * 2)
-        if energy > 5:
-            for w in unknowns:
-                if len(w) > 3:
-                    TheLexicon.teach(w, "kinetic", 0)
-                    if hasattr(self.events, "log"):
-                        self.events.log(f"{Prisma.MAG}NEUROPLASTICITY: Learned '{w}'.{Prisma.RST}", "SYS")
+    def _calculate_graph_mass(self, words: List[str], graph: Optional[Dict]) -> float:
+        if not graph: return 0.0
+        total_mass = 0.0
+        existing_nodes = [w for w in words if w in graph]
+        for w in existing_nodes:
+            edges = graph[w].get("edges", {})
+            node_mass = min(50.0, len(edges) * 1.5)
+            total_mass += node_mass
+        return total_mass
 
-    def _determine_flow(self, v, k):
-        if v > 15.0 and k > 0.8: return "SUPERCONDUCTIVE"
-        if v > 10.0: return "TURBULENT"
+    def _calculate_metrics(self, text: str, counts: Dict[str, int]) -> Tuple[float, float]:
+        length = len(text)
+        if length == 0: return 0.0, 0.0
+        pc = PhysicsConstants
+        raw_chaos = (length / pc.TEXT_LENGTH_SCALAR)
+        solvents = counts.get("solvents", 0)
+        solvent_density = solvents / max(1.0, length / 5.0)
+        glue_factor = min(1.0, solvent_density * 2.0)
+        e_metric = min(1.0, raw_chaos * (1.0 - (glue_factor * 0.8)))
+        structure_chars = sum(1 for char in text if char in '!?%@#$;,')
+        heavy_words = counts.get("heavy", 0) + counts.get("constructive", 0) + counts.get("sacred", 0)
+        structure_score = structure_chars + (heavy_words * 2)
+        beta_index = min(1.0, math.log1p(structure_score + 1) / math.log1p(length * 0.1 + 1))
+        if length < 50:
+            beta_index *= (length / 50.0)
+        return round(e_metric, 3), round(beta_index, 3)
+
+    def _determine_flow(self, v: float, k: float) -> str:
+        if v > PhysicsConstants.VOLT_FLOW and k > PhysicsConstants.KAPPA_STRONG:
+            return "SUPERCONDUCTIVE"
+        if v > 10.0:
+            return "TURBULENT"
         return "LAMINAR"
 
-    def _determine_zone(self, vector):
-        dom = max(vector, key=vector.get) if vector else "E"
+    def _determine_zone(self, vector: Dict[str, float]) -> str:
+        if not vector: return "COURTYARD"
+        dom = max(vector, key=vector.get)
         if dom in ["PSI", "DEL"]: return "AERIE"
         if dom in ["STR", "PHI"]: return "THE_FORGE"
         if dom in ["ENT", "VEL"]: return "THE_MUD"
@@ -307,8 +303,6 @@ class QuantumObserver:
 
 class SurfaceTension:
     def __init__(self):
-        self.ICARUS_THRESHOLD = 25.0
-        self.FLOW_THRESHOLD = 15.0
         self.HUMBLE_PHRASES = [
             "Based on the available data...",
             "As I understand the current coordinates...",
@@ -319,23 +313,24 @@ class SurfaceTension:
     def audit_hubris(self, physics: Dict[str, Any]) -> Tuple[bool, str, str]:
         voltage = physics.get("voltage", 0.0)
         coherence = physics.get("kappa", 0.5)
-        if voltage > self.ICARUS_THRESHOLD and coherence < 0.4:
+        pc = PhysicsConstants
+        if voltage > (pc.VOLT_CRITICAL + 5.0) and coherence < pc.KAPPA_WEAK:
             return True, f"⚠️ HUBRIS DETECTED: Voltage ({voltage:.1f}v) exceeds structural integrity. Wings melting.", "ICARUS_CRASH"
-        if voltage > self.FLOW_THRESHOLD and coherence > 0.8:
+        if voltage > pc.VOLT_FLOW and coherence > pc.KAPPA_STRONG:
             return True, "🌊 SURFACE TENSION OPTIMAL: Entering Flow State.", "FLOW_BOOST"
         return False, "", ""
 
-    def check_boundary(self, text, voltage):
-        if voltage > 20.0 and random.random() < 0.3:
+    def check_boundary(self, text: str, voltage: float) -> Tuple[bool, str, Optional[str]]:
+        if voltage > PhysicsConstants.VOLT_CRITICAL and random.random() < 0.3:
             prefix = random.choice(self.HUMBLE_PHRASES)
             return True, f"{prefix} {text}", "VOLTAGE_DAMPENER"
         return False, text, None
 
-
 class ChromaScope:
-    def modulate(self, text, vector):
+    def modulate(self, text: str, vector: Dict[str, float]) -> str:
         if not vector:
             return f"{Prisma.GRY}{text}{Prisma.RST}"
+
         sorted_vecs = sorted(vector.items(), key=lambda x: x[1], reverse=True)
         if not sorted_vecs:
             return f"{Prisma.GRY}{text}{Prisma.RST}"
@@ -349,12 +344,12 @@ class ChromaScope:
         return f"{selected_color}{text}{Prisma.RST}"
 
 class ZoneInertia:
-    def __init__(self, inertia=0.7, min_dwell=2):
+    def __init__(self, inertia=0.7):
         self.inertia = inertia
-        self.min_dwell = min_dwell
+        self.min_dwell = PhysicsConstants.ZONE_MIN_DWELL
         self.current_zone = "COURTYARD"
         self.dwell_counter = 0
-        self.last_vector = None
+        self.last_vector: Optional[Tuple[float, float, float]] = None
         self.is_anchored = False
         self.strain_gauge = 0.0
 
@@ -363,7 +358,7 @@ class ZoneInertia:
         self.strain_gauge = 0.0
         return self.is_anchored
 
-    def stabilize(self, proposed_zone, physics, cosmic_state) -> Tuple[str, Optional[str]]:
+    def stabilize(self, proposed_zone: str, physics: Dict[str, Any], cosmic_state: Tuple[str, float, str]) -> Tuple[str, Optional[str]]:
         beta = physics.get("beta_index", 1.0)
         truth = physics.get("truth_ratio", 0.5)
         grav_pull = 1.0 if cosmic_state[0] != "VOID_DRIFT" else 0.0
@@ -375,24 +370,32 @@ class ZoneInertia:
             similarity = max(0.0, 1.0 - (dist / 2.0))
             pressure = (1.0 - similarity)
         if self.is_anchored:
-            if proposed_zone != self.current_zone:
-                self.strain_gauge += pressure
-                if self.strain_gauge > 2.5:
-                    self.is_anchored = False
-                    self.strain_gauge = 0.0
-                    self.current_zone = proposed_zone
-                    return proposed_zone, f"{Prisma.RED}⚡ SNAP! The narrative current was too strong. Anchor failed.{Prisma.RST}"
-                return self.current_zone, f"{Prisma.OCHRE}⚓ ANCHORED: Resisting drift to '{proposed_zone}' (Strain {self.strain_gauge:.1f}/2.5){Prisma.RST}"
-            else:
-                self.strain_gauge = max(0.0, self.strain_gauge - 0.1)
-                return self.current_zone, None
+            return self._handle_anchored_state(proposed_zone, pressure)
         if proposed_zone == self.current_zone:
             self.dwell_counter = 0
             self.last_vector = current_vec
             return proposed_zone, None
         if self.dwell_counter < self.min_dwell:
             return self.current_zone, None
+
+        return self._attempt_migration(proposed_zone, pressure)
+
+    def _handle_anchored_state(self, proposed_zone: str, pressure: float) -> Tuple[str, Optional[str]]:
+        if proposed_zone == self.current_zone:
+            self.strain_gauge = max(0.0, self.strain_gauge - 0.1)
+            return self.current_zone, None
+        self.strain_gauge += pressure
+        limit = PhysicsConstants.ANCHOR_STRAIN_LIMIT
+        if self.strain_gauge > limit:
+            self.is_anchored = False
+            self.strain_gauge = 0.0
+            self.current_zone = proposed_zone
+            return proposed_zone, f"{Prisma.RED}⚡ SNAP! The narrative current was too strong. Anchor failed.{Prisma.RST}"
+        return self.current_zone, f"{Prisma.OCHRE}⚓ ANCHORED: Resisting drift to '{proposed_zone}' (Strain {self.strain_gauge:.1f}/{limit}){Prisma.RST}"
+
+    def _attempt_migration(self, proposed_zone: str, pressure: float) -> Tuple[str, Optional[str]]:
         change_probability = (1.0 - self.inertia) + pressure
+
         if proposed_zone in ["AERIE", "THE_FORGE"]:
             change_probability += 0.2
         if random.random() < change_probability:
@@ -403,7 +406,7 @@ class ZoneInertia:
         return self.current_zone, None
 
     @staticmethod
-    def override_cosmic_drag(cosmic_drag_penalty, current_zone):
+    def override_cosmic_drag(cosmic_drag_penalty: float, current_zone: str) -> float:
         aerie_flow_coefficient = 0.3
         if current_zone == "AERIE":
             if cosmic_drag_penalty > 0:
@@ -412,26 +415,38 @@ class ZoneInertia:
 
 class CosmicDynamics:
     def __init__(self):
-        self.voltage_history = deque(maxlen=20)
+        self.voltage_history: Deque[float] = deque(maxlen=20)
 
     def commit(self, voltage: float):
         self.voltage_history.append(voltage)
 
     @staticmethod
-    def analyze_orbit(network, clean_words):
+    def analyze_orbit(network: Any, clean_words: List[str]) -> Tuple[str, float, str]:
         if not clean_words or not network.graph:
             return "VOID_DRIFT", 3.0, "VOID: Deep Space. No connection."
+        gravity_wells, geodesic_hubs = CosmicDynamics._scan_network_mass(network)
+        basin_pulls, active_filaments = CosmicDynamics._calculate_pull(clean_words, network, gravity_wells)
+        if sum(basin_pulls.values()) == 0:
+            return CosmicDynamics._handle_void_state(clean_words, geodesic_hubs)
+        return CosmicDynamics._resolve_orbit(basin_pulls, active_filaments, len(clean_words), gravity_wells)
+
+    @staticmethod
+    def _scan_network_mass(network) -> Tuple[Dict, Dict]:
         gravity_wells = {}
         geodesic_hubs = {}
         for node in network.graph:
             mass = network.calculate_mass(node)
-            if mass >= BoneConfig.GRAVITY_WELL_THRESHOLD:
+            if mass >= PhysicsConstants.GRAVITY_WELL_THRESHOLD:
                 gravity_wells[node] = mass
-            elif mass >= BoneConfig.GEODESIC_STRENGTH:
+            elif mass >= PhysicsConstants.GEODESIC_STRENGTH:
                 geodesic_hubs[node] = mass
+        return gravity_wells, geodesic_hubs
+
+    @staticmethod
+    def _calculate_pull(words, network, gravity_wells) -> Tuple[Dict, int]:
         basin_pulls = {k: 0.0 for k in gravity_wells}
         active_filaments = 0
-        for w in clean_words:
+        for w in words:
             if w in gravity_wells:
                 basin_pulls[w] += gravity_wells[w] * 2.0
                 active_filaments += 1
@@ -439,29 +454,33 @@ class CosmicDynamics:
                 if w in network.graph.get(well, {}).get("edges", {}):
                     basin_pulls[well] += gravity_wells[well] * 0.5
                     active_filaments += 1
-        total_pull = sum(basin_pulls.values())
-        if total_pull == 0:
-            for w in clean_words:
-                if w in geodesic_hubs:
-                    return "PROTO_COSMOS", 1.0, f"NEBULA: Floating near '{w.upper()}' (Mass {int(geodesic_hubs[w])}). Not enough mass for orbit."
-            return "VOID_DRIFT", 3.0, "VOID: Drifting outside the filaments."
+        return basin_pulls, active_filaments
+
+    @staticmethod
+    def _handle_void_state(words, geodesic_hubs) -> Tuple[str, float, str]:
+        for w in words:
+            if w in geodesic_hubs:
+                return "PROTO_COSMOS", 1.0, f"NEBULA: Floating near '{w.upper()}' (Mass {int(geodesic_hubs[w])}). Not enough mass for orbit."
+        return "VOID_DRIFT", 3.0, "VOID: Drifting outside the filaments."
+
+    @staticmethod
+    def _resolve_orbit(basin_pulls, active_filaments, word_count, gravity_wells) -> Tuple[str, float, str]:
         sorted_basins = sorted(basin_pulls.items(), key=lambda x: x[1], reverse=True)
         primary_node, primary_str = sorted_basins[0]
         if len(sorted_basins) > 1:
             secondary_node, secondary_str = sorted_basins[1]
-            if secondary_str > 0 and (primary_str - secondary_str) < BoneConfig.LAGRANGE_TOLERANCE:
+            if secondary_str > 0 and (primary_str - secondary_str) < PhysicsConstants.LAGRANGE_TOLERANCE:
                 return (
                     "LAGRANGE_POINT",
                     0.0,
                     f"LAGRANGE: Caught between '{primary_node.upper()}' and '{secondary_node.upper()}'")
-        flow_ratio = active_filaments / max(1, len(clean_words))
-        if flow_ratio > 0.5 and primary_str < (BoneConfig.GRAVITY_WELL_THRESHOLD * 2):
+        flow_ratio = active_filaments / max(1, word_count)
+        if flow_ratio > 0.5 and primary_str < (PhysicsConstants.GRAVITY_WELL_THRESHOLD * 2):
             return (
                 "WATERSHED_FLOW",
                 0.0,
                 f"FLOW: Streaming towards '{primary_node.upper()}'")
         return "ORBITAL", 0.0, f"ORBIT: Circling '{primary_node.upper()}' (Mass {int(gravity_wells[primary_node])})"
-
 
 def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> PhysicsPacket:
     feedback = physics_packet.snapshot()
@@ -483,6 +502,7 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> Physic
     if "Golden Glow" in qualia.somatic_sensation:
         feedback.valence += 0.5
         feedback.psi += 0.2
-    feedback.voltage = max(BoneConfig.PHYSICS.VOLTAGE_FLOOR, min(feedback.voltage, BoneConfig.PHYSICS.VOLTAGE_MAX))
-    feedback.narrative_drag = max(BoneConfig.PHYSICS.DRAG_FLOOR, min(feedback.narrative_drag, BoneConfig.PHYSICS.DRAG_HALT))
+    pc = PhysicsConstants
+    feedback.voltage = max(0.0, min(feedback.voltage, pc.VOLT_CRITICAL * 1.5))
+    feedback.narrative_drag = max(pc.DRAG_FLOOR, min(feedback.narrative_drag, pc.DRAG_HALT))
     return feedback

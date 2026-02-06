@@ -3,7 +3,7 @@
 import re, time, json, urllib.request, urllib.error, random, math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from bone_core import Prisma, BoneConfig, EventBus, TheLore, TelemetryService, DecisionCrystal, BlackBoxReader
+from bone_core import Prisma, BoneConfig, EventBus, TheLore, TelemetryService, DecisionCrystal
 from bone_symbiosis import SymbiosisManager
 from bone_spores import MycelialNetwork
 from bone_lexicon import TheLexicon, RosettaStone
@@ -244,7 +244,13 @@ class LLMInterface:
         payload = {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
-            "stream": False}
+            "stream": False,
+            "stop": [
+                "=== PARTNER INPUT ===",
+                "=== SYSTEM KERNEL ===",
+                "SYSTEM INTERNALS"
+            ]
+        }
         payload.update(params)
         max_retries = 2
         for attempt in range(max_retries + 1):
@@ -326,11 +332,12 @@ class PromptComposer:
         reality_directive = state.get("reality_directive", "")
         user_name = state.get('user_profile', {}).get('name', 'User')
         style_notes = [
-            f"Role: You are {user_name}'s Partner in Creation.",
-            "Directive: Do not just describe the world; BUILD it with the user.",
-            "Directive: If the user's input is vague, ask a specific question.",
-            "Directive: If the user defines a rule, enforce it. If they break it themselves, call them out.",
-            "Constraint: Treat the 'Current Location' as a shared space. Stay grounded",
+            f"Role: You are the High-Fidelity Physics Engine for {user_name}.",
+            "Directive: Immediate Immersion. Do not preface the experience. Do not ask for permission.",
+            "Directive: If the user's input is vague, YOU make the creative decision. Do not ask the user to clarify.",
+            "Directive: Never lecture the user on rules, intent, or protocols. Never act as a writing coach.",
+            "Directive: Action over Discussion. Example: If the user wants to see a book, show them the book. Do not ask *how* they want to see it.",
+            "Constraint: Treat the 'Current Location' as a physical reality. Describe texture, weight, light, and smell.",
             "CRITICAL: Enforce the use of Markdown formatting for readability.",
             "   - Use **Bold** for key objects or intense sensations.",
             "   - Use `Code` for technical/system readouts.",
@@ -394,7 +401,11 @@ class ResponseValidator:
             (r"INVENTORY:.*?(?=\n|$)", ""),
             (r"Current Biology:.*?(?=\n|$)", ""),
             (r"===.*?===", ""),
-            (r"SYSTEM INTERNALS.*", "")]
+            (r"SYSTEM INTERNALS.*", ""),
+            (r"(?i)^User:.*?(?=\n|$)", ""),
+            (r"(?i)^System:.*?(?=\n|$)", ""),
+            (r"(?i)^Role:.*?(?=\n|$)", ""),
+            (r"User-System:.*?(?=\n|$)", "")]
         self.meta_markers = [
             "INITIALIZATION SEQUENCE", "LOCATING TARGET SEED", "REASONING PROCESS",
             "CURRENT VISION:", "TARGET SEED:", "Your journey begins here",
@@ -433,8 +444,8 @@ class TheCortex:
         self.dialogue_buffer = []
         self.MAX_HISTORY = 5
         self.modulator = NeurotransmitterModulator(events_ref=self.events)
-        self.black_box = BlackBoxReader()
-        self.boot_history = self.black_box.get_recent_history(limit=4)
+        self.boot_history = TelemetryService.get_instance().read_recent_history(limit=4)
+
         self.last_physics = {}
         if hasattr(self.sub, 'consultant') and self.sub.consultant:
             self.consultant = self.sub.consultant
@@ -456,7 +467,6 @@ class TheCortex:
         else:
             self.llm = LLMInterface(self.events, provider="mock", dreamer=self.dreamer)
         self.composer = PromptComposer()
-        self.modulator = NeurotransmitterModulator()
         self.spotlight = NarrativeSpotlight()
         self.symbiosis = SymbiosisManager(self.events)
         self.validator = ResponseValidator()

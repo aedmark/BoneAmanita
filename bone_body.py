@@ -142,6 +142,7 @@ class MitochondrialForge:
     ROS_THRESHOLD_SIGNAL = 3.0
     ROS_THRESHOLD_DAMAGE = 8.0
     ROS_THRESHOLD_PURGE = 12.0
+    MAX_SAFE_BURN = 25.0
 
     def __init__(self, state_ref: MitochondrialState, events_ref):
         self.state = state_ref
@@ -159,23 +160,25 @@ class MitochondrialForge:
         raw_drag = _get_val(physics_packet, "narrative_drag", 0.0)
         drag = max(0.0, raw_drag)
         base_demand = max(0.1, math.log1p(voltage) * 1.5)
-        cognitive_load_tax = (drag ** 1.5) * 0.5
+        raw_tax = (drag ** 1.5) * 0.5
+        cognitive_load_tax = min(15.0, raw_tax)
         mod_factor = 1.0
         if external_modifiers:
             for m in external_modifiers:
                 mod_factor *= m
         efficiency = max(0.35, self.state.membrane_potential)
         raw_cost = ((base_demand + cognitive_load_tax) * mod_factor) / efficiency
+        if raw_cost > self.MAX_SAFE_BURN:
+            excess = raw_cost - self.MAX_SAFE_BURN
+            raw_cost = self.MAX_SAFE_BURN
+            if self.events:
+                self.events.log(f"{Prisma.CYN}⚡ SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).{Prisma.RST}", "BIO")
         total_metabolic_cost = raw_cost
         waste_generated = total_metabolic_cost * (1.0 - efficiency) * 0.5
         self.state.ros_buildup += waste_generated
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
-        if total_metabolic_cost > 30.0:
-            self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.01)
-            if self.events:
-                self.events.log(
-                    f"{Prisma.RED}🔥 THERMAL RUNAWAY: Burn ({total_metabolic_cost:.1f}) melted mitochondrial lining.{Prisma.RST}",
-                    "BIO_CRIT")
+        if total_metabolic_cost >= self.MAX_SAFE_BURN:
+            self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.005) # Reduced damage
         self._apply_adaptive_dynamics(waste_generated)
         status = "RESPIRING"
         if self.state.atp_pool < BioConstants.ATP_CRITICAL: status = "LOW_POWER"

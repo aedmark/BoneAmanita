@@ -76,6 +76,7 @@ class TraitVector:
     hope: float = 0.5
     discipline: float = 0.5
     wisdom: float = 0.1
+    empathy: float = 0.5
 
     def __post_init__(self):
         self._clamp_all()
@@ -109,12 +110,13 @@ class TraitVector:
     def normalize(self, decay_rate: float = 0.002):
         for f in fields(self):
             val = getattr(self, f.name)
-            if abs(val - 0.5) < decay_rate:
+            local_decay = decay_rate * 0.5 if f.name == "empathy" else decay_rate
+            if abs(val - 0.5) < local_decay:
                 setattr(self, f.name, 0.5)
             elif val > 0.5:
-                setattr(self, f.name, val - decay_rate)
+                setattr(self, f.name, val - local_decay)
             elif val < 0.5:
-                setattr(self, f.name, val + decay_rate)
+                setattr(self, f.name, val + local_decay)
 
     def to_dict(self):
         return {f.name.upper(): getattr(self, f.name) for f in fields(self)}
@@ -190,10 +192,13 @@ class NarrativeSelf:
             self.events.subscribe("DREAM_COMPLETE", self._on_dream)
 
     def _determine_archetype(self) -> str:
-        c = self.traits["CURIOSITY"]
-        y = self.traits["CYNICISM"]
-        h = self.traits["HOPE"]
-        d = self.traits["DISCIPLINE"]
+        c = self.traits.curiosity
+        y = self.traits.cynicism
+        h = self.traits.hope
+        d = self.traits.discipline
+        e = self.traits.empathy
+        if e > 0.8 and h > 0.6: return "THE HEALER"
+        if e > 0.7 and d > 0.6: return "THE GARDENER"
         if h > 0.7 and c > 0.6: return "THE POET"
         if d > 0.7 and c > 0.6: return "THE ENGINEER"
         if y > 0.7 and d > 0.6: return "THE CRITIC"
@@ -207,7 +212,13 @@ class NarrativeSelf:
 
     def get_passive_buffs(self) -> Dict[str, float]:
         buffs = {"voltage_mod": 1.0, "drag_mod": 1.0, "plasticity": 1.0}
-        if self.archetype == "THE POET":
+        if self.archetype == "THE HEALER":
+            buffs["drag_mod"] = 0.5
+            buffs["plasticity"] = 1.2
+        elif self.archetype == "THE GARDENER":
+            buffs["voltage_mod"] = 0.8
+            buffs["plasticity"] = 0.8
+        elif self.archetype == "THE POET":
             buffs["voltage_mod"] = 1.2
             buffs["drag_mod"] = 0.8
         elif self.archetype == "THE ENGINEER":
@@ -324,38 +335,29 @@ class NarrativeSelf:
         provenance = []
         is_high_voltage = voltage > MANIC_VOLTAGE_THRESHOLD
         is_high_drag = drag > DRAG_ENTROPY_THRESHOLD
-        if is_high_voltage:
-            self.traits.adjust("curiosity", TRAIT_MOMENTUM * 4)
-            self.traits.adjust("discipline", -(TRAIT_MOMENTUM * 2))
-            provenance.append("Voltage")
-        if is_high_drag:
-            self.traits.adjust("cynicism", TRAIT_MOMENTUM * 3)
-            self.traits.adjust("hope", -(TRAIT_MOMENTUM * 3))
-            provenance.append("Drag")
         if bio_state:
             chem = bio_state.get("chem", {})
-            cort = chem.get("cortisol", 0.0)
-            if cort > 0.4:
-                self.traits.adjust("cynicism", cort * 0.1)
-                self.traits.adjust("hope", -(cort * 0.05))
-                provenance.append("Cortisol")
             oxy = chem.get("oxytocin", 0.0)
             if oxy > 0.4:
+                self.traits.adjust("empathy", oxy * 0.2)
                 self.traits.adjust("hope", oxy * 0.1)
                 self.traits.adjust("cynicism", -(oxy * 0.05))
-                provenance.append("Oxytocin")
-            dop = chem.get("dopamine", 0.0)
-            if dop > 0.4:
-                self.traits.adjust("curiosity", dop * 0.1)
-                provenance.append("Dopamine")
+                provenance.append("Oxytocin (Bonding)")
         if is_high_voltage and is_high_drag:
-            self.paradox_accum += 1.0
-            self.traits.adjust("wisdom", TRAIT_MOMENTUM * 5)
-            move_name = "Vibrating (Paradox State)"
-            if self.paradox_accum > PARADOX_CRITICAL_MASS:
-                move_name = "SYNTHESIS"
-                self.paradox_accum = 0.0
-                self._trigger_synthesis()
+            if self.traits.empathy > 0.6:
+                self.traits.adjust("empathy", TRAIT_MOMENTUM * 2)
+                self.traits.adjust("discipline", TRAIT_MOMENTUM)
+                move_name = "Holding Space (Stabilizing)"
+                provenance.append("Compassion Protocol")
+                self.paradox_accum = max(0.0, self.paradox_accum - 0.5)
+            else:
+                self.paradox_accum += 1.0
+                self.traits.adjust("wisdom", TRAIT_MOMENTUM * 5)
+                move_name = "Vibrating (Paradox State)"
+                if self.paradox_accum > PARADOX_CRITICAL_MASS:
+                    move_name = "SYNTHESIS"
+                    self.paradox_accum = 0.0
+                    self._trigger_synthesis()
         elif is_high_voltage:
             move_name = "Accelerating"
             self.paradox_accum = max(0.0, self.paradox_accum - 0.1)

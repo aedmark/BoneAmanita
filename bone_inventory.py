@@ -296,55 +296,88 @@ class GordonKnot:
 
     def audit_tools(self, physics_ref: Dict) -> List[str]:
         logs = []
+        logs.extend(self._handle_environment(physics_ref))
+        all_deltas = self._gather_passive_deltas(physics_ref)
+        delta_logs = self._apply_physics_deltas(physics_ref, all_deltas)
+        logs.extend(delta_logs)
+        return logs
+
+    def _handle_environment(self, physics_ref: Dict) -> List[str]:
+        logs = []
         cling_msg = self.check_static_cling(physics_ref)
         if cling_msg:
             logs.append(cling_msg)
-        all_deltas: List[PhysicsDelta] = []
         turbulence = physics_ref.get("turbulence", 0.0)
-        logs_data = TheLore.get("GORDON_LOGS") or {"FUMBLE": ["{item} slipped."]}
-        if turbulence > BoneConfig.INVENTORY.TURBULENCE_THRESHOLD:
-            if random.random() < BoneConfig.INVENTORY.TURBULENCE_FUMBLE_CHANCE and self.inventory:
-                droppable = [i for i in self.inventory if i not in self.CRITICAL_ITEMS]
-                if droppable:
-                    dropped = random.choice(droppable)
-                    if self.safe_remove_item(dropped):
-                        template = random.choice(logs_data.get("FUMBLE", ["{item} fell."]))
-                        msg = template.format(item=dropped)
-                        logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
+        threshold = BoneConfig.INVENTORY.TURBULENCE_THRESHOLD
+        if turbulence <= threshold:
+            return logs
+        if not self.inventory:
+            return logs
+        fumble_chance = BoneConfig.INVENTORY.TURBULENCE_FUMBLE_CHANCE
+        if random.random() >= fumble_chance:
+            return logs
+        droppable = [i for i in self.inventory if i not in self.CRITICAL_ITEMS]
+        if not droppable:
+            return logs
+        dropped = random.choice(droppable)
+        if self.safe_remove_item(dropped):
+            logs_data = TheLore.get("GORDON_LOGS") or {}
+            templates = logs_data.get("FUMBLE", ["{item} fell."])
+            msg = random.choice(templates).format(item=dropped)
+            logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
+        return logs
+
+    # noinspection PyCallingNonCallable
+    def _gather_passive_deltas(self, physics_ref: Dict) -> List[PhysicsDelta]:
+        all_deltas = []
         for item_name in self.inventory:
             data = self.get_item_data(item_name)
-            for trait in data.get("passive_traits", []):
+            traits = data.get("passive_traits", [])
+            for trait in traits:
                 effect_def = TRAIT_REGISTRY.get(trait)
-                if effect_def and effect_def.effect_type in [EffectType.PHYSICS, EffectType.HYBRID]:
-                    raw_handler = effect_def.physics_handler
-                    if callable(raw_handler):
-                        safe_handler = cast(Callable[[Dict, Dict, str], List[PhysicsDelta]], raw_handler)
-                        new_deltas = safe_handler(physics_ref, data, item_name)
-                        if new_deltas:
-                            all_deltas.extend(new_deltas)
-        for delta in all_deltas:
+                if not effect_def:
+                    continue
+                if effect_def.effect_type not in [EffectType.PHYSICS, EffectType.HYBRID]:
+                    continue
+                handler = effect_def.physics_handler
+                if handler is not None and callable(handler):
+                    new_deltas = handler(physics_ref, data, item_name)
+                    if new_deltas:
+                        all_deltas.extend(new_deltas)
+        return all_deltas
+
+    def _apply_physics_deltas(self, physics_ref: Dict, deltas: List[PhysicsDelta]) -> List[str]:
+        logs = []
+        for delta in deltas:
             if delta.message:
                 logs.append(delta.message)
             if delta.operator == "noop":
                 continue
-            if delta.operator == "ADD_COUNT":
-                if "counts" not in physics_ref: physics_ref["counts"] = {}
-                physics_ref["counts"][delta.field] = physics_ref["counts"].get(delta.field, 0) + delta.value
-            elif delta.operator == "SET_COUNT":
-                if "counts" not in physics_ref: physics_ref["counts"] = {}
-                physics_ref["counts"][delta.field] = delta.value
-            elif delta.operator == "ADD_VECTOR":
-                if "vector" not in physics_ref: physics_ref["vector"] = {}
-                physics_ref["vector"][delta.field] = physics_ref["vector"].get(delta.field, 0.0) + delta.value
-            elif delta.operator == "SET_ZONE":
-                physics_ref["zone"] = str(delta.value)
-            elif delta.operator == "SET":
-                physics_ref[delta.field] = delta.value
-            elif delta.operator == "ADD":
-                physics_ref[delta.field] = physics_ref.get(delta.field, 0.0) + delta.value
-            elif delta.operator == "MULTIPLY":
-                physics_ref[delta.field] = physics_ref.get(delta.field, 0.0) * delta.value
+            self._execute_delta_op(physics_ref, delta)
         return logs
+
+    def _execute_delta_op(self, physics_ref: Dict, delta: PhysicsDelta):
+        op = delta.operator
+        target_field = delta.field
+        val = delta.value
+        if op in ["ADD_COUNT", "SET_COUNT"] and "counts" not in physics_ref:
+            physics_ref["counts"] = {}
+        if op == "ADD_VECTOR" and "vector" not in physics_ref:
+            physics_ref["vector"] = {}
+        if op == "ADD":
+            physics_ref[target_field] = physics_ref.get(target_field, 0.0) + val
+        elif op == "SET":
+            physics_ref[target_field] = val
+        elif op == "MULTIPLY":
+            physics_ref[target_field] = physics_ref.get(target_field, 0.0) * val
+        elif op == "SET_ZONE":
+            physics_ref["zone"] = str(val)
+        elif op == "ADD_COUNT":
+            physics_ref["counts"][target_field] = physics_ref["counts"].get(target_field, 0) + val
+        elif op == "SET_COUNT":
+            physics_ref["counts"][target_field] = val
+        elif op == "ADD_VECTOR":
+            physics_ref["vector"][target_field] = physics_ref["vector"].get(target_field, 0.0) + val
 
     def rummage(self, physics_ref: Dict, stamina_pool: float) -> Tuple[bool, str, float]:
         cost = BoneConfig.INVENTORY.RUMMAGE_COST

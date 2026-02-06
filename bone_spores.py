@@ -5,7 +5,7 @@ from collections import deque
 from typing import List, Tuple, Optional, Dict
 from bone_lexicon import TheLexicon
 from bone_core import EventBus, Prisma, BoneConfig, TheLore
-from bone_village import ParadoxSeed, TheAlmanac
+from bone_village import ParadoxSeed
 
 class BoneJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -21,7 +21,7 @@ class BoneJSONEncoder(json.JSONEncoder):
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors):
-        self.genome = "BONEAMANITA_14.3.0"
+        self.genome = "BONEAMANITA_14.4.1"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():
@@ -481,11 +481,24 @@ class MycelialNetwork:
         active_seeds.sort(key=lambda s: s.maturity, reverse=True)
         kept_seeds = active_seeds[:5]
         data["seeds"] = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in kept_seeds]
-        almanac = TheAlmanac()
-        condition, _ = almanac.diagnose_condition(data)
-        future_seed = almanac.get_seed(condition)
+        future_seed = self._generate_future_seed(data)
         data["seeds"].append({"q": future_seed, "m": 0.0, "b": False})
         return self.loader.save_spore(self.filename, data)
+
+    def _generate_future_seed(self, spore_data: Dict) -> str:
+        meta = spore_data.get("meta", {})
+        trauma = spore_data.get("trauma_vector", {})
+        final_health = meta.get("final_health", 50)
+        condition = "BALANCED"
+        max_trauma = max(trauma, key=trauma.get) if trauma else "NONE"
+        if trauma.get(max_trauma, 0) > 0.6:
+            condition = "HIGH_TRAUMA"
+        elif final_health < 30:
+            condition = "HIGH_TRAUMA"
+        seeds = {
+            "HIGH_TRAUMA": "Recovery",
+            "BALANCED": "Growth"}
+        return seeds.get(condition, "Hope")
 
     def ingest(self, target_file, current_tick=0):
         data = self.loader.load_spore(target_file)
@@ -904,7 +917,7 @@ class LiteraryReproduction:
 
     def attempt_reproduction(self, engine_ref, mode="MITOSIS", target_spore=None) -> Tuple[str, Dict]:
         mem = engine_ref.mind.mem
-        phys = engine_ref.phys.tension.last_physics_packet
+        phys = engine_ref.phys.observer.last_physics_packet
         child_id = None
         genome = {}
         log_msg = []

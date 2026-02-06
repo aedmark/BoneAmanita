@@ -46,20 +46,9 @@ class Prisma:
             for char in str(text))
 
 class EventBus:
-    def __init__(self, max_memory=1024, max_gestation=500):
+    def __init__(self, max_memory=1024):
         self.buffer = deque(maxlen=max_memory)
         self.subscribers = {}
-        self.dormant = False
-        self.gestation_queue = []
-        self.max_gestation = max_gestation
-
-    def set_dormancy(self, active: bool):
-        self.dormant = active
-        if not active and self.gestation_queue:
-            print(f"{Prisma.GRY}[BUS]: Waking up. Processing {len(self.gestation_queue)} buffered events...{Prisma.RST}")
-            for event_type, data in self.gestation_queue:
-                self.publish(event_type, data)
-            self.gestation_queue.clear()
 
     def subscribe(self, event_type, callback):
         if event_type not in self.subscribers:
@@ -67,13 +56,6 @@ class EventBus:
         self.subscribers[event_type].append(callback)
 
     def publish(self, event_type, data=None, priority=False):
-        if self.dormant and not priority:
-            if len(self.gestation_queue) >= self.max_gestation:
-                self.gestation_queue.pop(0)
-                if len(self.gestation_queue) % 50 == 0:
-                    print(f"{Prisma.YEL}[BUS WARNING]: Dormancy queue overflowing. Dropping old signals.{Prisma.RST}")
-            self.gestation_queue.append((event_type, data))
-            return
         if event_type in self.subscribers:
             for callback in self.subscribers[event_type]:
                 try:
@@ -770,42 +752,6 @@ class DecisionCrystal:
         data["_type"] = "CRYSTAL"
         return json.dumps(data)
 
-class BlackBoxReader:
-    def __init__(self, log_dir="logs/telemetry"):
-        self.log_dir = log_dir
-
-    def get_recent_history(self, limit=4) -> List[str]:
-        if not os.path.exists(self.log_dir):
-            return []
-        pattern = os.path.join(self.log_dir, "trace_*.jsonl")
-        files = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
-        history = []
-        for fpath in files:
-            if len(history) >= limit: break
-            try:
-                with open(fpath, 'r', encoding='utf-8') as f:
-                    lines = deque(f, maxlen=limit * 2)
-                    for line in reversed(lines):
-                        if len(history) >= limit: break
-                        try:
-                            data = json.loads(line)
-                            if data.get("_type") == "CRYSTAL" or "final_response" in data:
-                                resp = data.get("final_response", "")
-                                if not resp: continue
-                                prompt = data.get("prompt_snapshot", "")
-                                user_text = "Unknown"
-                                if "User:" in prompt:
-                                    parts = prompt.split("User:")
-                                    if len(parts) > 1:
-                                        user_text = parts[1].split("\n")[0].strip()
-                                entry = f"User: {user_text} | System: {resp}"
-                                history.insert(0, entry)
-                        except json.JSONDecodeError:
-                            continue
-            except Exception:
-                continue
-        return history[-limit:]
-
 class TelemetryService:
     log_dir = "logs/telemetry"
     _tracer_instance = None
@@ -876,9 +822,40 @@ class TelemetryService:
         except Exception:
             pass
 
+    def read_recent_history(self, limit=4) -> List[str]:
+        if not os.path.exists(self.log_dir):
+            return []
+        pattern = os.path.join(self.log_dir, "trace_*.jsonl")
+        files = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
+        history = []
+        for fpath in files:
+            if len(history) >= limit: break
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    lines = deque(f, maxlen=limit * 2)
+                    for line in reversed(lines):
+                        if len(history) >= limit: break
+                        try:
+                            data = json.loads(line)
+                            if data.get("_type") == "CRYSTAL" or "final_response" in data:
+                                resp = data.get("final_response", "")
+                                if not resp: continue
+                                prompt = data.get("prompt_snapshot", "")
+                                user_text = "Unknown"
+                                if "User:" in prompt:
+                                    parts = prompt.split("User:")
+                                    if len(parts) > 1:
+                                        user_text = parts[1].split("\n")[0].strip()
+                                entry = f"User: {user_text} | System: {resp}"
+                                history.insert(0, entry)
+                        except json.JSONDecodeError:
+                            continue
+            except Exception:
+                continue
+        return history[-limit:]
+
     def get_last_thoughts(self, limit=3) -> List[str]:
-        reader = BlackBoxReader(self.log_dir)
-        history = reader.get_recent_history(limit)
+        history = self.read_recent_history(limit)
         return [h.split("System: ")[-1] for h in history if "System: " in h]
 
     def get_last_fatal_error(self) -> Optional[str]:
