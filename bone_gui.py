@@ -63,6 +63,10 @@ class GeodesicRenderer:
         self.projector = Projector()
         self.vsl_chroma = chroma_ref
         self.strunk_white = strunk_ref
+        self.NOISE_PATTERNS = [
+            "STABILIZER:", "PID_", "Flux", "Phase execution",
+            "Vector collapse", "MANIFOLD", "Orbit:", "update_coordinates",
+            "active correction", "Drag reduced", "Voltage spiked"]
 
     def render_frame(self, ctx, current_tick: int, current_events: List[Dict]) -> Dict[str, Any]:
         physics = ctx.physics
@@ -114,8 +118,7 @@ class GeodesicRenderer:
         obsession = soul_ref.current_obsession or "Void"
         return f"{Prisma.GRY}--- Obsession: {obsession} ---{Prisma.RST}"
 
-    @staticmethod
-    def compose_logs(logs: list, events: list, tick: int) -> List[str]:
+    def compose_logs(self, logs: list, events: list, tick: int) -> List[str]:
         all_logs = [str(l) for l in logs if l is not None]
         for e in events:
             if e and e.get("text"):
@@ -124,6 +127,10 @@ class GeodesicRenderer:
         unique_logs = []
         seen = set()
         for l in all_logs:
+            clean_l = Prisma.strip(l)
+            if any(pattern in clean_l for pattern in self.NOISE_PATTERNS):
+                continue
+
             if l not in seen:
                 unique_logs.append(l)
                 seen.add(l)
@@ -131,10 +138,13 @@ class GeodesicRenderer:
         for log in unique_logs:
             if "CRITICAL" in log or "RUPTURE" in log:
                 structured.append(f"{Prisma.RED}► {log}{Prisma.RST}")
-            elif "PHASE" in log:
-                structured.append(f"{Prisma.CYN}{log}{Prisma.RST}")
+            elif "Bio-Alert" in log or "SENSATION" in log:
+                structured.append(f"{Prisma.CYN}• {log}{Prisma.RST}")
+            elif "ITEM:" in log or "GAINED" in log:
+                structured.append(f"{Prisma.YEL}★ {log}{Prisma.RST}")
             else:
-                structured.append(f"• {log}")
+                structured.append(f"{Prisma.GRY}• {log}{Prisma.RST}")
+
         return structured
 
     def _punish_style_crime(self, log_msg):

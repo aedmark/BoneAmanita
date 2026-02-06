@@ -963,6 +963,8 @@ class GeodesicOrchestrator:
             ctx.council_mandates = []
             self.eng.events.flush()
             ctx = self.simulator.run_simulation(ctx)
+            if self.eng.phys and hasattr(self.eng.phys, 'observer'):
+                self.eng.phys.observer.last_physics_packet = ctx.physics.snapshot()
             if hasattr(ctx, 'validator') and ctx.validator:
                 last_log = ctx.logs[-1] if ctx.logs else ""
                 ctx.validator.calculate_resonance(last_log, ctx)
