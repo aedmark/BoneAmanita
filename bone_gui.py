@@ -64,9 +64,10 @@ class GeodesicRenderer:
         self.vsl_chroma = chroma_ref
         self.strunk_white = strunk_ref
         self.NOISE_PATTERNS = [
-            "STABILIZER:", "PID_", "Flux", "Phase execution",
-            "Vector collapse", "MANIFOLD", "Orbit:", "update_coordinates",
-            "active correction", "Drag reduced", "Voltage spiked"]
+            "stabilizer:", "pid_", "flux", "phase execution",
+            "vector collapse", "manifold", "orbit:", "update_coordinates",
+            "active correction", "drag reduced", "voltage spiked",
+            "live state mirror", "auto_trace", "wayfinder"]
 
     def render_frame(self, ctx, current_tick: int, current_events: List[Dict]) -> Dict[str, Any]:
         physics = ctx.physics
@@ -115,8 +116,9 @@ class GeodesicRenderer:
 
     def render_soul_strip(self, soul_ref) -> str:
         if not soul_ref: return ""
-        obsession = soul_ref.current_obsession or "Void"
-        return f"{Prisma.GRY}--- Obsession: {obsession} ---{Prisma.RST}"
+        if not soul_ref.current_obsession:
+            return ""
+        return f"{Prisma.GRY}--- Obsession: {soul_ref.current_obsession} ---{Prisma.RST}"
 
     def compose_logs(self, logs: list, events: list, tick: int) -> List[str]:
         all_logs = [str(l) for l in logs if l is not None]
@@ -127,10 +129,9 @@ class GeodesicRenderer:
         unique_logs = []
         seen = set()
         for l in all_logs:
-            clean_l = Prisma.strip(l)
+            clean_l = Prisma.strip(l).lower()
             if any(pattern in clean_l for pattern in self.NOISE_PATTERNS):
                 continue
-
             if l not in seen:
                 unique_logs.append(l)
                 seen.add(l)
@@ -144,7 +145,6 @@ class GeodesicRenderer:
                 structured.append(f"{Prisma.YEL}★ {log}{Prisma.RST}")
             else:
                 structured.append(f"{Prisma.GRY}• {log}{Prisma.RST}")
-
         return structured
 
     def _punish_style_crime(self, log_msg):

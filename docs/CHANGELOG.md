@@ -1,5 +1,37 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.5.1: "THE SIGNAL UPDATE"**
+
+_"Signal is the truth. Noise is the politics of the machine."_
+
+#### **🤠 HUMANISTIC WIT (The Schur Lens)**
+
+- **The Diegetic Filter (`bone_gui.py`):**
+  - **The Silence:** The engine was vomiting debugging data (`[FLUX]`, `PID Correction`) into the narrative stream.
+  - **The Fix:** Implemented a **Noise Gate**. Case-insensitive filtering now strips system internals from the logs, leaving only **Narrative Events** (Sensation, Loot, Danger).
+  - **Color Coding:** Applied semantic highlighting. `CRITICAL` events bleed Red; `SENSATION` events glow Cyan.
+
+- **Tabula Rasa (`bone_gui.py`):**
+  - **The Fix:** The "Obsession" strip no longer defaults to `Void` at birth. It remains invisible until the Soul actually finds a Muse. The UI now earns its complexity.
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **The Severed Nerve (`bone_brain.py`):**
+  - **The Disconnect:** `PromptComposer` was ignoring the `SynergeticLensArbiter`. The Driver was screaming "Don't mention Inventory," and the Brain was ignoring it.
+  - **The Rewire:** The Brain now explicitly injects `mind["style_directives"]` into the System Kernel. The hierarchy is restored.
+
+- **The Coma Patch (`bone_brain.py`):**
+  - **The Bug:** On Tick 0, the `NoeticLoop` saw 0.0v and triggered `THE REDUCER` (Coma Persona) before the Physics Engine could spin up.
+  - **The Fix:** Hard-locked the Reducer out of the first 2 ticks. The system forces the `GAME_MASTER` to hold the wheel during ignition.
+
+#### **✒️ LINGUISTIC COGNITION (The Pinker Lens)**
+
+- **The Void Killer (`bone_drivers.py`):**
+  - **The Hallucination:** The Driver was randomly selecting "The Void" as a seed even when the user provided a specific location ("Kitchen").
+  - **The Mandate:** The Arbiter now prioritizes `SOURCE_SEED`. We removed the random archetype shuffle during boot and enforced **"Modernized Hemingway Mode"** (Concrete nouns, zero purple prose).
+
+---
+
 ### **BONEAMANITA v14.5: "THE MISE-EN-PLACE UPDATE"**
 
 _"Mise-en-place is the religion of all good line cooks. Do not fuck with my station."_ — Anthony Bourdain

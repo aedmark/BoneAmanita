@@ -129,20 +129,20 @@ class SynergeticLensArbiter:
         voltage = physics.get("voltage", 0.0) if isinstance(physics, dict) else getattr(physics, "voltage", 0.0)
         if current_tick <= 2:
             self.current_focus = "NARRATOR"
-            archetype = random.choice(SCENARIOS.get("ARCHETYPES", ["The Void"]))
             bans = ", ".join(SCENARIOS.get("BANNED_CLICHES", []))
-            gen_instruction = "IMMEDIATELY establish a stark, physical reality based on the SEED (but do not copy it verbatim)"
+            gen_instruction = "IMMEDIATELY establish a physical reality based on the SOURCE_SEED provided in the input"
             if current_tick > 0: gen_instruction += " (OR describe the details of the current location if already established)"
             return {
                 "lens": "GAME_MASTER",
                 "role": "The Architect [World Builder]",
                 "style_directives": [
-                    "You are a creative, welcoming Game Master.", f"SEED INSPIRATION: {archetype}.",
+                    "You are a creative, welcoming Game Master.",
+                    "SEED INSPIRATION: Use the SOURCE_SEED found in the User Input.",
                     "CONSTRAINT: This seed is a starting point only. Remix it. Invert it. Subvert it. Do NOT output it verbatim.",
-                    f"{gen_instruction}.", "STYLE: Modernized Hemingway Mode.",
-                    "NEGATIVE CONSTRAINT: NO PURPLE PROSE. Kill all adverbs. Limit adjectives to one per noun maximum.",
+                    f"{gen_instruction}.", "PROSE STYLE: Modernized Hemingway Mode.",
+                    "NEGATIVE CONSTRAINT: NO PURPLE PROSE. Use adverbs sparingly. Limit adjectives to one per noun maximum.",
                     "Focus on physical reality (texture, weight, smell) over abstract metaphor.",
-                    "Do NOT mention the user's inventory, pockets, or stats.",
+                    "CRITICAL: Do NOT mention the user's inventory, pockets, or stats unless asked.",
                     f"NEGATIVE CONSTRAINT: Avoid these overused tropes: {bans}.", "Be concrete. Be specific. Be Real."],
                 "lexicon_bias": self.boot_flavor, "context_msg": "Scenario Initialization."}
         if self.current_focus and self.current_focus != "NARRATOR":
