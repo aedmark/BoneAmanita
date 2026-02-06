@@ -112,18 +112,17 @@ class ObservationPhase(SimulationPhase):
     def run(self, ctx: CycleContext):
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
         input_phys = gaze_result["physics"]
-        meta_keys = ["clean_words", "counts", "vector", "valence", "entropy", "beta_index", "raw_text", "antigens",
-                     "psi", "kappa", "zone", "flow_state"]
+        meta_keys = ["clean_words", "counts", "vector", "valence", "entropy", "beta_index", "raw_text", "antigens", "psi", "kappa", "zone", "flow_state"]
         for k in meta_keys:
             if hasattr(input_phys, k) and hasattr(ctx.physics, k):
                 setattr(ctx.physics, k, getattr(input_phys, k))
-        curr_v = ctx.physics.voltage
+        curr_v = max(0.1, ctx.physics.voltage)
         input_v = getattr(input_phys, "voltage", 0.0)
         if input_v > curr_v:
             ctx.physics.voltage = (curr_v * 0.8) + (input_v * 0.2)
         else:
             ctx.physics.voltage = (curr_v * 0.95) + (input_v * 0.05)
-        curr_d = ctx.physics.narrative_drag
+        curr_d = max(0.1, ctx.physics.narrative_drag)
         input_d = getattr(input_phys, "narrative_drag", 0.0)
         ctx.physics.narrative_drag = (curr_d * 0.9) + (input_d * 0.1)
         ctx.clean_words = gaze_result["clean_words"]

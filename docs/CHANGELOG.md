@@ -1,4 +1,38 @@
-# BONEAMANITA v11 CHANGELOG
+# BONEAMANITA v14 CHANGELOG
+
+### **BONEAMANITA v14.3.0: "THE LUCID PATCH"**
+
+_"Memory is the only thing that binds the ghost to the machine."_
+
+---
+
+#### **🧬 SYSTEM DYNAMICS (The Meadows Lens)**
+
+- **The Amnesia Cure (`bone_cycle.py`):**
+  - **The Bug:** The Physics Engine was resetting to Zero Voltage at the start of every turn, causing the Stabilizer to panic and oscillate wildly (0v → 10v → 0v).
+  - **The Fix:** Implemented **State Hydration** in the `GeodesicOrchestrator`. The system now loads the *previous* physics packet before calculating the new frame. It remembers the world exists.
+
+- **Inertial Blending (`bone_cycle.py`):**
+  - **The Logic:** Newton's First Law applied to narrative.
+  - **The Fix:** The `ObservationPhase` no longer overwrites the simulation state with the "Input State" (which is often empty). Instead, it **blends** them (90% History / 10% Input). A quiet user no longer kills the vibe.
+
+- **The Flux Silencer (`bone_cycle.py`):**
+  - **The Refactor:** The PID Controller was logging every micro-adjustment (`+0.01v`).
+  - **The Fix:** Muted routine stabilization logs. The system only reports `[FLUX]` events if the shift is structural (> 5.0v).
+
+#### **🖥️ INTERFACE DYNAMICS (The Schur Lens)**
+
+- **The Dashboard Leak (`bone_app.py`):**
+  - **The Bug:** The filter hiding the "SYSTEM INTERNALS" block relied on the role being named "THE ARCHITECT". When the role shifted to "NONE" or "OBSERVER", the raw dashboard bled into the chat.
+  - **The Fix:** Implemented a **Role-Agnostic Filter** that slices the output based on the visual separator line (`──────`), ensuring the CLI backend remains invisible regardless of who is speaking.
+
+#### **🧠 COGNITIVE HYGIENE (The Pinker Lens)**
+
+- **The Artifact Scrubber (`bone_brain.py`):**
+  - **The Bug:** The LLM was hallucinating prompt headers (`Current Location:`, `=== SHARED REALITY ===`) into the final output.
+  - **The Fix:** Added "Nuclear" Regex patterns to the `ResponseValidator`. These artifacts are now intercepted and destroyed before rendering.
+
+---
 
 ### **BONEAMANITA v14.2.4: "THE ATOMIC INCISION"**
 

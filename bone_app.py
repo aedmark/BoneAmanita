@@ -225,15 +225,18 @@ if prompt := st.chat_input("Broadcast Signal..."):
     st.session_state.history.append({"role": "user", "content": prompt})
     with st.spinner("Calculating Geodesics..."):
         packet = engine.process_turn(prompt)
+    separator = "────────────────────────────────────────────────────────────"
+    logs = packet.get("logs", [])
     response_text = packet.get("raw_content", packet.get("ui", "No signal."))
-    if "♦ THE ARCHITECT" in response_text:
-        parts = response_text.split("────────────────────────────────────────────────────────────")
+    if separator in response_text:
+        parts = response_text.split(separator)
         if len(parts) > 1:
             response_text = parts[-1].strip()
-    logs = packet.get("logs", [])
+    response_text = strip_ansi(response_text)
     st.session_state.history.append({
         "role": "assistant",
         "content": response_text,
         "raw_content": response_text,
-        "logs": logs})
+        "logs": logs
+    })
     st.rerun()

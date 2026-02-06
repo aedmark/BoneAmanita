@@ -393,7 +393,8 @@ class ResponseValidator:
             (r"Current Location:.*?(?=\n|$)", ""),
             (r"INVENTORY:.*?(?=\n|$)", ""),
             (r"Current Biology:.*?(?=\n|$)", ""),
-            (r"===.*?===", "")]
+            (r"===.*?===", ""),
+            (r"SYSTEM INTERNALS.*", "")]
         self.meta_markers = [
             "INITIALIZATION SEQUENCE", "LOCATING TARGET SEED", "REASONING PROCESS",
             "CURRENT VISION:", "TARGET SEED:", "Your journey begins here",
