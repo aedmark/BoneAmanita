@@ -389,12 +389,11 @@ class ResponseValidator:
             "large language model", "AI assistant", "cannot feel", "as an AI",
             "against my programming", "cannot comply", "language model",
             "delve into", "rich tapestry"]
-        self.leak_patterns = [
-            r"Current Location:.*",
-            r"INVENTORY:.*",
-            r"Current Biology:.*",
-            r"=== SHARED REALITY ===",
-            r"=== PARTNER INPUT ==="]
+        self.scrub_patterns = [
+            (r"Current Location:.*?(?=\n|$)", ""),
+            (r"INVENTORY:.*?(?=\n|$)", ""),
+            (r"Current Biology:.*?(?=\n|$)", ""),
+            (r"===.*?===", "")]
         self.meta_markers = [
             "INITIALIZATION SEQUENCE", "LOCATING TARGET SEED", "REASONING PROCESS",
             "CURRENT VISION:", "TARGET SEED:", "Your journey begins here",
@@ -402,20 +401,18 @@ class ResponseValidator:
         self.immersion_break_msg = f"{Prisma.GRY}[The system attempts to recite a EULA, but hiccups instead.]{Prisma.RST}"
 
     def validate(self, response: str, _state: Dict) -> Dict:
+        clean_text = response
+        for pattern, replacement in self.scrub_patterns:
+            clean_text = re.sub(pattern, replacement, clean_text, flags=re.IGNORECASE)
         clean_lines = []
-        for line in response.splitlines():
-            is_leak = False
-            for pattern in self.leak_patterns:
-                if re.search(pattern, line, re.IGNORECASE):
-                    is_leak = True
-                    break
+        for line in clean_text.splitlines():
             is_meta = False
             for marker in self.meta_markers:
                 if marker.lower() in line.lower():
                     is_meta = True
                     break
-            if not is_meta and not is_leak and line.strip():
-                clean_lines.append(line)
+            if not is_meta and line.strip():
+                clean_lines.append(line.strip())
         sanitized_response = "\n\n".join(clean_lines)
         low_resp = sanitized_response.lower()
         for phrase in self.banned_phrases:
@@ -427,7 +424,6 @@ class ResponseValidator:
         if len(sanitized_response.strip()) < 5:
             return {"valid": False, "reason": "STUTTER", "replacement": "The vision fractures. Static remains."}
         return {"valid": True, "content": sanitized_response}
-
 
 class TheCortex:
     def __init__(self, engine_ref, llm_client=None):

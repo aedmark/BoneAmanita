@@ -954,7 +954,7 @@ class CycleReporter:
         for entry in ctx.flux_log[-5:]:
             r = entry['reason']
             d = abs(entry['delta'])
-            if r in ["AUTO_TRACE", "PID_BRAKING", "PID_EXCITATION", "PID_DAMPENER"]:
+            if r in ["AUTO_TRACE", "PID_BRAKING", "PID_EXCITATION", "PID_DAMPENER", "PID_LUBRICATION"]:
                 if d < 5.0: continue
             m = entry['metric'].upper()
             icon = "⚡" if m == "VOLTAGE" else "⚓"
@@ -993,6 +993,8 @@ class GeodesicOrchestrator:
         tracer.start_cycle(cycle_id)
         try:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
+            if self.eng.phys and hasattr(self.eng.phys, 'observer') and self.eng.phys.observer.last_physics_packet:
+                ctx.physics = self.eng.phys.observer.last_physics_packet.snapshot()
             ctx.validator = CongruenceValidator()
             if hasattr(self.eng, 'reality_stack'):
                 ctx.reality_stack = self.eng.reality_stack
