@@ -112,8 +112,9 @@ class ObservationPhase(SimulationPhase):
     def run(self, ctx: CycleContext):
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
         input_phys = gaze_result["physics"]
+        protected_keys = ["voltage", "narrative_drag"]
         for k in ["clean_words", "counts", "vector", "valence", "entropy", "beta_index", "raw_text", "antigens", "psi", "kappa", "zone", "flow_state"]:
-            if hasattr(input_phys, k):
+            if k not in protected_keys and hasattr(input_phys, k):
                 setattr(ctx.physics, k, getattr(input_phys, k))
         curr_v = max(0.1, ctx.physics.voltage)
         input_v = getattr(input_phys, "voltage", 0.0)
@@ -234,6 +235,8 @@ class GatekeeperPhase(SimulationPhase):
         self.bureau = TheBureau()
 
     def run(self, ctx: CycleContext):
+        if ctx.is_system_event:
+            return ctx
         is_allowed, refusal_packet = self.gatekeeper.check_entry(ctx)
         if not is_allowed:
             ctx.refusal_triggered = True

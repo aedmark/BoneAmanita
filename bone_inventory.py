@@ -207,10 +207,10 @@ class GordonKnot:
         gordon_data = TheLore.get("GORDON") or {}
         starting_gear = gordon_data.get("STARTING_INVENTORY", [])
         if not starting_gear:
-            starting_gear = ["SILENT_KNIFE", "DUCT_TAPE", "SKELETON_KEY"]
+            starting_gear = ["SILENT_KNIFE"]
         if not self.inventory or self.inventory == ["POCKET_ROCKS"]:
             self.inventory = list(starting_gear)
-        self.CRITICAL_ITEMS = {"SILENT_KNIFE", "SKELETON_KEY"}
+        self.CRITICAL_ITEMS = {"SILENT_KNIFE"}
         for crit in self.CRITICAL_ITEMS:
             if crit not in self.inventory:
                 self.inventory.append(crit)

@@ -159,21 +159,17 @@ class TheNavigator:
         p = _normalize_physics_dict(physics_packet)
         drag = _get_float(p, "narrative_drag", 0.0)
         volt = _get_float(p, "voltage", 0.0)
-
-        # Logic Mapping
         if volt > VOLT_MANIC:
             self.current_loc = "THE_FORGE"
-        elif drag > 5.0:
+        elif drag > DRAG_HEAVY:
             self.current_loc = "THE_MUD"
         else:
             self.current_loc = "THE_CONSTRUCT"
-
         msg = None
         if self.current_loc != self.last_loc:
             self.weather_report = self._read_weather(volt, drag)
             msg = f"{Prisma.CYN}🗺️ WAYFINDER: Entering {self.current_loc}. {self.weather_report}{Prisma.RST}"
             self.last_loc = self.current_loc
-
         return self.current_loc, msg
 
     def apply_environment(self, physics_packet: Any) -> List[str]:
@@ -339,14 +335,19 @@ class PIDController:
         self.min_out, self.max_out = output_limits
         self._integral = 0.0
         self._last_error = 0.0
+        self._first_run = True
 
     def reset(self):
         self._integral = 0.0
         self._last_error = 0.0
+        self._first_run = True
 
     def update(self, measurement: float, dt: float = 1.0) -> float:
         if dt <= 0.0: return 0.0
         error = self.setpoint - measurement
+        if self._first_run:
+            self._last_error = error
+            self._first_run = False
         self._integral += error * dt
         self._integral = max(self.min_out, min(self.max_out, self._integral))
         derivative = (error - self._last_error) / dt
