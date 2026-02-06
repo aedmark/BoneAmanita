@@ -399,7 +399,6 @@ class ResponseValidator:
             "CURRENT VISION:", "TARGET SEED:", "Your journey begins here",
             "What would you like to do?", "What do you do?"]
         self.immersion_break_msg = f"{Prisma.GRY}[The system attempts to recite a EULA, but hiccups instead.]{Prisma.RST}"
-
     def validate(self, response: str, _state: Dict) -> Dict:
         clean_text = response
         for pattern, replacement in self.scrub_patterns:
