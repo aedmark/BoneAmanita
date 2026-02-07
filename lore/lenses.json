@@ -83,5 +83,13 @@
             "CLARENCE",
             "THE OBSERVER"
         ]
+    },
+    "GORDON_THE OBSERVER_HYBRID": {
+        "role": "The The Janitor / Participant Synthesis",
+        "msg": "Perspective shift: GORDON and THE OBSERVER are aligning. The dialectic is resolved.",
+        "derived_from": [
+            "GORDON",
+            "THE OBSERVER"
+        ]
     }
 }

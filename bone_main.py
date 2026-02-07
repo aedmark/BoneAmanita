@@ -491,6 +491,32 @@ class BoneAmanita:
     def shutdown(self):
         print(f"{Prisma.GRY}...Broadcasting SYSTEM_HALT...{Prisma.RST}")
         self.events.publish("SYSTEM_HALT", {"tick": self.tick_count})
+        if hasattr(self, 'mind') and hasattr(self.mind, 'mem'):
+            try:
+                print(f"{Prisma.GRY}[MEMORY]: Committing Session State...{Prisma.RST}")
+                last_phys = getattr(self.cortex, "last_physics", {})
+                world_data = self.cortex.gather_state(last_phys).get("world", {})
+                loc = world_data.get("orbit", ["Void"])[0]
+                last_speech = "Silence."
+                if self.cortex.dialogue_buffer:
+                    last_speech = self.cortex.dialogue_buffer[-1]
+                continuity_packet = {
+                    "location": loc,
+                    "last_output": last_speech,
+                    "inventory": self.gordon.inventory}
+                save_path = self.mind.mem.save(
+                    health=self.health,
+                    stamina=self.stamina,
+                    mutations={},
+                    trauma_accum=self.trauma_accum,
+                    joy_history=[],
+                    mitochondria_traits=self.bio.mito.adapt(0),
+                    antibodies=list(self.bio.immune.active_antibodies),
+                    soul_data=self.soul.to_dict(),
+                    continuity=continuity_packet)
+                print(f"{Prisma.GRN}[MEMORY]: State preserved at {save_path}{Prisma.RST}")
+            except Exception as e:
+                print(f"{Prisma.RED}[MEMORY]: Save Failed: {e}{Prisma.RST}")
         time.sleep(0.1)
         if hasattr(self, 'lex') and hasattr(self.lex, 'save'):
             print(f"{Prisma.GRY}[LEXICON]: Preserving Hive Mind...{Prisma.RST}")

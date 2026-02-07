@@ -3,7 +3,7 @@
 import shlex
 from typing import Dict, Callable, List, Any, Tuple, Optional
 from dataclasses import dataclass
-from bone_core import BonePresets, TheLore
+from bone_core import BonePresets, TheLore, Prisma
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
@@ -80,7 +80,7 @@ class CommandStateInterface:
         if not hasattr(self.eng, "town_hall") or not hasattr(self.eng, "phys"):
             return "Navigation Offline."
         nav = getattr(self.eng.town_hall, "Navigator", None)
-        packet = self.eng.phys.tension.last_physics_packet
+        packet = self.eng.phys.tension.last_physics_packet if hasattr(self.eng.phys, "tension") else None
 
         if nav and packet:
             return nav.report_position(packet)
@@ -136,7 +136,7 @@ class CommandRegistry:
 class CommandProcessor:
     def __init__(self, engine, prisma_ref, lexicon_ref=None, config_ref=None, cartographer_ref=None):
         real_config = config_ref if config_ref else getattr(engine, "config", None)
-        self.interface = CommandStateInterface(engine, prisma_ref, config_ref)
+        self.interface = CommandStateInterface(engine, prisma_ref, real_config)
         self.tax = ResourceTax(self.interface)
         self.registry = CommandRegistry(self.interface)
         self.P = prisma_ref
@@ -157,10 +157,9 @@ class CommandProcessor:
             stack = self.interface.eng.reality_stack
             rules = stack.get_grammar_rules()
             if not rules.get("allow_commands", True):
-                if hasattr(self.interface, 'log'):
-                    self.interface.log(
-                        f"{self.P.RED}COMMAND REJECTED: Reality Depth {stack.current_depth} prohibits administrative override.{self.P.RST}",
-                        "ERR")
+                self.interface.log(
+                    f"{self.P.RED}COMMAND REJECTED: Reality Depth {stack.current_depth} prohibits administrative override.{self.P.RST}",
+                    "ERR")
                 return True
         return self.registry.execute(text)
 
@@ -238,8 +237,19 @@ class CommandProcessor:
 
     def _cmd_inventory(self, _parts):
         inv = self.interface.get_inventory()
-        self.interface.log(f"Pocket: {inv if inv else 'Empty'}")
-        return True
+        if not inv:
+            return "Inventory: Empty."
+        active_effects = []
+        if hasattr(self.interface.eng, 'gordon'):
+            active_effects = self.interface.eng.gordon.get_semantic_operators()
+        report = [f"Inventory ({len(inv)}):"]
+        for item in inv:
+            report.append(f"- {item}")
+        if active_effects:
+            report.append(f"\n{Prisma.CYN}=== ACTIVE RESONANCE ==={Prisma.RST}")
+            for _, effect_desc in active_effects:
+                report.append(f"» {effect_desc}")
+        return "\n".join(report)
 
     def _cmd_map(self, _parts):
         if not self.tax.levy("MAP", {"stamina": 2.0}): return True
@@ -253,7 +263,15 @@ class CommandProcessor:
         return True
 
     def _cmd_exit(self, _parts):
-        self.interface.log("Shutting down...")
+        import sys
+        # SLASH FIX: Use self.interface, not self.state
+        self.interface.log(f"{Prisma.RED}System Halt Initiated.{Prisma.RST}", "SYS")
+        if 'streamlit' in sys.modules:
+            try:
+                import streamlit as st
+                st.stop()
+            except Exception:
+                pass
         raise KeyboardInterrupt
 
     def _cmd_soul(self, _parts):

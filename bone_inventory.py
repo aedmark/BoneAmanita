@@ -245,6 +245,12 @@ class GordonKnot:
         name_key = item_name.upper()
         if name_key in self.ITEM_REGISTRY:
             return self.ITEM_REGISTRY[name_key]
+        plural_key = name_key + "S"
+        if plural_key in self.ITEM_REGISTRY:
+            parent_data = self.ITEM_REGISTRY[plural_key].copy()
+            parent_data["description"] = f"{parent_data['description']} (Single)"
+            parent_data["mass"] = parent_data.get("mass", 1.0) * 0.5
+            return parent_data
         return {
             "description": f"An anomaly detected by the narrative. It appears to be a {item_name}.",
             "function": "NARRATIVE_ARTIFACT",
@@ -297,13 +303,16 @@ class GordonKnot:
             is_collapsed=collapsed)
 
     def safe_remove_item(self, item_name: str) -> bool:
-        if item_name in self.CRITICAL_ITEMS:
-            return False
-        if item_name not in self.inventory:
-            return False
-        self.inventory.remove(item_name)
-        self._recalculate_tensegrity()
-        return True
+        if item_name in self.inventory:
+            self.inventory.remove(item_name)
+            return True
+        plural_key = item_name + "S"
+        if plural_key in self.inventory:
+            self.inventory.remove(plural_key)
+            self.inventory.append(item_name)
+            return True
+
+        return False
 
     def audit_tools(self, physics_ref: Dict) -> List[str]:
         logs = []

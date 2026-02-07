@@ -1,5 +1,41 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.5.3: "THE CINDERELLA PATCH"**
+
+_“Entropy is just the universe's way of reorganizing your inventory.”_
+
+---
+
+#### **🔄 FEEDBACK LOOPS (The Meadows Lens)**
+
+- **The Loot Goblin (`bone_brain.py`):**
+    - **The Disconnect:** The narrative was handing out items ("The old man gives you a compass"), but the inventory remained empty. The LLM was writing checks the database couldn't cash.
+    - **The Fix:** Implemented the **Loot & Entropy Protocols**. The Cortex now scans output for `[[LOOT: ITEM]]` and `[[LOST: ITEM]]` tags. These are intercepted, stripped from the user-facing text, and converted into immediate state changes in `GordonKnot`.
+
+- **Semantic Resonance (`bone_brain.py`):**
+    - **The Silence:** Items like the `SILENT_KNIFE` had passive traits ("Constraint: Do not use the verb 'to be'"), but the LLM never knew about them.
+    - **The Fix:** Wired `gordon.get_semantic_operators()` directly into the `PromptComposer`. Holding specific items now fundamentally alters the narrator's prose style.
+
+#### **👞 INVENTORY LOGIC (The Schur Lens)**
+
+- **The Cinderella Protocol (`bone_inventory.py`):**
+    - **The Glitch:** The user tried to lose a single "LEAD_BOOT," but the inventory only contained the pair "LEAD_BOOTS." The system, being a literalist, refused to delete the pair, creating infinite boots.
+    - **The Fix:** Implemented fuzzy plurality handling. If the narrative subtracts a singular item but only the plural exists, the system now **splits the set**: it deletes the plural item and grants a single version with half the mass and modified metadata.
+
+- **Null-Pointer Defense:** Added robust fallbacks to `get_item_data` to prevent crashes when the narrative hallucinates items not in the registry ("STELLAR_COG"). The system now improvises valid data for these anomalies instead of crashing.
+
+#### **💾 PERSISTENCE & STABILITY (The Torvalds Lens)**
+
+- **The Deathbed Confession (`bone_main.py`):**
+    - **The Data Loss:** Using `Ctrl+C` or the `/exit` command killed the process instantly, bypassing the save cycle. Sessions were lost to the void.
+    - **The Fix:** Patched `shutdown()` to force a memory commit of Location, Inventory, and Vitals before terminating the process.
+
+- **The Graceful Exit (`bone_commands.py`):**
+    - **The Panic:** The `/exit` command raised `KeyboardInterrupt`, which Streamlit interpreted as a thread crash, displaying a massive stack trace.
+    - **The Fix:** Added environment awareness. The system now detects if it is running in Streamlit and uses `st.stop()` for a clean, silent shutdown.
+
+---
+
 ### **BONEAMANITA v14.5.2: "THE MEMORY PATCH"**
 
 _"To exist is to have a history. To save is to have a future."_

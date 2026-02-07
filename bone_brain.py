@@ -349,6 +349,7 @@ class PromptComposer:
             if chem.get("SER", 0) > 0.6: mood_note = "Current Biology: Zen / Lucid"
         reality_directive = state.get("reality_directive", "")
         user_name = state.get('user_profile', {}).get('name', 'User')
+        semantic_ops = state.get("semantic_operators", [])
         style_notes = [
             f"Role: {role} for {user_name}.",
             "Directive: Immediate Immersion. Do not preface the experience. Do not ask for permission.",
@@ -358,10 +359,15 @@ class PromptComposer:
             "   - Use **Bold** for key objects or intense sensations.",
             "   - Use Headers for location changes or narrative shifts.",
             "   - IMPORTANT: Use DOUBLE NEWLINES between every paragraph or element",
-            "LOOT PROTOCOL: If the narrative grants a new item (found, given, or traded), you MUST output: [[LOOT: ITEM_NAME]].",
-            "   - Example: 'The old man hands you a key. [[LOOT: BRASS_KEY]]'",
+            "LOOT PROTOCOL: If the narrative grants a new item, output: [[LOOT: ITEM_NAME]].",
+            "ENTROPY PROTOCOL: If an item is lost, destroyed, consumed, or traded away, output: [[LOST: ITEM_NAME]].",
+            "   - Example: 'You eat the apple. [[LOST: RED_APPLE]]'",
             "   - Keep the item name simple (e.g., BRASS_KEY, STELLAR_COG).",
             mood_note]
+        if semantic_ops:
+            style_notes.append("\n=== INVENTORY RESONANCE (Active Item Effects) ===")
+            # semantic_ops is a list of strings like "CONSTRAINT: Do not use 'to be'."
+            style_notes.extend([f"» {op}" for op in semantic_ops])
         if driver_directives:
             style_notes.append("\n=== CORE DIRECTIVES ===")
             style_notes.extend([f"» {d}" for d in driver_directives])
@@ -506,15 +512,26 @@ class TheCortex:
         if len(self.dialogue_buffer) > self.MAX_HISTORY:
             self.dialogue_buffer.pop(0)
 
-    def _harvest_loot(self, text: str) -> Tuple[str, List[str]]:
+    def _harvest_loot(self, text: str) -> Tuple[str, List[str], List[str]]:
         loot_pattern = r"\[\[LOOT:\s*([A-Za-z0-9_\s]+)\]\]"
+        lost_pattern = r"\[\[LOST:\s*([A-Za-z0-9_\s]+)\]\]"
         found_items = []
-        def replace_func(match):
+        lost_items = []
+
+        def loot_replacer(match):
             item_name = match.group(1).strip().replace(" ", "_").upper()
             found_items.append(item_name)
             return ""
-        cleaned_text = re.sub(loot_pattern, replace_func, text)
-        return cleaned_text, found_items
+
+        def lost_replacer(match):
+            item_name = match.group(1).strip().replace(" ", "_").upper()
+            lost_items.append(item_name)
+            return ""
+
+        text = re.sub(loot_pattern, loot_replacer, text)
+        text = re.sub(lost_pattern, lost_replacer, text)
+
+        return text, found_items, lost_items
 
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
         if self.consultant:
@@ -595,13 +612,22 @@ class TheCortex:
             mood_override=mood_directive)
         start_time = time.time()
         raw_response_text = self.llm.generate(final_prompt, llm_params)
-        raw_response_text, new_loot = self._harvest_loot(raw_response_text)
-        loot_logs = []
+        raw_response_text, new_loot, lost_loot = self._harvest_loot(raw_response_text)
+        inventory_logs = []
         if new_loot:
             for item in new_loot:
-                loot_logs.append(self.sub.gordon.acquire(item))
+                inventory_logs.append(self.sub.gordon.acquire(item))
                 if self.events:
                     self.events.publish("ITEM_ACQUIRED", {"item": item, "source": "NARRATIVE"})
+        if lost_loot:
+            for item in lost_loot:
+                if self.sub.gordon.safe_remove_item(item):
+                    inventory_logs.append(f"{Prisma.GRY}ENTROPY: {item} consumed/lost.{Prisma.RST}")
+                    if self.events:
+                        self.events.publish("ITEM_LOST", {"item": item, "source": "NARRATIVE"})
+                else:
+                    inventory_logs.append(
+                        f"{Prisma.OCHRE}GLITCH: Tried to lose {item}, but you didn't have it.{Prisma.RST}")
         if "\n\n" not in raw_response_text:
             raw_response_text = raw_response_text.replace("\n", "\n\n")
             if len(raw_response_text) > 300 and raw_response_text.count("\n") < 2:
@@ -656,8 +682,8 @@ class TheCortex:
         self._audit_solipsism(final_response_text, lens_name=current_lens)
         self._update_history(user_input, final_response_text)
         sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_response_text}{Prisma.RST}"
-        if loot_logs:
-            sim_result["ui"] += "\n" + "\n".join(loot_logs)
+        if inventory_logs:
+            sim_result["ui"] += "\n" + "\n".join(inventory_logs)
         sim_result["raw_content"] = final_response_text
         return sim_result
 
