@@ -160,7 +160,9 @@
         "fly",
         "zip",
         "zoom",
-        "severed"
+        "severed",
+        "breaker",
+        "reset"
     ],
     "constructive": [
         "build",
