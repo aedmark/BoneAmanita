@@ -2,7 +2,7 @@
 import json
 import os
 import random
-from typing import Dict, Any, Tuple, cast, List
+from typing import Dict, Any, Tuple, cast, List, Set
 from bone_core import Prisma, TheLore, LoreManifest
 
 class TheAkashicRecord:
@@ -13,6 +13,7 @@ class TheAkashicRecord:
         self.lens_cooccurrence: Dict[Tuple[str, str], int] = {}
         self.ingredient_affinity: Dict[str, int] = {}
         self.style_drift = {"chaos_score": 0.0, "rigidity_score": 0.0}
+        self.known_recipes: Set[Tuple[str, str]] = set()
         self.RECIPE_THRESHOLD = 3
         self.HYBRID_LENS_THRESHOLD = 5
         self.lore = TheLore
@@ -80,6 +81,13 @@ class TheAkashicRecord:
                 self.lens_cooccurrence[(parts[0], parts[1])] = v
         self.ingredient_affinity = data.get("ingredient_affinity", {})
         self.shadow_stock = data.get("shadow_stock", [])
+        gordon_data = self.lore.get("GORDON")
+        if gordon_data and "RECIPES" in gordon_data:
+            for r in gordon_data["RECIPES"]:
+                ing = r.get("ingredient")
+                cat = r.get("catalyst_category")
+                if ing and cat:
+                    self.known_recipes.add((ing, cat))
 
     def record_interaction(self, lenses_active: list, ingredients_used: list = None):
         if len(lenses_active) >= 2:
@@ -125,11 +133,14 @@ class TheAkashicRecord:
         self.lens_cooccurrence[(lens_a, lens_b)] = 0
 
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
+        if (ingredient, catalyst) in self.known_recipes:
+            return
         gordon_data = self.lore.get("GORDON")
         if not gordon_data:
             gordon_data = {"RECIPES": [], "ITEM_REGISTRY": {}}
         current_recipes = gordon_data.get("RECIPES", [])
         if any(r.get("ingredient") == ingredient and r.get("catalyst_category") == catalyst for r in current_recipes):
+            self.known_recipes.add((ingredient, catalyst))
             return
         new_recipe = {
             "ingredient": ingredient,
@@ -138,6 +149,7 @@ class TheAkashicRecord:
             "msg": "The universe remembers this combination. It is now Law.",
             "dynamic_result": result_item}
         current_recipes.append(new_recipe)
+        self.known_recipes.add((ingredient, catalyst))
         print(f"✨ MYTHOLOGY ENGINE: A new recipe has been codified: {ingredient} + {catalyst}")
         gordon_data["RECIPES"] = current_recipes
         self.save_to_disk("GORDON", gordon_data)

@@ -1,5 +1,24 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.5.4: "THE WINTER SOLSTICE"**
+
+_“To survive the cold, one must learn to be still.”_
+
+---
+
+#### **❄️ SYSTEM DYNAMICS (The Meadows Lens)**
+
+- **The Hibernation Circuit (`bone_body.py`):**
+- **The Panic Spiral:** The Mitochondrial Forge was previously trapped in a **Reinforcing Feedback Loop**. When ATP dropped, the system applied stress modifiers, which increased metabolic cost, which burned _more_ ATP, leading to a rapid cascade into Necrosis.
+- **The Fix:** Installed a **Balancing Loop** via the `is_critical` check. When ATP falls below 20.0 (The Critical Threshold), the system now **refuses to pay the Cognitive Tax**. Narrative Drag is ignored. The system becomes "dumb but alive," prioritizing survival over wit until energy is restored.
+
+#### **⚡ STRUCTURAL OPTIMIZATION (The Torvalds Lens)**
+
+- **The O(1) Akashic Cache (`bone_akashic.py`):**
+- **The Linear Drag:** The `_crystallize_recipe` method was performing a linear scan () of the entire Recipe List for every potential forge event. As the system learned, it became exponentially slower at having new ideas.
+- **The Fix:** Implemented a `known_recipes` Set for ** Lookups**. The system now checks its immediate memory cache before opening the heavy JSON ledger. "Talk is cheap. Show me the hash map."
+
+
 ### **BONEAMANITA v14.5.3: "THE CINDERELLA PATCH"**
 
 _“Entropy is just the universe's way of reorganizing your inventory.”_

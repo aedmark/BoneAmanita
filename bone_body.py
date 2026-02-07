@@ -165,10 +165,12 @@ class MitochondrialForge:
         is_critical = self.state.atp_pool < BioConstants.ATP_CRITICAL
         if is_critical:
             cognitive_load_tax = 0.0
-            external_modifiers = [0.5] # Force dampening.
+            external_modifiers = [0.5]
             if self.events and self.state.retrograde_signal != "HIBERNATING":
-                 self.events.log(f"{Prisma.VIOLET}💤 MITOCHONDRIA: Power Critical. Entering Hibernation. Cognitive Tax waived.{Prisma.RST}", "BIO_CRIT")
-                 self.state.retrograde_signal = "HIBERNATING"
+                self.events.log(
+                    f"{Prisma.VIOLET}💤 MITOCHONDRIA: Power Critical. Entering Hibernation. Cognitive Tax waived.{Prisma.RST}",
+                    "BIO_CRIT")
+                self.state.retrograde_signal = "HIBERNATING"
         mod_factor = 1.0
         if external_modifiers:
             for m in external_modifiers:
