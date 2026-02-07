@@ -3,8 +3,9 @@
 import math
 import random
 import time
-from typing import List, Dict, Any, Tuple, Optional
-from dataclasses import dataclass
+import hashlib
+from typing import List, Dict, Any, Tuple, Optional, Set
+from dataclasses import dataclass, field
 
 from bone_core import Prisma, BoneConfig, BonePresets, TheLore
 from bone_lexicon import TheLexicon
@@ -27,30 +28,40 @@ def _get(p: Any, k: str, d: Any = 0.0) -> Any:
 
 def _get_float(p: Any, k: str, d: float = 0.0) -> float:
     val = _get(p, k, d)
-    try:
-        return float(val)
-    except (ValueError, TypeError, AttributeError):
-        return d
+    try: return float(val)
+    except (ValueError, TypeError, AttributeError): return d
 
 def _normalize_physics_dict(packet: Any) -> Dict[str, Any]:
     if packet is None: return {}
     if isinstance(packet, dict): return packet
     return getattr(packet, "__dict__", {})
 
-def _safe_get(container: Any, key: str, default: Any = 0.0, expected_type: type = float) -> Any:
-    if container is None: return default
-    val = default
-    if isinstance(container, dict):
-        val = container.get(key, default)
-    else:
-        val = getattr(container, key, default)
-    if val is None: return default
-    if expected_type == float and isinstance(val, (int, str)):
-        try:
-            return float(val)
-        except ValueError:
-            return default
-    return val
+@dataclass
+class GeniusLoci:
+    id: str
+    name: str
+    atmosphere: str
+    smell: str
+    local_items: List[str] = field(default_factory=list)
+    visited_count: int = 0
+    entropy_buildup: float = 0.0
+
+    def description(self) -> str:
+        base = f"LOCATION: {self.name}\nATMOSPHERE: {self.atmosphere}\nSMELL: {self.smell}"
+        if self.local_items:
+            items = ", ".join(self.local_items)
+            base += f"\nVISIBLE ITEMS: {items}"
+        return base
+
+    def to_dict(self):
+        return {
+            "id": self.id, "name": self.name, "atmosphere": self.atmosphere,
+            "smell": self.smell, "local_items": self.local_items,
+            "visited_count": self.visited_count, "entropy_buildup": self.entropy_buildup}
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
 
 class TheTinkerer:
     def __init__(self, gordon_ref, events_ref, akashic_ref):
@@ -95,15 +106,13 @@ class TheTinkerer:
             self.events.log(f"{Prisma.RED}[TINKER] JAMMED: {item} has seized up via Entropy.{Prisma.RST}", "SYS")
 
     def _attempt_ascension(self, old_name: str, inventory_list: List[str], vector: Any):
-        if "OF_" in old_name:
-            return
+        if "OF_" in old_name: return
         new_name, new_data = self.akashic.forge_new_item(vector)
         if old_name in inventory_list:
             idx = inventory_list.index(old_name)
-            inventory_list[idx] = new_name # Cleaner than remove/append
+            inventory_list[idx] = new_name
             if hasattr(self.gordon, "ITEM_REGISTRY"):
                 self.gordon.ITEM_REGISTRY[new_name] = new_data
-
             self.events.log(f"{Prisma.MAG}✨ ASCENSION: {old_name} -> {new_name}{Prisma.RST}", "AKASHIC")
 
 class ParadoxSeed:
@@ -135,82 +144,143 @@ class MirrorGraph:
     def reflect(self, physics: Dict):
         txt = str(_get(physics, "raw_text", ""))
         volt = _get_float(physics, "voltage", 0.0)
-        if "!" in txt or volt > VOLT_MANIC:
-            self.stats["WAR"] += 0.1
-        if "?" in txt:
-            self.stats["ART"] += 0.1
+        if "!" in txt or volt > VOLT_MANIC: self.stats["WAR"] += 0.1
+        if "?" in txt: self.stats["ART"] += 0.1
         total = sum(self.stats.values())
         if total > 5.0:
-            for k in self.stats:
-                self.stats[k] *= 0.8
+            for k in self.stats: self.stats[k] *= 0.8
     def get_reflection_modifiers(self) -> Dict:
-        if not self.stats:
-            return {"flavor": "Reflecting NEUTRAL", "drag_mult": 1.0}
+        if not self.stats: return {"flavor": "Reflecting NEUTRAL", "drag_mult": 1.0}
         top_stat = max(self.stats, key=self.stats.get)
         return {"flavor": f"Reflecting {top_stat}", "drag_mult": 1.0}
 
-def _update_physics_field(packet: Any, key: str, value: Any):
-    if isinstance(packet, dict):
-        packet[key] = value
-    else:
-        setattr(packet, key, value)
+class TheCartographer:
+    PREFIXES = ["The", "Neo", "Old", "Sector", "Zone", "Void"]
+    ROOTS = ["Construct", "Forge", "Mud", "Archive", "Garden", "Nexus", "Spire", "Basement"]
+    SUFFIXES = ["Alpha", "Prime", "Deep", "Zero", "Flux", "Rot"]
 
-class TheNavigator:
     def __init__(self, shimmer_ref):
         self.shimmer = shimmer_ref
-        self.current_loc = "THE_CONSTRUCT"
-        self.last_loc = None
-        self.weather_report = "Clear skies."
+        self.world_graph: Dict[str, GeniusLoci] = {}
+        self.current_node_id: str = "GENESIS_POINT"
+        self._init_genesis()
 
-    def _read_weather(self, volt: float, drag: float) -> str:
-        if volt > VOLT_CRITICAL: return "The air is ionizing. Static discharge imminent."
-        if volt > VOLT_MANIC: return "High pressure front. Sparks in the fog."
-        if drag > DRAG_SWAMP: return "Heavy atmosphere. Movement is like swimming in syrup."
-        if drag > 4.0: return "Fog rolling in. Visibility low."
-        if volt < 2.0 and drag < 1.0: return "Dead calm. The sails are slack."
-        return "Ideal conditions."
+    def _init_genesis(self):
+        self.world_graph["GENESIS_POINT"] = GeniusLoci(
+            id="GENESIS_POINT",
+            name="THE CONSTRUCT (Origin)",
+            atmosphere="Clean white void. Infinite potential.",
+            smell="Ozone and new plastic.")
 
-    def locate(self, physics_packet: dict, host_health: Any = None) -> Tuple[str, Optional[str]]:
-        p = _normalize_physics_dict(physics_packet)
-        drag = _get_float(p, "narrative_drag", 0.0)
-        volt = _get_float(p, "voltage", 0.0)
+    def _generate_coord_hash(self, vector: Dict[str, float]) -> str:
+        if not vector: return "VOID_DRIFT"
+        sorted_dims = sorted(vector.items(), key=lambda x: -x[1])
+        top_dims = sorted_dims[:2]
+        coord_str = "-".join([f"{k}{int(v*10)}" for k, v in top_dims])
+        return coord_str
+
+    def get_current_description(self) -> str:
+        if self.current_node_id in self.world_graph:
+            node = self.world_graph[self.current_node_id]
+            return f"{node.atmosphere} Smell: {node.smell}. Visible: {', '.join(node.local_items) if node.local_items else 'None'}"
+        return "Unmapped territory. The fog is thick."
+
+    def _generate_loci_data(self, node_id: str, physics: Dict) -> GeniusLoci:
+        random.seed(node_id)
+        p1 = random.choice(self.PREFIXES)
+        p2 = random.choice(self.ROOTS)
+        name = f"{p1} {p2}"
+        volt = _get_float(physics, "voltage", 0.0)
+        drag = _get_float(physics, "narrative_drag", 0.0)
         if volt > VOLT_MANIC:
-            self.current_loc = "THE_FORGE"
+            suffix = random.choice(["Flux", "Spark", "Storm"])
+            atmosphere = "The air is vibrating. Geometry is unstable."
+            smell = "Burning copper."
         elif drag > DRAG_HEAVY:
-            self.current_loc = "THE_MUD"
+            suffix = random.choice(["Deep", "Rot", "Sediment"])
+            atmosphere = "Heavy gravity. Dust motes hang suspended in stagnant air."
+            smell = "Wet wool and ancient dust."
         else:
-            self.current_loc = "THE_CONSTRUCT"
-        msg = None
-        if self.current_loc != self.last_loc:
-            self.weather_report = self._read_weather(volt, drag)
-            msg = f"{Prisma.CYN}🗺️ WAYFINDER: Entering {self.current_loc}. {self.weather_report}{Prisma.RST}"
-            self.last_loc = self.current_loc
-        return self.current_loc, msg
+            suffix = random.choice(self.SUFFIXES)
+            atmosphere = "Stable reality matrix. Standard definition."
+            smell = "Clean air."
+        final_name = f"{name} {suffix}"
+        return GeniusLoci(id=node_id, name=final_name.upper(), atmosphere=atmosphere, smell=smell)
+
+    def locate(self, physics_packet: dict, host_stats: Any = None) -> Tuple[str, Optional[str]]:
+        p = _normalize_physics_dict(physics_packet)
+        vector = _get(p, "vector", {})
+        target_id = self._generate_coord_hash(vector)
+        if target_id not in self.world_graph:
+            new_node = self._generate_loci_data(target_id, p)
+            self.world_graph[target_id] = new_node
+            msg = f"{Prisma.MAG}🗺️ CARTOGRAPHER: New Sector Discovered [{new_node.name}].{Prisma.RST}"
+        else:
+            new_node = self.world_graph[target_id]
+            msg = None
+            if new_node.id != self.current_node_id:
+                msg = f"{Prisma.CYN}🗺️ CARTOGRAPHER: Arriving at {new_node.name}.{Prisma.RST}"
+        self.current_node_id = target_id
+        current_node = self.world_graph[target_id]
+        current_node.visited_count += 1
+        return current_node.name, msg
 
     def apply_environment(self, physics_packet: Any) -> List[str]:
         logs = []
-        p = _normalize_physics_dict(physics_packet)
-        if self.current_loc == "THE_MUD":
-            old_drag = _get_float(p, "narrative_drag", 0.0)
-            if old_drag < 6.0:
-                _update_physics_field(physics_packet, "narrative_drag", 6.0)
-                logs.append(f"{Prisma.OCHRE}The Mud holds you. (Drag floor set to 6.0){Prisma.RST}")
-        elif self.current_loc == "THE_FORGE":
-            old_volt = _get_float(p, "voltage", 0.0)
-            if old_volt < VOLT_MANIC:
-                _update_physics_field(physics_packet, "voltage", VOLT_MANIC)
-            if random.random() < 0.2:
-                logs.append(f"{Prisma.RED}The Forge is hot. Ideas are malleable here.{Prisma.RST}")
+        node = self.world_graph.get(self.current_node_id)
+        if not node: return logs
+        if node.visited_count == 1:
+            logs.append(f"{Prisma.GRY}SCENE: {node.atmosphere} Smell: {node.smell}{Prisma.RST}")
+        if node.local_items:
+            items_str = ", ".join([f"[{i}]" for i in node.local_items])
+            logs.append(f"{Prisma.YEL}GROUND: You see {items_str} here.{Prisma.RST}")
+
         return logs
 
+    def drop_item(self, item_name: str) -> str:
+        if self.current_node_id in self.world_graph:
+            self.world_graph[self.current_node_id].local_items.append(item_name)
+            return f"Item '{item_name}' left at {self.world_graph[self.current_node_id].name}."
+        return "Item lost in the void."
+
+    def pickup_item(self, item_name: str) -> bool:
+        node = self.world_graph.get(self.current_node_id)
+        if node and item_name in node.local_items:
+            node.local_items.remove(item_name)
+            return True
+        return False
+
     def strike_root(self, vector): return None
+
     def check_transplant_shock(self, vector): return None
+
+    def export_atlas(self) -> Dict[str, Any]:
+        return {
+            "nodes": {k: v.to_dict() for k, v in self.world_graph.items()},
+            "current_id": self.current_node_id}
+
+    def import_atlas(self, atlas_data: Dict[str, Any]):
+        if not atlas_data: return
+        self.world_graph = {}
+        raw_nodes = atlas_data.get("nodes", {})
+        for nid, n_data in raw_nodes.items():
+            self.world_graph[nid] = GeniusLoci.from_dict(n_data)
+        self.current_node_id = atlas_data.get("current_id", "GENESIS_POINT")
+        if "GENESIS_POINT" not in self.world_graph:
+            self._init_genesis()
 
 class TownHall:
     def __init__(self, gordon_ref, events_ref, shimmer_ref, akashic_ref):
         self.Tinkerer = TheTinkerer(gordon_ref, events_ref, akashic_ref)
-        self.Navigator = TheNavigator(shimmer_ref)
+        self.Navigator = TheCartographer(shimmer_ref)
         self.seeds: List[ParadoxSeed] = []
+        if hasattr(events_ref, "subscribe"):
+            events_ref.subscribe("ITEM_LOST", self._on_item_drop)
+
+    def _on_item_drop(self, payload):
+        item = payload.get("item")
+        if item:
+            log = self.Navigator.drop_item(item)
 
     @property
     def rumors(self) -> List[str]:
@@ -238,6 +308,8 @@ class TownHall:
         drag = _get_float(p, "narrative_drag", 0.0)
         volt = _get_float(p, "voltage", 0.0)
         latency = getattr(host_stats, "latency", 0.0) if host_stats else 0.0
+        loc_name = self.Navigator.world_graph.get(self.Navigator.current_node_id).name
+
         if latency > 3.0:
             status, advice = "HIGH_LATENCY", "System is lagging. Simplify inputs."
         elif volt > 15.0:
@@ -246,8 +318,9 @@ class TownHall:
             status, advice = "HIGH_DRAG", "The narrative is stuck in the mud."
         else:
             status, advice = "NOMINAL", "Systems operational."
+
         news = self._get_town_news(latency, volt, status)
-        report = f"CENSUS: {status} | {advice}"
+        report = f"CENSUS [{loc_name}]: {status} | {advice}"
         if news:
             report += f"\n{news}"
         return report
@@ -282,8 +355,7 @@ class TownHall:
 class DeathGen:
     @classmethod
     def load_protocols(cls):
-        if TheLore.get("DEATH"):
-            return
+        if TheLore.get("DEATH"): return
         print(f"{Prisma.RED}[DEATH]: Protocols missing. Loading default fallback.{Prisma.RST}")
         default_death = {
             "PREFIXES": ["System Halt.", "Alas.", "So it ends."],
@@ -292,16 +364,13 @@ class DeathGen:
                 "STARVATION": ["Energy Depletion", "Metabolic Collapse"],
                 "GLUTTONY": ["Circuit Overload", "Icarus Failure"],
                 "TOXICITY": ["Viral Load Exceeded", "Poisoned Input"],
-                "BOREDOM": ["Stagnation", "Entropy Victory"]
-            },
+                "BOREDOM": ["Stagnation", "Entropy Victory"]},
             "VERDICTS": {
                 "DEFAULT": ["The screen goes black."],
                 "HEAVY": ["Gravity wins.", "Silence falls."],
                 "LIGHT": ["A flash of light, then nothing."],
                 "TOXIC": ["The system purges itself."],
-                "BORING": ["The narrative dissolves into grey."]
-            }
-        }
+                "BORING": ["The narrative dissolves into grey."]}}
         TheLore.inject("DEATH", default_death)
 
     @staticmethod
@@ -321,10 +390,8 @@ class DeathGen:
     @staticmethod
     def _determine_cause(p: Dict, mito_state: Any) -> str:
         atp = 0.0
-        if isinstance(mito_state, dict):
-            atp = float(mito_state.get("atp", 0))
-        else:
-            atp = float(getattr(mito_state, "atp_pool", 0))
+        if isinstance(mito_state, dict): atp = float(mito_state.get("atp", 0))
+        else: atp = float(getattr(mito_state, "atp_pool", 0))
         if atp <= 0: return "STARVATION"
         volt = _get_float(p, "voltage", 0.0)
         drag = _get_float(p, "narrative_drag", 0.0)
@@ -343,26 +410,19 @@ class DeathGen:
 
 class PIDController:
     def __init__(self, kp, ki, kd, setpoint, output_limits=(-10.0, 10.0)):
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
+        self.kp = kp; self.ki = ki; self.kd = kd
         self.setpoint = setpoint
         self.min_out, self.max_out = output_limits
-        self._integral = 0.0
-        self._last_error = 0.0
-        self._first_run = True
+        self._integral = 0.0; self._last_error = 0.0; self._first_run = True
 
     def reset(self):
-        self._integral = 0.0
-        self._last_error = 0.0
-        self._first_run = True
+        self._integral = 0.0; self._last_error = 0.0; self._first_run = True
 
     def update(self, measurement: float, dt: float = 1.0) -> float:
         if dt <= 0.0: return 0.0
         error = self.setpoint - measurement
         if self._first_run:
-            self._last_error = error
-            self._first_run = False
+            self._last_error = error; self._first_run = False
         self._integral += error * dt
         self._integral = max(self.min_out, min(self.max_out, self._integral))
         derivative = (error - self._last_error) / dt
@@ -377,9 +437,7 @@ class SanctuaryGovernor:
         self.voltage_pid = PIDController(kp=0.8, ki=0.1, kd=0.05, setpoint=10.0)
         self.drag_pid = PIDController(kp=0.4, ki=0.2, kd=0.1, setpoint=1.0)
 
-    def shift(self, physics_packet, voltage_history, tick_count):
-        # Placeholder for future logic
-        return "GOVERNOR_MAINTAIN"
+    def shift(self, physics_packet, voltage_history, tick_count): return "GOVERNOR_MAINTAIN"
 
     def recalibrate(self, target_voltage: float, target_drag: float):
         self.voltage_pid.setpoint = target_voltage
@@ -394,21 +452,17 @@ class SanctuaryGovernor:
         p = _normalize_physics_dict(physics_packet)
         curr_v = _get_float(p, "voltage", 0.0)
         curr_d = _get_float(p, "narrative_drag", 0.0)
-        target_v = self.voltage_pid.setpoint
-        target_d = self.drag_pid.setpoint
-        dist_v = abs(curr_v - target_v)
-        dist_d = abs(curr_d - target_d)
+        dist_v = abs(curr_v - self.voltage_pid.setpoint)
+        dist_d = abs(curr_d - self.drag_pid.setpoint)
         is_safe = (dist_v < 2.0) and (dist_d < 1.0)
-        distance = math.sqrt(dist_v ** 2 + dist_d ** 2)
-        return is_safe, distance
+        return is_safe, math.sqrt(dist_v ** 2 + dist_d ** 2)
 
 class Limbo:
     def __init__(self):
         self.ghosts: List[str] = []
 
     def haunt(self, text: str) -> str:
-        if not self.ghosts:
-            return text
+        if not self.ghosts: return text
         if random.random() < 0.1:
             ghost_word = random.choice(self.ghosts)
             return f"{text} ...{ghost_word.lower()}..."

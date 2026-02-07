@@ -3,10 +3,10 @@
 from typing import Tuple, Dict, Any, Optional
 from dataclasses import dataclass
 from bone_core import Prisma, MindSystem, PhysSystem, PhysicsPacket
-from bone_village import MirrorGraph, TheNavigator
+from bone_village import MirrorGraph, TheCartographer
 from bone_spores import MycotoxinFactory, LichenSymbiont, HyphalInterface, ParasiticSymbiont, MycelialNetwork
 from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, ViralTracer, ThePacemaker
-from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity, GlobalIntegrator, WisdomAllocator
+from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity
 from bone_protocols import LimboLayer
 from bone_physics import QuantumObserver, SurfaceTension
 from bone_machine import TheCrucible, TheForge, TheTheremin
@@ -70,7 +70,7 @@ class PanicRoom:
         return {
             "lens": "NARRATOR",
             "role": "The Backup System",
-            "thought": "I cannot think clearly, therefore I still am, but barely.",}
+            "thought": "I cannot think clearly, therefore I still am, but barely.", }
 
     @staticmethod
     def get_safe_soul():
@@ -102,8 +102,6 @@ class BoneArchitect:
             dreamer=DreamEngine(events),
             mirror=MirrorGraph(events),
             tracer=ViralTracer(_mem))
-        mind.integrator = GlobalIntegrator()
-        mind.wise = WisdomAllocator()
         return mind, limbo
 
     @staticmethod
@@ -128,7 +126,7 @@ class BoneArchitect:
             crucible=TheCrucible(),
             theremin=TheTheremin(),
             pulse=ThePacemaker(),
-            nav=TheNavigator(bio.shimmer),
+            nav=TheCartographer(bio.shimmer),
             tension=SurfaceTension(),
             dynamics=None)
 
@@ -154,27 +152,21 @@ class BoneArchitect:
         try:
             load_result = embryo.mind.mem.autoload_last_spore()
         except Exception as e:
-            events.log(f"{Prisma.RED}[ARCHITECT]: Spore corruption detected ({e}). Clearing heritage.{Prisma.RST}", "SYS")
+            events.log(f"{Prisma.RED}[ARCHITECT]: Spore corruption ({e}).{Prisma.RST}", "SYS")
             load_result = None
         inherited_traits = {}
         inherited_antibodies = set()
         soul_legacy = {}
         continuity_data = None
-        if load_result and isinstance(load_result, (list, tuple)):
+        recovered_atlas = {}
+        if load_result:
             if len(load_result) >= 1: inherited_traits = load_result[0]
             if len(load_result) >= 2: inherited_antibodies = load_result[1]
             if len(load_result) >= 3: soul_legacy = load_result[2]
             if len(load_result) >= 4: continuity_data = load_result[3]
-            events.log(f"{Prisma.CYN}[ARCHITECT]: Ancestral Spirit detected.{Prisma.RST}", "SYS")
-        else:
-            events.log(f"{Prisma.WHT}[ARCHITECT]: No ancestors found. A new lineage begins.{Prisma.RST}", "SYS")
-        embryo.bio.mito.state.mother_hash = getattr(embryo.mind.mem, "session_id", "GENESIS")
-        embryo.bio.mito.apply_inheritance(inherited_traits)
-        embryo.bio.immune.active_antibodies = inherited_antibodies
-        embryo.soul_legacy = soul_legacy
-        embryo.continuity = continuity_data
-        embryo.is_gestating = False
-        events.log(f"{Prisma.GRN}[ARCHITECT]: Embryo viable. Breaking the shell...{Prisma.RST}", "SYS")
-        if hasattr(events, "set_dormancy"):
-            events.set_dormancy(False)
+            if len(load_result) >= 5: recovered_atlas = load_result[4]  # <--- Get the map
+        if hasattr(embryo.physics, "nav") and hasattr(embryo.physics.nav, "import_atlas"):
+            if recovered_atlas:
+                embryo.physics.nav.import_atlas(recovered_atlas)
+                events.log(f"{Prisma.MAG}[ARCHITECT]: World Map restored.{Prisma.RST}", "SYS")
         return embryo

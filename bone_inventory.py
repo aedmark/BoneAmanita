@@ -465,8 +465,14 @@ class GordonKnot:
             return f"{Prisma.YEL}FULL: Gordon's pockets are bursting. (Vol: {self.physics_state.volume}){Prisma.RST}"
         self.inventory.append(tool_name)
         self._recalculate_tensegrity()
-        desc = registry_data.get('description', 'A thing.')
-        return f"{Prisma.GRN}LOOT DROP: Acquired [{tool_name}].{Prisma.RST}\n   {Prisma.GRY}\"{desc}\"{Prisma.RST}"
+        desc = registry_data.get('description', 'A mysterious object.')
+        usage = registry_data.get('usage_msg', '')
+        exposition = (
+            f"{Prisma.GRN}♦ ACQUIRED: {tool_name}{Prisma.RST}\n"
+            f"   {Prisma.CYN}“{desc}”{Prisma.RST}")
+        if usage and usage != "It does nothing.":
+            exposition += f"\n   {Prisma.GRY}(System Note: {usage}){Prisma.RST}"
+        return exposition
 
     def check_gravity(self, current_drift: float, psi: float) -> Tuple[float, List[str]]:
         messages = []

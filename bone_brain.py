@@ -23,24 +23,26 @@ class BrainConfig:
     ADRENALINE_RUSH: float = 600.0
     SEROTONIN_CALM: float = 0.5
 
+
 @dataclass
 class ChemicalState:
     dopamine: float = 0.2
     cortisol: float = 0.1
     adrenaline: float = 0.1
     serotonin: float = 0.2
+
     def homeostasis(self, rate: float = 0.1):
         targets = {"dopamine": 0.2, "cortisol": 0.1, "adrenaline": 0.1, "serotonin": 0.3}
         for attr, target in targets.items():
             current = getattr(self, attr)
-            delta = (target - current) * rate
-            setattr(self, attr, current + delta)
+            setattr(self, attr, current + ((target - current) * rate))
 
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
-        self.dopamine = (self.dopamine * (1.0 - weight)) + (new_state.get("DOP", 0.0) * weight)
-        self.cortisol = (self.cortisol * (1.0 - weight)) + (new_state.get("COR", 0.0) * weight)
-        self.adrenaline = (self.adrenaline * (1.0 - weight)) + (new_state.get("ADR", 0.0) * weight)
-        self.serotonin = (self.serotonin * (1.0 - weight)) + (new_state.get("SER", 0.0) * weight)
+        for key, attr in [("DOP", "dopamine"), ("COR", "cortisol"), ("ADR", "adrenaline"), ("SER", "serotonin")]:
+            val = new_state.get(key, 0.0)
+            current = getattr(self, attr)
+            setattr(self, attr, (current * (1.0 - weight)) + (val * weight))
+
 
 class NarrativeSpotlight:
     def __init__(self):
@@ -51,50 +53,32 @@ class NarrativeSpotlight:
             "PHI": {"thermal", "photo", "explosive"},
             "PSI": {"abstract", "sacred", "void", "idea"},
             "BET": {"suburban", "solvents", "play"}}
-        self.semantic_drift_factor = 0.1
 
     def expand_horizon(self, dimension: str, new_category: str):
         if dimension in self.dimension_map:
             self.dimension_map[dimension].add(new_category)
 
     def illuminate(self, graph: Dict, vector: Dict[str, float], limit: int = 5) -> List[str]:
-        if not graph:
-            return []
+        if not graph: return []
         active_dims = {k: v for k, v in vector.items() if v > 0.4}
         if not active_dims and vector:
-             top_dim = max(vector, key=vector.get)
-             if vector[top_dim] > 0.1:
-                 active_dims = {top_dim: vector[top_dim]}
-             else:
-                 active_dims = {"ENT": 0.2}
+            top_dim = max(vector, key=vector.get)
+            active_dims = {top_dim: vector[top_dim]} if vector[top_dim] > 0.1 else {"ENT": 0.2}
         scored_memories = []
-        secondary_candidates = set()
         for node, data in graph.items():
             resonance_score = 0.0
             if TheLexicon:
                 node_cats = TheLexicon.get_categories_for_word(node)
                 for dim, val in active_dims.items():
-                    target_flavors = self.dimension_map.get(dim, set())
-                    if node_cats & target_flavors:
+                    if node_cats & self.dimension_map.get(dim, set()):
                         resonance_score += (val * 1.5)
-                        for neighbor in data.get("edges", {}):
-                            secondary_candidates.add(neighbor)
             mass = sum(data.get("edges", {}).values())
             resonance_score += (mass * 0.1)
             if resonance_score > 0.5:
                 scored_memories.append((resonance_score, node, data))
-        for neighbor in secondary_candidates:
-            if neighbor not in graph: continue
-            scored_memories.append((0.4, neighbor, graph[neighbor]))
-        unique_memories = {}
-        for score, name, data in scored_memories:
-            if name not in unique_memories or score > unique_memories[name][0]:
-                unique_memories[name] = (score, data)
-        final_list = [(s, n, d) for n, (s, d) in unique_memories.items()]
-        final_list.sort(key=lambda x: x[0], reverse=True)
-        top_n = final_list[:limit]
+        scored_memories.sort(key=lambda x: x[0], reverse=True)
         results = []
-        for score, name, data in top_n:
+        for score, name, data in scored_memories[:limit]:
             connections = list(data.get("edges", {}).keys())
             conn_str = f" -> [{', '.join(connections[:2])}]" if connections else ""
             prefix = "Resonant" if score > 0.5 else "Associated"
@@ -112,22 +96,15 @@ class NeurotransmitterModulator:
         self.last_mood = "NEUTRAL"
 
     def force_state(self, state_name: str):
-        if state_name == "MANIC":
-            self.current_chem.dopamine = 1.0
-            self.current_chem.adrenaline = 1.0
-            self.current_chem.cortisol = 0.2
-            self.current_chem.serotonin = 0.0
-        elif state_name == "DEPRESSED":
-            self.current_chem.dopamine = 0.0
-            self.current_chem.serotonin = 0.0
-            self.current_chem.cortisol = 0.8
-        elif state_name == "ZEN":
-            self.current_chem.dopamine = 0.3
-            self.current_chem.serotonin = 0.9
-            self.current_chem.cortisol = 0.0
-            self.current_chem.adrenaline = 0.0
-        if self.events:
-            self.events.publish("NEURAL_STATE_SHIFT", {"state": state_name, "source": "FORCE"})
+        states = {
+            "MANIC": {"dopamine": 1.0, "adrenaline": 1.0, "cortisol": 0.2, "serotonin": 0.0},
+            "DEPRESSED": {"dopamine": 0.0, "serotonin": 0.0, "cortisol": 0.8},
+            "ZEN": {"dopamine": 0.3, "serotonin": 0.9, "cortisol": 0.0, "adrenaline": 0.0}}
+        if state_name in states:
+            for k, v in states[state_name].items():
+                setattr(self.current_chem, k, v)
+            if self.events:
+                self.events.publish("NEURAL_STATE_SHIFT", {"state": state_name, "source": "FORCE"})
 
     def get_mood_directive(self) -> str:
         c = self.current_chem
@@ -137,8 +114,8 @@ class NeurotransmitterModulator:
         if c.cortisol > 0.6: return "Current Mood: DEFENSIVE. Suspicious, brief, guarding information."
         return "Current Mood: NEUTRAL. Observant and receptive."
 
-    def modulate(self, incoming_chem: Dict[str, float], base_voltage: float, lens_name: str = "NARRATOR",
-                 model_name: str = "", latency_penalty: float = 0.0) -> Dict[str, Any]:
+    def modulate(self, incoming_chem: Dict[str, float], base_voltage: float, latency_penalty: float = 0.0) -> Dict[
+        str, Any]:
         self.current_chem.homeostasis(rate=BrainConfig.BASE_DECAY_RATE)
         if latency_penalty > 2.0:
             self.current_chem.cortisol += 0.1
@@ -161,21 +138,13 @@ class NeurotransmitterModulator:
             self.last_mood = current_mood
         voltage_heat = math.log1p(max(0.0, base_voltage - 5.0)) * 0.1
         chemical_delta = (c.dopamine * 0.4) - (c.adrenaline * 0.3) - (c.cortisol * 0.2)
-        temp_delta = chemical_delta + voltage_heat
-        final_temp = max(0.4, min(1.2, BrainConfig.BASE_TEMP + temp_delta))
-        token_volatility = (c.adrenaline * 600) - (c.cortisol * 300)
-        final_tokens = int(max(150.0, min(float(self.MAX_TOKENS), self.BASE_TOKENS + token_volatility)))
-        freq_penalty = 0.0
-        if c.adrenaline > 0.5:
-            freq_penalty = 0.4
-        elif c.dopamine > 0.7:
-            freq_penalty = 0.1
         params = {
-            "temperature": round(final_temp, 2),
+            "temperature": round(max(0.4, min(1.2, BrainConfig.BASE_TEMP + chemical_delta + voltage_heat)), 2),
             "top_p": BrainConfig.BASE_TOP_P,
-            "frequency_penalty": freq_penalty,
+            "frequency_penalty": 0.4 if c.adrenaline > 0.5 else (0.1 if c.dopamine > 0.7 else 0.0),
             "presence_penalty": 0.0,
-            "max_tokens": final_tokens}
+            "max_tokens": int(
+                max(150.0, min(float(self.MAX_TOKENS), self.BASE_TOKENS + ((c.adrenaline * 600) - (c.cortisol * 300)))))}
         return params
 
 
@@ -241,90 +210,52 @@ class LLMInterface:
             self.failure_count = 0
             self.circuit_state = "CLOSED"
             return "[SYSTEM]: Circuit Breaker Manually Reset."
-        if not self._is_synapse_active():
-            return self.mock_generation(prompt, reason=f"CIRCUIT_BROKEN")
-        if self.provider == "mock":
-            return self.mock_generation(prompt)
+        if not self._is_synapse_active(): return self.mock_generation(prompt, reason="CIRCUIT_BROKEN")
+        if self.provider == "mock": return self.mock_generation(prompt)
         payload = {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "stop": [
-                "=== PARTNER INPUT ===",
-                "=== SYSTEM KERNEL ===",
-                "SYSTEM INTERNALS",
-                "\nUser:",
-                "\nSystem:",
-                "\nRole:",
-                "\n\nUser:",
-                "| System:"
-            ]
-        }
+            "stop": ["=== PARTNER INPUT ===", "=== SYSTEM KERNEL ===", "\n\nUser:", "| System:"]}
         payload.update(params)
-        max_retries = 2
-        for attempt in range(max_retries + 1):
+        for attempt in range(3):
             try:
-                if attempt == max_retries:
-                    if "stop" in payload: del payload["stop"]
-                    payload["temperature"] = min(1.5, payload.get("temperature", 0.7) + 0.3)
-                    if self.events:
-                        self.events.log(
-                            f"{Prisma.OCHRE}⚡ SYNAPSE DEFIBRILLATOR: Removing safety rails for final attempt.{Prisma.RST}",
-                            "SYS")
-                timeout = 10.0 if self.circuit_state == "HALF_OPEN" else 60.0
-                content = self._transmit(payload, timeout)
-                if not content or len(content.strip()) < 2:
-                    raise ValueError(f"Response empty (Len: {len(content)})")
-                if self.circuit_state != "CLOSED" and self.events:
-                    self.events.log(f"{Prisma.GRN}⚡ SYNAPSE RESTORED.{Prisma.RST}", "SYS")
-                self.failure_count = 0
-                self.circuit_state = "CLOSED"
-                return content
-            except (ValueError, json.JSONDecodeError) as e:
-                if self.events:
-                    self.events.log(f"{Prisma.OCHRE}⚡ SYNAPSE GLITCH (Attempt {attempt}): {e}{Prisma.RST}", "SYS")
-                if attempt == max_retries:
-                    return self.mock_generation(prompt, reason="MALFORMED_OUTPUT")
-                time.sleep(0.5 * (attempt + 1))
+                content = self._transmit(payload, timeout=60.0)
+                if content and len(content.strip()) > 1:
+                    self.failure_count = 0
+                    self.circuit_state = "CLOSED"
+                    return content
             except Exception as e:
                 self.failure_count += 1
                 self.last_failure_time = time.time()
                 if self.failure_count >= self.failure_threshold:
                     self.circuit_state = "OPEN"
-                    if self.events:
-                        self.events.log(f"{Prisma.RED}⚡ SYNAPSE SEVERED: {e}{Prisma.RST}", "CRIT")
+                    if self.events: self.events.log(f"{Prisma.RED}⚡ SYNAPSE SEVERED: {e}{Prisma.RST}", "CRIT")
                     return self.mock_generation(prompt, reason="SEVERED")
                 if self.provider != "ollama" and self.circuit_state != "OPEN":
                     fallback = self._local_fallback(prompt, params)
-                    if "FALLBACK_DEAD" not in fallback:
-                        return fallback
-                time.sleep(1.0 * (attempt + 1))
-
+                    if "FALLBACK_DEAD" not in fallback: return fallback
         return self.mock_generation(prompt, reason="SILENCE")
 
     def _local_fallback(self, prompt: str, params: Dict) -> str:
-        fallback_url = getattr(BoneConfig, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
-        payload = {
-            "model": getattr(BoneConfig, "OLLAMA_MODEL_ID", "llama3"),
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": False,
-            "temperature": params.get('temperature', 0.7)}
         try:
-            headers = {"Content-Type": "application/json"}
-            data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(fallback_url, data=data, headers=headers)
-            with urllib.request.urlopen(req, timeout=10.0) as response:
+            url = getattr(BoneConfig, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
+            payload = {
+                "model": getattr(BoneConfig, "OLLAMA_MODEL_ID", "llama3"),
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+                "temperature": params.get('temperature', 0.55)}
+            req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=5.0) as response:
                 if response.status == 200:
-                    result = json.loads(response.read().decode("utf-8"))
-                    return result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    return json.loads(response.read().decode("utf-8")).get("choices", [{}])[0].get("message", {}).get("content", "")
         except Exception:
             pass
         return self.mock_generation(prompt, reason="FALLBACK_DEAD")
 
     def mock_generation(self, prompt: str, reason: str = "SIMULATION") -> str:
         if self.dreamer:
-            seed_vector = {"ENTROPY": len(prompt) % 10, "VOID": 5.0}
-            hallucination, _ = self.dreamer.hallucinate(seed_vector, trauma_level=2.0)
+            hallucination, _ = self.dreamer.hallucinate({"ENTROPY": len(prompt) % 10}, trauma_level=2.0)
             return f"[{reason}]: {hallucination}"
         return f"[{reason}]: The wire hums. There is no signal."
 
@@ -350,6 +281,7 @@ class PromptComposer:
         reality_directive = state.get("reality_directive", "")
         user_name = state.get('user_profile', {}).get('name', 'User')
         semantic_ops = state.get("semantic_operators", [])
+        loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
         style_notes = [
             f"Role: {role} for {user_name}.",
             "Directive: Immediate Immersion. Do not preface the experience. Do not ask for permission.",
@@ -359,14 +291,17 @@ class PromptComposer:
             "   - Use **Bold** for key objects or intense sensations.",
             "   - Use Headers for location changes or narrative shifts.",
             "   - IMPORTANT: Use DOUBLE NEWLINES between every paragraph or element",
-            "LOOT PROTOCOL: If the narrative grants a new item, output: [[LOOT: ITEM_NAME]].",
+            "LOOT LOGIC: If the user explicitly takes an item OR if your narrative implies they are holding/carrying it (e.g., 'the key is heavy in your hand'), you MUST output [[LOOT: ITEM_NAME]].",
+            "   - Do NOT loot scenery (e.g., 'floor', 'darkness').",
+            "NEGATIVE CONSTRAINT (LOOT): Do NOT auto-loot items.",
+            "   - Describing an item is allowed. Giving it to the user ([[LOOT: ITEM]]) is only allowed once ownership is implied.",
+            "   - If the user only looks at an item, describe it. Do not loot it.",
             "ENTROPY PROTOCOL: If an item is lost, destroyed, consumed, or traded away, output: [[LOST: ITEM_NAME]].",
             "   - Example: 'You eat the apple. [[LOST: RED_APPLE]]'",
             "   - Keep the item name simple (e.g., BRASS_KEY, STELLAR_COG).",
             mood_note]
         if semantic_ops:
             style_notes.append("\n=== INVENTORY RESONANCE (Active Item Effects) ===")
-            # semantic_ops is a list of strings like "CONSTRAINT: Do not use 'to be'."
             style_notes.extend([f"» {op}" for op in semantic_ops])
         if driver_directives:
             style_notes.append("\n=== CORE DIRECTIVES ===")
@@ -391,7 +326,10 @@ class PromptComposer:
                 f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. ***\n")
         final_prompt = (
             f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
-            f"=== SHARED REALITY ===\nCURRENT LOCATION: {loc}\nINVENTORY: {inv_str}\n\n"
+            f"=== SHARED REALITY ===\n"
+            f"CURRENT LOCATION: {loc}\n"
+            f"ENVIRONMENT ANCHOR: {loci_desc}\n"
+            f"INVENTORY: {inv_str}\n\n"
             f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
             f"=== PARTNER INPUT ===\n{user_name}: {self._sanitize(user_query)}\n"
             f"{system_injection}"
@@ -463,6 +401,7 @@ class ResponseValidator:
             return {"valid": False, "reason": "STUTTER", "replacement": "The vision fractures. Static remains."}
         return {"valid": True, "content": sanitized_response}
 
+
 class TheCortex:
     def __init__(self, engine_ref, llm_client=None):
         self.sub = engine_ref
@@ -473,297 +412,160 @@ class TheCortex:
         self.modulator = NeurotransmitterModulator(events_ref=self.events)
         self.boot_history = TelemetryService.get_instance().read_recent_history(limit=4)
         self.last_physics = {}
-        if hasattr(self.sub, 'consultant') and self.sub.consultant:
-            self.consultant = self.sub.consultant
-            if self.events:
-                self.events.log("[INIT]: Linked to Central VSL Consultant.", "SYS")
-        else:
-            try:
-                self.consultant = BoneConsultant()
-                if self.events:
-                    self.events.log("[INIT]: Local VSL Consultant spawned (Fallback).", "SYS")
-            except ImportError as e:
-                self.consultant = None
-                if self.events:
-                    self.events.log(f"⚠️ BoneConsultant missing: {e}", "SYS")
-        if llm_client:
-            self.llm = llm_client
-            if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None:
-                self.llm.dreamer = self.dreamer
-        else:
-            self.llm = LLMInterface(self.events, provider="mock", dreamer=self.dreamer)
+        try:
+            self.consultant = self.sub.consultant if hasattr(self.sub, 'consultant') else BoneConsultant()
+        except Exception:
+            self.consultant = None
+        self.llm = llm_client or LLMInterface(self.events, provider="mock", dreamer=self.dreamer)
+        if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None: self.llm.dreamer = self.dreamer
         self.composer = PromptComposer()
         self.spotlight = NarrativeSpotlight()
         self.symbiosis = SymbiosisManager(self.events)
         self.validator = ResponseValidator()
         self.ballast_active = False
-        self.ballast_counter = 0
         if hasattr(self.events, "subscribe"):
-            self.events.subscribe("AIRSTRIKE", self._handle_airstrike)
-
-    def _handle_airstrike(self, _payload):
-        self.events.log("AIRSTRIKE: Engaging defensive ballast.", "CORTEX")
-        self.ballast_active = True
-        self.ballast_counter = 5
+            self.events.subscribe("AIRSTRIKE", lambda p: setattr(self, 'ballast_active', True))
 
     def _update_history(self, user_text: str, system_text: str):
-        entry = f"User: {user_text} | System: {system_text}"
-        self.dialogue_buffer.append(entry)
+        self.dialogue_buffer.append(f"User: {user_text} | System: {system_text}")
         if len(self.dialogue_buffer) > self.MAX_HISTORY:
             self.dialogue_buffer.pop(0)
 
     def _harvest_loot(self, text: str) -> Tuple[str, List[str], List[str]]:
-        loot_pattern = r"\[\[LOOT:\s*([A-Za-z0-9_\s]+)\]\]"
-        lost_pattern = r"\[\[LOST:\s*([A-Za-z0-9_\s]+)\]\]"
-        found_items = []
-        lost_items = []
-
-        def loot_replacer(match):
-            item_name = match.group(1).strip().replace(" ", "_").upper()
-            found_items.append(item_name)
-            return ""
-
-        def lost_replacer(match):
-            item_name = match.group(1).strip().replace(" ", "_").upper()
-            lost_items.append(item_name)
-            return ""
-
-        text = re.sub(loot_pattern, loot_replacer, text)
-        text = re.sub(lost_pattern, lost_replacer, text)
-
-        return text, found_items, lost_items
+        found, lost = [], []
+        for match in re.findall(r"\[\[LOOT:\s*([A-Za-z0-9_\s]+)]]", text):
+            found.append(match.strip().replace(" ", "_").upper())
+        for match in re.findall(r"\[\[LOST:\s*([A-Za-z0-9_\s]+)]]", text):
+            lost.append(match.strip().replace(" ", "_").upper())
+        clean_text = re.sub(r"\[\[(LOOT|LOST):.*?]]", "", text)
+        return clean_text, found, lost
 
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
-        if self.consultant:
-            if "/vsl start" in user_input.lower():
-                msg = self.consultant.engage()
-                self.events.log(msg, "VSL")
-                return {"ui": f"{Prisma.CYN}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.sub.get_metrics()}
-            if "/vsl stop" in user_input.lower():
-                msg = self.consultant.disengage()
-                self.events.log(msg, "VSL")
-                return {"ui": f"{Prisma.GRY}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.sub.get_metrics()}
+        # 1. Handle Meta-Commands
+        if self.consultant and "/vsl" in user_input.lower():
+            return self._handle_vsl_command(user_input)
+        # 2. Run Engine Cycle
         is_boot_sequence = "SYSTEM_BOOT:" in user_input
         sim_result = self.sub.cycle_controller.run_turn(user_input, is_system=is_system)
-        if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]:
-            return sim_result
+        if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]: return sim_result
+        # 3. Gather State
         full_state = self.gather_state(sim_result)
-        if self.consultant and self.consultant.active:
-            bio_state = full_state.get("bio", {})
-            physics_packet = full_state.get("physics", None)
-            self.consultant.update_coordinates(
-                user_text=user_input,
-                bio_state=bio_state,
-                physics=physics_packet)
-            vsl_prompt = self.consultant.get_system_prompt()
-            full_state["mind"]["style_directives"] = [vsl_prompt]
-            sim_result["physics"]["voltage"] = self.consultant.state.B * 30.0
-            sim_result["physics"]["narrative_drag"] = self.consultant.state.E * 10.0
-        if is_boot_sequence:
-            clean_prompt = user_input.replace("SYSTEM_BOOT:", "").strip()
-            full_state["mind"]["lexicon_bias"] = "interesting"
-            full_state["world"]["orbit"] = [f"Seed: {clean_prompt}"]
-            full_state["mind"]["style_directives"] = [
-                "You are The Architect.",
-                f"TARGET SEED: {clean_prompt}",
-                "DIRECTIVE: This is a Cold Start. Build the world from the first sensation up.",
-                "DIRECTIVE: Do NOT describe the seed literally. Do not use the nouns in the seed title.",
-                "INSTEAD: Describe the *texture*, the *smell*, and the *emotional weight* of the space.",
-                "NEGATIVE CONSTRAINT: As an example: If the seed says 'Glass', do not use the word 'Glass'. Use 'brittle air' or 'sharp horizons'.",
-                "STYLE: Sensory. Grounded. Atmospheric."]
-            full_state["dialogue_history"] = []
-            user_input = "Entering reality..."
-        if hasattr(self.sub, 'tutorial') and self.sub.tutorial and not self.sub.tutorial.complete:
-            stage_directions = self.sub.tutorial.get_stage_directions(user_input)
-            if stage_directions:
-                full_state["mind"]["style_directives"].extend(stage_directions)
-        voltage = full_state["physics"].get("voltage", 5.0)
-        chem = full_state["bio"].get("chem", {})
-        current_lens = full_state["mind"].get("lens", "NARRATOR")
-        model_id = self.llm.model if hasattr(self.llm, "model") else "unknown"
-        current_latency = 0.0
-        if hasattr(self.sub, "host_stats"):
-            current_latency = self.sub.host_stats.latency
-        llm_params = self.modulator.modulate(
-            chem,
-            voltage,
-            lens_name=current_lens,
-            model_name=model_id,
-            latency_penalty=current_latency)
-        if is_boot_sequence:
-            llm_params["temperature"] = 1.3
-            llm_params["top_p"] = 0.95
-            llm_params["frequency_penalty"] = 0.5
+        # 4. Apply Special Modes (Boot/VSL)
         modifiers = self.symbiosis.get_prompt_modifiers()
-        if self.sub.tick_count < 5: modifiers["grace_period"] = True
-        if hasattr(self.sub, 'tutorial') and self.sub.tutorial:
-            modifiers["soften"] = True
-        if is_boot_sequence or self.sub.tick_count == 0:
-            modifiers["include_inventory"] = False
-        if self.ballast_active:
-            self.ballast_counter -= 1
-            if self.ballast_counter <= 0: self.ballast_active = False
-        mood_directive = self.modulator.get_mood_directive()
-        final_prompt = self.composer.compose(
-            full_state,
-            user_input,
-            ballast=self.ballast_active,
-            modifiers=modifiers,
-            mood_override=mood_directive)
-        start_time = time.time()
-        raw_response_text = self.llm.generate(final_prompt, llm_params)
-        raw_response_text, new_loot, lost_loot = self._harvest_loot(raw_response_text)
-        inventory_logs = []
-        if new_loot:
-            for item in new_loot:
-                inventory_logs.append(self.sub.gordon.acquire(item))
-                if self.events:
-                    self.events.publish("ITEM_ACQUIRED", {"item": item, "source": "NARRATIVE"})
-        if lost_loot:
-            for item in lost_loot:
-                if self.sub.gordon.safe_remove_item(item):
-                    inventory_logs.append(f"{Prisma.GRY}ENTROPY: {item} consumed/lost.{Prisma.RST}")
-                    if self.events:
-                        self.events.publish("ITEM_LOST", {"item": item, "source": "NARRATIVE"})
-                else:
-                    inventory_logs.append(
-                        f"{Prisma.OCHRE}GLITCH: Tried to lose {item}, but you didn't have it.{Prisma.RST}")
-        if "\n\n" not in raw_response_text:
-            raw_response_text = raw_response_text.replace("\n", "\n\n")
-            if len(raw_response_text) > 300 and raw_response_text.count("\n") < 2:
-                raw_response_text = raw_response_text.replace(". ", ".\n\n")
+        if self.consultant and self.consultant.active:
+            self._apply_vsl_overlay(full_state, user_input, sim_result)
         if is_boot_sequence:
-            self._update_history("SYSTEM_INIT", raw_response_text)
-        else:
-            self._update_history(user_input, raw_response_text)
-        if "LOOK" in user_input.upper() and "System blind" in raw_response_text:
-            raw_response_text = raw_response_text.replace("System blind. Awaiting command: LOOK.", "")
-            raw_response_text = raw_response_text.replace("System blind.", "")
-            raw_response_text = raw_response_text.strip()
-        try:
-            p_data = full_state.get("physics", {})
-            def _get_p(k):
-                return p_data.get(k, 0) if isinstance(p_data, dict) else getattr(p_data, k, 0)
-            physics_snapshot = {
-                "voltage": _get_p("voltage"),
-                "narrative_drag": _get_p("narrative_drag"),
-                "beta_index": _get_p("beta_index")}
-            mandates = [str(m) for m in sim_result.get("council_mandates", [])]
-            crystal = DecisionCrystal(
-                prompt_snapshot=final_prompt[:1000] + "..." if len(final_prompt) > 1000 else final_prompt,
-                physics_state=physics_snapshot,
-                active_archetype=full_state["mind"].get("lens", "UNKNOWN"),
-                chorus_weights={full_state["mind"].get("lens", "UNKNOWN"): 1.0},
-                council_mandates=mandates,
-                final_response=raw_response_text)
-            TelemetryService.get_instance().log_crystal(crystal)
-        except Exception as e:
-            if self.events:
-                self.events.log(f"AUDIT FAILURE: {e}", "SYS")
-        latency = time.time() - start_time
-        system_vector = full_state["physics"].get("vector", {})
-        response_vector = self.sub.lex.vectorize(raw_response_text)
-        alignment_score = cosine_similarity(system_vector, response_vector)
-        physics_data = sim_result.get("physics")
-        if alignment_score < 0.3:
-            self.events.log(f"{Prisma.OCHRE}DIVERGENCE ({alignment_score:.2f}): The Ghost is wandering.{Prisma.RST}",
-                            "CORTEX")
-            if physics_data and isinstance(physics_data, dict):
-                self.last_physics = physics_data
-                voltage = physics_data.get("voltage", 0.0)
-                if voltage > 18.0:
-                    self.modulator.force_state("MANIC")
-                sim_result["physics"]["voltage"] = voltage + 1.0
-        validation_result = self.validator.validate(raw_response_text, full_state)
-        final_response_text = validation_result["content"] if validation_result["valid"] else validation_result[
-            "replacement"]
-        self.learn_from_response(final_response_text)
-        self.symbiosis.monitor_host(latency=latency, response_text=final_response_text, prompt_len=len(final_prompt))
-        self._audit_solipsism(final_response_text, lens_name=current_lens)
-        self._update_history(user_input, final_response_text)
-        sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_response_text}{Prisma.RST}"
-        if inventory_logs:
-            sim_result["ui"] += "\n" + "\n".join(inventory_logs)
-        sim_result["raw_content"] = final_response_text
+            self._apply_boot_overlay(full_state, user_input)
+            modifiers["include_inventory"] = False
+            user_input = "Entering reality..."
+        # 5. Neuro-Modulation
+        llm_params = self.modulator.modulate(
+            full_state["bio"].get("chem", {}),
+            full_state["physics"].get("voltage", 5.0),
+            latency_penalty=getattr(self.sub.host_stats, "latency", 0.0))
+        if is_boot_sequence: llm_params.update({"temperature": 1.3, "top_p": 0.95})
+        # 6. Compose & Generate
+        final_prompt = self.composer.compose(
+            full_state, user_input,
+            ballast=self.ballast_active, modifiers=modifiers,
+            mood_override=self.modulator.get_mood_directive())
+        start_time = time.time()
+        raw_resp = self.llm.generate(final_prompt, llm_params)
+        final_text, new_loot, lost_loot = self._harvest_loot(raw_resp)
+        # 7. Post-Process (Inventory, Logs, Telemetry)
+        inv_logs = self._process_inventory_changes(new_loot, lost_loot)
+        self._log_telemetry(final_prompt, final_text, full_state, sim_result)
+        self.learn_from_response(final_text)
+        # 8. Validation & History
+        val_res = self.validator.validate(final_text, full_state)
+        final_output = val_res["content"] if val_res["valid"] else val_res["replacement"]
+        self.symbiosis.monitor_host(time.time() - start_time, final_output, len(final_prompt))
+        self._update_history("SYSTEM_INIT" if is_boot_sequence else user_input, final_output)
+        # 9. Final Packaging
+        sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_output}{Prisma.RST}"
+        if inv_logs: sim_result["ui"] += "\n" + "\n".join(inv_logs)
+        sim_result["raw_content"] = final_output
+        self.ballast_active = False
         return sim_result
 
+    def _handle_vsl_command(self, text):
+        msg = self.consultant.engage() if "start" in text else self.consultant.disengage()
+        self.events.log(msg, "VSL")
+        return {"ui": f"{Prisma.CYN}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.sub.get_metrics()}
+
+    def _apply_vsl_overlay(self, state, text, sim_result):
+        self.consultant.update_coordinates(text, state.get("bio", {}), state.get("physics"))
+        state["mind"]["style_directives"] = [self.consultant.get_system_prompt()]
+        sim_result["physics"]["voltage"] = self.consultant.state.B * 30.0
+
+    def _apply_boot_overlay(self, state, text):
+        seed = text.replace("SYSTEM_BOOT:", "").strip()
+        state["mind"]["style_directives"] = [
+            "You are The Architect.", f"TARGET SEED: {seed}",
+            "DIRECTIVE: Build the world from the first sensation up. Do not describe the seed literally.",
+            "STYLE: Sensory. Grounded. Atmospheric."]
+        state["dialogue_history"] = []
+
+    def _process_inventory_changes(self, found, lost):
+        logs = []
+        for item in found:
+            logs.append(self.sub.gordon.acquire(item))
+            if self.events: self.events.publish("ITEM_ACQUIRED", {"item": item})
+        for item in lost:
+            if self.sub.gordon.safe_remove_item(item):
+                logs.append(f"{Prisma.GRY}ENTROPY: {item} consumed/lost.{Prisma.RST}")
+            else:
+                logs.append(f"{Prisma.OCHRE}GLITCH: Tried to lose {item}, but you didn't have it.{Prisma.RST}")
+        return logs
+
+    def _log_telemetry(self, prompt, response, state, sim_result):
+        try:
+            phys = state.get("physics", {})
+            crystal = DecisionCrystal(
+                prompt_snapshot=prompt[:500],
+                physics_state={"voltage": phys.get("voltage", 0), "narrative_drag": phys.get("narrative_drag", 0)},
+                active_archetype=state["mind"].get("lens", "UNKNOWN"),
+                council_mandates=[str(m) for m in sim_result.get("council_mandates", [])],
+                final_response=response)
+            TelemetryService.get_instance().log_crystal(crystal)
+        except Exception:
+            pass
+
     def gather_state(self, sim_result):
-        current_tick = self.sub.tick_count if hasattr(self.sub, 'tick_count') else 0
-        phys_packet = self.sub.phys.observer.last_physics_packet
-        if phys_packet is not None:
-            phys_dict = phys_packet.to_dict()
-        else:
-            raw_p = sim_result.get("physics", {})
-            phys_dict = raw_p if isinstance(raw_p, dict) else {}
-            if not phys_dict:
-                phys_dict = {"voltage": 0.0, "narrative_drag": 0.0, "vector": {}, "clean_words": []}
-        bio_state = {
-            "chem": self.sub.bio.endo.get_state(),
-            "atp": self.sub.bio.mito.state.atp_pool}
-        inventory = self.sub.gordon.inventory
-        mind_data = self.sub.noetic.arbiter.consult(
-            phys_packet,
-            bio_state,
-            inventory,
-            current_tick,
-            soul_ref=self.sub.soul)
-        if isinstance(mind_data, tuple):
-            mind_data = {
-                "lens": mind_data[0],
-                "role": mind_data[2],
-                "style_directives": ["Neutral tone."],
-                "lexicon_bias": "abstract"}
+        phys = self.sub.phys.observer.last_physics_packet.to_dict() if self.sub.phys.observer.last_physics_packet else sim_result.get("physics", {})
+        bio = {"chem": self.sub.bio.endo.get_state(), "atp": self.sub.bio.mito.state.atp_pool}
+        mind = self.sub.noetic.arbiter.consult(phys, bio, self.sub.gordon.inventory, self.sub.tick_count, soul_ref=self.sub.soul)
+        if isinstance(mind, tuple):
+            mind = {"lens": mind[0], "role": mind[2], "style_directives": ["Neutral tone."]}
         if hasattr(self.sub, 'director'):
-            chorus_instr, active_voices = self.sub.director.generate_chorus_instruction(phys_dict)
-            if len(active_voices) > 1 and "NARRATOR" not in active_voices:
-                mind_data["style_directives"].append(chorus_instr)
-                mind_data["role"] = f"The Chorus ({'/'.join(active_voices)})"
-        active_history = self.dialogue_buffer
-        if not active_history and self.boot_history:
-            active_history = [f"[PREVIOUSLY]: {entry}" for entry in self.boot_history]
-        reality_directive = ""
-        if hasattr(self.sub, 'reality_stack'):
-            reality_directive = self.sub.reality_stack.get_prompt_directive()
+            chorus, voices = self.sub.director.generate_chorus_instruction(phys)
+            if len(voices) > 1 and "NARRATOR" not in voices:
+                mind["style_directives"].append(chorus)
+                mind["role"] = f"The Chorus ({'/'.join(voices)})"
+        loci_description = "Unknown Void."
+        if hasattr(self.sub.phys, "nav") and hasattr(self.sub.phys.nav, "get_current_description"):
+            loci_description = self.sub.phys.nav.get_current_description()
         return {
-            "bio": bio_state,
-            "physics": phys_dict,
-            "mind": mind_data,
-            "reality_directive": reality_directive,
-            "dialogue_history": active_history,
+            "bio": bio,
+            "physics": phys,
+            "mind": mind,
+            "dialogue_history": self.dialogue_buffer or [f"[PREV]: {e}" for e in self.boot_history],
             "user_profile": self.sub.mind.mirror.profile.__dict__,
-            "world": {"orbit": sim_result.get("world_state", {}).get("orbit", ["Void"])},
-            "inventory": inventory,
+            "world": {
+                "orbit": sim_result.get("world_state", {}).get("orbit", ["Void"]),
+                "loci_description": loci_description},
+            "inventory": self.sub.gordon.inventory,
             "semantic_operators": self.sub.gordon.get_semantic_operators(),
-            "soul_state": self.sub.soul.get_soul_state(),
-            "spotlight": self.spotlight.illuminate(
-                self.sub.mind.mem.graph,
-                phys_dict.get("vector", {}))}
+            "spotlight": self.spotlight.illuminate(self.sub.mind.mem.graph, phys.get("vector", {}))}
 
-    def _audit_solipsism(self, text: str, lens_name: str = "NARRATOR"):
-        words = text.lower().split()
-        if not words: return
-        self_refs = words.count("i") + words.count("me") + words.count("my")
-        density = self_refs / len(words)
-        if density > 0.2:
-            self.events.log(f"SOLIPSISM DETECTED ({density:.2f}). Ego is thickening.", "SYS")
-            if hasattr(self.modulator, 'current_chem'):
-                self.modulator.current_chem.dopamine *= 0.5
-                self.modulator.current_chem.serotonin = min(1.0, self.modulator.current_chem.serotonin + 0.2)
-                self.events.log(f"{Prisma.CYN}   >>> NEURO-CORRECTION: Dopamine Cut. Humility induced.{Prisma.RST}",
-                                "SYS")
-
-    def learn_from_response(self, response_text):
-        words = self.sub.lex.sanitize(response_text)
+    def learn_from_response(self, text):
+        words = self.sub.lex.sanitize(text)
         unknowns = [w for w in words if not self.sub.lex.get_categories_for_word(w)]
-        if unknowns and len(unknowns) < 5:
+        if unknowns:
             target = random.choice(unknowns)
             if len(target) > 4:
                 self.sub.lex.teach(target, "kinetic", self.sub.tick_count)
-                if self.events:
-                    self.events.publish("MYTHOLOGY_UPDATE", {
-                        "word": target,
-                        "category": "kinetic"})
-                self.events.log(f"AUTO-DIDACTIC: Learned '{target}' from self.", "CORTEX")
+                if self.events: self.events.log(f"AUTO-DIDACTIC: Learned '{target}'.", "CORTEX")
 
 class NeuroPlasticity:
     def __init__(self):
@@ -912,42 +714,6 @@ class DreamEngine:
             return f"DEFRAG: Pruned {len(pruned)} dead nodes ({joined}...). Neural load lightened."
         return "DEFRAG: Memory structure is efficient. No pruning needed."
 
-class GlobalIntegrator:
-    def __init__(self):
-        self.global_coherence = 0.0
-
-    def measure_ignition(self, clean_words: List[str], voltage_history: List[float]) -> Tuple[float, float, float]:
-        if not voltage_history: return 0.0, 0.0, 0.0
-        avg_voltage = sum(voltage_history) / len(voltage_history)
-        word_density = len(clean_words) / 10.0
-        ignition = min(1.0, (avg_voltage / 20.0) * word_density)
-        coherence = 1.0 - (abs(voltage_history[-1] - avg_voltage) / 20.0)
-        return ignition, coherence, 0.0
-
-class WisdomAllocator:
-    def __init__(self):
-        self.insight_depth = 0.0
-
-    def get_readout(self):
-        return f"Insight: {self.insight_depth:.2f}"
-
-    def architect(self, context_packet: Dict[str, Any], mind_tuple: Tuple, is_dream: bool) -> Dict[str, str]:
-        lens = mind_tuple[0] if mind_tuple else "UNKNOWN"
-        role = mind_tuple[2] if len(mind_tuple) > 2 else "Observer"
-        mode = "REM_CYCLE" if is_dream else "WAKING_LIFE"
-        physics = context_packet.get("physics", {})
-        voltage = physics.get("voltage", 0.0) if isinstance(physics, dict) else getattr(physics, "voltage", 0.0)
-        chapter_title = "The Flatline"
-        if voltage > 15.0:
-            chapter_title = "The Surge"
-        elif voltage > 5.0:
-            chapter_title = "The Flow"
-        return {
-            "mode": mode,
-            "lens": lens,
-            "role": role,
-            "chapter": chapter_title,
-            "insight": self.get_readout()}
 
 class NoeticLoop:
     def __init__(self, mind_layer, bio_layer, events):
@@ -955,57 +721,27 @@ class NoeticLoop:
         self.bio = bio_layer
         self.arbiter = SynergeticLensArbiter(events)
 
-    def think(self, physics_packet, _bio_result_dict, inventory, voltage_history, tick_count, soul_ref=None):
-        volts = physics_packet.get("voltage", 0.0)
-        drag = physics_packet.get("narrative_drag", 0.0)
-        if volts < 1.5 and drag < 1.5 and tick_count > 1:
-            raw_text = physics_packet.get("raw_text", "")
-            stripped_thought = TheLexicon.walk_gradient(raw_text)
-            return {
-                "mode": "COGNITIVE",
-                "lens": "GRADIENT_WALKER",
-                "context_msg": f"ECHO: {stripped_thought}",
-                "role": "The Reducer",
-                "ignition": 0.0,
-                "hebbian_msg": None}
-        clean_words = physics_packet.get("clean_words", [])
-        ignition_score, coherence, _ = self.mind.integrator.measure_ignition(
-            clean_words,
-            voltage_history)
-        mind_data = self.arbiter.consult(
-            physics_packet,
-            _bio_result_dict,
-            inventory,
-            tick_count,
-            soul_ref=soul_ref,
-            _ignition_score=ignition_score)
-        standardized_mind = {}
+    def think(self, physics_packet, _bio, inventory, voltage_history, tick_count, soul_ref=None):
+        avg_v = sum(voltage_history) / len(voltage_history) if voltage_history else 0
+        ignition = min(1.0, (avg_v / 20.0) * (len(physics_packet.get("clean_words", [])) / 10.0))
+        if physics_packet.get("voltage", 0) > 12.0 and random.random() < 0.15:
+            words = physics_packet.get("clean_words", [])
+            if len(words) >= 2:
+                w1, w2 = random.sample(words, 2)
+                self._force_link(self.mind.mem.graph, w1, w2)
+        mind_data = self.arbiter.consult(physics_packet, _bio, inventory, tick_count, soul_ref=soul_ref, _ignition_score=ignition)
         if isinstance(mind_data, tuple):
-            standardized_mind = {
-                "lens": mind_data[0],
-                "context_msg": mind_data[1],
-                "role": mind_data[2]}
-        elif isinstance(mind_data, dict):
-            standardized_mind = mind_data
-            standardized_mind.setdefault("context_msg", standardized_mind.get("msg", ""))
-            standardized_mind.setdefault("lens", "DEFAULT")
-            standardized_mind.setdefault("role", "Observer")
-        hebbian_msg = None
-        clean_words = physics_packet.get("clean_words", [])
-        if physics_packet.get("voltage", 0.0) > 12.0 and len(clean_words) >= 2:
-            if random.random() < 0.15:
-                w1, w2 = random.sample(clean_words, 2)
-                hebbian_msg = self.bio.plasticity.force_hebbian_link(self.mind.mem.graph, w1, w2)
-        current_physics = {}
-        if hasattr(self, 'stabilizer'):
-            current_physics = self.stabilizer.get_physics_state()
-        elif hasattr(self, 'physics_engine'):
-            current_physics = self.physics_engine.get_state()
+            mind_data = {"lens": mind_data[0], "context_msg": mind_data[1], "role": mind_data[2]}
         return {
             "mode": "COGNITIVE",
-            "lens": standardized_mind.get("lens"),
-            "context_msg": standardized_mind.get("context_msg", standardized_mind.get("msg")),
-            "role": standardized_mind.get("role"),
-            "ignition": ignition_score,
-            "physics": current_physics,
+            "lens": mind_data.get("lens"),
+            "context_msg": mind_data.get("context_msg"),
+            "role": mind_data.get("role"),
+            "ignition": ignition,
+            "physics": physics_packet,
             "bio": self.bio.endo.get_state() if hasattr(self.bio, 'endo') else {}}
+
+    def _force_link(self, graph, wa, wb):
+        for a, b in [(wa, wb), (wb, wa)]:
+            if a not in graph: graph[a] = {"edges": {}, "last_tick": 0}
+            graph[a]["edges"][b] = min(10.0, graph[a]["edges"].get(b, 0) + 2.5)

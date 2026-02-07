@@ -91,5 +91,13 @@
             "GORDON",
             "THE OBSERVER"
         ]
+    },
+    "NARRATOR_THE OBSERVER_HYBRID": {
+        "role": "The The Witness / Participant Synthesis",
+        "msg": "Perspective shift: NARRATOR and THE OBSERVER are aligning. The dialectic is resolved.",
+        "derived_from": [
+            "NARRATOR",
+            "THE OBSERVER"
+        ]
     }
 }

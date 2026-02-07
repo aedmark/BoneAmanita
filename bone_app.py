@@ -72,7 +72,7 @@ st.markdown("""
     /* This targets the paragraph tags inside the markdown to ensure spacing */
     .stChatMessage .stMarkdown p {
         margin-bottom: 1.2em !important; /* Force paragraph spacing */
-        line-height: 1.6 !important;     /* Improve readability */
+        line-heightssssssssssssssssssssssssssssssssssssssssssss: 1.6 !important;     /* Improve readability */
         font-size: 1.05rem;
     }
     
@@ -159,7 +159,7 @@ with st.sidebar:
     c1.metric("ATP", f"{atp:.1f} J")
     c2.metric("ENZYME", "ACTIVE")
     st.divider()
-    st.subheader("GEO.DESICS")
+    st.subheader("COORDINATES")
     volts = 0.0
     drag = 0.0
     zone = "VOID"
@@ -172,9 +172,8 @@ with st.sidebar:
     c3.metric("VOLTAGE", f"{volts:.1f}v")
     c4.metric("DRAG", f"{drag:.1f}")
     st.info(f"📍 ZONE: {zone}")
-
     st.divider()
-    st.subheader("GORDON.KNOT")
+    st.subheader("INVENTORY")
     inv = engine.gordon.inventory
     if inv:
         for item in inv: st.code(item, language=None)
@@ -183,6 +182,11 @@ with st.sidebar:
     if st.button("☣️ EMERGENCY DUMP"):
         msg = engine.emergency_save(exit_cause="MANUAL_UI")
         st.toast(msg)
+    if st.button("💾 SAVE & HIBERNATE"):
+        if 'engine' in st.session_state:
+            with st.spinner("Compiling Spore..."):
+                st.session_state.engine.shutdown()
+                st.success("System State Saved. You may close the terminal.")
 
 # --- CHAT LOOP ---
 for msg in st.session_state.history:

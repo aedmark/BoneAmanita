@@ -15,17 +15,6 @@ from bone_symbiosis import SymbiosisManager
 from bone_village import SanctuaryGovernor
 from bone_lexicon import SomaticInterface
 
-def _get_p(p, key, default=None):
-    if isinstance(p, dict):
-        return p.get(key, default)
-    return getattr(p, key, default)
-
-def _set_p(p, key, value):
-    if isinstance(p, dict):
-        p[key] = value
-    else:
-        setattr(p, key, value)
-
 class CycleStabilizer:
     MANIFOLD_CONFIGS = {
         "THE_FORGE": {"voltage": 15.0, "drag": 1.5},
@@ -35,65 +24,35 @@ class CycleStabilizer:
         "COURTYARD": {"voltage": 8.0, "drag": 2.0},
         "DEFAULT": {"voltage": 10.0, "drag": 1.5}}
 
-    HIGH_ENERGY_STATES = {"SUPERCONDUCTIVE", "FLOW_BOOST", "HUBRIS_RISK"}
-
     def __init__(self, events_ref, governor_ref):
         self.events = events_ref
         self.governor = governor_ref
-        self.last_phase: str = "INIT"
         self.last_tick_time = time.time()
-
-    def _adjust_setpoints(self, ctx: CycleContext, p: Any):
-        flow = str(getattr(p, "flow_state", "LAMINAR"))
-        current_manifold = getattr(p, "manifold", "THE_CONSTRUCT")
-        if current_manifold in ["THE_CONSTRUCT", "DEFAULT", "None"]:
-            world = getattr(ctx, "world_state", {})
-            if isinstance(world, dict):
-                orbit = world.get("orbit")
-                if orbit and isinstance(orbit, (list, tuple)) and orbit[0]:
-                    current_manifold = orbit[0]
-        target_cfg = self.MANIFOLD_CONFIGS.get(current_manifold, self.MANIFOLD_CONFIGS["DEFAULT"])
-        base_max_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
-        target_v = base_max_v if flow in self.HIGH_ENERGY_STATES else target_cfg["voltage"]
-        target_d = target_cfg["drag"]
-        self.governor.recalibrate(target_v, target_d)
 
     def stabilize(self, ctx: CycleContext, current_phase: str):
         now = time.time()
         dt = max(0.001, min(1.0, now - self.last_tick_time))
         self.last_tick_time = now
         p = ctx.physics
-        self._adjust_setpoints(ctx, p)
-        curr_v = p.voltage
-        curr_d = p.narrative_drag
+        manifold = getattr(p, "manifold", "DEFAULT")
+        if manifold not in self.MANIFOLD_CONFIGS: manifold = "DEFAULT"
+        cfg = self.MANIFOLD_CONFIGS[manifold]
+        target_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0) if getattr(p, "flow_state", "LAMINAR") in [
+            "SUPERCONDUCTIVE", "FLOW_BOOST"] else cfg["voltage"]
+        self.governor.recalibrate(target_v, cfg["drag"])
         v_force, d_force = self.governor.regulate(p, dt=dt)
-        CRITICAL_VOLT = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
-        CRITICAL_DRAG = getattr(BoneConfig.PHYSICS, "DRAG_CRITICAL", 8.0)
-        if p.voltage > CRITICAL_VOLT and p.narrative_drag > (CRITICAL_DRAG * 0.5):
-            d_force = min(d_force, 0.0)
-        corrections_made = False
-        MAX_V = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
-        MIN_V = getattr(BoneConfig.PHYSICS, "VOLTAGE_FLOOR", 0.0)
+        corrections = False
         if abs(v_force) > 0.01:
-            raw_new_v = curr_v + v_force
-            new_v = max(MIN_V, min(MAX_V, raw_new_v))
-            p.voltage = new_v
+            p.voltage = max(0.0, min(getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0), p.voltage + v_force))
             if abs(v_force) > 0.5:
-                reason = "PID_DAMPENER" if v_force < 0 else "PID_EXCITATION"
-                ctx.record_flux(current_phase, "voltage", curr_v, new_v, reason)
-                if abs(v_force) > 1.0:
-                    self.events.log(
-                        f"{Prisma.GRY}⚖️ STABILIZER: Voltage active correction ({v_force:+.2f}v).{Prisma.RST}", "SYS")
-            corrections_made = True
+                ctx.record_flux(current_phase, "voltage", p.voltage - v_force, p.voltage, "PID_CORRECTION")
+            corrections = True
         if abs(d_force) > 0.01:
-            new_d = max(0.0, curr_d + d_force)
-            p.narrative_drag = new_d
+            p.narrative_drag = max(0.0, p.narrative_drag + d_force)
             if abs(d_force) > 0.5:
-                reason = "PID_LUBRICATION" if d_force < 0 else "PID_BRAKING"
-                ctx.record_flux(current_phase, "narrative_drag", curr_d, new_d, reason)
-            corrections_made = True
-        self.last_phase = current_phase
-        return corrections_made
+                ctx.record_flux(current_phase, "narrative_drag", p.narrative_drag - d_force, p.narrative_drag, "PID_CORRECTION")
+            corrections = True
+        return corrections
 
 class SimulationPhase:
     def __init__(self, engine_ref):
@@ -102,7 +61,6 @@ class SimulationPhase:
 
     def run(self, ctx: CycleContext) -> CycleContext:
         raise NotImplementedError
-
 
 class ObservationPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -148,7 +106,6 @@ class IntentionPhase(SimulationPhase):
             ctx.log(f"{Prisma.OCHRE}🧠 INTENTION: Low Energy. Conservation mode active.{Prisma.RST}")
         return ctx
 
-
 class SanctuaryPhase(SimulationPhase):
     def __init__(self, engine_ref, governor_ref):
         super().__init__(engine_ref)
@@ -166,9 +123,10 @@ class SanctuaryPhase(SimulationPhase):
         return ctx
 
     def _enter_sanctuary(self, ctx: CycleContext):
-        _set_p(ctx.physics, "zone", getattr(BonePresets.SANCTUARY, "ZONE", "SANCTUARY"))
-        _set_p(ctx.physics, "zone_color", getattr(BonePresets.SANCTUARY, "COLOR_NAME", "GRN"))
-        _set_p(ctx.physics, "flow_state", "LAMINAR")
+        # [SLASH]: Fixed _set_p calls to use dot notation
+        ctx.physics.zone = getattr(BonePresets.SANCTUARY, "ZONE", "SANCTUARY")
+        ctx.physics.zone_color = getattr(BonePresets.SANCTUARY, "COLOR_NAME", "GRN")
+        ctx.physics.flow_state = "LAMINAR"
         if random.random() < 0.1:
             color = getattr(BonePresets.SANCTUARY, 'COLOR', Prisma.GRN)
             ctx.log(f"{color}![☀️] SANCTUARY: Breathing space.{Prisma.RST}")
@@ -252,23 +210,14 @@ class MetabolismPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "METABOLISM"
-        self.bailout_pid = PIDController(
-            kp=5.0, ki=1.0, kd=2.0,
-            setpoint=1.0,
-            output_limits=(0.0, 10.0))
 
     def run(self, ctx: CycleContext):
-        if ctx.is_system_event:
-            return ctx
+        if ctx.is_system_event: return ctx
         physics = ctx.physics
         if hasattr(self.eng, "host_stats"):
-            efficiency = self.eng.host_stats.efficiency_index
-            self._apply_economic_stimulus(ctx, efficiency)
-        gov_msg = self.eng.bio.governor.shift(
-            physics,
-            self.eng.phys.dynamics.voltage_history, self.eng.tick_count)
-        if gov_msg:
-            self.eng.events.log(gov_msg, "GOV")
+            self._apply_economic_stimulus(ctx, self.eng.host_stats.efficiency_index)
+        gov_msg = self.eng.bio.governor.shift(physics, self.eng.phys.dynamics.voltage_history, self.eng.tick_count)
+        if gov_msg: self.eng.events.log(gov_msg, "GOV")
         physics.manifold = self.eng.bio.governor.mode
         max_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
         bio_feedback = {
@@ -276,126 +225,70 @@ class MetabolismPhase(SimulationPhase):
             "STATIC": physics.repetition,
             "FORCE": physics.voltage / max_v,
             "BETA": physics.beta_index}
-        stress_mod = self.eng.bio.governor.get_stress_modifier(self.eng.tick_count)
-        circadian_bias = self._check_circadian_rhythm()
         ctx.bio_result = self.eng.soma.digest_cycle(
             ctx.input_text, physics, bio_feedback,
-            self.eng.health, self.eng.stamina, stress_mod, self.eng.tick_count,
-            circadian_bias=circadian_bias)
+            self.eng.health, self.eng.stamina,
+            self.eng.bio.governor.get_stress_modifier(self.eng.tick_count),
+            self.eng.tick_count,
+            circadian_bias=self._check_circadian_rhythm())
         ctx.is_alive = ctx.bio_result["is_alive"]
-        for bio_item in ctx.bio_result["logs"]:
-            if any(x in str(bio_item) for x in ["CRITICAL", "TAX", "Poison", "NECROSIS"]):
-                ctx.log(bio_item)
+        for log in ctx.bio_result["logs"]:
+            if any(x in str(log) for x in ["CRITICAL", "TAX", "Poison", "NECROSIS"]):
+                ctx.log(log)
         self._audit_hubris(ctx, physics)
         self._apply_healing(ctx)
         self._check_narcolepsy(ctx)
         return ctx
 
     def _apply_economic_stimulus(self, ctx: CycleContext, efficiency: float):
-        raw_tax = 0.0
-        if efficiency < 0.8:
-            raw_tax = min(1.5, (1.0 - efficiency) * 2.0)
-        stimulus = self.bailout_pid.update(efficiency)
-        adjusted_tax = max(0.0, raw_tax - stimulus)
-        if adjusted_tax > 0.0:
-            self.eng.bio.mito.state.atp_pool -= adjusted_tax
-            subsidy = raw_tax - adjusted_tax
-            msg = f"{Prisma.OCHRE}⚡ METABOLIC TAX: System strain burns {adjusted_tax:.1f} ATP.{Prisma.RST}"
-            if subsidy > 0.1:
-                msg += f" {Prisma.GRY}(System subsidized {subsidy:.1f} cost){Prisma.RST}"
-            ctx.log(msg)
-        elif raw_tax > 0.0 and adjusted_tax == 0.0:
-            ctx.log(f"{Prisma.GRN}🛡️ METABOLIC SHIELD: Emergency Stimulus negated {raw_tax:.1f} ATP tax.{Prisma.RST}")
+        if efficiency >= 0.8: return
+        tax_burn = min(1.5, (0.8 - efficiency) * 5.0)
+        if tax_burn > 0:
+            self.eng.bio.mito.state.atp_pool = max(0.0, self.eng.bio.mito.state.atp_pool - tax_burn)
+            ctx.log(f"{Prisma.OCHRE}⚡ METABOLIC TAX: System strain burns {tax_burn:.1f} ATP.{Prisma.RST}")
 
     def _check_narcolepsy(self, ctx: CycleContext):
-        current_atp = self.eng.bio.mito.state.atp_pool
-        tick = self.eng.tick_count
-        trigger = False
-        reason = ""
-        starvation_line = getattr(BoneConfig.BIO, "ATP_STARVATION", 5.0)
-        collapse_threshold = max(1.0, starvation_line * 0.5)
-        if current_atp < collapse_threshold:
-            trigger = True
-            reason = f"METABOLIC CRASH (ATP < {collapse_threshold:.1f})"
-        elif tick > 0 and tick % 100 == 0:
-            trigger = True
-            reason = "CIRCADIAN CLEANUP"
+        atp = self.eng.bio.mito.state.atp_pool
+        starvation = getattr(BoneConfig.BIO, "ATP_STARVATION", 5.0)
+        trigger = (atp < (starvation * 0.5)) or (self.eng.tick_count > 0 and self.eng.tick_count % 100 == 0)
         if trigger and hasattr(self.eng.mind, "dreamer"):
-            phys_data = ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics
-            bio_packet = {
-                "chem": ctx.bio_result.get("chemistry", {}),
-                "mito": {"ros": 0.0, "atp": current_atp},
-                "physics": phys_data}
-            ctx.log(f"\n{Prisma.VIOLET}[AUTO-SLEEP]: {reason} initiated.{Prisma.RST}")
-            dream_packet = self.eng.mind.dreamer.enter_rem_cycle(self.eng.mind.mem, bio_readout=bio_packet)
-            if isinstance(dream_packet, dict):
-                ctx.log(dream_packet["log"])
-                ctx.last_dream = dream_packet
-            else:
-                ctx.log(dream_packet)
-            defrag_log = self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
-            ctx.log(f"{Prisma.GRY}   {defrag_log}{Prisma.RST}")
-            max_atp = getattr(BoneConfig, "MAX_ATP", 100.0)
-            reboot_val = max_atp * 0.33
+            ctx.log(f"\n{Prisma.VIOLET}[AUTO-SLEEP]: Forced reboot sequence.{Prisma.RST}")
+            self.eng.mind.dreamer.enter_rem_cycle(self.eng.mind.mem, bio_readout={"atp": atp})
+            self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
+            reboot_val = getattr(BoneConfig, "MAX_ATP", 100.0) * 0.33
             self.eng.bio.mito.state.atp_pool = reboot_val
-            ctx.is_alive = True
-            ctx.bio_result["respiration"] = "REM_CYCLE"
             ctx.bio_result["atp"] = reboot_val
-            ctx.log(
-                f"{Prisma.GRN}   (Microsleep / Defibrillator Active. ATP stabilized at {reboot_val:.1f}){Prisma.RST}")
-
-    @staticmethod
-    def _generate_feedback(physics):
-        max_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
-        return {
-            "INTEGRITY": _get_p(physics, "truth_ratio", 0.0),
-            "STATIC": _get_p(physics, "repetition", 0.0),
-            "FORCE": _get_p(physics, "voltage", 0.0) / max_v,
-            "BETA": _get_p(physics, "beta_index", 1.0)}
+            ctx.log(f"{Prisma.GRN}   (System restored. ATP stabilized at {reboot_val:.1f}){Prisma.RST}")
 
     def _check_circadian_rhythm(self):
         if self.eng.tick_count % 10 == 0:
             bias, msg = self.eng.bio.endo.calculate_circadian_bias()
-            if msg:
-                self.eng.events.log(f"{Prisma.CYN}🕒 {msg}{Prisma.RST}", "BIO")
+            if msg: self.eng.events.log(f"{Prisma.CYN}🕒 {msg}{Prisma.RST}", "BIO")
             return bias
         return None
 
     def _audit_hubris(self, ctx, physics):
-        hubris_hit, hubris_msg, event_type = self.eng.phys.tension.audit_hubris(physics.to_dict())
-        if hubris_hit:
-            ctx.log(hubris_msg)
-            if event_type == "FLOW_BOOST":
+        hit, msg, evt = self.eng.phys.tension.audit_hubris(physics.to_dict())
+        if hit:
+            ctx.log(msg)
+            if evt == "FLOW_BOOST":
                 self.eng.bio.mito.state.atp_pool += 20.0
-            elif event_type == "ICARUS_CRASH":
-                damage = 15.0
-                self.eng.health -= damage
-                ctx.log(f"   {Prisma.RED}IMPACT TRAUMA: -{damage} HP.{Prisma.RST}")
+            elif evt == "ICARUS_CRASH":
+                self.eng.health -= 15.0
+                ctx.log(f"   {Prisma.RED}IMPACT TRAUMA: -15.0 HP.{Prisma.RST}")
 
     def _apply_healing(self, ctx):
-        impulse = getattr(ctx, "last_impulse", None)
-        qualia = self.eng.somatic.get_current_qualia(impulse)
-        is_cracked, koan = self.eng.kintsugi.check_integrity(self.eng.stamina)
-        if is_cracked:
-            ctx.log(f"{Prisma.YEL}🏺 KINTSUGI ACTIVATED: Vessel cracking.{Prisma.RST}")
-            ctx.log(f"   {Prisma.WHT}KOAN: {koan}{Prisma.RST}")
+        qualia = self.eng.somatic.get_current_qualia(getattr(ctx, "last_impulse", None))
+        cracked, koan = self.eng.kintsugi.check_integrity(self.eng.stamina)
+        if cracked:
+            ctx.log(f"{Prisma.YEL}🏺 KINTSUGI ACTIVATED. KOAN: {koan}{Prisma.RST}")
         if self.eng.kintsugi.active_koan:
-            repair = self.eng.kintsugi.attempt_repair(
-                ctx.physics,
-                self.eng.trauma_accum,
-                soul_ref=self.eng.soul,
-                qualia=qualia)
+            repair = self.eng.kintsugi.attempt_repair(ctx.physics, self.eng.trauma_accum, self.eng.soul, qualia)
             if repair and repair["success"]:
                 ctx.log(repair["msg"])
                 self.eng.stamina = min(BoneConfig.MAX_STAMINA, self.eng.stamina + 20.0)
-        healed = self.eng.therapy.check_progress(
-            ctx.physics,
-            self.eng.stamina,
-            self.eng.trauma_accum,
-            qualia=qualia)
-        if healed:
-            joined = ", ".join(healed)
-            ctx.log(f"{Prisma.GRN}❤️ THERAPY STREAK: Healing [{joined}]. Health +5.{Prisma.RST}")
+        if self.eng.therapy.check_progress(ctx.physics, self.eng.stamina, self.eng.trauma_accum, qualia):
+            ctx.log(f"{Prisma.GRN}❤️ THERAPY: Trauma processed. Health +5.{Prisma.RST}")
             self.eng.health = min(BoneConfig.MAX_HEALTH, self.eng.health + 5.0)
 
 class RealityFilterPhase(SimulationPhase):
@@ -454,16 +347,21 @@ class NavigationPhase(SimulationPhase):
         if orbit_msg:
             ctx.log(orbit_msg)
         raw_zone = getattr(physics, "zone", "COURTYARD")
-        stabilized_zone = self.eng.stabilizer.stabilize(
+        stabilization_result = self.eng.stabilizer.stabilize(
             proposed_zone=raw_zone,
             physics=phys_dict,
             cosmic_state=(orbit_state, drag_pen))
+        if isinstance(stabilization_result, tuple):
+            stabilized_zone = stabilization_result[0]
+            if len(stabilization_result) > 1 and stabilization_result[1]:
+                ctx.log(stabilization_result[1])
+        else:
+            stabilized_zone = stabilization_result
         physics.zone = stabilized_zone
         adjusted_drag = self.eng.stabilizer.override_cosmic_drag(drag_pen, stabilized_zone)
         self.eng.apply_cosmic_physics(phys_dict, orbit_state, adjusted_drag)
         ctx.world_state["orbit"] = orbit_state
         return ctx
-
 
 class MachineryPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -848,91 +746,55 @@ class CycleReporter:
         self.switch_renderer("STANDARD")
 
     def switch_renderer(self, mode: str):
-        if self.current_mode == mode and self.renderer is not None:
-            return
-        self.renderer = get_renderer(
-            self.eng,
-            self.vsl_chroma,
-            None,
-            getattr(self, 'valve', None),
-            mode=mode)
+        if self.current_mode == mode and self.renderer: return
+        self.renderer = get_renderer(self.eng, self.vsl_chroma, None, getattr(self, 'valve', None), mode=mode)
         self.current_mode = mode
-        if hasattr(self.eng, 'tick_count') and self.eng.tick_count > 0:
-            self.eng.events.log(f"VIEWPORT SHIFT: Switched to {mode} mode.", "SYS")
 
     def render_snapshot(self, ctx: CycleContext) -> Dict[str, Any]:
         try:
-            if ctx.refusal_triggered and ctx.refusal_packet:
-                return ctx.refusal_packet
-            if ctx.is_bureaucratic:
-                return self._package_bureaucracy(ctx)
+            if ctx.refusal_triggered and ctx.refusal_packet: return ctx.refusal_packet
+            if ctx.is_bureaucratic: return self._package_bureaucracy(ctx)
             self._inject_diagnostics(ctx)
             self._inject_flux_readout(ctx)
             self._inject_somatic_pulse(ctx)
-            captured_events = self.eng.events.flush()
-            return self.renderer.render_frame(ctx, self.eng.tick_count, captured_events)
+            return self.renderer.render_frame(ctx, self.eng.tick_count, self.eng.events.flush())
         except Exception as e:
             return {
                 "type": "CRITICAL_RENDER_FAIL",
-                "ui": f"{Prisma.RED}REALITY FRACTURE (Renderer Crash): {e}{Prisma.RST}\nRaw Output: {ctx.logs}",
-                "logs": ctx.logs,
-                "metrics": self.eng.get_metrics()}
+                "ui": f"{Prisma.RED}RENDERER CRASH: {e}{Prisma.RST}",
+                "logs": ctx.logs, "metrics": self.eng.get_metrics()}
 
     def _inject_diagnostics(self, ctx: CycleContext):
-        feedback = self.eng.system_health.flush_feedback()
-        if feedback["hints"]:
-            for hint in feedback["hints"]:
-                ctx.logs.append(f"{Prisma.CYN}💡 HINT: {hint}{Prisma.RST}")
-        if feedback["warnings"]:
-            for warn in feedback["warnings"]:
-                ctx.logs.append(f"{Prisma.OCHRE}⚠️ WARNING: {warn}{Prisma.RST}")
-        if hasattr(ctx, 'validator') and ctx.validator:
-            phi = ctx.validator.last_phi
-            color = Prisma.GRN if phi > 0.8 else Prisma.RED
-            ctx.logs.append(f"{color}Φ RESONANCE: {phi:.3f}{Prisma.RST}")
+        fb = self.eng.system_health.flush_feedback()
+        for h in fb["hints"]: ctx.logs.append(f"{Prisma.CYN}💡 {h}{Prisma.RST}")
+        for w in fb["warnings"]: ctx.logs.append(f"{Prisma.OCHRE}⚠️ {w}{Prisma.RST}")
 
     def _inject_somatic_pulse(self, ctx: CycleContext):
-        impulse = getattr(ctx, "last_impulse", None)
-        qualia = self.eng.somatic.get_current_qualia(impulse)
-        somatic_log = (
-            f"{qualia.color_code}♦ SENSATION: {qualia.somatic_sensation} "
-            f"[{qualia.tone}]{Prisma.RST}")
-        hint_log = f"{Prisma.GRY}   ({qualia.internal_monologue_hint}){Prisma.RST}"
-        ctx.logs.insert(0, hint_log)
-        ctx.logs.insert(0, somatic_log)
+        qualia = self.eng.somatic.get_current_qualia(getattr(ctx, "last_impulse", None))
+        ctx.logs.insert(0, f"{Prisma.GRY}({qualia.internal_monologue_hint}){Prisma.RST}")
+        ctx.logs.insert(0, f"{qualia.color_code}♦ SENSATION: {qualia.somatic_sensation} [{qualia.tone}]{Prisma.RST}")
 
-    @staticmethod
-    def _inject_flux_readout(ctx: CycleContext):
-        if not ctx.flux_log:
-            return
-        significant_flux = []
-        for entry in ctx.flux_log[-5:]:
-            r = entry['reason']
-            d = abs(entry['delta'])
-            if r in ["AUTO_TRACE", "PID_BRAKING", "PID_EXCITATION", "PID_DAMPENER", "PID_LUBRICATION"]:
-                if d < 5.0: continue
-            m = entry['metric'].upper()
-            icon = "⚡" if m == "VOLTAGE" else "⚓"
-            color = Prisma.GRN if entry['delta'] > 0 else Prisma.RED
-            arrow = "▲" if entry['delta'] > 0 else "▼"
-            line = (
-                f"{Prisma.GRY}[FLUX]{Prisma.RST} "
-                f"{icon} {m[:3]} {entry['initial']:.1f} "
-                f"{color}{arrow} {d:.1f}{Prisma.RST} -> "
-                f"{Prisma.WHT}{entry['final']:.1f}{Prisma.RST} "
-                f"({r})")
-            significant_flux.append(line)
-        if significant_flux:
+    def _inject_flux_readout(self, ctx: CycleContext):
+        if not ctx.flux_log: return
+        significant = []
+        for e in ctx.flux_log[-5:]:
+            d = abs(e['delta'])
+            if d < 1.0 and "PID" in e['reason']: continue
+            icon = "⚡" if e['metric'].upper() == "VOLTAGE" else "⚓"
+            color = Prisma.GRN if e['delta'] > 0 else Prisma.RED
+            arrow = "▲" if e['delta'] > 0 else "▼"
+            significant.append(
+                f"{Prisma.GRY}[FLUX]{Prisma.RST} {icon} {e['metric'][:3].upper()} {color}{arrow} {d:.1f}{Prisma.RST} ({e['reason']})")
+        if significant:
             ctx.logs.insert(0, "")
-            for line in reversed(significant_flux):
-                ctx.logs.insert(0, line)
-            ctx.logs.insert(0, f"{Prisma.CYN}--- LIVE STATE MIRROR ---{Prisma.RST}")
+            for line in reversed(significant): ctx.logs.insert(0, line)
 
     def _package_bureaucracy(self, ctx: CycleContext):
+        # [SLASH]: Use 'renderer' (unwrapped if needed) to access static composition method
+        base = self.renderer.base_renderer if hasattr(self.renderer, 'base_renderer') else self.renderer
         return {
-            "type": "BUREAUCRACY",
-            "ui": ctx.bureau_ui,
-            "logs": GeodesicRenderer.compose_logs(ctx.logs, self.eng.events.flush(), self.eng.tick_count),
+            "type": "BUREAUCRACY", "ui": ctx.bureau_ui,
+            "logs": base.compose_logs(ctx.logs, self.eng.events.flush(), self.eng.tick_count),
             "metrics": self.eng.get_metrics(ctx.bio_result.get("atp", 0.0))}
 
 class GeodesicOrchestrator:
@@ -944,11 +806,8 @@ class GeodesicOrchestrator:
 
     def run_turn(self, user_message: str, latency: float = 0.0, is_system: bool = False) -> Dict[str, Any]:
         if not is_system and len(user_message.strip()) < 3:
-            return {
-                "type": "SNAPSHOT",
-                "ui": f"{Prisma.GRY}(System ignores the stutter...){Prisma.RST}",
-                "metrics": self.eng.get_metrics(),
-                "logs": ["Input too short. Cycle skipped."]}
+            return {"type": "SNAPSHOT", "ui": f"{Prisma.GRY}(Ignored: Input too short){Prisma.RST}",
+                    "metrics": self.eng.get_metrics(), "logs": []}
         tracer = TelemetryService.get_tracer()
         cycle_id = str(uuid.uuid4())[:8]
         tracer.start_cycle(cycle_id)
@@ -957,33 +816,21 @@ class GeodesicOrchestrator:
             if self.eng.phys and hasattr(self.eng.phys, 'observer') and self.eng.phys.observer.last_physics_packet:
                 ctx.physics = self.eng.phys.observer.last_physics_packet.snapshot()
             ctx.validator = CongruenceValidator()
-            if hasattr(self.eng, 'reality_stack'):
-                ctx.reality_stack = self.eng.reality_stack
+            ctx.reality_stack = getattr(self.eng, 'reality_stack', None)
             ctx.user_name = self.eng.user_name
             ctx.council_mandates = []
             self.eng.events.flush()
             ctx = self.simulator.run_simulation(ctx)
             if self.eng.phys and hasattr(self.eng.phys, 'observer'):
                 self.eng.phys.observer.last_physics_packet = ctx.physics.snapshot()
-            if hasattr(ctx, 'validator') and ctx.validator:
-                last_log = ctx.logs[-1] if ctx.logs else ""
-                ctx.validator.calculate_resonance(last_log, ctx)
-                if hasattr(ctx.physics, "phi"):
-                    ctx.physics.phi = ctx.validator.last_phi
-                else:
-                    setattr(ctx.physics, "phi", ctx.validator.last_phi)
-            if not ctx.is_alive:
-                return self.eng.trigger_death(ctx.physics)
+            if not ctx.is_alive: return self.eng.trigger_death(ctx.physics)
             snapshot = self.reporter.render_snapshot(ctx)
-            snapshot["council_mandates"] = getattr(ctx, "council_mandates", [])
-            snapshot["trace_id"] = cycle_id
-            if hasattr(ctx, "last_dream") and ctx.last_dream:
-                snapshot["dream"] = ctx.last_dream
-            snapshot["enzyme"] = ctx.bio_result.get("enzyme", "NONE")
-            snapshot["chemistry"] = ctx.bio_result.get("chemistry", {})
-            snapshot["physics"] = ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics
-            if hasattr(self.eng, "soul"):
-                snapshot["soul"] = self.eng.soul.to_dict()
+            snapshot.update({
+                "council_mandates": getattr(ctx, "council_mandates", []),
+                "trace_id": cycle_id,
+                "dream": getattr(ctx, "last_dream", None),
+                "physics": ctx.physics.to_dict(),
+                "soul": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else {}})
             if "ui" in snapshot:
                 self.symbiosis.monitor_host(latency, snapshot["ui"], len(user_message))
             return snapshot

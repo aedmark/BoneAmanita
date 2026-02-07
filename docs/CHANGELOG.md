@@ -1,5 +1,50 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.5.5: "THE CARTOGRAPHER'S INK"**
+
+_“If a tree falls in a procedurally generated forest, it now stays fallen.”_
+
+---
+
+#### **🗺️ SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+-   **The Cartographer (`bone_village.py`):**
+    -   **Replaced:** `TheNavigator` (Transient) has been deprecated.
+    -   **Implemented:** `TheCartographer` now manages a persistent `world_graph` of `GeniusLoci` nodes.
+    -   **Effect:** The engine now remembers where you have been. Rooms are generated once via procedural determinism (Physics Vector → Coordinate Hash) and then serialized. The "Shining Black Stone" you dropped in the Forge will be there when you return.
+
+-   **The Atlas Spore (`bone_spores.py`):**
+    -   **New Payload:** The `SporeCasing` now carries a `world_atlas` dictionary.
+    -   **The Awakening:** `BoneArchitect` now extracts this atlas during boot and grafts it onto the physics engine, ensuring continuity across reboots.
+
+#### **✒️ LINGUISTIC COGNITION (The Pinker Lens)**
+
+-   **Reality Anchoring (`bone_brain.py`):**
+    -   **The Problem:** "Dream Drift." As logs scrolled off-screen, the LLM forgot the room's geometry (e.g., stairs changing direction).
+    -   **The Fix:** Injected a permanent `ENVIRONMENT ANCHOR` line into the System Kernel. The Cartographer forces the LLM to remember the "Smell" and "Atmosphere" of the current locus in every single prompt.
+
+-   **Narrative Looting (`bone_inventory.py`):**
+    -   **The Shift:** Moved from video-game style logs (`LOOT: COIN`) to narrative exposition (`"The coin is heavy..."`).
+    -   **The Constraint:** Hardened `PromptComposer` to forbid "Auto-Looting" (giving items just because they were seen) while enforcing "Possession Looting" (giving items if the narrative implies the user took them).
+
+#### **⚡ STRUCTURAL OPTIMIZATION (The Torvalds Lens)**
+
+-   **The Gatekeeper Refactor (`bone_physics.py`):**
+    -   **The Purge:** Removed the opaque "Cursed Word" filter that was flagging ellipses (`...`) as security threats.
+    -   **The Replacement:** Installed a transparent Syntax Filter. It allows dramatic pauses but blocks code injection (`{{`, `}}`) and context-bombing.
+
+-   **God Object Defragmentation (`bone_brain.py`):**
+    -   **Excised:** `GlobalIntegrator`, `WisdomAllocator`, and `NeuroPlasticity` (Legacy Wrappers).
+    -   **Streamlined:** `TheCortex` and `NoeticLoop` now handle ignition and learning directly. Less bureaucracy, faster thought.
+
+#### **❄️ SYSTEM DYNAMICS (The Meadows Lens)**
+
+-   **Metabolic Simplification (`bone_cycle.py`):**
+    -   **The Cut:** Removed the redundant PID Controller from the `MetabolismPhase`.
+    -   **The Rule:** Replaced it with a linear "Inefficiency Tax." Simple math beats complex control theory for biological burn rates.
+
+---
+
 ### **BONEAMANITA v14.5.4: "THE WINTER SOLSTICE"**
 
 _“To survive the cold, one must learn to be still.”_

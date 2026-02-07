@@ -159,8 +159,11 @@ class TheGatekeeper:
             return False, self._pack_refusal(ctx, "TANGIBILITY_FAIL", self._get_tangibility_msg())
         if phys.counts.get("antigen", 0) > 2:
             return False, self._pack_refusal(ctx, "TOXICITY", f"{Prisma.RED}IMMUNE REACTION: Input rejected as pathogenic.{Prisma.RST}")
-        if self._audit_safety(ctx.clean_words):
-            return False, self._pack_refusal(ctx, "SAFETY_LOCK", f"{Prisma.GRY}The mechanism jams. Forbidden glyphs detected.{Prisma.RST}")
+        text = ctx.input_text
+        if "```" in text or "{{" in text or "}}" in text:
+            return False, self._pack_refusal(ctx, "SYNTAX_ERR", f"{Prisma.RED}The mechanism jams. Syntax anomaly detected.{Prisma.RST}")
+        if len(text) > 1000:
+            return False, self._pack_refusal(ctx, "OVERLOAD", f"{Prisma.OCHRE}Input too long. Compress your thought.{Prisma.RST}")
         return True, None
 
     def _check_thermodynamics(self, ctx) -> bool:

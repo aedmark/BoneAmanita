@@ -20,8 +20,8 @@ class BoneJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 class SporeCasing:
-    def __init__(self, session_id, graph, mutations, trauma, joy_vectors):
-        self.genome = "BONEAMANITA_14.5.4"
+    def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
+        self.genome = "BONEAMANITA_14.5.5"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():
@@ -39,6 +39,7 @@ class SporeCasing:
         self.mutations = mutations
         self.trauma_scar = round(trauma, 3)
         self.joy_vectors = joy_vectors if joy_vectors is not None else []
+        self.world_atlas = world_atlas or {}
 
 class SporeInterface:
     def save_spore(self, filename, data): raise NotImplementedError
@@ -450,7 +451,7 @@ class MycelialNetwork:
         for n in nodes_to_remove: del self.graph[n]
         return f"📉 HOMEOSTATIC SCALING: Decayed {total_decayed} synapses. Pruned {pruned_count} weak connections."
 
-    def save(self, health, stamina, mutations, trauma_accum, joy_history, mitochondria_traits=None, antibodies=None, soul_data=None, continuity=None):
+    def save(self, health, stamina, mutations, trauma_accum, joy_history, mitochondria_traits=None, antibodies=None, soul_data=None, continuity=None, world_atlas=None):
         base_trauma = (BoneConfig.MAX_HEALTH - health) / BoneConfig.MAX_HEALTH
         final_vector = {k: min(1.0, v) for k, v in trauma_accum.items()}
         top_joy = sorted(joy_history, key=lambda x: x["resonance"], reverse=True)[:3]
@@ -464,7 +465,7 @@ class MycelialNetwork:
         if health <= 0:
             cause = max(final_vector, key=final_vector.get) if final_vector else "UNKNOWN"
             final_vector[cause] = 1.0
-        spore = SporeCasing(session_id=self.session_id, graph=self.graph, mutations=mutations, trauma=base_trauma, joy_vectors=top_joy)
+        spore = SporeCasing(session_id=self.session_id, graph=self.graph, mutations=mutations, trauma=base_trauma, joy_vectors=top_joy, world_atlas=world_atlas)
         data = spore.__dict__
         if continuity:
             data["continuity"] = continuity
@@ -624,7 +625,11 @@ class MycelialNetwork:
             continuity = data.get("continuity", None)
             if continuity:
                 self.events.log(f"{Prisma.CYN}[CHRONOS]: Timeline bookmark found ({continuity.get('location', 'Unknown')}).{Prisma.RST}")
-            return data.get("mitochondria", {}), set(data.get("antibodies", [])), data.get("soul_legacy", {}), continuity
+            world_atlas = data.get("world_atlas", {})
+            if world_atlas:
+                self.events.log(
+                    f"{Prisma.CYN}[MAP]: Recovered {len(world_atlas.get('nodes', {}))} locations from the spore.{Prisma.RST}")
+            return data.get("mitochondria", {}), set(data.get("antibodies", [])), data.get("soul_legacy", {}), continuity, world_atlas
         except Exception as err:
             self.events.log(f"{Prisma.RED}[MEMORY]: Spore ingestion failed. {err}{Prisma.RST}")
             return None, set(), {}

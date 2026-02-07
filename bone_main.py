@@ -1,4 +1,4 @@
-""" BONEAMANITA 14.5.4
+""" BONEAMANITA 14.5.5
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, Any, Optional
 from bone_core import EventBus, Prisma, BoneConfig, RealityLayer, SystemHealth, TheObserver, BonePresets, TheLore, LoreCategory, TelemetryService,RealityStack
 from bone_commands import CommandProcessor
-from bone_village import TownHall, DeathGen, TheNavigator, TheTinkerer, Limbo
+from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer, Limbo
 from bone_lexicon import TheLexicon, SomaticInterface
 from bone_inventory import GordonKnot
 from bone_protocols import TheFolly, KintsugiProtocol, TherapyProtocol, TheBureau, ZenGarden
@@ -42,7 +42,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.5.4', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.5.5', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -256,7 +256,7 @@ class BoneAmanita:
             "director": ChorusDriver(),
             "bureau": TheBureau(),
             "cosmic": CosmicDynamics(),
-            "navigator": TheNavigator(self.embryo.shimmer),
+            "navigator": TheCartographer(self.embryo.shimmer),
             "zen": ZenGarden(self.events),
             "tinkerer": TheTinkerer(self.gordon, self.events, self.akashic)}
         self.cmd = CommandProcessor(self, Prisma, self.lex, BoneConfig)
@@ -504,6 +504,9 @@ class BoneAmanita:
                     "location": loc,
                     "last_output": last_speech,
                     "inventory": self.gordon.inventory}
+                atlas_data = {}
+                if hasattr(self.phys, "nav") and hasattr(self.phys.nav, "export_atlas"):
+                    atlas_data = self.phys.nav.export_atlas()
                 save_path = self.mind.mem.save(
                     health=self.health,
                     stamina=self.stamina,
@@ -513,7 +516,8 @@ class BoneAmanita:
                     mitochondria_traits=self.bio.mito.adapt(0),
                     antibodies=list(self.bio.immune.active_antibodies),
                     soul_data=self.soul.to_dict(),
-                    continuity=continuity_packet)
+                    continuity=continuity_packet,
+                    world_atlas=atlas_data)
                 print(f"{Prisma.GRN}[MEMORY]: State preserved at {save_path}{Prisma.RST}")
             except Exception as e:
                 print(f"{Prisma.RED}[MEMORY]: Save Failed: {e}{Prisma.RST}")
@@ -566,7 +570,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 14.5.4', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 14.5.5', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)
