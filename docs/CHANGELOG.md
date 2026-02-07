@@ -1,5 +1,33 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.5.2: "THE MEMORY PATCH"**
+
+_"To exist is to have a history. To save is to have a future."_
+
+---
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **Hive Persistence (`bone_main.py` & `bone_lexicon.py`):**
+- **The Bug:** `TheLexicon` was learning new words (Auto-Didactics) but never writing them to disk upon shutdown. The "Hive Mind" was resetting every session.
+- **The Fix:** Exposed a public `save()` endpoint in `LexiconService` and wired it into the `BoneAmanita.shutdown()` sequence. The machine now remembers what it learns.
+
+- **Continuity Serialization (`bone_commands.py`):**
+- **The Crash:** The `/save` command was using an obsolete signature (Health/Stamina only), causing a `TypeError` when the Spore System expected Mutation/Trauma data.
+- **The Fix:** Updated `save_state` to scrape the engine for **Continuity Data** (Location, Inventory, Last Output) and pass empty biological vectors for manual saves. You no longer wake up in "The Void" after loading.
+
+#### **✒️ LINGUISTIC COGNITION (The Pinker Lens)**
+
+- **The Stenographer Fix (`bone_brain.py`):**
+- **The Hallucination:** The LLM was getting too helpful, auto-completing the User's response (`User: I agree | System: Affirmative`) and locking the player out of their own turn.
+- **The Fix:** Implemented **Smart Stop Sequences** (targeting `\nUser:` and `| System:`) and a **Multiline Janitor** in the `ResponseValidator`. The system is now physically incapable of speaking for you.
+
+- **The Womb Excision (`bone_brain.py`):**
+- **The Bug:** Cold Boot sequences were overriding the Seed Location with `["Unborn"]`, causing every story to start in a "throbbing factory floor" regardless of the prompt.
+- **The Fix:** Removed the hard-coded override. The Seed Text is now the literal Reality Anchor. A Laundromat is now a Laundromat.
+
+---
+
 ### **BONEAMANITA v14.5.1: "THE SIGNAL UPDATE"**
 
 _"Signal is the truth. Noise is the politics of the machine."_

@@ -37,7 +37,30 @@ class CommandStateInterface:
 
     def save_state(self) -> str:
         if hasattr(self.eng, "mind") and hasattr(self.eng.mind, "mem"):
-            return self.eng.mind.mem.save(health=self.eng.health, stamina=self.eng.stamina)
+            loc = "Unknown"
+            last_out = "Silence."
+            inv = []
+            if hasattr(self.eng, "cortex"):
+                state = self.eng.cortex.gather_state(getattr(self.eng.cortex, "last_physics", {}))
+                loc = state.get("world", {}).get("orbit", ["Void"])[0]
+                if self.eng.cortex.dialogue_buffer:
+                    last_out = self.eng.cortex.dialogue_buffer[-1]
+            if hasattr(self.eng, "gordon"):
+                inv = getattr(self.eng.gordon, "inventory", [])
+            continuity_packet = {
+                "location": loc,
+                "last_output": last_out,
+                "inventory": inv}
+            return self.eng.mind.mem.save(
+                health=self.eng.health,
+                stamina=self.eng.stamina,
+                mutations={},
+                trauma_accum=getattr(self.eng, "trauma_accum", {}),
+                joy_history=[],
+                mitochondria_traits=self.eng.bio.mito.adapt(0) if hasattr(self.eng, 'bio') else None,
+                antibodies=list(self.eng.bio.immune.active_antibodies) if hasattr(self.eng, 'bio') else None,
+                soul_data=self.eng.soul.to_dict() if hasattr(self.eng, 'soul') else None,
+                continuity=continuity_packet)
         return "Error: Memory system not found."
 
     def get_vitals(self) -> Dict[str, float]:
@@ -143,7 +166,7 @@ class CommandProcessor:
 
     def _cmd_help(self, _parts):
         lines = [
-            f"\n{self.P.CYN}/// BONEAMANITA 14.5.1 TERMINAL ///{self.P.RST}",
+            f"\n{self.P.CYN}/// BONEAMANITA 14.5.2 TERMINAL ///{self.P.RST}",
             f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n"]
         structure = {
             "SURVIVAL":    ["/status", "/inventory", "/look"],

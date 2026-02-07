@@ -33,9 +33,24 @@ def _get_float(p: Any, k: str, d: float = 0.0) -> float:
         return d
 
 def _normalize_physics_dict(packet: Any) -> Dict[str, Any]:
-    if isinstance(packet, dict):
-        return packet
+    if packet is None: return {}
+    if isinstance(packet, dict): return packet
     return getattr(packet, "__dict__", {})
+
+def _safe_get(container: Any, key: str, default: Any = 0.0, expected_type: type = float) -> Any:
+    if container is None: return default
+    val = default
+    if isinstance(container, dict):
+        val = container.get(key, default)
+    else:
+        val = getattr(container, key, default)
+    if val is None: return default
+    if expected_type == float and isinstance(val, (int, str)):
+        try:
+            return float(val)
+        except ValueError:
+            return default
+    return val
 
 class TheTinkerer:
     def __init__(self, gordon_ref, events_ref, akashic_ref):

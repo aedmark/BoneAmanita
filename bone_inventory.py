@@ -242,7 +242,16 @@ class GordonKnot:
             "ACCESS_DENIED": lambda p: p.get("refusal_triggered", False) is True}
 
     def get_item_data(self, item_name: str) -> Dict:
-        return self.ITEM_REGISTRY.get(item_name.upper(), UNKNOWN_ARTIFACT)
+        name_key = item_name.upper()
+        if name_key in self.ITEM_REGISTRY:
+            return self.ITEM_REGISTRY[name_key]
+        return {
+            "description": f"An anomaly detected by the narrative. It appears to be a {item_name}.",
+            "function": "NARRATIVE_ARTIFACT",
+            "usage_msg": f"You use the {item_name}. The system isn't sure what happened, but it looked cool.",
+            "mass": 1.0,
+            "volume": 1.0,
+            "passive_traits": []}
 
     def check_static_cling(self, physics_packet) -> Optional[str]:
         if isinstance(physics_packet, dict):

@@ -61,7 +61,7 @@ class LexiconStore:
         except (IOError, json.JSONDecodeError) as e:
             print(f"{Prisma.RED}[HIVE]: Memory corruption detected. Starting fresh. ({e}){Prisma.RST}")
 
-    def _save_hive(self):
+    def save_hive(self):
         try:
             with open(self.HIVE_FILENAME, 'w', encoding='utf-8') as f:
                 json.dump(self.LEARNED_VOCAB, f, indent=2)
@@ -88,7 +88,7 @@ class LexiconStore:
             return False
         self.LEARNED_VOCAB[category][w] = tick
         self._index_word(w, category)
-        self._save_hive()
+        self.save_hive()
         return True
 
     def atrophy(self, current_tick, max_age=100, protected: Set[str] = None):
@@ -113,7 +113,7 @@ class LexiconStore:
                     del words[candidate]
                     rotted.append(candidate)
         if rotted:
-            self._save_hive()
+            self.save_hive()
         return rotted
 
     def harvest(self, text: str) -> Dict[str, List[str]]:
@@ -450,6 +450,12 @@ class LexiconService:
     @_ensure_ready
     def teach(cls, word: str, category: str, tick: int = 0):
         cls._STORE.teach(word, category, tick)
+
+    @classmethod
+    def save(cls):
+        if cls._INITIALIZED and cls._STORE:
+            cls._STORE.save_hive()
+            print(f"{Prisma.GRN}[LEXICON]: Hive saved to disk.{Prisma.RST}")
 
     @classmethod
     @_ensure_ready

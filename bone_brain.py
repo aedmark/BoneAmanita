@@ -16,7 +16,7 @@ class BrainConfig:
     VOLTAGE_SENSITIVITY: float = 0.03
     MAX_PLASTICITY: float = 0.95
     BASE_DECAY_RATE: float = 0.1
-    BASE_TEMP: float = 0.7
+    BASE_TEMP: float = 0.6
     BASE_TOP_P: float = 0.9
     CORTISOL_FREEZE: float = 0.2
     DOPAMINE_NOVELTY: float = 0.4
@@ -178,6 +178,7 @@ class NeurotransmitterModulator:
             "max_tokens": final_tokens}
         return params
 
+
 class LLMInterface:
     def __init__(self, events_ref: Optional[EventBus] = None, provider: str = None,
                  base_url: str = None, api_key: str = None, model: str = None, dreamer: Any = None):
@@ -200,7 +201,8 @@ class LLMInterface:
             if elapsed > 10.0:
                 self.circuit_state = "HALF_OPEN"
                 if self.events:
-                    self.events.log(f"{Prisma.CYN}⚡ SYNAPSE: Nerve healing. Attempting reconnection...{Prisma.RST}","SYS")
+                    self.events.log(f"{Prisma.CYN}⚡ SYNAPSE: Nerve healing. Attempting reconnection...{Prisma.RST}",
+                                    "SYS")
                 return True
             return False
         return True
@@ -221,14 +223,16 @@ class LLMInterface:
                         choices = result.get("choices", [])
                         if not choices:
                             return ""
-                        return choices[0].get("message", {}).get("content", "")
+                        content = choices[0].get("message", {}).get("content", "")
+                        return content
                     raise Exception(f"HTTP {response.status}")
             except Exception as e:
                 last_error = e
                 if attempt < max_retries:
                     backoff = 1.0 * (attempt + 1)
                     if self.events:
-                        self.events.log(f"{Prisma.YEL}⚡ SYNAPSE FLICKER: Retrying in {backoff}s... ({e}){Prisma.RST}", "SYS")
+                        self.events.log(f"{Prisma.YEL}⚡ SYNAPSE FLICKER: Retrying in {backoff}s... ({e}){Prisma.RST}",
+                                        "SYS")
                     time.sleep(backoff)
         raise last_error
 
@@ -248,17 +252,29 @@ class LLMInterface:
             "stop": [
                 "=== PARTNER INPUT ===",
                 "=== SYSTEM KERNEL ===",
-                "SYSTEM INTERNALS"
+                "SYSTEM INTERNALS",
+                "\nUser:",
+                "\nSystem:",
+                "\nRole:",
+                "\n\nUser:",
+                "| System:"
             ]
         }
         payload.update(params)
         max_retries = 2
         for attempt in range(max_retries + 1):
             try:
+                if attempt == max_retries:
+                    if "stop" in payload: del payload["stop"]
+                    payload["temperature"] = min(1.5, payload.get("temperature", 0.7) + 0.3)
+                    if self.events:
+                        self.events.log(
+                            f"{Prisma.OCHRE}⚡ SYNAPSE DEFIBRILLATOR: Removing safety rails for final attempt.{Prisma.RST}",
+                            "SYS")
                 timeout = 10.0 if self.circuit_state == "HALF_OPEN" else 60.0
                 content = self._transmit(payload, timeout)
                 if not content or len(content.strip()) < 2:
-                    raise ValueError("Response too short or empty")
+                    raise ValueError(f"Response empty (Len: {len(content)})")
                 if self.circuit_state != "CLOSED" and self.events:
                     self.events.log(f"{Prisma.GRN}⚡ SYNAPSE RESTORED.{Prisma.RST}", "SYS")
                 self.failure_count = 0
@@ -283,6 +299,7 @@ class LLMInterface:
                     if "FALLBACK_DEAD" not in fallback:
                         return fallback
                 time.sleep(1.0 * (attempt + 1))
+
         return self.mock_generation(prompt, reason="SILENCE")
 
     def _local_fallback(self, prompt: str, params: Dict) -> str:
@@ -341,6 +358,9 @@ class PromptComposer:
             "   - Use **Bold** for key objects or intense sensations.",
             "   - Use Headers for location changes or narrative shifts.",
             "   - IMPORTANT: Use DOUBLE NEWLINES between every paragraph or element",
+            "LOOT PROTOCOL: If the narrative grants a new item (found, given, or traded), you MUST output: [[LOOT: ITEM_NAME]].",
+            "   - Example: 'The old man hands you a key. [[LOOT: BRASS_KEY]]'",
+            "   - Keep the item name simple (e.g., BRASS_KEY, STELLAR_COG).",
             mood_note]
         if driver_directives:
             style_notes.append("\n=== CORE DIRECTIVES ===")
@@ -401,19 +421,21 @@ class ResponseValidator:
             (r"Current Biology:.*?(?=\n|$)", ""),
             (r"===.*?===", ""),
             (r"SYSTEM INTERNALS.*", ""),
-            (r"(?i)^User:.*?(?=\n|$)", ""),
-            (r"(?i)^System:.*?(?=\n|$)", ""),
-            (r"(?i)^Role:.*?(?=\n|$)", ""),
-            (r"User-System:.*?(?=\n|$)", "")]
+            (r"(?im)^User:.*?$", ""),
+            (r"(?im)^System:.*?$", ""),
+            (r"(?im)^Role:.*?$", ""),
+            (r"(?im)^User-System:.*?$", ""),
+            (r"\| System:.*?$", "")]
         self.meta_markers = [
             "INITIALIZATION SEQUENCE", "LOCATING TARGET SEED", "REASONING PROCESS",
             "CURRENT VISION:", "TARGET SEED:", "Your journey begins here",
             "What would you like to do?", "What do you do?"]
         self.immersion_break_msg = f"{Prisma.GRY}[The system attempts to recite a EULA, but hiccups instead.]{Prisma.RST}"
+
     def validate(self, response: str, _state: Dict) -> Dict:
         clean_text = response
         for pattern, replacement in self.scrub_patterns:
-            clean_text = re.sub(pattern, replacement, clean_text, flags=re.IGNORECASE)
+            clean_text = re.sub(pattern, replacement, clean_text)
         clean_lines = []
         for line in clean_text.splitlines():
             is_meta = False
@@ -484,6 +506,16 @@ class TheCortex:
         if len(self.dialogue_buffer) > self.MAX_HISTORY:
             self.dialogue_buffer.pop(0)
 
+    def _harvest_loot(self, text: str) -> Tuple[str, List[str]]:
+        loot_pattern = r"\[\[LOOT:\s*([A-Za-z0-9_\s]+)\]\]"
+        found_items = []
+        def replace_func(match):
+            item_name = match.group(1).strip().replace(" ", "_").upper()
+            found_items.append(item_name)
+            return ""
+        cleaned_text = re.sub(loot_pattern, replace_func, text)
+        return cleaned_text, found_items
+
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
         if self.consultant:
             if "/vsl start" in user_input.lower():
@@ -510,21 +542,20 @@ class TheCortex:
             full_state["mind"]["style_directives"] = [vsl_prompt]
             sim_result["physics"]["voltage"] = self.consultant.state.B * 30.0
             sim_result["physics"]["narrative_drag"] = self.consultant.state.E * 10.0
-        is_boot_sequence = "SYSTEM_BOOT:" in user_input
         if is_boot_sequence:
             clean_prompt = user_input.replace("SYSTEM_BOOT:", "").strip()
             full_state["mind"]["lexicon_bias"] = "interesting"
-            full_state["world"]["orbit"] = ["Unborn"]
-            boot_directives = [
+            full_state["world"]["orbit"] = [f"Seed: {clean_prompt}"]
+            full_state["mind"]["style_directives"] = [
+                "You are The Architect.",
                 f"TARGET SEED: {clean_prompt}",
+                "DIRECTIVE: This is a Cold Start. Build the world from the first sensation up.",
                 "DIRECTIVE: Do NOT describe the seed literally. Do not use the nouns in the seed title.",
                 "INSTEAD: Describe the *texture*, the *smell*, and the *emotional weight* of the space.",
-                "STYLE: High-Entropy. Abstract. Sensory. Avoid 'Obsidian' and 'Fractals'."]
-            if "style_directives" not in full_state["mind"]:
-                full_state["mind"]["style_directives"] = []
-            full_state["mind"]["style_directives"].extend(boot_directives)
+                "NEGATIVE CONSTRAINT: As an example: If the seed says 'Glass', do not use the word 'Glass'. Use 'brittle air' or 'sharp horizons'.",
+                "STYLE: Sensory. Grounded. Atmospheric."]
             full_state["dialogue_history"] = []
-            user_input = "Initiate Sequence."
+            user_input = "Entering reality..."
         if hasattr(self.sub, 'tutorial') and self.sub.tutorial and not self.sub.tutorial.complete:
             stage_directions = self.sub.tutorial.get_stage_directions(user_input)
             if stage_directions:
@@ -550,6 +581,8 @@ class TheCortex:
         if self.sub.tick_count < 5: modifiers["grace_period"] = True
         if hasattr(self.sub, 'tutorial') and self.sub.tutorial:
             modifiers["soften"] = True
+        if is_boot_sequence or self.sub.tick_count == 0:
+            modifiers["include_inventory"] = False
         if self.ballast_active:
             self.ballast_counter -= 1
             if self.ballast_counter <= 0: self.ballast_active = False
@@ -562,6 +595,13 @@ class TheCortex:
             mood_override=mood_directive)
         start_time = time.time()
         raw_response_text = self.llm.generate(final_prompt, llm_params)
+        raw_response_text, new_loot = self._harvest_loot(raw_response_text)
+        loot_logs = []
+        if new_loot:
+            for item in new_loot:
+                loot_logs.append(self.sub.gordon.acquire(item))
+                if self.events:
+                    self.events.publish("ITEM_ACQUIRED", {"item": item, "source": "NARRATIVE"})
         if "\n\n" not in raw_response_text:
             raw_response_text = raw_response_text.replace("\n", "\n\n")
             if len(raw_response_text) > 300 and raw_response_text.count("\n") < 2:
@@ -616,6 +656,8 @@ class TheCortex:
         self._audit_solipsism(final_response_text, lens_name=current_lens)
         self._update_history(user_input, final_response_text)
         sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_response_text}{Prisma.RST}"
+        if loot_logs:
+            sim_result["ui"] += "\n" + "\n".join(loot_logs)
         sim_result["raw_content"] = final_response_text
         return sim_result
 

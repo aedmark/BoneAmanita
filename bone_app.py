@@ -146,37 +146,28 @@ if "ENGINE" not in st.session_state:
     with st.spinner("Hydrating Spore Casing..."):
         st.session_state.ENGINE = init_engine()
 engine = st.session_state.ENGINE
-
-# --- SIDEBAR DASHBOARD ---
 with st.sidebar:
     st.header(f"IDENTITY: {engine.user_name.upper()}")
     st.divider()
-
     st.subheader("BIO.MONITOR")
     hp = engine.health
     stam = engine.stamina
     atp = engine.bio.mito.state.atp_pool
     st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.1f}%")
     st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"STAMINA: {stam:.1f}%")
-
     c1, c2 = st.columns(2)
     c1.metric("ATP", f"{atp:.1f} J")
     c2.metric("ENZYME", "ACTIVE")
     st.divider()
-
     st.subheader("GEO.DESICS")
-    # FIX: Safely retrieve the last physics packet
     volts = 0.0
     drag = 0.0
     zone = "VOID"
-
     if engine.phys and hasattr(engine.phys, 'observer') and engine.phys.observer.last_physics_packet:
         packet = engine.phys.observer.last_physics_packet
-        # Handle if packet is dict or object
         volts = packet.get("voltage", 0.0) if isinstance(packet, dict) else getattr(packet, "voltage", 0.0)
         drag = packet.get("narrative_drag", 0.0) if isinstance(packet, dict) else getattr(packet, "narrative_drag", 0.0)
         zone = packet.get("zone", "VOID") if isinstance(packet, dict) else getattr(packet, "zone", "VOID")
-
     c3, c4 = st.columns(2)
     c3.metric("VOLTAGE", f"{volts:.1f}v")
     c4.metric("DRAG", f"{drag:.1f}")

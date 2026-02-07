@@ -1,4 +1,4 @@
-""" BONEAMANITA 14.5.1
+""" BONEAMANITA 14.5.2
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -42,7 +42,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.5.1', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.5.2', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -121,6 +121,74 @@ class BoneAmanita:
         self._initialize_cognition()
         self.host_stats = HostStats(latency=0.0, efficiency_index=1.0)
         self._validate_state()
+
+    @property
+    def phys(self):
+        return self.embryo.physics if self.embryo else None
+
+    @property
+    def mind(self):
+        return self.embryo.mind if self.embryo else None
+
+    @property
+    def bio(self):
+        return self.embryo.bio if self.embryo else None
+
+    @property
+    def shimmer(self):
+        return self.embryo.shimmer if self.embryo else None
+
+    @property
+    def council(self):
+        return self.village.get("council")
+
+    @property
+    def repro(self):
+        return self.village.get("repro")
+
+    @property
+    def projector(self):
+        return self.village.get("projector")
+
+    @property
+    def kintsugi(self):
+        return self.village.get("kintsugi")
+
+    @property
+    def therapy(self):
+        return self.village.get("therapy")
+
+    @property
+    def folly(self):
+        return self.village.get("folly")
+
+    @property
+    def stabilizer(self):
+        return self.village.get("stabilizer")
+
+    @property
+    def director(self):
+        return self.village.get("director")
+
+    @property
+    def bureau(self):
+        return self.village.get("bureau")
+
+    @property
+    def cosmic(self):
+        return self.village.get("cosmic")
+
+    @property
+    def navigator(self):
+        return self.village.get("navigator")
+
+    @property
+    def zen(self):
+        return self.village.get("zen")
+
+    @property
+    def tinkerer(self):
+        return self.village.get("tinkerer")
 
     def _initialize_core(self, lexicon_layer):
         print(f"{Prisma.GRY}...Bootstrapping Core Systems...{Prisma.RST}")
@@ -208,22 +276,6 @@ class BoneAmanita:
         self.cortex = TheCortex(self, llm_client=client)
         self.somatic = SomaticInterface(self)
 
-    def __getattr__(self, name):
-        if name == 'phys':
-            if hasattr(self, 'embryo') and self.embryo:
-                return self.embryo.physics
-            raise AttributeError("'BoneAmanita' has no embryo to retrieve 'phys' from.")
-        if hasattr(self, 'embryo') and self.embryo and hasattr(self.embryo, name):
-            return getattr(self.embryo, name)
-        if hasattr(self, 'town_hall') and self.town_hall and hasattr(self.town_hall, name):
-            return getattr(self.town_hall, name)
-        if hasattr(self, 'village') and name in self.village:
-            return self.village[name]
-        if hasattr(self, 'embryo') and self.embryo and hasattr(self.embryo, 'physics'):
-            if hasattr(self.embryo.physics, name):
-                return getattr(self.embryo.physics, name) 
-        raise AttributeError(f"'BoneAmanita' object has no attribute '{name}'")
-
     def _validate_state(self):
         BoneConfig.load_preset(BonePresets.ZEN_GARDEN)
         self.tick_count = 0
@@ -242,18 +294,6 @@ class BoneAmanita:
         hist = self.phys.observer.voltage_history
         if not hist: return 0.0
         return sum(hist) / len(hist)
-
-    @property
-    def phys(self):
-        if self.embryo:
-            return self.embryo.physics
-        return None
-
-    @property
-    def mind(self):
-        if self.embryo:
-            return self.embryo.mind
-        return None
 
     def process_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         turn_start = self.observer.clock_in()
@@ -452,6 +492,9 @@ class BoneAmanita:
         print(f"{Prisma.GRY}...Broadcasting SYSTEM_HALT...{Prisma.RST}")
         self.events.publish("SYSTEM_HALT", {"tick": self.tick_count})
         time.sleep(0.1)
+        if hasattr(self, 'lex') and hasattr(self.lex, 'save'):
+            print(f"{Prisma.GRY}[LEXICON]: Preserving Hive Mind...{Prisma.RST}")
+            self.lex.save()
         if hasattr(self, 'akashic') and hasattr(self.akashic, 'save_all'):
             self.akashic.save_all()
         elif hasattr(self, 'akashic') and hasattr(self.akashic, '_save_to_disk'):
@@ -497,7 +540,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 14.5.1', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 14.5.2', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

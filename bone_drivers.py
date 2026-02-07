@@ -138,12 +138,15 @@ class SynergeticLensArbiter:
                 "style_directives": [
                     "You are a creative, welcoming Game Master.",
                     "SEED INSPIRATION: Use the SOURCE_SEED found in the User Input.",
-                    "CONSTRAINT: This seed is a starting point only. Remix it. Invert it. Subvert it. Do NOT output it verbatim.",
-                    f"{gen_instruction}.", "PROSE STYLE: Modernized Hemingway Mode.",
+                    "NEGATIVE CONSTRAINT: Do NOT use the seed text literally. Do not describe the 'antique shop' if the seed is 'antique shop'. Describe the *smell of old paper* instead.",
+                    "CONSTRAINT: This seed is a metaphor. Remix it. Invert it.",
+                    f"{gen_instruction}.",
+                    "PROSE STYLE: Modernized Hemingway with a dash of Douglas Adams.",
                     "NEGATIVE CONSTRAINT: NO PURPLE PROSE. Use adverbs sparingly. Limit adjectives to one per noun maximum.",
                     "Focus on physical reality (texture, weight, smell) over abstract metaphor.",
-                    "CRITICAL: Do NOT mention the user's inventory, pockets, or stats unless asked.",
-                    f"NEGATIVE CONSTRAINT: Avoid these overused tropes: {bans}.", "Be concrete. Be specific. Be Real."],
+                    "CRITICAL: The user's inventory is their private business. Do NOT mention pockets, belts, or items.",
+                    f"NEGATIVE CONSTRAINT: Avoid these overused tropes: {bans}.",
+                    "Be concrete. Be specific. Be Real."],
                 "lexicon_bias": self.boot_flavor, "context_msg": "Scenario Initialization."}
         if self.current_focus and self.current_focus != "NARRATOR":
             lens_name = self.current_focus

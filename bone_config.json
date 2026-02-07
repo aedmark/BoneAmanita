@@ -1,6 +1,6 @@
 {
     "user_name": "Traveler",
     "provider": "ollama",
-    "model": "gemma3",
+    "model": "mistral-nemo",
     "base_url": "http://127.0.0.1:11434/v1/chat/completions"
 }

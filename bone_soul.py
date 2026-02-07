@@ -162,6 +162,7 @@ class NarrativeSelf:
     SYSTEM_NOISE = {
         "look", "help", "exit", "wait", "inventory", "status", "quit",
         "save", "load", "score", "map", "xyzzy"}
+
     def __init__(self, engine_ref, events_ref, memory_ref=None):
         self.eng = engine_ref
         self.events = events_ref
@@ -261,9 +262,10 @@ class NarrativeSelf:
                 "MEM_DECAY")
 
     def crystallize_memory(self, physics_packet: Dict, bio_state: Dict, _tick: int) -> Optional[str]:
+        if not physics_packet: return None
         voltage = physics_packet.get("voltage", 0.0)
         truth = physics_packet.get("truth_ratio", 0.0)
-        if hasattr(self.eng, 'akashic'):
+        if hasattr(self.eng, 'akashic') and self.eng.akashic:
             vsl_delta = self.eng.akashic.calculate_manifold_shift(
                 theta=self.archetype,
                 e=self.traits.to_dict())
@@ -313,7 +315,7 @@ class NarrativeSelf:
                 impact_voltage=voltage)
             self.core_memories.append(memory)
             self._prune_memories()
-            chapter_title = f"The Incident of the {random.choice(clean_words).title()}"
+            chapter_title = f"The Incident of the {random.choice(clean_words).title()}" if clean_words else "The Silent Incident"
             self.chapters.append(chapter_title)
             log_msg = (
                 f"{Prisma.MAG}✨ CORE MEMORY FORMED: '{chapter_title}'{Prisma.RST}\n"
@@ -321,7 +323,7 @@ class NarrativeSelf:
                 f"   {Prisma.GRY}Genealogy: {dance_move}{Prisma.RST}")
             self.events.log(log_msg, "SOUL")
             self.events.log(self.editor.critique(chapter_title, stress_mode=is_crisis), "EDIT")
-            if hasattr(self.eng, 'akashic'):
+            if hasattr(self.eng, 'akashic') and self.eng.akashic:
                 self.eng.akashic.record_interaction(
                     lenses_active=[self.archetype],
                     ingredients_used=clean_words)
@@ -393,11 +395,10 @@ class NarrativeSelf:
 
     def _safe_get_packet(self) -> Optional[Any]:
         if not self.eng: return None
-        if not hasattr(self.eng, 'phys'): return None
-        if not self.eng.phys: return None
-        if not hasattr(self.eng.phys, 'observer'): return None
-        if not self.eng.phys.observer: return None
-        return self.eng.phys.observer.last_physics_packet
+        phys = self.eng.phys
+        if phys and hasattr(phys, 'observer') and phys.observer:
+             return phys.observer.last_physics_packet
+        return None
 
     def _trigger_synthesis(self):
         old_arch = self.archetype
@@ -484,7 +485,7 @@ class NarrativeSelf:
     def _generate_new_obsession(self):
         old_obsession = self.current_obsession
         self.current_obsession = None
-        if not hasattr(self.eng, 'lex'):
+        if not hasattr(self.eng, 'lex') or not self.eng.lex:
             if hasattr(self, 'events'):
                 self.events.log("⚠️ Soul cannot dream: Lexicon missing.", "ERR")
             return
@@ -601,7 +602,12 @@ class NarrativeSelf:
         self.paradox_accum = data.get("paradox_accum", 0.0)
         self.chapters = data.get("chapters", [])
         mem_data = data.get("core_memories", [])
-        self.core_memories = [CoreMemory(**m) for m in mem_data]
+        self.core_memories = []
+        for m in mem_data:
+            try:
+                self.core_memories.append(CoreMemory(**m))
+            except TypeError:
+                continue
         obs_data = data.get("obsession", {})
         if obs_data.get("title"):
             self.current_obsession = obs_data["title"]
@@ -744,7 +750,7 @@ class SynestheticCortex:
             internal_monologue_hint=hint)
 
     def apply_impulse(self, impulse: BiologicalImpulse) -> float:
-        if not self.bio:
+        if not self.bio or not hasattr(self.bio, 'endo') or not self.bio.endo:
             return 0.0
         endo = self.bio.endo
         endo.cortisol = max(0.0, min(1.0, endo.cortisol + impulse.cortisol_delta))
