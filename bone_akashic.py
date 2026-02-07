@@ -54,6 +54,12 @@ class TheAkashicRecord:
 
     def save_to_disk(self, category: str, data: Any):
         directory = LoreManifest.DATA_DIR
+        if not os.path.exists(directory):
+            try:
+                os.makedirs(directory)
+            except OSError as e:
+                print(f"{Prisma.RED}[AKASHIC]: CRITICAL - Cannot create lore directory: {e}{Prisma.RST}")
+                return
         filename = f"{category.lower()}.json"
         path = os.path.join(directory, filename)
         try:
@@ -120,11 +126,11 @@ class TheAkashicRecord:
 
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
         gordon_data = self.lore.get("GORDON")
-        if not gordon_data: return
+        if not gordon_data:
+            gordon_data = {"RECIPES": [], "ITEM_REGISTRY": {}}
         current_recipes = gordon_data.get("RECIPES", [])
-        for r in current_recipes:
-            if r.get("ingredient") == ingredient and r.get("catalyst_category") == catalyst:
-                return
+        if any(r.get("ingredient") == ingredient and r.get("catalyst_category") == catalyst for r in current_recipes):
+            return
         new_recipe = {
             "ingredient": ingredient,
             "catalyst_category": catalyst,

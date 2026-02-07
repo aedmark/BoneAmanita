@@ -21,7 +21,7 @@ class BoneJSONEncoder(json.JSONEncoder):
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors):
-        self.genome = "BONEAMANITA_14.5.2"
+        self.genome = "BONEAMANITA_14.5.3"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():

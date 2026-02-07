@@ -162,6 +162,13 @@ class MitochondrialForge:
         base_demand = max(0.1, math.log1p(voltage) * 1.5)
         raw_tax = (drag ** 1.5) * 0.5
         cognitive_load_tax = min(15.0, raw_tax)
+        is_critical = self.state.atp_pool < BioConstants.ATP_CRITICAL
+        if is_critical:
+            cognitive_load_tax = 0.0
+            external_modifiers = [0.5] # Force dampening.
+            if self.events and self.state.retrograde_signal != "HIBERNATING":
+                 self.events.log(f"{Prisma.VIOLET}💤 MITOCHONDRIA: Power Critical. Entering Hibernation. Cognitive Tax waived.{Prisma.RST}", "BIO_CRIT")
+                 self.state.retrograde_signal = "HIBERNATING"
         mod_factor = 1.0
         if external_modifiers:
             for m in external_modifiers:
@@ -172,16 +179,18 @@ class MitochondrialForge:
             excess = raw_cost - self.MAX_SAFE_BURN
             raw_cost = self.MAX_SAFE_BURN
             if self.events:
-                self.events.log(f"{Prisma.CYN}⚡ SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).{Prisma.RST}", "BIO")
+                self.events.log(
+                    f"{Prisma.CYN}⚡ SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).{Prisma.RST}",
+                    "BIO")
         total_metabolic_cost = raw_cost
         waste_generated = total_metabolic_cost * (1.0 - efficiency) * 0.5
         self.state.ros_buildup += waste_generated
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
-        if total_metabolic_cost >= self.MAX_SAFE_BURN:
-            self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.005) # Reduced damage
+        if total_metabolic_cost >= self.MAX_SAFE_BURN and not is_critical:
+            self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.005)
         self._apply_adaptive_dynamics(waste_generated)
         status = "RESPIRING"
-        if self.state.atp_pool < BioConstants.ATP_CRITICAL: status = "LOW_POWER"
+        if is_critical: status = "LOW_POWER"
         if self.state.atp_pool <= BioConstants.ATP_COLLAPSE: status = "NECROSIS"
         return MetabolicReceipt(
             base_cost=round(base_demand, 2),
