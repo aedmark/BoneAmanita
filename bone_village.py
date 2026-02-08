@@ -309,18 +309,26 @@ class TownHall:
         volt = _get_float(p, "voltage", 0.0)
         latency = getattr(host_stats, "latency", 0.0) if host_stats else 0.0
         loc_name = self.Navigator.world_graph.get(self.Navigator.current_node_id).name
-
+        almanac = TheLore.get("ALMANAC") or {}
+        forecasts = almanac.get("FORECASTS", {})
+        strategies = almanac.get("STRATEGIES", {})
         if latency > 3.0:
-            status, advice = "HIGH_LATENCY", "System is lagging. Simplify inputs."
+            status = "HIGH_LATENCY"
+            advice = "System is lagging. Simplify inputs."
         elif volt > 15.0:
-            status, advice = "HIGH_VOLTAGE", "Manic energy detected. Risk of burnout."
+            status = "HIGH_VOLTAGE"
+            advice = random.choice(forecasts.get("HIGH_VOLTAGE", ["Manic energy detected."]))
         elif drag > DRAG_HEAVY:
-            status, advice = "HIGH_DRAG", "The narrative is stuck in the mud."
+            status = "HIGH_DRAG"
+            advice = random.choice(forecasts.get("HIGH_DRAG", ["The narrative is stuck."]))
         else:
-            status, advice = "NOMINAL", "Systems operational."
-
+            status = "BALANCED"
+            advice = random.choice(forecasts.get("BALANCED", ["Systems operational."]))
+        strategy_tip = ""
+        if random.random() < 0.2 and status in strategies:
+            strategy_tip = f"\n💡 STRATEGY: {strategies[status]}"
         news = self._get_town_news(latency, volt, status)
-        report = f"CENSUS [{loc_name}]: {status} | {advice}"
+        report = f"CENSUS [{loc_name}]: {status} | {advice}{strategy_tip}"
         if news:
             report += f"\n{news}"
         return report

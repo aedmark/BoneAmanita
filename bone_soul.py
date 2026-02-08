@@ -163,14 +163,19 @@ class NarrativeSelf:
         "look", "help", "exit", "wait", "inventory", "status", "quit",
         "save", "load", "score", "map", "xyzzy"}
 
-    def __init__(self, engine_ref, events_ref, memory_ref=None):
+    def __init__(self, engine_ref, events_ref, memory_ref, akashic_ref=None):
         self.eng = engine_ref
         self.events = events_ref
-        self.memory = memory_ref
+        self.mem = memory_ref
         self.editor = TheEditor()
         self.anchor = HumanityAnchor(events_ref)
         self.chapters: List[str] = []
         self.core_memories: List[CoreMemory] = []
+        if akashic_ref:
+            self.akashic = akashic_ref
+        else:
+            print(f"{Prisma.OCHRE}[SOUL]: Warning - Isolated Akashic Record created.{Prisma.RST}")
+            self.akashic = TheAkashicRecord()
         self.traits = TraitVector()
         self.paradox_accum: float = 0.0
         self.archetype = "THE OBSERVER"

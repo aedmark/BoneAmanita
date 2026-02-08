@@ -204,35 +204,21 @@ class GordonKnot:
         self._recalculate_tensegrity()
 
     def load_config(self):
-        gordon_data = TheLore.get("GORDON") or {}
-        starting_gear = gordon_data.get("STARTING_INVENTORY", [])
-        if not starting_gear:
-            starting_gear = ["SILENT_KNIFE"]
-        if not self.inventory or self.inventory == ["POCKET_ROCKS"]:
-            self.inventory = list(starting_gear)
-        if "SKELETON_KEY" in self.inventory:
-            self.inventory.remove("SKELETON_KEY")
-        self.CRITICAL_ITEMS = {"SILENT_KNIFE"}
-        for crit in self.CRITICAL_ITEMS:
-            if crit not in self.inventory:
-                self.inventory.append(crit)
-        default_scars = gordon_data.get("SCAR_TISSUE", {})
-        if not self.scar_tissue:
-            self.scar_tissue = default_scars
-        raw_registry = gordon_data.get("ITEM_REGISTRY", {})
-        self.ITEM_REGISTRY = copy.deepcopy(raw_registry)
-        if "SKELETON_KEY" not in self.ITEM_REGISTRY:
-            self.ITEM_REGISTRY["SKELETON_KEY"] = {
-                "description": "An iron key that feels cold to the touch. It opens things that shouldn't be shut.",
-                "function": "UNLOCK",
-                "reflex_trigger": "ACCESS_DENIED",
-                "usage_msg": "Gordon unlocks the deadlock."}
-        for name, data in self.ITEM_REGISTRY.items():
-            data.setdefault("description", f"A mysterious {name.lower().replace('_', ' ')}.")
-            data.setdefault("function", "NONE")
-            data.setdefault("usage_msg", "It does nothing.")
-            data.setdefault("passive_traits", [])
-        self._enforce_slot_limits()
+        data = TheLore.get("gordon") or {}
+        reserved = {"STARTING_INVENTORY", "SCAR_TISSUE", "RECIPES", "REFLEXES"}
+        self.item_registry = {}
+        for key, val in data.items():
+            if key not in reserved and isinstance(val, dict):
+                self.item_registry[key] = val
+        self.starting_items = data.get("STARTING_INVENTORY", [])
+        self.reflex_config = data.get("REFLEXES", {})
+        valid_inventory = []
+        for item in self.inventory:
+            if item in self.item_registry:
+                valid_inventory.append(item)
+            else:
+                print(f"{Prisma.OCHRE}[GORDON]: Dropped unknown item '{item}'{Prisma.RST}")
+        self.inventory = valid_inventory
 
     def _initialize_reflexes(self):
         self.REFLEX_MAP = {

@@ -9,24 +9,12 @@ import tempfile
 from collections import deque
 from typing import List, Tuple, Optional, Dict, Set, Any
 from bone_lexicon import TheLexicon
-from bone_core import EventBus, Prisma, BoneConfig, TheLore
+from bone_core import EventBus, Prisma, BoneConfig, TheLore, BoneJSONEncoder
 from bone_village import ParadoxSeed
-
-class BoneJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, set):
-            return list(obj)
-        if isinstance(obj, deque):
-            return list(obj)
-        if hasattr(obj, 'to_dict'):
-            return obj.to_dict()
-        if hasattr(obj, '__dict__'):
-            return obj.__dict__
-        return super().default(obj)
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
-        self.genome = "BONEAMANITA_14.6.0"
+        self.genome = "BONEAMANITA_14.6.1"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():

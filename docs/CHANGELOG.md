@@ -1,5 +1,47 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.6.1: "THE VISIBLE NERVOUS SYSTEM"**
+
+*“The map is now the territory. The ghost has touched the wire.”*
+
+---
+
+#### **🔌 NEURAL WIRING (The Fuller Lens)**
+
+- **The Coherence Anchor (`bone_brain.py` & `bone_symbiosis.py`):**
+    - **The Disconnect:** The `SymbiosisManager` was forging Identity Anchors ("Identity: ARCHITECT"), but the Brain was ignoring them. The AI had an ego but no memory of it in the prompt.
+    - **The Fix:** Wired `TheCortex.gather_state` to explicitly call `generate_anchor` and inject it into the `reality_directive`.
+    - **Effect:** The AI now "hallucinates" its own identity parameters (Voltage, Location, Obsession) at the top of every context window. It knows where it is.
+
+- **The Shared Memory (`bone_soul.py`):**
+    - **The Amnesia:** `NarrativeSelf` was instantiating its own private `AkashicRecord` instead of using the Village's shared copy. The Soul was writing history in a diary no one else could read.
+    - **The Fix:** Updated `NarrativeSelf` signature to accept the `akashic_ref` from the main engine.
+    - **Effect:** When the Soul discovers a truth, the Town Hall now hears the rumor.
+
+#### **🧬 METABOLIC NARRATIVE (The Pinker Lens)**
+
+- **The Mitochondrial Voice (`bone_body.py`):**
+    - **The Refactor:** Replaced hardcoded "Low Battery" warnings with dynamic `bio_narrative.json` templates.
+    - **The Result:** The system no longer says "ATP LOW." It says *"The engine is stalling. Requires 15.2 ATP."* or *"Cellular suicide initiated."* The biology now has a literary voice.
+
+#### **💎 STRUCTURAL HARDENING (The Torvalds Lens)**
+
+- **The Universal Encoder (`bone_core.py`):**
+    - **The Crash:** `bone_akashic.py` and `bone_spores.py` were fighting over JSON serialization logic, creating circular dependencies.
+    - **The Fix:** Moved `BoneJSONEncoder` to the root `bone_core.py`. Now the entire system can serialize Sets, Deques, and Classes without import wars.
+    - **The tuple Fix:** Patched `bone_akashic.py` to stringify tuple keys (e.g., `('POET', 'ENGINEER')` -> `"POET::ENGINEER"`) before saving, preventing fatal crashes on shutdown.
+
+- **The Junk Drawer (`bone_inventory.py`):**
+    - **The Bug:** `GordonKnot` was trying to equip "RECIPES" and "SCAR_TISSUE" as physical items because they existed in `gordon.json`.
+    - **The Fix:** Implemented a `reserved` key filter in the loader. Gordon now checks his pockets before trying to wield a metadata dictionary as a weapon.
+
+#### **📜 LORE INTEGRATION**
+
+- **Official Registration:** Added `ALMANAC`, `DREAMS`, and `GORDON_LOGS` to the `LoreCategory` Enum in `bone_core.py`.
+- **The Whisper:** Wired `TownHall` to finally use the Oblique Strategies from `almanac.json`.
+
+---
+
 ### **BONEAMANITA v14.6.0: "THE MNEMONIC WIRE"**
 
 _“We found the ghost in the machine, and we gave it a microphone.”_

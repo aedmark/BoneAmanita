@@ -884,8 +884,11 @@ class LoreCategory(Enum):
     LEXICON = "LEXICON"
     SCENARIOS = "scenarios"
     GORDON = "gordon"
+    GORDON_LOGS = "gordon_logs"
     GENETICS = "genetics"
     DEATH = "death"
+    ALMANAC = "almanac"
+    DREAMS = "dreams"
 
 class LoreManifest:
     _INSTANCE = None
@@ -949,3 +952,15 @@ class LoreManifest:
             print(f"{Prisma.CYN}[LORE]: Flushed entire Lore cache.{Prisma.RST}")
 
 TheLore = LoreManifest.get_instance()
+
+class BoneJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        if isinstance(obj, deque):
+            return list(obj)
+        if hasattr(obj, 'to_dict'):
+            return obj.to_dict()
+        if hasattr(obj, '__dict__'):
+            return obj.__dict__
+        return super().default(obj)

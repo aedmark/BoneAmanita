@@ -136,6 +136,7 @@ class MitochondrialState:
     def efficiency_mod(self) -> float:
         return self.membrane_potential
 
+
 class MitochondrialForge:
     ROS_THRESHOLD_SIGNAL = 3.0
     ROS_THRESHOLD_DAMAGE = 8.0
@@ -145,13 +146,22 @@ class MitochondrialForge:
     def __init__(self, state_ref: MitochondrialState, events_ref):
         self.state = state_ref
         self.events = events_ref
+        full_narrative = TheLore.get("BIO_NARRATIVE") or {}
+        self.narrative = full_narrative.get("MITO", {})
 
     def adjust_atp(self, delta: float, reason: str = ""):
         old = self.state.atp_pool
         max_limit = getattr(BoneConfig, "MAX_ATP", 100.0)
         self.state.atp_pool = max(BioConstants.ATP_COLLAPSE, min(max_limit, old + delta))
-        if reason and abs(delta) > 5.0:
+        if reason and (abs(delta) > 5.0 or self.state.atp_pool > 90.0):
             self.events.log(f"[ATP]: {reason} ({delta:+.1f})", "BIO")
+
+    def _get_text(self, key, **kwargs):
+        tmpl = self.narrative.get(key, f"MITO_{key}")
+        try:
+            return tmpl.format(**kwargs)
+        except Exception:
+            return tmpl
 
     def process_cycle(self, physics_packet: dict, external_modifiers: List[float] = None) -> MetabolicReceipt:
         voltage = _get_val(physics_packet, "voltage", 0.0)
@@ -165,9 +175,8 @@ class MitochondrialForge:
             cognitive_load_tax = 0.0
             external_modifiers = [0.5]
             if self.events and self.state.retrograde_signal != "HIBERNATING":
-                self.events.log(
-                    f"{Prisma.VIOLET}💤 MITOCHONDRIA: Power Critical. Entering Hibernation. Cognitive Tax waived.{Prisma.RST}",
-                    "BIO_CRIT")
+                msg = self._get_text("NECROSIS", cost=base_demand, pool=self.state.atp_pool)
+                self.events.log(f"{Prisma.VIOLET}💤 {msg}{Prisma.RST}", "BIO_CRIT")
                 self.state.retrograde_signal = "HIBERNATING"
         mod_factor = 1.0
         if external_modifiers:
@@ -182,6 +191,9 @@ class MitochondrialForge:
                 self.events.log(
                     f"{Prisma.CYN}⚡ SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).{Prisma.RST}",
                     "BIO")
+        if raw_cost > 15.0 and self.events and random.random() < 0.2:
+            msg = self._get_text("GRINDING")
+            self.events.log(f"{Prisma.OCHRE}⚙️ {msg}{Prisma.RST}", "BIO_WARN")
         total_metabolic_cost = raw_cost
         waste_generated = total_metabolic_cost * (1.0 - efficiency) * 0.5
         self.state.ros_buildup += waste_generated
@@ -235,13 +247,13 @@ class MitochondrialForge:
         self.state.ros_buildup = 0.0
         self.state.membrane_potential = 0.6
         self.state.retrograde_signal = "MITOPHAGY_RESET"
-        self.events.log(f"{Prisma.RED}[MITO]: CRITICAL WASTE LEVELS. Purging organelles.{Prisma.RST}", "BIO")
+        msg = self._get_text("APOPTOSIS")
+        self.events.log(f"{Prisma.RED}♻️ [MITO]: {msg}{Prisma.RST}", "BIO_CRIT")
 
     def _print_receipt(self, base, tax, total) -> MetabolicReceipt:
         status = "NOMINAL"
         if self.state.atp_pool < 20.0: status = "LOW_POWER"
         if self.state.atp_pool <= 0.0: status = "METABOLIC_COLLAPSE"
-
         return MetabolicReceipt(
             base_cost=round(base, 2),
             drag_tax=round(tax, 2),
@@ -253,6 +265,7 @@ class MitochondrialForge:
     def apply_inheritance(self, traits: dict):
         if traits.get("high_metabolism"):
             self.state.membrane_potential = 1.1
+            self.events.log("[MITO]: Ancestral High Metabolism activated.", "GENETICS")
 
 class SemanticEndocrinologist:
     def __init__(self, memory_ref, lexicon_ref):

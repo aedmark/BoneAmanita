@@ -448,7 +448,7 @@ class ResponseValidator:
 
 class TheCortex:
     def __init__(self, engine_ref, llm_client=None):
-        self.sub = engine_ref
+        self.eng = engine_ref
         self.events = engine_ref.events
         self.dreamer = DreamEngine(self.events)
         self.dialogue_buffer = []
@@ -457,10 +457,18 @@ class TheCortex:
         self.boot_history = TelemetryService.get_instance().read_recent_history(limit=4)
         self.last_physics = {}
         try:
-            self.consultant = self.sub.consultant if hasattr(self.sub, 'consultant') else BoneConsultant()
+            self.consultant = self.eng.consultant if hasattr(self.eng, 'consultant') else BoneConsultant()
         except Exception:
             self.consultant = None
         self.llm = llm_client or LLMInterface(self.events, provider="mock", dreamer=self.dreamer)
+        if hasattr(self.eng, 'events'):
+            self.symbiosis = SymbiosisManager(self.eng.events)
+            if hasattr(self.eng, "system_health"):
+                pass
+        events = getattr(self.eng, 'events', None)
+        self.arbiter = SynergeticLensArbiter(events)
+        self.last_physics = None
+        self.dialogue_buffer = []
         if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None: self.llm.dreamer = self.dreamer
         self.composer = PromptComposer()
         self.spotlight = NarrativeSpotlight()
@@ -488,7 +496,7 @@ class TheCortex:
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
         is_boot_sequence = "SYSTEM_BOOT:" in user_input
-        sim_result = self.sub.cycle_controller.run_turn(user_input, is_system=is_system)
+        sim_result = self.eng.cycle_controller.run_turn(user_input, is_system=is_system)
         if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]: return sim_result
         full_state = self.gather_state(sim_result)
         modifiers = self.symbiosis.get_prompt_modifiers()
@@ -501,7 +509,7 @@ class TheCortex:
         llm_params = self.modulator.modulate(
             full_state["bio"].get("chem", {}),
             full_state["physics"].get("voltage", 5.0),
-            latency_penalty=getattr(self.sub.host_stats, "latency", 0.0))
+            latency_penalty=getattr(self.eng.host_stats, "latency", 0.0))
         if is_boot_sequence: llm_params.update({"temperature": 1.3, "top_p": 0.95})
         final_prompt = self.composer.compose(
             full_state, user_input,
@@ -529,7 +537,7 @@ class TheCortex:
     def _handle_vsl_command(self, text):
         msg = self.consultant.engage() if "start" in text else self.consultant.disengage()
         self.events.log(msg, "VSL")
-        return {"ui": f"{Prisma.CYN}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.sub.get_metrics()}
+        return {"ui": f"{Prisma.CYN}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.eng.get_metrics()}
 
     def _apply_vsl_overlay(self, state, text, sim_result):
         self.consultant.update_coordinates(text, state.get("bio", {}), state.get("physics"))
@@ -553,10 +561,10 @@ class TheCortex:
     def _process_inventory_changes(self, found, lost):
         logs = []
         for item in found:
-            logs.append(self.sub.gordon.acquire(item))
+            logs.append(self.eng.gordon.acquire(item))
             if self.events: self.events.publish("ITEM_ACQUIRED", {"item": item})
         for item in lost:
-            if self.sub.gordon.safe_remove_item(item):
+            if self.eng.gordon.safe_remove_item(item):
                 logs.append(f"{Prisma.GRY}ENTROPY: {item} consumed/lost.{Prisma.RST}")
             else:
                 logs.append(f"{Prisma.OCHRE}GLITCH: Tried to lose {item}, but you didn't have it.{Prisma.RST}")
@@ -575,40 +583,42 @@ class TheCortex:
         except Exception:
             pass
 
-    def gather_state(self, sim_result):
-        phys = self.sub.phys.observer.last_physics_packet.to_dict() if self.sub.phys.observer.last_physics_packet else sim_result.get("physics", {})
-        bio = {"chem": self.sub.bio.endo.get_state(), "atp": self.sub.bio.mito.state.atp_pool}
-        mind = self.sub.noetic.arbiter.consult(phys, bio, self.sub.gordon.inventory, self.sub.tick_count, soul_ref=self.sub.soul)
-        if isinstance(mind, tuple):
-            mind = {"lens": mind[0], "role": mind[2], "style_directives": ["Neutral tone."]}
-        if hasattr(self.sub, 'director'):
-            chorus, voices = self.sub.director.generate_chorus_instruction(phys)
-            if len(voices) > 1 and "NARRATOR" not in voices:
-                mind["style_directives"].append(chorus)
-                mind["role"] = f"The Chorus ({'/'.join(voices)})"
-        loci_description = "Seed Location"
-        if hasattr(self.sub.phys, "nav") and hasattr(self.sub.phys.nav, "get_current_description"):
-            loci_description = self.sub.phys.nav.get_current_description()
-        return {
+    def gather_state(self, sim_result: Dict[str, Any]) -> Dict[str, Any]:
+        phys = sim_result.get("physics", {})
+        bio = sim_result.get("bio", {})
+        mind = sim_result.get("mind", {})
+        world = sim_result.get("world", {})
+        soul_data = {}
+        if hasattr(self.eng, "soul"):
+            soul_data = self.eng.soul.to_dict()
+        full_state = {
             "bio": bio,
             "physics": phys,
             "mind": mind,
-            "dialogue_history": self.dialogue_buffer or [f"[PREV]: {e}" for e in self.boot_history],
-            "user_profile": self.sub.mind.mirror.profile.__dict__,
-            "world": {
-                "orbit": sim_result.get("world_state", {}).get("orbit", ["{seed}"]),
-                "loci_description": loci_description},
-            "inventory": self.sub.gordon.inventory,
-            "semantic_operators": self.sub.gordon.get_semantic_operators(),
-            "spotlight": self.spotlight.illuminate(self.sub.mind.mem.graph, phys.get("vector", {}))}
+            "soul": soul_data,
+            "world": world,
+            "user_profile": getattr(self.eng.cmd, "user_profile", {}),
+            "meta": {
+                "tick": self.eng.tick_count,
+                "timestamp": time.time()
+            }
+        }
+        if hasattr(self, "symbiosis"):
+            if hasattr(self.eng, "host_stats"):
+                pass
+            anchor_text = self.symbiosis.generate_anchor(full_state)
+            full_state["reality_directive"] = anchor_text
+            if BoneConfig.VERBOSE_LOGGING and self.eng.tick_count % 10 == 0:
+                print(f"{Prisma.GRY}[ANCHOR]: {anchor_text}{Prisma.RST}")
+        return full_state
 
     def learn_from_response(self, text):
-        words = self.sub.lex.sanitize(text)
-        unknowns = [w for w in words if not self.sub.lex.get_categories_for_word(w)]
+        words = self.eng.lex.sanitize(text)
+        unknowns = [w for w in words if not self.eng.lex.get_categories_for_word(w)]
         if unknowns:
             target = random.choice(unknowns)
             if len(target) > 4:
-                self.sub.lex.teach(target, "kinetic", self.sub.tick_count)
+                self.eng.lex.teach(target, "kinetic", self.eng.tick_count)
                 if self.events: self.events.log(f"AUTO-DIDACTIC: Learned '{target}'.", "CORTEX")
 
 class NeuroPlasticity:

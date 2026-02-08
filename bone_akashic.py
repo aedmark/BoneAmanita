@@ -3,7 +3,8 @@ import json
 import os
 import random
 from typing import Dict, Any, Tuple, cast, List, Set
-from bone_core import Prisma, TheLore, LoreManifest
+from bone_core import Prisma, TheLore, LoreManifest, BoneJSONEncoder
+
 
 class TheAkashicRecord:
     def __init__(self):
@@ -54,22 +55,18 @@ class TheAkashicRecord:
         print(f"{Prisma.CYN}[AKASHIC]: Mythos state preserved.{Prisma.RST}")
 
     def save_to_disk(self, category: str, data: Any):
-        directory = LoreManifest.DATA_DIR
-        if not os.path.exists(directory):
-            try:
-                os.makedirs(directory)
-            except OSError as e:
-                print(f"{Prisma.RED}[AKASHIC]: CRITICAL - Cannot create lore directory: {e}{Prisma.RST}")
-                return
-        filename = f"{category.lower()}.json"
-        path = os.path.join(directory, filename)
+        filepath = os.path.join("lore", f"akashic_{category}.json")
+        serializable_data = data
+        if category == "lens_cooccurrence":
+            serializable_data = {
+                f"{k[0]}::{k[1]}": v
+                for k, v in data.items()}
         try:
-            with open(path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=4)
-            print(f"{Prisma.GRN}[AKASHIC]: {category} updated on disk.{Prisma.RST}")
-            self.lore.inject(category, data)
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(serializable_data, f, indent=2, cls=BoneJSONEncoder)
+            print(f"{Prisma.GRY}[AKASHIC]: Saved {category}.{Prisma.RST}")
         except Exception as e:
-            print(f"{Prisma.RED}[AKASHIC]: Failed to write {filename}: {e}{Prisma.RST}")
+            print(f"{Prisma.RED}[AKASHIC]: Save Failed ({category}): {e}{Prisma.RST}")
 
     def _load_mythos_state(self):
         data = self.lore.get("MYTHOS")
