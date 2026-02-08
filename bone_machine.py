@@ -130,7 +130,7 @@ class TheTheremin:
         self.decoherence_buildup = 0.0
         self.classical_turns = 0
         self.AMBER_THRESHOLD = 20.0
-        self.SHATTER_POINT = 80.0
+        self.SHATTER_POINT = 100.0
         self.is_stuck = False
 
     def listen(self, physics, governor_mode="COURTYARD"):
@@ -155,7 +155,7 @@ class TheTheremin:
         critical_event = None
         if rep > 0.5:
             self.classical_turns += 1
-            slag = self.classical_turns * 4.0
+            slag = self.classical_turns * 2.0
             self.decoherence_buildup += slag
             theremin_msg = f"🗿 CALCIFICATION: Turn {self.classical_turns} (+{slag} Resin)"
         elif complexity > 0.4 and self.classical_turns > 0:

@@ -88,7 +88,6 @@ class LexiconStore:
             return False
         self.LEARNED_VOCAB[category][w] = tick
         self._index_word(w, category)
-        self.save_hive()
         return True
 
     def atrophy(self, current_tick, max_age=100, protected: Set[str] = None):

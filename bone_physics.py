@@ -115,7 +115,7 @@ class GeodesicEngine:
         tension = round(min(100.0, base_tension), 2)
         shear_rate = total_kinetic / safe_volume
         raw_friction = (
-                (counts.get("solvents", 0) * 0.2) +
+                (counts.get("solvents", 0) * 0.05) +
                 (counts.get("suburban", 0) * 2.0) +
                 (masses["heavy"] * 2.5))
         dynamic_viscosity = raw_friction / (1.0 + (shear_rate * 2.0))

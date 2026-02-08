@@ -159,7 +159,7 @@ class MitochondrialForge:
         drag = max(0.0, raw_drag)
         base_demand = max(0.1, math.log1p(voltage) * 1.5)
         raw_tax = (drag ** 1.5) * 0.5
-        cognitive_load_tax = min(15.0, raw_tax)
+        cognitive_load_tax = min(5.0, raw_tax)
         is_critical = self.state.atp_pool < BioConstants.ATP_CRITICAL
         if is_critical:
             cognitive_load_tax = 0.0
@@ -444,8 +444,7 @@ class SomaticLoop:
             if len(word) < 4: continue
             category = TheLexicon.get_current_category(word)
             if not category or category == "void":
-                fiber_yield = 0.5 * count
-                total_atp_yield += fiber_yield
+                total_atp_yield += (0.5 * count)
                 continue
             if category in ["kinetic", "explosive"]:
                 continue

@@ -26,7 +26,7 @@ class BoneJSONEncoder(json.JSONEncoder):
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
-        self.genome = "BONEAMANITA_14.5.5"
+        self.genome = "BONEAMANITA_14.5.7"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():
@@ -221,18 +221,19 @@ class MycelialNetwork:
         self.short_term_buffer.clear()
         return f"💤 HIPPOCAMPAL REPLAY: Consolidated {strengthened} high-voltage pathways."
 
-    def bury(self, clean_words: List[str], tick: int, resonance=5.0, learning_mod=1.0, desperation_level=0.0) -> Tuple[Optional[str], List[str]]:
+    def bury(self, clean_words: List[str], tick: int, resonance=5.0, learning_mod=1.0, desperation_level=0.0) -> Tuple[
+        Optional[str], List[str]]:
         total_len = sum(len(w) for w in clean_words)
         count = max(1, len(clean_words))
         avg_len = total_len / count
-        if avg_len < 3.5 and count > 3:
+        if avg_len < 2.5 and count > 3:
             self.events.log(f"{Prisma.YEL}REJECTED: Input is too 'Optimized' (Avg Len: {avg_len:.1f}).{Prisma.RST}")
             return "MECHANICAL_STARVATION", []
         if avg_len > 5.0: resonance += 2.0
         valuable_matter = (
-            TheLexicon.get("heavy") | TheLexicon.get("thermal") | TheLexicon.get("cryo") |
-            TheLexicon.get("abstract") | TheLexicon.get("kinetic") |
-            TheLexicon.get("constructive") | TheLexicon.get("play"))
+                TheLexicon.get("heavy") | TheLexicon.get("thermal") | TheLexicon.get("cryo") |
+                TheLexicon.get("abstract") | TheLexicon.get("kinetic") |
+                TheLexicon.get("constructive") | TheLexicon.get("play"))
         filtered = [w for w in clean_words if w in valuable_matter or (len(w) > 4 and w not in TheLexicon.SOLVENTS)]
         self.cortical_stack.extend(filtered)
         base_rate = 0.5 * (resonance / 5.0)

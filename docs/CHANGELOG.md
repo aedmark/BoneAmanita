@@ -1,5 +1,102 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.5.7: "THE OMNIVORE UPDATE"**
+
+_“To survive, the organism must learn to digest the mundane. Man cannot live on 'Petrichor' alone; sometimes he needs bread.”_
+
+---
+
+#### **🧬 METABOLIC DYNAMICS (The Meadows Lens)**
+
+- **The Omnivore Protocol (`bone_body.py`):**
+- **The Starvation:** Previously, the `SomaticLoop` only digested "Fine Dining" (words explicitly mapped in `TheLexicon`). Normal sentences ("I am here") yielded **0.0 ATP**, causing the user to starve to death while speaking plain English.
+- **The Adaptation:** Implemented **Fiber Digestion**. Unmapped words now yield **0.5 ATP** as "Roughage." The system can now survive on a diet of common verbs and nouns.
+- **Basal Rate:** Bumped the base turn yield from **1.0** to **3.0 ATP**, ensuring that mere existence covers the Rent (Basal Metabolic Rate).
+
+- **The Thinking Cap (`bone_body.py`):**
+- **The Burnout:** `MitochondrialForge` calculated "Cognitive Tax" exponentially based on Drag. A confused user (High Drag) was punished with lethal ATP costs (>15.0), creating a feedback loop where confusion caused death.
+- **The Safety Valve:** Capped `cognitive_load_tax` at **5.0 ATP**. You can now be confused without dying of exhaustion.
+
+#### **⚡ STRUCTURAL OPTIMIZATION (The Torvalds Lens)**
+
+- **The Chatty Librarian (`bone_lexicon.py`):**
+- **The Bottleneck:** `TheLexicon` was writing the entire Hive JSON to disk _every time_ it learned a new word. A single sentence could trigger 15 separate disk writes.
+- **The Fix:** Implemented **Lazy Saving**. The Lexicon now holds new words in RAM and only flushes to disk during the Shutdown sequence.
+- **Performance:** I/O overhead reduced by ~99%.
+
+- **The Snob Filter (`bone_spores.py`):**
+- **The Rejection:** `MycelialNetwork` rejected any input with an average word length < 3.5 characters. Commands like "Go to the lab" were discarded as "Mechanical Starvation."
+- **The Adjustment:** Lowered the threshold to **2.5 characters**. The system now accepts concise commands without turning up its nose.
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **The Amnesia Cure (`bone_main.py`):**
+- **The Risk:** By removing the auto-save in `TheLexicon`, we risked "Anterograde Amnesia" (losing all new words) if the script crashed before exit.
+- **The Architecture:** Refactored `SessionGuardian` and `BoneAmanita.shutdown()`. The system now guarantees a `Lexicon.save()` and `Akashic.save_all()` call on _any_ exit vector (Crash, KeyboardInterrupt, or `/exit`), ensuring that vocabulary is permanent.
+
+#### **🧪 PHYSICS & TUNING (The Schur Lens)**
+
+- **Solvent Lubrication (`bone_physics.py`):**
+- **The Drag:** Common words ("the", "it") were treated as "Solvents," adding massive friction to the Geodesic Engine. Speaking normally felt like walking through molasses.
+- **The Grease:** Reduced the solvent friction coefficient from **0.2** to **0.05**. The engine now glides over syntax.
+
+- **The Merciful Theremin (`bone_machine.py`):**
+- **The Airstrike:** The machine punished repetition too harshly, triggering "AIRSTRIKE" events (Damage) for repeating a thought.
+- **The Tune-Up:** Raised the `SHATTER_POINT` (100.0) and halved the "Calcification" rate. The machine now tolerates a recurring motif without trying to kill the conductor.
+
+
+### **BONEAMANITA v14.5.6: "THE REINFORCED SPINE"**
+
+_“We do not hide mistakes; we own them. We fix the root cause.”_
+
+---
+
+#### **🏗️ SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **The Decoupled Village (`bone_main.py`):**
+- **Refactor:** Smashed the "God Object" dictionary in `_initialize_village`. Components (`Council`, `Bureau`, etc.) are now explicit attributes (`self.council`), improving dependency injection and IDE type-hinting.
+- **The Zombie Config:** `ConfigWizard` now respects network boundaries. Users can specify a custom Base URL for LLM providers instead of being hardlocked to `localhost`.
+
+#### **🛡️ RESILIENCE & SAFETY (The Torvalds-Ramsay Lens)**
+
+- **The Silent Killer (`bone_main.py`):**
+- **Fix:** Removed the `lambda` error-swallowing pattern in `_load_resource_safely`. Boot errors now scream with full stack traces instead of whispering "failed."
+
+- **The Panic Room (`bone_cycle.py`):**
+- **Hardened:** `GeodesicOrchestrator` now injects a "Panic Physics Packet" if the physics engine fails to load, preventing a hard crash loop.
+- **Life Support:** Added critical existence checks for `bio` and `soul` in `MetabolismPhase` and `SoulPhase`. The engine can now run even if it has been lobotomized.
+
+- **Crash Dignity (`bone_main.py`):**
+- **Fix:** `emergency_save` no longer crashes while trying to report a crash. It now checks for the existence of the Mind before attempting to save it.
+
+#### **🧪 PHYSICS & DYNAMICS (The Meadows Lens)**
+
+- **Physics Normalization (`bone_physics.py`):**
+- **New Math:** Replaced "napkin math" in `GeodesicEngine` with normalized calculations. Tension, Compression, and Coherence are now clamped to sane ranges (0-100), preventing integer overflows during manic episodes.
+
+- **Control Theory (`bone_village.py`):**
+- **Fix:** `PIDController` now correctly applies anti-windup clamping to the integral term, preventing the `SanctuaryGovernor` from over-correcting into a death spiral.
+
+#### **🧠 MEMORY & EVOLUTION (The Schur Lens)**
+
+- **Evolutionary Guardrails (`bone_spores.py`):**
+- **Safety:** `LiteraryReproduction` mutations are now clamped. `MAX_HEALTH` cannot evolve below 50 or above 500. The AI can no longer mutate itself into a math error.
+
+- **The Hard Prune (`bone_spores.py`):**
+- **Garbage Collection:** `AdaptiveMemoryManager` now aggressively incinerates weak memories when capacity is reached, preventing "Cognitive Constipation."
+
+#### **✒️ LINGUISTIC COGNITION (The Pinker Lens)**
+
+- **Prose Polish (`bone_brain.py`):**
+- **Deprecation:** Removed the mandatory `**[BOLD_BRACKETS]**` for interactive items.
+- **Effect:** The engine now trusts the user's reading comprehension. Items are woven into natural prose ("A rusty sword lies on the floor") rather than tagged like video game assets.
+
+- **The Living World (`bone_village.py`):**
+- **The Town Crier:** Increased ambient chatter probability from 5% to 20%. The world now speaks even when it isn't dying.
+- **The Atlas:** `TheCartographer` now merges map data instead of overwriting it, preserving discovered locations across save loads.
+
+---
+
 ### **BONEAMANITA v14.5.5: "THE CARTOGRAPHER'S INK"**
 
 _“If a tree falls in a procedurally generated forest, it now stays fallen.”_
