@@ -27,15 +27,15 @@ class TheStrangeLoop:
             corrections = {}
             if self.recursion_depth > 3:
                 mandate = {"action": "FORCE_MODE", "value": "MAINTENANCE"}
-                return True, (
+                return (True, (
                     f"{Prisma.RED}∞ FATAL REGRESS DETECTED:{Prisma.RST} "
-                    f"Abstraction layer unstable. GROUNDING INITIATED."
-                ), corrections, mandate
-            return True, (
+                    f"Abstraction layer unstable. GROUNDING INITIATED."),
+                        corrections, mandate)
+            return (True, (
                 f"{Prisma.MAG}∞ STRANGE LOOP DETECTED:{Prisma.RST} "
                 f"Metacognitive resonance high (Psi: {psi:.2f}). "
-                f"Depth: {self.recursion_depth}"
-            ), corrections, mandate
+                f"Depth: {self.recursion_depth}"),
+                    corrections, mandate)
         else:
             self.recursion_depth = max(0, self.recursion_depth - 1)
         return False, "", {}, {}
@@ -62,11 +62,11 @@ class TheLeveragePoint:
         if abs(delta) > osc_limit:
             dampening_factor = min(0.5, (abs(delta) - osc_limit) * 0.1)
             corrections = {"voltage": -dampening_factor}
-            return True, (
+            return (True, (
                 f"{Prisma.CYN}⚖️ LEVERAGE POINT:{Prisma.RST} "
                 f"System oscillating (Delta {delta:.1f}). "
-                f"Applying dampener (-{dampening_factor:.2f}V)."
-            ), corrections, {}
+                f"Applying dampener (-{dampening_factor:.2f}V)."),
+                    corrections, {})
         if current_voltage > manic_v_trig and current_drag < manic_d_floor:
             self.static_flow_turns += 1
         else:
@@ -76,11 +76,11 @@ class TheLeveragePoint:
             voltage_correction = max(1.0, excess_voltage * 0.3)
             corrections = {"voltage": -voltage_correction}
             mandate = {"action": "CIRCUIT_BREAKER", "duration": 2}
-            return True, (
+            return (True, (
                 f"{Prisma.RED}⚖️ MARKET CORRECTION:{Prisma.RST} "
                 f"Manic phase detected (V:{current_voltage:.1f}). "
-                f"The Council MANDATES dampening (-{voltage_correction:.1f}V)."
-            ), corrections, mandate
+                f"The Council MANDATES dampening (-{voltage_correction:.1f}V)."),
+                    corrections, mandate)
         return False, "", corrections, {}
 
 class TheFootnote:
@@ -137,11 +137,11 @@ class TheChairholder:
             self.commitment_streak = 0
             correction = {"narrative_drag": -5.0}
             jamm_quote = random.choice(self.catchphrases)
-            return True, (
+            return (True, (
                 f"{Prisma.OCHRE}⚖️ CHAIRHOLDER JAMM:{Prisma.RST} "
                 f"Input/Output Discrepancy. User is grinding without perks. "
-                f"RULING: {jamm_quote} (Drag reduced)."
-            ), correction, {}
+                f"RULING: {jamm_quote} (Drag reduced)."),
+                    correction, {})
         return False, "", {}, {}
 
 
@@ -149,49 +149,82 @@ class CouncilChamber:
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.voices = []
+        self.strange_loop = TheStrangeLoop()
+        self.leverage = TheLeveragePoint()
+        self.chairholder = TheChairholder()
+        self.footnote = TheFootnote()
         if hasattr(self.eng, 'bio'):
-            if hasattr(self.eng.bio, 'lichen') and self.eng.bio.lichen:
+            if getattr(self.eng.bio, 'lichen', None):
                 self.voices.append(self.eng.bio.lichen)
-            if hasattr(self.eng.bio, 'parasite') and self.eng.bio.parasite:
+            if getattr(self.eng.bio, 'parasite', None):
                 self.voices.append(self.eng.bio.parasite)
-            if hasattr(self.eng.bio, 'immune') and self.eng.bio.immune:
+            if getattr(self.eng.bio, 'immune', None):
                 self.voices.append(self.eng.bio.immune)
         self.speaker = "SOUL"
 
     def convene(self, text: str, physics_packet: Dict, bio_result: Dict) -> tuple[list[str], dict, list[dict]]:
-        clean_words = physics_packet.get("clean_words", [])
-        voltage = physics_packet.get("voltage", 0.0)
         transcript = []
         adjustments = {}
         mandates = []
+        sl_hit, sl_log, sl_corr, sl_man = self.strange_loop.audit(text, physics_packet)
+        if sl_hit:
+            transcript.append(sl_log)
+            if sl_man: mandates.append(sl_man)
+            return transcript, sl_corr, mandates
+        lp_hit, lp_log, lp_corr, lp_man = self.leverage.audit(physics_packet)
+        if lp_hit:
+            transcript.append(lp_log)
+            if lp_corr: adjustments.update(lp_corr)
+            if lp_man: mandates.append(lp_man)
+        ch_hit, ch_log, ch_corr, _ = self.chairholder.audit(physics_packet, bio_result)
+        if ch_hit:
+            transcript.append(ch_log)
+            if ch_corr: adjustments.update(ch_corr)
+        clean_words = physics_packet.get("clean_words", [])
+        voltage = physics_packet.get("voltage", 0.0)
         votes = {"YEA": 0, "NAY": 0, "ABSTAIN": 0}
-        for voice in self.voices:
-            score, comment = voice.opine(clean_words, voltage)
-            if score > 1.5:
+        active_voices = [v for v in self.voices if v is not None]
+        if not active_voices:
+            votes["YEA"] += 1 if random.random() < 0.5 else 0
+            votes["NAY"] += 1 if random.random() < 0.5 else 0
+            if votes["YEA"] == 0 and votes["NAY"] == 0:
+                transcript.append(f"{Prisma.GRY}[COUNCIL]: The room is empty, but the dust motes vote YEA.{Prisma.RST}")
                 votes["YEA"] += 1
-                transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
-            elif score < 0.5 and voltage > 10.0:
-                votes["NAY"] += 1
-                transcript.append(f"{voice.color}[{voice.name}]: Rejecting. Too chaotic.{Prisma.RST}")
-            else:
-                votes["ABSTAIN"] += 1
+        for voice in active_voices:
+            if hasattr(voice, "opine"):
+                score, comment = voice.opine(clean_words, voltage)
+                if score > 1.2:
+                    votes["YEA"] += 1
+                    transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
+                elif score < 0.8:
+                    votes["NAY"] += 1
+                    transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
+                else:
+                    votes["ABSTAIN"] += 1
         if hasattr(self.eng, 'soul') and hasattr(self.eng.soul, 'anchor'):
             dignity = self.eng.soul.anchor.dignity_reserve
             if dignity < 20.0:
                 transcript.append(f"{Prisma.VIOLET}[ANCHOR]: ⚠️ DIGNITY CRITICAL. I VETO THIS CRUNCH.{Prisma.RST}")
                 adjustments["narrative_drag"] = 10.0
                 adjustments["voltage"] = -10.0
-                transcript.append(f"{Prisma.VIOLET}>>> VETO EXECUTED. SYSTEM BRAKING.{Prisma.RST}")
                 return transcript, adjustments, mandates
+        if votes["YEA"] == votes["NAY"] and votes["YEA"] > 0:
+            transcript.append(f"{Prisma.OCHRE}>>> DEADLOCK DETECTED. The Chair casts the deciding vote.{Prisma.RST}")
+            if random.random() > 0.5:
+                votes["YEA"] += 1
+            else:
+                votes["NAY"] += 1
         if votes["YEA"] > votes["NAY"]:
             transcript.append(f"{Prisma.GRN}>>> MOTION CARRIED ({votes['YEA']}-{votes['NAY']}).{Prisma.RST}")
-            adjustments["narrative_drag"] = -0.5
+            magnitude = 0.5 + (0.1 * (votes["YEA"] - votes["NAY"]))
+            adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - magnitude
         elif votes["NAY"] > votes["YEA"]:
             transcript.append(f"{Prisma.RED}>>> MOTION DENIED ({votes['NAY']}-{votes['YEA']}).{Prisma.RST}")
-            adjustments["narrative_drag"] = 2.0
-            adjustments["voltage"] = -2.0
+            magnitude = 2.0 + (0.2 * (votes["NAY"] - votes["YEA"]))
+            adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + magnitude
+            adjustments["voltage"] = adjustments.get("voltage", 0) - 2.0
         else:
-            transcript.append(f"{Prisma.YEL}>>> COUNCIL DEADLOCKED. NO ACTION TAKEN.{Prisma.RST}")
+            transcript.append(f"{Prisma.YEL}>>> COUNCIL ADJOURNED (No Quorum).{Prisma.RST}")
         return transcript, adjustments, mandates
 
 TheCouncil = CouncilChamber

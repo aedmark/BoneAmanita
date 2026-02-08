@@ -777,10 +777,7 @@ class GeodesicOrchestrator:
         self.reporter = CycleReporter(engine_ref)
         self.symbiosis = SymbiosisManager(self.eng.events)
 
-    def run_turn(self, user_message: str, latency: float = 0.0, is_system: bool = False) -> Dict[str, Any]:
-        if not is_system and len(user_message.strip()) < 3:
-            return {"type": "SNAPSHOT", "ui": f"{Prisma.GRY}(Ignored: Input too short){Prisma.RST}",
-                    "metrics": self.eng.get_metrics(), "logs": []}
+    def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         tracer = TelemetryService.get_tracer()
         cycle_id = str(uuid.uuid4())[:8]
         tracer.start_cycle(cycle_id)
@@ -796,21 +793,45 @@ class GeodesicOrchestrator:
             ctx.reality_stack = getattr(self.eng, 'reality_stack', None)
             ctx.user_name = self.eng.user_name
             ctx.council_mandates = []
+            ctx.timestamp = time.time()
             self.eng.events.flush()
             ctx = self.simulator.run_simulation(ctx)
             if self.eng.phys and hasattr(self.eng.phys, 'observer'):
                 self.eng.phys.observer.last_physics_packet = ctx.physics.snapshot()
-            if not ctx.is_alive: return self.eng.trigger_death(ctx.physics)
+            if not ctx.is_alive:
+                return self.eng.trigger_death(ctx.physics)
             snapshot = self.reporter.render_snapshot(ctx)
             snapshot.update({
-                "council_mandates": getattr(ctx, "council_mandates", []),
+                "type": "SNAPSHOT",
                 "trace_id": cycle_id,
-                "dream": getattr(ctx, "last_dream", None),
-                "physics": ctx.physics.to_dict(),
-                "soul": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else {}})
+                "is_alive": True,
+                "physics": ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics,
+                "bio": ctx.bio_result,
+                "mind": ctx.mind_state,
+                "world": ctx.world_state,
+                "soul": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else {},
+                "council_mandates": getattr(ctx, "council_mandates", []),
+                "dream": getattr(ctx, "last_dream", None)})
+            latency = time.time() - ctx.timestamp
             if "ui" in snapshot:
                 self.symbiosis.monitor_host(latency, snapshot["ui"], len(user_message))
             return snapshot
+        except Exception as e:
+            t_str = traceback.format_exc()
+            self.eng.events.log(f"CYCLE CRASH: {e}", "CRIT")
+            tracer.log_decision("ORCHESTRATOR", "CRASH", {"error": str(e)}, t_str, "FAILURE")
+            from bone_architect import PanicRoom
+            safe_phys = PanicRoom.get_safe_physics()
+            safe_bio = PanicRoom.get_safe_bio()
+            return {
+                "type": "CRASH",
+                "ui": f"\n{Prisma.RED}*** REALITY FRACTURE ***\n{e}\n[System stabilized in Safe Mode]{Prisma.RST}",
+                "physics": safe_phys.to_dict(),
+                "bio": safe_bio,
+                "mind": PanicRoom.get_safe_mind(),
+                "world": {"orbit": ["VOID"], "loci_description": "System Failure"},
+                "logs": ["CRITICAL FAILURE", "SAFE MODE ACTIVE"],
+                "is_alive": True}
         finally:
             tracer.finalize_cycle()
 

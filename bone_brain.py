@@ -147,6 +147,14 @@ class NeurotransmitterModulator:
                 max(150.0, min(float(self.MAX_TOKENS), self.BASE_TOKENS + ((c.adrenaline * 600) - (c.cortisol * 300)))))}
         return params
 
+class SynapseError(Exception):
+    pass
+
+class AuthError(SynapseError):
+    pass
+
+class TransientError(SynapseError):
+    pass
 
 class LLMInterface:
     def __init__(self, events_ref: Optional[EventBus] = None, provider: str = None,
@@ -170,8 +178,7 @@ class LLMInterface:
             if elapsed > 10.0:
                 self.circuit_state = "HALF_OPEN"
                 if self.events:
-                    self.events.log(f"{Prisma.CYN}⚡ SYNAPSE: Nerve healing. Attempting reconnection...{Prisma.RST}",
-                                    "SYS")
+                    self.events.log(f"{Prisma.CYN}⚡ SYNAPSE: Nerve healing. Attempting reconnection...{Prisma.RST}", "SYS")
                 return True
             return False
         return True
@@ -181,60 +188,80 @@ class LLMInterface:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"}
         data = json.dumps(payload).encode("utf-8")
-        last_error = None
         for attempt in range(max_retries + 1):
             try:
                 req = urllib.request.Request(self.base_url, data=data, headers=headers)
                 with urllib.request.urlopen(req, timeout=timeout) as response:
                     if response.status == 200:
                         body = response.read().decode("utf-8")
-                        result = json.loads(body)
-                        choices = result.get("choices", [])
-                        if not choices:
-                            return ""
-                        content = choices[0].get("message", {}).get("content", "")
-                        return content
-                    raise Exception(f"HTTP {response.status}")
+                        return self._parse_response(body)
+            except urllib.error.HTTPError as e:
+                if e.code in [401, 403]:
+                    raise AuthError(f"AUTHENTICATION FAILURE ({e.code}): Check your API Key.")
+                if e.code >= 500 or e.code == 429:
+                    self._log_flicker(attempt, e)
+                    time.sleep(2 ** attempt)
+                    continue
+                raise SynapseError(f"HTTP {e.code}: {e.reason}")
+            except (urllib.error.URLError, TimeoutError) as e:
+                self._log_flicker(attempt, e)
+                time.sleep(2 ** attempt)
             except Exception as e:
-                last_error = e
-                if attempt < max_retries:
-                    backoff = 1.0 * (attempt + 1)
-                    if self.events:
-                        self.events.log(f"{Prisma.YEL}⚡ SYNAPSE FLICKER: Retrying in {backoff}s... ({e}){Prisma.RST}",
-                                        "SYS")
-                    time.sleep(backoff)
-        raise last_error
+                raise SynapseError(f"Unexpected Protocol Failure: {e}")
+        raise TransientError(f"Max retries ({max_retries}) exhausted.")
+
+    def _parse_response(self, body: str) -> str:
+        try:
+            result = json.loads(body)
+            if "choices" in result:
+                return result["choices"][0].get("message", {}).get("content", "")
+            return ""
+        except json.JSONDecodeError:
+            raise SynapseError("Neural noise. Response was not valid JSON.")
+
+    def _log_flicker(self, attempt, error):
+        if self.events and attempt < 2:
+            self.events.log(f"{Prisma.YEL}⚡ SYNAPSE FLICKER (Attempt {attempt + 1}): {error}{Prisma.RST}", "SYS")
 
     def generate(self, prompt: str, params: Dict[str, Any]) -> str:
         if "reset" in prompt.lower() and "system" in prompt.lower():
             self.failure_count = 0
             self.circuit_state = "CLOSED"
             return "[SYSTEM]: Circuit Breaker Manually Reset."
-        if not self._is_synapse_active(): return self.mock_generation(prompt, reason="CIRCUIT_BROKEN")
-        if self.provider == "mock": return self.mock_generation(prompt)
+        if not self._is_synapse_active():
+            return self.mock_generation(prompt, reason="CIRCUIT_BROKEN")
+        if self.provider == "mock":
+            return self.mock_generation(prompt)
         payload = {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
             "stop": ["=== PARTNER INPUT ===", "=== SYSTEM KERNEL ===", "\n\nUser:", "| System:"]}
         payload.update(params)
-        for attempt in range(3):
-            try:
-                content = self._transmit(payload, timeout=60.0)
-                if content and len(content.strip()) > 1:
-                    self.failure_count = 0
-                    self.circuit_state = "CLOSED"
-                    return content
-            except Exception as e:
-                self.failure_count += 1
-                self.last_failure_time = time.time()
-                if self.failure_count >= self.failure_threshold:
-                    self.circuit_state = "OPEN"
-                    if self.events: self.events.log(f"{Prisma.RED}⚡ SYNAPSE SEVERED: {e}{Prisma.RST}", "CRIT")
-                    return self.mock_generation(prompt, reason="SEVERED")
-                if self.provider != "ollama" and self.circuit_state != "OPEN":
-                    fallback = self._local_fallback(prompt, params)
-                    if "FALLBACK_DEAD" not in fallback: return fallback
+        try:
+            content = self._transmit(payload, timeout=60.0)
+            if content:
+                if self.failure_count > 0:
+                    if self.events: self.events.log(f"{Prisma.GRN}⚡ SYNAPSE RESTORED.{Prisma.RST}", "SYS")
+                self.failure_count = 0
+                self.circuit_state = "CLOSED"
+                return content
+        except AuthError as e:
+            self.circuit_state = "OPEN"
+            self.failure_count = self.failure_threshold + 1
+            if self.events: self.events.log(f"{Prisma.RED}⚡ AUTHENTICATION SEVERED: {e}{Prisma.RST}", "CRIT")
+            return f"[SYSTEM]: CRITICAL AUTH FAILURE. {e}"
+        except Exception as e:
+            self.failure_count += 1
+            self.last_failure_time = time.time()
+            if self.failure_count >= self.failure_threshold:
+                self.circuit_state = "OPEN"
+                if self.events: self.events.log(
+                    f"{Prisma.RED}⚡ SYNAPSE OVERLOAD: Circuit Breaker Tripped ({e}){Prisma.RST}", "CRIT")
+                return self.mock_generation(prompt, reason="SEVERED")
+            if self.provider != "ollama":
+                fallback = self._local_fallback(prompt, params)
+                if "FALLBACK_DEAD" not in fallback: return fallback
         return self.mock_generation(prompt, reason="SILENCE")
 
     def _local_fallback(self, prompt: str, params: Dict) -> str:
@@ -282,12 +309,17 @@ class PromptComposer:
         user_name = state.get('user_profile', {}).get('name', 'User')
         semantic_ops = state.get("semantic_operators", [])
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
+        scenarios = TheLore.get("scenarios") or {}
+        banned_words = scenarios.get("BANNED_CLICHES", [])
+        ban_string = ", ".join(banned_words) if banned_words else "obsidian, dust motes, neon-soaked"
         style_notes = [
             f"Role: {role} for {user_name}.",
-            "Directive: Immediate Immersion. Do not preface the experience. Do not ask for permission.",
-            "Constraint: Treat the 'Current Location' as a physical reality. Use the 5-senses grounding technique.",
+            "Directive: Start the adventure immediately. Do not preface the experience. Do not ask for permission.",
+            "Constraint: Treat the 'Current Location' as a physical reality. Use the 5-senses grounding technique, but weave it into the narrative, don't just list off things.",
+            "CREATIVITY PROTOCOL: Use JSON data references (e.g. locations, inventory, lexicon) as metaphorical inspiration, not literal scripts. Diverge.",
+            f"NEGATIVE CONSTRAINT: Do NOT use these words/phrases: {ban_string}.",
             "CRITICAL FORMATTING:",
-            "   - Write in standard, immersive prose.",
+            "   - Write in an engaging, active, creative, and immersive prose. Keep it cohesive.",
             "   - Use Headers for location changes.",
             "   - Use DOUBLE NEWLINES between paragraphs.",
             "=== QUANTUM INVENTORY RULES (STRICT) ===",
@@ -357,6 +389,8 @@ class ResponseValidator:
             "large language model", "AI assistant", "cannot feel", "as an AI",
             "against my programming", "cannot comply", "language model",
             "delve into", "rich tapestry"]
+        scenarios = TheLore.get("scenarios") or {}
+        self.style_bans = scenarios.get("BANNED_CLICHES", ["obsidian", "dust motes"])
         self.scrub_patterns = [
             (r"Current Location:.*?(?=\n|$)", ""),
             (r"INVENTORY:.*?(?=\n|$)", ""),
@@ -395,6 +429,9 @@ class ResponseValidator:
                     "valid": False,
                     "reason": "IMMISSION_BREAK",
                     "replacement": self.immersion_break_msg}
+        for cliche in self.style_bans:
+            if cliche.lower() in low_resp:
+                pass
         if len(sanitized_response.strip()) < 5:
             return {"valid": False, "reason": "STUTTER", "replacement": "The vision fractures. Static remains."}
         return {"valid": True, "content": sanitized_response}
@@ -439,16 +476,12 @@ class TheCortex:
         return clean_text, found, lost
 
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
-        # 1. Handle Meta-Commands
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
-        # 2. Run Engine Cycle
         is_boot_sequence = "SYSTEM_BOOT:" in user_input
         sim_result = self.sub.cycle_controller.run_turn(user_input, is_system=is_system)
         if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]: return sim_result
-        # 3. Gather State
         full_state = self.gather_state(sim_result)
-        # 4. Apply Special Modes (Boot/VSL)
         modifiers = self.symbiosis.get_prompt_modifiers()
         if self.consultant and self.consultant.active:
             self._apply_vsl_overlay(full_state, user_input, sim_result)
@@ -456,13 +489,11 @@ class TheCortex:
             self._apply_boot_overlay(full_state, user_input)
             modifiers["include_inventory"] = False
             user_input = "Entering reality..."
-        # 5. Neuro-Modulation
         llm_params = self.modulator.modulate(
             full_state["bio"].get("chem", {}),
             full_state["physics"].get("voltage", 5.0),
             latency_penalty=getattr(self.sub.host_stats, "latency", 0.0))
         if is_boot_sequence: llm_params.update({"temperature": 1.3, "top_p": 0.95})
-        # 6. Compose & Generate
         final_prompt = self.composer.compose(
             full_state, user_input,
             ballast=self.ballast_active, modifiers=modifiers,
@@ -470,16 +501,13 @@ class TheCortex:
         start_time = time.time()
         raw_resp = self.llm.generate(final_prompt, llm_params)
         final_text, new_loot, lost_loot = self._harvest_loot(raw_resp)
-        # 7. Post-Process (Inventory, Logs, Telemetry)
         inv_logs = self._process_inventory_changes(new_loot, lost_loot)
         self._log_telemetry(final_prompt, final_text, full_state, sim_result)
         self.learn_from_response(final_text)
-        # 8. Validation & History
         val_res = self.validator.validate(final_text, full_state)
         final_output = val_res["content"] if val_res["valid"] else val_res["replacement"]
         self.symbiosis.monitor_host(time.time() - start_time, final_output, len(final_prompt))
         self._update_history("SYSTEM_INIT" if is_boot_sequence else user_input, final_output)
-        # 9. Final Packaging
         sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_output}{Prisma.RST}"
         if inv_logs: sim_result["ui"] += "\n" + "\n".join(inv_logs)
         sim_result["raw_content"] = final_output
@@ -504,8 +532,10 @@ class TheCortex:
         state["mind"]["style_directives"] = [
             "You are The Architect.",
             f"TARGET SEED: {seed}",
-            "DIRECTIVE: Build the world from the first sensation up. Do not describe the seed literally.",
-            "STYLE: Sensory. Grounded. Atmospheric."]
+            "DIRECTIVE: Build the world from the first sensation up.",
+            "INTERPRETATION: The seed is a metaphor. If the seed is 'Hospital', make it a place of healing, not necessarily a literal hospital.",
+            "STYLE: Sensory. Grounded. Atmospheric.",
+            "ANTI-PATTERN: Avoid cliches 'obsidian', 'neon', 'dust motes' and 'pulsing'. Be specific. Always leave a little room for whimsy."]
         state["dialogue_history"] = []
 
     def _process_inventory_changes(self, found, lost):

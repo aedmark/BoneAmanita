@@ -116,7 +116,8 @@ class BoneArchitect:
             plasticity=NeuroPlasticity(),
             governor=MetabolicGovernor(),
             shimmer=ShimmerState(),
-            parasite=BioParasite(mind.mem, lex))
+            parasite=BioParasite(mind.mem, lex),
+            events=events)
 
     @staticmethod
     def _construct_physics(events, bio) -> PhysSystem:
@@ -149,24 +150,35 @@ class BoneArchitect:
     @staticmethod
     def awaken(embryo: SystemEmbryo) -> SystemEmbryo:
         events = embryo.bio.mito.events
+        load_result = None
         try:
-            load_result = embryo.mind.mem.autoload_last_spore()
+            if hasattr(embryo.mind.mem, "autoload_last_spore"):
+                load_result = embryo.mind.mem.autoload_last_spore()
         except Exception as e:
-            events.log(f"{Prisma.RED}[ARCHITECT]: Spore corruption ({e}).{Prisma.RST}", "SYS")
+            events.log(f"{Prisma.RED}[ARCHITECT]: Spore resurrection failed: {e}{Prisma.RST}", "CRIT")
             load_result = None
-        inherited_traits = {}
-        inherited_antibodies = set()
-        soul_legacy = {}
-        continuity_data = None
+        embryo.soul_legacy = {}
+        embryo.continuity = None
         recovered_atlas = {}
-        if load_result:
-            if len(load_result) >= 1: inherited_traits = load_result[0]
-            if len(load_result) >= 2: inherited_antibodies = load_result[1]
-            if len(load_result) >= 3: soul_legacy = load_result[2]
-            if len(load_result) >= 4: continuity_data = load_result[3]
-            if len(load_result) >= 5: recovered_atlas = load_result[4]
-        if hasattr(embryo.physics, "nav") and hasattr(embryo.physics.nav, "import_atlas"):
-            if recovered_atlas:
-                embryo.physics.nav.import_atlas(recovered_atlas)
-                events.log(f"{Prisma.MAG}[ARCHITECT]: World Map restored.{Prisma.RST}", "SYS")
+        if load_result and isinstance(load_result, (list, tuple)):
+            count = len(load_result)
+            if count > 0:
+                if hasattr(embryo.bio.mito, 'apply_inheritance'):
+                    embryo.bio.mito.apply_inheritance(load_result[0])
+            if count > 1 and isinstance(load_result[1], (list, set)):
+                if hasattr(embryo.bio.immune, 'load_antibodies'):
+                    embryo.bio.immune.load_antibodies(load_result[1])
+            if count > 2 and isinstance(load_result[2], dict):
+                embryo.soul_legacy = load_result[2]
+            if count > 3 and isinstance(load_result[3], dict):
+                embryo.continuity = load_result[3]
+            if count > 4 and isinstance(load_result[4], dict):
+                recovered_atlas = load_result[4]
+        if recovered_atlas and hasattr(embryo.physics, "nav"):
+            if hasattr(embryo.physics.nav, "import_atlas"):
+                try:
+                    embryo.physics.nav.import_atlas(recovered_atlas)
+                    events.log(f"{Prisma.MAG}[ARCHITECT]: World Map restored from Spore.{Prisma.RST}", "SYS")
+                except Exception as e:
+                    events.log(f"{Prisma.OCHRE}[ARCHITECT]: Atlas corrupt, discarding map: {e}{Prisma.RST}", "WARN")
         return embryo

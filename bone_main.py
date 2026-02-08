@@ -38,6 +38,7 @@ def bootstrap_systems():
         else:
             print(f"{Prisma.GRY}[SYS] Checked {cat.name}... OK.{Prisma.RST}")
 
+
 class SessionGuardian:
     def __init__(self, engine_ref):
         self.engine_instance = engine_ref
@@ -53,16 +54,20 @@ class SessionGuardian:
             try:
                 self.engine_instance.shutdown()
             except Exception as e:
-                print(f"Error during graceful shutdown: {e}")
+                print(f"{Prisma.RED}Error during graceful shutdown: {e}{Prisma.RST}")
+                self._safe_log(f"SHUTDOWN_ERROR: {e}", "SYS_ERR")
         if self.engine_instance and hasattr(self.engine_instance, "telemetry"):
-            print(self.engine_instance.telemetry.generate_session_summary())
+            try:
+                print(self.engine_instance.telemetry.generate_session_summary())
+            except Exception as e:
+                print(f"{Prisma.GRY}[Telemetry Summary Failed]: {e}{Prisma.RST}")
         if exc_type:
-            print(f"{Prisma.paint(f'CRITICAL FAILURE: {exc_val}', 'R')}")
-            if self.engine_instance and hasattr(self.engine_instance, "events"):
-                try:
-                    self.engine_instance.events.log(f"CRASH: {exc_val}", "SYS")
-                except Exception as e:
-                    print(f"{Prisma.paint(f'LOGGING SYSTEM FAILED: {e}', 'R')}")
+            is_interrupt = issubclass(exc_type, KeyboardInterrupt)
+            err_color = 'Y' if is_interrupt else 'R'
+            print(f"{Prisma.paint(f'EXIT CAUSE: {exc_val}', err_color)}")
+            if not is_interrupt:
+                full_trace = "".join(traceback.format_exception(exc_type, exc_val, exc_tb))
+                self._safe_log(f"CRITICAL CRASH: {exc_val}\n{full_trace}", "CRIT")
         try:
             print(f"{Prisma.paint('Initiating Emergency Spore Preservation...', 'Y')}")
             if self.engine_instance:
@@ -71,9 +76,16 @@ class SessionGuardian:
                 color = 'C' if '✔' in result_msg else 'R'
                 print(f"{Prisma.paint(result_msg, color)}")
         except Exception as e:
-            print(f"FATAL: State corruption during shutdown. {e}")
+            print(f"{Prisma.RED}FATAL: State corruption during Spore creation. {e}{Prisma.RST}")
         print(f"{Prisma.paint('Disconnected.', '0')}")
         return exc_type is KeyboardInterrupt
+
+    def _safe_log(self, msg, cat):
+        if self.engine_instance and hasattr(self.engine_instance, "events"):
+            try:
+                self.engine_instance.events.log(msg, cat)
+            except:
+                pass
 
 class ConfigWizard:
     CONFIG_FILE = "bone_config.json"
@@ -82,11 +94,27 @@ class ConfigWizard:
     def load_or_create():
         if os.path.exists(ConfigWizard.CONFIG_FILE):
             try:
-                with open(ConfigWizard.CONFIG_FILE, "r") as f:
+                with open(ConfigWizard.CONFIG_FILE, "r", encoding='utf-8') as f:
                     return json.load(f)
-            except:
-                print(f"{Prisma.RED}Config corrupt. Re-initializing.{Prisma.RST}")
+            except json.JSONDecodeError as e:
+                print(f"{Prisma.RED}[CONFIG]: JSON Corruption detected: {e}{Prisma.RST}")
+                ConfigWizard._backup_corrupt_file()
+            except IOError as e:
+                print(f"{Prisma.RED}[CONFIG]: Read Error: {e}{Prisma.RST}")
+            except Exception as e:
+                print(f"{Prisma.RED}[CONFIG]: Unexpected Load Failure: {e}{Prisma.RST}")
         return ConfigWizard._run_setup()
+
+    @staticmethod
+    def _backup_corrupt_file():
+        try:
+            timestamp = int(time.time())
+            backup_name = f"{ConfigWizard.CONFIG_FILE}.{timestamp}.bak"
+            os.rename(ConfigWizard.CONFIG_FILE, backup_name)
+            print(f"{Prisma.YEL}   >>> Corrupt config backed up to: {backup_name}{Prisma.RST}")
+            print(f"{Prisma.YEL}   >>> Re-initializing Setup...{Prisma.RST}")
+        except Exception as e:
+            print(f"{Prisma.RED}   >>> FATAL: Could not backup config: {e}{Prisma.RST}")
 
     @staticmethod
     def _run_setup():
@@ -112,6 +140,7 @@ class ConfigWizard:
         return config
 
 class BoneAmanita:
+    events: EventBus
     def __init__(self, config: Dict[str, Any]):
         self.kernel_hash = str(uuid.uuid4())[:8].upper()
         self.config = config
@@ -363,45 +392,31 @@ class BoneAmanita:
         return os.path.join(folder, f"{prefix}_{int(time.time())}.json")
 
     def emergency_save(self, exit_cause: str = "UNKNOWN") -> str:
-        try:
-            if hasattr(self, "mind") and hasattr(self.mind, "mem") and hasattr(self.mind.mem, "session_id"):
-                sess_id = self.mind.mem.session_id
-            else:
-                sess_id = f"boot_crash_{int(time.time())}"
-        except Exception:
-            sess_id = f"total_failure_{int(time.time())}"
+        sess_id = "unknown_session"
+        if hasattr(self, "mind") and hasattr(self.mind, "mem"):
+            sess_id = getattr(self.mind.mem, "session_id", f"crash_{int(time.time())}")
         spore_data = {
             "session_id": sess_id,
             "meta": {
                 "timestamp": time.time(),
                 "final_health": getattr(self, "health", 0),
-                "final_stamina": getattr(self, "stamina", 0),
                 "exit_cause": str(exit_cause),
                 "kernel_hash": getattr(self, "kernel_hash", "UNKNOWN")},
-            "core_graph": {},
             "trauma_vector": getattr(self, "trauma_accum", {})}
         try:
-            if hasattr(self, "mind") and hasattr(self.mind, "mem"):
-                spore_data["core_graph"] = getattr(self.mind.mem, "graph", {})
-        except:
-            pass
-        try:
-            if hasattr(self, "mind") and hasattr(self.mind, "mem") and hasattr(self.mind.mem, "loader"):
+            if hasattr(self.mind.mem, "loader"):
                 path = self.mind.mem.loader.save_spore(f"emergency_{sess_id}.json", spore_data)
                 return f"✔ Spore encapsulated via Loader: {path}"
-            else:
-                fname = self._get_crash_path(f"spore_{sess_id}")
-                with open(fname, 'w', encoding='utf-8') as spore_file:
-                    json.dump(spore_data, spore_file, default=str, indent=2)
-                return f"✔ Spore encapsulated via RAW DUMP: {fname}"
+            fname = self._get_crash_path(f"spore_{sess_id}")
+            with open(fname, 'w', encoding='utf-8') as spore_file:
+                json.dump(spore_data, spore_file, default=str, indent=2)
+            return f"✔ Spore encapsulated via RAW DUMP: {fname}"
+        except (OSError, IOError) as disk_err:
+            self.events.log(f"EMERGENCY SAVE DISK ERROR: {disk_err}", "CRIT")
+            return f"✘ Disk Failure during spore creation: {disk_err}"
         except Exception as e:
-            try:
-                fname = self._get_crash_path("panic_dump")
-                with open(fname, 'w', encoding='utf-8') as panic_file:
-                    json.dump({"error": str(e), "partial_data": str(spore_data)}, panic_file)
-                return f"✘ Encapsulation Failed. Panic dump written to {fname}"
-            except Exception as final_e:
-                return f"✘ TOTAL SYSTEM FAILURE: {final_e}"
+            self.events.log(f"UNEXPECTED ENCAPSULATION FAILURE: {e}", "CRIT")
+            return f"✘ Total System Failure: {e}"
 
     def _ethical_audit(self):
         DESPERATION_THRESHOLD = 0.7
@@ -494,6 +509,7 @@ class BoneAmanita:
                 print(f"{Prisma.GRN}[MEMORY]: State preserved at {save_path}{Prisma.RST}")
             except Exception as e:
                 print(f"{Prisma.RED}[MEMORY]: Save Failed: {e}{Prisma.RST}")
+                self.events.log(f"SHUTDOWN_SAVE_FAILURE: {traceback.format_exc()}", "ERR")
         time.sleep(0.1)
         if hasattr(self, 'lex') and hasattr(self.lex, 'save'):
             print(f"{Prisma.GRY}[LEXICON]: Preserving Hive Mind...{Prisma.RST}")
@@ -506,6 +522,16 @@ class BoneAmanita:
                 self.akashic.save_to_disk("manifest", {})
             except Exception as e:
                 print(f"{Prisma.RED}[AKASHIC]: Save failed: {e}{Prisma.RST}")
+        for system_name, system in [("LEXICON", self.lex), ("AKASHIC", self.akashic)]:
+            if hasattr(system, 'save') or hasattr(system, 'save_all'):
+                try:
+                    print(f"{Prisma.GRY}[{system_name}]: Preserving...{Prisma.RST}")
+                    if hasattr(system, 'save'):
+                        system.save()
+                    else:
+                        system.save_all()
+                except Exception as e:
+                    print(f"{Prisma.RED}[{system_name}]: Save failed: {e}{Prisma.RST}")
 
     def _handle_meta_command(self, text: str) -> Dict[str, Any]:
         parts = text.strip().split()
