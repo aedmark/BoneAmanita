@@ -209,6 +209,7 @@
     "COMPASS_OF_VELOCITY": {
       "description": "It doesn't point North. It points FAST.",
       "function": "ACCELERATOR",
+      "reflex_trigger": "LOW_VOLTAGE",
       "spawn_context": "VOLTAGE_CRITICAL",
       "passive_traits": ["CAFFEINE_DRIP"],
       "usage_msg": "The needle spins. You feel a tailwind."
