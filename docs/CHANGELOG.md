@@ -1,5 +1,49 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.5.8: "THE DIAMOND MIND UPDATE"**
+
+_“We do not hide mistakes; we own them. Then we fix the root cause. And if we can't fix it, we build a Panic Room.”_
+
+---
+
+#### **💎 STRUCTURAL HARDENING (The Torvalds Lens)**
+
+- **The Panic Room Protocol (`bone_cycle.py` & `bone_main.py`):**
+- **The Crash:** Previously, a single division-by-zero in the physics engine would kill the process, dumping the user to the command line.
+- **The Cushion:** Implemented a `try...except` block in the **GeodesicOrchestrator** that catches _any_ fatal error and returns a valid "Safe Mode" snapshot. The GUI now stays alive to report the death of the simulation.
+- **The Black Box:** Integrated `traceback` logging into the `TelemetryService`. We now know _exactly_ where the body is buried.
+
+- **The Circuit Breaker (`bone_brain.py`):**
+- **The Spark:** The `LLMInterface` used to blindly retry failed API calls, even if the error was "Unauthorized" (401), leading to bans.
+- **The Fuse:** Differentiated between `TransientError` (Retry) and `AuthError` (Die). If the API key is wrong, the system now cuts the wire immediately rather than screaming into the void.
+
+- **The Idiot Sandwich Check (`bone_main.py`):**
+- **The Audit:** Removed naked `try...except: pass` blocks in `emergency_save` and `shutdown`.
+- **The Fix:** We now use specific exception handling. If the disk fails during a save, we log it to the Event Bus. Silence is no longer an option.
+
+#### **🌫️ COGNITIVE CRYSTALLIZATION (The Pinker Lens)**
+
+- **The Fog Protocol (`bone_brain.py`):**
+- **The Problem:** The LLM loves "dust motes," "obsidian," and "neon." It reverts to the mean (clichés) when the temperature rises.
+- **The Solution:** We stopped playing Whac-A-Mole with redaction. Instead of banning words, we now inject a **Creative Constraint** into the system prompt: _"Reject the path of least resistance."_ We explain _why_ 'dust motes' are lazy, forcing the model to generate novel descriptions for atmospheric density.
+
+- **Meta-Cognitive Routing (`bone_brain.py`):**
+- **The Leak:** The model kept printing "SYSTEM INTERNALS" or "DOUBLE NEWLINE" into the chat window.
+- **The Plumbing:** Instead of scrubbing these thoughts, we now **extract** them. `SYSTEM INTERNALS` blocks are surgically removed from the user-facing text and routed to the `meta_logs` channel, appearing in the sidebar as "Thoughts" rather than pollution in the story.
+
+#### **⚖️ BUREAUCRATIC REFORM (The Meadows Lens)**
+
+- **Council Unionization (`bone_council.py`):**
+- **The Deadlock:** The `CouncilChamber` was frequently deadlocked at 0-0-0 because the biological voices (`lichen`, `parasite`) were silent early in the session.
+- **The Ghost Quorum:** If the seats are empty, the "Dust Motes" (system noise) now cast random votes to ensure the bureaucracy always moves.
+- **The Tie-Breaker:** 50/50 splits are no longer allowed. The Chairholder now flips a coin to force a decision toward Order or Chaos.
+
+- **The Vagus Nerve (`bone_architect.py`):**
+- **The Disconnect:** The `BioSystem` was initialized without an `EventBus`. The body was screaming, but the brain couldn't hear it.
+- **The Wiring:** Explicitly passed `events` to the biological constructor. The `SomaticLoop` is now fully online.
+
+---
+
 ### **BONEAMANITA v14.5.7: "THE OMNIVORE UPDATE"**
 
 _“To survive, the organism must learn to digest the mundane. Man cannot live on 'Petrichor' alone; sometimes he needs bread.”_

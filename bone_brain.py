@@ -23,7 +23,6 @@ class BrainConfig:
     ADRENALINE_RUSH: float = 600.0
     SEROTONIN_CALM: float = 0.5
 
-
 @dataclass
 class ChemicalState:
     dopamine: float = 0.2
@@ -42,7 +41,6 @@ class ChemicalState:
             val = new_state.get(key, 0.0)
             current = getattr(self, attr)
             setattr(self, attr, (current * (1.0 - weight)) + (val * weight))
-
 
 class NarrativeSpotlight:
     def __init__(self):
@@ -146,6 +144,7 @@ class NeurotransmitterModulator:
             "max_tokens": int(
                 max(150.0, min(float(self.MAX_TOKENS), self.BASE_TOKENS + ((c.adrenaline * 600) - (c.cortisol * 300)))))}
         return params
+
 
 class SynapseError(Exception):
     pass
@@ -311,17 +310,23 @@ class PromptComposer:
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
         scenarios = TheLore.get("scenarios") or {}
         banned_words = scenarios.get("BANNED_CLICHES", [])
-        ban_string = ", ".join(banned_words) if banned_words else "obsidian, dust motes, neon-soaked"
+        hard_bans = ["obsidian", "dust motes", "motes", "neon", "eldritch", "pulsing veins"]
+        for b in hard_bans:
+            if b not in banned_words: banned_words.append(b)
+        ban_string = ", ".join(banned_words)
         style_notes = [
             f"Role: {role} for {user_name}.",
-            "Directive: Start the adventure immediately. Do not preface the experience. Do not ask for permission.",
-            "Constraint: Treat the 'Current Location' as a physical reality. Use the 5-senses grounding technique, but weave it into the narrative, don't just list off things.",
-            "CREATIVITY PROTOCOL: Use JSON data references (e.g. locations, inventory, lexicon) as metaphorical inspiration, not literal scripts. Diverge.",
-            f"NEGATIVE CONSTRAINT: Do NOT use these words/phrases: {ban_string}.",
+            "Directive: Start the adventure immediately. Do not preface the experience. Offer suggestions of actions for the user, when appropriate.",
+            "Constraint: Treat the 'Current Location' as a physical reality. Use the 5-senses grounding technique, but work it into the narrative, don't just make a numbered list.",
+            "=== THE FOG PROTOCOL (STYLE GUIDE) ===",
+            "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
+            "1. REJECT ENTROPY: Do not use the statistically likely adjective. If the scene is cyber, avoid 'neon'. If the scene is old, avoid 'dust motes'.",
+            f"2. CREATIVE CONSTRAINT: The following concepts are 'High Entropy' and MUST be avoided: [{ban_string}].",
+            "3. SOLUTION: If you want to describe dust, describe the texture of the air or the weight of time. Work AROUND the forbidden concepts. That obstacle is the way.",
             "CRITICAL FORMATTING:",
             "   - Write in an engaging, active, creative, and immersive prose. Keep it cohesive.",
-            "   - Use Headers for location changes.",
-            "   - Use DOUBLE NEWLINES between paragraphs.",
+            "   - Use Headers ONLY for major location changes.",
+            "   - Separate paragraphs with a single blank line.",
             "=== QUANTUM INVENTORY RULES (STRICT) ===",
             "1. OBSERVATION: Integrate items naturally into the description. If an item is important, describe it clearly, but do not tag it.",
             "2. ACQUISITION: ONLY output the hidden command [[LOOT: ITEM_NAME]] if the user EXPLICITLY performs a 'take', 'grab', or 'pickup' action.",
@@ -382,21 +387,17 @@ class PromptComposer:
             defaults.update(modifiers)
         return defaults
 
-
 class ResponseValidator:
     def __init__(self):
         self.banned_phrases = [
             "large language model", "AI assistant", "cannot feel", "as an AI",
             "against my programming", "cannot comply", "language model",
             "delve into", "rich tapestry"]
-        scenarios = TheLore.get("scenarios") or {}
-        self.style_bans = scenarios.get("BANNED_CLICHES", ["obsidian", "dust motes"])
         self.scrub_patterns = [
             (r"Current Location:.*?(?=\n|$)", ""),
             (r"INVENTORY:.*?(?=\n|$)", ""),
             (r"Current Biology:.*?(?=\n|$)", ""),
             (r"===.*?===", ""),
-            (r"SYSTEM INTERNALS.*", ""),
             (r"(?im)^User:.*?$", ""),
             (r"(?im)^System:.*?$", ""),
             (r"(?im)^Role:.*?$", ""),
@@ -409,7 +410,15 @@ class ResponseValidator:
         self.immersion_break_msg = f"{Prisma.GRY}[The system attempts to recite a EULA, but hiccups instead.]{Prisma.RST}"
 
     def validate(self, response: str, _state: Dict) -> Dict:
-        clean_text = response
+        extracted_meta_logs = []
+        sys_internal_pattern = re.compile(r"(?i)SYSTEM INTERNALS\s*\n(.*?)(?=\n\n|\Z)", re.DOTALL)
+
+        def extract_meta(match):
+            content = match.group(1).strip()
+            for extracted_line in content.split('\n'):
+                extracted_meta_logs.append(f"[THOUGHT]: {extracted_line}")
+            return ""
+        clean_text = sys_internal_pattern.sub(extract_meta, response)
         for pattern, replacement in self.scrub_patterns:
             clean_text = re.sub(pattern, replacement, clean_text)
         clean_lines = []
@@ -428,14 +437,12 @@ class ResponseValidator:
                 return {
                     "valid": False,
                     "reason": "IMMISSION_BREAK",
-                    "replacement": self.immersion_break_msg}
-        for cliche in self.style_bans:
-            if cliche.lower() in low_resp:
-                pass
-        if len(sanitized_response.strip()) < 5:
-            return {"valid": False, "reason": "STUTTER", "replacement": "The vision fractures. Static remains."}
-        return {"valid": True, "content": sanitized_response}
+                    "replacement": self.immersion_break_msg,
+                    "meta_logs": extracted_meta_logs}
 
+        if len(sanitized_response.strip()) < 5:
+            return {"valid": False, "reason": "STUTTER", "replacement": "The vision fractures. Static remains.", "meta_logs": extracted_meta_logs}
+        return {"valid": True, "content": sanitized_response, "meta_logs": extracted_meta_logs}
 
 class TheCortex:
     def __init__(self, engine_ref, llm_client=None):
@@ -506,10 +513,13 @@ class TheCortex:
         self.learn_from_response(final_text)
         val_res = self.validator.validate(final_text, full_state)
         final_output = val_res["content"] if val_res["valid"] else val_res["replacement"]
+        extracted_logs = val_res.get("meta_logs", [])
         self.symbiosis.monitor_host(time.time() - start_time, final_output, len(final_prompt))
         self._update_history("SYSTEM_INIT" if is_boot_sequence else user_input, final_output)
         sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_output}{Prisma.RST}"
         if inv_logs: sim_result["ui"] += "\n" + "\n".join(inv_logs)
+        if "logs" not in sim_result: sim_result["logs"] = []
+        sim_result["logs"].extend(extracted_logs)
         sim_result["raw_content"] = final_output
         self.ballast_active = False
         return sim_result
@@ -745,7 +755,6 @@ class DreamEngine:
             joined = ", ".join(pruned[:3])
             return f"DEFRAG: Pruned {len(pruned)} dead nodes ({joined}...). Neural load lightened."
         return "DEFRAG: Memory structure is efficient. No pruning needed."
-
 
 class NoeticLoop:
     def __init__(self, mind_layer, bio_layer, events):

@@ -1,4 +1,4 @@
-""" bone_app.py - The Glass Terminal Interface (Fixed) """
+""" bone_app.py - The Glass Terminal Interface (Fixed & Enhanced) """
 
 import streamlit as st
 import time
@@ -7,6 +7,7 @@ import os
 from bone_main import BoneAmanita, ConfigWizard
 from bone_core import Prisma
 
+# --- CONFIGURATION ---
 st.set_page_config(
     page_title="BONEAMANITA [GLASS TERMINAL]",
     page_icon="💀",
@@ -14,69 +15,46 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# --- STYLES ---
 st.markdown("""
 <style>
     .stChatMessage .stMarkdown p {
-        margin-bottom: 1.5em !important; /* Increased from 1.2em */
-        line-height: 1.8 !important;     /* Increased from 1.6 */
+        margin-bottom: 1.5em !important;
+        line-height: 1.8 !important;
         font-size: 1.05rem;
-        display: block;                  /* Ensure block formatting */
+        display: block;
     }
-    
-    /* Ensure lists don't look crushed */
     .stChatMessage .stMarkdown ul, .stChatMessage .stMarkdown ol {
         margin-bottom: 1.2em !important;
     }
-    
-    /* Main Background & Text */
     .stApp {
         background-color: #050505;
         color: #00ff41;
         font-family: 'Courier New', monospace;
     }
-    
-    /* Input Field Styling */
     .stTextInput > div > div > input {
         background-color: #111;
         color: #00ff41;
         border: 1px solid #333;
         font-family: 'Courier New', monospace;
     }
-    
-    /* Sidebar Styling */
     section[data-testid="stSidebar"] {
         background-color: #0a0a0a;
         border-right: 1px solid #222;
     }
-    
-    /* Metric Values */
     div[data-testid="stMetricValue"] {
         font-size: 1.1rem !important;
         color: #00ff41 !important;
     }
-    
-    /* Progress Bars */
     .stProgress > div > div > div > div {
         background-color: #00ff41;
     }
-    
-    /* Chat Messages - Container */
     .stChatMessage {
         background-color: #0e1117;
         border: 1px solid #222;
         border-radius: 5px;
         margin-bottom: 15px;
     }
-    
-    /* Chat Messages - Typography Fixes */
-    /* This targets the paragraph tags inside the markdown to ensure spacing */
-    .stChatMessage .stMarkdown p {
-        margin-bottom: 1.2em !important; /* Force paragraph spacing */
-        line-heightssssssssssssssssssssssssssssssssssssssssssss: 1.6 !important;     /* Improve readability */
-        font-size: 1.05rem;
-    }
-    
-    /* Button Styling */
     .stButton > button {
         border: 1px solid #00ff41;
         color: #00ff41;
@@ -89,6 +67,8 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# --- UTILITIES ---
 
 def strip_ansi(text):
     return Prisma.strip(text)
@@ -104,6 +84,40 @@ def format_log_entry(log_str):
     if "ERROR" in clean or "CRITICAL" in clean: return f"❌ {clean}"
     return f"🔹 {clean}"
 
+def generate_transcript(history):
+    """
+    SLASH PROTOCOL: TRANSCRIPTION
+    Converts the session history into a structured Markdown document.
+    """
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    lines = [f"# BONEAMANITA TRANSCRIPT - {timestamp}", "---"]
+
+    for msg in history:
+        role = msg["role"].upper()
+        # Use raw_content if available to capture the full text before UI slicing
+        content = msg.get("raw_content", msg["content"])
+        clean_content = strip_ansi(content)
+
+        # Header for the turn
+        icon = "👤" if role == "USER" else "💀"
+        lines.append(f"\n### {icon} {role}")
+
+        # The main content
+        lines.append(clean_content)
+
+        # If there are internal logs, fold them into a quote block
+        if "logs" in msg and msg["logs"]:
+            lines.append("\n> **SYSTEM INTERNALS:**")
+            for log in msg["logs"]:
+                clean_log = strip_ansi(str(log))
+                lines.append(f"> * {clean_log}")
+
+    lines.append("\n---")
+    lines.append("*End of Transmission*")
+    return "\n".join(lines)
+
+# --- INITIALIZATION ---
+
 if "history" not in st.session_state:
     st.session_state.history = []
 
@@ -112,6 +126,8 @@ def init_engine():
         config = ConfigWizard.load_or_create()
         if not config: return None
         new_instance = BoneAmanita(config)
+
+        # Only boot if history is empty (fresh load)
         if not st.session_state.history:
             boot_packet = new_instance.engage_cold_boot()
             if boot_packet and "ui" in boot_packet:
@@ -128,6 +144,8 @@ def init_engine():
     except Exception as e:
         st.error(f"Critical Boot Error: {e}")
         return None
+
+# --- SETUP WIZARD ---
 if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_state:
     st.title("/// SYSTEM SETUP ///")
     with st.form("setup_form"):
@@ -142,10 +160,15 @@ if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_s
             with open(ConfigWizard.CONFIG_FILE, "w") as f: json.dump(cfg, f, indent=4)
             st.rerun()
     st.stop()
+
+# --- ENGINE HYDRATION ---
 if "ENGINE" not in st.session_state:
     with st.spinner("Hydrating Spore Casing..."):
         st.session_state.ENGINE = init_engine()
+
 engine = st.session_state.ENGINE
+
+# --- SIDEBAR ---
 with st.sidebar:
     st.header(f"IDENTITY: {engine.user_name.upper()}")
     st.divider()
@@ -178,6 +201,16 @@ with st.sidebar:
     if inv:
         for item in inv: st.code(item, language=None)
     else: st.caption("Belt Empty.")
+
+    # [SLASH]: Added Transcript Export
+    transcript_txt = generate_transcript(st.session_state.history)
+    st.download_button(
+        label="📜 EXPORT LOG",
+        data=transcript_txt,
+        file_name=f"bone_log_{int(time.time())}.md",
+        mime="text/markdown"
+    )
+
     st.divider()
     if st.button("☣️ EMERGENCY DUMP"):
         msg = engine.emergency_save(exit_cause="MANUAL_UI")
