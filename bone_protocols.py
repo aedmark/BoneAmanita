@@ -16,10 +16,20 @@ class ZenGarden:
         self.pebbles_collected = 0
         self.koans = NARRATIVE_DATA.get("ZEN_KOANS", ["The code that is not written has no bugs."])
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "stillness_streak": self.stillness_streak,
+            "max_streak": self.max_streak,
+            "pebbles_collected": self.pebbles_collected}
+
+    def load_state(self, data: Dict[str, Any]):
+        self.stillness_streak = data.get("stillness_streak", 0)
+        self.max_streak = data.get("max_streak", 0)
+        self.pebbles_collected = data.get("pebbles_collected", 0)
+
     def raking_the_sand(self, physics: Any, bio: Dict) -> Tuple[float, Optional[str]]:
         vol = getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0)
-        drag = getattr(physics, "narrative_drag", 0.0) if not isinstance(physics, dict) else physics.get(
-            "narrative_drag", 0.0)
+        drag = getattr(physics, "narrative_drag", 0.0) if not isinstance(physics, dict) else physics.get("narrative_drag", 0.0)
         is_stable = (2.0 <= vol <= 12.0) and (drag <= 4.0)
         if is_stable:
             self.stillness_streak += 1
@@ -31,7 +41,9 @@ class ZenGarden:
                 msg = f"{Prisma.GRY}⛩️ ZEN GARDEN: Entering the quiet zone.{Prisma.RST}"
             elif self.stillness_streak % 5 == 0:
                 self.pebbles_collected += 1
-                msg = f"{Prisma.CYN}⛩️ ZEN GARDEN: {self.stillness_streak} ticks of poise. Efficiency +{int(efficiency_boost * 100)}%{Prisma.RST}"
+                koan = random.choice(self.koans)
+                msg = (f"{Prisma.CYN}⛩️ ZEN GARDEN: {self.stillness_streak} ticks of poise.\n"
+                       f"   \"{koan}\" (Efficiency +{int(efficiency_boost * 100)}%){Prisma.RST}")
             return efficiency_boost, msg
         if self.stillness_streak > 5:
             self.events.log(f"{Prisma.GRY}🍂 ZEN GARDEN: Leaf falls. Turbulence broke the streak.{Prisma.RST}", "SYS")
@@ -41,15 +53,22 @@ class ZenGarden:
 class TheBureau:
     def __init__(self):
         self.stamp_count = 0
-        self.forms = ["Form 27B-6", "Form 1099-B", "Schedule C", "Form W-2", "Form 404"]
-        self.responses = ["Processing...", "Please hold...", "Circle back later.", "Let's put a pin in that."]
+        self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 27B-6", "Form 404"])
+        self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
         self.BUZZWORDS = {"synergy", "paradigm", "leverage", "utilize", "holistic", "bandwidth", "circle back"}
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"stamp_count": self.stamp_count}
+
+    def load_state(self, data: Dict[str, Any]):
+        self.stamp_count = data.get("stamp_count", 0)
 
     def audit(self, physics, bio_state, context=None):
         if bio_state.get("health", 100.0) < 20.0: return None
         vol = getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0)
-        clean_words = getattr(physics, "clean_words", []) if not isinstance(physics, dict) else physics.get("clean_words", [])
-        truth = getattr(physics, "truth_ratio", 0.0) if not isinstance(physics, dict) else physics.get("truth_ratio",0.0)
+        clean_words = getattr(physics, "clean_words", []) if not isinstance(physics, dict) else physics.get(
+            "clean_words", [])
+        truth = getattr(physics, "truth_ratio", 0.0) if not isinstance(physics, dict) else physics.get("truth_ratio", 0.0)
         selected_form = None
         evidence = []
         if vol > 18.0:
@@ -60,7 +79,7 @@ class TheBureau:
                 selected_form = "Form 202-A"
         elif any(w in self.BUZZWORDS for w in clean_words):
             hits = [w for w in clean_words if w in self.BUZZWORDS]
-            selected_form = "Form 404"
+            selected_form = random.choice(self.forms)
             evidence = hits
         elif vol < 2.0 and len(clean_words) > 5:
             selected_form = "Schedule C"
@@ -70,21 +89,26 @@ class TheBureau:
         self.stamp_count += 1
         chaos_tax = 5.0
         if selected_form == "ZONING_VIOLATION": chaos_tax = 15.0
-        ui_msg = f"{Prisma.GRY}🏢 THE BUREAU: {random.choice(self.responses)}{Prisma.RST}\n   {Prisma.WHT}[Filed: {selected_form}]{Prisma.RST}"
+        bureau_resp = random.choice(self.responses)
+        ui_msg = f"{Prisma.GRY}🏢 THE BUREAU: {bureau_resp}{Prisma.RST}\n   {Prisma.WHT}[Filed: {selected_form}]{Prisma.RST}"
         if evidence:
             ui_msg += f"\n   {Prisma.RED}Evidence: {', '.join(evidence)}{Prisma.RST}"
-
         return {
             "status": "AUDITED",
             "ui": ui_msg,
             "log": f"BUREAUCRACY: Filed {selected_form}. Chaos Tax: -{chaos_tax:.1f} ATP.",
             "atp_gain": -chaos_tax}
 
-
 class TherapyProtocol:
     def __init__(self):
         self.streaks = {k: 0 for k in BoneConfig.TRAUMA_VECTOR.keys()}
         self.HEALING_THRESHOLD = 5
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"streaks": self.streaks}
+
+    def load_state(self, data: Dict[str, Any]):
+        self.streaks = data.get("streaks", {k: 0 for k in BoneConfig.TRAUMA_VECTOR.keys()})
 
     def check_progress(self, phys, stamina, current_trauma_accum, qualia=None):
         counts = getattr(phys, "counts", {}) if not isinstance(phys, dict) else phys.get("counts", {})
@@ -104,7 +128,6 @@ class TherapyProtocol:
                     healed_types.append(trauma_type)
         return healed_types
 
-
 class KintsugiProtocol:
     PATH_SCAR = "SCAR"
     PATH_INTEGRATION = "KINTSUGI"
@@ -113,6 +136,12 @@ class KintsugiProtocol:
     def __init__(self):
         self.active_koan = None
         self.koans = NARRATIVE_DATA.get("KINTSUGI_KOANS", ["The crack is where the light enters."])
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"active_koan": self.active_koan}
+
+    def load_state(self, data: Dict[str, Any]):
+        self.active_koan = data.get("active_koan", None)
 
     def check_integrity(self, stamina):
         if stamina < 15.0 and not self.active_koan:
@@ -165,12 +194,78 @@ class KintsugiProtocol:
             success = True
         return {"success": success, "msg": msg, "healed": healed_log}
 
+
+class TheCriticsCircle:
+    def __init__(self, events_ref):
+        self.events = events_ref
+        self.critics = NARRATIVE_DATA.get("LITERARY_CRITICS", {})
+        self.active_cooldowns = {}
+        self.last_review_turn = 0
+
+    def to_dict(self):
+        return {"active_cooldowns": self.active_cooldowns, "last_review_turn": self.last_review_turn}
+
+    def load_state(self, data):
+        self.active_cooldowns = data.get("active_cooldowns", {})
+        self.last_review_turn = data.get("last_review_turn", 0)
+
+    def audit_performance(self, physics: Any, turn_count: int) -> Optional[str]:
+        if turn_count - self.last_review_turn < 10: return None
+        p = physics if isinstance(physics, dict) else getattr(physics, "__dict__", {})
+        voltage = p.get("voltage", 0.0)
+        drag = p.get("narrative_drag", 0.0)
+        if "velocity" not in p: p["velocity"] = voltage * (1.0 / max(0.1, drag))
+        best_match = None
+        highest_intensity = 0.0
+        review_type = "neutral"
+
+        for key, critic in self.critics.items():
+            if self.active_cooldowns.get(key, 0) > turn_count: continue
+            prefs = critic.get("preferences", {})
+            score = 0.0
+            for metric, target in prefs.items():
+                current = p.get(metric, 0.0)
+                if target > 0:
+                    score += current * target
+                else:
+                    score -= current * abs(target)
+
+            if score > 15.0:
+                best_match = (key, critic)
+                highest_intensity = score
+                review_type = "high"
+            elif score < -15.0:
+                best_match = (key, critic)
+                highest_intensity = abs(score)
+                review_type = "low"
+
+        if best_match:
+            key, critic = best_match
+            self.last_review_turn = turn_count
+            self.active_cooldowns[key] = turn_count + 50
+            reviews = critic["reviews"].get(review_type, ["Hrm."])
+            comment = random.choice(reviews)
+            color = Prisma.GRN if review_type == "high" else Prisma.RED
+            icon = "🌟" if review_type == "high" else "💢"
+            return f"{color}{icon} CRITIC REVIEW ({critic['name']}): \"{comment}\"{Prisma.RST}"
+        return None
+
 class LimboLayer:
     MAX_ECTOPLASM = 50
-    STASIS_SCREAMS = ["BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT", "HALF AWAKE", "REVIVE FAILED"]
+    STASIS_SCREAMS = NARRATIVE_DATA.get("CASSANDRA_SCREAMS", [
+        "BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT"])
 
     def __init__(self):
         self.ghosts = deque(maxlen=self.MAX_ECTOPLASM); self.haunt_chance = 0.05; self.stasis_leak = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "ghosts": list(self.ghosts),
+            "stasis_leak": self.stasis_leak}
+
+    def load_state(self, data: Dict[str, Any]):
+        self.ghosts = deque(data.get("ghosts", []), maxlen=self.MAX_ECTOPLASM)
+        self.stasis_leak = data.get("stasis_leak", 0.0)
 
     def absorb_dead_timeline(self, filepath):
         try:
@@ -184,14 +279,16 @@ class LimboLayer:
         except (IOError, json.JSONDecodeError): pass
 
     def trigger_stasis_failure(self, intended_thought):
-        self.stasis_leak += 1.0; horror = random.choice(self.STASIS_SCREAMS)
+        self.stasis_leak += 1.0
+        horror = random.choice(self.STASIS_SCREAMS)
         self.ghosts.append(f"{Prisma.VIOLET}{horror}{Prisma.RST}")
-        return f"{Prisma.CYN}STASIS ERROR: '{intended_thought}' froze halfway. It is banging on the glass.{Prisma.RST}"
+        return f"{Prisma.CYN}STASIS ERROR: '{intended_thought}' froze halfway. {horror}.{Prisma.RST}"
 
     def haunt(self, text):
         if self.stasis_leak > 0:
             if random.random() < 0.2:
-                self.stasis_leak = max(0.0, self.stasis_leak - 0.5); scream = random.choice(self.STASIS_SCREAMS)
+                self.stasis_leak = max(0.0, self.stasis_leak - 0.5)
+                scream = random.choice(self.STASIS_SCREAMS)
                 return f"{text} ...{Prisma.RED}{scream}{Prisma.RST}..."
         if self.ghosts and random.random() < self.haunt_chance:
             spirit = random.choice(self.ghosts)
@@ -201,6 +298,15 @@ class LimboLayer:
 class TheFolly:
     def __init__(self):
         self.gut_memory = deque(maxlen=50); self.global_tastings = Counter()
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "gut_memory": list(self.gut_memory),
+            "global_tastings": dict(self.global_tastings)}
+
+    def load_state(self, data: Dict[str, Any]):
+        self.gut_memory = deque(data.get("gut_memory", []), maxlen=50)
+        self.global_tastings = Counter(data.get("global_tastings", {}))
 
     @staticmethod
     def audit_desire(physics, stamina):

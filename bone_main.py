@@ -1,4 +1,4 @@
-""" BONEAMANITA 14.5.9
+""" BONEAMANITA 14.6.0
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -10,7 +10,7 @@ from bone_commands import CommandProcessor
 from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer, Limbo
 from bone_lexicon import TheLexicon, SomaticInterface
 from bone_inventory import GordonKnot
-from bone_protocols import TheFolly, KintsugiProtocol, TherapyProtocol, TheBureau, ZenGarden
+from bone_protocols import TheFolly, KintsugiProtocol, TherapyProtocol, TheBureau, ZenGarden, TheCriticsCircle
 from bone_drivers import ChorusDriver, SynergeticLensArbiter, BoneConsultant
 from bone_physics import CosmicDynamics, ZoneInertia
 from bone_body import SomaticLoop
@@ -44,7 +44,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.5.9', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.6.0', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -236,8 +236,10 @@ class BoneAmanita:
         self.navigator = TheCartographer(self.embryo.shimmer)
         self.zen = ZenGarden(self.events)
         self.tinkerer = TheTinkerer(self.gordon, self.events, self.akashic)
+        self.critics = TheCriticsCircle(self.events)
         self.village = {
             "town_hall": self.town_hall,
+            "critics": self.critics,
             "council": self.council,
             "repro": self.repro,
             "projector": self.projector,
@@ -254,6 +256,8 @@ class BoneAmanita:
         self.cmd = CommandProcessor(self, Prisma, self.lex, BoneConfig)
         if self.phys:
             self.phys.dynamics = self.cosmic
+
+
 
     def _initialize_cognition(self):
         self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.folly, self.events)
@@ -476,6 +480,25 @@ class BoneAmanita:
             print(cold_result["ui"])
         return cold_result
 
+    def _gather_village_state(self) -> Dict[str, Any]:
+        state = {}
+        for name, component in self.village.items():
+            if hasattr(component, 'to_dict'):
+                try:
+                    state[name] = component.to_dict()
+                except Exception as e:
+                    self.events.log(f"Serialization failed for {name}: {e}", "ERR")
+        return state
+
+    def _restore_village_state(self, state_data: Dict[str, Any]):
+        if not state_data: return
+        for name, data in state_data.items():
+            if name in self.village and hasattr(self.village[name], 'load_state'):
+                try:
+                    self.village[name].load_state(data)
+                except Exception as e:
+                    print(f"{Prisma.RED}[RESUME]: Failed to hydrate {name}: {e}{Prisma.RST}")
+
     def save_checkpoint(self, history: list = None) -> str:
         try:
             folder = "saves"
@@ -496,13 +519,13 @@ class BoneAmanita:
                 "stamina": self.stamina,
                 "trauma_accum": self.trauma_accum,
                 "soul_data": self.soul.to_dict(),
+                "village_data": self._gather_village_state(),
                 "continuity": continuity_packet,
                 "timestamp": time.time(),
                 "chat_history": history if history else []}
             path = os.path.join(folder, "quicksave.json")
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump(state_data, f, indent=2, default=str)
-
             return f"✔ Checkpoint Saved: {path}"
         except Exception as e:
             self.events.log(f"SAVE FAILED: {e}", "SYS_ERR")
@@ -522,6 +545,8 @@ class BoneAmanita:
             self.trauma_accum = data.get("trauma_accum", {})
             if "soul_data" in data and hasattr(self, "soul"):
                 self.soul.load_from_dict(data["soul_data"])
+            if "village_data" in data:
+                 self._restore_village_state(data["village_data"])
             if "continuity" in data:
                 self.embryo.continuity = data["continuity"]
                 if "inventory" in data["continuity"]:
@@ -561,6 +586,7 @@ class BoneAmanita:
                     mitochondria_traits=self.bio.mito.adapt(0),
                     antibodies=list(self.bio.immune.active_antibodies),
                     soul_data=self.soul.to_dict(),
+                    village_data=self._gather_village_state(),
                     continuity=continuity_packet,
                     world_atlas=atlas_data)
                 print(f"{Prisma.GRN}[MEMORY]: State preserved at {save_path}{Prisma.RST}")
@@ -626,7 +652,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 14.5.9', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 14.6.0', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

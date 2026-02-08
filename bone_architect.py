@@ -1,8 +1,8 @@
 """ bone_architect.py - "We shape our buildings; thereafter they shape us." - Churchill """
-
+import random
 from typing import Tuple, Dict, Any, Optional
 from dataclasses import dataclass
-from bone_core import Prisma, MindSystem, PhysSystem, PhysicsPacket
+from bone_core import Prisma, MindSystem, PhysSystem, PhysicsPacket, TheLore
 from bone_village import MirrorGraph, TheCartographer
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_symbiosis import MycotoxinFactory, LichenSymbiont, ParasiticSymbiont
@@ -26,6 +26,9 @@ class SystemEmbryo:
 class PanicRoom:
     @staticmethod
     def get_safe_physics():
+        narrative = TheLore.get("narrative_data") or {}
+        cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["[SYSTEM FAILURE]"])
+        fail_msg = random.choice(cathedral_logs)
         return PhysicsPacket(
             voltage=5.0,
             narrative_drag=5.0,
@@ -38,7 +41,7 @@ class PanicRoom:
             flow_state="SAFE_MODE",
             zone="PANIC_ROOM",
             truth_ratio=1.0,
-            raw_text="[SYSTEM FAILURE]: Physics Engine yeeted. Welcome to the Void.",
+            raw_text=f"[PANIC PROTOCOL]: {fail_msg}",
             antigens=0,
             perfection_streak=0,
             turbulence=0.0,

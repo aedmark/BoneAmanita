@@ -2,7 +2,8 @@
 
 import traceback, random, time, uuid, copy
 from typing import Dict, Any, List, cast
-from bone_core import Prisma, BoneConfig, CycleContext, PhysicsPacket, TelemetryService, BonePresets, ArchetypeArbiter, PhysicsSandbox
+from bone_core import Prisma, BoneConfig, CycleContext, PhysicsPacket, TelemetryService, BonePresets, ArchetypeArbiter, \
+    PhysicsSandbox, TheLore
 from bone_metaphysics import CongruenceValidator
 from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, ChromaScope
 from bone_gui import get_renderer
@@ -360,6 +361,14 @@ class MachineryPhase(SimulationPhase):
         if ctx.is_system_event: return ctx
         physics = ctx.physics
         phys_dict = physics.to_dict()
+        if hasattr(self.eng, 'critics'):
+            review = self.eng.critics.audit_performance(phys_dict, self.eng.tick_count)
+            if review:
+                ctx.log(review)
+                if "🌟" in review:
+                    ctx.physics.narrative_drag = max(0.0, ctx.physics.narrative_drag - 1.0)
+                else:
+                    ctx.physics.narrative_drag += 1.0
         eff_boost, zen_msg = self.eng.zen.raking_the_sand(phys_dict, ctx.bio_result)
         if zen_msg: ctx.log(zen_msg)
         if eff_boost > 0:
@@ -696,6 +705,10 @@ class CycleSimulator:
     def handle_phase_crash(self, ctx, phase_name, error):
         print(f"\n{Prisma.RED}!!! CRITICAL {phase_name} CRASH !!!{Prisma.RST}")
         traceback.print_exc()
+        narrative = TheLore.get("narrative_data") or {}
+        cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["System Failure."])
+        eulogy = random.choice(cathedral_logs)
+        ctx.log(f"{Prisma.RED}🏛️ CATHEDRAL COLLAPSE: \"{eulogy}\"{Prisma.RST}")
         component_map = {
             "OBSERVE": "PHYSICS",
             "METABOLISM": "BIO",

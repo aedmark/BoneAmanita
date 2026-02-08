@@ -1,5 +1,46 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.6.0: "THE MNEMONIC WIRE"**
+
+_“We found the ghost in the machine, and we gave it a microphone.”_
+
+---
+
+#### **💎 STRUCTURAL HARDENING (The Torvalds Lens)**
+
+- **The Village Memory (`bone_protocols.py` & `bone_main.py`):**
+- **The Amnesia:** The Village protocols (`ZenGarden`, `TheBureau`, `TheFolly`) were stateless. Every time the system rebooted, the Zen Garden forgot its stillness streak, and the Bureau lost its stamp count. The simulation had no object permanence.
+- **The Fix:** Implemented standard `to_dict` and `load_state` interfaces across all protocols.
+- **The Wiring:** Updated `save_checkpoint` and `resume_checkpoint` in the kernel to serialize the entire `village_data` dictionary. The Bureau now remembers your paperwork forever.
+
+#### **🧠 COGNITIVE WIRING (The Pinker Lens)**
+
+- **The Silent Library (`bone_protocols.py`):**
+- **The Disconnect:** `narrative_data.json` was a "Stock without a Flow." The system had rich lists of `BUREAU_FORMS` and `ZEN_KOANS`, but the protocols were hardcoded to use generic placeholders.
+- **The Flow:** Wired the JSON directly into the class logic.
+- `ZenGarden` now recites actual Koans upon mastery.
+- `TheBureau` now issues specific forms ("Form 27B-6") and rejections.
+- `LimboLayer` now screams with the specific voices of Cassandra.
+
+- **The Critics Circle (`bone_protocols.py`):**
+- **New Class:** `TheCriticsCircle`.
+- **The Mechanism:** The system now actively audits the Physics Engine against the personas defined in `LITERARY_CRITICS`.
+- **The Consequence:** If you write with high voltage, **Hunter** (The Gonzo) cheers. If you write with dry structuralism, **Sherlock** (The Academic) approves. Narrative style now has mechanical feedback (Drag modification).
+
+#### **🛡️ RESILIENCE (The Fuller Lens)**
+
+- **The Cathedral Eulogy (`bone_cycle.py` & `bone_architect.py`):**
+- **The Silence:** Previously, a critical crash resulted in a generic Python traceback or a "System Failure" message.
+- **The Voice:** Wired `CATHEDRAL_COLLAPSE_LOGS` into the `handle_phase_crash` and `PanicRoom` protocols. If the engine dies, it now dies poetically ("The geodesic dome is cracking").
+
+#### **🎭 SCENARIO EXPANSION (The Schur Lens)**
+
+- **The Cliché Purge (`scenarios.json`):**
+- **The Kill List:** Expanded `BANNED_CLICHES` to target the "Holy Trinity" of LLM filler: _Tapestry_, _Neon-Soaked_, and _Obsidian_.
+- **The New World:** Replaced generic archetypes with hyper-specific, absurd prompts (e.g., "A dentist office where the magazines are blank"). The engine is forced to abandon the "Path of Least Resistance."
+
+---
+
 ### **BONEAMANITA v14.5.9: "THE PERMANENCE PATCH"**
 
 _“A story without memory is just noise. We do not simply exist; we record.”_
