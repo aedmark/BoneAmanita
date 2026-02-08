@@ -4,7 +4,7 @@ import math, random, time
 from collections import deque, Counter
 from dataclasses import dataclass, field
 from typing import Set, Optional, Dict, List, Any, Tuple
-from bone_spores import MycotoxinFactory, LichenSymbiont, HyphalInterface, ParasiticSymbiont
+from bone_spores import ImmuneMycelium, BioLichen, BioParasite
 from bone_lexicon import TheLexicon
 from bone_core import Prisma, BoneConfig, TheLore
 
@@ -64,16 +64,14 @@ class BioConstants:
     GOV_DRAG_HIGH = 4.0
     GOV_DRAG_LOW = 2.0
 
-
 @dataclass
 class BioSystem:
     mito: 'MitochondrialForge'
     endo: 'EndocrineSystem'
     governor: 'MetabolicGovernor'
-    immune: Optional[MycotoxinFactory] = None
-    lichen: Optional[LichenSymbiont] = None
-    gut: Optional[HyphalInterface] = None
-    parasite: Optional[ParasiticSymbiont] = None
+    immune: Optional[ImmuneMycelium] = None
+    lichen: Optional[BioLichen] = None
+    parasite: Optional[BioParasite] = None
     plasticity: Any = None
     shimmer: Any = None
     events: Any = None
@@ -337,19 +335,6 @@ class SomaticLoop:
             stamina = 10.0
         total_yield = 0.0
         enzyme = "NONE"
-        if self.bio.gut:
-            gut_enzyme, nutrient_data = self.bio.gut.secrete(text, phys)
-            gut_yield = nutrient_data.get("yield", 0.0)
-            gut_toxin = nutrient_data.get("toxin", 0.0)
-            if gut_yield > 0:
-                total_yield += gut_yield
-                desc = nutrient_data.get("desc", "Nutrients")
-                logs.append(f"{Prisma.GRN}[GUT]: digested {desc} -> +{gut_yield:.1f} ATP.{Prisma.RST}")
-            if gut_toxin > 0:
-                self.bio.mito.state.ros_buildup += gut_toxin
-                logs.append(f"{Prisma.OCHRE}[GUT]: Toxin detected (+{gut_toxin:.1f} ROS).{Prisma.RST}")
-            if gut_enzyme != "NONE":
-                enzyme = gut_enzyme
         if self.bio.lichen:
             sugar, photo_log = self.bio.lichen.photosynthesize(phys, phys["clean_words"], tick_count)
             if sugar > 0:
@@ -381,7 +366,8 @@ class SomaticLoop:
             stress_tax = 1.0 + (chem.cortisol * 0.5)
             modifiers.append(stress_tax)
             if random.random() < 0.3:
-                logs.append(f"{Prisma.RED}[BIO]: Cortisol spiking. Metabolism inefficient (x{stress_tax:.2f}).{Prisma.RST}")
+                logs.append(
+                    f"{Prisma.RED}[BIO]: Cortisol spiking. Metabolism inefficient (x{stress_tax:.2f}).{Prisma.RST}")
         if chem.adrenaline > 0.6:
             modifiers.append(0.5)
             logs.append(f"{Prisma.YEL}[BIO]: Adrenaline Surge. Pain ignored.{Prisma.RST}")
@@ -417,6 +403,12 @@ class SomaticLoop:
             kappa = physics_packet.get("kappa", 0.5)
             clean_words = physics_packet.get("clean_words", [])
             counts = physics_packet.get("counts", {})
+        else:
+            voltage = getattr(physics_packet, "voltage", 0.0)
+            drag = getattr(physics_packet, "narrative_drag", getattr(physics_packet, "drag", 0.0))
+            kappa = getattr(physics_packet, "kappa", 0.5)
+            clean_words = getattr(physics_packet, "clean_words", [])
+            counts = getattr(physics_packet, "counts", {})
         return {
             "voltage": voltage,
             "drag": drag,
@@ -469,10 +461,12 @@ class SomaticLoop:
                     total_atp_yield += final_yield
                     self.enzyme_mastery[enzyme] = min(5.0, current_mastery + 0.02)
                     if len(found_enzymes) <= 3:
-                        logs.append(f"{Prisma.GRN}[BIO]: Digested '{word}' -> {enzyme} (Mastery x{mastery_bonus:.2f}) -> +{final_yield:.1f} ATP.{Prisma.RST}")
+                        logs.append(
+                            f"{Prisma.GRN}[BIO]: Digested '{word}' -> {enzyme} (Mastery x{mastery_bonus:.2f}) -> +{final_yield:.1f} ATP.{Prisma.RST}")
         if cliche_tax_total > 0:
             total_atp_yield = max(0.0, total_atp_yield - cliche_tax_total)
-            logs.append(f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX: System drained by -{cliche_tax_total:.1f} ATP. (Antigens Detected){Prisma.RST}")
+            logs.append(
+                f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX: System drained by -{cliche_tax_total:.1f} ATP. (Antigens Detected){Prisma.RST}")
         if _get_val(phys, "voltage", 0.0) > 8.0 and found_enzymes:
             found_enzymes.append("PROTEASE")
             total_atp_yield += 5.0
@@ -490,7 +484,8 @@ class SomaticLoop:
             logs.append(f"{Prisma.GRY}[MAINTENANCE]: Large input buffer detected. Flushed.{Prisma.RST}")
         drag = _get_val(phys, "narrative_drag", 0.0)
         if drag > 8.0 and tick % 10 == 0:
-            logs.append(f"{Prisma.OCHRE}[MAINTENANCE]: Clearing sludge from intake valves (Drag {drag:.1f}).{Prisma.RST}")
+            logs.append(
+                f"{Prisma.OCHRE}[MAINTENANCE]: Clearing sludge from intake valves (Drag {drag:.1f}).{Prisma.RST}")
 
     @staticmethod
     def _count_harvest_hits(phys: Dict) -> int:

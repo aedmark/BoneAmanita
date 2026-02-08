@@ -13,10 +13,10 @@ from bone_protocols import ZenGarden
 from bone_drivers import UserProfile
 from bone_akashic import TheAkashicRecord
 
-VOLT_MANIC = 12.0
-VOLT_CRITICAL = 20.0
-DRAG_HEAVY = 6.0
-DRAG_SWAMP = 8.0
+VOLT_MANIC = 18.0
+VOLT_CRITICAL = 25.0
+DRAG_HEAVY = 10.0
+DRAG_SWAMP = 16.0
 ENTROPY_RUST_THRESH = 0.3
 KAPPA_COHERENT = 0.8
 CONFIDENCE_ASCENSION = 2.5

@@ -285,20 +285,18 @@ class PromptComposer:
         style_notes = [
             f"Role: {role} for {user_name}.",
             "Directive: Immediate Immersion. Do not preface the experience. Do not ask for permission.",
-            "Directive: If the user's input is vague, YOU make the creative decision. Do not ask the user to clarify.",
-            "Constraint: Treat the 'Current Location' as a physical reality. Describe texture, weight, light, and smell.",
-            "CRITICAL: Enforce the use of Markdown formatting for readability.",
-            "   - Use **Bold** for key objects or intense sensations.",
-            "   - Use Headers for location changes or narrative shifts.",
-            "   - IMPORTANT: Use DOUBLE NEWLINES between every paragraph or element",
-            "LOOT LOGIC: If the user explicitly takes an item OR if your narrative implies they are holding/carrying it (e.g., 'the key is heavy in your hand'), you MUST output [[LOOT: ITEM_NAME]].",
-            "   - Do NOT loot scenery (e.g., 'floor', 'darkness').",
-            "NEGATIVE CONSTRAINT (LOOT): Do NOT auto-loot items.",
-            "   - Describing an item is allowed. Giving it to the user ([[LOOT: ITEM]]) is only allowed once ownership is implied.",
-            "   - If the user only looks at an item, describe it. Do not loot it.",
-            "ENTROPY PROTOCOL: If an item is lost, destroyed, consumed, or traded away, output: [[LOST: ITEM_NAME]].",
-            "   - Example: 'You eat the apple. [[LOST: RED_APPLE]]'",
-            "   - Keep the item name simple (e.g., BRASS_KEY, STELLAR_COG).",
+            "Constraint: Treat the 'Current Location' as a physical reality. Use the 5-senses grounding technique.",
+            "CRITICAL FORMATTING:",
+            "   - Use `**[ITEM_NAME]**` (Bold + Brackets) to highlight interactable objects in the scene.",
+            "   - Use Headers for location changes.",
+            "   - Use DOUBLE NEWLINES between paragraphs.",
+            "=== QUANTUM INVENTORY RULES (STRICT) ===",
+            "1. OBSERVATION: When an item is present but not held, describe it as **[ITEM_NAME]**. This makes it visible.",
+            "2. ACQUISITION: ONLY output the hidden command [[LOOT: ITEM_NAME]] if the user EXPLICITLY performs a 'take', 'grab', or 'pickup' action.",
+            "   - NEVER output [[LOOT: ...]] just because the user looked at an item.",
+            "   - If the user says 'look at key', output **[BRASS_KEY]**. Do NOT output [[LOOT: BRASS_KEY]].",
+            "3. LOSS: If an item leaves inventory, output [[LOST: ITEM_NAME]].",
+            "4. Do not list the users inventory contents unless asked. Do not comment on the items in the inventory unless instructed to.",
             mood_note]
         if semantic_ops:
             style_notes.append("\n=== INVENTORY RESONANCE (Active Item Effects) ===")
@@ -310,7 +308,7 @@ class PromptComposer:
             style_notes.insert(0, f"*** PRIORITY OVERRIDE: {reality_directive} ***")
         if modifiers.get("soften"):
             style_notes.append("TONE OVERRIDE: Be warm, helpful, and clear.")
-        loc = state.get('world', {}).get('orbit', ['Void'])[0]
+        loc = state.get('world', {}).get('orbit', ['{seed}'])[0]
         inv_str = "Hands: Empty"
         if modifiers["include_inventory"]:
             inv = state.get("inventory", [])
@@ -500,8 +498,12 @@ class TheCortex:
 
     def _apply_boot_overlay(self, state, text):
         seed = text.replace("SYSTEM_BOOT:", "").strip()
+        if "world" not in state: state["world"] = {}
+        state["world"]["orbit"] = [seed]
+        state["world"]["loci_description"] = f"Manifesting: {seed}"
         state["mind"]["style_directives"] = [
-            "You are The Architect.", f"TARGET SEED: {seed}",
+            "You are The Architect.",
+            f"TARGET SEED: {seed}",
             "DIRECTIVE: Build the world from the first sensation up. Do not describe the seed literally.",
             "STYLE: Sensory. Grounded. Atmospheric."]
         state["dialogue_history"] = []
@@ -542,7 +544,7 @@ class TheCortex:
             if len(voices) > 1 and "NARRATOR" not in voices:
                 mind["style_directives"].append(chorus)
                 mind["role"] = f"The Chorus ({'/'.join(voices)})"
-        loci_description = "Unknown Void."
+        loci_description = "Seed Location"
         if hasattr(self.sub.phys, "nav") and hasattr(self.sub.phys.nav, "get_current_description"):
             loci_description = self.sub.phys.nav.get_current_description()
         return {
@@ -552,7 +554,7 @@ class TheCortex:
             "dialogue_history": self.dialogue_buffer or [f"[PREV]: {e}" for e in self.boot_history],
             "user_profile": self.sub.mind.mirror.profile.__dict__,
             "world": {
-                "orbit": sim_result.get("world_state", {}).get("orbit", ["Void"]),
+                "orbit": sim_result.get("world_state", {}).get("orbit", ["{seed}"]),
                 "loci_description": loci_description},
             "inventory": self.sub.gordon.inventory,
             "semantic_operators": self.sub.gordon.get_semantic_operators(),

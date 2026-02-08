@@ -2,6 +2,7 @@
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
+import traceback
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
 from bone_core import EventBus, Prisma, BoneConfig, RealityLayer, SystemHealth, TheObserver, BonePresets, TheLore, LoreCategory, TelemetryService,RealityStack
@@ -288,7 +289,8 @@ class BoneAmanita:
             loader_func()
         except Exception as e:
             self.events.log(f"{Prisma.RED}[INIT]: {resource_name} failed to load: {e}{Prisma.RST}", "BOOT_ERR")
-            print(f"{Prisma.RED}   > {resource_name} skipped (Error: {e}){Prisma.RST}")
+            print(f"{Prisma.RED}   > {resource_name} CRITICAL FAILURE:{Prisma.RST}")
+            traceback.print_exc()
 
     def get_avg_voltage(self):
         hist = self.phys.observer.voltage_history
@@ -400,35 +402,44 @@ class BoneAmanita:
 
     def emergency_save(self, exit_cause: str = "UNKNOWN") -> str:
         try:
-            sess_id = self.mind.mem.session_id
-        except AttributeError:
-            sess_id = f"corrupted_{int(time.time())}"
+            if hasattr(self, "mind") and hasattr(self.mind, "mem") and hasattr(self.mind.mem, "session_id"):
+                sess_id = self.mind.mem.session_id
+            else:
+                sess_id = f"boot_crash_{int(time.time())}"
+        except Exception:
+            sess_id = f"total_failure_{int(time.time())}"
         spore_data = {
             "session_id": sess_id,
             "meta": {
                 "timestamp": time.time(),
                 "final_health": getattr(self, "health", 0),
                 "final_stamina": getattr(self, "stamina", 0),
-                "exit_cause": str(exit_cause)},
-            "core_graph": getattr(self.mind.mem, "graph", {}) if hasattr(self, "mind") else {},
+                "exit_cause": str(exit_cause),
+                "kernel_hash": getattr(self, "kernel_hash", "UNKNOWN")},
+            "core_graph": {},
             "trauma_vector": getattr(self, "trauma_accum", {})}
         try:
-            if hasattr(self, "mind") and hasattr(self.mind.mem, "loader"):
+            if hasattr(self, "mind") and hasattr(self.mind, "mem"):
+                spore_data["core_graph"] = getattr(self.mind.mem, "graph", {})
+        except:
+            pass
+        try:
+            if hasattr(self, "mind") and hasattr(self.mind, "mem") and hasattr(self.mind.mem, "loader"):
                 path = self.mind.mem.loader.save_spore(f"emergency_{sess_id}.json", spore_data)
+                return f"✔ Spore encapsulated via Loader: {path}"
             else:
-                fname = self._get_crash_path("spore_emergency")
-                with open(fname, 'w') as spore_file:
-                    json.dump(spore_data, spore_file, default=str)
-                path = fname
-            return f"✔ Spore encapsulated: {path}"
+                fname = self._get_crash_path(f"spore_{sess_id}")
+                with open(fname, 'w', encoding='utf-8') as spore_file:
+                    json.dump(spore_data, spore_file, default=str, indent=2)
+                return f"✔ Spore encapsulated via RAW DUMP: {fname}"
         except Exception as e:
             try:
                 fname = self._get_crash_path("panic_dump")
-                with open(fname, 'w') as panic_file:
-                    json.dump({"error": str(e), "data": str(spore_data)}, panic_file)
+                with open(fname, 'w', encoding='utf-8') as panic_file:
+                    json.dump({"error": str(e), "partial_data": str(spore_data)}, panic_file)
                 return f"✘ Encapsulation Failed. Panic dump written to {fname}"
-            except:
-                return f"✘ TOTAL SYSTEM FAILURE: {e}"
+            except Exception as final_e:
+                return f"✘ TOTAL SYSTEM FAILURE: {final_e}"
 
     def _ethical_audit(self):
         DESPERATION_THRESHOLD = 0.7

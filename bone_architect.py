@@ -4,7 +4,8 @@ from typing import Tuple, Dict, Any, Optional
 from dataclasses import dataclass
 from bone_core import Prisma, MindSystem, PhysSystem, PhysicsPacket
 from bone_village import MirrorGraph, TheCartographer
-from bone_spores import MycotoxinFactory, LichenSymbiont, HyphalInterface, ParasiticSymbiont, MycelialNetwork
+from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
+from bone_symbiosis import MycotoxinFactory, LichenSymbiont, ParasiticSymbiont
 from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, ViralTracer, ThePacemaker
 from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity
 from bone_protocols import LimboLayer
@@ -110,13 +111,12 @@ class BoneArchitect:
         return BioSystem(
             mito=MitochondrialForge(mito_state, events),
             endo=EndocrineSystem(),
-            immune=MycotoxinFactory(),
-            lichen=LichenSymbiont(),
-            gut=HyphalInterface(),
+            immune=ImmuneMycelium(),
+            lichen=BioLichen(),
             plasticity=NeuroPlasticity(),
             governor=MetabolicGovernor(),
             shimmer=ShimmerState(),
-            parasite=ParasiticSymbiont(mind.mem, lex))
+            parasite=BioParasite(mind.mem, lex))
 
     @staticmethod
     def _construct_physics(events, bio) -> PhysSystem:
@@ -164,7 +164,7 @@ class BoneArchitect:
             if len(load_result) >= 2: inherited_antibodies = load_result[1]
             if len(load_result) >= 3: soul_legacy = load_result[2]
             if len(load_result) >= 4: continuity_data = load_result[3]
-            if len(load_result) >= 5: recovered_atlas = load_result[4]  # <--- Get the map
+            if len(load_result) >= 5: recovered_atlas = load_result[4]
         if hasattr(embryo.physics, "nav") and hasattr(embryo.physics.nav, "import_atlas"):
             if recovered_atlas:
                 embryo.physics.nav.import_atlas(recovered_atlas)

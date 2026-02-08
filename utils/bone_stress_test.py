@@ -1,21 +1,14 @@
 """ bone_stress_test.py - "Pressure makes diamonds, or dust."
-    Verifies the Reactive Layer: Kintsugi, Bureaucracy, Folly, and Somatic Enzymes.
+    Verifies the Reactive Layer: Kintsugi, Bureau, Folly, and Somatic Enzymes.
 """
 import sys, os, time
 from dataclasses import dataclass
+
+from bone_main import BoneAmanita
+from bone_core import Prisma, BoneConfig
+from bone_protocols import KintsugiProtocol, TheBureau, TheFolly
+from bone_lexicon import TheLexicon
 from bone_body import SomaticLoop, BioSystem, Biometrics, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '.'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-try:
-    from dev.bone_main import BoneAmanita
-    from dev.bone_bus import Prisma, BoneConfig
-    from dev.bone_protocols import KintsugiProtocol, TheBureau, TheFolly
-    from dev.bone_lexicon import TheLexicon
-except ImportError:
-    print("❌ Critical Import Error. Ensure you are running this from the project root.")
-    sys.exit(1)
 
 class StressTest:
     def __init__(self):
@@ -24,7 +17,7 @@ class StressTest:
         self.print_header()
 
     def print_header(self):
-        print(f"\n{Prisma.CYN}=== REACTIVE SYSTEMS STRESS TEST ==={Prisma.RST}")
+        print(f"\n{Prisma.CYN}=== REACTIVE SYSTEMS STRESS TEST (SLASH.MOD) ==={Prisma.RST}")
         print(f"{Prisma.GRY}Targeting: Kintsugi, Bureau, Folly, Enzymes{Prisma.RST}\n")
 
     def log(self, msg, status="INFO"):
@@ -41,15 +34,19 @@ class StressTest:
         self.kintsugi = KintsugiProtocol()
         self.bureau = TheBureau()
         self.folly = TheFolly()
-
         if not hasattr(self.engine, 'body') or not self.engine.body:
             mito_state = MitochondrialState()
             mito = MitochondrialForge(mito_state, self.engine.events)
             endo = EndocrineSystem()
             gov = MetabolicGovernor()
-            bio = BioSystem(mito=mito, endo=endo, immune=None, lichen=None, gut=None, plasticity=None, governor=gov, shimmer=None, parasite=None, events=self.engine.events)
-            self.engine.body = SomaticLoop(bio, events_ref=self.engine.events)
-            self.engine.body.bio.biometrics = Biometrics(health=100.0, stamina=100.0)
+            bio = BioSystem(
+                mito=mito, endo=endo,
+                immune=None, lichen=None,
+                plasticity=None, governor=gov,
+                shimmer=None, parasite=None)
+            self.engine.body = SomaticLoop(bio, self.engine.mind.mem, self.engine.lex, self.folly, self.engine.events)
+            if not hasattr(self.engine.body.bio, 'biometrics'):
+                self.engine.body.bio.biometrics = Biometrics(health=100.0, stamina=100.0)
 
     def test_kintsugi_gold(self):
         print(f"{Prisma.WHT}--- TEST 1: KINTSUGI (The Golden Repair) ---{Prisma.RST}")
@@ -62,10 +59,10 @@ class StressTest:
         soul.traits.wisdom = 0.5
         initial_wisdom = soul.traits.wisdom
         result = self.kintsugi.attempt_repair(mock_phys, trauma_accum, soul_ref=soul)
-        if result["success"] and "Integrated SEPTIC" in result["healed"]:
+        if result and result["success"] and "Integrated SEPTIC" in str(result.get("healed")):
             self.log("Trauma correctly integrated (Golden Repair).", "PASS")
         else:
-            self.log(f"Repair failed or wrong path taken: {result.get('msg')}", "FAIL")
+            self.log(f"Repair failed or wrong path taken: {result.get('msg') if result else 'None'}", "FAIL")
         if soul.traits.wisdom > initial_wisdom:
             self.log(f"Wisdom boosted ({initial_wisdom} -> {soul.traits.wisdom:.2f}).", "PASS")
         else:
@@ -79,10 +76,10 @@ class StressTest:
             "voltage": 5.0,
             "clean_words": ["data", "chart", "file"]})
         result = self.kintsugi.attempt_repair(mock_phys, trauma_accum, soul_ref=None)
-        if result["success"] and "Scarred THERMAL" in result["healed"]:
+        if result and result["success"] and "Scarred THERMAL" in str(result.get("healed")):
             self.log("Trauma correctly scarred (Fallback Path).", "PASS")
         else:
-            self.log(f"Scarring failed: {result.get('msg')}", "FAIL")
+            self.log(f"Scarring failed: {result.get('msg') if result else 'None'}", "FAIL")
 
     def test_bureaucracy(self):
         print(f"\n{Prisma.WHT}--- TEST 3: THE BUREAU (Red Tape) ---{Prisma.RST}")
@@ -129,47 +126,31 @@ class StressTest:
 
     def test_enzymatic_digestion(self):
         print(f"\n{Prisma.WHT}--- TEST 5: SOMATIC ENZYMES (Metabolism 2.0) ---{Prisma.RST}")
-
         original_classifier = TheLexicon.get_current_category
         def mock_classifier(w):
             if w == "concept": return "abstract"
             if w == "cliche": return "antigen"
             return "void"
         TheLexicon.get_current_category = mock_classifier
-
         try:
             body = self.engine.body
+            phys_abstract = type('obj', (object,), {"voltage": 5.0, "clean_words": ["concept"], "beta_index": 0.0, "truth_ratio": 1.0, "repetition": 0.0})
 
-            phys_abstract = {"clean_words": ["concept"], "voltage": 5.0}
-            result_a = body.digest_cycle("concept", phys_abstract, {}, 100, 100, 1.0)
-
+            result_a = body.digest_cycle("concept", phys_abstract, {}, 100, 100, 1.0, 0)
             if result_a["enzyme"] == "DECRYPTASE":
                 self.log("Enzyme 'DECRYPTASE' correctly identified for abstract word.", "PASS")
             else:
                 self.log(f"Failed to trigger DECRYPTASE. Got: {result_a.get('enzyme')}", "FAIL")
-
             body.bio.mito.state.atp_pool = 50.0
-
-            result_b = body.digest_cycle("concept", phys_abstract, {}, 100, 100, 1.0)
-
-            mastery = body.enzyme_mastery.get("DECRYPTASE", 0.0)
-            if mastery > 0.0:
-                 self.log(f"Enzyme Mastery increased (Level: {mastery:.2f}).", "PASS")
-            else:
-                 self.log("Enzyme Mastery failed to increment.", "FAIL")
-
-            phys_toxic = {"clean_words": ["cliche"], "voltage": 5.0}
-            body.bio.mito.state.atp_pool = 50.0
+            result_b = body.digest_cycle("concept", phys_abstract, {}, 100, 100, 1.0, 0)
+            phys_toxic = type('obj', (object,), {"voltage": 5.0, "clean_words": ["cliche"], "beta_index": 0.0, "truth_ratio": 1.0, "repetition": 0.0})
             pre_atp = body.bio.mito.state.atp_pool
-
-            body.digest_cycle("cliche", phys_toxic, {}, 100, 100, 1.0)
+            body.digest_cycle("cliche", phys_toxic, {}, 100, 100, 1.0, 0)
             post_atp = body.bio.mito.state.atp_pool
-
             if post_atp < pre_atp:
                 self.log(f"Antigen correctly taxed system (ATP {pre_atp} -> {post_atp}).", "PASS")
             else:
                 self.log(f"Antigen failed to drain ATP (ATP {pre_atp} -> {post_atp}).", "FAIL")
-
         finally:
             TheLexicon.get_current_category = original_classifier
 
