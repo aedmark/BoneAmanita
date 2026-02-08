@@ -80,11 +80,16 @@ class LocalFileSporeLoader(SporeInterface):
 
     def load_spore(self, filepath):
         if not os.path.exists(filepath):
+            print(f"{Prisma.RED}[LOADER] File not found: {filepath}{Prisma.RST}")
             return None
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except (IOError, json.JSONDecodeError):
+        except json.JSONDecodeError as e:
+            print(f"{Prisma.RED}[LOADER] CORRUPT SPORE ({filepath}): {e}{Prisma.RST}")
+            return None
+        except IOError as e:
+            print(f"{Prisma.RED}[LOADER] READ ERROR ({filepath}): {e}{Prisma.RST}")
             return None
 
     def list_spores(self):
@@ -118,31 +123,24 @@ class AdaptiveMemoryManager:
             return None
         keep_set = set(current_focus_words)
         keep_set.update(self.network.cortical_stack)
-        neighbors = set()
-        for node in keep_set:
-            if node in self.network.graph:
-                neighbors.update(self.network.graph[node]["edges"].keys())
-        keep_set.update(neighbors)
         candidates = []
+        current_tick = int(time.time())
         for node, data in self.network.graph.items():
-            if node in keep_set:
-                continue
-            last_tick = data.get("last_tick", 0)
+            if node in keep_set: continue
             mass = sum(data["edges"].values())
-            score = (last_tick * 1.0) + (mass * 0.5)
+            last_tick = data.get("last_tick", 0)
+            recency = 1.0 / (max(1, current_tick - last_tick))
+            score = (mass * 0.5) + (recency * 100.0)
             candidates.append((node, score))
         candidates.sort(key=lambda x: x[1])
-        remove_count = max(0, len(self.network.graph) - max_nodes)
-        max_batch = int(len(self.network.graph) * 0.2)
-        remove_count = min(remove_count, max_batch)
-        victims = [x[0] for x in candidates[:remove_count]]
-        if not victims:
-            return None
+        excess = len(self.network.graph) - max_nodes
+        target_prune = excess + int(max_nodes * 0.05)
+        victims = [x[0] for x in candidates[:target_prune]]
+        if not victims: return "MEMORY CLAMPED (Protected Nodes saturated)."
         for v in victims:
             if v in self.network.graph:
-                self.network.cannibalize(preserve_current=None, current_tick=0)
-                if v in self.network.graph: del self.network.graph[v]
-        return f"ADAPTIVE PRUNE: Archived {len(victims)} nodes."
+                del self.network.graph[v]
+        return f"ADAPTIVE PRUNE: Incinerated {len(victims)} weak memories to clear space."
 
     def should_absorb(self, word: str, existing_graph: dict) -> bool:
         if word in existing_graph:
@@ -754,21 +752,34 @@ class LiteraryReproduction:
     @staticmethod
     def mutate_config(current_config):
         mutations = {}
+        def safe_mutate(val, min_v, max_v):
+            drift = random.uniform(0.9, 1.1)
+            new_val = val * drift
+            return max(min_v, min(max_v, new_val))
         if random.random() < 0.3:
-            mutations["MAX_DRAG_LIMIT"] = current_config.MAX_DRAG_LIMIT * random.uniform(0.9, 1.1)
+            base = getattr(current_config, "MAX_DRAG_LIMIT", 10.0)
+            mutations["MAX_DRAG_LIMIT"] = safe_mutate(base, 1.0, 20.0)
         if random.random() < 0.3:
-            mutations["TOXIN_WEIGHT"] = current_config.TOXIN_WEIGHT * random.uniform(0.9, 1.2)
+            base = getattr(current_config, "TOXIN_WEIGHT", 1.0)
+            mutations["TOXIN_WEIGHT"] = safe_mutate(base, 0.1, 5.0)
         if random.random() < 0.1:
-            mutations["MAX_HEALTH"] = current_config.MAX_HEALTH * random.uniform(0.8, 1.05)
+            base = getattr(current_config, "MAX_HEALTH", 100.0)
+            mutations["MAX_HEALTH"] = safe_mutate(base, 50.0, 500.0)
         if random.random() < 0.2:
-            current_v_max = getattr(current_config.PHYSICS, "VOLTAGE_MAX", 20.0)
-            mutations["PHYSICS.VOLTAGE_MAX"] = current_v_max * random.uniform(0.9, 1.15)
+            phys_conf = getattr(current_config, "PHYSICS", None)
+            if phys_conf:
+                base = getattr(phys_conf, "VOLTAGE_MAX", 20.0)
+                mutations["PHYSICS.VOLTAGE_MAX"] = safe_mutate(base, 10.0, 100.0)
         if random.random() < 0.2:
-            current_regen = getattr(current_config.BIO, "REWARD_MEDIUM", 0.10)
-            mutations["BIO.REWARD_MEDIUM"] = current_regen * random.uniform(0.8, 1.3)
+            bio_conf = getattr(current_config, "BIO", None)
+            if bio_conf:
+                base = getattr(bio_conf, "REWARD_MEDIUM", 0.10)
+                mutations["BIO.REWARD_MEDIUM"] = safe_mutate(base, 0.01, 1.0)
         if random.random() < 0.1:
-            current_trigger = getattr(current_config.COUNCIL, "MANIC_VOLTAGE_TRIGGER", 18.0)
-            mutations["COUNCIL.MANIC_VOLTAGE_TRIGGER"] = current_trigger * random.uniform(0.9, 1.1)
+            council_conf = getattr(current_config, "COUNCIL", None)
+            if council_conf:
+                base = getattr(council_conf, "MANIC_VOLTAGE_TRIGGER", 18.0)
+                mutations["COUNCIL.MANIC_VOLTAGE_TRIGGER"] = safe_mutate(base, 10.0, 50.0)
         return mutations
 
     @staticmethod

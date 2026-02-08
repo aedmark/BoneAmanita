@@ -104,13 +104,16 @@ class GeodesicEngine:
     @staticmethod
     def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int) -> Dict[str, float]:
         pc = PhysicsConstants
+        safe_volume = max(1, volume)
         total_kinetic = masses["kinetic"] + masses["explosive"]
         raw_tension_mass = (
                 (masses["heavy"] * pc.WEIGHT_HEAVY) +
                 (total_kinetic * pc.WEIGHT_EXPLOSIVE) +
                 (masses["constructive"] * pc.WEIGHT_CONSTRUCTIVE))
-        tension = round(((raw_tension_mass / volume) * 25.0) * pc.KINETIC_GAIN, 2)
-        shear_rate = total_kinetic / volume
+        density = raw_tension_mass / safe_volume
+        base_tension = density * 20.0 * pc.KINETIC_GAIN
+        tension = round(min(100.0, base_tension), 2)
+        shear_rate = total_kinetic / safe_volume
         raw_friction = (
                 (counts.get("solvents", 0) * 0.2) +
                 (counts.get("suburban", 0) * 2.0) +
@@ -120,12 +123,14 @@ class GeodesicEngine:
         if masses["heavy"] > 0:
             kinetic_lift /= (masses["heavy"] * 0.5 + 1.0)
         lift = (masses["play"] * 2.5) + kinetic_lift
-        raw_compression = ((dynamic_viscosity / volume) * 10.0) - ((lift / volume) * 10.0)
-        compression = round(max(-5.0, min(pc.DRAG_HALT, raw_compression * pc.SIGNAL_DRAG_MULTIPLIER)), 2)
+        viscosity_density = dynamic_viscosity / safe_volume
+        lift_density = lift / safe_volume
+        raw_compression = (viscosity_density * 10.0) - (lift_density * 10.0)
+        raw_compression *= pc.SIGNAL_DRAG_MULTIPLIER
+        compression = round(max(-5.0, min(pc.DRAG_HALT, raw_compression)), 2)
         structural_mass = masses["heavy"] + masses["constructive"]
-        coherence = min(1.0, structural_mass / max(1, pc.SHAPLEY_MASS_THRESHOLD))
-        abstraction = min(1.0, (masses["abstract"] / volume) + 0.2)
-
+        coherence = min(1.0, structural_mass / max(1.0, pc.SHAPLEY_MASS_THRESHOLD))
+        abstraction = min(1.0, (masses["abstract"] / safe_volume) + 0.2)
         return {
             "tension": tension,
             "compression": compression,

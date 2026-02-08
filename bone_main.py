@@ -102,8 +102,9 @@ class ConfigWizard:
             config["model"] = input("Model (e.g., gpt-4): ").strip() or "gpt-4"
         elif choice != "3":
             config["provider"] = "ollama"
-            config["base_url"] = "http://127.0.0.1:11434/v1/chat/completions"
-            print(f"{Prisma.GRY}(Assuming Ollama on default port){Prisma.RST}")
+            default_url = "http://127.0.0.1:11434/v1/chat/completions"
+            user_url = input(f"Base URL [{default_url}]: ").strip()
+            config["base_url"] = user_url if user_url else default_url
             config["model"] = input("Model Name (e.g., llama3): ").strip() or "llama3"
         config["user_name"] = input("Designation (User Name): ").strip() or "TRAVELER"
         with open(ConfigWizard.CONFIG_FILE, "w") as f:
@@ -138,58 +139,6 @@ class BoneAmanita:
     @property
     def shimmer(self):
         return self.embryo.shimmer if self.embryo else None
-
-    @property
-    def council(self):
-        return self.village.get("council")
-
-    @property
-    def repro(self):
-        return self.village.get("repro")
-
-    @property
-    def projector(self):
-        return self.village.get("projector")
-
-    @property
-    def kintsugi(self):
-        return self.village.get("kintsugi")
-
-    @property
-    def therapy(self):
-        return self.village.get("therapy")
-
-    @property
-    def folly(self):
-        return self.village.get("folly")
-
-    @property
-    def stabilizer(self):
-        return self.village.get("stabilizer")
-
-    @property
-    def director(self):
-        return self.village.get("director")
-
-    @property
-    def bureau(self):
-        return self.village.get("bureau")
-
-    @property
-    def cosmic(self):
-        return self.village.get("cosmic")
-
-    @property
-    def navigator(self):
-        return self.village.get("navigator")
-
-    @property
-    def zen(self):
-        return self.village.get("zen")
-
-    @property
-    def tinkerer(self):
-        return self.village.get("tinkerer")
 
     def _initialize_core(self, lexicon_layer):
         print(f"{Prisma.GRY}...Bootstrapping Core Systems...{Prisma.RST}")
@@ -245,24 +194,37 @@ class BoneAmanita:
         self.drivers = SynergeticLensArbiter(self.events)
         self.consultant = BoneConsultant()
         self.limbo = Limbo()
+        self.council = CouncilChamber(self)
+        self.repro = LiteraryReproduction()
+        self.projector = Projector()
+        self.kintsugi = KintsugiProtocol()
+        self.therapy = TherapyProtocol()
+        self.folly = TheFolly()
+        self.stabilizer = ZoneInertia()
+        self.director = ChorusDriver()
+        self.bureau = TheBureau()
+        self.cosmic = CosmicDynamics()
+        self.navigator = TheCartographer(self.embryo.shimmer)
+        self.zen = ZenGarden(self.events)
+        self.tinkerer = TheTinkerer(self.gordon, self.events, self.akashic)
         self.village = {
             "town_hall": self.town_hall,
-            "council": CouncilChamber(self),
-            "repro": LiteraryReproduction(),
-            "projector": Projector(),
-            "kintsugi": KintsugiProtocol(),
-            "therapy": TherapyProtocol(),
-            "folly": TheFolly(),
-            "stabilizer": ZoneInertia(),
-            "director": ChorusDriver(),
-            "bureau": TheBureau(),
-            "cosmic": CosmicDynamics(),
-            "navigator": TheCartographer(self.embryo.shimmer),
-            "zen": ZenGarden(self.events),
-            "tinkerer": TheTinkerer(self.gordon, self.events, self.akashic)}
+            "council": self.council,
+            "repro": self.repro,
+            "projector": self.projector,
+            "kintsugi": self.kintsugi,
+            "therapy": self.therapy,
+            "folly": self.folly,
+            "stabilizer": self.stabilizer,
+            "director": self.director,
+            "bureau": self.bureau,
+            "cosmic": self.cosmic,
+            "navigator": self.navigator,
+            "zen": self.zen,
+            "tinkerer": self.tinkerer}
         self.cmd = CommandProcessor(self, Prisma, self.lex, BoneConfig)
         if self.phys:
-            self.phys.dynamics = self.village["cosmic"]
+            self.phys.dynamics = self.cosmic
 
     def _initialize_cognition(self):
         self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.folly, self.events)

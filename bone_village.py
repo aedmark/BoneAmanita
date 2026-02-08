@@ -330,7 +330,10 @@ class TownHall:
             return f"{Prisma.OCHRE}📢 TOWN CRIER: The time-winds are blowing slow today! (High Latency){Prisma.RST}"
         if volt > 15.0:
             return f"{Prisma.YEL}📢 HEAR YE: Curfew in effect! The voltage is dangerous!{Prisma.RST}"
-        if status == "NOMINAL" and random.random() < 0.05:
+        if random.random() < 0.20:
+            loc_name = self.Navigator.world_graph.get(self.Navigator.current_node_id).name
+            if "VOID" in loc_name:
+                return f"{Prisma.GRY}📢 TOWN CRIER: Echoes... just echoes...{Prisma.RST}"
             msg = random.choice(self.rumors)
             return f"{Prisma.GRY}📢 TOWN CRIER: {msg}{Prisma.RST}"
         return None
@@ -422,11 +425,15 @@ class PIDController:
         if dt <= 0.0: return 0.0
         error = self.setpoint - measurement
         if self._first_run:
-            self._last_error = error; self._first_run = False
+            self._last_error = error;
+            self._first_run = False
+        P = self.kp * error
         self._integral += error * dt
         self._integral = max(self.min_out, min(self.max_out, self._integral))
+        I = self.ki * self._integral
         derivative = (error - self._last_error) / dt
-        output = (self.kp * error) + (self.ki * self._integral) + (self.kd * derivative)
+        D = self.kd * derivative
+        output = P + I + D
         self._last_error = error
         return max(self.min_out, min(self.max_out, output))
 

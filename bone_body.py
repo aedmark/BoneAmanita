@@ -437,12 +437,16 @@ class SomaticLoop:
         if not clean_words:
             return "NONE", 0.0
         found_enzymes = []
-        total_atp_yield = 1.0
+        total_atp_yield = 3.0
         word_counts = Counter(clean_words)
         cliche_tax_total = 0.0
         for word, count in word_counts.items():
             if len(word) < 4: continue
             category = TheLexicon.get_current_category(word)
+            if not category or category == "void":
+                fiber_yield = 0.5 * count
+                total_atp_yield += fiber_yield
+                continue
             if category in ["kinetic", "explosive"]:
                 continue
             if category == "antigen":

@@ -208,6 +208,8 @@ class MetabolismPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         if ctx.is_system_event: return ctx
+        if not hasattr(self.eng, 'bio') or not self.eng.bio:
+            return ctx
         physics = ctx.physics
         if hasattr(self.eng, "host_stats"):
             self._apply_economic_stimulus(ctx, self.eng.host_stats.efficiency_index)
@@ -456,6 +458,8 @@ class SoulPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         if ctx.is_system_event: return ctx
+        if not hasattr(self.eng, 'soul') or not self.eng.soul:
+            return ctx
         lesson = self.eng.soul.crystallize_memory(ctx.physics.to_dict(), ctx.bio_result, self.eng.tick_count)
         if lesson: ctx.log(f"{Prisma.VIOLET}   (The lesson '{lesson}' echoes in the chamber.){Prisma.RST}")
         if not self.eng.soul.current_obsession:
@@ -784,6 +788,10 @@ class GeodesicOrchestrator:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
             if self.eng.phys and hasattr(self.eng.phys, 'observer') and self.eng.phys.observer.last_physics_packet:
                 ctx.physics = self.eng.phys.observer.last_physics_packet.snapshot()
+            elif not ctx.physics:
+                from bone_architect import PanicRoom
+                ctx.physics = PanicRoom.get_safe_physics()
+                self.eng.events.log("⚠️ PHYSICS BYPASS: Running on Panic Protocol.", "SYS")
             ctx.validator = CongruenceValidator()
             ctx.reality_stack = getattr(self.eng, 'reality_stack', None)
             ctx.user_name = self.eng.user_name
