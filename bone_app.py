@@ -7,15 +7,12 @@ import os
 from bone_main import BoneAmanita, ConfigWizard
 from bone_core import Prisma
 
-# --- CONFIGURATION ---
 st.set_page_config(
     page_title="BONEAMANITA [GLASS TERMINAL]",
     page_icon="💀",
     layout="wide",
-    initial_sidebar_state="expanded"
-)
+    initial_sidebar_state="expanded")
 
-# --- STYLES ---
 st.markdown("""
 <style>
     .stChatMessage .stMarkdown p {
@@ -68,8 +65,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- UTILITIES ---
-
 def strip_ansi(text):
     return Prisma.strip(text)
 
@@ -84,39 +79,29 @@ def format_log_entry(log_str):
     if "ERROR" in clean or "CRITICAL" in clean: return f"❌ {clean}"
     return f"🔹 {clean}"
 
-def generate_transcript(history):
-    """
-    SLASH PROTOCOL: TRANSCRIPTION
-    Converts the session history into a structured Markdown document.
-    """
+def generate_transcript(history, user_name="TRAVELER"):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    lines = [f"# BONEAMANITA TRANSCRIPT - {timestamp}", "---"]
-
+    lines = [f"# BONEAMANITA TRANSCRIPT - {timestamp}", f"Identity: {user_name}", "---"]
     for msg in history:
-        role = msg["role"].upper()
-        # Use raw_content if available to capture the full text before UI slicing
+        raw_role = msg["role"].upper()
+        display_name = raw_role
+        if raw_role == "USER":
+            display_name = user_name.upper()
+        elif raw_role == "ASSISTANT":
+            display_name = "THE SYSTEM"
         content = msg.get("raw_content", msg["content"])
         clean_content = strip_ansi(content)
-
-        # Header for the turn
-        icon = "👤" if role == "USER" else "💀"
-        lines.append(f"\n### {icon} {role}")
-
-        # The main content
+        icon = "👤" if raw_role == "USER" else "💀"
+        lines.append(f"\n### {icon} {display_name}")
         lines.append(clean_content)
-
-        # If there are internal logs, fold them into a quote block
         if "logs" in msg and msg["logs"]:
             lines.append("\n> **SYSTEM INTERNALS:**")
             for log in msg["logs"]:
                 clean_log = strip_ansi(str(log))
                 lines.append(f"> * {clean_log}")
-
     lines.append("\n---")
     lines.append("*End of Transmission*")
     return "\n".join(lines)
-
-# --- INITIALIZATION ---
 
 if "history" not in st.session_state:
     st.session_state.history = []
@@ -126,8 +111,7 @@ def init_engine():
         config = ConfigWizard.load_or_create()
         if not config: return None
         new_instance = BoneAmanita(config)
-
-        # Only boot if history is empty (fresh load)
+        restored = new_instance.resume_checkpoint()
         if not st.session_state.history:
             boot_packet = new_instance.engage_cold_boot()
             if boot_packet and "ui" in boot_packet:
@@ -144,8 +128,6 @@ def init_engine():
     except Exception as e:
         st.error(f"Critical Boot Error: {e}")
         return None
-
-# --- SETUP WIZARD ---
 if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_state:
     st.title("/// SYSTEM SETUP ///")
     with st.form("setup_form"):
@@ -160,15 +142,10 @@ if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_s
             with open(ConfigWizard.CONFIG_FILE, "w") as f: json.dump(cfg, f, indent=4)
             st.rerun()
     st.stop()
-
-# --- ENGINE HYDRATION ---
 if "ENGINE" not in st.session_state:
     with st.spinner("Hydrating Spore Casing..."):
         st.session_state.ENGINE = init_engine()
-
 engine = st.session_state.ENGINE
-
-# --- SIDEBAR ---
 with st.sidebar:
     st.header(f"IDENTITY: {engine.user_name.upper()}")
     st.divider()
@@ -201,16 +178,12 @@ with st.sidebar:
     if inv:
         for item in inv: st.code(item, language=None)
     else: st.caption("Belt Empty.")
-
-    # [SLASH]: Added Transcript Export
-    transcript_txt = generate_transcript(st.session_state.history)
+    transcript_txt = generate_transcript(st.session_state.history, user_name=engine.user_name)
     st.download_button(
         label="📜 EXPORT LOG",
         data=transcript_txt,
         file_name=f"bone_log_{int(time.time())}.md",
-        mime="text/markdown"
-    )
-
+        mime="text/markdown")
     st.divider()
     if st.button("☣️ EMERGENCY DUMP"):
         msg = engine.emergency_save(exit_cause="MANUAL_UI")
@@ -220,8 +193,6 @@ with st.sidebar:
             with st.spinner("Compiling Spore..."):
                 st.session_state.engine.shutdown()
                 st.success("System State Saved. You may close the terminal.")
-
-# --- CHAT LOOP ---
 for msg in st.session_state.history:
     with st.chat_message(msg["role"]):
         content_to_show = msg.get("raw_content", msg["content"])
@@ -253,6 +224,7 @@ if prompt := st.chat_input("Broadcast Signal..."):
     st.session_state.history.append({"role": "user", "content": prompt})
     with st.spinner("Calculating Geodesics..."):
         packet = engine.process_turn(prompt)
+        engine.save_checkpoint()
     separator = "────────────────────────────────────────────────────────────"
     logs = packet.get("logs", [])
     response_text = packet.get("raw_content", packet.get("ui", "No signal."))

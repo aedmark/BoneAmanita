@@ -317,7 +317,7 @@ class PromptComposer:
         style_notes = [
             f"Role: {role} for {user_name}.",
             "Directive: Start the adventure immediately. Do not preface the experience. Offer suggestions of actions for the user, when appropriate.",
-            "Constraint: Treat the 'Current Location' as a physical reality. Use the 5-senses grounding technique, but work it into the narrative, don't just make a numbered list.",
+            "Constraint: Treat the 'Current Location' as a physical space. Use the 5-senses grounding technique, but work it into the narrative, don't just make a numbered list. Strictly adhere to the diegetic reality.",
             "=== THE FOG PROTOCOL (STYLE GUIDE) ===",
             "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
             "1. REJECT ENTROPY: Do not use the statistically likely adjective. If the scene is cyber, avoid 'neon'. If the scene is old, avoid 'dust motes'.",
@@ -328,12 +328,12 @@ class PromptComposer:
             "   - Use Headers ONLY for major location changes.",
             "   - Separate paragraphs with a single blank line.",
             "=== QUANTUM INVENTORY RULES (STRICT) ===",
-            "1. OBSERVATION: Integrate items naturally into the description. If an item is important, describe it clearly, but do not tag it.",
-            "2. ACQUISITION: ONLY output the hidden command [[LOOT: ITEM_NAME]] if the user EXPLICITLY performs a 'take', 'grab', or 'pickup' action.",
-            "   - NEVER output [[LOOT: ...]] just because the user looked at an item.",
-            "   - If the user says 'look at key', describe the key's details. Do NOT output [[LOOT: BRASS_KEY]].",
-            "3. LOSS: If an item leaves inventory, output [[LOST: ITEM_NAME]].",
-            "4. Do not list the users inventory contents unless asked. Do not comment on the items in the inventory unless instructed to.",
+            "1. ACQUISITION: If the user performs an action to take, grab, pocket, or keep an item, you MUST output [[LOOT: ITEM_NAME]].",
+            "   - Example: User says 'I pocket the coin' -> You output [[LOOT: SILVER_COIN]].",
+            "   - Example: User says 'I take the book' -> You output [[LOOT: LEATHER_BOOK]].",
+            "2. LOSS: If an item leaves inventory, output [[LOST: ITEM_NAME]].",
+            "3. OBSERVATION: If the user only looks at or examines an item, do NOT output a loot tag.",
+            "4. SILENCE: Do not list the inventory contents in your narrative unless asked.",
             mood_note]
         if semantic_ops:
             style_notes.append("\n=== INVENTORY RESONANCE (Active Item Effects) ===")

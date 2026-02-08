@@ -5,7 +5,7 @@ import os, time, json, uuid, urllib.request, urllib.error, random
 import traceback
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
-from bone_core import EventBus, Prisma, BoneConfig, RealityLayer, SystemHealth, TheObserver, BonePresets, TheLore, LoreCategory, TelemetryService,RealityStack
+from bone_core import EventBus, Prisma, BoneConfig, RealityLayer, SystemHealth, TheObserver, BonePresets, TheLore, LoreCategory, TelemetryService, RealityStack
 from bone_commands import CommandProcessor
 from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer, Limbo
 from bone_lexicon import TheLexicon, SomaticInterface
@@ -475,6 +475,60 @@ class BoneAmanita:
         if cold_result.get("ui"):
             print(cold_result["ui"])
         return cold_result
+
+    def save_checkpoint(self) -> str:
+        try:
+            folder = "saves"
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            last_phys = getattr(self.cortex, "last_physics", {})
+            world_data = self.cortex.gather_state(last_phys).get("world", {})
+            loc = world_data.get("orbit", ["Void"])[0]
+            last_speech = "Silence."
+            if self.cortex.dialogue_buffer:
+                last_speech = self.cortex.dialogue_buffer[-1]
+            continuity_packet = {
+                "location": loc,
+                "last_output": last_speech,
+                "inventory": self.gordon.inventory}
+            state_data = {
+                "health": self.health,
+                "stamina": self.stamina,
+                "trauma_accum": self.trauma_accum,
+                "soul_data": self.soul.to_dict(),
+                "continuity": continuity_packet,
+                "timestamp": time.time()}
+            path = os.path.join(folder, "quicksave.json")
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(state_data, f, indent=2, default=str)
+            return f"✔ Checkpoint Saved: {path}"
+        except Exception as e:
+            self.events.log(f"SAVE FAILED: {e}", "SYS_ERR")
+            return f"❌ Save Failed: {e}"
+
+    def resume_checkpoint(self) -> bool:
+        path = "saves/quicksave.json"
+        if not os.path.exists(path):
+            print(f"{Prisma.GRY}[RESUME]: No quicksave found. Starting fresh.{Prisma.RST}")
+            return False
+        try:
+            print(f"{Prisma.CYN}[RESUME]: Hydrating from {path}...{Prisma.RST}")
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            self.health = data.get("health", 100.0)
+            self.stamina = data.get("stamina", 100.0)
+            self.trauma_accum = data.get("trauma_accum", {})
+            if "soul_data" in data and hasattr(self, "soul"):
+                self.soul.load_from_dict(data["soul_data"])
+            if "continuity" in data:
+                self.embryo.continuity = data["continuity"]
+                if "inventory" in data["continuity"]:
+                    self.gordon.inventory = data["continuity"]["inventory"]
+            print(f"{Prisma.GRN}[RESUME]: System State Restored.{Prisma.RST}")
+            return True
+        except Exception as e:
+            print(f"{Prisma.RED}[RESUME]: Failed to hydrate: {e}{Prisma.RST}")
+            return False
 
     def shutdown(self):
         print(f"{Prisma.GRY}...Broadcasting SYSTEM_HALT...{Prisma.RST}")
