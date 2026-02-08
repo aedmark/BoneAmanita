@@ -2,11 +2,11 @@
 import random
 from typing import Tuple, Dict, Any, Optional
 from dataclasses import dataclass
-from bone_core import Prisma, MindSystem, PhysSystem, PhysicsPacket, TheLore
+from bone_core import Prisma, MindSystem, PhysSystem, PhysicsPacket, TheLore, BoneConfig
 from bone_village import MirrorGraph, TheCartographer
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_symbiosis import MycotoxinFactory, LichenSymbiont, ParasiticSymbiont
-from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, ViralTracer, ThePacemaker
+from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, ViralTracer, ThePacemaker, Biometrics
 from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity
 from bone_protocols import LimboLayer
 from bone_physics import QuantumObserver, SurfaceTension
@@ -49,7 +49,7 @@ class PanicRoom:
             mass=1.0,
             velocity=0.0,
             psi=0.0,
-            kappa=0.0,
+            kappa=0.9,
             beta_index=1.0,
             manifold="BUNKER")
 
@@ -111,6 +111,11 @@ class BoneArchitect:
     @staticmethod
     def _construct_bio(events, mind, lex) -> BioSystem:
         mito_state = MitochondrialState()
+        start_health = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+        start_stamina = getattr(BoneConfig, "MAX_STAMINA", 100.0)
+        bio_metrics = Biometrics(
+            health=start_health,
+            stamina=start_stamina)
         return BioSystem(
             mito=MitochondrialForge(mito_state, events),
             endo=EndocrineSystem(),
@@ -120,7 +125,8 @@ class BoneArchitect:
             governor=MetabolicGovernor(),
             shimmer=ShimmerState(),
             parasite=BioParasite(mind.mem, lex),
-            events=events)
+            events=events,
+            biometrics=bio_metrics)
 
     @staticmethod
     def _construct_physics(events, bio) -> PhysSystem:

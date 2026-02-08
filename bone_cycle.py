@@ -105,6 +105,7 @@ class IntentionPhase(SimulationPhase):
             ctx.log(f"{Prisma.OCHRE}🧠 INTENTION: Low Energy. Metabolism slowing down.{Prisma.RST}")
         return ctx
 
+
 class SanctuaryPhase(SimulationPhase):
     def __init__(self, engine_ref, governor_ref):
         super().__init__(engine_ref)
@@ -130,6 +131,10 @@ class SanctuaryPhase(SimulationPhase):
             ctx.log(f"{color}![☀️] SANCTUARY: Breathing space.{Prisma.RST}")
 
     def _apply_restoration(self, ctx: CycleContext):
+        if self.eng.bio and self.eng.bio.biometrics:
+            bio = self.eng.bio.biometrics
+            bio.health = min(BoneConfig.MAX_HEALTH, bio.health + 0.5)
+            bio.stamina = min(BoneConfig.MAX_STAMINA, bio.stamina + 1.0)
         self.eng.health = min(BoneConfig.MAX_HEALTH, self.eng.health + 0.5)
         self.eng.stamina = min(BoneConfig.MAX_STAMINA, self.eng.stamina + 1.0)
         if hasattr(self.eng, 'bio'):
@@ -223,12 +228,20 @@ class MetabolismPhase(SimulationPhase):
             "STATIC": physics.repetition,
             "FORCE": physics.voltage / max_v,
             "BETA": physics.beta_index}
+        real_health = self.eng.health
+        real_stamina = self.eng.stamina
+        if self.eng.bio.biometrics:
+            real_health = self.eng.bio.biometrics.health
+            real_stamina = self.eng.bio.biometrics.stamina
         ctx.bio_result = self.eng.soma.digest_cycle(
             ctx.input_text, physics, bio_feedback,
-            self.eng.health, self.eng.stamina,
+            real_health, real_stamina,
             self.eng.bio.governor.get_stress_modifier(self.eng.tick_count),
             self.eng.tick_count,
             circadian_bias=self._check_circadian_rhythm())
+        if self.eng.bio.biometrics:
+            self.eng.health = self.eng.bio.biometrics.health
+            self.eng.stamina = self.eng.bio.biometrics.stamina
         ctx.is_alive = ctx.bio_result["is_alive"]
         for log in ctx.bio_result["logs"]:
             if any(x in str(log) for x in ["CRITICAL", "TAX", "Poison", "NECROSIS"]):
@@ -272,21 +285,32 @@ class MetabolismPhase(SimulationPhase):
             if evt == "FLOW_BOOST":
                 self.eng.bio.mito.state.atp_pool += 20.0
             elif evt == "ICARUS_CRASH":
-                self.eng.health -= 15.0
-                ctx.log(f"   {Prisma.RED}IMPACT TRAUMA: -15.0 HP.{Prisma.RST}")
+                damage = 15.0
+                ctx.log(f"   {Prisma.RED}IMPACT TRAUMA: -{damage} HP.{Prisma.RST}")
+                if self.eng.bio.biometrics:
+                    self.eng.bio.biometrics.health = max(0.0, self.eng.bio.biometrics.health - damage)
+                self.eng.health -= damage
 
     def _apply_healing(self, ctx):
         qualia = self.eng.somatic.get_current_qualia(getattr(ctx, "last_impulse", None))
-        cracked, koan = self.eng.kintsugi.check_integrity(self.eng.stamina)
+        current_stamina = self.eng.stamina
+        if self.eng.bio.biometrics:
+            current_stamina = self.eng.bio.biometrics.stamina
+        cracked, koan = self.eng.kintsugi.check_integrity(current_stamina)
         if cracked:
             ctx.log(f"{Prisma.YEL}🏺 KINTSUGI ACTIVATED. KOAN: {koan}{Prisma.RST}")
         if self.eng.kintsugi.active_koan:
             repair = self.eng.kintsugi.attempt_repair(ctx.physics, self.eng.trauma_accum, self.eng.soul, qualia)
             if repair and repair["success"]:
                 ctx.log(repair["msg"])
-                self.eng.stamina = min(BoneConfig.MAX_STAMINA, self.eng.stamina + 20.0)
-        if self.eng.therapy.check_progress(ctx.physics, self.eng.stamina, self.eng.trauma_accum, qualia):
+                heal_amt = 20.0
+                if self.eng.bio.biometrics:
+                    self.eng.bio.biometrics.stamina = min(BoneConfig.MAX_STAMINA, self.eng.bio.biometrics.stamina + heal_amt)
+                self.eng.stamina = min(BoneConfig.MAX_STAMINA, self.eng.stamina + heal_amt)
+        if self.eng.therapy.check_progress(ctx.physics, current_stamina, self.eng.trauma_accum, qualia):
             ctx.log(f"{Prisma.GRN}❤️ THERAPY: Trauma processed. Health +5.{Prisma.RST}")
+            if self.eng.bio.biometrics:
+                self.eng.bio.biometrics.health = min(BoneConfig.MAX_HEALTH, self.eng.bio.biometrics.health + 5.0)
             self.eng.health = min(BoneConfig.MAX_HEALTH, self.eng.health + 5.0)
 
 class RealityFilterPhase(SimulationPhase):
@@ -386,7 +410,10 @@ class MachineryPhase(SimulationPhase):
         if t_crit == "AIRSTRIKE": self._handle_airstrike(ctx)
         c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(phys_dict)
         if c_msg: ctx.log(c_msg)
-        if c_state == "MELTDOWN": self.eng.health -= c_val
+        if c_state == "MELTDOWN":
+            if self.eng.bio.biometrics:
+                self.eng.bio.biometrics.health -= c_val
+            self.eng.health -= c_val
         return ctx
 
     def _process_crafting(self, ctx, phys_dict):
@@ -408,6 +435,8 @@ class MachineryPhase(SimulationPhase):
     def _handle_airstrike(self, ctx):
         max_hp = getattr(BoneConfig, "MAX_HEALTH", 100.0)
         damage = max_hp * 0.25
+        if self.eng.bio.biometrics:
+            self.eng.bio.biometrics.health -= damage
         self.eng.health -= damage
         ctx.log(f"{Prisma.RED}*** CRITICAL THEREMIN DISCHARGE *** -{damage:.1f} HP{Prisma.RST}")
         if hasattr(self.eng.events, "publish"):
@@ -571,6 +600,8 @@ class CognitionPhase(SimulationPhase):
         if ctx.is_alive and ctx.clean_words:
             max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
             current_h = max(0.0, self.eng.health)
+            if self.eng.bio.biometrics:
+                current_h = max(0.0, self.eng.bio.biometrics.health)
             desperation = 1.0 - (current_h / max_h)
             bury_msg, new_wells = self.eng.mind.mem.bury(
                 ctx.clean_words,
@@ -617,6 +648,8 @@ class SensationPhase(SimulationPhase):
         ctx.physics = apply_somatic_feedback(ctx.physics, qualia)
         self.synesthesia.apply_impulse(impulse)
         if impulse.stamina_impact != 0:
+            if self.eng.bio.biometrics:
+                self.eng.bio.biometrics.stamina = max(0.0, self.eng.bio.biometrics.stamina + impulse.stamina_impact)
             self.eng.stamina = max(0.0, self.eng.stamina + impulse.stamina_impact)
         return ctx
 

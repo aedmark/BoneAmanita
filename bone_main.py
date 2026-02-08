@@ -358,7 +358,7 @@ class BoneAmanita:
         return None
 
     def trigger_death(self, last_phys) -> Dict:
-        eulogy = DeathGen.eulogy(last_phys, self.bio.mito.state)
+        eulogy = DeathGen.eulogy(last_phys, self.bio.mito.state, self.trauma_accum)
         death_log = [f"\n{Prisma.RED}SYSTEM HALT: {eulogy}{Prisma.RST}"]
         continuity_packet = {
             "location": self.cortex.gather_state(self.cortex.last_physics or {}).get("world", {}).get("orbit", ["Void"])[0],

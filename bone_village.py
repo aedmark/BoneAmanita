@@ -368,41 +368,36 @@ class DeathGen:
     def load_protocols(cls):
         if TheLore.get("DEATH"): return
         print(f"{Prisma.RED}[DEATH]: Protocols missing. Loading default fallback.{Prisma.RST}")
-        default_death = {
-            "PREFIXES": ["System Halt.", "Alas.", "So it ends."],
-            "CAUSES": {
-                "DEFAULT": ["Unknown Error"],
-                "STARVATION": ["Energy Depletion", "Metabolic Collapse"],
-                "GLUTTONY": ["Circuit Overload", "Icarus Failure"],
-                "TOXICITY": ["Viral Load Exceeded", "Poisoned Input"],
-                "BOREDOM": ["Stagnation", "Entropy Victory"]},
-            "VERDICTS": {
-                "DEFAULT": ["The screen goes black."],
-                "HEAVY": ["Gravity wins.", "Silence falls."],
-                "LIGHT": ["A flash of light, then nothing."],
-                "TOXIC": ["The system purges itself."],
-                "BORING": ["The narrative dissolves into grey."]}}
+        default_death = {"PREFIXES": ["FATAL ERROR"], "CAUSES": {"DEFAULT": ["Unknown"]}, "VERDICTS": {"DEFAULT": ["End of Line."]}}
         TheLore.inject("DEATH", default_death)
 
     @staticmethod
-    def eulogy(physics, mito_state) -> str:
+    def eulogy(physics: Dict, mito_state: Any, trauma_vector: Dict = None) -> str:
         death_data = TheLore.get("DEATH")
         if not death_data:
             DeathGen.load_protocols()
             death_data = TheLore.get("DEATH")
         p = _normalize_physics_dict(physics)
-        cause = DeathGen._determine_cause(p, mito_state)
+        cause = DeathGen._determine_cause(p, mito_state, trauma_vector)
         verdict_type = DeathGen._determine_verdict_type(p, cause)
         prefix = random.choice(death_data.get("PREFIXES", ["Alas."]))
-        specific_cause = random.choice(death_data["CAUSES"].get(cause, ["General Failure"]))
-        verdict = random.choice(death_data["VERDICTS"].get(verdict_type, ["It is done."]))
+        possible_causes = death_data["CAUSES"].get(cause, death_data["CAUSES"].get("DEFAULT", ["General System Failure"]))
+        specific_cause = random.choice(possible_causes)
+        possible_verdicts = death_data["VERDICTS"].get(verdict_type, death_data["VERDICTS"].get("HEAVY", ["It is done."]))
+        verdict = random.choice(possible_verdicts)
         return f"{prefix} CAUSE: {specific_cause}. {verdict}"
 
     @staticmethod
-    def _determine_cause(p: Dict, mito_state: Any) -> str:
+    def _determine_cause(p: Dict, mito_state: Any, trauma_vector: Dict = None) -> str:
+        if trauma_vector:
+            total_trauma = sum(trauma_vector.values())
+            if total_trauma > 50.0:
+                return "TRAUMA"
         atp = 0.0
-        if isinstance(mito_state, dict): atp = float(mito_state.get("atp", 0))
-        else: atp = float(getattr(mito_state, "atp_pool", 0))
+        if isinstance(mito_state, dict):
+            atp = float(mito_state.get("atp", 0))
+        else:
+            atp = float(getattr(mito_state, "atp_pool", 0))
         if atp <= 0: return "STARVATION"
         volt = _get_float(p, "voltage", 0.0)
         drag = _get_float(p, "narrative_drag", 0.0)
@@ -410,12 +405,13 @@ class DeathGen:
         if volt > VOLT_CRITICAL: return "GLUTTONY"
         if counts.get("antigen", 0) > 5: return "TOXICITY"
         if drag > DRAG_SWAMP: return "BOREDOM"
-        return "DEFAULT"
+        return "TRAUMA" if trauma_vector and sum(trauma_vector.values()) > 20.0 else "STARVATION"
 
     @staticmethod
     def _determine_verdict_type(p: Dict, cause: str) -> str:
         if cause == "TOXICITY": return "TOXIC"
         if cause == "BOREDOM": return "BORING"
+        if cause == "TRAUMA": return "BROKEN"
         volt = _get_float(p, "voltage", 0.0)
         return "LIGHT" if volt > 10.0 else "HEAVY"
 
@@ -433,7 +429,7 @@ class PIDController:
         if dt <= 0.0: return 0.0
         error = self.setpoint - measurement
         if self._first_run:
-            self._last_error = error;
+            self._last_error = error
             self._first_run = False
         P = self.kp * error
         self._integral += error * dt

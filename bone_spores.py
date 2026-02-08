@@ -741,10 +741,12 @@ class LiteraryReproduction:
     @staticmethod
     def mutate_config(current_config):
         mutations = {}
+
         def safe_mutate(val, min_v, max_v):
             drift = random.uniform(0.9, 1.1)
             new_val = val * drift
             return max(min_v, min(max_v, new_val))
+
         if random.random() < 0.3:
             base = getattr(current_config, "MAX_DRAG_LIMIT", 10.0)
             mutations["MAX_DRAG_LIMIT"] = safe_mutate(base, 1.0, 20.0)
@@ -777,15 +779,17 @@ class LiteraryReproduction:
         dominant = max(counts, key=counts.get) if counts else "VOID"
         mutation_data = LiteraryReproduction.MUTATIONS.get(
             dominant.upper(),
-            {"trait": "NEUTRAL", "mod": {}})
+            {"trait": "NEUTRAL", "mod": {}, "lexicon": []})
         child_id = f"{parent_id}_({mutation_data['trait']})"
         config_mutations = LiteraryReproduction.mutate_config(BoneConfig)
+        config_mutations.update(mutation_data["mod"])
+        lexicon_mutations = {dominant.lower(): mutation_data.get("lexicon", [])}
         trauma_vec = bio_state.get("trauma_vector", {})
         child_genome = {
             "source": "MITOSIS",
             "parent_a": parent_id,
             "parent_b": None,
-            "mutations": mutation_data["mod"],
+            "lexicon_mutations": lexicon_mutations,
             "config_mutations": config_mutations,
             "dominant_flavor": dominant,
             "trauma_inheritance": trauma_vec}
@@ -836,7 +840,7 @@ class LiteraryReproduction:
             bio_state = {"trauma_vector": engine_ref.trauma_accum}
             child_id, genome = self.mitosis(mem.session_id, bio_state, phys)
             log_msg = [f"   ► CHILD SPAWNED: {Prisma.WHT}{child_id}{Prisma.RST}",
-                       f"   ► TRAIT: {genome.get('mutations', 'None')}"]
+                       f"   ► TRAIT: {genome.get('dominant_flavor', 'None')}"]
         elif mode == "CROSSOVER":
             if not target_spore:
                 return f"{Prisma.RED}FERTILITY ERROR: No partner found.{Prisma.RST}", {}
@@ -853,6 +857,7 @@ class LiteraryReproduction:
                 "final_stamina": engine_ref.stamina},
             "trauma_vector": genome.get("trauma_inheritance", {}),
             "config_mutations": genome.get("config_mutations", {}),
+            "mutations": genome.get("lexicon_mutations", {}),
             "mitochondria": {"enzymes": list(genome.get("inherited_enzymes", []))},
             "core_graph": mem.graph,
             "antibodies": list(engine_ref.bio.immune.active_antibodies)}
@@ -860,4 +865,4 @@ class LiteraryReproduction:
         saved_path = mem.loader.save_spore(filename, full_spore_data)
         if saved_path:
             log_msg.append(f"   {Prisma.GRN}SAVED: {saved_path}{Prisma.RST}")
-        return "\n".join(log_msg), genome.get("mutations", {})
+        return "\n".join(log_msg), genome.get("config_mutations", {})

@@ -16,7 +16,7 @@ class BrainConfig:
     VOLTAGE_SENSITIVITY: float = 0.03
     MAX_PLASTICITY: float = 0.95
     BASE_DECAY_RATE: float = 0.1
-    BASE_TEMP: float = 0.6
+    BASE_TEMP: float = 0.65
     BASE_TOP_P: float = 0.9
     CORTISOL_FREEZE: float = 0.2
     DOPAMINE_NOVELTY: float = 0.4
