@@ -1,6 +1,7 @@
 {
     "lens_cooccurrence": {
-        "NARRATOR|THE OBSERVER": 1
+        "NARRATOR|THE OBSERVER": 7,
+        "CLARENCE|THE OBSERVER": 10
     },
     "ingredient_affinity": {},
     "shadow_stock": []

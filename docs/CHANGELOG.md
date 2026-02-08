@@ -1,5 +1,38 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.5.9: "THE PERMANENCE PATCH"**
+
+_“A story without memory is just noise. We do not simply exist; we record.”_
+
+---
+
+#### **💎 STRUCTURAL HARDENING (The Torvalds Lens)**
+
+- **The Omniscient Save (`bone_main.py` & `bone_app.py`):**
+- **The Amnesia:** The `save_checkpoint` function was preserving the _state_ (Health, Inventory, Location) but discarding the _narrative_. Reloading a session felt like waking up from a coma—you knew who you were, but not what you had just said.
+- **The Chronicle:** Updated the serialization logic to capture the full `chat_history`.
+- **The Hydration:** `resume_checkpoint` now injects this history back into the UI upon boot. The engine remembers the entire conversation, not just the last sentence.
+
+- **The Ghost Button (`bone_app.py`):**
+- **The Bug:** The **SAVE & HIBERNATE** button was checking for `st.session_state['engine']` (lowercase), but the system initialized it as `['ENGINE']` (uppercase). The button clicked, but the signal terminated in a void.
+- **The Fix:** aligned the keys. The button now connects.
+
+#### **🧠 COGNITIVE DISCIPLINE (The Pinker Lens)**
+
+- **The Hands-Off Protocol (`bone_brain.py`):**
+- **The Thief:** The LLM was violating the **Law of Agency**. If the user looked at a "rusty key," the AI would helpfuly put it in their pocket (`[[LOOT: RUSTY_KEY]]`).
+- **The Constraint:** Implemented **Quantum Inventory Rules** in the `PromptComposer`. We explicitly decoupled _Perception_ from _Possession_.
+- **The Law:** "Finding is not Taking." The AI is now forbidden from auto-looting. It must wait for the user to extend their hand.
+
+#### **📜 INTERFACE DYNAMICS (The Schur Lens)**
+
+- **The Ship's Log (`bone_app.py`):**
+- **The Feature:** Added a **Transcript Export** button.
+- **The Form:** Generates a clean Markdown file of the entire session, stripping out UI artifacts and formatting it for human readability.
+- **The Identity:** The log now respects the user's chosen `Designation` instead of labeling them generic "USER".
+
+---
+
 ### **BONEAMANITA v14.5.8: "THE DIAMOND MIND UPDATE"**
 
 _“We do not hide mistakes; we own them. Then we fix the root cause. And if we can't fix it, we build a Panic Room.”_

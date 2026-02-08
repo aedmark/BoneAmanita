@@ -106,12 +106,15 @@ def generate_transcript(history, user_name="TRAVELER"):
 if "history" not in st.session_state:
     st.session_state.history = []
 
+
 def init_engine():
     try:
         config = ConfigWizard.load_or_create()
         if not config: return None
         new_instance = BoneAmanita(config)
-        restored = new_instance.resume_checkpoint()
+        restored, saved_history = new_instance.resume_checkpoint()
+        if restored and saved_history:
+            st.session_state.history = saved_history
         if not st.session_state.history:
             boot_packet = new_instance.engage_cold_boot()
             if boot_packet and "ui" in boot_packet:
@@ -128,6 +131,7 @@ def init_engine():
     except Exception as e:
         st.error(f"Critical Boot Error: {e}")
         return None
+
 if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_state:
     st.title("/// SYSTEM SETUP ///")
     with st.form("setup_form"):
@@ -189,9 +193,10 @@ with st.sidebar:
         msg = engine.emergency_save(exit_cause="MANUAL_UI")
         st.toast(msg)
     if st.button("💾 SAVE & HIBERNATE"):
-        if 'engine' in st.session_state:
+        if 'ENGINE' in st.session_state:
             with st.spinner("Compiling Spore..."):
-                st.session_state.engine.shutdown()
+                st.session_state.ENGINE.save_checkpoint(history=st.session_state.history)
+                st.session_state.ENGINE.shutdown()
                 st.success("System State Saved. You may close the terminal.")
 for msg in st.session_state.history:
     with st.chat_message(msg["role"]):
@@ -224,7 +229,6 @@ if prompt := st.chat_input("Broadcast Signal..."):
     st.session_state.history.append({"role": "user", "content": prompt})
     with st.spinner("Calculating Geodesics..."):
         packet = engine.process_turn(prompt)
-        engine.save_checkpoint()
     separator = "────────────────────────────────────────────────────────────"
     logs = packet.get("logs", [])
     response_text = packet.get("raw_content", packet.get("ui", "No signal."))
@@ -237,6 +241,6 @@ if prompt := st.chat_input("Broadcast Signal..."):
         "role": "assistant",
         "content": response_text,
         "raw_content": response_text,
-        "logs": logs
-    })
+        "logs": logs})
+    engine.save_checkpoint(history=st.session_state.history)
     st.rerun()

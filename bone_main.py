@@ -1,10 +1,10 @@
-""" BONEAMANITA 14.5.8
+""" BONEAMANITA 14.5.9
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
 import traceback
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from bone_core import EventBus, Prisma, BoneConfig, RealityLayer, SystemHealth, TheObserver, BonePresets, TheLore, LoreCategory, TelemetryService, RealityStack
 from bone_commands import CommandProcessor
 from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer, Limbo
@@ -44,7 +44,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.5.8', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.5.9', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -476,7 +476,7 @@ class BoneAmanita:
             print(cold_result["ui"])
         return cold_result
 
-    def save_checkpoint(self) -> str:
+    def save_checkpoint(self, history: list = None) -> str:
         try:
             folder = "saves"
             if not os.path.exists(folder):
@@ -497,20 +497,22 @@ class BoneAmanita:
                 "trauma_accum": self.trauma_accum,
                 "soul_data": self.soul.to_dict(),
                 "continuity": continuity_packet,
-                "timestamp": time.time()}
+                "timestamp": time.time(),
+                "chat_history": history if history else []}
             path = os.path.join(folder, "quicksave.json")
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump(state_data, f, indent=2, default=str)
+
             return f"✔ Checkpoint Saved: {path}"
         except Exception as e:
             self.events.log(f"SAVE FAILED: {e}", "SYS_ERR")
             return f"❌ Save Failed: {e}"
 
-    def resume_checkpoint(self) -> bool:
+    def resume_checkpoint(self) -> Tuple[bool, list]:
         path = "saves/quicksave.json"
         if not os.path.exists(path):
             print(f"{Prisma.GRY}[RESUME]: No quicksave found. Starting fresh.{Prisma.RST}")
-            return False
+            return False, []
         try:
             print(f"{Prisma.CYN}[RESUME]: Hydrating from {path}...{Prisma.RST}")
             with open(path, 'r', encoding='utf-8') as f:
@@ -524,11 +526,12 @@ class BoneAmanita:
                 self.embryo.continuity = data["continuity"]
                 if "inventory" in data["continuity"]:
                     self.gordon.inventory = data["continuity"]["inventory"]
-            print(f"{Prisma.GRN}[RESUME]: System State Restored.{Prisma.RST}")
-            return True
+            restored_history = data.get("chat_history", [])
+            print(f"{Prisma.GRN}[RESUME]: System State & Logs Restored.{Prisma.RST}")
+            return True, restored_history
         except Exception as e:
             print(f"{Prisma.RED}[RESUME]: Failed to hydrate: {e}{Prisma.RST}")
-            return False
+            return False, []
 
     def shutdown(self):
         print(f"{Prisma.GRY}...Broadcasting SYSTEM_HALT...{Prisma.RST}")
@@ -623,7 +626,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 14.5.8', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 14.5.9', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)
