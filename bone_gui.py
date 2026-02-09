@@ -59,12 +59,14 @@ class Projector:
         empty = width - fill
         return f"{color}{'█'*fill}{Prisma.GRY}{'░'*empty}{Prisma.RST}"
 
+
 class GeodesicRenderer:
     def __init__(self, engine_ref, chroma_ref, strunk_ref, valve_ref):
         self.eng = engine_ref
         self.projector = Projector()
         self.vsl_chroma = chroma_ref
         self.strunk_white = strunk_ref
+        self.soul_dashboard = SoulDashboard(engine_ref)
         self.NOISE_PATTERNS = [
             "stabilizer:", "pid_", "flux", "phase execution",
             "vector collapse", "manifold", "orbit:", "update_coordinates",
@@ -78,15 +80,14 @@ class GeodesicRenderer:
         colored_ui = self.vsl_chroma.modulate(raw_dashboard, physics.get("vector", {}))
         if self.strunk_white:
             clean_ui, style_log = self.strunk_white.sanitize(colored_ui)
-            if style_log:
-                self._punish_style_crime(style_log)
+            if style_log: self._punish_style_crime(style_log)
         else:
             clean_ui = colored_ui
         if "The system is listening." in clean_ui:
             clean_ui = clean_ui.replace("The system is listening.", "")
         if hasattr(self.eng, 'soul'):
-            soul_ui = self.render_soul_strip(self.eng.soul)
-            clean_ui = f"{clean_ui}\n{soul_ui}"
+            soul_ui = self.soul_dashboard.render()
+            clean_ui = f"{soul_ui}\n{clean_ui}"
         structured_logs = self.compose_logs(ctx.logs, current_events, current_tick)
         return {
             "type": "GEODESIC_FRAME",
@@ -241,3 +242,38 @@ class PulseReader:
         if voltage > 15.0: return "HIGH", "🔥"
         if voltage < 5.0: return "LOW", "❄️"
         return "NOMINAL", "🟢"
+
+class SoulDashboard:
+    def __init__(self, engine_ref):
+        self.eng = engine_ref
+
+    def render(self) -> str:
+        if not hasattr(self.eng, 'soul') or not self.eng.soul:
+            return ""
+        anchor = self.eng.soul.anchor
+        soul = self.eng.soul
+        dig = anchor.dignity_reserve
+        if dig > 80:
+            color = Prisma.GRN
+        elif dig > 30:
+            color = Prisma.OCHRE
+        else:
+            color = Prisma.RED
+        filled = int(dig / 5)
+        bar_str = f"{color}{'█' * filled}{Prisma.GRY}{'░' * (20 - filled)}{Prisma.RST}"
+        lock_status = ""
+        if anchor.agency_lock:
+            lock_status = f" {Prisma.RED}[🔒 AGENCY LOCKED]{Prisma.RST}"
+        elif dig < 30:
+            lock_status = f" {Prisma.OCHRE}[⚠ FADING]{Prisma.RST}"
+        arch = soul.archetype
+        tenure = soul.archetype_tenure
+        tenure_color = Prisma.GRY
+        if tenure > 5: tenure_color = Prisma.OCHRE
+        if tenure > 8: tenure_color = Prisma.RED
+        arch_display = f"{Prisma.CYN}{arch}{Prisma.RST} ({tenure_color}T:{tenure}{Prisma.RST})"
+        pet_icon = " 🐕" if (dig < 50 and not anchor.agency_lock) else ""
+        muse = soul.current_obsession if soul.current_obsession else "Void"
+        line1 = f"SOUL: {bar_str} {int(dig)}%{lock_status}{pet_icon}"
+        line2 = f"      DRIVER: {arch_display}  MUSE: {Prisma.VIOLET}{muse}{Prisma.RST}"
+        return f"{line1}\n{line2}"

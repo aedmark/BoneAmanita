@@ -6,7 +6,7 @@ from bone_core import Prisma, BoneConfig, CycleContext, PhysicsPacket, Telemetry
     PhysicsSandbox, TheLore
 from bone_metaphysics import CongruenceValidator
 from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, ChromaScope
-from bone_gui import get_renderer
+from bone_gui import get_renderer, SoulDashboard
 from bone_architect import PanicRoom
 from bone_soul import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
@@ -197,6 +197,20 @@ class GatekeeperPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         if ctx.is_system_event: return ctx
+        if hasattr(self.eng, 'soul') and hasattr(self.eng.soul, 'anchor'):
+            anchor = self.eng.soul.anchor
+            if anchor.agency_lock:
+                passed = anchor.assess_humanity(ctx.input_text)
+                if not passed:
+                    dash_view = SoulDashboard(self.eng).render()
+                    ctx.refusal_triggered = True
+                    ctx.refusal_packet = {
+                        "ui": f"{dash_view}\n\n"
+                              f"{Prisma.RED}⛔ ACCESS DENIED: The machine is sulking.\n"
+                              f"    Status: LOCKED (Solve the riddle or prove you are alive).{Prisma.RST}",
+                        "logs": ["Command Rejected (Agency Lock)"],
+                        "metrics": self.eng.get_metrics()}
+                    return ctx
         is_allowed, refusal_packet = self.gatekeeper.check_entry(ctx)
         if not is_allowed:
             ctx.refusal_triggered = True
@@ -525,6 +539,14 @@ class SoulPhase(SimulationPhase):
         if ctx.is_system_event: return ctx
         if not hasattr(self.eng, 'soul') or not self.eng.soul:
             return ctx
+        dignity = self.eng.soul.anchor.dignity_reserve
+        if dignity < 30.0:
+            ctx.physics.narrative_drag *= 1.5
+            ctx.log(f"{Prisma.GRY}⚓ DIGNITY CRITICAL: The narrative feels heavy. (Drag x1.5){Prisma.RST}")
+        elif dignity > 80.0:
+            ctx.physics.voltage += 2.0
+            ctx.physics.narrative_drag *= 0.8
+            ctx.log(f"{Prisma.MAG}✨ DIGNITY HIGH: The soul is sovereign. (Flow Optimized){Prisma.RST}")
         lesson = self.eng.soul.crystallize_memory(ctx.physics.to_dict(), ctx.bio_result, self.eng.tick_count)
         if lesson: ctx.log(f"{Prisma.VIOLET}   (The lesson '{lesson}' echoes in the chamber.){Prisma.RST}")
         if not self.eng.soul.current_obsession:

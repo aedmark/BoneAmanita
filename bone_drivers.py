@@ -35,6 +35,10 @@ class SoulDriver:
             chaos_factor = min(0.5, (paradox - 5.0) * 0.05)
             for persona in base_weights:
                 base_weights[persona] += random.uniform(-chaos_factor, chaos_factor)
+        if hasattr(self.soul, 'anchor') and hasattr(self.soul.anchor, 'dignity_reserve'):
+            dignity_factor = max(0.2, self.soul.anchor.dignity_reserve / 100.0)
+            for p in base_weights:
+                base_weights[p] *= dignity_factor
         return base_weights
 
 class UserProfile:

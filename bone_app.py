@@ -8,6 +8,69 @@ import re
 from bone_main import BoneAmanita, ConfigWizard
 from bone_core import Prisma
 
+def render_sidebar(eng_ref):
+    """
+    Visualizes the Soul's Metaphysical State in the Sidebar.
+    """
+    if not hasattr(eng_ref, 'soul') or not eng_ref.soul:
+        return
+
+    soul = eng_ref.soul
+    anchor = soul.anchor
+
+    with st.sidebar:
+        st.title("💀 BONEAMANITA")
+        st.markdown("---")
+
+        dig = anchor.dignity_reserve
+        st.subheader("⚓ Dignity Reserve")
+
+        st.progress(min(100, max(0, int(dig))))
+
+        if anchor.agency_lock:
+            st.error("🔒 AGENCY LOCKED")
+            st.caption("The machine is sulking. Solve the riddle.")
+        elif dig < 30:
+            st.warning("⚠ CRITICAL FADE")
+            st.caption(f"Value: {dig:.1f}% (High Drag)")
+        else:
+            st.caption(f"Value: {dig:.1f}% (Nominal)")
+
+        st.markdown("---")
+
+        st.subheader("🎭 Active Driver")
+        st.markdown(f"**{soul.archetype}**")
+
+        tenure = soul.archetype_tenure
+        st.caption(f"Tenure: {tenure} cycles")
+        if tenure > 8:
+            st.warning("🔥 Burnout Risk: HIGH")
+        elif tenure > 5:
+            st.info("⚠ Burnout Risk: MODERATE")
+
+        st.markdown("---")
+        st.subheader("🧭 Current Muse")
+        if soul.current_obsession:
+            st.success(f"\"{soul.current_obsession}\"")
+        else:
+            st.markdown("*The Void*")
+
+        with st.expander("System Vectors"):
+            v = 0.0
+            d = 0.0
+            if hasattr(eng_ref, 'phys') and eng_ref.phys and hasattr(eng_ref.phys, 'observer'):
+                v_packet = eng_ref.phys.observer.last_physics_packet
+                if v_packet:
+                    if isinstance(packet, dict):
+                        v = v_packet.get("voltage", 0.0)
+                        d = v_packet.get("narrative_drag", 0.0)
+                    else:
+                        v = getattr(v_packet, "voltage", 0.0)
+                        d = getattr(v_packet, "narrative_drag", 0.0)
+
+            st.metric("Voltage", f"{v:.1f}v")
+            st.metric("Narrative Drag", f"{d:.1f}")
+
 st.set_page_config(
     page_title="BONEAMANITA [GLASS TERMINAL]",
     page_icon="💀",
@@ -120,22 +183,22 @@ def format_log_entry(log_str):
 def generate_transcript(history, user_name="TRAVELER"):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
     lines = [f"# BONEAMANITA TRANSCRIPT - {timestamp}", f"Identity: {user_name}", "---"]
-    for msg in history:
-        raw_role = msg["role"].upper()
+    for entry in history:
+        raw_role = entry["role"].upper()
         display_name = raw_role
         if raw_role == "USER":
             display_name = user_name.upper()
         elif raw_role == "ASSISTANT":
             display_name = "THE SYSTEM"
-        content = msg.get("raw_content", msg["content"])
+        content = entry.get("raw_content", entry["content"])
         clean_content = strip_ansi(content)
         icon = "👤" if raw_role == "USER" else "💀"
         lines.append(f"\n### {icon} {display_name}")
         lines.append(clean_content)
-        if "logs" in msg and msg["logs"]:
+        if "logs" in entry and entry["logs"]:
             lines.append("\n> **SYSTEM INTERNALS:**")
-            for log in msg["logs"]:
-                clean_log = strip_ansi(str(log))
+            for internal_log in entry["logs"]:
+                clean_log = strip_ansi(str(internal_log))
                 lines.append(f"> * {clean_log}")
     lines.append("\n---")
     lines.append("*End of Transmission*")
@@ -174,12 +237,12 @@ def init_engine():
 if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_state:
     st.title("/// SYSTEM SETUP ///")
     with st.form("setup_form"):
-        user_name = st.text_input("Designation", value="Traveler")
+        setup_user_name = st.text_input("Designation", value="Traveler")
         provider = st.selectbox("Backend", ["Ollama (Local)", "OpenAI (Cloud)", "Mock"])
         api_key = st.text_input("API Key (if Cloud)", type="password")
         model_name = st.text_input("Model ID", value="gpt-4" if provider == "OpenAI (Cloud)" else "llama3")
         if st.form_submit_button("IGNITE"):
-            cfg = {"user_name": user_name, "provider": provider.split()[0].lower(), "model": model_name}
+            cfg = {"user_name": setup_user_name, "provider": provider.split()[0].lower(), "model": model_name}
             if api_key: cfg["api_key"] = api_key
             if cfg["provider"] == "ollama": cfg["base_url"] = "http://127.0.0.1:11434/v1/chat/completions"
             with open(ConfigWizard.CONFIG_FILE, "w") as f: json.dump(cfg, f, indent=4)
@@ -189,6 +252,9 @@ if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_s
 if "ENGINE" not in st.session_state:
     with st.spinner("Hydrating Spore Casing..."):
         st.session_state.ENGINE = init_engine()
+
+if "ENGINE" in st.session_state:
+    render_sidebar(st.session_state.ENGINE)
 
 engine = st.session_state.ENGINE
 
@@ -260,17 +326,17 @@ with st.sidebar:
                 st.session_state.ENGINE.shutdown()
                 st.success("System State Saved. You may close the terminal.")
 
-for msg in st.session_state.history:
-    with st.chat_message(msg["role"]):
-        raw = msg.get("raw_content", msg["content"])
+for hist_msg in st.session_state.history:
+    with st.chat_message(hist_msg["role"]):
+        raw = hist_msg.get("raw_content", hist_msg["content"])
 
         clean_show = clean_engine_output(raw)
 
         st.markdown(clean_show)
-        if "logs" in msg and msg["logs"]:
+        if "logs" in hist_msg and hist_msg["logs"]:
             with st.expander("SYSTEM INTERNALS"):
-                for log in msg["logs"]:
-                    formatted = format_log_entry(log)
+                for hist_log in hist_msg["logs"]:
+                    formatted = format_log_entry(hist_log)
                     if formatted:
                         st.caption(formatted)
 

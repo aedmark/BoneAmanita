@@ -14,7 +14,7 @@ from bone_village import ParadoxSeed
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
-        self.genome = "BONEAMANITA_14.6.4"
+        self.genome = "BONEAMANITA_14.7.0"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():
@@ -31,7 +31,6 @@ class SporeCasing:
         self.trauma_scar = round(trauma, 3)
         self.joy_vectors = joy_vectors if joy_vectors is not None else []
         self.world_atlas = world_atlas or {}
-
 
 class SporeInterface:
     def save_spore(self, filename, data): raise NotImplementedError

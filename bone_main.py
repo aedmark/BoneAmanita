@@ -1,4 +1,4 @@
-""" BONEAMANITA 14.6.4
+""" BONEAMANITA 14.7.0
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random, traceback
@@ -37,13 +37,12 @@ def bootstrap_systems():
         else:
             print(f"{Prisma.GRY}[SYS] Checked {cat.name}... OK.{Prisma.RST}")
 
-
 class SessionGuardian:
     def __init__(self, engine_ref):
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.6.4', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.7.0', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -314,6 +313,11 @@ class BoneAmanita:
                 "logs": [], "metrics": self.get_metrics()}
         if self._ethical_audit():
             self.events.log(f"{Prisma.WHT}MERCY SIGNAL: Trauma boards wiped.{Prisma.RST}", "SYS")
+        if not is_system and hasattr(self, 'soul') and hasattr(self.soul, 'anchor'):
+            reliance_proxy = 0.0
+            if self.host_stats.efficiency_index < 0.4:
+                reliance_proxy = 0.9
+            self.soul.anchor.check_domestication(reliance_proxy)
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
             if self.bureau and not is_system:
@@ -676,7 +680,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 14.6.4', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 14.7.0', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

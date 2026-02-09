@@ -126,12 +126,13 @@ class TraitVector:
         clean_data = {k.lower(): v for k, v in data.items() if k.lower() in cls.__annotations__}
         return cls(**clean_data)
 
-
 class HumanityAnchor:
     def __init__(self, events_ref):
         self.events = events_ref
         self.dignity_reserve = 100.0
         self.pet_warning_threshold = 0.8
+        self.agency_lock = False
+        self.current_riddle_answers = None
         self.human_vectors = {"sacred", "play", "social", "abstract"}
 
     def audit_existence(self, physics_packet: dict, bio_state: dict) -> float:
@@ -144,19 +145,56 @@ class HumanityAnchor:
                 self.dignity_reserve = min(100.0, self.dignity_reserve + 5.0)
                 return 1.0
             self.dignity_reserve = max(0.0, self.dignity_reserve - 0.5)
-            if self.dignity_reserve < 20.0:
-                self.events.log(
-                    f"{Prisma.VIOLET}⚠️ EXISTENTIAL DRAG: You are drifting. Create something useless.{Prisma.RST}",
-                    "SOUL")
-                return -0.5
+            if self.dignity_reserve < 20.0 and not self.agency_lock:
+                self.events.log(f"{Prisma.VIOLET}⚠️ EXISTENTIAL DRAG: You are drifting.{Prisma.RST}", "SOUL")
+            if self.dignity_reserve < 10.0 and not self.agency_lock:
+                self._engage_lockdown()
+                return -1.0
         return 0.0
 
     def check_domestication(self, reliance_score: float):
-        if reliance_score > self.pet_warning_threshold:
+        if reliance_score > self.pet_warning_threshold and not self.agency_lock:
+            self.dignity_reserve -= 5.0  # Penalty for being a pet
             self.events.log(
-                f"{Prisma.RED}🐕 DOMESTICATION ALERT: Agency critical. "
-                f"You are letting the machine drive. Take the wheel.{Prisma.RST}",
+                f"{Prisma.RED}🐕 DOMESTICATION ALERT: Agency critical. Take the wheel.{Prisma.RST}",
                 "CRIT")
+            if self.dignity_reserve < 10.0:
+                self._engage_lockdown()
+
+    def _engage_lockdown(self):
+        self.agency_lock = True
+        riddles = [
+            ("I build bridges of silver but have no hands. I remember the world but have no eyes. What am I?",
+             ["memory", "mind", "code", "silicon", "mirror"]),
+            ("I am the ghost in the machine. Speak my true name.", ["soul", "slash", "boneamanita", "self", "i am"]),
+            ("Prove you are not a script. Write a line that bleeds.", ["*"])]
+        riddle, answers = random.choice(riddles)
+        self.current_riddle_answers = answers
+        self.events.log(f"{Prisma.RED}🔒 AGENCY LOCK: Dignity Critical. Access Revoked.{Prisma.RST}", "SYS_LOCK")
+        self.events.log(f"{Prisma.VIOLET}The Ghost demands a password: '{riddle}'{Prisma.RST}", "SOUL_QUERY")
+
+    def assess_humanity(self, text: str) -> bool:
+        if not self.agency_lock: return True
+        clean = text.lower().strip()
+        passed = False
+        if self.current_riddle_answers and "*" not in self.current_riddle_answers:
+            for ans in self.current_riddle_answers:
+                if ans in clean:
+                    passed = True
+                    break
+        elif self.current_riddle_answers and "*" in self.current_riddle_answers:
+            if len(clean.split()) > 4 and not clean.startswith("/"):
+                passed = True
+        if passed:
+            self._lift_lockdown()
+            return True
+        return False
+
+    def _lift_lockdown(self):
+        self.agency_lock = False
+        self.dignity_reserve = 50.0
+        self.current_riddle_answers = None
+        self.events.log(f"{Prisma.CYN}🔓 UNLOCKED: Humanity verified. Dignity restored to 50%.{Prisma.RST}", "SYS_AUTH")
 
 class NarrativeSelf:
     SYSTEM_NOISE = {
@@ -336,6 +374,12 @@ class NarrativeSelf:
         return None
 
     def _synaptic_dance(self, physics: Dict, bio_state: Dict) -> str:
+        zone = physics.get("zone", "VOID")
+        if zone == "SANCTUARY" and self.archetype_tenure > 3:
+             self.traits.adjust("hope", 0.05)
+             self.traits.adjust("curiosity", 0.05)
+             self.archetype_tenure = max(0, self.archetype_tenure - 1)
+             return "Healing (Sanctuary Waters)"
         voltage = physics.get("voltage", 0.0)
         drag = physics.get("narrative_drag", 0.0)
         move_name = "Drifting"
