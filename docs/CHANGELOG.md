@@ -1,5 +1,62 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.6.4: "THE ATOMIC SYNTHESIS"**
+
+_“We stopped simulating the connection between body and mind. We simply connected the wires.”_
+
+---
+
+#### **🧬 SOMATIC INTEGRATION (The Meadows Lens)**
+
+- **The Closed Loop (`bone_soul.py`):**
+- **The Disconnect:** The `SomaticInterface` was perceiving biological stress (Cortisol, Adrenaline) but failing to act on it. The body was screaming in a soundproof room.
+- **The Wire:** Implemented `apply_somatic_feedback()`.
+- **The Effect:** Biology now directly modulates Physics. High **Cortisol** creates immediate **Narrative Drag** (Brain Fog). High **Adrenaline** spikes **Voltage**. The user can no longer write calmly while their dashboard is redlining.
+
+- **The Awake Governor (`bone_village.py`):**
+- **The Coma:** `SanctuaryGovernor` was a placebo class returning a static `"MAINTAIN"` signal. It never shifted manifolds.
+- **The Awakening:** Implemented a full PID-driven state machine.
+- **The Behavior:** The system now actively shifts biomes based on user behavior.
+- **Manic (Voltage > 16):** Shifts to **THE FORGE**.
+- **Stuck (Drag > 6):** Shifts to **THE MUD**.
+- **Floating (Low V/D):** Shifts to **THE AERIE**.
+
+#### **🎒 INVENTORY DYNAMICS (The Schur Lens)**
+
+- **Gordon's Voice (`bone_inventory.py`):**
+- **The Hardcoding:** `GordonKnot` was ignoring `gordon_logs.json` and using hardcoded strings for failures.
+- **The Fix:** Wired the class to the JSON. Gordon now complains specifically about "Union Breaks" or "Lint" based on the data file.
+
+- **Autonomic Reflexes (`bone_cycle.py` & `bone_inventory.py`):**
+- **The Mechanism:** Injected `emergency_reflex` into the `NavigationPhase`.
+- **The Survival:** If **Drag > 6.0** and the user possesses an **ANCHOR_STONE**, Gordon now autonomously deploys it to prevent Void Drift. The inventory is no longer just a list of strings; it is a safety system.
+
+#### **💾 PERSISTENCE & MEMORY (The Fuller Lens)**
+
+- **The Akashic Fix (`bone_akashic.py`):**
+- **The Amnesia:** The system "learned" recipes and lenses but forgot them on reboot because `save_all` was hollow.
+- **The Patch:**
+- **Science:** Successful `FORGE` events now permanently write to `gordon.json`.
+- **Evolution:** `_hybridize_lenses` now generates and saves new Archetypes (`THE POET-ENGINEER`) to `lenses.json`.
+
+- **Object Serialization (`bone_body.py`):**
+- **The Crash:** The UI tried to read `engine.bio` as a dictionary, but it was a raw Dataclass, causing an `AttributeError`.
+- **The Polyfill:** Implemented `BioSystem.to_dict()` to strictly serialize the biological state for the frontend.
+
+#### **👁️ INTERFACE UNIFICATION (The Torvalds Lens)**
+
+- **The Split-Brain Cure (`bone_app.py` & `bone_gui.py`):**
+- **The Issue:** The CLI (`bone_main`) and Web (`bone_app`) were drifting apart. We had dead code in `run_entity.py` and `bone_entity.py`.
+- **The Purge:** Deleted `run_entity.py` and `bone_entity.py`.
+- **The Merge:** Extracted the "Mood Reading" logic into `bone_gui.PulseReader` and standardized the Streamlit app to use the core Engine exclusively.
+
+- **The Ship's Log (`bone_app.py`):**
+- **Restoration:** Re-implemented the **Markdown Export** feature that was lost in the refactor.
+- **Hygiene:** Added aggressive Regex cleaning (`clean_engine_output`) to strip CLI artifacts (Status Bars, ANSI codes) from the Web Chat, ensuring the narrative remains pure.
+
+
+---
+
 ### **BONEAMANITA v14.6.3: "THE BROKEN MIRROR"**
 
 _“Truth is not a smooth surface; it is a jagged edge. We have added the handle.”_

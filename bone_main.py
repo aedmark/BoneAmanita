@@ -1,8 +1,7 @@
-""" BONEAMANITA 14.6.2
+""" BONEAMANITA 14.6.4
  Architects: SLASH, KISHO, Taylor & Edmark """
 
-import os, time, json, uuid, urllib.request, urllib.error, random
-import traceback
+import os, time, json, uuid, urllib.request, urllib.error, random, traceback
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
 from bone_core import EventBus, Prisma, BoneConfig, RealityLayer, SystemHealth, TheObserver, BonePresets, TheLore, LoreCategory, TelemetryService, RealityStack
@@ -44,7 +43,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.6.2', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.6.4', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -677,7 +676,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 14.6.2', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 14.6.4', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

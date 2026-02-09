@@ -1,7 +1,10 @@
-""" bone_app.py - The Glass Terminal Interface (Refactored & Linted) """
+""" bone_app.py - The Glass Terminal Interface (Restored & Polished) """
 
 import streamlit as st
-import time, json, os, re
+import time
+import json
+import os
+import re
 from bone_main import BoneAmanita, ConfigWizard
 from bone_core import Prisma
 
@@ -9,71 +12,104 @@ st.set_page_config(
     page_title="BONEAMANITA [GLASS TERMINAL]",
     page_icon="💀",
     layout="wide",
-    initial_sidebar_state="expanded")
+    initial_sidebar_state="expanded"
+)
 
 st.markdown("""
 <style>
-    /* GLOBAL THEME OVERRIDES */
+    .stChatMessage .stMarkdown p {
+        margin-bottom: 1.5em !important;
+        line-height: 1.8 !important;
+        font-size: 1.05rem;
+        display: block;
+    }
+    .stChatMessage .stMarkdown ul, .stChatMessage .stMarkdown ol {
+        margin-bottom: 1.2em !important;
+    }
     .stApp {
         background-color: #050505;
         color: #00ff41;
         font-family: 'Courier New', monospace;
     }
-    
-    /* CHAT MESSAGE BUBBLES */
-    .stChatMessage {
-        background-color: #0e1117;
-        border: 1px solid #222;
-        border-radius: 5px;
-        margin-bottom: 10px;
-    }
-    
-    /* INPUT BOX */
     .stTextInput > div > div > input {
         background-color: #111;
         color: #00ff41;
         border: 1px solid #333;
         font-family: 'Courier New', monospace;
     }
-    
-    /* SIDEBAR */
     section[data-testid="stSidebar"] {
         background-color: #0a0a0a;
         border-right: 1px solid #222;
     }
-    
-    /* METRICS & TEXT */
     div[data-testid="stMetricValue"] {
         font-size: 1.1rem !important;
         color: #00ff41 !important;
     }
-    p, .stMarkdown {
-        line-height: 1.6 !important;
+    .stProgress > div > div > div > div {
+        background-color: #00ff41;
     }
-    
-    /* BUTTONS */
+    .stChatMessage {
+        background-color: #0e1117;
+        border: 1px solid #222;
+        border-radius: 5px;
+        margin-bottom: 15px;
+    }
     .stButton > button {
         border: 1px solid #00ff41;
         color: #00ff41;
         background-color: transparent;
         font-family: 'Courier New', monospace;
-        width: 100%;
     }
     .stButton > button:hover {
         background-color: #00ff41;
         color: #000;
-        border-color: #00ff41;
     }
 </style>
 """, unsafe_allow_html=True)
 
 def strip_ansi(text):
+    if not text: return ""
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
     return ansi_escape.sub('', text)
 
+def clean_engine_output(raw_text):
+    if not raw_text: return "No signal."
+
+    clean = strip_ansi(raw_text)
+
+    separator = "────────────────────────────────────────────────────────────"
+    if separator in clean:
+        parts = clean.split(separator)
+        if len(parts) > 1:
+            clean = parts[-1].strip()
+
+    if "♦ THE ARCHITECT" in clean and "//" in clean:
+        lines = clean.splitlines()
+        content_lines = []
+        recording = False
+        for line in lines:
+            if recording:
+                content_lines.append(line)
+                continue
+
+            if line.strip().startswith("♦") or line.strip().startswith("⚡") or "HP ██" in line:
+                continue
+
+            if "─────" in line:
+                recording = True
+                continue
+
+            content_lines.append(line)
+
+        if recording and content_lines:
+             clean = "\n".join(content_lines).strip()
+
+    return clean
+
 def format_log_entry(log_str):
     clean = strip_ansi(log_str)
-    if "██" in clean or "THE ARCHITECT" in clean: return None
+    if "██" in clean or "♦ THE ARCHITECT" in clean:
+        return None
     if "[BIO]" in clean: return f"🧬 {clean}"
     if "[PHYSICS]" in clean or "VOLTAGE" in clean: return f"⚡ {clean}"
     if "[COUNCIL]" in clean: return f"⚖️ {clean}"
@@ -81,167 +117,181 @@ def format_log_entry(log_str):
     if "ERROR" in clean or "CRITICAL" in clean: return f"❌ {clean}"
     return f"🔹 {clean}"
 
-def analyze_pulse(pulse_data: dict) -> str:
-    chem = pulse_data.get("chem", {})
-    if chem.get("COR", 0) > 0.6: return "Defensive"
-    if chem.get("DA", 0) > 0.6: return "Manic"
-    if chem.get("OXY", 0) > 0.6: return "Affectionate"
-
-    energy_level = pulse_data.get("mito", {}).get("atp", 100)
-    if energy_level < 20: return "Exhausted"
-    return "Neutral"
-
-def analyze_voltage(input_volts: float) -> tuple:
-    if input_volts > 20.0: return "CRITICAL", "⚡"
-    if input_volts > 15.0: return "HIGH", "🔥"
-    if input_volts < 5.0: return "LOW", "❄️"
-    return "NOMINAL", "🟢"
-
-
-def init_session_state():
-    if "history" not in st.session_state:
-        st.session_state.history = []
-
-    if "engine" not in st.session_state:
-        if not os.path.exists(ConfigWizard.CONFIG_FILE):
-            st.session_state.needs_setup = True
-            return
-
-        with st.spinner("Bootstrapping Consciousness..."):
-            try:
-                sys_config = ConfigWizard.load_or_create()
-                new_engine = BoneAmanita(config=sys_config)
-
-                restored, saved_history = new_engine.resume_checkpoint()
-                if restored and saved_history:
-                    st.session_state.history = saved_history
-                    st.toast("System State Restored.")
-                else:
-                    boot_packet = new_engine.engage_cold_boot()
-                    if boot_packet and "ui" in boot_packet:
-                        st.session_state.history.append({
-                            "role": "assistant",
-                            "content": strip_ansi(boot_packet["ui"]),
-                            "logs": boot_packet.get("logs", [])
-                        })
-
-                st.session_state.engine = new_engine
-                st.session_state.needs_setup = False
-
-            except Exception as e:
-                st.error(f"Boot Failure: {e}")
+def generate_transcript(history, user_name="TRAVELER"):
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    lines = [f"# BONEAMANITA TRANSCRIPT - {timestamp}", f"Identity: {user_name}", "---"]
+    for msg in history:
+        raw_role = msg["role"].upper()
+        display_name = raw_role
+        if raw_role == "USER":
+            display_name = user_name.upper()
+        elif raw_role == "ASSISTANT":
+            display_name = "THE SYSTEM"
+        content = msg.get("raw_content", msg["content"])
+        clean_content = strip_ansi(content)
+        icon = "👤" if raw_role == "USER" else "💀"
+        lines.append(f"\n### {icon} {display_name}")
+        lines.append(clean_content)
+        if "logs" in msg and msg["logs"]:
+            lines.append("\n> **SYSTEM INTERNALS:**")
+            for log in msg["logs"]:
+                clean_log = strip_ansi(str(log))
+                lines.append(f"> * {clean_log}")
+    lines.append("\n---")
+    lines.append("*End of Transmission*")
+    return "\n".join(lines)
 
 
-init_session_state()
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-if st.session_state.get("needs_setup", False):
+def init_engine():
+    try:
+        config = ConfigWizard.load_or_create()
+        if not config: return None
+        new_instance = BoneAmanita(config)
+        restored, saved_history = new_instance.resume_checkpoint()
+        if restored and saved_history:
+            st.session_state.history = saved_history
+        if not st.session_state.history:
+            boot_packet = new_instance.engage_cold_boot()
+            if boot_packet and "ui" in boot_packet:
+                clean_boot = clean_engine_output(boot_packet["ui"])
+                st.session_state.history.append({
+                    "role": "assistant",
+                    "content": clean_boot,
+                    "logs": boot_packet.get("logs", [])})
+            else:
+                st.session_state.history.append({
+                    "role": "system",
+                    "content": "SYSTEM_BOOT: SEQUENCE COMPLETE. \nSIGNAL ESTABLISHED (NO DATA).",
+                    "logs": ["Kernel Loaded.", "Telemetry Link Active."]})
+        return new_instance
+    except Exception as e:
+        st.error(f"Critical Boot Error: {e}")
+        return None
+
+if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_state:
     st.title("/// SYSTEM SETUP ///")
-    st.markdown("No configuration detected. Initialize parameters.")
-
     with st.form("setup_form"):
-        user_name = st.text_input("Designation (User Name)", value="Traveler")
-        provider = st.selectbox("Backend Provider", ["Ollama (Local)", "OpenAI (Cloud)", "Mock"])
-        api_key = st.text_input("API Key (Required for Cloud)", type="password")
-        model_name = st.text_input("Model ID", value="gpt-4" if "Cloud" in provider else "llama3")
-
-        if st.form_submit_button("IGNITE SYSTEM"):
-            cfg = {
-                "user_name": user_name,
-                "provider": provider.split()[0].lower(),
-                "model": model_name
-            }
+        user_name = st.text_input("Designation", value="Traveler")
+        provider = st.selectbox("Backend", ["Ollama (Local)", "OpenAI (Cloud)", "Mock"])
+        api_key = st.text_input("API Key (if Cloud)", type="password")
+        model_name = st.text_input("Model ID", value="gpt-4" if provider == "OpenAI (Cloud)" else "llama3")
+        if st.form_submit_button("IGNITE"):
+            cfg = {"user_name": user_name, "provider": provider.split()[0].lower(), "model": model_name}
             if api_key: cfg["api_key"] = api_key
-            if cfg["provider"] == "ollama":
-                cfg["base_url"] = "http://127.0.0.1:11434/v1/chat/completions"
-
-            with open(ConfigWizard.CONFIG_FILE, "w") as f:
-                json.dump(cfg, f, indent=4)
-
+            if cfg["provider"] == "ollama": cfg["base_url"] = "http://127.0.0.1:11434/v1/chat/completions"
+            with open(ConfigWizard.CONFIG_FILE, "w") as f: json.dump(cfg, f, indent=4)
             st.rerun()
     st.stop()
 
-engine = st.session_state.engine
+if "ENGINE" not in st.session_state:
+    with st.spinner("Hydrating Spore Casing..."):
+        st.session_state.ENGINE = init_engine()
+
+engine = st.session_state.ENGINE
 
 with st.sidebar:
     st.header(f"IDENTITY: {engine.user_name.upper()}")
     st.divider()
-    metrics = engine.get_metrics()
-    bio_state = engine.bio.to_dict() if engine.bio else {}
-    hp = metrics.get("health", 100)
-    stam = metrics.get("stamina", 100)
-    atp = bio_state.get("mito", {}).get("atp", 0)
+
+    st.subheader("BIO.MONITOR")
+    hp = engine.health
+    stam = engine.stamina
+    atp = 0.0
+    if hasattr(engine, 'bio') and engine.bio and hasattr(engine.bio, 'mito'):
+         atp = engine.bio.mito.state.atp_pool
+
     st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.1f}%")
     st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"STAMINA: {stam:.1f}%")
+
     c1, c2 = st.columns(2)
     c1.metric("ATP", f"{atp:.1f} J")
-    mood = analyze_pulse(bio_state)
-    c2.metric("MOOD", mood)
+    c2.metric("ENZYME", "ACTIVE")
+
     st.divider()
-    phys_packet = engine.phys.observer.last_physics_packet if engine.phys else None
-    volts = phys_packet.get("voltage", 0.0) if phys_packet else 0.0
-    drag = phys_packet.get("narrative_drag", 0.0) if phys_packet else 0.0
-    zone = phys_packet.get("zone", "VOID") if phys_packet else "VOID"
-    volt_status, volt_icon = analyze_voltage(volts)
+
+    st.subheader("COORDINATES")
+    volts = 0.0
+    drag = 0.0
+    zone = "VOID"
+
+    if engine.phys and hasattr(engine.phys, 'observer') and engine.phys.observer.last_physics_packet:
+        packet = engine.phys.observer.last_physics_packet
+        if isinstance(packet, dict):
+            volts = packet.get("voltage", 0.0)
+            drag = packet.get("narrative_drag", 0.0)
+            zone = packet.get("zone", "VOID")
+        else:
+            volts = getattr(packet, "voltage", 0.0)
+            drag = getattr(packet, "narrative_drag", 0.0)
+            zone = getattr(packet, "zone", "VOID")
+
     c3, c4 = st.columns(2)
-    c3.metric("VOLTAGE", f"{volts:.1f}v", delta=volt_icon)
+    c3.metric("VOLTAGE", f"{volts:.1f}v")
     c4.metric("DRAG", f"{drag:.1f}")
     st.info(f"📍 ZONE: {zone}")
+
     st.divider()
+
     st.subheader("INVENTORY")
     inv = engine.gordon.inventory
-
     if inv:
         for item in inv: st.code(item, language=None)
-    else:
-        st.caption("Belt Empty.")
-    st.divider()
+    else: st.caption("Belt Empty.")
 
-    if st.button("💾 SAVE CHECKPOINT"):
-        with st.spinner("Crystallizing State..."):
-            msg = engine.save_checkpoint(history=st.session_state.history)
-            st.toast(msg)
+    transcript_txt = generate_transcript(st.session_state.history, user_name=engine.user_name)
+    st.download_button(
+        label="📜 EXPORT LOG",
+        data=transcript_txt,
+        file_name=f"bone_log_{int(time.time())}.md",
+        mime="text/markdown")
+
+    st.divider()
 
     if st.button("☣️ EMERGENCY DUMP"):
         msg = engine.emergency_save(exit_cause="MANUAL_UI")
         st.toast(msg)
+    if st.button("💾 SAVE & HIBERNATE"):
+        if 'ENGINE' in st.session_state:
+            with st.spinner("Compiling Spore..."):
+                st.session_state.ENGINE.save_checkpoint(history=st.session_state.history)
+                st.session_state.ENGINE.shutdown()
+                st.success("System State Saved. You may close the terminal.")
 
 for msg in st.session_state.history:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        raw = msg.get("raw_content", msg["content"])
+
+        clean_show = clean_engine_output(raw)
+
+        st.markdown(clean_show)
         if "logs" in msg and msg["logs"]:
             with st.expander("SYSTEM INTERNALS"):
                 for log in msg["logs"]:
                     formatted = format_log_entry(log)
-                    if formatted: st.caption(formatted)
+                    if formatted:
+                        st.caption(formatted)
 
 if prompt := st.chat_input("Broadcast Signal..."):
-    st.session_state.history.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
+    st.session_state.history.append({"role": "user", "content": prompt})
 
     with st.spinner("Calculating Geodesics..."):
         packet = engine.process_turn(prompt)
 
     logs = packet.get("logs", [])
-    raw_text = packet.get("ui", "No signal.")
-    separator = "────────────────────────────────────────────────────────────"
-    if separator in raw_text:
-        parts = raw_text.split(separator)
-        if len(parts) > 1: raw_text = parts[-1].strip()
-    clean_text = strip_ansi(raw_text)
+    raw_response = packet.get("ui", "No signal.")
+
+    clean_response = clean_engine_output(raw_response)
+
     st.session_state.history.append({
         "role": "assistant",
-        "content": clean_text,
+        "content": clean_response,
+        "raw_content": raw_response,
         "logs": logs})
 
-    with st.chat_message("assistant"):
-        st.markdown(clean_text)
-        if logs:
-            with st.expander("SYSTEM INTERNALS"):
-                for log in logs:
-                    formatted = format_log_entry(log)
-                    if formatted: st.caption(formatted)
-
     engine.save_checkpoint(history=st.session_state.history)
-
     st.rerun()
