@@ -352,6 +352,21 @@ class PromptComposer:
         if active_resonance:
             style_notes.append("\n=== HARMONIC RESONANCE (Active Mastery) ===")
             style_notes.extend(active_resonance)
+        if modifiers.get("include_memories"):
+            memories = state.get("soul", {}).get("core_memories", [])
+            if memories:
+                mem_strs = []
+                for m in memories:
+                    if isinstance(m, dict):
+                        lesson = m.get('lesson', 'Unknown')
+                        flavor = m.get('emotional_flavor', 'NEUTRAL')
+                    else:
+                        lesson = getattr(m, 'lesson', 'Unknown')
+                        flavor = getattr(m, 'emotional_flavor', 'NEUTRAL')
+                    mem_strs.append(f"» {lesson} [{flavor}]")
+                if mem_strs:
+                    style_notes.append("\n=== CORE MEMORIES (Narrative Truths) ===")
+                    style_notes.extend(mem_strs)
         if semantic_ops:
             style_notes.append("\n=== INVENTORY RESONANCE (Active Item Effects) ===")
             style_notes.extend([f"» {op}" for op in semantic_ops])
@@ -370,7 +385,7 @@ class PromptComposer:
                 items = ", ".join(inv)
                 inv_str = f"Belt (Accessible): {items}"
         history = state.get("dialogue_history", [])
-        history_str = "\n".join(history[-10:])
+        history_str = "\n".join(history[-15:])
         system_injection = ""
         if ballast:
             system_injection = (
@@ -467,7 +482,7 @@ class TheCortex:
         self.events = engine_ref.events
         self.dreamer = DreamEngine(self.events)
         self.dialogue_buffer = []
-        self.MAX_HISTORY = 5
+        self.MAX_HISTORY = 15
         self.modulator = NeurotransmitterModulator(events_ref=self.events)
         self.boot_history = TelemetryService.get_instance().read_recent_history(limit=4)
         self.last_physics = {}
@@ -512,6 +527,8 @@ class TheCortex:
             return self._handle_vsl_command(user_input)
         is_boot_sequence = "SYSTEM_BOOT:" in user_input
         sim_result = self.eng.cycle_controller.run_turn(user_input, is_system=is_system)
+        if sim_result.get("physics"):
+             self.last_physics = sim_result["physics"]
         if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]: return sim_result
         full_state = self.gather_state(sim_result)
         modifiers = self.symbiosis.get_prompt_modifiers()

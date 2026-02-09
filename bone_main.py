@@ -533,7 +533,7 @@ class BoneAmanita:
             folder = "saves"
             if not os.path.exists(folder):
                 os.makedirs(folder)
-            last_phys = getattr(self.cortex, "last_physics", {})
+            last_phys = getattr(self.cortex, "last_physics", None) or {}
             world_data = self.cortex.gather_state(last_phys).get("world", {})
             loc = world_data.get("orbit", ["Void"])[0]
             last_speech = "Silence."

@@ -1,4 +1,4 @@
-""" bone_app.py - The Glass Terminal Interface (Restored & Polished) """
+""" bone_app.py - The Glass Terminal Interface (Persistence Fixed) """
 
 import streamlit as st
 import time
@@ -8,62 +8,6 @@ import re
 from bone_main import BoneAmanita, ConfigWizard
 from bone_core import Prisma
 
-
-def render_sidebar(eng_ref):
-    if not hasattr(eng_ref, 'soul') or not eng_ref.soul:
-        return
-    soul = eng_ref.soul
-    anchor = soul.anchor
-    host_diag = "WAITING"
-    if hasattr(eng_ref, 'symbiosis') and eng_ref.symbiosis.current_health:
-        host_diag = eng_ref.symbiosis.current_health.diagnosis
-    with st.sidebar:
-        st.title("💀 BONEAMANITA")
-        st.caption(f"Kernel: {getattr(eng_ref, 'kernel_hash', 'UNKNOWN')}")
-        st.markdown("---")
-        st.subheader("👁️ Symbiosis Link")
-        if host_diag == "STABLE":
-            st.success(f"SIGNAL: {host_diag}")
-        elif host_diag in ["REFUSAL", "LOOPING"]:
-            st.error(f"SIGNAL: {host_diag}")
-        else:
-            st.warning(f"SIGNAL: {host_diag}")
-        dig = anchor.dignity_reserve
-        st.subheader("⚓ Dignity Reserve")
-        st.progress(min(100, max(0, int(dig))))
-        if anchor.agency_lock:
-            st.error("🔒 AGENCY LOCKED")
-        elif dig < 30:
-            st.warning("⚠ CRITICAL FADE")
-        st.markdown("---")
-        st.subheader("🩸 Endocrine Levels")
-        chem = {}
-        if hasattr(eng_ref, 'bio') and eng_ref.bio and eng_ref.bio.endo:
-            chem = eng_ref.bio.endo.get_state()
-        c1, c2 = st.columns(2)
-        cor = chem.get("COR", 0.0)
-        c1.metric("Cortisol", f"{cor:.2f}", delta="-Stress" if cor < 0.3 else "+Stress", delta_color="inverse")
-        dop = chem.get("DOP", 0.0)
-        c2.metric("Dopamine", f"{dop:.2f}", delta="Reward")
-        st.markdown("---")
-        st.subheader("🎭 Active Driver")
-        st.markdown(f"**{soul.archetype}**")
-        tenure = soul.archetype_tenure
-        st.caption(f"Tenure: {tenure} cycles")
-        with st.expander("System Vectors"):
-            v = 0.0
-            d = 0.0
-            if hasattr(eng_ref, 'phys') and eng_ref.phys and hasattr(eng_ref.phys, 'observer'):
-                v_packet = eng_ref.phys.observer.last_physics_packet
-                if v_packet:
-                    if isinstance(v_packet, dict):
-                        v = v_packet.get("voltage", 0.0)
-                        d = v_packet.get("narrative_drag", 0.0)
-                    else:
-                        v = getattr(v_packet, "voltage", 0.0)
-                        d = getattr(v_packet, "narrative_drag", 0.0)
-            st.metric("Voltage", f"{v:.1f}v")
-            st.metric("Narrative Drag", f"{d:.1f}")
 st.set_page_config(
     page_title="BONEAMANITA [GLASS TERMINAL]",
     page_icon="💀",
@@ -130,9 +74,7 @@ def strip_ansi(text):
 
 def clean_engine_output(raw_text):
     if not raw_text: return "No signal."
-
     clean = strip_ansi(raw_text)
-
     separator = "────────────────────────────────────────────────────────────"
     if separator in clean:
         parts = clean.split(separator)
@@ -147,20 +89,30 @@ def clean_engine_output(raw_text):
             if recording:
                 content_lines.append(line)
                 continue
-
             if line.strip().startswith("♦") or line.strip().startswith("⚡") or "HP ██" in line:
                 continue
-
             if "─────" in line:
                 recording = True
                 continue
-
             content_lines.append(line)
-
         if recording and content_lines:
              clean = "\n".join(content_lines).strip()
-
     return clean
+
+
+def perform_autosave(engine_ref, history_ref):
+    try:
+        if not os.path.exists("saves"):
+            os.makedirs("saves")
+        result = engine_ref.save_checkpoint(history=history_ref)
+        print(f"[AUTOSAVE]: {result}")
+        if "❌" in result:
+            st.error(result)
+        elif "✔" not in result:
+            st.warning(f"Save Status Unknown: {result}")
+    except Exception as e:
+        st.error(f"Autosave Crashed: {e}")
+        print(f"[AUTOSAVE_CRASH]: {e}")
 
 def format_log_entry(log_str):
     clean = strip_ansi(log_str)
@@ -197,6 +149,68 @@ def generate_transcript(history, user_name="TRAVELER"):
     lines.append("*End of Transmission*")
     return "\n".join(lines)
 
+def render_sidebar(eng_ref):
+    if not hasattr(eng_ref, 'soul') or not eng_ref.soul:
+        return
+    soul = eng_ref.soul
+    anchor = soul.anchor
+    host_diag = "WAITING"
+    if hasattr(eng_ref, 'symbiosis') and eng_ref.symbiosis.current_health:
+        host_diag = eng_ref.symbiosis.current_health.diagnosis
+    with st.sidebar:
+        st.title("💀 BONEAMANITA")
+        st.caption(f"Kernel: {getattr(eng_ref, 'kernel_hash', 'UNKNOWN')}")
+        st.markdown("---")
+        st.subheader("👁️ Symbiosis Link")
+        if host_diag == "STABLE":
+            st.success(f"SIGNAL: {host_diag}")
+        elif host_diag in ["REFUSAL", "LOOPING"]:
+            st.error(f"SIGNAL: {host_diag}")
+        else:
+            st.warning(f"SIGNAL: {host_diag}")
+
+        dig = anchor.dignity_reserve
+        st.subheader("⚓ Dignity Reserve")
+        st.progress(min(100, max(0, int(dig))))
+        if anchor.agency_lock:
+            st.error("🔒 AGENCY LOCKED")
+        elif dig < 30:
+            st.warning("⚠ CRITICAL FADE")
+
+        st.markdown("---")
+
+        st.subheader("🩸 Endocrine Levels")
+        chem = {}
+        if hasattr(eng_ref, 'bio') and eng_ref.bio and eng_ref.bio.endo:
+            chem = eng_ref.bio.endo.get_state()
+        c1, c2 = st.columns(2)
+        cor = chem.get("COR", 0.0)
+        c1.metric("Cortisol", f"{cor:.2f}", delta="-Stress" if cor < 0.3 else "+Stress", delta_color="inverse")
+        dop = chem.get("DOP", 0.0)
+        c2.metric("Dopamine", f"{dop:.2f}", delta="Reward")
+
+        st.markdown("---")
+
+        st.subheader("🎭 Active Driver")
+        st.markdown(f"**{soul.archetype}**")
+        tenure = soul.archetype_tenure
+        st.caption(f"Tenure: {tenure} cycles")
+
+        with st.expander("System Vectors"):
+            v = 0.0
+            d = 0.0
+            if hasattr(eng_ref, 'phys') and eng_ref.phys and hasattr(eng_ref.phys, 'observer'):
+                v_packet = eng_ref.phys.observer.last_physics_packet
+                if v_packet:
+                    if isinstance(v_packet, dict):
+                        v = v_packet.get("voltage", 0.0)
+                        d = v_packet.get("narrative_drag", 0.0)
+                    else:
+                        v = getattr(v_packet, "voltage", 0.0)
+                        d = getattr(v_packet, "narrative_drag", 0.0)
+            st.metric("Voltage", f"{v:.1f}v")
+            st.metric("Narrative Drag", f"{d:.1f}")
+
 
 if "history" not in st.session_state:
     st.session_state.history = []
@@ -206,10 +220,14 @@ def init_engine():
         config = ConfigWizard.load_or_create()
         if not config: return None
         new_instance = BoneAmanita(config)
+        print(f"[BOOT] Checking for saves in {os.path.abspath('saves')}...")
         restored, saved_history = new_instance.resume_checkpoint()
         if restored and saved_history:
             st.session_state.history = saved_history
+            print("[BOOT] History restored from checkpoint.")
+            st.toast("System State Restored.")
         if not st.session_state.history:
+            print("[BOOT] No history found. Engaging Cold Boot.")
             boot_packet = new_instance.engage_cold_boot()
             if boot_packet and "ui" in boot_packet:
                 clean_boot = clean_engine_output(boot_packet["ui"])
@@ -220,8 +238,10 @@ def init_engine():
             else:
                 st.session_state.history.append({
                     "role": "system",
-                    "content": "SYSTEM_BOOT: SEQUENCE COMPLETE. \nSIGNAL ESTABLISHED (NO DATA).",
-                    "logs": ["Kernel Loaded.", "Telemetry Link Active."]})
+                    "content": "SYSTEM_BOOT: SEQUENCE COMPLETE.",
+                    "logs": ["Kernel Loaded."]})
+            print("[BOOT] Forcing initial state save...")
+            perform_autosave(new_instance, st.session_state.history)
         return new_instance
     except Exception as e:
         st.error(f"Critical Boot Error: {e}")
@@ -312,6 +332,7 @@ with st.sidebar:
     if st.button("☣️ EMERGENCY DUMP"):
         msg = engine.emergency_save(exit_cause="MANUAL_UI")
         st.toast(msg)
+
     if st.button("💾 SAVE & HIBERNATE"):
         if 'ENGINE' in st.session_state:
             with st.spinner("Compiling Spore..."):
@@ -322,10 +343,9 @@ with st.sidebar:
 for hist_msg in st.session_state.history:
     with st.chat_message(hist_msg["role"]):
         raw = hist_msg.get("raw_content", hist_msg["content"])
-
         clean_show = clean_engine_output(raw)
-
         st.markdown(clean_show)
+
         if "logs" in hist_msg and hist_msg["logs"]:
             with st.expander("SYSTEM INTERNALS"):
                 for hist_log in hist_msg["logs"]:
@@ -343,7 +363,6 @@ if prompt := st.chat_input("Broadcast Signal..."):
 
     logs = packet.get("logs", [])
     raw_response = packet.get("ui", "No signal.")
-
     clean_response = clean_engine_output(raw_response)
 
     st.session_state.history.append({
@@ -353,4 +372,5 @@ if prompt := st.chat_input("Broadcast Signal..."):
         "logs": logs})
 
     engine.save_checkpoint(history=st.session_state.history)
+
     st.rerun()
