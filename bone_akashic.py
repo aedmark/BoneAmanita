@@ -34,6 +34,7 @@ class TheAkashicRecord:
             self.record_interaction(lenses)
 
     def _on_forge_event(self, payload):
+        if not payload or not isinstance(payload, dict): return
         self.track_successful_forge(
             payload.get("ingredient"),
             payload.get("catalyst"),
@@ -47,12 +48,14 @@ class TheAkashicRecord:
             self.register_word(word, category)
 
     def save_all(self):
-        mythos_data = {
-            "lens_cooccurrence": {f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
-            "ingredient_affinity": self.ingredient_affinity,
-            "shadow_stock": self.shadow_stock}
-        self.save_to_disk("MYTHOS", mythos_data)
-        print(f"{Prisma.CYN}[AKASHIC]: Mythos state preserved.{Prisma.RST}")
+        self.save_to_disk("akashic_lexicon", self.discovered_words)
+        gordon_data = self.lore.get("GORDON")
+        if gordon_data:
+            self.save_to_disk("gordon", gordon_data)
+        lens_data = self.lore.get("LENSES")
+        if lens_data:
+            self.save_to_disk("lenses", lens_data)
+        print(f"{Prisma.GRY}[AKASHIC]: Mythos persisted.{Prisma.RST}")
 
     def save_to_disk(self, category: str, data: Any):
         filepath = os.path.join("lore", f"akashic_{category}.json")
@@ -97,6 +100,9 @@ class TheAkashicRecord:
                 self.ingredient_affinity[item] = self.ingredient_affinity.get(item, 0) + 1
 
     def track_successful_forge(self, ingredient_name, catalyst_type, result_item):
+        if not ingredient_name or not catalyst_type: return
+        if (ingredient_name, catalyst_type) in self.known_recipes:
+            return
         key = (ingredient_name, catalyst_type)
         if key not in self.recipe_candidates:
             self.recipe_candidates[key] = {}
@@ -114,42 +120,41 @@ class TheAkashicRecord:
         if self.recipe_candidates[key][result_name] >= self.RECIPE_THRESHOLD:
             self._crystallize_recipe(ingredient_name, catalyst_type, result_item)
 
-    def _hybridize_lenses(self, lens_a, lens_b):
-        new_key = f"{lens_a}_{lens_b}_HYBRID"
-        lenses_data = self.lore.get("LENSES")
-        if new_key in lenses_data: return
-        role_a = lenses_data.get(lens_a, {}).get("role", "Observer")
-        role_b = lenses_data.get(lens_b, {}).get("role", "Participant")
-        new_lens = {
-            "role": f"The {role_a} / {role_b} Synthesis",
-            "msg": f"Perspective shift: {lens_a} and {lens_b} are aligning. The dialectic is resolved.",
-            "derived_from": [lens_a, lens_b]}
-        print(f"✨ MYTHOLOGY ENGINE: A new lens has formed: {new_key}")
-        lenses_data[new_key] = new_lens
-        self.save_to_disk("LENSES", lenses_data)
-        self.lens_cooccurrence[(lens_a, lens_b)] = 0
+    def _hybridize_lenses(self, lens_a: str, lens_b: str):
+        if lens_a == lens_b: return
+        roots = sorted([lens_a.replace("THE ", ""), lens_b.replace("THE ", "")])
+        new_name = f"THE {roots[0]}-{roots[1]}"
+        existing_lenses = self.lore.get("LENSES", {})
+        if new_name in existing_lenses: return
+
+        def get_weights(l_name):
+            return existing_lenses.get(l_name, {}).get("weights", {"v": 0, "d": 0})
+
+        w_a = get_weights(lens_a)
+        w_b = get_weights(lens_b)
+        new_weights = {
+            "v": round((w_a.get("v", 0) + w_b.get("v", 0)) / 2, 2),
+            "d": round((w_a.get("d", 0) + w_b.get("d", 0)) / 2, 2)}
+        new_lens_data = {
+            "description": f"A syncretic fusion of {lens_a} and {lens_b}.",
+            "weights": new_weights,
+            "parentage": [lens_a, lens_b]}
+        self.lore.inject("LENSES", {new_name: new_lens_data})
+        self.discovered_words[new_name] = "LENS"
+        print(f"{Prisma.MAG}🔮 AKASHIC: A new paradigm has crystallized: {new_name}{Prisma.RST}")
 
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
-        if (ingredient, catalyst) in self.known_recipes:
-            return
-        gordon_data = self.lore.get("GORDON")
-        if not gordon_data:
-            gordon_data = {"RECIPES": [], "ITEM_REGISTRY": {}}
-        current_recipes = gordon_data.get("RECIPES", [])
-        if any(r.get("ingredient") == ingredient and r.get("catalyst_category") == catalyst for r in current_recipes):
-            self.known_recipes.add((ingredient, catalyst))
-            return
+        self.known_recipes.add((ingredient, catalyst))
         new_recipe = {
             "ingredient": ingredient,
             "catalyst_category": catalyst,
-            "result": "CUSTOM_ARTIFACT",
-            "msg": "The universe remembers this combination. It is now Law.",
-            "dynamic_result": result_item}
-        current_recipes.append(new_recipe)
-        self.known_recipes.add((ingredient, catalyst))
-        print(f"✨ MYTHOLOGY ENGINE: A new recipe has been codified: {ingredient} + {catalyst}")
-        gordon_data["RECIPES"] = current_recipes
-        self.save_to_disk("GORDON", gordon_data)
+            "result": result_item,
+            "msg": f"The {ingredient} resonates with {catalyst} energy, transforming into {result_item}."}
+        current_recipes = self.lore.get("GORDON", {}).get("RECIPES", [])
+        if not any(r['ingredient'] == ingredient and r['catalyst_category'] == catalyst for r in current_recipes):
+            current_recipes.append(new_recipe)
+            self.lore.inject("GORDON", {"RECIPES": current_recipes})
+            print(f"{Prisma.CYN}📜 AKASHIC: Recipe recorded in the Great Book.{Prisma.RST}")
 
     def propose_new_category(self, word_list, category_name):
         lexicon_data = self.lore.get("LEXICON")

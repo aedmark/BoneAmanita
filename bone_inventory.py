@@ -221,10 +221,15 @@ class GordonKnot:
         self.inventory = valid_inventory
 
     def _initialize_reflexes(self):
+        defaults = {
+            "DRIFT_CRITICAL": 6.0,
+            "KAPPA_CRITICAL": 0.2,
+            "BOREDOM_CRITICAL": 0.5}
+        cfg = self.reflex_config.get("THRESHOLDS", defaults)
         self.REFLEX_MAP = {
-            "DRIFT_CRITICAL": lambda p: p.get("narrative_drag", 0) > 6.0,
-            "KAPPA_CRITICAL": lambda p: p.get("kappa", 1.0) < 0.2,
-            "BOREDOM_CRITICAL": lambda p: p.get("repetition", 0.0) > 0.5,
+            "DRIFT_CRITICAL": lambda p: p.get("narrative_drag", 0) > cfg.get("DRIFT_CRITICAL", 6.0),
+            "KAPPA_CRITICAL": lambda p: p.get("kappa", 1.0) < cfg.get("KAPPA_CRITICAL", 0.2),
+            "BOREDOM_CRITICAL": lambda p: p.get("repetition", 0.0) > cfg.get("BOREDOM_CRITICAL", 0.5),
             "ACCESS_DENIED": lambda p: p.get("refusal_triggered", False) is True}
 
     def get_item_data(self, item_name: str) -> Dict:
@@ -385,9 +390,14 @@ class GordonKnot:
             physics_ref["vector"][target_field] = physics_ref["vector"].get(target_field, 0.0) + val
 
     def rummage(self, physics_ref: Dict, stamina_pool: float) -> Tuple[bool, str, float]:
+        logs_config = TheLore.get("GORDON_LOGS") or {}
+        rummage_logs = logs_config.get("RUMMAGE", {})
         cost = BoneConfig.INVENTORY.RUMMAGE_COST
         if stamina_pool < cost:
-            return False, f"{Prisma.GRY}GORDON: 'Too tired to dig. Eat something first.'{Prisma.RST}", 0.0
+            tired_msgs = rummage_logs.get("TOO_TIRED", [
+                "GORDON: 'Too tired to dig. Eat something first.'"])
+            msg = random.choice(tired_msgs)
+            return False, f"{Prisma.GRY}{msg}{Prisma.RST}", 0.0
         vol = physics_ref.get("voltage", 0.0)
         drag = physics_ref.get("narrative_drag", 0.0)
         psi = physics_ref.get("psi", 0.0)
@@ -404,15 +414,13 @@ class GordonKnot:
             if item_context == loot_tag:
                 candidates.append(name)
         if not candidates:
-            legacy_map = {
-                "VOLTAGE_CRITICAL": ["QUANTUM_GUM", "JAR_OF_FIREFLIES", "BROKEN_WATCH"],
-                "DRAG_HEAVY":       ["POCKET_ROCKS", "LEAD_BOOTS", "ANCHOR_STONE"],
-                "PSI_HIGH":         ["HORSE_PLUSHIE", "SPIDER_LOCUS", "WAFFLE_OF_PERSISTENCE"],
-                "STANDARD":         ["TRAPPERKEEPER_OF_VIGILANCE", "THE_RED_STAPLER", "PERMIT_A38", "DUCT_TAPE", "THE_STYLE_GUIDE"]}
-            candidates = legacy_map.get(loot_tag, legacy_map["STANDARD"])
+            candidates = ["TRAPPERKEEPER_OF_VIGILANCE", "DUCT_TAPE"]
         stamina_penalty = cost
-        if random.random() < 0.3:
-            return True, f"{Prisma.GRY}RUMMAGE: Gordon dug through the trash. Just lint and old receipts.{Prisma.RST}", stamina_penalty
+        if random.random() < 0.42:
+            empty_msgs = rummage_logs.get("EMPTY", [
+                "Gordon dug through the trash. Just lint and old receipts."])
+            fail_msg = random.choice(empty_msgs)
+            return True, f"{Prisma.GRY}RUMMAGE: {fail_msg}{Prisma.RST}", stamina_penalty
         found_item = random.choice(candidates)
         msg = self.acquire(found_item)
         prefix = f"{Prisma.OCHRE}RUMMAGE:{Prisma.RST} "

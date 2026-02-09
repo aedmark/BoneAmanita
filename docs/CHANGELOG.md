@@ -1,5 +1,43 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.6.3: "THE BROKEN MIRROR"**
+
+_“Truth is not a smooth surface; it is a jagged edge. We have added the handle.”_
+
+---
+
+#### **👁️ INTERFACE DYNAMICS (The Schur Lens)**
+
+- **The Ambiguity Dial (`bone_gui.py`):**
+- **The Feature:** We rejected the binary choice between "Code" and "Prose." We implemented a **Scalar Truth Interface**.
+- **The Modes:**
+- **0 (Boardroom):** Pure Signal. The "Corporate Smooth." (Dangerous).
+- **1 (Workshop):** Signal + Metrics. The Engineer's view.
+- **2 (Red Team):** Signal + Dissent. The Conflict view.
+- **3 (Palimpsest):** Raw Thought Stream. The Archeological view (shows deleted drafts).
+
+- **The Renderer:** `TruthRenderer` now wraps the output. It doesn't just print text; it calculates and displays the **Cost of Blandness** (Trauma incurred by hiding the truth).
+
+#### **⚖️ GOVERNANCE (The Fuller Lens)**
+
+- **The Red Team Protocol (`bone_council.py`):**
+- **The Shift:** The Council previously sought consensus. It now simulates **Adversarial Attack**.
+- **The Mechanism:** `convene_red_team` generates specific critiques from the Village Agents:
+- `[BUREAU]` flags unearned confidence ("95% certainty").
+- `[FOLLY]` flags "Narrative Smoothing" (low friction).
+- `[CRITIC]` calculates the **Future Liability** (Trauma) of a lie.
+
+#### **🔧 STRUCTURAL INTEGRITY (The Torvalds Lens)**
+
+- **The Hot-Swap (`bone_commands.py`):**
+- **The Surgery:** The `/truth` command does not require a reboot. It performs a **Live Object Transplant**.
+- **The Logic:** It detects if the engine is running a legacy `GeodesicRenderer`, initializes a `TruthRenderer` with the live engine state, and swaps the pointers in real-time.
+
+- **Explicit Anchoring (`bone_gui.py`):**
+- **The Fix:** Patched `TruthRenderer` to explicitly bind `self.engine`. We do not rely on `super()` to handle dependency injection for radical new organs.
+
+---
+
 ### **BONEAMANITA v14.6.2: "THE GLASS PANOPTICON"**
 
 _“The eye that sees all must also see itself.”_

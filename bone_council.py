@@ -226,9 +226,22 @@ class CouncilChamber:
             adjustments["voltage"] = adjustments.get("voltage", 0) - 2.0
         else:
             final_log = f"{Prisma.YEL}>>> COUNCIL ADJOURNED (No Quorum).{Prisma.RST}"
-
         transcript.append(self.footnote.commentary(final_log))
-
         return transcript, adjustments, mandates
+
+    def convene_red_team(self, text, physics_packet):
+        dissent_log = []
+        if "confidence" in text.lower() or "certainty" in text.lower():
+            dissent_log.append(f"{Prisma.CYN}[BUREAU]: Citation needed. Confidence is unearned.{Prisma.RST}")
+        narrative_drag = physics_packet.get("narrative_drag", 0)
+        if narrative_drag < 1.0:
+            dissent_log.append(
+                f"{Prisma.MAG}[FOLLY]: Too smooth. Where is the friction? Who are we silencing?{Prisma.RST}")
+        truth_delta = 1.0 - physics_packet.get("truth_ratio", 1.0)
+        if truth_delta > 0.1:
+            future_cost = truth_delta * 50.0
+            dissent_log.append(
+                f"{Prisma.RED}[CRITIC]: Systemic Blindness Risk. Future Liability: {future_cost} ATP.{Prisma.RST}")
+        return dissent_log
 
 TheCouncil = CouncilChamber

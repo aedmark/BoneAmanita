@@ -2,7 +2,7 @@
 
 import math, random, time
 from collections import deque, Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import Set, Optional, Dict, List, Any, Tuple
 from bone_spores import ImmuneMycelium, BioLichen, BioParasite
 from bone_lexicon import TheLexicon
@@ -81,6 +81,24 @@ class BioSystem:
         if self.events and hasattr(self.events, "subscribe"):
             self.events.subscribe("NEURAL_STATE_SHIFT", self._on_neural_shift)
             self.events.log("[BIO]: Vagus Nerve connected.", "SYS")
+
+    def to_dict(self) -> Dict[str, Any]:
+        mito_data = {}
+        if self.mito and hasattr(self.mito, "state"):
+            mito_data = asdict(self.mito.state)
+            mito_data['atp'] = mito_data.get('atp_pool', 0.0)
+        chem_data = {}
+        if self.endo:
+            chem_data = self.endo.get_state()
+        biometrics_data = {}
+        if self.biometrics:
+            biometrics_data = asdict(self.biometrics)
+        return {
+            "mito": mito_data,
+            "endo": chem_data,
+            "chem": chem_data,
+            "biometrics": biometrics_data,
+            "governor_mode": self.governor.mode if self.governor else "UNKNOWN"}
 
     def _on_neural_shift(self, payload):
         state = payload.get("state", "NEUTRAL")

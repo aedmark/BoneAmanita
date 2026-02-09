@@ -450,14 +450,40 @@ class PIDController:
         self._last_error = error
         return max(self.min_out, min(self.max_out, output))
 
+
 class SanctuaryGovernor:
     def __init__(self, events_ref):
         self.events = events_ref
         self.mode = "DEFAULT"
-        self.voltage_pid = PIDController(kp=0.8, ki=0.1, kd=0.05, setpoint=10.0)
-        self.drag_pid = PIDController(kp=0.4, ki=0.2, kd=0.1, setpoint=1.0)
+        self.voltage_pid = PIDController(kp=0.6, ki=0.05, kd=0.2, setpoint=10.0)
+        self.drag_pid = PIDController(kp=0.4, ki=0.1, kd=0.1, setpoint=1.5)
+        self.hysteresis_counter = 0
 
-    def shift(self, physics_packet, voltage_history, tick_count): return "GOVERNOR_MAINTAIN"
+    def shift(self, physics_packet, voltage_history, tick_count) -> Optional[str]:
+        p = _normalize_physics_dict(physics_packet)
+        curr_v = _get_float(p, "voltage", 0.0)
+        curr_d = _get_float(p, "narrative_drag", 0.0)
+        target_mode = "DEFAULT"
+        reason = ""
+        if curr_v > 16.0:
+            target_mode = "THE_FORGE"
+            reason = "High Energy Detected"
+        elif curr_d > 6.0:
+            target_mode = "THE_MUD"
+            reason = "High Viscosity Detected"
+        elif curr_v < 5.0 and curr_d < 1.0:
+            target_mode = "THE_AERIE"
+            reason = "Low Gravity Detected"
+        if target_mode == self.mode:
+            self.hysteresis_counter = 0
+            return None
+        self.hysteresis_counter += 1
+        if self.hysteresis_counter < 3:
+            return None
+        old_mode = self.mode
+        self.mode = target_mode
+        self.hysteresis_counter = 0
+        return f"{Prisma.CYN}⚖️ GOVERNOR: Shifting Manifold {old_mode} -> {self.mode} ({reason}).{Prisma.RST}"
 
     def recalibrate(self, target_voltage: float, target_drag: float):
         self.voltage_pid.setpoint = target_voltage
@@ -474,7 +500,7 @@ class SanctuaryGovernor:
         curr_d = _get_float(p, "narrative_drag", 0.0)
         dist_v = abs(curr_v - self.voltage_pid.setpoint)
         dist_d = abs(curr_d - self.drag_pid.setpoint)
-        is_safe = (dist_v < 2.0) and (dist_d < 1.0)
+        is_safe = (dist_v < 3.0) and (dist_d < 1.5)
         return is_safe, math.sqrt(dist_v ** 2 + dist_d ** 2)
 
 class Limbo:

@@ -754,6 +754,25 @@ class SynestheticCortex:
             tone=tone,
             internal_monologue_hint=hint)
 
+    def apply_somatic_feedback(self, physics: Dict, impulse: BiologicalImpulse) -> None:
+        if not physics or not impulse: return
+        if impulse.cortisol_delta > 0.05:
+            drag_penalty = impulse.cortisol_delta * 4.0
+            current_drag = physics.get("narrative_drag", 0.0)
+            physics["narrative_drag"] = current_drag + drag_penalty
+        if impulse.adrenaline_delta > 0.05:
+            volt_boost = impulse.adrenaline_delta * 12.0
+            current_volts = physics.get("voltage", 0.0)
+            physics["voltage"] = current_volts + volt_boost
+        if impulse.dopamine_delta > 0.05:
+            drag_relief = impulse.dopamine_delta * 3.0
+            current_drag = physics.get("narrative_drag", 0.0)
+            physics["narrative_drag"] = max(0.0, current_drag - drag_relief)
+        if impulse.oxytocin_delta > 0.1:
+            current_volts = physics.get("voltage", 0.0)
+            if current_volts > 20.0:
+                physics["voltage"] = current_volts * 0.85
+
     def apply_impulse(self, impulse: BiologicalImpulse) -> float:
         if not self.bio or not hasattr(self.bio, 'endo') or not self.bio.endo:
             return 0.0

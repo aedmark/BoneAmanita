@@ -151,6 +151,7 @@ class CommandProcessor:
         self.registry.register("/soul", self._cmd_soul, "Introspection")
         self.registry.register("/look", self._cmd_look, "Observe environment")
         self.registry.register("/reload", self._cmd_reload, "Hot-reload Lore")
+        self.registry.register("/truth", self._cmd_truth, "Adjust Reality Ambiguity [0-3]")
 
     def execute(self, text: str):
         if hasattr(self.interface.eng, "reality_stack"):
@@ -170,7 +171,7 @@ class CommandProcessor:
         structure = {
             "SURVIVAL":    ["/status", "/inventory", "/look"],
             "PROTOCOL":    ["/save", "/mode", "/exit", "/help"],
-            "MYSTICISM":   ["/soul", "/map"],
+            "MYSTICISM":   ["/soul", "/map", "/truth"],
             "MAINTENANCE": ["/debug", "/reload"]}
         buckets = {k: [] for k in structure.keys()}
         buckets["UNCATEGORIZED"] = []
@@ -264,7 +265,6 @@ class CommandProcessor:
 
     def _cmd_exit(self, _parts):
         import sys
-        # SLASH FIX: Use self.interface, not self.state
         self.interface.log(f"{Prisma.RED}System Halt Initiated.{Prisma.RST}", "SYS")
         if 'streamlit' in sys.modules:
             try:
@@ -296,4 +296,35 @@ class CommandProcessor:
         else:
             TheLore.flush_cache()
             self.interface.log("Reloaded all Lore.")
+        return True
+
+    def _cmd_truth(self, parts):
+        if len(parts) < 2:
+            self.interface.log("Usage: /truth [0=Boardroom, 1=Workshop, 2=RedTeam, 3=Palimpsest]")
+            return True
+        from bone_gui import TruthRenderer
+        try:
+            mode = int(parts[1])
+            if not (0 <= mode <= 3):
+                raise ValueError
+            controller = getattr(self.interface.eng, "cycle_controller", None)
+            if not controller:
+                self.interface.log("Error: CycleController not found.")
+                return True
+            reporter = getattr(controller, "reporter", None)
+            if not reporter:
+                self.interface.log("Error: CycleReporter not found.")
+                return True
+            if not hasattr(reporter.renderer, "dial_setting"):
+                self.interface.log(f"{self.P.YEL}[SYS] Transplanting TruthRenderer into active cycle...{self.P.RST}")
+                new_renderer = TruthRenderer(self.interface.eng)
+                reporter.renderer = new_renderer
+                reporter.renderers["STANDARD"] = new_renderer
+            reporter.renderer.dial_setting = mode
+            modes = ["BOARDROOM", "WORKSHOP", "RED TEAM", "PALIMPSEST"]
+            self.interface.log(f"{self.P.CYN}Ambiguity Dial set to: {modes[mode]}{self.P.RST}")
+        except ValueError:
+            self.interface.log("Invalid mode. Use 0-3.")
+        except Exception as e:
+            self.interface.log(f"Truth Dial Failure: {e}")
         return True

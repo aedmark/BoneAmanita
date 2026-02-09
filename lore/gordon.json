@@ -1,6 +1,20 @@
 {
   "STARTING_INVENTORY": ["POCKET_ROCKS", "SILENT_KNIFE"],
-  "SCAR_TISSUE": {"FEAR": 0.8, "HATE": 0.6, "FATE": 0.9, "REGRET": 0.6, "ABANDONMENT": 0.1, "BETRAYAL": 0.314},
+  "SCAR_TISSUE": {
+    "FEAR": 0.8,
+    "HATE": 0.6,
+    "FATE": 0.9,
+    "REGRET": 0.6,
+    "ABANDONMENT": 0.1,
+    "BETRAYAL": 0.314
+  },
+  "REFLEXES": {
+    "THRESHOLDS": {
+      "DRIFT_CRITICAL": 6.0,
+      "KAPPA_CRITICAL": 0.2,
+      "BOREDOM_CRITICAL": 0.5
+    }
+  },
   "RECIPES": [
     {
       "ingredient": "POCKET_ROCKS",
@@ -178,8 +192,8 @@
       "value": 25.0,
       "usage_msg": "You eat the waffle. It tastes like victory. (Health +25, Morale Improved)"
     },
-    "TRAPERKEEPER_OF_VIGILANCE": {
-      "description": "Color-coded tabs. meticulously organized. It demands order.",
+    "TRAPPERKEEPER_OF_VIGILANCE": {
+      "description": "Color-coded tabs. Meticulously organized. It demands order.",
       "function": "ENTROPY_REDUCTION",
       "spawn_context": "STANDARD",
       "passive_traits": ["ORGANIZE_CHAOS"],

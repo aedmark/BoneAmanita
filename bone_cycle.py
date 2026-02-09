@@ -368,6 +368,17 @@ class NavigationPhase(SimulationPhase):
             effects = flinch_result.get("physics_effects", {})
             for k, v in effects.items():
                 if hasattr(physics, k): setattr(physics, k, v)
+        phys_snapshot = physics.to_dict()
+        reflex_triggered, reflex_msg = self.eng.gordon.emergency_reflex(phys_snapshot)
+        if reflex_triggered:
+            for key, val in phys_snapshot.items():
+                if hasattr(physics, key):
+                    current_val = getattr(physics, key)
+                    if current_val != val:
+                        setattr(physics, key, val)
+            if reflex_msg:
+                ctx.log(reflex_msg)
+            ctx.record_flux("NAVIGATION", "REFLEX", 1.0, 0.0, "ITEM_TRIGGERED")
         phys_dict = physics.to_dict()
         current_loc, entry_msg = self.eng.navigator.locate(phys_dict, self.eng.host_stats)
         if entry_msg: ctx.log(entry_msg)

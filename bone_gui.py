@@ -1,7 +1,9 @@
 """ bone_gui.py - The Visual Cortex (Renderer Library) """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 from bone_core import Prisma
+
+
 
 class Projector:
     def __init__(self):
@@ -176,3 +178,66 @@ def get_renderer(engine_ref, chroma_ref, strunk_ref, valve_ref, mode="STANDARD")
     if mode == "PERFORMANCE":
         return CachedRenderer(base)
     return base
+
+class AmbiguityDial:
+    BOARDROOM = 0
+    WORKSHOP = 1
+    RED_TEAM = 2
+    PALIMPSEST = 3
+
+
+class TruthRenderer(GeodesicRenderer):
+    def __init__(self, engine_ref):
+        super().__init__(engine_ref, None, None, None)
+        self.engine = engine_ref
+        self.dial_setting = AmbiguityDial.BOARDROOM
+
+    def render_truth(self, cortex_packet, council_log, trauma_cost):
+        ui_text = cortex_packet.get("ui", "")
+        if self.dial_setting == AmbiguityDial.BOARDROOM:
+            return f"{Prisma.paint('--- EXECUTIVE SUMMARY ---', 'W')}\n{ui_text}\n"
+        elif self.dial_setting == AmbiguityDial.WORKSHOP:
+            metrics = self.engine.get_metrics()
+            return (
+                f"{Prisma.paint('--- ENGINEER VIEW ---', 'C')}\n"
+                f"Confidence: {cortex_packet.get('truth_ratio', 0.95):.2%}\n"
+                f"System Drag: {metrics['stamina']:.1f}\n"
+                f"---------------------\n{ui_text}\n")
+
+        elif self.dial_setting == AmbiguityDial.RED_TEAM:
+            dissent = [l for l in council_log if "CRITIC" in l or "WARN" in l]
+            return (
+                    f"{Prisma.paint('--- RED TEAM DASHBOARD ---', 'R')}\n"
+                    f"{Prisma.paint('⚠️ ADVERSARIAL SIMULATION ACTIVE', 'Y')}\n"
+                    f"Cost of Blandness: {trauma_cost:.1f} Trauma Units\n"
+                    f"Active Conflicts:\n" + "\n".join([f"  > {d}" for d in dissent]) + "\n"
+                                                                                        f"---------------------\n{ui_text}\n")
+        elif self.dial_setting == AmbiguityDial.PALIMPSEST:
+            drafts = cortex_packet.get("drafts", [])
+            layer_view = ""
+            for i, draft in enumerate(drafts):
+                layer_view += f"{Prisma.GRY}[Draft {i}]: {draft} {Prisma.RED}[REDACTED]{Prisma.RST}\n"
+            return (
+                f"{Prisma.paint('--- PALIMPSEST VIEW ---', 'M')}\n"
+                f"{layer_view}"
+                f"{Prisma.paint('--- FINAL SURFACE ---', 'W')}\n{ui_text}\n")
+        return None
+
+
+class PulseReader:
+    @staticmethod
+    def derive_mood(bio_state: Dict) -> str:
+        chem = bio_state.get("chem", {})
+        if chem.get("COR", 0) > 0.6: return "Defensive"
+        if chem.get("DA", 0) > 0.6: return "Manic"
+        if chem.get("OXY", 0) > 0.6: return "Affectionate"
+        atp = bio_state.get("mito", {}).get("atp", 100)
+        if atp < 20: return "Exhausted"
+        return "Neutral"
+
+    @staticmethod
+    def analyze_voltage(voltage: float) -> Tuple[str, str]:
+        if voltage > 20.0: return "CRITICAL", "⚡"
+        if voltage > 15.0: return "HIGH", "🔥"
+        if voltage < 5.0: return "LOW", "❄️"
+        return "NOMINAL", "🟢"

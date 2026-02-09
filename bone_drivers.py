@@ -9,6 +9,34 @@ from bone_metaphysics import CongruenceValidator
 SCENARIOS = TheLore.get("scenarios") or {"ARCHETYPES": ["Void"], "BANNED_CLICHES": []}
 LENSES = TheLore.get("lenses") or {}
 
+class SoulDriver:
+    ARCHETYPE_TO_PERSONA_WEIGHT = {
+        "THE POET": {"NATHAN": 0.8, "JESTER": 0.4, "NARRATOR": 0.6},
+        "THE ENGINEER": {"GORDON": 0.9, "CLARENCE": 0.7, "SHERLOCK": 0.5},
+        "THE NIHILIST": {"NARRATOR": 0.9, "CLARENCE": 0.3, "JESTER": -0.5},
+        "THE CRITIC": {"CLARENCE": 0.8, "SHERLOCK": 0.6, "GORDON": 0.2},
+        "THE EXPLORER": {"NATHAN": 0.7, "JESTER": 0.5, "SHERLOCK": 0.6},
+        "THE OBSERVER": {"NARRATOR": 1.0, "GORDON": 0.2}}
+
+    def __init__(self, soul_ref):
+        self.soul = soul_ref
+
+    def get_influence(self) -> Dict[str, float]:
+        base_weights = {persona: 0.0 for persona in EnneagramDriver.WEIGHTS.keys()}
+        if not self.soul:
+            return base_weights
+        archetype = getattr(self.soul, "archetype", "THE OBSERVER")
+        mapping = self.ARCHETYPE_TO_PERSONA_WEIGHT.get(archetype, {"NARRATOR": 1.0})
+        for persona, weight in mapping.items():
+            if persona in base_weights:
+                base_weights[persona] += weight
+        paradox = getattr(self.soul, "paradox_accum", 0.0)
+        if paradox > 5.0:
+            chaos_factor = min(0.5, (paradox - 5.0) * 0.05)
+            for persona in base_weights:
+                base_weights[persona] += random.uniform(-chaos_factor, chaos_factor)
+        return base_weights
+
 class UserProfile:
     def __init__(self, name="USER"):
         self.name = name
@@ -297,6 +325,14 @@ class BoneConsultant:
             self.state.archetype = "VALIDATOR"
             self.state.B = 0.2
 
+    def get_vsl_bias(self) -> Dict[str, float]:
+        bias = {"voltage_mod": 0.0, "drag_mod": 0.0}
+        if self.state.E > 0.4:
+            bias["drag_mod"] += (self.state.E - 0.4) * 8.0
+        if self.state.B > 0.6:
+            bias["voltage_mod"] += (self.state.B - 0.6) * 15.0
+        return bias
+
     def get_system_prompt(self) -> str:
         return f"""
 [VSL_PRIMER ACTIVE]
@@ -318,32 +354,3 @@ DIRECTIVES:
             "SYNTHESIZER": "Connect the dots. Mirror back understanding.",
             "VALIDATOR": "Verify gaps. Confirm the final spec."}
         return desc.get(self.state.archetype, "Observe.")
-
-
-class SoulDriver:
-    ARCHETYPE_TO_PERSONA_WEIGHT = {
-        "THE POET": {"NATHAN": 0.8, "JESTER": 0.4, "NARRATOR": 0.6},
-        "THE ENGINEER": {"GORDON": 0.9, "CLARENCE": 0.7, "SHERLOCK": 0.5},
-        "THE NIHILIST": {"NARRATOR": 0.9, "CLARENCE": 0.3, "JESTER": -0.5},
-        "THE CRITIC": {"CLARENCE": 0.8, "SHERLOCK": 0.6, "GORDON": 0.2},
-        "THE EXPLORER": {"NATHAN": 0.7, "JESTER": 0.5, "SHERLOCK": 0.6},
-        "THE OBSERVER": {"NARRATOR": 1.0, "GORDON": 0.2}}
-
-    def __init__(self, soul_ref):
-        self.soul = soul_ref
-
-    def get_influence(self) -> Dict[str, float]:
-        base_weights = {persona: 0.0 for persona in EnneagramDriver.WEIGHTS.keys()}
-        if not self.soul:
-            return base_weights
-        archetype = getattr(self.soul, "archetype", "THE OBSERVER")
-        mapping = self.ARCHETYPE_TO_PERSONA_WEIGHT.get(archetype, {"NARRATOR": 1.0})
-        for persona, weight in mapping.items():
-            if persona in base_weights:
-                base_weights[persona] += weight
-        paradox = getattr(self.soul, "paradox_accum", 0.0)
-        if paradox > 5.0:
-            chaos_factor = min(0.5, (paradox - 5.0) * 0.05)
-            for persona in base_weights:
-                base_weights[persona] += random.uniform(-chaos_factor, chaos_factor)
-        return base_weights
