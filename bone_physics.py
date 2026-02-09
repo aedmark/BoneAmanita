@@ -6,9 +6,10 @@ import random
 from typing import Dict, List, Any, Tuple, Optional, Deque
 from collections import Counter, deque
 from dataclasses import dataclass, field
-from bone_lexicon import TheLexicon
-from bone_core import Prisma, BoneConfig, PhysicsPacket, CycleContext
 
+from bone_types import Prisma, PhysicsPacket, CycleContext
+from bone_config import BoneConfig
+from bone_lexicon import TheLexicon
 
 class PhysicsConstants:
     VOLT_CRITICAL = 20.0
@@ -156,14 +157,13 @@ class GeodesicEngine:
             "E":   norm(counts.get("solvents", 0))}
 
 class TheGatekeeper:
-    def __init__(self, engine_ref):
-        self.eng = engine_ref
-        self.lex = engine_ref.mind.lex
-        self.mem = engine_ref.mind.mem
+    def __init__(self, lexicon_ref, memory_ref):
+        self.lex = lexicon_ref
+        self.mem = memory_ref
 
-    def check_entry(self, ctx: CycleContext) -> Tuple[bool, Optional[Dict]]:
+    def check_entry(self, ctx: CycleContext, current_atp: float = 20.0) -> Tuple[bool, Optional[Dict]]:
         phys = ctx.physics
-        if not self._check_thermodynamics(ctx):
+        if current_atp < (PhysicsConstants.ATP_STARVATION * 0.5):
             return False, self._pack_refusal(ctx, "DARK_SYSTEM", "Energy critical. The inputs dissolve into the void.")
         if phys.counts.get("antigen", 0) > 2:
             return False, self._pack_refusal(ctx, "TOXICITY", f"{Prisma.RED}IMMUNE REACTION: Input rejected as pathogenic.{Prisma.RST}")
@@ -174,14 +174,6 @@ class TheGatekeeper:
             return False, self._pack_refusal(ctx, "OVERLOAD", f"{Prisma.OCHRE}Input too long. Compress your thought.{Prisma.RST}")
         return True, None
 
-    def _check_thermodynamics(self, ctx) -> bool:
-        threshold = PhysicsConstants.ATP_STARVATION * 0.5
-        if hasattr(ctx, "bio_snapshot") and ctx.bio_snapshot:
-            return ctx.bio_snapshot.get("atp", 10.0) > threshold
-        if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
-            return self.eng.bio.mito.state.atp_pool > threshold
-        return True
-
     def _audit_safety(self, words: List[str]) -> bool:
         cursed = self.lex.get("cursed")
         return any(w in cursed for w in words)
@@ -190,13 +182,7 @@ class TheGatekeeper:
         return {
             "type": type_str,
             "ui": ui_msg,
-            "logs": ctx.logs + [ui_msg],
-            "metrics": self.eng.get_metrics()}
-
-    def _get_tangibility_msg(self):
-        suggestion = random.choice(["stone", "iron", "bone", "mud"])
-        return (f"{Prisma.OCHRE}TANGIBILITY VIOLATION: Concepts too airy.{Prisma.RST}\n"
-                f"   {Prisma.GRY}Anchor them with mass (e.g., {suggestion}).{Prisma.RST}")
+            "logs": ctx.logs + [ui_msg]}
 
 class QuantumObserver:
     def __init__(self, events):
@@ -304,8 +290,7 @@ class SurfaceTension:
             "Based on the available data...",
             "As I understand the current coordinates...",
             "From a structural perspective...",
-            "This is a probabilistic estimation...",
-            "I could be misinterpreting the vector..."]
+            "This is a probabilistic estimation..."]
 
     def audit_hubris(self, physics: Dict[str, Any]) -> Tuple[bool, str, str]:
         voltage = physics.get("voltage", 0.0)
@@ -317,27 +302,16 @@ class SurfaceTension:
             return True, "🌊 SURFACE TENSION OPTIMAL: Entering Flow State.", "FLOW_BOOST"
         return False, "", ""
 
-    def check_boundary(self, text: str, voltage: float) -> Tuple[bool, str, Optional[str]]:
-        if voltage > PhysicsConstants.VOLT_CRITICAL and random.random() < 0.3:
-            prefix = random.choice(self.HUMBLE_PHRASES)
-            return True, f"{prefix} {text}", "VOLTAGE_DAMPENER"
-        return False, text, None
-
 class ChromaScope:
     def modulate(self, text: str, vector: Dict[str, float]) -> str:
-        if not vector:
-            return f"{Prisma.GRY}{text}{Prisma.RST}"
-
+        if not vector: return f"{Prisma.GRY}{text}{Prisma.RST}"
         sorted_vecs = sorted(vector.items(), key=lambda x: x[1], reverse=True)
-        if not sorted_vecs:
-            return f"{Prisma.GRY}{text}{Prisma.RST}"
+        if not sorted_vecs: return f"{Prisma.GRY}{text}{Prisma.RST}"
         primary_dim = sorted_vecs[0][0]
         if primary_dim in TRIGRAM_MAP:
             selected_color = TRIGRAM_MAP[primary_dim][3]
         else:
             selected_color = Prisma.GRY
-        if "sorry" in text.lower():
-            return f"{Prisma.OCHRE}{text}{Prisma.RST}"
         return f"{selected_color}{text}{Prisma.RST}"
 
 class ZoneInertia:
@@ -374,7 +348,6 @@ class ZoneInertia:
             return proposed_zone, None
         if self.dwell_counter < self.min_dwell:
             return self.current_zone, None
-
         return self._attempt_migration(proposed_zone, pressure)
 
     def _handle_anchored_state(self, proposed_zone: str, pressure: float) -> Tuple[str, Optional[str]]:
@@ -392,9 +365,7 @@ class ZoneInertia:
 
     def _attempt_migration(self, proposed_zone: str, pressure: float) -> Tuple[str, Optional[str]]:
         change_probability = (1.0 - self.inertia) + pressure
-
-        if proposed_zone in ["AERIE", "THE_FORGE"]:
-            change_probability += 0.2
+        if proposed_zone in ["AERIE", "THE_FORGE"]: change_probability += 0.2
         if random.random() < change_probability:
             old_zone = self.current_zone
             self.current_zone = proposed_zone
@@ -404,10 +375,8 @@ class ZoneInertia:
 
     @staticmethod
     def override_cosmic_drag(cosmic_drag_penalty: float, current_zone: str) -> float:
-        aerie_flow_coefficient = 0.3
-        if current_zone == "AERIE":
-            if cosmic_drag_penalty > 0:
-                return cosmic_drag_penalty * aerie_flow_coefficient
+        if current_zone == "AERIE" and cosmic_drag_penalty > 0:
+            return cosmic_drag_penalty * 0.3
         return cosmic_drag_penalty
 
 class CosmicDynamics:

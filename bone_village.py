@@ -2,13 +2,13 @@
 
 import math
 import random
-import time
 import hashlib
 from typing import List, Dict, Any, Tuple, Optional, Set
 from dataclasses import dataclass, field
 
-from bone_core import Prisma, BoneConfig, BonePresets, TheLore
-from bone_lexicon import TheLexicon
+from bone_types import Prisma, PhysicsPacket
+from bone_config import BoneConfig, BonePresets
+from bone_core import TheLore
 from bone_protocols import ZenGarden
 from bone_drivers import UserProfile
 from bone_akashic import TheAkashicRecord
@@ -24,7 +24,8 @@ CONFIDENCE_RUST_WARN = 0.2
 
 def _get(p: Any, k: str, d: Any = 0.0) -> Any:
     if p is None: return d
-    return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
+    if isinstance(p, dict): return p.get(k, d)
+    return getattr(p, k, d)
 
 def _get_float(p: Any, k: str, d: float = 0.0) -> float:
     val = _get(p, k, d)
@@ -70,7 +71,7 @@ class TheTinkerer:
         self.akashic = akashic_ref
         self.tool_resonance: Dict[str, float] = {}
 
-    def audit_tool_use(self, physics_packet, inventory_list: List[str], host_health: Any = None):
+    def audit_tool_use(self, physics_packet: Any, inventory_list: List[str], host_health: Any = None):
         p = _normalize_physics_dict(physics_packet)
         voltage = _get_float(p, "voltage", 0.0)
         drag = _get_float(p, "narrative_drag", 0.0)
@@ -121,11 +122,13 @@ class ParadoxSeed:
         self.question = question
         self.triggers = set([t.lower() for t in triggers])
         self.bloomed = False
+        self.maturity = 0.0
 
     def water(self, current_words: List[str]) -> bool:
         if self.bloomed: return False
         for word in current_words:
             if word in self.triggers:
+                self.maturity += 0.2
                 return True
         return False
 

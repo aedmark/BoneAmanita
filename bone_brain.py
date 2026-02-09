@@ -3,12 +3,27 @@
 import re, time, json, urllib.request, urllib.error, random, math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from bone_core import Prisma, BoneConfig, EventBus, TheLore, TelemetryService, DecisionCrystal
+
+from bone_core import EventBus, TheLore, TelemetryService
+from bone_types import Prisma, DecisionCrystal, CycleContext
+from bone_config import BoneConfig
 from bone_symbiosis import SymbiosisManager
 from bone_spores import MycelialNetwork
 from bone_lexicon import TheLexicon, RosettaStone
 from bone_physics import cosine_similarity
 from bone_drivers import SynergeticLensArbiter, BoneConsultant
+
+@dataclass
+class CortexServices:
+    events: EventBus
+    lexicon: Any
+    inventory: Any
+    consultant: Any
+    cycle_controller: Any
+    symbiosis: Any
+    mind_memory: Any
+    host_stats: Any = None
+
 
 @dataclass
 class BrainConfig:
@@ -477,36 +492,66 @@ class ResponseValidator:
         return {"valid": True, "content": sanitized_response, "meta_logs": extracted_meta_logs}
 
 class TheCortex:
-    def __init__(self, engine_ref, llm_client=None):
-        self.eng = engine_ref
-        self.events = engine_ref.events
+    def __init__(self, services: CortexServices, llm_client=None):
+        self.svc = services
+        self.events = services.events
         self.dreamer = DreamEngine(self.events)
         self.dialogue_buffer = []
         self.MAX_HISTORY = 15
         self.modulator = NeurotransmitterModulator(events_ref=self.events)
         self.boot_history = TelemetryService.get_instance().read_recent_history(limit=4)
         self.last_physics = {}
-        try:
-            self.consultant = self.eng.consultant if hasattr(self.eng, 'consultant') else BoneConsultant()
-        except Exception:
-            self.consultant = None
+
+        self.consultant = services.consultant
         self.llm = llm_client or LLMInterface(self.events, provider="mock", dreamer=self.dreamer)
-        if hasattr(self.eng, 'events'):
-            self.symbiosis = SymbiosisManager(self.eng.events)
-            if hasattr(self.eng, "system_health"):
-                pass
-        events = getattr(self.eng, 'events', None)
-        self.arbiter = SynergeticLensArbiter(events)
-        self.last_physics = None
-        self.dialogue_buffer = []
-        if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None: self.llm.dreamer = self.dreamer
+        self.symbiosis = services.symbiosis
+        self.arbiter = SynergeticLensArbiter(self.events)
+
+        if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None:
+            self.llm.dreamer = self.dreamer
+
         self.composer = PromptComposer()
         self.spotlight = NarrativeSpotlight()
-        self.symbiosis = SymbiosisManager(self.events)
         self.validator = ResponseValidator()
         self.ballast_active = False
+
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("AIRSTRIKE", lambda p: setattr(self, 'ballast_active', True))
+
+    @classmethod
+    def from_engine(cls, engine_ref, llm_client=None):
+        """ Factory method to maintain compatibility with legacy engine references """
+        services = CortexServices(
+            events=engine_ref.events,
+            lexicon=engine_ref.lex,
+            inventory=engine_ref.gordon,
+            consultant=engine_ref.consultant if hasattr(engine_ref, 'consultant') else None,
+            cycle_controller=engine_ref.cycle_controller,
+            symbiosis=getattr(engine_ref, 'symbiosis', SymbiosisManager(engine_ref.events)),
+            mind_memory=engine_ref.mind.mem,
+            host_stats=getattr(engine_ref, 'host_stats', None)
+        )
+        return cls(services, llm_client)
+
+    @property
+    def eng(self):
+        """ Deprecated: Backward compatibility property for direct engine access.
+            Avoid using this if possible. Use self.svc instead.
+        """
+
+        class LegacyEngineProxy:
+            def __init__(self, services):
+                self.gordon = services.inventory
+                self.lex = services.lexicon
+                self.cycle_controller = services.cycle_controller
+                self.tick_count = 0
+                self.host_stats = services.host_stats
+                self.soul = None
+
+            def get_metrics(self):
+                return {"note": "Metrics unavailable in strict service mode"}
+
+        return LegacyEngineProxy(self.svc)
 
     def _update_history(self, user_text: str, system_text: str):
         self.dialogue_buffer.append(f"User: {user_text} | System: {system_text}")
@@ -525,53 +570,73 @@ class TheCortex:
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
+
         is_boot_sequence = "SYSTEM_BOOT:" in user_input
-        sim_result = self.eng.cycle_controller.run_turn(user_input, is_system=is_system)
+        sim_result = self.svc.cycle_controller.run_turn(user_input, is_system=is_system)
+
         if sim_result.get("physics"):
              self.last_physics = sim_result["physics"]
-        if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]: return sim_result
+
+        if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]:
+            return sim_result
+
         full_state = self.gather_state(sim_result)
-        modifiers = self.symbiosis.get_prompt_modifiers()
+        modifiers = self.svc.symbiosis.get_prompt_modifiers()
+
         if self.consultant and self.consultant.active:
             self._apply_vsl_overlay(full_state, user_input, sim_result)
+
         if is_boot_sequence:
             self._apply_boot_overlay(full_state, user_input)
             modifiers["include_inventory"] = False
             user_input = "Entering reality..."
+
         llm_params = self.modulator.modulate(
             full_state["bio"].get("chem", {}),
             full_state["physics"].get("voltage", 5.0),
-            latency_penalty=getattr(self.eng.host_stats, "latency", 0.0))
-        if is_boot_sequence: llm_params.update({"temperature": 1.3, "top_p": 0.95})
+            latency_penalty=getattr(self.svc.host_stats, "latency", 0.0) if self.svc.host_stats else 0.0)
+
+        if is_boot_sequence:
+            llm_params.update({"temperature": 1.3, "top_p": 0.95})
+
         final_prompt = self.composer.compose(
             full_state, user_input,
             ballast=self.ballast_active, modifiers=modifiers,
             mood_override=self.modulator.get_mood_directive())
+
         start_time = time.time()
         raw_resp = self.llm.generate(final_prompt, llm_params)
         final_text, new_loot, lost_loot = self._harvest_loot(raw_resp)
         inv_logs = self._process_inventory_changes(new_loot, lost_loot)
+
         self._log_telemetry(final_prompt, final_text, full_state, sim_result)
         self.learn_from_response(final_text)
+
         val_res = self.validator.validate(final_text, full_state)
         final_output = val_res["content"] if val_res["valid"] else val_res["replacement"]
         extracted_logs = val_res.get("meta_logs", [])
-        self.symbiosis.monitor_host(time.time() - start_time, final_output, len(final_prompt))
+
+        self.svc.symbiosis.monitor_host(time.time() - start_time, final_output, len(final_prompt))
         self._update_history("SYSTEM_INIT" if is_boot_sequence else user_input, final_output)
+
         sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_output}{Prisma.RST}"
         if inv_logs: sim_result["ui"] += "\n" + "\n".join(inv_logs)
+
         if "logs" not in sim_result: sim_result["logs"] = []
         sim_result["logs"].extend(extracted_logs)
         sim_result["raw_content"] = final_output
         self.ballast_active = False
+
         return sim_result
 
     def _handle_vsl_command(self, text):
+        if not self.consultant: return {"ui": "VSL Unavailable", "logs": []}
         msg = self.consultant.engage() if "start" in text else self.consultant.disengage()
         self.events.log(msg, "VSL")
-        return {"ui": f"{Prisma.CYN}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.eng.get_metrics()}
+        return {"ui": f"{Prisma.CYN}{msg}{Prisma.RST}", "logs": [msg]}
 
     def _apply_vsl_overlay(self, state, text, sim_result):
+        if not self.consultant: return
         self.consultant.update_coordinates(text, state.get("bio", {}), state.get("physics"))
         state["mind"]["style_directives"] = [self.consultant.get_system_prompt()]
         sim_result["physics"]["voltage"] = self.consultant.state.B * 30.0
@@ -593,10 +658,10 @@ class TheCortex:
     def _process_inventory_changes(self, found, lost):
         logs = []
         for item in found:
-            logs.append(self.eng.gordon.acquire(item))
+            logs.append(self.svc.inventory.acquire(item))
             if self.events: self.events.publish("ITEM_ACQUIRED", {"item": item})
         for item in lost:
-            if self.eng.gordon.safe_remove_item(item):
+            if self.svc.inventory.safe_remove_item(item):
                 logs.append(f"{Prisma.GRY}ENTROPY: {item} consumed/lost.{Prisma.RST}")
             else:
                 logs.append(f"{Prisma.OCHRE}GLITCH: Tried to lose {item}, but you didn't have it.{Prisma.RST}")
@@ -620,17 +685,11 @@ class TheCortex:
         bio = sim_result.get("bio", {})
         mind = sim_result.get("mind", {})
         world = sim_result.get("world", {})
-        soul_data = {}
-        if hasattr(self.eng, "soul"):
-            soul_data = self.eng.soul.to_dict()
+
+        soul_data = sim_result.get("soul", {})
+
         village_data = {}
-        if hasattr(self.eng, "village"):
-            tinkerer_data = {}
-            if "tinkerer" in self.eng.village:
-                tinker_ref = self.eng.village["tinkerer"]
-                if hasattr(tinker_ref, "tool_resonance"):
-                    tinkerer_data["tool_resonance"] = tinker_ref.tool_resonance
-            village_data["tinkerer"] = tinkerer_data
+
         full_state = {
             "bio": bio,
             "physics": phys,
@@ -638,28 +697,25 @@ class TheCortex:
             "soul": soul_data,
             "world": world,
             "village": village_data,
-            "user_profile": getattr(self.eng.cmd, "user_profile", {}),
+            "user_profile": {"name": "Traveler"},
             "meta": {
-                "tick": self.eng.tick_count,
                 "timestamp": time.time()
             }
         }
-        if hasattr(self, "symbiosis"):
-            if hasattr(self.eng, "host_stats"):
-                pass
-            anchor_text = self.symbiosis.generate_anchor(full_state)
+
+        if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
+            anchor_text = self.svc.symbiosis.generate_anchor(full_state)
             full_state["reality_directive"] = anchor_text
-            if BoneConfig.VERBOSE_LOGGING and self.eng.tick_count % 10 == 0:
-                print(f"{Prisma.GRY}[ANCHOR]: {anchor_text}{Prisma.RST}")
+
         return full_state
 
     def learn_from_response(self, text):
-        words = self.eng.lex.sanitize(text)
-        unknowns = [w for w in words if not self.eng.lex.get_categories_for_word(w)]
+        words = self.svc.lexicon.sanitize(text)
+        unknowns = [w for w in words if not self.svc.lexicon.get_categories_for_word(w)]
         if unknowns:
             target = random.choice(unknowns)
             if len(target) > 4:
-                self.eng.lex.teach(target, "kinetic", self.eng.tick_count)
+                self.svc.lexicon.teach(target, "kinetic", 0)
                 if self.events: self.events.log(f"AUTO-DIDACTIC: Learned '{target}'.", "CORTEX")
 
 class NeuroPlasticity:
@@ -816,16 +872,28 @@ class NoeticLoop:
         self.arbiter = SynergeticLensArbiter(events)
 
     def think(self, physics_packet, _bio, inventory, voltage_history, tick_count, soul_ref=None):
+        voltage = physics_packet.get("voltage", 0.0)
+        clean_words = physics_packet.get("clean_words", [])
+
         avg_v = sum(voltage_history) / len(voltage_history) if voltage_history else 0
-        ignition = min(1.0, (avg_v / 20.0) * (len(physics_packet.get("clean_words", [])) / 10.0))
-        if physics_packet.get("voltage", 0) > 12.0 and random.random() < 0.15:
-            words = physics_packet.get("clean_words", [])
-            if len(words) >= 2:
-                w1, w2 = random.sample(words, 2)
+        ignition = min(1.0, (avg_v / 20.0) * (len(clean_words) / 10.0))
+
+        if voltage > 12.0 and random.random() < 0.15:
+            if len(clean_words) >= 2:
+                w1, w2 = random.sample(clean_words, 2)
                 self._force_link(self.mind.mem.graph, w1, w2)
-        mind_data = self.arbiter.consult(physics_packet, _bio, inventory, tick_count, soul_ref=soul_ref, _ignition_score=ignition)
+
+        mind_data = self.arbiter.consult(
+            physics_packet,
+            _bio,
+            inventory,
+            tick_count,
+            soul_ref=soul_ref,
+            _ignition_score=ignition)
+
         if isinstance(mind_data, tuple):
             mind_data = {"lens": mind_data[0], "context_msg": mind_data[1], "role": mind_data[2]}
+
         return {
             "mode": "COGNITIVE",
             "lens": mind_data.get("lens"),

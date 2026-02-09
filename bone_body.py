@@ -4,20 +4,18 @@ import math, random, time
 from collections import deque, Counter
 from dataclasses import dataclass, field, asdict
 from typing import Set, Optional, Dict, List, Any, Tuple
+
 from bone_spores import ImmuneMycelium, BioLichen, BioParasite
 from bone_lexicon import TheLexicon
 from bone_core import Prisma, BoneConfig, TheLore
 
 def _get_val(obj, key, default=0.0):
-    if isinstance(obj, dict):
-        return obj.get(key, default)
+    if isinstance(obj, dict): return obj.get(key, default)
     return getattr(obj, key, default)
 
 def _set_val(obj, key, value):
-    if isinstance(obj, dict):
-        obj[key] = value
-    else:
-        setattr(obj, key, value)
+    if isinstance(obj, dict): obj[key] = value
+    else: setattr(obj, key, value)
 
 @dataclass
 class Biometrics:
@@ -142,7 +140,7 @@ class BioSystem:
             self.biometrics.health = max(0.0, self.biometrics.health - total_drain)
         if shield_strength > 0.2 and self.events:
             self.events.log(f"{Prisma.CYN}🛡️ EM SHIELD ACTIVE: Mitigation {int(shield_strength*100)}%{Prisma.RST}", "PHYS")
-
+@dataclass
 class MitochondrialState:
     atp_pool: float = 60.0
     membrane_potential: float = 1.0
@@ -595,12 +593,22 @@ class EndocrineSystem:
     glimmers: int = 0
     narrative_data: Dict = field(default_factory=dict, repr=False)
     _REACTION_MAP = {
-        "PROTEASE":   {"ADR": BoneConfig.BIO.REWARD_MEDIUM},
-        "CELLULASE":  {"COR": -BoneConfig.BIO.REWARD_MEDIUM, "OXY": BoneConfig.BIO.REWARD_SMALL},
-        "CHITINASE":  {"DOP": BoneConfig.BIO.REWARD_LARGE},
-        "LIGNASE":    {"SER": BoneConfig.BIO.REWARD_MEDIUM},
-        "DECRYPTASE": {"ADR": BoneConfig.BIO.REWARD_SMALL, "DOP": BoneConfig.BIO.REWARD_SMALL},
-        "AMYLASE":    {"SER": BoneConfig.BIO.REWARD_LARGE, "OXY": BoneConfig.BIO.REWARD_MEDIUM}}
+        "PROTEASE":   {"ADR": 0.1},
+        "CELLULASE":  {"COR": -0.1, "OXY": 0.05},
+        "CHITINASE":  {"DOP": 0.15},
+        "LIGNASE":    {"SER": 0.1},
+        "DECRYPTASE": {"ADR": 0.05, "DOP": 0.05},
+        "AMYLASE":    {"SER": 0.15, "OXY": 0.1}}
+
+    def __post_init__(self):
+        if hasattr(BoneConfig, "BIO"):
+            self._REACTION_MAP = {
+                "PROTEASE":   {"ADR": BoneConfig.BIO.REWARD_MEDIUM},
+                "CELLULASE":  {"COR": -BoneConfig.BIO.REWARD_MEDIUM, "OXY": BoneConfig.BIO.REWARD_SMALL},
+                "CHITINASE":  {"DOP": BoneConfig.BIO.REWARD_LARGE},
+                "LIGNASE":    {"SER": BoneConfig.BIO.REWARD_MEDIUM},
+                "DECRYPTASE": {"ADR": BoneConfig.BIO.REWARD_SMALL, "DOP": BoneConfig.BIO.REWARD_SMALL},
+                "AMYLASE":    {"SER": BoneConfig.BIO.REWARD_LARGE, "OXY": BoneConfig.BIO.REWARD_MEDIUM}}
 
     @staticmethod
     def _clamp(val: float) -> float:

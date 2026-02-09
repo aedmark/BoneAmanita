@@ -12,6 +12,7 @@ from bone_soul import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
 from bone_village import SanctuaryGovernor
 
+
 class CycleStabilizer:
     MANIFOLD_CONFIGS = {
         "THE_FORGE": {"voltage": 15.0, "drag": 1.5},
