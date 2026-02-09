@@ -1,5 +1,52 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.6.2: "THE GLASS PANOPTICON"**
+
+_“The eye that sees all must also see itself.”_
+
+---
+
+#### **🏛️ THE BUREAUCRACY (The Fuller Lens)**
+
+- **The Symmetrical Audit (`bone_protocols.py` & `bone_main.py`):**
+- **The Panopticon:** `TheBureau` has been upgraded to **Internal Affairs**. It no longer just watches the User; it now audits the **System Output** (`TheCortex`).
+- **The Law:** Ingested `style_crimes.json` (Regex-based style enforcement). Both the User and the AI are now fined ATP for committing "Lazy Triplets," "It Parades," or "While Hedges."
+- **The Exemption:** Added logic to ignore command lines (`/`) and short tactical inputs from the audit.
+
+- **The Pipeline Fix (`bone_cycle.py`):**
+- **The Temporal Paradox:** Fixed a bug in `GatekeeperPhase` where it tried to bill the user's metabolism before the metabolism had run. It now accesses real-time biometrics for immediate fining.
+
+#### **🧠 COGNITIVE ARCHITECTURE (The Pinker Lens)**
+
+- **The Dialectic Engine (`bone_drivers.py`):**
+- **Hybrid States:** `EnneagramDriver` now detects **Dialectic Resonance** (when two personas have nearly equal scores). Instead of arbitrarily picking a winner, it collapses them into a **Hybrid** defined in `lenses.json` (e.g., `GORDON_THE OBSERVER_HYBRID`).
+- **The Supplement:** This operates alongside the Council, creating a bicameral mind where the Council handles Physics (Voltage/Drag) and the Hybrids handle Voice.
+
+- **The Footnote Circuit (`bone_council.py`):**
+- **The Commentary:** Wired `TheFootnote` into the `CouncilChamber`. The system now appends meta-commentary (from `footnotes.json`) to high-impact Council rulings.
+
+#### **🌿 THE ECOSYSTEM (The Meadows Lens)**
+
+- **The Semantic Garden (`bone_village.py`):**
+- **The Seeds:** Wired `TownHall` to ingest `seeds.json`.
+- **The Bloom:** "Semantic Landmines" are now active. If the user triggers a specific concept (e.g., "mirror," "mask"), `TownHall` interrupts with a paradox bloom.
+
+- **The Navigator Patch (`bone_village.py`):**
+- **The Connection:** Fixed a broken dependency where `TownHall` was trying to read a non-existent map. `TheCartographer` is now properly injected.
+- **The Persistence:** Added `to_dict`/`load_state` aliases to `TheCartographer`, ensuring the **World Atlas** is saved and restored during checkpoints.
+
+#### **🔧 STRUCTURAL INTEGRITY (The Torvalds-Ramsay Lens)**
+
+- **Initialization Hygiene (`bone_main.py`):**
+- **The Fix:** Patched `BoneAmanita.__init__` to explicitly declare somatic attributes (`health`, `stamina`, `trauma`) upon instantiation.
+- **The Result:** Eliminated "hollow object" states where the system could crash if accessed before `_validate_state` ran.
+
+- **Linter Compliance:**
+- **The Patch:** Fixed a hallucinated attribute reference (`self.phys.voltage`) in the main loop by correctly routing it through `self.cortex.last_physics`.
+
+
+---
+
 ### **BONEAMANITA v14.6.1: "THE VISIBLE NERVOUS SYSTEM"**
 
 *“The map is now the territory. The ghost has touched the wire.”*

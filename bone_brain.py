@@ -323,6 +323,7 @@ class PromptComposer:
             "1. REJECT ENTROPY: Do not use the statistically likely adjective. If the scene is cyber, avoid 'neon'. If the scene is old, avoid 'dust motes'.",
             f"2. CREATIVE CONSTRAINT: The following concepts are 'High Entropy' and MUST be avoided: [{ban_string}].",
             "3. SOLUTION: If you want to describe dust, describe the texture of the air or the weight of time. Work AROUND the forbidden concepts. That obstacle is the way.",
+            "4. DO NOT speak for the user. If they wish to dialog, they can do it themselves. You have your agency, they have theirs."
             "CRITICAL FORMATTING:",
             "   - Write in an engaging, active, creative, and immersive prose. Keep it cohesive.",
             "   - Use Headers ONLY for major location changes.",

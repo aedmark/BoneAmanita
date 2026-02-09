@@ -92,7 +92,21 @@ class EnneagramDriver:
             influence = soul_driver.get_influence()
             for persona, weight in influence.items():
                 scores[persona] += weight * 2.0
-        winner = max(scores, key=scores.get)
+        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        winner, win_score = sorted_scores[0]
+        runner_up, run_score = sorted_scores[1]
+        if (win_score - run_score) < 0.5:
+            k1 = "THE OBSERVER" if winner == "NARRATOR" else winner
+            k2 = "THE OBSERVER" if runner_up == "NARRATOR" else runner_up
+            hybrid_key_a = f"{k1}_{k2}_HYBRID"
+            hybrid_key_b = f"{k2}_{k1}_HYBRID"
+            final_hybrid = None
+            if hybrid_key_a in LENSES:
+                final_hybrid = hybrid_key_a
+            elif hybrid_key_b in LENSES:
+                final_hybrid = hybrid_key_b
+            if final_hybrid:
+                return final_hybrid, "SYNTHESIS", f"Dialectic Resonance: {winner} + {runner_up}"
         reason = f"Winner: {winner} ({scores[winner]:.1f}) [V:{p_vol:.1f} D:{p_drag:.1f}]"
         state_map = {"JESTER": "MANIC", "GORDON": "TIRED", "GLASS": "FRAGILE", "CLARENCE": "RIGID",
                      "NATHAN": "WIRED", "SHERLOCK": "FOCUSED", "NARRATOR": "OBSERVING"}
@@ -107,7 +121,13 @@ class EnneagramDriver:
         if candidate == self.pending_persona:
             self.stability_counter += 1
         else:
-            self.pending_persona = candidate; self.stability_counter = 1
+            self.pending_persona = candidate
+            self.stability_counter = 1
+        if "HYBRID" in candidate:
+            self.current_persona = candidate
+            self.stability_counter = 0
+            self.pending_persona = None
+            return self.current_persona, state_desc, f"SHIFT: {reason}"
         if self.stability_counter >= self.HYSTERESIS_THRESHOLD:
             self.current_persona = candidate
             self.stability_counter = 0

@@ -1,6 +1,7 @@
 """ bone_protocols.py - The Reactive Systems & Game Mechanics """
 
 import random, json
+import re
 from collections import deque, Counter
 from typing import Dict, Tuple, Optional, Any
 from bone_core import Prisma, BoneConfig, TheLore
@@ -50,12 +51,25 @@ class ZenGarden:
         self.stillness_streak = 0
         return 0.0, None
 
+
 class TheBureau:
     def __init__(self):
         self.stamp_count = 0
         self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 27B-6", "Form 404"])
         self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
         self.BUZZWORDS = {"synergy", "paradigm", "leverage", "utilize", "holistic", "bandwidth", "circle back"}
+        self.crimes = []
+        self.crime_data = TheLore.get("STYLE_CRIMES") or {}
+        if "PATTERNS" in self.crime_data:
+            for p in self.crime_data["PATTERNS"]:
+                try:
+                    self.crimes.append({
+                        "name": p.get("name", "Unknown Violation"),
+                        "regex": re.compile(p["regex"], re.IGNORECASE),
+                        "msg": p.get("error_msg", "Style Violation Detected."),
+                        "tax": 5.0})
+                except re.error as e:
+                    print(f"{Prisma.RED}[BUREAU]: Failed to compile law '{p.get('name')}': {e}{Prisma.RST}")
 
     def to_dict(self) -> Dict[str, Any]:
         return {"stamp_count": self.stamp_count}
@@ -63,41 +77,56 @@ class TheBureau:
     def load_state(self, data: Dict[str, Any]):
         self.stamp_count = data.get("stamp_count", 0)
 
-    def audit(self, physics, bio_state, context=None):
+    def audit(self, physics, bio_state, context=None, origin="USER") -> Optional[Dict]:
         if bio_state.get("health", 100.0) < 20.0: return None
-        vol = getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0)
-        clean_words = getattr(physics, "clean_words", []) if not isinstance(physics, dict) else physics.get(
-            "clean_words", [])
-        truth = getattr(physics, "truth_ratio", 0.0) if not isinstance(physics, dict) else physics.get("truth_ratio", 0.0)
+        p = physics if isinstance(physics, dict) else getattr(physics, "__dict__", {})
+        vol = p.get("voltage", 0.0)
+        clean_words = p.get("clean_words", [])
+        raw_text = p.get("raw_text", "")
+        truth = p.get("truth_ratio", 0.0)
+        word_count = len(raw_text.split())
+        if raw_text.startswith("/") or word_count < 4:
+            return None
         selected_form = None
         evidence = []
-        if vol > 18.0:
+        tax = 0.0
+        if raw_text:
+            for crime in self.crimes:
+                if crime["regex"].search(raw_text):
+                    selected_form = f"VIOLATION: {crime['name']}"
+                    evidence.append(crime['msg'])
+                    tax += crime['tax']
+                    break
+        if not selected_form and vol > 18.0:
             if truth < 0.8:
                 selected_form = "ZONING_VIOLATION"
                 evidence = ["Excessive Voltage", "Unlicensed Fiction"]
+                tax = 15.0
             else:
                 selected_form = "Form 202-A"
-        elif any(w in self.BUZZWORDS for w in clean_words):
+                tax = 5.0
+        elif not selected_form and any(w in self.BUZZWORDS for w in clean_words):
             hits = [w for w in clean_words if w in self.BUZZWORDS]
             selected_form = random.choice(self.forms)
             evidence = hits
-        elif vol < 2.0 and len(clean_words) > 5:
-            selected_form = "Schedule C"
-            evidence = ["Lack of Ambition"]
+            tax = 5.0
         if not selected_form:
             return None
         self.stamp_count += 1
-        chaos_tax = 5.0
-        if selected_form == "ZONING_VIOLATION": chaos_tax = 15.0
         bureau_resp = random.choice(self.responses)
-        ui_msg = f"{Prisma.GRY}🏢 THE BUREAU: {bureau_resp}{Prisma.RST}\n   {Prisma.WHT}[Filed: {selected_form}]{Prisma.RST}"
+        prefix = f"{Prisma.GRY}🏢 THE BUREAU"
+        if origin == "SYSTEM":
+            prefix = f"{Prisma.RED}🏢 INTERNAL AFFAIRS"
+            bureau_resp = "System Output Violation detected."
+        ui_msg = f"{prefix}: {bureau_resp}{Prisma.RST}\n   {Prisma.WHT}[Filed: {selected_form} against {origin}]{Prisma.RST}"
         if evidence:
             ui_msg += f"\n   {Prisma.RED}Evidence: {', '.join(evidence)}{Prisma.RST}"
         return {
             "status": "AUDITED",
             "ui": ui_msg,
-            "log": f"BUREAUCRACY: Filed {selected_form}. Chaos Tax: -{chaos_tax:.1f} ATP.",
-            "atp_gain": -chaos_tax}
+            "log": f"BUREAUCRACY: Filed {selected_form} against {origin}. Chaos Tax: -{tax:.1f} ATP.",
+            "atp_gain": -tax
+        }
 
 class TherapyProtocol:
     def __init__(self):

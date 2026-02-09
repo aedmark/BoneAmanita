@@ -118,22 +118,20 @@ class TheTinkerer:
 class ParadoxSeed:
     def __init__(self, question: str, triggers: List[str]):
         self.question = question
-        self.triggers = {t.lower() for t in triggers}
-        self.maturity = 0.0
+        self.triggers = set([t.lower() for t in triggers])
         self.bloomed = False
 
     def water(self, current_words: List[str]) -> bool:
         if self.bloomed: return False
-        word_set = set(current_words)
-        overlap = self.triggers.intersection(word_set)
-        if overlap:
-            self.maturity += (len(overlap) * 0.1)
-            if self.maturity >= 1.0:
-                self.bloomed = True
+        # Check if any trigger word appears in the user's input
+        for word in current_words:
+            if word in self.triggers:
                 return True
         return False
+
     def bloom(self) -> str:
-        return f"{Prisma.GRN}🌸 BLOOM: The seed '{self.question}' has opened. A new truth takes root.{Prisma.RST}"
+        self.bloomed = True
+        return self.question
 
 class MirrorGraph:
     def __init__(self, events_ref):
@@ -269,46 +267,56 @@ class TheCartographer:
         if "GENESIS_POINT" not in self.world_graph:
             self._init_genesis()
 
+    def to_dict(self):
+        return self.export_atlas()
+
+    def load_state(self, data):
+        self.import_atlas(data)
+
+
 class TownHall:
-    def __init__(self, gordon_ref, events_ref, shimmer_ref, akashic_ref):
-        self.Tinkerer = TheTinkerer(gordon_ref, events_ref, akashic_ref)
-        self.Navigator = TheCartographer(shimmer_ref)
+    def __init__(self, gordon_ref, events_ref, shimmer_ref, akashic_ref, navigator_ref):
+        self.gordon = gordon_ref
+        self.events = events_ref
+        self.shimmer = shimmer_ref
+        self.akashic = akashic_ref
+        self.navigator = navigator_ref
         self.seeds: List[ParadoxSeed] = []
-        if hasattr(events_ref, "subscribe"):
-            events_ref.subscribe("ITEM_LOST", self._on_item_drop)
+        lore = TheLore.get_instance()
+        seed_data = lore.get("SEEDS") or []
+        for s in seed_data:
+            if "question" in s and "triggers" in s:
+                self.sow_seed(s["question"], s["triggers"])
+        if self.seeds:
+            print(f"{Prisma.GRY}[TOWN HALL]: Planted {len(self.seeds)} Paradox Seeds.{Prisma.RST}")
 
     def _on_item_drop(self, payload):
         item = payload.get("item")
         if item:
-            log = self.Navigator.drop_item(item)
+            self.events.log(f"Town Hall noticed you dropped {item}.", "VILLAGE")
 
-    @property
-    def rumors(self) -> List[str]:
-        return TheLore.get("narrative_data", "RUMORS") or ["The air is silent."]
+    def rumors(self):
+        return "The Town Hall is quiet."
 
-    def sow_seed(self, question: str, triggers: List[str]):
-        new_seed = ParadoxSeed(question, triggers)
-        self.seeds.append(new_seed)
-        return f"Seed planted: '{question}'"
+    def sow_seed(self, question, triggers):
+        self.seeds.append(ParadoxSeed(question, triggers))
 
-    def tend_garden(self, clean_words: List[str]) -> List[str]:
-        logs = []
-        remaining_seeds = []
+    def tend_garden(self, clean_words: List[str]):
         for seed in self.seeds:
-            if not seed.bloomed:
-                if seed.water(clean_words):
-                    logs.append(seed.bloom())
-                else:
-                    remaining_seeds.append(seed)
-        self.seeds = remaining_seeds
-        return logs
+            if seed.water(clean_words):
+                bloom_msg = seed.bloom()
+                self.events.log(
+                    f"{Prisma.MAG}🌷 PARADOX BLOOM:{Prisma.RST} {bloom_msg}",
+                    "VILLAGE_EVENT")
+                return
 
     def conduct_census(self, physics_snapshot, host_stats) -> str:
         p = _normalize_physics_dict(physics_snapshot)
         drag = _get_float(p, "narrative_drag", 0.0)
         volt = _get_float(p, "voltage", 0.0)
         latency = getattr(host_stats, "latency", 0.0) if host_stats else 0.0
-        loc_name = self.Navigator.world_graph.get(self.Navigator.current_node_id).name
+        current_node = self.navigator.world_graph.get(self.navigator.current_node_id)
+        loc_name = current_node.name if current_node else "UNKNOWN"
         almanac = TheLore.get("ALMANAC") or {}
         forecasts = almanac.get("FORECASTS", {})
         strategies = almanac.get("STRATEGIES", {})
@@ -339,10 +347,11 @@ class TownHall:
         if volt > 15.0:
             return f"{Prisma.YEL}📢 HEAR YE: Curfew in effect! The voltage is dangerous!{Prisma.RST}"
         if random.random() < 0.20:
-            loc_name = self.Navigator.world_graph.get(self.Navigator.current_node_id).name
+            current_node = self.navigator.world_graph.get(self.navigator.current_node_id)
+            loc_name = current_node.name if current_node else "VOID"
             if "VOID" in loc_name:
                 return f"{Prisma.GRY}📢 TOWN CRIER: Echoes... just echoes...{Prisma.RST}"
-            msg = random.choice(self.rumors)
+            msg = self.rumors()
             return f"{Prisma.GRY}📢 TOWN CRIER: {msg}{Prisma.RST}"
         return None
 

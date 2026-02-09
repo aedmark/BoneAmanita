@@ -1,4 +1,4 @@
-""" BONEAMANITA 14.6.1
+""" BONEAMANITA 14.6.2
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random
@@ -44,7 +44,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.6.1', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.6.2', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -145,6 +145,10 @@ class BoneAmanita:
         self.kernel_hash = str(uuid.uuid4())[:8].upper()
         self.config = config
         self.user_name = config.get("user_name", "TRAVELER")
+        self.health: float = BoneConfig.MAX_HEALTH
+        self.stamina: float = BoneConfig.MAX_STAMINA
+        self.trauma_accum: Dict[str, float] = {}
+        self.tick_count: int = 0
         self._initialize_core(None)
         self._initialize_embryo()
         self._initialize_identity()
@@ -223,7 +227,8 @@ class BoneAmanita:
             self.soul.load_from_dict(self.soul_legacy_data)
 
     def _initialize_village(self):
-        self.town_hall = TownHall(self.gordon, self.events, self.embryo.shimmer, self.akashic)
+        self.navigator = TheCartographer(self.embryo.shimmer)
+        self.town_hall = TownHall(self.gordon, self.events, self.embryo.shimmer, self.akashic, self.navigator)
         self.drivers = SynergeticLensArbiter(self.events)
         self.consultant = BoneConsultant()
         self.limbo = Limbo()
@@ -237,7 +242,6 @@ class BoneAmanita:
         self.director = ChorusDriver()
         self.bureau = TheBureau()
         self.cosmic = CosmicDynamics()
-        self.navigator = TheCartographer(self.embryo.shimmer)
         self.zen = ZenGarden(self.events)
         self.tinkerer = TheTinkerer(self.gordon, self.events, self.akashic)
         self.critics = TheCriticsCircle(self.events)
@@ -260,8 +264,6 @@ class BoneAmanita:
         self.cmd = CommandProcessor(self, Prisma, self.lex, BoneConfig)
         if self.phys:
             self.phys.dynamics = self.cosmic
-
-
 
     def _initialize_cognition(self):
         self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.folly, self.events)
@@ -315,6 +317,25 @@ class BoneAmanita:
             self.events.log(f"{Prisma.WHT}MERCY SIGNAL: Trauma boards wiped.{Prisma.RST}", "SYS")
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
+            if self.bureau and not is_system:
+                sys_text = cortex_packet.get("ui", "")
+                current_voltage = 0.0
+                if self.cortex and getattr(self.cortex, "last_physics", None):
+                    current_voltage = self.cortex.last_physics.get("voltage", 0.0)
+                sys_phys = {
+                    "raw_text": sys_text,
+                    "clean_words": self.lex.clean(sys_text) if hasattr(self, 'lex') else [],
+                    "voltage": current_voltage,
+                    "truth_ratio": 1.0}
+                sys_bio = {"health": self.health}
+                audit_result = self.bureau.audit(sys_phys, sys_bio, origin="SYSTEM")
+                if audit_result:
+                    if "atp_gain" in audit_result and hasattr(self, 'bio') and self.bio.mito:
+                        self.bio.mito.adjust_atp(audit_result["atp_gain"], "System Style Violation")
+                    if "ui" in audit_result:
+                        cortex_packet["ui"] += f"\n\n{audit_result['ui']}"
+                    if "log" in audit_result:
+                        self.events.log(audit_result["log"], "BUREAU")
             if rules["system_override"] and "ui" in cortex_packet:
                 debug_footer = f"\n{Prisma.paint(f'--- DEBUG: {self.get_metrics()} ---', '0')}"
                 cortex_packet["ui"] += debug_footer
@@ -656,7 +677,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 14.6.1', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 14.6.2', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

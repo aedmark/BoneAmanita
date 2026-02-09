@@ -188,6 +188,7 @@ class MaintenancePhase(SimulationPhase):
             if BoneConfig.VERBOSE_LOGGING: print(f"Maintenance Error: {e}")
         return ctx
 
+
 class GatekeeperPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -201,10 +202,25 @@ class GatekeeperPhase(SimulationPhase):
             ctx.refusal_triggered = True
             ctx.refusal_packet = refusal_packet
             return ctx
-        audit_result = self.eng.bureau.audit(ctx.physics, getattr(ctx, "bio_result", {}))
+        current_bio = {}
+        if hasattr(self.eng, 'bio') and self.eng.bio and self.eng.bio.biometrics:
+            current_bio = {
+                "health": self.eng.bio.biometrics.health,
+                "stamina": self.eng.bio.biometrics.stamina}
+        else:
+            current_bio = {"health": self.eng.health, "stamina": self.eng.stamina}
+        audit_result = self.eng.bureau.audit(
+            ctx.physics,
+            current_bio,
+            origin="USER")
         if audit_result:
-            self.eng.bio.mito.state.atp_pool += audit_result.get("atp_gain", 0.0)
-            if audit_result.get("log"): ctx.log(audit_result["log"])
+            if self.eng.bio and self.eng.bio.mito:
+                self.eng.bio.mito.adjust_atp(audit_result.get("atp_gain", 0.0), "Bureaucratic Fine (User)")
+            if audit_result.get("log"):
+                ctx.log(audit_result["log"])
+            if audit_result.get("ui"):
+                ctx.bureau_ui = audit_result["ui"]
+                ctx.is_bureaucratic = True
         return ctx
 
 class MetabolismPhase(SimulationPhase):

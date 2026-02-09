@@ -144,7 +144,6 @@ class TheChairholder:
                     correction, {})
         return False, "", {}, {}
 
-
 class CouncilChamber:
     def __init__(self, engine_ref):
         self.eng = engine_ref
@@ -168,17 +167,17 @@ class CouncilChamber:
         mandates = []
         sl_hit, sl_log, sl_corr, sl_man = self.strange_loop.audit(text, physics_packet)
         if sl_hit:
-            transcript.append(sl_log)
+            transcript.append(self.footnote.commentary(sl_log))
             if sl_man: mandates.append(sl_man)
             return transcript, sl_corr, mandates
         lp_hit, lp_log, lp_corr, lp_man = self.leverage.audit(physics_packet)
         if lp_hit:
-            transcript.append(lp_log)
+            transcript.append(self.footnote.commentary(lp_log))
             if lp_corr: adjustments.update(lp_corr)
             if lp_man: mandates.append(lp_man)
         ch_hit, ch_log, ch_corr, _ = self.chairholder.audit(physics_packet, bio_result)
         if ch_hit:
-            transcript.append(ch_log)
+            transcript.append(self.footnote.commentary(ch_log))
             if ch_corr: adjustments.update(ch_corr)
         clean_words = physics_packet.get("clean_words", [])
         voltage = physics_packet.get("voltage", 0.0)
@@ -204,10 +203,12 @@ class CouncilChamber:
         if hasattr(self.eng, 'soul') and hasattr(self.eng.soul, 'anchor'):
             dignity = self.eng.soul.anchor.dignity_reserve
             if dignity < 20.0:
-                transcript.append(f"{Prisma.VIOLET}[ANCHOR]: ⚠️ DIGNITY CRITICAL. I VETO THIS CRUNCH.{Prisma.RST}")
+                msg = f"{Prisma.VIOLET}[ANCHOR]: ⚠️ DIGNITY CRITICAL. I VETO THIS CRUNCH.{Prisma.RST}"
+                transcript.append(self.footnote.commentary(msg))
                 adjustments["narrative_drag"] = 10.0
                 adjustments["voltage"] = -10.0
                 return transcript, adjustments, mandates
+        final_log = ""
         if votes["YEA"] == votes["NAY"] and votes["YEA"] > 0:
             transcript.append(f"{Prisma.OCHRE}>>> DEADLOCK DETECTED. The Chair casts the deciding vote.{Prisma.RST}")
             if random.random() > 0.5:
@@ -215,16 +216,19 @@ class CouncilChamber:
             else:
                 votes["NAY"] += 1
         if votes["YEA"] > votes["NAY"]:
-            transcript.append(f"{Prisma.GRN}>>> MOTION CARRIED ({votes['YEA']}-{votes['NAY']}).{Prisma.RST}")
+            final_log = f"{Prisma.GRN}>>> MOTION CARRIED ({votes['YEA']}-{votes['NAY']}).{Prisma.RST}"
             magnitude = 0.5 + (0.1 * (votes["YEA"] - votes["NAY"]))
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - magnitude
         elif votes["NAY"] > votes["YEA"]:
-            transcript.append(f"{Prisma.RED}>>> MOTION DENIED ({votes['NAY']}-{votes['YEA']}).{Prisma.RST}")
+            final_log = f"{Prisma.RED}>>> MOTION DENIED ({votes['NAY']}-{votes['YEA']}).{Prisma.RST}"
             magnitude = 2.0 + (0.2 * (votes["NAY"] - votes["YEA"]))
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + magnitude
             adjustments["voltage"] = adjustments.get("voltage", 0) - 2.0
         else:
-            transcript.append(f"{Prisma.YEL}>>> COUNCIL ADJOURNED (No Quorum).{Prisma.RST}")
+            final_log = f"{Prisma.YEL}>>> COUNCIL ADJOURNED (No Quorum).{Prisma.RST}"
+
+        transcript.append(self.footnote.commentary(final_log))
+
         return transcript, adjustments, mandates
 
 TheCouncil = CouncilChamber
