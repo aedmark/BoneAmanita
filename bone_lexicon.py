@@ -28,13 +28,38 @@ class LexiconStore:
         data = TheLore.get("LEXICON")
         self.SOLVENTS = set(data.get("solvents", []))
         self.ANTIGEN_REPLACEMENTS = data.get("antigen_replacements", {})
-        for cat, words in data.items():
-            if cat in self.categories or cat in ["refusal_guru", "cursed"]:
-                word_set = set(words)
-                self.VOCAB[cat] = word_set
-                for w in word_set:
-                    self._index_word(w, cat)
-        self._load_hive()
+        for cat in self.categories:
+            if cat in data:
+                raw_words = data[cat]
+                if isinstance(raw_words, list):
+                    self.VOCAB[cat] = set(w.lower() for w in raw_words)
+        self.REVERSE_INDEX = {}
+        for category, words in self.VOCAB.items():
+            for word in words:
+                if word not in self.REVERSE_INDEX:
+                    self.REVERSE_INDEX[word] = set()
+                self.REVERSE_INDEX[word].add(category)
+
+        self.hive_loaded = True
+        print(f"{Prisma.GRY}[LEXICON]: Hive Index Built ({len(self.REVERSE_INDEX)} words).{Prisma.RST}")
+
+    def get_current_category(self, word: str) -> str:
+        cats = self.REVERSE_INDEX.get(word.lower())
+        if cats:
+            return next(iter(cats))
+        return "void"
+
+    def get_category_counts(self, text: List[str]) -> Dict[str, int]:
+        counts = {k: 0 for k in self.categories}
+        counts["void"] = 0
+        for word in text:
+            cats = self.REVERSE_INDEX.get(word.lower())
+            if cats:
+                for c in cats:
+                    if c in counts: counts[c] += 1
+            else:
+                counts["void"] += 1
+        return counts
 
     def _index_word(self, word: str, category: str):
         w = word.lower()

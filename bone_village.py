@@ -67,8 +67,8 @@ class TheTinkerer:
     def __init__(self, gordon_ref, events_ref, akashic_ref):
         self.gordon = gordon_ref
         self.events = events_ref
-        self.tool_confidence: Dict[str, float] = {}
         self.akashic = akashic_ref
+        self.tool_resonance: Dict[str, float] = {}
 
     def audit_tool_use(self, physics_packet, inventory_list: List[str], host_health: Any = None):
         p = _normalize_physics_dict(physics_packet)
@@ -81,39 +81,40 @@ class TheTinkerer:
         for item in inventory_list:
             self._process_single_tool(item, inventory_list, voltage, kappa, entropy_level, drag, vector)
 
-    def _process_single_tool(self, item: str, inventory: List[str], voltage: float, kappa: float, entropy: float, drag: float, vector: Any):
-        if item not in self.tool_confidence:
-            self.tool_confidence[item] = 1.0
-        if voltage > VOLT_MANIC or kappa > KAPPA_COHERENT:
-            self._apply_growth(item, inventory, vector)
+    def _process_single_tool(self, item: str, inventory: List[str], voltage: float, kappa: float, entropy: float,
+                             drag: float, vector: Any):
+        if item not in self.tool_resonance:
+            self.tool_resonance[item] = 0.0
+        if voltage > VOLT_MANIC or entropy > 0.5:
+            self._apply_resonance(item, 0.1, "High Voltage")
+            self._check_ascension(item, inventory, vector)
+        elif kappa > KAPPA_COHERENT:
+            self._apply_resonance(item, 0.05, "Coherent Flow")
+        elif drag > DRAG_HEAVY:
+            self._apply_resonance(item, 0.01, "Tempering")
+
+    def _apply_resonance(self, item: str, amount: float, reason: str):
+        self.tool_resonance[item] = min(10.0, self.tool_resonance[item] + amount)
+        curr = self.tool_resonance[item]
+        if 4.9 < curr < 5.1 and random.random() < 0.1:
+            self.events.log(f"{Prisma.CYN}🔨 TINKER: {item} hums with resonance. (Lvl 5 Mastery){Prisma.RST}", "VILLAGE")
+
+    def _check_ascension(self, old_name: str, inventory_list: List[str], vector: Any):
+        resonance = self.tool_resonance.get(old_name, 0.0)
+        if resonance < CONFIDENCE_ASCENSION:
             return
-        if entropy > ENTROPY_RUST_THRESH or drag > DRAG_HEAVY:
-            self._apply_decay(item, entropy)
-
-    def _apply_growth(self, item: str, inventory: List[str], vector: Any):
-        self.tool_confidence[item] += 0.05
-        if self.tool_confidence[item] > CONFIDENCE_ASCENSION:
-            self._attempt_ascension(item, inventory, vector)
-
-    def _apply_decay(self, item: str, entropy_level: float):
-        decay_rate = 0.05 * (1.0 + entropy_level)
-        self.tool_confidence[item] -= decay_rate
-        current_conf = self.tool_confidence[item]
-        if 0.1 < current_conf < CONFIDENCE_RUST_WARN:
-            self.events.log(f"{Prisma.OCHRE}[TINKER] Warning: {item} is rusting. (Conf: {current_conf:.2f}){Prisma.RST}", "SYS")
-        elif current_conf <= 0.0:
-            self.tool_confidence[item] = 0.0
-            self.events.log(f"{Prisma.RED}[TINKER] JAMMED: {item} has seized up via Entropy.{Prisma.RST}", "SYS")
-
-    def _attempt_ascension(self, old_name: str, inventory_list: List[str], vector: Any):
         if "OF_" in old_name: return
-        new_name, new_data = self.akashic.forge_new_item(vector)
-        if old_name in inventory_list:
-            idx = inventory_list.index(old_name)
-            inventory_list[idx] = new_name
-            if hasattr(self.gordon, "ITEM_REGISTRY"):
-                self.gordon.ITEM_REGISTRY[new_name] = new_data
-            self.events.log(f"{Prisma.MAG}✨ ASCENSION: {old_name} -> {new_name}{Prisma.RST}", "AKASHIC")
+        if random.random() < (resonance * 0.05):
+            new_name, new_data = self.akashic.forge_new_item(vector)
+            if old_name in inventory_list:
+                idx = inventory_list.index(old_name)
+                inventory_list[idx] = new_name
+                if hasattr(self.gordon, "ITEM_REGISTRY"):
+                    self.gordon.ITEM_REGISTRY[new_name] = new_data
+                self.tool_resonance[new_name] = resonance / 2.0
+                del self.tool_resonance[old_name]
+                self.events.log(f"{Prisma.MAG}✨ ASCENSION: {old_name} -> {new_name} (Born of Resonance){Prisma.RST}",
+                                "AKASHIC")
 
 class ParadoxSeed:
     def __init__(self, question: str, triggers: List[str]):
@@ -123,7 +124,6 @@ class ParadoxSeed:
 
     def water(self, current_words: List[str]) -> bool:
         if self.bloomed: return False
-        # Check if any trigger word appears in the user's input
         for word in current_words:
             if word in self.triggers:
                 return True

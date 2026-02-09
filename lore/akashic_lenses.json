@@ -1,0 +1,13 @@
+{
+  "THE NARRATOR-OBSERVER": {
+    "description": "A syncretic fusion of NARRATOR and THE OBSERVER.",
+    "weights": {
+      "v": 0.0,
+      "d": 0.0
+    },
+    "parentage": [
+      "NARRATOR",
+      "THE OBSERVER"
+    ]
+  }
+}

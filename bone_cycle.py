@@ -164,7 +164,7 @@ class MaintenancePhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         if hasattr(self.eng, 'town_hall'):
-            blooms = self.eng.town_hall.tend_garden(ctx.clean_words)
+            blooms = self.eng.town_hall.tend_garden(ctx.clean_words) or []
             for bloom in blooms: ctx.log(bloom)
         if self.eng.tick_count % 10 != 0: return ctx
         try:
@@ -870,7 +870,10 @@ class GeodesicOrchestrator:
         self.eng = engine_ref
         self.simulator = CycleSimulator(engine_ref)
         self.reporter = CycleReporter(engine_ref)
-        self.symbiosis = SymbiosisManager(self.eng.events)
+        if hasattr(self.eng, 'symbiosis'):
+            self.symbiosis = self.eng.symbiosis
+        else:
+            self.symbiosis = SymbiosisManager(self.eng.events)
 
     def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         tracer = TelemetryService.get_tracer()

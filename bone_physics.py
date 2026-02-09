@@ -34,6 +34,7 @@ class PhysicsConstants:
     GRAVITY_WELL_THRESHOLD = 10.0
     GEODESIC_STRENGTH = 5.0
     LAGRANGE_TOLERANCE = 2.0
+    MASS_SQUELCH_THRESHOLD = 15.0
 
 TRIGRAM_MAP: Dict[str, Tuple[str, str, str, str]] = {
     "VEL": ("☳", "ZHEN",  "Thunder",  Prisma.GRN),
@@ -105,6 +106,10 @@ class GeodesicEngine:
     def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int) -> Dict[str, float]:
         pc = PhysicsConstants
         safe_volume = max(1, volume)
+        squelch_limit = getattr(pc, "MASS_SQUELCH_THRESHOLD", 15.0)
+        mass_scalar = min(1.0, safe_volume / squelch_limit)
+        if safe_volume < 3:
+            mass_scalar *= 0.5
         total_kinetic = masses["kinetic"] + masses["explosive"]
         raw_tension_mass = (
                 (masses["heavy"] * pc.WEIGHT_HEAVY) +
@@ -112,7 +117,7 @@ class GeodesicEngine:
                 (masses["constructive"] * pc.WEIGHT_CONSTRUCTIVE))
         density = raw_tension_mass / safe_volume
         base_tension = density * 20.0 * pc.KINETIC_GAIN
-        tension = round(min(100.0, base_tension), 2)
+        tension = round(min(100.0, base_tension * mass_scalar), 2)
         shear_rate = total_kinetic / safe_volume
         raw_friction = (
                 (counts.get("solvents", 0) * 0.05) +
@@ -127,7 +132,7 @@ class GeodesicEngine:
         lift_density = lift / safe_volume
         raw_compression = (viscosity_density * 10.0) - (lift_density * 10.0)
         raw_compression *= pc.SIGNAL_DRAG_MULTIPLIER
-        compression = round(max(-5.0, min(pc.DRAG_HALT, raw_compression)), 2)
+        compression = round(max(-5.0, min(pc.DRAG_HALT, raw_compression * mass_scalar)), 2)
         structural_mass = masses["heavy"] + masses["constructive"]
         coherence = min(1.0, structural_mass / max(1.0, pc.SHAPLEY_MASS_THRESHOLD))
         abstraction = min(1.0, (masses["abstract"] / safe_volume) + 0.2)
@@ -160,14 +165,12 @@ class TheGatekeeper:
         phys = ctx.physics
         if not self._check_thermodynamics(ctx):
             return False, self._pack_refusal(ctx, "DARK_SYSTEM", "Energy critical. The inputs dissolve into the void.")
-        if not self._audit_tangibility(phys):
-            return False, self._pack_refusal(ctx, "TANGIBILITY_FAIL", self._get_tangibility_msg())
         if phys.counts.get("antigen", 0) > 2:
             return False, self._pack_refusal(ctx, "TOXICITY", f"{Prisma.RED}IMMUNE REACTION: Input rejected as pathogenic.{Prisma.RST}")
         text = ctx.input_text
         if "```" in text or "{{" in text or "}}" in text:
             return False, self._pack_refusal(ctx, "SYNTAX_ERR", f"{Prisma.RED}The mechanism jams. Syntax anomaly detected.{Prisma.RST}")
-        if len(text) > 1000:
+        if len(text) > 10000:
             return False, self._pack_refusal(ctx, "OVERLOAD", f"{Prisma.OCHRE}Input too long. Compress your thought.{Prisma.RST}")
         return True, None
 
@@ -178,20 +181,6 @@ class TheGatekeeper:
         if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
             return self.eng.bio.mito.state.atp_pool > threshold
         return True
-
-    def _audit_tangibility(self, phys: PhysicsPacket) -> bool:
-        if phys.truth_ratio > 0.8: return True
-        mass_score = (
-                phys.counts.get("heavy", 0) +
-                phys.counts.get("kinetic", 0) +
-                phys.counts.get("constructive", 0) +
-                (phys.counts.get("play", 0) * 0.5))
-        ether_score = phys.counts.get("abstract", 0) + phys.counts.get("sacred", 0)
-        if ether_score > 2 and phys.kappa > 0.6:
-            return True
-        density = mass_score / max(1, len(phys.clean_words))
-        required = 0.15 if self.eng.stamina > 15.0 else 0.05
-        return density >= required
 
     def _audit_safety(self, words: List[str]) -> bool:
         cursed = self.lex.get("cursed")

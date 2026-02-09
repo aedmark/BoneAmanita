@@ -1,4 +1,4 @@
-""" BONEAMANITA 14.7.0
+""" BONEAMANITA 14.7.1
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random, traceback
@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
 from bone_core import EventBus, Prisma, BoneConfig, RealityLayer, SystemHealth, TheObserver, BonePresets, TheLore, LoreCategory, TelemetryService, RealityStack
 from bone_commands import CommandProcessor
+from bone_symbiosis import SymbiosisManager
 from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer, Limbo
 from bone_lexicon import TheLexicon, SomaticInterface
 from bone_inventory import GordonKnot
@@ -42,7 +43,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.7.0', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.7.1', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -243,6 +244,7 @@ class BoneAmanita:
         self.zen = ZenGarden(self.events)
         self.tinkerer = TheTinkerer(self.gordon, self.events, self.akashic)
         self.critics = TheCriticsCircle(self.events)
+        self.symbiosis = SymbiosisManager(self.events)
         self.village = {
             "town_hall": self.town_hall,
             "critics": self.critics,
@@ -258,7 +260,8 @@ class BoneAmanita:
             "cosmic": self.cosmic,
             "navigator": self.navigator,
             "zen": self.zen,
-            "tinkerer": self.tinkerer}
+            "tinkerer": self.tinkerer,
+            "symbiosis": self.symbiosis}
         self.cmd = CommandProcessor(self, Prisma, self.lex, BoneConfig)
         if self.phys:
             self.phys.dynamics = self.cosmic
@@ -314,13 +317,20 @@ class BoneAmanita:
         if self._ethical_audit():
             self.events.log(f"{Prisma.WHT}MERCY SIGNAL: Trauma boards wiped.{Prisma.RST}", "SYS")
         if not is_system and hasattr(self, 'soul') and hasattr(self.soul, 'anchor'):
-            reliance_proxy = 0.0
-            if self.host_stats.efficiency_index < 0.4:
-                reliance_proxy = 0.9
+            reliance_proxy = 0.9 if self.host_stats.efficiency_index < 0.4 else 0.0
             self.soul.anchor.check_domestication(reliance_proxy)
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
-            if self.bureau and not is_system:
+        except Exception as e:
+            self.events.log(f"CORTEX CRITICAL FAILURE: {e}", "CRIT")
+            import traceback
+            traceback.print_exc()
+            return {
+                "ui": f"{Prisma.RED}NEURAL COLLAPSE: {e}{Prisma.RST}",
+                "logs": ["CRITICAL FAILURE"],
+                "metrics": self.get_metrics()}
+        if self.bureau and not is_system:
+            try:
                 sys_text = cortex_packet.get("ui", "")
                 current_voltage = 0.0
                 if self.cortex and getattr(self.cortex, "last_physics", None):
@@ -339,24 +349,15 @@ class BoneAmanita:
                         cortex_packet["ui"] += f"\n\n{audit_result['ui']}"
                     if "log" in audit_result:
                         self.events.log(audit_result["log"], "BUREAU")
-            if rules["system_override"] and "ui" in cortex_packet:
-                debug_footer = f"\n{Prisma.paint(f'--- DEBUG: {self.get_metrics()} ---', '0')}"
-                cortex_packet["ui"] += debug_footer
-        except Exception as e:
-            self.events.log(f"CYCLE CRITICAL FAILURE: {e}", "ERR")
-            import traceback
-            traceback.print_exc()
-            return {
-                "ui": f"{Prisma.RED}REALITY FRACTURE: {e}{Prisma.RST}",
-                "logs": ["CRITICAL FAILURE"],
-                "metrics": self.get_metrics()}
+            except Exception as e:
+                 self.events.log(f"BUREAU ERROR (Ignored): {e}", "WARN")
+                 cortex_packet["ui"] += f"\n\n{Prisma.GRY}[The Bureau is closed for lunch. Audit skipped.]{Prisma.RST}"
+        if rules["system_override"] and "ui" in cortex_packet:
+            debug_footer = f"\n{Prisma.paint(f'--- DEBUG: {self.get_metrics()} ---', '0')}"
+            cortex_packet["ui"] += debug_footer
         self.observer.clock_out(turn_start, "cycle")
         self.host_stats.latency = self.observer.last_cycle_duration
         self.host_stats.efficiency_index = self.observer.calculate_efficiency(self.health, self.stamina)
-        if self.host_stats.efficiency_index < 50.0:
-            self.events.log(
-                f"{Prisma.OCHRE}[LAG]: System viscosity high. Efficiency: {self.host_stats.efficiency_index:.1f}{Prisma.RST}",
-                "PERF")
         avg_cycle = self.observer.get_report().get("avg_cycle_sec", 0.0)
         reporter = self.cycle_controller.reporter
         if avg_cycle > 2.0 and reporter.current_mode != "PERFORMANCE":
@@ -680,7 +681,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 14.7.0', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 14.7.1', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

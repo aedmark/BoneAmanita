@@ -32,6 +32,7 @@ class MetabolicReceipt:
     drag_tax: float
     inefficiency_tax: float
     total_burn: float
+    waste_generated: float
     status: str
     symptom: str = "Nominal"
 
@@ -142,7 +143,6 @@ class BioSystem:
         if shield_strength > 0.2 and self.events:
             self.events.log(f"{Prisma.CYN}🛡️ EM SHIELD ACTIVE: Mitigation {int(shield_strength*100)}%{Prisma.RST}", "PHYS")
 
-@dataclass
 class MitochondrialState:
     atp_pool: float = 60.0
     membrane_potential: float = 1.0
@@ -154,12 +154,13 @@ class MitochondrialState:
     def efficiency_mod(self) -> float:
         return self.membrane_potential
 
-
+@dataclass
 class MitochondrialForge:
     ROS_THRESHOLD_SIGNAL = 3.0
     ROS_THRESHOLD_DAMAGE = 8.0
     ROS_THRESHOLD_PURGE = 12.0
     MAX_SAFE_BURN = 25.0
+    ANAEROBIC_THRESHOLD = 40.0
 
     def __init__(self, state_ref: MitochondrialState, events_ref):
         self.state = state_ref
@@ -181,6 +182,22 @@ class MitochondrialForge:
         except Exception:
             return tmpl
 
+    def _trigger_anaerobic_bypass(self, raw_cost: float) -> MetabolicReceipt:
+        health_burn = 2.0
+        self.state.ros_buildup += 2.0
+        if self.events:
+            self.events.log(
+                f"{Prisma.MAG}⚡ ANAEROBIC BYPASS: Load ({raw_cost:.1f}) too high for ATP. Burning Health instead.{Prisma.RST}",
+                "BIO_WARN")
+        return MetabolicReceipt(
+            base_cost=raw_cost,
+            drag_tax=0.0,
+            inefficiency_tax=0.0,
+            total_burn=health_burn,
+            waste_generated=2.0,
+            status="ANAEROBIC",
+            symptom="LACTATE_BUILDUP")
+
     def process_cycle(self, physics_packet: dict, external_modifiers: List[float] = None) -> MetabolicReceipt:
         voltage = _get_val(physics_packet, "voltage", 0.0)
         raw_drag = _get_val(physics_packet, "narrative_drag", 0.0)
@@ -188,6 +205,9 @@ class MitochondrialForge:
         base_demand = max(0.1, math.log1p(voltage) * 1.5)
         raw_tax = (drag ** 1.5) * 0.5
         cognitive_load_tax = min(5.0, raw_tax)
+        pre_calc_cost = base_demand + raw_tax
+        if pre_calc_cost > self.ANAEROBIC_THRESHOLD:
+            return self._trigger_anaerobic_bypass(pre_calc_cost)
         is_critical = self.state.atp_pool < BioConstants.ATP_CRITICAL
         if is_critical:
             cognitive_load_tax = 0.0
@@ -196,6 +216,7 @@ class MitochondrialForge:
                 msg = self._get_text("NECROSIS", cost=base_demand, pool=self.state.atp_pool)
                 self.events.log(f"{Prisma.VIOLET}💤 {msg}{Prisma.RST}", "BIO_CRIT")
                 self.state.retrograde_signal = "HIBERNATING"
+
         mod_factor = 1.0
         if external_modifiers:
             for m in external_modifiers:
@@ -207,26 +228,32 @@ class MitochondrialForge:
             raw_cost = self.MAX_SAFE_BURN
             if self.events:
                 self.events.log(
-                    f"{Prisma.CYN}⚡ SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).{Prisma.RST}",
-                    "BIO")
+                    f"{Prisma.CYN}⚡ SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).{Prisma.RST}", "BIO")
         if raw_cost > 15.0 and self.events and random.random() < 0.2:
             msg = self._get_text("GRINDING")
             self.events.log(f"{Prisma.OCHRE}⚙️ {msg}{Prisma.RST}", "BIO_WARN")
+
         total_metabolic_cost = raw_cost
         waste_generated = total_metabolic_cost * (1.0 - efficiency) * 0.5
+
         self.state.ros_buildup += waste_generated
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
+
         if total_metabolic_cost >= self.MAX_SAFE_BURN and not is_critical:
             self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.005)
+
         self._apply_adaptive_dynamics(waste_generated)
+
         status = "RESPIRING"
         if is_critical: status = "LOW_POWER"
         if self.state.atp_pool <= BioConstants.ATP_COLLAPSE: status = "NECROSIS"
+
         return MetabolicReceipt(
             base_cost=round(base_demand, 2),
             drag_tax=round(cognitive_load_tax, 2),
             inefficiency_tax=round(total_metabolic_cost - (base_demand + cognitive_load_tax), 2),
             total_burn=round(total_metabolic_cost, 2),
+            waste_generated=round(waste_generated, 2),
             status=status,
             symptom=self.state.retrograde_signal)
 
@@ -277,6 +304,7 @@ class MitochondrialForge:
             drag_tax=round(tax, 2),
             inefficiency_tax=round(total - (base + tax), 2),
             total_burn=round(total, 2),
+            waste_generated=0.0,
             status=status,
             symptom=self.state.retrograde_signal)
 
@@ -324,6 +352,8 @@ class SomaticLoop:
         "social": "AMYLASE",
         "antigen": "OXIDASE"}
 
+    SAMPLING_THRESHOLD = 1000
+
     def __init__(self, bio_system_ref: BioSystem, memory_ref=None, lexicon_ref=None, gordon_ref=None, folly_ref=None, events_ref=None):
         self.bio = bio_system_ref
         self.mem = memory_ref
@@ -357,6 +387,8 @@ class SomaticLoop:
             self.bio.apply_environmental_entropy(physics_data)
         modifiers = self._gather_hormonal_modifiers(phys, logs)
         receipt = self.bio.mito.process_cycle(phys, external_modifiers=modifiers)
+        if receipt.waste_generated > 1.0:
+            self.bio.endo.cortisol = min(1.0, self.bio.endo.cortisol + (receipt.waste_generated * 0.05))
         resp_status = receipt.status
         audit_result = self._audit_folly_desire(phys, stamina, logs)
         if audit_result == "MAUSOLEUM_CLAMP":
@@ -465,17 +497,29 @@ class SomaticLoop:
 
     def _harvest_resources(self, phys: Dict, logs: List[str]) -> Tuple[str, float]:
         clean_words = phys.get("clean_words", [])
-        if not clean_words:
+        total_word_count = len(clean_words)
+        if total_word_count == 0:
             return "NONE", 0.0
+        use_sampling = total_word_count > self.SAMPLING_THRESHOLD
+        if use_sampling:
+            sample_words = random.sample(clean_words, self.SAMPLING_THRESHOLD)
+            scaling_factor = total_word_count / self.SAMPLING_THRESHOLD
+            words_to_process = sample_words
+            if random.random() < 0.1:
+                logs.append(
+                    f"{Prisma.GRY}[BIO]: Large input detected. Sampling metabolism (x{scaling_factor:.1f}).{Prisma.RST}")
+        else:
+            words_to_process = clean_words
+            scaling_factor = 1.0
         found_enzymes = []
-        total_atp_yield = 3.0
-        word_counts = Counter(clean_words)
+        raw_atp_yield = 3.0 / scaling_factor
+        word_counts = Counter(words_to_process)
         cliche_tax_total = 0.0
         for word, count in word_counts.items():
             if len(word) < 4: continue
             category = TheLexicon.get_current_category(word)
             if not category or category == "void":
-                total_atp_yield += (0.5 * count)
+                raw_atp_yield += (0.5 * count)
                 continue
             if category in ["kinetic", "explosive"]:
                 continue
@@ -492,15 +536,18 @@ class SomaticLoop:
                     base_word_yield = 2.0 if len(word) > 7 else 1.0
                     damped_multiplier = 1.0 + math.log(count)
                     final_yield = (base_word_yield * damped_multiplier) * mastery_bonus
-                    total_atp_yield += final_yield
+                    raw_atp_yield += final_yield
                     self.enzyme_mastery[enzyme] = min(5.0, current_mastery + 0.02)
-                    if len(found_enzymes) <= 3:
+                    if len(found_enzymes) <= 3 and not use_sampling:
                         logs.append(
                             f"{Prisma.GRN}[BIO]: Digested '{word}' -> {enzyme} (Mastery x{mastery_bonus:.2f}) -> +{final_yield:.1f} ATP.{Prisma.RST}")
-        if cliche_tax_total > 0:
-            total_atp_yield = max(0.0, total_atp_yield - cliche_tax_total)
+        total_atp_yield = raw_atp_yield * scaling_factor
+        scaled_tax = cliche_tax_total * scaling_factor
+        if scaled_tax > 0:
+            total_atp_yield = max(0.0, total_atp_yield - scaled_tax)
+            self.bio.endo.cortisol = min(1.0, self.bio.endo.cortisol + (scaled_tax * 0.02))
             logs.append(
-                f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX: System drained by -{cliche_tax_total:.1f} ATP. (Antigens Detected){Prisma.RST}")
+                f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX: System drained by -{scaled_tax:.1f} ATP. (Antigens Detected){Prisma.RST}")
         if _get_val(phys, "voltage", 0.0) > 8.0 and found_enzymes:
             found_enzymes.append("PROTEASE")
             total_atp_yield += 5.0
@@ -514,8 +561,8 @@ class SomaticLoop:
 
     @staticmethod
     def _perform_maintenance(text: str, phys: Dict, logs: List[str], tick: int):
-        if len(text) > 1000:
-            logs.append(f"{Prisma.GRY}[MAINTENANCE]: Large input buffer detected. Flushed.{Prisma.RST}")
+        if len(text) > 10000:
+            logs.append(f"{Prisma.GRY}[MAINTENANCE]: Large input buffer detected.{Prisma.RST}")
         drag = _get_val(phys, "narrative_drag", 0.0)
         if drag > 8.0 and tick % 10 == 0:
             logs.append(
@@ -527,7 +574,7 @@ class SomaticLoop:
         return len([w for w in clean_words if len(w) >= 4])
 
     def _package_result(self, resp_status, logs, chem_state=None, enzyme="NONE"):
-        is_alive = (resp_status == "RESPIRING")
+        is_alive = (resp_status == "RESPIRING" or resp_status == "ANAEROBIC")
         current_atp = self.bio.mito.state.atp_pool
         return {
             "respiration": resp_status,

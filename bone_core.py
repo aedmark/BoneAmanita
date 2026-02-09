@@ -1,6 +1,6 @@
-""" bone_bus.py - All aboard the Magic Bone Bus! """
+""" bone_core.py - The Spine of the System """
 
-import json, os, time, random, copy, re, glob, math, uuid
+import json, os, time, random, copy, re, glob, math, uuid, traceback
 from collections import deque
 from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
@@ -61,7 +61,9 @@ class EventBus:
                 try:
                     callback(data)
                 except Exception as e:
-                    print(f"{Prisma.RED}Event Bus Dispatch Error: {e}{Prisma.RST}")
+                    cb_name = getattr(callback, "__name__", str(callback))
+                    print(f"{Prisma.RED}Event Bus Dispatch Error [{cb_name}]: {e}{Prisma.RST}")
+                    traceback.print_exc()
 
     def log(self, text: str, category: str = "SYSTEM"):
         entry = {
@@ -563,6 +565,11 @@ class RealityStack:
     def stabilize_at(self, layer: int):
         self._stack = [layer]
 
+    def emergency_reset(self):
+        self._lock = False
+        self._stack = [RealityLayer.SIMULATION]
+        print(f"{Prisma.RED}*** REALITY STACK RESET ***{Prisma.RST}")
+
     def get_grammar_rules(self) -> Dict[str, bool]:
         depth = self.current_depth
         return {
@@ -577,7 +584,7 @@ class RealityStack:
         if depth == RealityLayer.TERMINAL:
             return "[SYSTEM_MODE: TERMINAL] No simulation. Echo inputs."
         if depth == RealityLayer.SIMULATION:
-            return "" # Standard operation (Narrative)
+            return ""
         if depth == RealityLayer.VILLAGE:
             return "[SYSTEM_MODE: VILLAGE_OS] Maintain bureaucratic/technical tone. No flowery prose."
         if depth == RealityLayer.DEBUG:
@@ -758,12 +765,19 @@ class TelemetryService:
 
     def __init__(self):
         self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=50)
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
-        self.current_trace_file = os.path.join(
-            self.log_dir, f"trace_{int(time.time())}.jsonl")
         self.active_crystal = None
         self.session_start = time.time()
+        self.disabled = False
+        self.write_errors = 0
+        try:
+            if not os.path.exists(self.log_dir):
+                os.makedirs(self.log_dir)
+            self.current_trace_file = os.path.join(
+                self.log_dir, f"trace_{int(time.time())}.jsonl")
+        except OSError as e:
+            print(f"{Prisma.RED}[TELEMETRY]: Disk Access Denied. Telemetry Disabled.{Prisma.RST}")
+            self.disabled = True
+            self.current_trace_file = None
 
     @classmethod
     def get_tracer(cls):
@@ -776,10 +790,11 @@ class TelemetryService:
         return cls.get_tracer()
 
     def start_cycle(self, trace_id: str):
+        if self.disabled: return
         self.active_crystal = DecisionCrystal(decision_id=trace_id)
 
     def log_decision(self, component: str, decision_type: str, inputs: Any, reasoning: str, outcome: str):
-        if not self.active_crystal: return
+        if self.disabled or not self.active_crystal: return
         trace = DecisionTrace(
             trace_id=self.active_crystal.decision_id,
             timestamp=time.time(),
@@ -792,6 +807,7 @@ class TelemetryService:
         self._write_line(trace.to_json())
 
     def log_crystal(self, crystal: DecisionCrystal):
+        if self.disabled: return
         self._write_line(crystal.crystallize())
 
     def start_phase(self, phase_name: str, context: Any):
@@ -816,11 +832,15 @@ class TelemetryService:
             self.active_crystal = None
 
     def _write_line(self, json_str: str):
+        if self.disabled or not self.current_trace_file: return
         try:
             with open(self.current_trace_file, "a", encoding="utf-8") as f:
                 f.write(json_str + "\n")
-        except Exception:
-            pass
+        except IOError:
+            self.write_errors += 1
+            if self.write_errors > 3:
+                print(f"{Prisma.RED}[TELEMETRY]: Too many write errors. Disabling telemetry.{Prisma.RST}")
+                self.disabled = True
 
     def read_recent_history(self, limit=4) -> List[str]:
         if not os.path.exists(self.log_dir):
@@ -876,8 +896,9 @@ class TelemetryService:
     def generate_session_summary(self) -> str:
         count = len(self.trace_buffer)
         duration = time.time() - self.session_start
+        status = "DISABLED" if self.disabled else "ACTIVE"
         return (
-            f"\n[TELEMETRY] Session ended. {count} thoughts processed in {duration:.2f}s.\n"
+            f"\n[TELEMETRY] Session ended ({status}). {count} thoughts processed in {duration:.2f}s.\n"
             f"            Trace: {self.current_trace_file}")
 
 class LoreCategory(Enum):

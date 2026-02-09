@@ -296,8 +296,13 @@ class PromptComposer:
         driver_directives = mind.get("style_directives", [])
         bio = state.get("bio", {})
         chem = bio.get("chem", {})
+        respiration = bio.get("respiration", "RESPIRING")
         mood_note = "Current Biology: Neutral."
-        if mood_override:
+        if respiration == "ANAEROBIC":
+            mood_note = (
+                "Current Biology: ⚠️ ANAEROBIC STATE. You are burning vital health for fuel. "
+                "Your prose must be raw, breathless, and efficient. Do not waste tokens on pleasantries.")
+        elif mood_override:
             mood_note = f"Current Biology: {mood_override}"
         else:
             if chem.get("ADR", 0) > 0.6: mood_note = "Current Biology: High Alert / Adrenaline"
@@ -337,7 +342,16 @@ class PromptComposer:
             "6. LOSS: If an item leaves inventory, output [[LOST: ITEM_NAME]].",
             "7. Do not list the users inventory contents unless asked. Do not comment on the items in the inventory unless instructed to.",
             mood_note]
-
+        village = state.get("village", {})
+        tinker_state = village.get("tinkerer", {})
+        resonances = tinker_state.get("tool_resonance", {})
+        active_resonance = []
+        for tool, level in resonances.items():
+            if level > 4.0:
+                active_resonance.append(f"» {tool} (Mastery Lvl {int(level)}): This concept is singing. You may wield it with absolute narrative power.")
+        if active_resonance:
+            style_notes.append("\n=== HARMONIC RESONANCE (Active Mastery) ===")
+            style_notes.extend(active_resonance)
         if semantic_ops:
             style_notes.append("\n=== INVENTORY RESONANCE (Active Item Effects) ===")
             style_notes.extend([f"» {op}" for op in semantic_ops])
@@ -421,6 +435,7 @@ class ResponseValidator:
             for extracted_line in content.split('\n'):
                 extracted_meta_logs.append(f"[THOUGHT]: {extracted_line}")
             return ""
+
         clean_text = sys_internal_pattern.sub(extract_meta, response)
         for pattern, replacement in self.scrub_patterns:
             clean_text = re.sub(pattern, replacement, clean_text)
@@ -442,7 +457,6 @@ class ResponseValidator:
                     "reason": "IMMISSION_BREAK",
                     "replacement": self.immersion_break_msg,
                     "meta_logs": extracted_meta_logs}
-
         if len(sanitized_response.strip()) < 5:
             return {"valid": False, "reason": "STUTTER", "replacement": "The vision fractures. Static remains.", "meta_logs": extracted_meta_logs}
         return {"valid": True, "content": sanitized_response, "meta_logs": extracted_meta_logs}
@@ -592,12 +606,21 @@ class TheCortex:
         soul_data = {}
         if hasattr(self.eng, "soul"):
             soul_data = self.eng.soul.to_dict()
+        village_data = {}
+        if hasattr(self.eng, "village"):
+            tinkerer_data = {}
+            if "tinkerer" in self.eng.village:
+                tinker_ref = self.eng.village["tinkerer"]
+                if hasattr(tinker_ref, "tool_resonance"):
+                    tinkerer_data["tool_resonance"] = tinker_ref.tool_resonance
+            village_data["tinkerer"] = tinkerer_data
         full_state = {
             "bio": bio,
             "physics": phys,
             "mind": mind,
             "soul": soul_data,
             "world": world,
+            "village": village_data,
             "user_profile": getattr(self.eng.cmd, "user_profile", {}),
             "meta": {
                 "tick": self.eng.tick_count,

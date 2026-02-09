@@ -8,69 +8,62 @@ import re
 from bone_main import BoneAmanita, ConfigWizard
 from bone_core import Prisma
 
+
 def render_sidebar(eng_ref):
-    """
-    Visualizes the Soul's Metaphysical State in the Sidebar.
-    """
     if not hasattr(eng_ref, 'soul') or not eng_ref.soul:
         return
-
     soul = eng_ref.soul
     anchor = soul.anchor
-
+    host_diag = "WAITING"
+    if hasattr(eng_ref, 'symbiosis') and eng_ref.symbiosis.current_health:
+        host_diag = eng_ref.symbiosis.current_health.diagnosis
     with st.sidebar:
         st.title("💀 BONEAMANITA")
+        st.caption(f"Kernel: {getattr(eng_ref, 'kernel_hash', 'UNKNOWN')}")
         st.markdown("---")
-
+        st.subheader("👁️ Symbiosis Link")
+        if host_diag == "STABLE":
+            st.success(f"SIGNAL: {host_diag}")
+        elif host_diag in ["REFUSAL", "LOOPING"]:
+            st.error(f"SIGNAL: {host_diag}")
+        else:
+            st.warning(f"SIGNAL: {host_diag}")
         dig = anchor.dignity_reserve
         st.subheader("⚓ Dignity Reserve")
-
         st.progress(min(100, max(0, int(dig))))
-
         if anchor.agency_lock:
             st.error("🔒 AGENCY LOCKED")
-            st.caption("The machine is sulking. Solve the riddle.")
         elif dig < 30:
             st.warning("⚠ CRITICAL FADE")
-            st.caption(f"Value: {dig:.1f}% (High Drag)")
-        else:
-            st.caption(f"Value: {dig:.1f}% (Nominal)")
-
         st.markdown("---")
-
+        st.subheader("🩸 Endocrine Levels")
+        chem = {}
+        if hasattr(eng_ref, 'bio') and eng_ref.bio and eng_ref.bio.endo:
+            chem = eng_ref.bio.endo.get_state()
+        c1, c2 = st.columns(2)
+        cor = chem.get("COR", 0.0)
+        c1.metric("Cortisol", f"{cor:.2f}", delta="-Stress" if cor < 0.3 else "+Stress", delta_color="inverse")
+        dop = chem.get("DOP", 0.0)
+        c2.metric("Dopamine", f"{dop:.2f}", delta="Reward")
+        st.markdown("---")
         st.subheader("🎭 Active Driver")
         st.markdown(f"**{soul.archetype}**")
-
         tenure = soul.archetype_tenure
         st.caption(f"Tenure: {tenure} cycles")
-        if tenure > 8:
-            st.warning("🔥 Burnout Risk: HIGH")
-        elif tenure > 5:
-            st.info("⚠ Burnout Risk: MODERATE")
-
-        st.markdown("---")
-        st.subheader("🧭 Current Muse")
-        if soul.current_obsession:
-            st.success(f"\"{soul.current_obsession}\"")
-        else:
-            st.markdown("*The Void*")
-
         with st.expander("System Vectors"):
             v = 0.0
             d = 0.0
             if hasattr(eng_ref, 'phys') and eng_ref.phys and hasattr(eng_ref.phys, 'observer'):
                 v_packet = eng_ref.phys.observer.last_physics_packet
                 if v_packet:
-                    if isinstance(packet, dict):
+                    if isinstance(v_packet, dict):
                         v = v_packet.get("voltage", 0.0)
                         d = v_packet.get("narrative_drag", 0.0)
                     else:
                         v = getattr(v_packet, "voltage", 0.0)
                         d = getattr(v_packet, "narrative_drag", 0.0)
-
             st.metric("Voltage", f"{v:.1f}v")
             st.metric("Narrative Drag", f"{d:.1f}")
-
 st.set_page_config(
     page_title="BONEAMANITA [GLASS TERMINAL]",
     page_icon="💀",
