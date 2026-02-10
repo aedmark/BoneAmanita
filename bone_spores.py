@@ -99,30 +99,6 @@ class AdaptiveMemoryManager:
         self.network = network
         self.threshold = 0.5
 
-    def prune_graph(self, current_focus_words: List[str], max_nodes: int):
-        if len(self.network.graph) <= max_nodes:
-            return None
-        keep_set = set(current_focus_words)
-        keep_set.update(self.network.cortical_stack)
-        candidates = []
-        current_tick = int(time.time())
-        for node, data in self.network.graph.items():
-            if node in keep_set: continue
-            mass = sum(data["edges"].values())
-            last_tick = data.get("last_tick", 0)
-            recency = 1.0 / (max(1, current_tick - last_tick))
-            score = (mass * 0.5) + (recency * 100.0)
-            candidates.append((node, score))
-        candidates.sort(key=lambda x: x[1])
-        excess = len(self.network.graph) - max_nodes
-        target_prune = excess + int(max_nodes * 0.05)
-        victims = [x[0] for x in candidates[:target_prune]]
-        if not victims: return "MEMORY CLAMPED (Protected Nodes saturated)."
-        for v in victims:
-            if v in self.network.graph:
-                del self.network.graph[v]
-        return f"ADAPTIVE PRUNE: Incinerated {len(victims)} weak memories to clear space."
-
     def should_absorb(self, word: str, existing_graph: dict) -> bool:
         if word in existing_graph:
             return True
@@ -136,6 +112,7 @@ class AdaptiveMemoryManager:
         else: offset = 0.0
         gain += offset
         return gain > self.threshold
+
 
 class MycelialNetwork:
     def __init__(self, events: EventBus, loader: SporeInterface = None, seed_file=None):
@@ -151,8 +128,9 @@ class MycelialNetwork:
         self.consolidation_threshold = 5.0
         self.memory_manager = AdaptiveMemoryManager(self)
         self.seeds = self.load_seeds()
-        self.session_health = None
-        self.session_stamina = None
+        self.session_health = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+        self.session_stamina = getattr(BoneConfig, "MAX_STAMINA", 100.0)
+        self.session_trauma_vector = {}
         if seed_file:
             self.ingest(seed_file)
 
@@ -519,12 +497,16 @@ class MycelialNetwork:
         if mitochondria_traits: data["mitochondria"] = mitochondria_traits
         if joy_legacy_data: data["joy_legacy"] = joy_legacy_data
         if soul_data: data["soul_legacy"] = soul_data
-        active_seeds = [s for s in self.seeds if not s.bloomed]
-        active_seeds.sort(key=lambda s: s.maturity, reverse=True)
-        kept_seeds = active_seeds[:5]
-        data["seeds"] = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in kept_seeds]
-        future_seed = self._generate_future_seed(data)
-        data["seeds"].append({"q": future_seed, "m": 0.0, "b": False})
+        active_seeds = sorted(
+            [s for s in self.seeds if not s.bloomed],
+            key=lambda s: s.maturity,
+            reverse=True)[:5]
+        seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in active_seeds]
+        temp_meta = {"final_health": health}
+        temp_trauma = {k: min(1.0, v) for k, v in trauma_accum.items()}
+        future_seed = self._generate_future_seed({"meta": temp_meta, "trauma_vector": temp_trauma})
+        seed_list.append({"q": future_seed, "m": 0.0, "b": False})
+        data["seeds"] = seed_list
         return self.loader.save_spore(self.filename, data)
 
     def _generate_future_seed(self, spore_data: Dict) -> str:

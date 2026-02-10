@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from bone_core import Prisma, MindSystem, PhysSystem, PhysicsPacket, TheLore, BoneConfig
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_symbiosis import MycotoxinFactory, LichenSymbiont, ParasiticSymbiont
-from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, ViralTracer, ThePacemaker, Biometrics
+from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, Biometrics
 from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity
 from bone_protocols import LimboLayer
 from bone_physics import QuantumObserver, SurfaceTension, TheGatekeeper
@@ -92,6 +92,12 @@ class PanicRoom:
             "volatility": 0.0,
             "mask": "DEFAULT",
             "glitch_factor": 0.0}
+
+def ViralTracer(_mem):
+    pass
+
+def ThePacemaker():
+    pass
 
 class BoneArchitect:
     @staticmethod

@@ -134,7 +134,7 @@ def render_sidebar(eng_ref):
     soul = eng_ref.soul
     anchor = soul.anchor
     host_diag = "WAITING"
-    if hasattr(eng_ref, 'symbiosis') and eng_ref.symbiosis.current_health:
+    if hasattr(eng_ref, 'symbiosis') and getattr(eng_ref.symbiosis, 'current_health', None):
         host_diag = eng_ref.symbiosis.current_health.diagnosis
     with st.sidebar:
         st.title("💀 BONEAMANITA")

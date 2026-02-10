@@ -140,6 +140,7 @@ class BioSystem:
             self.biometrics.health = max(0.0, self.biometrics.health - total_drain)
         if shield_strength > 0.2 and self.events:
             self.events.log(f"{Prisma.CYN}🛡️ EM SHIELD ACTIVE: Mitigation {int(shield_strength*100)}%{Prisma.RST}", "PHYS")
+
 @dataclass
 class MitochondrialState:
     atp_pool: float = 60.0
@@ -154,9 +155,6 @@ class MitochondrialState:
 
 @dataclass
 class MitochondrialForge:
-    ROS_THRESHOLD_SIGNAL = 3.0
-    ROS_THRESHOLD_DAMAGE = 8.0
-    ROS_THRESHOLD_PURGE = 12.0
     MAX_SAFE_BURN = 25.0
     ANAEROBIC_THRESHOLD = 40.0
 
@@ -214,7 +212,6 @@ class MitochondrialForge:
                 msg = self._get_text("NECROSIS", cost=base_demand, pool=self.state.atp_pool)
                 self.events.log(f"{Prisma.VIOLET}💤 {msg}{Prisma.RST}", "BIO_CRIT")
                 self.state.retrograde_signal = "HIBERNATING"
-
         mod_factor = 1.0
         if external_modifiers:
             for m in external_modifiers:
@@ -230,22 +227,16 @@ class MitochondrialForge:
         if raw_cost > 15.0 and self.events and random.random() < 0.2:
             msg = self._get_text("GRINDING")
             self.events.log(f"{Prisma.OCHRE}⚙️ {msg}{Prisma.RST}", "BIO_WARN")
-
         total_metabolic_cost = raw_cost
         waste_generated = total_metabolic_cost * (1.0 - efficiency) * 0.5
-
         self.state.ros_buildup += waste_generated
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
-
         if total_metabolic_cost >= self.MAX_SAFE_BURN and not is_critical:
             self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.005)
-
         self._apply_adaptive_dynamics(waste_generated)
-
         status = "RESPIRING"
         if is_critical: status = "LOW_POWER"
         if self.state.atp_pool <= BioConstants.ATP_COLLAPSE: status = "NECROSIS"
-
         return MetabolicReceipt(
             base_cost=round(base_demand, 2),
             drag_tax=round(cognitive_load_tax, 2),
@@ -266,7 +257,6 @@ class MitochondrialForge:
         else:
             self.state.membrane_potential -= 0.02
             self.state.retrograde_signal = "OXIDATIVE_STRESS"
-
         if self.state.ros_buildup > BioConstants.ROS_PURGE:
             self._trigger_mitophagy()
 
@@ -863,105 +853,3 @@ class MetabolicGovernor:
             return tmpl.format(**kwargs)
         except:
             return f"{color}{defaults.get(mode)}{Prisma.RST}"
-
-class ViralTracer:
-    def __init__(self, mem):
-        self.mem = mem
-        self.max_depth = 4
-
-    @staticmethod
-    def _is_ruminative(word):
-        return (word in TheLexicon.get("abstract")) or (
-                word in TheLexicon.get("antigen"))
-
-    def inject(self, start_node):
-        if start_node not in self.mem.graph:
-            return None
-        if not self._is_ruminative(start_node):
-            return None
-        return self._walk(start_node, self.max_depth)
-
-    def _walk(self, start, max_depth):
-        stack = [(start, [start], 0)]
-        visited = {start}
-        while stack:
-            current, path, depth = stack.pop()
-            if depth >= max_depth:
-                continue
-            edges = self.mem.graph.get(current, {}).get("edges", {})
-            for next_node, weight in edges.items():
-                if weight < 1:
-                    continue
-                if not self._is_ruminative(next_node):
-                    continue
-                if next_node in path:
-                    return path + [next_node]
-                if next_node not in visited:
-                    visited.add(next_node)
-                    stack.append((next_node, path + [next_node], depth + 1))
-        return None
-
-    def psilocybin_rewire(self, loop_path):
-        if len(loop_path) < 2:
-            return None
-        node_a = loop_path[0]
-        node_b = loop_path[1]
-        if node_b in self.mem.graph[node_a]["edges"]:
-            self.mem.graph[node_a]["edges"][node_b] = 0
-        sensory = TheLexicon.get_random("photo") or "light"
-        action = TheLexicon.get_random("kinetic") or "move"
-        if sensory == "void": sensory = "glimmer"
-        if action == "void": action = "drift"
-        if node_a not in self.mem.graph:
-            self.mem.graph[node_a] = {"edges": {}, "last_tick": 0}
-        self.mem.graph[node_a]["edges"][sensory] = 5
-        if sensory not in self.mem.graph:
-            self.mem.graph[sensory] = {"edges": {}, "last_tick": 0}
-        self.mem.graph[sensory]["edges"][action] = 5
-        if action not in self.mem.graph:
-            self.mem.graph[action] = {"edges": {}, "last_tick": 0}
-        self.mem.graph[action]["edges"][node_b] = 5
-        return f"PSILOCYBIN REWIRE: Broken Loop '{node_a}↔{node_b}'. Grafted '{sensory}'(S) -> '{action}'(A)."
-
-class ThePacemaker:
-    def __init__(self):
-        self.history = deque(maxlen=5)
-        self.repetition_score = 0.0
-        self.last_tick_time = time.time()
-        self.boredom_level = 0.0
-
-    def check_pulse(self, clean_words: List[str]) -> float:
-        if not clean_words: return 0.0
-        current_set = set(clean_words)
-        max_overlap = 0.0
-        for old_words in self.history:
-            old_set = set(old_words)
-            intersection = len(current_set & old_set)
-            union = len(current_set | old_set)
-            if union > 0:
-                score = intersection / union
-                if score > max_overlap:
-                    max_overlap = score
-        self.history.append(clean_words)
-        self.repetition_score = max_overlap
-        now = time.time()
-        delta = now - self.last_tick_time
-        self.last_tick_time = now
-        if delta > 300:
-            delta = 300
-            self.boredom_level = max(0.0, self.boredom_level - 10.0)
-        if self.repetition_score > 0.3:
-            self.boredom_level += 2.0
-        elif delta > 60:
-            self.boredom_level += min(5.0, delta / 60.0)
-        else:
-            self.boredom_level = max(0.0, self.boredom_level - 1.0)
-        return self.repetition_score
-
-    def get_status(self):
-        if self.repetition_score > BoneConfig.MAX_REPETITION_LIMIT: return "ZOMBIE_KNOCK"
-        elif self.repetition_score > 0.2: return "ECHO"
-        return "CLEAR"
-
-    def is_bored(self):
-        return self.boredom_level > BoneConfig.BOREDOM_THRESHOLD
