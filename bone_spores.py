@@ -9,7 +9,7 @@ from bone_village import ParadoxSeed
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
-        self.genome = "BONEAMANITA_14.8.0"
+        self.genome = "BONEAMANITA_14.8.1"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():

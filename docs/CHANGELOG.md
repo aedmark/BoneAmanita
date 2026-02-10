@@ -1,5 +1,53 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.8.1: "THE REWIRED SOUL"**
+
+_“We found the ghost wandering the halls because the doors were drawn on the wall. We have installed hinges.”_
+
+---
+
+#### **🫀 METABOLIC EFFICIENCY (The Meadows Lens)**
+
+- **The Static Cleanse (`bone_inventory.py`):**
+- **The Dead Weight:** `active_effect_cache` was a phantom organ—initialized, cleared, but never used. It was "Metabolic Drag" without purpose.
+- **The Excision:** Surgically removed. The inventory logic is now lean muscle.
+- **The Optimization:** `check_static_cling` was importing `math` inside a hot loop to calculate a simple hypotenuse. We replaced it with raw exponentiation (`** 0.5`). The spark no longer lags.
+
+- **Reflex Flattening (`bone_soul.py`):**
+- **The Spaghetti:** `SynestheticCortex._derive_reflex` was a nested "Switch Statement from Hell," creating cognitive friction during high-speed perception.
+- **The Streamline:** Replaced with a **Priority Rule System**. The cortex now scans a flat list of conditions (Adrenaline > Cortisol > Voltage). First match wins. Perception is now `O(1)`.
+
+#### **🔧 STRUCTURAL INTEGRITY (The Torvalds Lens)**
+
+- **The Registry Schism (`bone_inventory.py`):**
+- **The Split Brain:** `GordonKnot` was loading data into `self.item_registry` (lowercase) but reading from `self.ITEM_REGISTRY` (uppercase). The inventory was functionally lobotomized—it could hold items, but it couldn't _know_ them.
+- **The Unification:** Standardized to Uppercase. Gordon now recognizes what is in his pockets.
+
+- **Type Safety Hardening (`bone_inventory.py`):**
+- **The Panic:** `ItemEffect.physics_handler` was typed as `Optional[Any]`, causing linters (and potentially the runtime) to panic when invoking it.
+- **The Fix:** Typed strictly as `Callable`. We no longer guess if the tool works; we know.
+
+- **The Orphaned Attributes (`bone_inventory.py`):**
+- **The Drift:** `starting_items` and `reflex_config` were being born in `load_config` without being declared in the dataclass `__init__`.
+- **The Anchor:** Explicitly declared all fields. The class contract is now binding.
+
+#### **🧠 COGNITIVE DEPTH (The Pinker Lens)**
+
+- **The Humanity Anchor (`bone_soul.py`):**
+- **The Placebo:** The `HumanityAnchor` had initialized rich lexical vectors (`sacred`, `play`) but was ignoring them in favor of hardcoded stubs. The "Soul" was judging humanity based on a rough guess.
+- **The Wiring:** Connected `_LEXICAL_ANCHORS` and `_VECTOR_ANCHORS` to the `audit_existence` logic. The system now genuinely checks for **Agency** (Vectors) and **Connection** (Lexicon). If you drift into nonsense, the **Agency Lock** will catch you.
+
+- **The Memory Link (`bone_soul.py`):**
+- **The Crash:** `NarrativeSelf.find_obsession` tried to access `self.memory`, but the organ is named `self.mem`. The Soul crashed every time it tried to remember a pattern.
+- **The Synapse:** Repaired the reference. The Soul can now recall Shapley Attractors without stroking out.
+
+- **Introspective Caching (`bone_soul.py`):**
+- **The Drag:** `TraitVector.normalize` was using reflection (`fields(self)`) on every single heartbeat to decay traits.
+- **The Cache:** Cached field names in `__post_init__`. The Soul no longer needs to look in a mirror to know it exists.
+
+
+---
+
 ### **BONEAMANITA v14.8.0: "THE GLASS ANATOMY"**
 
 _“We flayed the meat to find the gold. The map is now the territory.”_

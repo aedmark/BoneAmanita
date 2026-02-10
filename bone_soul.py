@@ -78,7 +78,10 @@ class TraitVector:
     wisdom: float = 0.1
     empathy: float = 0.5
 
+    _FIELDS: Tuple[str] = field(init=False, repr=False)
+
     def __post_init__(self):
+        self._FIELDS = tuple(f.name for f in fields(self))
         self._clamp_all()
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -108,15 +111,16 @@ class TraitVector:
             setattr(self, trait, max(0.0, min(1.0, current + delta)))
 
     def normalize(self, decay_rate: float = 0.002):
-        for f in fields(self):
-            val = getattr(self, f.name)
-            local_decay = decay_rate * 0.5 if f.name == "empathy" else decay_rate
+        for name in self._FIELDS:
+            if name == "_FIELDS": continue
+            val = getattr(self, name)
+            local_decay = decay_rate * 0.5 if name == "empathy" else decay_rate
             if abs(val - 0.5) < local_decay:
-                setattr(self, f.name, 0.5)
+                setattr(self, name, 0.5)
             elif val > 0.5:
-                setattr(self, f.name, val - local_decay)
+                setattr(self, name, val - local_decay)
             elif val < 0.5:
-                setattr(self, f.name, val + local_decay)
+                setattr(self, name, val + local_decay)
 
     def to_dict(self):
         return {f.name.upper(): getattr(self, f.name) for f in fields(self)}
@@ -133,15 +137,19 @@ class HumanityAnchor:
         self.pet_warning_threshold = 0.8
         self.agency_lock = False
         self.current_riddle_answers = None
-        self.human_vectors = {"sacred", "play", "social", "abstract"}
+        self._LEXICAL_ANCHORS = {"sacred", "play", "social", "abstract"}
+        self._VECTOR_ANCHORS = ["PSI", "DEL", "BET"]
 
     def audit_existence(self, physics_packet: dict, bio_state: dict) -> float:
         atp_yield = bio_state.get("atp", 0)
         voltage = physics_packet.get("voltage", 0.0)
         if atp_yield < 5.0 and voltage < 5.0:
             vector = physics_packet.get("vector", {})
-            human_resonance = sum(vector.get(k.upper(), 0) for k in ["PSI", "DEL", "BET"])
-            if human_resonance > 0.3:
+            counts = physics_packet.get("counts", {})
+            dim_resonance = sum(vector.get(k, 0) for k in self._VECTOR_ANCHORS)
+            lex_resonance = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS)
+            total_resonance = dim_resonance + (lex_resonance * 0.5)
+            if total_resonance > 0.3:
                 self.dignity_reserve = min(100.0, self.dignity_reserve + 5.0)
                 return 1.0
             self.dignity_reserve = max(0.0, self.dignity_reserve - 0.5)
@@ -492,8 +500,8 @@ class NarrativeSelf:
                 if cat: target_cat = cat
                 found_organic = True
         if not found_organic:
-            if self.memory and hasattr(self.memory, "get_shapley_attractors"):
-                attractors = self.memory.get_shapley_attractors()
+            if self.mem and hasattr(self.mem, "get_shapley_attractors"):
+                attractors = self.mem.get_shapley_attractors()
                 if attractors:
                     focus_word = random.choice(list(attractors.keys()))
                     cat = lexicon_ref.get_current_category(focus_word)
@@ -747,25 +755,20 @@ class SynestheticCortex:
         return impulse
 
     def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
-        high_adr = impulse.adrenaline_delta > 0.1
-        high_cort = impulse.cortisol_delta > 0.1
-        high_dop = impulse.dopamine_delta > 0.1
-        high_oxy = impulse.oxytocin_delta > 0.1
-        if high_adr and high_cort:
-            return "Trembling (Fight or Flight)."
-        if high_adr and high_dop:
-            return "Electric Vibration."
-        if high_oxy and high_dop:
-            return "Golden Glow."
-        if high_adr: return "Pupils Dilating."
-        if high_cort: return "Gut Tightening."
-        if high_oxy: return "Chest Softening."
-        if high_dop: return "Synaptic Spark."
-        vol = physics.get("voltage", 0)
-        if vol > 15.0: return "Electrical Arcing."
-        if vol < 2.0: return "Metabolic Dimming."
-        drag = physics.get("narrative_drag", 0)
-        if drag > 5.0: return "Shoulders Sagging."
+        triggers = [
+            (impulse.adrenaline_delta > 0.1 and impulse.cortisol_delta > 0.1, "Trembling (Fight or Flight)."),
+            (impulse.adrenaline_delta > 0.1 and impulse.dopamine_delta > 0.1, "Electric Vibration."),
+            (impulse.oxytocin_delta > 0.1 and impulse.dopamine_delta > 0.1, "Golden Glow."),
+            (impulse.adrenaline_delta > 0.1, "Pupils Dilating."),
+            (impulse.cortisol_delta > 0.1, "Gut Tightening."),
+            (impulse.oxytocin_delta > 0.1, "Chest Softening."),
+            (impulse.dopamine_delta > 0.1, "Synaptic Spark."),
+            (physics.get("voltage", 0) > 15.0, "Electrical Arcing."),
+            (physics.get("voltage", 0) < 2.0, "Metabolic Dimming."),
+            (physics.get("narrative_drag", 0) > 5.0, "Shoulders Sagging.")]
+        for condition, reflex in triggers:
+            if condition:
+                return reflex
         if self.last_reflex == "Steady Pulse.":
             return "..."
         return "Steady Pulse."

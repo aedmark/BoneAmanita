@@ -15,7 +15,7 @@ class EffectType(Enum):
 @dataclass
 class ItemEffect:
     effect_type: EffectType
-    physics_handler: Optional[Any] = None
+    physics_handler: Optional[Callable[[Dict, Dict, str], List['PhysicsDelta']]] = None
     semantic_instr: Optional[str] = None
     priority: int = 50
 
@@ -170,6 +170,7 @@ def _init_trait_registry() -> Dict[str, ItemEffect]:
 
 TRAIT_REGISTRY = _init_trait_registry()
 
+
 @dataclass
 class GordonKnot:
     integrity: float = 65.0
@@ -182,6 +183,8 @@ class GordonKnot:
     ITEM_REGISTRY: Dict = field(default_factory=dict, init=False)
     CRITICAL_ITEMS: set = field(default_factory=set, init=False)
     REFLEX_MAP: Dict = field(init=False, default_factory=dict)
+    starting_items: List[str] = field(default_factory=list, init=False)
+    reflex_config: Dict = field(default_factory=dict, init=False)
 
     def __post_init__(self):
         self.load_config()
@@ -206,15 +209,15 @@ class GordonKnot:
     def load_config(self):
         data = TheLore.get("gordon") or {}
         reserved = {"STARTING_INVENTORY", "SCAR_TISSUE", "RECIPES", "REFLEXES"}
-        self.item_registry = {}
+        self.ITEM_REGISTRY = {}
         for key, val in data.items():
             if key not in reserved and isinstance(val, dict):
-                self.item_registry[key] = val
+                self.ITEM_REGISTRY[key] = val
         self.starting_items = data.get("STARTING_INVENTORY", [])
         self.reflex_config = data.get("REFLEXES", {})
         valid_inventory = []
         for item in self.inventory:
-            if item in self.item_registry:
+            if item in self.ITEM_REGISTRY:
                 valid_inventory.append(item)
             else:
                 print(f"{Prisma.OCHRE}[GORDON]: Dropped unknown item '{item}'{Prisma.RST}")
@@ -251,19 +254,20 @@ class GordonKnot:
             "passive_traits": []}
 
     def check_static_cling(self, physics_packet) -> Optional[str]:
+        if not self.inventory:
+            return None
+        em_field = 0.0
         if isinstance(physics_packet, dict):
             em_field = physics_packet.get("electromagnetism", 0.0)
             if em_field == 0.0:
-                import math
-                e = physics_packet.get("E", 0.0)
-                b = physics_packet.get("B", 0.0)
-                em_field = math.sqrt(e**2 + b**2)
+                vec = physics_packet.get("vector", {})
+                e = vec.get("E", physics_packet.get("E", 0.0))
+                b = vec.get("B", physics_packet.get("B", 0.0))
+                em_field = (e ** 2 + b ** 2) ** 0.5
         else:
             em_field = getattr(physics_packet, "electromagnetism", 0.0)
         if em_field < 6.0:
             return None
-        if not self.inventory:
-            return f"{Prisma.VIOLET}*Sparks fly from your empty hands.*{Prisma.RST}"
         if random.random() < 0.3:
             item = random.choice(self.inventory)
             cling_msgs = [
@@ -278,15 +282,13 @@ class GordonKnot:
         total_mass = 0.0
         total_lift = 0.0
         total_vol = 0.0
-        self.active_effect_cache = []
         for item_name in self.inventory:
             data = self.get_item_data(item_name)
             total_mass += data.get("mass", 1.0)
             total_lift += data.get("lift", 0.0)
             total_vol += data.get("volume", 1.0)
-        collapsed = False
-        if total_mass > 20.0 and total_mass > (total_lift * 3.0 + 10.0):
-            collapsed = True
+        limit = (total_lift * 3.0) + 10.0
+        collapsed = (total_mass > 20.0) and (total_mass > limit)
         self.physics_state = TensegrityState(
             mass=total_mass,
             lift=total_lift,
@@ -350,8 +352,8 @@ class GordonKnot:
                 if effect_def.effect_type not in [EffectType.PHYSICS, EffectType.HYBRID]:
                     continue
                 handler = effect_def.physics_handler
-                if handler is not None and callable(handler):
-                    new_deltas = handler(physics_ref, data, item_name)
+                if handler is not None:
+                    new_deltas = handler
                     if new_deltas:
                         all_deltas.extend(new_deltas)
         return all_deltas
