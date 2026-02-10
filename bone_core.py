@@ -93,6 +93,10 @@ class TheObserver:
             self.llm_latencies.append(duration)
         return duration
 
+    @property
+    def uptime(self) -> float:
+        return time.time() - self.start_time
+
     def calculate_efficiency(self, health: float, stamina: float) -> float:
         duration = max(0.01, self.last_cycle_duration)
         resource_sum = health + stamina
@@ -211,8 +215,10 @@ class RealityStack:
             "raw_output": depth == RealityLayer.DEEP_CX,
             "system_override": depth == RealityLayer.DEBUG}
 
+
 class ArchetypeArbiter:
-    def arbitrate(self, physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Dict = None) -> Tuple[str, str, str]:
+    def arbitrate(self, physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Dict = None) -> \
+    Tuple[str, str, str]:
         for mandate in council_mandates:
             if mandate.get("type") == "LOCKDOWN":
                 return "THE CENSOR", "COUNCIL", "Martial Law declared. Identity suppressed."
@@ -221,15 +227,17 @@ class ArchetypeArbiter:
         if "/" in soul_archetype:
             return soul_archetype, "SOUL", f"The Diamond Soul refracts the physics ({soul_archetype})."
         if trigram:
-            name = trigram.get("name")
-            if name == "ZHEN" and physics_lens == "THE MANIC":
-                return "THE STORM_CHASER", "COSMIC", "Thunder resonates with the mania. Destiny accelerates the signal."
-            if name == "LI" and soul_archetype == "THE POET":
-                return "THE ILLUMINATOR", "COSMIC", "The Fire of Heaven ignites the Poet's vision."
-            if name == "KAN" and physics_lens == "THE VOID":
-                return "THE DEEP_DIVER", "COSMIC", "The Water of the Abyss pulls you deeper into the void."
-            if name == "QIAN" and soul_archetype == "THE ENGINEER":
-                return "THE ARCHITECT", "COSMIC", "Heavenly alignment grants the Engineer perfect clarity."
+            trigram_name = trigram.get("name")
+            mythos = LoreManifest.get_instance().get("MYTHOS") or {}
+            rules = mythos.get("trigram_resonance", [])
+            for rule in rules:
+                if rule.get("trigram") == trigram_name:
+                    required_lens = rule.get("lens")
+                    required_soul = rule.get("soul")
+                    match_lens = (required_lens == physics_lens) if required_lens else True
+                    match_soul = (required_soul == soul_archetype) if required_soul else True
+                    if match_lens and match_soul:
+                        return rule["result"], rule.get("source", "COSMIC"), rule.get("msg", "Resonance detected.")
         if physics_lens in ["THE MANIC", "THE VOID"]:
             return physics_lens, "PHYSICS", f"Environment is too loud. You are {physics_lens}."
         return soul_archetype, "SOUL", "The Soul guides the lens."
@@ -243,7 +251,6 @@ class TelemetryService:
         self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=50)
         self.write_buffer: List[str] = []
         self.active_crystal = None
-        self.session_start = time.time()
         self.disabled = False
         self.write_errors = 0
         try:
@@ -369,13 +376,12 @@ class TelemetryService:
         except Exception:
             return None
 
-    def generate_session_summary(self) -> str:
+    def generate_session_summary(self, uptime: float = 0.0) -> str:
         self._flush_to_disk()
         count = len(self.trace_buffer)
-        duration = time.time() - self.session_start
         status = "DISABLED" if self.disabled else "ACTIVE"
         return (
-            f"\n[TELEMETRY] Session ended ({status}). {count} thoughts processed in {duration:.2f}s.\n"
+            f"\n[TELEMETRY] Session ended ({status}). {count} crystals crystallized.\n"
             f"            Trace: {self.current_trace_file}")
 
 class LoreManifest:

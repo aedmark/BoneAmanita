@@ -122,14 +122,19 @@ class PhysicsPacket:
 @dataclass
 class PhysicsSandbox:
     packet: PhysicsPacket
-    original_snapshot: PhysicsPacket
+    original_snapshot: Optional[PhysicsPacket] = None
     modifications: List[Dict[str, Any]] = field(default_factory=list)
 
     @classmethod
     def create(cls, packet: PhysicsPacket) -> 'PhysicsSandbox':
-        return cls(packet=packet, original_snapshot=packet.snapshot())
+        return cls(packet=packet, original_snapshot=None)
+
+    def _ensure_snapshot(self):
+        if self.original_snapshot is None:
+            self.original_snapshot = self.packet.snapshot()
 
     def apply_delta(self, key: str, value: Any, reason: str = ""):
+        self._ensure_snapshot()
         old = getattr(self.packet, key, None)
         setattr(self.packet, key, value)
         self.modifications.append({
@@ -142,8 +147,9 @@ class PhysicsSandbox:
         return self.modifications
 
     def rollback(self):
-        for f in fields(self.original_snapshot):
-            setattr(self.packet, f.name, getattr(self.original_snapshot, f.name))
+        if self.original_snapshot:
+            for f in fields(self.original_snapshot):
+                setattr(self.packet, f.name, getattr(self.original_snapshot, f.name))
 
     def __getattr__(self, name):
         return getattr(self.packet, name)

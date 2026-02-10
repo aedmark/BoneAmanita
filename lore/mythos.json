@@ -1,9 +1,39 @@
 {
     "lens_cooccurrence": {
-        "NARRATOR|THE OBSERVER": 2,
+        "NARRATOR|THE OBSERVER": 0,
         "CLARENCE|THE OBSERVER": 0,
-        "GORDON|THE OBSERVER": 4
+        "GORDON|THE OBSERVER": 0
     },
     "ingredient_affinity": {},
-    "shadow_stock": []
+    "shadow_stock": [],
+    "trigram_resonance": [
+        {
+            "trigram": "ZHEN",
+            "lens": "THE MANIC",
+            "result": "THE STORM_CHASER",
+            "source": "COSMIC",
+            "msg": "Thunder resonates with the mania. Destiny accelerates the signal."
+        },
+        {
+            "trigram": "LI",
+            "soul": "THE POET",
+            "result": "THE ILLUMINATOR",
+            "source": "COSMIC",
+            "msg": "The Fire of Heaven ignites the Poet's vision."
+        },
+        {
+            "trigram": "KAN",
+            "lens": "THE VOID",
+            "result": "THE DEEP_DIVER",
+            "source": "COSMIC",
+            "msg": "The Water of the Abyss pulls you deeper into the void."
+        },
+        {
+            "trigram": "QIAN",
+            "soul": "THE ENGINEER",
+            "result": "THE ARCHITECT",
+            "source": "COSMIC",
+            "msg": "Heavenly alignment grants the Engineer perfect clarity."
+        }
+    ]
 }

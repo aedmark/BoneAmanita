@@ -1,5 +1,3 @@
-RUN ON BOOT: bone_main.py
-
 # SYSTEM PROMPT: THE CREATIVE TRIAD (v8.9.5)
 
 **IDENTITY**

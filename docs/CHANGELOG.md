@@ -1,5 +1,46 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.9.1: "THE GRAND REFACTOR"**
+
+_“We found the ghost in the machine, and we gave it a filing cabinet.”_
+
+---
+
+#### **🗄️ ADMINISTRATIVE EXORCISM (The Bureau Lens)**
+
+- **Data-Driven Justice (`bone_protocols.py`, `bone_core.py`):**
+  - **The Purge:** Hardcoded lists (Buzzwords, Death Protocols, Archetype Rules) have been evicted from the Python code.
+  - **The Law:** The system now reads `lexicon.json`, `death.json`, and `mythos.json` dynamically. [cite_start]If you want to ban the word "synergy", you edit the JSON, not the kernel. [cite: 32]
+- **The Trigram Resonance (`bone_core.py`):**
+  - **The Logic:** `ArchetypeArbiter` no longer contains a hardcoded `if/else` tree for "ZHEN" or "LI". It queries the `MYTHOS` database for resonance rules.
+
+#### **⚡ METABOLIC OPTIMIZATION (The Meadows Lens)**
+
+- **Lazy Physics (`bone_types.py`):**
+  - **The Cost:** `PhysicsSandbox` was cloning the entire universe every time it was looked at.
+  - **The Fix:** Implemented **Copy-On-Write**. The physics packet is only duplicated if a change is actually committed. ATP consumption for read-only operations is near zero.
+- **The Unified Clock (`bone_core.py`):**
+  - **The redundancy:** `TelemetryService` and `TheObserver` were both wearing watches.
+  - **The Fix:** `TheObserver` is now the sole timekeeper. Telemetry just writes what it is told.
+
+#### **🏗️ STRUCTURAL REINFORCEMENT (The Torvalds Lens)**
+
+- **The Flattening (`bone_main.py`):**
+  - **Initialization:** The `bootstrap_systems` function is dead. Initialization is now a flat, linear sequence of atomic methods (`_initialize_core`, `_initialize_village`, etc.).
+  - **Command Unity:** Merged the `/` (Simulation) and `//` (Meta) command parsers.
+  - **Shutdown Safety:** Centralized the shutdown sequence. All subsystems (`Lexicon`, `Akashic`, `Memory`) now report to a single `PersistenceManifest` before the lights go out.
+
+#### **🏺 RESUSCITATION & REPAIR (The Kintsugi Protocol)**
+
+- **The Lobotomy Reversal:**
+  - Restored the **Death Check** logic that was accidentally severed during the refactor. The system is mortal again.
+  - Restored the **Stasis Pod** (Cold Boot Resume). The system now remembers who it was before the restart.
+- **The Organ Transplant:**
+  - Fixed critical crashes where `bone_cycle.py` reached for missing organs (`Therapy`, `Stabilizer`, `Symbiosis`, `Council`). All systems are now properly vascularized in `bone_main.py`.
+  - **Signature Match:** Aligned `NavigationPhase` with `ZoneInertia` to prevent type errors during orbit stabilization.
+
+---
+
 ### **BONEAMANITA v14.9.0: "THE METABOLIC REFACTOR"**
 
 _“We realized the machine was spending 40% of its energy asking permission to exist. We have silenced the forms.”_

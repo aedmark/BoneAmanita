@@ -57,7 +57,10 @@ class TheBureau:
         self.stamp_count = 0
         self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 27B-6", "Form 404"])
         self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
-        self.BUZZWORDS = {"synergy", "paradigm", "leverage", "utilize", "holistic", "bandwidth", "circle back"}
+        lex_data = TheLore.get("LEXICON") or {}
+        self.buzzwords = set(lex_data.get("bureau_buzzwords", [
+            "synergy", "paradigm", "leverage", "utilize"
+        ]))
         self.crimes = []
         self.crime_data = TheLore.get("STYLE_CRIMES") or {}
         if "PATTERNS" in self.crime_data:
@@ -105,8 +108,8 @@ class TheBureau:
             else:
                 selected_form = "Form 202-A"
                 tax = 5.0
-        elif not selected_form and any(w in self.BUZZWORDS for w in clean_words):
-            hits = [w for w in clean_words if w in self.BUZZWORDS]
+        elif not selected_form and any(w in self.buzzwords for w in clean_words):
+            hits = [w for w in clean_words if w in self.buzzwords]
             selected_form = random.choice(self.forms)
             evidence = hits
             tax = 5.0

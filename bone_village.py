@@ -396,20 +396,24 @@ class TownHall:
             return "HIGH_TRAUMA", "System critical. Structural damage."
         return "BALANCED", "System nominal."
 
+
 class DeathGen:
+    _FALLBACK_PROTOCOLS = {
+        "PREFIXES": ["FATAL ERROR", "SYSTEM HALT", "THE END"],
+        "CAUSES": {"DEFAULT": ["Unknown Error", "Entropy limit reached"]},
+        "VERDICTS": {"DEFAULT": ["End of Line.", "Reboot required."]}}
+
     @classmethod
     def load_protocols(cls):
-        if TheLore.get("DEATH"): return
-        print(f"{Prisma.RED}[DEATH]: Protocols missing. Loading default fallback.{Prisma.RST}")
-        default_death = {"PREFIXES": ["FATAL ERROR"], "CAUSES": {"DEFAULT": ["Unknown"]}, "VERDICTS": {"DEFAULT": ["End of Line."]}}
-        TheLore.inject("DEATH", default_death)
+        if TheLore.get("DEATH") is None:
+            print(f"{Prisma.RED}[DEATH]: Protocols missing. Injecting fallback skeleton.{Prisma.RST}")
+            TheLore.inject("DEATH", cls._FALLBACK_PROTOCOLS)
 
     @staticmethod
     def eulogy(physics: Dict, mito_state: Any, trauma_vector: Dict = None) -> str:
         death_data = TheLore.get("DEATH")
         if not death_data:
-            DeathGen.load_protocols()
-            death_data = TheLore.get("DEATH")
+            death_data = DeathGen._FALLBACK_PROTOCOLS
         p = _normalize_physics_dict(physics)
         cause = DeathGen._determine_cause(p, mito_state, trauma_vector)
         verdict_type = DeathGen._determine_verdict_type(p, cause)

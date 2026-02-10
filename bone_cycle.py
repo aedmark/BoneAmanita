@@ -169,17 +169,24 @@ class SanctuaryPhase(SimulationPhase):
 
     def _trigger_dream(self, ctx: CycleContext):
         if not hasattr(self.eng.mind, "dreamer"): return
+        current_trauma_load = sum(self.eng.trauma_accum.values()) if hasattr(self.eng, "trauma_accum") else 0.0
         bio_packet = {
             "chem": self.eng.bio.endo.get_state(),
             "mito": {"atp": self.eng.bio.mito.state.atp_pool, "ros": self.eng.bio.mito.state.ros_buildup},
-            "physics": ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics}
+            "physics": ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics,
+            "trauma_vector": current_trauma_load}
         dream_packet = self.eng.mind.dreamer.enter_rem_cycle(
             self.eng.mind.mem,
             bio_readout=bio_packet)
         if isinstance(dream_packet, dict):
             ctx.log(dream_packet.get("log", "The mind wanders..."))
             ctx.last_dream = dream_packet
-
+        elif isinstance(dream_packet, tuple):
+            log_msg, effects = dream_packet
+            ctx.log(log_msg)
+            if effects:
+                if "adrenaline" in effects: self.eng.bio.endo.adrenaline += effects["adrenaline"]
+                if "voltage" in effects: ctx.physics.voltage += effects["voltage"]
 
 class MaintenancePhase(SimulationPhase):
     def __init__(self, engine_ref):

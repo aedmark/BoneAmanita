@@ -305,27 +305,21 @@ class LLMInterface:
             return f"[{reason}]: {hallucination}"
         return f"[{reason}]: The wire hums. There is no signal."
 
-class PromptComposer:
-    FOG_PROTOCOL = [
-        "=== THE FOG PROTOCOL (STYLE GUIDE) ===",
-        "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
-        "1. REJECT ENTROPY: Do not use the statistically likely adjective (e.g., 'neon' for cyber, 'dust' for old).",
-        "2. CREATIVE CONSTRAINT: The following concepts are 'High Entropy' and MUST be avoided: {ban_string}.",
-        "3. SOLUTION: Work AROUND the forbidden concepts. That obstacle is the way.",
-        "4. AGENCY: DO NOT speak for the user. You have your agency, they have theirs.",
-        "CRITICAL FORMATTING:",
-        "   - Write in engaging, active, immersive prose.",
-        "   - Use Headers ONLY for major location changes.",
-        "   - Separate paragraphs with a single blank line."]
 
+class PromptComposer:
+    CORE_STYLE = [
+        "=== STYLE DIRECTIVES ===",
+        "1. GROUNDING: Use the 5-senses. No floating abstractions.",
+        "2. AGENCY: Do NOT speak for the user.",
+        "3. FORMAT: Active prose. Separate paragraphs with blank lines."]
+    FOG_PROTOCOL = [
+        "4. ANTI-CLICHE: Reject 'neon', 'obsidian', 'petrichor'.",
+        "5. CONSTRAINT: The obstacle is the way. Work around forbidden concepts."]
     INVENTORY_PROTOCOL = [
-        "=== QUANTUM INVENTORY RULES ===",
-        "1. DISTINCTION: Finding/Seeing an item is NOT taking it.",
-        "2. THE LAW OF CONSENT: Output [[LOOT: ITEM_NAME]] ONLY if the user explicitly takes the item.",
-        "3. PROHIBITION: Do NOT auto-loot.",
-        "4. FORMAT: [[LOOT: SILVER_COIN]] (Underscores, no spaces).",
-        "5. LOSS: [[LOST: ITEM_NAME]].",
-        "6. Do not list inventory contents unless asked."]
+        "=== INVENTORY RULES ===",
+        "1. ACQUISITION: Output [[LOOT: ITEM_NAME]] only if explicitly taken.",
+        "2. LOSS: Output [[LOST: ITEM_NAME]] if destroyed/dropped.",
+        "3. STATE: Do not auto-loot. Do not list contents unless asked."]
 
     def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None,
                 mood_override: str = "") -> str:
@@ -333,11 +327,14 @@ class PromptComposer:
         mind = state.get("mind", {})
         bio = state.get("bio", {})
         style_notes = self._build_persona_block(mind, bio, mood_override)
-        scenarios = TheLore.get("scenarios") or {}
-        banned = scenarios.get("BANNED_CLICHES", []) + ["obsidian", "dust motes", "neon", "eldritch", "pulsing veins"]
-        ban_string = ", ".join(set(banned))
-        style_notes.extend([line.format(ban_string=ban_string) for line in self.FOG_PROTOCOL])
-        style_notes.extend(self.INVENTORY_PROTOCOL)
+        style_notes.extend(self.CORE_STYLE)
+        chem = bio.get("chem", {})
+        if chem.get("DOP", 0) > 0.7 or modifiers.get("strict_mode"):
+            style_notes.extend(self.FOG_PROTOCOL)
+        trigger_words = {"take", "grab", "drop", "hold", "inventory", "bag", "pocket", "check", "loot", "search"}
+        user_words = set(user_query.lower().split())
+        if not user_words.isdisjoint(trigger_words) or modifiers.get("force_inventory_rules"):
+            style_notes.extend(self.INVENTORY_PROTOCOL)
         self._inject_resonances(style_notes, state, modifiers)
         loc = state.get('world', {}).get('orbit', ['Unknown'])[0]
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
@@ -351,9 +348,8 @@ class PromptComposer:
         return (
                 f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
                 f"=== SHARED REALITY ===\n"
-                f"CURRENT LOCATION: {loc}\n"
-                f"ENVIRONMENT ANCHOR: {loci_desc}\n"
-                f"INVENTORY: {inv_str}\n\n"
+                f"LOC: {loc} | ANCHOR: {loci_desc}\n"
+                f"INV: {inv_str}\n\n"
                 f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
                 f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
                 f"{system_injection}"
@@ -361,52 +357,31 @@ class PromptComposer:
 
     def _build_persona_block(self, mind, bio, mood_override):
         role = mind.get("role", "The Observer")
-        user_name = "User"
         chem = bio.get("chem", {})
-        respiration = bio.get("respiration", "RESPIRING")
-        mood_note = "Current Biology: Neutral."
-        if respiration == "ANAEROBIC":
-            mood_note = "Current Biology: ⚠️ ANAEROBIC STATE. Raw, breathless, efficient prose."
-        elif mood_override:
-            mood_note = f"Current Biology: {mood_override}"
-        else:
-            mood_note = self._derive_bio_mood(chem)
+        mood_note = mood_override if mood_override else self._derive_bio_mood(chem)
         return [
             f"Role: {role}.",
-            "Directive: Start the adventure immediately. Treat it like a 'Choose Your Own Adventure' where the reader is an equal partner.",
-            "Constraint: Use the 5-senses grounding technique.",
-            mood_note]
+            f"Bio-State: {mood_note}",
+            "Directive: Be an equal partner in the narrative."]
 
     def _derive_bio_mood(self, chem):
-        if chem.get("ADR", 0) > 0.6: return "Current Biology: High Alert / Adrenaline"
-        if chem.get("COR", 0) > 0.6: return "Current Biology: Defensive / Anxious"
-        if chem.get("DOP", 0) > 0.6: return "Current Biology: Curious / Manic"
-        if chem.get("SER", 0) > 0.6: return "Current Biology: Zen / Lucid"
-        return "Current Biology: Neutral."
+        if chem.get("ADR", 0) > 0.6: return "High Alert (Sentences: Short. Urgent.)"
+        if chem.get("COR", 0) > 0.6: return "Defensive (Sentences: Guarded. Cynical.)"
+        if chem.get("DOP", 0) > 0.6: return "Manic (Sentences: Run-on. Associative.)"
+        if chem.get("SER", 0) > 0.6: return "Lucid (Sentences: Clear. Flowing.)"
+        return "Neutral."
 
     def _inject_resonances(self, style_notes, state, modifiers):
         village = state.get("village", {})
         resonances = village.get("tinkerer", {}).get("tool_resonance", {})
-        active_resonance = [f"» {t} (Lvl {int(l)})" for t, l in resonances.items() if l > 4.0]
+        active_resonance = [f"» {t}" for t, l in resonances.items() if l > 4.0]
         if active_resonance:
-            style_notes.append("\n=== HARMONIC RESONANCE ===")
-            style_notes.extend(active_resonance)
-        if modifiers.get("include_memories"):
-            memories = state.get("soul", {}).get("core_memories", [])
-            if memories:
-                mem_strs = []
-                for m in memories:
-                    lesson = m.get('lesson', 'Unknown') if isinstance(m, dict) else getattr(m, 'lesson', 'Unknown')
-                    flavor = m.get('emotional_flavor', 'NEUTRAL') if isinstance(m, dict) else getattr(m, 'emotional_flavor', 'NEUTRAL')
-                    mem_strs.append(f"» {lesson} [{flavor}]")
-                if mem_strs:
-                    style_notes.append("\n=== CORE MEMORIES ===")
-                    style_notes.extend(mem_strs)
+            style_notes.append(f"Resonances: {', '.join(active_resonance)}")
 
     def _format_inventory(self, state, modifiers):
-        if not modifiers["include_inventory"]: return "Hands: Empty"
+        if not modifiers["include_inventory"]: return "N/A"
         inv = state.get("inventory", [])
-        return f"Belt: {', '.join(inv)}" if inv else "Hands: Empty"
+        return ", ".join(inv) if inv else "Empty"
 
     @staticmethod
     def _sanitize(text: str) -> str:
@@ -415,7 +390,7 @@ class PromptComposer:
 
     def _normalize_modifiers(self, modifiers: Optional[Dict]) -> Dict:
         defaults = {"include_somatic": True, "include_inventory": True, "include_memories": True, "grace_period": False,
-                    "soften": False}
+                    "soften": False, "strict_mode": False, "force_inventory_rules": False}
         if modifiers: defaults.update(modifiers)
         return defaults
 
@@ -673,6 +648,13 @@ class TheCortex:
             if len(target) > 4:
                 self.svc.lexicon.teach(target, "kinetic", 0)
                 if self.events: self.events.log(f"AUTO-DIDACTIC: Learned '{target}'.", "CORTEX")
+
+    def restore_context(self, history: List[str]):
+        if not history:
+            return
+        self.dialogue_buffer = history[-self.MAX_HISTORY:]
+        if self.events:
+            self.events.log(f"Cortex re-sequenced {len(self.dialogue_buffer)} synaptic turns.", "BRAIN")
 
 class NeuroPlasticity:
     def __init__(self):
