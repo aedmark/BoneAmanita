@@ -58,7 +58,14 @@ class TheAkashicRecord:
         print(f"{Prisma.GRY}[AKASHIC]: Mythos persisted.{Prisma.RST}")
 
     def save_to_disk(self, category: str, data: Any):
-        filepath = os.path.join("lore", f"akashic_{category}.json")
+        directory = "lore"
+        if not os.path.exists(directory):
+            try:
+                os.makedirs(directory)
+            except OSError as e:
+                print(f"{Prisma.RED}[AKASHIC]: Failed to create '{directory}' directory: {e}{Prisma.RST}")
+                return
+        filepath = os.path.join(directory, f"akashic_{category}.json")
         serializable_data = data
         if category == "lens_cooccurrence":
             serializable_data = {

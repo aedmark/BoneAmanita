@@ -1,4 +1,4 @@
-""" BONEAMANITA 14.7.1
+""" BONEAMANITA 14.7.2
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random, traceback
@@ -43,7 +43,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.7.1', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.7.2', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -267,7 +267,7 @@ class BoneAmanita:
             self.phys.dynamics = self.cosmic
 
     def _initialize_cognition(self):
-        self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.folly, self.events)
+        self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.gordon, self.folly, self.events)
         self.noetic = NoeticLoop(self.mind, self.bio, self.events)
         self.cycle_controller = GeodesicOrchestrator(self)
         client = LLMInterface(
@@ -276,7 +276,7 @@ class BoneAmanita:
             base_url=self.config.get("base_url"),
             api_key=self.config.get("api_key"),
             model=self.config.get("model"))
-        self.cortex = TheCortex(self, llm_client=client)
+        self.cortex = TheCortex.from_engine(self, llm_client=client)
         self.somatic = SomaticInterface(self)
 
     def _validate_state(self):
@@ -681,7 +681,7 @@ class BoneAmanita:
 
 if __name__ == "__main__":
     print("\n" + "="*40)
-    print(f"{Prisma.paint('♦ BONEAMANITA 14.7.1', 'M')}")
+    print(f"{Prisma.paint('♦ BONEAMANITA 14.7.2', 'M')}")
     print("="*40 + "\n")
     sys_config = ConfigWizard.load_or_create()
     engine_instance = BoneAmanita(config=sys_config)

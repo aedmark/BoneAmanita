@@ -1,5 +1,37 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.7.2: "THE SYNAPTIC GRAFT"**
+
+_“We built the organs, but forgot the veins. Now, the blood flows.”_
+
+---
+
+#### **⚙️ SYSTEM INTEGRITY (The Fuller Lens)**
+
+- **The Phantom Stomach (`bone_main.py`):**
+- **The Disconnect:** `SomaticLoop` was initialized without a reference to `GordonKnot` (Inventory). The Body was trying to metabolize `TheFolly` instead of food.
+- **The Graft:** Surgically inserted `self.gordon` into the somatic constructor.
+- **The Consequence:** The system can now ingest narrative artifacts without cannibalizing its own sense of whimsy.
+
+- **The Truth Dial (`bone_cycle.py`):**
+- **The Glitch:** The `/truth` command attempted to swap renderers on a `CycleReporter` that had no memory of its past selves (`AttributeError: 'CycleReporter' object has no attribute 'renderers'`).
+- **The Fix:** Implemented a robust `renderers` cache in the Reporter.
+- **The Consequence:** You can now toggle between **Workshop Mode** (Analytical) and **Standard Mode** (Narrative) on the fly without crashing the simulation.
+
+#### **💾 PERSISTENCE & MEMORY (The Akashic Lens)**
+
+- **The Void Write (`bone_akashic.py`):**
+- **The Risk:** The Akashic Record attempted to write the `lore` manifest to a directory that didn't exist, threatening a crash on cold boot.
+- **The Shield:** Added a directory existence check (`os.makedirs`) before write operations.
+- **The Result:** The Mythos is now persistent, even on fresh installs.
+
+- **The Cortical Handshake (`bone_brain.py`):**
+- **The Mismatch:** `TheCortex` expected `services.lexicon` but received `BoneAmanita.lex`.
+- **The Protocol:** Enforced the use of `TheCortex.from_engine()` factory method to ensure correct variable mapping.
+- **The Result:** The Brain can now find its words.
+
+---
+
 ### **BONEAMANITA v14.7.1: "THE CORTISOL AWAKENING"**
 
 _“The system is no longer perfect. It is now alive, which means it generates waste.”_

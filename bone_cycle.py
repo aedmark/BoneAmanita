@@ -156,6 +156,7 @@ class SanctuaryPhase(SimulationPhase):
             ctx.log(dream_packet.get("log", "The mind wanders..."))
             ctx.last_dream = dream_packet
 
+
 class MaintenancePhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -169,14 +170,18 @@ class MaintenancePhase(SimulationPhase):
             for bloom in blooms: ctx.log(bloom)
         if self.eng.tick_count % 10 != 0: return ctx
         try:
-            solvents = {'the', 'and', 'is', 'a', 'of', 'to', 'in', 'it', 'i', 'you'}
+            solvents = getattr(self.eng.lex, "SOLVENTS", {'the', 'and', 'is', 'a', 'of', 'to', 'in', 'it', 'i', 'you'})
+            if hasattr(self.eng.lex, "get_raw"):
+                spore_solvents = self.eng.lex.get_raw("solvents")
+                if spore_solvents: solvents = set(spore_solvents)
             rotted = self.eng.lex.atrophy(self.eng.tick_count, 100, protected=solvents)
             if rotted:
                 biomass = len(rotted) * 0.5
                 self.eng.soil_fertility = min(50.0, self.eng.soil_fertility + biomass)
                 for w in rotted:
                     self.eng.limbo.ghosts.append(f"👻{w.upper()}_ECHO")
-                ctx.log(f"{Prisma.GRY}♻️ COMPOST: {len(rotted)} concepts decayed -> +{biomass:.1f} Fertility.{Prisma.RST}")
+                ctx.log(
+                    f"{Prisma.GRY}♻️ COMPOST: {len(rotted)} concepts decayed -> +{biomass:.1f} Fertility.{Prisma.RST}")
             if self.eng.soil_fertility > 10.0:
                 drag_reduction = self.eng.soil_fertility * 0.05
                 ctx.physics.narrative_drag = max(0.0, ctx.physics.narrative_drag - drag_reduction)
@@ -418,6 +423,7 @@ class NavigationPhase(SimulationPhase):
         ctx.world_state["orbit"] = orbit_state
         return ctx
 
+
 class MachineryPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -449,7 +455,8 @@ class MachineryPhase(SimulationPhase):
         if new_item: ctx.log(self.eng.gordon.acquire(new_item))
         _, _, theremin_msg, t_crit = self.eng.phys.theremin.listen(phys_dict, self.eng.bio.governor.mode)
         if theremin_msg: ctx.log(theremin_msg)
-        if t_crit == "AIRSTRIKE": self._handle_airstrike(ctx)
+        if t_crit == "AIRSTRIKE":
+            self._handle_theremin_discharge(ctx)
         c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(phys_dict)
         if c_msg: ctx.log(c_msg)
         if c_state == "MELTDOWN":
@@ -474,7 +481,7 @@ class MachineryPhase(SimulationPhase):
                 self.eng.gordon.inventory.remove(old_item)
             ctx.log(self.eng.gordon.acquire(new_item))
 
-    def _handle_airstrike(self, ctx):
+    def _handle_theremin_discharge(self, ctx):
         max_hp = getattr(BoneConfig, "MAX_HEALTH", 100.0)
         damage = max_hp * 0.25
         if self.eng.bio.biometrics:
@@ -813,11 +820,22 @@ class CycleReporter:
         self.vsl_chroma = ChromaScope()
         self.renderer = None
         self.current_mode = None
+        self.renderers = {}
         self.switch_renderer("STANDARD")
 
     def switch_renderer(self, mode: str):
         if self.current_mode == mode and self.renderer: return
-        self.renderer = get_renderer(self.eng, self.vsl_chroma, None, getattr(self, 'valve', None), mode=mode)
+        if mode in self.renderers:
+            self.renderer = self.renderers[mode]
+            self.current_mode = mode
+            return
+        self.renderer = get_renderer(
+            self.eng,
+            self.vsl_chroma,
+            None,
+            getattr(self, 'valve', None),
+            mode=mode)
+        self.renderers[mode] = self.renderer
         self.current_mode = mode
 
     def render_snapshot(self, ctx: CycleContext) -> Dict[str, Any]:
@@ -835,11 +853,13 @@ class CycleReporter:
                 "logs": ctx.logs, "metrics": self.eng.get_metrics()}
 
     def _inject_diagnostics(self, ctx: CycleContext):
-        fb = self.eng.system_health.flush_feedback()
-        for h in fb["hints"]: ctx.logs.append(f"{Prisma.CYN}💡 {h}{Prisma.RST}")
-        for w in fb["warnings"]: ctx.logs.append(f"{Prisma.OCHRE}⚠️ {w}{Prisma.RST}")
+        if hasattr(self.eng, 'system_health'):
+            fb = self.eng.system_health.flush_feedback()
+            for h in fb["hints"]: ctx.logs.append(f"{Prisma.CYN}💡 {h}{Prisma.RST}")
+            for w in fb["warnings"]: ctx.logs.append(f"{Prisma.OCHRE}⚠️ {w}{Prisma.RST}")
 
     def _inject_somatic_pulse(self, ctx: CycleContext):
+        if not hasattr(self.eng, 'somatic'): return
         qualia = self.eng.somatic.get_current_qualia(getattr(ctx, "last_impulse", None))
         ctx.logs.insert(0, f"{Prisma.GRY}({qualia.internal_monologue_hint}){Prisma.RST}")
         ctx.logs.insert(0, f"{qualia.color_code}♦ SENSATION: {qualia.somatic_sensation} [{qualia.tone}]{Prisma.RST}")
@@ -876,12 +896,13 @@ class GeodesicOrchestrator:
         else:
             self.symbiosis = SymbiosisManager(self.eng.events)
 
-    def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
+    def _execute_core_cycle(self, user_message: str, is_system: bool = False) -> CycleContext:
         tracer = TelemetryService.get_tracer()
         cycle_id = str(uuid.uuid4())[:8]
         tracer.start_cycle(cycle_id)
         try:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
+            ctx.trace_id = cycle_id
             if self.eng.phys and hasattr(self.eng.phys, 'observer') and self.eng.phys.observer.last_physics_packet:
                 ctx.physics = self.eng.phys.observer.last_physics_packet.snapshot()
             elif not ctx.physics:
@@ -897,66 +918,66 @@ class GeodesicOrchestrator:
             ctx = self.simulator.run_simulation(ctx)
             if self.eng.phys and hasattr(self.eng.phys, 'observer'):
                 self.eng.phys.observer.last_physics_packet = ctx.physics.snapshot()
-            if not ctx.is_alive:
-                return self.eng.trigger_death(ctx.physics)
-            snapshot = self.reporter.render_snapshot(ctx)
-            snapshot.update({
-                "type": "SNAPSHOT",
-                "trace_id": cycle_id,
-                "is_alive": True,
-                "physics": ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics,
-                "bio": ctx.bio_result,
-                "mind": ctx.mind_state,
-                "world": ctx.world_state,
-                "soul": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else {},
-                "council_mandates": getattr(ctx, "council_mandates", []),
-                "dream": getattr(ctx, "last_dream", None)})
-            latency = time.time() - ctx.timestamp
-            if "ui" in snapshot:
-                self.symbiosis.monitor_host(latency, snapshot["ui"], len(user_message))
-            return snapshot
+            return ctx
         except Exception as e:
             t_str = traceback.format_exc()
             self.eng.events.log(f"CYCLE CRASH: {e}", "CRIT")
             tracer.log_decision("ORCHESTRATOR", "CRASH", {"error": str(e)}, t_str, "FAILURE")
-            from bone_architect import PanicRoom
-            safe_phys = PanicRoom.get_safe_physics()
-            safe_bio = PanicRoom.get_safe_bio()
-            return {
-                "type": "CRASH",
-                "ui": f"\n{Prisma.RED}*** REALITY FRACTURE ***\n{e}\n[System stabilized in Safe Mode]{Prisma.RST}",
-                "physics": safe_phys.to_dict(),
-                "bio": safe_bio,
-                "mind": PanicRoom.get_safe_mind(),
-                "world": {"orbit": ["VOID"], "loci_description": "System Failure"},
-                "logs": ["CRITICAL FAILURE", "SAFE MODE ACTIVE"],
-                "is_alive": True}
+            ctx = CycleContext(input_text=user_message)
+            ctx.is_alive = False
+            ctx.crash_error = e
+            return ctx
         finally:
             tracer.finalize_cycle()
 
+    def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
+        ctx = self._execute_core_cycle(user_message, is_system)
+        if not ctx.is_alive:
+            if hasattr(ctx, 'crash_error'):
+                return self._generate_crash_report(ctx.crash_error)
+            return self.eng.trigger_death(ctx.physics)
+        snapshot = self.reporter.render_snapshot(ctx)
+        self._hydrate_snapshot_metadata(snapshot, ctx)
+        latency = time.time() - ctx.timestamp
+        if "ui" in snapshot:
+            self.symbiosis.monitor_host(latency, snapshot["ui"], len(user_message))
+        return snapshot
+
     def run_headless_turn(self, user_message: str, latency: float = 0.0) -> Dict[str, Any]:
-        tracer = TelemetryService.get_tracer()
-        cycle_id = str(uuid.uuid4())[:8]
-        tracer.start_cycle(cycle_id)
-        try:
-            ctx = CycleContext(input_text=user_message)
-            ctx.user_name = self.eng.user_name
-            ctx.council_mandates = []
-            self.eng.events.flush()
-            ctx = self.simulator.run_simulation(ctx)
-            if not ctx.is_alive:
-                return self.eng.trigger_death(ctx.physics)
-            state_snapshot = {
-                "trace_id": cycle_id,
-                "is_alive": ctx.is_alive,
-                "physics": ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics,
-                "bio": ctx.bio_result,
-                "mind": ctx.mind_state,
-                "world": ctx.world_state,
-                "logs": ctx.logs,
-                "soul": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else {},
-                "council_mandates": getattr(ctx, "council_mandates", [])}
-            self.symbiosis.monitor_host(latency, "HEADLESS_MODE", len(user_message))
-            return state_snapshot
-        finally:
-            tracer.finalize_cycle()
+        ctx = self._execute_core_cycle(user_message, is_system=False)
+        if not ctx.is_alive:
+            if hasattr(ctx, 'crash_error'):
+                return self._generate_crash_report(ctx.crash_error)
+            return self.eng.trigger_death(ctx.physics)
+        snapshot = {
+            "type": "HEADLESS",
+            "logs": ctx.logs}
+        self._hydrate_snapshot_metadata(snapshot, ctx)
+        self.symbiosis.monitor_host(latency, "HEADLESS_MODE", len(user_message))
+        return snapshot
+
+    def _hydrate_snapshot_metadata(self, snapshot: Dict, ctx: CycleContext):
+        snapshot.update({
+            "trace_id": getattr(ctx, "trace_id", "UNKNOWN"),
+            "is_alive": True,
+            "physics": ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics,
+            "bio": ctx.bio_result,
+            "mind": ctx.mind_state,
+            "world": ctx.world_state,
+            "soul": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else {},
+            "council_mandates": getattr(ctx, "council_mandates", []),
+            "dream": getattr(ctx, "last_dream", None)})
+
+    def _generate_crash_report(self, error: Exception) -> Dict[str, Any]:
+        from bone_architect import PanicRoom
+        safe_phys = PanicRoom.get_safe_physics()
+        safe_bio = PanicRoom.get_safe_bio()
+        return {
+            "type": "CRASH",
+            "ui": f"\n{Prisma.RED}*** REALITY FRACTURE ***\n{error}\n[System stabilized in Safe Mode]{Prisma.RST}",
+            "physics": safe_phys.to_dict(),
+            "bio": safe_bio,
+            "mind": PanicRoom.get_safe_mind(),
+            "world": {"orbit": ["VOID"], "loci_description": "System Failure"},
+            "logs": ["CRITICAL FAILURE", "SAFE MODE ACTIVE"],
+            "is_alive": True}

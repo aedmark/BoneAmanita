@@ -266,6 +266,10 @@ if "ENGINE" not in st.session_state:
     with st.spinner("Hydrating Spore Casing..."):
         st.session_state.ENGINE = init_engine()
 
+if st.session_state.ENGINE is None:
+    st.error("❌ CRITICAL BOOT FAILURE: Engine could not initialize. See errors above.")
+    st.stop()
+
 if "ENGINE" in st.session_state:
     render_sidebar(st.session_state.ENGINE)
 

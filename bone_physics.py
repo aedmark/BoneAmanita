@@ -157,7 +157,7 @@ class GeodesicEngine:
             "E":   norm(counts.get("solvents", 0))}
 
 class TheGatekeeper:
-    def __init__(self, lexicon_ref, memory_ref):
+    def __init__(self, lexicon_ref, memory_ref=None):
         self.lex = lexicon_ref
         self.mem = memory_ref
 

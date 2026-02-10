@@ -87,6 +87,7 @@ class StressTest:
             "voltage": 25.0,
             "truth_ratio": 0.2,
             "clean_words": ["chaos", "fire"],
+            "raw_text": "this is absolute chaos and fire",
             "counts": {}}
         mock_bio = {"health": 100.0}
         audit_bad = self.bureau.audit(mock_phys_bad, mock_bio)
@@ -98,6 +99,7 @@ class StressTest:
             "voltage": 22.0,
             "truth_ratio": 0.95,
             "clean_words": ["beauty", "truth"],
+            "raw_text": "beauty is truth truth beauty",
             "counts": {}}
         audit_good = self.bureau.audit(mock_phys_good, mock_bio)
         if audit_good and "Form 202-A" in audit_good["ui"]:

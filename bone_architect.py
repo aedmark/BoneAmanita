@@ -9,7 +9,7 @@ from bone_symbiosis import MycotoxinFactory, LichenSymbiont, ParasiticSymbiont
 from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, ViralTracer, ThePacemaker, Biometrics
 from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity
 from bone_protocols import LimboLayer
-from bone_physics import QuantumObserver, SurfaceTension
+from bone_physics import QuantumObserver, SurfaceTension, TheGatekeeper
 from bone_machine import TheCrucible, TheForge, TheTheremin
 
 @dataclass
@@ -129,7 +129,9 @@ class BoneArchitect:
             biometrics=bio_metrics)
 
     @staticmethod
-    def _construct_physics(events, bio) -> PhysSystem:
+    def _construct_physics(events, bio, mind, lex) -> PhysSystem:
+        gate = TheGatekeeper(lex, mind.mem)
+
         return PhysSystem(
             observer=QuantumObserver(events),
             forge=TheForge(),
@@ -137,6 +139,7 @@ class BoneArchitect:
             theremin=TheTheremin(),
             pulse=ThePacemaker(),
             nav=TheCartographer(bio.shimmer),
+            gate=gate,
             tension=SurfaceTension(),
             dynamics=None)
 
@@ -147,7 +150,7 @@ class BoneArchitect:
         events.log(f"{Prisma.GRY}[ARCHITECT]: Laying foundations (Dormancy Active)...{Prisma.RST}", "SYS")
         mind, limbo = BoneArchitect._construct_mind(events, lex)
         bio = BoneArchitect._construct_bio(events, mind, lex)
-        physics = BoneArchitect._construct_physics(events, bio)
+        physics = BoneArchitect._construct_physics(events, bio, mind, lex)
         return SystemEmbryo(
             mind=mind,
             limbo=limbo,
