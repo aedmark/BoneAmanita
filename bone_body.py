@@ -494,65 +494,69 @@ class SomaticLoop:
         return "CLEAR"
 
     def _harvest_resources(self, phys: Dict, logs: List[str]) -> Tuple[str, float]:
+        """
+        [SLASH_REFACTOR]: Broken into atomic steps for clarity and metabolic efficiency.
+        """
         clean_words = phys.get("clean_words", [])
-        total_word_count = len(clean_words)
-        if total_word_count == 0:
-            return "NONE", 0.0
-        use_sampling = total_word_count > self.SAMPLING_THRESHOLD
-        if use_sampling:
-            sample_words = random.sample(clean_words, self.SAMPLING_THRESHOLD)
-            scaling_factor = total_word_count / self.SAMPLING_THRESHOLD
-            words_to_process = sample_words
-            if random.random() < 0.1:
-                logs.append(
-                    f"{Prisma.GRY}[BIO]: Large input detected. Sampling metabolism (x{scaling_factor:.1f}).{Prisma.RST}")
-        else:
-            words_to_process = clean_words
-            scaling_factor = 1.0
-        found_enzymes = []
-        raw_atp_yield = 3.0 / scaling_factor
-        word_counts = Counter(words_to_process)
-        cliche_tax_total = 0.0
-        for word, count in word_counts.items():
-            if len(word) < 4: continue
-            category = TheLexicon.get_current_category(word)
-            if not category or category == "void":
-                raw_atp_yield += (0.5 * count)
-                continue
-            if category in ["kinetic", "explosive"]:
-                continue
-            if category == "antigen":
-                tax = 3.0 * count
-                cliche_tax_total += tax
-                continue
-            if category and category != "void":
-                enzyme = self._map_category_to_enzyme(category)
-                if enzyme != "AMYLASE":
-                    found_enzymes.append(enzyme)
-                    current_mastery = self.enzyme_mastery.get(enzyme, 0.0)
-                    mastery_bonus = 1.0 + (current_mastery * 0.1)
-                    base_word_yield = 2.0 if len(word) > 7 else 1.0
-                    damped_multiplier = 1.0 + math.log(count)
-                    final_yield = (base_word_yield * damped_multiplier) * mastery_bonus
-                    raw_atp_yield += final_yield
-                    self.enzyme_mastery[enzyme] = min(5.0, current_mastery + 0.02)
-                    if len(found_enzymes) <= 3 and not use_sampling:
-                        logs.append(
-                            f"{Prisma.GRN}[BIO]: Digested '{word}' -> {enzyme} (Mastery x{mastery_bonus:.2f}) -> +{final_yield:.1f} ATP.{Prisma.RST}")
-        total_atp_yield = raw_atp_yield * scaling_factor
-        scaled_tax = cliche_tax_total * scaling_factor
+        if not clean_words: return "NONE", 0.0
+
+        words_to_process, scaling_factor = self._sample_input(clean_words, logs)
+
+        raw_yield, found_enzymes, cliche_tax = self._digest_words(words_to_process)
+
+        total_atp = (raw_yield * scaling_factor)
+        scaled_tax = (cliche_tax * scaling_factor)
+
         if scaled_tax > 0:
-            total_atp_yield = max(0.0, total_atp_yield - scaled_tax)
+            total_atp = max(0.0, total_atp - scaled_tax)
             self.bio.endo.cortisol = min(1.0, self.bio.endo.cortisol + (scaled_tax * 0.02))
-            logs.append(
-                f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX: System drained by -{scaled_tax:.1f} ATP. (Antigens Detected){Prisma.RST}")
+            logs.append(f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX: -{scaled_tax:.1f} ATP. (Antigens Detected){Prisma.RST}")
+
         if _get_val(phys, "voltage", 0.0) > 8.0 and found_enzymes:
             found_enzymes.append("PROTEASE")
-            total_atp_yield += 5.0
-        if not found_enzymes:
-            return "NONE", total_atp_yield
-        dominant_enzyme = Counter(found_enzymes).most_common(1)[0][0]
-        return dominant_enzyme, total_atp_yield
+            total_atp += 5.0
+
+        dominant = Counter(found_enzymes).most_common(1)[0][0] if found_enzymes else "NONE"
+
+        return dominant, total_atp
+
+    def _sample_input(self, words: List[str], logs: List[str]) -> Tuple[List[str], float]:
+        count = len(words)
+        if count > self.SAMPLING_THRESHOLD:
+            factor = count / self.SAMPLING_THRESHOLD
+            if random.random() < 0.1:
+                logs.append(f"{Prisma.GRY}[BIO]: Mass Input ({count}). Sampling x{factor:.1f}.{Prisma.RST}")
+            return random.sample(words, self.SAMPLING_THRESHOLD), factor
+        return words, 1.0
+
+    def _digest_words(self, words: List[str]) -> Tuple[float, List[str], float]:
+        atp_yield = 0.0
+        enzymes = []
+        cliche_tax = 0.0
+        word_counts = Counter(words)
+        for word, count in word_counts.items():
+            if len(word) < 4: continue
+            cat = TheLexicon.get_current_category(word)
+            if not cat or cat == "void":
+                atp_yield += (0.5 * count)
+                continue
+            if cat == "antigen":
+                cliche_tax += (3.0 * count)
+                continue
+            if cat not in ["kinetic", "explosive"]:
+                enzyme = self._map_category_to_enzyme(cat)
+                if enzyme != "AMYLASE":
+                    enzymes.append(enzyme)
+                    atp_yield += self._calculate_enzymatic_value(word, count, enzyme)
+        return atp_yield, enzymes, cliche_tax
+
+    def _calculate_enzymatic_value(self, word: str, count: int, enzyme: str) -> float:
+        current_mastery = self.enzyme_mastery.get(enzyme, 0.0)
+        mastery_bonus = 1.0 + (current_mastery * 0.1)
+        base_val = 2.0 if len(word) > 7 else 1.0
+        damped_mult = 1.0 + math.log(count)
+        self.enzyme_mastery[enzyme] = min(5.0, current_mastery + 0.02)
+        return (base_val * damped_mult) * mastery_bonus
 
     def _map_category_to_enzyme(self, category: str) -> str:
         return self.enzyme_map.get(category, "AMYLASE")
@@ -767,6 +771,12 @@ class MetabolicGovernor:
     narrative_data: Dict = field(default_factory=dict, repr=False)
     last_shift_tick: int = 0
     hysteresis_duration: int = 3
+    STATE_THRESHOLDS = [
+        (25.0, 0.0, "SANCTUARY", 10),
+        (15.0, 0.0, "FORGE", 8),
+        (10.0, 0.0, "FORGE", 6),
+        (0.0, 4.0, "LABORATORY", 5),
+        (0.0, 0.0, "COURTYARD", 1)]
 
     @staticmethod
     def get_stress_modifier(tick_count):
@@ -793,53 +803,66 @@ class MetabolicGovernor:
             return msg_tmpl.format(mode=target_mode)
         return gov_text.get("INVALID", "Invalid Mode Override.")
 
+    def _check_override_safety(self, physics: Dict, gov_text: Dict) -> Optional[str]:
+        current_voltage = _get_val(physics, "voltage", 0.0)
+        if current_voltage > BioConstants.GOV_VOLTAGE_CRITICAL:
+            self.manual_override = False
+            return gov_text.get("OVERRIDE_CLEARED", "OVERRIDE CLEARED: VOLTAGE CRITICAL")
+        return None
+
     def shift(self, physics: Dict, _voltage_history: List[float], current_tick: int = 0) -> Optional[str]:
         gov_text = self.narrative_data.get("GOVERNOR", {})
-        current_voltage = _get_val(physics, "voltage", 0.0)
         if self.manual_override:
-            if current_voltage > BioConstants.GOV_VOLTAGE_CRITICAL:
-                self.manual_override = False
-                return gov_text.get("OVERRIDE_CLEARED", "OVERRIDE CLEARED: VOLTAGE CRITICAL")
+            return self._check_override_safety(physics, gov_text)
+        if (current_tick - self.last_shift_tick) < self.hysteresis_duration:
             return None
-        time_since_shift = current_tick - self.last_shift_tick
-        is_locked = time_since_shift < self.hysteresis_duration
-        if is_locked and current_voltage < BioConstants.GOV_VOLTAGE_HIGH:
-            return None
-        drag = _get_val(physics, "narrative_drag", 0.0)
-        beta = _get_val(physics, "beta_index", 0.0)
-        voltage_velocity = 0.0
-        if len(_voltage_history) >= 2:
-            voltage_velocity = _voltage_history[-1] - _voltage_history[-2]
-        proposed_mode = self.mode
-        log_msg = None
-        if current_tick <= 5:
-            _set_val(physics, "voltage", min(current_voltage, 8.0))
-            proposed_mode = "COURTYARD"
-        elif current_voltage > BioConstants.GOV_VOLTAGE_HIGH and beta > 1.5:
-            proposed_mode = "SANCTUARY"
-            _set_val(physics, "narrative_drag", 0.0)
-        elif current_voltage > BioConstants.GOV_VOLTAGE_MED or (current_voltage > 8.0 and voltage_velocity > 1.0):
-            proposed_mode = "FORGE"
-        elif drag > BioConstants.GOV_DRAG_HIGH > current_voltage:
-            proposed_mode = "LABORATORY"
-        elif current_voltage < BioConstants.GOV_VOLTAGE_LOW and drag < BioConstants.GOV_DRAG_LOW:
-            proposed_mode = "COURTYARD"
-        if proposed_mode != self.mode:
-            self.mode = proposed_mode
+        proposed = self._evaluate_state(physics, _voltage_history, current_tick)
+        if proposed != self.mode:
+            self.mode = proposed
             self.last_shift_tick = current_tick
-            if self.mode == "SANCTUARY":
-                tmpl = gov_text.get("SANCTUARY", "{color}SANCTUARY ACTIVE{reset}")
-                log_msg = tmpl.format(color=Prisma.GRN, beta=beta, reset=Prisma.RST)
-            elif self.mode == "FORGE":
-                tmpl = gov_text.get("FORGE", "{color}FORGE ACTIVE{reset}")
-                log_msg = tmpl.format(color=Prisma.RED, volts=current_voltage, reset=Prisma.RST)
-            elif self.mode == "LABORATORY":
-                tmpl = gov_text.get("LAB", "{color}LAB ACTIVE{reset}")
-                log_msg = tmpl.format(color=Prisma.CYN, reset=Prisma.RST)
-            elif self.mode == "COURTYARD":
-                tmpl = gov_text.get("CLEAR", "{color}SYSTEM CLEAR{reset}")
-                log_msg = tmpl.format(color=Prisma.GRN, reset=Prisma.RST)
-        return log_msg
+            return self._get_shift_message(proposed, gov_text, physics)
+        return None
+
+    def _evaluate_state(self, physics: Dict, v_history: List[float], tick: int) -> str:
+        volts = _get_val(physics, "voltage", 0.0)
+        drag = _get_val(physics, "narrative_drag", 0.0)
+        v_velocity = 0.0
+        if len(v_history) >= 2:
+            v_velocity = v_history[-1] - v_history[-2]
+        if tick <= 5: return "COURTYARD"
+        if volts > BioConstants.GOV_VOLTAGE_HIGH and _get_val(physics, "beta_index", 0.0) > 1.5:
+            return "SANCTUARY"
+        if volts > 8.0 and v_velocity > 1.0:
+            return "FORGE"
+        for v_min, d_min, mode, _ in sorted(self.STATE_THRESHOLDS, key=lambda x: x[3], reverse=True):
+            if volts >= v_min and drag >= d_min:
+                return mode
+        return "COURTYARD"
+
+    def _get_shift_message(self, mode: str, text_map: Dict, physics: Dict) -> str:
+        colors = {
+            "SANCTUARY": Prisma.GRN,
+            "FORGE": Prisma.RED,
+            "LABORATORY": Prisma.CYN,
+            "COURTYARD": Prisma.GRN}
+        color = colors.get(mode, Prisma.WHT)
+        defaults = {
+            "SANCTUARY": "SANCTUARY ACTIVE",
+            "FORGE": f"FORGE ACTIVE ({_get_val(physics, 'voltage', 0):.1f}v)",
+            "LABORATORY": "LAB ACTIVE",
+            "COURTYARD": "SYSTEM CLEAR"}
+        key_map = {"LABORATORY": "LAB", "COURTYARD": "CLEAR"}
+        lookup = key_map.get(mode, mode)
+        tmpl = text_map.get(lookup, defaults.get(mode, "MODE SHIFT"))
+        kwargs = {
+            "color": color,
+            "reset": Prisma.RST,
+            "volts": _get_val(physics, 'voltage', 0),
+            "beta": _get_val(physics, 'beta_index', 0)}
+        try:
+            return tmpl.format(**kwargs)
+        except:
+            return f"{color}{defaults.get(mode)}{Prisma.RST}"
 
 class ViralTracer:
     def __init__(self, mem):

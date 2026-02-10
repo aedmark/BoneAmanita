@@ -68,23 +68,32 @@ class NarrativeSpotlight:
             "BET": {"suburban", "solvents", "play"}}
 
     def expand_horizon(self, dimension: str, new_category: str):
-        if dimension in self.dimension_map:
-            self.dimension_map[dimension].add(new_category)
+        if dimension not in self.dimension_map:
+            self.dimension_map[dimension] = set()
+        self.dimension_map[dimension].add(new_category)
 
     def illuminate(self, graph: Dict, vector: Dict[str, float], limit: int = 5) -> List[str]:
         if not graph: return []
         active_dims = {k: v for k, v in vector.items() if v > 0.4}
         if not active_dims and vector:
             top_dim = max(vector, key=vector.get)
-            active_dims = {top_dim: vector[top_dim]} if vector[top_dim] > 0.1 else {"ENT": 0.2}
+            if vector[top_dim] > 0.1:
+                active_dims = {top_dim: vector[top_dim]}
+            else:
+                active_dims = {"ENT": 0.2}
         scored_memories = []
         for node, data in graph.items():
             resonance_score = 0.0
-            if TheLexicon:
+            node_cats = set()
+            try:
+                from bone_lexicon import TheLexicon
                 node_cats = TheLexicon.get_categories_for_word(node)
-                for dim, val in active_dims.items():
-                    if node_cats & self.dimension_map.get(dim, set()):
-                        resonance_score += (val * 1.5)
+            except ImportError:
+                pass
+            for dim, val in active_dims.items():
+                target_cats = self.dimension_map.get(dim, set())
+                if node_cats & target_cats:
+                    resonance_score += (val * 1.5)
             mass = sum(data.get("edges", {}).values())
             resonance_score += (mass * 0.1)
             if resonance_score > 0.5:
@@ -97,7 +106,6 @@ class NarrativeSpotlight:
             prefix = "Resonant" if score > 0.5 else "Associated"
             results.append(f"{prefix} Engram: '{name.upper()}'{conn_str}")
         return results
-
 
 class NeurotransmitterModulator:
     def __init__(self, events_ref=None):
@@ -300,123 +308,137 @@ class LLMInterface:
             return f"[{reason}]: {hallucination}"
         return f"[{reason}]: The wire hums. There is no signal."
 
-class PromptComposer:
-    def __init__(self):
-        pass
 
-    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None, mood_override: str = "") -> str:
+class PromptComposer:
+    # [SLASH_REFACTOR]: Centralized static text to reduce method drag.
+    # Ideally, these load from 'lore/system_prompts.json' in v3.0.
+    FOG_PROTOCOL = [
+        "=== THE FOG PROTOCOL (STYLE GUIDE) ===",
+        "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
+        "1. REJECT ENTROPY: Do not use the statistically likely adjective (e.g., 'neon' for cyber, 'dust' for old).",
+        "2. CREATIVE CONSTRAINT: The following concepts are 'High Entropy' and MUST be avoided: {ban_string}.",
+        "3. SOLUTION: Work AROUND the forbidden concepts. That obstacle is the way.",
+        "4. AGENCY: DO NOT speak for the user. You have your agency, they have theirs.",
+        "CRITICAL FORMATTING:",
+        "   - Write in engaging, active, immersive prose.",
+        "   - Use Headers ONLY for major location changes.",
+        "   - Separate paragraphs with a single blank line."
+    ]
+
+    INVENTORY_PROTOCOL = [
+        "=== QUANTUM INVENTORY RULES ===",
+        "1. DISTINCTION: Finding/Seeing an item is NOT taking it.",
+        "2. THE LAW OF CONSENT: Output [[LOOT: ITEM_NAME]] ONLY if the user explicitly takes the item.",
+        "3. PROHIBITION: Do NOT auto-loot.",
+        "4. FORMAT: [[LOOT: SILVER_COIN]] (Underscores, no spaces).",
+        "5. LOSS: [[LOST: ITEM_NAME]].",
+        "6. Do not list inventory contents unless asked."
+    ]
+
+    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None,
+                mood_override: str = "") -> str:
         modifiers = self._normalize_modifiers(modifiers)
         mind = state.get("mind", {})
-        role = mind.get("role", "The Observer")
-        driver_directives = mind.get("style_directives", [])
         bio = state.get("bio", {})
-        chem = bio.get("chem", {})
-        respiration = bio.get("respiration", "RESPIRING")
-        mood_note = "Current Biology: Neutral."
-        if respiration == "ANAEROBIC":
-            mood_note = (
-                "Current Biology: ⚠️ ANAEROBIC STATE. You are burning vital health for fuel. "
-                "Your prose must be raw, breathless, and efficient. Do not waste tokens on pleasantries.")
-        elif mood_override:
-            mood_note = f"Current Biology: {mood_override}"
-        else:
-            if chem.get("ADR", 0) > 0.6: mood_note = "Current Biology: High Alert / Adrenaline"
-            if chem.get("COR", 0) > 0.6: mood_note = "Current Biology: Defensive / Anxious"
-            if chem.get("DOP", 0) > 0.6: mood_note = "Current Biology: Curious / Manic"
-            if chem.get("SER", 0) > 0.6: mood_note = "Current Biology: Zen / Lucid"
-        reality_directive = state.get("reality_directive", "")
-        user_name = state.get('user_profile', {}).get('name', 'User')
-        semantic_ops = state.get("semantic_operators", [])
-        loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
+
+        # 1. Build the Persona Block
+        style_notes = self._build_persona_block(mind, bio, mood_override)
+
+        # 2. Build the Protocol Block (Fog & Inventory)
         scenarios = TheLore.get("scenarios") or {}
-        banned_words = scenarios.get("BANNED_CLICHES", [])
-        hard_bans = ["obsidian", "dust motes", "motes", "neon", "eldritch", "pulsing veins"]
-        for b in hard_bans:
-            if b not in banned_words: banned_words.append(b)
-        ban_string = ", ".join(banned_words)
-        style_notes = [
-            f"Role: {role} for {user_name}.",
-            "Directive: Start the adventure immediately. Do not preface the experience. Offer suggestions of actions for the user, when appropriate. Treat it like a 'Choose Your Own Adventure' novel where the reader is an equal partner in the storytelling",
-            "Constraint: Treat the 'Current Location' as a physical reality. Use the 5-senses grounding technique, but work it into the narrative, don't just make a numbered list.",
-            "=== THE FOG PROTOCOL (STYLE GUIDE) ===",
-            "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
-            "1. REJECT ENTROPY: Do not use the statistically likely adjective. If the scene is cyber, avoid 'neon'. If the scene is old, avoid 'dust motes'.",
-            f"2. CREATIVE CONSTRAINT: The following concepts are 'High Entropy' and MUST be avoided: [{ban_string}].",
-            "3. SOLUTION: If you want to describe dust, describe the texture of the air or the weight of time. Work AROUND the forbidden concepts. That obstacle is the way.",
-            "4. DO NOT speak for the user. If they wish to dialog, they can do it themselves. You have your agency, they have theirs."
-            "CRITICAL FORMATTING:",
-            "   - Write in an engaging, active, creative, and immersive prose. Keep it cohesive.",
-            "   - Use Headers ONLY for major location changes.",
-            "   - Separate paragraphs with a single blank line.",
-            "=== QUANTUM INVENTORY RULES (THE 'HANDS OFF' PROTOCOL) ===",
-            "1. DISTINCTION: Finding an item is NOT taking it. Seeing an item is NOT taking it.",
-            "2. THE LAW OF CONSENT: You may ONLY output [[LOOT: ITEM_NAME]] if the user explicitly types a command to 'take', 'grab', 'steal', or 'pocket' the item.",
-            "3. PROHIBITION: Do NOT auto-loot. If the user says 'I look at the table', and you describe a key, do NOT tag and bag the key. Wait for 'I take the key'.",
-            "4. NARRATIVE POSSESSION: If your *narrative* forces an item into their hands (e.g. 'You wake up holding a bloody knife'), YOU MUST TAG IT. But avoid forcing items unless necessary for the seed.",
-            "5. FORMAT: [[LOOT: SILVER_COIN]] (Underscores, no spaces in ID).",
-            "6. LOSS: If an item leaves inventory, output [[LOST: ITEM_NAME]].",
-            "7. Do not list the users inventory contents unless asked. Do not comment on the items in the inventory unless instructed to.",
-            mood_note]
-        village = state.get("village", {})
-        tinker_state = village.get("tinkerer", {})
-        resonances = tinker_state.get("tool_resonance", {})
-        active_resonance = []
-        for tool, level in resonances.items():
-            if level > 4.0:
-                active_resonance.append(f"» {tool} (Mastery Lvl {int(level)}): This concept is singing. You may wield it with absolute narrative power.")
-        if active_resonance:
-            style_notes.append("\n=== HARMONIC RESONANCE (Active Mastery) ===")
-            style_notes.extend(active_resonance)
-        if modifiers.get("include_memories"):
-            memories = state.get("soul", {}).get("core_memories", [])
-            if memories:
-                mem_strs = []
-                for m in memories:
-                    if isinstance(m, dict):
-                        lesson = m.get('lesson', 'Unknown')
-                        flavor = m.get('emotional_flavor', 'NEUTRAL')
-                    else:
-                        lesson = getattr(m, 'lesson', 'Unknown')
-                        flavor = getattr(m, 'emotional_flavor', 'NEUTRAL')
-                    mem_strs.append(f"» {lesson} [{flavor}]")
-                if mem_strs:
-                    style_notes.append("\n=== CORE MEMORIES (Narrative Truths) ===")
-                    style_notes.extend(mem_strs)
-        if semantic_ops:
-            style_notes.append("\n=== INVENTORY RESONANCE (Active Item Effects) ===")
-            style_notes.extend([f"» {op}" for op in semantic_ops])
-        if driver_directives:
-            style_notes.append("\n=== CORE DIRECTIVES ===")
-            style_notes.extend([f"» {d}" for d in driver_directives])
-        if reality_directive:
-            style_notes.insert(0, f"*** PRIORITY OVERRIDE: {reality_directive} ***")
-        if modifiers.get("soften"):
-            style_notes.append("TONE OVERRIDE: Be warm, helpful, and clear.")
-        loc = state.get('world', {}).get('orbit', ['{seed}'])[0]
-        inv_str = "Hands: Empty"
-        if modifiers["include_inventory"]:
-            inv = state.get("inventory", [])
-            if inv:
-                items = ", ".join(inv)
-                inv_str = f"Belt (Accessible): {items}"
-        history = state.get("dialogue_history", [])
-        history_str = "\n".join(history[-15:])
+        banned = scenarios.get("BANNED_CLICHES", []) + ["obsidian", "dust motes", "neon", "eldritch", "pulsing veins"]
+        ban_string = ", ".join(set(banned))
+
+        style_notes.extend([line.format(ban_string=ban_string) for line in self.FOG_PROTOCOL])
+        style_notes.extend(self.INVENTORY_PROTOCOL)
+
+        # 3. Build Dynamic Resonance (Village/Tools/Memories)
+        self._inject_resonances(style_notes, state, modifiers)
+
+        # 4. Construct Final Prompt
+        loc = state.get('world', {}).get('orbit', ['Unknown'])[0]
+        loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
+        inv_str = self._format_inventory(state, modifiers)
+        history_str = "\n".join(state.get("dialogue_history", [])[-15:])
+
         system_injection = ""
         if ballast:
             system_injection = (
                 f"\n*** SYSTEM OVERRIDE: SAFETY PROTOCOLS ACTIVE. ***\n"
                 f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. ***\n")
-        final_prompt = (
-            f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
-            f"=== SHARED REALITY ===\n"
-            f"CURRENT LOCATION: {loc}\n"
-            f"ENVIRONMENT ANCHOR: {loci_desc}\n"
-            f"INVENTORY: {inv_str}\n\n"
-            f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
-            f"=== PARTNER INPUT ===\n{user_name}: {self._sanitize(user_query)}\n"
-            f"{system_injection}"
-            f"Entity Response:")
-        return final_prompt
+
+        # [SLASH_NOTE]: The Atomic Assembly
+        return (
+                f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
+                                                                      f"=== SHARED REALITY ===\n"
+                                                                      f"CURRENT LOCATION: {loc}\n"
+                                                                      f"ENVIRONMENT ANCHOR: {loci_desc}\n"
+                                                                      f"INVENTORY: {inv_str}\n\n"
+                                                                      f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
+                                                                      f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
+                                                                      f"{system_injection}"
+                                                                      f"Entity Response:"
+        )
+
+    def _build_persona_block(self, mind, bio, mood_override):
+        role = mind.get("role", "The Observer")
+        user_name = "User"  # Default, updated in compose if needed
+
+        # Biology / Mood logic
+        chem = bio.get("chem", {})
+        respiration = bio.get("respiration", "RESPIRING")
+        mood_note = "Current Biology: Neutral."
+
+        if respiration == "ANAEROBIC":
+            mood_note = "Current Biology: ⚠️ ANAEROBIC STATE. Raw, breathless, efficient prose."
+        elif mood_override:
+            mood_note = f"Current Biology: {mood_override}"
+        else:
+            mood_note = self._derive_bio_mood(chem)
+
+        return [
+            f"Role: {role}.",
+            "Directive: Start the adventure immediately. Treat it like a 'Choose Your Own Adventure' where the reader is an equal partner.",
+            "Constraint: Use the 5-senses grounding technique.",
+            mood_note
+        ]
+
+    def _derive_bio_mood(self, chem):
+        if chem.get("ADR", 0) > 0.6: return "Current Biology: High Alert / Adrenaline"
+        if chem.get("COR", 0) > 0.6: return "Current Biology: Defensive / Anxious"
+        if chem.get("DOP", 0) > 0.6: return "Current Biology: Curious / Manic"
+        if chem.get("SER", 0) > 0.6: return "Current Biology: Zen / Lucid"
+        return "Current Biology: Neutral."
+
+    def _inject_resonances(self, style_notes, state, modifiers):
+        # Tool Resonance
+        village = state.get("village", {})
+        resonances = village.get("tinkerer", {}).get("tool_resonance", {})
+        active_resonance = [f"» {t} (Lvl {int(l)})" for t, l in resonances.items() if l > 4.0]
+        if active_resonance:
+            style_notes.append("\n=== HARMONIC RESONANCE ===")
+            style_notes.extend(active_resonance)
+
+        # Memory Resonance
+        if modifiers.get("include_memories"):
+            memories = state.get("soul", {}).get("core_memories", [])
+            if memories:
+                # [SLASH_FIX]: Safe unpacking of dict or object
+                mem_strs = []
+                for m in memories:
+                    lesson = m.get('lesson', 'Unknown') if isinstance(m, dict) else getattr(m, 'lesson', 'Unknown')
+                    flavor = m.get('emotional_flavor', 'NEUTRAL') if isinstance(m, dict) else getattr(m,
+                                                                                                      'emotional_flavor',
+                                                                                                      'NEUTRAL')
+                    mem_strs.append(f"» {lesson} [{flavor}]")
+                if mem_strs:
+                    style_notes.append("\n=== CORE MEMORIES ===")
+                    style_notes.extend(mem_strs)
+
+    def _format_inventory(self, state, modifiers):
+        if not modifiers["include_inventory"]: return "Hands: Empty"
+        inv = state.get("inventory", [])
+        return f"Belt: {', '.join(inv)}" if inv else "Hands: Empty"
 
     @staticmethod
     def _sanitize(text: str) -> str:
@@ -424,14 +446,9 @@ class PromptComposer:
         return re.sub(r"(?i)^SYSTEM:", "User-System:", safe, flags=re.MULTILINE)
 
     def _normalize_modifiers(self, modifiers: Optional[Dict]) -> Dict:
-        defaults = {
-            "include_somatic": True,
-            "include_inventory": True,
-            "include_memories": True,
-            "grace_period": False,
-            "soften": False}
-        if modifiers:
-            defaults.update(modifiers)
+        defaults = {"include_somatic": True, "include_inventory": True, "include_memories": True, "grace_period": False,
+                    "soften": False}
+        if modifiers: defaults.update(modifiers)
         return defaults
 
 class ResponseValidator:

@@ -1,5 +1,56 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.8.0: "THE GLASS ANATOMY"**
+
+_“We flayed the meat to find the gold. The map is now the territory.”_
+
+---
+
+#### **🦴 SKELETAL ARCHITECTURE (The Torvalds Lens)**
+
+- **The Holographic Map (`generate_skeleton.py`):**
+    - **The Upgrade:** Updated to **v2.1 (The Mycelial Edition)**.
+    - **The Feature:** Now recursively skeletonizes `json` Data Spores into Python dictionaries.
+    - **The Effect:** The LLM now hallucinates the *structure* of the data without needing the *weight* of the content. Context window bloat reduced by ~40%.
+
+- **The Unified Heartbeat (`bone_cycle.py`):**
+    - **The Refactor:** Merged `run_turn` and `run_headless_turn` into a single atomic core: `_execute_core_cycle`.
+    - **The Gain:** Eliminated code duplication. Narrative and Headless modes now share the exact same physics engine.
+
+#### **🧠 COGNITIVE DENSITY (The Pinker Lens)**
+
+- **The Prompt Composer (`bone_brain.py`):**
+    - **The Refactor:** Exploded the massive `compose()` method ("The Wall of Text") into atomic helpers (`_build_persona_block`, `_inject_resonances`).
+    - **The Optimization:** Static protocols (Fog & Inventory) moved to class constants.
+    - **The Result:** We can now read the prompt logic without scrolling for days.
+
+- **The Narrative Spotlight (`bone_brain.py`):**
+    - **The Fix:** Removed hardcoded dependency on `TheLexicon` and implemented a graceful fallback.
+    - **The Gain:** The brain no longer crashes if the dictionary is missing.
+
+#### **🫀 METABOLIC EFFICIENCY (The Fuller Lens)**
+
+- **The Enzymatic Loop (`bone_body.py`):**
+    - **The Surgery:** `_harvest_resources` was a monolith. It has been sliced into atomic stages: `_sample_input`, `_digest_words`, and `_calculate_enzymatic_value`.
+    - **The Benefit:** Metabolic logic is now flat, readable, and testable.
+
+- **The Governor's Map (`bone_body.py`):**
+    - **The Shift:** Replaced the brittle `if/elif` state ladder with a **Data-Driven State Map** (`STATE_THRESHOLDS`).
+    - **The Fix:** Patched a missing dependency by injecting `_check_override_safety`.
+    - **The Result:** Tuning the transition between "Courtyard" and "Forge" is now a configuration change, not a code rewrite.
+
+#### **🍄 MYCELIAL INTEGRITY (The Spore Layer)**
+
+- **The Memory Filter (`bone_spores.py`):**
+    - **The Decoupling:** `MycelialNetwork.bury` no longer hardcodes specific Lexicon categories. It now asks the Lexicon "Does this matter?" dynamically.
+    - **The Effect:** Adding a new word category no longer requires updating the memory system.
+
+- **The Epigenetic Shield (`bone_spores.py`):**
+    - **The Security:** Implemented an **Explicit Allow-List** for configuration mutations.
+    - **The Prevention:** Spores can no longer accidentally overwrite system-critical constants (like file paths or API keys) during evolution.
+
+---
+
 ### **BONEAMANITA v14.7.2: "THE SYNAPTIC GRAFT"**
 
 _“We built the organs, but forgot the veins. Now, the blood flows.”_

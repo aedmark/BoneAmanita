@@ -1,11 +1,6 @@
 """ bone_spores.py - The Mycelium & Persistence Layer """
 
-import json
-import math
-import os
-import random
-import time
-import tempfile
+import json, math, os, random, time, tempfile
 from collections import deque
 from typing import List, Tuple, Optional, Dict, Set, Any
 from bone_lexicon import TheLexicon
@@ -14,7 +9,7 @@ from bone_village import ParadoxSeed
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
-        self.genome = "BONEAMANITA_14.7.2"
+        self.genome = "BONEAMANITA_14.8.0"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():
@@ -217,17 +212,12 @@ class MycelialNetwork:
             self.events.log(f"{Prisma.YEL}REJECTED: Input is too 'Optimized' (Avg Len: {avg_len:.1f}).{Prisma.RST}")
             return "MECHANICAL_STARVATION", []
         if avg_len > 5.0: resonance += 2.0
-        valuable_matter = (
-                TheLexicon.get("heavy") | TheLexicon.get("thermal") | TheLexicon.get("cryo") |
-                TheLexicon.get("abstract") | TheLexicon.get("kinetic") |
-                TheLexicon.get("constructive") | TheLexicon.get("play"))
-        filtered = [w for w in clean_words if w in valuable_matter or (len(w) > 4 and w not in TheLexicon.SOLVENTS)]
+        filtered = self._filter_valuable_matter(clean_words)
         self.cortical_stack.extend(filtered)
         base_rate = 0.5 * (resonance / 5.0)
         learning_rate = max(0.1, min(1.0, base_rate * learning_mod))
         decay_rate = 0.1
-        for i in range(len(filtered)):
-            current = filtered[i]
+        for i, current in enumerate(filtered):
             if current not in self.graph:
                 if not self.memory_manager.should_absorb(current, self.graph): continue
                 self.graph[current] = {"edges": {}, "last_tick": tick}
@@ -244,6 +234,56 @@ class MycelialNetwork:
         victim_msg, victim_list = self._manage_capacity(desperation_level, clean_words[0] if clean_words else "void", tick)
         new_wells = self._detect_new_wells(filtered, tick)
         return victim_msg, victim_list + new_wells
+
+    def _filter_valuable_matter(self, words: List[str]) -> List[str]:
+        valuable = []
+        for w in words:
+            if len(w) <= 4 and w in TheLexicon.SOLVENTS: continue
+            cat = TheLexicon.get_current_category(w)
+            if cat and cat != "void":
+                valuable.append(w)
+            elif len(w) > 4:
+                valuable.append(w)
+        return valuable
+
+    def _apply_epigenetics(self, data):
+        if "config_mutations" not in data: return
+        self.events.log(f"{Prisma.MAG}EPIGENETICS: Auditing ancestral configuration...{Prisma.RST}")
+        valid_mutations = 0
+        SAFE_MUTATIONS = {
+            "STAMINA_REGEN", "MAX_DRAG_LIMIT", "GEODESIC_STRENGTH",
+            "SIGNAL_DRAG_MULTIPLIER", "KINETIC_GAIN", "TOXIN_WEIGHT",
+            "FLASHPOINT_THRESHOLD"}
+        for key, value in data["config_mutations"].items():
+            if self._is_safe_mutation(key, SAFE_MUTATIONS):
+                if self._inject_config(key, value):
+                    valid_mutations += 1
+        if valid_mutations > 0:
+            self.events.log(f"{Prisma.CYN}   ► Applied {valid_mutations} verified config shifts.{Prisma.RST}")
+
+    def _is_safe_mutation(self, key, safe_set):
+        if key in safe_set: return True
+        if "." in key:
+            sector = key.split('.')[0]
+            if sector in ["PHYSICS", "BIO", "COUNCIL", "INVENTORY"]: return True
+        return False
+
+    def _inject_config(self, path, value):
+        parts = path.split('.')
+        target = BoneConfig
+        for part in parts[:-1]:
+            if hasattr(target, part):
+                target = getattr(target, part)
+            else:
+                return False
+        last_key = parts[-1]
+        if hasattr(target, last_key):
+            current = getattr(target, last_key)
+            if isinstance(current, (int, float)) and isinstance(value, (int, float)):
+                if 0.0 <= value <= 1000.0:
+                    setattr(target, last_key, value)
+                    return True
+        return False
 
     def _strengthen_link(self, source, target, rate, decay):
         edges = self.graph[source]["edges"]
@@ -395,41 +435,6 @@ class MycelialNetwork:
                         TheLexicon.teach(w, cat, 0)
                         accepted_count += 1
             self.events.log(f"{Prisma.CYN}[MEMBRANE]: Integrated {accepted_count} mutations.{Prisma.RST}")
-
-    def _apply_epigenetics(self, data):
-        safe_config_keys = {
-            "STAMINA_REGEN", "MAX_DRAG_LIMIT", "GEODESIC_STRENGTH",
-            "SIGNAL_DRAG_MULTIPLIER", "KINETIC_GAIN", "TOXIN_WEIGHT",
-            "FLASHPOINT_THRESHOLD"}
-        if "config_mutations" in data:
-            self.events.log(f"{Prisma.MAG}EPIGENETICS: Auditing ancestral configuration...{Prisma.RST}")
-            valid_mutations = 0
-
-            def apply_deep_mutation(root, path, evolved_value):
-                parts = path.split('.')
-                target = root
-                for i, part in enumerate(parts[:-1]):
-                    if hasattr(target, part): target = getattr(target, part)
-                    else: return False
-                last_key = parts[-1]
-                if hasattr(target, last_key):
-                    current = getattr(target, last_key)
-                    if isinstance(current, (int, float)) and isinstance(evolved_value, (int, float)):
-                        if 0.0 <= evolved_value <= 1000.0:
-                            setattr(target, last_key, evolved_value)
-                            return True
-                return False
-            for key, value in data["config_mutations"].items():
-                is_safe = key in safe_config_keys
-                if not is_safe and "." in key:
-                    sector = key.split('.')[0]
-                    if sector in ["PHYSICS", "BIO", "COUNCIL", "INVENTORY"]:
-                        is_safe = True
-                if is_safe:
-                    if apply_deep_mutation(BoneConfig, key, value):
-                        valid_mutations += 1
-            if valid_mutations > 0:
-                self.events.log(f"{Prisma.CYN}   ► Applied {valid_mutations} verified config shifts.{Prisma.RST}")
 
     def _graft_graph(self, data, current_tick):
         if "core_graph" in data:
@@ -740,37 +745,31 @@ class LiteraryReproduction:
     @staticmethod
     def mutate_config(current_config):
         mutations = {}
-
-        def safe_mutate(val, min_v, max_v):
-            drift = random.uniform(0.9, 1.1)
-            new_val = val * drift
-            return max(min_v, min(max_v, new_val))
-
-        if random.random() < 0.3:
-            base = getattr(current_config, "MAX_DRAG_LIMIT", 10.0)
-            mutations["MAX_DRAG_LIMIT"] = safe_mutate(base, 1.0, 20.0)
-        if random.random() < 0.3:
-            base = getattr(current_config, "TOXIN_WEIGHT", 1.0)
-            mutations["TOXIN_WEIGHT"] = safe_mutate(base, 0.1, 5.0)
-        if random.random() < 0.1:
-            base = getattr(current_config, "MAX_HEALTH", 100.0)
-            mutations["MAX_HEALTH"] = safe_mutate(base, 50.0, 500.0)
-        if random.random() < 0.2:
-            phys_conf = getattr(current_config, "PHYSICS", None)
-            if phys_conf:
-                base = getattr(phys_conf, "VOLTAGE_MAX", 20.0)
-                mutations["PHYSICS.VOLTAGE_MAX"] = safe_mutate(base, 10.0, 100.0)
-        if random.random() < 0.2:
-            bio_conf = getattr(current_config, "BIO", None)
-            if bio_conf:
-                base = getattr(bio_conf, "REWARD_MEDIUM", 0.10)
-                mutations["BIO.REWARD_MEDIUM"] = safe_mutate(base, 0.01, 1.0)
-        if random.random() < 0.1:
-            council_conf = getattr(current_config, "COUNCIL", None)
-            if council_conf:
-                base = getattr(council_conf, "MANIC_VOLTAGE_TRIGGER", 18.0)
-                mutations["COUNCIL.MANIC_VOLTAGE_TRIGGER"] = safe_mutate(base, 10.0, 50.0)
+        MUTATION_TABLE = [
+            ("MAX_DRAG_LIMIT", 1.0, 20.0, 0.3),
+            ("TOXIN_WEIGHT", 0.1, 5.0, 0.3),
+            ("MAX_HEALTH", 50.0, 500.0, 0.1),
+            ("PHYSICS.VOLTAGE_MAX", 10.0, 100.0, 0.2),
+            ("BIO.REWARD_MEDIUM", 0.01, 1.0, 0.2),
+            ("COUNCIL.MANIC_VOLTAGE_TRIGGER", 10.0, 50.0, 0.1)]
+        for key, min_v, max_v, chance in MUTATION_TABLE:
+            if random.random() < chance:
+                current_val = LiteraryReproduction._resolve_config_value(current_config, key)
+                if current_val is not None:
+                    drift = random.uniform(0.9, 1.1)
+                    mutations[key] = max(min_v, min(max_v, current_val * drift))
         return mutations
+
+    @staticmethod
+    def _resolve_config_value(root_config, path):
+        parts = path.split('.')
+        target = root_config
+        try:
+            for part in parts:
+                target = getattr(target, part)
+            return target
+        except AttributeError:
+            return None
 
     @staticmethod
     def mitosis(parent_id, bio_state, physics):
