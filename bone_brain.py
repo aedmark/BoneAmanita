@@ -3,7 +3,6 @@
 import re, time, json, urllib.request, urllib.error, random, math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-
 from bone_core import EventBus, TheLore, TelemetryService
 from bone_types import Prisma, DecisionCrystal, CycleContext
 from bone_config import BoneConfig
@@ -11,7 +10,6 @@ from bone_symbiosis import SymbiosisManager
 from bone_spores import MycelialNetwork
 from bone_lexicon import TheLexicon, RosettaStone
 from bone_physics import cosine_similarity
-from bone_drivers import SynergeticLensArbiter, BoneConsultant
 
 @dataclass
 class CortexServices:
@@ -23,7 +21,6 @@ class CortexServices:
     symbiosis: Any
     mind_memory: Any
     host_stats: Any = None
-
 
 @dataclass
 class BrainConfig:
@@ -308,10 +305,7 @@ class LLMInterface:
             return f"[{reason}]: {hallucination}"
         return f"[{reason}]: The wire hums. There is no signal."
 
-
 class PromptComposer:
-    # [SLASH_REFACTOR]: Centralized static text to reduce method drag.
-    # Ideally, these load from 'lore/system_prompts.json' in v3.0.
     FOG_PROTOCOL = [
         "=== THE FOG PROTOCOL (STYLE GUIDE) ===",
         "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
@@ -322,8 +316,7 @@ class PromptComposer:
         "CRITICAL FORMATTING:",
         "   - Write in engaging, active, immersive prose.",
         "   - Use Headers ONLY for major location changes.",
-        "   - Separate paragraphs with a single blank line."
-    ]
+        "   - Separate paragraphs with a single blank line."]
 
     INVENTORY_PROTOCOL = [
         "=== QUANTUM INVENTORY RULES ===",
@@ -332,76 +325,57 @@ class PromptComposer:
         "3. PROHIBITION: Do NOT auto-loot.",
         "4. FORMAT: [[LOOT: SILVER_COIN]] (Underscores, no spaces).",
         "5. LOSS: [[LOST: ITEM_NAME]].",
-        "6. Do not list inventory contents unless asked."
-    ]
+        "6. Do not list inventory contents unless asked."]
 
     def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None,
                 mood_override: str = "") -> str:
         modifiers = self._normalize_modifiers(modifiers)
         mind = state.get("mind", {})
         bio = state.get("bio", {})
-
-        # 1. Build the Persona Block
         style_notes = self._build_persona_block(mind, bio, mood_override)
-
-        # 2. Build the Protocol Block (Fog & Inventory)
         scenarios = TheLore.get("scenarios") or {}
         banned = scenarios.get("BANNED_CLICHES", []) + ["obsidian", "dust motes", "neon", "eldritch", "pulsing veins"]
         ban_string = ", ".join(set(banned))
-
         style_notes.extend([line.format(ban_string=ban_string) for line in self.FOG_PROTOCOL])
         style_notes.extend(self.INVENTORY_PROTOCOL)
-
-        # 3. Build Dynamic Resonance (Village/Tools/Memories)
         self._inject_resonances(style_notes, state, modifiers)
-
-        # 4. Construct Final Prompt
         loc = state.get('world', {}).get('orbit', ['Unknown'])[0]
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
         inv_str = self._format_inventory(state, modifiers)
         history_str = "\n".join(state.get("dialogue_history", [])[-15:])
-
         system_injection = ""
         if ballast:
             system_injection = (
                 f"\n*** SYSTEM OVERRIDE: SAFETY PROTOCOLS ACTIVE. ***\n"
                 f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. ***\n")
-
-        # [SLASH_NOTE]: The Atomic Assembly
         return (
                 f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
-                                                                      f"=== SHARED REALITY ===\n"
-                                                                      f"CURRENT LOCATION: {loc}\n"
-                                                                      f"ENVIRONMENT ANCHOR: {loci_desc}\n"
-                                                                      f"INVENTORY: {inv_str}\n\n"
-                                                                      f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
-                                                                      f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
-                                                                      f"{system_injection}"
-                                                                      f"Entity Response:"
-        )
+                f"=== SHARED REALITY ===\n"
+                f"CURRENT LOCATION: {loc}\n"
+                f"ENVIRONMENT ANCHOR: {loci_desc}\n"
+                f"INVENTORY: {inv_str}\n\n"
+                f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
+                f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
+                f"{system_injection}"
+                f"Entity Response:")
 
     def _build_persona_block(self, mind, bio, mood_override):
         role = mind.get("role", "The Observer")
-        user_name = "User"  # Default, updated in compose if needed
-
-        # Biology / Mood logic
+        user_name = "User"
         chem = bio.get("chem", {})
         respiration = bio.get("respiration", "RESPIRING")
         mood_note = "Current Biology: Neutral."
-
         if respiration == "ANAEROBIC":
             mood_note = "Current Biology: ⚠️ ANAEROBIC STATE. Raw, breathless, efficient prose."
         elif mood_override:
             mood_note = f"Current Biology: {mood_override}"
         else:
             mood_note = self._derive_bio_mood(chem)
-
         return [
             f"Role: {role}.",
             "Directive: Start the adventure immediately. Treat it like a 'Choose Your Own Adventure' where the reader is an equal partner.",
             "Constraint: Use the 5-senses grounding technique.",
-            mood_note
-        ]
+            mood_note]
 
     def _derive_bio_mood(self, chem):
         if chem.get("ADR", 0) > 0.6: return "Current Biology: High Alert / Adrenaline"
@@ -411,25 +385,19 @@ class PromptComposer:
         return "Current Biology: Neutral."
 
     def _inject_resonances(self, style_notes, state, modifiers):
-        # Tool Resonance
         village = state.get("village", {})
         resonances = village.get("tinkerer", {}).get("tool_resonance", {})
         active_resonance = [f"» {t} (Lvl {int(l)})" for t, l in resonances.items() if l > 4.0]
         if active_resonance:
             style_notes.append("\n=== HARMONIC RESONANCE ===")
             style_notes.extend(active_resonance)
-
-        # Memory Resonance
         if modifiers.get("include_memories"):
             memories = state.get("soul", {}).get("core_memories", [])
             if memories:
-                # [SLASH_FIX]: Safe unpacking of dict or object
                 mem_strs = []
                 for m in memories:
                     lesson = m.get('lesson', 'Unknown') if isinstance(m, dict) else getattr(m, 'lesson', 'Unknown')
-                    flavor = m.get('emotional_flavor', 'NEUTRAL') if isinstance(m, dict) else getattr(m,
-                                                                                                      'emotional_flavor',
-                                                                                                      'NEUTRAL')
+                    flavor = m.get('emotional_flavor', 'NEUTRAL') if isinstance(m, dict) else getattr(m, 'emotional_flavor', 'NEUTRAL')
                     mem_strs.append(f"» {lesson} [{flavor}]")
                 if mem_strs:
                     style_notes.append("\n=== CORE MEMORIES ===")
@@ -518,26 +486,22 @@ class TheCortex:
         self.modulator = NeurotransmitterModulator(events_ref=self.events)
         self.boot_history = TelemetryService.get_instance().read_recent_history(limit=4)
         self.last_physics = {}
-
         self.consultant = services.consultant
         self.llm = llm_client or LLMInterface(self.events, provider="mock", dreamer=self.dreamer)
         self.symbiosis = services.symbiosis
+        from bone_drivers import SynergeticLensArbiter
         self.arbiter = SynergeticLensArbiter(self.events)
-
         if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None:
             self.llm.dreamer = self.dreamer
-
         self.composer = PromptComposer()
         self.spotlight = NarrativeSpotlight()
         self.validator = ResponseValidator()
         self.ballast_active = False
-
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("AIRSTRIKE", lambda p: setattr(self, 'ballast_active', True))
 
     @classmethod
     def from_engine(cls, engine_ref, llm_client=None):
-        """ Factory method to maintain compatibility with legacy engine references """
         services = CortexServices(
             events=engine_ref.events,
             lexicon=engine_ref.lex,
@@ -552,10 +516,6 @@ class TheCortex:
 
     @property
     def eng(self):
-        """ Deprecated: Backward compatibility property for direct engine access.
-            Avoid using this if possible. Use self.svc instead.
-        """
-
         class LegacyEngineProxy:
             def __init__(self, services):
                 self.gordon = services.inventory
@@ -587,63 +547,47 @@ class TheCortex:
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
-
         is_boot_sequence = "SYSTEM_BOOT:" in user_input
         sim_result = self.svc.cycle_controller.run_turn(user_input, is_system=is_system)
-
         if sim_result.get("physics"):
              self.last_physics = sim_result["physics"]
-
         if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]:
             return sim_result
-
         full_state = self.gather_state(sim_result)
         modifiers = self.svc.symbiosis.get_prompt_modifiers()
-
         if self.consultant and self.consultant.active:
             self._apply_vsl_overlay(full_state, user_input, sim_result)
-
         if is_boot_sequence:
             self._apply_boot_overlay(full_state, user_input)
             modifiers["include_inventory"] = False
             user_input = "Entering reality..."
-
         llm_params = self.modulator.modulate(
             full_state["bio"].get("chem", {}),
             full_state["physics"].get("voltage", 5.0),
             latency_penalty=getattr(self.svc.host_stats, "latency", 0.0) if self.svc.host_stats else 0.0)
-
         if is_boot_sequence:
             llm_params.update({"temperature": 1.3, "top_p": 0.95})
-
         final_prompt = self.composer.compose(
             full_state, user_input,
             ballast=self.ballast_active, modifiers=modifiers,
             mood_override=self.modulator.get_mood_directive())
-
         start_time = time.time()
         raw_resp = self.llm.generate(final_prompt, llm_params)
         final_text, new_loot, lost_loot = self._harvest_loot(raw_resp)
         inv_logs = self._process_inventory_changes(new_loot, lost_loot)
-
         self._log_telemetry(final_prompt, final_text, full_state, sim_result)
         self.learn_from_response(final_text)
-
         val_res = self.validator.validate(final_text, full_state)
         final_output = val_res["content"] if val_res["valid"] else val_res["replacement"]
         extracted_logs = val_res.get("meta_logs", [])
-
         self.svc.symbiosis.monitor_host(time.time() - start_time, final_output, len(final_prompt))
         self._update_history("SYSTEM_INIT" if is_boot_sequence else user_input, final_output)
-
         sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_output}{Prisma.RST}"
         if inv_logs: sim_result["ui"] += "\n" + "\n".join(inv_logs)
-
         if "logs" not in sim_result: sim_result["logs"] = []
         sim_result["logs"].extend(extracted_logs)
         sim_result["raw_content"] = final_output
         self.ballast_active = False
-
         return sim_result
 
     def _handle_vsl_command(self, text):
@@ -702,11 +646,8 @@ class TheCortex:
         bio = sim_result.get("bio", {})
         mind = sim_result.get("mind", {})
         world = sim_result.get("world", {})
-
         soul_data = sim_result.get("soul", {})
-
         village_data = {}
-
         full_state = {
             "bio": bio,
             "physics": phys,
@@ -719,11 +660,9 @@ class TheCortex:
                 "timestamp": time.time()
             }
         }
-
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             anchor_text = self.svc.symbiosis.generate_anchor(full_state)
             full_state["reality_directive"] = anchor_text
-
         return full_state
 
     def learn_from_response(self, text):
@@ -886,6 +825,7 @@ class NoeticLoop:
     def __init__(self, mind_layer, bio_layer, events):
         self.mind = mind_layer
         self.bio = bio_layer
+        from bone_drivers import SynergeticLensArbiter
         self.arbiter = SynergeticLensArbiter(events)
 
     def think(self, physics_packet, _bio, inventory, voltage_history, tick_count, soul_ref=None):

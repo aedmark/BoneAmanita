@@ -1,7 +1,7 @@
 """ dev/bone_machine.py - 'The gears turn, the pistons fire.' """
 
 import random
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Set, List, Dict
 from bone_core import Prisma, TheLore
 from bone_lexicon import TheLexicon
 
@@ -16,7 +16,7 @@ class TheCrucible:
     def dampener_status(self):
         return f"🛡️ Charges: {self.dampener_charges}"
 
-    def dampen(self, voltage_spike, stability_index):
+    def dampen(self, voltage_spike: float, stability_index: float) -> Tuple[bool, str, float]:
         if self.dampener_charges <= 0:
             return False, "⚠️ DAMPER EMPTY", 0.0
         should_dampen = False
@@ -37,13 +37,15 @@ class TheCrucible:
             return True, msg, reduction
         return False, "Holding Charge", 0.0
 
-    def audit_fire(self, physics):
-        voltage = physics.get("voltage", 0.0)
-        structure = physics.get("kappa", 0.0)
+    def audit_fire(self, physics: Dict) -> Tuple[str, float, Optional[str]]:
+        voltage = float(physics.get("voltage", 0.0))
+        structure = float(physics.get("kappa", 0.0))
         ideal_voltage = structure * 20.0
         delta = voltage - ideal_voltage
         self.instability_index = (self.instability_index * 0.7) + (delta * 0.3)
-        current_drag = physics.get("narrative_drag", 0.0)
+        if abs(self.instability_index) < 0.05:
+            self.instability_index = 0.0
+        current_drag = float(physics.get("narrative_drag", 0.0))
         adjustment = self.instability_index * 0.5
         if current_drag < 1.0 and adjustment > 0:
             adjustment *= 0.1
@@ -75,10 +77,11 @@ class TheForge:
         self.recipes = gordon_data.get("RECIPES", [])
 
     @staticmethod
-    def hammer_alloy(physics):
-        voltage = physics.get("voltage", 0)
+    def hammer_alloy(physics: Dict) -> Tuple[bool, Optional[str], Optional[str]]:
+        voltage = float(physics.get("voltage", 0))
         clean_words = physics.get("clean_words", [])
         counts = physics.get("counts", {})
+        if not clean_words: return False, None, None
         total_mass = (counts.get("heavy", 0) * 2.0) + (counts.get("kinetic", 0) * 0.5)
         avg_density = total_mass / max(1, len(clean_words))
         forge_probability = (voltage / 20.0) * avg_density
@@ -90,35 +93,40 @@ class TheForge:
             return True, f"🔨 FORGED: Anchor Stone", "ANCHOR_STONE"
         return False, None, None
 
-    def attempt_crafting(self, physics, inventory_list) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
-        clean = physics.get("clean_words", [])
-        voltage = physics.get("voltage", 0)
+    def attempt_crafting(self, physics: Dict, inventory_list: List[str]) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
+        clean_words = physics.get("clean_words", [])
+        if not clean_words: return False, None, None, None
+        clean_set = set(clean_words)
+        voltage = float(physics.get("voltage", 0))
         for recipe in self.recipes:
             ingredient = recipe["ingredient"]
-            if ingredient in inventory_list:
-                catalyst_cat = recipe["catalyst_category"]
-                catalyst_hits = [w for w in clean if w in TheLexicon.get(catalyst_cat)]
-                if catalyst_hits:
-                    entanglement = self._calculate_entanglement(len(catalyst_hits), voltage)
-                    if random.random() < entanglement:
-                        return (
-                            True,
-                            f"⚗️ ALCHEMY: {recipe['result']} (via {ingredient})",
-                            ingredient,
-                            recipe["result"])
-                    else:
-                        return False, f"⚠️ ALCHEMY FAIL: Decoherence ({int(entanglement*100)}%)", None, None
+            if ingredient not in inventory_list:
+                continue
+            catalyst_cat = recipe["catalyst_category"]
+            cat_words = TheLexicon.get(catalyst_cat)
+            if not cat_words: continue
+            hits = clean_set.intersection(cat_words)
+            if hits:
+                entanglement = self._calculate_entanglement(len(hits), voltage)
+                if random.random() < entanglement:
+                    return (
+                        True,
+                        f"⚗️ ALCHEMY: {recipe['result']} (via {ingredient})",
+                        ingredient,
+                        recipe["result"])
+                else:
+                    return False, f"⚠️ ALCHEMY FAIL: Decoherence ({int(entanglement*100)}%)", None, None
         return False, None, None, None
 
     @staticmethod
-    def _calculate_entanglement(hit_count, voltage):
+    def _calculate_entanglement(hit_count: int, voltage: float) -> float:
         return min(1.0, 0.2 + (hit_count * 0.1) + (voltage / 133.0))
 
     @staticmethod
-    def transmute(physics):
+    def transmute(physics: Dict) -> Optional[str]:
         counts = physics.get("counts", {})
-        voltage = physics.get("voltage", 0)
-        gamma = physics.get("gamma", 0.0)
+        voltage = float(physics.get("voltage", 0))
+        gamma = float(physics.get("gamma", 0.0))
         if gamma < 0.15 and counts.get("abstract", 0) > 1:
             return f"⚠️ EMULSION FAIL: Add Binder (Heavy)."
         if voltage > 15.0:
@@ -133,18 +141,20 @@ class TheTheremin:
         self.SHATTER_POINT = 100.0
         self.is_stuck = False
 
-    def listen(self, physics, governor_mode="COURTYARD"):
+    def listen(self, physics: Dict, governor_mode="COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
         counts = physics.get("counts", {})
-        voltage = physics.get("voltage", 0.0)
-        turb = physics.get("turbulence", 0.0)
-        rep = physics.get("repetition", 0.0)
-        complexity = physics.get("truth_ratio", 0.0)
+        voltage = float(physics.get("voltage", 0.0))
+        turb = float(physics.get("turbulence", 0.0))
+        rep = float(physics.get("repetition", 0.0))
+        complexity = float(physics.get("truth_ratio", 0.0))
         ancient_mass = counts.get("heavy", 0) + counts.get("thermal", 0) + counts.get("cryo", 0)
         modern_mass = counts.get("abstract", 0)
         raw_mix = min(ancient_mass, modern_mass)
         resin_flow = raw_mix * 2.0
-        if governor_mode == "LABORATORY": resin_flow *= 0.5
-        if voltage > 5.0: resin_flow = max(0.0, resin_flow - (voltage * 0.6))
+        if governor_mode == "LABORATORY":
+            resin_flow *= 0.5
+        if voltage > 5.0:
+            resin_flow = max(0.0, resin_flow - (voltage * 0.6))
         thermal_hits = counts.get("thermal", 0)
         if thermal_hits > 0 and self.decoherence_buildup > 5.0:
             dissolved = thermal_hits * 15.0
@@ -172,20 +182,20 @@ class TheTheremin:
             theremin_msg = f"🌊 TURBULENCE: -{shatter_amt:.1f} Resin"
             self.classical_turns = 0
         if turb < 0.2:
-            physics["narrative_drag"] = max(0.0, physics["narrative_drag"] - 1.0)
+            physics["narrative_drag"] = max(0.0, float(physics.get("narrative_drag", 0)) - 1.0)
         if self.decoherence_buildup > self.SHATTER_POINT:
             self.decoherence_buildup = 0.0
             self.classical_turns = 0
             return False, resin_flow, f"💣 COLLAPSE: AIRSTRIKE INITIATED", "AIRSTRIKE"
         if self.classical_turns > 3:
             critical_event = "CORROSION"
-            theremin_msg = f"{theremin_msg} | ⚠️ CORROSION"
+            theremin_msg = f"{theremin_msg or ''} | ⚠️ CORROSION"
         if self.decoherence_buildup > self.AMBER_THRESHOLD:
             self.is_stuck = True
-            theremin_msg = f"{theremin_msg} | 🍯 STUCK"
-        if self.is_stuck and self.decoherence_buildup < 5.0:
+            theremin_msg = f"{theremin_msg or ''} | 🍯 STUCK"
+        elif self.is_stuck and self.decoherence_buildup < 5.0:
             self.is_stuck = False
-            theremin_msg = f"{theremin_msg} | 🦋 FREE"
+            theremin_msg = f"{theremin_msg or ''} | 🦋 FREE"
         return self.is_stuck, resin_flow, theremin_msg, critical_event
 
     def get_readout(self):

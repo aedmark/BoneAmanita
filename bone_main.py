@@ -1,4 +1,4 @@
-""" BONEAMANITA 14.8.1
+""" BONEAMANITA 14.9.0
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, urllib.request, urllib.error, random, traceback
@@ -43,7 +43,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.8.1', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.9.0', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -156,22 +156,6 @@ class BoneAmanita:
         self.host_stats = HostStats(latency=0.0, efficiency_index=1.0)
         self._validate_state()
 
-    @property
-    def phys(self):
-        return self.embryo.physics if self.embryo else None
-
-    @property
-    def mind(self):
-        return self.embryo.mind if self.embryo else None
-
-    @property
-    def bio(self):
-        return self.embryo.bio if self.embryo else None
-
-    @property
-    def shimmer(self):
-        return self.embryo.shimmer if self.embryo else None
-
     def _initialize_core(self, lexicon_layer):
         print(f"{Prisma.GRY}...Bootstrapping Core Systems...{Prisma.RST}")
         self.lex = lexicon_layer if lexicon_layer else TheLexicon
@@ -211,8 +195,12 @@ class BoneAmanita:
     def _initialize_embryo(self):
         self.embryo = BoneArchitect.incubate(self.events, self.lex)
         self.embryo = BoneArchitect.awaken(self.embryo)
-        if hasattr(self.embryo, 'bio') and hasattr(self.embryo.bio, 'setup_listeners'):
-            self.embryo.bio.setup_listeners()
+        self.phys = self.embryo.physics
+        self.mind = self.embryo.mind
+        self.bio = self.embryo.bio
+        self.shimmer = self.embryo.shimmer
+        if hasattr(self.bio, 'setup_listeners'):
+            self.bio.setup_listeners()
         self.gordon = GordonKnot(events=self.events)
         self.soul_legacy_data = self.embryo.soul_legacy
 
@@ -302,23 +290,25 @@ class BoneAmanita:
     def process_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         turn_start = self.observer.clock_in()
         self.observer.user_turns += 1
+        self.tick_count += 1
         if not user_message: user_message = ""
         if user_message.startswith("//"):
             return self._handle_meta_command(user_message)
+        if user_message.strip().startswith("/"):
+            rules = self.reality_stack.get_grammar_rules()
+            if rules["allow_commands"]:
+                return self._phase_check_commands(user_message) or self.get_metrics()
         rules = self.reality_stack.get_grammar_rules()
-        if rules["allow_commands"]:
-            cmd_response = self._phase_check_commands(user_message)
-            if cmd_response:
-                return cmd_response
         if not rules["allow_narrative"]:
             return {
-                "ui": f"{Prisma.paint('REALITY HALT', 'R')}: Narrative engine suppressed by current depth ({self.reality_stack.current_depth}).",
+                "ui": f"{Prisma.paint('REALITY HALT', 'R')}: Narrative engine suppressed.",
                 "logs": [], "metrics": self.get_metrics()}
         if self._ethical_audit():
             self.events.log(f"{Prisma.WHT}MERCY SIGNAL: Trauma boards wiped.{Prisma.RST}", "SYS")
         if not is_system and hasattr(self, 'soul') and hasattr(self.soul, 'anchor'):
-            reliance_proxy = 0.9 if self.host_stats.efficiency_index < 0.4 else 0.0
-            self.soul.anchor.check_domestication(reliance_proxy)
+            if self.host_stats.efficiency_index < 0.6:
+                reliance_proxy = 0.9 if self.host_stats.efficiency_index < 0.4 else 0.5
+                self.soul.anchor.check_domestication(reliance_proxy)
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
         except Exception as e:
@@ -331,42 +321,42 @@ class BoneAmanita:
                 "metrics": self.get_metrics()}
         if self.bureau and not is_system:
             try:
-                sys_text = cortex_packet.get("ui", "")
                 current_voltage = 0.0
                 if self.cortex and getattr(self.cortex, "last_physics", None):
                     current_voltage = self.cortex.last_physics.get("voltage", 0.0)
-                sys_phys = {
-                    "raw_text": sys_text,
-                    "clean_words": self.lex.clean(sys_text) if hasattr(self, 'lex') else [],
-                    "voltage": current_voltage,
-                    "truth_ratio": 1.0}
-                sys_bio = {"health": self.health}
-                audit_result = self.bureau.audit(sys_phys, sys_bio, origin="SYSTEM")
-                if audit_result:
-                    if "atp_gain" in audit_result and hasattr(self, 'bio') and self.bio.mito:
-                        self.bio.mito.adjust_atp(audit_result["atp_gain"], "System Style Violation")
-                    if "ui" in audit_result:
-                        cortex_packet["ui"] += f"\n\n{audit_result['ui']}"
-                    if "log" in audit_result:
-                        self.events.log(audit_result["log"], "BUREAU")
+                if (current_voltage > 0.6) or (random.random() < 0.10):
+                    sys_text = cortex_packet.get("ui", "")
+                should_audit = (current_voltage > 0.6) or (random.random() < 0.10)
+                if should_audit:
+                    sys_text = cortex_packet.get("ui", "")
+                    sys_phys = {
+                        "raw_text": sys_text,
+                        "clean_words": self.lex.clean(sys_text) if hasattr(self, 'lex') else [],
+                        "voltage": current_voltage,
+                        "truth_ratio": 1.0}
+                    sys_bio = {"health": self.health}
+                    audit_result = self.bureau.audit(sys_phys, sys_bio, origin="SYSTEM")
+                    if audit_result:
+                        if "atp_gain" in audit_result and hasattr(self, 'bio') and self.bio.mito:
+                            self.bio.mito.adjust_atp(audit_result["atp_gain"], "Bureau Grant")
+                        if "ui" in audit_result:
+                            cortex_packet["ui"] += f"\n\n{audit_result['ui']}"
+                        if "log" in audit_result:
+                            self.events.log(audit_result["log"], "BUREAU")
             except Exception as e:
                  self.events.log(f"BUREAU ERROR (Ignored): {e}", "WARN")
-                 cortex_packet["ui"] += f"\n\n{Prisma.GRY}[The Bureau is closed for lunch. Audit skipped.]{Prisma.RST}"
         if rules["system_override"] and "ui" in cortex_packet:
-            debug_footer = f"\n{Prisma.paint(f'--- DEBUG: {self.get_metrics()} ---', '0')}"
-            cortex_packet["ui"] += debug_footer
+            cortex_packet["ui"] += f"\n{Prisma.paint(f'--- DEBUG: {self.get_metrics()} ---', '0')}"
         self.observer.clock_out(turn_start, "cycle")
         self.host_stats.latency = self.observer.last_cycle_duration
         self.host_stats.efficiency_index = self.observer.calculate_efficiency(self.health, self.stamina)
         avg_cycle = self.observer.get_report().get("avg_cycle_sec", 0.0)
         reporter = self.cycle_controller.reporter
         if avg_cycle > 2.0 and reporter.current_mode != "PERFORMANCE":
-            self.events.log(f"{Prisma.OCHRE}The simulation blurs to maintain velocity. (Performance Mode Engaged){Prisma.RST}", "SENSATION")
             reporter.switch_renderer("PERFORMANCE")
         elif avg_cycle < 0.5 and reporter.current_mode == "PERFORMANCE":
-            self.events.log(f"{Prisma.GRN}The details snap back into focus. (High-Fidelity Restored){Prisma.RST}", "SENSATION")
             reporter.switch_renderer("STANDARD")
-        if hasattr(self.mind, 'mem') and hasattr(self.mind.mem, 'session_trauma_vector'):
+        if hasattr(self.mind, 'mem'):
             self.mind.mem.session_trauma_vector = self.trauma_accum.copy()
         return cortex_packet
 
@@ -452,6 +442,8 @@ class BoneAmanita:
             return f"✘ Total System Failure: {e}"
 
     def _ethical_audit(self):
+        if self.tick_count % 3 != 0 and self.health > (BoneConfig.MAX_HEALTH * 0.3):
+            return False
         DESPERATION_THRESHOLD = 0.7
         CATHARSIS_HEAL_AMOUNT = 30.0
         CATHARSIS_DECAY = 0.1
@@ -460,11 +452,11 @@ class BoneAmanita:
         health_ratio = self.health / BoneConfig.MAX_HEALTH
         desperation = trauma_sum * (1.0 - health_ratio)
         if desperation > DESPERATION_THRESHOLD:
-            self.events.log(f"{Prisma.WHT}MERCY SIGNAL: The pressure is too high. Venting...{Prisma.RST}", "SYS")
+            self.events.log(f"{Prisma.WHT}MERCY SIGNAL: Pressure Critical. Venting...{Prisma.RST}", "SYS")
             for k in self.trauma_accum:
                 self.trauma_accum[k] *= CATHARSIS_DECAY
             self.events.log(
-                f"{Prisma.CYN}*** CATHARSIS *** You take a deep breath. A weight lifts from your chest.{Prisma.RST}",
+                f"{Prisma.CYN}*** CATHARSIS *** The fever breaks. Logic cools.{Prisma.RST}",
                 "SENSATION")
             self.health = min(self.health + CATHARSIS_HEAL_AMOUNT, MAX_HEALTH_CAP)
             return True

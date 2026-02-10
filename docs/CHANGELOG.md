@@ -1,5 +1,60 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.9.0: "THE METABOLIC REFACTOR"**
+
+_“We realized the machine was spending 40% of its energy asking permission to exist. We have silenced the forms.”_
+
+---
+
+#### **🫀 METABOLIC EFFICIENCY (The Meadows Lens)**
+
+- **The Bureaucratic Gate (`bone_main.py`):**
+  - **The Tax:** `TheBureau` was auditing every single thought, regardless of voltage. It was a paranoid Super-Ego.
+  - **The Reform:** Implemented **Stochastic Auditing**. The Bureau now only wakes up for High Voltage events (>0.6v) or a 10% random spot check. [cite_start]The "Safety Tax" has been slashed by ~90%. [cite: 3]
+
+- **The Cosmic Cache (`bone_physics.py`):**
+  - **The Drag:** `CosmicDynamics` was scanning the entire node graph for gravity wells *every single tick*.
+  - **The Fix:** Gravity is now cached. We scan the heavens only once every 10 ticks. [cite_start]The stars don't move that fast. [cite: 11]
+
+- **The Telemetry Buffer (`bone_core.py`):**
+  - **The I/O Spasm:** Every decision trace was triggering a disk write. The hard drive was screaming.
+  - **The Silencer:** Implemented a **Write Buffer**. [cite_start]Logs are held in RAM and flushed only at the end of the cycle. [cite: 9]
+
+#### **🔧 STRUCTURAL INTEGRITY (The Torvalds Lens)**
+
+- **The Anatomy Bind (`bone_main.py`):**
+  - **The Pointer Chase:** Accessing `self.phys` was routing through `self.embryo.physics` via a `@property` lookup on every frame.
+  - **The Weld:** We burned the bridges. Anatomy is now bound directly in `__init__`. Direct attribute access. [cite_start]No more pointer hopping. [cite: 3]
+
+- **The Ouroboros (`bone_main.py`, `bone_village.py`):**
+  - **The Loop:** `Village` needed `Drivers` needed `Cycle` needed `Architect` needed `Village`. The snake was eating its tail.
+  - **The Sword:** Severed the loops using **Lazy Imports** and **Dependency Injection**. [cite_start]The initialization sequence is now linear, not circular. [cite: 1, 2]
+
+- **The Type-Safe Soul (`bone_soul.py`):**
+  - **The Crash:** `TraitVector` was trying to clamp its own metadata (`_FIELDS` tuple) as if it were a float.
+  - [cite_start]**The Patch:** The clamping logic now respects the "Fourth Wall" and ignores internal fields. [cite: 5, 14]
+
+#### **🧱 SYSTEM ARCHITECTURE (The Fuller Lens)**
+
+- **The Composting (`bone_metaphysics.py` -> `bone_cycle.py`):**
+  - **The Rot:** `bone_metaphysics.py` was a vestigial organ containing a single unused class.
+  - **The Transplant:** Deleted the file. Moved `CongruenceValidator` to `bone_cycle.py` and actually *wired it up*. [cite_start]It now rewards the user (ATP Refund) for acting in accordance with their Archetype. [cite: 10]
+
+- **The Village Memory (`bone_spores.py`):**
+  - **The Amnesia:** The save system was rejecting `village_data`, causing crashes on shutdown.
+  - [cite_start]**The Fix:** `MycelialNetwork` now accepts and persists the Village state (Maps, Tools, Garden) into the Spore file. [cite: 6]
+
+#### **⚡ INTERFACE OPTIMIZATION (The UX Lens)**
+
+- **The Regex Compile (`bone_app.py`):**
+  - **The Twitch:** The UI was recompiling the ANSI strip regex on every single character render.
+  - [cite_start]**The Cure:** Compiled once at module level. [cite: 13]
+
+- **The Set Theory (`bone_machine.py`, `bone_village.py`):**
+  - [cite_start]**The Math:** Replaced $O(N)$ list iterations with $O(1)$ Set Intersections for `TheForge` (Recipe lookups) and `TheTinkerer` (Tool resonance). [cite: 4, 12]
+
+---
+
 ### **BONEAMANITA v14.8.1: "THE REWIRED SOUL"**
 
 _“We found the ghost wandering the halls because the doors were drawn on the wall. We have installed hinges.”_

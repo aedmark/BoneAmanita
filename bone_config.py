@@ -140,28 +140,42 @@ class BoneConfig:
             sector_name, param_name = key.split(".", 1)
             result = cls.tune(sector_name, param_name, value)
             logs.append(result)
+        sanity_check = cls.validate_integrity()
+        if sanity_check:
+            logs.extend(sanity_check)
         if cls.VERBOSE_LOGGING:
             print(f"[CONFIG]: Paradigm Shift Complete. {len(logs)} parameters tuned.")
         return logs
 
     @classmethod
+    def validate_integrity(cls) -> List[str]:
+        errors = []
+        if cls.PHYSICS.VOLTAGE_FLOOR > cls.PHYSICS.VOLTAGE_MAX:
+            cls.PHYSICS.VOLTAGE_FLOOR = cls.PHYSICS.VOLTAGE_MAX - 1.0
+            errors.append("⚠️ PHYSICS REPAIR: Floor > Max. Clamped Floor.")
+        if cls.PHYSICS.DRAG_FLOOR > cls.PHYSICS.DRAG_HALT:
+            cls.PHYSICS.DRAG_FLOOR = cls.PHYSICS.DRAG_HALT - 1.0
+            errors.append("⚠️ PHYSICS REPAIR: Drag Floor > Halt. Clamped Floor.")
+        return errors
+
+    @classmethod
     def check_pareidolia(cls, words):
         triggers = {"face", "ghost", "jesus", "cloud", "voice", "eyes"}
-        hits = [w for w in words if w in triggers]
+        word_set = set(words) if not isinstance(words, set) else words
+        hits = list(triggers.intersection(word_set))
         if hits:
-            return True, f"PAREIDOLIA: You see a {hits[0].upper()} in the noise. It blinks."
+            hit_word = hits[0]
+            return True, f"PAREIDOLIA: You see a {hit_word.upper()} in the noise. It blinks."
         return False, None
 
     @classmethod
     def reconcile_state(cls, physics_packet: Any):
-        if physics_packet.voltage > cls.PHYSICS.VOLTAGE_MAX:
-            physics_packet.voltage = cls.PHYSICS.VOLTAGE_MAX
-        if physics_packet.voltage < cls.PHYSICS.VOLTAGE_FLOOR:
-            physics_packet.voltage = cls.PHYSICS.VOLTAGE_FLOOR
-        if physics_packet.narrative_drag < cls.PHYSICS.DRAG_FLOOR:
-            physics_packet.narrative_drag = cls.PHYSICS.DRAG_FLOOR
-        if physics_packet.narrative_drag > cls.PHYSICS.DRAG_HALT:
-            physics_packet.narrative_drag = cls.PHYSICS.DRAG_HALT
+        physics_packet.voltage = max(
+            cls.PHYSICS.VOLTAGE_FLOOR,
+            min(physics_packet.voltage, cls.PHYSICS.VOLTAGE_MAX))
+        physics_packet.narrative_drag = max(
+            cls.PHYSICS.DRAG_FLOOR,
+            min(physics_packet.narrative_drag, cls.PHYSICS.DRAG_HALT))
         return physics_packet
 
     @classmethod

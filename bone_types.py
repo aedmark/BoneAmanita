@@ -24,6 +24,8 @@ class Prisma:
         "M": MAG, "C": CYN, "W": WHT, "0": GRY,
         "I": INDIGO, "O": OCHRE, "V": VIOLET,
         "S": SLATE}
+    _TIE_DYE_COLORS = [RED, GRN, YEL, CYN, MAG, VIOLET, OCHRE]
+    _STRIP_REGEX = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
@@ -34,16 +36,13 @@ class Prisma:
 
     @classmethod
     def strip(cls, text: str) -> str:
-        clean = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-        return clean.sub('', str(text))
+        return cls._STRIP_REGEX.sub('', str(text))
 
     @classmethod
     def tie_dye(cls, text: str) -> str:
-        colors = [cls.RED, cls.GRN, cls.YEL, cls.CYN, cls.MAG, cls.VIOLET, cls.OCHRE]
         return "".join(
-            f"{random.choice(colors)}{char}{cls.RST}" if char.strip() else char
+            f"{random.choice(cls._TIE_DYE_COLORS)}{char}{cls.RST}" if char.strip() else char
             for char in str(text))
-
 
 class LoreCategory(Enum):
     LEXICON = "LEXICON"
@@ -61,7 +60,6 @@ class RealityLayer:
     VILLAGE = 2
     DEBUG = 3
     DEEP_CX = 4
-
 
 @dataclass
 class ErrorLog:
@@ -107,7 +105,7 @@ class PhysicsPacket:
         return new_packet
 
     def to_dict(self) -> Dict[str, Any]:
-        return {f.name: getattr(self, f.name) for f in fields(self)}
+        return self.__dict__.copy()
 
     def get(self, key, default=None):
         return getattr(self, key, default)
@@ -152,7 +150,7 @@ class PhysicsSandbox:
 
     def __setattr__(self, name, value):
         if name in ['packet', 'original_snapshot', 'modifications']:
-            super().__setattr__(name, value)
+            object.__setattr__(self, name, value)
         else:
             self.apply_delta(name, value, reason="AUTO_TRACE")
 
@@ -204,8 +202,7 @@ class CycleContext:
                 "timestamp": time.time()})
 
     def snapshot(self) -> 'CycleContext':
-        stack_copy = copy.deepcopy(self.reality_stack) if self.reality_stack else None
-
+        stack_copy = copy.copy(self.reality_stack) if self.reality_stack else None
         new_ctx = CycleContext(
             input_text=self.input_text,
             physics=self.physics.snapshot() if hasattr(self.physics, 'snapshot') else copy.deepcopy(self.physics),

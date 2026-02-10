@@ -1,12 +1,10 @@
 """ bone_physics.py
  'Gravity is just a habit that space-time hasn't been able to break.' """
 
-import math
-import random
+import math, random, time
 from typing import Dict, List, Any, Tuple, Optional, Deque
 from collections import Counter, deque
 from dataclasses import dataclass, field
-
 from bone_types import Prisma, PhysicsPacket, CycleContext
 from bone_config import BoneConfig
 from bone_lexicon import TheLexicon
@@ -145,16 +143,17 @@ class GeodesicEngine:
 
     @staticmethod
     def _calculate_dimensions(masses, forces, counts, volume) -> Dict[str, float]:
-        def norm(val): return min(1.0, val / volume)
+        inv_vol = 1.0 / volume
+
         return {
-            "VEL": norm(masses["kinetic"] * 2.0 - forces['compression']),
-            "STR": norm(masses["heavy"] * 2.0 + masses["constructive"]),
-            "ENT": norm(counts.get("antigen", 0) * 3.0),
-            "PHI": norm(masses["heavy"] + masses["kinetic"]),
+            "VEL": min(1.0, (masses["kinetic"] * 2.0 - forces['compression']) * inv_vol),
+            "STR": min(1.0, (masses["heavy"] * 2.0 + masses["constructive"]) * inv_vol),
+            "ENT": min(1.0, (counts.get("antigen", 0) * 3.0) * inv_vol),
+            "PHI": min(1.0, (masses["heavy"] + masses["kinetic"]) * inv_vol),
             "PSI": forces['abstraction'],
-            "BET": norm(masses["social"] * 2.0),
-            "DEL": norm(masses["play"] * 3.0),
-            "E":   norm(counts.get("solvents", 0))}
+            "BET": min(1.0, (masses["social"] * 2.0) * inv_vol),
+            "DEL": min(1.0, (masses["play"] * 3.0) * inv_vol),
+            "E":   min(1.0, (counts.get("solvents", 0)) * inv_vol)}
 
 class TheGatekeeper:
     def __init__(self, lexicon_ref, memory_ref=None):
@@ -176,7 +175,7 @@ class TheGatekeeper:
 
     def _audit_safety(self, words: List[str]) -> bool:
         cursed = self.lex.get("cursed")
-        return any(w in cursed for w in words)
+        return not cursed.isdisjoint(words) if isinstance(cursed, set) else any(w in cursed for w in words)
 
     def _pack_refusal(self, ctx, type_str, ui_msg):
         return {
@@ -337,7 +336,9 @@ class ZoneInertia:
         self.dwell_counter += 1
         pressure = 0.0
         if self.last_vector:
-            dist = sum((a - b) ** 2 for a, b in zip(current_vec, self.last_vector)) ** 0.5
+            a1, a2, a3 = current_vec
+            b1, b2, b3 = self.last_vector
+            dist = math.sqrt((a1-b1)**2 + (a2-b2)**2 + (a3-b3)**2)
             similarity = max(0.0, 1.0 - (dist / 2.0))
             pressure = (1.0 - similarity)
         if self.is_anchored:
@@ -380,6 +381,11 @@ class ZoneInertia:
         return cosmic_drag_penalty
 
 class CosmicDynamics:
+    _cached_wells: Dict = {}
+    _cached_hubs: Dict = {}
+    _last_scan_tick: int = 0
+    SCAN_INTERVAL: int = 10
+
     def __init__(self):
         self.voltage_history: Deque[float] = deque(maxlen=20)
 
@@ -390,7 +396,15 @@ class CosmicDynamics:
     def analyze_orbit(network: Any, clean_words: List[str]) -> Tuple[str, float, str]:
         if not clean_words or not network.graph:
             return "VOID_DRIFT", 3.0, "VOID: Deep Space. No connection."
-        gravity_wells, geodesic_hubs = CosmicDynamics._scan_network_mass(network)
+        current_time = int(time.time())
+        if not CosmicDynamics._cached_wells or (current_time - CosmicDynamics._last_scan_tick) > 5:
+            gravity_wells, geodesic_hubs = CosmicDynamics._scan_network_mass(network)
+            CosmicDynamics._cached_wells = gravity_wells
+            CosmicDynamics._cached_hubs = geodesic_hubs
+            CosmicDynamics._last_scan_tick = current_time
+        else:
+            gravity_wells = CosmicDynamics._cached_wells
+            geodesic_hubs = CosmicDynamics._cached_hubs
         basin_pulls, active_filaments = CosmicDynamics._calculate_pull(clean_words, network, gravity_wells)
         if sum(basin_pulls.values()) == 0:
             return CosmicDynamics._handle_void_state(clean_words, geodesic_hubs)

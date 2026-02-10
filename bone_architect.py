@@ -3,7 +3,6 @@ import random
 from typing import Tuple, Dict, Any, Optional
 from dataclasses import dataclass
 from bone_core import Prisma, MindSystem, PhysSystem, PhysicsPacket, TheLore, BoneConfig
-from bone_village import MirrorGraph, TheCartographer
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_symbiosis import MycotoxinFactory, LichenSymbiont, ParasiticSymbiont
 from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, ViralTracer, ThePacemaker, Biometrics
@@ -97,6 +96,7 @@ class PanicRoom:
 class BoneArchitect:
     @staticmethod
     def _construct_mind(events, lex) -> Tuple[MindSystem, LimboLayer]:
+        from bone_village import MirrorGraph
         _mem = MycelialNetwork(events, None, None)
         limbo = LimboLayer()
         _mem.cleanup_old_sessions(limbo)
@@ -130,8 +130,8 @@ class BoneArchitect:
 
     @staticmethod
     def _construct_physics(events, bio, mind, lex) -> PhysSystem:
+        from bone_village import TheCartographer
         gate = TheGatekeeper(lex, mind.mem)
-
         return PhysSystem(
             observer=QuantumObserver(events),
             forge=TheForge(),

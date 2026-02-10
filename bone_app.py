@@ -8,12 +8,13 @@ import re
 from bone_main import BoneAmanita, ConfigWizard
 from bone_core import Prisma
 
+ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+
 st.set_page_config(
     page_title="BONEAMANITA [GLASS TERMINAL]",
     page_icon="💀",
     layout="wide",
-    initial_sidebar_state="expanded"
-)
+    initial_sidebar_state="expanded")
 
 st.markdown("""
 <style>
@@ -69,36 +70,14 @@ st.markdown("""
 
 def strip_ansi(text):
     if not text: return ""
-    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-    return ansi_escape.sub('', text)
+    return ANSI_ESCAPE.sub('', text)
 
 def clean_engine_output(raw_text):
     if not raw_text: return "No signal."
     clean = strip_ansi(raw_text)
-    separator = "────────────────────────────────────────────────────────────"
-    if separator in clean:
-        parts = clean.split(separator)
-        if len(parts) > 1:
-            clean = parts[-1].strip()
-
-    if "♦ THE ARCHITECT" in clean and "//" in clean:
-        lines = clean.splitlines()
-        content_lines = []
-        recording = False
-        for line in lines:
-            if recording:
-                content_lines.append(line)
-                continue
-            if line.strip().startswith("♦") or line.strip().startswith("⚡") or "HP ██" in line:
-                continue
-            if "─────" in line:
-                recording = True
-                continue
-            content_lines.append(line)
-        if recording and content_lines:
-             clean = "\n".join(content_lines).strip()
+    if "────────────────────────────────────────────────────────────" in clean:
+        clean = clean.split("────────────────────────────────────────────────────────────")[-1].strip()
     return clean
-
 
 def perform_autosave(engine_ref, history_ref):
     try:
@@ -168,7 +147,6 @@ def render_sidebar(eng_ref):
             st.error(f"SIGNAL: {host_diag}")
         else:
             st.warning(f"SIGNAL: {host_diag}")
-
         dig = anchor.dignity_reserve
         st.subheader("⚓ Dignity Reserve")
         st.progress(min(100, max(0, int(dig))))
@@ -176,9 +154,7 @@ def render_sidebar(eng_ref):
             st.error("🔒 AGENCY LOCKED")
         elif dig < 30:
             st.warning("⚠ CRITICAL FADE")
-
         st.markdown("---")
-
         st.subheader("🩸 Endocrine Levels")
         chem = {}
         if hasattr(eng_ref, 'bio') and eng_ref.bio and eng_ref.bio.endo:
@@ -188,14 +164,11 @@ def render_sidebar(eng_ref):
         c1.metric("Cortisol", f"{cor:.2f}", delta="-Stress" if cor < 0.3 else "+Stress", delta_color="inverse")
         dop = chem.get("DOP", 0.0)
         c2.metric("Dopamine", f"{dop:.2f}", delta="Reward")
-
         st.markdown("---")
-
         st.subheader("🎭 Active Driver")
         st.markdown(f"**{soul.archetype}**")
         tenure = soul.archetype_tenure
         st.caption(f"Tenure: {tenure} cycles")
-
         with st.expander("System Vectors"):
             v = 0.0
             d = 0.0
@@ -211,37 +184,38 @@ def render_sidebar(eng_ref):
             st.metric("Voltage", f"{v:.1f}v")
             st.metric("Narrative Drag", f"{d:.1f}")
 
-
 if "history" not in st.session_state:
     st.session_state.history = []
 
+@st.cache_data
+def load_config_cached():
+    return ConfigWizard.load_or_create()
+
+
 def init_engine():
     try:
-        config = ConfigWizard.load_or_create()
+        config = load_config_cached()
         if not config: return None
         new_instance = BoneAmanita(config)
         print(f"[BOOT] Checking for saves in {os.path.abspath('saves')}...")
         restored, saved_history = new_instance.resume_checkpoint()
         if restored and saved_history:
             st.session_state.history = saved_history
-            print("[BOOT] History restored from checkpoint.")
+            print("[BOOT] History restored.")
             st.toast("System State Restored.")
         if not st.session_state.history:
-            print("[BOOT] No history found. Engaging Cold Boot.")
+            print("[BOOT] Cold Boot.")
             boot_packet = new_instance.engage_cold_boot()
             if boot_packet and "ui" in boot_packet:
-                clean_boot = clean_engine_output(boot_packet["ui"])
                 st.session_state.history.append({
                     "role": "assistant",
-                    "content": clean_boot,
+                    "content": clean_engine_output(boot_packet["ui"]),
                     "logs": boot_packet.get("logs", [])})
             else:
                 st.session_state.history.append({
                     "role": "system",
                     "content": "SYSTEM_BOOT: SEQUENCE COMPLETE.",
                     "logs": ["Kernel Loaded."]})
-            print("[BOOT] Forcing initial state save...")
-            perform_autosave(new_instance, st.session_state.history)
         return new_instance
     except Exception as e:
         st.error(f"Critical Boot Error: {e}")
@@ -262,12 +236,14 @@ if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_s
             st.rerun()
     st.stop()
 
+if "history" not in st.session_state:
+    st.session_state.history = []
+
 if "ENGINE" not in st.session_state:
     with st.spinner("Hydrating Spore Casing..."):
         st.session_state.ENGINE = init_engine()
 
 if st.session_state.ENGINE is None:
-    st.error("❌ CRITICAL BOOT FAILURE: Engine could not initialize. See errors above.")
     st.stop()
 
 if "ENGINE" in st.session_state:

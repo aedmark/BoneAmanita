@@ -237,9 +237,11 @@ class ArchetypeArbiter:
 class TelemetryService:
     log_dir = "logs/telemetry"
     _tracer_instance = None
+    BUFFER_SIZE = 50
 
     def __init__(self):
         self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=50)
+        self.write_buffer: List[str] = []
         self.active_crystal = None
         self.session_start = time.time()
         self.disabled = False
@@ -279,38 +281,37 @@ class TelemetryService:
             reasoning=reasoning,
             outcome=outcome)
         self.trace_buffer.append(trace)
-        self._write_line(trace.to_json())
+        self._buffer_line(trace.to_json())
 
     def log_crystal(self, crystal: DecisionCrystal):
         if self.disabled: return
-        self._write_line(crystal.crystallize())
+        self._buffer_line(crystal.crystallize())
 
     def start_phase(self, phase_name: str, context: Any):
-        self.log_decision(
-            component=phase_name,
-            decision_type="PHASE_START",
-            inputs={"timestamp": time.time()},
-            reasoning="Phase execution initiated.",
-            outcome="RUNNING")
+        self.log_decision(phase_name, "PHASE_START", {"timestamp": time.time()}, "Phase execution initiated.", "RUNNING")
 
     def end_phase(self, phase_name: str, ctx_before: Any, ctx_after: Any):
-        self.log_decision(
-            component=phase_name,
-            decision_type="PHASE_END",
-            inputs={"timestamp": time.time()},
-            reasoning="Phase execution completed.",
-            outcome="SUCCESS")
+        self.log_decision(phase_name, "PHASE_END", {"timestamp": time.time()}, "Phase execution completed.", "SUCCESS")
 
     def finalize_cycle(self):
         if self.active_crystal:
             self.log_crystal(self.active_crystal)
             self.active_crystal = None
+        self._flush_to_disk()
 
-    def _write_line(self, json_str: str):
-        if self.disabled or not self.current_trace_file: return
+    def _buffer_line(self, json_str: str):
+        if self.disabled: return
+        self.write_buffer.append(json_str)
+        if len(self.write_buffer) >= self.BUFFER_SIZE:
+            self._flush_to_disk()
+
+    def _flush_to_disk(self):
+        if self.disabled or not self.current_trace_file or not self.write_buffer: return
         try:
             with open(self.current_trace_file, "a", encoding="utf-8") as f:
-                f.write(json_str + "\n")
+                f.write("\n".join(self.write_buffer) + "\n")
+            self.write_buffer.clear()
+            self.write_errors = 0
         except IOError:
             self.write_errors += 1
             if self.write_errors > 3:
@@ -369,6 +370,7 @@ class TelemetryService:
             return None
 
     def generate_session_summary(self) -> str:
+        self._flush_to_disk()
         count = len(self.trace_buffer)
         duration = time.time() - self.session_start
         status = "DISABLED" if self.disabled else "ACTIVE"
@@ -383,6 +385,7 @@ class LoreManifest:
     def __init__(self):
         self._cache = {}
         self._overlays = {}
+        self._missing_cache = set()
 
     @classmethod
     def get_instance(cls):
@@ -394,7 +397,6 @@ class LoreManifest:
         filename = f"{category.lower()}.json"
         filepath = os.path.join(self.DATA_DIR, filename)
         if not os.path.exists(filepath):
-            print(f"{Prisma.RED}[LORE]: Missing data file for '{category}' at {filepath}{Prisma.RST}")
             return None
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
@@ -410,11 +412,15 @@ class LoreManifest:
             data = self._overlays[category]
         elif category in self._cache:
             data = self._cache[category]
+        elif category in self._missing_cache:
+            data = {}
         else:
             data = self._load_from_disk(category)
             if data is not None:
                 self._cache[category] = data
             else:
+                self._missing_cache.add(category)
+                print(f"{Prisma.GRY}[LORE]: '{category}' not found. Caching miss.{Prisma.RST}")
                 data = {}
         if sub_key and isinstance(data, dict):
             return data.get(sub_key, None)
@@ -427,14 +433,19 @@ class LoreManifest:
             self._overlays[category].update(data)
         else:
             self._overlays[category] = data
+        if category in self._missing_cache:
+            self._missing_cache.remove(category)
 
     def flush_cache(self, category: str = None):
         if category:
             if category in self._cache:
                 del self._cache[category]
-                print(f"{Prisma.CYN}[LORE]: Flushed cache for '{category}'.{Prisma.RST}")
+            if category in self._missing_cache:
+                self._missing_cache.remove(category)
+            print(f"{Prisma.CYN}[LORE]: Flushed cache for '{category}'.{Prisma.RST}")
         else:
             self._cache = {}
+            self._missing_cache = set()
             print(f"{Prisma.CYN}[LORE]: Flushed entire Lore cache.{Prisma.RST}")
 
 TheLore = LoreManifest.get_instance()

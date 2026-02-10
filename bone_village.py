@@ -64,6 +64,7 @@ class GeniusLoci:
     def from_dict(cls, data):
         return cls(**data)
 
+
 class TheTinkerer:
     def __init__(self, gordon_ref, events_ref, akashic_ref):
         self.gordon = gordon_ref
@@ -72,32 +73,35 @@ class TheTinkerer:
         self.tool_resonance: Dict[str, float] = {}
 
     def audit_tool_use(self, physics_packet: Any, inventory_list: List[str], host_health: Any = None):
+        if not inventory_list: return
         p = _normalize_physics_dict(physics_packet)
         voltage = _get_float(p, "voltage", 0.0)
+        if voltage < 5.0 and random.random() > 0.1:
+            return
+        focus_item = random.choice(inventory_list)
         drag = _get_float(p, "narrative_drag", 0.0)
         kappa = _get_float(p, "kappa", 0.0)
         vector = _get(p, "vector", {})
         ent_val = float(vector.get("ENT", 0.0)) if isinstance(vector, dict) else 0.0
         entropy_level = ent_val + (drag * 0.1)
-        for item in inventory_list:
-            self._process_single_tool(item, inventory_list, voltage, kappa, entropy_level, drag, vector)
+        self._process_single_tool(focus_item, inventory_list, voltage, kappa, entropy_level, drag, vector)
 
     def _process_single_tool(self, item: str, inventory: List[str], voltage: float, kappa: float, entropy: float,
                              drag: float, vector: Any):
         if item not in self.tool_resonance:
             self.tool_resonance[item] = 0.0
         if voltage > VOLT_MANIC or entropy > 0.5:
-            self._apply_resonance(item, 0.1, "High Voltage")
+            self._apply_resonance(item, 0.2, "High Voltage")
             self._check_ascension(item, inventory, vector)
         elif kappa > KAPPA_COHERENT:
-            self._apply_resonance(item, 0.05, "Coherent Flow")
+            self._apply_resonance(item, 0.1, "Coherent Flow")
         elif drag > DRAG_HEAVY:
-            self._apply_resonance(item, 0.01, "Tempering")
+            self._apply_resonance(item, 0.05, "Tempering")
 
     def _apply_resonance(self, item: str, amount: float, reason: str):
         self.tool_resonance[item] = min(10.0, self.tool_resonance[item] + amount)
         curr = self.tool_resonance[item]
-        if 4.9 < curr < 5.1 and random.random() < 0.1:
+        if 4.8 < curr < 5.2 and random.random() < 0.05:
             self.events.log(f"{Prisma.CYN}🔨 TINKER: {item} hums with resonance. (Lvl 5 Mastery){Prisma.RST}", "VILLAGE")
 
     def _check_ascension(self, old_name: str, inventory_list: List[str], vector: Any):
@@ -108,14 +112,18 @@ class TheTinkerer:
         if random.random() < (resonance * 0.05):
             new_name, new_data = self.akashic.forge_new_item(vector)
             if old_name in inventory_list:
-                idx = inventory_list.index(old_name)
-                inventory_list[idx] = new_name
-                if hasattr(self.gordon, "ITEM_REGISTRY"):
-                    self.gordon.ITEM_REGISTRY[new_name] = new_data
-                self.tool_resonance[new_name] = resonance / 2.0
-                del self.tool_resonance[old_name]
-                self.events.log(f"{Prisma.MAG}✨ ASCENSION: {old_name} -> {new_name} (Born of Resonance){Prisma.RST}",
-                                "AKASHIC")
+                try:
+                    idx = inventory_list.index(old_name)
+                    inventory_list[idx] = new_name
+                    if hasattr(self.gordon, "ITEM_REGISTRY"):
+                        self.gordon.ITEM_REGISTRY[new_name] = new_data
+                    self.tool_resonance[new_name] = resonance / 2.0
+                    del self.tool_resonance[old_name]
+                    self.events.log(
+                        f"{Prisma.MAG}✨ ASCENSION: {old_name} -> {new_name} (Born of Resonance){Prisma.RST}",
+                        "AKASHIC")
+                except ValueError:
+                    pass
 
 class ParadoxSeed:
     def __init__(self, question: str, triggers: List[str]):
@@ -159,6 +167,7 @@ class TheCartographer:
     PREFIXES = ["The", "Neo", "Old", "Sector", "Zone", "Void"]
     ROOTS = ["Construct", "Forge", "Mud", "Archive", "Garden", "Nexus", "Spire", "Basement"]
     SUFFIXES = ["Alpha", "Prime", "Deep", "Zero", "Flux", "Rot"]
+    MAX_NODES = 50
 
     def __init__(self, shimmer_ref):
         self.shimmer = shimmer_ref
@@ -177,7 +186,7 @@ class TheCartographer:
         if not vector: return "VOID_DRIFT"
         sorted_dims = sorted(vector.items(), key=lambda x: -x[1])
         top_dims = sorted_dims[:2]
-        coord_str = "-".join([f"{k}{int(v*10)}" for k, v in top_dims])
+        coord_str = "-".join([f"{k}{int(v * 10)}" for k, v in top_dims])
         return coord_str
 
     def get_current_description(self) -> str:
@@ -213,6 +222,8 @@ class TheCartographer:
         vector = _get(p, "vector", {})
         target_id = self._generate_coord_hash(vector)
         if target_id not in self.world_graph:
+            if len(self.world_graph) >= self.MAX_NODES:
+                self._prune_graph()
             new_node = self._generate_loci_data(target_id, p)
             self.world_graph[target_id] = new_node
             msg = f"{Prisma.MAG}🗺️ CARTOGRAPHER: New Sector Discovered [{new_node.name}].{Prisma.RST}"
@@ -226,6 +237,13 @@ class TheCartographer:
         current_node.visited_count += 1
         return current_node.name, msg
 
+    def _prune_graph(self):
+        candidates = [k for k in self.world_graph.keys() if k != "GENESIS_POINT" and k != self.current_node_id]
+        if not candidates: return
+        candidates.sort(key=lambda k: self.world_graph[k].visited_count)
+        victim = candidates[0]
+        del self.world_graph[victim]
+
     def apply_environment(self, physics_packet: Any) -> List[str]:
         logs = []
         node = self.world_graph.get(self.current_node_id)
@@ -235,7 +253,6 @@ class TheCartographer:
         if node.local_items:
             items_str = ", ".join([f"[{i}]" for i in node.local_items])
             logs.append(f"{Prisma.YEL}GROUND: You see {items_str} here.{Prisma.RST}")
-
         return logs
 
     def drop_item(self, item_name: str) -> str:
@@ -251,9 +268,11 @@ class TheCartographer:
             return True
         return False
 
-    def strike_root(self, vector): return None
+    def strike_root(self, vector):
+        return None
 
-    def check_transplant_shock(self, vector): return None
+    def check_transplant_shock(self, vector):
+        return None
 
     def export_atlas(self) -> Dict[str, Any]:
         return {
@@ -276,7 +295,6 @@ class TheCartographer:
     def load_state(self, data):
         self.import_atlas(data)
 
-
 class TownHall:
     def __init__(self, gordon_ref, events_ref, shimmer_ref, akashic_ref, navigator_ref):
         self.gordon = gordon_ref
@@ -291,7 +309,7 @@ class TownHall:
             if "question" in s and "triggers" in s:
                 self.sow_seed(s["question"], s["triggers"])
         if self.seeds:
-            print(f"{Prisma.GRY}[TOWN HALL]: Planted {len(self.seeds)} Paradox Seeds.{Prisma.RST}")
+            pass
 
     def _on_item_drop(self, payload):
         item = payload.get("item")
@@ -305,8 +323,11 @@ class TownHall:
         self.seeds.append(ParadoxSeed(question, triggers))
 
     def tend_garden(self, clean_words: List[str]):
+        if not self.seeds or not clean_words: return
+        word_set = set(w.lower() for w in clean_words)
         for seed in self.seeds:
-            if seed.water(clean_words):
+            if seed.bloomed: continue
+            if not seed.triggers.isdisjoint(word_set):
                 bloom_msg = seed.bloom()
                 self.events.log(
                     f"{Prisma.MAG}🌷 PARADOX BLOOM:{Prisma.RST} {bloom_msg}",

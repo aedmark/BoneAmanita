@@ -4,14 +4,38 @@ import traceback, random, time, uuid, copy
 from typing import Dict, Any, List, cast
 from bone_core import Prisma, BoneConfig, CycleContext, PhysicsPacket, TelemetryService, BonePresets, ArchetypeArbiter, \
     PhysicsSandbox, TheLore
-from bone_metaphysics import CongruenceValidator
 from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, ChromaScope
 from bone_gui import get_renderer, SoulDashboard
 from bone_architect import PanicRoom
 from bone_soul import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
-from bone_village import SanctuaryGovernor
 
+class CongruenceValidator:
+    ARCHETYPE_MAP = {
+        "POET": {"light", "dark", "soul", "dream", "fade", "echo"},
+        "ENGINEER": {"system", "voltage", "drag", "efficiency", "structure"},
+        "NIHILIST": {"void", "pointless", "entropy", "end", "silence"},
+        "CRITIC": {"derivative", "pacing", "structure", "flawed"}}
+
+    def __init__(self):
+        self.last_phi = 1.0
+
+    def calculate_resonance(self, text: str, context: Any) -> float:
+        if not text: return 0.0
+        archetype = getattr(context, "active_lens", "OBSERVER").upper().replace("THE ", "")
+        tone_score = 0.8
+        target_words = self.ARCHETYPE_MAP.get(archetype)
+        if target_words:
+            words_to_check = set(context.clean_words) if context.clean_words else set(text.lower().split())
+            if not target_words.isdisjoint(words_to_check):
+                tone_score = 1.0
+        layer_confusion = 0.0
+        if context.reality_stack and context.reality_stack.current_depth == 1:
+            if "{" in text and "}" in text and ":" in text:
+                layer_confusion = 0.5
+        phi = 1.0 - (abs(tone_score - 1.0) + layer_confusion)
+        self.last_phi = max(0.0, min(1.0, phi))
+        return self.last_phi
 
 class CycleStabilizer:
     MANIFOLD_CONFIGS = {
@@ -651,6 +675,16 @@ class CognitionPhase(SimulationPhase):
         self.name = "COGNITION"
 
     def run(self, ctx: CycleContext):
+        if ctx.validator and ctx.input_text:
+            phi = ctx.validator.calculate_resonance(ctx.input_text, ctx)
+            if phi > 0.8:
+                drag_relief = (phi - 0.5) * 2.0
+                ctx.physics.narrative_drag = max(0.0, ctx.physics.narrative_drag - drag_relief)
+                if self.eng.bio and self.eng.bio.mito:
+                    refund = 5.0 * phi
+                    self.eng.bio.mito.adjust_atp(refund, "Harmonic Resonance")
+                ctx.log(
+                    f"{Prisma.CYN}✨ HARMONIC RESONANCE (Φ={phi:.2f}): The narrative flows effortlessly.{Prisma.RST}")
         if hasattr(self.eng, 'consultant'):
             self.eng.consultant.update_coordinates(ctx.input_text, ctx.bio_result, ctx.physics)
         self.eng.mind.mem.encode(ctx.clean_words, ctx.physics.to_dict(), "GEODESIC")
@@ -762,6 +796,7 @@ class PhaseExecutor:
 class CycleSimulator:
     def __init__(self, engine_ref):
         self.eng = engine_ref
+        from bone_village import SanctuaryGovernor
         self.shared_governor = SanctuaryGovernor(self.eng.events)
         self.stabilizer = CycleStabilizer(self.eng.events, self.shared_governor)
         self.executor = PhaseExecutor()

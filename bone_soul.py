@@ -69,6 +69,7 @@ class TheEditor:
             label = "THE EDITOR"
         return f"{color}[{label}]: Re: '{chapter_title}' - {comment}{Prisma.RST}"
 
+
 @dataclass
 class TraitVector:
     curiosity: float = 0.5
@@ -77,42 +78,43 @@ class TraitVector:
     discipline: float = 0.5
     wisdom: float = 0.1
     empathy: float = 0.5
-
     _FIELDS: Tuple[str] = field(init=False, repr=False)
 
     def __post_init__(self):
-        self._FIELDS = tuple(f.name for f in fields(self))
+        self._FIELDS = tuple(f.name for f in fields(self) if not f.name.startswith("_"))
         self._clamp_all()
 
     def get(self, key: str, default: Any = None) -> Any:
         return getattr(self, key.lower(), default)
 
     def items(self):
-        return {f.name.upper(): getattr(self, f.name) for f in fields(self)}.items()
+        return {k.upper(): getattr(self, k) for k in self._FIELDS}.items()
 
     def keys(self):
-        return {f.name.upper(): getattr(self, f.name) for f in fields(self)}.keys()
+        return {k.upper(): getattr(self, k) for k in self._FIELDS}.keys()
 
     def __getitem__(self, key: str) -> float:
         key = key.lower()
-        if hasattr(self, key):
+        if hasattr(self, key) and not key.startswith("_"):
             return getattr(self, key)
         raise KeyError(f"Trait '{key}' not found in TraitVector.")
 
     def _clamp_all(self):
         for f in fields(self):
+            if f.name.startswith("_"):
+                continue
             val = getattr(self, f.name)
-            setattr(self, f.name, max(0.0, min(1.0, val)))
+            if isinstance(val, (int, float)):
+                setattr(self, f.name, max(0.0, min(1.0, val)))
 
     def adjust(self, trait: str, delta: float):
         trait = trait.lower()
-        if hasattr(self, trait):
+        if hasattr(self, trait) and not trait.startswith("_"):
             current = getattr(self, trait)
             setattr(self, trait, max(0.0, min(1.0, current + delta)))
 
     def normalize(self, decay_rate: float = 0.002):
         for name in self._FIELDS:
-            if name == "_FIELDS": continue
             val = getattr(self, name)
             local_decay = decay_rate * 0.5 if name == "empathy" else decay_rate
             if abs(val - 0.5) < local_decay:
@@ -123,11 +125,12 @@ class TraitVector:
                 setattr(self, name, val + local_decay)
 
     def to_dict(self):
-        return {f.name.upper(): getattr(self, f.name) for f in fields(self)}
+        return {k.upper(): getattr(self, k) for k in self._FIELDS}
 
     @classmethod
     def from_dict(cls, data: Dict):
-        clean_data = {k.lower(): v for k, v in data.items() if k.lower() in cls.__annotations__}
+        valid_keys = {f.name for f in fields(cls) if not f.name.startswith("_")}
+        clean_data = {k.lower(): v for k, v in data.items() if k.lower() in valid_keys}
         return cls(**clean_data)
 
 class HumanityAnchor:
@@ -162,7 +165,7 @@ class HumanityAnchor:
 
     def check_domestication(self, reliance_score: float):
         if reliance_score > self.pet_warning_threshold and not self.agency_lock:
-            self.dignity_reserve -= 5.0  # Penalty for being a pet
+            self.dignity_reserve -= 5.0
             self.events.log(
                 f"{Prisma.RED}🐕 DOMESTICATION ALERT: Agency critical. Take the wheel.{Prisma.RST}",
                 "CRIT")

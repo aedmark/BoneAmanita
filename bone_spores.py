@@ -5,11 +5,10 @@ from collections import deque
 from typing import List, Tuple, Optional, Dict, Set, Any
 from bone_lexicon import TheLexicon
 from bone_core import EventBus, Prisma, BoneConfig, TheLore, BoneJSONEncoder
-from bone_village import ParadoxSeed
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
-        self.genome = "BONEAMANITA_14.8.1"
+        self.genome = "BONEAMANITA_14.9.0"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():
@@ -158,6 +157,7 @@ class MycelialNetwork:
             self.ingest(seed_file)
 
     def load_seeds(self):
+        from bone_village import ParadoxSeed
         loaded_seeds = []
         try:
             raw_seeds = TheLore.get("seeds") or []
@@ -449,6 +449,7 @@ class MycelialNetwork:
             self.events.log(f"{Prisma.CYN}[SPORE]: Grafted {len(data['core_graph'])} nodes.{Prisma.RST}")
 
     def _extract_legacy_traits(self, data):
+        from bone_village import ParadoxSeed
         if "joy_legacy" in data and data["joy_legacy"]:
             joy = data["joy_legacy"]
             flavor = joy.get("flavor")
@@ -487,7 +488,8 @@ class MycelialNetwork:
             continuity,
             world_atlas)
 
-    def save(self, health, stamina, mutations, trauma_accum, joy_history, mitochondria_traits=None, antibodies=None, soul_data=None, continuity=None, world_atlas=None):
+    def save(self, health, stamina, mutations, trauma_accum, joy_history, mitochondria_traits=None, antibodies=None,
+             soul_data=None, continuity=None, world_atlas=None, village_data=None):
         base_trauma = (BoneConfig.MAX_HEALTH - health) / BoneConfig.MAX_HEALTH
         final_vector = {k: min(1.0, v) for k, v in trauma_accum.items()}
         top_joy = sorted(joy_history, key=lambda x: x["resonance"], reverse=True)[:3]
@@ -506,6 +508,8 @@ class MycelialNetwork:
             mutations=mutations, trauma=base_trauma,
             joy_vectors=top_joy, world_atlas=world_atlas)
         data = spore.__dict__
+        if village_data:
+            data["village_data"] = village_data
         if continuity: data["continuity"] = continuity
         data["cortical_stack"] = self.cortical_stack
         if antibodies: data["antibodies"] = antibodies
