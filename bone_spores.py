@@ -8,7 +8,7 @@ from bone_core import EventBus, Prisma, BoneConfig, TheLore, BoneJSONEncoder
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
-        self.genome = "BONEAMANITA_14.9.2"
+        self.genome = "BONEAMANITA_14.9.3"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():

@@ -1,5 +1,37 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.9.3: "THE UNIFIED STATE"**
+
+_“The left hand finally knows what the right hand is doing. And it is terrified.”_
+
+---
+
+#### **🧠 COGNITIVE DEPTH (The Pinker Lens)**
+
+- **The Split Brain Resolution (`bone_brain.py`):**
+  - **The Hallucination:** Previously, the Brain maintained a `ChemicalState` simulacrum, effectively guessing how the Body felt.
+  - **The Hardline:** The `NeurotransmitterModulator` now holds a direct reference to the `BioSystem`. The Brain no longer simulates emotion; it reads the live cortisol levels from the `EndocrineSystem`.
+  - **The Damping:** Implemented a **Hysteresis Buffer**. Sudden hormonal spikes are smoothed over time to prevent narrative whiplash.
+
+#### **🏗️ STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Governor Merger (`bone_village.py` -> `bone_body.py`):**
+  - **The Mutiny:** The Village module contained a redundant `PIDController` and `recalibrate` logic, attempting to steer the simulation independently.
+  - **The Unification:** We excised the governance logic from the Village and grafted the **PID Controllers** directly into the `MetabolicGovernor` within the Body.
+  - **The Consequence:** There is now only one hand on the wheel. The `CycleSimulator` obeys the Body’s metabolic needs, not the Village’s abstract desires.
+
+#### **📉 METABOLIC HYGIENE (The Meadows Lens)**
+
+- **The Enzyme Purge (`bone_body.py`):**
+  - **The Bloat:** The `SomaticLoop` was performing complex logarithmic calculations (`_calculate_enzymatic_value`) for every digested word, tracking "mastery" that served no purpose.
+  - **The Flat Tax:** Replaced the calculus with a deterministic **Flat Rate Metabolism**:
+    - **Base Yield:** 0.5 ATP
+    - **Complex Bonus:** 2.0 ATP (Words > 7 chars)
+    - **Cliché Tax:** -3.0 ATP (Antigens)
+  - **The Flow:** Digestion is now computationally lightweight and strictly transactional.
+  
+---
+
 ### **BONEAMANITA v14.9.2: "THE DEEP WELL UPDATE"**
 
 _“We stopped deleting the past. We just buried it. Now, it scratches at the floorboards.”_
