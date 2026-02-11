@@ -1,15 +1,18 @@
 """ bone_brain.py - "The brain is a machine for jumping to conclusions." - S. Pinker """
 
-import re, time, json, urllib.request, urllib.error, random, math
+import re
+import time
+import json
+import urllib.request
+import urllib.error
+import random
+import math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from bone_core import EventBus, TheLore, TelemetryService
-from bone_types import Prisma, DecisionCrystal, CycleContext
+from bone_types import Prisma, DecisionCrystal
 from bone_config import BoneConfig
 from bone_symbiosis import SymbiosisManager
-from bone_spores import MycelialNetwork
-from bone_lexicon import TheLexicon, RosettaStone
-from bone_physics import cosine_similarity
 
 @dataclass
 class CortexServices:
@@ -20,6 +23,7 @@ class CortexServices:
     cycle_controller: Any
     symbiosis: Any
     mind_memory: Any
+    bio: Any
     host_stats: Any = None
 
 @dataclass
@@ -34,25 +38,6 @@ class BrainConfig:
     DOPAMINE_NOVELTY: float = 0.4
     ADRENALINE_RUSH: float = 600.0
     SEROTONIN_CALM: float = 0.5
-
-@dataclass
-class ChemicalState:
-    dopamine: float = 0.2
-    cortisol: float = 0.1
-    adrenaline: float = 0.1
-    serotonin: float = 0.2
-
-    def homeostasis(self, rate: float = 0.1):
-        targets = {"dopamine": 0.2, "cortisol": 0.1, "adrenaline": 0.1, "serotonin": 0.3}
-        for attr, target in targets.items():
-            current = getattr(self, attr)
-            setattr(self, attr, current + ((target - current) * rate))
-
-    def mix(self, new_state: Dict[str, float], weight: float = 0.5):
-        for key, attr in [("DOP", "dopamine"), ("COR", "cortisol"), ("ADR", "adrenaline"), ("SER", "serotonin")]:
-            val = new_state.get(key, 0.0)
-            current = getattr(self, attr)
-            setattr(self, attr, (current * (1.0 - weight)) + (val * weight))
 
 class NarrativeSpotlight:
     def __init__(self):
@@ -104,44 +89,49 @@ class NarrativeSpotlight:
             results.append(f"{prefix} Engram: '{name.upper()}'{conn_str}")
         return results
 
+@dataclass
+class ChemicalState:
+    dopamine: float = 0.2
+    cortisol: float = 0.1
+    adrenaline: float = 0.1
+    serotonin: float = 0.2
+
+    def homeostasis(self, rate: float = 0.1):
+        targets = {"dopamine": 0.2, "cortisol": 0.1, "adrenaline": 0.1, "serotonin": 0.3}
+        for attr, target in targets.items():
+            current = getattr(self, attr)
+            setattr(self, attr, current + ((target - current) * rate))
+
+    def mix(self, new_state: Dict[str, float], weight: float = 0.5):
+        mapping = [("DOP", "dopamine"), ("COR", "cortisol"), ("ADR", "adrenaline"), ("SER", "serotonin")]
+        for key, attr in mapping:
+            val = new_state.get(key, 0.0)
+            current = getattr(self, attr)
+            setattr(self, attr, (current * (1.0 - weight)) + (val * weight))
+
+
 class NeurotransmitterModulator:
-    def __init__(self, events_ref=None):
+    def __init__(self, bio_ref, events_ref=None):
+        self.bio = bio_ref
         self.events = events_ref
         self.current_chem = ChemicalState()
-        self.last_tick = time.time()
+        self.last_mood = "NEUTRAL"
         self.BASE_TOKENS = 720
         self.MAX_TOKENS = 4096
-        self.last_mood = "NEUTRAL"
 
-    def force_state(self, state_name: str):
-        states = {
-            "MANIC": {"dopamine": 1.0, "adrenaline": 1.0, "cortisol": 0.2, "serotonin": 0.0},
-            "DEPRESSED": {"dopamine": 0.0, "serotonin": 0.0, "cortisol": 0.8},
-            "ZEN": {"dopamine": 0.3, "serotonin": 0.9, "cortisol": 0.0, "adrenaline": 0.0}}
-        if state_name in states:
-            for k, v in states[state_name].items():
-                setattr(self.current_chem, k, v)
-            if self.events:
-                self.events.publish("NEURAL_STATE_SHIFT", {"state": state_name, "source": "FORCE"})
-
-    def get_mood_directive(self) -> str:
-        c = self.current_chem
-        if c.cortisol > 0.7 and c.adrenaline > 0.7: return "Current Mood: PANIC. Sentences must be short. Fragmented. Urgent."
-        if c.dopamine > 0.8 and c.adrenaline > 0.5: return "Current Mood: MANIC. Run-on sentences, high associative leaps, hyper-fixated."
-        if c.serotonin > 0.7: return "Current Mood: LUCID. Calm, detached, seeing the connections clearly."
-        if c.cortisol > 0.6: return "Current Mood: DEFENSIVE. Suspicious, brief, guarding information."
-        return "Current Mood: NEUTRAL. Observant and receptive."
-
-    def modulate(self, incoming_chem: Dict[str, float], base_voltage: float, latency_penalty: float = 0.0) -> Dict[
-        str, Any]:
+    def modulate(self, base_voltage: float, latency_penalty: float = 0.0) -> Dict[str, Any]:
+        if self.bio and hasattr(self.bio, 'endo'):
+            incoming_chem = self.bio.endo.get_state()
+        else:
+            incoming_chem = {}
         self.current_chem.homeostasis(rate=BrainConfig.BASE_DECAY_RATE)
-        if latency_penalty > 2.0:
-            self.current_chem.cortisol += 0.1
-            self.current_chem.adrenaline += 0.05
         plasticity = BrainConfig.BASE_PLASTICITY + (base_voltage * BrainConfig.VOLTAGE_SENSITIVITY)
         plasticity = max(0.1, min(BrainConfig.MAX_PLASTICITY, plasticity))
         self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
         c = self.current_chem
+        if latency_penalty > 2.0:
+            c.cortisol = min(1.0, c.cortisol + 0.1)
+            c.adrenaline = min(1.0, c.adrenaline + 0.05)
         current_mood = "NEUTRAL"
         if c.dopamine > 0.8:
             current_mood = "MANIC"
@@ -152,19 +142,32 @@ class NeurotransmitterModulator:
         if current_mood != self.last_mood and self.events:
             self.events.publish("NEURAL_STATE_SHIFT", {
                 "state": current_mood,
-                "chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin}})
+                "chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin} })
             self.last_mood = current_mood
         voltage_heat = math.log1p(max(0.0, base_voltage - 5.0)) * 0.1
         chemical_delta = (c.dopamine * 0.4) - (c.adrenaline * 0.3) - (c.cortisol * 0.2)
-        params = {
+        return {
             "temperature": round(max(0.4, min(1.2, BrainConfig.BASE_TEMP + chemical_delta + voltage_heat)), 2),
             "top_p": BrainConfig.BASE_TOP_P,
             "frequency_penalty": 0.4 if c.adrenaline > 0.5 else (0.1 if c.dopamine > 0.7 else 0.0),
             "presence_penalty": 0.0,
-            "max_tokens": int(
-                max(150.0, min(float(self.MAX_TOKENS), self.BASE_TOKENS + ((c.adrenaline * 600) - (c.cortisol * 300)))))}
-        return params
+            "max_tokens": int(max(150.0, min(float(self.MAX_TOKENS), self.BASE_TOKENS + ((c.adrenaline * 600) - (c.cortisol * 300)))))}
 
+    def force_state(self, state_name: str):
+        if self.events:
+            self.events.log(f"[NEURO]: Manual State Override: {state_name}", "SYS")
+
+    def get_mood_directive(self) -> str:
+        c = self.current_chem
+        if c.cortisol > 0.7 and c.adrenaline > 0.7:
+            return "Current Mood: PANIC. Sentences must be short. Fragmented. Urgent."
+        if c.dopamine > 0.8 and c.adrenaline > 0.5:
+            return "Current Mood: MANIC. Run-on sentences, high associative leaps, hyper-fixated."
+        if c.serotonin > 0.7:
+            return "Current Mood: LUCID. Calm, detached, seeing the connections clearly."
+        if c.cortisol > 0.6:
+            return "Current Mood: DEFENSIVE. Suspicious, brief, guarding information."
+        return "Current Mood: NEUTRAL. Observant and receptive."
 
 class SynapseError(Exception):
     pass
@@ -458,7 +461,7 @@ class TheCortex:
         self.dreamer = DreamEngine(self.events)
         self.dialogue_buffer = []
         self.MAX_HISTORY = 15
-        self.modulator = NeurotransmitterModulator(events_ref=self.events)
+        self.modulator = NeurotransmitterModulator(bio_ref=self.svc.bio, events_ref=self.events)
         self.boot_history = TelemetryService.get_instance().read_recent_history(limit=4)
         self.last_physics = {}
         self.consultant = services.consultant
@@ -485,8 +488,8 @@ class TheCortex:
             cycle_controller=engine_ref.cycle_controller,
             symbiosis=getattr(engine_ref, 'symbiosis', SymbiosisManager(engine_ref.events)),
             mind_memory=engine_ref.mind.mem,
-            host_stats=getattr(engine_ref, 'host_stats', None)
-        )
+            bio=getattr(engine_ref, 'bio', None),
+            host_stats=getattr(engine_ref, 'host_stats', None))
         return cls(services, llm_client)
 
     @property
@@ -537,8 +540,7 @@ class TheCortex:
             modifiers["include_inventory"] = False
             user_input = "Entering reality..."
         llm_params = self.modulator.modulate(
-            full_state["bio"].get("chem", {}),
-            full_state["physics"].get("voltage", 5.0),
+            base_voltage=full_state["physics"].get("voltage", 5.0),
             latency_penalty=getattr(self.svc.host_stats, "latency", 0.0) if self.svc.host_stats else 0.0)
         if is_boot_sequence:
             llm_params.update({"temperature": 1.3, "top_p": 0.95})

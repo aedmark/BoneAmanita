@@ -1,9 +1,15 @@
 """ bone_lexicon.py - The Global Dictionary """
 
-import json, random, re, string, time, unicodedata, os
-from dataclasses import dataclass, field
+import json
+import random
+import re
+import string
+import time
+import unicodedata
+import os
+from dataclasses import dataclass
 from typing import Tuple, Dict, Set, Optional, List, Any
-from bone_core import BoneConfig, Prisma, TheLore
+from bone_core import Prisma, TheLore
 from functools import lru_cache
 
 class LexiconStore:

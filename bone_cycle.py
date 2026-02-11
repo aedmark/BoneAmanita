@@ -39,7 +39,8 @@ class CongruenceValidator:
 
 class CycleStabilizer:
     MANIFOLD_CONFIGS = {
-        "THE_FORGE": {"voltage": 15.0, "drag": 1.5},
+        "FORGE": {"voltage": 15.0, "drag": 1.5},
+        "SANCTUARY": {"voltage": 20.0, "drag": 0.0},
         "THE_MUD": {"voltage": 10.0, "drag": 5.0},
         "THE_AERIE": {"voltage": 10.0, "drag": 0.5},
         "LABORATORY": {"voltage": 12.0, "drag": 1.0},
@@ -814,8 +815,7 @@ class PhaseExecutor:
 class CycleSimulator:
     def __init__(self, engine_ref):
         self.eng = engine_ref
-        from bone_village import SanctuaryGovernor
-        self.shared_governor = SanctuaryGovernor(self.eng.events)
+        self.shared_governor = self.eng.bio.governor
         self.stabilizer = CycleStabilizer(self.eng.events, self.shared_governor)
         self.executor = PhaseExecutor()
         self.pipeline: List[SimulationPhase] = [

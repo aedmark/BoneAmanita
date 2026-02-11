@@ -339,8 +339,10 @@ class SomaticLoop:
         "synthetic": "CHITINASE",
         "social": "AMYLASE",
         "antigen": "OXIDASE"}
-
     SAMPLING_THRESHOLD = 1000
+    BASE_WORD_VALUE = 0.5
+    COMPLEX_WORD_BONUS = 2.0
+    CLICHE_TAX_RATE = 3.0
 
     def __init__(self, bio_system_ref: BioSystem, memory_ref=None, lexicon_ref=None, gordon_ref=None, folly_ref=None, events_ref=None):
         self.bio = bio_system_ref
@@ -360,7 +362,6 @@ class SomaticLoop:
             self.bio.governor.narrative_data = self.narrative_data
         self.semantic_doctor = SemanticEndocrinologist(memory_ref, lexicon_ref)
         self.enzyme_map = getattr(BoneConfig.BIO, "ENZYME_MAP", SomaticLoop._ENZYME_MAP) if hasattr(BoneConfig, "BIO") else SomaticLoop._ENZYME_MAP
-        self.enzyme_mastery = {v: 0.0 for v in self.enzyme_map.values()}
 
     def digest_cycle(self, text: str, physics_data: Any, feedback: Dict,
                      health: float, stamina: float, stress_modifier: float,
@@ -484,30 +485,20 @@ class SomaticLoop:
         return "CLEAR"
 
     def _harvest_resources(self, phys: Dict, logs: List[str]) -> Tuple[str, float]:
-        """
-        [SLASH_REFACTOR]: Broken into atomic steps for clarity and metabolic efficiency.
-        """
         clean_words = phys.get("clean_words", [])
         if not clean_words: return "NONE", 0.0
-
         words_to_process, scaling_factor = self._sample_input(clean_words, logs)
-
         raw_yield, found_enzymes, cliche_tax = self._digest_words(words_to_process)
-
         total_atp = (raw_yield * scaling_factor)
         scaled_tax = (cliche_tax * scaling_factor)
-
         if scaled_tax > 0:
             total_atp = max(0.0, total_atp - scaled_tax)
             self.bio.endo.cortisol = min(1.0, self.bio.endo.cortisol + (scaled_tax * 0.02))
             logs.append(f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX: -{scaled_tax:.1f} ATP. (Antigens Detected){Prisma.RST}")
-
         if _get_val(phys, "voltage", 0.0) > 8.0 and found_enzymes:
             found_enzymes.append("PROTEASE")
             total_atp += 5.0
-
         dominant = Counter(found_enzymes).most_common(1)[0][0] if found_enzymes else "NONE"
-
         return dominant, total_atp
 
     def _sample_input(self, words: List[str], logs: List[str]) -> Tuple[List[str], float]:
@@ -528,25 +519,19 @@ class SomaticLoop:
             if len(word) < 4: continue
             cat = TheLexicon.get_current_category(word)
             if not cat or cat == "void":
-                atp_yield += (0.5 * count)
+                atp_yield += (self.BASE_WORD_VALUE * count)
                 continue
             if cat == "antigen":
-                cliche_tax += (3.0 * count)
+                cliche_tax += (self.CLICHE_TAX_RATE * count)
                 continue
             if cat not in ["kinetic", "explosive"]:
                 enzyme = self._map_category_to_enzyme(cat)
                 if enzyme != "AMYLASE":
                     enzymes.append(enzyme)
-                    atp_yield += self._calculate_enzymatic_value(word, count, enzyme)
+                    val = self.COMPLEX_WORD_BONUS if len(word) > 7 else self.BASE_WORD_VALUE
+                    total_val = val * (1.0 + math.log(count))
+                    atp_yield += total_val
         return atp_yield, enzymes, cliche_tax
-
-    def _calculate_enzymatic_value(self, word: str, count: int, enzyme: str) -> float:
-        current_mastery = self.enzyme_mastery.get(enzyme, 0.0)
-        mastery_bonus = 1.0 + (current_mastery * 0.1)
-        base_val = 2.0 if len(word) > 7 else 1.0
-        damped_mult = 1.0 + math.log(count)
-        self.enzyme_mastery[enzyme] = min(5.0, current_mastery + 0.02)
-        return (base_val * damped_mult) * mastery_bonus
 
     def _map_category_to_enzyme(self, category: str) -> str:
         return self.enzyme_map.get(category, "AMYLASE")
@@ -748,6 +733,31 @@ class EndocrineSystem:
             "ADR": round(self.adrenaline, 2),
             "MEL": round(self.melatonin, 2)}
 
+class PIDController:
+    def __init__(self, kp, ki, kd, setpoint, output_limits=(-10.0, 10.0)):
+        self.kp = kp; self.ki = ki; self.kd = kd
+        self.setpoint = setpoint
+        self.min_out, self.max_out = output_limits
+        self._integral = 0.0; self._last_error = 0.0; self._first_run = True
+
+    def reset(self):
+        self._integral = 0.0; self._last_error = 0.0; self._first_run = True
+
+    def update(self, measurement: float, dt: float = 1.0) -> float:
+        if dt <= 0.0: return 0.0
+        error = self.setpoint - measurement
+        if self._first_run:
+            self._last_error = error
+            self._first_run = False
+        P = self.kp * error
+        self._integral += error * dt
+        self._integral = max(self.min_out, min(self.max_out, self._integral))
+        I = self.ki * self._integral
+        derivative = (error - self._last_error) / dt
+        D = self.kd * derivative
+        output = P + I + D
+        self._last_error = error
+        return max(self.min_out, min(self.max_out, output))
 
 @dataclass
 class MetabolicGovernor:
@@ -767,6 +777,27 @@ class MetabolicGovernor:
         (10.0, 0.0, "FORGE", 6),
         (0.0, 4.0, "LABORATORY", 5),
         (0.0, 0.0, "COURTYARD", 1)]
+
+    def __post_init__(self):
+        self.voltage_pid = PIDController(kp=0.6, ki=0.05, kd=0.2, setpoint=10.0)
+        self.drag_pid = PIDController(kp=0.4, ki=0.1, kd=0.1, setpoint=1.5)
+
+    def recalibrate(self, target_voltage: float, target_drag: float):
+        self.voltage_pid.setpoint = target_voltage
+        self.drag_pid.setpoint = target_drag
+
+    def regulate(self, physics, dt: float) -> Tuple[float, float]:
+        v_force = self.voltage_pid.update(physics.voltage, dt)
+        d_force = self.drag_pid.update(physics.narrative_drag, dt)
+        return v_force, d_force
+
+    def assess(self, physics_packet) -> Tuple[bool, float]:
+        curr_v = _get_val(physics_packet, "voltage", 0.0)
+        curr_d = _get_val(physics_packet, "narrative_drag", 0.0)
+        dist_v = abs(curr_v - self.voltage_pid.setpoint)
+        dist_d = abs(curr_d - self.drag_pid.setpoint)
+        is_safe = (dist_v < 3.0) and (dist_d < 1.5)
+        return is_safe, math.sqrt(dist_v ** 2 + dist_d ** 2)
 
     @staticmethod
     def get_stress_modifier(tick_count):
