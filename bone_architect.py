@@ -1,10 +1,10 @@
 """ bone_architect.py - "We shape our buildings; thereafter they shape us." - Churchill """
+
 import random
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Dict, Any, Optional, List
 from dataclasses import dataclass
 from bone_core import Prisma, MindSystem, PhysSystem, PhysicsPacket, TheLore, BoneConfig
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
-from bone_symbiosis import MycotoxinFactory, LichenSymbiont, ParasiticSymbiont
 from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, Biometrics
 from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity
 from bone_protocols import LimboLayer
@@ -93,11 +93,30 @@ class PanicRoom:
             "mask": "DEFAULT",
             "glitch_factor": 0.0}
 
-def ViralTracer(_mem):
-    pass
+class ViralTracer:
+    def __init__(self, memory_ref):
+        self.memory = memory_ref
+        self.active_loops = []
 
-def ThePacemaker():
-    pass
+    def inject(self, start_node: str) -> Optional[List[str]]:
+        if random.random() < 0.05:
+            return [start_node, "echo", "void", start_node]
+        return None
+
+    def psilocybin_rewire(self, loop_path: List[str]) -> str:
+        return f"Rewired logic loop: {'->'.join(loop_path)}"
+
+class ThePacemaker:
+    def __init__(self):
+        self.boredom_level = 0.0
+        self.heart_rate = 60
+        self.BOREDOM_THRESHOLD = getattr(BoneConfig, "BOREDOM_THRESHOLD", 10.0)
+
+    def beat(self, stress: float):
+        self.heart_rate = 60 + (stress * 20)
+
+    def is_bored(self) -> bool:
+        return self.boredom_level > self.BOREDOM_THRESHOLD
 
 class BoneArchitect:
     @staticmethod

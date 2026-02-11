@@ -1,31 +1,28 @@
 """ bone_akashic.py - The Self-Writing Myth """
 import json
 import os
-import random
-from typing import Dict, Any, Tuple, cast, List, Set
+from typing import Dict, Any, Tuple, cast, List, Set, Optional
 from bone_core import Prisma, TheLore, LoreManifest, BoneJSONEncoder
-
 
 class TheAkashicRecord:
     def __init__(self):
         self.discovered_words: Dict[str, str] = {}
-        self.forged_items: Dict[str, Any] = {}
-        self.recipe_candidates: Dict[Tuple[str, str], Dict[str, int]] = {}
         self.lens_cooccurrence: Dict[Tuple[str, str], int] = {}
         self.ingredient_affinity: Dict[str, int] = {}
-        self.style_drift = {"chaos_score": 0.0, "rigidity_score": 0.0}
         self.known_recipes: Set[Tuple[str, str]] = set()
+        self.recipe_candidates: Dict[Tuple[str, str], Dict[str, int]] = {}
         self.RECIPE_THRESHOLD = 3
         self.HYBRID_LENS_THRESHOLD = 5
+        self.MAX_SHADOW_CAPACITY = 50
         self.lore = TheLore
         self.shadow_stock: List[Dict] = []
-        self.MAX_SHADOW_CAPACITY = 50
         self._load_mythos_state()
 
     def setup_listeners(self, event_bus):
         event_bus.subscribe("MYTHOLOGY_UPDATE", self._on_mythology_update)
         event_bus.subscribe("LENS_INTERACTION", self._on_lens_interaction)
         event_bus.subscribe("FORGE_SUCCESS", self._on_forge_event)
+        event_bus.subscribe("GHOST_SIGNAL", self._on_ghost_signal)
         print(f"{Prisma.CYN}[AKASHIC]: Listening for mythic resonance...{Prisma.RST}")
 
     def _on_lens_interaction(self, payload):
@@ -47,6 +44,10 @@ class TheAkashicRecord:
         if word and category:
             self.register_word(word, category)
 
+    def _on_ghost_signal(self, payload):
+        if payload:
+            self.store_ghost_echo(payload)
+
     def save_all(self):
         self.save_to_disk("akashic_lexicon", self.discovered_words)
         gordon_data = self.lore.get("GORDON")
@@ -55,25 +56,26 @@ class TheAkashicRecord:
         lens_data = self.lore.get("LENSES")
         if lens_data:
             self.save_to_disk("lenses", lens_data)
+        mythos_state = {
+            "lens_cooccurrence": {f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
+            "ingredient_affinity": self.ingredient_affinity,
+            "shadow_stock": self.shadow_stock}
+        self.save_to_disk("mythos", mythos_state)
         print(f"{Prisma.GRY}[AKASHIC]: Mythos persisted.{Prisma.RST}")
 
     def save_to_disk(self, category: str, data: Any):
-        directory = "lore"
+        directory = LoreManifest.DATA_DIR
         if not os.path.exists(directory):
             try:
                 os.makedirs(directory)
             except OSError as e:
                 print(f"{Prisma.RED}[AKASHIC]: Failed to create '{directory}' directory: {e}{Prisma.RST}")
                 return
-        filepath = os.path.join(directory, f"akashic_{category}.json")
-        serializable_data = data
-        if category == "lens_cooccurrence":
-            serializable_data = {
-                f"{k[0]}::{k[1]}": v
-                for k, v in data.items()}
+        filename = f"akashic_{category}.json"
+        filepath = os.path.join(directory, filename)
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(serializable_data, f, indent=2, cls=BoneJSONEncoder)
+                json.dump(data, f, indent=2, cls=BoneJSONEncoder)
             print(f"{Prisma.GRY}[AKASHIC]: Saved {category}.{Prisma.RST}")
         except Exception as e:
             print(f"{Prisma.RED}[AKASHIC]: Save Failed ({category}): {e}{Prisma.RST}")
@@ -136,7 +138,6 @@ class TheAkashicRecord:
 
         def get_weights(l_name):
             return existing_lenses.get(l_name, {}).get("weights", {"v": 0, "d": 0})
-
         w_a = get_weights(lens_a)
         w_b = get_weights(lens_b)
         new_weights = {
@@ -177,59 +178,16 @@ class TheAkashicRecord:
             print(f"✨ MYTHOLOGY ENGINE: The Lexicon expands. New Category: '{category_name.upper()}'")
             self.save_to_disk("LEXICON", lexicon_data)
 
-    def forge_new_item(self, vector_data, ITEM_GENERATION=None):
-        if ITEM_GENERATION is None:
-            gordon_data = self.lore.get("GORDON") or {}
-            ITEM_GENERATION = gordon_data.get("ITEM_GENERATION", {})
-        if not ITEM_GENERATION or "PREFIXES" not in ITEM_GENERATION:
-            ITEM_GENERATION = {
-                "PREFIXES": {"void": ["Null"]},
-                "BASES": {"default": ["Object"]},
-                "SUFFIXES": {"void": ["of Void"]}}
-        if not vector_data: vector_data = {"void": 1.0}
-        dominant = max(vector_data, key=vector_data.get)
-        if dominant not in ITEM_GENERATION["PREFIXES"]: dominant = "void"
-        prefix = random.choice(ITEM_GENERATION["PREFIXES"].get(dominant, ["Strange"]))
-        bases = ITEM_GENERATION.get("BASES", {})
-        if not bases: bases = {"default": ["Artifact"]}
-        base_type = random.choice(list(bases.keys()))
-        base_name = random.choice(bases[base_type])
-        suffix = random.choice(ITEM_GENERATION["SUFFIXES"].get(dominant, ["of Mystery"]))
-        name = f"{prefix.upper()} {base_name.upper()} {suffix.upper()}"
-        value = vector_data.get(dominant, 0.0) * 10.0
-        description = f"A procedurally generated artifact. It vibrates with {dominant} energy."
-        new_item = {
-            "description": description,
-            "function": "ARTIFACT",
-            "passive_traits": [f"{dominant.upper()}_RESONANCE"],
-            "value": round(value, 2),
-            "usage_msg": f"You use the {name}. The air ripples with {dominant} force."}
-        return name, new_item
-
     def store_ghost_echo(self, memory_data: Dict):
         self.shadow_stock.append(memory_data)
         if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
             self.shadow_stock.pop(0)
-        self.save_all()
-        print(f"{Prisma.VIOLET}[AKASHIC]: Ghost Echo archived: '{memory_data.get('lesson')}'{Prisma.RST}")
-
-    def calculate_manifold_shift(self, theta: str, e: Dict[str, float]) -> Dict[str, float]:
-        delta = {"voltage_bias": 0.0, "drag_scalar": 1.0}
-        archetype_bias = {
-            "THE POET": {"v": 2.0, "d": 0.8},
-            "THE ENGINEER": {"v": -1.0, "d": 1.2},
-            "THE NIHILIST": {"v": -5.0, "d": 2.0},
-            "THE MANIC": {"v": 10.0, "d": 0.5},
-            "THE OBSERVER": {"v": 0.0, "d": 1.0},
-            "THE CRITIC": {"v": -2.0, "d": 1.5}}
-        base = archetype_bias.get(theta, archetype_bias["THE OBSERVER"])
-        tension = e.get("DISCIPLINE", 0.5)
-        vitality = e.get("HOPE", 0.5)
-        lambda_val = (1.0 + tension) * vitality
-        delta["voltage_bias"] = base["v"] * lambda_val
-        flow_state = (e.get("CURIOSITY", 0.5) + vitality) / 2.0
-        delta["drag_scalar"] = base["d"] * (1.5 - flow_state)
-        return delta
+        mythos_state = {
+            "lens_cooccurrence": {f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
+            "ingredient_affinity": self.ingredient_affinity,
+            "shadow_stock": self.shadow_stock}
+        self.save_to_disk("mythos", mythos_state)
+        print(f"{Prisma.VIOLET}[AKASHIC]: Ghost Echo archived.{Prisma.RST}")
 
     def register_word(self, word, category):
         lexicon_data = self.lore.get("LEXICON")

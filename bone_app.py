@@ -1,14 +1,11 @@
-""" bone_app.py - The Glass Terminal Interface (Persistence Fixed) """
+""" bone_app.py - The Glass Terminal Interface (Refactored) """
 
 import streamlit as st
 import time
 import json
 import os
-import re
 from bone_main import BoneAmanita, ConfigWizard
 from bone_core import Prisma
-
-ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 st.set_page_config(
     page_title="BONEAMANITA [GLASS TERMINAL]",
@@ -16,92 +13,50 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded")
 
+# --- CSS STYLING ---
 st.markdown("""
 <style>
-    .stChatMessage .stMarkdown p {
-        margin-bottom: 1.5em !important;
-        line-height: 1.8 !important;
-        font-size: 1.05rem;
-        display: block;
-    }
-    .stChatMessage .stMarkdown ul, .stChatMessage .stMarkdown ol {
-        margin-bottom: 1.2em !important;
-    }
-    .stApp {
-        background-color: #050505;
-        color: #00ff41;
-        font-family: 'Courier New', monospace;
-    }
-    .stTextInput > div > div > input {
-        background-color: #111;
-        color: #00ff41;
-        border: 1px solid #333;
-        font-family: 'Courier New', monospace;
-    }
-    section[data-testid="stSidebar"] {
-        background-color: #0a0a0a;
-        border-right: 1px solid #222;
-    }
-    div[data-testid="stMetricValue"] {
-        font-size: 1.1rem !important;
-        color: #00ff41 !important;
-    }
-    .stProgress > div > div > div > div {
-        background-color: #00ff41;
-    }
-    .stChatMessage {
-        background-color: #0e1117;
-        border: 1px solid #222;
-        border-radius: 5px;
-        margin-bottom: 15px;
-    }
-    .stButton > button {
-        border: 1px solid #00ff41;
-        color: #00ff41;
-        background-color: transparent;
-        font-family: 'Courier New', monospace;
-    }
-    .stButton > button:hover {
-        background-color: #00ff41;
-        color: #000;
-    }
+    .stChatMessage .stMarkdown p { margin-bottom: 1.5em !important; line-height: 1.8 !important; font-size: 1.05rem; }
+    .stApp { background-color: #050505; color: #00ff41; font-family: 'Courier New', monospace; }
+    .stTextInput > div > div > input { background-color: #111; color: #00ff41; border: 1px solid #333; font-family: 'Courier New', monospace; }
+    section[data-testid="stSidebar"] { background-color: #0a0a0a; border-right: 1px solid #222; }
+    div[data-testid="stMetricValue"] { font-size: 1.1rem !important; color: #00ff41 !important; }
+    .stChatMessage { background-color: #0e1117; border: 1px solid #222; border-radius: 5px; margin-bottom: 15px; }
+    .stButton > button { border: 1px solid #00ff41; color: #00ff41; background-color: transparent; font-family: 'Courier New', monospace; }
+    .stButton > button:hover { background-color: #00ff41; color: #000; }
 </style>
 """, unsafe_allow_html=True)
 
-def strip_ansi(text):
-    if not text: return ""
-    return ANSI_ESCAPE.sub('', text)
+
+# --- HELPER FUNCTIONS ---
 
 def clean_engine_output(raw_text):
     if not raw_text: return "No signal."
-    clean = strip_ansi(raw_text)
-    if "────────────────────────────────────────────────────────────" in clean:
-        clean = clean.split("────────────────────────────────────────────────────────────")[-1].strip()
-    return clean
+    # Use the centralized stripper
+    clean = Prisma.strip(raw_text)
+    lines = clean.split('\n')
+    filtered = [line for line in lines if not set(line).issubset({'─', '-', ' '}) or len(line) < 5]
+    return "\n".join(filtered).strip()
 
 def perform_autosave(engine_ref, history_ref):
     try:
         if not os.path.exists("saves"):
             os.makedirs("saves")
         result = engine_ref.save_checkpoint(history=history_ref)
-        print(f"[AUTOSAVE]: {result}")
         if "❌" in result:
             st.error(result)
-        elif "✔" not in result:
-            st.warning(f"Save Status Unknown: {result}")
     except Exception as e:
         st.error(f"Autosave Crashed: {e}")
-        print(f"[AUTOSAVE_CRASH]: {e}")
 
 def format_log_entry(log_str):
-    clean = strip_ansi(log_str)
-    if "██" in clean or "♦ THE ARCHITECT" in clean:
-        return None
+    clean = Prisma.strip(log_str)
+    if "██" in clean or "♦ THE ARCHITECT" in clean: return None
     if "[BIO]" in clean: return f"🧬 {clean}"
     if "[PHYSICS]" in clean or "VOLTAGE" in clean: return f"⚡ {clean}"
     if "[COUNCIL]" in clean: return f"⚖️ {clean}"
     if "[REM]" in clean: return f"💤 {clean}"
     if "ERROR" in clean or "CRITICAL" in clean: return f"❌ {clean}"
+    if "ITEM:" in clean or "GAINED" in clean: return f"🎒 {clean}"
     return f"🔹 {clean}"
 
 def generate_transcript(history, user_name="TRAVELER"):
@@ -109,80 +64,110 @@ def generate_transcript(history, user_name="TRAVELER"):
     lines = [f"# BONEAMANITA TRANSCRIPT - {timestamp}", f"Identity: {user_name}", "---"]
     for entry in history:
         raw_role = entry["role"].upper()
-        display_name = raw_role
-        if raw_role == "USER":
-            display_name = user_name.upper()
-        elif raw_role == "ASSISTANT":
-            display_name = "THE SYSTEM"
-        content = entry.get("raw_content", entry["content"])
-        clean_content = strip_ansi(content)
+        display_name = user_name.upper() if raw_role == "USER" else "THE SYSTEM"
         icon = "👤" if raw_role == "USER" else "💀"
+        clean_content = Prisma.strip(entry.get("raw_content", entry["content"]))
         lines.append(f"\n### {icon} {display_name}")
         lines.append(clean_content)
         if "logs" in entry and entry["logs"]:
             lines.append("\n> **SYSTEM INTERNALS:**")
             for internal_log in entry["logs"]:
-                clean_log = strip_ansi(str(internal_log))
+                clean_log = Prisma.strip(str(internal_log))
                 lines.append(f"> * {clean_log}")
-    lines.append("\n---")
-    lines.append("*End of Transmission*")
+    lines.append("\n---\n*End of Transmission*")
     return "\n".join(lines)
 
-def render_sidebar(eng_ref):
-    if not hasattr(eng_ref, 'soul') or not eng_ref.soul:
-        return
-    soul = eng_ref.soul
-    anchor = soul.anchor
-    host_diag = "WAITING"
-    if hasattr(eng_ref, 'symbiosis') and getattr(eng_ref.symbiosis, 'current_health', None):
-        host_diag = eng_ref.symbiosis.current_health.diagnosis
+
+# --- RENDER LOGIC ---
+
+def render_dashboard(eng_ref):
     with st.sidebar:
         st.title("💀 BONEAMANITA")
         st.caption(f"Kernel: {getattr(eng_ref, 'kernel_hash', 'UNKNOWN')}")
-        st.markdown("---")
-        st.subheader("👁️ Symbiosis Link")
-        if host_diag == "STABLE":
-            st.success(f"SIGNAL: {host_diag}")
-        elif host_diag in ["REFUSAL", "LOOPING"]:
-            st.error(f"SIGNAL: {host_diag}")
-        else:
-            st.warning(f"SIGNAL: {host_diag}")
-        dig = anchor.dignity_reserve
-        st.subheader("⚓ Dignity Reserve")
-        st.progress(min(100, max(0, int(dig))))
-        if anchor.agency_lock:
-            st.error("🔒 AGENCY LOCKED")
-        elif dig < 30:
-            st.warning("⚠ CRITICAL FADE")
-        st.markdown("---")
-        st.subheader("🩸 Endocrine Levels")
-        chem = {}
+        st.divider()
+
+        # 1. IDENTITY & SOUL
+        st.subheader("IDENTITY")
+        if hasattr(eng_ref, 'soul') and eng_ref.soul:
+            anchor = eng_ref.soul.anchor
+            dig = anchor.dignity_reserve
+            st.progress(min(100, max(0, int(dig))), text=f"DIGNITY: {int(dig)}%")
+            if anchor.agency_lock:
+                st.error("🔒 AGENCY LOCKED")
+            st.markdown(f"**ARCHETYPE: {eng_ref.soul.archetype}**")
+            st.caption(f"Tenure: {eng_ref.soul.archetype_tenure} cycles")
+            if eng_ref.soul.current_obsession:
+                 st.caption(f"Obsession: {eng_ref.soul.current_obsession}")
+
+        # 2. SYMBIOSIS & HEALTH
+        st.divider()
+        st.subheader("VITALS")
+        hp = eng_ref.health
+        stam = eng_ref.stamina
+        atp = 0.0
+        if hasattr(eng_ref, 'bio') and eng_ref.bio and hasattr(eng_ref.bio, 'mito'):
+             atp = eng_ref.bio.mito.state.atp_pool
+        st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.1f}%")
+        st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"STAMINA: {stam:.1f}%")
+        c1, c2 = st.columns(2)
+        c1.metric("ATP", f"{atp:.1f} J")
+
+        # Endocrine Check
         if hasattr(eng_ref, 'bio') and eng_ref.bio and eng_ref.bio.endo:
             chem = eng_ref.bio.endo.get_state()
-        c1, c2 = st.columns(2)
-        cor = chem.get("COR", 0.0)
-        c1.metric("Cortisol", f"{cor:.2f}", delta="-Stress" if cor < 0.3 else "+Stress", delta_color="inverse")
-        dop = chem.get("DOP", 0.0)
-        c2.metric("Dopamine", f"{dop:.2f}", delta="Reward")
-        st.markdown("---")
-        st.subheader("🎭 Active Driver")
-        st.markdown(f"**{soul.archetype}**")
-        tenure = soul.archetype_tenure
-        st.caption(f"Tenure: {tenure} cycles")
-        with st.expander("System Vectors"):
-            v = 0.0
-            d = 0.0
-            if hasattr(eng_ref, 'phys') and eng_ref.phys and hasattr(eng_ref.phys, 'observer'):
-                v_packet = eng_ref.phys.observer.last_physics_packet
-                if v_packet:
-                    if isinstance(v_packet, dict):
-                        v = v_packet.get("voltage", 0.0)
-                        d = v_packet.get("narrative_drag", 0.0)
-                    else:
-                        v = getattr(v_packet, "voltage", 0.0)
-                        d = getattr(v_packet, "narrative_drag", 0.0)
-            st.metric("Voltage", f"{v:.1f}v")
-            st.metric("Narrative Drag", f"{d:.1f}")
+            cor = chem.get("COR", 0.0)
+            c2.metric("CORTISOL", f"{cor:.2f}", delta="-Stress" if cor < 0.3 else "+Stress", delta_color="inverse")
+
+        # 3. PHYSICS & COORDINATES
+        st.divider()
+        st.subheader("PHYSICS")
+        volts = 0.0
+        drag = 0.0
+        zone = "VOID"
+
+        if eng_ref.phys and hasattr(eng_ref.phys, 'observer') and eng_ref.phys.observer.last_physics_packet:
+            packet = eng_ref.phys.observer.last_physics_packet
+            if isinstance(packet, dict):
+                volts = packet.get("voltage", 0.0)
+                drag = packet.get("narrative_drag", 0.0)
+                zone = packet.get("zone", "VOID")
+            else:
+                volts = getattr(packet, "voltage", 0.0)
+                drag = getattr(packet, "narrative_drag", 0.0)
+                zone = getattr(packet, "zone", "VOID")
+        c3, c4 = st.columns(2)
+        c3.metric("VOLTAGE", f"{volts:.1f}v")
+        c4.metric("DRAG", f"{drag:.1f}")
+        st.info(f"📍 ZONE: {zone}")
+
+        # 4. INVENTORY
+        st.divider()
+        st.subheader("INVENTORY")
+        inv = eng_ref.gordon.inventory
+        if inv:
+            for item in inv: st.code(item, language=None)
+        else:
+            st.caption("Belt Empty.")
+
+        # 5. ADMIN TOOLS
+        st.divider()
+        transcript_txt = generate_transcript(st.session_state.history, user_name=eng_ref.user_name)
+        st.download_button(
+            label="📜 EXPORT LOG",
+            data=transcript_txt,
+            file_name=f"bone_log_{int(time.time())}.md",
+            mime="text/markdown")
+        if st.button("☣️ EMERGENCY DUMP"):
+            msg = eng_ref.emergency_save(exit_cause="MANUAL_UI")
+            st.toast(msg)
+        if st.button("💾 SAVE & HIBERNATE"):
+            with st.spinner("Compiling Spore..."):
+                eng_ref.save_checkpoint(history=st.session_state.history)
+                eng_ref.shutdown()
+                st.success("System State Saved. You may close the terminal.")
+
+
+# --- MAIN EXECUTION ---
 
 if "history" not in st.session_state:
     st.session_state.history = []
@@ -191,18 +176,20 @@ if "history" not in st.session_state:
 def load_config_cached():
     return ConfigWizard.load_or_create()
 
-
 def init_engine():
     try:
         config = load_config_cached()
         if not config: return None
         new_instance = BoneAmanita(config)
+
+        # Resume Check
         print(f"[BOOT] Checking for saves in {os.path.abspath('saves')}...")
         restored, saved_history = new_instance.resume_checkpoint()
         if restored and saved_history:
             st.session_state.history = saved_history
-            print("[BOOT] History restored.")
             st.toast("System State Restored.")
+
+        # Cold Boot
         if not st.session_state.history:
             print("[BOOT] Cold Boot.")
             boot_packet = new_instance.engage_cold_boot()
@@ -221,6 +208,7 @@ def init_engine():
         st.error(f"Critical Boot Error: {e}")
         return None
 
+# Setup Wizard
 if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_state:
     st.title("/// SYSTEM SETUP ///")
     with st.form("setup_form"):
@@ -236,121 +224,43 @@ if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_s
             st.rerun()
     st.stop()
 
-if "history" not in st.session_state:
-    st.session_state.history = []
-
+# Engine Initialization
 if "ENGINE" not in st.session_state:
     with st.spinner("Hydrating Spore Casing..."):
         st.session_state.ENGINE = init_engine()
-
 if st.session_state.ENGINE is None:
     st.stop()
 
-if "ENGINE" in st.session_state:
-    render_sidebar(st.session_state.ENGINE)
-
+# Render Interface
 engine = st.session_state.ENGINE
+render_dashboard(engine)
 
-with st.sidebar:
-    st.header(f"IDENTITY: {engine.user_name.upper()}")
-    st.divider()
-
-    st.subheader("BIO.MONITOR")
-    hp = engine.health
-    stam = engine.stamina
-    atp = 0.0
-    if hasattr(engine, 'bio') and engine.bio and hasattr(engine.bio, 'mito'):
-         atp = engine.bio.mito.state.atp_pool
-
-    st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.1f}%")
-    st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"STAMINA: {stam:.1f}%")
-
-    c1, c2 = st.columns(2)
-    c1.metric("ATP", f"{atp:.1f} J")
-    c2.metric("ENZYME", "ACTIVE")
-
-    st.divider()
-
-    st.subheader("COORDINATES")
-    volts = 0.0
-    drag = 0.0
-    zone = "VOID"
-
-    if engine.phys and hasattr(engine.phys, 'observer') and engine.phys.observer.last_physics_packet:
-        packet = engine.phys.observer.last_physics_packet
-        if isinstance(packet, dict):
-            volts = packet.get("voltage", 0.0)
-            drag = packet.get("narrative_drag", 0.0)
-            zone = packet.get("zone", "VOID")
-        else:
-            volts = getattr(packet, "voltage", 0.0)
-            drag = getattr(packet, "narrative_drag", 0.0)
-            zone = getattr(packet, "zone", "VOID")
-
-    c3, c4 = st.columns(2)
-    c3.metric("VOLTAGE", f"{volts:.1f}v")
-    c4.metric("DRAG", f"{drag:.1f}")
-    st.info(f"📍 ZONE: {zone}")
-
-    st.divider()
-
-    st.subheader("INVENTORY")
-    inv = engine.gordon.inventory
-    if inv:
-        for item in inv: st.code(item, language=None)
-    else: st.caption("Belt Empty.")
-
-    transcript_txt = generate_transcript(st.session_state.history, user_name=engine.user_name)
-    st.download_button(
-        label="📜 EXPORT LOG",
-        data=transcript_txt,
-        file_name=f"bone_log_{int(time.time())}.md",
-        mime="text/markdown")
-
-    st.divider()
-
-    if st.button("☣️ EMERGENCY DUMP"):
-        msg = engine.emergency_save(exit_cause="MANUAL_UI")
-        st.toast(msg)
-
-    if st.button("💾 SAVE & HIBERNATE"):
-        if 'ENGINE' in st.session_state:
-            with st.spinner("Compiling Spore..."):
-                st.session_state.ENGINE.save_checkpoint(history=st.session_state.history)
-                st.session_state.ENGINE.shutdown()
-                st.success("System State Saved. You may close the terminal.")
-
+# Chat History Display
 for hist_msg in st.session_state.history:
     with st.chat_message(hist_msg["role"]):
         raw = hist_msg.get("raw_content", hist_msg["content"])
         clean_show = clean_engine_output(raw)
         st.markdown(clean_show)
-
         if "logs" in hist_msg and hist_msg["logs"]:
             with st.expander("SYSTEM INTERNALS"):
                 for hist_log in hist_msg["logs"]:
                     formatted = format_log_entry(hist_log)
-                    if formatted:
-                        st.caption(formatted)
+                    if formatted: st.caption(formatted)
 
+# Input Loop
 if prompt := st.chat_input("Broadcast Signal..."):
     with st.chat_message("user"):
         st.markdown(prompt)
     st.session_state.history.append({"role": "user", "content": prompt})
-
     with st.spinner("Calculating Geodesics..."):
         packet = engine.process_turn(prompt)
-
     logs = packet.get("logs", [])
     raw_response = packet.get("ui", "No signal.")
     clean_response = clean_engine_output(raw_response)
-
     st.session_state.history.append({
         "role": "assistant",
         "content": clean_response,
         "raw_content": raw_response,
         "logs": logs})
-
-    engine.save_checkpoint(history=st.session_state.history)
-
+    perform_autosave(engine, st.session_state.history)
     st.rerun()

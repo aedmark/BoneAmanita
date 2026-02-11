@@ -1,5 +1,40 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.9.4: "THE BUREAU'S AUDIT"**
+
+_“We do not fix the building by painting the walls. We fix it by replacing the cardboard pillars with concrete.”_
+
+---
+
+#### **🧠 COGNITIVE DEPTH (The Pinker Lens)**
+
+- **The Librarian’s Delusion (`bone_akashic.py`):**
+  - **The Scope Creep:** The Akashic Record had forgotten its purpose. It was attempting to calculate physics (`calculate_manifold_shift`) and manufacture artifacts (`forge_new_item`) inside the archives.
+  - **The Audit:** We stripped the Archive of its pretensions. It no longer does math or smithing. It remembers.
+  - **The Ghost Wire:** `store_ghost_echo` was an island. It is now wired to the `GHOST_SIGNAL` event, ensuring the dead are properly filed.
+
+#### **🏗️ STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Concrete Pour (`bone_architect.py`):**
+  - **The Cardboard Pillars:** `ThePacemaker` and `ViralTracer` were defined as empty stubs (`pass`), creating a structural lie that crashed the Cycle when called.
+  - **The Reification:** We poured concrete. These are now fully functional classes with the methods required by the Geodesic Orchestrator.
+  - **The Panic Room:** Tightened the `get_safe_physics` protocol to ensure emergency packets match the current system spec.
+
+- **The Glass Unification (`bone_app.py`):**
+  - **The Schism:** The UI logic was bifurcated, with sidebar rendering split across two disconnected functions, leading to "Split-Brain Sidebar."
+  - **The Cyclops:** Consolidated all sidebar logic into a single `render_dashboard` function.
+  - **The Shredder:** Replaced manual Regex compilation for ANSI stripping with the centralized `Prisma.strip` method.
+
+#### **📉 METABOLIC HYGIENE (The Meadows Lens)**
+
+- **The Somatic Standardization (`bone_body.py`):**
+  - **The Cowardice:** The code relied on `_get_val`, a weak helper function that guessed whether data was a Dictionary or an Object.
+  - **The Law:** Implemented `get_phys_attr`. We now have a robust, standardized accessor for `PhysicsPacket` data.
+  - **The Integral Windup:** The `PIDController` in the Metabolic Governor was vulnerable to division-by-zero errors during time dilations ($dt=0$). We installed a `safe_dt` floor.
+  - **The Cold Boot:** Lazy-loaded `TheLore` in the `MitochondrialForge`. The body no longer dies of shock if it wakes up before the history books are written.
+
+---
+
 ### **BONEAMANITA v14.9.3: "THE UNIFIED STATE"**
 
 _“The left hand finally knows what the right hand is doing. And it is terrified.”_
