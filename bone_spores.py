@@ -1,14 +1,16 @@
 """ bone_spores.py - The Mycelium & Persistence Layer """
 
-import json, math, os, random, time, tempfile
+import json, os, random, time, tempfile
 from collections import deque
-from typing import List, Tuple, Optional, Dict, Set, Any
+from typing import List, Tuple, Optional, Dict, Any
 from bone_lexicon import TheLexicon
-from bone_core import EventBus, Prisma, BoneConfig, TheLore, BoneJSONEncoder
+from bone_core import EventBus, TheLore, BoneJSONEncoder
+from bone_types import Prisma
+from bone_config import BoneConfig
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
-        self.genome = "BONEAMANITA_14.9.4"
+        self.genome = "BONEAMANITA_14.9.5"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():
@@ -314,12 +316,18 @@ class MycelialNetwork:
         parts = path.split('.')
         target = BoneConfig
         for part in parts[:-1]:
-            if hasattr(target, part):
-                target = getattr(target, part)
+            if isinstance(target, dict):
+                target = target.get(part)
             else:
-                return False
+                target = getattr(target, part, None)
+            if target is None: return False
         last_key = parts[-1]
-        if hasattr(target, last_key):
+        if isinstance(target, dict):
+            if last_key in target and isinstance(target[last_key], (int, float)):
+                if 0.0 <= value <= 1000.0:
+                    target[last_key] = value
+                    return True
+        elif hasattr(target, last_key):
             current = getattr(target, last_key)
             if isinstance(current, (int, float)) and isinstance(value, (int, float)):
                 if 0.0 <= value <= 1000.0:
@@ -840,14 +848,25 @@ class LiteraryReproduction:
         target = root_config
         try:
             for part in parts:
-                target = getattr(target, part)
+                if isinstance(target, dict):
+                    target = target.get(part)
+                else:
+                    target = getattr(target, part)
+                if target is None: return None
             return target
-        except AttributeError:
+        except (AttributeError, KeyError):
             return None
 
     @staticmethod
     def mitosis(parent_id, bio_state, physics):
         counts = LiteraryReproduction._extract_counts(physics)
+        if not counts:
+            dominant = "VOID"
+        else:
+            dominant = max(counts, key=counts.get)
+        mutation_data = LiteraryReproduction.MUTATIONS.get(
+            dominant.upper(),
+            {"trait": "NEUTRAL", "mod": {}, "lexicon": []})
         dominant = max(counts, key=counts.get) if counts else "VOID"
         mutation_data = LiteraryReproduction.MUTATIONS.get(
             dominant.upper(),

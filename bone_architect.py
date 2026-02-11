@@ -3,7 +3,9 @@
 import random
 from typing import Tuple, Dict, Any, Optional, List
 from dataclasses import dataclass
-from bone_core import Prisma, MindSystem, PhysSystem, PhysicsPacket, TheLore, BoneConfig
+from bone_core import Prisma, TheLore
+from bone_types import MindSystem, PhysSystem, PhysicsPacket
+from bone_config import BoneConfig
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, Biometrics
 from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity

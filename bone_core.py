@@ -1,25 +1,10 @@
 """ bone_core.py - The Spine of the System (Refactored) """
 
-import json, os, time, random, copy, re, glob, math, uuid, traceback
+import json, os, time, random, glob, traceback
 from collections import deque
-from dataclasses import dataclass, field, fields, asdict
+from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Counter, Tuple, Deque
-
-from bone_types import (
-    Prisma,
-    LoreCategory,
-    RealityLayer,
-    ErrorLog,
-    PhysicsPacket,
-    PhysicsSandbox,
-    CycleContext,
-    MindSystem,
-    PhysSystem,
-    StateSandbox,
-    DecisionTrace,
-    DecisionCrystal
-)
-from bone_config import BoneConfig, BonePresets
+from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
 
 class BoneJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -67,6 +52,78 @@ class EventBus:
 
     def get_recent_logs(self, count=10):
         return list(self.buffer)[-count:]
+
+class LoreManifest:
+    _INSTANCE = None
+    DATA_DIR = "lore"
+
+    def __init__(self):
+        self._cache = {}
+        self._overlays = {}
+        self._missing_cache = set()
+
+    @classmethod
+    def get_instance(cls):
+        if cls._INSTANCE is None:
+            cls._INSTANCE = LoreManifest()
+        return cls._INSTANCE
+
+    def _load_from_disk(self, category: str) -> Optional[Dict]:
+        filename = f"{category.lower()}.json"
+        filepath = os.path.join(self.DATA_DIR, filename)
+        if not os.path.exists(filepath):
+            return None
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            print(f"{Prisma.GRY}[LORE]: Lazy-loaded '{category}' from disk.{Prisma.RST}")
+            return data
+        except Exception as e:
+            print(f"{Prisma.RED}[LORE]: Corrupt JSON in '{category}': {e}{Prisma.RST}")
+            return None
+
+    def get(self, category: str, sub_key: str = None) -> Any:
+        if category in self._overlays:
+            data = self._overlays[category]
+        elif category in self._cache:
+            data = self._cache[category]
+        elif category in self._missing_cache:
+            data = {}
+        else:
+            data = self._load_from_disk(category)
+            if data is not None:
+                self._cache[category] = data
+            else:
+                self._missing_cache.add(category)
+                print(f"{Prisma.GRY}[LORE]: '{category}' not found. Caching miss.{Prisma.RST}")
+                data = {}
+        if sub_key and isinstance(data, dict):
+            return data.get(sub_key, None)
+        return data
+
+    def inject(self, category: str, data: Any):
+        if category not in self._overlays:
+            self._overlays[category] = {}
+        if isinstance(self._overlays[category], dict) and isinstance(data, dict):
+            self._overlays[category].update(data)
+        else:
+            self._overlays[category] = data
+        if category in self._missing_cache:
+            self._missing_cache.remove(category)
+
+    def flush_cache(self, category: str = None):
+        if category:
+            if category in self._cache:
+                del self._cache[category]
+            if category in self._missing_cache:
+                self._missing_cache.remove(category)
+            print(f"{Prisma.CYN}[LORE]: Flushed cache for '{category}'.{Prisma.RST}")
+        else:
+            self._cache = {}
+            self._missing_cache = set()
+            print(f"{Prisma.CYN}[LORE]: Flushed entire Lore cache.{Prisma.RST}")
+
+TheLore = LoreManifest.get_instance()
 
 class TheObserver:
     def __init__(self):
@@ -254,8 +311,7 @@ class TelemetryService:
         self.disabled = False
         self.write_errors = 0
         try:
-            if not os.path.exists(self.log_dir):
-                os.makedirs(self.log_dir)
+            os.makedirs(self.log_dir, exist_ok=True)
             self.current_trace_file = os.path.join(
                 self.log_dir, f"trace_{int(time.time())}.jsonl")
         except OSError as e:
@@ -384,74 +440,3 @@ class TelemetryService:
             f"\n[TELEMETRY] Session ended ({status}). {count} crystals crystallized.\n"
             f"            Trace: {self.current_trace_file}")
 
-class LoreManifest:
-    _INSTANCE = None
-    DATA_DIR = "lore"
-
-    def __init__(self):
-        self._cache = {}
-        self._overlays = {}
-        self._missing_cache = set()
-
-    @classmethod
-    def get_instance(cls):
-        if cls._INSTANCE is None:
-            cls._INSTANCE = LoreManifest()
-        return cls._INSTANCE
-
-    def _load_from_disk(self, category: str) -> Optional[Dict]:
-        filename = f"{category.lower()}.json"
-        filepath = os.path.join(self.DATA_DIR, filename)
-        if not os.path.exists(filepath):
-            return None
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            print(f"{Prisma.GRY}[LORE]: Lazy-loaded '{category}' from disk.{Prisma.RST}")
-            return data
-        except Exception as e:
-            print(f"{Prisma.RED}[LORE]: Corrupt JSON in '{category}': {e}{Prisma.RST}")
-            return None
-
-    def get(self, category: str, sub_key: str = None) -> Any:
-        if category in self._overlays:
-            data = self._overlays[category]
-        elif category in self._cache:
-            data = self._cache[category]
-        elif category in self._missing_cache:
-            data = {}
-        else:
-            data = self._load_from_disk(category)
-            if data is not None:
-                self._cache[category] = data
-            else:
-                self._missing_cache.add(category)
-                print(f"{Prisma.GRY}[LORE]: '{category}' not found. Caching miss.{Prisma.RST}")
-                data = {}
-        if sub_key and isinstance(data, dict):
-            return data.get(sub_key, None)
-        return data
-
-    def inject(self, category: str, data: Any):
-        if category not in self._overlays:
-            self._overlays[category] = {}
-        if isinstance(self._overlays[category], dict) and isinstance(data, dict):
-            self._overlays[category].update(data)
-        else:
-            self._overlays[category] = data
-        if category in self._missing_cache:
-            self._missing_cache.remove(category)
-
-    def flush_cache(self, category: str = None):
-        if category:
-            if category in self._cache:
-                del self._cache[category]
-            if category in self._missing_cache:
-                self._missing_cache.remove(category)
-            print(f"{Prisma.CYN}[LORE]: Flushed cache for '{category}'.{Prisma.RST}")
-        else:
-            self._cache = {}
-            self._missing_cache = set()
-            print(f"{Prisma.CYN}[LORE]: Flushed entire Lore cache.{Prisma.RST}")
-
-TheLore = LoreManifest.get_instance()

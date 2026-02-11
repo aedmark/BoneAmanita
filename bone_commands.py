@@ -1,9 +1,9 @@
 """ bone_commands.py - 'The snake spits out its tail. The circle becomes a line.' """
 
 import shlex
-from typing import Dict, Callable, List, Any, Tuple, Optional
-from dataclasses import dataclass
-from bone_core import BonePresets, TheLore, Prisma
+from typing import Dict, Callable, List, Optional
+from bone_core import TheLore, Prisma
+from bone_config import BonePresets
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
@@ -36,6 +36,8 @@ class CommandStateInterface:
         return 0.0
 
     def save_state(self) -> str:
+        if not hasattr(self.eng, "mind") or not hasattr(self.eng.mind, "mem"):
+            return "Error: Memory system not found."
         if hasattr(self.eng, "mind") and hasattr(self.eng.mind, "mem"):
             loc = "Unknown"
             last_out = "Silence."
@@ -51,17 +53,29 @@ class CommandStateInterface:
                 "location": loc,
                 "last_output": last_out,
                 "inventory": inv}
+            atlas_data = None
+            if hasattr(self.eng, "town_hall") and hasattr(self.eng.town_hall, "Cartographer"):
+                atlas_data = self.eng.town_hall.Cartographer.export_atlas()
+            mito_traits = None
+            antibodies = None
+            if hasattr(self.eng, 'bio'):
+                if hasattr(self.eng.bio, 'mito'):
+                    mito_traits = self.eng.bio.mito.adapt(0)
+                if hasattr(self.eng.bio, 'immune'):
+                    antibodies = list(self.eng.bio.immune.active_antibodies)
             return self.eng.mind.mem.save(
                 health=self.eng.health,
                 stamina=self.eng.stamina,
                 mutations={},
                 trauma_accum=getattr(self.eng, "trauma_accum", {}),
                 joy_history=[],
-                mitochondria_traits=self.eng.bio.mito.adapt(0) if hasattr(self.eng, 'bio') else None,
-                antibodies=list(self.eng.bio.immune.active_antibodies) if hasattr(self.eng, 'bio') else None,
+                mitochondria_traits=mito_traits,
+                antibodies=antibodies,
                 soul_data=self.eng.soul.to_dict() if hasattr(self.eng, 'soul') else None,
-                continuity=continuity_packet)
-        return "Error: Memory system not found."
+                continuity=continuity_packet,
+                world_atlas=atlas_data,
+                village_data=None)
+        return "Error: Memory system unreachable."
 
     def get_vitals(self) -> Dict[str, float]:
         return {
@@ -171,7 +185,9 @@ class CommandProcessor:
         if current_stamina < cost:
             self.interface.log(f"{self.P.RED}Too weak to mourn. (Req: {cost} Stamina){self.P.RST}")
             return True
-        if not hasattr(self.interface.eng.mind.mem, "soothe_conscience"):
+        if not hasattr(self.interface.eng, "mind") or \
+                not hasattr(self.interface.eng.mind, "mem") or \
+                not hasattr(self.interface.eng.mind.mem, "soothe_conscience"):
             self.interface.log(f"{self.P.YEL}The subconscious is not installed.{self.P.RST}")
             return True
         self.interface.modify_resource("stamina", -cost)
@@ -181,7 +197,7 @@ class CommandProcessor:
 
     def _cmd_help(self, _parts):
         lines = [
-            f"\n{self.P.CYN}/// BONEAMANITA 14.9.4 TERMINAL ///{self.P.RST}",
+            f"\n{self.P.CYN}/// BONEAMANITA 14.9.5 TERMINAL ///{self.P.RST}",
             f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n"]
         structure = {
             "SURVIVAL":    ["/status", "/inventory", "/look"],

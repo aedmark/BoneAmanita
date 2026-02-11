@@ -4,10 +4,10 @@
 import time, random
 from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple
-from bone_core import Prisma, BoneConfig
+from bone_types import Prisma
+from bone_config import BoneConfig
 from bone_lexicon import TheLexicon
 from bone_akashic import TheAkashicRecord
-
 
 MEMORY_VOLTAGE_THRESHOLD = 14.0
 MEMORY_TRUTH_THRESHOLD = 0.8
@@ -220,6 +220,11 @@ class NarrativeSelf:
         self.anchor = HumanityAnchor(events_ref)
         self.chapters: List[str] = []
         self.core_memories: List[CoreMemory] = []
+        if akashic_ref is None:
+            print(f"{Prisma.RED}[SOUL]: Warning - No Akashic Record provided. Memories will be ephemeral.{Prisma.RST}")
+            self.akashic = TheAkashicRecord()  # Fallback
+        else:
+            self.akashic = akashic_ref
         if akashic_ref:
             self.akashic = akashic_ref
         else:

@@ -9,7 +9,8 @@ import random
 import math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from bone_core import EventBus, TheLore, TelemetryService
+from bone_core import EventBus, LoreManifest, TelemetryService
+from bone_lexicon import LexiconService
 from bone_types import Prisma, DecisionCrystal
 from bone_config import BoneConfig
 from bone_symbiosis import SymbiosisManager
@@ -25,6 +26,7 @@ class CortexServices:
     mind_memory: Any
     bio: Any
     host_stats: Any = None
+    village: Any = None
 
 @dataclass
 class BrainConfig:
@@ -68,8 +70,7 @@ class NarrativeSpotlight:
             resonance_score = 0.0
             node_cats = set()
             try:
-                from bone_lexicon import TheLexicon
-                node_cats = TheLexicon.get_categories_for_word(node)
+                node_cats = LexiconService.get_categories_for_word(node)
             except ImportError:
                 pass
             for dim, val in active_dims.items():
@@ -489,7 +490,8 @@ class TheCortex:
             symbiosis=getattr(engine_ref, 'symbiosis', SymbiosisManager(engine_ref.events)),
             mind_memory=engine_ref.mind.mem,
             bio=getattr(engine_ref, 'bio', None),
-            host_stats=getattr(engine_ref, 'host_stats', None))
+            host_stats=getattr(engine_ref, 'host_stats', None),
+            village=getattr(engine_ref, 'village', None))
         return cls(services, llm_client)
 
     @property
@@ -625,6 +627,10 @@ class TheCortex:
         world = sim_result.get("world", {})
         soul_data = sim_result.get("soul", {})
         village_data = {}
+        if self.svc.village:
+            tinkerer = getattr(self.svc.village, 'tinkerer', None)
+            if tinkerer:
+                village_data["tinkerer"] = tinkerer.to_dict() if hasattr(tinkerer, 'to_dict') else {}
         full_state = {
             "bio": bio,
             "physics": phys,
@@ -634,9 +640,7 @@ class TheCortex:
             "village": village_data,
             "user_profile": {"name": "Traveler"},
             "meta": {
-                "timestamp": time.time()
-            }
-        }
+                "timestamp": time.time()}}
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             anchor_text = self.svc.symbiosis.generate_anchor(full_state)
             full_state["reality_directive"] = anchor_text
@@ -698,7 +702,7 @@ class ShimmerState:
 class DreamEngine:
     def __init__(self, events):
         self.events = events
-        dreams_data = TheLore.get("dreams") or {}
+        dreams_data = LoreManifest.get_instance().get("dreams") or {}
         self.PROMPTS = dreams_data.get("PROMPTS", ["{A} -> {B}?"])
         self.NIGHTMARES = dreams_data.get("NIGHTMARES", {})
         self.VISIONS = dreams_data.get("VISIONS", ["Static."])

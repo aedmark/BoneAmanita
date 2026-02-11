@@ -1,8 +1,10 @@
 """ bone_akashic.py - The Self-Writing Myth """
+
 import json
 import os
-from typing import Dict, Any, Tuple, cast, List, Set, Optional
-from bone_core import Prisma, TheLore, LoreManifest, BoneJSONEncoder
+from typing import Dict, Any, Tuple, cast, List, Set
+from bone_core import TheLore, LoreManifest, BoneJSONEncoder
+from bone_types import Prisma
 
 class TheAkashicRecord:
     def __init__(self):

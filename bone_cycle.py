@@ -2,13 +2,14 @@
 
 import traceback, random, time, uuid, copy
 from typing import Dict, Any, List, cast
-from bone_core import Prisma, BoneConfig, CycleContext, PhysicsPacket, TelemetryService, BonePresets, ArchetypeArbiter, \
-    PhysicsSandbox, TheLore
+from bone_core import TelemetryService, ArchetypeArbiter, TheLore
+from bone_types import Prisma, CycleContext, PhysicsSandbox, PhysicsPacket
 from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, ChromaScope
 from bone_gui import get_renderer, SoulDashboard
 from bone_architect import PanicRoom
 from bone_soul import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
+from bone_config import BoneConfig, BonePresets
 
 class CongruenceValidator:
     ARCHETYPE_MAP = {

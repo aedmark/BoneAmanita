@@ -1,26 +1,24 @@
-""" BONEAMANITA 14.9.4
+""" BONEAMANITA 14.9.5
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, random, traceback
 from dataclasses import dataclass
-from typing import Dict, Any, Optional, Tuple, List
-from bone_core import (
-    EventBus, Prisma, BoneConfig, RealityLayer, SystemHealth,
-    TheObserver, BonePresets, TheLore, LoreCategory, TelemetryService, RealityStack)
+from typing import Dict, Any, Optional, Tuple
+from bone_core import EventBus, SystemHealth, TheObserver, TheLore, TelemetryService, RealityStack
+from bone_types import Prisma, RealityLayer, LoreCategory
+from bone_config import BoneConfig, BonePresets
 from bone_commands import CommandProcessor
 from bone_symbiosis import SymbiosisManager
 from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer, Limbo
-from bone_lexicon import TheLexicon, SomaticInterface
+from bone_lexicon import TheLexicon
 from bone_inventory import GordonKnot
-from bone_protocols import TheFolly, KintsugiProtocol, TherapyProtocol, TheBureau, ZenGarden, TheCriticsCircle
-from bone_drivers import ChorusDriver, SynergeticLensArbiter, BoneConsultant
+from bone_protocols import KintsugiProtocol, TherapyProtocol, TheBureau, ZenGarden, TheCriticsCircle
 from bone_physics import CosmicDynamics, ZoneInertia
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_soul import NarrativeSelf
 from bone_architect import BoneArchitect
-from bone_cycle import GeodesicOrchestrator, CycleStabilizer
-from bone_gui import Projector
+from bone_cycle import GeodesicOrchestrator
 from bone_council import CouncilChamber
 from bone_spores import LiteraryReproduction
 from bone_akashic import TheAkashicRecord
@@ -35,7 +33,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.9.4', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.9.5', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -512,7 +510,7 @@ class BoneAmanita:
 
 
 if __name__ == "__main__":
-    print(f"\n{Prisma.paint('♦ BONEAMANITA 14.9.4', 'M')}")
+    print(f"\n{Prisma.paint('♦ BONEAMANITA 14.9.5', 'M')}")
     sys_config = ConfigWizard.load_or_create()
     engine = BoneAmanita(config=sys_config)
     with SessionGuardian(engine) as session:

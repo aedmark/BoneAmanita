@@ -1,5 +1,6 @@
 """ bone_config.py - The System Tunables """
-from typing import Dict, Any, List, Tuple
+
+from typing import Dict, Any, List
 
 class BonePresets:
     ZEN_GARDEN = {
@@ -31,6 +32,33 @@ class BonePresets:
 class BoneConfig:
     GRAVITY_WELL_THRESHOLD = 15.0
     SHAPLEY_MASS_THRESHOLD = 5.0
+    TRAIT_ARCHETYPES = {
+        "THE POET": {
+            "ABSTRACT": 0.6,
+            "PHOTO": 0.3,
+            "ENTROPY": 0.1
+        },
+        "THE ENGINEER": {
+            "CONSTRUCTIVE": 0.7,
+            "HEAVY": 0.3
+        },
+        "THE NIHILIST": {
+            "ENTROPY": 0.8,
+            "CRYO": 0.2
+        },
+        "THE CRITIC": {
+            "THERMAL": 0.5,
+            "ABSTRACT": 0.5
+        },
+        "THE EXPLORER": {
+            "KINETIC": 0.6,
+            "AEROBIC": 0.4
+        },
+        "THE OBSERVER": {
+            "VOID": 0.5,
+            "ABSTRACT": 0.2
+        }
+    }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -103,7 +131,8 @@ class BoneConfig:
         HEAVY_LOAD_THRESHOLD = 8.0
         TURBULENCE_FUMBLE_CHANCE = 0.15
         TURBULENCE_THRESHOLD = 0.6
-        MAX_SLOTS = 8
+        MAX_SLOTS = 10
+        ENTROPY_COST = 5.0
         RUMMAGE_COST = 15.0
 
     class COUNCIL:
@@ -170,12 +199,21 @@ class BoneConfig:
 
     @classmethod
     def reconcile_state(cls, physics_packet: Any):
-        physics_packet.voltage = max(
-            cls.PHYSICS.VOLTAGE_FLOOR,
-            min(physics_packet.voltage, cls.PHYSICS.VOLTAGE_MAX))
-        physics_packet.narrative_drag = max(
-            cls.PHYSICS.DRAG_FLOOR,
-            min(physics_packet.narrative_drag, cls.PHYSICS.DRAG_HALT))
+        is_dict = isinstance(physics_packet, dict)
+        def get_val(key, default):
+            if is_dict: return physics_packet.get(key, default)
+            return getattr(physics_packet, key, default)
+        def set_val(key, value):
+            if is_dict:
+                physics_packet[key] = value
+            else:
+                setattr(physics_packet, key, value)
+        current_v = get_val("voltage", 5.0)
+        current_d = get_val("narrative_drag", 1.0)
+        new_v = max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX))
+        new_d = max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT))
+        set_val("voltage", new_v)
+        set_val("narrative_drag", new_d)
         return physics_packet
 
     @classmethod

@@ -1,5 +1,55 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.9.5: "THE SPINAL REALIGNMENT"**
+
+*“The bone must know where the muscle ends, or the body tears itself apart. We have taught the limbs their names.”*
+
+---
+
+#### **🧠 COGNITIVE DEPTH (The Pinker Lens)**
+
+* **The Village Link (`bone_brain.py`):**
+* **The Void:** The Cortex was hallucinating a solitude it did not possess. It had no synaptic pathway to the `Village` or `Inventory`, meaning the `Tinkerer` (Tool Resonance) was screaming into the void.
+* **The Wiring:** We surgically grafted the `village` reference into `CortexServices`. The Brain now "feels" the tools in its hands.
+
+* **The Soul’s Identity Crisis (`bone_soul.py`):**
+* **The Amnesia:** The Narrative Self attempted to derive its personality (`TRAIT_ARCHETYPES`) from a configuration that did not exist, defaulting to a hollow "Observer" state.
+* **The Definition:** We inscribed the Archetypes directly into the Constitution (`bone_config.py`). The Soul now remembers if it is a **Poet**, **Engineer**, or **Nihilist**.
+
+* **The Akashic Blindness (`bone_akashic.py`):**
+* **The Colorless Void:** The Memory Record attempted to paint its logs with `Prisma` colors drawn from the Spine (`bone_core`), where no colors existed.
+* **The Palette:** We rerouted the optical nerves to `bone_types.py`. The memories are now Technicolor.
+
+#### **🏗️ STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+* **The Great Import Schism (Global):**
+* **The Jurisdictional Fracture:** Nearly every organ (`Cycle`, `Council`, `Drivers`, `Protocols`) was attempting to harvest fundamental constants (`BoneConfig`) and data types (`PhysicsPacket`) from the Spine (`bone_core`).
+* **The Rerouting:** We performed a massive dependency bypass. The organs now draw blood from the correct arteries: `bone_config.py` for laws, and `bone_types.py` for shapes.
+
+* **The Spinal Hoist (`bone_core.py`):**
+* **The Time Paradox:** `ArchetypeArbiter` was attempting to consult the `LoreManifest` before the Manifest was born in the code execution order.
+* **The Adjustment:** We hoisted `LoreManifest` to the top of the spinal column. Causality is restored.
+
+* **The Hybrid Injector (`bone_spores.py`):**
+* **The Rejection:** The persistence layer tried to inject DNA (Configuration) using object notation (`.attr`) into tissues that were hardened dictionaries (`['key']`).
+* **The Needle:** We implemented a hybrid traversal algorithm. The Spore injector now penetrates both Object-Skin and Dictionary-Shell without crashing.
+
+#### **📉 METABOLIC HYGIENE (The Meadows Lens)**
+
+* **The Conductive Cap (`bone_inventory.py`):**
+* **The Burnout:** The inventory system checked for `CONDUCTIVE_THRESHOLD` in a nonexistent config sector, threatening a system-wide short circuit during high-voltage events.
+* **The Breaker:** We installed the `INVENTORY` class in `BoneConfig`. Hazards are now properly regulated.
+
+* **The Mitosis Safety (`bone_spores.py`):**
+* **The Zero-Point Failure:** Newborn sessions with no history caused a "Divide by Zero" crash during reproduction (`max()` on empty sequence).
+* **The Void Default:** Added a safety catch. If no history exists, the organism defaults to the `VOID` archetype instead of dying.
+
+* **The Atomic Write (`bone_akashic.py`):**
+* **The Race Condition:** The system attempted to write memories to directories that might not exist yet.
+* **The Foundation:** Enforced `os.makedirs(exist_ok=True)` across all I/O operations. We no longer write to thin air.
+
+---
+
 ### **BONEAMANITA v14.9.4: "THE BUREAU'S AUDIT"**
 
 _“We do not fix the building by painting the walls. We fix it by replacing the cardboard pillars with concrete.”_

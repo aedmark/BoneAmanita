@@ -4,8 +4,10 @@ import random, json
 import re
 from collections import deque, Counter
 from typing import Dict, Tuple, Optional, Any
-from bone_core import Prisma, BoneConfig, TheLore
-from bone_lexicon import TheLexicon
+from bone_core import TheLore
+from bone_types import Prisma
+from bone_lexicon import LexiconService
+from bone_config import BoneConfig
 
 NARRATIVE_DATA = TheLore.get("narrative_data") or {}
 
@@ -133,7 +135,9 @@ class TheBureau:
 
 class TherapyProtocol:
     def __init__(self):
-        self.streaks = {k: 0 for k in BoneConfig.TRAUMA_VECTOR.keys()}
+        default_vector = {"SEPTIC": 0, "EXHAUSTION": 0, "PARANOIA": 0}
+        vector_keys = getattr(BoneConfig, "TRAUMA_VECTOR", default_vector).keys()
+        self.streaks = {k: 0 for k in vector_keys}
         self.HEALING_THRESHOLD = 5
 
     def to_dict(self) -> Dict[str, Any]:

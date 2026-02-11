@@ -3,8 +3,10 @@
 import json, os, random
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional
-from bone_core import EventBus, BonePresets, ArchetypeArbiter, PhysicsPacket, TheLore
-from bone_cycle import CongruenceValidator
+from bone_core import EventBus, TheLore
+from bone_config import BonePresets
+from bone_types import PhysicsPacket
+
 
 SCENARIOS = TheLore.get("scenarios") or {"ARCHETYPES": ["Void"], "BANNED_CLICHES": []}
 LENSES = TheLore.get("lenses") or {}

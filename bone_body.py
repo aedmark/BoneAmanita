@@ -7,7 +7,8 @@ from typing import Set, Optional, Dict, List, Any, Tuple
 
 from bone_spores import ImmuneMycelium, BioLichen, BioParasite
 from bone_lexicon import TheLexicon
-from bone_core import Prisma, BoneConfig, TheLore
+from bone_core import Prisma, TheLore
+from bone_config import BoneConfig
 
 def get_phys_attr(packet: Any, key: str, default: float = 0.0) -> float:
     if isinstance(packet, dict):

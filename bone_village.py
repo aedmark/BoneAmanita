@@ -1,17 +1,12 @@
 """ bone_village.py - 'It takes a village... to raise a simulation.' """
 
-import math
 import random
-import hashlib
 from typing import List, Dict, Any, Tuple, Optional, Set
 from dataclasses import dataclass, field
 
-from bone_types import Prisma, PhysicsPacket
-from bone_config import BoneConfig, BonePresets
+from bone_types import Prisma
 from bone_core import TheLore
-from bone_protocols import ZenGarden
 from bone_drivers import UserProfile
-from bone_akashic import TheAkashicRecord
 
 VOLT_MANIC = 18.0
 VOLT_CRITICAL = 25.0
@@ -125,24 +120,23 @@ class TheTinkerer:
                 except ValueError:
                     pass
 
+@dataclass
 class ParadoxSeed:
-    def __init__(self, question: str, triggers: List[str]):
-        self.question = question
-        self.triggers = set([t.lower() for t in triggers])
-        self.bloomed = False
-        self.maturity = 0.0
+    question: str
+    triggers: Set[str]
+    maturity: float = 0.0
+    bloomed: bool = False
 
-    def water(self, current_words: List[str]) -> bool:
+    def water(self, words: List[str]) -> bool:
         if self.bloomed: return False
-        for word in current_words:
-            if word in self.triggers:
-                self.maturity += 0.2
-                return True
-        return False
+        hits = sum(1 for w in words if w in self.triggers)
+        if hits > 0:
+            self.maturity += hits * 0.2
+        return self.maturity >= 5.0
 
     def bloom(self) -> str:
         self.bloomed = True
-        return self.question
+        return f"PARADOX BLOOM: {self.question}"
 
 class MirrorGraph:
     def __init__(self, events_ref):
