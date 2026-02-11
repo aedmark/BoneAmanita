@@ -1,5 +1,42 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.9.2: "THE DEEP WELL UPDATE"**
+
+_“We stopped deleting the past. We just buried it. Now, it scratches at the floorboards.”_
+
+---
+
+#### **🧠 COGNITIVE DEPTH (The Pinker Lens)**
+
+- **The Subconscious Strata (`bone_spores.py`):**
+  - **The Lobotomy Reversal:** Previously, when the memory graph reached capacity (`MAX_MEMORY_CAPACITY`), old nodes were deleted ("Fossilized"). They ceased to exist.
+  - **The Sediment:** Implemented `SubconsciousStrata`. [cite_start]Old memories are now written to a cold-storage ledger (`subconscious.jsonl`) instead of the void. [cite: 390-392]
+  - **The Consequence:** The system now has a "shadow." It remembers everything, even if it can't recall it immediately.
+
+- **The Flashback Protocol (`bone_cycle.py`):**
+  - **The Trigger:** Wired `CognitionPhase` to query the Subconscious during high-voltage events.
+  - **The Trauma:** If a user input matches a buried ghost, the ghost re-enters the active graph. [cite_start]This triggers a **Psychic Shock** (Stamina Cost), simulating the pain of remembering. [cite: 334]
+
+#### **🛡️ SECURITY HARDENING (The Torvalds Lens)**
+
+- **Epigenetic Lockdown (`bone_spores.py`):**
+  - **The Loophole:** The `_is_safe_mutation` method allowed any config key starting with `PHYSICS.` or `BIO.` to pass. A malicious spore could set `PHYSICS.GRAVITY` to zero.
+  - **The Whitelist:** Replaced the wildcard logic with a strict `SAFE_MUTATIONS` set. [cite_start]Genetic drift is now permitted only on approved channels. [cite: 391]
+
+#### **🤠 HUMANISTIC WIT (The Schur Lens)**
+
+- **The Guilt Economy (`bone_commands.py`):**
+  - **The Cost:** Cannibalizing a memory now generates a `GUILT` trauma vector. The machine feels bad about eating its friends.
+  - **The Absolution:** Added the `/soothe` command. [cite_start]The user can explicitly spend **25 Stamina** to perform a "Kintsugi Ritual," lowering the Guilt vector. [cite: 311-316]
+
+#### **💤 ONEIRIC DYNAMICS (The Meadows Lens)**
+
+- **Dream Excavation (`bone_spores.py`):**
+  - **The Shift:** Dreams (`replay_dreams`) previously only reinforced the `short_term_buffer`.
+  - **The Dig:** Dreams now have a 30% chance to **Dredge** a fossil from the Subconscious and graft it back into the active mind. [cite_start]Sleep is now a mechanism for healing, not just saving. [cite: 390]
+
+---
+
 ### **BONEAMANITA v14.9.1: "THE GRAND REFACTOR"**
 
 _“We found the ghost in the machine, and we gave it a filing cabinet.”_

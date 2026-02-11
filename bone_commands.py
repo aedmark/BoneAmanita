@@ -152,6 +152,7 @@ class CommandProcessor:
         self.registry.register("/look", self._cmd_look, "Observe environment")
         self.registry.register("/reload", self._cmd_reload, "Hot-reload Lore")
         self.registry.register("/truth", self._cmd_truth, "Adjust Reality Ambiguity [0-3]")
+        self.registry.register("/soothe", self._cmd_soothe, "Burn ATP to quell memory guilt")
 
     def execute(self, text: str):
         if hasattr(self.interface.eng, "reality_stack"):
@@ -164,9 +165,23 @@ class CommandProcessor:
                 return True
         return self.registry.execute(text)
 
+    def _cmd_soothe(self, _parts):
+        cost = 25.0
+        current_stamina = self.interface.get_resource("stamina")
+        if current_stamina < cost:
+            self.interface.log(f"{self.P.RED}Too weak to mourn. (Req: {cost} Stamina){self.P.RST}")
+            return True
+        if not hasattr(self.interface.eng.mind.mem, "soothe_conscience"):
+            self.interface.log(f"{self.P.YEL}The subconscious is not installed.{self.P.RST}")
+            return True
+        self.interface.modify_resource("stamina", -cost)
+        result_msg = self.interface.eng.mind.mem.soothe_conscience()
+        self.interface.log(f"{self.P.OCHRE}🏺 {result_msg} (-{cost} Stamina){self.P.RST}")
+        return True
+
     def _cmd_help(self, _parts):
         lines = [
-            f"\n{self.P.CYN}/// BONEAMANITA 14.9.0 TERMINAL ///{self.P.RST}",
+            f"\n{self.P.CYN}/// BONEAMANITA 14.9.2 TERMINAL ///{self.P.RST}",
             f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n"]
         structure = {
             "SURVIVAL":    ["/status", "/inventory", "/look"],

@@ -676,6 +676,7 @@ class ArbitrationPhase(SimulationPhase):
         self.eng.drivers.current_focus = final_lens
         return ctx
 
+
 class CognitionPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -694,6 +695,16 @@ class CognitionPhase(SimulationPhase):
                     f"{Prisma.CYN}✨ HARMONIC RESONANCE (Φ={phi:.2f}): The narrative flows effortlessly.{Prisma.RST}")
         if hasattr(self.eng, 'consultant'):
             self.eng.consultant.update_coordinates(ctx.input_text, ctx.bio_result, ctx.physics)
+        if hasattr(self.eng.mind.mem, "check_for_resurrection"):
+            flashback_msg = self.eng.mind.mem.check_for_resurrection(
+                ctx.clean_words,
+                ctx.physics.voltage)
+            if flashback_msg:
+                ctx.log(f"{Prisma.MAG}{flashback_msg}{Prisma.RST}")
+                shock_cost = 5.0
+                if self.eng.bio.biometrics:
+                    self.eng.bio.biometrics.stamina = max(0.0, self.eng.bio.biometrics.stamina - shock_cost)
+                self.eng.stamina = max(0.0, self.eng.stamina - shock_cost)
         self.eng.mind.mem.encode(ctx.clean_words, ctx.physics.to_dict(), "GEODESIC")
         if ctx.is_alive and ctx.clean_words:
             max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)

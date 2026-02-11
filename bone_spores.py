@@ -8,7 +8,7 @@ from bone_core import EventBus, Prisma, BoneConfig, TheLore, BoneJSONEncoder
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
-        self.genome = "BONEAMANITA_14.9.0"
+        self.genome = "BONEAMANITA_14.9.2"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():
@@ -93,7 +93,6 @@ class LocalFileSporeLoader(SporeInterface):
         except OSError:
             return False
 
-
 class AdaptiveMemoryManager:
     def __init__(self, network):
         self.network = network
@@ -113,6 +112,51 @@ class AdaptiveMemoryManager:
         gain += offset
         return gain > self.threshold
 
+class SubconsciousStrata:
+    def __init__(self, filename="memories/subconscious.jsonl"):
+        self.filepath = filename
+        self.directory = os.path.dirname(filename)
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+        self.index = set()
+        self._load_index()
+
+    def _load_index(self):
+        if not os.path.exists(self.filepath): return
+        try:
+            with open(self.filepath, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if not line.strip(): continue
+                    try:
+                        entry = json.loads(line)
+                        if "word" in entry: self.index.add(entry["word"])
+                    except json.JSONDecodeError:
+                        continue
+        except IOError:
+            pass
+
+    def bury(self, fossil_data: Dict):
+        try:
+            with open(self.filepath, 'a', encoding='utf-8') as f:
+                fossil_data["buried_at"] = time.time()
+                f.write(json.dumps(fossil_data, cls=BoneJSONEncoder) + "\n")
+            self.index.add(fossil_data["word"])
+            return True
+        except IOError:
+            return False
+
+    def dredge(self, trigger_word: str) -> Optional[Dict]:
+        if trigger_word not in self.index: return None
+        found = None
+        try:
+            with open(self.filepath, 'r', encoding='utf-8') as f:
+                for line in f:
+                    entry = json.loads(line)
+                    if entry.get("word") == trigger_word:
+                        found = entry
+        except IOError:
+            return None
+        return found
 
 class MycelialNetwork:
     def __init__(self, events: EventBus, loader: SporeInterface = None, seed_file=None):
@@ -123,6 +167,7 @@ class MycelialNetwork:
         self.graph = {}
         self.cortical_stack = deque(maxlen=15)
         self.fossils = deque(maxlen=200)
+        self.subconscious = SubconsciousStrata()
         self.lineage_log = deque(maxlen=50)
         self.short_term_buffer = deque(maxlen=10)
         self.consolidation_threshold = 5.0
@@ -166,20 +211,36 @@ class MycelialNetwork:
         return False
 
     def replay_dreams(self):
-        if not self.short_term_buffer:
-            return "🌑 SLEEPLESS: No significant memories to process."
         strengthened = 0
-        for engram in self.short_term_buffer:
-            weight_boost = engram["significance"] * 0.1
-            words = engram["trigger"]
-            if len(words) >= 2:
-                w1, w2 = words[0], words[1]
-                if w1 in self.graph and w2 in self.graph:
-                    if w2 in self.graph[w1]["edges"]:
-                        self.graph[w1]["edges"][w2] += weight_boost
-                        strengthened += 1
-        self.short_term_buffer.clear()
-        return f"💤 HIPPOCAMPAL REPLAY: Consolidated {strengthened} high-voltage pathways."
+        restored_ghost = None
+        if self.short_term_buffer:
+            for engram in self.short_term_buffer:
+                weight_boost = engram["significance"] * 0.1
+                words = engram["trigger"]
+                if len(words) >= 2:
+                    w1, w2 = words[0], words[1]
+                    if w1 in self.graph and w2 in self.graph:
+                        if w2 in self.graph[w1]["edges"]:
+                            self.graph[w1]["edges"][w2] += weight_boost
+                            strengthened += 1
+            self.short_term_buffer.clear()
+        if hasattr(self, "subconscious") and random.random() < 0.30:
+            if self.graph:
+                anchor = random.choice(list(self.graph.keys()))
+                ghost_data = self.subconscious.dredge(anchor)
+
+                if ghost_data:
+                    word = ghost_data["word"]
+                    self.graph[word] = {"edges": ghost_data["edges"], "last_tick": 0}
+                    restored_ghost = word
+        status = []
+        if strengthened > 0:
+            status.append(f"Consolidated {strengthened} pathways.")
+        if restored_ghost:
+            status.append(f"Resurrected '{restored_ghost}' from the deep.")
+        if not status:
+            return "🌑 SLEEPLESS: The mind is quiet."
+        return f"💤 REM CYCLE: {' '.join(status)}"
 
     def bury(self, clean_words: List[str], tick: int, resonance=5.0, learning_mod=1.0, desperation_level=0.0) -> Tuple[
         Optional[str], List[str]]:
@@ -231,7 +292,14 @@ class MycelialNetwork:
         SAFE_MUTATIONS = {
             "STAMINA_REGEN", "MAX_DRAG_LIMIT", "GEODESIC_STRENGTH",
             "SIGNAL_DRAG_MULTIPLIER", "KINETIC_GAIN", "TOXIN_WEIGHT",
-            "FLASHPOINT_THRESHOLD"}
+            "FLASHPOINT_THRESHOLD", "MAX_MEMORY_CAPACITY", "PRIORITY_LEARNING_RATE",
+            "ANVIL_TRIGGER_VOLTAGE", "MAX_REPETITION_LIMIT",
+            "PHYSICS.WEIGHT_HEAVY", "PHYSICS.WEIGHT_KINETIC",
+            "PHYSICS.VOLTAGE_FLOOR", "PHYSICS.VOLTAGE_MAX",
+            "BIO.CORTEX_SENSITIVITY", "BIO.ROS_CRITICAL",
+            "BIO.DECAY_RATE", "BIO.REWARD_MEDIUM",
+            "METABOLISM.PHOTOSYNTHESIS_GAIN", "METABOLISM.ROS_GENERATION_FACTOR",
+            "COUNCIL.FOOTNOTE_CHANCE", "COUNCIL.MANIC_VOLTAGE_TRIGGER"}
         for key, value in data["config_mutations"].items():
             if self._is_safe_mutation(key, SAFE_MUTATIONS):
                 if self._inject_config(key, value):
@@ -240,11 +308,7 @@ class MycelialNetwork:
             self.events.log(f"{Prisma.CYN}   ► Applied {valid_mutations} verified config shifts.{Prisma.RST}")
 
     def _is_safe_mutation(self, key, safe_set):
-        if key in safe_set: return True
-        if "." in key:
-            sector = key.split('.')[0]
-            if sector in ["PHYSICS", "BIO", "COUNCIL", "INVENTORY"]: return True
-        return False
+        return key in safe_set
 
     def _inject_config(self, path, value):
         parts = path.split('.')
@@ -303,8 +367,10 @@ class MycelialNetwork:
     def cannibalize(self, preserve_current=None, current_tick=0) -> Tuple[Optional[str], str]:
         protected = set()
         if preserve_current:
-            if isinstance(preserve_current, list): protected.update(preserve_current)
-            else: protected.add(preserve_current)
+            if isinstance(preserve_current, list):
+                protected.update(preserve_current)
+            else:
+                protected.add(preserve_current)
         protected.update(self.cortical_stack)
         candidates = []
         for k, v in self.graph.items():
@@ -319,14 +385,36 @@ class MycelialNetwork:
         victim, data, score = candidates[0]
         mass = sum(data["edges"].values())
         lifespan = current_tick - data.get("strata", {}).get("birth_tick", current_tick)
-        self.fossils.append({
-            "word": victim, "mass": round(mass, 2),
-            "lifespan": lifespan, "death_tick": current_tick})
+        fossil_data = {
+            "word": victim,
+            "mass": round(mass, 2),
+            "lifespan": lifespan,
+            "edges": data["edges"],
+            "death_tick": current_tick}
+        self.subconscious.bury(fossil_data)
         del self.graph[victim]
         for node in self.graph:
             if victim in self.graph[node]["edges"]:
                 del self.graph[node]["edges"][victim]
-        return victim, f"FOSSILIZED: '{victim}' (Score {score:.1f} -> Ossuary)"
+        return victim, f"REPRESSED: '{victim}' (Score {score:.1f} -> Subconscious)"
+
+    def check_for_resurrection(self, input_words: List[str], voltage: float) -> Optional[str]:
+        if voltage < 60.0: return None
+        for word in input_words:
+            if word in self.subconscious.index:
+                if random.random() < 0.20:
+                    memory = self.subconscious.dredge(word)
+                    if memory:
+                        self.graph[word] = {"edges": memory["edges"], "last_tick": 0}
+                        return f"⚠️ FLASHBACK: The word '{word}' clawed its way back from the deep."
+        return None
+
+    def soothe_conscience(self):
+        if self.session_trauma_vector.get("GUILT", 0) > 0:
+            self.events.log(f"{Prisma.OCHRE}🏺 KINTSUGI: Pouring gold into the memory gaps...{Prisma.RST}")
+            self.session_trauma_vector["GUILT"] = max(0.0, self.session_trauma_vector["GUILT"] - 0.5)
+            return "The ghosts are quieted."
+        return "No guilt detected."
 
     def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
         pruned_count = 0
