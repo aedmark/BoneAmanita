@@ -46,6 +46,20 @@ class TheAkashicRecord:
         if word and category:
             self.register_word(word, category)
 
+    def calculate_manifold_shift(self, theta: str, e: Dict[str, float]) -> Dict[str, float]:
+        bias = 0.0
+        scalar = 1.0
+        theta_upper = theta.upper()
+        if "POET" in theta_upper or "HEALER" in theta_upper:
+            bias += 2.0
+        elif "NIHILIST" in theta_upper or "CRITIC" in theta_upper:
+            scalar *= 1.2
+        if e.get("HOPE", 0.5) > 0.7:
+            scalar *= 0.9
+        if e.get("DISCIPLINE", 0.5) > 0.7:
+            bias += 1.0
+        return {"voltage_bias": bias, "drag_scalar": scalar}
+
     def _on_ghost_signal(self, payload):
         if payload:
             self.store_ghost_echo(payload)

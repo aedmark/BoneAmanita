@@ -188,8 +188,8 @@ class KintsugiProtocol:
     def attempt_repair(self, phys, trauma_accum, soul_ref=None, qualia=None):
         if not self.active_koan: return None
         vol = getattr(phys, "voltage", 0.0) if not isinstance(phys, dict) else phys.get("voltage", 0.0)
-        clean = getattr(phys, "clean_words", []) if not isinstance(phys, dict) else phys.get("clean_words", [])
-        play_count = sum(1 for w in clean if w in TheLexicon.get("play") or w in TheLexicon.get("abstract"))
+        clean = LexiconService.sanitize(getattr(phys, "raw_text", "")) if hasattr(phys, "raw_text") else []
+        play_count = sum(1 for w in clean if w in LexiconService.get("play") or w in LexiconService.get("abstract"))
         whimsy_score = play_count / max(1, len(clean))
         pathway = self.PATH_SCAR
         if vol > 15.0 and whimsy_score > 0.4:
@@ -378,11 +378,15 @@ class TheFolly:
 
     def _eat_meat(self, fresh_meat: list, lexicon: Dict) -> Tuple[str, str, float, Optional[str]]:
         target = random.choice(fresh_meat)
+        suburban_set = lexicon.get("suburban")
+        suburban_set = suburban_set if suburban_set else []
+        play_set = lexicon.get("play")
+        play_set = play_set if play_set else []
         self.gut_memory.append(target)
         self.global_tastings[target] += 1
-        if target in lexicon.get("suburban", []):
+        if target in suburban_set:
             return "INDIGESTION", f"{Prisma.MAG}THE FOLLY GAGS: It coughs up a piece of office equipment.{Prisma.RST}", -BoneConfig.FOLLY.PENALTY_INDIGESTION, "THE_RED_STAPLER"
-        if target in lexicon.get("play", []):
+        if target in play_set:
             return "SUGAR_RUSH", f"{Prisma.VIOLET}THE FOLLY CHEWS: It compresses the chaos into a small, sticky ball.{Prisma.RST}", BoneConfig.FOLLY.SUGAR_RUSH_YIELD, "QUANTUM_GUM"
         times_eaten = self.global_tastings[target]
         base_yield = BoneConfig.FOLLY.BASE_YIELD
@@ -395,13 +399,18 @@ class TheFolly:
         return "MEAT_GRINDER", msg, actual_yield, loot
 
     def _filter_meat_words(self, clean_words: list, lexicon: Dict) -> list:
-        heavy = lexicon.get("heavy", [])
-        kinetic = lexicon.get("kinetic", [])
-        suburban = lexicon.get("suburban", [])
+        heavy = lexicon.get("heavy")
+        kinetic = lexicon.get("kinetic")
+        suburban = lexicon.get("suburban")
+        heavy = heavy if heavy else []
+        kinetic = kinetic if kinetic else []
+        suburban = suburban if suburban else []
         return [w for w in clean_words if w in heavy or w in kinetic or w in suburban]
 
     def _attempt_digest_abstract(self, clean_words: list, lexicon: Dict) -> Tuple[str, str, float, Optional[str]]:
-        abstract_words = [w for w in clean_words if w in lexicon.get("abstract", [])]
+        abstract_set = lexicon.get("abstract")
+        abstract_set = abstract_set if abstract_set else []
+        abstract_words = [w for w in clean_words if w in abstract_set]
         if abstract_words:
             target = random.choice(abstract_words)
             yield_val = BoneConfig.FOLLY.YIELD_ABSTRACT

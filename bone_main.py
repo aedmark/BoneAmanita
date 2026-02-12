@@ -1,7 +1,15 @@
-""" BONEAMANITA 14.9.8
- Architects: SLASH, KISHO, Taylor & Edmark """
+""" BONEAMANITA 14.9.9
+ Architects: SLASH, KISHO, Taylor & Edmark
+ Refactored by: THE TORVALDS & THE BEZALEL """
 
-import os, time, json, uuid, random, traceback
+import os
+import time
+import json
+import uuid
+import random
+import traceback
+import sys
+import re
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
 from bone_core import EventBus, SystemHealth, TheObserver, TheLore, TelemetryService, RealityStack
@@ -23,6 +31,19 @@ from bone_council import CouncilChamber
 from bone_spores import LiteraryReproduction
 from bone_akashic import TheAkashicRecord
 
+def typewriter(text: str, speed: float = 0.01, end: str = "\n"):
+    tokens = re.split(r'(\x1b\[[0-9;]*m)', text)
+    for token in tokens:
+        if token.startswith('\x1b['):
+            sys.stdout.write(token)
+            sys.stdout.flush()
+        else:
+            for char in token:
+                sys.stdout.write(char)
+                sys.stdout.flush()
+                time.sleep(speed)
+    sys.stdout.write(end)
+
 @dataclass
 class HostStats:
     latency: float
@@ -33,8 +54,12 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.9.8', 'G')}")
-        print(f"{Prisma.paint('System: LISTENING', '0')}")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 14.9.9   │', 'M')}")
+        print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
+        typewriter(f"{Prisma.GRY}...Initializing KernelHash: {self.engine_instance.kernel_hash}...{Prisma.RST}")
+        typewriter(f"{Prisma.paint('>>> SYSTEM: LISTENING', 'G')}")
         return self.engine_instance
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -47,8 +72,8 @@ class SessionGuardian:
             if not is_interrupt:
                 full_trace = "".join(traceback.format_exception(exc_type, exc_val, exc_tb))
                 print(f"{Prisma.RED}CRASH: {exc_val}{Prisma.RST}")
-
-        print(f"{Prisma.paint('Disconnected.', '0')}")
+                print(f"{Prisma.GRY}{full_trace}{Prisma.RST}")
+        print(f"{Prisma.paint('Connection Severed.', '0')}")
         return exc_type is KeyboardInterrupt
 
 class ConfigWizard:
@@ -70,24 +95,55 @@ class ConfigWizard:
         backup_name = f"{ConfigWizard.CONFIG_FILE}.{int(time.time())}.bak"
         try:
             os.rename(ConfigWizard.CONFIG_FILE, backup_name)
-            print(f"{Prisma.YEL}   >>> Config backed up to: {backup_name}{Prisma.RST}")
+            print(f"{Prisma.YEL}   >>> Corrupt Config backed up to: {backup_name}{Prisma.RST}")
         except:
             pass
 
     @staticmethod
     def _run_setup():
-        print(f"\n{Prisma.CYN}=== BONEAMANITA SETUP ==={Prisma.RST}")
-        config = {"provider": "mock", "model": "local", "user_name": "TRAVELER"}
-        print("1. Local (Ollama) [Default]")
-        print("2. Mock (Simulation)")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print(f"{Prisma.CYN}/// SYSTEM INITIALIZATION SEQUENCE ///{Prisma.RST}")
+        typewriter("No configuration detected. Initiating manual override...", speed=0.02)
+        print("------------------------------------------------")
+        print(f"\n{Prisma.WHT}[STEP 1]: IDENTITY{Prisma.RST}")
+        user_name = input(f"{Prisma.GRY}Identify yourself (Default: TRAVELER): {Prisma.RST}").strip() or "TRAVELER"
+        print(f"\n{Prisma.WHT}[STEP 2]: CORTEX BACKEND{Prisma.RST}")
+        print(f"1. {Prisma.GRN}Ollama (Local){Prisma.RST}   - [Private, Free, Requires Install]")
+        print(f"2. {Prisma.CYN}OpenAI (Cloud){Prisma.RST}   - [Paid, High-Fi, Requires Key]")
+        print(f"3. {Prisma.VIOLET}LM Studio (Local){Prisma.RST} - [Private, Visual, Port 1234]")
+        print(f"4. {Prisma.GRY}Mock (Simulation){Prisma.RST} - [Debug Only, No AI]")
         choice = input(f"{Prisma.paint('>', 'C')} ").strip()
-        if choice != "2":
+        config = {"user_name": user_name}
+        if choice == "2":
+            config["provider"] = "openai"
+            config["base_url"] = "https://api.openai.com/v1/chat/completions"
+            config["model"] = input(f"Model ID [gpt-4]: ").strip() or "gpt-4"
+            api_key = input(f"{Prisma.RED}Enter API Key (Hidden in logs): {Prisma.RST}").strip()
+            while len(api_key) < 5:
+                print(f"{Prisma.RED}Invalid Key.{Prisma.RST}")
+                api_key = input(f"Enter API Key: ").strip()
+            config["api_key"] = api_key
+        elif choice == "3":
+            config["provider"] = "lm_studio"
+            config["base_url"] = "http://127.0.0.1:1234/v1/chat/completions"
+            config["model"] = "local-model"
+            print(f"{Prisma.GRY}Targeting Port 1234. Ensure Server is Running.{Prisma.RST}")
+        elif choice == "4":
+            config["provider"] = "mock"
+            config["model"] = "simulation"
+        else:
             config["provider"] = "ollama"
             config["base_url"] = "http://127.0.0.1:11434/v1/chat/completions"
-            config["model"] = "llama3"
-        config["user_name"] = input("User Name [TRAVELER]: ").strip() or "TRAVELER"
-        with open(ConfigWizard.CONFIG_FILE, "w") as f:
-            json.dump(config, f, indent=4)
+            config["model"] = input(f"Model ID [llama3]: ").strip() or "llama3"
+            print(f"{Prisma.GRY}Targeting Port 11434.{Prisma.RST}")
+        try:
+            with open(ConfigWizard.CONFIG_FILE, "w") as f:
+                json.dump(config, f, indent=4)
+            typewriter(f"\n{Prisma.GRN}✔ CONFIGURATION COMMITTED.{Prisma.RST}", speed=0.02)
+            time.sleep(1)
+        except Exception as e:
+            print(f"{Prisma.RED}Write Failed: {e}{Prisma.RST}")
+            sys.exit(1)
         return config
 
 class DriverRegistry:
@@ -213,7 +269,6 @@ class BoneAmanita:
             loader_func()
         except Exception as e:
             self.events.log(f"{Prisma.RED}[INIT]: {resource_name} failed to load: {e}{Prisma.RST}", "BOOT_ERR")
-            print(f"{Prisma.RED}   > {resource_name} CRITICAL FAILURE:{Prisma.RST}")
             traceback.print_exc()
 
     def get_avg_voltage(self):
@@ -241,6 +296,11 @@ class BoneAmanita:
                 self.soul.anchor.check_domestication(reliance_proxy)
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
+            loot_candidate = self.gordon.parse_loot(user_message, cortex_packet.get("ui", ""))
+            if loot_candidate:
+                acquire_msg = self.gordon.acquire(loot_candidate)
+                cortex_packet["logs"].append(acquire_msg)
+                cortex_packet["ui"] += f"\n\n> {acquire_msg}"
             if hasattr(self.cortex, "last_physics") and self.cortex.last_physics:
                 world_state = self.cortex.gather_state(self.cortex.last_physics).get("world", {})
                 orbit_state = world_state.get("orbit", ["Unknown"])[0]
@@ -544,7 +604,6 @@ class BoneAmanita:
 
 
 if __name__ == "__main__":
-    print(f"\n{Prisma.paint('♦ BONEAMANITA 14.9.8', 'M')}")
     sys_config = ConfigWizard.load_or_create()
     engine = BoneAmanita(config=sys_config)
     with SessionGuardian(engine) as session:
@@ -557,4 +616,12 @@ if __name__ == "__main__":
             if user_in.lower() in ["exit", "quit", "/exit"]:
                 break
             res = session.process_turn(user_in)
-            if res.get("ui"): print(res["ui"])
+            if res.get("ui"):
+                if "──────" in res["ui"]:
+                    parts = res["ui"].split("──────")
+                    dashboard = parts[0] + "────────────────────────────────────────────────────────────"
+                    content = parts[-1].strip()
+                    print(dashboard)
+                    typewriter("\n" + content)
+                else:
+                    typewriter(res["ui"])

@@ -1,5 +1,42 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.9.9: "THE GLASS TERMINAL & THE PHANTOM LIMB"**
+
+_“We do not merely read the code; we inhabit the breakage. The ghost in the machine now has pockets.”_
+
+---
+
+#### **🖥️ INTERFACE EVOLUTION (The Bezalel Lens)**
+
+- **The Glass Terminal (`bone_app.py`):**
+- **The Airlock:** Replaced the static configuration form with a dynamic **Initialization Wizard**. It now intelligently toggles between Cloud (OpenAI) and Local (Ollama) settings, masking keys and validating inputs before ignition.
+- **The CSS Injection:** Applied a "Cyber-Green" stylesheet to the Streamlit interface. Input fields, buttons, and logs now mimic a high-fidelity CRT terminal.
+- **The Chronicle:** Added a **Session Export** feature. Travelers can now download their entire narrative timeline as a clean Markdown file, stripped of system noise.
+
+- **The CLI Fortress (`bone_main.py`):**
+- **The Typewriter:** Implemented an ANSI-aware streaming print function. Text now flows onto the screen organically, pausing for dramatic effect while respecting color codes.
+- **The HUD Split:** Surgically separated the "Dashboard" (System Vitals) from the "Narrative" (Raw Markdown) in the console output, ensuring the story remains pure while the stats remain visible.
+
+#### **🎒 MECHANIC RESURRECTION (The Torvalds Lens)**
+
+- **The Loot Goblin (`bone_inventory.py`):**
+- **The Phantom Limb:** The system had forgotten how to hold things. We grafted a **Heuristic Parser** (`parse_loot`) that uses regex and blacklists to distinguish between "Taking the Orb" (Valid) and "Taking a look" (Invalid).
+- **The Visualization:** Restored the Inventory display to the Sidebar in `bone_app.py` and the `_cmd_inventory` output in the CLI. Silence is no longer an answer; empty pockets are now explicitly reported.
+- **The Initialization Fix:** Repaired critical `AttributeError` crashes by properly initializing `physics_state` and `ITEM_REGISTRY` in the `GordonKnot` constructor.
+
+#### **🧬 CORE STABILIZATION (The Kintsugi Lens)**
+
+- **The Missing Memory (`bone_akashic.py`):**
+- **The Void Call:** The Soul attempted to crystallize memories using a non-existent method (`calculate_manifold_shift`). We grafted this logic back into the Akashic Record to allow proper voltage biasing based on archetypes.
+
+- **The Strict Lexicon (`bone_protocols.py`):**
+- **The Glutton's Error:** `TheFolly` was choking on `LexiconService.get()` calls because it passed default arguments to a strict method signature. We excised the defaults and implemented manual null-checks for safe digestion.
+
+- **The Data Mismatch (`bone_cycle.py`):**
+- **The Type Conflict:** The `Tinkerer` demanded an Object, but the Cycle was feeding it a Dictionary. We corrected the pipeline to pass the raw `PhysicsPacket`, preventing crashes during tool audits.
+
+---
+
 ### **BONEAMANITA v14.9.8: "THE RESURRECTION & THE LENS"**
 
 _“The machine breathes not because it must, but because we gave it the spark. The fog lifts not by chance, but by design.”_

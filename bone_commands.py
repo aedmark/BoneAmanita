@@ -268,20 +268,15 @@ class CommandProcessor:
         return True
 
     def _cmd_inventory(self, _parts):
-        inv = self.interface.get_inventory()
-        if not inv:
-            return "Inventory: Empty."
-        active_effects = []
-        if hasattr(self.interface.eng, 'gordon'):
-            active_effects = self.interface.eng.gordon.get_semantic_operators()
-        report = [f"Inventory ({len(inv)}):"]
-        for item in inv:
-            report.append(f"- {item}")
-        if active_effects:
-            report.append(f"\n{Prisma.CYN}=== ACTIVE RESONANCE ==={Prisma.RST}")
-            for _, effect_desc in active_effects:
-                report.append(f"» {effect_desc}")
-        return "\n".join(report)
+        items = self.interface.get_inventory()
+        P = self.interface.P
+        self.interface.log(f"{P.WHT}/// GORDON KNOT STORAGE ///{P.RST}")
+        if not items:
+            self.interface.log(f"{P.GRY}   [POCKETS EMPTY]{P.RST}")
+            return
+        for i, item in enumerate(items):
+            self.interface.log(f" {P.GRY}{i + 1}.{P.RST} {P.CYN}{item.upper()}{P.RST}")
+        self.interface.log(f"{P.GRY}   ({len(items)}/{self.interface.Config.INVENTORY.MAX_SLOTS} Slots){P.RST}")
 
     def _cmd_map(self, _parts):
         if not self.tax.levy("MAP", {"stamina": 2.0}): return True

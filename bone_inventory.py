@@ -2,6 +2,7 @@
  'Organization is the first step toward civilization.' - Schur """
 
 import random
+import re
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional, Any, Callable
 from enum import Enum, auto
@@ -173,20 +174,45 @@ def _init_trait_registry() -> Dict[str, ItemEffect]:
 TRAIT_REGISTRY = _init_trait_registry()
 
 
-@dataclass
 class GordonKnot:
-    integrity: float = 65.0
-    inventory: List[str] = field(default_factory=list)
-    scar_tissue: Dict[str, float] = field(default_factory=dict)
-    last_flinch_turn: int = -10
-    physics_state: TensegrityState = field(default_factory=TensegrityState)
-    events: Optional[Any] = field(default=None, repr=False)
-    active_effect_cache: List[Tuple] = field(default_factory=list, init=False)
-    ITEM_REGISTRY: Dict = field(default_factory=dict, init=False)
-    CRITICAL_ITEMS: set = field(default_factory=set, init=False)
-    REFLEX_MAP: Dict = field(init=False, default_factory=dict)
-    starting_items: List[str] = field(default_factory=list, init=False)
-    reflex_config: Dict = field(default_factory=dict, init=False)
+    LOOT_BLACKLIST = {
+        "look", "breath", "step", "time", "moment", "rest", "break",
+        "nap", "seat", "inventory", "status", "map", "path", "left",
+        "right", "north", "south", "east", "west", "closer", "around",
+        "look around", "a look"
+    }
+
+    REFUSAL_MARKERS = [
+        "cannot", "can't", "unable", "fail", "too heavy",
+        "stuck", "don't", "do not", "locked"
+    ]
+
+    def __init__(self, events=None):
+        self.inventory: List[str] = []
+        self.events = events
+        self.physics_state = TensegrityState()
+
+        self.ITEM_REGISTRY = TheLore.get("ITEMS") or {}
+
+        if not self.inventory:
+            data = TheLore.get("gordon") or {}
+            self.inventory = data.get("STARTING_INVENTORY", [])
+
+    def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
+        user_lower = user_text.lower().strip()
+        sys_lower = sys_text.lower().strip()
+        if any(m in sys_lower for m in self.REFUSAL_MARKERS):
+            return None
+        match = re.search(r"(?:take|grab|pick up|acquire)\s+(?:the\s+|a\s+|an\s+)?([a-z0-9\s]+)", user_lower)
+        if match:
+            raw_target = match.group(1).strip()
+            target = "".join(c for c in raw_target if c.isalnum() or c.isspace()).strip()
+            if not target: return None
+            if target in self.LOOT_BLACKLIST: return None
+            if "look" in target: return None
+            if len(target) < 3 or len(target) > 25: return None
+            return target
+        return None
 
     def __post_init__(self):
         self.load_config()

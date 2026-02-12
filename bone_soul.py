@@ -301,7 +301,7 @@ class NarrativeSelf:
         if not physics_packet: return None
         voltage = physics_packet.get("voltage", 0.0)
         truth = physics_packet.get("truth_ratio", 0.0)
-        if hasattr(self.eng, 'akashic') and self.eng.akashic:
+        if hasattr(self.eng, 'akashic') and self.eng.akashic and hasattr(self.eng.akashic, 'calculate_manifold_shift'):
             vsl_delta = self.eng.akashic.calculate_manifold_shift(
                 theta=self.archetype,
                 e=self.traits.to_dict())
