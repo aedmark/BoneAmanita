@@ -620,6 +620,16 @@ class SoulPhase(SimulationPhase):
         if not self.eng.soul.current_obsession:
             self.eng.soul.find_obsession(self.eng.lex)
         self.eng.soul.pursue_obsession(ctx.physics.to_dict())
+        if hasattr(self.eng, 'oroboros') and self.eng.oroboros.myths:
+            for myth in self.eng.oroboros.myths:
+                if myth.trigger in ctx.clean_words:
+                    ctx.log(f"{Prisma.YEL}📜 ANCIENT MYTH INVOKED: {myth.title}{Prisma.RST}")
+                    ctx.log(f"   \"{myth.lesson}\"")
+                    old_volts = ctx.physics.voltage
+                    ctx.physics.voltage += 5.0
+                    ctx.record_flux("SOUL", "VOLTAGE", old_volts, ctx.physics.voltage, "MYTH_BUFF")
+                    if self.eng.bio.biometrics:
+                        self.eng.bio.biometrics.stamina = min(100.0, self.eng.bio.biometrics.stamina + 5.0)
         if self.eng.gordon.inventory:
             self.eng.tinkerer.audit_tool_use(ctx.physics.to_dict(), self.eng.gordon.inventory)
         council_mandates = self._consult_council(self.eng.soul.traits)

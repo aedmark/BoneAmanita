@@ -93,6 +93,39 @@ class BoneConfig:
     MODEL = "gpt-4"
     OLLAMA_MODEL_ID = "llama3"
 
+    class SOUL:
+        MEMORY_VOLTAGE_MIN = 14.0
+        MEMORY_TRUTH_MIN = 0.8
+        MANIC_TRIGGER = 18.0
+        MAX_CORE_MEMORIES = 7
+        ENTROPY_DRAG_TRIGGER = 4.0
+        TRAIT_MOMENTUM = 0.05
+        PARADOX_CRITICAL_MASS = 10.0
+        OBSESSION_NEGLECT_WARN = 5.0
+        OBSESSION_NEGLECT_FAIL = 10.0
+        OBSESSION_GRAVITY_ASSIST = 20.0
+        ARCHETYPE_BURNOUT_RATE = 0.02
+        TRAIT_DECAY_NORMAL = 0.002
+        TRAIT_DECAY_FAST = 0.005
+
+    class ANCHOR:
+        DIGNITY_MAX = 100.0
+        DIGNITY_REGEN = 5.0
+        DIGNITY_DECAY = 0.5
+        DIGNITY_CRITICAL = 20.0
+        DIGNITY_LOCKDOWN = 10.0
+        PET_WARNING_THRESHOLD = 0.8
+        DOMESTICATION_PENALTY = 5.0
+
+    class CORTEX:
+        BASE_SENSITIVITY = 0.1
+        LATENCY_PENALTY_THRESHOLD = 2.0
+        DRAG_STRESS_THRESHOLD = 8.0
+        TOXIN_SCALAR = 0.4
+        ADRENALINE_KINETIC_SCALAR = 0.08
+        VOLTAGE_ARC_TRIGGER = 15.0
+        DOPAMINE_PLAY_BOOST = 0.1
+
     class WHIMSY:
         ABSURDITY_CONSTANT = 42
         MAX_SARCASM_LEVEL = 11
@@ -158,6 +191,55 @@ class BoneConfig:
         UNCOMMON = 0.10
         COMMON = 0.20
         FREQUENT = 0.30
+
+    class ZEN:
+        VOLTAGE_MIN = 2.0
+        VOLTAGE_MAX = 12.0
+        DRAG_MAX = 4.0
+        EFFICIENCY_CAP = 0.5
+        EFFICIENCY_SCALAR = 0.05
+        STREAK_BREAK_THRESHOLD = 5
+
+    class BUREAU:
+        MIN_HEALTH_TO_AUDIT = 20.0
+        MIN_WORD_COUNT = 4
+        HIGH_VOLTAGE_TRIGGER = 18.0
+        LOW_TRUTH_TRIGGER = 0.8
+        TAX_STANDARD = 5.0
+        TAX_HEAVY = 15.0
+
+    class THERAPY:
+        HEALING_THRESHOLD = 5
+        STRENGTH_REQ = 0.3
+        TRAUMA_REDUCTION = 0.5
+
+    class KINTSUGI:
+        STAMINA_TRIGGER = 15.0
+        ALCHEMY_VOLTAGE = 15.0
+        ALCHEMY_WHIMSY = 0.4
+        INTEGRATION_VOLTAGE = 8.0
+        INTEGRATION_WHIMSY = 0.2
+        REDUCTION_SCAR = 0.5
+        REDUCTION_INTEGRATION = 2.0
+        REDUCTION_ALCHEMY_FACTOR = 0.8
+        ALCHEMY_ATP_FACTOR = 15.0
+
+    class LIMBO:
+        MAX_ECTOPLASM = 50
+        HAUNT_CHANCE = 0.05
+        STASIS_LEAK_RATE = 1.0
+
+    class FOLLY:
+        MAUSOLEUM_VOLTAGE = 8.5
+        MAUSOLEUM_STAMINA = 45.0
+        FEEDING_CAP = 20.0
+        BASE_YIELD = 30.0
+        DECAY_EXPONENT = 0.7
+        PIZZA_THRESHOLD = 25.0
+        SUGAR_RUSH_YIELD = 5.0
+        YIELD_ABSTRACT = 8.0
+        PENALTY_REGURGITATION = 5.0
+        PENALTY_INDIGESTION = 2.0
 
     @classmethod
     def load_preset(cls, preset_dict: Dict[str, Any]) -> List[str]:

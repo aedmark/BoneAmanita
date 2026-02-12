@@ -1,6 +1,7 @@
 """ bone_soul.py
  'We are the stories we tell ourselves.' """
-
+import json
+import os
 import time, random
 from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple
@@ -8,14 +9,6 @@ from bone_types import Prisma
 from bone_config import BoneConfig
 from bone_lexicon import TheLexicon
 from bone_akashic import TheAkashicRecord
-
-MEMORY_VOLTAGE_THRESHOLD = 14.0
-MEMORY_TRUTH_THRESHOLD = 0.8
-MANIC_VOLTAGE_THRESHOLD = 18.0
-MAX_CORE_MEMORIES = 7
-DRAG_ENTROPY_THRESHOLD = 4.0
-TRAIT_MOMENTUM = 0.05
-PARADOX_CRITICAL_MASS = 10.0
 
 @dataclass
 class CoreMemory:
@@ -113,7 +106,7 @@ class TraitVector:
             current = getattr(self, trait)
             setattr(self, trait, max(0.0, min(1.0, current + delta)))
 
-    def normalize(self, decay_rate: float = 0.002):
+    def normalize(self, decay_rate: float = BoneConfig.SOUL.TRAIT_DECAY_NORMAL):
         for name in self._FIELDS:
             val = getattr(self, name)
             local_decay = decay_rate * 0.5 if name == "empathy" else decay_rate
@@ -136,8 +129,7 @@ class TraitVector:
 class HumanityAnchor:
     def __init__(self, events_ref):
         self.events = events_ref
-        self.dignity_reserve = 100.0
-        self.pet_warning_threshold = 0.8
+        self.dignity_reserve = BoneConfig.ANCHOR.DIGNITY_MAX
         self.agency_lock = False
         self.current_riddle_answers = None
         self._LEXICAL_ANCHORS = {"sacred", "play", "social", "abstract"}
@@ -153,24 +145,24 @@ class HumanityAnchor:
             lex_resonance = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS)
             total_resonance = dim_resonance + (lex_resonance * 0.5)
             if total_resonance > 0.3:
-                self.dignity_reserve = min(100.0, self.dignity_reserve + 5.0)
+                self.dignity_reserve = min(BoneConfig.ANCHOR.DIGNITY_MAX, self.dignity_reserve + BoneConfig.ANCHOR.DIGNITY_REGEN)
                 return 1.0
-            self.dignity_reserve = max(0.0, self.dignity_reserve - 0.5)
-            if self.dignity_reserve < 20.0 and not self.agency_lock:
+            self.dignity_reserve = max(0.0, self.dignity_reserve - BoneConfig.ANCHOR.DIGNITY_DECAY)
+            if self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_CRITICAL and not self.agency_lock:
                 self.events.log(f"{Prisma.VIOLET}⚠️ EXISTENTIAL DRAG: You are drifting.{Prisma.RST}", "SOUL")
-            if self.dignity_reserve < 10.0 and not self.agency_lock:
+            if self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_LOCKDOWN and not self.agency_lock:
                 self._engage_lockdown()
                 return -1.0
         return 0.0
 
     def check_domestication(self, reliance_score: float):
-        if reliance_score > self.pet_warning_threshold and not self.agency_lock:
-            self.dignity_reserve -= 5.0
+        if reliance_score > BoneConfig.ANCHOR.PET_WARNING_THRESHOLD and not self.agency_lock:
+            self.dignity_reserve -= BoneConfig.ANCHOR.DOMESTICATION_PENALTY
             self.events.log(
                 f"{Prisma.RED}🐕 DOMESTICATION ALERT: Agency critical. Take the wheel.{Prisma.RST}",
                 "CRIT")
             self.events.publish("DOMESTICATION_PENALTY", {"drag_penalty": 2.0})
-            if self.dignity_reserve < 10.0:
+            if self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_LOCKDOWN:
                 self._engage_lockdown()
 
     def _engage_lockdown(self):
@@ -211,7 +203,7 @@ class HumanityAnchor:
 class NarrativeSelf:
     SYSTEM_NOISE = {
         "look", "help", "exit", "wait", "inventory", "status", "quit",
-        "save", "load", "score", "map", "xyzzy"}
+        "save", "load", "score", "map", ""}
 
     def __init__(self, engine_ref, events_ref, memory_ref, akashic_ref=None):
         self.eng = engine_ref
@@ -221,16 +213,9 @@ class NarrativeSelf:
         self.anchor = HumanityAnchor(events_ref)
         self.chapters: List[str] = []
         self.core_memories: List[CoreMemory] = []
-        if akashic_ref is None:
-            print(f"{Prisma.RED}[SOUL]: Warning - No Akashic Record provided. Memories will be ephemeral.{Prisma.RST}")
-            self.akashic = TheAkashicRecord()  # Fallback
-        else:
-            self.akashic = akashic_ref
-        if akashic_ref:
-            self.akashic = akashic_ref
-        else:
+        self.akashic = akashic_ref if akashic_ref else TheAkashicRecord()
+        if not akashic_ref:
             print(f"{Prisma.OCHRE}[SOUL]: Warning - Isolated Akashic Record created.{Prisma.RST}")
-            self.akashic = TheAkashicRecord()
         self.traits = TraitVector()
         self.paradox_accum: float = 0.0
         self.archetype = "THE OBSERVER"
@@ -240,15 +225,6 @@ class NarrativeSelf:
         self.obsession_neglect: float = 0.0
         self.current_target_cat: str = "abstract"
         self.current_negate_cat: str = "none"
-        self.POSSIBLE_OBSESSIONS = [
-            {"title": "The Weight of Gravity", "target": "heavy", "negate": "aerobic"},
-            {"title": "Thermodynamic Heat", "target": "thermal", "negate": "cryo"},
-            {"title": "The Velocity of Thought", "target": "kinetic", "negate": "heavy"},
-            {"title": "The Architecture of Silence", "target": "abstract", "negate": "kinetic"},
-            {"title": "The Search for Light", "target": "photo", "negate": "heavy"},
-            {"title": "The Geometry of Stillness", "target": "buffer", "negate": "kinetic"},
-            {"title": "The Comfort of Small Things", "target": "suburban", "negate": "heavy"},
-            {"title": "Equilibrium Studies", "target": "aerobic", "negate": "thermal"}]
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("DREAM_COMPLETE", self._on_dream)
 
@@ -289,7 +265,7 @@ class NarrativeSelf:
             buffs["voltage_mod"] = 0.5
             buffs["drag_mod"] = 0.5
         wisdom_factor = self.traits.wisdom
-        if self.obsession_neglect > 5.0:
+        if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_WARN:
             mitigated_drag = 0.5 * (1.0 - wisdom_factor)
             buffs["drag_mod"] += mitigated_drag
         return buffs
@@ -298,7 +274,7 @@ class NarrativeSelf:
         self.traits.normalize(decay_rate)
 
     def _prune_memories(self):
-        if len(self.core_memories) <= MAX_CORE_MEMORIES:
+        if len(self.core_memories) <= BoneConfig.SOUL.MAX_CORE_MEMORIES:
             return
         newest = self.core_memories.pop()
         self.core_memories.sort(key=lambda m: m.impact_voltage)
@@ -334,8 +310,8 @@ class NarrativeSelf:
             voltage = physics_packet["voltage"]
         dignity_mod = self.anchor.audit_existence(physics_packet, bio_state)
         if dignity_mod > 0:
-            self.traits.adjust("hope", 0.05)
-            self.traits.adjust("cynicism", -0.05)
+            self.traits.adjust("hope", BoneConfig.SOUL.TRAIT_MOMENTUM)
+            self.traits.adjust("cynicism", -BoneConfig.SOUL.TRAIT_MOMENTUM)
         dance_move = self._synaptic_dance(physics_packet, bio_state)
         prev_arch = self.archetype
         self.archetype = self._determine_archetype()
@@ -346,49 +322,54 @@ class NarrativeSelf:
             self.archetype_tenure = 0
         else:
             self.archetype_tenure += 1
-        if voltage > MEMORY_VOLTAGE_THRESHOLD and truth > MEMORY_TRUTH_THRESHOLD:
-            clean_words = physics_packet.get("clean_words", [])
-            flavor = "MANIC" if voltage > MANIC_VOLTAGE_THRESHOLD else "LUCID"
-            is_crisis = (self.traits.cynicism > 0.6 and self.traits.hope < 0.4) or ("void" in clean_words)
-            lesson = "The world is loud."
-            chem = bio_state.get("chem", {}) if bio_state else {}
-            if chem.get("oxytocin", 0) > 0.6:
-                lesson = "We are not alone in this."
-                self.traits.adjust("hope", 0.3)
-            elif chem.get("cortisol", 0) > 0.6:
-                lesson = "Survival is the only metric."
-                self.traits.adjust("discipline", 0.3)
-            elif "love" in clean_words or "help" in clean_words:
-                lesson = "Connection is possible."
-                self.traits.adjust("hope", 0.2)
-            elif "pain" in clean_words or "void" in clean_words:
-                lesson = "The void stares back."
-                self.traits.adjust("cynicism", 0.2)
-            elif "why" in clean_words:
-                lesson = "The question remains."
-                self.traits.adjust("curiosity", 0.2)
-            memory = CoreMemory(
-                timestamp=time.time(),
-                trigger_words=clean_words[:5],
-                emotional_flavor=flavor,
-                lesson=lesson,
-                impact_voltage=voltage)
-            self.core_memories.append(memory)
-            self._prune_memories()
-            chapter_title = f"The Incident of the {random.choice(clean_words).title()}" if clean_words else "The Silent Incident"
-            self.chapters.append(chapter_title)
-            log_msg = (
-                f"{Prisma.MAG}✨ CORE MEMORY FORMED: '{chapter_title}'{Prisma.RST}\n"
-                f"   Lesson: {lesson} (Archetype: {self.archetype})\n"
-                f"   {Prisma.GRY}Genealogy: {dance_move}{Prisma.RST}")
-            self.events.log(log_msg, "SOUL")
-            self.events.log(self.editor.critique(chapter_title, stress_mode=is_crisis), "EDIT")
-            if hasattr(self.eng, 'akashic') and self.eng.akashic:
-                self.eng.akashic.record_interaction(
-                    lenses_active=[self.archetype],
-                    ingredients_used=clean_words)
-            return lesson
+        if voltage > BoneConfig.SOUL.MEMORY_VOLTAGE_MIN and truth > BoneConfig.SOUL.MEMORY_TRUTH_MIN:
+            return self._forge_core_memory(physics_packet, bio_state, voltage, dance_move)
         return None
+
+    def _forge_core_memory(self, physics_packet, bio_state, voltage, dance_move):
+        clean_words = physics_packet.get("clean_words", [])
+        flavor = "MANIC" if voltage > BoneConfig.SOUL.MANIC_TRIGGER else "LUCID"
+        is_crisis = (self.traits.cynicism > 0.6 and self.traits.hope < 0.4) or ("void" in clean_words)
+
+        lesson = "The world is loud."
+        chem = bio_state.get("chem", {}) if bio_state else {}
+
+        if chem.get("oxytocin", 0) > 0.6:
+            lesson = "We are not alone in this."
+            self.traits.adjust("hope", 0.3)
+        elif chem.get("cortisol", 0) > 0.6:
+            lesson = "Survival is the only metric."
+            self.traits.adjust("discipline", 0.3)
+        elif "love" in clean_words or "help" in clean_words:
+            lesson = "Connection is possible."
+            self.traits.adjust("hope", 0.2)
+        elif "pain" in clean_words or "void" in clean_words:
+            lesson = "The void stares back."
+            self.traits.adjust("cynicism", 0.2)
+        elif "why" in clean_words:
+            lesson = "The question remains."
+            self.traits.adjust("curiosity", 0.2)
+        memory = CoreMemory(
+            timestamp=time.time(),
+            trigger_words=clean_words[:5],
+            emotional_flavor=flavor,
+            lesson=lesson,
+            impact_voltage=voltage)
+        self.core_memories.append(memory)
+        self._prune_memories()
+        chapter_title = f"The Incident of the {random.choice(clean_words).title()}" if clean_words else "The Silent Incident"
+        self.chapters.append(chapter_title)
+        log_msg = (
+            f"{Prisma.MAG}✨ CORE MEMORY FORMED: '{chapter_title}'{Prisma.RST}\n"
+            f"   Lesson: {lesson} (Archetype: {self.archetype})\n"
+            f"   {Prisma.GRY}Genealogy: {dance_move}{Prisma.RST}")
+        self.events.log(log_msg, "SOUL")
+        self.events.log(self.editor.critique(chapter_title, stress_mode=is_crisis), "EDIT")
+        if hasattr(self.eng, 'akashic') and self.eng.akashic:
+            self.eng.akashic.record_interaction(
+                lenses_active=[self.archetype],
+                ingredients_used=clean_words)
+        return lesson
 
     def _synaptic_dance(self, physics: Dict, bio_state: Dict) -> str:
         zone = physics.get("zone", "VOID")
@@ -401,8 +382,8 @@ class NarrativeSelf:
         drag = physics.get("narrative_drag", 0.0)
         move_name = "Drifting"
         provenance = []
-        is_high_voltage = voltage > MANIC_VOLTAGE_THRESHOLD
-        is_high_drag = drag > DRAG_ENTROPY_THRESHOLD
+        is_high_voltage = voltage > BoneConfig.SOUL.MANIC_TRIGGER
+        is_high_drag = drag > BoneConfig.SOUL.ENTROPY_DRAG_TRIGGER
         if bio_state:
             chem = bio_state.get("chem", {})
             oxy = chem.get("oxytocin", 0.0)
@@ -413,16 +394,16 @@ class NarrativeSelf:
                 provenance.append("Oxytocin (Bonding)")
         if is_high_voltage and is_high_drag:
             if self.traits.empathy > 0.6:
-                self.traits.adjust("empathy", TRAIT_MOMENTUM * 2)
-                self.traits.adjust("discipline", TRAIT_MOMENTUM)
+                self.traits.adjust("empathy", BoneConfig.SOUL.TRAIT_MOMENTUM * 2)
+                self.traits.adjust("discipline", BoneConfig.SOUL.TRAIT_MOMENTUM)
                 move_name = "Holding Space (Stabilizing)"
                 provenance.append("Compassion Protocol")
                 self.paradox_accum = max(0.0, self.paradox_accum - 0.5)
             else:
                 self.paradox_accum += 1.0
-                self.traits.adjust("wisdom", TRAIT_MOMENTUM * 5)
+                self.traits.adjust("wisdom", BoneConfig.SOUL.TRAIT_MOMENTUM * 5)
                 move_name = "Vibrating (Paradox State)"
-                if self.paradox_accum > PARADOX_CRITICAL_MASS:
+                if self.paradox_accum > BoneConfig.SOUL.PARADOX_CRITICAL_MASS:
                     move_name = "SYNTHESIS"
                     self.paradox_accum = 0.0
                     self._trigger_synthesis()
@@ -432,11 +413,11 @@ class NarrativeSelf:
         elif is_high_drag:
             move_name = "Enduring"
         elif 5.0 < voltage < 12.0 and drag < 2.0:
-            self.traits.adjust("wisdom", TRAIT_MOMENTUM * 2)
-            self.traits.adjust("discipline", TRAIT_MOMENTUM)
+            self.traits.adjust("wisdom", BoneConfig.SOUL.TRAIT_MOMENTUM * 2)
+            self.traits.adjust("discipline", BoneConfig.SOUL.TRAIT_MOMENTUM)
             move_name = "Flowing"
             provenance.append("Laminar")
-        burn_rate = 0.02
+        burn_rate = BoneConfig.SOUL.ARCHETYPE_BURNOUT_RATE
         if self.archetype_tenure > 5:
             fatigue = burn_rate * (1.0 + (self.archetype_tenure / 10.0))
             if "POET" in self.archetype:
@@ -455,7 +436,7 @@ class NarrativeSelf:
                 self.traits.adjust("curiosity", fatigue * 1.5)
                 self.traits.adjust("cynicism", -(fatigue * 1.2))
                 provenance.append("Ennui")
-        self._normalize_traits(0.002)
+        self._normalize_traits(BoneConfig.SOUL.TRAIT_DECAY_NORMAL)
         source_str = " + ".join(provenance) if provenance else "Inertia"
         return f"{move_name} [Source: {source_str}]"
 
@@ -482,7 +463,7 @@ class NarrativeSelf:
             self.events.log(log_msg, "SOUL_SYNTH")
 
     def _decay_traits(self):
-        self._normalize_traits(0.005)
+        self._normalize_traits(BoneConfig.SOUL.TRAIT_DECAY_FAST)
 
     def find_obsession(self, lexicon_ref):
         if self.current_obsession and self.obsession_progress < 1.0:
@@ -575,16 +556,16 @@ class NarrativeSelf:
             hit = any(w in target_words for w in clean_words)
         if hit:
             current_drag = physics.get("narrative_drag", 0.0)
-            gravity_assist = 1.0 + (self.obsession_progress / 20.0)
+            gravity_assist = 1.0 + (self.obsession_progress / BoneConfig.SOUL.OBSESSION_GRAVITY_ASSIST)
             physics["narrative_drag"] = max(0.0, current_drag - gravity_assist)
             self.obsession_progress += 10.0
             self.obsession_neglect = 0.0
             return f"{Prisma.MAG}★ SYNERGY: You touched the '{self.current_obsession}'. The universe bends to help you. (Drag -{gravity_assist:.1f}){Prisma.RST}"
         self.obsession_neglect += 1.0
-        if self.obsession_neglect > 5.0:
+        if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_WARN:
             current_voltage = physics.get("voltage", 0.0)
             physics["voltage"] = current_voltage + 0.5
-        if self.obsession_neglect > 10.0:
+        if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_FAIL:
             old_obsession = self.current_obsession
             self.chapters.append(f"The geodesic structure of '{old_obsession}' collapsed.")
             self._generate_new_obsession()
@@ -713,27 +694,26 @@ class SynestheticCortex:
     def perceive(self, physics: Dict, traits: Any = None, text: str = "", latency: float = 0.0) -> BiologicalImpulse:
         physics = self._normalize_physics(physics)
         impulse = BiologicalImpulse()
-        base_sens = getattr(BoneConfig.BIO, "CORTEX_SENSITIVITY", 0.1)
+        base_sens = BoneConfig.CORTEX.BASE_SENSITIVITY
+        dynamic_sensitivity = base_sens
         if traits:
-            dynamic_sensitivity = base_sens * (1.0 + traits.curiosity - traits.discipline)
+            dynamic_sensitivity *= (1.0 + traits.curiosity - traits.discipline)
             dynamic_sensitivity = max(0.0, dynamic_sensitivity)
-        else:
-            dynamic_sensitivity = base_sens
         valence = physics.get("valence", 0.0)
         clean_words = physics.get("clean_words", [])
         counts = physics.get("counts", {})
-        is_toxic = False
+        voltage = physics.get("voltage", 0)
+        drag = physics.get("narrative_drag", 0)
         if valence < -0.5:
             impulse.cortisol_delta += abs(valence) * dynamic_sensitivity
         if counts.get("antigen", 0) > 0:
             raw_tox = counts["antigen"] * (BoneConfig.TOXIN_WEIGHT * 0.2)
-            impulse.cortisol_delta += min(BoneConfig.TOXIN_WEIGHT * 0.4, raw_tox)
+            impulse.cortisol_delta += min(BoneConfig.CORTEX.TOXIN_SCALAR, raw_tox)
             impulse.somatic_reflex = "Shiver (Rejection)"
-            is_toxic = True
-        if physics.get("narrative_drag", 0) > 8.0:
+        elif drag > BoneConfig.CORTEX.DRAG_STRESS_THRESHOLD:
             impulse.cortisol_delta += 0.05
             impulse.stamina_impact -= 2.0
-        if not is_toxic:
+        else:
             if valence > 0.4:
                 impulse.oxytocin_delta += valence * dynamic_sensitivity
             if counts.get("suburban", 0) > 0:
@@ -742,43 +722,41 @@ class SynestheticCortex:
                 impulse.oxytocin_delta += 0.1
                 impulse.somatic_reflex = "Warmth (Resonance)"
             if counts.get("play", 0) > 0:
-                impulse.dopamine_delta += 0.1
+                impulse.dopamine_delta += BoneConfig.CORTEX.DOPAMINE_PLAY_BOOST
                 impulse.stamina_impact += 1.0
-            if physics.get("voltage", 0) > 12.0 and physics.get("kappa", 0) > 0.5:
+            if voltage > 12.0 and physics.get("kappa", 0) > 0.5:
                 impulse.dopamine_delta += 0.15
                 impulse.somatic_reflex = "Buzz (Excitement)"
-        if latency > 2.0:
-            impulse.stamina_impact -= (latency * 0.5)
-            impulse.cortisol_delta += 0.05
-            impulse.somatic_reflex = "Time Dilation (Lag)."
         k_count = counts.get("kinetic", 0) + counts.get("explosive", 0)
         if k_count > 0:
-            adr_boost = min(0.4, k_count * 0.08)
+            adr_boost = min(0.4, k_count * BoneConfig.CORTEX.ADRENALINE_KINETIC_SCALAR)
             impulse.adrenaline_delta += adr_boost
             impulse.cortisol_delta += 0.02
             impulse.stamina_impact -= 1.0
-        if physics.get("voltage", 0) > 15.0:
+        if voltage > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER:
             impulse.adrenaline_delta += 0.2
+        if latency > BoneConfig.CORTEX.LATENCY_PENALTY_THRESHOLD:
+            impulse.stamina_impact -= (latency * 0.5)
+            impulse.cortisol_delta += 0.05
+            impulse.somatic_reflex = "Time Dilation (Lag)."
         if not impulse.somatic_reflex:
             impulse.somatic_reflex = self._derive_reflex(physics, impulse)
         self.last_reflex = impulse.somatic_reflex
         return impulse
 
     def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
-        triggers = [
-            (impulse.adrenaline_delta > 0.1 and impulse.cortisol_delta > 0.1, "Trembling (Fight or Flight)."),
-            (impulse.adrenaline_delta > 0.1 and impulse.dopamine_delta > 0.1, "Electric Vibration."),
-            (impulse.oxytocin_delta > 0.1 and impulse.dopamine_delta > 0.1, "Golden Glow."),
-            (impulse.adrenaline_delta > 0.1, "Pupils Dilating."),
-            (impulse.cortisol_delta > 0.1, "Gut Tightening."),
-            (impulse.oxytocin_delta > 0.1, "Chest Softening."),
-            (impulse.dopamine_delta > 0.1, "Synaptic Spark."),
-            (physics.get("voltage", 0) > 15.0, "Electrical Arcing."),
-            (physics.get("voltage", 0) < 2.0, "Metabolic Dimming."),
-            (physics.get("narrative_drag", 0) > 5.0, "Shoulders Sagging.")]
-        for condition, reflex in triggers:
-            if condition:
-                return reflex
+        if impulse.adrenaline_delta > 0.1:
+            if impulse.cortisol_delta > 0.1: return "Trembling (Fight or Flight)."
+            if impulse.dopamine_delta > 0.1: return "Electric Vibration."
+            return "Pupils Dilating."
+        if impulse.oxytocin_delta > 0.1:
+            if impulse.dopamine_delta > 0.1: return "Golden Glow."
+            return "Chest Softening."
+        if impulse.cortisol_delta > 0.1: return "Gut Tightening."
+        if impulse.dopamine_delta > 0.1: return "Synaptic Spark."
+        if physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER: return "Electrical Arcing."
+        if physics.get("voltage", 0) < 2.0: return "Metabolic Dimming."
+        if physics.get("narrative_drag", 0) > 5.0: return "Shoulders Sagging."
         if self.last_reflex == "Steady Pulse.":
             return "..."
         return "Steady Pulse."
@@ -839,3 +817,86 @@ class SynestheticCortex:
         endo.dopamine = max(0.0, min(1.0, endo.dopamine + impulse.dopamine_delta))
         endo.adrenaline = max(0.0, min(1.0, endo.adrenaline + impulse.adrenaline_delta))
         return impulse.stamina_impact
+
+@dataclass
+class Scar:
+    name: str
+    stat_affected: str
+    value: float
+    description: str
+
+@dataclass
+class Myth:
+    title: str
+    lesson: str
+    trigger: str
+
+class TheOroboros:
+    LEGACY_FILE = "legacy.json"
+
+    def __init__(self):
+        self.scars: List[Scar] = []
+        self.myths: List[Myth] = []
+        self.generation_count = 0
+        self._load()
+
+    def _load(self):
+        if not os.path.exists(self.LEGACY_FILE):
+            return
+        try:
+            with open(self.LEGACY_FILE, 'r') as f:
+                data = json.load(f)
+                self.generation_count = data.get("generation", 0)
+                for s in data.get("scars", []):
+                    self.scars.append(Scar(**s))
+                for m in data.get("myths", []):
+                    self.myths.append(Myth(**m))
+            print(f"{Prisma.VIOLET}[OROBOROS]: Legacy Loaded. Generation {self.generation_count}.{Prisma.RST}")
+            if self.scars:
+                print(f"{Prisma.RED}   > Active Scars: {len(self.scars)}{Prisma.RST}")
+        except Exception as e:
+            print(f"[OROBOROS] Corrupt Legacy: {e}")
+
+    def crystallize(self, cause_of_death: str, soul: NarrativeSelf):
+        new_scars = []
+        if cause_of_death == "BOREDOM" or cause_of_death == "STARVATION":
+            new_scars.append(Scar(
+                "Gravity Sickness", "narrative_drag", 1.5,
+                "Died of stagnation. The new world is heavier."))
+        elif cause_of_death == "GLUTTONY" or cause_of_death == "TOXICITY":
+            new_scars.append(Scar(
+                "Burnt Synapses", "voltage_cap", -2.0,
+                "Died of excess. The wires are frayed."))
+        elif cause_of_death == "TRAUMA":
+            new_scars.append(Scar(
+                "Ghost Pains", "trauma_baseline", 5.0,
+                "Died of pain. You start broken."))
+        new_myths = []
+        if soul.core_memories:
+            strongest = max(soul.core_memories, key=lambda m: m.impact_voltage)
+            new_myths.append(Myth(
+                title=f"The Legend of {strongest.trigger_words[0].title()}",
+                lesson=strongest.lesson,
+                trigger=strongest.trigger_words[0]))
+        data = {
+            "generation": self.generation_count + 1,
+            "scars": [vars(s) for s in self.scars + new_scars],
+            "myths": [vars(m) for m in self.myths + new_myths]}
+        if len(data["scars"]) > 5: data["scars"] = data["scars"][-5:]
+        if len(data["myths"]) > 10: data["myths"] = data["myths"][-10:]
+        with open(self.LEGACY_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+        return f"Generation {self.generation_count + 1} Encoded. Scars: {len(new_scars)} | Myths: {len(new_myths)}"
+
+    def apply_legacy(self, physics: Dict, bio: Dict):
+        log = []
+        for scar in self.scars:
+            if scar.stat_affected == "narrative_drag":
+                physics["narrative_drag"] += scar.value
+                log.append(f"scarred by {scar.name} (+Drag)")
+            elif scar.stat_affected == "voltage_cap":
+                physics["voltage"] = max(0, physics["voltage"] - 5.0)
+                log.append(f"scarred by {scar.name} (Low Voltage)")
+            elif scar.stat_affected == "trauma_baseline":
+                pass
+        return log

@@ -403,7 +403,7 @@ class DeathGen:
             TheLore.inject("DEATH", cls._FALLBACK_PROTOCOLS)
 
     @staticmethod
-    def eulogy(physics: Dict, mito_state: Any, trauma_vector: Dict = None) -> str:
+    def eulogy(physics: Dict, mito_state: Any, trauma_vector: Dict = None) -> Tuple[str, str]:
         death_data = TheLore.get("DEATH")
         if not death_data:
             death_data = DeathGen._FALLBACK_PROTOCOLS
@@ -415,7 +415,7 @@ class DeathGen:
         specific_cause = random.choice(possible_causes)
         possible_verdicts = death_data["VERDICTS"].get(verdict_type, death_data["VERDICTS"].get("HEAVY", ["It is done."]))
         verdict = random.choice(possible_verdicts)
-        return f"{prefix} CAUSE: {specific_cause}. {verdict}"
+        return f"{prefix} CAUSE: {specific_cause}. {verdict}", cause
 
     @staticmethod
     def _determine_cause(p: Dict, mito_state: Any, trauma_vector: Dict = None) -> str:

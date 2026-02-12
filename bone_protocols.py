@@ -33,12 +33,12 @@ class ZenGarden:
     def raking_the_sand(self, physics: Any, bio: Dict) -> Tuple[float, Optional[str]]:
         vol = getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0)
         drag = getattr(physics, "narrative_drag", 0.0) if not isinstance(physics, dict) else physics.get("narrative_drag", 0.0)
-        is_stable = (2.0 <= vol <= 12.0) and (drag <= 4.0)
+        is_stable = (BoneConfig.ZEN.VOLTAGE_MIN <= vol <= BoneConfig.ZEN.VOLTAGE_MAX) and (drag <= BoneConfig.ZEN.DRAG_MAX)
         if is_stable:
             self.stillness_streak += 1
             if self.stillness_streak > self.max_streak:
                 self.max_streak = self.stillness_streak
-            efficiency_boost = min(0.5, self.stillness_streak * 0.05)
+            efficiency_boost = min(BoneConfig.ZEN.EFFICIENCY_CAP, self.stillness_streak * BoneConfig.ZEN.EFFICIENCY_SCALAR)
             msg = None
             if self.stillness_streak == 1:
                 msg = f"{Prisma.GRY}⛩️ ZEN GARDEN: Entering the quiet zone.{Prisma.RST}"
@@ -48,7 +48,7 @@ class ZenGarden:
                 msg = (f"{Prisma.CYN}⛩️ ZEN GARDEN: {self.stillness_streak} ticks of poise.\n"
                        f"   \"{koan}\" (Efficiency +{int(efficiency_boost * 100)}%){Prisma.RST}")
             return efficiency_boost, msg
-        if self.stillness_streak > 5:
+        if self.stillness_streak > BoneConfig.ZEN.STREAK_BREAK_THRESHOLD:
             self.events.log(f"{Prisma.GRY}🍂 ZEN GARDEN: Leaf falls. Turbulence broke the streak.{Prisma.RST}", "SYS")
         self.stillness_streak = 0
         return 0.0, None
@@ -83,14 +83,14 @@ class TheBureau:
         self.stamp_count = data.get("stamp_count", 0)
 
     def audit(self, physics, bio_state, context=None, origin="USER") -> Optional[Dict]:
-        if bio_state.get("health", 100.0) < 20.0: return None
+        if bio_state.get("health", 100.0) < BoneConfig.BUREAU.MIN_HEALTH_TO_AUDIT: return None
         p = physics if isinstance(physics, dict) else getattr(physics, "__dict__", {})
         vol = p.get("voltage", 0.0)
         clean_words = p.get("clean_words", [])
         raw_text = p.get("raw_text", "")
         truth = p.get("truth_ratio", 0.0)
         word_count = len(raw_text.split())
-        if raw_text.startswith("/") or word_count < 4:
+        if raw_text.startswith("/") or word_count < BoneConfig.BUREAU.MIN_WORD_COUNT:
             return None
         selected_form = None
         evidence = []
@@ -102,19 +102,19 @@ class TheBureau:
                     evidence.append(crime['msg'])
                     tax += crime['tax']
                     break
-        if not selected_form and vol > 18.0:
-            if truth < 0.8:
+        if not selected_form and vol > BoneConfig.BUREAU.HIGH_VOLTAGE_TRIGGER:
+            if truth < BoneConfig.BUREAU.LOW_TRUTH_TRIGGER:
                 selected_form = "ZONING_VIOLATION"
                 evidence = ["Excessive Voltage", "Unlicensed Fiction"]
-                tax = 15.0
+                tax = BoneConfig.BUREAU.TAX_HEAVY
             else:
                 selected_form = "Form 202-A"
-                tax = 5.0
+                tax = BoneConfig.BUREAU.TAX_STANDARD
         elif not selected_form and any(w in self.buzzwords for w in clean_words):
             hits = [w for w in clean_words if w in self.buzzwords]
             selected_form = random.choice(self.forms)
             evidence = hits
-            tax = 5.0
+            tax = BoneConfig.BUREAU.TAX_STANDARD
         if not selected_form:
             return None
         self.stamp_count += 1
@@ -303,16 +303,23 @@ class LimboLayer:
         self.ghosts = deque(data.get("ghosts", []), maxlen=self.MAX_ECTOPLASM)
         self.stasis_leak = data.get("stasis_leak", 0.0)
 
-    def absorb_dead_timeline(self, filepath):
+    def absorb_dead_timeline(self, filepath: str) -> None:
         try:
             with open(filepath, "r") as f:
                 data = json.load(f)
-                if "trauma_vector" in data:
-                    for k, v in data["trauma_vector"].items():
-                        if v > 0.3: self.ghosts.append(f"👻{k}_ECHO")
-                if "mutations" in data and "heavy" in data["mutations"]:
-                    bones = list(data["mutations"]["heavy"]); random.shuffle(bones); self.ghosts.extend(bones[:3])
-        except (IOError, json.JSONDecodeError): pass
+            self._extract_ghosts(data)
+        except (IOError, json.JSONDecodeError) as e:
+            print(f"{Prisma.RED}[LIMBO] Failed to absorb timeline '{filepath}': {e}{Prisma.RST}")
+
+    def _extract_ghosts(self, data: Dict[str, Any]) -> None:
+        if "trauma_vector" in data:
+            for k, v in data["trauma_vector"].items():
+                if v > 0.3:
+                    self.ghosts.append(f"👻{k}_ECHO")
+        if "mutations" in data and "heavy" in data["mutations"]:
+            bones = list(data["mutations"]["heavy"])
+            random.shuffle(bones)
+            self.ghosts.extend(bones[:3])
 
     def trigger_stasis_failure(self, intended_thought):
         self.stasis_leak += 1.0
@@ -333,7 +340,8 @@ class LimboLayer:
 
 class TheFolly:
     def __init__(self):
-        self.gut_memory = deque(maxlen=50); self.global_tastings = Counter()
+        self.gut_memory = deque(maxlen=50);
+        self.global_tastings = Counter()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -349,29 +357,58 @@ class TheFolly:
         def _get(p, k, d=0.0):
             return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
         voltage = _get(physics, "voltage", 0.0)
-        if voltage > 8.5 and stamina > 45:
+        if voltage > BoneConfig.FOLLY.MAUSOLEUM_VOLTAGE and stamina > BoneConfig.FOLLY.MAUSOLEUM_STAMINA:
             return "MAUSOLEUM_CLAMP", f"{Prisma.GRY}THE MAUSOLEUM: No battle is ever won. We are just spinning hands.{Prisma.RST}\n   {Prisma.CYN}TIME DILATION: Voltage 0.0. The field reveals your folly.{Prisma.RST}", 0.0, None
         return None, None, 0.0, None
 
-    def grind_the_machine(self, atp_pool, clean_words, lexicon):
-        loot = None
-        if 20.0 > atp_pool > 0.0:
-            meat_words = [w for w in clean_words if w in lexicon.get("heavy") or w in lexicon.get("kinetic") or w in lexicon.get("suburban")]
-            fresh_meat = [w for w in meat_words if w not in self.gut_memory]
-            if fresh_meat:
-                target = random.choice(fresh_meat); self.gut_memory.append(target); self.global_tastings[target] += 1
-                times_eaten = self.global_tastings[target]
-                base_yield = 30.0; decay_factor = 0.7 ** (times_eaten - 1); actual_yield = max(2.0, base_yield * decay_factor)
-                flavor_text = f" (Stale: {times_eaten}x)" if times_eaten > 3 else ""
-                if target in lexicon.get("suburban"): return "INDIGESTION", f"{Prisma.MAG}THE FOLLY GAGS: It coughs up a piece of office equipment.{Prisma.RST}", -2.0, "THE_RED_STAPLER"
-                if target in lexicon.get("play"): return "SUGAR_RUSH", f"{Prisma.VIOLET}THE FOLLY CHEWS: It compresses the chaos into a small, sticky ball.{Prisma.RST}", 5.0, "QUANTUM_GUM"
-                if actual_yield >= 25.0: loot = "STABILITY_PIZZA"
-                return "MEAT_GRINDER", f"{Prisma.RED}CROWD CAFFEINE: I chewed on '{target.upper()}'{flavor_text}.{Prisma.RST}\n   {Prisma.WHT}Yield: {actual_yield:.1f} ATP.{Prisma.RST}", actual_yield, loot
-            elif meat_words: return "REGURGITATION", f"{Prisma.OCHRE}REFLEX: You already fed me '{meat_words[0]}'. It is ash to me now.{Prisma.RST}\n   {Prisma.RED}► PENALTY: -5.0 ATP. Find new fuel.{Prisma.RST}", -5.0, None
-            else:
-                abstract_words = [w for w in clean_words if w in lexicon.get("abstract")]
-                if abstract_words:
-                    target = random.choice(abstract_words); yield_val = 8.0
-                    return "GRUEL", f"{Prisma.GRY}THE FOLLY SIGHS: It grinds the ABSTRACT concept '{target.upper()}'.{Prisma.RST}\n   {Prisma.GRY}It tastes like chalk dust. +{yield_val} ATP.{Prisma.RST}", yield_val, None
-                return "INDIGESTION", f"{Prisma.OCHRE}INDIGESTION: I tried to eat your words, but they were just air.{Prisma.RST}\n   {Prisma.GRY}Cannot grind this input into fuel.{Prisma.RST}\n   {Prisma.RED}► STARVATION CONTINUES.{Prisma.RST}", 0.0, None
-        return None, None, 0.0, None
+    def grind_the_machine(self, atp_pool: float, clean_words: list, lexicon: Dict) -> Tuple[
+        Optional[str], Optional[str], float, Optional[str]]:
+        if not (0.0 < atp_pool < BoneConfig.FOLLY.FEEDING_CAP):
+            return None, None, 0.0, None
+        meat_words = self._filter_meat_words(clean_words, lexicon)
+        if not meat_words:
+            return self._attempt_digest_abstract(clean_words, lexicon)
+        fresh_meat = [w for w in meat_words if w not in self.gut_memory]
+        if not fresh_meat:
+            target = meat_words[0]
+            msg = (f"{Prisma.OCHRE}REFLEX: You already fed me '{target}'. It is ash to me now.{Prisma.RST}\n"
+                   f"   {Prisma.RED}► PENALTY: -{BoneConfig.FOLLY.PENALTY_REGURGITATION} ATP. Find new fuel.{Prisma.RST}")
+            return "REGURGITATION", msg, -BoneConfig.FOLLY.PENALTY_REGURGITATION, None
+        return self._eat_meat(fresh_meat, lexicon)
+
+    def _eat_meat(self, fresh_meat: list, lexicon: Dict) -> Tuple[str, str, float, Optional[str]]:
+        target = random.choice(fresh_meat)
+        self.gut_memory.append(target)
+        self.global_tastings[target] += 1
+        if target in lexicon.get("suburban", []):
+            return "INDIGESTION", f"{Prisma.MAG}THE FOLLY GAGS: It coughs up a piece of office equipment.{Prisma.RST}", -BoneConfig.FOLLY.PENALTY_INDIGESTION, "THE_RED_STAPLER"
+        if target in lexicon.get("play", []):
+            return "SUGAR_RUSH", f"{Prisma.VIOLET}THE FOLLY CHEWS: It compresses the chaos into a small, sticky ball.{Prisma.RST}", BoneConfig.FOLLY.SUGAR_RUSH_YIELD, "QUANTUM_GUM"
+        times_eaten = self.global_tastings[target]
+        base_yield = BoneConfig.FOLLY.BASE_YIELD
+        decay_factor = BoneConfig.FOLLY.DECAY_EXPONENT ** (times_eaten - 1)
+        actual_yield = max(2.0, base_yield * decay_factor)
+        loot = "STABILITY_PIZZA" if actual_yield >= BoneConfig.FOLLY.PIZZA_THRESHOLD else None
+        flavor_text = f" (Stale: {times_eaten}x)" if times_eaten > 3 else ""
+        msg = (f"{Prisma.RED}CROWD CAFFEINE: I chewed on '{target.upper()}'{flavor_text}.{Prisma.RST}\n"
+               f"   {Prisma.WHT}Yield: {actual_yield:.1f} ATP.{Prisma.RST}")
+        return "MEAT_GRINDER", msg, actual_yield, loot
+
+    def _filter_meat_words(self, clean_words: list, lexicon: Dict) -> list:
+        heavy = lexicon.get("heavy", [])
+        kinetic = lexicon.get("kinetic", [])
+        suburban = lexicon.get("suburban", [])
+        return [w for w in clean_words if w in heavy or w in kinetic or w in suburban]
+
+    def _attempt_digest_abstract(self, clean_words: list, lexicon: Dict) -> Tuple[str, str, float, Optional[str]]:
+        abstract_words = [w for w in clean_words if w in lexicon.get("abstract", [])]
+        if abstract_words:
+            target = random.choice(abstract_words)
+            yield_val = BoneConfig.FOLLY.YIELD_ABSTRACT
+            msg = (f"{Prisma.GRY}THE FOLLY SIGHS: It grinds the ABSTRACT concept '{target.upper()}'.{Prisma.RST}\n"
+                   f"   {Prisma.GRY}It tastes like chalk dust. +{yield_val} ATP.{Prisma.RST}")
+            return "GRUEL", msg, yield_val, None
+        msg = (f"{Prisma.OCHRE}INDIGESTION: I tried to eat your words, but they were just air.{Prisma.RST}\n"
+               f"   {Prisma.GRY}Cannot grind this input into fuel.{Prisma.RST}\n"
+               f"   {Prisma.RED}► STARVATION CONTINUES.{Prisma.RST}")
+        return "INDIGESTION", msg, 0.0, None

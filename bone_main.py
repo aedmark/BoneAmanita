@@ -16,7 +16,7 @@ from bone_protocols import KintsugiProtocol, TherapyProtocol, TheBureau, ZenGard
 from bone_physics import CosmicDynamics, ZoneInertia
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
-from bone_soul import NarrativeSelf
+from bone_soul import NarrativeSelf, TheOroboros
 from bone_architect import BoneArchitect
 from bone_cycle import GeodesicOrchestrator
 from bone_council import CouncilChamber
@@ -146,6 +146,13 @@ class BoneAmanita:
             self, self.events, memory_ref=self.mind.mem, akashic_ref=self.akashic)
         if self.soul_legacy_data:
             self.soul.load_from_dict(self.soul_legacy_data)
+        self.oroboros = TheOroboros()
+        if self.phys and hasattr(self.phys, "observer"):
+            dummy_phys = {"narrative_drag": 0.0, "voltage": 10.0}
+            logs = self.oroboros.apply_legacy(dummy_phys, {})
+            if logs:
+                self.events.log(f"{Prisma.RED}⛓️ LEGACY SCARS: {', '.join(logs)}{Prisma.RST}", "OROBOROS")
+                self.phys.dynamics.base_drag += dummy_phys["narrative_drag"]
 
     def _initialize_village(self):
         self.navigator = TheCartographer(self.embryo.shimmer)
@@ -301,8 +308,10 @@ class BoneAmanita:
         return {"ui": f"{Prisma.GRY}[META] {ui_msg}{Prisma.RST}", "logs": [], "metrics": self.get_metrics()}
 
     def trigger_death(self, last_phys) -> Dict:
-        eulogy = DeathGen.eulogy(last_phys, self.bio.mito.state, self.trauma_accum)
-        death_log = [f"\n{Prisma.RED}SYSTEM HALT: {eulogy}{Prisma.RST}"]
+        eulogy_text, cause_code = DeathGen.eulogy(last_phys, self.bio.mito.state, self.trauma_accum)
+        death_log = [f"\n{Prisma.RED}SYSTEM HALT: {eulogy_text}{Prisma.RST}"]
+        legacy_msg = self.oroboros.crystallize(cause_code, self.soul)
+        death_log.append(f"{Prisma.MAG}🐍 {legacy_msg}{Prisma.RST}")
         continuity_packet = {
             "location": self.cortex.gather_state(self.cortex.last_physics or {}).get("world", {}).get("orbit", ["Void"])[0],
             "last_output": self.cortex.dialogue_buffer[-1] if self.cortex.dialogue_buffer else "Silence.",
