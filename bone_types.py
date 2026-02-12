@@ -4,34 +4,25 @@ from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
 
+
 class Prisma:
     RST = "\033[0m"
-    RED = "\033[31m"
-    GRN = "\033[32m"
-    YEL = "\033[33m"
-    BLU = "\033[34m"
-    MAG = "\033[35m"
-    CYN = "\033[36m"
-    WHT = "\033[97m"
-    GRY = "\033[90m"
-    INDIGO = "\033[34;1m"
-    OCHRE = "\033[33;2m"
-    VIOLET = "\033[35;2m"
-    SLATE = "\033[30;1m"
+    RED, GRN, YEL, BLU, MAG, CYN, WHT, GRY = (
+        "\033[31m", "\033[32m", "\033[33m", "\033[34m",
+        "\033[35m", "\033[36m", "\033[97m", "\033[90m")
+    INDIGO, OCHRE, VIOLET, SLATE = (
+        "\033[34;1m", "\033[33;2m", "\033[35;2m", "\033[30;1m")
     _COLOR_MAP = {
-        "R": RED, "G": GRN, "Y": YEL, "B": BLU,
-        "M": MAG, "C": CYN, "W": WHT, "0": GRY,
-        "I": INDIGO, "O": OCHRE, "V": VIOLET,
-        "S": SLATE}
+        "R": RED, "G": GRN, "Y": YEL, "B": BLU, "M": MAG, "C": CYN,
+        "W": WHT, "0": GRY, "I": INDIGO, "O": OCHRE, "V": VIOLET, "S": SLATE}
     _TIE_DYE_COLORS = [RED, GRN, YEL, CYN, MAG, VIOLET, OCHRE]
     _STRIP_REGEX = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
         code = cls._COLOR_MAP.get(str(color_key).upper(), cls.WHT)
-        if str(text).endswith(cls.RST):
-            return f"{code}{text}"
-        return f"{code}{text}{cls.RST}"
+        txt = str(text)
+        return f"{code}{txt}" if txt.endswith(cls.RST) else f"{code}{txt}{cls.RST}"
 
     @classmethod
     def strip(cls, text: str) -> str:
@@ -98,9 +89,10 @@ class PhysicsPacket:
 
     def snapshot(self) -> 'PhysicsPacket':
         new_packet = copy.copy(self)
-        new_packet.clean_words = list(self.clean_words)
-        new_packet.counts = self.counts.copy()
-        new_packet.vector = self.vector.copy()
+        for f in fields(self):
+            val = getattr(self, f.name)
+            if isinstance(val, (list, dict, set)):
+                setattr(new_packet, f.name, copy.deepcopy(val))
         return new_packet
 
     def to_dict(self) -> Dict[str, Any]:
@@ -207,26 +199,16 @@ class CycleContext:
                 "timestamp": time.time()})
 
     def snapshot(self) -> 'CycleContext':
-        stack_copy = copy.copy(self.reality_stack) if self.reality_stack else None
-        new_ctx = CycleContext(
-            input_text=self.input_text,
-            physics=self.physics.snapshot() if hasattr(self.physics, 'snapshot') else copy.deepcopy(self.physics),
-            bio_result=copy.deepcopy(self.bio_result),
-            mind_state=copy.deepcopy(self.mind_state),
-            world_state=copy.deepcopy(self.world_state),
-            user_profile=copy.deepcopy(self.user_profile),
-            clean_words=list(self.clean_words),
-            logs=list(self.logs),
-            flux_log=list(self.flux_log),
-            is_alive=self.is_alive,
-            refusal_triggered=self.refusal_triggered,
-            refusal_packet=copy.deepcopy(self.refusal_packet),
-            is_bureaucratic=self.is_bureaucratic,
-            bureau_ui=self.bureau_ui,
-            timestamp=self.timestamp,
-            last_impulse=self.last_impulse,
-            reality_stack=stack_copy,
-            active_lens=self.active_lens)
+        new_ctx = copy.copy(self)
+        for f in fields(self):
+            name = f.name
+            val = getattr(self, name)
+            if name == 'physics' and hasattr(val, 'snapshot'):
+                setattr(new_ctx, name, val.snapshot())
+            elif isinstance(val, (list, dict, set)):
+                setattr(new_ctx, name, copy.deepcopy(val))
+            elif hasattr(val, '__dict__') and not isinstance(val, (str, float, int, bool)):
+                pass
         return new_ctx
 
 @dataclass
@@ -248,22 +230,6 @@ class PhysSystem:
     gate: Optional[Any] = None
     tension: Optional[Any] = None
     dynamics: Any = None
-
-@dataclass
-class StateSandbox:
-    phase_name: str
-    physics_copy: Dict[str, Any]
-    bio_copy: Dict[str, Any]
-    logs: List[str] = field(default_factory=list)
-    changes_committed: bool = False
-
-    def commit(self, target_context: 'CycleContext'):
-        if self.changes_committed: return
-        target_context.logs.extend(self.logs)
-        for k, v in self.physics_copy.items():
-            if hasattr(target_context.physics, k):
-                setattr(target_context.physics, k, v)
-        self.changes_committed = True
 
 @dataclass
 class DecisionTrace:

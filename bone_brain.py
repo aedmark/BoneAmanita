@@ -288,27 +288,30 @@ class LLMInterface:
         return self.mock_generation(prompt, reason="SILENCE")
 
     def _local_fallback(self, prompt: str, params: Dict) -> str:
+        url = getattr(BoneConfig, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
+        model = getattr(BoneConfig, "OLLAMA_MODEL_ID", "llama3")
+        fallback_payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "temperature": params.get('temperature', 0.55)}
+        original_url = self.base_url
+        original_key = self.api_key
         try:
-            url = getattr(BoneConfig, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
-            payload = {
-                "model": getattr(BoneConfig, "OLLAMA_MODEL_ID", "llama3"),
-                "messages": [{"role": "user", "content": prompt}],
-                "stream": False,
-                "temperature": params.get('temperature', 0.55)}
-            req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=5.0) as response:
-                if response.status == 200:
-                    return json.loads(response.read().decode("utf-8")).get("choices", [{}])[0].get("message", {}).get("content", "")
+            self.base_url = url
+            self.api_key = "ollama"
+            return self._transmit(fallback_payload, timeout=10.0, max_retries=1)
         except Exception:
-            pass
-        return self.mock_generation(prompt, reason="FALLBACK_DEAD")
+            return self.mock_generation(prompt, reason="FALLBACK_DEAD")
+        finally:
+            self.base_url = original_url
+            self.api_key = original_key
 
     def mock_generation(self, prompt: str, reason: str = "SIMULATION") -> str:
         if self.dreamer:
             hallucination, _ = self.dreamer.hallucinate({"ENTROPY": len(prompt) % 10}, trauma_level=2.0)
             return f"[{reason}]: {hallucination}"
         return f"[{reason}]: The wire hums. There is no signal."
-
 
 class PromptComposer:
     CORE_STYLE = [
@@ -495,22 +498,6 @@ class TheCortex:
             host_stats=getattr(engine_ref, 'host_stats', None),
             village=getattr(engine_ref, 'village', None))
         return cls(services, llm_client)
-
-    @property
-    def eng(self):
-        class LegacyEngineProxy:
-            def __init__(self, services):
-                self.gordon = services.inventory
-                self.lex = services.lexicon
-                self.cycle_controller = services.cycle_controller
-                self.tick_count = 0
-                self.host_stats = services.host_stats
-                self.soul = None
-
-            def get_metrics(self):
-                return {"note": "Metrics unavailable in strict service mode"}
-
-        return LegacyEngineProxy(self.svc)
 
     def _update_history(self, user_text: str, system_text: str):
         self.dialogue_buffer.append(f"User: {user_text} | System: {system_text}")

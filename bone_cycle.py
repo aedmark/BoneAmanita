@@ -12,31 +12,40 @@ from bone_symbiosis import SymbiosisManager
 from bone_config import BoneConfig, BonePresets
 
 class CongruenceValidator:
-    ARCHETYPE_MAP = {
-        "POET": {"light", "dark", "soul", "dream", "fade", "echo"},
-        "ENGINEER": {"system", "voltage", "drag", "efficiency", "structure"},
-        "NIHILIST": {"void", "pointless", "entropy", "end", "silence"},
-        "CRITIC": {"derivative", "pacing", "structure", "flawed"}}
-
     def __init__(self):
         self.last_phi = 1.0
+        self._archetype_map = None
+
+    @property
+    def map(self):
+        if self._archetype_map is None:
+            try:
+                self._archetype_map = TheLore.get("ARCHETYPES") or {}
+            except Exception:
+                self._archetype_map = {}
+        return self._archetype_map
 
     def calculate_resonance(self, text: str, context: Any) -> float:
         if not text: return 0.0
-        archetype = getattr(context, "active_lens", "OBSERVER").upper().replace("THE ", "")
+        raw_lens = getattr(context, "active_lens", "OBSERVER")
+        archetype = raw_lens.upper().replace("THE ", "")
         tone_score = 0.8
-        target_words = self.ARCHETYPE_MAP.get(archetype)
+        target_data = self.map.get(archetype)
+        target_words = set()
+        if isinstance(target_data, list):
+            target_words = set(target_data)
+        elif isinstance(target_data, dict):
+            target_words = set(target_data.get("keywords", []))
+        if not target_words:
+            if archetype == "ENGINEER":
+                target_words = {"system", "structure", "logic"}
+            elif archetype == "POET":
+                target_words = {"dream", "echo", "flow"}
         if target_words:
-            words_to_check = set(context.clean_words) if context.clean_words else set(text.lower().split())
-            if not target_words.isdisjoint(words_to_check):
-                tone_score = 1.0
-        layer_confusion = 0.0
-        if context.reality_stack and context.reality_stack.current_depth == 1:
-            if "{" in text and "}" in text and ":" in text:
-                layer_confusion = 0.5
-        phi = 1.0 - (abs(tone_score - 1.0) + layer_confusion)
-        self.last_phi = max(0.0, min(1.0, phi))
-        return self.last_phi
+            words_to_check = set(context.clean_words) if hasattr(context, "clean_words") else set()
+            hits = len(words_to_check.intersection(target_words))
+            if hits > 0: tone_score += (0.1 * hits)
+        return min(1.5, tone_score)
 
 class CycleStabilizer:
     MANIFOLD_CONFIGS = {
@@ -1048,14 +1057,18 @@ class GeodesicOrchestrator:
         return snapshot
 
     def _hydrate_snapshot_metadata(self, snapshot: Dict, ctx: CycleContext):
+        def _safe_dict(obj):
+            if hasattr(obj, "to_dict"): return obj.to_dict()
+            if isinstance(obj, dict): return obj
+            return {}
         snapshot.update({
             "trace_id": getattr(ctx, "trace_id", "UNKNOWN"),
             "is_alive": True,
-            "physics": ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics,
-            "bio": ctx.bio_result,
-            "mind": ctx.mind_state,
-            "world": ctx.world_state,
-            "soul": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else {},
+            "physics": _safe_dict(ctx.physics),
+            "bio": _safe_dict(ctx.bio_result),
+            "mind": _safe_dict(ctx.mind_state),
+            "world": _safe_dict(ctx.world_state),
+            "soul": _safe_dict(getattr(self.eng, "soul", {})),
             "council_mandates": getattr(ctx, "council_mandates", []),
             "dream": getattr(ctx, "last_dream", None)})
 

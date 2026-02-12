@@ -8,33 +8,35 @@ from bone_core import EventBus, TheLore, BoneJSONEncoder
 from bone_types import Prisma
 from bone_config import BoneConfig
 
-class SporeCasing:
-    def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
-        self.genome = "BONEAMANITA_14.9.6"
-        self.parent_id = session_id
-        self.core_graph = {}
-        for k, data in graph.items():
-            filtered_edges = {}
-            for target, weight in data["edges"].items():
-                if weight <= 1.0: continue
-                if weight > 8.0 and random.random() < 0.20: continue
-                drift = random.uniform(0.9, 1.1)
-                new_weight = min(10.0, weight * drift)
-                filtered_edges[target] = round(new_weight, 2)
-            if filtered_edges:
-                self.core_graph[k] = {"edges": filtered_edges, "last_tick": 0}
-        self.mutations = mutations
-        self.trauma_scar = round(trauma, 3)
-        self.joy_vectors = joy_vectors if joy_vectors is not None else []
-        self.world_atlas = world_atlas or {}
+def _access_config_path(root, path, value=None, set_mode=False):
+    parts = path.split('.')
+    target = root
+    try:
+        for part in parts[:-1]:
+            if isinstance(target, dict):
+                target = target.get(part)
+            else:
+                target = getattr(target, part)
+            if target is None: return None
+        leaf = parts[-1]
+        if set_mode:
+            if isinstance(target, dict):
+                if leaf in target and isinstance(target[leaf], (int, float)):
+                    target[leaf] = value
+                    return True
+            elif hasattr(target, leaf):
+                current = getattr(target, leaf)
+                if isinstance(current, (int, float)):
+                    setattr(target, leaf, value)
+                    return True
+            return False
+        else:
+            if isinstance(target, dict): return target.get(leaf)
+            return getattr(target, leaf, None)
+    except (AttributeError, KeyError, TypeError):
+        return None
 
-class SporeInterface:
-    def save_spore(self, filename, data): raise NotImplementedError
-    def load_spore(self, filepath): raise NotImplementedError
-    def list_spores(self): raise NotImplementedError
-    def delete_spore(self, filepath): raise NotImplementedError
-
-class LocalFileSporeLoader(SporeInterface):
+class LocalFileSporeLoader:
     def __init__(self, directory="memories"):
         self.directory = directory
         if not os.path.exists(directory):
@@ -161,7 +163,7 @@ class SubconsciousStrata:
         return found
 
 class MycelialNetwork:
-    def __init__(self, events: EventBus, loader: SporeInterface = None, seed_file=None):
+    def __init__(self, events: EventBus, loader: 'LocalFileSporeLoader' = None, seed_file=None):
         self.loader = loader if loader else LocalFileSporeLoader()
         self.events = events
         self.session_id = f"session_{int(time.time())}"
@@ -182,6 +184,27 @@ class MycelialNetwork:
         self.session_trauma_vector = {}
         if seed_file:
             self.ingest(seed_file)
+
+    def _prepare_spore_dict(self, base_trauma, joy_vectors, world_atlas):
+        core_graph = {}
+        for k, data in self.graph.items():
+            filtered_edges = {}
+            for target, weight in data["edges"].items():
+                if weight <= 1.0: continue
+                if weight > 8.0 and random.random() < 0.20: continue
+                drift = random.uniform(0.9, 1.1)
+                new_weight = min(10.0, weight * drift)
+                filtered_edges[target] = round(new_weight, 2)
+            if filtered_edges:
+                core_graph[k] = {"edges": filtered_edges, "last_tick": 0}
+        return {
+            "genome": "BONEAMANITA_14.9.6",
+            "parent_id": self.session_id,
+            "core_graph": core_graph,
+            "mutations": {},
+            "trauma_scar": round(base_trauma, 3),
+            "joy_vectors": joy_vectors or [],
+            "world_atlas": world_atlas or {}}
 
     def load_seeds(self):
         from bone_village import ParadoxSeed
@@ -326,27 +349,7 @@ class MycelialNetwork:
         return key in safe_set
 
     def _inject_config(self, path, value):
-        parts = path.split('.')
-        target = BoneConfig
-        for part in parts[:-1]:
-            if isinstance(target, dict):
-                target = target.get(part)
-            else:
-                target = getattr(target, part, None)
-            if target is None: return False
-        last_key = parts[-1]
-        if isinstance(target, dict):
-            if last_key in target and isinstance(target[last_key], (int, float)):
-                if 0.0 <= value <= 1000.0:
-                    target[last_key] = value
-                    return True
-        elif hasattr(target, last_key):
-            current = getattr(target, last_key)
-            if isinstance(current, (int, float)) and isinstance(value, (int, float)):
-                if 0.0 <= value <= 1000.0:
-                    setattr(target, last_key, value)
-                    return True
-        return False
+        return _access_config_path(BoneConfig, path, value, set_mode=True)
 
     def _strengthen_link(self, source, target, rate, decay):
         edges = self.graph[source]["edges"]
@@ -576,8 +579,7 @@ class MycelialNetwork:
             continuity,
             world_atlas)
 
-    def save(self, health, stamina, mutations, trauma_accum, joy_history, mitochondria_traits=None, antibodies=None,
-             soul_data=None, continuity=None, world_atlas=None, village_data=None):
+    def save(self, health, stamina, mutations, trauma_accum, joy_history, mitochondria_traits=None, antibodies=None, soul_data=None, continuity=None, world_atlas=None, village_data=None):
         base_trauma = (BoneConfig.MAX_HEALTH - health) / BoneConfig.MAX_HEALTH
         final_vector = {k: min(1.0, v) for k, v in trauma_accum.items()}
         top_joy = sorted(joy_history, key=lambda x: x["resonance"], reverse=True)[:3]
@@ -591,11 +593,8 @@ class MycelialNetwork:
         if health <= 0:
             cause = max(final_vector, key=final_vector.get) if final_vector else "UNKNOWN"
             final_vector[cause] = 1.0
-        spore = SporeCasing(
-            session_id=self.session_id, graph=self.graph,
-            mutations=mutations, trauma=base_trauma,
-            joy_vectors=top_joy, world_atlas=world_atlas)
-        data = spore.__dict__
+        data = self._prepare_spore_dict(base_trauma, top_joy, world_atlas)
+        data["mutations"] = mutations
         if village_data:
             data["village_data"] = village_data
         if continuity: data["continuity"] = continuity
@@ -858,18 +857,7 @@ class LiteraryReproduction:
 
     @staticmethod
     def _resolve_config_value(root_config, path):
-        parts = path.split('.')
-        target = root_config
-        try:
-            for part in parts:
-                if isinstance(target, dict):
-                    target = target.get(part)
-                else:
-                    target = getattr(target, part)
-                if target is None: return None
-            return target
-        except (AttributeError, KeyError):
-            return None
+        return _access_config_path(root_config, path, set_mode=False)
 
     @staticmethod
     def mitosis(parent_id, bio_state, physics):

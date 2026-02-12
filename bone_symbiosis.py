@@ -73,10 +73,24 @@ class DiagnosticConfidence:
         return self.current_diagnosis
 
 class SymbiontVoice:
-    def __init__(self, name, color, archetypes):
+    def __init__(self, name, color, archetypes, personality_matrix=None):
         self.name = name
         self.color = color
-        self.archetypes = archetypes
+        if isinstance(archetypes, list):
+            final_vocab = set()
+            for key in archetypes:
+                try:
+                    val = TheLexicon.get(key)
+                    if val:
+                        final_vocab.update(val)
+                    else:
+                        final_vocab.add(key)
+                except Exception:
+                    final_vocab.add(key)
+            self.archetypes = final_vocab
+        else:
+            self.archetypes = archetypes
+        self.personality = personality_matrix or {}
 
     def opine(self, clean_words: list, voltage: float) -> tuple[float, str]:
         hits = sum(1 for w in clean_words if w in self.archetypes)
@@ -84,23 +98,41 @@ class SymbiontVoice:
         return score, self._get_comment(score, voltage)
 
     def _get_comment(self, score, voltage):
+        if voltage > 18.0 and "high_volt" in self.personality:
+            return self.personality["high_volt"]
+        if voltage < 5.0 and "low_volt" in self.personality:
+            return self.personality["low_volt"]
+        if score > 3.0 and "high_score" in self.personality:
+            return self.personality["high_score"]
+        if score > 1.0 and "med_score" in self.personality:
+            return self.personality["med_score"]
         return "..."
 
-class MycorrhizalSymbiont(SymbiontVoice):
-    def __init__(self):
-        vocab = {"roots", "hold", "breath", "slow", "steady", "we", "here", "safe"}
-        super().__init__("MYCORRHIZA", Prisma.OCHRE, vocab)
-
-    def _get_comment(self, score, voltage):
-        if voltage > 15.0: return "Sshhh. Too fast. Let the heat dissipate into the soil."
-        if voltage < 5.0:  return "It is okay to rest. We will hold the structure while you sleep."
-        return "We are woven together. You do not need to carry this alone."
-
 def get_symbiont(type_name):
-    if type_name == "LICHEN": return LichenSymbiont()
-    if type_name == "PARASITE": return ParasiticSymbiont()
-    if type_name == "MYCORRHIZA": return MycorrhizalSymbiont()
-    return MycotoxinFactory()
+    if type_name == "LICHEN":
+        return SymbiontVoice("LICHEN", Prisma.GRN, ["photo", "vital", "bloom", "solar"], {
+            "high_score": "Yes! The roots are drinking deep.",
+            "med_score": "We see the light.",
+            "high_volt": "Too hot! You'll scorch the leaves!",
+            "low_volt": "It is cold... we are sleeping."
+        })
+    if type_name == "PARASITE":
+        return SymbiontVoice("PARASITE", Prisma.RED, ["antigen", "heavy", "rot", "void"], {
+            "high_score": "Delicious. The entropy is sweet.",
+            "med_score": "I smell rust.",
+            "high_volt": "Stop vibrating. Be still and rot.",
+            "low_volt": "Finally. Silence."
+        })
+    if type_name == "MYCORRHIZA":
+        return SymbiontVoice("MYCORRHIZA", Prisma.OCHRE, ["roots", "hold", "safe", "steady"], {
+            "high_volt": "Sshhh. Too fast. Let the heat dissipate.",
+            "low_volt": "It is okay to rest. We hold the structure.",
+            "med_score": "We are woven together."
+        })
+    return SymbiontVoice("MYCELIUM", Prisma.CYN, ["constructive", "abstract", "code"], {
+        "high_score": "The pattern holds. Integration probable.",
+        "med_score": "Scanning for structural integrity..."
+    })
 
 class SymbiosisManager:
     def __init__(self, events_ref):
@@ -201,48 +233,3 @@ class SymbiosisManager:
         soul = current_state.get("soul", {})
         phys = current_state.get("physics", {})
         return CoherenceAnchor.compress_anchor(soul, phys)
-
-class LichenSymbiont(SymbiontVoice):
-    def __init__(self):
-        try:
-            vocab = TheLexicon.get("photo") | TheLexicon.get("vital") | {"bloom", "grow", "solar", "roots"}
-        except Exception:
-            vocab = {"photo", "play", "sacred", "social", "solar", "vital", "bloom", "grow"}
-        super().__init__("LICHEN", Prisma.GRN, vocab)
-
-    def photosynthesize(self, physics, words, tick):
-        return 5.0, None
-
-    def _get_comment(self, score, voltage):
-        if score > 3.0: return "Yes! The roots are drinking deep."
-        if score > 1.0: return "We see the light."
-        if voltage > 18.0: return "Too hot! You'll scorch the leaves!"
-        if voltage < 2.0: return "It is cold... we are sleeping."
-        return "..."
-
-class ParasiticSymbiont(SymbiontVoice):
-    def __init__(self):
-        try:
-            vocab = TheLexicon.get("antigen") | TheLexicon.get("heavy") | {"rot", "static", "void", "decay"}
-        except Exception:
-            vocab = {"antigen", "toxin", "heavy", "meat", "void", "static", "rot", "decay"}
-        super().__init__("PARASITE", Prisma.RED, vocab)
-
-    def _get_comment(self, score, voltage):
-        if score > 3.0: return "Delicious. The entropy is sweet."
-        if score > 1.0: return "I smell rust."
-        if voltage > 15.0: return "Stop vibrating. Be still and rot."
-        if voltage < 5.0: return "Finally. Silence."
-        return "..."
-
-class MycotoxinFactory(SymbiontVoice):
-    def __init__(self):
-        try:
-            vocab = TheLexicon.get("constructive") | TheLexicon.get("abstract") | {"code", "system", "logic"}
-        except Exception:
-            vocab = {"constructive", "kinetic", "abstract", "code", "system"}
-        super().__init__("MYCELIUM", Prisma.CYN, vocab)
-
-    def _get_comment(self, score, voltage):
-        if score > 2.0: return "The pattern holds. Integration probable."
-        return "Scanning for structural integrity..."

@@ -145,60 +145,6 @@ class TheChairholder:
                     correction, {})
         return False, "", {}, {}
 
-class CouncilChamber:
-    def __init__(self, engine_ref):
-        self.eng = engine_ref
-        self.voices = []
-        self.strange_loop = TheStrangeLoop()
-        self.leverage = TheLeveragePoint()
-        self.chairholder = TheChairholder()
-        self.footnote = TheFootnote()
-        if hasattr(self.eng, 'bio'):
-            if getattr(self.eng.bio, 'lichen', None):
-                self.voices.append(self.eng.bio.lichen)
-            if getattr(self.eng.bio, 'parasite', None):
-                self.voices.append(self.eng.bio.parasite)
-            if getattr(self.eng.bio, 'immune', None):
-                self.voices.append(self.eng.bio.immune)
-        self.speaker = "SOUL"
-
-    class TheChairholder:
-        def __init__(self):
-            self.commitment_streak = 0
-            self.grievance_threshold = 4
-            lore = LoreManifest.get_instance()
-            c_data = lore.get("COUNCIL_DATA") or {}
-            self.catchphrases = c_data.get("CHAIRHOLDER_PHRASES", [
-                "You just got Jammed."])
-
-        def audit(self, physics: dict, bio_state: dict) -> tuple[bool, str, dict, dict]:
-            drag_endured = physics.get("narrative_drag", 0.0)
-            current_stamina = bio_state.get("stamina", 100.0)
-            # Handle bio state variants (some use 'stamina', some 'atp')
-            if current_stamina == 100.0 and "atp" in bio_state:
-                current_stamina = bio_state.get("atp", 100.0)
-            max_stamina = getattr(BoneConfig, "MAX_STAMINA", 100.0)
-            stamina_spent = max_stamina - current_stamina
-            chem = bio_state.get("chem", {})
-            dopamine = chem.get("dopamine", chem.get("DOP", 0.0))
-            glimmers = chem.get("glimmers", 0)
-            is_working_hard = (drag_endured > 3.0 or stamina_spent > (max_stamina * 0.3))
-            is_rewarded = (dopamine > 0.6 or glimmers > 0)
-            if is_working_hard and not is_rewarded:
-                self.commitment_streak += 1
-            elif is_rewarded:
-                self.commitment_streak = max(0, self.commitment_streak - 1)
-            if self.commitment_streak >= self.grievance_threshold:
-                self.commitment_streak = 0
-                correction = {"narrative_drag": -5.0}
-                jamm_quote = random.choice(self.catchphrases)
-                return (True, (
-                    f"{Prisma.OCHRE}⚖️ CHAIRHOLDER JAMM:{Prisma.RST} "
-                    f"Input/Output Discrepancy. User is grinding without perks. "
-                    f"RULING: {jamm_quote} (Drag reduced)."),
-                        correction, {})
-            return False, "", {}, {}
-
     class CouncilChamber:
         def __init__(self, engine_ref):
             self.eng = engine_ref
@@ -234,17 +180,12 @@ class CouncilChamber:
             if ch_hit:
                 transcript.append(self.footnote.commentary(ch_log))
                 if ch_corr: adjustments.update(ch_corr)
-            clean_words = physics_packet.get("clean_words", [])
-            voltage = physics_packet.get("voltage", 0.0)
-            votes = {"YEA": 0, "NAY": 0, "ABSTAIN": 0}
+            votes = {"YEA": 0, "NAY": 0}
             active_voices = [v for v in self.voices if v is not None]
             if not active_voices:
-                votes["YEA"] += 1 if random.random() < 0.5 else 0
-                votes["NAY"] += 1 if random.random() < 0.5 else 0
-                if votes["YEA"] == 0 and votes["NAY"] == 0:
-                    transcript.append(
-                        f"{Prisma.GRY}[COUNCIL]: The room is empty, but the dust motes vote YEA.{Prisma.RST}")
-                    votes["YEA"] += 1
+                votes["YEA"] = 1
+            clean_words = physics_packet.get("clean_words", [])
+            voltage = physics_packet.get("voltage", 0.0)
             for voice in active_voices:
                 if hasattr(voice, "opine"):
                     score, comment = voice.opine(clean_words, voltage)
@@ -254,32 +195,13 @@ class CouncilChamber:
                     elif score < 0.8:
                         votes["NAY"] += 1
                         transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
-                    else:
-                        votes["ABSTAIN"] += 1
-            if hasattr(self.eng, 'soul') and hasattr(self.eng.soul, 'anchor'):
-                dignity = self.eng.soul.anchor.dignity_reserve
-                if dignity < 20.0:
-                    msg = f"{Prisma.VIOLET}[ANCHOR]: ⚠️ DIGNITY CRITICAL. I VETO THIS CRUNCH.{Prisma.RST}"
-                    transcript.append(self.footnote.commentary(msg))
-                    adjustments["narrative_drag"] = 10.0
-                    adjustments["voltage"] = -10.0
-                    return transcript, adjustments, mandates
             final_log = ""
-            if votes["YEA"] == votes["NAY"] and votes["YEA"] > 0:
-                transcript.append(
-                    f"{Prisma.OCHRE}>>> DEADLOCK DETECTED. The Chair casts the deciding vote.{Prisma.RST}")
-                if random.random() > 0.5:
-                    votes["YEA"] += 1
-                else:
-                    votes["NAY"] += 1
             if votes["YEA"] > votes["NAY"]:
                 final_log = f"{Prisma.GRN}>>> MOTION CARRIED ({votes['YEA']}-{votes['NAY']}).{Prisma.RST}"
-                magnitude = 0.5 + (0.1 * (votes["YEA"] - votes["NAY"]))
-                adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - magnitude
+                adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - 0.5
             elif votes["NAY"] > votes["YEA"]:
                 final_log = f"{Prisma.RED}>>> MOTION DENIED ({votes['NAY']}-{votes['YEA']}).{Prisma.RST}"
-                magnitude = 2.0 + (0.2 * (votes["NAY"] - votes["YEA"]))
-                adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + magnitude
+                adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + 2.0
                 adjustments["voltage"] = adjustments.get("voltage", 0) - 2.0
             else:
                 final_log = f"{Prisma.YEL}>>> COUNCIL ADJOURNED (No Quorum).{Prisma.RST}"
