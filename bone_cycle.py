@@ -646,7 +646,7 @@ class SoulPhase(SimulationPhase):
                     if self.eng.bio.biometrics:
                         self.eng.bio.biometrics.stamina = min(100.0, self.eng.bio.biometrics.stamina + 5.0)
         if self.eng.gordon.inventory:
-            self.eng.tinkerer.audit_tool_use(ctx.physics.to_dict(), self.eng.gordon.inventory)
+            self.eng.tinkerer.audit_tool_use(ctx.physics, self.eng.gordon.inventory)
         council_mandates = self._consult_council(self.eng.soul.traits)
         if council_mandates:
             ctx.council_mandates = getattr(ctx, "council_mandates", []) + council_mandates

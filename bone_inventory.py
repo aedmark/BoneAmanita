@@ -3,7 +3,7 @@
 
 import random
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Dict, Tuple, Optional, Any, Callable
 from enum import Enum, auto
 from bone_core import TheLore
@@ -191,9 +191,11 @@ class GordonKnot:
         self.inventory: List[str] = []
         self.events = events
         self.physics_state = TensegrityState()
-
         self.ITEM_REGISTRY = TheLore.get("ITEMS") or {}
-
+        self.last_flinch_turn = 0
+        self.scar_tissue = {}
+        self.integrity = 100.0
+        self.CRITICAL_ITEMS = {"POCKET_ROCKS"}
         if not self.inventory:
             data = TheLore.get("gordon") or {}
             self.inventory = data.get("STARTING_INVENTORY", [])
@@ -381,7 +383,7 @@ class GordonKnot:
                     continue
                 handler = effect_def.physics_handler
                 if handler is not None:
-                    new_deltas = handler
+                    new_deltas = handler(physics_ref, data, item_name)
                     if new_deltas:
                         all_deltas.extend(new_deltas)
         return all_deltas

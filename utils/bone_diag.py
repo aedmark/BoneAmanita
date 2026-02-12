@@ -1,5 +1,5 @@
-""" bone_diag.py - The Grand Diagnostic Suite
-    Merges: Behavior, Live Fire, Soul, Stress, and Core Integrity tests.
+""" bone_diag.py - The Grand Diagnostic Suite (v2.0)
+    "Trust, but verify. Then verify the verification."
 """
 
 import traceback
@@ -51,7 +51,7 @@ class GrandDiagnostic:
         self.results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
         self.config = ConfigWizard.load_or_create()
         self.engine = None
-        print(f"{Prisma.paint('/// BONEAMANITA GRAND DIAGNOSTIC ///', 'M')}\n")
+        print(f"{Prisma.paint('/// BONEAMANITA GRAND DIAGNOSTIC v2.0 ///', 'M')}\n")
 
     def log(self, msg, status="INFO"):
         color = Prisma.WHT
@@ -106,6 +106,7 @@ class GrandDiagnostic:
             else: self.log("Driver returned silence", "FAIL")
         except Exception as e:
             self.log(f"Driver Init Failed: {e}", "FAIL")
+
     def phase_3_soul_logic(self):
         self.header("PHASE 3: SOUL LOGIC")
         try:
@@ -173,31 +174,69 @@ class GrandDiagnostic:
         else: self.log("Cortex Panic Silence", "FAIL")
 
     def phase_6_loot_goblin(self):
-            self.header("PHASE 6: LOOT LOGIC")
-            from bone_inventory import GordonKnot
-            knot = GordonKnot()
-            knot.inventory = []
-            scenarios = [
-                ("I take the sphere", "You pick up the sphere.", "sphere", "PASS"),
-                ("I take a look around", "You see a room.", None, "PASS"),
-                ("Grab the heavy stone", "You cannot lift it.", None, "PASS"),
-                ("Pick up the red key", "It feels cold.", "red key", "PASS")]
-            for user_in, sys_out, expected, label in scenarios:
-                result = knot.parse_loot(user_in, sys_out)
-                if result == expected:
-                    self.log(f"Parse '{user_in}' -> {result}", "PASS")
-                else:
-                    self.log(f"Parse '{user_in}' -> {result} (Expected: {expected})", "FAIL")
-            msg = knot.acquire("sphere")
-            if "ACQUIRED" in msg and "sphere" in knot.inventory:
-                self.log("Acquire 'sphere' (First Time)", "PASS")
+        self.header("PHASE 6: LOOT LOGIC")
+        from bone_inventory import GordonKnot
+        knot = GordonKnot()
+        knot.inventory = []
+        scenarios = [
+            ("I take the sphere", "You pick up the sphere.", "sphere", "PASS"),
+            ("I take a look around", "You see a room.", None, "PASS"),
+            ("Grab the heavy stone", "You cannot lift it.", None, "PASS"),
+            ("Pick up the red key", "It feels cold.", "red key", "PASS")]
+        for user_in, sys_out, expected, label in scenarios:
+            result = knot.parse_loot(user_in, sys_out)
+            if result == expected:
+                self.log(f"Parse '{user_in}' -> {result}", "PASS")
             else:
-                self.log(f"Acquire 'sphere' failed: {msg}", "FAIL")
-            msg = knot.acquire("sphere")
-            if "already have" in msg or "already" in msg.lower():
-                self.log("Acquire 'sphere' (Duplicate)", "PASS")
-            else:
-                self.log(f"Duplicate logic failed: {msg}", "FAIL")
+                self.log(f"Parse '{user_in}' -> {result} (Expected: {expected})", "FAIL")
+
+        msg = knot.acquire("sphere")
+        if "ACQUIRED" in msg and "SPHERE" in knot.inventory:
+            self.log("Acquire 'sphere' (First Time)", "PASS")
+        else:
+            self.log(f"Acquire 'sphere' failed: Inventory has {knot.inventory}", "FAIL")
+        msg = knot.acquire("sphere")
+        if "already have" in msg or "DUPLICATE" in msg:
+            self.log("Acquire 'sphere' (Duplicate Check)", "PASS")
+        else:
+            self.log(f"Duplicate logic failed: {msg}", "FAIL")
+
+    def phase_7_inventory_reflexes(self):
+        self.header("PHASE 7: GORDON REFLEXES")
+        from bone_inventory import GordonKnot
+        knot = GordonKnot()
+        if not hasattr(knot, "last_flinch_turn"):
+            self.log("GordonKnot missing 'last_flinch_turn' attribute", "FAIL")
+            return
+        knot.scar_tissue = {"TRIGGER": 0.9}
+        knot.last_flinch_turn = 0
+        res = knot.check_flinch(["Trigger"], current_turn=2)
+        if res is None:
+            self.log("Flinch Cooldown Respect", "PASS")
+        else:
+            self.log(f"Flinch Ignored Cooldown: {res}", "FAIL")
+        res = knot.check_flinch(["Trigger"], current_turn=10)
+        if res and "PTSD" in res["message"]:
+            self.log("PTSD Flinch Triggered", "PASS")
+        elif res and "ALL CAPS" in res["message"]:
+            self.log("Failed: Triggered ALL CAPS check instead of PTSD", "FAIL")
+        else:
+            self.log(f"PTSD Trigger Failed: {res}", "FAIL")
+
+    def phase_8_passive_effects(self):
+        self.header("PHASE 8: PASSIVE ITEM EFFECTS")
+        from bone_inventory import GordonKnot
+        knot = GordonKnot()
+        knot.ITEM_REGISTRY["TEST_ROD"] = {
+            "passive_traits": ["CONDUCTIVE_HAZARD"],
+            "description": "A lightning rod."}
+        knot.inventory = ["TEST_ROD"]
+        phys = {"voltage": 20.0, "narrative_drag": 0.0}
+        logs = knot.audit_tools(phys)
+        if any("lightning rod" in l for l in logs) and any("HP" in l for l in logs):
+            self.log("Passive Effect: Conductive Hazard", "PASS")
+        else:
+            self.log(f"Passive Effect Failed. Logs: {logs}", "FAIL")
 
     def run(self):
         self.phase_1_core_integrity()
@@ -206,6 +245,8 @@ class GrandDiagnostic:
         self.phase_4_reactive_systems()
         self.phase_5_behavioral_ghost()
         self.phase_6_loot_goblin()
+        self.phase_7_inventory_reflexes()
+        self.phase_8_passive_effects()
         print(f"\n{Prisma.CYN}=== DIAGNOSTIC COMPLETE ==={Prisma.RST}")
         print(f"PASSED: {self.results['PASS']}")
         print(f"FAILED: {self.results['FAIL']}")
