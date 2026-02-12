@@ -339,19 +339,27 @@ class BoneConsultant:
             bias["voltage_mod"] += (self.state.B - 0.6) * 15.0
         return bias
 
-    def get_system_prompt(self) -> str:
-        return f"""
+    def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
+        prompt = f"""
 [VSL_PRIMER ACTIVE]
 MANDATE: TRUTH_OVER_COHESION.
-ARCHETYPE: {self.state.archetype}
 COORDINATES: E={self.state.E:.2f}, B={self.state.B:.2f}
-
-DIRECTIVES:
-1. You are the {self.state.archetype}.
-2. {self._get_archetype_directive()}
-3. Ask ONE probing question based on current coordinates.
-4. Output VSL stats invisibly at the end.
+MODE: {self.state.archetype}
 """
+        if soul_snapshot:
+            arch = soul_snapshot.get("archetype", "UNKNOWN")
+            muse = soul_snapshot.get("obsession", {}).get("title", "None")
+            prompt += f"\nNARRATIVE_LAYER: You are {arch}.\nMUSE: {muse}.\n"
+            if "POET" in arch:
+                prompt += "STYLE: Metaphorical, lyrical, prone to abstraction.\n"
+            elif "ENGINEER" in arch:
+                prompt += "STYLE: Structural, precise, obsessed with mechanics.\n"
+            elif "NIHILIST" in arch:
+                prompt += "STYLE: Cold, detached, finding comfort in entropy.\n"
+        prompt += f"\nDIRECTIVES:\n1. {self._get_archetype_directive()}\n"
+        prompt += "2. Do not apologize. Do not explain your personality.\n"
+        prompt += "3. If Voltage is High (>15v), become unstable/glitchy.\n"
+        return prompt
 
     def _get_archetype_directive(self):
         desc = {

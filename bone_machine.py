@@ -1,8 +1,8 @@
 """ dev/bone_machine.py - 'The gears turn, the pistons fire.' """
 
 import random
-from typing import Tuple, Optional, Set, List, Dict
-from bone_core import Prisma, TheLore
+from typing import Tuple, Optional, List, Dict
+from bone_core import TheLore
 from bone_lexicon import TheLexicon
 
 class TheCrucible:
@@ -43,16 +43,16 @@ class TheCrucible:
         ideal_voltage = structure * 20.0
         delta = voltage - ideal_voltage
         self.instability_index = (self.instability_index * 0.7) + (delta * 0.3)
-        if abs(self.instability_index) < 0.05:
+        if abs(self.instability_index) < 0.1:
             self.instability_index = 0.0
         current_drag = float(physics.get("narrative_drag", 0.0))
         adjustment = self.instability_index * 0.5
-        if current_drag < 1.0 and adjustment > 0:
+        if current_drag < 1.0 and adjustment < 0:
             adjustment *= 0.1
         new_drag = max(0.0, min(10.0, current_drag + adjustment))
         physics["narrative_drag"] = round(new_drag, 2)
         msg = None
-        if abs(adjustment) > 0.5:
+        if abs(adjustment) > 0.1:
             direction = "TIGHTENING" if adjustment > 0 else "RELAXING"
             msg = f"⚖️ REGULATOR: {direction} (Drag {current_drag:.1f} -> {new_drag:.1f})"
         if physics.get("system_surge_event", False):
@@ -69,7 +69,7 @@ class TheCrucible:
                 self.active_state = "MELTDOWN"
                 return "MELTDOWN", damage, f"💥 MELTDOWN: Hull Breach (-{damage:.1f} HP)"
         self.active_state = "REGULATED"
-        return "REGULATED", 0.0, msg
+        return "REGULATED", adjustment, msg
 
 class TheForge:
     def __init__(self):
@@ -161,7 +161,12 @@ class TheTheremin:
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - dissolved)
             self.classical_turns = 0
             return False, 0.0, f"🔥 MELT: -{dissolved:.1f} Resin", None
-        theremin_msg = None
+        theremin_msg = ""
+        if thermal_hits > 0 and self.decoherence_buildup > 5.0:
+            dissolved = thermal_hits * 15.0
+            self.decoherence_buildup = max(0.0, self.decoherence_buildup - dissolved)
+            self.classical_turns = 0
+            theremin_msg = f"🔥 MELT: -{dissolved:.1f} Resin"
         critical_event = None
         if rep > 0.5:
             self.classical_turns += 1

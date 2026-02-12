@@ -250,6 +250,8 @@ class SoulDashboard:
     def render(self) -> str:
         if not hasattr(self.eng, 'soul') or not self.eng.soul:
             return ""
+        if not hasattr(self.eng.soul, 'anchor'):
+            return f"{Prisma.GRY}[SOUL DETECTED - ANCHOR LOST]{Prisma.RST}"
         anchor = self.eng.soul.anchor
         soul = self.eng.soul
         dig = anchor.dignity_reserve

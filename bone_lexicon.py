@@ -226,7 +226,8 @@ class LinguisticAnalyzer:
             normalized = text
         cleaned_text = normalized.translate(self._TRANSLATOR).lower()
         words = cleaned_text.split()
-        return [w for w in words if w.strip() and w not in self.store.USER_FLAGGED_BIAS]
+        bias_set = getattr(self.store, 'USER_FLAGGED_BIAS', set())
+        return [w for w in words if w.strip() and w not in bias_set]
 
     def classify_word(self, word: str) -> Tuple[Optional[str], float]:
         w = word.lower()

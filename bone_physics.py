@@ -4,9 +4,8 @@
 import math, random, time
 from typing import Dict, List, Any, Tuple, Optional, Deque
 from collections import Counter, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from bone_types import Prisma, PhysicsPacket, CycleContext
-from bone_config import BoneConfig
 from bone_lexicon import TheLexicon
 
 class PhysicsConstants:
@@ -119,10 +118,11 @@ class GeodesicEngine:
         tension = round(min(100.0, base_tension * mass_scalar), 2)
         shear_rate = total_kinetic / safe_volume
         raw_friction = (
-                (counts.get("solvents", 0) * 0.05) +
                 (counts.get("suburban", 0) * 2.0) +
                 (masses["heavy"] * 2.5))
-        dynamic_viscosity = raw_friction / (1.0 + (shear_rate * 2.0))
+        solvent_count = counts.get("solvents", 0)
+        lubrication = 1.0 + (solvent_count * 0.05)
+        dynamic_viscosity = (raw_friction / lubrication) / (1.0 + (shear_rate * 2.0))
         kinetic_lift = total_kinetic * 0.5
         if masses["heavy"] > 0:
             kinetic_lift /= (masses["heavy"] * 0.5 + 1.0)
@@ -381,34 +381,32 @@ class ZoneInertia:
         return cosmic_drag_penalty
 
 class CosmicDynamics:
-    _cached_wells: Dict = {}
-    _cached_hubs: Dict = {}
-    _last_scan_tick: int = 0
-    SCAN_INTERVAL: int = 10
-
     def __init__(self):
         self.voltage_history: Deque[float] = deque(maxlen=20)
+        self.cached_wells: Dict = {}
+        self.cached_hubs: Dict = {}
+        self.last_scan_tick: int = 0
+        self.SCAN_INTERVAL: int = 10
 
     def commit(self, voltage: float):
         self.voltage_history.append(voltage)
 
-    @staticmethod
-    def analyze_orbit(network: Any, clean_words: List[str]) -> Tuple[str, float, str]:
-        if not clean_words or not network.graph:
+    def analyze_orbit(self, network: Any, clean_words: List[str]) -> Tuple[str, float, str]:
+        if not clean_words or not network or not hasattr(network, 'graph') or not network.graph:
             return "VOID_DRIFT", 3.0, "VOID: Deep Space. No connection."
         current_time = int(time.time())
-        if not CosmicDynamics._cached_wells or (current_time - CosmicDynamics._last_scan_tick) > 5:
-            gravity_wells, geodesic_hubs = CosmicDynamics._scan_network_mass(network)
-            CosmicDynamics._cached_wells = gravity_wells
-            CosmicDynamics._cached_hubs = geodesic_hubs
-            CosmicDynamics._last_scan_tick = current_time
+        if not self.cached_wells or (current_time - self.last_scan_tick) > self.SCAN_INTERVAL:
+            gravity_wells, geodesic_hubs = self._scan_network_mass(network)
+            self.cached_wells = gravity_wells
+            self.cached_hubs = geodesic_hubs
+            self.last_scan_tick = current_time
         else:
-            gravity_wells = CosmicDynamics._cached_wells
-            geodesic_hubs = CosmicDynamics._cached_hubs
-        basin_pulls, active_filaments = CosmicDynamics._calculate_pull(clean_words, network, gravity_wells)
+            gravity_wells = self.cached_wells
+            geodesic_hubs = self.cached_hubs
+        basin_pulls, active_filaments = self._calculate_pull(clean_words, network, gravity_wells)
         if sum(basin_pulls.values()) == 0:
-            return CosmicDynamics._handle_void_state(clean_words, geodesic_hubs)
-        return CosmicDynamics._resolve_orbit(basin_pulls, active_filaments, len(clean_words), gravity_wells)
+            return self._handle_void_state(clean_words, geodesic_hubs)
+        return self._resolve_orbit(basin_pulls, active_filaments, len(clean_words), gravity_wells)
 
     @staticmethod
     def _scan_network_mass(network) -> Tuple[Dict, Dict]:

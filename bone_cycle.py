@@ -52,8 +52,24 @@ class CycleStabilizer:
         self.events = events_ref
         self.governor = governor_ref
         self.last_tick_time = time.time()
+        self.pending_drag = 0.0
+        if hasattr(self.events, "subscribe"):
+            self.events.subscribe("DOMESTICATION_PENALTY", self._on_domestication_penalty)
+
+    def _on_domestication_penalty(self, payload):
+        amount = payload.get("drag_penalty", 0.0)
+        self.pending_drag += amount
 
     def stabilize(self, ctx: CycleContext, current_phase: str):
+        if self.pending_drag > 0:
+            if isinstance(ctx.physics, dict):
+                ctx.physics["narrative_drag"] = ctx.physics.get("narrative_drag", 0.0) + self.pending_drag
+            else:
+                ctx.physics.narrative_drag += self.pending_drag
+            ctx.log(
+                f"{Prisma.GRY}⚖️ DOMESTICATION: The collar feels heavy. (Drag +{self.pending_drag:.1f}){Prisma.RST}")
+
+            self.pending_drag = 0.0
         now = time.time()
         dt = max(0.001, min(1.0, now - self.last_tick_time))
         self.last_tick_time = now
@@ -171,6 +187,10 @@ class SanctuaryPhase(SimulationPhase):
 
     def _trigger_dream(self, ctx: CycleContext):
         if not hasattr(self.eng.mind, "dreamer"): return
+        if hasattr(self.eng.mind.mem, 'replay_dreams'):
+            dream_log = self.eng.mind.mem.replay_dreams()
+            if dream_log:
+                ctx.log(f"{Prisma.VIOLET}{dream_log}{Prisma.RST}")
         current_trauma_load = sum(self.eng.trauma_accum.values()) if hasattr(self.eng, "trauma_accum") else 0.0
         bio_packet = {
             "chem": self.eng.bio.endo.get_state(),
@@ -201,6 +221,13 @@ class MaintenancePhase(SimulationPhase):
         if hasattr(self.eng, 'town_hall'):
             blooms = self.eng.town_hall.tend_garden(ctx.clean_words) or []
             for bloom in blooms: ctx.log(bloom)
+        if hasattr(self.eng.mind.mem, 'run_ecosystem'):
+            eco_logs = self.eng.mind.mem.run_ecosystem(
+                ctx.physics.to_dict(),
+                self.eng.stamina,
+                self.eng.tick_count)
+            for log in eco_logs:
+                ctx.log(log)
         if self.eng.tick_count % 10 != 0: return ctx
         try:
             solvents = getattr(self.eng.lex, "SOLVENTS", {'the', 'and', 'is', 'a', 'of', 'to', 'in', 'it', 'i', 'you'})

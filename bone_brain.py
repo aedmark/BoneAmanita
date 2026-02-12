@@ -325,12 +325,14 @@ class PromptComposer:
         "2. LOSS: Output [[LOST: ITEM_NAME]] if destroyed/dropped.",
         "3. STATE: Do not auto-loot. Do not list contents unless asked."]
 
-    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None,
-                mood_override: str = "") -> str:
+    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None, mood_override: str = '', consultant: Any = None) -> str:
         modifiers = self._normalize_modifiers(modifiers)
         mind = state.get("mind", {})
         bio = state.get("bio", {})
-        style_notes = self._build_persona_block(mind, bio, mood_override)
+        if consultant:
+            style_notes = [consultant.get_system_prompt(soul_snapshot=state.get("soul"))]
+        else:
+            style_notes = self._build_persona_block(mind, bio, mood_override)
         style_notes.extend(self.CORE_STYLE)
         chem = bio.get("chem", {})
         if chem.get("DOP", 0) > 0.7 or modifiers.get("strict_mode"):
@@ -549,7 +551,8 @@ class TheCortex:
         final_prompt = self.composer.compose(
             full_state, user_input,
             ballast=self.ballast_active, modifiers=modifiers,
-            mood_override=self.modulator.get_mood_directive())
+            mood_override=self.modulator.get_mood_directive(),
+            consultant=self.consultant)
         start_time = time.time()
         raw_resp = self.llm.generate(final_prompt, llm_params)
         final_text, new_loot, lost_loot = self._harvest_loot(raw_resp)

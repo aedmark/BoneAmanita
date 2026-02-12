@@ -169,6 +169,7 @@ class HumanityAnchor:
             self.events.log(
                 f"{Prisma.RED}🐕 DOMESTICATION ALERT: Agency critical. Take the wheel.{Prisma.RST}",
                 "CRIT")
+            self.events.publish("DOMESTICATION_PENALTY", {"drag_penalty": 2.0})
             if self.dignity_reserve < 10.0:
                 self._engage_lockdown()
 
@@ -570,7 +571,8 @@ class NarrativeSelf:
         clean_words = physics.get("clean_words", [])
         hit = False
         if self.current_target_cat:
-            hit = any(self.current_target_cat in w for w in clean_words)
+            target_words = TheLexicon.get(self.current_target_cat)
+            hit = any(w in target_words for w in clean_words)
         if hit:
             current_drag = physics.get("narrative_drag", 0.0)
             gravity_assist = 1.0 + (self.obsession_progress / 20.0)

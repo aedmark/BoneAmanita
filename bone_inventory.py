@@ -1,9 +1,9 @@
 """ bone_inventory.py
  'Organization is the first step toward civilization.' - Schur """
 
-import random, copy
+import random
 from dataclasses import dataclass, field
-from typing import List, Dict, Tuple, Optional, Any, cast, Callable
+from typing import List, Dict, Tuple, Optional, Any, Callable
 from enum import Enum, auto
 from bone_core import TheLore
 from bone_types import Prisma
@@ -582,7 +582,9 @@ class GordonKnot:
             lex_data = TheLore.get("LEXICON") or {}
             target_words = set(lex_data.get(req_type, []))
         else:
-            target_words = lexicon.get(req_type)
+            target_words = lexicon.get(req_type) or set()
+        if not target_words:
+             return False, f"{Prisma.GRY}MISSING DATA: The pizza cannot find the '{req_type}' ingredient.{Prisma.RST}"
         source = [w for w in clean_words if w in target_words]
         if not source:
             return False, f"{Prisma.CYN}🧊 STASIS LOCK: {item_name} is frozen. Apply {req_type.upper()} words to thaw.{Prisma.RST}"

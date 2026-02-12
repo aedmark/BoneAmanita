@@ -10,7 +10,7 @@ from bone_config import BoneConfig
 
 class SporeCasing:
     def __init__(self, session_id, graph, mutations, trauma, joy_vectors, world_atlas=None):
-        self.genome = "BONEAMANITA_14.9.5"
+        self.genome = "BONEAMANITA_14.9.6"
         self.parent_id = session_id
         self.core_graph = {}
         for k, data in graph.items():
@@ -174,6 +174,8 @@ class MycelialNetwork:
         self.short_term_buffer = deque(maxlen=10)
         self.consolidation_threshold = 5.0
         self.memory_manager = AdaptiveMemoryManager(self)
+        self.lichen = BioLichen()
+        self.parasite = BioParasite(self, TheLexicon)
         self.seeds = self.load_seeds()
         self.session_health = getattr(BoneConfig, "MAX_HEALTH", 100.0)
         self.session_stamina = getattr(BoneConfig, "MAX_STAMINA", 100.0)
@@ -196,6 +198,17 @@ class MycelialNetwork:
             self.events.log(f"{Prisma.RED}[CRITICAL]: Seed Injection Failed: {e}{Prisma.RST}")
             loaded_seeds = [ParadoxSeed("Does the mask eat the face?", {"mask", "face", "hide"})]
         return loaded_seeds
+
+    def run_ecosystem(self, physics: Dict, stamina: float, tick: int) -> List[str]:
+        logs = []
+        clean_words = physics.get("clean_words", [])
+        sugar, lichen_msg = self.lichen.photosynthesize(physics, clean_words, tick)
+        if lichen_msg:
+            logs.append(lichen_msg)
+        infected, parasite_msg = self.parasite.infect(physics, stamina)
+        if infected and parasite_msg:
+            logs.append(parasite_msg)
+        return logs
 
     def encode(self, clean_words, physics, governor_mode):
         significance = physics["voltage"]
@@ -360,6 +373,7 @@ class MycelialNetwork:
         new_wells = []
         for w in words:
             if w in self.graph:
+                self.check_echo_well(w)
                 mass = sum(self.graph[w]["edges"].values())
                 if mass > BoneConfig.SHAPLEY_MASS_THRESHOLD:
                     node_data = self.graph[w]
@@ -864,10 +878,6 @@ class LiteraryReproduction:
             dominant = "VOID"
         else:
             dominant = max(counts, key=counts.get)
-        mutation_data = LiteraryReproduction.MUTATIONS.get(
-            dominant.upper(),
-            {"trait": "NEUTRAL", "mod": {}, "lexicon": []})
-        dominant = max(counts, key=counts.get) if counts else "VOID"
         mutation_data = LiteraryReproduction.MUTATIONS.get(
             dominant.upper(),
             {"trait": "NEUTRAL", "mod": {}, "lexicon": []})

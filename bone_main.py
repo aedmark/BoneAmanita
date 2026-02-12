@@ -1,11 +1,11 @@
-""" BONEAMANITA 14.9.5
+""" BONEAMANITA 14.9.6
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, random, traceback
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
 from bone_core import EventBus, SystemHealth, TheObserver, TheLore, TelemetryService, RealityStack
-from bone_types import Prisma, RealityLayer, LoreCategory
+from bone_types import Prisma, RealityLayer
 from bone_config import BoneConfig, BonePresets
 from bone_commands import CommandProcessor
 from bone_symbiosis import SymbiosisManager
@@ -33,7 +33,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.9.5', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.9.6', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -90,6 +90,11 @@ class ConfigWizard:
             json.dump(config, f, indent=4)
         return config
 
+class DriverRegistry:
+    def __init__(self, events_ref):
+        from bone_drivers import EnneagramDriver
+        self.enneagram = EnneagramDriver(events_ref)
+        self.current_focus = "NONE"
 
 class BoneAmanita:
     events: EventBus
@@ -156,14 +161,7 @@ class BoneAmanita:
         self.kintsugi = KintsugiProtocol()
         self.council = CouncilChamber(self)
         self.symbiosis = SymbiosisManager(self.events)
-
-        from bone_drivers import EnneagramDriver
-
-        @dataclass
-        class DriverCluster:
-            enneagram: Any
-        self.drivers = DriverCluster(
-            enneagram=EnneagramDriver(self.events))
+        self.drivers = DriverRegistry(self.events)
         if self.phys:
             self.phys.dynamics = CosmicDynamics()
             self.cosmic = self.phys.dynamics
@@ -176,7 +174,8 @@ class BoneAmanita:
             "navigator": self.navigator,
             "limbo": self.limbo,
             "council": self.council,
-            "therapy": self.therapy}
+            "therapy": self.therapy,
+            "enneagram": self.drivers.enneagram}
         self.cmd = CommandProcessor(self, Prisma, self.lex, BoneConfig)
 
     def _initialize_cognition(self):
@@ -229,6 +228,15 @@ class BoneAmanita:
                 self.soul.anchor.check_domestication(reliance_proxy)
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
+            if hasattr(self.cortex, "last_physics") and self.cortex.last_physics:
+                world_state = self.cortex.gather_state(self.cortex.last_physics).get("world", {})
+                orbit_state = world_state.get("orbit", ["Unknown"])[0]
+                if "physics" in cortex_packet and isinstance(cortex_packet["physics"], dict):
+                    cosmic_drag = 0.5 if orbit_state == "VOID_DRIFT" else 0.0
+                    BoneAmanita.apply_cosmic_physics(
+                        cortex_packet["physics"],
+                        orbit_state,
+                        cosmic_drag)
             if hasattr(self.mind, 'mem'):
                 self.health = self.mind.mem.session_health
                 self.stamina = self.mind.mem.session_stamina
@@ -239,8 +247,12 @@ class BoneAmanita:
             traceback.print_exc()
             return {"ui": f"CORTEX ERROR: {e}", "logs": [], "metrics": self.get_metrics()}
         if self.bureau and not is_system and random.random() < 0.15:
-            phys = {"raw_text": cortex_packet.get("ui", ""), "voltage": 1.0, "truth_ratio": 1.0}
-            audit = self.bureau.audit(phys, {"health": self.health}, origin="SYSTEM")
+            real_phys = cortex_packet.get("physics", {})
+            if hasattr(real_phys, "to_dict"):
+                real_phys = real_phys.to_dict()
+            if not real_phys:
+                real_phys = {"raw_text": cortex_packet.get("ui", ""), "voltage": 1.0, "truth_ratio": 1.0}
+            audit = self.bureau.audit(real_phys, {"health": self.health}, origin="SYSTEM")
             if audit and "ui" in audit:
                 cortex_packet["ui"] += f"\n\n{audit['ui']}"
         self.observer.clock_out(turn_start, "cycle")
@@ -510,7 +522,7 @@ class BoneAmanita:
 
 
 if __name__ == "__main__":
-    print(f"\n{Prisma.paint('♦ BONEAMANITA 14.9.5', 'M')}")
+    print(f"\n{Prisma.paint('♦ BONEAMANITA 14.9.6', 'M')}")
     sys_config = ConfigWizard.load_or_create()
     engine = BoneAmanita(config=sys_config)
     with SessionGuardian(engine) as session:

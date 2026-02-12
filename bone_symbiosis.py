@@ -1,10 +1,10 @@
 """ bone_symbiosis.py - 'We are not alone. We are a part of the machine.' """
 
-import math, time
-from dataclasses import dataclass, field
-from typing import Dict, Deque, Counter, List, Optional
+import math
+from dataclasses import dataclass
+from typing import Dict, Counter
 from collections import deque
-from bone_core import Prisma
+from bone_types import Prisma
 from bone_lexicon import TheLexicon
 
 @dataclass
