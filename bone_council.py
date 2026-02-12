@@ -145,7 +145,7 @@ class TheChairholder:
                     correction, {})
         return False, "", {}, {}
 
-    class CouncilChamber:
+class CouncilChamber:
         def __init__(self, engine_ref):
             self.eng = engine_ref
             self.voices = []

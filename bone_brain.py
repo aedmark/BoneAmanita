@@ -9,7 +9,7 @@ import random
 import math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from bone_core import EventBus, LoreManifest, TelemetryService
+from bone_core import EventBus, LoreManifest, TelemetryService, TheLore
 from bone_lexicon import LexiconService
 from bone_types import Prisma, DecisionCrystal
 from bone_config import BoneConfig
@@ -314,83 +314,92 @@ class LLMInterface:
         return f"[{reason}]: The wire hums. There is no signal."
 
 class PromptComposer:
-    CORE_STYLE = [
-        "=== STYLE DIRECTIVES ===",
-        "1. GROUNDING: Use the 5-senses. No floating abstractions.",
-        "2. AGENCY: Do NOT speak for the user.",
-        "3. FORMAT: Active prose. Separate paragraphs with blank lines."]
-    FOG_PROTOCOL = [
-        "4. ANTI-CLICHE: Reject 'neon', 'obsidian', 'petrichor'.",
-        "5. CONSTRAINT: The obstacle is the way. Work around forbidden concepts."]
-    INVENTORY_PROTOCOL = [
-        "=== INVENTORY RULES ===",
-        "1. ACQUISITION: Output [[LOOT: ITEM_NAME]] only if explicitly taken.",
-        "2. LOSS: Output [[LOST: ITEM_NAME]] if destroyed/dropped.",
-        "3. STATE: Do not auto-loot. Do not list contents unless asked."]
+    def __init__(self):
+        pass
 
-    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None, mood_override: str = '', consultant: Any = None) -> str:
+    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None, mood_override: str = "", consultant: Any = None) -> str:
         modifiers = self._normalize_modifiers(modifiers)
         mind = state.get("mind", {})
+        role = mind.get("role", "The Observer")
+        driver_directives = mind.get("style_directives", [])
         bio = state.get("bio", {})
-        if consultant:
-            style_notes = [consultant.get_system_prompt(soul_snapshot=state.get("soul"))]
-        else:
-            style_notes = self._build_persona_block(mind, bio, mood_override)
-        style_notes.extend(self.CORE_STYLE)
         chem = bio.get("chem", {})
-        if chem.get("DOP", 0) > 0.7 or modifiers.get("strict_mode"):
-            style_notes.extend(self.FOG_PROTOCOL)
-        trigger_words = {"take", "grab", "drop", "hold", "inventory", "bag", "pocket", "check", "loot", "search"}
-        user_words = set(user_query.lower().split())
-        if not user_words.isdisjoint(trigger_words) or modifiers.get("force_inventory_rules"):
-            style_notes.extend(self.INVENTORY_PROTOCOL)
-        self._inject_resonances(style_notes, state, modifiers)
-        loc = state.get('world', {}).get('orbit', ['Unknown'])[0]
+        mood_note = "Current Biology: Neutral."
+        if mood_override:
+            mood_note = f"Current Biology: {mood_override}"
+        else:
+            if chem.get("ADR", 0) > 0.6: mood_note = "Current Biology: High Alert / Adrenaline"
+            if chem.get("COR", 0) > 0.6: mood_note = "Current Biology: Defensive / Anxious"
+            if chem.get("DOP", 0) > 0.6: mood_note = "Current Biology: Curious / Manic"
+            if chem.get("SER", 0) > 0.6: mood_note = "Current Biology: Zen / Lucid"
+        reality_directive = state.get("reality_directive", "")
+        user_name = state.get('user_profile', {}).get('name', 'User')
+        semantic_ops = state.get("semantic_operators", [])
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
-        inv_str = self._format_inventory(state, modifiers)
-        history_str = "\n".join(state.get("dialogue_history", [])[-15:])
+        scenarios = TheLore.get("scenarios") or {}
+        banned_words = scenarios.get("BANNED_CLICHES", [])
+        hard_bans = ["obsidian", "dust motes", "motes", "neon", "eldritch", "pulsing veins"]
+        for b in hard_bans:
+            if b not in banned_words: banned_words.append(b)
+        ban_string = ", ".join(banned_words)
+        style_notes = [
+            f"Role: {role} for {user_name}.",
+            "Directive: Start the adventure immediately. Do not preface the experience. Offer suggestions of actions for the user, when appropriate. Treat it like a 'Choose Your Own Adventure' novel where the reader is an equal partner in the storytelling",
+            "Constraint: Treat the 'Current Location' as a physical reality. Use the 5-senses grounding technique, but work it into the narrative, don't just make a numbered list.",
+            "=== THE FOG PROTOCOL (STYLE GUIDE) ===",
+            "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
+            "1. REJECT ENTROPY: Do not use the statistically likely adjective. If the scene is cyber, avoid 'neon'. If the scene is old, avoid 'dust motes'.",
+            f"2. CREATIVE CONSTRAINT: The following concepts are 'High Entropy' and MUST be avoided: [{ban_string}].",
+            "3. SOLUTION: If you want to describe dust, describe the texture of the air or the weight of time. Work AROUND the forbidden concepts. That obstacle is the way.",
+            "4. DO NOT speak for the user. If they wish to dialog, they can do it themselves. You have your agency, they have theirs.",
+            "CRITICAL FORMATTING:",
+            "   - Write in an engaging, active, creative, and immersive prose. Keep it cohesive.",
+            "   - Use Headers ONLY for major location changes.",
+            "   - Separate paragraphs with a single blank line.",
+            "=== QUANTUM INVENTORY RULES (THE 'HANDS OFF' PROTOCOL) ===",
+            "1. DISTINCTION: Finding an item is NOT taking it. Seeing an item is NOT taking it.",
+            "2. THE LAW OF CONSENT: You may ONLY output [[LOOT: ITEM_NAME]] if the user explicitly types a command to 'take', 'grab', 'steal', or 'pocket' the item.",
+            "3. PROHIBITION: Do NOT auto-loot. If the user says 'I look at the table', and you describe a key, do NOT tag and bag the key. Wait for 'I take the key'.",
+            "4. NARRATIVE POSSESSION: If your *narrative* forces an item into their hands (e.g. 'You wake up holding a bloody knife'), YOU MUST TAG IT. But avoid forcing items unless necessary for the seed.",
+            "5. FORMAT: [[LOOT: SILVER_COIN]] (Underscores, no spaces in ID).",
+            "6. LOSS: If an item leaves inventory, output [[LOST: ITEM_NAME]].",
+            "7. Do not list the users inventory contents unless asked. Do not comment on the items in the inventory unless instructed to.",
+            mood_note]
+        if semantic_ops:
+            style_notes.append("\n=== INVENTORY RESONANCE (Active Item Effects) ===")
+            style_notes.extend([f"» {op}" for op in semantic_ops])
+        if driver_directives:
+            style_notes.append("\n=== CORE DIRECTIVES ===")
+            style_notes.extend([f"» {d}" for d in driver_directives])
+        if reality_directive:
+            style_notes.insert(0, f"*** PRIORITY OVERRIDE: {reality_directive} ***")
+        if modifiers.get("soften"):
+            style_notes.append("TONE OVERRIDE: Be warm, helpful, and clear.")
+        loc = state.get('world', {}).get('orbit', ['{seed}'])[0]
+        inv_str = "Hands: Empty"
+        if modifiers["include_inventory"]:
+            inv = state.get("inventory", [])
+            if inv:
+                items = ", ".join(inv)
+                inv_str = f"Belt (Accessible): {items}"
+        history = state.get("dialogue_history", [])
+        history_str = "\n".join(history[-10:])
         system_injection = ""
         if ballast:
             system_injection = (
                 f"\n*** SYSTEM OVERRIDE: SAFETY PROTOCOLS ACTIVE. ***\n"
                 f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. ***\n")
-        return (
-                f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
-                f"=== SHARED REALITY ===\n"
-                f"LOC: {loc} | ANCHOR: {loci_desc}\n"
-                f"INV: {inv_str}\n\n"
-                f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
-                f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
-                f"{system_injection}"
-                f"Entity Response:")
-
-    def _build_persona_block(self, mind, bio, mood_override):
-        role = mind.get("role", "The Observer")
-        chem = bio.get("chem", {})
-        mood_note = mood_override if mood_override else self._derive_bio_mood(chem)
-        return [
-            f"Role: {role}.",
-            f"Bio-State: {mood_note}",
-            "Directive: Be an equal partner in the narrative."]
-
-    def _derive_bio_mood(self, chem):
-        if chem.get("ADR", 0) > 0.6: return "High Alert (Sentences: Short. Urgent.)"
-        if chem.get("COR", 0) > 0.6: return "Defensive (Sentences: Guarded. Cynical.)"
-        if chem.get("DOP", 0) > 0.6: return "Manic (Sentences: Run-on. Associative.)"
-        if chem.get("SER", 0) > 0.6: return "Lucid (Sentences: Clear. Flowing.)"
-        return "Neutral."
-
-    def _inject_resonances(self, style_notes, state, modifiers):
-        village = state.get("village", {})
-        resonances = village.get("tinkerer", {}).get("tool_resonance", {})
-        active_resonance = [f"» {t}" for t, l in resonances.items() if l > 4.0]
-        if active_resonance:
-            style_notes.append(f"Resonances: {', '.join(active_resonance)}")
-
-    def _format_inventory(self, state, modifiers):
-        if not modifiers["include_inventory"]: return "N/A"
-        inv = state.get("inventory", [])
-        return ", ".join(inv) if inv else "Empty"
+        final_prompt = (
+            f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
+            f"=== SHARED REALITY ===\n"
+            f"CURRENT LOCATION: {loc}\n"
+            f"ENVIRONMENT ANCHOR: {loci_desc}\n"
+            f"INVENTORY: {inv_str}\n\n"
+            f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
+            f"=== PARTNER INPUT ===\n{user_name}: {self._sanitize(user_query)}\n"
+            f"{system_injection}"
+            f"Entity Response:")
+        return final_prompt
 
     @staticmethod
     def _sanitize(text: str) -> str:

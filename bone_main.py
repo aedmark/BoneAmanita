@@ -1,4 +1,4 @@
-""" BONEAMANITA 14.9.6
+""" BONEAMANITA 14.9.8
  Architects: SLASH, KISHO, Taylor & Edmark """
 
 import os, time, json, uuid, random, traceback
@@ -33,7 +33,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        print(f"{Prisma.paint('>>> BONEAMANITA 14.9.6', 'G')}")
+        print(f"{Prisma.paint('>>> BONEAMANITA 14.9.8', 'G')}")
         print(f"{Prisma.paint('System: LISTENING', '0')}")
         return self.engine_instance
 
@@ -140,6 +140,10 @@ class BoneAmanita:
         self.bio.setup_listeners()
         self.gordon = GordonKnot(events=self.events)
         self.soul_legacy_data = self.embryo.soul_legacy
+        if self.bio.mito.state.atp_pool <= 0.0:
+            genesis_val = getattr(BoneConfig.METABOLISM, "GENESIS_VOLTAGE", 100.0)
+            self.events.log(f"{Prisma.RED}⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP).{Prisma.RST}", "SYS")
+            self.bio.mito.adjust_atp(genesis_val, reason="GENESIS")
 
     def _initialize_identity(self):
         self.soul = NarrativeSelf(
@@ -202,7 +206,7 @@ class BoneAmanita:
             self.stamina = self.mind.mem.session_stamina
             self.trauma_accum = self.mind.mem.session_trauma_vector or {}
         if self.tick_count == 0 and self.bio.mito:
-            self.bio.mito.state.atp_pool = 60.0
+            self.bio.mito.state.atp_pool = BoneConfig.BIO.STARTING_ATP
 
     def _load_resource_safely(self, loader_func, resource_name):
         try:
@@ -333,7 +337,14 @@ class BoneAmanita:
         return {"type": "DEATH", "ui": "\n".join(death_log), "logs": death_log, "metrics": self.get_metrics(0.0)}
 
     def get_metrics(self, atp=0.0):
-        return {"health": self.health, "stamina": self.stamina, "atp": atp, "tick": self.tick_count}
+        real_atp = atp
+        if real_atp <= 0.0 and hasattr(self, 'bio') and hasattr(self.bio, 'mito'):
+             try:
+                 if hasattr(self.bio.mito, 'state'):
+                     real_atp = getattr(self.bio.mito.state, 'atp_pool', 0.0)
+             except Exception:
+                 pass
+        return {"health": self.health, "stamina": self.stamina, "atp": real_atp, "tick": self.tick_count}
 
     def _get_crash_path(self, prefix="crash"):
         folder = "crashes"
@@ -533,7 +544,7 @@ class BoneAmanita:
 
 
 if __name__ == "__main__":
-    print(f"\n{Prisma.paint('♦ BONEAMANITA 14.9.6', 'M')}")
+    print(f"\n{Prisma.paint('♦ BONEAMANITA 14.9.8', 'M')}")
     sys_config = ConfigWizard.load_or_create()
     engine = BoneAmanita(config=sys_config)
     with SessionGuardian(engine) as session:

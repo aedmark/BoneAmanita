@@ -20,7 +20,7 @@ class CongruenceValidator:
     def map(self):
         if self._archetype_map is None:
             try:
-                self._archetype_map = TheLore.get("ARCHETYPES") or {}
+                self._archetype_map = TheLore.get("LENSES") or {}
             except Exception:
                 self._archetype_map = {}
         return self._archetype_map
@@ -30,12 +30,13 @@ class CongruenceValidator:
         raw_lens = getattr(context, "active_lens", "OBSERVER")
         archetype = raw_lens.upper().replace("THE ", "")
         tone_score = 0.8
-        target_data = self.map.get(archetype)
+        target_data = self.map.get(archetype, {})
         target_words = set()
-        if isinstance(target_data, list):
-            target_words = set(target_data)
-        elif isinstance(target_data, dict):
-            target_words = set(target_data.get("keywords", []))
+        if isinstance(target_data, dict):
+            vocab_str = target_data.get("vocab", "")
+            if vocab_str:
+                target_words = set(w.strip().lower() for w in vocab_str.split(","))
+            target_words.update(target_data.get("keywords", []))
         if not target_words:
             if archetype == "ENGINEER":
                 target_words = {"system", "structure", "logic"}
@@ -120,6 +121,12 @@ class ObservationPhase(SimulationPhase):
         self.name = "OBSERVE"
 
     def run(self, ctx: CycleContext):
+        if self.eng.tick_count == 0:
+            current_atp = self.eng.bio.mito.state.atp_pool
+            if current_atp <= 0.0:
+                start_val = getattr(BoneConfig.BIO, "STARTING_ATP", 60.0)
+                self.eng.bio.mito.state.atp_pool = start_val
+                ctx.log(f"{Prisma.GRN}⚡ GENESIS: ATP initialized to {start_val}.{Prisma.RST}")
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
         input_phys = gaze_result["physics"]
         protected_keys = ["voltage", "narrative_drag"]
@@ -469,7 +476,7 @@ class NavigationPhase(SimulationPhase):
                 ctx.log(reflex_msg)
             ctx.record_flux("NAVIGATION", "REFLEX", 1.0, 0.0, "ITEM_TRIGGERED")
         phys_dict = physics.to_dict()
-        current_loc, entry_msg = self.eng.navigator.locate(phys_dict, self.eng.host_stats)
+        current_loc, entry_msg = self.eng.navigator.locate(ctx.physics, self.eng.host_stats)
         if entry_msg: ctx.log(entry_msg)
         env_logs = self.eng.navigator.apply_environment(physics)
         for e_log in env_logs: ctx.log(e_log)
@@ -491,7 +498,6 @@ class NavigationPhase(SimulationPhase):
         self.eng.apply_cosmic_physics(phys_dict, orbit_state, adjusted_drag)
         ctx.world_state["orbit"] = orbit_state
         return ctx
-
 
 class MachineryPhase(SimulationPhase):
     def __init__(self, engine_ref):

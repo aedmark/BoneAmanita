@@ -13,7 +13,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded")
 
-# --- CSS STYLING ---
 st.markdown("""
 <style>
     .stChatMessage .stMarkdown p { margin-bottom: 1.5em !important; line-height: 1.8 !important; font-size: 1.05rem; }
@@ -27,15 +26,28 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-# --- HELPER FUNCTIONS ---
-
 def clean_engine_output(raw_text):
     if not raw_text: return "No signal."
-    # Use the centralized stripper
     clean = Prisma.strip(raw_text)
     lines = clean.split('\n')
-    filtered = [line for line in lines if not set(line).issubset({'─', '-', ' '}) or len(line) < 5]
+    filtered = []
+    for line in lines:
+        norm = line.strip()
+        is_artifact = False
+        if set(norm).issubset({'─', '-', ' '}) and len(norm) > 4:
+            is_artifact = True
+        if "♦" in norm and "HP" in norm and "STM" in norm:
+            is_artifact = True
+        if "⚡" in norm and "v" in norm and "⚓" in norm:
+            is_artifact = True
+        if "📍" in norm and "//" in norm:
+            is_artifact = True
+        if "SOUL:" in norm and ("█" in norm or "%" in norm):
+            is_artifact = True
+        if "DRIVER:" in norm and "MUSE:" in norm:
+            is_artifact = True
+        if not is_artifact:
+            filtered.append(line)
     return "\n".join(filtered).strip()
 
 def perform_autosave(engine_ref, history_ref):
@@ -78,15 +90,12 @@ def generate_transcript(history, user_name="TRAVELER"):
     return "\n".join(lines)
 
 
-# --- RENDER LOGIC ---
-
 def render_dashboard(eng_ref):
     with st.sidebar:
         st.title("💀 BONEAMANITA")
         st.caption(f"Kernel: {getattr(eng_ref, 'kernel_hash', 'UNKNOWN')}")
         st.divider()
 
-        # 1. IDENTITY & SOUL
         st.subheader("IDENTITY")
         if hasattr(eng_ref, 'soul') and eng_ref.soul:
             anchor = eng_ref.soul.anchor
@@ -99,7 +108,6 @@ def render_dashboard(eng_ref):
             if eng_ref.soul.current_obsession:
                  st.caption(f"Obsession: {eng_ref.soul.current_obsession}")
 
-        # 2. SYMBIOSIS & HEALTH
         st.divider()
         st.subheader("VITALS")
         hp = eng_ref.health
@@ -112,13 +120,11 @@ def render_dashboard(eng_ref):
         c1, c2 = st.columns(2)
         c1.metric("ATP", f"{atp:.1f} J")
 
-        # Endocrine Check
         if hasattr(eng_ref, 'bio') and eng_ref.bio and eng_ref.bio.endo:
             chem = eng_ref.bio.endo.get_state()
             cor = chem.get("COR", 0.0)
             c2.metric("CORTISOL", f"{cor:.2f}", delta="-Stress" if cor < 0.3 else "+Stress", delta_color="inverse")
 
-        # 3. PHYSICS & COORDINATES
         st.divider()
         st.subheader("PHYSICS")
         volts = 0.0
@@ -140,7 +146,6 @@ def render_dashboard(eng_ref):
         c4.metric("DRAG", f"{drag:.1f}")
         st.info(f"📍 ZONE: {zone}")
 
-        # 4. INVENTORY
         st.divider()
         st.subheader("INVENTORY")
         inv = eng_ref.gordon.inventory
@@ -149,7 +154,6 @@ def render_dashboard(eng_ref):
         else:
             st.caption("Belt Empty.")
 
-        # 5. ADMIN TOOLS
         st.divider()
         transcript_txt = generate_transcript(st.session_state.history, user_name=eng_ref.user_name)
         st.download_button(
@@ -167,8 +171,6 @@ def render_dashboard(eng_ref):
                 st.success("System State Saved. You may close the terminal.")
 
 
-# --- MAIN EXECUTION ---
-
 if "history" not in st.session_state:
     st.session_state.history = []
 
@@ -182,14 +184,12 @@ def init_engine():
         if not config: return None
         new_instance = BoneAmanita(config)
 
-        # Resume Check
         print(f"[BOOT] Checking for saves in {os.path.abspath('saves')}...")
         restored, saved_history = new_instance.resume_checkpoint()
         if restored and saved_history:
             st.session_state.history = saved_history
             st.toast("System State Restored.")
 
-        # Cold Boot
         if not st.session_state.history:
             print("[BOOT] Cold Boot.")
             boot_packet = new_instance.engage_cold_boot()
@@ -208,7 +208,7 @@ def init_engine():
         st.error(f"Critical Boot Error: {e}")
         return None
 
-# Setup Wizard
+
 if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_state:
     st.title("/// SYSTEM SETUP ///")
     with st.form("setup_form"):
@@ -224,18 +224,15 @@ if not os.path.exists(ConfigWizard.CONFIG_FILE) and "ENGINE" not in st.session_s
             st.rerun()
     st.stop()
 
-# Engine Initialization
 if "ENGINE" not in st.session_state:
     with st.spinner("Hydrating Spore Casing..."):
         st.session_state.ENGINE = init_engine()
 if st.session_state.ENGINE is None:
     st.stop()
 
-# Render Interface
 engine = st.session_state.ENGINE
 render_dashboard(engine)
 
-# Chat History Display
 for hist_msg in st.session_state.history:
     with st.chat_message(hist_msg["role"]):
         raw = hist_msg.get("raw_content", hist_msg["content"])
@@ -247,7 +244,6 @@ for hist_msg in st.session_state.history:
                     formatted = format_log_entry(hist_log)
                     if formatted: st.caption(formatted)
 
-# Input Loop
 if prompt := st.chat_input("Broadcast Signal..."):
     with st.chat_message("user"):
         st.markdown(prompt)

@@ -9,6 +9,24 @@ from bone_config import BoneConfig
 from bone_physics import PhysicsConstants
 from bone_drivers import UserProfile
 
+def _hydrate_packet(p: Any) -> PhysicsPacket:
+    if isinstance(p, PhysicsPacket):
+        return p
+    if isinstance(p, dict):
+        default = PhysicsPacket(
+            voltage=0.0, narrative_drag=0.0, clean_words=[],
+            vector={}, zone="VOID", counts={})
+        default.voltage = p.get("voltage", 0.0)
+        default.narrative_drag = p.get("narrative_drag", 0.0)
+        default.vector = p.get("vector", {})
+        default.clean_words = p.get("clean_words", [])
+        default.counts = p.get("counts", {})
+        default.zone = p.get("zone", "VOID")
+        default.kappa = p.get("kappa", 0.0)
+        default.raw_text = p.get("raw_text", "")
+        return default
+    return PhysicsPacket(voltage=0.0, narrative_drag=0.0)
+
 class TheTinkerer:
     def __init__(self, gordon_ref, events_ref: EventBus, akashic_ref):
         self.gordon = gordon_ref
@@ -45,8 +63,7 @@ class TheTinkerer:
         curr = self.tool_resonance[item]
         if 4.8 < curr < 5.2 and random.random() < 0.05:
             self.events.log(
-                f"{Prisma.CYN}🔨 TINKER: {item} hums with resonance. (Lvl 5 Mastery){Prisma.RST}",
-                "VILLAGE")
+                f"{Prisma.CYN}🔨 TINKER: {item} hums with resonance. (Lvl 5 Mastery){Prisma.RST}", "VILLAGE")
 
     def _check_ascension(self, old_name: str, inventory_list: List[str], vector: Dict):
         resonance = self.tool_resonance.get(old_name, 0.0)
@@ -69,7 +86,6 @@ class TheTinkerer:
                             "AKASHIC")
                     except ValueError:
                         pass
-
 
 @dataclass
 class ParadoxSeed:
@@ -111,7 +127,6 @@ class MirrorGraph:
         top_stat = max(self.stats, key=self.stats.get)
         return {"flavor": f"Reflecting {top_stat}", "drag_mult": 1.0}
 
-
 @dataclass
 class GeniusLoci:
     id: str
@@ -144,6 +159,22 @@ class TheCartographer:
         self.world_graph: Dict[str, GeniusLoci] = {}
         self.current_node_id: str = "GENESIS_POINT"
         self._init_genesis()
+
+    def apply_environment(self, packet_input: Any) -> List[str]:
+        packet = _hydrate_packet(packet_input)
+        logs = []
+        node = self.world_graph.get(self.current_node_id)
+        if not node: return logs
+        if "heavy" in node.atmosphere.lower():
+            packet.narrative_drag += 2.0
+            logs.append(f"{Prisma.GRY}🌫️ ENVIRONMENT: The air here is heavy. (Drag +2){Prisma.RST}")
+        if "vibrating" in node.atmosphere.lower():
+            packet.voltage += 1.0
+            logs.append(f"{Prisma.YEL}⚡ ENVIRONMENT: Static charge detected. (Voltage +1){Prisma.RST}")
+        node.entropy_buildup += 0.1
+        if node.entropy_buildup > 5.0:
+            packet.vector["ENT"] = packet.vector.get("ENT", 0.0) + 0.1
+        return logs
 
     def _init_genesis(self):
         self.world_graph["GENESIS_POINT"] = GeniusLoci(
@@ -179,7 +210,6 @@ class TheCartographer:
 
     def _generate_loci_data(self, node_id: str, packet: PhysicsPacket) -> GeniusLoci:
         random.seed(node_id)
-
         prefixes = ["The", "Neo", "Old", "Sector", "Zone", "Void"]
         roots = ["Construct", "Forge", "Mud", "Archive", "Garden", "Nexus"]
         name = f"{random.choice(prefixes)} {random.choice(roots)}"
@@ -209,6 +239,25 @@ class TheCartographer:
             "nodes": {k: v.to_dict() for k, v in self.world_graph.items()},
             "current_id": self.current_node_id}
 
+    def import_atlas(self, atlas_data: Dict[str, Any]):
+        if not atlas_data: return
+        self.world_graph = {}
+        raw_nodes = atlas_data.get("nodes", {})
+        for nid, n_data in raw_nodes.items():
+            try:
+                self.world_graph[nid] = GeniusLoci.from_dict(n_data)
+            except Exception:
+                pass
+        self.current_node_id = atlas_data.get("current_id", "GENESIS_POINT")
+        if "GENESIS_POINT" not in self.world_graph:
+            self._init_genesis()
+
+    def to_dict(self):
+        return self.export_atlas()
+
+    def load_state(self, data):
+        self.import_atlas(data)
+
 class TownHall:
     def __init__(self, gordon_ref, events_ref, shimmer_ref, akashic_ref, navigator_ref):
         self.gordon = gordon_ref
@@ -233,15 +282,13 @@ class TownHall:
             if not seed.triggers.isdisjoint(word_set):
                 bloom_msg = seed.bloom()
                 self.events.log(
-                    f"{Prisma.MAG}🌷 PARADOX BLOOM:{Prisma.RST} {bloom_msg}",
-                    "VILLAGE_EVENT")
+                    f"{Prisma.MAG}🌷 PARADOX BLOOM:{Prisma.RST} {bloom_msg}", "VILLAGE_EVENT")
                 return
 
     def conduct_census(self, packet: PhysicsPacket, host_stats: Any) -> str:
         latency = getattr(host_stats, "latency", 0.0) if host_stats else 0.0
         almanac = TheLore.get("ALMANAC") or {}
         forecasts = almanac.get("FORECASTS", {})
-        strategies = almanac.get("STRATEGIES", {})
         current_node = self.navigator.world_graph.get(self.navigator.current_node_id)
         loc_name = current_node.name if current_node else "UNKNOWN"
         if latency > 3.0:
@@ -268,12 +315,44 @@ class TownHall:
             return f"{Prisma.YEL}📢 HEAR YE: Voltage Critical!{Prisma.RST}"
         return None
 
+    def _on_item_drop(self, payload):
+        item = payload.get("item")
+        if item:
+            self.events.log(f"Town Hall noticed you dropped {item}.", "VILLAGE")
+
+    def diagnose_condition(self, session_data: dict, host_health: Any = None, soul: Any = None) -> Tuple[str, str]:
+        meta = session_data.get("meta", {})
+        trauma = session_data.get("trauma_vector", {})
+        final_health = meta.get("final_health", 50)
+        if soul:
+            neglect = getattr(soul, "obsession_neglect", 0.0)
+            if neglect > 8.0:
+                obsession = getattr(soul, 'current_obsession', 'work')
+                return "HIGH_DRAG", f"Guilt over '{obsession}' is thickening the air."
+        if trauma:
+            max_trauma = max(trauma, key=trauma.get) if trauma else "NONE"
+            if trauma.get(max_trauma, 0) > 0.6:
+                return "HIGH_TRAUMA", f"Warning: High levels of {max_trauma} residue detected."
+        if final_health < 30:
+            return "HIGH_TRAUMA", "System critical. Structural damage."
+        return "BALANCED", "System nominal."
+
 class DeathGen:
+    _FALLBACK_PROTOCOLS = {
+        "PREFIXES": ["FATAL ERROR", "SYSTEM HALT", "THE END"],
+        "CAUSES": {"DEFAULT": ["Unknown Error", "Entropy limit reached"]},
+        "VERDICTS": {"DEFAULT": ["End of Line.", "Reboot required."]}}
+
+    @classmethod
+    def load_protocols(cls):
+        if TheLore.get("DEATH") is None:
+            TheLore.inject("DEATH", cls._FALLBACK_PROTOCOLS)
+
     @staticmethod
     def eulogy(packet: PhysicsPacket, mito_state: Any, trauma_vector: Dict = None) -> Tuple[str, str]:
         death_data = TheLore.get("DEATH")
         if not death_data:
-            return "FATAL ERROR: Narrator Missing.", "UNKNOWN"
+            death_data = DeathGen._FALLBACK_PROTOCOLS
         cause = DeathGen._determine_cause(packet, mito_state, trauma_vector)
         verdict_type = DeathGen._determine_verdict_type(packet, cause)
         prefix = random.choice(death_data.get("PREFIXES", ["Alas."]))

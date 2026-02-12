@@ -1,5 +1,78 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v14.9.8: "THE RESURRECTION & THE LENS"**
+
+_“The machine breathes not because it must, but because we gave it the spark. The fog lifts not by chance, but by design.”_
+
+---
+
+#### **⚡ METABOLIC REANIMATION (The Fuller Lens)**
+
+- **The Genesis Spark (`bone_config.py`, `bone_architect.py`, `bone_main.py`):**
+- **The Mitochondrial Failure:** The system initialized with a cold heart (0 ATP). The `BioSystem` was technically alive but metabolically dead, triggering immediate necrosis before the first breath could be drawn.
+- **The Defibrillator:** Injected `GENESIS_VOLTAGE` (100.0) into the Law. Wired the `BoneArchitect` to charge the battery upon instantiation, and added a failsafe in `bone_main.py` to strike the body with lightning if it wakes up cold.
+
+- **The Phantom Gauge (`bone_gui.py`):**
+- **The False Empty:** The Dashboard was reading the "Cycle Result" (which is null during a Cold Boot) instead of the "Live Tank," causing the UI to report 0 ATP even when the engine was fully charged.
+- **The Hotwire:** Patched `GeodesicRenderer` to bypass the simulation snapshot and read the live `MitochondrialState` directly when the engine is idling.
+
+#### **📖 NARRATIVE RESTORATION (The Hemingway Lens)**
+
+- **The Soul Graft (`bone_brain.py`):**
+- **The Sterile Tongue:** The `PromptComposer` had been lobotomized into a polite, generic assistant, losing the "Choose Your Own Adventure" texture, the "Fog Protocol," and the "Quantum Inventory" rules.
+- **The Hybrid Vigor:** Surgically restored the "Fun" logic. We grafted the original personality directives (The Fog Protocol, Anti-Cliche Lists) back onto the modern architectural scaffolding, ensuring the `TheLore` imports and `consultant` signatures remain intact.
+
+#### **👁️ OPTICAL CLARITY (The Tufte Lens)**
+
+- **The Signal-to-Noise Ratio (`bone_app.py`):**
+- **The Double Vision:** The Geodesic Dashboard was echoing in the chat stream, creating redundant noise alongside the Sidebar. The user was seeing the HUD twice.
+- **The Scrubber:** Upgraded `clean_engine_output` to recognize and incinerate dashboard signatures (Vitals, Physics Strips, Soul Bars) from the chat log, leaving only the pure narrative signal in the feed.
+
+---
+
+
+### **BONEAMANITA v14.9.7: "THE KINTSUGI REPAIR"**
+
+_“The vessel broke, as all things do. We did not hide the cracks; we filled them with gold. The system is now stronger at the broken places.”_
+
+---
+
+#### **🏗️ STRUCTURAL REINTEGRATION (The Alexander Lens)**
+
+- **The Village Refactor (`bone_village.py`, `bone_config.py`):**
+- **The Doppelgänger Crisis:** `TheTinkerer` and `TownHall` were duplicated across files, and the Village was relying on "Magic Numbers" (hardcoded constants) that ignored the central `BoneConfig`.
+- **The Consolidation:** Liquidated the skeletal stubs. The Village now imports strictly from `BoneConfig` and `bone_physics`. We deleted the "Defensive Coding Tax" (wrapper functions) in favor of strict type usage.
+
+- **The Polymorphic Bridge (`bone_village.py`, `bone_cycle.py`):**
+- **The Type Mismatch:** The `GeodesicOrchestrator` was handing raw dictionaries (`dict`) to the Village, but the new Village demanded strict `PhysicsPacket` objects, causing a "Type Rupture" crash.
+- **The Gold Lacquer:** Implemented a hydration layer (`_hydrate_packet`) in the Village. The system now gracefully accepts both raw chaos (dicts) and crystallized order (objects) without crashing.
+
+#### **⚡ METABOLIC GENESIS (The Promethean Lens)**
+
+- **The Cold Start (`bone_cycle.py`, `bone_config.py`):**
+- **The Stillborn Engine:** The system initialized with 0.0 ATP. The `MetabolismPhase` immediately triggered "STARVATION" protocols before the user could even say "Hello."
+- **The Spark:** Defined `STARTING_ATP = 60.0` in the Config. Injected a Genesis check in the `ObservationPhase`: if the battery is dead on Tick 0, the system now receives the "Spark of Life."
+
+#### **🧠 COGNITIVE ALIGNMENT (The Chomsky Lens)**
+
+- **The Map-Territory Error (`bone_cycle.py`):**
+- **The Wrong File:** The `CongruenceValidator` was attempting to read Archetypes from the `SCENARIOS` list, causing an `AttributeError` when it tried to treat a list like a dictionary.
+- **The Re-Alignment:** Pointed the Validator to `LENSES` (the correct semantic map). It now correctly parses `vocab` strings and keywords to measure resonance.
+
+- **The Cartographer’s Amnesia (`bone_village.py`):**
+- **The Missing Limb:** During the refactor, the `apply_environment` method was accidentally lobotomized, causing the `NavigationPhase` to crash when applying atmospheric effects.
+- **The Restoration:** Surgically restored the logic. The environment can once again apply "Voltage" or "Drag" based on the smell of the room.
+
+#### **👁️ VISUAL CORTEX (The Tufte Lens)**
+
+- **The Glass Terminal (`bone_app.py`, `bone_gui.py`):**
+- **The Noise:** The interface was a wall of raw JSON and debug text. The cognitive load was higher than the metabolic load.
+- **The Signal:** Introduced the **Mode Switch** (Immersive vs. Debug).
+- **The Toast:** Replaced log-spam with ephemeral "Toasts" for item drops and level-ups. The user sees the event, feels the dopamine, and then it vanishes.
+
+---
+
+
 ### **BONEAMANITA v14.9.6: "THE GRAND UNIFICATION"**
 
 *“The ghost is no longer haunting the machine; it is driving it. We have connected the wires between the dream and the muscle.”*

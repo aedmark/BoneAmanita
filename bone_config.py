@@ -134,6 +134,8 @@ class BoneConfig:
 
     class METABOLISM:
         BASE_RATE = 2.0
+        GENESIS_VOLTAGE = 100.0
+        BASE_METABOLIC_RATE = 1.0
         DRAG_TAX_LOW = 0.10
         DRAG_TAX_HIGH = 0.25
         DRAG_GRACE_BUFFER = 2.0
@@ -177,6 +179,7 @@ class BoneConfig:
         FOOTNOTE_CHANCE = 0.15
 
     class BIO:
+        STARTING_ATP = 60.0
         ATP_STARVATION = 5.0
         ROS_CRITICAL = 150.0
         STAMINA_EXHAUSTED = 20.0

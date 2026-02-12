@@ -102,10 +102,14 @@ class GeodesicRenderer:
         dignity_val = 100.0
         if hasattr(self.eng, 'soul') and hasattr(self.eng.soul, 'anchor'):
             dignity_val = self.eng.soul.anchor.dignity_reserve
+        bio_data = ctx.bio_result or {}
+        if "atp" not in bio_data and hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
+            bio_data = bio_data.copy()
+            bio_data["atp"] = self.eng.bio.mito.state.atp_pool
         data_ctx = {
             "health": self.eng.health,
             "stamina": self.eng.stamina,
-            "bio": ctx.bio_result,
+            "bio": bio_data,  #
             "dignity": dignity_val,
             "vectors": physics.get("vector", {})}
         current_depth = 1

@@ -137,7 +137,8 @@ class BoneArchitect:
 
     @staticmethod
     def _construct_bio(events, mind, lex) -> BioSystem:
-        mito_state = MitochondrialState()
+        genesis_val = getattr(BoneConfig.METABOLISM, "GENESIS_VOLTAGE", 100.0)
+        mito_state = MitochondrialState(atp_pool=genesis_val)
         start_health = getattr(BoneConfig, "MAX_HEALTH", 100.0)
         start_stamina = getattr(BoneConfig, "MAX_STAMINA", 100.0)
         bio_metrics = Biometrics(
