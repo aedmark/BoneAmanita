@@ -5,8 +5,8 @@ from typing import Dict, Any, List
 class BonePresets:
     ZEN_GARDEN = {
         "PHYSICS.VOLTAGE_FLOOR": 1.0,
-        "PHYSICS.VOLTAGE_MAX": 10.0,
-        "PHYSICS.DRAG_FLOOR": 2.0,
+        "PHYSICS.VOLTAGE_MAX": 25.0,
+        "PHYSICS.DRAG_FLOOR": 0.5,
         "BIO.DECAY_RATE": 0.001,
         "BIO.STAMINA_EXHAUSTED": 5.0,
         "COUNCIL.MANIC_VOLTAGE_TRIGGER": 99.0}

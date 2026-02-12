@@ -194,6 +194,8 @@ class BoneAmanita:
             self.health = self.mind.mem.session_health
             self.stamina = self.mind.mem.session_stamina
             self.trauma_accum = self.mind.mem.session_trauma_vector or {}
+        if self.tick_count == 0 and self.bio.mito:
+            self.bio.mito.state.atp_pool = 60.0
 
     def _load_resource_safely(self, loader_func, resource_name):
         try:
