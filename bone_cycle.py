@@ -320,18 +320,19 @@ class GatekeeperPhase(SimulationPhase):
                 "stamina": self.eng.bio.biometrics.stamina}
         else:
             current_bio = {"health": self.eng.health, "stamina": self.eng.stamina}
-        audit_result = self.eng.bureau.audit(
-            ctx.physics,
-            current_bio,
-            origin="USER")
-        if audit_result:
-            if self.eng.bio and self.eng.bio.mito:
-                self.eng.bio.mito.adjust_atp(audit_result.get("atp_gain", 0.0), "Bureaucratic Fine (User)")
-            if audit_result.get("log"):
-                ctx.log(audit_result["log"])
-            if audit_result.get("ui"):
-                ctx.bureau_ui = audit_result["ui"]
-                ctx.is_bureaucratic = True
+        if self.eng.bureau:
+            audit_result = self.eng.bureau.audit(
+                ctx.physics,
+                current_bio,
+                origin="USER")
+            if audit_result:
+                if self.eng.bio and self.eng.bio.mito:
+                    self.eng.bio.mito.adjust_atp(audit_result.get("atp_gain", 0.0), "Bureaucratic Fine (User)")
+                if audit_result.get("log"):
+                    ctx.log(audit_result["log"])
+                if audit_result.get("ui"):
+                    ctx.bureau_ui = audit_result["ui"]
+                    ctx.is_bureaucratic = True
         return ctx
 
 class MetabolismPhase(SimulationPhase):

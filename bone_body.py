@@ -351,13 +351,13 @@ class MitochondrialForge:
         self.events.log(f"{Prisma.RED}♻️ [MITO]: {msg}{Prisma.RST}", "BIO_CRIT")
 
     def apply_inheritance(self, traits: dict):
+        if not traits:
+            return
         if traits.get("high_metabolism"):
             self.state.membrane_potential = 1.1
             self.events.log("[MITO]: Ancestral High Metabolism activated.", "GENETICS")
 
-
 """ MODULES EXTRACTED FROM SOMATIC LOOP """
-
 
 class DigestiveTrack:
     """The Stomach. Converts words into ATP and Enzymes."""
