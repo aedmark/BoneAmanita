@@ -202,7 +202,8 @@ class SanctuaryPhase(SimulationPhase):
             self.eng.trauma_accum[key] = max(0.0, self.eng.trauma_accum[key] - 0.1)
 
     def _trigger_dream(self, ctx: CycleContext):
-        if not hasattr(self.eng.mind, "dreamer"): return
+        if not hasattr(self.eng, "mind") or not hasattr(self.eng.mind, "dreamer"):
+            return
         if hasattr(self.eng.mind.mem, 'replay_dreams'):
             dream_log = self.eng.mind.mem.replay_dreams()
             if dream_log:
@@ -215,7 +216,7 @@ class SanctuaryPhase(SimulationPhase):
             "trauma_vector": current_trauma_load}
         dream_packet = self.eng.mind.dreamer.enter_rem_cycle(
             self.eng.mind.mem,
-            bio_readout=bio_packet)
+            bio_state=bio_packet)
         if isinstance(dream_packet, dict):
             ctx.log(dream_packet.get("log", "The mind wanders..."))
             ctx.last_dream = dream_packet

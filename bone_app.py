@@ -6,6 +6,7 @@ import json
 import os
 from bone_main import BoneAmanita, ConfigWizard
 from bone_core import Prisma
+from bone_config import BonePresets
 
 st.set_page_config(
     page_title="BONEAMANITA [GLASS TERMINAL]",
@@ -201,10 +202,22 @@ def run_setup_sequence():
             st.markdown("#### 1. IDENTITY")
             setup_user_name = st.text_input("Designation", value="Traveler", help="How the system addresses you.")
         with c2:
-            st.markdown("#### 2. CORTEX (LLM)")
-            provider_options = ["Ollama (Local)", "OpenAI (Cloud)", "LM Studio (Local)", "Mock (Simulation)"]
-            provider_selection = st.selectbox("Provider", provider_options, index=0)
-        st.markdown("#### 3. CONNECTION PARAMETERS")
+            st.markdown("#### 2. REALITY INTERFACE")
+            mode_icons = {"ADVENTURE": "🗡️", "CONVERSATION": "☕", "CREATIVE": "⚡", "TECHNICAL": "🔧"}
+            def mode_format(option):
+                data = BonePresets.MODES[option]
+                icon = mode_icons.get(option, "🔹")
+                return f"{icon} {option}: {data['description']}"
+            selected_mode = st.radio(
+                "Select Operating Mode",
+                options=list(BonePresets.MODES.keys()),
+                format_func=mode_format,
+                index=0)
+        st.write("---")
+        st.markdown("#### 3. CORTEX (LLM)")
+        provider_options = ["Ollama (Local)", "OpenAI (Cloud)", "LM Studio (Local)", "Mock (Simulation)"]
+        provider_selection = st.selectbox("Provider", provider_options, index=0)
+        st.markdown("#### 4. CONNECTION PARAMETERS")
         default_model = "llama3"
         default_url = "http://127.0.0.1:11434/v1/chat/completions"
         show_api_key = False
@@ -237,6 +250,7 @@ def run_setup_sequence():
                 clean_provider = provider_selection.split()[0].lower()
                 cfg = {
                     "user_name": setup_user_name,
+                    "boot_mode": selected_mode,
                     "provider": clean_provider,
                     "model": model_name,
                     "base_url": base_url}

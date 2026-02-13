@@ -1,4 +1,4 @@
-""" BONEAMANITA 14.9.9
+""" BONEAMANITA 15.0.0
  Architects: SLASH, KISHO, Taylor & Edmark
  Refactored by: THE TORVALDS & THE BEZALEL """
 
@@ -56,7 +56,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 14.9.9   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.0.0   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         typewriter(f"{Prisma.GRY}...Initializing KernelHash: {self.engine_instance.kernel_hash}...{Prisma.RST}")
         typewriter(f"{Prisma.paint('>>> SYSTEM: LISTENING', 'G')}")
@@ -169,6 +169,7 @@ class BoneAmanita:
         self._initialize_cognition()
         self.host_stats = HostStats(latency=0.0, efficiency_index=1.0)
         self._validate_state()
+        self._apply_boot_mode()
 
     def _initialize_core(self, lexicon_layer):
         print(f"{Prisma.GRY}...Bootstrapping Core...{Prisma.RST}")
@@ -296,11 +297,12 @@ class BoneAmanita:
                 self.soul.anchor.check_domestication(reliance_proxy)
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
-            loot_candidate = self.gordon.parse_loot(user_message, cortex_packet.get("ui", ""))
-            if loot_candidate:
-                acquire_msg = self.gordon.acquire(loot_candidate)
-                cortex_packet["logs"].append(acquire_msg)
-                cortex_packet["ui"] += f"\n\n> {acquire_msg}"
+            if "GORDON" not in getattr(self, "suppressed_agents", []):
+                loot_candidate = self.gordon.parse_loot(user_message, cortex_packet.get("ui", ""))
+                if loot_candidate:
+                    acquire_msg = self.gordon.acquire(loot_candidate)
+                    cortex_packet["logs"].append(acquire_msg)
+                    cortex_packet["ui"] += f"\n\n> {acquire_msg}"
             if hasattr(self.cortex, "last_physics") and self.cortex.last_physics:
                 world_state = self.cortex.gather_state(self.cortex.last_physics).get("world", {})
                 orbit_state = world_state.get("orbit", ["Unknown"])[0]
@@ -320,7 +322,8 @@ class BoneAmanita:
             traceback.print_exc()
             return {"ui": f"CORTEX ERROR: {e}", "logs": [], "metrics": self.get_metrics()}
         if self.bureau and not is_system and random.random() < 0.15:
-            real_phys = cortex_packet.get("physics", {})
+            if "BUREAU" not in getattr(self, "suppressed_agents", []):
+                real_phys = cortex_packet.get("physics", {})
             if hasattr(real_phys, "to_dict"):
                 real_phys = real_phys.to_dict()
             if not real_phys:
@@ -500,6 +503,20 @@ class BoneAmanita:
                     self.village[name].load_state(data)
                 except Exception as e:
                     print(f"{Prisma.RED}[RESUME]: Failed to hydrate {name}: {e}{Prisma.RST}")
+
+    def _apply_boot_mode(self):
+        mode = self.config.get("boot_mode", "ADVENTURE").upper()
+        if mode not in BonePresets.MODES:
+            mode = "ADVENTURE"
+        preset = BonePresets.MODES[mode]
+        print(f"{Prisma.CYN}...Engaging Mode: {mode}...{Prisma.RST}")
+        tuning_key = preset["tuning"]
+        if hasattr(BonePresets, tuning_key):
+            target_tuning = getattr(BonePresets, tuning_key)
+            BoneConfig.load_preset(target_tuning)
+        self.suppressed_agents = set(preset["village_suppression"])
+        if hasattr(self, 'reality_stack'):
+            self.reality_stack.stabilize_at(preset["ui_layer"])
 
     def save_checkpoint(self, history: list = None) -> str:
         try:

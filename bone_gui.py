@@ -52,6 +52,17 @@ class Projector:
             f"⚓ {drag:.1f}  "
             f"📐 {dom_vec} ({dom_val:.2f})")
 
+    def render_technical(self, physics: Dict, data: Dict, mind: tuple) -> str:
+        v = physics.get("voltage", 0.0)
+        d = physics.get("narrative_drag", 0.0)
+        vec = data.get("vectors", {})
+        vec_str = ", ".join([f"{k}:{v:.2f}" for k, v in vec.items() if v > 0.01])
+        return (
+            f"{Prisma.CYN}/// KERNEL TELEMETRY ///{Prisma.RST}\n"
+            f"PHYSICS : V={v:<6.3f} D={d:<6.3f} | LENS: {mind[0]}\n"
+            f"VECTORS : [{vec_str}]\n"
+            f"BIO_DUMP: {str(data.get('bio', {}))[:60]}...")
+
     def _mini_bar(self, val, max_val, width, color):
         if max_val == 0: return ""
         ratio = max(0.0, min(1.0, val / max_val))
@@ -99,9 +110,6 @@ class GeodesicRenderer:
         physics = ctx.physics
         mind = ctx.mind_state
         mind_tuple = (mind.get("lens"), mind.get("thought"), mind.get("role"))
-        dignity_val = 100.0
-        if hasattr(self.eng, 'soul') and hasattr(self.eng.soul, 'anchor'):
-            dignity_val = self.eng.soul.anchor.dignity_reserve
         bio_data = ctx.bio_result or {}
         if "atp" not in bio_data and hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
             bio_data = bio_data.copy()
@@ -109,17 +117,26 @@ class GeodesicRenderer:
         data_ctx = {
             "health": self.eng.health,
             "stamina": self.eng.stamina,
-            "bio": bio_data,  #
-            "dignity": dignity_val,
+            "bio": bio_data,
+            "dignity": getattr(self.eng.soul.anchor, 'dignity_reserve', 100.0) if hasattr(self.eng, 'soul') else 100.0,
             "vectors": physics.get("vector", {})}
-        current_depth = 1
-        if hasattr(ctx, "reality_stack"):
-            current_depth = ctx.reality_stack.current_depth
-        return self.projector.render(
-            {"physics": physics},
-            data_ctx,
-            mind_tuple,
-            reality_depth=current_depth)
+        mode = self.eng.config.get("boot_mode", "ADVENTURE")
+        if mode == "TECHNICAL":
+            return self.projector.render_technical(physics, data_ctx, mind_tuple)
+        elif mode == "CREATIVE":
+            return f"{Prisma.MAG}⚡ CREATIVE FLOW // VOLTAGE UNLOCKED{Prisma.RST}"
+        elif mode == "CONVERSATION":
+            role = mind_tuple[2] if mind_tuple[2] else "System"
+            return f"{Prisma.GRN}♦ {role}{Prisma.RST} is listening..."
+        else:
+            current_depth = 1
+            if hasattr(ctx, "reality_stack"):
+                current_depth = ctx.reality_stack.current_depth
+            return self.projector.render(
+                {"physics": physics},
+                data_ctx,
+                mind_tuple,
+                reality_depth=current_depth)
 
     def render_soul_strip(self, soul_ref) -> str:
         if not soul_ref: return ""

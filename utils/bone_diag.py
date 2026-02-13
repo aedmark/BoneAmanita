@@ -10,6 +10,7 @@ from bone_types import PhysicsPacket
 from bone_soul import NarrativeSelf
 from bone_protocols import KintsugiProtocol, TheBureau, TheFolly
 from bone_lexicon import TheLexicon
+from bone_config import BonePresets, BoneConfig
 
 try:
     from bone_brain import LLMInterface
@@ -238,6 +239,45 @@ class GrandDiagnostic:
         else:
             self.log(f"Passive Effect Failed. Logs: {logs}", "FAIL")
 
+    def phase_9_operating_modes(self):
+        self.header("PHASE 9: OPERATING MODES")
+        try:
+            tech_conf = {"user_name": "TEST", "provider": "mock", "boot_mode": "TECHNICAL"}
+            eng = BoneAmanita(tech_conf)
+            if BoneConfig.PHYSICS.DRAG_FLOOR == 2.0:
+                self.log("Technical Physics Tuned", "PASS")
+            else:
+                self.log(f"Technical Physics Failed (Drag: {BoneConfig.PHYSICS.DRAG_FLOOR})", "FAIL")
+            if "ZEN" in eng.suppressed_agents:
+                self.log("Technical Suppression Active", "PASS")
+            else:
+                self.log("Technical Suppression Failed", "FAIL")
+        except Exception as e:
+            self.log(f"Technical Boot Crash: {e}", "FAIL")
+        try:
+            create_conf = {"user_name": "TEST", "provider": "mock", "boot_mode": "CREATIVE"}
+            BoneConfig.load_preset(BonePresets.ZEN_GARDEN)
+            eng = BoneAmanita(create_conf)
+            if eng.reality_stack.current_depth == 0:
+                self.log("Creative UI Layer Set", "PASS")
+            else:
+                self.log(f"Creative UI Layer Failed (Depth: {eng.reality_stack.current_depth})", "FAIL")
+            if "BUREAU" in eng.suppressed_agents:
+                self.log("Creative Bureau Suppression", "PASS")
+            else:
+                self.log("Creative Bureau Active (Fail)", "FAIL")
+        except Exception as e:
+            self.log(f"Creative Boot Crash: {e}", "FAIL")
+        try:
+            bad_conf = {"user_name": "TEST", "provider": "mock", "boot_mode": "INVALID_MODE"}
+            eng = BoneAmanita(bad_conf)
+            if "ADVENTURE" in BonePresets.MODES and eng.reality_stack.current_depth == 1:
+                self.log("Invalid Mode Fallback -> Adventure", "PASS")
+            else:
+                self.log("Invalid Mode Fallback Failed", "FAIL")
+        except Exception as e:
+            self.log(f"Fallback Boot Crash: {e}", "FAIL")
+
     def run(self):
         self.phase_1_core_integrity()
         self.phase_2_bare_metal()
@@ -247,6 +287,7 @@ class GrandDiagnostic:
         self.phase_6_loot_goblin()
         self.phase_7_inventory_reflexes()
         self.phase_8_passive_effects()
+        self.phase_9_operating_modes()
         print(f"\n{Prisma.CYN}=== DIAGNOSTIC COMPLETE ==={Prisma.RST}")
         print(f"PASSED: {self.results['PASS']}")
         print(f"FAILED: {self.results['FAIL']}")

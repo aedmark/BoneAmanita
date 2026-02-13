@@ -358,12 +358,13 @@ class PromptComposer:
             "   - Separate paragraphs with a single blank line.",
             "=== QUANTUM INVENTORY RULES (THE 'HANDS OFF' PROTOCOL) ===",
             "1. DISTINCTION: Finding an item is NOT taking it. Seeing an item is NOT taking it.",
-            "2. THE LAW OF CONSENT: You may ONLY output [[LOOT: ITEM_NAME]] if the user explicitly types a command to 'take', 'grab', 'steal', or 'pocket' the item.",
-            "3. PROHIBITION: Do NOT auto-loot. If the user says 'I look at the table', and you describe a key, do NOT tag and bag the key. Wait for 'I take the key'.",
-            "4. NARRATIVE POSSESSION: If your *narrative* forces an item into their hands (e.g. 'You wake up holding a bloody knife'), YOU MUST TAG IT. But avoid forcing items unless necessary for the seed.",
-            "5. FORMAT: [[LOOT: SILVER_COIN]] (Underscores, no spaces in ID).",
-            "6. LOSS: If an item leaves inventory, output [[LOST: ITEM_NAME]].",
-            "7. Do not list the users inventory contents unless asked. Do not comment on the items in the inventory unless instructed to.",
+            "2. VISUAL HINTS: When describing an item that *could* be picked up, write its name in **bold** (e.g., 'A **brass key** rests on the table').",
+            "3. THE LAW OF CONSENT: You may ONLY output [[LOOT: ITEM_NAME]] if the user explicitly types a command to 'take', 'grab', 'steal', or 'pocket' the item.",
+            "4. PROHIBITION: Do NOT auto-loot. If the user says 'I look at the table', and you describe a key, do NOT tag and bag the key. Wait for 'I take the key'.",
+            "5. FALLING OBJECTS: If an item falls out of a container (like a book or box) because of a user action, IT LANDS ON THE FLOOR. Do not put it in their hand. Let them see it first.",
+            "6. FORMAT: [[LOOT: SILVER_COIN]] (Underscores, no spaces in ID).",
+            "7. LOSS: If an item leaves inventory, output [[LOST: ITEM_NAME]].",
+            "8. Do not list the users inventory contents unless asked. Do not comment on the items in the inventory unless instructed to.",
             mood_note]
         if semantic_ops:
             style_notes.append("\n=== INVENTORY RESONANCE (Active Item Effects) ===")
@@ -514,13 +515,23 @@ class TheCortex:
             self.dialogue_buffer.pop(0)
 
     def _harvest_loot(self, text: str) -> Tuple[str, List[str], List[str]]:
-        found, lost = [], []
-        for match in re.findall(r"\[\[LOOT:\s*([A-Za-z0-9_\s]+)]]", text):
-            found.append(match.strip().replace(" ", "_").upper())
-        for match in re.findall(r"\[\[LOST:\s*([A-Za-z0-9_\s]+)]]", text):
-            lost.append(match.strip().replace(" ", "_").upper())
-        clean_text = re.sub(r"\[\[(LOOT|LOST):.*?]]", "", text)
-        return clean_text, found, lost
+        loot_pattern = r"\[\[LOOT:\s*(.*?)\]\]"
+        lost_pattern = r"\[\[LOST:\s*(.*?)\]\]"
+        raw_loot = re.findall(loot_pattern, text, re.IGNORECASE)
+        raw_lost = re.findall(lost_pattern, text, re.IGNORECASE)
+        def normalize(items):
+            clean_set = set()
+            for item in items:
+                clean = item.strip().upper().replace(" ", "_")
+                clean = re.sub(r"[^A-Z0-9_]", "", clean)
+                if clean:
+                    clean_set.add(clean)
+            return list(clean_set)
+        new_loot = normalize(raw_loot)
+        lost_loot = normalize(raw_lost)
+        clean_text = re.sub(loot_pattern, "", text, flags=re.IGNORECASE)
+        clean_text = re.sub(lost_pattern, "", clean_text, flags=re.IGNORECASE)
+        return clean_text.strip(), new_loot, lost_loot
 
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
         if self.consultant and "/vsl" in user_input.lower():
@@ -552,6 +563,11 @@ class TheCortex:
         start_time = time.time()
         raw_resp = self.llm.generate(final_prompt, llm_params)
         final_text, new_loot, lost_loot = self._harvest_loot(raw_resp)
+        if is_boot_sequence:
+            new_loot = []
+            lost_loot = []
+        else:
+            new_loot = self._check_consent(user_input, new_loot)
         inv_logs = self._process_inventory_changes(new_loot, lost_loot)
         self._log_telemetry(final_prompt, final_text, full_state, sim_result)
         self.learn_from_response(final_text)
@@ -591,7 +607,9 @@ class TheCortex:
             "DIRECTIVE: Build the world from the first sensation up.",
             "INTERPRETATION: The seed is a metaphor. If the seed is 'Hospital', make it a place of healing, not necessarily a literal hospital.",
             "STYLE: Sensory. Grounded. Atmospheric.",
-            "ANTI-PATTERN: Avoid cliches 'obsidian', 'neon', 'dust motes' and 'pulsing'. Be specific. Always leave a little room for whimsy."]
+            "ANTI-PATTERN: Avoid cliches 'obsidian', 'neon', 'dust motes' and 'pulsing'. Be specific. Always leave a little room for whimsy.",
+            "VISUALS: Use **bold** for objects of interest (e.g. **old photograph**).",
+            "INVENTORY RULE: Hands off. Do not list items. Do not acquire items. You are observing, not taking."]
         state["dialogue_history"] = []
 
     def _process_inventory_changes(self, found, lost):
@@ -618,6 +636,20 @@ class TheCortex:
             TelemetryService.get_instance().log_crystal(crystal)
         except Exception:
             pass
+
+    def _check_consent(self, user_input: str, new_loot: List[str]) -> List[str]:
+        if not new_loot: return []
+        acquisition_verbs = [
+            "take", "grab", "pick", "get", "steal", "seize", "collect",
+            "snatch", "acquire", "pocket", "loot", "harvest"]
+        clean_input = user_input.lower()
+        has_intent = any(verb in clean_input for verb in acquisition_verbs)
+        if not has_intent:
+            if self.events:
+                for item in new_loot:
+                    self.events.log(f"CONSENT: Intercepted auto-loot for '{item}'. User did not ask for it.", "CORTEX")
+            return []
+        return new_loot
 
     def gather_state(self, sim_result: Dict[str, Any]) -> Dict[str, Any]:
         phys = sim_result.get("physics", {})
@@ -818,15 +850,12 @@ class NoeticLoop:
     def think(self, physics_packet, _bio, inventory, voltage_history, tick_count, soul_ref=None):
         voltage = physics_packet.get("voltage", 0.0)
         clean_words = physics_packet.get("clean_words", [])
-
         avg_v = sum(voltage_history) / len(voltage_history) if voltage_history else 0
         ignition = min(1.0, (avg_v / 20.0) * (len(clean_words) / 10.0))
-
         if voltage > 12.0 and random.random() < 0.15:
             if len(clean_words) >= 2:
                 w1, w2 = random.sample(clean_words, 2)
                 self._force_link(self.mind.mem.graph, w1, w2)
-
         mind_data = self.arbiter.consult(
             physics_packet,
             _bio,
@@ -834,10 +863,8 @@ class NoeticLoop:
             tick_count,
             soul_ref=soul_ref,
             _ignition_score=ignition)
-
         if isinstance(mind_data, tuple):
             mind_data = {"lens": mind_data[0], "context_msg": mind_data[1], "role": mind_data[2]}
-
         return {
             "mode": "COGNITIVE",
             "lens": mind_data.get("lens"),

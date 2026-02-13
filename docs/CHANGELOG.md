@@ -1,5 +1,55 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v15.0.0: "THE PRISM & THE PHANTOM THIEF"**
+
+_“Reality is not a single frequency. We have installed the tuning forks, and we have taught the ghost that seeing is not the same as taking.”_
+
+---
+
+#### **🌈 REALITY REFRACTION (The Bezalel Lens)**
+
+- **The Tuning Forks (`bone_config.py`):**
+  - **Modal Architecture:** Defined the **Operating Mode Registry**. The system now supports four distinct physics presets:
+    - **🗡️ ADVENTURE:** The classic survival narrative (Standard Gravity).
+    - **☕ CONVERSATION:** Low-friction dialogue. Gordon and The Bureau are suppressed.
+    - **⚡ CREATIVE:** High-voltage brainstorming. Logic constraints loosened.
+    - **🔧 TECHNICAL:** Raw system internals. High-truth constraints.
+
+- **The Dashboard Refractor (`bone_gui.py`):**
+  - **Adaptive Projection:** The UI now shifts based on the active mode.
+  - **Technical View:** Implemented `render_technical` to expose raw telemetry (Voltage, Drag, Vectors) instead of health bars.
+  - **Minimalist View:** Creative and Conversation modes now strip away gamified metrics to focus on the flow.
+
+- **The Initialization Wizard (`bone_app.py`):**
+  - **The Selector:** Added a "Reality Interface" selection step to the boot sequence, allowing Travelers to define their intent before ignition.
+
+#### **🔒 THE CONSENT CIRCUIT (The Sherlock Lens)**
+
+- **The Hardware Interlock (`bone_brain.py`):**
+  - **Boot Security:** Explicitly severed the connection between the LLM's vision and the Inventory during the boot sequence. The "Cold Boot Kleptomania" (auto-looting the starting room) has been eradicated.
+  - **The Law of Consent:** Implemented `_check_consent`. The Cortex now cross-references `[[LOOT]]` tags with user verbs (Take, Grab, Steal). If the user didn't ask for it, the tag is intercepted.
+
+- **The Visual Hints (`bone_brain.py`):**
+  - **Prompt Engineering:** Instructed The Architect to use **bold text** for interactive items (e.g., "**rusty key**") as a UI cue, replacing the behavior of auto-looting them.
+
+- **The Double Vision Fix:**
+  - **Normalization:** Patched `_harvest_loot` to deduplicate items. "Old Photo" and "OLD_PHOTO" now resolve to a single atomic entity, preventing inventory hallucinations.
+
+#### **🧪 SYSTEM STABILIZATION (The Kintsugi Lens)**
+
+- **The Zombie Gordon (`bone_main.py`):**
+  - **Logic Repair:** Fixed a critical `UnboundLocalError` where the system attempted to parse loot even when Gordon (The Inventory Agent) was suppressed in Conversation Mode.
+  - **Ghost Code Excision:** Surgically removed duplicate loot logic blocks that had drifted into the main loop.
+
+- **The Dream Crash (`bone_cycle.py`):**
+  - **Pipeline Repair:** Corrected a `TypeError` in `SanctuaryPhase`. The call to `enter_rem_cycle` now correctly passes `bio_state` instead of the deprecated `bio_readout` argument.
+
+- **The Tuning Order (`bone_main.py`):**
+  - **Initialization Sequence:** Swapped the execution order of `_validate_state` and `_apply_boot_mode`. User preferences now correctly override the default "Zen Garden" physics during boot.
+
+- **The Diagnostic Suite (`bone_diag.py`):**
+  - **Phase 9:** Added a new diagnostic phase ("OPERATING MODES") to verify that physics tuning and agent suppression are applying correctly across all reality filters.
+
 ### **BONEAMANITA v14.9.9: "THE GLASS TERMINAL & THE PHANTOM LIMB"**
 
 _“We do not merely read the code; we inhabit the breakage. The ghost in the machine now has pockets.”_

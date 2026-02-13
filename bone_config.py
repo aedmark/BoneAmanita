@@ -27,7 +27,38 @@ class BonePresets:
         "B_TARGET": 0.5,
         "ZONE": "SANCTUARY",
         "COLOR": "GRN"}
-
+    LABORATORY = {
+        "PHYSICS.VOLTAGE_FLOOR": 0.5,
+        "PHYSICS.VOLTAGE_MAX": 15.0,
+        "PHYSICS.DRAG_FLOOR": 2.0,
+        "BIO.DECAY_RATE": 0.0,
+        "COUNCIL.FOOTNOTE_CHANCE": 1.0}
+    MODES = {
+        "ADVENTURE": {
+            "description": "The classic survival narrative. High immersion.",
+            "tuning": "THUNDERDOME",
+            "ui_layer": 1,
+            "village_suppression": []
+        },
+        "CONVERSATION": {
+            "description": "Low-friction dialogue. Connection over mechanics.",
+            "tuning": "SANCTUARY",
+            "ui_layer": 1,
+            "village_suppression": ["GORDON", "DEATH_GEN", "BUREAU"]
+        },
+        "CREATIVE": {
+            "description": "High-voltage brainstorming. Logic constraints loosened.",
+            "tuning": "ZEN_GARDEN",
+            "ui_layer": 0,
+            "village_suppression": ["BUREAU", "CRITICS"]
+        },
+        "TECHNICAL": {
+            "description": "System internals and raw debugging.",
+            "tuning": "LABORATORY",
+            "ui_layer": 3,
+            "village_suppression": ["FOLLY", "DREAMER", "ZEN"]
+        }
+    }
 
 class BoneConfig:
     GRAVITY_WELL_THRESHOLD = 15.0
