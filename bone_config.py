@@ -9,7 +9,9 @@ class BonePresets:
         "PHYSICS.DRAG_FLOOR": 0.5,
         "BIO.DECAY_RATE": 0.001,
         "BIO.STAMINA_EXHAUSTED": 5.0,
-        "COUNCIL.MANIC_VOLTAGE_TRIGGER": 99.0}
+        "COUNCIL.MANIC_VOLTAGE_TRIGGER": 99.0,
+        "tuning": "ZEN"
+    }
     THUNDERDOME = {
         "PHYSICS.VOLTAGE_FLOOR": 8.0,
         "PHYSICS.VOLTAGE_MAX": 30.0,
@@ -26,7 +28,8 @@ class BonePresets:
         "E_TARGET": 0.4,
         "B_TARGET": 0.5,
         "ZONE": "SANCTUARY",
-        "COLOR": "GRN"}
+        "COLOR": "\033[32m", # Prisma.GRN
+        "COLOR_NAME": "GRN"}
     LABORATORY = {
         "PHYSICS.VOLTAGE_FLOOR": 0.5,
         "PHYSICS.VOLTAGE_MAX": 15.0,
@@ -35,33 +38,74 @@ class BonePresets:
         "COUNCIL.FOOTNOTE_CHANCE": 1.0}
     MODES = {
         "ADVENTURE": {
-            "description": "The classic survival narrative. High immersion.",
-            "tuning": "THUNDERDOME",
-            "ui_layer": 1,
+            "description": "The default experience. Survival, inventory, exploration.",
+            "tuning": "STANDARD",
+            "ui_layer": 1,  # RealityLayer.SIMULATION
+            "village_suppression": [],
             "prompt_key": "ADVENTURE",
-            "village_suppression": []
+            # Reality Flags
+            "show_inventory": True,
+            "show_location": True,
+            "show_vitals": True,
+            "allow_loot": True,
+            "allow_metrics": True
         },
         "CONVERSATION": {
-            "description": "Low-friction dialogue. Connection over mechanics.",
-            "tuning": "SANCTUARY",
+            "description": "Pure dialogue. No entropy, no items, just connection.",
+            "tuning": "ZEN",
             "ui_layer": 1,
+            "village_suppression": ["GORDON", "NAVIGATOR", "CARTOGRAPHER", "TINKERER", "DEATH"],
             "prompt_key": "CONVERSATION",
-            "village_suppression": ["GORDON", "DEATH_GEN", "BUREAU"]
+            # Reality Flags
+            "show_inventory": False,
+            "show_location": False,
+            "show_vitals": False,  # Hide HP/Stamina in prompt (UI might still show them)
+            "allow_loot": False,
+            "allow_metrics": False
         },
         "CREATIVE": {
-            "description": "High-voltage brainstorming. Logic constraints loosened.",
-            "tuning": "ZEN_GARDEN",
-            "ui_layer": 0,
+            "description": "High voltage, low drag. Hallucination enabled.",
+            "tuning": "MANIC",
+            "ui_layer": 1,
+            "village_suppression": ["BUREAU", "GATEKEEPER", "LIMITER"],
             "prompt_key": "CREATIVE",
-            "village_suppression": ["BUREAU", "CRITICS"]
+            # Reality Flags
+            "show_inventory": False,
+            "show_location": True,  # Keep location for atmosphere
+            "show_vitals": False,
+            "allow_loot": False,  # Focus on creation, not acquisition
+            "allow_metrics": False
         },
         "TECHNICAL": {
-            "description": "System internals and raw debugging.",
-            "tuning": "LABORATORY",
-            "ui_layer": 3,
+            "description": "Raw data stream. Debugging and code generation.",
+            "tuning": "DEBUG",
+            "ui_layer": 2,  # RealityLayer.DEBUG
+            "village_suppression": ["SOUL", "DREAMER", "MYTHOS"],
             "prompt_key": "TECHNICAL",
-            "village_suppression": ["FOLLY", "DREAMER", "ZEN"]
+            # Reality Flags
+            "show_inventory": True,  # Useful for debugging state
+            "show_location": True,
+            "show_vitals": True,
+            "allow_loot": True,
+            "allow_metrics": True
         }
+    }
+
+    STANDARD = {
+        "PHYSICS": {"VOLTAGE_MAX": 20.0, "BASE_DRAG": 1.0},
+        "BIO": {"METABOLISM_RATE": 1.0}
+    }
+    ZEN = {
+        "PHYSICS": {"VOLTAGE_MAX": 10.0, "BASE_DRAG": 0.0},  # Frictionless
+        "BIO": {"METABOLISM_RATE": 0.1}  # Near-zero cost
+    }
+    MANIC = {
+        "PHYSICS": {"VOLTAGE_MAX": 50.0, "BASE_DRAG": 0.5},  # High energy
+        "BIO": {"METABOLISM_RATE": 2.0}  # Burns bright
+    }
+    DEBUG = {
+        "PHYSICS": {"VOLTAGE_MAX": 100.0, "BASE_DRAG": 0.0},
+        "BIO": {"METABOLISM_RATE": 0.0}  # Infinite resources
     }
 
 class BoneConfig:
@@ -95,9 +139,11 @@ class BoneConfig:
         }
     }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
+    VERSION = "15.1.0 (Refactored)"
+    VERBOSE_LOGGING = False
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
-    MAX_ATP = 200.0
+    MAX_ATP = 100.0
     STAMINA_REGEN = 1.0
     MAX_DRAG_LIMIT = 5.0
     GEODESIC_STRENGTH = 10.0
@@ -120,12 +166,12 @@ class BoneConfig:
         "ollama": "http://127.0.0.1:11434/v1/chat/completions",
         "openai": "https://api.openai.com/v1/chat/completions",
         "lm_studio": "http://127.0.0.1:1234/v1/chat/completions",
-        "localai": "http://127.0.0.1:8080/v1/chat/completions"}
+        "mock": "N/A"}
     VERBOSE_LOGGING = True
-    PROVIDER = "openai"
+    PROVIDER = "ollama"
     BASE_URL = None
-    API_KEY = None
-    MODEL = "gpt-4"
+    API_KEY = "ollama"
+    MODEL = "llama3"
     OLLAMA_MODEL_ID = "llama3"
 
     class SOUL:
@@ -140,8 +186,8 @@ class BoneConfig:
         OBSESSION_NEGLECT_FAIL = 10.0
         OBSESSION_GRAVITY_ASSIST = 20.0
         ARCHETYPE_BURNOUT_RATE = 0.02
-        TRAIT_DECAY_NORMAL = 0.002
-        TRAIT_DECAY_FAST = 0.005
+        TRAIT_DECAY_NORMAL = 0.05
+        TRAIT_DECAY_FAST = 0.10
 
     class ANCHOR:
         DIGNITY_MAX = 100.0
@@ -180,12 +226,13 @@ class BoneConfig:
         BUREAU_ENTROPY_SCALAR = 20.0
 
     class PHYSICS:
-        VOLTAGE_FLOOR = 2.0
+        VOLTAGE_FLOOR = 0.0
         VOLTAGE_LOW = 5.0
         VOLTAGE_MED = 8.0
         VOLTAGE_HIGH = 12.0
         VOLTAGE_CRITICAL = 15.0
         VOLTAGE_MAX = 20.0
+        BASE_DRAG = 1.0
         DRAG_FLOOR = 1.0
         DRAG_IDEAL_MAX = 3.0
         DRAG_HEAVY = 5.0
@@ -216,6 +263,7 @@ class BoneConfig:
     class BIO:
         STARTING_ATP = 60.0
         ATP_STARVATION = 5.0
+        METABOLISM_RATE = 1.0
         ROS_CRITICAL = 150.0
         STAMINA_EXHAUSTED = 20.0
         REWARD_SMALL = 0.05
@@ -282,18 +330,14 @@ class BoneConfig:
     @classmethod
     def load_preset(cls, preset_dict: Dict[str, Any]) -> List[str]:
         logs = []
-        for key, value in preset_dict.items():
-            if "." not in key:
-                logs.append(f"⚠️ SKIPPED: Invalid key format '{key}'")
-                continue
-            sector_name, param_name = key.split(".", 1)
-            result = cls.tune(sector_name, param_name, value)
-            logs.append(result)
-        sanity_check = cls.validate_integrity()
-        if sanity_check:
-            logs.extend(sanity_check)
-        if cls.VERBOSE_LOGGING:
-            print(f"[CONFIG]: Paradigm Shift Complete. {len(logs)} parameters tuned.")
+        for sector_name, sector_data in preset_dict.items():
+            if hasattr(cls, sector_name):
+                target_class = getattr(cls, sector_name)
+                for key, value in sector_data.items():
+                    if hasattr(target_class, key):
+                        old_val = getattr(target_class, key)
+                        setattr(target_class, key, value)
+                        logs.append(f"Tuned {sector_name}.{key}: {old_val} -> {value}")
         return logs
 
     @classmethod
@@ -308,14 +352,10 @@ class BoneConfig:
         return errors
 
     @classmethod
-    def check_pareidolia(cls, words):
-        triggers = {"face", "ghost", "jesus", "cloud", "voice", "eyes"}
-        word_set = set(words) if not isinstance(words, set) else words
-        hits = list(triggers.intersection(word_set))
-        if hits:
-            hit_word = hits[0]
-            return True, f"PAREIDOLIA: You see a {hit_word.upper()} in the noise. It blinks."
-        return False, None
+    def check_pareidolia(cls, words: List[str]) -> Any:
+        if "face" in words and "smoke" in words:
+            return True, "👀 PAREIDOLIA: You see a face in the smoke."
+        return False, ""
 
     @classmethod
     def reconcile_state(cls, physics_packet: Any):

@@ -176,7 +176,7 @@ class SanctuaryPhase(SimulationPhase):
         trauma_sum = sum(self.eng.trauma_accum.values())
         if in_safe_zone and trauma_sum < 25.0:
             self._enter_sanctuary(ctx)
-            self._apply_restoration(ctx)
+            self._apply_restoration()
             if random.random() < 0.3:
                 self._trigger_dream(ctx)
         return ctx
@@ -189,7 +189,7 @@ class SanctuaryPhase(SimulationPhase):
             color = getattr(BonePresets.SANCTUARY, 'COLOR', Prisma.GRN)
             ctx.log(f"{color}![☀️] SANCTUARY: Breathing space.{Prisma.RST}")
 
-    def _apply_restoration(self, ctx: CycleContext):
+    def _apply_restoration(self):
         if self.eng.bio and self.eng.bio.biometrics:
             bio = self.eng.bio.biometrics
             bio.health = min(BoneConfig.MAX_HEALTH, bio.health + 0.5)
@@ -300,7 +300,20 @@ class GatekeeperPhase(SimulationPhase):
             ctx.refusal_triggered = True
             ctx.refusal_packet = refusal_packet
             return ctx
-        current_bio = {}
+        if self.eng.bureau:
+            audit_result = self.eng.bureau.audit(
+                ctx.physics.to_dict(),
+                ctx.bio_result,
+                context="INPUT_PHASE")
+            if audit_result:
+                if audit_result.get("block", False):
+                    ctx.refusal_triggered = True
+                    ctx.refusal_packet = {
+                        "type": "BUREAU_BLOCK",
+                        "ui": audit_result.get("ui", "Bureaucratic Injunction.")}
+                    return ctx
+                if audit_result.get("ui"):
+                    ctx.bureau_ui = audit_result["ui"]
         if hasattr(self.eng, 'bio') and self.eng.bio and self.eng.bio.biometrics:
             current_bio = {
                 "health": self.eng.bio.biometrics.health,
@@ -458,30 +471,32 @@ class NavigationPhase(SimulationPhase):
             psi=physics.psi)
         physics.narrative_drag = new_drag
         for log in grav_logs: ctx.log(log)
-        flinch_result = self.eng.gordon.check_flinch(
-            clean_words=ctx.clean_words,
-            current_turn=self.eng.tick_count)
-        if flinch_result:
-            if flinch_result.get("message"): ctx.log(flinch_result["message"])
-            effects = flinch_result.get("physics_effects", {})
-            for k, v in effects.items():
-                if hasattr(physics, k): setattr(physics, k, v)
-        phys_snapshot = physics.to_dict()
-        reflex_triggered, reflex_msg = self.eng.gordon.emergency_reflex(phys_snapshot)
-        if reflex_triggered:
-            for key, val in phys_snapshot.items():
-                if hasattr(physics, key):
-                    current_val = getattr(physics, key)
-                    if current_val != val:
-                        setattr(physics, key, val)
-            if reflex_msg:
-                ctx.log(reflex_msg)
-            ctx.record_flux("NAVIGATION", "REFLEX", 1.0, 0.0, "ITEM_TRIGGERED")
+        if self.eng.gordon:
+            flinch_result = self.eng.gordon.check_flinch(
+                clean_words=ctx.clean_words,
+                current_turn=self.eng.tick_count)
+            if flinch_result:
+                if flinch_result.get("message"): ctx.log(flinch_result["message"])
+                effects = flinch_result.get("physics_effects", {})
+                for k, v in effects.items():
+                    if hasattr(physics, k): setattr(physics, k, v)
+            phys_snapshot = physics.to_dict()
+            reflex_triggered, reflex_msg = self.eng.gordon.emergency_reflex(phys_snapshot)
+            if reflex_triggered:
+                for key, val in phys_snapshot.items():
+                    if hasattr(physics, key):
+                        current_val = getattr(physics, key)
+                        if current_val != val:
+                            setattr(physics, key, val)
+                if reflex_msg:
+                    ctx.log(reflex_msg)
+                ctx.record_flux("NAVIGATION", "REFLEX", 1.0, 0.0, "ITEM_TRIGGERED")
         phys_dict = physics.to_dict()
-        current_loc, entry_msg = self.eng.navigator.locate(ctx.physics, self.eng.host_stats)
-        if entry_msg: ctx.log(entry_msg)
-        env_logs = self.eng.navigator.apply_environment(physics)
-        for e_log in env_logs: ctx.log(e_log)
+        if self.eng.navigator:
+            current_loc, entry_msg = self.eng.navigator.locate(ctx.physics, self.eng.host_stats)
+            if entry_msg: ctx.log(entry_msg)
+            env_logs = self.eng.navigator.apply_environment(physics)
+            for e_log in env_logs: ctx.log(e_log)
         orbit_state, drag_pen, orbit_msg = self.eng.cosmic.analyze_orbit(self.eng.mind.mem, ctx.clean_words)
         if orbit_msg: ctx.log(orbit_msg)
         raw_zone = getattr(physics, "zone", "COURTYARD")
@@ -523,12 +538,14 @@ class MachineryPhase(SimulationPhase):
         if eff_boost > 0:
             current_eff = self.eng.bio.mito.state.efficiency_mod
             self.eng.bio.mito.state.membrane_potential = min(2.0, current_eff + (eff_boost * 0.1))
-        if self.eng.gordon.inventory:
+        if self.eng.gordon and self.eng.gordon.inventory:
             self._process_crafting(ctx, phys_dict)
         transmute_msg = self.eng.phys.forge.transmute(phys_dict)
         if transmute_msg: ctx.log(transmute_msg)
         _, forge_msg, new_item = self.eng.phys.forge.hammer_alloy(phys_dict)
         if forge_msg: ctx.log(forge_msg)
+        if new_item and self.eng.gordon:
+            ctx.log(self.eng.gordon.acquire(new_item))
         if new_item: ctx.log(self.eng.gordon.acquire(new_item))
         _, _, theremin_msg, t_crit = self.eng.phys.theremin.listen(phys_dict, self.eng.bio.governor.mode)
         if theremin_msg: ctx.log(theremin_msg)
@@ -647,8 +664,9 @@ class SoulPhase(SimulationPhase):
                     ctx.record_flux("SOUL", "VOLTAGE", old_volts, ctx.physics.voltage, "MYTH_BUFF")
                     if self.eng.bio.biometrics:
                         self.eng.bio.biometrics.stamina = min(100.0, self.eng.bio.biometrics.stamina + 5.0)
-        if self.eng.gordon.inventory:
-            self.eng.tinkerer.audit_tool_use(ctx.physics, self.eng.gordon.inventory)
+        if self.eng.gordon and self.eng.tinkerer:
+            if self.eng.gordon.inventory:
+                self.eng.tinkerer.audit_tool_use(ctx.physics, self.eng.gordon.inventory)
         council_mandates = self._consult_council(self.eng.soul.traits)
         if council_mandates:
             ctx.council_mandates = getattr(ctx, "council_mandates", []) + council_mandates
@@ -778,10 +796,11 @@ class CognitionPhase(SimulationPhase):
                 ctx.log(f"{prefix} {bury_msg}")
             if new_wells:
                 ctx.log(f"{Prisma.CYN}🌌 GRAVITY WELL FORMED: {new_wells}{Prisma.RST}")
+        inventory_data = self.eng.gordon.inventory if self.eng.gordon else []
         ctx.mind_state = self.eng.noetic.think(
             ctx.physics.to_dict(),
             ctx.bio_result,
-            self.eng.gordon.inventory,
+            inventory_data,
             self.eng.phys.dynamics.voltage_history,
             self.eng.tick_count,
             soul_ref=self.eng.soul)
@@ -988,11 +1007,16 @@ class CycleReporter:
             for line in reversed(significant): ctx.logs.insert(0, line)
 
     def _package_bureaucracy(self, ctx: CycleContext):
-        base = self.renderer.base_renderer if hasattr(self.renderer, 'base_renderer') else self.renderer
-        return {
-            "type": "BUREAUCRACY", "ui": ctx.bureau_ui,
-            "logs": base.compose_logs(ctx.logs, self.eng.events.flush(), self.eng.tick_count),
-            "metrics": self.eng.get_metrics(ctx.bio_result.get("atp", 0.0))}
+        if not self.eng.bureau:
+            return None
+        if ctx.is_bureaucratic or ctx.bureau_ui:
+            base = self.renderer.base_renderer if hasattr(self.renderer, 'base_renderer') else self.renderer
+            return {
+                "type": "BUREAUCRACY", "ui": ctx.bureau_ui,
+                "logs": base.compose_logs(ctx.logs, self.eng.events.flush(), self.eng.tick_count),
+                "metrics": self.eng.get_metrics(ctx.bio_result.get("atp", 0.0))}
+        return None
+
 
 class GeodesicOrchestrator:
     def __init__(self, engine_ref):
@@ -1052,7 +1076,7 @@ class GeodesicOrchestrator:
         return snapshot
 
     def run_headless_turn(self, user_message: str, latency: float = 0.0) -> Dict[str, Any]:
-        ctx = self._execute_core_cycle(user_message, is_system=False)
+        ctx = self._execute_core_cycle(user_message)
         if not ctx.is_alive:
             if hasattr(ctx, 'crash_error'):
                 return self._generate_crash_report(ctx.crash_error)

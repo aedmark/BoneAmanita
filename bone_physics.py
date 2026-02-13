@@ -538,9 +538,9 @@ class ItemPhysics:
         voltage = physics.get("voltage", 0.0)
         limit = getattr(BoneConfig.INVENTORY, "CONDUCTIVE_THRESHOLD", 20.0)
 
-        if voltage > limit:
+        if voltage >= limit:
             for item in inventory_data:
-                if "CONDUCTIVE" in item.get("passive_traits", []):
+                if "CONDUCTIVE_HAZARD" in item.get("passive_traits", []):
                     damage = (voltage - limit) * 0.5
                     logs.append(
                         f"{Prisma.RED}⚡ CONDUCTIVE HAZARD: {item['name']} acts as a lightning rod! (-{damage:.1f} HP){Prisma.RST}")

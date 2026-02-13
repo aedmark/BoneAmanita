@@ -1,41 +1,57 @@
-""" bone_gui.py - The Visual Cortex (Renderer Library) """
+""" bone_gui.py - The Visual Cortex (Renderer Library)
+    Refactored for Multi-Modal UX
+"""
 
 from typing import Dict, List, Any, Tuple
 from bone_core import Prisma
-
-
 
 class Projector:
     def __init__(self):
         self.width = 60
 
-    def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1) -> str:
+    def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1, labels: Dict = None) -> str:
+        if not labels: labels = {"HP": "HP", "STM": "STM"}
+
         physics = physics_ctx.get("physics", {})
-        status_line = self._render_vital_strip(data_ctx, mind_ctx)
-        physics_line = self._render_physics_strip(physics, data_ctx.get("vectors", {}))
+        status_line = self._render_vital_strip(data_ctx, mind_ctx, labels)
+
+        physics_line = ""
+        if labels.get("SHOW_PHYSICS", True):
+            physics_line = "\n" + self._render_physics_strip(physics, data_ctx.get("vectors", {}))
+
         zone = physics.get("zone", "UNKNOWN")
         lens = mind_ctx[0] if mind_ctx else "RAW"
-        depth_map = {0: "TERMINAL", 1: "SIM", 2: "VILLAGE", 3: "DEBUG", 4: "DEEP_CX"}
-        depth_label = depth_map.get(reality_depth, "UNKNOWN")
+
+        depth_map = {0: "TERM", 1: "SIM", 2: "VIL", 3: "DBG", 4: "DEEP"}
+        depth_label = depth_map.get(reality_depth, "?")
         depth_marker = f"{Prisma.VIOLET}[D{reality_depth}:{depth_label}]{Prisma.RST}"
+
         context_line = f"{Prisma.GRY}📍 {zone} // 👁️ {lens}{Prisma.RST} // {depth_marker}"
         div = f"{Prisma.GRY}{'─' * 60}{Prisma.RST}"
-        return f"{status_line}\n{physics_line}\n{context_line}\n{div}"
+        return f"{status_line}{physics_line}\n{context_line}\n{div}"
 
-    def _render_vital_strip(self, data: Dict, mind: tuple) -> str:
+    def _render_vital_strip(self, data: Dict, mind: tuple, labels: Dict) -> str:
         health = data.get("health", 100)
         stamina = data.get("stamina", 100)
         atp = data.get("bio", {}).get("atp") or 0
         dignity = data.get("dignity", 100)
+
         hp_bar = self._mini_bar(health, 100, 4, Prisma.RED)
         stm_bar = self._mini_bar(stamina, 100, 4, Prisma.GRN)
+
         dig_color = Prisma.VIOLET if dignity > 50 else Prisma.GRY
         dig_icon = "✦" if dignity > 80 else "✧"
+
         raw_role = mind[2] if mind and len(mind) > 2 else None
         role = str(raw_role).upper() if raw_role else "OBSERVER"
+        if len(role) > 15: role = role[:12] + "..."
+
+        l_hp = labels.get("HP", "HP")
+        l_stm = labels.get("STM", "STM")
+
         return (
             f"{Prisma.WHT}♦ {role}{Prisma.RST}   "
-            f"HP {hp_bar}  STM {stm_bar}  "
+            f"{l_hp} {hp_bar}  {l_stm} {stm_bar}  "
             f"{dig_color}{dig_icon} {int(dignity)}%{Prisma.RST}  "
             f"{Prisma.YEL}ATP {int(atp)}{Prisma.RST}")
 
@@ -88,18 +104,20 @@ class GeodesicRenderer:
         physics = ctx.physics
         bio = ctx.bio_result
         raw_dashboard = self.render_dashboard(ctx)
+
         colored_ui = self.vsl_chroma.modulate(raw_dashboard, physics.get("vector", {}))
+
         if self.strunk_white:
             clean_ui, style_log = self.strunk_white.sanitize(colored_ui)
             if style_log: self._punish_style_crime(style_log)
         else:
             clean_ui = colored_ui
+
         if "The system is listening." in clean_ui:
             clean_ui = clean_ui.replace("The system is listening.", "")
-        if hasattr(self.eng, 'soul'):
-            soul_ui = self.soul_dashboard.render()
-            clean_ui = f"{soul_ui}\n{clean_ui}"
+
         structured_logs = self.compose_logs(ctx.logs, current_events, current_tick)
+
         return {
             "type": "GEODESIC_FRAME",
             "ui": clean_ui,
@@ -110,28 +128,38 @@ class GeodesicRenderer:
         physics = ctx.physics
         mind = ctx.mind_state
         mind_tuple = (mind.get("lens"), mind.get("thought"), mind.get("role"))
+
         bio_data = ctx.bio_result or {}
         if "atp" not in bio_data and hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
             bio_data = bio_data.copy()
             bio_data["atp"] = self.eng.bio.mito.state.atp_pool
+
         data_ctx = {
             "health": self.eng.health,
             "stamina": self.eng.stamina,
             "bio": bio_data,
             "dignity": getattr(self.eng.soul.anchor, 'dignity_reserve', 100.0) if hasattr(self.eng, 'soul') else 100.0,
             "vectors": physics.get("vector", {})}
-        mode = self.eng.config.get("boot_mode", "ADVENTURE")
+
+        mode = self.eng.config.get("boot_mode", "ADVENTURE").upper()
+        current_depth = 1
+        if hasattr(ctx, "reality_stack"):
+            current_depth = ctx.reality_stack.current_depth
+
         if mode == "TECHNICAL":
             return self.projector.render_technical(physics, data_ctx, mind_tuple)
-        elif mode == "CREATIVE":
-            return f"{Prisma.MAG}⚡ CREATIVE FLOW // VOLTAGE UNLOCKED{Prisma.RST}"
+
         elif mode == "CONVERSATION":
-            role = mind_tuple[2] if mind_tuple[2] else "System"
-            return f"{Prisma.GRN}♦ {role}{Prisma.RST} is listening..."
+            labels = {"HP": "LINK", "STM": "SYNC", "SHOW_PHYSICS": False}
+            return self.projector.render(
+                {"physics": physics}, data_ctx, mind_tuple, current_depth, labels)
+
+        elif mode == "CREATIVE":
+            labels = {"HP": "INT", "STM": "FLOW", "SHOW_PHYSICS": True}
+            return self.projector.render(
+                {"physics": physics}, data_ctx, mind_tuple, current_depth, labels)
+
         else:
-            current_depth = 1
-            if hasattr(ctx, "reality_stack"):
-                current_depth = ctx.reality_stack.current_depth
             return self.projector.render(
                 {"physics": physics},
                 data_ctx,
@@ -233,7 +261,7 @@ class TruthRenderer(GeodesicRenderer):
                     f"{Prisma.paint('⚠️ ADVERSARIAL SIMULATION ACTIVE', 'Y')}\n"
                     f"Cost of Blandness: {trauma_cost:.1f} Trauma Units\n"
                     f"Active Conflicts:\n" + "\n".join([f"  > {d}" for d in dissent]) + "\n"
-                                                                                        f"---------------------\n{ui_text}\n")
+                    f"---------------------\n{ui_text}\n")
         elif self.dial_setting == AmbiguityDial.PALIMPSEST:
             drafts = cortex_packet.get("drafts", [])
             layer_view = ""

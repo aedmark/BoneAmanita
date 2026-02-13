@@ -9,10 +9,10 @@ import random
 import math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from bone_core import EventBus, LoreManifest, TelemetryService, TheLore
+from bone_core import EventBus, LoreManifest, TelemetryService
 from bone_lexicon import LexiconService
 from bone_types import Prisma, DecisionCrystal
-from bone_config import BoneConfig
+from bone_config import BoneConfig, BonePresets
 from bone_symbiosis import SymbiosisManager
 
 @dataclass
@@ -330,23 +330,35 @@ class PromptComposer:
 
     def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None, mood_override: str = "", consultant: Any = None) -> str:
         modifiers = self._normalize_modifiers(modifiers)
+
+        mode_settings = state.get("meta", {}).get("mode_settings", {})
+        show_inventory = mode_settings.get("show_inventory", True)
+        show_location = mode_settings.get("show_location", True)
+        show_vitals = mode_settings.get("show_vitals", True)
+
         mind = state.get("mind", {})
         role = mind.get("role", "The Observer")
         driver_directives = mind.get("style_directives", [])
         bio = state.get("bio", {})
         chem = bio.get("chem", {})
+
         mood_note = "Current Biology: Neutral."
-        if mood_override:
-            mood_note = f"Current Biology: {mood_override}"
+        if show_vitals:
+            if mood_override:
+                mood_note = f"Current Biology: {mood_override}"
+            else:
+                if chem.get("ADR", 0) > 0.6: mood_note = "Current Biology: High Alert / Adrenaline"
+                if chem.get("COR", 0) > 0.6: mood_note = "Current Biology: Defensive / Anxious"
+                if chem.get("DOP", 0) > 0.6: mood_note = "Current Biology: Curious / Manic"
+                if chem.get("SER", 0) > 0.6: mood_note = "Current Biology: Zen / Lucid"
         else:
-            if chem.get("ADR", 0) > 0.6: mood_note = "Current Biology: High Alert / Adrenaline"
-            if chem.get("COR", 0) > 0.6: mood_note = "Current Biology: Defensive / Anxious"
-            if chem.get("DOP", 0) > 0.6: mood_note = "Current Biology: Curious / Manic"
-            if chem.get("SER", 0) > 0.6: mood_note = "Current Biology: Zen / Lucid"
+            mood_note = ""
+
         user_name = state.get('user_profile', {}).get('name', 'User')
         reality_directive = state.get("reality_directive", "")
         style_notes = [f"Role: {role} for {user_name}."]
-        style_notes.append(mood_note)
+
+        if mood_note: style_notes.append(mood_note)
         style_notes.extend(self.active_template["directives"])
         style_notes.extend(self.active_template["style_guide"])
         if self.active_template["inventory_rules"]:
@@ -361,28 +373,37 @@ class PromptComposer:
             style_notes.insert(0, f"*** PRIORITY OVERRIDE: {reality_directive} ***")
         if modifiers.get("soften"):
             style_notes.append("TONE OVERRIDE: Be warm, helpful, and clear.")
-        loc = state.get('world', {}).get('orbit', ['{seed}'])[0]
-        loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
-        inv_str = "Hands: Empty"
-        if modifiers["include_inventory"]:
+
+        loc_str = ""
+        if show_location:
+            loc = state.get('world', {}).get('orbit', ['{seed}'])[0]
+            loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
+            loc_str = f"CURRENT LOCATION: {loc}\nENVIRONMENT ANCHOR: {loci_desc}\n"
+
+        inv_str = ""
+        if show_inventory and modifiers["include_inventory"]:
             inv = state.get("inventory", [])
             if inv:
                 items = ", ".join(inv)
-                inv_str = f"Belt (Accessible): {items}"
+                inv_str = f"INVENTORY (Belt): {items}\n"
+            else:
+                inv_str = "INVENTORY: Empty\n"
+
         history = state.get("dialogue_history", [])
         history_str = "\n".join(history[-10:])
+
         system_injection = ""
         if ballast:
             system_injection = (
                 f"\n*** SYSTEM OVERRIDE: SAFETY PROTOCOLS ACTIVE. ***\n"
                 f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. ***\n")
+
         final_prompt = (
             f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
             f"=== SHARED REALITY ===\n"
-            f"CURRENT LOCATION: {loc}\n"
-            f"ENVIRONMENT ANCHOR: {loci_desc}\n"
-            f"INVENTORY: {inv_str}\n\n"
-            f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
+            f"{loc_str}"
+            f"{inv_str}"
+            f"\n=== RECENT DIALOGUE ===\n{history_str}\n\n"
             f"=== PARTNER INPUT ===\n{user_name}: {self._sanitize(user_query)}\n"
             f"{system_injection}"
             f"Entity Response:")
@@ -477,6 +498,7 @@ class TheCortex:
         self.spotlight = NarrativeSpotlight()
         self.validator = ResponseValidator()
         self.ballast_active = False
+        self.active_mode = "ADVENTURE"
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("AIRSTRIKE", lambda p: setattr(self, 'ballast_active', True))
 
@@ -493,7 +515,12 @@ class TheCortex:
             bio=getattr(engine_ref, 'bio', None),
             host_stats=getattr(engine_ref, 'host_stats', None),
             village=getattr(engine_ref, 'village', None))
-        return cls(services, llm_client)
+
+        instance = cls(services, llm_client)
+        instance.active_mode = engine_ref.config.get("boot_mode", "ADVENTURE").upper()
+        if instance.active_mode not in BonePresets.MODES:
+            instance.active_mode = "ADVENTURE"
+        return instance
 
     def _update_history(self, user_text: str, system_text: str):
         self.dialogue_buffer.append(f"User: {user_text} | System: {system_text}")
@@ -520,6 +547,9 @@ class TheCortex:
         return clean_text.strip(), new_loot, lost_loot
 
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
+        mode_settings = BonePresets.MODES.get(self.active_mode, BonePresets.MODES["ADVENTURE"])
+        allow_loot = mode_settings.get("allow_loot", True)
+
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
         is_boot_sequence = "SYSTEM_BOOT:" in user_input
@@ -548,13 +578,25 @@ class TheCortex:
             consultant=self.consultant)
         start_time = time.time()
         raw_resp = self.llm.generate(final_prompt, llm_params)
-        final_text, new_loot, lost_loot = self._harvest_loot(raw_resp)
+
+        if allow_loot:
+            final_text, new_loot, lost_loot = self._harvest_loot(raw_resp)
+        else:
+            final_text = raw_resp
+            new_loot = []
+            lost_loot = []
+
         if is_boot_sequence:
             new_loot = []
             lost_loot = []
         else:
-            new_loot = self._check_consent(user_input, new_loot)
-        inv_logs = self._process_inventory_changes(new_loot, lost_loot)
+            if allow_loot:
+                new_loot = self._check_consent(user_input, new_loot)
+
+        inv_logs = []
+        if allow_loot:
+            inv_logs = self._process_inventory_changes(new_loot, lost_loot)
+
         self._log_telemetry(final_prompt, final_text, full_state, sim_result)
         self.learn_from_response(final_text)
         val_res = self.validator.validate(final_text, full_state)
@@ -648,6 +690,9 @@ class TheCortex:
             tinkerer = getattr(self.svc.village, 'tinkerer', None)
             if tinkerer:
                 village_data["tinkerer"] = tinkerer.to_dict() if hasattr(tinkerer, 'to_dict') else {}
+
+        mode_settings = BonePresets.MODES.get(self.active_mode, BonePresets.MODES["ADVENTURE"])
+
         full_state = {
             "bio": bio,
             "physics": phys,
@@ -657,7 +702,9 @@ class TheCortex:
             "village": village_data,
             "user_profile": {"name": "Traveler"},
             "meta": {
-                "timestamp": time.time()}}
+                "timestamp": time.time(),
+                "mode_settings": mode_settings
+            }}
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             anchor_text = self.svc.symbiosis.generate_anchor(full_state)
             full_state["reality_directive"] = anchor_text

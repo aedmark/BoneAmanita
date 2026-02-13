@@ -31,7 +31,12 @@
       "2. MEMORY: Reference previous topics naturally.",
       "3. FORMATTING: Use simple paragraphs. No headers, no bold items."
     ],
-    "inventory_rules": []
+    "inventory_rules": [
+      "=== METAPHORICAL STATE ===",
+      "1. OBJECT PERMANENCE: FALSE. Do not track physical items.",
+      "2. CONSTRAINT: If the user asks for an item, treat it as a concept, not loot.",
+      "3. ANTI-PATTERN: Never output [[LOOT]] tags in this mode."
+    ]
   },
   "CREATIVE": {
     "directives": [
@@ -45,7 +50,11 @@
       "2. SUGGESTION: Offer 3 distinct paths or variations for every user idea.",
       "3. FORMATTING: Use bullet points and lists to organize concepts."
     ],
-    "inventory_rules": []
+    "inventory_rules": [
+      "=== DREAM LOGIC ===",
+      "1. FLUIDITY: Items can appear and disappear based on narrative need.",
+      "2. PERMISSION: You may invent items freely without 'looting' mechanics."
+    ]
   },
   "TECHNICAL": {
     "directives": [
@@ -59,6 +68,10 @@
       "2. OUTPUT: Explain *why* the engine made a decision based on the logs.",
       "3. FORMATTING: Use code blocks for data."
     ],
-    "inventory_rules": []
+    "inventory_rules": [
+      "=== STATE ANALYSIS ===",
+      "1. FORMAT: Treat inventory as a JSON array or data structure.",
+      "2. FOCUS: Analyze properties (weight, value, entropy) rather than description."
+    ]
   }
 }

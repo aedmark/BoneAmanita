@@ -1,4 +1,6 @@
-""" bone_app.py - The Glass Terminal Interface (Refactored v2) """
+""" bone_app.py - The Glass Terminal Interface (Refactored v2.1)
+    Enhanced with Multi-Modal Sidebar Logic
+"""
 
 import streamlit as st
 import time
@@ -75,6 +77,7 @@ def clean_engine_output(raw_text):
     for line in lines:
         if "SOUL:" in line and "DRIVER:" in line: continue
         if "HP " in line and "STM " in line and "ATP" in line: continue
+        if "HP " in line and "LINK " in line: continue
         if "⚡" in line and "⚓" in line: continue
         if "📍" in line and "//" in line: continue
         filtered_lines.append(line)
@@ -102,9 +105,12 @@ def format_log_entry(log_str):
     return f"🔹 {clean}"
 
 def render_dashboard(eng_ref):
+    mode = getattr(eng_ref, "boot_mode", "ADVENTURE")
+
     with st.sidebar:
         st.title("💀 BONEAMANITA")
-        st.caption(f"Kernel: {getattr(eng_ref, 'kernel_hash', 'UNKNOWN')}")
+        st.caption(f"Kernel: {getattr(eng_ref, 'kernel_hash', 'UNKNOWN')} | Mode: {mode}")
+
         st.divider()
         st.subheader("IDENTITY")
         if hasattr(eng_ref, 'soul') and eng_ref.soul:
@@ -118,54 +124,73 @@ def render_dashboard(eng_ref):
             st.markdown(f"**ARCHETYPE:** `{eng_ref.soul.archetype}`")
             if eng_ref.soul.current_obsession:
                  st.caption(f"Obsession: {eng_ref.soul.current_obsession}")
+
         st.divider()
-        st.subheader("VITALS")
+        st.subheader("STATUS")
+
         hp = eng_ref.health
         stam = eng_ref.stamina
-        atp = 0.0
-        if hasattr(eng_ref, 'bio') and eng_ref.bio and hasattr(eng_ref.bio, 'mito'):
-             atp = eng_ref.bio.mito.state.atp_pool
-        st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.1f}%")
-        st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"STAMINA: {stam:.1f}%")
-        c1, c2 = st.columns(2)
-        c1.metric("ATP", f"{atp:.0f} J")
-        if hasattr(eng_ref, 'bio') and eng_ref.bio and eng_ref.bio.endo:
-            chem = eng_ref.bio.endo.get_state()
-            cor = chem.get("COR", 0.0)
-            c2.metric("CORTISOL", f"{cor:.2f}")
-        st.divider()
-        st.subheader("INVENTORY")
-        if hasattr(eng_ref, 'gordon'):
-            items = eng_ref.gordon.inventory
-            if items:
-                for item in items:
-                    st.markdown(f"```\n{item}\n```")
-            else:
-                st.caption("Pockets Empty.")
+
+        if mode == "CONVERSATION":
+            st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"CONNECTION: {hp:.0f}%")
+            st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"PATIENCE: {stam:.0f}%")
+        elif mode == "CREATIVE":
+            st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.0f}%")
+            st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"FLOW STATE: {stam:.0f}%")
         else:
-            st.error("Inventory Offline")
-        st.divider()
-        st.subheader("PHYSICS")
-        volts = 0.0
-        drag = 0.0
-        zone = "VOID"
-        if eng_ref.phys and hasattr(eng_ref.phys, 'observer') and eng_ref.phys.observer.last_physics_packet:
-            packet = eng_ref.phys.observer.last_physics_packet
-            if isinstance(packet, dict):
-                volts = packet.get("voltage", 0.0)
-                drag = packet.get("narrative_drag", 0.0)
-                zone = packet.get("zone", "VOID")
+            st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.1f}%")
+            st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"STAMINA: {stam:.1f}%")
+
+            atp = 0.0
+            if hasattr(eng_ref, 'bio') and eng_ref.bio and hasattr(eng_ref.bio, 'mito'):
+                 atp = eng_ref.bio.mito.state.atp_pool
+            c1, c2 = st.columns(2)
+            c1.metric("ATP", f"{atp:.0f} J")
+            if hasattr(eng_ref, 'bio') and eng_ref.bio and eng_ref.bio.endo:
+                chem = eng_ref.bio.endo.get_state()
+                cor = chem.get("COR", 0.0)
+                c2.metric("STRESS", f"{cor:.2f}")
+
+        if mode not in ["CONVERSATION", "CREATIVE"]:
+            st.divider()
+            st.subheader("INVENTORY")
+            if hasattr(eng_ref, 'gordon') and eng_ref.gordon:
+                items = eng_ref.gordon.inventory
+                if items:
+                    for item in items:
+                        st.markdown(f"```\n{item}\n```")
+                else:
+                    st.caption("Pockets Empty.")
             else:
-                volts = getattr(packet, "voltage", 0.0)
-                drag = getattr(packet, "narrative_drag", 0.0)
-                zone = getattr(packet, "zone", "VOID")
-        c3, c4 = st.columns(2)
-        c3.metric("VOLTAGE", f"{volts:.1f}v", delta="High" if volts > 15 else "Normal")
-        c4.metric("DRAG", f"{drag:.1f}")
-        st.info(f"📍 ZONE: {zone}")
+                st.warning("Inventory Module Sleeping.")
+
+        if mode != "CONVERSATION":
+            st.divider()
+            st.subheader("PHYSICS")
+            volts = 0.0
+            drag = 0.0
+            zone = "VOID"
+            if eng_ref.phys and hasattr(eng_ref.phys, 'observer') and eng_ref.phys.observer.last_physics_packet:
+                packet = eng_ref.phys.observer.last_physics_packet
+                if isinstance(packet, dict):
+                    volts = packet.get("voltage", 0.0)
+                    drag = packet.get("narrative_drag", 0.0)
+                    zone = packet.get("zone", "VOID")
+                else:
+                    volts = getattr(packet, "voltage", 0.0)
+                    drag = getattr(packet, "narrative_drag", 0.0)
+                    zone = getattr(packet, "zone", "VOID")
+            c3, c4 = st.columns(2)
+            c3.metric("VOLTAGE", f"{volts:.1f}v", delta="High" if volts > 15 else "Normal")
+            c4.metric("DRAG", f"{drag:.1f}")
+            st.info(f"📍 ZONE: {zone}")
+
         st.divider()
-        st.caption("JOURNAL")
         if "history" in st.session_state and st.session_state.history:
+            if st.button("🗑️ CLEAR HISTORY", use_container_width=True):
+                st.session_state.history = []
+                st.rerun()
+
             md_text = f"# BONEAMANITA SESSION: {getattr(eng_ref, 'kernel_hash', 'UNKNOWN')}\n\n"
             for msg in st.session_state.history:
                 role = msg["role"].upper()
@@ -176,8 +201,8 @@ def render_dashboard(eng_ref):
                 data=md_text,
                 file_name=f"chronicle_{int(time.time())}.md",
                 mime="text/markdown",
-                use_container_width=True,
-                help="Download the full story as a Markdown file.")
+                use_container_width=True)
+
         if st.button("💾 SAVE & HIBERNATE", use_container_width=True):
             with st.spinner("Compiling Spore..."):
                 eng_ref.save_checkpoint(history=st.session_state.history)
@@ -185,6 +210,7 @@ def render_dashboard(eng_ref):
                 st.success("System State Saved. Close terminal.")
                 time.sleep(2)
                 st.stop()
+
 if "history" not in st.session_state:
     st.session_state.history = []
 

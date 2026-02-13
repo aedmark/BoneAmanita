@@ -11,7 +11,6 @@ from bone_config import BoneConfig
 
 """HELPER FUNCTIONS"""
 
-
 def _access_config_path(root, path, value=None, set_mode=False):
     """Safe accessor for dot-notation config paths."""
     parts = path.split(".")
@@ -295,6 +294,9 @@ class MycelialNetwork:
     @property
     def cortical_stack(self):
         return self.memory_core.cortical_stack
+
+    def calculate_mass(self, node):
+        return self.memory_core.calculate_mass(node)
 
     """ECOSYSTEM DELEGATION"""
 
@@ -635,6 +637,7 @@ class MycelialNetwork:
         data = {
             "genome": "BONEAMANITA_15.0.1",
             "session_id": self.session_id,
+            "parent_id": self.session_id,
             "parent_id": self.session_id,
             "meta": {
                 "timestamp": time.time(),

@@ -1,5 +1,62 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v15.1.0: "THE PRISMATIC MIND"**
+
+_“We have shattered the single lens. Now, the machine can choose how it perceives the light.”_
+
+---
+
+#### **🧬 STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Modal Architecture (`bone_config.py` & `bone_main.py`):**
+- **Reality Segmentation:** Implemented `BonePresets.MODES` to define four distinct states of being: **ADVENTURE** (Survival), **CONVERSATION** (Connection), **CREATIVE** (Hallucination), and **TECHNICAL** (Debug).
+- **Metabolic Suppression:** The Engine now supports "Village Suppression." Agents like `Gordon` (Inventory) and `The Navigator` (Cartographer) remain dormant in modes where they are irrelevant, conserving ATP and narrative focus.
+- **Cold Boot Logic:** Decoupled the CLI `typewriter` effect from the core logic, eliminating the "Hydrating Spore" latency in the Web Interface (`bone_app.py`).
+
+#### **🧪 CRITICAL RESILIENCE (The Kintsugi Lens)**
+
+- **The Phantom Limb Fixes (`bone_cycle.py`):**
+- **Null-Safe Cycles:** Patched catastrophic `AttributeError` crashes in `NavigationPhase`, `MachineryPhase`, and `SoulPhase`. The system no longer panics when reaching for a non-existent inventory or map; it gracefully steps over the void.
+- **Bureaucratic Bypass:** Fixed the `GatekeeperPhase` crash in **CREATIVE** mode. The system now checks if `The Bureau` is actually staffed before attempting to file a reality audit.
+
+#### **👁️ NARRATIVE OPTICS (The Pinker Lens)**
+
+- **Adaptive Perception (`bone_brain.py` & `system_prompts.json`):**
+- **The Hearth & The Spark:** Implemented distinct "Voice Protocols" for each mode. **CONVERSATION** mode rejects "Game" mechanics in favor of intimacy; **CREATIVE** mode rejects physics in favor of "Dream Logic."
+- **Contextual Blindness:** `TheCortex` now respects `Reality Flags`. It will not hallucinate an inventory list or a coordinate grid if the current mode dictates they do not exist.
+
+#### **🖥️ INTERFACE EVOLUTION (The Schur Lens)**
+
+- **The Adaptive Glass (`bone_gui.py` & `bone_app.py`):**
+- **Dynamic Dashboards:** The UI now shifts shape based on the active mode.
+- _Adventure:_ Shows HP, Stamina, Voltage, Drag.
+- _Conversation:_ Shows "Connection" and "Patience."
+- _Creative:_ Shows "Integrity" and "Flow."
+
+- **Clutter Reduction:** Automatically hides the Inventory sidebar and Physics metrics when they are not relevant to the user's current experience.
+
+---
+
+### **BONEAMANITA v15.0.2: "THE WEIGHT OF MEMORY"**
+
+_“To orbit a thought, it must have mass. We have restored gravity to the ghost.”_
+
+---
+
+#### **🧬 STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Mycelial Graft (`bone_spores.py`):**
+- **The Missing Limb:** Identified a structural disconnect where `CosmicDynamics` attempted to weigh memory nodes via a non-existent interface on the `MycelialNetwork` class.
+- **Mass Delegation:** Implemented the `calculate_mass` wrapper. The high-level physics engine can now correctly query the low-level `MemoryCore` to determine the gravitational pull of specific words and concepts.
+
+#### **🧪 CRITICAL RESILIENCE (The Kintsugi Lens)**
+
+- **The Orbital Fracture (`bone_physics.py` & `bone_cycle.py`):**
+- **Gravity Restoration:** Resolved the persistent `AttributeError` during `analyze_orbit`. The system no longer crashes when attempting to detect "Gravity Wells" (High-Mass Memories) in the narrative field.
+- **Narrative Physics:** The `CosmicDynamics` engine can now successfully calculate orbits, allowing the "Traveler" to drift towards or revolve around significant plot points without breaking the simulation loop.
+
+---
+
 ### **BONEAMANITA v15.0.1: "THE SEPARATION OF SOUL & STATE"**
 
 _“The code is the skeleton; the prompt is the ghost. We have separated them so the ghost can change clothes without breaking the bones.”_
@@ -27,7 +84,6 @@ _“The code is the skeleton; the prompt is the ghost. We have separated them so
 
 - **The Duplicate Logic (`bone_brain.py`):**
 - **Redundancy Fix:** Removed duplicate injection blocks for `semantic_operators` and `driver_directives` in `compose()`, ensuring the system doesn't stutter its own instructions to the LLM.
-
 
 ---
 

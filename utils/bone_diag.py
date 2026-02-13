@@ -70,8 +70,9 @@ class GrandDiagnostic:
         self.header("PHASE 1: CORE INTEGRITY")
         try:
             self.config["provider"] = "mock"
+            self.config["boot_mode"] = "ADVENTURE"
             self.engine = BoneAmanita(self.config)
-            self.log("Core Engine Booted", "PASS")
+            self.log("Core Engine Booted (Adventure Mode)", "PASS")
 
             def crasher(payload): raise ValueError("Sabotage")
             self.engine.events.subscribe("TEST_CRASH", crasher)
@@ -240,43 +241,72 @@ class GrandDiagnostic:
             self.log(f"Passive Effect Failed. Logs: {logs}", "FAIL")
 
     def phase_9_operating_modes(self):
-        self.header("PHASE 9: OPERATING MODES")
+        self.header("PHASE 9: OPERATING MODES (Multi-Modal)")
+
         try:
             tech_conf = {"user_name": "TEST", "provider": "mock", "boot_mode": "TECHNICAL"}
             eng = BoneAmanita(tech_conf)
-            if BoneConfig.PHYSICS.DRAG_FLOOR == 2.0:
-                self.log("Technical Physics Tuned", "PASS")
+
+            if BoneConfig.PHYSICS.BASE_DRAG == 0.0:
+                self.log("Technical Physics Tuned (Base Drag 0.0)", "PASS")
             else:
-                self.log(f"Technical Physics Failed (Drag: {BoneConfig.PHYSICS.DRAG_FLOOR})", "FAIL")
-            if "ZEN" in eng.suppressed_agents:
-                self.log("Technical Suppression Active", "PASS")
+                self.log(f"Technical Physics Failed (Drag: {BoneConfig.PHYSICS.BASE_DRAG})", "FAIL")
+
+            if "SOUL" in eng.suppressed_agents:
+                self.log("Technical Suppression Active (SOUL)", "PASS")
             else:
-                self.log("Technical Suppression Failed", "FAIL")
+                self.log(f"Technical Suppression Failed (Suppressed: {eng.suppressed_agents})", "FAIL")
         except Exception as e:
             self.log(f"Technical Boot Crash: {e}", "FAIL")
+
+        try:
+            conv_conf = {"user_name": "TEST", "provider": "mock", "boot_mode": "CONVERSATION"}
+            eng = BoneAmanita(conv_conf)
+
+            if eng.gordon is None:
+                self.log("Conversation Mode: Gordon Sleeping (None)", "PASS")
+            else:
+                self.log("Conversation Mode: Gordon Awake (Fail)", "FAIL")
+
+            if "GORDON" in eng.suppressed_agents:
+                self.log("Conversation Suppression List Correct", "PASS")
+        except Exception as e:
+            self.log(f"Conversation Boot Crash: {e}", "FAIL")
+
         try:
             create_conf = {"user_name": "TEST", "provider": "mock", "boot_mode": "CREATIVE"}
-            BoneConfig.load_preset(BonePresets.ZEN_GARDEN)
             eng = BoneAmanita(create_conf)
-            if eng.reality_stack.current_depth == 0:
-                self.log("Creative UI Layer Set", "PASS")
+
+            if "BUREAU" in eng.suppressed_agents and eng.bureau is None:
+                self.log("Creative Mode: Bureau Suppressed", "PASS")
             else:
-                self.log(f"Creative UI Layer Failed (Depth: {eng.reality_stack.current_depth})", "FAIL")
-            if "BUREAU" in eng.suppressed_agents:
-                self.log("Creative Bureau Suppression", "PASS")
-            else:
-                self.log("Creative Bureau Active (Fail)", "FAIL")
+                self.log("Creative Mode: Bureau Active (Fail)", "FAIL")
         except Exception as e:
             self.log(f"Creative Boot Crash: {e}", "FAIL")
+
+    def phase_10_prompt_logic(self):
+        self.header("PHASE 10: PROMPT COMPOSITION")
         try:
-            bad_conf = {"user_name": "TEST", "provider": "mock", "boot_mode": "INVALID_MODE"}
-            eng = BoneAmanita(bad_conf)
-            if "ADVENTURE" in BonePresets.MODES and eng.reality_stack.current_depth == 1:
-                self.log("Invalid Mode Fallback -> Adventure", "PASS")
+            adv_eng = BoneAmanita({"boot_mode": "ADVENTURE", "provider": "mock"})
+            adv_state = adv_eng.cortex.gather_state(adv_eng.cortex.last_physics)
+            adv_prompt = adv_eng.cortex.composer.compose(adv_state, "Test")
+
+            if "INVENTORY" in adv_prompt and "CURRENT LOCATION" in adv_prompt:
+                self.log("Adventure Prompt: Contains Inventory & Location", "PASS")
             else:
-                self.log("Invalid Mode Fallback Failed", "FAIL")
+                self.log("Adventure Prompt: Missing Reality Anchors", "FAIL")
+
+            conv_eng = BoneAmanita({"boot_mode": "CONVERSATION", "provider": "mock"})
+            conv_state = conv_eng.cortex.gather_state(conv_eng.cortex.last_physics)
+            conv_prompt = conv_eng.cortex.composer.compose(conv_state, "Test")
+
+            if "INVENTORY" not in conv_prompt:
+                self.log("Conversation Prompt: Hides Inventory", "PASS")
+            else:
+                self.log("Conversation Prompt: Leaked Inventory", "FAIL")
+
         except Exception as e:
-            self.log(f"Fallback Boot Crash: {e}", "FAIL")
+            self.log(f"Prompt Logic Crash: {e}", "FAIL")
 
     def run(self):
         self.phase_1_core_integrity()
@@ -288,6 +318,7 @@ class GrandDiagnostic:
         self.phase_7_inventory_reflexes()
         self.phase_8_passive_effects()
         self.phase_9_operating_modes()
+        self.phase_10_prompt_logic()
         print(f"\n{Prisma.CYN}=== DIAGNOSTIC COMPLETE ==={Prisma.RST}")
         print(f"PASSED: {self.results['PASS']}")
         print(f"FAILED: {self.results['FAIL']}")
