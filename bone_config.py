@@ -38,24 +38,28 @@ class BonePresets:
             "description": "The classic survival narrative. High immersion.",
             "tuning": "THUNDERDOME",
             "ui_layer": 1,
+            "prompt_key": "ADVENTURE",
             "village_suppression": []
         },
         "CONVERSATION": {
             "description": "Low-friction dialogue. Connection over mechanics.",
             "tuning": "SANCTUARY",
             "ui_layer": 1,
+            "prompt_key": "CONVERSATION",
             "village_suppression": ["GORDON", "DEATH_GEN", "BUREAU"]
         },
         "CREATIVE": {
             "description": "High-voltage brainstorming. Logic constraints loosened.",
             "tuning": "ZEN_GARDEN",
             "ui_layer": 0,
+            "prompt_key": "CREATIVE",
             "village_suppression": ["BUREAU", "CRITICS"]
         },
         "TECHNICAL": {
             "description": "System internals and raw debugging.",
             "tuning": "LABORATORY",
             "ui_layer": 3,
+            "prompt_key": "TECHNICAL",
             "village_suppression": ["FOLLY", "DREAMER", "ZEN"]
         }
     }

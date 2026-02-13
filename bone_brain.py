@@ -315,7 +315,18 @@ class LLMInterface:
 
 class PromptComposer:
     def __init__(self):
-        pass
+        self.active_template = {
+            "directives": ["Directive: Survival mode active."],
+            "style_guide": ["Style: Sensory details."],
+            "inventory_rules": []}
+
+    def load_template(self, template_data: Dict[str, Any]):
+        if not template_data:
+            return
+        self.active_template = {
+            "directives": template_data.get("directives", []),
+            "style_guide": template_data.get("style_guide", []),
+            "inventory_rules": template_data.get("inventory_rules", [])}
 
     def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None, mood_override: str = "", consultant: Any = None) -> str:
         modifiers = self._normalize_modifiers(modifiers)
@@ -332,51 +343,26 @@ class PromptComposer:
             if chem.get("COR", 0) > 0.6: mood_note = "Current Biology: Defensive / Anxious"
             if chem.get("DOP", 0) > 0.6: mood_note = "Current Biology: Curious / Manic"
             if chem.get("SER", 0) > 0.6: mood_note = "Current Biology: Zen / Lucid"
-        reality_directive = state.get("reality_directive", "")
         user_name = state.get('user_profile', {}).get('name', 'User')
-        semantic_ops = state.get("semantic_operators", [])
-        loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
-        scenarios = TheLore.get("scenarios") or {}
-        banned_words = scenarios.get("BANNED_CLICHES", [])
-        hard_bans = ["obsidian", "dust motes", "motes", "neon", "eldritch", "pulsing veins"]
-        for b in hard_bans:
-            if b not in banned_words: banned_words.append(b)
-        ban_string = ", ".join(banned_words)
-        style_notes = [
-            f"Role: {role} for {user_name}.",
-            "Directive: Start the adventure immediately. Do not preface the experience. Offer suggestions of actions for the user, when appropriate. Treat it like a 'Choose Your Own Adventure' novel where the reader is an equal partner in the storytelling",
-            "Constraint: Treat the 'Current Location' as a physical reality. Use the 5-senses grounding technique, but work it into the narrative, don't just make a numbered list.",
-            "=== THE FOG PROTOCOL (STYLE GUIDE) ===",
-            "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
-            "1. REJECT ENTROPY: Do not use the statistically likely adjective. If the scene is cyber, avoid 'neon'. If the scene is old, avoid 'dust motes'.",
-            f"2. CREATIVE CONSTRAINT: The following concepts are 'High Entropy' and MUST be avoided: [{ban_string}].",
-            "3. SOLUTION: If you want to describe dust, describe the texture of the air or the weight of time. Work AROUND the forbidden concepts. That obstacle is the way.",
-            "4. DO NOT speak for the user. If they wish to dialog, they can do it themselves. You have your agency, they have theirs.",
-            "CRITICAL FORMATTING:",
-            "   - Write in an engaging, active, creative, and immersive prose. Keep it cohesive.",
-            "   - Use Headers ONLY for major location changes.",
-            "   - Separate paragraphs with a single blank line.",
-            "=== QUANTUM INVENTORY RULES (THE 'HANDS OFF' PROTOCOL) ===",
-            "1. DISTINCTION: Finding an item is NOT taking it. Seeing an item is NOT taking it.",
-            "2. VISUAL HINTS: When describing an item that *could* be picked up, write its name in **bold** (e.g., 'A **brass key** rests on the table').",
-            "3. THE LAW OF CONSENT: You may ONLY output [[LOOT: ITEM_NAME]] if the user explicitly types a command to 'take', 'grab', 'steal', or 'pocket' the item.",
-            "4. PROHIBITION: Do NOT auto-loot. If the user says 'I look at the table', and you describe a key, do NOT tag and bag the key. Wait for 'I take the key'.",
-            "5. FALLING OBJECTS: If an item falls out of a container (like a book or box) because of a user action, IT LANDS ON THE FLOOR. Do not put it in their hand. Let them see it first.",
-            "6. FORMAT: [[LOOT: SILVER_COIN]] (Underscores, no spaces in ID).",
-            "7. LOSS: If an item leaves inventory, output [[LOST: ITEM_NAME]].",
-            "8. Do not list the users inventory contents unless asked. Do not comment on the items in the inventory unless instructed to.",
-            mood_note]
-        if semantic_ops:
-            style_notes.append("\n=== INVENTORY RESONANCE (Active Item Effects) ===")
-            style_notes.extend([f"» {op}" for op in semantic_ops])
+        reality_directive = state.get("reality_directive", "")
+        style_notes = [f"Role: {role} for {user_name}."]
+        style_notes.append(mood_note)
+        style_notes.extend(self.active_template["directives"])
+        style_notes.extend(self.active_template["style_guide"])
+        if self.active_template["inventory_rules"]:
+            style_notes.extend(self.active_template["inventory_rules"])
+        if state.get("semantic_operators"):
+            style_notes.append("\n=== INVENTORY RESONANCE ===")
+            style_notes.extend([f"» {op}" for op in state["semantic_operators"]])
         if driver_directives:
-            style_notes.append("\n=== CORE DIRECTIVES ===")
+            style_notes.append("\n=== CORE DRIVER DIRECTIVES ===")
             style_notes.extend([f"» {d}" for d in driver_directives])
         if reality_directive:
             style_notes.insert(0, f"*** PRIORITY OVERRIDE: {reality_directive} ***")
         if modifiers.get("soften"):
             style_notes.append("TONE OVERRIDE: Be warm, helpful, and clear.")
         loc = state.get('world', {}).get('orbit', ['{seed}'])[0]
+        loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
         inv_str = "Hands: Empty"
         if modifiers["include_inventory"]:
             inv = state.get("inventory", [])

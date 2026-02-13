@@ -2,14 +2,19 @@
 
 import json, os, random, time, tempfile
 from collections import deque
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Optional, Dict, Any, Set
+
 from bone_lexicon import TheLexicon
 from bone_core import EventBus, TheLore, BoneJSONEncoder
 from bone_types import Prisma
 from bone_config import BoneConfig
 
+"""HELPER FUNCTIONS"""
+
+
 def _access_config_path(root, path, value=None, set_mode=False):
-    parts = path.split('.')
+    """Safe accessor for dot-notation config paths."""
+    parts = path.split(".")
     target = root
     try:
         for part in parts[:-1]:
@@ -17,7 +22,8 @@ def _access_config_path(root, path, value=None, set_mode=False):
                 target = target.get(part)
             else:
                 target = getattr(target, part)
-            if target is None: return None
+            if target is None:
+                return None
         leaf = parts[-1]
         if set_mode:
             if isinstance(target, dict):
@@ -31,10 +37,15 @@ def _access_config_path(root, path, value=None, set_mode=False):
                     return True
             return False
         else:
-            if isinstance(target, dict): return target.get(leaf)
+            if isinstance(target, dict):
+                return target.get(leaf)
             return getattr(target, leaf, None)
     except (AttributeError, KeyError, TypeError):
         return None
+
+
+"""PERSISTENCE LAYER"""
+
 
 class LocalFileSporeLoader:
     def __init__(self, directory="memories"):
@@ -44,21 +55,23 @@ class LocalFileSporeLoader:
 
     def save_spore(self, filename, data):
         temp_path = filename
-        if not os.path.isabs(filename) and not filename.startswith(os.path.join(self.directory, "")):
+        if not os.path.isabs(filename) and not filename.startswith(
+            os.path.join(self.directory, "")
+        ):
             final_path = os.path.join(self.directory, filename)
         else:
             final_path = filename
         os.makedirs(os.path.dirname(final_path), exist_ok=True)
         try:
             fd, temp_path = tempfile.mkstemp(dir=os.path.dirname(final_path), text=True)
-            with os.fdopen(fd, 'w') as f:
+            with os.fdopen(fd, "w") as f:
                 json.dump(data, f, indent=2, cls=BoneJSONEncoder)
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temp_path, final_path)
             return final_path
         except (IOError, OSError, TypeError) as e:
-            print(f"Error saving spore: {e}")
+            print(f"{Prisma.RED}[LOADER] Error saving spore: {e}{Prisma.RST}")
             if os.path.exists(temp_path):
                 os.remove(temp_path)
             return None
@@ -68,7 +81,7 @@ class LocalFileSporeLoader:
             print(f"{Prisma.RED}[LOADER] File not found: {filepath}{Prisma.RST}")
             return None
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except json.JSONDecodeError as e:
             print(f"{Prisma.RED}[LOADER] CORRUPT SPORE ({filepath}): {e}{Prisma.RST}")
@@ -78,7 +91,8 @@ class LocalFileSporeLoader:
             return None
 
     def list_spores(self):
-        if not os.path.exists(self.directory): return []
+        if not os.path.exists(self.directory):
+            return []
         files = []
         for f in os.listdir(self.directory):
             if f.endswith(".json"):
@@ -97,24 +111,6 @@ class LocalFileSporeLoader:
         except OSError:
             return False
 
-class AdaptiveMemoryManager:
-    def __init__(self, network):
-        self.network = network
-        self.threshold = 0.5
-
-    def should_absorb(self, word: str, existing_graph: dict) -> bool:
-        if word in existing_graph:
-            return True
-        gain = len(word) * 0.1
-        u_word = word.upper()
-        if u_word in TheLexicon.get("heavy"): offset = 0.5
-        elif u_word in TheLexicon.get("abstract"): offset = 0.4
-        elif u_word in TheLexicon.get("play"): offset = 0.45
-        elif u_word in TheLexicon.get("constructive"): offset = 0.4
-        elif u_word in TheLexicon.get("kinetic"): offset = 0.3
-        else: offset = 0.0
-        gain += offset
-        return gain > self.threshold
 
 class SubconsciousStrata:
     def __init__(self, filename="memories/subconscious.jsonl"):
@@ -126,14 +122,17 @@ class SubconsciousStrata:
         self._load_index()
 
     def _load_index(self):
-        if not os.path.exists(self.filepath): return
+        if not os.path.exists(self.filepath):
+            return
         try:
-            with open(self.filepath, 'r', encoding='utf-8') as f:
+            with open(self.filepath, "r", encoding="utf-8") as f:
                 for line in f:
-                    if not line.strip(): continue
+                    if not line.strip():
+                        continue
                     try:
                         entry = json.loads(line)
-                        if "word" in entry: self.index.add(entry["word"])
+                        if "word" in entry:
+                            self.index.add(entry["word"])
                     except json.JSONDecodeError:
                         continue
         except IOError:
@@ -141,7 +140,7 @@ class SubconsciousStrata:
 
     def bury(self, fossil_data: Dict):
         try:
-            with open(self.filepath, 'a', encoding='utf-8') as f:
+            with open(self.filepath, "a", encoding="utf-8") as f:
                 fossil_data["buried_at"] = time.time()
                 f.write(json.dumps(fossil_data, cls=BoneJSONEncoder) + "\n")
             self.index.add(fossil_data["word"])
@@ -150,10 +149,11 @@ class SubconsciousStrata:
             return False
 
     def dredge(self, trigger_word: str) -> Optional[Dict]:
-        if trigger_word not in self.index: return None
+        if trigger_word not in self.index:
+            return None
         found = None
         try:
-            with open(self.filepath, 'r', encoding='utf-8') as f:
+            with open(self.filepath, "r", encoding="utf-8") as f:
                 for line in f:
                     entry = json.loads(line)
                     if entry.get("word") == trigger_word:
@@ -162,284 +162,35 @@ class SubconsciousStrata:
             return None
         return found
 
-class MycelialNetwork:
-    def __init__(self, events: EventBus, loader: 'LocalFileSporeLoader' = None, seed_file=None):
-        self.loader = loader if loader else LocalFileSporeLoader()
-        self.events = events
-        self.session_id = f"session_{int(time.time())}"
-        self.filename = f"{self.session_id}.json"
+
+"""MEMORY CORE (GRAPH LOGIC)"""
+
+
+class MemoryCore:
+    """Handles the raw graph operations: Synapses, Weights, Pruning."""
+
+    def __init__(self, events_ref, subconscious_ref):
+        self.events = events_ref
+        self.subconscious = subconscious_ref
         self.graph = {}
         self.cortical_stack = deque(maxlen=15)
-        self.fossils = deque(maxlen=200)
-        self.subconscious = SubconsciousStrata()
-        self.lineage_log = deque(maxlen=50)
         self.short_term_buffer = deque(maxlen=10)
         self.consolidation_threshold = 5.0
-        self.memory_manager = AdaptiveMemoryManager(self)
-        self.lichen = BioLichen()
-        self.parasite = BioParasite(self, TheLexicon)
-        self.seeds = self.load_seeds()
-        self.session_health = getattr(BoneConfig, "MAX_HEALTH", 100.0)
-        self.session_stamina = getattr(BoneConfig, "MAX_STAMINA", 100.0)
-        self.session_trauma_vector = {}
-        if seed_file:
-            self.ingest(seed_file)
 
-    def _prepare_spore_dict(self, base_trauma, joy_vectors, world_atlas):
-        core_graph = {}
-        for k, data in self.graph.items():
-            filtered_edges = {}
-            for target, weight in data["edges"].items():
-                if weight <= 1.0: continue
-                if weight > 8.0 and random.random() < 0.20: continue
-                drift = random.uniform(0.9, 1.1)
-                new_weight = min(10.0, weight * drift)
-                filtered_edges[target] = round(new_weight, 2)
-            if filtered_edges:
-                core_graph[k] = {"edges": filtered_edges, "last_tick": 0}
-        return {
-            "genome": "BONEAMANITA_14.9.6",
-            "parent_id": self.session_id,
-            "core_graph": core_graph,
-            "mutations": {},
-            "trauma_scar": round(base_trauma, 3),
-            "joy_vectors": joy_vectors or [],
-            "world_atlas": world_atlas or {}}
+    def calculate_mass(self, node):
+        if node not in self.graph:
+            return 0.0
+        return sum(self.graph[node]["edges"].values())
 
-    def load_seeds(self):
-        from bone_village import ParadoxSeed
-        loaded_seeds = []
-        try:
-            raw_seeds = TheLore.get("seeds") or []
-            for item in raw_seeds:
-                q = item.get("question", "Undefined Paradox")
-                t = set(item.get("triggers", []))
-                seed = ParadoxSeed(q, t)
-                loaded_seeds.append(seed)
-            self.events.log(f"{Prisma.GRY}[SYSTEM]: Paradox Seeds loaded ({len(loaded_seeds)} active).{Prisma.RST}")
-        except Exception as e:
-            self.events.log(f"{Prisma.RED}[CRITICAL]: Seed Injection Failed: {e}{Prisma.RST}")
-            loaded_seeds = [ParadoxSeed("Does the mask eat the face?", {"mask", "face", "hide"})]
-        return loaded_seeds
-
-    def run_ecosystem(self, physics: Dict, stamina: float, tick: int) -> List[str]:
-        logs = []
-        clean_words = physics.get("clean_words", [])
-        sugar, lichen_msg = self.lichen.photosynthesize(physics, clean_words, tick)
-        if lichen_msg:
-            logs.append(lichen_msg)
-        infected, parasite_msg = self.parasite.infect(physics, stamina)
-        if infected and parasite_msg:
-            logs.append(parasite_msg)
-        return logs
-
-    def encode(self, clean_words, physics, governor_mode):
-        significance = physics["voltage"]
-        if governor_mode == "FORGE": significance *= 2.0
-        elif governor_mode == "LABORATORY": significance *= 1.2
-        engram = {
-            "trigger": clean_words[:3] if clean_words else ["void"],
-            "context": governor_mode,
-            "voltage": physics["voltage"],
-            "significance": significance,
-            "timestamp": time.time()}
-        if significance > self.consolidation_threshold:
-            self.short_term_buffer.append(engram)
-            return True
-        return False
-
-    def replay_dreams(self):
-        strengthened = 0
-        restored_ghost = None
-        if self.short_term_buffer:
-            for engram in self.short_term_buffer:
-                weight_boost = engram["significance"] * 0.1
-                words = engram["trigger"]
-                if len(words) >= 2:
-                    w1, w2 = words[0], words[1]
-                    if w1 in self.graph and w2 in self.graph:
-                        if w2 in self.graph[w1]["edges"]:
-                            self.graph[w1]["edges"][w2] += weight_boost
-                            strengthened += 1
-            self.short_term_buffer.clear()
-        if hasattr(self, "subconscious") and random.random() < 0.30:
-            if self.graph:
-                anchor = random.choice(list(self.graph.keys()))
-                ghost_data = self.subconscious.dredge(anchor)
-
-                if ghost_data:
-                    word = ghost_data["word"]
-                    self.graph[word] = {"edges": ghost_data["edges"], "last_tick": 0}
-                    restored_ghost = word
-        status = []
-        if strengthened > 0:
-            status.append(f"Consolidated {strengthened} pathways.")
-        if restored_ghost:
-            status.append(f"Resurrected '{restored_ghost}' from the deep.")
-        if not status:
-            return "🌑 SLEEPLESS: The mind is quiet."
-        return f"💤 REM CYCLE: {' '.join(status)}"
-
-    def bury(self, clean_words: List[str], tick: int, resonance=5.0, learning_mod=1.0, desperation_level=0.0) -> Tuple[
-        Optional[str], List[str]]:
-        total_len = sum(len(w) for w in clean_words)
-        count = max(1, len(clean_words))
-        avg_len = total_len / count
-        if avg_len < 2.5 and count > 3:
-            self.events.log(f"{Prisma.YEL}REJECTED: Input is too 'Optimized' (Avg Len: {avg_len:.1f}).{Prisma.RST}")
-            return "MECHANICAL_STARVATION", []
-        if avg_len > 5.0: resonance += 2.0
-        filtered = self._filter_valuable_matter(clean_words)
-        self.cortical_stack.extend(filtered)
-        base_rate = 0.5 * (resonance / 5.0)
-        learning_rate = max(0.1, min(1.0, base_rate * learning_mod))
-        decay_rate = 0.1
-        for i, current in enumerate(filtered):
-            if current not in self.graph:
-                if not self.memory_manager.should_absorb(current, self.graph): continue
-                self.graph[current] = {"edges": {}, "last_tick": tick}
-            else:
-                self.graph[current]["last_tick"] = tick
-            start_window = max(0, i - 2)
-            context_window = set(filtered[start_window:i])
-            for prev in context_window:
-                if prev == current: continue
-                if prev not in self.graph:
-                    self.graph[prev] = {"edges": {}, "last_tick": tick}
-                self._strengthen_link(current, prev, learning_rate, decay_rate)
-                self._strengthen_link(prev, current, learning_rate, decay_rate)
-        victim_msg, victim_list = self._manage_capacity(desperation_level, clean_words[0] if clean_words else "void", tick)
-        new_wells = self._detect_new_wells(filtered, tick)
-        return victim_msg, victim_list + new_wells
-
-    def _filter_valuable_matter(self, words: List[str]) -> List[str]:
-        valuable = []
-        for w in words:
-            if len(w) <= 4 and w in TheLexicon.SOLVENTS: continue
-            cat = TheLexicon.get_current_category(w)
-            if cat and cat != "void":
-                valuable.append(w)
-            elif len(w) > 4:
-                valuable.append(w)
-        return valuable
-
-    def _apply_epigenetics(self, data):
-        if "config_mutations" not in data: return
-        self.events.log(f"{Prisma.MAG}EPIGENETICS: Auditing ancestral configuration...{Prisma.RST}")
-        valid_mutations = 0
-        SAFE_MUTATIONS = {
-            "STAMINA_REGEN", "MAX_DRAG_LIMIT", "GEODESIC_STRENGTH",
-            "SIGNAL_DRAG_MULTIPLIER", "KINETIC_GAIN", "TOXIN_WEIGHT",
-            "FLASHPOINT_THRESHOLD", "MAX_MEMORY_CAPACITY", "PRIORITY_LEARNING_RATE",
-            "ANVIL_TRIGGER_VOLTAGE", "MAX_REPETITION_LIMIT",
-            "PHYSICS.WEIGHT_HEAVY", "PHYSICS.WEIGHT_KINETIC",
-            "PHYSICS.VOLTAGE_FLOOR", "PHYSICS.VOLTAGE_MAX",
-            "BIO.CORTEX_SENSITIVITY", "BIO.ROS_CRITICAL",
-            "BIO.DECAY_RATE", "BIO.REWARD_MEDIUM",
-            "METABOLISM.PHOTOSYNTHESIS_GAIN", "METABOLISM.ROS_GENERATION_FACTOR",
-            "COUNCIL.FOOTNOTE_CHANCE", "COUNCIL.MANIC_VOLTAGE_TRIGGER"}
-        for key, value in data["config_mutations"].items():
-            if self._is_safe_mutation(key, SAFE_MUTATIONS):
-                if self._inject_config(key, value):
-                    valid_mutations += 1
-        if valid_mutations > 0:
-            self.events.log(f"{Prisma.CYN}   ► Applied {valid_mutations} verified config shifts.{Prisma.RST}")
-
-    def _is_safe_mutation(self, key, safe_set):
-        return key in safe_set
-
-    def _inject_config(self, path, value):
-        return _access_config_path(BoneConfig, path, value, set_mode=True)
-
-    def _strengthen_link(self, source, target, rate, decay):
+    def strengthen_link(self, source, target, rate, decay):
+        if source not in self.graph:
+            return
         edges = self.graph[source]["edges"]
-        if target not in edges: edges[target] = 0.0
+        if target not in edges:
+            edges[target] = 0.0
         current_weight = edges[target]
         delta = rate * (1.0 - (current_weight * decay))
         edges[target] = min(10.0, current_weight + delta)
-
-    def _manage_capacity(self, desperation_level, current_word, tick):
-        victim_msg = None
-        victim_list = []
-        if len(self.graph) > BoneConfig.MAX_MEMORY_CAPACITY:
-            if desperation_level < 0.6:
-                return f"CORTICAL SATURATION: Memory full & Glucose High. Input rejected.", []
-            victim, log_msg = self.cannibalize(current_tick=tick)
-            if victim:
-                victim_msg = log_msg
-                victim_list = [victim]
-            else:
-                return f"MEMORY FULL: Cortical Lock. Input '{current_word}' rejected.", []
-        return victim_msg, victim_list
-
-    def _detect_new_wells(self, words, tick):
-        new_wells = []
-        for w in words:
-            if w in self.graph:
-                self.check_echo_well(w)
-                mass = sum(self.graph[w]["edges"].values())
-                if mass > BoneConfig.SHAPLEY_MASS_THRESHOLD:
-                    node_data = self.graph[w]
-                    if "strata" not in node_data:
-                        node_data["strata"] = {"birth_tick": tick, "birth_mass": mass, "stability_index": 0.0}
-                        new_wells.append(w)
-                    else:
-                        age = max(1, tick - node_data["strata"]["birth_tick"])
-                        growth = (mass - node_data["strata"]["birth_mass"]) / age
-                        node_data["strata"]["growth_rate"] = round(growth, 3)
-        return new_wells
-
-    def cannibalize(self, preserve_current=None, current_tick=0) -> Tuple[Optional[str], str]:
-        protected = set()
-        if preserve_current:
-            if isinstance(preserve_current, list):
-                protected.update(preserve_current)
-            else:
-                protected.add(preserve_current)
-        protected.update(self.cortical_stack)
-        candidates = []
-        for k, v in self.graph.items():
-            edge_count = len(v["edges"])
-            age = max(1, current_tick - v.get("last_tick", 0))
-            base_score = edge_count + (100.0 / age)
-            if k in protected: base_score += 500.0
-            candidates.append((k, v, base_score))
-        if not candidates:
-            return None, "MEMORY EMPTY. NOTHING TO EAT."
-        candidates.sort(key=lambda x: x[2])
-        victim, data, score = candidates[0]
-        mass = sum(data["edges"].values())
-        lifespan = current_tick - data.get("strata", {}).get("birth_tick", current_tick)
-        fossil_data = {
-            "word": victim,
-            "mass": round(mass, 2),
-            "lifespan": lifespan,
-            "edges": data["edges"],
-            "death_tick": current_tick}
-        self.subconscious.bury(fossil_data)
-        del self.graph[victim]
-        for node in self.graph:
-            if victim in self.graph[node]["edges"]:
-                del self.graph[node]["edges"][victim]
-        return victim, f"REPRESSED: '{victim}' (Score {score:.1f} -> Subconscious)"
-
-    def check_for_resurrection(self, input_words: List[str], voltage: float) -> Optional[str]:
-        if voltage < 60.0: return None
-        for word in input_words:
-            if word in self.subconscious.index:
-                if random.random() < 0.20:
-                    memory = self.subconscious.dredge(word)
-                    if memory:
-                        self.graph[word] = {"edges": memory["edges"], "last_tick": 0}
-                        return f"⚠️ FLASHBACK: The word '{word}' clawed its way back from the deep."
-        return None
-
-    def soothe_conscience(self):
-        if self.session_trauma_vector.get("GUILT", 0) > 0:
-            self.events.log(f"{Prisma.OCHRE}🏺 KINTSUGI: Pouring gold into the memory gaps...{Prisma.RST}")
-            self.session_trauma_vector["GUILT"] = max(0.0, self.session_trauma_vector["GUILT"] - 0.5)
-            return "The ghosts are quieted."
-        return "No guilt detected."
 
     def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
         pruned_count = 0
@@ -454,67 +205,347 @@ class MycelialNetwork:
                 new_weight = weight * dynamic_factor
                 edges[target] = new_weight
                 total_decayed += 1
-                if new_weight < prune_threshold: dead_links.append(target)
+                if new_weight < prune_threshold:
+                    dead_links.append(target)
             for dead in dead_links:
                 del edges[dead]
                 pruned_count += 1
-            if not edges: nodes_to_remove.append(node)
-        for n in nodes_to_remove: del self.graph[n]
+            if not edges:
+                nodes_to_remove.append(node)
+        for n in nodes_to_remove:
+            del self.graph[n]
         return f"📉 HOMEOSTATIC SCALING: Decayed {total_decayed} synapses. Pruned {pruned_count} weak connections."
 
-    def autoload_last_spore(self):
-        files = self.loader.list_spores()
-        if not files:
-            self.events.log(f"{Prisma.GRY}[GENETICS]: No ancestors found. Genesis Bloom.{Prisma.RST}")
+    def cannibalize(
+        self, current_tick, preserve_current=None
+    ) -> Tuple[Optional[str], str]:
+        protected = set()
+        if preserve_current:
+            if isinstance(preserve_current, list):
+                protected.update(preserve_current)
+            else:
+                protected.add(preserve_current)
+        protected.update(self.cortical_stack)
+
+        candidates = []
+        for k, v in self.graph.items():
+            edge_count = len(v["edges"])
+            age = max(1, current_tick - v.get("last_tick", 0))
+            base_score = edge_count + (100.0 / age)
+            if k in protected:
+                base_score += 500.0
+            candidates.append((k, v, base_score))
+
+        if not candidates:
+            return None, "MEMORY EMPTY. NOTHING TO EAT."
+
+        candidates.sort(key=lambda x: x[2])
+        victim, data, score = candidates[0]
+
+        mass = sum(data["edges"].values())
+        lifespan = current_tick - data.get("strata", {}).get("birth_tick", current_tick)
+        fossil_data = {
+            "word": victim,
+            "mass": round(mass, 2),
+            "lifespan": lifespan,
+            "edges": data["edges"],
+            "death_tick": current_tick,
+        }
+        self.subconscious.bury(fossil_data)
+
+        del self.graph[victim]
+        for node in self.graph:
+            if victim in self.graph[node]["edges"]:
+                del self.graph[node]["edges"][victim]
+
+        return victim, f"REPRESSED: '{victim}' (Score {score:.1f} -> Subconscious)"
+
+
+"""THE COORDINATOR"""
+
+
+class MycelialNetwork:
+    def __init__(
+        self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None
+    ):
+        self.events = events
+        self.loader = loader if loader else LocalFileSporeLoader()
+        self.session_id = f"session_{int(time.time())}"
+        self.filename = f"{self.session_id}.json"
+        self.subconscious = SubconsciousStrata()
+        self.memory_core = MemoryCore(events, self.subconscious)
+        self.lichen = BioLichen()
+        self.parasite = BioParasite(self, TheLexicon)
+        self.immune = ImmuneMycelium()
+        self.repro = LiteraryReproduction()
+        self.fossils = deque(maxlen=200)
+        self.lineage_log = deque(maxlen=50)
+        self.seeds = self._load_seeds()
+        self.session_health = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+        self.session_stamina = getattr(BoneConfig, "MAX_STAMINA", 100.0)
+        self.session_trauma_vector = {}
+
+        if seed_file:
+            self.ingest(seed_file)
+
+    @property
+    def graph(self):
+        return self.memory_core.graph
+
+    @property
+    def cortical_stack(self):
+        return self.memory_core.cortical_stack
+
+    """ECOSYSTEM DELEGATION"""
+
+    def run_ecosystem(self, physics: Dict, stamina: float, tick: int) -> List[str]:
+        logs = []
+        clean_words = physics.get("clean_words", [])
+        sugar, lichen_msg = self.lichen.photosynthesize(physics, clean_words, tick)
+        if lichen_msg:
+            logs.append(lichen_msg)
+        infected, parasite_msg = self.parasite.infect(physics, stamina)
+        if infected and parasite_msg:
+            logs.append(parasite_msg)
+        return logs
+
+    def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
+        return self.memory_core.prune_synapses(scaling_factor, prune_threshold)
+
+    """MEMORY OPERATIONS"""
+
+    def encode(self, clean_words, physics, governor_mode):
+        significance = physics.get("voltage", 0.0)
+        if governor_mode == "FORGE":
+            significance *= 2.0
+        elif governor_mode == "LABORATORY":
+            significance *= 1.2
+        engram = {
+            "trigger": clean_words[:3] if clean_words else ["void"],
+            "context": governor_mode,
+            "significance": significance,
+            "timestamp": time.time(),
+        }
+        if significance > self.memory_core.consolidation_threshold:
+            self.memory_core.short_term_buffer.append(engram)
+            return True
+        return False
+
+    def check_for_resurrection(
+        self, input_words: List[str], voltage: float
+    ) -> Optional[str]:
+        if voltage < 60.0:
             return None
-        candidates = [f for f in files if self.session_id not in f[0]]
-        if candidates:
-            last_spore_path = candidates[0][0]
-            self.events.log(f"{Prisma.CYN}[GENETICS]: Locating nearest ancestor...{Prisma.RST}")
-            return self.ingest(last_spore_path)
+        for word in input_words:
+            if word in self.subconscious.index:
+                if random.random() < 0.20:
+                    memory = self.subconscious.dredge(word)
+                    if memory:
+                        self.graph[word] = {"edges": memory["edges"], "last_tick": 0}
+                        return f"⚠️ FLASHBACK: The word '{word}' clawed its way back from the deep."
         return None
+
+    def bury(
+        self,
+        clean_words: List[str],
+        tick: int,
+        resonance=5.0,
+        learning_mod=1.0,
+        desperation_level=0.0,
+    ) -> Tuple[Optional[str], List[str]]:
+        if not clean_words:
+            return None, []
+        valuable = self._filter_valuable_matter(clean_words)
+        self.cortical_stack.extend(valuable)
+        if len(self.graph) > BoneConfig.MAX_MEMORY_CAPACITY:
+            if desperation_level < 0.6:
+                return (
+                    f"CORTICAL SATURATION: Memory full & Glucose High. Input rejected.",
+                    [],
+                )
+            victim, log_msg = self.memory_core.cannibalize(
+                tick, preserve_current=clean_words[0]
+            )
+            if not victim:
+                return f"MEMORY FULL: Cortical Lock. Input rejected.", []
+        else:
+            victim, log_msg = None, None
+        base_rate = 0.5 * (resonance / 5.0)
+        learning_rate = max(0.1, min(1.0, base_rate * learning_mod))
+        decay_rate = 0.1
+        for i, current in enumerate(valuable):
+            if current not in self.graph:
+                self.graph[current] = {"edges": {}, "last_tick": tick}
+            else:
+                self.graph[current]["last_tick"] = tick
+            start_window = max(0, i - 2)
+            context_window = set(valuable[start_window:i])
+            for prev in context_window:
+                if prev == current:
+                    continue
+                if prev not in self.graph:
+                    self.graph[prev] = {"edges": {}, "last_tick": tick}
+                self.memory_core.strengthen_link(
+                    current, prev, learning_rate, decay_rate
+                )
+                self.memory_core.strengthen_link(
+                    prev, current, learning_rate, decay_rate
+                )
+        new_wells = self._detect_new_wells(valuable, tick)
+        return log_msg, ([victim] if victim else []) + new_wells
+
+    def _filter_valuable_matter(self, words: List[str]) -> List[str]:
+        valuable = []
+        for w in words:
+            if len(w) <= 4 and w in TheLexicon.SOLVENTS:
+                continue
+            cat = TheLexicon.get_current_category(w)
+            if cat and cat != "void":
+                valuable.append(w)
+            elif len(w) > 4:
+                valuable.append(w)
+        return valuable
+
+    def _detect_new_wells(self, words, tick):
+        new_wells = []
+        for w in words:
+            if w in self.graph:
+                self._check_echo_well(w)
+                mass = self.memory_core.calculate_mass(w)
+                if mass > BoneConfig.SHAPLEY_MASS_THRESHOLD:
+                    node_data = self.graph[w]
+                    if "strata" not in node_data:
+                        node_data["strata"] = {
+                            "birth_tick": tick,
+                            "birth_mass": mass,
+                            "stability_index": 0.0,
+                        }
+                        new_wells.append(w)
+                    else:
+                        age = max(1, tick - node_data["strata"]["birth_tick"])
+                        growth = (mass - node_data["strata"]["birth_mass"]) / age
+                        node_data["strata"]["growth_rate"] = round(growth, 3)
+        return new_wells
+
+    def _check_echo_well(self, node):
+        mass = self.memory_core.calculate_mass(node)
+        if mass > BoneConfig.GRAVITY_WELL_THRESHOLD * 1.5:
+            self.events.log(
+                f"{Prisma.VIOLET}GRAVITY WARNING: '{node.upper()}' is becoming a black hole (Mass {int(mass)}).{Prisma.RST}"
+            )
+            return 2.0
+        return 0.0
+
+    """SEED & GENETICS LOGIC"""
+
+    def _load_seeds(self):
+        from bone_village import ParadoxSeed
+
+        loaded_seeds = []
+        try:
+            raw_seeds = TheLore.get("seeds") or []
+            for item in raw_seeds:
+                q = item.get("question", "Undefined Paradox")
+                t = set(item.get("triggers", []))
+                seed = ParadoxSeed(q, t)
+                loaded_seeds.append(seed)
+        except Exception:
+            loaded_seeds = [
+                ParadoxSeed("Does the mask eat the face?", {"mask", "face", "hide"})
+            ]
+        return loaded_seeds
+
+    def tend_garden(self, current_words):
+        bloom_msg = None
+        for seed in self.seeds:
+            is_ready = seed.water(current_words)
+            if is_ready and not bloom_msg:
+                bloom_msg = seed.bloom()
+        return bloom_msg
+
+    def _apply_epigenetics(self, data):
+        if "config_mutations" not in data:
+            return
+        self.events.log(
+            f"{Prisma.MAG}EPIGENETICS: Auditing ancestral configuration...{Prisma.RST}"
+        )
+        valid_mutations = 0
+        SAFE_MUTATIONS = {
+            "STAMINA_REGEN",
+            "MAX_DRAG_LIMIT",
+            "GEODESIC_STRENGTH",
+            "SIGNAL_DRAG_MULTIPLIER",
+            "KINETIC_GAIN",
+            "TOXIN_WEIGHT",
+            "FLASHPOINT_THRESHOLD",
+            "MAX_MEMORY_CAPACITY",
+            "PRIORITY_LEARNING_RATE",
+            "ANVIL_TRIGGER_VOLTAGE",
+            "MAX_REPETITION_LIMIT",
+            "PHYSICS.WEIGHT_HEAVY",
+            "PHYSICS.WEIGHT_KINETIC",
+            "PHYSICS.VOLTAGE_FLOOR",
+            "PHYSICS.VOLTAGE_MAX",
+            "BIO.CORTEX_SENSITIVITY",
+            "BIO.ROS_CRITICAL",
+            "BIO.DECAY_RATE",
+            "BIO.REWARD_MEDIUM",
+            "METABOLISM.PHOTOSYNTHESIS_GAIN",
+            "METABOLISM.ROS_GENERATION_FACTOR",
+            "COUNCIL.FOOTNOTE_CHANCE",
+            "COUNCIL.MANIC_VOLTAGE_TRIGGER",
+        }
+
+        for key, value in data["config_mutations"].items():
+            if key in SAFE_MUTATIONS:
+                if _access_config_path(BoneConfig, key, value, set_mode=True):
+                    valid_mutations += 1
+        if valid_mutations > 0:
+            self.events.log(
+                f"{Prisma.CYN}   ► Applied {valid_mutations} verified config shifts.{Prisma.RST}"
+            )
+
+    """PERSISTENCE & INGESTION"""
 
     def ingest(self, target_file, current_tick=0):
         data = self.loader.load_spore(target_file)
         if not data:
             self.events.log(f"{Prisma.RED}[MEMORY]: Spore file not found.{Prisma.RST}")
             return None, set(), {}, None
+
         required_keys = ["meta", "trauma_vector", "core_graph"]
         if not all(k in data for k in required_keys):
-            self.events.log(f"{Prisma.RED}[MEMORY]: Spore rejected (Missing Structural Keys).{Prisma.RST}")
+            self.events.log(
+                f"{Prisma.RED}[MEMORY]: Spore rejected (Missing Structural Keys).{Prisma.RST}"
+            )
             return None, set(), {}, None
-        self._process_metadata(data)
-        self._process_fossils(data)
+        self._process_lineage(data)
         self._process_mutations(data)
         self._apply_epigenetics(data)
-        self._graft_graph(data, current_tick)
-
+        if "core_graph" in data:
+            self.graph.update(data["core_graph"])
+            for node in data["core_graph"]:
+                if node in self.graph:
+                    self.graph[node]["last_tick"] = current_tick
         return self._extract_legacy_traits(data)
 
-    def _process_metadata(self, data):
-        final_health = data.get("meta", {}).get("final_health", 50)
-        final_stamina = data.get("meta", {}).get("final_stamina", 25)
-        spore_authority = (final_health + final_stamina) / 150.0
-        self.events.log(f"{Prisma.CYN}[MEMBRANE]: Spore Authority: {round(spore_authority, 2)}{Prisma.RST}")
+    def _process_lineage(self, data):
         session_source = data.get("session_id", "UNKNOWN_ANCESTOR")
         timestamp = data.get("meta", {}).get("timestamp", 0)
         time_ago = int((time.time() - timestamp) / 3600)
-        trauma_summary = {k:v for k,v in data.get("trauma_vector", {}).items() if v > 0.1}
+        trauma_summary = {
+            k: v for k, v in data.get("trauma_vector", {}).items() if v > 0.1
+        }
         mutation_count = sum(len(v) for v in data.get("mutations", {}).values())
-        self.lineage_log.append({
-            "source": session_source, "age_hours": time_ago,
-            "trauma": trauma_summary, "mutations": mutation_count,
-            "loaded_at": time.time()})
-
-    def _process_fossils(self, data):
-        if "fossils" in data:
-            self.fossils.extend(data["fossils"])
-            count = len(data["fossils"])
-            fossil_fuel = count * 0.5
-            if fossil_fuel > 0:
-                self.events.log(f"{Prisma.OCHRE}🔥 [OSSUARY]: Incinerating {count} fossils... Yield: {fossil_fuel:.1f} Shimmer.{Prisma.RST}", "FUEL")
-                if hasattr(self.events, "publish"):
-                    self.events.publish("FUEL", fossil_fuel)
+        self.lineage_log.append(
+            {
+                "source": session_source,
+                "age_hours": time_ago,
+                "trauma": trauma_summary,
+                "mutations": mutation_count,
+                "loaded_at": time.time(),
+            }
+        )
 
     def _process_mutations(self, data):
         if "mutations" in data:
@@ -525,110 +556,114 @@ class MycelialNetwork:
                     if not current_cat or current_cat == "unknown":
                         TheLexicon.teach(w, cat, 0)
                         accepted_count += 1
-            self.events.log(f"{Prisma.CYN}[MEMBRANE]: Integrated {accepted_count} mutations.{Prisma.RST}")
-
-    def _graft_graph(self, data, current_tick):
-        if "core_graph" in data:
-            self.graph.update(data["core_graph"])
-            grafted_nodes = list(data["core_graph"].keys())
-            for node in grafted_nodes:
-                if node in self.graph:
-                    self.graph[node]["last_tick"] = current_tick
-            sample_size = min(len(grafted_nodes), 10)
-            if sample_size > 0:
-                self.cortical_stack.extend(random.sample(grafted_nodes, sample_size))
-            self.events.log(f"{Prisma.CYN}[SPORE]: Grafted {len(data['core_graph'])} nodes.{Prisma.RST}")
+            if accepted_count > 0:
+                self.events.log(
+                    f"{Prisma.CYN}[MEMBRANE]: Integrated {accepted_count} mutations.{Prisma.RST}"
+                )
 
     def _extract_legacy_traits(self, data):
-        from bone_village import ParadoxSeed
         if "joy_legacy" in data and data["joy_legacy"]:
             joy = data["joy_legacy"]
-            flavor = joy.get("flavor")
-            clade = LiteraryReproduction.JOY_CLADE.get(flavor)
+            clade = LiteraryReproduction.JOY_CLADE.get(joy.get("flavor"))
             if clade:
-                self.events.log(f"{Prisma.CYN}INHERITED GLORY: {clade['title']} ({clade['desc']}){Prisma.RST}")
+                self.events.log(
+                    f"{Prisma.CYN}INHERITED GLORY: {clade['title']}{Prisma.RST}"
+                )
                 for stat, ancestral_bonus in clade["buff"].items():
                     if hasattr(BoneConfig, stat):
                         setattr(BoneConfig, stat, ancestral_bonus)
         if "seeds" in data:
-            loaded_seeds = []
+            from bone_village import ParadoxSeed
+
+            self.seeds = []
             for s_data in data["seeds"]:
                 new_seed = ParadoxSeed(s_data["q"], set())
                 new_seed.maturity = s_data.get("m", 0.0)
                 new_seed.bloomed = s_data.get("b", False)
-                loaded_seeds.append(new_seed)
-            if loaded_seeds:
-                self.seeds = loaded_seeds
-        if "trauma_vector" in data:
-            vec = data["trauma_vector"]
-            self.events.log(f"{Prisma.CYN}[GENETICS]: Inheriting Trauma Vector: {vec}{Prisma.RST}")
-            if vec.get("SEPTIC", 0) > 0.2: BoneConfig.TOXIN_WEIGHT *= 2.0
-            if vec.get("CRYO", 0) > 0.2: BoneConfig.STAMINA_REGEN *= 0.5
-            if vec.get("THERMAL", 0) > 0.2: BoneConfig.FLASHPOINT_THRESHOLD *= 0.8
-            if vec.get("BARIC", 0) > 0.2: BoneConfig.SIGNAL_DRAG_MULTIPLIER *= 1.5
-        continuity = data.get("continuity", None)
-        if continuity:
-            self.events.log(f"{Prisma.CYN}[CHRONOS]: Timeline bookmark found ({continuity.get('location', 'Unknown')}).{Prisma.RST}")
-        world_atlas = data.get("world_atlas", {})
-        if world_atlas:
-            self.events.log(f"{Prisma.CYN}[MAP]: Recovered {len(world_atlas.get('nodes', {}))} locations.{Prisma.RST}")
+                self.seeds.append(new_seed)
         return (
             data.get("mitochondria", {}),
             set(data.get("antibodies", [])),
             data.get("soul_legacy", {}),
-            continuity,
-            world_atlas)
+            data.get("continuity", None),
+            data.get("world_atlas", {}),
+        )
 
-    def save(self, health, stamina, mutations, trauma_accum, joy_history, mitochondria_traits=None, antibodies=None, soul_data=None, continuity=None, world_atlas=None, village_data=None):
+    def save(
+        self,
+        health,
+        stamina,
+        mutations,
+        trauma_accum,
+        joy_history,
+        mitochondria_traits=None,
+        antibodies=None,
+        soul_data=None,
+        continuity=None,
+        world_atlas=None,
+        village_data=None,
+    ):
         base_trauma = (BoneConfig.MAX_HEALTH - health) / BoneConfig.MAX_HEALTH
         final_vector = {k: min(1.0, v) for k, v in trauma_accum.items()}
         top_joy = sorted(joy_history, key=lambda x: x["resonance"], reverse=True)[:3]
         joy_legacy_data = None
         if top_joy:
-            primary_joy = top_joy[0]
             joy_legacy_data = {
-                "flavor": primary_joy["dominant_flavor"],
-                "resonance": primary_joy["resonance"],
-                "timestamp": primary_joy["timestamp"]}
-        if health <= 0:
-            cause = max(final_vector, key=final_vector.get) if final_vector else "UNKNOWN"
-            final_vector[cause] = 1.0
-        data = self._prepare_spore_dict(base_trauma, top_joy, world_atlas)
-        data["mutations"] = mutations
-        if village_data:
-            data["village_data"] = village_data
-        if continuity: data["continuity"] = continuity
-        data["cortical_stack"] = self.cortical_stack
-        if antibodies: data["antibodies"] = antibodies
-        data["trauma_vector"] = final_vector
-        data["fossils"] = self.fossils
-        data["meta"] = {"timestamp": time.time(), "final_health": health, "final_stamina": stamina}
-        if mitochondria_traits: data["mitochondria"] = mitochondria_traits
-        if joy_legacy_data: data["joy_legacy"] = joy_legacy_data
-        if soul_data: data["soul_legacy"] = soul_data
-        active_seeds = sorted(
-            [s for s in self.seeds if not s.bloomed],
-            key=lambda s: s.maturity,
-            reverse=True)[:5]
-        seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in active_seeds]
+                "flavor": top_joy[0]["dominant_flavor"],
+                "resonance": top_joy[0]["resonance"],
+                "timestamp": top_joy[0]["timestamp"],
+            }
+        core_graph = {}
+        for k, data in self.graph.items():
+            filtered_edges = {}
+            for target, weight in data["edges"].items():
+                if weight > 1.0:
+                    filtered_edges[target] = round(weight, 2)
+            if filtered_edges:
+                core_graph[k] = {"edges": filtered_edges, "last_tick": 0}
         temp_meta = {"final_health": health}
         temp_trauma = {k: min(1.0, v) for k, v in trauma_accum.items()}
-        future_seed = self._generate_future_seed({"meta": temp_meta, "trauma_vector": temp_trauma})
-        seed_list.append({"q": future_seed, "m": 0.0, "b": False})
-        data["seeds"] = seed_list
+        future_seed_q = self._generate_future_seed(
+            temp_health=health, trauma_vec=temp_trauma
+        )
+        seed_list = [
+            {"q": s.question, "m": s.maturity, "b": s.bloomed}
+            for s in self.seeds
+            if not s.bloomed
+        ]
+        seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
+        data = {
+            "genome": "BONEAMANITA_15.0.1",
+            "session_id": self.session_id,
+            "parent_id": self.session_id,
+            "meta": {
+                "timestamp": time.time(),
+                "final_health": health,
+                "final_stamina": stamina,
+            },
+            "trauma_vector": final_vector,
+            "joy_vectors": top_joy or [],
+            "joy_legacy": joy_legacy_data,
+            "core_graph": core_graph,
+            "mutations": mutations,
+            "antibodies": antibodies,
+            "mitochondria": mitochondria_traits,
+            "soul_legacy": soul_data,
+            "continuity": continuity,
+            "world_atlas": world_atlas or {},
+            "village_data": village_data,
+            "seeds": seed_list,
+            "fossils": list(self.fossils),
+        }
+
         return self.loader.save_spore(self.filename, data)
 
-    def _generate_future_seed(self, spore_data: Dict) -> str:
-        meta = spore_data.get("meta", {})
-        trauma = spore_data.get("trauma_vector", {})
-        final_health = meta.get("final_health", 50)
+    def _generate_future_seed(self, temp_health, trauma_vec) -> str:
         condition = "BALANCED"
-        max_trauma = max(trauma, key=trauma.get) if trauma else "NONE"
-        if trauma.get(max_trauma, 0) > 0.6: condition = "HIGH_TRAUMA"
-        elif final_health < 30: condition = "HIGH_TRAUMA"
-        seeds = {
-            "HIGH_TRAUMA": "Recovery",
-            "BALANCED": "Growth"}
+        max_trauma = max(trauma_vec, key=trauma_vec.get) if trauma_vec else "NONE"
+        if trauma_vec.get(max_trauma, 0) > 0.6 or temp_health < 30:
+            condition = "HIGH_TRAUMA"
+        seeds = {"HIGH_TRAUMA": "Recovery", "BALANCED": "Growth"}
         return seeds.get(condition, "Hope")
 
     def cleanup_old_sessions(self, limbo_layer=None):
@@ -638,57 +673,61 @@ class MycelialNetwork:
         max_age = 86400
         for i, (path, age, fname) in enumerate(files):
             file_age = time.time() - age
-            is_overflow = i >= max_files
-            is_ancient = file_age > max_age
-            if is_overflow or is_ancient:
+            if i >= max_files or file_age > max_age:
                 try:
-                    if limbo_layer: limbo_layer.absorb_dead_timeline(path)
-                    if self.loader.delete_spore(path): removed += 1
+                    if limbo_layer:
+                        limbo_layer.absorb_dead_timeline(path)
+                    if self.loader.delete_spore(path):
+                        removed += 1
                 except (OSError, AttributeError):
                     pass
         if removed:
-            self.events.log(f"{Prisma.GRY}[TIME MENDER]: Pruned {removed} dead timelines.{Prisma.RST}")
+            self.events.log(
+                f"{Prisma.GRY}[TIME MENDER]: Pruned {removed} dead timelines.{Prisma.RST}"
+            )
 
     def report_status(self):
         return len(self.graph)
 
-    def tend_garden(self, current_words):
-        bloom_msg = None
-        for seed in self.seeds:
-            is_ready = seed.water(current_words)
-            if is_ready and not bloom_msg:
-                bloom_msg = seed.bloom()
-        return bloom_msg
+    def autoload_last_spore(self):
+        files = self.loader.list_spores()
+        if not files:
+            self.events.log(
+                f"{Prisma.GRY}[GENETICS]: No ancestors found. Genesis Bloom.{Prisma.RST}"
+            )
+            return None
+        candidates = [f for f in files if self.session_id not in f[0]]
+        if candidates:
+            return self.ingest(candidates[0][0])
+        return None
 
-    def calculate_mass(self, node):
-        if node not in self.graph: return 0.0
-        return sum(self.graph[node]["edges"].values())
 
-    def get_shapley_attractors(self):
-        attractors = {}
-        for node in self.graph:
-            mass = self.calculate_mass(node)
-            if mass >= BoneConfig.SHAPLEY_MASS_THRESHOLD:
-                attractors[node] = mass
-        return attractors
-
-    def check_echo_well(self, node):
-        mass = self.calculate_mass(node)
-        if mass > BoneConfig.GRAVITY_WELL_THRESHOLD * 1.5:
-            self.events.log(f"{Prisma.VIOLET}GRAVITY WARNING: '{node.upper()}' is becoming a black hole (Mass {int(mass)}).{Prisma.RST}")
-            return 2.0
-        return 0.0
+"""ECOSYSTEM & EVOLUTION"""
 
 
 class ImmuneMycelium:
     def __init__(self):
         self.active_antibodies = set()
         self.PHONETICS = {
-            "PLOSIVE": set("bdgkpt"), "FRICATIVE": set("fthszsh"),
-            "LIQUID": set("lr"), "NASAL": set("mn")}
+            "PLOSIVE": set("bdgkpt"),
+            "FRICATIVE": set("fthszsh"),
+            "LIQUID": set("lr"),
+            "NASAL": set("mn"),
+        }
         self.ROOTS = {
-            "HEAVY": ("lith", "ferr", "petr", "dens", "grav", "struct", "base", "fund", "mound"),
-            "KINETIC": ("mot", "mov", "ject", "tract", "pel", "crat", "dynam", "flux"),}
+            "HEAVY": (
+                "lith",
+                "ferr",
+                "petr",
+                "dens",
+                "grav",
+                "struct",
+                "base",
+                "fund",
+                "mound",
+            ),
+            "KINETIC": ("mot", "mov", "ject", "tract", "pel", "crat", "dynam", "flux"),
+        }
         self.name = "MYCELIUM"
         self.color = Prisma.CYN
         self.archetypes = {"constructive", "kinetic", "abstract", "code", "system"}
@@ -704,7 +743,8 @@ class ImmuneMycelium:
     def assay(self, word, _context, _rep_val, _phys, _pulse):
         w = word.lower()
         clean_len = len(w)
-        if clean_len < 3: return None, ""
+        if clean_len < 3:
+            return None, ""
         for cat, roots in self.ROOTS.items():
             for r in roots:
                 if r in w:
@@ -721,6 +761,7 @@ class ImmuneMycelium:
             return "TOXIN_HEAVY", f"Detected phonetic toxicity in '{w}'."
         return None, ""
 
+
 class BioParasite:
     def __init__(self, memory_ref, lexicon_ref):
         self.mem = memory_ref
@@ -729,7 +770,16 @@ class BioParasite:
         self.MAX_SPORES = 8
         self.name = "PARASITE"
         self.color = Prisma.RED
-        self.archetypes = {"antigen", "toxin", "heavy", "meat", "void", "static", "rot", "decay"}
+        self.archetypes = {
+            "antigen",
+            "toxin",
+            "heavy",
+            "meat",
+            "void",
+            "static",
+            "rot",
+            "decay",
+        }
 
     def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
         hits = sum(1 for w in clean_words if w in self.archetypes)
@@ -753,36 +803,48 @@ class BioParasite:
             if random.random() < 0.2:
                 self.spores_deployed = max(0, self.spores_deployed - 1)
             return False, None
-        heavy_candidates = [w for w in self.mem.graph if w in self.lex.get("heavy")]
-        abstract_candidates = [w for w in self.mem.graph if w in self.lex.get("abstract")]
+        graph = self.mem.graph
+        heavy_candidates = [w for w in graph if w in self.lex.get("heavy")]
+        abstract_candidates = [w for w in graph if w in self.lex.get("abstract")]
         if not heavy_candidates or not abstract_candidates:
             return False, None
         host = random.choice(heavy_candidates)
         parasite = random.choice(abstract_candidates)
-        if parasite in self.mem.graph[host]["edges"]:
+        if parasite in graph[host]["edges"]:
             return False, None
         is_metaphor = psi > 0.7
         weight = 8.88
-        self.mem.graph[host]["edges"][parasite] = weight
-        if parasite not in self.mem.graph:
-            self.mem.graph[parasite] = {"edges": {}, "last_tick": 0}
-        self.mem.graph[parasite]["edges"][host] = weight
+        graph[host]["edges"][parasite] = weight
+        if parasite not in graph:
+            graph[parasite] = {"edges": {}, "last_tick": 0}
+        graph[parasite]["edges"][host] = weight
         self.spores_deployed += 1
         if is_metaphor:
             return True, (
                 f"{Prisma.CYN}✨ SYNAPSE SPARK: Your mind bridges '{host.upper()}' and '{parasite.upper()}'.\n"
-                f"   A new metaphor is born. The map folds.{Prisma.RST}")
+                f"   A new metaphor is born. The map folds.{Prisma.RST}"
+            )
         else:
             return True, (
                 f"{Prisma.VIOLET}🍄 INTRUSIVE THOUGHT: Exhaustion logic links '{host.upper()}' <-> '{parasite.upper()}'.\n"
-                f"   This makes no sense, yet there it is. 'Some things just happen.'{Prisma.RST}")
+                f"   This makes no sense, yet there it is. 'Some things just happen.'{Prisma.RST}"
+            )
 
 
 class BioLichen:
     def __init__(self):
         self.name = "LICHEN"
         self.color = Prisma.GRN
-        self.archetypes = {"photo", "play", "sacred", "social", "solar", "vital", "bloom", "grow"}
+        self.archetypes = {
+            "photo",
+            "play",
+            "sacred",
+            "social",
+            "solar",
+            "vital",
+            "bloom",
+            "grow",
+        }
 
     def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
         hits = sum(1 for w in clean_words if w in self.archetypes)
@@ -815,8 +877,11 @@ class BioLichen:
             if heavy_words:
                 h_word = random.choice(heavy_words)
                 TheLexicon.teach(h_word, "photo", tick_count)
-                msgs.append(f"{Prisma.MAG}SUBLIMATION: '{h_word}' has become Light.{Prisma.RST}")
+                msgs.append(
+                    f"{Prisma.MAG}SUBLIMATION: '{h_word}' has become Light.{Prisma.RST}"
+                )
         return sugar, " ".join(msgs) if msgs else None
+
 
 class LiteraryReproduction:
     MUTATIONS = {}
@@ -834,8 +899,11 @@ class LiteraryReproduction:
 
     @staticmethod
     def _extract_counts(physics_container):
-        if hasattr(physics_container, "counts"): return physics_container.counts
-        return physics_container.get("counts", {})
+        if hasattr(physics_container, "counts"):
+            return physics_container.counts
+        if isinstance(physics_container, dict):
+            return physics_container.get("counts", {})
+        return {}
 
     @staticmethod
     def mutate_config(current_config):
@@ -846,10 +914,13 @@ class LiteraryReproduction:
             ("MAX_HEALTH", 50.0, 500.0, 0.1),
             ("PHYSICS.VOLTAGE_MAX", 10.0, 100.0, 0.2),
             ("BIO.REWARD_MEDIUM", 0.01, 1.0, 0.2),
-            ("COUNCIL.MANIC_VOLTAGE_TRIGGER", 10.0, 50.0, 0.1)]
+            ("COUNCIL.MANIC_VOLTAGE_TRIGGER", 10.0, 50.0, 0.1),
+        ]
         for key, min_v, max_v, chance in MUTATION_TABLE:
             if random.random() < chance:
-                current_val = LiteraryReproduction._resolve_config_value(current_config, key)
+                current_val = LiteraryReproduction._resolve_config_value(
+                    current_config, key
+                )
                 if current_val is not None:
                     drift = random.uniform(0.9, 1.1)
                     mutations[key] = max(min_v, min(max_v, current_val * drift))
@@ -862,13 +933,10 @@ class LiteraryReproduction:
     @staticmethod
     def mitosis(parent_id, bio_state, physics):
         counts = LiteraryReproduction._extract_counts(physics)
-        if not counts:
-            dominant = "VOID"
-        else:
-            dominant = max(counts, key=counts.get)
+        dominant = max(counts, key=counts.get) if counts else "VOID"
         mutation_data = LiteraryReproduction.MUTATIONS.get(
-            dominant.upper(),
-            {"trait": "NEUTRAL", "mod": {}, "lexicon": []})
+            dominant.upper(), {"trait": "NEUTRAL", "mod": {}, "lexicon": []}
+        )
         child_id = f"{parent_id}_({mutation_data['trait']})"
         config_mutations = LiteraryReproduction.mutate_config(BoneConfig)
         config_mutations.update(mutation_data["mod"])
@@ -881,7 +949,8 @@ class LiteraryReproduction:
             "lexicon_mutations": lexicon_mutations,
             "config_mutations": config_mutations,
             "dominant_flavor": dominant,
-            "trauma_inheritance": trauma_vec}
+            "trauma_inheritance": trauma_vec,
+        }
         return child_id, child_genome
 
     @staticmethod
@@ -916,42 +985,31 @@ class LiteraryReproduction:
             "parent_b": parent_b_id,
             "trauma_inheritance": child_trauma,
             "config_mutations": config_mutations,
-            "inherited_enzymes": child_enzymes}
+            "inherited_enzymes": child_enzymes,
+        }
         return child_id, child_genome
 
-    def attempt_reproduction(self, engine_ref, mode="MITOSIS", target_spore=None) -> Tuple[str, Dict]:
+    def attempt_reproduction(
+        self, engine_ref, mode="MITOSIS", target_spore=None
+    ) -> Tuple[str, Dict]:
         mem = engine_ref.mind.mem
-        phys = engine_ref.phys.observer.last_physics_packet
-        child_id = None
+        bio_state = {
+            "trauma_vector": engine_ref.trauma_accum,
+            "mito": engine_ref.bio.mito,
+        }
+        phys_packet = {}
+        if hasattr(engine_ref, "cortex") and engine_ref.cortex.last_physics:
+            phys_packet = engine_ref.cortex.last_physics
+        elif hasattr(engine_ref, "phys") and hasattr(engine_ref.phys, "observer"):
+            if engine_ref.phys.observer.last_physics_packet:
+                phys_packet = engine_ref.phys.observer.last_physics_packet
         genome = {}
-        log_msg = []
+        child_id = "UNKNOWN"
         if mode == "MITOSIS":
-            bio_state = {"trauma_vector": engine_ref.trauma_accum}
-            child_id, genome = self.mitosis(mem.session_id, bio_state, phys)
-            log_msg = [f"   ► CHILD SPAWNED: {Prisma.WHT}{child_id}{Prisma.RST}",
-                       f"   ► TRAIT: {genome.get('dominant_flavor', 'None')}"]
+            child_id, genome = self.mitosis(mem.session_id, bio_state, phys_packet)
         elif mode == "CROSSOVER":
-            if not target_spore:
-                return f"{Prisma.RED}FERTILITY ERROR: No partner found.{Prisma.RST}", {}
-            current_bio = {"trauma_vector": engine_ref.trauma_accum, "mito": engine_ref.bio.mito}
-            child_id, genome = self.crossover(mem.session_id, current_bio, target_spore)
-            if not child_id:
-                return f"{Prisma.RED}REPRODUCTION ERROR: Mode '{mode}' yielded no offspring.{Prisma.RST}", {}
-            log_msg = [f"   HYBRID SPAWNED: {Prisma.WHT}{child_id}{Prisma.RST}"]
-        full_spore_data = {
-            "session_id": child_id,
-            "meta": {
-                "timestamp": time.time(),
-                "final_health": engine_ref.health,
-                "final_stamina": engine_ref.stamina},
-            "trauma_vector": genome.get("trauma_inheritance", {}),
-            "config_mutations": genome.get("config_mutations", {}),
-            "mutations": genome.get("lexicon_mutations", {}),
-            "mitochondria": {"enzymes": list(genome.get("inherited_enzymes", []))},
-            "core_graph": mem.graph,
-            "antibodies": list(engine_ref.bio.immune.active_antibodies)}
-        filename = f"{child_id}.json"
-        saved_path = mem.loader.save_spore(filename, full_spore_data)
-        if saved_path:
-            log_msg.append(f"   {Prisma.GRN}SAVED: {saved_path}{Prisma.RST}")
-        return "\n".join(log_msg), genome.get("config_mutations", {})
+            if target_spore:
+                res = self.crossover(mem.session_id, bio_state, target_spore)
+                if res[0]:
+                    child_id, genome = res
+        return child_id, genome.get("lexicon_mutations", {})

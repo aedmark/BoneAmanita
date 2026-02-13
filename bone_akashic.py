@@ -6,6 +6,7 @@ from typing import Dict, Any, Tuple, cast, List, Set
 from bone_core import TheLore, LoreManifest, BoneJSONEncoder
 from bone_types import Prisma
 
+
 class TheAkashicRecord:
     def __init__(self):
         self.discovered_words: Dict[str, str] = {}
@@ -33,20 +34,23 @@ class TheAkashicRecord:
             self.record_interaction(lenses)
 
     def _on_forge_event(self, payload):
-        if not payload or not isinstance(payload, dict): return
+        if not payload or not isinstance(payload, dict):
+            return
         self.track_successful_forge(
-            payload.get("ingredient"),
-            payload.get("catalyst"),
-            payload.get("result"))
+            payload.get("ingredient"), payload.get("catalyst"), payload.get("result")
+        )
 
     def _on_mythology_update(self, payload):
-        if not payload or not isinstance(payload, dict): return
+        if not payload or not isinstance(payload, dict):
+            return
         word = payload.get("word")
         category = payload.get("category")
         if word and category:
             self.register_word(word, category)
 
-    def calculate_manifold_shift(self, theta: str, e: Dict[str, float]) -> Dict[str, float]:
+    def calculate_manifold_shift(
+        self, theta: str, e: Dict[str, float]
+    ) -> Dict[str, float]:
         bias = 0.0
         scalar = 1.0
         theta_upper = theta.upper()
@@ -73,9 +77,12 @@ class TheAkashicRecord:
         if lens_data:
             self.save_to_disk("lenses", lens_data)
         mythos_state = {
-            "lens_cooccurrence": {f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
+            "lens_cooccurrence": {
+                f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()
+            },
             "ingredient_affinity": self.ingredient_affinity,
-            "shadow_stock": self.shadow_stock}
+            "shadow_stock": self.shadow_stock,
+        }
         self.save_to_disk("mythos", mythos_state)
         print(f"{Prisma.GRY}[AKASHIC]: Mythos persisted.{Prisma.RST}")
 
@@ -85,12 +92,14 @@ class TheAkashicRecord:
             try:
                 os.makedirs(directory)
             except OSError as e:
-                print(f"{Prisma.RED}[AKASHIC]: Failed to create '{directory}' directory: {e}{Prisma.RST}")
+                print(
+                    f"{Prisma.RED}[AKASHIC]: Failed to create '{directory}' directory: {e}{Prisma.RST}"
+                )
                 return
         filename = f"akashic_{category}.json"
         filepath = os.path.join(directory, filename)
         try:
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, cls=BoneJSONEncoder)
             print(f"{Prisma.GRY}[AKASHIC]: Saved {category}.{Prisma.RST}")
         except Exception as e:
@@ -98,7 +107,8 @@ class TheAkashicRecord:
 
     def _load_mythos_state(self):
         data = self.lore.get("MYTHOS")
-        if not data: return
+        if not data:
+            return
         raw_cooc = data.get("lens_cooccurrence", {})
         for k, v in raw_cooc.items():
             if "|" in k:
@@ -122,10 +132,13 @@ class TheAkashicRecord:
                 self._hybridize_lenses(key[0], key[1])
         if ingredients_used:
             for item in ingredients_used:
-                self.ingredient_affinity[item] = self.ingredient_affinity.get(item, 0) + 1
+                self.ingredient_affinity[item] = (
+                    self.ingredient_affinity.get(item, 0) + 1
+                )
 
     def track_successful_forge(self, ingredient_name, catalyst_type, result_item):
-        if not ingredient_name or not catalyst_type: return
+        if not ingredient_name or not catalyst_type:
+            return
         if (ingredient_name, catalyst_type) in self.known_recipes:
             return
         key = (ingredient_name, catalyst_type)
@@ -141,31 +154,40 @@ class TheAkashicRecord:
                 result_name = registry[result_item].get("description", result_item)
             else:
                 result_name = result_item
-        self.recipe_candidates[key][result_name] = self.recipe_candidates[key].get(result_name, 0) + 1
+        self.recipe_candidates[key][result_name] = (
+            self.recipe_candidates[key].get(result_name, 0) + 1
+        )
         if self.recipe_candidates[key][result_name] >= self.RECIPE_THRESHOLD:
             self._crystallize_recipe(ingredient_name, catalyst_type, result_item)
 
     def _hybridize_lenses(self, lens_a: str, lens_b: str):
-        if lens_a == lens_b: return
+        if lens_a == lens_b:
+            return
         roots = sorted([lens_a.replace("THE ", ""), lens_b.replace("THE ", "")])
         new_name = f"THE {roots[0]}-{roots[1]}"
         existing_lenses = self.lore.get("LENSES", {})
-        if new_name in existing_lenses: return
+        if new_name in existing_lenses:
+            return
 
         def get_weights(l_name):
             return existing_lenses.get(l_name, {}).get("weights", {"v": 0, "d": 0})
+
         w_a = get_weights(lens_a)
         w_b = get_weights(lens_b)
         new_weights = {
             "v": round((w_a.get("v", 0) + w_b.get("v", 0)) / 2, 2),
-            "d": round((w_a.get("d", 0) + w_b.get("d", 0)) / 2, 2)}
+            "d": round((w_a.get("d", 0) + w_b.get("d", 0)) / 2, 2),
+        }
         new_lens_data = {
             "description": f"A syncretic fusion of {lens_a} and {lens_b}.",
             "weights": new_weights,
-            "parentage": [lens_a, lens_b]}
+            "parentage": [lens_a, lens_b],
+        }
         self.lore.inject("LENSES", {new_name: new_lens_data})
         self.discovered_words[new_name] = "LENS"
-        print(f"{Prisma.MAG}🔮 AKASHIC: A new paradigm has crystallized: {new_name}{Prisma.RST}")
+        print(
+            f"{Prisma.MAG}🔮 AKASHIC: A new paradigm has crystallized: {new_name}{Prisma.RST}"
+        )
 
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
         self.known_recipes.add((ingredient, catalyst))
@@ -173,12 +195,18 @@ class TheAkashicRecord:
             "ingredient": ingredient,
             "catalyst_category": catalyst,
             "result": result_item,
-            "msg": f"The {ingredient} resonates with {catalyst} energy, transforming into {result_item}."}
+            "msg": f"The {ingredient} resonates with {catalyst} energy, transforming into {result_item}.",
+        }
         current_recipes = self.lore.get("GORDON", {}).get("RECIPES", [])
-        if not any(r['ingredient'] == ingredient and r['catalyst_category'] == catalyst for r in current_recipes):
+        if not any(
+            r["ingredient"] == ingredient and r["catalyst_category"] == catalyst
+            for r in current_recipes
+        ):
             current_recipes.append(new_recipe)
             self.lore.inject("GORDON", {"RECIPES": current_recipes})
-            print(f"{Prisma.CYN}📜 AKASHIC: Recipe recorded in the Great Book.{Prisma.RST}")
+            print(
+                f"{Prisma.CYN}📜 AKASHIC: Recipe recorded in the Great Book.{Prisma.RST}"
+            )
 
     def propose_new_category(self, word_list, category_name):
         lexicon_data = self.lore.get("LEXICON")
@@ -191,7 +219,9 @@ class TheAkashicRecord:
                 self.discovered_words[w] = category_name
                 updated = True
         if updated:
-            print(f"✨ MYTHOLOGY ENGINE: The Lexicon expands. New Category: '{category_name.upper()}'")
+            print(
+                f"✨ MYTHOLOGY ENGINE: The Lexicon expands. New Category: '{category_name.upper()}'"
+            )
             self.save_to_disk("LEXICON", lexicon_data)
 
     def store_ghost_echo(self, memory_data: Dict):
@@ -199,9 +229,12 @@ class TheAkashicRecord:
         if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
             self.shadow_stock.pop(0)
         mythos_state = {
-            "lens_cooccurrence": {f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
+            "lens_cooccurrence": {
+                f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()
+            },
             "ingredient_affinity": self.ingredient_affinity,
-            "shadow_stock": self.shadow_stock}
+            "shadow_stock": self.shadow_stock,
+        }
         self.save_to_disk("mythos", mythos_state)
         print(f"{Prisma.VIOLET}[AKASHIC]: Ghost Echo archived.{Prisma.RST}")
 
@@ -214,6 +247,8 @@ class TheAkashicRecord:
                 print(f"✨ LEXICON: Learned '{word}' ({category})")
                 self.save_to_disk("LEXICON", lexicon_data)
                 if len(lexicon_data[category]) > 50 and category != "heavy":
-                    print(f"⚠️ MYTHOLOGY ENGINE: Category '{category}' is bloating. Suggest fission.")
+                    print(
+                        f"⚠️ MYTHOLOGY ENGINE: Category '{category}' is bloating. Suggest fission."
+                    )
                 return True
         return False

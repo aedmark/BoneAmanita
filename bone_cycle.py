@@ -214,8 +214,9 @@ class SanctuaryPhase(SimulationPhase):
             "mito": {"atp": self.eng.bio.mito.state.atp_pool, "ros": self.eng.bio.mito.state.ros_buildup},
             "physics": ctx.physics.to_dict() if hasattr(ctx.physics, 'to_dict') else ctx.physics,
             "trauma_vector": current_trauma_load}
+        soul_snapshot = self.eng.soul.to_dict() if hasattr(self.eng, 'soul') and hasattr(self.eng.soul, 'to_dict') else {}
         dream_packet = self.eng.mind.dreamer.enter_rem_cycle(
-            self.eng.mind.mem,
+            soul_snapshot,
             bio_state=bio_packet)
         if isinstance(dream_packet, dict):
             ctx.log(dream_packet.get("log", "The mind wanders..."))
@@ -452,7 +453,7 @@ class NavigationPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         physics = ctx.physics
-        new_drag, grav_logs = self.eng.gordon.check_gravity(
+        new_drag, grav_logs = self.eng.phys.dynamics.check_gravity(
             current_drift=physics.narrative_drag,
             psi=physics.psi)
         physics.narrative_drag = new_drag

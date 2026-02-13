@@ -5,8 +5,19 @@ import math, random, time
 from typing import Dict, List, Any, Tuple, Optional, Deque
 from collections import Counter, deque
 from dataclasses import dataclass
+
+from bone_config import BoneConfig
 from bone_types import Prisma, PhysicsPacket, CycleContext
 from bone_lexicon import TheLexicon
+
+@dataclass
+class PhysicsDelta:
+    """ Represents a change to the physics state. """
+    operator: str
+    field: str
+    value: float
+    source: str
+    message: Optional[str] = None
 
 class PhysicsConstants:
     VOLT_CRITICAL = 20.0
@@ -391,6 +402,21 @@ class CosmicDynamics:
     def commit(self, voltage: float):
         self.voltage_history.append(voltage)
 
+    def check_gravity(self, current_drift: float, psi: float) -> Tuple[float, List[str]]:
+        """ Calculates the natural accumulation of Narrative Drag (Entropy)."""
+        logs = []
+        new_drag = current_drift
+        if new_drag < PhysicsConstants.DRAG_FLOOR:
+            new_drag += 0.05
+        if psi > 0.5:
+            reduction = (psi - 0.5) * 0.2
+            new_drag = max(0.0, new_drag - reduction)
+        CRITICAL_DRIFT = 6.0
+        if new_drag > CRITICAL_DRIFT:
+            if random.random() < 0.3:
+                logs.append(f"{Prisma.GRY}⚓ GRAVITY: The narrative is heavy. (Drag {new_drag:.1f}){Prisma.RST}")
+        return new_drag, logs
+
     def analyze_orbit(self, network: Any, clean_words: List[str]) -> Tuple[str, float, str]:
         if not clean_words or not network or not hasattr(network, 'graph') or not network.graph:
             return "VOID_DRIFT", 3.0, "VOID: Deep Space. No connection."
@@ -484,3 +510,38 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> Physic
     feedback.voltage = max(0.0, min(feedback.voltage, pc.VOLT_CRITICAL * 1.5))
     feedback.narrative_drag = max(pc.DRAG_FLOOR, min(feedback.narrative_drag, pc.DRAG_HALT))
     return feedback
+
+
+class ItemPhysics:
+    """ Handles the physical consequences of Inventory Items. """
+    @staticmethod
+    def calculate_passive_deltas(inventory_data: List[Dict]) -> List[PhysicsDelta]:
+        deltas = []
+        for item_data in inventory_data:
+            traits = item_data.get("passive_traits", [])
+            name = item_data.get("name", "Unknown")
+
+            if "HEAVY_LOAD" in traits:
+                deltas.append(PhysicsDelta("ADD", "narrative_drag", 0.5, name, "Heavy Load"))
+
+            if "TIME_DILATION" in traits:
+                deltas.append(PhysicsDelta("MULT", "narrative_drag", 0.8, name, "Time Dilation"))
+
+            if "ENTROPY_BUFFER" in traits:
+                deltas.append(PhysicsDelta("MULT", "turbulence", 0.5, name, "Entropy Buffer"))
+
+        return deltas
+
+    @staticmethod
+    def check_conductive_hazard(physics: Dict, inventory_data: List[Dict]) -> List[str]:
+        logs = []
+        voltage = physics.get("voltage", 0.0)
+        limit = getattr(BoneConfig.INVENTORY, "CONDUCTIVE_THRESHOLD", 20.0)
+
+        if voltage > limit:
+            for item in inventory_data:
+                if "CONDUCTIVE" in item.get("passive_traits", []):
+                    damage = (voltage - limit) * 0.5
+                    logs.append(
+                        f"{Prisma.RED}⚡ CONDUCTIVE HAZARD: {item['name']} acts as a lightning rod! (-{damage:.1f} HP){Prisma.RST}")
+        return logs

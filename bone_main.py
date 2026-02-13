@@ -1,4 +1,4 @@
-""" BONEAMANITA 15.0.0
+""" BONEAMANITA 15.0.1
  Architects: SLASH, KISHO, Taylor & Edmark
  Refactored by: THE TORVALDS & THE BEZALEL """
 
@@ -56,7 +56,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.0.0   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.0.1   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         typewriter(f"{Prisma.GRY}...Initializing KernelHash: {self.engine_instance.kernel_hash}...{Prisma.RST}")
         typewriter(f"{Prisma.paint('>>> SYSTEM: LISTENING', 'G')}")
@@ -186,6 +186,19 @@ class BoneAmanita:
         self.observer = TheObserver()
         self.system_health.link_observer(self.observer)
         self.reality_stack = RealityStack()
+        self._load_system_prompts()
+
+    def _load_system_prompts(self):
+        try:
+            path = "dev/lore/system_prompts.json"
+            if not os.path.exists(path):
+                path = "lore/system_prompts.json"
+            with open(path, 'r', encoding='utf-8') as f:
+                self.prompt_library = json.load(f)
+            print(f"{Prisma.GRY}...Prompt Library Loaded ({len(self.prompt_library)} modes)...{Prisma.RST}")
+        except Exception as e:
+            print(f"{Prisma.RED}CRITICAL: Could not load prompts: {e}{Prisma.RST}")
+            self.prompt_library = {}
 
     def _initialize_embryo(self):
         self.embryo = BoneArchitect.incubate(self.events, self.lex)
@@ -517,6 +530,11 @@ class BoneAmanita:
         self.suppressed_agents = set(preset["village_suppression"])
         if hasattr(self, 'reality_stack'):
             self.reality_stack.stabilize_at(preset["ui_layer"])
+        prompt_key = preset.get("prompt_key", "ADVENTURE")
+        if hasattr(self, 'prompt_library') and prompt_key in self.prompt_library:
+            if self.cortex and self.cortex.composer:
+                self.cortex.composer.load_template(self.prompt_library[prompt_key])
+                print(f"{Prisma.GRY}   >>> Neural Pathway Re-aligned: {prompt_key}{Prisma.RST}")
 
     def save_checkpoint(self, history: list = None) -> str:
         try:

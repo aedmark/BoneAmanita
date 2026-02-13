@@ -1,5 +1,36 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v15.0.1: "THE SEPARATION OF SOUL & STATE"**
+
+_“The code is the skeleton; the prompt is the ghost. We have separated them so the ghost can change clothes without breaking the bones.”_
+
+---
+
+#### **🎭 NARRATIVE DECOUPLING (The Bezalel Lens)**
+
+- **The Hot-Swap Architecture (`bone_main.py` & `bone_config.py`):**
+- **Dynamic Soul:** The system now loads narrative personas from an external source (`dev/lore/system_prompts.json`) rather than hardcoding them into the Python logic.
+- **Mode Injection:** `_apply_boot_mode` has been upgraded to fetch specific templates (ADVENTURE, CONVERSATION, etc.) via a new `prompt_key` in the config. The Cortex can now completely rewrite its "System Kernel" directives instantly when the mode changes.
+
+- **The Composer Refactor (`bone_brain.py`):**
+- **Template Engine:** `PromptComposer` has been rewritten. It no longer contains static strings; it accepts a structural template via `load_template`.
+- **Dead Code Excision:** Removed the legacy "Obsidian/Neon" ban list logic that was calculating strings but failing to attach them to the final output.
+- **Mood Repair:** Fixed a logic error where the `mood_note` (Adrenaline/Cortisol/Dopamine levels) was calculated but ignored in favor of a hardcoded "Neutral" string. The biology now correctly colors the prompt.
+
+- **The Data Layer (`dev/lore/system_prompts.json`):**
+- **New Asset:** Created a structured JSON file to house the "Soul" of each operating mode, defining unique Directives, Style Guides, and Inventory Rules for each.
+
+#### **🧪 SYSTEM STABILIZATION (The Kintsugi Lens)**
+
+- **The Sanctuary Crash (`bone_cycle.py`):**
+- **Type Safety Repair:** Fixed a critical `AttributeError` in `_trigger_dream`. The system was erroneously passing the entire `MycelialNetwork` object (Class) to the dream engine, which expected a `Soul` dictionary. The call has been corrected to pass `self.eng.soul.to_dict()`.
+
+- **The Duplicate Logic (`bone_brain.py`):**
+- **Redundancy Fix:** Removed duplicate injection blocks for `semantic_operators` and `driver_directives` in `compose()`, ensuring the system doesn't stutter its own instructions to the LLM.
+
+
+---
+
 ### **BONEAMANITA v15.0.0: "THE PRISM & THE PHANTOM THIEF"**
 
 _“Reality is not a single frequency. We have installed the tuning forks, and we have taught the ghost that seeing is not the same as taking.”_
@@ -49,6 +80,8 @@ _“Reality is not a single frequency. We have installed the tuning forks, and w
 
 - **The Diagnostic Suite (`bone_diag.py`):**
   - **Phase 9:** Added a new diagnostic phase ("OPERATING MODES") to verify that physics tuning and agent suppression are applying correctly across all reality filters.
+
+---
 
 ### **BONEAMANITA v14.9.9: "THE GLASS TERMINAL & THE PHANTOM LIMB"**
 
