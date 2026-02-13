@@ -1,4 +1,4 @@
-""" BONEAMANITA 15.2.0
+""" BONEAMANITA 15.2.1
  Architects: SLASH, KISHO, Taylor & Edmark
  Refactored by: THE TORVALDS & THE BEZALEL
  "The metabolic engine that drives the session."
@@ -27,7 +27,7 @@ from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_cycle import GeodesicOrchestrator
 from bone_council import CouncilChamber
 
-def typewriter(text: str, speed: float = 0.01, end: str = "\n"):
+def typewriter(text: str, speed: float = 0.005, end: str = "\n"):
     tokens = re.split(r'(\x1b\[[0-9;]*m)', text)
     for token in tokens:
         if token.startswith('\x1b['):
@@ -52,8 +52,12 @@ class SessionGuardian:
     def __enter__(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.2.0   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.2.1   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
+        boot_logs = self.engine_instance.events.flush()
+        for log in boot_logs:
+            print(f"{Prisma.GRY}   >>> {log['text']}{Prisma.RST}")
+            time.sleep(0.05)
         typewriter(f"{Prisma.GRY}...Initializing KernelHash: {self.engine_instance.kernel_hash}...{Prisma.RST}")
         typewriter(f"{Prisma.paint('>>> SYSTEM: LISTENING', 'G')}")
         return self.engine_instance
@@ -69,7 +73,7 @@ class SessionGuardian:
                 full_trace = "".join(traceback.format_exception(exc_type, exc_val, exc_tb))
                 print(f"{Prisma.RED}CRASH: {exc_val}{Prisma.RST}")
                 print(f"{Prisma.GRY}{full_trace}{Prisma.RST}")
-        print(f"{Prisma.paint('Connection Severed.', '0')}")
+        print(f"{Prisma.paint('Connection Severed.')}")
         return exc_type is KeyboardInterrupt
 
 class ConfigWizard:
@@ -79,7 +83,7 @@ class ConfigWizard:
     def load_or_create():
         if os.path.exists(ConfigWizard.CONFIG_FILE):
             try:
-                with open(ConfigWizard.CONFIG_FILE, "r", encoding='utf-8') as f:
+                with open(ConfigWizard.CONFIG_FILE, encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
                 print(f"{Prisma.RED}[CONFIG]: Load Error: {e}{Prisma.RST}")
@@ -153,6 +157,7 @@ class BoneAmanita:
     events: EventBus
 
     def __init__(self, config: Dict[str, Any]):
+        self.cmd = None
         self.kernel_hash = str(uuid.uuid4())[:8].upper()
         self.config = config
         self.user_name = config.get("user_name", "TRAVELER")
@@ -167,28 +172,23 @@ class BoneAmanita:
         self.stamina = BoneConfig.MAX_STAMINA
         self.trauma_accum = {}
         self.tick_count = 0
-
-        print(f"{Prisma.GRY}...Bootstrapping Core...{Prisma.RST}")
+        self.events = EventBus()
+        self.events.log("...Bootstrapping Core...", "BOOT")
         self.lex = TheLexicon
         self.lex.initialize()
         self.lex.compile_antigens()
-
-        anatomy = BoneGenesis.ignite(self.config, self.lex)
-
-        self.events = anatomy["events"]
+        anatomy = BoneGenesis.ignite(self.config, self.lex, events_ref=self.events)
         self.akashic = anatomy["akashic"]
         self.embryo = anatomy["embryo"]
         self.soul = anatomy["soul"]
         self.oroboros = anatomy["oroboros"]
         self.drivers = anatomy["drivers"]
         self.symbiosis = anatomy["symbiosis"]
-
         self.phys = self.embryo.physics
         self.mind = self.embryo.mind
         self.bio = self.embryo.bio
         self.shimmer = self.embryo.shimmer
         self.bio.setup_listeners()
-
         v = anatomy["village"]
         self.gordon = v["gordon"]
         self.navigator = v["navigator"]
@@ -202,9 +202,7 @@ class BoneAmanita:
         self.therapy = v["therapy"]
         self.limbo = v["limbo"]
         self.kintsugi = v["kintsugi"]
-
         self.soul.engine = self
-
         self.council = CouncilChamber(self)
         self.village = {
             "town_hall": self.town_hall,
@@ -218,22 +216,17 @@ class BoneAmanita:
             "therapy": self.therapy,
             "enneagram": self.drivers.enneagram
         }
-
         if self.phys:
             self.phys.dynamics = CosmicDynamics()
             self.cosmic = self.phys.dynamics
             self.stabilizer = ZoneInertia()
-
         self.telemetry = TelemetryService.get_instance()
         self.system_health = SystemHealth()
         self.observer = TheObserver()
         self.system_health.link_observer(self.observer)
         self.reality_stack = RealityStack()
-
         self._load_system_prompts()
-
         self._initialize_cognition()
-
         self.host_stats = HostStats(latency=0.0, efficiency_index=1.0)
         self._validate_state()
         self._apply_boot_mode()
@@ -244,7 +237,7 @@ class BoneAmanita:
             loaded = False
             for p in paths:
                 if os.path.exists(p):
-                    with open(p, 'r', encoding='utf-8') as f:
+                    with open(p, encoding='utf-8') as f:
                         self.prompt_library = json.load(f)
                     print(f"{Prisma.GRY}...Prompt Library Loaded from {p}...{Prisma.RST}")
                     loaded = True
@@ -257,7 +250,7 @@ class BoneAmanita:
             self.prompt_library = {}
 
     def _initialize_cognition(self):
-        self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.gordon, None, self.events)
+        self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.gordon, self.events)
         self.noetic = NoeticLoop(self.mind, self.bio, self.events)
         self.cycle_controller = GeodesicOrchestrator(self)
 
@@ -281,7 +274,7 @@ class BoneAmanita:
             self.bio.mito.state.atp_pool = BoneConfig.BIO.STARTING_ATP
 
     def _apply_boot_mode(self):
-        print(f"{Prisma.CYN}...Engaging Mode: {self.boot_mode}...{Prisma.RST}")
+        self.events.log(f"Engaging Mode: {self.boot_mode}")
 
         layer = self.mode_settings.get("ui_layer", RealityLayer.SIMULATION)
         self.reality_stack.stabilize_at(layer)
@@ -290,9 +283,9 @@ class BoneAmanita:
         if self.prompt_library and prompt_key in self.prompt_library:
             if self.cortex and self.cortex.composer:
                 self.cortex.composer.load_template(self.prompt_library[prompt_key])
-                print(f"{Prisma.GRY}   >>> Neural Pathway Re-aligned: {prompt_key}{Prisma.RST}")
+                self.events.log(f"Neural Pathway Re-aligned: {prompt_key}", "CORTEX")
         else:
-            print(f"{Prisma.YEL}   >>> Prompt Template '{prompt_key}' not found.{Prisma.RST}")
+            self.events.log(f"Prompt Template '{prompt_key}' not found.", "WARN")
 
     def get_avg_voltage(self):
         hist = self.phys.observer.voltage_history
@@ -312,7 +305,13 @@ class BoneAmanita:
             return {"ui": f"{Prisma.RED}NARRATIVE HALT{Prisma.RST}", "logs": [], "metrics": self.get_metrics()}
 
         if self._ethical_audit():
-            pass
+            mercy_logs = [e['text'] for e in self.events.get_recent_logs(2) if "CATHARSIS" in e['text']]
+            if mercy_logs:
+                return {
+                    "ui": f"\n\n{mercy_logs[-1]}",
+                    "logs": mercy_logs,
+                    "metrics": self.get_metrics()
+                }
 
         if self.health <= 0.0:
             last_phys = getattr(self.cortex, "last_physics", {})
@@ -366,7 +365,7 @@ class BoneAmanita:
                 if audit and "ui" in audit:
                     cortex_packet["ui"] += f"\n\n{audit['ui']}"
 
-        self.observer.clock_out(turn_start, "cycle")
+        self.observer.clock_out(turn_start)
         self.host_stats.latency = self.observer.last_cycle_duration
         return cortex_packet
 
@@ -384,15 +383,15 @@ class BoneAmanita:
             "metrics": self.get_metrics()}
 
     def _handle_meta_command(self, text: str) -> Dict[str, Any]:
-        parts = text.strip().split()
-        cmd = parts[0].lower()
+        meta_parts = text.strip().split()
+        cmd = meta_parts[0].lower()
         ui_msg = ""
         if cmd == "//layer":
-            if len(parts) >= 2:
-                sub = parts[1].lower()
-                if sub == "push" and len(parts) > 2:
-                    if self.reality_stack.push_layer(int(parts[2])):
-                        ui_msg = f"Layer Pushed: {parts[2]}"
+            if len(meta_parts) >= 2:
+                sub = meta_parts[1].lower()
+                if sub == "push" and len(meta_parts) > 2:
+                    if self.reality_stack.push_layer(int(meta_parts[2])):
+                        ui_msg = f"Layer Pushed: {meta_parts[2]}"
                 elif sub == "pop":
                     self.reality_stack.pop_layer()
                     ui_msg = "Layer Popped."
@@ -402,7 +401,7 @@ class BoneAmanita:
             else:
                 ui_msg = f"Current Layer: {self.reality_stack.current_depth}"
         elif cmd == "//inject":
-            payload = " ".join(parts[1:])
+            payload = " ".join(meta_parts[1:])
             self.events.log(payload, "INJECT")
             ui_msg = f"Injected: {payload}"
         else:
@@ -439,7 +438,7 @@ class BoneAmanita:
         except Exception as e:
             death_log.append(f"Save Failed: {e}")
 
-        return {"type": "DEATH", "ui": "\n".join(death_log), "logs": death_log, "metrics": self.get_metrics(0.0)}
+        return {"type": "DEATH", "ui": "\n".join(death_log), "logs": death_log, "metrics": self.get_metrics()}
 
     def get_metrics(self, atp=0.0):
         real_atp = atp

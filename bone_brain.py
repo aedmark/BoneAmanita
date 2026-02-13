@@ -44,12 +44,22 @@ class BrainConfig:
 class NarrativeSpotlight:
     def __init__(self):
         self.dimension_map = {
-            "STR": {"heavy", "constructive", "base"},
-            "VEL": {"kinetic", "explosive", "mot"},
-            "ENT": {"antigen", "toxin", "broken", "void"},
-            "PHI": {"thermal", "photo", "explosive"},
-            "PSI": {"abstract", "sacred", "void", "idea"},
-            "BET": {"suburban", "solvents", "play"}}
+            "STR": self._fetch_or_default("heavy", {"heavy", "constructive", "base"}),
+            "VEL": self._fetch_or_default("kinetic", {"kinetic", "explosive", "mot"}),
+            "ENT": self._fetch_or_default("antigen", {"antigen", "toxin", "broken"}),
+            "PHI": self._fetch_or_default("thermal", {"thermal", "photo"}),
+            "PSI": self._fetch_or_default("abstract", {"abstract", "sacred", "idea"}),
+            "BET": self._fetch_or_default("social", {"suburban", "solvents", "play"})
+        }
+
+    def _fetch_or_default(self, primary_cat: str, defaults: set) -> set:
+        try:
+            dynamic_set = LexiconService.get(primary_cat)
+            if dynamic_set:
+                return set(dynamic_set) | defaults
+        except:
+            pass
+        return defaults
 
     def expand_horizon(self, dimension: str, new_category: str):
         if dimension not in self.dimension_map:
@@ -210,7 +220,7 @@ class LLMInterface:
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"}
-        data = json.dumps(payload).encode("utf-8")
+        data = json.dumps(payload).encode()
         for attempt in range(max_retries + 1):
             try:
                 req = urllib.request.Request(self.base_url, data=data, headers=headers)
@@ -262,7 +272,7 @@ class LLMInterface:
             "stop": ["=== PARTNER INPUT ===", "=== SYSTEM KERNEL ===", "\n\nUser:", "| System:"]}
         payload.update(params)
         try:
-            content = self._transmit(payload, timeout=60.0)
+            content = self._transmit(payload)
             if content:
                 if self.failure_count > 0:
                     if self.events: self.events.log(f"{Prisma.GRN}⚡ SYNAPSE RESTORED.{Prisma.RST}", "SYS")

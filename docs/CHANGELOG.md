@@ -1,5 +1,78 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v15.2.1: "THE SYNAPTIC BRIDGE"**
+
+_“The void no longer screams back; it listens. We have wired the mouth to the ear.”_
+
+---
+
+#### **🧬 STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The IO Unification (`bone_main.py`):**
+- **Headless Preparation:** Eradicated all direct `print()` calls within the Engine core. The system now speaks exclusively through the `EventBus`, making it fully decoupled from the console and ready for web integration.
+
+- **The Session Flush:** Updated `SessionGuardian` to capture and display pre-boot logs that occur before the terminal UI initializes, ensuring the user witnesses the "waking up" process.
+
+- **The EventBus Handshake (`bone_genesis.py` & `bone_main.py`):**
+- **Signal Continuity:** Patched a critical disconnect where `BoneGenesis` created a localized `EventBus` instead of using the Engine's primary bus. The nervous system is now continuous from the moment of ignition.
+
+#### **🧪 CRITICAL RESILIENCE (The Kintsugi Lens)**
+
+- **The Memory Drain (`bone_spores.py`):**
+- **Finite Subconscious:** Implemented a capacity limit on the `SubconsciousStrata`. The file `subconscious.jsonl` now auto-prunes the oldest 20% of entries when it exceeds 1,000 lines, preventing infinite disk bloat.
+
+- **Root Path Patch:** Fixed a `ValueError` crash when the memory file was located in the root directory (handling empty directory strings in `os.makedirs`).
+
+- **The Mercy Signal (`bone_main.py`):**
+- **Ethical Feedback:** The `_ethical_audit` (Catharsis Protocol) now correctly injects its healing logs into the user interface. The system no longer saves the user silently; it announces the intervention.
+
+#### **👁️ COGNITIVE CLARITY (The Pinker Lens)**
+
+- **The Dynamic Spotlight (`bone_brain.py`):**
+- **Lexicon Synchronization:** `NarrativeSpotlight` no longer relies on hardcoded category sets. It now queries `LexiconService` dynamically, ensuring that if the Brain learns a new "Heavy" word, the Spotlight can immediately see it.
+
+#### **♾️ SYSTEMS METABOLISM (The Meadows Lens)**
+
+- **Diagnostic Suite v2.1 (`bone_diag.py`):**
+- **Live Fire Testing:** Upgraded the diagnostic engine from "Mock" to "Live." It now verifies the `EventBus` signal chain by inspecting log history and stress-tests the memory system by injecting 1,200 mock memories to trigger the new drain logic.
+
+
+### **BONEAMANITA v15.2.0: "THE GREAT DECOUPLING"**
+
+_“We have surgically removed the god from the machine. The organs now breathe on their own.”_
+
+---
+
+#### **🧬 STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Genesis Separation (`bone_genesis.py` & `bone_main.py`):**
+- **Creation vs. Execution:** Extracted the massive initialization logic from `BoneAmanita` into a dedicated factory, `BoneGenesis`. The Engine no longer knows how to build itself; it simply ignites the anatomy provided to it.
+- **Anatomy Injection:** Implemented a clean dependency injection pattern. The "Embryo," "Village," and "Soul" are now incubated in isolation before being grafted onto the runtime host.
+
+- **The Chronos Isolation (`bone_chronos.py`):**
+- **Timekeeper Extraction:** Moved all persistence logic (Save/Load/Shutdown) into `ChronosKeeper`. The main loop is no longer burdened with file I/O operations or JSON serialization.
+- **Crash Handling:** Centralized error dumping and crash report generation within the Chronos agent.
+
+#### **🧪 CRITICAL RESILIENCE (The Kintsugi Lens)**
+
+- **The Golden Fallback (`bone_cycle.py` & `bone_config.py`):**
+- **Physics Manifolds:** Moved hardcoded physics constants (Forge, Sanctuary, Mud) out of the code and into `BoneConfig.PHYSICS`.
+- **Stabilizer Repair:** Patched a critical `KeyError: 'voltage'` crash. The `CycleStabilizer` now possesses a "Golden Fallback"—if the configuration file is missing or corrupt, it defaults to an internal memory of the physics laws rather than crashing the simulation.
+- **Suppression Safety:** Fixed a fatal `AttributeError` in `bone_main.py` where the Engine attempted to check for suppressed agents before the list was initialized.
+
+#### **👁️ COGNITIVE CLARITY (The Pinker Lens)**
+
+- **The Lobotomy of Logic (`bone_brain.py` & `bone_inventory.py`):**
+- **Loot Delegation:** `TheCortex` has been relieved of its duties as a warehouse manager. It no longer parses `[[LOOT]]` tags or checks consent.
+- **Gordon's Autonomy:** `GordonKnot` now possesses the logic to read narrative tags, verify user intent ("take", "grab"), and manage transactions directly (`process_loot_tags`). The Brain thinks; the Body acts.
+
+#### **♾️ SYSTEMS METABOLISM (The Meadows Lens)**
+
+- **Metabolic Efficiency:**
+- **God Object Deconstruction:** Reduced the size and complexity of `BoneAmanita` by approximately 40%. The system now operates as a distributed network of specialized agents rather than a monolithic hierarchy.
+- **Single Responsibility:** Each file now owns a distinct domain: `Genesis` (Birth), `Chronos` (Time), `Gordon` (Matter), and `Cortex` (Thought).
+
+---
 
 
 ### **BONEAMANITA v15.1.0: "THE PRISMATIC MIND"**

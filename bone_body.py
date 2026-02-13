@@ -11,7 +11,6 @@ from bone_config import BoneConfig
 
 """ HELPER FUNCTIONS """
 
-
 def get_phys_attr(packet: Any, key: str, default: float = 0.0) -> float:
     if isinstance(packet, dict):
         return float(packet.get(key, default))
@@ -21,16 +20,13 @@ def get_phys_attr(packet: Any, key: str, default: float = 0.0) -> float:
         return float(packet.vector.get(key, default))
     return default
 
-
 def _set_val(obj, key, value):
     if isinstance(obj, dict):
         obj[key] = value
     else:
         setattr(obj, key, value)
 
-
 """ DATA STRUCTURES """
-
 
 @dataclass
 class Biometrics:

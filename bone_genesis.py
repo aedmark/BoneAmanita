@@ -29,26 +29,24 @@ class BoneGenesis:
     """
 
     @staticmethod
-    def ignite(config: Dict[str, Any], lexicon_ref: Any) -> Dict[str, Any]:
-        print("...Igniting Genesis Sequence...")
-
-        events = EventBus()
+    def ignite(config: Dict[str, Any], lexicon_ref: Any, events_ref: Any = None) -> Dict[str, Any]:
+        if events_ref:
+            events_ref.log("Igniting Genesis Sequence...", "GENESIS")
+            events = events_ref
+        else:
+            print("...Igniting Genesis Sequence...")
+            events = EventBus()
         akashic = TheAkashicRecord()
         akashic.setup_listeners(events)
-
         embryo = BoneArchitect.incubate(events, lexicon_ref)
         embryo = BoneArchitect.awaken(embryo)
-
         if embryo.bio.mito.state.atp_pool <= 0.0:
             genesis_val = getattr(BoneConfig.METABOLISM, "GENESIS_VOLTAGE", 100.0)
             events.log(f"⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP).", "SYS")
             embryo.bio.mito.adjust_atp(genesis_val, reason="GENESIS")
-
         mode_settings = config.get("mode_settings", {})
         suppressed = set(mode_settings.get("village_suppression", []))
-
         village_bundle = BoneGenesis._summon_village(events, embryo, akashic, suppressed)
-
         soul = NarrativeSelf(
             engine_ref=None,
             events_ref=events,

@@ -110,12 +110,11 @@ class LocalFileSporeLoader:
         except OSError:
             return False
 
-
 class SubconsciousStrata:
     def __init__(self, filename="memories/subconscious.jsonl"):
         self.filepath = filename
         self.directory = os.path.dirname(filename)
-        if not os.path.exists(self.directory):
+        if self.directory and not os.path.exists(self.directory):
             os.makedirs(self.directory)
         self.index = set()
         self._load_index()
@@ -139,6 +138,8 @@ class SubconsciousStrata:
 
     def bury(self, fossil_data: Dict):
         try:
+            if len(self.index) > 1000:
+                self._prune_strata()
             with open(self.filepath, "a", encoding="utf-8") as f:
                 fossil_data["buried_at"] = time.time()
                 f.write(json.dumps(fossil_data, cls=BoneJSONEncoder) + "\n")
@@ -146,6 +147,23 @@ class SubconsciousStrata:
             return True
         except IOError:
             return False
+
+    def _prune_strata(self):
+        try:
+            with open(self.filepath, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            keep_count = int(len(lines) * 0.8)
+            survivors = lines[-keep_count:]
+            with open(self.filepath, "w", encoding="utf-8") as f:
+                f.writelines(survivors)
+            self.index = set()
+            for line in survivors:
+                try:
+                    self.index.add(json.loads(line)["word"])
+                except:
+                    pass
+        except Exception:
+            pass
 
     def dredge(self, trigger_word: str) -> Optional[Dict]:
         if trigger_word not in self.index:
@@ -635,7 +653,7 @@ class MycelialNetwork:
         ]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BONEAMANITA_15.2.0",
+            "genome": "BONEAMANITA_15.2.1",
             "session_id": self.session_id,
             "parent_id": self.session_id,
             "parent_id": self.session_id,

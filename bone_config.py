@@ -135,7 +135,7 @@ class BoneConfig:
         }
     }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "15.2.0"
+    VERSION = "15.2.1"
     VERBOSE_LOGGING = False
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
