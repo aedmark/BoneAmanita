@@ -289,6 +289,10 @@ class VSLState:
     B: float = 0.3
     history: List[str] = field(default_factory=list)
 
+class DriverRegistry:
+    def __init__(self, events_ref):
+        self.enneagram = EnneagramDriver(events_ref)
+        self.current_focus = "NONE"
 
 class BoneConsultant:
     STAGES = ["EXPLORER", "CLARIFIER", "SYNTHESIZER", "VALIDATOR"]

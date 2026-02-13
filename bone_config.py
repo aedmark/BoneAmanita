@@ -28,7 +28,7 @@ class BonePresets:
         "E_TARGET": 0.4,
         "B_TARGET": 0.5,
         "ZONE": "SANCTUARY",
-        "COLOR": "\033[32m", # Prisma.GRN
+        "COLOR": "\033[32m",
         "COLOR_NAME": "GRN"}
     LABORATORY = {
         "PHYSICS.VOLTAGE_FLOOR": 0.5,
@@ -40,10 +40,9 @@ class BonePresets:
         "ADVENTURE": {
             "description": "The default experience. Survival, inventory, exploration.",
             "tuning": "STANDARD",
-            "ui_layer": 1,  # RealityLayer.SIMULATION
+            "ui_layer": 1,
             "village_suppression": [],
             "prompt_key": "ADVENTURE",
-            # Reality Flags
             "show_inventory": True,
             "show_location": True,
             "show_vitals": True,
@@ -56,10 +55,9 @@ class BonePresets:
             "ui_layer": 1,
             "village_suppression": ["GORDON", "NAVIGATOR", "CARTOGRAPHER", "TINKERER", "DEATH"],
             "prompt_key": "CONVERSATION",
-            # Reality Flags
             "show_inventory": False,
             "show_location": False,
-            "show_vitals": False,  # Hide HP/Stamina in prompt (UI might still show them)
+            "show_vitals": False,
             "allow_loot": False,
             "allow_metrics": False
         },
@@ -69,21 +67,19 @@ class BonePresets:
             "ui_layer": 1,
             "village_suppression": ["BUREAU", "GATEKEEPER", "LIMITER"],
             "prompt_key": "CREATIVE",
-            # Reality Flags
             "show_inventory": False,
-            "show_location": True,  # Keep location for atmosphere
+            "show_location": True,
             "show_vitals": False,
-            "allow_loot": False,  # Focus on creation, not acquisition
+            "allow_loot": False,
             "allow_metrics": False
         },
         "TECHNICAL": {
             "description": "Raw data stream. Debugging and code generation.",
             "tuning": "DEBUG",
-            "ui_layer": 2,  # RealityLayer.DEBUG
+            "ui_layer": 2,
             "village_suppression": ["SOUL", "DREAMER", "MYTHOS"],
             "prompt_key": "TECHNICAL",
-            # Reality Flags
-            "show_inventory": True,  # Useful for debugging state
+            "show_inventory": True,
             "show_location": True,
             "show_vitals": True,
             "allow_loot": True,
@@ -96,16 +92,16 @@ class BonePresets:
         "BIO": {"METABOLISM_RATE": 1.0}
     }
     ZEN = {
-        "PHYSICS": {"VOLTAGE_MAX": 10.0, "BASE_DRAG": 0.0},  # Frictionless
-        "BIO": {"METABOLISM_RATE": 0.1}  # Near-zero cost
+        "PHYSICS": {"VOLTAGE_MAX": 10.0, "BASE_DRAG": 0.0},
+        "BIO": {"METABOLISM_RATE": 0.1}
     }
     MANIC = {
-        "PHYSICS": {"VOLTAGE_MAX": 50.0, "BASE_DRAG": 0.5},  # High energy
-        "BIO": {"METABOLISM_RATE": 2.0}  # Burns bright
+        "PHYSICS": {"VOLTAGE_MAX": 50.0, "BASE_DRAG": 0.5},
+        "BIO": {"METABOLISM_RATE": 2.0}
     }
     DEBUG = {
         "PHYSICS": {"VOLTAGE_MAX": 100.0, "BASE_DRAG": 0.0},
-        "BIO": {"METABOLISM_RATE": 0.0}  # Infinite resources
+        "BIO": {"METABOLISM_RATE": 0.0}
     }
 
 class BoneConfig:
@@ -139,7 +135,7 @@ class BoneConfig:
         }
     }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "15.1.0 (Refactored)"
+    VERSION = "15.2.0"
     VERBOSE_LOGGING = False
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -242,6 +238,15 @@ class BoneConfig:
         WEIGHT_KINETIC = 1.5
         WEIGHT_EXPLOSIVE = 3.0
         WEIGHT_CONSTRUCTIVE = 1.5
+        MANIFOLDS = {
+            "FORGE": {"voltage": 15.0, "drag": 1.5},
+            "SANCTUARY": {"voltage": 20.0, "drag": 0.0},
+            "THE_MUD": {"voltage": 10.0, "drag": 5.0},
+            "THE_AERIE": {"voltage": 10.0, "drag": 0.5},
+            "LABORATORY": {"voltage": 12.0, "drag": 1.0},
+            "COURTYARD": {"voltage": 8.0, "drag": 2.0},
+            "DEFAULT": {"voltage": 10.0, "drag": 1.5}
+        }
 
     class INVENTORY:
         CONDUCTIVE_THRESHOLD = 12.0

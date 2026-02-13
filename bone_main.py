@@ -1,4 +1,4 @@
-""" BONEAMANITA 15.1.0
+""" BONEAMANITA 15.2.0
  Architects: SLASH, KISHO, Taylor & Edmark
  Refactored by: THE TORVALDS & THE BEZALEL
  "The metabolic engine that drives the session."
@@ -14,28 +14,18 @@ import sys
 import re
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
-
+from bone_chronos import ChronosKeeper
 from bone_core import EventBus, SystemHealth, TheObserver, TheLore, TelemetryService, RealityStack
 from bone_types import Prisma, RealityLayer
 from bone_config import BoneConfig, BonePresets
-from bone_commands import CommandProcessor
-from bone_symbiosis import SymbiosisManager
-
-from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer, Limbo
+from bone_genesis import BoneGenesis
+from bone_village import DeathGen
 from bone_lexicon import TheLexicon
-from bone_inventory import GordonKnot
-from bone_protocols import KintsugiProtocol, TherapyProtocol, TheBureau, ZenGarden, TheCriticsCircle
 from bone_physics import CosmicDynamics, ZoneInertia
-
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
-from bone_soul import NarrativeSelf, TheOroboros
-from bone_architect import BoneArchitect
 from bone_cycle import GeodesicOrchestrator
 from bone_council import CouncilChamber
-from bone_spores import LiteraryReproduction
-from bone_akashic import TheAkashicRecord
-
 
 def typewriter(text: str, speed: float = 0.01, end: str = "\n"):
     tokens = re.split(r'(\x1b\[[0-9;]*m)', text)
@@ -62,7 +52,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.1.0   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.2.0   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         typewriter(f"{Prisma.GRY}...Initializing KernelHash: {self.engine_instance.kernel_hash}...{Prisma.RST}")
         typewriter(f"{Prisma.paint('>>> SYSTEM: LISTENING', 'G')}")
@@ -159,12 +149,6 @@ class ConfigWizard:
             sys.exit(1)
         return config
 
-class DriverRegistry:
-    def __init__(self, events_ref):
-        from bone_drivers import EnneagramDriver
-        self.enneagram = EnneagramDriver(events_ref)
-        self.current_focus = "NONE"
-
 class BoneAmanita:
     events: EventBus
 
@@ -172,44 +156,87 @@ class BoneAmanita:
         self.kernel_hash = str(uuid.uuid4())[:8].upper()
         self.config = config
         self.user_name = config.get("user_name", "TRAVELER")
-
+        self.chronos = ChronosKeeper(self)
         self.boot_mode = config.get("boot_mode", "ADVENTURE").upper()
         if self.boot_mode not in BonePresets.MODES:
             self.boot_mode = "ADVENTURE"
         self.mode_settings = BonePresets.MODES[self.boot_mode]
-        self.suppressed_agents = set(self.mode_settings.get("village_suppression", []))
-
+        self.suppressed_agents = self.mode_settings.get("village_suppression", [])
+        self.config["mode_settings"] = self.mode_settings
         self.health = BoneConfig.MAX_HEALTH
         self.stamina = BoneConfig.MAX_STAMINA
         self.trauma_accum = {}
         self.tick_count = 0
 
-        self._initialize_core(TheLexicon)
-        self._initialize_embryo()
-        self._initialize_identity()
-        self._initialize_village()
-        self._initialize_cognition()
-
-        self.host_stats = HostStats(latency=0.0, efficiency_index=1.0)
-        self._validate_state()
-        self._apply_boot_mode()
-
-    def _initialize_core(self, lexicon_layer):
         print(f"{Prisma.GRY}...Bootstrapping Core...{Prisma.RST}")
-        self.lex = lexicon_layer
+        self.lex = TheLexicon
         self.lex.initialize()
         self.lex.compile_antigens()
-        DeathGen.load_protocols()
-        LiteraryReproduction.load_genetics()
-        self.akashic = TheAkashicRecord()
-        self.events = EventBus()
-        self.akashic.setup_listeners(self.events)
+
+        anatomy = BoneGenesis.ignite(self.config, self.lex)
+
+        self.events = anatomy["events"]
+        self.akashic = anatomy["akashic"]
+        self.embryo = anatomy["embryo"]
+        self.soul = anatomy["soul"]
+        self.oroboros = anatomy["oroboros"]
+        self.drivers = anatomy["drivers"]
+        self.symbiosis = anatomy["symbiosis"]
+
+        self.phys = self.embryo.physics
+        self.mind = self.embryo.mind
+        self.bio = self.embryo.bio
+        self.shimmer = self.embryo.shimmer
+        self.bio.setup_listeners()
+
+        v = anatomy["village"]
+        self.gordon = v["gordon"]
+        self.navigator = v["navigator"]
+        self.tinkerer = v["tinkerer"]
+        self.death_gen = v["death_gen"]
+        self.bureau = v["bureau"]
+        self.town_hall = v["town_hall"]
+        self.repro = v["repro"]
+        self.zen = v["zen"]
+        self.critics = v["critics"]
+        self.therapy = v["therapy"]
+        self.limbo = v["limbo"]
+        self.kintsugi = v["kintsugi"]
+
+        self.soul.engine = self
+
+        self.council = CouncilChamber(self)
+        self.village = {
+            "town_hall": self.town_hall,
+            "bureau": self.bureau,
+            "zen": self.zen,
+            "tinkerer": self.tinkerer,
+            "critics": self.critics,
+            "navigator": self.navigator,
+            "limbo": self.limbo,
+            "council": self.council,
+            "therapy": self.therapy,
+            "enneagram": self.drivers.enneagram
+        }
+
+        if self.phys:
+            self.phys.dynamics = CosmicDynamics()
+            self.cosmic = self.phys.dynamics
+            self.stabilizer = ZoneInertia()
+
         self.telemetry = TelemetryService.get_instance()
         self.system_health = SystemHealth()
         self.observer = TheObserver()
         self.system_health.link_observer(self.observer)
         self.reality_stack = RealityStack()
+
         self._load_system_prompts()
+
+        self._initialize_cognition()
+
+        self.host_stats = HostStats(latency=0.0, efficiency_index=1.0)
+        self._validate_state()
+        self._apply_boot_mode()
 
     def _load_system_prompts(self):
         try:
@@ -228,92 +255,6 @@ class BoneAmanita:
         except Exception as e:
             print(f"{Prisma.RED}CRITICAL: Could not load prompts: {e}{Prisma.RST}")
             self.prompt_library = {}
-
-    def _initialize_embryo(self):
-        self.embryo = BoneArchitect.incubate(self.events, self.lex)
-        self.embryo = BoneArchitect.awaken(self.embryo)
-        self.phys = self.embryo.physics
-        self.mind = self.embryo.mind
-        self.bio = self.embryo.bio
-        self.shimmer = self.embryo.shimmer
-        self.bio.setup_listeners()
-        self.soul_legacy_data = self.embryo.soul_legacy
-
-        if self.bio.mito.state.atp_pool <= 0.0:
-            genesis_val = getattr(BoneConfig.METABOLISM, "GENESIS_VOLTAGE", 100.0)
-            self.events.log(f"{Prisma.RED}⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP).{Prisma.RST}", "SYS")
-            self.bio.mito.adjust_atp(genesis_val, reason="GENESIS")
-
-    def _initialize_identity(self):
-        self.soul = NarrativeSelf(
-            self, self.events, memory_ref=self.mind.mem, akashic_ref=self.akashic)
-        if self.soul_legacy_data:
-            self.soul.load_from_dict(self.soul_legacy_data)
-        self.oroboros = TheOroboros()
-
-        if self.phys and hasattr(self.phys, "observer"):
-            dummy_phys = {"narrative_drag": 0.0, "voltage": 10.0}
-            logs = self.oroboros.apply_legacy(dummy_phys, {})
-            if logs:
-                self.events.log(f"{Prisma.RED}⛓️ LEGACY SCARS: {', '.join(logs)}{Prisma.RST}", "OROBOROS")
-                self.phys.dynamics.base_drag += dummy_phys["narrative_drag"]
-
-    def _initialize_village(self):
-        if "GORDON" not in self.suppressed_agents:
-            self.gordon = GordonKnot(events=self.events)
-        else:
-            self.gordon = None
-
-        if "CARTOGRAPHER" not in self.suppressed_agents and "NAVIGATOR" not in self.suppressed_agents:
-            self.navigator = TheCartographer(self.embryo.shimmer)
-        else:
-            self.navigator = None
-
-        if "TINKERER" not in self.suppressed_agents:
-            self.tinkerer = TheTinkerer(self.gordon, self.events, self.akashic)
-        else:
-            self.tinkerer = None
-
-        if "DEATH" not in self.suppressed_agents:
-            self.death_gen = DeathGen()
-        else:
-            self.death_gen = None
-
-        if "BUREAU" not in self.suppressed_agents:
-            self.bureau = TheBureau()
-        else:
-            self.bureau = None
-
-        self.town_hall = TownHall(self.gordon, self.events, self.embryo.shimmer, self.akashic, self.navigator)
-
-        self.repro = LiteraryReproduction()
-        self.zen = ZenGarden(self.events)
-        self.critics = TheCriticsCircle(self.events)
-        self.therapy = TherapyProtocol()
-        self.stabilizer = ZoneInertia()
-        self.limbo = Limbo()
-        self.kintsugi = KintsugiProtocol()
-        self.council = CouncilChamber(self)
-        self.symbiosis = SymbiosisManager(self.events)
-        self.drivers = DriverRegistry(self.events)
-
-        if self.phys:
-            self.phys.dynamics = CosmicDynamics()
-            self.cosmic = self.phys.dynamics
-
-        self.village = {
-            "town_hall": self.town_hall,
-            "bureau": self.bureau,
-            "zen": self.zen,
-            "tinkerer": self.tinkerer,
-            "critics": self.critics,
-            "navigator": self.navigator,
-            "limbo": self.limbo,
-            "council": self.council,
-            "therapy": self.therapy,
-            "enneagram": self.drivers.enneagram}
-
-        self.cmd = CommandProcessor(self, Prisma, self.lex, BoneConfig)
 
     def _initialize_cognition(self):
         self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.gordon, None, self.events)
@@ -510,24 +451,11 @@ class BoneAmanita:
                  pass
         return {"health": self.health, "stamina": self.stamina, "atp": real_atp, "tick": self.tick_count}
 
-    def _get_crash_path(self, prefix="crash"):
-        folder = "crashes"
-        if not os.path.exists(folder):
-            try:
-                os.makedirs(folder)
-            except OSError:
-                folder = "."
-        try:
-            files = sorted([f for f in os.listdir(folder) if f.startswith(prefix)])
-            while len(files) >= 5:
-                oldest = files.pop(0)
-                os.remove(os.path.join(folder, oldest))
-        except Exception:
-            pass
-        return os.path.join(folder, f"{prefix}_{int(time.time())}.json")
-
     def emergency_save(self, exit_cause="UNKNOWN"):
-        return f"✔ Emergency Dump: {exit_cause}"
+        return self.chronos.emergency_dump(exit_cause)
+
+    def _get_crash_path(self, prefix="crash"):
+        return self.chronos.get_crash_path(prefix)
 
     def _ethical_audit(self):
         if self.tick_count % 3 != 0 and self.health > (BoneConfig.MAX_HEALTH * 0.3):
@@ -587,132 +515,14 @@ class BoneAmanita:
         cold_result = self.process_turn(boot_prompt, is_system=True)
         return cold_result
 
-    def _gather_village_state(self) -> Dict[str, Any]:
-        state = {}
-        for name, component in self.village.items():
-            if component and hasattr(component, 'to_dict'):
-                state[name] = component.to_dict()
-        return state
-
-    def _restore_village_state(self, state_data: Dict[str, Any]):
-        if not state_data: return
-        for name, data in state_data.items():
-            if name in self.village and self.village[name] and hasattr(self.village[name], 'load_state'):
-                try:
-                    self.village[name].load_state(data)
-                except Exception as e:
-                    print(f"{Prisma.RED}[RESUME]: Failed to hydrate {name}: {e}{Prisma.RST}")
-
     def save_checkpoint(self, history: list = None) -> str:
-        try:
-            folder = "saves"
-            if not os.path.exists(folder):
-                os.makedirs(folder)
-            last_phys = getattr(self.cortex, "last_physics", None) or {}
-            world_data = self.cortex.gather_state(last_phys).get("world", {})
-            loc = world_data.get("orbit", ["Void"])[0]
-            last_speech = "Silence."
-            if self.cortex.dialogue_buffer:
-                last_speech = self.cortex.dialogue_buffer[-1]
-            continuity_packet = {
-                "location": loc,
-                "last_output": last_speech,
-                "inventory": self.gordon.inventory if self.gordon else []}
-            start_history = history if history is not None else self.cortex.dialogue_buffer
-            state_data = {
-                "health": self.health,
-                "stamina": self.stamina,
-                "trauma_accum": self.trauma_accum,
-                "soul_data": self.soul.to_dict(),
-                "village_data": self._gather_village_state(),
-                "continuity": continuity_packet,
-                "timestamp": time.time(),
-                "chat_history": start_history}
-            path = os.path.join(folder, "quicksave.json")
-            with open(path, 'w', encoding='utf-8') as f:
-                json.dump(state_data, f, indent=2, default=str)
-            return f"✔ Checkpoint Saved: {path}"
-        except Exception as e:
-            self.events.log(f"SAVE FAILED: {e}", "SYS_ERR")
-            return f"❌ Save Failed: {e}"
+        return self.chronos.save_checkpoint(history)
 
     def resume_checkpoint(self) -> Tuple[bool, list]:
-        path = "saves/quicksave.json"
-        if not os.path.exists(path):
-            print(f"{Prisma.GRY}[RESUME]: No quicksave found. Starting fresh.{Prisma.RST}")
-            return False, []
-        try:
-            print(f"{Prisma.CYN}[RESUME]: Hydrating from {path}...{Prisma.RST}")
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            self.health = data.get("health", 100.0)
-            self.stamina = data.get("stamina", 100.0)
-            self.trauma_accum = data.get("trauma_accum", {})
-
-            if "soul_data" in data and hasattr(self, "soul"):
-                self.soul.load_from_dict(data["soul_data"])
-
-            if "village_data" in data:
-                 self._restore_village_state(data["village_data"])
-
-            if "continuity" in data:
-                self.embryo.continuity = data["continuity"]
-                if "inventory" in data["continuity"] and self.gordon:
-                    self.gordon.inventory = data["continuity"]["inventory"]
-
-            restored_history = data.get("chat_history", [])
-            print(f"{Prisma.GRN}[RESUME]: System State & Logs Restored.{Prisma.RST}")
-            return True, restored_history
-        except Exception as e:
-            print(f"{Prisma.RED}[RESUME]: Failed to hydrate: {e}{Prisma.RST}")
-            return False, []
+        return self.chronos.resume_checkpoint()
 
     def shutdown(self):
-        print(f"{Prisma.GRY}...System Halt...{Prisma.RST}")
-        self.events.publish("SYSTEM_HALT", {"tick": self.tick_count})
-        last_phys = getattr(self.cortex, "last_physics", {})
-        world_data = self.cortex.gather_state(last_phys).get("world", {})
-
-        continuity_packet = {
-            "location": world_data.get("orbit", ["Void"])[0],
-            "last_output": self.cortex.dialogue_buffer[-1] if self.cortex.dialogue_buffer else "Silence.",
-            "inventory": self.gordon.inventory if self.gordon else []}
-
-        try:
-            print(f"{Prisma.GRY}[MEMORY]: Freezing State...{Prisma.RST}")
-            mito_traits = {}
-            if hasattr(self.bio.mito, 'state_ref'):
-                mito_traits = self.bio.mito.state_ref.__dict__
-            else:
-                mito_traits = self.bio.mito.adapt(0)
-
-            self.mind.mem.save(
-                health=self.health,
-                stamina=self.stamina,
-                mutations={},
-                trauma_accum=self.trauma_accum,
-                joy_history=[],
-                mitochondria_traits=mito_traits,
-                antibodies=list(self.bio.immune.active_antibodies),
-                soul_data=self.soul.to_dict(),
-                village_data=self._gather_village_state(),
-                continuity=continuity_packet,
-                world_atlas=self.phys.nav.export_atlas() if hasattr(self.phys, "nav") else {})
-        except Exception as e:
-            print(f"{Prisma.RED}[MEMORY]: Save Failed: {e}{Prisma.RST}")
-
-        subsystems = [
-            ("LEXICON", self.lex, "save"),
-            ("AKASHIC", self.akashic, "save_all")]
-
-        for name, sys, method in subsystems:
-            if hasattr(sys, method):
-                try:
-                    print(f"{Prisma.GRY}[{name}]: Persisting...{Prisma.RST}")
-                    getattr(sys, method)()
-                except Exception as e:
-                    print(f"{Prisma.RED}[{name}]: Failed: {e}{Prisma.RST}")
-
+        self.chronos.perform_shutdown()
 
 if __name__ == "__main__":
     sys_config = ConfigWizard.load_or_create()

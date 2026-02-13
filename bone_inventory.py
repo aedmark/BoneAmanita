@@ -1,9 +1,9 @@
 """ bone_inventory.py
  'Organization is the first step toward civilization.' - Schur """
 
-import random
+import random, re
 from dataclasses import dataclass, field
-from typing import List, Dict, Tuple, Optional, Any, Set
+from typing import List, Dict, Tuple, Optional
 from bone_core import TheLore
 from bone_types import Prisma
 from bone_config import BoneConfig
@@ -74,6 +74,59 @@ class GordonKnot:
 
         if hasattr(BoneConfig, "INVENTORY"):
             self.max_slots = getattr(BoneConfig.INVENTORY, "MAX_SLOTS", 10)
+
+    def process_loot_tags(self, text: str, user_input: str) -> Tuple[str, List[str]]:
+        """
+        Parses [[LOOT:Item]] and [[LOST:Item]] tags.
+        Checks for user consent (acquisition verbs) before granting loot.
+        Returns cleaned text and a list of logs.
+        """
+        loot_pattern = r"\[\[LOOT:\s*(.*?)\]\]"
+        lost_pattern = r"\[\[LOST:\s*(.*?)\]\]"
+
+        raw_loot = re.findall(loot_pattern, text, re.IGNORECASE)
+        raw_lost = re.findall(lost_pattern, text, re.IGNORECASE)
+
+        def normalize(items):
+            clean_set = set()
+            for normalized_item in items:
+                clean = normalized_item.strip().upper().replace(" ", "_")
+                clean = re.sub(r"[^A-Z0-9_]", "", clean)
+                if clean: clean_set.add(clean)
+            return list(clean_set)
+
+        new_loot = normalize(raw_loot)
+        lost_loot = normalize(raw_lost)
+
+        logs = []
+
+        if new_loot:
+            acquisition_verbs = [
+                "take", "grab", "pick", "get", "steal", "seize", "collect",
+                "snatch", "acquire", "pocket", "loot", "harvest"
+            ]
+            clean_input = user_input.lower()
+            has_intent = any(verb in clean_input for verb in acquisition_verbs)
+
+            if has_intent:
+                for item in new_loot:
+                    logs.append(self.acquire(item))
+                    if self.events: self.events.publish("ITEM_ACQUIRED", {"item": item})
+            else:
+                if self.events:
+                    for item in new_loot:
+                        self.events.log(f"CONSENT: Intercepted auto-loot for '{item}'. User did not ask.", "GORDON")
+
+        for item in lost_loot:
+            if self.safe_remove_item(item):
+                logs.append(f"{Prisma.GRY}ENTROPY: {item} consumed/lost.{Prisma.RST}")
+            else:
+                logs.append(f"{Prisma.OCHRE}GLITCH: Tried to lose {item}, but you didn't have it.{Prisma.RST}")
+
+        clean_text = re.sub(loot_pattern, "", text, flags=re.IGNORECASE)
+        clean_text = re.sub(lost_pattern, "", clean_text, flags=re.IGNORECASE)
+
+        return clean_text.strip(), logs
 
     def _seed_test_items(self):
         """ Inject items required for bone_diag.py to pass if they don't exist. """
@@ -235,7 +288,7 @@ class GordonKnot:
 
         return None
 
-    def deploy_pizza(self, physics_ref: Dict, item_name="STABILITY_PIZZA") -> Tuple[bool, str]:
+    def deploy_pizza(self, item_name="STABILITY_PIZZA") -> Tuple[bool, str]:
         item_name = item_name.upper()
         if item_name not in self.inventory:
             return False, "No pizza found."

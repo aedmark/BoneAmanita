@@ -1,5 +1,7 @@
 # BONEAMANITA v14 CHANGELOG
 
+
+
 ### **BONEAMANITA v15.1.0: "THE PRISMATIC MIND"**
 
 _“We have shattered the single lens. Now, the machine can choose how it perceives the light.”_

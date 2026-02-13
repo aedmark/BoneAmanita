@@ -578,34 +578,24 @@ class TheCortex:
             consultant=self.consultant)
         start_time = time.time()
         raw_resp = self.llm.generate(final_prompt, llm_params)
-
-        if allow_loot:
-            final_text, new_loot, lost_loot = self._harvest_loot(raw_resp)
+        inv_logs = []
+        if allow_loot and self.svc.inventory:
+            final_text, inv_logs = self.svc.inventory.process_loot_tags(raw_resp, user_input)
         else:
             final_text = raw_resp
-            new_loot = []
-            lost_loot = []
-
-        if is_boot_sequence:
-            new_loot = []
-            lost_loot = []
-        else:
-            if allow_loot:
-                new_loot = self._check_consent(user_input, new_loot)
-
-        inv_logs = []
-        if allow_loot:
-            inv_logs = self._process_inventory_changes(new_loot, lost_loot)
-
         self._log_telemetry(final_prompt, final_text, full_state, sim_result)
         self.learn_from_response(final_text)
+
         val_res = self.validator.validate(final_text, full_state)
         final_output = val_res["content"] if val_res["valid"] else val_res["replacement"]
         extracted_logs = val_res.get("meta_logs", [])
+
         self.svc.symbiosis.monitor_host(time.time() - start_time, final_output, len(final_prompt))
-        self._update_history("SYSTEM_INIT" if is_boot_sequence else user_input, final_output)
+        self._update_history("SYSTEM_INIT" if "SYSTEM_BOOT" in user_input else user_input, final_output)
+
         sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_output}{Prisma.RST}"
-        if inv_logs: sim_result["ui"] += "\n" + "\n".join(inv_logs)
+        if inv_logs:
+            sim_result["ui"] += "\n" + "\n".join(inv_logs)
         if "logs" not in sim_result: sim_result["logs"] = []
         sim_result["logs"].extend(extracted_logs)
         sim_result["raw_content"] = final_output
