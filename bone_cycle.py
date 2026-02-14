@@ -44,7 +44,6 @@ class CongruenceValidator:
         return min(1.5, tone_score)
 
 class CycleStabilizer:
-
     def __init__(self, events_ref, governor_ref):
         self.events = events_ref
         self.governor = governor_ref
@@ -122,10 +121,9 @@ class ObservationPhase(SimulationPhase):
         for k in ["clean_words", "counts", "vector", "valence", "entropy", "beta_index", "raw_text", "antigens", "psi", "kappa", "zone", "flow_state"]:
             if k not in protected_keys and hasattr(input_phys, k):
                 setattr(ctx.physics, k, getattr(input_phys, k))
-        curr_v = max(0.1, ctx.physics.voltage)
-        input_v = getattr(input_phys, "voltage", 0.0)
-        blend_factor = 0.2 if input_v > curr_v else 0.05
-        ctx.physics.voltage = (curr_v * (1.0 - blend_factor)) + (input_v * blend_factor)
+        observed_voltage = getattr(input_phys, "voltage", 0.0)
+        if observed_voltage > 0:
+            ctx.physics.voltage += (observed_voltage * 0.5)
         curr_d = max(0.1, ctx.physics.narrative_drag)
         input_d = getattr(input_phys, "narrative_drag", 0.0)
         ctx.physics.narrative_drag = (curr_d * 0.9) + (input_d * 0.1)
@@ -181,14 +179,8 @@ class SanctuaryPhase(SimulationPhase):
             ctx.log(f"{color}![☀️] SANCTUARY: Breathing space.{Prisma.RST}")
 
     def _apply_restoration(self):
-        if self.eng.bio and self.eng.bio.biometrics:
-            bio = self.eng.bio.biometrics
-            bio.health = min(BoneConfig.MAX_HEALTH, bio.health + 0.5)
-            bio.stamina = min(BoneConfig.MAX_STAMINA, bio.stamina + 1.0)
-        self.eng.health = min(BoneConfig.MAX_HEALTH, self.eng.health + 0.5)
-        self.eng.stamina = min(BoneConfig.MAX_STAMINA, self.eng.stamina + 1.0)
-        if hasattr(self.eng, 'bio'):
-            self.eng.bio.endo.serotonin = min(1.0, self.eng.bio.endo.serotonin + 0.05)
+        if self.eng.bio:
+            self.eng.bio.rest(factor=1.0)
         for key in list(self.eng.trauma_accum.keys()):
             self.eng.trauma_accum[key] = max(0.0, self.eng.trauma_accum[key] - 0.1)
 
@@ -230,13 +222,14 @@ class MaintenancePhase(SimulationPhase):
         if hasattr(self.eng, 'town_hall'):
             blooms = self.eng.town_hall.tend_garden(ctx.clean_words) or []
             for bloom in blooms: ctx.log(bloom)
-        if hasattr(self.eng.mind.mem, 'run_ecosystem'):
-            eco_logs = self.eng.mind.mem.run_ecosystem(
-                ctx.physics.to_dict(),
-                self.eng.stamina,
-                self.eng.tick_count)
-            for log in eco_logs:
-                ctx.log(log)
+        if self.eng.mind and hasattr(self.eng.mind, "mem"):
+            if hasattr(self.eng.mind.mem, 'run_ecosystem'):
+                eco_logs = self.eng.mind.mem.run_ecosystem(
+                    ctx.physics.to_dict(),
+                    self.eng.stamina,
+                    self.eng.tick_count)
+                for log in eco_logs:
+                    ctx.log(log)
         if self.eng.tick_count % 10 != 0: return ctx
         try:
             solvents = getattr(self.eng.lex, "SOLVENTS", {'the', 'and', 'is', 'a', 'of', 'to', 'in', 'it', 'i', 'you'})
@@ -828,6 +821,20 @@ class SensationPhase(SimulationPhase):
             self.eng.stamina = max(0.0, self.eng.stamina + impulse.stamina_impact)
         return ctx
 
+
+class StabilizationPhase(SimulationPhase):
+    def __init__(self, engine_ref, stabilizer_ref):
+        super().__init__(engine_ref)
+        self.name = "STABILIZATION"
+        self.stabilizer = stabilizer_ref
+
+    def run(self, ctx: CycleContext):
+        current_mode = self.eng.bio.governor.mode
+        corrections = self.stabilizer.stabilize(ctx, current_mode)
+        if corrections:
+            pass
+        return ctx
+
 class PhaseExecutor:
     def execute_phases(self, simulator, ctx):
         SYSTEM_SKIP_LIST = ["OBSERVE", "METABOLISM", "INTRUSION", "MAINTENANCE", "SENSATION"]
@@ -843,18 +850,18 @@ class PhaseExecutor:
                     break
                 sandbox = copy.deepcopy(ctx)
                 try:
-                    self._run_single_safe(simulator, phase, sandbox)
+                    self._run_single_safe(phase, sandbox)
                     ctx = sandbox
                 except Exception as e:
                     simulator.handle_phase_crash(ctx, phase_name, e)
             else:
                 try:
-                    self._run_single_safe(simulator, phase, ctx)
+                    self._run_single_safe(phase, ctx)
                 except Exception as e:
                     simulator.handle_phase_crash(ctx, phase_name, e)
         return ctx
 
-    def _run_single_safe(self, simulator, phase, target_ctx):
+    def _run_single_safe(self, phase, target_ctx):
         tracer = TelemetryService.get_tracer()
         tracer.start_phase(phase.name, target_ctx)
         current_packet = cast(PhysicsPacket, cast(object, target_ctx.physics))
@@ -862,7 +869,6 @@ class PhaseExecutor:
         target_ctx.physics = wrapped_physics
         try:
             phase.run(target_ctx)
-            simulator.stabilizer.stabilize(target_ctx, phase.name)
         finally:
             target_ctx.physics = wrapped_physics.packet
             for mod in wrapped_physics.get_modification_log():
@@ -897,7 +903,9 @@ class CycleSimulator:
             IntrusionPhase(engine_ref),
             SoulPhase(engine_ref),
             ArbitrationPhase(engine_ref),
-            CognitionPhase(engine_ref)]
+            CognitionPhase(engine_ref),
+            StabilizationPhase(engine_ref, self.stabilizer)
+        ]
 
     def run_simulation(self, ctx: CycleContext) -> CycleContext:
         ctx = self.executor.execute_phases(self, ctx)

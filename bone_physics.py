@@ -1,5 +1,4 @@
-""" bone_physics.py
- 'Gravity is just a habit that space-time hasn't been able to break.' """
+""" bone_physics.py - 'Gravity is just a habit that space-time hasn't been able to break.' """
 
 import math, random, time
 from typing import Dict, List, Any, Tuple, Optional, Deque
@@ -7,41 +6,15 @@ from collections import Counter, deque
 from dataclasses import dataclass
 from bone_types import Prisma, PhysicsPacket, CycleContext
 from bone_lexicon import TheLexicon
+from bone_config import BoneConfig
 
 @dataclass
 class PhysicsDelta:
-    """ Represents a change to the physics state. """
     operator: str
     field: str
     value: float
     source: str
     message: Optional[str] = None
-
-class PhysicsConstants:
-    VOLT_CRITICAL = 20.0
-    VOLT_MANIC = 12.0
-    VOLT_FLOW = 15.0
-    DRAG_HALT = 10.0
-    DRAG_HEAVY = 6.0
-    DRAG_FLOOR = 0.1
-    KAPPA_STRONG = 0.8
-    KAPPA_WEAK = 0.4
-    WEIGHT_HEAVY = 2.0
-    WEIGHT_EXPLOSIVE = 3.0
-    WEIGHT_CONSTRUCTIVE = 1.5
-    KINETIC_GAIN = 1.0
-    SIGNAL_DRAG_MULTIPLIER = 1.0
-    SHAPLEY_MASS_THRESHOLD = 5.0
-    MAX_SOLVENT_TOLERANCE = 40.0
-    TEXT_LENGTH_SCALAR = 1500.0
-    ATP_STARVATION = 5.0
-    ZONE_INERTIA_DEFAULT = 0.7
-    ZONE_MIN_DWELL = 2
-    ANCHOR_STRAIN_LIMIT = 2.5
-    GRAVITY_WELL_THRESHOLD = 10.0
-    GEODESIC_STRENGTH = 5.0
-    LAGRANGE_TOLERANCE = 2.0
-    MASS_SQUELCH_THRESHOLD = 15.0
 
 TRIGRAM_MAP: Dict[str, Tuple[str, str, str, str]] = {
     "VEL": ("☳", "ZHEN",  "Thunder",  Prisma.GRN),
@@ -77,30 +50,25 @@ class GeodesicEngine:
 
     @staticmethod
     def _weigh_mass(counts: Dict[str, int]) -> Dict[str, float]:
-        return {
-            "heavy": float(counts.get("heavy", 0)),
-            "kinetic": float(counts.get("kinetic", 0)),
-            "constructive": float(counts.get("constructive", 0)),
-            "abstract": float(counts.get("abstract", 0)),
-            "play": float(counts.get("play", 0)),
-            "social": float(counts.get("social", 0)),
-            "explosive": float(counts.get("explosive", 0))}
+        return {k: float(counts.get(k, 0)) for k in [
+            "heavy", "kinetic", "constructive", "abstract",
+            "play", "social", "explosive"]}
 
     @staticmethod
     def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int) -> Dict[str, float]:
-        pc = PhysicsConstants
+        cfg = BoneConfig.PHYSICS
         safe_volume = max(1, volume)
-        squelch_limit = getattr(pc, "MASS_SQUELCH_THRESHOLD", 15.0)
-        mass_scalar = min(1.0, safe_volume / squelch_limit)
-        if safe_volume < 3:
-            mass_scalar *= 0.5
         total_kinetic = masses["kinetic"] + masses["explosive"]
         raw_tension_mass = (
-                (masses["heavy"] * pc.WEIGHT_HEAVY) +
-                (total_kinetic * pc.WEIGHT_EXPLOSIVE) +
-                (masses["constructive"] * pc.WEIGHT_CONSTRUCTIVE))
+                (masses["heavy"] * cfg.WEIGHT_HEAVY) +
+                (total_kinetic * cfg.WEIGHT_EXPLOSIVE) +
+                (masses["constructive"] * cfg.WEIGHT_CONSTRUCTIVE))
         density = raw_tension_mass / safe_volume
-        base_tension = density * 20.0 * pc.KINETIC_GAIN
+        kinetic_gain = getattr(BoneConfig, "KINETIC_GAIN", 1.0)
+        base_tension = density * 20.0 * kinetic_gain
+        squelch_limit = getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0) * 3.0
+        mass_scalar = min(1.0, safe_volume / squelch_limit)
+        if safe_volume < 3: mass_scalar *= 0.5
         tension = round(min(100.0, base_tension * mass_scalar), 2)
         shear_rate = total_kinetic / safe_volume
         raw_friction = (
@@ -116,10 +84,13 @@ class GeodesicEngine:
         viscosity_density = dynamic_viscosity / safe_volume
         lift_density = lift / safe_volume
         raw_compression = (viscosity_density * 10.0) - (lift_density * 10.0)
-        raw_compression *= pc.SIGNAL_DRAG_MULTIPLIER
-        compression = round(max(-5.0, min(pc.DRAG_HALT, raw_compression * mass_scalar)), 2)
+        signal_drag_mult = getattr(BoneConfig, "SIGNAL_DRAG_MULTIPLIER", 1.0)
+        raw_compression *= signal_drag_mult
+        drag_halt = getattr(cfg, "DRAG_HALT", 10.0)
+        compression = round(max(-5.0, min(drag_halt, raw_compression * mass_scalar)), 2)
         structural_mass = masses["heavy"] + masses["constructive"]
-        coherence = min(1.0, structural_mass / max(1.0, pc.SHAPLEY_MASS_THRESHOLD))
+        shapley_threshold = getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0)
+        coherence = min(1.0, structural_mass / max(1.0, shapley_threshold))
         abstraction = min(1.0, (masses["abstract"] / safe_volume) + 0.2)
         return {
             "tension": tension,
@@ -130,7 +101,6 @@ class GeodesicEngine:
     @staticmethod
     def _calculate_dimensions(masses, forces, counts, volume) -> Dict[str, float]:
         inv_vol = 1.0 / volume
-
         return {
             "VEL": min(1.0, (masses["kinetic"] * 2.0 - forces['compression']) * inv_vol),
             "STR": min(1.0, (masses["heavy"] * 2.0 + masses["constructive"]) * inv_vol),
@@ -148,7 +118,8 @@ class TheGatekeeper:
 
     def check_entry(self, ctx: CycleContext, current_atp: float = 20.0) -> Tuple[bool, Optional[Dict]]:
         phys = ctx.physics
-        if current_atp < (PhysicsConstants.ATP_STARVATION * 0.5):
+        starvation_threshold = getattr(BoneConfig.BIO, "ATP_STARVATION", 5.0)
+        if current_atp < (starvation_threshold * 0.5):
             return False, self._pack_refusal(ctx, "DARK_SYSTEM", "Energy critical. The inputs dissolve into the void.")
         if phys.counts.get("antigen", 0) > 2:
             return False, self._pack_refusal(ctx, "TOXICITY", f"{Prisma.RED}IMMUNE REACTION: Input rejected as pathogenic.{Prisma.RST}")
@@ -187,12 +158,14 @@ class QuantumObserver:
         packet_data = {
             "voltage": smoothed_voltage,
             "narrative_drag": geo.compression,
+            "kappa": geo.coherence,
+            "psi": geo.abstraction,
+            "vector": geo.dimensions,
             "valence": valence,
             "repetition": 0.0,
             "atmosphere": "NEUTRAL",
             "clean_words": clean_words,
             "counts": counts,
-            "vector": geo.dimensions,
             "flow_state": self._determine_flow(smoothed_voltage, geo.coherence),
             "zone": self._determine_zone(geo.dimensions),
             "truth_ratio": 0.5,
@@ -203,9 +176,8 @@ class QuantumObserver:
             "entropy": e_metric,
             "beta_index": beta_val,
             "mass": round(graph_mass, 1),
-            "velocity": 0.0,
-            "psi": geo.abstraction,
-            "kappa": geo.coherence}
+            "velocity": 0.0
+        }
         self.last_physics_packet = PhysicsPacket(**packet_data)
         if hasattr(self.events, "publish"):
             self.events.publish("PHYSICS_CALCULATED", packet_data)
@@ -240,8 +212,8 @@ class QuantumObserver:
     def _calculate_metrics(self, text: str, counts: Dict[str, int]) -> Tuple[float, float]:
         length = len(text)
         if length == 0: return 0.0, 0.0
-        pc = PhysicsConstants
-        raw_chaos = (length / pc.TEXT_LENGTH_SCALAR)
+        scalar = getattr(BoneConfig.PHYSICS, "TEXT_LENGTH_SCALAR", 1500.0)
+        raw_chaos = (length / scalar)
         solvents = counts.get("solvents", 0)
         solvent_density = solvents / max(1.0, length / 5.0)
         glue_factor = min(1.0, solvent_density * 2.0)
@@ -255,7 +227,9 @@ class QuantumObserver:
         return round(e_metric, 3), round(beta_index, 3)
 
     def _determine_flow(self, v: float, k: float) -> str:
-        if v > PhysicsConstants.VOLT_FLOW and k > PhysicsConstants.KAPPA_STRONG:
+        volt_flow = getattr(BoneConfig.PHYSICS, "VOLTAGE_HIGH", 12.0)
+        kappa_strong = 0.8
+        if v > volt_flow and k > kappa_strong:
             return "SUPERCONDUCTIVE"
         if v > 10.0:
             return "TURBULENT"
@@ -271,19 +245,16 @@ class QuantumObserver:
 
 class SurfaceTension:
     def __init__(self):
-        self.HUMBLE_PHRASES = [
-            "Based on the available data...",
-            "As I understand the current coordinates...",
-            "From a structural perspective...",
-            "This is a probabilistic estimation..."]
+        pass
 
     def audit_hubris(self, physics: Dict[str, Any]) -> Tuple[bool, str, str]:
         voltage = physics.get("voltage", 0.0)
         coherence = physics.get("kappa", 0.5)
-        pc = PhysicsConstants
-        if voltage > (pc.VOLT_CRITICAL + 5.0) and coherence < pc.KAPPA_WEAK:
+        volt_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
+        volt_flow = getattr(BoneConfig.PHYSICS, "VOLTAGE_HIGH", 12.0)
+        if voltage > (volt_crit + 5.0) and coherence < 0.4:
             return True, f"⚠️ HUBRIS DETECTED: Voltage ({voltage:.1f}v) exceeds structural integrity. Wings melting.", "ICARUS_CRASH"
-        if voltage > pc.VOLT_FLOW and coherence > pc.KAPPA_STRONG:
+        if voltage > volt_flow and coherence > 0.8:
             return True, "🌊 SURFACE TENSION OPTIMAL: Entering Flow State.", "FLOW_BOOST"
         return False, "", ""
 
@@ -302,7 +273,7 @@ class ChromaScope:
 class ZoneInertia:
     def __init__(self, inertia=0.7):
         self.inertia = inertia
-        self.min_dwell = PhysicsConstants.ZONE_MIN_DWELL
+        self.min_dwell = getattr(BoneConfig.PHYSICS, "ZONE_MIN_DWELL", 2)
         self.current_zone = "COURTYARD"
         self.dwell_counter = 0
         self.last_vector: Optional[Tuple[float, float, float]] = None
@@ -342,7 +313,7 @@ class ZoneInertia:
             self.strain_gauge = max(0.0, self.strain_gauge - 0.1)
             return self.current_zone, None
         self.strain_gauge += pressure
-        limit = PhysicsConstants.ANCHOR_STRAIN_LIMIT
+        limit = 2.5
         if self.strain_gauge > limit:
             self.is_anchored = False
             self.strain_gauge = 0.0
@@ -378,15 +349,15 @@ class CosmicDynamics:
         self.voltage_history.append(voltage)
 
     def check_gravity(self, current_drift: float, psi: float) -> Tuple[float, List[str]]:
-        """ Calculates the natural accumulation of Narrative Drag (Entropy)."""
         logs = []
         new_drag = current_drift
-        if new_drag < PhysicsConstants.DRAG_FLOOR:
+        drag_floor = getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0)
+        if new_drag < drag_floor:
             new_drag += 0.05
         if psi > 0.5:
             reduction = (psi - 0.5) * 0.2
             new_drag = max(0.0, new_drag - reduction)
-        CRITICAL_DRIFT = 6.0
+        CRITICAL_DRIFT = getattr(BoneConfig.PHYSICS, "DRAG_CRITICAL", 8.0)
         if new_drag > CRITICAL_DRIFT:
             if random.random() < 0.3:
                 logs.append(f"{Prisma.GRY}⚓ GRAVITY: The narrative is heavy. (Drag {new_drag:.1f}){Prisma.RST}")
@@ -413,11 +384,13 @@ class CosmicDynamics:
     def _scan_network_mass(network) -> Tuple[Dict, Dict]:
         gravity_wells = {}
         geodesic_hubs = {}
+        well_threshold = getattr(BoneConfig, "GRAVITY_WELL_THRESHOLD", 15.0)
+        geo_strength = getattr(BoneConfig, "GEODESIC_STRENGTH", 10.0)
         for node in network.graph:
             mass = network.calculate_mass(node)
-            if mass >= PhysicsConstants.GRAVITY_WELL_THRESHOLD:
+            if mass >= well_threshold:
                 gravity_wells[node] = mass
-            elif mass >= PhysicsConstants.GEODESIC_STRENGTH:
+            elif mass >= geo_strength:
                 geodesic_hubs[node] = mass
         return gravity_wells, geodesic_hubs
 
@@ -446,15 +419,17 @@ class CosmicDynamics:
     def _resolve_orbit(basin_pulls, active_filaments, word_count, gravity_wells) -> Tuple[str, float, str]:
         sorted_basins = sorted(basin_pulls.items(), key=lambda x: x[1], reverse=True)
         primary_node, primary_str = sorted_basins[0]
+        lagrange_tol = getattr(BoneConfig, "LAGRANGE_TOLERANCE", 2.0)
         if len(sorted_basins) > 1:
             secondary_node, secondary_str = sorted_basins[1]
-            if secondary_str > 0 and (primary_str - secondary_str) < PhysicsConstants.LAGRANGE_TOLERANCE:
+            if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:
                 return (
                     "LAGRANGE_POINT",
                     0.0,
                     f"LAGRANGE: Caught between '{primary_node.upper()}' and '{secondary_node.upper()}'")
         flow_ratio = active_filaments / max(1, word_count)
-        if flow_ratio > 0.5 and primary_str < (PhysicsConstants.GRAVITY_WELL_THRESHOLD * 2):
+        well_threshold = getattr(BoneConfig, "GRAVITY_WELL_THRESHOLD", 15.0)
+        if flow_ratio > 0.5 and primary_str < (well_threshold * 2):
             return (
                 "WATERSHED_FLOW",
                 0.0,
@@ -481,7 +456,9 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> Physic
     if "Golden Glow" in qualia.somatic_sensation:
         feedback.valence += 0.5
         feedback.psi += 0.2
-    pc = PhysicsConstants
-    feedback.voltage = max(0.0, min(feedback.voltage, pc.VOLT_CRITICAL * 1.5))
-    feedback.narrative_drag = max(pc.DRAG_FLOOR, min(feedback.narrative_drag, pc.DRAG_HALT))
+    volt_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
+    drag_floor = getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0)
+    drag_halt = getattr(BoneConfig.PHYSICS, "DRAG_HALT", 10.0)
+    feedback.voltage = max(0.0, min(feedback.voltage, volt_crit * 1.5))
+    feedback.narrative_drag = max(drag_floor, min(feedback.narrative_drag, drag_halt))
     return feedback

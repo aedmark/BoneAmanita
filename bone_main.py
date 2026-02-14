@@ -1,4 +1,4 @@
-""" BONEAMANITA 15.3.0
+""" BONEAMANITA 15.3.1
  Architects: SLASH, KISHO, Taylor & Edmark
  Refactored by: THE TORVALDS & THE BEZALEL
  "The metabolic engine that drives the session."
@@ -52,7 +52,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.3.0   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.3.1   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
@@ -250,7 +250,7 @@ class BoneAmanita:
             self.prompt_library = {}
 
     def _initialize_cognition(self):
-        self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.gordon, self.events)
+        self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.events)
         self.noetic = NoeticLoop(self.mind, self.bio, self.events)
         self.cycle_controller = GeodesicOrchestrator(self)
 
