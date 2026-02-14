@@ -9,8 +9,7 @@ import random
 import math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from bone_core import EventBus, LoreManifest, TelemetryService
-from bone_lexicon import LexiconService
+from bone_core import EventBus, LoreManifest, TelemetryService, BoneJSONEncoder
 from bone_types import Prisma, DecisionCrystal
 from bone_config import BoneConfig, BonePresets
 from bone_symbiosis import SymbiosisManager
@@ -29,78 +28,6 @@ class CortexServices:
     village: Any = None
 
 @dataclass
-class BrainConfig:
-    BASE_PLASTICITY: float = 0.4
-    VOLTAGE_SENSITIVITY: float = 0.03
-    MAX_PLASTICITY: float = 0.95
-    BASE_DECAY_RATE: float = 0.1
-    BASE_TEMP: float = 0.65
-    BASE_TOP_P: float = 0.9
-    CORTISOL_FREEZE: float = 0.2
-    DOPAMINE_NOVELTY: float = 0.4
-    ADRENALINE_RUSH: float = 600.0
-    SEROTONIN_CALM: float = 0.5
-
-class NarrativeSpotlight:
-    def __init__(self):
-        self.dimension_map = {
-            "STR": self._fetch_or_default("heavy", {"heavy", "constructive", "base"}),
-            "VEL": self._fetch_or_default("kinetic", {"kinetic", "explosive", "mot"}),
-            "ENT": self._fetch_or_default("antigen", {"antigen", "toxin", "broken"}),
-            "PHI": self._fetch_or_default("thermal", {"thermal", "photo"}),
-            "PSI": self._fetch_or_default("abstract", {"abstract", "sacred", "idea"}),
-            "BET": self._fetch_or_default("social", {"suburban", "solvents", "play"})
-        }
-
-    def _fetch_or_default(self, primary_cat: str, defaults: set) -> set:
-        try:
-            dynamic_set = LexiconService.get(primary_cat)
-            if dynamic_set:
-                return set(dynamic_set) | defaults
-        except:
-            pass
-        return defaults
-
-    def expand_horizon(self, dimension: str, new_category: str):
-        if dimension not in self.dimension_map:
-            self.dimension_map[dimension] = set()
-        self.dimension_map[dimension].add(new_category)
-
-    def illuminate(self, graph: Dict, vector: Dict[str, float], limit: int = 5) -> List[str]:
-        if not graph: return []
-        active_dims = {k: v for k, v in vector.items() if v > 0.4}
-        if not active_dims and vector:
-            top_dim = max(vector, key=vector.get)
-            if vector[top_dim] > 0.1:
-                active_dims = {top_dim: vector[top_dim]}
-            else:
-                active_dims = {"ENT": 0.2}
-        scored_memories = []
-        for node, data in graph.items():
-            resonance_score = 0.0
-            node_cats = set()
-            try:
-                node_cats = LexiconService.get_categories_for_word(node)
-            except ImportError:
-                pass
-            for dim, val in active_dims.items():
-                target_cats = self.dimension_map.get(dim, set())
-                if node_cats & target_cats:
-                    resonance_score += (val * 1.5)
-            mass = sum(data.get("edges", {}).values())
-            resonance_score += (mass * 0.1)
-            if resonance_score > 0.5:
-                scored_memories.append((resonance_score, node, data))
-        scored_memories.sort(key=lambda x: x[0], reverse=True)
-        results = []
-        for score, name, data in scored_memories[:limit]:
-            connections = list(data.get("edges", {}).keys())
-            conn_str = f" -> [{', '.join(connections[:2])}]" if connections else ""
-            prefix = "Resonant" if score > 0.5 else "Associated"
-            results.append(f"{prefix} Engram: '{name.upper()}'{conn_str}")
-        return results
-
-@dataclass
 class ChemicalState:
     dopamine: float = 0.2
     cortisol: float = 0.1
@@ -108,10 +35,15 @@ class ChemicalState:
     serotonin: float = 0.2
 
     def homeostasis(self, rate: float = 0.1):
-        targets = {"dopamine": 0.2, "cortisol": 0.1, "adrenaline": 0.1, "serotonin": 0.3}
+        cfg = BoneConfig.CORTEX
+        targets = {
+            "dopamine": cfg.RESTING_DOPAMINE,
+            "cortisol": cfg.RESTING_CORTISOL,
+            "adrenaline": cfg.RESTING_ADRENALINE,
+            "serotonin": cfg.RESTING_SEROTONIN
+        }
         for attr, target in targets.items():
             current = getattr(self, attr)
-            setattr(self, attr, current + ((target - current) * rate))
 
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
         mapping = [("DOP", "dopamine"), ("COR", "cortisol"), ("ADR", "adrenaline"), ("SER", "serotonin")]
@@ -120,6 +52,7 @@ class ChemicalState:
             current = getattr(self, attr)
             setattr(self, attr, (current * (1.0 - weight)) + (val * weight))
 
+BrainConfig = BoneConfig.CORTEX
 
 class NeurotransmitterModulator:
     def __init__(self, bio_ref, events_ref=None):
@@ -135,9 +68,10 @@ class NeurotransmitterModulator:
             incoming_chem = self.bio.endo.get_state()
         else:
             incoming_chem = {}
-        self.current_chem.homeostasis(rate=BrainConfig.BASE_DECAY_RATE)
-        plasticity = BrainConfig.BASE_PLASTICITY + (base_voltage * BrainConfig.VOLTAGE_SENSITIVITY)
-        plasticity = max(0.1, min(BrainConfig.MAX_PLASTICITY, plasticity))
+        cfg = BoneConfig.CORTEX
+        self.current_chem.homeostasis(rate=cfg.BASE_DECAY_RATE)
+        plasticity = cfg.BASE_PLASTICITY + (base_voltage * cfg.VOLTAGE_SENSITIVITY)
+        plasticity = max(0.1, min(cfg.MAX_PLASTICITY, plasticity))
         self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
         c = self.current_chem
         if latency_penalty > 2.0:
@@ -220,7 +154,7 @@ class LLMInterface:
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"}
-        data = json.dumps(payload).encode()
+        data = json.dumps(payload, cls=BoneJSONEncoder).encode()
         for attempt in range(max_retries + 1):
             try:
                 req = urllib.request.Request(self.base_url, data=data, headers=headers)
@@ -505,7 +439,6 @@ class TheCortex:
         if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None:
             self.llm.dreamer = self.dreamer
         self.composer = PromptComposer()
-        self.spotlight = NarrativeSpotlight()
         self.validator = ResponseValidator()
         self.ballast_active = False
         self.active_mode = "ADVENTURE"
@@ -725,24 +658,6 @@ class TheCortex:
         self.dialogue_buffer = history[-self.MAX_HISTORY:]
         if self.events:
             self.events.log(f"Cortex re-sequenced {len(self.dialogue_buffer)} synaptic turns.", "BRAIN")
-
-class NeuroPlasticity:
-    def __init__(self):
-        self.plasticity_mod = 1.0
-
-    @staticmethod
-    def force_hebbian_link(graph, word_a, word_b):
-        if word_a == word_b: return None
-        if word_a not in graph:
-            graph[word_a] = {"edges": {}, "last_tick": 0}
-        if word_b not in graph:
-            graph[word_b] = {"edges": {}, "last_tick": 0}
-        current_weight = graph[word_a]["edges"].get(word_b, 0.0)
-        new_weight = min(10.0, current_weight + 2.5)
-        graph[word_a]["edges"][word_b] = new_weight
-        back_weight = graph[word_b]["edges"].get(word_a, 0.0)
-        graph[word_b]["edges"][word_a] = min(10.0, back_weight + 1.0)
-        return f"{Prisma.MAG}⚡ HEBBIAN GRAFT: Wired '{word_a}' <-> '{word_b}'.{Prisma.RST}"
 
 class ShimmerState:
     def __init__(self, max_val=50.0):

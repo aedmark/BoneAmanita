@@ -1,4 +1,4 @@
-""" BONEAMANITA 15.2.1
+""" BONEAMANITA 15.3.0
  Architects: SLASH, KISHO, Taylor & Edmark
  Refactored by: THE TORVALDS & THE BEZALEL
  "The metabolic engine that drives the session."
@@ -52,7 +52,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.2.1   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.3.0   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:

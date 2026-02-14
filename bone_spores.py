@@ -185,7 +185,6 @@ class SubconsciousStrata:
 
 class MemoryCore:
     """Handles the raw graph operations: Synapses, Weights, Pruning."""
-
     def __init__(self, events_ref, subconscious_ref):
         self.events = events_ref
         self.subconscious = subconscious_ref
@@ -193,6 +192,41 @@ class MemoryCore:
         self.cortical_stack = deque(maxlen=15)
         self.short_term_buffer = deque(maxlen=10)
         self.consolidation_threshold = 5.0
+        self.dimension_map = {
+            "STR": {"heavy", "constructive", "base"},
+            "VEL": {"kinetic", "explosive", "mot"},
+            "ENT": {"antigen", "toxin", "broken"},
+            "PHI": {"thermal", "photo"},
+            "PSI": {"abstract", "sacred", "idea"},
+            "BET": {"social", "suburban", "play"}
+        }
+
+    def illuminate(self, vector: Dict[str, float], limit: int = 5) -> List[str]:
+        if not self.graph: return []
+        active_dims = {k: v for k, v in vector.items() if v > 0.4}
+        if not active_dims and vector:
+            top_dim = max(vector, key=vector.get)
+            active_dims = {top_dim: vector[top_dim]} if vector[top_dim] > 0.1 else {"ENT": 0.2}
+        scored_memories = []
+        for node, data in self.graph.items():
+            resonance_score = 0.0
+            node_cats = TheLexicon.get_categories_for_word(node) or set()
+            for dim, val in active_dims.items():
+                target_cats = self.dimension_map.get(dim, set())
+                if node_cats & target_cats:
+                    resonance_score += (val * 1.5)
+            mass = sum(data.get("edges", {}).values())
+            resonance_score += (mass * 0.1)
+            if resonance_score > 0.5:
+                scored_memories.append((resonance_score, node, data))
+        scored_memories.sort(key=lambda x: x[0], reverse=True)
+        results = []
+        for score, name, data in scored_memories[:limit]:
+            connections = list(data.get("edges", {}).keys())
+            conn_str = f" -> [{', '.join(connections[:2])}]" if connections else ""
+            prefix = "Resonant" if score > 0.5 else "Associated"
+            results.append(f"{prefix} Engram: '{name.upper()}'{conn_str}")
+        return results
 
     def calculate_mass(self, node):
         if node not in self.graph:
@@ -321,13 +355,29 @@ class MycelialNetwork:
     def run_ecosystem(self, physics: Dict, stamina: float, tick: int) -> List[str]:
         logs = []
         clean_words = physics.get("clean_words", [])
-        sugar, lichen_msg = self.lichen.photosynthesize(physics, clean_words, tick)
+        sugar, lichen_msg = self.lichen.photosynthesize(physics, clean_words, tick) [cite: 139]
         if lichen_msg:
             logs.append(lichen_msg)
-        infected, parasite_msg = self.parasite.infect(physics, stamina)
+        for word in clean_words:
+            toxin_msg = self.immune.assay(word, None, None, physics, None)[1] [cite: 138]
+            if toxin_msg:
+                 logs.append(f"{Prisma.CYN}🛡️ IMMUNE RESPONSE: {toxin_msg}{Prisma.RST}")
+        infected, parasite_msg = self.parasite.infect(physics, stamina) [cite: 138]
         if infected and parasite_msg:
             logs.append(parasite_msg)
+        if random.random() < 0.10:
+            chorus_log = self._poll_chorus(clean_words, physics.get("voltage", 0.0))
+            if chorus_log:
+                logs.append(chorus_log)
         return logs
+
+    def _poll_chorus(self, clean_words: list, voltage: float) -> Optional[str]:
+        agents = [self.lichen, self.parasite, self.immune]
+        speaker = random.choice(agents)
+        score, commentary = speaker.opine(clean_words, voltage)
+        if score > 2.0 or random.random() < 0.2:
+             return f"{speaker.color}💬 {speaker.name}: \"{commentary}\"{Prisma.RST}"
+        return None
 
     def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
         return self.memory_core.prune_synapses(scaling_factor, prune_threshold)
@@ -653,7 +703,7 @@ class MycelialNetwork:
         ]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BONEAMANITA_15.2.1",
+            "genome": "BONEAMANITA_15.3.0",
             "session_id": self.session_id,
             "parent_id": self.session_id,
             "parent_id": self.session_id,

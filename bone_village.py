@@ -6,7 +6,7 @@ from dataclasses import dataclass, field, asdict
 from bone_types import Prisma, PhysicsPacket
 from bone_core import TheLore, EventBus
 from bone_config import BoneConfig
-from bone_physics import PhysicsConstants
+from bone_physics import PhysicsConstants, PhysicsDelta
 from bone_drivers import UserProfile
 
 def _hydrate_packet(p: Any) -> PhysicsPacket:
@@ -33,6 +33,35 @@ class TheTinkerer:
         self.events = events_ref
         self.akashic = akashic_ref
         self.tool_resonance: Dict[str, float] = {}
+
+    def calculate_passive_deltas(self, inventory_data: List[Dict]) -> List[PhysicsDelta]:
+        deltas = []
+        for item_data in inventory_data:
+            traits = item_data.get("passive_traits", [])
+            name = item_data.get("name", "Unknown")
+
+            if "HEAVY_LOAD" in traits:
+                deltas.append(PhysicsDelta("ADD", "narrative_drag", 0.5, name, "Heavy Load"))
+
+            if "TIME_DILATION" in traits:
+                deltas.append(PhysicsDelta("MULT", "narrative_drag", 0.8, name, "Time Dilation"))
+
+            if "ENTROPY_BUFFER" in traits:
+                deltas.append(PhysicsDelta("MULT", "turbulence", 0.5, name, "Entropy Buffer"))
+        return deltas
+
+    def check_conductive_hazard(self, physics: Dict, inventory_data: List[Dict]) -> List[str]:
+        logs = []
+        voltage = physics.get("voltage", 0.0)
+        limit = getattr(BoneConfig.INVENTORY, "CONDUCTIVE_THRESHOLD", 20.0)
+
+        if voltage >= limit:
+            for item in inventory_data:
+                if "CONDUCTIVE_HAZARD" in item.get("passive_traits", []):
+                    damage = (voltage - limit) * 0.5
+                    logs.append(
+                        f"{Prisma.RED}⚡ CONDUCTIVE HAZARD: {item['name']} acts as a lightning rod! (-{damage:.1f} HP){Prisma.RST}")
+        return logs
 
     def audit_tool_use(self, packet: PhysicsPacket, inventory_list: List[str], host_health: Any = None):
         if not inventory_list: return

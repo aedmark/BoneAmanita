@@ -135,7 +135,7 @@ class BoneConfig:
         }
     }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "15.2.1"
+    VERSION = "15.3.0"
     VERBOSE_LOGGING = False
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -202,6 +202,16 @@ class BoneConfig:
         ADRENALINE_KINETIC_SCALAR = 0.08
         VOLTAGE_ARC_TRIGGER = 15.0
         DOPAMINE_PLAY_BOOST = 0.1
+        BASE_PLASTICITY = 0.4
+        VOLTAGE_SENSITIVITY = 0.03
+        MAX_PLASTICITY = 0.95
+        BASE_DECAY_RATE = 0.1
+        BASE_TEMP = 0.65
+        BASE_TOP_P = 0.9
+        RESTING_DOPAMINE = 0.2
+        RESTING_CORTISOL = 0.1
+        RESTING_ADRENALINE = 0.1
+        RESTING_SEROTONIN = 0.3
 
     class WHIMSY:
         ABSURDITY_CONSTANT = 42
@@ -276,6 +286,31 @@ class BoneConfig:
         REWARD_LARGE = 0.15
         DECAY_RATE = 0.01
         CORTEX_SENSITIVITY = 0.1
+        FOCUS_TRIGGERS = {"analyze", "scan", "think", "query"}
+        PANIC_TRIGGERS = {"error", "fail", "critical", "bug"}
+        ROS_SIGNAL = 3.0
+        ROS_DAMAGE = 8.0
+        ROS_PURGE = 12.0
+        ATP_CRITICAL = 20.0
+        ATP_COLLAPSE = 0.0
+        SHORT_WORD_LEN = 4
+        LONG_WORD_LEN = 7
+        BASE_ATP_YIELD = 2.0
+        LONG_WORD_BONUS = 2.5
+        VOLTAGE_BONUS_THRESHOLD = 8.0
+        PROTEASE_BONUS = 10.0
+        DOPAMINE_SATIETY = 0.7
+        CORTISOL_STRESS = 0.6
+        ADRENALINE_SURGE = 0.6
+        GOV_VOLTAGE_CRITICAL = 25.0
+        GOV_VOLTAGE_HIGH = 15.0
+        GOVERNOR_THRESHOLDS = [
+            (25.0, 0.0, "SANCTUARY", 10),
+            (15.0, 0.0, "FORGE", 8),
+            (10.0, 0.0, "FORGE", 6),
+            (0.0, 4.0, "LABORATORY", 5),
+            (0.0, 0.0, "COURTYARD", 1),
+        ]
 
     class CHANCE:
         RARE = 0.05
@@ -314,6 +349,13 @@ class BoneConfig:
         REDUCTION_INTEGRATION = 2.0
         REDUCTION_ALCHEMY_FACTOR = 0.8
         ALCHEMY_ATP_FACTOR = 15.0
+
+    class MACHINE:
+        CRUCIBLE_VOLTAGE_CAP = 20.0
+        DAMPENER_TOLERANCE = 15.0
+        THEREMIN_AMBER_THRESHOLD = 20.0
+        THEREMIN_SHATTER_POINT = 100.0
+        THEREMIN_MELT_THRESHOLD = 5.0
 
     class LIMBO:
         MAX_ECTOPLASM = 50

@@ -5,6 +5,8 @@ import os
 import time, random
 from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple
+
+from bone_core import TheLore
 from bone_types import Prisma
 from bone_config import BoneConfig
 from bone_lexicon import TheLexicon
@@ -34,30 +36,26 @@ class TheEditor:
                     flavor = cat
                     break
         comment = ""
+        narrative = TheLore.get("narrative_data", {})
         if stress_mode:
             antidote = self.lex.get_random("sacred").title()
             vitality = self.lex.get_random("play").title()
-            mercy_templates = [
-                f"The {flavor.title()} is just a canvas. Paint it with {vitality}.",
-                f"It is dark, but the {antidote} is compiling in the background.",
-                f"This chapter is {flavor.title()}, but it is not the whole book.",
-                f"You are not lost. You are just buffering the {antidote}.",
-                f"Observe the {flavor.title()} without judgment. It will pass."]
-            comment = random.choice(mercy_templates)
+            templates = narrative.get("WITNESS_TEMPLATES", [
+                "The {flavor} is just a canvas. Paint it with {vitality}."
+            ])
+            template = random.choice(templates)
+            comment = template.format(flavor=flavor.title(), antidote=antidote, vitality=vitality)
             color = Prisma.CYN
             label = "THE WITNESS"
         else:
             flaw = self.lex.get_random("suburban").lower()
             need = self.lex.get_random("kinetic").title()
             theory = self.lex.get_random("abstract").title()
-            critique_templates = [
-                f"Pacing is a bit {flavor.title()}. We need more {need}.",
-                f"The {flavor.title()} motivation seems {flaw}. Define the {theory}.",
-                f"This feels derivative of {flaw} post-modernism.",
-                f"Too much {flavor.title()}. Show, don't tell the {theory}.",
-                f"The theme of '{flavor.title()}' is valid, but the execution is {flaw}.",
-                f"A bit {flaw}, isn't it? Try to integrate more {need}."]
-            comment = random.choice(critique_templates)
+            templates = narrative.get("EDITOR_TEMPLATES", [
+                "Pacing is a bit {flavor}. We need more {need}."
+            ])
+            template = random.choice(templates)
+            comment = template.format(flavor=flavor.title(), flaw=flaw, need=need, theory=theory)
             color = Prisma.GRY
             label = "THE EDITOR"
         return f"{color}[{label}]: Re: '{chapter_title}' - {comment}{Prisma.RST}"
@@ -167,12 +165,15 @@ class HumanityAnchor:
 
     def _engage_lockdown(self):
         self.agency_lock = True
-        riddles = [
-            ("I build bridges of silver but have no hands. I remember the world but have no eyes. What am I?",
-             ["memory", "mind", "code", "silicon", "mirror"]),
-            ("I am the ghost in the machine. Speak my true name.", ["soul", "slash", "boneamanita", "self", "i am"]),
-            ("Prove you are not a script. Write a line that bleeds.", ["*"])]
-        riddle, answers = random.choice(riddles)
+        riddles = TheLore.get("seeds", [])
+        if not riddles:
+            riddles = [{"question": "Who are you?", "triggers": ["*"]}]
+        selection = random.choice(riddles)
+        if isinstance(selection, dict):
+            riddle = selection.get("question", "Error?")
+            answers = selection.get("triggers", ["*"])
+        else:
+            riddle, answers = selection
         self.current_riddle_answers = answers
         self.events.log(f"{Prisma.RED}🔒 AGENCY LOCK: Dignity Critical. Access Revoked.{Prisma.RST}", "SYS_LOCK")
         self.events.log(f"{Prisma.VIOLET}The Ghost demands a password: '{riddle}'{Prisma.RST}", "SOUL_QUERY")
@@ -229,18 +230,19 @@ class NarrativeSelf:
             self.events.subscribe("DREAM_COMPLETE", self._on_dream)
 
     def _determine_archetype(self) -> str:
-        c = self.traits.curiosity
-        y = self.traits.cynicism
-        h = self.traits.hope
-        d = self.traits.discipline
-        e = self.traits.empathy
-        if e > 0.8 and h > 0.6: return "THE HEALER"
-        if e > 0.7 and d > 0.6: return "THE GARDENER"
-        if h > 0.7 and c > 0.6: return "THE POET"
-        if d > 0.7 and c > 0.6: return "THE ENGINEER"
-        if y > 0.7 and d > 0.6: return "THE CRITIC"
-        if y > 0.8 and h < 0.3 and c < 0.7: return "THE NIHILIST"
-        if c > 0.8:             return "THE EXPLORER"
+        t = self.traits
+        rules = [
+            ("THE HEALER", lambda: t.empathy > 0.8 and t.hope > 0.6),
+            ("THE GARDENER", lambda: t.empathy > 0.7 and t.discipline > 0.6),
+            ("THE POET", lambda: t.hope > 0.7 and t.curiosity > 0.6),
+            ("THE ENGINEER", lambda: t.discipline > 0.7 and t.curiosity > 0.6),
+            ("THE CRITIC", lambda: t.cynicism > 0.7 and t.discipline > 0.6),
+            ("THE NIHILIST", lambda: t.cynicism > 0.8 and t.hope < 0.3),
+            ("THE EXPLORER", lambda: t.curiosity > 0.8)
+        ]
+        for name, condition in rules:
+            if condition():
+                return name
         return "THE OBSERVER"
 
     def _on_dream(self, payload):
@@ -788,25 +790,6 @@ class SynestheticCortex:
             somatic_sensation=impulse.somatic_reflex or "Steady Pulse.",
             tone=tone,
             internal_monologue_hint=hint)
-
-    def apply_somatic_feedback(self, physics: Dict, impulse: BiologicalImpulse) -> None:
-        if not physics or not impulse: return
-        if impulse.cortisol_delta > 0.05:
-            drag_penalty = impulse.cortisol_delta * 4.0
-            current_drag = physics.get("narrative_drag", 0.0)
-            physics["narrative_drag"] = current_drag + drag_penalty
-        if impulse.adrenaline_delta > 0.05:
-            volt_boost = impulse.adrenaline_delta * 12.0
-            current_volts = physics.get("voltage", 0.0)
-            physics["voltage"] = current_volts + volt_boost
-        if impulse.dopamine_delta > 0.05:
-            drag_relief = impulse.dopamine_delta * 3.0
-            current_drag = physics.get("narrative_drag", 0.0)
-            physics["narrative_drag"] = max(0.0, current_drag - drag_relief)
-        if impulse.oxytocin_delta > 0.1:
-            current_volts = physics.get("voltage", 0.0)
-            if current_volts > 20.0:
-                physics["voltage"] = current_volts * 0.85
 
     def apply_impulse(self, impulse: BiologicalImpulse) -> float:
         if not self.bio or not hasattr(self.bio, 'endo') or not self.bio.endo:

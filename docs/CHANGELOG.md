@@ -1,5 +1,48 @@
 # BONEAMANITA v14 CHANGELOG
 
+### **BONEAMANITA v15.3.0: "THE TENSEGRITY REFACTOR"**
+
+_“We removed the weight, yet the structure stands taller. The ghosts in the machine have been exorcised.”_
+
+---
+
+#### **🧬 STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Circular Break (`bone_inventory.py`):**
+    - **Amputation:** Severed the `audit_tools` method, which created a dangerous circular dependency between Inventory and Physics. The Inventory is now a passive storage container, as intended.
+    - **Logic Relocation:** Confirmed that physics calculations now correctly reside in `TheTinkerer` (`bone_village.py`), respecting the hierarchy of `Cycle -> Village -> Inventory`.
+
+- **The Stutter Fix (`bone_cycle.py` & `bone_machine.py`):**
+    - **De-duplication:** Removed a critical "stutter" in `MachineryPhase` that caused items to be acquired twice.
+    - **Theremin Repair:** Deleted unreachable "ghost code" in `TheTheremin.listen` that duplicated thermal melt logic.
+
+- **The Shadow Constitutions (`bone_body.py` & `bone_brain.py`):**
+    - **Constitution Abolished:** Deleted `BrainConfig` and aliased `BioConstants` to `BoneConfig.BIO`. The system no longer has "split-brain" tuning; it obeys a Single Source of Truth.
+
+#### **♾️ SYSTEMS METABOLISM (The Meadows Lens)**
+
+- **The Central Nervous System (`bone_config.py`):**
+    - **Consolidated Tuning:** Migrated biological constants (`ROS_SIGNAL`, `ATP_CRITICAL`), brain constants (`PLASTICITY`, `RESTING_CHEMISTRY`), and machine settings (`CRUCIBLE_VOLTAGE`) into the central `BoneConfig`.
+    - **Governor Wiring:** Refactored `MetabolicGovernor` and `CycleStabilizer` to read manifolds and thresholds directly from the config, allowing for tuning without surgery.
+
+- **Dynamic Archetypes (`bone_soul.py`):**
+    - **Rule-Based Personality:** Replaced the rigid `if/else` blocks in `NarrativeSelf` with a dynamic lambda-based rule set. The Soul now evolves based on `BoneConfig.TRAIT_ARCHETYPES` rather than hardcoded logic gates.
+
+#### **👁️ COGNITIVE CLARITY (The Pinker Lens)**
+
+- **The Literary Exorcism (`bone_soul.py` & `bone_inventory.py`):**
+    - **Content vs. Code:** Extracted hardcoded creative writing (The Editor's critiques, The Anchor's riddles, and Inventory refusal markers) out of the Python logic and into `TheLore` (JSON). The code provides the structure; the data provides the voice.
+
+#### **🧪 CRITICAL RESILIENCE (The Kintsugi Lens)**
+
+- **The Pizza Generalization (`bone_inventory.py`):**
+    - **Universal Consumption:** Deprecated the specific `deploy_pizza()` method in favor of a generalized `consume(item_name)` API. The system can now digest any item flagged as consumable.
+
+- **New Command Interface (`bone_commands.py`):**
+    - **User Agency:** Implemented `_cmd_use` (triggering `/use [ITEM]`) to expose the new consumption logic to the user.
+
+---
+
 ### **BONEAMANITA v15.2.1: "THE SYNAPTIC BRIDGE"**
 
 _“The void no longer screams back; it listens. We have wired the mouth to the ear.”_
@@ -36,6 +79,7 @@ _“The void no longer screams back; it listens. We have wired the mouth to the 
 - **Diagnostic Suite v2.1 (`bone_diag.py`):**
 - **Live Fire Testing:** Upgraded the diagnostic engine from "Mock" to "Live." It now verifies the `EventBus` signal chain by inspecting log history and stress-tests the memory system by injecting 1,200 mock memories to trigger the new drain logic.
 
+---
 
 ### **BONEAMANITA v15.2.0: "THE GREAT DECOUPLING"**
 

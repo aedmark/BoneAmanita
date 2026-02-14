@@ -5,8 +5,6 @@ import math, random, time
 from typing import Dict, List, Any, Tuple, Optional, Deque
 from collections import Counter, deque
 from dataclasses import dataclass
-
-from bone_config import BoneConfig
 from bone_types import Prisma, PhysicsPacket, CycleContext
 from bone_lexicon import TheLexicon
 
@@ -54,29 +52,6 @@ TRIGRAM_MAP: Dict[str, Tuple[str, str, str, str]] = {
     "BET": ("☴", "XUN",   "Wind",     Prisma.CYN),
     "E":   ("☷", "KUN",   "Earth",    Prisma.OCHRE),
     "DEL": ("☱", "DUI",   "Lake",     Prisma.MAG)}
-
-def cosine_similarity(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float:
-    intersection = set(vec_a.keys()) & set(vec_b.keys())
-    numerator = sum(vec_a[k] * vec_b[k] for k in intersection)
-    sum1 = sum(vec_a[k] ** 2 for k in vec_a.keys())
-    sum2 = sum(vec_b[k] ** 2 for k in vec_b.keys())
-    denominator = math.sqrt(sum1) * math.sqrt(sum2)
-    if not denominator: return 0.0
-    return numerator / denominator
-
-def resolve_trigram(vector: Dict[str, float]) -> Dict[str, Any]:
-    if not vector:
-        return {"symbol": "☷", "name": "KUN", "color": Prisma.OCHRE, "vector": "E"}
-    dominant_vec = max(vector, key=vector.get)
-    if vector[dominant_vec] < 0.2:
-        dominant_vec = "E"
-    symbol, name, concept, color = TRIGRAM_MAP.get(dominant_vec, TRIGRAM_MAP["E"])
-    return {
-        "symbol": symbol,
-        "name": name,
-        "concept": concept,
-        "color": color,
-        "vector": dominant_vec}
 
 @dataclass
 class GeodesicVector:
@@ -510,38 +485,3 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> Physic
     feedback.voltage = max(0.0, min(feedback.voltage, pc.VOLT_CRITICAL * 1.5))
     feedback.narrative_drag = max(pc.DRAG_FLOOR, min(feedback.narrative_drag, pc.DRAG_HALT))
     return feedback
-
-
-class ItemPhysics:
-    """ Handles the physical consequences of Inventory Items. """
-    @staticmethod
-    def calculate_passive_deltas(inventory_data: List[Dict]) -> List[PhysicsDelta]:
-        deltas = []
-        for item_data in inventory_data:
-            traits = item_data.get("passive_traits", [])
-            name = item_data.get("name", "Unknown")
-
-            if "HEAVY_LOAD" in traits:
-                deltas.append(PhysicsDelta("ADD", "narrative_drag", 0.5, name, "Heavy Load"))
-
-            if "TIME_DILATION" in traits:
-                deltas.append(PhysicsDelta("MULT", "narrative_drag", 0.8, name, "Time Dilation"))
-
-            if "ENTROPY_BUFFER" in traits:
-                deltas.append(PhysicsDelta("MULT", "turbulence", 0.5, name, "Entropy Buffer"))
-
-        return deltas
-
-    @staticmethod
-    def check_conductive_hazard(physics: Dict, inventory_data: List[Dict]) -> List[str]:
-        logs = []
-        voltage = physics.get("voltage", 0.0)
-        limit = getattr(BoneConfig.INVENTORY, "CONDUCTIVE_THRESHOLD", 20.0)
-
-        if voltage >= limit:
-            for item in inventory_data:
-                if "CONDUCTIVE_HAZARD" in item.get("passive_traits", []):
-                    damage = (voltage - limit) * 0.5
-                    logs.append(
-                        f"{Prisma.RED}⚡ CONDUCTIVE HAZARD: {item['name']} acts as a lightning rod! (-{damage:.1f} HP){Prisma.RST}")
-        return logs

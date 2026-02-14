@@ -2,15 +2,17 @@
 
 import random
 from typing import Tuple, Optional, List, Dict
+
+from bone_config import BoneConfig
 from bone_core import TheLore
 from bone_lexicon import TheLexicon
 
 class TheCrucible:
     def __init__(self):
-        self.max_voltage_cap = 20.0
+        self.max_voltage_cap = getattr(BoneConfig.MACHINE, "CRUCIBLE_VOLTAGE_CAP", 20.0)
         self.active_state = "COLD"
         self.dampener_charges = 3
-        self.dampener_tolerance = 15.0
+        self.dampener_tolerance = getattr(BoneConfig.MACHINE, "DAMPENER_TOLERANCE", 15.0)
         self.instability_index = 0.0
 
     def dampener_status(self):
@@ -156,17 +158,13 @@ class TheTheremin:
         if voltage > 5.0:
             resin_flow = max(0.0, resin_flow - (voltage * 0.6))
         thermal_hits = counts.get("thermal", 0)
-        if thermal_hits > 0 and self.decoherence_buildup > 5.0:
+        theremin_msg = ""
+        melt_thresh = getattr(BoneConfig.MACHINE, "THEREMIN_MELT_THRESHOLD", 5.0)
+        if thermal_hits > 0 and self.decoherence_buildup > melt_thresh:
             dissolved = thermal_hits * 15.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - dissolved)
             self.classical_turns = 0
             return False, 0.0, f"🔥 MELT: -{dissolved:.1f} Resin", None
-        theremin_msg = ""
-        if thermal_hits > 0 and self.decoherence_buildup > 5.0:
-            dissolved = thermal_hits * 15.0
-            self.decoherence_buildup = max(0.0, self.decoherence_buildup - dissolved)
-            self.classical_turns = 0
-            theremin_msg = f"🔥 MELT: -{dissolved:.1f} Resin"
         critical_event = None
         if rep > 0.5:
             self.classical_turns += 1

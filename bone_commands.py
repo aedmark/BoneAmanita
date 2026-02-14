@@ -167,6 +167,7 @@ class CommandProcessor:
         self.registry.register("/reload", self._cmd_reload, "Hot-reload Lore")
         self.registry.register("/truth", self._cmd_truth, "Adjust Reality Ambiguity [0-3]")
         self.registry.register("/soothe", self._cmd_soothe, "Burn ATP to quell memory guilt")
+        self.registry.register("/use", self._cmd_use, "Use/Consume an item")
 
     def execute(self, text: str):
         if hasattr(self.interface.eng, "reality_stack"):
@@ -197,7 +198,7 @@ class CommandProcessor:
 
     def _cmd_help(self, _parts):
         lines = [
-            f"\n{self.P.CYN}/// BONEAMANITA 15.2.1 TERMINAL ///{self.P.RST}",
+            f"\n{self.P.CYN}/// BONEAMANITA 15.3.0 TERMINAL ///{self.P.RST}",
             f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n"]
         structure = {
             "SURVIVAL":    ["/status", "/inventory", "/look"],
@@ -353,4 +354,18 @@ class CommandProcessor:
             self.interface.log("Invalid mode. Use 0-3.")
         except Exception as e:
             self.interface.log(f"Truth Dial Failure: {e}")
+        return True
+
+    def _cmd_use(self, parts):
+        if len(parts) < 2:
+            self.interface.log("Usage: /use [ITEM_NAME]")
+            return True
+        item_name = parts[1].upper()
+        gordon = getattr(self.interface.eng, "gordon", None)
+        if not gordon:
+            self.interface.log(f"{self.P.RED}Inventory system offline.{self.P.RST}")
+            return True
+        success, msg = gordon.consume(item_name)
+        color = self.P.GRN if success else self.P.OCHRE
+        self.interface.log(f"{color}{msg}{self.P.RST}")
         return True

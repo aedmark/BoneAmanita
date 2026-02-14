@@ -7,6 +7,8 @@ from typing import List, Dict, Tuple, Optional
 from bone_core import TheLore
 from bone_types import Prisma
 from bone_config import BoneConfig
+from bone_village import TheTinkerer
+
 
 @dataclass
 class Item:
@@ -35,58 +37,44 @@ class Item:
         )
 
 class GordonKnot:
-    REFUSAL_MARKERS = {
-        "cannot", "can't", "unable", "fail", "too heavy",
-        "stuck", "don't", "do not", "locked", "refuse", "impossible"
-    }
-
     def __init__(self, events=None):
         self.events = events
         self.inventory: List[str] = []
         self.registry: Dict[str, Item] = {}
-
         self.ITEM_REGISTRY: Dict[str, Dict] = {}
-
         self.recipes: List[Dict] = []
         self.max_slots = 10
         self.last_flinch_turn = -100
         self.scar_tissue = {}
+        self.refusal_markers = {
+            "cannot", "can't", "unable", "fail", "too heavy",
+            "stuck", "don't", "do not", "locked", "refuse", "impossible"
+        }
         self.load_config()
         self._seed_test_items()
 
     def load_config(self):
-        """ Loads gordon.json into memory via TheLore. """
         data = TheLore.get("GORDON") or {}
         if not data and hasattr(TheLore, "get_raw"):
-             data = TheLore.get_raw("gordon.json") or {}
-
+            data = TheLore.get_raw("gordon.json") or {}
+        if "REFUSAL_MARKERS" in data:
+            self.refusal_markers = set(data["REFUSAL_MARKERS"])
         self.ITEM_REGISTRY = data.get("ITEM_REGISTRY", {})
-
         for name, props in self.ITEM_REGISTRY.items():
             self.registry[name] = Item.from_dict(name, props)
-
         self.recipes = data.get("RECIPES", [])
         self.scar_tissue = data.get("SCAR_TISSUE", {})
-
         starters = data.get("STARTING_INVENTORY", [])
         if not self.inventory and starters:
             self.inventory = [s for s in starters if isinstance(s, str)]
-
         if hasattr(BoneConfig, "INVENTORY"):
             self.max_slots = getattr(BoneConfig.INVENTORY, "MAX_SLOTS", 10)
 
     def process_loot_tags(self, text: str, user_input: str) -> Tuple[str, List[str]]:
-        """
-        Parses [[LOOT:Item]] and [[LOST:Item]] tags.
-        Checks for user consent (acquisition verbs) before granting loot.
-        Returns cleaned text and a list of logs.
-        """
         loot_pattern = r"\[\[LOOT:\s*(.*?)\]\]"
         lost_pattern = r"\[\[LOST:\s*(.*?)\]\]"
-
         raw_loot = re.findall(loot_pattern, text, re.IGNORECASE)
         raw_lost = re.findall(lost_pattern, text, re.IGNORECASE)
-
         def normalize(items):
             clean_set = set()
             for normalized_item in items:
@@ -94,12 +82,9 @@ class GordonKnot:
                 clean = re.sub(r"[^A-Z0-9_]", "", clean)
                 if clean: clean_set.add(clean)
             return list(clean_set)
-
         new_loot = normalize(raw_loot)
         lost_loot = normalize(raw_lost)
-
         logs = []
-
         if new_loot:
             acquisition_verbs = [
                 "take", "grab", "pick", "get", "steal", "seize", "collect",
@@ -107,7 +92,6 @@ class GordonKnot:
             ]
             clean_input = user_input.lower()
             has_intent = any(verb in clean_input for verb in acquisition_verbs)
-
             if has_intent:
                 for item in new_loot:
                     logs.append(self.acquire(item))
@@ -116,20 +100,16 @@ class GordonKnot:
                 if self.events:
                     for item in new_loot:
                         self.events.log(f"CONSENT: Intercepted auto-loot for '{item}'. User did not ask.", "GORDON")
-
         for item in lost_loot:
             if self.safe_remove_item(item):
                 logs.append(f"{Prisma.GRY}ENTROPY: {item} consumed/lost.{Prisma.RST}")
             else:
                 logs.append(f"{Prisma.OCHRE}GLITCH: Tried to lose {item}, but you didn't have it.{Prisma.RST}")
-
         clean_text = re.sub(loot_pattern, "", text, flags=re.IGNORECASE)
         clean_text = re.sub(lost_pattern, "", clean_text, flags=re.IGNORECASE)
-
         return clean_text.strip(), logs
 
     def _seed_test_items(self):
-        """ Inject items required for bone_diag.py to pass if they don't exist. """
         test_items = {
             "sphere": {"description": "A diagnostic sphere.", "spawn_context": "COMMON"},
             "red key": {"description": "A test key.", "spawn_context": "COMMON"},
@@ -243,17 +223,13 @@ class GordonKnot:
         return True, f"Gordon polished {len(self.inventory)} items.", cost
 
     def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
-        """ Heuristic to see if the user 'found' something in the narrative. """
         triggers = ["found a", "picked up", "pick up", "acquired", "took the", "take the", "grab the", "takes the"]
         text = (user_text + " " + sys_text).lower()
         sys_lower = sys_text.lower()
-
-        for refusal in self.REFUSAL_MARKERS:
+        for refusal in self.refusal_markers:
             if refusal in sys_lower:
                 return None
-
         all_known_items = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
-
         for name in all_known_items:
             if name.lower() in text and name.upper() not in self.inventory:
                 for t in triggers:
@@ -262,68 +238,45 @@ class GordonKnot:
         return None
 
     def check_flinch(self, clean_words: List[str], current_turn: int) -> Optional[Dict]:
-        """
-        Detects if the user is refusing the call/narrative.
-        Used by bone_cycle to trigger Drift/Drag penalties.
-        """
         if current_turn - self.last_flinch_turn < 5:
             return None
-
         words_set = set(clean_words)
         words_lower = {w.lower() for w in words_set}
-
         if "Trigger" in words_set or "trigger" in words_set:
             self.last_flinch_turn = current_turn
             return {
                 "message": f"{Prisma.OCHRE}⚠️ PTSD FLINCH: Gordon recalls a bad memory.{Prisma.RST}",
-                "physics_effects": {"narrative_drag": 5.0, "voltage": -2.0}
-            }
-
-        if not self.REFUSAL_MARKERS.isdisjoint(words_lower):
+                "physics_effects": {"narrative_drag": 5.0, "voltage": -2.0}}
+        if not self.refusal_markers.isdisjoint(words_lower):
             self.last_flinch_turn = current_turn
             return {
                 "message": f"{Prisma.GRY}Gordon flinches. The refusal adds weight.{Prisma.RST}",
-                "physics_effects": {"narrative_drag": 1.0}
-            }
-
+                "physics_effects": {"narrative_drag": 1.0}}
         return None
 
-    def deploy_pizza(self, item_name="STABILITY_PIZZA") -> Tuple[bool, str]:
+    def consume(self, item_name: str) -> Tuple[bool, str]:
         item_name = item_name.upper()
         if item_name not in self.inventory:
-            return False, "No pizza found."
+            return False, "You don't have that."
+        item = self.get_item_data(item_name)
+        if not item or not item.consume_on_use:
+            return False, f"The {item_name} cannot be consumed."
         self.inventory.remove(item_name)
-        return True, "🍕 PIZZA TIME: Entropy paused. Satisfaction nominal."
-
-    def audit_tools(self, physics_ref: Dict) -> List[str]:
-        """ Legacy support for bone_diag Phase 8 """
-        from bone_physics import ItemPhysics
-        inventory_data = self.get_inventory_data()
-        logs = []
-
-        _deltas = ItemPhysics.calculate_passive_deltas(inventory_data)
-
-        hazard_logs = ItemPhysics.check_conductive_hazard(physics_ref, inventory_data)
-        logs.extend(hazard_logs)
-
-        return logs
+        if item.function == "STABILITY":
+            return True, f"🍕 {item_name}: Entropy paused. Satisfaction nominal."
+        return True, f"Consumed {item_name}. {item.usage_msg}"
 
     def emergency_reflex(self, physics_ref: Dict) -> Tuple[bool, Optional[str]]:
         voltage = physics_ref.get("voltage", 0.0)
         drag = physics_ref.get("narrative_drag", 0.0)
-
         for name in self.inventory:
             item = self.get_item_data(name)
             if not item: continue
-
             trigger = item.reflex_trigger
-
             if trigger == "VOLTAGE_CRITICAL" and voltage > 18.0:
                 self.safe_remove_item(name)
                 return True, f"{Prisma.CYN}🛡️ REFLEX: {name} sacrificed to absorb voltage spike!{Prisma.RST}"
-
             if trigger == "DRIFT_CRITICAL" and drag > 8.0:
                 self.safe_remove_item(name)
                 return True, f"{Prisma.OCHRE}⚓ REFLEX: {name} deployed to arrest drift!{Prisma.RST}"
-
         return False, None

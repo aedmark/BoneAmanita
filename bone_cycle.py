@@ -37,11 +37,6 @@ class CongruenceValidator:
             if vocab_str:
                 target_words = set(w.strip().lower() for w in vocab_str.split(","))
             target_words.update(target_data.get("keywords", []))
-        if not target_words:
-            if archetype == "ENGINEER":
-                target_words = {"system", "structure", "logic"}
-            elif archetype == "POET":
-                target_words = {"dream", "echo", "flow"}
         if target_words:
             words_to_check = set(context.clean_words) if hasattr(context, "clean_words") else set()
             hits = len(words_to_check.intersection(target_words))
@@ -49,23 +44,13 @@ class CongruenceValidator:
         return min(1.5, tone_score)
 
 class CycleStabilizer:
-    MANIFOLDS = {
-        "FORGE": {"voltage": 15.0, "drag": 1.5},
-        "SANCTUARY": {"voltage": 20.0, "drag": 0.0},
-        "THE_MUD": {"voltage": 10.0, "drag": 5.0},
-        "THE_AERIE": {"voltage": 10.0, "drag": 0.5},
-        "LABORATORY": {"voltage": 12.0, "drag": 1.0},
-        "COURTYARD": {"voltage": 8.0, "drag": 2.0},
-        "DEFAULT": {"voltage": 10.0, "drag": 1.5}
-    }
 
     def __init__(self, events_ref, governor_ref):
         self.events = events_ref
         self.governor = governor_ref
         self.last_tick_time = time.time()
         self.pending_drag = 0.0
-        config_manifolds = getattr(BoneConfig.PHYSICS, "MANIFOLDS", {})
-        self.manifolds = config_manifolds if config_manifolds else self.MANIFOLDS
+        self.manifolds = getattr(BoneConfig.PHYSICS, "MANIFOLDS", {})
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("DOMESTICATION_PENALTY", self._on_domestication_penalty)
 
@@ -82,42 +67,33 @@ class CycleStabilizer:
             ctx.log(
                 f"{Prisma.GRY}⚖️ DOMESTICATION: The collar feels heavy. (Drag +{self.pending_drag:.1f}){Prisma.RST}")
             self.pending_drag = 0.0
-
         now = time.time()
         dt = max(0.001, min(1.0, now - self.last_tick_time))
         self.last_tick_time = now
         p = ctx.physics
-
         manifold = getattr(p, "manifold", "DEFAULT")
         if manifold not in self.manifolds:
             manifold = "DEFAULT"
         cfg = self.manifolds[manifold]
-
         target_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
         flow_state = getattr(p, "flow_state", "LAMINAR")
-
         if flow_state in ["SUPERCONDUCTIVE", "FLOW_BOOST"]:
             pass
         else:
             target_v = cfg["voltage"]
-
         self.governor.recalibrate(target_v, cfg["drag"])
         v_force, d_force = self.governor.regulate(p, dt=dt)
         corrections = False
-
         if abs(v_force) > 0.01:
             p.voltage = max(0.0, min(getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0), p.voltage + v_force))
             if abs(v_force) > 0.5:
                 ctx.record_flux(current_phase, "voltage", p.voltage - v_force, p.voltage, "PID_CORRECTION")
             corrections = True
-
         if abs(d_force) > 0.01:
             p.narrative_drag = max(0.0, p.narrative_drag + d_force)
             if abs(d_force) > 0.5:
-                ctx.record_flux(current_phase, "narrative_drag", p.narrative_drag - d_force, p.narrative_drag,
-                                "PID_CORRECTION")
+                ctx.record_flux(current_phase, "narrative_drag", p.narrative_drag - d_force, p.narrative_drag, "PID_CORRECTION")
             corrections = True
-
         return corrections
 
 class SimulationPhase:
@@ -166,10 +142,12 @@ class IntentionPhase(SimulationPhase):
     def run(self, ctx: CycleContext):
         physics = ctx.physics
         clean = ctx.clean_words
-        if any(w in clean for w in ["analyze", "scan", "think", "query"]):
+        focus_triggers = getattr(BoneConfig.BIO, "FOCUS_TRIGGERS", {"analyze", "scan", "think", "query"})
+        panic_triggers = getattr(BoneConfig.BIO, "PANIC_TRIGGERS", {"error", "fail", "critical", "bug"})
+        if any(w in clean for w in focus_triggers):
             physics.narrative_drag = max(0.0, physics.narrative_drag - 1.0)
             ctx.log(f"{Prisma.CYN}🧠 INTENTION: Focus engaged. Drag reduced.{Prisma.RST}")
-        if any(w in clean for w in ["error", "fail", "critical", "bug"]):
+        if any(w in clean for w in panic_triggers):
             physics.voltage = min(20.0, physics.voltage + 2.0)
             ctx.log(f"{Prisma.MAG}🧠 INTENTION: Bracing for impact. Voltage spiked.{Prisma.RST}")
         current_atp = self.eng.bio.mito.state.atp_pool
@@ -560,7 +538,6 @@ class MachineryPhase(SimulationPhase):
         if forge_msg: ctx.log(forge_msg)
         if new_item and self.eng.gordon:
             ctx.log(self.eng.gordon.acquire(new_item))
-        if new_item: ctx.log(self.eng.gordon.acquire(new_item))
         _, _, theremin_msg, t_crit = self.eng.phys.theremin.listen(phys_dict, self.eng.bio.governor.mode)
         if theremin_msg: ctx.log(theremin_msg)
         if t_crit == "AIRSTRIKE":

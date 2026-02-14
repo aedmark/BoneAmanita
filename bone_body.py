@@ -54,28 +54,7 @@ class SemanticSignal:
     valence: float = 0.0
     coherence: float = 0.0
 
-
-class BioConstants:
-    ROS_SIGNAL = 3.0
-    ROS_DAMAGE = 8.0
-    ROS_PURGE = 12.0
-    ATP_CRITICAL = 20.0
-    ATP_COLLAPSE = 0.0
-    SHORT_WORD_LEN = 4
-    LONG_WORD_LEN = 7
-    BASE_ATP_YIELD = 2.0
-    LONG_WORD_BONUS = 2.5
-    VOLTAGE_BONUS_THRESHOLD = 8.0
-    PROTEASE_BONUS = 10.0
-    DOPAMINE_SATIETY = 0.7
-    CORTISOL_STRESS = 0.6
-    ADRENALINE_SURGE = 0.6
-    GOV_VOLTAGE_CRITICAL = 25.0
-    GOV_VOLTAGE_HIGH = 15.0
-    GOV_VOLTAGE_MED = 10.0
-    GOV_VOLTAGE_LOW = 5.0
-    GOV_DRAG_HIGH = 4.0
-    GOV_DRAG_LOW = 2.0
+BioConstants = BoneConfig.BIO
 
 
 """ CORE BIO SYSTEMS """
@@ -142,8 +121,8 @@ class BioSystem:
             self.mito.adjust_atp(-10.0, "Neural Overclock")
 
     def apply_environmental_entropy(self, physics_packet):
-        e_val = get_phys_attr(physics_packet, "E", 0.0)
-        b_val = get_phys_attr(physics_packet, "PHI", 0.0)
+        e_val = get_phys_attr(physics_packet, "E")
+        b_val = get_phys_attr(physics_packet, "PHI")
         em_field = math.sqrt(e_val**2 + b_val**2)
         base_entropy = 2.0
         shield_strength = min(0.8, em_field * 0.1)
@@ -235,8 +214,8 @@ class MitochondrialForge:
     def process_cycle(
         self, physics_packet: dict, external_modifiers: List[float] = None
     ) -> MetabolicReceipt:
-        voltage = get_phys_attr(physics_packet, "voltage", 0.0)
-        raw_drag = get_phys_attr(physics_packet, "narrative_drag", 0.0)
+        voltage = get_phys_attr(physics_packet, "voltage")
+        raw_drag = get_phys_attr(physics_packet, "narrative_drag")
         drag = max(0.0, raw_drag)
         base_demand = max(0.1, math.log1p(voltage) * 1.5)
         raw_tax = (drag**1.5) * 0.5
@@ -281,7 +260,7 @@ class MitochondrialForge:
             self.state.membrane_potential = max(
                 0.1, self.state.membrane_potential - 0.005
             )
-        self._apply_adaptive_dynamics(waste_generated)
+        self._apply_adaptive_dynamics()
         status = "RESPIRING"
         if is_critical:
             status = "LOW_POWER"
@@ -299,7 +278,7 @@ class MitochondrialForge:
             symptom=self.state.retrograde_signal,
         )
 
-    def _apply_adaptive_dynamics(self, current_waste):
+    def _apply_adaptive_dynamics(self):
         if self.state.ros_buildup < BioConstants.ROS_SIGNAL:
             self.state.membrane_potential = max(
                 0.5, self.state.membrane_potential - 0.001
@@ -397,7 +376,7 @@ class DigestiveTrack:
             logs.append(
                 f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX: -{scaled_tax:.1f} ATP. (Antigens Detected){Prisma.RST}"
             )
-        if get_phys_attr(phys, "voltage", 0.0) > 8.0 and found_enzymes:
+        if get_phys_attr(phys, "voltage") > 8.0 and found_enzymes:
             found_enzymes.append("PROTEASE")
             total_atp += 5.0
         dominant = (
@@ -474,7 +453,7 @@ class EndocrineRegulator:
             )
         if chem.dopamine > 0.7:
             modifiers.append(0.8)
-        voltage = get_phys_attr(phys, "voltage", 0.0)
+        voltage = get_phys_attr(phys, "voltage")
         if voltage > 15.0:
             modifiers.append(1.2)
             logs.append(
@@ -484,13 +463,11 @@ class EndocrineRegulator:
 
 
 class BioFeedback:
-    """The Nervous System. Reports status and safety checks."""
-
     def __init__(self, bio_system_ref: BioSystem):
         self.bio = bio_system_ref
 
     def check_vital_signs(self, phys: Dict, stamina: float, logs: List[str]) -> str:
-        voltage = get_phys_attr(phys, "voltage", 0.0)
+        voltage = get_phys_attr(phys, "voltage")
         if stamina <= 0:
             if self.bio.biometrics.health > 10.0:
                 burn_amount = 5.0
@@ -735,14 +712,7 @@ class EndocrineSystem:
     melatonin: float = 0.0
     glimmers: int = 0
     narrative_data: Dict = field(default_factory=dict, repr=False)
-    _REACTION_MAP = {
-        "PROTEASE": {"ADR": 0.1},
-        "CELLULASE": {"COR": -0.1, "OXY": 0.05},
-        "CHITINASE": {"DOP": 0.15},
-        "LIGNASE": {"SER": 0.1},
-        "DECRYPTASE": {"ADR": 0.05, "DOP": 0.05},
-        "AMYLASE": {"SER": 0.15, "OXY": 0.1},
-    }
+    _REACTION_MAP: Dict = field(default_factory=dict, init=False)
 
     def __post_init__(self):
         if hasattr(BoneConfig, "BIO"):
@@ -977,13 +947,7 @@ class MetabolicGovernor:
     narrative_data: Dict = field(default_factory=dict, repr=False)
     last_shift_tick: int = 0
     hysteresis_duration: int = 3
-    STATE_THRESHOLDS = [
-        (25.0, 0.0, "SANCTUARY", 10),
-        (15.0, 0.0, "FORGE", 8),
-        (10.0, 0.0, "FORGE", 6),
-        (0.0, 4.0, "LABORATORY", 5),
-        (0.0, 0.0, "COURTYARD", 1),
-    ]
+    STATE_THRESHOLDS = getattr(BoneConfig.BIO, "GOVERNOR_THRESHOLDS", [])
 
     def __post_init__(self):
         self.voltage_pid = PIDController(kp=0.6, ki=0.05, kd=0.2, setpoint=10.0)
