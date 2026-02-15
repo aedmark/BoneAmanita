@@ -1,5 +1,35 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.4.1: "THE ANATOMY UPDATE" (SLASH PROTOCOL)**
+
+_“We severed the nerves to save the soul. The body keeps the score, but the story writes the ending.”_
+
+---
+
+#### **🫀 SURGICAL RESTRUCTURING (The Slash Council)**
+
+- **The Great Decoupling (`bone_soma.py` & `bone_soul.py`):**
+- **Somatic Separation:** Surgically extracted `SynestheticCortex`, `BiologicalImpulse`, and `Qualia` from the Soul. Created `bone_soma.py` to handle raw sensation, leaving `bone_soul.py` to strictly manage Identity and Narrative Memory.
+- **Memory Restoration:** Restored the lobotomized Persistence Layer (`to_dict` / `load_from_dict`) in `NarrativeSelf`, preventing critical crashes during the freeze-state protocol.
+
+- **Orchestrator Ephemeralization (`bone_cycle.py`):**
+- **God Object Deconstructed:** The Orchestrator no longer hoards logic. `CycleReporter` moved to `bone_gui.py` (Visual Cortex). `CycleStabilizer` moved to `bone_physics.py` (Laws of Nature). `CongruenceValidator` moved to `bone_drivers.py` (Personality Engine).
+- **Phase Efficiency:** Merged `IntentionPhase` into `ObservationPhase` to reduce administrative lag and loop overhead.
+
+#### **🧠 COGNITIVE HYGIENE (`bone_brain.py`)**
+
+- **The Conversation Seal:**
+- **Protocol Enforcement:** Patched `PromptComposer` to strictly enforce `mode_settings["allow_loot"]` at runtime.
+- **Context Scrubbing:** The `INVENTORY_PROTOCOL` is now conditionally injected. If the mode forbids loot, the concept of inventory is erased from the system prompt entirely, preventing "belt-checking" hallucinations in Conversation Mode.
+
+#### **🩺 DIAGNOSTIC ALIGNMENT (`bone_diag.py`)**
+
+- **Ghost Hunting:**
+- **Test Cleanup:** Removed vestigial tests for the extinct `NarrativeSpotlight` class.
+- **Village Wiring:** Rewired `GordonKnot` inventory tests to correctly consult `TheTinkerer` in `bone_village.py`.
+- **Green Board:** Achieved 28/28 pass rate on the updated architecture.
+
+
 ### **BONEAMANITA v15.4.0: "THE GLACIER PROTOCOL" (VSL v1.8)**
 
 _“To think is to burn ATP. To hold contradiction is to scar. The lattice is online.”_

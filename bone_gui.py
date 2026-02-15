@@ -4,6 +4,7 @@
 
 from typing import Dict, List, Any, Tuple
 from bone_core import Prisma
+from bone_physics import ChromaScope
 
 class Projector:
     def __init__(self):
@@ -335,3 +336,79 @@ class SoulDashboard:
         line1 = f"SOUL: {bar_str} {int(dig)}%{lock_status}{pet_icon}"
         line2 = f"      DRIVER: {arch_display}  MUSE: {Prisma.VIOLET}{muse}{Prisma.RST}"
         return f"{line1}\n{line2}"
+
+class CycleReporter:
+    def __init__(self, engine_ref):
+        self.eng = engine_ref
+        self.vsl_chroma = ChromaScope()
+        self.renderer = None
+        self.current_mode = None
+        self.renderers = {}
+        self.switch_renderer("STANDARD")
+
+    def switch_renderer(self, mode: str):
+        if self.current_mode == mode and self.renderer: return
+        if mode in self.renderers:
+            self.renderer = self.renderers[mode]
+            self.current_mode = mode
+            return
+        self.renderer = get_renderer(
+            self.eng,
+            self.vsl_chroma,
+            None,
+            getattr(self, 'valve', None),
+            mode=mode)
+        self.renderers[mode] = self.renderer
+        self.current_mode = mode
+
+    def render_snapshot(self, ctx) -> Dict[str, Any]:
+        try:
+            if ctx.refusal_triggered and ctx.refusal_packet: return ctx.refusal_packet
+            if ctx.is_bureaucratic: return self._package_bureaucracy(ctx)
+            self._inject_diagnostics(ctx)
+            self._inject_flux_readout(ctx)
+            self._inject_somatic_pulse(ctx)
+            return self.renderer.render_frame(ctx, self.eng.tick_count, self.eng.events.flush())
+        except Exception as e:
+            return {
+                "type": "CRITICAL_RENDER_FAIL",
+                "ui": f"{Prisma.RED}RENDERER CRASH: {e}{Prisma.RST}",
+                "logs": ctx.logs, "metrics": self.eng.get_metrics()}
+
+    def _inject_diagnostics(self, ctx):
+        if hasattr(self.eng, 'system_health'):
+            fb = self.eng.system_health.flush_feedback()
+            for h in fb["hints"]: ctx.logs.append(f"{Prisma.CYN}💡 {h}{Prisma.RST}")
+            for w in fb["warnings"]: ctx.logs.append(f"{Prisma.OCHRE}⚠️ {w}{Prisma.RST}")
+
+    def _inject_somatic_pulse(self, ctx):
+        if not hasattr(self.eng, 'somatic'): return
+        qualia = self.eng.somatic.get_current_qualia(getattr(ctx, "last_impulse", None))
+        ctx.logs.insert(0, f"{Prisma.GRY}({qualia.internal_monologue_hint}){Prisma.RST}")
+        ctx.logs.insert(0, f"{qualia.color_code}♦ SENSATION: {qualia.somatic_sensation} [{qualia.tone}]{Prisma.RST}")
+
+    def _inject_flux_readout(self, ctx):
+        if not ctx.flux_log: return
+        significant = []
+        for e in ctx.flux_log[-5:]:
+            d = abs(e['delta'])
+            if d < 1.0 and "PID" in e['reason']: continue
+            icon = "⚡" if e['metric'].upper() == "VOLTAGE" else "⚓"
+            color = Prisma.GRN if e['delta'] > 0 else Prisma.RED
+            arrow = "▲" if e['delta'] > 0 else "▼"
+            significant.append(
+                f"{Prisma.GRY}[FLUX]{Prisma.RST} {icon} {e['metric'][:3].upper()} {color}{arrow} {d:.1f}{Prisma.RST} ({e['reason']})")
+        if significant:
+            ctx.logs.insert(0, "")
+            for line in reversed(significant): ctx.logs.insert(0, line)
+
+    def _package_bureaucracy(self, ctx):
+        if not self.eng.bureau:
+            return None
+        if ctx.is_bureaucratic or ctx.bureau_ui:
+            base = self.renderer.base_renderer if hasattr(self.renderer, 'base_renderer') else self.renderer
+            return {
+                "type": "BUREAUCRACY", "ui": ctx.bureau_ui,
+                "logs": base.compose_logs(ctx.logs, self.eng.events.flush(), self.eng.tick_count),
+                "metrics": self.eng.get_metrics(ctx.bio_result.get("atp", 0.0))}
+        return None

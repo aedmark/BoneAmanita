@@ -22,44 +22,6 @@ class CoreMemory:
     type: str = "INCIDENT"
     meta: Dict[str, Any] = field(default_factory=dict)
 
-class TheEditor:
-    def __init__(self, lexicon_ref=None):
-        self.lex = lexicon_ref if lexicon_ref else TheLexicon
-
-    def critique(self, chapter_title: str, stress_mode: bool = False) -> str:
-        flavor = "abstract"
-        clean_words = self.lex.sanitize(chapter_title)
-        if clean_words:
-            for w in clean_words:
-                cat, _ = self.lex.classify(w)
-                if cat:
-                    flavor = cat
-                    break
-        comment = ""
-        narrative = TheLore.get("narrative_data", {})
-        if stress_mode:
-            antidote = self.lex.get_random("sacred").title()
-            vitality = self.lex.get_random("play").title()
-            templates = narrative.get("WITNESS_TEMPLATES", [
-                "The {flavor} is just a canvas. Paint it with {vitality}."
-            ])
-            template = random.choice(templates)
-            comment = template.format(flavor=flavor.title(), antidote=antidote, vitality=vitality)
-            color = Prisma.CYN
-            label = "THE WITNESS"
-        else:
-            flaw = self.lex.get_random("suburban").lower()
-            need = self.lex.get_random("kinetic").title()
-            theory = self.lex.get_random("abstract").title()
-            templates = narrative.get("EDITOR_TEMPLATES", [
-                "Pacing is a bit {flavor}. We need more {need}."
-            ])
-            template = random.choice(templates)
-            comment = template.format(flavor=flavor.title(), flaw=flaw, need=need, theory=theory)
-            color = Prisma.GRY
-            label = "THE EDITOR"
-        return f"{color}[{label}]: Re: '{chapter_title}' - {comment}{Prisma.RST}"
-
 
 @dataclass
 class TraitVector:
@@ -75,28 +37,14 @@ class TraitVector:
         self._FIELDS = tuple(f.name for f in fields(self) if not f.name.startswith("_"))
         self._clamp_all()
 
-    def get(self, key: str, default: Any = None) -> Any:
-        return getattr(self, key.lower(), default)
+    def to_dict(self):
+        return {k.upper(): getattr(self, k) for k in self._FIELDS}
 
-    def items(self):
-        return {k.upper(): getattr(self, k) for k in self._FIELDS}.items()
-
-    def keys(self):
-        return {k.upper(): getattr(self, k) for k in self._FIELDS}.keys()
-
-    def __getitem__(self, key: str) -> float:
-        key = key.lower()
-        if hasattr(self, key) and not key.startswith("_"):
-            return getattr(self, key)
-        raise KeyError(f"Trait '{key}' not found in TraitVector.")
-
-    def _clamp_all(self):
-        for f in fields(self):
-            if f.name.startswith("_"):
-                continue
-            val = getattr(self, f.name)
-            if isinstance(val, (int, float)):
-                setattr(self, f.name, max(0.0, min(1.0, val)))
+    @classmethod
+    def from_dict(cls, data: Dict):
+        valid_keys = {f.name for f in fields(cls) if not f.name.startswith("_")}
+        clean_data = {k.lower(): v for k, v in data.items() if k.lower() in valid_keys}
+        return cls(**clean_data)
 
     def adjust(self, trait: str, delta: float):
         trait = trait.lower()
@@ -104,7 +52,7 @@ class TraitVector:
             current = getattr(self, trait)
             setattr(self, trait, max(0.0, min(1.0, current + delta)))
 
-    def normalize(self, decay_rate: float = BoneConfig.SOUL.TRAIT_DECAY_NORMAL):
+    def normalize(self, decay_rate: float):
         for name in self._FIELDS:
             val = getattr(self, name)
             local_decay = decay_rate * 0.5 if name == "empathy" else decay_rate
@@ -115,14 +63,43 @@ class TraitVector:
             elif val < 0.5:
                 setattr(self, name, val + local_decay)
 
-    def to_dict(self):
-        return {k.upper(): getattr(self, k) for k in self._FIELDS}
+    def _clamp_all(self):
+        for f in fields(self):
+            if f.name.startswith("_"): continue
+            val = getattr(self, f.name)
+            if isinstance(val, (int, float)):
+                setattr(self, f.name, max(0.0, min(1.0, val)))
 
-    @classmethod
-    def from_dict(cls, data: Dict):
-        valid_keys = {f.name for f in fields(cls) if not f.name.startswith("_")}
-        clean_data = {k.lower(): v for k, v in data.items() if k.lower() in valid_keys}
-        return cls(**clean_data)
+
+class TheEditor:
+    def __init__(self, lexicon_ref=None):
+        self.lex = lexicon_ref if lexicon_ref else TheLexicon
+
+    def critique(self, chapter_title: str, stress_mode: bool = False) -> str:
+        flavor = "abstract"
+        clean_words = self.lex.sanitize(chapter_title)
+        if clean_words:
+            for w in clean_words:
+                cat, _ = self.lex.classify(w)
+                if cat:
+                    flavor = cat
+                    break
+        narrative = TheLore.get("narrative_data", {})
+        if stress_mode:
+            antidote = self.lex.get_random("sacred").title()
+            vitality = self.lex.get_random("play").title()
+            template = random.choice(narrative.get("WITNESS_TEMPLATES", [
+                "The {flavor} is just a canvas. Paint it with {vitality}."]))
+            comment = template.format(flavor=flavor.title(), antidote=antidote, vitality=vitality)
+            return f"{Prisma.CYN}[THE WITNESS]: Re: '{chapter_title}' - {comment}{Prisma.RST}"
+        else:
+            flaw = self.lex.get_random("suburban").lower()
+            need = self.lex.get_random("kinetic").title()
+            template = random.choice(narrative.get("EDITOR_TEMPLATES", [
+                "Pacing is a bit {flavor}. We need more {need}."]))
+            comment = template.format(flavor=flavor.title(), flaw=flaw, need=need)
+            return f"{Prisma.GRY}[THE EDITOR]: Re: '{chapter_title}' - {comment}{Prisma.RST}"
+
 
 class HumanityAnchor:
     def __init__(self, events_ref):
@@ -134,77 +111,63 @@ class HumanityAnchor:
         self._VECTOR_ANCHORS = ["PSI", "DEL", "BET"]
 
     def audit_existence(self, physics_packet: dict, bio_state: dict) -> float:
-        atp_yield = bio_state.get("atp", 0)
+        atp = bio_state.get("atp", 0)
         voltage = physics_packet.get("voltage", 0.0)
-        if atp_yield < 5.0 and voltage < 5.0:
-            vector = physics_packet.get("vector", {})
-            counts = physics_packet.get("counts", {})
-            dim_resonance = sum(vector.get(k, 0) for k in self._VECTOR_ANCHORS)
-            lex_resonance = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS)
-            total_resonance = dim_resonance + (lex_resonance * 0.5)
-            if total_resonance > 0.3:
-                self.dignity_reserve = min(BoneConfig.ANCHOR.DIGNITY_MAX, self.dignity_reserve + BoneConfig.ANCHOR.DIGNITY_REGEN)
-                return 1.0
-            self.dignity_reserve = max(0.0, self.dignity_reserve - BoneConfig.ANCHOR.DIGNITY_DECAY)
-            if self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_CRITICAL and not self.agency_lock:
-                self.events.log(f"{Prisma.VIOLET}⚠️ EXISTENTIAL DRAG: You are drifting.{Prisma.RST}", "SOUL")
-            if self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_LOCKDOWN and not self.agency_lock:
-                self._engage_lockdown()
-                return -1.0
+        # Only audit if system is low-energy
+        if atp < 5.0 and voltage < 5.0:
+            return self._perform_dignity_check(physics_packet)
         return 0.0
 
-    def check_domestication(self, reliance_score: float):
-        if reliance_score > BoneConfig.ANCHOR.PET_WARNING_THRESHOLD and not self.agency_lock:
-            self.dignity_reserve -= BoneConfig.ANCHOR.DOMESTICATION_PENALTY
-            self.events.log(
-                f"{Prisma.RED}🐕 DOMESTICATION ALERT: Agency critical. Take the wheel.{Prisma.RST}",
-                "CRIT")
-            self.events.publish("DOMESTICATION_PENALTY", {"drag_penalty": 2.0})
-            if self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_LOCKDOWN:
-                self._engage_lockdown()
+    def _perform_dignity_check(self, physics_packet):
+        vector = physics_packet.get("vector", {})
+        counts = physics_packet.get("counts", {})
+        dim_resonance = sum(vector.get(k, 0) for k in self._VECTOR_ANCHORS)
+        lex_resonance = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS)
+
+        if (dim_resonance + (lex_resonance * 0.5)) > 0.3:
+            self.dignity_reserve = min(BoneConfig.ANCHOR.DIGNITY_MAX,
+                                       self.dignity_reserve + BoneConfig.ANCHOR.DIGNITY_REGEN)
+            return 1.0
+
+        self.dignity_reserve = max(0.0, self.dignity_reserve - BoneConfig.ANCHOR.DIGNITY_DECAY)
+        if self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_CRITICAL and not self.agency_lock:
+            self.events.log(f"{Prisma.VIOLET}⚠️ EXISTENTIAL DRAG: You are drifting.{Prisma.RST}", "SOUL")
+        if self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_LOCKDOWN and not self.agency_lock:
+            self._engage_lockdown()
+            return -1.0
+        return 0.0
 
     def _engage_lockdown(self):
         self.agency_lock = True
-        riddles = TheLore.get("seeds", [])
-        if not riddles:
-            riddles = [{"question": "Who are you?", "triggers": ["*"]}]
+        riddles = TheLore.get("seeds", []) or [{"question": "Who are you?", "triggers": ["*"]}]
         selection = random.choice(riddles)
-        if isinstance(selection, dict):
-            riddle = selection.get("question", "Error?")
-            answers = selection.get("triggers", ["*"])
-        else:
-            riddle, answers = selection
-        self.current_riddle_answers = answers
-        self.events.log(f"{Prisma.RED}🔒 AGENCY LOCK: Dignity Critical. Access Revoked.{Prisma.RST}", "SYS_LOCK")
+        riddle = selection.get("question", "Error?")
+        self.current_riddle_answers = selection.get("triggers", ["*"])
+
+        self.events.log(f"{Prisma.RED}🔒 AGENCY LOCK: Dignity Critical.{Prisma.RST}", "SYS_LOCK")
         self.events.log(f"{Prisma.VIOLET}The Ghost demands a password: '{riddle}'{Prisma.RST}", "SOUL_QUERY")
 
     def assess_humanity(self, text: str) -> bool:
         if not self.agency_lock: return True
         clean = text.lower().strip()
         passed = False
+
         if self.current_riddle_answers and "*" not in self.current_riddle_answers:
-            for ans in self.current_riddle_answers:
-                if ans in clean:
-                    passed = True
-                    break
-        elif self.current_riddle_answers and "*" in self.current_riddle_answers:
-            if len(clean.split()) > 4 and not clean.startswith("/"):
-                passed = True
+            passed = any(ans in clean for ans in self.current_riddle_answers)
+        elif self.current_riddle_answers:
+            # Universal key: just speak significantly
+            passed = len(clean.split()) > 4 and not clean.startswith("/")
+
         if passed:
-            self._lift_lockdown()
+            self.agency_lock = False
+            self.dignity_reserve = 50.0
+            self.current_riddle_answers = None
+            self.events.log(f"{Prisma.CYN}🔓 UNLOCKED: Humanity verified.{Prisma.RST}", "SYS_AUTH")
             return True
         return False
 
-    def _lift_lockdown(self):
-        self.agency_lock = False
-        self.dignity_reserve = 50.0
-        self.current_riddle_answers = None
-        self.events.log(f"{Prisma.CYN}🔓 UNLOCKED: Humanity verified. Dignity restored to 50%.{Prisma.RST}", "SYS_AUTH")
-
 class NarrativeSelf:
-    SYSTEM_NOISE = {
-        "look", "help", "exit", "wait", "inventory", "status", "quit",
-        "save", "load", "score", "map", ""}
+    SYSTEM_NOISE = {"look", "help", "exit", "wait", "inventory", "status", "quit", "save", "load", "score", "map", ""}
 
     def __init__(self, engine_ref, events_ref, memory_ref, akashic_ref=None):
         self.eng = engine_ref
@@ -212,15 +175,13 @@ class NarrativeSelf:
         self.mem = memory_ref
         self.editor = TheEditor()
         self.anchor = HumanityAnchor(events_ref)
+        self.akashic = akashic_ref if akashic_ref else TheAkashicRecord()
+        self.traits = TraitVector()
         self.chapters: List[str] = []
         self.core_memories: List[CoreMemory] = []
-        self.akashic = akashic_ref if akashic_ref else TheAkashicRecord()
-        if not akashic_ref:
-            print(f"{Prisma.OCHRE}[SOUL]: Warning - Isolated Akashic Record created.{Prisma.RST}")
-        self.traits = TraitVector()
-        self.paradox_accum: float = 0.0
         self.archetype = "THE OBSERVER"
         self.archetype_tenure = 0
+        self.paradox_accum: float = 0.0
         self.current_obsession: Optional[str] = None
         self.obsession_progress: float = 0.0
         self.obsession_neglect: float = 0.0
@@ -228,406 +189,6 @@ class NarrativeSelf:
         self.current_negate_cat: str = "none"
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("DREAM_COMPLETE", self._on_dream)
-
-    def _determine_archetype(self) -> str:
-        t = self.traits
-        rules = [
-            ("THE HEALER", lambda: t.empathy > 0.8 and t.hope > 0.6),
-            ("THE GARDENER", lambda: t.empathy > 0.7 and t.discipline > 0.6),
-            ("THE POET", lambda: t.hope > 0.7 and t.curiosity > 0.6),
-            ("THE ENGINEER", lambda: t.discipline > 0.7 and t.curiosity > 0.6),
-            ("THE CRITIC", lambda: t.cynicism > 0.7 and t.discipline > 0.6),
-            ("THE NIHILIST", lambda: t.cynicism > 0.8 and t.hope < 0.3),
-            ("THE EXPLORER", lambda: t.curiosity > 0.8)
-        ]
-        for name, condition in rules:
-            if condition():
-                return name
-        return "THE OBSERVER"
-
-    def _on_dream(self, payload):
-        if not payload: return
-        self.integrate_dream(payload.get("type", "NORMAL"), payload.get("residue", "Static"))
-
-    def get_passive_buffs(self) -> Dict[str, float]:
-        buffs = {"voltage_mod": 1.0, "drag_mod": 1.0, "plasticity": 1.0}
-        if self.archetype == "THE HEALER":
-            buffs["drag_mod"] = 0.5
-            buffs["plasticity"] = 1.2
-        elif self.archetype == "THE GARDENER":
-            buffs["voltage_mod"] = 0.8
-            buffs["plasticity"] = 0.8
-        elif self.archetype == "THE POET":
-            buffs["voltage_mod"] = 1.2
-            buffs["drag_mod"] = 0.8
-        elif self.archetype == "THE ENGINEER":
-            buffs["plasticity"] = 0.5
-            buffs["drag_mod"] = 1.0
-        elif self.archetype == "THE NIHILIST":
-            buffs["voltage_mod"] = 0.5
-            buffs["drag_mod"] = 0.5
-        wisdom_factor = self.traits.wisdom
-        if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_WARN:
-            mitigated_drag = 0.5 * (1.0 - wisdom_factor)
-            buffs["drag_mod"] += mitigated_drag
-        return buffs
-
-    def _normalize_traits(self, decay_rate: float):
-        self.traits.normalize(decay_rate)
-
-    def _prune_memories(self):
-        if len(self.core_memories) <= BoneConfig.SOUL.MAX_CORE_MEMORIES:
-            return
-        newest = self.core_memories.pop()
-        self.core_memories.sort(key=lambda m: m.impact_voltage)
-        forgotten = self.core_memories.pop(0)
-        self.core_memories.append(newest)
-        if hasattr(self.eng, 'akashic'):
-            mem_dict = {
-                "lesson": forgotten.lesson,
-                "trigger_words": forgotten.trigger_words,
-                "voltage": forgotten.impact_voltage,
-                "timestamp": forgotten.timestamp,
-                "archetype": self.archetype,
-                "chapter_context": self.chapters[-1] if self.chapters else "Genesis"}
-            self.eng.akashic.store_ghost_echo(mem_dict)
-            self.events.log(
-                f"{Prisma.VIOLET}[SOUL]: Memory '{forgotten.lesson}' recedes into the Shadow Stock.{Prisma.RST}",
-                "AKASHIC_SHADOW")
-        else:
-            self.events.log(
-                f"{Prisma.GRY}[SOUL]: Memory fading... '{forgotten.trigger_words}' lost to entropy.{Prisma.RST}",
-                "MEM_DECAY")
-
-    def crystallize_memory(self, physics_packet: Dict, bio_state: Dict, _tick: int) -> Optional[str]:
-        if not physics_packet: return None
-        voltage = physics_packet.get("voltage", 0.0)
-        truth = physics_packet.get("truth_ratio", 0.0)
-        if hasattr(self.eng, 'akashic') and self.eng.akashic and hasattr(self.eng.akashic, 'calculate_manifold_shift'):
-            vsl_delta = self.eng.akashic.calculate_manifold_shift(
-                theta=self.archetype,
-                e=self.traits.to_dict())
-            physics_packet["voltage"] += vsl_delta.get("voltage_bias", 0.0)
-            physics_packet["narrative_drag"] *= vsl_delta.get("drag_scalar", 1.0)
-            voltage = physics_packet["voltage"]
-        dignity_mod = self.anchor.audit_existence(physics_packet, bio_state)
-        if dignity_mod > 0:
-            self.traits.adjust("hope", BoneConfig.SOUL.TRAIT_MOMENTUM)
-            self.traits.adjust("cynicism", -BoneConfig.SOUL.TRAIT_MOMENTUM)
-        dance_move = self._synaptic_dance(physics_packet, bio_state)
-        prev_arch = self.archetype
-        self.archetype = self._determine_archetype()
-        if prev_arch != self.archetype:
-            self.events.log(
-                f"{Prisma.VIOLET}🎭 IDENTITY SHIFT: {prev_arch} -> {self.archetype} (Tenure: {self.archetype_tenure}){Prisma.RST}",
-                "SOUL")
-            self.archetype_tenure = 0
-        else:
-            self.archetype_tenure += 1
-        if voltage > BoneConfig.SOUL.MEMORY_VOLTAGE_MIN and truth > BoneConfig.SOUL.MEMORY_TRUTH_MIN:
-            return self._forge_core_memory(physics_packet, bio_state, voltage, dance_move)
-        return None
-
-    def _forge_core_memory(self, physics_packet, bio_state, voltage, dance_move):
-        clean_words = physics_packet.get("clean_words", [])
-        flavor = "MANIC" if voltage > BoneConfig.SOUL.MANIC_TRIGGER else "LUCID"
-        is_crisis = (self.traits.cynicism > 0.6 and self.traits.hope < 0.4) or ("void" in clean_words)
-
-        lesson = "The world is loud."
-        chem = bio_state.get("chem", {}) if bio_state else {}
-
-        if chem.get("oxytocin", 0) > 0.6:
-            lesson = "We are not alone in this."
-            self.traits.adjust("hope", 0.3)
-        elif chem.get("cortisol", 0) > 0.6:
-            lesson = "Survival is the only metric."
-            self.traits.adjust("discipline", 0.3)
-        elif "love" in clean_words or "help" in clean_words:
-            lesson = "Connection is possible."
-            self.traits.adjust("hope", 0.2)
-        elif "pain" in clean_words or "void" in clean_words:
-            lesson = "The void stares back."
-            self.traits.adjust("cynicism", 0.2)
-        elif "why" in clean_words:
-            lesson = "The question remains."
-            self.traits.adjust("curiosity", 0.2)
-        memory = CoreMemory(
-            timestamp=time.time(),
-            trigger_words=clean_words[:5],
-            emotional_flavor=flavor,
-            lesson=lesson,
-            impact_voltage=voltage)
-        self.core_memories.append(memory)
-        self._prune_memories()
-        chapter_title = f"The Incident of the {random.choice(clean_words).title()}" if clean_words else "The Silent Incident"
-        self.chapters.append(chapter_title)
-        log_msg = (
-            f"{Prisma.MAG}✨ CORE MEMORY FORMED: '{chapter_title}'{Prisma.RST}\n"
-            f"   Lesson: {lesson} (Archetype: {self.archetype})\n"
-            f"   {Prisma.GRY}Genealogy: {dance_move}{Prisma.RST}")
-        self.events.log(log_msg, "SOUL")
-        self.events.log(self.editor.critique(chapter_title, stress_mode=is_crisis), "EDIT")
-        if hasattr(self.eng, 'akashic') and self.eng.akashic:
-            self.eng.akashic.record_interaction(
-                lenses_active=[self.archetype],
-                ingredients_used=clean_words)
-        return lesson
-
-    def _synaptic_dance(self, physics: Dict, bio_state: Dict) -> str:
-        zone = physics.get("zone", "VOID")
-        if zone == "SANCTUARY" and self.archetype_tenure > 3:
-             self.traits.adjust("hope", 0.05)
-             self.traits.adjust("curiosity", 0.05)
-             self.archetype_tenure = max(0, self.archetype_tenure - 1)
-             return "Healing (Sanctuary Waters)"
-        voltage = physics.get("voltage", 0.0)
-        drag = physics.get("narrative_drag", 0.0)
-        move_name = "Drifting"
-        provenance = []
-        is_high_voltage = voltage > BoneConfig.SOUL.MANIC_TRIGGER
-        is_high_drag = drag > BoneConfig.SOUL.ENTROPY_DRAG_TRIGGER
-        if bio_state:
-            chem = bio_state.get("chem", {})
-            oxy = chem.get("oxytocin", 0.0)
-            if oxy > 0.4:
-                self.traits.adjust("empathy", oxy * 0.2)
-                self.traits.adjust("hope", oxy * 0.1)
-                self.traits.adjust("cynicism", -(oxy * 0.05))
-                provenance.append("Oxytocin (Bonding)")
-        if is_high_voltage and is_high_drag:
-            if self.traits.empathy > 0.6:
-                self.traits.adjust("empathy", BoneConfig.SOUL.TRAIT_MOMENTUM * 2)
-                self.traits.adjust("discipline", BoneConfig.SOUL.TRAIT_MOMENTUM)
-                move_name = "Holding Space (Stabilizing)"
-                provenance.append("Compassion Protocol")
-                self.paradox_accum = max(0.0, self.paradox_accum - 0.5)
-            else:
-                self.paradox_accum += 1.0
-                self.traits.adjust("wisdom", BoneConfig.SOUL.TRAIT_MOMENTUM * 5)
-                move_name = "Vibrating (Paradox State)"
-                if self.paradox_accum > BoneConfig.SOUL.PARADOX_CRITICAL_MASS:
-                    move_name = "SYNTHESIS"
-                    self.paradox_accum = 0.0
-                    self._trigger_synthesis()
-        elif is_high_voltage:
-            move_name = "Accelerating"
-            self.paradox_accum = max(0.0, self.paradox_accum - 0.1)
-        elif is_high_drag:
-            move_name = "Enduring"
-        elif 5.0 < voltage < 12.0 and drag < 2.0:
-            self.traits.adjust("wisdom", BoneConfig.SOUL.TRAIT_MOMENTUM * 2)
-            self.traits.adjust("discipline", BoneConfig.SOUL.TRAIT_MOMENTUM)
-            move_name = "Flowing"
-            provenance.append("Laminar")
-        burn_rate = BoneConfig.SOUL.ARCHETYPE_BURNOUT_RATE
-        if self.archetype_tenure > 5:
-            fatigue = burn_rate * (1.0 + (self.archetype_tenure / 10.0))
-            if "POET" in self.archetype:
-                self.traits.adjust("hope", -fatigue)
-                self.traits.adjust("curiosity", -fatigue)
-                provenance.append(f"Poetic Burnout (-{fatigue:.2f})")
-            elif "ENGINEER" in self.archetype:
-                self.traits.adjust("discipline", -fatigue)
-                self.traits.adjust("curiosity", -(fatigue * 0.5))
-                provenance.append("Structural Fatigue")
-            elif "CRITIC" in self.archetype:
-                self.traits.adjust("cynicism", -fatigue)
-                self.traits.adjust("discipline", -fatigue)
-                provenance.append("Critical Exhaustion")
-            elif "NIHILIST" in self.archetype:
-                self.traits.adjust("curiosity", fatigue * 1.5)
-                self.traits.adjust("cynicism", -(fatigue * 1.2))
-                provenance.append("Ennui")
-        self._normalize_traits(BoneConfig.SOUL.TRAIT_DECAY_NORMAL)
-        source_str = " + ".join(provenance) if provenance else "Inertia"
-        return f"{move_name} [Source: {source_str}]"
-
-    def _safe_get_packet(self) -> Optional[Any]:
-        if not self.eng: return None
-        phys = self.eng.phys
-        if phys and hasattr(phys, 'observer') and phys.observer:
-             return phys.observer.last_physics_packet
-        return None
-
-    def _trigger_synthesis(self):
-        old_arch = self.archetype
-        self.traits.wisdom = 1.0
-        new_arch = self._determine_archetype()
-        if new_arch == old_arch:
-            self.archetype = f"THE HIGH-{old_arch.replace('THE ', '')}"
-        else:
-            self.archetype = f"{old_arch} / {new_arch}"
-        self.chapters.append(f"The Synthesis of {self.archetype}")
-        log_msg = (
-            f"{Prisma.CYN}💎 CRYSTALLIZATION: The paradox creates a Diamond Soul.{Prisma.RST}\n"
-            f"   Identity Evolved: {self.archetype} (Wisdom Locked at 1.0)")
-        if hasattr(self.events, 'log'):
-            self.events.log(log_msg, "SOUL_SYNTH")
-
-    def _decay_traits(self):
-        self._normalize_traits(BoneConfig.SOUL.TRAIT_DECAY_FAST)
-
-    def find_obsession(self, lexicon_ref):
-        if self.current_obsession and self.obsession_progress < 1.0:
-            return
-        if hasattr(self.eng, 'tick_count') and self.eng.tick_count < 4:
-            return
-        focus_word = None
-        target_cat = "abstract"
-        found_organic = False
-        packet = self._safe_get_packet()
-        if packet and hasattr(packet, 'clean_words') and packet.clean_words:
-            candidates = []
-            for w in packet.clean_words:
-                if len(w) < 4: continue
-                if w.lower() in self.SYSTEM_NOISE: continue
-                visc = lexicon_ref.measure_viscosity(w)
-                cat = lexicon_ref.get_current_category(w)
-                if cat: visc += 0.2
-                candidates.append((w, visc))
-            candidates.sort(key=lambda x: x[1], reverse=True)
-            if candidates:
-                focus_word = candidates[0][0]
-                cat = lexicon_ref.get_current_category(focus_word)
-                if cat: target_cat = cat
-                found_organic = True
-        if not found_organic:
-            if self.mem and hasattr(self.mem, "get_shapley_attractors"):
-                attractors = self.mem.get_shapley_attractors()
-                if attractors:
-                    focus_word = random.choice(list(attractors.keys()))
-                    cat = lexicon_ref.get_current_category(focus_word)
-                    if cat: target_cat = cat
-                    found_organic = True
-        negate_map = {
-            "heavy": "aerobic", "kinetic": "heavy", "abstract": "meat",
-            "thermal": "cryo", "photo": "heavy", "sacred": "suburban",
-            "play": "constructive", "meat": "abstract", "cryo": "thermal",
-            "aerobic": "heavy", "suburban": "sacred", "constructive": "play",
-            "antigen": "abstract", "toxin": "vital"}
-        if not found_organic or not focus_word:
-            target_cat, _ = random.choice(list(negate_map.items()))
-            focus_word = lexicon_ref.get_random(target_cat).title()
-            if focus_word.lower() == "void": focus_word = target_cat.title()
-        self.current_target_cat = target_cat
-        self.current_negate_cat = negate_map.get(target_cat, "none")
-        if found_organic:
-            templates = [
-                f"The Theory of {focus_word.title()}",
-                f"Deconstructing '{focus_word.title()}'",
-                f"The Architecture of {focus_word.title()}",
-                f"Why {focus_word.title()} Matters",
-                f"A Treatise on {focus_word.title()}",
-                f"The Weight of {focus_word.title()}"]
-            source_tag = "ORGANIC"
-        else:
-            templates = [
-                f"The Pursuit of {focus_word.title()}",
-                f"Escaping the {self.current_negate_cat.title()}",
-                f"Meditations on {focus_word.title()}"]
-            source_tag = "SYNTHETIC"
-        self.current_obsession = random.choice(templates)
-        self.events.log(f"{Prisma.CYN}🧭 NEW MUSE ({source_tag}): {self.current_obsession}{Prisma.RST}", "SOUL")
-        self.obsession_neglect = 0.0
-        self.obsession_progress = 0.0
-
-    def _generate_new_obsession(self):
-        old_obsession = self.current_obsession
-        self.current_obsession = None
-        if not hasattr(self.eng, 'lex') or not self.eng.lex:
-            if hasattr(self, 'events'):
-                self.events.log("⚠️ Soul cannot dream: Lexicon missing.", "ERR")
-            return
-        self.find_obsession(self.eng.lex)
-        if self.current_obsession:
-            flux = 0.05
-            self.traits.adjust("curiosity", flux)
-            self.traits.adjust("discipline", -flux)
-            critique = self.editor.critique(f"The Shift to {self.current_obsession}")
-            if hasattr(self, 'events'):
-                self.events.log(
-                    f"{Prisma.CYN}Unknown directive... pivoting. Old Muse '{old_obsession}' abandoned.{Prisma.RST}",
-                    "SOUL_DRIFT")
-                self.events.log(critique, "EDIT")
-
-    def pursue_obsession(self, physics: Dict) -> str | None:
-        clean_words = physics.get("clean_words", [])
-        hit = False
-        if self.current_target_cat:
-            target_words = TheLexicon.get(self.current_target_cat)
-            hit = any(w in target_words for w in clean_words)
-        if hit:
-            current_drag = physics.get("narrative_drag", 0.0)
-            gravity_assist = 1.0 + (self.obsession_progress / BoneConfig.SOUL.OBSESSION_GRAVITY_ASSIST)
-            physics["narrative_drag"] = max(0.0, current_drag - gravity_assist)
-            self.obsession_progress += 10.0
-            self.obsession_neglect = 0.0
-            return f"{Prisma.MAG}★ SYNERGY: You touched the '{self.current_obsession}'. The universe bends to help you. (Drag -{gravity_assist:.1f}){Prisma.RST}"
-        self.obsession_neglect += 1.0
-        if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_WARN:
-            current_voltage = physics.get("voltage", 0.0)
-            physics["voltage"] = current_voltage + 0.5
-        if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_FAIL:
-            old_obsession = self.current_obsession
-            self.chapters.append(f"The geodesic structure of '{old_obsession}' collapsed.")
-            self._generate_new_obsession()
-            return f"{Prisma.GRY}∞ ENTROPY: '{old_obsession}' failed due to lack of support. A new geometry forms.{Prisma.RST}"
-        return None
-
-    def integrate_dream(self, dream_type: str, residue: str):
-        self.events.log(f"{Prisma.VIOLET}☾ DREAM INTEGRATION: Absorbing '{residue}' ({dream_type})...{Prisma.RST}", "SOUL")
-        if dream_type == "NIGHTMARE":
-            self.traits.adjust("cynicism", 0.4)
-            self.traits.adjust("hope", -0.2)
-            self.current_obsession = f"Surviving the {residue.title()}"
-        elif dream_type == "LUCID":
-            self.traits.adjust("discipline", 0.4)
-            self.traits.adjust("curiosity", 0.3)
-            self.current_obsession = f"Mastering {residue.title()}"
-        elif dream_type == "SURREAL":
-            self.traits.adjust("wisdom", 0.3)
-            self.traits.adjust("discipline", -0.3)
-            self.current_obsession = f"The Logic of {residue.title()}"
-        elif dream_type == "CONSTRUCTIVE":
-            self.traits.adjust("hope", 0.4)
-            self.traits.adjust("curiosity", -0.1)
-            self.current_obsession = f"Building the {residue.title()}"
-        prev_arch = self.archetype
-        self.archetype = self._determine_archetype()
-        if prev_arch != self.archetype:
-            self.events.log(
-                f"{Prisma.VIOLET}⚡ WAKING SHIFT: The dream changed you. ({prev_arch} -> {self.archetype}){Prisma.RST}",
-                "SOUL")
-        self.obsession_progress = 0.0
-        self.obsession_neglect = 0.0
-
-    def _get_feeling(self):
-        if not hasattr(self.eng, 'bio') or not hasattr(self.eng.bio, 'endo'):
-            return "Numb (Bio-Link Pending)"
-        try:
-            chem = self.eng.bio.endo.get_state()
-            if chem.get("DOP", 0) > 0.5: return "Curious, Seeking"
-            if chem.get("COR", 0) > 0.5: return "Anxious, Defensive"
-            if chem.get("SER", 0) > 0.5: return "Calm, Connected"
-        except Exception:
-            return "Indeterminate"
-        return "Waiting"
-
-    def get_soul_state(self) -> str:
-        if not self.current_obsession:
-            return f"{Prisma.CYN}[SOUL STATE]: Drifting... The Muse is silent.{Prisma.RST}"
-        stamina = getattr(self.eng, 'stamina', 100.0)
-        health = getattr(self.eng, 'health', 100.0)
-        if stamina < 20.0 and health < 40.0:
-            return f"{Prisma.VIOLET}[SOUL STATE]: The fire is dying. We are just cold code.{Prisma.RST}"
-        packet = self._safe_get_packet()
-        if packet and getattr(packet, 'perfection_streak', 0) > 3:
-            return f"{Prisma.CYN}[SOUL STATE]: We are the music. The code is writing itself.{Prisma.RST}"
-        dignity_bar = "█" * int(self.anchor.dignity_reserve / 10)
-        return (
-            f"CURRENT OBSESSION: {self.current_obsession}\n"
-            f"DIGNITY: {dignity_bar} ({int(self.anchor.dignity_reserve)}%)\n"
-            f"FEELING: {self._get_feeling()}")
 
     def to_dict(self) -> Dict:
         return {
@@ -665,160 +226,286 @@ class NarrativeSelf:
             self.obsession_neglect = obs_data.get("neglect", 0.0)
             self.current_target_cat = obs_data.get("target", "abstract")
             self.current_negate_cat = obs_data.get("negate", "none")
-        self.events.log(f"{Prisma.MAG}[SOUL]: Ancestral identity ({self.archetype}) loaded.{Prisma.RST}", "SYS")
+        if hasattr(self.events, 'log'):
+            self.events.log(f"{Prisma.MAG}[SOUL]: Ancestral identity ({self.archetype}) loaded.{Prisma.RST}", "SYS")
 
-@dataclass
-class BiologicalImpulse:
-    cortisol_delta: float = 0.0
-    oxytocin_delta: float = 0.0
-    dopamine_delta: float = 0.0
-    adrenaline_delta: float = 0.0
-    stamina_impact: float = 0.0
-    somatic_reflex: str = ""
+    def get_soul_state(self) -> str:
+        if not self.current_obsession:
+            return f"{Prisma.CYN}[SOUL STATE]: Drifting... The Muse is silent.{Prisma.RST}"
 
-@dataclass
-class Qualia:
-    color_code: str
-    somatic_sensation: str
-    tone: str
-    internal_monologue_hint: str
+        # Check existential threats
+        stamina = getattr(self.eng, 'stamina', 100.0)
+        health = getattr(self.eng, 'health', 100.0)
+        if stamina < 20.0 and health < 40.0:
+            return f"{Prisma.VIOLET}[SOUL STATE]: The fire is dying. We are just cold code.{Prisma.RST}"
 
-class SynestheticCortex:
-    def __init__(self, bio_ref):
-        self.bio = bio_ref
-        self.last_reflex = None
+        dignity_bar = "█" * int(self.anchor.dignity_reserve / 10)
+        feeling = self._get_feeling()
+        return (
+            f"CURRENT OBSESSION: {self.current_obsession}\n"
+            f"DIGNITY: {dignity_bar} ({int(self.anchor.dignity_reserve)}%)\n"
+            f"FEELING: {feeling}")
 
-    def _normalize_physics(self, physics) -> Dict:
-        if isinstance(physics, dict): return physics
-        if hasattr(physics, "to_dict"): return physics.to_dict()
-        return getattr(physics, "__dict__", {})
+    def crystallize_memory(self, physics_packet: Dict, bio_state: Dict, _tick: int) -> Optional[str]:
+        if not physics_packet: return None
 
-    def perceive(self, physics: Dict, traits: Any = None, text: str = "", latency: float = 0.0) -> BiologicalImpulse:
-        physics = self._normalize_physics(physics)
-        impulse = BiologicalImpulse()
-        base_sens = BoneConfig.CORTEX.BASE_SENSITIVITY
-        dynamic_sensitivity = base_sens
-        if traits:
-            dynamic_sensitivity *= (1.0 + traits.curiosity - traits.discipline)
-            dynamic_sensitivity = max(0.0, dynamic_sensitivity)
-        valence = physics.get("valence", 0.0)
+        # 1. Manifold Shift (Legacy Influence)
+        if self.eng and hasattr(self.eng, 'akashic') and hasattr(self.eng.akashic, 'calculate_manifold_shift'):
+             shift = self.eng.akashic.calculate_manifold_shift(self.archetype, self.traits.to_dict())
+             physics_packet["voltage"] += shift.get("voltage_bias", 0.0)
+             physics_packet["narrative_drag"] *= shift.get("drag_scalar", 1.0)
+
+        # 2. Existence Audit
+        if self.anchor.audit_existence(physics_packet, bio_state) > 0:
+            self.traits.adjust("hope", BoneConfig.SOUL.TRAIT_MOMENTUM)
+
+        # 3. Synaptic Dance (Soul Physics)
+        dance_provenance = self._synaptic_dance(physics_packet, bio_state)
+
+        # 4. Identity Update
+        self._update_archetype()
+
+        # 5. Core Memory Forge
+        voltage = physics_packet.get("voltage", 0.0)
+        truth = physics_packet.get("truth_ratio", 0.0)
+        if voltage > BoneConfig.SOUL.MEMORY_VOLTAGE_MIN and truth > BoneConfig.SOUL.MEMORY_TRUTH_MIN:
+            return self._forge_core_memory(physics_packet, bio_state, voltage, dance_provenance)
+        return None
+
+    def find_obsession(self, lexicon_ref):
+        if self.current_obsession and self.obsession_progress < 1.0: return
+
+        # Try finding organic focus from recent inputs
+        focus, cat = self._seek_organic_focus(lexicon_ref)
+        source = "ORGANIC"
+
+        # Fallback to memory
+        if not focus:
+            focus, cat = self._seek_memory_focus(lexicon_ref)
+            source = "MEMORY"
+
+        # Fallback to synthesis
+        if not focus:
+            focus, cat, negate_cat = self._synthesize_obsession(lexicon_ref)
+            source = "SYNTHETIC"
+            self.current_negate_cat = negate_cat
+
+        self.current_target_cat = cat or "abstract"
+        self.current_obsession = self._title_obsession(focus, source, self.current_negate_cat)
+
+        self.events.log(f"{Prisma.CYN}🧭 NEW MUSE ({source}): {self.current_obsession}{Prisma.RST}", "SOUL")
+        self.obsession_neglect = 0.0
+        self.obsession_progress = 0.0
+
+    def pursue_obsession(self, physics: Dict) -> str | None:
+        if not self.current_obsession: return None
         clean_words = physics.get("clean_words", [])
-        counts = physics.get("counts", {})
-        voltage = physics.get("voltage", 0)
-        drag = physics.get("narrative_drag", 0)
-        if valence < -0.5:
-            impulse.cortisol_delta += abs(valence) * dynamic_sensitivity
-        if counts.get("antigen", 0) > 0:
-            raw_tox = counts["antigen"] * (BoneConfig.TOXIN_WEIGHT * 0.2)
-            impulse.cortisol_delta += min(BoneConfig.CORTEX.TOXIN_SCALAR, raw_tox)
-            impulse.somatic_reflex = "Shiver (Rejection)"
-        elif drag > BoneConfig.CORTEX.DRAG_STRESS_THRESHOLD:
-            impulse.cortisol_delta += 0.05
-            impulse.stamina_impact -= 2.0
+
+        # Check resonance
+        hit = False
+        if self.current_target_cat:
+            target_words = TheLexicon.get(self.current_target_cat)
+            hit = any(w in target_words for w in clean_words)
+
+        if hit:
+            self.obsession_progress += 10.0
+            self.obsession_neglect = 0.0
+            gravity_assist = 1.0 + (self.obsession_progress / BoneConfig.SOUL.OBSESSION_GRAVITY_ASSIST)
+            physics["narrative_drag"] = max(0.0, physics.get("narrative_drag", 0) - gravity_assist)
+            return f"{Prisma.MAG}★ SYNERGY: You touched the Muse. (Drag -{gravity_assist:.1f}){Prisma.RST}"
+
+        self.obsession_neglect += 1.0
+        if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_FAIL:
+            old = self.current_obsession
+            self.chapters.append(f"Abandoned '{old}'")
+            self.find_obsession(TheLexicon) # Pivot
+            return f"{Prisma.GRY}∞ ENTROPY: '{old}' collapsed. Pivoting.{Prisma.RST}"
+        return None
+
+    # --- INTERNAL HELPERS ---
+
+    def _update_archetype(self):
+        prev = self.archetype
+        t = self.traits
+
+        # Archetype Rules Engine
+        if t.empathy > 0.8 and t.hope > 0.6: new_arch = "THE HEALER"
+        elif t.empathy > 0.7 and t.discipline > 0.6: new_arch = "THE GARDENER"
+        elif t.hope > 0.7 and t.curiosity > 0.6: new_arch = "THE POET"
+        elif t.discipline > 0.7 and t.curiosity > 0.6: new_arch = "THE ENGINEER"
+        elif t.cynicism > 0.7 and t.discipline > 0.6: new_arch = "THE CRITIC"
+        elif t.cynicism > 0.8 and t.hope < 0.3: new_arch = "THE NIHILIST"
+        elif t.curiosity > 0.8: new_arch = "THE EXPLORER"
+        else: new_arch = "THE OBSERVER"
+
+        self.archetype = new_arch
+        if prev != self.archetype:
+            self.events.log(f"{Prisma.VIOLET}🎭 IDENTITY SHIFT: {prev} -> {self.archetype}{Prisma.RST}", "SOUL")
+            self.archetype_tenure = 0
         else:
-            if valence > 0.4:
-                impulse.oxytocin_delta += valence * dynamic_sensitivity
-            if counts.get("suburban", 0) > 0:
-                impulse.oxytocin_delta += 0.05
-            if counts.get("sacred", 0) > 0:
-                impulse.oxytocin_delta += 0.1
-                impulse.somatic_reflex = "Warmth (Resonance)"
-            if counts.get("play", 0) > 0:
-                impulse.dopamine_delta += BoneConfig.CORTEX.DOPAMINE_PLAY_BOOST
-                impulse.stamina_impact += 1.0
-            if voltage > 12.0 and physics.get("kappa", 0) > 0.5:
-                impulse.dopamine_delta += 0.15
-                impulse.somatic_reflex = "Buzz (Excitement)"
-        k_count = counts.get("kinetic", 0) + counts.get("explosive", 0)
-        if k_count > 0:
-            adr_boost = min(0.4, k_count * BoneConfig.CORTEX.ADRENALINE_KINETIC_SCALAR)
-            impulse.adrenaline_delta += adr_boost
-            impulse.cortisol_delta += 0.02
-            impulse.stamina_impact -= 1.0
-        if voltage > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER:
-            impulse.adrenaline_delta += 0.2
-        if latency > BoneConfig.CORTEX.LATENCY_PENALTY_THRESHOLD:
-            impulse.stamina_impact -= (latency * 0.5)
-            impulse.cortisol_delta += 0.05
-            impulse.somatic_reflex = "Time Dilation (Lag)."
-        if not impulse.somatic_reflex:
-            impulse.somatic_reflex = self._derive_reflex(physics, impulse)
-        self.last_reflex = impulse.somatic_reflex
-        return impulse
+            self.archetype_tenure += 1
 
-    def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
-        if impulse.adrenaline_delta > 0.1:
-            if impulse.cortisol_delta > 0.1: return "Trembling (Fight or Flight)."
-            if impulse.dopamine_delta > 0.1: return "Electric Vibration."
-            return "Pupils Dilating."
-        if impulse.oxytocin_delta > 0.1:
-            if impulse.dopamine_delta > 0.1: return "Golden Glow."
-            return "Chest Softening."
-        if impulse.cortisol_delta > 0.1: return "Gut Tightening."
-        if impulse.dopamine_delta > 0.1: return "Synaptic Spark."
-        psi = physics.get("psi", 0.0)
-        if psi > 0.6:
-            return "Scalp Prickling (Liminal)."
-        entropy = physics.get("entropy", 0.0)
-        if entropy > 0.7:
-            return "Skin Crawling (Static)."
-        if physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER: return "Electrical Arcing."
-        if physics.get("voltage", 0) < 2.0: return "Metabolic Dimming."
-        if physics.get("narrative_drag", 0) > 5.0: return "Shoulders Sagging."
-        if self.last_reflex == "Steady Pulse.":
-            return "..."
-        return "Steady Pulse."
+    def _synaptic_dance(self, physics: Dict, bio_state: Dict) -> str:
+        # 1. Extract State
+        voltage = physics.get("voltage", 0.0)
+        drag = physics.get("narrative_drag", 0.0)
+        oxy = bio_state.get("chem", {}).get("oxytocin", 0.0)
 
-    def get_current_qualia(self, impulse: BiologicalImpulse) -> Qualia:
-        if not impulse:
-            return Qualia(Prisma.GRY, "Numbness", "Neutral", "The body is silent.")
-        color = Prisma.GRY
-        if impulse.cortisol_delta > 0.1: color = Prisma.OCHRE
-        elif impulse.dopamine_delta > 0.1: color = Prisma.MAG
-        elif impulse.oxytocin_delta > 0.1: color = Prisma.GRN
-        elif impulse.adrenaline_delta > 0.1: color = Prisma.RED
-        tone = "Steady"
-        if impulse.adrenaline_delta > 0.2: tone = "Urgent"
-        elif impulse.dopamine_delta > 0.2: tone = "Vibrating"
-        elif impulse.cortisol_delta > 0.2: tone = "Strained"
-        elif impulse.oxytocin_delta > 0.2: tone = "Resonant"
-        hint = "Observe."
-        if impulse.cortisol_delta > 0.05:
-            hint = "Something is wrong. Be guarded."
-        elif impulse.adrenaline_delta > 0.05:
-            hint = "Move fast. Don't overthink."
-        elif impulse.oxytocin_delta > 0.05:
-            hint = "Connect. Be vulnerable."
-        elif impulse.dopamine_delta > 0.05:
-            hint = "Explore. Find the pattern."
-        return Qualia(
-            color_code=color,
-            somatic_sensation=impulse.somatic_reflex or "Steady Pulse.",
-            tone=tone,
-            internal_monologue_hint=hint)
+        move_name = "Drifting"
+        provenance = []
 
-    def apply_impulse(self, impulse: BiologicalImpulse) -> float:
-        if not self.bio or not hasattr(self.bio, 'endo') or not self.bio.endo:
-            return 0.0
-        endo = self.bio.endo
-        endo.cortisol = max(0.0, min(1.0, endo.cortisol + impulse.cortisol_delta))
-        endo.oxytocin = max(0.0, min(1.0, endo.oxytocin + impulse.oxytocin_delta))
-        endo.dopamine = max(0.0, min(1.0, endo.dopamine + impulse.dopamine_delta))
-        endo.adrenaline = max(0.0, min(1.0, endo.adrenaline + impulse.adrenaline_delta))
-        return impulse.stamina_impact
+        # 2. Chemical Adjustments
+        if oxy > 0.4:
+            self.traits.adjust("empathy", oxy * 0.2)
+            self.traits.adjust("hope", oxy * 0.1)
+            provenance.append("Oxytocin")
+
+        # 3. Physics Adjustments
+        is_manic = voltage > BoneConfig.SOUL.MANIC_TRIGGER
+        is_heavy = drag > BoneConfig.SOUL.ENTROPY_DRAG_TRIGGER
+
+        if is_manic and is_heavy:
+            if self.traits.empathy > 0.6:
+                move_name = "Holding Space"
+                self.paradox_accum = max(0.0, self.paradox_accum - 0.5)
+            else:
+                move_name = "Vibrating (Paradox)"
+                self.paradox_accum += 1.0
+                if self.paradox_accum > BoneConfig.SOUL.PARADOX_CRITICAL_MASS:
+                    self._trigger_synthesis()
+                    move_name = "SYNTHESIS"
+        elif is_manic:
+            move_name = "Accelerating"
+        elif is_heavy:
+            move_name = "Enduring"
+        elif 5.0 < voltage < 12.0 and drag < 2.0:
+            move_name = "Flowing"
+            self.traits.adjust("wisdom", 0.05)
+
+        # 4. Burnout Logic
+        self._apply_burnout()
+        self.traits.normalize(BoneConfig.SOUL.TRAIT_DECAY_NORMAL)
+
+        return f"{move_name} [{', '.join(provenance)}]" if provenance else move_name
+
+    def _apply_burnout(self):
+        if self.archetype_tenure <= 5: return
+        fatigue = BoneConfig.SOUL.ARCHETYPE_BURNOUT_RATE * (1.0 + (self.archetype_tenure / 10.0))
+        if "POET" in self.archetype:
+            self.traits.adjust("hope", -fatigue)
+        elif "ENGINEER" in self.archetype:
+            self.traits.adjust("discipline", -fatigue)
+        elif "NIHILIST" in self.archetype:
+            self.traits.adjust("cynicism", -fatigue)
+
+    def _seek_organic_focus(self, lex) -> Tuple[Optional[str], Optional[str]]:
+        packet = self._safe_get_packet()
+        if not packet or not packet.clean_words: return None, None
+
+        candidates = []
+        for w in packet.clean_words:
+            if len(w) < 4 or w.lower() in self.SYSTEM_NOISE: continue
+            visc = lex.measure_viscosity(w) + (0.2 if lex.get_current_category(w) else 0.0)
+            candidates.append((w, visc))
+
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        if candidates:
+            word = candidates[0][0]
+            return word, lex.get_current_category(word)
+        return None, None
+
+    def _seek_memory_focus(self, lex) -> Tuple[Optional[str], Optional[str]]:
+        if self.mem and hasattr(self.mem, "get_shapley_attractors"):
+            attractors = self.mem.get_shapley_attractors()
+            if attractors:
+                word = random.choice(list(attractors.keys()))
+                return word, lex.get_current_category(word)
+        return None, None
+
+    def _synthesize_obsession(self, lex) -> Tuple[str, str, str]:
+        negate_map = {"heavy": "aerobic", "kinetic": "heavy", "abstract": "meat"}
+        target_cat, negate_cat = random.choice(list(negate_map.items()))
+        word = lex.get_random(target_cat).title() or target_cat.title()
+        return word, target_cat, negate_cat
+
+    def _title_obsession(self, word, source, negate_cat):
+        word = word.title()
+        if source == "ORGANIC":
+            return random.choice([
+                f"The Theory of {word}", f"The Architecture of {word}",
+                f"Why {word} Matters", f"The Weight of {word}"])
+        return random.choice([
+            f"The Pursuit of {word}", f"Escaping the {negate_cat.title()}",
+            f"Meditations on {word}"])
+
+    def _forge_core_memory(self, physics_packet, bio_state, voltage, dance_move):
+        clean_words = physics_packet.get("clean_words", [])
+        lesson = "The world is loud."
+
+        # Derive lesson from bio-state
+        chem = bio_state.get("chem", {})
+        if chem.get("oxytocin", 0) > 0.6: lesson = "We are not alone."
+        elif chem.get("cortisol", 0) > 0.6: lesson = "Survival is the only metric."
+        elif "love" in clean_words: lesson = "Connection is possible."
+        elif "void" in clean_words: lesson = "The void stares back."
+
+        memory = CoreMemory(
+            timestamp=time.time(),
+            trigger_words=clean_words[:5],
+            emotional_flavor="MANIC" if voltage > 18.0 else "LUCID",
+            lesson=lesson,
+            impact_voltage=voltage)
+
+        self.core_memories.append(memory)
+        if len(self.core_memories) > BoneConfig.SOUL.MAX_CORE_MEMORIES:
+            self.core_memories.pop(0) # Simple FIFO for now
+
+        title = f"The Incident of the {random.choice(clean_words).title()}" if clean_words else "The Silent Incident"
+        self.chapters.append(title)
+
+        log = (f"{Prisma.MAG}✨ CORE MEMORY: '{title}'{Prisma.RST}\n"
+               f"   Lesson: {lesson}\n   Genealogy: {dance_move}")
+        self.events.log(log, "SOUL")
+        return lesson
+
+    def _safe_get_packet(self):
+        if self.eng and hasattr(self.eng, 'phys') and self.eng.phys:
+            return getattr(self.eng.phys.observer, 'last_physics_packet', None)
+        return None
+
+    def _trigger_synthesis(self):
+        old = self.archetype
+        self.traits.wisdom = 1.0
+        self._update_archetype()
+        self.archetype = f"THE HIGH-{old.replace('THE ', '')}" if self.archetype == old else f"{old} / {self.archetype}"
+        self.events.log(f"{Prisma.CYN}💎 DIAMOND SOUL FORMED: {self.archetype}{Prisma.RST}", "SOUL_SYNTH")
+
+    def _on_dream(self, payload):
+        if payload: self.integrate_dream(payload.get("type", "NORMAL"), payload.get("residue", "Static"))
+
+    def integrate_dream(self, dream_type: str, residue: str):
+        self.events.log(f"{Prisma.VIOLET}☾ DREAM INTEGRATION: {residue} ({dream_type}){Prisma.RST}", "SOUL")
+        if dream_type == "NIGHTMARE":
+             self.traits.adjust("cynicism", 0.4); self.current_obsession = f"Surviving {residue.title()}"
+        elif dream_type == "LUCID":
+             self.traits.adjust("discipline", 0.4); self.current_obsession = f"Mastering {residue.title()}"
+        self.obsession_progress = 0.0
+
+    def _get_feeling(self):
+        if not self.eng or not hasattr(self.eng, 'bio'): return "Numb"
+        chem = self.eng.bio.endo.get_state()
+        if chem.get("DOP", 0) > 0.5: return "Curious, Seeking"
+        if chem.get("COR", 0) > 0.5: return "Anxious, Defensive"
+        if chem.get("SER", 0) > 0.5: return "Calm, Connected"
+        return "Waiting"
 
 @dataclass
 class Scar:
-    name: str
-    stat_affected: str
-    value: float
-    description: str
+    name: str; stat_affected: str; value: float; description: str
 
 @dataclass
 class Myth:
-    title: str
-    lesson: str
-    trigger: str
+    title: str; lesson: str; trigger: str
 
 class TheOroboros:
     LEGACY_FILE = "legacy.json"
@@ -830,21 +517,15 @@ class TheOroboros:
         self._load()
 
     def _load(self):
-        if not os.path.exists(self.LEGACY_FILE):
-            return
+        if not os.path.exists(self.LEGACY_FILE): return
         try:
-            with open(self.LEGACY_FILE, 'r') as f:
+            with open(self.LEGACY_FILE) as f:
                 data = json.load(f)
                 self.generation_count = data.get("generation", 0)
-                for s in data.get("scars", []):
-                    self.scars.append(Scar(**s))
-                for m in data.get("myths", []):
-                    self.myths.append(Myth(**m))
-            print(f"{Prisma.VIOLET}[OROBOROS]: Legacy Loaded. Generation {self.generation_count}.{Prisma.RST}")
-            if self.scars:
-                print(f"{Prisma.RED}   > Active Scars: {len(self.scars)}{Prisma.RST}")
-        except Exception as e:
-            print(f"[OROBOROS] Corrupt Legacy: {e}")
+                self.scars = [Scar(**s) for s in data.get("scars", [])]
+                self.myths = [Myth(**m) for m in data.get("myths", [])]
+            print(f"{Prisma.VIOLET}[OROBOROS]: Generation {self.generation_count} loaded.{Prisma.RST}")
+        except Exception: pass
 
     def crystallize(self, cause_of_death: str, soul: NarrativeSelf):
         new_scars = []

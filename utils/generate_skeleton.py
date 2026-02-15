@@ -8,7 +8,7 @@ import json
 MAX_DEPTH = 10
 IGNORE_DIRS = {'.git', '__pycache__', 'venv', 'env', 'node_modules', '.idea', '.vscode', 'build', 'dist'}
 IGNORE_FILES = {'.DS_Store', 'poetry.lock', 'package-lock.json'}
-OUTPUT_FILE = "codebase_context.txt"
+OUTPUT_FILE = "bone_skeleton.txt"
 
 def generate_skeleton(directory=".", output_file=OUTPUT_FILE):
     """

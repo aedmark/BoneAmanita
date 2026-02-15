@@ -464,3 +464,56 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> Physic
     feedback.voltage = max(0.0, min(feedback.voltage, volt_crit * 1.5))
     feedback.narrative_drag = max(drag_floor, min(feedback.narrative_drag, drag_halt))
     return feedback
+
+class CycleStabilizer:
+    def __init__(self, events_ref, governor_ref):
+        self.events = events_ref
+        self.governor = governor_ref
+        self.last_tick_time = time.time()
+        self.pending_drag = 0.0
+        self.manifolds = getattr(BoneConfig.PHYSICS, "MANIFOLDS", {})
+        if hasattr(self.events, "subscribe"):
+            self.events.subscribe("DOMESTICATION_PENALTY", self._on_domestication_penalty)
+
+    def _on_domestication_penalty(self, payload):
+        amount = payload.get("drag_penalty", 0.0)
+        self.pending_drag += amount
+
+    def stabilize(self, ctx: CycleContext, current_phase: str):
+        if self.pending_drag > 0:
+            if isinstance(ctx.physics, dict):
+                ctx.physics["narrative_drag"] = ctx.physics.get("narrative_drag", 0.0) + self.pending_drag
+            else:
+                ctx.physics.narrative_drag += self.pending_drag
+            ctx.log(
+                f"{Prisma.GRY}⚖️ DOMESTICATION: The collar feels heavy. (Drag +{self.pending_drag:.1f}){Prisma.RST}")
+            self.pending_drag = 0.0
+        now = time.time()
+        dt = max(0.001, min(1.0, now - self.last_tick_time))
+        self.last_tick_time = now
+        p = ctx.physics
+        manifold = getattr(p, "manifold", "DEFAULT")
+        if manifold not in self.manifolds:
+            manifold = "DEFAULT"
+        cfg = self.manifolds[manifold]
+        target_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
+        flow_state = getattr(p, "flow_state", "LAMINAR")
+        if flow_state in ["SUPERCONDUCTIVE", "FLOW_BOOST"]:
+            target_v = p.voltage
+            cfg["drag"] = max(0.1, cfg["drag"] * 0.5)
+        else:
+            target_v = cfg["voltage"]
+        self.governor.recalibrate(target_v, cfg["drag"])
+        v_force, d_force = self.governor.regulate(p, dt=dt)
+        corrections = False
+        if abs(v_force) > 0.01:
+            p.voltage = max(0.0, min(getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0), p.voltage + v_force))
+            if abs(v_force) > 0.5:
+                ctx.record_flux(current_phase, "voltage", p.voltage - v_force, p.voltage, "PID_CORRECTION")
+            corrections = True
+        if abs(d_force) > 0.01:
+            p.narrative_drag = max(0.0, p.narrative_drag + d_force)
+            if abs(d_force) > 0.5:
+                ctx.record_flux(current_phase, "narrative_drag", p.narrative_drag - d_force, p.narrative_drag, "PID_CORRECTION")
+            corrections = True
+        return corrections

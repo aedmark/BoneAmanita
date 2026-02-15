@@ -4,97 +4,13 @@ import traceback, random, time, uuid, copy
 from typing import Dict, Any, List, cast
 from bone_core import TelemetryService, ArchetypeArbiter, TheLore
 from bone_types import Prisma, CycleContext, PhysicsSandbox, PhysicsPacket
-from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, ChromaScope
-from bone_gui import get_renderer, SoulDashboard
+from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, CycleStabilizer
+from bone_gui import SoulDashboard, CycleReporter
 from bone_architect import PanicRoom
-from bone_soul import SynestheticCortex
+from bone_soma import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
 from bone_config import BoneConfig, BonePresets
-
-class CongruenceValidator:
-    def __init__(self):
-        self.last_phi = 1.0
-        self._archetype_map = None
-
-    @property
-    def map(self):
-        if self._archetype_map is None:
-            try:
-                self._archetype_map = TheLore.get("LENSES") or {}
-            except Exception:
-                self._archetype_map = {}
-        return self._archetype_map
-
-    def calculate_resonance(self, text: str, context: Any) -> float:
-        if not text: return 0.0
-        raw_lens = getattr(context, "active_lens", "OBSERVER")
-        archetype = raw_lens.upper().replace("THE ", "")
-        tone_score = 0.8
-        target_data = self.map.get(archetype, {})
-        target_words = set()
-        if isinstance(target_data, dict):
-            vocab_str = target_data.get("vocab", "")
-            if vocab_str:
-                target_words = set(w.strip().lower() for w in vocab_str.split(","))
-            target_words.update(target_data.get("keywords", []))
-        if target_words:
-            words_to_check = set(context.clean_words) if hasattr(context, "clean_words") else set()
-            hits = len(words_to_check.intersection(target_words))
-            if hits > 0: tone_score += (0.1 * hits)
-        return min(1.5, tone_score)
-
-class CycleStabilizer:
-    def __init__(self, events_ref, governor_ref):
-        self.events = events_ref
-        self.governor = governor_ref
-        self.last_tick_time = time.time()
-        self.pending_drag = 0.0
-        self.manifolds = getattr(BoneConfig.PHYSICS, "MANIFOLDS", {})
-        if hasattr(self.events, "subscribe"):
-            self.events.subscribe("DOMESTICATION_PENALTY", self._on_domestication_penalty)
-
-    def _on_domestication_penalty(self, payload):
-        amount = payload.get("drag_penalty", 0.0)
-        self.pending_drag += amount
-
-    def stabilize(self, ctx: CycleContext, current_phase: str):
-        if self.pending_drag > 0:
-            if isinstance(ctx.physics, dict):
-                ctx.physics["narrative_drag"] = ctx.physics.get("narrative_drag", 0.0) + self.pending_drag
-            else:
-                ctx.physics.narrative_drag += self.pending_drag
-            ctx.log(
-                f"{Prisma.GRY}⚖️ DOMESTICATION: The collar feels heavy. (Drag +{self.pending_drag:.1f}){Prisma.RST}")
-            self.pending_drag = 0.0
-        now = time.time()
-        dt = max(0.001, min(1.0, now - self.last_tick_time))
-        self.last_tick_time = now
-        p = ctx.physics
-        manifold = getattr(p, "manifold", "DEFAULT")
-        if manifold not in self.manifolds:
-            manifold = "DEFAULT"
-        cfg = self.manifolds[manifold]
-        target_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
-        flow_state = getattr(p, "flow_state", "LAMINAR")
-        if flow_state in ["SUPERCONDUCTIVE", "FLOW_BOOST"]:
-            target_v = p.voltage
-            cfg["drag"] = max(0.1, cfg["drag"] * 0.5)
-        else:
-            target_v = cfg["voltage"]
-        self.governor.recalibrate(target_v, cfg["drag"])
-        v_force, d_force = self.governor.regulate(p, dt=dt)
-        corrections = False
-        if abs(v_force) > 0.01:
-            p.voltage = max(0.0, min(getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0), p.voltage + v_force))
-            if abs(v_force) > 0.5:
-                ctx.record_flux(current_phase, "voltage", p.voltage - v_force, p.voltage, "PID_CORRECTION")
-            corrections = True
-        if abs(d_force) > 0.01:
-            p.narrative_drag = max(0.0, p.narrative_drag + d_force)
-            if abs(d_force) > 0.5:
-                ctx.record_flux(current_phase, "narrative_drag", p.narrative_drag - d_force, p.narrative_drag, "PID_CORRECTION")
-            corrections = True
-        return corrections
+from bone_drivers import CongruenceValidator
 
 class SimulationPhase:
     def __init__(self, engine_ref):
@@ -129,31 +45,21 @@ class ObservationPhase(SimulationPhase):
         input_d = getattr(input_phys, "narrative_drag", 0.0)
         ctx.physics.narrative_drag = (curr_d * 0.9) + (input_d * 0.1)
         ctx.clean_words = gaze_result["clean_words"]
-        self.eng.phys.dynamics.commit(ctx.physics.voltage)
-        self.eng.tick_count += 1
-        return ctx
-
-class IntentionPhase(SimulationPhase):
-    def __init__(self, engine_ref):
-        super().__init__(engine_ref)
-        self.name = "INTENTION"
-
-    def run(self, ctx: CycleContext):
-        physics = ctx.physics
         clean = ctx.clean_words
         focus_triggers = getattr(BoneConfig.BIO, "FOCUS_TRIGGERS", {"analyze", "scan", "think", "query"})
         panic_triggers = getattr(BoneConfig.BIO, "PANIC_TRIGGERS", {"error", "fail", "critical", "bug"})
         if any(w in clean for w in focus_triggers):
-            physics.narrative_drag = max(0.0, physics.narrative_drag - 1.0)
+            ctx.physics.narrative_drag = max(0.0, ctx.physics.narrative_drag - 1.0)
             ctx.log(f"{Prisma.CYN}🧠 INTENTION: Focus engaged. Drag reduced.{Prisma.RST}")
         if any(w in clean for w in panic_triggers):
-            physics.voltage = min(20.0, physics.voltage + 2.0)
+            ctx.physics.voltage = min(20.0, ctx.physics.voltage + 2.0)
             ctx.log(f"{Prisma.MAG}🧠 INTENTION: Bracing for impact. Voltage spiked.{Prisma.RST}")
         current_atp = self.eng.bio.mito.state.atp_pool
         if current_atp < 15.0:
             ctx.log(f"{Prisma.OCHRE}🧠 INTENTION: Low Energy. Metabolism slowing down.{Prisma.RST}")
+        self.eng.phys.dynamics.commit(ctx.physics.voltage)
+        self.eng.tick_count += 1
         return ctx
-
 
 class SanctuaryPhase(SimulationPhase):
     def __init__(self, engine_ref, governor_ref):
@@ -258,7 +164,6 @@ class MaintenancePhase(SimulationPhase):
         except Exception as e:
             if BoneConfig.VERBOSE_LOGGING: print(f"Maintenance Error: {e}")
         return ctx
-
 
 class GatekeeperPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -894,7 +799,6 @@ class CycleSimulator:
         self.executor = PhaseExecutor()
         self.pipeline: List[SimulationPhase] = [
             ObservationPhase(engine_ref),
-            IntentionPhase(engine_ref),
             MaintenancePhase(engine_ref),
             SensationPhase(engine_ref),
             GatekeeperPhase(engine_ref),
@@ -907,8 +811,7 @@ class CycleSimulator:
             SoulPhase(engine_ref),
             ArbitrationPhase(engine_ref),
             CognitionPhase(engine_ref),
-            StabilizationPhase(engine_ref, self.stabilizer)
-        ]
+            StabilizationPhase(engine_ref, self.stabilizer)]
 
     def run_simulation(self, ctx: CycleContext) -> CycleContext:
         ctx = self.executor.execute_phases(self, ctx)
@@ -942,83 +845,6 @@ class CycleSimulator:
         elif comp == "MIND":
             ctx.mind_state = PanicRoom.get_safe_mind()
         ctx.log(f"{Prisma.RED}⚠ {phase_name} FAILURE: Switching to Panic Protocol.{Prisma.RST}")
-
-class CycleReporter:
-    def __init__(self, engine_ref):
-        self.eng = engine_ref
-        self.vsl_chroma = ChromaScope()
-        self.renderer = None
-        self.current_mode = None
-        self.renderers = {}
-        self.switch_renderer("STANDARD")
-
-    def switch_renderer(self, mode: str):
-        if self.current_mode == mode and self.renderer: return
-        if mode in self.renderers:
-            self.renderer = self.renderers[mode]
-            self.current_mode = mode
-            return
-        self.renderer = get_renderer(
-            self.eng,
-            self.vsl_chroma,
-            None,
-            getattr(self, 'valve', None),
-            mode=mode)
-        self.renderers[mode] = self.renderer
-        self.current_mode = mode
-
-    def render_snapshot(self, ctx: CycleContext) -> Dict[str, Any]:
-        try:
-            if ctx.refusal_triggered and ctx.refusal_packet: return ctx.refusal_packet
-            if ctx.is_bureaucratic: return self._package_bureaucracy(ctx)
-            self._inject_diagnostics(ctx)
-            self._inject_flux_readout(ctx)
-            self._inject_somatic_pulse(ctx)
-            return self.renderer.render_frame(ctx, self.eng.tick_count, self.eng.events.flush())
-        except Exception as e:
-            return {
-                "type": "CRITICAL_RENDER_FAIL",
-                "ui": f"{Prisma.RED}RENDERER CRASH: {e}{Prisma.RST}",
-                "logs": ctx.logs, "metrics": self.eng.get_metrics()}
-
-    def _inject_diagnostics(self, ctx: CycleContext):
-        if hasattr(self.eng, 'system_health'):
-            fb = self.eng.system_health.flush_feedback()
-            for h in fb["hints"]: ctx.logs.append(f"{Prisma.CYN}💡 {h}{Prisma.RST}")
-            for w in fb["warnings"]: ctx.logs.append(f"{Prisma.OCHRE}⚠️ {w}{Prisma.RST}")
-
-    def _inject_somatic_pulse(self, ctx: CycleContext):
-        if not hasattr(self.eng, 'somatic'): return
-        qualia = self.eng.somatic.get_current_qualia(getattr(ctx, "last_impulse", None))
-        ctx.logs.insert(0, f"{Prisma.GRY}({qualia.internal_monologue_hint}){Prisma.RST}")
-        ctx.logs.insert(0, f"{qualia.color_code}♦ SENSATION: {qualia.somatic_sensation} [{qualia.tone}]{Prisma.RST}")
-
-    def _inject_flux_readout(self, ctx: CycleContext):
-        if not ctx.flux_log: return
-        significant = []
-        for e in ctx.flux_log[-5:]:
-            d = abs(e['delta'])
-            if d < 1.0 and "PID" in e['reason']: continue
-            icon = "⚡" if e['metric'].upper() == "VOLTAGE" else "⚓"
-            color = Prisma.GRN if e['delta'] > 0 else Prisma.RED
-            arrow = "▲" if e['delta'] > 0 else "▼"
-            significant.append(
-                f"{Prisma.GRY}[FLUX]{Prisma.RST} {icon} {e['metric'][:3].upper()} {color}{arrow} {d:.1f}{Prisma.RST} ({e['reason']})")
-        if significant:
-            ctx.logs.insert(0, "")
-            for line in reversed(significant): ctx.logs.insert(0, line)
-
-    def _package_bureaucracy(self, ctx: CycleContext):
-        if not self.eng.bureau:
-            return None
-        if ctx.is_bureaucratic or ctx.bureau_ui:
-            base = self.renderer.base_renderer if hasattr(self.renderer, 'base_renderer') else self.renderer
-            return {
-                "type": "BUREAUCRACY", "ui": ctx.bureau_ui,
-                "logs": base.compose_logs(ctx.logs, self.eng.events.flush(), self.eng.tick_count),
-                "metrics": self.eng.get_metrics(ctx.bio_result.get("atp", 0.0))}
-        return None
-
 
 class GeodesicOrchestrator:
     def __init__(self, engine_ref):

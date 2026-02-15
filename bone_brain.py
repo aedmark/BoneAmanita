@@ -294,7 +294,13 @@ class PromptComposer:
 
     def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None,
                 mood_override: str = "") -> str:
+        mode_settings = state.get("meta", {}).get("mode_settings", {})
+
         modifiers = self._normalize_modifiers(modifiers)
+
+        if not mode_settings.get("allow_loot", True):
+            modifiers["include_inventory"] = False
+
         mind = state.get("mind", {})
         bio = state.get("bio", {})
         style_notes = self._build_persona_block(mind, bio, mood_override, state.get("vsl", {}))
@@ -302,12 +308,16 @@ class PromptComposer:
         banned = scenarios.get("BANNED_CLICHES", []) + ["obsidian", "dust motes", "neon", "eldritch", "pulsing veins"]
         ban_string = ", ".join(set(banned))
         style_notes.extend([line.format(ban_string=ban_string) for line in self.FOG_PROTOCOL])
-        style_notes.extend(self.INVENTORY_PROTOCOL)
+        if modifiers["include_inventory"]:
+            style_notes.extend(self.INVENTORY_PROTOCOL)
         self._inject_resonances(style_notes, state, modifiers)
         loc = state.get('world', {}).get('orbit', ['Unknown'])[0]
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
+
         inv_str = self._format_inventory(state, modifiers)
-        history_str = "\n".join(state.get("dialogue_history", [])[-15:]) 
+        inventory_block = f"INVENTORY: {inv_str}\n" if modifiers["include_inventory"] else ""
+
+        history_str = "\n".join(state.get("dialogue_history", [])[-15:])
         system_injection = ""
         if ballast:
             system_injection = (
@@ -318,7 +328,7 @@ class PromptComposer:
                 f"=== SHARED REALITY ===\n"
                 f"CURRENT LOCATION: {loc}\n"
                 f"ENVIRONMENT ANCHOR: {loci_desc}\n"
-                f"INVENTORY: {inv_str}\n\n"
+                f"{inventory_block}\n"
                 f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
                 f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
                 f"{system_injection}"
@@ -333,7 +343,7 @@ class PromptComposer:
         elif mood_override:
             mood_note = f"Current Biology: {mood_override}"
         else:
-            mood_note = self._derive_bio_mood(bio.get("chem", {})) 
+            mood_note = self._derive_bio_mood(bio.get("chem", {}))
         persona_block = [
             f"Role: {role}.",
             "Directive: Start the adventure immediately. Treat it like a 'Choose Your Own Adventure' where the reader is an equal partner.",
@@ -533,6 +543,10 @@ class TheCortex:
             return sim_result
         full_state = self.gather_state(sim_result)
         modifiers = self.svc.symbiosis.get_prompt_modifiers()
+
+        if not allow_loot:
+            modifiers["include_inventory"] = False
+
         if self.consultant and self.consultant.active:
             self._apply_vsl_overlay(full_state, user_input, sim_result)
         if is_boot_sequence:

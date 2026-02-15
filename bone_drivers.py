@@ -2,7 +2,7 @@
 
 import json, os, random
 from dataclasses import dataclass, field
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, Tuple, List, Optional, Any
 from bone_core import EventBus, TheLore
 from bone_config import BonePresets
 from bone_lexicon import TheLexicon
@@ -343,6 +343,37 @@ class VSLState:
     O: float = 1.0
     active_modules: List[str] = field(default_factory=list)
 
+class CongruenceValidator:
+    def __init__(self):
+        self.last_phi = 1.0
+        self._archetype_map = None
+
+    @property
+    def map(self):
+        if self._archetype_map is None:
+            try:
+                self._archetype_map = TheLore.get("LENSES") or {}
+            except Exception:
+                self._archetype_map = {}
+        return self._archetype_map
+
+    def calculate_resonance(self, text: str, context: Any) -> float:
+        if not text: return 0.0
+        raw_lens = getattr(context, "active_lens", "OBSERVER")
+        archetype = raw_lens.upper().replace("THE ", "")
+        tone_score = 0.8
+        target_data = self.map.get(archetype, {})
+        target_words = set()
+        if isinstance(target_data, dict):
+            vocab_str = target_data.get("vocab", "")
+            if vocab_str:
+                target_words = set(w.strip().lower() for w in vocab_str.split(","))
+            target_words.update(target_data.get("keywords", []))
+        if target_words:
+            words_to_check = set(context.clean_words) if hasattr(context, "clean_words") else set()
+            hits = len(words_to_check.intersection(target_words))
+            if hits > 0: tone_score += (0.1 * hits)
+        return min(1.5, tone_score)
 
 class BoneConsultant:
     def __init__(self):
