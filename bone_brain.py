@@ -40,10 +40,11 @@ class ChemicalState:
             "dopamine": cfg.RESTING_DOPAMINE,
             "cortisol": cfg.RESTING_CORTISOL,
             "adrenaline": cfg.RESTING_ADRENALINE,
-            "serotonin": cfg.RESTING_SEROTONIN
-        }
+            "serotonin": cfg.RESTING_SEROTONIN}
         for attr, target in targets.items():
             current = getattr(self, attr)
+            delta = (target - current) * rate
+            setattr(self, attr, current + delta)
 
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
         mapping = [("DOP", "dopamine"), ("COR", "cortisol"), ("ADR", "adrenaline"), ("SER", "serotonin")]
@@ -94,7 +95,7 @@ class NeurotransmitterModulator:
         return {
             "temperature": round(max(0.4, min(1.2, BrainConfig.BASE_TEMP + chemical_delta + voltage_heat)), 2),
             "top_p": BrainConfig.BASE_TOP_P,
-            "frequency_penalty": 0.4 if c.adrenaline > 0.5 else (0.1 if c.dopamine > 0.7 else 0.0),
+            "frequency_penalty": 0.4 if c.adrenaline > 0.5 else (0.5 if c.dopamine > 0.8 else 0.0),
             "presence_penalty": 0.0,
             "max_tokens": int(max(150.0, min(float(self.MAX_TOKENS), self.BASE_TOKENS + ((c.adrenaline * 600) - (c.cortisol * 300)))))}
 
@@ -253,9 +254,12 @@ class LLMInterface:
 
     def mock_generation(self, prompt: str, reason: str = "SIMULATION") -> str:
         if self.dreamer:
-            hallucination, _ = self.dreamer.hallucinate({"ENTROPY": len(prompt) % 10}, trauma_level=2.0)
-            return f"[{reason}]: {hallucination}"
-        return f"[{reason}]: The wire hums. There is no signal."
+            try:
+                hallucination, _ = self.dreamer.hallucinate({"ENTROPY": len(prompt) % 10}, trauma_level=2.0)
+                return f"[{reason}]: {hallucination}"
+            except Exception:
+                pass
+        return f"[{reason}]: The wire hums. Static only."
 
 class PromptComposer:
     def __init__(self):
@@ -272,20 +276,17 @@ class PromptComposer:
             "style_guide": template_data.get("style_guide", []),
             "inventory_rules": template_data.get("inventory_rules", [])}
 
-    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None, mood_override: str = "", consultant: Any = None) -> str:
+    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None, mood_override: str = "") -> str:
         modifiers = self._normalize_modifiers(modifiers)
-
         mode_settings = state.get("meta", {}).get("mode_settings", {})
         show_inventory = mode_settings.get("show_inventory", True)
         show_location = mode_settings.get("show_location", True)
         show_vitals = mode_settings.get("show_vitals", True)
-
         mind = state.get("mind", {})
         role = mind.get("role", "The Observer")
         driver_directives = mind.get("style_directives", [])
         bio = state.get("bio", {})
         chem = bio.get("chem", {})
-
         mood_note = "Current Biology: Neutral."
         if show_vitals:
             if mood_override:
@@ -297,11 +298,9 @@ class PromptComposer:
                 if chem.get("SER", 0) > 0.6: mood_note = "Current Biology: Zen / Lucid"
         else:
             mood_note = ""
-
         user_name = state.get('user_profile', {}).get('name', 'User')
         reality_directive = state.get("reality_directive", "")
         style_notes = [f"Role: {role} for {user_name}."]
-
         if mood_note: style_notes.append(mood_note)
         style_notes.extend(self.active_template["directives"])
         style_notes.extend(self.active_template["style_guide"])
@@ -317,13 +316,11 @@ class PromptComposer:
             style_notes.insert(0, f"*** PRIORITY OVERRIDE: {reality_directive} ***")
         if modifiers.get("soften"):
             style_notes.append("TONE OVERRIDE: Be warm, helpful, and clear.")
-
         loc_str = ""
         if show_location:
             loc = state.get('world', {}).get('orbit', ['{seed}'])[0]
             loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
             loc_str = f"CURRENT LOCATION: {loc}\nENVIRONMENT ANCHOR: {loci_desc}\n"
-
         inv_str = ""
         if show_inventory and modifiers["include_inventory"]:
             inv = state.get("inventory", [])
@@ -332,16 +329,13 @@ class PromptComposer:
                 inv_str = f"INVENTORY (Belt): {items}\n"
             else:
                 inv_str = "INVENTORY: Empty\n"
-
         history = state.get("dialogue_history", [])
         history_str = "\n".join(history[-10:])
-
         system_injection = ""
         if ballast:
             system_injection = (
                 f"\n*** SYSTEM OVERRIDE: SAFETY PROTOCOLS ACTIVE. ***\n"
                 f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. ***\n")
-
         final_prompt = (
             f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
             f"=== SHARED REALITY ===\n"
@@ -517,8 +511,7 @@ class TheCortex:
         final_prompt = self.composer.compose(
             full_state, user_input,
             ballast=self.ballast_active, modifiers=modifiers,
-            mood_override=self.modulator.get_mood_directive(),
-            consultant=self.consultant)
+            mood_override=self.modulator.get_mood_directive())
         start_time = time.time()
         raw_resp = self.llm.generate(final_prompt, llm_params)
         inv_logs = []
@@ -528,7 +521,6 @@ class TheCortex:
             final_text = raw_resp
         self._log_telemetry(final_prompt, final_text, full_state, sim_result)
         self.learn_from_response(final_text)
-
         val_res = self.validator.validate(final_text, full_state)
         final_output = val_res["content"] if val_res["valid"] else val_res["replacement"]
         extracted_logs = val_res.get("meta_logs", [])
@@ -690,7 +682,7 @@ class DreamEngine:
         self.CONSTRUCTIVE_PROMPTS = dreams_data.get("CONSTRUCTIVE", [
             "You are building a cathedral out of {A}. The mortar is {B}."])
 
-    def enter_rem_cycle(self, soul_snapshot: Dict[str, Any], bio_state: Dict[str, Any]) -> str:
+    def enter_rem_cycle(self, soul_snapshot: Dict[str, Any], bio_state: Dict[str, Any]) -> Tuple[str, Dict[str, float]]:
         voltage = bio_state.get("voltage", 0.0)
         trauma = bio_state.get("trauma_vector", 0.0)
         memories = soul_snapshot.get("core_memories", [])
@@ -711,9 +703,8 @@ class DreamEngine:
             anchors = ["static", "void", "humming"]
         primary_symbol = random.choice(anchors).upper()
         abstract_concept = "ENTROPY"
-        if hasattr(self, 'lex'):
-            abstract_concept = self.lex.get_random_word("ABSTRACT") or "SILENCE"
-        dream_log = ""
+        if hasattr(self, 'lex') and self.lex:
+             abstract_concept = self.lex.get_random_word("ABSTRACT") or "SILENCE"
         if dream_mode == "NIGHTMARE":
             dream_log = (
                 f"{Prisma.RED}[REM]: The {primary_symbol} is rotting. "

@@ -214,8 +214,10 @@ class MitochondrialForge:
         )
 
     def process_cycle(
-        self, physics_packet: Any, external_modifiers: List[float] = None
+            self, physics_packet: Any, external_modifiers: List[float] = None
     ) -> MetabolicReceipt:
+        if self.state.atp_pool > 95.0 and self.state.ros_buildup < 1.0:
+            return MetabolicReceipt(0, 0, 0, 0, 0, "NOMINAL", "Fresh Start")
         voltage = getattr(physics_packet, "voltage", 0.0)
         raw_drag = getattr(physics_packet, "narrative_drag", 0.0)
         drag = max(0.0, raw_drag)
@@ -348,7 +350,7 @@ class DigestiveTrack:
     SAMPLING_THRESHOLD = 1000
     BASE_WORD_VALUE = 0.5
     COMPLEX_WORD_BONUS = 2.0
-    CLICHE_TAX_RATE = 3.0
+    CLICHE_TAX_RATE = 0.5
 
     def __init__(self, bio_system_ref: BioSystem):
         self.bio = bio_system_ref
@@ -869,17 +871,16 @@ class PIDController:
         self._first_run = True
 
     def update(self, measurement: float, dt: float = 1.0) -> float:
-        if dt <= 0.0:
-            return 0.0
+        safe_dt = max(0.01, dt)
         error = self.setpoint - measurement
         if self._first_run:
             self._last_error = error
             self._first_run = False
         P = self.kp * error
-        self._integral += error * dt
+        self._integral += error * safe_dt
         self._integral = max(self.min_out, min(self.max_out, self._integral))
         I = self.ki * self._integral
-        derivative = (error - self._last_error) / dt
+        derivative = (error - self._last_error) / safe_dt
         D = self.kd * derivative
         output = P + I + D
         self._last_error = error

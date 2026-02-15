@@ -8,7 +8,7 @@ from bone_types import MindSystem, PhysSystem, PhysicsPacket
 from bone_config import BoneConfig
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_body import BioSystem, MitochondrialForge, MitochondrialState, EndocrineSystem, MetabolicGovernor, Biometrics
-from bone_brain import DreamEngine, ShimmerState, NeuroPlasticity
+from bone_brain import DreamEngine, ShimmerState
 from bone_protocols import LimboLayer
 from bone_physics import QuantumObserver, SurfaceTension, TheGatekeeper
 from bone_machine import TheCrucible, TheForge, TheTheremin
@@ -124,7 +124,7 @@ class BoneArchitect:
     @staticmethod
     def _construct_mind(events, lex) -> Tuple[MindSystem, LimboLayer]:
         from bone_village import MirrorGraph
-        _mem = MycelialNetwork(events, None, None)
+        _mem = MycelialNetwork(events)
         limbo = LimboLayer()
         _mem.cleanup_old_sessions(limbo)
         mind = MindSystem(
@@ -149,7 +149,6 @@ class BoneArchitect:
             endo=EndocrineSystem(),
             immune=ImmuneMycelium(),
             lichen=BioLichen(),
-            plasticity=NeuroPlasticity(),
             governor=MetabolicGovernor(),
             shimmer=ShimmerState(),
             parasite=BioParasite(mind.mem, lex),
@@ -179,13 +178,7 @@ class BoneArchitect:
         mind, limbo = BoneArchitect._construct_mind(events, lex)
         bio = BoneArchitect._construct_bio(events, mind, lex)
         physics = BoneArchitect._construct_physics(events, bio, mind, lex)
-        return SystemEmbryo(
-            mind=mind,
-            limbo=limbo,
-            bio=bio,
-            physics=physics,
-            shimmer=bio.shimmer,
-            is_gestating=True)
+        return SystemEmbryo(mind=mind, limbo=limbo, bio=bio, physics=physics, shimmer=bio.shimmer)
 
     @staticmethod
     def awaken(embryo: SystemEmbryo) -> SystemEmbryo:

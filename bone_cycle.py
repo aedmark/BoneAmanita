@@ -77,7 +77,8 @@ class CycleStabilizer:
         target_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
         flow_state = getattr(p, "flow_state", "LAMINAR")
         if flow_state in ["SUPERCONDUCTIVE", "FLOW_BOOST"]:
-            pass
+            target_v = p.voltage
+            cfg["drag"] = max(0.1, cfg["drag"] * 0.5)
         else:
             target_v = cfg["voltage"]
         self.governor.recalibrate(target_v, cfg["drag"])
@@ -165,7 +166,7 @@ class SanctuaryPhase(SimulationPhase):
         trauma_sum = sum(self.eng.trauma_accum.values())
         if in_safe_zone and trauma_sum < 25.0:
             self._enter_sanctuary(ctx)
-            self._apply_restoration()
+            self._apply_restoration(ctx)
             if random.random() < 0.3:
                 self._trigger_dream(ctx)
         return ctx
@@ -178,9 +179,11 @@ class SanctuaryPhase(SimulationPhase):
             color = getattr(BonePresets.SANCTUARY, 'COLOR', Prisma.GRN)
             ctx.log(f"{color}![☀️] SANCTUARY: Breathing space.{Prisma.RST}")
 
-    def _apply_restoration(self):
+    def _apply_restoration(self, ctx: CycleContext):
         if self.eng.bio:
-            self.eng.bio.rest(factor=1.0)
+            rest_logs = self.eng.bio.rest(factor=1.0)
+            for log in rest_logs:
+                ctx.log(log)
         for key in list(self.eng.trauma_accum.keys()):
             self.eng.trauma_accum[key] = max(0.0, self.eng.trauma_accum[key] - 0.1)
 

@@ -1,8 +1,4 @@
-""" BONEAMANITA 15.3.1
- Architects: SLASH, KISHO, Taylor & Edmark
- Refactored by: THE TORVALDS & THE BEZALEL
- "The metabolic engine that drives the session."
-"""
+""" BONEAMANITA 15.3.2 - 'The metabolic engine that drives the session.' """
 
 import os
 import time
@@ -19,7 +15,6 @@ from bone_core import EventBus, SystemHealth, TheObserver, TheLore, TelemetrySer
 from bone_types import Prisma, RealityLayer
 from bone_config import BoneConfig, BonePresets
 from bone_genesis import BoneGenesis
-from bone_village import DeathGen
 from bone_lexicon import TheLexicon
 from bone_physics import CosmicDynamics, ZoneInertia
 from bone_body import SomaticLoop
@@ -52,7 +47,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.3.1   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.3.2   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
@@ -410,19 +405,19 @@ class BoneAmanita:
 
     def trigger_death(self, last_phys) -> Dict:
         if self.death_gen is None:
-             return {"type": "DEATH", "ui": f"{Prisma.RED}*** CRITICAL FAILURE (NO DEATH PROTOCOL) ***{Prisma.RST}", "logs": []}
-
-        eulogy_text, cause_code = DeathGen.eulogy(last_phys, self.bio.mito.state, self.trauma_accum)
+            return {
+                "type": "DEATH",
+                "ui": f"{Prisma.RED}*** CRITICAL FAILURE (NO DEATH PROTOCOL) ***{Prisma.RST}",
+                "logs": []
+            }
+        eulogy_text, cause_code = self.death_gen.eulogy(last_phys, self.bio.mito.state, self.trauma_accum)
         death_log = [f"\n{Prisma.RED}SYSTEM HALT: {eulogy_text}{Prisma.RST}"]
-
         legacy_msg = self.oroboros.crystallize(cause_code, self.soul)
         death_log.append(f"{Prisma.MAG}🐍 {legacy_msg}{Prisma.RST}")
-
         continuity_packet = {
             "location": self.cortex.gather_state(self.cortex.last_physics or {}).get("world", {}).get("orbit", ["Void"])[0],
             "last_output": self.cortex.dialogue_buffer[-1] if self.cortex.dialogue_buffer else "Silence.",
             "inventory": self.gordon.inventory if self.gordon else []}
-
         try:
             path = self.mind.mem.save(
                 health=0,
@@ -437,7 +432,6 @@ class BoneAmanita:
             death_log.append(f"{Prisma.WHT}   [LEGACY SAVED: {path}]{Prisma.RST}")
         except Exception as e:
             death_log.append(f"Save Failed: {e}")
-
         return {"type": "DEATH", "ui": "\n".join(death_log), "logs": death_log, "metrics": self.get_metrics()}
 
     def get_metrics(self, atp=0.0):

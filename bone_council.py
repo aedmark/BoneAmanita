@@ -40,6 +40,15 @@ class TheStrangeLoop:
                     corrections, mandate)
         else:
             self.recursion_depth = max(0, self.recursion_depth - 1)
+        voltage = physics.get("voltage", 0.0)
+        drag = physics.get("narrative_drag", 0.0)
+        if voltage < 5.0 and drag > 3.0 and self.recursion_depth == 0:
+            return (
+                True,
+                f"{Prisma.MAG}🃏 JESTER: 'Boring! Burn the map!' (Voltage Spike Initiated){Prisma.RST}",
+                {"voltage": 10.0, "narrative_drag": -2.0},
+                {"action": "RIOT"}
+            )
         return False, "", {}, {}
 
 class TheLeveragePoint:
@@ -49,7 +58,7 @@ class TheLeveragePoint:
         self.TARGET_VOLTAGE = 12.0
         self.TARGET_DRAG = 3.0
 
-    def audit(self, physics: dict) -> tuple[bool, str, dict, dict]:
+    def audit(self, physics: dict, bio_state: dict = None) -> tuple[bool, str, dict, dict]:
         current_drag = physics.get("narrative_drag", 0.0)
         current_voltage = physics.get("voltage", 0.0)
         if self.last_drag == 0.0 and current_drag > 0:
@@ -83,6 +92,16 @@ class TheLeveragePoint:
                 f"Manic phase detected (V:{current_voltage:.1f}). "
                 f"The Council MANDATES dampening (-{voltage_correction:.1f}V)."),
                     corrections, mandate)
+        if bio_state:
+            trauma_vec = bio_state.get("trauma_vector", {})
+            total_trauma = sum(trauma_vec.values()) if isinstance(trauma_vec, dict) else 0
+            if total_trauma > 20.0:
+                return (
+                    True,
+                    f"{Prisma.WHT}🕊️ GLASS: 'The vessel is cracking. Gold is required.' (Healing Protocol){Prisma.RST}",
+                    {"narrative_drag": 5.0, "voltage": -5.0},
+                    {"action": "HEAL"}
+                )
         return False, "", corrections, {}
 
 class TheFootnote:
@@ -130,6 +149,15 @@ class TheChairholder:
         glimmers = chem.get("glimmers", 0)
         is_working_hard = (drag_endured > 3.0 or stamina_spent > (max_stamina * 0.3))
         is_rewarded = (dopamine > 0.6 or glimmers > 0)
+        voltage = physics.get("voltage", 0.0)
+        max_voltage = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 20.0)
+        if voltage > max_voltage:
+            return (
+                True,
+                f"{Prisma.OCHRE}🛑 GRAHAM: 'Order in the court! System overheating.' (Circuit Breaker){Prisma.RST}",
+                {"voltage": -10.0, "narrative_drag": 5.0},
+                {"action": "CIRCUIT_BREAKER"}
+            )
         if is_working_hard and not is_rewarded:
             self.commitment_streak += 1
         elif is_rewarded:

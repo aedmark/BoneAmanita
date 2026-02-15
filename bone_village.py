@@ -6,7 +6,7 @@ from dataclasses import dataclass, field, asdict
 from bone_types import Prisma, PhysicsPacket
 from bone_core import TheLore, EventBus
 from bone_config import BoneConfig
-from bone_physics import PhysicsConstants, PhysicsDelta
+from bone_physics import PhysicsDelta
 from bone_drivers import UserProfile
 
 def _hydrate_packet(p: Any) -> PhysicsPacket:
@@ -82,8 +82,6 @@ class TheTinkerer:
         if packet.voltage > BoneConfig.COUNCIL.MANIC_VOLTAGE_TRIGGER or entropy > 0.5:
             self._apply_resonance(item, 0.2, "High Voltage")
             self._check_ascension(item, inventory, packet.vector)
-        elif packet.kappa > PhysicsConstants.KAPPA_STRONG:
-            self._apply_resonance(item, 0.1, "Coherent Flow")
         elif packet.narrative_drag > BoneConfig.PHYSICS.DRAG_HALT:
             self._apply_resonance(item, 0.05, "Tempering")
 
@@ -258,7 +256,10 @@ class TheCartographer:
         return GeniusLoci(id=node_id, name=final_name, atmosphere=atmosphere, smell=smell)
 
     def _prune_graph(self):
-        candidates = [k for k in self.world_graph.keys() if k != "GENESIS_POINT" and k != self.current_node_id]
+        candidates = [
+            k for k in self.world_graph.keys()
+            if k != "GENESIS_POINT"
+               and k != self.current_node_id]
         if not candidates: return
         candidates.sort(key=lambda k: self.world_graph[k].visited_count)
         del self.world_graph[candidates[0]]
@@ -335,6 +336,10 @@ class TownHall:
         report = f"CENSUS [{loc_name}]: {status} | {advice}"
         news = self._get_town_news(latency, packet.voltage)
         if news: report += f"\n{news}"
+        if packet.voltage > 20.0:
+            report += f"\n{Prisma.RED}⚖️ COUNCIL ALERT: The Chairholder is drafting a restraining order.{Prisma.RST}"
+        elif packet.voltage < 2.0 and packet.narrative_drag > 5.0:
+            report += f"\n{Prisma.MAG}⚖️ COUNCIL ALERT: Strange Loops detected in the lower districts.{Prisma.RST}"
         return report
 
     def _get_town_news(self, latency: float, volt: float) -> Optional[str]:

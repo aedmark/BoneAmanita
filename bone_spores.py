@@ -353,14 +353,14 @@ class MycelialNetwork:
     def run_ecosystem(self, physics: Dict, stamina: float, tick: int) -> List[str]:
         logs = []
         clean_words = physics.get("clean_words", [])
-        sugar, lichen_msg = self.lichen.photosynthesize(physics, clean_words, tick) [cite: 139]
+        sugar, lichen_msg = self.lichen.photosynthesize(physics, clean_words, tick)
         if lichen_msg:
             logs.append(lichen_msg)
         for word in clean_words:
-            toxin_msg = self.immune.assay(word, None, None, physics, None)[1] [cite: 138]
+            toxin_msg = self.immune.assay(word, None, None, physics, None)[1]
             if toxin_msg:
                  logs.append(f"{Prisma.CYN}🛡️ IMMUNE RESPONSE: {toxin_msg}{Prisma.RST}")
-        infected, parasite_msg = self.parasite.infect(physics, stamina) [cite: 138]
+        infected, parasite_msg = self.parasite.infect(physics, stamina)
         if infected and parasite_msg:
             logs.append(parasite_msg)
         if random.random() < 0.10:
@@ -370,11 +370,23 @@ class MycelialNetwork:
         return logs
 
     def _poll_chorus(self, clean_words: list, voltage: float) -> Optional[str]:
-        agents = [self.lichen, self.parasite, self.immune]
-        speaker = random.choice(agents)
-        score, commentary = speaker.opine(clean_words, voltage)
-        if score > 2.0 or random.random() < 0.2:
-             return f"{speaker.color}💬 {speaker.name}: \"{commentary}\"{Prisma.RST}"
+        active_voices = []
+        if self.events:
+            pass
+        total_voltage_boost = 0.0
+        total_drag_penalty = 0.0
+        echo_count = 0
+        for w in clean_words:
+            v_boost, d_pen = self._check_echo_well(w)
+            if v_boost > 0:
+                total_voltage_boost += v_boost
+                total_drag_penalty += d_pen
+                echo_count += 1
+        if echo_count > 0:
+            if total_voltage_boost > 4.0:
+                return f"{Prisma.VIOLET}👻 ECHO: The past is heavy here. (Drag +{total_drag_penalty:.1f}){Prisma.RST}"
+            elif total_voltage_boost > 0:
+                return f"{Prisma.GRY}👻 ECHO: Familiar ground.{Prisma.RST}"
         return None
 
     def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
@@ -496,13 +508,14 @@ class MycelialNetwork:
         return new_wells
 
     def _check_echo_well(self, node):
-        mass = self.memory_core.calculate_mass(node)
-        if mass > BoneConfig.GRAVITY_WELL_THRESHOLD * 1.5:
-            self.events.log(
-                f"{Prisma.VIOLET}GRAVITY WARNING: '{node.upper()}' is becoming a black hole (Mass {int(mass)}).{Prisma.RST}"
-            )
-            return 2.0
-        return 0.0
+        if node in self.graph:
+            data = self.graph[node]
+            mass = self.calculate_mass(node)
+            if mass > 8.0:
+                return (2.0, 1.5)
+            elif mass > 4.0:
+                return (0.5, 0.5)
+        return (0.0, 0.0)
 
     """SEED & GENETICS LOGIC"""
 
@@ -699,7 +712,7 @@ class MycelialNetwork:
             if not s.bloomed]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BONEAMANITA_15.3.1",
+            "genome": "BONEAMANITA_15.3.2",
             "session_id": self.session_id,
             "parent_id": self.session_id,
             "parent_id": self.session_id,
@@ -712,7 +725,7 @@ class MycelialNetwork:
             "joy_legacy": joy_legacy_data,
             "core_graph": core_graph,
             "mutations": mutations,
-            "antibodies": antibodies,
+            "antibodies": list(antibodies) if antibodies else [],
             "mitochondria": mitochondria_traits,
             "soul_legacy": soul_data,
             "continuity": continuity,
@@ -721,7 +734,6 @@ class MycelialNetwork:
             "seeds": seed_list,
             "fossils": list(self.fossils),
         }
-
         return self.loader.save_spore(self.filename, data)
 
     def _generate_future_seed(self, temp_health, trauma_vec) -> str:
@@ -928,10 +940,17 @@ class BioLichen:
 
     @staticmethod
     def photosynthesize(phys, clean_words, tick_count):
-        sugar = 0
         msgs = []
-        light = phys["counts"].get("photo", 0)
-        drag = phys["narrative_drag"]
+        if hasattr(phys, "counts"):
+            counts = phys.counts
+            voltage = getattr(phys, "voltage", 0.0)
+            drag = getattr(phys, "narrative_drag", 0.0)
+        else:
+            counts = phys.get("counts", {})
+            voltage = phys.get("voltage", 0.0)
+            drag = phys.get("narrative_drag", 0.0)
+        light = counts.get("photo", 0)
+        sugar = 0.0
         light_words = [w for w in clean_words if w in TheLexicon.get("photo")]
         if light > 0 and drag < 3.0:
             s = light * 2
@@ -947,7 +966,6 @@ class BioLichen:
                     f"{Prisma.MAG}SUBLIMATION: '{h_word}' has become Light.{Prisma.RST}"
                 )
         return sugar, " ".join(msgs) if msgs else None
-
 
 class LiteraryReproduction:
     MUTATIONS = {}

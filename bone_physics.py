@@ -100,16 +100,18 @@ class GeodesicEngine:
 
     @staticmethod
     def _calculate_dimensions(masses, forces, counts, volume) -> Dict[str, float]:
-        inv_vol = 1.0 / volume
+        inv_vol = 1.0 / max(1, volume)
+        base_mass = 0.1
         return {
-            "VEL": min(1.0, (masses["kinetic"] * 2.0 - forces['compression']) * inv_vol),
-            "STR": min(1.0, (masses["heavy"] * 2.0 + masses["constructive"]) * inv_vol),
+            "VEL": min(1.0, (masses["kinetic"] * 2.0 - forces['compression'] + base_mass) * inv_vol),
+            "STR": min(1.0, (masses["heavy"] * 2.0 + masses["constructive"] + base_mass) * inv_vol),
             "ENT": min(1.0, (counts.get("antigen", 0) * 3.0) * inv_vol),
-            "PHI": min(1.0, (masses["heavy"] + masses["kinetic"]) * inv_vol),
+            "PHI": min(1.0, (masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol),
             "PSI": forces['abstraction'],
             "BET": min(1.0, (masses["social"] * 2.0) * inv_vol),
             "DEL": min(1.0, (masses["play"] * 3.0) * inv_vol),
-            "E":   min(1.0, (counts.get("solvents", 0)) * inv_vol)}
+            "E": min(1.0, (counts.get("solvents", 0)) * inv_vol)
+        }
 
 class TheGatekeeper:
     def __init__(self, lexicon_ref, memory_ref=None):

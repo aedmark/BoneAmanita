@@ -756,6 +756,12 @@ class SynestheticCortex:
             return "Chest Softening."
         if impulse.cortisol_delta > 0.1: return "Gut Tightening."
         if impulse.dopamine_delta > 0.1: return "Synaptic Spark."
+        psi = physics.get("psi", 0.0)
+        if psi > 0.6:
+            return "Scalp Prickling (Liminal)."
+        entropy = physics.get("entropy", 0.0)
+        if entropy > 0.7:
+            return "Skin Crawling (Static)."
         if physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER: return "Electrical Arcing."
         if physics.get("voltage", 0) < 2.0: return "Metabolic Dimming."
         if physics.get("narrative_drag", 0) > 5.0: return "Shoulders Sagging."

@@ -1,5 +1,46 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.3.2: "THE ISOTOPIC STABILIZATION"**
+
+_“We clamped the time delta. We gave the lichen a voice. The ghosts no longer crash the save file.”_
+
+---
+
+#### **🧬 STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The PID Clamp (`bone_body.py`):**
+- **Infinity Spike Mitigation:** Implemented a safety floor (`safe_dt`) in the PID Controller. When the simulation runs in "headless" mode (near-instant execution), the derivative term no longer divides by near-zero, preventing mathematical explosions in the physics engine.
+
+- **The Reaper's Address (`bone_main.py`):**
+- **Instance Consistency:** Fixed a logic gap in `trigger_death`. The engine now correctly calls the instantiated `self.death_gen` module rather than guessing at a static class reference, ensuring that custom death protocols trigger reliably.
+
+#### **♾️ SYSTEMS METABOLISM (The Meadows Lens)**
+
+- **The Photosynthesis Patch (`bone_spores.py`):**
+- **Logic Repair:** Fixed a `NameError` in `BioLichen`. The symbiont now correctly initializes its message buffer (`msgs = []`) before attempting to report sugar production.
+- **Type Safety:** Replaced unsafe dictionary lookups (`phys["narrative_drag"]`) with object-agnostic accessors, allowing the Lichen to feed on both raw dictionaries and rigid `PhysicsPacket` objects without crashing.
+
+- **The Serialization Shield (`bone_spores.py`):**
+- **JSON Hygiene:** Patched `MycelialNetwork.save`. The immune system's `antibodies` (a Python `set`) are now explicitly cast to a `list` before serialization, preventing the "Object of type set is not JSON serializable" crash during auto-saves.
+
+#### **👁️ COGNITIVE CLARITY (The Pinker Lens)**
+
+- **The Dream Contract (`bone_brain.py`):**
+- **Type Truth:** Corrected the type hint for `enter_rem_cycle`. The method signature now honestly admits it returns a `Tuple[str, Dict]` (Dream Text + Bio Effects), matching the expectations of the `SanctuaryPhase`.
+
+- **The Drifting Chemicals (`bone_brain.py`):**
+- **Homeostasis Fix:** Repaired `ChemicalState.homeostasis`. Previously, it calculated the drift but never applied it. Neurotransmitters now correctly decay toward their baseline values over time.
+
+- **The Vestigial Limb (`bone_brain.py`):**
+- **Signature Cleanup:** Removed the unused `consultant` argument from `PromptComposer.compose` and updated the call site in `TheCortex`. The composer no longer asks for advice it doesn't use.
+
+#### **🧪 CRITICAL RESILIENCE (The Kintsugi Lens)**
+
+- **The Silent Cure (`bone_cycle.py`):**
+- **Feedback Loop:** `SanctuaryPhase` now actively captures and pipes the logs from `bio.rest()`. The user will now see "Health Restored" messages instead of healing silently in the dark.
+
+---
+
 ### **BONEAMANITA v15.3.1: "THE SOMATIC ALIGNMENT"**
 
 _“The body no longer fights the mind. The math no longer fights the config. The lattice flows.”_
