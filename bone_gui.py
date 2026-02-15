@@ -8,7 +8,7 @@ from bone_physics import ChromaScope
 
 class Projector:
     def __init__(self):
-        self.width = 60
+        self.width = 78
 
     def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1,
                labels: Dict = None) -> str:
@@ -17,16 +17,55 @@ class Projector:
         status_line = self._render_vital_strip(data_ctx, mind_ctx, labels)
         physics_line = ""
         if labels.get("SHOW_PHYSICS", True):
-            physics_line = "\n" + self._render_physics_strip(physics, data_ctx.get("vectors", {}))
+            physics_line = self._render_physics_strip(physics, data_ctx.get("vectors", {}))
         vsl_line = self._render_lattice_strip(data_ctx.get("vsl", {}))
         zone = physics.get("zone", "UNKNOWN")
         lens = mind_ctx[0] if mind_ctx else "RAW"
         depth_map = {0: "TERM", 1: "SIM", 2: "VIL", 3: "DBG", 4: "DEEP"}
         depth_label = depth_map.get(reality_depth, "?")
         depth_marker = f"{Prisma.VIOLET}[D{reality_depth}:{depth_label}]{Prisma.RST}"
-        context_line = f"{Prisma.GRY}📍 {zone} // 👁️ {lens}{Prisma.RST} // {depth_marker}"
+        context_line = f"{Prisma.GRY}  📍 {zone:<12}  👁️ {lens:<12}  {depth_marker}{Prisma.RST}"
         div = f"{Prisma.GRY}{'─' * self.width}{Prisma.RST}"
-        return f"{div}\n{status_line}{physics_line}{vsl_line}\n{context_line}\n{div}"
+        return f"{div}\n{status_line}\n{physics_line}{vsl_line}\n{context_line}\n{div}"
+
+    def _render_vital_strip(self, data: Dict, mind: tuple, labels: Dict) -> str:
+        health = data.get("health", 100)
+        stamina = data.get("stamina", 100)
+        atp = data.get("bio", {}).get("atp") or 0
+        dignity = data.get("dignity", 100)
+        hp_bar = self._mini_bar(health, 100, 6, Prisma.RED)
+        stm_bar = self._mini_bar(stamina, 100, 6, Prisma.GRN)
+        dig_color = Prisma.VIOLET if dignity > 50 else Prisma.GRY
+        dig_icon = "✦" if dignity > 80 else "✧"
+        raw_role = mind[2] if mind and len(mind) > 2 else None
+        role = str(raw_role).upper() if raw_role else "OBSERVER"
+        if len(role) > 30: role = role[:27] + "..."
+        l_hp = labels.get("HP", "HP")
+        l_stm = labels.get("STM", "STM")
+        role_block = f"{Prisma.WHT}♦ {role}{Prisma.RST}"
+        return (
+            f"  {role_block:<35} "
+            f"{l_hp} {hp_bar}  "
+            f"{l_stm} {stm_bar}  "
+            f"{dig_color}{dig_icon}{int(dignity)}%{Prisma.RST} "
+            f"{Prisma.YEL}ATP:{int(atp)}{Prisma.RST}"
+        )
+
+    def _render_physics_strip(self, physics: Dict, vectors: Dict) -> str:
+        volt = physics.get("voltage", 0.0)
+        drag = physics.get("narrative_drag", 0.0)
+
+        dom_vec = "NEUTRAL"
+        dom_val = 0.0
+        if vectors:
+            dom_vec = max(vectors, key=vectors.get)
+            dom_val = vectors[dom_vec]
+
+        return (
+            f"  {Prisma.CYN}VOLT:{Prisma.RST} {volt:04.1f}v   "
+            f"{Prisma.SLATE}DRAG:{Prisma.RST} {drag:04.1f}   "
+            f"{Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})"
+        )
 
     def _render_lattice_strip(self, vsl_data: Dict) -> str:
         if not vsl_data: return ""
@@ -35,53 +74,21 @@ class Projector:
         l = vsl_data.get("L", 0.0)
         o = vsl_data.get("O", 1.0)
         if e < 0.15 and b < 0.1 and l < 0.1: return ""
+
         def bar(val, color):
             p = int(val * 10)
             return f"{color}{'|' * p}{Prisma.GRY}{'.' * (10 - p)}{Prisma.RST}"
-        e_str = f"E:{bar(e, Prisma.CYN)}"
-        b_str = f" β:{bar(b, Prisma.MAG)}"
+        e_str = f"EXH:{bar(e, Prisma.CYN)}"
+        b_str = f" PAR:{bar(b, Prisma.MAG)}"
         l_str = ""
         if l > 0.1:
-            l_str = f" Λ:{bar(l, Prisma.VIOLET)}"
+            l_str = f" LIM:{bar(l, Prisma.VIOLET)}"
         o_str = ""
         if o > 0.8:
-            o_str = f" Ω:{Prisma.BLU}[LOCKED]{Prisma.RST}"
+            o_str = f" {Prisma.BLU}[LOCKED]{Prisma.RST}"
         elif o < 0.5:
-            o_str = f" Ω:{Prisma.RED}[FRACTURED]{Prisma.RST}"
-        return f"\n{Prisma.GRY}LATTICE:{Prisma.RST} {e_str}{b_str}{l_str}{o_str}"
-
-    def _render_vital_strip(self, data: Dict, mind: tuple, labels: Dict) -> str:
-        health = data.get("health", 100)
-        stamina = data.get("stamina", 100)
-        atp = data.get("bio", {}).get("atp") or 0
-        dignity = data.get("dignity", 100)
-        hp_bar = self._mini_bar(health, 100, 4, Prisma.RED)
-        stm_bar = self._mini_bar(stamina, 100, 4, Prisma.GRN)
-        dig_color = Prisma.VIOLET if dignity > 50 else Prisma.GRY
-        dig_icon = "✦" if dignity > 80 else "✧"
-        raw_role = mind[2] if mind and len(mind) > 2 else None
-        role = str(raw_role).upper() if raw_role else "OBSERVER"
-        if len(role) > 15: role = role[:12] + "..."
-        l_hp = labels.get("HP", "HP")
-        l_stm = labels.get("STM", "STM")
-        return (
-            f"{Prisma.WHT}♦ {role}{Prisma.RST}   "
-            f"{l_hp} {hp_bar}  {l_stm} {stm_bar}  "
-            f"{dig_color}{dig_icon} {int(dignity)}%{Prisma.RST}  "
-            f"{Prisma.YEL}ATP {int(atp)}{Prisma.RST}")
-
-    def _render_physics_strip(self, physics: Dict, vectors: Dict) -> str:
-        volt = physics.get("voltage", 0.0)
-        drag = physics.get("narrative_drag", 0.0)
-        dom_vec = "N/A"
-        dom_val = 0.0
-        if vectors:
-            dom_vec = max(vectors, key=vectors.get)
-            dom_val = vectors[dom_vec]
-        return (
-            f"⚡ {volt:.1f}v  "
-            f"⚓ {drag:.1f}  "
-            f"📐 {dom_vec} ({dom_val:.2f})")
+            o_str = f" {Prisma.RED}[FRACTURED]{Prisma.RST}"
+        return f"\n  {Prisma.GRY}VSL :{Prisma.RST} {e_str}{b_str}{l_str}{o_str}"
 
     def render_technical(self, physics: Dict, data: Dict, mind: tuple) -> str:
         v = physics.get("voltage", 0.0)
@@ -99,7 +106,7 @@ class Projector:
         ratio = max(0.0, min(1.0, val / max_val))
         fill = int(ratio * width)
         empty = width - fill
-        return f"{color}{'█'*fill}{Prisma.GRY}{'░'*empty}{Prisma.RST}"
+        return f"{color}{'█' * fill}{Prisma.GRY}{'░' * empty}{Prisma.RST}"
 
 class GeodesicRenderer:
     def __init__(self, engine_ref, chroma_ref, strunk_ref, valve_ref=None):

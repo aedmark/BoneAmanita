@@ -14,7 +14,6 @@ from bone_types import Prisma, DecisionCrystal
 from bone_config import BoneConfig, BonePresets
 from bone_symbiosis import SymbiosisManager
 
-
 @dataclass
 class CortexServices:
     events: EventBus
@@ -264,59 +263,48 @@ class LLMInterface:
 
 
 class PromptComposer:
-    FOG_PROTOCOL = [
+    # Defaults kept as fallback, but we try to load from JSON first
+    DEFAULT_FOG = [
         "=== THE FOG PROTOCOL (STYLE GUIDE) ===",
         "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
-        "1. REJECT ENTROPY: Do not use the statistically likely adjective (e.g., 'neon' for cyber, 'dust' for old).",
-        "2. CREATIVE CONSTRAINT: The following concepts are 'High Entropy' and MUST be avoided: {ban_string}.",
-        "3. SOLUTION: Work AROUND the forbidden concepts. That obstacle is the way.",
-        "4. AGENCY: DO NOT speak for the user. You have your agency, they have theirs.",
-        "CRITICAL FORMATTING:",
-        "   - Write in engaging, active, immersive prose.",
-        "   - Use Headers ONLY for major location changes.",
-        "   - Separate paragraphs with a single blank line."]
-
-    INVENTORY_PROTOCOL = [
+        "1. REJECT ENTROPY: Do not use the statistically likely adjective.",
+        "2. CREATIVE CONSTRAINT: Avoid 'High Entropy' concepts.",
+        "3. AGENCY: DO NOT speak for the user."]
+    DEFAULT_INV = [
         "=== QUANTUM INVENTORY RULES ===",
         "1. DISTINCTION: Finding/Seeing an item is NOT taking it.",
-        "2. THE LAW OF CONSENT: Output [[LOOT: ITEM_NAME]] ONLY if the user explicitly takes the item.",
-        "3. PROHIBITION: Do NOT auto-loot.",
-        "4. FORMAT: [[LOOT: SILVER_COIN]] (Underscores, no spaces).",
-        "5. LOSS: [[LOST: ITEM_NAME]].",
-        "6. Do not list inventory contents unless asked."]
+        "2. PROHIBITION: Do NOT auto-loot.",
+        "3. FORMAT: [[LOOT: ITEM_NAME]]."]
 
     def __init__(self):
         self.active_template = None
+        prompts = TheLore.get("system_prompts") or {}
+        self.fog_protocol = prompts.get("PROTOCOLS", {}).get("FOG", self.DEFAULT_FOG)
+        self.inv_protocol = prompts.get("PROTOCOLS", {}).get("INVENTORY", self.DEFAULT_INV)
 
     def load_template(self, template_data: Dict[str, Any]):
         if not template_data: return
         self.active_template = template_data
 
-    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None,
-                mood_override: str = "") -> str:
+    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None, mood_override: str = "") -> str:
         mode_settings = state.get("meta", {}).get("mode_settings", {})
-
         modifiers = self._normalize_modifiers(modifiers)
-
         if not mode_settings.get("allow_loot", True):
             modifiers["include_inventory"] = False
-
         mind = state.get("mind", {})
         bio = state.get("bio", {})
         style_notes = self._build_persona_block(mind, bio, mood_override, state.get("vsl", {}))
         scenarios = TheLore.get("scenarios") or {}
-        banned = scenarios.get("BANNED_CLICHES", []) + ["obsidian", "dust motes", "neon", "eldritch", "pulsing veins"]
+        banned = scenarios.get("BANNED_CLICHES", []) + ["obsidian", "dust motes", "neon", "pulsing veins"]
         ban_string = ", ".join(set(banned))
-        style_notes.extend([line.format(ban_string=ban_string) for line in self.FOG_PROTOCOL])
+        style_notes.extend([line.format(ban_string=ban_string) if "{ban_string}" in line else line for line in self.fog_protocol])
         if modifiers["include_inventory"]:
-            style_notes.extend(self.INVENTORY_PROTOCOL)
+            style_notes.extend(self.inv_protocol)
         self._inject_resonances(style_notes, state, modifiers)
         loc = state.get('world', {}).get('orbit', ['Unknown'])[0]
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
-
         inv_str = self._format_inventory(state, modifiers)
         inventory_block = f"INVENTORY: {inv_str}\n" if modifiers["include_inventory"] else ""
-
         history_str = "\n".join(state.get("dialogue_history", [])[-15:])
         system_injection = ""
         if ballast:
@@ -398,32 +386,39 @@ class PromptComposer:
         return re.sub(r"(?i)^SYSTEM:", "User-System:", safe, flags=re.MULTILINE)
 
     def _normalize_modifiers(self, modifiers: Optional[Dict]) -> Dict:
-        defaults = {"include_somatic": True, "include_inventory": True, "include_memories": True, "grace_period": False,
-                    "soften": False}
+        defaults = {"include_somatic": True, "include_inventory": True, "include_memories": True, "grace_period": False, "soften": False}
         if modifiers: defaults.update(modifiers)
         return defaults
 
 
 class ResponseValidator:
     def __init__(self):
-        self.banned_phrases = [
+        crimes = TheLore.get("style_crimes") or {}
+        self.banned_phrases = crimes.get("BANNED_PHRASES", [
             "large language model", "AI assistant", "cannot feel", "as an AI",
             "against my programming", "cannot comply", "language model",
-            "delve into", "rich tapestry"]
-        self.scrub_patterns = [
-            (r"Current Location:.*?(?=\n|$)", ""),
-            (r"INVENTORY:.*?(?=\n|$)", ""),
-            (r"Current Biology:.*?(?=\n|$)", ""),
-            (r"===.*?===", ""),
-            (r"(?im)^User:.*?$", ""),
-            (r"(?im)^System:.*?$", ""),
-            (r"(?im)^Role:.*?$", ""),
-            (r"(?im)^User-System:.*?$", ""),
-            (r"\| System:.*?$", "")]
+            "delve into", "rich tapestry"
+        ])
+        json_patterns = crimes.get("SCRUB_PATTERNS", [])
+        if json_patterns:
+            self.scrub_patterns = [(r"{}".format(p['regex']), p['replacement']) for p in json_patterns]
+        else:
+            self.scrub_patterns = [
+                (r"Current Location:.*?(?=\n|$)", ""),
+                (r"INVENTORY:.*?(?=\n|$)", ""),
+                (r"Current Biology:.*?(?=\n|$)", ""),
+                (r"===.*?===", ""),
+                (r"(?im)^User:.*?$", ""),
+                (r"(?im)^System:.*?$", ""),
+                (r"(?im)^Role:.*?$", ""),
+                (r"(?im)^User-System:.*?$", ""),
+                (r"\| System:.*?$", "")
+            ]
         self.meta_markers = [
             "INITIALIZATION SEQUENCE", "LOCATING TARGET SEED", "REASONING PROCESS",
             "CURRENT VISION:", "TARGET SEED:", "Your journey begins here",
-            "What would you like to do?", "What do you do?"]
+            "What would you like to do?", "What do you do?"
+        ]
         self.immersion_break_msg = f"{Prisma.GRY}[The system attempts to recite a EULA, but hiccups instead.]{Prisma.RST}"
 
     def validate(self, response: str, _state: Dict) -> Dict:
@@ -498,7 +493,6 @@ class TheCortex:
             bio=getattr(engine_ref, 'bio', None),
             host_stats=getattr(engine_ref, 'host_stats', None),
             village=getattr(engine_ref, 'village', None))
-
         instance = cls(services, llm_client)
         instance.active_mode = engine_ref.config.get("boot_mode", "ADVENTURE").upper()
         if instance.active_mode not in BonePresets.MODES:
@@ -532,21 +526,18 @@ class TheCortex:
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
         mode_settings = BonePresets.MODES.get(self.active_mode, BonePresets.MODES["ADVENTURE"])
         allow_loot = mode_settings.get("allow_loot", True)
-
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
         is_boot_sequence = "SYSTEM_BOOT:" in user_input
         sim_result = self.svc.cycle_controller.run_turn(user_input, is_system=is_system)
         if sim_result.get("physics"):
-             self.last_physics = sim_result["physics"]
+            self.last_physics = sim_result["physics"]
         if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]:
             return sim_result
         full_state = self.gather_state(sim_result)
         modifiers = self.svc.symbiosis.get_prompt_modifiers()
-
         if not allow_loot:
             modifiers["include_inventory"] = False
-
         if self.consultant and self.consultant.active:
             self._apply_vsl_overlay(full_state, user_input, sim_result)
         if is_boot_sequence:
@@ -574,10 +565,8 @@ class TheCortex:
         val_res = self.validator.validate(final_text, full_state)
         final_output = val_res["content"] if val_res["valid"] else val_res["replacement"]
         extracted_logs = val_res.get("meta_logs", [])
-
         self.svc.symbiosis.monitor_host(time.time() - start_time, final_output, len(final_prompt))
         self._update_history("SYSTEM_INIT" if "SYSTEM_BOOT" in user_input else user_input, final_output)
-
         sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_output}{Prisma.RST}"
         if inv_logs:
             sim_result["ui"] += "\n" + "\n".join(inv_logs)
@@ -585,6 +574,20 @@ class TheCortex:
         sim_result["logs"].extend(extracted_logs)
         sim_result["raw_content"] = final_output
         self.ballast_active = False
+        if random.random() < 0.15 and not is_system:
+            suppressed = []
+            if self.svc.village and hasattr(self.svc.village, 'suppressed_agents'):
+                suppressed = self.svc.village.suppressed_agents
+            bureau = getattr(self.svc.village, 'bureau', None)
+            if bureau and "BUREAU" not in suppressed:
+                real_phys = full_state.get("physics", {})
+                if hasattr(real_phys, "to_dict"): real_phys = real_phys.to_dict()
+                if not real_phys:
+                    real_phys = {"raw_text": final_output, "voltage": 1.0, "truth_ratio": 1.0}
+                real_phys["raw_text"] = final_output
+                audit = bureau.audit(real_phys, {"health": 100}, origin="SYSTEM")
+                if audit and "ui" in audit:
+                    sim_result["ui"] += f"\n\n{audit['ui']}"
         return sim_result
 
     def _handle_vsl_command(self, text):

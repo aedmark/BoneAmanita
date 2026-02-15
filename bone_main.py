@@ -209,8 +209,8 @@ class BoneAmanita:
             "limbo": self.limbo,
             "council": self.council,
             "therapy": self.therapy,
-            "enneagram": self.drivers.enneagram
-        }
+            "enneagram": self.drivers.enneagram,
+            "suppressed_agents": self.suppressed_agents}
         if self.phys:
             self.phys.dynamics = CosmicDynamics()
             self.cosmic = self.phys.dynamics
@@ -291,75 +291,36 @@ class BoneAmanita:
         turn_start = self.observer.clock_in()
         self.observer.user_turns += 1
         self.tick_count += 1
-
         if user_message.strip().startswith(("/", "//")):
             return self._phase_check_commands(user_message) or self.get_metrics()
-
         rules = self.reality_stack.get_grammar_rules()
         if not rules["allow_narrative"]:
             return {"ui": f"{Prisma.RED}NARRATIVE HALT{Prisma.RST}", "logs": [], "metrics": self.get_metrics()}
-
         if self._ethical_audit():
             mercy_logs = [e['text'] for e in self.events.get_recent_logs(2) if "CATHARSIS" in e['text']]
             if mercy_logs:
                 return {
                     "ui": f"\n\n{mercy_logs[-1]}",
                     "logs": mercy_logs,
-                    "metrics": self.get_metrics()
-                }
-
+                    "metrics": self.get_metrics()}
         if self.health <= 0.0:
             last_phys = getattr(self.cortex, "last_physics", {})
             return self.trigger_death(last_phys)
-
         if not is_system and hasattr(self, 'soul') and hasattr(self.soul, 'anchor'):
             if self.host_stats.efficiency_index < 0.6:
                 reliance_proxy = 0.9 if self.host_stats.efficiency_index < 0.4 else 0.5
                 self.soul.anchor.check_domestication(reliance_proxy)
-
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
-
-            if self.gordon and "GORDON" not in self.suppressed_agents:
-                loot_candidate = self.gordon.parse_loot(user_message, cortex_packet.get("ui", ""))
-                if loot_candidate:
-                    acquire_msg = self.gordon.acquire(loot_candidate)
-                    cortex_packet["logs"].append(acquire_msg)
-                    cortex_packet["ui"] += f"\n\n> {acquire_msg}"
-
-            if hasattr(self.cortex, "last_physics") and self.cortex.last_physics:
-                world_state = self.cortex.gather_state(self.cortex.last_physics).get("world", {})
-                orbit_state = world_state.get("orbit", ["Unknown"])[0]
-                if "physics" in cortex_packet and isinstance(cortex_packet["physics"], dict):
-                    cosmic_drag = 0.5 if orbit_state == "VOID_DRIFT" else 0.0
-                    BoneAmanita.apply_cosmic_physics(
-                        cortex_packet["physics"],
-                        orbit_state,
-                        cosmic_drag)
-
             if hasattr(self.mind, 'mem'):
                 self.health = self.mind.mem.session_health
                 self.stamina = self.mind.mem.session_stamina
                 self.trauma_accum = self.mind.mem.session_trauma_vector or {}
             if self.health <= 0.0:
                 return self.trigger_death(cortex_packet.get("physics", {}))
-
         except Exception as e:
             traceback.print_exc()
             return {"ui": f"CORTEX ERROR: {e}", "logs": [], "metrics": self.get_metrics()}
-
-        if self.bureau and not is_system and random.random() < 0.15:
-            if "BUREAU" not in self.suppressed_agents:
-                real_phys = cortex_packet.get("physics", {})
-                if hasattr(real_phys, "to_dict"):
-                    real_phys = real_phys.to_dict()
-                if not real_phys:
-                    real_phys = {"raw_text": cortex_packet.get("ui", ""), "voltage": 1.0, "truth_ratio": 1.0}
-
-                audit = self.bureau.audit(real_phys, {"health": self.health}, origin="SYSTEM")
-                if audit and "ui" in audit:
-                    cortex_packet["ui"] += f"\n\n{audit['ui']}"
-
         self.observer.clock_out(turn_start)
         self.host_stats.latency = self.observer.last_cycle_duration
         return cortex_packet

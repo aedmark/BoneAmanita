@@ -32,6 +32,11 @@ class ObservationPhase(SimulationPhase):
                 start_val = getattr(BoneConfig.BIO, "STARTING_ATP", 60.0)
                 self.eng.bio.mito.state.atp_pool = start_val
                 ctx.log(f"{Prisma.GRN}⚡ GENESIS: ATP initialized to {start_val}.{Prisma.RST}")
+        if self.eng.gordon and "GORDON" not in self.eng.suppressed_agents:
+            loot_candidate = self.eng.gordon.parse_loot(ctx.input_text, "")
+            if loot_candidate:
+                acquire_msg = self.eng.gordon.acquire(loot_candidate)
+                ctx.log(acquire_msg)
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
         input_phys = gaze_result["physics"]
         protected_keys = ["voltage", "narrative_drag"]
@@ -392,6 +397,13 @@ class NavigationPhase(SimulationPhase):
             for e_log in env_logs: ctx.log(e_log)
         orbit_state, drag_pen, orbit_msg = self.eng.cosmic.analyze_orbit(self.eng.mind.mem, ctx.clean_words)
         if orbit_msg: ctx.log(orbit_msg)
+        physics.narrative_drag += drag_pen
+        if orbit_state == "VOID_DRIFT":
+            physics.voltage = max(0.0, physics.voltage - 0.5)
+        elif orbit_state == "LAGRANGE_POINT":
+            physics.narrative_drag = max(0.1, physics.narrative_drag - 2.0)
+        elif orbit_state == "WATERSHED_FLOW":
+            physics.voltage += 0.5
         raw_zone = getattr(physics, "zone", "COURTYARD")
         stabilization_result = self.eng.stabilizer.stabilize(
             proposed_zone=raw_zone,
@@ -405,7 +417,6 @@ class NavigationPhase(SimulationPhase):
             stabilized_zone = stabilization_result
         physics.zone = stabilized_zone
         adjusted_drag = self.eng.stabilizer.override_cosmic_drag(drag_pen, stabilized_zone)
-        self.eng.apply_cosmic_physics(phys_dict, orbit_state, adjusted_drag)
         ctx.world_state["orbit"] = orbit_state
         return ctx
 
