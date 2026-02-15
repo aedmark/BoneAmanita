@@ -22,8 +22,7 @@ class LexiconStore:
             "heavy", "kinetic", "explosive", "constructive", "abstract",
             "photo", "aerobic", "thermal", "cryo", "suburban", "play",
             "sacred", "buffer", "antigen", "diversion", "meat", "gradient_stop",
-            "liminal", "void"
-        }
+            "liminal", "void", "beureau_buzzwords"}
         self.VOCAB: Dict[str, Set[str]] = {k: set() for k in self.categories}
         self.LEARNED_VOCAB: Dict[str, Dict[str, int]] = {}
         self.USER_FLAGGED_BIAS = set()
