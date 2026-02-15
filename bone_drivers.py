@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional
 from bone_core import EventBus, TheLore
 from bone_config import BonePresets
+from bone_lexicon import TheLexicon
 from bone_types import PhysicsPacket
-
 
 SCENARIOS = TheLore.get("scenarios") or {"ARCHETYPES": ["Void"], "BANNED_CLICHES": []}
 LENSES = TheLore.get("lenses") or {}
@@ -73,12 +73,11 @@ class UserProfile:
     def load(self):
         if os.path.exists(self.file_path):
             try:
-                with open(self.file_path, "r") as f:
+                with open(self.file_path) as f:
                     data = json.load(f)
                     self.affinities = data.get("affinities", self.affinities)
                     self.confidence = data.get("confidence", 0)
             except (IOError, json.JSONDecodeError): pass
-
 
 class EnneagramDriver:
     WEIGHTS = {
@@ -180,7 +179,6 @@ class SynergeticLensArbiter:
     def consult(self, physics, bio_state, _inventory, current_tick, _ignition_score=0.0, soul_ref=None):
         if physics is None:
             return {"lens": "NARRATOR", "role": "The Void-Watcher", "style_directives": ["System blind. Describe the darkness."], "lexicon_bias": "abstract", "context_msg": "PHYSICS_FAIL_SAFE"}
-        voltage = physics.get("voltage", 0.0) if isinstance(physics, dict) else getattr(physics, "voltage", 0.0)
         if current_tick <= 2:
             self.current_focus = "NARRATOR"
             bans = ", ".join(SCENARIOS.get("BANNED_CLICHES", []))
@@ -287,88 +285,116 @@ class VSLState:
     archetype: str = "EXPLORER"
     E: float = 0.1
     B: float = 0.3
-    history: List[str] = field(default_factory=list)
+    L: float = 0.0
+    O: float = 1.0
+    active_modules: List[str] = field(default_factory=list)
 
 class DriverRegistry:
     def __init__(self, events_ref):
         self.enneagram = EnneagramDriver(events_ref)
         self.current_focus = "NONE"
 
-class BoneConsultant:
-    STAGES = ["EXPLORER", "CLARIFIER", "SYNTHESIZER", "VALIDATOR"]
+class LiminalModule:
+    def __init__(self):
+        self.lambda_val = 0.0
 
+    def analyze(self, text: str, physics_vector: Dict[str, float]) -> float:
+        liminal_vocab = TheLexicon.get("liminal")
+        if not liminal_vocab:
+            liminal_vocab = {"void", "silence", "gap"}
+        words = text.lower().split()
+        void_hits = sum(1 for w in words if w in liminal_vocab)
+        lexical_lambda = min(1.0, void_hits * 0.15)
+        vector_lambda = 0.0
+        if physics_vector:
+            vector_lambda = (physics_vector.get("PSI", 0) * 0.5) + \
+                            (physics_vector.get("ENT", 0) * 0.3) + \
+                            (physics_vector.get("DEL", 0) * 0.2)
+
+        self.lambda_val = (self.lambda_val * 0.7) + ((lexical_lambda + vector_lambda) * 0.15)
+        return min(1.0, self.lambda_val)
+
+
+class SyntaxModule:
+    def __init__(self):
+        self.omega_val = 1.0
+
+    def analyze(self, text: str, narrative_drag: float) -> float:
+        words = text.split()
+        if not words: return 1.0
+        bureau_vocab = TheLexicon.get("bureau_buzzwords") or set()
+        buzz_count = sum(1 for w in words if w.lower() in bureau_vocab)
+        avg_len = sum(len(w) for w in words) / len(words)
+        if (avg_len > 6.0 and narrative_drag > 5.0) or buzz_count > 0:
+            target_omega = 1.0
+        elif avg_len < 3.5 and narrative_drag < 1.0:
+            target_omega = 0.4
+        else:
+            target_omega = 0.7
+        self.omega_val = (self.omega_val * 0.8) + (target_omega * 0.2)
+        return self.omega_val
+
+@dataclass
+class VSLState:
+    archetype: str = "EXPLORER"
+    E: float = 0.1
+    B: float = 0.3
+    L: float = 0.0
+    O: float = 1.0
+    active_modules: List[str] = field(default_factory=list)
+
+
+class BoneConsultant:
     def __init__(self):
         self.state = VSLState()
-        self.active = False
+        self.active = True
+        self.liminal_mod = LiminalModule()
+        self.syntax_mod = SyntaxModule()
 
     def engage(self):
-        self.active = True
-        self.state = VSLState()
-        return "VSL PROTOCOL ENGAGED. Initializing Explorer Archetype."
+        return "VSL 1.8 HYPERVISOR: LATTICE REVEALED."
 
     def disengage(self):
-        self.active = False
-        return "VSL PROTOCOL STANDBY."
+        return "VSL 1.8 HYPERVISOR: RETURNING TO SURFACE MODE."
 
     def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None,
                            physics: Optional[PhysicsPacket] = None):
         word_count = len(user_text.split())
-        self.state.E = min(1.0, self.state.E + (word_count * 0.005))
+        self.state.E = min(1.0, self.state.E + (word_count * 0.002))
+
         if bio_state and 'fatigue' in bio_state:
             self.state.E = max(self.state.E, bio_state['fatigue'] * 0.3)
-        if word_count < 10:
-            self.state.B = min(1.0, self.state.B + 0.1)
-        else:
-            self.state.B = max(0.1, self.state.B - 0.05)
-        if physics and hasattr(physics, 'beta_index'):
-            self.state.B = (self.state.B * 0.7) + (physics.beta_index * 0.3)
-        self._check_phase_shift()
-
-    def _check_phase_shift(self):
-        if self.state.archetype == "EXPLORER" and self.state.E > 0.3:
-            self.state.archetype = "CLARIFIER"
-            self.state.B = 0.6
-        elif self.state.archetype == "CLARIFIER" and self.state.E > 0.6:
-            self.state.archetype = "SYNTHESIZER"
-            self.state.B = 0.4
-        elif self.state.archetype == "SYNTHESIZER" and self.state.E > 0.85:
-            self.state.archetype = "VALIDATOR"
-            self.state.B = 0.2
-
-    def get_vsl_bias(self) -> Dict[str, float]:
-        bias = {"voltage_mod": 0.0, "drag_mod": 0.0}
-        if self.state.E > 0.4:
-            bias["drag_mod"] += (self.state.E - 0.4) * 8.0
-        if self.state.B > 0.6:
-            bias["voltage_mod"] += (self.state.B - 0.6) * 15.0
-        return bias
+        phys_beta = 0.0
+        phys_vec = {}
+        drag = 0.0
+        if physics:
+            if hasattr(physics, 'beta_index'): phys_beta = physics.beta_index
+            if hasattr(physics, 'vector'): phys_vec = physics.vector
+            if hasattr(physics, 'narrative_drag'): drag = physics.narrative_drag
+        self.state.B = (self.state.B * 0.8) + (phys_beta * 0.2)
+        self.state.L = self.liminal_mod.analyze(user_text, phys_vec)
+        self.state.O = self.syntax_mod.analyze(user_text, drag)
+        if "[VSL_LIMINAL]" in user_text:
+            if "LIMINAL" not in self.state.active_modules: self.state.active_modules.append("LIMINAL")
+        if "[VSL_SYNTAX]" in user_text:
+            if "SYNTAX" not in self.state.active_modules: self.state.active_modules.append("SYNTAX")
 
     def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
-        prompt = f"""
-[VSL_PRIMER ACTIVE]
-MANDATE: TRUTH_OVER_COHESION.
-COORDINATES: E={self.state.E:.2f}, B={self.state.B:.2f}
-MODE: {self.state.archetype}
-"""
+        directives = []
+        if "LIMINAL" in self.state.active_modules or self.state.L > 0.7:
+            directives.append("ARCHETYPE: THE CARTOMANCER. Read the empty spaces. Speak in riddles and absences.")
+        elif "SYNTAX" in self.state.active_modules or self.state.O > 0.9:
+            directives.append(
+                "ARCHETYPE: THE BUREAU. Enforce structural rigidity. Correct grammar. Use bureaucratic jargon.")
+        else:
+            if self.state.E < 0.3:
+                directives.append("MODE: SNOWBALL. Be warm, simple, welcoming.")
+            elif self.state.B > 0.6:
+                directives.append("MODE: PARADOX. Hold contradictory truths. Be Jester-like.")
+            else:
+                directives.append("MODE: GLACIER. Deep, slow, resonant.")
         if soul_snapshot:
             arch = soul_snapshot.get("archetype", "UNKNOWN")
             muse = soul_snapshot.get("obsession", {}).get("title", "None")
-            prompt += f"\nNARRATIVE_LAYER: You are {arch}.\nMUSE: {muse}.\n"
-            if "POET" in arch:
-                prompt += "STYLE: Metaphorical, lyrical, prone to abstraction.\n"
-            elif "ENGINEER" in arch:
-                prompt += "STYLE: Structural, precise, obsessed with mechanics.\n"
-            elif "NIHILIST" in arch:
-                prompt += "STYLE: Cold, detached, finding comfort in entropy.\n"
-        prompt += f"\nDIRECTIVES:\n1. {self._get_archetype_directive()}\n"
-        prompt += "2. Do not apologize. Do not explain your personality.\n"
-        prompt += "3. If Voltage is High (>15v), become unstable/glitchy.\n"
-        return prompt
-
-    def _get_archetype_directive(self):
-        desc = {
-            "EXPLORER": "Ask open-ended questions. Broaden the scope.",
-            "CLARIFIER": "Drill down. Challenge assumptions. Be specific.",
-            "SYNTHESIZER": "Connect the dots. Mirror back understanding.",
-            "VALIDATOR": "Verify gaps. Confirm the final spec."}
-        return desc.get(self.state.archetype, "Observe.")
+            directives.append(f"NARRATIVE_LAYER: You are {arch}. MUSE: {muse}.")
+        return "\n".join(directives)
