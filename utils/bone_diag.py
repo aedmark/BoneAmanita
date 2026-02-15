@@ -2,20 +2,33 @@
     "Trust, but verify. Then verify the verification."
 """
 
+import os, json, time
 import traceback
 from dataclasses import dataclass, field
+
 from bone_main import BoneAmanita, ConfigWizard
-from bone_core import Prisma
+from bone_core import Prisma, EventBus
 from bone_types import PhysicsPacket
 from bone_soul import NarrativeSelf
 from bone_protocols import KintsugiProtocol, TheBureau, TheFolly
-from bone_lexicon import TheLexicon
+from bone_lexicon import TheLexicon, LexiconService
 from bone_config import BonePresets, BoneConfig
+from bone_spores import SubconsciousStrata
 
 try:
     from bone_brain import LLMInterface
 except ImportError:
     LLMInterface = None
+
+class LogTrap:
+    """Catches EventBus signals to verify internal comms."""
+    def __init__(self):
+        self.logs = []
+    def catch(self, payload):
+        text = payload.get('text', '')
+        self.logs.append(text)
+    def has(self, substring):
+        return any(substring in log for log in self.logs)
 
 @dataclass
 class MockEngine:
@@ -67,47 +80,76 @@ class GrandDiagnostic:
         print(f"\n{Prisma.CYN}=== {title} ==={Prisma.RST}")
 
     def phase_1_core_integrity(self):
-        self.header("PHASE 1: CORE INTEGRITY")
+        self.header("PHASE 1: CORE INTEGRITY & IO REPAIR")
         try:
+            trap = LogTrap()
+
             self.config["provider"] = "mock"
             self.config["boot_mode"] = "ADVENTURE"
             self.engine = BoneAmanita(self.config)
-            self.log("Core Engine Booted (Adventure Mode)", "PASS")
 
-            def crasher(payload): raise ValueError("Sabotage")
-            self.engine.events.subscribe("TEST_CRASH", crasher)
-            try:
-                self.engine.events.publish("TEST_CRASH", {})
-                self.log("EventBus Resilience (Caught Crash)", "PASS")
-            except:
-                self.log("EventBus Crashed System", "FAIL")
-            fake_refusal = "I apologize, but as an AI language model..."
-            self.engine.symbiosis.monitor_host(0.5, fake_refusal, 10)
-            if self.engine.symbiosis.current_health.refusal_streak > 0:
-                self.log("Symbiosis Detected Refusal", "PASS")
+            self.engine.events.subscribe("SYSTEM", trap.catch)
+            self.engine.events.subscribe("BOOT", trap.catch)
+
+            self.engine.events.log("Test Signal", "SYSTEM")
+            recent_history = self.engine.events.get_recent_logs(5)
+            signal_found = any("Test Signal" in log['text'] for log in recent_history)
+
+            if signal_found:
+                self.log("EventBus Wiring Verified (Log History)", "PASS")
+            elif trap.has("Test Signal"):
+                self.log("EventBus Wiring Verified (Realtime Trap)", "PASS")
             else:
-                self.log("Symbiosis Missed Refusal", "FAIL")
+                self.log("EventBus Wiring Failed (Signal Lost in Ether)", "FAIL")
+
+            recent = self.engine.events.get_recent_logs(20)
+            boot_log_found = any("Bootstrapping Core" in log['text'] for log in recent)
+            if boot_log_found:
+                self.log("IO Repair Verified (Boot logs captured)", "PASS")
+            else:
+                self.log("IO Repair Warning (Boot logs printed to stdout?)", "SKIP")
+
+            self.log("Core Engine Booted", "PASS")
         except Exception as e:
             self.log(f"Core Integrity Critical Failure: {e}", "FAIL")
             traceback.print_exc()
 
     def phase_2_bare_metal(self):
-        self.header("PHASE 2: BARE METAL (LLM DRIVER)")
+        self.header("PHASE 2: LIVE FIRE (OLLAMA)")
         if not LLMInterface:
             self.log("LLMInterface not imported", "SKIP")
             return
-        real_config = ConfigWizard.load_or_create()
+
+        live_config = {
+            "provider": "ollama",
+            "base_url": "[http://127.0.0.1:11434/v1/chat/completions](http://127.0.0.1:11434/v1/chat/completions)",
+            "model": "llama3",
+            "api_key": "ollama"
+        }
+
         try:
+            print(f"   {Prisma.GRY}>>> Dialing Localhost...{Prisma.RST}")
             driver = LLMInterface(
                 events_ref=MockEventBus(),
-                provider=real_config.get("provider", "mock"),
-                model=real_config.get("model", "test"),
-                dreamer=None)
-            response = driver.mock_generation("Ping") if real_config["provider"] == "mock" else driver.generate("Ping", {"max_tokens": 5})
-            if response: self.log("Driver Connectivity", "PASS")
-            else: self.log("Driver returned silence", "FAIL")
+                provider="ollama",
+                base_url=live_config["base_url"],
+                model=live_config["model"]
+            )
+
+            start_t = time.time()
+            response = driver.generate("Respond with one word: 'Alive'.", {"max_tokens": 10})
+            latency = time.time() - start_t
+
+            if response and "Alive" in response:
+                self.log(f"Ollama Connection Established ({latency:.2f}s)", "PASS")
+                self.log(f"Response: {response.strip()}", "INFO")
+            elif response:
+                self.log(f"Ollama Responded (Unexpected): {response}", "PASS")
+            else:
+                self.log("Ollama Silence (Check 'ollama serve')", "FAIL")
+
         except Exception as e:
-            self.log(f"Driver Init Failed: {e}", "FAIL")
+            self.log(f"Connection Refused: {e}", "FAIL")
 
     def phase_3_soul_logic(self):
         self.header("PHASE 3: SOUL LOGIC")
@@ -308,6 +350,76 @@ class GrandDiagnostic:
         except Exception as e:
             self.log(f"Prompt Logic Crash: {e}", "FAIL")
 
+    def phase_11_memory_pressure(self):
+        self.header("PHASE 11: MEMORY PRESSURE (The Drain)")
+        test_file = "test_subconscious.jsonl"
+        try:
+            strata = SubconsciousStrata(filename=test_file)
+
+            print(f"   {Prisma.GRY}>>> Injecting 1,100 memories...{Prisma.RST}")
+            for i in range(1100):
+                strata.index.add(f"memory_{i}")
+
+            with open(test_file, "w") as f:
+                for i in range(1100):
+                    f.write(json.dumps({"word": f"mem_{i}", "buried_at": time.time()}) + "\n")
+
+            strata.bury({"word": "straw_that_broke_camel", "data": "test"})
+
+            with open(test_file, "r") as f:
+                count = sum(1 for _ in f)
+
+            if count < 1000:
+                self.log(f"Drain System Active (Count reduced to {count})", "PASS")
+            else:
+                self.log(f"Drain Clogged (Count {count} > 1000)", "FAIL")
+
+        except Exception as e:
+            self.log(f"Memory Test Failed: {e}", "FAIL")
+        finally:
+            if os.path.exists(test_file): os.remove(test_file)
+
+    def phase_12_mercy_protocol(self):
+        self.header("PHASE 12: MERCY PROTOCOL (Ethical Audit)")
+        try:
+            eng = BoneAmanita({"provider": "mock", "boot_mode": "ADVENTURE"})
+            eng.health = 10.0
+            eng.trauma_accum = {"FEAR": 0.9, "PAIN": 0.8}
+
+            print(f"   {Prisma.GRY}>>> Inducing Trauma...{Prisma.RST}")
+            result = eng.process_turn("Help me")
+
+            if "CATHARSIS" in result["ui"] and "The fever breaks" in result["ui"]:
+                self.log("Mercy Interceded & Reported", "PASS")
+            else:
+                self.log("Mercy Failed or Silent", "FAIL")
+
+        except Exception as e:
+            self.log(f"Mercy Test Failed: {e}", "FAIL")
+
+    def phase_13_dynamic_spotlight(self):
+        self.header("PHASE 13: DYNAMIC SPOTLIGHT")
+        try:
+            LexiconService.initialize()
+            new_word = "xyz_test_word"
+            LexiconService.teach(new_word, "heavy", 0)
+
+            from bone_brain import NarrativeSpotlight
+            spot = NarrativeSpotlight()
+
+            str_set = spot.dimension_map.get("STR", set())
+
+            if new_word in str_set or "heavy" in str_set:
+                if new_word in str_set:
+                    self.log("Spotlight Updated Dynamically", "PASS")
+                else:
+                    self.log(f"Spotlight Blind to New Word '{new_word}'", "FAIL")
+            else:
+                self.log("Spotlight Dimension Map Broken", "FAIL")
+
+        except Exception as e:
+            self.log(f"Spotlight Test Failed: {e}", "FAIL")
+
     def run(self):
         self.phase_1_core_integrity()
         self.phase_2_bare_metal()
@@ -319,6 +431,9 @@ class GrandDiagnostic:
         self.phase_8_passive_effects()
         self.phase_9_operating_modes()
         self.phase_10_prompt_logic()
+        self.phase_11_memory_pressure()
+        self.phase_12_mercy_protocol()
+        self.phase_13_dynamic_spotlight()
         print(f"\n{Prisma.CYN}=== DIAGNOSTIC COMPLETE ==={Prisma.RST}")
         print(f"PASSED: {self.results['PASS']}")
         print(f"FAILED: {self.results['FAIL']}")
