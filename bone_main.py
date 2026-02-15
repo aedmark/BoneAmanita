@@ -1,4 +1,4 @@
-""" BONEAMANITA 15.3.2 - 'The metabolic engine that drives the session.' """
+""" BONEAMANITA 15.4.0 - 'The metabolic engine that drives the session.' """
 
 import os
 import time
@@ -47,7 +47,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.3.2   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.4.0   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:

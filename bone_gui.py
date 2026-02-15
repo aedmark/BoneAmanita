@@ -101,11 +101,12 @@ class Projector:
         return f"{color}{'█'*fill}{Prisma.GRY}{'░'*empty}{Prisma.RST}"
 
 class GeodesicRenderer:
-    def __init__(self, engine_ref, chroma_ref, strunk_ref):
+    def __init__(self, engine_ref, chroma_ref, strunk_ref, valve_ref=None):
         self.eng = engine_ref
         self.projector = Projector()
         self.vsl_chroma = chroma_ref
         self.strunk_white = strunk_ref
+        self.valve = valve_ref
         self.soul_dashboard = SoulDashboard(engine_ref)
         self.NOISE_PATTERNS = [
             "stabilizer:", "pid_", "flux", "phase execution",
@@ -113,7 +114,7 @@ class GeodesicRenderer:
             "active correction", "drag reduced", "voltage spiked",
             "live state mirror", "auto_trace", "wayfinder"]
 
-    def render_frame(self, ctx, current_events: List[Dict]) -> Dict[str, Any]:
+    def render_frame(self, ctx, tick: int, current_events: List[Dict]) -> Dict[str, Any]:
         physics = ctx.physics
         bio = ctx.bio_result
         raw_dashboard = self.render_dashboard(ctx)
@@ -125,7 +126,7 @@ class GeodesicRenderer:
             clean_ui = colored_ui
         if "The system is listening." in clean_ui:
             clean_ui = clean_ui.replace("The system is listening.", "")
-        structured_logs = self.compose_logs(ctx.logs, current_events)
+        structured_logs = self.compose_logs(ctx.logs, current_events, tick)
         return {
             "type": "GEODESIC_FRAME",
             "ui": clean_ui,
@@ -146,6 +147,12 @@ class GeodesicRenderer:
             "bio": bio_data,
             "dignity": getattr(self.eng.soul.anchor, 'dignity_reserve', 100.0) if hasattr(self.eng, 'soul') else 100.0,
             "vectors": physics.get("vector", {})}
+        if hasattr(self.eng, 'consultant'):
+            data_ctx["vsl"] = {
+                "E": self.eng.consultant.state.E,
+                "B": self.eng.consultant.state.B,
+                "L": getattr(self.eng.consultant.state, "L", 0.0),
+                "O": getattr(self.eng.consultant.state, "O", 1.0)}
         mode = self.eng.config.get("boot_mode", "ADVENTURE").upper()
         current_depth = 1
         if hasattr(ctx, "reality_stack"):
@@ -173,7 +180,7 @@ class GeodesicRenderer:
             return ""
         return f"{Prisma.GRY}--- Obsession: {soul_ref.current_obsession} ---{Prisma.RST}"
 
-    def compose_logs(self, logs: list, events: list) -> List[str]:
+    def compose_logs(self, logs: list, events: list, tick: int = 0) -> List[str]:
         all_logs = [str(l) for l in logs if l is not None]
         for e in events:
             if e and e.get("text"):
@@ -224,8 +231,9 @@ class CachedRenderer:
             "logs": self._base.compose_logs(ctx.logs, events, tick),
             "metrics": ctx.bio_result if hasattr(ctx, 'bio_result') else {}}
 
-def get_renderer(engine_ref, chroma_ref, strunk_ref, mode="STANDARD"):
-    base = GeodesicRenderer(engine_ref, chroma_ref, strunk_ref)
+
+def get_renderer(engine_ref, chroma_ref, strunk_ref, valve_ref=None, mode="STANDARD"):
+    base = GeodesicRenderer(engine_ref, chroma_ref, strunk_ref, valve_ref)
     if mode == "PERFORMANCE":
         return CachedRenderer(base)
     return base

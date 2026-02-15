@@ -1,5 +1,40 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.4.0: "THE GLACIER PROTOCOL" (VSL v1.8)**
+
+_“To think is to burn ATP. To hold contradiction is to scar. The lattice is online.”_
+
+---
+
+#### **🧊 THE HYPERVISOR (Drivers & Brain)**
+
+- **VSL 1.8 Integration (`bone_drivers.py`):**
+  - **Metabolic Lattice:** Upgraded `BoneConsultant` to track four new coordinate axes: Exhaustion ($E$), Paradox ($\beta$), Liminality ($\Lambda$), and Structural Rigidity ($\Omega$).
+  - **New Modules:** Implemented `LiminalModule` (detects "Dark Matter" words) and `SyntaxModule` (detects bureaucratic rigidity) to drive dynamic archetype shifts (e.g., *The Cartomancer*, *The Bureau*).
+  - **Dynamic Lookups:** Connected drivers to `LexiconStore` to avoid hardcoded vocabulary lists.
+
+- **Layered Priming (`bone_brain.py`):**
+  - **Context Injection:** Updated `PromptComposer` to gently inject VSL coordinates into the system prompt. The LLM now "feels" its metabolic state (e.g., "The Void is leaking") without overriding the core "Fog Protocol" style guide.
+  - **Dashboard Excision:** Removed ASCII chart rendering from the LLM's output instructions. The Brain now focuses on narrative, delegating visualization to the GUI.
+
+#### **🖥️ THE GLASS TERMINAL (App & GUI)**
+
+- **Sidebar Renaissance (`bone_app.py`):**
+  - **VSL Dashboard:** Added a dedicated **VSL HYPERVISOR** section to the sidebar, visualizing $\Lambda$ (Dark Matter) and $\Omega$ (Rigidity) alongside standard Physics and Bio-metrics.
+  - **Full Restoration:** Restored the "Adventure Mode" sidebar widgets (Inventory, Dignity, Obsession) that were temporarily lost during the refactor.
+  - **Narrative Hygiene:** Implemented `extract_narrative()` to surgically strip internal ASCII dashboards from the chat stream, ensuring the chat window remains clean and immersive.
+
+- **Signature Repair (`bone_gui.py`):**
+  - **Crash Prevention:** Fixed critical `TypeError` crashes by restoring missing arguments (`tick`, `valve_ref`) to `render_frame`, `compose_logs`, and `get_renderer`. The renderer now correctly accepts signals from the `GeodesicOrchestrator`.
+  - **Lattice Strip:** Upgraded the `Projector` to render a "Lattice Strip" (VSL metrics) in the terminal output when running in headless/CLI mode.
+
+#### **📚 THE LEXICON (Data)**
+
+- **Vocabulary Expansion (`bone_lexicon.py`):**
+  - **Category Registration:** Registered `liminal` and `bureau_buzzwords` as first-class citizens in the `LexiconStore`, allowing the system to recognize and react to void-heavy or bureaucratic language patterns.
+
+---
+
 ### **BONEAMANITA v15.3.2: "THE ISOTOPIC STABILIZATION"**
 
 _“We clamped the time delta. We gave the lichen a voice. The ghosts no longer crash the save file.”_
