@@ -1,5 +1,5 @@
 {
-    "ARCHETYPES": [
+    "ARCHETYPES":[
         "A Sun-drenched Cyber-Pastoral Meadow",
         "A Clockwork City inside a Glacial Rift",
         "A Desert of Glass singing in the wind",
@@ -20,7 +20,7 @@
         "A lighthouse keeping watch over a sea of fog",
         "A jazz club where the instruments play themselves"
     ],
-    "BANNED_CLICHES": [
+    "BANNED_CLICHES":[
         "Obsidian",
         "Mushroom",
         "Fungus",
