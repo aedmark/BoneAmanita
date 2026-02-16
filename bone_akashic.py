@@ -7,7 +7,7 @@ from bone_core import LoreManifest, BoneJSONEncoder
 from bone_types import Prisma
 
 class TheAkashicRecord:
-    def __init__(self, lore_manifest: 'LoreManifest', events_ref=None):
+    def __init__(self, lore_manifest: 'LoreManifest' = None, events_ref=None):
         self.discovered_words: Dict[str, str] = {}
         self.lens_cooccurrence: Dict[Tuple[str, str], int] = {}
         self.ingredient_affinity: Dict[str, int] = {}
@@ -16,7 +16,7 @@ class TheAkashicRecord:
         self.RECIPE_THRESHOLD = 3
         self.HYBRID_LENS_THRESHOLD = 5
         self.MAX_SHADOW_CAPACITY = 50
-        self.lore = LoreManifest
+        self.lore = LoreManifest.get_instance()
         self.events = events_ref
         self.shadow_stock: List[Dict] = []
         self._load_mythos_state()
@@ -78,23 +78,20 @@ class TheAkashicRecord:
             self.save_to_disk("lenses", lens_data)
         mythos_state = {
             "lens_cooccurrence": {
-                f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()
-            },
+                f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
             "ingredient_affinity": self.ingredient_affinity,
-            "shadow_stock": self.shadow_stock,
-        }
+            "shadow_stock": self.shadow_stock,}
         self.save_to_disk("mythos", mythos_state)
         print(f"{Prisma.GRY}[AKASHIC]: Mythos persisted.{Prisma.RST}")
 
     def save_to_disk(self, category: str, data: Any):
-        directory = LoreManifest.DATA_DIR
+        directory = getattr(self.lore, "DATA_DIR", "lore")
         if not os.path.exists(directory):
             try:
                 os.makedirs(directory)
             except OSError as e:
                 print(
-                    f"{Prisma.RED}[AKASHIC]: Failed to create '{directory}' directory: {e}{Prisma.RST}"
-                )
+                    f"{Prisma.RED}[AKASHIC]: Failed to create '{directory}' directory: {e}{Prisma.RST}")
                 return
         filename = f"akashic_{category}.json"
         filepath = os.path.join(directory, filename)
@@ -133,8 +130,7 @@ class TheAkashicRecord:
         if ingredients_used:
             for item in ingredients_used:
                 self.ingredient_affinity[item] = (
-                    self.ingredient_affinity.get(item, 0) + 1
-                )
+                    self.ingredient_affinity.get(item, 0) + 1)
 
     def track_successful_forge(self, ingredient_name, catalyst_type, result_item):
         if not ingredient_name or not catalyst_type:

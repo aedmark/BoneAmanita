@@ -4,7 +4,6 @@ from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
 
-
 class Prisma:
     RST = "\033[0m"
     RED, GRN, YEL, BLU, MAG, CYN, WHT, GRY = (
@@ -88,6 +87,17 @@ class PhysicsPacket:
     energy: EnergyState = field(default_factory=EnergyState)
     matter: MaterialState = field(default_factory=MaterialState)
     space: SpatialState = field(default_factory=SpatialState)
+
+    def __init__(self, energy: Optional[EnergyState] = None,
+                 matter: Optional[MaterialState] = None,
+                 space: Optional[SpatialState] = None,
+                 **kwargs):
+        self.energy = energy or EnergyState()
+        self.matter = matter or MaterialState()
+        self.space = space or SpatialState()
+
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @property
     def voltage(self): return self.energy.voltage

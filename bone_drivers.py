@@ -3,13 +3,13 @@
 import json, os, random
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
-from bone_core import EventBus, TheLore
+from bone_core import EventBus, LoreManifest
 from bone_config import BonePresets
 from bone_lexicon import TheLexicon
 from bone_types import PhysicsPacket
 
-SCENARIOS = TheLore.get("scenarios") or {"ARCHETYPES": ["Void"], "BANNED_CLICHES": []}
-LENSES = TheLore.get("lenses") or {}
+SCENARIOS = LoreManifest.get_instance().get("scenarios") or {"ARCHETYPES": ["Void"], "BANNED_CLICHES": []}
+LENSES = LoreManifest.get_instance().get("lenses") or {}
 
 class SoulDriver:
     ARCHETYPE_TO_PERSONA_WEIGHT = {
@@ -243,7 +243,7 @@ class SynergeticLensArbiter:
 
 class ChorusDriver:
     def __init__(self):
-        lenses = TheLore.get("lenses") or {}
+        lenses = LoreManifest.get_instance().get("lenses") or {}
         self.ARCHETYPE_MAP = {}
         if lenses:
             for key, data in lenses.items():
@@ -360,7 +360,7 @@ class CongruenceValidator:
     def map(self):
         if self._archetype_map is None:
             try:
-                self._archetype_map = TheLore.get("LENSES") or {}
+                self._archetype_map = LoreManifest.get_instance().get("LENSES") or {}
             except Exception:
                 self._archetype_map = {}
         return self._archetype_map

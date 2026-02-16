@@ -32,7 +32,7 @@ class LexiconStore:
         self.hive_loaded = False
 
     def load_vocabulary(self):
-        data = LoreManifest.get("LEXICON")
+        data = LoreManifest.get_instance().get("LEXICON")
         self.SOLVENTS = set(data.get("solvents", []))
         self.ANTIGEN_REPLACEMENTS = data.get("antigen_replacements", {})
         for cat, words in data.items():
@@ -522,7 +522,7 @@ class RosettaStone:
         focus = RosettaStone._derive_coherence_focus(coherence)
         chem_state = bio.get("chem", {})
         flavor = RosettaStone._apply_chemistry(tone, chem_state)
-        somatic_lib = LoreManifest.get("SOMATIC_LIBRARY") or {}
+        somatic_lib = LoreManifest.get_instance().get("SOMATIC_LIBRARY") or {}
         pacing_key = "HIGH" if voltage > 12 else "LOW"
         pacing_options = somatic_lib.get("PACING_RESERVOIR", {}).get(pacing_key, ["Normal"])
         pacing = random.choice(pacing_options)

@@ -73,12 +73,19 @@ class EventBus:
 
 class LoreManifest:
     DATA_DIR = "lore"
+    _instance = None
 
     def __init__(self, data_dir=None):
         self.DATA_DIR = data_dir or self.DATA_DIR
         self._cache = {}
         self._overlays = {}
         self._missing_cache = set()
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = LoreManifest()
+        return cls._instance
 
     def _load_from_disk(self, category: str) -> Optional[Dict]:
         filename = f"{category.lower()}.json"

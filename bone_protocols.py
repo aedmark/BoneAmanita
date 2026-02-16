@@ -9,7 +9,7 @@ from bone_types import Prisma
 from bone_lexicon import LexiconService
 from bone_config import BoneConfig
 
-NARRATIVE_DATA = LoreManifest.get("narrative_data") or {}
+NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
 
 class ZenGarden:
     def __init__(self, events_ref):
@@ -59,12 +59,12 @@ class TheBureau:
         self.stamp_count = 0
         self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 27B-6", "Form 404"])
         self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
-        lex_data = TheLore.get("LEXICON") or {}
+        lex_data = LoreManifest.get_instance().get("LEXICON") or {}
         self.buzzwords = set(lex_data.get("bureau_buzzwords", [
             "synergy", "paradigm", "leverage", "utilize"
         ]))
         self.crimes = []
-        self.crime_data = TheLore.get("STYLE_CRIMES") or {}
+        self.crime_data = LoreManifest.get_instance().get("STYLE_CRIMES") or {}
         if "PATTERNS" in self.crime_data:
             for p in self.crime_data["PATTERNS"]:
                 try:

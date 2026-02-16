@@ -2,7 +2,7 @@
 
 import traceback, random, time, uuid, copy
 from typing import Dict, Any, List, cast
-from bone_core import TelemetryService, ArchetypeArbiter, TheLore
+from bone_core import TelemetryService, ArchetypeArbiter, LoreManifest
 from bone_types import Prisma, CycleContext, PhysicsSandbox, PhysicsPacket
 from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, CycleStabilizer
 from bone_gui import SoulDashboard, CycleReporter
@@ -838,7 +838,7 @@ class CycleSimulator:
     def handle_phase_crash(self, ctx, phase_name, error):
         print(f"\n{Prisma.RED}!!! CRITICAL {phase_name} CRASH !!!{Prisma.RST}")
         traceback.print_exc()
-        narrative = TheLore.get("narrative_data") or {}
+        narrative = LoreManifest.get("narrative_data") or {}
         cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["System Failure."])
         eulogy = random.choice(cathedral_logs)
         ctx.log(f"{Prisma.RED}🏛️ CATHEDRAL COLLAPSE: \"{eulogy}\"{Prisma.RST}")

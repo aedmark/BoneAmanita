@@ -27,7 +27,7 @@ class SystemEmbryo:
 class PanicRoom:
     @staticmethod
     def get_safe_physics():
-        narrative = LoreManifest.get("narrative_data") or {}
+        narrative = LoreManifest.get_instance().get("narrative_data") or {}
         cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["[SYSTEM FAILURE]"])
         fail_msg = random.choice(cathedral_logs)
         return PhysicsPacket(
@@ -127,10 +127,11 @@ class BoneArchitect:
         _mem = MycelialNetwork(events)
         limbo = LimboLayer()
         _mem.cleanup_old_sessions(limbo)
+        lore = LoreManifest.get_instance()
         mind = MindSystem(
             mem=_mem,
             lex=lex,
-            dreamer=DreamEngine(events),
+            dreamer=DreamEngine(events, lore),
             mirror=MirrorGraph(events),
             tracer=ViralTracer(_mem))
         return mind, limbo
