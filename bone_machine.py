@@ -4,7 +4,7 @@ import random
 from typing import Tuple, Optional, List, Dict
 
 from bone_config import BoneConfig
-from bone_core import TheLore
+from bone_core import LoreManifest
 from bone_lexicon import TheLexicon
 
 class TheCrucible:
@@ -75,7 +75,7 @@ class TheCrucible:
 
 class TheForge:
     def __init__(self):
-        gordon_data = TheLore.get("gordon") or {}
+        gordon_data = LoreManifest.get("gordon") or {}
         self.recipes = gordon_data.get("RECIPES", [])
 
     @staticmethod

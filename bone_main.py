@@ -1,17 +1,10 @@
-""" BONEAMANITA 15.4.1 - 'The metabolic engine that drives the session.' """
+""" BONEAMANITA 15.5.0 - 'The metabolic engine that drives the session.' """
 
-import os
-import time
-import json
-import uuid
-import random
-import traceback
-import sys
-import re
+import os, time, json, uuid, random, traceback, sys, re
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
 from bone_chronos import ChronosKeeper
-from bone_core import EventBus, SystemHealth, TheObserver, TheLore, TelemetryService, RealityStack
+from bone_core import EventBus, SystemHealth, TheObserver, LoreManifest, TelemetryService, RealityStack
 from bone_types import Prisma, RealityLayer
 from bone_config import BoneConfig, BonePresets
 from bone_genesis import BoneGenesis
@@ -47,7 +40,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.4.1   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.5.0   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
@@ -110,16 +103,13 @@ class ConfigWizard:
         mode_choice = input(f"{Prisma.paint('>', 'C')} ").strip()
         mode_map = {"1": "ADVENTURE", "2": "CONVERSATION", "3": "CREATIVE", "4": "TECHNICAL"}
         boot_mode = mode_map.get(mode_choice, "ADVENTURE")
-
         print(f"\n{Prisma.WHT}[STEP 3]: CORTEX BACKEND{Prisma.RST}")
         print(f"1. {Prisma.GRN}Ollama (Local){Prisma.RST}")
         print(f"2. {Prisma.CYN}OpenAI (Cloud){Prisma.RST}")
         print(f"3. {Prisma.VIOLET}LM Studio (Local){Prisma.RST}")
         print(f"4. {Prisma.GRY}Mock (Simulation){Prisma.RST}")
         choice = input(f"{Prisma.paint('>', 'C')} ").strip()
-
         config = {"user_name": user_name, "boot_mode": boot_mode}
-
         if choice == "2":
             config["provider"] = "openai"
             config["base_url"] = "https://api.openai.com/v1/chat/completions"
@@ -137,7 +127,6 @@ class ConfigWizard:
             config["provider"] = "ollama"
             config["base_url"] = "http://127.0.0.1:11434/v1/chat/completions"
             config["model"] = input(f"Model ID [llama3]: ").strip() or "llama3"
-
         try:
             with open(ConfigWizard.CONFIG_FILE, "w") as f:
                 json.dump(config, f, indent=4)
@@ -248,11 +237,9 @@ class BoneAmanita:
         self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.events)
         self.noetic = NoeticLoop(self.mind, self.bio, self.events)
         self.cycle_controller = GeodesicOrchestrator(self)
-
         llm_args = {
             k: v for k, v in self.config.items()
             if k in ["provider", "base_url", "api_key", "model"]}
-
         client = LLMInterface(events_ref=self.events, **llm_args)
         self.cortex = TheCortex.from_engine(self, llm_client=client)
 
@@ -260,7 +247,6 @@ class BoneAmanita:
         tuning_key = self.mode_settings.get("tuning", "STANDARD")
         if hasattr(BonePresets, tuning_key):
             BoneConfig.load_preset(getattr(BonePresets, tuning_key))
-
         if self.mind.mem.session_health:
             self.health = self.mind.mem.session_health
             self.stamina = self.mind.mem.session_stamina
@@ -270,10 +256,8 @@ class BoneAmanita:
 
     def _apply_boot_mode(self):
         self.events.log(f"Engaging Mode: {self.boot_mode}")
-
         layer = self.mode_settings.get("ui_layer", RealityLayer.SIMULATION)
         self.reality_stack.stabilize_at(layer)
-
         prompt_key = self.mode_settings.get("prompt_key", "ADVENTURE")
         if self.prompt_library and prompt_key in self.prompt_library:
             if self.cortex and self.cortex.composer:
@@ -369,8 +353,7 @@ class BoneAmanita:
             return {
                 "type": "DEATH",
                 "ui": f"{Prisma.RED}*** CRITICAL FAILURE (NO DEATH PROTOCOL) ***{Prisma.RST}",
-                "logs": []
-            }
+                "logs": []}
         eulogy_text, cause_code = self.death_gen.eulogy(last_phys, self.bio.mito.state, self.trauma_accum)
         death_log = [f"\n{Prisma.RED}SYSTEM HALT: {eulogy_text}{Prisma.RST}"]
         legacy_msg = self.oroboros.crystallize(cause_code, self.soul)
@@ -456,7 +439,7 @@ class BoneAmanita:
                 resume_text = f"**RESUMING TIMELINE**\nLocation: {loc}\n\n{last_scene}"
                 return {"ui": resume_text, "logs": ["Timeline Restored."]}
         print(f"{Prisma.GRY}...Synthesizing Initial Reality...{Prisma.RST}")
-        scenarios = TheLore.get_instance().get("SCENARIOS", {})
+        scenarios = LoreManifest.get_instance().get("SCENARIOS", {})
         archetypes = scenarios.get("ARCHETYPES", ["A quiet garden"])
         seed = random.choice(archetypes)
         print(f"{Prisma.CYN}[SYS] Seed Loaded: '{seed}'{Prisma.RST}")

@@ -4,7 +4,7 @@ import math, random, time
 from typing import Dict, List, Any, Tuple, Optional, Deque
 from collections import Counter, deque
 from dataclasses import dataclass
-from bone_types import Prisma, PhysicsPacket, CycleContext
+from bone_types import Prisma, PhysicsPacket, CycleContext, SpatialState, MaterialState, EnergyState
 from bone_lexicon import TheLexicon
 from bone_config import BoneConfig
 
@@ -157,32 +157,32 @@ class QuantumObserver:
         e_metric, beta_val = self._calculate_metrics(text, counts)
         valence = TheLexicon.get_valence(clean_words)
         graph_mass = self._calculate_graph_mass(clean_words, graph)
-        packet_data = {
-            "voltage": smoothed_voltage,
-            "narrative_drag": geo.compression,
-            "kappa": geo.coherence,
-            "psi": geo.abstraction,
-            "vector": geo.dimensions,
-            "valence": valence,
-            "repetition": 0.0,
-            "atmosphere": "NEUTRAL",
-            "clean_words": clean_words,
-            "counts": counts,
-            "flow_state": self._determine_flow(smoothed_voltage, geo.coherence),
-            "zone": self._determine_zone(geo.dimensions),
-            "truth_ratio": 0.5,
-            "raw_text": text,
-            "antigens": counts.get("antigen", 0),
-            "perfection_streak": 0,
-            "turbulence": 0.0,
-            "entropy": e_metric,
-            "beta_index": beta_val,
-            "mass": round(graph_mass, 1),
-            "velocity": 0.0
-        }
-        self.last_physics_packet = PhysicsPacket(**packet_data)
+        energy = EnergyState(
+            voltage=smoothed_voltage,
+            entropy=e_metric,
+            beta_index=beta_val,
+            mass=round(graph_mass, 1),
+            psi=geo.abstraction,
+            kappa=geo.coherence,
+            valence=valence,
+            velocity=0.0,
+            turbulence=0.0)
+        matter = MaterialState(
+            clean_words=clean_words,
+            raw_text=text,
+            counts=counts,
+            antigens=counts.get("antigen", 0),
+            vector=geo.dimensions,
+            truth_ratio=0.5)
+        space = SpatialState(
+            narrative_drag=geo.compression,
+            zone=self._determine_zone(geo.dimensions),
+            atmosphere="NEUTRAL",
+            flow_state=self._determine_flow(smoothed_voltage, geo.coherence))
+        self.last_physics_packet = PhysicsPacket(energy=energy, matter=matter, space=space)
+        packet_dict = self.last_physics_packet.to_dict()
         if hasattr(self.events, "publish"):
-            self.events.publish("PHYSICS_CALCULATED", packet_data)
+            self.events.publish("PHYSICS_CALCULATED", packet_dict)
         return {"physics": self.last_physics_packet, "clean_words": clean_words}
 
     def _tally_categories(self, clean_words: List[str]) -> Counter:

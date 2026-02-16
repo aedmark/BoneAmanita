@@ -6,7 +6,7 @@ import time, random
 from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple
 
-from bone_core import TheLore
+from bone_core import LoreManifest
 from bone_types import Prisma
 from bone_config import BoneConfig
 from bone_lexicon import TheLexicon
@@ -84,7 +84,7 @@ class TheEditor:
                 if cat:
                     flavor = cat
                     break
-        narrative = TheLore.get("narrative_data", {})
+        narrative = LoreManifest.get("narrative_data", {})
         if stress_mode:
             antidote = self.lex.get_random("sacred").title()
             vitality = self.lex.get_random("play").title()
@@ -139,7 +139,7 @@ class HumanityAnchor:
 
     def _engage_lockdown(self):
         self.agency_lock = True
-        riddles = TheLore.get("seeds", []) or [{"question": "Who are you?", "triggers": ["*"]}]
+        riddles = LoreManifest.get("seeds", []) or [{"question": "Who are you?", "triggers": ["*"]}]
         selection = random.choice(riddles)
         riddle = selection.get("question", "Error?")
         self.current_riddle_answers = selection.get("triggers", ["*"])

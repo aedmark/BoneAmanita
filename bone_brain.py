@@ -1,15 +1,9 @@
 """ bone_brain.py - "The brain is a machine for jumping to conclusions." - S. Pinker """
 
-import re
-import time
-import json
-import urllib.request
-import urllib.error
-import random
-import math
+import re, time, json, urllib.request, urllib.error, random, math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from bone_core import EventBus, LoreManifest, TelemetryService, BoneJSONEncoder, TheLore
+from bone_core import EventBus, TelemetryService, BoneJSONEncoder
 from bone_types import Prisma, DecisionCrystal
 from bone_config import BoneConfig, BonePresets
 from bone_symbiosis import SymbiosisManager
@@ -17,6 +11,7 @@ from bone_symbiosis import SymbiosisManager
 @dataclass
 class CortexServices:
     events: EventBus
+    lore: Any
     lexicon: Any
     inventory: Any
     consultant: Any
@@ -263,7 +258,6 @@ class LLMInterface:
 
 
 class PromptComposer:
-    # Defaults kept as fallback, but we try to load from JSON first
     DEFAULT_FOG = [
         "=== THE FOG PROTOCOL (STYLE GUIDE) ===",
         "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
@@ -276,9 +270,10 @@ class PromptComposer:
         "2. PROHIBITION: Do NOT auto-loot.",
         "3. FORMAT: [[LOOT: ITEM_NAME]]."]
 
-    def __init__(self):
+    def __init__(self, lore_ref):
+        self.lore = lore_ref
         self.active_template = None
-        prompts = TheLore.get("system_prompts") or {}
+        prompts = self.lore.get("system_prompts") or {}
         self.fog_protocol = prompts.get("PROTOCOLS", {}).get("FOG", self.DEFAULT_FOG)
         self.inv_protocol = prompts.get("PROTOCOLS", {}).get("INVENTORY", self.DEFAULT_INV)
 
@@ -294,7 +289,8 @@ class PromptComposer:
         mind = state.get("mind", {})
         bio = state.get("bio", {})
         style_notes = self._build_persona_block(mind, bio, mood_override, state.get("vsl", {}))
-        scenarios = TheLore.get("scenarios") or {}
+
+        scenarios = self.lore.get("scenarios") or {}
         banned = scenarios.get("BANNED_CLICHES", []) + ["obsidian", "dust motes", "neon", "pulsing veins"]
         ban_string = ", ".join(set(banned))
         style_notes.extend([line.format(ban_string=ban_string) if "{ban_string}" in line else line for line in self.fog_protocol])
@@ -390,10 +386,10 @@ class PromptComposer:
         if modifiers: defaults.update(modifiers)
         return defaults
 
-
 class ResponseValidator:
-    def __init__(self):
-        crimes = TheLore.get("style_crimes") or {}
+    def __init__(self, lore_ref):
+        self.lore = lore_ref
+        crimes = self.lore.get("style_crimes") or {}
         self.banned_phrases = crimes.get("BANNED_PHRASES", [
             "large language model", "AI assistant", "cannot feel", "as an AI",
             "against my programming", "cannot comply", "language model",
@@ -460,7 +456,7 @@ class TheCortex:
     def __init__(self, services: CortexServices, llm_client=None):
         self.svc = services
         self.events = services.events
-        self.dreamer = DreamEngine(self.events)
+        self.dreamer = DreamEngine(self.events, self.svc.lore)
         self.dialogue_buffer = []
         self.MAX_HISTORY = 15
         self.modulator = NeurotransmitterModulator(bio_ref=self.svc.bio, events_ref=self.events)
@@ -473,8 +469,8 @@ class TheCortex:
         self.arbiter = SynergeticLensArbiter(self.events)
         if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None:
             self.llm.dreamer = self.dreamer
-        self.composer = PromptComposer()
-        self.validator = ResponseValidator()
+        self.composer = PromptComposer(self.svc.lore)
+        self.validator = ResponseValidator(self.svc.lore)
         self.ballast_active = False
         self.active_mode = "ADVENTURE"
         if hasattr(self.events, "subscribe"):
@@ -484,6 +480,7 @@ class TheCortex:
     def from_engine(cls, engine_ref, llm_client=None):
         services = CortexServices(
             events=engine_ref.events,
+            lore=engine_ref.lore,
             lexicon=engine_ref.lex,
             inventory=engine_ref.gordon,
             consultant=engine_ref.consultant if hasattr(engine_ref, 'consultant') else None,
@@ -725,9 +722,10 @@ class ShimmerState:
         return None
 
 class DreamEngine:
-    def __init__(self, events):
+    def __init__(self, events, lore_ref):
         self.events = events
-        dreams_data = LoreManifest.get_instance().get("dreams") or {}
+        self.lore = lore_ref
+        dreams_data = self.lore.get("dreams") or {}
         self.PROMPTS = dreams_data.get("PROMPTS", ["{A} -> {B}?"])
         self.NIGHTMARES = dreams_data.get("NIGHTMARES", {})
         self.VISIONS = dreams_data.get("VISIONS", ["Static."])

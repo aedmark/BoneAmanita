@@ -1,17 +1,25 @@
-""" bone_gui.py - The Visual Cortex (Renderer Library)
-    Refactored for Multi-Modal UX
-"""
+""" bone_gui.py - The Visual Cortex (Renderer Library)"""
 
 from typing import Dict, List, Any, Tuple
 from bone_core import Prisma
 from bone_physics import ChromaScope
 
+
 class Projector:
     def __init__(self):
-        self.width = 78
+        self.width = 80
 
-    def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1,
-               labels: Dict = None) -> str:
+    def _extract(self, physics_obj: Any, field: str, sub_field: str, default=0.0):
+        if hasattr(physics_obj, sub_field):
+            return getattr(physics_obj, sub_field)
+        if isinstance(physics_obj, dict):
+            if sub_field in physics_obj:
+                return physics_obj[sub_field]
+            if field in physics_obj and isinstance(physics_obj[field], dict):
+                return physics_obj[field].get(sub_field, default)
+        return default
+
+    def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1, labels: Dict = None) -> str:
         if not labels: labels = {"HP": "HP", "STM": "STM"}
         physics = physics_ctx.get("physics", {})
         status_line = self._render_vital_strip(data_ctx, mind_ctx, labels)
@@ -19,7 +27,7 @@ class Projector:
         if labels.get("SHOW_PHYSICS", True):
             physics_line = self._render_physics_strip(physics, data_ctx.get("vectors", {}))
         vsl_line = self._render_lattice_strip(data_ctx.get("vsl", {}))
-        zone = physics.get("zone", "UNKNOWN")
+        zone = self._extract(physics, "space", "zone", "UNKNOWN")
         lens = mind_ctx[0] if mind_ctx else "RAW"
         depth_map = {0: "TERM", 1: "SIM", 2: "VIL", 3: "DBG", 4: "DEEP"}
         depth_label = depth_map.get(reality_depth, "?")
@@ -48,24 +56,20 @@ class Projector:
             f"{l_hp} {hp_bar}  "
             f"{l_stm} {stm_bar}  "
             f"{dig_color}{dig_icon}{int(dignity)}%{Prisma.RST} "
-            f"{Prisma.YEL}ATP:{int(atp)}{Prisma.RST}"
-        )
+            f"{Prisma.YEL}ATP:{int(atp)}{Prisma.RST}")
 
-    def _render_physics_strip(self, physics: Dict, vectors: Dict) -> str:
-        volt = physics.get("voltage", 0.0)
-        drag = physics.get("narrative_drag", 0.0)
-
+    def _render_physics_strip(self, physics: Any, vectors: Dict) -> str:
+        volt = self._extract(physics, "energy", "voltage", 0.0)
+        drag = self._extract(physics, "space", "narrative_drag", 0.0)
         dom_vec = "NEUTRAL"
         dom_val = 0.0
         if vectors:
             dom_vec = max(vectors, key=vectors.get)
             dom_val = vectors[dom_vec]
-
         return (
             f"  {Prisma.CYN}VOLT:{Prisma.RST} {volt:04.1f}v   "
             f"{Prisma.SLATE}DRAG:{Prisma.RST} {drag:04.1f}   "
-            f"{Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})"
-        )
+            f"{Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})")
 
     def _render_lattice_strip(self, vsl_data: Dict) -> str:
         if not vsl_data: return ""
@@ -91,8 +95,8 @@ class Projector:
         return f"\n  {Prisma.GRY}VSL :{Prisma.RST} {e_str}{b_str}{l_str}{o_str}"
 
     def render_technical(self, physics: Dict, data: Dict, mind: tuple) -> str:
-        v = physics.get("voltage", 0.0)
-        d = physics.get("narrative_drag", 0.0)
+        v = self._extract(physics, "energy", "voltage", 0.0)
+        d = self._extract(physics, "space", "narrative_drag", 0.0)
         vec = data.get("vectors", {})
         vec_str = ", ".join([f"{k}:{v:.2f}" for k, v in vec.items() if v > 0.01])
         return (

@@ -4,12 +4,12 @@ import random, json
 import re
 from collections import deque, Counter
 from typing import Dict, Tuple, Optional, Any
-from bone_core import TheLore
+from bone_core import LoreManifest
 from bone_types import Prisma
 from bone_lexicon import LexiconService
 from bone_config import BoneConfig
 
-NARRATIVE_DATA = TheLore.get("narrative_data") or {}
+NARRATIVE_DATA = LoreManifest.get("narrative_data") or {}
 
 class ZenGarden:
     def __init__(self, events_ref):

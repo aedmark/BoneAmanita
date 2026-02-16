@@ -3,7 +3,7 @@
 import random
 from typing import Tuple, Dict, Any, Optional, List
 from dataclasses import dataclass
-from bone_core import Prisma, TheLore
+from bone_core import Prisma, LoreManifest
 from bone_types import MindSystem, PhysSystem, PhysicsPacket
 from bone_config import BoneConfig
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
@@ -27,7 +27,7 @@ class SystemEmbryo:
 class PanicRoom:
     @staticmethod
     def get_safe_physics():
-        narrative = TheLore.get("narrative_data") or {}
+        narrative = LoreManifest.get("narrative_data") or {}
         cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["[SYSTEM FAILURE]"])
         fail_msg = random.choice(cathedral_logs)
         return PhysicsPacket(

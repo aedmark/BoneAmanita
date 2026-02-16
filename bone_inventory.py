@@ -4,10 +4,9 @@
 import random, re
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
-from bone_core import TheLore
+from bone_core import LoreManifest
 from bone_types import Prisma
 from bone_config import BoneConfig
-from bone_village import TheTinkerer
 
 
 @dataclass
@@ -36,6 +35,7 @@ class Item:
             reflex_trigger=data.get("reflex_trigger", None)
         )
 
+
 class GordonKnot:
     def __init__(self, events=None):
         self.events = events
@@ -48,25 +48,33 @@ class GordonKnot:
         self.scar_tissue = {}
         self.refusal_markers = {
             "cannot", "can't", "unable", "fail", "too heavy",
-            "stuck", "don't", "do not", "locked", "refuse", "impossible"
-        }
+            "stuck", "don't", "do not", "locked", "refuse", "impossible"}
+        self.loot_triggers = ["found a", "picked up", "pick up", "acquired", "took the", "take the", "grab the",
+                              "takes the"]
         self.load_config()
-        self._seed_test_items()
 
     def load_config(self):
-        data = TheLore.get("GORDON") or {}
-        if not data and hasattr(TheLore, "get_raw"):
-            data = TheLore.get_raw("gordon.json") or {}
+        data = LoreManifest.get("GORDON") or {}
+        if not data and hasattr(LoreManifest, "get_raw"):
+            data = LoreManifest.get_raw("gordon.json") or {}
+
         if "REFUSAL_MARKERS" in data:
             self.refusal_markers = set(data["REFUSAL_MARKERS"])
+
+        if "LOOT_TRIGGERS" in data:
+            self.loot_triggers = data["LOOT_TRIGGERS"]
+
         self.ITEM_REGISTRY = data.get("ITEM_REGISTRY", {})
         for name, props in self.ITEM_REGISTRY.items():
             self.registry[name] = Item.from_dict(name, props)
+
         self.recipes = data.get("RECIPES", [])
         self.scar_tissue = data.get("SCAR_TISSUE", {})
+
         starters = data.get("STARTING_INVENTORY", [])
         if not self.inventory and starters:
             self.inventory = [s for s in starters if isinstance(s, str)]
+
         if hasattr(BoneConfig, "INVENTORY"):
             self.max_slots = getattr(BoneConfig.INVENTORY, "MAX_SLOTS", 10)
 
@@ -109,35 +117,17 @@ class GordonKnot:
         clean_text = re.sub(lost_pattern, "", clean_text, flags=re.IGNORECASE)
         return clean_text.strip(), logs
 
-    def _seed_test_items(self):
-        test_items = {
-            "sphere": {"description": "A diagnostic sphere.", "spawn_context": "COMMON"},
-            "red key": {"description": "A test key.", "spawn_context": "COMMON"},
-            "heavy stone": {"description": "A heavy object.", "spawn_context": "COMMON"}
-        }
-        for name, data in test_items.items():
-            if name not in self.registry:
-                self.ITEM_REGISTRY[name] = data
-                self.registry[name] = Item.from_dict(name, data)
-
     def get_item_data(self, item_name: str) -> Optional[Item]:
-        """
-        Retrieves Item object. Checks active registry first,
-        then falls back to raw ITEM_REGISTRY (lazy hydration).
-        """
         if item_name in self.registry:
             return self.registry[item_name]
-
         if item_name in self.ITEM_REGISTRY:
             raw_data = self.ITEM_REGISTRY[item_name]
             item_obj = Item.from_dict(item_name, raw_data)
             self.registry[item_name] = item_obj
             return item_obj
-
         return None
 
     def get_inventory_data(self) -> List[Dict]:
-        """ Returns full data objects for current inventory (for Physics Engine). """
         data = []
         for name in self.inventory:
             item = self.get_item_data(name)
@@ -147,29 +137,22 @@ class GordonKnot:
 
     def acquire(self, tool_name: str) -> str:
         tool_name = tool_name.upper() if tool_name else "UNKNOWN"
-
         if tool_name in self.inventory:
             return f"{Prisma.OCHRE}Inventory duplicate: You already have the {tool_name}.{Prisma.RST}"
-
         item_obj = self.get_item_data(tool_name)
         if not item_obj:
             item_obj = self.get_item_data(tool_name.lower())
-
         if not item_obj:
             new_item = Item(name=tool_name, description="???", function="MISC")
             self.registry[tool_name] = new_item
             self.ITEM_REGISTRY[tool_name] = new_item.__dict__
-
         if len(self.inventory) >= self.max_slots:
             dropped = self.inventory.pop(0)
             if self.events:
                 self.events.log(f"Inventory full. Dropped {dropped}.", "INV")
-
         self.inventory.append(tool_name)
-
         if self.events:
             self.events.publish("ITEM_ACQUIRED", {"item": tool_name})
-
         return f"{Prisma.GRN}📦 ACQUIRED: {tool_name}{Prisma.RST}"
 
     def safe_remove_item(self, item_name: str) -> bool:
@@ -183,16 +166,12 @@ class GordonKnot:
         cost = 15.0
         if hasattr(BoneConfig, "INVENTORY"):
             cost = getattr(BoneConfig.INVENTORY, "RUMMAGE_COST", 15.0)
-
         if stamina_pool < cost:
             return False, f"{Prisma.OCHRE}Gordon sighs. 'Too tired. Eat first.'{Prisma.RST}", 0.0
-
         voltage = physics_ref.get("voltage", 0.0)
         loot_table = self._get_loot_candidates(voltage)
-
         if not loot_table:
             return False, "Gordon dug deep but found only lint.", cost
-
         found_item = random.choice(loot_table)
         msg = self.acquire(found_item)
         return True, msg, cost
@@ -200,11 +179,9 @@ class GordonKnot:
     def _get_loot_candidates(self, voltage: float) -> List[str]:
         candidates = []
         all_keys = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
-
         for name in all_keys:
             item = self.get_item_data(name)
             if not item: continue
-
             ctx = item.spawn_context
             if ctx == "COMMON":
                 candidates.append(name)
@@ -223,7 +200,6 @@ class GordonKnot:
         return True, f"Gordon polished {len(self.inventory)} items.", cost
 
     def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
-        triggers = ["found a", "picked up", "pick up", "acquired", "took the", "take the", "grab the", "takes the"]
         text = (user_text + " " + sys_text).lower()
         sys_lower = sys_text.lower()
         for refusal in self.refusal_markers:
@@ -232,7 +208,7 @@ class GordonKnot:
         all_known_items = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
         for name in all_known_items:
             if name.lower() in text and name.upper() not in self.inventory:
-                for t in triggers:
+                for t in self.loot_triggers:
                     if t in text:
                         return name
         return None

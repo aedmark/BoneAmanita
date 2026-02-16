@@ -1,4 +1,4 @@
-""" bone_app.py - The Glass Terminal Interface """
+""" bone_app.py - The Glass Terminal Interface v1.9 """
 
 import streamlit as st
 import re
@@ -31,25 +31,31 @@ st.markdown("""
     
     /* CHAT BUBBLES */
     .stChatMessage { background-color: #0e1117; border: 1px solid #222; border-radius: 5px; margin-bottom: 15px; }
+    
+    /* EXPANDER HEADERS */
+    .streamlit-expanderHeader { font-family: 'Courier New', monospace; font-size: 0.8rem; color: #666; }
 </style>
 """, unsafe_allow_html=True)
 
 def clean_engine_output(raw_text):
     if not raw_text: return "No signal."
     clean = re.sub(r'\x1b\[[0-9;]*m', '', raw_text)
-
     if "──────" in clean:
         clean = clean.split("──────")[-1].strip()
-
     return clean
 
 def format_log_entry(log_str):
     clean = re.sub(r'\x1b\[[0-9;]*m', '', log_str).strip()
+
     if "██" in clean or "♦ THE ARCHITECT" in clean: return None
+
     if "[BIO]" in clean: return f"🧬 {clean.replace('[BIO]', '')}"
     if "[PHYSICS]" in clean or "VOLTAGE" in clean: return f"⚡ {clean.replace('[PHYSICS]', '')}"
     if "[COUNCIL]" in clean: return f"⚖️ {clean.replace('[COUNCIL]', '')}"
+    if "[SLASH]" in clean or "SANTIAGO" in clean or "PINKER" in clean: return f"🗡️ {clean}"
     if "CRITICAL" in clean: return f"🔴 {clean}"
+    if "VSL" in clean: return f"🧊 {clean}"
+
     return f"🔹 {clean}"
 
 def render_dashboard(eng_ref):
@@ -92,13 +98,15 @@ def render_dashboard(eng_ref):
             st.subheader("🧊 VSL LATTICE")
             s = eng_ref.consultant.state
             c1, c2 = st.columns(2)
-            c1.metric("E (Exhaust)", f"{s.E:.2f}")
-            c2.metric("β (Paradox)", f"{s.B:.2f}")
-            if s.L > 0.1:
-                st.progress(min(1.0, s.L), text=f"Λ (DARK MATTER): {s.L:.2f}")
+            c1.metric("EXH", f"{s.E:.2f}")
+            c2.metric("PAR", f"{s.B:.2f}")
+
+            if s.L > 0.1 or "LIMINAL" in s.active_modules:
+                st.progress(min(1.0, s.L), text=f"LIM (Dark Matter): {s.L:.2f}")
+
             if s.O > 0.8:
                 st.caption(f"Ω Structure: LOCKED ({s.O:.2f})")
-            elif s.O < 0.6:
+            elif s.O < 0.5:
                 st.caption(f"Ω Structure: FRACTURED ({s.O:.2f})")
 
         st.divider()
@@ -121,7 +129,7 @@ def render_dashboard(eng_ref):
                     zone = getattr(dash_packet, "zone", "VOID")
 
         c3, c4 = st.columns(2)
-        c3.metric("VOLTAGE", f"{volts:.1f}v")
+        c3.metric("VOLT", f"{volts:.1f}v")
         c4.metric("DRAG", f"{drag:.1f}")
         st.info(f"📍 ZONE: {zone}")
 
@@ -147,7 +155,6 @@ if "ENGINE" not in st.session_state:
         sys_config["boot_mode"] = "ADVENTURE"
         st.session_state.ENGINE = BoneAmanita(config=sys_config)
 
-        # noinspection PyTypeChecker
         with st.spinner("Hydrating Spore Casing..."):
             session = st.session_state.ENGINE
 
@@ -159,9 +166,9 @@ if "ENGINE" not in st.session_state:
 
             st.session_state.history.append({
                 "role": "assistant",
-                "content": "VSL-CryoSomatic Hypervisor v1.8 ONLINE.\nThe Glacier is listening. [Type 'start' to begin]",
-                "raw_content": "VSL-CryoSomatic Hypervisor v1.8 ONLINE.\nThe Glacier is listening. [Type 'start' to begin]",
-                "logs": ["System Boot Complete", "Lattice Coordinates Set"]
+                "content": "VSL-CryoSomatic Hypervisor v1.9 ONLINE.\nThe Glacier is listening. [Type 'start' to begin]",
+                "raw_content": "VSL-CryoSomatic Hypervisor v1.9 ONLINE.\nThe Glacier is listening. [Type 'start' to begin]",
+                "logs": ["System Boot Complete", "Lattice Coordinates Set", "Slash Council: STANDBY"]
             })
 
     except Exception as e:
@@ -188,7 +195,6 @@ if prompt := st.chat_input("Broadcast Signal..."):
         st.markdown(prompt)
     st.session_state.history.append({"role": "user", "content": prompt})
 
-    # noinspection PyTypeChecker
     with st.spinner("Calculating Geodesics..."):
         try:
             packet = engine.process_turn(prompt)

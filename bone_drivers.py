@@ -240,15 +240,23 @@ class SynergeticLensArbiter:
         except Exception: style_packet["msg"] = static_data.get("msg", "System Nominal.")
         return style_packet
 
+
 class ChorusDriver:
     def __init__(self):
-        self.ARCHETYPE_MAP = {
-            "GORDON": "The Janitor. Weary, grounded, physical. Fixing the mess.",
-            "SHERLOCK": "The Empiricist. Cold, deductive, cutting through fog.",
-            "NATHAN": "The Heart. High adrenaline, vulnerable, human.",
-            "JESTER": "The Paradox. Mocking, riddling, breaking the fourth wall.",
-            "CLARENCE": "The Surgeon. Clinical, invasive, removing rot.",
-            "NARRATOR": "The Witness. Neutral, observing, recording."}
+        lenses = TheLore.get("lenses") or {}
+        self.ARCHETYPE_MAP = {}
+        if lenses:
+            for key, data in lenses.items():
+                role = data.get("role", "Unknown")
+                self.ARCHETYPE_MAP[key] = f"{role}. {data.get('vocab', 'Neutral')}."
+        else:
+            self.ARCHETYPE_MAP = {
+                "GORDON": "The Janitor. Weary, grounded, physical.",
+                "SHERLOCK": "The Empiricist. Cold, deductive.",
+                "NATHAN": "The Heart. High adrenaline, vulnerable.",
+                "JESTER": "The Paradox. Mocking, riddling.",
+                "CLARENCE": "The Surgeon. Clinical, invasive.",
+                "NARRATOR": "The Witness. Neutral, observing."}
 
     def generate_chorus_instruction(self, physics):
         vec = physics.get("vector", {})
@@ -383,10 +391,10 @@ class BoneConsultant:
         self.syntax_mod = SyntaxModule()
 
     def engage(self):
-        return "VSL 1.8 HYPERVISOR: LATTICE REVEALED."
+        return "VSL 1.9 HYPERVISOR: LATTICE REVEALED."
 
     def disengage(self):
-        return "VSL 1.8 HYPERVISOR: RETURNING TO SURFACE MODE."
+        return "VSL 1.9 HYPERVISOR: RETURNING TO SURFACE MODE."
 
     def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None,
                            physics: Optional[PhysicsPacket] = None):

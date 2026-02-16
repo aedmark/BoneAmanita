@@ -1,5 +1,5 @@
-""" bone_types.py - The Data Structures """
-import time, copy, uuid, json, re, random
+""" bone_types.py - The Data Structures (Refactored) """
+import time, copy, uuid, json, re
 from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
@@ -15,8 +15,6 @@ class Prisma:
     _COLOR_MAP = {
         "R": RED, "G": GRN, "Y": YEL, "B": BLU, "M": MAG, "C": CYN,
         "W": WHT, "0": GRY, "I": INDIGO, "O": OCHRE, "V": VIOLET, "S": SLATE}
-    _TIE_DYE_COLORS = [RED, GRN, YEL, CYN, MAG, VIOLET, OCHRE]
-    _STRIP_REGEX = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
@@ -26,13 +24,9 @@ class Prisma:
 
     @classmethod
     def strip(cls, text: str) -> str:
-        return cls._STRIP_REGEX.sub('', str(text))
+        pattern = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        return pattern.sub('', str(text))
 
-    @classmethod
-    def tie_dye(cls, text: str) -> str:
-        return "".join(
-            f"{random.choice(cls._TIE_DYE_COLORS)}{char}{cls.RST}" if char.strip() else char
-            for char in str(text))
 
 class LoreCategory(Enum):
     LEXICON = "LEXICON"
@@ -59,47 +53,170 @@ class ErrorLog:
     severity: str = "WARNING"
 
 @dataclass
-class PhysicsPacket:
+class EnergyState:
     voltage: float = 0.0
-    narrative_drag: float = 0.0
-    valence: float = 0.0
-    repetition: float = 0.0
-    atmosphere: str = "NEUTRAL"
-    clean_words: List[str] = field(default_factory=list)
-    counts: Dict[str, int] = field(default_factory=dict)
-    vector: Dict[str, float] = field(default_factory=dict)
-    flow_state: str = "LAMINAR"
-    zone: str = "COURTYARD"
-    truth_ratio: float = 0.0
-    raw_text: str = ""
-    antigens: int = 0
-    perfection_streak: int = 0
-    turbulence: float = 0.0
     entropy: float = 0.0
     mass: float = 0.0
     velocity: float = 0.0
     psi: float = 0.0
-    kappa: float = 0.0
-    manifold: str = "DEFAULT"
     beta_index: float = 0.0
+    turbulence: float = 0.0
+    kappa: float = 0.0
+    valence: float = 0.0
+    perfection_streak: int = 0
+
+@dataclass
+class MaterialState:
+    clean_words: List[str] = field(default_factory=list)
+    raw_text: str = ""
+    counts: Dict[str, int] = field(default_factory=dict)
+    antigens: int = 0
+    vector: Dict[str, float] = field(default_factory=dict)
+    truth_ratio: float = 0.0
+    repetition: float = 0.0
+
+@dataclass
+class SpatialState:
+    zone: str = "COURTYARD"
+    manifold: str = "DEFAULT"
+    narrative_drag: float = 0.0
+    atmosphere: str = "NEUTRAL"
+    flow_state: str = "LAMINAR"
+
+@dataclass
+class PhysicsPacket:
+    energy: EnergyState = field(default_factory=EnergyState)
+    matter: MaterialState = field(default_factory=MaterialState)
+    space: SpatialState = field(default_factory=SpatialState)
+
+    @property
+    def voltage(self): return self.energy.voltage
+    @voltage.setter
+    def voltage(self, v): self.energy.voltage = v
+
+    @property
+    def entropy(self): return self.energy.entropy
+    @entropy.setter
+    def entropy(self, v): self.energy.entropy = v
+
+    @property
+    def mass(self): return self.energy.mass
+    @mass.setter
+    def mass(self, v): self.energy.mass = v
+
+    @property
+    def velocity(self): return self.energy.velocity
+    @velocity.setter
+    def velocity(self, v): self.energy.velocity = v
+
+    @property
+    def psi(self): return self.energy.psi
+    @psi.setter
+    def psi(self, v): self.energy.psi = v
+
+    @property
+    def beta_index(self): return self.energy.beta_index
+    @beta_index.setter
+    def beta_index(self, v): self.energy.beta_index = v
+
+    @property
+    def turbulence(self): return self.energy.turbulence
+    @turbulence.setter
+    def turbulence(self, v): self.energy.turbulence = v
+
+    @property
+    def kappa(self): return self.energy.kappa
+    @kappa.setter
+    def kappa(self, v): self.energy.kappa = v
+
+    @property
+    def valence(self): return self.energy.valence
+    @valence.setter
+    def valence(self, v): self.energy.valence = v
+
+    @property
+    def perfection_streak(self): return self.energy.perfection_streak
+    @perfection_streak.setter
+    def perfection_streak(self, v): self.energy.perfection_streak = v
+
+    @property
+    def clean_words(self): return self.matter.clean_words
+    @clean_words.setter
+    def clean_words(self, v): self.matter.clean_words = v
+
+    @property
+    def raw_text(self): return self.matter.raw_text
+    @raw_text.setter
+    def raw_text(self, v): self.matter.raw_text = v
+
+    @property
+    def counts(self): return self.matter.counts
+    @counts.setter
+    def counts(self, v): self.matter.counts = v
+
+    @property
+    def antigens(self): return self.matter.antigens
+    @antigens.setter
+    def antigens(self, v): self.matter.antigens = v
+
+    @property
+    def vector(self): return self.matter.vector
+    @vector.setter
+    def vector(self, v): self.matter.vector = v
+
+    @property
+    def truth_ratio(self): return self.matter.truth_ratio
+    @truth_ratio.setter
+    def truth_ratio(self, v): self.matter.truth_ratio = v
+
+    @property
+    def repetition(self): return self.matter.repetition
+    @repetition.setter
+    def repetition(self, v): self.matter.repetition = v
+
+    @property
+    def zone(self): return self.space.zone
+    @zone.setter
+    def zone(self, v): self.space.zone = v
+
+    @property
+    def manifold(self): return self.space.manifold
+    @manifold.setter
+    def manifold(self, v): self.space.manifold = v
+
+    @property
+    def narrative_drag(self): return self.space.narrative_drag
+    @narrative_drag.setter
+    def narrative_drag(self, v): self.space.narrative_drag = v
+
+    @property
+    def atmosphere(self): return self.space.atmosphere
+    @atmosphere.setter
+    def atmosphere(self, v): self.space.atmosphere = v
+
+    @property
+    def flow_state(self): return self.space.flow_state
+    @flow_state.setter
+    def flow_state(self, v): self.space.flow_state = v
 
     @classmethod
     def void_state(cls):
-        return cls(atmosphere="VOID", flow_state="LAMINAR", zone="VOID")
+        p = cls()
+        p.space.atmosphere = "VOID"
+        p.space.zone = "VOID"
+        p.space.flow_state = "LAMINAR"
+        return p
 
     def snapshot(self) -> 'PhysicsPacket':
-        new_packet = copy.copy(self)
-        for f in fields(self):
-            val = getattr(self, f.name)
-            if isinstance(val, (list, dict, set)):
-                setattr(new_packet, f.name, copy.deepcopy(val))
-        return new_packet
+        return copy.deepcopy(self)
 
     def to_dict(self) -> Dict[str, Any]:
-        return self.__dict__.copy()
+        return asdict(self)
 
     def get(self, key, default=None):
-        return getattr(self, key, default)
+        if hasattr(self, key):
+            return getattr(self, key)
+        return default
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -118,7 +235,7 @@ class PhysicsSandbox:
 
     @classmethod
     def create(cls, packet: PhysicsPacket) -> 'PhysicsSandbox':
-        return cls(packet=packet, original_snapshot=None)
+        return cls(packet=packet)
 
     def _ensure_snapshot(self):
         if self.original_snapshot is None:
@@ -126,11 +243,9 @@ class PhysicsSandbox:
 
     def apply_delta(self, key: str, value: Any, reason: str = ""):
         self._ensure_snapshot()
-        old = getattr(self.packet, key, None)
         setattr(self.packet, key, value)
         self.modifications.append({
             "key": key,
-            "old": old,
             "new": value,
             "reason": reason})
 
@@ -139,8 +254,9 @@ class PhysicsSandbox:
 
     def rollback(self):
         if self.original_snapshot:
-            for f in fields(self.original_snapshot):
-                setattr(self.packet, f.name, getattr(self.original_snapshot, f.name))
+            self.packet.energy = copy.deepcopy(self.original_snapshot.energy)
+            self.packet.matter = copy.deepcopy(self.original_snapshot.matter)
+            self.packet.space = copy.deepcopy(self.original_snapshot.space)
 
     def __getattr__(self, name):
         return getattr(self.packet, name)
@@ -207,8 +323,6 @@ class CycleContext:
                 setattr(new_ctx, name, val.snapshot())
             elif isinstance(val, (list, dict, set)):
                 setattr(new_ctx, name, copy.deepcopy(val))
-            elif hasattr(val, '__dict__') and not isinstance(val, (str, float, int, bool)):
-                pass
         return new_ctx
 
 @dataclass

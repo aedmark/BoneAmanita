@@ -22,6 +22,8 @@ class EventBus:
     def __init__(self, max_memory=1024):
         self.buffer = deque(maxlen=max_memory)
         self.subscribers = {}
+        self.error_counts = Counter()
+        self.CIRCUIT_LIMIT = 3
 
     def subscribe(self, event_type, callback):
         if event_type not in self.subscribers:
@@ -29,14 +31,30 @@ class EventBus:
         self.subscribers[event_type].append(callback)
 
     def publish(self, event_type, data=None, priority=False):
-        if event_type in self.subscribers:
-            for callback in self.subscribers[event_type]:
-                try:
-                    callback(data)
-                except Exception as e:
-                    cb_name = getattr(callback, "__name__", str(callback))
-                    print(f"{Prisma.RED}Event Bus Dispatch Error [{cb_name}]: {e}{Prisma.RST}")
-                    traceback.print_exc()
+        if event_type not in self.subscribers:
+            return
+        for callback in list(self.subscribers[event_type]):
+            try:
+                callback(data)
+            except Exception as e:
+                self._handle_failure(event_type, callback, e)
+
+    def _handle_failure(self, event_type, callback, error):
+        cb_name = getattr(callback, "__name__", str(callback))
+        self.error_counts[cb_name] += 1
+        count = self.error_counts[cb_name]
+        if count >= self.CIRCUIT_LIMIT:
+            print(
+                f"{Prisma.RED}[BUS]: CIRCUIT BROKEN. Unsubscribing '{cb_name}' from '{event_type}' after {count} failures.{Prisma.RST}")
+            self.log(f"CIRCUIT_BROKEN: {cb_name}", "CRITICAL")
+            try:
+                self.subscribers[event_type].remove(callback)
+            except ValueError:
+                pass
+        else:
+            print(
+                f"{Prisma.YEL}[BUS]: Warning - '{cb_name}' failed ({count}/{self.CIRCUIT_LIMIT}). Error: {error}{Prisma.RST}")
+            traceback.print_exc()
 
     def log(self, text: str, category: str = "SYSTEM"):
         entry = {
@@ -54,19 +72,13 @@ class EventBus:
         return list(self.buffer)[-count:]
 
 class LoreManifest:
-    _INSTANCE = None
     DATA_DIR = "lore"
 
-    def __init__(self):
+    def __init__(self, data_dir=None):
+        self.DATA_DIR = data_dir or self.DATA_DIR
         self._cache = {}
         self._overlays = {}
         self._missing_cache = set()
-
-    @classmethod
-    def get_instance(cls):
-        if cls._INSTANCE is None:
-            cls._INSTANCE = LoreManifest()
-        return cls._INSTANCE
 
     def _load_from_disk(self, category: str) -> Optional[Dict]:
         filename = f"{category.lower()}.json"
@@ -122,8 +134,6 @@ class LoreManifest:
             self._cache = {}
             self._missing_cache = set()
             print(f"{Prisma.CYN}[LORE]: Flushed entire Lore cache.{Prisma.RST}")
-
-TheLore = LoreManifest.get_instance()
 
 class TheObserver:
     def __init__(self):

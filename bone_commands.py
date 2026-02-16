@@ -2,7 +2,7 @@
 
 import shlex
 from typing import Dict, Callable, List, Optional
-from bone_core import TheLore, Prisma
+from bone_core import LoreManifest, Prisma
 from bone_config import BonePresets
 
 class CommandStateInterface:
@@ -198,7 +198,7 @@ class CommandProcessor:
 
     def _cmd_help(self, _parts):
         lines = [
-            f"\n{self.P.CYN}/// BONEAMANITA 15.4.1 TERMINAL ///{self.P.RST}",
+            f"\n{self.P.CYN}/// BONEAMANITA 15.5.0 TERMINAL ///{self.P.RST}",
             f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n"]
         structure = {
             "SURVIVAL":    ["/status", "/inventory", "/look"],

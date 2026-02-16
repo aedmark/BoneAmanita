@@ -1,5 +1,81 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.5.0: "THE TENSEGRITY UPDATE" (SLASH PROTOCOL)**
+
+_“We broke the flat circle. Gravity is now a choice, and the spine handles its own weight.”_
+
+---
+
+#### **🦴 SPINAL RECONSTRUCTION (`bone_types.py` & `bone_core.py`)**
+
+- **The Tensegrity Structure:**
+- **Composition over Inheritance:** Refactored `PhysicsPacket` from a flat, 30-variable dataclass into a composed triad of **Energy** (Voltage/Entropy), **Matter** (Words/Vectors), and **Space** (Zone/Drag).
+- **The Facade Pattern:** Implemented backward-compatible properties so existing logic (e.g., `packet.voltage`) still works while routing data to the new `EnergyState` sub-object.
+
+- **The Circuit Breaker (`EventBus`):**
+- **Toxic Listener Containment:** The Event Bus no longer swallows exceptions silently. It now tracks failure counts per listener.
+- **Automatic Amputation:** If a listener fails 3 times, it is unsubscribed to prevent "zombie processes" from corrupting the cycle.
+
+#### **👻 THE GREAT UNBINDING (`bone_genesis.py` & `bone_brain.py`)**
+
+- **Singleton Exorcism:**
+- **Dependency Injection:** Removed the global `LoreManifest._INSTANCE`. The Lore system is now instantiated by `BoneGenesis` and injected explicitly into `CortexServices` and `TheAkashicRecord`.
+- **Neural Wiring:** `PromptComposer`, `DreamEngine`, and `ResponseValidator` no longer import `TheLore` from the global scope. They request access via their service layer, making the brain testable in isolation.
+
+#### **👁️ SENSORY INTEGRATION (`bone_physics.py` & `bone_gui.py`)**
+
+- **The Sorting Hat (`QuantumObserver`):**
+- **Packet Packing:** Updated the observer to sort raw metrics (e.g., lexical density, graph mass) into the correct Tensegrity buckets before sealing the `PhysicsPacket`.
+
+- **The Smart Projector (`bone_gui.py`):**
+- **Polymorphic Rendering:** Implemented a smart `_extract` helper in the `Projector` class. The GUI can now render physics data regardless of whether it receives a raw Object (via properties) or a serialized Nested Dictionary (via JSON).
+
+#### **🚨 SAFETY PROTOCOLS (`bone_main.py`)**
+
+- **The Self-Reliant Panic Room:**
+- **Zero-Dependency Crash:** Refactored `PanicRoom.get_safe_physics()` to generate a valid Tensegrity packet without reading from disk or calling the Lore system, ensuring the system can crash safely even if the hard drive is missing.
+
+---
+
+### **BONEAMANITA v15.4.2: "THE SURGICAL SUITE" (DATA-DRIVEN MIND)**
+
+_“We stopped hardcoding the ghosts. Now they live in the JSON, where they belong.”_
+
+---
+
+#### **🩻 THE GOD-OBJECT EXORCISM (`bone_main.py` & `bone_cycle.py`)**
+
+- **Kernel Decoupling:**
+    - **`BoneAmanita.process_turn`:** Stripped of mechanic micromanagement. The kernel no longer manually checks for loot, applies cosmic physics patches, or runs bureaucratic audits.
+    - **Delegation Protocol:** These logic flows were surgically grafted into the **Simulation Phases** where they belong:
+        - **Loot Parsing** ➔ Moved to `ObservationPhase` (Input Analysis).
+        - **Cosmic Physics** ➔ Moved to `NavigationPhase` (World State).
+        - **Bureau Audits** ➔ Moved to `TheCortex.process` (Output Stamping).
+
+#### **🧠 THE DATA-DRIVEN CORTEX (`bone_brain.py` & `bone_drivers.py`)**
+
+- **Exorcising Magic Strings:**
+    - **`PromptComposer` & `ResponseValidator`:** No longer contain hardcoded lists of "banned phrases" or "style protocols." These are now hydrated dynamically from `TheLore` (`system_prompts.json` and `style_crimes.json`), allowing for hot-swappable censorship and style guides.
+    - **`ChorusDriver`:** Archetype voices are no longer hardcoded in Python; they are pulled from `lenses.json`, allowing the choir to evolve without code deploys.
+
+#### **🎒 LOGISTICS & INVENTORY (`bone_inventory.py`)**
+
+- **Registry Cleanup:**
+    - **Debug Artifacts Removed:** Deleted `_seed_test_items()`. The system no longer hallucinates a "sphere" or "red key" on every boot.
+    - **Dynamic Triggers:** "Loot triggers" (e.g., *picked up*, *grabbed*) are now loaded from `gordon.json` via `TheLore` instead of being hardcoded.
+
+#### **🖥️ GLASS TERMINAL v1.9 (`bone_gui.py` & `bone_app.py`)**
+
+- **UX Polish:**
+    - **Widescreen Dashboard:** Expanded render width from 60 to 78 characters to let the data breathe.
+    - **Human-Readable Labels:** Translated cryptic icons into plain English (`VOLT`, `DRAG`, `VEC`).
+    - **Unlocked Name Tags:** Increased role truncation limit (15 ➔ 30 chars) so "THE ARCHITECT" is no longer decapitated.
+- **SLASH Integration:**
+    - Added specific log formatting (`🗡️`) for **SLASH Council** interventions (Santiago, Pinker, et al.).
+    - Bumped splash screen version to **v1.9**.
+
+---
+
 ### **BONEAMANITA v15.4.1: "THE ANATOMY UPDATE" (SLASH PROTOCOL)**
 
 _“We severed the nerves to save the soul. The body keeps the score, but the story writes the ending.”_
@@ -29,6 +105,7 @@ _“We severed the nerves to save the soul. The body keeps the score, but the st
 - **Village Wiring:** Rewired `GordonKnot` inventory tests to correctly consult `TheTinkerer` in `bone_village.py`.
 - **Green Board:** Achieved 28/28 pass rate on the updated architecture.
 
+---
 
 ### **BONEAMANITA v15.4.0: "THE GLACIER PROTOCOL" (VSL v1.8)**
 

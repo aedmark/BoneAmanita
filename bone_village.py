@@ -4,7 +4,7 @@ import random
 from typing import List, Dict, Any, Tuple, Optional, Set
 from dataclasses import dataclass, field, asdict
 from bone_types import Prisma, PhysicsPacket
-from bone_core import TheLore, EventBus
+from bone_core import LoreManifest, EventBus
 from bone_config import BoneConfig
 from bone_physics import PhysicsDelta
 from bone_drivers import UserProfile
@@ -296,7 +296,7 @@ class TownHall:
         self.akashic = akashic_ref
         self.navigator = navigator_ref
         self.seeds: List[ParadoxSeed] = []
-        seed_data = TheLore.get("SEEDS") or []
+        seed_data = LoreManifest.get("SEEDS") or []
         for s in seed_data:
             if "question" in s and "triggers" in s:
                 self.sow_seed(s["question"], set(s["triggers"]))
@@ -317,7 +317,7 @@ class TownHall:
 
     def conduct_census(self, packet: PhysicsPacket, host_stats: Any) -> str:
         latency = getattr(host_stats, "latency", 0.0) if host_stats else 0.0
-        almanac = TheLore.get("ALMANAC") or {}
+        almanac = LoreManifest.get("ALMANAC") or {}
         forecasts = almanac.get("FORECASTS", {})
         current_node = self.navigator.world_graph.get(self.navigator.current_node_id)
         loc_name = current_node.name if current_node else "UNKNOWN"
@@ -379,12 +379,12 @@ class DeathGen:
 
     @classmethod
     def load_protocols(cls):
-        if TheLore.get("DEATH") is None:
-            TheLore.inject("DEATH", cls._FALLBACK_PROTOCOLS)
+        if LoreManifest.get("DEATH") is None:
+            LoreManifest.inject("DEATH", cls._FALLBACK_PROTOCOLS)
 
     @staticmethod
     def eulogy(packet: PhysicsPacket, mito_state: Any, trauma_vector: Dict = None) -> Tuple[str, str]:
-        death_data = TheLore.get("DEATH")
+        death_data = LoreManifest.get("DEATH")
         if not death_data:
             death_data = DeathGen._FALLBACK_PROTOCOLS
         cause = DeathGen._determine_cause(packet, mito_state, trauma_vector)

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, List, Any, Tuple
 from bone_spores import ImmuneMycelium, BioLichen, BioParasite
 from bone_lexicon import TheLexicon
-from bone_core import Prisma, TheLore
+from bone_core import Prisma, LoreManifest
 from bone_config import BoneConfig
 
 """ DATA STRUCTURES """
@@ -169,7 +169,7 @@ class MitochondrialForge:
     def __init__(self, state_ref: MitochondrialState, events_ref):
         self.state = state_ref
         self.events = events_ref
-        full_narrative = TheLore.get("BIO_NARRATIVE") or {}
+        full_narrative = LoreManifest.get("BIO_NARRATIVE") or {}
         self.narrative = full_narrative.get(
             "MITO",
             {
@@ -548,7 +548,7 @@ class SomaticLoop:
         self.semantic_doctor = SemanticEndocrinologist(memory_ref, lexicon_ref)
 
         """Config Loading"""
-        self.narrative_data = TheLore.get("BIO_NARRATIVE") or {}
+        self.narrative_data = LoreManifest.get("BIO_NARRATIVE") or {}
         if not self.narrative_data:
             if hasattr(self.events, "log"):
                 self.events.log(

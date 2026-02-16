@@ -3,9 +3,8 @@
 import json, os, random, time, tempfile
 from collections import deque
 from typing import List, Tuple, Optional, Dict, Any, Set
-
 from bone_lexicon import TheLexicon
-from bone_core import EventBus, TheLore, BoneJSONEncoder
+from bone_core import EventBus, LoreManifest, BoneJSONEncoder
 from bone_types import Prisma
 from bone_config import BoneConfig
 

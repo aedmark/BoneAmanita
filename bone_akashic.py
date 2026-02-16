@@ -3,12 +3,11 @@
 import json
 import os
 from typing import Dict, Any, Tuple, cast, List, Set
-from bone_core import TheLore, LoreManifest, BoneJSONEncoder
+from bone_core import LoreManifest, BoneJSONEncoder
 from bone_types import Prisma
 
-
 class TheAkashicRecord:
-    def __init__(self):
+    def __init__(self, lore_manifest: 'LoreManifest', events_ref=None):
         self.discovered_words: Dict[str, str] = {}
         self.lens_cooccurrence: Dict[Tuple[str, str], int] = {}
         self.ingredient_affinity: Dict[str, int] = {}
@@ -17,7 +16,8 @@ class TheAkashicRecord:
         self.RECIPE_THRESHOLD = 3
         self.HYBRID_LENS_THRESHOLD = 5
         self.MAX_SHADOW_CAPACITY = 50
-        self.lore = TheLore
+        self.lore = LoreManifest
+        self.events = events_ref
         self.shadow_stock: List[Dict] = []
         self._load_mythos_state()
 
