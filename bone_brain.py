@@ -301,7 +301,18 @@ class PromptComposer:
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
         inv_str = self._format_inventory(state, modifiers)
         inventory_block = f"INVENTORY: {inv_str}\n" if modifiers["include_inventory"] else ""
-        history_str = "\n".join(state.get("dialogue_history", [])[-15:])
+        raw_history = state.get("dialogue_history", [])
+        history_str = ""
+        char_limit = 8000
+        current_chars = 0
+        kept_lines = []
+        for line in reversed(raw_history):
+            line_len = len(line)
+            if current_chars + line_len > char_limit:
+                break
+            kept_lines.append(line)
+            current_chars += line_len
+        history_str = "\n".join(reversed(kept_lines))
         system_injection = ""
         if ballast:
             system_injection = (

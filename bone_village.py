@@ -96,7 +96,6 @@ class TheTinkerer:
         resonance = self.tool_resonance.get(old_name, 0.0)
         if resonance < 2.5:
             return
-        if "OF_" in old_name: return
         if random.random() < (resonance * 0.05):
             if hasattr(self.akashic, 'forge_new_item'):
                 new_name, new_data = self.akashic.forge_new_item(vector)
@@ -349,7 +348,7 @@ class TownHall:
             return f"{Prisma.YEL}📢 HEAR YE: Voltage Critical!{Prisma.RST}"
         return None
 
-    def _on_item_drop(self, payload):
+    def on_item_drop(self, payload):
         item = payload.get("item")
         if item:
             self.events.log(f"Town Hall noticed you dropped {item}.", "VILLAGE")

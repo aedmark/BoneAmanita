@@ -53,7 +53,6 @@ class ZenGarden:
         self.stillness_streak = 0
         return 0.0, None
 
-
 class TheBureau:
     def __init__(self):
         self.stamp_count = 0
@@ -61,8 +60,7 @@ class TheBureau:
         self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
         lex_data = LoreManifest.get_instance().get("LEXICON") or {}
         self.buzzwords = set(lex_data.get("bureau_buzzwords", [
-            "synergy", "paradigm", "leverage", "utilize"
-        ]))
+            "synergy", "paradigm", "leverage", "utilize"]))
         self.crimes = []
         self.crime_data = LoreManifest.get_instance().get("STYLE_CRIMES") or {}
         if "PATTERNS" in self.crime_data:

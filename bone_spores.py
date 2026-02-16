@@ -8,8 +8,6 @@ from bone_core import EventBus, LoreManifest, BoneJSONEncoder
 from bone_types import Prisma
 from bone_config import BoneConfig
 
-"""HELPER FUNCTIONS"""
-
 def _access_config_path(root, path, value=None, set_mode=False):
     parts = path.split(".")
     target = root
@@ -39,8 +37,6 @@ def _access_config_path(root, path, value=None, set_mode=False):
             return getattr(target, leaf, None)
     except (AttributeError, KeyError, TypeError):
         return None
-
-"""PERSISTENCE LAYER"""
 
 class LocalFileSporeLoader:
     def __init__(self, directory="memories"):
@@ -175,12 +171,7 @@ class SubconsciousStrata:
             return None
         return found
 
-
-"""MEMORY CORE (GRAPH LOGIC)"""
-
-
 class MemoryCore:
-    """Handles the raw graph operations: Synapses, Weights, Pruning."""
     def __init__(self, events_ref, subconscious_ref):
         self.events = events_ref
         self.subconscious = subconscious_ref
@@ -194,8 +185,7 @@ class MemoryCore:
             "ENT": {"antigen", "toxin", "broken"},
             "PHI": {"thermal", "photo"},
             "PSI": {"abstract", "sacred", "idea"},
-            "BET": {"social", "suburban", "play"}
-        }
+            "BET": {"social", "suburban", "play"}}
 
     def illuminate(self, vector: Dict[str, float], limit: int = 5) -> List[str]:
         if not self.graph: return []
@@ -264,8 +254,7 @@ class MemoryCore:
         return f"📉 HOMEOSTATIC SCALING: Decayed {total_decayed} synapses. Pruned {pruned_count} weak connections."
 
     def cannibalize(
-        self, current_tick, preserve_current=None
-    ) -> Tuple[Optional[str], str]:
+        self, current_tick, preserve_current=None) -> Tuple[Optional[str], str]:
         protected = set()
         if preserve_current:
             if isinstance(preserve_current, list):
@@ -273,7 +262,6 @@ class MemoryCore:
             else:
                 protected.add(preserve_current)
         protected.update(self.cortical_stack)
-
         candidates = []
         for k, v in self.graph.items():
             edge_count = len(v["edges"])
@@ -282,13 +270,10 @@ class MemoryCore:
             if k in protected:
                 base_score += 500.0
             candidates.append((k, v, base_score))
-
         if not candidates:
             return None, "MEMORY EMPTY. NOTHING TO EAT."
-
         candidates.sort(key=lambda x: x[2])
         victim, data, score = candidates[0]
-
         mass = sum(data["edges"].values())
         lifespan = current_tick - data.get("strata", {}).get("birth_tick", current_tick)
         fossil_data = {
@@ -296,25 +281,17 @@ class MemoryCore:
             "mass": round(mass, 2),
             "lifespan": lifespan,
             "edges": data["edges"],
-            "death_tick": current_tick,
-        }
+            "death_tick": current_tick,}
         self.subconscious.bury(fossil_data)
-
         del self.graph[victim]
         for node in self.graph:
             if victim in self.graph[node]["edges"]:
                 del self.graph[node]["edges"][victim]
-
         return victim, f"REPRESSED: '{victim}' (Score {score:.1f} -> Subconscious)"
-
-
-"""THE COORDINATOR"""
-
 
 class MycelialNetwork:
     def __init__(
-        self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None
-    ):
+        self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None):
         self.events = events
         self.loader = loader if loader else LocalFileSporeLoader()
         self.session_id = f"session_{int(time.time())}"
@@ -331,7 +308,6 @@ class MycelialNetwork:
         self.session_health = getattr(BoneConfig, "MAX_HEALTH", 100.0)
         self.session_stamina = getattr(BoneConfig, "MAX_STAMINA", 100.0)
         self.session_trauma_vector = {}
-
         if seed_file:
             self.ingest(seed_file)
 
@@ -345,8 +321,6 @@ class MycelialNetwork:
 
     def calculate_mass(self, node):
         return self.memory_core.calculate_mass(node)
-
-    """ECOSYSTEM DELEGATION"""
 
     def run_ecosystem(self, physics: Dict, stamina: float, tick: int) -> List[str]:
         logs = []
@@ -390,8 +364,6 @@ class MycelialNetwork:
     def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
         return self.memory_core.prune_synapses(scaling_factor, prune_threshold)
 
-    """MEMORY OPERATIONS"""
-
     def encode(self, clean_words, physics, governor_mode):
         significance = physics.get("voltage", 0.0)
         if governor_mode == "FORGE":
@@ -402,16 +374,14 @@ class MycelialNetwork:
             "trigger": clean_words[:3] if clean_words else ["void"],
             "context": governor_mode,
             "significance": significance,
-            "timestamp": time.time(),
-        }
+            "timestamp": time.time(),}
         if significance > self.memory_core.consolidation_threshold:
             self.memory_core.short_term_buffer.append(engram)
             return True
         return False
 
     def check_for_resurrection(
-        self, input_words: List[str], voltage: float
-    ) -> Optional[str]:
+        self, input_words: List[str], voltage: float) -> Optional[str]:
         if voltage < 60.0:
             return None
         for word in input_words:
@@ -429,21 +399,16 @@ class MycelialNetwork:
         tick: int,
         resonance=5.0,
         learning_mod=1.0,
-        desperation_level=0.0,
-    ) -> Tuple[Optional[str], List[str]]:
+        desperation_level=0.0, ) -> Tuple[Optional[str], List[str]]:
         if not clean_words:
             return None, []
         valuable = self._filter_valuable_matter(clean_words)
         self.cortical_stack.extend(valuable)
         if len(self.graph) > BoneConfig.MAX_MEMORY_CAPACITY:
             if desperation_level < 0.6:
-                return (
-                    f"CORTICAL SATURATION: Memory full & Glucose High. Input rejected.",
-                    [],
-                )
+                return (f"CORTICAL SATURATION: Memory full & Glucose High. Input rejected.", [],)
             victim, log_msg = self.memory_core.cannibalize(
-                tick, preserve_current=clean_words[0]
-            )
+                tick, preserve_current=clean_words[0])
             if not victim:
                 return f"MEMORY FULL: Cortical Lock. Input rejected.", []
         else:
@@ -464,11 +429,9 @@ class MycelialNetwork:
                 if prev not in self.graph:
                     self.graph[prev] = {"edges": {}, "last_tick": tick}
                 self.memory_core.strengthen_link(
-                    current, prev, learning_rate, decay_rate
-                )
+                    current, prev, learning_rate, decay_rate)
                 self.memory_core.strengthen_link(
-                    prev, current, learning_rate, decay_rate
-                )
+                    prev, current, learning_rate, decay_rate)
         new_wells = self._detect_new_wells(valuable, tick)
         return log_msg, ([victim] if victim else []) + new_wells
 
@@ -496,8 +459,7 @@ class MycelialNetwork:
                         node_data["strata"] = {
                             "birth_tick": tick,
                             "birth_mass": mass,
-                            "stability_index": 0.0,
-                        }
+                            "stability_index": 0.0,}
                         new_wells.append(w)
                     else:
                         age = max(1, tick - node_data["strata"]["birth_tick"])
@@ -515,8 +477,6 @@ class MycelialNetwork:
                 return (0.5, 0.5)
         return (0.0, 0.0)
 
-    """SEED & GENETICS LOGIC"""
-
     def _load_seeds(self):
         from bone_village import ParadoxSeed
 
@@ -530,8 +490,7 @@ class MycelialNetwork:
                 loaded_seeds.append(seed)
         except Exception:
             loaded_seeds = [
-                ParadoxSeed("Does the mask eat the face?", {"mask", "face", "hide"})
-            ]
+                ParadoxSeed("Does the mask eat the face?", {"mask", "face", "hide"})]
         return loaded_seeds
 
     def tend_garden(self, current_words):
@@ -710,7 +669,7 @@ class MycelialNetwork:
             if not s.bloomed]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BONEAMANITA_15.4.1",
+            "genome": "BONEAMANITA_15.4.3",
             "session_id": self.session_id,
             "parent_id": self.session_id,
             "parent_id": self.session_id,

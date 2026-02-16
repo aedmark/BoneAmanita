@@ -1,13 +1,12 @@
-""" bone_diag.py - The Grand Diagnostic Suite (v2.1)
-    "Trust, but verify. Then verify the verification."
-"""
+""" bone_diag.py - The Grand Diagnostic Suite - "Trust, but verify. Then verify the verification." """
 
 import os, json, time
 import traceback
 from dataclasses import dataclass, field
+from typing import List, Tuple, Optional, Dict
 
 from bone_main import BoneAmanita, ConfigWizard
-from bone_core import Prisma
+from bone_core import Prisma, EventBus
 from bone_types import PhysicsPacket
 from bone_soul import NarrativeSelf
 from bone_protocols import KintsugiProtocol, TheBureau, TheFolly
@@ -22,7 +21,6 @@ except ImportError:
     LLMInterface = None
 
 class LogTrap:
-    """Catches EventBus signals to verify internal comms."""
     def __init__(self):
         self.logs = []
     def catch(self, payload):
@@ -32,16 +30,45 @@ class LogTrap:
         return any(substring in log for log in self.logs)
 
 @dataclass
-class MockEngine:
-    tick_count: int = 10
-    phys: 'MockPhys' = None
-    lex: 'MockLexicon' = None
-    akashic: 'MockAkashic' = None
+class MockLexicon:
+    @staticmethod
+    def sanitize(text: str) -> List[str]: return text.split()
+    @staticmethod
+    def classify(word: str) -> Tuple[Optional[str], float]: return "abstract", 0.5
+    @staticmethod
+    def get_random(cat: str) -> str: return "test_word"
+    @staticmethod
+    def measure_viscosity(word: str) -> float: return 0.5
+
+@dataclass
+class MockAkashic:
+    def calculate_manifold_shift(self, archetype: str, traits: Dict) -> Dict: return {}
+    def forge_new_item(self, vector: Dict) -> Tuple[str, Dict]: return "Artifact", {}
+
+@dataclass
+class MockPacket:
+    clean_words: list = field(default_factory=list)
+    voltage: float = 0.0
+    narrative_drag: float = 0.0
+    perfection_streak: int = 0
+    zone: str = "VOID"
+    def to_dict(self): return self.__dict__
+
+@dataclass
+class MockObserver:
+    last_physics_packet: MockPacket = field(default_factory=MockPacket)
 
 @dataclass
 class MockPhys:
-    observer: 'MockObserver' = None
+    observer: MockObserver = field(default_factory=MockObserver)
     def to_dict(self): return {"voltage": 10.0, "narrative_drag": 5.0, "zone": "TEST_LAB"}
+
+@dataclass
+class MockEngine:
+    tick_count: int = 10
+    phys: Optional[MockPhys] = None
+    lex: Optional[MockLexicon] = None
+    akashic: Optional[MockAkashic] = None
 
 @dataclass
 class MockObserver:
@@ -56,7 +83,10 @@ class MockPacket:
     zone: str = "VOID"
     def to_dict(self): return self.__dict__
 
-class MockEventBus:
+class MockEventBus(EventBus):
+    def __init__(self):
+        super().__init__()
+        self.subscribers = {}
     def log(self, message, channel="TEST", tags=None): pass
     def subscribe(self, channel, callback): pass
     def __getattr__(self, name): return lambda *args, **kwargs: None
@@ -170,7 +200,7 @@ class GrandDiagnostic:
                 self.log("Soul Died in Isolation", "FAIL")
             soul.traits.wisdom = 0.5
             packet = {"voltage": 20.0, "narrative_drag": 10.0}
-            for _ in range(12): soul._synaptic_dance(packet, {})
+            for _ in range(12): soul.synaptic_dance(packet, {})
             if "/" in soul.archetype or "HIGH-" in soul.archetype:
                 self.log("Soul Synthesis Triggered", "PASS")
             else:
@@ -361,27 +391,22 @@ class GrandDiagnostic:
     def phase_11_memory_pressure(self):
         self.header("PHASE 11: MEMORY PRESSURE (The Drain)")
         test_file = "test_subconscious.jsonl"
+        if os.path.exists(test_file): os.remove(test_file)
         try:
             strata = SubconsciousStrata(filename=test_file)
-
             print(f"   {Prisma.GRY}>>> Injecting 1,100 memories...{Prisma.RST}")
             for i in range(1100):
                 strata.index.add(f"memory_{i}")
-
             with open(test_file, "w") as f:
                 for i in range(1100):
                     f.write(json.dumps({"word": f"mem_{i}", "buried_at": time.time()}) + "\n")
-
             strata.bury({"word": "straw_that_broke_camel", "data": "test"})
-
             with open(test_file, "r") as f:
                 count = sum(1 for _ in f)
-
             if count < 1000:
                 self.log(f"Drain System Active (Count reduced to {count})", "PASS")
             else:
                 self.log(f"Drain Clogged (Count {count} > 1000)", "FAIL")
-
         except Exception as e:
             self.log(f"Memory Test Failed: {e}", "FAIL")
         finally:

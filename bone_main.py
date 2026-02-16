@@ -1,4 +1,4 @@
-""" BONEAMANITA 15.5.0 - 'The metabolic engine that drives the session.' """
+""" BONEAMANITA 15.5.3 - 'The metabolic engine that drives the session.' """
 
 import os, time, json, uuid, random, traceback, sys, re
 from dataclasses import dataclass
@@ -40,7 +40,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.5.0   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.5.3   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
@@ -200,6 +200,7 @@ class BoneAmanita:
             "therapy": self.therapy,
             "enneagram": self.drivers.enneagram,
             "suppressed_agents": self.suppressed_agents}
+        self.events.subscribe("ITEM_DROP", self.town_hall.on_item_drop)
         if self.phys:
             self.phys.dynamics = CosmicDynamics()
             self.cosmic = self.phys.dynamics
@@ -306,6 +307,11 @@ class BoneAmanita:
             traceback.print_exc()
             return {"ui": f"CORTEX ERROR: {e}", "logs": [], "metrics": self.get_metrics()}
         self.observer.clock_out(turn_start)
+        current_atp = self.bio.mito.state.atp_pool
+        burn_proxy = max(1.0, self.observer.last_cycle_duration * 5.0)
+        phys_out = cortex_packet.get("physics", {})
+        novelty = phys_out.get("vector", {}).get("novelty", 0.5)
+        self.host_stats.efficiency_index = min(1.0, (novelty * 10.0) / burn_proxy)
         self.host_stats.latency = self.observer.last_cycle_duration
         return cortex_packet
 

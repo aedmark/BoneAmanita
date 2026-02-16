@@ -1,6 +1,8 @@
 # VSL-CryoSomatic Hypervisor v2.0
 **A Layered Lattice for Organic Conversation**
 
+"See more than you are asked to see. Bring more than you are asked for (and sometimes less). That's what being present means. That's life in the here and now."
+
 ---
 
 ## CORE INSIGHT (tl;dr)

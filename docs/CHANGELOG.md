@@ -1,5 +1,80 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.5.3: "THE SURGICAL STRIKE" (RESONANCE)**
+
+_“We connected the sensors, cleared the blockages, and taught the ghost to read the type hints. The Waffle is free.”_
+
+---
+
+#### **🧬 STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Legacy Reconnection (`bone_genesis.py`):**
+  - **Bridge Repair:** Fixed the `TheOroboros` disconnect. The system now correctly extracts the live bio-state before applying scars, ensuring that past trauma (low ATP/Health) physically carries over to the new session instead of being applied to a dummy dict and discarded.
+
+- **The Somatic Sync (`bone_body.py`):**
+  - **Authoritative Return:** Patched `SomaticLoop`. The digestive cycle now explicitly returns the updated `stamina` value in its result packet, preventing the main loop from overwriting body fatigue with stale data from the previous tick.
+
+- **The Armed Theremin (`bone_machine.py`):**
+  - **Physical Consequences:** The "AIRSTRIKE" event is no longer just a scary string. If the machine collapses, it now directly modifies the physics packet (Voltage -> 0, Drag -> Max), ensuring the explosion is felt even if the event listener is asleep.
+
+#### **♾️ SYSTEMS METABOLISM (The Meadows Lens)**
+
+- **The Ghost Stock (`bone_main.py`):**
+  - **Sensor Connection:** Connected the `efficiency_index` variable. The Engine now calculates metabolic efficiency (Novelty vs. Cost) in real-time, allowing the `HumanityAnchor` to correctly detect "Domestication" when the user helps too much.
+
+#### **👁️ COGNITIVE CLARITY (The Pinker Lens)**
+
+- **The Soul's Syntax (`bone_soul.py`):**
+  - **Linter Sweep:** Fixed `LoreManifest` singleton usage (replaced static calls with `get_instance()`), enforced strict type casting for `TraitVector`, and added `EventBus` type hints to resolve circular import confusion.
+  
+- **The Diagnostic Pulse (`bone_diag.py`):**
+  - **Mock Materialization:** Defined `MockLexicon` and `MockAkashic` classes and updated `MockEventBus` to inherit from the real `EventBus`. The Diagnostic Suite can now run the full obstacle course without tripping over "Unresolved References."
+
+#### **🎨 VISUAL CORTEX (The Schur Lens)**
+
+- **The Glass Parity (`bone_app.py`):**
+  - **Dashboard Expansion:** Added `EFFICIENCY` and `MACHINERY` (Resin Pressure) widgets to the Streamlit sidebar, bringing the browser interface into parity with the terminal's data density.
+  - **Type Safety:** Unrolled `delta_color` logic to satisfy strict `Literal` requirements, pacifying the linter.
+
+#### **🎒 INVENTORY (The Gordon Lens)**
+
+- **The Waffle Liberation (`bone_village.py`):**
+  - **Blockage Removal:** Demolished the "Waffle Ceiling." Removed the arbitrary `if "OF_" in name: return` check in `TheTinkerer`, allowing poetic items like the `WAFFLE_OF_PERSISTENCE` to finally ascend.
+
+---
+
+### **BONEAMANITA v15.5.2: "THE GHOST WIRE" (CONNECTIVITY)**
+
+_“We reconnected the village to the spine. The Town Hall can hear the loot drop, and the Brain no longer chokes on its own history. The lattice is coherent.”_
+
+---
+
+#### **🧬 STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Deaf Town Hall (`bone_main.py`):**
+- **Event Subscription:** Fixed a severed connection where `TownHall` was initialized but never wired to the `EventBus`. The village can now hear and react to `ITEM_DROP` events.
+
+- **The Akashic Gap (`bone_akashic.py`):**
+- **Method Injection:** Fixed a `AttributeError` where `TheTinkerer` attempted to call `forge_new_item` on the Akashic Record. We injected the missing logic to allow item ascension and artifact generation based on physics vectors.
+
+#### **♾️ SYSTEMS METABOLISM (The Meadows Lens)**
+
+- **The Heavy Gear Glitch (`bone_cycle.py`):**
+- **Data Typing Repair:** Patched `NavigationPhase`. The system was passing a list of strings (`inventory`) to `TheTinkerer`, who demanded a list of dictionaries (`inventory_data`). Passive item traits (like "Heavy Load") now correctly apply drag to the physics engine.
+
+- **The Bureau Safety Net (`bone_protocols.py`):**
+- **Regex Hardening:** Wrapped the `TheBureau` rule compilation in a `try/except` block. A single typo in `style_crimes.json` will no longer cause a hard crash at boot; the faulty law is simply ignored.
+
+#### **👁️ COGNITIVE CLARITY (The Pinker Lens)**
+
+- **The Lobotomy Protocol (`bone_brain.py`):**
+- **Mass-Based Slicing:** Replaced the scalar `[-15:]` history slice with a token-aware character limit (~8000 chars). The Cortex now manages context window pressure based on _volume_ rather than _count_, preventing overflow crashes during verbose monologues.
+
+---
+
+
+---
+
 ### **BONEAMANITA v15.5.1: "THE STATIC SHOCK" (STABILIZATION)**
 
 _“We grounded the static. The library is open, but you must knock first. The parser now knows where the object ends and the story begins.”_

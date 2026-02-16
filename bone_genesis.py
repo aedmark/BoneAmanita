@@ -44,11 +44,20 @@ class BoneGenesis:
         oroboros = TheOroboros()
         if hasattr(embryo.physics, "observer"):
             dummy_phys = {"narrative_drag": 0.0, "voltage": 10.0}
-            logs = oroboros.apply_legacy(dummy_phys, {})
+            live_bio_state = embryo.bio.to_dict()
+            logs = oroboros.apply_legacy(dummy_phys, live_bio_state)
             if logs:
                 events.log(f"⛓️ LEGACY SCARS: {', '.join(logs)}", "OROBOROS")
                 if hasattr(embryo.physics, 'dynamics'):
                     embryo.physics.dynamics.base_drag += dummy_phys["narrative_drag"]
+                if "biometrics" in live_bio_state and embryo.bio.biometrics:
+                    target_health = live_bio_state["biometrics"].get("health", 100.0)
+                    target_stamina = live_bio_state["biometrics"].get("stamina", 100.0)
+                    embryo.bio.biometrics.health = target_health
+                    embryo.bio.biometrics.stamina = target_stamina
+                if "mito" in live_bio_state and embryo.bio.mito:
+                    target_atp = live_bio_state["mito"].get("atp", 60.0)
+                    embryo.bio.mito.state.atp_pool = target_atp
         drivers = DriverRegistry(events)
         symbiosis = SymbiosisManager(events)
         return {

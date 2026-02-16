@@ -189,7 +189,10 @@ class TheTheremin:
         if self.decoherence_buildup > self.SHATTER_POINT:
             self.decoherence_buildup = 0.0
             self.classical_turns = 0
-            return False, resin_flow, f"💣 COLLAPSE: AIRSTRIKE INITIATED", "AIRSTRIKE"
+            if isinstance(physics, dict):
+                physics["narrative_drag"] = max(physics.get("narrative_drag", 0.0) + 20.0, 20.0)
+                physics["voltage"] = 0.0
+            return False, resin_flow, f"💣 COLLAPSE: AIRSTRIKE INITIATED (Drag +20, Voltage 0)", "AIRSTRIKE"
         if self.classical_turns > 3:
             critical_event = "CORROSION"
             theremin_msg = f"{theremin_msg or ''} | ⚠️ CORROSION"

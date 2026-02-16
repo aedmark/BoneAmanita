@@ -48,9 +48,12 @@ def format_log_entry(log_str):
     clean = re.sub(r'\x1b\[[0-9;]*m', '', log_str).strip()
 
     if "██" in clean or "♦ THE ARCHITECT" in clean: return None
-
     if "[BIO]" in clean: return f"🧬 {clean.replace('[BIO]', '')}"
     if "[PHYSICS]" in clean or "VOLTAGE" in clean: return f"⚡ {clean.replace('[PHYSICS]', '')}"
+    if "ASCENSION" in clean: return f"✨ {clean}"
+    if "AIRSTRIKE" in clean: return f"💣 {clean}"
+    if "LEGACY" in clean: return f"⛓️ {clean}"
+    if "EFFICIENCY" in clean: return f"📉 {clean}"
     if "[COUNCIL]" in clean: return f"⚖️ {clean.replace('[COUNCIL]', '')}"
     if "[SLASH]" in clean or "SANTIAGO" in clean or "PINKER" in clean: return f"🗡️ {clean}"
     if "CRITICAL" in clean: return f"🔴 {clean}"
@@ -87,11 +90,20 @@ def render_dashboard(eng_ref):
 
         st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.1f}%")
         st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"STAMINA: {stam:.1f}%")
-
         atp = 0.0
         if hasattr(eng_ref, 'bio') and eng_ref.bio and hasattr(eng_ref.bio, 'mito'):
-             atp = eng_ref.bio.mito.state.atp_pool
-        st.metric("ATP", f"{atp:.0f} J")
+            atp = eng_ref.bio.mito.state.atp_pool
+
+        eff = getattr(eng_ref.host_stats, 'efficiency_index', 1.0)
+        c_atp, c_eff = st.columns(2)
+        c_atp.metric("ATP", f"{atp:.0f} J")
+
+        if eff < 0.6:
+            c_eff.metric("EFFICIENCY", f"{eff:.2f}", delta_color="off")
+        elif eff > 1.2:
+            c_eff.metric("EFFICIENCY", f"{eff:.2f}", delta_color="inverse")
+        else:
+            c_eff.metric("EFFICIENCY", f"{eff:.2f}", delta_color="normal")
 
         if hasattr(eng_ref, 'consultant'):
             st.divider()
@@ -132,6 +144,19 @@ def render_dashboard(eng_ref):
         c3.metric("VOLT", f"{volts:.1f}v")
         c4.metric("DRAG", f"{drag:.1f}")
         st.info(f"📍 ZONE: {zone}")
+
+        if hasattr(eng_ref, 'phys') and hasattr(eng_ref.phys, 'theremin'):
+            theremin = eng_ref.phys.theremin
+            if theremin.decoherence_buildup > 1.0 or theremin.is_stuck:
+                st.divider()
+                st.subheader("MACHINERY")
+                resin = theremin.decoherence_buildup
+                max_resin = theremin.SHATTER_POINT
+                st.progress(min(1.0, resin / max_resin), text=f"RESIN PRESSURE: {resin:.1f}")
+                if theremin.is_stuck:
+                    st.error("⚠️ THEREMIN STUCK (AMBER)")
+                elif resin > (max_resin * 0.8):
+                    st.warning("💣 AIRSTRIKE IMMINENT")
 
         st.divider()
         st.subheader("INVENTORY")

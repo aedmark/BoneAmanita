@@ -37,8 +37,7 @@ class TheAkashicRecord:
         if not payload or not isinstance(payload, dict):
             return
         self.track_successful_forge(
-            payload.get("ingredient"), payload.get("catalyst"), payload.get("result")
-        )
+            payload.get("ingredient"), payload.get("catalyst"), payload.get("result"))
 
     def _on_mythology_update(self, payload):
         if not payload or not isinstance(payload, dict):
@@ -48,9 +47,7 @@ class TheAkashicRecord:
         if word and category:
             self.register_word(word, category)
 
-    def calculate_manifold_shift(
-        self, theta: str, e: Dict[str, float]
-    ) -> Dict[str, float]:
+    def calculate_manifold_shift(self, theta: str, e: Dict[str, float]) -> Dict[str, float]:
         bias = 0.0
         scalar = 1.0
         theta_upper = theta.upper()
@@ -67,6 +64,26 @@ class TheAkashicRecord:
     def _on_ghost_signal(self, payload):
         if payload:
             self.store_ghost_echo(payload)
+
+    def forge_new_item(self, vector: Dict[str, float]) -> Tuple[str, Dict]:
+        dominant_force = max(vector, key=vector.get) if vector else "ENT"
+        prefixes = {
+            "VEL": "Sonic", "STR": "Heavy", "ENT": "Void",
+            "PHI": "Solar", "PSI": "Psionic", "BET": "Hollow",
+            "E": "Primal", "DEL": "Manic"}
+        prefix = prefixes.get(dominant_force, "Ascended")
+        new_name = f"{prefix.upper()}_ARTIFACT_{int(vector.get(dominant_force, 0) * 10)}"
+        new_data = {
+            "name": new_name,
+            "description": f"A vibrating artifact humming with {dominant_force} energy.",
+            "function": "ARTIFACT",
+            "passive_traits": ["CONDUCTIVE_HAZARD"] if vector.get("PHI", 0) > 0.5 else [],
+            "value": 50.0}
+        gordon_data = self.lore.get("GORDON") or {}
+        registry = gordon_data.get("ITEM_REGISTRY", {})
+        registry[new_name] = new_data
+        self.lore.inject("GORDON", {"ITEM_REGISTRY": registry})
+        return new_name, new_data
 
     def save_all(self):
         self.save_to_disk("akashic_lexicon", self.discovered_words)

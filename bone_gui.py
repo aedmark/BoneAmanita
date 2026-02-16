@@ -9,7 +9,7 @@ class Projector:
     def __init__(self):
         self.width = 80
 
-    def _extract(self, physics_obj: Any, field: str, sub_field: str, default=0.0):
+    def _extract(self, physics_obj: Any, field: str, sub_field: str, default: Any = 0.0):
         if hasattr(physics_obj, sub_field):
             return getattr(physics_obj, sub_field)
         if isinstance(physics_obj, dict):

@@ -153,9 +153,7 @@ class MitochondrialForge:
             {
                 "NECROSIS": "Cellular collapse imminent.",
                 "APOPTOSIS": "Programmed cell death initiated.",
-                "GRINDING": "Metabolic gears are grinding.",
-            },
-        )
+                "GRINDING": "Metabolic gears are grinding.",},)
 
     def adjust_atp(self, delta: float, reason: str = ""):
         old = self.state.atp_pool
@@ -548,13 +546,17 @@ class SomaticLoop:
     def _package_result(self, resp_status, logs, chem_state=None, enzyme="NONE"):
         is_alive = resp_status == "RESPIRING" or resp_status == "ANAEROBIC"
         current_atp = self.bio.mito.state.atp_pool
+        current_stamina = 100.0
+        if self.bio.biometrics:
+            current_stamina = self.bio.biometrics.stamina
         return {
             "respiration": resp_status,
             "is_alive": is_alive,
             "logs": logs,
             "chemistry": chem_state or {},
             "enzyme": enzyme,
-            "atp": current_atp,}
+            "atp": current_atp,
+            "stamina": current_stamina}
 
 @dataclass
 class EndocrineSystem:

@@ -1,4 +1,4 @@
-# VSL-CryoSomatic Hypervisor v1.9 – Mod Chip Architecture
+# VSL-CryoSomatic Hypervisor– Mod Chip Architecture
 
 ## MOD CHIP – THE CODING SUITE (SLASH)
 

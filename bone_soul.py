@@ -2,15 +2,17 @@
  'We are the stories we tell ourselves.' """
 import json
 import os
-import time, random
+import random
+import time
 from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple
 
-from bone_core import LoreManifest
-from bone_types import Prisma
-from bone_config import BoneConfig
-from bone_lexicon import TheLexicon
 from bone_akashic import TheAkashicRecord
+from bone_config import BoneConfig
+from bone_core import LoreManifest, EventBus
+from bone_lexicon import TheLexicon
+from bone_types import Prisma
+
 
 @dataclass
 class CoreMemory:
@@ -31,7 +33,7 @@ class TraitVector:
     discipline: float = 0.5
     wisdom: float = 0.1
     empathy: float = 0.5
-    _FIELDS: Tuple[str] = field(init=False, repr=False)
+    _FIELDS: Tuple[str, ...] = field(init=False, repr=False, default=())
 
     def __post_init__(self):
         self._FIELDS = tuple(f.name for f in fields(self) if not f.name.startswith("_"))
@@ -72,7 +74,7 @@ class TraitVector:
 
 
 class TheEditor:
-    def __init__(self, lexicon_ref=None):
+    def __init__(self, lexicon_ref: Any = None):
         self.lex = lexicon_ref if lexicon_ref else TheLexicon
 
     def critique(self, chapter_title: str, stress_mode: bool = False) -> str:
@@ -84,44 +86,56 @@ class TheEditor:
                 if cat:
                     flavor = cat
                     break
-        narrative = LoreManifest.get("narrative_data", {})
+
+        narrative = {}
+        if hasattr(LoreManifest, 'get_instance'):
+             narrative = LoreManifest.get_instance().get("narrative_data") or {}
+
         if stress_mode:
-            antidote = self.lex.get_random("sacred").title()
-            vitality = self.lex.get_random("play").title()
-            template = random.choice(narrative.get("WITNESS_TEMPLATES", [
-                "The {flavor} is just a canvas. Paint it with {vitality}."]))
+            antidote = str(self.lex.get_random("sacred")).title()
+            vitality = str(self.lex.get_random("play")).title()
+
+            templates = narrative.get("WITNESS_TEMPLATES")
+            if not templates or not isinstance(templates, list):
+                templates = ["The {flavor} is just a canvas. Paint it with {vitality}."]
+
+            template = random.choice(templates)
             comment = template.format(flavor=flavor.title(), antidote=antidote, vitality=vitality)
             return f"{Prisma.CYN}[THE WITNESS]: Re: '{chapter_title}' - {comment}{Prisma.RST}"
         else:
-            flaw = self.lex.get_random("suburban").lower()
-            need = self.lex.get_random("kinetic").title()
-            template = random.choice(narrative.get("EDITOR_TEMPLATES", [
-                "Pacing is a bit {flavor}. We need more {need}."]))
+            flaw = str(self.lex.get_random("suburban")).lower()
+            need = str(self.lex.get_random("kinetic")).title()
+
+            templates = narrative.get("EDITOR_TEMPLATES")
+            if not templates or not isinstance(templates, list):
+                templates = ["Pacing is a bit {flavor}. We need more {need}."]
+
+            template = random.choice(templates)
             comment = template.format(flavor=flavor.title(), flaw=flaw, need=need)
             return f"{Prisma.GRY}[THE EDITOR]: Re: '{chapter_title}' - {comment}{Prisma.RST}"
 
 
 class HumanityAnchor:
-    def __init__(self, events_ref):
+    def __init__(self, events_ref: 'EventBus'):
         self.events = events_ref
         self.dignity_reserve = BoneConfig.ANCHOR.DIGNITY_MAX
         self.agency_lock = False
-        self.current_riddle_answers = None
+        self.current_riddle_answers: Optional[List[str]] = None
         self._LEXICAL_ANCHORS = {"sacred", "play", "social", "abstract"}
         self._VECTOR_ANCHORS = ["PSI", "DEL", "BET"]
 
     def audit_existence(self, physics_packet: dict, bio_state: dict) -> float:
         atp = bio_state.get("atp", 0)
         voltage = physics_packet.get("voltage", 0.0)
-        # Only audit if system is low-energy
         if atp < 5.0 and voltage < 5.0:
             return self._perform_dignity_check(physics_packet)
         return 0.0
 
     def _perform_dignity_check(self, physics_packet):
-        vector = physics_packet.get("vector", {})
-        counts = physics_packet.get("counts", {})
-        dim_resonance = sum(vector.get(k, 0) for k in self._VECTOR_ANCHORS)
+        vector: Dict[str, float] = physics_packet.get("vector", {})
+        counts: Dict[str, int] = physics_packet.get("counts", {})
+
+        dim_resonance = sum(vector.get(k, 0.0) for k in self._VECTOR_ANCHORS)
         lex_resonance = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS)
 
         if (dim_resonance + (lex_resonance * 0.5)) > 0.3:
@@ -139,10 +153,20 @@ class HumanityAnchor:
 
     def _engage_lockdown(self):
         self.agency_lock = True
-        riddles = LoreManifest.get("seeds", []) or [{"question": "Who are you?", "triggers": ["*"]}]
+
+        seeds = []
+        if hasattr(LoreManifest, 'get_instance'):
+            seeds = LoreManifest.get_instance().get("seeds") or []
+
+        riddles = seeds or [{"question": "Who are you?", "triggers": ["*"]}]
         selection = random.choice(riddles)
         riddle = selection.get("question", "Error?")
-        self.current_riddle_answers = selection.get("triggers", ["*"])
+
+        raw_triggers = selection.get("triggers", ["*"])
+        if isinstance(raw_triggers, list):
+            self.current_riddle_answers = raw_triggers
+        else:
+            self.current_riddle_answers = ["*"]
 
         self.events.log(f"{Prisma.RED}🔒 AGENCY LOCK: Dignity Critical.{Prisma.RST}", "SYS_LOCK")
         self.events.log(f"{Prisma.VIOLET}The Ghost demands a password: '{riddle}'{Prisma.RST}", "SOUL_QUERY")
@@ -155,7 +179,6 @@ class HumanityAnchor:
         if self.current_riddle_answers and "*" not in self.current_riddle_answers:
             passed = any(ans in clean for ans in self.current_riddle_answers)
         elif self.current_riddle_answers:
-            # Universal key: just speak significantly
             passed = len(clean.split()) > 4 and not clean.startswith("/")
 
         if passed:
@@ -169,7 +192,7 @@ class HumanityAnchor:
 class NarrativeSelf:
     SYSTEM_NOISE = {"look", "help", "exit", "wait", "inventory", "status", "quit", "save", "load", "score", "map", ""}
 
-    def __init__(self, engine_ref, events_ref, memory_ref, akashic_ref=None):
+    def __init__(self, engine_ref, events_ref: 'EventBus', memory_ref, akashic_ref=None):
         self.eng = engine_ref
         self.events = events_ref
         self.mem = memory_ref
@@ -233,7 +256,6 @@ class NarrativeSelf:
         if not self.current_obsession:
             return f"{Prisma.CYN}[SOUL STATE]: Drifting... The Muse is silent.{Prisma.RST}"
 
-        # Check existential threats
         stamina = getattr(self.eng, 'stamina', 100.0)
         health = getattr(self.eng, 'health', 100.0)
         if stamina < 20.0 and health < 40.0:
@@ -249,23 +271,23 @@ class NarrativeSelf:
     def crystallize_memory(self, physics_packet: Dict, bio_state: Dict, _tick: int) -> Optional[str]:
         if not physics_packet: return None
 
-        # 1. Manifold Shift (Legacy Influence)
         if self.eng and hasattr(self.eng, 'akashic') and hasattr(self.eng.akashic, 'calculate_manifold_shift'):
              shift = self.eng.akashic.calculate_manifold_shift(self.archetype, self.traits.to_dict())
-             physics_packet["voltage"] += shift.get("voltage_bias", 0.0)
-             physics_packet["narrative_drag"] *= shift.get("drag_scalar", 1.0)
+             v_bias = float(shift.get("voltage_bias", 0.0))
+             d_scalar = float(shift.get("drag_scalar", 1.0))
 
-        # 2. Existence Audit
+             current_v = float(physics_packet.get("voltage", 0.0))
+             current_d = float(physics_packet.get("narrative_drag", 1.0))
+
+             physics_packet["voltage"] = current_v + v_bias
+             physics_packet["narrative_drag"] = current_d * d_scalar
+
         if self.anchor.audit_existence(physics_packet, bio_state) > 0:
             self.traits.adjust("hope", BoneConfig.SOUL.TRAIT_MOMENTUM)
 
-        # 3. Synaptic Dance (Soul Physics)
-        dance_provenance = self._synaptic_dance(physics_packet, bio_state)
-
-        # 4. Identity Update
+        dance_provenance = self.synaptic_dance(physics_packet, bio_state)
         self._update_archetype()
 
-        # 5. Core Memory Forge
         voltage = physics_packet.get("voltage", 0.0)
         truth = physics_packet.get("truth_ratio", 0.0)
         if voltage > BoneConfig.SOUL.MEMORY_VOLTAGE_MIN and truth > BoneConfig.SOUL.MEMORY_TRUTH_MIN:
@@ -274,17 +296,11 @@ class NarrativeSelf:
 
     def find_obsession(self, lexicon_ref):
         if self.current_obsession and self.obsession_progress < 1.0: return
-
-        # Try finding organic focus from recent inputs
         focus, cat = self._seek_organic_focus(lexicon_ref)
         source = "ORGANIC"
-
-        # Fallback to memory
         if not focus:
             focus, cat = self._seek_memory_focus(lexicon_ref)
             source = "MEMORY"
-
-        # Fallback to synthesis
         if not focus:
             focus, cat, negate_cat = self._synthesize_obsession(lexicon_ref)
             source = "SYNTHETIC"
@@ -292,7 +308,6 @@ class NarrativeSelf:
 
         self.current_target_cat = cat or "abstract"
         self.current_obsession = self._title_obsession(focus, source, self.current_negate_cat)
-
         self.events.log(f"{Prisma.CYN}🧭 NEW MUSE ({source}): {self.current_obsession}{Prisma.RST}", "SOUL")
         self.obsession_neglect = 0.0
         self.obsession_progress = 0.0
@@ -300,8 +315,6 @@ class NarrativeSelf:
     def pursue_obsession(self, physics: Dict) -> str | None:
         if not self.current_obsession: return None
         clean_words = physics.get("clean_words", [])
-
-        # Check resonance
         hit = False
         if self.current_target_cat:
             target_words = TheLexicon.get(self.current_target_cat)
@@ -318,17 +331,13 @@ class NarrativeSelf:
         if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_FAIL:
             old = self.current_obsession
             self.chapters.append(f"Abandoned '{old}'")
-            self.find_obsession(TheLexicon) # Pivot
+            self.find_obsession(TheLexicon)
             return f"{Prisma.GRY}∞ ENTROPY: '{old}' collapsed. Pivoting.{Prisma.RST}"
         return None
-
-    # --- INTERNAL HELPERS ---
 
     def _update_archetype(self):
         prev = self.archetype
         t = self.traits
-
-        # Archetype Rules Engine
         if t.empathy > 0.8 and t.hope > 0.6: new_arch = "THE HEALER"
         elif t.empathy > 0.7 and t.discipline > 0.6: new_arch = "THE GARDENER"
         elif t.hope > 0.7 and t.curiosity > 0.6: new_arch = "THE POET"
@@ -345,22 +354,18 @@ class NarrativeSelf:
         else:
             self.archetype_tenure += 1
 
-    def _synaptic_dance(self, physics: Dict, bio_state: Dict) -> str:
-        # 1. Extract State
+    def synaptic_dance(self, physics: Dict, bio_state: Dict) -> str:
         voltage = physics.get("voltage", 0.0)
         drag = physics.get("narrative_drag", 0.0)
         oxy = bio_state.get("chem", {}).get("oxytocin", 0.0)
-
         move_name = "Drifting"
         provenance = []
 
-        # 2. Chemical Adjustments
         if oxy > 0.4:
             self.traits.adjust("empathy", oxy * 0.2)
             self.traits.adjust("hope", oxy * 0.1)
             provenance.append("Oxytocin")
 
-        # 3. Physics Adjustments
         is_manic = voltage > BoneConfig.SOUL.MANIC_TRIGGER
         is_heavy = drag > BoneConfig.SOUL.ENTROPY_DRAG_TRIGGER
 
@@ -381,11 +386,8 @@ class NarrativeSelf:
         elif 5.0 < voltage < 12.0 and drag < 2.0:
             move_name = "Flowing"
             self.traits.adjust("wisdom", 0.05)
-
-        # 4. Burnout Logic
         self._apply_burnout()
         self.traits.normalize(BoneConfig.SOUL.TRAIT_DECAY_NORMAL)
-
         return f"{move_name} [{', '.join(provenance)}]" if provenance else move_name
 
     def _apply_burnout(self):
@@ -401,13 +403,11 @@ class NarrativeSelf:
     def _seek_organic_focus(self, lex) -> Tuple[Optional[str], Optional[str]]:
         packet = self._safe_get_packet()
         if not packet or not packet.clean_words: return None, None
-
         candidates = []
         for w in packet.clean_words:
             if len(w) < 4 or w.lower() in self.SYSTEM_NOISE: continue
             visc = lex.measure_viscosity(w) + (0.2 if lex.get_current_category(w) else 0.0)
             candidates.append((w, visc))
-
         candidates.sort(key=lambda x: x[1], reverse=True)
         if candidates:
             word = candidates[0][0]
@@ -441,8 +441,6 @@ class NarrativeSelf:
     def _forge_core_memory(self, physics_packet, bio_state, voltage, dance_move):
         clean_words = physics_packet.get("clean_words", [])
         lesson = "The world is loud."
-
-        # Derive lesson from bio-state
         chem = bio_state.get("chem", {})
         if chem.get("oxytocin", 0) > 0.6: lesson = "We are not alone."
         elif chem.get("cortisol", 0) > 0.6: lesson = "Survival is the only metric."
@@ -455,14 +453,11 @@ class NarrativeSelf:
             emotional_flavor="MANIC" if voltage > 18.0 else "LUCID",
             lesson=lesson,
             impact_voltage=voltage)
-
         self.core_memories.append(memory)
         if len(self.core_memories) > BoneConfig.SOUL.MAX_CORE_MEMORIES:
-            self.core_memories.pop(0) # Simple FIFO for now
-
+            self.core_memories.pop(0)
         title = f"The Incident of the {random.choice(clean_words).title()}" if clean_words else "The Silent Incident"
         self.chapters.append(title)
-
         log = (f"{Prisma.MAG}✨ CORE MEMORY: '{title}'{Prisma.RST}\n"
                f"   Lesson: {lesson}\n   Genealogy: {dance_move}")
         self.events.log(log, "SOUL")

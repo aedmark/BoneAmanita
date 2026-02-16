@@ -395,6 +395,17 @@ class NavigationPhase(SimulationPhase):
             if entry_msg: ctx.log(entry_msg)
             env_logs = self.eng.navigator.apply_environment(physics)
             for e_log in env_logs: ctx.log(e_log)
+        if self.eng.gordon and self.eng.tinkerer:
+            inv_data = self.eng.gordon.get_inventory_data()
+            deltas = self.eng.tinkerer.calculate_passive_deltas(inv_data)
+            for delta in deltas:
+                if delta.field == "narrative_drag":
+                    if delta.operator == "ADD":
+                        physics.narrative_drag += delta.value
+                    elif delta.operator == "MULT":
+                        physics.narrative_drag *= delta.value
+                    ctx.log(
+                        f"{Prisma.GRY}🎒 GEAR: {delta.source} affects drag ({delta.operator} {delta.value}).{Prisma.RST}")
         orbit_state, drag_pen, orbit_msg = self.eng.cosmic.analyze_orbit(self.eng.mind.mem, ctx.clean_words)
         if orbit_msg: ctx.log(orbit_msg)
         physics.narrative_drag += drag_pen
@@ -853,7 +864,7 @@ class CycleSimulator:
     def handle_phase_crash(self, ctx, phase_name, error):
         print(f"\n{Prisma.RED}!!! CRITICAL {phase_name} CRASH !!!{Prisma.RST}")
         traceback.print_exc()
-        narrative = LoreManifest.get("narrative_data") or {}
+        narrative = LoreManifest.get_instance().get("narrative_data") or {}
         cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["System Failure."])
         eulogy = random.choice(cathedral_logs)
         ctx.log(f"{Prisma.RED}🏛️ CATHEDRAL COLLAPSE: \"{eulogy}\"{Prisma.RST}")
