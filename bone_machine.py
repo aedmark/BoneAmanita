@@ -75,7 +75,7 @@ class TheCrucible:
 
 class TheForge:
     def __init__(self):
-        gordon_data = LoreManifest.get("gordon") or {}
+        gordon_data = LoreManifest.get_instance().get("gordon") or {}
         self.recipes = gordon_data.get("RECIPES", [])
 
     @staticmethod

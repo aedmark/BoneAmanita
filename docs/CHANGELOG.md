@@ -1,5 +1,34 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.5.1: "THE STATIC SHOCK" (STABILIZATION)**
+
+_“We grounded the static. The library is open, but you must knock first. The parser now knows where the object ends and the story begins.”_
+
+---
+
+#### **🧬 STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Singleton Protocol (`bone_machine.py` & `bone_body.py`):**
+- **Instance Enforcement:** Fixed critical `TypeError` crashes in `MitochondrialForge` and `TheForge`. The system was attempting to access the `LoreManifest` via static class calls; it now correctly instantiates the Singleton (`get_instance()`) before requesting data.
+- **The Ghost Reference (`bone_brain.py`):**
+- **Dependency Repair:** Fixed a fatal `AttributeError` in `TheCortex`. The Brain was attempting to read `lore` from the Engine (which did not possess it). It now bypasses the middleman and connects directly to the `LoreManifest` source.
+
+#### **♾️ SYSTEMS METABOLISM (The Meadows Lens)**
+
+- **The Vacuum Collapse (`bone_cycle.py`):**
+- **Null-Safe Flux:** Patched `PhaseExecutor`. The Physics Sandbox no longer crashes with a `KeyError: 'old'` when historical data is missing during a state transition. It now defaults to zero-point energy.
+
+- **The Soul Interface (`bone_cycle.py`):**
+- **Vector Translation:** Fixed an `AttributeError` in `SoulPhase`. The Council now correctly recognizes the Soul's `TraitVector` as a structured object (Dataclass) rather than trying to read it as a raw dictionary.
+
+#### **👁️ COGNITIVE CLARITY (The Pinker Lens)**
+
+- **The Gluttonous Parser (`bone_inventory.py`):**
+- **Boundary Enforcement:** Rewrote the Loot Regex. The parser no longer consumes entire sentences (e.g., _"Sphere you pick up the sphere"_) as item names. It now respects sentence boundaries and grammar.
+- **Dynamic Extraction:** Cured "Object Blindness." The Inventory system can now acquire novel items it has never seen before (not in the registry) by analyzing user intent (`pick up`, `take`) and extracting the target noun phrase dynamically.
+
+---
+
 ### **BONEAMANITA v15.5.0: "THE TENSEGRITY UPDATE" (SLASH PROTOCOL)**
 
 _“We broke the flat circle. Gravity is now a choice, and the spine handles its own weight.”_

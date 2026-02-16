@@ -602,19 +602,32 @@ class SoulPhase(SimulationPhase):
                 ctx.record_flux("SIMULATION", param, old_val, new_val, "COUNCIL_MANDATE")
         return ctx
 
-    def _consult_council(self, traits: Dict[str, float]) -> List[Dict]:
+    def _consult_council(self, traits: Any) -> List[Dict]:
+        if hasattr(traits, "to_dict"):
+            t_map = traits.to_dict()
+        elif hasattr(traits, "__dict__"):
+            t_map = traits.__dict__
+        else:
+            t_map = traits if isinstance(traits, dict) else {}
+
+        def get_trait(key):
+            val = t_map.get(key)
+            if val is None:
+                val = t_map.get(key.lower(), 0.0)
+            return val
+
         mandates = []
-        if traits.get("CYNICISM", 0) > 0.8:
+        if get_trait("CYNICISM") > 0.8:
             mandates.append({
                 "type": "LOCKDOWN",
                 "log": f"{Prisma.OCHRE}⚖️ COUNCIL: The Cynic holds the gavel. 'Stop doing things.' (Drag Increased).{Prisma.RST}",
                 "effect": {"narrative_drag": 5.0, "voltage": -5.0}})
-        elif traits.get("HOPE", 0) > 0.8:
+        elif get_trait("HOPE") > 0.8:
             mandates.append({
                 "type": "STIMULUS",
                 "log": f"{Prisma.MAG}⚖️ COUNCIL: The Optimist filibustered. 'We can build it!' (Voltage Spiked).{Prisma.RST}",
                 "effect": {"voltage": 5.0, "narrative_drag": -2.0}})
-        elif traits.get("DISCIPLINE", 0) > 0.8:
+        elif get_trait("DISCIPLINE") > 0.8:
             mandates.append({
                 "type": "STANDARDIZE",
                 "log": f"{Prisma.CYN}⚖️ COUNCIL: The Engineer demands efficiency. (Entropy Reduced).{Prisma.RST}",
@@ -791,15 +804,17 @@ class PhaseExecutor:
         finally:
             target_ctx.physics = wrapped_physics.packet
             for mod in wrapped_physics.get_modification_log():
-                val_old = mod['old']
-                val_new = mod['new']
+                val_old = mod.get('old', 0.0)
+                val_new = mod.get('new', 0.0)
+                reason = mod.get('reason', 'UNKNOWN')
+                key = mod.get('key', 'UNKNOWN')
                 if isinstance(val_old, (int, float)) and isinstance(val_new, (int, float)):
                     target_ctx.record_flux(
                         phase=phase.name,
-                        metric=mod['key'],
+                        metric=key,
                         initial=float(val_old),
                         final=float(val_new),
-                        reason=mod['reason'])
+                        reason=reason)
             tracer.end_phase(phase.name, target_ctx, target_ctx)
 
 class CycleSimulator:

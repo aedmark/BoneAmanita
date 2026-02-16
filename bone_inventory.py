@@ -54,7 +54,7 @@ class GordonKnot:
         self.load_config()
 
     def load_config(self):
-        data = LoreManifest.get("GORDON") or {}
+        data = LoreManifest.get_instance().get("GORDON") or {}
         if not data and hasattr(LoreManifest, "get_raw"):
             data = LoreManifest.get_raw("gordon.json") or {}
 
@@ -211,6 +211,15 @@ class GordonKnot:
                 for t in self.loot_triggers:
                     if t in text:
                         return name
+        sorted_triggers = sorted(self.loot_triggers, key=len, reverse=True)
+        for t in sorted_triggers:
+            if t in text:
+                pattern = f"{re.escape(t)}\\s+(?:the\\s+|a\\s+|an\\s+)?(?P<item>[\\w\\s]{{1,30}}?)(?:\\s+(?:you|it|he|she|we|they)|[\\.,!?]|$)"
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    candidate = match.group("item").strip()
+                    if 2 < len(candidate) < 40 and candidate not in self.refusal_markers:
+                        return candidate
         return None
 
     def check_flinch(self, clean_words: List[str], current_turn: int) -> Optional[Dict]:

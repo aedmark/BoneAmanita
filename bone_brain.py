@@ -3,7 +3,7 @@
 import re, time, json, urllib.request, urllib.error, random, math
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from bone_core import EventBus, TelemetryService, BoneJSONEncoder
+from bone_core import EventBus, TelemetryService, BoneJSONEncoder, LoreManifest
 from bone_types import Prisma, DecisionCrystal
 from bone_config import BoneConfig, BonePresets
 from bone_symbiosis import SymbiosisManager
@@ -480,7 +480,7 @@ class TheCortex:
     def from_engine(cls, engine_ref, llm_client=None):
         services = CortexServices(
             events=engine_ref.events,
-            lore=engine_ref.lore,
+            lore=LoreManifest.get_instance(),
             lexicon=engine_ref.lex,
             inventory=engine_ref.gordon,
             consultant=engine_ref.consultant if hasattr(engine_ref, 'consultant') else None,
