@@ -7,8 +7,7 @@ import string
 import time
 import unicodedata
 import os
-from dataclasses import dataclass
-from typing import Tuple, Dict, Set, Optional, List, Any
+from typing import Tuple, Dict, Set, Optional, List
 from bone_core import Prisma, LoreManifest
 from functools import lru_cache
 
@@ -96,31 +95,6 @@ class LexiconStore:
         self.LEARNED_VOCAB[category][w] = tick
         self._index_word(w, category)
         return True
-
-    def atrophy(self, current_tick, max_age=100, protected: Set[str] = None):
-        if not self.LEARNED_VOCAB:
-            return []
-        cats = list(self.LEARNED_VOCAB.keys())
-        if not cats: return []
-        target_cat = random.choice(cats)
-        words = self.LEARNED_VOCAB[target_cat]
-        rotted = []
-        protected = protected or set()
-        candidates = list(words.keys())
-        sample_size = max(5, len(candidates) // 10)
-        audit_batch = random.sample(candidates, min(len(candidates), sample_size))
-        for candidate in audit_batch:
-            if candidate in protected:
-                continue
-            age = current_tick - words[candidate]
-            if age > max_age:
-                death_probability = 1.0 if age > (max_age * 2) else 0.2
-                if random.random() < death_probability:
-                    del words[candidate]
-                    rotted.append(candidate)
-        if rotted:
-            self.save_hive()
-        return rotted
 
     def harvest(self, text: str) -> Dict[str, List[str]]:
         results = {}
@@ -471,22 +445,6 @@ class LexiconService:
 
     @classmethod
     @_ensure_ready
-    def atrophy(cls, current_tick, max_age=100, protected: Set[str] = None):
-        return cls._STORE.atrophy(current_tick, max_age, protected=protected)
-
-    @classmethod
-    def walk_gradient(cls, text: str) -> str:
-        clean_words = cls.sanitize(text)
-        if not clean_words: return "..."
-        kept = []
-        for w in clean_words:
-            cat, _ = cls.classify(w)
-            if cat in ["heavy", "abstract", "sacred"]:
-                kept.append(w)
-        return " ".join(kept) if kept else " ".join(clean_words[:3])
-
-    @classmethod
-    @_ensure_ready
     def learn_antigen(cls, word: str, replacement: str = ""):
         cls._STORE.ANTIGEN_REPLACEMENTS[word] = replacement
         cls.compile_antigens()
@@ -496,95 +454,3 @@ class LexiconService:
     def tune_perception(cls, voltage: float, narrative_drag: float):
         if cls._ANALYZER:
             cls._ANALYZER.tune_sensitivity(voltage, narrative_drag)
-
-TheLexicon = LexiconService
-
-@dataclass
-class SomaticState:
-    tone: str
-    pacing: str
-    focus: str
-    somatic_sensation: str
-    metaphor: str
-    internal_monologue_hint: str
-    color_code: str = Prisma.GRY
-
-class RosettaStone:
-    @staticmethod
-    def translate(physics, bio, impulse):
-        voltage = physics.get("voltage", 0.0)
-        drag = physics.get("narrative_drag", 0.0)
-        coherence = physics.get("coherence", 0.5)
-        tone = RosettaStone._derive_voltage_tone(voltage)
-        sensation = RosettaStone._derive_drag_sensation(drag)
-        if impulse and hasattr(impulse, 'somatic_reflex') and impulse.somatic_reflex:
-            sensation = f"{sensation} ({impulse.somatic_reflex})"
-        focus = RosettaStone._derive_coherence_focus(coherence)
-        chem_state = bio.get("chem", {})
-        flavor = RosettaStone._apply_chemistry(tone, chem_state)
-        somatic_lib = LoreManifest.get_instance().get("SOMATIC_LIBRARY") or {}
-        pacing_key = "HIGH" if voltage > 12 else "LOW"
-        pacing_options = somatic_lib.get("PACING_RESERVOIR", {}).get(pacing_key, ["Normal"])
-        pacing = random.choice(pacing_options)
-        meta_key = "HIGH_DRAG" if drag > 4 else "LOW_DRAG"
-        meta_options = somatic_lib.get("METAPHOR_RESERVOIR", {}).get(meta_key, ["Stable"])
-        metaphor = random.choice(meta_options)
-        hint = f"Focus on the {sensation.lower()} nature of this moment."
-        return SomaticState(
-            tone=flavor,
-            pacing=pacing,
-            focus=focus,
-            somatic_sensation=sensation,
-            metaphor=metaphor,
-            internal_monologue_hint=hint)
-
-    @staticmethod
-    def _derive_voltage_tone(v):
-        if v < 5.0: return "Lethargic (Hypo-active)"
-        if v < 10.0: return "Lucid (Flow)"
-        if v < 15.0: return "Vibrating (Manic precursor)"
-        return "FRACTURED (Hyper-voltage)"
-
-    @staticmethod
-    def _derive_drag_sensation(d):
-        if d < 1.0: return "Weightless"
-        if d < 3.0: return "Viscous"
-        if d < 6.0: return "Crushing"
-        return "IMMOBILIZED (Event Horizon)"
-
-    @staticmethod
-    def _derive_coherence_focus(k):
-        if k > 0.8: return "Laser"
-        if k > 0.4: return "Soft"
-        return "Scattershot"
-
-    @staticmethod
-    def _apply_chemistry(current_tone, chem):
-        cortisol = chem.get("COR", 0.0)
-        dopamine = chem.get("DOP", 0.0)
-        if cortisol > 0.6: return f"{current_tone} (Trembling)"
-        if dopamine > 0.6: return f"{current_tone} (Giddy)"
-        return current_tone
-
-class SomaticInterface:
-    def __init__(self, engine_ref):
-        self.eng = engine_ref
-
-    def get_current_qualia(self, impulse: Any = None) -> SomaticState:
-        physics = self.eng.phys.observer.last_physics_packet if self.eng.phys.observer.last_physics_packet else {}
-        if hasattr(physics, "to_dict"): physics = physics.to_dict()
-        bio = {}
-        if hasattr(self.eng, 'bio') and self.eng.bio:
-            if hasattr(self.eng.bio, 'endo'):
-                bio = self.eng.bio.endo.get_state()
-            if hasattr(self.eng.bio, 'mito') and hasattr(self.eng.bio.mito, 'state'):
-                bio["atp"] = self.eng.bio.mito.state.atp_pool
-        return RosettaStone.translate(physics, bio, impulse)
-
-    def report(self):
-        qualia = self.get_current_qualia()
-        print(f"\n{qualia.color_code}--- SOMATIC REPORT ---")
-        print(f"TONE: {qualia.tone}")
-        print(f"BODY: {qualia.somatic_sensation}")
-        print(f"MIND: {qualia.focus}")
-        print(f"STATE: {qualia.metaphor}{Prisma.RST}\n")

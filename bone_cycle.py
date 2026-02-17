@@ -118,6 +118,7 @@ class SanctuaryPhase(SimulationPhase):
                 if "adrenaline" in effects: self.eng.bio.endo.adrenaline += effects["adrenaline"]
                 if "voltage" in effects: ctx.physics.voltage += effects["voltage"]
 
+
 class MaintenancePhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -127,6 +128,20 @@ class MaintenancePhase(SimulationPhase):
         if hasattr(self.eng, 'town_hall'):
             blooms = self.eng.town_hall.tend_garden(ctx.clean_words) or []
             for bloom in blooms: ctx.log(bloom)
+            is_census_due = (self.eng.tick_count > 0 and self.eng.tick_count % 20 == 0)
+            if is_census_due or "census" in ctx.clean_words:
+                report = self.eng.town_hall.conduct_census(ctx.physics, self.eng.host_stats)
+                if report:
+                    ctx.log(f"{Prisma.CYN}📜 TOWN HALL: {report}{Prisma.RST}")
+            session_snapshot = {
+                "trauma_vector": self.eng.trauma_accum,
+                "meta": {"final_health": self.eng.health}}
+            status, advice = self.eng.town_hall.diagnose_condition(
+                session_data=session_snapshot,
+                host_health=self.eng.bio.biometrics if self.eng.bio else None,
+                soul=self.eng.soul)
+            if status != "BALANCED":
+                ctx.log(f"{Prisma.OCHRE}🩺 VITAL SIGNS: {status} - {advice}{Prisma.RST}")
         if self.eng.mind and hasattr(self.eng.mind, "mem"):
             if hasattr(self.eng.mind.mem, 'run_ecosystem'):
                 eco_logs = self.eng.mind.mem.run_ecosystem(
@@ -337,14 +352,6 @@ class NavigationPhase(SimulationPhase):
         physics.narrative_drag = new_drag
         for log in grav_logs: ctx.log(log)
         if self.eng.gordon:
-            flinch_result = self.eng.gordon.check_flinch(
-                clean_words=ctx.clean_words,
-                current_turn=self.eng.tick_count)
-            if flinch_result:
-                if flinch_result.get("message"): ctx.log(flinch_result["message"])
-                effects = flinch_result.get("physics_effects", {})
-                for k, v in effects.items():
-                    if hasattr(physics, k): setattr(physics, k, v)
             phys_snapshot = physics.to_dict()
             reflex_triggered, reflex_msg = self.eng.gordon.emergency_reflex(phys_snapshot)
             if reflex_triggered:

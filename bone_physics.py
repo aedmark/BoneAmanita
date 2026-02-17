@@ -5,7 +5,7 @@ from typing import Dict, List, Any, Tuple, Optional, Deque
 from collections import Counter, deque
 from dataclasses import dataclass
 from bone_types import Prisma, PhysicsPacket, CycleContext, SpatialState, MaterialState, EnergyState
-from bone_lexicon import TheLexicon
+from bone_lexicon import LexiconService
 from bone_config import BoneConfig
 
 @dataclass
@@ -34,6 +34,22 @@ class GeodesicVector:
     abstraction: float
     dimensions: Dict[str, float]
 
+class GeodesicConstants:
+    DENSITY_SCALAR = 20.0
+    SQUELCH_LIMIT_MULT = 3.0
+    MIN_VOLUME_SCALAR = 0.5
+    SUBURBAN_FRICTION_LOG_BASE = 5.0
+    HEAVY_FRICTION_MULT = 2.5
+    SOLVENT_LUBRICATION_FACTOR = 0.05
+    SHEAR_RESISTANCE_SCALAR = 2.0
+    KINETIC_LIFT_RATIO = 0.5
+    PLAY_LIFT_MULT = 2.5
+    COMPRESSION_SCALAR = 10.0
+    ABSTRACTION_BASE = 0.2
+    MAX_VISCOSITY_DENSITY = 2.0
+    MAX_LIFT_DENSITY = 2.0
+    SAFE_VOL_THRESHOLD = 3
+
 class GeodesicEngine:
     @staticmethod
     def collapse_wavefunction(clean_words: List[str], counts: Dict[str, int]) -> GeodesicVector:
@@ -57,30 +73,32 @@ class GeodesicEngine:
     @staticmethod
     def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int) -> Dict[str, float]:
         cfg = BoneConfig.PHYSICS
+        GC = GeodesicConstants
         safe_volume = max(1, volume)
         total_kinetic = masses["kinetic"] + masses["explosive"]
         raw_tension_mass = ((masses["heavy"] * cfg.WEIGHT_HEAVY) + (total_kinetic * cfg.WEIGHT_EXPLOSIVE) + (masses["constructive"] * cfg.WEIGHT_CONSTRUCTIVE))
         density = raw_tension_mass / safe_volume
         kinetic_gain = getattr(BoneConfig, "KINETIC_GAIN", 1.0)
-        base_tension = density * 20.0 * kinetic_gain
-        squelch_limit = getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0) * 3.0
+        base_tension = density * GC.DENSITY_SCALAR * kinetic_gain
+        squelch_limit = getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0) * GC.SQUELCH_LIMIT_MULT
         mass_scalar = min(1.0, safe_volume / squelch_limit)
-        if safe_volume < 3: mass_scalar *= 0.5
+        if safe_volume < GC.SAFE_VOL_THRESHOLD:
+            mass_scalar *= GC.MIN_VOLUME_SCALAR
         tension = round(min(100.0, base_tension * mass_scalar), 2)
         shear_rate = total_kinetic / safe_volume
         suburban_count = counts.get("suburban", 0)
-        suburban_friction = math.log1p(suburban_count) * 5.0
-        raw_friction = (suburban_friction + (masses["heavy"] * 2.5))
+        suburban_friction = math.log1p(suburban_count) * GC.SUBURBAN_FRICTION_LOG_BASE
+        raw_friction = (suburban_friction + (masses["heavy"] * GC.HEAVY_FRICTION_MULT))
         solvent_count = counts.get("solvents", 0)
-        lubrication = 1.0 + (solvent_count * 0.05)
-        dynamic_viscosity = (raw_friction / lubrication) / (1.0 + (shear_rate * 2.0))
-        kinetic_lift = total_kinetic * 0.5
+        lubrication = 1.0 + (solvent_count * GC.SOLVENT_LUBRICATION_FACTOR)
+        dynamic_viscosity = (raw_friction / lubrication) / (1.0 + (shear_rate * GC.SHEAR_RESISTANCE_SCALAR))
+        kinetic_lift = total_kinetic * GC.KINETIC_LIFT_RATIO
         if masses["heavy"] > 0:
             kinetic_lift /= (masses["heavy"] * 0.5 + 1.0)
-        lift = (masses["play"] * 2.5) + kinetic_lift
-        viscosity_density = min(2.0, dynamic_viscosity / safe_volume)
-        lift_density = min(2.0, lift / safe_volume)
-        raw_compression = (viscosity_density * 10.0) - (lift_density * 10.0)
+        lift = (masses["play"] * GC.PLAY_LIFT_MULT) + kinetic_lift
+        viscosity_density = min(GC.MAX_VISCOSITY_DENSITY, dynamic_viscosity / safe_volume)
+        lift_density = min(GC.MAX_LIFT_DENSITY, lift / safe_volume)
+        raw_compression = (viscosity_density * GC.COMPRESSION_SCALAR) - (lift_density * GC.COMPRESSION_SCALAR)
         signal_drag_mult = getattr(BoneConfig, "SIGNAL_DRAG_MULTIPLIER", 1.0)
         raw_compression *= signal_drag_mult
         drag_halt = getattr(cfg, "DRAG_HALT", 10.0)
@@ -88,7 +106,7 @@ class GeodesicEngine:
         structural_mass = masses["heavy"] + masses["constructive"]
         shapley_threshold = getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0)
         coherence = min(1.0, structural_mass / max(1.0, shapley_threshold))
-        abstraction = min(1.0, (masses["abstract"] / safe_volume) + 0.2)
+        abstraction = min(1.0, (masses["abstract"] / safe_volume) + GC.ABSTRACTION_BASE)
         return {
             "tension": tension,
             "compression": compression,
@@ -145,13 +163,13 @@ class QuantumObserver:
         self.last_physics_packet: Optional[PhysicsPacket] = None
 
     def gaze(self, text: str, graph: Dict = None) -> Dict:
-        clean_words = TheLexicon.clean(text)
+        clean_words = LexiconService.clean(text)
         counts = self._tally_categories(clean_words)
         geo = GeodesicEngine.collapse_wavefunction(clean_words, counts)
         self.voltage_history.append(geo.tension)
         smoothed_voltage = round(sum(self.voltage_history) / len(self.voltage_history), 2)
         e_metric, beta_val = self._calculate_metrics(text, counts)
-        valence = TheLexicon.get_valence(clean_words)
+        valence = LexiconService.get_valence(clean_words)
         graph_mass = self._calculate_graph_mass(clean_words, graph)
         energy = EnergyState(
             voltage=smoothed_voltage,
@@ -183,16 +201,16 @@ class QuantumObserver:
 
     def _tally_categories(self, clean_words: List[str]) -> Counter:
         counts = Counter()
-        solvents = TheLexicon.SOLVENTS if hasattr(TheLexicon, 'SOLVENTS') else set()
+        solvents = LexiconService.SOLVENTS if hasattr(LexiconService, 'SOLVENTS') else set()
         for w in clean_words:
             if w in solvents:
                 counts["solvents"] += 1
                 continue
-            cats = TheLexicon.get_categories_for_word(w)
+            cats = LexiconService.get_categories_for_word(w)
             if cats:
                 counts.update(cats)
             else:
-                flavor, conf = TheLexicon.taste(w)
+                flavor, conf = LexiconService.taste(w)
                 if flavor and conf > 0.5:
                     counts[flavor] += 1
         return counts
@@ -461,6 +479,7 @@ class CycleStabilizer:
         self.last_tick_time = time.time()
         self.pending_drag = 0.0
         self.manifolds = getattr(BoneConfig.PHYSICS, "MANIFOLDS", {})
+        self.HARD_FUSE_VOLTAGE = 100.0
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("DOMESTICATION_PENALTY", self._on_domestication_penalty)
 
@@ -469,6 +488,14 @@ class CycleStabilizer:
         self.pending_drag += amount
 
     def stabilize(self, ctx: CycleContext, current_phase: str):
+        p = ctx.physics
+        if p.voltage >= self.HARD_FUSE_VOLTAGE:
+            ctx.log(f"{Prisma.RED}⚡ FUSE BLOWN: Voltage exceeded {self.HARD_FUSE_VOLTAGE}V. Hard Reset Initiated.{Prisma.RST}")
+            p.voltage = 10.0
+            p.narrative_drag = 5.0
+            p.flow_state = "SAFE_MODE"
+            ctx.record_flux(current_phase, "voltage", self.HARD_FUSE_VOLTAGE, 10.0, "FUSE_BLOWN")
+            return True
         if self.pending_drag > 0:
             if isinstance(ctx.physics, dict):
                 ctx.physics["narrative_drag"] = ctx.physics.get("narrative_drag", 0.0) + self.pending_drag
@@ -480,7 +507,6 @@ class CycleStabilizer:
         now = time.time()
         dt = max(0.001, min(1.0, now - self.last_tick_time))
         self.last_tick_time = now
-        p = ctx.physics
         manifold = getattr(p, "manifold", "DEFAULT")
         if manifold not in self.manifolds:
             manifold = "DEFAULT"

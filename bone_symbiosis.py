@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Dict, Counter
 from collections import deque
 from bone_types import Prisma
-from bone_lexicon import TheLexicon
+from bone_lexicon import LexiconService
 
 @dataclass
 class HostHealth:
@@ -80,7 +80,7 @@ class SymbiontVoice:
             final_vocab = set()
             for key in archetypes:
                 try:
-                    val = TheLexicon.get(key)
+                    val = LexiconService.get(key)
                     if val:
                         final_vocab.update(val)
                     else:

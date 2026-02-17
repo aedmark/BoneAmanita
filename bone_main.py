@@ -1,4 +1,4 @@
-""" BONEAMANITA 15.5.3 - 'The metabolic engine that drives the session.' """
+""" BONEAMANITA 15.5.6 - 'The metabolic engine that drives the session.' """
 
 import os, time, json, uuid, random, traceback, sys, re
 from dataclasses import dataclass
@@ -8,7 +8,7 @@ from bone_core import EventBus, SystemHealth, TheObserver, LoreManifest, Telemet
 from bone_types import Prisma, RealityLayer
 from bone_config import BoneConfig, BonePresets
 from bone_genesis import BoneGenesis
-from bone_lexicon import TheLexicon
+from bone_lexicon import LexiconService
 from bone_physics import CosmicDynamics, ZoneInertia
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
@@ -40,7 +40,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.5.3   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.5.6   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
@@ -158,7 +158,7 @@ class BoneAmanita:
         self.tick_count = 0
         self.events = EventBus()
         self.events.log("...Bootstrapping Core...", "BOOT")
-        self.lex = TheLexicon
+        self.lex = LexiconService
         self.lex.initialize()
         self.lex.compile_antigens()
         anatomy = BoneGenesis.ignite(self.config, self.lex, events_ref=self.events)

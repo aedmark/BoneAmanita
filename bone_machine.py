@@ -5,7 +5,7 @@ from typing import Tuple, Optional, List, Dict
 
 from bone_config import BoneConfig
 from bone_core import LoreManifest
-from bone_lexicon import TheLexicon
+from bone_lexicon import LexiconService
 
 class TheCrucible:
     def __init__(self):
@@ -105,7 +105,7 @@ class TheForge:
             if ingredient not in inventory_list:
                 continue
             catalyst_cat = recipe["catalyst_category"]
-            cat_words = TheLexicon.get(catalyst_cat)
+            cat_words = LexiconService.get(catalyst_cat)
             if not cat_words: continue
             hits = clean_set.intersection(cat_words)
             if hits:

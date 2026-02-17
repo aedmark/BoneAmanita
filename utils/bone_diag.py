@@ -1,20 +1,18 @@
-""" bone_diag.py - The Grand Diagnostic Suite (v2.1)
-    "Trust, but verify. Then verify the verification."
-"""
+""" bone_diag.py - The Grand Diagnostic Suite - "Trust, but verify. Then verify the verification." """
 
 import os, json, time
 import traceback
 from dataclasses import dataclass, field
+from typing import List, Tuple, Optional, Dict
 
 from bone_main import BoneAmanita, ConfigWizard
-from bone_core import Prisma
+from bone_core import Prisma, EventBus
 from bone_types import PhysicsPacket
 from bone_soul import NarrativeSelf
 from bone_protocols import KintsugiProtocol, TheBureau, TheFolly
-from bone_lexicon import TheLexicon
+from bone_lexicon import LexiconStore, LexiconService
 from bone_config import BoneConfig
 from bone_spores import SubconsciousStrata
-from bone_village import TheTinkerer
 
 try:
     from bone_brain import LLMInterface
@@ -22,7 +20,6 @@ except ImportError:
     LLMInterface = None
 
 class LogTrap:
-    """Catches EventBus signals to verify internal comms."""
     def __init__(self):
         self.logs = []
     def catch(self, payload):
@@ -32,16 +29,45 @@ class LogTrap:
         return any(substring in log for log in self.logs)
 
 @dataclass
-class MockEngine:
-    tick_count: int = 10
-    phys: 'MockPhys' = None
-    lex: 'MockLexicon' = None
-    akashic: 'MockAkashic' = None
+class MockLexicon:
+    @staticmethod
+    def sanitize(text: str) -> List[str]: return text.split()
+    @staticmethod
+    def classify(word: str) -> Tuple[Optional[str], float]: return "abstract", 0.5
+    @staticmethod
+    def get_random(cat: str) -> str: return "test_word"
+    @staticmethod
+    def measure_viscosity(word: str) -> float: return 0.5
+
+@dataclass
+class MockAkashic:
+    def calculate_manifold_shift(self, archetype: str, traits: Dict) -> Dict: return {}
+    def forge_new_item(self, vector: Dict) -> Tuple[str, Dict]: return "Artifact", {}
+
+@dataclass
+class MockPacket:
+    clean_words: list = field(default_factory=list)
+    voltage: float = 0.0
+    narrative_drag: float = 0.0
+    perfection_streak: int = 0
+    zone: str = "VOID"
+    def to_dict(self): return self.__dict__
+
+@dataclass
+class MockObserver:
+    last_physics_packet: MockPacket = field(default_factory=MockPacket)
 
 @dataclass
 class MockPhys:
-    observer: 'MockObserver' = None
+    observer: MockObserver = field(default_factory=MockObserver)
     def to_dict(self): return {"voltage": 10.0, "narrative_drag": 5.0, "zone": "TEST_LAB"}
+
+@dataclass
+class MockEngine:
+    tick_count: int = 10
+    phys: Optional[MockPhys] = None
+    lex: Optional[MockLexicon] = None
+    akashic: Optional[MockAkashic] = None
 
 @dataclass
 class MockObserver:
@@ -56,10 +82,129 @@ class MockPacket:
     zone: str = "VOID"
     def to_dict(self): return self.__dict__
 
-class MockEventBus:
+class MockEventBus(EventBus):
+    def __init__(self):
+        super().__init__()
+        self.subscribers = {}
     def log(self, message, channel="TEST", tags=None): pass
     def subscribe(self, channel, callback): pass
     def __getattr__(self, name): return lambda *args, **kwargs: None
+
+
+class TheGauntlet:
+    """
+    STRESS TEST SUITE - "The system is not what it says it is. It is what it does." - Meadows
+    """
+
+    def __init__(self, engine_ref):
+        self.eng = engine_ref
+        self.results = {"PASS": [], "FAIL": []}
+
+    def log(self, msg, status="INFO"):
+        color = Prisma.GRN if status == "PASS" else (Prisma.RED if status == "FAIL" else Prisma.CYN)
+        print(f"{color}[GAUNTLET]: {msg} - {status}{Prisma.RST}")
+        if status in ["PASS", "FAIL"]:
+            self.results[status].append(msg)
+
+    def run_all(self):
+        print(f"\n{Prisma.MAG}=== INITIATING THE GAUNTLET ==={Prisma.RST}")
+        self.test_starvation_clamp()
+        self.test_logarithmic_friction()
+        self.test_inventory_stacking()
+        self.test_akashic_handshake()
+        return self.results
+
+    def test_starvation_clamp(self):
+        """ Verify bone_body.py clamps drag tax and prevents instant death. """
+        try:
+            self.eng.bio.biometrics.health = 100.0
+            self.eng.bio.mito.state.atp_pool = 100.0
+
+            fatal_packet = PhysicsPacket(voltage=10.0, narrative_drag=25.0)
+
+            receipt = self.eng.bio.mito.process_cycle(fatal_packet)
+
+            if receipt.drag_tax > 6.0:
+                self.log(f"Starvation Clamp Failed (Tax: {receipt.drag_tax})", "FAIL")
+            elif self.eng.bio.biometrics.health < 90.0:
+                self.log("System Panicked/Burned excessive health", "FAIL")
+            else:
+                self.log(f"Starvation Clamp Holds (Tax: {receipt.drag_tax:.1f} | HP: {self.eng.bio.biometrics.health})",
+                         "PASS")
+        except Exception as e:
+            self.log(f"Starvation Test Crashed: {e}", "FAIL")
+
+    def test_logarithmic_friction(self):
+        """ Verify bone_physics.py uses log scaling for boring inputs. """
+        try:
+            from bone_physics import GeodesicEngine
+
+            counts = {"suburban": 500, "heavy": 0}
+            clean_words = ["the"] * 500
+
+            vector = GeodesicEngine.collapse_wavefunction(clean_words, counts)
+
+            result_drag = vector.compression
+
+            if result_drag > 50.0:
+                self.log(f"Friction Explosion Detected (Drag: {result_drag:.1f})", "FAIL")
+            else:
+                self.log(f"Logarithmic Friction Active (Input: 500 words -> Drag: {result_drag:.1f})", "PASS")
+
+        except Exception as e:
+            self.log(f"Friction Test Crashed: {e}", "FAIL")
+
+    def test_inventory_stacking(self):
+        """ Verify bone_village.py diminishes returns on stacked items. """
+        try:
+            tinkerer = getattr(self.eng.village, 'tinkerer', None) if hasattr(self.eng, 'village') else None
+
+            if not tinkerer:
+                from bone_village import TheTinkerer
+                tinkerer = TheTinkerer(self.eng.gordon, self.eng.events, getattr(self.eng, 'akashic', None))
+
+            heavy_item = {"name": "ROCK", "passive_traits": ["HEAVY_LOAD"]}
+            mock_inventory = [heavy_item] * 10
+
+            deltas = tinkerer.calculate_passive_deltas(mock_inventory)
+
+            drag_add = 0.0
+            for d in deltas:
+                if d.field == "narrative_drag" and d.operator == "ADD":
+                    drag_add += d.value
+
+            if drag_add > 4.0:
+                self.log(f"Linear Stacking Detected (Delta: {drag_add:.1f})", "FAIL")
+            else:
+                self.log(f"Diminishing Returns Active (10 items -> +{drag_add:.2f} Drag)", "PASS")
+
+        except Exception as e:
+            self.log(f"Inventory Stack Test Crashed: {e}", "FAIL")
+
+    def test_akashic_handshake(self):
+        """ Verify bone_akashic.py can teach bone_inventory.py (Gordon) new items. """
+        try:
+            if not hasattr(self.eng, 'akashic') or not hasattr(self.eng, 'gordon'):
+                self.log("Akashic/Gordon not loaded", "FAIL")
+                return
+
+            vector = {"PHI": 0.9, "ENT": 0.1}
+            name, data = self.eng.akashic.forge_new_item(vector)
+
+            if hasattr(self.eng.gordon, 'register_dynamic_item'):
+                self.eng.gordon.register_dynamic_item(name, data)
+            else:
+                self.log("Gordon missing 'register_dynamic_item' method", "FAIL")
+                return
+
+            retrieved = self.eng.gordon.get_item_data(name)
+            if retrieved and retrieved.name == name:
+                self.log(f"Akashic-Gordon Handshake Successful ({name})", "PASS")
+            else:
+                self.log(f"Gordon Amnesia Detected (Could not retrieve {name})", "FAIL")
+
+        except Exception as e:
+            self.log(f"Akashic Handshake Crashed: {e}", "FAIL")
 
 class GrandDiagnostic:
     def __init__(self):
@@ -170,7 +315,7 @@ class GrandDiagnostic:
                 self.log("Soul Died in Isolation", "FAIL")
             soul.traits.wisdom = 0.5
             packet = {"voltage": 20.0, "narrative_drag": 10.0}
-            for _ in range(12): soul._synaptic_dance(packet, {})
+            for _ in range(12): soul.synaptic_dance(packet, {})
             if "/" in soul.archetype or "HIGH-" in soul.archetype:
                 self.log("Soul Synthesis Triggered", "PASS")
             else:
@@ -199,7 +344,7 @@ class GrandDiagnostic:
         if audit and "ZONING_VIOLATION" in audit["ui"]: self.log("Bureau Caught Violation", "PASS")
         else: self.log("Bureau Missed Violation", "FAIL")
         folly = TheFolly()
-        status, _, yield_val, _ = folly.grind_the_machine(10.0, ["stone"], TheLexicon)
+        status, _, yield_val, _ = folly.grind_the_machine(10.0, ["stone"], LexiconService)
         if status == "MEAT_GRINDER": self.log("Folly Metabolism", "PASS")
         else: self.log(f"Folly Failed (Status: {status})", "FAIL")
 
@@ -255,78 +400,53 @@ class GrandDiagnostic:
             return
         knot.scar_tissue = {"TRIGGER": 0.9}
         knot.last_flinch_turn = 0
-        res = knot.check_flinch(["Trigger"], current_turn=2)
-        if res is None:
-            self.log("Flinch Cooldown Respect", "PASS")
-        else:
-            self.log(f"Flinch Ignored Cooldown: {res}", "FAIL")
-        res = knot.check_flinch(["Trigger"], current_turn=10)
-        if res and "PTSD" in res["message"]:
-            self.log("PTSD Flinch Triggered", "PASS")
-        elif res and "ALL CAPS" in res["message"]:
-            self.log("Failed: Triggered ALL CAPS check instead of PTSD", "FAIL")
-        else:
-            self.log(f"PTSD Trigger Failed: {res}", "FAIL")
 
     def phase_8_passive_effects(self):
-        self.header("PHASE 8: PASSIVE ITEM EFFECTS (VIA TINKERER)")
-        from bone_inventory import GordonKnot
-
-        knot = GordonKnot()
-        knot.ITEM_REGISTRY["TEST_ROD"] = {
-            "passive_traits": ["CONDUCTIVE_HAZARD"],
-            "description": "A lightning rod."}
-        knot.inventory = ["TEST_ROD"]
-
-        mock_events = MockEventBus()
-        tink = TheTinkerer(knot, mock_events, None)
-
-        phys = {"voltage": 20.0, "narrative_drag": 0.0}
-
-        logs = tink.check_conductive_hazard(phys, knot.get_inventory_data())
-
-        if any("lightning rod" in l for l in logs) and any("HP" in l for l in logs):
-            self.log("Passive Effect: Conductive Hazard", "PASS")
-        else:
-            self.log(f"Passive Effect Failed. Logs: {logs}", "FAIL")
+        print(f"\n{Prisma.CYN}--- Phase 8: Passive Systems ---{Prisma.RST}")
+        print("Testing Town Hall Census...")
+        try:
+            if hasattr(self.engine, 'town_hall'):
+                report = self.engine.town_hall.conduct_census(
+                    self.engine.phys.observer.last_physics_packet,
+                    self.engine.host_stats)
+                if report:
+                    self.log(f"Census Generated: {report[:50]}...", "PASS")
+                else:
+                    self.log("Census Silent (Conditional)", "SKIP")
+            else:
+                self.log("Town Hall Missing", "FAIL")
+        except Exception as e:
+            self.log(f"Town Hall Wiring Failed: {e}", "FAIL")
 
     def phase_9_operating_modes(self):
         self.header("PHASE 9: OPERATING MODES (Multi-Modal)")
-
         try:
             tech_conf = {"user_name": "TEST", "provider": "mock", "boot_mode": "TECHNICAL"}
             eng = BoneAmanita(tech_conf)
-
             if BoneConfig.PHYSICS.BASE_DRAG == 0.0:
                 self.log("Technical Physics Tuned (Base Drag 0.0)", "PASS")
             else:
                 self.log(f"Technical Physics Failed (Drag: {BoneConfig.PHYSICS.BASE_DRAG})", "FAIL")
-
             if "SOUL" in eng.suppressed_agents:
                 self.log("Technical Suppression Active (SOUL)", "PASS")
             else:
                 self.log(f"Technical Suppression Failed (Suppressed: {eng.suppressed_agents})", "FAIL")
         except Exception as e:
             self.log(f"Technical Boot Crash: {e}", "FAIL")
-
         try:
             conv_conf = {"user_name": "TEST", "provider": "mock", "boot_mode": "CONVERSATION"}
             eng = BoneAmanita(conv_conf)
-
             if eng.gordon is None:
                 self.log("Conversation Mode: Gordon Sleeping (None)", "PASS")
             else:
                 self.log("Conversation Mode: Gordon Awake (Fail)", "FAIL")
-
             if "GORDON" in eng.suppressed_agents:
                 self.log("Conversation Suppression List Correct", "PASS")
         except Exception as e:
             self.log(f"Conversation Boot Crash: {e}", "FAIL")
-
         try:
             create_conf = {"user_name": "TEST", "provider": "mock", "boot_mode": "CREATIVE"}
             eng = BoneAmanita(create_conf)
-
             if "BUREAU" in eng.suppressed_agents and eng.bureau is None:
                 self.log("Creative Mode: Bureau Suppressed", "PASS")
             else:
@@ -361,27 +481,22 @@ class GrandDiagnostic:
     def phase_11_memory_pressure(self):
         self.header("PHASE 11: MEMORY PRESSURE (The Drain)")
         test_file = "test_subconscious.jsonl"
+        if os.path.exists(test_file): os.remove(test_file)
         try:
             strata = SubconsciousStrata(filename=test_file)
-
             print(f"   {Prisma.GRY}>>> Injecting 1,100 memories...{Prisma.RST}")
             for i in range(1100):
                 strata.index.add(f"memory_{i}")
-
             with open(test_file, "w") as f:
                 for i in range(1100):
                     f.write(json.dumps({"word": f"mem_{i}", "buried_at": time.time()}) + "\n")
-
             strata.bury({"word": "straw_that_broke_camel", "data": "test"})
-
             with open(test_file, "r") as f:
                 count = sum(1 for _ in f)
-
             if count < 1000:
                 self.log(f"Drain System Active (Count reduced to {count})", "PASS")
             else:
                 self.log(f"Drain Clogged (Count {count} > 1000)", "FAIL")
-
         except Exception as e:
             self.log(f"Memory Test Failed: {e}", "FAIL")
         finally:
@@ -405,6 +520,49 @@ class GrandDiagnostic:
         except Exception as e:
             self.log(f"Mercy Test Failed: {e}", "FAIL")
 
+    def phase_13_live_fire(self):
+        print(f"\n{Prisma.RED}--- Phase 13: LIVE FIRE (Ollama) ---{Prisma.RST}")
+
+        if not self.engine.cortex or not self.engine.cortex.llm:
+            self.log("No Cortex/LLM loaded. Skipping Live Fire.", "SKIP")
+            return
+        print("Sending 'ping' to local LLM...")
+        start_t = time.time()
+        try:
+            response = self.engine.cortex.llm.generate(
+                prompt="System check. Reply with the single word: ONLINE.",
+                params={"temperature": 0.1, "max_tokens": 10})
+            duration = time.time() - start_t
+            if response and len(response) > 0:
+                self.log(f"LLM Responded in {duration:.2f}s: '{response}'", "PASS")
+                if "ONLINE" in response.upper():
+                    self.log("LLM Instruction Followed", "PASS")
+                else:
+                    self.log(f"LLM Drifted: {response}", "WARN")
+            else:
+                self.log("LLM returned empty response", "FAIL")
+        except Exception as e:
+            self.log(f"LLM Connection Failed: {e}", "FAIL")
+            self.log("Ensure Ollama is running (e.g., 'ollama serve')", "HINT")
+
+    def phase_14_slash_suite(self):
+        print(f"\n{Prisma.VIOLET}--- Phase 14: SLASH Protocol ---{Prisma.RST}")
+
+        self.engine.process_turn("[MOD:CODING] Activate Slash Suite.")
+
+        test_input = "def horrible_function(x): pass"
+        result = self.engine.process_turn(test_input)
+
+        response = result.get('ui', '')
+
+        voices = ["PINKER", "FULLER", "SCHUR", "MEADOWS"]
+        hit = any(v in response.upper() for v in voices)
+
+        if hit:
+            self.log("Slash Council Convened on Code Input", "PASS")
+        else:
+            self.log("Slash Council Silent (Check [MOD:CODING] wiring)", "WARN")
+
     def run(self):
         self.phase_1_core_integrity()
         self.phase_2_bare_metal()
@@ -418,7 +576,12 @@ class GrandDiagnostic:
         self.phase_10_prompt_logic()
         self.phase_11_memory_pressure()
         self.phase_12_mercy_protocol()
-
+        self.phase_13_live_fire()
+        self.phase_14_slash_suite()
+        gauntlet = TheGauntlet(self.engine)
+        g_results = gauntlet.run_all()
+        self.results['PASS'] += len(g_results['PASS'])
+        self.results['FAIL'] += len(g_results['FAIL'])
         print(f"\n{Prisma.CYN}=== DIAGNOSTIC COMPLETE ==={Prisma.RST}")
         print(f"PASSED: {self.results['PASS']}")
         print(f"FAILED: {self.results['FAIL']}")

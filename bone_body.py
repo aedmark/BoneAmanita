@@ -5,7 +5,7 @@ from collections import deque, Counter
 from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, List, Any, Tuple
 from bone_spores import ImmuneMycelium, BioLichen, BioParasite
-from bone_lexicon import TheLexicon
+from bone_lexicon import LexiconService
 from bone_core import Prisma, LoreManifest
 from bone_config import BoneConfig
 
@@ -353,7 +353,7 @@ class DigestiveTrack:
         for word, count in word_counts.items():
             if len(word) < 4:
                 continue
-            cat = TheLexicon.get_current_category(word)
+            cat = LexiconService.get_current_category(word)
             if not cat or cat == "void":
                 atp_yield += self.BASE_WORD_VALUE * count
                 continue

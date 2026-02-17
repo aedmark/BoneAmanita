@@ -213,6 +213,10 @@ class GeodesicRenderer:
                 structured.append(f"{Prisma.RED}► {log}{Prisma.RST}")
             elif "Bio-Alert" in log or "SENSATION" in log:
                 structured.append(f"{Prisma.CYN}• {log}{Prisma.RST}")
+            elif "TOWN HALL" in log or "VITAL SIGNS" in log:
+                structured.append(f"{Prisma.CYN}📜 {log}{Prisma.RST}")
+            elif "PARADOX" in log:
+                structured.append(f"{Prisma.MAG}🌷 {log}{Prisma.RST}")
             elif "ITEM:" in log or "GAINED" in log:
                 structured.append(f"{Prisma.YEL}★ {log}{Prisma.RST}")
             else:

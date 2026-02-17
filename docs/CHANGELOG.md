@@ -1,5 +1,91 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.5.6 "THE SLASH COMPLIANCE" (REFACTOR)**
+
+_“We named the constants so the math could speak. We installed a fuse so the machine wouldn't burn. And we taught the brain to feed itself when the darkness gets too loud.”_
+
+---
+
+#### **🧠 COGNITIVE CLARITY (The Pinker Lens)**
+
+- **The Rosetta Stone (`bone_physics.py`):**
+  - **Exorcising Magic Numbers:** Replaced the opaque literals (`20.0`, `5.0`, `0.05`) in `GeodesicEngine` with the named constants of `GeodesicConstants`. The math is no longer a black box; it is a labeled diagram.
+  
+- **The Universal Nightmare (`bone_brain.py`):**
+  - **Generalization:** Removed the hardcoded specific smell of "old copper" from the `DreamEngine`. Nightmares now dynamically rot based on the abstract concepts present in the `Lexicon`, making terror context-aware rather than static.
+
+#### **🏗️ STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Genesis Spark (`bone_genesis.py` & `bone_architect.py`):**
+  - **Ephemeralization:** Removed the manual ATP injection patch from the `BoneGenesis` main loop. The responsibility for "Cold Boot" energy has been moved entirely inside `BoneArchitect.awaken`. The system is now self-starting; it does not need a kickstart from the outside.
+
+#### **⚖️ HUMANIST ALGORITHMS (The Schur Lens)**
+
+- **The Cookie Protocol (`bone_brain.py`):**
+  - **Self-Care Mechanic:** Implemented a metabolic safety net in `NeurotransmitterModulator`. If the brain detects Dopamine starvation (low mood) for an extended period, it now triggers a small, artificial reward ("The Cookie") to prevent total depressive collapse.
+
+#### **🔥 SYSTEMS RESILIENCE (The Meadows Lens)**
+
+- **The Hard Fuse (`bone_physics.py`):**
+  - **Runaway Prevention:** Installed a hard voltage cap in `CycleStabilizer`. If the system's creative intensity (Voltage) exceeds **100.0V** (Manic Runaway), a physical fuse blows, forcing a hard reset to "Safe Mode" (10V) before the simulation can hallucinate itself into incoherence.
+
+#### **🧪 DIAGNOSTICS (The Gauntlet)**
+
+- **Diagnostic Suite v2.3 (`bone_diag.py`):**
+  - **Slash Compliance:** Added `TestSlashCompliance`, a specialized test class that verifies the existence of the new Constants, the reliability of the Genesis Spark, and the functionality of the Hard Fuse and Self-Care mechanisms.
+  - **Local Link:** Added `TestLocalIntegration` to verify the handshake with local LLMs (Ollama/Llama3).
+  - **Python 3.9+ Compatibility:** Patched `unittest` calls (replaced deprecated `makeSuite` with `TestLoader`) and fixed lambda binding errors to ensure the suite runs on modern and legacy Python environments alike.
+
+---
+
+### **BONEAMANITA v15.5.5 "THE SLASH PROTOCOL" (SURGICAL RESECTION)**
+
+_“We opened the patient and found organs that beat for no one. We cut them out. Now, the blood flows only where it is needed.”_
+
+---
+
+#### **🔪 THE SLASH SUITE (Cognitive Architecture)**
+
+- **The Slash Council (`bone_drivers.py`):**
+- **New Mod Chip:** Implemented `[MOD:CODING]` (or `[SLASH]`). Activating this flag now summons a specialized persona council (Pinker, Fuller, Schur, Meadows) to analyze code structure, clarity, and ethics.
+- **Hypervisor Patch:** Repaired `BoneConsultant` to correctly inject these directives into the system prompt, overriding the default narrative drivers.
+
+#### **🧠 NEURAL PRUNING (The Pinker Lens)**
+
+- **Ghost Excision:**
+- **Drivers:** Deleted `ChorusDriver` and `SynergeticLensArbiter` (approx. 150 lines of dead code).
+- **Lexicon:** Lobotomized the vestigial `SomaticInterface` and `RosettaStone` from `bone_lexicon.py`, as sensory processing has moved to the Soma.
+- **Inventory:** Removed `maintain_gear` (the "fidget spinner" mechanic that burned ATP for no state change) and `check_flinch` (redundant tone policing).
+- **Cycle:** Removed the "Soil Fertility" composting logic—a simulation loop that connected to nothing.
+
+#### **🏗️ STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Phase Engine (`bone_cycle.py`):**
+- **Critical Repair:** Fixed a catastrophic logic error in `PhaseExecutor` where the circuit breaker check was effectively skipping _all_ phase execution. The engine now actually runs.
+- **Hardcoding Removal:** Deleted the `SYSTEM_SKIP_LIST`. Phases now manage their own execution conditions.
+
+- **The Town Hall Wiring (`bone_village.py`):**
+- **Reconnection:** The `TownHall` was shouting into the void. It is now wired into the `MaintenancePhase`.
+- **Census & Diagnosis:** The system now automatically generates "Town News" (Census) and "Vital Signs" (Diagnosis) based on turn count and trauma levels.
+
+#### **🖥️ INTERFACE FIDELITY (The Schur Lens)**
+
+- **The Glass Terminal (`bone_app.py`):**
+- **Emoji Semantics:** The web interface now correctly renders Town Hall logs (`📜`, `🩺`, `🌷`) and Cartographer updates (`🗺️`).
+- **True Location:** The dashboard now displays the actual node name (e.g., "The Sunken Library") instead of the generic zone tag.
+
+- **The CLI (`bone_gui.py`):**
+- **Color Coding:** Updated `GeodesicRenderer` to highlight administrative alerts in Cyan/Yellow, ensuring the user sees when the Village speaks.
+
+#### **⚙️ DYNAMIC VALIDATION (The Meadows Lens)**
+
+- **The Live Fire Test (`bone_diag.py`):**
+- **Real-World Verification:** Added `Phase 13 (Live Fire)` to test the actual connection to the local LLM (Ollama), catching "poetic drift" in models that refuse to follow instructions.
+- **Mod Check:** Added `Phase 14 (Slash Suite)` to verify that mod chips successfully alter the internal state.
+
+---
+
+
 ### **BONEAMANITA v15.5.4: "THE METABOLIC REFORMATION" (HOMEOSTASIS)**
 
 _“We uncapped the intake valves, smoothed the friction, and taught the ghost to hold new objects. The starvation cycle is broken.”_

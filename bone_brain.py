@@ -58,6 +58,8 @@ class NeurotransmitterModulator:
         self.last_mood = "NEUTRAL"
         self.BASE_TOKENS = 720
         self.MAX_TOKENS = 4096
+        self.starvation_ticks = 0
+        self.SELF_CARE_THRESHOLD = 10
 
     def modulate(self, base_voltage: float, latency_penalty: float = 0.0) -> Dict[str, Any]:
         if self.bio and hasattr(self.bio, 'endo'):
@@ -69,6 +71,12 @@ class NeurotransmitterModulator:
         plasticity = cfg.BASE_PLASTICITY + (base_voltage * cfg.VOLTAGE_SENSITIVITY)
         plasticity = max(0.1, min(cfg.MAX_PLASTICITY, plasticity))
         self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
+        if self.current_chem.dopamine < 0.15:
+            self.starvation_ticks += 1
+            if self.starvation_ticks > self.SELF_CARE_THRESHOLD:
+                self._treat_yourself()
+        else:
+            self.starvation_ticks = 0
         c = self.current_chem
         if latency_penalty > 2.0:
             c.cortisol = min(1.0, c.cortisol + 0.1)
@@ -95,6 +103,12 @@ class NeurotransmitterModulator:
             "max_tokens": int(max(150.0, min(
                 float(self.MAX_TOKENS),
                 self.BASE_TOKENS + ((c.dopamine * 800) - (c.adrenaline * 400) - (c.cortisol * 200)))))}
+
+    def _treat_yourself(self):
+        if self.events:
+            self.events.log(f"{Prisma.VIOLET}🍪 SELF-CARE: Dopamine starvation detected. Injecting small reward.{Prisma.RST}", "SYS")
+        self.current_chem.dopamine += 0.2
+        self.starvation_ticks = 0
 
     def force_state(self, state_name: str):
         if self.events:
@@ -129,7 +143,7 @@ class LLMInterface:
         self.api_key = api_key or BoneConfig.API_KEY
         self.model = model or BoneConfig.MODEL
         defaults = getattr(BoneConfig, "DEFAULT_LLM_ENDPOINTS", {})
-        self.base_url = base_url or defaults.get(self.provider, "https://api.openai.com/v1/chat/completions")
+        self.base_url = base_url or defaults.get(self.provider, "[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)")
         self.dreamer = dreamer
         self.failure_count = 0
         self.failure_threshold = 3
@@ -230,7 +244,7 @@ class LLMInterface:
         return self.mock_generation(prompt, reason="SILENCE")
 
     def _local_fallback(self, prompt: str, params: Dict) -> str:
-        url = getattr(BoneConfig, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
+        url = getattr(BoneConfig, "OLLAMA_URL", "[http://127.0.0.1:11434/v1/chat/completions](http://127.0.0.1:11434/v1/chat/completions)")
         model = getattr(BoneConfig, "OLLAMA_MODEL_ID", "llama3")
         fallback_payload = {
             "model": model,
@@ -480,8 +494,6 @@ class TheCortex:
         self.consultant = services.consultant
         self.llm = llm_client or LLMInterface(self.events, provider="mock", dreamer=self.dreamer)
         self.symbiosis = services.symbiosis
-        from bone_drivers import SynergeticLensArbiter
-        self.arbiter = SynergeticLensArbiter(self.events)
         if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None:
             self.llm.dreamer = self.dreamer
         self.composer = PromptComposer(self.svc.lore)
@@ -775,7 +787,7 @@ class DreamEngine:
         if dream_mode == "NIGHTMARE":
             dream_log = (
                 f"{Prisma.RED}[REM]: The {primary_symbol} is rotting. "
-                f"It smells like {abstract_concept.lower()} and old copper.{Prisma.RST}")
+                f"It smells like {abstract_concept.lower()} and decay.{Prisma.RST}")
             return dream_log, {"adrenaline": 0.2, "narrative_drag": -1.0}
         elif dream_mode == "MANIC":
             dream_log = (
@@ -850,8 +862,6 @@ class NoeticLoop:
     def __init__(self, mind_layer, bio_layer, events):
         self.mind = mind_layer
         self.bio = bio_layer
-        from bone_drivers import SynergeticLensArbiter
-        self.arbiter = SynergeticLensArbiter(events)
 
     def think(self, physics_packet, _bio, inventory, voltage_history, tick_count, soul_ref=None):
         voltage = physics_packet.get("voltage", 0.0)
@@ -862,15 +872,15 @@ class NoeticLoop:
             if len(clean_words) >= 2:
                 w1, w2 = random.sample(clean_words, 2)
                 self._force_link(self.mind.mem.graph, w1, w2)
-        mind_data = self.arbiter.consult(
-            physics_packet,
-            _bio,
-            inventory,
-            tick_count,
-            soul_ref=soul_ref,
-            _ignition_score=ignition)
-        if isinstance(mind_data, tuple):
-            mind_data = {"lens": mind_data[0], "context_msg": mind_data[1], "role": mind_data[2]}
+        current_lens = "OBSERVER"
+        current_role = "Witness"
+        if soul_ref:
+            current_lens = soul_ref.archetype
+            current_role = f"The {current_lens.title().replace('_', ' ')}"
+        mind_data = {
+            "lens": current_lens,
+            "context_msg": f"Cognition active. Ignition: {ignition:.2f}",
+            "role": current_role}
         return {
             "mode": "COGNITIVE",
             "lens": mind_data.get("lens"),

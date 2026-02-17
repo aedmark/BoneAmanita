@@ -10,7 +10,7 @@ from typing import List, Dict, Optional, Any, Tuple
 from bone_akashic import TheAkashicRecord
 from bone_config import BoneConfig
 from bone_core import LoreManifest, EventBus
-from bone_lexicon import TheLexicon
+from bone_lexicon import LexiconService
 from bone_types import Prisma
 
 
@@ -75,7 +75,7 @@ class TraitVector:
 
 class TheEditor:
     def __init__(self, lexicon_ref: Any = None):
-        self.lex = lexicon_ref if lexicon_ref else TheLexicon
+        self.lex = lexicon_ref if lexicon_ref else LexiconService
 
     def critique(self, chapter_title: str, stress_mode: bool = False) -> str:
         flavor = "abstract"
@@ -317,7 +317,7 @@ class NarrativeSelf:
         clean_words = physics.get("clean_words", [])
         hit = False
         if self.current_target_cat:
-            target_words = TheLexicon.get(self.current_target_cat)
+            target_words = LexiconService.get(self.current_target_cat)
             hit = any(w in target_words for w in clean_words)
 
         if hit:
@@ -331,7 +331,7 @@ class NarrativeSelf:
         if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_FAIL:
             old = self.current_obsession
             self.chapters.append(f"Abandoned '{old}'")
-            self.find_obsession(TheLexicon)
+            self.find_obsession(LexiconService)
             return f"{Prisma.GRY}∞ ENTROPY: '{old}' collapsed. Pivoting.{Prisma.RST}"
         return None
 

@@ -207,4 +207,8 @@ class BoneArchitect:
                     events.log(f"{Prisma.MAG}[ARCHITECT]: World Map restored from Spore.{Prisma.RST}", "SYS")
                 except Exception as e:
                     events.log(f"{Prisma.OCHRE}[ARCHITECT]: Atlas corrupt, discarding map: {e}{Prisma.RST}", "WARN")
+        if embryo.bio.mito.state.atp_pool <= 0.0:
+            genesis_val = getattr(BoneConfig.METABOLISM, "GENESIS_VOLTAGE", 100.0)
+            events.log(f"⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP).", "SYS")
+            embryo.bio.mito.adjust_atp(genesis_val, reason="GENESIS")
         return embryo

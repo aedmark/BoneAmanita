@@ -175,14 +175,6 @@ class GordonKnot:
                 candidates.append(name)
         return candidates
 
-    def maintain_gear(self, stamina_pool: float) -> Tuple[bool, str, float]:
-        if not self.inventory:
-            return True, "No gear to maintain.", 0.0
-        cost = 5.0
-        if stamina_pool < cost:
-            return False, "Too tired to polish the brass.", 0.0
-        return True, f"Gordon polished {len(self.inventory)} items.", cost
-
     def register_dynamic_item(self, name: str, data: Dict):
         name = name.upper()
         if name not in self.registry:
@@ -212,23 +204,6 @@ class GordonKnot:
                     candidate = match.group("item").strip()
                     if 2 < len(candidate) < 40 and candidate not in self.refusal_markers:
                         return candidate
-        return None
-
-    def check_flinch(self, clean_words: List[str], current_turn: int) -> Optional[Dict]:
-        if current_turn - self.last_flinch_turn < 5:
-            return None
-        words_set = set(clean_words)
-        words_lower = {w.lower() for w in words_set}
-        if "Trigger" in words_set or "trigger" in words_set:
-            self.last_flinch_turn = current_turn
-            return {
-                "message": f"{Prisma.OCHRE}⚠️ PTSD FLINCH: Gordon recalls a bad memory.{Prisma.RST}",
-                "physics_effects": {"narrative_drag": 5.0, "voltage": -2.0}}
-        if not self.refusal_markers.isdisjoint(words_lower):
-            self.last_flinch_turn = current_turn
-            return {
-                "message": f"{Prisma.GRY}Gordon flinches. The refusal adds weight.{Prisma.RST}",
-                "physics_effects": {"narrative_drag": 1.0}}
         return None
 
     def consume(self, item_name: str) -> Tuple[bool, str]:

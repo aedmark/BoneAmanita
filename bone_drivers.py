@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
 from bone_core import LoreManifest
 from bone_config import BonePresets
-from bone_lexicon import TheLexicon
+from bone_lexicon import LexiconService
 from bone_types import PhysicsPacket
 
 SCENARIOS = LoreManifest.get_instance().get("scenarios") or {"ARCHETYPES": ["Void"], "BANNED_CLICHES": []}
@@ -187,7 +187,7 @@ class LiminalModule:
         self.lambda_val = 0.0
 
     def analyze(self, text: str, physics_vector: Dict[str, float]) -> float:
-        liminal_vocab = TheLexicon.get("liminal")
+        liminal_vocab = LexiconService.get("liminal")
         if not liminal_vocab:
             liminal_vocab = {"void", "silence", "gap"}
         words = text.lower().split()
@@ -202,7 +202,6 @@ class LiminalModule:
         self.lambda_val = (self.lambda_val * 0.7) + ((lexical_lambda + vector_lambda) * 0.15)
         return min(1.0, self.lambda_val)
 
-
 class SyntaxModule:
     def __init__(self):
         self.omega_val = 1.0
@@ -210,7 +209,7 @@ class SyntaxModule:
     def analyze(self, text: str, narrative_drag: float) -> float:
         words = text.split()
         if not words: return 1.0
-        bureau_vocab = TheLexicon.get("bureau_buzzwords") or set()
+        bureau_vocab = LexiconService.get("bureau_buzzwords") or set()
         buzz_count = sum(1 for w in words if w.lower() in bureau_vocab)
         avg_len = sum(len(w) for w in words) / len(words)
         if (avg_len > 6.0 and narrative_drag > 5.0) or buzz_count > 0:
@@ -262,16 +261,14 @@ class BoneConsultant:
         self.syntax_mod = SyntaxModule()
 
     def engage(self):
-        return "VSL 1.9 HYPERVISOR: LATTICE REVEALED."
+        return "VSL HYPERVISOR: LATTICE REVEALED."
 
     def disengage(self):
-        return "VSL 1.9 HYPERVISOR: RETURNING TO SURFACE MODE."
+        return "VSL HYPERVISOR: RETURNING TO SURFACE MODE."
 
-    def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None,
-                           physics: Optional[PhysicsPacket] = None):
+    def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None, physics: Optional[PhysicsPacket] = None):
         word_count = len(user_text.split())
         self.state.E = min(1.0, self.state.E + (word_count * 0.002))
-
         if bio_state and 'fatigue' in bio_state:
             self.state.E = max(self.state.E, bio_state['fatigue'] * 0.3)
         phys_beta = 0.0
@@ -288,10 +285,21 @@ class BoneConsultant:
             if "LIMINAL" not in self.state.active_modules: self.state.active_modules.append("LIMINAL")
         if "[VSL_SYNTAX]" in user_text:
             if "SYNTAX" not in self.state.active_modules: self.state.active_modules.append("SYNTAX")
+        if "[MOD:CODING]" in user_text or "[SLASH]" in user_text:
+            if "CODING" not in self.state.active_modules:
+                self.state.active_modules.append("CODING")
 
     def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
         directives = []
-        if "LIMINAL" in self.state.active_modules or self.state.L > 0.7:
+        if "CODING" in self.state.active_modules:
+            directives.append(
+                "MODE: SLASH_COUNCIL. You are a composite intelligence analyzing code.\n"
+                "- PINKER: Focus on syntax, clarity, and cognitive load.\n"
+                "- FULLER: Focus on structural integrity and ephemeralization.\n"
+                "- SCHUR: Focus on human-centric design and kindness.\n"
+                "- MEADOWS: Focus on feedback loops and system dynamics.\n"
+                "WHEN DISCUSSING CODE, ADOPT THESE PERSONAE.")
+        elif "LIMINAL" in self.state.active_modules or self.state.L > 0.7:
             directives.append("ARCHETYPE: THE CARTOMANCER. Read the empty spaces. Speak in riddles and absences.")
         elif "SYNTAX" in self.state.active_modules or self.state.O > 0.9:
             directives.append(

@@ -374,11 +374,11 @@ class TheFolly:
             return "REGURGITATION", msg, -BoneConfig.FOLLY.PENALTY_REGURGITATION, None
         return self._eat_meat(fresh_meat, lexicon)
 
-    def _eat_meat(self, fresh_meat: list, lexicon: Dict) -> Tuple[str, str, float, Optional[str]]:
+    def _eat_meat(self, fresh_meat: list, LexiconService: Dict) -> Tuple[str, str, float, Optional[str]]:
         target = random.choice(fresh_meat)
-        suburban_set = lexicon.get("suburban")
+        suburban_set = LexiconService.get("suburban")
         suburban_set = suburban_set if suburban_set else []
-        play_set = lexicon.get("play")
+        play_set = LexiconService.get("play")
         play_set = play_set if play_set else []
         self.gut_memory.append(target)
         self.global_tastings[target] += 1
@@ -397,16 +397,16 @@ class TheFolly:
         return "MEAT_GRINDER", msg, actual_yield, loot
 
     def _filter_meat_words(self, clean_words: list, lexicon: Dict) -> list:
-        heavy = lexicon.get("heavy")
-        kinetic = lexicon.get("kinetic")
-        suburban = lexicon.get("suburban")
+        heavy = LexiconService.get("heavy")
+        kinetic = LexiconService.get("kinetic")
+        suburban = LexiconService.get("suburban")
         heavy = heavy if heavy else []
         kinetic = kinetic if kinetic else []
         suburban = suburban if suburban else []
         return [w for w in clean_words if w in heavy or w in kinetic or w in suburban]
 
     def _attempt_digest_abstract(self, clean_words: list, lexicon: Dict) -> Tuple[str, str, float, Optional[str]]:
-        abstract_set = lexicon.get("abstract")
+        abstract_set = LexiconService.get("abstract")
         abstract_set = abstract_set if abstract_set else []
         abstract_words = [w for w in clean_words if w in abstract_set]
         if abstract_words:

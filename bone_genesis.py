@@ -1,7 +1,6 @@
 """ bone_genesis.py - "The Egg." """
 
 from typing import Dict, Any, Set
-from bone_config import BoneConfig
 from bone_core import EventBus, LoreManifest
 from bone_akashic import TheAkashicRecord
 from bone_architect import BoneArchitect
@@ -27,10 +26,6 @@ class BoneGenesis:
         akashic.setup_listeners(events)
         embryo = BoneArchitect.incubate(events, lexicon_ref)
         embryo = BoneArchitect.awaken(embryo)
-        if embryo.bio.mito.state.atp_pool <= 0.0:
-            genesis_val = getattr(BoneConfig.METABOLISM, "GENESIS_VOLTAGE", 100.0)
-            events.log(f"⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP).", "SYS")
-            embryo.bio.mito.adjust_atp(genesis_val, reason="GENESIS")
         mode_settings = config.get("mode_settings", {})
         suppressed = set(mode_settings.get("village_suppression", []))
         village_bundle = BoneGenesis._summon_village(events, embryo, akashic, suppressed)

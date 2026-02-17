@@ -3,7 +3,7 @@
 import json, os, random, time, tempfile
 from collections import deque
 from typing import List, Tuple, Optional, Dict, Any, Set
-from bone_lexicon import TheLexicon
+from bone_lexicon import LexiconStore, LexiconService
 from bone_core import EventBus, LoreManifest, BoneJSONEncoder
 from bone_types import Prisma
 from bone_config import BoneConfig
@@ -196,7 +196,7 @@ class MemoryCore:
         scored_memories = []
         for node, data in self.graph.items():
             resonance_score = 0.0
-            node_cats = TheLexicon.get_categories_for_word(node) or set()
+            node_cats = LexiconService.get_categories_for_word(node) or set()
             for dim, val in active_dims.items():
                 target_cats = self.dimension_map.get(dim, set())
                 if node_cats & target_cats:
@@ -299,7 +299,7 @@ class MycelialNetwork:
         self.subconscious = SubconsciousStrata()
         self.memory_core = MemoryCore(events, self.subconscious)
         self.lichen = BioLichen()
-        self.parasite = BioParasite(self, TheLexicon)
+        self.parasite = BioParasite(self, LexiconService)
         self.immune = ImmuneMycelium()
         self.repro = LiteraryReproduction()
         self.fossils = deque(maxlen=200)
@@ -438,9 +438,9 @@ class MycelialNetwork:
     def _filter_valuable_matter(self, words: List[str]) -> List[str]:
         valuable = []
         for w in words:
-            if len(w) <= 4 and w in TheLexicon.SOLVENTS:
+            if len(w) <= 4 and w in LexiconService.SOLVENTS:
                 continue
-            cat = TheLexicon.get_current_category(w)
+            cat = LexiconService.get_current_category(w)
             if cat and cat != "void":
                 valuable.append(w)
             elif len(w) > 4:
@@ -577,9 +577,9 @@ class MycelialNetwork:
             accepted_count = 0
             for cat, words in data["mutations"].items():
                 for w in words:
-                    current_cat = TheLexicon.get_current_category(w)
+                    current_cat = LexiconService.get_current_category(w)
                     if not current_cat or current_cat == "unknown":
-                        TheLexicon.teach(w, cat, 0)
+                        LexiconService.teach(w, cat, 0)
                         accepted_count += 1
             if accepted_count > 0:
                 self.events.log(
@@ -649,7 +649,7 @@ class MycelialNetwork:
             if not s.bloomed]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BONEAMANITA_15.4.3",
+            "genome": "BONEAMANITA_15.4.6",
             "session_id": self.session_id,
             "parent_id": self.session_id,
             "parent_id": self.session_id,
@@ -872,17 +872,17 @@ class BioLichen:
             drag = phys.get("narrative_drag", 0.0)
         light = counts.get("photo", 0)
         sugar = 0.0
-        light_words = [w for w in clean_words if w in TheLexicon.get("photo")]
+        light_words = [w for w in clean_words if w in LexiconService.get("photo")]
         if light > 0 and drag < 3.0:
             s = light * 2
             sugar += s
             source_str = f" via '{random.choice(light_words)}'" if light_words else ""
             msgs.append(f"{Prisma.GRN}PHOTOSYNTHESIS{source_str} (+{s}){Prisma.RST}")
         if sugar > 0:
-            heavy_words = [w for w in clean_words if w in TheLexicon.get("heavy")]
+            heavy_words = [w for w in clean_words if w in LexiconService.get("heavy")]
             if heavy_words:
                 h_word = random.choice(heavy_words)
-                TheLexicon.teach(h_word, "photo", tick_count)
+                LexiconService.teach(h_word, "photo", tick_count)
                 msgs.append(f"{Prisma.MAG}SUBLIMATION: '{h_word}' has become Light.{Prisma.RST}")
         return sugar, " ".join(msgs) if msgs else None
 
