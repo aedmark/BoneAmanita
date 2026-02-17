@@ -1,9 +1,8 @@
-""" bone_commands.py - 'The snake spits out its tail. The circle becomes a line.' """
-
 import shlex
 from typing import Dict, Callable, List, Optional
 from bone_core import LoreManifest, Prisma
 from bone_config import BonePresets
+
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
@@ -27,12 +26,17 @@ class CommandStateInterface:
             self.eng.stamina = max(0.0, self.eng.stamina + delta)
         elif resource == "atp":
             if hasattr(self.eng, "bio"):
-                self.eng.bio.mito.state.atp_pool = max(0.0, self.eng.bio.mito.state.atp_pool + delta)
+                self.eng.bio.mito.state.atp_pool = max(
+                    0.0, self.eng.bio.mito.state.atp_pool + delta
+                )
 
     def get_resource(self, resource: str) -> float:
-        if resource == "stamina": return self.eng.stamina
-        if resource == "atp": return self.eng.bio.mito.state.atp_pool
-        if resource == "health": return self.eng.health
+        if resource == "stamina":
+            return self.eng.stamina
+        if resource == "atp":
+            return self.eng.bio.mito.state.atp_pool
+        if resource == "health":
+            return self.eng.health
         return 0.0
 
     def save_state(self) -> str:
@@ -43,7 +47,9 @@ class CommandStateInterface:
             last_out = "Silence."
             inv = []
             if hasattr(self.eng, "cortex"):
-                state = self.eng.cortex.gather_state(getattr(self.eng.cortex, "last_physics", {}))
+                state = self.eng.cortex.gather_state(
+                    getattr(self.eng.cortex, "last_physics", {})
+                )
                 loc = state.get("world", {}).get("orbit", ["Void"])[0]
                 if self.eng.cortex.dialogue_buffer:
                     last_out = self.eng.cortex.dialogue_buffer[-1]
@@ -52,16 +58,19 @@ class CommandStateInterface:
             continuity_packet = {
                 "location": loc,
                 "last_output": last_out,
-                "inventory": inv}
+                "inventory": inv,
+            }
             atlas_data = None
-            if hasattr(self.eng, "town_hall") and hasattr(self.eng.town_hall, "Cartographer"):
+            if hasattr(self.eng, "town_hall") and hasattr(
+                self.eng.town_hall, "Cartographer"
+            ):
                 atlas_data = self.eng.town_hall.Cartographer.export_atlas()
             mito_traits = None
             antibodies = None
-            if hasattr(self.eng, 'bio'):
-                if hasattr(self.eng.bio, 'mito'):
+            if hasattr(self.eng, "bio"):
+                if hasattr(self.eng.bio, "mito"):
                     mito_traits = self.eng.bio.mito.adapt(0)
-                if hasattr(self.eng.bio, 'immune'):
+                if hasattr(self.eng.bio, "immune"):
                     antibodies = list(self.eng.bio.immune.active_antibodies)
             return self.eng.mind.mem.save(
                 health=self.eng.health,
@@ -71,10 +80,13 @@ class CommandStateInterface:
                 joy_history=[],
                 mitochondria_traits=mito_traits,
                 antibodies=antibodies,
-                soul_data=self.eng.soul.to_dict() if hasattr(self.eng, 'soul') else None,
+                soul_data=(
+                    self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None
+                ),
                 continuity=continuity_packet,
                 world_atlas=atlas_data,
-                village_data=None)
+                village_data=None,
+            )
         return "Error: Memory system unreachable."
 
     def get_vitals(self) -> Dict[str, float]:
@@ -83,7 +95,8 @@ class CommandStateInterface:
             "stamina": self.eng.stamina,
             "atp": self.eng.bio.mito.state.atp_pool,
             "max_health": getattr(self.Config, "MAX_HEALTH", 100.0),
-            "max_stamina": getattr(self.Config, "MAX_STAMINA", 100.0)}
+            "max_stamina": getattr(self.Config, "MAX_STAMINA", 100.0),
+        }
 
     def get_inventory(self) -> List[str]:
         if hasattr(self.eng, "gordon"):
@@ -94,7 +107,11 @@ class CommandStateInterface:
         if not hasattr(self.eng, "town_hall") or not hasattr(self.eng, "phys"):
             return "Navigation Offline."
         nav = getattr(self.eng.town_hall, "Navigator", None)
-        packet = self.eng.phys.tension.last_physics_packet if hasattr(self.eng.phys, "tension") else None
+        packet = (
+            self.eng.phys.tension.last_physics_packet
+            if hasattr(self.eng.phys, "tension")
+            else None
+        )
 
         if nav and packet:
             return nav.report_position(packet)
@@ -106,6 +123,7 @@ class CommandStateInterface:
             return soul.get_soul_state()
         return None
 
+
 class ResourceTax:
     def __init__(self, state: CommandStateInterface):
         self.state = state
@@ -114,14 +132,21 @@ class ResourceTax:
         stamina_cost = costs.get("stamina", 0.0)
         atp_cost = costs.get("atp", 0.0)
         if self.state.get_resource("stamina") < stamina_cost:
-            self.state.log(f"{self.state.P.RED}🛑 EXHAUSTED: Requires {stamina_cost} Stamina.{self.state.P.RST}")
+            self.state.log(
+                f"{self.state.P.RED}🛑 EXHAUSTED: Requires {stamina_cost} Stamina.{self.state.P.RST}"
+            )
             return False
         if self.state.get_resource("atp") < atp_cost:
-            self.state.log(f"{self.state.P.RED}🛑 STARVING: Requires {atp_cost} ATP.{self.state.P.RST}")
+            self.state.log(
+                f"{self.state.P.RED}🛑 STARVING: Requires {atp_cost} ATP.{self.state.P.RST}"
+            )
             return False
-        if stamina_cost > 0: self.state.modify_resource("stamina", -stamina_cost)
-        if atp_cost > 0: self.state.modify_resource("atp", -atp_cost)
+        if stamina_cost > 0:
+            self.state.modify_resource("stamina", -stamina_cost)
+        if atp_cost > 0:
+            self.state.modify_resource("atp", -atp_cost)
         return True
+
 
 class CommandRegistry:
     def __init__(self, state: CommandStateInterface):
@@ -134,7 +159,8 @@ class CommandRegistry:
         self.help_text[name] = help_str
 
     def execute(self, text: str) -> bool:
-        if not text.startswith("/"): return False
+        if not text.startswith("/"):
+            return False
         try:
             parts = shlex.split(text)
         except ValueError:
@@ -147,8 +173,16 @@ class CommandRegistry:
             self.state.log(f"Unknown command '{cmd}'. Try /help.", "CMD")
             return True
 
+
 class CommandProcessor:
-    def __init__(self, engine, prisma_ref, lexicon_ref=None, config_ref=None, cartographer_ref=None):
+    def __init__(
+        self,
+        engine,
+        prisma_ref,
+        lexicon_ref=None,
+        config_ref=None,
+        cartographer_ref=None,
+    ):
         real_config = config_ref if config_ref else getattr(engine, "config", None)
         self.interface = CommandStateInterface(engine, prisma_ref, real_config)
         self.tax = ResourceTax(self.interface)
@@ -165,8 +199,12 @@ class CommandProcessor:
         self.registry.register("/soul", self._cmd_soul, "Introspection")
         self.registry.register("/look", self._cmd_look, "Observe environment")
         self.registry.register("/reload", self._cmd_reload, "Hot-reload Lore")
-        self.registry.register("/truth", self._cmd_truth, "Adjust Reality Ambiguity [0-3]")
-        self.registry.register("/soothe", self._cmd_soothe, "Burn ATP to quell memory guilt")
+        self.registry.register(
+            "/truth", self._cmd_truth, "Adjust Reality Ambiguity [0-3]"
+        )
+        self.registry.register(
+            "/soothe", self._cmd_soothe, "Burn ATP to quell memory guilt"
+        )
         self.registry.register("/use", self._cmd_use, "Use/Consume an item")
 
     def execute(self, text: str):
@@ -176,7 +214,8 @@ class CommandProcessor:
             if not rules.get("allow_commands", True):
                 self.interface.log(
                     f"{self.P.RED}COMMAND REJECTED: Reality Depth {stack.current_depth} prohibits administrative override.{self.P.RST}",
-                    "ERR")
+                    "ERR",
+                )
                 return True
         return self.registry.execute(text)
 
@@ -184,27 +223,37 @@ class CommandProcessor:
         cost = 25.0
         current_stamina = self.interface.get_resource("stamina")
         if current_stamina < cost:
-            self.interface.log(f"{self.P.RED}Too weak to mourn. (Req: {cost} Stamina){self.P.RST}")
+            self.interface.log(
+                f"{self.P.RED}Too weak to mourn. (Req: {cost} Stamina){self.P.RST}"
+            )
             return True
-        if not hasattr(self.interface.eng, "mind") or \
-                not hasattr(self.interface.eng.mind, "mem") or \
-                not hasattr(self.interface.eng.mind.mem, "soothe_conscience"):
-            self.interface.log(f"{self.P.YEL}The subconscious is not installed.{self.P.RST}")
+        if (
+            not hasattr(self.interface.eng, "mind")
+            or not hasattr(self.interface.eng.mind, "mem")
+            or not hasattr(self.interface.eng.mind.mem, "soothe_conscience")
+        ):
+            self.interface.log(
+                f"{self.P.YEL}The subconscious is not installed.{self.P.RST}"
+            )
             return True
         self.interface.modify_resource("stamina", -cost)
         result_msg = self.interface.eng.mind.mem.soothe_conscience()
-        self.interface.log(f"{self.P.OCHRE}🏺 {result_msg} (-{cost} Stamina){self.P.RST}")
+        self.interface.log(
+            f"{self.P.OCHRE}🏺 {result_msg} (-{cost} Stamina){self.P.RST}"
+        )
         return True
 
     def _cmd_help(self, _parts):
         lines = [
-            f"\n{self.P.CYN}/// BONEAMANITA 15.5.6 TERMINAL ///{self.P.RST}",
-            f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n"]
+            f"\n{self.P.CYN}/// BONEAMANITA 15.5.7 TERMINAL ///{self.P.RST}",
+            f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n",
+        ]
         structure = {
-            "SURVIVAL":    ["/status", "/inventory", "/look"],
-            "PROTOCOL":    ["/save", "/mode", "/exit", "/help"],
-            "MYSTICISM":   ["/soul", "/map", "/truth"],
-            "MAINTENANCE": ["/debug", "/reload"]}
+            "SURVIVAL": ["/status", "/inventory", "/look"],
+            "PROTOCOL": ["/save", "/mode", "/exit", "/help"],
+            "MYSTICISM": ["/soul", "/map", "/truth"],
+            "MAINTENANCE": ["/debug", "/reload"],
+        }
         buckets = {k: [] for k in structure.keys()}
         buckets["UNCATEGORIZED"] = []
         for cmd, desc in self.registry.help_text.items():
@@ -217,7 +266,8 @@ class CommandProcessor:
             if not found:
                 buckets["UNCATEGORIZED"].append((cmd, desc))
         for cat, cmds in buckets.items():
-            if not cmds: continue
+            if not cmds:
+                continue
             lines.append(f"{self.P.WHT}[{cat}]{self.P.RST}")
             for cmd, desc in cmds:
                 lines.append(f"  {self.P.CYN}{cmd:<12}{self.P.RST} {desc}")
@@ -228,6 +278,7 @@ class CommandProcessor:
 
     def _cmd_status(self, _parts):
         v = self.interface.get_vitals()
+
         def bar(curr, max_v, col):
             filled = int((curr / max_v) * 10)
             return f"{col}{'█'*filled}{'░'*(10-filled)}{self.P.RST}"
@@ -235,7 +286,8 @@ class CommandProcessor:
         self.interface.log(
             f"Health:  {bar(v['health'], v['max_health'], self.P.RED)} {v['health']:.0f}\n"
             f"Stamina: {bar(v['stamina'], v['max_stamina'], self.P.GRN)} {v['stamina']:.0f}\n"
-            f"Energy:  {bar(v['atp'], 200, self.P.YEL)} {v['atp']:.0f}")
+            f"Energy:  {bar(v['atp'], 200, self.P.YEL)} {v['atp']:.0f}"
+        )
         return True
 
     def _cmd_mode(self, parts):
@@ -252,11 +304,17 @@ class CommandProcessor:
             for log in logs:
                 self.interface.log(log)
             phys_packet = None
-            if hasattr(self.interface.eng, "phys") and hasattr(self.interface.eng.phys, "tension"):
-                phys_packet = getattr(self.interface.eng.phys.tension, "last_physics_packet", None)
+            if hasattr(self.interface.eng, "phys") and hasattr(
+                self.interface.eng.phys, "tension"
+            ):
+                phys_packet = getattr(
+                    self.interface.eng.phys.tension, "last_physics_packet", None
+                )
             if phys_packet:
                 self.interface.Config.reconcile_state(phys_packet)
-                self.interface.log(f"{self.P.CYN}State reconciled to {mode_name} parameters.{self.P.RST}")
+                self.interface.log(
+                    f"{self.P.CYN}State reconciled to {mode_name} parameters.{self.P.RST}"
+                )
             self.interface.log(f"Switched to {mode_name}.")
         return True
 
@@ -277,25 +335,32 @@ class CommandProcessor:
             return
         for i, item in enumerate(items):
             self.interface.log(f" {P.GRY}{i + 1}.{P.RST} {P.CYN}{item.upper()}{P.RST}")
-        self.interface.log(f"{P.GRY}   ({len(items)}/{self.interface.Config.INVENTORY.MAX_SLOTS} Slots){P.RST}")
+        self.interface.log(
+            f"{P.GRY}   ({len(items)}/{self.interface.Config.INVENTORY.MAX_SLOTS} Slots){P.RST}"
+        )
 
     def _cmd_map(self, _parts):
-        if not self.tax.levy("MAP", {"stamina": 2.0}): return True
+        if not self.tax.levy("MAP", {"stamina": 2.0}):
+            return True
         nav_report = self.interface.get_navigation_report()
         self.interface.log(nav_report)
         return True
 
     def _cmd_debug(self, _parts):
-        self.interface.Config.VERBOSE_LOGGING = not self.interface.Config.VERBOSE_LOGGING
+        self.interface.Config.VERBOSE_LOGGING = (
+            not self.interface.Config.VERBOSE_LOGGING
+        )
         self.interface.log(f"Debug Mode: {self.interface.Config.VERBOSE_LOGGING}")
         return True
 
     def _cmd_exit(self, _parts):
         import sys
+
         self.interface.log(f"{Prisma.RED}System Halt Initiated.{Prisma.RST}", "SYS")
-        if 'streamlit' in sys.modules:
+        if "streamlit" in sys.modules:
             try:
                 import streamlit as st
+
                 st.stop()
             except Exception:
                 pass
@@ -327,9 +392,12 @@ class CommandProcessor:
 
     def _cmd_truth(self, parts):
         if len(parts) < 2:
-            self.interface.log("Usage: /truth [0=Boardroom, 1=Workshop, 2=RedTeam, 3=Palimpsest]")
+            self.interface.log(
+                "Usage: /truth [0=Boardroom, 1=Workshop, 2=RedTeam, 3=Palimpsest]"
+            )
             return True
         from bone_gui import TruthRenderer
+
         try:
             mode = int(parts[1])
             if not (0 <= mode <= 3):
@@ -343,13 +411,17 @@ class CommandProcessor:
                 self.interface.log("Error: CycleReporter not found.")
                 return True
             if not hasattr(reporter.renderer, "dial_setting"):
-                self.interface.log(f"{self.P.YEL}[SYS] Transplanting TruthRenderer into active cycle...{self.P.RST}")
+                self.interface.log(
+                    f"{self.P.YEL}[SYS] Transplanting TruthRenderer into active cycle...{self.P.RST}"
+                )
                 new_renderer = TruthRenderer(self.interface.eng)
                 reporter.renderer = new_renderer
                 reporter.renderers["STANDARD"] = new_renderer
             reporter.renderer.dial_setting = mode
             modes = ["BOARDROOM", "WORKSHOP", "RED TEAM", "PALIMPSEST"]
-            self.interface.log(f"{self.P.CYN}Ambiguity Dial set to: {modes[mode]}{self.P.RST}")
+            self.interface.log(
+                f"{self.P.CYN}Ambiguity Dial set to: {modes[mode]}{self.P.RST}"
+            )
         except ValueError:
             self.interface.log("Invalid mode. Use 0-3.")
         except Exception as e:

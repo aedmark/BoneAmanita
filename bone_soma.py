@@ -1,9 +1,8 @@
-""" bone_soma.py - "The body keeps the score." """
-
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
 from bone_config import BoneConfig
 from bone_types import Prisma
+
 
 @dataclass
 class BiologicalImpulse:
@@ -14,6 +13,7 @@ class BiologicalImpulse:
     stamina_impact: float = 0.0
     somatic_reflex: str = ""
 
+
 @dataclass
 class Qualia:
     color_code: str
@@ -21,38 +21,38 @@ class Qualia:
     tone: str
     internal_monologue_hint: str
 
+
 class SynestheticCortex:
     def __init__(self, bio_ref):
         self.bio = bio_ref
         self.last_reflex = None
 
     def _normalize_physics(self, physics) -> Dict:
-        if isinstance(physics, dict): return physics
-        if hasattr(physics, "to_dict"): return physics.to_dict()
+        if isinstance(physics, dict):
+            return physics
+        if hasattr(physics, "to_dict"):
+            return physics.to_dict()
         return getattr(physics, "__dict__", {})
 
-    def perceive(self, physics: Dict, traits: Any = None, latency: float = 0.0) -> BiologicalImpulse:
+    def perceive(
+        self, physics: Dict, traits: Any = None, latency: float = 0.0
+    ) -> BiologicalImpulse:
         physics = self._normalize_physics(physics)
         impulse = BiologicalImpulse()
-
-        # 1. Sensitivity Tuning
         base_sens = BoneConfig.CORTEX.BASE_SENSITIVITY
         if traits:
-            # Curiosity heightens sensitivity; Discipline dampens it.
-            base_sens *= (1.0 + getattr(traits, "curiosity", 0.5) - getattr(traits, "discipline", 0.5))
-
+            base_sens *= (
+                1.0
+                + getattr(traits, "curiosity", 0.5)
+                - getattr(traits, "discipline", 0.5)
+            )
         dynamic_sensitivity = max(0.0, base_sens)
-
-        # 2. Extract Signals
         valence = physics.get("valence", 0.0)
         counts = physics.get("counts", {})
         voltage = physics.get("voltage", 0)
         drag = physics.get("narrative_drag", 0)
-
-        # 3. Process Negative Stimuli
         if valence < -0.5:
             impulse.cortisol_delta += abs(valence) * dynamic_sensitivity
-
         if counts.get("antigen", 0) > 0:
             raw_tox = counts["antigen"] * (BoneConfig.TOXIN_WEIGHT * 0.2)
             impulse.cortisol_delta += min(BoneConfig.CORTEX.TOXIN_SCALAR, raw_tox)
@@ -60,8 +60,6 @@ class SynestheticCortex:
         elif drag > BoneConfig.CORTEX.DRAG_STRESS_THRESHOLD:
             impulse.cortisol_delta += 0.05
             impulse.stamina_impact -= 2.0
-
-        # 4. Process Positive Stimuli
         else:
             if valence > 0.4:
                 impulse.oxytocin_delta += valence * dynamic_sensitivity
@@ -74,86 +72,93 @@ class SynestheticCortex:
             if voltage > 12.0 and physics.get("kappa", 0) > 0.5:
                 impulse.dopamine_delta += 0.15
                 impulse.somatic_reflex = "Buzz (Excitement)"
-
-        # 5. Process Kinetic/Systemic
         k_count = counts.get("kinetic", 0) + counts.get("explosive", 0)
         if k_count > 0:
             adr_boost = min(0.4, k_count * BoneConfig.CORTEX.ADRENALINE_KINETIC_SCALAR)
             impulse.adrenaline_delta += adr_boost
             impulse.cortisol_delta += 0.02
             impulse.stamina_impact -= 1.0
-
         if voltage > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER:
             impulse.adrenaline_delta += 0.2
-
         if latency > BoneConfig.CORTEX.LATENCY_PENALTY_THRESHOLD:
-            impulse.stamina_impact -= (latency * 0.5)
+            impulse.stamina_impact -= latency * 0.5
             impulse.cortisol_delta += 0.05
             impulse.somatic_reflex = "Time Dilation (Lag)."
-
         if not impulse.somatic_reflex:
             impulse.somatic_reflex = self._derive_reflex(physics, impulse)
-
         self.last_reflex = impulse.somatic_reflex
         return impulse
 
     def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
-        # Hierarchy of sensation
         if impulse.adrenaline_delta > 0.1:
-            if impulse.cortisol_delta > 0.1: return "Trembling (Fight or Flight)."
-            if impulse.dopamine_delta > 0.1: return "Electric Vibration."
+            if impulse.cortisol_delta > 0.1:
+                return "Trembling (Fight or Flight)."
+            if impulse.dopamine_delta > 0.1:
+                return "Electric Vibration."
             return "Pupils Dilating."
-
         if impulse.oxytocin_delta > 0.1:
-            if impulse.dopamine_delta > 0.1: return "Golden Glow."
+            if impulse.dopamine_delta > 0.1:
+                return "Golden Glow."
             return "Chest Softening."
-
-        if impulse.cortisol_delta > 0.1: return "Gut Tightening."
-        if impulse.dopamine_delta > 0.1: return "Synaptic Spark."
-
+        if impulse.cortisol_delta > 0.1:
+            return "Gut Tightening."
+        if impulse.dopamine_delta > 0.1:
+            return "Synaptic Spark."
         psi = physics.get("psi", 0.0)
-        if psi > 0.6: return "Scalp Prickling (Liminal)."
-
+        if psi > 0.6:
+            return "Scalp Prickling (Liminal)."
         entropy = physics.get("entropy", 0.0)
-        if entropy > 0.7: return "Skin Crawling (Static)."
-
-        if physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER: return "Electrical Arcing."
-        if physics.get("voltage", 0) < 2.0: return "Metabolic Dimming."
-        if physics.get("narrative_drag", 0) > 5.0: return "Shoulders Sagging."
-
-        if self.last_reflex == "Steady Pulse.": return "..."
+        if entropy > 0.7:
+            return "Skin Crawling (Static)."
+        if physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER:
+            return "Electrical Arcing."
+        if physics.get("voltage", 0) < 2.0:
+            return "Metabolic Dimming."
+        if physics.get("narrative_drag", 0) > 5.0:
+            return "Shoulders Sagging."
+        if self.last_reflex == "Steady Pulse.":
+            return "..."
         return "Steady Pulse."
 
     def get_current_qualia(self, impulse: Optional[BiologicalImpulse]) -> Qualia:
         if not impulse:
             return Qualia(Prisma.GRY, "Numbness", "Neutral", "The body is silent.")
-
         color = Prisma.GRY
-        if impulse.cortisol_delta > 0.1: color = Prisma.OCHRE
-        elif impulse.dopamine_delta > 0.1: color = Prisma.MAG
-        elif impulse.oxytocin_delta > 0.1: color = Prisma.GRN
-        elif impulse.adrenaline_delta > 0.1: color = Prisma.RED
-
+        if impulse.cortisol_delta > 0.1:
+            color = Prisma.OCHRE
+        elif impulse.dopamine_delta > 0.1:
+            color = Prisma.MAG
+        elif impulse.oxytocin_delta > 0.1:
+            color = Prisma.GRN
+        elif impulse.adrenaline_delta > 0.1:
+            color = Prisma.RED
         tone = "Steady"
-        if impulse.adrenaline_delta > 0.2: tone = "Urgent"
-        elif impulse.dopamine_delta > 0.2: tone = "Vibrating"
-        elif impulse.cortisol_delta > 0.2: tone = "Strained"
-        elif impulse.oxytocin_delta > 0.2: tone = "Resonant"
-
+        if impulse.adrenaline_delta > 0.2:
+            tone = "Urgent"
+        elif impulse.dopamine_delta > 0.2:
+            tone = "Vibrating"
+        elif impulse.cortisol_delta > 0.2:
+            tone = "Strained"
+        elif impulse.oxytocin_delta > 0.2:
+            tone = "Resonant"
         hint = "Observe."
-        if impulse.cortisol_delta > 0.05: hint = "Something is wrong. Be guarded."
-        elif impulse.adrenaline_delta > 0.05: hint = "Move fast. Don't overthink."
-        elif impulse.oxytocin_delta > 0.05: hint = "Connect. Be vulnerable."
-        elif impulse.dopamine_delta > 0.05: hint = "Explore. Find the pattern."
-
+        if impulse.cortisol_delta > 0.05:
+            hint = "Something is wrong. Be guarded."
+        elif impulse.adrenaline_delta > 0.05:
+            hint = "Move fast. Don't overthink."
+        elif impulse.oxytocin_delta > 0.05:
+            hint = "Connect. Be vulnerable."
+        elif impulse.dopamine_delta > 0.05:
+            hint = "Explore. Find the pattern."
         return Qualia(
             color_code=color,
             somatic_sensation=impulse.somatic_reflex or "Steady Pulse.",
             tone=tone,
-            internal_monologue_hint=hint)
+            internal_monologue_hint=hint,
+        )
 
     def apply_impulse(self, impulse: BiologicalImpulse) -> float:
-        if not self.bio or not hasattr(self.bio, 'endo') or not self.bio.endo:
+        if not self.bio or not hasattr(self.bio, "endo") or not self.bio.endo:
             return 0.0
         endo = self.bio.endo
         endo.cortisol = max(0.0, min(1.0, endo.cortisol + impulse.cortisol_delta))

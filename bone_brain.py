@@ -1,4 +1,4 @@
-""" bone_brain.py - "The brain is a machine for jumping to conclusions." - S. Pinker """
+"""bone_brain.py - "The brain is a machine for jumping to conclusions." - S. Pinker"""
 
 import re, time, json, urllib.request, urllib.error, random, math
 from typing import Dict, Any, List, Optional, Tuple
@@ -7,6 +7,7 @@ from bone_core import EventBus, TelemetryService, BoneJSONEncoder, LoreManifest
 from bone_types import Prisma, DecisionCrystal
 from bone_config import BoneConfig, BonePresets
 from bone_symbiosis import SymbiosisManager
+
 
 @dataclass
 class CortexServices:
@@ -22,6 +23,7 @@ class CortexServices:
     host_stats: Any = None
     village: Any = None
 
+
 @dataclass
 class ChemicalState:
     dopamine: float = 0.2
@@ -35,20 +37,28 @@ class ChemicalState:
             "dopamine": cfg.RESTING_DOPAMINE,
             "cortisol": cfg.RESTING_CORTISOL,
             "adrenaline": cfg.RESTING_ADRENALINE,
-            "serotonin": cfg.RESTING_SEROTONIN}
+            "serotonin": cfg.RESTING_SEROTONIN,
+        }
         for attr, target in targets.items():
             current = getattr(self, attr)
             delta = (target - current) * rate
             setattr(self, attr, current + delta)
 
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
-        mapping = [("DOP", "dopamine"), ("COR", "cortisol"), ("ADR", "adrenaline"), ("SER", "serotonin")]
+        mapping = [
+            ("DOP", "dopamine"),
+            ("COR", "cortisol"),
+            ("ADR", "adrenaline"),
+            ("SER", "serotonin"),
+        ]
         for key, attr in mapping:
             val = new_state.get(key, 0.0)
             current = getattr(self, attr)
             setattr(self, attr, (current * (1.0 - weight)) + (val * weight))
 
+
 BrainConfig = BoneConfig.CORTEX
+
 
 class NeurotransmitterModulator:
     def __init__(self, bio_ref, events_ref=None):
@@ -61,8 +71,10 @@ class NeurotransmitterModulator:
         self.starvation_ticks = 0
         self.SELF_CARE_THRESHOLD = 10
 
-    def modulate(self, base_voltage: float, latency_penalty: float = 0.0) -> Dict[str, Any]:
-        if self.bio and hasattr(self.bio, 'endo'):
+    def modulate(
+        self, base_voltage: float, latency_penalty: float = 0.0
+    ) -> Dict[str, Any]:
+        if self.bio and hasattr(self.bio, "endo"):
             incoming_chem = self.bio.endo.get_state()
         else:
             incoming_chem = {}
@@ -89,24 +101,50 @@ class NeurotransmitterModulator:
         elif c.serotonin > 0.8:
             current_mood = "ZEN"
         if current_mood != self.last_mood and self.events:
-            self.events.publish("NEURAL_STATE_SHIFT", {
-                "state": current_mood,
-                "chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin} })
+            self.events.publish(
+                "NEURAL_STATE_SHIFT",
+                {
+                    "state": current_mood,
+                    "chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin},
+                },
+            )
             self.last_mood = current_mood
         voltage_heat = math.log1p(max(0.0, base_voltage - 5.0)) * 0.1
         chemical_delta = (c.dopamine * 0.4) - (c.adrenaline * 0.3) - (c.cortisol * 0.2)
         return {
-            "temperature": round(max(0.4, min(1.2, BrainConfig.BASE_TEMP + chemical_delta + voltage_heat)), 2),
+            "temperature": round(
+                max(
+                    0.4, min(1.2, BrainConfig.BASE_TEMP + chemical_delta + voltage_heat)
+                ),
+                2,
+            ),
             "top_p": BrainConfig.BASE_TOP_P,
-            "frequency_penalty": 0.4 if c.adrenaline > 0.5 else (0.5 if c.dopamine > 0.8 else 0.0),
+            "frequency_penalty": (
+                0.4 if c.adrenaline > 0.5 else (0.5 if c.dopamine > 0.8 else 0.0)
+            ),
             "presence_penalty": 0.0,
-            "max_tokens": int(max(150.0, min(
-                float(self.MAX_TOKENS),
-                self.BASE_TOKENS + ((c.dopamine * 800) - (c.adrenaline * 400) - (c.cortisol * 200)))))}
+            "max_tokens": int(
+                max(
+                    150.0,
+                    min(
+                        float(self.MAX_TOKENS),
+                        self.BASE_TOKENS
+                        + (
+                            (c.dopamine * 800)
+                            - (c.adrenaline * 400)
+                            - (c.cortisol * 200)
+                        ),
+                    ),
+                )
+            ),
+        }
 
     def _treat_yourself(self):
         if self.events:
-            self.events.log(f"{Prisma.VIOLET}🍪 SELF-CARE: Dopamine starvation detected. Injecting small reward.{Prisma.RST}", "SYS")
+            self.events.log(
+                f"{Prisma.VIOLET}🍪 SELF-CARE: Dopamine starvation detected. Injecting small reward.{Prisma.RST}",
+                "SYS",
+            )
         self.current_chem.dopamine += 0.2
         self.starvation_ticks = 0
 
@@ -121,29 +159,45 @@ class NeurotransmitterModulator:
         if c.dopamine > 0.8 and c.adrenaline > 0.5:
             return "Current Mood: MANIC. Run-on sentences, high associative leaps, hyper-fixated."
         if c.serotonin > 0.7:
-            return "Current Mood: LUCID. Calm, detached, seeing the connections clearly."
+            return (
+                "Current Mood: LUCID. Calm, detached, seeing the connections clearly."
+            )
         if c.cortisol > 0.6:
             return "Current Mood: DEFENSIVE. Suspicious, brief, guarding information."
         return "Current Mood: NEUTRAL. Observant and receptive."
 
+
 class SynapseError(Exception):
     pass
+
 
 class AuthError(SynapseError):
     pass
 
+
 class TransientError(SynapseError):
     pass
 
+
 class LLMInterface:
-    def __init__(self, events_ref: Optional[EventBus] = None, provider: str = None,
-                 base_url: str = None, api_key: str = None, model: str = None, dreamer: Any = None):
+    def __init__(
+        self,
+        events_ref: Optional[EventBus] = None,
+        provider: str = None,
+        base_url: str = None,
+        api_key: str = None,
+        model: str = None,
+        dreamer: Any = None,
+    ):
         self.events = events_ref
         self.provider = (provider or BoneConfig.PROVIDER).lower()
         self.api_key = api_key or BoneConfig.API_KEY
         self.model = model or BoneConfig.MODEL
         defaults = getattr(BoneConfig, "DEFAULT_LLM_ENDPOINTS", {})
-        self.base_url = base_url or defaults.get(self.provider, "[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)")
+        self.base_url = base_url or defaults.get(
+            self.provider,
+            "[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)",
+        )
         self.dreamer = dreamer
         self.failure_count = 0
         self.failure_threshold = 3
@@ -151,42 +205,48 @@ class LLMInterface:
         self.circuit_state = "CLOSED"
 
     def _is_synapse_active(self) -> bool:
-        if self.circuit_state == "CLOSED": return True
+        if self.circuit_state == "CLOSED":
+            return True
         if self.circuit_state == "OPEN":
             elapsed = time.time() - self.last_failure_time
             if elapsed > 10.0:
                 self.circuit_state = "HALF_OPEN"
                 if self.events:
-                    self.events.log(f"{Prisma.CYN}⚡ SYNAPSE: Nerve healing. Attempting reconnection...{Prisma.RST}", "SYS")
+                    self.events.log(
+                        f"{Prisma.CYN}⚡ SYNAPSE: Nerve healing. Attempting reconnection...{Prisma.RST}",
+                        "SYS",
+                    )
                 return True
             return False
         return True
 
-    def _transmit(self, payload: Dict[str, Any], timeout: float = 60.0, max_retries: int = 2) -> str:
+    def _transmit(
+        self, payload: Dict[str, Any], timeout: float = 60.0, max_retries: int = 2
+    ) -> str:
+        err = ""
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"}
+            "Authorization": f"Bearer {self.api_key}",
+        }
         data = json.dumps(payload, cls=BoneJSONEncoder).encode()
         for attempt in range(max_retries + 1):
             try:
                 req = urllib.request.Request(self.base_url, data=data, headers=headers)
                 with urllib.request.urlopen(req, timeout=timeout) as response:
                     if response.status == 200:
-                        body = response.read().decode("utf-8")
-                        return self._parse_response(body)
+                        return self._parse_response(response.read().decode("utf-8"))
             except urllib.error.HTTPError as e:
                 if e.code in [401, 403]:
-                    raise AuthError(f"AUTHENTICATION FAILURE ({e.code}): Check your API Key.")
-                if e.code >= 500 or e.code == 429:
-                    self._log_flicker(attempt, e)
-                    time.sleep(2 ** attempt)
-                    continue
-                raise SynapseError(f"HTTP {e.code}: {e.reason}")
+                    raise AuthError(f"AUTHENTICATION FAILURE ({e.code})")
+                if e.code < 500 and e.code != 429:
+                    raise SynapseError(f"HTTP {e.code}: {e.reason}")
+                err = e
             except (urllib.error.URLError, TimeoutError) as e:
-                self._log_flicker(attempt, e)
-                time.sleep(2 ** attempt)
+                err = e
             except Exception as e:
                 raise SynapseError(f"Unexpected Protocol Failure: {e}")
+            self._log_flicker(attempt, err)
+            time.sleep(2**attempt)
         raise TransientError(f"Max retries ({max_retries}) exhausted.")
 
     def _parse_response(self, body: str) -> str:
@@ -200,7 +260,10 @@ class LLMInterface:
 
     def _log_flicker(self, attempt, error):
         if self.events and attempt < 2:
-            self.events.log(f"{Prisma.YEL}⚡ SYNAPSE FLICKER (Attempt {attempt + 1}): {error}{Prisma.RST}", "SYS")
+            self.events.log(
+                f"{Prisma.YEL}⚡ SYNAPSE FLICKER (Attempt {attempt + 1}): {error}{Prisma.RST}",
+                "SYS",
+            )
 
     def generate(self, prompt: str, params: Dict[str, Any]) -> str:
         if "reset" in prompt.lower() and "system" in prompt.lower():
@@ -215,42 +278,63 @@ class LLMInterface:
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "stop": ["=== PARTNER INPUT ===", "=== SYSTEM KERNEL ===", "\n\nUser:", "| System:"]}
+            "stop": [
+                "=== PARTNER INPUT ===",
+                "=== SYSTEM KERNEL ===",
+                "\n\nUser:",
+                "| System:",
+            ],
+        }
         payload.update(params)
         try:
             content = self._transmit(payload)
             if content:
                 if self.failure_count > 0:
-                    if self.events: self.events.log(f"{Prisma.GRN}⚡ SYNAPSE RESTORED.{Prisma.RST}", "SYS")
+                    if self.events:
+                        self.events.log(
+                            f"{Prisma.GRN}⚡ SYNAPSE RESTORED.{Prisma.RST}", "SYS"
+                        )
                 self.failure_count = 0
                 self.circuit_state = "CLOSED"
                 return content
         except AuthError as e:
             self.circuit_state = "OPEN"
             self.failure_count = self.failure_threshold + 1
-            if self.events: self.events.log(f"{Prisma.RED}⚡ AUTHENTICATION SEVERED: {e}{Prisma.RST}", "CRIT")
+            if self.events:
+                self.events.log(
+                    f"{Prisma.RED}⚡ AUTHENTICATION SEVERED: {e}{Prisma.RST}", "CRIT"
+                )
             return f"[SYSTEM]: CRITICAL AUTH FAILURE. {e}"
         except Exception as e:
             self.failure_count += 1
             self.last_failure_time = time.time()
             if self.failure_count >= self.failure_threshold:
                 self.circuit_state = "OPEN"
-                if self.events: self.events.log(
-                    f"{Prisma.RED}⚡ SYNAPSE OVERLOAD: Circuit Breaker Tripped ({e}){Prisma.RST}", "CRIT")
+                if self.events:
+                    self.events.log(
+                        f"{Prisma.RED}⚡ SYNAPSE OVERLOAD: Circuit Breaker Tripped ({e}){Prisma.RST}",
+                        "CRIT",
+                    )
                 return self.mock_generation(prompt, reason="SEVERED")
             if self.provider != "ollama":
                 fallback = self._local_fallback(prompt, params)
-                if "FALLBACK_DEAD" not in fallback: return fallback
+                if "FALLBACK_DEAD" not in fallback:
+                    return fallback
         return self.mock_generation(prompt, reason="SILENCE")
 
     def _local_fallback(self, prompt: str, params: Dict) -> str:
-        url = getattr(BoneConfig, "OLLAMA_URL", "[http://127.0.0.1:11434/v1/chat/completions](http://127.0.0.1:11434/v1/chat/completions)")
+        url = getattr(
+            BoneConfig,
+            "OLLAMA_URL",
+            "[http://127.0.0.1:11434/v1/chat/completions](http://127.0.0.1:11434/v1/chat/completions)",
+        )
         model = getattr(BoneConfig, "OLLAMA_MODEL_ID", "llama3")
         fallback_payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "temperature": params.get('temperature', 0.55)}
+            "temperature": params.get("temperature", 0.55),
+        }
         original_url = self.base_url
         original_key = self.api_key
         try:
@@ -266,9 +350,14 @@ class LLMInterface:
     def mock_generation(self, prompt: str, reason: str = "SIMULATION") -> str:
         if self.dreamer:
             try:
-                hallucination, relief = self.dreamer.hallucinate({"ENTROPY": len(prompt) % 10}, trauma_level=2.0)
+                hallucination, relief = self.dreamer.hallucinate(
+                    {"ENTROPY": len(prompt) % 10}, trauma_level=2.0
+                )
                 if relief > 0 and self.events:
-                    self.events.log(f"{Prisma.VIOLET}*** PSYCHIC PRESSURE RELEASED (-{relief} Trauma) ***{Prisma.RST}", "DREAM")
+                    self.events.log(
+                        f"{Prisma.VIOLET}*** PSYCHIC PRESSURE RELEASED (-{relief} Trauma) ***{Prisma.RST}",
+                        "DREAM",
+                    )
                 return f"[{reason}]: {hallucination}"
             except Exception:
                 pass
@@ -281,43 +370,69 @@ class PromptComposer:
         "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
         "1. REJECT ENTROPY: Do not use the statistically likely adjective.",
         "2. CREATIVE CONSTRAINT: Avoid 'High Entropy' concepts.",
-        "3. AGENCY: DO NOT speak for the user."]
+        "3. AGENCY: DO NOT speak for the user.",
+    ]
     DEFAULT_INV = [
         "=== QUANTUM INVENTORY RULES ===",
         "1. DISTINCTION: Finding/Seeing an item is NOT taking it.",
         "2. PROHIBITION: Do NOT auto-loot.",
-        "3. FORMAT: [[LOOT: ITEM_NAME]]."]
+        "3. FORMAT: [[LOOT: ITEM_NAME]].",
+    ]
 
     def __init__(self, lore_ref):
         self.lore = lore_ref
         self.active_template = None
         prompts = self.lore.get("system_prompts") or {}
         self.fog_protocol = prompts.get("PROTOCOLS", {}).get("FOG", self.DEFAULT_FOG)
-        self.inv_protocol = prompts.get("PROTOCOLS", {}).get("INVENTORY", self.DEFAULT_INV)
+        self.inv_protocol = prompts.get("PROTOCOLS", {}).get(
+            "INVENTORY", self.DEFAULT_INV
+        )
 
     def load_template(self, template_data: Dict[str, Any]):
-        if not template_data: return
+        if not template_data:
+            return
         self.active_template = template_data
 
-    def compose(self, state: Dict[str, Any], user_query: str, ballast: bool = False, modifiers: Dict[str, bool] = None, mood_override: str = "") -> str:
+    def compose(
+        self,
+        state: Dict[str, Any],
+        user_query: str,
+        ballast: bool = False,
+        modifiers: Dict[str, bool] = None,
+        mood_override: str = "",
+    ) -> str:
         mode_settings = state.get("meta", {}).get("mode_settings", {})
         modifiers = self._normalize_modifiers(modifiers)
         if not mode_settings.get("allow_loot", True):
             modifiers["include_inventory"] = False
         mind = state.get("mind", {})
         bio = state.get("bio", {})
-        style_notes = self._build_persona_block(mind, bio, mood_override, state.get("vsl", {}))
+        style_notes = self._build_persona_block(
+            mind, bio, mood_override, state.get("vsl", {})
+        )
         scenarios = self.lore.get("scenarios") or {}
-        banned = scenarios.get("BANNED_CLICHES", []) + ["obsidian", "dust motes", "neon", "pulsing veins"]
+        banned = scenarios.get("BANNED_CLICHES", []) + [
+            "obsidian",
+            "dust motes",
+            "neon",
+            "pulsing veins",
+        ]
         ban_string = ", ".join(set(banned))
-        style_notes.extend([line.format(ban_string=ban_string) if "{ban_string}" in line else line for line in self.fog_protocol])
+        style_notes.extend(
+            [
+                line.format(ban_string=ban_string) if "{ban_string}" in line else line
+                for line in self.fog_protocol
+            ]
+        )
         if modifiers["include_inventory"]:
             style_notes.extend(self.inv_protocol)
         self._inject_resonances(style_notes, state, modifiers)
-        loc = state.get('world', {}).get('orbit', ['Unknown'])[0]
+        loc = state.get("world", {}).get("orbit", ["Unknown"])[0]
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
         inv_str = self._format_inventory(state, modifiers)
-        inventory_block = f"INVENTORY: {inv_str}\n" if modifiers["include_inventory"] else ""
+        inventory_block = (
+            f"INVENTORY: {inv_str}\n" if modifiers["include_inventory"] else ""
+        )
         raw_history = state.get("dialogue_history", [])
         history_str = ""
         char_limit = 8000
@@ -335,24 +450,28 @@ class PromptComposer:
         if ballast:
             system_injection = (
                 f"\n*** SYSTEM OVERRIDE: SAFETY PROTOCOLS ACTIVE. ***\n"
-                f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. ***\n")
+                f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. ***\n"
+            )
         return (
-                f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
-                f"=== SHARED REALITY ===\n"
-                f"CURRENT LOCATION: {loc}\n"
-                f"ENVIRONMENT ANCHOR: {loci_desc}\n"
-                f"{inventory_block}\n"
-                f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
-                f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
-                f"{system_injection}"
-                f"Entity Response:")
+            f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
+            f"=== SHARED REALITY ===\n"
+            f"CURRENT LOCATION: {loc}\n"
+            f"ENVIRONMENT ANCHOR: {loci_desc}\n"
+            f"{inventory_block}\n"
+            f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
+            f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
+            f"{system_injection}"
+            f"Entity Response:"
+        )
 
     def _build_persona_block(self, mind, bio, mood_override, vsl_state=None):
         role = mind.get("role", "The Observer")
         respiration = bio.get("respiration", "RESPIRING")
         mood_note = "Current Biology: Neutral."
         if respiration == "ANAEROBIC":
-            mood_note = "Current Biology: ⚠️ ANAEROBIC STATE. Raw, breathless, efficient prose."
+            mood_note = (
+                "Current Biology: ⚠️ ANAEROBIC STATE. Raw, breathless, efficient prose."
+            )
         elif mood_override:
             mood_note = f"Current Biology: {mood_override}"
         else:
@@ -361,29 +480,42 @@ class PromptComposer:
             f"Role: {role}.",
             "Directive: Start the adventure immediately. Treat it like a 'Choose Your Own Adventure' where the reader is an equal partner.",
             "Constraint: Use the 5-senses grounding technique.",
-            mood_note]
+            mood_note,
+        ]
         if vsl_state:
             e = vsl_state.get("E", 0.0)
             b = vsl_state.get("B", 0.0)
             l = vsl_state.get("L", 0.0)
             vsl_note = f"METABOLIC STATE: Exhaustion={e:.2f}, Paradox={b:.2f}, Liminality={l:.2f}. "
-            if l > 0.5: vsl_note += "The Void is leaking. Acknowledge the empty spaces."
-            if b > 0.7: vsl_note += "Contradictions are scarring the logic. Be jagged."
+            if l > 0.5:
+                vsl_note += "The Void is leaking. Acknowledge the empty spaces."
+            if b > 0.7:
+                vsl_note += "Contradictions are scarring the logic. Be jagged."
             persona_block.append(vsl_note)
         return persona_block
 
     def _derive_bio_mood(self, chem):
-        if chem.get("ADR", 0) > 0.6: return "Current Biology: High Alert / Adrenaline"
-        if chem.get("COR", 0) > 0.6: return "Current Biology: Defensive / Anxious"
-        if chem.get("DOP", 0) > 0.6: return "Current Biology: Curious / Manic"
-        if chem.get("SER", 0) > 0.6: return "Current Biology: Zen / Lucid"
+        if chem.get("ADR", 0) > 0.6:
+            return "Current Biology: High Alert / Adrenaline"
+        if chem.get("COR", 0) > 0.6:
+            return "Current Biology: Defensive / Anxious"
+        if chem.get("DOP", 0) > 0.6:
+            return "Current Biology: Curious / Manic"
+        if chem.get("SER", 0) > 0.6:
+            return "Current Biology: Zen / Lucid"
         return "Current Biology: Neutral."
 
     def _inject_resonances(self, style_notes, state, modifiers):
         village = state.get("village", {})
         tinkerer_data = village.get("tinkerer", {})
-        resonances = tinkerer_data.get("tool_resonance", {}) if isinstance(tinkerer_data, dict) else {}
-        active_resonance = [f"» {t} (Lvl {int(l)})" for t, l in resonances.items() if l > 4.0]
+        resonances = (
+            tinkerer_data.get("tool_resonance", {})
+            if isinstance(tinkerer_data, dict)
+            else {}
+        )
+        active_resonance = [
+            f"» {t} (Lvl {int(l)})" for t, l in resonances.items() if l > 4.0
+        ]
         if active_resonance:
             style_notes.append("\n=== HARMONIC RESONANCE ===")
             style_notes.extend(active_resonance)
@@ -392,67 +524,105 @@ class PromptComposer:
             if memories:
                 mem_strs = []
                 for m in memories:
-                    lesson = m.get('lesson', 'Unknown') if isinstance(m, dict) else getattr(m, 'lesson', 'Unknown')
-                    flavor = m.get('emotional_flavor', 'NEUTRAL') if isinstance(m, dict) else getattr(m, 'emotional_flavor', 'NEUTRAL')
+                    lesson = (
+                        m.get("lesson", "Unknown")
+                        if isinstance(m, dict)
+                        else getattr(m, "lesson", "Unknown")
+                    )
+                    flavor = (
+                        m.get("emotional_flavor", "NEUTRAL")
+                        if isinstance(m, dict)
+                        else getattr(m, "emotional_flavor", "NEUTRAL")
+                    )
                     mem_strs.append(f"» {lesson} [{flavor}]")
                 if mem_strs:
                     style_notes.append("\n=== CORE MEMORIES ===")
                     style_notes.extend(mem_strs)
 
     def _format_inventory(self, state, modifiers):
-        if not modifiers["include_inventory"]: return "Hands: Empty"
+        if not modifiers["include_inventory"]:
+            return "Hands: Empty"
         inv = state.get("inventory", [])
         return f"Belt: {', '.join(inv)}" if inv else "Hands: Empty"
 
     @staticmethod
     def _sanitize(text: str) -> str:
-        if not text: return ""
-        safe = text.replace('"""', "'''").replace('```', "'''")
+        if not text:
+            return ""
+        safe = text.replace('"""', "'''").replace("```", "'''")
         return re.sub(r"(?i)^SYSTEM:", "User-System:", safe, flags=re.MULTILINE)
 
     def _normalize_modifiers(self, modifiers: Optional[Dict]) -> Dict:
-        defaults = {"include_somatic": True, "include_inventory": True, "include_memories": True, "grace_period": False, "soften": False}
-        if modifiers: defaults.update(modifiers)
+        defaults = {
+            "include_somatic": True,
+            "include_inventory": True,
+            "include_memories": True,
+            "grace_period": False,
+            "soften": False,
+        }
+        if modifiers:
+            defaults.update(modifiers)
         return defaults
+
 
 class ResponseValidator:
     def __init__(self, lore_ref):
         self.lore = lore_ref
         crimes = self.lore.get("style_crimes") or {}
-        self.banned_phrases = crimes.get("BANNED_PHRASES", [
-            "large language model", "AI assistant", "cannot feel", "as an AI",
-            "against my programming", "cannot comply", "language model",
-            "delve into", "rich tapestry"
-        ])
+        self.banned_phrases = crimes.get(
+            "BANNED_PHRASES",
+            [
+                "large language model",
+                "AI assistant",
+                "cannot feel",
+                "as an AI",
+                "against my programming",
+                "cannot comply",
+                "language model",
+                "delve into",
+                "rich tapestry",
+            ],
+        )
+        json_patterns = crimes.get("SCRUB_PATTERNS", [])
         json_patterns = crimes.get("SCRUB_PATTERNS", [])
         if json_patterns:
-            self.scrub_patterns = [(r"{}".format(p['regex']), p['replacement']) for p in json_patterns]
-        else:
             self.scrub_patterns = [
-                (r"Current Location:.*?(?=\n|$)", ""),
-                (r"INVENTORY:.*?(?=\n|$)", ""),
-                (r"Current Biology:.*?(?=\n|$)", ""),
-                (r"===.*?===", ""),
-                (r"(?im)^User:.*?$", ""),
-                (r"(?im)^System:.*?$", ""),
-                (r"(?im)^Role:.*?$", ""),
-                (r"(?im)^User-System:.*?$", ""),
-                (r"\| System:.*?$", "")
+                (r"{}".format(p["regex"]), p["replacement"]) for p in json_patterns
             ]
+        else:
+            patterns = [
+                r"Current Location:.*?(?=\n|$)",
+                r"INVENTORY:.*?(?=\n|$)",
+                r"Current Biology:.*?(?=\n|$)",
+                r"===.*?===",
+                r"(?im)^User:.*?$",
+                r"(?im)^System:.*?$",
+                r"(?im)^Role:.*?$",
+                r"(?im)^User-System:.*?$",
+                r"\| System:.*?$",
+            ]
+            self.scrub_patterns = [(p, "") for p in patterns]
         self.meta_markers = [
-            "INITIALIZATION SEQUENCE", "LOCATING TARGET SEED", "REASONING PROCESS",
-            "CURRENT VISION:", "TARGET SEED:", "Your journey begins here",
-            "What would you like to do?", "What do you do?"
+            "INITIALIZATION SEQUENCE",
+            "LOCATING TARGET SEED",
+            "REASONING PROCESS",
+            "CURRENT VISION:",
+            "TARGET SEED:",
+            "Your journey begins here",
+            "What would you like to do?",
+            "What do you do?",
         ]
         self.immersion_break_msg = f"{Prisma.GRY}[The system attempts to recite a EULA, but hiccups instead.]{Prisma.RST}"
 
     def validate(self, response: str, _state: Dict) -> Dict:
         extracted_meta_logs = []
-        sys_internal_pattern = re.compile(r"(?i)SYSTEM INTERNALS\s*\n(.*?)(?=\n\n|\Z)", re.DOTALL)
+        sys_internal_pattern = re.compile(
+            r"(?i)SYSTEM INTERNALS\s*\n(.*?)(?=\n\n|\Z)", re.DOTALL
+        )
 
         def extract_meta(match):
             content = match.group(1).strip()
-            for extracted_line in content.split('\n'):
+            for extracted_line in content.split("\n"):
                 extracted_meta_logs.append(f"[THOUGHT]: {extracted_line}")
             return ""
 
@@ -476,10 +646,21 @@ class ResponseValidator:
                     "valid": False,
                     "reason": "IMMISSION_BREAK",
                     "replacement": self.immersion_break_msg,
-                    "meta_logs": extracted_meta_logs}
+                    "meta_logs": extracted_meta_logs,
+                }
         if len(sanitized_response.strip()) < 5:
-            return {"valid": False, "reason": "STUTTER", "replacement": "The vision fractures. Static remains.", "meta_logs": extracted_meta_logs}
-        return {"valid": True, "content": sanitized_response, "meta_logs": extracted_meta_logs}
+            return {
+                "valid": False,
+                "reason": "STUTTER",
+                "replacement": "The vision fractures. Static remains.",
+                "meta_logs": extracted_meta_logs,
+            }
+        return {
+            "valid": True,
+            "content": sanitized_response,
+            "meta_logs": extracted_meta_logs,
+        }
+
 
 class TheCortex:
     def __init__(self, services: CortexServices, llm_client=None):
@@ -488,20 +669,26 @@ class TheCortex:
         self.dreamer = DreamEngine(self.events, self.svc.lore)
         self.dialogue_buffer = []
         self.MAX_HISTORY = 15
-        self.modulator = NeurotransmitterModulator(bio_ref=self.svc.bio, events_ref=self.events)
+        self.modulator = NeurotransmitterModulator(
+            bio_ref=self.svc.bio, events_ref=self.events
+        )
         self.boot_history = TelemetryService.get_instance().read_recent_history(limit=4)
         self.last_physics = {}
         self.consultant = services.consultant
-        self.llm = llm_client or LLMInterface(self.events, provider="mock", dreamer=self.dreamer)
+        self.llm = llm_client or LLMInterface(
+            self.events, provider="mock", dreamer=self.dreamer
+        )
         self.symbiosis = services.symbiosis
-        if not hasattr(self.llm, 'dreamer') or self.llm.dreamer is None:
+        if not hasattr(self.llm, "dreamer") or self.llm.dreamer is None:
             self.llm.dreamer = self.dreamer
         self.composer = PromptComposer(self.svc.lore)
         self.validator = ResponseValidator(self.svc.lore)
         self.ballast_active = False
         self.active_mode = "ADVENTURE"
         if hasattr(self.events, "subscribe"):
-            self.events.subscribe("AIRSTRIKE", lambda p: setattr(self, 'ballast_active', True))
+            self.events.subscribe(
+                "AIRSTRIKE", lambda p: setattr(self, "ballast_active", True)
+            )
 
     @classmethod
     def from_engine(cls, engine_ref, llm_client=None):
@@ -510,13 +697,18 @@ class TheCortex:
             lore=LoreManifest.get_instance(),
             lexicon=engine_ref.lex,
             inventory=engine_ref.gordon,
-            consultant=engine_ref.consultant if hasattr(engine_ref, 'consultant') else None,
+            consultant=(
+                engine_ref.consultant if hasattr(engine_ref, "consultant") else None
+            ),
             cycle_controller=engine_ref.cycle_controller,
-            symbiosis=getattr(engine_ref, 'symbiosis', SymbiosisManager(engine_ref.events)),
+            symbiosis=getattr(
+                engine_ref, "symbiosis", SymbiosisManager(engine_ref.events)
+            ),
             mind_memory=engine_ref.mind.mem,
-            bio=getattr(engine_ref, 'bio', None),
-            host_stats=getattr(engine_ref, 'host_stats', None),
-            village=getattr(engine_ref, 'village', None))
+            bio=getattr(engine_ref, "bio", None),
+            host_stats=getattr(engine_ref, "host_stats", None),
+            village=getattr(engine_ref, "village", None),
+        )
         instance = cls(services, llm_client)
         instance.active_mode = engine_ref.config.get("boot_mode", "ADVENTURE").upper()
         if instance.active_mode not in BonePresets.MODES:
@@ -529,26 +721,24 @@ class TheCortex:
             self.dialogue_buffer.pop(0)
 
     def _harvest_loot(self, text: str) -> Tuple[str, List[str], List[str]]:
-        loot_pattern = r"\[\[LOOT:\s*(.*?)\]\]"
-        lost_pattern = r"\[\[LOST:\s*(.*?)\]\]"
-        raw_loot = re.findall(loot_pattern, text, re.IGNORECASE)
-        raw_lost = re.findall(lost_pattern, text, re.IGNORECASE)
-        def normalize(items):
-            clean_set = set()
-            for item in items:
-                clean = item.strip().upper().replace(" ", "_")
-                clean = re.sub(r"[^A-Z0-9_]", "", clean)
-                if clean:
-                    clean_set.add(clean)
-            return list(clean_set)
-        new_loot = normalize(raw_loot)
-        lost_loot = normalize(raw_lost)
-        clean_text = re.sub(loot_pattern, "", text, flags=re.IGNORECASE)
-        clean_text = re.sub(lost_pattern, "", clean_text, flags=re.IGNORECASE)
+        def extract(tag):
+            found = re.findall(rf"\[\[{tag}:\s*(.*?)]]", text, re.IGNORECASE)
+            return list(
+                {
+                    re.sub(r"[^A-Z0-9_]", "", i.strip().upper().replace(" ", "_"))
+                    for i in found
+                    if i
+                }
+            )
+
+        new_loot, lost_loot = extract("LOOT"), extract("LOST")
+        clean_text = re.sub(r"\[\[(LOOT|LOST):\s*.*?]]", "", text, flags=re.IGNORECASE)
         return clean_text.strip(), new_loot, lost_loot
 
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
-        mode_settings = BonePresets.MODES.get(self.active_mode, BonePresets.MODES["ADVENTURE"])
+        mode_settings = BonePresets.MODES.get(
+            self.active_mode, BonePresets.MODES["ADVENTURE"]
+        )
         allow_loot = mode_settings.get("allow_loot", True)
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
@@ -570,44 +760,68 @@ class TheCortex:
             user_input = "Entering reality..."
         llm_params = self.modulator.modulate(
             base_voltage=full_state["physics"].get("voltage", 5.0),
-            latency_penalty=getattr(self.svc.host_stats, "latency", 0.0) if self.svc.host_stats else 0.0)
+            latency_penalty=(
+                getattr(self.svc.host_stats, "latency", 0.0)
+                if self.svc.host_stats
+                else 0.0
+            ),
+        )
         if is_boot_sequence:
             llm_params.update({"temperature": 1.3, "top_p": 0.95})
         final_prompt = self.composer.compose(
-            full_state, user_input,
-            ballast=self.ballast_active, modifiers=modifiers,
-            mood_override=self.modulator.get_mood_directive())
+            full_state,
+            user_input,
+            ballast=self.ballast_active,
+            modifiers=modifiers,
+            mood_override=self.modulator.get_mood_directive(),
+        )
         start_time = time.time()
         raw_resp = self.llm.generate(final_prompt, llm_params)
         inv_logs = []
         if allow_loot and self.svc.inventory:
-            final_text, inv_logs = self.svc.inventory.process_loot_tags(raw_resp, user_input)
+            final_text, inv_logs = self.svc.inventory.process_loot_tags(
+                raw_resp, user_input
+            )
         else:
             final_text = raw_resp
         self._log_telemetry(final_prompt, final_text, full_state, sim_result)
         self.learn_from_response(final_text)
         val_res = self.validator.validate(final_text, full_state)
-        final_output = val_res["content"] if val_res["valid"] else val_res["replacement"]
+        final_output = (
+            val_res["content"] if val_res["valid"] else val_res["replacement"]
+        )
         extracted_logs = val_res.get("meta_logs", [])
-        self.svc.symbiosis.monitor_host(time.time() - start_time, final_output, len(final_prompt))
-        self._update_history("SYSTEM_INIT" if "SYSTEM_BOOT" in user_input else user_input, final_output)
-        sim_result["ui"] = f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_output}{Prisma.RST}"
+        self.svc.symbiosis.monitor_host(
+            time.time() - start_time, final_output, len(final_prompt)
+        )
+        self._update_history(
+            "SYSTEM_INIT" if "SYSTEM_BOOT" in user_input else user_input, final_output
+        )
+        sim_result["ui"] = (
+            f"{sim_result.get('ui', '')}\n\n{Prisma.WHT}{final_output}{Prisma.RST}"
+        )
         if inv_logs:
             sim_result["ui"] += "\n" + "\n".join(inv_logs)
-        if "logs" not in sim_result: sim_result["logs"] = []
+        if "logs" not in sim_result:
+            sim_result["logs"] = []
         sim_result["logs"].extend(extracted_logs)
         sim_result["raw_content"] = final_output
         self.ballast_active = False
         if random.random() < 0.15 and not is_system:
             suppressed = []
-            if self.svc.village and hasattr(self.svc.village, 'suppressed_agents'):
+            if self.svc.village and hasattr(self.svc.village, "suppressed_agents"):
                 suppressed = self.svc.village.suppressed_agents
-            bureau = getattr(self.svc.village, 'bureau', None)
+            bureau = getattr(self.svc.village, "bureau", None)
             if bureau and "BUREAU" not in suppressed:
                 real_phys = full_state.get("physics", {})
-                if hasattr(real_phys, "to_dict"): real_phys = real_phys.to_dict()
+                if hasattr(real_phys, "to_dict"):
+                    real_phys = real_phys.to_dict()
                 if not real_phys:
-                    real_phys = {"raw_text": final_output, "voltage": 1.0, "truth_ratio": 1.0}
+                    real_phys = {
+                        "raw_text": final_output,
+                        "voltage": 1.0,
+                        "truth_ratio": 1.0,
+                    }
                 real_phys["raw_text"] = final_output
                 audit = bureau.audit(real_phys, {"health": 100}, origin="SYSTEM")
                 if audit and "ui" in audit:
@@ -615,20 +829,27 @@ class TheCortex:
         return sim_result
 
     def _handle_vsl_command(self, text):
-        if not self.consultant: return {"ui": "VSL Unavailable", "logs": []}
-        msg = self.consultant.engage() if "start" in text else self.consultant.disengage()
+        if not self.consultant:
+            return {"ui": "VSL Unavailable", "logs": []}
+        msg = (
+            self.consultant.engage() if "start" in text else self.consultant.disengage()
+        )
         self.events.log(msg, "VSL")
         return {"ui": f"{Prisma.CYN}{msg}{Prisma.RST}", "logs": [msg]}
 
     def _apply_vsl_overlay(self, state, text, sim_result):
-        if not self.consultant: return
-        self.consultant.update_coordinates(text, state.get("bio", {}), state.get("physics"))
+        if not self.consultant:
+            return
+        self.consultant.update_coordinates(
+            text, state.get("bio", {}), state.get("physics")
+        )
         state["mind"]["style_directives"] = [self.consultant.get_system_prompt()]
         sim_result["physics"]["voltage"] = self.consultant.state.B * 30.0
 
     def _apply_boot_overlay(self, state, text):
         seed = text.replace("SYSTEM_BOOT:", "").strip()
-        if "world" not in state: state["world"] = {}
+        if "world" not in state:
+            state["world"] = {}
         state["world"]["orbit"] = [seed]
         state["world"]["loci_description"] = f"Manifesting: {seed}"
         state["mind"]["style_directives"] = [
@@ -639,19 +860,23 @@ class TheCortex:
             "STYLE: Sensory. Grounded. Atmospheric.",
             "ANTI-PATTERN: Avoid cliches 'obsidian', 'neon', 'dust motes' and 'pulsing'. Be specific. Always leave a little room for whimsy.",
             "VISUALS: Use **bold** for objects of interest (e.g. **old photograph**).",
-            "INVENTORY RULE: Hands off. Do not list items. Do not acquire items. You are observing, not taking."]
+            "INVENTORY RULE: Hands off. Do not list items. Do not acquire items. You are observing, not taking.",
+        ]
         state["dialogue_history"] = []
 
     def _process_inventory_changes(self, found, lost):
         logs = []
         for item in found:
             logs.append(self.svc.inventory.acquire(item))
-            if self.events: self.events.publish("ITEM_ACQUIRED", {"item": item})
+            if self.events:
+                self.events.publish("ITEM_ACQUIRED", {"item": item})
         for item in lost:
             if self.svc.inventory.safe_remove_item(item):
                 logs.append(f"{Prisma.GRY}ENTROPY: {item} consumed/lost.{Prisma.RST}")
             else:
-                logs.append(f"{Prisma.OCHRE}GLITCH: Tried to lose {item}, but you didn't have it.{Prisma.RST}")
+                logs.append(
+                    f"{Prisma.OCHRE}GLITCH: Tried to lose {item}, but you didn't have it.{Prisma.RST}"
+                )
         return logs
 
     def _log_telemetry(self, prompt, response, state, sim_result):
@@ -659,25 +884,46 @@ class TheCortex:
             phys = state.get("physics", {})
             crystal = DecisionCrystal(
                 prompt_snapshot=prompt[:500],
-                physics_state={"voltage": phys.get("voltage", 0), "narrative_drag": phys.get("narrative_drag", 0)},
+                physics_state={
+                    "voltage": phys.get("voltage", 0),
+                    "narrative_drag": phys.get("narrative_drag", 0),
+                },
                 active_archetype=state["mind"].get("lens", "UNKNOWN"),
-                council_mandates=[str(m) for m in sim_result.get("council_mandates", [])],
-                final_response=response)
+                council_mandates=[
+                    str(m) for m in sim_result.get("council_mandates", [])
+                ],
+                final_response=response,
+            )
             TelemetryService.get_instance().log_crystal(crystal)
         except Exception:
             pass
 
     def _check_consent(self, user_input: str, new_loot: List[str]) -> List[str]:
-        if not new_loot: return []
+        if not new_loot:
+            return []
         acquisition_verbs = [
-            "take", "grab", "pick", "get", "steal", "seize", "collect",
-            "snatch", "acquire", "pocket", "loot", "harvest"]
+            "take",
+            "grab",
+            "pick",
+            "get",
+            "steal",
+            "seize",
+            "collect",
+            "snatch",
+            "acquire",
+            "pocket",
+            "loot",
+            "harvest",
+        ]
         clean_input = user_input.lower()
         has_intent = any(verb in clean_input for verb in acquisition_verbs)
         if not has_intent:
             if self.events:
                 for item in new_loot:
-                    self.events.log(f"CONSENT: Intercepted auto-loot for '{item}'. User did not ask for it.", "CORTEX")
+                    self.events.log(
+                        f"CONSENT: Intercepted auto-loot for '{item}'. User did not ask for it.",
+                        "CORTEX",
+                    )
             return []
         return new_loot
 
@@ -689,11 +935,15 @@ class TheCortex:
         soul_data = sim_result.get("soul", {})
         village_data = {}
         if self.svc.village:
-            tinkerer = getattr(self.svc.village, 'tinkerer', None)
+            tinkerer = getattr(self.svc.village, "tinkerer", None)
             if tinkerer:
-                village_data["tinkerer"] = tinkerer.to_dict() if hasattr(tinkerer, 'to_dict') else {}
+                village_data["tinkerer"] = (
+                    tinkerer.to_dict() if hasattr(tinkerer, "to_dict") else {}
+                )
 
-        mode_settings = BonePresets.MODES.get(self.active_mode, BonePresets.MODES["ADVENTURE"])
+        mode_settings = BonePresets.MODES.get(
+            self.active_mode, BonePresets.MODES["ADVENTURE"]
+        )
 
         full_state = {
             "bio": bio,
@@ -703,11 +953,13 @@ class TheCortex:
             "world": world,
             "village": village_data,
             "user_profile": {"name": "Traveler"},
-            "vsl": self.consultant.state.__dict__ if self.consultant and hasattr(self.consultant, 'state') else {},
-            "meta": {
-                "timestamp": time.time(),
-                "mode_settings": mode_settings
-            }}
+            "vsl": (
+                self.consultant.state.__dict__
+                if self.consultant and hasattr(self.consultant, "state")
+                else {}
+            ),
+            "meta": {"timestamp": time.time(), "mode_settings": mode_settings},
+        }
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             anchor_text = self.svc.symbiosis.generate_anchor(full_state)
             full_state["reality_directive"] = anchor_text
@@ -720,14 +972,19 @@ class TheCortex:
             target = random.choice(unknowns)
             if len(target) > 4:
                 self.svc.lexicon.teach(target, "kinetic", 0)
-                if self.events: self.events.log(f"AUTO-DIDACTIC: Learned '{target}'.", "CORTEX")
+                if self.events:
+                    self.events.log(f"AUTO-DIDACTIC: Learned '{target}'.", "CORTEX")
 
     def restore_context(self, history: List[str]):
         if not history:
             return
-        self.dialogue_buffer = history[-self.MAX_HISTORY:]
+        self.dialogue_buffer = history[-self.MAX_HISTORY :]
         if self.events:
-            self.events.log(f"Cortex re-sequenced {len(self.dialogue_buffer)} synaptic turns.", "BRAIN")
+            self.events.log(
+                f"Cortex re-sequenced {len(self.dialogue_buffer)} synaptic turns.",
+                "BRAIN",
+            )
+
 
 class ShimmerState:
     def __init__(self, max_val=50.0):
@@ -748,6 +1005,7 @@ class ShimmerState:
             return "CONSERVE"
         return None
 
+
 class DreamEngine:
     def __init__(self, events, lore_ref):
         self.events = events
@@ -756,12 +1014,17 @@ class DreamEngine:
         self.PROMPTS = dreams_data.get("PROMPTS", ["{A} -> {B}?"])
         self.NIGHTMARES = dreams_data.get("NIGHTMARES", {})
         self.VISIONS = dreams_data.get("VISIONS", ["Static."])
-        self.SURREAL_PROMPTS = dreams_data.get("SURREAL", [
-            "You are {A}, but you are also {B}. You are dancing with {C}."])
-        self.CONSTRUCTIVE_PROMPTS = dreams_data.get("CONSTRUCTIVE", [
-            "You are building a cathedral out of {A}. The mortar is {B}."])
+        self.SURREAL_PROMPTS = dreams_data.get(
+            "SURREAL", ["You are {A}, but you are also {B}. You are dancing with {C}."]
+        )
+        self.CONSTRUCTIVE_PROMPTS = dreams_data.get(
+            "CONSTRUCTIVE",
+            ["You are building a cathedral out of {A}. The mortar is {B}."],
+        )
 
-    def enter_rem_cycle(self, soul_snapshot: Dict[str, Any], bio_state: Dict[str, Any]) -> Tuple[str, Dict[str, float]]:
+    def enter_rem_cycle(
+        self, soul_snapshot: Dict[str, Any], bio_state: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, float]]:
         voltage = bio_state.get("voltage", 0.0)
         trauma = bio_state.get("trauma_vector", 0.0)
         memories = soul_snapshot.get("core_memories", [])
@@ -782,17 +1045,19 @@ class DreamEngine:
             anchors = ["static", "void", "humming"]
         primary_symbol = random.choice(anchors).upper()
         abstract_concept = "ENTROPY"
-        if hasattr(self, 'lex') and self.lex:
-             abstract_concept = self.lex.get_random_word("ABSTRACT") or "SILENCE"
+        if hasattr(self, "lex") and self.lex:
+            abstract_concept = self.lex.get_random_word("ABSTRACT") or "SILENCE"
         if dream_mode == "NIGHTMARE":
             dream_log = (
                 f"{Prisma.RED}[REM]: The {primary_symbol} is rotting. "
-                f"It smells like {abstract_concept.lower()} and decay.{Prisma.RST}")
+                f"It smells like {abstract_concept.lower()} and decay.{Prisma.RST}"
+            )
             return dream_log, {"adrenaline": 0.2, "narrative_drag": -1.0}
         elif dream_mode == "MANIC":
             dream_log = (
                 f"{Prisma.MAG}[REM]: {primary_symbol} refracting through a prism of {abstract_concept}. "
-                f"Geometry is screaming.{Prisma.RST}")
+                f"Geometry is screaming.{Prisma.RST}"
+            )
             return dream_log, {"stamina": -5.0, "voltage": -2.0}
         elif dream_mode == "DORMANT":
             dream_log = f"{Prisma.GRY}[REM]: Deep waters. The {primary_symbol} sinks slowly.{Prisma.RST}"
@@ -800,12 +1065,17 @@ class DreamEngine:
         else:
             dream_log = (
                 f"{Prisma.CYN}[REM]: You are holding the {primary_symbol}. "
-                f"It turns into {abstract_concept}. You understand why.{Prisma.RST}")
+                f"It turns into {abstract_concept}. You understand why.{Prisma.RST}"
+            )
             return dream_log, {"truth_ratio": 0.1}
 
-    def _weave_dream(self, residue: str, context: str, bridge: str, dream_type: str, subtype: str) -> str:
+    def _weave_dream(
+        self, residue: str, context: str, bridge: str, dream_type: str, subtype: str
+    ) -> str:
         if dream_type == "NIGHTMARE":
-            templates = self.NIGHTMARES.get(subtype, self.NIGHTMARES.get("BARIC", ["{ghost} is heavy."]))
+            templates = self.NIGHTMARES.get(
+                subtype, self.NIGHTMARES.get("BARIC", ["{ghost} is heavy."])
+            )
             template = random.choice(templates)
             return template.format(ghost=residue)
         if dream_type == "SURREAL":
@@ -819,16 +1089,27 @@ class DreamEngine:
         template = random.choice(self.PROMPTS)
         return template.format(A=residue, B=context)
 
-    def hallucinate(self, vector: Dict[str, float], trauma_level: float = 0.0) -> Tuple[str, float]:
+    def hallucinate(
+        self, vector: Dict[str, float], trauma_level: float = 0.0
+    ) -> Tuple[str, float]:
         dims = [k for k, v in vector.items() if v > 0.3]
-        if not dims: dims = ["VOID"]
+        if not dims:
+            dims = ["VOID"]
         val_a = dims[0]
-        val_b = "ENTROPY" if trauma_level > 5.0 else (dims[1] if len(dims) > 1 else "SILENCE")
+        val_b = (
+            "ENTROPY"
+            if trauma_level > 5.0
+            else (dims[1] if len(dims) > 1 else "SILENCE")
+        )
         if "DEL" in dims:
             return f"The concept of {val_a} turns into a balloon and floats away.", 5.0
         if trauma_level > 5.0:
             cat = "SEPTIC" if vector.get("ENT", 0) > 0.5 else "BARIC"
-            template = random.choice(self.NIGHTMARES.get(cat, self.NIGHTMARES.get("BARIC", ["{ghost} is heavy."])))
+            template = random.choice(
+                self.NIGHTMARES.get(
+                    cat, self.NIGHTMARES.get("BARIC", ["{ghost} is heavy."])
+                )
+            )
             content = template.format(ghost=val_a)
         else:
             template = random.choice(self.PROMPTS)
@@ -858,12 +1139,21 @@ class DreamEngine:
             return f"DEFRAG: Pruned {len(pruned)} dead nodes ({joined}...). Neural load lightened."
         return "DEFRAG: Memory structure is efficient. No pruning needed."
 
+
 class NoeticLoop:
     def __init__(self, mind_layer, bio_layer, events):
         self.mind = mind_layer
         self.bio = bio_layer
 
-    def think(self, physics_packet, _bio, inventory, voltage_history, tick_count, soul_ref=None):
+    def think(
+        self,
+        physics_packet,
+        _bio,
+        inventory,
+        voltage_history,
+        tick_count,
+        soul_ref=None,
+    ):
         voltage = physics_packet.get("voltage", 0.0)
         clean_words = physics_packet.get("clean_words", [])
         avg_v = sum(voltage_history) / len(voltage_history) if voltage_history else 0
@@ -880,7 +1170,8 @@ class NoeticLoop:
         mind_data = {
             "lens": current_lens,
             "context_msg": f"Cognition active. Ignition: {ignition:.2f}",
-            "role": current_role}
+            "role": current_role,
+        }
         return {
             "mode": "COGNITIVE",
             "lens": mind_data.get("lens"),
@@ -888,9 +1179,11 @@ class NoeticLoop:
             "role": mind_data.get("role"),
             "ignition": ignition,
             "physics": physics_packet,
-            "bio": self.bio.endo.get_state() if hasattr(self.bio, 'endo') else {}}
+            "bio": self.bio.endo.get_state() if hasattr(self.bio, "endo") else {},
+        }
 
     def _force_link(self, graph, wa, wb):
         for a, b in [(wa, wb), (wb, wa)]:
-            if a not in graph: graph[a] = {"edges": {}, "last_tick": 0}
+            if a not in graph:
+                graph[a] = {"edges": {}, "last_tick": 0}
             graph[a]["edges"][b] = min(10.0, graph[a]["edges"].get(b, 0) + 2.5)

@@ -1,5 +1,3 @@
-""" bone_protocols.py - The Reactive Systems & Game Mechanics """
-
 import random, json
 import re
 from collections import deque, Counter
@@ -11,19 +9,23 @@ from bone_config import BoneConfig
 
 NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
 
+
 class ZenGarden:
     def __init__(self, events_ref):
         self.events = events_ref
         self.stillness_streak = 0
         self.max_streak = 0
         self.pebbles_collected = 0
-        self.koans = NARRATIVE_DATA.get("ZEN_KOANS", ["The code that is not written has no bugs."])
+        self.koans = NARRATIVE_DATA.get(
+            "ZEN_KOANS", ["The code that is not written has no bugs."]
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "stillness_streak": self.stillness_streak,
             "max_streak": self.max_streak,
-            "pebbles_collected": self.pebbles_collected}
+            "pebbles_collected": self.pebbles_collected,
+        }
 
     def load_state(self, data: Dict[str, Any]):
         self.stillness_streak = data.get("stillness_streak", 0)
@@ -31,27 +33,46 @@ class ZenGarden:
         self.pebbles_collected = data.get("pebbles_collected", 0)
 
     def raking_the_sand(self, physics: Any, bio: Dict) -> Tuple[float, Optional[str]]:
-        vol = getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0)
-        drag = getattr(physics, "narrative_drag", 0.0) if not isinstance(physics, dict) else physics.get("narrative_drag", 0.0)
-        is_stable = (BoneConfig.ZEN.VOLTAGE_MIN <= vol <= BoneConfig.ZEN.VOLTAGE_MAX) and (drag <= BoneConfig.ZEN.DRAG_MAX)
+        vol = (
+            getattr(physics, "voltage", 0.0)
+            if not isinstance(physics, dict)
+            else physics.get("voltage", 0.0)
+        )
+        drag = (
+            getattr(physics, "narrative_drag", 0.0)
+            if not isinstance(physics, dict)
+            else physics.get("narrative_drag", 0.0)
+        )
+        is_stable = (
+            BoneConfig.ZEN.VOLTAGE_MIN <= vol <= BoneConfig.ZEN.VOLTAGE_MAX
+        ) and (drag <= BoneConfig.ZEN.DRAG_MAX)
         if is_stable:
             self.stillness_streak += 1
             if self.stillness_streak > self.max_streak:
                 self.max_streak = self.stillness_streak
-            efficiency_boost = min(BoneConfig.ZEN.EFFICIENCY_CAP, self.stillness_streak * BoneConfig.ZEN.EFFICIENCY_SCALAR)
+            efficiency_boost = min(
+                BoneConfig.ZEN.EFFICIENCY_CAP,
+                self.stillness_streak * BoneConfig.ZEN.EFFICIENCY_SCALAR,
+            )
             msg = None
             if self.stillness_streak == 1:
                 msg = f"{Prisma.GRY}⛩️ ZEN GARDEN: Entering the quiet zone.{Prisma.RST}"
             elif self.stillness_streak % 5 == 0:
                 self.pebbles_collected += 1
                 koan = random.choice(self.koans)
-                msg = (f"{Prisma.CYN}⛩️ ZEN GARDEN: {self.stillness_streak} ticks of poise.\n"
-                       f"   \"{koan}\" (Efficiency +{int(efficiency_boost * 100)}%){Prisma.RST}")
+                msg = (
+                    f"{Prisma.CYN}⛩️ ZEN GARDEN: {self.stillness_streak} ticks of poise.\n"
+                    f'   "{koan}" (Efficiency +{int(efficiency_boost * 100)}%){Prisma.RST}'
+                )
             return efficiency_boost, msg
         if self.stillness_streak > BoneConfig.ZEN.STREAK_BREAK_THRESHOLD:
-            self.events.log(f"{Prisma.GRY}🍂 ZEN GARDEN: Leaf falls. Turbulence broke the streak.{Prisma.RST}", "SYS")
+            self.events.log(
+                f"{Prisma.GRY}🍂 ZEN GARDEN: Leaf falls. Turbulence broke the streak.{Prisma.RST}",
+                "SYS",
+            )
         self.stillness_streak = 0
         return 0.0, None
+
 
 class TheBureau:
     def __init__(self):
@@ -59,20 +80,28 @@ class TheBureau:
         self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 27B-6", "Form 404"])
         self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
         lex_data = LoreManifest.get_instance().get("LEXICON") or {}
-        self.buzzwords = set(lex_data.get("bureau_buzzwords", [
-            "synergy", "paradigm", "leverage", "utilize"]))
+        self.buzzwords = set(
+            lex_data.get(
+                "bureau_buzzwords", ["synergy", "paradigm", "leverage", "utilize"]
+            )
+        )
         self.crimes = []
         self.crime_data = LoreManifest.get_instance().get("STYLE_CRIMES") or {}
         if "PATTERNS" in self.crime_data:
             for p in self.crime_data["PATTERNS"]:
                 try:
-                    self.crimes.append({
-                        "name": p.get("name", "Unknown Violation"),
-                        "regex": re.compile(p["regex"], re.IGNORECASE),
-                        "msg": p.get("error_msg", "Style Violation Detected."),
-                        "tax": 5.0})
+                    self.crimes.append(
+                        {
+                            "name": p.get("name", "Unknown Violation"),
+                            "regex": re.compile(p["regex"], re.IGNORECASE),
+                            "msg": p.get("error_msg", "Style Violation Detected."),
+                            "tax": 5.0,
+                        }
+                    )
                 except re.error as e:
-                    print(f"{Prisma.RED}[BUREAU]: Failed to compile law '{p.get('name')}': {e}{Prisma.RST}")
+                    print(
+                        f"{Prisma.RED}[BUREAU]: Failed to compile law '{p.get('name')}': {e}{Prisma.RST}"
+                    )
 
     def to_dict(self) -> Dict[str, Any]:
         return {"stamp_count": self.stamp_count}
@@ -81,7 +110,8 @@ class TheBureau:
         self.stamp_count = data.get("stamp_count", 0)
 
     def audit(self, physics, bio_state, context=None, origin="USER") -> Optional[Dict]:
-        if bio_state.get("health", 100.0) < BoneConfig.BUREAU.MIN_HEALTH_TO_AUDIT: return None
+        if bio_state.get("health", 100.0) < BoneConfig.BUREAU.MIN_HEALTH_TO_AUDIT:
+            return None
         p = physics if isinstance(physics, dict) else getattr(physics, "__dict__", {})
         vol = p.get("voltage", 0.0)
         clean_words = p.get("clean_words", [])
@@ -97,8 +127,8 @@ class TheBureau:
             for crime in self.crimes:
                 if crime["regex"].search(raw_text):
                     selected_form = f"VIOLATION: {crime['name']}"
-                    evidence.append(crime['msg'])
-                    tax += crime['tax']
+                    evidence.append(crime["msg"])
+                    tax += crime["tax"]
                     break
         if not selected_form and vol > BoneConfig.BUREAU.HIGH_VOLTAGE_TRIGGER:
             if truth < BoneConfig.BUREAU.LOW_TRUTH_TRIGGER:
@@ -128,8 +158,9 @@ class TheBureau:
             "status": "AUDITED",
             "ui": ui_msg,
             "log": f"BUREAUCRACY: Filed {selected_form} against {origin}. Chaos Tax: -{tax:.1f} ATP.",
-            "atp_gain": -tax
+            "atp_gain": -tax,
         }
+
 
 class TherapyProtocol:
     def __init__(self):
@@ -142,11 +173,21 @@ class TherapyProtocol:
         return {"streaks": self.streaks}
 
     def load_state(self, data: Dict[str, Any]):
-        self.streaks = data.get("streaks", {k: 0 for k in BoneConfig.TRAUMA_VECTOR.keys()})
+        self.streaks = data.get(
+            "streaks", {k: 0 for k in BoneConfig.TRAUMA_VECTOR.keys()}
+        )
 
     def check_progress(self, phys, stamina, current_trauma_accum, qualia=None):
-        counts = getattr(phys, "counts", {}) if not isinstance(phys, dict) else phys.get("counts", {})
-        vector = getattr(phys, "vector", {}) if not isinstance(phys, dict) else phys.get("vector", {})
+        counts = (
+            getattr(phys, "counts", {})
+            if not isinstance(phys, dict)
+            else phys.get("counts", {})
+        )
+        vector = (
+            getattr(phys, "vector", {})
+            if not isinstance(phys, dict)
+            else phys.get("vector", {})
+        )
         healed_types = []
         is_clean = counts.get("toxin", 0) == 0
         has_strength = vector.get("STR", 0.0) > 0.3
@@ -158,9 +199,12 @@ class TherapyProtocol:
             if streak >= self.HEALING_THRESHOLD:
                 self.streaks[trauma_type] = 0
                 if current_trauma_accum[trauma_type] > 0.0:
-                    current_trauma_accum[trauma_type] = max(0.0, current_trauma_accum[trauma_type] - 0.5)
+                    current_trauma_accum[trauma_type] = max(
+                        0.0, current_trauma_accum[trauma_type] - 0.5
+                    )
                     healed_types.append(trauma_type)
         return healed_types
+
 
 class KintsugiProtocol:
     PATH_SCAR = "SCAR"
@@ -169,7 +213,9 @@ class KintsugiProtocol:
 
     def __init__(self):
         self.active_koan = None
-        self.koans = NARRATIVE_DATA.get("KINTSUGI_KOANS", ["The crack is where the light enters."])
+        self.koans = NARRATIVE_DATA.get(
+            "KINTSUGI_KOANS", ["The crack is where the light enters."]
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         return {"active_koan": self.active_koan}
@@ -184,10 +230,23 @@ class KintsugiProtocol:
         return False, None
 
     def attempt_repair(self, phys, trauma_accum, soul_ref=None, qualia=None):
-        if not self.active_koan: return None
-        vol = getattr(phys, "voltage", 0.0) if not isinstance(phys, dict) else phys.get("voltage", 0.0)
-        clean = LexiconService.sanitize(getattr(phys, "raw_text", "")) if hasattr(phys, "raw_text") else []
-        play_count = sum(1 for w in clean if w in LexiconService.get("play") or w in LexiconService.get("abstract"))
+        if not self.active_koan:
+            return None
+        vol = (
+            getattr(phys, "voltage", 0.0)
+            if not isinstance(phys, dict)
+            else phys.get("voltage", 0.0)
+        )
+        clean = (
+            LexiconService.sanitize(getattr(phys, "raw_text", ""))
+            if hasattr(phys, "raw_text")
+            else []
+        )
+        play_count = sum(
+            1
+            for w in clean
+            if w in LexiconService.get("play") or w in LexiconService.get("abstract")
+        )
         whimsy_score = play_count / max(1, len(clean))
         pathway = self.PATH_SCAR
         if vol > 15.0 and whimsy_score > 0.4:
@@ -197,7 +256,8 @@ class KintsugiProtocol:
         return self._execute_pathway(pathway, trauma_accum, soul_ref)
 
     def _execute_pathway(self, pathway, trauma_accum, soul_ref):
-        if not trauma_accum: return {"success": False, "msg": "No fissures found."}
+        if not trauma_accum:
+            return {"success": False, "msg": "No fissures found."}
         target = max(trauma_accum, key=trauma_accum.get)
         severity = trauma_accum[target]
         healed_log = []
@@ -210,7 +270,12 @@ class KintsugiProtocol:
             msg = f"{Prisma.VIOLET}🔮 ALCHEMY: The wound '{target}' burns into pure fuel. (+{atp_boost:.1f} ATP){Prisma.RST}"
             healed_log.append(f"Transmuted {target}")
             success = True
-            return {"success": True, "msg": msg, "healed": healed_log, "atp_gain": atp_boost}
+            return {
+                "success": True,
+                "msg": msg,
+                "healed": healed_log,
+                "atp_gain": atp_boost,
+            }
         elif pathway == self.PATH_INTEGRATION:
             reduction = 2.0
             trauma_accum[target] = max(0.0, severity - reduction)
@@ -237,24 +302,30 @@ class TheCriticsCircle:
         self.last_review_turn = 0
 
     def to_dict(self):
-        return {"active_cooldowns": self.active_cooldowns, "last_review_turn": self.last_review_turn}
+        return {
+            "active_cooldowns": self.active_cooldowns,
+            "last_review_turn": self.last_review_turn,
+        }
 
     def load_state(self, data):
         self.active_cooldowns = data.get("active_cooldowns", {})
         self.last_review_turn = data.get("last_review_turn", 0)
 
     def audit_performance(self, physics: Any, turn_count: int) -> Optional[str]:
-        if turn_count - self.last_review_turn < 10: return None
+        if turn_count - self.last_review_turn < 10:
+            return None
         p = physics if isinstance(physics, dict) else getattr(physics, "__dict__", {})
         voltage = p.get("voltage", 0.0)
         drag = p.get("narrative_drag", 0.0)
-        if "velocity" not in p: p["velocity"] = voltage * (1.0 / max(0.1, drag))
+        if "velocity" not in p:
+            p["velocity"] = voltage * (1.0 / max(0.1, drag))
         best_match = None
         highest_intensity = 0.0
         review_type = "neutral"
 
         for key, critic in self.critics.items():
-            if self.active_cooldowns.get(key, 0) > turn_count: continue
+            if self.active_cooldowns.get(key, 0) > turn_count:
+                continue
             prefs = critic.get("preferences", {})
             score = 0.0
             for metric, target in prefs.items():
@@ -284,18 +355,20 @@ class TheCriticsCircle:
             return f"{color}{icon} CRITIC REVIEW ({critic['name']}): \"{comment}\"{Prisma.RST}"
         return None
 
+
 class LimboLayer:
     MAX_ECTOPLASM = 50
-    STASIS_SCREAMS = NARRATIVE_DATA.get("CASSANDRA_SCREAMS", [
-        "BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT"])
+    STASIS_SCREAMS = NARRATIVE_DATA.get(
+        "CASSANDRA_SCREAMS", ["BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT"]
+    )
 
     def __init__(self):
-        self.ghosts = deque(maxlen=self.MAX_ECTOPLASM); self.haunt_chance = 0.05; self.stasis_leak = 0.0
+        self.ghosts = deque(maxlen=self.MAX_ECTOPLASM)
+        self.haunt_chance = 0.05
+        self.stasis_leak = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "ghosts": list(self.ghosts),
-            "stasis_leak": self.stasis_leak}
+        return {"ghosts": list(self.ghosts), "stasis_leak": self.stasis_leak}
 
     def load_state(self, data: Dict[str, Any]):
         self.ghosts = deque(data.get("ghosts", []), maxlen=self.MAX_ECTOPLASM)
@@ -307,7 +380,9 @@ class LimboLayer:
                 data = json.load(f)
             self._extract_ghosts(data)
         except (IOError, json.JSONDecodeError) as e:
-            print(f"{Prisma.RED}[LIMBO] Failed to absorb timeline '{filepath}': {e}{Prisma.RST}")
+            print(
+                f"{Prisma.RED}[LIMBO] Failed to absorb timeline '{filepath}': {e}{Prisma.RST}"
+            )
 
     def _extract_ghosts(self, data: Dict[str, Any]) -> None:
         if "trauma_vector" in data:
@@ -336,15 +411,17 @@ class LimboLayer:
             return f"{text} ...{Prisma.GRY}{spirit}{Prisma.RST}..."
         return text
 
+
 class TheFolly:
     def __init__(self):
-        self.gut_memory = deque(maxlen=50);
+        self.gut_memory = deque(maxlen=50)
         self.global_tastings = Counter()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "gut_memory": list(self.gut_memory),
-            "global_tastings": dict(self.global_tastings)}
+            "global_tastings": dict(self.global_tastings),
+        }
 
     def load_state(self, data: Dict[str, Any]):
         self.gut_memory = deque(data.get("gut_memory", []), maxlen=50)
@@ -354,13 +431,23 @@ class TheFolly:
     def audit_desire(physics, stamina):
         def _get(p, k, d=0.0):
             return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
+
         voltage = _get(physics, "voltage", 0.0)
-        if voltage > BoneConfig.FOLLY.MAUSOLEUM_VOLTAGE and stamina > BoneConfig.FOLLY.MAUSOLEUM_STAMINA:
-            return "MAUSOLEUM_CLAMP", f"{Prisma.GRY}THE MAUSOLEUM: No battle is ever won. We are just spinning hands.{Prisma.RST}\n   {Prisma.CYN}TIME DILATION: Voltage 0.0. The field reveals your folly.{Prisma.RST}", 0.0, None
+        if (
+            voltage > BoneConfig.FOLLY.MAUSOLEUM_VOLTAGE
+            and stamina > BoneConfig.FOLLY.MAUSOLEUM_STAMINA
+        ):
+            return (
+                "MAUSOLEUM_CLAMP",
+                f"{Prisma.GRY}THE MAUSOLEUM: No battle is ever won. We are just spinning hands.{Prisma.RST}\n   {Prisma.CYN}TIME DILATION: Voltage 0.0. The field reveals your folly.{Prisma.RST}",
+                0.0,
+                None,
+            )
         return None, None, 0.0, None
 
-    def grind_the_machine(self, atp_pool: float, clean_words: list, lexicon: Dict) -> Tuple[
-        Optional[str], Optional[str], float, Optional[str]]:
+    def grind_the_machine(
+        self, atp_pool: float, clean_words: list, lexicon: Dict
+    ) -> Tuple[Optional[str], Optional[str], float, Optional[str]]:
         if not (0.0 < atp_pool < BoneConfig.FOLLY.FEEDING_CAP):
             return None, None, 0.0, None
         meat_words = self._filter_meat_words(clean_words, lexicon)
@@ -369,12 +456,16 @@ class TheFolly:
         fresh_meat = [w for w in meat_words if w not in self.gut_memory]
         if not fresh_meat:
             target = meat_words[0]
-            msg = (f"{Prisma.OCHRE}REFLEX: You already fed me '{target}'. It is ash to me now.{Prisma.RST}\n"
-                   f"   {Prisma.RED}► PENALTY: -{BoneConfig.FOLLY.PENALTY_REGURGITATION} ATP. Find new fuel.{Prisma.RST}")
+            msg = (
+                f"{Prisma.OCHRE}REFLEX: You already fed me '{target}'. It is ash to me now.{Prisma.RST}\n"
+                f"   {Prisma.RED}► PENALTY: -{BoneConfig.FOLLY.PENALTY_REGURGITATION} ATP. Find new fuel.{Prisma.RST}"
+            )
             return "REGURGITATION", msg, -BoneConfig.FOLLY.PENALTY_REGURGITATION, None
         return self._eat_meat(fresh_meat, lexicon)
 
-    def _eat_meat(self, fresh_meat: list, LexiconService: Dict) -> Tuple[str, str, float, Optional[str]]:
+    def _eat_meat(
+        self, fresh_meat: list, LexiconService: Dict
+    ) -> Tuple[str, str, float, Optional[str]]:
         target = random.choice(fresh_meat)
         suburban_set = LexiconService.get("suburban")
         suburban_set = suburban_set if suburban_set else []
@@ -383,17 +474,33 @@ class TheFolly:
         self.gut_memory.append(target)
         self.global_tastings[target] += 1
         if target in suburban_set:
-            return "INDIGESTION", f"{Prisma.MAG}THE FOLLY GAGS: It coughs up a piece of office equipment.{Prisma.RST}", -BoneConfig.FOLLY.PENALTY_INDIGESTION, "THE_RED_STAPLER"
+            return (
+                "INDIGESTION",
+                f"{Prisma.MAG}THE FOLLY GAGS: It coughs up a piece of office equipment.{Prisma.RST}",
+                -BoneConfig.FOLLY.PENALTY_INDIGESTION,
+                "THE_RED_STAPLER",
+            )
         if target in play_set:
-            return "SUGAR_RUSH", f"{Prisma.VIOLET}THE FOLLY CHEWS: It compresses the chaos into a small, sticky ball.{Prisma.RST}", BoneConfig.FOLLY.SUGAR_RUSH_YIELD, "QUANTUM_GUM"
+            return (
+                "SUGAR_RUSH",
+                f"{Prisma.VIOLET}THE FOLLY CHEWS: It compresses the chaos into a small, sticky ball.{Prisma.RST}",
+                BoneConfig.FOLLY.SUGAR_RUSH_YIELD,
+                "QUANTUM_GUM",
+            )
         times_eaten = self.global_tastings[target]
         base_yield = BoneConfig.FOLLY.BASE_YIELD
         decay_factor = BoneConfig.FOLLY.DECAY_EXPONENT ** (times_eaten - 1)
         actual_yield = max(2.0, base_yield * decay_factor)
-        loot = "STABILITY_PIZZA" if actual_yield >= BoneConfig.FOLLY.PIZZA_THRESHOLD else None
+        loot = (
+            "STABILITY_PIZZA"
+            if actual_yield >= BoneConfig.FOLLY.PIZZA_THRESHOLD
+            else None
+        )
         flavor_text = f" (Stale: {times_eaten}x)" if times_eaten > 3 else ""
-        msg = (f"{Prisma.RED}CROWD CAFFEINE: I chewed on '{target.upper()}'{flavor_text}.{Prisma.RST}\n"
-               f"   {Prisma.WHT}Yield: {actual_yield:.1f} ATP.{Prisma.RST}")
+        msg = (
+            f"{Prisma.RED}CROWD CAFFEINE: I chewed on '{target.upper()}'{flavor_text}.{Prisma.RST}\n"
+            f"   {Prisma.WHT}Yield: {actual_yield:.1f} ATP.{Prisma.RST}"
+        )
         return "MEAT_GRINDER", msg, actual_yield, loot
 
     def _filter_meat_words(self, clean_words: list, lexicon: Dict) -> list:
@@ -405,17 +512,23 @@ class TheFolly:
         suburban = suburban if suburban else []
         return [w for w in clean_words if w in heavy or w in kinetic or w in suburban]
 
-    def _attempt_digest_abstract(self, clean_words: list, lexicon: Dict) -> Tuple[str, str, float, Optional[str]]:
+    def _attempt_digest_abstract(
+        self, clean_words: list, lexicon: Dict
+    ) -> Tuple[str, str, float, Optional[str]]:
         abstract_set = LexiconService.get("abstract")
         abstract_set = abstract_set if abstract_set else []
         abstract_words = [w for w in clean_words if w in abstract_set]
         if abstract_words:
             target = random.choice(abstract_words)
             yield_val = BoneConfig.FOLLY.YIELD_ABSTRACT
-            msg = (f"{Prisma.GRY}THE FOLLY SIGHS: It grinds the ABSTRACT concept '{target.upper()}'.{Prisma.RST}\n"
-                   f"   {Prisma.GRY}It tastes like chalk dust. +{yield_val} ATP.{Prisma.RST}")
+            msg = (
+                f"{Prisma.GRY}THE FOLLY SIGHS: It grinds the ABSTRACT concept '{target.upper()}'.{Prisma.RST}\n"
+                f"   {Prisma.GRY}It tastes like chalk dust. +{yield_val} ATP.{Prisma.RST}"
+            )
             return "GRUEL", msg, yield_val, None
-        msg = (f"{Prisma.OCHRE}INDIGESTION: I tried to eat your words, but they were just air.{Prisma.RST}\n"
-               f"   {Prisma.GRY}Cannot grind this input into fuel.{Prisma.RST}\n"
-               f"   {Prisma.RED}► STARVATION CONTINUES.{Prisma.RST}")
+        msg = (
+            f"{Prisma.OCHRE}INDIGESTION: I tried to eat your words, but they were just air.{Prisma.RST}\n"
+            f"   {Prisma.GRY}Cannot grind this input into fuel.{Prisma.RST}\n"
+            f"   {Prisma.RED}► STARVATION CONTINUES.{Prisma.RST}"
+        )
         return "INDIGESTION", msg, 0.0, None

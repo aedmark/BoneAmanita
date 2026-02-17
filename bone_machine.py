@@ -1,24 +1,26 @@
-""" bone_machine.py - 'The gears turn, the pistons fire.' """
-
 import random
 from typing import Tuple, Optional, List, Dict
-
 from bone_config import BoneConfig
 from bone_core import LoreManifest
 from bone_lexicon import LexiconService
+
 
 class TheCrucible:
     def __init__(self):
         self.max_voltage_cap = getattr(BoneConfig.MACHINE, "CRUCIBLE_VOLTAGE_CAP", 20.0)
         self.active_state = "COLD"
         self.dampener_charges = 3
-        self.dampener_tolerance = getattr(BoneConfig.MACHINE, "DAMPENER_TOLERANCE", 15.0)
+        self.dampener_tolerance = getattr(
+            BoneConfig.MACHINE, "DAMPENER_TOLERANCE", 15.0
+        )
         self.instability_index = 0.0
 
     def dampener_status(self):
         return f"🛡️ Charges: {self.dampener_charges}"
 
-    def dampen(self, voltage_spike: float, stability_index: float) -> Tuple[bool, str, float]:
+    def dampen(
+        self, voltage_spike: float, stability_index: float
+    ) -> Tuple[bool, str, float]:
         if self.dampener_charges <= 0:
             return False, "⚠️ DAMPER EMPTY", 0.0
         should_dampen = False
@@ -56,7 +58,9 @@ class TheCrucible:
         msg = None
         if abs(adjustment) > 0.1:
             direction = "TIGHTENING" if adjustment > 0 else "RELAXING"
-            msg = f"⚖️ REGULATOR: {direction} (Drag {current_drag:.1f} -> {new_drag:.1f})"
+            msg = (
+                f"⚖️ REGULATOR: {direction} (Drag {current_drag:.1f} -> {new_drag:.1f})"
+            )
         if physics.get("system_surge_event", False):
             self.active_state = "SURGE"
             return "SURGE", 0.0, f"⚡ SURGE: Absorbed {voltage}v."
@@ -69,9 +73,14 @@ class TheCrucible:
             else:
                 damage = voltage * 0.5
                 self.active_state = "MELTDOWN"
-                return "MELTDOWN", damage, f"💥 MELTDOWN: Hull Breach (-{damage:.1f} HP)"
+                return (
+                    "MELTDOWN",
+                    damage,
+                    f"💥 MELTDOWN: Hull Breach (-{damage:.1f} HP)",
+                )
         self.active_state = "REGULATED"
         return "REGULATED", adjustment, msg
+
 
 class TheForge:
     def __init__(self):
@@ -83,21 +92,29 @@ class TheForge:
         voltage = float(physics.get("voltage", 0))
         clean_words = physics.get("clean_words", [])
         counts = physics.get("counts", {})
-        if not clean_words: return False, None, None
+        if not clean_words:
+            return False, None, None
         total_mass = (counts.get("heavy", 0) * 2.0) + (counts.get("kinetic", 0) * 0.5)
         avg_density = total_mass / max(1, len(clean_words))
         forge_probability = (voltage / 20.0) * avg_density
         if random.random() < forge_probability:
             if counts.get("heavy", 0) > 3:
-                return True, f"🔨 FORGED: Lead Boots (Mass {avg_density:.1f})", "LEAD_BOOTS"
+                return (
+                    True,
+                    f"🔨 FORGED: Lead Boots (Mass {avg_density:.1f})",
+                    "LEAD_BOOTS",
+                )
             if counts.get("kinetic", 0) > 3:
                 return True, f"🔨 FORGED: Safety Scissors (Kinetic)", "SAFETY_SCISSORS"
             return True, f"🔨 FORGED: Anchor Stone", "ANCHOR_STONE"
         return False, None, None
 
-    def attempt_crafting(self, physics: Dict, inventory_list: List[str]) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
+    def attempt_crafting(
+        self, physics: Dict, inventory_list: List[str]
+    ) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
         clean_words = physics.get("clean_words", [])
-        if not clean_words: return False, None, None, None
+        if not clean_words:
+            return False, None, None, None
         clean_set = set(clean_words)
         voltage = float(physics.get("voltage", 0))
         for recipe in self.recipes:
@@ -106,7 +123,8 @@ class TheForge:
                 continue
             catalyst_cat = recipe["catalyst_category"]
             cat_words = LexiconService.get(catalyst_cat)
-            if not cat_words: continue
+            if not cat_words:
+                continue
             hits = clean_set.intersection(cat_words)
             if hits:
                 entanglement = self._calculate_entanglement(len(hits), voltage)
@@ -115,9 +133,15 @@ class TheForge:
                         True,
                         f"⚗️ ALCHEMY: {recipe['result']} (via {ingredient})",
                         ingredient,
-                        recipe["result"])
+                        recipe["result"],
+                    )
                 else:
-                    return False, f"⚠️ ALCHEMY FAIL: Decoherence ({int(entanglement*100)}%)", None, None
+                    return (
+                        False,
+                        f"⚠️ ALCHEMY FAIL: Decoherence ({int(entanglement*100)}%)",
+                        None,
+                        None,
+                    )
         return False, None, None, None
 
     @staticmethod
@@ -135,6 +159,7 @@ class TheForge:
             return f"🌡️ OVERHEAT: {voltage:.1f}v. Add Coolant (Aerobic)."
         return None
 
+
 class TheTheremin:
     def __init__(self):
         self.decoherence_buildup = 0.0
@@ -143,13 +168,17 @@ class TheTheremin:
         self.SHATTER_POINT = 100.0
         self.is_stuck = False
 
-    def listen(self, physics: Dict, governor_mode="COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
+    def listen(
+        self, physics: Dict, governor_mode="COURTYARD"
+    ) -> Tuple[bool, float, Optional[str], Optional[str]]:
         counts = physics.get("counts", {})
         voltage = float(physics.get("voltage", 0.0))
         turb = float(physics.get("turbulence", 0.0))
         rep = float(physics.get("repetition", 0.0))
         complexity = float(physics.get("truth_ratio", 0.0))
-        ancient_mass = counts.get("heavy", 0) + counts.get("thermal", 0) + counts.get("cryo", 0)
+        ancient_mass = (
+            counts.get("heavy", 0) + counts.get("thermal", 0) + counts.get("cryo", 0)
+        )
         modern_mass = counts.get("abstract", 0)
         raw_mix = min(ancient_mass, modern_mass)
         resin_flow = raw_mix * 2.0
@@ -170,7 +199,9 @@ class TheTheremin:
             self.classical_turns += 1
             slag = self.classical_turns * 2.0
             self.decoherence_buildup += slag
-            theremin_msg = f"🗿 CALCIFICATION: Turn {self.classical_turns} (+{slag} Resin)"
+            theremin_msg = (
+                f"🗿 CALCIFICATION: Turn {self.classical_turns} (+{slag} Resin)"
+            )
         elif complexity > 0.4 and self.classical_turns > 0:
             self.classical_turns = 0
             relief = 15.0
@@ -185,14 +216,23 @@ class TheTheremin:
             theremin_msg = f"🌊 TURBULENCE: -{shatter_amt:.1f} Resin"
             self.classical_turns = 0
         if turb < 0.2:
-            physics["narrative_drag"] = max(0.0, float(physics.get("narrative_drag", 0)) - 1.0)
+            physics["narrative_drag"] = max(
+                0.0, float(physics.get("narrative_drag", 0)) - 1.0
+            )
         if self.decoherence_buildup > self.SHATTER_POINT:
             self.decoherence_buildup = 0.0
             self.classical_turns = 0
             if isinstance(physics, dict):
-                physics["narrative_drag"] = max(physics.get("narrative_drag", 0.0) + 20.0, 20.0)
+                physics["narrative_drag"] = max(
+                    physics.get("narrative_drag", 0.0) + 20.0, 20.0
+                )
                 physics["voltage"] = 0.0
-            return False, resin_flow, f"💣 COLLAPSE: AIRSTRIKE INITIATED (Drag +20, Voltage 0)", "AIRSTRIKE"
+            return (
+                False,
+                resin_flow,
+                f"💣 COLLAPSE: AIRSTRIKE INITIATED (Drag +20, Voltage 0)",
+                "AIRSTRIKE",
+            )
         if self.classical_turns > 3:
             critical_event = "CORROSION"
             theremin_msg = f"{theremin_msg or ''} | ⚠️ CORROSION"

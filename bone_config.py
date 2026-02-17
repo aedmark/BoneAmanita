@@ -1,6 +1,5 @@
-""" bone_config.py - The System Tunables """
-
 from typing import Dict, Any, List
+
 
 class BonePresets:
     ZEN_GARDEN = {
@@ -10,7 +9,7 @@ class BonePresets:
         "BIO.DECAY_RATE": 0.001,
         "BIO.STAMINA_EXHAUSTED": 5.0,
         "COUNCIL.MANIC_VOLTAGE_TRIGGER": 99.0,
-        "tuning": "ZEN"
+        "tuning": "ZEN",
     }
     THUNDERDOME = {
         "PHYSICS.VOLTAGE_FLOOR": 8.0,
@@ -18,7 +17,8 @@ class BonePresets:
         "PHYSICS.DRAG_FLOOR": 0.5,
         "BIO.ATP_STARVATION": 20.0,
         "COUNCIL.MANIC_VOLTAGE_TRIGGER": 12.0,
-        "CHANCE.RARE": 0.20}
+        "CHANCE.RARE": 0.20,
+    }
     SANCTUARY = {
         "VOLTAGE_TARGET": 7.0,
         "VOLTAGE_TOLERANCE": 3.0,
@@ -29,13 +29,15 @@ class BonePresets:
         "B_TARGET": 0.5,
         "ZONE": "SANCTUARY",
         "COLOR": "\033[32m",
-        "COLOR_NAME": "GRN"}
+        "COLOR_NAME": "GRN",
+    }
     LABORATORY = {
         "PHYSICS.VOLTAGE_FLOOR": 0.5,
         "PHYSICS.VOLTAGE_MAX": 15.0,
         "PHYSICS.DRAG_FLOOR": 2.0,
         "BIO.DECAY_RATE": 0.0,
-        "COUNCIL.FOOTNOTE_CHANCE": 1.0}
+        "COUNCIL.FOOTNOTE_CHANCE": 1.0,
+    }
     MODES = {
         "ADVENTURE": {
             "description": "The default experience. Survival, inventory, exploration.",
@@ -47,19 +49,25 @@ class BonePresets:
             "show_location": True,
             "show_vitals": True,
             "allow_loot": True,
-            "allow_metrics": True
+            "allow_metrics": True,
         },
         "CONVERSATION": {
             "description": "Pure dialogue. No entropy, no items, just connection.",
             "tuning": "ZEN",
             "ui_layer": 1,
-            "village_suppression": ["GORDON", "NAVIGATOR", "CARTOGRAPHER", "TINKERER", "DEATH"],
+            "village_suppression": [
+                "GORDON",
+                "NAVIGATOR",
+                "CARTOGRAPHER",
+                "TINKERER",
+                "DEATH",
+            ],
             "prompt_key": "CONVERSATION",
             "show_inventory": False,
             "show_location": False,
             "show_vitals": False,
             "allow_loot": False,
-            "allow_metrics": False
+            "allow_metrics": False,
         },
         "CREATIVE": {
             "description": "High voltage, low drag. Hallucination enabled.",
@@ -71,7 +79,7 @@ class BonePresets:
             "show_location": True,
             "show_vitals": False,
             "allow_loot": False,
-            "allow_metrics": False
+            "allow_metrics": False,
         },
         "TECHNICAL": {
             "description": "Raw data stream. Debugging and code generation.",
@@ -83,59 +91,41 @@ class BonePresets:
             "show_location": True,
             "show_vitals": True,
             "allow_loot": True,
-            "allow_metrics": True
-        }
+            "allow_metrics": True,
+        },
     }
 
     STANDARD = {
         "PHYSICS": {"VOLTAGE_MAX": 20.0, "BASE_DRAG": 1.0},
-        "BIO": {"METABOLISM_RATE": 1.0}
+        "BIO": {"METABOLISM_RATE": 1.0},
     }
     ZEN = {
         "PHYSICS": {"VOLTAGE_MAX": 10.0, "BASE_DRAG": 0.0},
-        "BIO": {"METABOLISM_RATE": 0.1}
+        "BIO": {"METABOLISM_RATE": 0.1},
     }
     MANIC = {
         "PHYSICS": {"VOLTAGE_MAX": 50.0, "BASE_DRAG": 0.5},
-        "BIO": {"METABOLISM_RATE": 2.0}
+        "BIO": {"METABOLISM_RATE": 2.0},
     }
     DEBUG = {
         "PHYSICS": {"VOLTAGE_MAX": 100.0, "BASE_DRAG": 0.0},
-        "BIO": {"METABOLISM_RATE": 0.0}
+        "BIO": {"METABOLISM_RATE": 0.0},
     }
+
 
 class BoneConfig:
     GRAVITY_WELL_THRESHOLD = 15.0
     SHAPLEY_MASS_THRESHOLD = 5.0
     TRAIT_ARCHETYPES = {
-        "THE POET": {
-            "ABSTRACT": 0.6,
-            "PHOTO": 0.3,
-            "ENTROPY": 0.1
-        },
-        "THE ENGINEER": {
-            "CONSTRUCTIVE": 0.7,
-            "HEAVY": 0.3
-        },
-        "THE NIHILIST": {
-            "ENTROPY": 0.8,
-            "CRYO": 0.2
-        },
-        "THE CRITIC": {
-            "THERMAL": 0.5,
-            "ABSTRACT": 0.5
-        },
-        "THE EXPLORER": {
-            "KINETIC": 0.6,
-            "AEROBIC": 0.4
-        },
-        "THE OBSERVER": {
-            "VOID": 0.5,
-            "ABSTRACT": 0.2
-        }
+        "THE POET": {"ABSTRACT": 0.6, "PHOTO": 0.3, "ENTROPY": 0.1},
+        "THE ENGINEER": {"CONSTRUCTIVE": 0.7, "HEAVY": 0.3},
+        "THE NIHILIST": {"ENTROPY": 0.8, "CRYO": 0.2},
+        "THE CRITIC": {"THERMAL": 0.5, "ABSTRACT": 0.5},
+        "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
+        "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2},
     }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "15.5.6"
+    VERSION = "15.5.7"
     VERBOSE_LOGGING = False
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -162,7 +152,8 @@ class BoneConfig:
         "ollama": "http://127.0.0.1:11434/v1/chat/completions",
         "openai": "https://api.openai.com/v1/chat/completions",
         "lm_studio": "http://127.0.0.1:1234/v1/chat/completions",
-        "mock": "N/A"}
+        "mock": "N/A",
+    }
     VERBOSE_LOGGING = True
     PROVIDER = "ollama"
     BASE_URL = None
@@ -255,7 +246,7 @@ class BoneConfig:
             "THE_AERIE": {"voltage": 10.0, "drag": 0.5},
             "LABORATORY": {"voltage": 12.0, "drag": 1.0},
             "COURTYARD": {"voltage": 8.0, "drag": 2.0},
-            "DEFAULT": {"voltage": 10.0, "drag": 1.5}
+            "DEFAULT": {"voltage": 10.0, "drag": 1.5},
         }
 
     class INVENTORY:
@@ -407,14 +398,18 @@ class BoneConfig:
     @classmethod
     def reconcile_state(cls, physics_packet: Any):
         is_dict = isinstance(physics_packet, dict)
+
         def get_val(key, default):
-            if is_dict: return physics_packet.get(key, default)
+            if is_dict:
+                return physics_packet.get(key, default)
             return getattr(physics_packet, key, default)
+
         def set_val(key, value):
             if is_dict:
                 physics_packet[key] = value
             else:
                 setattr(physics_packet, key, value)
+
         current_v = get_val("voltage", 5.0)
         current_d = get_val("narrative_drag", 1.0)
         new_v = max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX))
@@ -431,7 +426,9 @@ class BoneConfig:
         if not hasattr(target_sector, parameter):
             return f"❌ PARAM ERROR: '{parameter}' not found in {sector}."
         current_val = getattr(target_sector, parameter)
-        if type(current_val) != type(value) and not (isinstance(current_val, float) and isinstance(value, int)):
+        if type(current_val) != type(value) and not (
+            isinstance(current_val, float) and isinstance(value, int)
+        ):
             return f"⚠️ TYPE MISMATCH: Cannot replace {type(current_val)} with {type(value)}."
         setattr(target_sector, parameter, value)
         return f"✅ TUNED: {sector}.{parameter} -> {value}"

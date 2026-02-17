@@ -1,5 +1,3 @@
-""" bone_genesis.py - "The Egg." """
-
 from typing import Dict, Any, Set
 from bone_core import EventBus, LoreManifest
 from bone_akashic import TheAkashicRecord
@@ -12,9 +10,12 @@ from bone_symbiosis import SymbiosisManager
 from bone_spores import LiteraryReproduction
 from bone_drivers import DriverRegistry
 
+
 class BoneGenesis:
     @staticmethod
-    def ignite(config: Dict[str, Any], lexicon_ref: Any, events_ref: Any = None) -> Dict[str, Any]:
+    def ignite(
+        config: Dict[str, Any], lexicon_ref: Any, events_ref: Any = None
+    ) -> Dict[str, Any]:
         if events_ref:
             events_ref.log("Igniting Genesis Sequence...", "GENESIS")
             events = events_ref
@@ -28,12 +29,15 @@ class BoneGenesis:
         embryo = BoneArchitect.awaken(embryo)
         mode_settings = config.get("mode_settings", {})
         suppressed = set(mode_settings.get("village_suppression", []))
-        village_bundle = BoneGenesis._summon_village(events, embryo, akashic, suppressed)
+        village_bundle = BoneGenesis._summon_village(
+            events, embryo, akashic, suppressed
+        )
         soul = NarrativeSelf(
             engine_ref=None,
             events_ref=events,
             memory_ref=embryo.mind.mem,
-            akashic_ref=akashic)
+            akashic_ref=akashic,
+        )
         if embryo.soul_legacy:
             soul.load_from_dict(embryo.soul_legacy)
         oroboros = TheOroboros()
@@ -43,7 +47,7 @@ class BoneGenesis:
             logs = oroboros.apply_legacy(dummy_phys, live_bio_state)
             if logs:
                 events.log(f"⛓️ LEGACY SCARS: {', '.join(logs)}", "OROBOROS")
-                if hasattr(embryo.physics, 'dynamics'):
+                if hasattr(embryo.physics, "dynamics"):
                     embryo.physics.dynamics.base_drag += dummy_phys["narrative_drag"]
                 if "biometrics" in live_bio_state and embryo.bio.biometrics:
                     target_health = live_bio_state["biometrics"].get("health", 100.0)
@@ -63,10 +67,13 @@ class BoneGenesis:
             "soul": soul,
             "oroboros": oroboros,
             "drivers": drivers,
-            "symbiosis": symbiosis}
+            "symbiosis": symbiosis,
+        }
 
     @staticmethod
-    def _summon_village(events, embryo, akashic, suppressed: Set[str]) -> Dict[str, Any]:
+    def _summon_village(
+        events, embryo, akashic, suppressed: Set[str]
+    ) -> Dict[str, Any]:
         gordon = None
         if "GORDON" not in suppressed:
             gordon = GordonKnot(events=events)
@@ -103,4 +110,5 @@ class BoneGenesis:
             "critics": critics,
             "therapy": therapy,
             "limbo": limbo,
-            "kintsugi": kintsugi}
+            "kintsugi": kintsugi,
+        }

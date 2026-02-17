@@ -1,11 +1,10 @@
-""" bone_inventory.py - 'Organization is the first step toward civilization.' - Schur """
-
 import random, re
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
 from bone_core import LoreManifest
 from bone_types import Prisma
 from bone_config import BoneConfig
+
 
 @dataclass
 class Item:
@@ -30,7 +29,9 @@ class Item:
             value=data.get("value", 1.0),
             usage_msg=data.get("usage_msg", f"You use the {name}."),
             consume_on_use=data.get("consume_on_use", False),
-            reflex_trigger=data.get("reflex_trigger", None))
+            reflex_trigger=data.get("reflex_trigger", None),
+        )
+
 
 class GordonKnot:
     def __init__(self, events=None):
@@ -42,8 +43,29 @@ class GordonKnot:
         self.max_slots = 10
         self.last_flinch_turn = -100
         self.scar_tissue = {}
-        self.refusal_markers = {"cannot", "can't", "unable", "fail", "too heavy", "stuck", "don't", "do not", "locked", "refuse", "impossible"}
-        self.loot_triggers = ["found a", "picked up", "pick up", "acquired", "took the", "take the", "grab the", "takes the"]
+        self.refusal_markers = {
+            "cannot",
+            "can't",
+            "unable",
+            "fail",
+            "too heavy",
+            "stuck",
+            "don't",
+            "do not",
+            "locked",
+            "refuse",
+            "impossible",
+        }
+        self.loot_triggers = [
+            "found a",
+            "picked up",
+            "pick up",
+            "acquired",
+            "took the",
+            "take the",
+            "grab the",
+            "takes the",
+        ]
         self.load_config()
 
     def load_config(self):
@@ -70,33 +92,55 @@ class GordonKnot:
         lost_pattern = r"\[\[LOST:\s*(.*?)\]\]"
         raw_loot = re.findall(loot_pattern, text, re.IGNORECASE)
         raw_lost = re.findall(lost_pattern, text, re.IGNORECASE)
+
         def normalize(items):
             clean_set = set()
             for normalized_item in items:
                 clean = normalized_item.strip().upper().replace(" ", "_")
                 clean = re.sub(r"[^A-Z0-9_]", "", clean)
-                if clean: clean_set.add(clean)
+                if clean:
+                    clean_set.add(clean)
             return list(clean_set)
+
         new_loot = normalize(raw_loot)
         lost_loot = normalize(raw_lost)
         logs = []
         if new_loot:
-            acquisition_verbs = ["take", "grab", "pick", "get", "steal", "seize", "collect", "snatch", "acquire", "pocket", "loot", "harvest"]
+            acquisition_verbs = [
+                "take",
+                "grab",
+                "pick",
+                "get",
+                "steal",
+                "seize",
+                "collect",
+                "snatch",
+                "acquire",
+                "pocket",
+                "loot",
+                "harvest",
+            ]
             clean_input = user_input.lower()
             has_intent = any(verb in clean_input for verb in acquisition_verbs)
             if has_intent:
                 for item in new_loot:
                     logs.append(self.acquire(item))
-                    if self.events: self.events.publish("ITEM_ACQUIRED", {"item": item})
+                    if self.events:
+                        self.events.publish("ITEM_ACQUIRED", {"item": item})
             else:
                 if self.events:
                     for item in new_loot:
-                        self.events.log(f"CONSENT: Intercepted auto-loot for '{item}'. User did not ask.", "GORDON")
+                        self.events.log(
+                            f"CONSENT: Intercepted auto-loot for '{item}'. User did not ask.",
+                            "GORDON",
+                        )
         for item in lost_loot:
             if self.safe_remove_item(item):
                 logs.append(f"{Prisma.GRY}ENTROPY: {item} consumed/lost.{Prisma.RST}")
             else:
-                logs.append(f"{Prisma.OCHRE}GLITCH: Tried to lose {item}, but you didn't have it.{Prisma.RST}")
+                logs.append(
+                    f"{Prisma.OCHRE}GLITCH: Tried to lose {item}, but you didn't have it.{Prisma.RST}"
+                )
         clean_text = re.sub(loot_pattern, "", text, flags=re.IGNORECASE)
         clean_text = re.sub(lost_pattern, "", clean_text, flags=re.IGNORECASE)
         return clean_text.strip(), logs
@@ -146,12 +190,18 @@ class GordonKnot:
             return True
         return False
 
-    def rummage(self, physics_ref: Dict, stamina_pool: float) -> Tuple[bool, str, float]:
+    def rummage(
+        self, physics_ref: Dict, stamina_pool: float
+    ) -> Tuple[bool, str, float]:
         cost = 15.0
         if hasattr(BoneConfig, "INVENTORY"):
             cost = getattr(BoneConfig.INVENTORY, "RUMMAGE_COST", 15.0)
         if stamina_pool < cost:
-            return False, f"{Prisma.OCHRE}Gordon sighs. 'Too tired. Eat first.'{Prisma.RST}", 0.0
+            return (
+                False,
+                f"{Prisma.OCHRE}Gordon sighs. 'Too tired. Eat first.'{Prisma.RST}",
+                0.0,
+            )
         voltage = physics_ref.get("voltage", 0.0)
         loot_table = self._get_loot_candidates(voltage)
         if not loot_table:
@@ -165,7 +215,8 @@ class GordonKnot:
         all_keys = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
         for name in all_keys:
             item = self.get_item_data(name)
-            if not item: continue
+            if not item:
+                continue
             ctx = item.spawn_context
             if ctx == "COMMON":
                 candidates.append(name)
@@ -181,7 +232,10 @@ class GordonKnot:
             new_item = Item.from_dict(name, data)
             self.registry[name] = new_item
             if self.events:
-                self.events.log(f"{Prisma.CYN}🎒 GORDON: 'I'll make space for {name}.'{Prisma.RST}", "INV")
+                self.events.log(
+                    f"{Prisma.CYN}🎒 GORDON: 'I'll make space for {name}.'{Prisma.RST}",
+                    "INV",
+                )
 
     def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
         text = (user_text + " " + sys_text).lower()
@@ -202,7 +256,10 @@ class GordonKnot:
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     candidate = match.group("item").strip()
-                    if 2 < len(candidate) < 40 and candidate not in self.refusal_markers:
+                    if (
+                        2 < len(candidate) < 40
+                        and candidate not in self.refusal_markers
+                    ):
                         return candidate
         return None
 
@@ -223,12 +280,16 @@ class GordonKnot:
         drag = physics_ref.get("narrative_drag", 0.0)
         for name in self.inventory:
             item = self.get_item_data(name)
-            if not item: continue
+            if not item:
+                continue
             trigger = item.reflex_trigger
             if trigger == "VOLTAGE_CRITICAL" and voltage > 18.0:
                 self.safe_remove_item(name)
                 physics_ref["voltage"] = 12.0
-                return True, f"{Prisma.CYN}🛡️ REFLEX: {name} sacrificed to absorb voltage spike! (Voltage -> 12.0v){Prisma.RST}"
+                return (
+                    True,
+                    f"{Prisma.CYN}🛡️ REFLEX: {name} sacrificed to absorb voltage spike! (Voltage -> 12.0v){Prisma.RST}",
+                )
             if trigger == "DRIFT_CRITICAL" and drag > 6.0:
                 pass
         return False, None

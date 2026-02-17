@@ -1,19 +1,41 @@
-""" bone_types.py - The Data Structures (Refactored) """
 import time, copy, uuid, json, re
 from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
 
+
 class Prisma:
     RST = "\033[0m"
     RED, GRN, YEL, BLU, MAG, CYN, WHT, GRY = (
-        "\033[31m", "\033[32m", "\033[33m", "\033[34m",
-        "\033[35m", "\033[36m", "\033[97m", "\033[90m")
+        "\033[31m",
+        "\033[32m",
+        "\033[33m",
+        "\033[34m",
+        "\033[35m",
+        "\033[36m",
+        "\033[97m",
+        "\033[90m",
+    )
     INDIGO, OCHRE, VIOLET, SLATE = (
-        "\033[34;1m", "\033[33;2m", "\033[35;2m", "\033[30;1m")
+        "\033[34;1m",
+        "\033[33;2m",
+        "\033[35;2m",
+        "\033[30;1m",
+    )
     _COLOR_MAP = {
-        "R": RED, "G": GRN, "Y": YEL, "B": BLU, "M": MAG, "C": CYN,
-        "W": WHT, "0": GRY, "I": INDIGO, "O": OCHRE, "V": VIOLET, "S": SLATE}
+        "R": RED,
+        "G": GRN,
+        "Y": YEL,
+        "B": BLU,
+        "M": MAG,
+        "C": CYN,
+        "W": WHT,
+        "0": GRY,
+        "I": INDIGO,
+        "O": OCHRE,
+        "V": VIOLET,
+        "S": SLATE,
+    }
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
@@ -23,8 +45,9 @@ class Prisma:
 
     @classmethod
     def strip(cls, text: str) -> str:
-        pattern = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-        return pattern.sub('', str(text))
+        pattern = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        return pattern.sub("", str(text))
+
 
 class LoreCategory(Enum):
     LEXICON = "LEXICON"
@@ -36,6 +59,7 @@ class LoreCategory(Enum):
     ALMANAC = "almanac"
     DREAMS = "dreams"
 
+
 class RealityLayer:
     TERMINAL = 0
     SIMULATION = 1
@@ -43,12 +67,14 @@ class RealityLayer:
     DEBUG = 3
     DEEP_CX = 4
 
+
 @dataclass
 class ErrorLog:
     component: str
     error_msg: str
     timestamp: float = field(default_factory=time.time)
     severity: str = "WARNING"
+
 
 @dataclass
 class EnergyState:
@@ -63,6 +89,7 @@ class EnergyState:
     valence: float = 0.0
     perfection_streak: int = 0
 
+
 @dataclass
 class MaterialState:
     clean_words: List[str] = field(default_factory=list)
@@ -73,6 +100,7 @@ class MaterialState:
     truth_ratio: float = 0.0
     repetition: float = 0.0
 
+
 @dataclass
 class SpatialState:
     zone: str = "COURTYARD"
@@ -81,132 +109,50 @@ class SpatialState:
     atmosphere: str = "NEUTRAL"
     flow_state: str = "LAMINAR"
 
+
 @dataclass
 class PhysicsPacket:
     energy: EnergyState = field(default_factory=EnergyState)
     matter: MaterialState = field(default_factory=MaterialState)
     space: SpatialState = field(default_factory=SpatialState)
 
-    def __init__(self, energy: Optional[EnergyState] = None,
-                 matter: Optional[MaterialState] = None,
-                 space: Optional[SpatialState] = None,
-                 **kwargs):
+    def __init__(
+        self,
+        energy: Optional[EnergyState] = None,
+        matter: Optional[MaterialState] = None,
+        space: Optional[SpatialState] = None,
+        **kwargs,
+    ):
         self.energy = energy or EnergyState()
         self.matter = matter or MaterialState()
         self.space = space or SpatialState()
-
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-    @property
-    def voltage(self): return self.energy.voltage
-    @voltage.setter
-    def voltage(self, v): self.energy.voltage = v
+    def __getattr__(self, key):
+        if key in {"energy", "matter", "space"}:
+            raise AttributeError(key)
+        energy = self.__dict__.get("energy")
+        matter = self.__dict__.get("matter")
+        space = self.__dict__.get("space")
+        if energy is None or matter is None or space is None:
+            raise AttributeError(
+                f"'{type(self).__name__}' not fully initialized (accessing '{key}')"
+            )
+        for sub in (energy, matter, space):
+            if hasattr(sub, key):
+                return getattr(sub, key)
+        raise AttributeError(f"'{type(self).__name__}' has no attribute '{key}'")
 
-    @property
-    def entropy(self): return self.energy.entropy
-    @entropy.setter
-    def entropy(self, v): self.energy.entropy = v
-
-    @property
-    def mass(self): return self.energy.mass
-    @mass.setter
-    def mass(self, v): self.energy.mass = v
-
-    @property
-    def velocity(self): return self.energy.velocity
-    @velocity.setter
-    def velocity(self, v): self.energy.velocity = v
-
-    @property
-    def psi(self): return self.energy.psi
-    @psi.setter
-    def psi(self, v): self.energy.psi = v
-
-    @property
-    def beta_index(self): return self.energy.beta_index
-    @beta_index.setter
-    def beta_index(self, v): self.energy.beta_index = v
-
-    @property
-    def turbulence(self): return self.energy.turbulence
-    @turbulence.setter
-    def turbulence(self, v): self.energy.turbulence = v
-
-    @property
-    def kappa(self): return self.energy.kappa
-    @kappa.setter
-    def kappa(self, v): self.energy.kappa = v
-
-    @property
-    def valence(self): return self.energy.valence
-    @valence.setter
-    def valence(self, v): self.energy.valence = v
-
-    @property
-    def perfection_streak(self): return self.energy.perfection_streak
-    @perfection_streak.setter
-    def perfection_streak(self, v): self.energy.perfection_streak = v
-
-    @property
-    def clean_words(self): return self.matter.clean_words
-    @clean_words.setter
-    def clean_words(self, v): self.matter.clean_words = v
-
-    @property
-    def raw_text(self): return self.matter.raw_text
-    @raw_text.setter
-    def raw_text(self, v): self.matter.raw_text = v
-
-    @property
-    def counts(self): return self.matter.counts
-    @counts.setter
-    def counts(self, v): self.matter.counts = v
-
-    @property
-    def antigens(self): return self.matter.antigens
-    @antigens.setter
-    def antigens(self, v): self.matter.antigens = v
-
-    @property
-    def vector(self): return self.matter.vector
-    @vector.setter
-    def vector(self, v): self.matter.vector = v
-
-    @property
-    def truth_ratio(self): return self.matter.truth_ratio
-    @truth_ratio.setter
-    def truth_ratio(self, v): self.matter.truth_ratio = v
-
-    @property
-    def repetition(self): return self.matter.repetition
-    @repetition.setter
-    def repetition(self, v): self.matter.repetition = v
-
-    @property
-    def zone(self): return self.space.zone
-    @zone.setter
-    def zone(self, v): self.space.zone = v
-
-    @property
-    def manifold(self): return self.space.manifold
-    @manifold.setter
-    def manifold(self, v): self.space.manifold = v
-
-    @property
-    def narrative_drag(self): return self.space.narrative_drag
-    @narrative_drag.setter
-    def narrative_drag(self, v): self.space.narrative_drag = v
-
-    @property
-    def atmosphere(self): return self.space.atmosphere
-    @atmosphere.setter
-    def atmosphere(self, v): self.space.atmosphere = v
-
-    @property
-    def flow_state(self): return self.space.flow_state
-    @flow_state.setter
-    def flow_state(self, v): self.space.flow_state = v
+    def __setattr__(self, key, value):
+        if key in {"energy", "matter", "space"}:
+            super().__setattr__(key, value)
+            return
+        for sub in (self.energy, self.matter, self.space):
+            if hasattr(sub, key):
+                setattr(sub, key, value)
+                return
+        super().__setattr__(key, value)
 
     @classmethod
     def void_state(cls):
@@ -216,7 +162,7 @@ class PhysicsPacket:
         p.space.flow_state = "LAMINAR"
         return p
 
-    def snapshot(self) -> 'PhysicsPacket':
+    def snapshot(self) -> "PhysicsPacket":
         return copy.deepcopy(self)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -236,6 +182,7 @@ class PhysicsPacket:
     def __contains__(self, key):
         return hasattr(self, key)
 
+
 @dataclass
 class PhysicsSandbox:
     packet: PhysicsPacket
@@ -243,7 +190,7 @@ class PhysicsSandbox:
     modifications: List[Dict[str, Any]] = field(default_factory=list)
 
     @classmethod
-    def create(cls, packet: PhysicsPacket) -> 'PhysicsSandbox':
+    def create(cls, packet: PhysicsPacket) -> "PhysicsSandbox":
         return cls(packet=packet)
 
     def _ensure_snapshot(self):
@@ -253,10 +200,7 @@ class PhysicsSandbox:
     def apply_delta(self, key: str, value: Any, reason: str = ""):
         self._ensure_snapshot()
         setattr(self.packet, key, value)
-        self.modifications.append({
-            "key": key,
-            "new": value,
-            "reason": reason})
+        self.modifications.append({"key": key, "new": value, "reason": reason})
 
     def get_modification_log(self) -> List[Dict]:
         return self.modifications
@@ -268,13 +212,21 @@ class PhysicsSandbox:
             self.packet.space = copy.deepcopy(self.original_snapshot.space)
 
     def __getattr__(self, name):
-        return getattr(self.packet, name)
+        if name == "packet":
+            raise AttributeError(name)
+        packet = self.__dict__.get("packet")
+        if packet is None:
+            raise AttributeError(
+                f"'{type(self).__name__}' has no packet (accessing '{name}')"
+            )
+        return getattr(packet, name)
 
     def __setattr__(self, name, value):
-        if name in ['packet', 'original_snapshot', 'modifications']:
+        if name in ["packet", "original_snapshot", "modifications"]:
             object.__setattr__(self, name, value)
         else:
             self.apply_delta(name, value, reason="AUTO_TRACE")
+
 
 @dataclass
 class CycleContext:
@@ -294,7 +246,9 @@ class CycleContext:
     mind_state: Dict = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
     bureau_ui: str = ""
-    user_profile: Dict = field(default_factory=lambda: {"name": "TRAVELER", "confidence": 0})
+    user_profile: Dict = field(
+        default_factory=lambda: {"name": "TRAVELER", "confidence": 0}
+    )
     last_impulse: Any = None
     reality_stack: Any = None
     active_lens: str = "NARRATOR"
@@ -311,28 +265,34 @@ class CycleContext:
     def log(self, message: str):
         self.logs.append(message)
 
-    def record_flux(self, phase: str, metric: str, initial: float, final: float, reason: str = ""):
+    def record_flux(
+        self, phase: str, metric: str, initial: float, final: float, reason: str = ""
+    ):
         delta = final - initial
         if abs(delta) > 0.001:
-            self.flux_log.append({
-                "phase": phase,
-                "metric": metric,
-                "initial": initial,
-                "final": final,
-                "delta": delta,
-                "reason": reason,
-                "timestamp": time.time()})
+            self.flux_log.append(
+                {
+                    "phase": phase,
+                    "metric": metric,
+                    "initial": initial,
+                    "final": final,
+                    "delta": delta,
+                    "reason": reason,
+                    "timestamp": time.time(),
+                }
+            )
 
-    def snapshot(self) -> 'CycleContext':
+    def snapshot(self) -> "CycleContext":
         new_ctx = copy.copy(self)
         for f in fields(self):
             name = f.name
             val = getattr(self, name)
-            if name == 'physics' and hasattr(val, 'snapshot'):
+            if name == "physics" and hasattr(val, "snapshot"):
                 setattr(new_ctx, name, val.snapshot())
             elif isinstance(val, (list, dict, set)):
                 setattr(new_ctx, name, copy.deepcopy(val))
         return new_ctx
+
 
 @dataclass
 class MindSystem:
@@ -341,6 +301,7 @@ class MindSystem:
     dreamer: Any
     mirror: Any
     tracer: Any
+
 
 @dataclass
 class PhysSystem:
@@ -354,6 +315,7 @@ class PhysSystem:
     tension: Optional[Any] = None
     dynamics: Any = None
 
+
 @dataclass
 class DecisionTrace:
     trace_id: str
@@ -366,6 +328,7 @@ class DecisionTrace:
 
     def to_json(self):
         return json.dumps(asdict(self))
+
 
 @dataclass
 class DecisionCrystal:
@@ -381,10 +344,11 @@ class DecisionCrystal:
     final_response: str = ""
 
     def __str__(self):
-        e_val = self.leverage_metrics.get('E', 0.0)
+        e_val = self.leverage_metrics.get("E", 0.0)
         return (
             f"💎 CRYSTAL [{self.decision_id}] {self.system_state} | "
-            f"Arch: {self.active_archetype} | E: {e_val:.2f}")
+            f"Arch: {self.active_archetype} | E: {e_val:.2f}"
+        )
 
     def crystallize(self) -> str:
         data = asdict(self)
