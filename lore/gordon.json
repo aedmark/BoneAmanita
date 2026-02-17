@@ -254,7 +254,7 @@
             "function":"TRANCE_INDUCER",
             "spawn_context":"PSI_HIGH",
             "passive_traits":[
-                "TIME_DILATION_CAP"
+                "TIME_DILATION"
             ],
             "value":3.0,
             "usage_msg":"The wax rises. The wax falls. You lose track of time."
