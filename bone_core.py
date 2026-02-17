@@ -253,14 +253,12 @@ class SystemHealth:
 class RealityStack:
     def __init__(self):
         self._stack = [RealityLayer.SIMULATION]
-        self._lock = False
 
     @property
     def current_depth(self) -> int:
         return self._stack[-1]
 
     def push_layer(self, layer: int, context: Any = None) -> bool:
-        if self._lock: return False
         if layer == RealityLayer.DEBUG or layer == self.current_depth + 1:
             self._stack.append(layer)
             return True
@@ -274,11 +272,6 @@ class RealityStack:
 
     def stabilize_at(self, layer: int):
         self._stack = [layer]
-
-    def emergency_reset(self):
-        self._lock = False
-        self._stack = [RealityLayer.SIMULATION]
-        print(f"{Prisma.RED}*** REALITY STACK RESET ***{Prisma.RST}")
 
     def get_grammar_rules(self) -> Dict[str, bool]:
         depth = self.current_depth

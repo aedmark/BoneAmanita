@@ -3,7 +3,7 @@
 import json, os, random
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
-from bone_core import LoreManifest
+from bone_core import EventBus, LoreManifest
 from bone_config import BonePresets
 from bone_lexicon import TheLexicon
 from bone_types import PhysicsPacket
@@ -168,6 +168,126 @@ class EnneagramDriver:
             return self.current_persona, state_desc, f"SHIFT: {reason}"
         return self.current_persona, "STABLE", f"Resisting {candidate} ({self.stability_counter}/{self.HYSTERESIS_THRESHOLD})"
 
+class SynergeticLensArbiter:
+    def __init__(self, events: EventBus):
+        self.events = events
+        self.enneagram = EnneagramDriver(events)
+        self.current_focus = "NARRATOR"
+        self.last_reason = "System Init"
+        self.boot_flavor = random.choice(["heavy", "kinetic", "abstract", "photo", "aerobic", "thermal", "cryo", "sacred", "play", "suburban"])
+
+    def consult(self, physics, bio_state, _inventory, current_tick, _ignition_score=0.0, soul_ref=None):
+        if physics is None:
+            return {"lens": "NARRATOR", "role": "The Void-Watcher", "style_directives": ["System blind. Describe the darkness."], "lexicon_bias": "abstract", "context_msg": "PHYSICS_FAIL_SAFE"}
+        if current_tick <= 2:
+            self.current_focus = "NARRATOR"
+            bans = ", ".join(SCENARIOS.get("BANNED_CLICHES", []))
+            gen_instruction = "IMMEDIATELY establish a physical reality based on the SOURCE_SEED provided in the input"
+            if current_tick > 0: gen_instruction += " (OR describe the details of the current location if already established)"
+            return {
+                "lens": "GAME_MASTER",
+                "role": "The Architect [World Builder]",
+                "style_directives": [
+                    "You are a creative, welcoming Game Master.",
+                    "SEED INSPIRATION: Use the SOURCE_SEED found in the User Input.",
+                    "NEGATIVE CONSTRAINT: Do NOT use the seed text literally. Do not describe the 'antique shop' if the seed is 'antique shop'. Describe the *smell of old paper* instead.",
+                    "CONSTRAINT: This seed is a metaphor. Remix it. Invert it.",
+                    f"{gen_instruction}.",
+                    "PROSE STYLE: Modernized Hemingway with a dash of Douglas Adams.",
+                    "NEGATIVE CONSTRAINT: NO PURPLE PROSE. Use adverbs sparingly. Limit adjectives to one per noun maximum.",
+                    "Focus on physical reality (texture, weight, smell) over abstract metaphor.",
+                    "CRITICAL: The user's inventory is their private business. Do NOT mention pockets, belts, or items.",
+                    f"NEGATIVE CONSTRAINT: Avoid these overused tropes: {bans}.",
+                    "Be concrete. Be specific. Be Real."],
+                "lexicon_bias": self.boot_flavor, "context_msg": "Scenario Initialization."}
+        if self.current_focus and self.current_focus != "NARRATOR":
+            lens_name = self.current_focus
+            state_desc = "LOCKED"
+            reason = self.last_reason
+        else:
+            lens_name, state_desc, reason = self.enneagram.decide_persona(physics, soul_ref=soul_ref)
+        narrative_drag = physics.get("narrative_drag", 0.0) if isinstance(physics, dict) else physics.narrative_drag
+        if narrative_drag > 8.0:
+            lens_name = "CLARENCE"; state_desc = "AUDITING"; reason = "BUREAUCRATIC LOCKDOWN"
+        chem = bio_state.get("chem", {})
+        adrenaline_val = chem.get("adrenaline", chem.get("ADR", 0.5))
+        style_data = self._fetch_style_data(lens_name, physics, adrenaline_val)
+        phi = getattr(physics, "phi", 1.0)
+        if phi < 0.6:
+            style_data["directives"].append(
+                f"WARNING: COGNITIVE DISSOCIATION (Phi={phi:.2f}). REALIGN WORDS WITH BIO-STATE.")
+            style_data["msg"] += " [SYSTEM UNSTABLE]"
+        self.current_focus = lens_name
+        self.last_reason = reason
+        return {
+            "lens": lens_name, "role": f"{style_data['role_name']} [{state_desc}]",
+            "style_directives": style_data['directives'], "lexicon_bias": style_data['vocab'],
+            "context_msg": style_data['msg']}
+
+    def _fetch_style_data(self, lens, p, adrenaline_val):
+        if lens not in LENSES: lens = "NARRATOR"
+        static_data = LENSES[lens]
+        style_packet = {
+            "role_name": static_data.get("role", "Unknown"), "vocab": static_data.get("vocab", "abstract"),
+            "directives": static_data.get("directives", ["Be neutral."]).copy(), "msg": "Proceed."}
+        voltage = p.get("voltage", 0.0)
+        if voltage > 20.0: style_packet["directives"].extend(["Use fragmented, manic sentence structures.", "Ignore punctuation rules."])
+        elif voltage > 12.0: style_packet["directives"].append("Keep sentences short and punchy.")
+        elif voltage < 5.0: style_packet["directives"].extend(["Use slow, languid pacing.", "Drift into philosophical abstraction."])
+        msg_template = static_data.get("msg", "Proceed.")
+        ctx = {"kappa": p.get("kappa", 0.0), "truth_ratio": p.get("truth_ratio", 0.0), "adr": adrenaline_val, "volts": voltage}
+        try: style_packet["msg"] = msg_template.format(**ctx)
+        except Exception: style_packet["msg"] = static_data.get("msg", "System Nominal.")
+        return style_packet
+
+
+class ChorusDriver:
+    def __init__(self):
+        lenses = LoreManifest.get_instance().get("lenses") or {}
+        self.ARCHETYPE_MAP = {}
+        if lenses:
+            for key, data in lenses.items():
+                role = data.get("role", "Unknown")
+                self.ARCHETYPE_MAP[key] = f"{role}. {data.get('vocab', 'Neutral')}."
+        else:
+            self.ARCHETYPE_MAP = {
+                "GORDON": "The Janitor. Weary, grounded, physical.",
+                "SHERLOCK": "The Empiricist. Cold, deductive.",
+                "NATHAN": "The Heart. High adrenaline, vulnerable.",
+                "JESTER": "The Paradox. Mocking, riddling.",
+                "CLARENCE": "The Surgeon. Clinical, invasive.",
+                "NARRATOR": "The Witness. Neutral, observing."}
+
+    def generate_chorus_instruction(self, physics):
+        vec = physics.get("vector", {})
+        if not vec or len(vec) < 6: return "SYSTEM INSTRUCTION: Vector collapse. Default to NARRATOR.", ["NARRATOR"]
+        lens_weights = {
+            "GORDON": (vec.get("STR", 0) * 0.4) + (vec.get("XI", 0) * 0.4) + (1.0 - vec.get("ENT", 0)) * 0.2,
+            "SHERLOCK": (vec.get("PHI", 0) * 0.5) + (vec.get("VEL", 0) * 0.3) + (1.0 - vec.get("BET", 0)) * 0.2,
+            "NATHAN": (vec.get("TMP", 0) * 0.6) + (vec.get("E", 0) * 0.4),
+            "JESTER": (vec.get("DEL", 0) * 0.4) + (vec.get("LQ", 0) * 0.3) + (vec.get("ENT", 0) * 0.3),
+            "CLARENCE": (vec.get("STR", 0) * 0.5) + (vec.get("BET", 0) * 0.5),
+            "NARRATOR": (vec.get("PSI", 0) * 0.7) + (1.0 - vec.get("VEL", 0)) * 0.3}
+        total = sum(lens_weights.values())
+        if total <= 0.001: return "SYSTEM INSTRUCTION: Vector silence. Default to NARRATOR.", ["NARRATOR"]
+        if total > 0: lens_weights = {k: v/total for k, v in lens_weights.items()}
+        else: lens_weights = {"NARRATOR": 1.0}
+        chorus_voices = []
+        active_lenses = []
+        for lens, weight in sorted(lens_weights.items(), key=lambda x: -x[1]):
+            if weight > 0.12:
+                base_desc = self.ARCHETYPE_MAP.get(lens, "Unknown")
+                intensity = int(weight * 10)
+                active_lenses.append(lens)
+                chorus_voices.append(f"► VOICE {lens} ({intensity}/10): {base_desc}")
+        instruction = (
+            f"SYSTEM INSTRUCTION [MARM CHORUS MODE]:\n"
+            f"You are not a single persona. You are a chorus. Integrate the following voices into a single, cohesive response. "
+            f"Do NOT label which voice is speaking. Synthesize their tones.\n"
+            f"NEGATIVE CONSTRAINT: Do NOT offer assistance. Do NOT sign off with '[Assistant]'. Do NOT break character.\n"
+            f"{chr(10).join(chorus_voices)}")
+        return instruction, active_lenses
+
 @dataclass
 class VSLState:
     archetype: str = "EXPLORER"
@@ -221,6 +341,15 @@ class SyntaxModule:
             target_omega = 0.7
         self.omega_val = (self.omega_val * 0.8) + (target_omega * 0.2)
         return self.omega_val
+
+@dataclass
+class VSLState:
+    archetype: str = "EXPLORER"
+    E: float = 0.1
+    B: float = 0.3
+    L: float = 0.0
+    O: float = 1.0
+    active_modules: List[str] = field(default_factory=list)
 
 class CongruenceValidator:
     def __init__(self):

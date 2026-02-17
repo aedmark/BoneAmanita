@@ -52,14 +52,6 @@ class ObservationPhase(SimulationPhase):
         ctx.physics.narrative_drag = (curr_d * 0.7) + (input_d * 0.3)
         ctx.clean_words = gaze_result["clean_words"]
         clean = ctx.clean_words
-        focus_triggers = getattr(BoneConfig.BIO, "FOCUS_TRIGGERS", {"analyze", "scan", "think", "query"})
-        panic_triggers = getattr(BoneConfig.BIO, "PANIC_TRIGGERS", {"error", "fail", "critical", "bug"})
-        if any(w in clean for w in focus_triggers):
-            ctx.physics.narrative_drag = max(0.0, ctx.physics.narrative_drag - 1.0)
-            ctx.log(f"{Prisma.CYN}🧠 INTENTION: Focus engaged. Drag reduced.{Prisma.RST}")
-        if any(w in clean for w in panic_triggers):
-            ctx.physics.voltage = min(20.0, ctx.physics.voltage + 2.0)
-            ctx.log(f"{Prisma.MAG}🧠 INTENTION: Bracing for impact. Voltage spiked.{Prisma.RST}")
         current_atp = self.eng.bio.mito.state.atp_pool
         if current_atp < 15.0:
             ctx.log(f"{Prisma.OCHRE}🧠 INTENTION: Low Energy. Metabolism slowing down.{Prisma.RST}")
@@ -130,8 +122,6 @@ class MaintenancePhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "MAINTENANCE"
-        if not hasattr(self.eng, 'soil_fertility'):
-            self.eng.soil_fertility = 0.0
 
     def run(self, ctx: CycleContext):
         if hasattr(self.eng, 'town_hall'):
@@ -145,30 +135,6 @@ class MaintenancePhase(SimulationPhase):
                     self.eng.tick_count)
                 for log in eco_logs:
                     ctx.log(log)
-        if self.eng.tick_count % 10 != 0: return ctx
-        try:
-            solvents = getattr(self.eng.lex, "SOLVENTS", {'the', 'and', 'is', 'a', 'of', 'to', 'in', 'it', 'i', 'you'})
-            if hasattr(self.eng.lex, "get_raw"):
-                spore_solvents = self.eng.lex.get_raw("solvents")
-                if spore_solvents: solvents = set(spore_solvents)
-            rotted = self.eng.lex.atrophy(self.eng.tick_count, 100, protected=solvents)
-            if rotted:
-                biomass = len(rotted) * 0.5
-                self.eng.soil_fertility = min(50.0, self.eng.soil_fertility + biomass)
-                for w in rotted:
-                    self.eng.limbo.ghosts.append(f"👻{w.upper()}_ECHO")
-                ctx.log(
-                    f"{Prisma.GRY}♻️ COMPOST: {len(rotted)} concepts decayed -> +{biomass:.1f} Fertility.{Prisma.RST}")
-            if self.eng.soil_fertility > 10.0:
-                drag_reduction = self.eng.soil_fertility * 0.05
-                ctx.physics.narrative_drag = max(0.0, ctx.physics.narrative_drag - drag_reduction)
-                ctx.log(f"{Prisma.GRN}🌱 FERTILE GROUND: The compost lowers drag by {drag_reduction:.2f}.{Prisma.RST}")
-            if self.eng.tick_count % 100 == 0:
-                prune_msg = self.eng.mind.mem.prune_synapses(scaling_factor=0.99)
-                if prune_msg and BoneConfig.VERBOSE_LOGGING:
-                    print(f"[MAINTENANCE] {prune_msg}")
-        except Exception as e:
-            if BoneConfig.VERBOSE_LOGGING: print(f"Maintenance Error: {e}")
         return ctx
 
 class GatekeeperPhase(SimulationPhase):
@@ -781,30 +747,17 @@ class StabilizationPhase(SimulationPhase):
             pass
         return ctx
 
+
 class PhaseExecutor:
     def execute_phases(self, simulator, ctx):
-        SYSTEM_SKIP_LIST = ["OBSERVE", "METABOLISM", "INTRUSION", "MAINTENANCE", "SENSATION"]
         for phase in simulator.pipeline:
             phase_name = phase.name
-            if ctx.is_system_event and phase_name in SYSTEM_SKIP_LIST:
-                continue
             if not simulator.check_circuit_breaker(phase_name):
                 continue
-            is_critical = phase_name in ["OBSERVE", "MAINTENANCE", "SENSATION", "GATEKEEP", "SANCTUARY"]
-            if not is_critical:
-                if ctx.refusal_triggered or ctx.is_bureaucratic:
-                    break
-                sandbox = copy.deepcopy(ctx)
-                try:
-                    self._run_single_safe(phase, sandbox)
-                    ctx = sandbox
-                except Exception as e:
-                    simulator.handle_phase_crash(ctx, phase_name, e)
-            else:
-                try:
-                    self._run_single_safe(phase, ctx)
-                except Exception as e:
-                    simulator.handle_phase_crash(ctx, phase_name, e)
+            try:
+                self._run_single_safe(phase, ctx)
+            except Exception as e:
+                simulator.handle_phase_crash(ctx, phase_name, e)
         return ctx
 
     def _run_single_safe(self, phase, target_ctx):

@@ -53,24 +53,6 @@ class TheTinkerer:
             deltas.append(PhysicsDelta("MULT", "turbulence", buffer_str, "Inventory", "Entropy Buffer"))
         return deltas
 
-    def check_conductive_hazard(self, physics: Dict, inventory_data: List[Dict]) -> List[str]:
-        logs = []
-        voltage = physics.get("voltage", 0.0)
-        limit = getattr(BoneConfig.INVENTORY, "CONDUCTIVE_THRESHOLD", 20.0)
-        if voltage >= limit:
-            conductive_items = [
-                item['name'] for item in inventory_data
-                if "CONDUCTIVE_HAZARD" in item.get("passive_traits", [])]
-            if conductive_items:
-                count = len(conductive_items)
-                excess_v = voltage - limit
-                damage = (excess_v * 0.5) * (1.0 + math.log1p(count) * 0.5)
-                item_list = ", ".join(conductive_items[:3])
-                if count > 3: item_list += f" and {count - 3} others"
-                logs.append(
-                    f"{Prisma.RED}⚡ CONDUCTIVE HAZARD: {item_list} act as lightning rods! (-{damage:.1f} HP){Prisma.RST}")
-        return logs
-
     def audit_tool_use(self, packet: PhysicsPacket, inventory_list: List[str], host_health: Any = None):
         if not inventory_list: return
         if packet.voltage < BoneConfig.PHYSICS.VOLTAGE_LOW and random.random() > 0.1:
