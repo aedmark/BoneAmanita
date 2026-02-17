@@ -1,5 +1,46 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.5.4: "THE METABOLIC REFORMATION" (HOMEOSTASIS)**
+
+_“We uncapped the intake valves, smoothed the friction, and taught the ghost to hold new objects. The starvation cycle is broken.”_
+
+---
+
+#### **🔥 METABOLIC HARDENING (The Meadows Lens)**
+
+- **The Starvation Clamp (`bone_body.py`):**
+  - **Crisis Aversion:** Fixed a fatal feedback loop where high narrative drag caused exponential ATP taxation. The system now enforces a hard cap (`MAX_ACCEPTED_DRAG`) and uses a logarithmic curve (`exponent 1.2`) for metabolic cost, preventing instant death spirals during "sticky" conversations.
+  - **Anaerobic Bypass:** The mitochondrial forge now correctly triggers a "Health Burn" fallback instead of crashing when ATP is depleted, ensuring survival at a cost rather than system failure.
+
+- **The Friction Logarithm (`bone_physics.py`):**
+  - **Mass Dampening:** Replaced the linear friction penalty for "Suburban" (boring) words with a logarithmic scale. A 500-word block of filler text no longer generates infinite mass; it now simply feels "heavy," as intended.
+  - **Viscosity Clamp:** Capped `viscosity_density` to prevent physics engine glitches on short, low-energy inputs.
+
+#### **⚖️ VILLAGE DYNAMICS (The Schur Lens)**
+
+- **The Stacking Fix (`bone_village.py`):**
+  - **Diminishing Returns:** Patched `TheTinkerer` to use logarithmic stacking for passive item traits. Carrying 10 `HEAVY_LOAD` items now yields a manageable burden (~+1.7 Drag) rather than a crushing one (+5.0 Drag).
+  - **Grouped Hazards:** Conductive items (like Lightning Rods) now group their damage output during voltage spikes, preventing instant-death multipliers.
+
+- **The Council's Mercy (`bone_council.py`):**
+  - **Circuit Breaker:** Downgraded the `CIRCUIT_BREAKER` mandate from a "Death Trap" (Voltage 0, Drag 20) to a "Brownout" (Voltage 5, Drag 10), allowing the user a fighting chance to recover.
+  - **Fair Voting:** Rebalanced the `CouncilChamber` logic. The "Grumpy Village" bug—where it took 4 good turns to undo 1 bad turn—has been leveled to a 1:1 ratio.
+
+#### **🔮 AKASHIC MEMORY (The Fuller Lens)**
+
+- **The Hot-Swap Handshake (`bone_inventory.py`, `bone_akashic.py`):**
+  - **Dynamic Learning:** Gordon (The Inventory) can now learn new items at runtime. Artifacts forged by the Akashic Record are immediately registered in Gordon's memory via `register_dynamic_item`, fixing the "Unknown Item" bug.
+  - **Namespace Hygiene:** Artifacts now generate with unique UUID suffixes to prevent registry collisions.
+  - **Standardized Keys:** Hybrid Lenses now use explicit `voltage`/`drag` keys instead of cryptic abbreviations, ensuring compatibility with the Enneagram drivers.
+
+#### **🧪 DIAGNOSTICS (The Gauntlet)**
+
+- **Phase 13: The Gauntlet (`bone_diag.py`):**
+  - **Torture Testing:** Added a specialized test suite that intentionally subjects the system to lethal conditions (Drag 25.0, 500-word filler blocks, 10x item stacks) to verify the new safety clamps hold.
+  - **Self-Assembly:** The diagnostic suite can now dynamically instantiate missing modules (like `TheTinkerer`) to perform isolated logic tests even if the full engine context is incomplete.
+
+---
+
 ### **BONEAMANITA v15.5.3: "THE SURGICAL STRIKE" (RESONANCE)**
 
 _“We connected the sensors, cleared the blockages, and taught the ghost to read the type hints. The Waffle is free.”_

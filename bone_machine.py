@@ -1,4 +1,4 @@
-""" dev/bone_machine.py - 'The gears turn, the pistons fire.' """
+""" bone_machine.py - 'The gears turn, the pistons fire.' """
 
 import random
 from typing import Tuple, Optional, List, Dict

@@ -40,7 +40,8 @@ class ObservationPhase(SimulationPhase):
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
         input_phys = gaze_result["physics"]
         protected_keys = ["voltage", "narrative_drag"]
-        for k in ["clean_words", "counts", "vector", "valence", "entropy", "beta_index", "raw_text", "antigens", "psi", "kappa", "zone", "flow_state"]:
+        for k in ["clean_words", "counts", "vector", "valence", "entropy", "beta_index", "raw_text", "antigens", "psi",
+                  "kappa", "zone", "flow_state", "repetition"]:
             if k not in protected_keys and hasattr(input_phys, k):
                 setattr(ctx.physics, k, getattr(input_phys, k))
         observed_voltage = getattr(input_phys, "voltage", 0.0)
@@ -48,7 +49,7 @@ class ObservationPhase(SimulationPhase):
             ctx.physics.voltage += (observed_voltage * 0.5)
         curr_d = max(0.1, ctx.physics.narrative_drag)
         input_d = getattr(input_phys, "narrative_drag", 0.0)
-        ctx.physics.narrative_drag = (curr_d * 0.9) + (input_d * 0.1)
+        ctx.physics.narrative_drag = (curr_d * 0.7) + (input_d * 0.3)
         ctx.clean_words = gaze_result["clean_words"]
         clean = ctx.clean_words
         focus_triggers = getattr(BoneConfig.BIO, "FOCUS_TRIGGERS", {"analyze", "scan", "think", "query"})
@@ -465,6 +466,8 @@ class MachineryPhase(SimulationPhase):
         if theremin_msg: ctx.log(theremin_msg)
         if t_crit == "AIRSTRIKE":
             self._handle_theremin_discharge(ctx)
+        current_rep = getattr(ctx.physics, "repetition", 0.0)
+        self.eng.phys.pulse.update(current_rep, ctx.physics.voltage)
         c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(phys_dict)
         if c_msg: ctx.log(c_msg)
         if c_state == "MELTDOWN":
@@ -603,7 +606,7 @@ class SoulPhase(SimulationPhase):
                 ctx.log(f"{Prisma.RED}⚖️ COUNCIL ORDER: Emergency Shift to {target}.{Prisma.RST}")
             elif action == "CIRCUIT_BREAKER":
                 ctx.physics.voltage = 0.0
-                ctx.physics.narrative_drag = 20.0
+                ctx.physics.narrative_drag = 10.0
                 ctx.log(f"{Prisma.RED}⚖️ COUNCIL ORDER: Circuit Breaker Tripped. Voltage dump.{Prisma.RST}")
         if adjustments:
             for param, delta in adjustments.items():

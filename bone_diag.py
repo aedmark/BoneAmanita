@@ -91,6 +91,122 @@ class MockEventBus(EventBus):
     def subscribe(self, channel, callback): pass
     def __getattr__(self, name): return lambda *args, **kwargs: None
 
+
+class TheGauntlet:
+    """
+    STRESS TEST SUITE - "The system is not what it says it is. It is what it does." - Meadows
+    """
+
+    def __init__(self, engine_ref):
+        self.eng = engine_ref
+        self.results = {"PASS": [], "FAIL": []}
+
+    def log(self, msg, status="INFO"):
+        color = Prisma.GRN if status == "PASS" else (Prisma.RED if status == "FAIL" else Prisma.CYN)
+        print(f"{color}[GAUNTLET]: {msg} - {status}{Prisma.RST}")
+        if status in ["PASS", "FAIL"]:
+            self.results[status].append(msg)
+
+    def run_all(self):
+        print(f"\n{Prisma.MAG}=== INITIATING THE GAUNTLET ==={Prisma.RST}")
+        self.test_starvation_clamp()
+        self.test_logarithmic_friction()
+        self.test_inventory_stacking()
+        self.test_akashic_handshake()
+        return self.results
+
+    def test_starvation_clamp(self):
+        """ Verify bone_body.py clamps drag tax and prevents instant death. """
+        try:
+            self.eng.bio.biometrics.health = 100.0
+            self.eng.bio.mito.state.atp_pool = 100.0
+
+            fatal_packet = PhysicsPacket(voltage=10.0, narrative_drag=25.0)
+
+            receipt = self.eng.bio.mito.process_cycle(fatal_packet)
+
+            if receipt.drag_tax > 6.0:
+                self.log(f"Starvation Clamp Failed (Tax: {receipt.drag_tax})", "FAIL")
+            elif self.eng.bio.biometrics.health < 90.0:
+                self.log("System Panicked/Burned excessive health", "FAIL")
+            else:
+                self.log(f"Starvation Clamp Holds (Tax: {receipt.drag_tax:.1f} | HP: {self.eng.bio.biometrics.health})",
+                         "PASS")
+        except Exception as e:
+            self.log(f"Starvation Test Crashed: {e}", "FAIL")
+
+    def test_logarithmic_friction(self):
+        """ Verify bone_physics.py uses log scaling for boring inputs. """
+        try:
+            from bone_physics import GeodesicEngine
+
+            counts = {"suburban": 500, "heavy": 0}
+            clean_words = ["the"] * 500
+
+            vector = GeodesicEngine.collapse_wavefunction(clean_words, counts)
+
+            result_drag = vector.compression
+
+            if result_drag > 50.0:
+                self.log(f"Friction Explosion Detected (Drag: {result_drag:.1f})", "FAIL")
+            else:
+                self.log(f"Logarithmic Friction Active (Input: 500 words -> Drag: {result_drag:.1f})", "PASS")
+
+        except Exception as e:
+            self.log(f"Friction Test Crashed: {e}", "FAIL")
+
+    def test_inventory_stacking(self):
+        """ Verify bone_village.py diminishes returns on stacked items. """
+        try:
+            tinkerer = getattr(self.eng.village, 'tinkerer', None) if hasattr(self.eng, 'village') else None
+
+            if not tinkerer:
+                from bone_village import TheTinkerer
+                tinkerer = TheTinkerer(self.eng.gordon, self.eng.events, getattr(self.eng, 'akashic', None))
+
+            heavy_item = {"name": "ROCK", "passive_traits": ["HEAVY_LOAD"]}
+            mock_inventory = [heavy_item] * 10
+
+            deltas = tinkerer.calculate_passive_deltas(mock_inventory)
+
+            drag_add = 0.0
+            for d in deltas:
+                if d.field == "narrative_drag" and d.operator == "ADD":
+                    drag_add += d.value
+
+            if drag_add > 4.0:
+                self.log(f"Linear Stacking Detected (Delta: {drag_add:.1f})", "FAIL")
+            else:
+                self.log(f"Diminishing Returns Active (10 items -> +{drag_add:.2f} Drag)", "PASS")
+
+        except Exception as e:
+            self.log(f"Inventory Stack Test Crashed: {e}", "FAIL")
+
+    def test_akashic_handshake(self):
+        """ Verify bone_akashic.py can teach bone_inventory.py (Gordon) new items. """
+        try:
+            if not hasattr(self.eng, 'akashic') or not hasattr(self.eng, 'gordon'):
+                self.log("Akashic/Gordon not loaded", "FAIL")
+                return
+
+            vector = {"PHI": 0.9, "ENT": 0.1}
+            name, data = self.eng.akashic.forge_new_item(vector)
+
+            if hasattr(self.eng.gordon, 'register_dynamic_item'):
+                self.eng.gordon.register_dynamic_item(name, data)
+            else:
+                self.log("Gordon missing 'register_dynamic_item' method", "FAIL")
+                return
+
+            retrieved = self.eng.gordon.get_item_data(name)
+            if retrieved and retrieved.name == name:
+                self.log(f"Akashic-Gordon Handshake Successful ({name})", "PASS")
+            else:
+                self.log(f"Gordon Amnesia Detected (Could not retrieve {name})", "FAIL")
+
+        except Exception as e:
+            self.log(f"Akashic Handshake Crashed: {e}", "FAIL")
+
 class GrandDiagnostic:
     def __init__(self):
         self.results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
@@ -443,7 +559,10 @@ class GrandDiagnostic:
         self.phase_10_prompt_logic()
         self.phase_11_memory_pressure()
         self.phase_12_mercy_protocol()
-
+        gauntlet = TheGauntlet(self.engine)
+        g_results = gauntlet.run_all()
+        self.results['PASS'] += len(g_results['PASS'])
+        self.results['FAIL'] += len(g_results['FAIL'])
         print(f"\n{Prisma.CYN}=== DIAGNOSTIC COMPLETE ==={Prisma.RST}")
         print(f"PASSED: {self.results['PASS']}")
         print(f"FAILED: {self.results['FAIL']}")

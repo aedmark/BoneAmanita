@@ -92,7 +92,9 @@ class NeurotransmitterModulator:
             "top_p": BrainConfig.BASE_TOP_P,
             "frequency_penalty": 0.4 if c.adrenaline > 0.5 else (0.5 if c.dopamine > 0.8 else 0.0),
             "presence_penalty": 0.0,
-            "max_tokens": int(max(150.0, min(float(self.MAX_TOKENS), self.BASE_TOKENS + ((c.adrenaline * 600) - (c.cortisol * 300)))))}
+            "max_tokens": int(max(150.0, min(
+                float(self.MAX_TOKENS),
+                self.BASE_TOKENS + ((c.dopamine * 800) - (c.adrenaline * 400) - (c.cortisol * 200)))))}
 
     def force_state(self, state_name: str):
         if self.events:
@@ -250,7 +252,9 @@ class LLMInterface:
     def mock_generation(self, prompt: str, reason: str = "SIMULATION") -> str:
         if self.dreamer:
             try:
-                hallucination, _ = self.dreamer.hallucinate({"ENTROPY": len(prompt) % 10}, trauma_level=2.0)
+                hallucination, relief = self.dreamer.hallucinate({"ENTROPY": len(prompt) % 10}, trauma_level=2.0)
+                if relief > 0 and self.events:
+                    self.events.log(f"{Prisma.VIOLET}*** PSYCHIC PRESSURE RELEASED (-{relief} Trauma) ***{Prisma.RST}", "DREAM")
                 return f"[{reason}]: {hallucination}"
             except Exception:
                 pass
@@ -289,7 +293,6 @@ class PromptComposer:
         mind = state.get("mind", {})
         bio = state.get("bio", {})
         style_notes = self._build_persona_block(mind, bio, mood_override, state.get("vsl", {}))
-
         scenarios = self.lore.get("scenarios") or {}
         banned = scenarios.get("BANNED_CLICHES", []) + ["obsidian", "dust motes", "neon", "pulsing veins"]
         ban_string = ", ".join(set(banned))
@@ -306,9 +309,10 @@ class PromptComposer:
         char_limit = 8000
         current_chars = 0
         kept_lines = []
-        for line in reversed(raw_history):
+        min_lines = 1
+        for i, line in enumerate(reversed(raw_history)):
             line_len = len(line)
-            if current_chars + line_len > char_limit:
+            if i >= min_lines and (current_chars + line_len > char_limit):
                 break
             kept_lines.append(line)
             current_chars += line_len

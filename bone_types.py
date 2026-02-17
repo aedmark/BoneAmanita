@@ -26,7 +26,6 @@ class Prisma:
         pattern = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         return pattern.sub('', str(text))
 
-
 class LoreCategory(Enum):
     LEXICON = "LEXICON"
     SCENARIOS = "scenarios"

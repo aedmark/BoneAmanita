@@ -30,29 +30,15 @@ class PanicRoom:
         narrative = LoreManifest.get_instance().get("narrative_data") or {}
         cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["[SYSTEM FAILURE]"])
         fail_msg = random.choice(cathedral_logs)
-        return PhysicsPacket(
-            voltage=5.0,
-            narrative_drag=5.0,
-            valence=0.0,
-            repetition=0.0,
-            atmosphere="STABLE",
-            clean_words=["system", "error", "recovery"],
-            counts={"heavy": 0, "kinetic": 0},
-            vector={"STR": 0.5, "VEL": 0.5, "ENT": 0.0},
-            flow_state="SAFE_MODE",
-            zone="PANIC_ROOM",
-            truth_ratio=1.0,
-            raw_text=f"[PANIC PROTOCOL]: {fail_msg}",
-            antigens=0,
-            perfection_streak=0,
-            turbulence=0.0,
-            entropy=0.0,
-            mass=1.0,
-            velocity=0.0,
-            psi=0.0,
-            kappa=0.9,
-            beta_index=1.0,
-            manifold="BUNKER")
+        safe_packet = PhysicsPacket.void_state()
+        safe_packet.voltage = 5.0
+        safe_packet.narrative_drag = 5.0
+        safe_packet.clean_words = ["system", "error", "recovery"]
+        safe_packet.raw_text = f"[PANIC PROTOCOL]: {fail_msg}"
+        safe_packet.flow_state = "SAFE_MODE"
+        safe_packet.zone = "PANIC_ROOM"
+        safe_packet.manifold = "BUNKER"
+        return safe_packet
 
     @staticmethod
     def get_safe_bio(previous_state=None):
@@ -116,6 +102,12 @@ class ThePacemaker:
 
     def beat(self, stress: float):
         self.heart_rate = 60 + (stress * 20)
+
+    def update(self, repetition_score: float, voltage: float):
+        if repetition_score > 0.5 or voltage < 5.0:
+            self.boredom_level += 1.0
+        else:
+            self.boredom_level = max(0.0, self.boredom_level - 2.0)
 
     def is_bored(self) -> bool:
         return self.boredom_level > self.BOREDOM_THRESHOLD

@@ -1,5 +1,5 @@
 """ bone_village.py - 'It takes a village... to raise a simulation.' """
-
+import math
 import random
 from typing import List, Dict, Any, Tuple, Optional, Set
 from dataclasses import dataclass, field, asdict
@@ -36,31 +36,39 @@ class TheTinkerer:
 
     def calculate_passive_deltas(self, inventory_data: List[Dict]) -> List[PhysicsDelta]:
         deltas = []
+        trait_counts = {"HEAVY_LOAD": 0, "TIME_DILATION": 0, "ENTROPY_BUFFER": 0}
         for item_data in inventory_data:
             traits = item_data.get("passive_traits", [])
-            name = item_data.get("name", "Unknown")
-
-            if "HEAVY_LOAD" in traits:
-                deltas.append(PhysicsDelta("ADD", "narrative_drag", 0.5, name, "Heavy Load"))
-
-            if "TIME_DILATION" in traits:
-                deltas.append(PhysicsDelta("MULT", "narrative_drag", 0.8, name, "Time Dilation"))
-
-            if "ENTROPY_BUFFER" in traits:
-                deltas.append(PhysicsDelta("MULT", "turbulence", 0.5, name, "Entropy Buffer"))
+            for t in trait_counts:
+                if t in traits:
+                    trait_counts[t] += 1
+        if trait_counts["HEAVY_LOAD"] > 0:
+            impact = math.log1p(trait_counts["HEAVY_LOAD"]) * 0.7
+            deltas.append(PhysicsDelta("ADD", "narrative_drag", impact, "Inventory", "Heavy Load"))
+        if trait_counts["TIME_DILATION"] > 0:
+            reduction = max(0.5, 0.85 - (trait_counts["TIME_DILATION"] * 0.05))
+            deltas.append(PhysicsDelta("MULT", "narrative_drag", reduction, "Inventory", "Time Dilation"))
+        if trait_counts["ENTROPY_BUFFER"] > 0:
+            buffer_str = max(0.2, 0.5 / math.sqrt(trait_counts["ENTROPY_BUFFER"]))
+            deltas.append(PhysicsDelta("MULT", "turbulence", buffer_str, "Inventory", "Entropy Buffer"))
         return deltas
 
     def check_conductive_hazard(self, physics: Dict, inventory_data: List[Dict]) -> List[str]:
         logs = []
         voltage = physics.get("voltage", 0.0)
         limit = getattr(BoneConfig.INVENTORY, "CONDUCTIVE_THRESHOLD", 20.0)
-
         if voltage >= limit:
-            for item in inventory_data:
-                if "CONDUCTIVE_HAZARD" in item.get("passive_traits", []):
-                    damage = (voltage - limit) * 0.5
-                    logs.append(
-                        f"{Prisma.RED}⚡ CONDUCTIVE HAZARD: {item['name']} acts as a lightning rod! (-{damage:.1f} HP){Prisma.RST}")
+            conductive_items = [
+                item['name'] for item in inventory_data
+                if "CONDUCTIVE_HAZARD" in item.get("passive_traits", [])]
+            if conductive_items:
+                count = len(conductive_items)
+                excess_v = voltage - limit
+                damage = (excess_v * 0.5) * (1.0 + math.log1p(count) * 0.5)
+                item_list = ", ".join(conductive_items[:3])
+                if count > 3: item_list += f" and {count - 3} others"
+                logs.append(
+                    f"{Prisma.RED}⚡ CONDUCTIVE HAZARD: {item_list} act as lightning rods! (-{damage:.1f} HP){Prisma.RST}")
         return logs
 
     def audit_tool_use(self, packet: PhysicsPacket, inventory_list: List[str], host_health: Any = None):
@@ -99,6 +107,8 @@ class TheTinkerer:
         if random.random() < (resonance * 0.05):
             if hasattr(self.akashic, 'forge_new_item'):
                 new_name, new_data = self.akashic.forge_new_item(vector)
+                self.gordon.register_dynamic_item(new_name, new_data)
+                self.gordon.add_item(new_name)
                 if old_name in inventory_list:
                     try:
                         idx = inventory_list.index(old_name)

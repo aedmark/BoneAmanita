@@ -43,12 +43,10 @@ class TheStrangeLoop:
         voltage = physics.get("voltage", 0.0)
         drag = physics.get("narrative_drag", 0.0)
         if voltage < 5.0 and drag > 3.0 and self.recursion_depth == 0:
-            return (
-                True,
+            return (True,
                 f"{Prisma.MAG}🃏 JESTER: 'Boring! Burn the map!' (Voltage Spike Initiated){Prisma.RST}",
-                {"voltage": 10.0, "narrative_drag": -2.0},
-                {"action": "RIOT"}
-            )
+                {"voltage": 5.0, "narrative_drag": -5.0},
+                {"action": "RIOT"})
         return False, "", {}, {}
 
 class TheLeveragePoint:
@@ -86,11 +84,10 @@ class TheLeveragePoint:
             excess_voltage = current_voltage - self.TARGET_VOLTAGE
             voltage_correction = max(1.0, excess_voltage * 0.3)
             corrections = {"voltage": -voltage_correction}
-            mandate = {"action": "CIRCUIT_BREAKER", "duration": 2}
+            mandate = {"action": "FORCE_MODE", "value": "SANCTUARY"}
             return (True, (
                 f"{Prisma.RED}⚖️ MARKET CORRECTION:{Prisma.RST} "
-                f"Manic phase detected (V:{current_voltage:.1f}). "
-                f"The Council MANDATES dampening (-{voltage_correction:.1f}V)."),
+                f"Manic phase detected. Cooling enabled."),
                     corrections, mandate)
         if bio_state:
             trauma_vec = bio_state.get("trauma_vector", {})
@@ -100,8 +97,7 @@ class TheLeveragePoint:
                     True,
                     f"{Prisma.WHT}🕊️ GLASS: 'The vessel is cracking. Gold is required.' (Healing Protocol){Prisma.RST}",
                     {"narrative_drag": 5.0, "voltage": -5.0},
-                    {"action": "HEAL"}
-                )
+                    {"action": "HEAL"})
         return False, "", corrections, {}
 
 class TheFootnote:
@@ -152,12 +148,10 @@ class TheChairholder:
         voltage = physics.get("voltage", 0.0)
         max_voltage = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 20.0)
         if voltage > max_voltage:
-            return (
-                True,
+            return (True,
                 f"{Prisma.OCHRE}🛑 GRAHAM: 'Order in the court! System overheating.' (Circuit Breaker){Prisma.RST}",
                 {"voltage": -10.0, "narrative_drag": 5.0},
-                {"action": "CIRCUIT_BREAKER"}
-            )
+                {"action": "CIRCUIT_BREAKER"})
         if is_working_hard and not is_rewarded:
             self.commitment_streak += 1
         elif is_rewarded:
@@ -226,11 +220,11 @@ class CouncilChamber:
             final_log = ""
             if votes["YEA"] > votes["NAY"]:
                 final_log = f"{Prisma.GRN}>>> MOTION CARRIED ({votes['YEA']}-{votes['NAY']}).{Prisma.RST}"
-                adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - 0.5
+                adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - 1.0
             elif votes["NAY"] > votes["YEA"]:
                 final_log = f"{Prisma.RED}>>> MOTION DENIED ({votes['NAY']}-{votes['YEA']}).{Prisma.RST}"
-                adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + 2.0
-                adjustments["voltage"] = adjustments.get("voltage", 0) - 2.0
+                adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + 1.0
+                adjustments["voltage"] = adjustments.get("voltage", 0) - 1.0
             else:
                 final_log = f"{Prisma.YEL}>>> COUNCIL ADJOURNED (No Quorum).{Prisma.RST}"
             transcript.append(self.footnote.commentary(final_log))
@@ -250,5 +244,3 @@ class CouncilChamber:
                 dissent_log.append(
                     f"{Prisma.RED}[CRITIC]: Systemic Blindness Risk. Future Liability: {future_cost} ATP.{Prisma.RST}")
             return dissent_log
-
-TheCouncil = CouncilChamber

@@ -66,13 +66,15 @@ class TheAkashicRecord:
             self.store_ghost_echo(payload)
 
     def forge_new_item(self, vector: Dict[str, float]) -> Tuple[str, Dict]:
+        import uuid
         dominant_force = max(vector, key=vector.get) if vector else "ENT"
         prefixes = {
             "VEL": "Sonic", "STR": "Heavy", "ENT": "Void",
             "PHI": "Solar", "PSI": "Psionic", "BET": "Hollow",
             "E": "Primal", "DEL": "Manic"}
         prefix = prefixes.get(dominant_force, "Ascended")
-        new_name = f"{prefix.upper()}_ARTIFACT_{int(vector.get(dominant_force, 0) * 10)}"
+        unique_suffix = str(uuid.uuid4())[:4].upper()
+        new_name = f"{prefix.upper()}_ARTIFACT_{int(vector.get(dominant_force, 0) * 10)}_{unique_suffix}"
         new_data = {
             "name": new_name,
             "description": f"A vibrating artifact humming with {dominant_force} energy.",
@@ -159,7 +161,7 @@ class TheAkashicRecord:
             self.recipe_candidates[key] = {}
         result_name = "Unknown Artifact"
         if isinstance(result_item, dict):
-            result_name = result_item.get("description", "Unknown Artifact")
+            result_name = result_item.get("name", result_item.get("description", "Unknown Artifact"))
         elif isinstance(result_item, str):
             gordon_data = self.lore.get("GORDON") or {}
             registry = gordon_data.get("ITEM_REGISTRY", {})
@@ -188,19 +190,16 @@ class TheAkashicRecord:
         w_a = get_weights(lens_a)
         w_b = get_weights(lens_b)
         new_weights = {
-            "v": round((w_a.get("v", 0) + w_b.get("v", 0)) / 2, 2),
-            "d": round((w_a.get("d", 0) + w_b.get("d", 0)) / 2, 2),
-        }
+            "voltage": round((w_a.get("voltage", w_a.get("v", 0)) + w_b.get("voltage", w_b.get("v", 0))) / 2, 2),
+            "drag": round((w_a.get("drag", w_a.get("d", 0)) + w_b.get("drag", w_b.get("d", 0))) / 2, 2),}
         new_lens_data = {
             "description": f"A syncretic fusion of {lens_a} and {lens_b}.",
-            "weights": new_weights,
-            "parentage": [lens_a, lens_b],
-        }
+            "weights": new_weights,  # Now compatible
+            "parentage": [lens_a, lens_b],}
         self.lore.inject("LENSES", {new_name: new_lens_data})
         self.discovered_words[new_name] = "LENS"
         print(
-            f"{Prisma.MAG}🔮 AKASHIC: A new paradigm has crystallized: {new_name}{Prisma.RST}"
-        )
+            f"{Prisma.MAG}🔮 AKASHIC: A new paradigm has crystallized: {new_name}{Prisma.RST}")
 
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
         self.known_recipes.add((ingredient, catalyst))
@@ -208,8 +207,7 @@ class TheAkashicRecord:
             "ingredient": ingredient,
             "catalyst_category": catalyst,
             "result": result_item,
-            "msg": f"The {ingredient} resonates with {catalyst} energy, transforming into {result_item}.",
-        }
+            "msg": f"The {ingredient} resonates with {catalyst} energy, transforming into {result_item}.",}
         current_recipes = self.lore.get("GORDON", {}).get("RECIPES", [])
         if not any(
             r["ingredient"] == ingredient and r["catalyst_category"] == catalyst
@@ -218,8 +216,7 @@ class TheAkashicRecord:
             current_recipes.append(new_recipe)
             self.lore.inject("GORDON", {"RECIPES": current_recipes})
             print(
-                f"{Prisma.CYN}📜 AKASHIC: Recipe recorded in the Great Book.{Prisma.RST}"
-            )
+                f"{Prisma.CYN}📜 AKASHIC: Recipe recorded in the Great Book.{Prisma.RST}")
 
     def propose_new_category(self, word_list, category_name):
         lexicon_data = self.lore.get("LEXICON")
@@ -232,9 +229,7 @@ class TheAkashicRecord:
                 self.discovered_words[w] = category_name
                 updated = True
         if updated:
-            print(
-                f"✨ MYTHOLOGY ENGINE: The Lexicon expands. New Category: '{category_name.upper()}'"
-            )
+            print(f"✨ MYTHOLOGY ENGINE: The Lexicon expands. New Category: '{category_name.upper()}'")
             self.save_to_disk("LEXICON", lexicon_data)
 
     def store_ghost_echo(self, memory_data: Dict):
@@ -242,12 +237,7 @@ class TheAkashicRecord:
         if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
             self.shadow_stock.pop(0)
         mythos_state = {
-            "lens_cooccurrence": {
-                f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()
-            },
-            "ingredient_affinity": self.ingredient_affinity,
-            "shadow_stock": self.shadow_stock,
-        }
+            "lens_cooccurrence": {f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()}, "ingredient_affinity": self.ingredient_affinity, "shadow_stock": self.shadow_stock,}
         self.save_to_disk("mythos", mythos_state)
         print(f"{Prisma.VIOLET}[AKASHIC]: Ghost Echo archived.{Prisma.RST}")
 
@@ -260,8 +250,6 @@ class TheAkashicRecord:
                 print(f"✨ LEXICON: Learned '{word}' ({category})")
                 self.save_to_disk("LEXICON", lexicon_data)
                 if len(lexicon_data[category]) > 50 and category != "heavy":
-                    print(
-                        f"⚠️ MYTHOLOGY ENGINE: Category '{category}' is bloating. Suggest fission."
-                    )
+                    print(f"⚠️ MYTHOLOGY ENGINE: Category '{category}' is bloating. Suggest fission.")
                 return True
         return False

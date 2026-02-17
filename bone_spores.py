@@ -479,7 +479,6 @@ class MycelialNetwork:
 
     def _load_seeds(self):
         from bone_village import ParadoxSeed
-
         loaded_seeds = []
         try:
             raw_seeds = TheLore.get("seeds") or []
@@ -504,9 +503,7 @@ class MycelialNetwork:
     def _apply_epigenetics(self, data):
         if "config_mutations" not in data:
             return
-        self.events.log(
-            f"{Prisma.MAG}EPIGENETICS: Auditing ancestral configuration...{Prisma.RST}"
-        )
+        self.events.log(f"{Prisma.MAG}EPIGENETICS: Auditing ancestral configuration...{Prisma.RST}")
         valid_mutations = 0
         SAFE_MUTATIONS = {
             "STAMINA_REGEN",
@@ -531,19 +528,13 @@ class MycelialNetwork:
             "METABOLISM.PHOTOSYNTHESIS_GAIN",
             "METABOLISM.ROS_GENERATION_FACTOR",
             "COUNCIL.FOOTNOTE_CHANCE",
-            "COUNCIL.MANIC_VOLTAGE_TRIGGER",
-        }
-
+            "COUNCIL.MANIC_VOLTAGE_TRIGGER",}
         for key, value in data["config_mutations"].items():
             if key in SAFE_MUTATIONS:
                 if _access_config_path(BoneConfig, key, value, set_mode=True):
                     valid_mutations += 1
         if valid_mutations > 0:
-            self.events.log(
-                f"{Prisma.CYN}   ► Applied {valid_mutations} verified config shifts.{Prisma.RST}"
-            )
-
-    """PERSISTENCE & INGESTION"""
+            self.events.log(f"{Prisma.CYN}   ► Applied {valid_mutations} verified config shifts.{Prisma.RST}")
 
     def ingest(self, target_file, current_tick=0):
         data = self.loader.load_spore(target_file)
@@ -554,8 +545,7 @@ class MycelialNetwork:
         required_keys = ["meta", "trauma_vector", "core_graph"]
         if not all(k in data for k in required_keys):
             self.events.log(
-                f"{Prisma.RED}[MEMORY]: Spore rejected (Missing Structural Keys).{Prisma.RST}"
-            )
+                f"{Prisma.RED}[MEMORY]: Spore rejected (Missing Structural Keys).{Prisma.RST}")
             return None, set(), {}, None
         self._process_lineage(data)
         self._process_mutations(data)
@@ -572,8 +562,7 @@ class MycelialNetwork:
         timestamp = data.get("meta", {}).get("timestamp", 0)
         time_ago = int((time.time() - timestamp) / 3600)
         trauma_summary = {
-            k: v for k, v in data.get("trauma_vector", {}).items() if v > 0.1
-        }
+            k: v for k, v in data.get("trauma_vector", {}).items() if v > 0.1}
         mutation_count = sum(len(v) for v in data.get("mutations", {}).values())
         self.lineage_log.append(
             {
@@ -581,9 +570,7 @@ class MycelialNetwork:
                 "age_hours": time_ago,
                 "trauma": trauma_summary,
                 "mutations": mutation_count,
-                "loaded_at": time.time(),
-            }
-        )
+                "loaded_at": time.time(),})
 
     def _process_mutations(self, data):
         if "mutations" in data:
@@ -596,23 +583,19 @@ class MycelialNetwork:
                         accepted_count += 1
             if accepted_count > 0:
                 self.events.log(
-                    f"{Prisma.CYN}[MEMBRANE]: Integrated {accepted_count} mutations.{Prisma.RST}"
-                )
+                    f"{Prisma.CYN}[MEMBRANE]: Integrated {accepted_count} mutations.{Prisma.RST}")
 
     def _extract_legacy_traits(self, data):
         if "joy_legacy" in data and data["joy_legacy"]:
             joy = data["joy_legacy"]
             clade = LiteraryReproduction.JOY_CLADE.get(joy.get("flavor"))
             if clade:
-                self.events.log(
-                    f"{Prisma.CYN}INHERITED GLORY: {clade['title']}{Prisma.RST}"
-                )
+                self.events.log(f"{Prisma.CYN}INHERITED GLORY: {clade['title']}{Prisma.RST}")
                 for stat, ancestral_bonus in clade["buff"].items():
                     if hasattr(BoneConfig, stat):
                         setattr(BoneConfig, stat, ancestral_bonus)
         if "seeds" in data:
             from bone_village import ParadoxSeed
-
             self.seeds = []
             for s_data in data["seeds"]:
                 new_seed = ParadoxSeed(s_data["q"], set())
@@ -624,8 +607,7 @@ class MycelialNetwork:
             set(data.get("antibodies", [])),
             data.get("soul_legacy", {}),
             data.get("continuity", None),
-            data.get("world_atlas", {}),
-        )
+            data.get("world_atlas", {}),)
 
     def save(
         self,
@@ -639,8 +621,7 @@ class MycelialNetwork:
         soul_data=None,
         continuity=None,
         world_atlas=None,
-        village_data=None,
-    ):
+        village_data=None,):
         base_trauma = (BoneConfig.MAX_HEALTH - health) / BoneConfig.MAX_HEALTH
         final_vector = {k: min(1.0, v) for k, v in trauma_accum.items()}
         top_joy = sorted(joy_history, key=lambda x: x["resonance"], reverse=True)[:3]
@@ -649,8 +630,7 @@ class MycelialNetwork:
             joy_legacy_data = {
                 "flavor": top_joy[0]["dominant_flavor"],
                 "resonance": top_joy[0]["resonance"],
-                "timestamp": top_joy[0]["timestamp"],
-            }
+                "timestamp": top_joy[0]["timestamp"],}
         core_graph = {}
         for k, data in self.graph.items():
             filtered_edges = {}
@@ -689,8 +669,7 @@ class MycelialNetwork:
             "world_atlas": world_atlas or {},
             "village_data": village_data,
             "seeds": seed_list,
-            "fossils": list(self.fossils),
-        }
+            "fossils": list(self.fossils),}
         return self.loader.save_spore(self.filename, data)
 
     def _generate_future_seed(self, temp_health, trauma_vec) -> str:
@@ -717,9 +696,7 @@ class MycelialNetwork:
                 except (OSError, AttributeError):
                     pass
         if removed:
-            self.events.log(
-                f"{Prisma.GRY}[TIME MENDER]: Pruned {removed} dead timelines.{Prisma.RST}"
-            )
+            self.events.log(f"{Prisma.GRY}[TIME MENDER]: Pruned {removed} dead timelines.{Prisma.RST}")
 
     def report_status(self):
         return len(self.graph)
@@ -728,17 +705,12 @@ class MycelialNetwork:
         files = self.loader.list_spores()
         if not files:
             self.events.log(
-                f"{Prisma.GRY}[GENETICS]: No ancestors found. Genesis Bloom.{Prisma.RST}"
-            )
+                f"{Prisma.GRY}[GENETICS]: No ancestors found. Genesis Bloom.{Prisma.RST}")
             return None
         candidates = [f for f in files if self.session_id not in f[0]]
         if candidates:
             return self.ingest(candidates[0][0])
         return None
-
-
-"""ECOSYSTEM & EVOLUTION"""
-
 
 class ImmuneMycelium:
     def __init__(self):
@@ -747,8 +719,7 @@ class ImmuneMycelium:
             "PLOSIVE": set("bdgkpt"),
             "FRICATIVE": set("fthszsh"),
             "LIQUID": set("lr"),
-            "NASAL": set("mn"),
-        }
+            "NASAL": set("mn"),}
         self.ROOTS = {
             "HEAVY": (
                 "lith",
@@ -759,10 +730,8 @@ class ImmuneMycelium:
                 "struct",
                 "base",
                 "fund",
-                "mound",
-            ),
-            "KINETIC": ("mot", "mov", "ject", "tract", "pel", "crat", "dynam", "flux"),
-        }
+                "mound",),
+            "KINETIC": ("mot", "mov", "ject", "tract", "pel", "crat", "dynam", "flux"),}
         self.name = "MYCELIUM"
         self.color = Prisma.CYN
         self.archetypes = {"constructive", "kinetic", "abstract", "code", "system"}
@@ -796,7 +765,6 @@ class ImmuneMycelium:
             return "TOXIN_HEAVY", f"Detected phonetic toxicity in '{w}'."
         return None, ""
 
-
 class BioParasite:
     def __init__(self, memory_ref, lexicon_ref):
         self.mem = memory_ref
@@ -813,8 +781,7 @@ class BioParasite:
             "void",
             "static",
             "rot",
-            "decay",
-        }
+            "decay",}
 
     def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
         hits = sum(1 for w in clean_words if w in self.archetypes)
@@ -857,13 +824,11 @@ class BioParasite:
         if is_metaphor:
             return True, (
                 f"{Prisma.CYN}✨ SYNAPSE SPARK: Your mind bridges '{host.upper()}' and '{parasite.upper()}'.\n"
-                f"   A new metaphor is born. The map folds.{Prisma.RST}"
-            )
+                f"   A new metaphor is born. The map folds.{Prisma.RST}")
         else:
             return True, (
                 f"{Prisma.VIOLET}🍄 INTRUSIVE THOUGHT: Exhaustion logic links '{host.upper()}' <-> '{parasite.upper()}'.\n"
-                f"   This makes no sense, yet there it is. 'Some things just happen.'{Prisma.RST}"
-            )
+                f"   This makes no sense, yet there it is. 'Some things just happen.'{Prisma.RST}")
 
 
 class BioLichen:
@@ -878,8 +843,7 @@ class BioLichen:
             "solar",
             "vital",
             "bloom",
-            "grow",
-        }
+            "grow",}
 
     def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
         hits = sum(1 for w in clean_words if w in self.archetypes)
@@ -919,9 +883,7 @@ class BioLichen:
             if heavy_words:
                 h_word = random.choice(heavy_words)
                 TheLexicon.teach(h_word, "photo", tick_count)
-                msgs.append(
-                    f"{Prisma.MAG}SUBLIMATION: '{h_word}' has become Light.{Prisma.RST}"
-                )
+                msgs.append(f"{Prisma.MAG}SUBLIMATION: '{h_word}' has become Light.{Prisma.RST}")
         return sugar, " ".join(msgs) if msgs else None
 
 class LiteraryReproduction:
@@ -955,13 +917,11 @@ class LiteraryReproduction:
             ("MAX_HEALTH", 50.0, 500.0, 0.1),
             ("PHYSICS.VOLTAGE_MAX", 10.0, 100.0, 0.2),
             ("BIO.REWARD_MEDIUM", 0.01, 1.0, 0.2),
-            ("COUNCIL.MANIC_VOLTAGE_TRIGGER", 10.0, 50.0, 0.1),
-        ]
+            ("COUNCIL.MANIC_VOLTAGE_TRIGGER", 10.0, 50.0, 0.1),]
         for key, min_v, max_v, chance in MUTATION_TABLE:
             if random.random() < chance:
                 current_val = LiteraryReproduction._resolve_config_value(
-                    current_config, key
-                )
+                    current_config, key)
                 if current_val is not None:
                     drift = random.uniform(0.9, 1.1)
                     mutations[key] = max(min_v, min(max_v, current_val * drift))
@@ -976,8 +936,7 @@ class LiteraryReproduction:
         counts = LiteraryReproduction._extract_counts(physics)
         dominant = max(counts, key=counts.get) if counts else "VOID"
         mutation_data = LiteraryReproduction.MUTATIONS.get(
-            dominant.upper(), {"trait": "NEUTRAL", "mod": {}, "lexicon": []}
-        )
+            dominant.upper(), {"trait": "NEUTRAL", "mod": {}, "lexicon": []})
         child_id = f"{parent_id}_({mutation_data['trait']})"
         config_mutations = LiteraryReproduction.mutate_config(BoneConfig)
         config_mutations.update(mutation_data["mod"])
@@ -990,8 +949,7 @@ class LiteraryReproduction:
             "lexicon_mutations": lexicon_mutations,
             "config_mutations": config_mutations,
             "dominant_flavor": dominant,
-            "trauma_inheritance": trauma_vec,
-        }
+            "trauma_inheritance": trauma_vec,}
         return child_id, child_genome
 
     @staticmethod
@@ -1026,18 +984,15 @@ class LiteraryReproduction:
             "parent_b": parent_b_id,
             "trauma_inheritance": child_trauma,
             "config_mutations": config_mutations,
-            "inherited_enzymes": child_enzymes,
-        }
+            "inherited_enzymes": child_enzymes,}
         return child_id, child_genome
 
     def attempt_reproduction(
-        self, engine_ref, mode="MITOSIS", target_spore=None
-    ) -> Tuple[str, Dict]:
+        self, engine_ref, mode="MITOSIS", target_spore=None) -> Tuple[str, Dict]:
         mem = engine_ref.mind.mem
         bio_state = {
             "trauma_vector": engine_ref.trauma_accum,
-            "mito": engine_ref.bio.mito,
-        }
+            "mito": engine_ref.bio.mito,}
         phys_packet = {}
         if hasattr(engine_ref, "cortex") and engine_ref.cortex.last_physics:
             phys_packet = engine_ref.cortex.last_physics

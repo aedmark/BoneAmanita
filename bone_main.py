@@ -15,7 +15,7 @@ from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_cycle import GeodesicOrchestrator
 from bone_council import CouncilChamber
 
-def typewriter(text: str, speed: float = 0.005, end: str = "\n"):
+def typewriter(text: str, speed: float = 0.009, end: str = "\n"):
     tokens = re.split(r'(\x1b\[[0-9;]*m)', text)
     for token in tokens:
         if token.startswith('\x1b['):

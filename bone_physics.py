@@ -59,10 +59,7 @@ class GeodesicEngine:
         cfg = BoneConfig.PHYSICS
         safe_volume = max(1, volume)
         total_kinetic = masses["kinetic"] + masses["explosive"]
-        raw_tension_mass = (
-                (masses["heavy"] * cfg.WEIGHT_HEAVY) +
-                (total_kinetic * cfg.WEIGHT_EXPLOSIVE) +
-                (masses["constructive"] * cfg.WEIGHT_CONSTRUCTIVE))
+        raw_tension_mass = ((masses["heavy"] * cfg.WEIGHT_HEAVY) + (total_kinetic * cfg.WEIGHT_EXPLOSIVE) + (masses["constructive"] * cfg.WEIGHT_CONSTRUCTIVE))
         density = raw_tension_mass / safe_volume
         kinetic_gain = getattr(BoneConfig, "KINETIC_GAIN", 1.0)
         base_tension = density * 20.0 * kinetic_gain
@@ -71,9 +68,9 @@ class GeodesicEngine:
         if safe_volume < 3: mass_scalar *= 0.5
         tension = round(min(100.0, base_tension * mass_scalar), 2)
         shear_rate = total_kinetic / safe_volume
-        raw_friction = (
-                (counts.get("suburban", 0) * 2.0) +
-                (masses["heavy"] * 2.5))
+        suburban_count = counts.get("suburban", 0)
+        suburban_friction = math.log1p(suburban_count) * 5.0
+        raw_friction = (suburban_friction + (masses["heavy"] * 2.5))
         solvent_count = counts.get("solvents", 0)
         lubrication = 1.0 + (solvent_count * 0.05)
         dynamic_viscosity = (raw_friction / lubrication) / (1.0 + (shear_rate * 2.0))
@@ -81,8 +78,8 @@ class GeodesicEngine:
         if masses["heavy"] > 0:
             kinetic_lift /= (masses["heavy"] * 0.5 + 1.0)
         lift = (masses["play"] * 2.5) + kinetic_lift
-        viscosity_density = dynamic_viscosity / safe_volume
-        lift_density = lift / safe_volume
+        viscosity_density = min(2.0, dynamic_viscosity / safe_volume)
+        lift_density = min(2.0, lift / safe_volume)
         raw_compression = (viscosity_density * 10.0) - (lift_density * 10.0)
         signal_drag_mult = getattr(BoneConfig, "SIGNAL_DRAG_MULTIPLIER", 1.0)
         raw_compression *= signal_drag_mult
@@ -110,8 +107,7 @@ class GeodesicEngine:
             "PSI": forces['abstraction'],
             "BET": min(1.0, (masses["social"] * 2.0) * inv_vol),
             "DEL": min(1.0, (masses["play"] * 3.0) * inv_vol),
-            "E": min(1.0, (counts.get("solvents", 0)) * inv_vol)
-        }
+            "E": min(1.0, (counts.get("solvents", 0)) * inv_vol)}
 
 class TheGatekeeper:
     def __init__(self, lexicon_ref, memory_ref=None):
@@ -425,23 +421,16 @@ class CosmicDynamics:
         if len(sorted_basins) > 1:
             secondary_node, secondary_str = sorted_basins[1]
             if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:
-                return (
-                    "LAGRANGE_POINT",
-                    0.0,
-                    f"LAGRANGE: Caught between '{primary_node.upper()}' and '{secondary_node.upper()}'")
+                return "LAGRANGE_POINT", 0.0, f"LAGRANGE: Caught between '{primary_node.upper()}' and '{secondary_node.upper()}'"
         flow_ratio = active_filaments / max(1, word_count)
         well_threshold = getattr(BoneConfig, "GRAVITY_WELL_THRESHOLD", 15.0)
         if flow_ratio > 0.5 and primary_str < (well_threshold * 2):
-            return (
-                "WATERSHED_FLOW",
-                0.0,
-                f"FLOW: Streaming towards '{primary_node.upper()}'")
+            return "WATERSHED_FLOW", 0.0, f"FLOW: Streaming towards '{primary_node.upper()}'"
         return "ORBITAL", 0.0, f"ORBIT: Circling '{primary_node.upper()}' (Mass {int(gravity_wells[primary_node])})"
 
 def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> PhysicsPacket:
     feedback = physics_packet.snapshot()
-    tone_effects = {
-        "Urgent": {"velocity": 0.3, "narrative_drag": -0.5, "voltage": 0.5},
+    tone_effects = {"Urgent": {"velocity": 0.3, "narrative_drag": -0.5, "voltage": 0.5},
         "Strained": {"narrative_drag": 1.2, "voltage": -0.3, "kappa": -0.1},
         "Vibrating": {"entropy": 0.2, "voltage": 0.2, "psi": 0.1},
         "Resonant": {"valence": 0.3, "beta_index": 0.1, "kappa": 0.2},
@@ -511,8 +500,9 @@ class CycleStabilizer:
             if abs(v_force) > 0.5:
                 ctx.record_flux(current_phase, "voltage", p.voltage - v_force, p.voltage, "PID_CORRECTION")
             corrections = True
-        if abs(d_force) > 0.01:
-            p.narrative_drag = max(0.0, p.narrative_drag + d_force)
+            DRAG_DEADBAND = 0.05
+            if abs(d_force) > DRAG_DEADBAND:
+                p.narrative_drag = max(0.0, p.narrative_drag + d_force)
             if abs(d_force) > 0.5:
                 ctx.record_flux(current_phase, "narrative_drag", p.narrative_drag - d_force, p.narrative_drag, "PID_CORRECTION")
             corrections = True

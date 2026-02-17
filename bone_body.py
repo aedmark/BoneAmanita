@@ -1,4 +1,4 @@
-""" bone_body.py - The Metabolic Engine """
+""" bone_body.py - The Metabolic Engine (Hardened v15.5) """
 
 import math, random, time
 from collections import deque, Counter
@@ -8,6 +8,9 @@ from bone_spores import ImmuneMycelium, BioLichen, BioParasite
 from bone_lexicon import TheLexicon
 from bone_core import Prisma, LoreManifest
 from bone_config import BoneConfig
+
+MAX_ACCEPTED_DRAG = 15.0
+DRAG_EXPONENT = 1.2
 
 @dataclass
 class Biometrics:
@@ -191,11 +194,11 @@ class MitochondrialForge:
             return MetabolicReceipt(0, 0, 0, 0, 0, "NOMINAL", "Fresh Start")
         voltage = getattr(physics_packet, "voltage", 0.0)
         raw_drag = getattr(physics_packet, "narrative_drag", 0.0)
-        drag = max(0.0, raw_drag)
+        drag = max(0.0, min(MAX_ACCEPTED_DRAG, raw_drag))
         base_demand = max(0.1, math.log1p(voltage) * 1.5)
-        raw_tax = (drag**1.5) * 0.5
+        raw_tax = (drag**DRAG_EXPONENT) * 0.5
         cognitive_load_tax = min(5.0, raw_tax)
-        pre_calc_cost = base_demand + raw_tax
+        pre_calc_cost = base_demand + cognitive_load_tax
         if pre_calc_cost > self.ANAEROBIC_THRESHOLD:
             return self._trigger_anaerobic_bypass(pre_calc_cost)
         is_critical = self.state.atp_pool < BioConstants.ATP_CRITICAL

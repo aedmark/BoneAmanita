@@ -1,5 +1,4 @@
-""" bone_inventory.py
- 'Organization is the first step toward civilization.' - Schur """
+""" bone_inventory.py - 'Organization is the first step toward civilization.' - Schur """
 
 import random, re
 from dataclasses import dataclass, field
@@ -7,7 +6,6 @@ from typing import List, Dict, Tuple, Optional
 from bone_core import LoreManifest
 from bone_types import Prisma
 from bone_config import BoneConfig
-
 
 @dataclass
 class Item:
@@ -32,9 +30,7 @@ class Item:
             value=data.get("value", 1.0),
             usage_msg=data.get("usage_msg", f"You use the {name}."),
             consume_on_use=data.get("consume_on_use", False),
-            reflex_trigger=data.get("reflex_trigger", None)
-        )
-
+            reflex_trigger=data.get("reflex_trigger", None))
 
 class GordonKnot:
     def __init__(self, events=None):
@@ -46,35 +42,26 @@ class GordonKnot:
         self.max_slots = 10
         self.last_flinch_turn = -100
         self.scar_tissue = {}
-        self.refusal_markers = {
-            "cannot", "can't", "unable", "fail", "too heavy",
-            "stuck", "don't", "do not", "locked", "refuse", "impossible"}
-        self.loot_triggers = ["found a", "picked up", "pick up", "acquired", "took the", "take the", "grab the",
-                              "takes the"]
+        self.refusal_markers = {"cannot", "can't", "unable", "fail", "too heavy", "stuck", "don't", "do not", "locked", "refuse", "impossible"}
+        self.loot_triggers = ["found a", "picked up", "pick up", "acquired", "took the", "take the", "grab the", "takes the"]
         self.load_config()
 
     def load_config(self):
         data = LoreManifest.get_instance().get("GORDON") or {}
         if not data and hasattr(LoreManifest, "get_raw"):
             data = LoreManifest.get_raw("gordon.json") or {}
-
         if "REFUSAL_MARKERS" in data:
             self.refusal_markers = set(data["REFUSAL_MARKERS"])
-
         if "LOOT_TRIGGERS" in data:
             self.loot_triggers = data["LOOT_TRIGGERS"]
-
         self.ITEM_REGISTRY = data.get("ITEM_REGISTRY", {})
         for name, props in self.ITEM_REGISTRY.items():
             self.registry[name] = Item.from_dict(name, props)
-
         self.recipes = data.get("RECIPES", [])
         self.scar_tissue = data.get("SCAR_TISSUE", {})
-
         starters = data.get("STARTING_INVENTORY", [])
         if not self.inventory and starters:
             self.inventory = [s for s in starters if isinstance(s, str)]
-
         if hasattr(BoneConfig, "INVENTORY"):
             self.max_slots = getattr(BoneConfig.INVENTORY, "MAX_SLOTS", 10)
 
@@ -94,10 +81,7 @@ class GordonKnot:
         lost_loot = normalize(raw_lost)
         logs = []
         if new_loot:
-            acquisition_verbs = [
-                "take", "grab", "pick", "get", "steal", "seize", "collect",
-                "snatch", "acquire", "pocket", "loot", "harvest"
-            ]
+            acquisition_verbs = ["take", "grab", "pick", "get", "steal", "seize", "collect", "snatch", "acquire", "pocket", "loot", "harvest"]
             clean_input = user_input.lower()
             has_intent = any(verb in clean_input for verb in acquisition_verbs)
             if has_intent:
@@ -199,6 +183,14 @@ class GordonKnot:
             return False, "Too tired to polish the brass.", 0.0
         return True, f"Gordon polished {len(self.inventory)} items.", cost
 
+    def register_dynamic_item(self, name: str, data: Dict):
+        name = name.upper()
+        if name not in self.registry:
+            new_item = Item.from_dict(name, data)
+            self.registry[name] = new_item
+            if self.events:
+                self.events.log(f"{Prisma.CYN}🎒 GORDON: 'I'll make space for {name}.'{Prisma.RST}", "INV")
+
     def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
         text = (user_text + " " + sys_text).lower()
         sys_lower = sys_text.lower()
@@ -260,8 +252,8 @@ class GordonKnot:
             trigger = item.reflex_trigger
             if trigger == "VOLTAGE_CRITICAL" and voltage > 18.0:
                 self.safe_remove_item(name)
-                return True, f"{Prisma.CYN}🛡️ REFLEX: {name} sacrificed to absorb voltage spike!{Prisma.RST}"
-            if trigger == "DRIFT_CRITICAL" and drag > 8.0:
-                self.safe_remove_item(name)
-                return True, f"{Prisma.OCHRE}⚓ REFLEX: {name} deployed to arrest drift!{Prisma.RST}"
+                physics_ref["voltage"] = 12.0
+                return True, f"{Prisma.CYN}🛡️ REFLEX: {name} sacrificed to absorb voltage spike! (Voltage -> 12.0v){Prisma.RST}"
+            if trigger == "DRIFT_CRITICAL" and drag > 6.0:
+                pass
         return False, None
