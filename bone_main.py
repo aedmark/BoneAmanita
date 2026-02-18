@@ -47,7 +47,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system("cls" if os.name == "nt" else "clear")
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.5.7   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.6.1   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
@@ -207,7 +207,6 @@ class BoneAmanita:
         self.chronos = ChronosKeeper(self)
         self.lex = LexiconService
         self.lex.initialize()
-        self.lex.compile_antigens()
         anatomy = BoneGenesis.ignite(self.config, self.lex, events_ref=self.events)
         self._unpack_anatomy(anatomy)
         self.events.subscribe("ITEM_DROP", self.town_hall.on_item_drop)
@@ -381,7 +380,7 @@ class BoneAmanita:
                 self.trauma_accum = self.mind.mem.session_trauma_vector or {}
             if self.health <= 0.0:
                 return self.trigger_death(cortex_packet.get("physics", {}))
-        except Exception as e:
+        except Exception:
             full_trace = traceback.format_exc()
             return {
                 "ui": f"{Prisma.RED}*** CORTEX CRITICAL FAILURE ***\n{full_trace}{Prisma.RST}",
@@ -389,7 +388,6 @@ class BoneAmanita:
                 "metrics": self.get_metrics(),
             }
         self.observer.clock_out(turn_start)
-        current_atp = self.bio.mito.state.atp_pool
         burn_proxy = max(1.0, self.observer.last_cycle_duration * 5.0)
         phys_out = cortex_packet.get("physics", {})
         novelty = phys_out.get("vector", {}).get("novelty", 0.5)
@@ -402,6 +400,8 @@ class BoneAmanita:
         clean_cmd = user_message.strip()
         if clean_cmd.startswith("//"):
             return self._handle_meta_command(clean_cmd)
+        if self.cmd is None:
+            return {"ui": f"{Prisma.RED}ERR: Command interface not initialized.{Prisma.RST}", "logs": []}
         self.cmd.execute(clean_cmd)
         cmd_logs = [e["text"] for e in self.events.flush()]
         ui_output = "\n".join(cmd_logs) if cmd_logs else "Command Executed."
@@ -533,16 +533,6 @@ class BoneAmanita:
             self.health = min(self.health + CATHARSIS_HEAL_AMOUNT, MAX_HEALTH_CAP)
             return True
         return False
-
-    @staticmethod
-    def apply_cosmic_physics(physics, state, cosmic_drag_penalty):
-        physics["narrative_drag"] += cosmic_drag_penalty
-        if state == "VOID_DRIFT":
-            physics["voltage"] = max(0.0, physics["voltage"] - 0.5)
-        elif state == "LAGRANGE_POINT":
-            physics["narrative_drag"] = max(0.1, physics["narrative_drag"] - 2.0)
-        elif state == "WATERSHED_FLOW":
-            physics["voltage"] += 0.5
 
     @staticmethod
     def check_pareidolia(words):

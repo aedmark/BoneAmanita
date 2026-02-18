@@ -31,7 +31,7 @@ class ZenGarden:
         self.max_streak = data.get("max_streak", 0)
         self.pebbles_collected = data.get("pebbles_collected", 0)
 
-    def raking_the_sand(self, physics: Any, bio: Dict) -> Tuple[float, Optional[str]]:
+    def raking_the_sand(self, physics: Any, _bio: Dict) -> Tuple[float, Optional[str]]:
         vol = (
             getattr(physics, "voltage", 0.0)
             if not isinstance(physics, dict)
@@ -92,6 +92,7 @@ class TheBureau:
                             "regex": re.compile(p["regex"], re.IGNORECASE),
                             "msg": p.get("error_msg", "Style Violation Detected."),
                             "tax": 5.0,
+                            "action": p.get("action", None),
                         }
                     )
                 except re.error as e:
@@ -107,7 +108,7 @@ class TheBureau:
     def load_state(self, data: Dict[str, Any]):
         self.stamp_count = data.get("stamp_count", 0)
 
-    def audit(self, physics, bio_state, context=None, origin="USER") -> Optional[Dict]:
+    def audit(self, physics, bio_state, _context=None, origin="USER") -> Optional[Dict]:
         if bio_state.get("health", 100.0) < BoneConfig.BUREAU.MIN_HEALTH_TO_AUDIT:
             return None
         p = physics if isinstance(physics, dict) else getattr(physics, "__dict__", {})
@@ -171,7 +172,30 @@ class TheBureau:
             "atp_gain": -tax,
         }
 
+    @staticmethod
+    def _apply_correction(text: str, crime: Dict, match: re.Match) -> str:
+        action = crime.get("action")
+        if not action:
+            return text
+        if action == "KEEP_TAIL":
+            if match.groups():
+                return match.group(match.lastindex).strip()
+        elif action == "STRIP_PREFIX":
+            if len(match.groups()) >= 3:
+                prefix = match.group(1) or ""
+                suffix = match.group(3) or ""
+                if not prefix.strip() and suffix:
+                    suffix = suffix[0].upper() + suffix[1:]
+                return f"{prefix}{suffix}".strip()
+        return text
+
     def sanitize(self, text: str) -> Tuple[str, Optional[str]]:
+        for crime in self.crimes:
+            match = crime["regex"].search(text)
+            if match and crime.get("action"):
+                corrected_text = self._apply_correction(text, crime, match)
+                log_msg = f"BUREAU CORRECTION: {crime['msg']} -> Text optimized."
+                return corrected_text, log_msg
         dummy_physics = type(
             "obj",
             (object,),
@@ -199,7 +223,7 @@ class TherapyProtocol:
             "streaks", {k: 0 for k in BoneConfig.TRAUMA_VECTOR.keys()}
         )
 
-    def check_progress(self, phys, stamina, current_trauma_accum, qualia=None):
+    def check_progress(self, phys, _stamina, current_trauma_accum, _qualia=None):
         counts = (
             getattr(phys, "counts", {})
             if not isinstance(phys, dict)
@@ -251,7 +275,7 @@ class KintsugiProtocol:
             return True, self.active_koan
         return False, None
 
-    def attempt_repair(self, phys, trauma_accum, soul_ref=None, qualia=None):
+    def attempt_repair(self, phys, trauma_accum, soul_ref=None, _qualia=None):
         if not self.active_koan:
             return None
         vol = (
@@ -283,15 +307,13 @@ class KintsugiProtocol:
         target = max(trauma_accum, key=trauma_accum.get)
         severity = trauma_accum[target]
         healed_log = []
-        msg = ""
-        success = False
+
         if pathway == self.PATH_ALCHEMY:
             reduction = severity * 0.8
             trauma_accum[target] = max(0.0, severity - reduction)
             atp_boost = reduction * 15.0
             msg = f"{Prisma.VIOLET}🔮 ALCHEMY: The wound '{target}' burns into pure fuel. (+{atp_boost:.1f} ATP){Prisma.RST}"
             healed_log.append(f"Transmuted {target}")
-            success = True
             return {
                 "success": True,
                 "msg": msg,
@@ -342,7 +364,6 @@ class TheCriticsCircle:
         if "velocity" not in p:
             p["velocity"] = voltage * (1.0 / max(0.1, drag))
         best_match = None
-        highest_intensity = 0.0
         review_type = "neutral"
 
         for key, critic in self.critics.items():
@@ -351,14 +372,14 @@ class TheCriticsCircle:
             prefs = critic.get("preferences", {})
             score = 0.0
             for metric, target in prefs.items():
-                current = 0.0
-                if metric.startswith("counts_"):
-                    category = metric.replace("counts_", "")
+                metric_str = str(metric)
+                if metric_str.startswith("counts_"):
+                    category = metric_str.replace("counts_", "")
                     counts = p.get("counts", {})
                     raw_count = counts.get(category, 0)
                     current = min(5.0, raw_count * 0.5)
                 else:
-                    current = p.get(metric, 0.0)
+                    current = p.get(metric_str, 0.0)
                 if target > 0:
                     score += current * target
                 else:
@@ -366,11 +387,9 @@ class TheCriticsCircle:
 
             if score > 15.0:
                 best_match = (key, critic)
-                highest_intensity = score
                 review_type = "high"
             elif score < -15.0:
                 best_match = (key, critic)
-                highest_intensity = abs(score)
                 review_type = "low"
 
         if best_match:
@@ -493,7 +512,7 @@ class TheFolly:
         return self._eat_meat(fresh_meat, lexicon)
 
     def _eat_meat(
-        self, fresh_meat: list, LexiconService: Dict
+        self, fresh_meat: list, _lexicon_data: Dict
     ) -> Tuple[str, str, float, Optional[str]]:
         target = random.choice(fresh_meat)
         suburban_set = LexiconService.get("suburban")
@@ -532,7 +551,8 @@ class TheFolly:
         )
         return "MEAT_GRINDER", msg, actual_yield, loot
 
-    def _filter_meat_words(self, clean_words: list, lexicon: Dict) -> list:
+    @staticmethod
+    def _filter_meat_words(clean_words: list, _lexicon: Dict) -> list:
         heavy = LexiconService.get("heavy")
         kinetic = LexiconService.get("kinetic")
         suburban = LexiconService.get("suburban")
@@ -541,8 +561,9 @@ class TheFolly:
         suburban = suburban if suburban else []
         return [w for w in clean_words if w in heavy or w in kinetic or w in suburban]
 
+    @staticmethod
     def _attempt_digest_abstract(
-        self, clean_words: list, lexicon: Dict
+            clean_words: list, _lexicon: Dict
     ) -> Tuple[str, str, float, Optional[str]]:
         abstract_set = LexiconService.get("abstract")
         abstract_set = abstract_set if abstract_set else []

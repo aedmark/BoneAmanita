@@ -161,14 +161,18 @@ class GeodesicEngine:
         structural_mass = masses["heavy"] + masses["constructive"] + masses["harvest"]
         structural_mass -= (masses["void"] * 0.5)
         shapley_thresh = getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0)
-        total_abstract = masses["abstract"] + masses["liminal"] + masses["pareidolia"] + masses["void"]
+        total_abstract = (
+                masses["abstract"] +
+                masses["liminal"] +
+                masses["pareidolia"] +
+                masses["void"]
+        )
+        abstraction_val = (total_abstract / safe_volume) + GC.ABSTRACTION_BASE
         return {
             "tension": tension,
             "compression": compression,
             "coherence": round(min(1.0, structural_mass / max(1.0, shapley_thresh)), 3),
-            "abstraction": round(
-                min(1.0, (total_abstract / safe_volume) + GC.ABSTRACTION_BASE), 2
-            ),
+            "abstraction": round(min(1.0, abstraction_val), 2),
         }
 
     @staticmethod
@@ -608,8 +612,12 @@ class CosmicDynamics:
 
     def _handle_void_state(self, words, geodesic_hubs) -> Tuple[str, float, str]:
         for w in words:
-            if w in geodesic_hubs:
-                msg = self.logs.get("NEBULA", "NEBULA").format(node=w.upper(), mass=int(geodesic_hubs[w]))
+            hub_mass = geodesic_hubs.get(w)
+            if hub_mass is not None:
+                msg = self.logs.get("NEBULA", "NEBULA").format(
+                    node=w.upper(),
+                    mass=int(hub_mass)
+                )
                 return "PROTO_COSMOS", 1.0, msg
         return "VOID_DRIFT", 3.0, self.logs.get("VOID", "VOID")
 

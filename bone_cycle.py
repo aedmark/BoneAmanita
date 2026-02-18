@@ -183,7 +183,7 @@ class MaintenancePhase(SimulationPhase):
             }
             status, advice = self.eng.town_hall.diagnose_condition(
                 session_data=session_snapshot,
-                host_health=self.eng.bio.biometrics if self.eng.bio else None,
+                _host_health=self.eng.bio.biometrics if self.eng.bio else None,
                 soul=self.eng.soul,
             )
             if status != "BALANCED":
@@ -231,7 +231,7 @@ class GatekeeperPhase(SimulationPhase):
             return ctx
         if self.eng.bureau:
             audit_result = self.eng.bureau.audit(
-                ctx.physics.to_dict(), ctx.bio_result, context="INPUT_PHASE"
+                ctx.physics.to_dict(), ctx.bio_result, _context="INPUT_PHASE"
             )
             if audit_result:
                 if audit_result.get("block", False):
@@ -465,7 +465,7 @@ class NavigationPhase(SimulationPhase):
         phys_dict = physics.to_dict()
         if self.eng.navigator:
             current_loc, entry_msg = self.eng.navigator.locate(
-                ctx.physics, self.eng.host_stats
+                packet=ctx.physics,
             )
             if entry_msg:
                 ctx.log(entry_msg)
@@ -888,11 +888,11 @@ class CognitionPhase(SimulationPhase):
                 ctx.log(f"{Prisma.CYN}🌌 GRAVITY WELL FORMED: {new_wells}{Prisma.RST}")
         inventory_data = self.eng.gordon.inventory if self.eng.gordon else []
         ctx.mind_state = self.eng.noetic.think(
-            ctx.physics.to_dict(),
-            ctx.bio_result,
-            inventory_data,
-            self.eng.phys.dynamics.voltage_history,
-            self.eng.tick_count,
+            physics_packet=ctx.physics.to_dict(),
+            _bio=ctx.bio_result,
+            _inventory=inventory_data,
+            voltage_history=self.eng.phys.dynamics.voltage_history,
+            _tick_count=self.eng.tick_count,
             soul_ref=self.eng.soul,
         )
         thought = ctx.mind_state.get("context_msg", ctx.mind_state.get("thought"))

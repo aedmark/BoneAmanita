@@ -78,7 +78,7 @@ class TheTinkerer:
         return deltas
 
     def audit_tool_use(
-        self, packet: PhysicsPacket, inventory_list: List[str], host_health: Any = None
+            self, packet: PhysicsPacket, inventory_list: List[str], _host_health: Any = None
     ):
         if not inventory_list:
             return
@@ -90,17 +90,17 @@ class TheTinkerer:
         self._process_single_tool(focus_item, inventory_list, packet, entropy_level)
 
     def _process_single_tool(
-        self, item: str, inventory: List[str], packet: PhysicsPacket, entropy: float
+            self, item: str, _inventory: List[str], packet: PhysicsPacket, entropy: float
     ):
         if item not in self.tool_resonance:
             self.tool_resonance[item] = 0.0
         if packet.voltage > BoneConfig.COUNCIL.MANIC_VOLTAGE_TRIGGER or entropy > 0.5:
             self._apply_resonance(item, 0.2, "High Voltage")
-            self._check_ascension(item, inventory, packet.vector)
+            self._check_ascension(item, _inventory, packet.vector)
         elif packet.narrative_drag > BoneConfig.PHYSICS.DRAG_HALT:
             self._apply_resonance(item, 0.05, "Tempering")
 
-    def _apply_resonance(self, item: str, amount: float, reason: str):
+    def _apply_resonance(self, item: str, amount: float, _reason: str):
         self.tool_resonance[item] = min(10.0, self.tool_resonance[item] + amount)
         curr = self.tool_resonance[item]
         if 4.8 < curr < 5.2 and random.random() < 0.05:
@@ -173,10 +173,12 @@ class MirrorGraph:
                 self.stats[k] *= 0.8
 
     def get_reflection_modifiers(self) -> Dict:
-        if not self.stats:
+        if not self.stats or sum(self.stats.values()) == 0:
             return {"flavor": "Reflecting NEUTRAL", "drag_mult": 1.0}
         top_stat = max(self.stats, key=self.stats.get)
-        return {"flavor": f"Reflecting {top_stat}", "drag_mult": 1.0}
+        drag_map = {"WAR": 1.2, "ROT": 1.5, "LAW": 0.8, "ART": 0.9}
+        mult = drag_map.get(top_stat, 1.0)
+        return {"flavor": f"Reflecting {top_stat}", "drag_mult": mult}
 
 
 @dataclass
@@ -244,14 +246,15 @@ class TheCartographer:
             smell="Ozone and new plastic.",
         )
 
-    def _generate_coord_hash(self, vector: Dict[str, float]) -> str:
+    @staticmethod
+    def _generate_coord_hash(vector: Dict[str, float]) -> str:
         if not vector:
             return "VOID_DRIFT"
         top_dims = heapq.nlargest(2, vector.items(), key=lambda x: x[1])
         return "-".join([f"{k}{int(v * 10)}" for k, v in top_dims])
 
     def locate(
-        self, packet: PhysicsPacket, host_stats: Any = None
+            self, packet: PhysicsPacket
     ) -> Tuple[str, Optional[str]]:
         vector = packet.vector or {}
         target_id = self._generate_coord_hash(vector)
@@ -271,15 +274,18 @@ class TheCartographer:
         current_node.visited_count += 1
         return current_node.name, msg
 
-    def _generate_loci_data(self, node_id: str, packet: PhysicsPacket) -> GeniusLoci:
+    @staticmethod
+    def _generate_loci_data(node_id: str, packet: PhysicsPacket) -> GeniusLoci:
+        # Static method fix: Removed 'self' as a parameter
         random.seed(node_id)
-        prefixes = ["The", "Neo", "Old", "Sector", "Zone", "Void"]
-        roots = ["Construct", "Forge", "Mud", "Archive", "Garden", "Nexus"]
+        scenarios = LoreManifest.get_instance().get("SCENARIOS") or {}
+        prefixes = scenarios.get("PREFIXES", ["The", "Zone", "Sector"])
+        roots = scenarios.get("ROOTS", ["Construct", "Forge", "Garden"])
         name = f"{random.choice(prefixes)} {random.choice(roots)}"
         if packet.voltage > BoneConfig.COUNCIL.MANIC_VOLTAGE_TRIGGER:
             suffix = "Flux"
-            atmosphere = "The air is vibrating. Geometry is unstable."
-            smell = "Burning copper."
+            atmosphere = "The air has an electric jitter. Geometry is unstable."
+            smell = "Ozone and burning copper."
         elif packet.narrative_drag > BoneConfig.PHYSICS.DRAG_HALT:
             suffix = "Deep"
             atmosphere = "Heavy gravity. Dust motes hang suspended."
@@ -349,21 +355,22 @@ class TownHall:
     def sow_seed(self, question: str, triggers: Set[str]):
         self.seeds.append(ParadoxSeed(question, triggers))
 
-        def consult_almanac(self, physics: PhysicsPacket) -> str:
-            almanac = LoreManifest.get_instance().get("ALMANAC") or {}
-            forecasts = almanac.get("FORECASTS", {})
-            strategies = almanac.get("STRATEGIES", {})
-            state_key = "BALANCED"
-            if physics.voltage > 15.0:
-                state_key = "HIGH_VOLTAGE"
-            elif physics.narrative_drag > 4.0:
-                state_key = "HIGH_DRAG"
-            elif hasattr(physics, "entropy") and physics.entropy > 0.8:
-                state_key = "HIGH_ENTROPY"
-            options = forecasts.get(state_key, ["Weather unclear."])
-            flavor_text = random.choice(options)
-            strategy = strategies.get(state_key, "Keep breathing.")
-            return f"☁️ FORECAST [{state_key}]: {flavor_text} (Strategy: {strategy})"
+    @staticmethod
+    def consult_almanac(physics: PhysicsPacket) -> str:
+        almanac = LoreManifest.get_instance().get("ALMANAC") or {}
+        forecasts = almanac.get("FORECASTS", {})
+        strategies = almanac.get("STRATEGIES", {})
+        state_key = "BALANCED"
+        if physics.voltage > 15.0:
+            state_key = "HIGH_VOLTAGE"
+        elif physics.narrative_drag > 4.0:
+            state_key = "HIGH_DRAG"
+        elif hasattr(physics, "entropy") and physics.entropy > 0.8:
+            state_key = "HIGH_ENTROPY"
+        options = forecasts.get(state_key, ["Weather unclear."])
+        flavor_text = random.choice(options)
+        strategy = strategies.get(state_key, "Keep breathing.")
+        return f"☁️ FORECAST [{state_key}]: {flavor_text} (Strategy: {strategy})"
 
     def tend_garden(self, clean_words: List[str]):
         if not self.seeds or not clean_words:
@@ -411,7 +418,8 @@ class TownHall:
             report += f"\n{Prisma.GRY}👀 RUMOR: {rumor}{Prisma.RST}"
         return report
 
-    def _get_town_news(self, latency: float, volt: float) -> Optional[str]:
+    @staticmethod
+    def _get_town_news(latency: float, volt: float) -> Optional[str]:
         if latency > 4.0:
             return f"{Prisma.OCHRE}📢 TOWN CRIER: The time-winds are slow!{Prisma.RST}"
         if volt > BoneConfig.PHYSICS.VOLTAGE_CRITICAL:
@@ -423,8 +431,9 @@ class TownHall:
         if item:
             self.events.log(f"Town Hall noticed you dropped {item}.", "VILLAGE")
 
+    @staticmethod
     def diagnose_condition(
-        self, session_data: dict, host_health: Any = None, soul: Any = None
+            session_data: dict, _host_health: Any = None, soul: Any = None
     ) -> Tuple[str, str]:
         meta = session_data.get("meta", {})
         trauma = session_data.get("trauma_vector", {})

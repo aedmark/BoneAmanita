@@ -249,7 +249,8 @@ class LLMInterface:
             time.sleep(2**attempt)
         raise TransientError(f"Max retries ({max_retries}) exhausted.")
 
-    def _parse_response(self, body: str) -> str:
+    @staticmethod
+    def _parse_response(body: str) -> str:
         try:
             result = json.loads(body)
             if "choices" in result:
@@ -382,17 +383,18 @@ class PromptComposer:
     def __init__(self, lore_ref):
         self.lore = lore_ref
         self.active_template = None
-        prompts = self.lore.get("system_prompts") or {}
         self.lenses = self.lore.get("lenses") or {}
-        self.fog_protocol = prompts.get("PROTOCOLS", {}).get("FOG", self.DEFAULT_FOG)
-        self.inv_protocol = prompts.get("PROTOCOLS", {}).get(
-            "INVENTORY", self.DEFAULT_INV
-        )
+        self.fog_protocol = self.DEFAULT_FOG
+        self.inv_protocol = self.DEFAULT_INV
 
     def load_template(self, template_data: Dict[str, Any]):
         if not template_data:
             return
         self.active_template = template_data
+        if "style_guide" in template_data:
+            self.fog_protocol = template_data["style_guide"]
+        if "inventory_rules" in template_data:
+            self.inv_protocol = template_data["inventory_rules"]
 
     def compose(
         self,
@@ -435,7 +437,6 @@ class PromptComposer:
             f"INVENTORY: {inv_str}\n" if modifiers["include_inventory"] else ""
         )
         raw_history = state.get("dialogue_history", [])
-        history_str = ""
         char_limit = 8000
         current_chars = 0
         kept_lines = []
@@ -469,8 +470,11 @@ class PromptComposer:
         lens_key = mind.get("lens", "OBSERVER").upper()
         lens_data = self.lenses.get(lens_key, {})
         role = lens_data.get("role", mind.get("role", "The Observer"))
+        mode_directives = []
+        if self.active_template and "directives" in self.active_template:
+            mode_directives = self.active_template["directives"]
         respiration = bio.get("respiration", "RESPIRING")
-        mood_note = "Current Biology: Neutral."
+
         if respiration == "ANAEROBIC":
             mood_note = (
                 "Current Biology: ⚠️ ANAEROBIC STATE. Raw, breathless, efficient prose."
@@ -479,12 +483,14 @@ class PromptComposer:
             mood_note = f"Current Biology: {mood_override}"
         else:
             mood_note = self._derive_bio_mood(bio.get("chem", {}))
-        persona_block = [
-            f"Role: {role}.",
-            "Directive: Start the adventure immediately. Treat it like a 'Choose Your Own Adventure' where the reader is an equal partner.",
-            "Constraint: Use the 5-senses grounding technique.",
-            mood_note,
-        ]
+        persona_block = [f"Role: {role}."]
+        if mode_directives:
+            persona_block.extend(mode_directives)
+        else:
+            persona_block.append("Directive: Start the experience immediately.")
+            persona_block.append("Constraint: Use the 5-senses grounding technique.")
+
+        persona_block.append(mood_note)
         if hasattr(self, "lenses") and self.lenses:
             lens_key = mind.get("lens", "OBSERVER").upper()
             lens_data = self.lenses.get(lens_key, {})
@@ -503,7 +509,8 @@ class PromptComposer:
             persona_block.append(vsl_note)
         return persona_block
 
-    def _derive_bio_mood(self, chem):
+    @staticmethod
+    def _derive_bio_mood(chem):
         if chem.get("ADR", 0) > 0.6:
             return "Current Biology: High Alert / Adrenaline"
         if chem.get("COR", 0) > 0.6:
@@ -514,7 +521,8 @@ class PromptComposer:
             return "Current Biology: Zen / Lucid"
         return "Current Biology: Neutral."
 
-    def _inject_resonances(self, style_notes, state, modifiers):
+    @staticmethod
+    def _inject_resonances(style_notes, state, modifiers):
         village = state.get("village", {})
         tinkerer_data = village.get("tinkerer", {})
         resonances = (
@@ -548,7 +556,8 @@ class PromptComposer:
                     style_notes.append("\n=== CORE MEMORIES ===")
                     style_notes.extend(mem_strs)
 
-    def _format_inventory(self, state, modifiers):
+    @staticmethod
+    def _format_inventory(state, modifiers):
         if not modifiers["include_inventory"]:
             return "Hands: Empty"
         inv = state.get("inventory", [])
@@ -561,7 +570,8 @@ class PromptComposer:
         safe = text.replace('"""', "'''").replace("```", "'''")
         return re.sub(r"(?i)^SYSTEM:", "User-System:", safe, flags=re.MULTILINE)
 
-    def _normalize_modifiers(self, modifiers: Optional[Dict]) -> Dict:
+    @staticmethod
+    def _normalize_modifiers(modifiers: Optional[Dict]) -> Dict:
         defaults = {
             "include_somatic": True,
             "include_inventory": True,
@@ -592,7 +602,6 @@ class ResponseValidator:
                 "rich tapestry",
             ],
         )
-        json_patterns = crimes.get("SCRUB_PATTERNS", [])
         json_patterns = crimes.get("SCRUB_PATTERNS", [])
         if json_patterns:
             self.scrub_patterns = [
@@ -729,7 +738,8 @@ class TheCortex:
         if len(self.dialogue_buffer) > self.MAX_HISTORY:
             self.dialogue_buffer.pop(0)
 
-    def _harvest_loot(self, text: str) -> Tuple[str, List[str], List[str]]:
+    @staticmethod
+    def _harvest_loot(text: str) -> Tuple[str, List[str], List[str]]:
         def extract(tag):
             found = re.findall(rf"\[\[{tag}:\s*(.*?)]]", text, re.IGNORECASE)
             return list(
@@ -855,7 +865,8 @@ class TheCortex:
         state["mind"]["style_directives"] = [self.consultant.get_system_prompt()]
         sim_result["physics"]["voltage"] = self.consultant.state.B * 30.0
 
-    def _apply_boot_overlay(self, state, text):
+    @staticmethod
+    def _apply_boot_overlay(state, text):
         seed = text.replace("SYSTEM_BOOT:", "").strip()
         if "world" not in state:
             state["world"] = {}
@@ -888,7 +899,8 @@ class TheCortex:
                 )
         return logs
 
-    def _log_telemetry(self, prompt, response, state, sim_result):
+    @staticmethod
+    def _log_telemetry(prompt, response, state, sim_result):
         try:
             phys = state.get("physics", {})
             crystal = DecisionCrystal(
@@ -1057,7 +1069,7 @@ class DreamEngine:
         return dream_text, shift
 
     def _weave_dream(
-        self, residue: str, context: str, bridge: str, dream_type: str, subtype: str
+        self, residue: str, _context: str, _bridge: str, dream_type: str, subtype: str
     ) -> str:
         sources = self.dream_lore.get(subtype.upper(), [])
         if not sources and dream_type == "NIGHTMARE":
@@ -1068,11 +1080,10 @@ class DreamEngine:
         template = random.choice(sources)
         filler_a = "The Mountain"
         filler_b = "The Sea"
-        filler_c = "The Machine"
         return template.format(ghost=residue, A=residue, B=filler_a, C=filler_b)
 
     def hallucinate(
-        self, vector: Dict[str, float], trauma_level: float = 0.0
+            self, _vector: Dict[str, float], trauma_level: float = 0.0
     ) -> Tuple[str, float]:
         category = "SURREAL"
         if trauma_level > 0.5:
@@ -1089,7 +1100,8 @@ class DreamEngine:
         txt = txt.format(ghost="The Glitch", A="The Code", B="The Flesh", C="The Light")
         return f"{Prisma.MAG}👁️ HALLUCINATION: {txt}{Prisma.RST}", 0.2
 
-    def run_defragmentation(self, memory_system: Any, limit: int = 5) -> str:
+    @staticmethod
+    def run_defragmentation(memory_system: Any, limit: int = 5) -> str:
         if not hasattr(memory_system, "graph") or not memory_system.graph:
             return "No memories to defrag."
         graph = memory_system.graph
@@ -1114,7 +1126,7 @@ class DreamEngine:
 
 
 class NoeticLoop:
-    def __init__(self, mind_layer, bio_layer, events):
+    def __init__(self, mind_layer, bio_layer, _events):
         self.mind = mind_layer
         self.bio = bio_layer
 
@@ -1122,9 +1134,9 @@ class NoeticLoop:
         self,
         physics_packet,
         _bio,
-        inventory,
+        _inventory,
         voltage_history,
-        tick_count,
+        _tick_count,
         soul_ref=None,
     ):
         voltage = physics_packet.get("voltage", 0.0)
@@ -1155,7 +1167,8 @@ class NoeticLoop:
             "bio": self.bio.endo.get_state() if hasattr(self.bio, "endo") else {},
         }
 
-    def _force_link(self, graph, wa, wb):
+    @staticmethod
+    def _force_link(graph, wa, wb):
         for a, b in [(wa, wb), (wb, wa)]:
             if a not in graph:
                 graph[a] = {"edges": {}, "last_tick": 0}

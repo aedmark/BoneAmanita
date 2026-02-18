@@ -43,7 +43,8 @@ class TraitVector:
     def adjust(self, trait: str, delta: float):
         t = trait.lower()
         if t in self._TRAITS:
-            setattr(self, t, max(0.0, min(1.0, getattr(self, t) + delta)))
+            current_val = getattr(self, t)
+            setattr(self, t, max(0.0, min(1.0, current_val + delta)))
 
     def _clamp_all(self):
         for t in self._TRAITS:
@@ -105,12 +106,12 @@ class HumanityAnchor:
         atp, volt = bio.get("atp", 0), physics.get("voltage", 0.0)
         if atp >= 5.0 or volt >= 5.0:
             return 0.0
-        vec = physics.get("vector", {})
-        counts = physics.get("counts", {})
-        dim_res = sum(vec.get(k, 0.0) for k in self._VECTOR_ANCHORS)
-        lex_res = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS)
+        vector: Dict[str, float] = physics.get("vector", {})
+        counts: Dict[str, int] = physics.get("counts", {})
+        dim_resonance = sum(vector.get(k, 0.0) for k in self._VECTOR_ANCHORS)
+        lex_resonance = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS)
         cfg = BoneConfig.ANCHOR
-        if (dim_res + (lex_res * 0.5)) > 0.3:
+        if (dim_resonance + (lex_resonance * 0.5)) > 0.3:
             self.dignity_reserve = min(
                 cfg.DIGNITY_MAX, self.dignity_reserve + cfg.DIGNITY_REGEN
             )
@@ -122,39 +123,9 @@ class HumanityAnchor:
                 return -1.0
             elif self.dignity_reserve < cfg.DIGNITY_CRITICAL:
                 self.events.log(
-                    f"{Prisma.VIOLET}⚠️ EXISTENTIAL DRAG.{Prisma.RST}", "SOUL"
+                    f"{Prisma.VIOLET}⚠️ EXISTENTIAL DRAG: You are drifting.{Prisma.RST}",
+                    "SOUL"
                 )
-        return 0.0
-
-    def _perform_dignity_check(self, physics_packet):
-        vector: Dict[str, float] = physics_packet.get("vector", {})
-        counts: Dict[str, int] = physics_packet.get("counts", {})
-        dim_resonance = sum(vector.get(k, 0.0) for k in self._VECTOR_ANCHORS)
-        lex_resonance = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS)
-        if (dim_resonance + (lex_resonance * 0.5)) > 0.3:
-            self.dignity_reserve = min(
-                BoneConfig.ANCHOR.DIGNITY_MAX,
-                self.dignity_reserve + BoneConfig.ANCHOR.DIGNITY_REGEN,
-            )
-            return 1.0
-
-        self.dignity_reserve = max(
-            0.0, self.dignity_reserve - BoneConfig.ANCHOR.DIGNITY_DECAY
-        )
-        if (
-            self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_CRITICAL
-            and not self.agency_lock
-        ):
-            self.events.log(
-                f"{Prisma.VIOLET}⚠️ EXISTENTIAL DRAG: You are drifting.{Prisma.RST}",
-                "SOUL",
-            )
-        if (
-            self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_LOCKDOWN
-            and not self.agency_lock
-        ):
-            self._engage_lockdown()
-            return -1.0
         return 0.0
 
     def _engage_lockdown(self):
@@ -723,5 +694,7 @@ class TheOroboros:
                 physics["voltage"] = max(0, physics["voltage"] - 5.0)
                 log.append(f"scarred by {scar.name} (Low Voltage)")
             elif scar.stat_affected == "trauma_baseline":
-                pass
+                if "trauma_vector" in bio:
+                    bio["trauma_vector"]["EXISTENTIAL"] = scar.value
+                log.append(f"scarred by {scar.name} (Ghost Pains)")
         return log

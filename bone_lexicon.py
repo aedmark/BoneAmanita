@@ -146,8 +146,7 @@ class LexiconStore:
 class LinguisticAnalyzer:
     def __init__(self, store_ref):
         self.store = store_ref
-        punct = string.punctuation.replace("_", "")
-        self._TRANSLATOR = str.maketrans(punct, " " * len(punct))
+        self._TRANSLATOR = getattr(self.store, "_TRANSLATOR", None)
         self.PHONETICS = {
             "PLOSIVE": set("bdgkpt"),
             "FRICATIVE": set("fthszsh"),
@@ -282,14 +281,13 @@ class LinguisticAnalyzer:
         return round(diff_sq**0.5, 3)
 
     def contextualize(self, word: str, field_vector: Dict[str, float]) -> str:
-        base_cat, score = self.classify_word(word)
+        base_cat, _score = self.classify_word(word)
         if not field_vector or not base_cat:
             return base_cat
-        dominant_field = (
-            max(field_vector, key=field_vector.get) if field_vector else None
-        )
-        if dominant_field and field_vector[dominant_field] > 0.6:
-            return base_cat
+        dominant_field = max(field_vector, key=field_vector.get)
+        if field_vector.get(dominant_field, 0.0) > 0.8:
+            if dominant_field == "PSI" and base_cat == "heavy":
+                return "abstract"
         return base_cat
 
     def sanitize(self, text: str) -> List[str]:
@@ -303,7 +301,8 @@ class LinguisticAnalyzer:
             )
         except (TypeError, AttributeError):
             normalized = text
-        cleaned_text = normalized.translate(self._TRANSLATOR).lower()
+        xlate = self._TRANSLATOR if self._TRANSLATOR else str.maketrans("", "")
+        cleaned_text = normalized.translate(xlate).lower()
         words = cleaned_text.split()
         bias_set = getattr(self.store, "USER_FLAGGED_BIAS", set())
         return [w for w in words if w.strip() and w not in bias_set]
