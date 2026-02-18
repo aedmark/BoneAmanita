@@ -2,6 +2,8 @@ import math, random, time
 from typing import Dict, List, Any, Tuple, Optional, Deque
 from collections import Counter, deque
 from dataclasses import dataclass
+
+from bone_core import LoreManifest
 from bone_types import (
     Prisma,
     PhysicsPacket,
@@ -91,18 +93,22 @@ class GeodesicEngine:
 
     @staticmethod
     def _weigh_mass(counts: Dict[str, int]) -> Dict[str, float]:
-        return {
-            k: float(counts.get(k, 0))
-            for k in [
-                "heavy",
-                "kinetic",
-                "constructive",
-                "abstract",
-                "play",
-                "social",
-                "explosive",
-            ]
-        }
+        keys = [
+            "heavy",
+            "kinetic",
+            "constructive",
+            "abstract",
+            "play",
+            "social",
+            "explosive",
+            "void",
+            "liminal",
+            "meat",
+            "harvest",
+            "pareidolia",
+            "crisis_term",
+        ]
+        return {k: float(counts.get(k, 0)) for k in keys}
 
     @staticmethod
     def _calculate_forces(
@@ -152,14 +158,16 @@ class GeodesicEngine:
         compression = round(
             max(-5.0, min(PHYS_CFG["DRAG_HALT"], raw_compression * mass_scalar)), 2
         )
-        structural_mass = masses["heavy"] + masses["constructive"]
+        structural_mass = masses["heavy"] + masses["constructive"] + masses["harvest"]
+        structural_mass -= (masses["void"] * 0.5)
         shapley_thresh = getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0)
+        total_abstract = masses["abstract"] + masses["liminal"] + masses["pareidolia"] + masses["void"]
         return {
             "tension": tension,
             "compression": compression,
             "coherence": round(min(1.0, structural_mass / max(1.0, shapley_thresh)), 3),
             "abstraction": round(
-                min(1.0, (masses["abstract"] / safe_volume) + GC.ABSTRACTION_BASE), 2
+                min(1.0, (total_abstract / safe_volume) + GC.ABSTRACTION_BASE), 2
             ),
         }
 
@@ -167,20 +175,20 @@ class GeodesicEngine:
     def _calculate_dimensions(masses, forces, counts, volume) -> Dict[str, float]:
         inv_vol = 1.0 / max(1, volume)
         base_mass = 0.1
+        str_mass = masses["heavy"] * 2.0 + masses["constructive"] + masses["harvest"]
+        ent_mass = (counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"]
+        psi_mass = forces["abstraction"]
         return {
             "VEL": min(
                 1.0,
                 (masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol,
             ),
-            "STR": min(
-                1.0,
-                (masses["heavy"] * 2.0 + masses["constructive"] + base_mass) * inv_vol,
-            ),
-            "ENT": min(1.0, (counts.get("antigen", 0) * 3.0) * inv_vol),
+            "STR": min(1.0, (str_mass + base_mass) * inv_vol),
+            "ENT": min(1.0, ent_mass * inv_vol),
             "PHI": min(
                 1.0, (masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol
             ),
-            "PSI": forces["abstraction"],
+            "PSI": psi_mass,
             "BET": min(1.0, (masses["social"] * 2.0) * inv_vol),
             "DEL": min(1.0, (masses["play"] * 3.0) * inv_vol),
             "E": min(1.0, (counts.get("solvents", 0)) * inv_vol),
@@ -232,7 +240,8 @@ class TheGatekeeper:
             else any(w in cursed for w in words)
         )
 
-    def _pack_refusal(self, ctx, type_str, ui_msg):
+    @staticmethod
+    def _pack_refusal(ctx, type_str, ui_msg):
         return {"type": type_str, "ui": ui_msg, "logs": ctx.logs + [ui_msg]}
 
 
@@ -286,7 +295,8 @@ class QuantumObserver:
             self.events.publish("PHYSICS_CALCULATED", packet_dict)
         return {"physics": self.last_physics_packet, "clean_words": clean_words}
 
-    def _tally_categories(self, clean_words: List[str]) -> Counter:
+    @staticmethod
+    def _tally_categories(clean_words: List[str]) -> Counter:
         counts = Counter()
         solvents = (
             LexiconService.SOLVENTS if hasattr(LexiconService, "SOLVENTS") else set()
@@ -304,7 +314,8 @@ class QuantumObserver:
                     counts[flavor] += 1
         return counts
 
-    def _calculate_graph_mass(self, words: List[str], graph: Optional[Dict]) -> float:
+    @staticmethod
+    def _calculate_graph_mass(words: List[str], graph: Optional[Dict]) -> float:
         if not graph:
             return 0.0
         total_mass = 0.0
@@ -315,8 +326,9 @@ class QuantumObserver:
             total_mass += node_mass
         return total_mass
 
+    @staticmethod
     def _calculate_metrics(
-        self, text: str, counts: Dict[str, int]
+            text: str, counts: Dict[str, int]
     ) -> Tuple[float, float]:
         length = len(text)
         if length == 0:
@@ -341,7 +353,8 @@ class QuantumObserver:
             beta_index *= length / 50.0
         return round(e_metric, 3), round(beta_index, 3)
 
-    def _determine_flow(self, v: float, k: float) -> str:
+    @staticmethod
+    def _determine_flow(v: float, k: float) -> str:
         volt_flow = getattr(BoneConfig.PHYSICS, "VOLTAGE_HIGH", 12.0)
         kappa_strong = 0.8
         if v > volt_flow and k > kappa_strong:
@@ -350,7 +363,8 @@ class QuantumObserver:
             return "TURBULENT"
         return "LAMINAR"
 
-    def _determine_zone(self, vector: Dict[str, float]) -> str:
+    @staticmethod
+    def _determine_zone(vector: Dict[str, float]) -> str:
         if not vector:
             return "COURTYARD"
         dom = max(vector, key=vector.get)
@@ -367,7 +381,8 @@ class SurfaceTension:
     def __init__(self):
         pass
 
-    def audit_hubris(self, physics: Dict[str, Any]) -> Tuple[bool, str, str]:
+    @staticmethod
+    def audit_hubris(physics: Dict[str, Any]) -> Tuple[bool, str, str]:
         voltage = physics.get("voltage", 0.0)
         coherence = physics.get("kappa", 0.5)
         volt_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
@@ -388,7 +403,8 @@ class SurfaceTension:
 
 
 class ChromaScope:
-    def modulate(self, text: str, vector: Dict[str, float]) -> str:
+    @staticmethod
+    def modulate(text: str, vector: Dict[str, float]) -> str:
         if not vector:
             return f"{Prisma.GRY}{text}{Prisma.RST}"
         sorted_vecs = sorted(vector.items(), key=lambda x: x[1], reverse=True)
@@ -495,12 +511,26 @@ class CosmicDynamics:
         self.cached_hubs: Dict = {}
         self.last_scan_tick: int = 0
         self.SCAN_INTERVAL: int = 10
+        self.logs = self._load_logs()
+
+    @staticmethod
+    def _load_logs():
+        base = {
+            "GRAVITY": "⚓ GRAVITY: The narrative is heavy. (Drag {drag:.1f})",
+            "VOID": "VOID: Drifting outside the filaments.",
+            "NEBULA": "NEBULA: Floating near '{node}' (Mass {mass}). Not enough mass for orbit.",
+            "LAGRANGE": "LAGRANGE: Caught between '{p}' and '{s}'",
+            "FLOW": "FLOW: Streaming towards '{node}'",
+            "ORBIT": "ORBIT: Circling '{node}' (Mass {mass})"
+        }
+        manifest = LoreManifest.get_instance().get("narrative_data") or {}
+        return manifest.get("COSMIC_LOGS", base)
 
     def commit(self, voltage: float):
         self.voltage_history.append(voltage)
 
     def check_gravity(
-        self, current_drift: float, psi: float
+            self, current_drift: float, psi: float
     ) -> Tuple[float, List[str]]:
         logs = []
         new_drag = current_drift
@@ -513,9 +543,8 @@ class CosmicDynamics:
         CRITICAL_DRIFT = getattr(BoneConfig.PHYSICS, "DRAG_CRITICAL", 8.0)
         if new_drag > CRITICAL_DRIFT:
             if random.random() < 0.3:
-                logs.append(
-                    f"{Prisma.GRY}⚓ GRAVITY: The narrative is heavy. (Drag {new_drag:.1f}){Prisma.RST}"
-                )
+                msg = self.logs.get("GRAVITY", "⚓ GRAVITY").format(drag=new_drag)
+                logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         return new_drag, logs
 
     def analyze_orbit(
@@ -577,20 +606,15 @@ class CosmicDynamics:
                     active_filaments += 1
         return basin_pulls, active_filaments
 
-    @staticmethod
-    def _handle_void_state(words, geodesic_hubs) -> Tuple[str, float, str]:
+    def _handle_void_state(self, words, geodesic_hubs) -> Tuple[str, float, str]:
         for w in words:
             if w in geodesic_hubs:
-                return (
-                    "PROTO_COSMOS",
-                    1.0,
-                    f"NEBULA: Floating near '{w.upper()}' (Mass {int(geodesic_hubs[w])}). Not enough mass for orbit.",
-                )
-        return "VOID_DRIFT", 3.0, "VOID: Drifting outside the filaments."
+                msg = self.logs.get("NEBULA", "NEBULA").format(node=w.upper(), mass=int(geodesic_hubs[w]))
+                return "PROTO_COSMOS", 1.0, msg
+        return "VOID_DRIFT", 3.0, self.logs.get("VOID", "VOID")
 
-    @staticmethod
     def _resolve_orbit(
-        basin_pulls, active_filaments, word_count, gravity_wells
+        self, basin_pulls, active_filaments, word_count, gravity_wells
     ) -> Tuple[str, float, str]:
         sorted_basins = sorted(basin_pulls.items(), key=lambda x: x[1], reverse=True)
         primary_node, primary_str = sorted_basins[0]
@@ -598,24 +622,15 @@ class CosmicDynamics:
         if len(sorted_basins) > 1:
             secondary_node, secondary_str = sorted_basins[1]
             if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:
-                return (
-                    "LAGRANGE_POINT",
-                    0.0,
-                    f"LAGRANGE: Caught between '{primary_node.upper()}' and '{secondary_node.upper()}'",
-                )
+                msg = self.logs.get("LAGRANGE", "LAGRANGE").format(p=primary_node.upper(), s=secondary_node.upper())
+                return "LAGRANGE_POINT", 0.0, msg
         flow_ratio = active_filaments / max(1, word_count)
         well_threshold = getattr(BoneConfig, "GRAVITY_WELL_THRESHOLD", 15.0)
         if flow_ratio > 0.5 and primary_str < (well_threshold * 2):
-            return (
-                "WATERSHED_FLOW",
-                0.0,
-                f"FLOW: Streaming towards '{primary_node.upper()}'",
-            )
-        return (
-            "ORBITAL",
-            0.0,
-            f"ORBIT: Circling '{primary_node.upper()}' (Mass {int(gravity_wells[primary_node])})",
-        )
+            msg = self.logs.get("FLOW", "FLOW").format(node=primary_node.upper())
+            return "WATERSHED_FLOW", 0.0, msg
+        msg = self.logs.get("ORBIT", "ORBIT").format(node=primary_node.upper(), mass=int(gravity_wells[primary_node]))
+        return "ORBITAL", 0.0, msg
 
 
 def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> PhysicsPacket:
@@ -709,7 +724,8 @@ class CycleStabilizer:
         c2 = self._apply_force(ctx, current_phase, p, "narrative_drag", d_force)
         return c1 or c2
 
-    def _apply_force(self, ctx, phase, p, field, force, limits=None):
+    @staticmethod
+    def _apply_force(ctx, phase, p, field, force, limits=None):
         if abs(force) <= PHYS_CFG["DEADBAND"]:
             return False
         old_val = getattr(p, field)

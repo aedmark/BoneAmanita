@@ -79,11 +79,8 @@ class TheBureau:
         self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 27B-6", "Form 404"])
         self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
         lex_data = LoreManifest.get_instance().get("LEXICON") or {}
-        self.buzzwords = set(
-            lex_data.get(
-                "bureau_buzzwords", ["synergy", "paradigm", "leverage", "utilize"]
-            )
-        )
+        raw_buzz = lex_data.get("bureau_buzzwords") or lex_data.get("bureau_buzzwords") or []
+        self.buzzwords = set(raw_buzz) if raw_buzz else {"synergy", "paradigm", "leverage", "utilize"}
         self.crimes = []
         self.crime_data = LoreManifest.get_instance().get("STYLE_CRIMES") or {}
         if "PATTERNS" in self.crime_data:
@@ -101,6 +98,8 @@ class TheBureau:
                     print(
                         f"{Prisma.RED}[BUREAU]: Failed to compile law '{p.get('name')}': {e}{Prisma.RST}"
                     )
+        scenarios = LoreManifest.get_instance().get("scenarios") or {}
+        self.cliches = set(scenarios.get("BANNED_CLICHES", []))
 
     def to_dict(self) -> Dict[str, Any]:
         return {"stamp_count": self.stamp_count}
@@ -137,11 +136,23 @@ class TheBureau:
             else:
                 selected_form = "Form 202-A"
                 tax = BoneConfig.BUREAU.TAX_STANDARD
-        elif not selected_form and any(w in self.buzzwords for w in clean_words):
-            hits = [w for w in clean_words if w in self.buzzwords]
-            selected_form = random.choice(self.forms)
-            evidence = hits
-            tax = BoneConfig.BUREAU.TAX_STANDARD
+        entropy = p.get("entropy", 0.0)
+        if not selected_form and entropy > 0.6:
+            selected_form = "Form 666: Unlicensed Chaos"
+            evidence = ["Entropy Limit Exceeded", f"Level: {entropy:.2f}"]
+            tax = 8.0
+        elif not selected_form:
+            buzz_hits = [w for w in clean_words if w in self.buzzwords]
+            cliche_hits = [c for c in self.cliches if c.lower() in raw_text.lower()]
+            if buzz_hits:
+                selected_form = random.choice(self.forms)
+                evidence = buzz_hits
+                tax = BoneConfig.BUREAU.TAX_STANDARD
+            elif cliche_hits:
+                selected_form = "Form 101: Derivative Content"
+                evidence = cliche_hits
+                tax = BoneConfig.BUREAU.TAX_HEAVY
+
         if not selected_form:
             return None
         self.stamp_count += 1
@@ -340,7 +351,14 @@ class TheCriticsCircle:
             prefs = critic.get("preferences", {})
             score = 0.0
             for metric, target in prefs.items():
-                current = p.get(metric, 0.0)
+                current = 0.0
+                if metric.startswith("counts_"):
+                    category = metric.replace("counts_", "")
+                    counts = p.get("counts", {})
+                    raw_count = counts.get(category, 0)
+                    current = min(5.0, raw_count * 0.5)
+                else:
+                    current = p.get(metric, 0.0)
                 if target > 0:
                     score += current * target
                 else:

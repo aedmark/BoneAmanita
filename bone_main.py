@@ -382,10 +382,10 @@ class BoneAmanita:
             if self.health <= 0.0:
                 return self.trigger_death(cortex_packet.get("physics", {}))
         except Exception as e:
-            traceback.print_exc()
+            full_trace = traceback.format_exc()
             return {
-                "ui": f"CORTEX ERROR: {e}",
-                "logs": [],
+                "ui": f"{Prisma.RED}*** CORTEX CRITICAL FAILURE ***\n{full_trace}{Prisma.RST}",
+                "logs": ["CRITICAL FAILURE"],
                 "metrics": self.get_metrics(),
             }
         self.observer.clock_out(turn_start)

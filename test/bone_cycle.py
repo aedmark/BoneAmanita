@@ -67,7 +67,6 @@ class ObservationPhase(SimulationPhase):
         input_d = getattr(input_phys, "narrative_drag", 0.0)
         ctx.physics.narrative_drag = (curr_d * 0.7) + (input_d * 0.3)
         ctx.clean_words = gaze_result["clean_words"]
-        clean = ctx.clean_words
         current_atp = self.eng.bio.mito.state.atp_pool
         if current_atp < 15.0:
             ctx.log(
@@ -94,7 +93,8 @@ class SanctuaryPhase(SimulationPhase):
                 self._trigger_dream(ctx)
         return ctx
 
-    def _enter_sanctuary(self, ctx: CycleContext):
+    @staticmethod
+    def _enter_sanctuary(ctx: CycleContext):
         ctx.physics.zone = getattr(BonePresets.SANCTUARY, "ZONE", "SANCTUARY")
         ctx.physics.zone_color = getattr(BonePresets.SANCTUARY, "COLOR_NAME", "GRN")
         ctx.physics.flow_state = "LAMINAR"
@@ -292,6 +292,9 @@ class MetabolismPhase(SimulationPhase):
             "STATIC": physics.repetition,
             "FORCE": physics.voltage / max_v,
             "BETA": physics.beta_index,
+            "PSI": getattr(physics, "psi", 0.0),
+            "ENTROPY": getattr(physics, "entropy", 0.0),
+            "VALENCE": getattr(physics, "valence", 0.0),
         }
         real_health = self.eng.health
         real_stamina = self.eng.stamina
@@ -509,6 +512,8 @@ class NavigationPhase(SimulationPhase):
         adjusted_drag = self.eng.stabilizer.override_cosmic_drag(
             drag_pen, stabilized_zone
         )
+        if adjusted_drag != drag_pen:
+            physics.narrative_drag -= (drag_pen - adjusted_drag)
         ctx.world_state["orbit"] = orbit_state
         return ctx
 
@@ -640,10 +645,11 @@ class IntrusionPhase(SimulationPhase):
                     )
             if is_bored:
                 self.eng.phys.pulse.boredom_level = 0.0
-        is_p, p_msg = self.eng.check_pareidolia(ctx.clean_words)
-        if is_p:
+        current_psi = getattr(ctx.physics, "psi", 0.0)
+        if current_psi > 0.6 and random.random() < current_psi:
+            p_msg = f"{Prisma.VIOLET}👁️ PAREIDOLIA: The patterns are watching back (PSI {current_psi:.2f}).{Prisma.RST}"
             ctx.log(p_msg)
-            ctx.physics.psi = min(1.0, ctx.physics.psi + 3.0)
+            ctx.physics.psi = min(1.0, current_psi + 0.1)
         return ctx
 
 
@@ -739,7 +745,8 @@ class SoulPhase(SimulationPhase):
                 )
         return ctx
 
-    def _consult_council(self, traits: Any) -> List[Dict]:
+    @staticmethod
+    def _consult_council(traits: Any) -> List[Dict]:
         t_map = (
             traits.to_dict()
             if hasattr(traits, "to_dict")
@@ -784,7 +791,8 @@ class SoulPhase(SimulationPhase):
                 )
         return mandates
 
-    def _execute_mandate(self, ctx: CycleContext, mandate: Dict):
+    @staticmethod
+    def _execute_mandate(ctx: CycleContext, mandate: Dict):
         effects = mandate.get("effect", {})
         for key, delta in effects.items():
             current = getattr(ctx.physics, key, 0.0)
@@ -861,11 +869,13 @@ class CognitionPhase(SimulationPhase):
             if self.eng.bio.biometrics:
                 current_h = max(0.0, self.eng.bio.biometrics.health)
             desperation = 1.0 - (current_h / max_h)
+            learn_mod = getattr(BoneConfig, "PRIORITY_LEARNING_RATE", 1.0)
             bury_msg, new_wells = self.eng.mind.mem.bury(
                 ctx.clean_words,
                 self.eng.tick_count,
                 resonance=ctx.physics.voltage,
                 desperation_level=desperation,
+                learning_mod=learn_mod,
             )
             if bury_msg:
                 prefix = (
@@ -932,9 +942,7 @@ class StabilizationPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         current_mode = self.eng.bio.governor.mode
-        corrections = self.stabilizer.stabilize(ctx, current_mode)
-        if corrections:
-            pass
+        self.stabilizer.stabilize(ctx, current_mode)
         return ctx
 
 
@@ -956,7 +964,8 @@ class PhaseExecutor:
                 tracer.end_phase(phase_name, ctx, ctx)
         return ctx
 
-    def _audit_flux(self, ctx, phase, before, after):
+    @staticmethod
+    def _audit_flux(ctx, phase, before, after):
         if abs(before.voltage - after.voltage) > 0.01:
             ctx.record_flux(
                 phase, "voltage", before.voltage, after.voltage, "PHASE_DELTA"
@@ -1133,14 +1142,20 @@ class GeodesicOrchestrator:
             }
         )
 
-    def _generate_crash_report(self, error: Exception) -> Dict[str, Any]:
+    @staticmethod
+    def _generate_crash_report(e: Exception) -> Dict[str, Any]:
         from bone_architect import PanicRoom
-
+        full_trace = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         safe_phys = PanicRoom.get_safe_physics()
         safe_bio = PanicRoom.get_safe_bio()
+        ui_report = (
+            f"\n{Prisma.RED}*** REALITY FRACTURE: {e} ***{Prisma.RST}\n"
+            f"{Prisma.GRY}{full_trace}{Prisma.RST}\n"
+            f"{Prisma.OCHRE}[System stabilized in Safe Mode]{Prisma.RST}"
+        )
         return {
             "type": "CRASH",
-            "ui": f"\n{Prisma.RED}*** REALITY FRACTURE ***\n{error}\n[System stabilized in Safe Mode]{Prisma.RST}",
+            "ui": ui_report,
             "physics": safe_phys.to_dict(),
             "bio": safe_bio,
             "mind": PanicRoom.get_safe_mind(),

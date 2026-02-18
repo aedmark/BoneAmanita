@@ -10,7 +10,7 @@ SCENARIOS = LoreManifest.get_instance().get("scenarios") or {
     "ARCHETYPES": ["Void"],
     "BANNED_CLICHES": [],
 }
-LENSES = LoreManifest.get_instance().get("lenses") or {}
+LENSES = (LoreManifest.get_instance().get("narrative_data") or {}).get("lenses", {})
 
 
 class SoulDriver:

@@ -14,6 +14,21 @@ class TheCrucible:
             BoneConfig.MACHINE, "DAMPENER_TOLERANCE", 15.0
         )
         self.instability_index = 0.0
+        self.logs = self._load_logs()
+
+    @staticmethod
+    def _load_logs():
+        base = {
+            "DAMPER_EMPTY": "⚠️ DAMPER EMPTY",
+            "DAMPER_HIT": "🛡️ DAMPENER: -{reduction:.1f}v ({reason})",
+            "HOLDING": "Holding Charge",
+            "REGULATOR": "⚖️ REGULATOR: {direction} (Drag {current:.1f} -> {new:.1f})",
+            "SURGE": "⚡ SURGE: Absorbed {voltage}v.",
+            "RITUAL": "🔥 RITUAL: Capacity +{gain:.1f}v",
+            "MELTDOWN": "💥 MELTDOWN: Hull Breach (-{damage:.1f} HP)"
+        }
+        manifest = LoreManifest.get_instance().get("narrative_data") or {}
+        return manifest.get("CRUCIBLE_LOGS", base)
 
     def dampener_status(self):
         return f"🛡️ Charges: {self.dampener_charges}"
@@ -37,9 +52,9 @@ class TheCrucible:
         if should_dampen:
             self.dampener_charges -= 1
             reduction = voltage_spike * reduction_factor
-            msg = f"🛡️ DAMPENER: -{reduction:.1f}v ({reason})"
+            msg = self.logs.get("DAMPER_HIT", "🛡️ Hit").format(reduction=reduction, reason=reason)
             return True, msg, reduction
-        return False, "Holding Charge", 0.0
+        return False, self.logs.get("HOLDING", "Holding"), 0.0
 
     def audit_fire(self, physics: Dict) -> Tuple[str, float, Optional[str]]:
         voltage = float(physics.get("voltage", 0.0))
@@ -58,25 +73,23 @@ class TheCrucible:
         msg = None
         if abs(adjustment) > 0.1:
             direction = "TIGHTENING" if adjustment > 0 else "RELAXING"
-            msg = (
-                f"⚖️ REGULATOR: {direction} (Drag {current_drag:.1f} -> {new_drag:.1f})"
-            )
+            msg = self.logs.get("REGULATOR", "⚖️ REG").format(direction=direction, current=current_drag, new=new_drag)
         if physics.get("system_surge_event", False):
             self.active_state = "SURGE"
-            return "SURGE", 0.0, f"⚡ SURGE: Absorbed {voltage}v."
+            return "SURGE", 0.0, self.logs.get("SURGE", "⚡ SURGE").format(voltage=voltage)
         if voltage > 18.0:
             if structure > 0.5:
                 gain = voltage * 0.1
                 self.max_voltage_cap += gain
                 self.active_state = "RITUAL"
-                return "RITUAL", gain, f"🔥 RITUAL: Capacity +{gain:.1f}v"
+                return "RITUAL", gain, self.logs.get("RITUAL", "🔥 RITUAL").format(gain=gain)
             else:
                 damage = voltage * 0.5
                 self.active_state = "MELTDOWN"
                 return (
                     "MELTDOWN",
                     damage,
-                    f"💥 MELTDOWN: Hull Breach (-{damage:.1f} HP)",
+                    self.logs.get("MELTDOWN", "💥 MELTDOWN").format(damage=damage)
                 )
         self.active_state = "REGULATED"
         return "REGULATED", adjustment, msg
@@ -182,6 +195,20 @@ class TheTheremin:
         self.AMBER_THRESHOLD = 20.0
         self.SHATTER_POINT = 100.0
         self.is_stuck = False
+        self.logs = self._load_logs()
+
+    @staticmethod
+    def _load_logs():
+        base = {
+            "MELT": "🔥 MELT: -{val:.1f} Resin",
+            "CALCIFY": "🗿 CALCIFICATION: Turn {turns} (+{val:.1f} Resin)",
+            "SHATTER": "🔨 SHATTER: -{val:.1f} Resin",
+            "RESIN": "🎻 RESIN: +{val:.1f}",
+            "TURBULENCE": "🌊 TURBULENCE: -{val:.1f} Resin",
+            "COLLAPSE": "💣 COLLAPSE: AIRSTRIKE INITIATED (Drag +20, Voltage 0)"
+        }
+        manifest = LoreManifest.get_instance().get("narrative_data") or {}
+        return manifest.get("THEREMIN_LOGS", base)
 
     def listen(
         self, physics: Dict, governor_mode="COURTYARD"
@@ -208,27 +235,25 @@ class TheTheremin:
             dissolved = thermal_hits * 15.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - dissolved)
             self.classical_turns = 0
-            return False, 0.0, f"🔥 MELT: -{dissolved:.1f} Resin", None
+            return False, 0.0, self.logs.get("MELT", "🔥 MELT").format(val=dissolved), None
         critical_event = None
         if rep > 0.5:
             self.classical_turns += 1
             slag = self.classical_turns * 2.0
             self.decoherence_buildup += slag
-            theremin_msg = (
-                f"🗿 CALCIFICATION: Turn {self.classical_turns} (+{slag} Resin)"
-            )
+            theremin_msg = self.logs.get("CALCIFY", "🗿 CALCIFY").format(turns=self.classical_turns, val=slag)
         elif complexity > 0.4 and self.classical_turns > 0:
             self.classical_turns = 0
             relief = 15.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - relief)
-            theremin_msg = f"🔨 SHATTER: -{relief} Resin"
+            theremin_msg = self.logs.get("SHATTER", "🔨 SHATTER").format(val=relief)
         elif resin_flow > 0.5:
             self.decoherence_buildup += resin_flow
-            theremin_msg = f"🎻 RESIN: +{resin_flow:.1f}"
+            theremin_msg = self.logs.get("RESIN", "🎻 RESIN").format(val=resin_flow)
         if turb > 0.6 and self.decoherence_buildup > 0:
             shatter_amt = turb * 10.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - shatter_amt)
-            theremin_msg = f"🌊 TURBULENCE: -{shatter_amt:.1f} Resin"
+            theremin_msg = self.logs.get("TURBULENCE", "🌊 TURBULENCE").format(val=shatter_amt)
             self.classical_turns = 0
         if turb < 0.2:
             physics["narrative_drag"] = max(
@@ -245,7 +270,7 @@ class TheTheremin:
             return (
                 False,
                 resin_flow,
-                f"💣 COLLAPSE: AIRSTRIKE INITIATED (Drag +20, Voltage 0)",
+                self.logs.get("COLLAPSE", "💣 COLLAPSE"),
                 "AIRSTRIKE",
             )
         if self.classical_turns > 3:

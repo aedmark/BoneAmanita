@@ -1,5 +1,7 @@
+import random
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
+from bone_core import LoreManifest
 from bone_config import BoneConfig
 from bone_types import Prisma
 
@@ -25,8 +27,10 @@ class SynestheticCortex:
     def __init__(self, bio_ref):
         self.bio = bio_ref
         self.last_reflex = None
+        self.library = LoreManifest.get_instance().get("BIO_NARRATIVE") or {}
 
-    def _normalize_physics(self, physics) -> Dict:
+    @staticmethod
+    def _normalize_physics(physics) -> Dict:
         if isinstance(physics, dict):
             return physics
         if hasattr(physics, "to_dict"):
@@ -86,6 +90,12 @@ class SynestheticCortex:
             impulse.cortisol_delta += 0.05
             impulse.somatic_reflex = "Time Dilation (Lag)."
         if not impulse.somatic_reflex:
+            metaphors = self.library.get("METAPHOR_RESERVOIR", {})
+            if drag > 5.0 and "HIGH_DRAG" in metaphors:
+                impulse.somatic_reflex = random.choice(metaphors["HIGH_DRAG"])
+            elif drag < 1.0 and "LOW_DRAG" in metaphors:
+                impulse.somatic_reflex = random.choice(metaphors["LOW_DRAG"])
+        if not impulse.somatic_reflex:
             impulse.somatic_reflex = self._derive_reflex(physics, impulse)
         self.last_reflex = impulse.somatic_reflex
         return impulse
@@ -112,7 +122,8 @@ class SynestheticCortex:
             return "..."
         return "Steady Pulse."
 
-    def get_current_qualia(self, impulse: Optional[BiologicalImpulse]) -> Qualia:
+    @staticmethod
+    def get_current_qualia(impulse: Optional[BiologicalImpulse]) -> Qualia:
         if not impulse:
             return Qualia(Prisma.GRY, "Numbness", "Neutral", "The body is silent.")
         color = Prisma.GRY

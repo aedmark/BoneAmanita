@@ -36,7 +36,10 @@ SAFE_BIO_DEFAULTS = {
     "atp": 10.0,
     "respiration": "NECROSIS",
     "enzyme": "NONE",
-    "chem": {"DOP": 0.0, "COR": 0.0, "OXY": 0.0, "SER": 0.0},
+    "chem": {
+        "DOP": 0.0, "COR": 0.0, "OXY": 0.0,
+        "SER": 0.0, "ADR": 0.0, "MEL": 0.0
+    },
 }
 
 
@@ -49,6 +52,12 @@ class PanicRoom:
         safe_packet = PhysicsPacket.void_state()
         safe_packet.voltage = 5.0
         safe_packet.narrative_drag = 5.0
+        safe_packet.psi = 0.0
+        safe_packet.entropy = 0.0
+        safe_packet.valence = 0.0
+        safe_packet.beta_index = 0.1
+        safe_packet.kappa = 1.0
+        safe_packet.vector = {k: 0.1 for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "E"]}
         safe_packet.clean_words = ["system", "error", "recovery"]
         safe_packet.raw_text = f"[PANIC PROTOCOL]: {fail_msg}"
         safe_packet.flow_state = "SAFE_MODE"

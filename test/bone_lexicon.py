@@ -36,7 +36,17 @@ class LexiconStore:
             "gradient_stop",
             "liminal",
             "void",
-            "beureau_buzzwords",
+            "bureau_buzzwords",
+            "crisis_term",
+            "harvest",
+            "pareidolia",
+            "passive_watch",
+            "repair_trigger",
+            "refusal_guru",
+            "cursed",
+            "sentiment_pos",
+            "sentiment_neg",
+            "sentiment_negators",
         }
         self.VOCAB: Dict[str, Set[str]] = {k: set() for k in self.categories}
         self.LEARNED_VOCAB: Dict[str, Dict[str, int]] = {}
@@ -51,11 +61,12 @@ class LexiconStore:
         self.SOLVENTS = set(data.get("solvents", []))
         self.ANTIGEN_REPLACEMENTS = data.get("antigen_replacements", {})
         for cat, words in data.items():
-            if cat in self.categories or cat in ["refusal_guru", "cursed"]:
+            if cat in self.categories:
                 word_set = set(words)
                 self.VOCAB[cat] = word_set
-                for w in word_set:
-                    self._index_word(w, cat)
+                if not cat.startswith("sentiment"):
+                    for w in word_set:
+                        self._index_word(w, cat)
         self._load_hive()
 
     def _index_word(self, word: str, category: str):
@@ -237,6 +248,12 @@ class LinguisticAnalyzer:
             "buffer": "BET",
             "play": "DEL",
             "aerobic": "DEL",
+            "harvest": "STR",
+            "meat": "ENT",
+            "void": "PSI",
+            "liminal": "PSI",
+            "pareidolia": "PSI",
+            "crisis_term": "ENT",
         }
         dims = {
             "VEL": 0.0,
@@ -480,6 +497,9 @@ class LexiconService:
             "sacred",
             "antigen",
             "meat",
+            "void",
+            "liminal",
+            "pareidolia",
             "play",
             "suburban",
             "abstract",

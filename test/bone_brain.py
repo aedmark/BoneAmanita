@@ -383,6 +383,7 @@ class PromptComposer:
         self.lore = lore_ref
         self.active_template = None
         prompts = self.lore.get("system_prompts") or {}
+        self.lenses = self.lore.get("lenses") or {}
         self.fog_protocol = prompts.get("PROTOCOLS", {}).get("FOG", self.DEFAULT_FOG)
         self.inv_protocol = prompts.get("PROTOCOLS", {}).get(
             "INVENTORY", self.DEFAULT_INV
@@ -465,7 +466,9 @@ class PromptComposer:
         )
 
     def _build_persona_block(self, mind, bio, mood_override, vsl_state=None):
-        role = mind.get("role", "The Observer")
+        lens_key = mind.get("lens", "OBSERVER").upper()
+        lens_data = self.lenses.get(lens_key, {})
+        role = lens_data.get("role", mind.get("role", "The Observer"))
         respiration = bio.get("respiration", "RESPIRING")
         mood_note = "Current Biology: Neutral."
         if respiration == "ANAEROBIC":
@@ -482,6 +485,12 @@ class PromptComposer:
             "Constraint: Use the 5-senses grounding technique.",
             mood_note,
         ]
+        if hasattr(self, "lenses") and self.lenses:
+            lens_key = mind.get("lens", "OBSERVER").upper()
+            lens_data = self.lenses.get(lens_key, {})
+            if "directives" in lens_data:
+                persona_block.append("ARCHETYPE DIRECTIVES:")
+                persona_block.extend([f"- {d}" for d in lens_data["directives"]])
         if vsl_state:
             e = vsl_state.get("E", 0.0)
             b = vsl_state.get("B", 0.0)

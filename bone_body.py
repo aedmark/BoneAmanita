@@ -114,9 +114,9 @@ class BioSystem:
 
     def apply_environmental_entropy(self, physics_packet):
         vector = getattr(physics_packet, "vector", {}) or {}
-        e_val = vector.get("E", 0.0)
-        b_val = vector.get("PHI", 0.0)
-        em_field = math.sqrt(e_val**2 + b_val**2)
+        ent_val = vector.get("ENT", 0.0)
+        phi_val = vector.get("PHI", 0.0)
+        em_field = math.sqrt(ent_val**2 + phi_val**2)
         base_entropy = 2.0
         shield_strength = min(0.8, em_field * 0.1)
         effective_entropy = base_entropy * (1.0 - shield_strength)
@@ -229,8 +229,9 @@ class MitochondrialForge:
         raw_drag = getattr(physics_packet, "narrative_drag", 0.0)
         drag = max(0.0, min(MAX_ACCEPTED_DRAG, raw_drag))
         drag_mult = getattr(BoneConfig, "SIGNAL_DRAG_MULTIPLIER", 1.0)
-        raw_tax = ((drag**DRAG_EXPONENT) * 0.5) * drag_mult
+        raw_tax = ((drag ** DRAG_EXPONENT) * 0.5) * drag_mult
         cognitive_load_tax = min(5.0, raw_tax)
+        base_demand = 2.0 + (voltage * 0.2)
         pre_calc_cost = base_demand + cognitive_load_tax
         if pre_calc_cost > self.ANAEROBIC_THRESHOLD:
             return self._trigger_anaerobic_bypass(pre_calc_cost)
@@ -487,7 +488,8 @@ class BioFeedback:
             return "MAUSOLEUM_CLAMP"
         return "CLEAR"
 
-    def perform_maintenance(self, text: str, phys: Any, logs: List[str], tick: int):
+    @staticmethod
+    def perform_maintenance(text: str, phys: Any, logs: List[str], tick: int):
         if len(text) > 10000:
             logs.append(
                 f"{Prisma.GRY}[MAINTENANCE]: Large input buffer detected.{Prisma.RST}"
@@ -744,6 +746,21 @@ class EndocrineSystem:
             self.adrenaline += BoneConfig.BIO.REWARD_LARGE * stress_mod
         else:
             self.adrenaline -= BoneConfig.BIO.DECAY_RATE * 5
+        psi = feedback.get("PSI", 0.0)
+        entropy = feedback.get("ENTROPY", 0.0)
+        valence = feedback.get("VALENCE", 0.0)
+        if psi > 0.4:
+            self.adrenaline += 0.1 * psi
+            self.melatonin += 0.15 * psi
+        if entropy > 0.3:
+            self.cortisol += entropy * 0.6 * stress_mod
+            self.serotonin -= 0.1  # Mood crash
+        if valence > 0.2:
+            self.serotonin += valence * 0.2
+            self.oxytocin += valence * 0.15
+        elif valence < -0.2:
+            self.cortisol += abs(valence) * 0.2
+            self.dopamine -= 0.1
 
     def _apply_semantic_pressure(self, signal: SemanticSignal):
         if signal.novelty > 0.3:
@@ -994,7 +1011,8 @@ class MetabolicGovernor:
                 return mode
         return "COURTYARD"
 
-    def _get_shift_message(self, mode: str, text_map: Dict, physics: Dict) -> str:
+    @staticmethod
+    def _get_shift_message(mode: str, text_map: Dict, physics: Dict) -> str:
         colors = {
             "SANCTUARY": Prisma.GRN,
             "FORGE": Prisma.RED,

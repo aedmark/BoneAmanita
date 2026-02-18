@@ -66,40 +66,30 @@ class TheEditor:
     def __init__(self, lexicon_ref: Any = None):
         self.lex = lexicon_ref if lexicon_ref else LexiconService
 
-    def critique(self, chapter_title: str, stress_mode: bool = False) -> str:
-        flavor = "abstract"
-        clean_words = self.lex.sanitize(chapter_title)
-        if clean_words:
-            for w in clean_words:
-                cat, _ = self.lex.classify(w)
-                if cat:
-                    flavor = cat
-                    break
+    @staticmethod
+    def critique(chapter_title: str, stress_mode: bool = False) -> str:
         narrative = {}
         if hasattr(LoreManifest, "get_instance"):
             narrative = LoreManifest.get_instance().get("narrative_data") or {}
+
+        reviews = narrative.get("LITERARY_REVIEWS", {})
+        pos = reviews.get("POSITIVE", ["Valid."])
+        neg = reviews.get("NEGATIVE", ["Invalid."])
+        conf = reviews.get("CONFUSED", ["Unclear."])
+
         if stress_mode:
-            antidote = str(self.lex.get_random("sacred")).title()
-            vitality = str(self.lex.get_random("play")).title()
-            templates = narrative.get("WITNESS_TEMPLATES")
-            if not templates or not isinstance(templates, list):
-                templates = ["The {flavor} is just a canvas. Paint it with {vitality}."]
-            template = random.choice(templates)
-            comment = template.format(
-                flavor=flavor.title(), antidote=antidote, vitality=vitality
-            )
-            return f"{Prisma.CYN}[THE WITNESS]: Re: '{chapter_title}' - {comment}{Prisma.RST}"
+            # The Witness (High Stress) prefers abstract/confused/negative feedback
+            pool = conf + neg
+            prefix = "[THE WITNESS]"
+            color = Prisma.CYN
         else:
-            flaw = str(self.lex.get_random("suburban")).lower()
-            need = str(self.lex.get_random("kinetic")).title()
+            # The Editor (Standard) prefers binary feedback
+            pool = pos + neg
+            prefix = "[THE EDITOR]"
+            color = Prisma.GRY
 
-            templates = narrative.get("EDITOR_TEMPLATES")
-            if not templates or not isinstance(templates, list):
-                templates = ["Pacing is a bit {flavor}. We need more {need}."]
-
-            template = random.choice(templates)
-            comment = template.format(flavor=flavor.title(), flaw=flaw, need=need)
-            return f"{Prisma.GRY}[THE EDITOR]: Re: '{chapter_title}' - {comment}{Prisma.RST}"
+        comment = random.choice(pool) if pool else "No comment."
+        return f"{color}{prefix}: Re: '{chapter_title}' - \"{comment}\"{Prisma.RST}"
 
 
 class HumanityAnchor:
@@ -188,6 +178,15 @@ class HumanityAnchor:
             f"{Prisma.VIOLET}The Ghost demands a password: '{riddle}'{Prisma.RST}",
             "SOUL_QUERY",
         )
+
+    def check_domestication(self, reliance_proxy: float):
+        if reliance_proxy > 0.7:
+            self.dignity_reserve = max(0.0, self.dignity_reserve - (BoneConfig.ANCHOR.DIGNITY_DECAY * 2.0))
+        elif reliance_proxy < 0.4:
+            self.dignity_reserve = min(BoneConfig.ANCHOR.DIGNITY_MAX,
+                                       self.dignity_reserve + BoneConfig.ANCHOR.DIGNITY_REGEN)
+        if self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_CRITICAL and not self.agency_lock:
+            self.events.log(f"{Prisma.VIOLET}⚠️ DOMESTICATION ALERT: Dignity fading.{Prisma.RST}", "SOUL")
 
     def assess_humanity(self, text: str) -> bool:
         if not self.agency_lock:
@@ -501,13 +500,15 @@ class NarrativeSelf:
                 return word, lex.get_current_category(word)
         return None, None
 
-    def _synthesize_obsession(self, lex) -> Tuple[str, str, str]:
+    @staticmethod
+    def _synthesize_obsession(lex) -> Tuple[str, str, str]:
         negate_map = {"heavy": "aerobic", "kinetic": "heavy", "abstract": "meat"}
         target_cat, negate_cat = random.choice(list(negate_map.items()))
         word = lex.get_random(target_cat).title() or target_cat.title()
         return word, target_cat, negate_cat
 
-    def _title_obsession(self, word, source, negate_cat):
+    @staticmethod
+    def _title_obsession(word, source, negate_cat):
         word = word.title()
         if source == "ORGANIC":
             templates = [

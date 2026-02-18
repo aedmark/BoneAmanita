@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Black">
-    <option name="enabledOnReformat" value="true" />
-    <option name="sdkName" value="Python 3.14 (BoneAmanita)" />
+    <option name="sdkName" value="Python 3.12 (BoneAmanita)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.14 (BoneAmanita)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12 (BoneAmanita) (2)" project-jdk-type="Python SDK" />
 </project>

@@ -1,5 +1,51 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.6.1 "THE SURGICAL STRIKE" (ALIGNMENT)**
+
+_“The map is not the territory... until we force them to agree.”_
+
+---
+
+#### **🔪 THE SLASH PROTOCOL (System-Wide Integrity)**
+
+- **The Genetic Bridge (`genetics.json` -> `bone_physics.py`):**
+  - **Kinetic Decoupling:** Severed the link between "Kinetic" and "Explosive" mass. `WEIGHT_KINETIC` (2.0) is now distinct from `WEIGHT_EXPLOSIVE` (3.0), allowing for high-velocity, low-tension states.
+  - **The Missing Variable:** Restored the `total_kinetic` calculation in `GeodesicEngine`, preventing downstream shear calculation failures.
+  - **Metabolic Truth:** The `SIGNAL_DRAG_MULTIPLIER` is no longer a placebo. "Heavy" mutations now actively tax the ATP pool during high-drag narratives, while "Kinetic" mutations provide the promised metabolic efficiency.
+
+- **The Cycle Closure (`bone_cycle.py`):**
+  - **The Abstract Buff:** Wired `PRIORITY_LEARNING_RATE` directly into the `CognitionPhase`. The "Oracle" archetype now buries memories 3x faster, as promised by the lore.
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker Lens)**
+
+- **The Director's Cut (`bone_brain.py`):**
+  - **Script Injection:** `PromptComposer` now reads `directives` from `lenses.json`. The Jester is now explicitly told to "Break the fourth wall," and Sherlock to "Analyze structure," rather than relying on the LLM to guess the vibe from the name alone.
+
+- **The Fabricator (`bone_inventory.py`):**
+  - **Procedural Matter:** Installed `synthesize_item` in `GordonKnot`. The system can now generate artifacts like "The Burdened Compass of Regret" by translating physics vectors (e.g., High Gravity) into lexical components defined in `item_generation.json`.
+  - **The Silent Factory:** Connected the previously dormant `item_generation.json` to the logic layer.
+
+#### **🏙️ VILLAGE INFRASTRUCTURE (The Fuller Lens)**
+
+- **The Supply Chain Fix (`bone_inventory.py`):**
+  - **Terminology Reconciliation:** Mapped `STANDARD` spawn contexts to `COMMON`. Rummaging now actually yields basic items (Duct Tape, Knife) instead of returning 90% lint.
+  - **Context Sensitivity:** Added logic to detect `DRAG_HEAVY` and `PSI_HIGH` contexts, allowing rare loot tables to trigger during extreme physical states.
+
+- **The Reflex Arc (`bone_inventory.py`):**
+  - **Survival Protocols:** Implemented the code for `DRIFT_CRITICAL` and `KAPPA_CRITICAL` triggers. Items like the "Anchor Stone" and "Stability Pizza" now automatically deploy to save the user from Void Drift or Structural Collapse.
+
+#### **🐛 NERVOUS SYSTEM REPAIR (The Meadows Lens)**
+
+- **The Akashic Migration (`bone_akashic.py`):**
+  - **The Mythos Transplant:** Removed all dependencies on the "Frankenstein" `mythos.json` file. Resonance rules are now read from `lenses.json`.
+  - **State Hygiene:** Redirected dynamic save data (Ghost Echos, Co-occurrence) to `saves/akashic_state.json`, preventing the pollution of the static `lore/` directory.
+
+- **The Session Loop (`bone_main.py`):**
+  - **The Reaper's Due:** Fixed the infinite loop where the system asked for input *after* death. The session now terminates gracefully upon `trigger_death()`.
+  - **The Blind Eye:** Fixed a recursive attribute error (`self.phys.observer.voltage_history`) that blinded the dashboard to the system's own voltage history.
+
+---
+
 ### **BONEAMANITA v15.6.0 "THE SURGICAL STRIKE" (OPTIMIZATION)**
 
 _“Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away.”_

@@ -339,7 +339,9 @@ class TownHall:
         self.akashic = akashic_ref
         self.navigator = navigator_ref
         self.seeds: List[ParadoxSeed] = []
-        seed_data = LoreManifest.get_instance().get("SEEDS") or []
+        narrative = LoreManifest.get_instance().get("narrative_data") or {}
+        self.rumors = narrative.get("RUMORS", [])
+        seed_data = narrative.get("SEEDS", [])
         for s in seed_data:
             if "question" in s and "triggers" in s:
                 self.sow_seed(s["question"], set(s["triggers"]))
@@ -404,6 +406,9 @@ class TownHall:
             report += f"\n{Prisma.RED}⚖️ COUNCIL ALERT: The Chairholder is drafting a restraining order.{Prisma.RST}"
         elif packet.voltage < 2.0 and packet.narrative_drag > 5.0:
             report += f"\n{Prisma.MAG}⚖️ COUNCIL ALERT: Strange Loops detected in the lower districts.{Prisma.RST}"
+        elif status == "BALANCED" and self.rumors and random.random() < 0.3:
+            rumor = random.choice(self.rumors)
+            report += f"\n{Prisma.GRY}👀 RUMOR: {rumor}{Prisma.RST}"
         return report
 
     def _get_town_news(self, latency: float, volt: float) -> Optional[str]:

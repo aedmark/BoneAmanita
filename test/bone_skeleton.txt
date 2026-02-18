@@ -1,4 +1,4 @@
-<codebase_context root='/home/gordonknot/Documents/GitHub/dev'>
+<codebase_context root='/home/gordonknot/Documents/GitHub/BoneAmanita/test'>
 
 
 
@@ -17,6 +17,8 @@ class TheAkashicRecord:
         ...
     def _on_forge_event(self, payload):
         ...
+    def _extract_dominant_trigram(self, physics: Dict) -> str:
+        ...
     def _on_mythology_update(self, payload):
         ...
     def calculate_manifold_shift(self, theta: str, e: Dict[str, float]) -> Dict[str, float]:
@@ -26,6 +28,8 @@ class TheAkashicRecord:
     def forge_new_item(self, vector: Dict[str, float]) -> Tuple[str, Dict]:
         ...
     def save_all(self):
+        ...
+    def _save_user_state(self):
         ...
     def save_to_disk(self, category: str, data: Any):
         ...
@@ -244,7 +248,8 @@ class BioFeedback:
         ...
     def check_vital_signs(self, phys: Any, stamina: float, logs: List[str]) -> str:
         ...
-    def perform_maintenance(self, text: str, phys: Any, logs: List[str], tick: int):
+    @staticmethod
+    def perform_maintenance(text: str, phys: Any, logs: List[str], tick: int):
         ...
 class SemanticEndocrinologist:
     def __init__(self, memory_ref, lexicon_ref):
@@ -329,7 +334,8 @@ class MetabolicGovernor:
         ...
     def _evaluate_state(self, physics: Dict, v_history: List[float], tick: int) -> str:
         ...
-    def _get_shift_message(self, mode: str, text_map: Dict, physics: Dict) -> str:
+    @staticmethod
+    def _get_shift_message(mode: str, text_map: Dict, physics: Dict) -> str:
         ...
 </file>
 
@@ -825,7 +831,8 @@ class SanctuaryPhase(SimulationPhase):
         ...
     def run(self, ctx: CycleContext):
         ...
-    def _enter_sanctuary(self, ctx: CycleContext):
+    @staticmethod
+    def _enter_sanctuary(ctx: CycleContext):
         ...
     def _apply_restoration(self, ctx: CycleContext):
         ...
@@ -885,9 +892,11 @@ class SoulPhase(SimulationPhase):
         ...
     def run(self, ctx: CycleContext):
         ...
-    def _consult_council(self, traits: Any) -> List[Dict]:
+    @staticmethod
+    def _consult_council(traits: Any) -> List[Dict]:
         ...
-    def _execute_mandate(self, ctx: CycleContext, mandate: Dict):
+    @staticmethod
+    def _execute_mandate(ctx: CycleContext, mandate: Dict):
         ...
 class ArbitrationPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -912,7 +921,8 @@ class StabilizationPhase(SimulationPhase):
 class PhaseExecutor:
     def execute_phases(self, simulator, ctx):
         ...
-    def _audit_flux(self, ctx, phase, before, after):
+    @staticmethod
+    def _audit_flux(ctx, phase, before, after):
         ...
 class CycleSimulator:
     def __init__(self, engine_ref):
@@ -934,7 +944,8 @@ class GeodesicOrchestrator:
         ...
     def _hydrate_snapshot_metadata(self, snapshot: Dict, ctx: CycleContext):
         ...
-    def _generate_crash_report(self, error: Exception) -> Dict[str, Any]:
+    @staticmethod
+    def _generate_crash_report(e: Exception) -> Dict[str, Any]:
         ...
 </file>
 
@@ -947,7 +958,7 @@ from bone_config import BonePresets
 from bone_lexicon import LexiconService
 from bone_types import PhysicsPacket
 SCENARIOS = LoreManifest.get_instance().get('scenarios') or {'ARCHETYPES': ['Void'], 'BAN...
-LENSES = LoreManifest.get_instance().get('lenses') or {}
+LENSES = (LoreManifest.get_instance().get('narrative_data') or {}).get('lenses', {})
 class SoulDriver:
     def __init__(self, soul_ref):
         ...
@@ -1149,9 +1160,11 @@ class GordonKnot:
         ...
     def rummage(self, physics_ref: Dict, stamina_pool: float) -> Tuple[bool, str, float]:
         ...
-    def _get_loot_candidates(self, voltage: float) -> List[str]:
+    def _get_loot_candidates(self, physics: Dict) -> List[str]:
         ...
     def register_dynamic_item(self, name: str, data: Dict):
+        ...
+    def synthesize_item(self, physics_vector: Dict[str, float]) -> str:
         ...
     def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
         ...
@@ -1297,6 +1310,9 @@ from bone_lexicon import LexiconService
 class TheCrucible:
     def __init__(self):
         ...
+    @staticmethod
+    def _load_logs():
+        ...
     def dampener_status(self):
         ...
     def dampen(self, voltage_spike: float, stability_index: float) -> Tuple[bool, str, float]:
@@ -1319,6 +1335,9 @@ class TheForge:
         ...
 class TheTheremin:
     def __init__(self):
+        ...
+    @staticmethod
+    def _load_logs():
         ...
     def listen(self, physics: Dict, governor_mode='COURTYARD') -> Tuple[bool, float, Optional[str], Optional[str]]:
         ...
@@ -1427,6 +1446,7 @@ import math, random, time
 from typing import Dict, List, Any, Tuple, Optional, Deque
 from collections import Counter, deque
 from dataclasses import dataclass
+from bone_core import LoreManifest
 from bone_types import Prisma, PhysicsPacket, CycleContext, SpatialState, MaterialState, EnergyState
 from bone_lexicon import LexiconService
 from bone_config import BoneConfig
@@ -1465,30 +1485,38 @@ class TheGatekeeper:
         ...
     def _audit_safety(self, words: List[str]) -> bool:
         ...
-    def _pack_refusal(self, ctx, type_str, ui_msg):
+    @staticmethod
+    def _pack_refusal(ctx, type_str, ui_msg):
         ...
 class QuantumObserver:
     def __init__(self, events):
         ...
     def gaze(self, text: str, graph: Dict=None) -> Dict:
         ...
-    def _tally_categories(self, clean_words: List[str]) -> Counter:
+    @staticmethod
+    def _tally_categories(clean_words: List[str]) -> Counter:
         ...
-    def _calculate_graph_mass(self, words: List[str], graph: Optional[Dict]) -> float:
+    @staticmethod
+    def _calculate_graph_mass(words: List[str], graph: Optional[Dict]) -> float:
         ...
-    def _calculate_metrics(self, text: str, counts: Dict[str, int]) -> Tuple[float, float]:
+    @staticmethod
+    def _calculate_metrics(text: str, counts: Dict[str, int]) -> Tuple[float, float]:
         ...
-    def _determine_flow(self, v: float, k: float) -> str:
+    @staticmethod
+    def _determine_flow(v: float, k: float) -> str:
         ...
-    def _determine_zone(self, vector: Dict[str, float]) -> str:
+    @staticmethod
+    def _determine_zone(vector: Dict[str, float]) -> str:
         ...
 class SurfaceTension:
     def __init__(self):
         ...
-    def audit_hubris(self, physics: Dict[str, Any]) -> Tuple[bool, str, str]:
+    @staticmethod
+    def audit_hubris(physics: Dict[str, Any]) -> Tuple[bool, str, str]:
         ...
 class ChromaScope:
-    def modulate(self, text: str, vector: Dict[str, float]) -> str:
+    @staticmethod
+    def modulate(text: str, vector: Dict[str, float]) -> str:
         ...
 class ZoneInertia:
     def __init__(self, inertia=0.7):
@@ -1507,6 +1535,9 @@ class ZoneInertia:
 class CosmicDynamics:
     def __init__(self):
         ...
+    @staticmethod
+    def _load_logs():
+        ...
     def commit(self, voltage: float):
         ...
     def check_gravity(self, current_drift: float, psi: float) -> Tuple[float, List[str]]:
@@ -1519,11 +1550,9 @@ class CosmicDynamics:
     @staticmethod
     def _calculate_pull(words, network, gravity_wells) -> Tuple[Dict, int]:
         ...
-    @staticmethod
-    def _handle_void_state(words, geodesic_hubs) -> Tuple[str, float, str]:
+    def _handle_void_state(self, words, geodesic_hubs) -> Tuple[str, float, str]:
         ...
-    @staticmethod
-    def _resolve_orbit(basin_pulls, active_filaments, word_count, gravity_wells) -> Tuple[str, float, str]:
+    def _resolve_orbit(self, basin_pulls, active_filaments, word_count, gravity_wells) -> Tuple[str, float, str]:
         ...
 def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> PhysicsPacket:
     ...
@@ -1534,7 +1563,8 @@ class CycleStabilizer:
         ...
     def stabilize(self, ctx: CycleContext, current_phase: str):
         ...
-    def _apply_force(self, ctx, phase, p, field, force, limits=None):
+    @staticmethod
+    def _apply_force(ctx, phase, p, field, force, limits=None):
         ...
 </file>
 
@@ -1634,8 +1664,10 @@ class TheFolly:
 </file>
 
 <file path="bone_soma.py">
+import random
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
+from bone_core import LoreManifest
 from bone_config import BoneConfig
 from bone_types import Prisma
 class BiologicalImpulse:
@@ -1653,13 +1685,15 @@ class Qualia:
 class SynestheticCortex:
     def __init__(self, bio_ref):
         ...
-    def _normalize_physics(self, physics) -> Dict:
+    @staticmethod
+    def _normalize_physics(physics) -> Dict:
         ...
     def perceive(self, physics: Dict, traits: Any=None, latency: float=0.0) -> BiologicalImpulse:
         ...
     def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
         ...
-    def get_current_qualia(self, impulse: Optional[BiologicalImpulse]) -> Qualia:
+    @staticmethod
+    def get_current_qualia(impulse: Optional[BiologicalImpulse]) -> Qualia:
         ...
     def apply_impulse(self, impulse: BiologicalImpulse) -> float:
         ...
@@ -1705,7 +1739,8 @@ class TraitVector:
 class TheEditor:
     def __init__(self, lexicon_ref: Any=None):
         ...
-    def critique(self, chapter_title: str, stress_mode: bool=False) -> str:
+    @staticmethod
+    def critique(chapter_title: str, stress_mode: bool=False) -> str:
         ...
 class HumanityAnchor:
     def __init__(self, events_ref: 'EventBus'):
@@ -1715,6 +1750,8 @@ class HumanityAnchor:
     def _perform_dignity_check(self, physics_packet):
         ...
     def _engage_lockdown(self):
+        ...
+    def check_domestication(self, reliance_proxy: float):
         ...
     def assess_humanity(self, text: str) -> bool:
         ...
@@ -1743,9 +1780,11 @@ class NarrativeSelf:
         ...
     def _seek_memory_focus(self, lex) -> Tuple[Optional[str], Optional[str]]:
         ...
-    def _synthesize_obsession(self, lex) -> Tuple[str, str, str]:
+    @staticmethod
+    def _synthesize_obsession(lex) -> Tuple[str, str, str]:
         ...
-    def _title_obsession(self, word, source, negate_cat):
+    @staticmethod
+    def _title_obsession(word, source, negate_cat):
         ...
     def _forge_core_memory(self, physics_packet, bio_state, voltage, dance_move):
         ...
@@ -2506,7 +2545,7 @@ class Limbo:
       "trait": "str",
       "mod": {
         "SIGNAL_DRAG_MULTIPLIER": "float",
-        "MAX_VOLTAGE": "float",
+        "PHYSICS.VOLTAGE_MAX": "float",
         "PHYSICS.WEIGHT_HEAVY": "float"
       },
       "lexicon": [
@@ -3078,7 +3117,16 @@ class Limbo:
       "str",
       "... (1 more items)"
     ]
-  }
+  },
+  "_META_RESONANCE_": [
+    {
+      "trigram": "str",
+      "lens": "str",
+      "result": "str",
+      "msg": "str"
+    },
+    "... (3 more items)"
+  ]
 }
 </data_file>
 
@@ -3213,28 +3261,6 @@ class Limbo:
   "thermal": [
     "str",
     "... (13 more items)"
-  ]
-}
-</data_file>
-
-<data_file path="lore/mythos.json">
-{
-  "lens_cooccurrence": {
-    "NARRATOR|THE OBSERVER": "int",
-    "CLARENCE|THE OBSERVER": "int",
-    "GORDON|THE OBSERVER": "int"
-  },
-  "ingredient_affinity": {},
-  "shadow_stock": [],
-  "trigram_resonance": [
-    {
-      "trigram": "str",
-      "lens": "str",
-      "result": "str",
-      "source": "str",
-      "msg": "str"
-    },
-    "... (3 more items)"
   ]
 }
 </data_file>
@@ -3381,7 +3407,115 @@ class Limbo:
   "RUMORS": [
     "str",
     "... (5 more items)"
-  ]
+  ],
+  "SEEDS": [
+    {
+      "question": "str",
+      "triggers": [
+        "str",
+        "... (5 more items)"
+      ]
+    },
+    "... (6 more items)"
+  ],
+  "lenses": {
+    "SHERLOCK": {
+      "role": "str",
+      "vocab": "str",
+      "directives": [
+        "str",
+        "... (3 more items)"
+      ],
+      "msg": "str"
+    },
+    "NATHAN": {
+      "role": "str",
+      "vocab": "str",
+      "directives": [
+        "str",
+        "... (3 more items)"
+      ],
+      "msg": "str"
+    },
+    "JESTER": {
+      "role": "str",
+      "vocab": "str",
+      "directives": [
+        "str",
+        "... (3 more items)"
+      ],
+      "msg": "str"
+    },
+    "CLARENCE": {
+      "role": "str",
+      "vocab": "str",
+      "directives": [
+        "str",
+        "... (3 more items)"
+      ],
+      "msg": "str"
+    },
+    "NARRATOR": {
+      "role": "str",
+      "vocab": "str",
+      "directives": [
+        "str",
+        "... (3 more items)"
+      ],
+      "msg": "str"
+    },
+    "GORDON": {
+      "role": "str",
+      "vocab": "str",
+      "directives": [
+        "str",
+        "... (3 more items)"
+      ],
+      "msg": "str"
+    },
+    "GLASS": {
+      "role": "str",
+      "vocab": "str",
+      "directives": [
+        "str",
+        "... (3 more items)"
+      ],
+      "msg": "str"
+    },
+    "CLARENCE_THE OBSERVER_HYBRID": {
+      "role": "str",
+      "msg": "str",
+      "derived_from": [
+        "str",
+        "... (1 more items)"
+      ]
+    },
+    "GORDON_THE OBSERVER_HYBRID": {
+      "role": "str",
+      "msg": "str",
+      "derived_from": [
+        "str",
+        "... (1 more items)"
+      ]
+    },
+    "NARRATOR_THE OBSERVER_HYBRID": {
+      "role": "str",
+      "msg": "str",
+      "derived_from": [
+        "str",
+        "... (1 more items)"
+      ]
+    },
+    "_META_RESONANCE_": [
+      {
+        "trigram": "str",
+        "lens": "str",
+        "result": "str",
+        "msg": "str"
+      },
+      "... (3 more items)"
+    ]
+  }
 }
 </data_file>
 
@@ -3389,7 +3523,7 @@ class Limbo:
 {
   "ARCHETYPES": [
     "str",
-    "... (18 more items)"
+    "... (38 more items)"
   ],
   "BANNED_CLICHES": [
     "str",

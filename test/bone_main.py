@@ -284,7 +284,9 @@ class BoneAmanita:
             self.events.log(f"Prompt Template '{prompt_key}' not found.", "WARN")
 
     def get_avg_voltage(self):
-        hist = self.phys.observer.voltage_history
+        observer = getattr(self.phys, "observer", self.phys)
+        hist = getattr(observer, "voltage_history", [])
+        
         if not hist:
             return 0.0
         return sum(hist) / len(hist)
@@ -380,10 +382,10 @@ class BoneAmanita:
             if self.health <= 0.0:
                 return self.trigger_death(cortex_packet.get("physics", {}))
         except Exception as e:
-            traceback.print_exc()
+            full_trace = traceback.format_exc()
             return {
-                "ui": f"CORTEX ERROR: {e}",
-                "logs": [],
+                "ui": f"{Prisma.RED}*** CORTEX CRITICAL FAILURE ***\n{full_trace}{Prisma.RST}",
+                "logs": ["CRITICAL FAILURE"],
                 "metrics": self.get_metrics(),
             }
         self.observer.clock_out(turn_start)
@@ -619,3 +621,6 @@ if __name__ == "__main__":
                     typewriter("\n" + content)
                 else:
                     typewriter(res["ui"])
+            if res.get("type") == "DEATH":
+                print(f"\n{Prisma.GRY}[SESSION TERMINATED]{Prisma.RST}")
+                break

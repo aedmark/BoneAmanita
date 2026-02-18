@@ -15,7 +15,7 @@ class TheAkashicRecord:
         self.RECIPE_THRESHOLD = 3
         self.HYBRID_LENS_THRESHOLD = 5
         self.MAX_SHADOW_CAPACITY = 50
-        self.lore = LoreManifest.get_instance()
+        self.lore = lore_manifest if lore_manifest else LoreManifest.get_instance()
         self.events = events_ref
         self.shadow_stock: List[Dict] = []
         self._load_mythos_state()
@@ -39,6 +39,18 @@ class TheAkashicRecord:
             payload.get("ingredient"), payload.get("catalyst"), payload.get("result")
         )
 
+    def _extract_dominant_trigram(self, physics: Dict) -> str:
+        vector = physics.get("vector", {})
+        if not vector:
+            return "ENT"
+        dom = max(vector, key=vector.get)
+        mapping = {
+            "VEL": "ZHEN", "STR": "GEN", "ENT": "KAN",
+            "PHI": "LI", "PSI": "QIAN", "BET": "XUN",
+            "E": "KUN", "DEL": "DUI"
+        }
+        return mapping.get(dom, "KAN")
+
     def _on_mythology_update(self, payload):
         if not payload or not isinstance(payload, dict):
             return
@@ -46,6 +58,22 @@ class TheAkashicRecord:
         category = payload.get("category")
         if word and category:
             self.register_word(word, category)
+            return
+        if "physics" in payload:
+            physics = payload.get("physics", {})
+            trigram = self._extract_dominant_trigram(physics)
+            active_lens = payload.get("lens", "OBSERVER")
+            lenses_data = self.lore.get("LENSES") or {}
+            resonances = lenses_data.get("_META_RESONANCE_", [])
+            for resonance in resonances:
+                if resonance["trigram"] == trigram:
+                    target_lens = resonance.get("lens", resonance.get("soul"))
+                    if target_lens == active_lens:
+                        if self.events:
+                            self.events.publish("RESONANCE_ACHIEVED", {
+                                "result": resonance["result"],
+                                "msg": resonance["msg"]
+                            })
 
     def calculate_manifold_shift(
         self, theta: str, e: Dict[str, float]
@@ -101,21 +129,24 @@ class TheAkashicRecord:
 
     def save_all(self):
         self.save_to_disk("akashic_lexicon", self.discovered_words)
-        gordon_data = self.lore.get("GORDON")
-        if gordon_data:
-            self.save_to_disk("gordon", gordon_data)
-        lens_data = self.lore.get("LENSES")
-        if lens_data:
-            self.save_to_disk("lenses", lens_data)
-        mythos_state = {
+        self._save_user_state()
+        print(f"{Prisma.GRY}[AKASHIC]: Mythos persisted.{Prisma.RST}")
+
+    def _save_user_state(self):
+        state = {
             "lens_cooccurrence": {
                 f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()
             },
             "ingredient_affinity": self.ingredient_affinity,
             "shadow_stock": self.shadow_stock,
         }
-        self.save_to_disk("mythos", mythos_state)
-        print(f"{Prisma.GRY}[AKASHIC]: Mythos persisted.{Prisma.RST}")
+        if not os.path.exists("saves"):
+            os.makedirs("saves")
+        try:
+            with open("saves/akashic_state.json", "w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2)
+        except Exception as e:
+            print(f"{Prisma.RED}[AKASHIC] Save failed: {e}{Prisma.RST}")
 
     def save_to_disk(self, category: str, data: Any):
         directory = getattr(self.lore, "DATA_DIR", "lore")
@@ -137,7 +168,16 @@ class TheAkashicRecord:
             print(f"{Prisma.RED}[AKASHIC]: Save Failed ({category}): {e}{Prisma.RST}")
 
     def _load_mythos_state(self):
-        data = self.lore.get("MYTHOS")
+        data = {}
+        if os.path.exists("saves/akashic_state.json"):
+            try:
+                with open("saves/akashic_state.json", "r") as f:
+                    data = json.load(f)
+            except:
+                pass
+        if not data:
+            data = self.lore.get("MYTHOS")
+            
         if not data:
             return
         raw_cooc = data.get("lens_cooccurrence", {})
@@ -272,14 +312,7 @@ class TheAkashicRecord:
         self.shadow_stock.append(memory_data)
         if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
             self.shadow_stock.pop(0)
-        mythos_state = {
-            "lens_cooccurrence": {
-                f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()
-            },
-            "ingredient_affinity": self.ingredient_affinity,
-            "shadow_stock": self.shadow_stock,
-        }
-        self.save_to_disk("mythos", mythos_state)
+        self._save_user_state()
         print(f"{Prisma.VIOLET}[AKASHIC]: Ghost Echo archived.{Prisma.RST}")
 
     def register_word(self, word: str, category: str) -> bool:
