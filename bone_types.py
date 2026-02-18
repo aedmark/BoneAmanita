@@ -3,7 +3,6 @@ from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
 
-
 class Prisma:
     RST = "\033[0m"
     RED, GRN, YEL, BLU, MAG, CYN, WHT, GRY = (
@@ -22,6 +21,7 @@ class Prisma:
         "\033[35;2m",
         "\033[30;1m",
     )
+    _STRIP_PATTERN = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
     _COLOR_MAP = {
         "R": RED,
         "G": GRN,
@@ -39,14 +39,16 @@ class Prisma:
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
-        code = cls._COLOR_MAP.get(str(color_key).upper(), cls.WHT)
+        if len(color_key) == 1:
+            code = cls._COLOR_MAP.get(color_key, cls.WHT)
+        else:
+            code = cls._COLOR_MAP.get(str(color_key)[0].upper(), cls.WHT)
         txt = str(text)
         return f"{code}{txt}" if txt.endswith(cls.RST) else f"{code}{txt}{cls.RST}"
 
     @classmethod
     def strip(cls, text: str) -> str:
-        pattern = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-        return pattern.sub("", str(text))
+        return cls._STRIP_PATTERN.sub("", str(text))
 
 
 class LoreCategory(Enum):
@@ -116,6 +118,38 @@ class PhysicsPacket:
     matter: MaterialState = field(default_factory=MaterialState)
     space: SpatialState = field(default_factory=SpatialState)
 
+    # [FULLER]: FAST PATH STRUTS
+    # Explicitly delegate common fields to avoid __getattr__ overhead.
+    @property
+    def voltage(self): return self.energy.voltage
+    @voltage.setter
+    def voltage(self, v): self.energy.voltage = v
+
+    @property
+    def narrative_drag(self): return self.space.narrative_drag
+    @narrative_drag.setter
+    def narrative_drag(self, v): self.space.narrative_drag = v
+
+    @property
+    def clean_words(self): return self.matter.clean_words
+    @clean_words.setter
+    def clean_words(self, v): self.matter.clean_words = v
+
+    @property
+    def vector(self): return self.matter.vector
+    @vector.setter
+    def vector(self, v): self.matter.vector = v
+
+    @property
+    def counts(self): return self.matter.counts
+    @counts.setter
+    def counts(self, v): self.matter.counts = v
+
+    @property
+    def zone(self): return self.space.zone
+    @zone.setter
+    def zone(self, v): self.space.zone = v
+
     def __init__(
         self,
         energy: Optional[EnergyState] = None,
@@ -181,51 +215,6 @@ class PhysicsPacket:
 
     def __contains__(self, key):
         return hasattr(self, key)
-
-
-@dataclass
-class PhysicsSandbox:
-    packet: PhysicsPacket
-    original_snapshot: Optional[PhysicsPacket] = None
-    modifications: List[Dict[str, Any]] = field(default_factory=list)
-
-    @classmethod
-    def create(cls, packet: PhysicsPacket) -> "PhysicsSandbox":
-        return cls(packet=packet)
-
-    def _ensure_snapshot(self):
-        if self.original_snapshot is None:
-            self.original_snapshot = self.packet.snapshot()
-
-    def apply_delta(self, key: str, value: Any, reason: str = ""):
-        self._ensure_snapshot()
-        setattr(self.packet, key, value)
-        self.modifications.append({"key": key, "new": value, "reason": reason})
-
-    def get_modification_log(self) -> List[Dict]:
-        return self.modifications
-
-    def rollback(self):
-        if self.original_snapshot:
-            self.packet.energy = copy.deepcopy(self.original_snapshot.energy)
-            self.packet.matter = copy.deepcopy(self.original_snapshot.matter)
-            self.packet.space = copy.deepcopy(self.original_snapshot.space)
-
-    def __getattr__(self, name):
-        if name == "packet":
-            raise AttributeError(name)
-        packet = self.__dict__.get("packet")
-        if packet is None:
-            raise AttributeError(
-                f"'{type(self).__name__}' has no packet (accessing '{name}')"
-            )
-        return getattr(packet, name)
-
-    def __setattr__(self, name, value):
-        if name in ["packet", "original_snapshot", "modifications"]:
-            object.__setattr__(self, name, value)
-        else:
-            self.apply_delta(name, value, reason="AUTO_TRACE")
 
 
 @dataclass

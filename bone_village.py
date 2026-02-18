@@ -1,5 +1,4 @@
-import math
-import random
+import math, random, heapq
 from typing import List, Dict, Any, Tuple, Optional, Set
 from dataclasses import dataclass, field, asdict
 from bone_types import Prisma, PhysicsPacket
@@ -39,10 +38,15 @@ class TheTinkerer:
         self.events = events_ref
         self.akashic = akashic_ref
         self.tool_resonance: Dict[str, float] = {}
+        self._delta_cache = None
+        self._inventory_hash = 0
 
     def calculate_passive_deltas(
         self, inventory_data: List[Dict]
     ) -> List[PhysicsDelta]:
+        current_hash = hash(tuple(sorted(i.get("name", "") for i in inventory_data)))
+        if self._delta_cache is not None and current_hash == self._inventory_hash:
+            return self._delta_cache
         deltas = []
         trait_counts = {"HEAVY_LOAD": 0, "TIME_DILATION": 0, "ENTROPY_BUFFER": 0}
         for item_data in inventory_data:
@@ -69,6 +73,8 @@ class TheTinkerer:
                     "MULT", "turbulence", buffer_str, "Inventory", "Entropy Buffer"
                 )
             )
+        self._inventory_hash = current_hash
+        self._delta_cache = deltas
         return deltas
 
     def audit_tool_use(
@@ -241,8 +247,7 @@ class TheCartographer:
     def _generate_coord_hash(self, vector: Dict[str, float]) -> str:
         if not vector:
             return "VOID_DRIFT"
-        sorted_dims = sorted(vector.items(), key=lambda x: -x[1])
-        top_dims = sorted_dims[:2]
+        top_dims = heapq.nlargest(2, vector.items(), key=lambda x: x[1])
         return "-".join([f"{k}{int(v * 10)}" for k, v in top_dims])
 
     def locate(
@@ -296,8 +301,8 @@ class TheCartographer:
         ]
         if not candidates:
             return
-        candidates.sort(key=lambda k: self.world_graph[k].visited_count)
-        del self.world_graph[candidates[0]]
+        victim = min(candidates, key=lambda k: self.world_graph[k].visited_count)
+        del self.world_graph[victim]
 
     def export_atlas(self) -> Dict[str, Any]:
         return {
@@ -341,6 +346,22 @@ class TownHall:
 
     def sow_seed(self, question: str, triggers: Set[str]):
         self.seeds.append(ParadoxSeed(question, triggers))
+
+        def consult_almanac(self, physics: PhysicsPacket) -> str:
+            almanac = LoreManifest.get_instance().get("ALMANAC") or {}
+            forecasts = almanac.get("FORECASTS", {})
+            strategies = almanac.get("STRATEGIES", {})
+            state_key = "BALANCED"
+            if physics.voltage > 15.0:
+                state_key = "HIGH_VOLTAGE"
+            elif physics.narrative_drag > 4.0:
+                state_key = "HIGH_DRAG"
+            elif hasattr(physics, "entropy") and physics.entropy > 0.8:
+                state_key = "HIGH_ENTROPY"
+            options = forecasts.get(state_key, ["Weather unclear."])
+            flavor_text = random.choice(options)
+            strategy = strategies.get(state_key, "Keep breathing.")
+            return f"☁️ FORECAST [{state_key}]: {flavor_text} (Strategy: {strategy})"
 
     def tend_garden(self, clean_words: List[str]):
         if not self.seeds or not clean_words:

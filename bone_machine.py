@@ -85,63 +85,78 @@ class TheCrucible:
 class TheForge:
     def __init__(self):
         gordon_data = LoreManifest.get_instance().get("gordon") or {}
-        self.recipes = gordon_data.get("RECIPES", [])
+        raw_recipes = gordon_data.get("RECIPES", [])
+        self.recipe_map = {}
+        for r in raw_recipes:
+            ing = r.get("ingredient")
+            if ing:
+                if ing not in self.recipe_map:
+                    self.recipe_map[ing] = []
+                self.recipe_map[ing].append(r)
 
     @staticmethod
     def hammer_alloy(physics: Dict) -> Tuple[bool, Optional[str], Optional[str]]:
         voltage = float(physics.get("voltage", 0))
-        clean_words = physics.get("clean_words", [])
         counts = physics.get("counts", {})
+        clean_words = physics.get("clean_words", [])
         if not clean_words:
             return False, None, None
-        total_mass = (counts.get("heavy", 0) * 2.0) + (counts.get("kinetic", 0) * 0.5)
+        heavy = counts.get("heavy", 0)
+        kinetic = counts.get("kinetic", 0)
+        total_mass = (heavy * 2.0) + (kinetic * 0.5)
         avg_density = total_mass / max(1, len(clean_words))
         forge_probability = (voltage / 20.0) * avg_density
         if random.random() < forge_probability:
-            if counts.get("heavy", 0) > 3:
+            if heavy > 3:
                 return (
                     True,
                     f"🔨 FORGED: Lead Boots (Mass {avg_density:.1f})",
                     "LEAD_BOOTS",
                 )
-            if counts.get("kinetic", 0) > 3:
-                return True, f"🔨 FORGED: Safety Scissors (Kinetic)", "SAFETY_SCISSORS"
+            if kinetic > 3:
+                return (
+                    True,
+                    f"🔨 FORGED: Safety Scissors (Kinetic)",
+                    "SAFETY_SCISSORS",
+                )
             return True, f"🔨 FORGED: Anchor Stone", "ANCHOR_STONE"
         return False, None, None
 
     def attempt_crafting(
         self, physics: Dict, inventory_list: List[str]
     ) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
+        if not inventory_list:
+            return False, None, None, None
         clean_words = physics.get("clean_words", [])
         if not clean_words:
             return False, None, None, None
         clean_set = set(clean_words)
         voltage = float(physics.get("voltage", 0))
-        for recipe in self.recipes:
-            ingredient = recipe["ingredient"]
-            if ingredient not in inventory_list:
-                continue
-            catalyst_cat = recipe["catalyst_category"]
-            cat_words = LexiconService.get(catalyst_cat)
-            if not cat_words:
-                continue
-            hits = clean_set.intersection(cat_words)
-            if hits:
-                entanglement = self._calculate_entanglement(len(hits), voltage)
-                if random.random() < entanglement:
-                    return (
-                        True,
-                        f"⚗️ ALCHEMY: {recipe['result']} (via {ingredient})",
-                        ingredient,
-                        recipe["result"],
-                    )
-                else:
-                    return (
-                        False,
-                        f"⚠️ ALCHEMY FAIL: Decoherence ({int(entanglement*100)}%)",
-                        None,
-                        None,
-                    )
+        for item in inventory_list:
+            if item in self.recipe_map:
+                possible_recipes = self.recipe_map[item]
+                for recipe in possible_recipes:
+                    catalyst_cat = recipe["catalyst_category"]
+                    cat_words = LexiconService.get(catalyst_cat)
+                    if not cat_words:
+                        continue
+                    if not clean_set.isdisjoint(cat_words):
+                        hits = len(clean_set.intersection(cat_words))
+                        entanglement = self._calculate_entanglement(hits, voltage)
+                        if random.random() < entanglement:
+                            return (
+                                True,
+                                f"⚗️ ALCHEMY: {recipe['result']} (via {item})",
+                                item,
+                                recipe["result"],
+                            )
+                        else:
+                            return (
+                                False,
+                                f"⚠️ ALCHEMY FAIL: Decoherence ({int(entanglement*100)}%)",
+                                None,
+                                None,
+                            )
         return False, None, None, None
 
     @staticmethod

@@ -3,7 +3,6 @@ from typing import Dict, Any, Optional
 from bone_config import BoneConfig
 from bone_types import Prisma
 
-
 @dataclass
 class BiologicalImpulse:
     cortisol_delta: float = 0.0
@@ -37,24 +36,26 @@ class SynestheticCortex:
     def perceive(
         self, physics: Dict, traits: Any = None, latency: float = 0.0
     ) -> BiologicalImpulse:
-        physics = self._normalize_physics(physics)
+        if hasattr(physics, "to_dict"):
+            physics = physics.to_dict()
+        elif not isinstance(physics, dict):
+            physics = getattr(physics, "__dict__", {})
         impulse = BiologicalImpulse()
         base_sens = BoneConfig.CORTEX.BASE_SENSITIVITY
         if traits:
-            base_sens *= (
-                1.0
-                + getattr(traits, "curiosity", 0.5)
-                - getattr(traits, "discipline", 0.5)
-            )
-        dynamic_sensitivity = max(0.0, base_sens)
+            curiosity = getattr(traits, "curiosity", 0.5)
+            discipline = getattr(traits, "discipline", 0.5)
+            base_sens *= 1.0 + curiosity - discipline
+        sens = max(0.0, base_sens)
         valence = physics.get("valence", 0.0)
         counts = physics.get("counts", {})
         voltage = physics.get("voltage", 0)
         drag = physics.get("narrative_drag", 0)
         if valence < -0.5:
-            impulse.cortisol_delta += abs(valence) * dynamic_sensitivity
-        if counts.get("antigen", 0) > 0:
-            raw_tox = counts["antigen"] * (BoneConfig.TOXIN_WEIGHT * 0.2)
+            impulse.cortisol_delta += abs(valence) * sens
+        antigen_count = counts.get("antigen", 0)
+        if antigen_count > 0:
+            raw_tox = antigen_count * (BoneConfig.TOXIN_WEIGHT * 0.2)
             impulse.cortisol_delta += min(BoneConfig.CORTEX.TOXIN_SCALAR, raw_tox)
             impulse.somatic_reflex = "Shiver (Rejection)"
         elif drag > BoneConfig.CORTEX.DRAG_STRESS_THRESHOLD:
@@ -62,7 +63,7 @@ class SynestheticCortex:
             impulse.stamina_impact -= 2.0
         else:
             if valence > 0.4:
-                impulse.oxytocin_delta += valence * dynamic_sensitivity
+                impulse.oxytocin_delta += valence * sens
             if counts.get("sacred", 0) > 0:
                 impulse.oxytocin_delta += 0.1
                 impulse.somatic_reflex = "Warmth (Resonance)"
@@ -90,32 +91,23 @@ class SynestheticCortex:
         return impulse
 
     def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
-        if impulse.adrenaline_delta > 0.1:
-            if impulse.cortisol_delta > 0.1:
-                return "Trembling (Fight or Flight)."
-            if impulse.dopamine_delta > 0.1:
-                return "Electric Vibration."
-            return "Pupils Dilating."
-        if impulse.oxytocin_delta > 0.1:
-            if impulse.dopamine_delta > 0.1:
-                return "Golden Glow."
-            return "Chest Softening."
-        if impulse.cortisol_delta > 0.1:
-            return "Gut Tightening."
-        if impulse.dopamine_delta > 0.1:
-            return "Synaptic Spark."
-        psi = physics.get("psi", 0.0)
-        if psi > 0.6:
-            return "Scalp Prickling (Liminal)."
-        entropy = physics.get("entropy", 0.0)
-        if entropy > 0.7:
-            return "Skin Crawling (Static)."
-        if physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER:
-            return "Electrical Arcing."
-        if physics.get("voltage", 0) < 2.0:
-            return "Metabolic Dimming."
-        if physics.get("narrative_drag", 0) > 5.0:
-            return "Shoulders Sagging."
+        conditions = [
+            (impulse.cortisol_delta > 0.1 and impulse.adrenaline_delta > 0.1, "Trembling (Fight or Flight)."),
+            (impulse.dopamine_delta > 0.1 and impulse.adrenaline_delta > 0.1, "Electric Vibration."),
+            (impulse.adrenaline_delta > 0.1, "Pupils Dilating."),
+            (impulse.oxytocin_delta > 0.1 and impulse.dopamine_delta > 0.1, "Golden Glow."),
+            (impulse.oxytocin_delta > 0.1, "Chest Softening."),
+            (impulse.cortisol_delta > 0.1, "Gut Tightening."),
+            (impulse.dopamine_delta > 0.1, "Synaptic Spark."),
+            (physics.get("psi", 0.0) > 0.6, "Scalp Prickling (Liminal)."),
+            (physics.get("entropy", 0.0) > 0.7, "Skin Crawling (Static)."),
+            (physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER, "Electrical Arcing."),
+            (physics.get("voltage", 0) < 2.0, "Metabolic Dimming."),
+            (physics.get("narrative_drag", 0) > 5.0, "Shoulders Sagging."),
+        ]
+        for condition, reflex in conditions:
+            if condition:
+                return reflex
         if self.last_reflex == "Steady Pulse.":
             return "..."
         return "Steady Pulse."

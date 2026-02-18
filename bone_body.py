@@ -196,7 +196,7 @@ class MitochondrialForge:
         )
 
     def process_cycle(
-        self, physics_packet: Any, external_modifiers: List[float] = None
+        self, physics_packet: Any, modifier: float = 1.0
     ) -> MetabolicReceipt:
         if self.state.atp_pool > 95.0 and self.state.ros_buildup < 1.0:
             return MetabolicReceipt(0, 0, 0, 0, 0, "NOMINAL", "Fresh Start")
@@ -212,21 +212,15 @@ class MitochondrialForge:
         is_critical = self.state.atp_pool < BioConstants.ATP_CRITICAL
         if is_critical:
             cognitive_load_tax = 0.0
-            external_modifiers = (
-                [0.5] if external_modifiers is None else external_modifiers + [0.5]
-            )
+            modifier *= 0.5
             if self.events and self.state.retrograde_signal != "HIBERNATING":
                 msg = self._get_text(
                     "NECROSIS", cost=base_demand, pool=self.state.atp_pool
                 )
                 self.events.log(f"{Prisma.VIOLET}💤 {msg}{Prisma.RST}", "BIO_CRIT")
                 self.state.retrograde_signal = "HIBERNATING"
-        mod_factor = 1.0
-        if external_modifiers:
-            for m in external_modifiers:
-                mod_factor *= m
         efficiency = max(0.35, self.state.membrane_potential)
-        raw_cost = ((base_demand + cognitive_load_tax) * mod_factor) / efficiency
+        raw_cost = ((base_demand + cognitive_load_tax) * modifier) / efficiency
         if raw_cost > self.MAX_SAFE_BURN:
             excess = raw_cost - self.MAX_SAFE_BURN
             raw_cost = self.MAX_SAFE_BURN
@@ -341,21 +335,24 @@ class DigestiveTrack:
             else self._ENZYME_MAP
         )
 
-    def harvest(self, phys: Any, logs: List[str]) -> Tuple[str, float]:
+    def harvest(self, phys: Any, logs: List[str]) -> Tuple[str, float, int]:
         clean_words = getattr(phys, "clean_words", [])
         if not clean_words:
-            return "NONE", 0.0
+            return "NONE", 0.0, 0
         words_to_process, scaling_factor = self._sample_input(clean_words, logs)
-        raw_yield, found_enzymes, cliche_tax = self._digest_words(words_to_process)
+        raw_yield, found_enzymes, cliche_tax, raw_hits = self._digest_words(
+            words_to_process
+        )
         total_atp = raw_yield * scaling_factor
         scaled_tax = cliche_tax * scaling_factor
+        total_hits = int(raw_hits * scaling_factor)
         if scaled_tax > 0:
             total_atp = max(0.0, total_atp - scaled_tax)
             self.bio.endo.cortisol = min(
                 1.0, self.bio.endo.cortisol + (scaled_tax * 0.02)
             )
             logs.append(
-                f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX: -{scaled_tax:.1f} ATP. (Antigens Detected){Prisma.RST}"
+                f"{Prisma.RED}[BIO]: 🛑 CLICHÉ TAX: -{scaled_tax:.1f} ATP.{Prisma.RST}"
             )
         if getattr(phys, "voltage", 0.0) > 8.0 and found_enzymes:
             found_enzymes.append("PROTEASE")
@@ -363,11 +360,7 @@ class DigestiveTrack:
         dominant = (
             Counter(found_enzymes).most_common(1)[0][0] if found_enzymes else "NONE"
         )
-        return dominant, total_atp
-
-    def count_harvest_hits(self, phys: Any) -> int:
-        clean_words = getattr(phys, "clean_words", [])
-        return len([w for w in clean_words if len(w) >= 4])
+        return dominant, total_atp, total_hits
 
     def _sample_input(
         self, words: List[str], logs: List[str]
@@ -382,14 +375,16 @@ class DigestiveTrack:
             return random.sample(words, self.SAMPLING_THRESHOLD), factor
         return words, 1.0
 
-    def _digest_words(self, words: List[str]) -> Tuple[float, List[str], float]:
+    def _digest_words(self, words: List[str]) -> Tuple[float, List[str], float, int]:
         atp_yield = 0.0
         enzymes = []
         cliche_tax = 0.0
+        hits = 0
         word_counts = Counter(words)
         for word, count in word_counts.items():
             if len(word) < 4:
                 continue
+            hits += count
             cat = LexiconService.get_current_category(word)
             if not cat or cat == "void":
                 atp_yield += self.BASE_WORD_VALUE * count
@@ -408,37 +403,37 @@ class DigestiveTrack:
                     )
                     total_val = val * (1.0 + math.log(count))
                     atp_yield += total_val
-        return atp_yield, enzymes, cliche_tax
+        return atp_yield, enzymes, cliche_tax, hits
 
 
 class EndocrineRegulator:
     def __init__(self, bio_system_ref: BioSystem):
         self.bio = bio_system_ref
 
-    def gather_modifiers(self, phys: Any, logs: List[str]) -> List[float]:
+    def get_metabolic_modifier(self, phys: Any, logs: List[str]) -> float:
         chem = self.bio.endo
-        modifiers = []
+        modifier = 1.0
         if chem.cortisol > 0.5:
             stress_tax = 1.0 + (chem.cortisol * 0.5)
-            modifiers.append(stress_tax)
+            modifier *= stress_tax
             if random.random() < 0.3:
                 logs.append(
                     f"{Prisma.RED}[BIO]: Cortisol spiking. Metabolism inefficient (x{stress_tax:.2f}).{Prisma.RST}"
                 )
         if chem.adrenaline > 0.6:
-            modifiers.append(0.5)
+            modifier *= 0.5
             logs.append(
                 f"{Prisma.YEL}[BIO]: Adrenaline Surge. Pain ignored.{Prisma.RST}"
             )
         if chem.dopamine > 0.7:
-            modifiers.append(0.8)
+            modifier *= 0.8
         voltage = getattr(phys, "voltage", 0.0)
         if voltage > 15.0:
-            modifiers.append(1.2)
+            modifier *= 1.2
             logs.append(
                 f"{Prisma.MAG}[BIO]: Voltage Gap ({voltage:.1f}v). Wires heating up.{Prisma.RST}"
             )
-        return modifiers
+        return modifier
 
 
 class BioFeedback:
@@ -565,8 +560,8 @@ class SomaticLoop:
             self.bio.biometrics.stamina = max(0.0, min(100.0, stamina))
         if self.bio.events and hasattr(self.bio, "apply_environmental_entropy"):
             self.bio.apply_environmental_entropy(phys)
-        modifiers = self.regulator.gather_modifiers(phys, logs)
-        receipt = self.bio.mito.process_cycle(phys, external_modifiers=modifiers)
+        modifier = self.regulator.get_metabolic_modifier(phys, logs)
+        receipt = self.bio.mito.process_cycle(phys, modifier=modifier)
         if receipt.waste_generated > 1.0:
             self.bio.endo.cortisol = min(
                 1.0, self.bio.endo.cortisol + (receipt.waste_generated * 0.05)
@@ -588,7 +583,7 @@ class SomaticLoop:
                 total_yield += sugar
             if photo_log:
                 logs.append(photo_log)
-        soma_enzyme, soma_yield = self.digestive.harvest(phys, logs)
+        soma_enzyme, soma_yield, harvest_hits = self.digestive.harvest(phys, logs)
         total_yield += soma_yield
         if enzyme == "NONE":
             enzyme = soma_enzyme
@@ -602,7 +597,7 @@ class SomaticLoop:
             self.bio.biometrics.stamina,
             self.bio.mito.state.ros_buildup,
             receipt=receipt,
-            harvest_hits=self.digestive.count_harvest_hits(phys),
+            harvest_hits=harvest_hits,
             stress_mod=stress_modifier,
             enzyme_type=enzyme,
             circadian_bias=circadian_bias,

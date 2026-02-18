@@ -282,17 +282,21 @@ class TheAkashicRecord:
         self.save_to_disk("mythos", mythos_state)
         print(f"{Prisma.VIOLET}[AKASHIC]: Ghost Echo archived.{Prisma.RST}")
 
-    def register_word(self, word, category):
+    def register_word(self, word: str, category: str) -> bool:
+        if word in self.discovered_words:
+            if self.discovered_words[word] == category:
+                return False
         lexicon_data = self.lore.get("LEXICON")
-        if category in lexicon_data:
-            if word not in lexicon_data[category]:
-                lexicon_data[category].append(word)
-                self.discovered_words[word] = category
-                print(f"✨ LEXICON: Learned '{word}' ({category})")
-                self.save_to_disk("LEXICON", lexicon_data)
-                if len(lexicon_data[category]) > 50 and category != "heavy":
-                    print(
-                        f"⚠️ MYTHOLOGY ENGINE: Category '{category}' is bloating. Suggest fission."
-                    )
-                return True
+        if category not in lexicon_data:
+            lexicon_data[category] = []
+        if word not in lexicon_data[category]:
+            lexicon_data[category].append(word)
+            self.discovered_words[word] = category
+            print(f"✨ LEXICON: Learned '{word}' ({category})")
+            self.save_to_disk("LEXICON", lexicon_data)
+            if len(lexicon_data[category]) > 50 and category != "heavy":
+                print(
+                    f"⚠️ MYTHOLOGY ENGINE: Category '{category}' is bloating. Suggest fission."
+                )
+            return True
         return False

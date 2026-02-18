@@ -1,5 +1,47 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.6.0 "THE SURGICAL STRIKE" (OPTIMIZATION)**
+
+_“Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away.”_
+
+---\
+
+#### **🔪 THE SLASH PROTOCOL (System-Wide Ephemeralization)**
+
+- **The Physics Bypass (`bone_types.py`):**
+  - **Fast Path Struts:** Implemented direct `@property` accessors on `PhysicsPacket`. The system no longer burns cycles in `__getattr__` lookups for high-frequency stats like `voltage` and `narrative_drag`.
+  - **The Sandbox Excision:** Removed the `PhysicsSandbox` wrapper entirely. State flux is now audited directly by the `PhaseExecutor` via snapshot comparison, removing a layer of indirection from every single simulation phase.
+
+- **Metabolic Efficiency (`bone_body.py`):**
+  - **Single-Pass Digestion:** Refactored `DigestiveTrack` to calculate word metrics, enzymes, and ATP yield in a single loop. We no longer iterate the input stream twice to count "hits."
+  - **Float Accumulators:** Replaced list-based modifier collection in `EndocrineRegulator` with simple float multiplication, reducing memory allocation churn during metabolism.
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker Lens)**
+
+- **The Indexed Forge (`bone_machine.py`):**
+  - **O(1) Crafting:** `TheForge` now maps recipes by ingredient at boot. The system no longer scans the entire recipe book every tick to see if you are holding a valid component.
+  - **Event-Driven Checks:** Crafting logic now iterates the (small) inventory rather than the (large) recipe list.
+
+- **The Akashic Index (`bone_akashic.py`):**
+  - **Fast Learning:** `register_word` now checks an internal hash map before scanning the disk-loaded word lists, preventing the "learning lag" that occurred as the vocabulary grew.
+
+#### **🏙️ VILLAGE INFRASTRUCTURE (The Fuller Lens)**
+
+- **The Compass Fix (`bone_village.py`):**
+  - **Heap Optimization:** `TheCartographer` now uses `heapq.nlargest` to find dominant vector dimensions instead of sorting the entire coordinate space.
+  - **The Culling:** Node pruning now uses `min()` to find the weakest location, reducing complexity from O(N log N) to O(N).
+
+- **The Tinkerer's Memory (`bone_village.py`):**
+  - **Memoization:** The Tinkerer now caches the "weight" of the inventory. Passive physics deltas (like "Heavy Load") are only recalculated when the inventory hash changes, not every frame.
+
+#### **🐛 NERVOUS SYSTEM REPAIR (The Meadows Lens)**
+
+- **The Circuit Breaker Removal (`bone_core.py`):**
+  - **Transparent Failure:** Removed the "Circuit Breaker" logic from `EventBus`. The system no longer silently unsubscribes failing listeners; it now reports errors visibly so they can be healed rather than hidden.
+  - **The Symbiotic Stent (`bone_symbiosis.py`):** Capped Shannon Entropy calculations to the first 1000 characters of output and cached `SymbiontVoice` instances to prevent Lexicon thrashing.
+
+---
+
 ### **BONEAMANITA v15.5.7 "THE OUROBOROS BREAK" (STABILIZATION)**
 
 _“We found a mirror inside the machine that reflected itself until it broke. We fixed the glass. Then we organized the organs so the heart wouldn't have to ask the brain for permission to beat.”_

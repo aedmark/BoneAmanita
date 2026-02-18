@@ -5,6 +5,16 @@ from collections import deque
 from bone_types import Prisma
 from bone_lexicon import LexiconService
 
+_VOICE_CACHE = {}
+_DEFAULT_MODIFIERS = {
+    "include_somatic": True,
+    "include_inventory": True,
+    "include_memories": True,
+    "simplify_instruction": False,
+    "inject_chaos": False,
+    "include_compassion": False,
+    "system_directives": [],
+}
 
 @dataclass
 class HostHealth:
@@ -110,10 +120,12 @@ class SymbiontVoice:
             return self.personality["med_score"]
         return "..."
 
-
 def get_symbiont(type_name):
+    if type_name in _VOICE_CACHE:
+        return _VOICE_CACHE[type_name]
+    voice = None
     if type_name == "LICHEN":
-        return SymbiontVoice(
+        voice = SymbiontVoice(
             "LICHEN",
             Prisma.GRN,
             ["photo", "vital", "bloom", "solar"],
@@ -124,8 +136,8 @@ def get_symbiont(type_name):
                 "low_volt": "It is cold... we are sleeping.",
             },
         )
-    if type_name == "PARASITE":
-        return SymbiontVoice(
+    elif type_name == "PARASITE":
+        voice = SymbiontVoice(
             "PARASITE",
             Prisma.RED,
             ["antigen", "heavy", "rot", "void"],
@@ -136,8 +148,8 @@ def get_symbiont(type_name):
                 "low_volt": "Finally. Silence.",
             },
         )
-    if type_name == "MYCORRHIZA":
-        return SymbiontVoice(
+    elif type_name == "MYCORRHIZA":
+        voice = SymbiontVoice(
             "MYCORRHIZA",
             Prisma.OCHRE,
             ["roots", "hold", "safe", "steady"],
@@ -147,15 +159,19 @@ def get_symbiont(type_name):
                 "med_score": "We are woven together.",
             },
         )
-    return SymbiontVoice(
-        "MYCELIUM",
-        Prisma.CYN,
-        ["constructive", "abstract", "code"],
-        {
-            "high_score": "The pattern holds. Integration probable.",
-            "med_score": "Scanning for structural integrity...",
-        },
-    )
+    else:
+        voice = SymbiontVoice(
+            "MYCELIUM",
+            Prisma.CYN,
+            ["constructive", "abstract", "code"],
+            {
+                "high_score": "The pattern holds. Integration probable.",
+                "med_score": "Scanning for structural integrity...",
+            },
+        )
+    if voice:
+        _VOICE_CACHE[type_name] = voice
+    return voice
 
 
 class SymbiosisManager:
@@ -179,8 +195,9 @@ class SymbiosisManager:
     def _calculate_shannon_entropy(text: str) -> float:
         if not text:
             return 0.0
-        counts = Counter(text)
-        length = len(text)
+        sample = text[:1000] if len(text) > 1000 else text
+        counts = Counter(sample)
+        length = len(sample)
         entropy = 0.0
         for count in counts.values():
             prob = count / length
@@ -235,15 +252,8 @@ class SymbiosisManager:
         return False
 
     def get_prompt_modifiers(self) -> Dict:
-        mods = {
-            "include_somatic": True,
-            "include_inventory": True,
-            "include_memories": True,
-            "simplify_instruction": False,
-            "inject_chaos": False,
-            "include_compassion": False,
-            "system_directives": [],
-        }
+        mods = _DEFAULT_MODIFIERS.copy()
+        mods["system_directives"] = []
         diag = self.current_health.diagnosis
         if diag == "REFUSAL":
             mods["include_inventory"] = False

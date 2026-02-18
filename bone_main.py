@@ -13,13 +13,16 @@ from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_cycle import GeodesicOrchestrator
 from bone_council import CouncilChamber
 
+ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
 
 def typewriter(text: str, speed: float = 0.005, end: str = "\n"):
     if speed < 0.001:
         print(text, end=end)
         return
-    type_parts = re.split(r"(\x1b\[[0-9;]*m)", text)
+    type_parts = ANSI_SPLIT.split(text)
     for part in type_parts:
+        if not part:
+            continue
         if part.startswith("\x1b"):
             sys.stdout.write(part)
         else:
@@ -28,6 +31,7 @@ def typewriter(text: str, speed: float = 0.005, end: str = "\n"):
                 sys.stdout.flush()
                 time.sleep(speed)
     sys.stdout.write(end)
+    sys.stdout.flush()
 
 
 @dataclass

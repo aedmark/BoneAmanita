@@ -398,15 +398,6 @@ class LexiconService:
     ANTIGEN_REGEX = None
     SOLVENTS = set()
 
-    @staticmethod
-    def _ensure_ready(func):
-        def wrapper(cls, *args, **kwargs):
-            if not cls._INITIALIZED:
-                cls.initialize()
-            return func(cls, *args, **kwargs)
-
-        return wrapper
-
     @classmethod
     def get_store(cls):
         if not cls._INITIALIZED:
@@ -435,17 +426,14 @@ class LexiconService:
             raise e
 
     @classmethod
-    @_ensure_ready
     def get_valence(cls, words: List[str]) -> float:
         return cls._ANALYZER.measure_valence(words)
 
     @classmethod
-    @_ensure_ready
     def get_categories_for_word(cls, word: str) -> Set[str]:
         return cls._STORE.get_categories_for_word(word)
 
     @classmethod
-    @_ensure_ready
     def get_current_category(cls, word: str) -> Optional[str]:
         categories = cls._STORE.get_categories_for_word(word)
         if categories:
@@ -453,17 +441,14 @@ class LexiconService:
         return None
 
     @classmethod
-    @_ensure_ready
     def measure_viscosity(cls, word: str) -> float:
         return cls._ANALYZER.measure_viscosity(word)
 
     @classmethod
-    @_ensure_ready
     def get_turbulence(cls, words: List[str]) -> float:
         return cls._ANALYZER.get_turbulence(words)
 
     @classmethod
-    @_ensure_ready
     def vectorize(cls, text: str) -> Dict[str, float]:
         return cls._ANALYZER.vectorize(text)
 
@@ -481,12 +466,10 @@ class LexiconService:
         cls.ANTIGEN_REGEX = re.compile("|".join(escaped), re.IGNORECASE)
 
     @classmethod
-    @_ensure_ready
     def sanitize(cls, text):
         return cls._ANALYZER.sanitize(text)
 
     @classmethod
-    @_ensure_ready
     def classify(cls, word):
         PRIORITY_ORDER = [
             "heavy",
@@ -518,23 +501,19 @@ class LexiconService:
         return cls.classify(word)
 
     @classmethod
-    @_ensure_ready
     def create_field(cls):
         return SemanticField(cls._ANALYZER)
 
     @classmethod
-    @_ensure_ready
     def get(cls, category: str) -> Set[str]:
         return cls._STORE.get_raw(category)
 
     @classmethod
-    @_ensure_ready
     def get_random(cls, category: str) -> str:
         words = list(cls.get(category))
         return random.choice(words) if words else "void"
 
     @classmethod
-    @_ensure_ready
     def teach(cls, word: str, category: str, tick: int = 0):
         cls._STORE.teach(word, category, tick)
 
@@ -545,18 +524,15 @@ class LexiconService:
             print(f"{Prisma.GRN}[LEXICON]: Hive saved to disk.{Prisma.RST}")
 
     @classmethod
-    @_ensure_ready
     def harvest(cls, text: str) -> Dict[str, List[str]]:
         return cls._STORE.harvest(text)
 
     @classmethod
-    @_ensure_ready
     def learn_antigen(cls, word: str, replacement: str = ""):
         cls._STORE.ANTIGEN_REPLACEMENTS[word] = replacement
         cls.compile_antigens()
 
     @classmethod
-    @_ensure_ready
     def tune_perception(cls, voltage: float, narrative_drag: float):
         if cls._ANALYZER:
             cls._ANALYZER.tune_sensitivity(voltage, narrative_drag)

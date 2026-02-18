@@ -1,13 +1,8 @@
 import traceback, random, time, uuid
-from typing import Dict, Any, List, cast
+from typing import Dict, Any, List
 from bone_core import TelemetryService, ArchetypeArbiter, LoreManifest
-from bone_types import Prisma, CycleContext, PhysicsSandbox, PhysicsPacket
-from bone_physics import (
-    TheGatekeeper,
-    apply_somatic_feedback,
-    TRIGRAM_MAP,
-    CycleStabilizer,
-)
+from bone_types import Prisma, CycleContext
+from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, CycleStabilizer
 from bone_gui import SoulDashboard, CycleReporter
 from bone_architect import PanicRoom
 from bone_soma import SynestheticCortex
@@ -941,42 +936,35 @@ class StabilizationPhase(SimulationPhase):
 
 class PhaseExecutor:
     def execute_phases(self, simulator, ctx):
+        tracer = TelemetryService.get_tracer()
         for phase in simulator.pipeline:
             phase_name = phase.name
             if not simulator.check_circuit_breaker(phase_name):
                 continue
+            snapshot_before = ctx.physics.snapshot()
+            tracer.start_phase(phase_name, ctx)
             try:
-                self._run_single_safe(phase, ctx)
+                phase.run(ctx)
             except Exception as e:
                 simulator.handle_phase_crash(ctx, phase_name, e)
+            finally:
+                self._audit_flux(ctx, phase_name, snapshot_before, ctx.physics)
+                tracer.end_phase(phase_name, ctx, ctx)
         return ctx
 
-    def _run_single_safe(self, phase, target_ctx):
-        tracer = TelemetryService.get_tracer()
-        tracer.start_phase(phase.name, target_ctx)
-        current_packet = cast(PhysicsPacket, cast(object, target_ctx.physics))
-        wrapped_physics = PhysicsSandbox.create(current_packet)
-        target_ctx.physics = wrapped_physics
-        try:
-            phase.run(target_ctx)
-        finally:
-            target_ctx.physics = wrapped_physics.packet
-            for mod in wrapped_physics.get_modification_log():
-                val_old = mod.get("old", 0.0)
-                val_new = mod.get("new", 0.0)
-                reason = mod.get("reason", "UNKNOWN")
-                key = mod.get("key", "UNKNOWN")
-                if isinstance(val_old, (int, float)) and isinstance(
-                    val_new, (int, float)
-                ):
-                    target_ctx.record_flux(
-                        phase=phase.name,
-                        metric=key,
-                        initial=float(val_old),
-                        final=float(val_new),
-                        reason=reason,
-                    )
-            tracer.end_phase(phase.name, target_ctx, target_ctx)
+    def _audit_flux(self, ctx, phase, before, after):
+        if abs(before.voltage - after.voltage) > 0.01:
+            ctx.record_flux(
+                phase, "voltage", before.voltage, after.voltage, "PHASE_DELTA"
+            )
+        if abs(before.narrative_drag - after.narrative_drag) > 0.01:
+            ctx.record_flux(
+                phase,
+                "drag",
+                before.narrative_drag,
+                after.narrative_drag,
+                "PHASE_DELTA",
+            )
 
 
 class CycleSimulator:
