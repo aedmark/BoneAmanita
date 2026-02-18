@@ -1,0 +1,109 @@
+{
+    "PREFIXES":{
+        "heavy":[
+            "Burdened",
+            "Dense",
+            "Lead",
+            "Anchor",
+            "Iron",
+            "Gravitic",
+            "Sinking"
+        ],
+        "kinetic":[
+            "Fast",
+            "Darting",
+            "Flickering",
+            "Turbo",
+            "Manic",
+            "Restless"
+        ],
+        "thermal":[
+            "Burning",
+            "Molten",
+            "Fevered",
+            "Glowing",
+            "Searing"
+        ],
+        "abstract":[
+            "Conceptual",
+            "Imaginary",
+            "Platonic",
+            "Theoretical",
+            "Metaphorical"
+        ],
+        "constructive":[
+            "Structured",
+            "Binding",
+            "Tape",
+            "Woven",
+            "Layered"
+        ],
+        "void":[
+            "Null",
+            "Empty",
+            "Hollow",
+            "Silent",
+            "Missing"
+        ]
+    },
+    "BASES":{
+        "TOOL":[
+            "Wrench",
+            "Hammer",
+            "Scalpel",
+            "Pen",
+            "Brush",
+            "Lens",
+            "Compass"
+        ],
+        "JUNK":[
+            "Rock",
+            "String",
+            "Gum",
+            "Receipt",
+            "Battery",
+            "Can",
+            "Shard"
+        ],
+        "ARTIFACT":[
+            "Orb",
+            "Cube",
+            "Pyramid",
+            "Key",
+            "Mirror",
+            "Bone"
+        ]
+    },
+    "SUFFIXES":{
+        "heavy":[
+            "of Regret",
+            "of Gravity",
+            "of the Earth",
+            "of Weight"
+        ],
+        "kinetic":[
+            "of Speed",
+            "of Flight",
+            "of Panic",
+            "of the Wind"
+        ],
+        "thermal":[
+            "of Passion",
+            "of Anger",
+            "of the Sun",
+            "of Ignition"
+        ],
+        "abstract":[
+            "of Truth",
+            "of Meaning",
+            "of the Mind",
+            "of Logic"
+        ],
+        "void":[
+            "of Nothing",
+            "of Silence",
+            "of the Void",
+            "of Absence"
+        ]
+    }
+}
