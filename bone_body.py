@@ -228,8 +228,8 @@ class MitochondrialForge:
         voltage = getattr(physics_packet, "voltage", 0.0)
         raw_drag = getattr(physics_packet, "narrative_drag", 0.0)
         drag = max(0.0, min(MAX_ACCEPTED_DRAG, raw_drag))
-        base_demand = max(0.1, math.log1p(voltage) * 1.5)
-        raw_tax = (drag**DRAG_EXPONENT) * 0.5
+        drag_mult = getattr(BoneConfig, "SIGNAL_DRAG_MULTIPLIER", 1.0)
+        raw_tax = ((drag**DRAG_EXPONENT) * 0.5) * drag_mult
         cognitive_load_tax = min(5.0, raw_tax)
         pre_calc_cost = base_demand + cognitive_load_tax
         if pre_calc_cost > self.ANAEROBIC_THRESHOLD:

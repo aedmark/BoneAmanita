@@ -111,12 +111,14 @@ class GeodesicEngine:
         cfg = BoneConfig.PHYSICS
         GC = GeodesicConstants
         safe_volume = max(1, volume)
-        total_kinetic = masses["kinetic"] + masses["explosive"]
+        w_kinetic = getattr(cfg, "WEIGHT_KINETIC", 1.5)
         raw_tension_mass = (
             (masses["heavy"] * cfg.WEIGHT_HEAVY)
-            + (total_kinetic * cfg.WEIGHT_EXPLOSIVE)
+            + (masses["kinetic"] * w_kinetic)
+            + (masses["explosive"] * cfg.WEIGHT_EXPLOSIVE)
             + (masses["constructive"] * cfg.WEIGHT_CONSTRUCTIVE)
         )
+        total_kinetic = masses["kinetic"] + masses["explosive"]
         kinetic_gain = getattr(BoneConfig, "KINETIC_GAIN", 1.0)
         base_tension = (
             (raw_tension_mass / safe_volume) * GC.DENSITY_SCALAR * kinetic_gain

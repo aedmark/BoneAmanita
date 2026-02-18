@@ -862,12 +862,13 @@ class CognitionPhase(SimulationPhase):
                 current_h = max(0.0, self.eng.bio.biometrics.health)
             desperation = 1.0 - (current_h / max_h)
             learning_rate = getattr(BoneConfig, "PRIORITY_LEARNING_RATE", 1.0)
+            learn_mod = getattr(BoneConfig, "PRIORITY_LEARNING_RATE", 1.0)
             bury_msg, new_wells = self.eng.mind.mem.bury(
                 ctx.clean_words,
                 self.eng.tick_count,
                 resonance=ctx.physics.voltage,
                 desperation_level=desperation,
-                learning_mod=learning_rate,
+                learning_mod=learn_mod,
             )
             if bury_msg:
                 prefix = (

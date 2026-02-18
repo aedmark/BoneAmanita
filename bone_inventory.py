@@ -76,6 +76,7 @@ class GordonKnot:
             self.refusal_markers = set(data["REFUSAL_MARKERS"])
         if "LOOT_TRIGGERS" in data:
             self.loot_triggers = data["LOOT_TRIGGERS"]
+        self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
         self.ITEM_REGISTRY = data.get("ITEM_REGISTRY", {})
         for name, props in self.ITEM_REGISTRY.items():
             self.registry[name] = Item.from_dict(name, props)
@@ -202,27 +203,33 @@ class GordonKnot:
                 f"{Prisma.OCHRE}Gordon sighs. 'Too tired. Eat first.'{Prisma.RST}",
                 0.0,
             )
-        voltage = physics_ref.get("voltage", 0.0)
-        loot_table = self._get_loot_candidates(voltage)
+        loot_table = self._get_loot_candidates(physics_ref)
         if not loot_table:
             return False, "Gordon dug deep but found only lint.", cost
         found_item = random.choice(loot_table)
         msg = self.acquire(found_item)
         return True, msg, cost
 
-    def _get_loot_candidates(self, voltage: float) -> List[str]:
+    def _get_loot_candidates(self, physics: Dict) -> List[str]:
         candidates = []
+        voltage = physics.get("voltage", 0.0)
+        drag = physics.get("narrative_drag", 0.0)
+        psi = physics.get("psi", 0.0)
         all_keys = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
         for name in all_keys:
             item = self.get_item_data(name)
             if not item:
                 continue
             ctx = item.spawn_context
-            if ctx == "COMMON":
+            if ctx in ["COMMON", "STANDARD"]:
                 candidates.append(name)
             elif ctx == "VOLTAGE_HIGH" and voltage > 12.0:
                 candidates.append(name)
             elif ctx == "VOLTAGE_CRITICAL" and voltage > 18.0:
+                candidates.append(name)
+            elif ctx == "DRAG_HEAVY" and drag > 4.0:
+                candidates.append(name)
+            elif ctx == "PSI_HIGH" and psi > 0.6:
                 candidates.append(name)
         return candidates
 
@@ -236,6 +243,35 @@ class GordonKnot:
                     f"{Prisma.CYN}🎒 GORDON: 'I'll make space for {name}.'{Prisma.RST}",
                     "INV",
                 )
+
+    def synthesize_item(self, physics_vector: Dict[str, float]) -> str:
+        if not hasattr(self, "blueprints") or not self.blueprints:
+            self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
+            
+        dim_map = {
+            "STR": "heavy", "VEL": "kinetic", "PHI": "thermal", 
+            "PSI": "abstract", "ENT": "void", "BET": "constructive"
+        }
+        dom_dim = max(physics_vector, key=physics_vector.get) if physics_vector else "ENT"
+        archetype = dim_map.get(dom_dim, "void")
+        prefixes = self.blueprints.get("PREFIXES", {}).get(archetype, ["Strange"])
+        suffixes = self.blueprints.get("SUFFIXES", {}).get(archetype, ["of Mystery"])
+        base_cat = random.choice(["TOOL", "JUNK", "ARTIFACT"])
+        bases = self.blueprints.get("BASES", {}).get(base_cat, ["Object"])
+        prefix = random.choice(prefixes)
+        base = random.choice(bases)
+        suffix = random.choice(suffixes)
+        full_name = f"{prefix} {base} {suffix}"
+        clean_id = full_name.upper().replace(" ", "_")
+        item_data = {
+            "description": f"A {base.lower()} manifesting {archetype} properties.",
+            "function": "ARTIFACT",
+            "passive_traits": ["DYNAMIC"],
+            "value": round(physics_vector.get(dom_dim, 0.0) * 10, 1),
+            "spawn_context": "FORGED"
+        }
+        self.register_dynamic_item(clean_id, item_data)
+        return clean_id
 
     def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
         text = (user_text + " " + sys_text).lower()
@@ -291,5 +327,18 @@ class GordonKnot:
                     f"{Prisma.CYN}🛡️ REFLEX: {name} sacrificed to absorb voltage spike! (Voltage -> 12.0v){Prisma.RST}",
                 )
             if trigger == "DRIFT_CRITICAL" and drag > 6.0:
-                pass
+                self.safe_remove_item(name)
+                physics_ref["narrative_drag"] = 0.0
+                return (
+                    True,
+                    f"{Prisma.OCHRE}⚓ REFLEX: {name} deployed. Drag zeroed out.{Prisma.RST}"
+                )
+            kappa = physics_ref.get("kappa", 0.5)
+            if trigger == "KAPPA_CRITICAL" and kappa < 0.2:
+                self.safe_remove_item(name)
+                physics_ref["kappa"] = 0.8
+                return (
+                    True,
+                    f"{Prisma.GRN}🍕 REFLEX: {name} consumed. Structure restored.{Prisma.RST}"
+                )
         return False, None

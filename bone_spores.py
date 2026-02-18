@@ -539,6 +539,7 @@ class MycelialNetwork:
             "METABOLISM.ROS_GENERATION_FACTOR",
             "COUNCIL.FOOTNOTE_CHANCE",
             "COUNCIL.MANIC_VOLTAGE_TRIGGER",
+            "GRAVITY_WELL_THRESHOLD",
             "PRIORITY_LEARNING_RATE",
         }
         for key, value in data["config_mutations"].items():

@@ -284,7 +284,9 @@ class BoneAmanita:
             self.events.log(f"Prompt Template '{prompt_key}' not found.", "WARN")
 
     def get_avg_voltage(self):
-        hist = self.phys.observer.voltage_history
+        observer = getattr(self.phys, "observer", self.phys)
+        hist = getattr(observer, "voltage_history", [])
+        
         if not hist:
             return 0.0
         return sum(hist) / len(hist)
@@ -619,3 +621,6 @@ if __name__ == "__main__":
                     typewriter("\n" + content)
                 else:
                     typewriter(res["ui"])
+            if res.get("type") == "DEATH":
+                print(f"\n{Prisma.GRY}[SESSION TERMINATED]{Prisma.RST}")
+                break
