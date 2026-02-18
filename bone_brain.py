@@ -1010,111 +1010,75 @@ class DreamEngine:
     def __init__(self, events, lore_ref):
         self.events = events
         self.lore = lore_ref
-        dreams_data = self.lore.get("dreams") or {}
-        self.PROMPTS = dreams_data.get("PROMPTS", ["{A} -> {B}?"])
-        self.NIGHTMARES = dreams_data.get("NIGHTMARES", {})
-        self.VISIONS = dreams_data.get("VISIONS", ["Static."])
-        self.SURREAL_PROMPTS = dreams_data.get(
-            "SURREAL", ["You are {A}, but you are also {B}. You are dancing with {C}."]
-        )
-        self.CONSTRUCTIVE_PROMPTS = dreams_data.get(
-            "CONSTRUCTIVE",
-            ["You are building a cathedral out of {A}. The mortar is {B}."],
-        )
+        self.dream_lore = self.lore.get("DREAMS") or {}
 
     def enter_rem_cycle(
         self, soul_snapshot: Dict[str, Any], bio_state: Dict[str, Any]
     ) -> Tuple[str, Dict[str, float]]:
-        voltage = bio_state.get("voltage", 0.0)
-        trauma = bio_state.get("trauma_vector", 0.0)
-        memories = soul_snapshot.get("core_memories", [])
-        dream_mode = "LUCID"
-        if trauma > 40.0:
-            dream_mode = "NIGHTMARE"
-        elif voltage > 15.0:
-            dream_mode = "MANIC"
-        elif voltage < 5.0:
-            dream_mode = "DORMANT"
-        anchors = []
-        for mem in memories:
-            if isinstance(mem, dict):
-                anchors.extend(mem.get("trigger_words", []))
+        chem = bio_state.get("chem", {})
+        cortisol = chem.get("cortisol", 0.0)
+        trauma_vec = bio_state.get("trauma_vector", {})
+        dream_type = "NORMAL"
+        subtype = "visions"
+        if cortisol > 0.6:
+            dream_type = "NIGHTMARE"
+            if trauma_vec.get("THERMAL", 0) > 0:
+                subtype = "THERMAL"
+            elif trauma_vec.get("CRYO", 0) > 0:
+                subtype = "CRYO"
+            elif trauma_vec.get("SEPTIC", 0) > 0:
+                subtype = "SEPTIC"
             else:
-                anchors.extend(getattr(mem, "trigger_words", []))
-        if not anchors:
-            anchors = ["static", "void", "humming"]
-        primary_symbol = random.choice(anchors).upper()
-        abstract_concept = "ENTROPY"
-        if hasattr(self, "lex") and self.lex:
-            abstract_concept = self.lex.get_random_word("ABSTRACT") or "SILENCE"
-        if dream_mode == "NIGHTMARE":
-            dream_log = (
-                f"{Prisma.RED}[REM]: The {primary_symbol} is rotting. "
-                f"It smells like {abstract_concept.lower()} and decay.{Prisma.RST}"
-            )
-            return dream_log, {"adrenaline": 0.2, "narrative_drag": -1.0}
-        elif dream_mode == "MANIC":
-            dream_log = (
-                f"{Prisma.MAG}[REM]: {primary_symbol} refracting through a prism of {abstract_concept}. "
-                f"Geometry is screaming.{Prisma.RST}"
-            )
-            return dream_log, {"stamina": -5.0, "voltage": -2.0}
-        elif dream_mode == "DORMANT":
-            dream_log = f"{Prisma.GRY}[REM]: Deep waters. The {primary_symbol} sinks slowly.{Prisma.RST}"
-            return dream_log, {"health": 5.0, "stamina": 10.0}
-        else:
-            dream_log = (
-                f"{Prisma.CYN}[REM]: You are holding the {primary_symbol}. "
-                f"It turns into {abstract_concept}. You understand why.{Prisma.RST}"
-            )
-            return dream_log, {"truth_ratio": 0.1}
+                subtype = "BARIC"
+        elif chem.get("dopamine", 0) > 0.6:
+            dream_type = "LUCID"
+            subtype = "SURREAL"
+        elif chem.get("oxytocin", 0) > 0.6:
+            dream_type = "HEALING"
+            subtype = "CONSTRUCTIVE"
+        residue = soul_snapshot.get("obsession", {}).get("title", "The Void")
+        dream_text = self._weave_dream(
+            residue, "Context", "Bridge", dream_type, subtype
+        )
+        shift = (
+            {"cortisol": -0.2, "dopamine": 0.1}
+            if dream_type != "NIGHTMARE"
+            else {"cortisol": 0.1}
+        )
+        return dream_text, shift
 
     def _weave_dream(
         self, residue: str, context: str, bridge: str, dream_type: str, subtype: str
     ) -> str:
-        if dream_type == "NIGHTMARE":
-            templates = self.NIGHTMARES.get(
-                subtype, self.NIGHTMARES.get("BARIC", ["{ghost} is heavy."])
-            )
-            template = random.choice(templates)
-            return template.format(ghost=residue)
-        if dream_type == "SURREAL":
-            template = random.choice(self.SURREAL_PROMPTS)
-            return template.format(A=residue, B=context, C=bridge)
-        if dream_type == "CONSTRUCTIVE":
-            template = random.choice(self.CONSTRUCTIVE_PROMPTS)
-            return template.format(A=residue, B=context, C=bridge)
-        if dream_type == "LUCID":
-            return f"You hold '{residue}' in your hand. You control its shape. It becomes '{context}'."
-        template = random.choice(self.PROMPTS)
-        return template.format(A=residue, B=context)
+        sources = self.dream_lore.get(subtype.upper(), [])
+        if not sources and dream_type == "NIGHTMARE":
+            nightmares = self.dream_lore.get("NIGHTMARES", {})
+            sources = nightmares.get(subtype.upper(), nightmares.get("BARIC", []))
+        if not sources:
+            sources = self.dream_lore.get("VISIONS", ["You stare into the static."])
+        template = random.choice(sources)
+        filler_a = "The Mountain"
+        filler_b = "The Sea"
+        filler_c = "The Machine"
+        return template.format(ghost=residue, A=residue, B=filler_a, C=filler_b)
 
     def hallucinate(
         self, vector: Dict[str, float], trauma_level: float = 0.0
     ) -> Tuple[str, float]:
-        dims = [k for k, v in vector.items() if v > 0.3]
-        if not dims:
-            dims = ["VOID"]
-        val_a = dims[0]
-        val_b = (
-            "ENTROPY"
-            if trauma_level > 5.0
-            else (dims[1] if len(dims) > 1 else "SILENCE")
-        )
-        if "DEL" in dims:
-            return f"The concept of {val_a} turns into a balloon and floats away.", 5.0
-        if trauma_level > 5.0:
-            cat = "SEPTIC" if vector.get("ENT", 0) > 0.5 else "BARIC"
-            template = random.choice(
-                self.NIGHTMARES.get(
-                    cat, self.NIGHTMARES.get("BARIC", ["{ghost} is heavy."])
-                )
-            )
-            content = template.format(ghost=val_a)
-        else:
-            template = random.choice(self.PROMPTS)
-            content = template.format(A=val_a, B=val_b)
-        return content, 0.0
+        category = "SURREAL"
+        if trauma_level > 0.5:
+            category = "NIGHTMARES"
+        templates = self.dream_lore.get(category, [])
+        if category == "NIGHTMARES":
+            flat_list = []
+            for k, v in templates.items():
+                flat_list.extend(v)
+            templates = flat_list
+        if not templates:
+            return "The walls breathe.", 0.1
+        txt = random.choice(templates)
+        txt = txt.format(ghost="The Glitch", A="The Code", B="The Flesh", C="The Light")
+        return f"{Prisma.MAG}👁️ HALLUCINATION: {txt}{Prisma.RST}", 0.2
 
     def run_defragmentation(self, memory_system: Any, limit: int = 5) -> str:
         if not hasattr(memory_system, "graph") or not memory_system.graph:

@@ -662,9 +662,24 @@ class TheOroboros:
             pass
 
     def crystallize(self, cause_of_death: str, soul: NarrativeSelf):
+        death_data = LoreManifest.get_instance().get("DEATH") or {}
+        verdicts = death_data.get("VERDICTS", {})
+        def get_verdict_key(cause):
+            if cause == "TOXICITY":
+                return "TOXIC"
+            if cause == "BOREDOM":
+                return "BORING"
+            if cause == "STARVATION":
+                return "LIGHT"
+            return "HEAVY"
         new_scars = []
         if entry := self.DEATH_SCARS.get(cause_of_death):
-            new_scars.append(Scar(*entry))
+            name, stat, val, default_desc = entry
+            desc = default_desc
+            v_key = get_verdict_key(cause_of_death)
+            if v_key in verdicts and verdicts[v_key]:
+                desc = random.choice(verdicts[v_key])
+            new_scars.append(Scar(name, stat, val, desc))
         new_myths = []
         if soul.core_memories:
             strongest = max(soul.core_memories, key=lambda m: m.impact_voltage)

@@ -1,5 +1,4 @@
-import random, json
-import re
+import random, json, re
 from collections import deque, Counter
 from typing import Dict, Tuple, Optional, Any
 from bone_core import LoreManifest
@@ -160,6 +159,18 @@ class TheBureau:
             "log": f"BUREAUCRACY: Filed {selected_form} against {origin}. Chaos Tax: -{tax:.1f} ATP.",
             "atp_gain": -tax,
         }
+
+    def sanitize(self, text: str) -> Tuple[str, Optional[str]]:
+        dummy_physics = type(
+            "obj",
+            (object,),
+            {"voltage": 0.0, "raw_text": text, "clean_words": text.split()},
+        )
+        dummy_bio = {"health": 100.0}
+        result = self.audit(dummy_physics, dummy_bio, origin="SYSTEM")
+        if result:
+            return text, result.get("log")
+        return text, None
 
 
 class TherapyProtocol:

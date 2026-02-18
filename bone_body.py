@@ -58,6 +58,15 @@ class BioSystem:
         if self.events and hasattr(self.events, "subscribe"):
             self.events.subscribe("NEURAL_STATE_SHIFT", self._on_neural_shift)
             self.events.log("[BIO]: Vagus Nerve connected.", "SYS")
+        narrative = LoreManifest.get_instance().get("BIO_NARRATIVE") or {}
+        if self.mito:
+            self.mito.narrative_map = narrative.get("MITO", {})
+        if self.endo:
+            self.endo.narrative_map = narrative.get("CIRCADIAN", {})
+            self.endo.glimmer_map = narrative.get("GLIMMER", {})
+        if self.governor:
+            self.governor.text_map = narrative.get("GOVERNOR", {})
+            self.governor.tax_map = narrative.get("TAX", {})
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -160,6 +169,22 @@ class MitochondrialForge:
                 "GRINDING": "Metabolic gears are grinding.",
             },
         )
+
+    def get_status_report(self) -> str:
+        narrative = getattr(self, "narrative_map", {})
+        if not narrative:
+            return "Metabolism Nominal."
+        atp = self.state.atp_pool
+        if atp < 5.0:
+            key = "NECROSIS"
+        elif atp < 20.0:
+            key = "GRINDING"
+        elif self.state.ros_buildup > 80.0:
+            key = "APOPTOSIS"
+        else:
+            key = "NOMINAL"
+        template = narrative.get(key, "Status Unknown.")
+        return template.format(cost=0.0, pool=atp)
 
     def adjust_atp(self, delta: float, reason: str = ""):
         old = self.state.atp_pool
@@ -661,6 +686,8 @@ class EndocrineSystem:
     def calculate_circadian_bias(self) -> Tuple[Dict[str, float], Optional[str]]:
         hour = time.localtime().tm_hour
         circ = self.narrative_data.get("CIRCADIAN", {})
+        narrative = getattr(self, "narrative_map", {})
+        msg = narrative.get(circ, f"Cycle: {circ}")
         schedule = [
             (6, 10, {"COR": 0.1}, "DAWN", "Sunrise."),
             (10, 18, {"SER": 0.1}, "SOLAR", "High Noon."),

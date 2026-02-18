@@ -441,8 +441,15 @@ class CycleReporter:
             self.renderer = self.renderers[mode]
             self.current_mode = mode
             return
+        strunk_instance = None
+        if hasattr(self.eng, "village") and isinstance(self.eng.village, dict):
+            strunk_instance = self.eng.village.get("bureau")
         self.renderer = get_renderer(
-            self.eng, self.vsl_chroma, None, getattr(self, "valve", None), mode=mode
+            self.eng,
+            self.vsl_chroma,
+            strunk_instance,
+            getattr(self, "valve", None),
+            mode=mode,
         )
         self.renderers[mode] = self.renderer
         self.current_mode = mode

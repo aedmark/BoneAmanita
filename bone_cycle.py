@@ -166,6 +166,10 @@ class MaintenancePhase(SimulationPhase):
             blooms = self.eng.town_hall.tend_garden(ctx.clean_words) or []
             for bloom in blooms:
                 ctx.log(bloom)
+            if self.eng.tick_count % 5 == 0:
+                weather_report = self.eng.town_hall.consult_almanac(ctx.physics)
+                if weather_report:
+                    ctx.log(f"{Prisma.CYN}{weather_report}{Prisma.RST}")
             is_census_due = self.eng.tick_count > 0 and self.eng.tick_count % 20 == 0
             if is_census_due or "census" in ctx.clean_words:
                 report = self.eng.town_hall.conduct_census(
