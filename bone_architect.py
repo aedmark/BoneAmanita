@@ -30,7 +30,6 @@ class SystemEmbryo:
     soul_legacy: Optional[Dict] = None
     continuity: Optional[Dict] = None
 
-
 SAFE_BIO_DEFAULTS = {
     "is_alive": True,
     "atp": 10.0,
