@@ -99,5 +99,31 @@
             "NARRATOR",
             "THE OBSERVER"
         ]
-    }
+    },
+    "_META_RESONANCE_": [
+        {
+            "trigram": "ZHEN",
+            "lens": "THE MANIC",
+            "result": "THE STORM_CHASER",
+            "msg": "Thunder resonates with the mania. Destiny accelerates the signal."
+        },
+        {
+            "trigram": "LI",
+            "lens": "THE POET",
+            "result": "THE ILLUMINATOR",
+            "msg": "The Fire of Heaven ignites the Poet's vision."
+        },
+        {
+            "trigram": "KAN",
+            "lens": "THE VOID",
+            "result": "THE DEEP_DIVER",
+            "msg": "The Water of the Abyss pulls you deeper into the void."
+        },
+        {
+            "trigram": "QIAN",
+            "lens": "THE ENGINEER",
+            "result": "THE ARCHITECT",
+            "msg": "Heavenly alignment grants the Engineer perfect clarity."
+        }
+    ]
 }
