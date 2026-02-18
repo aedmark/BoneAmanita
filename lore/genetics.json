@@ -4,7 +4,7 @@
             "trait":"DENSITY",
             "mod":{
                 "SIGNAL_DRAG_MULTIPLIER":1.5,
-                "MAX_VOLTAGE":30.0,
+                "PHYSICS.VOLTAGE_MAX":30.0,
                 "PHYSICS.WEIGHT_HEAVY":3.0
             },
             "lexicon":[

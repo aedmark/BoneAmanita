@@ -539,6 +539,7 @@ class MycelialNetwork:
             "METABOLISM.ROS_GENERATION_FACTOR",
             "COUNCIL.FOOTNOTE_CHANCE",
             "COUNCIL.MANIC_VOLTAGE_TRIGGER",
+            "PRIORITY_LEARNING_RATE",
         }
         for key, value in data["config_mutations"].items():
             if key in SAFE_MUTATIONS:
@@ -675,7 +676,7 @@ class MycelialNetwork:
         ]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BONEAMANITA_15.5.7",
+            "genome": "BONEAMANITA_15.6.1",
             "session_id": self.session_id,
             "parent_id": self.session_id,
             "parent_id": self.session_id,
@@ -959,6 +960,7 @@ class LiteraryReproduction:
             ("PHYSICS.VOLTAGE_MAX", 10.0, 100.0, 0.2),
             ("BIO.REWARD_MEDIUM", 0.01, 1.0, 0.2),
             ("COUNCIL.MANIC_VOLTAGE_TRIGGER", 10.0, 50.0, 0.1),
+            ("PRIORITY_LEARNING_RATE", 0.5, 5.0, 0.15),
         ]
         for key, min_v, max_v, chance in MUTATION_TABLE:
             if random.random() < chance:

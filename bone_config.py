@@ -144,6 +144,7 @@ class BoneConfig:
     KINETIC_GAIN = 1.0
     CRITICAL_ROS_LIMIT = 100.0
     MAX_MEMORY_CAPACITY = 100
+    PRIORITY_LEARNING_RATE = 1.0
     ZONE_THRESHOLDS = {"LABORATORY": 1.5, "COURTYARD": 0.8}
     TOXIN_WEIGHT = 1.0
     ANTIGENS = ["basically", "actually", "literally", "utilize"]
