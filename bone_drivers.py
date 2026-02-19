@@ -128,7 +128,8 @@ class EnneagramDriver:
         self.stability_counter = 0
         self.HYSTERESIS_THRESHOLD = 3
 
-    def _get_phys_attr(self, physics, key, default=None):
+    @staticmethod
+    def _get_phys_attr(physics, key, default=None):
         if isinstance(physics, dict):
             return physics.get(key, default)
         return getattr(physics, key, default)
@@ -330,10 +331,12 @@ class BoneConsultant:
         self.liminal_mod = LiminalModule()
         self.syntax_mod = SyntaxModule()
 
-    def engage(self):
+    @staticmethod
+    def engage():
         return "VSL HYPERVISOR: LATTICE REVEALED."
 
-    def disengage(self):
+    @staticmethod
+    def disengage():
         return "VSL HYPERVISOR: RETURNING TO SURFACE MODE."
 
     def update_coordinates(

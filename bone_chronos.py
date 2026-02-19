@@ -93,10 +93,8 @@ class ChronosKeeper:
         try:
             print(f"{Prisma.GRY}[MEMORY]: Freezing State...{Prisma.RST}")
             mito_traits = {}
-            if hasattr(self.eng.bio.mito, "state_ref"):
-                mito_traits = self.eng.bio.mito.state_ref.__dict__
-            else:
-                mito_traits = self.eng.bio.mito.adapt(0)
+            if hasattr(self.eng.bio.mito, "state"):
+                mito_traits = self.eng.bio.mito.state.__dict__
             self.eng.mind.mem.save(
                 health=self.eng.health,
                 stamina=self.eng.stamina,
@@ -168,5 +166,6 @@ class ChronosKeeper:
             pass
         return os.path.join(self.CRASH_DIR, f"{prefix}_{int(time.time())}.json")
 
-    def emergency_dump(self, exit_cause="UNKNOWN") -> str:
+    @staticmethod
+    def emergency_dump(exit_cause="UNKNOWN") -> str:
         return f"✔ Emergency Dump: {exit_cause}"

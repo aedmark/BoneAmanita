@@ -39,7 +39,8 @@ class TheAkashicRecord:
             payload.get("ingredient"), payload.get("catalyst"), payload.get("result")
         )
 
-    def _extract_dominant_trigram(self, physics: Dict) -> str:
+    @staticmethod
+    def _extract_dominant_trigram(physics: Dict) -> str:
         vector = physics.get("vector", {})
         if not vector:
             return "ENT"
@@ -75,8 +76,9 @@ class TheAkashicRecord:
                                 "msg": resonance["msg"]
                             })
 
+    @staticmethod
     def calculate_manifold_shift(
-        self, theta: str, e: Dict[str, float]
+            theta: str, e: Dict[str, float]
     ) -> Dict[str, float]:
         bias = 0.0
         scalar = 1.0
@@ -238,7 +240,7 @@ class TheAkashicRecord:
             return
         roots = sorted([lens_a.replace("THE ", ""), lens_b.replace("THE ", "")])
         new_name = f"THE {roots[0]}-{roots[1]}"
-        existing_lenses = self.lore.get("LENSES", {})
+        existing_lenses = self.lore.get("LENSES") or {}
         if new_name in existing_lenses:
             return
 
@@ -281,7 +283,7 @@ class TheAkashicRecord:
             "result": result_item,
             "msg": f"The {ingredient} resonates with {catalyst} energy, transforming into {result_item}.",
         }
-        current_recipes = self.lore.get("GORDON", {}).get("RECIPES", [])
+        current_recipes = (self.lore.get("GORDON") or {}).get("RECIPES", [])
         if not any(
             r["ingredient"] == ingredient and r["catalyst_category"] == catalyst
             for r in current_recipes

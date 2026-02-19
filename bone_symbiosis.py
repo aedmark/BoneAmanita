@@ -123,7 +123,6 @@ class SymbiontVoice:
 def get_symbiont(type_name):
     if type_name in _VOICE_CACHE:
         return _VOICE_CACHE[type_name]
-    voice = None
     if type_name == "LICHEN":
         voice = SymbiontVoice(
             "LICHEN",
@@ -294,7 +293,8 @@ class SymbiosisManager:
             mods["simplify_instruction"] = True
         return mods
 
-    def generate_anchor(self, current_state: Dict) -> str:
+    @staticmethod
+    def generate_anchor(current_state: Dict) -> str:
         soul = current_state.get("soul", {})
         phys = current_state.get("physics", {})
         return CoherenceAnchor.compress_anchor(soul, phys)

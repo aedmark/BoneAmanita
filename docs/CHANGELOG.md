@@ -1,5 +1,11 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.6.2 "THE LINT BRUSH**
+
+*Lint free!
+
+---
+
 ### **BONEAMANITA v15.6.1 "THE SURGICAL STRIKE" (ALIGNMENT)**
 
 _“The map is not the territory... until we force them to agree.”_

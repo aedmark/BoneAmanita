@@ -7,8 +7,9 @@ class Projector:
     def __init__(self):
         self.width = 80
 
+    @staticmethod
     def _extract(
-        self, physics_obj: Any, field: str, sub_field: str, default: Any = 0.0
+            physics_obj: Any, field: str, sub_field: str, default: Any = 0.0
     ):
         if hasattr(physics_obj, sub_field):
             return getattr(physics_obj, sub_field)
@@ -86,7 +87,8 @@ class Projector:
             f"{Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})"
         )
 
-    def _render_lattice_strip(self, vsl_data: Dict) -> str:
+    @staticmethod
+    def _render_lattice_strip(vsl_data: Dict) -> str:
         if not vsl_data:
             return ""
         e = vsl_data.get("E", 0.0)
@@ -124,7 +126,8 @@ class Projector:
             f"BIO_DUMP: {str(data.get('bio', {}))[:60]}..."
         )
 
-    def _mini_bar(self, val, max_val, width, color):
+    @staticmethod
+    def _mini_bar(val, max_val, width, color):
         if max_val == 0:
             return ""
         ratio = max(0.0, min(1.0, val / max_val))
@@ -232,7 +235,8 @@ class GeodesicRenderer:
                 {"physics": physics}, data_ctx, mind_tuple, reality_depth=current_depth
             )
 
-    def render_soul_strip(self, soul_ref) -> str:
+    @staticmethod
+    def render_soul_strip(soul_ref) -> str:
         if not soul_ref:
             return ""
         if not soul_ref.current_obsession:
@@ -241,7 +245,7 @@ class GeodesicRenderer:
             f"{Prisma.GRY}--- Obsession: {soul_ref.current_obsession} ---{Prisma.RST}"
         )
 
-    def compose_logs(self, logs: list, events: list, tick: int = 0) -> List[str]:
+    def compose_logs(self, logs: list, events: list, _tick: int = 0) -> List[str]:
         all_logs = [str(l) for l in logs if l is not None]
         for e in events:
             if e and e.get("text"):
@@ -494,7 +498,8 @@ class CycleReporter:
             f"{qualia.color_code}♦ SENSATION: {qualia.somatic_sensation} [{qualia.tone}]{Prisma.RST}",
         )
 
-    def _inject_flux_readout(self, ctx):
+    @staticmethod
+    def _inject_flux_readout(ctx):
         if not ctx.flux_log:
             return
         significant = []

@@ -31,7 +31,7 @@ class SystemEmbryo:
     continuity: Optional[Dict] = None
 
 
-SAFE_BIO_DEFAULTS = {
+SAFE_BIO_DEFAULTS: Dict[str, Any] = {
     "is_alive": True,
     "atp": 10.0,
     "respiration": "NECROSIS",
@@ -109,12 +109,14 @@ class ViralTracer:
         self.memory = memory_ref
         self.active_loops = []
 
-    def inject(self, start_node: str) -> Optional[List[str]]:
+    @staticmethod
+    def inject(start_node: str) -> Optional[List[str]]:
         if random.random() < 0.05:
             return [start_node, "echo", "void", start_node]
         return None
 
-    def psilocybin_rewire(self, loop_path: List[str]) -> str:
+    @staticmethod
+    def psilocybin_rewire(loop_path: List[str]) -> str:
         return f"Rewired logic loop: {'->'.join(loop_path)}"
 
 

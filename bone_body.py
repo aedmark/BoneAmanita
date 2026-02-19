@@ -688,8 +688,6 @@ class EndocrineSystem:
     def calculate_circadian_bias(self) -> Tuple[Dict[str, float], Optional[str]]:
         hour = time.localtime().tm_hour
         circ = self.narrative_data.get("CIRCADIAN", {})
-        narrative = getattr(self, "narrative_map", {})
-        msg = narrative.get(circ, f"Cycle: {circ}")
         schedule = [
             (6, 10, {"COR": 0.1}, "DAWN", "Sunrise."),
             (10, 18, {"SER": 0.1}, "SOLAR", "High Noon."),
@@ -859,7 +857,7 @@ class EndocrineSystem:
             state["glimmer_msg"] = glimmer_msg
         return state
 
-    def get_state(self) -> Dict[str, float]:
+    def get_state(self) -> Dict[str, Any]:
         return {
             "DOP": round(self.dopamine, 2),
             "OXY": round(self.oxytocin, 2),

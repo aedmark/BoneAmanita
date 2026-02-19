@@ -125,8 +125,8 @@ class BoneConfig:
         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2},
     }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "15.6.1"
-    VERBOSE_LOGGING = False
+    VERSION = "15.6.2"
+    VERBOSE_LOGGING = True
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
     MAX_ATP = 100.0
@@ -155,7 +155,6 @@ class BoneConfig:
         "lm_studio": "http://127.0.0.1:1234/v1/chat/completions",
         "mock": "N/A",
     }
-    VERBOSE_LOGGING = True
     PROVIDER = "ollama"
     BASE_URL = None
     API_KEY = "ollama"

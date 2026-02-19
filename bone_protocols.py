@@ -178,12 +178,17 @@ class TheBureau:
         if not action:
             return text
         if action == "KEEP_TAIL":
-            if match.groups():
-                return match.group(match.lastindex).strip()
+            idx = match.lastindex
+            if idx is not None:
+                segment = match.group(idx)
+                if isinstance(segment, str):
+                    return segment.strip()
         elif action == "STRIP_PREFIX":
             if len(match.groups()) >= 3:
-                prefix = match.group(1) or ""
-                suffix = match.group(3) or ""
+                p_val = match.group(1)
+                s_val = match.group(3)
+                prefix = p_val if isinstance(p_val, str) else ""
+                suffix = s_val if isinstance(s_val, str) else ""
                 if not prefix.strip() and suffix:
                     suffix = suffix[0].upper() + suffix[1:]
                 return f"{prefix}{suffix}".strip()

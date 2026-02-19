@@ -65,11 +65,11 @@ class CommandStateInterface:
                 self.eng.town_hall, "Cartographer"
             ):
                 atlas_data = self.eng.town_hall.Cartographer.export_atlas()
-            mito_traits = None
+            mito_traits = {}
             antibodies = None
             if hasattr(self.eng, "bio"):
-                if hasattr(self.eng.bio, "mito"):
-                    mito_traits = self.eng.bio.mito.adapt(0)
+                if hasattr(self.eng.bio, "mito") and hasattr(self.eng.bio.mito, "state"):
+                    mito_traits = self.eng.bio.mito.state.__dict__
                 if hasattr(self.eng.bio, "immune"):
                     antibodies = list(self.eng.bio.immune.active_antibodies)
             return self.eng.mind.mem.save(
@@ -128,7 +128,7 @@ class ResourceTax:
     def __init__(self, state: CommandStateInterface):
         self.state = state
 
-    def levy(self, context: str, costs: Dict[str, float]) -> bool:
+    def levy(self, _context: str, costs: Dict[str, float]) -> bool:
         stamina_cost = costs.get("stamina", 0.0)
         atp_cost = costs.get("atp", 0.0)
         if self.state.get_resource("stamina") < stamina_cost:
@@ -179,9 +179,9 @@ class CommandProcessor:
         self,
         engine,
         prisma_ref,
-        lexicon_ref=None,
+        _lexicon_ref=None,
         config_ref=None,
-        cartographer_ref=None,
+        _cartographer_ref=None,
     ):
         real_config = config_ref if config_ref else getattr(engine, "config", None)
         self.interface = CommandStateInterface(engine, prisma_ref, real_config)
@@ -245,7 +245,7 @@ class CommandProcessor:
 
     def _cmd_help(self, _parts):
         lines = [
-            f"\n{self.P.CYN}/// BONEAMANITA 15.6.1 TERMINAL ///{self.P.RST}",
+            f"\n{self.P.CYN}/// BONEAMANITA 15.6.2 TERMINAL ///{self.P.RST}",
             f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n",
         ]
         structure = {
@@ -383,10 +383,10 @@ class CommandProcessor:
     def _cmd_reload(self, parts):
         if len(parts) > 1:
             target = parts[1].upper()
-            TheLore.flush_cache(target)
+            LoreManifest.get_instance().flush_cache(target)
             self.interface.log(f"Reloaded {target}.")
         else:
-            TheLore.flush_cache()
+            LoreManifest.get_instance().flush_cache()
             self.interface.log("Reloaded all Lore.")
         return True
 

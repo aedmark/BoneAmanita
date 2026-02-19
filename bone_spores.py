@@ -1,10 +1,15 @@
-import json, os, random, time, tempfile
+import json
+import os
+import random
+import tempfile
+import time
 from collections import deque
-from typing import List, Tuple, Optional, Dict, Any, Set
-from bone_lexicon import LexiconStore, LexiconService
-from bone_core import EventBus, LoreManifest, BoneJSONEncoder
-from bone_types import Prisma
+from typing import List, Tuple, Optional, Dict
+
 from bone_config import BoneConfig
+from bone_core import EventBus, LoreManifest, BoneJSONEncoder
+from bone_lexicon import LexiconService
+from bone_types import Prisma
 
 
 def _access_config_path(root, path, value=None, set_mode=False):
@@ -62,7 +67,8 @@ class LocalFileSporeLoader:
                 os.remove(temp_path)
             return None
 
-    def load_spore(self, filepath):
+    @staticmethod
+    def load_spore(filepath):
         if not os.path.exists(filepath):
             print(f"{Prisma.RED}[LOADER] File not found: {filepath}{Prisma.RST}")
             return None
@@ -88,7 +94,8 @@ class LocalFileSporeLoader:
                 continue
         return sorted(files, key=lambda x: x[1], reverse=True)
 
-    def delete_spore(self, filepath):
+    @staticmethod
+    def delete_spore(filepath):
         try:
             os.remove(filepath)
             return True
@@ -337,8 +344,7 @@ class MycelialNetwork:
                 logs.append(chorus_log)
         return logs
 
-    def _poll_chorus(self, clean_words: list, voltage: float) -> Optional[str]:
-        active_voices = []
+    def _poll_chorus(self, clean_words: list, _voltage: float) -> Optional[str]:
         if self.events:
             pass
         total_voltage_boost = 0.0
@@ -440,7 +446,8 @@ class MycelialNetwork:
         new_wells = self._detect_new_wells(valuable, tick)
         return log_msg, ([victim] if victim else []) + new_wells
 
-    def _filter_valuable_matter(self, words: List[str]) -> List[str]:
+    @staticmethod
+    def _filter_valuable_matter(words: List[str]) -> List[str]:
         valuable = []
         for w in words:
             if len(w) <= 4 and w in LexiconService.SOLVENTS:
@@ -475,20 +482,19 @@ class MycelialNetwork:
 
     def _check_echo_well(self, node):
         if node in self.graph:
-            data = self.graph[node]
             mass = self.calculate_mass(node)
             if mass > 8.0:
-                return (2.0, 1.5)
+                return 2.0, 1.5
             elif mass > 4.0:
-                return (0.5, 0.5)
-        return (0.0, 0.0)
+                return 0.5, 0.5
+        return 0.0, 0.0
 
-    def _load_seeds(self):
+    @staticmethod
+    def _load_seeds():
         from bone_village import ParadoxSeed
-
         loaded_seeds = []
         try:
-            raw_seeds = TheLore.get("seeds") or []
+            raw_seeds = LoreManifest.get_instance().get("seeds") or []
             for item in raw_seeds:
                 q = item.get("question", "Undefined Paradox")
                 t = set(item.get("triggers", []))
@@ -647,7 +653,6 @@ class MycelialNetwork:
         world_atlas=None,
         village_data=None,
     ):
-        base_trauma = (BoneConfig.MAX_HEALTH - health) / BoneConfig.MAX_HEALTH
         final_vector = {k: min(1.0, v) for k, v in trauma_accum.items()}
         top_joy = sorted(joy_history, key=lambda x: x["resonance"], reverse=True)[:3]
         joy_legacy_data = None
@@ -665,7 +670,6 @@ class MycelialNetwork:
                     filtered_edges[target] = round(weight, 2)
             if filtered_edges:
                 core_graph[k] = {"edges": filtered_edges, "last_tick": 0}
-        temp_meta = {"final_health": health}
         temp_trauma = {k: min(1.0, v) for k, v in trauma_accum.items()}
         future_seed_q = self._generate_future_seed(
             temp_health=health, trauma_vec=temp_trauma
@@ -677,9 +681,8 @@ class MycelialNetwork:
         ]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BONEAMANITA_15.6.1",
+            "genome": "BONEAMANITA_15.6.2",
             "session_id": self.session_id,
-            "parent_id": self.session_id,
             "parent_id": self.session_id,
             "meta": {
                 "timestamp": time.time(),
@@ -702,7 +705,8 @@ class MycelialNetwork:
         }
         return self.loader.save_spore(self.filename, data)
 
-    def _generate_future_seed(self, temp_health, trauma_vec) -> str:
+    @staticmethod
+    def _generate_future_seed(temp_health, trauma_vec) -> str:
         condition = "BALANCED"
         max_trauma = max(trauma_vec, key=trauma_vec.get) if trauma_vec else "NONE"
         if trauma_vec.get(max_trauma, 0) > 0.6 or temp_health < 30:
@@ -773,7 +777,7 @@ class ImmuneMycelium:
         self.color = Prisma.CYN
         self.archetypes = {"constructive", "kinetic", "abstract", "code", "system"}
 
-    def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
+    def opine(self, clean_words: list, _voltage: float) -> Tuple[float, str]:
         hits = sum(1 for w in clean_words if w in self.archetypes)
         score = (hits / max(1, len(clean_words))) * 10.0
         comment = "Scanning for structural integrity..."
@@ -904,11 +908,9 @@ class BioLichen:
         msgs = []
         if hasattr(phys, "counts"):
             counts = phys.counts
-            voltage = getattr(phys, "voltage", 0.0)
             drag = getattr(phys, "narrative_drag", 0.0)
         else:
             counts = phys.get("counts", {})
-            voltage = phys.get("voltage", 0.0)
             drag = phys.get("narrative_drag", 0.0)
         light = counts.get("photo", 0)
         sugar = 0.0
@@ -936,7 +938,7 @@ class LiteraryReproduction:
     @classmethod
     def load_genetics(cls):
         try:
-            genetics = TheLore.get("GENETICS")
+            genetics = LoreManifest.get_instance().get("GENETICS")
             cls.MUTATIONS = genetics.get("MUTATIONS", {})
             cls.JOY_CLADE = genetics.get("JOY_CLADE", {})
         except Exception:

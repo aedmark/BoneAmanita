@@ -28,7 +28,7 @@ class EventBus:
             self.subscribers[event_type] = []
         self.subscribers[event_type].append(callback)
 
-    def publish(self, event_type, data=None, priority=False):
+    def publish(self, event_type, data=None, _priority=False):
         if event_type not in self.subscribers:
             return
         for callback in list(self.subscribers[event_type]):
@@ -228,12 +228,13 @@ class SystemHealth:
 class RealityStack:
     def __init__(self):
         self._stack = [RealityLayer.SIMULATION]
+        self._lock = False
 
     @property
     def current_depth(self) -> int:
         return self._stack[-1]
 
-    def push_layer(self, layer: int, context: Any = None) -> bool:
+    def push_layer(self, layer: int, _context: Any = None) -> bool:
         if layer == RealityLayer.DEBUG or layer == self.current_depth + 1:
             self._stack.append(layer)
             return True
@@ -262,9 +263,9 @@ class RealityStack:
 
 
 class ArchetypeArbiter:
+    @staticmethod
     def arbitrate(
-        self,
-        physics_lens: str,
+            physics_lens: str,
         soul_archetype: str,
         council_mandates: List[Dict],
         trigram: Dict = None,
@@ -329,7 +330,7 @@ class TelemetryService:
             self.current_trace_file = os.path.join(
                 self.log_dir, f"trace_{int(time.time())}.jsonl"
             )
-        except OSError as e:
+        except OSError:
             print(
                 f"{Prisma.RED}[TELEMETRY]: Disk Access Denied. Telemetry Disabled.{Prisma.RST}"
             )
@@ -378,7 +379,7 @@ class TelemetryService:
             return
         self._buffer_line(crystal.crystallize())
 
-    def start_phase(self, phase_name: str, context: Any):
+    def start_phase(self, phase_name: str, _context: Any):
         self.log_decision(
             phase_name,
             "PHASE_START",
@@ -387,7 +388,7 @@ class TelemetryService:
             "RUNNING",
         )
 
-    def end_phase(self, phase_name: str, ctx_before: Any, ctx_after: Any):
+    def end_phase(self, phase_name: str, _ctx_before: Any, _ctx_after: Any):
         self.log_decision(
             phase_name,
             "PHASE_END",
@@ -484,7 +485,7 @@ class TelemetryService:
         except Exception:
             return None
 
-    def generate_session_summary(self, uptime: float = 0.0) -> str:
+    def generate_session_summary(self, _uptime: float = 0.0) -> str:
         self._flush_to_disk()
         count = len(self.trace_buffer)
         status = "DISABLED" if self.disabled else "ACTIVE"

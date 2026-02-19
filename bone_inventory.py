@@ -35,6 +35,7 @@ class Item:
 
 class GordonKnot:
     def __init__(self, events=None):
+        self.blueprints = None
         self.events = events
         self.inventory: List[str] = []
         self.registry: Dict[str, Item] = {}

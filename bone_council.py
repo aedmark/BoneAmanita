@@ -266,7 +266,6 @@ class CouncilChamber:
                     transcript.append(
                         f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}"
                     )
-        final_log = ""
         if votes["YEA"] > votes["NAY"]:
             final_log = f"{Prisma.GRN}>>> MOTION CARRIED ({votes['YEA']}-{votes['NAY']}).{Prisma.RST}"
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - 1.0
@@ -279,7 +278,8 @@ class CouncilChamber:
         transcript.append(self.footnote.commentary(final_log))
         return transcript, adjustments, mandates
 
-    def convene_red_team(self, text, physics_packet):
+    @staticmethod
+    def convene_red_team(text, physics_packet):
         dissent_log = []
         if "confidence" in text.lower() or "certainty" in text.lower():
             dissent_log.append(
