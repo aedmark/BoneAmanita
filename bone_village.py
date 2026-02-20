@@ -5,7 +5,6 @@ from bone_types import Prisma, PhysicsPacket
 from bone_core import LoreManifest, EventBus
 from bone_config import BoneConfig
 from bone_physics import PhysicsDelta
-from bone_drivers import UserProfile
 
 
 def _hydrate_packet(p: Any) -> PhysicsPacket:
@@ -144,7 +143,6 @@ class MirrorGraph:
     def __init__(self, events_ref):
         self.events = events_ref
         self.stats = {"WAR": 0.0, "ART": 0.0, "LAW": 0.0, "ROT": 0.0}
-        self.profile = UserProfile()
 
     def reflect(self, packet: PhysicsPacket):
         txt = packet.raw_text or ""
@@ -153,6 +151,10 @@ class MirrorGraph:
             self.stats["WAR"] += 0.1
         if "?" in txt:
             self.stats["ART"] += 0.1
+        if packet.narrative_drag > BoneConfig.PHYSICS.DRAG_HALT:
+            self.stats["LAW"] += 0.1
+        if packet.vector and packet.vector.get("ENT", 0.0) > 0.5:
+            self.stats["ROT"] += 0.1
         total = sum(self.stats.values())
         if total > 5.0:
             for k in self.stats:
@@ -505,16 +507,3 @@ class DeathGen:
         if p.voltage > BoneConfig.PHYSICS.VOLTAGE_MED:
             return "LIGHT"
         return "HEAVY"
-
-
-class Limbo:
-    def __init__(self):
-        self.ghosts: List[str] = []
-
-    def haunt(self, text: str) -> str:
-        if not self.ghosts:
-            return text
-        if random.random() < BoneConfig.LIMBO.HAUNT_CHANCE:
-            ghost_word = random.choice(self.ghosts)
-            return f"{text} ...{ghost_word.lower()}..."
-        return text

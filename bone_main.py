@@ -47,7 +47,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system("cls" if os.name == "nt" else "clear")
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.6.2   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.6.4   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
@@ -387,12 +387,6 @@ class BoneAmanita:
                 "logs": ["CRITICAL FAILURE"],
                 "metrics": self.get_metrics(),
             }
-        self.observer.clock_out(turn_start)
-        burn_proxy = max(1.0, self.observer.last_cycle_duration * 5.0)
-        phys_out = cortex_packet.get("physics", {})
-        novelty = phys_out.get("vector", {}).get("novelty", 0.5)
-        self.host_stats.efficiency_index = min(1.0, (novelty * 10.0) / burn_proxy)
-        self.host_stats.latency = self.observer.last_cycle_duration
         self._update_host_stats(cortex_packet, turn_start)
         return cortex_packet
 
@@ -530,10 +524,6 @@ class BoneAmanita:
             self.health = min(self.health + CATHARSIS_HEAL_AMOUNT, MAX_HEALTH_CAP)
             return True
         return False
-
-    @staticmethod
-    def check_pareidolia(words):
-        return BoneConfig.check_pareidolia(words)
 
     def engage_cold_boot(self) -> Optional[Dict[str, Any]]:
         if self.tick_count > 0:

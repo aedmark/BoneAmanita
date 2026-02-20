@@ -1,6 +1,7 @@
 import random, json, re
 from collections import deque, Counter
 from typing import Dict, Tuple, Optional, Any
+
 from bone_core import LoreManifest
 from bone_types import Prisma
 from bone_lexicon import LexiconService
@@ -136,7 +137,7 @@ class TheBureau:
             else:
                 selected_form = "Form 202-A"
                 tax = BoneConfig.BUREAU.TAX_STANDARD
-        entropy = p.get("entropy", 0.0)
+        entropy = getattr(physics, "entropy", 0.0)
         if not selected_form and entropy > 0.6:
             selected_form = "Form 666: Unlicensed Chaos"
             evidence = ["Entropy Limit Exceeded", f"Level: {entropy:.2f}"]

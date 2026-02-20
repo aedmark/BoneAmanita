@@ -1,8 +1,52 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.6.4 "THE DEAD WEIGHT EXCISE"**
+
+_“We walked the perimeter, cut the dead vines, and plugged the open valves. The machine breathes easier now.”_
+
+---
+
+#### **🏗️ STRUCTURAL INTEGRITY (The Fuller Lens)**
+
+- **The Phantom Profile (`bone_village.py`):**
+  - **I/O Relief:** Excised an unused `UserProfile` instantiation in `MirrorGraph` that was silently accessing the disk and draining I/O during village construction for no reason.
+- **The Vestigial Twin (`bone_village.py`):**
+  - **Amputation:** Deleted the duplicate, stripped-down `Limbo` class at the bottom of the file in favor of the robust `LimboLayer` in `bone_protocols`.
+- **The Empty Constructor (`bone_physics.py`):**
+  - **Ephemeralization:** Removed the pointless `__init__` from the purely static `SurfaceTension` class.
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker Lens)**
+
+- **The Wrong Manual (`bone_cycle.py`):**
+  - **Crash Prevention:** Fixed a critical `AttributeError` in `GatekeeperPhase` where the entire Engine object was passed to `TheGatekeeper` instead of just the Lexicon, causing it to crash when checking for cursed words.
+- **Semantic Stuttering (`bone_core.py` & `bone_cycle.py`):**
+  - **Consolidation:** Consolidated `TelemetryService` singleton methods, removing the redundant `get_tracer`. Removed a redundant `to_dict` ternary check in `SensationPhase`, as `PhysicsPacket` is explicitly typed.
+- **The Dangling Entropy (`bone_protocols.py`):**
+  - **Scope Repair:** Resolved a linter-flagged error in `TheBureau` where a ghost variable `p` was referenced for entropy calculations instead of the passed `physics` object.
+
+#### **♾️ SYSTEMS METABOLISM (The Meadows Lens)**
+
+- **The Chronos Corruption (`bone_main.py`):**
+  - **Telemetry Repair:** Patched `BoneAmanita.process_turn` to stop clocking out twice per turn. The observer cycle deque no longer receives instantaneous ghost-durations, restoring the accuracy of system latency telemetry.
+- **The Solvent Leak (`bone_physics.py`):**
+  - **Sensor Fix:** Fixed a broken attribute call (`LexiconService.SOLVENTS`) in `QuantumObserver` so the "solvents" category is properly queried. The narrative `glue_factor` math is fully functional again.
+- **Dead Flow Excision (`bone_core.py`):**
+  - **Signature Trimming:** Snipped an entirely unused `_priority` parameter from `EventBus.publish`.
+
+#### **⚖️ HUMANIST ALGORITHMS (The Schur Lens)**
+
+- **The Cursed Blindspot (`bone_physics.py`):**
+  - **Security Wiring:** Connected `TheGatekeeper`'s `_audit_safety` check to its main `check_entry` loop. The system now actually uses the lock it built to reject cursed syntax.
+- **Half-Finished Reflections (`bone_village.py`):**
+  - **Feedback Loop Restored:** Wired up the previously dead `LAW` and `ROT` metrics in `MirrorGraph` to react to narrative drag and entropy, rather than leaving half the array permanently flatlined.
+- **The Useless Wrapper (`bone_main.py`):**
+  - **Indirection Removal:** Excised the redundant `check_pareidolia` static method on the main engine that served only to bounce the call to `BoneConfig`.
+
+---
+
 ### **BONEAMANITA v15.6.3 "THE EPHEMERAL**
 
-- Simplified many equations to save cpu cycles
+- Simplified many equations to save CPU cycles
 
 ---
 

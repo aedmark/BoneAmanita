@@ -28,7 +28,7 @@ class EventBus:
             self.subscribers[event_type] = []
         self.subscribers[event_type].append(callback)
 
-    def publish(self, event_type, data=None, _priority=False):
+    def publish(self, event_type, data=None):
         if event_type not in self.subscribers:
             return
         for callback in list(self.subscribers[event_type]):
@@ -331,14 +331,10 @@ class TelemetryService:
             self.current_trace_file = None
 
     @classmethod
-    def get_tracer(cls):
+    def get_instance(cls):
         if cls._tracer_instance is None:
             cls._tracer_instance = TelemetryService()
         return cls._tracer_instance
-
-    @classmethod
-    def get_instance(cls):
-        return cls.get_tracer()
 
     def start_cycle(self, trace_id: str):
         if self.disabled:

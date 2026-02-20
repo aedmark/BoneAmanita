@@ -221,6 +221,12 @@ class TheGatekeeper:
                 "TOXICITY",
                 f"{Prisma.RED}IMMUNE REACTION: Input rejected as pathogenic.{Prisma.RST}",
             )
+        if self._audit_safety(ctx.clean_words):
+            return False, self._pack_refusal(
+                ctx,
+                "CURSED_INPUT",
+                f"{Prisma.RED}The Gatekeeper recoils. Cursed syntax detected.{Prisma.RST}",
+            )
         text = ctx.input_text
         if "```" in text or "{{" in text or "}}" in text:
             return False, self._pack_refusal(
@@ -302,9 +308,7 @@ class QuantumObserver:
     @staticmethod
     def _tally_categories(clean_words: List[str]) -> Counter:
         counts = Counter()
-        solvents = (
-            LexiconService.SOLVENTS if hasattr(LexiconService, "SOLVENTS") else set()
-        )
+        solvents = LexiconService.get("solvents") or set()
         for w in clean_words:
             if w in solvents:
                 counts["solvents"] += 1
@@ -382,9 +386,6 @@ class QuantumObserver:
 
 
 class SurfaceTension:
-    def __init__(self):
-        pass
-
     @staticmethod
     def audit_hubris(physics: Dict[str, Any]) -> Tuple[bool, str, str]:
         voltage = physics.get("voltage", 0.0)

@@ -1,6 +1,6 @@
 import traceback, random, time, uuid
 from typing import Dict, Any, List
-from bone_core import TelemetryService, ArchetypeArbiter, LoreManifest
+from bone_core import ArchetypeArbiter, LoreManifest
 from bone_types import Prisma, CycleContext
 from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, CycleStabilizer
 from bone_gui import SoulDashboard, CycleReporter
@@ -204,7 +204,7 @@ class GatekeeperPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "GATEKEEP"
-        self.gatekeeper = TheGatekeeper(self.eng)
+        self.gatekeeper = TheGatekeeper(self.eng.lex)
 
     def run(self, ctx: CycleContext):
         if ctx.is_system_event:
@@ -902,9 +902,7 @@ class SensationPhase(SimulationPhase):
             self.eng.somatic = self.synesthesia
 
     def run(self, ctx: CycleContext):
-        phys_data = (
-            ctx.physics.to_dict() if hasattr(ctx.physics, "to_dict") else ctx.physics
-        )
+        phys_data = ctx.physics.to_dict()
         current_latency = 0.0
         if hasattr(self.eng, "host_stats"):
             current_latency = self.eng.host_stats.latency
@@ -931,27 +929,22 @@ class StabilizationPhase(SimulationPhase):
         self.stabilizer = stabilizer_ref
 
     def run(self, ctx: CycleContext):
-        current_mode = self.eng.bio.governor.mode
-        self.stabilizer.stabilize(ctx, current_mode)
+        self.stabilizer.stabilize(ctx, self.name)
         return ctx
-
 
 class PhaseExecutor:
     def execute_phases(self, simulator, ctx):
-        tracer = TelemetryService.get_tracer()
         for phase in simulator.pipeline:
             phase_name = phase.name
             if not simulator.check_circuit_breaker(phase_name):
                 continue
             snapshot_before = ctx.physics.snapshot()
-            tracer.start_phase(phase_name, ctx)
             try:
                 phase.run(ctx)
             except Exception as e:
                 simulator.handle_phase_crash(ctx, phase_name, e)
             finally:
                 self._audit_flux(ctx, phase_name, snapshot_before, ctx.physics)
-                tracer.end_phase(phase_name, ctx, ctx)
         return ctx
 
     @staticmethod
@@ -1042,9 +1035,7 @@ class GeodesicOrchestrator:
     def _execute_core_cycle(
         self, user_message: str, is_system: bool = False
     ) -> CycleContext:
-        tracer = TelemetryService.get_tracer()
         cycle_id = str(uuid.uuid4())[:8]
-        tracer.start_cycle(cycle_id)
         try:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
             ctx.trace_id = cycle_id
@@ -1070,17 +1061,11 @@ class GeodesicOrchestrator:
                 self.eng.phys.observer.last_physics_packet = ctx.physics.snapshot()
             return ctx
         except Exception as e:
-            t_str = traceback.format_exc()
             self.eng.events.log(f"CYCLE CRASH: {e}", "CRIT")
-            tracer.log_decision(
-                "ORCHESTRATOR", "CRASH", {"error": str(e)}, t_str, "FAILURE"
-            )
             ctx = CycleContext(input_text=user_message)
             ctx.is_alive = False
             ctx.crash_error = e
             return ctx
-        finally:
-            tracer.finalize_cycle()
 
     def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         ctx = self._execute_core_cycle(user_message, is_system)
