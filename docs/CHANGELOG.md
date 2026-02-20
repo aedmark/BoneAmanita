@@ -1,8 +1,14 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.6.3 "THE EPHEMERAL**
+
+- Simplified many equations to save cpu cycles
+
+---
+
 ### **BONEAMANITA v15.6.2 "THE LINT BRUSH**
 
-*Lint free!
+- Lint free!
 
 ---
 
