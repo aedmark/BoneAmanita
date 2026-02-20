@@ -230,7 +230,7 @@ class GordonKnot:
     def synthesize_item(self, physics_vector: Dict[str, float]) -> str:
         if not hasattr(self, "blueprints") or not self.blueprints:
             self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
-            
+
         dim_map = {
             "STR": "heavy", "VEL": "kinetic", "PHI": "thermal", 
             "PSI": "abstract", "ENT": "void", "BET": "constructive"
@@ -259,20 +259,24 @@ class GordonKnot:
     def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
         text = (user_text + " " + sys_text).lower()
         sys_lower = sys_text.lower()
+
         for refusal in self.refusal_markers:
             if refusal in sys_lower:
                 return None
+
         all_known_items = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
         for name in all_known_items:
             if name.lower() in text and name.upper() not in self.inventory:
                 for t in self.loot_triggers:
                     if t in text:
                         return name
+
         sorted_triggers = sorted(self.loot_triggers, key=len, reverse=True)
         for t in sorted_triggers:
             if t in text:
-                pattern = f"{re.escape(t)}\\s+(?:the\\s+|a\\s+|an\\s+)?(?P<item>[\\w\\s]{{1,30}}?)(?:\\s+(?:you|it|he|she|we|they)|[\\.,!?]|$)"
+                pattern = f"{re.escape(t)}\\s+(?:the\\s+|a\\s+|an\\s+)?(?P<item>[\\w\\s]{{1,30}}?)(?:\\s+(?:from|on|in|under|with|by|near|at|to|you|it|he|she|we|they)|[\\.,!?]|$)"
                 match = re.search(pattern, text, re.IGNORECASE)
+
                 if match:
                     candidate = match.group("item").strip()
                     if (
@@ -280,6 +284,7 @@ class GordonKnot:
                         and candidate not in self.refusal_markers
                     ):
                         return candidate
+
         return None
 
     def consume(self, item_name: str) -> Tuple[bool, str]:

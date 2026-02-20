@@ -94,7 +94,7 @@ class TheBureau:
                             "name": p.get("name", "Unknown Violation"),
                             "regex": re.compile(p["regex"], re.IGNORECASE),
                             "msg": p.get("error_msg", "Style Violation Detected."),
-                            "tax": 5.0,
+                            "tax": float(p.get("tax", 5.0)),
                             "action": p.get("action", None),
                         }
                     )
