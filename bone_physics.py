@@ -1,9 +1,13 @@
-import math, random, time
-from typing import Dict, List, Any, Tuple, Optional, Deque
+import math
+import random
+import time
 from collections import Counter, deque
 from dataclasses import dataclass
+from typing import Dict, List, Any, Tuple, Optional, Deque
 
+from bone_config import BoneConfig
 from bone_core import LoreManifest
+from bone_lexicon import LexiconService
 from bone_types import (
     Prisma,
     PhysicsPacket,
@@ -12,8 +16,6 @@ from bone_types import (
     MaterialState,
     EnergyState,
 )
-from bone_lexicon import LexiconService
-from bone_config import BoneConfig
 
 
 @dataclass
@@ -112,17 +114,20 @@ class GeodesicEngine:
 
     @staticmethod
     def _calculate_forces(
-        masses: Dict[str, float], counts: Dict[str, int], volume: int
+            masses: Dict[str, float], counts: Dict[str, int], volume: int
     ) -> Dict[str, float]:
         cfg = BoneConfig.PHYSICS
         GC = GeodesicConstants
         safe_volume = max(1, volume)
+        w_heavy = getattr(cfg, "WEIGHT_HEAVY", 2.0)
         w_kinetic = getattr(cfg, "WEIGHT_KINETIC", 1.5)
+        w_explosive = getattr(cfg, "WEIGHT_EXPLOSIVE", 3.0)
+        w_constructive = getattr(cfg, "WEIGHT_CONSTRUCTIVE", 1.2)
         raw_tension_mass = (
-            (masses["heavy"] * cfg.WEIGHT_HEAVY)
-            + (masses["kinetic"] * w_kinetic)
-            + (masses["explosive"] * cfg.WEIGHT_EXPLOSIVE)
-            + (masses["constructive"] * cfg.WEIGHT_CONSTRUCTIVE)
+                (masses["heavy"] * w_heavy)
+                + (masses["kinetic"] * w_kinetic)
+                + (masses["explosive"] * w_explosive)
+                + (masses["constructive"] * w_constructive)
         )
         total_kinetic = masses["kinetic"] + masses["explosive"]
         kinetic_gain = getattr(BoneConfig, "KINETIC_GAIN", 1.0)
@@ -330,7 +335,8 @@ class QuantumObserver:
         existing_nodes = [w for w in words if w in graph]
         for w in existing_nodes:
             edges = graph[w].get("edges", {})
-            node_mass = min(50.0, len(edges) * 1.5)
+            edge_weight_sum = sum(edges.values()) if edges else 0.0
+            node_mass = min(50.0, edge_weight_sum)
             total_mass += node_mass
         return total_mass
 
@@ -392,7 +398,7 @@ class SurfaceTension:
         coherence = physics.get("kappa", 0.5)
         volt_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
         volt_flow = getattr(BoneConfig.PHYSICS, "VOLTAGE_HIGH", 12.0)
-        if voltage > (volt_crit + 5.0) and coherence < 0.4:
+        if voltage >= volt_crit and coherence < 0.4:
             return (
                 True,
                 f"⚠️ HUBRIS DETECTED: Voltage ({voltage:.1f}v) exceeds structural integrity. Wings melting.",

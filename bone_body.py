@@ -231,9 +231,6 @@ class MitochondrialForge:
         raw_tax = ((drag ** DRAG_EXPONENT) * 0.5) * drag_mult
         cognitive_load_tax = min(5.0, raw_tax)
         base_demand = 2.0 + (voltage * 0.2)
-        pre_calc_cost = base_demand + cognitive_load_tax
-        if pre_calc_cost > self.ANAEROBIC_THRESHOLD:
-            return self._trigger_anaerobic_bypass(pre_calc_cost)
         is_critical = self.state.atp_pool < BioConstants.ATP_CRITICAL
         if is_critical:
             cognitive_load_tax = 0.0
@@ -244,8 +241,11 @@ class MitochondrialForge:
                 )
                 self.events.log(f"{Prisma.VIOLET}💤 {msg}{Prisma.RST}", "BIO_CRIT")
                 self.state.retrograde_signal = "HIBERNATING"
+
         efficiency = max(0.35, self.state.membrane_potential)
         raw_cost = ((base_demand + cognitive_load_tax) * modifier) / efficiency
+        if raw_cost > self.ANAEROBIC_THRESHOLD:
+            return self._trigger_anaerobic_bypass(raw_cost)
         if raw_cost > self.MAX_SAFE_BURN:
             excess = raw_cost - self.MAX_SAFE_BURN
             raw_cost = self.MAX_SAFE_BURN
@@ -582,12 +582,17 @@ class SomaticLoop:
         phys = physics_data
         logs = []
         if self.bio.biometrics:
-            self.bio.biometrics.health = max(0.0, min(100.0, health))
-            self.bio.biometrics.stamina = max(0.0, min(100.0, stamina))
+            max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+            max_s = getattr(BoneConfig, "MAX_STAMINA", 100.0)
+            self.bio.biometrics.health = max(0.0, min(max_h, health))
+            self.bio.biometrics.stamina = max(0.0, min(max_s, stamina))
         if self.bio.events and hasattr(self.bio, "apply_environmental_entropy"):
             self.bio.apply_environmental_entropy(phys)
         modifier = self.regulator.get_metabolic_modifier(phys, logs)
         receipt = self.bio.mito.process_cycle(phys, modifier=modifier)
+        if receipt.status == "ANAEROBIC" and self.bio.biometrics:
+            self.bio.biometrics.health = max(0.0, self.bio.biometrics.health - receipt.total_burn)
+            logs.append(f"{Prisma.RED}🩸 ANAEROBIC BURN: Health depleted by {receipt.total_burn:.1f}{Prisma.RST}")
         if receipt.waste_generated > 1.0:
             self.bio.endo.cortisol = min(
                 1.0, self.bio.endo.cortisol + (receipt.waste_generated * 0.05)
@@ -1028,3 +1033,172 @@ class MetabolicGovernor:
             )
         except:
             return f"{colors.get(mode, '')}{defaults.get(mode)}{Prisma.RST}"
+
+@dataclass
+class BiologicalImpulse:
+    cortisol_delta: float = 0.0
+    oxytocin_delta: float = 0.0
+    dopamine_delta: float = 0.0
+    adrenaline_delta: float = 0.0
+    stamina_impact: float = 0.0
+    somatic_reflex: str = ""
+
+
+@dataclass
+class Qualia:
+    color_code: str
+    somatic_sensation: str
+    tone: str
+    internal_monologue_hint: str
+
+
+class SynestheticCortex:
+    def __init__(self, bio_ref):
+        self.bio = bio_ref
+        self.last_reflex = None
+        self.library = LoreManifest.get_instance().get("BIO_NARRATIVE") or {}
+
+    @staticmethod
+    def _normalize_physics(physics) -> Dict:
+        if isinstance(physics, dict):
+            return physics
+        if hasattr(physics, "to_dict"):
+            return physics.to_dict()
+        return getattr(physics, "__dict__", {})
+
+    def perceive(
+        self, physics: Dict, traits: Any = None, latency: float = 0.0
+    ) -> BiologicalImpulse:
+        physics = self._normalize_physics(physics)
+        impulse = BiologicalImpulse()
+        cortex_cfg = getattr(BoneConfig, "CORTEX", None)
+        base_sens = getattr(cortex_cfg, "BASE_SENSITIVITY", 1.0) if cortex_cfg else 1.0
+
+        if traits:
+            curiosity = getattr(traits, "curiosity", 0.5)
+            discipline = getattr(traits, "discipline", 0.5)
+            base_sens *= 1.0 + curiosity - discipline
+        sens = max(0.0, base_sens)
+
+        valence = physics.get("valence", 0.0)
+        counts = physics.get("counts", {})
+        voltage = physics.get("voltage", 0)
+        drag = physics.get("narrative_drag", 0)
+
+        if valence < -0.5:
+            impulse.cortisol_delta += abs(valence) * sens
+
+        antigen_count = counts.get("antigen", 0)
+        if antigen_count > 0:
+            toxin_weight = getattr(BoneConfig, "TOXIN_WEIGHT", 1.0)
+            toxin_scalar = getattr(cortex_cfg, "TOXIN_SCALAR", 0.5) if cortex_cfg else 0.5
+            raw_tox = antigen_count * (toxin_weight * 0.2)
+            impulse.cortisol_delta += min(toxin_scalar, raw_tox)
+            impulse.somatic_reflex = "Shiver (Rejection)"
+        elif drag > (getattr(cortex_cfg, "DRAG_STRESS_THRESHOLD", 8.0) if cortex_cfg else 8.0):
+            impulse.cortisol_delta += 0.05
+            impulse.stamina_impact -= 2.0
+        else:
+            if valence > 0.4:
+                impulse.oxytocin_delta += valence * sens
+            if counts.get("sacred", 0) > 0:
+                impulse.oxytocin_delta += 0.1
+                impulse.somatic_reflex = "Warmth (Resonance)"
+            if counts.get("play", 0) > 0:
+                play_boost = getattr(cortex_cfg, "DOPAMINE_PLAY_BOOST", 0.1) if cortex_cfg else 0.1
+                impulse.dopamine_delta += play_boost
+                impulse.stamina_impact += 1.0
+            if voltage > 12.0 and physics.get("kappa", 0) > 0.5:
+                impulse.dopamine_delta += 0.15
+                impulse.somatic_reflex = "Buzz (Excitement)"
+
+        k_count = counts.get("kinetic", 0) + counts.get("explosive", 0)
+        if k_count > 0:
+            adr_scalar = getattr(cortex_cfg, "ADRENALINE_KINETIC_SCALAR", 0.1) if cortex_cfg else 0.1
+            adr_boost = min(0.4, k_count * adr_scalar)
+            impulse.adrenaline_delta += adr_boost
+            impulse.cortisol_delta += 0.02
+            impulse.stamina_impact -= 1.0
+
+        if voltage > (getattr(cortex_cfg, "VOLTAGE_ARC_TRIGGER", 18.0) if cortex_cfg else 18.0):
+            impulse.adrenaline_delta += 0.2
+
+        if latency > (getattr(cortex_cfg, "LATENCY_PENALTY_THRESHOLD", 5.0) if cortex_cfg else 5.0):
+            impulse.stamina_impact -= latency * 0.5
+            impulse.cortisol_delta += 0.05
+            impulse.somatic_reflex = "Time Dilation (Lag)."
+        if not impulse.somatic_reflex:
+            metaphors = self.library.get("METAPHOR_RESERVOIR", {})
+            if drag > 5.0 and "HIGH_DRAG" in metaphors:
+                impulse.somatic_reflex = random.choice(metaphors["HIGH_DRAG"])
+            elif drag < 1.0 and "LOW_DRAG" in metaphors:
+                impulse.somatic_reflex = random.choice(metaphors["LOW_DRAG"])
+        if not impulse.somatic_reflex:
+            impulse.somatic_reflex = self._derive_reflex(physics, impulse)
+        self.last_reflex = impulse.somatic_reflex
+        return impulse
+
+    def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
+        if impulse.cortisol_delta > 0.1 and impulse.adrenaline_delta > 0.1: return "Trembling (Fight or Flight)."
+        if impulse.dopamine_delta > 0.1 and impulse.adrenaline_delta > 0.1: return "Electric Vibration."
+        if impulse.adrenaline_delta > 0.1: return "Pupils Dilating."
+        if impulse.oxytocin_delta > 0.1 and impulse.dopamine_delta > 0.1: return "Golden Glow."
+        if impulse.oxytocin_delta > 0.1: return "Chest Softening."
+        if impulse.cortisol_delta > 0.1: return "Gut Tightening."
+        if impulse.dopamine_delta > 0.1: return "Synaptic Spark."
+        if physics.get("psi", 0.0) > 0.6: return "Scalp Prickling (Liminal)."
+        if physics.get("entropy", 0.0) > 0.7: return "Skin Crawling (Static)."
+        if physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER: return "Electrical Arcing."
+        if physics.get("voltage", 0) < 2.0: return "Metabolic Dimming."
+        if physics.get("narrative_drag", 0) > 5.0: return "Shoulders Sagging."
+        if self.last_reflex == "Steady Pulse.":
+            return "..."
+        return "Steady Pulse."
+
+    @staticmethod
+    def get_current_qualia(impulse: Optional[BiologicalImpulse]) -> Qualia:
+        if not impulse:
+            return Qualia(Prisma.GRY, "Numbness", "Neutral", "The body is silent.")
+        color = Prisma.GRY
+        if impulse.cortisol_delta > 0.1:
+            color = Prisma.OCHRE
+        elif impulse.dopamine_delta > 0.1:
+            color = Prisma.MAG
+        elif impulse.oxytocin_delta > 0.1:
+            color = Prisma.GRN
+        elif impulse.adrenaline_delta > 0.1:
+            color = Prisma.RED
+        tone = "Steady"
+        if impulse.adrenaline_delta > 0.2:
+            tone = "Urgent"
+        elif impulse.dopamine_delta > 0.2:
+            tone = "Vibrating"
+        elif impulse.cortisol_delta > 0.2:
+            tone = "Strained"
+        elif impulse.oxytocin_delta > 0.2:
+            tone = "Resonant"
+        hint = "Observe."
+        if impulse.cortisol_delta > 0.05:
+            hint = "Something is wrong. Be guarded."
+        elif impulse.adrenaline_delta > 0.05:
+            hint = "Move fast. Don't overthink."
+        elif impulse.oxytocin_delta > 0.05:
+            hint = "Connect. Be vulnerable."
+        elif impulse.dopamine_delta > 0.05:
+            hint = "Explore. Find the pattern."
+        return Qualia(
+            color_code=color,
+            somatic_sensation=impulse.somatic_reflex or "Steady Pulse.",
+            tone=tone,
+            internal_monologue_hint=hint,
+        )
+
+    def apply_impulse(self, impulse: BiologicalImpulse) -> float:
+        if not self.bio or not hasattr(self.bio, "endo") or not self.bio.endo:
+            return 0.0
+        endo = self.bio.endo
+        endo.cortisol = max(0.0, min(1.0, endo.cortisol + impulse.cortisol_delta))
+        endo.oxytocin = max(0.0, min(1.0, endo.oxytocin + impulse.oxytocin_delta))
+        endo.dopamine = max(0.0, min(1.0, endo.dopamine + impulse.dopamine_delta))
+        endo.adrenaline = max(0.0, min(1.0, endo.adrenaline + impulse.adrenaline_delta))
+        return impulse.stamina_impact

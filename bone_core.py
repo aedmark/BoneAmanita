@@ -36,10 +36,9 @@ class EventBus:
                 callback(data)
             except Exception as e:
                 cb_name = getattr(callback, "__name__", str(callback))
-                print(
-                    f"{Prisma.RED}[BUS]: Error in '{cb_name}' for '{event_type}': {e}{Prisma.RST}"
-                )
-                traceback.print_exc()
+                error_msg = f"Error in '{cb_name}' for '{event_type}': {e}"
+                print(f"{Prisma.RED}[BUS]: {error_msg}{Prisma.RST}")
+                self.log(f"EVENT_FAILURE: {error_msg}", category="CRIT")
 
     def log(self, text: str, category: str = "SYSTEM"):
         entry = {"text": text, "category": category, "timestamp": time.time()}
@@ -407,13 +406,12 @@ class TelemetryService:
                 f.write("\n".join(self.write_buffer) + "\n")
             self.write_buffer.clear()
             self.write_errors = 0
-        except IOError:
+        except IOError as e:
             self.write_errors += 1
-            if self.write_errors > 3:
-                print(
-                    f"{Prisma.RED}[TELEMETRY]: Too many write errors. Disabling telemetry.{Prisma.RST}"
-                )
-                self.disabled = True
+            keep_count = self.BUFFER_SIZE // 2
+            self.write_buffer = self.write_buffer[-keep_count:]
+            if self.write_errors % 10 == 0:
+                 print(f"{Prisma.RED}[TELEMETRY]: Write error ({self.write_errors}). Retrying later. {e}{Prisma.RST}")
 
     def read_recent_history(self, limit=4) -> List[str]:
         if not os.path.exists(self.log_dir):

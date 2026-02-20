@@ -221,17 +221,24 @@ class LLMInterface:
         return True
 
     def _transmit(
-        self, payload: Dict[str, Any], timeout: float = 60.0, max_retries: int = 2
+        self,
+        payload: Dict[str, Any],
+        timeout: float = 60.0,
+        max_retries: int = 2,
+        override_url: str = None,
+        override_key: str = None
     ) -> str:
         err = ""
+        target_url = override_url or self.base_url
+        target_key = override_key or self.api_key
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {target_key}",
         }
         data = json.dumps(payload, cls=BoneJSONEncoder).encode()
         for attempt in range(max_retries + 1):
             try:
-                req = urllib.request.Request(self.base_url, data=data, headers=headers)
+                req = urllib.request.Request(target_url, data=data, headers=headers)
                 with urllib.request.urlopen(req, timeout=timeout) as response:
                     if response.status == 200:
                         return self._parse_response(response.read().decode("utf-8"))
@@ -336,17 +343,16 @@ class LLMInterface:
             "stream": False,
             "temperature": params.get("temperature", 0.55),
         }
-        original_url = self.base_url
-        original_key = self.api_key
         try:
-            self.base_url = url
-            self.api_key = "ollama"
-            return self._transmit(fallback_payload, timeout=10.0, max_retries=1)
+            return self._transmit(
+                fallback_payload,
+                timeout=10.0,
+                max_retries=1,
+                override_url=url,
+                override_key="ollama"
+            )
         except Exception:
             return self.mock_generation(prompt, reason="FALLBACK_DEAD")
-        finally:
-            self.base_url = original_url
-            self.api_key = original_key
 
     def mock_generation(self, prompt: str, reason: str = "SIMULATION") -> str:
         if self.dreamer:

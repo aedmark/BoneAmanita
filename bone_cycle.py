@@ -4,8 +4,8 @@ from bone_core import ArchetypeArbiter, LoreManifest
 from bone_types import Prisma, CycleContext
 from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, CycleStabilizer
 from bone_gui import SoulDashboard, CycleReporter
-from bone_architect import PanicRoom
-from bone_soma import SynestheticCortex
+from bone_machine import PanicRoom
+from bone_body import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
 from bone_config import BoneConfig, BonePresets
 from bone_drivers import CongruenceValidator
@@ -19,21 +19,12 @@ class SimulationPhase:
     def run(self, ctx: CycleContext) -> CycleContext:
         raise NotImplementedError
 
-
 class ObservationPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "OBSERVE"
 
     def run(self, ctx: CycleContext):
-        if self.eng.tick_count == 0:
-            current_atp = self.eng.bio.mito.state.atp_pool
-            if current_atp <= 0.0:
-                start_val = getattr(BoneConfig.BIO, "STARTING_ATP", 60.0)
-                self.eng.bio.mito.state.atp_pool = start_val
-                ctx.log(
-                    f"{Prisma.GRN}⚡ GENESIS: ATP initialized to {start_val}.{Prisma.RST}"
-                )
         if self.eng.gordon and "GORDON" not in self.eng.suppressed_agents:
             loot_candidate = self.eng.gordon.parse_loot(ctx.input_text, "")
             if loot_candidate:
@@ -230,8 +221,9 @@ class GatekeeperPhase(SimulationPhase):
             ctx.refusal_packet = refusal_packet
             return ctx
         if self.eng.bureau:
+            current_bio = self.eng.get_metrics()
             audit_result = self.eng.bureau.audit(
-                ctx.physics.to_dict(), ctx.bio_result, _context="INPUT_PHASE"
+                ctx.physics.to_dict(), current_bio, origin="USER"
             )
             if audit_result:
                 if audit_result.get("block", False):
@@ -241,14 +233,6 @@ class GatekeeperPhase(SimulationPhase):
                         "ui": audit_result.get("ui", "Bureaucratic Injunction."),
                     }
                     return ctx
-                if audit_result.get("ui"):
-                    ctx.bureau_ui = audit_result["ui"]
-        current_bio = self.eng.get_metrics()
-        if self.eng.bureau:
-            audit_result = self.eng.bureau.audit(
-                ctx.physics, current_bio, origin="USER"
-            )
-            if audit_result:
                 if self.eng.bio and self.eng.bio.mito:
                     self.eng.bio.mito.adjust_atp(
                         audit_result.get("atp_gain", 0.0), "Bureaucratic Fine (User)"
@@ -640,6 +624,9 @@ class IntrusionPhase(SimulationPhase):
             p_msg = f"{Prisma.VIOLET}👁️ PAREIDOLIA: The patterns are watching back (PSI {current_psi:.2f}).{Prisma.RST}"
             ctx.log(p_msg)
             ctx.physics.psi = min(1.0, current_psi + 0.1)
+            if self.eng.bio and self.eng.bio.biometrics:
+                self.eng.bio.biometrics.stamina = max(0.0, self.eng.bio.biometrics.stamina - 5.0)
+                ctx.log(f"{Prisma.GRY}   (The hallucination drains 5.0 Stamina){Prisma.RST}")
         return ctx
 
 
@@ -943,8 +930,9 @@ class PhaseExecutor:
                 phase.run(ctx)
             except Exception as e:
                 simulator.handle_phase_crash(ctx, phase_name, e)
-            finally:
                 self._audit_flux(ctx, phase_name, snapshot_before, ctx.physics)
+                break
+            self._audit_flux(ctx, phase_name, snapshot_before, ctx.physics)
         return ctx
 
     @staticmethod

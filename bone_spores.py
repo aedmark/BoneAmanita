@@ -265,14 +265,14 @@ class MemoryCore:
         protected.update(self.cortical_stack)
         candidates = []
         for k, v in self.graph.items():
+            if k in protected:
+                continue
             edge_count = len(v["edges"])
             age = max(1, current_tick - v.get("last_tick", 0))
             base_score = edge_count + (100.0 / age)
-            if k in protected:
-                base_score += 500.0
             candidates.append((k, v, base_score))
         if not candidates:
-            return None, "MEMORY EMPTY. NOTHING TO EAT."
+            return None, "CORTICAL LOCK: All available memories are currently protected."
         candidates.sort(key=lambda x: x[2])
         victim, data, score = candidates[0]
         mass = sum(data["edges"].values())
@@ -300,7 +300,7 @@ class MycelialNetwork:
         self.loader = loader if loader else LocalFileSporeLoader()
         self.session_id = f"session_{int(time.time())}"
         self.filename = f"{self.session_id}.json"
-        self.subconscious = SubconsciousStrata()
+        self.subconscious = SubconsciousStrata(filename=f"memories/subconscious_{self.session_id}.jsonl")
         self.memory_core = MemoryCore(events, self.subconscious)
         self.lichen = BioLichen()
         self.parasite = BioParasite(self, LexiconService)
@@ -340,14 +340,12 @@ class MycelialNetwork:
         if infected and parasite_msg:
             logs.append(parasite_msg)
         if random.random() < 0.10:
-            chorus_log = self._poll_chorus(clean_words, physics.get("voltage", 0.0))
+            chorus_log = self._poll_chorus(clean_words, physics)
             if chorus_log:
                 logs.append(chorus_log)
         return logs
 
-    def _poll_chorus(self, clean_words: list, _voltage: float) -> Optional[str]:
-        if self.events:
-            pass
+    def _poll_chorus(self, clean_words: list, physics: Dict) -> Optional[str]:
         total_voltage_boost = 0.0
         total_drag_penalty = 0.0
         echo_count = 0
@@ -358,6 +356,8 @@ class MycelialNetwork:
                 total_drag_penalty += d_pen
                 echo_count += 1
         if echo_count > 0:
+            physics["voltage"] = physics.get("voltage", 0.0) + total_voltage_boost
+            physics["narrative_drag"] = physics.get("narrative_drag", 0.0) + total_drag_penalty
             if total_voltage_boost > 4.0:
                 return f"{Prisma.VIOLET}👻 ECHO: The past is heavy here. (Drag +{total_drag_penalty:.1f}){Prisma.RST}"
             elif total_voltage_boost > 0:
@@ -684,7 +684,7 @@ class MycelialNetwork:
         ]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BONEAMANITA_15.6.4",
+            "genome": "BONEAMANITA_15.6.5",
             "session_id": self.session_id,
             "parent_id": self.session_id,
             "meta": {
@@ -907,8 +907,7 @@ class BioLichen:
             comment = "It is cold... we are sleeping."
         return score, comment
 
-    @staticmethod
-    def photosynthesize(phys, clean_words, tick_count):
+    def photosynthesize(self, phys, clean_words, tick_count):
         msgs = []
         if hasattr(phys, "counts"):
             counts = phys.counts
@@ -918,7 +917,7 @@ class BioLichen:
             drag = phys.get("narrative_drag", 0.0)
         light = counts.get("photo", 0)
         sugar = 0.0
-        light_words = [w for w in clean_words if w in LexiconService.get("photo")]
+        light_words = [w for w in clean_words if w in self.archetypes]
         if light > 0 and drag < 3.0:
             s = light * 2
             sugar += s

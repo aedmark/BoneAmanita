@@ -1,13 +1,13 @@
 import os, time, json, uuid, random, traceback, sys, re
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
-from bone_chronos import ChronosKeeper
 from bone_core import EventBus, SystemHealth, TheObserver, LoreManifest, TelemetryService, RealityStack
 from bone_types import Prisma, RealityLayer
 from bone_config import BoneConfig, BonePresets
 from bone_genesis import BoneGenesis
 from bone_lexicon import LexiconService
 from bone_physics import CosmicDynamics, ZoneInertia
+from bone_protocols import ChronosKeeper
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_cycle import GeodesicOrchestrator
@@ -47,7 +47,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system("cls" if os.name == "nt" else "clear")
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.6.4   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.6.5   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
