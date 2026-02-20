@@ -51,17 +51,6 @@ class Prisma:
         return cls._STRIP_PATTERN.sub("", str(text))
 
 
-class LoreCategory(Enum):
-    LEXICON = "LEXICON"
-    SCENARIOS = "scenarios"
-    GORDON = "gordon"
-    GORDON_LOGS = "gordon_logs"
-    GENETICS = "genetics"
-    DEATH = "death"
-    ALMANAC = "almanac"
-    DREAMS = "dreams"
-
-
 class RealityLayer:
     TERMINAL = 0
     SIMULATION = 1

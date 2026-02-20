@@ -143,7 +143,6 @@ class GeodesicRenderer:
         self.vsl_chroma = chroma_ref
         self.strunk_white = strunk_ref
         self.valve = valve_ref
-        self.soul_dashboard = SoulDashboard(engine_ref)
         self.NOISE_PATTERNS = [
             "stabilizer:",
             "pid_",
@@ -229,16 +228,6 @@ class GeodesicRenderer:
             return self.projector.render(
                 {"physics": physics}, data_ctx, mind_tuple, reality_depth=current_depth
             )
-
-    @staticmethod
-    def render_soul_strip(soul_ref) -> str:
-        if not soul_ref:
-            return ""
-        if not soul_ref.current_obsession:
-            return ""
-        return (
-            f"{Prisma.GRY}--- Obsession: {soul_ref.current_obsession} ---{Prisma.RST}"
-        )
 
     def compose_logs(self, logs: list, events: list, _tick: int = 0) -> List[str]:
         all_logs = [str(l) for l in logs if l is not None]
@@ -354,32 +343,6 @@ class TruthRenderer(GeodesicRenderer):
                 f"{Prisma.paint('--- FINAL SURFACE ---', 'W')}\n{ui_text}\n"
             )
         return None
-
-
-class PulseReader:
-    @staticmethod
-    def derive_mood(bio_state: Dict) -> str:
-        chem = bio_state.get("chem", {})
-        if chem.get("COR", 0) > 0.6:
-            return "Defensive"
-        if chem.get("DA", 0) > 0.6:
-            return "Manic"
-        if chem.get("OXY", 0) > 0.6:
-            return "Affectionate"
-        atp = bio_state.get("mito", {}).get("atp", 100)
-        if atp < 20:
-            return "Exhausted"
-        return "Neutral"
-
-    @staticmethod
-    def analyze_voltage(voltage: float) -> Tuple[str, str]:
-        if voltage > 20.0:
-            return "CRITICAL", "⚡"
-        if voltage > 15.0:
-            return "HIGH", "🔥"
-        if voltage < 5.0:
-            return "LOW", "❄️"
-        return "NOMINAL", "🟢"
 
 
 class SoulDashboard:
