@@ -69,14 +69,12 @@ class LoreManifest:
         return cls._instance
 
     def get(self, category: str, sub_key: str = None) -> Any:
-        if category in self._cache:
-            data = self._cache[category]
-        else:
+        if category not in self._cache:
             data = self._load_from_disk(category)
             self._cache[category] = data if data is not None else {}
-            data = self._cache[category]
+        data = self._cache[category]
         if sub_key and isinstance(data, dict):
-            return data.get(sub_key, None)
+            return data.get(sub_key)
         return data
 
     def _load_from_disk(self, category: str) -> Optional[Dict]:
@@ -202,14 +200,9 @@ class SystemHealth:
         self.errors.append(ErrorLog(component, msg, severity=severity))
         if self.observer:
             self.observer.log_error(component)
-        if component == "PHYSICS":
-            self.physics_online = False
-        elif component == "BIO":
-            self.bio_online = False
-        elif component == "MIND":
-            self.mind_online = False
-        elif component == "CORTEX":
-            self.cortex_online = False
+        attr_name = f"{component.lower()}_online"
+        if hasattr(self, attr_name):
+            setattr(self, attr_name, False)
         return f"[{component} OFFLINE]: {msg}"
 
     def report_warning(self, message: str):

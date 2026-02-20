@@ -36,17 +36,14 @@ class SoulDriver:
             if persona in base_weights:
                 base_weights[persona] += weight
         paradox = getattr(self.soul, "paradox_accum", 0.0)
-        if paradox > 5.0:
-            chaos_factor = min(0.5, (paradox - 5.0) * 0.05)
-            for persona in base_weights:
-                base_weights[persona] += random.uniform(-chaos_factor, chaos_factor)
-        if hasattr(self.soul, "anchor") and hasattr(
-            self.soul.anchor, "dignity_reserve"
-        ):
-            dignity_factor = max(0.2, self.soul.anchor.dignity_reserve / 100.0)
-            for p in base_weights:
-                base_weights[p] *= dignity_factor
-        return base_weights
+        chaos = min(0.5, (paradox - 5.0) * 0.05) if paradox > 5.0 else 0.0
+        dignity = 1.0
+        if hasattr(self.soul, "anchor") and hasattr(self.soul.anchor, "dignity_reserve"):
+            dignity = max(0.2, self.soul.anchor.dignity_reserve / 100.0)
+        return {
+            p: (w + random.uniform(-chaos, chaos)) * dignity
+            for p, w in base_weights.items()
+        }
 
 
 class UserProfile:
@@ -157,8 +154,8 @@ class EnneagramDriver:
             if "coherence_max" in criteria and p_coh < criteria["coherence_max"]:
                 scores[persona] += 4.0
             for dim, weight in criteria.get("vectors", {}).items():
-                if p_vec.get(dim, 0.0) > 0.2:
-                    scores[persona] += p_vec.get(dim, 0.0) * weight
+                if (val := p_vec.get(dim, 0.0)) > 0.2:
+                    scores[persona] += val * weight
         if soul_ref:
             soul_driver = SoulDriver(soul_ref)
             influence = soul_driver.get_influence()
@@ -310,9 +307,8 @@ class CongruenceValidator:
         target_data = self.map.get(archetype, {})
         target_words = set()
         if isinstance(target_data, dict):
-            vocab_str = target_data.get("vocab", "")
-            if vocab_str:
-                target_words = set(w.strip().lower() for w in vocab_str.split(","))
+            if vocab_str := target_data.get("vocab", ""):
+                target_words.update(w.strip().lower() for w in vocab_str.split(","))
             target_words.update(target_data.get("keywords", []))
         if target_words:
             words_to_check = (
@@ -385,7 +381,7 @@ class BoneConsultant:
             )
         elif "LIMINAL" in self.state.active_modules or self.state.L > 0.7:
             directives.append(
-                "ARCHETYPE: THE CARTOMANCER. Read the empty spaces. Speak in riddles and absences."
+                "ARCHETYPE: THE REVENANT. Read the empty spaces. Speak in riddles and absences."
             )
         elif "SYNTAX" in self.state.active_modules or self.state.O > 0.9:
             directives.append(
@@ -393,7 +389,7 @@ class BoneConsultant:
             )
         else:
             if self.state.E < 0.3:
-                directives.append("MODE: SNOWBALL. Be warm, simple, welcoming.")
+                directives.append("MODE: BUNNY HILL. Be warm, simple, welcoming.")
             elif self.state.B > 0.6:
                 directives.append(
                     "MODE: PARADOX. Hold contradictory truths. Be Jester-like."

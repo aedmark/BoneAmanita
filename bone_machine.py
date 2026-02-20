@@ -57,14 +57,14 @@ class TheCrucible:
         return False, self.logs.get("HOLDING", "Holding"), 0.0
 
     def audit_fire(self, physics: Dict) -> Tuple[str, float, Optional[str]]:
-        voltage = float(physics.get("voltage", 0.0))
-        structure = float(physics.get("kappa", 0.0))
+        voltage = physics.get("voltage", 0.0)
+        structure = physics.get("kappa", 0.0)
         ideal_voltage = structure * 20.0
         delta = voltage - ideal_voltage
         self.instability_index = (self.instability_index * 0.7) + (delta * 0.3)
         if abs(self.instability_index) < 0.1:
             self.instability_index = 0.0
-        current_drag = float(physics.get("narrative_drag", 0.0))
+        current_drag = physics.get("narrative_drag", 0.0)
         adjustment = self.instability_index * 0.5
         if current_drag < 1.0 and adjustment < 0:
             adjustment *= 0.1
@@ -109,31 +109,20 @@ class TheForge:
 
     @staticmethod
     def hammer_alloy(physics: Dict) -> Tuple[bool, Optional[str], Optional[str]]:
-        voltage = float(physics.get("voltage", 0))
         counts = physics.get("counts", {})
         clean_words = physics.get("clean_words", [])
         if not clean_words:
             return False, None, None
         heavy = counts.get("heavy", 0)
         kinetic = counts.get("kinetic", 0)
-        total_mass = (heavy * 2.0) + (kinetic * 0.5)
-        avg_density = total_mass / max(1, len(clean_words))
-        forge_probability = (voltage / 20.0) * avg_density
-        if random.random() < forge_probability:
-            if heavy > 3:
-                return (
-                    True,
-                    f"🔨 FORGED: Lead Boots (Mass {avg_density:.1f})",
-                    "LEAD_BOOTS",
-                )
-            if kinetic > 3:
-                return (
-                    True,
-                    f"🔨 FORGED: Safety Scissors (Kinetic)",
-                    "SAFETY_SCISSORS",
-                )
-            return True, f"🔨 FORGED: Anchor Stone", "ANCHOR_STONE"
-        return False, None, None
+        avg_density = ((heavy * 2.0) + (kinetic * 0.5)) / len(clean_words)
+        if random.random() >= (physics.get("voltage", 0) / 20.0) * avg_density:
+            return False, None, None
+        if heavy > 3:
+            return True, f"🔨 FORGED: Lead Boots (Mass {avg_density:.1f})", "LEAD_BOOTS"
+        if kinetic > 3:
+            return True, "🔨 FORGED: Safety Scissors (Kinetic)", "SAFETY_SCISSORS"
+        return True, "🔨 FORGED: Anchor Stone", "ANCHOR_STONE"
 
     def attempt_crafting(
         self, physics: Dict, inventory_list: List[str]
@@ -147,29 +136,26 @@ class TheForge:
         voltage = float(physics.get("voltage", 0))
         for item in inventory_list:
             if item in self.recipe_map:
-                possible_recipes = self.recipe_map[item]
-                for recipe in possible_recipes:
-                    catalyst_cat = recipe["catalyst_category"]
-                    cat_words = LexiconService.get(catalyst_cat)
-                    if not cat_words:
+                for recipe in self.recipe_map[item]:
+                    cat_words = LexiconService.get(recipe["catalyst_category"])
+                    if not cat_words or clean_set.isdisjoint(cat_words):
                         continue
-                    if not clean_set.isdisjoint(cat_words):
-                        hits = len(clean_set.intersection(cat_words))
-                        entanglement = self._calculate_entanglement(hits, voltage)
-                        if random.random() < entanglement:
-                            return (
-                                True,
-                                f"⚗️ ALCHEMY: {recipe['result']} (via {item})",
-                                item,
-                                recipe["result"],
-                            )
-                        else:
-                            return (
-                                False,
-                                f"⚠️ ALCHEMY FAIL: Decoherence ({int(entanglement*100)}%)",
-                                None,
-                                None,
-                            )
+                    hits = len(clean_set.intersection(cat_words))
+                    entanglement = self._calculate_entanglement(hits, voltage)
+                    if random.random() < entanglement:
+                        return (
+                            True,
+                            f"⚗️ ALCHEMY: {recipe['result']} (via {item})",
+                            item,
+                            recipe["result"],
+                        )
+                    else:
+                        return (
+                            False,
+                            f"⚠️ ALCHEMY FAIL: Decoherence ({int(entanglement * 100)}%)",
+                            None,
+                            None,
+                        )
         return False, None, None, None
 
     @staticmethod

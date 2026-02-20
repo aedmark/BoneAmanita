@@ -72,7 +72,6 @@ class BioSystem:
         return {
             "mito": asdict(self.mito.state) if self.mito else {},
             "endo": self.endo.get_state() if self.endo else {},
-            "chem": self.endo.get_state() if self.endo else {},
             "biometrics": asdict(self.biometrics) if self.biometrics else {},
             "governor_mode": self.governor.mode if self.governor else "UNKNOWN",
         }
@@ -710,16 +709,11 @@ class EndocrineSystem:
             self.cortisol = max(0.0, self.cortisol - 0.2)
         impact = self._REACTION_MAP.get(enzyme_type)
         if impact:
-            if "ADR" in impact:
-                self.adrenaline = min(1.0, self.adrenaline + impact["ADR"])
-            if "COR" in impact:
-                self.cortisol = max(0.0, self.cortisol + impact["COR"])
-            if "OXY" in impact:
-                self.oxytocin = min(1.0, self.oxytocin + impact["OXY"])
-            if "DOP" in impact:
-                self.dopamine = min(1.0, self.dopamine + impact["DOP"])
-            if "SER" in impact:
-                self.serotonin = min(1.0, self.serotonin + impact["SER"])
+            key_map = {"ADR": "adrenaline", "COR": "cortisol", "OXY": "oxytocin", "DOP": "dopamine", "SER": "serotonin"}
+            for k, v in impact.items():
+                attr = key_map.get(k)
+                if attr:
+                    setattr(self, attr, getattr(self, attr) + v)
 
     def _apply_environmental_pressure(
         self,
@@ -825,12 +819,12 @@ class EndocrineSystem:
         semantic_signal=None,
     ):
         if circadian_bias:
+            key_map = {"COR": "cortisol", "SER": "serotonin", "MEL": "melatonin", "DOP": "dopamine", "OXY": "oxytocin",
+                       "ADR": "adrenaline"}
             for k, v in circadian_bias.items():
-                setattr(
-                    self,
-                    k.lower() if k != "COR" else "cortisol",
-                    getattr(self, k.lower() if k != "COR" else "cortisol") + v,
-                )
+                attr_name = key_map.get(k, k.lower())
+                if hasattr(self, attr_name):
+                    setattr(self, attr_name, getattr(self, attr_name) + v)
         self._apply_enzyme_reaction(enzyme_type, harvest_hits)
         self._apply_environmental_pressure(
             feedback, health, stamina, ros_level, stress_mod

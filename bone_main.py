@@ -491,16 +491,13 @@ class BoneAmanita:
     def get_metrics(self, atp=0.0):
         real_atp = atp
         if real_atp <= 0.0 and hasattr(self, "bio") and hasattr(self.bio, "mito"):
-            try:
-                if hasattr(self.bio.mito, "state"):
-                    real_atp = getattr(self.bio.mito.state, "atp_pool", 0.0)
-            except Exception:
-                pass
+            real_atp = getattr(self.bio.mito.state, "atp_pool", 0.0)
         return {
             "health": self.health,
             "stamina": self.stamina,
             "atp": real_atp,
             "tick": self.tick_count,
+            "efficiency": getattr(self.host_stats, "efficiency_index", 1.0)
         }
 
     def emergency_save(self, exit_cause="UNKNOWN"):

@@ -409,12 +409,9 @@ class SurfaceTension:
 class ChromaScope:
     @staticmethod
     def modulate(text: str, vector: Dict[str, float]) -> str:
-        if not vector:
+        if not vector or not any(vector.values()):
             return f"{Prisma.GRY}{text}{Prisma.RST}"
-        sorted_vecs = sorted(vector.items(), key=lambda x: x[1], reverse=True)
-        if not sorted_vecs:
-            return f"{Prisma.GRY}{text}{Prisma.RST}"
-        primary_dim = sorted_vecs[0][0]
+        primary_dim = max(vector, key=vector.get)
         if primary_dim in TRIGRAM_MAP:
             selected_color = TRIGRAM_MAP[primary_dim][3]
         else:
@@ -450,9 +447,7 @@ class ZoneInertia:
         self.dwell_counter += 1
         pressure = 0.0
         if self.last_vector:
-            a1, a2, a3 = current_vec
-            b1, b2, b3 = self.last_vector
-            dist = math.sqrt((a1 - b1) ** 2 + (a2 - b2) ** 2 + (a3 - b3) ** 2)
+            dist = math.dist(current_vec, self.last_vector)
             similarity = max(0.0, 1.0 - (dist / 2.0))
             pressure = 1.0 - similarity
         if self.is_anchored:
@@ -700,12 +695,7 @@ class CycleStabilizer:
             )
             return True
         if self.pending_drag > 0:
-            if isinstance(ctx.physics, dict):
-                ctx.physics["narrative_drag"] = (
-                    ctx.physics.get("narrative_drag", 0.0) + self.pending_drag
-                )
-            else:
-                ctx.physics.narrative_drag += self.pending_drag
+            ctx.physics.narrative_drag += self.pending_drag
             ctx.log(
                 f"{Prisma.GRY}⚖️ DOMESTICATION: Drag +{self.pending_drag:.1f}{Prisma.RST}"
             )

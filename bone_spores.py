@@ -86,12 +86,13 @@ class LocalFileSporeLoader:
         if not os.path.exists(self.directory):
             return []
         files = []
-        for f in [x for x in os.listdir(self.directory) if x.endswith(".json")]:
-            try:
-                p = os.path.join(self.directory, f)
-                files.append((p, os.path.getmtime(p), f))
-            except OSError:
-                continue
+        for f in os.listdir(self.directory):
+            if f.endswith(".json"):
+                try:
+                    p = os.path.join(self.directory, f)
+                    files.append((p, os.path.getmtime(p), f))
+                except OSError:
+                    continue
         return sorted(files, key=lambda x: x[1], reverse=True)
 
     @staticmethod
@@ -598,18 +599,20 @@ class MycelialNetwork:
         )
 
     def _process_mutations(self, data):
-        if "mutations" in data:
-            accepted_count = 0
-            for cat, words in data["mutations"].items():
-                for w in words:
-                    current_cat = LexiconService.get_current_category(w)
-                    if not current_cat or current_cat == "unknown":
-                        LexiconService.teach(w, cat, 0)
-                        accepted_count += 1
-            if accepted_count > 0:
-                self.events.log(
-                    f"{Prisma.CYN}[MEMBRANE]: Integrated {accepted_count} mutations.{Prisma.RST}"
-                )
+        mutations = data.get("mutations", {})
+        if not mutations:
+            return
+        accepted_count = 0
+        for cat, words in mutations.items():
+            for w in words:
+                current_cat = LexiconService.get_current_category(w)
+                if not current_cat or current_cat == "unknown":
+                    LexiconService.teach(w, cat, 0)
+                    accepted_count += 1
+        if accepted_count > 0:
+            self.events.log(
+                f"{Prisma.CYN}[MEMBRANE]: Integrated {accepted_count} mutations.{Prisma.RST}"
+            )
 
     def _extract_legacy_traits(self, data):
         if "joy_legacy" in data and data["joy_legacy"]:
@@ -719,8 +722,9 @@ class MycelialNetwork:
         removed = 0
         max_files = 25
         max_age = 86400
+        current_time = time.time()
         for i, (path, age, fname) in enumerate(files):
-            file_age = time.time() - age
+            file_age = current_time - age
             if i >= max_files or file_age > max_age:
                 try:
                     if limbo_layer:

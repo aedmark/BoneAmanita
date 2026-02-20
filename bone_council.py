@@ -18,10 +18,7 @@ class TheStrangeLoop:
         text_lower = text.lower()
         phrase_hit = any(t in text_lower for t in self.triggers)
         psi = physics.get("psi", 0.0)
-        abstract_hit = False
-        if psi > 0.6:
-            if "self" in text_lower or "mirror" in text_lower or "define" in text_lower:
-                abstract_hit = True
+        abstract_hit = psi > 0.6 and any(w in text_lower for w in ("self", "mirror", "define"))
         threshold = getattr(BoneConfig.COUNCIL, "STRANGE_LOOP_VOLTAGE", 8.0)
         if (phrase_hit or abstract_hit) and physics.get("voltage", 0) > threshold:
             self.recursion_depth += 1

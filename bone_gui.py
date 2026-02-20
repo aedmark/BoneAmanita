@@ -189,13 +189,8 @@ class GeodesicRenderer:
         mind = ctx.mind_state
         mind_tuple = (mind.get("lens"), mind.get("thought"), mind.get("role"))
         bio_data = ctx.bio_result or {}
-        if (
-            "atp" not in bio_data
-            and hasattr(self.eng, "bio")
-            and hasattr(self.eng.bio, "mito")
-        ):
-            bio_data = bio_data.copy()
-            bio_data["atp"] = self.eng.bio.mito.state.atp_pool
+        metrics = self.eng.get_metrics()
+        bio_data["atp"] = metrics.get("atp", 0.0)
         data_ctx = {
             "health": self.eng.health,
             "stamina": self.eng.stamina,

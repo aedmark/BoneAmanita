@@ -397,25 +397,18 @@ class BoneConfig:
 
     @classmethod
     def reconcile_state(cls, physics_packet: Any):
-        is_dict = isinstance(physics_packet, dict)
+        if isinstance(physics_packet, dict):
+            current_v = physics_packet.get("voltage", 5.0)
+            current_d = physics_packet.get("narrative_drag", 1.0)
+            physics_packet["voltage"] = max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX))
+            physics_packet["narrative_drag"] = max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT))
+        else:
+            current_v = getattr(physics_packet, "voltage", 5.0)
+            current_d = getattr(physics_packet, "narrative_drag", 1.0)
+            setattr(physics_packet, "voltage", max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX)))
+            setattr(physics_packet, "narrative_drag",
+                    max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT)))
 
-        def get_val(key, default):
-            if is_dict:
-                return physics_packet.get(key, default)
-            return getattr(physics_packet, key, default)
-
-        def set_val(key, value):
-            if is_dict:
-                physics_packet[key] = value
-            else:
-                setattr(physics_packet, key, value)
-
-        current_v = get_val("voltage", 5.0)
-        current_d = get_val("narrative_drag", 1.0)
-        new_v = max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX))
-        new_d = max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT))
-        set_val("voltage", new_v)
-        set_val("narrative_drag", new_d)
         return physics_packet
 
     @classmethod
@@ -426,9 +419,8 @@ class BoneConfig:
         if not hasattr(target_sector, parameter):
             return f"❌ PARAM ERROR: '{parameter}' not found in {sector}."
         current_val = getattr(target_sector, parameter)
-        if type(current_val) != type(value) and not (
-            isinstance(current_val, float) and isinstance(value, int)
-        ):
-            return f"⚠️ TYPE MISMATCH: Cannot replace {type(current_val)} with {type(value)}."
+        if type(current_val) != type(value):
+            if not (isinstance(current_val, (int, float)) and isinstance(value, (int, float))):
+                return f"⚠️ TYPE MISMATCH: Cannot replace {type(current_val).__name__} with {type(value).__name__}."
         setattr(target_sector, parameter, value)
         return f"✅ TUNED: {sector}.{parameter} -> {value}"

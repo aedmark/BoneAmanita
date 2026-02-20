@@ -166,15 +166,9 @@ class PhysicsPacket:
     def __getattr__(self, key):
         if key in {"energy", "matter", "space"}:
             raise AttributeError(key)
-        energy = self.__dict__.get("energy")
-        matter = self.__dict__.get("matter")
-        space = self.__dict__.get("space")
-        if energy is None or matter is None or space is None:
-            raise AttributeError(
-                f"'{type(self).__name__}' not fully initialized (accessing '{key}')"
-            )
-        for sub in (energy, matter, space):
-            if hasattr(sub, key):
+        for sub_name in ("energy", "matter", "space"):
+            sub = self.__dict__.get(sub_name)
+            if sub and hasattr(sub, key):
                 return getattr(sub, key)
         raise AttributeError(f"'{type(self).__name__}' has no attribute '{key}'")
 

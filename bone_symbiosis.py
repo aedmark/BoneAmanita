@@ -51,7 +51,7 @@ class CoherenceAnchor:
         vits = f"V:{physics_state.get('voltage', 0):.1f}"
         traits = soul_state.get("traits", {})
         top_traits = sorted(traits.items(), key=lambda x: x[1], reverse=True)[:3]
-        trait_str = ",".join([f"{k[:3]}:{v:.1f}" for k, v in top_traits])
+        trait_str = ",".join(f"{k[:3]}:{v:.1f}" for k, v in top_traits)
         anchor = f"*** ANCHOR: {loc} || {vits} || [{trait_str}] ***"
         if len(anchor) > max_tokens * 4:
             return anchor[: max_tokens * 4] + "..."
@@ -75,12 +75,12 @@ class DiagnosticConfidence:
         elif health.entropy < 0.4:
             raw_state = "FATIGUED"
         self.history.append(raw_state)
-        recent = list(self.history)[-self.persistence_threshold :]
-        if len(recent) >= self.persistence_threshold:
+        if raw_state == "REFUSAL":
+            self.current_diagnosis = "REFUSAL"
+        elif len(self.history) >= self.persistence_threshold:
+            recent = list(self.history)[-self.persistence_threshold:]
             if all(s == raw_state for s in recent):
                 self.current_diagnosis = raw_state
-            if raw_state == "REFUSAL":
-                self.current_diagnosis = "REFUSAL"
         return self.current_diagnosis
 
 
@@ -243,12 +243,8 @@ class SymbiosisManager:
         return self.current_health
 
     def _detect_refusal(self, text):
-        lower_text = text.lower()
-        header = lower_text[:200]
-        for sig in self.REFUSAL_SIGNATURES:
-            if sig in header:
-                return True
-        return False
+        header = text[:200].lower()
+        return any(sig in header for sig in self.REFUSAL_SIGNATURES)
 
     def get_prompt_modifiers(self) -> Dict:
         mods = _DEFAULT_MODIFIERS.copy()

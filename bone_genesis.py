@@ -16,12 +16,11 @@ class BoneGenesis:
     def ignite(
         config: Dict[str, Any], lexicon_ref: Any, events_ref: Any = None
     ) -> Dict[str, Any]:
+        events = events_ref or EventBus()
         if events_ref:
-            events_ref.log("Igniting Genesis Sequence...", "GENESIS")
-            events = events_ref
+            events.log("Igniting Genesis Sequence...", "GENESIS")
         else:
             print("...Igniting Genesis Sequence...")
-            events = EventBus()
         lore = LoreManifest()
         akashic = TheAkashicRecord(lore_manifest=lore, events_ref=events)
         akashic.setup_listeners(events)
@@ -49,14 +48,12 @@ class BoneGenesis:
                 events.log(f"⛓️ LEGACY SCARS: {', '.join(logs)}", "OROBOROS")
                 if hasattr(embryo.physics, "dynamics"):
                     embryo.physics.dynamics.base_drag += dummy_phys["narrative_drag"]
-                if "biometrics" in live_bio_state and embryo.bio.biometrics:
-                    target_health = live_bio_state["biometrics"].get("health", 100.0)
-                    target_stamina = live_bio_state["biometrics"].get("stamina", 100.0)
-                    embryo.bio.biometrics.health = target_health
-                    embryo.bio.biometrics.stamina = target_stamina
-                if "mito" in live_bio_state and embryo.bio.mito:
-                    target_atp = live_bio_state["mito"].get("atp", 60.0)
-                    embryo.bio.mito.state.atp_pool = target_atp
+                if embryo.bio.biometrics:
+                    biometrics = live_bio_state.get("biometrics", {})
+                    embryo.bio.biometrics.health = biometrics.get("health", 100.0)
+                    embryo.bio.biometrics.stamina = biometrics.get("stamina", 100.0)
+                if embryo.bio.mito:
+                    embryo.bio.mito.state.atp_pool = live_bio_state.get("mito", {}).get("atp", 60.0)
         drivers = DriverRegistry(events)
         symbiosis = SymbiosisManager(events)
         return {
@@ -72,24 +69,17 @@ class BoneGenesis:
 
     @staticmethod
     def _summon_village(
-        events, embryo, akashic, suppressed: Set[str]
+            events, embryo, akashic, suppressed: Set[str]
     ) -> Dict[str, Any]:
-        gordon = None
-        if "GORDON" not in suppressed:
-            gordon = GordonKnot(events=events)
-        navigator = None
-        if "CARTOGRAPHER" not in suppressed and "NAVIGATOR" not in suppressed:
-            navigator = TheCartographer(embryo.shimmer)
-        tinkerer = None
-        if "TINKERER" not in suppressed:
-            tinkerer = TheTinkerer(gordon, events, akashic)
+        gordon = GordonKnot(events=events) if "GORDON" not in suppressed else None
+        navigator = TheCartographer(embryo.shimmer) if {"CARTOGRAPHER", "NAVIGATOR"}.isdisjoint(suppressed) else None
+        tinkerer = TheTinkerer(gordon, events, akashic) if "TINKERER" not in suppressed else None
+        bureau = TheBureau() if "BUREAU" not in suppressed else None
+
         death_gen = None
         if "DEATH" not in suppressed:
             death_gen = DeathGen()
             DeathGen.load_protocols()
-        bureau = None
-        if "BUREAU" not in suppressed:
-            bureau = TheBureau()
         town_hall = TownHall(gordon, events, embryo.shimmer, akashic, navigator)
         repro = LiteraryReproduction()
         LiteraryReproduction.load_genetics()

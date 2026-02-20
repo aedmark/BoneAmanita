@@ -1,6 +1,6 @@
 import streamlit as st
-import re
 from bone_main import BoneAmanita, ConfigWizard
+from bone_types import Prisma
 
 st.set_page_config(
     page_title="BONEAMANITA [GLASS TERMINAL]",
@@ -37,44 +37,26 @@ st.markdown(
 def clean_engine_output(raw_text):
     if not raw_text:
         return "No signal."
-    clean = re.sub(r"\x1b\[[0-9;]*m", "", raw_text)
-    if "──────" in clean:
-        clean = clean.split("──────")[-1].strip()
-    return clean
-
+    clean = Prisma.strip(raw_text)
+    return clean.split("──────")[-1].strip() if "──────" in clean else clean
 
 def format_log_entry(log_str):
-    clean = re.sub(r"\x1b\[[0-9;]*m", "", log_str).strip()
+    clean = Prisma.strip(log_str).strip()
     if "██" in clean or "♦ THE ARCHITECT" in clean:
         return None
-    if "TOWN HALL" in clean:
-        return f"📜 {clean.replace('📜', '').strip()}"
-    if "VITAL SIGNS" in clean:
-        return f"🩺 {clean.replace('🩺', '').strip()}"
-    if "PARADOX BLOOM" in clean:
-        return f"🌷 {clean.replace('🌷', '').strip()}"
-    if "CARTOGRAPHER" in clean:
-        return f"🗺️ {clean.replace('🗺️', '').strip()}"
-    if "[BIO]" in clean:
-        return f"🧬 {clean.replace('[BIO]', '')}"
-    if "[PHYSICS]" in clean or "VOLTAGE" in clean:
-        return f"⚡ {clean.replace('[PHYSICS]', '')}"
-    if "ASCENSION" in clean:
-        return f"✨ {clean}"
-    if "AIRSTRIKE" in clean:
-        return f"💣 {clean}"
-    if "LEGACY" in clean:
-        return f"⛓️ {clean}"
-    if "EFFICIENCY" in clean:
-        return f"📉 {clean}"
-    if "[COUNCIL]" in clean:
-        return f"⚖️ {clean.replace('[COUNCIL]', '')}"
-    if "[SLASH]" in clean or "SANTIAGO" in clean or "PINKER" in clean:
-        return f"🗡️ {clean}"
-    if "CRITICAL" in clean:
-        return f"🔴 {clean}"
-    if "VSL" in clean:
-        return f"🧊 {clean}"
+
+    icon_map = {
+        "TOWN HALL": "📜", "VITAL SIGNS": "🩺", "PARADOX BLOOM": "🌷",
+        "CARTOGRAPHER": "🗺️", "[BIO]": "🧬", "[PHYSICS]": "⚡", "VOLTAGE": "⚡",
+        "ASCENSION": "✨", "AIRSTRIKE": "💣", "LEGACY": "⛓️", "EFFICIENCY": "📉",
+        "[COUNCIL]": "⚖️", "[SLASH]": "🗡️", "SANTIAGO": "🗡️", "PINKER": "🗡️",
+        "CRITICAL": "🔴", "VSL": "🧊"
+    }
+    for key, icon in icon_map.items():
+        if key in clean:
+            text = clean.replace(key, "").replace(icon, "").strip()
+            return f"{icon} {text}" if text else f"{icon} {key}"
+
     return f"🔹 {clean}"
 
 
@@ -104,10 +86,9 @@ def render_dashboard(eng_ref):
         stam = eng_ref.stamina
         st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.1f}%")
         st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"STAMINA: {stam:.1f}%")
-        atp = 0.0
-        if hasattr(eng_ref, "bio") and eng_ref.bio and hasattr(eng_ref.bio, "mito"):
-            atp = eng_ref.bio.mito.state.atp_pool
-        eff = getattr(eng_ref.host_stats, "efficiency_index", 1.0)
+        metrics = eng_ref.get_metrics()
+        atp = metrics.get("atp", 0.0)
+        eff = metrics.get("efficiency", 1.0)
         c_atp, c_eff = st.columns(2)
         c_atp.metric("ATP", f"{atp:.0f} J")
         if eff < 0.6:

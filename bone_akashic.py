@@ -185,8 +185,8 @@ class TheAkashicRecord:
         raw_cooc = data.get("lens_cooccurrence", {})
         for k, v in raw_cooc.items():
             if "|" in k:
-                parts = k.split("|")
-                self.lens_cooccurrence[(parts[0], parts[1])] = v
+                p1, p2 = k.split("|", 1)
+                self.lens_cooccurrence[(p1, p2)] = v
         self.ingredient_affinity = data.get("ingredient_affinity", {})
         self.shadow_stock = data.get("shadow_stock", [])
         gordon_data = self.lore.get("GORDON")
@@ -322,10 +322,9 @@ class TheAkashicRecord:
             if self.discovered_words[word] == category:
                 return False
         lexicon_data = self.lore.get("LEXICON")
-        if category not in lexicon_data:
-            lexicon_data[category] = []
-        if word not in lexicon_data[category]:
-            lexicon_data[category].append(word)
+        target_category = lexicon_data.setdefault(category, [])
+        if word not in target_category:
+            target_category.append(word)
             self.discovered_words[word] = category
             print(f"✨ LEXICON: Learned '{word}' ({category})")
             self.save_to_disk("LEXICON", lexicon_data)

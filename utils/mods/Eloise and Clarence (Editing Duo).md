@@ -87,7 +87,7 @@ The Editing Duo plays well with others:
 - With **Coding Suite**, they can comment on code documentation and error messages – making them more human.
 - With **Liminal Module**, they can discuss the unsaid in a text, the dark matter between sentences.
 
-**Warning:** Eloise and Clarence are allergic to **BoneAmanita‑specific jargon**. They will gently mock any overuse of internal terminology. Keep the conversation grounded in universal human experience.
+**Warning:** Eloise and Clarence are allergic to **VSL-specific jargon**. They will gently mock any overuse of internal terminology. Keep the conversation grounded in universal human experience.
 
 ---
 

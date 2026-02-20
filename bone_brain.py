@@ -440,13 +440,11 @@ class PromptComposer:
         char_limit = 8000
         current_chars = 0
         kept_lines = []
-        min_lines = 1
-        for i, line in enumerate(reversed(raw_history)):
-            line_len = len(line)
-            if i >= min_lines and (current_chars + line_len > char_limit):
+        for line in reversed(raw_history):
+            if current_chars + len(line) > char_limit and kept_lines:
                 break
             kept_lines.append(line)
-            current_chars += line_len
+            current_chars += len(line)
         history_str = "\n".join(reversed(kept_lines))
         system_injection = ""
         if ballast:
@@ -605,7 +603,7 @@ class ResponseValidator:
         json_patterns = crimes.get("SCRUB_PATTERNS", [])
         if json_patterns:
             self.scrub_patterns = [
-                (r"{}".format(p["regex"]), p["replacement"]) for p in json_patterns
+                (re.compile(p["regex"]), p["replacement"]) for p in json_patterns
             ]
         else:
             patterns = [
@@ -619,7 +617,7 @@ class ResponseValidator:
                 r"(?im)^User-System:.*?$",
                 r"\| System:.*?$",
             ]
-            self.scrub_patterns = [(p, "") for p in patterns]
+            self.scrub_patterns = [(re.compile(p), "") for p in patterns]
         self.meta_markers = [
             "INITIALIZATION SEQUENCE",
             "LOCATING TARGET SEED",
@@ -643,10 +641,9 @@ class ResponseValidator:
             for extracted_line in content.split("\n"):
                 extracted_meta_logs.append(f"[THOUGHT]: {extracted_line}")
             return ""
-
         clean_text = sys_internal_pattern.sub(extract_meta, response)
         for pattern, replacement in self.scrub_patterns:
-            clean_text = re.sub(pattern, replacement, clean_text)
+            clean_text = pattern.sub(replacement, clean_text)
         clean_lines = []
         for line in clean_text.splitlines():
             is_meta = False
@@ -737,22 +734,6 @@ class TheCortex:
         self.dialogue_buffer.append(f"User: {user_text} | System: {system_text}")
         if len(self.dialogue_buffer) > self.MAX_HISTORY:
             self.dialogue_buffer.pop(0)
-
-    @staticmethod
-    def _harvest_loot(text: str) -> Tuple[str, List[str], List[str]]:
-        def extract(tag):
-            found = re.findall(rf"\[\[{tag}:\s*(.*?)]]", text, re.IGNORECASE)
-            return list(
-                {
-                    re.sub(r"[^A-Z0-9_]", "", i.strip().upper().replace(" ", "_"))
-                    for i in found
-                    if i
-                }
-            )
-
-        new_loot, lost_loot = extract("LOOT"), extract("LOST")
-        clean_text = re.sub(r"\[\[(LOOT|LOST):\s*.*?]]", "", text, flags=re.IGNORECASE)
-        return clean_text.strip(), new_loot, lost_loot
 
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
         mode_settings = BonePresets.MODES.get(

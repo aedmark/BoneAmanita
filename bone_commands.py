@@ -42,36 +42,35 @@ class CommandStateInterface:
     def save_state(self) -> str:
         if not hasattr(self.eng, "mind") or not hasattr(self.eng.mind, "mem"):
             return "Error: Memory system not found."
-        if hasattr(self.eng, "mind") and hasattr(self.eng.mind, "mem"):
-            loc = "Unknown"
-            last_out = "Silence."
-            inv = []
-            if hasattr(self.eng, "cortex"):
-                state = self.eng.cortex.gather_state(
-                    getattr(self.eng.cortex, "last_physics", {})
-                )
-                loc = state.get("world", {}).get("orbit", ["Void"])[0]
-                if self.eng.cortex.dialogue_buffer:
-                    last_out = self.eng.cortex.dialogue_buffer[-1]
-            if hasattr(self.eng, "gordon"):
-                inv = getattr(self.eng.gordon, "inventory", [])
-            continuity_packet = {
-                "location": loc,
-                "last_output": last_out,
-                "inventory": inv,
-            }
-            atlas_data = None
-            if hasattr(self.eng, "town_hall") and hasattr(
+        loc = "Unknown"
+        last_out = "Silence."
+        inv = []
+        if hasattr(self.eng, "cortex"):
+            state = self.eng.cortex.gather_state(
+                getattr(self.eng.cortex, "last_physics", {})
+            )
+            loc = state.get("world", {}).get("orbit", ["Void"])[0]
+            if self.eng.cortex.dialogue_buffer:
+                last_out = self.eng.cortex.dialogue_buffer[-1]
+        if hasattr(self.eng, "gordon"):
+            inv = getattr(self.eng.gordon, "inventory", [])
+        continuity_packet = {
+            "location": loc,
+            "last_output": last_out,
+            "inventory": inv,
+        }
+        atlas_data = None
+        if hasattr(self.eng, "town_hall") and hasattr(
                 self.eng.town_hall, "Cartographer"
-            ):
-                atlas_data = self.eng.town_hall.Cartographer.export_atlas()
-            mito_traits = {}
-            antibodies = None
-            if hasattr(self.eng, "bio"):
-                if hasattr(self.eng.bio, "mito") and hasattr(self.eng.bio.mito, "state"):
-                    mito_traits = self.eng.bio.mito.state.__dict__
-                if hasattr(self.eng.bio, "immune"):
-                    antibodies = list(self.eng.bio.immune.active_antibodies)
+        ):
+            atlas_data = self.eng.town_hall.Cartographer.export_atlas()
+        mito_traits = {}
+        antibodies = None
+        if hasattr(self.eng, "bio"):
+            if hasattr(self.eng.bio, "mito") and hasattr(self.eng.bio.mito, "state"):
+                mito_traits = self.eng.bio.mito.state.__dict__
+            if hasattr(self.eng.bio, "immune"):
+                antibodies = list(self.eng.bio.immune.active_antibodies)
             return self.eng.mind.mem.save(
                 health=self.eng.health,
                 stamina=self.eng.stamina,
@@ -90,10 +89,11 @@ class CommandStateInterface:
         return "Error: Memory system unreachable."
 
     def get_vitals(self) -> Dict[str, float]:
+        metrics = self.eng.get_metrics()
         return {
-            "health": self.eng.health,
-            "stamina": self.eng.stamina,
-            "atp": self.eng.bio.mito.state.atp_pool,
+            "health": metrics.get("health", 0.0),
+            "stamina": metrics.get("stamina", 0.0),
+            "atp": metrics.get("atp", 0.0),
             "max_health": getattr(self.Config, "MAX_HEALTH", 100.0),
             "max_stamina": getattr(self.Config, "MAX_STAMINA", 100.0),
         }
@@ -256,15 +256,10 @@ class CommandProcessor:
         }
         buckets = {k: [] for k in structure.keys()}
         buckets["UNCATEGORIZED"] = []
+        cmd_to_cat = {cmd: cat for cat, cmds in structure.items() for cmd in cmds}
         for cmd, desc in self.registry.help_text.items():
-            found = False
-            for cat, members in structure.items():
-                if cmd in members:
-                    buckets[cat].append((cmd, desc))
-                    found = True
-                    break
-            if not found:
-                buckets["UNCATEGORIZED"].append((cmd, desc))
+            cat = cmd_to_cat.get(cmd, "UNCATEGORIZED")
+            buckets[cat].append((cmd, desc))
         for cat, cmds in buckets.items():
             if not cmds:
                 continue

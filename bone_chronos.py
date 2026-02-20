@@ -159,8 +159,7 @@ class ChronosKeeper:
             files = sorted(
                 [f for f in os.listdir(self.CRASH_DIR) if f.startswith(prefix)]
             )
-            while len(files) >= 5:
-                oldest = files.pop(0)
+            for oldest in files[:-4]:
                 os.remove(os.path.join(self.CRASH_DIR, oldest))
         except Exception:
             pass

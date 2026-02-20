@@ -207,12 +207,12 @@ class LinguisticAnalyzer:
         if w in self.store.SOLVENTS:
             return 0.1
         length_score = min(1.0, len(w) / 12.0)
-        stops = sum(1 for c in w if c in self.PHONETICS["PLOSIVE"])
-        flow = sum(
-            1
-            for c in w
-            if c in self.PHONETICS["LIQUID"] or c in self.PHONETICS["VOWELS"]
-        )
+        stops, flow = 0, 0
+        for c in w:
+            if c in self.PHONETICS["PLOSIVE"]:
+                stops += 1
+            elif c in self.PHONETICS["LIQUID"] or c in self.PHONETICS["VOWELS"]:
+                flow += 1
         stop_score = min(1.0, stops / 3.0)
         flow_score = min(1.0, flow / 4.0)
         substance_score = max(stop_score, flow_score)
@@ -316,11 +316,10 @@ class LinguisticAnalyzer:
                 if root in w:
                     return category.lower(), 0.8
         counts = {k: 0 for k in self.PHONETICS}
+        char_to_sound = {char: sound_type for sound_type, chars in self.PHONETICS.items() for char in chars}
         for char in w:
-            for sound_type, chars in self.PHONETICS.items():
-                if char in chars:
-                    counts[sound_type] += 1
-                    break
+            if sound_type := char_to_sound.get(char):
+                counts[sound_type] += 1
         density_score = (counts["PLOSIVE"] * 1.5) + (counts["NASAL"] * 0.8)
         flow_score = counts["LIQUID"] + counts["FRICATIVE"]
         vitality_score = (counts["VOWELS"] * 1.2) + (flow_score * 0.8)
@@ -386,12 +385,9 @@ class SemanticField:
             return self.current_vector
         flux = self.analyzer.calculate_flux(self.current_vector, new_vector)
         self.momentum = (self.momentum * 0.7) + (flux * 0.3)
-        blended = {}
-        all_keys = set(self.current_vector.keys()) | set(new_vector.keys())
-        for k in all_keys:
-            old_val = self.current_vector.get(k, 0.0)
-            new_val = new_vector.get(k, 0.0)
-            blended[k] = round((old_val * 0.6) + (new_val * 0.4), 3)
+        blended = {k: round(v * 0.6, 3) for k, v in self.current_vector.items()}
+        for k, v in new_vector.items():
+            blended[k] = round(blended.get(k, 0.0) + (v * 0.4), 3)
         self.current_vector = blended
         self.history.append((time.time(), flux))
         if len(self.history) > 10:

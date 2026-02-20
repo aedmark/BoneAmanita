@@ -18,7 +18,6 @@ from bone_protocols import LimboLayer
 from bone_physics import QuantumObserver, SurfaceTension, TheGatekeeper
 from bone_machine import TheCrucible, TheForge, TheTheremin
 
-
 @dataclass
 class SystemEmbryo:
     mind: MindSystem
@@ -69,8 +68,9 @@ class PanicRoom:
     def get_safe_bio(previous_state=None):
         base = SAFE_BIO_DEFAULTS.copy()
         base["logs"] = [f"{Prisma.paint('BIO FAIL: Triage Protocol Active.', 'R')}"]
-        if previous_state and isinstance(previous_state, dict):
-            if old_chem := previous_state.get("chemistry"):
+        state = previous_state or {}
+        if isinstance(state, dict):
+            if old_chem := state.get("chemistry", {}):
                 base["chem"]["COR"] = min(0.9, old_chem.get("COR", 0.0))
                 base["chem"]["SER"] = max(0.2, old_chem.get("SER", 0.0))
         return base
@@ -224,20 +224,19 @@ class BoneArchitect:
         embryo.soul_legacy = {}
         embryo.continuity = None
         recovered_atlas = {}
-        if load_result and isinstance(load_result, (list, tuple)):
-            count = len(load_result)
-            if count > 0:
-                if hasattr(embryo.bio.mito, "apply_inheritance"):
-                    embryo.bio.mito.apply_inheritance(load_result[0])
-            if count > 1 and isinstance(load_result[1], (list, set)):
-                if hasattr(embryo.bio.immune, "load_antibodies"):
-                    embryo.bio.immune.load_antibodies(load_result[1])
-            if count > 2 and isinstance(load_result[2], dict):
-                embryo.soul_legacy = load_result[2]
-            if count > 3 and isinstance(load_result[3], dict):
-                embryo.continuity = load_result[3]
-            if count > 4 and isinstance(load_result[4], dict):
-                recovered_atlas = load_result[4]
+        if isinstance(load_result, (list, tuple)) and load_result:
+            padded_result = list(load_result) + [None] * (5 - len(load_result))
+            mito_legacy, immune_legacy, soul_legacy, continuity, atlas = padded_result[:5]
+            if mito_legacy and hasattr(embryo.bio.mito, "apply_inheritance"):
+                embryo.bio.mito.apply_inheritance(mito_legacy)
+            if immune_legacy and isinstance(immune_legacy, (list, set)) and hasattr(embryo.bio.immune, "load_antibodies"):
+                embryo.bio.immune.load_antibodies(immune_legacy)
+            if isinstance(soul_legacy, dict):
+                embryo.soul_legacy = soul_legacy
+            if isinstance(continuity, dict):
+                embryo.continuity = continuity
+            if isinstance(atlas, dict):
+                recovered_atlas = atlas
         if recovered_atlas and hasattr(embryo.physics, "nav"):
             if hasattr(embryo.physics.nav, "import_atlas"):
                 try:

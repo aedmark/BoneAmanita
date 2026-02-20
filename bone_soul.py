@@ -55,12 +55,11 @@ class TraitVector:
         for t in self._TRAITS:
             val = getattr(self, t)
             local_decay = decay_rate * 0.5 if t == "empathy" else decay_rate
-            if abs(val - 0.5) < local_decay:
-                setattr(self, t, 0.5)
-            elif val > 0.5:
-                setattr(self, t, val - local_decay)
+            if abs(val - 0.5) <= local_decay:
+                new_val = 0.5
             else:
-                setattr(self, t, val + local_decay)
+                new_val = val - local_decay if val > 0.5 else val + local_decay
+            setattr(self, t, new_val)
 
 
 class TheEditor:
@@ -163,11 +162,11 @@ class HumanityAnchor:
         if not self.agency_lock:
             return True
         clean = text.lower().strip()
-        passed = False
-        if self.current_riddle_answers and "*" not in self.current_riddle_answers:
-            passed = any(ans in clean for ans in self.current_riddle_answers)
-        elif self.current_riddle_answers:
+        answers = self.current_riddle_answers or ["*"]
+        if "*" in answers:
             passed = len(clean.split()) > 4 and not clean.startswith("/")
+        else:
+            passed = any(ans in clean for ans in answers)
         if passed:
             self.agency_lock = False
             self.dignity_reserve = 50.0
@@ -483,17 +482,18 @@ class NarrativeSelf:
         word = word.title()
         if source == "ORGANIC":
             templates = [
-                "The Theory of {}",
-                "The Architecture of {}",
-                "Why {} Matters",
-                "The Weight of {}",
+                "The Theory of {0}",
+                "The Architecture of {0}",
+                "Why {0} Matters",
+                "The Weight of {0}",
             ]
-            return random.choice(templates).format(word)
-        templates = [
-            "The Pursuit of {}",
-            f"Escaping the {negate_cat.title()}",
-            "Meditations on {}",
-        ]
+        else:
+            n_cat = negate_cat.title() if negate_cat else "Void"
+            templates = [
+                "The Pursuit of {0}",
+                f"Escaping the {n_cat}",
+                "Meditations on {0}",
+            ]
         return random.choice(templates).format(word)
 
     def _forge_core_memory(self, physics_packet, bio_state, voltage, dance_move):

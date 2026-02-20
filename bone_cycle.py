@@ -243,13 +243,7 @@ class GatekeeperPhase(SimulationPhase):
                     return ctx
                 if audit_result.get("ui"):
                     ctx.bureau_ui = audit_result["ui"]
-        if hasattr(self.eng, "bio") and self.eng.bio and self.eng.bio.biometrics:
-            current_bio = {
-                "health": self.eng.bio.biometrics.health,
-                "stamina": self.eng.bio.biometrics.stamina,
-            }
-        else:
-            current_bio = {"health": self.eng.health, "stamina": self.eng.stamina}
+        current_bio = self.eng.get_metrics()
         if self.eng.bureau:
             audit_result = self.eng.bureau.audit(
                 ctx.physics, current_bio, origin="USER"
@@ -296,17 +290,13 @@ class MetabolismPhase(SimulationPhase):
             "ENTROPY": getattr(physics, "entropy", 0.0),
             "VALENCE": getattr(physics, "valence", 0.0),
         }
-        real_health = self.eng.health
-        real_stamina = self.eng.stamina
-        if self.eng.bio.biometrics:
-            real_health = self.eng.bio.biometrics.health
-            real_stamina = self.eng.bio.biometrics.stamina
+        metrics = self.eng.get_metrics()
         ctx.bio_result = self.eng.soma.digest_cycle(
             ctx.input_text,
             physics,
             bio_feedback,
-            real_health,
-            real_stamina,
+            metrics["health"],
+            metrics["stamina"],
             self.eng.bio.governor.get_stress_modifier(self.eng.tick_count),
             self.eng.tick_count,
             circadian_bias=self._check_circadian_rhythm(),
@@ -1065,8 +1055,6 @@ class GeodesicOrchestrator:
             ):
                 ctx.physics = self.eng.phys.observer.last_physics_packet.snapshot()
             elif not ctx.physics:
-                from bone_architect import PanicRoom
-
                 ctx.physics = PanicRoom.get_safe_physics()
                 self.eng.events.log(
                     "⚠️ PHYSICS BYPASS: Running on Panic Protocol.", "SYS"
@@ -1144,7 +1132,6 @@ class GeodesicOrchestrator:
 
     @staticmethod
     def _generate_crash_report(e: Exception) -> Dict[str, Any]:
-        from bone_architect import PanicRoom
         full_trace = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         safe_phys = PanicRoom.get_safe_physics()
         safe_bio = PanicRoom.get_safe_bio()

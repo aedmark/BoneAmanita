@@ -11,25 +11,12 @@ from bone_drivers import UserProfile
 def _hydrate_packet(p: Any) -> PhysicsPacket:
     if isinstance(p, PhysicsPacket):
         return p
+    packet = PhysicsPacket.void_state()
     if isinstance(p, dict):
-        default = PhysicsPacket(
-            voltage=0.0,
-            narrative_drag=0.0,
-            clean_words=[],
-            vector={},
-            zone="VOID",
-            counts={},
-        )
-        default.voltage = p.get("voltage", 0.0)
-        default.narrative_drag = p.get("narrative_drag", 0.0)
-        default.vector = p.get("vector", {})
-        default.clean_words = p.get("clean_words", [])
-        default.counts = p.get("counts", {})
-        default.zone = p.get("zone", "VOID")
-        default.kappa = p.get("kappa", 0.0)
-        default.raw_text = p.get("raw_text", "")
-        return default
-    return PhysicsPacket(voltage=0.0, narrative_drag=0.0)
+        for k in ("voltage", "narrative_drag", "vector", "clean_words", "counts", "zone", "kappa", "raw_text"):
+            if k in p:
+                setattr(packet, k, p[k])
+    return packet
 
 
 class TheTinkerer:
@@ -50,9 +37,8 @@ class TheTinkerer:
         deltas = []
         trait_counts = {"HEAVY_LOAD": 0, "TIME_DILATION": 0, "ENTROPY_BUFFER": 0}
         for item_data in inventory_data:
-            traits = item_data.get("passive_traits", [])
-            for t in trait_counts:
-                if t in traits:
+            for t in item_data.get("passive_traits", []):
+                if t in trait_counts:
                     trait_counts[t] += 1
         if trait_counts["HEAVY_LOAD"] > 0:
             impact = math.log1p(trait_counts["HEAVY_LOAD"]) * 0.7

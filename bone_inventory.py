@@ -96,14 +96,7 @@ class GordonKnot:
         raw_lost = re.findall(lost_pattern, text, re.IGNORECASE)
 
         def normalize(items):
-            clean_set = set()
-            for normalized_item in items:
-                clean = normalized_item.strip().upper().replace(" ", "_")
-                clean = re.sub(r"[^A-Z0-9_]", "", clean)
-                if clean:
-                    clean_set.add(clean)
-            return list(clean_set)
-
+            return list({re.sub(r"[^A-Z0-9_]", "", i.strip().upper().replace(" ", "_")) for i in items if i})
         new_loot = normalize(raw_loot)
         lost_loot = normalize(raw_lost)
         logs = []
@@ -158,12 +151,7 @@ class GordonKnot:
         return None
 
     def get_inventory_data(self) -> List[Dict]:
-        data = []
-        for name in self.inventory:
-            item = self.get_item_data(name)
-            if item:
-                data.append(item.__dict__)
-        return data
+        return [item.__dict__ for name in self.inventory if (item := self.get_item_data(name))]
 
     def acquire(self, tool_name: str) -> str:
         tool_name = tool_name.upper() if tool_name else "UNKNOWN"
@@ -216,21 +204,15 @@ class GordonKnot:
         voltage = physics.get("voltage", 0.0)
         drag = physics.get("narrative_drag", 0.0)
         psi = physics.get("psi", 0.0)
-        all_keys = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
-        for name in all_keys:
-            item = self.get_item_data(name)
-            if not item:
+        for name in set(self.registry) | set(self.ITEM_REGISTRY):
+            if not (item := self.get_item_data(name)):
                 continue
             ctx = item.spawn_context
-            if ctx in ["COMMON", "STANDARD"]:
-                candidates.append(name)
-            elif ctx == "VOLTAGE_HIGH" and voltage > 12.0:
-                candidates.append(name)
-            elif ctx == "VOLTAGE_CRITICAL" and voltage > 18.0:
-                candidates.append(name)
-            elif ctx == "DRAG_HEAVY" and drag > 4.0:
-                candidates.append(name)
-            elif ctx == "PSI_HIGH" and psi > 0.6:
+            if ctx in ("COMMON", "STANDARD") or \
+                    (ctx == "VOLTAGE_HIGH" and voltage > 12.0) or \
+                    (ctx == "VOLTAGE_CRITICAL" and voltage > 18.0) or \
+                    (ctx == "DRAG_HEAVY" and drag > 4.0) or \
+                    (ctx == "PSI_HIGH" and psi > 0.6):
                 candidates.append(name)
         return candidates
 

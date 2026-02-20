@@ -111,11 +111,10 @@ class TheBureau:
     def audit(self, physics, bio_state, _context=None, origin="USER") -> Optional[Dict]:
         if bio_state.get("health", 100.0) < BoneConfig.BUREAU.MIN_HEALTH_TO_AUDIT:
             return None
-        p = physics if isinstance(physics, dict) else getattr(physics, "__dict__", {})
-        vol = p.get("voltage", 0.0)
-        clean_words = p.get("clean_words", [])
-        raw_text = p.get("raw_text", "")
-        truth = p.get("truth_ratio", 0.0)
+        vol = getattr(physics, "voltage", 0.0)
+        clean_words = getattr(physics, "clean_words", [])
+        raw_text = getattr(physics, "raw_text", "")
+        truth = getattr(physics, "truth_ratio", 0.0)
         word_count = len(raw_text.split())
         if raw_text.startswith("/") or word_count < BoneConfig.BUREAU.MIN_WORD_COUNT:
             return None
@@ -283,16 +282,8 @@ class KintsugiProtocol:
     def attempt_repair(self, phys, trauma_accum, soul_ref=None, _qualia=None):
         if not self.active_koan:
             return None
-        vol = (
-            getattr(phys, "voltage", 0.0)
-            if not isinstance(phys, dict)
-            else phys.get("voltage", 0.0)
-        )
-        clean = (
-            LexiconService.sanitize(getattr(phys, "raw_text", ""))
-            if hasattr(phys, "raw_text")
-            else []
-        )
+        vol = getattr(phys, "voltage", 0.0)
+        clean = LexiconService.sanitize(getattr(phys, "raw_text", ""))
         play_count = sum(
             1
             for w in clean
@@ -558,13 +549,10 @@ class TheFolly:
 
     @staticmethod
     def _filter_meat_words(clean_words: list, _lexicon: Dict) -> list:
-        heavy = LexiconService.get("heavy")
-        kinetic = LexiconService.get("kinetic")
-        suburban = LexiconService.get("suburban")
-        heavy = heavy if heavy else []
-        kinetic = kinetic if kinetic else []
-        suburban = suburban if suburban else []
-        return [w for w in clean_words if w in heavy or w in kinetic or w in suburban]
+        meat_pool = set(LexiconService.get("heavy") or []) | \
+                    set(LexiconService.get("kinetic") or []) | \
+                    set(LexiconService.get("suburban") or [])
+        return [w for w in clean_words if w in meat_pool]
 
     @staticmethod
     def _attempt_digest_abstract(

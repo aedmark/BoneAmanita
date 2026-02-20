@@ -40,10 +40,7 @@ class SynestheticCortex:
     def perceive(
         self, physics: Dict, traits: Any = None, latency: float = 0.0
     ) -> BiologicalImpulse:
-        if hasattr(physics, "to_dict"):
-            physics = physics.to_dict()
-        elif not isinstance(physics, dict):
-            physics = getattr(physics, "__dict__", {})
+        physics = self._normalize_physics(physics)
         impulse = BiologicalImpulse()
         base_sens = BoneConfig.CORTEX.BASE_SENSITIVITY
         if traits:
@@ -101,23 +98,18 @@ class SynestheticCortex:
         return impulse
 
     def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
-        conditions = [
-            (impulse.cortisol_delta > 0.1 and impulse.adrenaline_delta > 0.1, "Trembling (Fight or Flight)."),
-            (impulse.dopamine_delta > 0.1 and impulse.adrenaline_delta > 0.1, "Electric Vibration."),
-            (impulse.adrenaline_delta > 0.1, "Pupils Dilating."),
-            (impulse.oxytocin_delta > 0.1 and impulse.dopamine_delta > 0.1, "Golden Glow."),
-            (impulse.oxytocin_delta > 0.1, "Chest Softening."),
-            (impulse.cortisol_delta > 0.1, "Gut Tightening."),
-            (impulse.dopamine_delta > 0.1, "Synaptic Spark."),
-            (physics.get("psi", 0.0) > 0.6, "Scalp Prickling (Liminal)."),
-            (physics.get("entropy", 0.0) > 0.7, "Skin Crawling (Static)."),
-            (physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER, "Electrical Arcing."),
-            (physics.get("voltage", 0) < 2.0, "Metabolic Dimming."),
-            (physics.get("narrative_drag", 0) > 5.0, "Shoulders Sagging."),
-        ]
-        for condition, reflex in conditions:
-            if condition:
-                return reflex
+        if impulse.cortisol_delta > 0.1 and impulse.adrenaline_delta > 0.1: return "Trembling (Fight or Flight)."
+        if impulse.dopamine_delta > 0.1 and impulse.adrenaline_delta > 0.1: return "Electric Vibration."
+        if impulse.adrenaline_delta > 0.1: return "Pupils Dilating."
+        if impulse.oxytocin_delta > 0.1 and impulse.dopamine_delta > 0.1: return "Golden Glow."
+        if impulse.oxytocin_delta > 0.1: return "Chest Softening."
+        if impulse.cortisol_delta > 0.1: return "Gut Tightening."
+        if impulse.dopamine_delta > 0.1: return "Synaptic Spark."
+        if physics.get("psi", 0.0) > 0.6: return "Scalp Prickling (Liminal)."
+        if physics.get("entropy", 0.0) > 0.7: return "Skin Crawling (Static)."
+        if physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER: return "Electrical Arcing."
+        if physics.get("voltage", 0) < 2.0: return "Metabolic Dimming."
+        if physics.get("narrative_drag", 0) > 5.0: return "Shoulders Sagging."
         if self.last_reflex == "Steady Pulse.":
             return "..."
         return "Steady Pulse."
