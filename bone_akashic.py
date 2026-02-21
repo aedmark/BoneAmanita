@@ -1,5 +1,6 @@
 import json
 import os
+import uuid
 from typing import Dict, Any, Tuple, cast, List, Set
 from bone_core import LoreManifest, BoneJSONEncoder
 from bone_types import Prisma
@@ -43,12 +44,18 @@ class TheAkashicRecord:
     def _extract_dominant_trigram(physics: Dict) -> str:
         vector = physics.get("vector", {})
         if not vector:
-            return "ENT"
+            return "KAN"
         dom = max(vector, key=vector.get)
         mapping = {
-            "VEL": "ZHEN", "STR": "GEN", "ENT": "KAN",
-            "PHI": "LI", "PSI": "QIAN", "BET": "XUN",
-            "E": "KUN", "DEL": "DUI"
+            "VEL": "ZHEN",
+            "STR": "GEN",
+            "CHI": "KAN",
+            "ENT": "KAN",
+            "PHI": "LI",
+            "PSI": "QIAN",
+            "BET": "XUN",
+            "LAMBDA": "KUN",
+            "DEL": "DUI",
         }
         return mapping.get(dom, "KAN")
 
@@ -98,29 +105,31 @@ class TheAkashicRecord:
             self.store_ghost_echo(payload)
 
     def forge_new_item(self, vector: Dict[str, float]) -> Tuple[str, Dict]:
-        import uuid
-
-        dominant_force = max(vector, key=vector.get) if vector else "ENT"
+        dominant_force = max(vector, key=vector.get) if vector else "CHI"
         prefixes = {
-            "VEL": "Sonic",
+            "VEL": "Kinetic",
             "STR": "Heavy",
-            "ENT": "Void",
+            "CHI": "Cursed",
+            "ENT": "Cursed",
             "PHI": "Solar",
-            "PSI": "Psionic",
-            "BET": "Hollow",
-            "E": "Primal",
+            "PSI": "Void",
+            "BET": "Paradox",
+            "LAMBDA": "Liminal",
             "DEL": "Manic",
         }
         prefix = prefixes.get(dominant_force, "Ascended")
         unique_suffix = str(uuid.uuid4())[:4].upper()
         new_name = f"{prefix.upper()}_ARTIFACT_{int(vector.get(dominant_force, 0) * 10)}_{unique_suffix}"
+        hazards = []
+        if vector.get("PHI", 0) > 0.5:
+            hazards.append("CONDUCTIVE_HAZARD")
+        if vector.get("CHI", 0) > 0.5:
+            hazards.append("TOXIC_HAZARD")
         new_data = {
             "name": new_name,
             "description": f"A vibrating artifact humming with {dominant_force} energy.",
             "function": "ARTIFACT",
-            "passive_traits": (
-                ["CONDUCTIVE_HAZARD"] if vector.get("PHI", 0) > 0.5 else []
-            ),
+            "passive_traits": hazards,
             "value": 50.0,
         }
         gordon_data = self.lore.get("GORDON") or {}

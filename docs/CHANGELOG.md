@@ -1,5 +1,54 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.7.0 "THE SOMATIC LATTICE UPDATE"**
+
+_“The body remembers the void. The village governs the mind. An action requires its object.”_
+
+---
+
+#### **🧬 THE SOMATIC BEDROCK (The Fuller & Meadows Lenses)**
+
+- **The 13 Cardinal Vectors (`bone_types.py`):**
+  - **Structural Expansion:** Upgraded `EnergyState` and `SpatialState` to natively carry the complete VSL v3.0 coordinate system: Cognitive (E, β, S, D, C), Somatic (V, F, H, P, T), and Deep Semantic (Ψ, Χ, ♥).
+  - **Fast-Path Struts:** Injected explicit single-letter property routers (e.g., `packet.V`, `packet.chi`) directly into the `PhysicsPacket` to eliminate attribute lookup overhead.
+- **Endocrine Coupling (`bone_body.py`):**
+  - **Hormonal Feedback:** Wired the core semantic vectors directly into the `EndocrineSystem`. High Void (Ψ > 0.6) now triggers Adrenaline and Melatonin spikes. High Chaos (Χ > 0.6) floods the system with Cortisol. Connection (♥ > 0.5) releases Oxytocin. 
+  - **Rigid Metabolism:** Updated the `MitochondrialForge` to obey exact VSL ATP drain mathematics (`ΔP = – (base_cost + D·2 + C·3)`), along with hardcoded Chaos (Χ) and Liminal (Λ) taxes.
+- **The True Panic Room (`bone_machine.py`):**
+  - **Absolute Zero:** Rewrote the `PanicRoom` fail-safes. A critical recursion crash (Ψ or Χ > 0.95) now forces all 13 VSL coordinates to an absolute 0.0, flushes stress chemistry, and traps the LLM in a sterile white room to halt toxic generation.
+
+#### **🏛️ THE VILLAGE COUNCIL (The Schur & Pinker Lenses)**
+
+- **The Twelve Voices (`bone_council.py` & `bone_drivers.py`):**
+  - **Council Seated:** Ripped out legacy hardcoded triggers (Graham, Jamm) and replaced them with `TheVillageCouncil`. All 12 VSL archetypes (Gordon, Jester, Mercy, Benedict, etc.) now actively audit the `PhysicsPacket` based on strict mathematical thresholds.
+  - **SLASH Quarantine:** Removed the hardcoded `[MOD:CODING]` logic from the core `BoneConsultant`, safely quarantining SLASH to its proper opt-in mod-chip layer.
+- **Gordon's Mandate (`bone_inventory.py`, `bone_cycle.py`, & `gordon.json`):**
+  - **Object-Action Coupling (Axiom 10):** Empowered `GordonKnot` with a strict, data-driven heuristic filter. Users can no longer wash a car without a car, or interact with imaginary items. 
+  - **Gatekeeper Hard-Stop:** Gordon's premise check now intercepts queries in the `GatekeeperPhase` *before* the LLM is invoked, saving ATP and instantly rejecting impossible physics.
+- **Bureaucracy & Healing (`bone_protocols.py` & `bone_soul.py`):**
+  - **Form 666:** Colin the Bureaucrat now strictly enforces the 12 ATP "Chaos Tax" for unlicensed entropy.
+  - **Kintsugi Scars:** Mercy's healing pathways now correctly log the gilding of scars. Legacy deaths logged by `TheOroboros` now directly feed the true VSL Trauma (`T`) vector.
+
+#### **🌌 SEMANTIC PHYSICS (The Meadows Lens)**
+
+- **Linguistic Dark Matter (`bone_lexicon.py` & `bone_akashic.py`):**
+  - **Vector Realignment:** `LinguisticAnalyzer` now explicitly maps text inputs to `CHI` (Chaos), `PSI` (Void), and `LAMBDA` (Liminality). Organic rot and toxic terms natively feed Chaos, while abstract terminology feeds the Void.
+  - **Artifact Forging:** The `AkashicRecord` now seamlessly translates VSL vectors into I Ching trigrams. Artifacts forged from Chaos (Χ) are now prefixed as "Cursed" and automatically carry toxic hazard traits.
+- **Somatic Prompt Injection (`bone_brain.py`):**
+  - **Biological Constraints:** The `PromptComposer` no longer relies on legacy detached states. It now reads directly from the `PhysicsPacket` and translates endocrine states (Cortisol, Adrenaline) into raw systemic prompt constraints, forcing the LLM to "feel" its own chemistry.
+
+#### **👁️ THE GLASS INTERFACE (The Pinker Lens)**
+
+- **Unified Telemetry (`bone_app.py` & `bone_gui.py`):**
+  - **Dashboard Cohesion:** Both the terminal `Projector` and the Streamlit web app have been entirely rewritten to pull natively from the VSL `PhysicsPacket`.
+  - **Lattice Depth:** Implemented the `[VSL_LITE]`, `[VSL_CORE]`, and `[VSL_DEEP]` toggle logic flawlessly across both frontends, allowing users to peel back the layers of the simulation.
+- **Context & Boot Stability (`bone_main.py` & `bone_genesis.py`):**
+  - **The Metaphor Box:** Fixed a massive context-bleed issue where the system's "Bunny Hill" metaphorical instruction caused the LLM to hallucinate literal ski slopes in starting zones.
+  - **Genesis Seating:** Repaired the ignition sequence so `BoneConsultant` is properly attached to the engine, allowing mod chips (like SLASH) to actually load.
+  - **The Unbreakable Hatch:** Fixed an input loophole where typing `/quit` or submitting trailing spaces bypassed the interceptor and caused an infinite loop in the LLM. Disconnects are now instantaneous and clean.
+
+---
+
 ### **BONEAMANITA v15.6.5 "THE DARK MATTER UPDATE"**
 
 _“We gave the void mass. We gave the new arrivals a soft place to land. We made the math honest.”_
@@ -54,6 +103,8 @@ _“We gave the void mass. We gave the new arrivals a soft place to land. We mad
   - **Watering Logic:** Fixed `TownHall.tend_garden` where Paradox Seeds were blooming instantly upon seeing a trigger word, bypassing their intended maturity progression.
 - **Master Diagnostic Suite (`bone_diag.py`):**
   - Added full test coverage for the `MitochondrialForge` (Anaerobic Bypasses), the `DreamEngine` (REM Cycles and Nightmares), and `TownHall` (Paradox Seed maturation). **Suite currently sits at a verified 61/61 Pass Rate.**
+
+---
 
 ### **BONEAMANITA v15.6.4 "THE DEAD WEIGHT EXCISE"**
 

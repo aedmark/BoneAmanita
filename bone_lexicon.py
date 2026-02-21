@@ -234,11 +234,11 @@ class LinguisticAnalyzer:
             return {}
         DIMENSION_MAP = {
             "kinetic": "VEL",
-            "explosive": "VEL",
+            "explosive": "CHI",
             "heavy": "STR",
             "constructive": "STR",
-            "antigen": "ENT",
-            "toxin": "ENT",
+            "antigen": "CHI",
+            "toxin": "CHI",
             "thermal": "PHI",
             "photo": "PHI",
             "abstract": "PSI",
@@ -248,20 +248,23 @@ class LinguisticAnalyzer:
             "play": "DEL",
             "aerobic": "DEL",
             "harvest": "STR",
-            "meat": "ENT",
+            "meat": "CHI",
             "void": "PSI",
-            "liminal": "PSI",
+            "liminal": "LAMBDA",
             "pareidolia": "PSI",
-            "crisis_term": "ENT",
+            "crisis_term": "CHI",
+            "cursed": "CHI",
         }
         dims = {
             "VEL": 0.0,
             "STR": 0.0,
-            "ENT": 0.0,
+            "CHI": 0.0,
             "PHI": 0.0,
             "PSI": 0.0,
             "BET": 0.0,
             "DEL": 0.0,
+            "LAMBDA": 0.0,
+            "ENT": 0.0,
         }
         for w in words:
             cats = self.store.get_categories_for_word(w)
@@ -270,7 +273,11 @@ class LinguisticAnalyzer:
                     target_dim = DIMENSION_MAP[cat]
                     dims[target_dim] += 1.0
         total = max(1.0, sum(dims.values()))
-        return {k: round(v / total, 3) for k, v in dims.items()}
+        result = {k: round(v / total, 3) for k, v in dims.items()}
+        result["ENT"] = result[
+            "CHI"
+        ]
+        return result
 
     @staticmethod
     def calculate_flux(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float:

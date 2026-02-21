@@ -224,13 +224,24 @@ class MitochondrialForge:
     ) -> MetabolicReceipt:
         if self.state.atp_pool > 95.0 and self.state.ros_buildup < 1.0:
             return MetabolicReceipt(0, 0, 0, 0, 0, "NOMINAL", "Fresh Start")
-        voltage = getattr(physics_packet, "voltage", 0.0)
-        raw_drag = getattr(physics_packet, "narrative_drag", 0.0)
-        drag = max(0.0, min(MAX_ACCEPTED_DRAG, raw_drag))
-        drag_mult = getattr(BoneConfig, "SIGNAL_DRAG_MULTIPLIER", 1.0)
-        raw_tax = ((drag ** DRAG_EXPONENT) * 0.5) * drag_mult
-        cognitive_load_tax = min(5.0, raw_tax)
-        base_demand = 2.0 + (voltage * 0.2)
+        depth = getattr(physics_packet, "D", 0.3)
+        connectivity = getattr(physics_packet, "C", 0.2)
+        base_cost = 2.0 + (getattr(physics_packet, "V", 30.0) * 0.05)
+        cognitive_load_tax = (depth * 2.0) + (connectivity * 3.0)
+        chi = getattr(physics_packet, "chi", 0.0)
+        if chi > 0.6:
+            chaos_tax = 8.0 * chi
+            cognitive_load_tax += chaos_tax
+            if self.events:
+                self.events.log(
+                    f"{Prisma.RED}🩸 CHAOS TAX APPLIED: +{chaos_tax:.1f} ATP drain.{Prisma.RST}",
+                    "BIO_WARN",
+                )
+        liminal_intensity = getattr(physics_packet, "vector", {}).get("LAMBDA", 0.0)
+        if liminal_intensity > 0:
+            liminal_tax = liminal_intensity**2
+            cognitive_load_tax += liminal_tax
+        base_demand = base_cost
         is_critical = self.state.atp_pool < BioConstants.ATP_CRITICAL
         if is_critical:
             cognitive_load_tax = 0.0
@@ -241,7 +252,6 @@ class MitochondrialForge:
                 )
                 self.events.log(f"{Prisma.VIOLET}💤 {msg}{Prisma.RST}", "BIO_CRIT")
                 self.state.retrograde_signal = "HIBERNATING"
-
         efficiency = max(0.35, self.state.membrane_potential)
         raw_cost = ((base_demand + cognitive_load_tax) * modifier) / efficiency
         if raw_cost > self.ANAEROBIC_THRESHOLD:
@@ -624,6 +634,11 @@ class SomaticLoop:
         self.feedback.perform_maintenance(text, phys, logs, tick_count)
         clean_words = getattr(phys, "clean_words", [])
         semantic_sig = self.semantic_doctor.assess(clean_words, phys)
+        if not feedback:
+            feedback = {}
+        feedback["PSI"] = getattr(phys, "psi", 0.0)
+        feedback["CHI"] = getattr(phys, "chi", 0.0)
+        feedback["VALENCE"] = getattr(phys, "valence", 0.0)
         chem_state = self.bio.endo.metabolize(
             feedback,
             self.bio.biometrics.health,
@@ -746,20 +761,23 @@ class EndocrineSystem:
         else:
             self.adrenaline -= BoneConfig.BIO.DECAY_RATE * 5
         psi = feedback.get("PSI", 0.0)
-        entropy = feedback.get("ENTROPY", 0.0)
+        chi = feedback.get(
+            "CHI", feedback.get("ENTROPY", 0.0)
+        )
         valence = feedback.get("VALENCE", 0.0)
-        if psi > 0.4:
-            self.adrenaline += 0.1 * psi
-            self.melatonin += 0.15 * psi
-        if entropy > 0.3:
-            self.cortisol += entropy * 0.6 * stress_mod
-            self.serotonin -= 0.1  # Mood crash
-        if valence > 0.2:
-            self.serotonin += valence * 0.2
-            self.oxytocin += valence * 0.15
-        elif valence < -0.2:
-            self.cortisol += abs(valence) * 0.2
-            self.dopamine -= 0.1
+        if psi > 0.6:
+            self.adrenaline += 0.4
+            self.melatonin += 0.2 * psi
+        if chi > 0.6:
+            self.cortisol += (0.6 * chi) * stress_mod
+            self.serotonin -= 0.2
+        if valence > 0.5:
+            self.oxytocin += 0.5 * valence
+            self.serotonin += 0.3
+            self.cortisol -= 0.3
+        elif valence < -0.5:
+            self.cortisol += abs(valence) * 0.4
+            self.dopamine -= 0.2
 
     def _apply_semantic_pressure(self, signal: SemanticSignal):
         if signal.novelty > 0.3:

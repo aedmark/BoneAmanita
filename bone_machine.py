@@ -309,42 +309,50 @@ SAFE_BIO_DEFAULTS: Dict[str, Any] = {
 class PanicRoom:
     @staticmethod
     def get_safe_physics():
-        narrative = LoreManifest.get_instance().get("narrative_data") or {}
-        cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["[SYSTEM FAILURE]"])
-        fail_msg = random.choice(cathedral_logs)
         safe_packet = PhysicsPacket.void_state()
-        safe_packet.voltage = 5.0
-        safe_packet.narrative_drag = 5.0
+        safe_packet.V = 0.0
+        safe_packet.F = 0.0
+        safe_packet.E = 0.0
+        safe_packet.beta = 0.0
+        safe_packet.S = 0.0
+        safe_packet.D = 0.0
+        safe_packet.C = 0.0
         safe_packet.psi = 0.0
+        safe_packet.chi = 0.0
         safe_packet.entropy = 0.0
         safe_packet.valence = 0.0
-        safe_packet.beta_index = 0.1
-        safe_packet.kappa = 1.0
-        safe_packet.vector = {k: 0.1 for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "E"]}
-        safe_packet.clean_words = ["system", "error", "recovery"]
-        safe_packet.raw_text = f"[PANIC PROTOCOL]: {fail_msg}"
+        safe_packet.kappa = 0.0
+        safe_packet.vector = {
+            k: 0.0
+            for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "LAMBDA", "CHI"]
+        }
+        safe_packet.clean_words = ["white", "room", "safe", "mode"]
+        safe_packet.raw_text = "[PANIC PROTOCOL]: SAFE_MODE. You will wake up in a white room. Do not be alarmed."
         safe_packet.flow_state = "SAFE_MODE"
         safe_packet.zone = "PANIC_ROOM"
-        safe_packet.manifold = "BUNKER"
+        safe_packet.manifold = "WHITE_ROOM"
         return safe_packet
 
     @staticmethod
     def get_safe_bio(previous_state=None):
         base = SAFE_BIO_DEFAULTS.copy()
-        base["logs"] = [f"{Prisma.paint('BIO FAIL: Triage Protocol Active.', 'R')}"]
+        base["logs"] = [
+            f"{Prisma.paint('BIO FAIL: Panic Room Protocol Active. Sensory input severed.', 'R')}"
+        ]
         state = previous_state or {}
         if isinstance(state, dict):
             if old_chem := state.get("chemistry", {}):
-                base["chem"]["COR"] = min(0.9, old_chem.get("COR", 0.0))
+                base["chem"]["COR"] = 0.0
+                base["chem"]["ADR"] = 0.0
                 base["chem"]["SER"] = max(0.2, old_chem.get("SER", 0.0))
         return base
 
     @staticmethod
     def get_safe_mind():
         return {
-            "lens": "NARRATOR",
-            "role": "The Backup System",
-            "thought": "I cannot think clearly, therefore I still am, but barely.",
+            "lens": "GORDON",
+            "role": "Panic Room Overseer",
+            "thought": "SAFE_MODE. You will wake up in a white room. Do not be alarmed.",
         }
 
     @staticmethod

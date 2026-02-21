@@ -33,7 +33,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
 def clean_engine_output(raw_text):
     if not raw_text:
         return "No signal."
@@ -44,7 +43,6 @@ def format_log_entry(log_str):
     clean = Prisma.strip(log_str).strip()
     if "██" in clean or "♦ THE ARCHITECT" in clean:
         return None
-
     icon_map = {
         "TOWN HALL": "📜", "VITAL SIGNS": "🩺", "PARADOX BLOOM": "🌷",
         "CARTOGRAPHER": "🗺️", "[BIO]": "🧬", "[PHYSICS]": "⚡", "VOLTAGE": "⚡",
@@ -56,99 +54,74 @@ def format_log_entry(log_str):
         if key in clean:
             text = clean.replace(key, "").replace(icon, "").strip()
             return f"{icon} {text}" if text else f"{icon} {key}"
-
     return f"🔹 {clean}"
-
 
 def render_dashboard(eng_ref):
     mode = getattr(eng_ref, "boot_mode", "ADVENTURE")
     depth = st.session_state.get("ui_depth", "BUNNY")
-
     with st.sidebar:
         st.title("💀 BONEAMANITA")
         st.caption(
             f"Kernel: {getattr(eng_ref, 'kernel_hash', 'UNKNOWN')} | Mode: {mode}"
         )
-
-        # [BUNNY HILL] - Simplest View
         if depth == "BUNNY":
             st.markdown("*The lattice is quiet. Speak to awaken it.*")
             st.caption("Type `[VSL_LITE]` to reveal the energy metrics.")
             return
-
-        # [LITE AND ABOVE] - Basic Identity & Vitals
+        phys_dict = {}
+        if hasattr(eng_ref, "phys") and eng_ref.phys:
+            obs = getattr(eng_ref.phys, "observer", None)
+            if obs and obs.last_physics_packet:
+                dash_packet = obs.last_physics_packet
+                phys_dict = dash_packet if isinstance(dash_packet, dict) else dash_packet.to_dict()
         if depth in ["LITE", "CORE", "DEEP"]:
             st.divider()
             st.subheader("IDENTITY & VITALS")
-
             if hasattr(eng_ref, "soul") and eng_ref.soul:
-                anchor = eng_ref.soul.anchor
                 st.markdown(f"**ARCHETYPE:** `{eng_ref.soul.archetype}`")
-
-            hp = eng_ref.health
-            stam = eng_ref.stamina
-            st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.1f}%")
-            st.progress(
-                min(1.0, max(0.0, stam / 100.0)), text=f"ENERGY (ATP): {stam:.1f}%"
-            )
-
-        # [CORE AND ABOVE] - The Lattice Coordinates & Physics
+            show_vitals = getattr(eng_ref, "mode_settings", {}).get("show_vitals", True)
+            if show_vitals:
+                hp = phys_dict.get("health", getattr(eng_ref, "health", 100.0))
+                stam = phys_dict.get("stamina", getattr(eng_ref, "stamina", 100.0))
+                st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"❤️ Health (H): {hp:.1f}%")
+                st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"🔋 Stamina (P): {stam:.1f}%")
+            else:
+                st.caption("Vitals: LOCKED (Mode Override)")
         if depth in ["CORE", "DEEP"]:
-            metrics = eng_ref.get_metrics()
-            eff = metrics.get("efficiency", 1.0)
-
-            if hasattr(eng_ref, "consultant"):
-                st.divider()
-                st.subheader("🧊 VSL CORE")
-                s = eng_ref.consultant.state
-                c1, c2, c3 = st.columns(3)
-                c1.metric("EXH", f"{s.E:.2f}")
-                c2.metric("PAR", f"{s.B:.2f}")
-                if eff < 0.6:
-                    c3.metric("EFF", f"{eff:.2f}", delta_color="off")
-                else:
-                    c3.metric("EFF", f"{eff:.2f}", delta_color="normal")
-
             st.divider()
-            st.subheader("PHYSICS")
-            volts = 0.0
-            drag = 0.0
-            zone = "VOID"
-            if hasattr(eng_ref, "phys") and eng_ref.phys:
-                obs = getattr(eng_ref.phys, "observer", None)
-                if obs and obs.last_physics_packet:
-                    dash_packet = obs.last_physics_packet
-                    if isinstance(dash_packet, dict):
-                        volts = dash_packet.get("voltage", 0.0)
-                        drag = dash_packet.get("narrative_drag", 0.0)
-                        zone = dash_packet.get("zone", "VOID")
-                    else:
-                        volts = getattr(dash_packet, "voltage", 0.0)
-                        drag = getattr(dash_packet, "narrative_drag", 0.0)
-                        zone = getattr(dash_packet, "zone", "VOID")
-            loc_name = zone
+            st.subheader("🧊 VSL CORE")
+            volts = phys_dict.get("voltage", 30.0)
+            drag = phys_dict.get("friction", phys_dict.get("narrative_drag", 0.6))
+            exhaustion = phys_dict.get("exhaustion", phys_dict.get("E", 0.2))
+            contradiction = phys_dict.get("contradiction", phys_dict.get("beta", 0.4))
+            trauma = phys_dict.get("trauma", phys_dict.get("T", 0.0))
+            c1, c2 = st.columns(2)
+            c1.metric("⚡ Volt (V)", f"{volts:.1f}v")
+            c2.metric("⚓ Drag (F)", f"{drag:.1f}")
+            c1.metric("🧊 Exh (E)", f"{exhaustion:.2f}")
+            c2.metric("⚔️ Para (β)", f"{contradiction:.2f}")
+            st.metric("🏺 Trauma (T)", f"{trauma:.0f}")
+            zone = phys_dict.get("zone", "VOID")
             if hasattr(eng_ref, "navigator") and eng_ref.navigator:
-                current_node = eng_ref.navigator.world_graph.get(
-                    eng_ref.navigator.current_node_id
-                )
-                if current_node:
-                    loc_name = current_node.name
-            c3, c4 = st.columns(2)
-            c3.metric("VOLT", f"{volts:.1f}v")
-            c4.metric("DRAG", f"{drag:.1f}")
-            st.info(f"📍 LOCATION: {loc_name}")
-
-        # [DEEP ONLY] - Full Machinery, Void, and Inventory
+                current_node = eng_ref.navigator.world_graph.get(eng_ref.navigator.current_node_id)
+                if current_node: zone = current_node.name
+            st.info(f"📍 LOC: {zone}")
         if depth == "DEEP":
-            if hasattr(eng_ref, "consultant"):
-                s = eng_ref.consultant.state
-                if s.L > 0.1 or "LIMINAL" in s.active_modules:
-                    st.progress(min(1.0, s.L), text=f"LIM (Dark Matter): {s.L:.2f}")
-                if s.O > 0.8:
-                    st.caption(f"Ω Structure: LOCKED ({s.O:.2f})")
-                elif s.O < 0.5:
-                    st.caption(f"Ω Structure: FRACTURED ({s.O:.2f})")
-
+            st.divider()
+            st.subheader("🌌 DEEP PHYSICS")
+            psi = phys_dict.get("psi", 0.0)
+            chi = phys_dict.get("chi", 0.0)
+            valence = phys_dict.get("valence", 0.0)
+            liminal = phys_dict.get("vector", {}).get("LAMBDA", 0.0)
+            c3, c4, c5 = st.columns(3)
+            c3.metric("Void (Ψ)", f"{psi:.2f}")
+            c4.metric("Chaos (Χ)", f"{chi:.2f}")
+            c5.metric("Val (♥)", f"{valence:.2f}")
+            if liminal > 0:
+                st.progress(min(1.0, liminal), text=f"🌌 Liminal (Λ): {liminal:.2f}")
+            if hasattr(eng_ref, "bio") and hasattr(eng_ref.bio, "endo"):
+                endo = eng_ref.bio.endo
+                st.caption(f"🩸 **CHEM:** ADR: {endo.adrenaline:.2f} | COR: {endo.cortisol:.2f} | OXY: {endo.oxytocin:.2f}")
             if hasattr(eng_ref, "phys") and hasattr(eng_ref.phys, "theremin"):
                 theremin = eng_ref.phys.theremin
                 if theremin.decoherence_buildup > 1.0 or theremin.is_stuck:
@@ -156,16 +129,13 @@ def render_dashboard(eng_ref):
                     st.subheader("MACHINERY")
                     resin = theremin.decoherence_buildup
                     max_resin = theremin.SHATTER_POINT
-                    st.progress(
-                        min(1.0, resin / max_resin), text=f"RESIN PRESSURE: {resin:.1f}"
-                    )
+                    st.progress(min(1.0, resin / max_resin), text=f"🎻 RESIN PRESSURE: {resin:.1f}")
                     if theremin.is_stuck:
                         st.error("⚠️ THEREMIN STUCK (AMBER)")
                     elif resin > (max_resin * 0.8):
                         st.warning("💣 AIRSTRIKE IMMINENT")
-
             st.divider()
-            st.subheader("INVENTORY")
+            st.subheader("🎒 INVENTORY")
             if hasattr(eng_ref, "gordon") and eng_ref.gordon:
                 items = eng_ref.gordon.inventory
                 if items:
@@ -173,18 +143,14 @@ def render_dashboard(eng_ref):
                         st.code(item)
                 else:
                     st.caption("Pockets Empty.")
-
-
 if "history" not in st.session_state:
     st.session_state.history = []
-if "ui_depth" not in st.session_state:
-    st.session_state.ui_depth = "BUNNY"
-
 if "ENGINE" not in st.session_state:
     try:
         sys_config = ConfigWizard.load_or_create()
-        sys_config["boot_mode"] = "ADVENTURE"
         st.session_state.ENGINE = BoneAmanita(config=sys_config)
+        if "ui_depth" not in st.session_state:
+            st.session_state.ui_depth = st.session_state.ENGINE.mode_settings.get("default_ui_depth", "BUNNY")
         with st.spinner("Hydrating Spore Casing..."):
             session = st.session_state.ENGINE
             if hasattr(session, "resume_checkpoint"):
@@ -200,7 +166,6 @@ if "ENGINE" not in st.session_state:
                 "- Type `[VSL_DEEP]` for the full lattice (including PSI, ENTROPY, and VALENCE).\n\n"
                 'Or jump right into the deep end and say: "The void is leaking."'
             )
-
             st.session_state.history.append(
                 {
                     "role": "assistant",
@@ -235,7 +200,12 @@ for hist_msg in st.session_state.history:
 if prompt := st.chat_input("Broadcast Signal..."):
     with st.chat_message("user"):
         st.markdown(prompt)
-    p_lower = prompt.lower()
+    p_lower = prompt.strip().lower()
+    if p_lower in ["exit", "quit", "/exit", "/quit"]:
+        st.warning("Disconnecting from the lattice...")
+        engine.shutdown()
+        st.success("Session Terminated. You may close the tab.")
+        st.stop()
     if "[vsl_lite]" in p_lower:
         st.session_state.ui_depth = "LITE"
     elif "[vsl_core]" in p_lower:

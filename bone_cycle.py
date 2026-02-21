@@ -215,6 +215,20 @@ class GatekeeperPhase(SimulationPhase):
                         "metrics": self.eng.get_metrics(),
                     }
                     return ctx
+        if self.eng.gordon:
+            current_zone = getattr(ctx.physics, "zone", "UNKNOWN")
+            coupling_error = self.eng.gordon.enforce_object_action_coupling(
+                ctx.input_text, current_zone
+            )
+            if coupling_error:
+                ctx.refusal_triggered = True
+                ctx.refusal_packet = {
+                    "type": "PREMISE_VIOLATION",
+                    "ui": f"\n{coupling_error}",
+                    "logs": ["Premise Violation: Object-Action Coupling Failed"],
+                    "metrics": self.eng.get_metrics(),
+                }
+                return ctx
         is_allowed, refusal_packet = self.gatekeeper.check_entry(ctx)
         if not is_allowed:
             ctx.refusal_triggered = True
@@ -254,6 +268,17 @@ class MetabolismPhase(SimulationPhase):
         if ctx.is_system_event:
             return ctx
         if not hasattr(self.eng, "bio") or not self.eng.bio:
+            return ctx
+        mode_settings = getattr(self.eng, "mode_settings", {})
+        if not mode_settings.get("atp_drain_enabled", True):
+            atp_level = self.eng.bio.mito.state.atp_pool if self.eng.bio and self.eng.bio.mito else 100.0
+            ctx.bio_result = {
+                "is_alive": True,
+                "logs": [],
+                "atp": atp_level
+            }
+            ctx.is_alive = True
+            self._apply_healing(ctx)
             return ctx
         physics = ctx.physics
         if hasattr(self.eng, "host_stats"):
@@ -416,6 +441,12 @@ class NavigationPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         physics = ctx.physics
+        mode_settings = getattr(self.eng, "mode_settings", {})
+        v_floor = mode_settings.get("voltage_floor_override")
+        if v_floor is not None:
+            physics.voltage = max(physics.voltage, v_floor)
+            if v_floor >= 50.0:
+                physics.narrative_drag = 0.0
         new_drag, grav_logs = self.eng.phys.dynamics.check_gravity(
             current_drift=physics.narrative_drag, psi=physics.psi
         )

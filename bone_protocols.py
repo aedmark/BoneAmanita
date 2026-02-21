@@ -139,11 +139,11 @@ class TheBureau:
             else:
                 selected_form = "Form 202-A"
                 tax = BoneConfig.BUREAU.TAX_STANDARD
-        entropy = getattr(physics, "entropy", 0.0)
-        if not selected_form and entropy > 0.6:
+        chi = getattr(physics, "chi", getattr(physics, "entropy", 0.0))
+        if not selected_form and chi > 0.6:
             selected_form = "Form 666: Unlicensed Chaos"
-            evidence = ["Entropy Limit Exceeded", f"Level: {entropy:.2f}"]
-            tax = 8.0
+            evidence = ["Unlicensed Chaos (Χ > 0.6)", f"Level: {chi:.2f}"]
+            tax = 12.0
         elif not selected_form:
             buzz_hits = [w for w in clean_words if w in self.buzzwords]
             cliche_hits = [c for c in self.cliches if c.lower() in raw_text.lower()]
@@ -325,7 +325,7 @@ class KintsugiProtocol:
             if soul_ref:
                 soul_ref.traits.adjust("WISDOM", 0.1)
                 healed_log.append("Wisdom +0.1")
-            msg = f"{Prisma.YEL}🏺 KINTSUGI: The '{target}' crack is filled with gold. The vessel is stronger.{Prisma.RST}"
+            msg = f"{Prisma.OCHRE}🏺 MERCY (KINTSUGI): The gold sets. The '{target}' crack becomes a story.{Prisma.RST}"
             healed_log.append(f"Integrated {target}")
             success = True
         else:

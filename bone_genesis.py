@@ -8,8 +8,7 @@ from bone_inventory import GordonKnot
 from bone_protocols import TheBureau, ZenGarden, TheCriticsCircle, TherapyProtocol, KintsugiProtocol, LimboLayer
 from bone_symbiosis import SymbiosisManager
 from bone_spores import LiteraryReproduction
-from bone_drivers import DriverRegistry
-
+from bone_drivers import DriverRegistry, BoneConsultant
 
 class BoneGenesis:
     @staticmethod
@@ -64,6 +63,7 @@ class BoneGenesis:
             "soul": soul,
             "oroboros": oroboros,
             "drivers": drivers,
+            "consultant": village_bundle["consultant"],
             "symbiosis": symbiosis,
         }
 
@@ -88,6 +88,7 @@ class BoneGenesis:
         therapy = TherapyProtocol()
         limbo = LimboLayer()
         kintsugi = KintsugiProtocol()
+        consultant = BoneConsultant()
         return {
             "gordon": gordon,
             "navigator": navigator,
@@ -101,4 +102,5 @@ class BoneGenesis:
             "therapy": therapy,
             "limbo": limbo,
             "kintsugi": kintsugi,
+            "consultant": consultant,
         }

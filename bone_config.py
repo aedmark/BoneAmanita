@@ -50,6 +50,11 @@ class BonePresets:
             "show_vitals": True,
             "allow_loot": True,
             "allow_metrics": True,
+            "atp_drain_enabled": True,
+            "chaos_tax_enabled": True,
+            "voltage_floor_override": None,
+            "active_mods": [],
+            "default_ui_depth": "CORE"
         },
         "CONVERSATION": {
             "description": "Pure dialogue. No entropy, no items, just connection.",
@@ -61,6 +66,7 @@ class BonePresets:
                 "CARTOGRAPHER",
                 "TINKERER",
                 "DEATH",
+                "BUREAU"
             ],
             "prompt_key": "CONVERSATION",
             "show_inventory": False,
@@ -68,30 +74,45 @@ class BonePresets:
             "show_vitals": False,
             "allow_loot": False,
             "allow_metrics": False,
+            "atp_drain_enabled": False,
+            "chaos_tax_enabled": False,
+            "voltage_floor_override": None,
+            "active_mods": [],
+            "default_ui_depth": "BUNNY"
         },
         "CREATIVE": {
             "description": "High voltage, low drag. Hallucination enabled.",
             "tuning": "MANIC",
             "ui_layer": 1,
-            "village_suppression": ["BUREAU", "GATEKEEPER", "LIMITER"],
+            "village_suppression": ["GORDON", "BENEDICT", "BUREAU"],
             "prompt_key": "CREATIVE",
             "show_inventory": False,
             "show_location": True,
             "show_vitals": False,
             "allow_loot": False,
             "allow_metrics": False,
+            "atp_drain_enabled": True,
+            "chaos_tax_enabled": False,
+            "voltage_floor_override": 70.0,
+            "active_mods": ["LIMINAL"],
+            "default_ui_depth": "CORE"
         },
         "TECHNICAL": {
             "description": "Raw data stream. Debugging and code generation.",
             "tuning": "DEBUG",
             "ui_layer": 2,
-            "village_suppression": ["SOUL", "DREAMER", "MYTHOS"],
+            "village_suppression": ["MOIRA", "JESTER", "CASSANDRA", "APRIL"],
             "prompt_key": "TECHNICAL",
             "show_inventory": True,
             "show_location": True,
             "show_vitals": True,
             "allow_loot": True,
             "allow_metrics": True,
+            "atp_drain_enabled": True,
+            "chaos_tax_enabled": True,
+            "voltage_floor_override": None,
+            "active_mods": ["CODING", "SYNTAX"],
+            "default_ui_depth": "DEEP"
         },
     }
 
@@ -125,7 +146,7 @@ class BoneConfig:
         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2},
     }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "15.6.5"
+    VERSION = "15.7.1"
     VERBOSE_LOGGING = True
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0

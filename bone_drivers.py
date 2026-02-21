@@ -394,22 +394,10 @@ class BoneConsultant:
         if "[VSL_SYNTAX]" in user_text:
             if "SYNTAX" not in self.state.active_modules:
                 self.state.active_modules.append("SYNTAX")
-        if "[MOD:CODING]" in user_text or "[SLASH]" in user_text:
-            if "CODING" not in self.state.active_modules:
-                self.state.active_modules.append("CODING")
 
     def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
         directives = []
-        if "CODING" in self.state.active_modules:
-            directives.append(
-                "MODE: SLASH_COUNCIL. You are a composite intelligence analyzing code.\n"
-                "- PINKER: Focus on syntax, clarity, and cognitive load.\n"
-                "- FULLER: Focus on structural integrity and ephemeralization.\n"
-                "- SCHUR: Focus on human-centric design and kindness.\n"
-                "- MEADOWS: Focus on feedback loops and system dynamics.\n"
-                "WHEN DISCUSSING CODE, ADOPT THESE PERSONAE."
-            )
-        elif "LIMINAL" in self.state.active_modules or self.state.L > 0.7:
+        if "LIMINAL" in self.state.active_modules or self.state.L > 0.7:
             scar_note = f" (Godel Scars: {self.liminal_mod.godel_scars})" if self.liminal_mod.godel_scars > 0 else ""
             directives.append(
                 f"ARCHETYPE: THE REVENANT. Read the dark matter between the words. Speak of the absences.{scar_note}"

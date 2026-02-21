@@ -99,7 +99,7 @@ class HumanityAnchor:
         self.agency_lock = False
         self.current_riddle_answers: Optional[List[str]] = None
         self._LEXICAL_ANCHORS = {"sacred", "play", "social", "abstract"}
-        self._VECTOR_ANCHORS = ["PSI", "DEL", "BET"]
+        self._VECTOR_ANCHORS = ["PSI", "LAMBDA", "BET"]
 
     def audit_existence(self, physics: dict, bio: dict) -> float:
         atp, volt = bio.get("atp", 0), physics.get("voltage", 0.0)
@@ -345,7 +345,6 @@ class NarrativeSelf:
         if self.current_target_cat:
             target_words = LexiconService.get(self.current_target_cat)
             hit = any(w in target_words for w in clean_words)
-
         if hit:
             self.obsession_progress += 10.0
             self.obsession_neglect = 0.0
@@ -356,7 +355,6 @@ class NarrativeSelf:
                 0.0, physics.get("narrative_drag", 0) - gravity_assist
             )
             return f"{Prisma.MAG}★ SYNERGY: You touched the Muse. (Drag -{gravity_assist:.1f}){Prisma.RST}"
-
         self.obsession_neglect += 1.0
         if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_FAIL:
             old = self.current_obsession
@@ -384,7 +382,6 @@ class NarrativeSelf:
             new_arch = "THE EXPLORER"
         else:
             new_arch = "THE OBSERVER"
-
         self.archetype = new_arch
         if prev != self.archetype:
             self.events.log(
@@ -401,22 +398,20 @@ class NarrativeSelf:
         oxy = bio_state.get("chem", {}).get("oxytocin", 0.0)
         move_name = "Drifting"
         provenance = []
-
         if oxy > 0.4:
             self.traits.adjust("empathy", oxy * 0.2)
             self.traits.adjust("hope", oxy * 0.1)
             provenance.append("Oxytocin")
-
         is_manic = voltage > BoneConfig.SOUL.MANIC_TRIGGER
         is_heavy = drag > BoneConfig.SOUL.ENTROPY_DRAG_TRIGGER
-
-        if is_manic and is_heavy:
+        beta = physics.get("beta", 0.0)
+        if (is_manic and is_heavy) or beta > 0.7:
             if self.traits.empathy > 0.6:
                 move_name = "Holding Space"
                 self.paradox_accum = max(0.0, self.paradox_accum - 0.5)
             else:
                 move_name = "Vibrating (Paradox)"
-                self.paradox_accum += 1.0
+                self.paradox_accum += 1.0 + (beta * 0.5)
                 if self.paradox_accum > BoneConfig.SOUL.PARADOX_CRITICAL_MASS:
                     self._trigger_synthesis()
                     move_name = "SYNTHESIS"
@@ -696,5 +691,6 @@ class TheOroboros:
             elif scar.stat_affected == "trauma_baseline":
                 if "trauma_vector" in bio:
                     bio["trauma_vector"]["EXISTENTIAL"] = scar.value
+                physics["T"] = physics.get("T", 0.0) + scar.value
                 log.append(f"scarred by {scar.name} (Ghost Pains)")
         return log

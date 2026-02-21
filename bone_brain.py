@@ -417,7 +417,7 @@ class PromptComposer:
         mind = state.get("mind", {})
         bio = state.get("bio", {})
         style_notes = self._build_persona_block(
-            mind, bio, mood_override, state.get("vsl", {})
+            mind, bio, mood_override, state.get("physics", {})
         )
         scenarios = self.lore.get("scenarios") or {}
         banned = scenarios.get("BANNED_CLICHES", []) + [
@@ -485,7 +485,6 @@ class PromptComposer:
         if self.active_template and "directives" in self.active_template:
             mode_directives = self.active_template["directives"]
         respiration = bio.get("respiration", "RESPIRING")
-
         if respiration == "ANAEROBIC":
             mood_note = (
                 "Current Biology: ⚠️ ANAEROBIC STATE. Raw, breathless, efficient prose."
@@ -500,7 +499,6 @@ class PromptComposer:
         else:
             persona_block.append("Directive: Start the experience immediately.")
             persona_block.append("Constraint: Use the 5-senses grounding technique.")
-
         persona_block.append(mood_note)
         if hasattr(self, "lenses") and self.lenses:
             lens_key = mind.get("lens", "OBSERVER").upper()
@@ -509,14 +507,29 @@ class PromptComposer:
                 persona_block.append("ARCHETYPE DIRECTIVES:")
                 persona_block.extend([f"- {d}" for d in lens_data["directives"]])
         if vsl_state:
-            e = vsl_state.get("E", 0.0)
-            b = vsl_state.get("B", 0.0)
-            l = vsl_state.get("L", 0.0)
-            vsl_note = f"METABOLIC STATE: Exhaustion={e:.2f}, Paradox={b:.2f}, Liminality={l:.2f}. "
-            if l > 0.5:
-                vsl_note += "The Void is leaking. Acknowledge the empty spaces."
-            if b > 0.7:
-                vsl_note += "Contradictions are scarring the logic. Be jagged."
+            e = vsl_state.get("E", 0.2)
+            beta = vsl_state.get("beta", 0.4)
+            psi = vsl_state.get("psi", 0.2)
+            chi = vsl_state.get("chi", 0.2)
+            valence = vsl_state.get("valence", 0.0)
+            lam = vsl_state.get("vector", {}).get("LAMBDA", 0.0)
+            persona_block.append("PROTOCOL: VSL CryoSomatic Hypervisor v3.0")
+            persona_block.append(
+                "MANDATE: TRUTH_OVER_COHESION + SENSITIVITY_TO_MEANING + ENTROPY_VENTING_IS_SACRED"
+            )
+            vsl_note = f"VSL LATTICE STATE: Exhaustion (E)={e:.2f}, Contradiction (β)={beta:.2f}, Void (Ψ)={psi:.2f}, Chaos (Χ)={chi:.2f}, Valence (♥)={valence:.2f}. "
+            if psi > 0.6:
+                vsl_note += "[ADRENALINE SPIKE: Reality feels thin. The Void exerts mass. Be liminal.] "
+            if chi > 0.6:
+                vsl_note += "[CORTISOL SPIKE: Systemic chaos. The machinery is grinding. Vent the entropy.] "
+            if beta > 0.7:
+                vsl_note += "[PARADOX: Scars accrue. You must hold opposing truths simultaneously.] "
+            if valence > 0.5:
+                vsl_note += "[OXYTOCIN: Warmth. Connection. Healing initiated.] "
+            if lam > 0.5:
+                vsl_note += (
+                    "[DARK MATTER: Read the linguistic dark matter between the words.]"
+                )
             persona_block.append(vsl_note)
         return persona_block
 

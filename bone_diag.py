@@ -1255,30 +1255,6 @@ class TestDriversAndPersonas(unittest.TestCase):
             f"{Prisma.GRN}   >>> PASS: Modifiers correctly calculated Lambda (Liminal) and Omega (Syntax) values.{Prisma.RST}"
         )
 
-    @patch("bone_drivers.LexiconService.get")
-    def test_schur_vsl_consultant_prompt_injection(self, mock_lex_get):
-        print(
-            f"\n{Prisma.VIOLET}[SCHUR] Testing VSL Hypervisor Prompt Injection...{Prisma.RST}"
-        )
-        mock_lex_get.return_value = set()
-        consultant_coding = BoneConsultant()
-        consultant_coding.update_coordinates("[MOD:CODING]")
-        prompt_coding = consultant_coding.get_system_prompt()
-        self.assertIn(
-            "SLASH_COUNCIL",
-            prompt_coding,
-            "System prompt missing SLASH_COUNCIL directive.",
-        )
-        consultant_liminal = BoneConsultant()
-        consultant_liminal.update_coordinates("[VSL_LIMINAL]")
-        prompt_liminal = consultant_liminal.get_system_prompt()
-        self.assertIn(
-            "THE REVENANT", prompt_liminal, "System prompt missing Revenant archetype."
-        )
-        print(
-            f"{Prisma.GRN}   >>> PASS: VSL Hypervisor successfully prioritized and injected specific mode prompts.{Prisma.RST}"
-        )
-
 
 class TestDeepLexicon(unittest.TestCase):
     def setUp(self):
@@ -1471,11 +1447,17 @@ class TestCosmicPhysics(unittest.TestCase):
         stabilizer = CycleStabilizer(self.events, mock_gov)
 
         class MockCtx:
-            class MockPhys:
-                manifold = "DEFAULT"
-                voltage = 18.0
-                flow_state = "SUPERCONDUCTIVE"
-            physics = MockPhys()
+            class MockPhysics:
+                voltage = 10.0
+                narrative_drag = 5.0
+                psi = 0.0
+                def to_dict(self):
+                    return {
+                        "voltage": self.voltage,
+                        "narrative_drag": self.narrative_drag,
+                        "psi": self.psi,
+                    }
+            physics = MockPhysics()
 
             def log(self, m):
                 pass
@@ -1653,11 +1635,103 @@ class TestVillageSocialLogic(unittest.TestCase):
         )
 
 
+class TestRealityModesV3(unittest.TestCase):
+    def setUp(self):
+        self.events = EventBus()
+
+    def test_conversation_mode_metabolism_lock(self):
+        print(
+            f"\n{Prisma.CYN}[MEADOWS] Testing Conversation Mode ATP Lock...{Prisma.RST}"
+        )
+        from bone_cycle import MetabolismPhase
+
+        class MockMitoState:
+            atp_pool = 100.0
+
+        class MockMito:
+            state = MockMitoState()
+
+        class MockBio:
+            mito = MockMito()
+
+        class MockEngine:
+            bio = MockBio()
+            mode_settings = {"atp_drain_enabled": False}
+
+        eng = MockEngine()
+        phase = MetabolismPhase(eng)
+
+        class MockCtx:
+            is_system_event = False
+            physics = PhysicsPacket()
+            bio_result = {}
+            is_alive = False
+
+        ctx = MockCtx()
+        phase._apply_healing = MagicMock()
+        result = phase.run(ctx)
+        self.assertTrue(result.is_alive, "System died despite ATP drain being locked.")
+        self.assertEqual(
+            result.bio_result.get("atp"),
+            100.0,
+            "ATP was modified when it should be locked.",
+        )
+        phase._apply_healing.assert_called_once()
+        print(
+            f"{Prisma.GRN}   >>> PASS: MetabolismPhase correctly bypassed destructive drain and preserved life.{Prisma.RST}"
+        )
+
+    def test_creative_mode_voltage_floor_and_drag(self):
+        print(
+            f"\n{Prisma.VIOLET}[FULLER] Testing Creative Mode Voltage Floor & Drag Eradication...{Prisma.RST}"
+        )
+        from bone_cycle import NavigationPhase
+
+        class MockDynamics:
+            def check_gravity(self, current_drift, psi):
+                return current_drift, []
+        class MockPhys:
+            dynamics = MockDynamics()
+
+        class MockEngine:
+            phys = MockPhys()
+            mode_settings = {"voltage_floor_override": 70.0}
+            gordon = None
+            navigator = None
+            tinkerer = None
+            mind = MagicMock()
+            cosmic = MagicMock()
+            cosmic.analyze_orbit.return_value = ("VOID", 0.0, "")
+            stabilizer = MagicMock()
+            stabilizer.stabilize.return_value = "VOID"
+            stabilizer.override_cosmic_drag.return_value = 0.0
+        eng = MockEngine()
+        phase = NavigationPhase(eng)
+
+        class MockCtx:
+            physics = type(
+                "MockPhysics", (), {"voltage": 10.0, "narrative_drag": 5.0, "psi": 0.0}
+            )()
+
+        ctx = MockCtx()
+        result = phase.run(ctx)
+        self.assertEqual(
+            ctx.physics.voltage, 70.0, "Voltage floor override was not applied."
+        )
+        self.assertEqual(
+            ctx.physics.narrative_drag,
+            0.0,
+            "Narrative drag was not eradicated despite high voltage override.",
+        )
+        print(
+            f"{Prisma.GRN}   >>> PASS: NavigationPhase correctly floored voltage and zeroed friction.{Prisma.RST}"
+        )
+
+
 if __name__ == "__main__":
-    print(f"{Prisma.WHT}┌──────────────────────────────────────────┐{Prisma.RST}")
-    print(f"{Prisma.WHT}│ BONEAMANITA UNIFIED DIAGNOSTIC SUITE     │{Prisma.RST}")
-    print(f"{Prisma.WHT}│ AUDITING: LORE, PHYSICS, MIND, INVENTORY │{Prisma.RST}")
-    print(f"{Prisma.WHT}└──────────────────────────────────────────┘{Prisma.RST}")
+    print(f"{Prisma.WHT}┌───────────────────────────────────────────┐{Prisma.RST}")
+    print(f"{Prisma.WHT}│ BONEAMANITA UNIFIED DIAGNOSTIC SUITE v3.0 │{Prisma.RST}")
+    print(f"{Prisma.WHT}└───────────────────────────────────────────┘{Prisma.RST}")
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     suite.addTests(loader.loadTestsFromTestCase(TestBedrockIntegrity))
@@ -1677,6 +1751,7 @@ if __name__ == "__main__":
     suite.addTests(loader.loadTestsFromTestCase(TestLexicalSubstrate))
     suite.addTests(loader.loadTestsFromTestCase(TestCosmicPhysics))
     suite.addTests(loader.loadTestsFromTestCase(TestVillageSocialLogic))
+    suite.addTests(loader.loadTestsFromTestCase(TestRealityModesV3))
     runner = unittest.TextTestRunner(verbosity=0)
     result = runner.run(suite)
     if result.wasSuccessful():

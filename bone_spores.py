@@ -686,7 +686,7 @@ class MycelialNetwork:
         ]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BONEAMANITA_15.6.5",
+            "genome": "BONEAMANITA_15.7.1",
             "session_id": self.session_id,
             "parent_id": self.session_id,
             "meta": {

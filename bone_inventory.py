@@ -41,38 +41,73 @@ class GordonKnot:
         self.registry: Dict[str, Item] = {}
         self.ITEM_REGISTRY: Dict[str, Dict] = {}
         self.recipes: List[Dict] = []
+        self.action_coupling: Dict[str, List[str]] = {}
+        self.location_coupling: Dict[str, str] = {}
         self.max_slots = 10
         self.last_flinch_turn = -100
         self.scar_tissue = {}
         self.refusal_markers = {
-            "cannot",
-            "can't",
-            "unable",
-            "fail",
-            "too heavy",
-            "stuck",
-            "don't",
-            "do not",
-            "locked",
-            "refuse",
-            "impossible",
+            "cannot", "can't", "unable", "fail", "too heavy",
+            "stuck", "don't", "do not", "locked", "refuse", "impossible",
         }
         self.loot_triggers = [
-            "found a",
-            "picked up",
-            "pick up",
-            "acquired",
-            "took the",
-            "take the",
-            "grab the",
-            "takes the",
+            "found a", "picked up", "pick up", "acquired",
+            "took the", "take the", "grab the", "takes the",
         ]
         self.load_config()
+
+    def enforce_object_action_coupling(
+        self, user_input: str, current_zone: str
+    ) -> Optional[str]:
+        text = user_input.lower()
+
+        # 1. Location-bound objects (Dynamic from config)
+        for action_obj_pair, required_loc in self.location_coupling.items():
+            words = action_obj_pair.split()
+            if all(re.search(rf'\b{w}\b', text) for w in words):
+                if required_loc not in current_zone.lower():
+                    return (
+                        f"{Prisma.SLATE}🏢 GORDON [PREMISE VIOLATION]: The action requires the object "
+                        f"to be at the location '{required_loc}'. You are currently at '{current_zone}'. "
+                        f"You must bring the object to the location. Action denied.{Prisma.RST}"
+                    )
+
+        # 2. Action-bound tool classes (Dynamic from config)
+        inventory_items = " ".join([i.get("name", "").lower() for i in self.get_inventory_data()])
+        for action, required_objects in self.action_coupling.items():
+            if re.search(rf"\b{action}\b", text):
+                has_item = any(obj in inventory_items for obj in required_objects)
+                mentions_item = any(obj in text for obj in required_objects)
+                if not has_item and not mentions_item:
+                    req_str = ", ".join(required_objects)
+                    return (
+                        f"{Prisma.SLATE}🏢 GORDON [PREMISE VIOLATION]: The action '{action}' requires an object "
+                        f"of type [{req_str}]. The object is neither in your inventory nor the immediate environment. "
+                        f"Coupling failed. Action denied.{Prisma.RST}"
+                    )
+
+        # 3. Universal Object Check (Applies to ALL registered items)
+        interaction_verbs = ["use", "drop", "throw", "consume", "eat", "drink", "read", "activate", "give", "equip"]
+        has_interaction = any(re.search(rf'\b{v}\b', text) for v in interaction_verbs)
+
+        if has_interaction:
+            all_known = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
+            for item_name in all_known:
+                item_lower = item_name.lower().replace("_", " ")
+                if item_lower in text and item_name.upper() not in self.inventory:
+                    return (
+                        f"{Prisma.SLATE}🏢 GORDON [PREMISE VIOLATION]: You are attempting to interact with "
+                        f"[{item_lower}], but it is not in your inventory. Action denied.{Prisma.RST}"
+                    )
+
+        return None
 
     def load_config(self):
         data = LoreManifest.get_instance().get("GORDON") or {}
         if not data and hasattr(LoreManifest, "get_raw"):
             data = LoreManifest.get_raw("gordon.json") or {}
+        self.action_coupling = data.get("ACTION_COUPLING", {})
+        self.location_coupling = data.get("LOCATION_COUPLING", {})
         if "REFUSAL_MARKERS" in data:
             self.refusal_markers = set(data["REFUSAL_MARKERS"])
         if "LOOT_TRIGGERS" in data:

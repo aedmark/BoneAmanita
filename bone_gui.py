@@ -37,7 +37,8 @@ class Projector:
             physics_line = self._render_physics_strip(
                 physics, data_ctx.get("vectors", {})
             )
-        vsl_line = self._render_lattice_strip(data_ctx.get("vsl", {}))
+        ui_depth = data_ctx.get("ui_depth", "DEEP")
+        vsl_line = self._render_lattice_strip(physics, depth=ui_depth)
         zone = self._extract(physics, "space", "zone", "UNKNOWN")
         lens = mind_ctx[0] if mind_ctx else "RAW"
         depth_map = {0: "TERM", 1: "SIM", 2: "VIL", 3: "DBG", 4: "DEEP"}
@@ -88,31 +89,30 @@ class Projector:
         )
 
     @staticmethod
-    def _render_lattice_strip(vsl_data: Dict) -> str:
-        if not vsl_data:
+    def _render_lattice_strip(physics: Dict, depth: str = "DEEP") -> str:
+        if depth == "IDLE" or not physics:
             return ""
-        e = vsl_data.get("E", 0.0)
-        b = vsl_data.get("B", 0.0)
-        l = vsl_data.get("L", 0.0)
-        o = vsl_data.get("O", 1.0)
-        if e < 0.15 and b < 0.1 and l < 0.1:
-            return ""
-
-        def bar(val, color):
-            p = int(val * 10)
-            return f"{color}{'|' * p}{Prisma.GRY}{'.' * (10 - p)}{Prisma.RST}"
-
-        e_str = f"EXH:{bar(e, Prisma.CYN)}"
-        b_str = f" PAR:{bar(b, Prisma.MAG)}"
-        l_str = ""
-        if l > 0.1:
-            l_str = f" LIM:{bar(l, Prisma.VIOLET)}"
-        o_str = ""
-        if o > 0.8:
-            o_str = f" {Prisma.BLU}[LOCKED]{Prisma.RST}"
-        elif o < 0.5:
-            o_str = f" {Prisma.RED}[FRACTURED]{Prisma.RST}"
-        return f"\n  {Prisma.GRY}VSL :{Prisma.RST} {e_str}{b_str}{l_str}{o_str}"
+        E = physics.get("exhaustion", 0.2)
+        beta = physics.get("contradiction", 0.4)
+        V = physics.get("voltage", 30.0)
+        F = physics.get("friction", physics.get("narrative_drag", 0.6))
+        H = physics.get("health", 100.0)
+        P = physics.get("stamina", 100.0)
+        T = physics.get("trauma", 0.0)
+        psi = physics.get("psi", 0.0)
+        chi = physics.get("chi", 0.0)
+        valence = physics.get("valence", 0.0)
+        core = f"{Prisma.CYN}[🧊 E:{E:.2f} β:{beta:.2f} | ⚡ V:{V:.0f} F:{F:.1f} | ❤️ H:{H:.0f} P:{P:.0f} | 🏺 T:{T:.0f}]{Prisma.RST}"
+        deep = (
+            f"{Prisma.VIOLET} [🌌 Ψ:{psi:.2f} Χ:{chi:.2f} ♥:{valence:.2f}]{Prisma.RST}"
+        )
+        if depth == "DEEP":
+            return core + deep
+        elif depth == "CORE":
+            return core
+        elif depth == "LITE":
+            return f"{Prisma.CYN}[⚡ V:{V:.0f} | ❤️ H:{H:.0f} P:{P:.0f}]{Prisma.RST}"
+        return ""
 
     def render_technical(self, physics: Dict, data: Dict, mind: tuple) -> str:
         v = self._extract(physics, "energy", "voltage", 0.0)

@@ -80,15 +80,33 @@ class ErrorLog:
 
 @dataclass
 class EnergyState:
-    voltage: float = 0.0
-    entropy: float = 0.0
+    # --- VSL Somatic ---
+    voltage: float = 30.0  # (V) Creative intensity
+    health: float = 100.0  # (H) Structural integrity
+    stamina: float = 100.0  # (P) ATP pool
+    trauma: float = 0.0  # (T) Unresolved rupture
+
+    # --- VSL Cognitive ---
+    exhaustion: float = 0.2  # (E) Lexical fatigue
+    contradiction: float = 0.4  # (β) Capacity to hold opposing truths
+    scope: float = 0.3  # (S) Retrieval breadth
+    depth: float = 0.3  # (D) Hierarchical traversal
+    connectivity: float = 0.2  # (C) Logical bridging
+
+    # --- VSL Semantic ---
+    psi: float = 0.2  # (Ψ) Void / Abstraction
+    chi: float = 0.2  # (Χ) Entropy / Chaos
+    valence: float = 0.0  # (♥) Emotional polarity
+
+    # --- Extended/Legacy Substrate ---
+    entropy: float = 0.2  # Legacy map to chi
     mass: float = 0.0
     velocity: float = 0.0
-    psi: float = 0.0
-    beta_index: float = 0.0
+    beta_index: float = 0.4  # Legacy map to contradiction
     turbulence: float = 0.0
-    kappa: float = 0.0
-    valence: float = 0.0
+    kappa: float = 0.0  # (κ) Drag corollary
+    epsilon: float = 0.0  # (ε) Entropy corollary
+    xi: float = 0.0  # (Ξ) Substrate depth
     perfection_streak: int = 0
 
 
@@ -107,7 +125,8 @@ class MaterialState:
 class SpatialState:
     zone: str = "COURTYARD"
     manifold: str = "DEFAULT"
-    narrative_drag: float = 0.0
+    narrative_drag: float = 0.6  # (F) Friction - High=stuck, Low=flow. Default 0.6
+    friction: float = 0.6        # (F) VSL alias for narrative drag
     atmosphere: str = "NEUTRAL"
     flow_state: str = "LAMINAR"
 
@@ -118,37 +137,171 @@ class PhysicsPacket:
     matter: MaterialState = field(default_factory=MaterialState)
     space: SpatialState = field(default_factory=SpatialState)
 
-    # [FULLER]: FAST PATH STRUTS
-    # Explicitly delegate common fields to avoid __getattr__ overhead.
     @property
-    def voltage(self): return self.energy.voltage
+    def E(self):
+        return self.energy.exhaustion
+
+    @E.setter
+    def E(self, v):
+        self.energy.exhaustion = v
+
+    @property
+    def beta(self):
+        return self.energy.contradiction
+
+    @beta.setter
+    def beta(self, v):
+        self.energy.contradiction = v
+        self.energy.beta_index = v
+
+    @property
+    def S(self):
+        return self.energy.scope
+
+    @S.setter
+    def S(self, v):
+        self.energy.scope = v
+
+    @property
+    def D(self):
+        return self.energy.depth
+
+    @D.setter
+    def D(self, v):
+        self.energy.depth = v
+
+    @property
+    def C(self):
+        return self.energy.connectivity
+
+    @C.setter
+    def C(self, v):
+        self.energy.connectivity = v
+
+    @property
+    def V(self):
+        return self.energy.voltage
+
+    @V.setter
+    def V(self, v):
+        self.energy.voltage = v
+
+    @property
+    def voltage(self):
+        return self.energy.voltage
+
     @voltage.setter
-    def voltage(self, v): self.energy.voltage = v
+    def voltage(self, v):
+        self.energy.voltage = v
 
     @property
-    def narrative_drag(self): return self.space.narrative_drag
+    def F(self):
+        return self.space.friction
+
+    @F.setter
+    def F(self, v):
+        self.space.friction = v
+        self.space.narrative_drag = v
+
+    @property
+    def narrative_drag(self):
+        return self.space.narrative_drag
+
     @narrative_drag.setter
-    def narrative_drag(self, v): self.space.narrative_drag = v
+    def narrative_drag(self, v):
+        self.space.narrative_drag = v
+        self.space.friction = v
 
     @property
-    def clean_words(self): return self.matter.clean_words
+    def H(self):
+        return self.energy.health
+
+    @H.setter
+    def H(self, v):
+        self.energy.health = v
+
+    @property
+    def P(self):
+        return self.energy.stamina
+
+    @P.setter
+    def P(self, v):
+        self.energy.stamina = v
+
+    @property
+    def T(self):
+        return self.energy.trauma
+
+    @T.setter
+    def T(self, v):
+        self.energy.trauma = v
+
+    @property
+    def psi(self):
+        return self.energy.psi
+
+    @psi.setter
+    def psi(self, v):
+        self.energy.psi = v
+
+    @property
+    def chi(self):
+        return self.energy.chi
+
+    @chi.setter
+    def chi(self, v):
+        self.energy.chi = v
+        self.energy.entropy = v
+
+    @property
+    def entropy(self):
+        return self.energy.entropy
+
+    @entropy.setter
+    def entropy(self, v):
+        self.energy.entropy = v
+        self.energy.chi = v
+
+    @property
+    def valence(self):
+        return self.energy.valence
+
+    @valence.setter
+    def valence(self, v):
+        self.energy.valence = v
+
+    # -- LEGACY SHORTCUTS --
+    @property
+    def clean_words(self):
+        return self.matter.clean_words
+
     @clean_words.setter
-    def clean_words(self, v): self.matter.clean_words = v
+    def clean_words(self, v):
+        self.matter.clean_words = v
 
     @property
-    def vector(self): return self.matter.vector
+    def vector(self):
+        return self.matter.vector
+
     @vector.setter
-    def vector(self, v): self.matter.vector = v
+    def vector(self, v):
+        self.matter.vector = v
 
     @property
-    def counts(self): return self.matter.counts
+    def counts(self):
+        return self.matter.counts
+
     @counts.setter
-    def counts(self, v): self.matter.counts = v
+    def counts(self, v):
+        self.matter.counts = v
 
     @property
-    def zone(self): return self.space.zone
+    def zone(self):
+        return self.space.zone
+
     @zone.setter
-    def zone(self, v): self.space.zone = v
+    def zone(self, v):
+        self.space.zone = v
 
     def __init__(
         self,

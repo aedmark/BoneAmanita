@@ -1,3 +1,5 @@
+""" bone_main.py"""
+
 import os, time, json, uuid, random, traceback, sys, re
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
@@ -47,7 +49,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system("cls" if os.name == "nt" else "clear")
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.6.5   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.7.1   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
@@ -281,6 +283,12 @@ class BoneAmanita:
                 self.events.log(f"Neural Pathway Re-aligned: {prompt_key}", "CORTEX")
         else:
             self.events.log(f"Prompt Template '{prompt_key}' not found.", "WARN")
+        active_mods = self.mode_settings.get("active_mods", [])
+        if active_mods and hasattr(self, "consultant") and self.consultant:
+            for mod in active_mods:
+                if mod not in self.consultant.state.active_modules:
+                    self.consultant.state.active_modules.append(mod)
+            self.events.log(f"Hard-wired Mod Chips: {', '.join(active_mods)}", "SYS")
 
     def get_avg_voltage(self):
         observer = getattr(self.phys, "observer", self.phys)
@@ -297,6 +305,7 @@ class BoneAmanita:
         self.oroboros = anatomy["oroboros"]
         self.drivers = anatomy["drivers"]
         self.symbiosis = anatomy["symbiosis"]
+        self.consultant = anatomy.get("consultant", None)
         self.phys = self.embryo.physics
         self.mind = self.embryo.mind
         self.bio = self.embryo.bio
@@ -571,9 +580,9 @@ class BoneAmanita:
         boot_prompt = (
             f"SYSTEM_BOOT: SEQUENCE START.\n"
             f"SOURCE_SEED: '{seed}'\n"
-            f"DIRECTIVE: The user has just arrived at the 'Bunny Hill'. "
-            f"Do not overwhelm them with deep lore or extreme entropy. "
-            f"Welcome them gently to the living lattice. Provide a brief, calm, sensory observation based on the seed: '{seed}'. "
+            f"DIRECTIVE: This is the user's gentle introduction to the system. "
+            f"Do not overwhelm them with deep lore, meta-commentary, or extreme entropy. "
+            f"Welcome them to the living lattice. Provide a brief, calm, sensory observation based solely on the seed: '{seed}'. "
             f"End your response by softly asking what they would like to do, or observing them in the space."
         )
         cold_result = self.process_turn(boot_prompt, is_system=True)
@@ -601,7 +610,8 @@ if __name__ == "__main__":
                 user_in = input(f"{Prisma.paint(f'{session.user_name} >', 'W')} ")
             except EOFError:
                 break
-            if user_in.lower() in ["exit", "quit", "/exit"]:
+            clean_in = user_in.strip().lower()
+            if clean_in in ["exit", "quit", "/exit", "/quit"]:
                 break
             res = session.process_turn(user_in)
             if res.get("ui"):

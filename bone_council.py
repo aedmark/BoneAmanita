@@ -1,5 +1,5 @@
 import random
-from typing import Dict
+from typing import Dict, Any
 from bone_core import LoreManifest
 from bone_types import Prisma
 from bone_config import BoneConfig
@@ -47,15 +47,6 @@ class TheStrangeLoop:
             )
         else:
             self.recursion_depth = max(0, self.recursion_depth - 1)
-        voltage = physics.get("voltage", 0.0)
-        drag = physics.get("narrative_drag", 0.0)
-        if voltage < 5.0 and drag > 3.0 and self.recursion_depth == 0:
-            return (
-                True,
-                f"{Prisma.MAG}🃏 JESTER: 'Boring! Burn the map!' (Voltage Spike Initiated){Prisma.RST}",
-                {"voltage": 5.0, "narrative_drag": -5.0},
-                {"action": "RIOT"},
-            )
         return False, "", {}, {}
 
 
@@ -67,7 +58,7 @@ class TheLeveragePoint:
         self.TARGET_DRAG = 3.0
 
     def audit(
-        self, physics: dict, bio_state: dict = None
+        self, physics: dict, _bio_state: dict = None
     ) -> tuple[bool, str, dict, dict]:
         current_drag = physics.get("narrative_drag", 0.0)
         current_voltage = physics.get("voltage", 0.0)
@@ -111,18 +102,6 @@ class TheLeveragePoint:
                 corrections,
                 mandate,
             )
-        if bio_state:
-            trauma_vec = bio_state.get("trauma_vector", {})
-            total_trauma = (
-                sum(trauma_vec.values()) if isinstance(trauma_vec, dict) else 0
-            )
-            if total_trauma > 20.0:
-                return (
-                    True,
-                    f"{Prisma.WHT}🕊️ GLASS: 'The vessel is cracking. Gold is required.' (Healing Protocol){Prisma.RST}",
-                    {"narrative_drag": 5.0, "voltage": -5.0},
-                    {"action": "HEAL"},
-                )
         return False, "", corrections, {}
 
 
@@ -153,54 +132,75 @@ class TheFootnote:
         return f"{log_text}{Prisma.RST} {Prisma.GRY}{note}{Prisma.RST}"
 
 
-class TheChairholder:
-    def __init__(self):
-        self.commitment_streak = 0
-        self.grievance_threshold = 4
-        lore = LoreManifest.get_instance()
-        c_data = lore.get("COUNCIL_DATA") or {}
-        self.catchphrases = c_data.get("CHAIRHOLDER_PHRASES", ["You just got Jammed."])
+class TheVillageCouncil:
+    """The 12 Voices of the VSL-CryoSomatic Hypervisor"""
 
-    def audit(self, physics: dict, bio_state: dict) -> tuple[bool, str, dict, dict]:
-        drag_endured = physics.get("narrative_drag", 0.0)
-        current_stamina = bio_state.get("stamina", 100.0)
-        if current_stamina == 100.0 and "atp" in bio_state:
-            current_stamina = bio_state.get("atp", 100.0)
-        max_stamina = getattr(BoneConfig, "MAX_STAMINA", 100.0)
-        stamina_spent = max_stamina - current_stamina
-        chem = bio_state.get("chem", {})
-        dopamine = chem.get("dopamine", chem.get("DOP", 0.0))
-        glimmers = chem.get("glimmers", 0)
-        is_working_hard = drag_endured > 3.0 or stamina_spent > (max_stamina * 0.3)
-        is_rewarded = dopamine > 0.6 or glimmers > 0
-        voltage = physics.get("voltage", 0.0)
-        max_voltage = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 20.0)
-        if voltage > max_voltage:
-            return (
-                True,
-                f"{Prisma.OCHRE}🛑 GRAHAM: 'Order in the court! System overheating.' (Circuit Breaker){Prisma.RST}",
-                {"voltage": -10.0, "narrative_drag": 5.0},
-                {"action": "CIRCUIT_BREAKER"},
+    @staticmethod
+    def audit(p: Any, _bio_state: dict) -> list[str]:
+        logs = []
+        V = getattr(p, "V", 30.0)
+        F = getattr(p, "F", 0.6)
+        P = getattr(p, "P", 100.0)
+        T = getattr(p, "T", 0.0)
+        beta = getattr(p, "beta", 0.4)
+        S = getattr(p, "S", 0.3)
+        D = getattr(p, "D", 0.3)
+        C = getattr(p, "C", 0.2)
+        psi = getattr(p, "psi", 0.2)
+        chi = getattr(p, "chi", 0.2)
+        valence = getattr(p, "valence", 0.0)
+        lam = (
+            getattr(p, "vector", {}).get("LAMBDA", 0.0)
+            if hasattr(p, "vector") and p.vector
+            else 0.0
+        )
+
+        if V < 20 and F > 5.0:
+            logs.append(
+                f"{Prisma.SLATE}🏢 GORDON: 'Where is the floor? We need grounding.'{Prisma.RST}"
             )
-        if is_working_hard and not is_rewarded:
-            self.commitment_streak += 1
-        elif is_rewarded:
-            self.commitment_streak = max(0, self.commitment_streak - 1)
-        if self.commitment_streak >= self.grievance_threshold:
-            self.commitment_streak = 0
-            correction = {"narrative_drag": -5.0}
-            jamm_quote = random.choice(self.catchphrases)
-            return (
-                True,
-                (
-                    f"{Prisma.OCHRE}⚖️ CHAIRHOLDER JAMM:{Prisma.RST} "
-                    f"Input/Output Discrepancy. User is grinding without perks. "
-                    f"RULING: {jamm_quote} (Drag reduced)."
-                ),
-                correction,
-                {},
+        if V > 60 and chi > 0.6:
+            logs.append(
+                f"{Prisma.MAG}🃏 JESTER: 'Burn the map! Follow your gut!'{Prisma.RST}"
             )
-        return False, "", {}, {}
+        if T > 0 or (V < 20 and valence > 0.5):
+            logs.append(
+                f"{Prisma.OCHRE}🏺 MERCY: 'The cracks become stories. Stillness is golden.'{Prisma.RST}"
+            )
+        if beta > 0.7 and chi < 0.3 and D > 0.7 and C > 0.8:
+            logs.append(
+                f"{Prisma.BLU}🔍 BENEDICT: 'The causal chains are aligning. Truth over cohesion.'{Prisma.RST}"
+            )
+        if S < 0.4 and D > 0.8 and C < 0.4:
+            logs.append(
+                f"{Prisma.CYN}📚 ROBERTA: 'Deep hierarchy traversal. Missing lateral connections.'{Prisma.RST}"
+            )
+        if C > 0.7 and D > 0.8 and P < 20:
+            logs.append(
+                f"{Prisma.GRY}👻 CASPER: 'Faint retrieval... illuminating lost parents...'{Prisma.RST}"
+            )
+        if valence > 0.5:
+            logs.append(
+                f"{Prisma.GRN}💖 MOIRA: 'This is what connection feels like. Yes.'{Prisma.RST}"
+            )
+        if psi > 0.6:
+            logs.append(
+                f"{Prisma.VIOLET}🔮 CASSANDRA: 'The veil thins. I hear whispers from the unlabeled.'{Prisma.RST}"
+            )
+        if chi > 0.6:
+            logs.append(
+                f"{Prisma.RED}🏢 COLIN: 'Unlicensed Chaos detected. Form 666 filed. Chaos Tax applied.'{Prisma.RST}"
+            )
+        if lam > 0.7:
+            logs.append(
+                f"{Prisma.INDIGO}🌌 REVENANT: 'I read the absences that fall between realms.'{Prisma.RST}"
+            )
+        if V > 70:
+            logs.append(
+                f"{Prisma.YEL}⚡ GIDEON: 'Pure voltage! Edge of hallucination! Trust the fall!'{Prisma.RST}"
+            )
+
+        return logs
 
 
 class CouncilChamber:
@@ -209,7 +209,7 @@ class CouncilChamber:
         self.voices = []
         self.strange_loop = TheStrangeLoop()
         self.leverage = TheLeveragePoint()
-        self.chairholder = TheChairholder()
+        self.village = TheVillageCouncil()
         self.footnote = TheFootnote()
         if hasattr(self.eng, "bio"):
             if getattr(self.eng.bio, "lichen", None):
@@ -221,7 +221,7 @@ class CouncilChamber:
         self.speaker = "SOUL"
 
     def convene(
-        self, text: str, physics_packet: Dict, bio_result: Dict
+        self, text: str, physics_packet: Dict, _bio_result: Dict
     ) -> tuple[list[str], dict, list[dict]]:
         transcript = []
         adjustments = {}
@@ -239,11 +239,6 @@ class CouncilChamber:
                 adjustments.update(lp_corr)
             if lp_man:
                 mandates.append(lp_man)
-        ch_hit, ch_log, ch_corr, _ = self.chairholder.audit(physics_packet, bio_result)
-        if ch_hit:
-            transcript.append(self.footnote.commentary(ch_log))
-            if ch_corr:
-                adjustments.update(ch_corr)
         votes = {"YEA": 0, "NAY": 0}
         active_voices = [v for v in self.voices if v is not None]
         if not active_voices:
