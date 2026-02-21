@@ -116,7 +116,7 @@ class BioSystem:
         ent_val = vector.get("ENT", 0.0)
         phi_val = vector.get("PHI", 0.0)
         em_field = math.sqrt(ent_val**2 + phi_val**2)
-        base_entropy = 2.0
+        base_entropy = 0.2 + (ent_val * 1.0)
         shield_strength = min(0.8, em_field * 0.1)
         effective_entropy = base_entropy * (1.0 - shield_strength)
         thermal_feedback = 0.0

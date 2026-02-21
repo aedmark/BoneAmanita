@@ -251,7 +251,7 @@ class TherapyProtocol:
         for trauma_type, streak in self.streaks.items():
             if streak >= self.HEALING_THRESHOLD:
                 self.streaks[trauma_type] = 0
-                if current_trauma_accum[trauma_type] > 0.0:
+                if current_trauma_accum.get(trauma_type, 0.0) > 0.0:
                     current_trauma_accum[trauma_type] = max(
                         0.0, current_trauma_accum[trauma_type] - 0.5
                     )

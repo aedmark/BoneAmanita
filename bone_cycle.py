@@ -344,9 +344,8 @@ class MetabolismPhase(SimulationPhase):
             ctx.log(
                 f"\n{Prisma.VIOLET}[AUTO-SLEEP]: Forced reboot sequence.{Prisma.RST}"
             )
-            self.eng.mind.dreamer.enter_rem_cycle(
-                self.eng.mind.mem, bio_readout={"atp": atp}
-            )
+            soul_snap = self.eng.soul.to_dict() if hasattr(self.eng, "soul") else {}
+            self.eng.mind.dreamer.enter_rem_cycle(soul_snap, bio_state={"atp": atp})
             self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
             reboot_val = getattr(BoneConfig, "MAX_ATP", 100.0) * 0.33
             self.eng.bio.mito.state.atp_pool = reboot_val
@@ -571,6 +570,10 @@ class MachineryPhase(SimulationPhase):
             if self.eng.bio.biometrics:
                 self.eng.bio.biometrics.health -= damage
             self.eng.health -= damage
+        if "narrative_drag" in phys_dict:
+            ctx.physics.narrative_drag = phys_dict["narrative_drag"]
+        if "voltage" in phys_dict:
+            ctx.physics.voltage = phys_dict["voltage"]
         return ctx
 
     def _process_crafting(self, ctx, phys_dict):

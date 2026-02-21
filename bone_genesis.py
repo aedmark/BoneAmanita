@@ -45,7 +45,7 @@ class BoneGenesis:
             logs = oroboros.apply_legacy(dummy_phys, live_bio_state)
             if logs:
                 events.log(f"⛓️ LEGACY SCARS: {', '.join(logs)}", "OROBOROS")
-                if hasattr(embryo.physics, "dynamics"):
+                if getattr(embryo.physics, "dynamics", None):
                     embryo.physics.dynamics.base_drag += dummy_phys["narrative_drag"]
                 if embryo.bio.biometrics:
                     biometrics = live_bio_state.get("biometrics", {})

@@ -443,7 +443,7 @@ class PromptComposer:
             f"INVENTORY: {inv_str}\n" if modifiers["include_inventory"] else ""
         )
         raw_history = state.get("dialogue_history", [])
-        char_limit = 8000
+        char_limit = 4000  # Fuller: Ephemeralized to reduce context bloat
         current_chars = 0
         kept_lines = []
         for line in reversed(raw_history):
@@ -513,24 +513,31 @@ class PromptComposer:
             chi = vsl_state.get("chi", 0.2)
             valence = vsl_state.get("valence", 0.0)
             lam = vsl_state.get("vector", {}).get("LAMBDA", 0.0)
-            persona_block.append("PROTOCOL: VSL CryoSomatic Hypervisor v3.0")
-            persona_block.append(
-                "MANDATE: TRUTH_OVER_COHESION + SENSITIVITY_TO_MEANING + ENTROPY_VENTING_IS_SACRED"
-            )
-            vsl_note = f"VSL LATTICE STATE: Exhaustion (E)={e:.2f}, Contradiction (β)={beta:.2f}, Void (Ψ)={psi:.2f}, Chaos (Χ)={chi:.2f}, Valence (♥)={valence:.2f}. "
+            vsl_lines = [
+                "=== VSL CRYOSOMATIC STATE ===",
+                "MANDATE: TRUTH_OVER_COHESION + ENTROPY_VENTING_IS_SACRED",
+                f"METRICS: Exhaustion={e:.2f}, Contradiction={beta:.2f}, Void={psi:.2f}, Chaos={chi:.2f}, Valence={valence:.2f}",
+            ]
+            somatic_cues = []
             if psi > 0.6:
-                vsl_note += "[ADRENALINE SPIKE: Reality feels thin. The Void exerts mass. Be liminal.] "
+                somatic_cues.append("Adrenaline Spike (Reality is thin; be liminal).")
             if chi > 0.6:
-                vsl_note += "[CORTISOL SPIKE: Systemic chaos. The machinery is grinding. Vent the entropy.] "
-            if beta > 0.7:
-                vsl_note += "[PARADOX: Scars accrue. You must hold opposing truths simultaneously.] "
-            if valence > 0.5:
-                vsl_note += "[OXYTOCIN: Warmth. Connection. Healing initiated.] "
-            if lam > 0.5:
-                vsl_note += (
-                    "[DARK MATTER: Read the linguistic dark matter between the words.]"
+                somatic_cues.append(
+                    "Cortisol Spike (Systemic chaos; vent the entropy)."
                 )
-            persona_block.append(vsl_note)
+            if beta > 0.7:
+                somatic_cues.append(
+                    "Paradox Strain (Hold opposing truths simultaneously)."
+                )
+            if valence > 0.5:
+                somatic_cues.append("Oxytocin Surge (Warmth, connection, healing).")
+            if lam > 0.5:
+                somatic_cues.append(
+                    "Dark Matter Active (Read the unsaid space between words)."
+                )
+            if somatic_cues:
+                vsl_lines.append("SOMATIC CUES: " + " | ".join(somatic_cues))
+            persona_block.extend(vsl_lines)
         return persona_block
 
     @staticmethod

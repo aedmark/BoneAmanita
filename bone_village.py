@@ -108,7 +108,7 @@ class TheTinkerer:
             if hasattr(self.akashic, "forge_new_item"):
                 new_name, new_data = self.akashic.forge_new_item(vector)
                 self.gordon.register_dynamic_item(new_name, new_data)
-                self.gordon.add_item(new_name)
+                self.gordon.acquire(new_name)
                 if old_name in inventory_list:
                     try:
                         idx = inventory_list.index(old_name)

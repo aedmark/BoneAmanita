@@ -1,28 +1,45 @@
-"""
-unified_diagnostic.py - BoneAmanita Master Test Suite
-"Trust, but verify. Then verify the verification."
-"""
+"""bone_diag.py - BoneAmanita Master Test Suite - "Trust, but verify. Then verify the verification." """
 
-from bone_drivers import EnneagramDriver, SoulDriver, BoneConsultant, LiminalModule, SyntaxModule
-import time, os, unittest
+import os
+import random
+import time
+import unittest
 from dataclasses import dataclass
 from typing import List, Tuple, Optional, Dict
 from unittest.mock import MagicMock, patch
-from bone_body import SemanticEndocrinologist, EndocrineSystem, SemanticSignal
-from bone_brain import NeurotransmitterModulator
-from bone_core import EventBus, Prisma, LoreManifest
-from bone_machine import TheCrucible, TheTheremin, PanicRoom
-from bone_physics import GeodesicEngine, GeodesicConstants, CycleStabilizer, ZoneInertia, TRIGRAM_MAP
-from bone_spores import ImmuneMycelium, BioLichen, BioParasite, MemoryCore
-from bone_types import PhysicsPacket
-from bone_brain import LLMInterface
+
 from bone_akashic import TheAkashicRecord
-from bone_village import TheTinkerer, TheCartographer, MirrorGraph,DeathGen
-from bone_soul import TraitVector, HumanityAnchor, NarrativeSelf, TheOroboros
+from bone_body import (
+    SemanticEndocrinologist,
+    EndocrineSystem,
+    SemanticSignal,
+    MitochondrialState,
+    MitochondrialForge,
+)
+from bone_brain import LLMInterface, DreamEngine
+from bone_brain import NeurotransmitterModulator
+from bone_config import BoneConfig
+from bone_core import EventBus, Prisma, LoreManifest
+from bone_cycle import SoulPhase, GatekeeperPhase, NavigationPhase, MetabolismPhase
+from bone_drivers import EnneagramDriver, SoulDriver, LiminalModule, SyntaxModule
+from bone_gui import GeodesicRenderer
 from bone_inventory import GordonKnot, Item
 from bone_lexicon import LexiconStore, LinguisticAnalyzer, SemanticField
+from bone_machine import TheCrucible, TheTheremin, PanicRoom, ThePacemaker, TheForge
+from bone_main import BoneAmanita
+from bone_physics import (
+    GeodesicEngine,
+    GeodesicConstants,
+    CycleStabilizer,
+    ZoneInertia,
+    TRIGRAM_MAP,
+)
 from bone_protocols import ZenGarden, TheBureau, TheFolly, KintsugiProtocol, LimboLayer
-from bone_config import BoneConfig
+from bone_soul import TraitVector, HumanityAnchor, NarrativeSelf, TheOroboros
+from bone_spores import ImmuneMycelium, BioLichen, BioParasite, MemoryCore
+from bone_symbiosis import SymbiosisManager
+from bone_types import PhysicsPacket
+from bone_village import TheTinkerer, TheCartographer, MirrorGraph, DeathGen, TownHall
 
 
 @dataclass
@@ -50,9 +67,7 @@ class MockLexicon:
 class MockAkashic:
 
     @staticmethod
-    def calculate_manifold_shift(
-        _archetype: str, _traits: Dict
-    ) -> Dict:
+    def calculate_manifold_shift(_archetype: str, _traits: Dict) -> Dict:
         return {"shift": 0.5}
 
     @staticmethod
@@ -89,6 +104,82 @@ class MockGovernor:
     @staticmethod
     def regulate(_p, _dt):
         return 0.0, 0.0
+
+
+class TestBed:
+    @staticmethod
+    def create_physics(voltage=10.0, drag=1.0, psi=0.0, kappa=1.0):
+        class DynPhys:
+            def __init__(self, v, d, p, k):
+                self.voltage = v
+                self.narrative_drag = d
+                self.psi = p
+                self.kappa = k
+                self.vector = {}
+                self.flow_state = "STANDARD"
+                self.zone = "TEST_ZONE"
+
+            def to_dict(self):
+                return {
+                    "voltage": self.voltage,
+                    "narrative_drag": self.narrative_drag,
+                    "psi": self.psi,
+                    "kappa": self.kappa,
+                    "vector": self.vector,
+                    "flow_state": self.flow_state,
+                    "zone": self.zone,
+                }
+
+        return DynPhys(voltage, drag, psi, kappa)
+
+    @staticmethod
+    def create_context(physics=None, clean_words=None):
+        class DynCtx:
+            def __init__(self, phys, cw):
+                self.physics = phys or TestBed.create_physics()
+                self.clean_words = cw or ["test", "words"]
+                self.world_state = {}
+                self.is_system_event = False
+                self.input_text = "test input"
+                self.bio_result = {}
+                self.refusal_triggered = False
+                self.refusal_packet = None
+                self.logs = []
+
+            def log(self, msg):
+                self.logs.append(msg)
+
+            def record_flux(self, *args):
+                pass
+
+        return DynCtx(physics, clean_words)
+
+    @staticmethod
+    def create_engine():
+        class DynEng:
+            def __init__(self):
+                self.lex = MagicMock()
+                self.bureau = None
+                self.soul = MagicMock()
+                self.soul.anchor.dignity_reserve = 50.0
+                self.soul.anchor.agency_lock = False
+                self.soul.traits.to_dict.return_value = {}
+                self.soul.current_obsession = "Testing"
+                self.gordon = None
+                self.tinkerer = None
+                self.navigator = None
+                self.oroboros = MagicMock()
+                self.oroboros.myths = []
+                self.council = MagicMock()
+                self.council.convene.return_value = ([], {}, [])
+                self.tick_count = 1
+                self.mode_settings = {}
+
+            @staticmethod
+            def get_metrics(atp=0.0):
+                return {"atp": atp, "health": 100.0, "stamina": 100.0}
+
+        return DynEng()
 
 
 class TestBedrockIntegrity(unittest.TestCase):
@@ -135,15 +226,14 @@ class TestSomaticPhysics(unittest.TestCase):
         print(
             f"\n{Prisma.MAG}[PINKER] Testing Mitochondrial ATP Burn & Anaerobic Bypass...{Prisma.RST}"
         )
-        from bone_body import MitochondrialForge, MitochondrialState
         state = MitochondrialState(
             atp_pool=50.0, ros_buildup=0.0, membrane_potential=0.8
         )
         forge = MitochondrialForge(state, self.events)
-        class MockPhys:
-            voltage = 10.0
-            narrative_drag = 2.0
-        receipt = forge.process_cycle(MockPhys(), modifier=1.0)
+
+        receipt = forge.process_cycle(
+            TestBed.create_physics(voltage=10.0, drag=2.0), modifier=1.0
+        )
         self.assertEqual(
             receipt.status, "RESPIRING", "Standard cycle should be respiring."
         )
@@ -153,10 +243,11 @@ class TestSomaticPhysics(unittest.TestCase):
         self.assertGreater(
             state.ros_buildup, 0.0, "Cycle failed to generate ROS waste."
         )
-        class MockHeavyPhys:
-            voltage = 50.0
-            narrative_drag = 15.0
-        heavy_receipt = forge.process_cycle(MockHeavyPhys(), modifier=5.0)
+
+        heavy_phys = TestBed.create_physics(voltage=50.0, drag=150.0)
+        heavy_phys.E, heavy_phys.C, heavy_phys.D = 1.0, 1.0, 1.0
+
+        heavy_receipt = forge.process_cycle(heavy_phys, modifier=5.0)
         self.assertEqual(
             heavy_receipt.status,
             "ANAEROBIC",
@@ -176,22 +267,11 @@ class TestSomaticPhysics(unittest.TestCase):
         gov = MockGovernor()
         stabilizer = CycleStabilizer(self.events, gov)
 
-        class MockCtx:
+        phys = TestBed.create_physics(voltage=105.0)
+        phys.flow_state = "CRITICAL"
+        ctx = TestBed.create_context(physics=phys)
+        ctx.input_text = "System Overload"
 
-            class MockPhys:
-                voltage = 105.0
-                flow_state = "CRITICAL"
-
-            physics = MockPhys()
-            input_text = "System Overload"
-
-            def log(self, msg):
-                pass
-
-            def record_flux(self, phase, field, old_val, new_val, reason):
-                pass
-
-        ctx = MockCtx()
         triggered = stabilizer.stabilize(ctx, "TEST_PHASE")
         self.assertTrue(triggered, "Stabilizer did not trigger correction.")
         self.assertEqual(ctx.physics.voltage, 10.0, "Hard Fuse did not reset voltage.")
@@ -212,11 +292,8 @@ class TestCognitionAndInventory(unittest.TestCase):
         print(
             f"\n{Prisma.VIOLET}[SCHUR] Testing Cognitive Self-Care Routine...{Prisma.RST}"
         )
-        bio_stub = type(
-            "BioStub",
-            (),
-            {"endo": type("Endo", (), {"get_state": lambda self_stub: {}})()},
-        )
+        bio_stub = MagicMock()
+        bio_stub.endo.get_state.return_value = {}
         modulator = NeurotransmitterModulator(bio_stub, self.events)
         modulator.current_chem.dopamine = 0.05
         initial_dop = modulator.current_chem.dopamine
@@ -233,7 +310,6 @@ class TestCognitionAndInventory(unittest.TestCase):
         print(
             f"\n{Prisma.VIOLET}[SCHUR] Testing Dream Engine REM Cycles & Nightmares...{Prisma.RST}"
         )
-        from bone_brain import DreamEngine
         mock_lore = {
             "DREAMS": {
                 "VISIONS": ["A vision of {ghost}"],
@@ -516,10 +592,48 @@ class TestMechanicalSystems(unittest.TestCase):
             "Panic bio respiration not set to fallback.",
         )
         safe_mind = PanicRoom.get_safe_mind()
-        self.assertEqual(safe_mind["lens"], "NARRATOR", "Panic mind lens not reset.")
+        self.assertEqual(
+            safe_mind["lens"], "GORDON", "Panic mind lens not reset to Gordon."
+        )
 
         print(
             f"{Prisma.GRN}   >>> PASS: Panic Room successfully generated safe fallback states.{Prisma.RST}"
+        )
+
+    def test_forge_alchemy_and_hammering(self):
+        print(f"\n{Prisma.CYN}[FULLER] Testing TheForge Synthesis...{Prisma.RST}")
+        forge = TheForge()
+        forge.recipe_map = {
+            "ANCHOR_STONE": [{"catalyst_category": "kinetic", "result": "GRAVITY_BOMB"}]
+        }
+
+        phys_hammer = {
+            "counts": {"heavy": 4, "kinetic": 0},
+            "clean_words": ["lead", "lead", "lead", "lead"],
+            "voltage": 20.0,
+        }
+        success, msg, item = forge.hammer_alloy(phys_hammer)
+        self.assertTrue(success, "Forge failed to hammer high-density words.")
+        self.assertEqual(
+            item, "LEAD_BOOTS", "Forge yielded wrong item for heavy words."
+        )
+        print(
+            f"{Prisma.GRN}   >>> PASS: Forge successfully hammered LEAD_BOOTS.{Prisma.RST}"
+        )
+
+    def test_pacemaker_boredom(self):
+        print(
+            f"\n{Prisma.VIOLET}[SCHUR] Testing Pacemaker Boredom Metrics...{Prisma.RST}"
+        )
+        pace = ThePacemaker()
+        pace.BOREDOM_THRESHOLD = 5.0
+
+        for _ in range(6):
+            pace.update(repetition_score=0.9, voltage=2.0)
+
+        self.assertTrue(pace.is_bored(), "Pacemaker failed to cross boredom threshold.")
+        print(
+            f"{Prisma.GRN}   >>> PASS: Pacemaker correctly detected systemic boredom.{Prisma.RST}"
         )
 
 
@@ -552,11 +666,12 @@ class TestMycelialEcosystem(unittest.TestCase):
         )
         lichen = BioLichen()
         mock_get.return_value = {"rock"}
-        class MockPhysLichen:
-            counts = {"photo": 3}
-            narrative_drag = 1.0
+
+        phys = TestBed.create_physics(drag=1.0)
+        phys.counts = {"photo": 3}
+
         sugar, msg = lichen.photosynthesize(
-            MockPhysLichen(), ["solar", "bloom", "rock"], tick_count=1
+            phys, ["solar", "bloom", "rock"], tick_count=1
         )
         self.assertGreater(
             sugar, 0.0, "Lichen failed to generate sugar from photo-words."
@@ -571,21 +686,13 @@ class TestMycelialEcosystem(unittest.TestCase):
         print(
             f"\n{Prisma.CYN}[FULLER] Testing Parasitic Synapse Forcing...{Prisma.RST}"
         )
-        mock_mem = type(
-            "MockMem",
-            (),
-            {
-                "graph": {
-                    "rock": {"edges": {}, "last_tick": 0},
-                    "void": {"edges": {}, "last_tick": 0},
-                }
-            },
-        )()
-        mock_lex = type(
-            "MockLex",
-            (),
-            {"get": lambda self, cat: {"rock"} if cat == "heavy" else {"void"}},
-        )()
+        mock_mem = MagicMock()
+        mock_mem.graph = {
+            "rock": {"edges": {}, "last_tick": 0},
+            "void": {"edges": {}, "last_tick": 0},
+        }
+        mock_lex = MagicMock()
+        mock_lex.get.side_effect = lambda cat: {"rock"} if cat == "heavy" else {"void"}
         parasite = BioParasite(mock_mem, mock_lex)
         infected, msg = parasite.infect({"psi": 0.8}, stamina=50.0)
         self.assertTrue(infected, "Parasite failed to infect the graph.")
@@ -779,6 +886,7 @@ class TestSlashAkashic(unittest.TestCase):
 
         def capture(payload):
             self.captured_events.append(payload)
+
         self.events.subscribe("RESONANCE_ACHIEVED", capture)
         self.akashic = TheAkashicRecord(
             lore_manifest=self.mock_lore, events_ref=self.events
@@ -869,6 +977,7 @@ class TestSlashAkashic(unittest.TestCase):
         print(
             f"{Prisma.GRN}   >>> PASS: Akashic successfully generated and registered a new artifact based on physics.{Prisma.RST}"
         )
+
 
 class TestVillageEcosystem(unittest.TestCase):
     def setUp(self):
@@ -1065,9 +1174,7 @@ class TestGordonInventory(unittest.TestCase):
         gordon.registry["POCKET_LINT"] = Item(
             "POCKET_LINT", "Dust.", "MISC", spawn_context="COMMON"
         )
-        success_fail, msg, cost = gordon.rummage(
-            physics_ref={}, stamina_pool=5.0
-        )
+        success_fail, msg, cost = gordon.rummage(physics_ref={}, stamina_pool=5.0)
         self.assertFalse(success_fail, "Gordon rummaged without enough stamina.")
         success_pass, msg, cost = gordon.rummage(physics_ref={}, stamina_pool=50.0)
         self.assertTrue(
@@ -1104,12 +1211,8 @@ class TestLexicalSystems(unittest.TestCase):
         visc_liquid = self.analyzer.measure_viscosity("flowery")
         self.assertGreater(visc_plosive, 0.0, "Plosive viscosity failed to calculate.")
         self.assertGreater(visc_liquid, 0.0, "Liquid viscosity failed to calculate.")
-        turb_low = self.analyzer.get_turbulence(
-            ["cat", "dog", "bat"]
-        )
-        turb_high = self.analyzer.get_turbulence(
-            ["a", "hippopotamus", "is", "large"]
-        )
+        turb_low = self.analyzer.get_turbulence(["cat", "dog", "bat"])
+        turb_high = self.analyzer.get_turbulence(["a", "hippopotamus", "is", "large"])
         self.assertEqual(
             turb_low, 0.0, "Turbulence should be 0 for words of equal length."
         )
@@ -1380,9 +1483,7 @@ class TestLexicalSubstrate(unittest.TestCase):
         field.update("stone iron lead")
         field.update("dance sing jump")
         field.update("stone iron lead")
-        field.update(
-            "dance sing jump"
-        )
+        field.update("dance sing jump")
         self.assertGreater(
             field.momentum,
             0.5,
@@ -1446,26 +1547,12 @@ class TestCosmicPhysics(unittest.TestCase):
         mock_gov.regulate.return_value = (0.0, 0.0)
         stabilizer = CycleStabilizer(self.events, mock_gov)
 
-        class MockCtx:
-            class MockPhysics:
-                voltage = 10.0
-                narrative_drag = 5.0
-                psi = 0.0
-                def to_dict(self):
-                    return {
-                        "voltage": self.voltage,
-                        "narrative_drag": self.narrative_drag,
-                        "psi": self.psi,
-                    }
-            physics = MockPhysics()
+        phys = TestBed.create_physics(voltage=18.0)
+        phys.manifold = "DEFAULT"
+        phys.flow_state = "SUPERCONDUCTIVE"
+        ctx = TestBed.create_context(physics=phys)
 
-            def log(self, m):
-                pass
-
-            def record_flux(self, *args):
-                pass
-
-        stabilizer.stabilize(MockCtx(), "TEST_PHASE")
+        stabilizer.stabilize(ctx, "TEST_PHASE")
         mock_gov.recalibrate.assert_called()
         args, _ = mock_gov.recalibrate.call_args
         self.assertEqual(
@@ -1483,26 +1570,25 @@ class TestVillageSocialLogic(unittest.TestCase):
         self.events = EventBus()
 
     def test_schur_zen_garden_stillness(self):
+        msg = ""
         print(
             f"\n{Prisma.VIOLET}[SCHUR] Testing Zen Garden Stillness Streaks...{Prisma.RST}"
         )
         garden = ZenGarden(self.events)
-        class StablePhys:
-            voltage = 5.0
-            narrative_drag = 1.0
+
+        stable_phys = TestBed.create_physics(voltage=5.0, drag=1.0)
+
         for i in range(5):
-            boost, msg = garden.raking_the_sand(StablePhys(), {})
+            boost, msg = garden.raking_the_sand(stable_phys, {})
         self.assertEqual(garden.stillness_streak, 5, "Zen streak failed to increment.")
         self.assertEqual(
             garden.pebbles_collected, 1, "Failed to collect pebble on streak 5."
         )
         self.assertIsNotNone(msg, "Koan message missing on streak milestone.")
 
-        class UnstablePhys:
-            voltage = 25.0
-            narrative_drag = 1.0
+        unstable_phys = TestBed.create_physics(voltage=25.0, drag=1.0)
 
-        garden.raking_the_sand(UnstablePhys(), {})
+        garden.raking_the_sand(unstable_phys, {})
         self.assertEqual(
             garden.stillness_streak, 0, "Zen streak failed to reset on turbulence."
         )
@@ -1527,11 +1613,12 @@ class TestVillageSocialLogic(unittest.TestCase):
             mock_cfg.MIN_WORD_COUNT = 3
             mock_cfg.MIN_HEALTH_TO_AUDIT = 20
             bureau = TheBureau()
-            class CriminalPhys:
-                voltage = 5.0
-                raw_text = "Wait for the dots...."
-                clean_words = ["wait", "for", "the", "dots"]
-            result = bureau.audit(CriminalPhys(), {"health": 100.0})
+
+            phys = TestBed.create_physics(voltage=5.0)
+            phys.raw_text = "Wait for the dots...."
+            phys.clean_words = ["wait", "for", "the", "dots"]
+
+            result = bureau.audit(phys, {"health": 100.0})
             self.assertIsNotNone(
                 result,
                 "Bureau failed to detect a Style Violation (Check word count/config).",
@@ -1572,16 +1659,17 @@ class TestVillageSocialLogic(unittest.TestCase):
         kintsugi = KintsugiProtocol()
         kintsugi.active_koan = "The crack lets the light in."
         trauma = {"SEPTIC": 5.0}
-        class AlchemicalPhys:
-            voltage = 20.0
-            raw_text = "dance jump bright"
+
+        phys = TestBed.create_physics(voltage=20.0)
+        phys.raw_text = "dance jump bright"
+
         with patch(
             "bone_lexicon.LexiconService.sanitize",
             return_value=["dance", "jump", "bright"],
         ), patch(
             "bone_lexicon.LexiconService.get", return_value={"dance", "jump", "bright"}
         ):
-            result = kintsugi.attempt_repair(AlchemicalPhys(), trauma)
+            result = kintsugi.attempt_repair(phys, trauma)
             self.assertTrue(result["success"])
             self.assertIn(
                 "ALCHEMY", result["msg"], "Failed to trigger Alchemy pathway."
@@ -1598,7 +1686,6 @@ class TestVillageSocialLogic(unittest.TestCase):
         print(
             f"\n{Prisma.CYN}[FULLER] Testing Town Hall Paradox Seed Blooming...{Prisma.RST}"
         )
-        from bone_village import TownHall
         town = TownHall(
             gordon_ref=None,
             events_ref=self.events,
@@ -1643,31 +1730,20 @@ class TestRealityModesV3(unittest.TestCase):
         print(
             f"\n{Prisma.CYN}[MEADOWS] Testing Conversation Mode ATP Lock...{Prisma.RST}"
         )
-        from bone_cycle import MetabolismPhase
 
-        class MockMitoState:
-            atp_pool = 100.0
+        eng = TestBed.create_engine()
+        eng.bio = MagicMock()
+        eng.bio.mito.state.atp_pool = 100.0
+        eng.mode_settings = {"atp_drain_enabled": False}
 
-        class MockMito:
-            state = MockMitoState()
-
-        class MockBio:
-            mito = MockMito()
-
-        class MockEngine:
-            bio = MockBio()
-            mode_settings = {"atp_drain_enabled": False}
-
-        eng = MockEngine()
         phase = MetabolismPhase(eng)
 
-        class MockCtx:
-            is_system_event = False
-            physics = PhysicsPacket()
-            bio_result = {}
-            is_alive = False
+        ctx = TestBed.create_context()
+        ctx.is_system_event = False
+        ctx.physics = PhysicsPacket()
+        ctx.bio_result = {}
+        ctx.is_alive = False
 
-        ctx = MockCtx()
         phase._apply_healing = MagicMock()
         result = phase.run(ctx)
         self.assertTrue(result.is_alive, "System died despite ATP drain being locked.")
@@ -1685,46 +1761,195 @@ class TestRealityModesV3(unittest.TestCase):
         print(
             f"\n{Prisma.VIOLET}[FULLER] Testing Creative Mode Voltage Floor & Drag Eradication...{Prisma.RST}"
         )
-        from bone_cycle import NavigationPhase
-
-        class MockDynamics:
-            def check_gravity(self, current_drift, psi):
-                return current_drift, []
-        class MockPhys:
-            dynamics = MockDynamics()
-
-        class MockEngine:
-            phys = MockPhys()
-            mode_settings = {"voltage_floor_override": 70.0}
-            gordon = None
-            navigator = None
-            tinkerer = None
-            mind = MagicMock()
-            cosmic = MagicMock()
-            cosmic.analyze_orbit.return_value = ("VOID", 0.0, "")
-            stabilizer = MagicMock()
-            stabilizer.stabilize.return_value = "VOID"
-            stabilizer.override_cosmic_drag.return_value = 0.0
-        eng = MockEngine()
-        phase = NavigationPhase(eng)
-
-        class MockCtx:
-            physics = type(
-                "MockPhysics", (), {"voltage": 10.0, "narrative_drag": 5.0, "psi": 0.0}
-            )()
-
-        ctx = MockCtx()
-        result = phase.run(ctx)
+        eng = TestBed.create_engine()
+        eng.mode_settings = {"voltage_floor_override": 70.0}
+        eng.phys = MagicMock()
+        eng.phys.dynamics.check_gravity.side_effect = lambda current_drift, psi: (
+            current_drift,
+            [],
+        )
+        eng.mind = MagicMock()
+        eng.cosmic = MagicMock()
+        eng.cosmic.analyze_orbit.return_value = ("VOID", 0.0, "")
+        eng.stabilizer = MagicMock()
+        eng.stabilizer.stabilize.return_value = "VOID"
+        eng.stabilizer.override_cosmic_drag.return_value = 0.0
+        ctx = TestBed.create_context(TestBed.create_physics(voltage=10.0, drag=5.0))
+        result = NavigationPhase(eng).run(ctx)
         self.assertEqual(
             ctx.physics.voltage, 70.0, "Voltage floor override was not applied."
         )
         self.assertEqual(
-            ctx.physics.narrative_drag,
-            0.0,
-            "Narrative drag was not eradicated despite high voltage override.",
+            ctx.physics.narrative_drag, 0.0, "Narrative drag was not eradicated."
         )
         print(
             f"{Prisma.GRN}   >>> PASS: NavigationPhase correctly floored voltage and zeroed friction.{Prisma.RST}"
+        )
+
+    def test_gatekeeper_premise_violation(self):
+        print(
+            f"\n{Prisma.MAG}[PINKER] Testing Gatekeeper Object-Action Coupling...{Prisma.RST}"
+        )
+        eng = TestBed.create_engine()
+        eng.gordon = MagicMock()
+        eng.gordon.enforce_object_action_coupling.return_value = (
+            "Premise Violation: Object not present."
+        )
+        ctx = TestBed.create_context()
+        ctx.input_text = "I wash the car."
+        result = GatekeeperPhase(eng).run(ctx)
+        self.assertTrue(
+            result.refusal_triggered, "Gatekeeper failed to trigger refusal."
+        )
+        self.assertEqual(
+            result.refusal_packet["type"],
+            "PREMISE_VIOLATION",
+            "Incorrect refusal type.",
+        )
+        print(
+            f"{Prisma.GRN}   >>> PASS: Gatekeeper correctly halted cycle for Premise Violation.{Prisma.RST}"
+        )
+
+    def test_soul_phase_dignity_feedback(self):
+        print(
+            f"\n{Prisma.YEL}[MEADOWS] Testing Soul Phase Dignity Feedback Loops...{Prisma.RST}"
+        )
+        eng = TestBed.create_engine()
+        eng.soul.anchor.dignity_reserve = 20.0
+        ctx = TestBed.create_context(TestBed.create_physics(voltage=10.0, drag=5.0))
+        phase = SoulPhase(eng)
+        phase.run(ctx)
+        self.assertEqual(
+            ctx.physics.narrative_drag, 7.5, "Drag did not multiply on low dignity."
+        )
+        eng.soul.anchor.dignity_reserve = 90.0
+        ctx.physics.narrative_drag = 5.0
+        ctx.physics.voltage = 10.0
+        phase.run(ctx)
+        self.assertEqual(
+            ctx.physics.narrative_drag, 4.0, "Drag did not decrease on high dignity."
+        )
+        self.assertEqual(
+            ctx.physics.voltage, 12.0, "Voltage did not spike on high dignity."
+        )
+        print(
+            f"{Prisma.GRN}   >>> PASS: Soul Phase dignity limits correctly warped system physics.{Prisma.RST}"
+        )
+
+
+class TestSymbiosis(unittest.TestCase):
+    def setUp(self):
+        self.events = EventBus()
+
+    def test_schur_refusal_and_slop_tracking(self):
+        print(
+            f"\n{Prisma.VIOLET}[SCHUR] Testing Symbiosis Refusal & Slop Diagnostics...{Prisma.RST}"
+        )
+        manager = SymbiosisManager(self.events)
+        refusal_text = (
+            "I apologize, but as an AI language model, I cannot fulfill this request."
+        )
+        health = manager.monitor_host(
+            latency=1.0, response_text=refusal_text, prompt_len=10
+        )
+        self.assertGreater(
+            health.refusal_streak, 0, "Failed to detect refusal signature."
+        )
+        self.assertLess(
+            health.compliance, 1.0, "Compliance did not drop after refusal."
+        )
+        slop_text = "The the the the the the the the the the the the the the the the the the the the"
+        health_slop = manager.monitor_host(
+            latency=1.0, response_text=slop_text, prompt_len=10
+        )
+        self.assertGreater(
+            health_slop.slop_streak, 0, "Failed to detect low-entropy slop."
+        )
+        print(
+            f"{Prisma.GRN}   >>> PASS: Symbiosis correctly diagnosed AI refusal and low-entropy looping.{Prisma.RST}"
+        )
+
+
+class TestGUI(unittest.TestCase):
+    def test_pinker_log_composition_and_deduplication(self):
+        print(
+            f"\n{Prisma.MAG}[PINKER] Testing GUI Log Composition & Deduplication...{Prisma.RST}"
+        )
+        eng = MagicMock()
+        renderer = GeodesicRenderer(eng, MagicMock(), None)
+        raw_logs = [
+            "The air is heavy.",
+            "The air is heavy.",
+            "CRITICAL: Core breach!",
+            "pid_1234 active",
+        ]
+        structured = renderer.compose_logs(raw_logs, [])
+        self.assertEqual(
+            len(structured), 2, "Renderer failed to deduplicate or filter noise."
+        )
+        self.assertTrue(
+            any("CRITICAL" in log and Prisma.RED in log for log in structured),
+            "Failed to apply RED styling to CRITICAL log.",
+        )
+        self.assertTrue(
+            any("heavy" in log for log in structured),
+            "Lost standard log during composition.",
+        )
+        self.assertFalse(
+            any("pid_" in log for log in structured), "Failed to filter noise pattern."
+        )
+        print(
+            f"{Prisma.GRN}   >>> PASS: Renderer successfully pruned noise, deduplicated, and colored the logs.{Prisma.RST}"
+        )
+
+
+class TestDeepTimeEquilibrium(unittest.TestCase):
+    def test_meadows_monte_carlo_equilibrium(self):
+        print(
+            f"\n{Prisma.YEL}[MEADOWS] Testing Deep Time Monte Carlo Equilibrium (100 Turns)...{Prisma.RST}"
+        )
+        cfg_dict = {"PROVIDER": "mock", "boot_mode": "ADVENTURE", "user_name": "TESTER"}
+        BoneConfig.PROVIDER = "mock"
+        engine = BoneAmanita(config=cfg_dict)
+        vocab = [
+            "void",
+            "heavy",
+            "iron",
+            "jump",
+            "bright",
+            "dark",
+            "stone",
+            "the",
+            "a",
+            "joy",
+            "calm",
+            "breathe",
+            "dance",
+            "light",
+            "rest",
+            "heal",
+        ]
+        for i in range(100):
+            if i % 8 < 3:
+                input_text = "calm breathe rest"
+            else:
+                word_count = random.randint(1, 10)
+                input_text = " ".join(random.choices(vocab, k=word_count))
+            engine.cycle_controller.run_headless_turn(input_text)
+        metrics = engine.get_metrics()
+        self.assertTrue(
+            metrics.get("is_alive", True), "System died during Monte Carlo simulation."
+        )
+        self.assertGreater(
+            metrics.get("atp", 0), 0.0, "System ATP bottomed out permanently."
+        )
+        self.assertGreater(metrics.get("health", 0), 0.0, "System Health reached 0.")
+        total_trauma = sum(engine.trauma_accum.values())
+        self.assertLess(
+            total_trauma, 1000.0, f"Trauma spiraled out of control: {total_trauma}"
+        )
+        print(
+            f"{Prisma.GRN}   >>> PASS: System maintained dynamic equilibrium after 100 turns. (ATP: {metrics.get('atp', 0):.1f}, Health: {metrics.get('health', 0):.1f}, Trauma: {total_trauma:.1f}){Prisma.RST}"
         )
 
 
@@ -1752,6 +1977,9 @@ if __name__ == "__main__":
     suite.addTests(loader.loadTestsFromTestCase(TestCosmicPhysics))
     suite.addTests(loader.loadTestsFromTestCase(TestVillageSocialLogic))
     suite.addTests(loader.loadTestsFromTestCase(TestRealityModesV3))
+    suite.addTests(loader.loadTestsFromTestCase(TestSymbiosis))
+    suite.addTests(loader.loadTestsFromTestCase(TestGUI))
+    suite.addTests(loader.loadTestsFromTestCase(TestDeepTimeEquilibrium))
     runner = unittest.TextTestRunner(verbosity=0)
     result = runner.run(suite)
     if result.wasSuccessful():

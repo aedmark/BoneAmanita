@@ -335,10 +335,16 @@ class PanicRoom:
 
     @staticmethod
     def get_safe_bio(previous_state=None):
-        base = SAFE_BIO_DEFAULTS.copy()
-        base["logs"] = [
-            f"{Prisma.paint('BIO FAIL: Panic Room Protocol Active. Sensory input severed.', 'R')}"
-        ]
+        base = {"is_alive": True, "atp": 10.0, "respiration": "NECROSIS", "enzyme": "NONE", "chem": {
+            "DOP": 0.0,
+            "COR": 0.0,
+            "OXY": 0.0,
+            "SER": 0.0,
+            "ADR": 0.0,
+            "MEL": 0.0,
+        }, "logs": [
+            f"{Prisma.RED}BIO FAIL: Panic Room Protocol Active. Sensory input severed.{Prisma.RST}"
+        ]}
         state = previous_state or {}
         if isinstance(state, dict):
             if old_chem := state.get("chemistry", {}):
