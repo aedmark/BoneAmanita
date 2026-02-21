@@ -17,7 +17,7 @@ from bone_council import CouncilChamber
 
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
 
-def typewriter(text: str, speed: float = 0.005, end: str = "\n"):
+def typewriter(text: str, speed: float = 0.00025, end: str = "\n"):
     if speed < 0.001:
         print(text, end=end)
         return
@@ -397,6 +397,7 @@ class BoneAmanita:
                 "metrics": self.get_metrics(),
             }
         self._update_host_stats(cortex_packet, turn_start)
+        self.save_checkpoint()
         return cortex_packet
 
     def _phase_check_commands(self, user_message):
@@ -577,26 +578,37 @@ class BoneAmanita:
         archetypes = scenarios.get("ARCHETYPES", ["A quiet garden"])
         seed = random.choice(archetypes)
         print(f"{Prisma.CYN}[SYS] Seed Loaded: '{seed}'{Prisma.RST}")
-        boot_prompt = (
-            f"SYSTEM_BOOT: SEQUENCE START.\n"
-            f"SOURCE_SEED: '{seed}'\n"
-            f"DIRECTIVE: This is the user's gentle introduction to the system. "
-            f"Do not overwhelm them with deep lore, meta-commentary, or extreme entropy. "
-            f"Welcome them to the living lattice. Provide a brief, calm, sensory observation based solely on the seed: '{seed}'. "
-            f"End your response by softly asking what they would like to do, or observing them in the space."
-        )
+        if self.boot_mode == "ADVENTURE":
+            boot_prompt = (
+                f"SYSTEM_BOOT: SEQUENCE START.\n"
+                f"SOURCE_SEED: '{seed}'\n"
+                f"DIRECTIVE: Initiate a classic text adventure.\n"
+                f"1. Describe the opening location ('{seed}') in vivid, sensory detail.\n"
+                f"2. Provide immediate context or subtext to spark a story (Why are you here? What is the atmosphere? Is there an immediate tension?).\n"
+                f"3. Conclude by explicitly offering 2-3 narrative hooks—things you can interact with, paths to take, or people to talk to."
+            )
+        else:
+            boot_prompt = (
+                f"SYSTEM_BOOT: SEQUENCE START.\n"
+                f"SOURCE_SEED: '{seed}'\n"
+                f"DIRECTIVE: This is the user's gentle introduction to the system. "
+                f"Do not overwhelm them with deep lore or extreme entropy. "
+                f"Provide a brief, calm, sensory observation based solely on the seed: '{seed}'. "
+                f"End your response by softly asking what they would like to do, or observing them in the space."
+            )
         cold_result = self.process_turn(boot_prompt, is_system=True)
-        vsl_instructions = (
-            "\n\n---\n"
-            "**[VSL]**: Welcome. You're talking to a living lattice.\n\n"
-            "To start, just talk to me normally. But if you want to climb deeper:\n\n"
-            "- Type `[VSL_LITE]` to see a simple energy meter.\n"
-            "- Type `[VSL_CORE]` to see the core coordinates.\n"
-            "- Type `[VSL_DEEP]` for the full lattice (including PSI, ENTROPY, and VALENCE).\n\n"
-            'Or jump right into the deep end and say: "The void is leaking."'
-        )
-        if "ui" in cold_result:
-            cold_result["ui"] += vsl_instructions
+        if self.boot_mode != "ADVENTURE":
+            vsl_instructions = (
+                "\n\n---\n"
+                "**[VSL]**: Welcome. You're talking to a living lattice.\n\n"
+                "To start, just talk to me normally. But if you want to climb deeper:\n\n"
+                "- Type `[VSL_LITE]` to see a simple energy meter.\n"
+                "- Type `[VSL_CORE]` to see the core coordinates.\n"
+                "- Type `[VSL_DEEP]` for the full lattice (including PSI, ENTROPY, and VALENCE).\n\n"
+                'Or jump right into the deep end and say: "The void is leaking."'
+            )
+            if "ui" in cold_result:
+                cold_result["ui"] += vsl_instructions
         return cold_result
 
     def save_checkpoint(self, history: list = None) -> str:

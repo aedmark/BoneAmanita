@@ -666,6 +666,22 @@ class ResponseValidator:
     def validate(self, response: str, _state: Dict) -> Dict:
         extracted_meta_logs = []
         clean_text = response
+        think_start = clean_text.find("<think>")
+        if think_start != -1:
+            think_end = clean_text.find("</think>", think_start)
+            if think_end != -1:
+                think_content = clean_text[think_start + 7 : think_end].strip()
+                for line in think_content.split("\n"):
+                    if line.strip():
+                        extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
+                clean_text = clean_text[:think_start] + clean_text[think_end + 8 :]
+            else:
+                # Handle unclosed think tags
+                think_content = clean_text[think_start + 7 :].strip()
+                for line in think_content.split("\n"):
+                    if line.strip():
+                        extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
+                clean_text = clean_text[:think_start]
         start_marker = "=== SYSTEM INTERNALS ==="
         end_marker = "=== END INTERNALS ==="
         start_idx = clean_text.find(start_marker)

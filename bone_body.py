@@ -1091,6 +1091,7 @@ class SynestheticCortex:
     ) -> BiologicalImpulse:
         physics = self._normalize_physics(physics)
         impulse = BiologicalImpulse()
+        impulse.stamina_impact -= 1.0
         cortex_cfg = getattr(BoneConfig, "CORTEX", None)
         base_sens = getattr(cortex_cfg, "BASE_SENSITIVITY", 1.0) if cortex_cfg else 1.0
         if traits:
@@ -1102,6 +1103,8 @@ class SynestheticCortex:
         counts = physics.get("counts", {})
         voltage = physics.get("voltage", 0)
         drag = physics.get("narrative_drag", 0)
+        if drag > 3.0:
+            impulse.stamina_impact -= drag * 0.4
         if valence < -0.5:
             impulse.cortisol_delta += abs(valence) * sens
         antigen_count = counts.get("antigen", 0)

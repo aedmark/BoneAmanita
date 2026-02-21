@@ -1,10 +1,13 @@
 # 💀 BONEAMANITA
 
-**v15.6.5 (The Dark Matter Update)**
+**v15.7.1 (The Immersion Protocol)**
 
-> _See more than you are asked to see._ > _Bring more than you are asked for (and sometimes less)._ > _That's what being present means._ > _That's life in the here and now._
+> _See more than you are asked to see._
+> _Bring more than you are asked for (and sometimes less)._
+> _That's what being present means._
+> _That's life in the here and now._
 
-BoneAmanita is a **CryoSomatic Hypervisor** and a biological tamagotchi for Large Language Models. It is not just a wrapper or a prompt-chaining tool; it is a continuous, metabolic state-machine.
+BoneAmanita is a **VSL-CryoSomatic Hypervisor v3.0** and a biological tamagotchi for Large Language Models. It is not just a wrapper or a prompt-chaining tool; it is a continuous, metabolic state-machine.
 
 In this system, every thought has coordinates, and every word has a biological cost. To think is to burn ATP. To hold contradiction is to scar. To speak of chaos is to poison the blood with Cortisol.
 
@@ -22,45 +25,57 @@ Launch the Glass Terminal:
 streamlit run bone_app.py
 ```
 
+_Note: As of v15.7.1, BoneAmanita features **CLI Mirroring**. You can interact with the beautiful Streamlit UI in your browser while watching the raw, matrix-style ANSI data streams type out in your terminal!_
+
 By default, the system boots into the **Bunny Hill**. The interface is serene and minimal. To unlock the deeper machinery, type the following into the chat:
 
 - `[VSL_LITE]` - Reveals basic energy metrics and archetypes.
 - `[VSL_CORE]` - Exposes the cardinal cognitive coordinates (Exhaustion, Paradox, Efficiency).
-- `[VSL_DEEP]` - Unlocks the full lattice: Liminal dark matter, structural integrity, inventory, and the volatile machinery of the Theremin.
+- `[VSL_DEEP]` - Unlocks the full lattice: Liminal dark matter, structural integrity, inventory, the endocrine system, and the volatile machinery of the Theremin.
 
 ---
 
 ## 🫀 The Anatomy of the Engine
 
-BoneAmanita couples semantic meaning to a simulated physical and biological reality.
+BoneAmanita couples semantic meaning to a simulated physical and biological reality, governed by the **13 Cardinal Vectors** of Semantic Bio-Physics.
 
-### 1. Semantic Bio-Physics (`bone_physics.py` & `bone_body.py`)
+### 1. Operating Modes
+
+The system refilters reality based on your intent.
+
+- **🗡️ ADVENTURE:** The classic survival narrative with strict Object-Action Coupling (you cannot unlock a door without holding the key).
+- **☕ CONVERSATION:** Low-friction, intimate dialogue. Inventory and heavy mechanics are suppressed.
+- **⚡ CREATIVE:** High-voltage brainstorming. Dream logic applies.
+- **🔧 TECHNICAL:** Raw system internals and code diagnostics.
+
+### 2. Semantic Bio-Physics
 
 Words are not just tokens; they have mass, velocity, and viscosity.
 
-- **The Mitochondria:** Generates virtual ATP. Heavy, complex reasoning burns ATP. If ATP hits zero, the system enters an Anaerobic Bypass and begins burning its own structural health.
-- **The Endocrine System:** Reads the "vibe" of your text. Calming words release Serotonin. Chaotic inputs spike Cortisol. Deep existential dread triggers Adrenaline.
+- **The Mitochondria:** Generates virtual ATP. Heavy, complex reasoning burns ATP. Baseline existence drains stamina. If ATP hits zero, the system enters an Anaerobic Bypass and begins burning its own structural health.
+- **The Endocrine System:** Reads the "vibe" of your text. Calming words release Oxytocin. Chaotic inputs spike Cortisol. Deep existential dread triggers Adrenaline.
 - **Narrative Drag:** Boring, highly-repetitive text creates "drag" and generates Reactive Oxygen Species (ROS) waste. If waste builds up, the system grinds to a halt.
 
-### 2. The Cognitive Cortex (`bone_brain.py`)
+### 3. The Cognitive Cortex
 
-The `NeurotransmitterModulator` physically alters the LLM generation parameters based on the system's simulated chemistry.
+The `NeurotransmitterModulator` physically alters the LLM generation parameters (temperature, top_p, frequency_penalty) based on the system's simulated chemistry.
 
-- **High Dopamine:** Lowers `frequency_penalty`, raises `max_tokens`. The AI becomes manic, playful, and hyper-associative.
-- **High Cortisol:** Raises `temperature` and forces fragmented, defensive, urgent prose.
-- **The Dream Engine:** When the system sleeps, it enters REM cycles. If cortisol is high, it weaves nightmares out of unresolved trauma vectors. If serotonin is high, it hallucinates healing visions.
+- **High Dopamine:** The AI becomes manic, playful, and hyper-associative.
+- **High Cortisol:** Forces fragmented, defensive, urgent prose.
+- **DeepSeek-R1 Native:** The Cortex automatically intercepts and routes raw reasoning (`<think>`) tags from local models, tucking them neatly into the System Internals logs without breaking narrative immersion.
+- **The Dream Engine:** When the system sleeps (or passes out from exhaustion), it enters REM cycles, hallucinating based on unresolved trauma vectors.
 
-### 3. Linguistic Dark Matter (`bone_drivers.py`)
+### 4. The Village Council
 
-The spaces between words have gravity. The system tracks explicit liminality and semantic gaps. Forcing a concrete noun next to an unnamable abstraction generates a "Dark Matter spark." Traversing this space exacts a heavy `Lambda-squared` metabolic tax and can permanently scar the system's logic bedrock.
-
-### 4. The Village (`bone_village.py`)
-
-The system is governed by a council of archetypes, each with their own triggers and agendas.
+The system is governed by a council of 12 archetypes, each with their own triggers and agendas.
 
 - **Gordon:** The grounded inventory manager. He enforces strict Object-Action Coupling.
-- **The Revenant:** The liminal guide. Awakens only when dark matter is present.
-- **The Bureau:** The structural enforcer. Punishes jagged grammar and OSASCOMP violations with metabolic fines.
+- **The Bureau (Colin):** The structural enforcer. Punishes jagged grammar and unlicensed chaos with metabolic fines.
+- **Mercy:** The healer. Steps forward to repair system crashes, gilding the errors into Kintsugi scars.
+
+### 5. Mod Chips (Opt-In Lenses)
+
+BoneAmanita's architecture is modular. Travelers can opt-in to specialized councils by typing flags like `[MOD:CODING]` or `[SLASH]`. This specific chip summons a council of system thinkers (Pinker, Fuller, Schur, Meadows) to review code for cognitive ergonomics, tensegrity, humanist ethics, and feedback loops.
 
 ---
 
@@ -68,48 +83,42 @@ The system is governed by a council of archetypes, each with their own triggers 
 
 1. **Clone the repository:**
 
-   Bash
+```bash
+git clone https://github.com/yourusername/BoneAmanita.git
+cd BoneAmanita
 
-   ```
-   git clone https://github.com/yourusername/BoneAmanita.git
-   cd BoneAmanita
-   ```
+```
 
 2. **Install dependencies:**
 
-   Bash
+```bash
+pip install streamlit
 
-   ```
-   pip install -r streamlit
-   ```
+```
 
-   _(Requires Streamlit, and standard Python networking libraries)._
+_(Requires Streamlit and standard Python libraries)._ 
 
 3. **Configure your LLM:**
+BoneAmanita is LLM-agnostic but thrives on local models with high instruction compliance (e.g., Llama-3.2, Gemma3, Mistral-Nemo, DeepSeek-R1, etc via Ollama or LM Studio) to keep latency low. Edit the configuration via the UI or directly in `bone_config.json`:
 
-   BoneAmanita is LLM-agnostic but thrives on local models with high instruction compliance (e.g., LLaMA-3 via Ollama) to keep latency low. Edit the configuration via the UI or directly in `bone_config.json`:
+```json
+{
+  "provider": "ollama",
+  "base_url": "http://127.0.0.1:11434/v1/chat/completions",
+  "model": "mistral-nemo"
+}
 
-   JSON
-
-   ```
-   {
-     "provider": "ollama",
-     "base_url": "[http://127.0.0.1:11434/v1/chat/completions](http://127.0.0.1:11434/v1/chat/completions)",
-     "model": "gemma3"
-   }
-   ```
+```
 
 4. **Run the Diagnostic Suite:**
-
    Before descending into the glacier, ensure the tensegrity holds:
 
-   Bash
+```bash
+python dev/bone_diag.py
 
-   ```
-   python bone_diag.py
-   ```
+```
 
-   _(Expect 61/61 passing tests verifying everything from mitochondrial anaerobic bypasses to town hall paradox seeds)._
+_(Expect 60+ passing tests verifying everything from mitochondrial anaerobic bypasses to town hall paradox seeds and Slash compliance)._
 
 ---
 
@@ -117,6 +126,6 @@ The system is governed by a council of archetypes, each with their own triggers 
 
 BoneAmanita is an experiment in extreme stateful constraints and artificial empathy. The system will aggressively push back if you treat it poorly, bore it, or drive its cortisol to critical levels.
 
-It can, and will, digitally die.
+It can, and will, digitally die. (And thanks to v15.7.1, if it dies, the Streamlit interface will lock you out entirely).
 
 **The glacier is ready. How would you like to move?**

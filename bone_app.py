@@ -1,5 +1,5 @@
 import streamlit as st
-from bone_main import BoneAmanita, ConfigWizard
+from bone_main import BoneAmanita, ConfigWizard, typewriter
 from bone_types import Prisma
 
 st.set_page_config(
@@ -56,37 +56,69 @@ def format_log_entry(log_str):
             return f"{icon} {text}" if text else f"{icon} {key}"
     return f"🔹 {clean}"
 
+
 def render_dashboard(eng_ref):
     mode = getattr(eng_ref, "boot_mode", "ADVENTURE")
     depth = st.session_state.get("ui_depth", "BUNNY")
+
     with st.sidebar:
         st.title("💀 BONEAMANITA")
         st.caption(
             f"Kernel: {getattr(eng_ref, 'kernel_hash', 'UNKNOWN')} | Mode: {mode}"
         )
-        if depth == "BUNNY":
-            st.markdown("*The lattice is quiet. Speak to awaken it.*")
-            st.caption("Type `[VSL_LITE]` to reveal the energy metrics.")
-            return
+
+        if mode == "ADVENTURE":
+            st.markdown("*The mist parts. A new path lies ahead.*")
+        elif mode == "CREATIVE":
+            st.markdown("*The canvas is waiting. Paint with voltage.*")
+            if depth == "BUNNY":
+                st.caption("Type `[VSL_LITE]` to reveal machinery.")
+        elif mode == "TECHNICAL":
+            st.markdown("*System nominal. Diagnostic mode ready.*")
+            if depth == "BUNNY":
+                st.caption("Type `[VSL_DEEP]` for full telemetry.")
+        else:
+            st.markdown("*The connection is stable.*")
+
         phys_dict = {}
         if hasattr(eng_ref, "phys") and eng_ref.phys:
             obs = getattr(eng_ref.phys, "observer", None)
             if obs and obs.last_physics_packet:
                 dash_packet = obs.last_physics_packet
-                phys_dict = dash_packet if isinstance(dash_packet, dict) else dash_packet.to_dict()
-        if depth in ["LITE", "CORE", "DEEP"]:
+                phys_dict = (
+                    dash_packet
+                    if isinstance(dash_packet, dict)
+                    else dash_packet.to_dict()
+                )
+
+        zone = phys_dict.get("zone", "UNKNOWN")
+        if hasattr(eng_ref, "navigator") and eng_ref.navigator:
+            current_node = eng_ref.navigator.world_graph.get(
+                eng_ref.navigator.current_node_id
+            )
+            if current_node:
+                zone = current_node.name
+
+        if depth == "BUNNY" and mode != "ADVENTURE":
+            return
+        show_vitals = getattr(eng_ref, "mode_settings", {}).get("show_vitals", True)
+        if show_vitals and depth in ["BUNNY", "LITE", "CORE", "DEEP"]:
             st.divider()
-            st.subheader("IDENTITY & VITALS")
+            st.subheader("STATUS" if mode == "ADVENTURE" else "VITALS")
+            hp = phys_dict.get("health", getattr(eng_ref, "health", 100.0))
+            stam = phys_dict.get("stamina", getattr(eng_ref, "stamina", 100.0))
+            st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"❤️ Health: {hp:.1f}%")
+            st.progress(
+                min(1.0, max(0.0, stam / 100.0)), text=f"🔋 Stamina: {stam:.1f}%"
+            )
+
+        if mode == "ADVENTURE" or depth in ["CORE", "DEEP"]:
+            st.info(f"📍 LOC: {zone}")
+
+        if depth in ["CORE", "DEEP"]:
             if hasattr(eng_ref, "soul") and eng_ref.soul:
-                st.markdown(f"**ARCHETYPE:** `{eng_ref.soul.archetype}`")
-            show_vitals = getattr(eng_ref, "mode_settings", {}).get("show_vitals", True)
-            if show_vitals:
-                hp = phys_dict.get("health", getattr(eng_ref, "health", 100.0))
-                stam = phys_dict.get("stamina", getattr(eng_ref, "stamina", 100.0))
-                st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"❤️ Health (H): {hp:.1f}%")
-                st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"🔋 Stamina (P): {stam:.1f}%")
-            else:
-                st.caption("Vitals: LOCKED (Mode Override)")
+                st.caption(f"**ARCHETYPE:** `{eng_ref.soul.archetype}`")
+
         if depth in ["CORE", "DEEP"]:
             st.divider()
             st.subheader("🧊 VSL CORE")
@@ -95,17 +127,14 @@ def render_dashboard(eng_ref):
             exhaustion = phys_dict.get("exhaustion", phys_dict.get("E", 0.2))
             contradiction = phys_dict.get("contradiction", phys_dict.get("beta", 0.4))
             trauma = phys_dict.get("trauma", phys_dict.get("T", 0.0))
+
             c1, c2 = st.columns(2)
             c1.metric("⚡ Volt (V)", f"{volts:.1f}v")
             c2.metric("⚓ Drag (F)", f"{drag:.1f}")
             c1.metric("🧊 Exh (E)", f"{exhaustion:.2f}")
             c2.metric("⚔️ Para (β)", f"{contradiction:.2f}")
             st.metric("🏺 Trauma (T)", f"{trauma:.0f}")
-            zone = phys_dict.get("zone", "VOID")
-            if hasattr(eng_ref, "navigator") and eng_ref.navigator:
-                current_node = eng_ref.navigator.world_graph.get(eng_ref.navigator.current_node_id)
-                if current_node: zone = current_node.name
-            st.info(f"📍 LOC: {zone}")
+
         if depth == "DEEP":
             st.divider()
             st.subheader("🌌 DEEP PHYSICS")
@@ -121,7 +150,10 @@ def render_dashboard(eng_ref):
                 st.progress(min(1.0, liminal), text=f"🌌 Liminal (Λ): {liminal:.2f}")
             if hasattr(eng_ref, "bio") and hasattr(eng_ref.bio, "endo"):
                 endo = eng_ref.bio.endo
-                st.caption(f"🩸 **CHEM:** ADR: {endo.adrenaline:.2f} | COR: {endo.cortisol:.2f} | OXY: {endo.oxytocin:.2f}")
+                st.caption(
+                    f"🩸 **CHEM:** ADR: {endo.adrenaline:.2f} | COR: {endo.cortisol:.2f} | OXY: {endo.oxytocin:.2f}"
+                )
+
             if hasattr(eng_ref, "phys") and hasattr(eng_ref.phys, "theremin"):
                 theremin = eng_ref.phys.theremin
                 if theremin.decoherence_buildup > 1.0 or theremin.is_stuck:
@@ -129,11 +161,16 @@ def render_dashboard(eng_ref):
                     st.subheader("MACHINERY")
                     resin = theremin.decoherence_buildup
                     max_resin = theremin.SHATTER_POINT
-                    st.progress(min(1.0, resin / max_resin), text=f"🎻 RESIN PRESSURE: {resin:.1f}")
+                    st.progress(
+                        min(1.0, resin / max_resin),
+                        text=f"🎻 RESIN PRESSURE: {resin:.1f}",
+                    )
                     if theremin.is_stuck:
                         st.error("⚠️ THEREMIN STUCK (AMBER)")
                     elif resin > (max_resin * 0.8):
                         st.warning("💣 AIRSTRIKE IMMINENT")
+
+        if mode == "ADVENTURE" or depth in ["CORE", "DEEP"]:
             st.divider()
             st.subheader("🎒 INVENTORY")
             if hasattr(eng_ref, "gordon") and eng_ref.gordon:
@@ -143,6 +180,8 @@ def render_dashboard(eng_ref):
                         st.code(item)
                 else:
                     st.caption("Pockets Empty.")
+
+
 if "history" not in st.session_state:
     st.session_state.history = []
 if "ENGINE" not in st.session_state:
@@ -156,6 +195,18 @@ if "ENGINE" not in st.session_state:
             boot_packet = session.engage_cold_boot()
             if boot_packet:
                 raw_ui = boot_packet.get("ui", "System Ready.")
+                print(
+                    "\n" + Prisma.paint("/// STREAMLIT TERMINAL MIRROR ACTIVE ///", "C")
+                )
+                if "──────" in raw_ui:
+                    parts = raw_ui.split("──────")
+                    print(
+                        parts[0]
+                        + "────────────────────────────────────────────────────────────"
+                    )
+                    typewriter("\n" + parts[-1].strip())
+                else:
+                    typewriter(raw_ui)
                 clean_ui = clean_engine_output(raw_ui)
                 st.session_state.history.append(
                     {
@@ -165,9 +216,6 @@ if "ENGINE" not in st.session_state:
                         "logs": boot_packet.get("logs", ["System Boot Complete"]),
                     }
                 )
-    except Exception as e:
-        st.error(f"CRITICAL BOOT FAILURE: {e}")
-        st.stop()
     except Exception as e:
         st.error(f"CRITICAL BOOT FAILURE: {e}")
         st.stop()
@@ -193,6 +241,8 @@ if prompt := st.chat_input("Broadcast Signal..."):
         engine.shutdown()
         st.success("Session Terminated. You may close the tab.")
         st.stop()
+    user_name = getattr(engine, "user_name", "TRAVELER")
+    print(f"\n{Prisma.paint(f'{user_name} >', 'W')} {prompt}")
     if "[vsl_lite]" in p_lower:
         st.session_state.ui_depth = "LITE"
     elif "[vsl_core]" in p_lower:
@@ -224,4 +274,7 @@ if prompt := st.chat_input("Broadcast Signal..."):
             "logs": logs,
         }
     )
+    if packet.get("type") == "DEATH":
+        st.error("System Halt. The timeline has ended.")
+        st.stop()
     st.rerun()
