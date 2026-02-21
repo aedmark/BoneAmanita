@@ -154,10 +154,8 @@ class GeodesicEngine:
             masses["heavy"] * 0.5 + 1.0
         )
         lift = (masses["play"] * GC.PLAY_LIFT_MULT) + kinetic_lift
-        viscosity_density = min(
-            GC.MAX_VISCOSITY_DENSITY, dynamic_viscosity / safe_volume
-        )
-        lift_density = min(GC.MAX_LIFT_DENSITY, lift / safe_volume)
+        viscosity_density = dynamic_viscosity / safe_volume
+        lift_density = lift / safe_volume
         raw_compression = (viscosity_density - lift_density) * GC.COMPRESSION_SCALAR
         raw_compression *= getattr(BoneConfig, "SIGNAL_DRAG_MULTIPLIER", 1.0)
         compression = round(
@@ -602,14 +600,19 @@ class CosmicDynamics:
     def _calculate_pull(words, network, gravity_wells) -> Tuple[Dict, int]:
         basin_pulls = {k: 0.0 for k in gravity_wells}
         active_filaments = 0
-        for w in words:
+        word_counts = Counter(words)
+        for w, count in word_counts.items():
             if w in gravity_wells:
-                basin_pulls[w] += gravity_wells[w] * 2.0
-                active_filaments += 1
-            for well in gravity_wells:
-                if w in network.graph.get(well, {}).get("edges", {}):
-                    basin_pulls[well] += gravity_wells[well] * 0.5
-                    active_filaments += 1
+                basin_pulls[w] += (gravity_wells[w] * 2.0) * count
+                active_filaments += count
+        for well, well_mass in gravity_wells.items():
+            edges = network.graph.get(well, {}).get("edges", {})
+            if not edges:
+                continue
+            intersection = set(word_counts.keys()).intersection(edges.keys())
+            for match in intersection:
+                basin_pulls[well] += (well_mass * 0.5) * word_counts[match]
+                active_filaments += word_counts[match]
         return basin_pulls, active_filaments
 
     def _handle_void_state(self, words, geodesic_hubs) -> Tuple[str, float, str]:

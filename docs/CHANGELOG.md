@@ -1,5 +1,60 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.6.5 "THE DARK MATTER UPDATE"**
+
+_“We gave the void mass. We gave the new arrivals a soft place to land. We made the math honest.”_
+
+---
+
+#### **🌌 THE LIMINAL EXPANSION (The Revenant & The Bureau)**
+
+- **Linguistic Dark Matter (`bone_drivers.py`):**
+  - **Semantic Sparks:** `LiminalModule` no longer just counts 'void' words; it calculates the semantic gap between concrete objects and abstract concepts, generating "Dark Matter sparks" and Gödel Scars.
+  - **Grammatical Stress:** `SyntaxModule` now tracks punctuation density. Jagged, highly punctuated text fractures the $\Omega$ (Omega) structural integrity.
+- **The $\Lambda^2$ Tax (`bone_cycle.py`):**
+  - **Physical Cost:** Traversing liminal space is no longer free. Navigating dark matter explicitly burns virtual ATP from the Mitochondria at a quadratic rate based on liminal intensity.
+
+#### **🏔️ PROGRESSIVE ONBOARDING (The Schur Lens)**
+
+- **The Bunny Hill (`bone_app.py` & `bone_main.py`):**
+  - **Progressive Disclosure:** Overhauled the Streamlit dashboard. New users are greeted with a serene, minimalist interface. The terrifying machinery (Mitochondria, Resin, Viscosity) remains hidden until the user explicitly requests it via `[VSL_LITE]`, `[VSL_CORE]`, or `[VSL_DEEP]`.
+  - **Gentle Boot Protocol:** Modified the cold boot prompt to give new travelers a soft sensory landing instead of immediately plunging them into high-entropy lore.
+
+#### **🫀 METABOLIC & PHYSICS HARDENING (The Meadows Lens)**
+
+- **The Asymptotic Gravity Trap (`bone_physics.py`):**
+  - **Unclamped Density:** Removed the artificial ceiling on intermediate viscosity calculations in `GeodesicEngine`. Highly repetitive or boring text now properly scales to maximum drag without hitting an invisible wall.
+- **The Theremin Exploit (`bone_machine.py`):**
+  - **Loop Repair:** Fixed a logic skip where triggering a "Thermal Melt" returned early, freezing the Theremin's progression in time. The physics phase now correctly evaluates the rest of the turn.
+- **The Placebo Button (`bone_body.py`):**
+  - **Actual Maintenance:** `BioFeedback.perform_maintenance` now physically reduces `narrative_drag` instead of just printing a log saying it did.
+- **The Stamina Ceiling (`bone_cycle.py` & `bone_body.py`):**
+  - **Stock Limits:** Patched a runaway feedback loop where continuous high-dopamine inputs could push `stamina` infinitely past its 100.0 maximum.
+
+#### **🧠 COGNITIVE ERGONOMICS (The Pinker & Fuller Lenses)**
+
+- **Robust Internal Parsing (`bone_brain.py`):**
+  - **Regex Excision:** Replaced the brittle Regex block extraction for LLM Meta-Thoughts with explicit string splitting (`=== SYSTEM INTERNALS ===`). `PromptComposer` now strictly enforces this format, preventing lost thought-logs.
+- **The Markdown Hallucination (`bone_brain.py`):**
+  - **URL Fix:** Repaired invalid default fallback URLs (e.g., `[http...](http...)`) that would instantly crash the local `urllib` backup requests.
+- **The I/O Bottleneck (`bone_akashic.py`):**
+  - **Deferred Writes:** `TheAkashicRecord` no longer blocks execution to write the entire `LEXICON` to disk every time a single new word is learned.
+- **The Tinkerer's Hash (`bone_village.py`):**
+  - **Stateful Caching:** Passive inventory items now hash their active traits, not just their names. Dynamic state changes on items now correctly trigger physics updates.
+- **The O(N*M) Gravity Fix (`bone_physics.py`):**
+  - **Performance Leap:** Rewrote `CosmicDynamics._calculate_pull` to utilize `Counter` and set intersections, rescuing the CPU from exponential loop checks on large input strings.
+- **Cartographic Expansion (`bone_village.py`):**
+  - **Map Resolution:** Increased the `TheCartographer`'s vector hash multiplier from x10 to x100, preventing distinct geographic locations from collapsing into the same node ID.
+
+#### **🧪 DIAGNOSTIC INTEGRITY (The Kintsugi Lens)**
+
+- **The Crash inside the Crash (`bone_main.py`):**
+  - **Safe Legacy Dumps:** Fixed a fatal `NoneType` exception in `trigger_death` by ensuring the system safely checks if optional organs (Immune System, Reproductive System) exist before trying to serialize their final states.
+- **The Blooming Seeds (`bone_village.py`):**
+  - **Watering Logic:** Fixed `TownHall.tend_garden` where Paradox Seeds were blooming instantly upon seeing a trigger word, bypassing their intended maturity progression.
+- **Master Diagnostic Suite (`bone_diag.py`):**
+  - Added full test coverage for the `MitochondrialForge` (Anaerobic Bypasses), the `DreamEngine` (REM Cycles and Nightmares), and `TownHall` (Paradox Seed maturation). **Suite currently sits at a verified 61/61 Pass Rate.**
+
 ### **BONEAMANITA v15.6.4 "THE DEAD WEIGHT EXCISE"**
 
 _“We walked the perimeter, cut the dead vines, and plugged the open valves. The machine breathes easier now.”_

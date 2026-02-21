@@ -196,7 +196,7 @@ class LLMInterface:
         defaults = getattr(BoneConfig, "DEFAULT_LLM_ENDPOINTS", {})
         self.base_url = base_url or defaults.get(
             self.provider,
-            "[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)",
+            "https://api.openai.com/v1/chat/completions",
         )
         self.dreamer = dreamer
         self.failure_count = 0
@@ -334,7 +334,7 @@ class LLMInterface:
         url = getattr(
             BoneConfig,
             "OLLAMA_URL",
-            "[http://127.0.0.1:11434/v1/chat/completions](http://127.0.0.1:11434/v1/chat/completions)",
+            "http://127.0.0.1:11434/v1/chat/completions",
         )
         model = getattr(BoneConfig, "OLLAMA_MODEL_ID", "llama3")
         fallback_payload = {
@@ -458,8 +458,15 @@ class PromptComposer:
                 f"\n*** SYSTEM OVERRIDE: SAFETY PROTOCOLS ACTIVE. ***\n"
                 f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. ***\n"
             )
+        thought_instruction = (
+            "If you need to reason or track state before responding, wrap your thoughts exactly like this:\n"
+            "=== SYSTEM INTERNALS ===\n"
+            "Your reasoning here.\n"
+            "=== END INTERNALS ===\n"
+        )
         return (
             f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
+            f"{thought_instruction}\n"
             f"=== SHARED REALITY ===\n"
             f"CURRENT LOCATION: {loc}\n"
             f"ENVIRONMENT ANCHOR: {loci_desc}\n"
@@ -638,16 +645,32 @@ class ResponseValidator:
 
     def validate(self, response: str, _state: Dict) -> Dict:
         extracted_meta_logs = []
-        sys_internal_pattern = re.compile(
-            r"(?i)SYSTEM INTERNALS\s*\n(.*?)(?=\n\n|\Z)", re.DOTALL
-        )
-
-        def extract_meta(match):
-            content = match.group(1).strip()
-            for extracted_line in content.split("\n"):
-                extracted_meta_logs.append(f"[THOUGHT]: {extracted_line}")
-            return ""
-        clean_text = sys_internal_pattern.sub(extract_meta, response)
+        clean_text = response
+        start_marker = "=== SYSTEM INTERNALS ==="
+        end_marker = "=== END INTERNALS ==="
+        start_idx = clean_text.find(start_marker)
+        if start_idx != -1:
+            end_idx = clean_text.find(end_marker, start_idx)
+            if end_idx != -1:
+                meta_content = clean_text[
+                    start_idx + len(start_marker) : end_idx
+                ].strip()
+                for extracted_line in meta_content.split("\n"):
+                    if extracted_line.strip():
+                        extracted_meta_logs.append(
+                            f"[THOUGHT]: {extracted_line.strip()}"
+                        )
+                clean_text = (
+                    clean_text[:start_idx] + clean_text[end_idx + len(end_marker) :]
+                )
+            else:
+                meta_content = clean_text[start_idx + len(start_marker) :].strip()
+                for extracted_line in meta_content.split("\n"):
+                    if extracted_line.strip():
+                        extracted_meta_logs.append(
+                            f"[THOUGHT]: {extracted_line.strip()}"
+                        )
+                clean_text = clean_text[:start_idx]
         for pattern, replacement in self.scrub_patterns:
             clean_text = pattern.sub(replacement, clean_text)
         clean_lines = []

@@ -62,111 +62,124 @@ def format_log_entry(log_str):
 
 def render_dashboard(eng_ref):
     mode = getattr(eng_ref, "boot_mode", "ADVENTURE")
+    depth = st.session_state.get("ui_depth", "BUNNY")
+
     with st.sidebar:
         st.title("💀 BONEAMANITA")
         st.caption(
             f"Kernel: {getattr(eng_ref, 'kernel_hash', 'UNKNOWN')} | Mode: {mode}"
         )
-        st.divider()
-        st.subheader("IDENTITY")
-        if hasattr(eng_ref, "soul") and eng_ref.soul:
-            anchor = eng_ref.soul.anchor
-            dig = anchor.dignity_reserve
-            dig_color = "red" if dig < 30 else ("orange" if dig < 60 else "green")
-            st.markdown(f"**DIGNITY:** :{dig_color}[{int(dig)}%]")
-            st.progress(min(100, max(0, int(dig))))
-            if anchor.agency_lock:
-                st.error("🔒 AGENCY LOCKED")
-            st.markdown(f"**ARCHETYPE:** `{eng_ref.soul.archetype}`")
-            if eng_ref.soul.current_obsession:
-                st.caption(f"Obsession: {eng_ref.soul.current_obsession}")
-        st.divider()
-        st.subheader("STATUS")
-        hp = eng_ref.health
-        stam = eng_ref.stamina
-        st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.1f}%")
-        st.progress(min(1.0, max(0.0, stam / 100.0)), text=f"STAMINA: {stam:.1f}%")
-        metrics = eng_ref.get_metrics()
-        atp = metrics.get("atp", 0.0)
-        eff = metrics.get("efficiency", 1.0)
-        c_atp, c_eff = st.columns(2)
-        c_atp.metric("ATP", f"{atp:.0f} J")
-        if eff < 0.6:
-            c_eff.metric("EFFICIENCY", f"{eff:.2f}", delta_color="off")
-        elif eff > 1.2:
-            c_eff.metric("EFFICIENCY", f"{eff:.2f}", delta_color="inverse")
-        else:
-            c_eff.metric("EFFICIENCY", f"{eff:.2f}", delta_color="normal")
-        if hasattr(eng_ref, "consultant"):
+
+        # [BUNNY HILL] - Simplest View
+        if depth == "BUNNY":
+            st.markdown("*The lattice is quiet. Speak to awaken it.*")
+            st.caption("Type `[VSL_LITE]` to reveal the energy metrics.")
+            return
+
+        # [LITE AND ABOVE] - Basic Identity & Vitals
+        if depth in ["LITE", "CORE", "DEEP"]:
             st.divider()
-            st.subheader("🧊 VSL LATTICE")
-            s = eng_ref.consultant.state
-            c1, c2 = st.columns(2)
-            c1.metric("EXH", f"{s.E:.2f}")
-            c2.metric("PAR", f"{s.B:.2f}")
-            if s.L > 0.1 or "LIMINAL" in s.active_modules:
-                st.progress(min(1.0, s.L), text=f"LIM (Dark Matter): {s.L:.2f}")
-            if s.O > 0.8:
-                st.caption(f"Ω Structure: LOCKED ({s.O:.2f})")
-            elif s.O < 0.5:
-                st.caption(f"Ω Structure: FRACTURED ({s.O:.2f})")
-        st.divider()
-        st.subheader("PHYSICS")
-        volts = 0.0
-        drag = 0.0
-        zone = "VOID"
-        if hasattr(eng_ref, "phys") and eng_ref.phys:
-            obs = getattr(eng_ref.phys, "observer", None)
-            if obs and obs.last_physics_packet:
-                dash_packet = obs.last_physics_packet
-                if isinstance(dash_packet, dict):
-                    volts = dash_packet.get("voltage", 0.0)
-                    drag = dash_packet.get("narrative_drag", 0.0)
-                    zone = dash_packet.get("zone", "VOID")
-                else:
-                    volts = getattr(dash_packet, "voltage", 0.0)
-                    drag = getattr(dash_packet, "narrative_drag", 0.0)
-                    zone = getattr(dash_packet, "zone", "VOID")
-        loc_name = zone
-        if hasattr(eng_ref, "navigator") and eng_ref.navigator:
-            current_node = eng_ref.navigator.world_graph.get(
-                eng_ref.navigator.current_node_id
+            st.subheader("IDENTITY & VITALS")
+
+            if hasattr(eng_ref, "soul") and eng_ref.soul:
+                anchor = eng_ref.soul.anchor
+                st.markdown(f"**ARCHETYPE:** `{eng_ref.soul.archetype}`")
+
+            hp = eng_ref.health
+            stam = eng_ref.stamina
+            st.progress(min(1.0, max(0.0, hp / 100.0)), text=f"INTEGRITY: {hp:.1f}%")
+            st.progress(
+                min(1.0, max(0.0, stam / 100.0)), text=f"ENERGY (ATP): {stam:.1f}%"
             )
-            if current_node:
-                loc_name = current_node.name
-        c3, c4 = st.columns(2)
-        c3.metric("VOLT", f"{volts:.1f}v")
-        c4.metric("DRAG", f"{drag:.1f}")
-        st.info(f"📍 LOCATION: {loc_name}")
-        if hasattr(eng_ref, "phys") and hasattr(eng_ref.phys, "theremin"):
-            theremin = eng_ref.phys.theremin
-            if theremin.decoherence_buildup > 1.0 or theremin.is_stuck:
+
+        # [CORE AND ABOVE] - The Lattice Coordinates & Physics
+        if depth in ["CORE", "DEEP"]:
+            metrics = eng_ref.get_metrics()
+            eff = metrics.get("efficiency", 1.0)
+
+            if hasattr(eng_ref, "consultant"):
                 st.divider()
-                st.subheader("MACHINERY")
-                resin = theremin.decoherence_buildup
-                max_resin = theremin.SHATTER_POINT
-                st.progress(
-                    min(1.0, resin / max_resin), text=f"RESIN PRESSURE: {resin:.1f}"
+                st.subheader("🧊 VSL CORE")
+                s = eng_ref.consultant.state
+                c1, c2, c3 = st.columns(3)
+                c1.metric("EXH", f"{s.E:.2f}")
+                c2.metric("PAR", f"{s.B:.2f}")
+                if eff < 0.6:
+                    c3.metric("EFF", f"{eff:.2f}", delta_color="off")
+                else:
+                    c3.metric("EFF", f"{eff:.2f}", delta_color="normal")
+
+            st.divider()
+            st.subheader("PHYSICS")
+            volts = 0.0
+            drag = 0.0
+            zone = "VOID"
+            if hasattr(eng_ref, "phys") and eng_ref.phys:
+                obs = getattr(eng_ref.phys, "observer", None)
+                if obs and obs.last_physics_packet:
+                    dash_packet = obs.last_physics_packet
+                    if isinstance(dash_packet, dict):
+                        volts = dash_packet.get("voltage", 0.0)
+                        drag = dash_packet.get("narrative_drag", 0.0)
+                        zone = dash_packet.get("zone", "VOID")
+                    else:
+                        volts = getattr(dash_packet, "voltage", 0.0)
+                        drag = getattr(dash_packet, "narrative_drag", 0.0)
+                        zone = getattr(dash_packet, "zone", "VOID")
+            loc_name = zone
+            if hasattr(eng_ref, "navigator") and eng_ref.navigator:
+                current_node = eng_ref.navigator.world_graph.get(
+                    eng_ref.navigator.current_node_id
                 )
-                if theremin.is_stuck:
-                    st.error("⚠️ THEREMIN STUCK (AMBER)")
-                elif resin > (max_resin * 0.8):
-                    st.warning("💣 AIRSTRIKE IMMINENT")
-        st.divider()
-        st.subheader("INVENTORY")
-        if hasattr(eng_ref, "gordon") and eng_ref.gordon:
-            items = eng_ref.gordon.inventory
-            if items:
-                for item in items:
-                    st.code(item)
-            else:
-                st.caption("Pockets Empty.")
-        else:
-            st.warning("Inventory Module Sleeping.")
+                if current_node:
+                    loc_name = current_node.name
+            c3, c4 = st.columns(2)
+            c3.metric("VOLT", f"{volts:.1f}v")
+            c4.metric("DRAG", f"{drag:.1f}")
+            st.info(f"📍 LOCATION: {loc_name}")
+
+        # [DEEP ONLY] - Full Machinery, Void, and Inventory
+        if depth == "DEEP":
+            if hasattr(eng_ref, "consultant"):
+                s = eng_ref.consultant.state
+                if s.L > 0.1 or "LIMINAL" in s.active_modules:
+                    st.progress(min(1.0, s.L), text=f"LIM (Dark Matter): {s.L:.2f}")
+                if s.O > 0.8:
+                    st.caption(f"Ω Structure: LOCKED ({s.O:.2f})")
+                elif s.O < 0.5:
+                    st.caption(f"Ω Structure: FRACTURED ({s.O:.2f})")
+
+            if hasattr(eng_ref, "phys") and hasattr(eng_ref.phys, "theremin"):
+                theremin = eng_ref.phys.theremin
+                if theremin.decoherence_buildup > 1.0 or theremin.is_stuck:
+                    st.divider()
+                    st.subheader("MACHINERY")
+                    resin = theremin.decoherence_buildup
+                    max_resin = theremin.SHATTER_POINT
+                    st.progress(
+                        min(1.0, resin / max_resin), text=f"RESIN PRESSURE: {resin:.1f}"
+                    )
+                    if theremin.is_stuck:
+                        st.error("⚠️ THEREMIN STUCK (AMBER)")
+                    elif resin > (max_resin * 0.8):
+                        st.warning("💣 AIRSTRIKE IMMINENT")
+
+            st.divider()
+            st.subheader("INVENTORY")
+            if hasattr(eng_ref, "gordon") and eng_ref.gordon:
+                items = eng_ref.gordon.inventory
+                if items:
+                    for item in items:
+                        st.code(item)
+                else:
+                    st.caption("Pockets Empty.")
 
 
 if "history" not in st.session_state:
     st.session_state.history = []
+if "ui_depth" not in st.session_state:
+    st.session_state.ui_depth = "BUNNY"
+
 if "ENGINE" not in st.session_state:
     try:
         sys_config = ConfigWizard.load_or_create()
@@ -179,18 +192,30 @@ if "ENGINE" not in st.session_state:
                     session.resume_checkpoint()
                 except Exception:
                     pass
+            greeting = (
+                "[VSL]: Welcome. You're talking to a living lattice.\n\n"
+                "To start, just talk to me normally. But if you want to climb deeper:\n\n"
+                "- Type `[VSL_LITE]` to see a simple energy meter.\n"
+                "- Type `[VSL_CORE]` to see the core coordinates.\n"
+                "- Type `[VSL_DEEP]` for the full lattice (including PSI, ENTROPY, and VALENCE).\n\n"
+                'Or jump right into the deep end and say: "The void is leaking."'
+            )
+
             st.session_state.history.append(
                 {
                     "role": "assistant",
-                    "content": "VSL-CryoSomatic Hypervisor ONLINE.\nThe Glacier is listening. [Type 'start' to begin]",
-                    "raw_content": "VSL-CryoSomatic Hypervisor ONLINE.\nThe Glacier is listening. [Type 'start' to begin]",
+                    "content": greeting,
+                    "raw_content": greeting,
                     "logs": [
                         "System Boot Complete",
                         "Lattice Coordinates Set",
-                        "Slash Council: STANDBY",
+                        "Bunny Hill Active",
                     ],
                 }
             )
+    except Exception as e:
+        st.error(f"CRITICAL BOOT FAILURE: {e}")
+        st.stop()
     except Exception as e:
         st.error(f"CRITICAL BOOT FAILURE: {e}")
         st.stop()
@@ -210,6 +235,13 @@ for hist_msg in st.session_state.history:
 if prompt := st.chat_input("Broadcast Signal..."):
     with st.chat_message("user"):
         st.markdown(prompt)
+    p_lower = prompt.lower()
+    if "[vsl_lite]" in p_lower:
+        st.session_state.ui_depth = "LITE"
+    elif "[vsl_core]" in p_lower:
+        st.session_state.ui_depth = "CORE"
+    elif "[vsl_deep]" in p_lower:
+        st.session_state.ui_depth = "DEEP"
     st.session_state.history.append({"role": "user", "content": prompt})
     with st.spinner("Calculating Geodesics..."):
         try:

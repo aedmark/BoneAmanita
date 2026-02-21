@@ -498,6 +498,8 @@ class BioFeedback:
             logs.append(
                 f"{Prisma.OCHRE}[MAINTENANCE]: Clearing sludge from intake valves (Drag {drag:.1f}).{Prisma.RST}"
             )
+            if hasattr(phys, "narrative_drag"):
+                phys.narrative_drag = max(1.0, drag - 2.0)
 
 
 class SemanticEndocrinologist:
@@ -1073,21 +1075,17 @@ class SynestheticCortex:
         impulse = BiologicalImpulse()
         cortex_cfg = getattr(BoneConfig, "CORTEX", None)
         base_sens = getattr(cortex_cfg, "BASE_SENSITIVITY", 1.0) if cortex_cfg else 1.0
-
         if traits:
             curiosity = getattr(traits, "curiosity", 0.5)
             discipline = getattr(traits, "discipline", 0.5)
             base_sens *= 1.0 + curiosity - discipline
         sens = max(0.0, base_sens)
-
         valence = physics.get("valence", 0.0)
         counts = physics.get("counts", {})
         voltage = physics.get("voltage", 0)
         drag = physics.get("narrative_drag", 0)
-
         if valence < -0.5:
             impulse.cortisol_delta += abs(valence) * sens
-
         antigen_count = counts.get("antigen", 0)
         if antigen_count > 0:
             toxin_weight = getattr(BoneConfig, "TOXIN_WEIGHT", 1.0)

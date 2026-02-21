@@ -179,7 +179,7 @@ class TheAkashicRecord:
                 pass
         if not data:
             data = self.lore.get("MYTHOS")
-            
+
         if not data:
             return
         raw_cooc = data.get("lens_cooccurrence", {})
@@ -327,7 +327,6 @@ class TheAkashicRecord:
             target_category.append(word)
             self.discovered_words[word] = category
             print(f"✨ LEXICON: Learned '{word}' ({category})")
-            self.save_to_disk("LEXICON", lexicon_data)
             if len(lexicon_data[category]) > 50 and category != "heavy":
                 print(
                     f"⚠️ MYTHOLOGY ENGINE: Category '{category}' is bloating. Suggest fission."

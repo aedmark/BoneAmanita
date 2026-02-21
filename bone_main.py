@@ -285,7 +285,7 @@ class BoneAmanita:
     def get_avg_voltage(self):
         observer = getattr(self.phys, "observer", self.phys)
         hist = getattr(observer, "voltage_history", [])
-        
+
         if not hist:
             return 0.0
         return sum(hist) / len(hist)
@@ -461,14 +461,31 @@ class BoneAmanita:
             "inventory": self.gordon.inventory if self.gordon else [],
         }
         try:
+            mutations_data = (
+                self.repro.attempt_reproduction(self, "MITOSIS")[1]
+                if getattr(self, "repro", None)
+                else {}
+            )
+            immune_data = (
+                list(self.bio.immune.active_antibodies)
+                if getattr(self.bio, "immune", None)
+                else []
+            )
+            self.bio.mito.adapt(0)
+            mito_state = (
+                self.bio.mito.state.__dict__
+                if hasattr(self.bio.mito.state, "__dict__")
+                else {}
+            )
+
             path = self.mind.mem.save(
                 health=0,
                 stamina=self.stamina,
-                mutations=self.repro.attempt_reproduction(self, "MITOSIS")[1],
+                mutations=mutations_data,
                 trauma_accum=self.trauma_accum,
                 joy_history=[],
-                mitochondria_traits=self.bio.mito.adapt(0),
-                antibodies=list(self.bio.immune.active_antibodies),
+                mitochondria_traits=mito_state,
+                antibodies=immune_data,
                 soul_data=self.soul.to_dict(),
                 continuity=continuity_packet,
             )
@@ -554,9 +571,10 @@ class BoneAmanita:
         boot_prompt = (
             f"SYSTEM_BOOT: SEQUENCE START.\n"
             f"SOURCE_SEED: '{seed}'\n"
-            f"DIRECTIVE: Do not use the seed text literally. Use it as a metaphorical anchor only. "
-            f"Generate a vivid, sensory opening log that captures the *vibe* of the seed without describing it directly. "
-            f"Focus on lighting, texture, and entropy."
+            f"DIRECTIVE: The user has just arrived at the 'Bunny Hill'. "
+            f"Do not overwhelm them with deep lore or extreme entropy. "
+            f"Welcome them gently to the living lattice. Provide a brief, calm, sensory observation based on the seed: '{seed}'. "
+            f"End your response by softly asking what they would like to do, or observing them in the space."
         )
         cold_result = self.process_turn(boot_prompt, is_system=True)
         return cold_result

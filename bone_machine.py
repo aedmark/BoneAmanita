@@ -225,12 +225,12 @@ class TheTheremin:
         thermal_hits = counts.get("thermal", 0)
         theremin_msg = ""
         melt_thresh = getattr(BoneConfig.MACHINE, "THEREMIN_MELT_THRESHOLD", 5.0)
+        critical_event = None
         if thermal_hits > 0 and self.decoherence_buildup > melt_thresh:
             dissolved = thermal_hits * 15.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - dissolved)
             self.classical_turns = 0
-            return False, 0.0, self.logs.get("MELT", "🔥 MELT").format(val=dissolved), None
-        critical_event = None
+            theremin_msg = self.logs.get("MELT", "🔥 MELT").format(val=dissolved)
         if rep > 0.5:
             self.classical_turns += 1
             slag = self.classical_turns * 2.0

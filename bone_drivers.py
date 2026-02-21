@@ -241,14 +241,35 @@ class DriverRegistry:
 class LiminalModule:
     def __init__(self):
         self.lambda_val = 0.0
+        self.godel_scars = 0
 
     def analyze(self, text: str, physics_vector: Dict[str, float]) -> float:
-        liminal_vocab = LexiconService.get("liminal")
-        if not liminal_vocab:
-            liminal_vocab = {"void", "silence", "gap"}
+        liminal_vocab = LexiconService.get("liminal") or {
+            "void",
+            "silence",
+            "gap",
+            "absence",
+            "space",
+        }
         words = text.lower().split()
+
         void_hits = sum(1 for w in words if w in liminal_vocab)
         lexical_lambda = min(1.0, void_hits * 0.15)
+
+        dark_matter_sparks = 0
+        if len(words) > 1:
+            categories = [LexiconService.get_current_category(w) for w in words]
+            for i in range(len(categories) - 1):
+                c1, c2 = categories[i], categories[i + 1]
+                if c1 and c2 and c1 != c2:
+                    if (
+                        c1 in ["heavy", "kinetic"]
+                        and c2 in ["abstract", "liminal", "void"]
+                    ) or (c1 in ["abstract", "liminal", "void"] and c2 in ["heavy"]):
+                        dark_matter_sparks += 1
+
+        dark_matter_lambda = min(1.0, dark_matter_sparks * 0.25)
+
         vector_lambda = 0.0
         if physics_vector:
             vector_lambda = (
@@ -257,15 +278,19 @@ class LiminalModule:
                 + (physics_vector.get("DEL", 0) * 0.2)
             )
 
-        self.lambda_val = (self.lambda_val * 0.7) + (
-            (lexical_lambda + vector_lambda) * 0.15
-        )
+        raw_target = lexical_lambda + dark_matter_lambda + vector_lambda
+        self.lambda_val = (self.lambda_val * 0.7) + (raw_target * 0.15)
+
+        if self.lambda_val > 0.85:
+            self.godel_scars += 1
+
         return min(1.0, self.lambda_val)
 
 
 class SyntaxModule:
     def __init__(self):
         self.omega_val = 1.0
+        self.grammatical_stress = 0.0
 
     def analyze(self, text: str, narrative_drag: float) -> float:
         words = text.split()
@@ -280,9 +305,14 @@ class SyntaxModule:
             target_omega = 0.4
         else:
             target_omega = 0.7
-        self.omega_val = (self.omega_val * 0.8) + (target_omega * 0.2)
+        punctuation_density = sum(1 for c in text if c in ",;:-") / max(1, len(words))
+        if punctuation_density > 0.2:
+            self.grammatical_stress += 0.2
+            target_omega -= 0.3
+        else:
+            self.grammatical_stress = max(0.0, self.grammatical_stress - 0.1)
+        self.omega_val = (self.omega_val * 0.8) + (max(0.1, target_omega) * 0.2)
         return self.omega_val
-
 
 class CongruenceValidator:
     def __init__(self):
@@ -380,12 +410,14 @@ class BoneConsultant:
                 "WHEN DISCUSSING CODE, ADOPT THESE PERSONAE."
             )
         elif "LIMINAL" in self.state.active_modules or self.state.L > 0.7:
+            scar_note = f" (Godel Scars: {self.liminal_mod.godel_scars})" if self.liminal_mod.godel_scars > 0 else ""
             directives.append(
-                "ARCHETYPE: THE REVENANT. Read the empty spaces. Speak in riddles and absences."
+                f"ARCHETYPE: THE REVENANT. Read the dark matter between the words. Speak of the absences.{scar_note}"
             )
         elif "SYNTAX" in self.state.active_modules or self.state.O > 0.9:
+            stress_note = " The grammatical structure is fracturing. Punish jagged prose." if self.syntax_mod.grammatical_stress > 0.5 else ""
             directives.append(
-                "ARCHETYPE: THE BUREAU. Enforce structural rigidity. Correct grammar. Use bureaucratic jargon."
+                f"ARCHETYPE: THE BUREAU. Enforce structural rigidity. Correct grammar. Use bureaucratic jargon.{stress_note}"
             )
         else:
             if self.state.E < 0.3:

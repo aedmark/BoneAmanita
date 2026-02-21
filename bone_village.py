@@ -30,7 +30,13 @@ class TheTinkerer:
     def calculate_passive_deltas(
         self, inventory_data: List[Dict]
     ) -> List[PhysicsDelta]:
-        current_hash = hash(tuple(sorted(i.get("name", "") for i in inventory_data)))
+        state_tuple = tuple(
+            sorted(
+                f"{i.get('name', '')}:{','.join(sorted(i.get('passive_traits', [])))}"
+                for i in inventory_data
+            )
+        )
+        current_hash = hash(state_tuple)
         if self._delta_cache is not None and current_hash == self._inventory_hash:
             return self._delta_cache
         deltas = []
@@ -239,7 +245,7 @@ class TheCartographer:
         if not vector:
             return "VOID_DRIFT"
         top_dims = heapq.nlargest(2, vector.items(), key=lambda x: x[1])
-        return "-".join([f"{k}{int(v * 10)}" for k, v in top_dims])
+        return "-".join([f"{k}{int(v * 100)}" for k, v in top_dims])
 
     def locate(
             self, packet: PhysicsPacket
@@ -360,20 +366,22 @@ class TownHall:
         strategy = strategies.get(state_key, "Keep breathing.")
         return f"☁️ FORECAST [{state_key}]: {flavor_text} (Strategy: {strategy})"
 
-    def tend_garden(self, clean_words: List[str]):
+    def tend_garden(self, clean_words: List[str]) -> List[str]:
+        blooms = []
         if not self.seeds or not clean_words:
-            return
-        word_set = set(w.lower() for w in clean_words)
+            return blooms
+        lower_words = [w.lower() for w in clean_words]
         for seed in self.seeds:
             if seed.bloomed:
                 continue
-            if not seed.triggers.isdisjoint(word_set):
+            if seed.water(lower_words):
                 bloom_msg = seed.bloom()
                 self.events.log(
                     f"{Prisma.MAG}🌷 PARADOX BLOOM:{Prisma.RST} {bloom_msg}",
                     "VILLAGE_EVENT",
                 )
-                return
+                blooms.append(f"{Prisma.MAG}🌷 PARADOX BLOOM:{Prisma.RST} {bloom_msg}")
+        return blooms
 
     def conduct_census(self, packet: PhysicsPacket, host_stats: Any) -> str:
         latency = getattr(host_stats, "latency", 0.0) if host_stats else 0.0

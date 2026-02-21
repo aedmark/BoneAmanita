@@ -131,6 +131,44 @@ class TestSomaticPhysics(unittest.TestCase):
             f"{Prisma.GRN}   >>> PASS: Logarithmic Friction Active (Drag: {vector.compression:.1f}){Prisma.RST}"
         )
 
+    def test_pinker_mitochondrial_metabolism(self):
+        print(
+            f"\n{Prisma.MAG}[PINKER] Testing Mitochondrial ATP Burn & Anaerobic Bypass...{Prisma.RST}"
+        )
+        from bone_body import MitochondrialForge, MitochondrialState
+        state = MitochondrialState(
+            atp_pool=50.0, ros_buildup=0.0, membrane_potential=0.8
+        )
+        forge = MitochondrialForge(state, self.events)
+        class MockPhys:
+            voltage = 10.0
+            narrative_drag = 2.0
+        receipt = forge.process_cycle(MockPhys(), modifier=1.0)
+        self.assertEqual(
+            receipt.status, "RESPIRING", "Standard cycle should be respiring."
+        )
+        self.assertLess(
+            state.atp_pool, 50.0, "ATP pool did not decrease after standard burn."
+        )
+        self.assertGreater(
+            state.ros_buildup, 0.0, "Cycle failed to generate ROS waste."
+        )
+        class MockHeavyPhys:
+            voltage = 50.0
+            narrative_drag = 15.0
+        heavy_receipt = forge.process_cycle(MockHeavyPhys(), modifier=5.0)
+        self.assertEqual(
+            heavy_receipt.status,
+            "ANAEROBIC",
+            "Heavy load failed to trigger Anaerobic bypass.",
+        )
+        self.assertGreater(
+            heavy_receipt.total_burn, 0.0, "Anaerobic bypass did not burn health."
+        )
+        print(
+            f"{Prisma.GRN}   >>> PASS: Mitochondria correctly burned ATP, generated ROS, and triggered Anaerobic fallback.{Prisma.RST}"
+        )
+
     def test_meadows_hard_fuse_and_starvation(self):
         print(
             f"\n{Prisma.YEL}[MEADOWS] Testing Hard Fuses and Starvation Clamps...{Prisma.RST}"
@@ -190,6 +228,43 @@ class TestCognitionAndInventory(unittest.TestCase):
             "Dopamine did not increase after starvation.",
         )
         print(f"{Prisma.GRN}   >>> PASS: System administered self-care.{Prisma.RST}")
+
+    def test_schur_dream_engine_rem_cycles(self):
+        print(
+            f"\n{Prisma.VIOLET}[SCHUR] Testing Dream Engine REM Cycles & Nightmares...{Prisma.RST}"
+        )
+        from bone_brain import DreamEngine
+        mock_lore = {
+            "DREAMS": {
+                "VISIONS": ["A vision of {ghost}"],
+                "BARIC": ["Crushing weight on {ghost}"],
+            }
+        }
+        dreamer = DreamEngine(self.events, mock_lore)
+        bio_zen = {"chem": {"dopamine": 0.8, "cortisol": 0.1}}
+        soul_snap = {"obsession": {"title": "The Light"}}
+        dream_lucid, shift_lucid = dreamer.enter_rem_cycle(soul_snap, bio_zen)
+        self.assertIn(
+            "The Light", dream_lucid, "Dream failed to incorporate soul residue."
+        )
+        self.assertLess(
+            shift_lucid.get("cortisol", 0), 0, "Lucid dream failed to reduce cortisol."
+        )
+        bio_panic = {"chem": {"cortisol": 0.9}, "trauma_vector": {"BARIC": 10.0}}
+        dream_nightmare, shift_nightmare = dreamer.enter_rem_cycle(soul_snap, bio_panic)
+        self.assertIn(
+            "weight",
+            dream_nightmare.lower(),
+            "Nightmare failed to pull from BARIC trauma dictionary.",
+        )
+        self.assertGreater(
+            shift_nightmare.get("cortisol", 0),
+            0,
+            "Nightmare failed to increase cortisol.",
+        )
+        print(
+            f"{Prisma.GRN}   >>> PASS: Dream Engine successfully wove REM cycles based on somatic chemistry and trauma.{Prisma.RST}"
+        )
 
     def test_fuller_inventory_stacking_and_reflexes(self):
         print(
@@ -842,7 +917,7 @@ class TestVillageEcosystem(unittest.TestCase):
         loc_name, msg = cartographer.locate(packet)
         self.assertIsNotNone(loc_name)
         self.assertIn(
-            "STR9-VEL8",
+            "STR90-VEL80",
             cartographer.world_graph,
             "Cartographer failed to hash and store the new coordinates.",
         )
@@ -1152,13 +1227,17 @@ class TestDriversAndPersonas(unittest.TestCase):
             f"{Prisma.GRN}   >>> PASS: Soul Archetype successfully injected weighted influence into persona pool.{Prisma.RST}"
         )
 
+    @patch("bone_lexicon.LexiconService.get_current_category")
     @patch("bone_lexicon.LexiconService.get")
-    def test_fuller_liminal_and_syntax_analysis(self, mock_lex_get):
+    def test_fuller_liminal_and_syntax_analysis(self, mock_lex_get, mock_get_cat):
         print(
             f"\n{Prisma.CYN}[FULLER] Testing Liminal & Syntax Module Calculus...{Prisma.RST}"
         )
         mock_lex_get.side_effect = lambda cat: (
             {"void"} if cat == "liminal" else {"bureaucratic"}
+        )
+        mock_get_cat.side_effect = lambda w: (
+            "void" if w == "void" else ("heavy" if w == "the" else "neutral")
         )
         lim_mod = LiminalModule()
         syn_mod = SyntaxModule()
@@ -1463,7 +1542,7 @@ class TestVillageSocialLogic(unittest.TestCase):
             ]
         }
         with patch("bone_config.BoneConfig.BUREAU") as mock_cfg:
-            mock_cfg.MIN_WORD_COUNT = 3  # Ensure 4+ words always pass
+            mock_cfg.MIN_WORD_COUNT = 3
             mock_cfg.MIN_HEALTH_TO_AUDIT = 20
             bureau = TheBureau()
             class CriminalPhys:
@@ -1531,6 +1610,32 @@ class TestVillageSocialLogic(unittest.TestCase):
             )
         print(
             f"{Prisma.GRN}   >>> PASS: Kintsugi transmuted trauma into fuel via the Alchemy pathway.{Prisma.RST}"
+        )
+
+    def test_fuller_paradox_seeds(self):
+        print(
+            f"\n{Prisma.CYN}[FULLER] Testing Town Hall Paradox Seed Blooming...{Prisma.RST}"
+        )
+        from bone_village import TownHall
+        town = TownHall(
+            gordon_ref=None,
+            events_ref=self.events,
+            shimmer_ref=None,
+            akashic_ref=None,
+            navigator_ref=None,
+        )
+        town.seeds.clear()
+        town.sow_seed("Who are you?", {"identity", "mirror", "name"})
+        town.tend_garden(["look", "in", "the", "mirror"])
+        self.assertFalse(town.seeds[0].bloomed, "Seed bloomed too early.")
+        self.assertGreater(town.seeds[0].maturity, 0.0, "Seed failed to gain maturity.")
+        town.tend_garden(["identity"] * 30)
+        self.assertTrue(
+            town.seeds[0].bloomed,
+            "Seed failed to bloom after reaching maturity threshold.",
+        )
+        print(
+            f"{Prisma.GRN}   >>> PASS: Town Hall correctly tracked word triggers and bloomed Paradox Seeds.{Prisma.RST}"
         )
 
     def test_hauntings_in_limbo(self):

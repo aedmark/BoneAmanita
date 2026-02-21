@@ -827,6 +827,19 @@ class CognitionPhase(SimulationPhase):
             self.eng.consultant.update_coordinates(
                 ctx.input_text, ctx.bio_result, ctx.physics
             )
+            if (
+                "LIMINAL" in self.eng.consultant.state.active_modules
+                and self.eng.bio
+                and self.eng.bio.mito
+            ):
+                lambda_val = self.eng.consultant.state.L
+                if lambda_val > 0.1:
+                    lambda_tax = (lambda_val**2) * 10.0
+                    self.eng.bio.mito.adjust_atp(-lambda_tax, f"Λ² Liminal Tax")
+                    if lambda_tax > 2.0:
+                        ctx.log(
+                            f"{Prisma.VIOLET}🌌 DARK MATTER: Liminal navigation burns {lambda_tax:.1f} ATP.{Prisma.RST}"
+                        )
         if hasattr(self.eng.mind.mem, "check_for_resurrection"):
             flashback_msg = self.eng.mind.mem.check_for_resurrection(
                 ctx.clean_words, ctx.physics.voltage
@@ -901,11 +914,17 @@ class SensationPhase(SimulationPhase):
         ctx.physics = apply_somatic_feedback(ctx.physics, qualia)
         self.synesthesia.apply_impulse(impulse)
         if impulse.stamina_impact != 0:
+            max_s = getattr(BoneConfig, "MAX_STAMINA", 100.0)
             if self.eng.bio.biometrics:
                 self.eng.bio.biometrics.stamina = max(
-                    0.0, self.eng.bio.biometrics.stamina + impulse.stamina_impact
+                    0.0,
+                    min(
+                        max_s, self.eng.bio.biometrics.stamina + impulse.stamina_impact
+                    ),
                 )
-            self.eng.stamina = max(0.0, self.eng.stamina + impulse.stamina_impact)
+            self.eng.stamina = max(
+                0.0, min(max_s, self.eng.stamina + impulse.stamina_impact)
+            )
         return ctx
 
 
