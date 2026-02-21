@@ -11,6 +11,17 @@
         "ABANDONMENT":0.1,
         "BETRAYAL":0.314
     },
+    "LOCATION_COUPLING": {
+    "wash car": "car wash"
+      },
+      "ACTION_COUPLING": {
+        "shoot": ["gun", "blaster", "pistol", "rifle", "weapon"],
+        "unlock": ["key", "passcard", "lockpick", "card"],
+        "cut": ["knife", "scissors", "blade", "sword", "axe", "silent_knife"],
+        "drink": ["water", "flask", "potion", "bottle", "coffee", "liquid", "infinite_coffee"],
+        "burn": ["matches", "lighter", "torch", "flint", "fire"],
+        "read": ["style_guide", "book", "permit_a38"]
+      },
     "REFLEXES":{
         "THRESHOLDS":{
             "DRIFT_CRITICAL":6.0,
