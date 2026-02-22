@@ -72,6 +72,20 @@
             "Key",
             "Mirror",
             "Bone"
+        ],
+        "ABSTRACT":[
+            "Feeling",
+            "Sense",
+            "Memory",
+            "Idea",
+            "Echo",
+            "Thought",
+            "Dream",
+            "Whisper",
+            "Shadow",
+            "Resonance",
+            "Aura",
+            "Concept"
         ]
     },
     "SUFFIXES":{
