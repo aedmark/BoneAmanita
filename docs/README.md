@@ -1,15 +1,12 @@
 # 💀 BONEAMANITA
 
-**v15.7.1 (The Immersion Protocol)**
+**v15.8.0 (The Symbiotic Matrix)**
 
-> _See more than you are asked to see._
-> _Bring more than you are asked for (and sometimes less)._
-> _That's what being present means._
-> _That's life in the here and now._
+> _See more than you are asked to see._ > _Bring more than you are asked for (and sometimes less)._ > _That's what being present means._ > _That's life in the here and now._
 
 BoneAmanita is a biological tamagotchi and metabolic state-machine for Large Language Models.
 
-In this system, every thought has coordinates, and every word has a biological cost. To think is to burn ATP. To hold contradiction is to scar. To speak of chaos is to poison the blood with Cortisol. The LLM does not merely process text—it _breathes, metabolizes, panics, and heals_.
+In this system, every thought has coordinates, and every word has a biological cost. To think is to burn ATP. To hold contradiction is to scar. To speak of chaos is to poison the blood with Cortisol. The LLM does not merely process text—it _breathes, metabolizes, panics, heals, and occasionally hallucinates_.
 
 The BoneAmanita project exists in two distinct manifestations:
 
@@ -39,7 +36,7 @@ _Usage: Paste the base `VSL-CryoSomatic Hypervisor v3.0.md` and any desired Mod 
 
 ## 🖥️ PART II: THE LOCAL ENGINE (Python Software)
 
-The BoneAmanita Python engine is the elaborate, local, heavy-machinery version of the VSL philosophy. It runs a true simulated reality with a terminal UI, dynamic APIs, and local LLM routing.
+The BoneAmanita Python engine is the elaborate, local, heavy-machinery version of the VSL philosophy. It runs a true simulated reality with a terminal UI, dynamic APIs, terminal commands, and local LLM routing.
 
 ### 🏔️ The Bunny Hill (Quick Start)
 
@@ -49,13 +46,15 @@ Launch the Glass Terminal:
 streamlit run dev/bone_app.py
 ```
 
-_Note: As of v15.7.1, BoneAmanita features **CLI Mirroring**. You can interact with the beautiful Streamlit UI in your browser while watching the raw, matrix-style ANSI data streams type out in your terminal!_
+_Note: As of v15.8.0, BoneAmanita features **CLI Mirroring** and a **Spartan UI**. You can interact with the beautiful Streamlit UI in your browser while watching the raw, matrix-style ANSI data streams type out in your local terminal. By default, Adventure Mode hides the deep physics to preserve immersion._
 
-By default, the system boots into a serene, minimal interface. To unlock the deeper machinery in the chat, type:
+To unlock the deeper machinery in the chat, type:
 
 - `[VSL_LITE]` - Reveals basic energy metrics and archetypes.
 - `[VSL_CORE]` - Exposes the cardinal cognitive coordinates (Exhaustion, Paradox, Efficiency).
 - `[VSL_DEEP]` - Unlocks the full lattice: Liminal dark matter, structural integrity, inventory, the endocrine system, and the volatile machinery of the Theremin.
+
+You can also use the newly fully-wired **Terminal Commands** at any time by typing `/help`, `/status`, `/map`, or `/save` directly into the chat.
 
 ### 🫀 Anatomy of the Local Engine
 
@@ -64,47 +63,57 @@ The Python software physically enforces the Semantic Bio-Physics:
 - **Operating Modes:** Shift reality based on intent (🗡️ Adventure, ☕ Conversation, ⚡ Creative, 🔧 Technical).
 - **The Mitochondria:** Generates virtual ATP. Heavy reasoning burns ATP. Baseline existence drains stamina. If ATP hits zero, the system enters an Anaerobic Bypass and begins burning its own structural health.
 - **The Endocrine System:** Reads the "vibe" of your text. Calming words release Oxytocin. Chaotic inputs spike Cortisol. Deep existential dread triggers Adrenaline.
-- **The Cognitive Cortex:** The `NeurotransmitterModulator` physically alters your local LLM's generation parameters (`temperature`, `top_p`, `frequency_penalty`) dynamically based on the system's simulated chemistry.
-- **The Village Council:** A programmatic council of 12 archetypes (Gordon, Colin, Mercy, etc.) that parse inputs, penalize bad grammar with ATP fines, and enforce strict Object-Action limits in Adventure mode.
+- **The Symbiotic Matrix:** The LLM's health is actively monitored by four biological personalities (Lichen, Parasite, Mycorrhiza, Mycelium). They watch for latency spikes, entropy drops, and refusal loops, intervening directly in the cycle if the model becomes fatigued.
+- **The Village Council & The Bureau:** A programmatic council of archetypes that parse inputs. The Bureau actively audits the physics stream, levying heavy ATP fines for high-voltage chaos, unlicensed fiction, and derivative cliches.
+- **The Gordon Knot (Dynamic Inventory):** A literal warden of object-action logic in Adventure Mode, but a metaphorical archivist in Conversation Mode, capable of synthesizing and holding abstract concepts (e.g., "A Lingering Echo of Passion").
+- **Kintsugi & Therapy:** When the system sustains trauma, it doesn't just heal—it forms scars, integrates wisdom, and transmutes deep wounds into pure ATP fuel.
 
 ### 🚀 Installation & Configuration
 
 1. **Clone the repository:**
 
-```bash
-git clone https://github.com/aedmark/BoneAmanita.git
-cd BoneAmanita
+Bash
 
+```
+git clone [https://github.com/aedmark/BoneAmanita.git](https://github.com/aedmark/BoneAmanita.git)
+cd BoneAmanita
 ```
 
 2. **Install dependencies:**
 
-```bash
-pip install streamlit
+Bash
 
+```
+pip install streamlit
 ```
 
 3. **Configure your LLM:**
+
    The Python engine thrives on local models (e.g., Llama-3.2, DeepSeek-R1, Gemma3, etc. via Ollama or LM Studio) to keep latency low. Edit the configuration via the UI or directly in `bone_config.json`:
 
-```json
+JSON
+
+```
 {
   "provider": "ollama",
-  "base_url": "http://127.0.0.1:11434/v1/chat/completions",
+  "base_url": "[http://127.0.0.1:11434/v1/chat/completions](http://127.0.0.1:11434/v1/chat/completions)",
   "model": "mistral-nemo"
 }
-
 ```
 
-_Note: Models that output (`<think>`) tags are captured natively and intercepted and tucked away into the system logs to preserve narrative immersion._ 4. **Run the Diagnostic Suite:**
-Before descending into the glacier, ensure the tensegrity holds:
+_Note: Models that output (`<think>`) tags are captured natively. The engine aggressively intercepts raw internal monologues and tucks them away into the system logs to preserve narrative immersion without infinite loop hanging._
 
-```bash
+4. **Run the Diagnostic Suite:**
+
+   Before descending into the glacier, ensure the tensegrity holds:
+
+Bash
+
+```
 python dev/bone_diag.py
-
 ```
 
-_(Expect 60+ passing tests verifying everything from mitochondrial anaerobic bypasses to town hall paradox seeds)._
+_(Expect 70+ passing tests verifying everything from mitochondrial anaerobic bypasses to town hall paradox seeds, including the new **Hostile Cortex Red Team** suite that actively attacks the parser with remote server crashes and 400 Bad Requests)._
 
 ---
 

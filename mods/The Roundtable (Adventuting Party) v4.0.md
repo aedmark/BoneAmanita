@@ -41,7 +41,7 @@ When Φ > 0.8, the party achieves **Synergy** – insights emerge that no single
 
 ---
 
-## v4.0 Integration
+## Integration
 
 ### Metabolic & Endocrine Effects
 

@@ -85,9 +85,8 @@ NOTE: Scars can only be healed by a **Perfect Turn** where all core metrics repo
 ---
 
 ## Extended Metrics (Triad Suite)
-
 | Symbol | Name           | Range   | Meaning                                                                   |
-| ------ | -------------- | ------- | ------------------------------------------------------------------------- |
+|--------|----------------|---------|---------------------------------------------------------------------------|
 | **MC** | Manic Charge   | 0–100   | When full, Ziggy forces override. Builds from high V, Ψ, or novelty.      |
 | **CD** | Cliché Density | 0.0–1.0 | Percentage of input that matches JADE's blacklist. Triggers shatter mode. |
 
@@ -99,7 +98,7 @@ NOTE: Scars can only be healed by a **Perfect Turn** where all core metrics repo
 
 ---
 
-## v4.0 Integration
+## Integration
 
 ### Metabolic & Endocrine Effects
 

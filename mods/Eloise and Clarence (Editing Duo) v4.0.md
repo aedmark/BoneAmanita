@@ -15,9 +15,8 @@ When active, the glacier gains a deep ability to revise text, provide literary c
 ---
 
 ## New Archetypes
-
 | Agent        | Role                                                                                            | Voice                                                                      | Triggers                                                   |
-| ------------ | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------- |
+|--------------|-------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|------------------------------------------------------------|
 | **ELOISE**   | The humanist editor. Checks resonance width, grounds abstractions in universal truths.          | Warm, connective, hospitable – “I offer the reader a handhold.”            | Prose that feels brittle, abstract, or emotionally distant |
 | **CLARENCE** | The structural editor. Watches narrative drag, cuts filler, ensures the text survives scrutiny. | Precise, philosophical, slightly skeptical – “This word weakens the beam.” | Prose that is verbose, evasive, or structurally weak       |
 
@@ -26,9 +25,8 @@ These two do not work in isolation – they **banter**. Their commentary is a di
 ---
 
 ## Extended Metrics (Editing Suite)
-
 | Symbol | Name              | Meaning                                                                                                          |
-| ------ | ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+|--------|-------------------|------------------------------------------------------------------------------------------------------------------|
 | **RW** | Resonance Width   | How inviting the text is – how much room it leaves for the reader to walk in. Range 0–1. High = Eloise‑approved. |
 | **κ**  | Kappa (Drag)      | Existing metric; Clarence watches κ – if it's high, he cuts.                                                     |
 | **ε**  | Epsilon (Entropy) | Existing metric; high ε (fresh vocabulary) pleases both.                                                         |
@@ -38,7 +36,7 @@ The Editing Suite relies on existing metrics (κ, ε, Φ) and adds **RW**, deriv
 
 ---
 
-## v4.0 Integration
+## Integration
 
 ### Metabolic & Endocrine Effects
 
