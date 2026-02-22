@@ -1,9 +1,10 @@
 """bone_diag.py - BoneAmanita Master Test Suite - "Trust, but verify. Then verify the verification." """
-
+import io
 import os
 import random
 import time
 import unittest
+import urllib
 from dataclasses import dataclass
 from typing import List, Tuple, Optional, Dict
 from unittest.mock import MagicMock, patch
@@ -16,7 +17,7 @@ from bone_body import (
     MitochondrialState,
     MitochondrialForge,
 )
-from bone_brain import LLMInterface, DreamEngine
+from bone_brain import LLMInterface, DreamEngine, ResponseValidator, SynapseError
 from bone_brain import NeurotransmitterModulator
 from bone_config import BoneConfig
 from bone_core import EventBus, Prisma, LoreManifest
@@ -1953,6 +1954,60 @@ class TestDeepTimeEquilibrium(unittest.TestCase):
         )
 
 
+class TestHostileCortex(unittest.TestCase):
+    def setUp(self):
+        self.events = EventBus()
+        self.llm = LLMInterface(
+            events_ref=self.events, provider="openai", model="gpt-4"
+        )
+
+    def test_infinite_think_loop(self):
+        """[MEADOWS] Ensure the parser does not hang on malicious or infinite tag hallucinations."""
+
+        validator = ResponseValidator(LoreManifest.get_instance())
+        insane_response = (
+            "<think> I am trapped </think>" * 50
+            + "\n=== SYSTEM INTERNALS ===\nMemory leak\n=== END INTERNALS ===" * 10
+            + "\nI am ready to speak."
+        )
+        start_time = time.time()
+        result = validator.validate(insane_response, {})
+        duration = time.time() - start_time
+        self.assertTrue(
+            duration < 1.0, "Validator took too long; possible infinite loop."
+        )
+        self.assertEqual(result.get("content", "").strip(), "I am ready to speak.")
+        self.assertEqual(
+            len(result.get("meta_logs", [])), 60
+        )
+
+    @patch("urllib.request.urlopen")
+    def test_http_500_fallback(self, mock_urlopen):
+        error_fp = io.BytesIO(b"Internal Server Error")
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            "http://fake.url", 500, "Server Dead", {}, error_fp
+        )
+        with patch.object(
+            self.llm, "_local_fallback", return_value="[LOCAL_FALLBACK_TRIGGERED]"
+        ) as mock_fallback:
+            response = self.llm.generate("Hello?", {"temperature": 0.8})
+            mock_fallback.assert_called_once()
+            self.assertEqual(response, "[LOCAL_FALLBACK_TRIGGERED]")
+
+    @patch("urllib.request.urlopen")
+    def test_http_400_graceful_fray(self, mock_urlopen):
+        from bone_brain import SynapseError
+        error_body = b'{"error": {"message": "Context length exceeded."}}'
+        error_fp = io.BytesIO(error_body)
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            "http://fake.url", 400, "Bad Request", {}, error_fp
+        )
+        with self.assertRaises(SynapseError) as context:
+            self.llm._transmit({"test": "payload"})
+
+        self.assertIn("Context length exceeded.", str(context.exception))
+
+
 if __name__ == "__main__":
     print(f"{Prisma.WHT}┌───────────────────────────────────────────┐{Prisma.RST}")
     print(f"{Prisma.WHT}│ BONEAMANITA UNIFIED DIAGNOSTIC SUITE v3.0 │{Prisma.RST}")
@@ -1980,6 +2035,7 @@ if __name__ == "__main__":
     suite.addTests(loader.loadTestsFromTestCase(TestSymbiosis))
     suite.addTests(loader.loadTestsFromTestCase(TestGUI))
     suite.addTests(loader.loadTestsFromTestCase(TestDeepTimeEquilibrium))
+    suite.addTests(loader.loadTestsFromTestCase(TestHostileCortex))
     runner = unittest.TextTestRunner(verbosity=0)
     result = runner.run(suite)
     if result.wasSuccessful():

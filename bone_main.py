@@ -3,6 +3,8 @@
 import os, time, json, uuid, random, traceback, sys, re
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
+
+from bone_commands import CommandProcessor
 from bone_core import EventBus, SystemHealth, TheObserver, LoreManifest, TelemetryService, RealityStack
 from bone_types import Prisma, RealityLayer
 from bone_config import BoneConfig, BonePresets
@@ -49,7 +51,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system("cls" if os.name == "nt" else "clear")
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.7.1   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.8.0   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
@@ -69,11 +71,16 @@ class SessionGuardian:
         if exc_type:
             is_interrupt = issubclass(exc_type, KeyboardInterrupt)
             if not is_interrupt:
-                full_trace = "".join(
-                    traceback.format_exception(exc_type, exc_val, exc_tb)
-                )
                 print(f"{Prisma.RED}CRASH: {exc_val}{Prisma.RST}")
-                print(f"{Prisma.GRY}{full_trace}{Prisma.RST}")
+                if getattr(self.engine_instance, "boot_mode", "") == "TECHNICAL":
+                    full_trace = "".join(
+                        traceback.format_exception(exc_type, exc_val, exc_tb)
+                    )
+                    print(f"{Prisma.GRY}{full_trace}{Prisma.RST}")
+                else:
+                    print(
+                        f"{Prisma.GRY}The reality lattice collapsed. Check the developer logs.{Prisma.RST}"
+                    )
         print(f"{Prisma.paint('Connection Severed.')}")
         return exc_type is KeyboardInterrupt
 
@@ -193,7 +200,7 @@ class BoneAmanita:
         self.config = config
         self.events = EventBus()
         self.kernel_hash = str(uuid.uuid4())[:8].upper()
-        self.cmd = None
+        self.cmd = CommandProcessor(self, Prisma, config_ref=BoneConfig)
         self.user_name = config.get("user_name", "TRAVELER")
         self.boot_mode = config.get("boot_mode", "ADVENTURE").upper()
         if self.boot_mode not in BonePresets.MODES:
@@ -265,7 +272,7 @@ class BoneAmanita:
         tuning_key = self.mode_settings.get("tuning", "STANDARD")
         if hasattr(BonePresets, tuning_key):
             BoneConfig.load_preset(getattr(BonePresets, tuning_key))
-        if self.mind.mem.session_health:
+        if getattr(self.mind.mem, "session_health", None) is not None:
             self.health = self.mind.mem.session_health
             self.stamina = self.mind.mem.session_stamina
             self.trauma_accum = self.mind.mem.session_trauma_vector or {}
@@ -311,19 +318,19 @@ class BoneAmanita:
         self.bio = self.embryo.bio
         self.shimmer = self.embryo.shimmer
         self.bio.setup_listeners()
-        v = anatomy["village"]
-        self.gordon = v["gordon"]
-        self.navigator = v["navigator"]
-        self.tinkerer = v["tinkerer"]
-        self.death_gen = v["death_gen"]
-        self.bureau = v["bureau"]
-        self.town_hall = v["town_hall"]
-        self.repro = v["repro"]
-        self.zen = v["zen"]
-        self.critics = v["critics"]
-        self.therapy = v["therapy"]
-        self.limbo = v["limbo"]
-        self.kintsugi = v["kintsugi"]
+        v = anatomy.get("village", {})
+        self.gordon = v.get("gordon")
+        self.navigator = v.get("navigator")
+        self.tinkerer = v.get("tinkerer")
+        self.death_gen = v.get("death_gen")
+        self.bureau = v.get("bureau")
+        self.town_hall = v.get("town_hall")
+        self.repro = v.get("repro")
+        self.zen = v.get("zen")
+        self.critics = v.get("critics")
+        self.therapy = v.get("therapy")
+        self.limbo = v.get("limbo")
+        self.kintsugi = v.get("kintsugi")
         self.soul.engine = self
         self.council = CouncilChamber(self)
         self.village = {
@@ -544,6 +551,8 @@ class BoneAmanita:
             )
             for k in self.trauma_accum:
                 self.trauma_accum[k] *= CATHARSIS_DECAY
+                if self.trauma_accum[k] < 0.01:
+                    self.trauma_accum[k] = 0.0
             self.events.log(
                 f"{Prisma.CYN}*** CATHARSIS *** The fever breaks. Logic cools.{Prisma.RST}",
                 "SENSATION",
@@ -566,11 +575,13 @@ class BoneAmanita:
                     if self.embryo.continuity
                     else "Unknown"
                 )
-                last_scene = (
-                    self.embryo.continuity.get("last_output", "")
-                    if self.embryo.continuity
-                    else "Silence."
-                )
+
+                last_scene = "Silence."
+                if self.cortex and self.cortex.dialogue_buffer:
+                    last_scene = self.cortex.dialogue_buffer[-1]
+                elif self.embryo.continuity:
+                    last_scene = self.embryo.continuity.get("last_output", "Silence.")
+
                 resume_text = f"**RESUMING TIMELINE**\nLocation: {loc}\n\n{last_scene}"
                 return {"ui": resume_text, "logs": ["Timeline Restored."]}
         print(f"{Prisma.GRY}...Synthesizing Initial Reality...{Prisma.RST}")

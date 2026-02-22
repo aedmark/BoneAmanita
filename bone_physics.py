@@ -162,7 +162,8 @@ class GeodesicEngine:
             max(-5.0, min(PHYS_CFG["DRAG_HALT"], raw_compression * mass_scalar)), 2
         )
         structural_mass = masses["heavy"] + masses["constructive"] + masses["harvest"]
-        structural_mass -= (masses["void"] * 0.5)
+        structural_mass -= masses["void"] * 0.5
+        structural_mass = max(0.0, structural_mass)  # [MEADOWS] Plug the void leak
         shapley_thresh = getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0)
         total_abstract = (
                 masses["abstract"] +
@@ -186,19 +187,24 @@ class GeodesicEngine:
         ent_mass = (counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"]
         psi_mass = forces["abstraction"]
         return {
-            "VEL": min(
-                1.0,
-                (masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol,
+            "VEL": max(
+                0.0,
+                min(
+                    1.0,
+                    (masses["kinetic"] * 2.0 - forces["compression"] + base_mass)
+                    * inv_vol,
+                ),
             ),
-            "STR": min(1.0, (str_mass + base_mass) * inv_vol),
-            "ENT": min(1.0, ent_mass * inv_vol),
-            "PHI": min(
-                1.0, (masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol
+            "STR": max(0.0, min(1.0, (str_mass + base_mass) * inv_vol)),
+            "ENT": max(0.0, min(1.0, ent_mass * inv_vol)),
+            "PHI": max(
+                0.0,
+                min(1.0, (masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol),
             ),
-            "PSI": psi_mass,
-            "BET": min(1.0, (masses["social"] * 2.0) * inv_vol),
-            "DEL": min(1.0, (masses["play"] * 3.0) * inv_vol),
-            "E": min(1.0, (counts.get("solvents", 0)) * inv_vol),
+            "PSI": max(0.0, min(1.0, psi_mass)),
+            "BET": max(0.0, min(1.0, (masses["social"] * 2.0) * inv_vol)),
+            "DEL": max(0.0, min(1.0, (masses["play"] * 3.0) * inv_vol)),
+            "E": max(0.0, min(1.0, (counts.get("solvents", 0)) * inv_vol)),
         }
 
 

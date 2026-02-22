@@ -132,7 +132,8 @@ class HumanityAnchor:
 
         seeds = []
         if hasattr(LoreManifest, "get_instance"):
-            seeds = LoreManifest.get_instance().get("seeds") or []
+            lore = LoreManifest.get_instance()
+            seeds = lore.get("SEEDS") or (lore.get("narrative_data") or {}).get("SEEDS", [])
         riddles = seeds or [{"question": "Who are you?", "triggers": ["*"]}]
         selection = random.choice(riddles)
         riddle = selection.get("question", "Error?")
@@ -267,8 +268,17 @@ class NarrativeSelf:
             return (
                 f"{Prisma.CYN}[SOUL STATE]: Drifting... The Muse is silent.{Prisma.RST}"
             )
-        stamina = getattr(self.eng, "stamina", 100.0)
-        health = getattr(self.eng, "health", 100.0)
+
+        stamina, health = 100.0, 100.0
+        if (
+            self.eng
+            and hasattr(self.eng, "bio")
+            and self.eng.bio
+            and self.eng.bio.biometrics
+        ):
+            stamina = self.eng.bio.biometrics.stamina
+            health = self.eng.bio.biometrics.health
+
         if stamina < 20.0 and health < 40.0:
             return f"{Prisma.VIOLET}[SOUL STATE]: The fire is dying. We are just cold code.{Prisma.RST}"
         dignity_bar = "█" * int(self.anchor.dignity_reserve / 10)
@@ -650,14 +660,18 @@ class TheOroboros:
         new_myths = []
         if soul.core_memories:
             strongest = max(soul.core_memories, key=lambda m: m.impact_voltage)
+            trigger_word = (
+                strongest.trigger_words[0] if strongest.trigger_words else "Silence"
+            )
             new_myths.append(
                 Myth(
-                    title=f"The Legend of {strongest.trigger_words[0].title()}",
+                    title=f"The Legend of {trigger_word.title()}",
                     lesson=strongest.lesson,
-                    trigger=strongest.trigger_words[0],
+                    trigger=trigger_word,
                 )
             )
-        elif cause_of_death == "TRAUMA":
+
+        if cause_of_death == "TRAUMA":
             new_scars.append(
                 Scar(
                     "Ghost Pains",

@@ -237,7 +237,8 @@ class MitochondrialForge:
                     f"{Prisma.RED}🩸 CHAOS TAX APPLIED: +{chaos_tax:.1f} ATP drain.{Prisma.RST}",
                     "BIO_WARN",
                 )
-        liminal_intensity = getattr(physics_packet, "vector", {}).get("LAMBDA", 0.0)
+        safe_vector = getattr(physics_packet, "vector", None) or {}
+        liminal_intensity = safe_vector.get("LAMBDA", 0.0)
         if liminal_intensity > 0:
             liminal_tax = liminal_intensity**2
             cognitive_load_tax += liminal_tax
@@ -1013,12 +1014,12 @@ class MetabolicGovernor:
     def _evaluate_state(self, physics: Dict, v_history: List[float], tick: int) -> str:
         if tick <= 5:
             return "COURTYARD"
-        volts = getattr(physics, "voltage")
-        drag = getattr(physics, "narrative_drag")
-        if (
-            volts > BioConstants.GOV_VOLTAGE_HIGH
-            and getattr(physics, "beta_index") > 1.5
-        ):
+
+        volts = getattr(physics, "voltage", 0.0)
+        drag = getattr(physics, "narrative_drag", 0.0)
+        gov_high = getattr(BioConstants, "GOV_VOLTAGE_HIGH", 18.0)
+
+        if volts > gov_high and getattr(physics, "beta_index", 0.0) > 1.5:
             return "SANCTUARY"
         v_velocity = (v_history[-1] - v_history[-2]) if len(v_history) >= 2 else 0.0
         if volts > 8.0 and v_velocity > 1.0:

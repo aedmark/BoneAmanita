@@ -63,6 +63,10 @@ class ObservationPhase(SimulationPhase):
             ctx.log(
                 f"{Prisma.OCHRE}🧠 INTENTION: Low Energy. Metabolism slowing down.{Prisma.RST}"
             )
+        if hasattr(self.eng, "symbiosis"):
+            diag = self.eng.symbiosis.current_health.diagnosis
+            if diag != "STABLE":
+                ctx.log(f"{Prisma.OCHRE}⚕️ SYMBIONT DIAGNOSIS: {diag}{Prisma.RST}")
         self.eng.phys.dynamics.commit(ctx.physics.voltage)
         self.eng.tick_count += 1
         return ctx
@@ -76,7 +80,7 @@ class SanctuaryPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         in_safe_zone, distance = self.governor.assess(ctx.physics)
-        trauma_sum = sum(self.eng.trauma_accum.values())
+        trauma_sum = sum(self.eng.trauma_accum.values()) if getattr(self.eng, "trauma_accum", None) else 0.0
         if in_safe_zone and trauma_sum < 25.0:
             self._enter_sanctuary(ctx)
             self._apply_restoration(ctx)
@@ -245,6 +249,12 @@ class GatekeeperPhase(SimulationPhase):
                     ctx.refusal_packet = {
                         "type": "BUREAU_BLOCK",
                         "ui": audit_result.get("ui", "Bureaucratic Injunction."),
+                        "logs": ["Bureaucratic Block Triggered"],
+                        "metrics": (
+                            self.eng.get_metrics()
+                            if hasattr(self.eng, "get_metrics")
+                            else {}
+                        ),
                     }
                     return ctx
                 if self.eng.bio and self.eng.bio.mito:
@@ -291,10 +301,10 @@ class MetabolismPhase(SimulationPhase):
         physics.manifold = self.eng.bio.governor.mode
         max_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
         bio_feedback = {
-            "INTEGRITY": physics.truth_ratio,
-            "STATIC": physics.repetition,
-            "FORCE": physics.voltage / max_v,
-            "BETA": physics.beta_index,
+            "INTEGRITY": getattr(physics, "truth_ratio", 1.0),
+            "STATIC": getattr(physics, "repetition", 0.0),
+            "FORCE": getattr(physics, "voltage", 0.0) / max_v,
+            "BETA": getattr(physics, "beta_index", 0.0),
             "PSI": getattr(physics, "psi", 0.0),
             "ENTROPY": getattr(physics, "entropy", 0.0),
             "VALENCE": getattr(physics, "valence", 0.0),
@@ -462,7 +472,14 @@ class NavigationPhase(SimulationPhase):
                     if hasattr(physics, key):
                         current_val = getattr(physics, key)
                         if current_val != val:
-                            setattr(physics, key, val)
+                            if key in ["energy", "space", "matter"]:
+                                sub_obj = getattr(physics, key)
+                                if isinstance(val, dict) and sub_obj:
+                                    for sk, sv in val.items():
+                                        if hasattr(sub_obj, sk):
+                                            setattr(sub_obj, sk, sv)
+                            else:
+                                setattr(physics, key, val)
                 if reflex_msg:
                     ctx.log(reflex_msg)
                 ctx.record_flux("NAVIGATION", "REFLEX", 1.0, 0.0, "ITEM_TRIGGERED")
@@ -568,12 +585,24 @@ class MachineryPhase(SimulationPhase):
         if c_state == "MELTDOWN":
             damage = c_val
             if self.eng.bio.biometrics:
-                self.eng.bio.biometrics.health -= damage
-            self.eng.health -= damage
-        if "narrative_drag" in phys_dict:
-            ctx.physics.narrative_drag = phys_dict["narrative_drag"]
-        if "voltage" in phys_dict:
-            ctx.physics.voltage = phys_dict["voltage"]
+                self.eng.bio.biometrics.health = max(
+                    0.0, self.eng.bio.biometrics.health - damage
+                )
+            self.eng.health = max(0.0, self.eng.health - damage)
+
+        for k, v in phys_dict.items():
+            if hasattr(ctx.physics, k) and not callable(getattr(ctx.physics, k)):
+                try:
+                    if k in ["energy", "space", "matter"]:
+                        sub_obj = getattr(ctx.physics, k)
+                        if isinstance(v, dict) and sub_obj:
+                            for sk, sv in v.items():
+                                if hasattr(sub_obj, sk):
+                                    setattr(sub_obj, sk, sv)
+                    else:
+                        setattr(ctx.physics, k, v)
+                except AttributeError:
+                    pass
         return ctx
 
     def _process_crafting(self, ctx, phys_dict):
@@ -596,8 +625,10 @@ class MachineryPhase(SimulationPhase):
         max_hp = getattr(BoneConfig, "MAX_HEALTH", 100.0)
         damage = max_hp * 0.25
         if self.eng.bio.biometrics:
-            self.eng.bio.biometrics.health -= damage
-        self.eng.health -= damage
+            self.eng.bio.biometrics.health = max(
+                0.0, self.eng.bio.biometrics.health - damage
+            )
+        self.eng.health = max(0.0, self.eng.health - damage)
         ctx.log(
             f"{Prisma.RED}*** CRITICAL THEREMIN DISCHARGE *** -{damage:.1f} HP{Prisma.RST}"
         )
@@ -622,8 +653,10 @@ class IntrusionPhase(SimulationPhase):
                 ctx.logs[-1] = self.eng.limbo.haunt(ctx.logs[-1])
             else:
                 ctx.log(self.eng.limbo.haunt("The air is heavy."))
-        drag = ctx.physics.narrative_drag
-        kappa = ctx.physics.kappa
+
+        drag = getattr(ctx.physics, "narrative_drag", 0.0)
+        kappa = getattr(ctx.physics, "kappa", 1.0)
+
         if (drag > 4.0 or kappa < 0.3) and ctx.clean_words:
             start_node = random.choice(ctx.clean_words)
             loop_path = self.eng.mind.tracer.inject(start_node)
@@ -633,7 +666,11 @@ class IntrusionPhase(SimulationPhase):
                     ctx.log(f"{Prisma.CYN}🦠 IMMUNE SYSTEM: {rewire_msg}{Prisma.RST}")
                     self.eng.bio.endo.dopamine += 0.2
                     ctx.physics.narrative_drag = max(0.0, drag - 2.0)
-        trauma_sum = sum(self.eng.trauma_accum.values())
+        trauma_sum = (
+            sum(self.eng.trauma_accum.values())
+            if getattr(self.eng, "trauma_accum", None)
+            else 0.0
+        )
         is_bored = self.eng.phys.pulse.is_bored()
         if (trauma_sum > 10.0 or is_bored) and random.random() < 0.2:
             dream_text, relief = self.eng.mind.dreamer.hallucinate(
@@ -990,18 +1027,21 @@ class PhaseExecutor:
 
     @staticmethod
     def _audit_flux(ctx, phase, before, after):
-        if abs(before.voltage - after.voltage) > 0.01:
-            ctx.record_flux(
-                phase, "voltage", before.voltage, after.voltage, "PHASE_DELTA"
-            )
-        if abs(before.narrative_drag - after.narrative_drag) > 0.01:
-            ctx.record_flux(
-                phase,
-                "drag",
-                before.narrative_drag,
-                after.narrative_drag,
-                "PHASE_DELTA",
-            )
+        def _safe_get(obj, key):
+            try:
+                if isinstance(obj, dict):
+                    return obj.get(key, 0.0)
+                return getattr(obj, key, 0.0)
+            except Exception:
+                return 0.0
+        b_v = _safe_get(before, "voltage")
+        a_v = _safe_get(after, "voltage")
+        b_d = _safe_get(before, "narrative_drag")
+        a_d = _safe_get(after, "narrative_drag")
+        if abs(b_v - a_v) > 0.01:
+            ctx.record_flux(phase, "voltage", b_v, a_v, "PHASE_DELTA")
+        if abs(b_d - a_d) > 0.01:
+            ctx.record_flux(phase, "drag", b_d, a_d, "PHASE_DELTA")
 
 
 class CycleSimulator:

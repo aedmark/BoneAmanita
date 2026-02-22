@@ -139,7 +139,7 @@ class TheAkashicRecord:
         return new_name, new_data
 
     def save_all(self):
-        self.save_to_disk("akashic_lexicon", self.discovered_words)
+        self.save_to_disk("discovered_words", self.discovered_words)
         self._save_user_state()
         print(f"{Prisma.GRY}[AKASHIC]: Mythos persisted.{Prisma.RST}")
 
@@ -304,7 +304,7 @@ class TheAkashicRecord:
             )
 
     def propose_new_category(self, word_list, category_name):
-        lexicon_data = self.lore.get("LEXICON")
+        lexicon_data = self.lore.get("LEXICON") or {}
         if category_name not in lexicon_data:
             lexicon_data[category_name] = []
         updated = False
@@ -314,6 +314,7 @@ class TheAkashicRecord:
                 self.discovered_words[w] = category_name
                 updated = True
         if updated:
+            self.lore.inject("LEXICON", lexicon_data)
             print(
                 f"✨ MYTHOLOGY ENGINE: The Lexicon expands. New Category: '{category_name.upper()}'"
             )
@@ -330,11 +331,12 @@ class TheAkashicRecord:
         if word in self.discovered_words:
             if self.discovered_words[word] == category:
                 return False
-        lexicon_data = self.lore.get("LEXICON")
+        lexicon_data = self.lore.get("LEXICON") or {}
         target_category = lexicon_data.setdefault(category, [])
         if word not in target_category:
             target_category.append(word)
             self.discovered_words[word] = category
+            self.lore.inject("LEXICON", lexicon_data)
             print(f"✨ LEXICON: Learned '{word}' ({category})")
             if len(lexicon_data[category]) > 50 and category != "heavy":
                 print(

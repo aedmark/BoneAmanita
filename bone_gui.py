@@ -8,17 +8,16 @@ class Projector:
         self.width = 80
 
     @staticmethod
-    def _extract(
-            physics_obj: Any, field: str, sub_field: str, default: Any = 0.0
-    ):
+    def _extract(physics_obj: Any, field: str, sub_field: str, default: Any = 0.0):
+        val = None
         if hasattr(physics_obj, sub_field):
-            return getattr(physics_obj, sub_field)
-        if isinstance(physics_obj, dict):
+            val = getattr(physics_obj, sub_field)
+        elif isinstance(physics_obj, dict):
             if sub_field in physics_obj:
-                return physics_obj[sub_field]
-            if field in physics_obj and isinstance(physics_obj[field], dict):
-                return physics_obj[field].get(sub_field, default)
-        return default
+                val = physics_obj[sub_field]
+            elif field in physics_obj and isinstance(physics_obj[field], dict):
+                val = physics_obj[field].get(sub_field)
+        return default if val is None else val
 
     def render(
         self,
@@ -37,7 +36,7 @@ class Projector:
             physics_line = self._render_physics_strip(
                 physics, data_ctx.get("vectors", {})
             )
-        ui_depth = data_ctx.get("ui_depth", "DEEP")
+        ui_depth = data_ctx.get("ui_depth", "IDLE")
         vsl_line = self._render_lattice_strip(physics, depth=ui_depth)
         zone = self._extract(physics, "space", "zone", "UNKNOWN")
         lens = mind_ctx[0] if mind_ctx else "RAW"
@@ -48,7 +47,15 @@ class Projector:
             f"{Prisma.GRY}  📍 {zone:<12}  👁️ {lens:<12}  {depth_marker}{Prisma.RST}"
         )
         div = f"{Prisma.GRY}{'─' * self.width}{Prisma.RST}"
-        return f"{div}\n{status_line}\n{physics_line}{vsl_line}\n{context_line}\n{div}"
+
+        mid_lines = []
+        if physics_line:
+            mid_lines.append(physics_line)
+        if vsl_line:
+            mid_lines.append("  " + vsl_line)
+        mid_section = "\n".join(mid_lines) if mid_lines else ""
+
+        return f"{div}\n{status_line}\n{mid_section}\n{context_line}\n{div}"
 
     def _render_vital_strip(self, data: Dict, mind: tuple, labels: Dict) -> str:
         health = data.get("health", 100)
@@ -61,6 +68,7 @@ class Projector:
         dig_icon = "✦" if dignity > 80 else "✧"
         raw_role = mind[2] if mind and len(mind) > 2 else None
         role = str(raw_role).upper() if raw_role else "OBSERVER"
+        role = role.replace("THE THE ", "THE ")
         if len(role) > 30:
             role = role[:27] + "..."
         l_hp = labels.get("HP", "HP")
@@ -92,16 +100,23 @@ class Projector:
     def _render_lattice_strip(physics: Dict, depth: str = "DEEP") -> str:
         if depth == "IDLE" or not physics:
             return ""
-        E = physics.get("exhaustion", 0.2)
-        beta = physics.get("contradiction", 0.4)
-        V = physics.get("voltage", 30.0)
-        F = physics.get("friction", physics.get("narrative_drag", 0.6))
-        H = physics.get("health", 100.0)
-        P = physics.get("stamina", 100.0)
-        T = physics.get("trauma", 0.0)
-        psi = physics.get("psi", 0.0)
-        chi = physics.get("chi", 0.0)
-        valence = physics.get("valence", 0.0)
+
+        def _get_val(k1, k2, default_val):
+            v = physics.get(k1)
+            if v is None:
+                v = physics.get(k2)
+            return default_val if v is None else v
+
+        E = _get_val("exhaustion", "E", 0.2)
+        beta = _get_val("contradiction", "beta", 0.4)
+        V = _get_val("voltage", "voltage", 30.0)
+        F = _get_val("friction", "narrative_drag", 0.6)
+        H = _get_val("health", "health", 100.0)
+        P = _get_val("stamina", "stamina", 100.0)
+        T = _get_val("trauma", "T", 0.0)
+        psi = _get_val("psi", "psi", 0.0)
+        chi = _get_val("chi", "chi", 0.0)
+        valence = _get_val("valence", "valence", 0.0)
         core = f"{Prisma.CYN}[🧊 E:{E:.2f} β:{beta:.2f} | ⚡ V:{V:.0f} F:{F:.1f} | ❤️ H:{H:.0f} P:{P:.0f} | 🏺 T:{T:.0f}]{Prisma.RST}"
         deep = (
             f"{Prisma.VIOLET} [🌌 Ψ:{psi:.2f} Χ:{chi:.2f} ♥:{valence:.2f}]{Prisma.RST}"
@@ -226,8 +241,9 @@ class GeodesicRenderer:
                 {"physics": physics}, data_ctx, mind_tuple, current_depth, labels
             )
         else:
+            labels = {"HP": "HP", "STM": "STM", "SHOW_PHYSICS": False}
             return self.projector.render(
-                {"physics": physics}, data_ctx, mind_tuple, reality_depth=current_depth
+                {"physics": physics}, data_ctx, mind_tuple, reality_depth=current_depth, labels=labels
             )
 
     @staticmethod
@@ -522,12 +538,13 @@ class CycleReporter:
                 if hasattr(self.renderer, "base_renderer")
                 else self.renderer
             )
+            bio_res = ctx.bio_result or {}
             return {
                 "type": "BUREAUCRACY",
                 "ui": ctx.bureau_ui,
                 "logs": base.compose_logs(
                     ctx.logs, self.eng.events.flush(), self.eng.tick_count
                 ),
-                "metrics": self.eng.get_metrics(ctx.bio_result.get("atp", 0.0)),
+                "metrics": self.eng.get_metrics(bio_res.get("atp", 0.0)),
             }
         return None

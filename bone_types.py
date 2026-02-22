@@ -316,24 +316,6 @@ class PhysicsPacket:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-    def __getattr__(self, key):
-        if key in {"energy", "matter", "space"}:
-            raise AttributeError(key)
-        for sub_name in ("energy", "matter", "space"):
-            sub = self.__dict__.get(sub_name)
-            if sub and hasattr(sub, key):
-                return getattr(sub, key)
-        raise AttributeError(f"'{type(self).__name__}' has no attribute '{key}'")
-
-    def __setattr__(self, key, value):
-        if key in {"energy", "matter", "space"}:
-            super().__setattr__(key, value)
-            return
-        for sub in (self.energy, self.matter, self.space):
-            if hasattr(sub, key):
-                setattr(sub, key, value)
-                return
-        super().__setattr__(key, value)
 
     @classmethod
     def void_state(cls):

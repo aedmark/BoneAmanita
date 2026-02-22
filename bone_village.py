@@ -165,6 +165,8 @@ class MirrorGraph:
         if total > 5.0:
             for k in self.stats:
                 self.stats[k] *= 0.8
+                if self.stats[k] < 0.1:
+                    self.stats[k] = 0.0
 
     def get_reflection_modifiers(self) -> Dict:
         if not self.stats or sum(self.stats.values()) == 0:
@@ -387,8 +389,14 @@ class TownHall:
         latency = getattr(host_stats, "latency", 0.0) if host_stats else 0.0
         almanac = LoreManifest.get_instance().get("ALMANAC") or {}
         forecasts = almanac.get("FORECASTS", {})
-        current_node = self.navigator.world_graph.get(self.navigator.current_node_id)
-        loc_name = current_node.name if current_node else "UNKNOWN"
+
+        loc_name = "UNKNOWN"
+        if self.navigator:
+            current_node = self.navigator.world_graph.get(
+                self.navigator.current_node_id
+            )
+            if current_node:
+                loc_name = current_node.name
         if latency > 3.0:
             status = "HIGH_LATENCY"
             advice = "System lag detected."

@@ -1,4 +1,4 @@
-""" bone_spores.py"""
+"""bone_spores.py"""
 
 import json
 import os
@@ -253,6 +253,9 @@ class MemoryCore:
                 nodes_to_remove.append(node)
         for n in nodes_to_remove:
             del self.graph[n]
+            for other_node in self.graph.values():
+                if n in other_node["edges"]:
+                    del other_node["edges"][n]
         return f"📉 HOMEOSTATIC SCALING: Decayed {total_decayed} synapses. Pruned {pruned_count} weak connections."
 
     def cannibalize(
@@ -274,7 +277,10 @@ class MemoryCore:
             base_score = edge_count + (100.0 / age)
             candidates.append((k, v, base_score))
         if not candidates:
-            return None, "CORTICAL LOCK: All available memories are currently protected."
+            return (
+                None,
+                "CORTICAL LOCK: All available memories are currently protected.",
+            )
         candidates.sort(key=lambda x: x[2])
         victim, data, score = candidates[0]
         mass = sum(data["edges"].values())
@@ -302,7 +308,9 @@ class MycelialNetwork:
         self.loader = loader if loader else LocalFileSporeLoader()
         self.session_id = f"session_{int(time.time())}"
         self.filename = f"{self.session_id}.json"
-        self.subconscious = SubconsciousStrata(filename=f"memories/subconscious_{self.session_id}.jsonl")
+        self.subconscious = SubconsciousStrata(
+            filename=f"memories/subconscious_{self.session_id}.jsonl"
+        )
         self.memory_core = MemoryCore(events, self.subconscious)
         self.lichen = BioLichen()
         self.parasite = BioParasite(self, LexiconService)
@@ -359,7 +367,9 @@ class MycelialNetwork:
                 echo_count += 1
         if echo_count > 0:
             physics["voltage"] = physics.get("voltage", 0.0) + total_voltage_boost
-            physics["narrative_drag"] = physics.get("narrative_drag", 0.0) + total_drag_penalty
+            physics["narrative_drag"] = (
+                physics.get("narrative_drag", 0.0) + total_drag_penalty
+            )
             if total_voltage_boost > 4.0:
                 return f"{Prisma.VIOLET}👻 ECHO: The past is heavy here. (Drag +{total_drag_penalty:.1f}){Prisma.RST}"
             elif total_voltage_boost > 0:
@@ -495,6 +505,7 @@ class MycelialNetwork:
     @staticmethod
     def _load_seeds():
         from bone_village import ParadoxSeed
+
         loaded_seeds = []
         try:
             raw_seeds = LoreManifest.get_instance().get("seeds") or []
@@ -686,7 +697,7 @@ class MycelialNetwork:
         ]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BONEAMANITA_15.7.1",
+            "genome": "BONEAMANITA_15.8.0",
             "session_id": self.session_id,
             "parent_id": self.session_id,
             "meta": {
@@ -853,8 +864,10 @@ class BioParasite:
                 self.spores_deployed = max(0, self.spores_deployed - 1)
             return False, None
         graph = self.mem.graph
-        heavy_candidates = [w for w in graph if w in self.lex.get("heavy")]
-        abstract_candidates = [w for w in graph if w in self.lex.get("abstract")]
+        heavy_candidates = [w for w in graph if w in (self.lex.get("heavy") or [])]
+        abstract_candidates = [
+            w for w in graph if w in (self.lex.get("abstract") or [])
+        ]
         if not heavy_candidates or not abstract_candidates:
             return False, None
         host = random.choice(heavy_candidates)
@@ -926,7 +939,9 @@ class BioLichen:
             source_str = f" via '{random.choice(light_words)}'" if light_words else ""
             msgs.append(f"{Prisma.GRN}PHOTOSYNTHESIS{source_str} (+{s}){Prisma.RST}")
         if sugar > 0:
-            heavy_words = [w for w in clean_words if w in LexiconService.get("heavy")]
+            heavy_words = [
+                w for w in clean_words if w in (LexiconService.get("heavy") or [])
+            ]
             if heavy_words:
                 h_word = random.choice(heavy_words)
                 LexiconService.teach(h_word, "photo", tick_count)
@@ -1040,6 +1055,7 @@ class LiteraryReproduction:
             "trauma_inheritance": child_trauma,
             "config_mutations": config_mutations,
             "inherited_enzymes": child_enzymes,
+            "lexicon_mutations": {},
         }
         return child_id, child_genome
 

@@ -102,7 +102,9 @@ class LoreManifest:
         if category:
             if category in self._cache:
                 del self._cache[category]
-            print(f"{Prisma.CYN}[LORE]: Flushed '{category}'.{Prisma.RST}")
+                print(f"{Prisma.CYN}[LORE]: Flushed '{category}'.{Prisma.RST}")
+            else:
+                print(f"{Prisma.GRY}[LORE]: Category '{category}' not in cache.{Prisma.RST}")
         else:
             self._cache = {}
             print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
@@ -227,6 +229,8 @@ class RealityStack:
         return self._stack[-1]
 
     def push_layer(self, layer: int, _context: Any = None) -> bool:
+        if layer == self.current_depth:
+            return True
         if layer == RealityLayer.DEBUG or layer == self.current_depth + 1:
             self._stack.append(layer)
             return True
@@ -408,10 +412,14 @@ class TelemetryService:
             self.write_errors = 0
         except IOError as e:
             self.write_errors += 1
-            keep_count = self.BUFFER_SIZE // 2
-            self.write_buffer = self.write_buffer[-keep_count:]
-            if self.write_errors % 10 == 0:
-                 print(f"{Prisma.RED}[TELEMETRY]: Write error ({self.write_errors}). Retrying later. {e}{Prisma.RST}")
+            if self.write_errors >= 5:
+                print(f"{Prisma.RED}[TELEMETRY]: Critical write failure threshold reached. Telemetry disabled. {e}{Prisma.RST}")
+                self.disabled = True
+                self.write_buffer.clear()
+            else:
+                keep_count = self.BUFFER_SIZE // 2
+                self.write_buffer = self.write_buffer[-keep_count:]
+                print(f"{Prisma.RED}[TELEMETRY]: Write error ({self.write_errors}). Retrying later. {e}{Prisma.RST}")
 
     def read_recent_history(self, limit=4) -> List[str]:
         if not os.path.exists(self.log_dir):

@@ -141,7 +141,9 @@ def render_dashboard(eng_ref):
             psi = phys_dict.get("psi", 0.0)
             chi = phys_dict.get("chi", 0.0)
             valence = phys_dict.get("valence", 0.0)
-            liminal = phys_dict.get("vector", {}).get("LAMBDA", 0.0)
+            liminal = (phys_dict.get("vector") or {}).get(
+                "LAMBDA", 0.0
+            )
             c3, c4, c5 = st.columns(3)
             c3.metric("Void (Ψ)", f"{psi:.2f}")
             c4.metric("Chaos (Χ)", f"{chi:.2f}")
@@ -153,8 +155,9 @@ def render_dashboard(eng_ref):
                 st.caption(
                     f"🩸 **CHEM:** ADR: {endo.adrenaline:.2f} | COR: {endo.cortisol:.2f} | OXY: {endo.oxytocin:.2f}"
                 )
-
-            if hasattr(eng_ref, "phys") and hasattr(eng_ref.phys, "theremin"):
+            if hasattr(eng_ref, "phys") and getattr(
+                eng_ref.phys, "theremin", None
+            ):
                 theremin = eng_ref.phys.theremin
                 if theremin.decoherence_buildup > 1.0 or theremin.is_stuck:
                     st.divider()
@@ -254,18 +257,14 @@ if prompt := st.chat_input("Broadcast Signal..."):
         try:
             packet = engine.process_turn(prompt)
         except Exception as e:
-            packet = {"ui": f"RUNTIME ERROR: {e}", "logs": ["CRITICAL FAILURE"]}
+            packet = {
+                "ui": f"The connection to the cortex frayed temporarily. (Error: {e}). Take a breath and try again.",
+                "logs": ["CRITICAL FAILURE"],
+            }
     logs = packet.get("logs", [])
     raw_response = packet.get("ui", "No signal.")
     clean_response = clean_engine_output(raw_response)
-    with st.chat_message("assistant"):
-        st.markdown(clean_response)
-        if logs:
-            with st.expander("SYSTEM INTERNALS"):
-                for log in logs:
-                    formatted = format_log_entry(log)
-                    if formatted:
-                        st.caption(formatted)
+
     st.session_state.history.append(
         {
             "role": "assistant",

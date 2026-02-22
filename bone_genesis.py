@@ -27,8 +27,9 @@ class BoneGenesis:
         embryo = BoneArchitect.awaken(embryo)
         mode_settings = config.get("mode_settings", {})
         suppressed = set(mode_settings.get("village_suppression", []))
+        boot_mode = config.get("boot_mode", "ADVENTURE")
         village_bundle = BoneGenesis._summon_village(
-            events, embryo, akashic, suppressed
+            events, embryo, akashic, suppressed, boot_mode
         )
         soul = NarrativeSelf(
             engine_ref=None,
@@ -69,9 +70,13 @@ class BoneGenesis:
 
     @staticmethod
     def _summon_village(
-            events, embryo, akashic, suppressed: Set[str]
+        events, embryo, akashic, suppressed: Set[str], boot_mode: str = "ADVENTURE"
     ) -> Dict[str, Any]:
-        gordon = GordonKnot(events=events) if "GORDON" not in suppressed else None
+        gordon = (
+            GordonKnot(events=events, mode=boot_mode)
+            if "GORDON" not in suppressed
+            else None
+        )
         navigator = TheCartographer(embryo.shimmer) if {"CARTOGRAPHER", "NAVIGATOR"}.isdisjoint(suppressed) else None
         tinkerer = TheTinkerer(gordon, events, akashic) if "TINKERER" not in suppressed else None
         bureau = TheBureau() if "BUREAU" not in suppressed else None

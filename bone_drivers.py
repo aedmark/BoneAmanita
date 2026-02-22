@@ -132,7 +132,7 @@ class EnneagramDriver:
         return getattr(physics, key, default)
 
     def _calculate_raw_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
-        p_vec = self._get_phys_attr(physics, "vector", {})
+        p_vec = self._get_phys_attr(physics, "vector", {}) or {}
         p_vol = self._get_phys_attr(physics, "voltage", 0.0)
         p_drag = self._get_phys_attr(physics, "narrative_drag", 0.0)
         p_coh = self._get_phys_attr(physics, "kappa", 0.0)
@@ -418,6 +418,8 @@ class BoneConsultant:
                 directives.append("MODE: GLACIER. Deep, slow, resonant.")
         if soul_snapshot:
             arch = soul_snapshot.get("archetype", "UNKNOWN")
-            muse = soul_snapshot.get("obsession", {}).get("title", "None")
+            muse = (soul_snapshot.get("obsession") or {}).get(
+                "title", "None"
+            )
             directives.append(f"NARRATIVE_LAYER: You are {arch}. MUSE: {muse}.")
         return "\n".join(directives)

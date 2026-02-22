@@ -111,14 +111,13 @@ class NeurotransmitterModulator:
             self.last_mood = current_mood
         voltage_heat = math.log1p(max(0.0, base_voltage - 5.0)) * 0.1
         chemical_delta = (c.dopamine * 0.4) - (c.adrenaline * 0.3) - (c.cortisol * 0.2)
+        base_temp = getattr(BrainConfig, "BASE_TEMP", 0.8)
+        base_top_p = getattr(BrainConfig, "BASE_TOP_P", 0.95)
         return {
             "temperature": round(
-                max(
-                    0.4, min(1.2, BrainConfig.BASE_TEMP + chemical_delta + voltage_heat)
-                ),
-                2,
+                max(0.4, min(1.2, base_temp + chemical_delta + voltage_heat)), 2
             ),
-            "top_p": BrainConfig.BASE_TOP_P,
+            "top_p": base_top_p,
             "frequency_penalty": (
                 0.4 if c.adrenaline > 0.5 else (0.5 if c.dopamine > 0.8 else 0.0)
             ),
@@ -243,11 +242,15 @@ class LLMInterface:
                     if response.status == 200:
                         return self._parse_response(response.read().decode("utf-8"))
             except urllib.error.HTTPError as e:
+                try:
+                    error_body = e.read().decode('utf-8')
+                except Exception:
+                    error_body = e.reason
                 if e.code in [401, 403]:
-                    raise AuthError(f"AUTHENTICATION FAILURE ({e.code})")
+                    raise AuthError(f"AUTHENTICATION FAILURE ({e.code}): {error_body}")
                 if e.code < 500 and e.code != 429:
-                    raise SynapseError(f"HTTP {e.code}: {e.reason}")
-                err = e
+                    raise SynapseError(f"HTTP {e.code}: {error_body}")
+                err = f"HTTP {e.code}: {error_body}"
             except (urllib.error.URLError, TimeoutError) as e:
                 err = e
             except Exception as e:
@@ -326,7 +329,7 @@ class LLMInterface:
                 return self.mock_generation(prompt, reason="SEVERED")
             if self.provider != "ollama":
                 fallback = self._local_fallback(prompt, params)
-                if "FALLBACK_DEAD" not in fallback:
+                if fallback is not None:
                     return fallback
         return self.mock_generation(prompt, reason="SILENCE")
 
@@ -352,7 +355,7 @@ class LLMInterface:
                 override_key="ollama"
             )
         except Exception:
-            return self.mock_generation(prompt, reason="FALLBACK_DEAD")
+            return None
 
     def mock_generation(self, prompt: str, reason: str = "SIMULATION") -> str:
         if self.dreamer:
@@ -666,8 +669,10 @@ class ResponseValidator:
     def validate(self, response: str, _state: Dict) -> Dict:
         extracted_meta_logs = []
         clean_text = response
-        think_start = clean_text.find("<think>")
-        if think_start != -1:
+        while True:
+            think_start = clean_text.find("<think>")
+            if think_start == -1:
+                break
             think_end = clean_text.find("</think>", think_start)
             if think_end != -1:
                 think_content = clean_text[think_start + 7 : think_end].strip()
@@ -676,37 +681,37 @@ class ResponseValidator:
                         extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
                 clean_text = clean_text[:think_start] + clean_text[think_end + 8 :]
             else:
-                # Handle unclosed think tags
                 think_content = clean_text[think_start + 7 :].strip()
                 for line in think_content.split("\n"):
                     if line.strip():
                         extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
                 clean_text = clean_text[:think_start]
+                break
+
         start_marker = "=== SYSTEM INTERNALS ==="
         end_marker = "=== END INTERNALS ==="
-        start_idx = clean_text.find(start_marker)
-        if start_idx != -1:
+        while True:
+            start_idx = clean_text.find(start_marker)
+            if start_idx == -1:
+                break
             end_idx = clean_text.find(end_marker, start_idx)
             if end_idx != -1:
                 meta_content = clean_text[
                     start_idx + len(start_marker) : end_idx
                 ].strip()
-                for extracted_line in meta_content.split("\n"):
-                    if extracted_line.strip():
-                        extracted_meta_logs.append(
-                            f"[THOUGHT]: {extracted_line.strip()}"
-                        )
+                for line in meta_content.split("\n"):
+                    if line.strip():
+                        extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
                 clean_text = (
                     clean_text[:start_idx] + clean_text[end_idx + len(end_marker) :]
                 )
             else:
                 meta_content = clean_text[start_idx + len(start_marker) :].strip()
-                for extracted_line in meta_content.split("\n"):
-                    if extracted_line.strip():
-                        extracted_meta_logs.append(
-                            f"[THOUGHT]: {extracted_line.strip()}"
-                        )
+                for line in meta_content.split("\n"):
+                    if line.strip():
+                        extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
                 clean_text = clean_text[:start_idx]
+                break
         for pattern, replacement in self.scrub_patterns:
             clean_text = pattern.sub(replacement, clean_text)
         clean_lines = []

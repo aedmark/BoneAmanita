@@ -34,7 +34,8 @@ class Item:
 
 
 class GordonKnot:
-    def __init__(self, events=None):
+    def __init__(self, events=None, mode="ADVENTURE"):
+        self.mode = mode.upper()
         self.blueprints = None
         self.events = events
         self.inventory: List[str] = []
@@ -59,9 +60,9 @@ class GordonKnot:
     def enforce_object_action_coupling(
         self, user_input: str, current_zone: str
     ) -> Optional[str]:
+        if self.mode in ["CREATIVE", "CONVERSATION", "TECHNICAL"]:
+            return None
         text = user_input.lower()
-
-        # 1. Location-bound objects (Dynamic from config)
         for action_obj_pair, required_loc in self.location_coupling.items():
             words = action_obj_pair.split()
             if all(re.search(rf'\b{w}\b', text) for w in words):
@@ -110,7 +111,17 @@ class GordonKnot:
         self.location_coupling = data.get("LOCATION_COUPLING", {})
         if "REFUSAL_MARKERS" in data:
             self.refusal_markers = set(data["REFUSAL_MARKERS"])
-        if "LOOT_TRIGGERS" in data:
+        if self.mode in ["CREATIVE", "CONVERSATION"]:
+            self.loot_triggers = [
+                "grasped the concept of",
+                "held onto",
+                "felt a",
+                "internalized the",
+                "embraced the",
+                "clung to the",
+                "remembered the",
+            ]
+        elif "LOOT_TRIGGERS" in data:
             self.loot_triggers = data["LOOT_TRIGGERS"]
         self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
         self.ITEM_REGISTRY = data.get("ITEM_REGISTRY", {})
@@ -274,12 +285,24 @@ class GordonKnot:
         archetype = dim_map.get(dom_dim, "void")
         prefixes = self.blueprints.get("PREFIXES", {}).get(archetype, ["Strange"])
         suffixes = self.blueprints.get("SUFFIXES", {}).get(archetype, ["of Mystery"])
-        base_cat = random.choice(["TOOL", "JUNK", "ARTIFACT"])
-        bases = self.blueprints.get("BASES", {}).get(base_cat, ["Object"])
+        if self.mode in ["CREATIVE", "CONVERSATION"]:
+            base_cat = "ABSTRACT"
+            bases = self.blueprints.get("BASES", {}).get(
+                base_cat, ["Feeling", "Sense", "Memory", "Idea", "Echo"]
+            )
+            prefixes = ["A Lingering", "A Sudden", "A Distant", "A Sharp", "A Quiet"]
+            suffixes = ["of Dread", "of Hope", "of Clarity", "of Chaos", "of Stillness"]
+        else:
+            base_cat = random.choice(["TOOL", "JUNK", "ARTIFACT"])
+            bases = self.blueprints.get("BASES", {}).get(base_cat, ["Object"])
         prefix = random.choice(prefixes)
         base = random.choice(bases)
         suffix = random.choice(suffixes)
-        full_name = f"{prefix} {base} {suffix}"
+        full_name = (
+            f"{prefix} {base} {suffix}"
+            if self.mode == "ADVENTURE"
+            else f"{prefix} {base} {suffix}"
+        )
         clean_id = full_name.upper().replace(" ", "_")
         item_data = {
             "description": f"A {base.lower()} manifesting {archetype} properties.",

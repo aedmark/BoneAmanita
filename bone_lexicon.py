@@ -57,7 +57,7 @@ class LexiconStore:
         self.hive_loaded = False
 
     def load_vocabulary(self):
-        data = LoreManifest.get_instance().get("LEXICON")
+        data = LoreManifest.get_instance().get("LEXICON") or {}
         self.SOLVENTS = set(data.get("solvents", []))
         self.ANTIGEN_REPLACEMENTS = data.get("antigen_replacements", {})
         for cat, words in data.items():
@@ -113,7 +113,6 @@ class LexiconStore:
             return combined - self.USER_FLAGGED_BIAS
         return combined
 
-    @lru_cache(maxsize=4096)
     def get_categories_for_word(self, word: str) -> Set[str]:
         w = word.lower()
         return self.REVERSE_INDEX.get(w, set()).copy()
@@ -450,10 +449,14 @@ class LexiconService:
 
     @classmethod
     def get_categories_for_word(cls, word: str) -> Set[str]:
+        if not cls._INITIALIZED:
+            cls.initialize()  # [SCHUR] Safety net
         return cls._STORE.get_categories_for_word(word)
 
     @classmethod
     def get_current_category(cls, word: str) -> Optional[str]:
+        if not cls._INITIALIZED:
+            cls.initialize()
         categories = cls._STORE.get_categories_for_word(word)
         if categories:
             return next(iter(categories))
@@ -469,6 +472,8 @@ class LexiconService:
 
     @classmethod
     def vectorize(cls, text: str) -> Dict[str, float]:
+        if not cls._INITIALIZED:
+            cls.initialize()
         return cls._ANALYZER.vectorize(text)
 
     @classmethod

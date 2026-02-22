@@ -146,7 +146,7 @@ class BoneConfig:
         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2},
     }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "15.7.1"
+    VERSION = "15.8.0"
     VERBOSE_LOGGING = True
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -389,14 +389,27 @@ class BoneConfig:
     @classmethod
     def load_preset(cls, preset_dict: Dict[str, Any]) -> List[str]:
         logs = []
-        for sector_name, sector_data in preset_dict.items():
-            if hasattr(cls, sector_name):
-                target_class = getattr(cls, sector_name)
-                for key, value in sector_data.items():
-                    if hasattr(target_class, key):
-                        old_val = getattr(target_class, key)
-                        setattr(target_class, key, value)
-                        logs.append(f"Tuned {sector_name}.{key}: {old_val} -> {value}")
+        for key, value in preset_dict.items():
+            if "." in key:
+                sector_name, param_name = key.split(".", 1)
+                if hasattr(cls, sector_name):
+                    target_class = getattr(cls, sector_name)
+                    if hasattr(target_class, param_name):
+                        old_val = getattr(target_class, param_name)
+                        setattr(target_class, param_name, value)
+                        logs.append(
+                            f"Tuned {sector_name}.{param_name}: {old_val} -> {value}"
+                        )
+            else:
+                sector_name = key
+                sector_data = value
+                if hasattr(cls, sector_name) and isinstance(sector_data, dict):
+                    target_class = getattr(cls, sector_name)
+                    for k, v in sector_data.items():
+                        if hasattr(target_class, k):
+                            old_val = getattr(target_class, k)
+                            setattr(target_class, k, v)
+                            logs.append(f"Tuned {sector_name}.{k}: {old_val} -> {v}")
         return logs
 
     @classmethod

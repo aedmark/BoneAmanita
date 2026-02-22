@@ -1,5 +1,55 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.8.0 "This One's For Beau"**
+
+#### **⚙️ STRUCTURAL INTEGRITY & CORE ENGINE (The Fuller Lens)**
+
+- **The Missing Gravity (`bone_machine.py`):**
+  - **Dynamics Restored:** Re-wired `ZoneInertia` into the Geodesic Engine's initialization sequence. The system now correctly applies gravitational narrative drag and orbit states.
+  - **Panic Room Hardening:** Corrected mismatched attributes (`V`, `F`) in the `PanicRoom` safe-state generator to use their true dataclass names (`voltage`, `narrative_drag`), preventing fatal secondary crashes during emergency failovers.
+- **The Dictionary Smash (`bone_cycle.py`):**
+  - **Sub-Dataclass Protection:** Hardened the `NavigationPhase` and `MachineryPhase` to recursively sync state changes, preventing raw dictionaries from crushing the `EnergyState`, `SpaceState`, and `MatterState` objects.
+  - **Invincible Audits:** Wrapped `PhaseExecutor._audit_flux` in an impenetrable `_safe_get` try/catch block. The cycle auditor can no longer crash the engine, even if the physics packet is completely mangled.
+- **Console Uplink (`bone_main.py` & `bone_commands.py`):**
+  - **Plugging it in:** Officially instantiated the `CommandProcessor` during Genesis. The `/help`, `/status`, `/map`, and `/save` commands are now fully operational.
+  - **Safe Division:** Added mathematical bounds to `/status` bar rendering, curing a fatal `ZeroDivisionError` when maximum health or stamina drops to zero.
+
+#### **🍄 THE SYMBIOTIC MATRIX (The Meadows Lens)**
+
+- **Reuniting the Organism (`bone_council.py` & `bone_symbiosis.py`):**
+  - **Symbiont Voices Restored:** Unplugged the mechanical ecological spores from the `CouncilChamber` and hot-wired the true `SymbiontVoice` personalities (`LICHEN`, `PARASITE`, `MYCORRHIZA`, `MYCELIUM`) directly into the arbitration phase. 
+  - **The Manager Speaks:** The `SymbiosisManager` now actively broadcasts diagnostic alerts (e.g., `FATIGUED`, `OVERBURDENED`, `LOOPING`) into the cycle logs when the host LLM struggles, warning the human of impending syntax collapse.
+
+#### **🗃️ INVENTORY & LEXICON (The Gordon & Pinker Lenses)**
+
+- **Mode-Aware Abstraction (`bone_inventory.py`):**
+  - **Conceptual Loot:** Taught `GordonKnot` to comprehend reality layers. In `CREATIVE` and `CONVERSATION` modes, Gordon bypasses physical object-action constraints and synthesizes `ABSTRACT` concepts (e.g., "A Lingering Sense of Dread") instead of physical tools.
+- **Curing the Amnesia (`bone_lexicon.py`):**
+  - **Stale Cache Removal:** Excised a fatal `@lru_cache` that was preventing the `LexiconStore` from recognizing newly learned vocabulary during runtime.
+  - **The Empty Lore Trap:** Added missing null-checks to `load_vocabulary()` and `initialize()`, preventing a total engine stall if `LEXICON` payloads are missing on boot.
+
+#### **⚖️ THE BUREAU & PROTOCOLS (The Schur Lens)**
+
+- **Restoring the Bureau's Sight (`bone_protocols.py`):**
+  - **Object Agnosticism:** Fixed dict/object extraction mismatches in `TheBureau.audit`, `TherapyProtocol`, and `KintsugiProtocol`. The Bureau can finally see (and tax) voltage spikes, and therapy handles missing trauma dictionaries gracefully.
+- **The Chronos Crash (`bone_protocols.py`):**
+  - **Checkpoint Safety:** Removed a hallucinated `gather_state` method call from `ChronosKeeper`. The system now correctly extracts the `zone` from the `QuantumObserver`, preventing fatal crashes when the user attempts to `/save` or shutdown.
+- **Dynamic Physics Tuning (`bone_config.py`):**
+  - **Dot-Notation Parser:** Upgraded `BoneConfig.load_preset()` to successfully parse flat dot-notation dictionaries. Reality presets like `ZEN_GARDEN` and `THUNDERDOME` now correctly mutate the core engine parameters.
+
+#### **👁️ THE GLASS TERMINAL (The Aesthetic Lens)**
+
+- **Spartan Adventure UI (`bone_gui.py`):**
+  - **Immersion First:** Suppressed deep VSL physics readouts (Entropy, Valence, Drag) by default in Adventure mode. The UI now renders a beautiful, spartan readout focused entirely on HP, Stamina, and Location.
+  - **The Visual Collision:** Added proper vertical spacing to the terminal projector, preventing the VSL Lattice strip and the Physics readouts from violently colliding on the same line.
+  - **Archetype Stutter Cure:** Fixed a string concatenation bug causing `THE THE OBSERVER` to render in the active role slot.
+
+#### **🎯 HOSTILE RED TEAMING (`bone_diag.py`)**
+
+- **The Hostile Cortex Suite:** Added aggressive new unittests to validate the `ResponseValidator` against infinite `<think>` tag hallucinations, remote server 500 crashes, and malformed 400 Bad Request API responses.
+
+---
+
 ### **BONEAMANITA v15.7.1 "THE IMMERSION PROTOCOL"**
 
 _“The terminal watches the browser. The brain thinks out loud. The friction of existence is no longer free.”_

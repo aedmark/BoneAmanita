@@ -114,10 +114,14 @@ class TheBureau:
     def audit(self, physics, bio_state, _context=None, origin="USER") -> Optional[Dict]:
         if bio_state.get("health", 100.0) < BoneConfig.BUREAU.MIN_HEALTH_TO_AUDIT:
             return None
-        vol = getattr(physics, "voltage", 0.0)
-        clean_words = getattr(physics, "clean_words", [])
-        raw_text = getattr(physics, "raw_text", "")
-        truth = getattr(physics, "truth_ratio", 0.0)
+
+        def _get(p, k, d=0.0):
+            return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
+
+        vol = _get(physics, "voltage", 0.0)
+        clean_words = _get(physics, "clean_words", [])
+        raw_text = _get(physics, "raw_text", "")
+        truth = _get(physics, "truth_ratio", 0.0)
         word_count = len(raw_text.split())
         if raw_text.startswith("/") or word_count < BoneConfig.BUREAU.MIN_WORD_COUNT:
             return None
@@ -139,7 +143,7 @@ class TheBureau:
             else:
                 selected_form = "Form 202-A"
                 tax = BoneConfig.BUREAU.TAX_STANDARD
-        chi = getattr(physics, "chi", getattr(physics, "entropy", 0.0))
+        chi = _get(physics, "chi", _get(physics, "entropy", 0.0))
         if not selected_form and chi > 0.6:
             selected_form = "Form 666: Unlicensed Chaos"
             evidence = ["Unlicensed Chaos (Χ > 0.6)", f"Level: {chi:.2f}"]
@@ -589,9 +593,17 @@ class ChronosKeeper:
         try:
             if not os.path.exists(self.SAVE_DIR):
                 os.makedirs(self.SAVE_DIR)
-            last_phys = getattr(self.eng.cortex, "last_physics", None) or {}
-            world_data = self.eng.cortex.gather_state(last_phys).get("world", {})
-            loc = world_data.get("orbit", ["Void"])[0]
+
+            loc = "Void"
+            if (
+                hasattr(self.eng, "phys")
+                and hasattr(self.eng.phys, "observer")
+                and getattr(self.eng.phys.observer, "last_physics_packet", None)
+            ):
+                loc = getattr(
+                    self.eng.phys.observer.last_physics_packet, "zone", "Void"
+                )
+
             last_speech = "Silence."
             if self.eng.cortex.dialogue_buffer:
                 last_speech = self.eng.cortex.dialogue_buffer[-1]
@@ -653,10 +665,17 @@ class ChronosKeeper:
     def perform_shutdown(self):
         print(f"{Prisma.GRY}...System Halt...{Prisma.RST}")
         self.eng.events.publish("SYSTEM_HALT", {"tick": self.eng.tick_count})
-        last_phys = getattr(self.eng.cortex, "last_physics", {})
-        world_data = self.eng.cortex.gather_state(last_phys).get("world", {})
+
+        loc = "Void"
+        if (
+            hasattr(self.eng, "phys")
+            and hasattr(self.eng.phys, "observer")
+            and getattr(self.eng.phys.observer, "last_physics_packet", None)
+        ):
+            loc = getattr(self.eng.phys.observer.last_physics_packet, "zone", "Void")
+
         continuity_packet = {
-            "location": world_data.get("orbit", ["Void"])[0],
+            "location": loc,
             "last_output": (
                 self.eng.cortex.dialogue_buffer[-1]
                 if self.eng.cortex.dialogue_buffer

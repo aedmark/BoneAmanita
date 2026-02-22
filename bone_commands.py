@@ -1,8 +1,7 @@
 import shlex
 from typing import Dict, Callable, List, Optional
 from bone_core import LoreManifest, Prisma
-from bone_config import BonePresets
-
+from bone_config import BonePresets, BoneConfig
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
@@ -60,10 +59,8 @@ class CommandStateInterface:
             "inventory": inv,
         }
         atlas_data = None
-        if hasattr(self.eng, "town_hall") and hasattr(
-                self.eng.town_hall, "Cartographer"
-        ):
-            atlas_data = self.eng.town_hall.Cartographer.export_atlas()
+        if hasattr(self.eng, "navigator") and self.eng.navigator:
+            atlas_data = self.eng.navigator.export_atlas()
         mito_traits = {}
         antibodies = None
         if hasattr(self.eng, "bio"):
@@ -104,14 +101,12 @@ class CommandStateInterface:
         return []
 
     def get_navigation_report(self) -> str:
-        if not hasattr(self.eng, "town_hall") or not hasattr(self.eng, "phys"):
+        if not hasattr(self.eng, "navigator") or not hasattr(self.eng, "phys"):
             return "Navigation Offline."
-        nav = getattr(self.eng.town_hall, "Navigator", None)
-        packet = (
-            self.eng.phys.tension.last_physics_packet
-            if hasattr(self.eng.phys, "tension")
-            else None
-        )
+        nav = self.eng.navigator
+        packet = None
+        if hasattr(self.eng.phys, "observer"):
+            packet = getattr(self.eng.phys.observer, "last_physics_packet", None)
 
         if nav and packet:
             return nav.report_position(packet)
@@ -183,7 +178,7 @@ class CommandProcessor:
         config_ref=None,
         _cartographer_ref=None,
     ):
-        real_config = config_ref if config_ref else getattr(engine, "config", None)
+        real_config = config_ref if config_ref else BoneConfig
         self.interface = CommandStateInterface(engine, prisma_ref, real_config)
         self.tax = ResourceTax(self.interface)
         self.registry = CommandRegistry(self.interface)
@@ -245,7 +240,7 @@ class CommandProcessor:
 
     def _cmd_help(self, _parts):
         lines = [
-            f"\n{self.P.CYN}/// BONEAMANITA 15.7.1 TERMINAL ///{self.P.RST}",
+            f"\n{self.P.CYN}/// BONEAMANITA 15.8.0 TERMINAL ///{self.P.RST}",
             f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n",
         ]
         structure = {
@@ -275,7 +270,8 @@ class CommandProcessor:
         v = self.interface.get_vitals()
 
         def bar(curr, max_v, col):
-            filled = int((curr / max_v) * 10)
+            max_v = max(1.0, max_v)
+            filled = int(max(0.0, min(1.0, curr / max_v)) * 10)
             return f"{col}{'█'*filled}{'░'*(10-filled)}{self.P.RST}"
 
         self.interface.log(

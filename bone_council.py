@@ -1,6 +1,7 @@
 import random
 from typing import Dict, Any
 from bone_core import LoreManifest
+from bone_symbiosis import get_symbiont
 from bone_types import Prisma
 from bone_config import BoneConfig
 
@@ -133,27 +134,31 @@ class TheFootnote:
 
 
 class TheVillageCouncil:
-    """The 12 Voices of the VSL-CryoSomatic Hypervisor"""
 
     @staticmethod
     def audit(p: Any, _bio_state: dict) -> list[str]:
         logs = []
-        V = getattr(p, "V", 30.0)
-        F = getattr(p, "F", 0.6)
-        P = getattr(p, "P", 100.0)
-        T = getattr(p, "T", 0.0)
-        beta = getattr(p, "beta", 0.4)
-        S = getattr(p, "S", 0.3)
-        D = getattr(p, "D", 0.3)
-        C = getattr(p, "C", 0.2)
-        psi = getattr(p, "psi", 0.2)
-        chi = getattr(p, "chi", 0.2)
-        valence = getattr(p, "valence", 0.0)
-        lam = (
-            getattr(p, "vector", {}).get("LAMBDA", 0.0)
-            if hasattr(p, "vector") and p.vector
-            else 0.0
-        )
+        is_dict = isinstance(p, dict)
+
+        def get_val(key, attr, default):
+            if is_dict:
+                return p.get(key, p.get(attr, default))
+            return getattr(p, attr, getattr(p, key, default))
+
+        V = get_val("voltage", "V", 30.0)
+        F = get_val("narrative_drag", "F", 0.6)
+        P = get_val("stamina", "P", 100.0)
+        T = get_val("trauma", "T", 0.0)
+        beta = get_val("beta_index", "beta", 0.4)
+        S = get_val("S", "S", 0.3)
+        D = get_val("D", "D", 0.3)
+        C = get_val("C", "C", 0.2)
+        psi = get_val("psi", "psi", 0.2)
+        chi = get_val("chi", "chi", 0.2)
+        valence = get_val("valence", "valence", 0.0)
+
+        vec = p.get("vector", {}) if is_dict else getattr(p, "vector", {})
+        lam = vec.get("LAMBDA", 0.0) if vec else 0.0
 
         if V < 20 and F > 5.0:
             logs.append(
@@ -211,13 +216,11 @@ class CouncilChamber:
         self.leverage = TheLeveragePoint()
         self.village = TheVillageCouncil()
         self.footnote = TheFootnote()
-        if hasattr(self.eng, "bio"):
-            if getattr(self.eng.bio, "lichen", None):
-                self.voices.append(self.eng.bio.lichen)
-            if getattr(self.eng.bio, "parasite", None):
-                self.voices.append(self.eng.bio.parasite)
-            if getattr(self.eng.bio, "immune", None):
-                self.voices.append(self.eng.bio.immune)
+
+        # [FULLER] Wire in the actual Symbiont Voices from the new matrix!
+        for s_name in ["LICHEN", "PARASITE", "MYCORRHIZA", "MYCELIUM"]:
+            self.voices.append(get_symbiont(s_name))
+
         self.speaker = "SOUL"
 
     def convene(
@@ -239,6 +242,11 @@ class CouncilChamber:
                 adjustments.update(lp_corr)
             if lp_man:
                 mandates.append(lp_man)
+
+        village_logs = self.village.audit(physics_packet, _bio_result)
+        for vlog in village_logs:
+            transcript.append(self.footnote.commentary(vlog))
+
         votes = {"YEA": 0, "NAY": 0}
         active_voices = [v for v in self.voices if v is not None]
         if not active_voices:

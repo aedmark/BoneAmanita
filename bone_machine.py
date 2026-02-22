@@ -7,7 +7,7 @@ from bone_brain import DreamEngine, ShimmerState
 from bone_config import BoneConfig
 from bone_core import LoreManifest
 from bone_lexicon import LexiconService
-from bone_physics import TheGatekeeper, QuantumObserver, SurfaceTension
+from bone_physics import TheGatekeeper, QuantumObserver, SurfaceTension, ZoneInertia
 from bone_protocols import LimboLayer
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_types import MindSystem, PhysSystem, PhysicsPacket, Prisma
@@ -310,13 +310,15 @@ class PanicRoom:
     @staticmethod
     def get_safe_physics():
         safe_packet = PhysicsPacket.void_state()
-        safe_packet.V = 0.0
-        safe_packet.F = 0.0
-        safe_packet.E = 0.0
-        safe_packet.beta = 0.0
-        safe_packet.S = 0.0
-        safe_packet.D = 0.0
-        safe_packet.C = 0.0
+        safe_packet.voltage = 0.0
+        safe_packet.narrative_drag = 0.0
+        safe_packet.exhaustion = 0.0
+        safe_packet.beta_index = 0.0
+        safe_packet.psi = 0.0
+        safe_packet.chi = 0.0
+        safe_packet.entropy = 0.0
+        safe_packet.valence = 0.0
+        safe_packet.kappa = 0.0
         safe_packet.psi = 0.0
         safe_packet.chi = 0.0
         safe_packet.entropy = 0.0
@@ -468,7 +470,7 @@ class BoneArchitect:
             nav=TheCartographer(bio.shimmer),
             gate=gate,
             tension=SurfaceTension(),
-            dynamics=None,
+            dynamics=ZoneInertia(),  # [FULLER] Gravity restored!
         )
 
     @staticmethod
