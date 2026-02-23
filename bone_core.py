@@ -1,7 +1,12 @@
-import json, os, time, random, glob, traceback
+import glob
+import json
+import os
+import random
+import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Counter, Tuple, Deque
+
 from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
 
 
@@ -393,16 +398,16 @@ class TelemetryService:
         if self.active_crystal:
             self.log_crystal(self.active_crystal)
             self.active_crystal = None
-        self._flush_to_disk()
+        self.flush_to_disk()
 
     def _buffer_line(self, json_str: str):
         if self.disabled:
             return
         self.write_buffer.append(json_str)
         if len(self.write_buffer) >= self.BUFFER_SIZE:
-            self._flush_to_disk()
+            self.flush_to_disk()
 
-    def _flush_to_disk(self):
+    def flush_to_disk(self):
         if self.disabled or not self.current_trace_file or not self.write_buffer:
             return
         try:
@@ -481,7 +486,7 @@ class TelemetryService:
             return None
 
     def generate_session_summary(self, _uptime: float = 0.0) -> str:
-        self._flush_to_disk()
+        self.flush_to_disk()
         count = len(self.trace_buffer)
         status = "DISABLED" if self.disabled else "ACTIVE"
         return (
