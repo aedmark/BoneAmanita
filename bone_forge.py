@@ -52,7 +52,7 @@ def generate_vsl_dataset(
     # This is ONLY written to the JSONL for Unsloth to use later.
     # It does NOT change how BoneAmanita behaves right now.
     system_instruction = (
-        "[VSL-DEEP]"
+        "[VSL-LITE]"
     )
 
     success_count = 0
