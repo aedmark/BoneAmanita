@@ -216,11 +216,10 @@ class CouncilChamber:
         self.leverage = TheLeveragePoint()
         self.village = TheVillageCouncil()
         self.footnote = TheFootnote()
+        self.slash_council = TheSlashCouncil()
 
-        # [FULLER] Wire in the actual Symbiont Voices from the new matrix!
         for s_name in ["LICHEN", "PARASITE", "MYCORRHIZA", "MYCELIUM"]:
             self.voices.append(get_symbiont(s_name))
-
         self.speaker = "SOUL"
 
     def convene(
@@ -242,6 +241,15 @@ class CouncilChamber:
                 adjustments.update(lp_corr)
             if lp_man:
                 mandates.append(lp_man)
+
+        slash_hit, slash_logs, slash_corr = self.slash_council.audit(
+            text, physics_packet
+        )
+        if slash_hit:
+            for slog in slash_logs:
+                transcript.append(self.footnote.commentary(slog))
+            adjustments.update(slash_corr)
+            adjustments["stamina_cost"] = 10.0
 
         village_logs = self.village.audit(physics_packet, _bio_result)
         for vlog in village_logs:
@@ -297,3 +305,72 @@ class CouncilChamber:
                 f"{Prisma.RED}[CRITIC]: Systemic Blindness Risk. Future Liability: {future_cost} ATP.{Prisma.RST}"
             )
         return dissent_log
+
+
+class TheSlashCouncil:
+    def __init__(self):
+        self.active = False
+        self.triggers = ["[MOD:CODING]", "[SLASH]", "review this code", "refactor"]
+        self.code_keywords = [
+            "def ",
+            "class ",
+            "return ",
+            "import ",
+            "=>",
+            "function",
+            "struct ",
+        ]
+
+    def audit(self, text: str, physics: dict) -> tuple[bool, list[str], dict]:
+        text_lower = text.lower()
+
+        if any(t in text_lower for t in self.triggers):
+            self.active = True
+
+        is_coding = self.active or any(k in text_lower for k in self.code_keywords)
+        if not is_coding:
+            return False, [], {}
+
+        logs = []
+        corrections = {}
+
+        if "var " in text or "x =" in text or "data =" in text:
+            logs.append(
+                f"{Prisma.CYN}👓 PINKER: 'The nomenclature is opaque. Avoid cognitive grunts like 'x' or 'data'. '{Prisma.RST}"
+            )
+            corrections["gamma"] = -0.2
+        else:
+            corrections["gamma"] = 0.1
+
+        if "import " in text or "class " in text:
+            logs.append(
+                f"{Prisma.BLU}🌍 FULLER: 'A new strut in the tensegrity. Ensure ephemeralization—do more with less.'{Prisma.RST}"
+            )
+            corrections["sigma"] = 0.1
+
+        if "Exception" in text or "try:" in text or "catch" in text:
+            logs.append(
+                f"{Prisma.GRN}😊 SCHUR: 'Good catch on the error. Putting a bench here for the tired hikers. (+1 Glimmer)'{Prisma.RST}"
+            )
+            corrections["eta"] = 0.2
+            corrections["glimmers"] = 1
+
+        if (
+            "while " in text
+            or "for " in text
+            or "queue" in text_lower
+            or "recursion" in text_lower
+        ):
+            logs.append(
+                f"{Prisma.OCHRE}🛁 MEADOWS: 'A reinforcing loop detected. Does this stock have a balancing outflow or timeout?'{Prisma.RST}"
+            )
+            corrections["theta"] = -0.1
+
+        drag = physics.get("narrative_drag", 0.0)
+        if drag > 5.0:
+            corrections["upsilon"] = -0.3
+            logs.append(
+                f"{Prisma.RED}📉 [SLASH]: System integrity dropping due to semantic drag. Refactoring recommended.{Prisma.RST}"
+            )
+
+        return True, logs, corrections

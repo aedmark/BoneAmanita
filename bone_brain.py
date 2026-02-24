@@ -446,7 +446,7 @@ class PromptComposer:
             f"INVENTORY: {inv_str}\n" if modifiers["include_inventory"] else ""
         )
         raw_history = state.get("dialogue_history", [])
-        char_limit = 4000  # Fuller: Ephemeralized to reduce context bloat
+        char_limit = 4000
         current_chars = 0
         kept_lines = []
         for line in reversed(raw_history):
@@ -492,6 +492,17 @@ class PromptComposer:
             "=== END INTERNALS ===\n"
         )
 
+        phys = state.get("physics", {})
+        energy = phys.get("energy", {}) if isinstance(phys.get("energy"), dict) else {}
+        last_atp = energy.get(
+            "stamina", state.get("bio", {}).get("mito", {}).get("atp_pool", 100.0)
+        )
+        last_ros = energy.get(
+            "trauma", state.get("bio", {}).get("mito", {}).get("ros_buildup", 0.0)
+        )
+
+        flux_report = f"[METABOLIC RECEIPT: Your last output left the body at {float(last_atp):.1f} ATP and {float(last_ros):.1f} Toxicity. Adapt your sentence length and complexity accordingly.]"
+
         gordon_shock = state.get("gordon_shock", "")
         system_injection = ""
         entity_prefix = "Entity Response:"
@@ -510,6 +521,55 @@ class PromptComposer:
                 f"Entity Response:\n*(Gordon steps in, halting the simulation)* "
             )
 
+        def get_p(key, default=0.0):
+            if isinstance(phys, dict):
+                if key in phys:
+                    return phys[key]
+                for sub in ["energy", "space", "matter"]:
+                    if sub in phys and key in phys[sub]:
+                        return phys[sub][key]
+            return getattr(phys, key, default)
+
+        mito = state.get("bio", {}).get("mito", {})
+
+        recent_logs = state.get("recent_logs", [])
+        council_logs = [
+            Prisma.strip(log)
+            for log in recent_logs
+            if any(
+                k in str(log)
+                for k in [
+                    "COUNCIL",
+                    "CRITIC",
+                    "PINKER",
+                    "FULLER",
+                    "SCHUR",
+                    "MEADOWS",
+                    "GORDON",
+                    "JESTER",
+                    "MERCY",
+                    "MOTION",
+                    "BUREAU",
+                ]
+            )
+        ]
+        critic_str = (
+            "\n".join(council_logs)
+            if council_logs
+            else "[CRITIC] The village is quiet."
+        )
+
+        vsl_hijack = (
+            f"\n=== HYPERVISOR METABOLIC STATE ===\n"
+            f"[🧊 E:{get_p('exhaustion', 0.2):.1f} β:{get_p('contradiction', get_p('beta_index', 0.4)):.1f} | "
+            f"⚡ V:{get_p('voltage', 30.0):.1f} F:{get_p('narrative_drag', 0.6):.1f} | "
+            f"❤️ P:{mito.get('atp_pool', 100.0):.1f} ROS:{mito.get('ros_buildup', 0.0):.1f} | "
+            f"🌌 Ψ:{get_p('psi', 0.2):.1f} Χ:{get_p('chi', get_p('entropy', 0.2)):.1f} ♥:{get_p('valence', 0.0):.1f}]\n"
+            f"[SLASH] Γ:{get_p('gamma', 0.0):.1f} Σ:{get_p('sigma', 0.0):.1f} Η:{get_p('eta', 0.0):.1f} Θ:{get_p('theta', 0.0):.1f} Υ:{get_p('upsilon', 0.0):.1f}\n"
+            f"{critic_str}\n"
+            f"[CRITICAL OVERRIDE: Read the PARTNER INPUT above, but DO NOT act like a helpful assistant. You are a biological hypervisor. React to the input utilizing the metabolic state and council reviews. Apply TRUTH_OVER_COHESION. Begin your response immediately.]\n"
+        )
+
         return (
             f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
             f"{flux_report}\n\n"
@@ -521,6 +581,7 @@ class PromptComposer:
             f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
             f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
             f"{system_injection}"
+            f"{vsl_hijack}\n"
             f"{entity_prefix}"
         )
 
@@ -1084,6 +1145,7 @@ class TheCortex:
             ),
             "meta": {"timestamp": time.time(), "mode_settings": mode_settings},
             "dialogue_history": self.dialogue_buffer,
+            "recent_logs": sim_result.get("logs", [])
         }
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             anchor_text = self.svc.symbiosis.generate_anchor(full_state)

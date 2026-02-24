@@ -2,7 +2,12 @@ import traceback, random, time, uuid
 from typing import Dict, Any, List
 from bone_core import ArchetypeArbiter, LoreManifest
 from bone_types import Prisma, CycleContext
-from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, CycleStabilizer
+from bone_physics import (
+    TheGatekeeper,
+    apply_somatic_feedback,
+    TRIGRAM_MAP,
+    CycleStabilizer,
+)
 from bone_gui import SoulDashboard, CycleReporter
 from bone_machine import PanicRoom
 from bone_body import SynestheticCortex
@@ -18,6 +23,7 @@ class SimulationPhase:
 
     def run(self, ctx: CycleContext) -> CycleContext:
         raise NotImplementedError
+
 
 class ObservationPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -80,7 +86,11 @@ class SanctuaryPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         in_safe_zone, distance = self.governor.assess(ctx.physics)
-        trauma_sum = sum(self.eng.trauma_accum.values()) if getattr(self.eng, "trauma_accum", None) else 0.0
+        trauma_sum = (
+            sum(self.eng.trauma_accum.values())
+            if getattr(self.eng, "trauma_accum", None)
+            else 0.0
+        )
         if in_safe_zone and trauma_sum < 25.0:
             self._enter_sanctuary(ctx)
             self._apply_restoration(ctx)
@@ -281,12 +291,12 @@ class MetabolismPhase(SimulationPhase):
             return ctx
         mode_settings = getattr(self.eng, "mode_settings", {})
         if not mode_settings.get("atp_drain_enabled", True):
-            atp_level = self.eng.bio.mito.state.atp_pool if self.eng.bio and self.eng.bio.mito else 100.0
-            ctx.bio_result = {
-                "is_alive": True,
-                "logs": [],
-                "atp": atp_level
-            }
+            atp_level = (
+                self.eng.bio.mito.state.atp_pool
+                if self.eng.bio and self.eng.bio.mito
+                else 100.0
+            )
+            ctx.bio_result = {"is_alive": True, "logs": [], "atp": atp_level}
             ctx.is_alive = True
             self._apply_healing(ctx)
             return ctx
@@ -534,7 +544,7 @@ class NavigationPhase(SimulationPhase):
             drag_pen, stabilized_zone
         )
         if adjusted_drag != drag_pen:
-            physics.narrative_drag -= (drag_pen - adjusted_drag)
+            physics.narrative_drag -= drag_pen - adjusted_drag
         ctx.world_state["orbit"] = orbit_state
         return ctx
 
@@ -696,8 +706,12 @@ class IntrusionPhase(SimulationPhase):
             ctx.log(p_msg)
             ctx.physics.psi = min(1.0, current_psi + 0.1)
             if self.eng.bio and self.eng.bio.biometrics:
-                self.eng.bio.biometrics.stamina = max(0.0, self.eng.bio.biometrics.stamina - 5.0)
-                ctx.log(f"{Prisma.GRY}   (The hallucination drains 5.0 Stamina){Prisma.RST}")
+                self.eng.bio.biometrics.stamina = max(
+                    0.0, self.eng.bio.biometrics.stamina - 5.0
+                )
+                ctx.log(
+                    f"{Prisma.GRY}   (The hallucination drains 5.0 Stamina){Prisma.RST}"
+                )
         return ctx
 
 
@@ -947,7 +961,9 @@ class CognitionPhase(SimulationPhase):
                 ctx.log(f"{prefix} {bury_msg}")
             if new_wells:
                 ctx.log(f"{Prisma.CYN}🌌 GRAVITY WELL FORMED: {new_wells}{Prisma.RST}")
+
         inventory_data = self.eng.gordon.inventory if self.eng.gordon else []
+
         ctx.mind_state = self.eng.noetic.think(
             physics_packet=ctx.physics.to_dict(),
             _bio=ctx.bio_result,
@@ -956,6 +972,7 @@ class CognitionPhase(SimulationPhase):
             _tick_count=self.eng.tick_count,
             soul_ref=self.eng.soul,
         )
+
         thought = ctx.mind_state.get("context_msg", ctx.mind_state.get("thought"))
         if thought:
             ctx.log(thought)
@@ -1009,20 +1026,22 @@ class StabilizationPhase(SimulationPhase):
         self.stabilizer.stabilize(ctx, self.name)
         return ctx
 
+
 class PhaseExecutor:
     def execute_phases(self, simulator, ctx):
         for phase in simulator.pipeline:
-            phase_name = phase.name
-            if not simulator.check_circuit_breaker(phase_name):
+            if getattr(ctx, "refusal_triggered", False):
+                break
+            if not simulator.check_circuit_breaker(phase.name):
                 continue
             snapshot_before = ctx.physics.snapshot()
             try:
                 phase.run(ctx)
             except Exception as e:
-                simulator.handle_phase_crash(ctx, phase_name, e)
-                self._audit_flux(ctx, phase_name, snapshot_before, ctx.physics)
+                simulator.handle_phase_crash(ctx, phase.name, e)
+                self._audit_flux(ctx, phase.name, snapshot_before, ctx.physics)
                 break
-            self._audit_flux(ctx, phase_name, snapshot_before, ctx.physics)
+            self._audit_flux(ctx, phase.name, snapshot_before, ctx.physics)
         return ctx
 
     @staticmethod
@@ -1034,6 +1053,7 @@ class PhaseExecutor:
                 return getattr(obj, key, 0.0)
             except Exception:
                 return 0.0
+
         b_v = _safe_get(before, "voltage")
         a_v = _safe_get(after, "voltage")
         b_d = _safe_get(before, "narrative_drag")
@@ -1154,6 +1174,12 @@ class GeodesicOrchestrator:
             if hasattr(ctx, "crash_error"):
                 return self._generate_crash_report(ctx.crash_error)
             return self.eng.trigger_death(ctx.physics)
+
+        if getattr(ctx, "refusal_triggered", False) and getattr(
+            ctx, "refusal_packet", None
+        ):
+            return ctx.refusal_packet
+
         snapshot = self.reporter.render_snapshot(ctx)
         self._hydrate_snapshot_metadata(snapshot, ctx)
         latency = time.time() - ctx.timestamp
@@ -1169,6 +1195,12 @@ class GeodesicOrchestrator:
             if hasattr(ctx, "crash_error"):
                 return self._generate_crash_report(ctx.crash_error)
             return self.eng.trigger_death(ctx.physics)
+
+        if getattr(ctx, "refusal_triggered", False) and getattr(
+            ctx, "refusal_packet", None
+        ):
+            return ctx.refusal_packet
+
         snapshot = {"type": "HEADLESS", "logs": ctx.logs}
         self._hydrate_snapshot_metadata(snapshot, ctx)
         self.symbiosis.monitor_host(latency, "HEADLESS_MODE", len(user_message))

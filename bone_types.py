@@ -98,6 +98,13 @@ class EnergyState:
     chi: float = 0.2  # (Χ) Entropy / Chaos
     valence: float = 0.0  # (♥) Emotional polarity
 
+    # --- VSL Extended (SLASH Mod) ---
+    gamma: float = 0.0  # (Γ) Clarity Index
+    sigma: float = 0.0  # (Σ) Synergy Score
+    eta: float = 0.0  # (Η) Humanity Quotient
+    theta: float = 0.0  # (Θ) Resilience (Feedback loops)
+    upsilon: float = 0.0  # (Υ) Integrity
+
     # --- Extended/Legacy Substrate ---
     entropy: float = 0.2  # Legacy map to chi
     mass: float = 0.0
