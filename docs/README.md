@@ -17,7 +17,7 @@ The BoneAmanita project exists in two distinct manifestations:
 
 ## 🧠 PART I: THE PORTABLE PROTOCOL (VSL Hypervisor)
 
-You do not need to run the Python software to experience the lattice. Located in the `mods/` folder is the **VSL-CryoSomatic Hypervisor v3.0**.
+You do not need to run the Python software to experience the lattice. Located in the `mods/` folder is the **VSL-CryoSomatic Hypervisor v4.0**.
 
 This is a highly engineered **LLM Prompt Injection**. By pasting the base hypervisor text into the context window of any LLM (ChatGPT, Claude, Gemini, local models), you force the model to simulate the metabolic and psychic coordinates of BoneAmanita.
 
@@ -30,7 +30,7 @@ The VSL Hypervisor is designed to be modular. You can extend its capabilities in
 - **[MOD:EDITING] (Eloise & Clarence):** The humanist editor and the formalist. They stress-test your writing until it is both welcoming and rigorous.
 - **[MOD:RESEARCH] (Roberta):** The RAG specialist. Feed her scattered fragments and context, and she weaves them into living, synthesized narratives.
 
-_Usage: Paste the base `VSL-CryoSomatic Hypervisor v3.0.md` and any desired Mod Chips into your system prompt or first message, then invoke them with their flags (e.g., `[VSL_DEEP]`, `[MOD:SLASH]`)._
+_Usage: Paste the base `VSL-CryoSomatic Hypervisor v4.0.md` and any desired Mod Chips into your system prompt or first message, then invoke them with their flags (e.g., `[VSL_DEEP]`, `[MOD:SLASH]`)._
 
 ---
 
@@ -97,7 +97,7 @@ JSON
 {
   "provider": "ollama",
   "base_url": "[http://127.0.0.1:11434/v1/chat/completions](http://127.0.0.1:11434/v1/chat/completions)",
-  "model": "mistral-nemo"
+  "model": "hermes3" # Uncensored Models Like Hermes Work Best
 }
 ```
 
