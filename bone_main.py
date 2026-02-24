@@ -354,12 +354,42 @@ class BoneAmanita:
         self.host_stats.efficiency_index = min(1.0, (novelty * 10.0) / burn_proxy)
         self.host_stats.latency = self.observer.last_cycle_duration
 
-    def process_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
+    def process_turn(
+        self, user_message: str, is_system: bool = False
+    ) -> Dict[str, Any]:
         turn_start = self.observer.clock_in()
         self.observer.user_turns += 1
         self.tick_count += 1
+
         if user_message.strip().startswith(("/", "//")):
             return self._phase_check_commands(user_message) or self.get_metrics()
+
+        if not is_system and self.gordon:
+            self.gordon.mode = (
+                "ADVENTURE"
+            )
+            current_zone = "Unknown"
+            if hasattr(self, "cortex") and hasattr(self.cortex, "last_physics"):
+                current_zone = (
+                    self.cortex.gather_state(self.cortex.last_physics or {})
+                    .get("world", {})
+                    .get("orbit", ["Unknown"])[0]
+                )
+
+            violation_msg = self.gordon.enforce_object_action_coupling(
+                user_message, current_zone
+            )
+            if violation_msg:
+                self.events.log(
+                    "Gordon intercepted a premise violation. Shocking the Cortex.",
+                    "SYS",
+                )
+                if hasattr(self, "cortex"):
+                    self.cortex.ballast_active = True
+                    self.cortex.gordon_shock = (
+                        violation_msg
+                    )
+
         rules = self.reality_stack.get_grammar_rules()
         if not rules["allow_narrative"]:
             return {
@@ -608,18 +638,6 @@ class BoneAmanita:
                 f"End your response by softly asking what they would like to do, or observing them in the space."
             )
         cold_result = self.process_turn(boot_prompt, is_system=True)
-        if self.boot_mode != "ADVENTURE":
-            vsl_instructions = (
-                "\n\n---\n"
-                "**[VSL]**: Welcome. You're talking to a living lattice.\n\n"
-                "To start, just talk to me normally. But if you want to climb deeper:\n\n"
-                "- Type `[VSL_LITE]` to see a simple energy meter.\n"
-                "- Type `[VSL_CORE]` to see the core coordinates.\n"
-                "- Type `[VSL_DEEP]` for the full lattice (including PSI, ENTROPY, and VALENCE).\n\n"
-                'Or jump right into the deep end and say: "The void is leaking."'
-            )
-            if "ui" in cold_result:
-                cold_result["ui"] += vsl_instructions
         return cold_result
 
     def save_checkpoint(self, history: list = None) -> str:

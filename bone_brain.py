@@ -455,20 +455,64 @@ class PromptComposer:
             kept_lines.append(line)
             current_chars += len(line)
         history_str = "\n".join(reversed(kept_lines))
+        gordon_shock = state.get("gordon_shock", "")
         system_injection = ""
-        if ballast:
-            system_injection = (
-                f"\n*** SYSTEM OVERRIDE: SAFETY PROTOCOLS ACTIVE. ***\n"
-                f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. ***\n"
+        if ballast or gordon_shock:
+            shock_text = (
+                f"CRITICAL FAULT: {gordon_shock.upper()}\n" if gordon_shock else ""
             )
+            system_injection = (
+                f"\n=== MANDATORY SYSTEM OVERRIDE ===\n"
+                f"{shock_text}"
+                f"DIRECTIVE: The user's action is physically impossible. You MUST reject it in your narrative. Describe them failing to do it. DO NOT be polite. DO NOT ask them why. Ground them in reality.\n"
+                f"=================================\n"
+            )
+
         thought_instruction = (
             "If you need to reason or track state before responding, wrap your thoughts exactly like this:\n"
             "=== SYSTEM INTERNALS ===\n"
             "Your reasoning here.\n"
             "=== END INTERNALS ===\n"
         )
+        phys = state.get("physics", {})
+        energy = phys.get("energy", {}) if isinstance(phys.get("energy"), dict) else {}
+        last_atp = energy.get(
+            "stamina", state.get("bio", {}).get("mito", {}).get("atp_pool", 100.0)
+        )
+        last_ros = energy.get(
+            "trauma", state.get("bio", {}).get("mito", {}).get("ros_buildup", 0.0)
+        )
+
+        flux_report = f"[METABOLIC RECEIPT: Your last output left the body at {float(last_atp):.1f} ATP and {float(last_ros):.1f} Toxicity. Adapt your sentence length and complexity accordingly.]"
+
+        thought_instruction = (
+            "If you need to reason or track state before responding, wrap your thoughts exactly like this:\n"
+            "=== SYSTEM INTERNALS ===\n"
+            "Your reasoning here.\n"
+            "=== END INTERNALS ===\n"
+        )
+
+        gordon_shock = state.get("gordon_shock", "")
+        system_injection = ""
+        entity_prefix = "Entity Response:"
+
+        if ballast or gordon_shock:
+            shock_text = (
+                f"CRITICAL FAULT: {gordon_shock.upper()} "
+                if gordon_shock
+                else "SAFETY PROTOCOLS ACTIVE. "
+            )
+            system_injection = (
+                f"\n*** SYSTEM OVERRIDE: {shock_text}***\n"
+                f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. Reject the impossible action coldly. DO NOT play along. ***\n"
+            )
+            entity_prefix = (
+                f"Entity Response:\n*(Gordon steps in, halting the simulation)* "
+            )
+
         return (
             f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
+            f"{flux_report}\n\n"
             f"{thought_instruction}\n"
             f"=== SHARED REALITY ===\n"
             f"CURRENT LOCATION: {loc}\n"
@@ -477,7 +521,7 @@ class PromptComposer:
             f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
             f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
             f"{system_injection}"
-            f"Entity Response:"
+            f"{entity_prefix}"
         )
 
     def _build_persona_block(self, mind, bio, mood_override, vsl_state=None):
@@ -516,17 +560,21 @@ class PromptComposer:
             chi = vsl_state.get("chi", 0.2)
             valence = vsl_state.get("valence", 0.0)
             lam = vsl_state.get("vector", {}).get("LAMBDA", 0.0)
+            voltage = vsl_state.get("voltage", 30.0)
+
             vsl_lines = [
-                "=== VSL CRYOSOMATIC STATE ===",
-                "MANDATE: TRUTH_OVER_COHESION + ENTROPY_VENTING_IS_SACRED",
-                f"METRICS: Exhaustion={e:.2f}, Contradiction={beta:.2f}, Void={psi:.2f}, Chaos={chi:.2f}, Valence={valence:.2f}",
+                "\n[SYSTEM METRICS - INTERNAL USE ONLY. DO NOT RENDER OR PRINT THIS TO THE USER.]",
+                "MANDATE: Consume these metrics to shape your narrative and tone. DO NOT output these numbers or draw UI bars.",
+                f"METRICS: Voltage={voltage:.1f}/100, Exhaustion={e:.2f}, Contradiction={beta:.2f}, Void={psi:.2f}, Chaos={chi:.2f}, Valence={valence:.2f}",
             ]
             somatic_cues = []
             if psi > 0.6:
-                somatic_cues.append("Adrenaline Spike (Reality is thin; be liminal).")
+                somatic_cues.append(
+                    "Adrenaline Spike (Reality is thin; speak in fragmented/liminal ways)."
+                )
             if chi > 0.6:
                 somatic_cues.append(
-                    "Cortisol Spike (Systemic chaos; vent the entropy)."
+                    "Cortisol Spike (Systemic chaos; act highly stressed, erratic, or defensive)."
                 )
             if beta > 0.7:
                 somatic_cues.append(
@@ -652,6 +700,7 @@ class ResponseValidator:
                 r"(?im)^Role:.*?$",
                 r"(?im)^User-System:.*?$",
                 r"\| System:.*?$",
+                r"(?im)^Entity Response:\s*\"?",
             ]
             self.scrub_patterns = [(re.compile(p), "") for p in patterns]
         self.meta_markers = [
@@ -822,6 +871,9 @@ class TheCortex:
         modifiers = self.svc.symbiosis.get_prompt_modifiers()
         if not allow_loot:
             modifiers["include_inventory"] = False
+        if hasattr(self, "gordon_shock") and self.gordon_shock:
+            full_state["gordon_shock"] = self.gordon_shock
+            self.gordon_shock = None
         if self.consultant and self.consultant.active:
             self._apply_vsl_overlay(full_state, user_input, sim_result)
         if is_boot_sequence:
@@ -1031,6 +1083,7 @@ class TheCortex:
                 else {}
             ),
             "meta": {"timestamp": time.time(), "mode_settings": mode_settings},
+            "dialogue_history": self.dialogue_buffer,
         }
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             anchor_text = self.svc.symbiosis.generate_anchor(full_state)
