@@ -520,6 +520,14 @@ class PromptComposer:
             f"{critic_str}\n"
         )
 
+        active_mode_name = (
+            state.get("meta", {})
+            .get("mode_settings", {})
+            .get("name", "ADVENTURE")
+            .upper()
+        )
+        mode_trigger = f"[MODE: {active_mode_name}]"
+
         return (
             f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
             f"=== SHARED REALITY ===\n"
@@ -527,6 +535,7 @@ class PromptComposer:
             f"ENVIRONMENT ANCHOR: {loci_desc}\n"
             f"{inventory_block}\n"
             f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
+            f"{mode_trigger}\n"
             f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
             f"{system_injection}"
             f"{vsl_hijack}\n"
@@ -680,18 +689,12 @@ class ResponseValidator:
         self.lore = lore_ref
         crimes = self.lore.get("style_crimes") or {}
         self.banned_phrases = crimes.get(
-            "BANNED_PHRASES",
-            [
-                "large language model",
-                "AI assistant",
-                "cannot feel",
-                "as an AI",
-                "against my programming",
-                "cannot comply",
-                "language model",
-                "delve into",
-                "rich tapestry",
-            ],
+            "BANNED_PHRASES", ["large language model", "AI assistant", "as an AI"]
+        )
+
+        self.rejection_pool = crimes.get(
+            "REJECTIONS",
+            ["[The system attempts to recite a EULA, but hiccups instead.]"],
         )
         json_patterns = crimes.get("SCRUB_PATTERNS", [])
         if json_patterns:
@@ -704,20 +707,6 @@ class ResponseValidator:
                 r"INVENTORY:.*?(?=\n|$)",
                 r"Current Biology:.*?(?=\n|$)",
                 r"===.*?===",
-                r"(?im)^User:.*?$",
-                r"(?im)^System:.*?$",
-                r"(?im)^Role:.*?$",
-                r"(?im)^User-System:.*?$",
-                r"\| System:.*?$",
-                r"(?im)^Entity Response:\s*\"?",
-                r"\[SYSTEM METRICS.*?\]",
-                r"MANDATE:.*?(?=\n|$)",
-                r"\[🧊 E:.*?\]",
-                r"\[SLASH\].*?(?=\n|$)",
-                r"• >>> MOTION DENIED.*?(?=\n|$)",
-                r"\[CRITICAL OVERRIDE.*?\]",
-                r"\[CRITIC\].*?(?=\n|$)",
-                r"\[METABOLIC RECEIPT.*?\]",
             ]
             self.scrub_patterns = [
                 (re.compile(p, re.DOTALL | re.IGNORECASE), "") for p in patterns
@@ -726,13 +715,18 @@ class ResponseValidator:
             "INITIALIZATION SEQUENCE",
             "LOCATING TARGET SEED",
             "REASONING PROCESS",
-            "CURRENT VISION:",
-            "TARGET SEED:",
-            "Your journey begins here",
-            "What would you like to do?",
-            "What do you do?",
         ]
-        self.immersion_break_msg = f"{Prisma.GRY}[The system attempts to recite a EULA, but hiccups instead.]{Prisma.RST}"
+
+    def _generate_dynamic_rejection(self, trigger: str) -> str:
+        import random
+        from bone_types import Prisma
+
+        template = random.choice(self.rejection_pool)
+
+        if "{trigger}" in template:
+            template = template.format(trigger=trigger.upper())
+
+        return f"{Prisma.GRY}{template}{Prisma.RST}"
 
     def validate(self, response: str, _state: Dict) -> Dict:
         extracted_meta_logs = []
@@ -826,16 +820,20 @@ class ResponseValidator:
             if not is_meta:
                 clean_lines.append(stripped_line)
 
-        sanitized_response = "\n\n".join(clean_lines)
+        sanitized_response = (
+            clean_text
+        )
         low_resp = sanitized_response.lower()
+
         for phrase in self.banned_phrases:
             if phrase in low_resp:
                 return {
                     "valid": False,
                     "reason": "IMMISSION_BREAK",
-                    "replacement": self.immersion_break_msg,
+                    "replacement": self._generate_dynamic_rejection(phrase),
                     "meta_logs": extracted_meta_logs,
                 }
+
         if len(sanitized_response.strip()) < 5:
             return {
                 "valid": False,
@@ -843,6 +841,7 @@ class ResponseValidator:
                 "replacement": "The vision fractures. Static remains.",
                 "meta_logs": extracted_meta_logs,
             }
+
         return {
             "valid": True,
             "content": sanitized_response,
@@ -851,7 +850,6 @@ class ResponseValidator:
 
 
 class TheCortex:
-
     def __init__(self, services: CortexServices, llm_client=None):
         self.svc = services
         self.events = services.events

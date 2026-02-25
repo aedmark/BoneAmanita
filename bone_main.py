@@ -123,8 +123,9 @@ class ConfigWizard:
         os.system("cls" if os.name == "nt" else "clear")
         print(f"{Prisma.paint('/// SYSTEM INITIALIZATION SEQUENCE ///', 'C')}")
         typewriter(
-            "No configuration detected. Initiating manual override...", speed=0.02
+            "No configuration detected. Initiating VSL Hypervisor...", speed=0.02
         )
+
         print(f"\n{Prisma.paint('[STEP 1]: IDENTITY', 'W')}")
         user_name = (
             input(
@@ -132,16 +133,25 @@ class ConfigWizard:
             ).strip()
             or "TRAVELER"
         )
-        print(f"\n{Prisma.paint('[STEP 2]: REALITY MODE', 'W')}")
+
+        print(f"\n{Prisma.paint('[STEP 2]: LATTICE RESONANCE (MODE)', 'W')}")
         modes = [
-            ("1", "Adventure", "Survival, Inventory, Map", "G"),
-            ("2", "Conversation", "Pure Dialogue, No Mechanics", "C"),
-            ("3", "Creative", "High Voltage, Hallucination", "V"),
-            ("4", "Technical", "Debug, Raw Data", "0"),
+            ("1", "ADVENTURE", "Tactile, inventory-driven, high friction.", "G"),
+            ("2", "CONVERSATION", "Pure philosophical dialogue, no mechanics.", "C"),
+            ("3", "CREATIVE", "High voltage, associative leaps, brainstorming.", "V"),
+            (
+                "4",
+                "TECHNICAL",
+                "[SLASH COUNCIL] System architecture, debug, coding.",
+                "0",
+            ),
         ]
         for k, name, desc, col in modes:
-            print(f"{k}. {Prisma.paint(name, col)}    - [{desc}]")
-        mode_choice = input(f"{Prisma.paint('>', 'C')} ").strip()
+            print(f"  {k}. {Prisma.paint(name, col):<25} - {desc}")
+
+        mode_choice = input(
+            f"{Prisma.paint('Select resonance vector (1-4):', 'C')} "
+        ).strip()
         mode_map = {
             "1": "ADVENTURE",
             "2": "CONVERSATION",
@@ -625,27 +635,48 @@ class BoneAmanita:
                 return {"ui": resume_text, "logs": ["Timeline Restored."]}
         print(f"{Prisma.GRY}...Synthesizing Initial Reality...{Prisma.RST}")
         scenarios = LoreManifest.get_instance().get("SCENARIOS", {})
-        archetypes = scenarios.get("ARCHETYPES", ["A quiet garden"])
+        archetypes = scenarios.get(
+            "ARCHETYPES", ["A quiet room", "The edge of a forest", "A terminal screen"]
+        )
         seed = random.choice(archetypes)
         print(f"{Prisma.CYN}[SYS] Seed Loaded: '{seed}'{Prisma.RST}")
+
         if self.boot_mode == "ADVENTURE":
             boot_prompt = (
                 f"SYSTEM_BOOT: SEQUENCE START.\n"
                 f"SOURCE_SEED: '{seed}'\n"
                 f"DIRECTIVE: Initiate a classic text adventure.\n"
                 f"1. Describe the opening location ('{seed}') in vivid, sensory detail.\n"
-                f"2. Provide immediate context or subtext to spark a story (Why are you here? What is the atmosphere? Is there an immediate tension?).\n"
-                f"3. Conclude by explicitly offering 2-3 narrative hooks—things you can interact with, paths to take, or people to talk to."
+                f"2. Provide immediate context or subtext to spark a story (Why are the user here?).\n"
+                f"3. Conclude by explicitly offering 2-3 interactive elements or paths in bold."
             )
-        else:
+        elif self.boot_mode == "CONVERSATION":
             boot_prompt = (
                 f"SYSTEM_BOOT: SEQUENCE START.\n"
                 f"SOURCE_SEED: '{seed}'\n"
-                f"DIRECTIVE: This is the user's gentle introduction to the system. "
-                f"Do not overwhelm them with deep lore or extreme entropy. "
-                f"Provide a brief, calm, sensory observation based solely on the seed: '{seed}'. "
-                f"End your response by softly asking what they would like to do, or observing them in the space."
+                f"DIRECTIVE: The user has arrived. You are sitting with them in a metaphorical space inspired by '{seed}'.\n"
+                f"1. Offer a warm, grounded greeting.\n"
+                f"2. Do not describe the environment heavily. Focus on their presence.\n"
+                f"3. Ask one open-ended question to begin the dialogue."
             )
+        elif self.boot_mode == "CREATIVE":
+            boot_prompt = (
+                f"SYSTEM_BOOT: SEQUENCE START.\n"
+                f"SOURCE_SEED: '{seed}'\n"
+                f"DIRECTIVE: The spark is ignited. We are brainstorming.\n"
+                f"1. Give a high-energy, abstract opening statement inspired by '{seed}'.\n"
+                f"2. Immediately offer 3 wildly different creative directions or ideas we could explore together."
+            )
+        elif self.boot_mode == "TECHNICAL":
+            boot_prompt = (
+                f"SYSTEM_BOOT: SEQUENCE START.\n"
+                f"SOURCE_SEED: '{seed}'\n"
+                f"DIRECTIVE: The SLASH Council is online.\n"
+                f"1. Acknowledge the user's presence in the system terminal.\n"
+                f"2. Briefly report that the lattice is stable and the four archetypes (Pinker, Fuller, Schur, Meadows) are ready.\n"
+                f"3. Ask what architecture needs reviewing or what bugs need squashing."
+            )
+
         cold_result = self.process_turn(boot_prompt, is_system=True)
         return cold_result
 
