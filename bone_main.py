@@ -282,6 +282,8 @@ class BoneAmanita:
     def _apply_boot_mode(self):
         self.events.log(f"Engaging Mode: {self.boot_mode}")
         layer = self.mode_settings.get("ui_layer", RealityLayer.SIMULATION)
+        if self.boot_mode == "TECHNICAL":
+            layer = RealityLayer.SIMULATION
         self.reality_stack.stabilize_at(layer)
         prompt_key = self.mode_settings.get("prompt_key", "ADVENTURE")
         if self.prompt_library and prompt_key in self.prompt_library:

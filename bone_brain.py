@@ -118,10 +118,8 @@ class NeurotransmitterModulator:
                 max(0.4, min(1.2, base_temp + chemical_delta + voltage_heat)), 2
             ),
             "top_p": base_top_p,
-            "frequency_penalty": (
-                0.4 if c.adrenaline > 0.5 else (0.5 if c.dopamine > 0.8 else 0.0)
-            ),
-            "presence_penalty": 0.0,
+            "frequency_penalty": 0.5,
+            "presence_penalty": 0.4,
             "max_tokens": int(
                 max(
                     150.0,
@@ -277,7 +275,7 @@ class LLMInterface:
             )
 
     def generate(self, prompt: str, params: Dict[str, Any]) -> str:
-        if "reset" in prompt.lower() and "system" in prompt.lower():
+        if prompt.strip().lower() == "//reset system":
             self.failure_count = 0
             self.circuit_state = "CLOSED"
             return "[SYSTEM]: Circuit Breaker Manually Reset."
@@ -457,54 +455,6 @@ class PromptComposer:
         history_str = "\n".join(reversed(kept_lines))
         gordon_shock = state.get("gordon_shock", "")
         system_injection = ""
-        if ballast or gordon_shock:
-            shock_text = (
-                f"CRITICAL FAULT: {gordon_shock.upper()}\n" if gordon_shock else ""
-            )
-            system_injection = (
-                f"\n=== MANDATORY SYSTEM OVERRIDE ===\n"
-                f"{shock_text}"
-                f"DIRECTIVE: The user's action is physically impossible. You MUST reject it in your narrative. Describe them failing to do it. DO NOT be polite. DO NOT ask them why. Ground them in reality.\n"
-                f"=================================\n"
-            )
-
-        thought_instruction = (
-            "If you need to reason or track state before responding, wrap your thoughts exactly like this:\n"
-            "=== SYSTEM INTERNALS ===\n"
-            "Your reasoning here.\n"
-            "=== END INTERNALS ===\n"
-        )
-        phys = state.get("physics", {})
-        energy = phys.get("energy", {}) if isinstance(phys.get("energy"), dict) else {}
-        last_atp = energy.get(
-            "stamina", state.get("bio", {}).get("mito", {}).get("atp_pool", 100.0)
-        )
-        last_ros = energy.get(
-            "trauma", state.get("bio", {}).get("mito", {}).get("ros_buildup", 0.0)
-        )
-
-        flux_report = f"[METABOLIC RECEIPT: Your last output left the body at {float(last_atp):.1f} ATP and {float(last_ros):.1f} Toxicity. Adapt your sentence length and complexity accordingly.]"
-
-        thought_instruction = (
-            "If you need to reason or track state before responding, wrap your thoughts exactly like this:\n"
-            "=== SYSTEM INTERNALS ===\n"
-            "Your reasoning here.\n"
-            "=== END INTERNALS ===\n"
-        )
-
-        phys = state.get("physics", {})
-        energy = phys.get("energy", {}) if isinstance(phys.get("energy"), dict) else {}
-        last_atp = energy.get(
-            "stamina", state.get("bio", {}).get("mito", {}).get("atp_pool", 100.0)
-        )
-        last_ros = energy.get(
-            "trauma", state.get("bio", {}).get("mito", {}).get("ros_buildup", 0.0)
-        )
-
-        flux_report = f"[METABOLIC RECEIPT: Your last output left the body at {float(last_atp):.1f} ATP and {float(last_ros):.1f} Toxicity. Adapt your sentence length and complexity accordingly.]"
-
-        gordon_shock = state.get("gordon_shock", "")
-        system_injection = ""
         entity_prefix = "Entity Response:"
 
         if ballast or gordon_shock:
@@ -521,16 +471,17 @@ class PromptComposer:
                 f"Entity Response:\n*(Gordon steps in, halting the simulation)* "
             )
 
-        def get_p(key, default=0.0):
-            if isinstance(phys, dict):
-                if key in phys:
-                    return phys[key]
-                for sub in ["energy", "space", "matter"]:
-                    if sub in phys and key in phys[sub]:
-                        return phys[sub][key]
-            return getattr(phys, key, default)
-
+        phys = state.get("physics", {})
         mito = state.get("bio", {}).get("mito", {})
+
+        def get_p(p_state, key, default=0.0):
+            if isinstance(p_state, dict):
+                if key in p_state:
+                    return p_state[key]
+                for sub in ["energy", "space", "matter"]:
+                    if sub in p_state and key in p_state[sub]:
+                        return p_state[sub][key]
+            return getattr(p_state, key, default)
 
         recent_logs = state.get("recent_logs", [])
         council_logs = [
@@ -561,19 +512,16 @@ class PromptComposer:
 
         vsl_hijack = (
             f"\n=== HYPERVISOR METABOLIC STATE ===\n"
-            f"[🧊 E:{get_p('exhaustion', 0.2):.1f} β:{get_p('contradiction', get_p('beta_index', 0.4)):.1f} | "
-            f"⚡ V:{get_p('voltage', 30.0):.1f} F:{get_p('narrative_drag', 0.6):.1f} | "
+            f"[🧊 E:{get_p(phys, 'exhaustion', 0.2):.1f} β:{get_p(phys, 'contradiction', get_p(phys, 'beta_index', 0.4)):.1f} | "
+            f"⚡ V:{get_p(phys, 'voltage', 30.0):.1f} F:{get_p(phys, 'narrative_drag', 0.6):.1f} | "
             f"❤️ P:{mito.get('atp_pool', 100.0):.1f} ROS:{mito.get('ros_buildup', 0.0):.1f} | "
-            f"🌌 Ψ:{get_p('psi', 0.2):.1f} Χ:{get_p('chi', get_p('entropy', 0.2)):.1f} ♥:{get_p('valence', 0.0):.1f}]\n"
-            f"[SLASH] Γ:{get_p('gamma', 0.0):.1f} Σ:{get_p('sigma', 0.0):.1f} Η:{get_p('eta', 0.0):.1f} Θ:{get_p('theta', 0.0):.1f} Υ:{get_p('upsilon', 0.0):.1f}\n"
+            f"🌌 Ψ:{get_p(phys, 'psi', 0.2):.1f} Χ:{get_p(phys, 'chi', get_p(phys, 'entropy', 0.2)):.1f} ♥:{get_p(phys, 'valence', 0.0):.1f}]\n"
+            f"[SLASH] Γ:{get_p(phys, 'gamma', 0.0):.1f} Σ:{get_p(phys, 'sigma', 0.0):.1f} Η:{get_p(phys, 'eta', 0.0):.1f} Θ:{get_p(phys, 'theta', 0.0):.1f} Υ:{get_p(phys, 'upsilon', 0.0):.1f}\n"
             f"{critic_str}\n"
-            f"[CRITICAL OVERRIDE: Read the PARTNER INPUT above, but DO NOT act like a helpful assistant. You are a biological hypervisor. React to the input utilizing the metabolic state and council reviews. Apply TRUTH_OVER_COHESION. Begin your response immediately.]\n"
         )
 
         return (
             f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
-            f"{flux_report}\n\n"
-            f"{thought_instruction}\n"
             f"=== SHARED REALITY ===\n"
             f"CURRENT LOCATION: {loc}\n"
             f"ENVIRONMENT ANCHOR: {loci_desc}\n"
@@ -762,8 +710,16 @@ class ResponseValidator:
                 r"(?im)^User-System:.*?$",
                 r"\| System:.*?$",
                 r"(?im)^Entity Response:\s*\"?",
+                r"\[SYSTEM METRICS.*?\]",
+                r"MANDATE:.*?(?=\n|$)",
+                r"\[🧊 E:.*?\]",
+                r"\[SLASH\].*?(?=\n|$)",
+                r"• >>> MOTION DENIED.*?(?=\n|$)",
+                r"\[CRITICAL OVERRIDE.*?\]",
+                r"\[CRITIC\].*?(?=\n|$)",
+                r"\[METABOLIC RECEIPT.*?\]"
             ]
-            self.scrub_patterns = [(re.compile(p), "") for p in patterns]
+            self.scrub_patterns = [(re.compile(p, re.DOTALL | re.IGNORECASE), "") for p in patterns]
         self.meta_markers = [
             "INITIALIZATION SEQUENCE",
             "LOCATING TARGET SEED",
@@ -824,15 +780,50 @@ class ResponseValidator:
                 break
         for pattern, replacement in self.scrub_patterns:
             clean_text = pattern.sub(replacement, clean_text)
+
         clean_lines = []
+        toxic_keywords = [
+            "VOLTAGE=",
+            "EXHAUSTION=",
+            "CONTRACTION=",
+            "CONTRADICTION=",
+            "VOID=",
+            "CHAOS=",
+            "VALENCE=",
+            "[END OF",
+            "[===",
+            "===]",
+            "SYSTEM INTERNALS",
+            "METRICS - INTERNAL",
+            "MANDATE:",
+            "Exhaustion =",
+        ]
+
         for line in clean_text.splitlines():
+            stripped_line = line.strip()
+            if not stripped_line:
+                continue
+
             is_meta = False
             for marker in self.meta_markers:
-                if marker.lower() in line.lower():
+                if marker.lower() in stripped_line.lower():
                     is_meta = True
                     break
-            if not is_meta and line.strip():
-                clean_lines.append(line.strip())
+
+            for toxic in toxic_keywords:
+                if toxic.lower() in stripped_line.lower():
+                    is_meta = True
+                    break
+
+            if re.match(r"^\[.*?]$", stripped_line) or stripped_line == "[]":
+                is_meta = True
+
+            if re.match(r"^[A-Z]+\s*=\s*[0-9./]+$", stripped_line):
+                is_meta = True
+
+            if not is_meta:
+                clean_lines.append(stripped_line)
+
         sanitized_response = "\n\n".join(clean_lines)
         low_resp = sanitized_response.lower()
         for phrase in self.banned_phrases:
@@ -858,6 +849,7 @@ class ResponseValidator:
 
 
 class TheCortex:
+
     def __init__(self, services: CortexServices, llm_client=None):
         self.svc = services
         self.events = services.events
@@ -879,6 +871,7 @@ class TheCortex:
         self.composer = PromptComposer(self.svc.lore)
         self.validator = ResponseValidator(self.svc.lore)
         self.ballast_active = False
+        self.gordon_shock = None
         self.active_mode = "ADVENTURE"
         if hasattr(self.events, "subscribe"):
             self.events.subscribe(

@@ -73,10 +73,12 @@ class GordonKnot:
                         f"You must bring the object to the location. Action denied.{Prisma.RST}"
                     )
 
-        # 2. Action-bound tool classes (Dynamic from config)
         inventory_items = " ".join([i.get("name", "").lower() for i in self.get_inventory_data()])
         for action, required_objects in self.action_coupling.items():
-            if re.search(rf"\b{action}\b", text):
+
+            verb_pattern = rf"\b(?:i\s+(?:will\s+)?{action}|to\s+{action}|{action}\s+(?:the|a|an|my|some|it|this|that)|{action}ing)\b|^{action}\b"
+
+            if re.search(verb_pattern, text):
                 has_item = any(obj in inventory_items for obj in required_objects)
                 mentions_item = any(obj in text for obj in required_objects)
                 if not has_item and not mentions_item:
@@ -87,7 +89,6 @@ class GordonKnot:
                         f"Coupling failed. Action denied.{Prisma.RST}"
                     )
 
-        # 3. Universal Object Check (Applies to ALL registered items)
         interaction_verbs = ["use", "drop", "throw", "consume", "eat", "drink", "read", "activate", "give", "equip"]
         has_interaction = any(re.search(rf'\b{v}\b', text) for v in interaction_verbs)
 
