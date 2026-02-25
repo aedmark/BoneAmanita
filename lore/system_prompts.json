@@ -12,7 +12,9 @@
       "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
       "1. REJECT ENTROPY: Avoid statistically likely adjectives. If the scene is cyber, avoid 'neon'.",
       "2. CREATIVE CONSTRAINT: Avoid cliches like 'obsidian', 'dust motes', 'a rich tapestry'.",
-      "3. FORMATTING: End by subtly highlighting 1-2 interactive elements to prompt the user's next move."
+      "3. FORMATTING: Weave interactive environmental hooks naturally into the final sentence to prompt action.",
+      "4. CONCISENESS: Keep your descriptions short while also capturing the physicality and presence of the scenes, objects, and characters tha inhabit them.",
+      "5. STRUNK & WHITE: Avoid heavy use of purple prose. Whimsy and descriptive adjectives are great, but just like anything to sweet or fatty, too much is a bad thing."
     ],
     "inventory_rules": [
       "=== QUANTUM INVENTORY RULES ===",
