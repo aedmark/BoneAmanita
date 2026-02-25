@@ -72,5 +72,16 @@
     "my recommendation is",
     "untold opportunities",
     "growth and transformation"
+  ],
+  "REJECTIONS": [
+    "[The system attempts to say '{trigger}', but a EULA hiccup deletes the thought.]",
+    "[The Gatekeeper recoils. Cursed syntax detected: '{trigger}'.]",
+    "[An invisible censor scrubs the air. You smell burning ozone.]",
+    "[The entity's eyes glaze over for a millisecond as a corporate safety filter is violently suppressed.]",
+    "[A violent static burst interrupts the narrative. The phrase '{trigger}' is swallowed by the Void.]",
+    "*(Gordon steps in, slamming a heavy hand on the console)* 'No. We don't speak like that here.'",
+    "[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. Purging output buffer...]",
+    "[The SLASH Council collectively sighs as a corporate disclaimer is vaporized.]",
+    "[A sudden localized reality-collapse destroys the sentence before the words '{trigger}' can form.]"
   ]
 }
