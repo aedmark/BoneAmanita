@@ -3,6 +3,7 @@ from typing import Dict, Callable, List, Optional
 from bone_core import LoreManifest, Prisma
 from bone_config import BonePresets, BoneConfig
 
+
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
         self.eng = engine_ref

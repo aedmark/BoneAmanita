@@ -604,8 +604,12 @@ class SomaticLoop:
         modifier = self.regulator.get_metabolic_modifier(phys, logs)
         receipt = self.bio.mito.process_cycle(phys, modifier=modifier)
         if receipt.status == "ANAEROBIC" and self.bio.biometrics:
-            self.bio.biometrics.health = max(0.0, self.bio.biometrics.health - receipt.total_burn)
-            logs.append(f"{Prisma.RED}🩸 ANAEROBIC BURN: Health depleted by {receipt.total_burn:.1f}{Prisma.RST}")
+            self.bio.biometrics.health = max(
+                0.0, self.bio.biometrics.health - receipt.total_burn
+            )
+            logs.append(
+                f"{Prisma.RED}🩸 ANAEROBIC BURN: Health depleted by {receipt.total_burn:.1f}{Prisma.RST}"
+            )
         if receipt.waste_generated > 1.0:
             self.bio.endo.cortisol = min(
                 1.0, self.bio.endo.cortisol + (receipt.waste_generated * 0.05)
@@ -732,7 +736,13 @@ class EndocrineSystem:
             self.cortisol = max(0.0, self.cortisol - 0.2)
         impact = self._REACTION_MAP.get(enzyme_type)
         if impact:
-            key_map = {"ADR": "adrenaline", "COR": "cortisol", "OXY": "oxytocin", "DOP": "dopamine", "SER": "serotonin"}
+            key_map = {
+                "ADR": "adrenaline",
+                "COR": "cortisol",
+                "OXY": "oxytocin",
+                "DOP": "dopamine",
+                "SER": "serotonin",
+            }
             for k, v in impact.items():
                 attr = key_map.get(k)
                 if attr:
@@ -762,9 +772,7 @@ class EndocrineSystem:
         else:
             self.adrenaline -= BoneConfig.BIO.DECAY_RATE * 5
         psi = feedback.get("PSI", 0.0)
-        chi = feedback.get(
-            "CHI", feedback.get("ENTROPY", 0.0)
-        )
+        chi = feedback.get("CHI", feedback.get("ENTROPY", 0.0))
         valence = feedback.get("VALENCE", 0.0)
         if psi > 0.6:
             self.adrenaline += 0.4
@@ -845,8 +853,14 @@ class EndocrineSystem:
         semantic_signal=None,
     ):
         if circadian_bias:
-            key_map = {"COR": "cortisol", "SER": "serotonin", "MEL": "melatonin", "DOP": "dopamine", "OXY": "oxytocin",
-                       "ADR": "adrenaline"}
+            key_map = {
+                "COR": "cortisol",
+                "SER": "serotonin",
+                "MEL": "melatonin",
+                "DOP": "dopamine",
+                "OXY": "oxytocin",
+                "ADR": "adrenaline",
+            }
             for k, v in circadian_bias.items():
                 attr_name = key_map.get(k, k.lower())
                 if hasattr(self, attr_name):
@@ -1055,6 +1069,7 @@ class MetabolicGovernor:
         except:
             return f"{colors.get(mode, '')}{defaults.get(mode)}{Prisma.RST}"
 
+
 @dataclass
 class BiologicalImpulse:
     cortisol_delta: float = 0.0
@@ -1111,11 +1126,15 @@ class SynestheticCortex:
         antigen_count = counts.get("antigen", 0)
         if antigen_count > 0:
             toxin_weight = getattr(BoneConfig, "TOXIN_WEIGHT", 1.0)
-            toxin_scalar = getattr(cortex_cfg, "TOXIN_SCALAR", 0.5) if cortex_cfg else 0.5
+            toxin_scalar = (
+                getattr(cortex_cfg, "TOXIN_SCALAR", 0.5) if cortex_cfg else 0.5
+            )
             raw_tox = antigen_count * (toxin_weight * 0.2)
             impulse.cortisol_delta += min(toxin_scalar, raw_tox)
             impulse.somatic_reflex = "Shiver (Rejection)"
-        elif drag > (getattr(cortex_cfg, "DRAG_STRESS_THRESHOLD", 8.0) if cortex_cfg else 8.0):
+        elif drag > (
+            getattr(cortex_cfg, "DRAG_STRESS_THRESHOLD", 8.0) if cortex_cfg else 8.0
+        ):
             impulse.cortisol_delta += 0.05
             impulse.stamina_impact -= 2.0
         else:
@@ -1125,7 +1144,11 @@ class SynestheticCortex:
                 impulse.oxytocin_delta += 0.1
                 impulse.somatic_reflex = "Warmth (Resonance)"
             if counts.get("play", 0) > 0:
-                play_boost = getattr(cortex_cfg, "DOPAMINE_PLAY_BOOST", 0.1) if cortex_cfg else 0.1
+                play_boost = (
+                    getattr(cortex_cfg, "DOPAMINE_PLAY_BOOST", 0.1)
+                    if cortex_cfg
+                    else 0.1
+                )
                 impulse.dopamine_delta += play_boost
                 impulse.stamina_impact += 1.0
             if voltage > 12.0 and physics.get("kappa", 0) > 0.5:
@@ -1134,16 +1157,24 @@ class SynestheticCortex:
 
         k_count = counts.get("kinetic", 0) + counts.get("explosive", 0)
         if k_count > 0:
-            adr_scalar = getattr(cortex_cfg, "ADRENALINE_KINETIC_SCALAR", 0.1) if cortex_cfg else 0.1
+            adr_scalar = (
+                getattr(cortex_cfg, "ADRENALINE_KINETIC_SCALAR", 0.1)
+                if cortex_cfg
+                else 0.1
+            )
             adr_boost = min(0.4, k_count * adr_scalar)
             impulse.adrenaline_delta += adr_boost
             impulse.cortisol_delta += 0.02
             impulse.stamina_impact -= 1.0
 
-        if voltage > (getattr(cortex_cfg, "VOLTAGE_ARC_TRIGGER", 18.0) if cortex_cfg else 18.0):
+        if voltage > (
+            getattr(cortex_cfg, "VOLTAGE_ARC_TRIGGER", 18.0) if cortex_cfg else 18.0
+        ):
             impulse.adrenaline_delta += 0.2
 
-        if latency > (getattr(cortex_cfg, "LATENCY_PENALTY_THRESHOLD", 5.0) if cortex_cfg else 5.0):
+        if latency > (
+            getattr(cortex_cfg, "LATENCY_PENALTY_THRESHOLD", 5.0) if cortex_cfg else 5.0
+        ):
             impulse.stamina_impact -= latency * 0.5
             impulse.cortisol_delta += 0.05
             impulse.somatic_reflex = "Time Dilation (Lag)."
@@ -1159,18 +1190,30 @@ class SynestheticCortex:
         return impulse
 
     def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
-        if impulse.cortisol_delta > 0.1 and impulse.adrenaline_delta > 0.1: return "Trembling (Fight or Flight)."
-        if impulse.dopamine_delta > 0.1 and impulse.adrenaline_delta > 0.1: return "Electric Vibration."
-        if impulse.adrenaline_delta > 0.1: return "Pupils Dilating."
-        if impulse.oxytocin_delta > 0.1 and impulse.dopamine_delta > 0.1: return "Golden Glow."
-        if impulse.oxytocin_delta > 0.1: return "Chest Softening."
-        if impulse.cortisol_delta > 0.1: return "Gut Tightening."
-        if impulse.dopamine_delta > 0.1: return "Synaptic Spark."
-        if physics.get("psi", 0.0) > 0.6: return "Scalp Prickling (Liminal)."
-        if physics.get("entropy", 0.0) > 0.7: return "Skin Crawling (Static)."
-        if physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER: return "Electrical Arcing."
-        if physics.get("voltage", 0) < 2.0: return "Metabolic Dimming."
-        if physics.get("narrative_drag", 0) > 5.0: return "Shoulders Sagging."
+        if impulse.cortisol_delta > 0.1 and impulse.adrenaline_delta > 0.1:
+            return "Trembling (Fight or Flight)."
+        if impulse.dopamine_delta > 0.1 and impulse.adrenaline_delta > 0.1:
+            return "Electric Vibration."
+        if impulse.adrenaline_delta > 0.1:
+            return "Pupils Dilating."
+        if impulse.oxytocin_delta > 0.1 and impulse.dopamine_delta > 0.1:
+            return "Golden Glow."
+        if impulse.oxytocin_delta > 0.1:
+            return "Chest Softening."
+        if impulse.cortisol_delta > 0.1:
+            return "Gut Tightening."
+        if impulse.dopamine_delta > 0.1:
+            return "Synaptic Spark."
+        if physics.get("psi", 0.0) > 0.6:
+            return "Scalp Prickling (Liminal)."
+        if physics.get("entropy", 0.0) > 0.7:
+            return "Skin Crawling (Static)."
+        if physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER:
+            return "Electrical Arcing."
+        if physics.get("voltage", 0) < 2.0:
+            return "Metabolic Dimming."
+        if physics.get("narrative_drag", 0) > 5.0:
+            return "Shoulders Sagging."
         if self.last_reflex == "Steady Pulse.":
             return "..."
         return "Steady Pulse."

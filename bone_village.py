@@ -12,7 +12,16 @@ def _hydrate_packet(p: Any) -> PhysicsPacket:
         return p
     packet = PhysicsPacket.void_state()
     if isinstance(p, dict):
-        for k in ("voltage", "narrative_drag", "vector", "clean_words", "counts", "zone", "kappa", "raw_text"):
+        for k in (
+            "voltage",
+            "narrative_drag",
+            "vector",
+            "clean_words",
+            "counts",
+            "zone",
+            "kappa",
+            "raw_text",
+        ):
             if k in p:
                 setattr(packet, k, p[k])
     return packet
@@ -69,7 +78,7 @@ class TheTinkerer:
         return deltas
 
     def audit_tool_use(
-            self, packet: PhysicsPacket, inventory_list: List[str], _host_health: Any = None
+        self, packet: PhysicsPacket, inventory_list: List[str], _host_health: Any = None
     ):
         if not inventory_list:
             return
@@ -81,7 +90,7 @@ class TheTinkerer:
         self._process_single_tool(focus_item, inventory_list, packet, entropy_level)
 
     def _process_single_tool(
-            self, item: str, _inventory: List[str], packet: PhysicsPacket, entropy: float
+        self, item: str, _inventory: List[str], packet: PhysicsPacket, entropy: float
     ):
         if item not in self.tool_resonance:
             self.tool_resonance[item] = 0.0
@@ -249,9 +258,7 @@ class TheCartographer:
         top_dims = heapq.nlargest(2, vector.items(), key=lambda x: x[1])
         return "-".join([f"{k}{int(v * 100)}" for k, v in top_dims])
 
-    def locate(
-            self, packet: PhysicsPacket
-    ) -> Tuple[str, Optional[str]]:
+    def locate(self, packet: PhysicsPacket) -> Tuple[str, Optional[str]]:
         vector = packet.vector or {}
         target_id = self._generate_coord_hash(vector)
         msg = None
@@ -272,7 +279,6 @@ class TheCartographer:
 
     @staticmethod
     def _generate_loci_data(node_id: str, packet: PhysicsPacket) -> GeniusLoci:
-        # Static method fix: Removed 'self' as a parameter
         random.seed(node_id)
         scenarios = LoreManifest.get_instance().get("SCENARIOS") or {}
         prefixes = scenarios.get("PREFIXES", ["The", "Zone", "Sector"])
@@ -437,7 +443,7 @@ class TownHall:
 
     @staticmethod
     def diagnose_condition(
-            session_data: dict, _host_health: Any = None, soul: Any = None
+        session_data: dict, _host_health: Any = None, soul: Any = None
     ) -> Tuple[str, str]:
         meta = session_data.get("meta", {})
         trauma = session_data.get("trauma_vector", {})

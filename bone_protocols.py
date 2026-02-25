@@ -82,8 +82,14 @@ class TheBureau:
         self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 27B-6", "Form 404"])
         self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
         lex_data = LoreManifest.get_instance().get("LEXICON") or {}
-        raw_buzz = lex_data.get("bureau_buzzwords") or lex_data.get("bureau_buzzwords") or []
-        self.buzzwords = set(raw_buzz) if raw_buzz else {"synergy", "paradigm", "leverage", "utilize"}
+        raw_buzz = (
+            lex_data.get("bureau_buzzwords") or lex_data.get("bureau_buzzwords") or []
+        )
+        self.buzzwords = (
+            set(raw_buzz)
+            if raw_buzz
+            else {"synergy", "paradigm", "leverage", "utilize"}
+        )
         self.crimes = []
         self.crime_data = LoreManifest.get_instance().get("STYLE_CRIMES") or {}
         if "PATTERNS" in self.crime_data:
@@ -556,14 +562,16 @@ class TheFolly:
 
     @staticmethod
     def _filter_meat_words(clean_words: list, _lexicon: Dict) -> list:
-        meat_pool = set(LexiconService.get("heavy") or []) | \
-                    set(LexiconService.get("kinetic") or []) | \
-                    set(LexiconService.get("suburban") or [])
+        meat_pool = (
+            set(LexiconService.get("heavy") or [])
+            | set(LexiconService.get("kinetic") or [])
+            | set(LexiconService.get("suburban") or [])
+        )
         return [w for w in clean_words if w in meat_pool]
 
     @staticmethod
     def _attempt_digest_abstract(
-            clean_words: list, _lexicon: Dict
+        clean_words: list, _lexicon: Dict
     ) -> Tuple[str, str, float, Optional[str]]:
         abstract_set = LexiconService.get("abstract")
         abstract_set = abstract_set if abstract_set else []
@@ -582,6 +590,7 @@ class TheFolly:
             f"   {Prisma.RED}► STARVATION CONTINUES.{Prisma.RST}"
         )
         return "INDIGESTION", msg, 0.0, None
+
 
 class ChronosKeeper:
     def __init__(self, engine_ref):

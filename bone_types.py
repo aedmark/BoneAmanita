@@ -3,6 +3,7 @@ from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
 
+
 class Prisma:
     RST = "\033[0m"
     RED, GRN, YEL, BLU, MAG, CYN, WHT, GRY = (
@@ -80,40 +81,35 @@ class ErrorLog:
 
 @dataclass
 class EnergyState:
-    # --- VSL Somatic ---
-    voltage: float = 30.0  # (V) Creative intensity
-    health: float = 100.0  # (H) Structural integrity
-    stamina: float = 100.0  # (P) ATP pool
-    trauma: float = 0.0  # (T) Unresolved rupture
+    voltage: float = 30.0
+    health: float = 100.0
+    stamina: float = 100.0
+    trauma: float = 0.0
 
-    # --- VSL Cognitive ---
-    exhaustion: float = 0.2  # (E) Lexical fatigue
-    contradiction: float = 0.4  # (β) Capacity to hold opposing truths
-    scope: float = 0.3  # (S) Retrieval breadth
-    depth: float = 0.3  # (D) Hierarchical traversal
-    connectivity: float = 0.2  # (C) Logical bridging
+    exhaustion: float = 0.2
+    contradiction: float = 0.4
+    scope: float = 0.3
+    depth: float = 0.3
+    connectivity: float = 0.2
 
-    # --- VSL Semantic ---
-    psi: float = 0.2  # (Ψ) Void / Abstraction
-    chi: float = 0.2  # (Χ) Entropy / Chaos
-    valence: float = 0.0  # (♥) Emotional polarity
+    psi: float = 0.2
+    chi: float = 0.2
+    valence: float = 0.0
 
-    # --- VSL Extended (SLASH Mod) ---
-    gamma: float = 0.0  # (Γ) Clarity Index
-    sigma: float = 0.0  # (Σ) Synergy Score
-    eta: float = 0.0  # (Η) Humanity Quotient
-    theta: float = 0.0  # (Θ) Resilience (Feedback loops)
-    upsilon: float = 0.0  # (Υ) Integrity
+    gamma: float = 0.0
+    sigma: float = 0.0
+    eta: float = 0.0
+    theta: float = 0.0
+    upsilon: float = 0.0
 
-    # --- Extended/Legacy Substrate ---
-    entropy: float = 0.2  # Legacy map to chi
+    entropy: float = 0.2
     mass: float = 0.0
     velocity: float = 0.0
-    beta_index: float = 0.4  # Legacy map to contradiction
+    beta_index: float = 0.4
     turbulence: float = 0.0
-    kappa: float = 0.0  # (κ) Drag corollary
-    epsilon: float = 0.0  # (ε) Entropy corollary
-    xi: float = 0.0  # (Ξ) Substrate depth
+    kappa: float = 0.0
+    epsilon: float = 0.0
+    xi: float = 0.0
     perfection_streak: int = 0
 
 
@@ -132,8 +128,8 @@ class MaterialState:
 class SpatialState:
     zone: str = "COURTYARD"
     manifold: str = "DEFAULT"
-    narrative_drag: float = 0.6  # (F) Friction - High=stuck, Low=flow. Default 0.6
-    friction: float = 0.6        # (F) VSL alias for narrative drag
+    narrative_drag: float = 0.6
+    friction: float = 0.6
     atmosphere: str = "NEUTRAL"
     flow_state: str = "LAMINAR"
 
@@ -277,7 +273,6 @@ class PhysicsPacket:
     def valence(self, v):
         self.energy.valence = v
 
-    # -- LEGACY SHORTCUTS --
     @property
     def clean_words(self):
         return self.matter.clean_words
@@ -322,7 +317,6 @@ class PhysicsPacket:
         self.space = space or SpatialState()
         for k, v in kwargs.items():
             setattr(self, k, v)
-
 
     @classmethod
     def void_state(cls):

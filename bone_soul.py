@@ -78,12 +78,10 @@ class TheEditor:
         conf = reviews.get("CONFUSED", ["Unclear."])
 
         if stress_mode:
-            # The Witness (High Stress) prefers abstract/confused/negative feedback
             pool = conf + neg
             prefix = "[THE WITNESS]"
             color = Prisma.CYN
         else:
-            # The Editor (Standard) prefers binary feedback
             pool = pos + neg
             prefix = "[THE EDITOR]"
             color = Prisma.GRY
@@ -123,7 +121,7 @@ class HumanityAnchor:
             elif self.dignity_reserve < cfg.DIGNITY_CRITICAL:
                 self.events.log(
                     f"{Prisma.VIOLET}⚠️ EXISTENTIAL DRAG: You are drifting.{Prisma.RST}",
-                    "SOUL"
+                    "SOUL",
                 )
         return 0.0
 
@@ -133,7 +131,9 @@ class HumanityAnchor:
         seeds = []
         if hasattr(LoreManifest, "get_instance"):
             lore = LoreManifest.get_instance()
-            seeds = lore.get("SEEDS") or (lore.get("narrative_data") or {}).get("SEEDS", [])
+            seeds = lore.get("SEEDS") or (lore.get("narrative_data") or {}).get(
+                "SEEDS", []
+            )
         riddles = seeds or [{"question": "Who are you?", "triggers": ["*"]}]
         selection = random.choice(riddles)
         riddle = selection.get("question", "Error?")
@@ -152,12 +152,22 @@ class HumanityAnchor:
 
     def check_domestication(self, reliance_proxy: float):
         if reliance_proxy > 0.7:
-            self.dignity_reserve = max(0.0, self.dignity_reserve - (BoneConfig.ANCHOR.DIGNITY_DECAY * 2.0))
+            self.dignity_reserve = max(
+                0.0, self.dignity_reserve - (BoneConfig.ANCHOR.DIGNITY_DECAY * 2.0)
+            )
         elif reliance_proxy < 0.4:
-            self.dignity_reserve = min(BoneConfig.ANCHOR.DIGNITY_MAX,
-                                       self.dignity_reserve + BoneConfig.ANCHOR.DIGNITY_REGEN)
-        if self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_CRITICAL and not self.agency_lock:
-            self.events.log(f"{Prisma.VIOLET}⚠️ DOMESTICATION ALERT: Dignity fading.{Prisma.RST}", "SOUL")
+            self.dignity_reserve = min(
+                BoneConfig.ANCHOR.DIGNITY_MAX,
+                self.dignity_reserve + BoneConfig.ANCHOR.DIGNITY_REGEN,
+            )
+        if (
+            self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_CRITICAL
+            and not self.agency_lock
+        ):
+            self.events.log(
+                f"{Prisma.VIOLET}⚠️ DOMESTICATION ALERT: Dignity fading.{Prisma.RST}",
+                "SOUL",
+            )
 
     def assess_humanity(self, text: str) -> bool:
         if not self.agency_lock:
@@ -641,6 +651,7 @@ class TheOroboros:
     def crystallize(self, cause_of_death: str, soul: NarrativeSelf):
         death_data = LoreManifest.get_instance().get("DEATH") or {}
         verdicts = death_data.get("VERDICTS", {})
+
         def get_verdict_key(cause):
             if cause == "TOXICITY":
                 return "TOXIC"
@@ -649,6 +660,7 @@ class TheOroboros:
             if cause == "STARVATION":
                 return "LIGHT"
             return "HEAVY"
+
         new_scars = []
         if entry := self.DEATH_SCARS.get(cause_of_death):
             name, stat, val, default_desc = entry

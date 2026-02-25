@@ -1,6 +1,4 @@
-import math
-import random
-import time
+import math, random, time
 from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Dict, List, Any, Tuple, Optional, Deque
@@ -45,8 +43,9 @@ PHYS_CFG = {
     "DRAG_FLOOR": getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0),
     "DRAG_HALT": getattr(BoneConfig.PHYSICS, "DRAG_HALT", 10.0),
     "FLUX_THRESHOLD": 0.5,
-    "DEADBAND": 0.05
+    "DEADBAND": 0.05,
 }
+
 
 @dataclass
 class GeodesicVector:
@@ -114,7 +113,7 @@ class GeodesicEngine:
 
     @staticmethod
     def _calculate_forces(
-            masses: Dict[str, float], counts: Dict[str, int], volume: int
+        masses: Dict[str, float], counts: Dict[str, int], volume: int
     ) -> Dict[str, float]:
         cfg = BoneConfig.PHYSICS
         GC = GeodesicConstants
@@ -124,10 +123,10 @@ class GeodesicEngine:
         w_explosive = getattr(cfg, "WEIGHT_EXPLOSIVE", 3.0)
         w_constructive = getattr(cfg, "WEIGHT_CONSTRUCTIVE", 1.2)
         raw_tension_mass = (
-                (masses["heavy"] * w_heavy)
-                + (masses["kinetic"] * w_kinetic)
-                + (masses["explosive"] * w_explosive)
-                + (masses["constructive"] * w_constructive)
+            (masses["heavy"] * w_heavy)
+            + (masses["kinetic"] * w_kinetic)
+            + (masses["explosive"] * w_explosive)
+            + (masses["constructive"] * w_constructive)
         )
         total_kinetic = masses["kinetic"] + masses["explosive"]
         kinetic_gain = getattr(BoneConfig, "KINETIC_GAIN", 1.0)
@@ -163,13 +162,13 @@ class GeodesicEngine:
         )
         structural_mass = masses["heavy"] + masses["constructive"] + masses["harvest"]
         structural_mass -= masses["void"] * 0.5
-        structural_mass = max(0.0, structural_mass)  # [MEADOWS] Plug the void leak
+        structural_mass = max(0.0, structural_mass)
         shapley_thresh = getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0)
         total_abstract = (
-                masses["abstract"] +
-                masses["liminal"] +
-                masses["pareidolia"] +
-                masses["void"]
+            masses["abstract"]
+            + masses["liminal"]
+            + masses["pareidolia"]
+            + masses["void"]
         )
         abstraction_val = (total_abstract / safe_volume) + GC.ABSTRACTION_BASE
         return {
@@ -184,7 +183,9 @@ class GeodesicEngine:
         inv_vol = 1.0 / max(1, volume)
         base_mass = 0.1
         str_mass = masses["heavy"] * 2.0 + masses["constructive"] + masses["harvest"]
-        ent_mass = (counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"]
+        ent_mass = (
+            (counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"]
+        )
         psi_mass = forces["abstraction"]
         return {
             "VEL": max(
@@ -345,9 +346,7 @@ class QuantumObserver:
         return total_mass
 
     @staticmethod
-    def _calculate_metrics(
-            text: str, counts: Dict[str, int]
-    ) -> Tuple[float, float]:
+    def _calculate_metrics(text: str, counts: Dict[str, int]) -> Tuple[float, float]:
         length = len(text)
         if length == 0:
             return 0.0, 0.0
@@ -531,7 +530,7 @@ class CosmicDynamics:
             "NEBULA": "NEBULA: Floating near '{node}' (Mass {mass}). Not enough mass for orbit.",
             "LAGRANGE": "LAGRANGE: Caught between '{p}' and '{s}'",
             "FLOW": "FLOW: Streaming towards '{node}'",
-            "ORBIT": "ORBIT: Circling '{node}' (Mass {mass})"
+            "ORBIT": "ORBIT: Circling '{node}' (Mass {mass})",
         }
         manifest = LoreManifest.get_instance().get("narrative_data") or {}
         return manifest.get("COSMIC_LOGS", base)
@@ -540,7 +539,7 @@ class CosmicDynamics:
         self.voltage_history.append(voltage)
 
     def check_gravity(
-            self, current_drift: float, psi: float
+        self, current_drift: float, psi: float
     ) -> Tuple[float, List[str]]:
         logs = []
         new_drag = current_drift
@@ -626,8 +625,7 @@ class CosmicDynamics:
             hub_mass = geodesic_hubs.get(w)
             if hub_mass is not None:
                 msg = self.logs.get("NEBULA", "NEBULA").format(
-                    node=w.upper(),
-                    mass=int(hub_mass)
+                    node=w.upper(), mass=int(hub_mass)
                 )
                 return "PROTO_COSMOS", 1.0, msg
         return "VOID_DRIFT", 3.0, self.logs.get("VOID", "VOID")
@@ -641,14 +639,18 @@ class CosmicDynamics:
         if len(sorted_basins) > 1:
             secondary_node, secondary_str = sorted_basins[1]
             if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:
-                msg = self.logs.get("LAGRANGE", "LAGRANGE").format(p=primary_node.upper(), s=secondary_node.upper())
+                msg = self.logs.get("LAGRANGE", "LAGRANGE").format(
+                    p=primary_node.upper(), s=secondary_node.upper()
+                )
                 return "LAGRANGE_POINT", 0.0, msg
         flow_ratio = active_filaments / max(1, word_count)
         well_threshold = getattr(BoneConfig, "GRAVITY_WELL_THRESHOLD", 15.0)
         if flow_ratio > 0.5 and primary_str < (well_threshold * 2):
             msg = self.logs.get("FLOW", "FLOW").format(node=primary_node.upper())
             return "WATERSHED_FLOW", 0.0, msg
-        msg = self.logs.get("ORBIT", "ORBIT").format(node=primary_node.upper(), mass=int(gravity_wells[primary_node]))
+        msg = self.logs.get("ORBIT", "ORBIT").format(
+            node=primary_node.upper(), mass=int(gravity_wells[primary_node])
+        )
         return "ORBITAL", 0.0, msg
 
 

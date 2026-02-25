@@ -1,11 +1,18 @@
-""" bone_main.py"""
+"""bone_main.py"""
 
 import os, time, json, uuid, random, traceback, sys, re
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
 
 from bone_commands import CommandProcessor
-from bone_core import EventBus, SystemHealth, TheObserver, LoreManifest, TelemetryService, RealityStack
+from bone_core import (
+    EventBus,
+    SystemHealth,
+    TheObserver,
+    LoreManifest,
+    TelemetryService,
+    RealityStack,
+)
 from bone_types import Prisma, RealityLayer
 from bone_config import BoneConfig, BonePresets
 from bone_genesis import BoneGenesis
@@ -18,6 +25,7 @@ from bone_cycle import GeodesicOrchestrator
 from bone_council import CouncilChamber
 
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
+
 
 def typewriter(text: str, speed: float = 0.00025, end: str = "\n"):
     if speed < 0.001:
@@ -367,9 +375,7 @@ class BoneAmanita:
             return self._phase_check_commands(user_message) or self.get_metrics()
 
         if not is_system and self.gordon:
-            self.gordon.mode = (
-                "ADVENTURE"
-            )
+            self.gordon.mode = "ADVENTURE"
             current_zone = "Unknown"
             if hasattr(self, "cortex") and hasattr(self.cortex, "last_physics"):
                 current_zone = (
@@ -388,9 +394,7 @@ class BoneAmanita:
                 )
                 if hasattr(self, "cortex"):
                     self.cortex.ballast_active = True
-                    self.cortex.gordon_shock = (
-                        violation_msg
-                    )
+                    self.cortex.gordon_shock = violation_msg
 
         rules = self.reality_stack.get_grammar_rules()
         if not rules["allow_narrative"]:
@@ -444,7 +448,10 @@ class BoneAmanita:
         if clean_cmd.startswith("//"):
             return self._handle_meta_command(clean_cmd)
         if self.cmd is None:
-            return {"ui": f"{Prisma.RED}ERR: Command interface not initialized.{Prisma.RST}", "logs": []}
+            return {
+                "ui": f"{Prisma.RED}ERR: Command interface not initialized.{Prisma.RST}",
+                "logs": [],
+            }
         self.cmd.execute(clean_cmd)
         cmd_logs = [e["text"] for e in self.events.flush()]
         ui_output = "\n".join(cmd_logs) if cmd_logs else "Command Executed."
@@ -557,7 +564,7 @@ class BoneAmanita:
             "stamina": self.stamina,
             "atp": real_atp,
             "tick": self.tick_count,
-            "efficiency": getattr(self.host_stats, "efficiency_index", 1.0)
+            "efficiency": getattr(self.host_stats, "efficiency_index", 1.0),
         }
 
     def emergency_save(self, exit_cause="UNKNOWN"):

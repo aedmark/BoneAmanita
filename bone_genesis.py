@@ -5,10 +5,18 @@ from bone_machine import BoneArchitect
 from bone_soul import NarrativeSelf, TheOroboros
 from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer
 from bone_inventory import GordonKnot
-from bone_protocols import TheBureau, ZenGarden, TheCriticsCircle, TherapyProtocol, KintsugiProtocol, LimboLayer
+from bone_protocols import (
+    TheBureau,
+    ZenGarden,
+    TheCriticsCircle,
+    TherapyProtocol,
+    KintsugiProtocol,
+    LimboLayer,
+)
 from bone_symbiosis import SymbiosisManager
 from bone_spores import LiteraryReproduction
 from bone_drivers import DriverRegistry, BoneConsultant
+
 
 class BoneGenesis:
     @staticmethod
@@ -53,7 +61,9 @@ class BoneGenesis:
                     embryo.bio.biometrics.health = biometrics.get("health", 100.0)
                     embryo.bio.biometrics.stamina = biometrics.get("stamina", 100.0)
                 if embryo.bio.mito:
-                    embryo.bio.mito.state.atp_pool = live_bio_state.get("mito", {}).get("atp", 60.0)
+                    embryo.bio.mito.state.atp_pool = live_bio_state.get("mito", {}).get(
+                        "atp", 60.0
+                    )
         drivers = DriverRegistry(events)
         symbiosis = SymbiosisManager(events)
         return {
@@ -77,8 +87,16 @@ class BoneGenesis:
             if "GORDON" not in suppressed
             else None
         )
-        navigator = TheCartographer(embryo.shimmer) if {"CARTOGRAPHER", "NAVIGATOR"}.isdisjoint(suppressed) else None
-        tinkerer = TheTinkerer(gordon, events, akashic) if "TINKERER" not in suppressed else None
+        navigator = (
+            TheCartographer(embryo.shimmer)
+            if {"CARTOGRAPHER", "NAVIGATOR"}.isdisjoint(suppressed)
+            else None
+        )
+        tinkerer = (
+            TheTinkerer(gordon, events, akashic)
+            if "TINKERER" not in suppressed
+            else None
+        )
         bureau = TheBureau() if "BUREAU" not in suppressed else None
 
         death_gen = None

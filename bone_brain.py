@@ -223,7 +223,7 @@ class LLMInterface:
         timeout: float = 60.0,
         max_retries: int = 2,
         override_url: str = None,
-        override_key: str = None
+        override_key: str = None,
     ) -> str:
         err = ""
         target_url = override_url or self.base_url
@@ -241,7 +241,7 @@ class LLMInterface:
                         return self._parse_response(response.read().decode("utf-8"))
             except urllib.error.HTTPError as e:
                 try:
-                    error_body = e.read().decode('utf-8')
+                    error_body = e.read().decode("utf-8")
                 except Exception:
                     error_body = e.reason
                 if e.code in [401, 403]:
@@ -350,7 +350,7 @@ class LLMInterface:
                 timeout=10.0,
                 max_retries=1,
                 override_url=url,
-                override_key="ollama"
+                override_key="ollama",
             )
         except Exception:
             return None
@@ -717,9 +717,11 @@ class ResponseValidator:
                 r"• >>> MOTION DENIED.*?(?=\n|$)",
                 r"\[CRITICAL OVERRIDE.*?\]",
                 r"\[CRITIC\].*?(?=\n|$)",
-                r"\[METABOLIC RECEIPT.*?\]"
+                r"\[METABOLIC RECEIPT.*?\]",
             ]
-            self.scrub_patterns = [(re.compile(p, re.DOTALL | re.IGNORECASE), "") for p in patterns]
+            self.scrub_patterns = [
+                (re.compile(p, re.DOTALL | re.IGNORECASE), "") for p in patterns
+            ]
         self.meta_markers = [
             "INITIALIZATION SEQUENCE",
             "LOCATING TARGET SEED",
@@ -1138,7 +1140,7 @@ class TheCortex:
             ),
             "meta": {"timestamp": time.time(), "mode_settings": mode_settings},
             "dialogue_history": self.dialogue_buffer,
-            "recent_logs": sim_result.get("logs", [])
+            "recent_logs": sim_result.get("logs", []),
         }
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             anchor_text = self.svc.symbiosis.generate_anchor(full_state)
@@ -1242,7 +1244,7 @@ class DreamEngine:
         return template.format(ghost=residue, A=residue, B=filler_a, C=filler_b)
 
     def hallucinate(
-            self, _vector: Dict[str, float], trauma_level: float = 0.0
+        self, _vector: Dict[str, float], trauma_level: float = 0.0
     ) -> Tuple[str, float]:
         category = "SURREAL"
         if trauma_level > 0.5:

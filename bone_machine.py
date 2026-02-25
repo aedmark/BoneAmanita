@@ -2,7 +2,14 @@ import random
 from dataclasses import dataclass
 from typing import Tuple, Optional, List, Dict, Any
 
-from bone_body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, MetabolicGovernor
+from bone_body import (
+    BioSystem,
+    MitochondrialState,
+    Biometrics,
+    MitochondrialForge,
+    EndocrineSystem,
+    MetabolicGovernor,
+)
 from bone_brain import DreamEngine, ShimmerState
 from bone_config import BoneConfig
 from bone_core import LoreManifest
@@ -33,7 +40,7 @@ class TheCrucible:
             "REGULATOR": "⚖️ REGULATOR: {direction} (Drag {current:.1f} -> {new:.1f})",
             "SURGE": "⚡ SURGE: Absorbed {voltage}v.",
             "RITUAL": "🔥 RITUAL: Capacity +{gain:.1f}v",
-            "MELTDOWN": "💥 MELTDOWN: Hull Breach (-{damage:.1f} HP)"
+            "MELTDOWN": "💥 MELTDOWN: Hull Breach (-{damage:.1f} HP)",
         }
         manifest = LoreManifest.get_instance().get("narrative_data") or {}
         return manifest.get("CRUCIBLE_LOGS", base)
@@ -60,7 +67,9 @@ class TheCrucible:
         if should_dampen:
             self.dampener_charges -= 1
             reduction = voltage_spike * reduction_factor
-            msg = self.logs.get("DAMPER_HIT", "🛡️ Hit").format(reduction=reduction, reason=reason)
+            msg = self.logs.get("DAMPER_HIT", "🛡️ Hit").format(
+                reduction=reduction, reason=reason
+            )
             return True, msg, reduction
         return False, self.logs.get("HOLDING", "Holding"), 0.0
 
@@ -81,23 +90,33 @@ class TheCrucible:
         msg = None
         if abs(adjustment) > 0.1:
             direction = "TIGHTENING" if adjustment > 0 else "RELAXING"
-            msg = self.logs.get("REGULATOR", "⚖️ REG").format(direction=direction, current=current_drag, new=new_drag)
+            msg = self.logs.get("REGULATOR", "⚖️ REG").format(
+                direction=direction, current=current_drag, new=new_drag
+            )
         if physics.get("system_surge_event", False):
             self.active_state = "SURGE"
-            return "SURGE", 0.0, self.logs.get("SURGE", "⚡ SURGE").format(voltage=voltage)
+            return (
+                "SURGE",
+                0.0,
+                self.logs.get("SURGE", "⚡ SURGE").format(voltage=voltage),
+            )
         if voltage > 18.0:
             if structure > 0.5:
                 gain = voltage * 0.1
                 self.max_voltage_cap += gain
                 self.active_state = "RITUAL"
-                return "RITUAL", gain, self.logs.get("RITUAL", "🔥 RITUAL").format(gain=gain)
+                return (
+                    "RITUAL",
+                    gain,
+                    self.logs.get("RITUAL", "🔥 RITUAL").format(gain=gain),
+                )
             else:
                 damage = voltage * 0.5
                 self.active_state = "MELTDOWN"
                 return (
                     "MELTDOWN",
                     damage,
-                    self.logs.get("MELTDOWN", "💥 MELTDOWN").format(damage=damage)
+                    self.logs.get("MELTDOWN", "💥 MELTDOWN").format(damage=damage),
                 )
         self.active_state = "REGULATED"
         return "REGULATED", adjustment, msg
@@ -199,7 +218,7 @@ class TheTheremin:
             "SHATTER": "🔨 SHATTER: -{val:.1f} Resin",
             "RESIN": "🎻 RESIN: +{val:.1f}",
             "TURBULENCE": "🌊 TURBULENCE: -{val:.1f} Resin",
-            "COLLAPSE": "💣 COLLAPSE: AIRSTRIKE INITIATED (Drag +20, Voltage 0)"
+            "COLLAPSE": "💣 COLLAPSE: AIRSTRIKE INITIATED (Drag +20, Voltage 0)",
         }
         manifest = LoreManifest.get_instance().get("narrative_data") or {}
         return manifest.get("THEREMIN_LOGS", base)
@@ -235,7 +254,9 @@ class TheTheremin:
             self.classical_turns += 1
             slag = self.classical_turns * 2.0
             self.decoherence_buildup += slag
-            theremin_msg = self.logs.get("CALCIFY", "🗿 CALCIFY").format(turns=self.classical_turns, val=slag)
+            theremin_msg = self.logs.get("CALCIFY", "🗿 CALCIFY").format(
+                turns=self.classical_turns, val=slag
+            )
         elif complexity > 0.4 and self.classical_turns > 0:
             self.classical_turns = 0
             relief = 15.0
@@ -247,7 +268,9 @@ class TheTheremin:
         if turb > 0.6 and self.decoherence_buildup > 0:
             shatter_amt = turb * 10.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - shatter_amt)
-            theremin_msg = self.logs.get("TURBULENCE", "🌊 TURBULENCE").format(val=shatter_amt)
+            theremin_msg = self.logs.get("TURBULENCE", "🌊 TURBULENCE").format(
+                val=shatter_amt
+            )
             self.classical_turns = 0
         if turb < 0.2:
             physics["narrative_drag"] = max(
@@ -282,6 +305,7 @@ class TheTheremin:
         status = "STUCK" if self.is_stuck else "FLOW"
         return f"🎻 THEREMIN   Resin {self.decoherence_buildup:.1f}  Status {status}"
 
+
 @dataclass
 class SystemEmbryo:
     mind: MindSystem
@@ -299,10 +323,7 @@ SAFE_BIO_DEFAULTS: Dict[str, Any] = {
     "atp": 10.0,
     "respiration": "NECROSIS",
     "enzyme": "NONE",
-    "chem": {
-        "DOP": 0.0, "COR": 0.0, "OXY": 0.0,
-        "SER": 0.0, "ADR": 0.0, "MEL": 0.0
-    },
+    "chem": {"DOP": 0.0, "COR": 0.0, "OXY": 0.0, "SER": 0.0, "ADR": 0.0, "MEL": 0.0},
 }
 
 
@@ -337,16 +358,23 @@ class PanicRoom:
 
     @staticmethod
     def get_safe_bio(previous_state=None):
-        base = {"is_alive": True, "atp": 10.0, "respiration": "NECROSIS", "enzyme": "NONE", "chem": {
-            "DOP": 0.0,
-            "COR": 0.0,
-            "OXY": 0.0,
-            "SER": 0.0,
-            "ADR": 0.0,
-            "MEL": 0.0,
-        }, "logs": [
-            f"{Prisma.RED}BIO FAIL: Panic Room Protocol Active. Sensory input severed.{Prisma.RST}"
-        ]}
+        base = {
+            "is_alive": True,
+            "atp": 10.0,
+            "respiration": "NECROSIS",
+            "enzyme": "NONE",
+            "chem": {
+                "DOP": 0.0,
+                "COR": 0.0,
+                "OXY": 0.0,
+                "SER": 0.0,
+                "ADR": 0.0,
+                "MEL": 0.0,
+            },
+            "logs": [
+                f"{Prisma.RED}BIO FAIL: Panic Room Protocol Active. Sensory input severed.{Prisma.RST}"
+            ],
+        }
         state = previous_state or {}
         if isinstance(state, dict):
             if old_chem := state.get("chemistry", {}):
@@ -470,7 +498,7 @@ class BoneArchitect:
             nav=TheCartographer(bio.shimmer),
             gate=gate,
             tension=SurfaceTension(),
-            dynamics=ZoneInertia(),  # [FULLER] Gravity restored!
+            dynamics=ZoneInertia(),
         )
 
     @staticmethod
@@ -506,10 +534,16 @@ class BoneArchitect:
         recovered_atlas = {}
         if isinstance(load_result, (list, tuple)) and load_result:
             padded_result = list(load_result) + [None] * (5 - len(load_result))
-            mito_legacy, immune_legacy, soul_legacy, continuity, atlas = padded_result[:5]
+            mito_legacy, immune_legacy, soul_legacy, continuity, atlas = padded_result[
+                :5
+            ]
             if mito_legacy and hasattr(embryo.bio.mito, "apply_inheritance"):
                 embryo.bio.mito.apply_inheritance(mito_legacy)
-            if immune_legacy and isinstance(immune_legacy, (list, set)) and hasattr(embryo.bio.immune, "load_antibodies"):
+            if (
+                immune_legacy
+                and isinstance(immune_legacy, (list, set))
+                and hasattr(embryo.bio.immune, "load_antibodies")
+            ):
                 embryo.bio.immune.load_antibodies(immune_legacy)
             if isinstance(soul_legacy, dict):
                 embryo.soul_legacy = soul_legacy

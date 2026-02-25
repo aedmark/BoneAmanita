@@ -38,7 +38,9 @@ class SoulDriver:
         paradox = getattr(self.soul, "paradox_accum", 0.0)
         chaos = min(0.5, (paradox - 5.0) * 0.05) if paradox > 5.0 else 0.0
         dignity = 1.0
-        if hasattr(self.soul, "anchor") and hasattr(self.soul.anchor, "dignity_reserve"):
+        if hasattr(self.soul, "anchor") and hasattr(
+            self.soul.anchor, "dignity_reserve"
+        ):
             dignity = max(0.2, self.soul.anchor.dignity_reserve / 100.0)
         return {
             p: (w + random.uniform(-chaos, chaos)) * dignity
@@ -314,6 +316,7 @@ class SyntaxModule:
         self.omega_val = (self.omega_val * 0.8) + (max(0.1, target_omega) * 0.2)
         return self.omega_val
 
+
 class CongruenceValidator:
     def __init__(self):
         self.last_phi = 1.0
@@ -398,12 +401,20 @@ class BoneConsultant:
     def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
         directives = []
         if "LIMINAL" in self.state.active_modules or self.state.L > 0.7:
-            scar_note = f" (Godel Scars: {self.liminal_mod.godel_scars})" if self.liminal_mod.godel_scars > 0 else ""
+            scar_note = (
+                f" (Godel Scars: {self.liminal_mod.godel_scars})"
+                if self.liminal_mod.godel_scars > 0
+                else ""
+            )
             directives.append(
                 f"ARCHETYPE: THE REVENANT. Read the dark matter between the words. Speak of the absences.{scar_note}"
             )
         elif "SYNTAX" in self.state.active_modules or self.state.O > 0.9:
-            stress_note = " The grammatical structure is fracturing. Punish jagged prose." if self.syntax_mod.grammatical_stress > 0.5 else ""
+            stress_note = (
+                " The grammatical structure is fracturing. Punish jagged prose."
+                if self.syntax_mod.grammatical_stress > 0.5
+                else ""
+            )
             directives.append(
                 f"ARCHETYPE: THE BUREAU. Enforce structural rigidity. Correct grammar. Use bureaucratic jargon.{stress_note}"
             )
@@ -418,8 +429,6 @@ class BoneConsultant:
                 directives.append("MODE: GLACIER. Deep, slow, resonant.")
         if soul_snapshot:
             arch = soul_snapshot.get("archetype", "UNKNOWN")
-            muse = (soul_snapshot.get("obsession") or {}).get(
-                "title", "None"
-            )
+            muse = (soul_snapshot.get("obsession") or {}).get("title", "None")
             directives.append(f"NARRATIVE_LAYER: You are {arch}. MUSE: {muse}.")
         return "\n".join(directives)

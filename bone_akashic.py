@@ -78,15 +78,16 @@ class TheAkashicRecord:
                     target_lens = resonance.get("lens", resonance.get("soul"))
                     if target_lens == active_lens:
                         if self.events:
-                            self.events.publish("RESONANCE_ACHIEVED", {
-                                "result": resonance["result"],
-                                "msg": resonance["msg"]
-                            })
+                            self.events.publish(
+                                "RESONANCE_ACHIEVED",
+                                {
+                                    "result": resonance["result"],
+                                    "msg": resonance["msg"],
+                                },
+                            )
 
     @staticmethod
-    def calculate_manifold_shift(
-            theta: str, e: Dict[str, float]
-    ) -> Dict[str, float]:
+    def calculate_manifold_shift(theta: str, e: Dict[str, float]) -> Dict[str, float]:
         bias = 0.0
         scalar = 1.0
         theta_upper = theta.upper()

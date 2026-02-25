@@ -1,4 +1,5 @@
 """bone_diag.py - BoneAmanita Master Test Suite - "Trust, but verify. Then verify the verification." """
+
 import io
 import os
 import random
@@ -1977,9 +1978,7 @@ class TestHostileCortex(unittest.TestCase):
             duration < 1.0, "Validator took too long; possible infinite loop."
         )
         self.assertEqual(result.get("content", "").strip(), "I am ready to speak.")
-        self.assertEqual(
-            len(result.get("meta_logs", [])), 60
-        )
+        self.assertEqual(len(result.get("meta_logs", [])), 60)
 
     @patch("urllib.request.urlopen")
     def test_http_500_fallback(self, mock_urlopen):
@@ -1997,6 +1996,7 @@ class TestHostileCortex(unittest.TestCase):
     @patch("urllib.request.urlopen")
     def test_http_400_graceful_fray(self, mock_urlopen):
         from bone_brain import SynapseError
+
         error_body = b'{"error": {"message": "Context length exceeded."}}'
         error_fp = io.BytesIO(error_body)
         mock_urlopen.side_effect = urllib.error.HTTPError(

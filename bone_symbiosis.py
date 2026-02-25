@@ -16,6 +16,7 @@ _DEFAULT_MODIFIERS = {
     "system_directives": [],
 }
 
+
 @dataclass
 class HostHealth:
     latency: float = 0.0
@@ -78,7 +79,7 @@ class DiagnosticConfidence:
         if raw_state == "REFUSAL":
             self.current_diagnosis = "REFUSAL"
         elif len(self.history) >= self.persistence_threshold:
-            recent = list(self.history)[-self.persistence_threshold:]
+            recent = list(self.history)[-self.persistence_threshold :]
             if all(s == raw_state for s in recent):
                 self.current_diagnosis = raw_state
         return self.current_diagnosis
@@ -119,6 +120,7 @@ class SymbiontVoice:
         if score > 1.0 and "med_score" in self.personality:
             return self.personality["med_score"]
         return "..."
+
 
 def get_symbiont(type_name):
     if type_name in _VOICE_CACHE:

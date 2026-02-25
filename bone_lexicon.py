@@ -1,13 +1,6 @@
-import json
-import random
-import re
-import string
-import time
-import unicodedata
-import os
+import json, random, re, string, time, unicodedata, os
 from typing import Tuple, Dict, Set, Optional, List
 from bone_core import Prisma, LoreManifest
-from functools import lru_cache
 
 
 class LexiconStore:
@@ -273,9 +266,7 @@ class LinguisticAnalyzer:
                     dims[target_dim] += 1.0
         total = max(1.0, sum(dims.values()))
         result = {k: round(v / total, 3) for k, v in dims.items()}
-        result["ENT"] = result[
-            "CHI"
-        ]
+        result["ENT"] = result["CHI"]
         return result
 
     @staticmethod
@@ -322,7 +313,11 @@ class LinguisticAnalyzer:
                 if root in w:
                     return category.lower(), 0.8
         counts = {k: 0 for k in self.PHONETICS}
-        char_to_sound = {char: sound_type for sound_type, chars in self.PHONETICS.items() for char in chars}
+        char_to_sound = {
+            char: sound_type
+            for sound_type, chars in self.PHONETICS.items()
+            for char in chars
+        }
         for char in w:
             if sound_type := char_to_sound.get(char):
                 counts[sound_type] += 1
@@ -450,7 +445,7 @@ class LexiconService:
     @classmethod
     def get_categories_for_word(cls, word: str) -> Set[str]:
         if not cls._INITIALIZED:
-            cls.initialize()  # [SCHUR] Safety net
+            cls.initialize()
         return cls._STORE.get_categories_for_word(word)
 
     @classmethod

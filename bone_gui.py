@@ -243,7 +243,11 @@ class GeodesicRenderer:
         else:
             labels = {"HP": "HP", "STM": "STM", "SHOW_PHYSICS": False}
             return self.projector.render(
-                {"physics": physics}, data_ctx, mind_tuple, reality_depth=current_depth, labels=labels
+                {"physics": physics},
+                data_ctx,
+                mind_tuple,
+                reality_depth=current_depth,
+                labels=labels,
             )
 
     @staticmethod

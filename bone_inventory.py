@@ -48,12 +48,27 @@ class GordonKnot:
         self.last_flinch_turn = -100
         self.scar_tissue = {}
         self.refusal_markers = {
-            "cannot", "can't", "unable", "fail", "too heavy",
-            "stuck", "don't", "do not", "locked", "refuse", "impossible",
+            "cannot",
+            "can't",
+            "unable",
+            "fail",
+            "too heavy",
+            "stuck",
+            "don't",
+            "do not",
+            "locked",
+            "refuse",
+            "impossible",
         }
         self.loot_triggers = [
-            "found a", "picked up", "pick up", "acquired",
-            "took the", "take the", "grab the", "takes the",
+            "found a",
+            "picked up",
+            "pick up",
+            "acquired",
+            "took the",
+            "take the",
+            "grab the",
+            "takes the",
         ]
         self.load_config()
 
@@ -65,7 +80,7 @@ class GordonKnot:
         text = user_input.lower()
         for action_obj_pair, required_loc in self.location_coupling.items():
             words = action_obj_pair.split()
-            if all(re.search(rf'\b{w}\b', text) for w in words):
+            if all(re.search(rf"\b{w}\b", text) for w in words):
                 if required_loc not in current_zone.lower():
                     return (
                         f"{Prisma.SLATE}🏢 GORDON [PREMISE VIOLATION]: The action requires the object "
@@ -73,7 +88,9 @@ class GordonKnot:
                         f"You must bring the object to the location. Action denied.{Prisma.RST}"
                     )
 
-        inventory_items = " ".join([i.get("name", "").lower() for i in self.get_inventory_data()])
+        inventory_items = " ".join(
+            [i.get("name", "").lower() for i in self.get_inventory_data()]
+        )
         for action, required_objects in self.action_coupling.items():
 
             verb_pattern = rf"\b(?:i\s+(?:will\s+)?{action}|to\s+{action}|{action}\s+(?:the|a|an|my|some|it|this|that)|{action}ing)\b|^{action}\b"
@@ -89,8 +106,19 @@ class GordonKnot:
                         f"Coupling failed. Action denied.{Prisma.RST}"
                     )
 
-        interaction_verbs = ["use", "drop", "throw", "consume", "eat", "drink", "read", "activate", "give", "equip"]
-        has_interaction = any(re.search(rf'\b{v}\b', text) for v in interaction_verbs)
+        interaction_verbs = [
+            "use",
+            "drop",
+            "throw",
+            "consume",
+            "eat",
+            "drink",
+            "read",
+            "activate",
+            "give",
+            "equip",
+        ]
+        has_interaction = any(re.search(rf"\b{v}\b", text) for v in interaction_verbs)
 
         if has_interaction:
             all_known = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
@@ -143,7 +171,14 @@ class GordonKnot:
         raw_lost = re.findall(lost_pattern, text, re.IGNORECASE)
 
         def normalize(items):
-            return list({re.sub(r"[^A-Z0-9_]", "", i.strip().upper().replace(" ", "_")) for i in items if i})
+            return list(
+                {
+                    re.sub(r"[^A-Z0-9_]", "", i.strip().upper().replace(" ", "_"))
+                    for i in items
+                    if i
+                }
+            )
+
         new_loot = normalize(raw_loot)
         lost_loot = normalize(raw_lost)
         logs = []
@@ -198,7 +233,11 @@ class GordonKnot:
         return None
 
     def get_inventory_data(self) -> List[Dict]:
-        return [item.__dict__ for name in self.inventory if (item := self.get_item_data(name))]
+        return [
+            item.__dict__
+            for name in self.inventory
+            if (item := self.get_item_data(name))
+        ]
 
     def acquire(self, tool_name: str) -> str:
         tool_name = tool_name.upper() if tool_name else "UNKNOWN"
@@ -255,11 +294,13 @@ class GordonKnot:
             if not (item := self.get_item_data(name)):
                 continue
             ctx = item.spawn_context
-            if ctx in ("COMMON", "STANDARD") or \
-                    (ctx == "VOLTAGE_HIGH" and voltage > 12.0) or \
-                    (ctx == "VOLTAGE_CRITICAL" and voltage > 18.0) or \
-                    (ctx == "DRAG_HEAVY" and drag > 4.0) or \
-                    (ctx == "PSI_HIGH" and psi > 0.6):
+            if (
+                ctx in ("COMMON", "STANDARD")
+                or (ctx == "VOLTAGE_HIGH" and voltage > 12.0)
+                or (ctx == "VOLTAGE_CRITICAL" and voltage > 18.0)
+                or (ctx == "DRAG_HEAVY" and drag > 4.0)
+                or (ctx == "PSI_HIGH" and psi > 0.6)
+            ):
                 candidates.append(name)
         return candidates
 
@@ -279,10 +320,16 @@ class GordonKnot:
             self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
 
         dim_map = {
-            "STR": "heavy", "VEL": "kinetic", "PHI": "thermal", 
-            "PSI": "abstract", "ENT": "void", "BET": "constructive"
+            "STR": "heavy",
+            "VEL": "kinetic",
+            "PHI": "thermal",
+            "PSI": "abstract",
+            "ENT": "void",
+            "BET": "constructive",
         }
-        dom_dim = max(physics_vector, key=physics_vector.get) if physics_vector else "ENT"
+        dom_dim = (
+            max(physics_vector, key=physics_vector.get) if physics_vector else "ENT"
+        )
         archetype = dim_map.get(dom_dim, "void")
         prefixes = self.blueprints.get("PREFIXES", {}).get(archetype, ["Strange"])
         suffixes = self.blueprints.get("SUFFIXES", {}).get(archetype, ["of Mystery"])
@@ -310,7 +357,7 @@ class GordonKnot:
             "function": "ARTIFACT",
             "passive_traits": ["DYNAMIC"],
             "value": round(physics_vector.get(dom_dim, 0.0) * 10, 1),
-            "spawn_context": "FORGED"
+            "spawn_context": "FORGED",
         }
         self.register_dynamic_item(clean_id, item_data)
         return clean_id
@@ -378,7 +425,7 @@ class GordonKnot:
                 physics_ref["narrative_drag"] = 0.0
                 return (
                     True,
-                    f"{Prisma.OCHRE}⚓ REFLEX: {name} deployed. Drag zeroed out.{Prisma.RST}"
+                    f"{Prisma.OCHRE}⚓ REFLEX: {name} deployed. Drag zeroed out.{Prisma.RST}",
                 )
             kappa = physics_ref.get("kappa", 0.5)
             if trigger == "KAPPA_CRITICAL" and kappa < 0.2:
@@ -386,6 +433,6 @@ class GordonKnot:
                 physics_ref["kappa"] = 0.8
                 return (
                     True,
-                    f"{Prisma.GRN}🍕 REFLEX: {name} consumed. Structure restored.{Prisma.RST}"
+                    f"{Prisma.GRN}🍕 REFLEX: {name} consumed. Structure restored.{Prisma.RST}",
                 )
         return False, None

@@ -54,7 +54,7 @@ class BonePresets:
             "chaos_tax_enabled": True,
             "voltage_floor_override": None,
             "active_mods": [],
-            "default_ui_depth": "CORE"
+            "default_ui_depth": "CORE",
         },
         "CONVERSATION": {
             "description": "Pure dialogue. No entropy, no items, just connection.",
@@ -66,7 +66,7 @@ class BonePresets:
                 "CARTOGRAPHER",
                 "TINKERER",
                 "DEATH",
-                "BUREAU"
+                "BUREAU",
             ],
             "prompt_key": "CONVERSATION",
             "show_inventory": False,
@@ -78,7 +78,7 @@ class BonePresets:
             "chaos_tax_enabled": False,
             "voltage_floor_override": None,
             "active_mods": [],
-            "default_ui_depth": "BUNNY"
+            "default_ui_depth": "BUNNY",
         },
         "CREATIVE": {
             "description": "High voltage, low drag. Hallucination enabled.",
@@ -95,7 +95,7 @@ class BonePresets:
             "chaos_tax_enabled": False,
             "voltage_floor_override": 70.0,
             "active_mods": ["LIMINAL"],
-            "default_ui_depth": "CORE"
+            "default_ui_depth": "CORE",
         },
         "TECHNICAL": {
             "description": "Raw data stream. Debugging and code generation.",
@@ -112,7 +112,7 @@ class BonePresets:
             "chaos_tax_enabled": True,
             "voltage_floor_override": None,
             "active_mods": ["CODING", "SYNTAX"],
-            "default_ui_depth": "DEEP"
+            "default_ui_depth": "DEEP",
         },
     }
 
@@ -434,14 +434,25 @@ class BoneConfig:
         if isinstance(physics_packet, dict):
             current_v = physics_packet.get("voltage", 5.0)
             current_d = physics_packet.get("narrative_drag", 1.0)
-            physics_packet["voltage"] = max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX))
-            physics_packet["narrative_drag"] = max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT))
+            physics_packet["voltage"] = max(
+                cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX)
+            )
+            physics_packet["narrative_drag"] = max(
+                cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT)
+            )
         else:
             current_v = getattr(physics_packet, "voltage", 5.0)
             current_d = getattr(physics_packet, "narrative_drag", 1.0)
-            setattr(physics_packet, "voltage", max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX)))
-            setattr(physics_packet, "narrative_drag",
-                    max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT)))
+            setattr(
+                physics_packet,
+                "voltage",
+                max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX)),
+            )
+            setattr(
+                physics_packet,
+                "narrative_drag",
+                max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT)),
+            )
 
         return physics_packet
 
@@ -454,7 +465,10 @@ class BoneConfig:
             return f"❌ PARAM ERROR: '{parameter}' not found in {sector}."
         current_val = getattr(target_sector, parameter)
         if type(current_val) != type(value):
-            if not (isinstance(current_val, (int, float)) and isinstance(value, (int, float))):
+            if not (
+                isinstance(current_val, (int, float))
+                and isinstance(value, (int, float))
+            ):
                 return f"⚠️ TYPE MISMATCH: Cannot replace {type(current_val).__name__} with {type(value).__name__}."
         setattr(target_sector, parameter, value)
         return f"✅ TUNED: {sector}.{parameter} -> {value}"
