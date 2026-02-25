@@ -1,6 +1,6 @@
 # BONEAMANITA v15 CHANGELOG
 
-### **BONEAMANITA v15.9.0 "The Hypvervisor Era"**
+### **BONEAMANITA v15.9.0 "The Purple People Eater"**
 ---
 
 #### **🧠 THE CORTEX & NEUROCHEMISTRY (The Pinker & Schur Lenses)**
