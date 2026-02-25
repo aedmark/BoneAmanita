@@ -111,7 +111,7 @@ class NeurotransmitterModulator:
             self.last_mood = current_mood
         voltage_heat = math.log1p(max(0.0, base_voltage - 5.0)) * 0.1
         chemical_delta = (c.dopamine * 0.4) - (c.adrenaline * 0.3) - (c.cortisol * 0.2)
-        base_temp = getattr(BrainConfig, "BASE_TEMP", 0.8)
+        base_temp = getattr(BrainConfig, "BASE_TEMP", 0.4)
         base_top_p = getattr(BrainConfig, "BASE_TOP_P", 0.95)
         return {
             "temperature": round(
@@ -342,7 +342,9 @@ class LLMInterface:
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "temperature": params.get("temperature", 0.55),
+            "temperature": params.get("temperature", 0.4),
+            "frequency_penalty": params.get("frequency_penalty", 0.8),
+            "presence_penalty": params.get("presence_penalty", 0.4),
         }
         try:
             return self._transmit(

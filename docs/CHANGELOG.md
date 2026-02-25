@@ -1,5 +1,35 @@
 # BONEAMANITA v15 CHANGELOG
 
+### **BONEAMANITA v15.9.0 "The Hypvervisor Era"**
+---
+
+#### **🧠 THE CORTEX & NEUROCHEMISTRY (The Pinker & Schur Lenses)**
+
+* **The Purple Monster Cure (`bone_brain.py`):**
+* **Thermal Regulation:** Cooled `BrainConfig.BASE_TEMP` down from `0.8` to `0.4` within the `NeurotransmitterModulator`. This prevents the LLM from hallucinating overly-poetic, rambling "purple prose" when systemic Voltage spikes.
+* **The Fallback Muzzle:** Injected missing `frequency_penalty` (0.8) and `presence_penalty` (0.4) into the `LLMInterface._local_fallback` payload. If the primary circuit breaker trips, the local Ollama fallback will no longer spiral into repetitive, tranced loops.
+
+* **Prompt Tensegrity (`bone_brain.py`):**
+* **Trigger Injection:** Upgraded `PromptComposer.compose` to dynamically pass the active `mode_trigger` (e.g., `[MODE: ADVENTURE]`) to the LLM context window, ensuring the newly baked fine-tuned weights instantly load the correct persona.
+* **Ghost Removal:** Ephemeralized the prompt constructor by stripping orphaned legacy variables (`flux_report`, `thought_instruction`) from the final `return` block.
+
+#### **🛠️ THE FORGE & TRAINING DATA (The Architect Lens)**
+
+* **Mode Collapse Resolution (`bone_forge.py` & `fix_dataset.py`):**
+* **Conditional Routing:** Replaced the generic `[VSL]` system tag in the training data pipeline. The Forge now dynamically injects mode-specific triggers during dataset generation to prevent the model from blending the Adventure, Conversation, and Technical personas into one chaotic entity.
+* **The Dataset Healer:** Shipped `fix_dataset.py` as a surgical utility to retrofit legacy `.jsonl` training data with the correct cyclical mode tags via modulo logic.
+
+* **Naked Execution Baseline (`Modelfile`):**
+* **Safe Defaults:** Updated the core Ollama `Modelfile` to use `SYSTEM """[MODE: ADVENTURE]"""` as the baseline. Users running the model "naked" via `ollama run` will no longer trigger the broken, schizophrenic `[VSL]` fallback state.
+
+#### **📜 PROMPT ENGINEERING & CONSTRAINTS (The Fuller Lens)**
+
+* **The Menu Ghost (`system_prompts.json`):**
+* **Negative Formatting Constraints:** Added a strict negative constraint to the `ADVENTURE` mode `style_guide`. The model is now explicitly forbidden from using bullet points, numbered lists, or multiple-choice menus when subtly highlighting interactive elements at the end of a scene description.
+* **Conciseness Clamps:** Imposed a strict 3-sentence maximum for environmental crystallization, forcing the narrative to remain punchy, brutal, and efficient.
+
+---
+
 ### **BONEAMANITA v15.8.0 "This One's For Beau"**
 
 #### **⚙️ STRUCTURAL INTEGRITY & CORE ENGINE (The Fuller Lens)**
