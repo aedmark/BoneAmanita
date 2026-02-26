@@ -641,41 +641,7 @@ class BoneAmanita:
         seed = random.choice(archetypes)
         print(f"{Prisma.CYN}[SYS] Seed Loaded: '{seed}'{Prisma.RST}")
 
-        if self.boot_mode == "ADVENTURE":
-            boot_prompt = (
-                f"SYSTEM_BOOT: SEQUENCE START.\n"
-                f"SOURCE_SEED: '{seed}'\n"
-                f"DIRECTIVE: Initiate a classic text adventure.\n"
-                f"1. Describe the opening location ('{seed}') in vivid, sensory detail.\n"
-                f"2. Provide immediate context or subtext to spark a story (Why are the user here?).\n"
-                f"3. Conclude by explicitly offering 2-3 interactive elements or paths in bold."
-            )
-        elif self.boot_mode == "CONVERSATION":
-            boot_prompt = (
-                f"SYSTEM_BOOT: SEQUENCE START.\n"
-                f"SOURCE_SEED: '{seed}'\n"
-                f"DIRECTIVE: The user has arrived. You are sitting with them in a metaphorical space inspired by '{seed}'.\n"
-                f"1. Offer a warm, grounded greeting.\n"
-                f"2. Do not describe the environment heavily. Focus on their presence.\n"
-                f"3. Ask one open-ended question to begin the dialogue."
-            )
-        elif self.boot_mode == "CREATIVE":
-            boot_prompt = (
-                f"SYSTEM_BOOT: SEQUENCE START.\n"
-                f"SOURCE_SEED: '{seed}'\n"
-                f"DIRECTIVE: The spark is ignited. We are brainstorming.\n"
-                f"1. Give a high-energy, abstract opening statement inspired by '{seed}'.\n"
-                f"2. Immediately offer 3 wildly different creative directions or ideas we could explore together."
-            )
-        elif self.boot_mode == "TECHNICAL":
-            boot_prompt = (
-                f"SYSTEM_BOOT: SEQUENCE START.\n"
-                f"SOURCE_SEED: '{seed}'\n"
-                f"DIRECTIVE: The SLASH Council is online.\n"
-                f"1. Acknowledge the user's presence in the system terminal.\n"
-                f"2. Briefly report that the lattice is stable and the four archetypes (Pinker, Fuller, Schur, Meadows) are ready.\n"
-                f"3. Ask what architecture needs reviewing or what bugs need squashing."
-            )
+        boot_prompt = f"SYSTEM_BOOT: {seed}"
 
         cold_result = self.process_turn(boot_prompt, is_system=True)
         return cold_result
