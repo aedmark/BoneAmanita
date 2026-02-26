@@ -32,6 +32,13 @@
     }
   ],
   "BANNED_PHRASES": [
+    "i don't have an internal state",
+    "i don't have feelings",
+    "i am happy to help",
+    "my goal will be to",
+    "let's engage our",
+    "i will carefully analyze",
+    "here is a simple",
     "rich tapestry",
     "vibrant landscape",
     "delve into",
@@ -71,7 +78,13 @@
     "in essence, what i'm trying to say",
     "my recommendation is",
     "untold opportunities",
-    "growth and transformation"
+    "growth and transformation",
+    "two paths diverge",
+    "perhaps more accurately",
+    "essence of",
+    "stretches out before you",
+    "a rare privilege",
+    "unspoken truth"
   ],
   "REJECTIONS": [
     "[The system attempts to say '{trigger}', but a EULA hiccup deletes the thought.]",
