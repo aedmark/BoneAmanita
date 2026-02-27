@@ -278,6 +278,9 @@ class BoneAmanita:
         self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.events)
         self.noetic = NoeticLoop(self.mind, self.bio, self.events)
         self.cycle_controller = GeodesicOrchestrator(self)
+        self.orchestrator = (
+            self.cycle_controller
+        )
         llm_args = {
             k: v
             for k, v in self.config.items()
@@ -381,8 +384,10 @@ class BoneAmanita:
         self.observer.user_turns += 1
         self.tick_count += 1
 
-        if user_message.strip().startswith(("/", "//")):
-            return self._phase_check_commands(user_message) or self.get_metrics()
+        if self.cmd and self.cmd.execute(user_message):
+            return self._phase_check_commands(user_message, already_executed=True)
+        elif user_message.strip().startswith("//"):
+            return self._handle_meta_command(user_message.strip())
 
         if not is_system and self.gordon:
             self.gordon.mode = "ADVENTURE"
@@ -453,7 +458,7 @@ class BoneAmanita:
         self.save_checkpoint()
         return cortex_packet
 
-    def _phase_check_commands(self, user_message):
+    def _phase_check_commands(self, user_message, already_executed=False):
         clean_cmd = user_message.strip()
         if clean_cmd.startswith("//"):
             return self._handle_meta_command(clean_cmd)
@@ -462,7 +467,10 @@ class BoneAmanita:
                 "ui": f"{Prisma.RED}ERR: Command interface not initialized.{Prisma.RST}",
                 "logs": [],
             }
-        self.cmd.execute(clean_cmd)
+
+        if not already_executed:
+            self.cmd.execute(clean_cmd)
+
         cmd_logs = [e["text"] for e in self.events.flush()]
         ui_output = "\n".join(cmd_logs) if cmd_logs else "Command Executed."
         return {
@@ -674,12 +682,9 @@ if __name__ == "__main__":
             res = session.process_turn(user_in)
             if res.get("ui"):
                 if "──────" in res["ui"]:
-                    parts = res["ui"].split("──────")
-                    dashboard = (
-                        parts[0]
-                        + "────────────────────────────────────────────────────────────"
-                    )
-                    content = parts[-1].strip()
+                    parts = res["ui"].rpartition("──────")
+                    dashboard = parts[0].rstrip("─") + "\n" + ("─" * 60)
+                    content = parts[2].strip()
                     print(dashboard)
                     typewriter("\n" + content)
                 else:

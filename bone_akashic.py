@@ -19,6 +19,8 @@ class TheAkashicRecord:
         self.lore = lore_manifest if lore_manifest else LoreManifest.get_instance()
         self.events = events_ref
         self.shadow_stock: List[Dict] = []
+        self.subconscious_strata: List[Dict] = []  # Added for Autophagy
+        self.scar_map: List[Dict] = []  # Added for Kintsugi
         self._load_mythos_state()
 
     def setup_listeners(self, event_bus):
@@ -27,6 +29,59 @@ class TheAkashicRecord:
         event_bus.subscribe("FORGE_SUCCESS", self._on_forge_event)
         event_bus.subscribe("GHOST_SIGNAL", self._on_ghost_signal)
         print(f"{Prisma.CYN}[AKASHIC]: Listening for mythic resonance...{Prisma.RST}")
+
+    def trigger_autophagy(self) -> Tuple[float, str]:
+        """Cannibalizes old memories for emergency ATP."""
+        if not self.subconscious_strata:
+            # Fallback: Consume a discovered word if no deep memories exist
+            if self.discovered_words:
+                word = next(iter(self.discovered_words))
+                del self.discovered_words[word]
+                return (
+                    15.0,
+                    f"[AUTOPHAGY: Consumed lexical memory of '{word}' to survive.]",
+                )
+            return (
+                0.0,
+                "[AUTOPHAGY FAILED: No memories left to consume. System crash imminent.]",
+            )
+
+        # Consume oldest/weakest memory
+        consumed_node = self.subconscious_strata.pop(0)
+        target = consumed_node.get("concept", "Unknown Node")
+        return 15.0, f"[AUTOPHAGY: Consumed memory of {target} to survive.]"
+
+    def record_scar(self, concept: str, p: Any):
+        """Mercy's Exhalation Reflex: Gilds a scar and leaves a ghost."""
+        coords = {
+            "E": getattr(p, "E", 0.2),
+            "beta": getattr(p, "beta", 0.4),
+            "S": getattr(p, "S", 0.3),
+            "D": getattr(p, "D", 0.3),
+            "C": getattr(p, "C", 0.2),
+            "T": getattr(p, "T", 0.0),
+            "psi": getattr(p, "psi", 0.0),
+            "chi": getattr(p, "chi", 0.0),
+            "valence": getattr(p, "valence", 0.0),
+            "ROS": getattr(p, "ROS", 0.0),
+        }
+        scar = {"concept": concept, "coordinates": coords, "gilded": True}
+        self.scar_map.append(scar)
+
+        # Leave a ghost for Casper and Revenant
+        self.store_ghost_echo(
+            {"type": "SCAR_GHOST", "concept": concept, "coords": coords}
+        )
+
+        if self.events:
+            self.events.log(
+                f"{Prisma.OCHRE}🏺 MERCY: Scar recorded at '{concept}'. Ghost left in substrate.{Prisma.RST}",
+                "VILLAGE",
+            )
+
+    def bury_memory(self, concept: str, data: Dict):
+        """Plants a memory in the subconscious strata."""
+        self.subconscious_strata.append({"concept": concept, "data": data})
 
     def _on_lens_interaction(self, payload):
         lenses = payload.get("lenses", [])
@@ -151,6 +206,8 @@ class TheAkashicRecord:
             },
             "ingredient_affinity": self.ingredient_affinity,
             "shadow_stock": self.shadow_stock,
+            "subconscious_strata": self.subconscious_strata,  # Added
+            "scar_map": self.scar_map,  # Added
         }
         if not os.path.exists("saves"):
             os.makedirs("saves")

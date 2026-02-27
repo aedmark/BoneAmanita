@@ -47,6 +47,15 @@ class ObservationPhase(SimulationPhase):
             "valence",
             "entropy",
             "beta_index",
+            "contradiction",
+            "scope",
+            "depth",
+            "connectivity",
+            "resonance",
+            "silence",
+            "lq",
+            "ros",
+            "glimmers",
             "raw_text",
             "antigens",
             "psi",
@@ -340,6 +349,8 @@ class MetabolismPhase(SimulationPhase):
         self._audit_hubris(ctx, physics)
         self._apply_healing(ctx)
         self._check_narcolepsy(ctx)
+        self._check_autophagy(ctx)
+        self._check_ros_toxicity(ctx)
         return ctx
 
     def _apply_economic_stimulus(self, ctx: CycleContext, efficiency: float):
@@ -412,6 +423,12 @@ class MetabolismPhase(SimulationPhase):
             if repair and repair["success"]:
                 ctx.log(repair["msg"])
                 heal_amt = 20.0
+
+                if hasattr(self.eng.mind.mem, "record_scar"):
+                    self.eng.mind.mem.record_scar(
+                        self.eng.kintsugi.active_koan or "Healed Rupture", ctx.physics
+                    )
+
                 if self.eng.bio.biometrics:
                     self.eng.bio.biometrics.stamina = min(
                         BoneConfig.MAX_STAMINA,
@@ -429,6 +446,23 @@ class MetabolismPhase(SimulationPhase):
                     BoneConfig.MAX_HEALTH, self.eng.bio.biometrics.health + 5.0
                 )
             self.eng.health = min(BoneConfig.MAX_HEALTH, self.eng.health + 5.0)
+
+    def _check_autophagy(self, ctx: CycleContext):
+        if self.eng.bio.mito.state.atp_pool <= 0:
+            if hasattr(self.eng.mind.mem, "trigger_autophagy"):
+                atp_gain, msg = self.eng.mind.mem.trigger_autophagy()
+                self.eng.bio.mito.state.atp_pool += atp_gain
+                ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
+
+    def _check_ros_toxicity(self, ctx: CycleContext):
+        if self.eng.bio.mito.state.ros_buildup >= 100.0:
+            ctx.log(
+                f"{Prisma.RED}☣️ PANIC ROOM: Toxicity critical (ROS 100). Venting.{Prisma.RST}"
+            )
+            ctx.physics.psi = 0.0
+            ctx.physics.chi = 0.0
+            self.eng.bio.mito.state.ros_buildup *= 0.5
+            ctx.physics.flow_state = "SAFE_MODE"
 
 
 class RealityFilterPhase(SimulationPhase):
@@ -875,16 +909,56 @@ class ArbitrationPhase(SimulationPhase):
         soul_arch = self.eng.soul.archetype
         mandates = getattr(ctx, "council_mandates", [])
         current_trigram = ctx.world_state.get("trigram", None)
+
         final_lens, source, opinion = self.eng.arbiter.arbitrate(
             physics_lens=phys_lens,
             soul_archetype=soul_arch,
             council_mandates=mandates,
             trigram=current_trigram,
         )
+
+        tension = getattr(ctx.physics, "beta_index", 0.0)
+        silence = getattr(ctx.physics, "silence", 0.0)
+        synergy_active = any("The lenses align" in log for log in ctx.logs)
+
+        if tension > 0.85 and silence < 0.5 and not synergy_active:
+            final_lens = "THE STAGE MANAGER"
+            opinion = "The tension is too high. The Stage Manager cuts the mic. Silence is enforced."
+            ctx.physics.silence = 0.9
+            ctx.physics.narrative_drag += 2.0
+            ctx.log(
+                f"{Prisma.WHT}🎭 STAGE MANAGER: 'Too many voices. Step back.'{Prisma.RST}"
+            )
+            ctx.log(
+                f"{Prisma.GRY}∇ [THE SILENCE]: The system pauses, waiting for structure.{Prisma.RST}"
+            )
+
+        elif silence > 0.85 and not synergy_active:
+
+            final_lens = "THE STAGE MANAGER"
+
+            opinion = "The Stage Manager holds the silence. No archetype is called."
+
+            ctx.log(
+                f"{Prisma.WHT}🎭 STAGE MANAGER: (Gestures for the cosmos to hold.){Prisma.RST}"
+            )
+
+        else:
+            if synergy_active:
+                ctx.log(
+                    f"{Prisma.GRY}🎭 (The Stage Manager steps back. The Synergy speaks.){Prisma.RST}"
+                )
+            else:
+                ctx.log(
+                    f"{Prisma.GRY}🎭 (The Stage Manager nods. {final_lens} steps into the light.){Prisma.RST}"
+                )
+
         ctx.active_lens = final_lens
         self.eng.events.publish("LENS_INTERACTION", {"lenses": [phys_lens, soul_arch]})
-        if source != "PHYSICS_VECTOR":
+
+        if source != "PHYSICS_VECTOR" or final_lens == "THE STAGE MANAGER":
             ctx.log(f"{Prisma.MAG}⚖️ {opinion}{Prisma.RST}")
+
         self.eng.drivers.current_focus = final_lens
         return ctx
 
@@ -1156,7 +1230,8 @@ class GeodesicOrchestrator:
             ctx.user_name = self.eng.user_name
             ctx.council_mandates = []
             ctx.timestamp = time.time()
-            self.eng.events.flush()
+            pre_logs = [e["text"] for e in self.eng.events.flush()]
+            ctx.logs.extend(pre_logs)
             ctx = self.simulator.run_simulation(ctx)
             if self.eng.phys and hasattr(self.eng.phys, "observer"):
                 self.eng.phys.observer.last_physics_packet = ctx.physics.snapshot()
@@ -1181,6 +1256,26 @@ class GeodesicOrchestrator:
             return ctx.refusal_packet
 
         snapshot = self.reporter.render_snapshot(ctx)
+
+        ui_mode = getattr(self.eng, "ui_mode", "STANDARD")
+        if ui_mode in ["LITE", "CORE", "DEEP"]:
+            p = ctx.physics
+            t = (
+                sum(getattr(self.eng, "trauma_accum", {}).values())
+                if hasattr(self.eng, "trauma_accum")
+                else 0.0
+            )
+            ros = p.ROS if hasattr(p, "ROS") else 0.0
+
+            if ui_mode == "DEEP":
+                vsl_ui = f"[{Prisma.CYN}🧊 E:{p.E:.2f} β:{p.beta:.2f} | {Prisma.YEL}⚡ V:{p.V:.0f} F:{p.F:.2f} | {Prisma.GRN}❤️ H:{self.eng.health:.0f} P:{self.eng.stamina:.0f} | {Prisma.OCHRE}🏺 T:{t:.0f} | {Prisma.RED}ROS:{ros:.0f} | {Prisma.MAG}🌌 Ψ:{p.psi:.2f} Χ:{p.chi:.2f} ♥:{p.valence:.2f}{Prisma.RST}]\n"
+            elif ui_mode == "CORE":
+                vsl_ui = f"[{Prisma.CYN}🧊 E:{p.E:.2f} β:{p.beta:.2f} S:{getattr(p, 'S', 0.3):.2f} D:{getattr(p, 'D', 0.3):.2f} C:{getattr(p, 'C', 0.2):.2f}{Prisma.RST} | {Prisma.YEL}⚡ V:{p.V:.0f}{Prisma.RST} | {Prisma.MAG}🌌 Ψ:{p.psi:.2f}{Prisma.RST}]\n"
+            else:
+                vsl_ui = f"[{Prisma.GRN}❤️ H:{self.eng.health:.0f} | 🔋 P:{self.eng.stamina:.0f} | {Prisma.YEL}⚡ V:{p.V:.0f} | {Prisma.RED}☣️ ROS:{ros:.0f}{Prisma.RST}]\n"
+
+            snapshot["ui"] = vsl_ui + snapshot.get("ui", "")
+
         self._hydrate_snapshot_metadata(snapshot, ctx)
         latency = time.time() - ctx.timestamp
         if "ui" in snapshot:

@@ -213,7 +213,49 @@ class CommandProcessor:
                     "ERR",
                 )
                 return True
-        return self.registry.execute(text)
+
+        text_upper = text.upper()
+
+        if "[VSL_LITE]" in text_upper:
+            self.interface.eng.ui_mode = "LITE"
+            self.interface.log(
+                f"{self.P.CYN}[VSL_LITE]: Simple energy meter engaged.{self.P.RST}"
+            )
+        elif "[VSL_CORE]" in text_upper:
+            self.interface.eng.ui_mode = "CORE"
+            self.interface.log(
+                f"{self.P.CYN}[VSL_CORE]: 5-Coordinate display engaged.{self.P.RST}"
+            )
+        elif "[VSL_DEEP]" in text_upper:
+            self.interface.eng.ui_mode = "DEEP"
+            self.interface.log(
+                f"{self.P.MAG}[VSL_DEEP]: Full 15-vector lattice exposed.{self.P.RST}"
+            )
+
+        if "[MOD:CODING]" in text_upper or "[SLASH]" in text_upper:
+            self.interface.log(
+                f"{self.P.INDIGO}SLASH Mod Chip Engaged. Coding metrics (Γ, Σ, Η, Θ, Υ) active.{self.P.RST}"
+            )
+            if hasattr(self.interface.eng, "council") and hasattr(
+                self.interface.eng.council, "slash_council"
+            ):
+                self.interface.eng.council.slash_council.active = True
+
+        if "[VSL_IDLE]" in text_upper:
+            self.interface.log(
+                f"{self.P.VIOLET}[VSL_IDLE]: Zero ATP burn. Village dormant.{self.P.RST}"
+            )
+            self.interface.eng.mode_settings = {"atp_drain_enabled": False}
+        elif "[VSL_RECOVER]" in text_upper:
+            self.interface.log(
+                f"{self.P.GRN}[VSL_RECOVER]: Zen mode. Stamina regenerating.{self.P.RST}"
+            )
+            self.modify_resource("stamina", 20.0)
+
+        if text.startswith("/"):
+            return self.registry.execute(text)
+
+        return False
 
     def _cmd_soothe(self, _parts):
         cost = 25.0
@@ -297,10 +339,10 @@ class CommandProcessor:
                 self.interface.log(log)
             phys_packet = None
             if hasattr(self.interface.eng, "phys") and hasattr(
-                self.interface.eng.phys, "tension"
+                self.interface.eng.phys, "observer"
             ):
                 phys_packet = getattr(
-                    self.interface.eng.phys.tension, "last_physics_packet", None
+                    self.interface.eng.phys.observer, "last_physics_packet", None
                 )
             if phys_packet:
                 self.interface.Config.reconcile_state(phys_packet)
@@ -394,11 +436,11 @@ class CommandProcessor:
             mode = int(parts[1])
             if not (0 <= mode <= 3):
                 raise ValueError
-            controller = getattr(self.interface.eng, "cycle_controller", None)
-            if not controller:
-                self.interface.log("Error: CycleController not found.")
+            orchestrator = getattr(self.interface.eng, "orchestrator", None)
+            if not orchestrator:
+                self.interface.log("Error: Orchestrator not found.")
                 return True
-            reporter = getattr(controller, "reporter", None)
+            reporter = getattr(orchestrator, "reporter", None)
             if not reporter:
                 self.interface.log("Error: CycleReporter not found.")
                 return True

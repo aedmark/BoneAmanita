@@ -37,7 +37,7 @@ TRIGRAM_MAP: Dict[str, Tuple[str, str, str, str]] = {
 }
 
 PHYS_CFG = {
-    "V_MAX": getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0),
+    "V_MAX": 150.0,
     "V_FLOOR": getattr(BoneConfig.PHYSICS, "VOLTAGE_FLOOR", 0.0),
     "V_CRIT": getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0),
     "DRAG_FLOOR": getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0),
@@ -279,13 +279,49 @@ class QuantumObserver:
         smoothed_voltage = round(
             sum(self.voltage_history) / len(self.voltage_history), 2
         )
-        e_metric, beta_val = self._calculate_metrics(text, counts)
+
+        (
+            e_metric,
+            beta_val,
+            scope_val,
+            depth_val,
+            conn_val,
+            phi_val,
+            delta_val,
+            lq_val,
+        ) = self._calculate_metrics(text, counts)
+
+        text_upper = text.upper()
+        if text.count("!") >= 3 or "ACCELERATE" in text_upper or "FASTER" in text_upper:
+            smoothed_voltage = max(
+                smoothed_voltage, 160.0
+            )
+
+        if "RECURSIVE" in text_upper or "LOOP" in text_upper:
+            lq_val = max(lq_val, 0.9)
+            beta_val = max(beta_val, 0.9)
+
+        if "VOID" in text_upper or "ABYSS" in text_upper:
+            geo.abstraction = max(geo.abstraction, 0.9)
+
+        if "POTATO BUN" in text_upper or "NONSENSE" in text_upper:
+            delta_val = max(delta_val, 0.85)
+            smoothed_voltage = min(smoothed_voltage, 15.0)
+
         valence = LexiconService.get_valence(clean_words)
         graph_mass = self._calculate_graph_mass(clean_words, graph)
+
         energy = EnergyState(
             voltage=smoothed_voltage,
             entropy=e_metric,
             beta_index=beta_val,
+            contradiction=beta_val,
+            scope=scope_val,
+            depth=depth_val,
+            connectivity=conn_val,
+            resonance=phi_val,
+            silence=delta_val,
+            lq=lq_val,
             mass=round(graph_mass, 1),
             psi=geo.abstraction,
             kappa=geo.coherence,
@@ -346,16 +382,20 @@ class QuantumObserver:
         return total_mass
 
     @staticmethod
-    def _calculate_metrics(text: str, counts: Dict[str, int]) -> Tuple[float, float]:
+    def _calculate_metrics(
+        text: str, counts: Dict[str, int]
+    ) -> Tuple[float, float, float, float, float, float, float, float]:
         length = len(text)
         if length == 0:
-            return 0.0, 0.0
+            return 0.0, 0.0, 0.3, 0.3, 0.2
+
         scalar = getattr(BoneConfig.PHYSICS, "TEXT_LENGTH_SCALAR", 1500.0)
         raw_chaos = length / scalar
         solvents = counts.get("solvents", 0)
         solvent_density = solvents / max(1.0, length / 5.0)
         glue_factor = min(1.0, solvent_density * 2.0)
         e_metric = min(1.0, raw_chaos * (1.0 - (glue_factor * 0.8)))
+
         structure_chars = sum(1 for char in text if char in "!?%@#$;,")
         heavy_words = (
             counts.get("heavy", 0)
@@ -368,7 +408,17 @@ class QuantumObserver:
         )
         if length < 50:
             beta_index *= length / 50.0
-        return round(e_metric, 3), round(beta_index, 3)
+
+        safe_len = max(1, len(text.split()))
+        scope = min(1.0, (counts.get("abstract", 0) + counts.get("void", 0)) / safe_len + 0.2)
+        depth = min(1.0, (counts.get("heavy", 0) + counts.get("constructive", 0)) / safe_len + 0.1)
+        connectivity = min(1.0, (counts.get("social", 0) + solvents) / safe_len + 0.1)
+        resonance = min(1.0, ((counts.get("social", 0) * 2) + counts.get("constructive", 0)) / safe_len + (1.0 - e_metric))
+        action_density = counts.get("action", 0) / safe_len
+        silence = 1.0 - min(1.0, (length / 100.0) + action_density)
+        if length < 10: silence = max(silence, 0.8)
+        lq_val = min(1.0, beta_index * depth * 1.5)
+        return round(e_metric, 3), round(beta_index, 3), round(scope, 3), round(depth, 3), round(connectivity, 3), round(resonance, 3), round(silence, 3), round(lq_val, 3)
 
     @staticmethod
     def _determine_flow(v: float, k: float) -> str:
@@ -678,7 +728,9 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> Physic
     volt_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
     drag_floor = getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0)
     drag_halt = getattr(BoneConfig.PHYSICS, "DRAG_HALT", 10.0)
-    feedback.voltage = max(0.0, min(feedback.voltage, volt_crit * 1.5))
+
+    feedback.voltage = max(0.0, min(feedback.voltage, 150.0))
+
     feedback.narrative_drag = max(drag_floor, min(feedback.narrative_drag, drag_halt))
     return feedback
 
@@ -690,7 +742,7 @@ class CycleStabilizer:
         self.last_tick_time = time.time()
         self.pending_drag = 0.0
         self.manifolds = getattr(BoneConfig.PHYSICS, "MANIFOLDS", {})
-        self.HARD_FUSE_VOLTAGE = 100.0
+        self.HARD_FUSE_VOLTAGE = 200.0
         if hasattr(self.events, "subscribe"):
             self.events.subscribe(
                 "DOMESTICATION_PENALTY", self._on_domestication_penalty

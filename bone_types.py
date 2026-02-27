@@ -85,6 +85,8 @@ class EnergyState:
     health: float = 100.0
     stamina: float = 100.0
     trauma: float = 0.0
+    ros: float = 0.0
+    glimmers: int = 0
 
     exhaustion: float = 0.2
     contradiction: float = 0.4
@@ -110,6 +112,11 @@ class EnergyState:
     kappa: float = 0.0
     epsilon: float = 0.0
     xi: float = 0.0
+    lambda_val: float = 0.0
+    omega: float = 0.0
+    resonance: float = 0.0
+    silence: float = 0.0
+    lq: float = 0.0
     perfection_streak: int = 0
 
 
@@ -232,12 +239,44 @@ class PhysicsPacket:
         self.energy.stamina = v
 
     @property
-    def T(self):
-        return self.energy.trauma
+    def ROS(self):
+        return self.energy.ros
 
-    @T.setter
-    def T(self, v):
-        self.energy.trauma = v
+    @ROS.setter
+    def ROS(self, v):
+        self.energy.ros = v
+
+    @property
+    def G(self):
+        return self.energy.glimmers
+
+    @G.setter
+    def G(self, v):
+        self.energy.glimmers = v
+
+    @property
+    def PHI_RES(self):
+        return self.energy.resonance
+
+    @PHI_RES.setter
+    def PHI_RES(self, v):
+        self.energy.resonance = v
+
+    @property
+    def DELTA(self):
+        return self.energy.silence
+
+    @DELTA.setter
+    def DELTA(self, v):
+        self.energy.silence = v
+
+    @property
+    def LQ(self):
+        return self.energy.lq
+
+    @LQ.setter
+    def LQ(self, v):
+        self.energy.lq = v
 
     @property
     def psi(self):

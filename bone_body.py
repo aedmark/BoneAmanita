@@ -242,7 +242,7 @@ class MitochondrialForge:
         if liminal_intensity > 0:
             liminal_tax = liminal_intensity**2
             cognitive_load_tax += liminal_tax
-        base_demand = base_cost
+        base_demand = base_cost + (self.state.ros_buildup * 0.5)
         is_critical = self.state.atp_pool < BioConstants.ATP_CRITICAL
         if is_critical:
             cognitive_load_tax = 0.0
@@ -269,8 +269,18 @@ class MitochondrialForge:
             msg = self._get_text("GRINDING")
             self.events.log(f"{Prisma.OCHRE}⚙️ {msg}{Prisma.RST}", "BIO_WARN")
         total_metabolic_cost = raw_cost
-        waste_generated = total_metabolic_cost * (1.0 - efficiency) * 0.5
-        self.state.ros_buildup += waste_generated
+        psi = getattr(physics_packet, "psi", 0.0)
+        chi = getattr(physics_packet, "chi", 0.0)
+        voltage = getattr(physics_packet, "V", 30.0)
+
+        waste_generated = 0.0
+        if psi > 0.3 or chi > 0.3:
+            waste_generated += (psi * 5.0) + (chi * 5.0)
+        if voltage > 60.0:
+            waste_generated += voltage / 20.0
+        waste_generated -= 2.0
+        if self.state.ros_buildup + waste_generated < 0:
+            waste_generated = -self.state.ros_buildup
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
         if total_metabolic_cost >= self.MAX_SAFE_BURN and not is_critical:
             self.state.membrane_potential = max(

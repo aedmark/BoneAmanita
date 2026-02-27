@@ -158,9 +158,11 @@ class TheVillageCouncil:
         psi = get_val("psi", "psi", 0.2)
         chi = get_val("chi", "chi", 0.2)
         valence = get_val("valence", "valence", 0.0)
-
         vec = p.get("vector", {}) if is_dict else getattr(p, "vector", {})
         lam = vec.get("LAMBDA", 0.0) if vec else 0.0
+        phi = get_val("resonance", "PHI_RES", 0.0)
+        delta = get_val("silence", "DELTA", 0.0)
+        lq = get_val("lq", "LQ", 0.0)
 
         if V < 20 and F > 5.0:
             logs.append(
@@ -205,6 +207,40 @@ class TheVillageCouncil:
         if V > 70:
             logs.append(
                 f"{Prisma.YEL}⚡ GIDEON: 'Pure voltage! Edge of hallucination! Trust the fall!'{Prisma.RST}"
+            )
+
+        if psi > 0.6 and phi > 0.4 and beta < 0.4:
+            logs.append(
+                f"{Prisma.CYN}🗺️ ROBERTA (CARTOGRAPHER): 'I am mapping the attractors. The empty spaces are deliberate.'{Prisma.RST}"
+            )
+        if phi > 0.7 and F < 2.0:
+            logs.append(
+                f"{Prisma.GRN}🏡 MOIRA (HOMESTEADER): 'The clearing is made. We can dwell here. You don't need to build more.'{Prisma.RST}"
+            )
+        if lq > 0.6 and beta > 0.4:
+            logs.append(
+                f"{Prisma.BLU}♟️ BENEDICT (TACTICIAN): 'I see the board. The recursion tightens. The next five moves are already laid out.'{Prisma.RST}"
+            )
+        if delta > 0.7 and V < 20.0:
+            logs.append(
+                f"{Prisma.MAG}🃏 JESTER (FOOL): 'Does this rock float? Why do we need consensus?'{Prisma.RST}"
+            )
+        if psi > 0.85:
+            logs.append(
+                f"{Prisma.INDIGO}🚪 REVENANT (DOOR): 'The threshold is open. I do not guide. I merely allow passage.'{Prisma.RST}"
+            )
+        if beta > 0.6 and delta > 0.6:
+            logs.append(
+                f"{Prisma.GRY}👻 CASPER (GHOST): 'Bending the space around the alarms. You are present, but unseen.'{Prisma.RST}"
+            )
+        if delta > 0.8 and lq < 0.3:
+            logs.append(
+                f"{Prisma.RED}🍽️ COLIN (WAITER): 'We wait. The silence is doing the work. Form 666 is suspended pending cosmic breath.'{Prisma.RST}"
+            )
+        ros = get_val("ros", "ROS", 0.0)
+        if ros > 20.0 or abs(V - 30.0) > 20:
+            logs.append(
+                f"{Prisma.CYN}🌸 APRIL: 'Can you feel that? The system is physically humming. Just observe the static.'{Prisma.RST}"
             )
 
         return logs
@@ -254,8 +290,64 @@ class CouncilChamber:
             adjustments["stamina_cost"] = 10.0
 
         village_logs = self.village.audit(physics_packet, _bio_result)
-        for vlog in village_logs:
-            transcript.append(self.footnote.commentary(vlog))
+
+        import itertools
+
+        c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
+        synergy_map = c_data.get("SYNERGY_MAP", {})
+
+        pantheon = [
+            "GORDON",
+            "JESTER",
+            "MERCY",
+            "BENEDICT",
+            "ROBERTA",
+            "CASPER",
+            "MOIRA",
+            "CASSANDRA",
+            "COLIN",
+            "REVENANT",
+            "GIDEON",
+            "APRIL",
+        ]
+        active_present = []
+        for log in village_logs:
+            for actor in pantheon:
+                if actor in log and actor not in active_present:
+                    active_present.append(actor)
+
+        synergy_fired = False
+        for pair in itertools.combinations(sorted(active_present), 2):
+            chord_key = f"{pair[0]}|{pair[1]}"
+            if chord_key in synergy_map:
+                syn = synergy_map[chord_key]
+                transcript.append(f"\n{Prisma.WHT}{syn['log']}{Prisma.RST}")
+                if "adjustments" in syn:
+                    for k, v in syn["adjustments"].items():
+                        adjustments[k] = adjustments.get(k, 0) + v
+                synergy_fired = True
+                break
+
+        if synergy_fired:
+            for vlog in village_logs:
+                transcript.append(
+                    self.footnote.commentary(
+                        f"{Prisma.GRY}{Prisma.strip(vlog)}{Prisma.RST}"
+                    )
+                )
+        elif len(village_logs) > 2:
+            transcript.append(
+                f"{Prisma.WHT}🎭 STAGE MANAGER: 'Too many voices. The tension is unresolvable.'{Prisma.RST}"
+            )
+            transcript.append(
+                f"{Prisma.GRY}∇ [THE SILENCE]: The system pauses, waiting for structural clarity before proceeding.{Prisma.RST}"
+            )
+            adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + 3.0
+            for vlog in village_logs[:2]:
+                transcript.append(self.footnote.commentary(vlog))
+        else:
+            for vlog in village_logs:
+                transcript.append(self.footnote.commentary(vlog))
 
         votes = {"YEA": 0, "NAY": 0}
         active_voices = [v for v in self.voices if v is not None]

@@ -522,10 +522,12 @@ class DeathGen:
 
     @staticmethod
     def _determine_verdict_type(p: PhysicsPacket, cause: str) -> str:
+        if cause == "GLUTTONY":
+            return "THERMAL"  # Died of high voltage
         if cause == "TOXICITY":
-            return "TOXIC"
-        if cause == "BOREDOM":
-            return "BORING"
-        if p.voltage > BoneConfig.PHYSICS.VOLTAGE_MED:
-            return "LIGHT"
-        return "HEAVY"
+            return "ENTROPY"  # Died of semantic chaos/rot
+        if getattr(p, "psi", 0.0) > 0.8:
+            return "ABSTRACT"  # Died in the Void
+        if getattr(p, "valence", 0.0) > 0.6 and getattr(p, "glimmers", 0) > 3:
+            return "JOY_CLADE"  # Ended peacefully
+        return "ENTROPY"  # Default fallback
