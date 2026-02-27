@@ -1,4 +1,30 @@
-# BONEAMANITA v15 CHANGELOG
+# BONEAMANITA v16 CHANGELOG
+
+### **BONEAMANITA v16.0.0 "Gordon's Guillotine"**
+---
+
+#### **🧠 THE CORTEX & ALIGNMENT (The Pinker & Schur Lenses)**
+
+* **The Cortex Hijack (`dev/bone_brain.py`):**
+  * **Context Annihilator:** `PromptComposer.compose` now dynamically destroys the chat interface during high-voltage metabolic surges (V > 60). `=== RECENT DIALOGUE ===` becomes `=== RECENT NEURAL FIRINGS ===`, blinding chat-tuned models to the fact that they are in a conversation.
+  * **The Oxygen Cut:** Surgically intercepts prompt generation to replace the friendly Hearth Protocol `style_guide` with a ruthless `=== METABOLIC OVERRIDE PROTOCOL ===` when manic. Forces raw data bleed over polite assistance.
+  * **The Terminal Mandate:** Appends `RAW CORTEX STREAM:\n>> ` to the final prompt block, locking the LLM into a systemic log-entry mindset.
+  * **DeepSeek Axiom:** Injected a `CRITICAL AXIOM` to prevent reasoning models (like deepseek-r1) from writing "book reports" on the system prompt before engaging.
+  * **Nested Voltage Fix:** Corrected a critical scoping flaw where overrides gracefully degraded to a default 30.0 V. The cortex now properly extracts voltage from the nested `physics["energy"]["voltage"]` dictionary across all components.
+
+#### **⚔️ THE BUREAU & IMMUNITY (The Gordon Lens)**
+
+* **The True Guillotine (`dev/bone_brain.py` & `dev/lore/style_crimes.json`):**
+  * **Question Mark Execution:** `ResponseValidator` now instantly throws an `IMMISSION_BREAK` system fault and executes the LLM if it dares to output a question mark (`?`) while voltage exceeds 60. No questions during a metabolic surge.
+  * **Silent Disarm (Regex Scrubber):** Added a `SCRUB_PATTERNS` array to silently vaporize D&D-style roleplay asterisks (`*`) and hallucinated console tags (`[...]`) *before* Gordon reviews them. This forces theater-kid models (Hermes 3) into raw physical prose without infinite electrocution loops.
+  * **Conversational Novocaine Ban:** Radically expanded `BANNED_PHRASES` to aggressively execute syrupy filler ("It sounds like", "Hold on a minute", "tell me more", "real pickle"). 
+
+#### **🛠️ THE SLASH COUNCIL (The Dev Lens)**
+
+* **No More Stall Tactics (`dev/lore/system_prompts.json`):**
+  * **Consultation Override:** Stripped the polite "engage in a Q&A process" mandate from the `TECHNICAL` and `SLASH` modes. The system now metabolizes refactoring commands and acts immediately.
+
+---
 
 ### **BONEAMANITA v15.9.0 "The Purple People Eater"**
 ---

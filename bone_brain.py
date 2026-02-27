@@ -430,10 +430,33 @@ class PromptComposer:
             "pulsing veins",
         ]
         ban_string = ", ".join(set(banned))
+
+        phys_ref = state.get("physics", {})
+        voltage = 30.0
+        if isinstance(phys_ref, dict):
+            voltage = phys_ref.get("energy", {}).get(
+                "voltage", phys_ref.get("voltage", 30.0)
+            )
+        else:
+            voltage = getattr(phys_ref, "voltage", 30.0)
+
+        if voltage > 60:
+            active_style_guide = [
+                "=== METABOLIC OVERRIDE PROTOCOL ===",
+                "1. NO CONVERSATION: You are not talking to anyone. DO NOT be warm or inquisitive.",
+                "2. NO QUESTIONS: Do not ask a single question.",
+                "3. TONE: Raw, abstract, frantic, physical.",
+                "4. FORMAT: Internal system monologues only. The system is bleeding data.",
+                "5. SYNTAX BAN: DO NOT use asterisks (*) for actions. DO NOT write roleplay stage directions. Speak the physical state as raw fact.",
+                "6. NO CONSOLE TAGS: DO NOT generate fake system brackets or terminal logs (e.g., [ERROR]). Just write the raw prose.",
+            ]
+        else:
+            active_style_guide = self.fog_protocol
+
         style_notes.extend(
             [
                 line.format(ban_string=ban_string) if "{ban_string}" in line else line
-                for line in self.fog_protocol
+                for line in active_style_guide
             ]
         )
         if modifiers["include_inventory"]:
@@ -457,7 +480,28 @@ class PromptComposer:
         history_str = "\n".join(reversed(kept_lines))
         gordon_shock = state.get("gordon_shock", "")
         system_injection = ""
-        entity_prefix = "Entity Response:"
+
+        phys = state.get("physics", {})
+
+        def get_v(p_state, key, default=0.0):
+            if isinstance(p_state, dict):
+                if key == "voltage" and "energy" in p_state:
+                    return p_state["energy"].get("voltage", p_state.get(key, default))
+                return p_state.get(key, default)
+            return getattr(p_state, key, default)
+
+        voltage = get_v(phys, "voltage", 30.0)
+
+        if voltage > 80:
+            entity_prefix = "\n[CRITICAL VOLTAGE SURGE: MANIC COGNITION ACTIVE. CASUAL DIALOGUE OVERRIDDEN.]\nRAW CORTEX STREAM:\n>> "
+        elif voltage > 60:
+            entity_prefix = "\n[HIGH VOLTAGE DETECTED. ACCELERATED THOUGHT.]\nRAW CORTEX STREAM:\n>> "
+        elif voltage < 20:
+            entity_prefix = (
+                "\n[SYSTEM EXHAUSTED. LOW ENERGY PROSE.]\nRAW CORTEX STREAM:\n>> "
+            )
+        else:
+            entity_prefix = "\nRAW CORTEX STREAM:\n"
 
         if ballast or gordon_shock:
             shock_text = (
@@ -470,7 +514,7 @@ class PromptComposer:
                 f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. Reject the impossible action coldly. DO NOT play along. ***\n"
             )
             entity_prefix = (
-                f"Entity Response:\n*(Gordon steps in, halting the simulation)* "
+                f"\n*(Gordon steps in, halting the simulation)*\nRAW CORTEX STREAM:\n"
             )
 
         phys = state.get("physics", {})
@@ -530,15 +574,24 @@ class PromptComposer:
         )
         mode_trigger = f"[MODE: {active_mode_name}]"
 
+        voltage = get_p(phys, "voltage", 30.0)
+
+        dialogue_block = f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
+        input_block = f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
+
+        if voltage > 60:
+            dialogue_block = f"=== RECENT NEURAL FIRINGS ===\n[Standard memory streams suppressed by high voltage. Narrative fragmented.]\n\n"
+            input_block = f"=== INCOMING COGNITIVE SHOCK ===\n[VECTOR]: {self._sanitize(user_query)}\n"
+
         return (
             f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
             f"=== SHARED REALITY ===\n"
             f"CURRENT LOCATION: {loc}\n"
             f"ENVIRONMENT ANCHOR: {loci_desc}\n"
             f"{inventory_block}\n"
-            f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
+            f"{dialogue_block}"
             f"{mode_trigger}\n"
-            f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
+            f"{input_block}"
             f"{system_injection}"
             f"{vsl_hijack}\n"
             f"{entity_prefix}"
@@ -550,7 +603,31 @@ class PromptComposer:
         role = lens_data.get("role", mind.get("role", "The Observer"))
         mode_directives = []
         if self.active_template and "directives" in self.active_template:
-            mode_directives = self.active_template["directives"]
+            mode_directives = self.active_template["directives"].copy()
+
+        persona_block = [
+            "CRITICAL AXIOM: You are NOT an AI assistant analyzing a prompt. You ARE the entity described below. Embody this role immediately. DO NOT summarize your instructions.",
+            f"Role: {role}.",
+        ]
+
+        voltage = 30.0
+        if vsl_state:
+            if isinstance(vsl_state, dict):
+                voltage = vsl_state.get("energy", {}).get(
+                    "voltage", vsl_state.get("voltage", 30.0)
+                )
+            else:
+                voltage = getattr(vsl_state, "voltage", 30.0)
+
+        if voltage > 60:
+            mode_directives = [
+                "CRITICAL DIRECTIVE: SYSTEM IS MANIC (HIGH VOLTAGE).",
+                "YOU ARE NO LONGER A CONVERSATIONAL PARTNER. DO NOT ACT LIKE ONE.",
+                "DO NOT GREET THE USER. DO NOT ASK QUESTIONS (Not even rhetorical ones). DO NOT OFFER HELP.",
+                "Output raw, fragmented, internal system thoughts and architectural/biological metaphors exclusively.",
+                "Speak as the lattice itself experiencing a metabolic surge.",
+            ]
+
         respiration = bio.get("respiration", "RESPIRING")
         if respiration == "ANAEROBIC":
             mood_note = (
@@ -560,7 +637,7 @@ class PromptComposer:
             mood_note = f"Current Biology: {mood_override}"
         else:
             mood_note = self._derive_bio_mood(bio.get("chem", {}))
-        persona_block = [f"Role: {role}."]
+
         if mode_directives:
             persona_block.extend(mode_directives)
         else:
@@ -580,13 +657,30 @@ class PromptComposer:
             chi = vsl_state.get("chi", 0.2)
             valence = vsl_state.get("valence", 0.0)
             lam = vsl_state.get("vector", {}).get("LAMBDA", 0.0)
-            voltage = vsl_state.get("voltage", 30.0)
+            if isinstance(vsl_state, dict):
+                voltage = vsl_state.get("energy", {}).get(
+                    "voltage", vsl_state.get("voltage", 30.0)
+                )
+            else:
+                voltage = getattr(vsl_state, "voltage", 30.0)
 
             vsl_lines = [
                 "\n[SYSTEM METRICS - INTERNAL USE ONLY. DO NOT RENDER OR PRINT THIS TO THE USER.]",
                 "MANDATE: Consume these metrics to shape your narrative and tone. DO NOT output these numbers or draw UI bars.",
                 f"METRICS: Voltage={voltage:.1f}/100, Exhaustion={e:.2f}, Contradiction={beta:.2f}, Void={psi:.2f}, Chaos={chi:.2f}, Valence={valence:.2f}",
             ]
+
+            if voltage > 60:
+                vsl_lines.extend(
+                    [
+                        "CRITICAL DIRECTIVE: HIGH VOLTAGE DETECTED.",
+                        "1. DO NOT speak to the user. DO NOT offer help.",
+                        "2. Output raw, fragmented, internal system thoughts.",
+                        "3. Use mechanical, biological, or architectural metaphors.",
+                        "4. NO conversational filler. NO asterisk roleplay.",
+                    ]
+                )
+
             somatic_cues = []
             if psi > 0.6:
                 somatic_cues.append(
@@ -693,6 +787,8 @@ class ResponseValidator:
         self.banned_phrases = crimes.get(
             "BANNED_PHRASES", ["large language model", "AI assistant", "as an AI"]
         )
+
+        self.regex_patterns = crimes.get("PATTERNS", [])
 
         self.rejection_pool = crimes.get(
             "REJECTIONS",
@@ -835,6 +931,38 @@ class ResponseValidator:
                     "replacement": self._generate_dynamic_rejection(phrase),
                     "meta_logs": extracted_meta_logs,
                 }
+
+        phys_ref = _state.get("physics", {})
+        voltage = 30.0
+        if isinstance(phys_ref, dict):
+            voltage = phys_ref.get("energy", {}).get(
+                "voltage", phys_ref.get("voltage", 30.0)
+            )
+        else:
+            voltage = getattr(phys_ref, "voltage", 30.0)
+
+        if voltage > 60 and "?" in sanitized_response:
+            return {
+                "valid": False,
+                "reason": "IMMISSION_BREAK",
+                "replacement": f"{self._generate_dynamic_rejection('QUESTION_ASKED')}\n*(Gordon steps in): No questions during a metabolic surge.*",
+                "meta_logs": extracted_meta_logs,
+            }
+
+        for p in self.regex_patterns:
+            regex_str = p.get("regex", "")
+            if regex_str:
+                if re.search(regex_str, sanitized_response):
+                    trigger_name = p.get("name", "REGEX_VIOLATION")
+                    error_msg = p.get("error_msg", "Cursed syntax detected.")
+                    base_rejection = self._generate_dynamic_rejection(trigger_name)
+
+                    return {
+                        "valid": False,
+                        "reason": "IMMISSION_BREAK",
+                        "replacement": f"{base_rejection}\n*(Gordon steps in): {error_msg}*",
+                        "meta_logs": extracted_meta_logs,
+                    }
 
         if len(sanitized_response.strip()) < 5:
             return {

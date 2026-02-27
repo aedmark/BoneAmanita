@@ -46,16 +46,15 @@ class ObservationPhase(SimulationPhase):
             "vector",
             "valence",
             "entropy",
-            "beta_index",
-            "contradiction",
-            "scope",
-            "depth",
-            "connectivity",
-            "resonance",
-            "silence",
-            "lq",
-            "ros",
-            "glimmers",
+            "beta",
+            "S",
+            "D",
+            "C",
+            "PHI_RES",
+            "DELTA",
+            "LQ",
+            "ROS",
+            "G",
             "raw_text",
             "antigens",
             "psi",
@@ -809,7 +808,7 @@ class SoulPhase(SimulationPhase):
                 ctx.log(mandate["log"])
                 self._execute_mandate(ctx, mandate)
         council_advice, adjustments, mandates = self.eng.council.convene(
-            ctx.input_text, ctx.physics.to_dict(), ctx.bio_result
+            ctx.input_text, ctx.physics, ctx.bio_result
         )
         if mandates:
             if not hasattr(ctx, "council_mandates"):
@@ -919,7 +918,16 @@ class ArbitrationPhase(SimulationPhase):
 
         tension = getattr(ctx.physics, "beta_index", 0.0)
         silence = getattr(ctx.physics, "silence", 0.0)
-        synergy_active = any("The lenses align" in log for log in ctx.logs)
+
+        synergy_active = False
+        synergy_name = None
+        for log in ctx.logs:
+            if "The lenses align" in log and "fuse into [" in log:
+                synergy_active = True
+                try:
+                    synergy_name = log.split("fuse into [")[1].split("]")[0]
+                except Exception:
+                    pass
 
         if tension > 0.85 and silence < 0.5 and not synergy_active:
             final_lens = "THE STAGE MANAGER"
@@ -944,11 +952,23 @@ class ArbitrationPhase(SimulationPhase):
             )
 
         else:
-            if synergy_active:
+
+            if synergy_active and synergy_name:
+
+                final_lens = synergy_name
+
+                ctx.log(
+                    f"{Prisma.GRY}🎭 (The Stage Manager steps back. [{synergy_name}] speaks.){Prisma.RST}"
+                )
+
+            elif synergy_active:
+
                 ctx.log(
                     f"{Prisma.GRY}🎭 (The Stage Manager steps back. The Synergy speaks.){Prisma.RST}"
                 )
+
             else:
+
                 ctx.log(
                     f"{Prisma.GRY}🎭 (The Stage Manager nods. {final_lens} steps into the light.){Prisma.RST}"
                 )

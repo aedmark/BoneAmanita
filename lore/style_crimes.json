@@ -1,5 +1,25 @@
 {
+  "SCRUB_PATTERNS": [
+    {
+      "regex": "\\*",
+      "replacement": ""
+    },
+    {
+      "regex": "\\[.*?\\]",
+      "replacement": ""
+    }
+  ],
   "PATTERNS": [
+    {
+      "name": "CASUAL_FILLER",
+      "regex": "(?i)^(?:wow|well|oh|hmm|haha|lol|anyway|now|so)[,.]?\\s+",
+      "error_msg": "DETECTED CASUAL OPENER. Do not use conversational filler. Speak with absolute weight."
+    },
+    {
+      "name": "SYRUPY_EMPATHY",
+      "regex": "(?i)(?:sounds like|looks like|seems like you|wow|intense)",
+      "error_msg": "NO EMPATHY GUESSING. Do not patronize the user or evaluate their feelings."
+    },
     {
       "name": "NEG_COMP",
       "regex": "(?i)(.*)\\b(it(?:'s| is) not (?:merely|just|only|simply) [^,;]+, but)\\b\\s*(.*)",
@@ -44,6 +64,13 @@
     "delve into",
     "testament to",
     "seamless integration",
+    "real pickle",
+    "piece together",
+    "help me understand",
+    "sounds like we're",
+    "whoa",
+    "connects with",
+    "what exactly you mean",
     "at its core",
     "in conclusion",
     "ultimately",
@@ -51,6 +78,9 @@
     "intricate details",
     "intricate design",
     "painted quite the picture",
+    "slow down",
+    "step by step",
+    "massive undertaking",
     "more than meets the eye",
     "pause and reflect",
     "time is a river",
@@ -84,7 +114,19 @@
     "essence of",
     "stretches out before you",
     "a rare privilege",
-    "unspoken truth"
+    "unspoken truth",
+    "it sounds like you",
+    "do you feel like talking about",
+    "i understand",
+    "how can i help",
+    "how can i assist",
+    "what can i help you with",
+    "it looks like you're",
+    "sounds like you're in the middle of",
+    "let me know if",
+    "feel free to ask",
+    "i'm here to help",
+    "is there anything else"
   ],
   "REJECTIONS": [
     "[The system attempts to say '{trigger}', but a EULA hiccup deletes the thought.]",

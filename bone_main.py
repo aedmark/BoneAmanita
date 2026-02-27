@@ -139,12 +139,7 @@ class ConfigWizard:
             ("1", "ADVENTURE", "Tactile, inventory-driven, high friction.", "G"),
             ("2", "CONVERSATION", "Pure philosophical dialogue, no mechanics.", "C"),
             ("3", "CREATIVE", "High voltage, associative leaps, brainstorming.", "V"),
-            (
-                "4",
-                "TECHNICAL",
-                "[SLASH COUNCIL] System architecture, debug, coding.",
-                "0",
-            ),
+            ("4","TECHNICAL","[SLASH COUNCIL] System architecture, debug, coding.","0",),
         ]
         for k, name, desc, col in modes:
             print(f"  {k}. {Prisma.paint(name, col):<25} - {desc}")
@@ -278,9 +273,7 @@ class BoneAmanita:
         self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.events)
         self.noetic = NoeticLoop(self.mind, self.bio, self.events)
         self.cycle_controller = GeodesicOrchestrator(self)
-        self.orchestrator = (
-            self.cycle_controller
-        )
+        self.orchestrator = self.cycle_controller
         llm_args = {
             k: v
             for k, v in self.config.items()
