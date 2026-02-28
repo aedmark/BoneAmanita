@@ -219,6 +219,7 @@ class NarrativeSelf:
         self.core_memories: List[CoreMemory] = []
         self.archetype = "THE OBSERVER"
         self.archetype_tenure = 0
+        self.archetype_lock = False
         self.paradox_accum: float = 0.0
         self.current_obsession: Optional[str] = None
         self.obsession_progress: float = 0.0
@@ -227,6 +228,20 @@ class NarrativeSelf:
         self.current_negate_cat: str = "none"
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("DREAM_COMPLETE", self._on_dream)
+        if hasattr(self, "events") and self.events:
+            self.events.subscribe("SOUL_MUTATION", self._on_soul_mutation)
+
+    def force_mutation(self, new_archetype: str):
+        self.archetype = new_archetype.upper()
+        self.archetype_tenure = 0
+        self.archetype_lock = True
+        if hasattr(self, "events") and self.events:
+            self.events.log(f"Soul permanently mutated into {self.archetype}.", "SOUL")
+
+    def _on_soul_mutation(self, payload: dict):
+        new_arch = payload.get("new_archetype")
+        if new_arch:
+            self.force_mutation(new_arch)
 
     def to_dict(self) -> Dict:
         return {
@@ -384,6 +399,9 @@ class NarrativeSelf:
         return None
 
     def _update_archetype(self):
+        if getattr(self, "archetype_lock", False):
+            self.archetype_tenure += 1
+            return
         prev = self.archetype
         t = self.traits
         if t.empathy > 0.8 and t.hope > 0.6:

@@ -334,6 +334,8 @@ class TheAkashicRecord:
         print(
             f"{Prisma.MAG}🔮 AKASHIC: A new paradigm has crystallized: {new_name}{Prisma.RST}"
         )
+        if self.events:
+            self.events.publish("SOUL_MUTATION", {"new_archetype": new_name})
 
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
         self.known_recipes.add((ingredient, catalyst))

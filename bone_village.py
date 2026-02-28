@@ -1,10 +1,25 @@
-import math, random, heapq
+import math, random, heapq, os, json
 from typing import List, Dict, Any, Tuple, Optional, Set
 from dataclasses import dataclass, field, asdict
 from bone_types import Prisma, PhysicsPacket
 from bone_core import LoreManifest, EventBus
 from bone_config import BoneConfig
 from bone_physics import PhysicsDelta
+
+# --- UX LORE LOADER ---
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
+
+
+# ----------------------
 
 
 def _hydrate_packet(p: Any) -> PhysicsPacket:
@@ -104,10 +119,8 @@ class TheTinkerer:
         self.tool_resonance[item] = min(10.0, self.tool_resonance[item] + amount)
         curr = self.tool_resonance[item]
         if 4.8 < curr < 5.2 and random.random() < 0.05:
-            self.events.log(
-                f"{Prisma.CYN}🔨 TINKER: {item} hums with resonance. (Lvl 5 Mastery){Prisma.RST}",
-                "VILLAGE",
-            )
+            msg = _get_ux("tinkerer", "resonance_hum", "🔨 TINKER: {item} hums with resonance. (Lvl 5 Mastery)")
+            self.events.log(f"{Prisma.CYN}{msg.format(item=item)}{Prisma.RST}", "VILLAGE")
 
     def _check_ascension(self, old_name: str, inventory_list: List[str], vector: Dict):
         resonance = self.tool_resonance.get(old_name, 0.0)
@@ -126,10 +139,8 @@ class TheTinkerer:
                             self.gordon.ITEM_REGISTRY[new_name] = new_data
                         self.tool_resonance[new_name] = resonance / 2.0
                         del self.tool_resonance[old_name]
-                        self.events.log(
-                            f"{Prisma.MAG}✨ ASCENSION: {old_name} -> {new_name} (Born of Resonance){Prisma.RST}",
-                            "AKASHIC",
-                        )
+                        msg = _get_ux("tinkerer", "ascension", "✨ ASCENSION: {old_name} -> {new_name} (Born of Resonance)")
+                        self.events.log(f"{Prisma.MAG}{msg.format(old_name=old_name, new_name=new_name)}{Prisma.RST}", "AKASHIC")
                     except ValueError:
                         pass
 
@@ -151,8 +162,8 @@ class ParadoxSeed:
 
     def bloom(self) -> str:
         self.bloomed = True
-        return f"PARADOX BLOOM: {self.question}"
-
+        msg = _get_ux("paradox_seed", "bloom", "PARADOX BLOOM: {question}")
+        return msg.format(question=self.question)
 
 class MirrorGraph:
     def __init__(self, events_ref):
@@ -183,11 +194,13 @@ class MirrorGraph:
 
     def get_reflection_modifiers(self) -> Dict:
         if not self.stats or sum(self.stats.values()) == 0:
-            return {"flavor": "Reflecting NEUTRAL", "drag_mult": 1.0}
+            msg_neutral = _get_ux("mirror_graph", "reflecting_neutral", "Reflecting NEUTRAL")
+            return {"flavor": msg_neutral, "drag_mult": 1.0}
         top_stat = max(self.stats, key=self.stats.get)
         drag_map = {"WAR": 1.2, "ROT": 1.5, "LAW": 0.8, "ART": 0.9}
         mult = drag_map.get(top_stat, 1.0)
-        return {"flavor": f"Reflecting {top_stat}", "drag_mult": mult}
+        msg_stat = _get_ux("mirror_graph", "reflecting_stat", "Reflecting {stat}").format(stat=top_stat)
+        return {"flavor": msg_stat, "drag_mult": mult}
 
 
 @dataclass
@@ -234,14 +247,12 @@ class TheCartographer:
             return logs
         if "heavy" in node.atmosphere.lower():
             packet.narrative_drag += 2.0
-            logs.append(
-                f"{Prisma.GRY}🌫️ ENVIRONMENT: The air here is heavy. (Drag +2){Prisma.RST}"
-            )
+            msg = _get_ux("cartographer", "env_heavy", "🌫️ ENVIRONMENT: The air here is heavy. (Drag +2)")
+            logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         if "vibrating" in node.atmosphere.lower():
             packet.voltage += 1.0
-            logs.append(
-                f"{Prisma.YEL}⚡ ENVIRONMENT: Static charge detected. (Voltage +1){Prisma.RST}"
-            )
+            msg = _get_ux("cartographer", "env_static", "⚡ ENVIRONMENT: Static charge detected. (Voltage +1)")
+            logs.append(f"{Prisma.YEL}{msg}{Prisma.RST}")
         node.entropy_buildup += 0.1
         if node.entropy_buildup > 5.0:
             packet.vector["ENT"] = packet.vector.get("ENT", 0.0) + 0.1
@@ -271,11 +282,13 @@ class TheCartographer:
                 self._prune_graph()
             new_node = self._generate_loci_data(target_id, packet)
             self.world_graph[target_id] = new_node
-            msg = f"{Prisma.MAG}🗺️ CARTOGRAPHER: New Sector Discovered [{new_node.name}].{Prisma.RST}"
+            msg_str = _get_ux("cartographer", "new_sector", "🗺️ CARTOGRAPHER: New Sector Discovered [{name}].")
+            msg = f"{Prisma.MAG}{msg_str.format(name=new_node.name)}{Prisma.RST}"
         else:
             new_node = self.world_graph[target_id]
             if new_node.id != self.current_node_id:
-                msg = f"{Prisma.CYN}🗺️ CARTOGRAPHER: Arriving at {new_node.name}.{Prisma.RST}"
+                msg_str = _get_ux("cartographer", "arriving_sector", "🗺️ CARTOGRAPHER: Arriving at {name}.")
+                msg = f"{Prisma.CYN}{msg_str.format(name=new_node.name)}{Prisma.RST}"
         self.current_node_id = target_id
         current_node = self.world_graph[target_id]
         current_node.visited_count += 1
@@ -383,16 +396,19 @@ class TownHall:
         if not self.seeds or not clean_words:
             return blooms
         lower_words = [w.lower() for w in clean_words]
+
+        prefix = _get_ux("paradox_seed", "village_bloom", "🌷 PARADOX BLOOM:")
+
         for seed in self.seeds:
             if seed.bloomed:
                 continue
             if seed.water(lower_words):
                 bloom_msg = seed.bloom()
                 self.events.log(
-                    f"{Prisma.MAG}🌷 PARADOX BLOOM:{Prisma.RST} {bloom_msg}",
+                    f"{Prisma.MAG}{prefix}{Prisma.RST} {bloom_msg}",
                     "VILLAGE_EVENT",
                 )
-                blooms.append(f"{Prisma.MAG}🌷 PARADOX BLOOM:{Prisma.RST} {bloom_msg}")
+                blooms.append(f"{Prisma.MAG}{prefix}{Prisma.RST} {bloom_msg}")
         return blooms
 
     def conduct_census(self, packet: PhysicsPacket, host_stats: Any) -> str:
@@ -409,7 +425,7 @@ class TownHall:
                 loc_name = current_node.name
         if latency > 3.0:
             status = "HIGH_LATENCY"
-            advice = "System lag detected."
+            advice = _get_ux("town_hall", "lag_detected", "System lag detected.")
         elif packet.voltage > BoneConfig.PHYSICS.VOLTAGE_HIGH:
             status = "HIGH_VOLTAGE"
             advice = random.choice(forecasts.get("HIGH_VOLTAGE", ["Manic energy."]))
@@ -419,31 +435,54 @@ class TownHall:
         else:
             status = "BALANCED"
             advice = random.choice(forecasts.get("BALANCED", ["Nominal."]))
-        report = f"CENSUS [{loc_name}]: {status} | {advice}"
+
+        census_fmt = _get_ux(
+            "town_hall", "census_report", "CENSUS [{loc_name}]: {status} | {advice}"
+        )
+        report = census_fmt.format(loc_name=loc_name, status=status, advice=advice)
+
         news = self._get_town_news(latency, packet.voltage)
         if news:
             report += f"\n{news}"
         if packet.voltage > 20.0:
-            report += f"\n{Prisma.RED}⚖️ COUNCIL ALERT: The Chairholder is drafting a restraining order.{Prisma.RST}"
+            msg = _get_ux(
+                "town_hall",
+                "council_restraining",
+                "⚖️ COUNCIL ALERT: The Chairholder is drafting a restraining order.",
+            )
+            report += f"\n{Prisma.RED}{msg}{Prisma.RST}"
         elif packet.voltage < 2.0 and packet.narrative_drag > 5.0:
-            report += f"\n{Prisma.MAG}⚖️ COUNCIL ALERT: Strange Loops detected in the lower districts.{Prisma.RST}"
+            msg = _get_ux(
+                "town_hall",
+                "council_loops",
+                "⚖️ COUNCIL ALERT: Strange Loops detected in the lower districts.",
+            )
+            report += f"\n{Prisma.MAG}{msg}{Prisma.RST}"
         elif status == "BALANCED" and self.rumors and random.random() < 0.3:
             rumor = random.choice(self.rumors)
-            report += f"\n{Prisma.GRY}👀 RUMOR: {rumor}{Prisma.RST}"
+            msg = _get_ux("town_hall", "rumor_prefix", "👀 RUMOR: {rumor}")
+            report += f"\n{Prisma.GRY}{msg.format(rumor=rumor)}{Prisma.RST}"
         return report
 
     @staticmethod
     def _get_town_news(latency: float, volt: float) -> Optional[str]:
         if latency > 4.0:
-            return f"{Prisma.OCHRE}📢 TOWN CRIER: The time-winds are slow!{Prisma.RST}"
+            msg = _get_ux(
+                "town_hall", "crier_slow", "📢 TOWN CRIER: The time-winds are slow!"
+            )
+            return f"{Prisma.OCHRE}{msg}{Prisma.RST}"
         if volt > BoneConfig.PHYSICS.VOLTAGE_CRITICAL:
-            return f"{Prisma.YEL}📢 HEAR YE: Voltage Critical!{Prisma.RST}"
+            msg = _get_ux("town_hall", "crier_voltage", "📢 HEAR YE: Voltage Critical!")
+            return f"{Prisma.YEL}{msg}{Prisma.RST}"
         return None
 
     def on_item_drop(self, payload):
         item = payload.get("item")
         if item:
-            self.events.log(f"Town Hall noticed you dropped {item}.", "VILLAGE")
+            msg = _get_ux(
+                "town_hall", "item_drop", "Town Hall noticed you dropped {item}."
+            )
+            self.events.log(msg.format(item=item), "VILLAGE")
 
     @staticmethod
     def diagnose_condition(
@@ -456,17 +495,29 @@ class TownHall:
             neglect = getattr(soul, "obsession_neglect", 0.0)
             if neglect > 8.0:
                 obsession = getattr(soul, "current_obsession", "work")
-                return "HIGH_DRAG", f"Guilt over '{obsession}' is thickening the air."
+                msg = _get_ux(
+                    "town_hall",
+                    "diag_guilt",
+                    "Guilt over '{obsession}' is thickening the air.",
+                )
+                return "HIGH_DRAG", msg.format(obsession=obsession)
         if trauma:
             max_trauma = max(trauma, key=trauma.get) if trauma else "NONE"
             if trauma.get(max_trauma, 0) > 0.6:
+                msg = _get_ux(
+                    "town_hall",
+                    "diag_trauma",
+                    "Warning: High levels of {trauma} residue detected.",
+                )
                 return (
                     "HIGH_TRAUMA",
-                    f"Warning: High levels of {max_trauma} residue detected.",
+                    msg.format(trauma=max_trauma),
                 )
         if final_health < 30:
-            return "HIGH_TRAUMA", "System critical. Structural damage."
-        return "BALANCED", "System nominal."
+            return "HIGH_TRAUMA", _get_ux(
+                "town_hall", "diag_critical", "System critical. Structural damage."
+            )
+        return "BALANCED", _get_ux("town_hall", "diag_nominal", "System nominal.")
 
 
 class DeathGen:

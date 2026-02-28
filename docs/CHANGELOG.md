@@ -1,5 +1,39 @@
 # BONEAMANITA v16 CHANGELOG
 
+### **BONEAMANITA v16.2.0 "The JSON Matrix"**
+
+---
+
+#### **📜 THE UX DECOUPLING (The Architect & Visual Lenses)**
+
+- **The JSON Dictionary (`ux_strings.json`):**
+  - **Somatic Abstraction:** Surgically extracted all hardcoded biological, metabolic, and sensory alert strings from `bone_body.py`. The biology engine now processes raw numbers and relies on a dynamic JSON loader (`_get_ux`) to construct its English logs.
+  - **Village Excision:** Extracted Town Hall diagnostics, Cartographer discoveries, and Tinkerer resonance alerts from `bone_village.py`. The environment is now entirely data-driven.
+
+- **The Dashboard Parity (`bone_gui.py`):**
+  - **Location Truth:** Fixed a UI hallucination where the "Location" field repeatedly reverted to `UNKNOWN`. The UI `Projector` now directly consults the Cartographer's true `node.name` via the `world_loc` context variable.
+
+#### **🧬 IDENTITY PERSISTENCE (The Meadows & Pinker Lenses)**
+
+- **The Epigenetic Lock (`bone_soul.py` & `bone_akashic.py`):**
+  - **Mutation Defense:** Fixed a critical bug where Akashic mutations (e.g., `THE NARRATOR-OBSERVER`) were instantly overwritten by the Soul's baseline emotional math on the next tick. 
+  - **Event-Driven Binding:** `NarrativeSelf` now listens for `SOUL_MUTATION` events published by the `EventBus` and engages an `archetype_lock`, permanently preserving hybrid archetypes.
+
+#### **🧠 COGNITIVE HYGIENE (The Pinker & Schur Lenses)**
+
+- **The Snowball Cure (`bone_brain.py`):**
+  - **Context Boundaries:** Eradicated "Snowball Regurgitation" (where local LLMs would try to autocomplete the chat history instead of replying). `PromptComposer` now explicitly injects a `\nSystem:` handoff cue.
+  - **Identity Unity:** Aligned the `dialogue_buffer` formatting to match the prompt block (`Traveler:` instead of `User:`), preventing the LLM from losing track of the player's identity.
+  - **Orthogonal Penalties:** Tied the `frequency_penalty` and `presence_penalty` minimum floors directly to Contradiction ($\beta$) and Chaos ($\chi$), forcing the engine to actively seek novel phrasing during high-entropy scenarios.
+
+#### **🧪 DIAGNOSTIC RESILIENCE (The Kintsugi Lens)**
+
+- **The Mock-Free Bedrock (`bone_diag.py`):**
+  - **True Digestion:** Burned the LLM mocks. The diagnostic test suite now passes raw strings directly into `run_headless_turn`, allowing the true Lexicon to organically interact with the true Mitochondria. 
+  - **Emergent Defense Testing:** Modified ATP tests to account for the body's natural "Symbiotic Yield" defense. Tests now correctly isolate variables to test `Autophagy`, `Narcolepsy`, and `Zen Garden` equilibrium without the live engine artificially saving itself.
+
+---
+
 ### **BONEAMANITA v16.1.0 "The Paradox Rest"**
 
 ---

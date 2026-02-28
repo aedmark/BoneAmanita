@@ -138,8 +138,8 @@ class NeurotransmitterModulator:
         )
         final_top_p = min(1.0, base_top_p + (chi * 0.05))
 
-        freq_pen = min(0.35, 0.0 + (beta * 0.4))
-        pres_pen = min(0.35, 0.0 + (beta * 0.4))
+        freq_pen = min(1.2, 0.5 + (beta * 0.3) + (chi * 0.2))
+        pres_pen = min(1.2, 0.5 + (beta * 0.3) + (chi * 0.2))
 
         return {
             "temperature": final_temp,
@@ -319,9 +319,9 @@ class LLMInterface:
                 "=== PARTNER INPUT ===",
                 "=== SYSTEM KERNEL ===",
                 "=== INITIATION DIRECTIVE ===",
-                "\n\nUser:",
-                "\nUSER:",
-                "USER:",
+                "\n\nTraveler:",
+                "\nTraveler:",
+                "Traveler:",
                 "| System:",
             ],
         }
@@ -376,6 +376,12 @@ class LLMInterface:
             "temperature": params.get("temperature", 0.4),
             "frequency_penalty": params.get("frequency_penalty", 0.8),
             "presence_penalty": params.get("presence_penalty", 0.4),
+            "stop": [
+                "=== PARTNER INPUT ===",
+                "\n\nTraveler:",
+                "\nTraveler:",
+                "Traveler:",
+            ],
         }
         try:
             return self._transmit(
@@ -511,7 +517,7 @@ class PromptComposer:
             f"INVENTORY: {inv_str}\n" if modifiers["include_inventory"] else ""
         )
         raw_history = state.get("dialogue_history", [])
-        char_limit = 4000
+        char_limit = 4096
         current_chars = 0
         kept_lines = []
         for line in reversed(raw_history):
@@ -519,7 +525,7 @@ class PromptComposer:
                 break
             kept_lines.append(line)
             current_chars += len(line)
-        history_str = "\n".join(reversed(kept_lines))
+        history_str = "\n\n".join(reversed(kept_lines))
         gordon_shock = state.get("gordon_shock", "")
         system_injection = ""
 
@@ -528,9 +534,9 @@ class PromptComposer:
         elif voltage > 60:
             entity_prefix = "\n[HIGH VOLTAGE DETECTED. ACCELERATED THOUGHT.]\nRAW CORTEX STREAM:\n>> "
         elif voltage < 20:
-            entity_prefix = "\n[SYSTEM EXHAUSTED. LOW ENERGY PROSE.]"
+            entity_prefix = "\n[SYSTEM EXHAUSTED. LOW ENERGY PROSE.]\nSystem:"
         else:
-            entity_prefix = ""
+            entity_prefix = "\nSystem:"
 
         if ballast or gordon_shock:
             shock_text = (
@@ -1094,7 +1100,7 @@ class TheCortex:
         return instance
 
     def _update_history(self, user_text: str, system_text: str):
-        self.dialogue_buffer.append(f"User: {user_text} | System: {system_text}")
+        self.dialogue_buffer.append(f"Traveler: {user_text}\nSystem: {system_text}")
         if len(self.dialogue_buffer) > self.MAX_HISTORY:
             self.dialogue_buffer.pop(0)
 
@@ -1378,7 +1384,12 @@ class TheCortex:
     def restore_context(self, history: List[str]):
         if not history:
             return
-        self.dialogue_buffer = history[-self.MAX_HISTORY :]
+        cleaned_history = []
+        for line in history:
+            if " | System: " in line:
+                line = line.replace("User: ", "Traveler: ").replace(" | System: ", "\nSystem: ")
+            cleaned_history.append(line)
+        self.dialogue_buffer = cleaned_history[-self.MAX_HISTORY :]
         if self.events:
             self.events.log(
                 f"Cortex re-sequenced {len(self.dialogue_buffer)} synaptic turns.",
