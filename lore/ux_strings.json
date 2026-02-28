@@ -1,0 +1,20 @@
+{
+  "projector": {
+    "default_labels": {"HP": "HP", "STM": "STM"},
+    "depth_map": {"0": "TERM", "1": "SIM", "2": "VIL", "3": "DBG", "4": "DEEP"},
+    "default_zone": "UNKNOWN",
+    "default_lens": "RAW",
+    "default_role": "OBSERVER",
+    "role_redundancy": "THE THE "
+  },
+  "renderer": {
+    "noise_patterns": [
+      "stabilizer:", "pid_", "flux", "phase execution", "vector collapse",
+      "manifold", "orbit:", "update_coordinates", "active correction",
+      "drag reduced", "voltage spiked", "live state mirror", "auto_trace", "wayfinder"
+    ],
+    "ignore_msg": "The system is listening.",
+    "mode_labels_conversation": {"HP": "LINK", "STM": "SYNC"},
+    "mode_labels_creative": {"HP": "INT", "STM": "FLOW"}
+  }
+}
