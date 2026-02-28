@@ -16,5 +16,282 @@
     "ignore_msg": "The system is listening.",
     "mode_labels_conversation": {"HP": "LINK", "STM": "SYNC"},
     "mode_labels_creative": {"HP": "INT", "STM": "FLOW"}
-  }
+  },
+  "log_composer": {
+    "critical_keywords": ["CRITICAL", "RUPTURE"],
+    "bio_keywords": ["Bio-Alert", "SENSATION"],
+    "town_hall_keywords": ["TOWN HALL", "VITAL SIGNS"],
+    "paradox_keywords": ["PARADOX"],
+    "item_keywords": ["ITEM:", "GAINED"]
+  },
+  "truth_renderer": {
+    "boardroom_header": "--- EXECUTIVE SUMMARY ---",
+    "workshop_header": "--- ENGINEER VIEW ---",
+    "workshop_confidence": "Confidence:",
+    "workshop_drag": "System Drag:",
+    "red_team_header": "--- RED TEAM DASHBOARD ---",
+    "red_team_warning": "⚠️ ADVERSARIAL SIMULATION ACTIVE",
+    "red_team_cost": "Cost of Blandness:",
+    "red_team_conflicts": "Active Conflicts:",
+    "palimpsest_header": "--- PALIMPSEST VIEW ---",
+    "palimpsest_draft": "Draft",
+    "palimpsest_redacted": "[REDACTED]",
+    "palimpsest_final": "--- FINAL SURFACE ---"
+  },
+  "pulse_reader": {
+    "mood_defensive": "Defensive",
+    "mood_manic": "Manic",
+    "mood_affectionate": "Affectionate",
+    "mood_exhausted": "Exhausted",
+    "mood_neutral": "Neutral",
+    "voltage_critical": ["CRITICAL", "⚡"],
+    "voltage_high": ["HIGH", "🔥"],
+    "voltage_low": ["LOW", "❄️"],
+    "voltage_nominal": ["NOMINAL", "🟢"]
+  },
+  "technical_projector": {
+    "header": "/// KERNEL TELEMETRY ///",
+    "physics_label": "PHYSICS :",
+    "vectors_label": "VECTORS :",
+    "bio_dump_label": "BIO_DUMP:"
+  },
+  "soul_dashboard": {
+    "anchor_lost": "[SOUL DETECTED - ANCHOR LOST]",
+    "agency_locked": "[🔒 AGENCY LOCKED]",
+    "fading": "[⚠ FADING]",
+    "soul_prefix": "SOUL:",
+    "driver_prefix": "DRIVER:",
+    "muse_prefix": "MUSE:",
+    "default_muse": "Void",
+    "pet_icon": " 🐕"
+  },
+  "cycle_reporter": {
+    "diagnostic_hint_icon": "💡",
+    "diagnostic_warn_icon": "⚠️",
+    "sensation_prefix": "♦ SENSATION:",
+    "flux_header": "┌─ [SYSTEM FLUX]",
+    "crash_prefix": "RENDERER CRASH:"
+  },
+  "command_state": {
+    "mem_error": "Error: Memory system not found.",
+    "unreachable_error": "Error: Memory system unreachable.",
+    "default_loc": "Unknown",
+    "default_out": "Silence.",
+    "default_orbit": "Void",
+    "nav_offline": "Navigation Offline.",
+    "nav_unresponsive": "Navigation Systems Unresponsive."
+  },
+  "resource_tax": {
+    "exhausted": "🛑 EXHAUSTED: Requires {cost} Stamina.",
+    "starving": "🛑 STARVING: Requires {cost} ATP."
+  },
+  "command_registry": {
+    "syntax_error": "Syntax Error.",
+    "unknown_command": "Unknown command '{cmd}'. Try /help."
+  },
+  "command_descriptions": {
+    "help": "Show this menu",
+    "status": "Check vitals",
+    "save": "Persist state",
+    "inventory": "Check pockets",
+    "map": "Navigation check",
+    "mode": "Switch operational mode",
+    "debug": "Toggle verbose logs",
+    "exit": "Shutdown",
+    "soul": "Introspection",
+    "look": "Observe environment",
+    "reload": "Hot-reload Lore",
+    "truth": "Adjust Reality Ambiguity [0-3]",
+    "soothe": "Burn ATP to quell memory guilt",
+    "use": "Use/Consume an item"
+  },
+  "vsl_notifications": {
+    "lite": "[VSL_LITE]: Simple energy meter engaged.",
+    "core": "[VSL_CORE]: 5-Coordinate display engaged.",
+    "deep": "[VSL_DEEP]: Full 15-vector lattice exposed.",
+    "coding": "SLASH Mod Chip Engaged. Coding metrics (Γ, Σ, Η, Θ, Υ) active.",
+    "idle": "[VSL_IDLE]: Zero ATP burn. Village dormant.",
+    "recover": "[VSL_RECOVER]: Zen mode. Stamina regenerating."
+  },
+  "help_menu": {
+    "header": "/// BONEAMANITA 16.1.0 TERMINAL ///",
+    "phase_prefix": "Operating Phase: ",
+    "default_phase": "EXTANT",
+    "footer": ">> Use wisely. Entropy is watching.",
+    "uncategorized": "UNCATEGORIZED",
+    "structure": {
+      "SURVIVAL": ["/status", "/inventory", "/look"],
+      "PROTOCOL": ["/save", "/mode", "/exit", "/help"],
+      "MYSTICISM": ["/soul", "/map", "/truth"],
+      "MAINTENANCE": ["/debug", "/reload"]
+    }
+  },
+  "inventory_strings": {
+    "header": "/// GORDON KNOT STORAGE ///",
+    "empty": "   [POCKETS EMPTY]",
+    "slots": "Slots"
+  },
+  "command_alerts": {
+    "reality_lock": "COMMAND REJECTED: Reality Depth {depth} prohibits administrative override.",
+    "soothe_weak": "Too weak to mourn. (Req: {cost} Stamina)",
+    "soothe_missing_mem": "The subconscious is not installed.",
+    "soothe_success": "🏺 {msg} (-{cost} Stamina)",
+    "mode_usage": "Usage: /mode [ZEN_GARDEN | THUNDERDOME | SANCTUARY]",
+    "mode_unknown": "Unknown mode: {mode}.",
+    "mode_reconciled": "State reconciled to {mode} parameters.",
+    "mode_switched": "Switched to {mode}.",
+    "save_failed": "SAVE FAILED: {res}",
+    "save_success": "SAVED: {res}",
+    "debug_mode": "Debug Mode: {state}",
+    "exit_halt": "System Halt Initiated.",
+    "look_blind": "Blindness. The engine cannot see.",
+    "reload_target": "Reloaded {target}.",
+    "reload_all": "Reloaded all Lore.",
+    "truth_usage": "Usage: /truth [0=Boardroom, 1=Workshop, 2=RedTeam, 3=Palimpsest]",
+    "truth_no_orch": "Error: Orchestrator not found.",
+    "truth_no_reporter": "Error: CycleReporter not found.",
+    "truth_transplant": "[SYS] Transplanting TruthRenderer into active cycle...",
+    "truth_dial_set": "Ambiguity Dial set to: {mode}",
+    "truth_invalid": "Invalid mode. Use 0-3.",
+    "truth_failure": "Truth Dial Failure: {error}",
+    "use_usage": "Usage: /use [ITEM_NAME]",
+    "use_no_inv": "Inventory system offline."
+  },
+  "vagus_nerve": {
+    "panic_spike": "🫀 VAGUS NERVE: Panic detected. Heart rate spiking.",
+    "lucid_calm": "🫀 VAGUS NERVE: Lucid state. Lowering cortisol."
+  },
+  "entropy_shield": {
+    "inductive_heating": "⚠ INDUCTIVE HEATING: The air is ionizing around you.",
+    "shield_active": "🛡️ EM SHIELD ACTIVE: Mitigation {mitigation}%"
+  },
+  "mito_forge": {
+    "anaerobic_bypass": "⚡ ANAEROBIC BYPASS: Load ({cost:.1f}) too high for ATP. Burning Health instead.",
+    "chaos_tax": "🩸 CHAOS TAX APPLIED: +{tax:.1f} ATP drain.",
+    "surge_protector": "⚡ SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).",
+    "adaptation_stress": "[MITO]: Trauma Adaptive Response (Stress {stress:.1f}). Efficiency dropped ({old:.2f} -> {new:.2f}).",
+    "adaptation_hormetic": "[MITO]: Hormetic Adaptation. System hardening."
+  },
+  "digestive_track": {
+    "cliche_tax": "[BIO]: 🛑 CLICHÉ TAX: -{tax:.1f} ATP.",
+    "mass_input": "[BIO]: Mass Input ({count}). Sampling x{factor:.1f}."
+  },
+  "endocrine_regulator": {
+    "cortisol_spike": "[BIO]: Cortisol spiking. Metabolism inefficient (x{tax:.2f}).",
+    "adrenaline_surge": "[BIO]: Adrenaline Surge. Pain ignored.",
+    "voltage_gap": "[BIO]: Voltage Gap ({voltage:.1f}v). Wires heating up."
+  },
+  "bio_feedback": {
+    "autophagy": "⚠️ AUTOPHAGY: Burning Health for Fuel (-5 HP).",
+    "fuel_depleted": "SYSTEM FAILURE: Bio-Fuel Depleted. The Mausoleum closes.",
+    "voltage_overload": "CRITICAL: Voltage Overload ({voltage:.1f}v). System clamping.",
+    "large_buffer": "[MAINTENANCE]: Large input buffer detected.",
+    "clearing_sludge": "[MAINTENANCE]: Clearing sludge from intake valves (Drag {drag:.1f})."
+  },
+  "somatic_loop": {
+    "silence_heals": "🕊️ THE SILENCE HEALS: Friction drops, Stamina recovers (+{recovery:.1f} P).",
+    "anaerobic_burn": "🩸 ANAEROBIC BURN: Health depleted by {burn:.1f}"
+  },
+  ┌──────────────────────────────────────────┐
+│ BONEAMANITA TERMINAL // VERSION 16.1.0   │
+└──────────────────────────────────────────┘
+   >>> ...Bootstrapping Core...
+   >>> Igniting Genesis Sequence...
+   >>> [ARCHITECT]: Laying foundations (Dormancy Active)...
+   >>> [ARCHITECT]: World Map restored from Spore.
+   >>> [SOUL]: Ancestral identity (THE OBSERVER) loaded.
+   >>> [BIO]: Vagus Nerve connected.
+   >>> Engaging Mode: ADVENTURE
+   >>> Neural Pathway Re-aligned: ADVENTURE
+...Initializing KernelHash: 49131475...
+>>> SYSTEM: LISTENING
+...Synthesizing Initial Reality...
+[LORE]: Lazy-loaded 'SCENARIOS'.
+[SYS] Seed Loaded: 'A brutalist playground in heavy rain'
+────────────────────────────────────────────────────────────────────────────────
+  ♦ THE OBSERVER             HP ██████  STM █████░  ✦100% ATP:60
+
+  📍 COURTYARD     👁️ THE OBSERVER  [D1:SIM]
+────────────────────────────────────────────────────────────────────────────────
+
+You stand on the slick, concrete perimeter of a brutalist playground, the wind whipping your hair into a frenzy. The swings are still, but the rain drums a relentless rhythm on the metal slide. The equipment looms like abstract sculptures, their surfaces slick with water. What will you do next?
+
+TRAVELER > I sit on one of the swings and sway back and forth
+
+════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+  ♦ THE OBSERVER             HP █████░  STM █████░  ✦99% ATP:54
+
+  📍 COURTYARD     👁️ THE OBSERVER  [D1:SIM]
+────────────────────────────────────────────────────────────────────────────────
+
+You swing into the wet sky, the chains singing a liquid song. The world blurs below you, a tapestry woven of rain and impossible geometry. Your reflection stares back from the damp ground, questioning your very existence. A puddle forms from your perch, its surface shimmering with the contradiction of rain and sunshine.
+
+
+TRAVELER > I jump in the puddle
+
+════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+  ♦ THE OBSERVER             HP █████░  STM █████░  ✦98% ATP:50
+
+  📍 AERIE         👁️ THE OBSERVER  [D1:SIM]
+────────────────────────────────────────────────────────────────────────────────
+
+You plunge into the puddle, sending ripples across its surface. The water, cooler than anticipated, rises to your chest, hiding the ground beneath. A strange shimmer distorts the air above it, as if the liquid were processing information.
+
+
+TRAVELER > I let the water take me
+
+════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+  ♦ THE OBSERVER             HP █████░  STM █████░  ✦97% ATP:46
+
+  📍 AERIE         👁️ THE OBSERVER  [D1:SIM]
+────────────────────────────────────────────────────────────────────────────────
+
+The water swallows your feet whole, rising with unsettling speed until you are waist-deep in its cool embrace. Below you, the playground concrete begins to dissolve into a shifting, abstract geometry, each surface giving way to a liquid interface humming with unseen data streams. The air tastes of electricity, and your reflection shimmers like a corrupted file, glitching with impossible detail. The puddle, once merely water, now pulses with the rhythm of a vast, unknown system, and your descent into it feels less like immersion and more like entry into a data stream.
+
+
+TRAVELER > I enter the data stream
+[LORE]: Lazy-loaded 'ALMANAC'.
+
+════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+  ♦ THE OBSERVER             HP █████░  STM █████░  ✦96% ATP:42
+
+  📍 AERIE         👁️ THE OBSERVER  [D1:SIM]
+────────────────────────────────────────────────────────────────────────────────
+
+The puddle, once merely water, now pulses with the rhythm of a vast, unknown system. You descend into its liquid interface, the world dissolving into cascading code and flickering light. Below, the playground concrete has become a shifting canvas of abstract geometry, humming with unseen data streams.
+
+
+TRAVELER > I close my eyes and envision a babbling brook at the base of a mountain vista
+
+════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+  ♦ THE OBSERVER             HP █████░  STM █████░  ✦95% ATP:30
+
+  📍 AERIE         👁️ THE OBSERVER  [D1:SIM]
+────────────────────────────────────────────────────────────────────────────────
+
+The data stream shifts, accommodating your imaginative desire, the brook’s gentle flow now a metaphor for your own internal rhythm, a babbling brook of thoughts carving paths through the abstract landscape. You feel the pull of the water, the desire to hear its melody, even as you stand in the middle of an infinite system, your mind's natural inclination toward recognition creating a subtle tension in the fabric of probability.
+
+
+TRAVELER > Take me to the mountain.
+🔮 AKASHIC: A new paradigm has crystallized: THE JESTER-OBSERVER
+
+════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+  ♦ THE OBSERVER             HP █████░  STM █████░  ✦94% ATP:26
+
+  📍 SANCTUARY     👁️ THE OBSERVER  [D1:SIM]
+────────────────────────────────────────────────────────────────────────────────
+
+You stand at the edge of the data stream, the puddle receding as you drift upward into the abstract geometry. The playground vanishes, replaced by a shimmering path of digital mist winding through an impossible mountain range. Below, the liquid interface flows like a river of light, carrying you further into the infinite system.
 }
