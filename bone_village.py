@@ -160,7 +160,11 @@ class MirrorGraph:
         self.stats = {"WAR": 0.0, "ART": 0.0, "LAW": 0.0, "ROT": 0.0}
 
     def reflect(self, packet: PhysicsPacket):
-        txt = packet.raw_text or ""
+        txt = ""
+        if hasattr(packet, "matter") and packet.matter:
+            txt = getattr(packet.matter, "raw_text", "")
+        if not txt:
+            txt = getattr(packet, "raw_text", "")
         volt = packet.voltage
         if "!" in txt or volt > BoneConfig.COUNCIL.MANIC_VOLTAGE_TRIGGER:
             self.stats["WAR"] += 0.1

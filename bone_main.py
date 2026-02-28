@@ -59,7 +59,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system("cls" if os.name == "nt" else "clear")
         print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 15.8.0   │', 'M')}")
+        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 16.1.0   │', 'M')}")
         print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
@@ -666,22 +666,24 @@ if __name__ == "__main__":
             typewriter(boot_packet["ui"])
         while True:
             try:
-                user_in = input(f"{Prisma.paint(f'{session.user_name} >', 'W')} ")
+                user_in = input(f"\n{Prisma.paint(f'{session.user_name} >', 'W')} ")
             except EOFError:
                 break
             clean_in = user_in.strip().lower()
             if clean_in in ["exit", "quit", "/exit", "/quit"]:
                 break
             res = session.process_turn(user_in)
+            print(f"\n{Prisma.GRY}════════════════════════════════════════════════════════════{Prisma.RST}")
+
             if res.get("ui"):
-                if "──────" in res["ui"]:
-                    parts = res["ui"].rpartition("──────")
-                    dashboard = parts[0].rstrip("─") + "\n" + ("─" * 60)
-                    content = parts[2].strip()
-                    print(dashboard)
-                    typewriter("\n" + content)
+                if "────────" in res["ui"]:
+                    dashboard, _, content = res["ui"].partition("\n\n")
+
+                    print(f"\n{dashboard.strip()}\n")
+
+                    typewriter(content.strip() + "\n", speed=0.005)
                 else:
-                    typewriter(res["ui"])
+                    typewriter(res["ui"] + "\n", speed=0.005)
             if res.get("type") == "DEATH":
                 print(f"\n{Prisma.GRY}[SESSION TERMINATED]{Prisma.RST}")
                 break

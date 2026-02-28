@@ -250,7 +250,7 @@ class CommandProcessor:
             self.interface.log(
                 f"{self.P.GRN}[VSL_RECOVER]: Zen mode. Stamina regenerating.{self.P.RST}"
             )
-            self.modify_resource("stamina", 20.0)
+            self.interface.modify_resource("stamina", 20.0)
 
         if text.startswith("/"):
             return self.registry.execute(text)
@@ -283,7 +283,7 @@ class CommandProcessor:
 
     def _cmd_help(self, _parts):
         lines = [
-            f"\n{self.P.CYN}/// BONEAMANITA 15.8.0 TERMINAL ///{self.P.RST}",
+            f"\n{self.P.CYN}/// BONEAMANITA 16.1.0 TERMINAL ///{self.P.RST}",
             f"{self.P.GRY}Operating Phase: {self.interface.get_soul_status() or 'EXTANT'}{self.P.RST}\n",
         ]
         structure = {
@@ -366,12 +366,13 @@ class CommandProcessor:
         self.interface.log(f"{P.WHT}/// GORDON KNOT STORAGE ///{P.RST}")
         if not items:
             self.interface.log(f"{P.GRY}   [POCKETS EMPTY]{P.RST}")
-            return
+            return True  # FIXED: Stop the command from leaking to the LLM
         for i, item in enumerate(items):
             self.interface.log(f" {P.GRY}{i + 1}.{P.RST} {P.CYN}{item.upper()}{P.RST}")
         self.interface.log(
             f"{P.GRY}   ({len(items)}/{self.interface.Config.INVENTORY.MAX_SLOTS} Slots){P.RST}"
         )
+        return True
 
     def _cmd_map(self, _parts):
         if not self.tax.levy("MAP", {"stamina": 2.0}):

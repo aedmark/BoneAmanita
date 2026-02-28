@@ -272,7 +272,6 @@ class MitochondrialForge:
         psi = getattr(physics_packet, "psi", 0.0)
         chi = getattr(physics_packet, "chi", 0.0)
         voltage = getattr(physics_packet, "V", 30.0)
-
         waste_generated = 0.0
         if psi > 0.3 or chi > 0.3:
             waste_generated += (psi * 5.0) + (chi * 5.0)
@@ -281,6 +280,7 @@ class MitochondrialForge:
         waste_generated -= 2.0
         if self.state.ros_buildup + waste_generated < 0:
             waste_generated = -self.state.ros_buildup
+        self.state.ros_buildup += waste_generated
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
         if total_metabolic_cost >= self.MAX_SAFE_BURN and not is_critical:
             self.state.membrane_potential = max(
@@ -612,6 +612,17 @@ class SomaticLoop:
         if self.bio.events and hasattr(self.bio, "apply_environmental_entropy"):
             self.bio.apply_environmental_entropy(phys)
         modifier = self.regulator.get_metabolic_modifier(phys, logs)
+        delta_silence = getattr(phys, "delta", 0.0)
+        if delta_silence > 0.6:
+            if hasattr(phys, "narrative_drag"):
+                phys.narrative_drag = max(1.0, phys.narrative_drag - (delta_silence * 2.0))
+            if self.bio.biometrics:
+                self.bio.biometrics.stamina = min(
+                    getattr(BoneConfig, "MAX_STAMINA", 100.0),
+                    self.bio.biometrics.stamina + (delta_silence * 5.0)
+                )
+            logs.append(
+                f"{Prisma.CYN}🕊️ THE SILENCE HEALS: Friction drops, Stamina recovers (+{delta_silence * 5.0:.1f} P).{Prisma.RST}")
         receipt = self.bio.mito.process_cycle(phys, modifier=modifier)
         if receipt.status == "ANAEROBIC" and self.bio.biometrics:
             self.bio.biometrics.health = max(
@@ -1164,7 +1175,6 @@ class SynestheticCortex:
             if voltage > 12.0 and physics.get("kappa", 0) > 0.5:
                 impulse.dopamine_delta += 0.15
                 impulse.somatic_reflex = "Buzz (Excitement)"
-
         k_count = counts.get("kinetic", 0) + counts.get("explosive", 0)
         if k_count > 0:
             adr_scalar = (
@@ -1176,12 +1186,10 @@ class SynestheticCortex:
             impulse.adrenaline_delta += adr_boost
             impulse.cortisol_delta += 0.02
             impulse.stamina_impact -= 1.0
-
         if voltage > (
             getattr(cortex_cfg, "VOLTAGE_ARC_TRIGGER", 18.0) if cortex_cfg else 18.0
         ):
             impulse.adrenaline_delta += 0.2
-
         if latency > (
             getattr(cortex_cfg, "LATENCY_PENALTY_THRESHOLD", 5.0) if cortex_cfg else 5.0
         ):

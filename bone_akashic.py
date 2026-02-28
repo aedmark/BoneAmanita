@@ -1,12 +1,14 @@
 import json
 import os
 import uuid
-from typing import Dict, Any, Tuple, cast, List, Set
-from bone_core import LoreManifest, BoneJSONEncoder
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
+
+from bone_core import BoneJSONEncoder, LoreManifest
 from bone_types import Prisma
 
+
 class TheAkashicRecord:
-    def __init__(self, lore_manifest: "LoreManifest" = None, events_ref=None):
+    def __init__(self, lore_manifest: Optional["LoreManifest"] = None, events_ref=None):
         self.discovered_words: Dict[str, str] = {}
         self.lens_cooccurrence: Dict[Tuple[str, str], int] = {}
         self.ingredient_affinity: Dict[str, int] = {}
@@ -47,7 +49,6 @@ class TheAkashicRecord:
         return 15.0, f"[AUTOPHAGY: Consumed memory of {target} to survive.]"
 
     def record_scar(self, concept: str, p: Any):
-        """Mercy's Exhalation Reflex: Gilds a scar and leaves a ghost."""
         coords = {
             "E": getattr(p, "E", 0.2),
             "beta": getattr(p, "beta", 0.4),
@@ -152,7 +153,7 @@ class TheAkashicRecord:
             self.store_ghost_echo(payload)
 
     def forge_new_item(self, vector: Dict[str, float]) -> Tuple[str, Dict]:
-        dominant_force = max(vector, key=vector.get) if vector else "CHI"
+        dominant_force = max(vector, key=vector.__getitem__) if vector else "CHI"
         prefixes = {
             "VEL": "Kinetic",
             "STR": "Heavy",
@@ -233,8 +234,8 @@ class TheAkashicRecord:
             try:
                 with open("saves/akashic_state.json", "r") as f:
                     data = json.load(f)
-            except:
-                pass
+            except Exception as e:  # Do not use bare except
+                print(f"{Prisma.RED}[AKASHIC] State load failed: {e}{Prisma.RST}")
         if not data:
             data = self.lore.get("MYTHOS")
         if not data:
@@ -254,7 +255,9 @@ class TheAkashicRecord:
                 if ing and cat:
                     self.known_recipes.add((ing, cat))
 
-    def record_interaction(self, lenses_active: list, ingredients_used: list = None):
+    def record_interaction(
+        self, lenses_active: list, ingredients_used: Optional[list] = None
+    ):
         if len(lenses_active) >= 2:
             key = cast(Tuple[str, str], tuple(sorted(lenses_active[:2])))
             self.lens_cooccurrence[key] = self.lens_cooccurrence.get(key, 0) + 1

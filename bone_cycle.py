@@ -1,3 +1,4 @@
+import re
 import traceback, random, time, uuid
 from typing import Dict, Any, List
 from bone_core import ArchetypeArbiter, LoreManifest
@@ -915,10 +916,8 @@ class ArbitrationPhase(SimulationPhase):
             council_mandates=mandates,
             trigram=current_trigram,
         )
-
         tension = getattr(ctx.physics, "beta_index", 0.0)
         silence = getattr(ctx.physics, "silence", 0.0)
-
         synergy_active = False
         synergy_name = None
         for log in ctx.logs:
@@ -942,33 +941,23 @@ class ArbitrationPhase(SimulationPhase):
             )
 
         elif silence > 0.85 and not synergy_active:
-
             final_lens = "THE STAGE MANAGER"
-
             opinion = "The Stage Manager holds the silence. No archetype is called."
-
             ctx.log(
                 f"{Prisma.WHT}🎭 STAGE MANAGER: (Gestures for the cosmos to hold.){Prisma.RST}"
             )
 
         else:
-
             if synergy_active and synergy_name:
-
                 final_lens = synergy_name
-
                 ctx.log(
                     f"{Prisma.GRY}🎭 (The Stage Manager steps back. [{synergy_name}] speaks.){Prisma.RST}"
                 )
-
             elif synergy_active:
-
                 ctx.log(
                     f"{Prisma.GRY}🎭 (The Stage Manager steps back. The Synergy speaks.){Prisma.RST}"
                 )
-
             else:
-
                 ctx.log(
                     f"{Prisma.GRY}🎭 (The Stage Manager nods. {final_lens} steps into the light.){Prisma.RST}"
                 )
@@ -1264,7 +1253,21 @@ class GeodesicOrchestrator:
             return ctx
 
     def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
-        ctx = self._execute_core_cycle(user_message, is_system)
+        upper_msg = user_message.upper()
+        if "[VSL_DEEP]" in upper_msg:
+            self.eng.ui_mode = "DEEP"
+        elif "[VSL_CORE]" in upper_msg:
+            self.eng.ui_mode = "CORE"
+        elif "[VSL_LITE]" in upper_msg:
+            self.eng.ui_mode = "LITE"
+        elif "[VSL_HIDE]" in upper_msg:
+            self.eng.ui_mode = "IDLE"
+
+        clean_message = re.sub(r'(?i)\[VSL_[A-Z]+\]', '', user_message).strip()
+        if not clean_message:
+            clean_message = "(Waiting)"
+
+        ctx = self._execute_core_cycle(clean_message, is_system)
         if not ctx.is_alive:
             if hasattr(ctx, "crash_error"):
                 return self._generate_crash_report(ctx.crash_error)
@@ -1276,26 +1279,6 @@ class GeodesicOrchestrator:
             return ctx.refusal_packet
 
         snapshot = self.reporter.render_snapshot(ctx)
-
-        ui_mode = getattr(self.eng, "ui_mode", "STANDARD")
-        if ui_mode in ["LITE", "CORE", "DEEP"]:
-            p = ctx.physics
-            t = (
-                sum(getattr(self.eng, "trauma_accum", {}).values())
-                if hasattr(self.eng, "trauma_accum")
-                else 0.0
-            )
-            ros = p.ROS if hasattr(p, "ROS") else 0.0
-
-            if ui_mode == "DEEP":
-                vsl_ui = f"[{Prisma.CYN}🧊 E:{p.E:.2f} β:{p.beta:.2f} | {Prisma.YEL}⚡ V:{p.V:.0f} F:{p.F:.2f} | {Prisma.GRN}❤️ H:{self.eng.health:.0f} P:{self.eng.stamina:.0f} | {Prisma.OCHRE}🏺 T:{t:.0f} | {Prisma.RED}ROS:{ros:.0f} | {Prisma.MAG}🌌 Ψ:{p.psi:.2f} Χ:{p.chi:.2f} ♥:{p.valence:.2f}{Prisma.RST}]\n"
-            elif ui_mode == "CORE":
-                vsl_ui = f"[{Prisma.CYN}🧊 E:{p.E:.2f} β:{p.beta:.2f} S:{getattr(p, 'S', 0.3):.2f} D:{getattr(p, 'D', 0.3):.2f} C:{getattr(p, 'C', 0.2):.2f}{Prisma.RST} | {Prisma.YEL}⚡ V:{p.V:.0f}{Prisma.RST} | {Prisma.MAG}🌌 Ψ:{p.psi:.2f}{Prisma.RST}]\n"
-            else:
-                vsl_ui = f"[{Prisma.GRN}❤️ H:{self.eng.health:.0f} | 🔋 P:{self.eng.stamina:.0f} | {Prisma.YEL}⚡ V:{p.V:.0f} | {Prisma.RED}☣️ ROS:{ros:.0f}{Prisma.RST}]\n"
-
-            snapshot["ui"] = vsl_ui + snapshot.get("ui", "")
-
         self._hydrate_snapshot_metadata(snapshot, ctx)
         latency = time.time() - ctx.timestamp
         if "ui" in snapshot:

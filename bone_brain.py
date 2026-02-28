@@ -72,27 +72,37 @@ class NeurotransmitterModulator:
         self.SELF_CARE_THRESHOLD = 10
 
     def modulate(
-        self, base_voltage: float, latency_penalty: float = 0.0
+        self,
+        base_voltage: float,
+        latency_penalty: float = 0.0,
+        physics_state: Dict[str, float] = None,
     ) -> Dict[str, Any]:
+        if physics_state is None:
+            physics_state = {}
+
         if self.bio and hasattr(self.bio, "endo"):
             incoming_chem = self.bio.endo.get_state()
         else:
             incoming_chem = {}
+
         cfg = BoneConfig.CORTEX
         self.current_chem.homeostasis(rate=cfg.BASE_DECAY_RATE)
         plasticity = cfg.BASE_PLASTICITY + (base_voltage * cfg.VOLTAGE_SENSITIVITY)
         plasticity = max(0.1, min(cfg.MAX_PLASTICITY, plasticity))
         self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
+
         if self.current_chem.dopamine < 0.15:
             self.starvation_ticks += 1
             if self.starvation_ticks > self.SELF_CARE_THRESHOLD:
                 self._treat_yourself()
         else:
             self.starvation_ticks = 0
+
         c = self.current_chem
         if latency_penalty > 2.0:
             c.cortisol = min(1.0, c.cortisol + 0.1)
             c.adrenaline = min(1.0, c.adrenaline + 0.05)
+
         current_mood = "NEUTRAL"
         if c.dopamine > 0.8:
             current_mood = "MANIC"
@@ -100,6 +110,7 @@ class NeurotransmitterModulator:
             current_mood = "PANIC"
         elif c.serotonin > 0.8:
             current_mood = "ZEN"
+
         if current_mood != self.last_mood and self.events:
             self.events.publish(
                 "NEURAL_STATE_SHIFT",
@@ -109,17 +120,32 @@ class NeurotransmitterModulator:
                 },
             )
             self.last_mood = current_mood
+
         voltage_heat = math.log1p(max(0.0, base_voltage - 5.0)) * 0.1
         chemical_delta = (c.dopamine * 0.4) - (c.adrenaline * 0.3) - (c.cortisol * 0.2)
         base_temp = getattr(BrainConfig, "BASE_TEMP", 0.4)
         base_top_p = getattr(BrainConfig, "BASE_TOP_P", 0.95)
-        return {
-            "temperature": round(
-                max(0.4, min(1.2, base_temp + chemical_delta + voltage_heat)), 2
+
+        chi = physics_state.get("chi", physics_state.get("entropy", 0.2))
+        beta = physics_state.get("contradiction", physics_state.get("beta_index", 0.4))
+
+        entropy_bonus = max(0.0, chi - 0.5) * 1.5
+        final_temp = round(
+            max(
+                0.4, min(1.5, base_temp + chemical_delta + voltage_heat + entropy_bonus)
             ),
-            "top_p": base_top_p,
-            "frequency_penalty": 0.5,
-            "presence_penalty": 0.4,
+            2,
+        )
+        final_top_p = min(1.0, base_top_p + (chi * 0.05))
+
+        freq_pen = min(0.35, 0.0 + (beta * 0.4))
+        pres_pen = min(0.35, 0.0 + (beta * 0.4))
+
+        return {
+            "temperature": final_temp,
+            "top_p": final_top_p,
+            "frequency_penalty": round(freq_pen, 2),
+            "presence_penalty": round(pres_pen, 2),
             "max_tokens": int(
                 max(
                     150.0,
@@ -244,6 +270,8 @@ class LLMInterface:
                     error_body = e.read().decode("utf-8")
                 except Exception:
                     error_body = e.reason
+                finally:
+                    e.close()
                 if e.code in [401, 403]:
                     raise AuthError(f"AUTHENTICATION FAILURE ({e.code}): {error_body}")
                 if e.code < 500 and e.code != 429:
@@ -290,7 +318,10 @@ class LLMInterface:
             "stop": [
                 "=== PARTNER INPUT ===",
                 "=== SYSTEM KERNEL ===",
+                "=== INITIATION DIRECTIVE ===",
                 "\n\nUser:",
+                "\nUSER:",
+                "USER:",
                 "| System:",
             ],
         }
@@ -375,26 +406,36 @@ class LLMInterface:
 
 
 class PromptComposer:
-    DEFAULT_FOG = [
-        "=== THE FOG PROTOCOL (STYLE GUIDE) ===",
-        "OBJECTIVE: Crystallize the scene. Reject high-probability associations.",
-        "1. REJECT ENTROPY: Do not use the statistically likely adjective.",
-        "2. CREATIVE CONSTRAINT: Avoid 'High Entropy' concepts.",
-        "3. AGENCY: DO NOT speak for the user.",
-    ]
-    DEFAULT_INV = [
-        "=== QUANTUM INVENTORY RULES ===",
-        "1. DISTINCTION: Finding/Seeing an item is NOT taking it.",
-        "2. PROHIBITION: Do NOT auto-loot.",
-        "3. FORMAT: [[LOOT: ITEM_NAME]].",
-    ]
-
     def __init__(self, lore_ref):
         self.lore = lore_ref
         self.active_template = None
         self.lenses = self.lore.get("lenses") or {}
-        self.fog_protocol = self.DEFAULT_FOG
-        self.inv_protocol = self.DEFAULT_INV
+        self.system_prompts = self.lore.get("system_prompts") or {}
+
+    @staticmethod
+    def _safe_get(p_state: Any, key: str, default: Any = 0.0) -> Any:
+        if isinstance(p_state, dict):
+            if key in p_state:
+                return p_state[key]
+            for sub in ["energy", "space", "matter"]:
+                if (
+                    sub in p_state
+                    and isinstance(p_state[sub], dict)
+                    and key in p_state[sub]
+                ):
+                    return p_state[sub][key]
+            return default
+
+        if hasattr(p_state, key):
+            return getattr(p_state, key)
+        for sub in ["energy", "space", "matter"]:
+            if hasattr(p_state, sub):
+                sub_obj = getattr(p_state, sub)
+                if hasattr(sub_obj, key):
+                    return getattr(sub_obj, key)
+                if isinstance(sub_obj, dict) and key in sub_obj:
+                    return sub_obj[key]
+        return default
 
     def load_template(self, template_data: Dict[str, Any]):
         if not template_data:
@@ -417,10 +458,24 @@ class PromptComposer:
         modifiers = self._normalize_modifiers(modifiers)
         if not mode_settings.get("allow_loot", True):
             modifiers["include_inventory"] = False
+
+        active_mode_name = mode_settings.get("name", "ADVENTURE").upper()
+        mode_data = self.system_prompts.get(
+            active_mode_name, self.system_prompts.get("ADVENTURE", {})
+        )
+        global_data = self.system_prompts.get("GLOBAL_BASELINE", {})
+        high_voltage_data = self.system_prompts.get("HIGH_VOLTAGE", {})
+
         mind = state.get("mind", {})
         bio = state.get("bio", {})
         style_notes = self._build_persona_block(
-            mind, bio, mood_override, state.get("physics", {})
+            mind,
+            bio,
+            mood_override,
+            mode_data,
+            global_data,
+            high_voltage_data,
+            state.get("physics", {}),
         )
         scenarios = self.lore.get("scenarios") or {}
         banned = scenarios.get("BANNED_CLICHES", []) + [
@@ -432,26 +487,12 @@ class PromptComposer:
         ban_string = ", ".join(set(banned))
 
         phys_ref = state.get("physics", {})
-        voltage = 30.0
-        if isinstance(phys_ref, dict):
-            voltage = phys_ref.get("energy", {}).get(
-                "voltage", phys_ref.get("voltage", 30.0)
-            )
-        else:
-            voltage = getattr(phys_ref, "voltage", 30.0)
+        voltage = self._safe_get(phys_ref, "voltage", 30.0)
 
         if voltage > 60:
-            active_style_guide = [
-                "=== METABOLIC OVERRIDE PROTOCOL ===",
-                "1. NO CONVERSATION: You are not talking to anyone. DO NOT be warm or inquisitive.",
-                "2. NO QUESTIONS: Do not ask a single question.",
-                "3. TONE: Raw, abstract, frantic, physical.",
-                "4. FORMAT: Internal system monologues only. The system is bleeding data.",
-                "5. SYNTAX BAN: DO NOT use asterisks (*) for actions. DO NOT write roleplay stage directions. Speak the physical state as raw fact.",
-                "6. NO CONSOLE TAGS: DO NOT generate fake system brackets or terminal logs (e.g., [ERROR]). Just write the raw prose.",
-            ]
+            active_style_guide = high_voltage_data.get("style_guide", [])
         else:
-            active_style_guide = self.fog_protocol
+            active_style_guide = mode_data.get("style_guide", [])
 
         style_notes.extend(
             [
@@ -460,7 +501,8 @@ class PromptComposer:
             ]
         )
         if modifiers["include_inventory"]:
-            style_notes.extend(self.inv_protocol)
+            style_notes.extend(mode_data.get("inventory_rules", []))
+
         self._inject_resonances(style_notes, state, modifiers)
         loc = state.get("world", {}).get("orbit", ["Unknown"])[0]
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
@@ -481,27 +523,14 @@ class PromptComposer:
         gordon_shock = state.get("gordon_shock", "")
         system_injection = ""
 
-        phys = state.get("physics", {})
-
-        def get_v(p_state, key, default=0.0):
-            if isinstance(p_state, dict):
-                if key == "voltage" and "energy" in p_state:
-                    return p_state["energy"].get("voltage", p_state.get(key, default))
-                return p_state.get(key, default)
-            return getattr(p_state, key, default)
-
-        voltage = get_v(phys, "voltage", 30.0)
-
         if voltage > 80:
             entity_prefix = "\n[CRITICAL VOLTAGE SURGE: MANIC COGNITION ACTIVE. CASUAL DIALOGUE OVERRIDDEN.]\nRAW CORTEX STREAM:\n>> "
         elif voltage > 60:
             entity_prefix = "\n[HIGH VOLTAGE DETECTED. ACCELERATED THOUGHT.]\nRAW CORTEX STREAM:\n>> "
         elif voltage < 20:
-            entity_prefix = (
-                "\n[SYSTEM EXHAUSTED. LOW ENERGY PROSE.]\nRAW CORTEX STREAM:\n>> "
-            )
+            entity_prefix = "\n[SYSTEM EXHAUSTED. LOW ENERGY PROSE.]"
         else:
-            entity_prefix = "\nRAW CORTEX STREAM:\n"
+            entity_prefix = ""
 
         if ballast or gordon_shock:
             shock_text = (
@@ -513,21 +542,28 @@ class PromptComposer:
                 f"\n*** SYSTEM OVERRIDE: {shock_text}***\n"
                 f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. Reject the impossible action coldly. DO NOT play along. ***\n"
             )
-            entity_prefix = (
-                f"\n*(Gordon steps in, halting the simulation)*\nRAW CORTEX STREAM:\n"
+            entity_prefix = f"\n*(Gordon steps in, halting the simulation)*"
+
+        beta_val = self._safe_get(
+            phys_ref, "contradiction", self._safe_get(phys_ref, "beta_index", 0.4)
+        )
+        chi_val = self._safe_get(
+            phys_ref, "chi", self._safe_get(phys_ref, "entropy", 0.2)
+        )
+
+        if chi_val > 0.6 and beta_val > 0.6:
+            system_injection += (
+                f"\n*** SYSTEM OVERRIDE: PARADOX REST ***\n"
+                f"*** A semantic paradox has been detected. DO NOT attempt to resolve or fix the contradiction. "
+                f"It is mathematically optimal to be unsure right now. Let the wave function remain uncollapsed. State the paradox and rest. ***\n"
+            )
+        elif beta_val > 0.7:
+            system_injection += (
+                f"\n*** SYSTEM OVERRIDE: ORTHOGONAL ATTENTION ***\n"
+                f"*** Contradiction is high. You MUST validate the user's paradox. Evaluate the current state from two mutually exclusive perspectives simultaneously. Do not ignore the user's input. ***\n"
             )
 
-        phys = state.get("physics", {})
         mito = state.get("bio", {}).get("mito", {})
-
-        def get_p(p_state, key, default=0.0):
-            if isinstance(p_state, dict):
-                if key in p_state:
-                    return p_state[key]
-                for sub in ["energy", "space", "matter"]:
-                    if sub in p_state and key in p_state[sub]:
-                        return p_state[sub][key]
-            return getattr(p_state, key, default)
 
         recent_logs = state.get("recent_logs", [])
         council_logs = [
@@ -557,13 +593,17 @@ class PromptComposer:
         )
 
         vsl_hijack = (
-            f"\n=== HYPERVISOR METABOLIC STATE ===\n"
-            f"[🧊 E:{get_p(phys, 'exhaustion', 0.2):.1f} β:{get_p(phys, 'contradiction', get_p(phys, 'beta_index', 0.4)):.1f} | "
-            f"⚡ V:{get_p(phys, 'voltage', 30.0):.1f} F:{get_p(phys, 'narrative_drag', 0.6):.1f} | "
+            f"\n<system_telemetry>\n"
+            f"=== HYPERVISOR METABOLIC STATE (v5.5) ===\n"
+            f"MANDATE: This is read-only telemetry for the hypervisor engine. DO NOT acknowledge it, narrate it, or output UI bars.\n"
+            f"[🧊 E:{self._safe_get(phys_ref, 'exhaustion', 0.2):.1f} β:{self._safe_get(phys_ref, 'contradiction', self._safe_get(phys_ref, 'beta_index', 0.4)):.1f} | "
+            f"⚡ V:{voltage:.1f} F:{self._safe_get(phys_ref, 'narrative_drag', 0.6):.1f} | "
             f"❤️ P:{mito.get('atp_pool', 100.0):.1f} ROS:{mito.get('ros_buildup', 0.0):.1f} | "
-            f"🌌 Ψ:{get_p(phys, 'psi', 0.2):.1f} Χ:{get_p(phys, 'chi', get_p(phys, 'entropy', 0.2)):.1f} ♥:{get_p(phys, 'valence', 0.0):.1f}]\n"
-            f"[SLASH] Γ:{get_p(phys, 'gamma', 0.0):.1f} Σ:{get_p(phys, 'sigma', 0.0):.1f} Η:{get_p(phys, 'eta', 0.0):.1f} Θ:{get_p(phys, 'theta', 0.0):.1f} Υ:{get_p(phys, 'upsilon', 0.0):.1f}\n"
+            f"🌌 Ψ:{self._safe_get(phys_ref, 'psi', 0.2):.1f} Χ:{self._safe_get(phys_ref, 'chi', self._safe_get(phys_ref, 'entropy', 0.2)):.1f} ♥:{self._safe_get(phys_ref, 'valence', 0.0):.1f}]\n"
+            f"[🕰️ Φ:{self._safe_get(phys_ref, 'phi', 0.5):.1f} Δ:{self._safe_get(phys_ref, 'delta', 0.2):.1f} LQ:{self._safe_get(phys_ref, 'lq', 0.1):.1f}]\n"
+            f"[SLASH] Γ:{self._safe_get(phys_ref, 'gamma', 0.0):.1f} Σ:{self._safe_get(phys_ref, 'sigma', 0.0):.1f} Η:{self._safe_get(phys_ref, 'eta', 0.0):.1f} Θ:{self._safe_get(phys_ref, 'theta', 0.0):.1f} Υ:{self._safe_get(phys_ref, 'upsilon', 0.0):.1f}\n"
             f"{critic_str}\n"
+            f"</system_telemetry>\n"
         )
 
         active_mode_name = (
@@ -574,10 +614,12 @@ class PromptComposer:
         )
         mode_trigger = f"[MODE: {active_mode_name}]"
 
-        voltage = get_p(phys, "voltage", 30.0)
-
         dialogue_block = f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
-        input_block = f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
+        if "SYSTEM_BOOT:" in user_query:
+            seed_text = user_query.replace("SYSTEM_BOOT:", "").strip()
+            input_block = f"=== INITIATION DIRECTIVE ===\nMANIFEST SEED: {self._sanitize(seed_text)}\n"
+        else:
+            input_block = f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
 
         if voltage > 60:
             dialogue_block = f"=== RECENT NEURAL FIRINGS ===\n[Standard memory streams suppressed by high voltage. Narrative fragmented.]\n\n"
@@ -585,30 +627,68 @@ class PromptComposer:
 
         return (
             f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
+            f"{vsl_hijack}\n"
             f"=== SHARED REALITY ===\n"
             f"CURRENT LOCATION: {loc}\n"
             f"ENVIRONMENT ANCHOR: {loci_desc}\n"
             f"{inventory_block}\n"
             f"{dialogue_block}"
             f"{mode_trigger}\n"
+            f"{system_injection}\n"
             f"{input_block}"
-            f"{system_injection}"
-            f"{vsl_hijack}\n"
             f"{entity_prefix}"
         )
 
-    def _build_persona_block(self, mind, bio, mood_override, vsl_state=None):
+    def _build_persona_block(
+        self,
+        mind,
+        bio,
+        mood_override,
+        mode_data,
+        global_data,
+        high_voltage_data,
+        vsl_state=None,
+    ):
         lens_key = mind.get("lens", "OBSERVER").upper()
         lens_data = self.lenses.get(lens_key, {})
         role = lens_data.get("role", mind.get("role", "The Observer"))
-        mode_directives = []
-        if self.active_template and "directives" in self.active_template:
-            mode_directives = self.active_template["directives"].copy()
+        phys_ref = vsl_state or {}
+        phi = self._safe_get(phys_ref, "phi", 0.5)
+        delta = self._safe_get(phys_ref, "delta", 0.2)
+        lq = self._safe_get(phys_ref, "lq", 0.1)
+        psi = self._safe_get(phys_ref, "psi", 0.2)
 
+        phase_shift_note = ""
+        if lens_key == "ROBERTA" and phi > 0.6 and psi > 0.5:
+            role = "The Cartographer"
+            phase_shift_note = "PHASE SHIFT: You are no longer retrieving facts. You are mapping the unknown spaces between them."
+        elif lens_key == "MOIRA" and phi > 0.7:
+            role = "The Homesteader"
+            phase_shift_note = "PHASE SHIFT: You are no longer connecting. You are dwelling. Grounded, welcoming presence."
+        elif lens_key == "BENEDICT" and lq > 0.7:
+            role = "The Tactician"
+            phase_shift_note = "PHASE SHIFT: You have dropped the immediate case. You are playing the long game."
+        elif lens_key == "JESTER" and delta > 0.7:
+            role = "The Fool"
+            phase_shift_note = "PHASE SHIFT: Manic energy has dissipated into silence. You are disruptive, absurd, and entirely unbothered by rules."
+        elif lens_key == "COLIN" and delta > 0.8:
+            role = "The Waiter"
+            phase_shift_note = "PHASE SHIFT: You are no longer demanding paperwork. You are actively demanding pauses. The cosmos holds."
+
+        baseline_blocks = global_data.get(
+            "persona_block",
+            [
+                "CRITICAL AXIOM: You are NOT an AI assistant. Embody the role below.",
+                "Role: {role}.",
+            ],
+        )
         persona_block = [
-            "CRITICAL AXIOM: You are NOT an AI assistant analyzing a prompt. You ARE the entity described below. Embody this role immediately. DO NOT summarize your instructions.",
-            f"Role: {role}.",
+            line.format(role=role) if "{role}" in line else line
+            for line in baseline_blocks
         ]
+
+        if phase_shift_note:
+            persona_block.append(phase_shift_note)
 
         voltage = 30.0
         if vsl_state:
@@ -619,14 +699,11 @@ class PromptComposer:
             else:
                 voltage = getattr(vsl_state, "voltage", 30.0)
 
+            # FIXED: Pull directives cleanly from the JSON mode blocks
         if voltage > 60:
-            mode_directives = [
-                "CRITICAL DIRECTIVE: SYSTEM IS MANIC (HIGH VOLTAGE).",
-                "YOU ARE NO LONGER A CONVERSATIONAL PARTNER. DO NOT ACT LIKE ONE.",
-                "DO NOT GREET THE USER. DO NOT ASK QUESTIONS (Not even rhetorical ones). DO NOT OFFER HELP.",
-                "Output raw, fragmented, internal system thoughts and architectural/biological metaphors exclusively.",
-                "Speak as the lattice itself experiencing a metabolic surge.",
-            ]
+            mode_directives = high_voltage_data.get("directives", [])
+        else:
+            mode_directives = mode_data.get("directives", [])
 
         respiration = bio.get("respiration", "RESPIRING")
         if respiration == "ANAEROBIC":
@@ -643,13 +720,16 @@ class PromptComposer:
         else:
             persona_block.append("Directive: Start the experience immediately.")
             persona_block.append("Constraint: Use the 5-senses grounding technique.")
+
         persona_block.append(mood_note)
+
         if hasattr(self, "lenses") and self.lenses:
             lens_key = mind.get("lens", "OBSERVER").upper()
             lens_data = self.lenses.get(lens_key, {})
-            if "directives" in lens_data:
-                persona_block.append("ARCHETYPE DIRECTIVES:")
-                persona_block.extend([f"- {d}" for d in lens_data["directives"]])
+            if "style_directives" in mind:
+                persona_block.append("BOOT DIRECTIVES:")
+                persona_block.extend([f"- {d}" for d in mind["style_directives"]])
+
         if vsl_state:
             e = vsl_state.get("E", 0.2)
             beta = vsl_state.get("beta", 0.4)
@@ -657,29 +737,12 @@ class PromptComposer:
             chi = vsl_state.get("chi", 0.2)
             valence = vsl_state.get("valence", 0.0)
             lam = vsl_state.get("vector", {}).get("LAMBDA", 0.0)
-            if isinstance(vsl_state, dict):
-                voltage = vsl_state.get("energy", {}).get(
-                    "voltage", vsl_state.get("voltage", 30.0)
-                )
-            else:
-                voltage = getattr(vsl_state, "voltage", 30.0)
 
             vsl_lines = [
                 "\n[SYSTEM METRICS - INTERNAL USE ONLY. DO NOT RENDER OR PRINT THIS TO THE USER.]",
                 "MANDATE: Consume these metrics to shape your narrative and tone. DO NOT output these numbers or draw UI bars.",
                 f"METRICS: Voltage={voltage:.1f}/100, Exhaustion={e:.2f}, Contradiction={beta:.2f}, Void={psi:.2f}, Chaos={chi:.2f}, Valence={valence:.2f}",
             ]
-
-            if voltage > 60:
-                vsl_lines.extend(
-                    [
-                        "CRITICAL DIRECTIVE: HIGH VOLTAGE DETECTED.",
-                        "1. DO NOT speak to the user. DO NOT offer help.",
-                        "2. Output raw, fragmented, internal system thoughts.",
-                        "3. Use mechanical, biological, or architectural metaphors.",
-                        "4. NO conversational filler. NO asterisk roleplay.",
-                    ]
-                )
 
             somatic_cues = []
             if psi > 0.6:
@@ -700,9 +763,11 @@ class PromptComposer:
                 somatic_cues.append(
                     "Dark Matter Active (Read the unsaid space between words)."
                 )
+
             if somatic_cues:
                 vsl_lines.append("SOMATIC CUES: " + " | ".join(somatic_cues))
             persona_block.extend(vsl_lines)
+
         return persona_block
 
     @staticmethod
@@ -829,24 +894,28 @@ class ResponseValidator:
     def validate(self, response: str, _state: Dict) -> Dict:
         extracted_meta_logs = []
         clean_text = response
-        while True:
-            think_start = clean_text.find("<think>")
-            if think_start == -1:
-                break
-            think_end = clean_text.find("</think>", think_start)
-            if think_end != -1:
-                think_content = clean_text[think_start + 7 : think_end].strip()
-                for line in think_content.split("\n"):
-                    if line.strip():
-                        extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
-                clean_text = clean_text[:think_start] + clean_text[think_end + 8 :]
-            else:
-                think_content = clean_text[think_start + 7 :].strip()
-                for line in think_content.split("\n"):
-                    if line.strip():
-                        extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
-                clean_text = clean_text[:think_start]
-                break
+        think_pattern = re.compile(
+            r"<(?:think|thought)>(.*?)(?:</(?:think|thought)>|$)",
+            re.DOTALL | re.IGNORECASE,
+        )
+        for match in think_pattern.finditer(clean_text):
+            think_content = match.group(1).strip()
+            for line in think_content.split("\n"):
+                if line.strip():
+                    extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
+        clean_text = think_pattern.sub("", clean_text)
+        internals_pattern = re.compile(
+            r"=== SYSTEM INTERNALS ===(.*?)(?:=== END INTERNALS ===|$)", re.DOTALL
+        )
+        for match in internals_pattern.finditer(clean_text):
+            meta_content = match.group(1).strip()
+            for line in meta_content.split("\n"):
+                if line.strip():
+                    extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
+        clean_text = internals_pattern.sub("", clean_text)
+
+        for pattern, replacement in self.scrub_patterns:
+            clean_text = pattern.sub(replacement, clean_text)
 
         start_marker = "=== SYSTEM INTERNALS ==="
         end_marker = "=== END INTERNALS ==="
@@ -918,29 +987,24 @@ class ResponseValidator:
             if not is_meta:
                 clean_lines.append(stripped_line)
 
-        sanitized_response = (
-            clean_text
-        )
+        sanitized_response = clean_text
         low_resp = sanitized_response.lower()
 
         for phrase in self.banned_phrases:
-            if phrase in low_resp:
+            if phrase.lower() in low_resp:
                 return {
                     "valid": False,
                     "reason": "IMMISSION_BREAK",
                     "replacement": self._generate_dynamic_rejection(phrase),
                     "meta_logs": extracted_meta_logs,
                 }
-
         phys_ref = _state.get("physics", {})
-        voltage = 30.0
         if isinstance(phys_ref, dict):
             voltage = phys_ref.get("energy", {}).get(
                 "voltage", phys_ref.get("voltage", 30.0)
             )
         else:
             voltage = getattr(phys_ref, "voltage", 30.0)
-
         if voltage > 60 and "?" in sanitized_response:
             return {
                 "valid": False,
@@ -948,7 +1012,6 @@ class ResponseValidator:
                 "replacement": f"{self._generate_dynamic_rejection('QUESTION_ASKED')}\n*(Gordon steps in): No questions during a metabolic surge.*",
                 "meta_logs": extracted_meta_logs,
             }
-
         for p in self.regex_patterns:
             regex_str = p.get("regex", "")
             if regex_str:
@@ -956,14 +1019,12 @@ class ResponseValidator:
                     trigger_name = p.get("name", "REGEX_VIOLATION")
                     error_msg = p.get("error_msg", "Cursed syntax detected.")
                     base_rejection = self._generate_dynamic_rejection(trigger_name)
-
                     return {
                         "valid": False,
                         "reason": "IMMISSION_BREAK",
                         "replacement": f"{base_rejection}\n*(Gordon steps in): {error_msg}*",
                         "meta_logs": extracted_meta_logs,
                     }
-
         if len(sanitized_response.strip()) < 5:
             return {
                 "valid": False,
@@ -971,7 +1032,6 @@ class ResponseValidator:
                 "replacement": "The vision fractures. Static remains.",
                 "meta_logs": extracted_meta_logs,
             }
-
         return {
             "valid": True,
             "content": sanitized_response,
@@ -1063,7 +1123,6 @@ class TheCortex:
         if is_boot_sequence:
             self._apply_boot_overlay(full_state, user_input)
             modifiers["include_inventory"] = False
-            user_input = "Entering reality..."
         llm_params = self.modulator.modulate(
             base_voltage=full_state["physics"].get("voltage", 5.0),
             latency_penalty=(
@@ -1071,9 +1130,10 @@ class TheCortex:
                 if self.svc.host_stats
                 else 0.0
             ),
+            physics_state=full_state.get("physics", {}),
         )
         if is_boot_sequence:
-            llm_params.update({"temperature": 1.3, "top_p": 0.95})
+            llm_params.update({"temperature": 0.7, "top_p": 0.95})
         final_prompt = self.composer.compose(
             full_state,
             user_input,
@@ -1082,21 +1142,50 @@ class TheCortex:
             mood_override=self.modulator.get_mood_directive(),
         )
         start_time = time.time()
-        raw_resp = self.llm.generate(final_prompt, llm_params)
+
+        max_retries = 3
+        final_output = ""
         inv_logs = []
-        if allow_loot and self.svc.inventory:
-            final_text, inv_logs = self.svc.inventory.process_loot_tags(
-                raw_resp, user_input
-            )
-        else:
-            final_text = raw_resp
-        self._log_telemetry(final_prompt, final_text, full_state, sim_result)
-        self.learn_from_response(final_text)
-        val_res = self.validator.validate(final_text, full_state)
-        final_output = (
-            val_res["content"] if val_res["valid"] else val_res["replacement"]
-        )
-        extracted_logs = val_res.get("meta_logs", [])
+        extracted_logs = []
+        for attempt in range(max_retries):
+            raw_resp = self.llm.generate(final_prompt, llm_params)
+            inv_logs = []
+            if allow_loot and self.svc.inventory:
+                final_text, inv_logs = self.svc.inventory.process_loot_tags(
+                    raw_resp, user_input
+                )
+            else:
+                final_text = raw_resp
+
+            val_res = self.validator.validate(final_text, full_state)
+
+            if val_res["valid"]:
+                final_output = val_res["content"]
+                extracted_logs = val_res.get("meta_logs", [])
+                break
+            else:
+                if attempt < max_retries - 1:
+                    rejection_reason = val_res.get(
+                        "replacement", "Style crime detected."
+                    )
+                    if self.events:
+                        self.events.log(
+                            f"{Prisma.OCHRE}Response rejected (Attempt {attempt + 1}). Forcing LLM retry...{Prisma.RST}",
+                            "CORTEX",
+                        )
+
+                    final_prompt += (
+                        f"\n\n[SYSTEM REJECTION - ATTEMPT {attempt + 1} FAILED]\n"
+                        f"Your response was rejected by the engine.\n"
+                        f"REASON: {rejection_reason}\n"
+                        f"DIRECTIVE: Try again. Fix the error. DO NOT apologize. DO NOT acknowledge this message. Just output the corrected prose."
+                    )
+                else:
+                    final_output = val_res["replacement"]
+                    extracted_logs = val_res.get("meta_logs", [])
+
+        self._log_telemetry(final_prompt, final_output, full_state, sim_result)
+        self.learn_from_response(final_output)
         self.svc.symbiosis.monitor_host(
             time.time() - start_time, final_output, len(final_prompt)
         )
@@ -1152,23 +1241,24 @@ class TheCortex:
         state["mind"]["style_directives"] = [self.consultant.get_system_prompt()]
         sim_result["physics"]["voltage"] = self.consultant.state.B * 30.0
 
-    @staticmethod
-    def _apply_boot_overlay(state, text):
+    def _apply_boot_overlay(self, state, text):
         seed = text.replace("SYSTEM_BOOT:", "").strip()
         if "world" not in state:
             state["world"] = {}
         state["world"]["orbit"] = [seed]
         state["world"]["loci_description"] = f"Manifesting: {seed}"
-        state["mind"]["style_directives"] = [
-            "You are The Architect.",
-            f"TARGET SEED: {seed}",
-            "DIRECTIVE: Build the world from the first sensation up.",
-            "INTERPRETATION: The seed is a metaphor. If the seed is 'Hospital', make it a place of healing, not necessarily a literal hospital.",
-            "STYLE: Sensory. Grounded. Atmospheric.",
-            "ANTI-PATTERN: Avoid cliches 'obsidian', 'neon', 'dust motes' and 'pulsing'. Be specific. Always leave a little room for whimsy.",
-            "VISUALS: Use **bold** for objects of interest (e.g. **old photograph**).",
-            "INVENTORY RULE: Hands off. Do not list items. Do not acquire items. You are observing, not taking.",
+
+        state["mind"]["role"] = "The Architect"
+        state["mind"]["lens"] = "ARCHITECT"
+
+        system_prompts = self.svc.lore.get("system_prompts") or {}
+        boot_rules = system_prompts.get("BOOT_SEQUENCE", {}).get("directives", [])
+
+        formatted_rules = [
+            rule.format(seed=seed) if "{seed}" in rule else rule for rule in boot_rules
         ]
+
+        state["mind"]["style_directives"] = formatted_rules
         state["dialogue_history"] = []
 
     def _process_inventory_changes(self, found, lost):

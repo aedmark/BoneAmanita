@@ -216,6 +216,7 @@ class GeodesicRenderer:
                 else 100.0
             ),
             "vectors": physics.get("vector", {}),
+            "ui_depth": getattr(self.eng, "ui_mode", "IDLE"),
         }
         if hasattr(self.eng, "consultant"):
             data_ctx["vsl"] = {
@@ -526,12 +527,14 @@ class CycleReporter:
             color = Prisma.GRN if e["delta"] > 0 else Prisma.RED
             arrow = "▲" if e["delta"] > 0 else "▼"
             significant.append(
-                f"{Prisma.GRY}[FLUX]{Prisma.RST} {icon} {e['metric'][:3].upper()} {color}{arrow} {d:.1f}{Prisma.RST} ({e['reason']})"
+                f"   {Prisma.GRY}│{Prisma.RST} {icon} {e['metric'][:3].upper()} {color}{arrow} {d:.1f}{Prisma.RST} ({e['reason']})"
             )
         if significant:
             ctx.logs.insert(0, "")
+            ctx.logs.insert(1, f" {Prisma.GRY}┌─ [SYSTEM FLUX]{Prisma.RST}")
             for line in reversed(significant):
-                ctx.logs.insert(0, line)
+                ctx.logs.insert(2, line)
+            ctx.logs.insert(2 + len(significant), f" {Prisma.GRY}└{'─' * 15}{Prisma.RST}")
 
     def _package_bureaucracy(self, ctx):
         if not self.eng.bureau:

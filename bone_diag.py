@@ -104,7 +104,9 @@ class MockGovernor:
         pass
 
     @staticmethod
-    def regulate(_p, _dt):
+    def regulate(p, dt=0.0):
+        if getattr(p, "voltage", 0.0) > 100.0:
+            return -95.0, 0.0
         return 0.0, 0.0
 
 
@@ -234,7 +236,7 @@ class TestSomaticPhysics(unittest.TestCase):
         forge = MitochondrialForge(state, self.events)
 
         receipt = forge.process_cycle(
-            TestBed.create_physics(voltage=10.0, drag=2.0), modifier=1.0
+            TestBed.create_physics(voltage=10.0, drag=2.0, psi=0.8), modifier=1.0
         )
         self.assertEqual(
             receipt.status, "RESPIRING", "Standard cycle should be respiring."
@@ -406,6 +408,53 @@ class TestLiveFireIntegration(unittest.TestCase):
                 )
         except Exception as e:
             self.fail(f"LLM Connection Failed: {e}")
+
+    def test_live_fire_cortex_metabolism(self):
+        """[FULLER] Ensure a live LLM response actually triggers the metabolic, lexical, and validation systems."""
+        if not LLMInterface:
+            print(f"\n{Prisma.OCHRE}[LIVE FIRE] LLMInterface not imported. Skipping.{Prisma.RST}")
+            self.skipTest("LLMInterface missing")
+
+        print(f"\n{Prisma.CYN}[LIVE FIRE] Testing Full Cortex Pipeline with Local LLM...{Prisma.RST}")
+
+        live_cfg = {
+            "PROVIDER": "ollama",
+            "MODEL": "mistral-nemo",
+            "OLLAMA_URL": "http://127.0.0.1:11434/v1/chat/completions",
+            "boot_mode": "ADVENTURE"
+        }
+
+        original_provider = BoneConfig.PROVIDER
+        BoneConfig.PROVIDER = "ollama"
+
+        try:
+            engine = BoneAmanita(config=live_cfg)
+
+            initial_atp = engine.bio.mito.state.atp_pool
+            initial_ros = engine.bio.mito.state.ros_buildup
+
+            start_t = time.time()
+            result = engine.cortex.process("I step into the void and look for a heavy iron key.")
+            duration = time.time() - start_t
+
+            final_text = result.get("raw_content", "")
+            self.assertIsNotNone(final_text, "LLM failed to produce content.")
+            self.assertGreater(len(final_text), 10, "LLM response was abnormally short or blocked.")
+
+            current_atp = engine.bio.mito.state.atp_pool
+            self.assertLess(current_atp, initial_atp, "Live LLM response did not cost ATP! Metabolism disconnected.")
+
+            phys = result.get("physics", {})
+            drag = getattr(phys, "narrative_drag", 0.0)
+            self.assertGreaterEqual(drag, 0.0, "Physics packet failed to generate drag from LLM prose.")
+
+            print(
+                f"{Prisma.GRN}   >>> PASS: Live LLM successfully drove the metabolic and lexical engines in {duration:.2f}s.{Prisma.RST}")
+
+        except Exception as e:
+            self.fail(f"Full Cycle Live Fire Failed: {e}")
+        finally:
+            BoneConfig.PROVIDER = original_provider
 
 
 class TestSemanticEndocrine(unittest.TestCase):
@@ -1548,12 +1597,10 @@ class TestCosmicPhysics(unittest.TestCase):
         mock_gov = MagicMock()
         mock_gov.regulate.return_value = (0.0, 0.0)
         stabilizer = CycleStabilizer(self.events, mock_gov)
-
         phys = TestBed.create_physics(voltage=18.0)
         phys.manifold = "DEFAULT"
         phys.flow_state = "SUPERCONDUCTIVE"
         ctx = TestBed.create_context(physics=phys)
-
         stabilizer.stabilize(ctx, "TEST_PHASE")
         mock_gov.recalibrate.assert_called()
         args, _ = mock_gov.recalibrate.call_args
@@ -1577,9 +1624,7 @@ class TestVillageSocialLogic(unittest.TestCase):
             f"\n{Prisma.VIOLET}[SCHUR] Testing Zen Garden Stillness Streaks...{Prisma.RST}"
         )
         garden = ZenGarden(self.events)
-
         stable_phys = TestBed.create_physics(voltage=5.0, drag=1.0)
-
         for i in range(5):
             boost, msg = garden.raking_the_sand(stable_phys, {})
         self.assertEqual(garden.stillness_streak, 5, "Zen streak failed to increment.")
@@ -1615,11 +1660,9 @@ class TestVillageSocialLogic(unittest.TestCase):
             mock_cfg.MIN_WORD_COUNT = 3
             mock_cfg.MIN_HEALTH_TO_AUDIT = 20
             bureau = TheBureau()
-
             phys = TestBed.create_physics(voltage=5.0)
             phys.raw_text = "Wait for the dots...."
             phys.clean_words = ["wait", "for", "the", "dots"]
-
             result = bureau.audit(phys, {"health": 100.0})
             self.assertIsNotNone(
                 result,
@@ -1963,8 +2006,6 @@ class TestHostileCortex(unittest.TestCase):
         )
 
     def test_infinite_think_loop(self):
-        """[MEADOWS] Ensure the parser does not hang on malicious or infinite tag hallucinations."""
-
         validator = ResponseValidator(LoreManifest.get_instance())
         insane_response = (
             "<think> I am trapped </think>" * 50
@@ -1992,6 +2033,7 @@ class TestHostileCortex(unittest.TestCase):
             response = self.llm.generate("Hello?", {"temperature": 0.8})
             mock_fallback.assert_called_once()
             self.assertEqual(response, "[LOCAL_FALLBACK_TRIGGERED]")
+        error_fp.close()
 
     @patch("urllib.request.urlopen")
     def test_http_400_graceful_fray(self, mock_urlopen):
@@ -2006,11 +2048,55 @@ class TestHostileCortex(unittest.TestCase):
             self.llm._transmit({"test": "payload"})
 
         self.assertIn("Context length exceeded.", str(context.exception))
+        error_fp.close()
+
+    def test_rlhf_slop_rejection(self):
+        print(f"\n{Prisma.MAG}[PINKER] Testing RLHF Slop Interception...{Prisma.RST}")
+
+        validator = ResponseValidator(LoreManifest.get_instance())
+
+        rlhf_apology = "I apologize, but as an AI language model, I cannot write that."
+        result_apology = validator.validate(
+            rlhf_apology, {"physics": {"voltage": 30.0}}
+        )
+
+        self.assertFalse(
+            result_apology.get("valid"), "Validator failed to flag 'as an AI' slop."
+        )
+        self.assertEqual(
+            result_apology.get("reason"),
+            "IMMISSION_BREAK",
+            "Incorrect reason for banned phrase.",
+        )
+        self.assertNotEqual(
+            result_apology.get("replacement"),
+            rlhf_apology,
+            "Replacement text was not generated.",
+        )
+
+        rlhf_identity = "Hello! I am an AI assistant here to help you."
+        result_identity = validator.validate(
+            rlhf_identity, {"physics": {"voltage": 30.0}}
+        )
+
+        self.assertFalse(
+            result_identity.get("valid"),
+            "Validator failed to flag 'AI assistant' phrase.",
+        )
+        self.assertEqual(
+            result_identity.get("reason"),
+            "IMMISSION_BREAK",
+            "Incorrect reason for banned phrase.",
+        )
+
+        print(
+            f"{Prisma.GRN}   >>> PASS: Validator successfully caught and destroyed RLHF slop.{Prisma.RST}"
+        )
 
 
 if __name__ == "__main__":
     print(f"{Prisma.WHT}┌───────────────────────────────────────────┐{Prisma.RST}")
-    print(f"{Prisma.WHT}│ BONEAMANITA UNIFIED DIAGNOSTIC SUITE v3.0 │{Prisma.RST}")
+    print(f"{Prisma.WHT}│ BONEAMANITA UNIFIED DIAGNOSTIC SUITE │{Prisma.RST}")
     print(f"{Prisma.WHT}└───────────────────────────────────────────┘{Prisma.RST}")
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()

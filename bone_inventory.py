@@ -180,6 +180,10 @@ class GordonKnot:
             )
 
         new_loot = normalize(raw_loot)
+        if not new_loot:
+            implicit_loot = self.parse_loot(user_input, text)
+            if implicit_loot:
+                new_loot = normalize([implicit_loot])
         lost_loot = normalize(raw_lost)
         logs = []
         if new_loot:

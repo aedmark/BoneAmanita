@@ -725,7 +725,6 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> Physic
     if "Golden Glow" in qualia.somatic_sensation:
         feedback.valence += 0.5
         feedback.psi += 0.2
-    volt_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
     drag_floor = getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0)
     drag_halt = getattr(BoneConfig.PHYSICS, "DRAG_HALT", 10.0)
 

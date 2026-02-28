@@ -40,6 +40,7 @@ class LexiconStore:
             "sentiment_pos",
             "sentiment_neg",
             "sentiment_negators",
+            "toxin",
         }
         self.VOCAB: Dict[str, Set[str]] = {k: set() for k in self.categories}
         self.LEARNED_VOCAB: Dict[str, Dict[str, int]] = {}
@@ -183,6 +184,27 @@ class LinguisticAnalyzer:
                 "phon",
                 "surg",
                 "bloom",
+            ),
+            "TOXIN": (
+                "necro",
+                "path",
+                "tox",
+                "vir",
+                "mort",
+                "rot",
+                "rupt",
+                "flict",
+                "plasm",
+                "fester",
+                "decay",
+                "plagu",
+                "tumor",
+                "bleed",
+                "blood",
+                "sick",
+                "carcin",
+                "pus",
+                "bile",
             ),
         }
         self.thresholds = {
@@ -491,6 +513,7 @@ class LexiconService:
     @classmethod
     def classify(cls, word):
         PRIORITY_ORDER = [
+            "toxin",
             "heavy",
             "kinetic",
             "explosive",

@@ -55,7 +55,10 @@ class BoneGenesis:
             if logs:
                 events.log(f"⛓️ LEGACY SCARS: {', '.join(logs)}", "OROBOROS")
                 if getattr(embryo.physics, "dynamics", None):
-                    embryo.physics.dynamics.base_drag += dummy_phys["narrative_drag"]
+                    if hasattr(embryo.physics.dynamics, "base_drag"):
+                        embryo.physics.dynamics.base_drag += dummy_phys["narrative_drag"]
+                    elif hasattr(embryo.physics.dynamics, "strain_gauge"):
+                        embryo.physics.dynamics.strain_gauge += (dummy_phys.get("narrative_drag", 0.0) * 0.1)
                 if embryo.bio.biometrics:
                     biometrics = live_bio_state.get("biometrics", {})
                     embryo.bio.biometrics.health = biometrics.get("health", 100.0)
