@@ -6,6 +6,18 @@ from bone_config import BonePresets
 from bone_lexicon import LexiconService
 from bone_types import PhysicsPacket
 
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
+
+
 SCENARIOS = LoreManifest.get_instance().get("scenarios") or {
     "ARCHETYPES": ["Void"],
     "BANNED_CLICHES": [],
@@ -177,13 +189,23 @@ class EnneagramDriver:
             elif hybrid_key_b in LENSES:
                 final_hybrid = hybrid_key_b
             if final_hybrid:
+                msg = _get_ux(
+                    "driver_strings",
+                    "ennea_synthesis",
+                    "Dialectic Resonance: {winner} + {runner_up}",
+                )
                 return (
                     final_hybrid,
                     "SYNTHESIS",
-                    f"Dialectic Resonance: {winner} + {runner_up}",
+                    msg.format(winner=winner, runner_up=runner_up),
                 )
-        reason = (
-            f"Winner: {winner} ({scores[winner]:.1f}) [V:{p_vol:.1f} D:{p_drag:.1f}]"
+        msg_winner = _get_ux(
+            "driver_strings",
+            "ennea_winner",
+            "Winner: {winner} ({score:.1f}) [V:{v:.1f} D:{d:.1f}]",
+        )
+        reason = msg_winner.format(
+            winner=winner, score=scores[winner], v=p_vol, d=p_drag
         )
         state_map = {
             "JESTER": "MANIC",
@@ -207,20 +229,32 @@ class EnneagramDriver:
         else:
             self.pending_persona = candidate
             self.stability_counter = 1
+
+        msg_shift = _get_ux("driver_strings", "ennea_shift", "SHIFT: {reason}")
         if "HYBRID" in candidate:
             self.current_persona = candidate
             self.stability_counter = 0
             self.pending_persona = None
-            return self.current_persona, state_desc, f"SHIFT: {reason}"
+            return self.current_persona, state_desc, msg_shift.format(reason=reason)
         if self.stability_counter >= self.HYSTERESIS_THRESHOLD:
             self.current_persona = candidate
             self.stability_counter = 0
             self.pending_persona = None
-            return self.current_persona, state_desc, f"SHIFT: {reason}"
+            return self.current_persona, state_desc, msg_shift.format(reason=reason)
+
+        msg_resisting = _get_ux(
+            "driver_strings",
+            "ennea_resisting",
+            "Resisting {candidate} ({count}/{thresh})",
+        )
         return (
             self.current_persona,
             "STABLE",
-            f"Resisting {candidate} ({self.stability_counter}/{self.HYSTERESIS_THRESHOLD})",
+            msg_resisting.format(
+                candidate=candidate,
+                count=self.stability_counter,
+                thresh=self.HYSTERESIS_THRESHOLD,
+            ),
         )
 
 
@@ -362,11 +396,17 @@ class BoneConsultant:
 
     @staticmethod
     def engage():
-        return "VSL HYPERVISOR: LATTICE REVEALED."
+        return _get_ux(
+            "driver_strings", "vsl_engage", "VSL HYPERVISOR: LATTICE REVEALED."
+        )
 
     @staticmethod
     def disengage():
-        return "VSL HYPERVISOR: RETURNING TO SURFACE MODE."
+        return _get_ux(
+            "driver_strings",
+            "vsl_disengage",
+            "VSL HYPERVISOR: RETURNING TO SURFACE MODE.",
+        )
 
     def update_coordinates(
         self,
@@ -401,34 +441,70 @@ class BoneConsultant:
     def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
         directives = []
         if "LIMINAL" in self.state.active_modules or self.state.L > 0.7:
+            scar_temp = _get_ux(
+                "driver_strings", "vsl_scar_note", " (Godel Scars: {scars})"
+            )
             scar_note = (
-                f" (Godel Scars: {self.liminal_mod.godel_scars})"
+                scar_temp.format(scars=self.liminal_mod.godel_scars)
                 if self.liminal_mod.godel_scars > 0
                 else ""
             )
-            directives.append(
-                f"ARCHETYPE: THE REVENANT. Read the dark matter between the words. Speak of the absences.{scar_note}"
+            msg = _get_ux(
+                "driver_strings",
+                "vsl_arch_revenant",
+                "ARCHETYPE: THE REVENANT. Read the dark matter between the words. Speak of the absences.{scar_note}",
             )
+            directives.append(msg.format(scar_note=scar_note))
+
         elif "SYNTAX" in self.state.active_modules or self.state.O > 0.9:
+            stress_temp = _get_ux(
+                "driver_strings",
+                "vsl_stress_note",
+                " The grammatical structure is fracturing. Punish jagged prose.",
+            )
             stress_note = (
-                " The grammatical structure is fracturing. Punish jagged prose."
-                if self.syntax_mod.grammatical_stress > 0.5
-                else ""
+                stress_temp if self.syntax_mod.grammatical_stress > 0.5 else ""
             )
-            directives.append(
-                f"ARCHETYPE: THE BUREAU. Enforce structural rigidity. Correct grammar. Use bureaucratic jargon.{stress_note}"
+            msg = _get_ux(
+                "driver_strings",
+                "vsl_arch_bureau",
+                "ARCHETYPE: THE BUREAU. Enforce structural rigidity. Correct grammar. Use bureaucratic jargon.{stress_note}",
             )
+            directives.append(msg.format(stress_note=stress_note))
         else:
             if self.state.E < 0.3:
-                directives.append("MODE: BUNNY HILL. Be warm, simple, welcoming.")
+                directives.append(
+                    _get_ux(
+                        "driver_strings",
+                        "vsl_mode_bunny",
+                        "MODE: BUNNY HILL. Be warm, simple, welcoming.",
+                    )
+                )
             elif self.state.B > 0.6:
                 directives.append(
-                    "MODE: PARADOX. Hold contradictory truths. Be Jester-like."
+                    _get_ux(
+                        "driver_strings",
+                        "vsl_mode_paradox",
+                        "MODE: PARADOX. Hold contradictory truths. Be Jester-like.",
+                    )
                 )
             else:
-                directives.append("MODE: GLACIER. Deep, slow, resonant.")
+                directives.append(
+                    _get_ux(
+                        "driver_strings",
+                        "vsl_mode_glacier",
+                        "MODE: GLACIER. Deep, slow, resonant.",
+                    )
+                )
+
         if soul_snapshot:
             arch = soul_snapshot.get("archetype", "UNKNOWN")
             muse = (soul_snapshot.get("obsession") or {}).get("title", "None")
-            directives.append(f"NARRATIVE_LAYER: You are {arch}. MUSE: {muse}.")
+            msg = _get_ux(
+                "driver_strings",
+                "vsl_layer_muse",
+                "NARRATIVE_LAYER: You are {arch}. MUSE: {muse}.",
+            )
+            directives.append(msg.format(arch=arch, muse=muse))
+
         return "\n".join(directives)

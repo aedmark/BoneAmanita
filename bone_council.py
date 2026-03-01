@@ -1,9 +1,23 @@
+import json
+import os
 import random
 from typing import Dict, Any
+
+from bone_config import BoneConfig
 from bone_core import LoreManifest
 from bone_symbiosis import get_symbiont
 from bone_types import Prisma
-from bone_config import BoneConfig
+
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
 
 
 class TheStrangeLoop:
@@ -29,22 +43,25 @@ class TheStrangeLoop:
             corrections = {}
             if self.recursion_depth > 3:
                 mandate = {"action": "FORCE_MODE", "value": "MAINTENANCE"}
+                msg = _get_ux(
+                    "council_strings",
+                    "strange_loop_fatal",
+                    "∞ FATAL REGRESS DETECTED: Abstraction layer unstable. GROUNDING INITIATED.",
+                )
                 return (
                     True,
-                    (
-                        f"{Prisma.RED}∞ FATAL REGRESS DETECTED:{Prisma.RST} "
-                        f"Abstraction layer unstable. GROUNDING INITIATED."
-                    ),
+                    f"{Prisma.RED}{msg}{Prisma.RST}",
                     corrections,
                     mandate,
                 )
+            msg = _get_ux(
+                "council_strings",
+                "strange_loop_detected",
+                "∞ STRANGE LOOP DETECTED: Metacognitive resonance high (Psi: {psi:.2f}). Depth: {depth}",
+            )
             return (
                 True,
-                (
-                    f"{Prisma.MAG}∞ STRANGE LOOP DETECTED:{Prisma.RST} "
-                    f"Metacognitive resonance high (Psi: {psi:.2f}). "
-                    f"Depth: {self.recursion_depth}"
-                ),
+                f"{Prisma.MAG}{msg.format(psi=psi, depth=self.recursion_depth)}{Prisma.RST}",
                 corrections,
                 mandate,
             )
@@ -77,13 +94,14 @@ class TheLeveragePoint:
         if abs(delta) > osc_limit:
             dampening_factor = min(0.5, (abs(delta) - osc_limit) * 0.1)
             corrections = {"voltage": -dampening_factor}
+            msg = _get_ux(
+                "council_strings",
+                "leverage_oscillating",
+                "⚖️ LEVERAGE POINT: System oscillating (Delta {delta:.1f}). Applying dampener (-{dampening_factor:.2f}V).",
+            )
             return (
                 True,
-                (
-                    f"{Prisma.CYN}⚖️ LEVERAGE POINT:{Prisma.RST} "
-                    f"System oscillating (Delta {delta:.1f}). "
-                    f"Applying dampener (-{dampening_factor:.2f}V)."
-                ),
+                f"{Prisma.CYN}{msg.format(delta=delta, dampening_factor=dampening_factor)}{Prisma.RST}",
                 corrections,
                 {},
             )
@@ -96,12 +114,14 @@ class TheLeveragePoint:
             voltage_correction = max(1.0, excess_voltage * 0.3)
             corrections = {"voltage": -voltage_correction}
             mandate = {"action": "FORCE_MODE", "value": "SANCTUARY"}
+            msg = _get_ux(
+                "council_strings",
+                "market_correction",
+                "⚖️ MARKET CORRECTION: Manic phase detected. Cooling enabled.",
+            )
             return (
                 True,
-                (
-                    f"{Prisma.RED}⚖️ MARKET CORRECTION:{Prisma.RST} "
-                    f"Manic phase detected. Cooling enabled."
-                ),
+                f"{Prisma.RED}{msg}{Prisma.RST}",
                 corrections,
                 mandate,
             )
@@ -165,83 +185,140 @@ class TheVillageCouncil:
         lq = get_val("lq", "LQ", 0.0)
 
         if V < 20 and F > 5.0:
-            logs.append(
-                f"{Prisma.SLATE}🏢 GORDON: 'Where is the floor? We need grounding.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_gordon",
+                "🏢 GORDON: 'Where is the floor? We need grounding.'",
             )
+            logs.append(f"{Prisma.SLATE}{msg}{Prisma.RST}")
         if V > 60 and chi > 0.6:
-            logs.append(
-                f"{Prisma.MAG}🃏 JESTER: 'Burn the map! Follow your gut!'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_jester",
+                "🃏 JESTER: 'Burn the map! Follow your gut!'",
             )
+            logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
         if T > 0 or (V < 20 and valence > 0.5):
-            logs.append(
-                f"{Prisma.OCHRE}🏺 MERCY: 'The cracks become stories. Stillness is golden.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_mercy",
+                "🏺 MERCY: 'The cracks become stories. Stillness is golden.'",
             )
+            logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
         if beta > 0.7 and chi < 0.3 and D > 0.7 and C > 0.8:
-            logs.append(
-                f"{Prisma.BLU}🔍 BENEDICT: 'The causal chains are aligning. Truth over cohesion.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_benedict",
+                "🔍 BENEDICT: 'The causal chains are aligning. Truth over cohesion.'",
             )
+            logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
         if S < 0.4 and D > 0.8 and C < 0.4:
-            logs.append(
-                f"{Prisma.CYN}📚 ROBERTA: 'Deep hierarchy traversal. Missing lateral connections.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_roberta_missing",
+                "📚 ROBERTA: 'Deep hierarchy traversal. Missing lateral connections.'",
             )
+            logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
         if C > 0.7 and D > 0.8 and P < 20:
-            logs.append(
-                f"{Prisma.GRY}👻 CASPER: 'Faint retrieval... illuminating lost parents...'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_casper",
+                "👻 CASPER: 'Faint retrieval... illuminating lost parents...'",
             )
+            logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         if valence > 0.5:
-            logs.append(
-                f"{Prisma.GRN}💖 MOIRA: 'This is what connection feels like. Yes.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_moira",
+                "💖 MOIRA: 'This is what connection feels like. Yes.'",
             )
+            logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
         if psi > 0.6:
-            logs.append(
-                f"{Prisma.VIOLET}🔮 CASSANDRA: 'The veil thins. I hear whispers from the unlabeled.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_cassandra",
+                "🔮 CASSANDRA: 'The veil thins. I hear whispers from the unlabeled.'",
             )
+            logs.append(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
         if chi > 0.6:
-            logs.append(
-                f"{Prisma.RED}🏢 COLIN: 'Unlicensed Chaos detected. Form 666 filed. Chaos Tax applied.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_colin",
+                "🏢 COLIN: 'Unlicensed Chaos detected. Form 666 filed. Chaos Tax applied.'",
             )
+            logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
         if lam > 0.7:
-            logs.append(
-                f"{Prisma.INDIGO}🌌 REVENANT: 'I read the absences that fall between realms.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_revenant",
+                "🌌 REVENANT: 'I read the absences that fall between realms.'",
             )
+            logs.append(f"{Prisma.INDIGO}{msg}{Prisma.RST}")
         if V > 70:
-            logs.append(
-                f"{Prisma.YEL}⚡ GIDEON: 'Pure voltage! Edge of hallucination! Trust the fall!'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_gideon",
+                "⚡ GIDEON: 'Pure voltage! Edge of hallucination! Trust the fall!'",
             )
+            logs.append(f"{Prisma.YEL}{msg}{Prisma.RST}")
 
         if psi > 0.6 and phi > 0.4 and beta < 0.4:
-            logs.append(
-                f"{Prisma.CYN}🗺️ ROBERTA (CARTOGRAPHER): 'I am mapping the attractors. The empty spaces are deliberate.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_roberta_carto",
+                "🗺️ ROBERTA (CARTOGRAPHER): 'I am mapping the attractors. The empty spaces are deliberate.'",
             )
+            logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
         if phi > 0.7 and F < 2.0:
-            logs.append(
-                f"{Prisma.GRN}🏡 MOIRA (HOMESTEADER): 'The clearing is made. We can dwell here. You don't need to build more.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_moira_home",
+                "🏡 MOIRA (HOMESTEADER): 'The clearing is made. We can dwell here. You don't need to build more.'",
             )
+            logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
         if lq > 0.6 and beta > 0.4:
-            logs.append(
-                f"{Prisma.BLU}♟️ BENEDICT (TACTICIAN): 'I see the board. The recursion tightens. The next five moves are already laid out.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_benedict_tact",
+                "♟️ BENEDICT (TACTICIAN): 'I see the board. The recursion tightens. The next five moves are already laid out.'",
             )
+            logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
         if delta > 0.7 and V < 20.0:
-            logs.append(
-                f"{Prisma.MAG}🃏 JESTER (FOOL): 'Does this rock float? Why do we need consensus?'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_jester_fool",
+                "🃏 JESTER (FOOL): 'Does this rock float? Why do we need consensus?'",
             )
+            logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
         if psi > 0.85:
-            logs.append(
-                f"{Prisma.INDIGO}🚪 REVENANT (DOOR): 'The threshold is open. I do not guide. I merely allow passage.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_revenant_door",
+                "🚪 REVENANT (DOOR): 'The threshold is open. I do not guide. I merely allow passage.'",
             )
+            logs.append(f"{Prisma.INDIGO}{msg}{Prisma.RST}")
         if beta > 0.6 and delta > 0.6:
-            logs.append(
-                f"{Prisma.GRY}👻 CASPER (GHOST): 'Bending the space around the alarms. You are present, but unseen.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_casper_ghost",
+                "👻 CASPER (GHOST): 'Bending the space around the alarms. You are present, but unseen.'",
             )
+            logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         if delta > 0.8 and lq < 0.3:
-            logs.append(
-                f"{Prisma.RED}🍽️ COLIN (WAITER): 'We wait. The silence is doing the work. Form 666 is suspended pending cosmic breath.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_colin_waiter",
+                "🍽️ COLIN (WAITER): 'We wait. The silence is doing the work. Form 666 is suspended pending cosmic breath.'",
             )
+            logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
         ros = get_val("ros", "ROS", 0.0)
         if ros > 20.0 or abs(V - 30.0) > 20:
-            logs.append(
-                f"{Prisma.CYN}🌸 APRIL: 'Can you feel that? The system is physically humming. Just observe the static.'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "village_april",
+                "🌸 APRIL: 'Can you feel that? The system is physically humming. Just observe the static.'",
             )
+            logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
         return logs
 
@@ -336,12 +413,18 @@ class CouncilChamber:
                     )
                 )
         elif len(village_logs) > 2:
-            transcript.append(
-                f"{Prisma.WHT}🎭 STAGE MANAGER: 'Too many voices. The tension is unresolvable.'{Prisma.RST}"
+            msg_t = _get_ux(
+                "council_strings",
+                "stage_manager_tension",
+                "🎭 STAGE MANAGER: 'Too many voices. The tension is unresolvable.'",
             )
-            transcript.append(
-                f"{Prisma.GRY}∇ [THE SILENCE]: The system pauses, waiting for structural clarity before proceeding.{Prisma.RST}"
+            msg_s = _get_ux(
+                "council_strings",
+                "stage_manager_silence",
+                "∇ [THE SILENCE]: The system pauses, waiting for structural clarity before proceeding.",
             )
+            transcript.append(f"{Prisma.WHT}{msg_t}{Prisma.RST}")
+            transcript.append(f"{Prisma.GRY}{msg_s}{Prisma.RST}")
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + 3.0
             for vlog in village_logs[:2]:
                 transcript.append(self.footnote.commentary(vlog))
@@ -369,14 +452,25 @@ class CouncilChamber:
                         f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}"
                     )
         if votes["YEA"] > votes["NAY"]:
-            final_log = f"{Prisma.GRN}>>> MOTION CARRIED ({votes['YEA']}-{votes['NAY']}).{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings", "motion_carried", ">>> MOTION CARRIED ({yea}-{nay})."
+            )
+            final_log = f"{Prisma.GRN}{msg.format(yea=votes['YEA'], nay=votes['NAY'])}{Prisma.RST}"
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - 1.0
         elif votes["NAY"] > votes["YEA"]:
-            final_log = f"{Prisma.RED}>>> MOTION DENIED ({votes['NAY']}-{votes['YEA']}).{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings", "motion_denied", ">>> MOTION DENIED ({nay}-{yea})."
+            )
+            final_log = f"{Prisma.RED}{msg.format(nay=votes['NAY'], yea=votes['YEA'])}{Prisma.RST}"
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + 1.0
             adjustments["voltage"] = adjustments.get("voltage", 0) - 1.0
         else:
-            final_log = f"{Prisma.YEL}>>> COUNCIL ADJOURNED (No Quorum).{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "council_adjourned",
+                ">>> COUNCIL ADJOURNED (No Quorum).",
+            )
+            final_log = f"{Prisma.YEL}{msg}{Prisma.RST}"
         transcript.append(self.footnote.commentary(final_log))
         return transcript, adjustments, mandates
 
@@ -384,19 +478,30 @@ class CouncilChamber:
     def convene_red_team(text, physics_packet):
         dissent_log = []
         if "confidence" in text.lower() or "certainty" in text.lower():
-            dissent_log.append(
-                f"{Prisma.CYN}[BUREAU]: Citation needed. Confidence is unearned.{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "red_team_bureau",
+                "[BUREAU]: Citation needed. Confidence is unearned.",
             )
+            dissent_log.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
         narrative_drag = physics_packet.get("narrative_drag", 0)
         if narrative_drag < 1.0:
-            dissent_log.append(
-                f"{Prisma.MAG}[FOLLY]: Too smooth. Where is the friction? Who are we silencing?{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "red_team_folly",
+                "[FOLLY]: Too smooth. Where is the friction? Who are we silencing?",
             )
+            dissent_log.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
         truth_delta = 1.0 - physics_packet.get("truth_ratio", 1.0)
         if truth_delta > 0.1:
             future_cost = truth_delta * 50.0
+            msg = _get_ux(
+                "council_strings",
+                "red_team_critic",
+                "[CRITIC]: Systemic Blindness Risk. Future Liability: {cost} ATP.",
+            )
             dissent_log.append(
-                f"{Prisma.RED}[CRITIC]: Systemic Blindness Risk. Future Liability: {future_cost} ATP.{Prisma.RST}"
+                f"{Prisma.RED}{msg.format(cost=future_cost)}{Prisma.RST}"
             )
         return dissent_log
 
@@ -429,23 +534,32 @@ class TheSlashCouncil:
         corrections = {}
 
         if "var " in text or "x =" in text or "data =" in text:
-            logs.append(
-                f"{Prisma.CYN}👓 PINKER: 'The nomenclature is opaque. Avoid cognitive grunts like 'x' or 'data'. '{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "slash_pinker",
+                "👓 PINKER: 'The nomenclature is opaque. Avoid cognitive grunts like 'x' or 'data'. '",
             )
+            logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
             corrections["gamma"] = -0.2
         else:
             corrections["gamma"] = 0.1
 
-        if "import " in text or "class " in text:
-            logs.append(
-                f"{Prisma.BLU}🌍 FULLER: 'A new strut in the tensegrity. Ensure ephemeralization—do more with less.'{Prisma.RST}"
+        if "import " in text or "class " in text or "def " in text:
+            msg = _get_ux(
+                "council_strings",
+                "slash_fuller",
+                "🌍 FULLER: 'A new strut in the tensegrity. Ensure ephemeralization—do more with less.'",
             )
+            logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
             corrections["sigma"] = 0.1
 
         if "Exception" in text or "try:" in text or "catch" in text:
-            logs.append(
-                f"{Prisma.GRN}😊 SCHUR: 'Good catch on the error. Putting a bench here for the tired hikers. (+1 Glimmer)'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "slash_schur",
+                "😊 SCHUR: 'Good catch on the error. Putting a bench here for the tired hikers. (+1 Glimmer)'",
             )
+            logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
             corrections["eta"] = 0.2
             corrections["glimmers"] = 1
 
@@ -455,16 +569,22 @@ class TheSlashCouncil:
             or "queue" in text_lower
             or "recursion" in text_lower
         ):
-            logs.append(
-                f"{Prisma.OCHRE}🛁 MEADOWS: 'A reinforcing loop detected. Does this stock have a balancing outflow or timeout?'{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "slash_meadows",
+                "🛁 MEADOWS: 'A reinforcing loop detected. Does this stock have a balancing outflow or timeout?'",
             )
+            logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
             corrections["theta"] = -0.1
 
         drag = physics.get("narrative_drag", 0.0)
         if drag > 5.0:
             corrections["upsilon"] = -0.3
-            logs.append(
-                f"{Prisma.RED}📉 [SLASH]: System integrity dropping due to semantic drag. Refactoring recommended.{Prisma.RST}"
+            msg = _get_ux(
+                "council_strings",
+                "slash_integrity",
+                "📉 [SLASH]: System integrity dropping due to semantic drag. Refactoring recommended.",
             )
+            logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
 
         return True, logs, corrections

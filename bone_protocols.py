@@ -9,6 +9,18 @@ from bone_types import Prisma
 from bone_lexicon import LexiconService
 from bone_config import BoneConfig
 
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
+
+
 NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
 
 
@@ -58,18 +70,30 @@ class ZenGarden:
             )
             msg = None
             if self.stillness_streak == 1:
-                msg = f"{Prisma.GRY}⛩️ ZEN GARDEN: Entering the quiet zone.{Prisma.RST}"
+                raw_enter = _get_ux(
+                    "protocol_strings",
+                    "zen_enter",
+                    "⛩️ ZEN GARDEN: Entering the quiet zone.",
+                )
+                msg = f"{Prisma.GRY}{raw_enter}{Prisma.RST}"
             elif self.stillness_streak % 5 == 0:
                 self.pebbles_collected += 1
                 koan = random.choice(self.koans)
-                msg = (
-                    f"{Prisma.CYN}⛩️ ZEN GARDEN: {self.stillness_streak} ticks of poise.\n"
-                    f'   "{koan}" (Efficiency +{int(efficiency_boost * 100)}%){Prisma.RST}'
+                raw_streak = _get_ux(
+                    "protocol_strings",
+                    "zen_streak",
+                    '⛩️ ZEN GARDEN: {streak} ticks of poise.\n   "{koan}" (Efficiency +{boost}%)',
                 )
+                msg = f"{Prisma.CYN}{raw_streak.format(streak=self.stillness_streak, koan=koan, boost=int(efficiency_boost * 100))}{Prisma.RST}"
             return efficiency_boost, msg
         if self.stillness_streak > BoneConfig.ZEN.STREAK_BREAK_THRESHOLD:
+            break_msg = _get_ux(
+                "protocol_strings",
+                "zen_break",
+                "🍂 ZEN GARDEN: Leaf falls. Turbulence broke the streak.",
+            )
             self.events.log(
-                f"{Prisma.GRY}🍂 ZEN GARDEN: Leaf falls. Turbulence broke the streak.{Prisma.RST}",
+                f"{Prisma.GRY}{break_msg}{Prisma.RST}",
                 "SYS",
             )
         self.stillness_streak = 0
@@ -105,8 +129,13 @@ class TheBureau:
                         }
                     )
                 except re.error as e:
+                    err_msg = _get_ux(
+                        "protocol_strings",
+                        "bureau_compile_fail",
+                        "[BUREAU]: Failed to compile law '{name}': {e}",
+                    )
                     print(
-                        f"{Prisma.RED}[BUREAU]: Failed to compile law '{p.get('name')}': {e}{Prisma.RST}"
+                        f"{Prisma.RED}{err_msg.format(name=p.get('name'), e=e)}{Prisma.RST}"
                     )
         scenarios = LoreManifest.get_instance().get("scenarios") or {}
         self.cliches = set(scenarios.get("BANNED_CLICHES", []))
@@ -170,17 +199,32 @@ class TheBureau:
             return None
         self.stamp_count += 1
         bureau_resp = random.choice(self.responses)
-        prefix = f"{Prisma.GRY}🏢 THE BUREAU"
+        prefix = f"{Prisma.GRY}{_get_ux('protocol_strings', 'bureau_prefix_normal', '🏢 THE BUREAU')}"
         if origin == "SYSTEM":
-            prefix = f"{Prisma.RED}🏢 INTERNAL AFFAIRS"
-            bureau_resp = "System Output Violation detected."
-        ui_msg = f"{prefix}: {bureau_resp}{Prisma.RST}\n   {Prisma.WHT}[Filed: {selected_form} against {origin}]{Prisma.RST}"
+            prefix = f"{Prisma.RED}{_get_ux('protocol_strings', 'bureau_prefix_internal', '🏢 INTERNAL AFFAIRS')}"
+            bureau_resp = _get_ux(
+                "protocol_strings",
+                "bureau_sys_violation",
+                "System Output Violation detected.",
+            )
+        filed_msg = _get_ux(
+            "protocol_strings", "bureau_filed", "[Filed: {form} against {origin}]"
+        )
+        ui_msg = f"{prefix}: {bureau_resp}{Prisma.RST}\n   {Prisma.WHT}{filed_msg.format(form=selected_form, origin=origin)}{Prisma.RST}"
         if evidence:
-            ui_msg += f"\n   {Prisma.RED}Evidence: {', '.join(evidence)}{Prisma.RST}"
+            ev_msg = _get_ux(
+                "protocol_strings", "bureau_evidence", "Evidence: {evidence}"
+            )
+            ui_msg += f"\n   {Prisma.RED}{ev_msg.format(evidence=', '.join(evidence))}{Prisma.RST}"
+        log_msg = _get_ux(
+            "protocol_strings",
+            "bureau_log",
+            "BUREAUCRACY: Filed {form} against {origin}. Chaos Tax: -{tax:.1f} ATP.",
+        )
         return {
             "status": "AUDITED",
             "ui": ui_msg,
-            "log": f"BUREAUCRACY: Filed {selected_form} against {origin}. Chaos Tax: -{tax:.1f} ATP.",
+            "log": log_msg.format(form=selected_form, origin=origin, tax=tax),
             "atp_gain": -tax,
         }
 
@@ -211,7 +255,12 @@ class TheBureau:
             match = crime["regex"].search(text)
             if match and crime.get("action"):
                 corrected_text = self._apply_correction(text, crime, match)
-                log_msg = f"BUREAU CORRECTION: {crime['msg']} -> Text optimized."
+                corr_msg = _get_ux(
+                    "protocol_strings",
+                    "bureau_correction",
+                    "BUREAU CORRECTION: {msg} -> Text optimized.",
+                )
+                log_msg = corr_msg.format(msg=crime["msg"])
                 return corrected_text, log_msg
         dummy_physics = type(
             "obj",
@@ -312,7 +361,12 @@ class KintsugiProtocol:
 
     def _execute_pathway(self, pathway, trauma_accum, soul_ref):
         if not trauma_accum:
-            return {"success": False, "msg": "No fissures found."}
+            return {
+                "success": False,
+                "msg": _get_ux(
+                    "protocol_strings", "kintsugi_no_fissures", "No fissures found."
+                ),
+            }
         target = max(trauma_accum, key=trauma_accum.get)
         severity = trauma_accum[target]
         healed_log = []
@@ -321,7 +375,12 @@ class KintsugiProtocol:
             reduction = severity * 0.8
             trauma_accum[target] = max(0.0, severity - reduction)
             atp_boost = reduction * 15.0
-            msg = f"{Prisma.VIOLET}🔮 ALCHEMY: The wound '{target}' burns into pure fuel. (+{atp_boost:.1f} ATP){Prisma.RST}"
+            msg_raw = _get_ux(
+                "protocol_strings",
+                "kintsugi_alchemy",
+                "🔮 ALCHEMY: The wound '{target}' burns into pure fuel. (+{boost:.1f} ATP)",
+            )
+            msg = f"{Prisma.VIOLET}{msg_raw.format(target=target, boost=atp_boost)}{Prisma.RST}"
             healed_log.append(f"Transmuted {target}")
             return {
                 "success": True,
@@ -335,13 +394,21 @@ class KintsugiProtocol:
             if soul_ref:
                 soul_ref.traits.adjust("WISDOM", 0.1)
                 healed_log.append("Wisdom +0.1")
-            msg = f"{Prisma.OCHRE}🏺 MERCY (KINTSUGI): The gold sets. The '{target}' crack becomes a story.{Prisma.RST}"
+            msg_raw = _get_ux(
+                "protocol_strings",
+                "kintsugi_mercy",
+                "🏺 MERCY (KINTSUGI): The gold sets. The '{target}' crack becomes a story.",
+            )
+            msg = f"{Prisma.OCHRE}{msg_raw.format(target=target)}{Prisma.RST}"
             healed_log.append(f"Integrated {target}")
             success = True
         else:
             reduction = 0.5
             trauma_accum[target] = max(0.0, severity - reduction)
-            msg = f"{Prisma.GRY}🩹 SCAR: It's ugly, but it holds.{Prisma.RST}"
+            msg_raw = _get_ux(
+                "protocol_strings", "kintsugi_scar", "🩹 SCAR: It's ugly, but it holds."
+            )
+            msg = f"{Prisma.GRY}{msg_raw}{Prisma.RST}"
             healed_log.append(f"Scarred {target}")
             success = True
         return {"success": success, "msg": msg, "healed": healed_log}
@@ -409,7 +476,12 @@ class TheCriticsCircle:
             comment = random.choice(reviews)
             color = Prisma.GRN if review_type == "high" else Prisma.RED
             icon = "🌟" if review_type == "high" else "💢"
-            return f"{color}{icon} CRITIC REVIEW ({critic['name']}): \"{comment}\"{Prisma.RST}"
+            rev_msg = _get_ux(
+                "protocol_strings",
+                "critic_review",
+                '{icon} CRITIC REVIEW ({name}): "{comment}"',
+            )
+            return f"{color}{rev_msg.format(icon=icon, name=critic['name'], comment=comment)}{Prisma.RST}"
         return None
 
 
@@ -437,15 +509,19 @@ class LimboLayer:
                 data = json.load(f)
             self._extract_ghosts(data)
         except (IOError, json.JSONDecodeError) as e:
-            print(
-                f"{Prisma.RED}[LIMBO] Failed to absorb timeline '{filepath}': {e}{Prisma.RST}"
+            err_msg = _get_ux(
+                "protocol_strings",
+                "limbo_absorb_fail",
+                "[LIMBO] Failed to absorb timeline '{filepath}': {e}",
             )
+            print(f"{Prisma.RED}{err_msg.format(filepath=filepath, e=e)}{Prisma.RST}")
 
     def _extract_ghosts(self, data: Dict[str, Any]) -> None:
         if "trauma_vector" in data:
             for k, v in data["trauma_vector"].items():
                 if v > 0.3:
-                    self.ghosts.append(f"👻{k}_ECHO")
+                    echo_msg = _get_ux("protocol_strings", "limbo_echo", "👻{k}_ECHO")
+                    self.ghosts.append(echo_msg.format(k=k))
         if "mutations" in data and "heavy" in data["mutations"]:
             bones = list(data["mutations"]["heavy"])
             random.shuffle(bones)
@@ -455,7 +531,12 @@ class LimboLayer:
         self.stasis_leak += 1.0
         horror = random.choice(self.STASIS_SCREAMS)
         self.ghosts.append(f"{Prisma.VIOLET}{horror}{Prisma.RST}")
-        return f"{Prisma.CYN}STASIS ERROR: '{intended_thought}' froze halfway. {horror}.{Prisma.RST}"
+        err_msg = _get_ux(
+            "protocol_strings",
+            "limbo_stasis_err",
+            "STASIS ERROR: '{thought}' froze halfway. {horror}.",
+        )
+        return f"{Prisma.CYN}{err_msg.format(thought=intended_thought, horror=horror)}{Prisma.RST}"
 
     def haunt(self, text):
         if self.stasis_leak > 0:
@@ -494,9 +575,19 @@ class TheFolly:
             voltage > BoneConfig.FOLLY.MAUSOLEUM_VOLTAGE
             and stamina > BoneConfig.FOLLY.MAUSOLEUM_STAMINA
         ):
+            msg1 = _get_ux(
+                "protocol_strings",
+                "folly_mausoleum",
+                "THE MAUSOLEUM: No battle is ever won. We are just spinning hands.",
+            )
+            msg2 = _get_ux(
+                "protocol_strings",
+                "folly_dilation",
+                "TIME DILATION: Voltage 0.0. The field reveals your folly.",
+            )
             return (
                 "MAUSOLEUM_CLAMP",
-                f"{Prisma.GRY}THE MAUSOLEUM: No battle is ever won. We are just spinning hands.{Prisma.RST}\n   {Prisma.CYN}TIME DILATION: Voltage 0.0. The field reveals your folly.{Prisma.RST}",
+                f"{Prisma.GRY}{msg1}{Prisma.RST}\n   {Prisma.CYN}{msg2}{Prisma.RST}",
                 0.0,
                 None,
             )
@@ -513,9 +604,19 @@ class TheFolly:
         fresh_meat = [w for w in meat_words if w not in self.gut_memory]
         if not fresh_meat:
             target = meat_words[0]
+            msg1 = _get_ux(
+                "protocol_strings",
+                "folly_reflex",
+                "REFLEX: You already fed me '{target}'. It is ash to me now.",
+            )
+            msg2 = _get_ux(
+                "protocol_strings",
+                "folly_penalty",
+                "► PENALTY: -{penalty} ATP. Find new fuel.",
+            )
             msg = (
-                f"{Prisma.OCHRE}REFLEX: You already fed me '{target}'. It is ash to me now.{Prisma.RST}\n"
-                f"   {Prisma.RED}► PENALTY: -{BoneConfig.FOLLY.PENALTY_REGURGITATION} ATP. Find new fuel.{Prisma.RST}"
+                f"{Prisma.OCHRE}{msg1.format(target=target)}{Prisma.RST}\n"
+                f"   {Prisma.RED}{msg2.format(penalty=BoneConfig.FOLLY.PENALTY_REGURGITATION)}{Prisma.RST}"
             )
             return "REGURGITATION", msg, -BoneConfig.FOLLY.PENALTY_REGURGITATION, None
         return self._eat_meat(fresh_meat, lexicon)
@@ -531,16 +632,26 @@ class TheFolly:
         self.gut_memory.append(target)
         self.global_tastings[target] += 1
         if target in suburban_set:
+            gags = _get_ux(
+                "protocol_strings",
+                "folly_gags",
+                "THE FOLLY GAGS: It coughs up a piece of office equipment.",
+            )
             return (
                 "INDIGESTION",
-                f"{Prisma.MAG}THE FOLLY GAGS: It coughs up a piece of office equipment.{Prisma.RST}",
+                f"{Prisma.MAG}{gags}{Prisma.RST}",
                 -BoneConfig.FOLLY.PENALTY_INDIGESTION,
                 "THE_RED_STAPLER",
             )
         if target in play_set:
+            chews = _get_ux(
+                "protocol_strings",
+                "folly_chews",
+                "THE FOLLY CHEWS: It compresses the chaos into a small, sticky ball.",
+            )
             return (
                 "SUGAR_RUSH",
-                f"{Prisma.VIOLET}THE FOLLY CHEWS: It compresses the chaos into a small, sticky ball.{Prisma.RST}",
+                f"{Prisma.VIOLET}{chews}{Prisma.RST}",
                 BoneConfig.FOLLY.SUGAR_RUSH_YIELD,
                 "QUANTUM_GUM",
             )
@@ -554,9 +665,15 @@ class TheFolly:
             else None
         )
         flavor_text = f" (Stale: {times_eaten}x)" if times_eaten > 3 else ""
+        msg1 = _get_ux(
+            "protocol_strings",
+            "folly_caffeine",
+            "CROWD CAFFEINE: I chewed on '{target}'{flavor_text}.",
+        )
+        msg2 = _get_ux("protocol_strings", "folly_yield", "Yield: {yield_val:.1f} ATP.")
         msg = (
-            f"{Prisma.RED}CROWD CAFFEINE: I chewed on '{target.upper()}'{flavor_text}.{Prisma.RST}\n"
-            f"   {Prisma.WHT}Yield: {actual_yield:.1f} ATP.{Prisma.RST}"
+            f"{Prisma.RED}{msg1.format(target=target.upper(), flavor_text=flavor_text)}{Prisma.RST}\n"
+            f"   {Prisma.WHT}{msg2.format(yield_val=actual_yield)}{Prisma.RST}"
         )
         return "MEAT_GRINDER", msg, actual_yield, loot
 
@@ -579,15 +696,38 @@ class TheFolly:
         if abstract_words:
             target = random.choice(abstract_words)
             yield_val = BoneConfig.FOLLY.YIELD_ABSTRACT
+            msg1 = _get_ux(
+                "protocol_strings",
+                "folly_sighs",
+                "THE FOLLY SIGHS: It grinds the ABSTRACT concept '{target}'.",
+            )
+            msg2 = _get_ux(
+                "protocol_strings",
+                "folly_chalk",
+                "It tastes like chalk dust. +{yield_val} ATP.",
+            )
             msg = (
-                f"{Prisma.GRY}THE FOLLY SIGHS: It grinds the ABSTRACT concept '{target.upper()}'.{Prisma.RST}\n"
-                f"   {Prisma.GRY}It tastes like chalk dust. +{yield_val} ATP.{Prisma.RST}"
+                f"{Prisma.GRY}{msg1.format(target=target.upper())}{Prisma.RST}\n"
+                f"   {Prisma.GRY}{msg2.format(yield_val=yield_val)}{Prisma.RST}"
             )
             return "GRUEL", msg, yield_val, None
+        msg1 = _get_ux(
+            "protocol_strings",
+            "folly_indigestion",
+            "INDIGESTION: I tried to eat your words, but they were just air.",
+        )
+        msg2 = _get_ux(
+            "protocol_strings",
+            "folly_cannot_grind",
+            "Cannot grind this input into fuel.",
+        )
+        msg3 = _get_ux(
+            "protocol_strings", "folly_starvation", "► STARVATION CONTINUES."
+        )
         msg = (
-            f"{Prisma.OCHRE}INDIGESTION: I tried to eat your words, but they were just air.{Prisma.RST}\n"
-            f"   {Prisma.GRY}Cannot grind this input into fuel.{Prisma.RST}\n"
-            f"   {Prisma.RED}► STARVATION CONTINUES.{Prisma.RST}"
+            f"{Prisma.OCHRE}{msg1}{Prisma.RST}\n"
+            f"   {Prisma.GRY}{msg2}{Prisma.RST}\n"
+            f"   {Prisma.RED}{msg3}{Prisma.RST}"
         )
         return "INDIGESTION", msg, 0.0, None
 
@@ -637,20 +777,38 @@ class ChronosKeeper:
             path = os.path.join(self.SAVE_DIR, "quicksave.json")
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(state_data, f, indent=2, default=str)
-            return f"✔ Checkpoint Saved: {path}"
+            msg_save = _get_ux(
+                "protocol_strings", "chronos_save_success", "✔ Checkpoint Saved: {path}"
+            )
+            return msg_save.format(path=path)
         except Exception as e:
-            self.eng.events.log(f"SAVE FAILED: {e}", "SYS_ERR")
-            return f"❌ Save Failed: {e}"
+            self.eng.events.log(
+                _get_ux(
+                    "protocol_strings", "chronos_save_failed_log", "SAVE FAILED: {e}"
+                ).format(e=e),
+                "SYS_ERR",
+            )
+            return _get_ux(
+                "protocol_strings", "chronos_save_failed_msg", "❌ Save Failed: {e}"
+            ).format(e=e)
 
     def resume_checkpoint(self) -> Tuple[bool, list]:
         path = os.path.join(self.SAVE_DIR, "quicksave.json")
         if not os.path.exists(path):
-            print(
-                f"{Prisma.GRY}[RESUME]: No quicksave found. Starting fresh.{Prisma.RST}"
+            msg = _get_ux(
+                "protocol_strings",
+                "chronos_resume_none",
+                "[RESUME]: No quicksave found. Starting fresh.",
             )
+            print(f"{Prisma.GRY}{msg}{Prisma.RST}")
             return False, []
         try:
-            print(f"{Prisma.CYN}[RESUME]: Hydrating from {path}...{Prisma.RST}")
+            msg1 = _get_ux(
+                "protocol_strings",
+                "chronos_resume_hydrating",
+                "[RESUME]: Hydrating from {path}...",
+            )
+            print(f"{Prisma.CYN}{msg1.format(path=path)}{Prisma.RST}")
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             self.eng.health = data.get("health", 100.0)
@@ -665,14 +823,25 @@ class ChronosKeeper:
                 if "inventory" in data["continuity"] and self.eng.gordon:
                     self.eng.gordon.inventory = data["continuity"]["inventory"]
             restored_history = data.get("chat_history", [])
-            print(f"{Prisma.GRN}[RESUME]: System State & Logs Restored.{Prisma.RST}")
+            msg2 = _get_ux(
+                "protocol_strings",
+                "chronos_resume_success",
+                "[RESUME]: System State & Logs Restored.",
+            )
+            print(f"{Prisma.GRN}{msg2}{Prisma.RST}")
             return True, restored_history
         except Exception as e:
-            print(f"{Prisma.RED}[RESUME]: Failed to hydrate: {e}{Prisma.RST}")
+            msg3 = _get_ux(
+                "protocol_strings",
+                "chronos_resume_failed",
+                "[RESUME]: Failed to hydrate: {e}",
+            )
+            print(f"{Prisma.RED}{msg3.format(e=e)}{Prisma.RST}")
             return False, []
 
     def perform_shutdown(self):
-        print(f"{Prisma.GRY}...System Halt...{Prisma.RST}")
+        msg = _get_ux("protocol_strings", "chronos_halt", "...System Halt...")
+        print(f"{Prisma.GRY}{msg}{Prisma.RST}")
         self.eng.events.publish("SYSTEM_HALT", {"tick": self.eng.tick_count})
 
         loc = "Void"
@@ -693,7 +862,10 @@ class ChronosKeeper:
             "inventory": self.eng.gordon.inventory if self.eng.gordon else [],
         }
         try:
-            print(f"{Prisma.GRY}[MEMORY]: Freezing State...{Prisma.RST}")
+            msg2 = _get_ux(
+                "protocol_strings", "chronos_freezing", "[MEMORY]: Freezing State..."
+            )
+            print(f"{Prisma.GRY}{msg2}{Prisma.RST}")
             mito_traits = {}
             if hasattr(self.eng.bio.mito, "state"):
                 mito_traits = self.eng.bio.mito.state.__dict__
@@ -715,7 +887,12 @@ class ChronosKeeper:
                 ),
             )
         except Exception as e:
-            print(f"{Prisma.RED}[MEMORY]: Save Failed: {e}{Prisma.RST}")
+            msg3 = _get_ux(
+                "protocol_strings",
+                "chronos_mem_save_fail",
+                "[MEMORY]: Save Failed: {e}",
+            )
+            print(f"{Prisma.RED}{msg3.format(e=e)}{Prisma.RST}")
         subsystems = [
             ("LEXICON", self.eng.lex, "save"),
             ("AKASHIC", self.eng.akashic, "save_all"),
@@ -723,10 +900,20 @@ class ChronosKeeper:
         for name, sys, method in subsystems:
             if hasattr(sys, method):
                 try:
-                    print(f"{Prisma.GRY}[{name}]: Persisting...{Prisma.RST}")
+                    msg4 = _get_ux(
+                        "protocol_strings",
+                        "chronos_persisting",
+                        "[{name}]: Persisting...",
+                    )
+                    print(f"{Prisma.GRY}{msg4.format(name=name)}{Prisma.RST}")
                     getattr(sys, method)()
                 except Exception as e:
-                    print(f"{Prisma.RED}[{name}]: Failed: {e}{Prisma.RST}")
+                    msg5 = _get_ux(
+                        "protocol_strings",
+                        "chronos_persist_fail",
+                        "[{name}]: Failed: {e}",
+                    )
+                    print(f"{Prisma.RED}{msg5.format(name=name, e=e)}{Prisma.RST}")
 
     def _gather_village_state(self) -> Dict[str, Any]:
         state = {}
@@ -747,9 +934,12 @@ class ChronosKeeper:
                 try:
                     self.eng.village[name].load_state(data)
                 except Exception as e:
-                    print(
-                        f"{Prisma.RED}[RESUME]: Failed to hydrate {name}: {e}{Prisma.RST}"
+                    msg = _get_ux(
+                        "protocol_strings",
+                        "chronos_hydrate_fail",
+                        "[RESUME]: Failed to hydrate {name}: {e}",
                     )
+                    print(f"{Prisma.RED}{msg.format(name=name, e=e)}{Prisma.RST}")
 
     def get_crash_path(self, prefix="crash"):
         if not os.path.exists(self.CRASH_DIR):
@@ -769,4 +959,7 @@ class ChronosKeeper:
 
     @staticmethod
     def emergency_dump(exit_cause="UNKNOWN") -> str:
-        return f"✔ Emergency Dump: {exit_cause}"
+        msg = _get_ux(
+            "protocol_strings", "chronos_emerg_dump", "✔ Emergency Dump: {exit_cause}"
+        )
+        return msg.format(exit_cause=exit_cause)

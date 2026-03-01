@@ -1,4 +1,4 @@
-import math, random, time
+import math, random, time, os, json
 from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Dict, List, Any, Tuple, Optional, Deque
@@ -14,6 +14,17 @@ from bone_types import (
     MaterialState,
     EnergyState,
 )
+
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
 
 
 @dataclass
@@ -220,36 +231,54 @@ class TheGatekeeper:
         phys = ctx.physics
         starvation_threshold = getattr(BoneConfig.BIO, "ATP_STARVATION", 5.0)
         if current_atp < (starvation_threshold * 0.5):
-            return False, self._pack_refusal(
-                ctx,
-                "DARK_SYSTEM",
+            msg = _get_ux(
+                "physics_strings",
+                "gatekeeper_starved",
                 "Energy critical. The inputs dissolve into the void.",
             )
+            return False, self._pack_refusal(ctx, "DARK_SYSTEM", msg)
+
         if phys.counts.get("antigen", 0) > 2:
-            return False, self._pack_refusal(
-                ctx,
-                "TOXICITY",
-                f"{Prisma.RED}IMMUNE REACTION: Input rejected as pathogenic.{Prisma.RST}",
+            msg = _get_ux(
+                "physics_strings",
+                "gatekeeper_toxic",
+                "IMMUNE REACTION: Input rejected as pathogenic.",
             )
+            return False, self._pack_refusal(
+                ctx, "TOXICITY", f"{Prisma.RED}{msg}{Prisma.RST}"
+            )
+
         if self._audit_safety(ctx.clean_words):
-            return False, self._pack_refusal(
-                ctx,
-                "CURSED_INPUT",
-                f"{Prisma.RED}The Gatekeeper recoils. Cursed syntax detected.{Prisma.RST}",
+            msg = _get_ux(
+                "physics_strings",
+                "gatekeeper_cursed",
+                "The Gatekeeper recoils. Cursed syntax detected.",
             )
+            return False, self._pack_refusal(
+                ctx, "CURSED_INPUT", f"{Prisma.RED}{msg}{Prisma.RST}"
+            )
+
         text = ctx.input_text
         if "```" in text or "{{" in text or "}}" in text:
-            return False, self._pack_refusal(
-                ctx,
-                "SYNTAX_ERR",
-                f"{Prisma.RED}The mechanism jams. Syntax anomaly detected.{Prisma.RST}",
+            msg = _get_ux(
+                "physics_strings",
+                "gatekeeper_syntax",
+                "The mechanism jams. Syntax anomaly detected.",
             )
+            return False, self._pack_refusal(
+                ctx, "SYNTAX_ERR", f"{Prisma.RED}{msg}{Prisma.RST}"
+            )
+
         if len(text) > 10000:
-            return False, self._pack_refusal(
-                ctx,
-                "OVERLOAD",
-                f"{Prisma.OCHRE}Input too long. Compress your thought.{Prisma.RST}",
+            msg = _get_ux(
+                "physics_strings",
+                "gatekeeper_overload",
+                "Input too long. Compress your thought.",
             )
+            return False, self._pack_refusal(
+                ctx, "OVERLOAD", f"{Prisma.OCHRE}{msg}{Prisma.RST}"
+            )
+
         return True, None
 
     def _audit_safety(self, words: List[str]) -> bool:
@@ -293,9 +322,7 @@ class QuantumObserver:
 
         text_upper = text.upper()
         if text.count("!") >= 3 or "ACCELERATE" in text_upper or "FASTER" in text_upper:
-            smoothed_voltage = max(
-                smoothed_voltage, 160.0
-            )
+            smoothed_voltage = max(smoothed_voltage, 160.0)
 
         if "RECURSIVE" in text_upper or "LOOP" in text_upper:
             lq_val = max(lq_val, 0.9)
@@ -410,15 +437,34 @@ class QuantumObserver:
             beta_index *= length / 50.0
 
         safe_len = max(1, len(text.split()))
-        scope = min(1.0, (counts.get("abstract", 0) + counts.get("void", 0)) / safe_len + 0.2)
-        depth = min(1.0, (counts.get("heavy", 0) + counts.get("constructive", 0)) / safe_len + 0.1)
+        scope = min(
+            1.0, (counts.get("abstract", 0) + counts.get("void", 0)) / safe_len + 0.2
+        )
+        depth = min(
+            1.0,
+            (counts.get("heavy", 0) + counts.get("constructive", 0)) / safe_len + 0.1,
+        )
         connectivity = min(1.0, (counts.get("social", 0) + solvents) / safe_len + 0.1)
-        resonance = min(1.0, ((counts.get("social", 0) * 2) + counts.get("constructive", 0)) / safe_len + (1.0 - e_metric))
+        resonance = min(
+            1.0,
+            ((counts.get("social", 0) * 2) + counts.get("constructive", 0)) / safe_len
+            + (1.0 - e_metric),
+        )
         action_density = counts.get("action", 0) / safe_len
         silence = 1.0 - min(1.0, (length / 100.0) + action_density)
-        if length < 10: silence = max(silence, 0.8)
+        if length < 10:
+            silence = max(silence, 0.8)
         lq_val = min(1.0, beta_index * depth * 1.5)
-        return round(e_metric, 3), round(beta_index, 3), round(scope, 3), round(depth, 3), round(connectivity, 3), round(resonance, 3), round(silence, 3), round(lq_val, 3)
+        return (
+            round(e_metric, 3),
+            round(beta_index, 3),
+            round(scope, 3),
+            round(depth, 3),
+            round(connectivity, 3),
+            round(resonance, 3),
+            round(silence, 3),
+            round(lq_val, 3),
+        )
 
     @staticmethod
     def _determine_flow(v: float, k: float) -> str:
@@ -452,17 +498,21 @@ class SurfaceTension:
         volt_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
         volt_flow = getattr(BoneConfig.PHYSICS, "VOLTAGE_HIGH", 12.0)
         if voltage >= volt_crit and coherence < 0.4:
-            return (
-                True,
-                f"⚠️ HUBRIS DETECTED: Voltage ({voltage:.1f}v) exceeds structural integrity. Wings melting.",
-                "ICARUS_CRASH",
+            msg = _get_ux(
+                "physics_strings",
+                "hubris_detected",
+                "⚠️ HUBRIS DETECTED: Voltage ({voltage:.1f}v) exceeds structural integrity. Wings melting.",
             )
+            return True, msg.format(voltage=voltage), "ICARUS_CRASH"
+
         if voltage > volt_flow and coherence > 0.8:
-            return (
-                True,
+            msg = _get_ux(
+                "physics_strings",
+                "hubris_flow",
                 "🌊 SURFACE TENSION OPTIMAL: Entering Flow State.",
-                "FLOW_BOOST",
             )
+            return True, msg, "FLOW_BOOST"
+
         return False, "", ""
 
 
@@ -532,13 +582,21 @@ class ZoneInertia:
             self.is_anchored = False
             self.strain_gauge = 0.0
             self.current_zone = proposed_zone
-            return (
-                proposed_zone,
-                f"{Prisma.RED}⚡ SNAP! The narrative current was too strong. Anchor failed.{Prisma.RST}",
+            msg = _get_ux(
+                "physics_strings",
+                "anchor_failed",
+                "⚡ SNAP! The narrative current was too strong. Anchor failed.",
             )
+            return proposed_zone, f"{Prisma.RED}{msg}{Prisma.RST}"
+
+        msg = _get_ux(
+            "physics_strings",
+            "anchor_holding",
+            "⚓ ANCHORED: Resisting drift to '{proposed_zone}' (Strain {strain:.1f}/{limit})",
+        )
         return (
             self.current_zone,
-            f"{Prisma.OCHRE}⚓ ANCHORED: Resisting drift to '{proposed_zone}' (Strain {self.strain_gauge:.1f}/{limit}){Prisma.RST}",
+            f"{Prisma.OCHRE}{msg.format(proposed_zone=proposed_zone, strain=self.strain_gauge, limit=limit)}{Prisma.RST}",
         )
 
     def _attempt_migration(
@@ -550,9 +608,14 @@ class ZoneInertia:
         if random.random() < prob:
             old, self.current_zone = self.current_zone, proposed_zone
             self.dwell_counter = 0
+            msg = _get_ux(
+                "physics_strings",
+                "zone_migration",
+                ">>> MIGRATION: {old} -> {proposed_zone}.",
+            )
             return (
                 self.current_zone,
-                f"{Prisma.CYN}>>> MIGRATION: {old} -> {proposed_zone}.{Prisma.RST}",
+                f"{Prisma.CYN}{msg.format(old=old, proposed_zone=proposed_zone)}{Prisma.RST}",
             )
         return self.current_zone, None
 
@@ -575,12 +638,34 @@ class CosmicDynamics:
     @staticmethod
     def _load_logs():
         base = {
-            "GRAVITY": "⚓ GRAVITY: The narrative is heavy. (Drag {drag:.1f})",
-            "VOID": "VOID: Drifting outside the filaments.",
-            "NEBULA": "NEBULA: Floating near '{node}' (Mass {mass}). Not enough mass for orbit.",
-            "LAGRANGE": "LAGRANGE: Caught between '{p}' and '{s}'",
-            "FLOW": "FLOW: Streaming towards '{node}'",
-            "ORBIT": "ORBIT: Circling '{node}' (Mass {mass})",
+            "GRAVITY": _get_ux(
+                "physics_strings",
+                "cosmic_gravity",
+                "⚓ GRAVITY: The narrative is heavy. (Drag {drag:.1f})",
+            ),
+            "VOID": _get_ux(
+                "physics_strings",
+                "cosmic_void",
+                "VOID: Drifting outside the filaments.",
+            ),
+            "NEBULA": _get_ux(
+                "physics_strings",
+                "cosmic_nebula",
+                "NEBULA: Floating near '{node}' (Mass {mass}). Not enough mass for orbit.",
+            ),
+            "LAGRANGE": _get_ux(
+                "physics_strings",
+                "cosmic_lagrange",
+                "LAGRANGE: Caught between '{p}' and '{s}'",
+            ),
+            "FLOW": _get_ux(
+                "physics_strings", "cosmic_flow", "FLOW: Streaming towards '{node}'"
+            ),
+            "ORBIT": _get_ux(
+                "physics_strings",
+                "cosmic_orbit",
+                "ORBIT: Circling '{node}' (Mass {mass})",
+            ),
         }
         manifest = LoreManifest.get_instance().get("narrative_data") or {}
         return manifest.get("COSMIC_LOGS", base)
@@ -615,7 +700,11 @@ class CosmicDynamics:
             or not hasattr(network, "graph")
             or not network.graph
         ):
-            return "VOID_DRIFT", 3.0, "VOID: Deep Space. No connection."
+            return (
+                "VOID_DRIFT",
+                3.0,
+                self.logs.get("VOID", "VOID: Deep Space. No connection."),
+            )
         current_time = int(time.time())
         if (
             not self.cached_wells
@@ -754,8 +843,13 @@ class CycleStabilizer:
     def stabilize(self, ctx: CycleContext, current_phase: str):
         p = ctx.physics
         if p.voltage >= self.HARD_FUSE_VOLTAGE:
+            msg = _get_ux(
+                "physics_strings",
+                "stabilizer_fuse",
+                "⚡ FUSE BLOWN: Voltage > {voltage}V.",
+            )
             ctx.log(
-                f"{Prisma.RED}⚡ FUSE BLOWN: Voltage > {self.HARD_FUSE_VOLTAGE}V.{Prisma.RST}"
+                f"{Prisma.RED}{msg.format(voltage=self.HARD_FUSE_VOLTAGE)}{Prisma.RST}"
             )
             p.voltage, p.narrative_drag = 10.0, 5.0
             p.flow_state = "SAFE_MODE"
@@ -765,9 +859,12 @@ class CycleStabilizer:
             return True
         if self.pending_drag > 0:
             ctx.physics.narrative_drag += self.pending_drag
-            ctx.log(
-                f"{Prisma.GRY}⚖️ DOMESTICATION: Drag +{self.pending_drag:.1f}{Prisma.RST}"
+            msg = _get_ux(
+                "physics_strings",
+                "stabilizer_domestication",
+                "⚖️ DOMESTICATION: Drag +{drag:.1f}",
             )
+            ctx.log(f"{Prisma.GRY}{msg.format(drag=self.pending_drag)}{Prisma.RST}")
             self.pending_drag = 0.0
         now = time.time()
         dt = max(0.001, min(1.0, now - self.last_tick_time))

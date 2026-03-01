@@ -1,4 +1,6 @@
 import random
+import json
+import os
 from dataclasses import dataclass
 from typing import Tuple, Optional, List, Dict, Any
 
@@ -18,6 +20,17 @@ from bone_physics import TheGatekeeper, QuantumObserver, SurfaceTension, ZoneIne
 from bone_protocols import LimboLayer
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_types import MindSystem, PhysSystem, PhysicsPacket, Prisma
+
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
 
 
 class TheCrucible:
@@ -46,7 +59,10 @@ class TheCrucible:
         return manifest.get("CRUCIBLE_LOGS", base)
 
     def dampener_status(self):
-        return f"🛡️ Charges: {self.dampener_charges}"
+        msg = _get_ux(
+            "machine_strings", "crucible_dampener_status", "🛡️ Charges: {charges}"
+        )
+        return msg.format(charges=self.dampener_charges)
 
     def dampen(
         self, voltage_spike: float, stability_index: float
@@ -146,10 +162,27 @@ class TheForge:
         if random.random() >= (physics.get("voltage", 0) / 20.0) * avg_density:
             return False, None, None
         if heavy > 3:
-            return True, f"🔨 FORGED: Lead Boots (Mass {avg_density:.1f})", "LEAD_BOOTS"
+            msg = _get_ux(
+                "machine_strings",
+                "forge_lead_boots",
+                "🔨 FORGED: Lead Boots (Mass {avg_density:.1f})",
+            )
+            return True, msg.format(avg_density=avg_density), "LEAD_BOOTS"
         if kinetic > 3:
-            return True, "🔨 FORGED: Safety Scissors (Kinetic)", "SAFETY_SCISSORS"
-        return True, "🔨 FORGED: Anchor Stone", "ANCHOR_STONE"
+            return (
+                True,
+                _get_ux(
+                    "machine_strings",
+                    "forge_safety_scissors",
+                    "🔨 FORGED: Safety Scissors (Kinetic)",
+                ),
+                "SAFETY_SCISSORS",
+            )
+        return (
+            True,
+            _get_ux("machine_strings", "forge_anchor_stone", "🔨 FORGED: Anchor Stone"),
+            "ANCHOR_STONE",
+        )
 
     def attempt_crafting(
         self, physics: Dict, inventory_list: List[str]
@@ -170,16 +203,26 @@ class TheForge:
                     hits = len(clean_set.intersection(cat_words))
                     entanglement = self._calculate_entanglement(hits, voltage)
                     if random.random() < entanglement:
+                        msg = _get_ux(
+                            "machine_strings",
+                            "forge_alchemy_success",
+                            "⚗️ ALCHEMY: {result} (via {item})",
+                        )
                         return (
                             True,
-                            f"⚗️ ALCHEMY: {recipe['result']} (via {item})",
+                            msg.format(result=recipe["result"], item=item),
                             item,
                             recipe["result"],
                         )
                     else:
+                        msg = _get_ux(
+                            "machine_strings",
+                            "forge_alchemy_fail",
+                            "⚠️ ALCHEMY FAIL: Decoherence ({entanglement}%)",
+                        )
                         return (
                             False,
-                            f"⚠️ ALCHEMY FAIL: Decoherence ({int(entanglement * 100)}%)",
+                            msg.format(entanglement=int(entanglement * 100)),
                             None,
                             None,
                         )
@@ -195,9 +238,18 @@ class TheForge:
         voltage = float(physics.get("voltage", 0))
         gamma = float(physics.get("gamma", 0.0))
         if gamma < 0.15 and counts.get("abstract", 0) > 1:
-            return f"⚠️ EMULSION FAIL: Add Binder (Heavy)."
+            return _get_ux(
+                "machine_strings",
+                "forge_emulsion_fail",
+                "⚠️ EMULSION FAIL: Add Binder (Heavy).",
+            )
         if voltage > 15.0:
-            return f"🌡️ OVERHEAT: {voltage:.1f}v. Add Coolant (Aerobic)."
+            msg = _get_ux(
+                "machine_strings",
+                "forge_overheat",
+                "🌡️ OVERHEAT: {voltage:.1f}v. Add Coolant (Aerobic).",
+            )
+            return msg.format(voltage=voltage)
         return None
 
 
@@ -292,18 +344,23 @@ class TheTheremin:
             )
         if self.classical_turns > 3:
             critical_event = "CORROSION"
-            theremin_msg = f"{theremin_msg or ''} | ⚠️ CORROSION"
+            theremin_msg = f"{theremin_msg or ''}{_get_ux('machine_strings', 'theremin_corrosion', ' | ⚠️ CORROSION')}"
         if self.decoherence_buildup > self.AMBER_THRESHOLD:
             self.is_stuck = True
-            theremin_msg = f"{theremin_msg or ''} | 🍯 STUCK"
+            theremin_msg = f"{theremin_msg or ''}{_get_ux('machine_strings', 'theremin_stuck', ' | 🍯 STUCK')}"
         elif self.is_stuck and self.decoherence_buildup < 5.0:
             self.is_stuck = False
-            theremin_msg = f"{theremin_msg or ''} | 🦋 FREE"
+            theremin_msg = f"{theremin_msg or ''}{_get_ux('machine_strings', 'theremin_free', ' | 🦋 FREE')}"
         return self.is_stuck, resin_flow, theremin_msg, critical_event
 
     def get_readout(self):
         status = "STUCK" if self.is_stuck else "FLOW"
-        return f"🎻 THEREMIN   Resin {self.decoherence_buildup:.1f}  Status {status}"
+        msg = _get_ux(
+            "machine_strings",
+            "theremin_readout",
+            "🎻 THEREMIN   Resin {resin:.1f}  Status {status}",
+        )
+        return msg.format(resin=self.decoherence_buildup, status=status)
 
 
 @dataclass
@@ -350,7 +407,11 @@ class PanicRoom:
             for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "LAMBDA", "CHI"]
         }
         safe_packet.clean_words = ["white", "room", "safe", "mode"]
-        safe_packet.raw_text = "[PANIC PROTOCOL]: SAFE_MODE. You will wake up in a white room. Do not be alarmed."
+        safe_packet.raw_text = _get_ux(
+            "machine_strings",
+            "panic_physics_text",
+            "[PANIC PROTOCOL]: SAFE_MODE. You will wake up in a white room. Do not be alarmed.",
+        )
         safe_packet.flow_state = "SAFE_MODE"
         safe_packet.zone = "PANIC_ROOM"
         safe_packet.manifold = "WHITE_ROOM"
@@ -358,6 +419,11 @@ class PanicRoom:
 
     @staticmethod
     def get_safe_bio(previous_state=None):
+        log_msg = _get_ux(
+            "machine_strings",
+            "panic_bio_log",
+            "BIO FAIL: Panic Room Protocol Active. Sensory input severed.",
+        )
         base = {
             "is_alive": True,
             "atp": 10.0,
@@ -371,9 +437,7 @@ class PanicRoom:
                 "ADR": 0.0,
                 "MEL": 0.0,
             },
-            "logs": [
-                f"{Prisma.RED}BIO FAIL: Panic Room Protocol Active. Sensory input severed.{Prisma.RST}"
-            ],
+            "logs": [f"{Prisma.RED}{log_msg}{Prisma.RST}"],
         }
         state = previous_state or {}
         if isinstance(state, dict):
@@ -388,7 +452,11 @@ class PanicRoom:
         return {
             "lens": "GORDON",
             "role": "Panic Room Overseer",
-            "thought": "SAFE_MODE. You will wake up in a white room. Do not be alarmed.",
+            "thought": _get_ux(
+                "machine_strings",
+                "panic_mind_thought",
+                "SAFE_MODE. You will wake up in a white room. Do not be alarmed.",
+            ),
         }
 
     @staticmethod
@@ -425,7 +493,8 @@ class ViralTracer:
 
     @staticmethod
     def psilocybin_rewire(loop_path: List[str]) -> str:
-        return f"Rewired logic loop: {'->'.join(loop_path)}"
+        msg = _get_ux("machine_strings", "tracer_rewire", "Rewired logic loop: {path}")
+        return msg.format(path="->".join(loop_path))
 
 
 class ThePacemaker:
@@ -505,8 +574,13 @@ class BoneArchitect:
     def incubate(events, lex) -> SystemEmbryo:
         if hasattr(events, "set_dormancy"):
             events.set_dormancy(True)
+        msg = _get_ux(
+            "machine_strings",
+            "arch_incubate",
+            "[ARCHITECT]: Laying foundations (Dormancy Active)...",
+        )
         events.log(
-            f"{Prisma.GRY}[ARCHITECT]: Laying foundations (Dormancy Active)...{Prisma.RST}",
+            f"{Prisma.GRY}{msg}{Prisma.RST}",
             "SYS",
         )
         mind, limbo = BoneArchitect._construct_mind(events, lex)
@@ -524,8 +598,13 @@ class BoneArchitect:
             if hasattr(embryo.mind.mem, "autoload_last_spore"):
                 load_result = embryo.mind.mem.autoload_last_spore()
         except Exception as e:
+            msg = _get_ux(
+                "machine_strings",
+                "arch_spore_fail",
+                "[ARCHITECT]: Spore resurrection failed: {e}",
+            )
             events.log(
-                f"{Prisma.RED}[ARCHITECT]: Spore resurrection failed: {e}{Prisma.RST}",
+                f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}",
                 "CRIT",
             )
             load_result = None
@@ -555,19 +634,32 @@ class BoneArchitect:
             if hasattr(embryo.physics.nav, "import_atlas"):
                 try:
                     embryo.physics.nav.import_atlas(recovered_atlas)
+                    msg = _get_ux(
+                        "machine_strings",
+                        "arch_map_restored",
+                        "[ARCHITECT]: World Map restored from Spore.",
+                    )
                     events.log(
-                        f"{Prisma.MAG}[ARCHITECT]: World Map restored from Spore.{Prisma.RST}",
+                        f"{Prisma.MAG}{msg}{Prisma.RST}",
                         "SYS",
                     )
                 except Exception as e:
+                    msg = _get_ux(
+                        "machine_strings",
+                        "arch_map_corrupt",
+                        "[ARCHITECT]: Atlas corrupt, discarding map: {e}",
+                    )
                     events.log(
-                        f"{Prisma.OCHRE}[ARCHITECT]: Atlas corrupt, discarding map: {e}{Prisma.RST}",
+                        f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}",
                         "WARN",
                     )
         if embryo.bio.mito.state.atp_pool <= 0.0:
             genesis_val = getattr(BoneConfig.METABOLISM, "GENESIS_VOLTAGE", 100.0)
-            events.log(
-                f"⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP).", "SYS"
+            msg = _get_ux(
+                "machine_strings",
+                "arch_cold_boot",
+                "⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP).",
             )
+            events.log(msg.format(genesis_val=genesis_val), "SYS")
             embryo.bio.mito.adjust_atp(genesis_val, reason="GENESIS")
         return embryo

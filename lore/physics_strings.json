@@ -1,0 +1,22 @@
+{
+  "physics_strings": {
+    "gatekeeper_starved": "Energy critical. The inputs dissolve into the void.",
+    "gatekeeper_toxic": "IMMUNE REACTION: Input rejected as pathogenic.",
+    "gatekeeper_cursed": "The Gatekeeper recoils. Cursed syntax detected.",
+    "gatekeeper_syntax": "The mechanism jams. Syntax anomaly detected.",
+    "gatekeeper_overload": "Input too long. Compress your thought.",
+    "hubris_detected": "\u26a0\ufe0f HUBRIS DETECTED: Voltage ({voltage:.1f}v) exceeds structural integrity. Wings melting.",
+    "hubris_flow": "\ud83c\udf0a SURFACE TENSION OPTIMAL: Entering Flow State.",
+    "anchor_failed": "\u26a1 SNAP! The narrative current was too strong. Anchor failed.",
+    "anchor_holding": "\u2693 ANCHORED: Resisting drift to '{proposed_zone}' (Strain {strain:.1f}/{limit})",
+    "zone_migration": ">>> MIGRATION: {old} -> {proposed_zone}.",
+    "cosmic_gravity": "\u2693 GRAVITY: The narrative is heavy. (Drag {drag:.1f})",
+    "cosmic_void": "VOID: Drifting outside the filaments.",
+    "cosmic_nebula": "NEBULA: Floating near '{node}' (Mass {mass}). Not enough mass for orbit.",
+    "cosmic_lagrange": "LAGRANGE: Caught between '{p}' and '{s}'",
+    "cosmic_flow": "FLOW: Streaming towards '{node}'",
+    "cosmic_orbit": "ORBIT: Circling '{node}' (Mass {mass})",
+    "stabilizer_fuse": "\u26a1 FUSE BLOWN: Voltage > {voltage}V.",
+    "stabilizer_domestication": "\u2696\ufe0f DOMESTICATION: Drag +{drag:.1f}"
+  }
+}

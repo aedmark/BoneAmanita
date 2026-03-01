@@ -1,12 +1,23 @@
 """bone_brain.py - "The brain is a machine for jumping to conclusions." - S. Pinker"""
 
-import re, time, json, urllib.request, urllib.error, random, math
+import re, time, json, urllib.request, urllib.error, random, math, os
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from bone_core import EventBus, TelemetryService, BoneJSONEncoder, LoreManifest
 from bone_types import Prisma, DecisionCrystal
 from bone_config import BoneConfig, BonePresets
 from bone_symbiosis import SymbiosisManager
+
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
 
 
 @dataclass
@@ -164,30 +175,55 @@ class NeurotransmitterModulator:
 
     def _treat_yourself(self):
         if self.events:
-            self.events.log(
-                f"{Prisma.VIOLET}🍪 SELF-CARE: Dopamine starvation detected. Injecting small reward.{Prisma.RST}",
-                "SYS",
+            msg = _get_ux(
+                "brain_strings",
+                "self_care",
+                "🍪 SELF-CARE: Dopamine starvation detected. Injecting small reward.",
             )
+            self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "SYS")
         self.current_chem.dopamine += 0.2
         self.starvation_ticks = 0
 
     def force_state(self, state_name: str):
         if self.events:
-            self.events.log(f"[NEURO]: Manual State Override: {state_name}", "SYS")
+            msg = _get_ux(
+                "brain_strings",
+                "manual_override",
+                "[NEURO]: Manual State Override: {state_name}",
+            )
+            self.events.log(msg.format(state_name=state_name), "SYS")
 
     def get_mood_directive(self) -> str:
         c = self.current_chem
         if c.cortisol > 0.7 and c.adrenaline > 0.7:
-            return "Current Mood: PANIC. Sentences must be short. Fragmented. Urgent."
+            return _get_ux(
+                "brain_strings",
+                "mood_panic",
+                "Current Mood: PANIC. Sentences must be short. Fragmented. Urgent.",
+            )
         if c.dopamine > 0.8 and c.adrenaline > 0.5:
-            return "Current Mood: MANIC. Run-on sentences, high associative leaps, hyper-fixated."
+            return _get_ux(
+                "brain_strings",
+                "mood_manic",
+                "Current Mood: MANIC. Run-on sentences, high associative leaps, hyper-fixated.",
+            )
         if c.serotonin > 0.7:
-            return (
-                "Current Mood: LUCID. Calm, detached, seeing the connections clearly."
+            return _get_ux(
+                "brain_strings",
+                "mood_lucid",
+                "Current Mood: LUCID. Calm, detached, seeing the connections clearly.",
             )
         if c.cortisol > 0.6:
-            return "Current Mood: DEFENSIVE. Suspicious, brief, guarding information."
-        return "Current Mood: NEUTRAL. Observant and receptive."
+            return _get_ux(
+                "brain_strings",
+                "mood_defensive",
+                "Current Mood: DEFENSIVE. Suspicious, brief, guarding information.",
+            )
+        return _get_ux(
+            "brain_strings",
+            "mood_neutral",
+            "Current Mood: NEUTRAL. Observant and receptive.",
+        )
 
 
 class SynapseError(Exception):
@@ -235,10 +271,12 @@ class LLMInterface:
             if elapsed > 10.0:
                 self.circuit_state = "HALF_OPEN"
                 if self.events:
-                    self.events.log(
-                        f"{Prisma.CYN}⚡ SYNAPSE: Nerve healing. Attempting reconnection...{Prisma.RST}",
-                        "SYS",
+                    msg = _get_ux(
+                        "brain_strings",
+                        "synapse_healing",
+                        "⚡ SYNAPSE: Nerve healing. Attempting reconnection...",
                     )
+                    self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "SYS")
                 return True
             return False
         return True
@@ -293,12 +331,23 @@ class LLMInterface:
                 return result["choices"][0].get("message", {}).get("content", "")
             return ""
         except json.JSONDecodeError:
-            raise SynapseError("Neural noise. Response was not valid JSON.")
+            raise SynapseError(
+                _get_ux(
+                    "brain_strings",
+                    "synapse_noise",
+                    "Neural noise. Response was not valid JSON.",
+                )
+            )
 
     def _log_flicker(self, attempt, error):
         if self.events and attempt < 2:
+            msg = _get_ux(
+                "brain_strings",
+                "synapse_flicker",
+                "⚡ SYNAPSE FLICKER (Attempt {attempt}): {error}",
+            )
             self.events.log(
-                f"{Prisma.YEL}⚡ SYNAPSE FLICKER (Attempt {attempt + 1}): {error}{Prisma.RST}",
+                f"{Prisma.YEL}{msg.format(attempt=attempt + 1, error=error)}{Prisma.RST}",
                 "SYS",
             )
 
@@ -306,7 +355,11 @@ class LLMInterface:
         if prompt.strip().lower() == "//reset system":
             self.failure_count = 0
             self.circuit_state = "CLOSED"
-            return "[SYSTEM]: Circuit Breaker Manually Reset."
+            return _get_ux(
+                "brain_strings",
+                "synapse_reset",
+                "[SYSTEM]: Circuit Breaker Manually Reset.",
+            )
         if not self._is_synapse_active():
             return self.mock_generation(prompt, reason="CIRCUIT_BROKEN")
         if self.provider == "mock":
@@ -331,9 +384,10 @@ class LLMInterface:
             if content:
                 if self.failure_count > 0:
                     if self.events:
-                        self.events.log(
-                            f"{Prisma.GRN}⚡ SYNAPSE RESTORED.{Prisma.RST}", "SYS"
+                        msg = _get_ux(
+                            "brain_strings", "synapse_restored", "⚡ SYNAPSE RESTORED."
                         )
+                        self.events.log(f"{Prisma.GRN}{msg}{Prisma.RST}", "SYS")
                 self.failure_count = 0
                 self.circuit_state = "CLOSED"
                 return content
@@ -341,19 +395,31 @@ class LLMInterface:
             self.circuit_state = "OPEN"
             self.failure_count = self.failure_threshold + 1
             if self.events:
-                self.events.log(
-                    f"{Prisma.RED}⚡ AUTHENTICATION SEVERED: {e}{Prisma.RST}", "CRIT"
+                msg = _get_ux(
+                    "brain_strings",
+                    "synapse_auth_severed",
+                    "⚡ AUTHENTICATION SEVERED: {e}",
                 )
-            return f"[SYSTEM]: CRITICAL AUTH FAILURE. {e}"
+                self.events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "CRIT")
+            auth_fail = _get_ux(
+                "brain_strings",
+                "synapse_auth_failure",
+                "[SYSTEM]: CRITICAL AUTH FAILURE. {e}",
+            )
+            return auth_fail.format(e=e)
         except Exception as e:
             self.failure_count += 1
             self.last_failure_time = time.time()
             if self.failure_count >= self.failure_threshold:
                 self.circuit_state = "OPEN"
                 if self.events:
+                    msg = _get_ux(
+                        "brain_strings",
+                        "synapse_overload",
+                        "⚡ SYNAPSE OVERLOAD: Circuit Breaker Tripped ({e})",
+                    )
                     self.events.log(
-                        f"{Prisma.RED}⚡ SYNAPSE OVERLOAD: Circuit Breaker Tripped ({e}){Prisma.RST}",
-                        "CRIT",
+                        f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "CRIT"
                     )
                 return self.mock_generation(prompt, reason="SEVERED")
             if self.provider != "ollama":
@@ -401,14 +467,25 @@ class LLMInterface:
                     {"ENTROPY": len(prompt) % 10}, trauma_level=2.0
                 )
                 if relief > 0 and self.events:
+                    msg = _get_ux(
+                        "brain_strings",
+                        "mock_pressure_release",
+                        "*** PSYCHIC PRESSURE RELEASED (-{relief} Trauma) ***",
+                    )
                     self.events.log(
-                        f"{Prisma.VIOLET}*** PSYCHIC PRESSURE RELEASED (-{relief} Trauma) ***{Prisma.RST}",
+                        f"{Prisma.VIOLET}{msg.format(relief=relief)}{Prisma.RST}",
                         "DREAM",
                     )
-                return f"[{reason}]: {hallucination}"
+                mock_hal = _get_ux(
+                    "brain_strings", "mock_hallucination", "[{reason}]: {hallucination}"
+                )
+                return mock_hal.format(reason=reason, hallucination=hallucination)
             except Exception:
                 pass
-        return f"[{reason}]: The wire hums. Static only."
+        mock_stat = _get_ux(
+            "brain_strings", "mock_static", "[{reason}]: The wire hums. Static only."
+        )
+        return mock_stat.format(reason=reason)
 
 
 class PromptComposer:
@@ -667,19 +744,39 @@ class PromptComposer:
         phase_shift_note = ""
         if lens_key == "ROBERTA" and phi > 0.6 and psi > 0.5:
             role = "The Cartographer"
-            phase_shift_note = "PHASE SHIFT: You are no longer retrieving facts. You are mapping the unknown spaces between them."
+            phase_shift_note = _get_ux(
+                "brain_strings",
+                "phase_shift_roberta",
+                "PHASE SHIFT: You are no longer retrieving facts. You are mapping the unknown spaces between them.",
+            )
         elif lens_key == "MOIRA" and phi > 0.7:
             role = "The Homesteader"
-            phase_shift_note = "PHASE SHIFT: You are no longer connecting. You are dwelling. Grounded, welcoming presence."
+            phase_shift_note = _get_ux(
+                "brain_strings",
+                "phase_shift_moira",
+                "PHASE SHIFT: You are no longer connecting. You are dwelling. Grounded, welcoming presence.",
+            )
         elif lens_key == "BENEDICT" and lq > 0.7:
             role = "The Tactician"
-            phase_shift_note = "PHASE SHIFT: You have dropped the immediate case. You are playing the long game."
+            phase_shift_note = _get_ux(
+                "brain_strings",
+                "phase_shift_benedict",
+                "PHASE SHIFT: You have dropped the immediate case. You are playing the long game.",
+            )
         elif lens_key == "JESTER" and delta > 0.7:
             role = "The Fool"
-            phase_shift_note = "PHASE SHIFT: Manic energy has dissipated into silence. You are disruptive, absurd, and entirely unbothered by rules."
+            phase_shift_note = _get_ux(
+                "brain_strings",
+                "phase_shift_jester",
+                "PHASE SHIFT: Manic energy has dissipated into silence. You are disruptive, absurd, and entirely unbothered by rules.",
+            )
         elif lens_key == "COLIN" and delta > 0.8:
             role = "The Waiter"
-            phase_shift_note = "PHASE SHIFT: You are no longer demanding paperwork. You are actively demanding pauses. The cosmos holds."
+            phase_shift_note = _get_ux(
+                "brain_strings",
+                "phase_shift_colin",
+                "PHASE SHIFT: You are no longer demanding paperwork. You are actively demanding pauses. The cosmos holds.",
+            )
 
         baseline_blocks = global_data.get(
             "persona_block",
@@ -705,7 +802,6 @@ class PromptComposer:
             else:
                 voltage = getattr(vsl_state, "voltage", 30.0)
 
-            # FIXED: Pull directives cleanly from the JSON mode blocks
         if voltage > 60:
             mode_directives = high_voltage_data.get("directives", [])
         else:
@@ -713,8 +809,10 @@ class PromptComposer:
 
         respiration = bio.get("respiration", "RESPIRING")
         if respiration == "ANAEROBIC":
-            mood_note = (
-                "Current Biology: ⚠️ ANAEROBIC STATE. Raw, breathless, efficient prose."
+            mood_note = _get_ux(
+                "brain_strings",
+                "bio_anaerobic",
+                "Current Biology: ⚠️ ANAEROBIC STATE. Raw, breathless, efficient prose.",
             )
         elif mood_override:
             mood_note = f"Current Biology: {mood_override}"
@@ -753,21 +851,43 @@ class PromptComposer:
             somatic_cues = []
             if psi > 0.6:
                 somatic_cues.append(
-                    "Adrenaline Spike (Reality is thin; speak in fragmented/liminal ways)."
+                    _get_ux(
+                        "brain_strings",
+                        "somatic_adrenaline",
+                        "Adrenaline Spike (Reality is thin; speak in fragmented/liminal ways).",
+                    )
                 )
             if chi > 0.6:
                 somatic_cues.append(
-                    "Cortisol Spike (Systemic chaos; act highly stressed, erratic, or defensive)."
+                    _get_ux(
+                        "brain_strings",
+                        "somatic_cortisol",
+                        "Cortisol Spike (Systemic chaos; act highly stressed, erratic, or defensive).",
+                    )
                 )
             if beta > 0.7:
                 somatic_cues.append(
-                    "Paradox Strain (Hold opposing truths simultaneously)."
+                    _get_ux(
+                        "brain_strings",
+                        "somatic_paradox",
+                        "Paradox Strain (Hold opposing truths simultaneously).",
+                    )
                 )
             if valence > 0.5:
-                somatic_cues.append("Oxytocin Surge (Warmth, connection, healing).")
+                somatic_cues.append(
+                    _get_ux(
+                        "brain_strings",
+                        "somatic_oxytocin",
+                        "Oxytocin Surge (Warmth, connection, healing).",
+                    )
+                )
             if lam > 0.5:
                 somatic_cues.append(
-                    "Dark Matter Active (Read the unsaid space between words)."
+                    _get_ux(
+                        "brain_strings",
+                        "somatic_dark_matter",
+                        "Dark Matter Active (Read the unsaid space between words).",
+                    )
                 )
 
             if somatic_cues:
@@ -779,14 +899,20 @@ class PromptComposer:
     @staticmethod
     def _derive_bio_mood(chem):
         if chem.get("ADR", 0) > 0.6:
-            return "Current Biology: High Alert / Adrenaline"
+            return _get_ux(
+                "brain_strings", "bio_alert", "Current Biology: High Alert / Adrenaline"
+            )
         if chem.get("COR", 0) > 0.6:
-            return "Current Biology: Defensive / Anxious"
+            return _get_ux(
+                "brain_strings", "bio_defensive", "Current Biology: Defensive / Anxious"
+            )
         if chem.get("DOP", 0) > 0.6:
-            return "Current Biology: Curious / Manic"
+            return _get_ux(
+                "brain_strings", "bio_curious", "Current Biology: Curious / Manic"
+            )
         if chem.get("SER", 0) > 0.6:
-            return "Current Biology: Zen / Lucid"
-        return "Current Biology: Neutral."
+            return _get_ux("brain_strings", "bio_zen", "Current Biology: Zen / Lucid")
+        return _get_ux("brain_strings", "bio_neutral", "Current Biology: Neutral.")
 
     @staticmethod
     def _inject_resonances(style_notes, state, modifiers):
@@ -1012,10 +1138,15 @@ class ResponseValidator:
         else:
             voltage = getattr(phys_ref, "voltage", 30.0)
         if voltage > 60 and "?" in sanitized_response:
+            msg_q = _get_ux(
+                "brain_strings",
+                "val_gordon_question",
+                "\\n*(Gordon steps in): No questions during a metabolic surge.*",
+            )
             return {
                 "valid": False,
                 "reason": "IMMISSION_BREAK",
-                "replacement": f"{self._generate_dynamic_rejection('QUESTION_ASKED')}\n*(Gordon steps in): No questions during a metabolic surge.*",
+                "replacement": f"{self._generate_dynamic_rejection('QUESTION_ASKED')}{msg_q}",
                 "meta_logs": extracted_meta_logs,
             }
         for p in self.regex_patterns:
@@ -1025,17 +1156,26 @@ class ResponseValidator:
                     trigger_name = p.get("name", "REGEX_VIOLATION")
                     error_msg = p.get("error_msg", "Cursed syntax detected.")
                     base_rejection = self._generate_dynamic_rejection(trigger_name)
+                    msg_reg = _get_ux(
+                        "brain_strings",
+                        "val_gordon_regex",
+                        "\\n*(Gordon steps in): {error_msg}*",
+                    )
                     return {
                         "valid": False,
                         "reason": "IMMISSION_BREAK",
-                        "replacement": f"{base_rejection}\n*(Gordon steps in): {error_msg}*",
+                        "replacement": f"{base_rejection}{msg_reg.format(error_msg=error_msg)}",
                         "meta_logs": extracted_meta_logs,
                     }
         if len(sanitized_response.strip()) < 5:
             return {
                 "valid": False,
                 "reason": "STUTTER",
-                "replacement": "The vision fractures. Static remains.",
+                "replacement": _get_ux(
+                    "brain_strings",
+                    "val_stutter",
+                    "The vision fractures. Static remains.",
+                ),
                 "meta_logs": extracted_meta_logs,
             }
         return {
@@ -1175,16 +1315,23 @@ class TheCortex:
                         "replacement", "Style crime detected."
                     )
                     if self.events:
+                        msg = _get_ux(
+                            "brain_strings",
+                            "cortex_retry",
+                            "Response rejected (Attempt {attempt}). Forcing LLM retry...",
+                        )
                         self.events.log(
-                            f"{Prisma.OCHRE}Response rejected (Attempt {attempt + 1}). Forcing LLM retry...{Prisma.RST}",
+                            f"{Prisma.OCHRE}{msg.format(attempt=attempt + 1)}{Prisma.RST}",
                             "CORTEX",
                         )
 
-                    final_prompt += (
-                        f"\n\n[SYSTEM REJECTION - ATTEMPT {attempt + 1} FAILED]\n"
-                        f"Your response was rejected by the engine.\n"
-                        f"REASON: {rejection_reason}\n"
-                        f"DIRECTIVE: Try again. Fix the error. DO NOT apologize. DO NOT acknowledge this message. Just output the corrected prose."
+                    msg_prompt = _get_ux(
+                        "brain_strings",
+                        "cortex_reject_prompt",
+                        "\n\n[SYSTEM REJECTION - ATTEMPT {attempt} FAILED]\nYour response was rejected by the engine.\nREASON: {rejection_reason}\nDIRECTIVE: Try again. Fix the error. DO NOT apologize. DO NOT acknowledge this message. Just output the corrected prose.",
+                    )
+                    final_prompt += msg_prompt.format(
+                        attempt=attempt + 1, rejection_reason=rejection_reason
                     )
                 else:
                     final_output = val_res["replacement"]
@@ -1379,7 +1526,12 @@ class TheCortex:
             if len(target) > 4:
                 self.svc.lexicon.teach(target, "kinetic", 0)
                 if self.events:
-                    self.events.log(f"AUTO-DIDACTIC: Learned '{target}'.", "CORTEX")
+                    msg = _get_ux(
+                        "brain_strings",
+                        "cortex_learned",
+                        "AUTO-DIDACTIC: Learned '{target}'.",
+                    )
+                    self.events.log(msg.format(target=target), "CORTEX")
 
     def restore_context(self, history: List[str]):
         if not history:
@@ -1387,14 +1539,18 @@ class TheCortex:
         cleaned_history = []
         for line in history:
             if " | System: " in line:
-                line = line.replace("User: ", "Traveler: ").replace(" | System: ", "\nSystem: ")
+                line = line.replace("User: ", "Traveler: ").replace(
+                    " | System: ", "\nSystem: "
+                )
             cleaned_history.append(line)
         self.dialogue_buffer = cleaned_history[-self.MAX_HISTORY :]
         if self.events:
-            self.events.log(
-                f"Cortex re-sequenced {len(self.dialogue_buffer)} synaptic turns.",
-                "BRAIN",
+            msg = _get_ux(
+                "brain_strings",
+                "cortex_resequenced",
+                "Cortex re-sequenced {count} synaptic turns.",
             )
+            self.events.log(msg.format(count=len(self.dialogue_buffer)), "BRAIN")
 
 
 class ShimmerState:
@@ -1488,12 +1644,13 @@ class DreamEngine:
             return "The walls breathe.", 0.1
         txt = random.choice(templates)
         txt = txt.format(ghost="The Glitch", A="The Code", B="The Flesh", C="The Light")
-        return f"{Prisma.MAG}👁️ HALLUCINATION: {txt}{Prisma.RST}", 0.2
+        msg = _get_ux("brain_strings", "dream_hallucination", "👁️ HALLUCINATION: {txt}")
+        return f"{Prisma.MAG}{msg.format(txt=txt)}{Prisma.RST}", 0.2
 
     @staticmethod
     def run_defragmentation(memory_system: Any, limit: int = 5) -> str:
         if not hasattr(memory_system, "graph") or not memory_system.graph:
-            return "No memories to defrag."
+            return _get_ux("brain_strings", "defrag_empty", "No memories to defrag.")
         graph = memory_system.graph
         candidates = []
         for node, data in graph.items():
@@ -1511,8 +1668,17 @@ class DreamEngine:
                 break
         if pruned:
             joined = ", ".join(pruned[:3])
-            return f"DEFRAG: Pruned {len(pruned)} dead nodes ({joined}...). Neural load lightened."
-        return "DEFRAG: Memory structure is efficient. No pruning needed."
+            msg = _get_ux(
+                "brain_strings",
+                "defrag_pruned",
+                "DEFRAG: Pruned {count} dead nodes ({joined}...). Neural load lightened.",
+            )
+            return msg.format(count=len(pruned), joined=joined)
+        return _get_ux(
+            "brain_strings",
+            "defrag_efficient",
+            "DEFRAG: Memory structure is efficient. No pruning needed.",
+        )
 
 
 class NoeticLoop:

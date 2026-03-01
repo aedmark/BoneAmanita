@@ -9,6 +9,17 @@ from typing import List, Dict, Any, Optional, Counter, Tuple, Deque
 
 from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
 
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
+
 
 class BoneJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -41,9 +52,10 @@ class EventBus:
                 callback(data)
             except Exception as e:
                 cb_name = getattr(callback, "__name__", str(callback))
-                error_msg = f"Error in '{cb_name}' for '{event_type}': {e}"
-                print(f"{Prisma.RED}[BUS]: {error_msg}{Prisma.RST}")
-                self.log(f"EVENT_FAILURE: {error_msg}", category="CRIT")
+                raw_err = f"Error in '{cb_name}' for '{event_type}': {e}"
+                msg = _get_ux("core_strings", "bus_error", "[BUS]: {error_msg}")
+                print(f"{Prisma.RED}{msg.format(error_msg=raw_err)}{Prisma.RST}")
+                self.log(f"EVENT_FAILURE: {raw_err}", category="CRIT")
 
     def log(self, text: str, category: str = "SYSTEM"):
         entry = {"text": text, "category": category, "timestamp": time.time()}
@@ -89,10 +101,18 @@ class LoreManifest:
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            print(f"{Prisma.GRY}[LORE]: Lazy-loaded '{category}'.{Prisma.RST}")
+            msg = _get_ux(
+                "core_strings", "lore_lazy_load", "[LORE]: Lazy-loaded '{category}'."
+            )
+            print(f"{Prisma.GRY}{msg.format(category=category)}{Prisma.RST}")
             return data
         except Exception as e:
-            print(f"{Prisma.RED}[LORE]: Corrupt JSON in '{category}': {e}{Prisma.RST}")
+            msg = _get_ux(
+                "core_strings",
+                "lore_corrupt",
+                "[LORE]: Corrupt JSON in '{category}': {e}",
+            )
+            print(f"{Prisma.RED}{msg.format(category=category, e=e)}{Prisma.RST}")
             return None
 
     def inject(self, category: str, data: Any):
@@ -107,14 +127,23 @@ class LoreManifest:
         if category:
             if category in self._cache:
                 del self._cache[category]
-                print(f"{Prisma.CYN}[LORE]: Flushed '{category}'.{Prisma.RST}")
-            else:
-                print(
-                    f"{Prisma.GRY}[LORE]: Category '{category}' not in cache.{Prisma.RST}"
+                msg = _get_ux(
+                    "core_strings", "lore_flushed_cat", "[LORE]: Flushed '{category}'."
                 )
+                print(f"{Prisma.CYN}{msg.format(category=category)}{Prisma.RST}")
+            else:
+                msg = _get_ux(
+                    "core_strings",
+                    "lore_not_in_cache",
+                    "[LORE]: Category '{category}' not in cache.",
+                )
+                print(f"{Prisma.GRY}{msg.format(category=category)}{Prisma.RST}")
         else:
             self._cache = {}
-            print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
+            msg = _get_ux(
+                "core_strings", "lore_flushed_all", "[LORE]: Flushed Lore cache."
+            )
+            print(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
 
 class TheObserver:
@@ -159,19 +188,33 @@ class TheObserver:
 
     def pass_judgment(self, avg_cycle, avg_llm):
         if avg_cycle == 0.0 and avg_llm == 0.0:
-            return "ASLEEP (WAKE UP)"
+            return _get_ux("core_strings", "obs_asleep", "ASLEEP (WAKE UP)")
         if avg_cycle < 0.1 and avg_llm < 0.5:
-            return "SUSPICIOUSLY EFFICIENT (Did we skip the math?)"
+            return _get_ux(
+                "core_strings",
+                "obs_efficient",
+                "SUSPICIOUSLY EFFICIENT (Did we skip the math?)",
+            )
         if avg_llm > self.LATENCY_WARNING:
             jokes = [
-                "BRAIN FOG (The neural net is buffering)",
-                "DEGRADED (Thinking... thinking...)",
-                "PONDEROUS (Is the LLM on a coffee break?)",
+                _get_ux(
+                    "core_strings", "obs_fog", "BRAIN FOG (The neural net is buffering)"
+                ),
+                _get_ux(
+                    "core_strings", "obs_degraded", "DEGRADED (Thinking... thinking...)"
+                ),
+                _get_ux(
+                    "core_strings",
+                    "obs_ponderous",
+                    "PONDEROUS (Is the LLM on a coffee break?)",
+                ),
             ]
             return random.choice(jokes)
         if avg_cycle > self.CYCLE_WARNING:
-            return "SLUGGISH (The gears need oil)"
-        return "NOMINAL (Boringly adequate)"
+            return _get_ux(
+                "core_strings", "obs_sluggish", "SLUGGISH (The gears need oil)"
+            )
+        return _get_ux("core_strings", "obs_nominal", "NOMINAL (Boringly adequate)")
 
     def get_report(self):
         avg_cycle = sum(self.cycle_times) / max(1, len(self.cycle_times))
@@ -211,7 +254,10 @@ class SystemHealth:
         attr_name = f"{component.lower()}_online"
         if hasattr(self, attr_name):
             setattr(self, attr_name, False)
-        return f"[{component} OFFLINE]: {msg}"
+        err_msg = _get_ux(
+            "core_strings", "health_offline", "[{component} OFFLINE]: {msg}"
+        )
+        return err_msg.format(component=component, msg=msg)
 
     def report_warning(self, message: str):
         self.warnings.append(message)
@@ -278,16 +324,35 @@ class ArchetypeArbiter:
                 return (
                     "THE CENSOR",
                     "COUNCIL",
-                    "Martial Law declared. Identity suppressed.",
+                    _get_ux(
+                        "core_strings",
+                        "arb_martial_law",
+                        "Martial Law declared. Identity suppressed.",
+                    ),
                 )
             if mandate.get("type") == "FORCE_MODE":
-                return "THE MACHINE", "COUNCIL", "Bureaucratic override active."
+                return (
+                    "THE MACHINE",
+                    "COUNCIL",
+                    _get_ux(
+                        "core_strings",
+                        "arb_bureaucratic",
+                        "Bureaucratic override active.",
+                    ),
+                )
+
         if "/" in soul_archetype:
+            msg = _get_ux(
+                "core_strings",
+                "arb_diamond",
+                "The Diamond Soul refracts the physics ({soul_archetype}).",
+            )
             return (
                 soul_archetype,
                 "SOUL",
-                f"The Diamond Soul refracts the physics ({soul_archetype}).",
+                msg.format(soul_archetype=soul_archetype),
             )
+
         if trigram:
             trigram_name = trigram.get("name")
             mythos = LoreManifest.get_instance().get("MYTHOS") or {}
@@ -306,15 +371,33 @@ class ArchetypeArbiter:
                         return (
                             rule["result"],
                             rule.get("source", "COSMIC"),
-                            rule.get("msg", "Resonance detected."),
+                            rule.get(
+                                "msg",
+                                _get_ux(
+                                    "core_strings",
+                                    "arb_resonance",
+                                    "Resonance detected.",
+                                ),
+                            ),
                         )
+
         if physics_lens in ["THE MANIC", "THE VOID"]:
+            msg = _get_ux(
+                "core_strings",
+                "arb_loud",
+                "Environment is too loud. You are {physics_lens}.",
+            )
             return (
                 physics_lens,
                 "PHYSICS",
-                f"Environment is too loud. You are {physics_lens}.",
+                msg.format(physics_lens=physics_lens),
             )
-        return soul_archetype, "SOUL", "The Soul guides the lens."
+
+        return (
+            soul_archetype,
+            "SOUL",
+            _get_ux("core_strings", "arb_soul", "The Soul guides the lens."),
+        )
 
 
 class TelemetryService:
@@ -334,9 +417,12 @@ class TelemetryService:
                 self.log_dir, f"trace_{int(time.time())}.jsonl"
             )
         except OSError:
-            print(
-                f"{Prisma.RED}[TELEMETRY]: Disk Access Denied. Telemetry Disabled.{Prisma.RST}"
+            msg = _get_ux(
+                "core_strings",
+                "tel_disk_denied",
+                "[TELEMETRY]: Disk Access Denied. Telemetry Disabled.",
             )
+            print(f"{Prisma.RED}{msg}{Prisma.RST}")
             self.disabled = True
             self.current_trace_file = None
 
@@ -420,16 +506,24 @@ class TelemetryService:
         except IOError as e:
             self.write_errors += 1
             if self.write_errors >= 5:
-                print(
-                    f"{Prisma.RED}[TELEMETRY]: Critical write failure threshold reached. Telemetry disabled. {e}{Prisma.RST}"
+                msg = _get_ux(
+                    "core_strings",
+                    "tel_crit_write_fail",
+                    "[TELEMETRY]: Critical write failure threshold reached. Telemetry disabled. {e}",
                 )
+                print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
                 self.disabled = True
                 self.write_buffer.clear()
             else:
                 keep_count = self.BUFFER_SIZE // 2
                 self.write_buffer = self.write_buffer[-keep_count:]
+                msg = _get_ux(
+                    "core_strings",
+                    "tel_write_error",
+                    "[TELEMETRY]: Write error ({errors}). Retrying later. {e}",
+                )
                 print(
-                    f"{Prisma.RED}[TELEMETRY]: Write error ({self.write_errors}). Retrying later. {e}{Prisma.RST}"
+                    f"{Prisma.RED}{msg.format(errors=self.write_errors, e=e)}{Prisma.RST}"
                 )
 
     def read_recent_history(self, limit=4) -> List[str]:
@@ -487,7 +581,13 @@ class TelemetryService:
                     return None
                 last_line = json.loads(lines[-1])
                 if "outcome" in last_line and "CRITICAL" in str(last_line["outcome"]):
-                    return f"PREVIOUS SYSTEM CRASH: {last_line.get('reasoning', 'Unknown')}"
+                    reason = last_line.get("reasoning", "Unknown")
+                    msg = _get_ux(
+                        "core_strings",
+                        "tel_prev_crash",
+                        "PREVIOUS SYSTEM CRASH: {reason}",
+                    )
+                    return msg.format(reason=reason)
         except Exception:
             return None
 
@@ -495,7 +595,11 @@ class TelemetryService:
         self.flush_to_disk()
         count = len(self.trace_buffer)
         status = "DISABLED" if self.disabled else "ACTIVE"
-        return (
-            f"\n[TELEMETRY] Session ended ({status}). {count} crystals crystallized.\n"
-            f"            Trace: {self.current_trace_file}"
+        msg = _get_ux(
+            "core_strings",
+            "tel_session_summary",
+            "\n[TELEMETRY] Session ended ({status}). {count} crystals crystallized.\n            Trace: {trace_file}",
+        )
+        return msg.format(
+            status=status, count=count, trace_file=self.current_trace_file
         )

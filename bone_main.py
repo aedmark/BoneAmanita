@@ -24,6 +24,18 @@ from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_cycle import GeodesicOrchestrator
 from bone_council import CouncilChamber
 
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
+
+
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
 
 
@@ -58,38 +70,64 @@ class SessionGuardian:
 
     def __enter__(self):
         os.system("cls" if os.name == "nt" else "clear")
-        print(f"{Prisma.paint('┌──────────────────────────────────────────┐', 'M')}")
-        print(f"{Prisma.paint('│ BONEAMANITA TERMINAL // VERSION 16.2.0   │', 'M')}")
-        print(f"{Prisma.paint('└──────────────────────────────────────────┘', 'M')}")
+        top_bar = _get_ux(
+            "main_strings",
+            "term_header_top",
+            "┌──────────────────────────────────────────┐",
+        )
+        mid_bar = _get_ux(
+            "main_strings",
+            "term_header_mid",
+            "│ BONEAMANITA TERMINAL // VERSION 16.2.0   │",
+        )
+        bot_bar = _get_ux(
+            "main_strings",
+            "term_header_bot",
+            "└──────────────────────────────────────────┘",
+        )
+        print(f"{Prisma.paint(top_bar, 'M')}")
+        print(f"{Prisma.paint(mid_bar, 'M')}")
+        print(f"{Prisma.paint(bot_bar, 'M')}")
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
             print(f"{Prisma.GRY}   >>> {log['text']}{Prisma.RST}")
             time.sleep(0.05)
-        typewriter(
-            f"{Prisma.GRY}...Initializing KernelHash: {self.engine_instance.kernel_hash}...{Prisma.RST}"
+
+        init_msg = _get_ux(
+            "main_strings", "init_hash", "...Initializing KernelHash: {hash}..."
         )
-        typewriter(f"{Prisma.paint('>>> SYSTEM: LISTENING', 'G')}")
+        typewriter(
+            f"{Prisma.GRY}{init_msg.format(hash=self.engine_instance.kernel_hash)}{Prisma.RST}"
+        )
+        sys_msg = _get_ux("main_strings", "sys_listening", ">>> SYSTEM: LISTENING")
+        typewriter(f"{Prisma.paint(sys_msg, 'G')}")
         return self.engine_instance
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        print(f"\n{Prisma.paint('--- SYSTEM HALT ---', 'R')}")
+        halt_msg = _get_ux("main_strings", "sys_halt", "--- SYSTEM HALT ---")
+        print(f"\n{Prisma.paint(halt_msg, 'R')}")
         if self.engine_instance:
             self.engine_instance.shutdown()
 
         if exc_type:
             is_interrupt = issubclass(exc_type, KeyboardInterrupt)
             if not is_interrupt:
-                print(f"{Prisma.RED}CRASH: {exc_val}{Prisma.RST}")
+                crash_msg = _get_ux("main_strings", "crash_msg", "CRASH: {exc_val}")
+                print(f"{Prisma.RED}{crash_msg.format(exc_val=exc_val)}{Prisma.RST}")
                 if getattr(self.engine_instance, "boot_mode", "") == "TECHNICAL":
                     full_trace = "".join(
                         traceback.format_exception(exc_type, exc_val, exc_tb)
                     )
                     print(f"{Prisma.GRY}{full_trace}{Prisma.RST}")
                 else:
-                    print(
-                        f"{Prisma.GRY}The reality lattice collapsed. Check the developer logs.{Prisma.RST}"
+                    lattice_msg = _get_ux(
+                        "main_strings",
+                        "lattice_collapsed",
+                        "The reality lattice collapsed. Check the developer logs.",
                     )
-        print(f"{Prisma.paint('Connection Severed.')}")
+                    print(f"{Prisma.GRY}{lattice_msg}{Prisma.RST}")
+        conn_msg = _get_ux("main_strings", "conn_severed", "Connection Severed.")
+        print(f"{Prisma.paint(conn_msg)}")
         return exc_type is KeyboardInterrupt
 
 
@@ -103,7 +141,10 @@ class ConfigWizard:
                 with open(ConfigWizard.CONFIG_FILE, encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
-                print(f"{Prisma.RED}[CONFIG]: Load Error: {e}{Prisma.RST}")
+                err_msg = _get_ux(
+                    "main_strings", "config_load_err", "[CONFIG]: Load Error: {e}"
+                )
+                print(f"{Prisma.RED}{err_msg.format(e=e)}{Prisma.RST}")
                 ConfigWizard._backup_corrupt_file()
         return ConfigWizard._run_setup()
 
@@ -112,41 +153,89 @@ class ConfigWizard:
         backup_name = f"{ConfigWizard.CONFIG_FILE}.{int(time.time())}.bak"
         try:
             os.rename(ConfigWizard.CONFIG_FILE, backup_name)
-            print(
-                f"{Prisma.YEL}   >>> Corrupt Config backed up to: {backup_name}{Prisma.RST}"
+            msg = _get_ux(
+                "main_strings",
+                "config_backup",
+                "   >>> Corrupt Config backed up to: {backup_name}",
             )
+            print(f"{Prisma.YEL}{msg.format(backup_name=backup_name)}{Prisma.RST}")
         except:
             pass
 
     @staticmethod
     def _run_setup():
         os.system("cls" if os.name == "nt" else "clear")
-        print(f"{Prisma.paint('/// SYSTEM INITIALIZATION SEQUENCE ///', 'C')}")
-        typewriter(
-            "No configuration detected. Initiating VSL Hypervisor...", speed=0.02
+        seq_msg = _get_ux(
+            "main_strings", "init_seq", "/// SYSTEM INITIALIZATION SEQUENCE ///"
         )
-
-        print(f"\n{Prisma.paint('[STEP 1]: IDENTITY', 'W')}")
-        user_name = (
-            input(
-                f"{Prisma.GRY}Identify yourself (Default: TRAVELER): {Prisma.RST}"
-            ).strip()
-            or "TRAVELER"
+        hyp_msg = _get_ux(
+            "main_strings",
+            "init_hypervisor",
+            "No configuration detected. Initiating VSL Hypervisor...",
         )
+        print(f"{Prisma.paint(seq_msg, 'C')}")
+        typewriter(hyp_msg, speed=0.02)
 
-        print(f"\n{Prisma.paint('[STEP 2]: LATTICE RESONANCE (MODE)', 'W')}")
+        step1 = _get_ux("main_strings", "step1_id", "[STEP 1]: IDENTITY")
+        prompt1 = _get_ux(
+            "main_strings", "prompt_id", "Identify yourself (Default: TRAVELER): "
+        )
+        print(f"\n{Prisma.paint(step1, 'W')}")
+        user_name = input(f"{Prisma.GRY}{prompt1}{Prisma.RST}").strip() or "TRAVELER"
+
+        step2 = _get_ux(
+            "main_strings", "step2_mode", "[STEP 2]: LATTICE RESONANCE (MODE)"
+        )
+        print(f"\n{Prisma.paint(step2, 'W')}")
         modes = [
-            ("1", "ADVENTURE", "Tactile, inventory-driven, high friction.", "G"),
-            ("2", "CONVERSATION", "Pure philosophical dialogue, no mechanics.", "C"),
-            ("3", "CREATIVE", "High voltage, associative leaps, brainstorming.", "V"),
-            ("4","TECHNICAL","[SLASH COUNCIL] System architecture, debug, coding.","0",),
+            (
+                "1",
+                "ADVENTURE",
+                _get_ux(
+                    "main_strings",
+                    "mode_adv_desc",
+                    "Tactile, inventory-driven, high friction.",
+                ),
+                "G",
+            ),
+            (
+                "2",
+                "CONVERSATION",
+                _get_ux(
+                    "main_strings",
+                    "mode_conv_desc",
+                    "Pure philosophical dialogue, no mechanics.",
+                ),
+                "C",
+            ),
+            (
+                "3",
+                "CREATIVE",
+                _get_ux(
+                    "main_strings",
+                    "mode_crea_desc",
+                    "High voltage, associative leaps, brainstorming.",
+                ),
+                "V",
+            ),
+            (
+                "4",
+                "TECHNICAL",
+                _get_ux(
+                    "main_strings",
+                    "mode_tech_desc",
+                    "[SLASH COUNCIL] System architecture, debug, coding.",
+                ),
+                "0",
+            ),
         ]
         for k, name, desc, col in modes:
             print(f"  {k}. {Prisma.paint(name, col):<25} - {desc}")
 
-        mode_choice = input(
-            f"{Prisma.paint('Select resonance vector (1-4):', 'C')} "
-        ).strip()
+        prompt_mode = _get_ux(
+            "main_strings", "prompt_mode", "Select resonance vector (1-4): "
+        )
+        mode_choice = input(f"{Prisma.paint(prompt_mode, 'C')} ").strip()
         mode_map = {
             "1": "ADVENTURE",
             "2": "CONVERSATION",
@@ -154,7 +243,9 @@ class ConfigWizard:
             "4": "TECHNICAL",
         }
         boot_mode = mode_map.get(mode_choice, "ADVENTURE")
-        print(f"\n{Prisma.paint('[STEP 3]: CORTEX BACKEND', 'W')}")
+
+        step3 = _get_ux("main_strings", "step3_backend", "[STEP 3]: CORTEX BACKEND")
+        print(f"\n{Prisma.paint(step3, 'W')}")
         backends = [
             ("1", "Ollama (Local)", "G"),
             ("2", "OpenAI (Cloud)", "C"),
@@ -173,7 +264,8 @@ class ConfigWizard:
                 }
             )
             config["model"] = input(f"Model ID [gpt-4]: ").strip() or "gpt-4"
-            config["api_key"] = input(f"{Prisma.paint('Enter API Key:', 'R')} ").strip()
+            prompt_api = _get_ux("main_strings", "prompt_api", "Enter API Key: ")
+            config["api_key"] = input(f"{Prisma.paint(prompt_api, 'R')} ").strip()
         elif choice == "3":
             config.update(
                 {
@@ -196,12 +288,14 @@ class ConfigWizard:
         try:
             with open(ConfigWizard.CONFIG_FILE, "w") as f:
                 json.dump(config, f, indent=4)
-            typewriter(
-                f"\n{Prisma.paint('✔ CONFIGURATION COMMITTED.', 'G')}", speed=0.02
+            commit_msg = _get_ux(
+                "main_strings", "config_committed", "✔ CONFIGURATION COMMITTED."
             )
+            typewriter(f"\n{Prisma.paint(commit_msg, 'G')}", speed=0.02)
             time.sleep(1)
         except Exception as e:
-            print(f"{Prisma.paint(f'Write Failed: {e}', 'R')}")
+            fail_msg = _get_ux("main_strings", "write_failed", "Write Failed: {e}")
+            print(f"{Prisma.paint(fail_msg.format(e=e), 'R')}")
             sys.exit(1)
         return config
 
@@ -225,7 +319,8 @@ class BoneAmanita:
         self.stamina = BoneConfig.MAX_STAMINA
         self.trauma_accum = {}
         self.tick_count = 0
-        self.events.log("...Bootstrapping Core...", "BOOT")
+        boot_msg = _get_ux("main_strings", "boot_core", "...Bootstrapping Core...")
+        self.events.log(boot_msg, "BOOT")
         self.chronos = ChronosKeeper(self)
         self.lex = LexiconService
         self.lex.initialize()
@@ -255,18 +350,29 @@ class BoneAmanita:
                 if os.path.exists(p):
                     with open(p, encoding="utf-8") as f:
                         self.prompt_library = json.load(f)
-                    print(
-                        f"{Prisma.GRY}...Prompt Library Loaded from {p}...{Prisma.RST}"
+                    msg = _get_ux(
+                        "main_strings",
+                        "prompt_lib_loaded",
+                        "...Prompt Library Loaded from {p}...",
                     )
+                    print(f"{Prisma.GRY}{msg.format(p=p)}{Prisma.RST}")
                     loaded = True
                     break
             if not loaded:
-                print(
-                    f"{Prisma.YEL}WARNING: system_prompts.json not found. Using defaults.{Prisma.RST}"
+                warn_msg = _get_ux(
+                    "main_strings",
+                    "prompt_lib_warn",
+                    "WARNING: system_prompts.json not found. Using defaults.",
                 )
+                print(f"{Prisma.YEL}{warn_msg}{Prisma.RST}")
                 self.prompt_library = {}
         except Exception as e:
-            print(f"{Prisma.RED}CRITICAL: Could not load prompts: {e}{Prisma.RST}")
+            crit_msg = _get_ux(
+                "main_strings",
+                "prompt_lib_crit",
+                "CRITICAL: Could not load prompts: {e}",
+            )
+            print(f"{Prisma.RED}{crit_msg.format(e=e)}{Prisma.RST}")
             self.prompt_library = {}
 
     def _initialize_cognition(self):
@@ -294,7 +400,8 @@ class BoneAmanita:
             self.bio.mito.state.atp_pool = BoneConfig.BIO.STARTING_ATP
 
     def _apply_boot_mode(self):
-        self.events.log(f"Engaging Mode: {self.boot_mode}")
+        msg = _get_ux("main_strings", "engaging_mode", "Engaging Mode: {boot_mode}")
+        self.events.log(msg.format(boot_mode=self.boot_mode))
         layer = self.mode_settings.get("ui_layer", RealityLayer.SIMULATION)
         if self.boot_mode == "TECHNICAL":
             layer = RealityLayer.SIMULATION
@@ -303,15 +410,28 @@ class BoneAmanita:
         if self.prompt_library and prompt_key in self.prompt_library:
             if self.cortex and self.cortex.composer:
                 self.cortex.composer.load_template(self.prompt_library[prompt_key])
-                self.events.log(f"Neural Pathway Re-aligned: {prompt_key}", "CORTEX")
+                msg_align = _get_ux(
+                    "main_strings",
+                    "pathway_aligned",
+                    "Neural Pathway Re-aligned: {prompt_key}",
+                )
+                self.events.log(msg_align.format(prompt_key=prompt_key), "CORTEX")
         else:
-            self.events.log(f"Prompt Template '{prompt_key}' not found.", "WARN")
+            msg_warn = _get_ux(
+                "main_strings",
+                "prompt_not_found",
+                "Prompt Template '{prompt_key}' not found.",
+            )
+            self.events.log(msg_warn.format(prompt_key=prompt_key), "WARN")
         active_mods = self.mode_settings.get("active_mods", [])
         if active_mods and hasattr(self, "consultant") and self.consultant:
             for mod in active_mods:
                 if mod not in self.consultant.state.active_modules:
                     self.consultant.state.active_modules.append(mod)
-            self.events.log(f"Hard-wired Mod Chips: {', '.join(active_mods)}", "SYS")
+            msg_mods = _get_ux(
+                "main_strings", "hardwired_mods", "Hard-wired Mod Chips: {mods}"
+            )
+            self.events.log(msg_mods.format(mods=", ".join(active_mods)), "SYS")
 
     def get_avg_voltage(self):
         observer = getattr(self.phys, "observer", self.phys)
@@ -396,18 +516,21 @@ class BoneAmanita:
                 user_message, current_zone
             )
             if violation_msg:
-                self.events.log(
+                msg = _get_ux(
+                    "main_strings",
+                    "gordon_intercept",
                     "Gordon intercepted a premise violation. Shocking the Cortex.",
-                    "SYS",
                 )
+                self.events.log(msg, "SYS")
                 if hasattr(self, "cortex"):
                     self.cortex.ballast_active = True
                     self.cortex.gordon_shock = violation_msg
 
         rules = self.reality_stack.get_grammar_rules()
         if not rules["allow_narrative"]:
+            halt_msg = _get_ux("main_strings", "narrative_halt", "NARRATIVE HALT")
             return {
-                "ui": f"{Prisma.RED}NARRATIVE HALT{Prisma.RST}",
+                "ui": f"{Prisma.RED}{halt_msg}{Prisma.RST}",
                 "logs": [],
                 "metrics": self.get_metrics(),
             }
@@ -442,8 +565,13 @@ class BoneAmanita:
                 return self.trigger_death(cortex_packet.get("physics", {}))
         except Exception:
             full_trace = traceback.format_exc()
+            crit_msg = _get_ux(
+                "main_strings",
+                "cortex_crit_fail",
+                "*** CORTEX CRITICAL FAILURE ***\n{trace}",
+            )
             return {
-                "ui": f"{Prisma.RED}*** CORTEX CRITICAL FAILURE ***\n{full_trace}{Prisma.RST}",
+                "ui": f"{Prisma.RED}{crit_msg.format(trace=full_trace)}{Prisma.RST}",
                 "logs": ["CRITICAL FAILURE"],
                 "metrics": self.get_metrics(),
             }
@@ -456,8 +584,13 @@ class BoneAmanita:
         if clean_cmd.startswith("//"):
             return self._handle_meta_command(clean_cmd)
         if self.cmd is None:
+            err_msg = _get_ux(
+                "main_strings",
+                "cmd_err_init",
+                "ERR: Command interface not initialized.",
+            )
             return {
-                "ui": f"{Prisma.RED}ERR: Command interface not initialized.{Prisma.RST}",
+                "ui": f"{Prisma.RED}{err_msg}{Prisma.RST}",
                 "logs": [],
             }
 
@@ -465,7 +598,8 @@ class BoneAmanita:
             self.cmd.execute(clean_cmd)
 
         cmd_logs = [e["text"] for e in self.events.flush()]
-        ui_output = "\n".join(cmd_logs) if cmd_logs else "Command Executed."
+        default_exec = _get_ux("main_strings", "cmd_executed", "Command Executed.")
+        ui_output = "\n".join(cmd_logs) if cmd_logs else default_exec
         return {
             "type": "COMMAND",
             "ui": f"\n{ui_output}",
@@ -482,21 +616,29 @@ class BoneAmanita:
                 sub = meta_parts[1].lower()
                 if sub == "push" and len(meta_parts) > 2:
                     if self.reality_stack.push_layer(int(meta_parts[2])):
-                        ui_msg = f"Layer Pushed: {meta_parts[2]}"
+                        msg = _get_ux(
+                            "main_strings", "layer_pushed", "Layer Pushed: {layer}"
+                        )
+                        ui_msg = msg.format(layer=meta_parts[2])
                 elif sub == "pop":
                     self.reality_stack.pop_layer()
-                    ui_msg = "Layer Popped."
+                    ui_msg = _get_ux("main_strings", "layer_popped", "Layer Popped.")
                 elif sub == "debug":
                     self.reality_stack.push_layer(RealityLayer.DEBUG)
-                    ui_msg = "Debug Mode Engaged."
+                    ui_msg = _get_ux(
+                        "main_strings", "debug_engaged", "Debug Mode Engaged."
+                    )
             else:
-                ui_msg = f"Current Layer: {self.reality_stack.current_depth}"
+                msg = _get_ux("main_strings", "current_layer", "Current Layer: {layer}")
+                ui_msg = msg.format(layer=self.reality_stack.current_depth)
         elif cmd == "//inject":
             payload = " ".join(meta_parts[1:])
             self.events.log(payload, "INJECT")
-            ui_msg = f"Injected: {payload}"
+            msg = _get_ux("main_strings", "injected", "Injected: {payload}")
+            ui_msg = msg.format(payload=payload)
         else:
-            ui_msg = f"Unknown Meta-Command: {cmd}"
+            msg = _get_ux("main_strings", "unknown_meta", "Unknown Meta-Command: {cmd}")
+            ui_msg = msg.format(cmd=cmd)
         return {
             "ui": f"{Prisma.GRY}[META] {ui_msg}{Prisma.RST}",
             "logs": [],
@@ -505,15 +647,23 @@ class BoneAmanita:
 
     def trigger_death(self, last_phys) -> Dict:
         if self.death_gen is None:
+            crit_msg = _get_ux(
+                "main_strings",
+                "death_no_proto",
+                "*** CRITICAL FAILURE (NO DEATH PROTOCOL) ***",
+            )
             return {
                 "type": "DEATH",
-                "ui": f"{Prisma.RED}*** CRITICAL FAILURE (NO DEATH PROTOCOL) ***{Prisma.RST}",
+                "ui": f"{Prisma.RED}{crit_msg}{Prisma.RST}",
                 "logs": [],
             }
         eulogy_text, cause_code = self.death_gen.eulogy(
             last_phys, self.bio.mito.state, self.trauma_accum
         )
-        death_log = [f"\n{Prisma.RED}SYSTEM HALT: {eulogy_text}{Prisma.RST}"]
+        halt_msg = _get_ux("main_strings", "death_halt", "SYSTEM HALT: {eulogy_text}")
+        death_log = [
+            f"\n{Prisma.RED}{halt_msg.format(eulogy_text=eulogy_text)}{Prisma.RST}"
+        ]
         legacy_msg = self.oroboros.crystallize(cause_code, self.soul)
         death_log.append(f"{Prisma.MAG}🐍 {legacy_msg}{Prisma.RST}")
         continuity_packet = {
@@ -556,9 +706,13 @@ class BoneAmanita:
                 soul_data=self.soul.to_dict(),
                 continuity=continuity_packet,
             )
-            death_log.append(f"{Prisma.WHT}   [LEGACY SAVED: {path}]{Prisma.RST}")
+            saved_msg = _get_ux(
+                "main_strings", "legacy_saved", "   [LEGACY SAVED: {path}]"
+            )
+            death_log.append(f"{Prisma.WHT}{saved_msg.format(path=path)}{Prisma.RST}")
         except Exception as e:
-            death_log.append(f"Save Failed: {e}")
+            fail_msg = _get_ux("main_strings", "save_failed", "Save Failed: {e}")
+            death_log.append(fail_msg.format(e=e))
         return {
             "type": "DEATH",
             "ui": "\n".join(death_log),
@@ -595,16 +749,26 @@ class BoneAmanita:
         health_ratio = self.health / BoneConfig.MAX_HEALTH
         desperation = trauma_sum * (1.0 - health_ratio)
         if desperation > DESPERATION_THRESHOLD:
+            msg = _get_ux(
+                "main_strings",
+                "mercy_venting",
+                "MERCY SIGNAL: Pressure Critical. Venting...",
+            )
             self.events.log(
-                f"{Prisma.WHT}MERCY SIGNAL: Pressure Critical. Venting...{Prisma.RST}",
+                f"{Prisma.WHT}{msg}{Prisma.RST}",
                 "SYS",
             )
             for k in self.trauma_accum:
                 self.trauma_accum[k] *= CATHARSIS_DECAY
                 if self.trauma_accum[k] < 0.01:
                     self.trauma_accum[k] = 0.0
+            msg_cath = _get_ux(
+                "main_strings",
+                "catharsis",
+                "*** CATHARSIS *** The fever breaks. Logic cools.",
+            )
             self.events.log(
-                f"{Prisma.CYN}*** CATHARSIS *** The fever breaks. Logic cools.{Prisma.RST}",
+                f"{Prisma.CYN}{msg_cath}{Prisma.RST}",
                 "SENSATION",
             )
             self.health = min(self.health + CATHARSIS_HEAL_AMOUNT, MAX_HEALTH_CAP)
@@ -615,7 +779,8 @@ class BoneAmanita:
         if self.tick_count > 0:
             return None
         if os.path.exists("saves/quicksave.json"):
-            print(f"{Prisma.GRY}...Detected Stasis Pod...{Prisma.RST}")
+            msg_pod = _get_ux("main_strings", "stasis_pod", "...Detected Stasis Pod...")
+            print(f"{Prisma.GRY}{msg_pod}{Prisma.RST}")
             success, history = self.resume_checkpoint()
             if success:
                 if self.cortex:
@@ -632,15 +797,28 @@ class BoneAmanita:
                 elif self.embryo.continuity:
                     last_scene = self.embryo.continuity.get("last_output", "Silence.")
 
-                resume_text = f"**RESUMING TIMELINE**\nLocation: {loc}\n\n{last_scene}"
-                return {"ui": resume_text, "logs": ["Timeline Restored."]}
-        print(f"{Prisma.GRY}...Synthesizing Initial Reality...{Prisma.RST}")
+                msg_resume = _get_ux(
+                    "main_strings",
+                    "resuming_timeline",
+                    "**RESUMING TIMELINE**\nLocation: {loc}\n\n{last_scene}",
+                )
+                msg_restored = _get_ux(
+                    "main_strings", "timeline_restored", "Timeline Restored."
+                )
+                resume_text = msg_resume.format(loc=loc, last_scene=last_scene)
+                return {"ui": resume_text, "logs": [msg_restored]}
+
+        msg_synth = _get_ux(
+            "main_strings", "synth_reality", "...Synthesizing Initial Reality..."
+        )
+        print(f"{Prisma.GRY}{msg_synth}{Prisma.RST}")
         scenarios = LoreManifest.get_instance().get("SCENARIOS", {})
         archetypes = scenarios.get(
             "ARCHETYPES", ["A quiet room", "The edge of a forest", "A terminal screen"]
         )
         seed = random.choice(archetypes)
-        print(f"{Prisma.CYN}[SYS] Seed Loaded: '{seed}'{Prisma.RST}")
+        msg_seed = _get_ux("main_strings", "seed_loaded", "[SYS] Seed Loaded: '{seed}'")
+        print(f"{Prisma.CYN}{msg_seed.format(seed=seed)}{Prisma.RST}")
 
         boot_prompt = f"SYSTEM_BOOT: {seed}"
 
@@ -673,7 +851,9 @@ if __name__ == "__main__":
             if clean_in in ["exit", "quit", "/exit", "/quit"]:
                 break
             res = session.process_turn(user_in)
-            print(f"\n{Prisma.GRY}════════════════════════════════════════════════════════════{Prisma.RST}")
+            print(
+                f"\n{Prisma.GRY}════════════════════════════════════════════════════════════{Prisma.RST}"
+            )
 
             if res.get("ui"):
                 if "────────" in res["ui"]:
@@ -685,5 +865,8 @@ if __name__ == "__main__":
                 else:
                     typewriter(res["ui"] + "\n", speed=0.005)
             if res.get("type") == "DEATH":
-                print(f"\n{Prisma.GRY}[SESSION TERMINATED]{Prisma.RST}")
+                term_msg = _get_ux(
+                    "main_strings", "session_term", "[SESSION TERMINATED]"
+                )
+                print(f"\n{Prisma.GRY}{term_msg}{Prisma.RST}")
                 break

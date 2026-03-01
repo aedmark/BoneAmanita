@@ -1,3 +1,5 @@
+import os
+import json
 from typing import Dict, Any, Set
 from bone_core import EventBus, LoreManifest
 from bone_akashic import TheAkashicRecord
@@ -17,6 +19,17 @@ from bone_symbiosis import SymbiosisManager
 from bone_spores import LiteraryReproduction
 from bone_drivers import DriverRegistry, BoneConsultant
 
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
+
 
 class BoneGenesis:
     @staticmethod
@@ -25,9 +38,16 @@ class BoneGenesis:
     ) -> Dict[str, Any]:
         events = events_ref or EventBus()
         if events_ref:
-            events.log("Igniting Genesis Sequence...", "GENESIS")
+            msg = _get_ux(
+                "genesis_strings", "ignite_log", "Igniting Genesis Sequence..."
+            )
+            events.log(msg, "GENESIS")
         else:
-            print("...Igniting Genesis Sequence...")
+            msg = _get_ux(
+                "genesis_strings", "ignite_print", "...Igniting Genesis Sequence..."
+            )
+            print(msg)
+
         lore = LoreManifest()
         akashic = TheAkashicRecord(lore_manifest=lore, events_ref=events)
         akashic.setup_listeners(events)
@@ -53,12 +73,21 @@ class BoneGenesis:
             live_bio_state = embryo.bio.to_dict()
             logs = oroboros.apply_legacy(dummy_phys, live_bio_state)
             if logs:
-                events.log(f"⛓️ LEGACY SCARS: {', '.join(logs)}", "OROBOROS")
+                msg_scars = _get_ux(
+                    "genesis_strings",
+                    "legacy_scars",
+                    "\u26d3\ufe0f LEGACY SCARS: {logs}",
+                )
+                events.log(msg_scars.format(logs=", ".join(logs)), "OROBOROS")
                 if getattr(embryo.physics, "dynamics", None):
                     if hasattr(embryo.physics.dynamics, "base_drag"):
-                        embryo.physics.dynamics.base_drag += dummy_phys["narrative_drag"]
+                        embryo.physics.dynamics.base_drag += dummy_phys[
+                            "narrative_drag"
+                        ]
                     elif hasattr(embryo.physics.dynamics, "strain_gauge"):
-                        embryo.physics.dynamics.strain_gauge += (dummy_phys.get("narrative_drag", 0.0) * 0.1)
+                        embryo.physics.dynamics.strain_gauge += (
+                            dummy_phys.get("narrative_drag", 0.0) * 0.1
+                        )
                 if embryo.bio.biometrics:
                     biometrics = live_bio_state.get("biometrics", {})
                     embryo.bio.biometrics.health = biometrics.get("health", 100.0)

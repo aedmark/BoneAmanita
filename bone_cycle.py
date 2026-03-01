@@ -1,5 +1,5 @@
 import re
-import traceback, random, time, uuid
+import traceback, random, time, uuid, os, json
 from typing import Dict, Any, List
 from bone_core import ArchetypeArbiter, LoreManifest
 from bone_types import Prisma, CycleContext
@@ -15,6 +15,17 @@ from bone_body import SynestheticCortex
 from bone_symbiosis import SymbiosisManager
 from bone_config import BoneConfig, BonePresets
 from bone_drivers import CongruenceValidator
+
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
 
 
 class SimulationPhase:
@@ -75,13 +86,19 @@ class ObservationPhase(SimulationPhase):
         ctx.clean_words = gaze_result["clean_words"]
         current_atp = self.eng.bio.mito.state.atp_pool
         if current_atp < 15.0:
-            ctx.log(
-                f"{Prisma.OCHRE}🧠 INTENTION: Low Energy. Metabolism slowing down.{Prisma.RST}"
+            msg = _get_ux(
+                "cycle_strings",
+                "observe_low_energy",
+                "🧠 INTENTION: Low Energy. Metabolism slowing down.",
             )
+            ctx.log(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
         if hasattr(self.eng, "symbiosis"):
             diag = self.eng.symbiosis.current_health.diagnosis
             if diag != "STABLE":
-                ctx.log(f"{Prisma.OCHRE}⚕️ SYMBIONT DIAGNOSIS: {diag}{Prisma.RST}")
+                msg = _get_ux(
+                    "cycle_strings", "observe_symbiont", "⚕️ SYMBIONT DIAGNOSIS: {diag}"
+                )
+                ctx.log(f"{Prisma.OCHRE}{msg.format(diag=diag)}{Prisma.RST}")
         self.eng.phys.dynamics.commit(ctx.physics.voltage)
         self.eng.tick_count += 1
         return ctx
@@ -114,7 +131,12 @@ class SanctuaryPhase(SimulationPhase):
         ctx.physics.flow_state = "LAMINAR"
         if random.random() < 0.1:
             color = getattr(BonePresets.SANCTUARY, "COLOR", Prisma.GRN)
-            ctx.log(f"{color}![☀️] SANCTUARY: Breathing space.{Prisma.RST}")
+            msg = _get_ux(
+                "cycle_strings",
+                "sanctuary_breathe",
+                "![☀️] SANCTUARY: Breathing space.",
+            )
+            ctx.log(f"{color}{msg}{Prisma.RST}")
 
     def _apply_restoration(self, ctx: CycleContext):
         if self.eng.bio:
@@ -190,7 +212,10 @@ class MaintenancePhase(SimulationPhase):
                     ctx.physics, self.eng.host_stats
                 )
                 if report:
-                    ctx.log(f"{Prisma.CYN}📜 TOWN HALL: {report}{Prisma.RST}")
+                    msg = _get_ux(
+                        "cycle_strings", "town_hall_report", "📜 TOWN HALL: {report}"
+                    )
+                    ctx.log(f"{Prisma.CYN}{msg.format(report=report)}{Prisma.RST}")
             session_snapshot = {
                 "trauma_vector": self.eng.trauma_accum,
                 "meta": {"final_health": self.eng.health},
@@ -201,8 +226,13 @@ class MaintenancePhase(SimulationPhase):
                 soul=self.eng.soul,
             )
             if status != "BALANCED":
+                msg = _get_ux(
+                    "cycle_strings",
+                    "town_hall_vitals",
+                    "🩺 VITAL SIGNS: {status} - {advice}",
+                )
                 ctx.log(
-                    f"{Prisma.OCHRE}🩺 VITAL SIGNS: {status} - {advice}{Prisma.RST}"
+                    f"{Prisma.OCHRE}{msg.format(status=status, advice=advice)}{Prisma.RST}"
                 )
         if self.eng.mind and hasattr(self.eng.mind, "mem"):
             if hasattr(self.eng.mind.mem, "run_ecosystem"):
@@ -230,10 +260,13 @@ class GatekeeperPhase(SimulationPhase):
                 if not passed:
                     dash_view = SoulDashboard(self.eng).render()
                     ctx.refusal_triggered = True
+                    msg = _get_ux(
+                        "cycle_strings",
+                        "gatekeep_locked",
+                        "⛔ ACCESS DENIED: The machine is sulking.\n    Status: LOCKED (Solve the riddle or prove you are alive).",
+                    )
                     ctx.refusal_packet = {
-                        "ui": f"{dash_view}\n\n"
-                        f"{Prisma.RED}⛔ ACCESS DENIED: The machine is sulking.\n"
-                        f"    Status: LOCKED (Solve the riddle or prove you are alive).{Prisma.RST}",
+                        "ui": f"{dash_view}\n\n{Prisma.RED}{msg}{Prisma.RST}",
                         "logs": ["Command Rejected (Agency Lock)"],
                         "metrics": self.eng.get_metrics(),
                     }
@@ -361,9 +394,12 @@ class MetabolismPhase(SimulationPhase):
             self.eng.bio.mito.state.atp_pool = max(
                 0.0, self.eng.bio.mito.state.atp_pool - tax_burn
             )
-            ctx.log(
-                f"{Prisma.OCHRE}⚡ METABOLIC TAX: System strain burns {tax_burn:.1f} ATP.{Prisma.RST}"
+            msg = _get_ux(
+                "cycle_strings",
+                "metabolism_tax",
+                "⚡ METABOLIC TAX: System strain burns {tax_burn:.1f} ATP.",
             )
+            ctx.log(f"{Prisma.OCHRE}{msg.format(tax_burn=tax_burn)}{Prisma.RST}")
 
     def _check_narcolepsy(self, ctx: CycleContext):
         atp = self.eng.bio.mito.state.atp_pool
@@ -372,18 +408,24 @@ class MetabolismPhase(SimulationPhase):
             self.eng.tick_count > 0 and self.eng.tick_count % 100 == 0
         )
         if trigger and hasattr(self.eng.mind, "dreamer"):
-            ctx.log(
-                f"\n{Prisma.VIOLET}[AUTO-SLEEP]: Forced reboot sequence.{Prisma.RST}"
+            msg_sleep = _get_ux(
+                "cycle_strings",
+                "metabolism_sleep",
+                "\n[AUTO-SLEEP]: Forced reboot sequence.",
             )
+            ctx.log(f"{Prisma.VIOLET}{msg_sleep}{Prisma.RST}")
             soul_snap = self.eng.soul.to_dict() if hasattr(self.eng, "soul") else {}
             self.eng.mind.dreamer.enter_rem_cycle(soul_snap, bio_state={"atp": atp})
             self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
             reboot_val = getattr(BoneConfig, "MAX_ATP", 100.0) * 0.33
             self.eng.bio.mito.state.atp_pool = reboot_val
             ctx.bio_result["atp"] = reboot_val
-            ctx.log(
-                f"{Prisma.GRN}   (System restored. ATP stabilized at {reboot_val:.1f}){Prisma.RST}"
+            msg_wake = _get_ux(
+                "cycle_strings",
+                "metabolism_waking",
+                "   (System restored. ATP stabilized at {reboot_val:.1f})",
             )
+            ctx.log(f"{Prisma.GRN}{msg_wake.format(reboot_val=reboot_val)}{Prisma.RST}")
 
     def _check_circadian_rhythm(self):
         if self.eng.tick_count % 10 == 0:
@@ -401,7 +443,12 @@ class MetabolismPhase(SimulationPhase):
                 self.eng.bio.mito.state.atp_pool += 20.0
             elif evt == "ICARUS_CRASH":
                 damage = 15.0
-                ctx.log(f"   {Prisma.RED}IMPACT TRAUMA: -{damage} HP.{Prisma.RST}")
+                msg_impact = _get_ux(
+                    "cycle_strings",
+                    "metabolism_impact",
+                    "   IMPACT TRAUMA: -{damage} HP.",
+                )
+                ctx.log(f"{Prisma.RED}{msg_impact.format(damage=damage)}{Prisma.RST}")
                 if self.eng.bio.biometrics:
                     self.eng.bio.biometrics.health = max(
                         0.0, self.eng.bio.biometrics.health - damage
@@ -415,7 +462,12 @@ class MetabolismPhase(SimulationPhase):
             current_stamina = self.eng.bio.biometrics.stamina
         cracked, koan = self.eng.kintsugi.check_integrity(current_stamina)
         if cracked:
-            ctx.log(f"{Prisma.YEL}🏺 KINTSUGI ACTIVATED. KOAN: {koan}{Prisma.RST}")
+            msg = _get_ux(
+                "cycle_strings",
+                "metabolism_kintsugi",
+                "🏺 KINTSUGI ACTIVATED. KOAN: {koan}",
+            )
+            ctx.log(f"{Prisma.YEL}{msg.format(koan=koan)}{Prisma.RST}")
         if self.eng.kintsugi.active_koan:
             repair = self.eng.kintsugi.attempt_repair(
                 ctx.physics, self.eng.trauma_accum, self.eng.soul, qualia
@@ -440,7 +492,12 @@ class MetabolismPhase(SimulationPhase):
         if self.eng.therapy.check_progress(
             ctx.physics, current_stamina, self.eng.trauma_accum, qualia
         ):
-            ctx.log(f"{Prisma.GRN}❤️ THERAPY: Trauma processed. Health +5.{Prisma.RST}")
+            msg = _get_ux(
+                "cycle_strings",
+                "metabolism_therapy",
+                "❤️ THERAPY: Trauma processed. Health +5.",
+            )
+            ctx.log(f"{Prisma.GRN}{msg}{Prisma.RST}")
             if self.eng.bio.biometrics:
                 self.eng.bio.biometrics.health = min(
                     BoneConfig.MAX_HEALTH, self.eng.bio.biometrics.health + 5.0
@@ -456,9 +513,12 @@ class MetabolismPhase(SimulationPhase):
 
     def _check_ros_toxicity(self, ctx: CycleContext):
         if self.eng.bio.mito.state.ros_buildup >= 100.0:
-            ctx.log(
-                f"{Prisma.RED}☣️ PANIC ROOM: Toxicity critical (ROS 100). Venting.{Prisma.RST}"
+            msg = _get_ux(
+                "cycle_strings",
+                "metabolism_panic",
+                "☣️ PANIC ROOM: Toxicity critical (ROS 100). Venting.",
             )
+            ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
             ctx.physics.psi = 0.0
             ctx.physics.chi = 0.0
             self.eng.bio.mito.state.ros_buildup *= 0.5
@@ -481,9 +541,12 @@ class RealityFilterPhase(SimulationPhase):
             sym, name, _, color = entry
             ctx.world_state["trigram"] = {"symbol": sym, "name": name, "color": color}
             if random.random() < 0.05:
-                ctx.log(
-                    f"{color}I CHING: {sym} {name} is in the ascendant.{Prisma.RST}"
+                msg = _get_ux(
+                    "cycle_strings",
+                    "filter_iching",
+                    "I CHING: {sym} {name} is in the ascendant.",
                 )
+                ctx.log(f"{color}{msg.format(sym=sym, name=name)}{Prisma.RST}")
         return ctx
 
 
@@ -546,8 +609,13 @@ class NavigationPhase(SimulationPhase):
                         physics.narrative_drag += delta.value
                     elif delta.operator == "MULT":
                         physics.narrative_drag *= delta.value
+                    msg = _get_ux(
+                        "cycle_strings",
+                        "nav_gear_drag",
+                        "🎒 GEAR: {source} affects drag ({operator} {value}).",
+                    )
                     ctx.log(
-                        f"{Prisma.GRY}🎒 GEAR: {delta.source} affects drag ({delta.operator} {delta.value}).{Prisma.RST}"
+                        f"{Prisma.GRY}{msg.format(source=delta.source, operator=delta.operator, value=delta.value)}{Prisma.RST}"
                     )
         orbit_state, drag_pen, orbit_msg = self.eng.cosmic.analyze_orbit(
             self.eng.mind.mem, ctx.clean_words
@@ -673,9 +741,12 @@ class MachineryPhase(SimulationPhase):
                 0.0, self.eng.bio.biometrics.health - damage
             )
         self.eng.health = max(0.0, self.eng.health - damage)
-        ctx.log(
-            f"{Prisma.RED}*** CRITICAL THEREMIN DISCHARGE *** -{damage:.1f} HP{Prisma.RST}"
+        msg = _get_ux(
+            "cycle_strings",
+            "machinery_theremin",
+            "*** CRITICAL THEREMIN DISCHARGE *** -{damage:.1f} HP",
         )
+        ctx.log(f"{Prisma.RED}{msg.format(damage=damage)}{Prisma.RST}")
         if hasattr(self.eng.events, "publish"):
             self.eng.events.publish(
                 "AIRSTRIKE", {"damage": damage, "source": "THEREMIN"}
@@ -696,7 +767,8 @@ class IntrusionPhase(SimulationPhase):
             if ctx.logs:
                 ctx.logs[-1] = self.eng.limbo.haunt(ctx.logs[-1])
             else:
-                ctx.log(self.eng.limbo.haunt("The air is heavy."))
+                msg = _get_ux("cycle_strings", "intrusion_heavy", "The air is heavy.")
+                ctx.log(self.eng.limbo.haunt(msg))
 
         drag = getattr(ctx.physics, "narrative_drag", 0.0)
         kappa = getattr(ctx.physics, "kappa", 1.0)
@@ -707,7 +779,14 @@ class IntrusionPhase(SimulationPhase):
             if loop_path:
                 rewire_msg = self.eng.mind.tracer.psilocybin_rewire(loop_path)
                 if rewire_msg:
-                    ctx.log(f"{Prisma.CYN}🦠 IMMUNE SYSTEM: {rewire_msg}{Prisma.RST}")
+                    msg = _get_ux(
+                        "cycle_strings",
+                        "intrusion_immune",
+                        "🦠 IMMUNE SYSTEM: {rewire_msg}",
+                    )
+                    ctx.log(
+                        f"{Prisma.CYN}{msg.format(rewire_msg=rewire_msg)}{Prisma.RST}"
+                    )
                     self.eng.bio.endo.dopamine += 0.2
                     ctx.physics.narrative_drag = max(0.0, drag - 2.0)
         trauma_sum = (
@@ -720,8 +799,17 @@ class IntrusionPhase(SimulationPhase):
             dream_text, relief = self.eng.mind.dreamer.hallucinate(
                 ctx.physics.vector, trauma_level=trauma_sum
             )
-            prefix = "💭 NIGHTMARE" if trauma_sum > 10.0 else "💭 DAYDREAM"
-            ctx.log(f"{Prisma.VIOLET}{prefix}: {dream_text}{Prisma.RST}")
+            if trauma_sum > 10.0:
+                prefix = _get_ux(
+                    "cycle_strings", "intrusion_nightmare", "💭 NIGHTMARE: {dream_text}"
+                )
+            else:
+                prefix = _get_ux(
+                    "cycle_strings", "intrusion_daydream", "💭 DAYDREAM: {dream_text}"
+                )
+            ctx.log(
+                f"{Prisma.VIOLET}{prefix.format(dream_text=dream_text)}{Prisma.RST}"
+            )
             if relief > 0:
                 keys = list(self.eng.trauma_accum.keys())
                 if keys:
@@ -729,23 +817,37 @@ class IntrusionPhase(SimulationPhase):
                     self.eng.trauma_accum[target] = max(
                         0.0, self.eng.trauma_accum[target] - relief
                     )
+                    msg_relief = _get_ux(
+                        "cycle_strings",
+                        "intrusion_relief",
+                        "   (Psychic pressure released: -{relief:.1f} {target})",
+                    )
                     ctx.log(
-                        f"   {Prisma.GRY}(Psychic pressure released: -{relief:.1f} {target}){Prisma.RST}"
+                        f"{Prisma.GRY}{msg_relief.format(relief=relief, target=target)}{Prisma.RST}"
                     )
             if is_bored:
                 self.eng.phys.pulse.boredom_level = 0.0
         current_psi = getattr(ctx.physics, "psi", 0.0)
         if current_psi > 0.6 and random.random() < current_psi:
-            p_msg = f"{Prisma.VIOLET}👁️ PAREIDOLIA: The patterns are watching back (PSI {current_psi:.2f}).{Prisma.RST}"
-            ctx.log(p_msg)
+            msg_p = _get_ux(
+                "cycle_strings",
+                "intrusion_pareidolia",
+                "👁️ PAREIDOLIA: The patterns are watching back (PSI {current_psi:.2f}).",
+            )
+            ctx.log(
+                f"{Prisma.VIOLET}{msg_p.format(current_psi=current_psi)}{Prisma.RST}"
+            )
             ctx.physics.psi = min(1.0, current_psi + 0.1)
             if self.eng.bio and self.eng.bio.biometrics:
                 self.eng.bio.biometrics.stamina = max(
                     0.0, self.eng.bio.biometrics.stamina - 5.0
                 )
-                ctx.log(
-                    f"{Prisma.GRY}   (The hallucination drains 5.0 Stamina){Prisma.RST}"
+                msg_drain = _get_ux(
+                    "cycle_strings",
+                    "intrusion_hallucination_drain",
+                    "   (The hallucination drains 5.0 Stamina)",
                 )
+                ctx.log(f"{Prisma.GRY}{msg_drain}{Prisma.RST}")
         return ctx
 
 
@@ -762,31 +864,41 @@ class SoulPhase(SimulationPhase):
         dignity = self.eng.soul.anchor.dignity_reserve
         if dignity < 30.0:
             ctx.physics.narrative_drag *= 1.5
-            ctx.log(
-                f"{Prisma.GRY}⚓ DIGNITY CRITICAL: The narrative feels heavy. (Drag x1.5){Prisma.RST}"
+            msg = _get_ux(
+                "cycle_strings",
+                "soul_dignity_low",
+                "⚓ DIGNITY CRITICAL: The narrative feels heavy. (Drag x1.5)",
             )
+            ctx.log(f"{Prisma.GRY}{msg}{Prisma.RST}")
         elif dignity > 80.0:
             ctx.physics.voltage += 2.0
             ctx.physics.narrative_drag *= 0.8
-            ctx.log(
-                f"{Prisma.MAG}✨ DIGNITY HIGH: The soul is sovereign. (Flow Optimized){Prisma.RST}"
+            msg = _get_ux(
+                "cycle_strings",
+                "soul_dignity_high",
+                "✨ DIGNITY HIGH: The soul is sovereign. (Flow Optimized)",
             )
+            ctx.log(f"{Prisma.MAG}{msg}{Prisma.RST}")
         lesson = self.eng.soul.crystallize_memory(
             ctx.physics.to_dict(), ctx.bio_result, self.eng.tick_count
         )
         if lesson:
-            ctx.log(
-                f"{Prisma.VIOLET}   (The lesson '{lesson}' echoes in the chamber.){Prisma.RST}"
+            msg = _get_ux(
+                "cycle_strings",
+                "soul_lesson",
+                "   (The lesson '{lesson}' echoes in the chamber.)",
             )
+            ctx.log(f"{Prisma.VIOLET}{msg.format(lesson=lesson)}{Prisma.RST}")
         if not self.eng.soul.current_obsession:
             self.eng.soul.find_obsession(self.eng.lex)
         self.eng.soul.pursue_obsession(ctx.physics.to_dict())
         if hasattr(self.eng, "oroboros") and self.eng.oroboros.myths:
             for myth in self.eng.oroboros.myths:
                 if myth.trigger in ctx.clean_words:
-                    ctx.log(
-                        f"{Prisma.YEL}📜 ANCIENT MYTH INVOKED: {myth.title}{Prisma.RST}"
+                    msg = _get_ux(
+                        "cycle_strings", "soul_myth", "📜 ANCIENT MYTH INVOKED: {title}"
                     )
+                    ctx.log(f"{Prisma.YEL}{msg.format(title=myth.title)}{Prisma.RST}")
                     ctx.log(f'   "{myth.lesson}"')
                     old_volts = ctx.physics.voltage
                     ctx.physics.voltage += 5.0
@@ -822,15 +934,21 @@ class SoulPhase(SimulationPhase):
             if action == "FORCE_MODE":
                 target = mandate["value"]
                 self.eng.bio.governor.set_override(target)
-                ctx.log(
-                    f"{Prisma.RED}⚖️ COUNCIL ORDER: Emergency Shift to {target}.{Prisma.RST}"
+                msg = _get_ux(
+                    "cycle_strings",
+                    "council_force_mode",
+                    "⚖️ COUNCIL ORDER: Emergency Shift to {target}.",
                 )
+                ctx.log(f"{Prisma.RED}{msg.format(target=target)}{Prisma.RST}")
             elif action == "CIRCUIT_BREAKER":
                 ctx.physics.voltage = 0.0
                 ctx.physics.narrative_drag = 10.0
-                ctx.log(
-                    f"{Prisma.RED}⚖️ COUNCIL ORDER: Circuit Breaker Tripped. Voltage dump.{Prisma.RST}"
+                msg = _get_ux(
+                    "cycle_strings",
+                    "council_circuit_breaker",
+                    "⚖️ COUNCIL ORDER: Circuit Breaker Tripped. Voltage dump.",
                 )
+                ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
         if adjustments:
             for param, delta in adjustments.items():
                 old_val = getattr(ctx.physics, param, 0.0)
@@ -878,10 +996,11 @@ class SoulPhase(SimulationPhase):
         mandates = []
         for trait, thresh, m_type, msg, eff, col in rules:
             if get_t(trait) > thresh:
+                str_msg = _get_ux("cycle_strings", "council_log", "⚖️ COUNCIL: {msg}")
                 mandates.append(
                     {
                         "type": m_type,
-                        "log": f"{col}⚖️ COUNCIL: {msg}{Prisma.RST}",
+                        "log": f"{col}{str_msg.format(msg=msg)}{Prisma.RST}",
                         "effect": eff,
                     }
                 )
@@ -933,40 +1052,61 @@ class ArbitrationPhase(SimulationPhase):
             opinion = "The tension is too high. The Stage Manager cuts the mic. Silence is enforced."
             ctx.physics.silence = 0.9
             ctx.physics.narrative_drag += 2.0
-            ctx.log(
-                f"{Prisma.WHT}🎭 STAGE MANAGER: 'Too many voices. Step back.'{Prisma.RST}"
+            msg = _get_ux(
+                "cycle_strings",
+                "arbiter_stage_manager_cut",
+                "🎭 STAGE MANAGER: 'Too many voices. Step back.'",
             )
-            ctx.log(
-                f"{Prisma.GRY}∇ [THE SILENCE]: The system pauses, waiting for structure.{Prisma.RST}"
+            ctx.log(f"{Prisma.WHT}{msg}{Prisma.RST}")
+            msg_silence = _get_ux(
+                "cycle_strings",
+                "arbiter_silence",
+                "∇ [THE SILENCE]: The system pauses, waiting for structure.",
             )
+            ctx.log(f"{Prisma.GRY}{msg_silence}{Prisma.RST}")
 
         elif silence > 0.85 and not synergy_active:
             final_lens = "THE STAGE MANAGER"
             opinion = "The Stage Manager holds the silence. No archetype is called."
-            ctx.log(
-                f"{Prisma.WHT}🎭 STAGE MANAGER: (Gestures for the cosmos to hold.){Prisma.RST}"
+            msg = _get_ux(
+                "cycle_strings",
+                "arbiter_stage_manager_hold",
+                "🎭 STAGE MANAGER: (Gestures for the cosmos to hold.)",
             )
+            ctx.log(f"{Prisma.WHT}{msg}{Prisma.RST}")
 
         else:
             if synergy_active and synergy_name:
                 final_lens = synergy_name
+                msg = _get_ux(
+                    "cycle_strings",
+                    "arbiter_synergy_named",
+                    "🎭 (The Stage Manager steps back. [{synergy_name}] speaks.)",
+                )
                 ctx.log(
-                    f"{Prisma.GRY}🎭 (The Stage Manager steps back. [{synergy_name}] speaks.){Prisma.RST}"
+                    f"{Prisma.GRY}{msg.format(synergy_name=synergy_name)}{Prisma.RST}"
                 )
             elif synergy_active:
-                ctx.log(
-                    f"{Prisma.GRY}🎭 (The Stage Manager steps back. The Synergy speaks.){Prisma.RST}"
+                msg = _get_ux(
+                    "cycle_strings",
+                    "arbiter_synergy_unnamed",
+                    "🎭 (The Stage Manager steps back. The Synergy speaks.)",
                 )
+                ctx.log(f"{Prisma.GRY}{msg}{Prisma.RST}")
             else:
-                ctx.log(
-                    f"{Prisma.GRY}🎭 (The Stage Manager nods. {final_lens} steps into the light.){Prisma.RST}"
+                msg = _get_ux(
+                    "cycle_strings",
+                    "arbiter_normal_lens",
+                    "🎭 (The Stage Manager nods. {final_lens} steps into the light.)",
                 )
+                ctx.log(f"{Prisma.GRY}{msg.format(final_lens=final_lens)}{Prisma.RST}")
 
         ctx.active_lens = final_lens
         self.eng.events.publish("LENS_INTERACTION", {"lenses": [phys_lens, soul_arch]})
 
         if source != "PHYSICS_VECTOR" or final_lens == "THE STAGE MANAGER":
-            ctx.log(f"{Prisma.MAG}⚖️ {opinion}{Prisma.RST}")
+            msg = _get_ux("cycle_strings", "arbiter_opinion", "⚖️ {opinion}")
+            ctx.log(f"{Prisma.MAG}{msg.format(opinion=opinion)}{Prisma.RST}")
 
         self.eng.drivers.current_focus = final_lens
         return ctx
@@ -988,9 +1128,12 @@ class CognitionPhase(SimulationPhase):
                 if self.eng.bio and self.eng.bio.mito:
                     refund = 5.0 * phi
                     self.eng.bio.mito.adjust_atp(refund, "Harmonic Resonance")
-                ctx.log(
-                    f"{Prisma.CYN}✨ HARMONIC RESONANCE (Φ={phi:.2f}): The narrative flows effortlessly.{Prisma.RST}"
+                msg = _get_ux(
+                    "cycle_strings",
+                    "cog_resonance",
+                    "✨ HARMONIC RESONANCE (Φ={phi:.2f}): The narrative flows effortlessly.",
                 )
+                ctx.log(f"{Prisma.CYN}{msg.format(phi=phi)}{Prisma.RST}")
         if hasattr(self.eng, "consultant"):
             self.eng.consultant.update_coordinates(
                 ctx.input_text, ctx.bio_result, ctx.physics
@@ -1005,8 +1148,13 @@ class CognitionPhase(SimulationPhase):
                     lambda_tax = (lambda_val**2) * 10.0
                     self.eng.bio.mito.adjust_atp(-lambda_tax, f"Λ² Liminal Tax")
                     if lambda_tax > 2.0:
+                        msg = _get_ux(
+                            "cycle_strings",
+                            "cog_liminal_tax",
+                            "🌌 DARK MATTER: Liminal navigation burns {lambda_tax:.1f} ATP.",
+                        )
                         ctx.log(
-                            f"{Prisma.VIOLET}🌌 DARK MATTER: Liminal navigation burns {lambda_tax:.1f} ATP.{Prisma.RST}"
+                            f"{Prisma.VIOLET}{msg.format(lambda_tax=lambda_tax)}{Prisma.RST}"
                         )
         if hasattr(self.eng.mind.mem, "check_for_resurrection"):
             flashback_msg = self.eng.mind.mem.check_for_resurrection(
@@ -1036,14 +1184,18 @@ class CognitionPhase(SimulationPhase):
                 learning_mod=learn_mod,
             )
             if bury_msg:
-                prefix = (
-                    f"{Prisma.YEL}⚠️ MEMORY:{Prisma.RST}"
-                    if "SATURATION" in bury_msg
-                    else f"{Prisma.RED}🍖 DONNER PROTOCOL:{Prisma.RST}"
-                )
-                ctx.log(f"{prefix} {bury_msg}")
+                if "SATURATION" in bury_msg:
+                    prefix = f"{Prisma.YEL}{_get_ux('cycle_strings', 'cog_memory_warn', '⚠️ MEMORY: {bury_msg}').format(bury_msg=bury_msg)}{Prisma.RST}"
+                else:
+                    prefix = f"{Prisma.RED}{_get_ux('cycle_strings', 'cog_memory_donner', '🍖 DONNER PROTOCOL: {bury_msg}').format(bury_msg=bury_msg)}{Prisma.RST}"
+                ctx.log(prefix)
             if new_wells:
-                ctx.log(f"{Prisma.CYN}🌌 GRAVITY WELL FORMED: {new_wells}{Prisma.RST}")
+                msg = _get_ux(
+                    "cycle_strings",
+                    "cog_gravity_well",
+                    "🌌 GRAVITY WELL FORMED: {new_wells}",
+                )
+                ctx.log(f"{Prisma.CYN}{msg.format(new_wells=new_wells)}{Prisma.RST}")
 
         inventory_data = self.eng.gordon.inventory if self.eng.gordon else []
 
@@ -1185,12 +1337,20 @@ class CycleSimulator:
         return True
 
     def handle_phase_crash(self, ctx, phase_name, error):
-        print(f"\n{Prisma.RED}!!! CRITICAL {phase_name} CRASH !!!{Prisma.RST}")
+        msg_crash = _get_ux(
+            "cycle_strings", "sim_crash_header", "!!! CRITICAL {phase_name} CRASH !!!"
+        )
+        print(f"\n{Prisma.RED}{msg_crash.format(phase_name=phase_name)}{Prisma.RST}")
         traceback.print_exc()
         narrative = LoreManifest.get_instance().get("narrative_data") or {}
         cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["System Failure."])
         eulogy = random.choice(cathedral_logs)
-        ctx.log(f'{Prisma.RED}🏛️ CATHEDRAL COLLAPSE: "{eulogy}"{Prisma.RST}')
+        msg_eulogy = _get_ux(
+            "cycle_strings",
+            "sim_cathedral_collapse",
+            '🏛️ CATHEDRAL COLLAPSE: "{eulogy}"',
+        )
+        ctx.log(f"{Prisma.RED}{msg_eulogy.format(eulogy=eulogy)}{Prisma.RST}")
         component_map = {"OBSERVE": "PHYSICS", "METABOLISM": "BIO", "COGNITION": "MIND"}
         comp = component_map.get(phase_name, "SIMULATION")
         self.eng.system_health.report_failure(comp, error)
@@ -1201,9 +1361,12 @@ class CycleSimulator:
             ctx.is_alive = True
         elif comp == "MIND":
             ctx.mind_state = PanicRoom.get_safe_mind()
-        ctx.log(
-            f"{Prisma.RED}⚠ {phase_name} FAILURE: Switching to Panic Protocol.{Prisma.RST}"
+        msg_panic = _get_ux(
+            "cycle_strings",
+            "sim_panic_switch",
+            "⚠ {phase_name} FAILURE: Switching to Panic Protocol.",
         )
+        ctx.log(f"{Prisma.RED}{msg_panic.format(phase_name=phase_name)}{Prisma.RST}")
 
 
 class GeodesicOrchestrator:
@@ -1231,9 +1394,12 @@ class GeodesicOrchestrator:
                 ctx.physics = self.eng.phys.observer.last_physics_packet.snapshot()
             elif not ctx.physics:
                 ctx.physics = PanicRoom.get_safe_physics()
-                self.eng.events.log(
-                    "⚠️ PHYSICS BYPASS: Running on Panic Protocol.", "SYS"
+                msg = _get_ux(
+                    "cycle_strings",
+                    "orch_physics_bypass",
+                    "⚠️ PHYSICS BYPASS: Running on Panic Protocol.",
                 )
+                self.eng.events.log(msg, "SYS")
             ctx.validator = CongruenceValidator()
             ctx.reality_stack = getattr(self.eng, "reality_stack", None)
             ctx.user_name = self.eng.user_name
@@ -1263,7 +1429,7 @@ class GeodesicOrchestrator:
         elif "[VSL_HIDE]" in upper_msg:
             self.eng.ui_mode = "IDLE"
 
-        clean_message = re.sub(r'(?i)\[VSL_[A-Z]+\]', '', user_message).strip()
+        clean_message = re.sub(r"(?i)\[VSL_[A-Z]+]", "", user_message).strip()
         if not clean_message:
             clean_message = "(Waiting)"
 
@@ -1331,11 +1497,12 @@ class GeodesicOrchestrator:
         full_trace = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         safe_phys = PanicRoom.get_safe_physics()
         safe_bio = PanicRoom.get_safe_bio()
-        ui_report = (
-            f"\n{Prisma.RED}*** REALITY FRACTURE: {e} ***{Prisma.RST}\n"
-            f"{Prisma.GRY}{full_trace}{Prisma.RST}\n"
-            f"{Prisma.OCHRE}[System stabilized in Safe Mode]{Prisma.RST}"
+        msg = _get_ux(
+            "cycle_strings",
+            "orch_reality_fracture",
+            "\n*** REALITY FRACTURE: {error} ***\n{trace}\n[System stabilized in Safe Mode]",
         )
+        ui_report = f"{Prisma.RED}{msg.format(error=e, trace=full_trace)}{Prisma.RST}"
         return {
             "type": "CRASH",
             "ui": ui_report,

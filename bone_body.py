@@ -7,7 +7,6 @@ from bone_lexicon import LexiconService
 from bone_core import Prisma, LoreManifest
 from bone_config import BoneConfig
 
-# --- UX LORE LOADER ---
 UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
 try:
     with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
@@ -19,8 +18,6 @@ except Exception:
 def _get_ux(section: str, key: str, default: Any) -> Any:
     return _UX_DATA.get(section, {}).get(key, default)
 
-
-# ----------------------
 
 MAX_ACCEPTED_DRAG = 15.0
 DRAG_EXPONENT = 1.2
@@ -231,8 +228,14 @@ class MitochondrialForge:
         health_burn = 2.0
         self.state.ros_buildup += 2.0
         if self.events:
-            msg = _get_ux("mito_forge", "anaerobic_bypass", "⚡ ANAEROBIC BYPASS: Load ({cost:.1f}) too high for ATP. Burning Health instead.")
-            self.events.log(f"{Prisma.MAG}{msg.format(cost=raw_cost)}{Prisma.RST}", "BIO_WARN")
+            msg = _get_ux(
+                "mito_forge",
+                "anaerobic_bypass",
+                "⚡ ANAEROBIC BYPASS: Load ({cost:.1f}) too high for ATP. Burning Health instead.",
+            )
+            self.events.log(
+                f"{Prisma.MAG}{msg.format(cost=raw_cost)}{Prisma.RST}", "BIO_WARN"
+            )
         return MetabolicReceipt(
             base_cost=raw_cost,
             drag_tax=0.0,
@@ -360,14 +363,25 @@ class MitochondrialForge:
             self.state.membrane_potential = max(
                 0.4, self.state.membrane_potential - 0.15
             )
-            msg = _get_ux("mito_forge", "adaptation_stress", "[MITO]: Trauma Adaptive Response (Stress {stress:.1f}). Efficiency dropped ({old:.2f} -> {new:.2f}).")
-            self.events.log(f"{Prisma.RED}{msg.format(stress=stress_level, old=old_potential, new=self.state.membrane_potential)}{Prisma.RST}", "BIO")
+            msg = _get_ux(
+                "mito_forge",
+                "adaptation_stress",
+                "[MITO]: Trauma Adaptive Response (Stress {stress:.1f}). Efficiency dropped ({old:.2f} -> {new:.2f}).",
+            )
+            self.events.log(
+                f"{Prisma.RED}{msg.format(stress=stress_level, old=old_potential, new=self.state.membrane_potential)}{Prisma.RST}",
+                "BIO",
+            )
         elif stress_level > 1.0:
             self.state.membrane_potential = min(
                 1.5, self.state.membrane_potential + 0.05
             )
             if random.random() < 0.2:
-                msg = _get_ux("mito_forge", "adaptation_hormetic", "[MITO]: Hormetic Adaptation. System hardening.")
+                msg = _get_ux(
+                    "mito_forge",
+                    "adaptation_hormetic",
+                    "[MITO]: Hormetic Adaptation. System hardening.",
+                )
                 self.events.log(f"{Prisma.GRN}{msg}{Prisma.RST}", "BIO")
 
     def _trigger_mitophagy(self):
@@ -443,8 +457,14 @@ class DigestiveTrack:
         if count > self.SAMPLING_THRESHOLD:
             factor = count / self.SAMPLING_THRESHOLD
             if random.random() < 0.1:
-                msg = _get_ux("digestive_track", "mass_input", "[BIO]: Mass Input ({count}). Sampling x{factor:.1f}.")
-                logs.append(f"{Prisma.GRY}{msg.format(count=count, factor=factor)}{Prisma.RST}")
+                msg = _get_ux(
+                    "digestive_track",
+                    "mass_input",
+                    "[BIO]: Mass Input ({count}). Sampling x{factor:.1f}.",
+                )
+                logs.append(
+                    f"{Prisma.GRY}{msg.format(count=count, factor=factor)}{Prisma.RST}"
+                )
             return random.sample(words, self.SAMPLING_THRESHOLD), factor
         return words, 1.0
 
@@ -528,15 +548,27 @@ class BioFeedback:
             if self.bio.biometrics.health > 10.0:
                 burn_amount = 5.0
                 self.bio.biometrics.health -= burn_amount
-                msg = _get_ux("bio_feedback", "autophagy", "⚠️ AUTOPHAGY: Burning Health for Fuel (-5 HP).")
+                msg = _get_ux(
+                    "bio_feedback",
+                    "autophagy",
+                    "⚠️ AUTOPHAGY: Burning Health for Fuel (-5 HP).",
+                )
                 logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
                 return "AUTOPHAGY"
             else:
-                msg = _get_ux("bio_feedback", "fuel_depleted", "SYSTEM FAILURE: Bio-Fuel Depleted. The Mausoleum closes.")
+                msg = _get_ux(
+                    "bio_feedback",
+                    "fuel_depleted",
+                    "SYSTEM FAILURE: Bio-Fuel Depleted. The Mausoleum closes.",
+                )
                 logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
                 return "MAUSOLEUM_CLAMP"
         if voltage > 30.0:
-            msg = _get_ux("bio_feedback", "voltage_overload", "CRITICAL: Voltage Overload ({voltage:.1f}v). System clamping.")
+            msg = _get_ux(
+                "bio_feedback",
+                "voltage_overload",
+                "CRITICAL: Voltage Overload ({voltage:.1f}v). System clamping.",
+            )
             logs.append(f"{Prisma.RED}{msg.format(voltage=voltage)}{Prisma.RST}")
             return "MAUSOLEUM_CLAMP"
         return "CLEAR"
@@ -544,11 +576,19 @@ class BioFeedback:
     @staticmethod
     def perform_maintenance(text: str, phys: Any, logs: List[str], tick: int):
         if len(text) > 10000:
-            msg = _get_ux("bio_feedback", "large_buffer", "[MAINTENANCE]: Large input buffer detected.")
+            msg = _get_ux(
+                "bio_feedback",
+                "large_buffer",
+                "[MAINTENANCE]: Large input buffer detected.",
+            )
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         drag = getattr(phys, "narrative_drag", 0.0)
         if drag > 8.0 and tick % 10 == 0:
-            msg = _get_ux("bio_feedback", "clearing_sludge", "[MAINTENANCE]: Clearing sludge from intake valves (Drag {drag:.1f}).")
+            msg = _get_ux(
+                "bio_feedback",
+                "clearing_sludge",
+                "[MAINTENANCE]: Clearing sludge from intake valves (Drag {drag:.1f}).",
+            )
             logs.append(f"{Prisma.OCHRE}{msg.format(drag=drag)}{Prisma.RST}")
             if hasattr(phys, "narrative_drag"):
                 phys.narrative_drag = max(1.0, drag - 2.0)

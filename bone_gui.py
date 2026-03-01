@@ -650,7 +650,9 @@ class CycleReporter:
             ctx.logs.insert(1, f" {Prisma.GRY}{h_flux}{Prisma.RST}")
             for line in reversed(significant):
                 ctx.logs.insert(2, line)
-            ctx.logs.insert(2 + len(significant), f" {Prisma.GRY}└{'─' * 15}{Prisma.RST}")
+            ctx.logs.insert(
+                2 + len(significant), f" {Prisma.GRY}└{'─' * 15}{Prisma.RST}"
+            )
 
     def _package_bureaucracy(self, ctx):
         if not self.eng.bureau:

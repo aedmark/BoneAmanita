@@ -2,6 +2,17 @@ import json, random, re, string, time, unicodedata, os
 from typing import Tuple, Dict, Set, Optional, List
 from bone_core import Prisma, LoreManifest
 
+UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
+try:
+    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
+        _UX_DATA = json.load(f)
+except Exception:
+    _UX_DATA = {}
+
+
+def _get_ux(section: str, key: str, default: Any) -> Any:
+    return _UX_DATA.get(section, {}).get(key, default)
+
 
 class LexiconStore:
     HIVE_FILENAME = "cortex_hive.json"
@@ -84,13 +95,19 @@ class LexiconStore:
                     self._index_word(word, cat)
                     count += 1
             self.hive_loaded = True
-            print(
-                f"{Prisma.CYN}[HIVE]: The Library is open. {count} memories restored.{Prisma.RST}"
+            msg = _get_ux(
+                "lexicon_strings",
+                "hive_restored",
+                "[HIVE]: The Library is open. {count} memories restored.",
             )
+            print(f"{Prisma.CYN}{msg.format(count=count)}{Prisma.RST}")
         except (IOError, json.JSONDecodeError) as e:
-            print(
-                f"{Prisma.RED}[HIVE]: Memory corruption detected. Starting fresh. ({e}){Prisma.RST}"
+            msg = _get_ux(
+                "lexicon_strings",
+                "hive_corruption",
+                "[HIVE]: Memory corruption detected. Starting fresh. ({e})",
             )
+            print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
 
     def save_hive(self):
         try:
@@ -451,13 +468,21 @@ class LexiconService:
             cls.compile_antigens()
             cls.SOLVENTS = cls._STORE.SOLVENTS
             total_words = sum(len(s) for s in cls._STORE.VOCAB.values())
-            print(
-                f"{Prisma.GRN}[LEXICON]: Systems Nominal. {total_words} words loaded.{Prisma.RST}"
+            msg = _get_ux(
+                "lexicon_strings",
+                "sys_nominal",
+                "[LEXICON]: Systems Nominal. {total_words} words loaded.",
             )
+            print(f"{Prisma.GRN}{msg.format(total_words=total_words)}{Prisma.RST}")
 
         except Exception as e:
             cls._INITIALIZED = False
-            print(f"{Prisma.RED}[LEXICON]: Initialization Failed: {e}{Prisma.RST}")
+            msg = _get_ux(
+                "lexicon_strings",
+                "sys_init_fail",
+                "[LEXICON]: Initialization Failed: {e}",
+            )
+            print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
             raise e
 
     @classmethod
@@ -566,7 +591,10 @@ class LexiconService:
     def save(cls):
         if cls._INITIALIZED and cls._STORE:
             cls._STORE.save_hive()
-            print(f"{Prisma.GRN}[LEXICON]: Hive saved to disk.{Prisma.RST}")
+            msg = _get_ux(
+                "lexicon_strings", "hive_saved", "[LEXICON]: Hive saved to disk."
+            )
+            print(f"{Prisma.GRN}{msg}{Prisma.RST}")
 
     @classmethod
     def harvest(cls, text: str) -> Dict[str, List[str]]:
