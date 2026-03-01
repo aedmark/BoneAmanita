@@ -1,17 +1,8 @@
 import random
-import json
-import os
 from dataclasses import dataclass
 from typing import Tuple, Optional, List, Dict, Any
 
-from bone_body import (
-    BioSystem,
-    MitochondrialState,
-    Biometrics,
-    MitochondrialForge,
-    EndocrineSystem,
-    MetabolicGovernor,
-)
+from bone_body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, MetabolicGovernor
 from bone_brain import DreamEngine, ShimmerState
 from bone_config import BoneConfig
 from bone_core import LoreManifest
@@ -20,17 +11,6 @@ from bone_physics import TheGatekeeper, QuantumObserver, SurfaceTension, ZoneIne
 from bone_protocols import LimboLayer
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_types import MindSystem, PhysSystem, PhysicsPacket, Prisma
-
-UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
-try:
-    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
-        _UX_DATA = json.load(f)
-except Exception:
-    _UX_DATA = {}
-
-
-def _get_ux(section: str, key: str, default: Any) -> Any:
-    return _UX_DATA.get(section, {}).get(key, default)
 
 
 class TheCrucible:
@@ -46,21 +26,12 @@ class TheCrucible:
 
     @staticmethod
     def _load_logs():
-        base = {
-            "DAMPER_EMPTY": "⚠️ DAMPER EMPTY",
-            "DAMPER_HIT": "🛡️ DAMPENER: -{reduction:.1f}v ({reason})",
-            "HOLDING": "Holding Charge",
-            "REGULATOR": "⚖️ REGULATOR: {direction} (Drag {current:.1f} -> {new:.1f})",
-            "SURGE": "⚡ SURGE: Absorbed {voltage}v.",
-            "RITUAL": "🔥 RITUAL: Capacity +{gain:.1f}v",
-            "MELTDOWN": "💥 MELTDOWN: Hull Breach (-{damage:.1f} HP)",
-        }
         manifest = LoreManifest.get_instance().get("narrative_data") or {}
-        return manifest.get("CRUCIBLE_LOGS", base)
+        return manifest.get("CRUCIBLE_LOGS", {})
 
     def dampener_status(self):
-        msg = _get_ux(
-            "machine_strings", "crucible_dampener_status", "🛡️ Charges: {charges}"
+        msg = LoreManifest.get_instance().get_ux(
+            "machine_strings", "crucible_dampener_status"
         )
         return msg.format(charges=self.dampener_charges)
 
@@ -68,7 +39,7 @@ class TheCrucible:
         self, voltage_spike: float, stability_index: float
     ) -> Tuple[bool, str, float]:
         if self.dampener_charges <= 0:
-            return False, "⚠️ DAMPER EMPTY", 0.0
+            return False, self.logs.get("DAMPER_EMPTY", "lore element is missing or not found"), 0.0
         should_dampen = False
         reduction_factor = 0.0
         reason = ""
@@ -83,11 +54,11 @@ class TheCrucible:
         if should_dampen:
             self.dampener_charges -= 1
             reduction = voltage_spike * reduction_factor
-            msg = self.logs.get("DAMPER_HIT", "🛡️ Hit").format(
+            msg = self.logs.get("DAMPER_HIT", "lore element is missing or not found").format(
                 reduction=reduction, reason=reason
             )
             return True, msg, reduction
-        return False, self.logs.get("HOLDING", "Holding"), 0.0
+        return False, self.logs.get("HOLDING", "lore element is missing or not found"), 0.0
 
     def audit_fire(self, physics: Dict) -> Tuple[str, float, Optional[str]]:
         voltage = physics.get("voltage", 0.0)
@@ -106,7 +77,7 @@ class TheCrucible:
         msg = None
         if abs(adjustment) > 0.1:
             direction = "TIGHTENING" if adjustment > 0 else "RELAXING"
-            msg = self.logs.get("REGULATOR", "⚖️ REG").format(
+            msg = self.logs.get("REGULATOR", "lore element is missing or not found").format(
                 direction=direction, current=current_drag, new=new_drag
             )
         if physics.get("system_surge_event", False):
@@ -114,7 +85,7 @@ class TheCrucible:
             return (
                 "SURGE",
                 0.0,
-                self.logs.get("SURGE", "⚡ SURGE").format(voltage=voltage),
+                self.logs.get("SURGE", "lore element is missing or not found").format(voltage=voltage),
             )
         if voltage > 18.0:
             if structure > 0.5:
@@ -124,7 +95,7 @@ class TheCrucible:
                 return (
                     "RITUAL",
                     gain,
-                    self.logs.get("RITUAL", "🔥 RITUAL").format(gain=gain),
+                    self.logs.get("RITUAL", "lore element is missing or not found").format(gain=gain),
                 )
             else:
                 damage = voltage * 0.5
@@ -132,7 +103,7 @@ class TheCrucible:
                 return (
                     "MELTDOWN",
                     damage,
-                    self.logs.get("MELTDOWN", "💥 MELTDOWN").format(damage=damage),
+                    self.logs.get("MELTDOWN", "lore element is missing or not found").format(damage=damage),
                 )
         self.active_state = "REGULATED"
         return "REGULATED", adjustment, msg
@@ -162,25 +133,23 @@ class TheForge:
         if random.random() >= (physics.get("voltage", 0) / 20.0) * avg_density:
             return False, None, None
         if heavy > 3:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "machine_strings",
-                "forge_lead_boots",
-                "🔨 FORGED: Lead Boots (Mass {avg_density:.1f})",
+                "forge_lead_boots"
             )
             return True, msg.format(avg_density=avg_density), "LEAD_BOOTS"
         if kinetic > 3:
             return (
                 True,
-                _get_ux(
+                LoreManifest.get_instance().get_ux(
                     "machine_strings",
-                    "forge_safety_scissors",
-                    "🔨 FORGED: Safety Scissors (Kinetic)",
+                    "forge_safety_scissors"
                 ),
                 "SAFETY_SCISSORS",
             )
         return (
             True,
-            _get_ux("machine_strings", "forge_anchor_stone", "🔨 FORGED: Anchor Stone"),
+            LoreManifest.get_instance().get_ux("machine_strings", "forge_anchor_stone"),
             "ANCHOR_STONE",
         )
 
@@ -203,10 +172,9 @@ class TheForge:
                     hits = len(clean_set.intersection(cat_words))
                     entanglement = self._calculate_entanglement(hits, voltage)
                     if random.random() < entanglement:
-                        msg = _get_ux(
+                        msg = LoreManifest.get_instance().get_ux(
                             "machine_strings",
-                            "forge_alchemy_success",
-                            "⚗️ ALCHEMY: {result} (via {item})",
+                            "forge_alchemy_success"
                         )
                         return (
                             True,
@@ -215,10 +183,9 @@ class TheForge:
                             recipe["result"],
                         )
                     else:
-                        msg = _get_ux(
+                        msg = LoreManifest.get_instance().get_ux(
                             "machine_strings",
-                            "forge_alchemy_fail",
-                            "⚠️ ALCHEMY FAIL: Decoherence ({entanglement}%)",
+                            "forge_alchemy_fail"
                         )
                         return (
                             False,
@@ -238,16 +205,14 @@ class TheForge:
         voltage = float(physics.get("voltage", 0))
         gamma = float(physics.get("gamma", 0.0))
         if gamma < 0.15 and counts.get("abstract", 0) > 1:
-            return _get_ux(
+            return LoreManifest.get_instance().get_ux(
                 "machine_strings",
-                "forge_emulsion_fail",
-                "⚠️ EMULSION FAIL: Add Binder (Heavy).",
+                "forge_emulsion_fail"
             )
         if voltage > 15.0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "machine_strings",
-                "forge_overheat",
-                "🌡️ OVERHEAT: {voltage:.1f}v. Add Coolant (Aerobic).",
+                "forge_overheat"
             )
             return msg.format(voltage=voltage)
         return None
@@ -264,16 +229,8 @@ class TheTheremin:
 
     @staticmethod
     def _load_logs():
-        base = {
-            "MELT": "🔥 MELT: -{val:.1f} Resin",
-            "CALCIFY": "🗿 CALCIFICATION: Turn {turns} (+{val:.1f} Resin)",
-            "SHATTER": "🔨 SHATTER: -{val:.1f} Resin",
-            "RESIN": "🎻 RESIN: +{val:.1f}",
-            "TURBULENCE": "🌊 TURBULENCE: -{val:.1f} Resin",
-            "COLLAPSE": "💣 COLLAPSE: AIRSTRIKE INITIATED (Drag +20, Voltage 0)",
-        }
         manifest = LoreManifest.get_instance().get("narrative_data") or {}
-        return manifest.get("THEREMIN_LOGS", base)
+        return manifest.get("THEREMIN_LOGS", {})
 
     def listen(
         self, physics: Dict, governor_mode="COURTYARD"
@@ -301,26 +258,26 @@ class TheTheremin:
             dissolved = thermal_hits * 15.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - dissolved)
             self.classical_turns = 0
-            theremin_msg = self.logs.get("MELT", "🔥 MELT").format(val=dissolved)
+            theremin_msg = self.logs.get("MELT", "lore element is missing or not found").format(val=dissolved)
         if rep > 0.5:
             self.classical_turns += 1
             slag = self.classical_turns * 2.0
             self.decoherence_buildup += slag
-            theremin_msg = self.logs.get("CALCIFY", "🗿 CALCIFY").format(
+            theremin_msg = self.logs.get("CALCIFY", "lore element is missing or not found").format(
                 turns=self.classical_turns, val=slag
             )
         elif complexity > 0.4 and self.classical_turns > 0:
             self.classical_turns = 0
             relief = 15.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - relief)
-            theremin_msg = self.logs.get("SHATTER", "🔨 SHATTER").format(val=relief)
+            theremin_msg = self.logs.get("SHATTER", "lore element is missing or not found").format(val=relief)
         elif resin_flow > 0.5:
             self.decoherence_buildup += resin_flow
-            theremin_msg = self.logs.get("RESIN", "🎻 RESIN").format(val=resin_flow)
+            theremin_msg = self.logs.get("RESIN", "lore element is missing or not found").format(val=resin_flow)
         if turb > 0.6 and self.decoherence_buildup > 0:
             shatter_amt = turb * 10.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - shatter_amt)
-            theremin_msg = self.logs.get("TURBULENCE", "🌊 TURBULENCE").format(
+            theremin_msg = self.logs.get("TURBULENCE", "lore element is missing or not found").format(
                 val=shatter_amt
             )
             self.classical_turns = 0
@@ -339,26 +296,25 @@ class TheTheremin:
             return (
                 False,
                 resin_flow,
-                self.logs.get("COLLAPSE", "💣 COLLAPSE"),
+                self.logs.get("COLLAPSE", "lore element is missing or not found"),
                 "AIRSTRIKE",
             )
         if self.classical_turns > 3:
             critical_event = "CORROSION"
-            theremin_msg = f"{theremin_msg or ''}{_get_ux('machine_strings', 'theremin_corrosion', ' | ⚠️ CORROSION')}"
+            theremin_msg = f"{theremin_msg or ''}{LoreManifest.get_instance().get_ux('machine_strings', 'theremin_corrosion')}"
         if self.decoherence_buildup > self.AMBER_THRESHOLD:
             self.is_stuck = True
-            theremin_msg = f"{theremin_msg or ''}{_get_ux('machine_strings', 'theremin_stuck', ' | 🍯 STUCK')}"
+            theremin_msg = f"{theremin_msg or ''}{LoreManifest.get_instance().get_ux('machine_strings', 'theremin_stuck')}"
         elif self.is_stuck and self.decoherence_buildup < 5.0:
             self.is_stuck = False
-            theremin_msg = f"{theremin_msg or ''}{_get_ux('machine_strings', 'theremin_free', ' | 🦋 FREE')}"
+            theremin_msg = f"{theremin_msg or ''}{LoreManifest.get_instance().get_ux('machine_strings', 'theremin_free')}"
         return self.is_stuck, resin_flow, theremin_msg, critical_event
 
     def get_readout(self):
         status = "STUCK" if self.is_stuck else "FLOW"
-        msg = _get_ux(
+        msg = LoreManifest.get_instance().get_ux(
             "machine_strings",
-            "theremin_readout",
-            "🎻 THEREMIN   Resin {resin:.1f}  Status {status}",
+            "theremin_readout"
         )
         return msg.format(resin=self.decoherence_buildup, status=status)
 
@@ -407,10 +363,9 @@ class PanicRoom:
             for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "LAMBDA", "CHI"]
         }
         safe_packet.clean_words = ["white", "room", "safe", "mode"]
-        safe_packet.raw_text = _get_ux(
+        safe_packet.raw_text = LoreManifest.get_instance().get_ux(
             "machine_strings",
-            "panic_physics_text",
-            "[PANIC PROTOCOL]: SAFE_MODE. You will wake up in a white room. Do not be alarmed.",
+            "panic_physics_text"
         )
         safe_packet.flow_state = "SAFE_MODE"
         safe_packet.zone = "PANIC_ROOM"
@@ -419,10 +374,9 @@ class PanicRoom:
 
     @staticmethod
     def get_safe_bio(previous_state=None):
-        log_msg = _get_ux(
+        log_msg = LoreManifest.get_instance().get_ux(
             "machine_strings",
-            "panic_bio_log",
-            "BIO FAIL: Panic Room Protocol Active. Sensory input severed.",
+            "panic_bio_log"
         )
         base = {
             "is_alive": True,
@@ -452,10 +406,9 @@ class PanicRoom:
         return {
             "lens": "GORDON",
             "role": "Panic Room Overseer",
-            "thought": _get_ux(
+            "thought": LoreManifest.get_instance().get_ux(
                 "machine_strings",
-                "panic_mind_thought",
-                "SAFE_MODE. You will wake up in a white room. Do not be alarmed.",
+                "panic_mind_thought"
             ),
         }
 
@@ -493,7 +446,7 @@ class ViralTracer:
 
     @staticmethod
     def psilocybin_rewire(loop_path: List[str]) -> str:
-        msg = _get_ux("machine_strings", "tracer_rewire", "Rewired logic loop: {path}")
+        msg = LoreManifest.get_instance().get_ux("machine_strings", "tracer_rewire")
         return msg.format(path="->".join(loop_path))
 
 
@@ -574,10 +527,9 @@ class BoneArchitect:
     def incubate(events, lex) -> SystemEmbryo:
         if hasattr(events, "set_dormancy"):
             events.set_dormancy(True)
-        msg = _get_ux(
+        msg = LoreManifest.get_instance().get_ux(
             "machine_strings",
-            "arch_incubate",
-            "[ARCHITECT]: Laying foundations (Dormancy Active)...",
+            "arch_incubate"
         )
         events.log(
             f"{Prisma.GRY}{msg}{Prisma.RST}",
@@ -598,10 +550,9 @@ class BoneArchitect:
             if hasattr(embryo.mind.mem, "autoload_last_spore"):
                 load_result = embryo.mind.mem.autoload_last_spore()
         except Exception as e:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "machine_strings",
-                "arch_spore_fail",
-                "[ARCHITECT]: Spore resurrection failed: {e}",
+                "arch_spore_fail"
             )
             events.log(
                 f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}",
@@ -634,20 +585,18 @@ class BoneArchitect:
             if hasattr(embryo.physics.nav, "import_atlas"):
                 try:
                     embryo.physics.nav.import_atlas(recovered_atlas)
-                    msg = _get_ux(
+                    msg = LoreManifest.get_instance().get_ux(
                         "machine_strings",
-                        "arch_map_restored",
-                        "[ARCHITECT]: World Map restored from Spore.",
+                        "arch_map_restored"
                     )
                     events.log(
                         f"{Prisma.MAG}{msg}{Prisma.RST}",
                         "SYS",
                     )
                 except Exception as e:
-                    msg = _get_ux(
+                    msg = LoreManifest.get_instance().get_ux(
                         "machine_strings",
-                        "arch_map_corrupt",
-                        "[ARCHITECT]: Atlas corrupt, discarding map: {e}",
+                        "arch_map_corrupt"
                     )
                     events.log(
                         f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}",
@@ -655,10 +604,9 @@ class BoneArchitect:
                     )
         if embryo.bio.mito.state.atp_pool <= 0.0:
             genesis_val = getattr(BoneConfig.METABOLISM, "GENESIS_VOLTAGE", 100.0)
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "machine_strings",
-                "arch_cold_boot",
-                "⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP).",
+                "arch_cold_boot"
             )
             events.log(msg.format(genesis_val=genesis_val), "SYS")
             embryo.bio.mito.adjust_atp(genesis_val, reason="GENESIS")

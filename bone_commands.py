@@ -1,19 +1,8 @@
-import os, json
 import shlex
-from typing import Dict, Callable, List, Any, Optional
-from bone_core import LoreManifest, Prisma
+from typing import Dict, Callable, List, Optional
+
 from bone_config import BonePresets, BoneConfig
-
-UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
-try:
-    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
-        _UX_DATA = json.load(f)
-except Exception:
-    _UX_DATA = {}
-
-
-def _get_ux(section: str, key: str, default: Any) -> Any:
-    return _UX_DATA.get(section, {}).get(key, default)
+from bone_core import LoreManifest, Prisma
 
 
 class CommandStateInterface:
@@ -53,17 +42,23 @@ class CommandStateInterface:
 
     def save_state(self) -> str:
         if not hasattr(self.eng, "mind") or not hasattr(self.eng.mind, "mem"):
-            return _get_ux(
-                "command_state", "mem_error", "Error: Memory system not found."
+            return LoreManifest.get_instance().get_ux(
+                "command_state", "mem_error"
             )
-        loc = _get_ux("command_state", "default_loc", "Unknown")
-        last_out = _get_ux("command_state", "default_out", "Silence.")
+        loc = LoreManifest.get_instance().get_ux(
+            "command_state", "default_loc"
+        )
+        last_out = LoreManifest.get_instance().get_ux(
+            "command_state", "default_out"
+        )
         inv = []
         if hasattr(self.eng, "cortex"):
             state = self.eng.cortex.gather_state(
                 getattr(self.eng.cortex, "last_physics", {})
             )
-            def_orbit = _get_ux("command_state", "default_orbit", "Void")
+            def_orbit = LoreManifest.get_instance().get_ux(
+                "command_state", "default_orbit"
+            )
             loc = state.get("world", {}).get("orbit", [def_orbit])[0]
             if self.eng.cortex.dialogue_buffer:
                 last_out = self.eng.cortex.dialogue_buffer[-1]
@@ -99,8 +94,8 @@ class CommandStateInterface:
                 world_atlas=atlas_data,
                 village_data=None,
             )
-        return _get_ux(
-            "command_state", "unreachable_error", "Error: Memory system unreachable."
+        return LoreManifest.get_instance().get_ux(
+            "command_state", "unreachable_error"
         )
 
     def get_vitals(self) -> Dict[str, float]:
@@ -120,7 +115,9 @@ class CommandStateInterface:
 
     def get_navigation_report(self) -> str:
         if not hasattr(self.eng, "navigator") or not hasattr(self.eng, "phys"):
-            return _get_ux("command_state", "nav_offline", "Navigation Offline.")
+            return LoreManifest.get_instance().get_ux(
+                "command_state", "nav_offline"
+            )
         nav = self.eng.navigator
         packet = None
         if hasattr(self.eng.phys, "observer"):
@@ -128,8 +125,8 @@ class CommandStateInterface:
 
         if nav and packet:
             return nav.report_position(packet)
-        return _get_ux(
-            "command_state", "nav_unresponsive", "Navigation Systems Unresponsive."
+        return LoreManifest.get_instance().get_ux(
+            "command_state", "nav_unresponsive"
         )
 
     def get_soul_status(self) -> Optional[str]:
@@ -147,11 +144,11 @@ class ResourceTax:
         stamina_cost = costs.get("stamina", 0.0)
         atp_cost = costs.get("atp", 0.0)
 
-        msg_exh = _get_ux(
-            "resource_tax", "exhausted", "🛑 EXHAUSTED: Requires {cost} Stamina."
+        msg_exh = LoreManifest.get_instance().get_ux(
+            "resource_tax", "exhausted"
         )
-        msg_starv = _get_ux(
-            "resource_tax", "starving", "🛑 STARVING: Requires {cost} ATP."
+        msg_starv = LoreManifest.get_instance().get_ux(
+            "resource_tax", "starving"
         )
 
         if self.state.get_resource("stamina") < stamina_cost:
@@ -188,17 +185,18 @@ class CommandRegistry:
             parts = shlex.split(text)
         except ValueError:
             self.state.log(
-                _get_ux("command_registry", "syntax_error", "Syntax Error."), "CMD"
+                LoreManifest.get_instance().get_ux(
+                    "command_registry", "syntax_error"
+                ),
+                "CMD",
             )
             return True
         cmd = parts[0].lower()
         if cmd in self.commands:
             return self.commands[cmd](parts)
         else:
-            msg = _get_ux(
-                "command_registry",
-                "unknown_command",
-                "Unknown command '{cmd}'. Try /help.",
+            msg = LoreManifest.get_instance().get_ux(
+                "command_registry", "unknown_command"
             )
             self.state.log(msg.format(cmd=cmd), "CMD")
             return True
@@ -219,49 +217,31 @@ class CommandProcessor:
         self.registry = CommandRegistry(self.interface)
         self.P = prisma_ref
 
-        def _cd(key, default):
-            return _get_ux("command_descriptions", key, default)
+        def _cd(key):
+            return LoreManifest.get_instance().get_ux("command_descriptions", key)
 
-        self.registry.register("/help", self._cmd_help, _cd("help", "Show this menu"))
-        self.registry.register(
-            "/status", self._cmd_status, _cd("status", "Check vitals")
-        )
-        self.registry.register("/save", self._cmd_save, _cd("save", "Persist state"))
-        self.registry.register(
-            "/inventory", self._cmd_inventory, _cd("inventory", "Check pockets")
-        )
-        self.registry.register("/map", self._cmd_map, _cd("map", "Navigation check"))
-        self.registry.register(
-            "/mode", self._cmd_mode, _cd("mode", "Switch operational mode")
-        )
-        self.registry.register(
-            "/debug", self._cmd_debug, _cd("debug", "Toggle verbose logs")
-        )
-        self.registry.register("/exit", self._cmd_exit, _cd("exit", "Shutdown"))
-        self.registry.register("/soul", self._cmd_soul, _cd("soul", "Introspection"))
-        self.registry.register(
-            "/look", self._cmd_look, _cd("look", "Observe environment")
-        )
-        self.registry.register(
-            "/reload", self._cmd_reload, _cd("reload", "Hot-reload Lore")
-        )
-        self.registry.register(
-            "/truth", self._cmd_truth, _cd("truth", "Adjust Reality Ambiguity [0-3]")
-        )
-        self.registry.register(
-            "/soothe", self._cmd_soothe, _cd("soothe", "Burn ATP to quell memory guilt")
-        )
-        self.registry.register("/use", self._cmd_use, _cd("use", "Use/Consume an item"))
+        self.registry.register("/help", self._cmd_help, _cd("help"))
+        self.registry.register("/status", self._cmd_status, _cd("status"))
+        self.registry.register("/save", self._cmd_save, _cd("save"))
+        self.registry.register("/inventory", self._cmd_inventory, _cd("inventory"))
+        self.registry.register("/map", self._cmd_map, _cd("map"))
+        self.registry.register("/mode", self._cmd_mode, _cd("mode"))
+        self.registry.register("/debug", self._cmd_debug, _cd("debug"))
+        self.registry.register("/exit", self._cmd_exit, _cd("exit"))
+        self.registry.register("/soul", self._cmd_soul, _cd("soul"))
+        self.registry.register("/look", self._cmd_look, _cd("look"))
+        self.registry.register("/reload", self._cmd_reload, _cd("reload"))
+        self.registry.register("/truth", self._cmd_truth, _cd("truth"))
+        self.registry.register("/soothe", self._cmd_soothe, _cd("soothe"))
+        self.registry.register("/use", self._cmd_use, _cd("use"))
 
     def execute(self, text: str):
         if hasattr(self.interface.eng, "reality_stack"):
             stack = self.interface.eng.reality_stack
             rules = stack.get_grammar_rules()
             if not rules.get("allow_commands", True):
-                msg = _get_ux(
-                    "command_alerts",
-                    "reality_lock",
-                    "COMMAND REJECTED: Reality Depth {depth} prohibits administrative override.",
+                msg = LoreManifest.get_instance().get_ux(
+                    "command_alerts", "reality_lock"
                 )
                 self.interface.log(
                     f"{self.P.RED}{msg.format(depth=stack.current_depth)}{self.P.RST}",
@@ -271,42 +251,42 @@ class CommandProcessor:
 
         text_upper = text.upper()
 
-        def _vn(key, default):
-            return _get_ux("vsl_notifications", key, default)
+        def _vn(key):
+            return LoreManifest.get_instance().get_ux("vsl_notifications", key)
 
         if "[VSL_LITE]" in text_upper:
             self.interface.eng.ui_mode = "LITE"
             self.interface.log(
-                f"{self.P.CYN}{_vn('lite', '[VSL_LITE]: Simple energy meter engaged.')}{self.P.RST}"
+                f"{self.P.CYN}{_vn('lite')}{self.P.RST}"
             )
         elif "[VSL_CORE]" in text_upper:
             self.interface.eng.ui_mode = "CORE"
             self.interface.log(
-                f"{self.P.CYN}{_vn('core', '[VSL_CORE]: 5-Coordinate display engaged.')}{self.P.RST}"
+                f"{self.P.CYN}{_vn('core')}{self.P.RST}"
             )
         elif "[VSL_DEEP]" in text_upper:
             self.interface.eng.ui_mode = "DEEP"
             self.interface.log(
-                f"{self.P.MAG}{_vn('deep', '[VSL_DEEP]: Full 15-vector lattice exposed.')}{self.P.RST}"
+                f"{self.P.MAG}{_vn('deep')}{self.P.RST}"
             )
 
         if "[MOD:CODING]" in text_upper or "[SLASH]" in text_upper:
             self.interface.log(
-                f"{self.P.INDIGO}{_vn('coding', 'SLASH Mod Chip Engaged.')}{self.P.RST}"
+                f"{self.P.INDIGO}{_vn('coding')}{self.P.RST}"
             )
             if hasattr(self.interface.eng, "council") and hasattr(
-                self.interface.eng.council, "slash_council"
+                    self.interface.eng.council, "slash_council"
             ):
                 self.interface.eng.council.slash_council.active = True
 
         if "[VSL_IDLE]" in text_upper:
             self.interface.log(
-                f"{self.P.VIOLET}{_vn('idle', '[VSL_IDLE]: Zero ATP burn. Village dormant.')}{self.P.RST}"
+                f"{self.P.VIOLET}{_vn('idle')}{self.P.RST}"
             )
             self.interface.eng.mode_settings = {"atp_drain_enabled": False}
         elif "[VSL_RECOVER]" in text_upper:
             self.interface.log(
-                f"{self.P.GRN}{_vn('recover', '[VSL_RECOVER]: Zen mode. Stamina regenerating.')}{self.P.RST}"
+                f"{self.P.GRN}{_vn('recover')}{self.P.RST}"
             )
             self.interface.modify_resource("stamina", 20.0)
 
@@ -319,11 +299,7 @@ class CommandProcessor:
         cost = 25.0
         current_stamina = self.interface.get_resource("stamina")
         if current_stamina < cost:
-            msg = _get_ux(
-                "command_alerts",
-                "soothe_weak",
-                "Too weak to mourn. (Req: {cost} Stamina)",
-            )
+            msg = LoreManifest.get_instance().get_ux("command_alerts", "soothe_weak")
             self.interface.log(f"{self.P.RED}{msg.format(cost=cost)}{self.P.RST}")
             return True
         if (
@@ -331,35 +307,37 @@ class CommandProcessor:
             or not hasattr(self.interface.eng.mind, "mem")
             or not hasattr(self.interface.eng.mind.mem, "soothe_conscience")
         ):
-            msg = _get_ux(
-                "command_alerts",
-                "soothe_missing_mem",
-                "The subconscious is not installed.",
+            msg = LoreManifest.get_instance().get_ux(
+                "command_alerts", "soothe_missing_mem"
             )
             self.interface.log(f"{self.P.YEL}{msg}{self.P.RST}")
             return True
         self.interface.modify_resource("stamina", -cost)
         result_msg = self.interface.eng.mind.mem.soothe_conscience()
-        msg = _get_ux("command_alerts", "soothe_success", "🏺 {msg} (-{cost} Stamina)")
+        msg = LoreManifest.get_instance().get_ux("command_alerts", "soothe_success")
         self.interface.log(
             f"{self.P.OCHRE}{msg.format(msg=result_msg, cost=cost)}{self.P.RST}"
         )
         return True
 
     def _cmd_help(self, _parts):
-        header = _get_ux("help_menu", "header", "/// BONEAMANITA 16.2.0 TERMINAL ///")
-        phase_pfx = _get_ux("help_menu", "phase_prefix", "Operating Phase: ")
-        def_phase = _get_ux("help_menu", "default_phase", "EXTANT")
-        footer = _get_ux("help_menu", "footer", ">> Use wisely. Entropy is watching.")
-        uncat = _get_ux("help_menu", "uncategorized", "UNCATEGORIZED")
+        header = LoreManifest.get_instance().get_ux(
+            "help_menu", "header"
+        )
+        phase_pfx = LoreManifest.get_instance().get_ux(
+            "help_menu", "phase_prefix"
+        )
+        def_phase = LoreManifest.get_instance().get_ux(
+            "help_menu", "default_phase"
+        )
+        footer = LoreManifest.get_instance().get_ux(
+            "help_menu", "footer"
+        )
+        uncat = LoreManifest.get_instance().get_ux(
+            "help_menu", "uncategorized"
+        )
 
-        default_structure = {
-            "SURVIVAL": ["/status", "/inventory", "/look"],
-            "PROTOCOL": ["/save", "/mode", "/exit", "/help"],
-            "MYSTICISM": ["/soul", "/map", "/truth"],
-            "MAINTENANCE": ["/debug", "/reload"],
-        }
-        structure = _get_ux("help_menu", "structure", default_structure)
+        structure = LoreManifest.get_instance().get_ux("help_menu", "structure")
 
         lines = [
             f"\n{self.P.CYN}{header}{self.P.RST}",
@@ -406,16 +384,17 @@ class CommandProcessor:
     def _cmd_mode(self, parts):
         if len(parts) < 2:
             self.interface.log(
-                _get_ux(
+                LoreManifest.get_instance().get_ux(
                     "command_alerts",
-                    "mode_usage",
-                    "Usage: /mode [ZEN_GARDEN | THUNDERDOME | SANCTUARY]",
+                    "mode_usage"
                 )
             )
             return True
         mode_name = parts[1].upper()
         if not hasattr(BonePresets, mode_name):
-            msg = _get_ux("command_alerts", "mode_unknown", "Unknown mode: {mode}.")
+            msg = LoreManifest.get_instance().get_ux(
+                "command_alerts", "mode_unknown"
+            )
             self.interface.log(f"{self.P.RED}{msg.format(mode=mode_name)}{self.P.RST}")
             return True
         if self.tax.levy("MODE_SWITCH", {"stamina": 10.0}):
@@ -432,25 +411,30 @@ class CommandProcessor:
                 )
             if phys_packet:
                 self.interface.Config.reconcile_state(phys_packet)
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "command_alerts",
-                    "mode_reconciled",
-                    "State reconciled to {mode} parameters.",
+                    "mode_reconciled"
                 )
                 self.interface.log(
                     f"{self.P.CYN}{msg.format(mode=mode_name)}{self.P.RST}"
                 )
-            msg = _get_ux("command_alerts", "mode_switched", "Switched to {mode}.")
+            msg = LoreManifest.get_instance().get_ux(
+                "command_alerts", "mode_switched"
+            )
             self.interface.log(msg.format(mode=mode_name))
         return True
 
     def _cmd_save(self, _parts):
         res = self.interface.save_state()
         if "Error" in res or "Failed" in res:
-            msg = _get_ux("command_alerts", "save_failed", "SAVE FAILED: {res}")
+            msg = LoreManifest.get_instance().get_ux(
+                "command_alerts", "save_failed"
+            )
             self.interface.log(f"{self.P.RED}{msg.format(res=res)}{self.P.RST}")
         else:
-            msg = _get_ux("command_alerts", "save_success", "SAVED: {res}")
+            msg = LoreManifest.get_instance().get_ux(
+                "command_alerts", "save_success"
+            )
             self.interface.log(f"{self.P.GRN}{msg.format(res=res)}{self.P.RST}")
         return True
 
@@ -458,9 +442,15 @@ class CommandProcessor:
         items = self.interface.get_inventory()
         P = self.interface.P
 
-        header = _get_ux("inventory_strings", "header", "/// GORDON KNOT STORAGE ///")
-        empty = _get_ux("inventory_strings", "empty", "   [POCKETS EMPTY]")
-        slots_str = _get_ux("inventory_strings", "slots", "Slots")
+        header = LoreManifest.get_instance().get_ux(
+            "inventory_strings", "header"
+        )
+        empty = LoreManifest.get_instance().get_ux(
+            "inventory_strings", "empty"
+        )
+        slots_str = LoreManifest.get_instance().get_ux(
+            "inventory_strings", "slots"
+        )
 
         self.interface.log(f"{P.WHT}{header}{P.RST}")
         if not items:
@@ -484,23 +474,18 @@ class CommandProcessor:
         self.interface.Config.VERBOSE_LOGGING = (
             not self.interface.Config.VERBOSE_LOGGING
         )
-        msg = _get_ux("command_alerts", "debug_mode", "Debug Mode: {state}")
+        msg = LoreManifest.get_instance().get_ux(
+            "command_alerts", "debug_mode"
+        )
         self.interface.log(msg.format(state=self.interface.Config.VERBOSE_LOGGING))
         return True
 
     def _cmd_exit(self, _parts):
-        import sys
 
-        msg = _get_ux("command_alerts", "exit_halt", "System Halt Initiated.")
+        msg = LoreManifest.get_instance().get_ux(
+            "command_alerts", "exit_halt"
+        )
         self.interface.log(f"{Prisma.RED}{msg}{Prisma.RST}", "SYS")
-        if "streamlit" in sys.modules:
-            try:
-                import streamlit as st
-
-                st.stop()
-            except Exception:
-                pass
-        raise KeyboardInterrupt
 
     def _cmd_soul(self, _parts):
         soul_msg = self.interface.get_soul_status()
@@ -514,8 +499,8 @@ class CommandProcessor:
             self.interface.log(result["ui"])
         else:
             self.interface.log(
-                _get_ux(
-                    "command_alerts", "look_blind", "Blindness. The engine cannot see."
+                LoreManifest.get_instance().get_ux(
+                    "command_alerts", "look_blind"
                 )
             )
         return True
@@ -524,22 +509,25 @@ class CommandProcessor:
         if len(parts) > 1:
             target = parts[1].upper()
             LoreManifest.get_instance().flush_cache(target)
-            msg = _get_ux("command_alerts", "reload_target", "Reloaded {target}.")
+            msg = LoreManifest.get_instance().get_ux(
+                "command_alerts", "reload_target"
+            )
             self.interface.log(msg.format(target=target))
         else:
             LoreManifest.get_instance().flush_cache()
             self.interface.log(
-                _get_ux("command_alerts", "reload_all", "Reloaded all Lore.")
+                LoreManifest.get_instance().get_ux(
+                    "command_alerts", "reload_all"
+                )
             )
         return True
 
     def _cmd_truth(self, parts):
         if len(parts) < 2:
             self.interface.log(
-                _get_ux(
+                LoreManifest.get_instance().get_ux(
                     "command_alerts",
-                    "truth_usage",
-                    "Usage: /truth [0=Boardroom, 1=Workshop, 2=RedTeam, 3=Palimpsest]",
+                    "truth_usage"
                 )
             )
             return True
@@ -552,28 +540,25 @@ class CommandProcessor:
             orchestrator = getattr(self.interface.eng, "orchestrator", None)
             if not orchestrator:
                 self.interface.log(
-                    _get_ux(
+                    LoreManifest.get_instance().get_ux(
                         "command_alerts",
-                        "truth_no_orch",
-                        "Error: Orchestrator not found.",
+                        "truth_no_orch"
                     )
                 )
                 return True
             reporter = getattr(orchestrator, "reporter", None)
             if not reporter:
                 self.interface.log(
-                    _get_ux(
+                    LoreManifest.get_instance().get_ux(
                         "command_alerts",
-                        "truth_no_reporter",
-                        "Error: CycleReporter not found.",
+                        "truth_no_reporter"
                     )
                 )
                 return True
             if not hasattr(reporter.renderer, "dial_setting"):
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "command_alerts",
-                    "truth_transplant",
-                    "[SYS] Transplanting TruthRenderer into active cycle...",
+                    "truth_transplant"
                 )
                 self.interface.log(f"{self.P.YEL}{msg}{self.P.RST}")
                 new_renderer = TruthRenderer(self.interface.eng)
@@ -581,19 +566,21 @@ class CommandProcessor:
                 reporter.renderers["STANDARD"] = new_renderer
             reporter.renderer.dial_setting = mode
             modes = ["BOARDROOM", "WORKSHOP", "RED TEAM", "PALIMPSEST"]
-            msg = _get_ux(
-                "command_alerts", "truth_dial_set", "Ambiguity Dial set to: {mode}"
+            msg = LoreManifest.get_instance().get_ux(
+                "command_alerts", "truth_dial_set"
             )
             self.interface.log(
                 f"{self.P.CYN}{msg.format(mode=modes[mode])}{self.P.RST}"
             )
         except ValueError:
             self.interface.log(
-                _get_ux("command_alerts", "truth_invalid", "Invalid mode. Use 0-3.")
+                LoreManifest.get_instance().get_ux(
+                    "command_alerts", "truth_invalid"
+                )
             )
         except Exception as e:
-            msg = _get_ux(
-                "command_alerts", "truth_failure", "Truth Dial Failure: {error}"
+            msg = LoreManifest.get_instance().get_ux(
+                "command_alerts", "truth_failure"
             )
             self.interface.log(msg.format(error=e))
         return True
@@ -601,13 +588,17 @@ class CommandProcessor:
     def _cmd_use(self, parts):
         if len(parts) < 2:
             self.interface.log(
-                _get_ux("command_alerts", "use_usage", "Usage: /use [ITEM_NAME]")
+                LoreManifest.get_instance().get_ux(
+                    "command_alerts", "use_usage"
+                )
             )
             return True
         item_name = parts[1].upper()
         gordon = getattr(self.interface.eng, "gordon", None)
         if not gordon:
-            msg = _get_ux("command_alerts", "use_no_inv", "Inventory system offline.")
+            msg = LoreManifest.get_instance().get_ux(
+                "command_alerts", "use_no_inv"
+            )
             self.interface.log(f"{self.P.RED}{msg}{self.P.RST}")
             return True
         success, msg = gordon.consume(item_name)

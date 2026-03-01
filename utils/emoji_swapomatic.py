@@ -8,6 +8,7 @@ def run_swapomatic(filepath):
         print(f"❌ [SWAPOMATIC]: Error - File not found at {filepath}")
         return
 
+    # 1. Read the original JSON (handling the existing UTF-8 literal symbols)
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -16,6 +17,8 @@ def run_swapomatic(filepath):
         print(f"❌ [SWAPOMATIC]: Failed to load JSON - {e}")
         return
 
+    # 2. Save it back with ensure_ascii=True
+    # This automatically converts ⚡ to \u26a1, ☳ to \u2633, etc.
     try:
         with open(filepath, 'w', encoding='ascii') as f:
             json.dump(data, f, indent=2, ensure_ascii=True)

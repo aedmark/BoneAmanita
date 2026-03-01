@@ -6,17 +6,6 @@ from bone_core import LoreManifest, EventBus
 from bone_config import BoneConfig
 from bone_physics import PhysicsDelta
 
-UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
-try:
-    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
-        _UX_DATA = json.load(f)
-except Exception:
-    _UX_DATA = {}
-
-
-def _get_ux(section: str, key: str, default: Any) -> Any:
-    return _UX_DATA.get(section, {}).get(key, default)
-
 
 def _hydrate_packet(p: Any) -> PhysicsPacket:
     if isinstance(p, PhysicsPacket):
@@ -115,7 +104,7 @@ class TheTinkerer:
         self.tool_resonance[item] = min(10.0, self.tool_resonance[item] + amount)
         curr = self.tool_resonance[item]
         if 4.8 < curr < 5.2 and random.random() < 0.05:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "village_strings",
                 "tinkerer_resonance",
                 "🔨 TINKER: {item} hums with resonance. (Lvl 5 Mastery)",
@@ -141,7 +130,7 @@ class TheTinkerer:
                             self.gordon.ITEM_REGISTRY[new_name] = new_data
                         self.tool_resonance[new_name] = resonance / 2.0
                         del self.tool_resonance[old_name]
-                        msg = _get_ux(
+                        msg = LoreManifest.get_instance().get_ux(
                             "village_strings",
                             "tinkerer_ascension",
                             "✨ ASCENSION: {old} -> {new} (Born of Resonance)",
@@ -171,7 +160,7 @@ class ParadoxSeed:
 
     def bloom(self) -> str:
         self.bloomed = True
-        msg = _get_ux("village_strings", "paradox_bloom", "PARADOX BLOOM: {question}")
+        msg = LoreManifest.get_instance().get_ux("village_strings", "paradox_bloom", "PARADOX BLOOM: {question}")
         return msg.format(question=self.question)
 
 
@@ -204,14 +193,14 @@ class MirrorGraph:
 
     def get_reflection_modifiers(self) -> Dict:
         if not self.stats or sum(self.stats.values()) == 0:
-            msg_neutral = _get_ux(
+            msg_neutral = LoreManifest.get_instance().get_ux(
                 "village_strings", "mirror_neutral", "Reflecting NEUTRAL"
             )
             return {"flavor": msg_neutral, "drag_mult": 1.0}
         top_stat = max(self.stats, key=self.stats.get)
         drag_map = {"WAR": 1.2, "ROT": 1.5, "LAW": 0.8, "ART": 0.9}
         mult = drag_map.get(top_stat, 1.0)
-        msg_stat = _get_ux(
+        msg_stat = LoreManifest.get_instance().get_ux(
             "village_strings", "mirror_stat", "Reflecting {stat}"
         ).format(stat=top_stat)
         return {"flavor": msg_stat, "drag_mult": mult}
@@ -261,7 +250,7 @@ class TheCartographer:
             return logs
         if "heavy" in node.atmosphere.lower():
             packet.narrative_drag += 2.0
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "village_strings",
                 "carto_env_heavy",
                 "🌫️ ENVIRONMENT: The air here is heavy. (Drag +2)",
@@ -269,7 +258,7 @@ class TheCartographer:
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         if "vibrating" in node.atmosphere.lower():
             packet.voltage += 1.0
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "village_strings",
                 "carto_env_static",
                 "⚡ ENVIRONMENT: Static charge detected. (Voltage +1)",
@@ -304,7 +293,7 @@ class TheCartographer:
                 self._prune_graph()
             new_node = self._generate_loci_data(target_id, packet)
             self.world_graph[target_id] = new_node
-            msg_str = _get_ux(
+            msg_str = LoreManifest.get_instance().get_ux(
                 "village_strings",
                 "carto_new_sector",
                 "🗺️ CARTOGRAPHER: New Sector Discovered [{name}].",
@@ -313,7 +302,7 @@ class TheCartographer:
         else:
             new_node = self.world_graph[target_id]
             if new_node.id != self.current_node_id:
-                msg_str = _get_ux(
+                msg_str = LoreManifest.get_instance().get_ux(
                     "village_strings",
                     "carto_arriving",
                     "🗺️ CARTOGRAPHER: Arriving at {name}.",
@@ -427,7 +416,7 @@ class TownHall:
             return blooms
         lower_words = [w.lower() for w in clean_words]
 
-        prefix = _get_ux("village_strings", "town_bloom", "🌷 PARADOX BLOOM:")
+        prefix = LoreManifest.get_instance().get_ux("village_strings", "town_bloom", "🌷 PARADOX BLOOM:")
 
         for seed in self.seeds:
             if seed.bloomed:
@@ -455,7 +444,7 @@ class TownHall:
                 loc_name = current_node.name
         if latency > 3.0:
             status = "HIGH_LATENCY"
-            advice = _get_ux("village_strings", "town_lag", "System lag detected.")
+            advice = LoreManifest.get_instance().get_ux("village_strings", "town_lag", "System lag detected.")
         elif packet.voltage > BoneConfig.PHYSICS.VOLTAGE_HIGH:
             status = "HIGH_VOLTAGE"
             advice = random.choice(forecasts.get("HIGH_VOLTAGE", ["Manic energy."]))
@@ -466,7 +455,7 @@ class TownHall:
             status = "BALANCED"
             advice = random.choice(forecasts.get("BALANCED", ["Nominal."]))
 
-        census_fmt = _get_ux(
+        census_fmt = LoreManifest.get_instance().get_ux(
             "village_strings", "town_census", "CENSUS [{loc}]: {status} | {advice}"
         )
         report = census_fmt.format(loc=loc_name, status=status, advice=advice)
@@ -475,14 +464,14 @@ class TownHall:
         if news:
             report += f"\n{news}"
         if packet.voltage > 20.0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "village_strings",
                 "town_restrain",
                 "⚖️ COUNCIL ALERT: The Chairholder is drafting a restraining order.",
             )
             report += f"\n{Prisma.RED}{msg}{Prisma.RST}"
         elif packet.voltage < 2.0 and packet.narrative_drag > 5.0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "village_strings",
                 "town_loops",
                 "⚖️ COUNCIL ALERT: Strange Loops detected in the lower districts.",
@@ -490,21 +479,21 @@ class TownHall:
             report += f"\n{Prisma.MAG}{msg}{Prisma.RST}"
         elif status == "BALANCED" and self.rumors and random.random() < 0.3:
             rumor = random.choice(self.rumors)
-            msg = _get_ux("village_strings", "town_rumor", "👀 RUMOR: {rumor}")
+            msg = LoreManifest.get_instance().get_ux("village_strings", "town_rumor", "👀 RUMOR: {rumor}")
             report += f"\n{Prisma.GRY}{msg.format(rumor=rumor)}{Prisma.RST}"
         return report
 
     @staticmethod
     def _get_town_news(latency: float, volt: float) -> Optional[str]:
         if latency > 4.0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "village_strings",
                 "town_crier_slow",
                 "📢 TOWN CRIER: The time-winds are slow!",
             )
             return f"{Prisma.OCHRE}{msg}{Prisma.RST}"
         if volt > BoneConfig.PHYSICS.VOLTAGE_CRITICAL:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "village_strings", "town_crier_volt", "📢 HEAR YE: Voltage Critical!"
             )
             return f"{Prisma.YEL}{msg}{Prisma.RST}"
@@ -513,7 +502,7 @@ class TownHall:
     def on_item_drop(self, payload):
         item = payload.get("item")
         if item:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "village_strings",
                 "town_item_drop",
                 "Town Hall noticed you dropped {item}.",
@@ -531,7 +520,7 @@ class TownHall:
             neglect = getattr(soul, "obsession_neglect", 0.0)
             if neglect > 8.0:
                 obsession = getattr(soul, "current_obsession", "work")
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "village_strings",
                     "town_guilt",
                     "Guilt over '{obsession}' is thickening the air.",
@@ -540,7 +529,7 @@ class TownHall:
         if trauma:
             max_trauma = max(trauma, key=trauma.get) if trauma else "NONE"
             if trauma.get(max_trauma, 0) > 0.6:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "village_strings",
                     "town_trauma",
                     "Warning: High levels of {trauma} residue detected.",
@@ -550,12 +539,12 @@ class TownHall:
                     msg.format(trauma=max_trauma),
                 )
         if final_health < 30:
-            return "HIGH_TRAUMA", _get_ux(
+            return "HIGH_TRAUMA", LoreManifest.get_instance().get_ux(
                 "village_strings",
                 "town_critical",
                 "System critical. Structural damage.",
             )
-        return "BALANCED", _get_ux("village_strings", "town_nominal", "System nominal.")
+        return "BALANCED", LoreManifest.get_instance().get_ux("village_strings", "town_nominal", "System nominal.")
 
 
 class DeathGen:

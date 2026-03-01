@@ -1,5 +1,3 @@
-import os
-import json
 from typing import Dict, Any, Set
 from bone_core import EventBus, LoreManifest
 from bone_akashic import TheAkashicRecord
@@ -7,28 +5,10 @@ from bone_machine import BoneArchitect
 from bone_soul import NarrativeSelf, TheOroboros
 from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer
 from bone_inventory import GordonKnot
-from bone_protocols import (
-    TheBureau,
-    ZenGarden,
-    TheCriticsCircle,
-    TherapyProtocol,
-    KintsugiProtocol,
-    LimboLayer,
-)
+from bone_protocols import TheBureau, ZenGarden, TheCriticsCircle, TherapyProtocol, KintsugiProtocol, LimboLayer
 from bone_symbiosis import SymbiosisManager
 from bone_spores import LiteraryReproduction
 from bone_drivers import DriverRegistry, BoneConsultant
-
-UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
-try:
-    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
-        _UX_DATA = json.load(f)
-except Exception:
-    _UX_DATA = {}
-
-
-def _get_ux(section: str, key: str, default: Any) -> Any:
-    return _UX_DATA.get(section, {}).get(key, default)
 
 
 class BoneGenesis:
@@ -38,13 +18,13 @@ class BoneGenesis:
     ) -> Dict[str, Any]:
         events = events_ref or EventBus()
         if events_ref:
-            msg = _get_ux(
-                "genesis_strings", "ignite_log", "Igniting Genesis Sequence..."
+            msg = LoreManifest.get_instance().get_ux(
+                "genesis_strings", "ignite_log"
             )
             events.log(msg, "GENESIS")
         else:
-            msg = _get_ux(
-                "genesis_strings", "ignite_print", "...Igniting Genesis Sequence..."
+            msg = LoreManifest.get_instance().get_ux(
+                "genesis_strings", "ignite_print"
             )
             print(msg)
 
@@ -73,10 +53,9 @@ class BoneGenesis:
             live_bio_state = embryo.bio.to_dict()
             logs = oroboros.apply_legacy(dummy_phys, live_bio_state)
             if logs:
-                msg_scars = _get_ux(
+                msg_scars = LoreManifest.get_instance().get_ux(
                     "genesis_strings",
-                    "legacy_scars",
-                    "\u26d3\ufe0f LEGACY SCARS: {logs}",
+                    "legacy_scars"
                 )
                 events.log(msg_scars.format(logs=", ".join(logs)), "OROBOROS")
                 if getattr(embryo.physics, "dynamics", None):

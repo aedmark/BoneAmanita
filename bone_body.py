@@ -1,4 +1,6 @@
-import math, random, time, os, json
+"""bone_body.py"""
+
+import math, random, time
 from collections import deque, Counter
 from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, List, Any, Tuple
@@ -6,18 +8,6 @@ from bone_spores import ImmuneMycelium, BioLichen, BioParasite
 from bone_lexicon import LexiconService
 from bone_core import Prisma, LoreManifest
 from bone_config import BoneConfig
-
-UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
-try:
-    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
-        _UX_DATA = json.load(f)
-except Exception:
-    _UX_DATA = {}
-
-
-def _get_ux(section: str, key: str, default: Any) -> Any:
-    return _UX_DATA.get(section, {}).get(key, default)
-
 
 MAX_ACCEPTED_DRAG = 15.0
 DRAG_EXPONENT = 1.2
@@ -108,20 +98,18 @@ class BioSystem:
             self.endo.adrenaline = min(1.0, self.endo.adrenaline + 0.3)
             self.endo.cortisol = min(1.0, self.endo.cortisol + 0.2)
             if self.events:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "vagus_nerve",
-                    "panic_spike",
-                    "🫀 VAGUS NERVE: Panic detected. Heart rate spiking.",
+                    "panic_spike"
                 )
                 self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}", "BIO")
         elif state == "ZEN":
             self.endo.cortisol = max(0.0, self.endo.cortisol - 0.3)
             self.endo.serotonin = min(1.0, self.endo.serotonin + 0.2)
             if self.events:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "vagus_nerve",
-                    "lucid_calm",
-                    "🫀 VAGUS NERVE: Lucid state. Lowering cortisol.",
+                    "lucid_calm"
                 )
                 self.events.log(f"{Prisma.GRN}{msg}{Prisma.RST}", "BIO")
         elif state == "MANIC":
@@ -140,20 +128,18 @@ class BioSystem:
         if em_field > HEAT_THRESHOLD:
             thermal_feedback = (em_field - HEAT_THRESHOLD) * 5.0
             if self.events:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "entropy_shield",
-                    "inductive_heating",
-                    "⚠ INDUCTIVE HEATING: The air is ionizing around you.",
+                    "inductive_heating"
                 )
                 self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}", "BIO_WARN")
         total_drain = effective_entropy + thermal_feedback
         if self.biometrics:
             self.biometrics.health = max(0.0, self.biometrics.health - total_drain)
         if shield_strength > 0.2 and self.events:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "entropy_shield",
-                "shield_active",
-                "🛡️ EM SHIELD ACTIVE: Mitigation {mitigation}%",
+                "shield_active"
             )
             self.events.log(
                 f"{Prisma.CYN}{msg.format(mitigation=int(shield_strength*100))}{Prisma.RST}",
@@ -228,10 +214,9 @@ class MitochondrialForge:
         health_burn = 2.0
         self.state.ros_buildup += 2.0
         if self.events:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "mito_forge",
-                "anaerobic_bypass",
-                "⚡ ANAEROBIC BYPASS: Load ({cost:.1f}) too high for ATP. Burning Health instead.",
+                "anaerobic_bypass"
             )
             self.events.log(
                 f"{Prisma.MAG}{msg.format(cost=raw_cost)}{Prisma.RST}", "BIO_WARN"
@@ -260,10 +245,9 @@ class MitochondrialForge:
             chaos_tax = 8.0 * chi
             cognitive_load_tax += chaos_tax
             if self.events:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "mito_forge",
-                    "chaos_tax",
-                    "🩸 CHAOS TAX APPLIED: +{tax:.1f} ATP drain.",
+                    "chaos_tax"
                 )
                 self.events.log(
                     f"{Prisma.RED}{msg.format(tax=chaos_tax)}{Prisma.RST}", "BIO_WARN"
@@ -292,10 +276,9 @@ class MitochondrialForge:
             excess = raw_cost - self.MAX_SAFE_BURN
             raw_cost = self.MAX_SAFE_BURN
             if self.events:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "mito_forge",
-                    "surge_protector",
-                    "⚡ SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).",
+                    "surge_protector"
                 )
                 self.events.log(
                     f"{Prisma.CYN}{msg.format(excess=excess)}{Prisma.RST}", "BIO"
@@ -363,10 +346,9 @@ class MitochondrialForge:
             self.state.membrane_potential = max(
                 0.4, self.state.membrane_potential - 0.15
             )
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "mito_forge",
-                "adaptation_stress",
-                "[MITO]: Trauma Adaptive Response (Stress {stress:.1f}). Efficiency dropped ({old:.2f} -> {new:.2f}).",
+                "adaptation_stress"
             )
             self.events.log(
                 f"{Prisma.RED}{msg.format(stress=stress_level, old=old_potential, new=self.state.membrane_potential)}{Prisma.RST}",
@@ -377,10 +359,9 @@ class MitochondrialForge:
                 1.5, self.state.membrane_potential + 0.05
             )
             if random.random() < 0.2:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "mito_forge",
-                    "adaptation_hormetic",
-                    "[MITO]: Hormetic Adaptation. System hardening.",
+                    "adaptation_hormetic"
                 )
                 self.events.log(f"{Prisma.GRN}{msg}{Prisma.RST}", "BIO")
 
@@ -438,8 +419,8 @@ class DigestiveTrack:
             self.bio.endo.cortisol = min(
                 1.0, self.bio.endo.cortisol + (scaled_tax * 0.02)
             )
-            msg = _get_ux(
-                "digestive_track", "cliche_tax", "[BIO]: 🛑 CLICHÉ TAX: -{tax:.1f} ATP."
+            msg = LoreManifest.get_instance().get_ux(
+                "digestive_track", "cliche_tax"
             )
             logs.append(f"{Prisma.RED}{msg.format(tax=scaled_tax)}{Prisma.RST}")
         if getattr(phys, "voltage", 0.0) > 8.0 and found_enzymes:
@@ -457,10 +438,9 @@ class DigestiveTrack:
         if count > self.SAMPLING_THRESHOLD:
             factor = count / self.SAMPLING_THRESHOLD
             if random.random() < 0.1:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "digestive_track",
-                    "mass_input",
-                    "[BIO]: Mass Input ({count}). Sampling x{factor:.1f}.",
+                    "mass_input"
                 )
                 logs.append(
                     f"{Prisma.GRY}{msg.format(count=count, factor=factor)}{Prisma.RST}"
@@ -510,18 +490,16 @@ class EndocrineRegulator:
             stress_tax = 1.0 + (chem.cortisol * 0.5)
             modifier *= stress_tax
             if random.random() < 0.3:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "endocrine_regulator",
-                    "cortisol_spike",
-                    "[BIO]: Cortisol spiking. Metabolism inefficient (x{tax:.2f}).",
+                    "cortisol_spike"
                 )
                 logs.append(f"{Prisma.RED}{msg.format(tax=stress_tax)}{Prisma.RST}")
         if chem.adrenaline > 0.6:
             modifier *= 0.5
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "endocrine_regulator",
-                "adrenaline_surge",
-                "[BIO]: Adrenaline Surge. Pain ignored.",
+                "adrenaline_surge"
             )
             logs.append(f"{Prisma.YEL}{msg}{Prisma.RST}")
         if chem.dopamine > 0.7:
@@ -529,10 +507,9 @@ class EndocrineRegulator:
         voltage = getattr(phys, "voltage", 0.0)
         if voltage > 15.0:
             modifier *= 1.2
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "endocrine_regulator",
-                "voltage_gap",
-                "[BIO]: Voltage Gap ({voltage:.1f}v). Wires heating up.",
+                "voltage_gap"
             )
             logs.append(f"{Prisma.MAG}{msg.format(voltage=voltage)}{Prisma.RST}")
         return modifier
@@ -548,26 +525,23 @@ class BioFeedback:
             if self.bio.biometrics.health > 10.0:
                 burn_amount = 5.0
                 self.bio.biometrics.health -= burn_amount
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "bio_feedback",
-                    "autophagy",
-                    "⚠️ AUTOPHAGY: Burning Health for Fuel (-5 HP).",
+                    "autophagy"
                 )
                 logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
                 return "AUTOPHAGY"
             else:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "bio_feedback",
-                    "fuel_depleted",
-                    "SYSTEM FAILURE: Bio-Fuel Depleted. The Mausoleum closes.",
+                    "fuel_depleted"
                 )
                 logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
                 return "MAUSOLEUM_CLAMP"
         if voltage > 30.0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "bio_feedback",
-                "voltage_overload",
-                "CRITICAL: Voltage Overload ({voltage:.1f}v). System clamping.",
+                "voltage_overload"
             )
             logs.append(f"{Prisma.RED}{msg.format(voltage=voltage)}{Prisma.RST}")
             return "MAUSOLEUM_CLAMP"
@@ -576,18 +550,16 @@ class BioFeedback:
     @staticmethod
     def perform_maintenance(text: str, phys: Any, logs: List[str], tick: int):
         if len(text) > 10000:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "bio_feedback",
-                "large_buffer",
-                "[MAINTENANCE]: Large input buffer detected.",
+                "large_buffer"
             )
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         drag = getattr(phys, "narrative_drag", 0.0)
         if drag > 8.0 and tick % 10 == 0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "bio_feedback",
-                "clearing_sludge",
-                "[MAINTENANCE]: Clearing sludge from intake valves (Drag {drag:.1f}).",
+                "clearing_sludge"
             )
             logs.append(f"{Prisma.OCHRE}{msg.format(drag=drag)}{Prisma.RST}")
             if hasattr(phys, "narrative_drag"):
@@ -694,10 +666,9 @@ class SomaticLoop:
                     getattr(BoneConfig, "MAX_STAMINA", 100.0),
                     self.bio.biometrics.stamina + (delta_silence * 5.0),
                 )
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "somatic_loop",
-                "silence_heals",
-                "🕊️ THE SILENCE HEALS: Friction drops, Stamina recovers (+{recovery:.1f} P).",
+                "silence_heals"
             )
             logs.append(
                 f"{Prisma.CYN}{msg.format(recovery=delta_silence * 5.0)}{Prisma.RST}"
@@ -707,10 +678,9 @@ class SomaticLoop:
             self.bio.biometrics.health = max(
                 0.0, self.bio.biometrics.health - receipt.total_burn
             )
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "somatic_loop",
-                "anaerobic_burn",
-                "🩸 ANAEROBIC BURN: Health depleted by {burn:.1f}",
+                "anaerobic_burn"
             )
             logs.append(
                 f"{Prisma.RED}{msg.format(burn=receipt.total_burn)}{Prisma.RST}"

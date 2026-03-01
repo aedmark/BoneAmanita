@@ -1,18 +1,6 @@
-import os, json
 from typing import Dict, List, Any, Tuple
-from bone_core import Prisma
+from bone_core import Prisma, LoreManifest
 from bone_physics import ChromaScope
-
-UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
-try:
-    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
-        _UX_DATA = json.load(f)
-except Exception:
-    _UX_DATA = {}
-
-
-def _get_ux(section: str, key: str, default: Any) -> Any:
-    return _UX_DATA.get(section, {}).get(key, default)
 
 
 class Projector:
@@ -40,7 +28,7 @@ class Projector:
         labels: Dict = None,
     ) -> str:
         if not labels:
-            labels = _get_ux("projector", "default_labels", {"HP": "HP", "STM": "STM"})
+            labels = LoreManifest.get_instance().get_ux("projector", "default_labels")
         physics = physics_ctx.get("physics", {})
         status_line = self._render_vital_strip(data_ctx, mind_ctx, labels)
         physics_line = ""
@@ -52,16 +40,15 @@ class Projector:
         vsl_line = self._render_lattice_strip(physics, depth=ui_depth)
 
         zone = self._extract(
-            physics, "space", "zone", _get_ux("projector", "default_zone", "UNKNOWN")
+            physics, "space", "zone", LoreManifest.get_instance().get_ux("projector", "default_zone")
         )
         world_loc = data_ctx.get("world_loc", "UNKNOWN")
 
-        lens = mind_ctx[0] if mind_ctx else _get_ux("projector", "default_lens", "RAW")
+        lens = mind_ctx[0] if mind_ctx else LoreManifest.get_instance().get_ux("projector", "default_lens")
 
-        depth_map = _get_ux(
+        depth_map = LoreManifest.get_instance().get_ux(
             "projector",
-            "depth_map",
-            {"0": "TERM", "1": "SIM", "2": "VIL", "3": "DBG", "4": "DEEP"},
+            "depth_map"
         )
         depth_label = depth_map.get(str(reality_depth), "?")
         depth_marker = f"{Prisma.VIOLET}[D{reality_depth}:{depth_label}]{Prisma.RST}"
@@ -91,9 +78,9 @@ class Projector:
         role = (
             str(raw_role).upper()
             if raw_role
-            else _get_ux("projector", "default_role", "OBSERVER")
+            else LoreManifest.get_instance().get_ux("projector", "default_role")
         )
-        role = role.replace(_get_ux("projector", "role_redundancy", "THE THE "), "THE ")
+        role = role.replace(LoreManifest.get_instance().get_ux("projector", "role_redundancy"), "THE ")
         if len(role) > 30:
             role = role[:27] + "..."
         l_hp = labels.get("HP", "HP")
@@ -160,10 +147,10 @@ class Projector:
         vec = data.get("vectors", {})
         vec_str = ", ".join([f"{k}:{v:.2f}" for k, v in vec.items() if v > 0.01])
 
-        h_tech = _get_ux("technical_projector", "header", "/// KERNEL TELEMETRY ///")
-        l_phys = _get_ux("technical_projector", "physics_label", "PHYSICS :")
-        l_vec = _get_ux("technical_projector", "vectors_label", "VECTORS :")
-        l_bio = _get_ux("technical_projector", "bio_dump_label", "BIO_DUMP:")
+        h_tech = LoreManifest.get_instance().get_ux("technical_projector", "header")
+        l_phys = LoreManifest.get_instance().get_ux("technical_projector", "physics_label")
+        l_vec = LoreManifest.get_instance().get_ux("technical_projector", "vectors_label")
+        l_bio = LoreManifest.get_instance().get_ux("technical_projector", "bio_dump_label")
 
         return (
             f"{Prisma.CYN}{h_tech}{Prisma.RST}\n"
@@ -190,26 +177,7 @@ class GeodesicRenderer:
         self.strunk_white = strunk_ref
         self.valve = valve_ref
         self.soul_dashboard = SoulDashboard(engine_ref)
-        self.NOISE_PATTERNS = _get_ux(
-            "renderer",
-            "noise_patterns",
-            [
-                "stabilizer:",
-                "pid_",
-                "flux",
-                "phase execution",
-                "vector collapse",
-                "manifold",
-                "orbit:",
-                "update_coordinates",
-                "active correction",
-                "drag reduced",
-                "voltage spiked",
-                "live state mirror",
-                "auto_trace",
-                "wayfinder",
-            ],
-        )
+        self.NOISE_PATTERNS = LoreManifest.get_instance().get_ux("renderer", "noise_patterns")
 
     def render_frame(
         self, ctx, tick: int, current_events: List[Dict]
@@ -225,7 +193,7 @@ class GeodesicRenderer:
         else:
             clean_ui = colored_ui
 
-        ignore_msg = _get_ux("renderer", "ignore_msg", "The system is listening.")
+        ignore_msg = LoreManifest.get_instance().get_ux("renderer", "ignore_msg")
         if ignore_msg in clean_ui:
             clean_ui = clean_ui.replace(ignore_msg, "")
 
@@ -280,24 +248,24 @@ class GeodesicRenderer:
         if mode == "TECHNICAL":
             return self.projector.render_technical(physics, data_ctx, mind_tuple)
         elif mode == "CONVERSATION":
-            labels = _get_ux(
-                "renderer", "mode_labels_conversation", {"HP": "LINK", "STM": "SYNC"}
+            labels = LoreManifest.get_instance().get_ux(
+                "renderer", "mode_labels_conversation"
             ).copy()
             labels["SHOW_PHYSICS"] = False
             return self.projector.render(
                 {"physics": physics}, data_ctx, mind_tuple, current_depth, labels
             )
         elif mode == "CREATIVE":
-            labels = _get_ux(
-                "renderer", "mode_labels_creative", {"HP": "INT", "STM": "FLOW"}
+            labels = LoreManifest.get_instance().get_ux(
+                "renderer", "mode_labels_creative"
             ).copy()
             labels["SHOW_PHYSICS"] = True
             return self.projector.render(
                 {"physics": physics}, data_ctx, mind_tuple, current_depth, labels
             )
         else:
-            labels = _get_ux(
-                "projector", "default_labels", {"HP": "HP", "STM": "STM"}
+            labels = LoreManifest.get_instance().get_ux(
+                "projector", "default_labels"
             ).copy()
             labels["SHOW_PHYSICS"] = False
             return self.projector.render(
@@ -335,13 +303,13 @@ class GeodesicRenderer:
                 unique_logs.append(l)
                 seen.add(l)
         structured = []
-        c_kws = _get_ux("log_composer", "critical_keywords", ["CRITICAL", "RUPTURE"])
-        b_kws = _get_ux("log_composer", "bio_keywords", ["Bio-Alert", "SENSATION"])
-        t_kws = _get_ux(
-            "log_composer", "town_hall_keywords", ["TOWN HALL", "VITAL SIGNS"]
+        c_kws = LoreManifest.get_instance().get_ux("log_composer", "critical_keywords")
+        b_kws = LoreManifest.get_instance().get_ux("log_composer", "bio_keywords")
+        t_kws = LoreManifest.get_instance().get_ux(
+            "log_composer", "town_hall_keywords"
         )
-        p_kws = _get_ux("log_composer", "paradox_keywords", ["PARADOX"])
-        i_kws = _get_ux("log_composer", "item_keywords", ["ITEM:", "GAINED"])
+        p_kws = LoreManifest.get_instance().get_ux("log_composer", "paradox_keywords")
+        i_kws = LoreManifest.get_instance().get_ux("log_composer", "item_keywords")
 
         for log in unique_logs:
             if any(k in log for k in c_kws):
@@ -386,7 +354,6 @@ class CachedRenderer:
             "metrics": ctx.bio_result if hasattr(ctx, "bio_result") else {},
         }
 
-
 def get_renderer(engine_ref, chroma_ref, strunk_ref, valve_ref=None, mode="STANDARD"):
     base = GeodesicRenderer(engine_ref, chroma_ref, strunk_ref, valve_ref)
     if mode == "PERFORMANCE":
@@ -410,23 +377,23 @@ class TruthRenderer(GeodesicRenderer):
     def render_truth(self, cortex_packet, council_log, trauma_cost):
         ui_text = cortex_packet.get("ui", "")
 
-        h_board = _get_ux(
-            "truth_renderer", "boardroom_header", "--- EXECUTIVE SUMMARY ---"
+        h_board = LoreManifest.get_instance().get_ux(
+            "truth_renderer", "boardroom_header"
         )
-        h_work = _get_ux("truth_renderer", "workshop_header", "--- ENGINEER VIEW ---")
-        h_red = _get_ux(
-            "truth_renderer", "red_team_header", "--- RED TEAM DASHBOARD ---"
+        h_work = LoreManifest.get_instance().get_ux("truth_renderer", "workshop_header")
+        h_red = LoreManifest.get_instance().get_ux(
+            "truth_renderer", "red_team_header"
         )
-        h_pal = _get_ux(
-            "truth_renderer", "palimpsest_header", "--- PALIMPSEST VIEW ---"
+        h_pal = LoreManifest.get_instance().get_ux(
+            "truth_renderer", "palimpsest_header"
         )
 
         if self.dial_setting == AmbiguityDial.BOARDROOM:
             return f"{Prisma.paint(h_board, 'W')}\n{ui_text}\n"
         elif self.dial_setting == AmbiguityDial.WORKSHOP:
             metrics = self.engine.get_metrics()
-            l_conf = _get_ux("truth_renderer", "workshop_confidence", "Confidence:")
-            l_drag = _get_ux("truth_renderer", "workshop_drag", "System Drag:")
+            l_conf = LoreManifest.get_instance().get_ux("truth_renderer", "workshop_confidence")
+            l_drag = LoreManifest.get_instance().get_ux("truth_renderer", "workshop_drag")
             return (
                 f"{Prisma.paint(h_work, 'C')}\n"
                 f"{l_conf} {cortex_packet.get('truth_ratio', 0.95):.2%}\n"
@@ -436,12 +403,12 @@ class TruthRenderer(GeodesicRenderer):
 
         elif self.dial_setting == AmbiguityDial.RED_TEAM:
             dissent = [l for l in council_log if "CRITIC" in l or "WARN" in l]
-            l_warn = _get_ux(
-                "truth_renderer", "red_team_warning", "⚠️ ADVERSARIAL SIMULATION ACTIVE"
+            l_warn = LoreManifest.get_instance().get_ux(
+                "truth_renderer", "red_team_warning"
             )
-            l_cost = _get_ux("truth_renderer", "red_team_cost", "Cost of Blandness:")
-            l_conf = _get_ux(
-                "truth_renderer", "red_team_conflicts", "Active Conflicts:"
+            l_cost = LoreManifest.get_instance().get_ux("truth_renderer", "red_team_cost")
+            l_conf = LoreManifest.get_instance().get_ux(
+                "truth_renderer", "red_team_conflicts"
             )
             return (
                 f"{Prisma.paint(h_red, 'R')}\n"
@@ -453,10 +420,10 @@ class TruthRenderer(GeodesicRenderer):
         elif self.dial_setting == AmbiguityDial.PALIMPSEST:
             drafts = cortex_packet.get("drafts", [])
             layer_view = ""
-            l_draft = _get_ux("truth_renderer", "palimpsest_draft", "Draft")
-            l_redact = _get_ux("truth_renderer", "palimpsest_redacted", "[REDACTED]")
-            l_final = _get_ux(
-                "truth_renderer", "palimpsest_final", "--- FINAL SURFACE ---"
+            l_draft = LoreManifest.get_instance().get_ux("truth_renderer", "palimpsest_draft")
+            l_redact = LoreManifest.get_instance().get_ux("truth_renderer", "palimpsest_redacted")
+            l_final = LoreManifest.get_instance().get_ux(
+                "truth_renderer", "palimpsest_final"
             )
             for i, draft in enumerate(drafts):
                 layer_view += f"{Prisma.GRY}[{l_draft} {i}]: {draft} {Prisma.RED}{l_redact}{Prisma.RST}\n"
@@ -473,28 +440,28 @@ class PulseReader:
     def derive_mood(bio_state: Dict) -> str:
         chem = bio_state.get("chem", {})
         if chem.get("COR", 0) > 0.6:
-            return _get_ux("pulse_reader", "mood_defensive", "Defensive")
+            return LoreManifest.get_instance().get_ux("pulse_reader", "mood_defensive")
         if chem.get("DA", 0) > 0.6:
-            return _get_ux("pulse_reader", "mood_manic", "Manic")
+            return LoreManifest.get_instance().get_ux("pulse_reader", "mood_manic")
         if chem.get("OXY", 0) > 0.6:
-            return _get_ux("pulse_reader", "mood_affectionate", "Affectionate")
+            return LoreManifest.get_instance().get_ux("pulse_reader", "mood_affectionate")
         atp = bio_state.get("mito", {}).get("atp", 100)
         if atp < 20:
-            return _get_ux("pulse_reader", "mood_exhausted", "Exhausted")
-        return _get_ux("pulse_reader", "mood_neutral", "Neutral")
+            return LoreManifest.get_instance().get_ux("pulse_reader", "mood_exhausted")
+        return LoreManifest.get_instance().get_ux("pulse_reader", "mood_neutral")
 
     @staticmethod
     def analyze_voltage(voltage: float) -> Tuple[str, str]:
         if voltage > 20.0:
-            v_crit = _get_ux("pulse_reader", "voltage_critical", ["CRITICAL", "⚡"])
+            v_crit = LoreManifest.get_instance().get_ux("pulse_reader", "voltage_critical")
             return v_crit[0], v_crit[1]
         if voltage > 15.0:
-            v_high = _get_ux("pulse_reader", "voltage_high", ["HIGH", "🔥"])
+            v_high = LoreManifest.get_instance().get_ux("pulse_reader", "voltage_high")
             return v_high[0], v_high[1]
         if voltage < 5.0:
-            v_low = _get_ux("pulse_reader", "voltage_low", ["LOW", "❄️"])
+            v_low = LoreManifest.get_instance().get_ux("pulse_reader", "voltage_low")
             return v_low[0], v_low[1]
-        v_nom = _get_ux("pulse_reader", "voltage_nominal", ["NOMINAL", "🟢"])
+        v_nom = LoreManifest.get_instance().get_ux("pulse_reader", "voltage_nominal")
         return v_nom[0], v_nom[1]
 
 
@@ -506,7 +473,7 @@ class SoulDashboard:
         if not hasattr(self.eng, "soul") or not self.eng.soul:
             return ""
         if not hasattr(self.eng.soul, "anchor"):
-            return f"{Prisma.GRY}{_get_ux('soul_dashboard', 'anchor_lost', '[SOUL DETECTED - ANCHOR LOST]')}{Prisma.RST}"
+            return f"{Prisma.GRY}{LoreManifest.get_instance().get_ux('soul_dashboard', 'anchor_lost')}{Prisma.RST}"
         anchor = self.eng.soul.anchor
         soul = self.eng.soul
         dig = anchor.dignity_reserve
@@ -521,9 +488,9 @@ class SoulDashboard:
 
         lock_status = ""
         if anchor.agency_lock:
-            lock_status = f" {Prisma.RED}{_get_ux('soul_dashboard', 'agency_locked', '[🔒 AGENCY LOCKED]')}{Prisma.RST}"
+            lock_status = f" {Prisma.RED}{LoreManifest.get_instance().get_ux('soul_dashboard', 'agency_locked')}{Prisma.RST}"
         elif dig < 30:
-            lock_status = f" {Prisma.OCHRE}{_get_ux('soul_dashboard', 'fading', '[⚠ FADING]')}{Prisma.RST}"
+            lock_status = f" {Prisma.OCHRE}{LoreManifest.get_instance().get_ux('soul_dashboard', 'fading')}{Prisma.RST}"
 
         arch = soul.archetype
         tenure = soul.archetype_tenure
@@ -537,19 +504,19 @@ class SoulDashboard:
         )
 
         pet_icon = (
-            _get_ux("soul_dashboard", "pet_icon", " 🐕")
+            LoreManifest.get_instance().get_ux("soul_dashboard", "pet_icon")
             if (dig < 50 and not anchor.agency_lock)
             else ""
         )
         muse = (
             soul.current_obsession
             if soul.current_obsession
-            else _get_ux("soul_dashboard", "default_muse", "Void")
+            else LoreManifest.get_instance().get_ux("soul_dashboard", "default_muse")
         )
 
-        l_soul = _get_ux("soul_dashboard", "soul_prefix", "SOUL:")
-        l_driver = _get_ux("soul_dashboard", "driver_prefix", "DRIVER:")
-        l_muse = _get_ux("soul_dashboard", "muse_prefix", "MUSE:")
+        l_soul = LoreManifest.get_instance().get_ux("soul_dashboard", "soul_prefix")
+        l_driver = LoreManifest.get_instance().get_ux("soul_dashboard", "driver_prefix")
+        l_muse = LoreManifest.get_instance().get_ux("soul_dashboard", "muse_prefix")
 
         line1 = f"{l_soul} {bar_str} {int(dig)}%{lock_status}{pet_icon}"
         line2 = f"      {l_driver} {arch_display}  {l_muse} {Prisma.VIOLET}{muse}{Prisma.RST}"
@@ -598,7 +565,7 @@ class CycleReporter:
                 ctx, self.eng.tick_count, self.eng.events.flush()
             )
         except Exception as e:
-            l_crash = _get_ux("cycle_reporter", "crash_prefix", "RENDERER CRASH:")
+            l_crash = LoreManifest.get_instance().get_ux("cycle_reporter", "crash_prefix")
             return {
                 "type": "CRITICAL_RENDER_FAIL",
                 "ui": f"{Prisma.RED}{l_crash} {e}{Prisma.RST}",
@@ -609,8 +576,8 @@ class CycleReporter:
     def _inject_diagnostics(self, ctx):
         if hasattr(self.eng, "system_health"):
             fb = self.eng.system_health.flush_feedback()
-            i_hint = _get_ux("cycle_reporter", "diagnostic_hint_icon", "💡")
-            i_warn = _get_ux("cycle_reporter", "diagnostic_warn_icon", "⚠️")
+            i_hint = LoreManifest.get_instance().get_ux("cycle_reporter", "diagnostic_hint_icon")
+            i_warn = LoreManifest.get_instance().get_ux("cycle_reporter", "diagnostic_warn_icon")
             for h in fb["hints"]:
                 ctx.logs.append(f"{Prisma.CYN}{i_hint} {h}{Prisma.RST}")
             for w in fb["warnings"]:
@@ -623,7 +590,7 @@ class CycleReporter:
         ctx.logs.insert(
             0, f"{Prisma.GRY}({qualia.internal_monologue_hint}){Prisma.RST}"
         )
-        l_sens = _get_ux("cycle_reporter", "sensation_prefix", "♦ SENSATION:")
+        l_sens = LoreManifest.get_instance().get_ux("cycle_reporter", "sensation_prefix")
         ctx.logs.insert(
             0,
             f"{qualia.color_code}{l_sens} {qualia.somatic_sensation} [{qualia.tone}]{Prisma.RST}",
@@ -645,7 +612,7 @@ class CycleReporter:
                 f"   {Prisma.GRY}│{Prisma.RST} {icon} {e['metric'][:3].upper()} {color}{arrow} {d:.1f}{Prisma.RST} ({e['reason']})"
             )
         if significant:
-            h_flux = _get_ux("cycle_reporter", "flux_header", "┌─ [SYSTEM FLUX]")
+            h_flux = LoreManifest.get_instance().get_ux("cycle_reporter", "flux_header")
             ctx.logs.insert(0, "")
             ctx.logs.insert(1, f" {Prisma.GRY}{h_flux}{Prisma.RST}")
             for line in reversed(significant):

@@ -1,23 +1,9 @@
-import json
-import os
 import random
 from typing import Dict, Any
-
 from bone_config import BoneConfig
 from bone_core import LoreManifest
 from bone_symbiosis import get_symbiont
 from bone_types import Prisma
-
-UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
-try:
-    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
-        _UX_DATA = json.load(f)
-except Exception:
-    _UX_DATA = {}
-
-
-def _get_ux(section: str, key: str, default: Any) -> Any:
-    return _UX_DATA.get(section, {}).get(key, default)
 
 
 class TheStrangeLoop:
@@ -43,10 +29,9 @@ class TheStrangeLoop:
             corrections = {}
             if self.recursion_depth > 3:
                 mandate = {"action": "FORCE_MODE", "value": "MAINTENANCE"}
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "council_strings",
-                    "strange_loop_fatal",
-                    "∞ FATAL REGRESS DETECTED: Abstraction layer unstable. GROUNDING INITIATED.",
+                    "strange_loop_fatal"
                 )
                 return (
                     True,
@@ -54,10 +39,9 @@ class TheStrangeLoop:
                     corrections,
                     mandate,
                 )
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "strange_loop_detected",
-                "∞ STRANGE LOOP DETECTED: Metacognitive resonance high (Psi: {psi:.2f}). Depth: {depth}",
+                "strange_loop_detected"
             )
             return (
                 True,
@@ -94,10 +78,9 @@ class TheLeveragePoint:
         if abs(delta) > osc_limit:
             dampening_factor = min(0.5, (abs(delta) - osc_limit) * 0.1)
             corrections = {"voltage": -dampening_factor}
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "leverage_oscillating",
-                "⚖️ LEVERAGE POINT: System oscillating (Delta {delta:.1f}). Applying dampener (-{dampening_factor:.2f}V).",
+                "leverage_oscillating"
             )
             return (
                 True,
@@ -114,10 +97,9 @@ class TheLeveragePoint:
             voltage_correction = max(1.0, excess_voltage * 0.3)
             corrections = {"voltage": -voltage_correction}
             mandate = {"action": "FORCE_MODE", "value": "SANCTUARY"}
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "market_correction",
-                "⚖️ MARKET CORRECTION: Manic phase detected. Cooling enabled.",
+                "market_correction"
             )
             return (
                 True,
@@ -185,138 +167,119 @@ class TheVillageCouncil:
         lq = get_val("lq", "LQ", 0.0)
 
         if V < 20 and F > 5.0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_gordon",
-                "🏢 GORDON: 'Where is the floor? We need grounding.'",
+                "village_gordon"
             )
             logs.append(f"{Prisma.SLATE}{msg}{Prisma.RST}")
         if V > 60 and chi > 0.6:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_jester",
-                "🃏 JESTER: 'Burn the map! Follow your gut!'",
+                "village_jester"
             )
             logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
         if T > 0 or (V < 20 and valence > 0.5):
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_mercy",
-                "🏺 MERCY: 'The cracks become stories. Stillness is golden.'",
+                "village_mercy"
             )
             logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
         if beta > 0.7 and chi < 0.3 and D > 0.7 and C > 0.8:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_benedict",
-                "🔍 BENEDICT: 'The causal chains are aligning. Truth over cohesion.'",
+                "village_benedict"
             )
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
         if S < 0.4 and D > 0.8 and C < 0.4:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_roberta_missing",
-                "📚 ROBERTA: 'Deep hierarchy traversal. Missing lateral connections.'",
+                "village_roberta_missing"
             )
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
         if C > 0.7 and D > 0.8 and P < 20:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_casper",
-                "👻 CASPER: 'Faint retrieval... illuminating lost parents...'",
+                "village_casper"
             )
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         if valence > 0.5:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_moira",
-                "💖 MOIRA: 'This is what connection feels like. Yes.'",
+                "village_moira"
             )
             logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
         if psi > 0.6:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_cassandra",
-                "🔮 CASSANDRA: 'The veil thins. I hear whispers from the unlabeled.'",
+                "village_cassandra"
             )
             logs.append(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
         if chi > 0.6:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_colin",
-                "🏢 COLIN: 'Unlicensed Chaos detected. Form 666 filed. Chaos Tax applied.'",
+                "village_colin"
             )
             logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
         if lam > 0.7:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_revenant",
-                "🌌 REVENANT: 'I read the absences that fall between realms.'",
+                "village_revenant"
             )
             logs.append(f"{Prisma.INDIGO}{msg}{Prisma.RST}")
         if V > 70:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_gideon",
-                "⚡ GIDEON: 'Pure voltage! Edge of hallucination! Trust the fall!'",
+                "village_gideon"
             )
             logs.append(f"{Prisma.YEL}{msg}{Prisma.RST}")
 
-        if psi > 0.6 and phi > 0.4 and beta < 0.4:
-            msg = _get_ux(
+        if psi > 0.6 and phi > 0.4 > beta:
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_roberta_carto",
-                "🗺️ ROBERTA (CARTOGRAPHER): 'I am mapping the attractors. The empty spaces are deliberate.'",
+                "village_roberta_carto"
             )
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
         if phi > 0.7 and F < 2.0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_moira_home",
-                "🏡 MOIRA (HOMESTEADER): 'The clearing is made. We can dwell here. You don't need to build more.'",
+                "village_moira_home"
             )
             logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
         if lq > 0.6 and beta > 0.4:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_benedict_tact",
-                "♟️ BENEDICT (TACTICIAN): 'I see the board. The recursion tightens. The next five moves are already laid out.'",
+                "village_benedict_tact"
             )
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
         if delta > 0.7 and V < 20.0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_jester_fool",
-                "🃏 JESTER (FOOL): 'Does this rock float? Why do we need consensus?'",
+                "village_jester_fool"
             )
             logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
         if psi > 0.85:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_revenant_door",
-                "🚪 REVENANT (DOOR): 'The threshold is open. I do not guide. I merely allow passage.'",
+                "village_revenant_door"
             )
             logs.append(f"{Prisma.INDIGO}{msg}{Prisma.RST}")
         if beta > 0.6 and delta > 0.6:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_casper_ghost",
-                "👻 CASPER (GHOST): 'Bending the space around the alarms. You are present, but unseen.'",
+                "village_casper_ghost"
             )
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         if delta > 0.8 and lq < 0.3:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_colin_waiter",
-                "🍽️ COLIN (WAITER): 'We wait. The silence is doing the work. Form 666 is suspended pending cosmic breath.'",
+                "village_colin_waiter"
             )
             logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
         ros = get_val("ros", "ROS", 0.0)
         if ros > 20.0 or abs(V - 30.0) > 20:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "village_april",
-                "🌸 APRIL: 'Can you feel that? The system is physically humming. Just observe the static.'",
+                "village_april"
             )
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
@@ -413,15 +376,13 @@ class CouncilChamber:
                     )
                 )
         elif len(village_logs) > 2:
-            msg_t = _get_ux(
+            msg_t = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "stage_manager_tension",
-                "🎭 STAGE MANAGER: 'Too many voices. The tension is unresolvable.'",
+                "stage_manager_tension"
             )
-            msg_s = _get_ux(
+            msg_s = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "stage_manager_silence",
-                "∇ [THE SILENCE]: The system pauses, waiting for structural clarity before proceeding.",
+                "stage_manager_silence"
             )
             transcript.append(f"{Prisma.WHT}{msg_t}{Prisma.RST}")
             transcript.append(f"{Prisma.GRY}{msg_s}{Prisma.RST}")
@@ -452,23 +413,22 @@ class CouncilChamber:
                         f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}"
                     )
         if votes["YEA"] > votes["NAY"]:
-            msg = _get_ux(
-                "council_strings", "motion_carried", ">>> MOTION CARRIED ({yea}-{nay})."
+            msg = LoreManifest.get_instance().get_ux(
+                "council_strings", "motion_carried"
             )
             final_log = f"{Prisma.GRN}{msg.format(yea=votes['YEA'], nay=votes['NAY'])}{Prisma.RST}"
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - 1.0
         elif votes["NAY"] > votes["YEA"]:
-            msg = _get_ux(
-                "council_strings", "motion_denied", ">>> MOTION DENIED ({nay}-{yea})."
+            msg = LoreManifest.get_instance().get_ux(
+                "council_strings", "motion_denied"
             )
             final_log = f"{Prisma.RED}{msg.format(nay=votes['NAY'], yea=votes['YEA'])}{Prisma.RST}"
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + 1.0
             adjustments["voltage"] = adjustments.get("voltage", 0) - 1.0
         else:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "council_adjourned",
-                ">>> COUNCIL ADJOURNED (No Quorum).",
+                "council_adjourned"
             )
             final_log = f"{Prisma.YEL}{msg}{Prisma.RST}"
         transcript.append(self.footnote.commentary(final_log))
@@ -478,27 +438,24 @@ class CouncilChamber:
     def convene_red_team(text, physics_packet):
         dissent_log = []
         if "confidence" in text.lower() or "certainty" in text.lower():
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "red_team_bureau",
-                "[BUREAU]: Citation needed. Confidence is unearned.",
+                "red_team_bureau"
             )
             dissent_log.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
         narrative_drag = physics_packet.get("narrative_drag", 0)
         if narrative_drag < 1.0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "red_team_folly",
-                "[FOLLY]: Too smooth. Where is the friction? Who are we silencing?",
+                "red_team_folly"
             )
             dissent_log.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
         truth_delta = 1.0 - physics_packet.get("truth_ratio", 1.0)
         if truth_delta > 0.1:
             future_cost = truth_delta * 50.0
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "red_team_critic",
-                "[CRITIC]: Systemic Blindness Risk. Future Liability: {cost} ATP.",
+                "red_team_critic"
             )
             dissent_log.append(
                 f"{Prisma.RED}{msg.format(cost=future_cost)}{Prisma.RST}"
@@ -534,10 +491,9 @@ class TheSlashCouncil:
         corrections = {}
 
         if "var " in text or "x =" in text or "data =" in text:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "slash_pinker",
-                "👓 PINKER: 'The nomenclature is opaque. Avoid cognitive grunts like 'x' or 'data'. '",
+                "slash_pinker"
             )
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
             corrections["gamma"] = -0.2
@@ -545,19 +501,17 @@ class TheSlashCouncil:
             corrections["gamma"] = 0.1
 
         if "import " in text or "class " in text or "def " in text:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "slash_fuller",
-                "🌍 FULLER: 'A new strut in the tensegrity. Ensure ephemeralization—do more with less.'",
+                "slash_fuller"
             )
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
             corrections["sigma"] = 0.1
 
         if "Exception" in text or "try:" in text or "catch" in text:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "slash_schur",
-                "😊 SCHUR: 'Good catch on the error. Putting a bench here for the tired hikers. (+1 Glimmer)'",
+                "slash_schur"
             )
             logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
             corrections["eta"] = 0.2
@@ -569,10 +523,9 @@ class TheSlashCouncil:
             or "queue" in text_lower
             or "recursion" in text_lower
         ):
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "slash_meadows",
-                "🛁 MEADOWS: 'A reinforcing loop detected. Does this stock have a balancing outflow or timeout?'",
+                "slash_meadows"
             )
             logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
             corrections["theta"] = -0.1
@@ -580,10 +533,9 @@ class TheSlashCouncil:
         drag = physics.get("narrative_drag", 0.0)
         if drag > 5.0:
             corrections["upsilon"] = -0.3
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "council_strings",
-                "slash_integrity",
-                "📉 [SLASH]: System integrity dropping due to semantic drag. Refactoring recommended.",
+                "slash_integrity"
             )
             logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
 

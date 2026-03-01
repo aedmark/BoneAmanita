@@ -5,14 +5,7 @@ from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
 
 from bone_commands import CommandProcessor
-from bone_core import (
-    EventBus,
-    SystemHealth,
-    TheObserver,
-    LoreManifest,
-    TelemetryService,
-    RealityStack,
-)
+from bone_core import EventBus, SystemHealth, TheObserver, LoreManifest, TelemetryService, RealityStack
 from bone_types import Prisma, RealityLayer
 from bone_config import BoneConfig, BonePresets
 from bone_genesis import BoneGenesis
@@ -24,20 +17,7 @@ from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_cycle import GeodesicOrchestrator
 from bone_council import CouncilChamber
 
-UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
-try:
-    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
-        _UX_DATA = json.load(f)
-except Exception:
-    _UX_DATA = {}
-
-
-def _get_ux(section: str, key: str, default: Any) -> Any:
-    return _UX_DATA.get(section, {}).get(key, default)
-
-
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
-
 
 def typewriter(text: str, speed: float = 0.00025, end: str = "\n"):
     if speed < 0.001:
@@ -70,17 +50,17 @@ class SessionGuardian:
 
     def __enter__(self):
         os.system("cls" if os.name == "nt" else "clear")
-        top_bar = _get_ux(
+        top_bar = LoreManifest.get_instance().get_ux(
             "main_strings",
             "term_header_top",
             "┌──────────────────────────────────────────┐",
         )
-        mid_bar = _get_ux(
+        mid_bar = LoreManifest.get_instance().get_ux(
             "main_strings",
             "term_header_mid",
             "│ BONEAMANITA TERMINAL // VERSION 16.2.0   │",
         )
-        bot_bar = _get_ux(
+        bot_bar = LoreManifest.get_instance().get_ux(
             "main_strings",
             "term_header_bot",
             "└──────────────────────────────────────────┘",
@@ -93,18 +73,18 @@ class SessionGuardian:
             print(f"{Prisma.GRY}   >>> {log['text']}{Prisma.RST}")
             time.sleep(0.05)
 
-        init_msg = _get_ux(
+        init_msg = LoreManifest.get_instance().get_ux(
             "main_strings", "init_hash", "...Initializing KernelHash: {hash}..."
         )
         typewriter(
             f"{Prisma.GRY}{init_msg.format(hash=self.engine_instance.kernel_hash)}{Prisma.RST}"
         )
-        sys_msg = _get_ux("main_strings", "sys_listening", ">>> SYSTEM: LISTENING")
+        sys_msg = LoreManifest.get_instance().get_ux("main_strings", "sys_listening", ">>> SYSTEM: LISTENING")
         typewriter(f"{Prisma.paint(sys_msg, 'G')}")
         return self.engine_instance
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        halt_msg = _get_ux("main_strings", "sys_halt", "--- SYSTEM HALT ---")
+        halt_msg = LoreManifest.get_instance().get_ux("main_strings", "sys_halt", "--- SYSTEM HALT ---")
         print(f"\n{Prisma.paint(halt_msg, 'R')}")
         if self.engine_instance:
             self.engine_instance.shutdown()
@@ -112,7 +92,7 @@ class SessionGuardian:
         if exc_type:
             is_interrupt = issubclass(exc_type, KeyboardInterrupt)
             if not is_interrupt:
-                crash_msg = _get_ux("main_strings", "crash_msg", "CRASH: {exc_val}")
+                crash_msg = LoreManifest.get_instance().get_ux("main_strings", "crash_msg", "CRASH: {exc_val}")
                 print(f"{Prisma.RED}{crash_msg.format(exc_val=exc_val)}{Prisma.RST}")
                 if getattr(self.engine_instance, "boot_mode", "") == "TECHNICAL":
                     full_trace = "".join(
@@ -120,13 +100,13 @@ class SessionGuardian:
                     )
                     print(f"{Prisma.GRY}{full_trace}{Prisma.RST}")
                 else:
-                    lattice_msg = _get_ux(
+                    lattice_msg = LoreManifest.get_instance().get_ux(
                         "main_strings",
                         "lattice_collapsed",
                         "The reality lattice collapsed. Check the developer logs.",
                     )
                     print(f"{Prisma.GRY}{lattice_msg}{Prisma.RST}")
-        conn_msg = _get_ux("main_strings", "conn_severed", "Connection Severed.")
+        conn_msg = LoreManifest.get_instance().get_ux("main_strings", "conn_severed", "Connection Severed.")
         print(f"{Prisma.paint(conn_msg)}")
         return exc_type is KeyboardInterrupt
 
@@ -141,7 +121,7 @@ class ConfigWizard:
                 with open(ConfigWizard.CONFIG_FILE, encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
-                err_msg = _get_ux(
+                err_msg = LoreManifest.get_instance().get_ux(
                     "main_strings", "config_load_err", "[CONFIG]: Load Error: {e}"
                 )
                 print(f"{Prisma.RED}{err_msg.format(e=e)}{Prisma.RST}")
@@ -153,7 +133,7 @@ class ConfigWizard:
         backup_name = f"{ConfigWizard.CONFIG_FILE}.{int(time.time())}.bak"
         try:
             os.rename(ConfigWizard.CONFIG_FILE, backup_name)
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "main_strings",
                 "config_backup",
                 "   >>> Corrupt Config backed up to: {backup_name}",
@@ -165,10 +145,10 @@ class ConfigWizard:
     @staticmethod
     def _run_setup():
         os.system("cls" if os.name == "nt" else "clear")
-        seq_msg = _get_ux(
+        seq_msg = LoreManifest.get_instance().get_ux(
             "main_strings", "init_seq", "/// SYSTEM INITIALIZATION SEQUENCE ///"
         )
-        hyp_msg = _get_ux(
+        hyp_msg = LoreManifest.get_instance().get_ux(
             "main_strings",
             "init_hypervisor",
             "No configuration detected. Initiating VSL Hypervisor...",
@@ -176,14 +156,14 @@ class ConfigWizard:
         print(f"{Prisma.paint(seq_msg, 'C')}")
         typewriter(hyp_msg, speed=0.02)
 
-        step1 = _get_ux("main_strings", "step1_id", "[STEP 1]: IDENTITY")
-        prompt1 = _get_ux(
+        step1 = LoreManifest.get_instance().get_ux("main_strings", "step1_id", "[STEP 1]: IDENTITY")
+        prompt1 = LoreManifest.get_instance().get_ux(
             "main_strings", "prompt_id", "Identify yourself (Default: TRAVELER): "
         )
         print(f"\n{Prisma.paint(step1, 'W')}")
         user_name = input(f"{Prisma.GRY}{prompt1}{Prisma.RST}").strip() or "TRAVELER"
 
-        step2 = _get_ux(
+        step2 = LoreManifest.get_instance().get_ux(
             "main_strings", "step2_mode", "[STEP 2]: LATTICE RESONANCE (MODE)"
         )
         print(f"\n{Prisma.paint(step2, 'W')}")
@@ -191,7 +171,7 @@ class ConfigWizard:
             (
                 "1",
                 "ADVENTURE",
-                _get_ux(
+                LoreManifest.get_instance().get_ux(
                     "main_strings",
                     "mode_adv_desc",
                     "Tactile, inventory-driven, high friction.",
@@ -201,7 +181,7 @@ class ConfigWizard:
             (
                 "2",
                 "CONVERSATION",
-                _get_ux(
+                LoreManifest.get_instance().get_ux(
                     "main_strings",
                     "mode_conv_desc",
                     "Pure philosophical dialogue, no mechanics.",
@@ -211,7 +191,7 @@ class ConfigWizard:
             (
                 "3",
                 "CREATIVE",
-                _get_ux(
+                LoreManifest.get_instance().get_ux(
                     "main_strings",
                     "mode_crea_desc",
                     "High voltage, associative leaps, brainstorming.",
@@ -221,7 +201,7 @@ class ConfigWizard:
             (
                 "4",
                 "TECHNICAL",
-                _get_ux(
+                LoreManifest.get_instance().get_ux(
                     "main_strings",
                     "mode_tech_desc",
                     "[SLASH COUNCIL] System architecture, debug, coding.",
@@ -232,7 +212,7 @@ class ConfigWizard:
         for k, name, desc, col in modes:
             print(f"  {k}. {Prisma.paint(name, col):<25} - {desc}")
 
-        prompt_mode = _get_ux(
+        prompt_mode = LoreManifest.get_instance().get_ux(
             "main_strings", "prompt_mode", "Select resonance vector (1-4): "
         )
         mode_choice = input(f"{Prisma.paint(prompt_mode, 'C')} ").strip()
@@ -244,7 +224,7 @@ class ConfigWizard:
         }
         boot_mode = mode_map.get(mode_choice, "ADVENTURE")
 
-        step3 = _get_ux("main_strings", "step3_backend", "[STEP 3]: CORTEX BACKEND")
+        step3 = LoreManifest.get_instance().get_ux("main_strings", "step3_backend", "[STEP 3]: CORTEX BACKEND")
         print(f"\n{Prisma.paint(step3, 'W')}")
         backends = [
             ("1", "Ollama (Local)", "G"),
@@ -264,7 +244,7 @@ class ConfigWizard:
                 }
             )
             config["model"] = input(f"Model ID [gpt-4]: ").strip() or "gpt-4"
-            prompt_api = _get_ux("main_strings", "prompt_api", "Enter API Key: ")
+            prompt_api = LoreManifest.get_instance().get_ux("main_strings", "prompt_api", "Enter API Key: ")
             config["api_key"] = input(f"{Prisma.paint(prompt_api, 'R')} ").strip()
         elif choice == "3":
             config.update(
@@ -288,13 +268,13 @@ class ConfigWizard:
         try:
             with open(ConfigWizard.CONFIG_FILE, "w") as f:
                 json.dump(config, f, indent=4)
-            commit_msg = _get_ux(
+            commit_msg = LoreManifest.get_instance().get_ux(
                 "main_strings", "config_committed", "✔ CONFIGURATION COMMITTED."
             )
             typewriter(f"\n{Prisma.paint(commit_msg, 'G')}", speed=0.02)
             time.sleep(1)
         except Exception as e:
-            fail_msg = _get_ux("main_strings", "write_failed", "Write Failed: {e}")
+            fail_msg = LoreManifest.get_instance().get_ux("main_strings", "write_failed", "Write Failed: {e}")
             print(f"{Prisma.paint(fail_msg.format(e=e), 'R')}")
             sys.exit(1)
         return config
@@ -319,7 +299,7 @@ class BoneAmanita:
         self.stamina = BoneConfig.MAX_STAMINA
         self.trauma_accum = {}
         self.tick_count = 0
-        boot_msg = _get_ux("main_strings", "boot_core", "...Bootstrapping Core...")
+        boot_msg = LoreManifest.get_instance().get_ux("main_strings", "boot_core", "...Bootstrapping Core...")
         self.events.log(boot_msg, "BOOT")
         self.chronos = ChronosKeeper(self)
         self.lex = LexiconService
@@ -350,7 +330,7 @@ class BoneAmanita:
                 if os.path.exists(p):
                     with open(p, encoding="utf-8") as f:
                         self.prompt_library = json.load(f)
-                    msg = _get_ux(
+                    msg = LoreManifest.get_instance().get_ux(
                         "main_strings",
                         "prompt_lib_loaded",
                         "...Prompt Library Loaded from {p}...",
@@ -359,7 +339,7 @@ class BoneAmanita:
                     loaded = True
                     break
             if not loaded:
-                warn_msg = _get_ux(
+                warn_msg = LoreManifest.get_instance().get_ux(
                     "main_strings",
                     "prompt_lib_warn",
                     "WARNING: system_prompts.json not found. Using defaults.",
@@ -367,7 +347,7 @@ class BoneAmanita:
                 print(f"{Prisma.YEL}{warn_msg}{Prisma.RST}")
                 self.prompt_library = {}
         except Exception as e:
-            crit_msg = _get_ux(
+            crit_msg = LoreManifest.get_instance().get_ux(
                 "main_strings",
                 "prompt_lib_crit",
                 "CRITICAL: Could not load prompts: {e}",
@@ -400,7 +380,7 @@ class BoneAmanita:
             self.bio.mito.state.atp_pool = BoneConfig.BIO.STARTING_ATP
 
     def _apply_boot_mode(self):
-        msg = _get_ux("main_strings", "engaging_mode", "Engaging Mode: {boot_mode}")
+        msg = LoreManifest.get_instance().get_ux("main_strings", "engaging_mode", "Engaging Mode: {boot_mode}")
         self.events.log(msg.format(boot_mode=self.boot_mode))
         layer = self.mode_settings.get("ui_layer", RealityLayer.SIMULATION)
         if self.boot_mode == "TECHNICAL":
@@ -410,14 +390,14 @@ class BoneAmanita:
         if self.prompt_library and prompt_key in self.prompt_library:
             if self.cortex and self.cortex.composer:
                 self.cortex.composer.load_template(self.prompt_library[prompt_key])
-                msg_align = _get_ux(
+                msg_align = LoreManifest.get_instance().get_ux(
                     "main_strings",
                     "pathway_aligned",
                     "Neural Pathway Re-aligned: {prompt_key}",
                 )
                 self.events.log(msg_align.format(prompt_key=prompt_key), "CORTEX")
         else:
-            msg_warn = _get_ux(
+            msg_warn = LoreManifest.get_instance().get_ux(
                 "main_strings",
                 "prompt_not_found",
                 "Prompt Template '{prompt_key}' not found.",
@@ -428,7 +408,7 @@ class BoneAmanita:
             for mod in active_mods:
                 if mod not in self.consultant.state.active_modules:
                     self.consultant.state.active_modules.append(mod)
-            msg_mods = _get_ux(
+            msg_mods = LoreManifest.get_instance().get_ux(
                 "main_strings", "hardwired_mods", "Hard-wired Mod Chips: {mods}"
             )
             self.events.log(msg_mods.format(mods=", ".join(active_mods)), "SYS")
@@ -516,7 +496,7 @@ class BoneAmanita:
                 user_message, current_zone
             )
             if violation_msg:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "main_strings",
                     "gordon_intercept",
                     "Gordon intercepted a premise violation. Shocking the Cortex.",
@@ -528,7 +508,7 @@ class BoneAmanita:
 
         rules = self.reality_stack.get_grammar_rules()
         if not rules["allow_narrative"]:
-            halt_msg = _get_ux("main_strings", "narrative_halt", "NARRATIVE HALT")
+            halt_msg = LoreManifest.get_instance().get_ux("main_strings", "narrative_halt", "NARRATIVE HALT")
             return {
                 "ui": f"{Prisma.RED}{halt_msg}{Prisma.RST}",
                 "logs": [],
@@ -565,7 +545,7 @@ class BoneAmanita:
                 return self.trigger_death(cortex_packet.get("physics", {}))
         except Exception:
             full_trace = traceback.format_exc()
-            crit_msg = _get_ux(
+            crit_msg = LoreManifest.get_instance().get_ux(
                 "main_strings",
                 "cortex_crit_fail",
                 "*** CORTEX CRITICAL FAILURE ***\n{trace}",
@@ -584,7 +564,7 @@ class BoneAmanita:
         if clean_cmd.startswith("//"):
             return self._handle_meta_command(clean_cmd)
         if self.cmd is None:
-            err_msg = _get_ux(
+            err_msg = LoreManifest.get_instance().get_ux(
                 "main_strings",
                 "cmd_err_init",
                 "ERR: Command interface not initialized.",
@@ -598,7 +578,7 @@ class BoneAmanita:
             self.cmd.execute(clean_cmd)
 
         cmd_logs = [e["text"] for e in self.events.flush()]
-        default_exec = _get_ux("main_strings", "cmd_executed", "Command Executed.")
+        default_exec = LoreManifest.get_instance().get_ux("main_strings", "cmd_executed", "Command Executed.")
         ui_output = "\n".join(cmd_logs) if cmd_logs else default_exec
         return {
             "type": "COMMAND",
@@ -616,28 +596,28 @@ class BoneAmanita:
                 sub = meta_parts[1].lower()
                 if sub == "push" and len(meta_parts) > 2:
                     if self.reality_stack.push_layer(int(meta_parts[2])):
-                        msg = _get_ux(
+                        msg = LoreManifest.get_instance().get_ux(
                             "main_strings", "layer_pushed", "Layer Pushed: {layer}"
                         )
                         ui_msg = msg.format(layer=meta_parts[2])
                 elif sub == "pop":
                     self.reality_stack.pop_layer()
-                    ui_msg = _get_ux("main_strings", "layer_popped", "Layer Popped.")
+                    ui_msg = LoreManifest.get_instance().get_ux("main_strings", "layer_popped", "Layer Popped.")
                 elif sub == "debug":
                     self.reality_stack.push_layer(RealityLayer.DEBUG)
-                    ui_msg = _get_ux(
+                    ui_msg = LoreManifest.get_instance().get_ux(
                         "main_strings", "debug_engaged", "Debug Mode Engaged."
                     )
             else:
-                msg = _get_ux("main_strings", "current_layer", "Current Layer: {layer}")
+                msg = LoreManifest.get_instance().get_ux("main_strings", "current_layer", "Current Layer: {layer}")
                 ui_msg = msg.format(layer=self.reality_stack.current_depth)
         elif cmd == "//inject":
             payload = " ".join(meta_parts[1:])
             self.events.log(payload, "INJECT")
-            msg = _get_ux("main_strings", "injected", "Injected: {payload}")
+            msg = LoreManifest.get_instance().get_ux("main_strings", "injected", "Injected: {payload}")
             ui_msg = msg.format(payload=payload)
         else:
-            msg = _get_ux("main_strings", "unknown_meta", "Unknown Meta-Command: {cmd}")
+            msg = LoreManifest.get_instance().get_ux("main_strings", "unknown_meta", "Unknown Meta-Command: {cmd}")
             ui_msg = msg.format(cmd=cmd)
         return {
             "ui": f"{Prisma.GRY}[META] {ui_msg}{Prisma.RST}",
@@ -647,7 +627,7 @@ class BoneAmanita:
 
     def trigger_death(self, last_phys) -> Dict:
         if self.death_gen is None:
-            crit_msg = _get_ux(
+            crit_msg = LoreManifest.get_instance().get_ux(
                 "main_strings",
                 "death_no_proto",
                 "*** CRITICAL FAILURE (NO DEATH PROTOCOL) ***",
@@ -660,7 +640,7 @@ class BoneAmanita:
         eulogy_text, cause_code = self.death_gen.eulogy(
             last_phys, self.bio.mito.state, self.trauma_accum
         )
-        halt_msg = _get_ux("main_strings", "death_halt", "SYSTEM HALT: {eulogy_text}")
+        halt_msg = LoreManifest.get_instance().get_ux("main_strings", "death_halt", "SYSTEM HALT: {eulogy_text}")
         death_log = [
             f"\n{Prisma.RED}{halt_msg.format(eulogy_text=eulogy_text)}{Prisma.RST}"
         ]
@@ -706,12 +686,12 @@ class BoneAmanita:
                 soul_data=self.soul.to_dict(),
                 continuity=continuity_packet,
             )
-            saved_msg = _get_ux(
+            saved_msg = LoreManifest.get_instance().get_ux(
                 "main_strings", "legacy_saved", "   [LEGACY SAVED: {path}]"
             )
             death_log.append(f"{Prisma.WHT}{saved_msg.format(path=path)}{Prisma.RST}")
         except Exception as e:
-            fail_msg = _get_ux("main_strings", "save_failed", "Save Failed: {e}")
+            fail_msg = LoreManifest.get_instance().get_ux("main_strings", "save_failed", "Save Failed: {e}")
             death_log.append(fail_msg.format(e=e))
         return {
             "type": "DEATH",
@@ -749,7 +729,7 @@ class BoneAmanita:
         health_ratio = self.health / BoneConfig.MAX_HEALTH
         desperation = trauma_sum * (1.0 - health_ratio)
         if desperation > DESPERATION_THRESHOLD:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "main_strings",
                 "mercy_venting",
                 "MERCY SIGNAL: Pressure Critical. Venting...",
@@ -762,7 +742,7 @@ class BoneAmanita:
                 self.trauma_accum[k] *= CATHARSIS_DECAY
                 if self.trauma_accum[k] < 0.01:
                     self.trauma_accum[k] = 0.0
-            msg_cath = _get_ux(
+            msg_cath = LoreManifest.get_instance().get_ux(
                 "main_strings",
                 "catharsis",
                 "*** CATHARSIS *** The fever breaks. Logic cools.",
@@ -779,7 +759,7 @@ class BoneAmanita:
         if self.tick_count > 0:
             return None
         if os.path.exists("saves/quicksave.json"):
-            msg_pod = _get_ux("main_strings", "stasis_pod", "...Detected Stasis Pod...")
+            msg_pod = LoreManifest.get_instance().get_ux("main_strings", "stasis_pod", "...Detected Stasis Pod...")
             print(f"{Prisma.GRY}{msg_pod}{Prisma.RST}")
             success, history = self.resume_checkpoint()
             if success:
@@ -797,18 +777,18 @@ class BoneAmanita:
                 elif self.embryo.continuity:
                     last_scene = self.embryo.continuity.get("last_output", "Silence.")
 
-                msg_resume = _get_ux(
+                msg_resume = LoreManifest.get_instance().get_ux(
                     "main_strings",
                     "resuming_timeline",
                     "**RESUMING TIMELINE**\nLocation: {loc}\n\n{last_scene}",
                 )
-                msg_restored = _get_ux(
+                msg_restored = LoreManifest.get_instance().get_ux(
                     "main_strings", "timeline_restored", "Timeline Restored."
                 )
                 resume_text = msg_resume.format(loc=loc, last_scene=last_scene)
                 return {"ui": resume_text, "logs": [msg_restored]}
 
-        msg_synth = _get_ux(
+        msg_synth = LoreManifest.get_instance().get_ux(
             "main_strings", "synth_reality", "...Synthesizing Initial Reality..."
         )
         print(f"{Prisma.GRY}{msg_synth}{Prisma.RST}")
@@ -817,7 +797,7 @@ class BoneAmanita:
             "ARCHETYPES", ["A quiet room", "The edge of a forest", "A terminal screen"]
         )
         seed = random.choice(archetypes)
-        msg_seed = _get_ux("main_strings", "seed_loaded", "[SYS] Seed Loaded: '{seed}'")
+        msg_seed = LoreManifest.get_instance().get_ux("main_strings", "seed_loaded", "[SYS] Seed Loaded: '{seed}'")
         print(f"{Prisma.CYN}{msg_seed.format(seed=seed)}{Prisma.RST}")
 
         boot_prompt = f"SYSTEM_BOOT: {seed}"
@@ -865,7 +845,7 @@ if __name__ == "__main__":
                 else:
                     typewriter(res["ui"] + "\n", speed=0.005)
             if res.get("type") == "DEATH":
-                term_msg = _get_ux(
+                term_msg = LoreManifest.get_instance().get_ux(
                     "main_strings", "session_term", "[SESSION TERMINATED]"
                 )
                 print(f"\n{Prisma.GRY}{term_msg}{Prisma.RST}")

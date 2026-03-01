@@ -1,28 +1,12 @@
 """bone_spores.py"""
 
-import json
-import os
-import random
-import tempfile
-import time
+import json, os, random, tempfile, time
 from collections import deque
-from typing import List, Tuple, Optional, Dict, Any
-
+from typing import List, Tuple, Optional, Dict
 from bone_config import BoneConfig
 from bone_core import EventBus, LoreManifest, BoneJSONEncoder
 from bone_lexicon import LexiconService
 from bone_types import Prisma
-
-UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
-try:
-    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
-        _UX_DATA = json.load(f)
-except Exception:
-    _UX_DATA = {}
-
-
-def _get_ux(section: str, key: str, default: Any) -> Any:
-    return _UX_DATA.get(section, {}).get(key, default)
 
 
 def _access_config_path(root, path, value=None, set_mode=False):
@@ -75,7 +59,7 @@ class LocalFileSporeLoader:
             os.replace(temp_path, final_path)
             return final_path
         except (IOError, OSError, TypeError) as e:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings", "loader_save_err", "[LOADER] Error saving spore: {e}"
             )
             print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
@@ -86,7 +70,7 @@ class LocalFileSporeLoader:
     @staticmethod
     def load_spore(filepath):
         if not os.path.exists(filepath):
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "loader_not_found",
                 "[LOADER] File not found: {filepath}",
@@ -97,7 +81,7 @@ class LocalFileSporeLoader:
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except json.JSONDecodeError as e:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "loader_corrupt",
                 "[LOADER] CORRUPT SPORE ({filepath}): {e}",
@@ -105,7 +89,7 @@ class LocalFileSporeLoader:
             print(f"{Prisma.RED}{msg.format(filepath=filepath, e=e)}{Prisma.RST}")
             return None
         except IOError as e:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "loader_read_err",
                 "[LOADER] READ ERROR ({filepath}): {e}",
@@ -285,7 +269,7 @@ class MemoryCore:
             for other_node in self.graph.values():
                 if n in other_node["edges"]:
                     del other_node["edges"][n]
-        msg = _get_ux(
+        msg = LoreManifest.get_instance().get_ux(
             "spore_strings",
             "core_pruned",
             "📉 HOMEOSTATIC SCALING: Decayed {total} synapses. Pruned {pruned} weak connections.",
@@ -313,7 +297,7 @@ class MemoryCore:
         if not candidates:
             return (
                 None,
-                _get_ux(
+                LoreManifest.get_instance().get_ux(
                     "spore_strings",
                     "core_lock",
                     "CORTICAL LOCK: All available memories are currently protected.",
@@ -335,7 +319,7 @@ class MemoryCore:
         for node in self.graph:
             if victim in self.graph[node]["edges"]:
                 del self.graph[node]["edges"][victim]
-        msg = _get_ux(
+        msg = LoreManifest.get_instance().get_ux(
             "spore_strings",
             "core_repressed",
             "REPRESSED: '{victim}' (Score {score:.1f} -> Subconscious)",
@@ -388,7 +372,7 @@ class MycelialNetwork:
         for word in clean_words:
             toxin_msg = self.immune.assay(word, None, None, physics, None)[1]
             if toxin_msg:
-                resp_msg = _get_ux(
+                resp_msg = LoreManifest.get_instance().get_ux(
                     "spore_strings", "net_immune_resp", "🛡️ IMMUNE RESPONSE: {msg}"
                 )
                 logs.append(f"{Prisma.CYN}{resp_msg.format(msg=toxin_msg)}{Prisma.RST}")
@@ -417,14 +401,14 @@ class MycelialNetwork:
                 physics.get("narrative_drag", 0.0) + total_drag_penalty
             )
             if total_voltage_boost > 4.0:
-                msg_h = _get_ux(
+                msg_h = LoreManifest.get_instance().get_ux(
                     "spore_strings",
                     "net_echo_heavy",
                     "👻 ECHO: The past is heavy here. (Drag +{drag:.1f})",
                 )
                 return f"{Prisma.VIOLET}{msg_h.format(drag=total_drag_penalty)}{Prisma.RST}"
             elif total_voltage_boost > 0:
-                msg_l = _get_ux(
+                msg_l = LoreManifest.get_instance().get_ux(
                     "spore_strings", "net_echo_light", "👻 ECHO: Familiar ground."
                 )
                 return f"{Prisma.GRY}{msg_l}{Prisma.RST}"
@@ -461,7 +445,7 @@ class MycelialNetwork:
                     memory = self.subconscious.dredge(word)
                     if memory:
                         self.graph[word] = {"edges": memory["edges"], "last_tick": 0}
-                        msg = _get_ux(
+                        msg = LoreManifest.get_instance().get_ux(
                             "spore_strings",
                             "net_flashback",
                             "⚠️ FLASHBACK: The word '{word}' clawed its way back from the deep.",
@@ -484,7 +468,7 @@ class MycelialNetwork:
         if len(self.graph) > BoneConfig.MAX_MEMORY_CAPACITY:
             if desperation_level < 0.6:
                 return (
-                    _get_ux(
+                    LoreManifest.get_instance().get_ux(
                         "spore_strings",
                         "net_sat_high",
                         "CORTICAL SATURATION: Memory full & Glucose High. Input rejected.",
@@ -496,7 +480,7 @@ class MycelialNetwork:
             )
             if not victim:
                 return (
-                    _get_ux(
+                    LoreManifest.get_instance().get_ux(
                         "spore_strings",
                         "net_sat_lock",
                         "MEMORY FULL: Cortical Lock. Input rejected.",
@@ -601,7 +585,7 @@ class MycelialNetwork:
     def _apply_epigenetics(self, data):
         if "config_mutations" not in data:
             return
-        msg = _get_ux(
+        msg = LoreManifest.get_instance().get_ux(
             "spore_strings",
             "net_audit_epig",
             "EPIGENETICS: Auditing ancestral configuration...",
@@ -640,7 +624,7 @@ class MycelialNetwork:
                 if _access_config_path(BoneConfig, key, value, set_mode=True):
                     valid_mutations += 1
         if valid_mutations > 0:
-            msg_ap = _get_ux(
+            msg_ap = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "net_apply_epig",
                 "► Applied {count} verified config shifts.",
@@ -652,7 +636,7 @@ class MycelialNetwork:
     def ingest(self, target_file, current_tick=0):
         data = self.loader.load_spore(target_file)
         if not data:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "net_spore_not_found",
                 "[MEMORY]: Spore file not found.",
@@ -662,7 +646,7 @@ class MycelialNetwork:
 
         required_keys = ["meta", "trauma_vector", "core_graph"]
         if not all(k in data for k in required_keys):
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "net_spore_reject",
                 "[MEMORY]: Spore rejected (Missing Structural Keys).",
@@ -709,7 +693,7 @@ class MycelialNetwork:
                     LexiconService.teach(w, cat, 0)
                     accepted_count += 1
         if accepted_count > 0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "net_mut_integ",
                 "[MEMBRANE]: Integrated {count} mutations.",
@@ -723,7 +707,7 @@ class MycelialNetwork:
             joy = data["joy_legacy"]
             clade = LiteraryReproduction.JOY_CLADE.get(joy.get("flavor"))
             if clade:
-                msg = _get_ux("spore_strings", "net_glory", "INHERITED GLORY: {title}")
+                msg = LoreManifest.get_instance().get_ux("spore_strings", "net_glory", "INHERITED GLORY: {title}")
                 self.events.log(
                     f"{Prisma.CYN}{msg.format(title=clade['title'])}{Prisma.RST}"
                 )
@@ -839,7 +823,7 @@ class MycelialNetwork:
                 except (OSError, AttributeError):
                     pass
         if removed:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "net_pruned_lines",
                 "[TIME MENDER]: Pruned {removed} dead timelines.",
@@ -852,7 +836,7 @@ class MycelialNetwork:
     def autoload_last_spore(self):
         files = self.loader.list_spores()
         if not files:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "net_no_ancestor",
                 "[GENETICS]: No ancestors found. Genesis Bloom.",
@@ -895,11 +879,11 @@ class ImmuneMycelium:
     def opine(self, clean_words: list, _voltage: float) -> Tuple[float, str]:
         hits = sum(1 for w in clean_words if w in self.archetypes)
         score = (hits / max(1, len(clean_words))) * 10.0
-        comment = _get_ux(
+        comment = LoreManifest.get_instance().get_ux(
             "spore_strings", "immune_op_scan", "Scanning for structural integrity..."
         )
         if score > 2.0:
-            comment = _get_ux(
+            comment = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "immune_op_good",
                 "The pattern holds. Integration probable.",
@@ -922,7 +906,7 @@ class ImmuneMycelium:
         if clean_len <= 4:
             density *= 1.2
         if density > 1.0:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "immune_tox_phon",
                 "Detected phonetic toxicity in '{word}'.",
@@ -955,17 +939,17 @@ class BioParasite:
         score = (hits / max(1, len(clean_words))) * 10.0
         comment = "..."
         if score > 3.0:
-            comment = _get_ux(
+            comment = LoreManifest.get_instance().get_ux(
                 "spore_strings", "para_op_great", "Delicious. The entropy is sweet."
             )
         elif score > 1.0:
-            comment = _get_ux("spore_strings", "para_op_good", "I smell rust.")
+            comment = LoreManifest.get_instance().get_ux("spore_strings", "para_op_good", "I smell rust.")
         elif voltage > 15.0:
-            comment = _get_ux(
+            comment = LoreManifest.get_instance().get_ux(
                 "spore_strings", "para_op_hot", "Stop vibrating. Be still and rot."
             )
         elif voltage < 5.0:
-            comment = _get_ux("spore_strings", "para_op_cold", "Finally. Silence.")
+            comment = LoreManifest.get_instance().get_ux("spore_strings", "para_op_cold", "Finally. Silence.")
         return score, comment
 
     def infect(self, physics_packet, stamina):
@@ -995,7 +979,7 @@ class BioParasite:
         graph[parasite]["edges"][host] = weight
         self.spores_deployed += 1
         if is_metaphor:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "para_syn_spark",
                 "✨ SYNAPSE SPARK: Your mind bridges '{host}' and '{para}'.\n   A new metaphor is born. The map folds.",
@@ -1004,7 +988,7 @@ class BioParasite:
                 f"{Prisma.CYN}{msg.format(host=host.upper(), para=parasite.upper())}{Prisma.RST}"
             )
         else:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings",
                 "para_intrusive",
                 "🍄 INTRUSIVE THOUGHT: Exhaustion logic links '{host}' <-> '{para}'.\n   This makes no sense, yet there it is. 'Some things just happen.'",
@@ -1034,17 +1018,17 @@ class BioLichen:
         score = (hits / max(1, len(clean_words))) * 10.0
         comment = "..."
         if score > 3.0:
-            comment = _get_ux(
+            comment = LoreManifest.get_instance().get_ux(
                 "spore_strings", "lichen_op_great", "Yes! The roots are drinking deep."
             )
         elif score > 1.0:
-            comment = _get_ux("spore_strings", "lichen_op_good", "We see the light.")
+            comment = LoreManifest.get_instance().get_ux("spore_strings", "lichen_op_good", "We see the light.")
         elif voltage > 18.0:
-            comment = _get_ux(
+            comment = LoreManifest.get_instance().get_ux(
                 "spore_strings", "lichen_op_hot", "Too hot! You'll scorch the leaves!"
             )
         elif voltage < 2.0:
-            comment = _get_ux(
+            comment = LoreManifest.get_instance().get_ux(
                 "spore_strings", "lichen_op_cold", "It is cold... we are sleeping."
             )
         return score, comment
@@ -1064,7 +1048,7 @@ class BioLichen:
             s = light * 2
             sugar += s
             source_str = f" via '{random.choice(light_words)}'" if light_words else ""
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "spore_strings", "lichen_photo", "PHOTOSYNTHESIS{source} (+{sugar})"
             )
             msgs.append(
@@ -1077,7 +1061,7 @@ class BioLichen:
             if heavy_words:
                 h_word = random.choice(heavy_words)
                 LexiconService.teach(h_word, "photo", tick_count)
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "spore_strings",
                     "lichen_sub",
                     "SUBLIMATION: '{word}' has become Light.",

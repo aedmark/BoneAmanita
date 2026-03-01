@@ -1,21 +1,9 @@
-import json
-import os
-import uuid
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
+""" bone_akashic.py"""
 
+import json, os, uuid
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
 from bone_core import BoneJSONEncoder, LoreManifest
 from bone_types import Prisma
-
-UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
-try:
-    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
-        _UX_DATA = json.load(f)
-except Exception:
-    _UX_DATA = {}
-
-
-def _get_ux(section: str, key: str, default: Any) -> Any:
-    return _UX_DATA.get(section, {}).get(key, default)
 
 
 class TheAkashicRecord:
@@ -40,10 +28,9 @@ class TheAkashicRecord:
         event_bus.subscribe("LENS_INTERACTION", self._on_lens_interaction)
         event_bus.subscribe("FORGE_SUCCESS", self._on_forge_event)
         event_bus.subscribe("GHOST_SIGNAL", self._on_ghost_signal)
-        msg = _get_ux(
+        msg = LoreManifest.get_instance().get_ux(
             "akashic_strings",
-            "listening",
-            "[AKASHIC]: Listening for mythic resonance...",
+            "listening"
         )
         print(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
@@ -52,24 +39,21 @@ class TheAkashicRecord:
             if self.discovered_words:
                 word = next(iter(self.discovered_words))
                 del self.discovered_words[word]
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "akashic_strings",
-                    "autophagy_lexical",
-                    "[AUTOPHAGY: Consumed lexical memory of '{word}' to survive.]",
+                    "autophagy_lexical"
                 )
                 return 15.0, msg.format(word=word)
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "akashic_strings",
-                "autophagy_failed",
-                "[AUTOPHAGY FAILED: No memories left to consume. System crash imminent.]",
+                "autophagy_failed"
             )
             return 0.0, msg
         consumed_node = self.subconscious_strata.pop(0)
         target = consumed_node.get("concept", "Unknown Node")
-        msg = _get_ux(
+        msg = LoreManifest.get_instance().get_ux(
             "akashic_strings",
-            "autophagy_memory",
-            "[AUTOPHAGY: Consumed memory of {target} to survive.]",
+            "autophagy_memory"
         )
         return 15.0, msg.format(target=target)
 
@@ -92,10 +76,9 @@ class TheAkashicRecord:
             {"type": "SCAR_GHOST", "concept": concept, "coords": coords}
         )
         if self.events:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "akashic_strings",
-                "mercy_scar",
-                "🏺 MERCY: Scar recorded at '{concept}'. Ghost left in substrate.",
+                "mercy_scar"
             )
             self.events.log(
                 f"{Prisma.OCHRE}{msg.format(concept=concept)}{Prisma.RST}", "VILLAGE"
@@ -203,11 +186,7 @@ class TheAkashicRecord:
         if vector.get("CHI", 0) > 0.5:
             hazards.append("TOXIC_HAZARD")
 
-        desc_template = _get_ux(
-            "akashic_strings",
-            "artifact_desc",
-            "A vibrating artifact humming with {dominant_force} energy.",
-        )
+        desc_template = LoreManifest.get_instance().get_ux("akashic_strings", "artifact_desc")
         new_data = {
             "name": new_name,
             "description": desc_template.format(dominant_force=dominant_force),
@@ -224,8 +203,8 @@ class TheAkashicRecord:
     def save_all(self):
         self.save_to_disk("discovered_words", self.discovered_words)
         self._save_user_state()
-        msg = _get_ux(
-            "akashic_strings", "mythos_persisted", "[AKASHIC]: Mythos persisted."
+        msg = LoreManifest.get_instance().get_ux(
+            "akashic_strings", "mythos_persisted"
         )
         print(f"{Prisma.GRY}{msg}{Prisma.RST}")
 
@@ -245,8 +224,8 @@ class TheAkashicRecord:
             with open("saves/akashic_state.json", "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2)
         except Exception as e:
-            msg = _get_ux(
-                "akashic_strings", "save_failed", "[AKASHIC] Save failed: {error}"
+            msg = LoreManifest.get_instance().get_ux(
+                "akashic_strings", "save_failed"
             )
             print(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
 
@@ -256,10 +235,9 @@ class TheAkashicRecord:
             try:
                 os.makedirs(directory)
             except OSError as e:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "akashic_strings",
-                    "dir_create_failed",
-                    "[AKASHIC]: Failed to create '{directory}' directory: {error}",
+                    "dir_create_failed"
                 )
                 print(
                     f"{Prisma.RED}{msg.format(directory=directory, error=e)}{Prisma.RST}"
@@ -270,15 +248,12 @@ class TheAkashicRecord:
         try:
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, cls=BoneJSONEncoder)
-            msg = _get_ux(
-                "akashic_strings", "saved_category", "[AKASHIC]: Saved {category}."
-            )
+            msg = LoreManifest.get_instance().get_ux("akashic_strings", "saved_category")
             print(f"{Prisma.GRY}{msg.format(category=category)}{Prisma.RST}")
         except Exception as e:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "akashic_strings",
-                "save_failed_category",
-                "[AKASHIC]: Save Failed ({category}): {error}",
+                "save_failed_category"
             )
             print(f"{Prisma.RED}{msg.format(category=category, error=e)}{Prisma.RST}")
 
@@ -289,10 +264,9 @@ class TheAkashicRecord:
                 with open("saves/akashic_state.json", "r") as f:
                     data = json.load(f)
             except Exception as e:
-                msg = _get_ux(
+                msg = LoreManifest.get_instance().get_ux(
                     "akashic_strings",
-                    "state_load_failed",
-                    "[AKASHIC] State load failed: {error}",
+                    "state_load_failed"
                 )
                 print(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
         if not data:
@@ -384,11 +358,7 @@ class TheAkashicRecord:
             ),
         }
 
-        desc_template = _get_ux(
-            "akashic_strings",
-            "lens_desc",
-            "A syncretic fusion of {lens_a} and {lens_b}.",
-        )
+        desc_template = LoreManifest.get_instance().get_ux("akashic_strings", "lens_desc")
         new_lens_data = {
             "description": desc_template.format(lens_a=lens_a, lens_b=lens_b),
             "weights": new_weights,
@@ -397,10 +367,9 @@ class TheAkashicRecord:
         self.lore.inject("LENSES", {new_name: new_lens_data})
         self.discovered_words[new_name] = "LENS"
 
-        msg = _get_ux(
+        msg = LoreManifest.get_instance().get_ux(
             "akashic_strings",
-            "paradigm_crystallized",
-            "🔮 AKASHIC: A new paradigm has crystallized: {new_name}",
+            "paradigm_crystallized"
         )
         print(f"{Prisma.MAG}{msg.format(new_name=new_name)}{Prisma.RST}")
         if self.events:
@@ -408,11 +377,7 @@ class TheAkashicRecord:
 
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
         self.known_recipes.add((ingredient, catalyst))
-        msg_template = _get_ux(
-            "akashic_strings",
-            "recipe_msg",
-            "The {ingredient} resonates with {catalyst} energy, transforming into {result_item}.",
-        )
+        msg_template = LoreManifest.get_instance().get_ux("akashic_strings", "recipe_msg")
         new_recipe = {
             "ingredient": ingredient,
             "catalyst_category": catalyst,
@@ -428,10 +393,9 @@ class TheAkashicRecord:
         ):
             current_recipes.append(new_recipe)
             self.lore.inject("GORDON", {"RECIPES": current_recipes})
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "akashic_strings",
-                "recipe_recorded",
-                "📜 AKASHIC: Recipe recorded in the Great Book.",
+                "recipe_recorded"
             )
             print(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
@@ -447,10 +411,9 @@ class TheAkashicRecord:
                 updated = True
         if updated:
             self.lore.inject("LEXICON", lexicon_data)
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "akashic_strings",
-                "lexicon_expands",
-                "✨ MYTHOLOGY ENGINE: The Lexicon expands. New Category: '{category}'",
+                "lexicon_expands"
             )
             print(msg.format(category=category_name.upper()))
             self.save_to_disk("LEXICON", lexicon_data)
@@ -460,8 +423,8 @@ class TheAkashicRecord:
         if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
             self.shadow_stock.pop(0)
         self._save_user_state()
-        msg = _get_ux(
-            "akashic_strings", "ghost_archived", "[AKASHIC]: Ghost Echo archived."
+        msg = LoreManifest.get_instance().get_ux(
+            "akashic_strings", "ghost_archived"
         )
         print(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
 
@@ -475,17 +438,15 @@ class TheAkashicRecord:
             target_category.append(word)
             self.discovered_words[word] = category
             self.lore.inject("LEXICON", lexicon_data)
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "akashic_strings",
-                "lexicon_learned",
-                "✨ LEXICON: Learned '{word}' ({category})",
+                "lexicon_learned"
             )
             print(msg.format(word=word, category=category))
             if len(lexicon_data[category]) > 50 and category != "heavy":
-                bloat_msg = _get_ux(
+                bloat_msg = LoreManifest.get_instance().get_ux(
                     "akashic_strings",
-                    "lexicon_bloat",
-                    "⚠️ MYTHOLOGY ENGINE: Category '{category}' is bloating. Suggest fission.",
+                    "lexicon_bloat"
                 )
                 print(bloat_msg.format(category=category))
             return True

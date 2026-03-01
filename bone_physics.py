@@ -1,30 +1,11 @@
-import math, random, time, os, json
+import math, random, time
 from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Dict, List, Any, Tuple, Optional, Deque
-
 from bone_config import BoneConfig
 from bone_core import LoreManifest
 from bone_lexicon import LexiconService
-from bone_types import (
-    Prisma,
-    PhysicsPacket,
-    CycleContext,
-    SpatialState,
-    MaterialState,
-    EnergyState,
-)
-
-UX_STRINGS_PATH = os.path.join(os.path.dirname(__file__), "lore", "ux_strings.json")
-try:
-    with open(UX_STRINGS_PATH, "r", encoding="utf-8") as f:
-        _UX_DATA = json.load(f)
-except Exception:
-    _UX_DATA = {}
-
-
-def _get_ux(section: str, key: str, default: Any) -> Any:
-    return _UX_DATA.get(section, {}).get(key, default)
+from bone_types import Prisma, PhysicsPacket, CycleContext, SpatialState, MaterialState, EnergyState
 
 
 @dataclass
@@ -231,7 +212,7 @@ class TheGatekeeper:
         phys = ctx.physics
         starvation_threshold = getattr(BoneConfig.BIO, "ATP_STARVATION", 5.0)
         if current_atp < (starvation_threshold * 0.5):
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "gatekeeper_starved",
                 "Energy critical. The inputs dissolve into the void.",
@@ -239,7 +220,7 @@ class TheGatekeeper:
             return False, self._pack_refusal(ctx, "DARK_SYSTEM", msg)
 
         if phys.counts.get("antigen", 0) > 2:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "gatekeeper_toxic",
                 "IMMUNE REACTION: Input rejected as pathogenic.",
@@ -249,7 +230,7 @@ class TheGatekeeper:
             )
 
         if self._audit_safety(ctx.clean_words):
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "gatekeeper_cursed",
                 "The Gatekeeper recoils. Cursed syntax detected.",
@@ -260,7 +241,7 @@ class TheGatekeeper:
 
         text = ctx.input_text
         if "```" in text or "{{" in text or "}}" in text:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "gatekeeper_syntax",
                 "The mechanism jams. Syntax anomaly detected.",
@@ -270,7 +251,7 @@ class TheGatekeeper:
             )
 
         if len(text) > 10000:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "gatekeeper_overload",
                 "Input too long. Compress your thought.",
@@ -498,7 +479,7 @@ class SurfaceTension:
         volt_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
         volt_flow = getattr(BoneConfig.PHYSICS, "VOLTAGE_HIGH", 12.0)
         if voltage >= volt_crit and coherence < 0.4:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "hubris_detected",
                 "⚠️ HUBRIS DETECTED: Voltage ({voltage:.1f}v) exceeds structural integrity. Wings melting.",
@@ -506,7 +487,7 @@ class SurfaceTension:
             return True, msg.format(voltage=voltage), "ICARUS_CRASH"
 
         if voltage > volt_flow and coherence > 0.8:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "hubris_flow",
                 "🌊 SURFACE TENSION OPTIMAL: Entering Flow State.",
@@ -582,14 +563,14 @@ class ZoneInertia:
             self.is_anchored = False
             self.strain_gauge = 0.0
             self.current_zone = proposed_zone
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "anchor_failed",
                 "⚡ SNAP! The narrative current was too strong. Anchor failed.",
             )
             return proposed_zone, f"{Prisma.RED}{msg}{Prisma.RST}"
 
-        msg = _get_ux(
+        msg = LoreManifest.get_instance().get_ux(
             "physics_strings",
             "anchor_holding",
             "⚓ ANCHORED: Resisting drift to '{proposed_zone}' (Strain {strain:.1f}/{limit})",
@@ -608,7 +589,7 @@ class ZoneInertia:
         if random.random() < prob:
             old, self.current_zone = self.current_zone, proposed_zone
             self.dwell_counter = 0
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "zone_migration",
                 ">>> MIGRATION: {old} -> {proposed_zone}.",
@@ -638,30 +619,30 @@ class CosmicDynamics:
     @staticmethod
     def _load_logs():
         base = {
-            "GRAVITY": _get_ux(
+            "GRAVITY": LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "cosmic_gravity",
                 "⚓ GRAVITY: The narrative is heavy. (Drag {drag:.1f})",
             ),
-            "VOID": _get_ux(
+            "VOID": LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "cosmic_void",
                 "VOID: Drifting outside the filaments.",
             ),
-            "NEBULA": _get_ux(
+            "NEBULA": LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "cosmic_nebula",
                 "NEBULA: Floating near '{node}' (Mass {mass}). Not enough mass for orbit.",
             ),
-            "LAGRANGE": _get_ux(
+            "LAGRANGE": LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "cosmic_lagrange",
                 "LAGRANGE: Caught between '{p}' and '{s}'",
             ),
-            "FLOW": _get_ux(
+            "FLOW": LoreManifest.get_instance().get_ux(
                 "physics_strings", "cosmic_flow", "FLOW: Streaming towards '{node}'"
             ),
-            "ORBIT": _get_ux(
+            "ORBIT": LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "cosmic_orbit",
                 "ORBIT: Circling '{node}' (Mass {mass})",
@@ -843,7 +824,7 @@ class CycleStabilizer:
     def stabilize(self, ctx: CycleContext, current_phase: str):
         p = ctx.physics
         if p.voltage >= self.HARD_FUSE_VOLTAGE:
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "stabilizer_fuse",
                 "⚡ FUSE BLOWN: Voltage > {voltage}V.",
@@ -859,7 +840,7 @@ class CycleStabilizer:
             return True
         if self.pending_drag > 0:
             ctx.physics.narrative_drag += self.pending_drag
-            msg = _get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "physics_strings",
                 "stabilizer_domestication",
                 "⚖️ DOMESTICATION: Drag +{drag:.1f}",
