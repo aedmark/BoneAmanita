@@ -29,6 +29,15 @@
     "Retroactive approval denied.",
     "This meeting is adjourned."
   ],
+  "SOUL_MANDATES": {
+    "CYNICISM": "The Cynic holds the gavel. 'Stop doing things.'",
+    "HOPE": "The Optimist filibustered. 'We can build it!'",
+    "DISCIPLINE": "The Engineer demands efficiency."
+  },
+  "ARBITRATION_OPINIONS": {
+    "TENSION_CUT": "The tension is too high. The Stage Manager cuts the mic. Silence is enforced.",
+    "SILENCE_HOLD": "The Stage Manager holds the silence. No archetype is called."
+  },
   "SYNERGY_MAP": {
     "JESTER|REVENANT": {
       "name": "THE LIMINAL JESTER",

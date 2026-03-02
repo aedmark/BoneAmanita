@@ -14,7 +14,20 @@
     "default_zone": "UNKNOWN",
     "default_lens": "RAW",
     "default_role": "OBSERVER",
-    "role_redundancy": "THE THE "
+    "role_redundancy": "THE THE ",
+    "symbols": {
+      "loc": "📍",
+      "lens": "👁️",
+      "role": "♦",
+      "dig_high": "✦",
+      "dig_low": "✧",
+      "core": "🧊",
+      "volt": "⚡",
+      "health": "❤️",
+      "trauma": "🏺",
+      "deep": "🌌",
+      "divider": "─"
+    }
   },
   "renderer": {
     "noise_patterns": [
@@ -62,7 +75,15 @@
     "item_keywords": [
       "ITEM:",
       "GAINED"
-    ]
+    ],
+    "log_prefixes": {
+      "critical": "► ",
+      "bio": "• ",
+      "town_hall": "📜 ",
+      "paradox": "🌷 ",
+      "item": "★ ",
+      "default": "• "
+    }
   },
   "truth_renderer": {
     "boardroom_header": "--- EXECUTIVE SUMMARY ---",
@@ -109,20 +130,29 @@
   },
   "soul_dashboard": {
     "anchor_lost": "[SOUL DETECTED - ANCHOR LOST]",
-    "agency_locked": "[\ud83d\udd12 AGENCY LOCKED]",
-    "fading": "[\u26a0 FADING]",
+    "agency_locked": "[🔒 AGENCY LOCKED]",
+    "fading": "[⚠️ FADING]",
     "soul_prefix": "SOUL:",
     "driver_prefix": "DRIVER:",
     "muse_prefix": "MUSE:",
     "default_muse": "Void",
-    "pet_icon": " \ud83d\udc15"
+    "pet_icon": " 🐕",
+    "obsession_strip": "--- Obsession: {obs} ---"
   },
   "cycle_reporter": {
-    "diagnostic_hint_icon": "\ud83d\udca1",
-    "diagnostic_warn_icon": "\u26a0\ufe0f",
-    "sensation_prefix": "\u2666 SENSATION:",
-    "flux_header": "\u250c\u2500 [SYSTEM FLUX]",
-    "crash_prefix": "RENDERER CRASH:"
+    "diagnostic_hint_icon": "💡",
+    "diagnostic_warn_icon": "⚠️",
+    "sensation_prefix": "♦ SENSATION:",
+    "flux_header": "┌─ [SYSTEM FLUX]",
+    "crash_prefix": "RENDERER CRASH:",
+    "flux_symbols": {
+      "voltage_icon": "⚡",
+      "default_icon": "⚓",
+      "up_arrow": "▲",
+      "down_arrow": "▼",
+      "pipe": "│",
+      "footer": "└───────────────"
+    }
   },
   "command_state": {
     "mem_error": "Error: Memory system not found.",
@@ -239,7 +269,10 @@
     "chaos_tax": "\ud83e\ude78 CHAOS TAX APPLIED: +{tax:.1f} ATP drain.",
     "surge_protector": "\u26a1 SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).",
     "adaptation_stress": "[MITO]: Trauma Adaptive Response (Stress {stress:.1f}). Efficiency dropped ({old:.2f} -> {new:.2f}).",
-    "adaptation_hormetic": "[MITO]: Hormetic Adaptation. System hardening."
+    "adaptation_hormetic": "[MITO]: Hormetic Adaptation. System hardening.",
+    "icon_necrosis": "💤 ",
+    "icon_grinding": "⚙️ ",
+    "icon_apoptosis": "♻️ "
   },
   "digestive_track": {
     "cliche_tax": "[BIO]: \ud83d\uded1 CLICH\u00c9 TAX: -{tax:.1f} ATP.",
@@ -351,8 +384,14 @@
     "sim_crash_header": "!!! CRITICAL {phase_name} CRASH !!!",
     "sim_cathedral_collapse": "\ud83c\udfdb\ufe0f CATHEDRAL COLLAPSE: \"{eulogy}\"",
     "sim_panic_switch": "\u26a0 {phase_name} FAILURE: Switching to Panic Protocol.",
-    "orch_physics_bypass": "\u26a0\ufe0f PHYSICS BYPASS: Running on Panic Protocol.",
-    "orch_reality_fracture": "\n*** REALITY FRACTURE: {error} ***\n{trace}\n[System stabilized in Safe Mode]"
+    "orch_physics_bypass": "⚠️ PHYSICS BYPASS: Running on Panic Protocol.",
+    "orch_reality_fracture": "\n*** REALITY FRACTURE: {error} ***\n{trace}\n[System stabilized in Safe Mode]",
+    "gatekeep_log_agency": "Command Rejected (Agency Lock)",
+    "gatekeep_log_premise": "Premise Violation: Object-Action Coupling Failed",
+    "gatekeep_bureau_injunction": "Bureaucratic Injunction.",
+    "gatekeep_log_bureau_block": "Bureaucratic Block Triggered",
+    "gatekeep_bureau_fine": "Bureaucratic Fine (User)",
+    "machinery_critic_good_icon": "🌟"
   },
   "brain_strings": {
     "self_care": "\ud83c\udf6a SELF-CARE: Dopamine starvation detected. Injecting small reward.",
@@ -515,11 +554,34 @@
     "arch_spore_fail": "[ARCHITECT]: Spore resurrection failed: {e}",
     "arch_map_restored": "[ARCHITECT]: World Map restored from Spore.",
     "arch_map_corrupt": "[ARCHITECT]: Atlas corrupt, discarding map: {e}",
-    "arch_cold_boot": "\u26a1 COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP)."
+    "arch_cold_boot": "⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP).",
+    "crucible_tightening": "TIGHTENING",
+    "crucible_relaxing": "RELAXING",
+    "dampen_reason_circuit": "Circuit Breaker",
+    "dampen_reason_instability": "Instability",
+    "panic_soul": {
+      "name": "Traveler",
+      "archetype": "The Survivor",
+      "virtues": {"resilience": 1.0},
+      "vices": {"amnesia": 1.0},
+      "narrative_arc": "RECOVERY",
+      "xp": 0
+    },
+    "panic_limbo": {
+      "mood": "NEUTRAL",
+      "volatility": 0.0,
+      "mask": "DEFAULT",
+      "glitch_factor": 0.0
+    }
+  },
+  "types_strings": {
+    "crystal_icon": "💎",
+    "crystal_label": "CRYSTAL",
+    "crystal_arch": "Arch:"
   },
   "main_strings": {
     "term_header_top": "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510",
-    "term_header_mid": "\u2502 BONEAMANITA TERMINAL // VERSION 16.3.0   \u2502",
+    "term_header_mid": "\u2502 BONEAMANITA TERMINAL // VERSION 16.3.1   \u2502",
     "term_header_bot": "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518",
     "init_hash": "...Initializing KernelHash: {hash}...",
     "sys_listening": ">>> SYSTEM: LISTENING",
@@ -573,7 +635,10 @@
     "session_term": "[SESSION TERMINATED]",
     "prompt_lib_loaded": "...Prompt Library Loaded from {p}...",
     "prompt_lib_warn": "WARNING: system_prompts.json not found. Using defaults.",
-    "prompt_lib_crit": "CRITICAL: Could not load prompts: {e}"
+    "prompt_lib_crit": "CRITICAL: Could not load prompts: {e}",
+    "prompt_indicator": ">",
+    "terminal_divider": "════════════════════════════════════════════════════════════",
+    "ui_split_token": "────────"
   },
   "protocol_strings": {
     "zen_enter": "\u26e9\ufe0f ZEN GARDEN: Entering the quiet zone.",
