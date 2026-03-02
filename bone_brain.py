@@ -455,6 +455,8 @@ class PromptComposer:
         self.active_template = None
         self.lenses = self.lore.get("lenses") or {}
         self.system_prompts = self.lore.get("system_prompts") or {}
+        self.fog_protocol = []
+        self.inv_protocol = []
 
     @staticmethod
     def _safe_get(p_state: Any, key: str, default: Any = 0.0) -> Any:
@@ -783,12 +785,9 @@ class PromptComposer:
 
         persona_block.append(mood_note)
 
-        if hasattr(self, "lenses") and self.lenses:
-            lens_key = mind.get("lens", "OBSERVER").upper()
-            lens_data = self.lenses.get(lens_key, {})
-            if "style_directives" in mind:
-                persona_block.append("BOOT DIRECTIVES:")
-                persona_block.extend([f"- {d}" for d in mind["style_directives"]])
+        if "style_directives" in mind:
+            persona_block.append("BOOT DIRECTIVES:")
+            persona_block.extend([f"- {d}" for d in mind["style_directives"]])
 
         if vsl_state:
             e = vsl_state.get("E", 0.2)

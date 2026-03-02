@@ -502,11 +502,17 @@ class DecisionCrystal:
     final_response: str = ""
 
     def __str__(self):
+        from bone_core import LoreManifest
         e_val = self.leverage_metrics.get("E", 0.0)
+
+        icon = LoreManifest.get_instance().get_ux("types_strings", "crystal_icon") or ""
+        lbl = LoreManifest.get_instance().get_ux("types_strings", "crystal_label") or ""
+        arch = LoreManifest.get_instance().get_ux("types_strings", "crystal_arch") or ""
+
         return (
-            f"💎 CRYSTAL [{self.decision_id}] {self.system_state} | "
-            f"Arch: {self.active_archetype} | E: {e_val:.2f}"
-        )
+            f"{icon} {lbl} [{self.decision_id}] {self.system_state} | "
+            f"{arch} {self.active_archetype} | E: {e_val:.2f}"
+        ).strip()
 
     def crystallize(self) -> str:
         data = asdict(self)

@@ -36,29 +36,29 @@ class TheCrucible:
         return msg.format(charges=self.dampener_charges)
 
     def dampen(
-        self, voltage_spike: float, stability_index: float
+            self, voltage_spike: float, stability_index: float
     ) -> Tuple[bool, str, float]:
         if self.dampener_charges <= 0:
-            return False, self.logs.get("DAMPER_EMPTY", "lore element is missing or not found"), 0.0
+            return False, self.logs.get("DAMPER_EMPTY", ""), 0.0
         should_dampen = False
         reduction_factor = 0.0
         reason = ""
         if voltage_spike > self.dampener_tolerance:
             should_dampen = True
             reduction_factor = 0.7
-            reason = "Circuit Breaker"
+            reason = LoreManifest.get_instance().get_ux("machine_strings", "dampen_reason_circuit") or "Circuit Breaker"
         elif voltage_spike > 8.0 and stability_index < 0.3:
             should_dampen = True
             reduction_factor = 0.4
-            reason = "Instability"
+            reason = LoreManifest.get_instance().get_ux("machine_strings", "dampen_reason_instability") or "Instability"
         if should_dampen:
             self.dampener_charges -= 1
             reduction = voltage_spike * reduction_factor
-            msg = self.logs.get("DAMPER_HIT", "lore element is missing or not found").format(
+            msg = self.logs.get("DAMPER_HIT", "").format(
                 reduction=reduction, reason=reason
             )
             return True, msg, reduction
-        return False, self.logs.get("HOLDING", "lore element is missing or not found"), 0.0
+        return False, self.logs.get("HOLDING", ""), 0.0
 
     def audit_fire(self, physics: Dict) -> Tuple[str, float, Optional[str]]:
         voltage = physics.get("voltage", 0.0)
@@ -76,8 +76,10 @@ class TheCrucible:
         physics["narrative_drag"] = round(new_drag, 2)
         msg = None
         if abs(adjustment) > 0.1:
-            direction = "TIGHTENING" if adjustment > 0 else "RELAXING"
-            msg = self.logs.get("REGULATOR", "lore element is missing or not found").format(
+            dir_tight = LoreManifest.get_instance().get_ux("machine_strings", "crucible_tightening") or "TIGHTENING"
+            dir_relax = LoreManifest.get_instance().get_ux("machine_strings", "crucible_relaxing") or "RELAXING"
+            direction = dir_tight if adjustment > 0 else dir_relax
+            msg = self.logs.get("REGULATOR", "").format(
                 direction=direction, current=current_drag, new=new_drag
             )
         if physics.get("system_surge_event", False):
@@ -85,7 +87,7 @@ class TheCrucible:
             return (
                 "SURGE",
                 0.0,
-                self.logs.get("SURGE", "lore element is missing or not found").format(voltage=voltage),
+                self.logs.get("SURGE", "").format(voltage=voltage),
             )
         if voltage > 18.0:
             if structure > 0.5:
@@ -95,7 +97,7 @@ class TheCrucible:
                 return (
                     "RITUAL",
                     gain,
-                    self.logs.get("RITUAL", "lore element is missing or not found").format(gain=gain),
+                    self.logs.get("RITUAL", "").format(gain=gain),
                 )
             else:
                 damage = voltage * 0.5
@@ -103,7 +105,7 @@ class TheCrucible:
                 return (
                     "MELTDOWN",
                     damage,
-                    self.logs.get("MELTDOWN", "lore element is missing or not found").format(damage=damage),
+                    self.logs.get("MELTDOWN", "").format(damage=damage),
                 )
         self.active_state = "REGULATED"
         return "REGULATED", adjustment, msg
@@ -258,26 +260,26 @@ class TheTheremin:
             dissolved = thermal_hits * 15.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - dissolved)
             self.classical_turns = 0
-            theremin_msg = self.logs.get("MELT", "lore element is missing or not found").format(val=dissolved)
+            theremin_msg = self.logs.get("MELT", "").format(val=dissolved)
         if rep > 0.5:
             self.classical_turns += 1
             slag = self.classical_turns * 2.0
             self.decoherence_buildup += slag
-            theremin_msg = self.logs.get("CALCIFY", "lore element is missing or not found").format(
+            theremin_msg = self.logs.get("CALCIFY", "").format(
                 turns=self.classical_turns, val=slag
             )
         elif complexity > 0.4 and self.classical_turns > 0:
             self.classical_turns = 0
             relief = 15.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - relief)
-            theremin_msg = self.logs.get("SHATTER", "lore element is missing or not found").format(val=relief)
+            theremin_msg = self.logs.get("SHATTER", "").format(val=relief)
         elif resin_flow > 0.5:
             self.decoherence_buildup += resin_flow
-            theremin_msg = self.logs.get("RESIN", "lore element is missing or not found").format(val=resin_flow)
+            theremin_msg = self.logs.get("RESIN", "").format(val=resin_flow)
         if turb > 0.6 and self.decoherence_buildup > 0:
             shatter_amt = turb * 10.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - shatter_amt)
-            theremin_msg = self.logs.get("TURBULENCE", "lore element is missing or not found").format(
+            theremin_msg = self.logs.get("TURBULENCE", "").format(
                 val=shatter_amt
             )
             self.classical_turns = 0
@@ -296,7 +298,7 @@ class TheTheremin:
             return (
                 False,
                 resin_flow,
-                self.logs.get("COLLAPSE", "lore element is missing or not found"),
+                self.logs.get("COLLAPSE", ""),
                 "AIRSTRIKE",
             )
         if self.classical_turns > 3:
@@ -414,7 +416,7 @@ class PanicRoom:
 
     @staticmethod
     def get_safe_soul():
-        return {
+        default_soul = {
             "name": "Traveler",
             "archetype": "The Survivor",
             "virtues": {"resilience": 1.0},
@@ -422,15 +424,17 @@ class PanicRoom:
             "narrative_arc": "RECOVERY",
             "xp": 0,
         }
+        return LoreManifest.get_instance().get_ux("machine_strings", "panic_soul") or default_soul
 
     @staticmethod
     def get_safe_limbo():
-        return {
+        default_limbo = {
             "mood": "NEUTRAL",
             "volatility": 0.0,
             "mask": "DEFAULT",
             "glitch_factor": 0.0,
         }
+        return LoreManifest.get_instance().get_ux("machine_strings", "panic_limbo") or default_limbo
 
 
 class ViralTracer:

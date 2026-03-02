@@ -37,8 +37,8 @@ class EventBus:
             except Exception as e:
                 cb_name = getattr(callback, "__name__", str(callback))
                 raw_err = f"Error in '{cb_name}' for '{event_type}': {e}"
-                msg = LoreManifest.get_instance().get_ux("core_strings", "bus_error")
-                print(f"{Prisma.RED}{msg.format(error_msg=raw_err)}{Prisma.RST}")
+                msg = LoreManifest.get_instance().get_ux("core_strings", "bus_error") or ""
+                if msg: print(f"{Prisma.RED}{msg.format(error_msg=raw_err)}{Prisma.RST}")
                 self.log(f"EVENT_FAILURE: {raw_err}", category="CRIT")
 
     def log(self, text: str, category: str = "SYSTEM"):
@@ -77,7 +77,7 @@ class LoreManifest:
             return data.get(sub_key)
         return data
 
-    def get_ux(self, section: str, key: str, default: Any = "lore element is missing or not found") -> Any:
+    def get_ux(self, section: str, key: str, default: Any = "") -> Any:
         section_data = self.get("ux_strings", section)
         if isinstance(section_data, dict):
             return section_data.get(key, default)
@@ -159,31 +159,20 @@ class TheObserver:
 
     def pass_judgment(self, avg_cycle, avg_llm):
         if avg_cycle == 0.0 and avg_llm == 0.0:
-            return LoreManifest.get_instance().get_ux("core_strings", "obs_asleep")
+            return LoreManifest.get_instance().get_ux("core_strings", "obs_asleep") or ""
         if avg_cycle < 0.1 and avg_llm < 0.5:
-            return LoreManifest.get_instance().get_ux(
-                "core_strings",
-                "obs_efficient"
-            )
+            return LoreManifest.get_instance().get_ux("core_strings", "obs_efficient") or ""
         if avg_llm > self.LATENCY_WARNING:
             jokes = [
-                LoreManifest.get_instance().get_ux(
-                    "core_strings", "obs_fog"
-                ),
-                LoreManifest.get_instance().get_ux(
-                    "core_strings", "obs_degraded"
-                ),
-                LoreManifest.get_instance().get_ux(
-                    "core_strings",
-                    "obs_ponderous"
-                ),
-            ]
-            return random.choice(jokes)
+                LoreManifest.get_instance().get_ux("core_strings", "obs_fog") or "",
+                LoreManifest.get_instance().get_ux("core_strings", "obs_degraded") or "",
+                LoreManifest.get_instance().get_ux("core_strings", "obs_ponderous") or "",
+                ]
+            valid_jokes = [j for j in jokes if j]
+            return random.choice(valid_jokes) if valid_jokes else ""
         if avg_cycle > self.CYCLE_WARNING:
-            return LoreManifest.get_instance().get_ux(
-                "core_strings", "obs_sluggish"
-            )
-        return LoreManifest.get_instance().get_ux("core_strings", "obs_nominal")
+            return LoreManifest.get_instance().get_ux("core_strings", "obs_sluggish") or ""
+        return LoreManifest.get_instance().get_ux("core_strings", "obs_nominal") or ""
 
     def get_report(self):
         avg_cycle = sum(self.cycle_times) / max(1, len(self.cycle_times))
@@ -223,10 +212,8 @@ class SystemHealth:
         attr_name = f"{component.lower()}_online"
         if hasattr(self, attr_name):
             setattr(self, attr_name, False)
-        err_msg = LoreManifest.get_instance().get_ux(
-            "core_strings", "health_offline"
-        )
-        return err_msg.format(component=component, msg=msg)
+        err_msg = LoreManifest.get_instance().get_ux("core_strings", "health_offline") or ""
+        return err_msg.format(component=component, msg=msg) if err_msg else ""
 
     def report_warning(self, message: str):
         self.warnings.append(message)
@@ -283,40 +270,31 @@ class RealityStack:
 class ArchetypeArbiter:
     @staticmethod
     def arbitrate(
-        physics_lens: str,
-        soul_archetype: str,
-        council_mandates: List[Dict],
-        trigram: Dict = None,
+            physics_lens: str,
+            soul_archetype: str,
+            council_mandates: List[Dict],
+            trigram: Dict = None,
     ) -> Tuple[str, str, str]:
         for mandate in council_mandates:
             if mandate.get("type") == "LOCKDOWN":
                 return (
                     "THE CENSOR",
                     "COUNCIL",
-                    LoreManifest.get_instance().get_ux(
-                        "core_strings",
-                        "arb_martial_law"
-                    ),
+                    LoreManifest.get_instance().get_ux("core_strings", "arb_martial_law") or "",
                 )
             if mandate.get("type") == "FORCE_MODE":
                 return (
                     "THE MACHINE",
                     "COUNCIL",
-                    LoreManifest.get_instance().get_ux(
-                        "core_strings",
-                        "arb_bureaucratic"
-                    ),
+                    LoreManifest.get_instance().get_ux("core_strings", "arb_bureaucratic") or "",
                 )
 
         if "/" in soul_archetype:
-            msg = LoreManifest.get_instance().get_ux(
-                "core_strings",
-                "arb_diamond"
-            )
+            msg = LoreManifest.get_instance().get_ux("core_strings", "arb_diamond") or ""
             return (
                 soul_archetype,
                 "SOUL",
-                msg.format(soul_archetype=soul_archetype),
+                msg.format(soul_archetype=soul_archetype) if msg else "",
             )
 
         if trigram:
@@ -327,40 +305,28 @@ class ArchetypeArbiter:
                 if rule.get("trigram") == trigram_name:
                     required_lens = rule.get("lens")
                     required_soul = rule.get("soul")
-                    match_lens = (
-                        (required_lens == physics_lens) if required_lens else True
-                    )
-                    match_soul = (
-                        (required_soul == soul_archetype) if required_soul else True
-                    )
+                    match_lens = (required_lens == physics_lens) if required_lens else True
+                    match_soul = (required_soul == soul_archetype) if required_soul else True
                     if match_lens and match_soul:
+                        msg = rule.get("msg") or LoreManifest.get_instance().get_ux("core_strings", "arb_resonance") or ""
                         return (
                             rule["result"],
                             rule.get("source", "COSMIC"),
-                            rule.get(
-                                "msg",
-                                LoreManifest.get_instance().get_ux(
-                                    "core_strings",
-                                    "arb_resonance"
-                                ),
-                            ),
+                            msg,
                         )
 
         if physics_lens in ["THE MANIC", "THE VOID"]:
-            msg = LoreManifest.get_instance().get_ux(
-                "core_strings",
-                "arb_loud"
-            )
+            msg = LoreManifest.get_instance().get_ux("core_strings", "arb_loud") or ""
             return (
                 physics_lens,
                 "PHYSICS",
-                msg.format(physics_lens=physics_lens),
+                msg.format(physics_lens=physics_lens) if msg else "",
             )
 
         return (
             soul_archetype,
             "SOUL",
-            LoreManifest.get_instance().get_ux("core_strings", "arb_soul"),
+            LoreManifest.get_instance().get_ux("core_strings", "arb_soul") or "",
         )
 
 
@@ -381,11 +347,8 @@ class TelemetryService:
                 self.log_dir, f"trace_{int(time.time())}.jsonl"
             )
         except OSError:
-            msg = LoreManifest.get_instance().get_ux(
-                "core_strings",
-                "tel_disk_denied"
-            )
-            print(f"{Prisma.RED}{msg}{Prisma.RST}")
+            msg = LoreManifest.get_instance().get_ux("core_strings", "tel_disk_denied") or ""
+            if msg: print(f"{Prisma.RED}{msg}{Prisma.RST}")
             self.disabled = True
             self.current_trace_file = None
 
@@ -469,23 +432,15 @@ class TelemetryService:
         except IOError as e:
             self.write_errors += 1
             if self.write_errors >= 5:
-                msg = LoreManifest.get_instance().get_ux(
-                    "core_strings",
-                    "tel_crit_write_fail"
-                )
-                print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
+                msg = LoreManifest.get_instance().get_ux("core_strings", "tel_crit_write_fail") or ""
+                if msg: print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
                 self.disabled = True
                 self.write_buffer.clear()
             else:
                 keep_count = self.BUFFER_SIZE // 2
                 self.write_buffer = self.write_buffer[-keep_count:]
-                msg = LoreManifest.get_instance().get_ux(
-                    "core_strings",
-                    "tel_write_error"
-                )
-                print(
-                    f"{Prisma.RED}{msg.format(errors=self.write_errors, e=e)}{Prisma.RST}"
-                )
+                msg = LoreManifest.get_instance().get_ux("core_strings", "tel_write_error") or ""
+                if msg: print(f"{Prisma.RED}{msg.format(errors=self.write_errors, e=e)}{Prisma.RST}")
 
     def read_recent_history(self, limit=4) -> List[str]:
         if not os.path.exists(self.log_dir):
@@ -543,8 +498,8 @@ class TelemetryService:
                 last_line = json.loads(lines[-1])
                 if "outcome" in last_line and "CRITICAL" in str(last_line["outcome"]):
                     reason = last_line.get("reasoning", "Unknown")
-                    msg = LoreManifest.get_instance().get_ux("core_strings", "tel_prev_crash")
-                    return msg.format(reason=reason)
+                    msg = LoreManifest.get_instance().get_ux("core_strings", "tel_prev_crash") or ""
+                    return msg.format(reason=reason) if msg else ""
         except Exception:
             return None
 
@@ -552,10 +507,5 @@ class TelemetryService:
         self.flush_to_disk()
         count = len(self.trace_buffer)
         status = "DISABLED" if self.disabled else "ACTIVE"
-        msg = LoreManifest.get_instance().get_ux(
-            "core_strings",
-            "tel_session_summary"
-        )
-        return msg.format(
-            status=status, count=count, trace_file=self.current_trace_file
-        )
+        msg = LoreManifest.get_instance().get_ux("core_strings", "tel_session_summary") or ""
+        return msg.format(status=status, count=count, trace_file=self.current_trace_file) if msg else ""

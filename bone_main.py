@@ -58,7 +58,7 @@ class SessionGuardian:
         mid_bar = LoreManifest.get_instance().get_ux(
             "main_strings",
             "term_header_mid",
-            "│ BONEAMANITA TERMINAL // VERSION 16.3.0   │",
+            "│ BONEAMANITA TERMINAL // VERSION 16.3.1   │",
         )
         bot_bar = LoreManifest.get_instance().get_ux(
             "main_strings",
@@ -822,21 +822,25 @@ if __name__ == "__main__":
         boot_packet = session.engage_cold_boot()
         if boot_packet and boot_packet.get("ui"):
             typewriter(boot_packet["ui"])
+
+        prompt_ind = LoreManifest.get_instance().get_ux("main_strings", "prompt_indicator") or ""
+        term_div = LoreManifest.get_instance().get_ux("main_strings", "terminal_divider") or ""
+        split_token = LoreManifest.get_instance().get_ux("main_strings", "ui_split_token") or ""
+
         while True:
             try:
-                user_in = input(f"\n{Prisma.paint(f'{session.user_name} >', 'W')} ")
+                user_in = input(f"\n{Prisma.paint(f'{session.user_name} {prompt_ind}', 'W')} ")
             except EOFError:
                 break
             clean_in = user_in.strip().lower()
             if clean_in in ["exit", "quit", "/exit", "/quit"]:
                 break
             res = session.process_turn(user_in)
-            print(
-                f"\n{Prisma.GRY}════════════════════════════════════════════════════════════{Prisma.RST}"
-            )
+
+            print(f"\n{Prisma.GRY}{term_div}{Prisma.RST}")
 
             if res.get("ui"):
-                if "────────" in res["ui"]:
+                if split_token and split_token in res["ui"]:
                     dashboard, _, content = res["ui"].partition("\n\n")
 
                     print(f"\n{dashboard.strip()}\n")

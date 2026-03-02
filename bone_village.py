@@ -106,12 +106,12 @@ class TheTinkerer:
         if 4.8 < curr < 5.2 and random.random() < 0.05:
             msg = LoreManifest.get_instance().get_ux(
                 "village_strings",
-                "tinkerer_resonance",
-                "🔨 TINKER: {item} hums with resonance. (Lvl 5 Mastery)",
-            )
-            self.events.log(
-                f"{Prisma.CYN}{msg.format(item=item)}{Prisma.RST}", "VILLAGE"
-            )
+                "tinkerer_resonance"
+            ) or ""
+            if msg:
+                self.events.log(
+                    f"{Prisma.CYN}{msg.format(item=item)}{Prisma.RST}", "VILLAGE"
+                )
 
     def _check_ascension(self, old_name: str, inventory_list: List[str], vector: Dict):
         resonance = self.tool_resonance.get(old_name, 0.0)
@@ -132,13 +132,13 @@ class TheTinkerer:
                         del self.tool_resonance[old_name]
                         msg = LoreManifest.get_instance().get_ux(
                             "village_strings",
-                            "tinkerer_ascension",
-                            "✨ ASCENSION: {old} -> {new} (Born of Resonance)",
-                        )
-                        self.events.log(
-                            f"{Prisma.MAG}{msg.format(old=old_name, new=new_name)}{Prisma.RST}",
-                            "AKASHIC",
-                        )
+                            "tinkerer_ascension"
+                        ) or ""
+                        if msg:
+                            self.events.log(
+                                f"{Prisma.MAG}{msg.format(old=old_name, new=new_name)}{Prisma.RST}",
+                                "AKASHIC",
+                            )
                     except ValueError:
                         pass
 
@@ -444,7 +444,7 @@ class TownHall:
                 loc_name = current_node.name
         if latency > 3.0:
             status = "HIGH_LATENCY"
-            advice = LoreManifest.get_instance().get_ux("village_strings", "town_lag", "System lag detected.")
+            advice = LoreManifest.get_instance().get_ux("village_strings", "town_lag") or ""
         elif packet.voltage > BoneConfig.PHYSICS.VOLTAGE_HIGH:
             status = "HIGH_VOLTAGE"
             advice = random.choice(forecasts.get("HIGH_VOLTAGE", ["Manic energy."]))
@@ -456,9 +456,9 @@ class TownHall:
             advice = random.choice(forecasts.get("BALANCED", ["Nominal."]))
 
         census_fmt = LoreManifest.get_instance().get_ux(
-            "village_strings", "town_census", "CENSUS [{loc}]: {status} | {advice}"
-        )
-        report = census_fmt.format(loc=loc_name, status=status, advice=advice)
+            "village_strings", "town_census"
+        ) or ""
+        report = census_fmt.format(loc=loc_name, status=status, advice=advice) if census_fmt else ""
 
         news = self._get_town_news(latency, packet.voltage)
         if news:
@@ -466,22 +466,20 @@ class TownHall:
         if packet.voltage > 20.0:
             msg = LoreManifest.get_instance().get_ux(
                 "village_strings",
-                "town_restrain",
-                "⚖️ COUNCIL ALERT: The Chairholder is drafting a restraining order.",
-            )
-            report += f"\n{Prisma.RED}{msg}{Prisma.RST}"
+                "town_restrain"
+            ) or ""
+            if msg: report += f"\n{Prisma.RED}{msg}{Prisma.RST}"
         elif packet.voltage < 2.0 and packet.narrative_drag > 5.0:
             msg = LoreManifest.get_instance().get_ux(
                 "village_strings",
-                "town_loops",
-                "⚖️ COUNCIL ALERT: Strange Loops detected in the lower districts.",
-            )
-            report += f"\n{Prisma.MAG}{msg}{Prisma.RST}"
+                "town_loops"
+            ) or ""
+            if msg: report += f"\n{Prisma.MAG}{msg}{Prisma.RST}"
         elif status == "BALANCED" and self.rumors and random.random() < 0.3:
             rumor = random.choice(self.rumors)
-            msg = LoreManifest.get_instance().get_ux("village_strings", "town_rumor", "👀 RUMOR: {rumor}")
-            report += f"\n{Prisma.GRY}{msg.format(rumor=rumor)}{Prisma.RST}"
-        return report
+            msg = LoreManifest.get_instance().get_ux("village_strings", "town_rumor") or ""
+            if msg: report += f"\n{Prisma.GRY}{msg.format(rumor=rumor)}{Prisma.RST}"
+        return report.strip()
 
     @staticmethod
     def _get_town_news(latency: float, volt: float) -> Optional[str]:
@@ -511,7 +509,7 @@ class TownHall:
 
     @staticmethod
     def diagnose_condition(
-        session_data: dict, _host_health: Any = None, soul: Any = None
+            session_data: dict, _host_health: Any = None, soul: Any = None
     ) -> Tuple[str, str]:
         meta = session_data.get("meta", {})
         trauma = session_data.get("trauma_vector", {})
@@ -522,29 +520,26 @@ class TownHall:
                 obsession = getattr(soul, "current_obsession", "work")
                 msg = LoreManifest.get_instance().get_ux(
                     "village_strings",
-                    "town_guilt",
-                    "Guilt over '{obsession}' is thickening the air.",
-                )
-                return "HIGH_DRAG", msg.format(obsession=obsession)
+                    "town_guilt"
+                ) or ""
+                return "HIGH_DRAG", msg.format(obsession=obsession) if msg else ""
         if trauma:
             max_trauma = max(trauma, key=trauma.get) if trauma else "NONE"
             if trauma.get(max_trauma, 0) > 0.6:
                 msg = LoreManifest.get_instance().get_ux(
                     "village_strings",
-                    "town_trauma",
-                    "Warning: High levels of {trauma} residue detected.",
-                )
-                return (
-                    "HIGH_TRAUMA",
-                    msg.format(trauma=max_trauma),
-                )
+                    "town_trauma"
+                ) or ""
+                return "HIGH_TRAUMA", msg.format(trauma=max_trauma) if msg else ""
         if final_health < 30:
-            return "HIGH_TRAUMA", LoreManifest.get_instance().get_ux(
+            msg = LoreManifest.get_instance().get_ux(
                 "village_strings",
-                "town_critical",
-                "System critical. Structural damage.",
-            )
-        return "BALANCED", LoreManifest.get_instance().get_ux("village_strings", "town_nominal", "System nominal.")
+                "town_critical"
+            ) or ""
+            return "HIGH_TRAUMA", msg
+
+        msg_nominal = LoreManifest.get_instance().get_ux("village_strings", "town_nominal") or ""
+        return "BALANCED", msg_nominal
 
 
 class DeathGen:

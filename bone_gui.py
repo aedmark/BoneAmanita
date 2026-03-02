@@ -53,8 +53,14 @@ class Projector:
         depth_label = depth_map.get(str(reality_depth), "?")
         depth_marker = f"{Prisma.VIOLET}[D{reality_depth}:{depth_label}]{Prisma.RST}"
         display_loc = f"{world_loc.upper()[:20]} [{zone}]"
-        context_line = f"{Prisma.GRY}  📍 {display_loc:<25}  👁️ {lens:<12}  {depth_marker}{Prisma.RST}"
-        div = f"{Prisma.GRY}{'─' * self.width}{Prisma.RST}"
+
+        sym = LoreManifest.get_instance().get_ux("projector", "symbols") or {}
+        i_loc = sym.get("loc", "")
+        i_lens = sym.get("lens", "")
+        i_div = sym.get("divider", "")
+
+        context_line = f"{Prisma.GRY}  {i_loc} {display_loc:<25}  {i_lens} {lens:<12}  {depth_marker}{Prisma.RST}"
+        div = f"{Prisma.GRY}{i_div * self.width}{Prisma.RST}"
 
         mid_lines = []
         if physics_line:
@@ -73,7 +79,10 @@ class Projector:
         hp_bar = self._mini_bar(health, 100, 6, Prisma.RED)
         stm_bar = self._mini_bar(stamina, 100, 6, Prisma.GRN)
         dig_color = Prisma.VIOLET if dignity > 50 else Prisma.GRY
-        dig_icon = "✦" if dignity > 80 else "✧"
+
+        sym = LoreManifest.get_instance().get_ux("projector", "symbols") or {}
+        dig_icon = sym.get("dig_high", "") if dignity > 80 else sym.get("dig_low", "")
+
         raw_role = mind[2] if mind and len(mind) > 2 else None
         role = (
             str(raw_role).upper()
@@ -85,7 +94,9 @@ class Projector:
             role = role[:27] + "..."
         l_hp = labels.get("HP", "HP")
         l_stm = labels.get("STM", "STM")
-        role_block = f"{Prisma.WHT}♦ {role}{Prisma.RST}"
+
+        i_role = sym.get("role", "")
+        role_block = f"{Prisma.WHT}{i_role} {role}{Prisma.RST}"
         return (
             f"  {role_block:<35} "
             f"{l_hp} {hp_bar}  "
@@ -129,16 +140,24 @@ class Projector:
         psi = _get_val("psi", "psi", 0.0)
         chi = _get_val("chi", "chi", 0.0)
         valence = _get_val("valence", "valence", 0.0)
-        core = f"{Prisma.CYN}[🧊 E:{E:.2f} β:{beta:.2f} | ⚡ V:{V:.0f} F:{F:.1f} | ❤️ H:{H:.0f} P:{P:.0f} | 🏺 T:{T:.0f}]{Prisma.RST}"
+
+        sym = LoreManifest.get_instance().get_ux("projector", "symbols") or {}
+        i_core = sym.get("core", "")
+        i_volt = sym.get("volt", "")
+        i_hlth = sym.get("health", "")
+        i_trau = sym.get("trauma", "")
+        i_deep = sym.get("deep", "")
+
+        core = f"{Prisma.CYN}[{i_core} E:{E:.2f} β:{beta:.2f} | {i_volt} V:{V:.0f} F:{F:.1f} | {i_hlth} H:{H:.0f} P:{P:.0f} | {i_trau} T:{T:.0f}]{Prisma.RST}"
         deep = (
-            f"{Prisma.VIOLET} [🌌 Ψ:{psi:.2f} Χ:{chi:.2f} ♥:{valence:.2f}]{Prisma.RST}"
+            f"{Prisma.VIOLET} [{i_deep} Ψ:{psi:.2f} Χ:{chi:.2f} ♥:{valence:.2f}]{Prisma.RST}"
         )
         if depth == "DEEP":
             return core + deep
         elif depth == "CORE":
             return core
         elif depth == "LITE":
-            return f"{Prisma.CYN}[⚡ V:{V:.0f} | ❤️ H:{H:.0f} P:{P:.0f}]{Prisma.RST}"
+            return f"{Prisma.CYN}[{i_volt} V:{V:.0f} | {i_hlth} H:{H:.0f} P:{P:.0f}]{Prisma.RST}"
         return ""
 
     def render_technical(self, physics: Dict, data: Dict, mind: tuple) -> str:
@@ -166,7 +185,12 @@ class Projector:
         ratio = max(0.0, min(1.0, val / max_val))
         fill = int(ratio * width)
         empty = width - fill
-        return f"{color}{'█' * fill}{Prisma.GRY}{'░' * empty}{Prisma.RST}"
+
+        sym = LoreManifest.get_instance().get_ux("projector", "symbols") or {}
+        c_fill = sym.get("bar_fill", "")
+        c_empty = sym.get("bar_empty", "")
+
+        return f"{color}{c_fill * fill}{Prisma.GRY}{c_empty * empty}{Prisma.RST}"
 
 
 class GeodesicRenderer:
@@ -282,9 +306,11 @@ class GeodesicRenderer:
             return ""
         if not soul_ref.current_obsession:
             return ""
-        return (
-            f"{Prisma.GRY}--- Obsession: {soul_ref.current_obsession} ---{Prisma.RST}"
-        )
+
+        strip_format = LoreManifest.get_instance().get_ux("soul_dashboard", "obsession_strip") or ""
+        formatted_strip = strip_format.replace("{obs}", str(soul_ref.current_obsession))
+
+        return f"{Prisma.GRY}{formatted_strip}{Prisma.RST}"
 
     def compose_logs(self, logs: list, events: list, _tick: int = 0) -> List[str]:
         all_logs = [str(l) for l in logs if l is not None]
@@ -311,19 +337,21 @@ class GeodesicRenderer:
         p_kws = LoreManifest.get_instance().get_ux("log_composer", "paradox_keywords")
         i_kws = LoreManifest.get_instance().get_ux("log_composer", "item_keywords")
 
+        prefixes = LoreManifest.get_instance().get_ux("log_composer", "log_prefixes")
+
         for log in unique_logs:
             if any(k in log for k in c_kws):
-                structured.append(f"{Prisma.RED}► {log}{Prisma.RST}")
+                structured.append(f"{Prisma.RED}{prefixes.get('critical', '► ')}{log}{Prisma.RST}")
             elif any(k in log for k in b_kws):
-                structured.append(f"{Prisma.CYN}• {log}{Prisma.RST}")
+                structured.append(f"{Prisma.CYN}{prefixes.get('bio', '• ')}{log}{Prisma.RST}")
             elif any(k in log for k in t_kws):
-                structured.append(f"{Prisma.CYN}📜 {log}{Prisma.RST}")
+                structured.append(f"{Prisma.CYN}{prefixes.get('town_hall', '📜 ')}{log}{Prisma.RST}")
             elif any(k in log for k in p_kws):
-                structured.append(f"{Prisma.MAG}🌷 {log}{Prisma.RST}")
+                structured.append(f"{Prisma.MAG}{prefixes.get('paradox', '🌷 ')}{log}{Prisma.RST}")
             elif any(k in log for k in i_kws):
-                structured.append(f"{Prisma.YEL}★ {log}{Prisma.RST}")
+                structured.append(f"{Prisma.YEL}{prefixes.get('item', '★ ')}{log}{Prisma.RST}")
             else:
-                structured.append(f"{Prisma.GRY}• {log}{Prisma.RST}")
+                structured.append(f"{Prisma.GRY}{prefixes.get('default', '• ')}{log}{Prisma.RST}")
         return structured
 
     def _punish_style_crime(self, log_msg):
@@ -483,8 +511,12 @@ class SoulDashboard:
             color = Prisma.OCHRE
         else:
             color = Prisma.RED
+
         filled = int(dig / 5)
-        bar_str = f"{color}{'█' * filled}{Prisma.GRY}{'░' * (20 - filled)}{Prisma.RST}"
+        c_fill = LoreManifest.get_instance().get_ux("status_menu", "bar_filled") or ""
+        c_empty = LoreManifest.get_instance().get_ux("status_menu", "bar_empty") or ""
+
+        bar_str = f"{color}{c_fill * filled}{Prisma.GRY}{c_empty * (20 - filled)}{Prisma.RST}"
 
         lock_status = ""
         if anchor.agency_lock:
@@ -601,15 +633,26 @@ class CycleReporter:
         if not ctx.flux_log:
             return
         significant = []
+        flux_sym = LoreManifest.get_instance().get_ux("cycle_reporter", "flux_symbols")
+        if not isinstance(flux_sym, dict):
+            flux_sym = {}
+
+        v_icon = flux_sym.get("voltage_icon", "")
+        d_icon = flux_sym.get("default_icon", "")
+        up_arr = flux_sym.get("up_arrow", "")
+        dn_arr = flux_sym.get("down_arrow", "")
+        pipe = flux_sym.get("pipe", "")
+        footer = flux_sym.get("footer", "")
+
         for e in ctx.flux_log[-5:]:
             d = abs(e["delta"])
             if d < 1.0 and "PID" in e["reason"]:
                 continue
-            icon = "⚡" if e["metric"].upper() == "VOLTAGE" else "⚓"
+            icon = v_icon if e["metric"].upper() == "VOLTAGE" else d_icon
             color = Prisma.GRN if e["delta"] > 0 else Prisma.RED
-            arrow = "▲" if e["delta"] > 0 else "▼"
+            arrow = up_arr if e["delta"] > 0 else dn_arr
             significant.append(
-                f"   {Prisma.GRY}│{Prisma.RST} {icon} {e['metric'][:3].upper()} {color}{arrow} {d:.1f}{Prisma.RST} ({e['reason']})"
+                f"   {Prisma.GRY}{pipe}{Prisma.RST} {icon} {e['metric'][:3].upper()} {color}{arrow} {d:.1f}{Prisma.RST} ({e['reason']})"
             )
         if significant:
             h_flux = LoreManifest.get_instance().get_ux("cycle_reporter", "flux_header")
@@ -618,7 +661,7 @@ class CycleReporter:
             for line in reversed(significant):
                 ctx.logs.insert(2, line)
             ctx.logs.insert(
-                2 + len(significant), f" {Prisma.GRY}└{'─' * 15}{Prisma.RST}"
+                2 + len(significant), f" {Prisma.GRY}{footer}{Prisma.RST}"
             )
 
     def _package_bureaucracy(self, ctx):

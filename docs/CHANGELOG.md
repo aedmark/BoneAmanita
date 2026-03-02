@@ -1,5 +1,40 @@
 # BONEAMANITA v16 CHANGELOG
 
+### **BONEAMANITA v16.3.1 "The Silent Substrate"**
+
+---
+
+#### **🏗️ THE ROOT CURE (The Architect & Pinker Lenses)**
+
+* **The Global Muzzle (`bone_core.py`):**
+  * **Silent Defaults:** Eliminated the ultimate ghost in the machine. Changed the default fallback parameter in `LoreManifest.get_ux()` from the verbose `"lore element is missing or not found"` to a strict empty string `""`.
+  * **Crash Guards:** Fortified `EventBus`, `TheObserver`, `ArchetypeArbiter`, and `TelemetryService`. If a JSON configuration is missing, the system now gracefully stays silent rather than crashing while attempting to `.format()` a `NoneType` or fallback string.
+
+#### **👁️ PRESENTATION SCHISM (The Visual Lens)**
+
+* **The Emoji Purge (`bone_gui.py` & `bone_types.py`):**
+  * **Decoupled HUD:** Surgically extracted all hardcoded lattice symbols (`🧊`, `⚡`, `❤️`, `🏺`, `🌌`), progress bar characters (`█`, `░`), and log prefixes from `GeodesicRenderer` and `Projector`.
+  * **Crystal Clarity:** Extracted the `💎` logging icon and label from `DecisionCrystal` via a safe local import, preventing circular dependency crashes at the bedrock layer.
+* **The Execution Loop (`bone_main.py`):**
+  * **Structural Extraction:** Stripped the prompt indicator (`>`), the 60-character terminal divider, and the brittle `────────` dashboard splitter from the `while True:` loop. The terminal UI is now entirely dictated by `ux_strings.json`.
+
+#### **⚙️ LOGIC & NARRATIVE DECOUPLING (The Benedict Lens)**
+
+* **Dangerous Logic Excision (`bone_cycle.py`):**
+  * **The Emoji Trap:** Fixed a catastrophic logic coupling in `MachineryPhase` where the engine literally looked for a hardcoded star emoji (`🌟`) to determine if narrative drag should decrease.
+  * **Archetype Mandates:** Ripped the hardcoded Soul Phase opinions ("The Cynic holds the gavel") and Stage Manager arbitration verdicts out of the cycle logic, migrating them to their proper home in `council_data.json`.
+* **The Crucible & Diagnostics (`bone_machine.py` & `bone_village.py`):**
+  * **Silent Smelting:** Purged the hardcoded tightening/relaxing directions from The Crucible and extracted the `PanicRoom`'s safe-mode dictionary structures into the JSON matrix.
+  * **Town Hall Exorcism:** Removed the massive blocks of hardcoded third-parameter defaults (e.g., "System nominal", "CENSUS") from `TownHall` diagnostics and `TheTinkerer` ascension alerts.
+
+#### **🍄 DEEP METABOLISM & PERSISTENCE (The Meadows Lens)**
+
+* **The Fungal Network (`bone_spores.py`):**
+  * **Third-Parameter Scrub:** Cleaned the entirety of the Mycelial Network, stripping raw dialogue from `MemoryCore` (cannibalize/prune alerts), `ImmuneMycelium`, `BioParasite`, and `BioLichen`.
+  * **Silent Persistence:** The long-term memory layer no longer writes hardcoded error strings to the terminal if spore files are missing or corrupt.
+* **The Somatic Loop (`bone_body.py`):**
+  * **Organ Scrub:** Extracted the `MitochondrialForge` emojis (`💤`, `⚙️`, `♻️`), neural shift Vagus Nerve messages, and environmental entropy warnings. The biological engine now strictly manages math and delegates all formatting to the Lore Manifest.
+
 ### **BONEAMANITA v16.3.0 "The Great Decoupling"**
 
 ---

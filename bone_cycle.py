@@ -244,9 +244,10 @@ class GatekeeperPhase(SimulationPhase):
                         "cycle_strings",
                         "gatekeep_locked"
                     )
+                    log_msg = LoreManifest.get_instance().get_ux("cycle_strings", "gatekeep_log_agency") or ""
                     ctx.refusal_packet = {
                         "ui": f"{dash_view}\n\n{Prisma.RED}{msg}{Prisma.RST}",
-                        "logs": ["Command Rejected (Agency Lock)"],
+                        "logs": [log_msg] if log_msg else [],
                         "metrics": self.eng.get_metrics(),
                     }
                     return ctx
@@ -256,11 +257,12 @@ class GatekeeperPhase(SimulationPhase):
                 ctx.input_text, current_zone
             )
             if coupling_error:
+                log_msg = LoreManifest.get_instance().get_ux("cycle_strings", "gatekeep_log_premise") or ""
                 ctx.refusal_triggered = True
                 ctx.refusal_packet = {
                     "type": "PREMISE_VIOLATION",
                     "ui": f"\n{coupling_error}",
-                    "logs": ["Premise Violation: Object-Action Coupling Failed"],
+                    "logs": [log_msg] if log_msg else [],
                     "metrics": self.eng.get_metrics(),
                 }
                 return ctx
@@ -277,10 +279,12 @@ class GatekeeperPhase(SimulationPhase):
             if audit_result:
                 if audit_result.get("block", False):
                     ctx.refusal_triggered = True
+                    injunction_fb = LoreManifest.get_instance().get_ux("cycle_strings", "gatekeep_bureau_injunction") or ""
+                    log_msg = LoreManifest.get_instance().get_ux("cycle_strings", "gatekeep_log_bureau_block") or ""
                     ctx.refusal_packet = {
                         "type": "BUREAU_BLOCK",
-                        "ui": audit_result.get("ui", "Bureaucratic Injunction."),
-                        "logs": ["Bureaucratic Block Triggered"],
+                        "ui": audit_result.get("ui", injunction_fb),
+                        "logs": [log_msg] if log_msg else [],
                         "metrics": (
                             self.eng.get_metrics()
                             if hasattr(self.eng, "get_metrics")
@@ -289,8 +293,9 @@ class GatekeeperPhase(SimulationPhase):
                     }
                     return ctx
                 if self.eng.bio and self.eng.bio.mito:
+                    fine_msg = LoreManifest.get_instance().get_ux("cycle_strings", "gatekeep_bureau_fine") or ""
                     self.eng.bio.mito.adjust_atp(
-                        audit_result.get("atp_gain", 0.0), "Bureaucratic Fine (User)"
+                        audit_result.get("atp_gain", 0.0), fine_msg
                     )
                 if audit_result.get("log"):
                     ctx.log(audit_result["log"])
@@ -634,10 +639,11 @@ class MachineryPhase(SimulationPhase):
             return ctx
         phys_dict = ctx.physics.to_dict()
         if hasattr(self.eng, "critics") and (
-            review := self.eng.critics.audit_performance(phys_dict, self.eng.tick_count)
+                review := self.eng.critics.audit_performance(phys_dict, self.eng.tick_count)
         ):
             ctx.log(review)
-            ctx.physics.narrative_drag += -1.0 if "🌟" in review else 1.0
+            good_icon = LoreManifest.get_instance().get_ux("cycle_strings", "machinery_critic_good_icon")
+            ctx.physics.narrative_drag += -1.0 if good_icon in review else 1.0
         boost, z_msg = self.eng.zen.raking_the_sand(phys_dict, ctx.bio_result)
         if z_msg:
             ctx.log(z_msg)
@@ -930,12 +936,15 @@ class SoulPhase(SimulationPhase):
             else (traits.__dict__ if hasattr(traits, "__dict__") else traits)
         )
         get_t = lambda k: t_map.get(k, t_map.get(k.lower(), 0.0))
+        council_data = LoreManifest.get_instance().get("council_data") or {}
+        mandates_text = council_data.get("SOUL_MANDATES", {})
+
         rules = [
             (
                 "CYNICISM",
                 0.8,
                 "LOCKDOWN",
-                "The Cynic holds the gavel. 'Stop doing things.'",
+                mandates_text.get("CYNICISM", ""),
                 {"narrative_drag": 5.0, "voltage": -5.0},
                 Prisma.OCHRE,
             ),
@@ -943,7 +952,7 @@ class SoulPhase(SimulationPhase):
                 "HOPE",
                 0.8,
                 "STIMULUS",
-                "The Optimist filibustered. 'We can build it!'",
+                mandates_text.get("HOPE", ""),
                 {"voltage": 5.0, "narrative_drag": -2.0},
                 Prisma.MAG,
             ),
@@ -951,7 +960,7 @@ class SoulPhase(SimulationPhase):
                 "DISCIPLINE",
                 0.8,
                 "STANDARDIZE",
-                "The Engineer demands efficiency.",
+                mandates_text.get("DISCIPLINE", ""),
                 {"kappa": -0.5, "beta_index": 1.0},
                 Prisma.CYN,
             ),
@@ -1010,9 +1019,12 @@ class ArbitrationPhase(SimulationPhase):
                 except Exception:
                     pass
 
+        council_data = LoreManifest.get_instance().get("council_data") or {}
+        arb_opinions = council_data.get("ARBITRATION_OPINIONS", {})
+
         if tension > 0.85 and silence < 0.5 and not synergy_active:
             final_lens = "THE STAGE MANAGER"
-            opinion = "The tension is too high. The Stage Manager cuts the mic. Silence is enforced."
+            opinion = arb_opinions.get("TENSION_CUT", "")
             ctx.physics.silence = 0.9
             ctx.physics.narrative_drag += 2.0
             msg = LoreManifest.get_instance().get_ux(
@@ -1028,7 +1040,7 @@ class ArbitrationPhase(SimulationPhase):
 
         elif silence > 0.85 and not synergy_active:
             final_lens = "THE STAGE MANAGER"
-            opinion = "The Stage Manager holds the silence. No archetype is called."
+            opinion = arb_opinions.get("SILENCE_HOLD", "")
             msg = LoreManifest.get_instance().get_ux(
                 "cycle_strings",
                 "arbiter_stage_manager_hold"
