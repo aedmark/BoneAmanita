@@ -222,6 +222,7 @@
     "truth_dial_set": "Ambiguity Dial set to: {mode}",
     "truth_invalid": "Invalid mode. Use 0-3.",
     "truth_failure": "Truth Dial Failure: {error}",
+    "truth_modes": ["BOARDROOM", "WORKSHOP", "RED TEAM", "PALIMPSEST"],
     "use_usage": "Usage: /use [ITEM_NAME]",
     "use_no_inv": "Inventory system offline."
   },
@@ -518,7 +519,7 @@
   },
   "main_strings": {
     "term_header_top": "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510",
-    "term_header_mid": "\u2502 BONEAMANITA TERMINAL // VERSION 16.2.0   \u2502",
+    "term_header_mid": "\u2502 BONEAMANITA TERMINAL // VERSION 16.3.0   \u2502",
     "term_header_bot": "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518",
     "init_hash": "...Initializing KernelHash: {hash}...",
     "sys_listening": ">>> SYSTEM: LISTENING",
@@ -719,5 +720,12 @@
     "town_trauma": "Warning: High levels of {trauma} residue detected.",
     "town_critical": "System critical. Structural damage.",
     "town_nominal": "System nominal."
+  },
+  "status_menu": {
+    "health_label": "Health:  ",
+    "stamina_label": "Stamina: ",
+    "energy_label": "Energy:  ",
+    "bar_filled": "█",
+    "bar_empty": "░"
   }
 }

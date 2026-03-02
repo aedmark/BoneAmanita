@@ -16,18 +16,6 @@ class PhysicsDelta:
     source: str
     message: Optional[str] = None
 
-
-TRIGRAM_MAP: Dict[str, Tuple[str, str, str, str]] = {
-    "VEL": ("☳", "ZHEN", "Thunder", Prisma.GRN),
-    "STR": ("☶", "GEN", "Mountain", Prisma.SLATE),
-    "ENT": ("☵", "KAN", "Water", Prisma.BLU),
-    "PHI": ("☲", "LI", "Fire", Prisma.RED),
-    "PSI": ("☰", "QIAN", "Heaven", Prisma.WHT),
-    "BET": ("☴", "XUN", "Wind", Prisma.CYN),
-    "E": ("☷", "KUN", "Earth", Prisma.OCHRE),
-    "DEL": ("☱", "DUI", "Lake", Prisma.MAG),
-}
-
 PHYS_CFG = {
     "V_MAX": 150.0,
     "V_FLOOR": getattr(BoneConfig.PHYSICS, "VOLTAGE_FLOOR", 0.0),
@@ -46,24 +34,6 @@ class GeodesicVector:
     coherence: float
     abstraction: float
     dimensions: Dict[str, float]
-
-
-class GeodesicConstants:
-    DENSITY_SCALAR = 20.0
-    SQUELCH_LIMIT_MULT = 3.0
-    MIN_VOLUME_SCALAR = 0.5
-    SUBURBAN_FRICTION_LOG_BASE = 5.0
-    HEAVY_FRICTION_MULT = 2.5
-    SOLVENT_LUBRICATION_FACTOR = 0.05
-    SHEAR_RESISTANCE_SCALAR = 2.0
-    KINETIC_LIFT_RATIO = 0.5
-    PLAY_LIFT_MULT = 2.5
-    COMPRESSION_SCALAR = 10.0
-    ABSTRACTION_BASE = 0.2
-    MAX_VISCOSITY_DENSITY = 2.0
-    MAX_LIFT_DENSITY = 2.0
-    SAFE_VOL_THRESHOLD = 3
-
 
 class GeodesicEngine:
     @staticmethod
@@ -105,10 +75,11 @@ class GeodesicEngine:
 
     @staticmethod
     def _calculate_forces(
-        masses: Dict[str, float], counts: Dict[str, int], volume: int
+            masses: Dict[str, float], counts: Dict[str, int], volume: int
     ) -> Dict[str, float]:
         cfg = BoneConfig.PHYSICS
-        GC = GeodesicConstants
+        gc_dict = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
+        GC = type('GC', (), gc_dict)
         safe_volume = max(1, volume)
         w_heavy = getattr(cfg, "WEIGHT_HEAVY", 2.0)
         w_kinetic = getattr(cfg, "WEIGHT_KINETIC", 1.5)
@@ -502,11 +473,16 @@ class ChromaScope:
     def modulate(text: str, vector: Dict[str, float]) -> str:
         if not vector or not any(vector.values()):
             return f"{Prisma.GRY}{text}{Prisma.RST}"
+
         primary_dim = max(vector, key=vector.get)
-        if primary_dim in TRIGRAM_MAP:
-            selected_color = TRIGRAM_MAP[primary_dim][3]
+        trigram_map = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
+
+        if primary_dim in trigram_map:
+            color_attr = trigram_map[primary_dim][3]
+            selected_color = getattr(Prisma, color_attr, Prisma.GRY)
         else:
             selected_color = Prisma.GRY
+
         return f"{selected_color}{text}{Prisma.RST}"
 
 
@@ -776,13 +752,7 @@ class CosmicDynamics:
 
 def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> PhysicsPacket:
     feedback = physics_packet.snapshot()
-    tone_effects = {
-        "Urgent": {"velocity": 0.3, "narrative_drag": -0.5, "voltage": 0.5},
-        "Strained": {"narrative_drag": 1.2, "voltage": -0.3, "kappa": -0.1},
-        "Vibrating": {"entropy": 0.2, "voltage": 0.2, "psi": 0.1},
-        "Resonant": {"valence": 0.3, "beta_index": 0.1, "kappa": 0.2},
-        "Steady": {},
-    }
+    tone_effects = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TONE_EFFECTS") or {}
     effects = tone_effects.get(qualia.tone, {})
     for key, delta in effects.items():
         if hasattr(feedback, key):

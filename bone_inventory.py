@@ -1,9 +1,10 @@
 import random, re
 from dataclasses import dataclass, field
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Tuple, Optional
+
+from bone_config import BoneConfig
 from bone_core import LoreManifest
 from bone_types import Prisma
-from bone_config import BoneConfig
 
 
 @dataclass
@@ -47,29 +48,11 @@ class GordonKnot:
         self.max_slots = 10
         self.last_flinch_turn = -100
         self.scar_tissue = {}
-        self.refusal_markers = {
-            "cannot",
-            "can't",
-            "unable",
-            "fail",
-            "too heavy",
-            "stuck",
-            "don't",
-            "do not",
-            "locked",
-            "refuse",
-            "impossible",
-        }
-        self.loot_triggers = [
-            "found a",
-            "picked up",
-            "pick up",
-            "acquired",
-            "took the",
-            "take the",
-            "grab the",
-            "takes the",
-        ]
+        self.refusal_markers = set()
+        self.loot_triggers = []
+        self.creative_loot_triggers = []
+        self.interaction_verbs = []
+        self.acquisition_verbs = []
         self.load_config()
 
     def enforce_object_action_coupling(
@@ -106,19 +89,7 @@ class GordonKnot:
                     )
                     return f"{Prisma.SLATE}{msg.format(action=action, req_str=req_str)}{Prisma.RST}"
 
-        interaction_verbs = [
-            "use",
-            "drop",
-            "throw",
-            "consume",
-            "eat",
-            "drink",
-            "read",
-            "activate",
-            "give",
-            "equip",
-        ]
-        has_interaction = any(re.search(rf"\b{v}\b", text) for v in interaction_verbs)
+        has_interaction = any(re.search(rf"\b{v}\b", text) for v in self.interaction_verbs)
 
         if has_interaction:
             all_known = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
@@ -139,20 +110,17 @@ class GordonKnot:
             data = LoreManifest.get_raw("gordon.json") or {}
         self.action_coupling = data.get("ACTION_COUPLING", {})
         self.location_coupling = data.get("LOCATION_COUPLING", {})
-        if "REFUSAL_MARKERS" in data:
-            self.refusal_markers = set(data["REFUSAL_MARKERS"])
+        self.refusal_markers = set(data.get("REFUSAL_MARKERS", []))
+        self.creative_loot_triggers = data.get("CREATIVE_LOOT_TRIGGERS", [])
+
         if self.mode in ["CREATIVE", "CONVERSATION"]:
-            self.loot_triggers = [
-                "grasped the concept of",
-                "held onto",
-                "felt a",
-                "internalized the",
-                "embraced the",
-                "clung to the",
-                "remembered the",
-            ]
-        elif "LOOT_TRIGGERS" in data:
-            self.loot_triggers = data["LOOT_TRIGGERS"]
+            self.loot_triggers = self.creative_loot_triggers
+        else:
+            self.loot_triggers = data.get("LOOT_TRIGGERS", [])
+
+        self.interaction_verbs = data.get("INTERACTION_VERBS", [])
+        self.acquisition_verbs = data.get("ACQUISITION_VERBS", [])
+
         self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
         self.ITEM_REGISTRY = data.get("ITEM_REGISTRY", {})
         for name, props in self.ITEM_REGISTRY.items():
@@ -188,22 +156,8 @@ class GordonKnot:
         lost_loot = normalize(raw_lost)
         logs = []
         if new_loot:
-            acquisition_verbs = [
-                "take",
-                "grab",
-                "pick",
-                "get",
-                "steal",
-                "seize",
-                "collect",
-                "snatch",
-                "acquire",
-                "pocket",
-                "loot",
-                "harvest",
-            ]
             clean_input = user_input.lower()
-            has_intent = any(verb in clean_input for verb in acquisition_verbs)
+            has_intent = any(verb in clean_input for verb in self.acquisition_verbs)
             if has_intent:
                 for item in new_loot:
                     logs.append(self.acquire(item))
@@ -346,30 +300,28 @@ class GordonKnot:
         if not hasattr(self, "blueprints") or not self.blueprints:
             self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
 
-        dim_map = {
-            "STR": "heavy",
-            "VEL": "kinetic",
-            "PHI": "thermal",
-            "PSI": "abstract",
-            "ENT": "void",
-            "BET": "constructive",
-        }
+        fallbacks = self.blueprints.get("FALLBACKS", {})
+        dim_map = self.blueprints.get("DIM_MAP", {})
+
         dom_dim = (
             max(physics_vector, key=physics_vector.get) if physics_vector else "ENT"
         )
         archetype = dim_map.get(dom_dim, "void")
-        prefixes = self.blueprints.get("PREFIXES", {}).get(archetype, ["Strange"])
-        suffixes = self.blueprints.get("SUFFIXES", {}).get(archetype, ["of Mystery"])
+
+        prefixes = self.blueprints.get("PREFIXES", {}).get(archetype, fallbacks.get("PREFIX", ["Strange"]))
+        suffixes = self.blueprints.get("SUFFIXES", {}).get(archetype, fallbacks.get("SUFFIX", ["of Mystery"]))
+
         if self.mode in ["CREATIVE", "CONVERSATION"]:
             base_cat = "ABSTRACT"
-            bases = self.blueprints.get("BASES", {}).get(
-                base_cat, ["Feeling", "Sense", "Memory", "Idea", "Echo"]
-            )
-            prefixes = ["A Lingering", "A Sudden", "A Distant", "A Sharp", "A Quiet"]
-            suffixes = ["of Dread", "of Hope", "of Clarity", "of Chaos", "of Stillness"]
+            bases = self.blueprints.get("BASES", {}).get(base_cat, fallbacks.get("BASE", ["Concept"]))
+
+            creative_overrides = self.blueprints.get("CREATIVE_OVERRIDES", {})
+            prefixes = creative_overrides.get("PREFIXES", prefixes)
+            suffixes = creative_overrides.get("SUFFIXES", suffixes)
         else:
-            base_cat = random.choice(["TOOL", "JUNK", "ARTIFACT"])
-            bases = self.blueprints.get("BASES", {}).get(base_cat, ["Object"])
+            adv_cats = self.blueprints.get("ADVENTURE_CATEGORIES", ["TOOL", "JUNK", "ARTIFACT"])
+            base_cat = random.choice(adv_cats)
+            bases = self.blueprints.get("BASES", {}).get(base_cat, fallbacks.get("BASE", ["Object"]))
         prefix = random.choice(prefixes)
         base = random.choice(bases)
         suffix = random.choice(suffixes)

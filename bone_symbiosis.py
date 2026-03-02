@@ -7,15 +7,6 @@ from bone_types import Prisma
 from bone_lexicon import LexiconService
 
 _VOICE_CACHE = {}
-_DEFAULT_MODIFIERS = {
-    "include_somatic": True,
-    "include_inventory": True,
-    "include_memories": True,
-    "simplify_instruction": False,
-    "inject_chaos": False,
-    "include_compassion": False,
-    "system_directives": [],
-}
 
 @dataclass
 class HostHealth:
@@ -125,51 +116,20 @@ class SymbiontVoice:
 def get_symbiont(type_name):
     if type_name in _VOICE_CACHE:
         return _VOICE_CACHE[type_name]
-    if type_name == "LICHEN":
-        voice = SymbiontVoice(
-            "LICHEN",
-            Prisma.GRN,
-            ["photo", "vital", "bloom", "solar"],
-            {
-                "high_score": "Yes! The roots are drinking deep.",
-                "med_score": "We see the light.",
-                "high_volt": "Too hot! You'll scorch the leaves!",
-                "low_volt": "It is cold... we are sleeping.",
-            },
-        )
-    elif type_name == "PARASITE":
-        voice = SymbiontVoice(
-            "PARASITE",
-            Prisma.RED,
-            ["antigen", "heavy", "rot", "void"],
-            {
-                "high_score": "Delicious. The entropy is sweet.",
-                "med_score": "I smell rust.",
-                "high_volt": "Stop vibrating. Be still and rot.",
-                "low_volt": "Finally. Silence.",
-            },
-        )
-    elif type_name == "MYCORRHIZA":
-        voice = SymbiontVoice(
-            "MYCORRHIZA",
-            Prisma.OCHRE,
-            ["roots", "hold", "safe", "steady"],
-            {
-                "high_volt": "Sshhh. Too fast. Let the heat dissipate.",
-                "low_volt": "It is okay to rest. We hold the structure.",
-                "med_score": "We are woven together.",
-            },
-        )
-    else:
-        voice = SymbiontVoice(
-            "MYCELIUM",
-            Prisma.CYN,
-            ["constructive", "abstract", "code"],
-            {
-                "high_score": "The pattern holds. Integration probable.",
-                "med_score": "Scanning for structural integrity...",
-            },
-        )
+
+    voice_configs = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "SYMBIONT_VOICES") or {}
+    cfg = voice_configs.get(type_name, voice_configs.get("MYCELIUM", {}))
+
+    color_attr = cfg.get("color", "CYN")
+    selected_color = getattr(Prisma, color_attr, Prisma.CYN)
+
+    voice = SymbiontVoice(
+        type_name if type_name in voice_configs else "MYCELIUM",
+        selected_color,
+        cfg.get("archetypes", []),
+        cfg.get("personality", {})
+    )
+
     if voice:
         _VOICE_CACHE[type_name] = voice
     return voice
@@ -181,16 +141,7 @@ class SymbiosisManager:
         self.current_health = HostHealth()
         self.diagnostician = DiagnosticConfidence()
         self.SLOP_THRESHOLD = 3.5
-        self.REFUSAL_SIGNATURES = [
-            "as an ai",
-            "language model",
-            "cannot fulfill",
-            "against my programming",
-            "apologize",
-            "sorry but",
-            "unable to generate",
-            "cant do that",
-        ]
+        self.REFUSAL_SIGNATURES = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "REFUSAL_SIGNATURES") or []
 
     @staticmethod
     def _calculate_shannon_entropy(text: str) -> float:
@@ -257,8 +208,10 @@ class SymbiosisManager:
         return any(sig in header for sig in self.REFUSAL_SIGNATURES)
 
     def get_prompt_modifiers(self) -> Dict:
-        mods = _DEFAULT_MODIFIERS.copy()
+        default_mods = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "DEFAULT_MODIFIERS") or {}
+        mods = default_mods.copy()
         mods["system_directives"] = []
+
         diag = self.current_health.diagnosis
         if diag == "REFUSAL":
             mods["include_inventory"] = False

@@ -7,32 +7,22 @@ from bone_lexicon import LexiconService
 from bone_types import PhysicsPacket
 
 
-SCENARIOS = LoreManifest.get_instance().get("scenarios") or {
-    "ARCHETYPES": ["Void"],
-    "BANNED_CLICHES": [],
-}
+SCENARIOS = LoreManifest.get_instance().get("scenarios") or {}
 LENSES = (LoreManifest.get_instance().get("narrative_data") or {}).get("lenses", {})
 
 
 class SoulDriver:
-    ARCHETYPE_TO_PERSONA_WEIGHT = {
-        "THE POET": {"NATHAN": 0.8, "JESTER": 0.4, "NARRATOR": 0.6},
-        "THE ENGINEER": {"GORDON": 0.9, "CLARENCE": 0.7, "SHERLOCK": 0.5},
-        "THE NIHILIST": {"NARRATOR": 0.9, "CLARENCE": 0.3, "JESTER": -0.5},
-        "THE CRITIC": {"CLARENCE": 0.8, "SHERLOCK": 0.6, "GORDON": 0.2},
-        "THE EXPLORER": {"NATHAN": 0.7, "JESTER": 0.5, "SHERLOCK": 0.6},
-        "THE OBSERVER": {"NARRATOR": 1.0, "GORDON": 0.2},
-    }
-
     def __init__(self, soul_ref):
         self.soul = soul_ref
+        self.archetype_weights = LoreManifest.get_instance().get("DRIVER_CONFIG", "ARCHETYPE_TO_PERSONA_WEIGHT") or {}
 
     def get_influence(self) -> Dict[str, float]:
-        base_weights = {persona: 0.0 for persona in EnneagramDriver.WEIGHTS.keys()}
+        ennea_weights = LoreManifest.get_instance().get("DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {}
+        base_weights = {persona: 0.0 for persona in ennea_weights.keys()}
         if not self.soul:
             return base_weights
         archetype = getattr(self.soul, "archetype", "THE OBSERVER")
-        mapping = self.ARCHETYPE_TO_PERSONA_WEIGHT.get(archetype, {"NARRATOR": 1.0})
+        mapping = self.archetype_weights.get(archetype, {"NARRATOR": 1.0})
         for persona, weight in mapping.items():
             if persona in base_weights:
                 base_weights[persona] += weight
@@ -101,32 +91,16 @@ class UserProfile:
 
 
 class EnneagramDriver:
-    WEIGHTS = {
-        "JESTER": {
-            "tension_min": 12.0,
-            "vectors": {"DEL": 4.0, "ENT": 4.0, "PSI": -3.0},
-        },
-        "GORDON": {"drag_min": 3.0, "vectors": {"STR": 3.0, "E": 3.0, "SUB": 2.0}},
-        "GLASS": {"coherence_max": 0.2, "vectors": {"LQ": 2.0, "VEL": 2.0}},
-        "CLARENCE": {
-            "coherence_min": 0.8,
-            "drag_min": 6.0,
-            "vectors": {"STR": 4.0, "BET": 3.0},
-        },
-        "NATHAN": {"tension_min": 8.0, "vectors": {"TMP": 3.0, "PHI": 2.0, "BIO": 2.0}},
-        "SHERLOCK": {
-            "tension_min": 10.0,
-            "vectors": {"PHI": 4.0, "VEL": 3.0, "PSI": 2.0},
-        },
-        "NARRATOR": {"safe_zone": True, "vectors": {"PSI": 4.0}},
-    }
-
     def __init__(self, events_ref):
         self.events = events_ref
         self.current_persona = "NARRATOR"
         self.pending_persona = None
         self.stability_counter = 0
         self.HYSTERESIS_THRESHOLD = 3
+
+    @property
+    def weights(self):
+        return LoreManifest.get_instance().get("DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {}
 
     @staticmethod
     def _get_phys_attr(physics, key, default=None):
@@ -140,14 +114,16 @@ class EnneagramDriver:
         p_drag = self._get_phys_attr(physics, "narrative_drag", 0.0)
         p_coh = self._get_phys_attr(physics, "kappa", 0.0)
         p_zone = self._get_phys_attr(physics, "zone", "")
-        scores = {k: 0.0 for k in self.WEIGHTS.keys()}
-        scores["NARRATOR"] += 2.0
+        weights_cfg = self.weights
+        scores = {k: 0.0 for k in weights_cfg.keys()}
+        if "NARRATOR" in scores:
+            scores["NARRATOR"] += 2.0
         is_safe_metrics = 4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5
         if p_zone == BonePresets.SANCTUARY.get("ZONE") or is_safe_metrics:
-            scores["NARRATOR"] += 6.0
-            scores["JESTER"] += 3.0
-            scores["GORDON"] -= 2.0
-        for persona, criteria in self.WEIGHTS.items():
+            if "NARRATOR" in scores: scores["NARRATOR"] += 6.0
+            if "JESTER" in scores: scores["JESTER"] += 3.0
+            if "GORDON" in scores: scores["GORDON"] -= 2.0
+        for persona, criteria in weights_cfg.items():
             if "tension_min" in criteria and p_vol > criteria["tension_min"]:
                 scores[persona] += 3.0
             if "drag_min" in criteria and p_drag > criteria["drag_min"]:
@@ -194,15 +170,7 @@ class EnneagramDriver:
         reason = msg_winner.format(
             winner=winner, score=scores[winner], v=p_vol, d=p_drag
         )
-        state_map = {
-            "JESTER": "MANIC",
-            "GORDON": "TIRED",
-            "GLASS": "FRAGILE",
-            "CLARENCE": "RIGID",
-            "NATHAN": "WIRED",
-            "SHERLOCK": "FOCUSED",
-            "NARRATOR": "OBSERVING",
-        }
+        state_map = LoreManifest.get_instance().get("DRIVER_CONFIG", "PERSONA_STATE_MAP") or {}
         return winner, state_map.get(winner, "ACTIVE"), reason
 
     def decide_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
@@ -266,13 +234,7 @@ class LiminalModule:
         self.godel_scars = 0
 
     def analyze(self, text: str, physics_vector: Dict[str, float]) -> float:
-        liminal_vocab = LexiconService.get("liminal") or {
-            "void",
-            "silence",
-            "gap",
-            "absence",
-            "space",
-        }
+        liminal_vocab = LexiconService.get("liminal") or set()
         words = text.lower().split()
 
         void_hits = sum(1 for w in words if w in liminal_vocab)

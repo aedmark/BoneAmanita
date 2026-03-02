@@ -522,12 +522,7 @@ class PromptComposer:
             state.get("physics", {}),
         )
         scenarios = self.lore.get("scenarios") or {}
-        banned = scenarios.get("BANNED_CLICHES", []) + [
-            "obsidian",
-            "dust motes",
-            "neon",
-            "pulsing veins",
-        ]
+        banned = scenarios.get("BANNED_CLICHES", [])
         ban_string = ", ".join(set(banned))
 
         phys_ref = state.get("physics", {})
@@ -942,36 +937,19 @@ class ResponseValidator:
     def __init__(self, lore_ref):
         self.lore = lore_ref
         crimes = self.lore.get("style_crimes") or {}
-        self.banned_phrases = crimes.get(
-            "BANNED_PHRASES", ["large language model", "AI assistant", "as an AI"]
-        )
 
+        self.banned_phrases = crimes.get("BANNED_PHRASES", [])
         self.regex_patterns = crimes.get("PATTERNS", [])
+        self.rejection_pool = crimes.get("REJECTIONS", ["[System format rejected.]"])
 
-        self.rejection_pool = crimes.get(
-            "REJECTIONS",
-            ["[The system attempts to recite a EULA, but hiccups instead.]"],
-        )
         json_patterns = crimes.get("SCRUB_PATTERNS", [])
-        if json_patterns:
-            self.scrub_patterns = [
-                (re.compile(p["regex"]), p["replacement"]) for p in json_patterns
-            ]
-        else:
-            patterns = [
-                r"Current Location:.*?(?=\n|$)",
-                r"INVENTORY:.*?(?=\n|$)",
-                r"Current Biology:.*?(?=\n|$)",
-                r"===.*?===",
-            ]
-            self.scrub_patterns = [
-                (re.compile(p, re.DOTALL | re.IGNORECASE), "") for p in patterns
-            ]
-        self.meta_markers = [
-            "INITIALIZATION SEQUENCE",
-            "LOCATING TARGET SEED",
-            "REASONING PROCESS",
+        self.scrub_patterns = [
+            (re.compile(p["regex"], re.DOTALL | re.IGNORECASE), p.get("replacement", ""))
+            for p in json_patterns
         ]
+
+        self.meta_markers = crimes.get("META_MARKERS", [])
+        self.toxic_keywords = crimes.get("TOXIC_KEYWORDS", [])
 
     def _generate_dynamic_rejection(self, trigger: str) -> str:
         import random
@@ -1038,22 +1016,7 @@ class ResponseValidator:
             clean_text = pattern.sub(replacement, clean_text)
 
         clean_lines = []
-        toxic_keywords = [
-            "VOLTAGE=",
-            "EXHAUSTION=",
-            "CONTRACTION=",
-            "CONTRADICTION=",
-            "VOID=",
-            "CHAOS=",
-            "VALENCE=",
-            "[END OF",
-            "[===",
-            "===]",
-            "SYSTEM INTERNALS",
-            "METRICS - INTERNAL",
-            "MANDATE:",
-            "Exhaustion =",
-        ]
+        toxic_keywords = getattr(self, "toxic_keywords", [])
 
         for line in clean_text.splitlines():
             stripped_line = line.strip()

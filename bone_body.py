@@ -382,14 +382,6 @@ class MitochondrialForge:
 
 
 class DigestiveTrack:
-    _ENZYME_MAP = {
-        "static": "CELLULASE",
-        "abstract": "DECRYPTASE",
-        "natural": "LIGNASE",
-        "synthetic": "CHITINASE",
-        "social": "AMYLASE",
-        "antigen": "OXIDASE",
-    }
     SAMPLING_THRESHOLD = 1000
     BASE_WORD_VALUE = 0.5
     COMPLEX_WORD_BONUS = 2.0
@@ -397,11 +389,7 @@ class DigestiveTrack:
 
     def __init__(self, bio_system_ref: BioSystem):
         self.bio = bio_system_ref
-        self.enzyme_map = (
-            getattr(BoneConfig.BIO, "ENZYME_MAP", self._ENZYME_MAP)
-            if hasattr(BoneConfig, "BIO")
-            else self._ENZYME_MAP
-        )
+        self.enzyme_map = LoreManifest.get_instance().get("BODY_CONFIG", "ENZYME_MAP") or {}
 
     def harvest(self, phys: Any, logs: List[str]) -> Tuple[str, float, int]:
         clean_words = getattr(phys, "clean_words", [])
@@ -789,15 +777,15 @@ class EndocrineSystem:
     def calculate_circadian_bias(self) -> Tuple[Dict[str, float], Optional[str]]:
         hour = time.localtime().tm_hour
         circ = self.narrative_data.get("CIRCADIAN", {})
-        schedule = [
-            (6, 10, {"COR": 0.1}, "DAWN", "Sunrise."),
-            (10, 18, {"SER": 0.1}, "SOLAR", "High Noon."),
-            (18, 23, {"MEL": 0.1}, "TWILIGHT", "Sunset."),
-        ]
+        config = LoreManifest.get_instance().get("BODY_CONFIG") or {}
+
+        schedule = config.get("CIRCADIAN_SCHEDULE", [])
         for s, e, bias, key, default in schedule:
             if s <= hour < e:
                 return bias, circ.get(key, default)
-        return {"MEL": 0.3, "COR": -0.1}, circ.get("LUNAR", "Night.")
+
+        night_cfg = config.get("CIRCADIAN_NIGHT", [{"MEL": 0.3, "COR": -0.1}, "LUNAR", "Night."])
+        return night_cfg[0], circ.get(night_cfg[1], night_cfg[2])
 
     def _apply_enzyme_reaction(self, enzyme_type: str, harvest_hits: int):
         if harvest_hits > 0:
@@ -1120,18 +1108,12 @@ class MetabolicGovernor:
 
     @staticmethod
     def _get_shift_message(mode: str, text_map: Dict, physics: Dict) -> str:
-        colors = {
-            "SANCTUARY": Prisma.GRN,
-            "FORGE": Prisma.RED,
-            "LABORATORY": Prisma.CYN,
-            "COURTYARD": Prisma.GRN,
-        }
-        defaults = {
-            "SANCTUARY": "SANCTUARY ACTIVE",
-            "LABORATORY": "LAB ACTIVE",
-            "COURTYARD": "SYSTEM CLEAR",
-            "FORGE": f"FORGE ACTIVE ({getattr(physics, 'voltage', 0):.1f}v)",
-        }
+        shift_cfg = LoreManifest.get_instance().get("BODY_CONFIG", "GOVERNOR_SHIFT") or {}
+        raw_colors = shift_cfg.get("COLORS", {})
+        defaults = shift_cfg.get("DEFAULTS", {})
+
+        colors = {k: getattr(Prisma, v, Prisma.WHT) for k, v in raw_colors.items()}
+
         lookup = {"LABORATORY": "LAB", "COURTYARD": "CLEAR"}.get(mode, mode)
         tmpl = text_map.get(lookup, defaults.get(mode, "MODE SHIFT"))
         try:
@@ -1262,68 +1244,79 @@ class SynestheticCortex:
         return impulse
 
     def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
+        strings = (LoreManifest.get_instance().get("BODY_CONFIG", "QUALIA_STRINGS") or {}).get("reflexes", {})
         if impulse.cortisol_delta > 0.1 and impulse.adrenaline_delta > 0.1:
-            return "Trembling (Fight or Flight)."
+            return strings.get("fight_flight", "Trembling.")
         if impulse.dopamine_delta > 0.1 and impulse.adrenaline_delta > 0.1:
-            return "Electric Vibration."
+            return strings.get("electric", "Vibration.")
         if impulse.adrenaline_delta > 0.1:
-            return "Pupils Dilating."
+            return strings.get("pupils", "Dilating.")
         if impulse.oxytocin_delta > 0.1 and impulse.dopamine_delta > 0.1:
-            return "Golden Glow."
+            return strings.get("glow", "Glowing.")
         if impulse.oxytocin_delta > 0.1:
-            return "Chest Softening."
+            return strings.get("chest", "Softening.")
         if impulse.cortisol_delta > 0.1:
-            return "Gut Tightening."
+            return strings.get("gut", "Tightening.")
         if impulse.dopamine_delta > 0.1:
-            return "Synaptic Spark."
+            return strings.get("spark", "Spark.")
         if physics.get("psi", 0.0) > 0.6:
-            return "Scalp Prickling (Liminal)."
+            return strings.get("liminal", "Prickling.")
         if physics.get("entropy", 0.0) > 0.7:
-            return "Skin Crawling (Static)."
-        if physics.get("voltage", 0) > BoneConfig.CORTEX.VOLTAGE_ARC_TRIGGER:
-            return "Electrical Arcing."
+            return strings.get("static", "Crawling.")
+        if physics.get("voltage", 0) > getattr(BoneConfig.CORTEX, "VOLTAGE_ARC_TRIGGER", 18.0):
+            return strings.get("arcing", "Arcing.")
         if physics.get("voltage", 0) < 2.0:
-            return "Metabolic Dimming."
+            return strings.get("dimming", "Dimming.")
         if physics.get("narrative_drag", 0) > 5.0:
-            return "Shoulders Sagging."
-        if self.last_reflex == "Steady Pulse.":
+            return strings.get("sagging", "Sagging.")
+
+        steady = strings.get("steady", "Steady Pulse.")
+        if self.last_reflex == steady:
             return "..."
-        return "Steady Pulse."
+        return steady
 
     @staticmethod
-    def get_current_qualia(impulse: Optional[BiologicalImpulse]) -> Qualia:
+    def get_current_qualia(impulse: Optional[BiologicalImpulse] = None) -> Qualia:
+        strings = LoreManifest.get_instance().get("BODY_CONFIG", "QUALIA_STRINGS") or {}
+        tones = strings.get("tones", {})
+        hints = strings.get("hints", {})
+
         if not impulse:
-            return Qualia(Prisma.GRY, "Numbness", "Neutral", "The body is silent.")
+            return Qualia(Prisma.GRY, "...", tones.get("steady", "Steady"), hints.get("observe", "Observe."))
+
         color = Prisma.GRY
-        if impulse.cortisol_delta > 0.1:
-            color = Prisma.OCHRE
-        elif impulse.dopamine_delta > 0.1:
+        if impulse.oxytocin_delta > 0.2:
             color = Prisma.MAG
-        elif impulse.oxytocin_delta > 0.1:
-            color = Prisma.GRN
-        elif impulse.adrenaline_delta > 0.1:
-            color = Prisma.RED
-        tone = "Steady"
-        if impulse.adrenaline_delta > 0.2:
-            tone = "Urgent"
         elif impulse.dopamine_delta > 0.2:
-            tone = "Vibrating"
+            color = Prisma.CYN
         elif impulse.cortisol_delta > 0.2:
-            tone = "Strained"
+            color = Prisma.OCHRE
+        elif impulse.adrenaline_delta > 0.2:
+            color = Prisma.RED
+
+        tone = tones.get("steady", "Steady")
+        if impulse.adrenaline_delta > 0.2:
+            tone = tones.get("urgent", "Urgent")
+        elif impulse.dopamine_delta > 0.2:
+            tone = tones.get("vibrating", "Vibrating")
+        elif impulse.cortisol_delta > 0.2:
+            tone = tones.get("strained", "Strained")
         elif impulse.oxytocin_delta > 0.2:
-            tone = "Resonant"
-        hint = "Observe."
+            tone = tones.get("resonant", "Resonant")
+
+        hint = hints.get("observe", "Observe.")
         if impulse.cortisol_delta > 0.05:
-            hint = "Something is wrong. Be guarded."
+            hint = hints.get("guarded", "Be guarded.")
         elif impulse.adrenaline_delta > 0.05:
-            hint = "Move fast. Don't overthink."
+            hint = hints.get("fast", "Move fast.")
         elif impulse.oxytocin_delta > 0.05:
-            hint = "Connect. Be vulnerable."
+            hint = hints.get("connect", "Connect.")
         elif impulse.dopamine_delta > 0.05:
-            hint = "Explore. Find the pattern."
+            hint = hints.get("explore", "Explore.")
+
         return Qualia(
             color_code=color,
-            somatic_sensation=impulse.somatic_reflex or "Steady Pulse.",
+            somatic_sensation=impulse.somatic_reflex or strings.get("reflexes", {}).get("steady", "Steady Pulse."),
             tone=tone,
             internal_monologue_hint=hint,
         )

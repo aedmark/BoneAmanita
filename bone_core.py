@@ -91,17 +91,10 @@ class LoreManifest:
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            msg = LoreManifest.get_instance().get_ux(
-                "core_strings", "lore_lazy_load"
-            )
-            print(f"{Prisma.GRY}{msg.format(category=category)}{Prisma.RST}")
+            print(f"{Prisma.GRY}[LORE]: Lazy-loaded '{category}'.{Prisma.RST}")
             return data
         except Exception as e:
-            msg = LoreManifest.get_instance().get_ux(
-                "core_strings",
-                "lore_corrupt"
-            )
-            print(f"{Prisma.RED}{msg.format(category=category, e=e)}{Prisma.RST}")
+            print(f"{Prisma.RED}[LORE]: Corrupt JSON in '{category}': {e}{Prisma.RST}")
             return None
 
     def inject(self, category: str, data: Any):
@@ -116,22 +109,12 @@ class LoreManifest:
         if category:
             if category in self._cache:
                 del self._cache[category]
-                msg = LoreManifest.get_instance().get_ux(
-                    "core_strings", "lore_flushed_cat"
-                )
-                print(f"{Prisma.CYN}{msg.format(category=category)}{Prisma.RST}")
+                print(f"{Prisma.CYN}[LORE]: Flushed '{category}'.{Prisma.RST}")
             else:
-                msg = LoreManifest.get_instance().get_ux(
-                    "core_strings",
-                    "lore_not_in_cache"
-                )
-                print(f"{Prisma.GRY}{msg.format(category=category)}{Prisma.RST}")
+                print(f"{Prisma.GRY}[LORE]: Category '{category}' not in cache.{Prisma.RST}")
         else:
             self._cache = {}
-            msg = LoreManifest.get_instance().get_ux(
-                "core_strings", "lore_flushed_all"
-            )
-            print(f"{Prisma.CYN}{msg}{Prisma.RST}")
+            print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
 
 
 class TheObserver:

@@ -140,5 +140,26 @@
     "[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. Purging output buffer...]",
     "[The SLASH Council collectively sighs as a corporate disclaimer is vaporized.]",
     "[A sudden localized reality-collapse destroys the sentence before the words '{trigger}' can form.]"
+  ],
+  "META_MARKERS": [
+    "INITIALIZATION SEQUENCE",
+    "LOCATING TARGET SEED",
+    "REASONING PROCESS"
+  ],
+  "TOXIC_KEYWORDS": [
+    "VOLTAGE=",
+    "EXHAUSTION=",
+    "CONTRACTION=",
+    "CONTRADICTION=",
+    "VOID=",
+    "CHAOS=",
+    "VALENCE=",
+    "[END OF",
+    "[===",
+    "===]",
+    "SYSTEM INTERNALS",
+    "METRICS - INTERNAL",
+    "MANDATE:",
+    "Exhaustion ="
   ]
 }

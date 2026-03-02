@@ -105,18 +105,14 @@ class TheAkashicRecord:
         if not vector:
             return "KAN"
         dom = max(vector, key=vector.get)
-        mapping = {
-            "VEL": "ZHEN",
-            "STR": "GEN",
-            "CHI": "KAN",
-            "ENT": "KAN",
-            "PHI": "LI",
-            "PSI": "QIAN",
-            "BET": "XUN",
-            "LAMBDA": "KUN",
-            "DEL": "DUI",
-        }
-        return mapping.get(dom, "KAN")
+
+        trigrams = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
+        fallback_mapping = {"CHI": "KAN", "LAMBDA": "KUN"}
+
+        if dom in trigrams and len(trigrams[dom]) > 1:
+            return trigrams[dom][1]
+
+        return fallback_mapping.get(dom, "KAN")
 
     def _on_mythology_update(self, payload):
         if not payload or not isinstance(payload, dict):

@@ -368,16 +368,24 @@ class CommandProcessor:
 
     def _cmd_status(self, _parts):
         v = self.interface.get_vitals()
+        menu_cfg = LoreManifest.get_instance().get("ux_strings", "status_menu") or {}
+
+        h_lbl = menu_cfg.get("health_label", "Health:  ")
+        s_lbl = menu_cfg.get("stamina_label", "Stamina: ")
+        e_lbl = menu_cfg.get("energy_label", "Energy:  ")
+
+        b_f = menu_cfg.get("bar_filled", "█")
+        b_e = menu_cfg.get("bar_empty", "░")
 
         def bar(curr, max_v, col):
             max_v = max(1.0, max_v)
             filled = int(max(0.0, min(1.0, curr / max_v)) * 10)
-            return f"{col}{'█'*filled}{'░'*(10-filled)}{self.P.RST}"
+            return f"{col}{b_f*filled}{b_e*(10-filled)}{self.P.RST}"
 
         self.interface.log(
-            f"Health:  {bar(v['health'], v['max_health'], self.P.RED)} {v['health']:.0f}\n"
-            f"Stamina: {bar(v['stamina'], v['max_stamina'], self.P.GRN)} {v['stamina']:.0f}\n"
-            f"Energy:  {bar(v['atp'], 200, self.P.YEL)} {v['atp']:.0f}"
+            f"{h_lbl}{bar(v['health'], v['max_health'], self.P.RED)} {v['health']:.0f}\n"
+            f"{s_lbl}{bar(v['stamina'], v['max_stamina'], self.P.GRN)} {v['stamina']:.0f}\n"
+            f"{e_lbl}{bar(v['atp'], 200, self.P.YEL)} {v['atp']:.0f}"
         )
         return True
 
@@ -565,12 +573,16 @@ class CommandProcessor:
                 reporter.renderer = new_renderer
                 reporter.renderers["STANDARD"] = new_renderer
             reporter.renderer.dial_setting = mode
-            modes = ["BOARDROOM", "WORKSHOP", "RED TEAM", "PALIMPSEST"]
+            modes = LoreManifest.get_instance().get_ux(
+                "command_alerts", "truth_modes", ["BOARDROOM", "WORKSHOP", "RED TEAM", "PALIMPSEST"]
+            )
             msg = LoreManifest.get_instance().get_ux(
                 "command_alerts", "truth_dial_set"
             )
+
+            selected_mode = modes[mode] if mode < len(modes) else "UNKNOWN"
             self.interface.log(
-                f"{self.P.CYN}{msg.format(mode=modes[mode])}{self.P.RST}"
+                f"{self.P.CYN}{msg.format(mode=selected_mode)}{self.P.RST}"
             )
         except ValueError:
             self.interface.log(

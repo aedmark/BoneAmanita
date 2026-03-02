@@ -2,7 +2,7 @@ import traceback, random, time, uuid, re
 from typing import Dict, Any, List
 from bone_core import ArchetypeArbiter, LoreManifest
 from bone_types import Prisma, CycleContext
-from bone_physics import TheGatekeeper, apply_somatic_feedback, TRIGRAM_MAP, CycleStabilizer
+from bone_physics import TheGatekeeper, apply_somatic_feedback, CycleStabilizer
 from bone_gui import SoulDashboard, CycleReporter
 from bone_machine import PanicRoom
 from bone_body import SynestheticCortex
@@ -501,7 +501,6 @@ class RealityFilterPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "REALITY_FILTER"
-        self.TRIGRAMS = TRIGRAM_MAP
 
     def run(self, ctx: CycleContext):
         reflection = self.eng.mind.mirror.get_reflection_modifiers()
@@ -509,8 +508,12 @@ class RealityFilterPhase(SimulationPhase):
         vector = ctx.physics.vector
         if vector:
             dom = max(vector, key=vector.get)
-            entry = self.TRIGRAMS.get(dom, self.TRIGRAMS["E"])
-            sym, name, _, color = entry
+            trigrams = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
+
+            entry = trigrams.get(dom, trigrams.get("E", ["?", "UNKNOWN", "Unknown", "GRY"]))
+            sym, name, _, color_attr = entry
+            color = getattr(Prisma, color_attr, Prisma.GRY)
+
             ctx.world_state["trigram"] = {"symbol": sym, "name": name, "color": color}
             if random.random() < 0.05:
                 msg = LoreManifest.get_instance().get_ux(

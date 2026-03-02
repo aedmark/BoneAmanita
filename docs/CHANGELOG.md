@@ -1,5 +1,28 @@
 # BONEAMANITA v16 CHANGELOG
 
+### **BONEAMANITA v16.3.0 "The Great Decoupling"**
+
+---
+
+#### **🏗️ STRUCTURAL REFACTORING (The Fuller & Pinker Lenses)**
+
+* **Total Data/Logic Schism:** Executed a massive architectural sweep to excise hardcoded configuration arrays, fallback dictionaries, and magic strings from the core Python engine, moving them to dynamic JSON data structures.
+  * **Inventory & Loot (`bone_inventory.py`):** Extracted `REFUSAL_MARKERS`, `LOOT_TRIGGERS`, and `INTERACTION_VERBS` into `gordon.json`. Moved dimension-to-archetype mappings and fallback generation strings to `item_generation.json`.
+  * **Persona Drivers (`bone_drivers.py`):** Ephemeralized the `SoulDriver` archetype mappings and the `EnneagramDriver` coordinate thresholds into `driver_config.json`.
+  * **Physics Engine (`bone_physics.py`):** Excised the `TRIGRAM_MAP`, `TONE_EFFECTS`, and the entire `GeodesicConstants` class into `physics_constants.json`. (Also refactored `bone_cycle.py` and `bone_akashic.py` to remove dangling pointer imports to the old map).
+  * **LLM Symbiosis (`bone_symbiosis.py`):** Moved `DEFAULT_MODIFIERS`, prompt injection directives, LLM `REFUSAL_SIGNATURES`, and `SYMBIONT_VOICES` (Lichen, Parasite, etc.) to `symbiosis_config.json`.
+  * **Biology & Metabolism (`bone_body.py`):** Extracted the `ENZYME_MAP`, circadian rhythms, `GOVERNOR_SHIFT` UI colors, and all somatic qualia reflexes (e.g., "Golden Glow", "Gut Tightening") to `body_config.json`.
+  * **The Cortex (`bone_brain.py`):** Relocated `META_MARKERS` and `TOXIC_KEYWORDS` to the existing `style_crimes.json` stylistic firewall.
+  * **Command UI (`bone_commands.py`):** Shifted the ASCII status bar labels and Truth Dial mode names into `ux_strings.json`.
+  * **Parliament of Selves (`bone_council.py`):** Moved the Pantheon roster, Strange Loop triggers, and Slash Council code-detection patterns into `council_data.json`.
+
+#### **🐛 BUG FIXES & STABILITY (The Schur & Meadows Lenses)**
+
+* **LoreManifest Circular Dependency (`bone_core.py`):** Fixed a fatal stack overflow loop where `LoreManifest` attempted to use `get_ux()` to log its own loading sequence before `ux_strings.json` was fully cached. Core I/O operations are now safely hardcoded to prevent recursive paradoxes.
+* **Decoupled Diagnostics (`bone_diag.py`):** Expanded the test suite with `test_decoupled_json_configs()` to proactively stress-test the new data-binding architecture, ensuring the engine gracefully hydrates from JSON arrays without collapsing.
+
+---
+
 ### **BONEAMANITA v16.2.0 "The JSON Matrix"**
 
 ---

@@ -14,13 +14,14 @@ class TheStrangeLoop:
         self.triggers = c_data.get(
             "STRANGE_LOOP_TRIGGERS", ["who are you", "strange loop"]
         )
+        self.keywords = c_data.get("STRANGE_LOOP_KEYWORDS", ["self", "mirror", "define"])
 
     def audit(self, text: str, physics: dict) -> tuple[bool, str, dict, dict]:
         text_lower = text.lower()
         phrase_hit = any(t in text_lower for t in self.triggers)
         psi = physics.get("psi", 0.0)
         abstract_hit = psi > 0.6 and any(
-            w in text_lower for w in ("self", "mirror", "define")
+            w in text_lower for w in self.keywords
         )
         threshold = getattr(BoneConfig.COUNCIL, "STRANGE_LOOP_VOLTAGE", 8.0)
         if (phrase_hit or abstract_hit) and physics.get("voltage", 0) > threshold:
@@ -296,7 +297,10 @@ class CouncilChamber:
         self.footnote = TheFootnote()
         self.slash_council = TheSlashCouncil()
 
-        for s_name in ["LICHEN", "PARASITE", "MYCORRHIZA", "MYCELIUM"]:
+        symbiont_cfg = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "SYMBIONT_VOICES") or {}
+        symbiont_names = list(symbiont_cfg.keys()) if symbiont_cfg else ["LICHEN", "PARASITE", "MYCORRHIZA", "MYCELIUM"]
+
+        for s_name in symbiont_names:
             self.voices.append(get_symbiont(s_name))
         self.speaker = "SOUL"
 
@@ -335,21 +339,10 @@ class CouncilChamber:
 
         c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
         synergy_map = c_data.get("SYNERGY_MAP", {})
-
-        pantheon = [
-            "GORDON",
-            "JESTER",
-            "MERCY",
-            "BENEDICT",
-            "ROBERTA",
-            "CASPER",
-            "MOIRA",
-            "CASSANDRA",
-            "COLIN",
-            "REVENANT",
-            "GIDEON",
-            "APRIL",
-        ]
+        pantheon = c_data.get("PANTHEON", [
+            "GORDON", "JESTER", "MERCY", "BENEDICT", "ROBERTA", "CASPER",
+            "MOIRA", "CASSANDRA", "COLIN", "REVENANT", "GIDEON", "APRIL"
+        ])
         active_present = []
         for log in village_logs:
             for actor in pantheon:
@@ -466,16 +459,10 @@ class CouncilChamber:
 class TheSlashCouncil:
     def __init__(self):
         self.active = False
-        self.triggers = ["[MOD:CODING]", "[SLASH]", "review this code", "refactor"]
-        self.code_keywords = [
-            "def ",
-            "class ",
-            "return ",
-            "import ",
-            "=>",
-            "function",
-            "struct ",
-        ]
+        c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
+        self.triggers = c_data.get("SLASH_TRIGGERS", ["[MOD:CODING]", "[SLASH]", "review this code", "refactor"])
+        self.code_keywords = c_data.get("CODE_KEYWORDS", ["def ", "class ", "return ", "import ", "=>", "function", "struct "])
+        self.rules = c_data.get("SLASH_RULES", {})
 
     def audit(self, text: str, physics: dict) -> tuple[bool, list[str], dict]:
         text_lower = text.lower()
@@ -490,43 +477,31 @@ class TheSlashCouncil:
         logs = []
         corrections = {}
 
-        if "var " in text or "x =" in text or "data =" in text:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "slash_pinker"
-            )
+        r_pinker = self.rules.get("PINKER", ["var ", "x =", "data ="])
+        r_fuller = self.rules.get("FULLER", ["import ", "class ", "def "])
+        r_schur = self.rules.get("SCHUR", ["Exception", "try:", "catch"])
+        r_meadows = self.rules.get("MEADOWS", ["while ", "for ", "queue", "recursion"])
+
+        if any(k in text for k in r_pinker):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "slash_pinker")
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
             corrections["gamma"] = -0.2
         else:
             corrections["gamma"] = 0.1
 
-        if "import " in text or "class " in text or "def " in text:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "slash_fuller"
-            )
+        if any(k in text for k in r_fuller):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "slash_fuller")
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
             corrections["sigma"] = 0.1
 
-        if "Exception" in text or "try:" in text or "catch" in text:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "slash_schur"
-            )
+        if any(k in text for k in r_schur):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "slash_schur")
             logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
             corrections["eta"] = 0.2
             corrections["glimmers"] = 1
 
-        if (
-            "while " in text
-            or "for " in text
-            or "queue" in text_lower
-            or "recursion" in text_lower
-        ):
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "slash_meadows"
-            )
+        if any(k in text_lower for k in r_meadows):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "slash_meadows")
             logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
             corrections["theta"] = -0.1
 

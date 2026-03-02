@@ -10,6 +10,19 @@
     "infinite regress",
     "strange loop"
   ],
+  "STRANGE_LOOP_KEYWORDS": ["self", "mirror", "define"],
+  "PANTHEON": [
+    "GORDON", "JESTER", "MERCY", "BENEDICT", "ROBERTA", "CASPER",
+    "MOIRA", "CASSANDRA", "COLIN", "REVENANT", "GIDEON", "APRIL"
+  ],
+  "SLASH_TRIGGERS": ["[MOD:CODING]", "[SLASH]", "review this code", "refactor"],
+  "CODE_KEYWORDS": ["def ", "class ", "return ", "import ", "=>", "function", "struct "],
+  "SLASH_RULES": {
+    "PINKER": ["var ", "x =", "data ="],
+    "FULLER": ["import ", "class ", "def "],
+    "SCHUR": ["Exception", "try:", "catch"],
+    "MEADOWS": ["while ", "for ", "queue", "recursion"]
+  },
   "CHAIRHOLDER_PHRASES": [
     "You just got Jammed.",
     "I'm voting present.",

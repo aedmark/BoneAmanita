@@ -58,7 +58,7 @@ class SessionGuardian:
         mid_bar = LoreManifest.get_instance().get_ux(
             "main_strings",
             "term_header_mid",
-            "│ BONEAMANITA TERMINAL // VERSION 16.2.0   │",
+            "│ BONEAMANITA TERMINAL // VERSION 16.3.0   │",
         )
         bot_bar = LoreManifest.get_instance().get_ux(
             "main_strings",
