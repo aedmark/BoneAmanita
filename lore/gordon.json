@@ -346,5 +346,25 @@
       ],
       "usage_msg": "You stick the concept to the wall. It's not going anywhere."
     }
-  }
+  },
+  "REFUSAL_MARKERS": [
+    "cannot", "can't", "unable", "fail", "too heavy",
+    "stuck", "don't", "do not", "locked", "refuse", "impossible"
+  ],
+  "LOOT_TRIGGERS": [
+    "found a", "picked up", "pick up", "acquired",
+    "took the", "take the", "grab the", "takes the"
+  ],
+  "CREATIVE_LOOT_TRIGGERS": [
+    "grasped the concept of", "held onto", "felt a",
+    "internalized the", "embraced the", "clung to the", "remembered the"
+  ],
+  "INTERACTION_VERBS": [
+    "use", "drop", "throw", "consume", "eat",
+    "drink", "read", "activate", "give", "equip"
+  ],
+  "ACQUISITION_VERBS": [
+    "take", "grab", "pick", "get", "steal", "seize",
+    "collect", "snatch", "acquire", "pocket", "loot", "harvest"
+  ]
 }

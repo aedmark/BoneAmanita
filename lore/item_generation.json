@@ -119,5 +119,27 @@
       "of the Void",
       "of Absence"
     ]
-  }
+  },
+  "DIM_MAP": {
+    "STR": "heavy",
+    "VEL": "kinetic",
+    "PHI": "thermal",
+    "PSI": "abstract",
+    "ENT": "void",
+    "BET": "constructive"
+  },
+  "FALLBACKS": {
+    "PREFIX": ["Strange"],
+    "SUFFIX": ["of Mystery"],
+    "BASE": ["Object"]
+  },
+  "CREATIVE_OVERRIDES": {
+    "PREFIXES": ["A Lingering", "A Sudden", "A Distant", "A Sharp", "A Quiet"],
+    "SUFFIXES": ["of Dread", "of Hope", "of Clarity", "of Chaos", "of Stillness"]
+  },
+  "ADVENTURE_CATEGORIES": [
+    "TOOL",
+    "JUNK",
+    "ARTIFACT"
+  ]
 }
