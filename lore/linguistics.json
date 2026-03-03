@@ -1,0 +1,67 @@
+{
+  "PHONETICS": {
+    "PLOSIVE": "bdgkpt",
+    "FRICATIVE": "fthszsh",
+    "LIQUID": "lr",
+    "NASAL": "mn",
+    "VOWELS": "aeiouy"
+  },
+  "ROOTS": {
+    "HEAVY": [
+      "lith", "ferr", "petr", "dens", "grav", "struct", "base", "fund", "mound"
+    ],
+    "KINETIC": [
+      "mot", "mov", "ject", "tract", "pel", "crat", "dynam", "flux"
+    ],
+    "ABSTRACT": [
+      "tion", "ism", "ence", "ance", "ity", "ology", "ness", "ment", "idea"
+    ],
+    "SUBURBAN": [
+      "norm", "comm", "stand", "pol", "reg", "mod"
+    ],
+    "VITAL": [
+      "viv", "vita", "spir", "anim", "bio", "luc", "lum", "phot", "phon", "surg", "bloom"
+    ],
+    "TOXIN": [
+      "necro", "path", "tox", "vir", "mort", "rot", "rupt", "flict", "plasm", "fester", "decay", "plagu", "tumor", "bleed", "blood", "sick", "carcin", "pus", "bile"
+    ]
+  },
+  "THRESHOLDS": {
+    "heavy_density": 0.55,
+    "play_vitality": 0.6,
+    "kinetic_flow": 0.6
+  },
+  "BIASES": {
+    "heavy": 1.0,
+    "play": 1.0,
+    "kinetic": 1.0
+  },
+  "DIMENSION_MAP": {
+    "kinetic": "VEL",
+    "explosive": "CHI",
+    "heavy": "STR",
+    "constructive": "STR",
+    "antigen": "CHI",
+    "toxin": "CHI",
+    "thermal": "PHI",
+    "photo": "PHI",
+    "abstract": "PSI",
+    "sacred": "PSI",
+    "suburban": "BET",
+    "buffer": "BET",
+    "play": "DEL",
+    "aerobic": "DEL",
+    "harvest": "STR",
+    "meat": "CHI",
+    "void": "PSI",
+    "liminal": "LAMBDA",
+    "pareidolia": "PSI",
+    "crisis_term": "CHI",
+    "cursed": "CHI"
+  },
+  "PRIORITY_ORDER": [
+    "toxin", "heavy", "kinetic", "explosive", "thermal", "cryo", "sacred",
+    "antigen", "meat", "void", "liminal", "pareidolia", "play", "suburban", "abstract"
+  ]
+}
+
