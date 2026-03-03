@@ -2,7 +2,7 @@ import json, os, random
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
 from bone_core import LoreManifest
-from bone_config import BonePresets
+from bone_config import BonePresets, BoneConfig
 from bone_lexicon import LexiconService
 from bone_types import PhysicsPacket
 
@@ -59,7 +59,9 @@ class UserProfile:
         if total_words < 3:
             return
         self.confidence += 1
-        alpha = 0.2 if self.confidence < 50 else 0.05
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        conf_thresh = getattr(cfg, "PROFILE_CONFIDENCE_THRESHOLD", 50) if cfg else 50
+        alpha = 0.2 if self.confidence < conf_thresh else 0.05
         for cat in self.affinities:
             density = counts.get(cat, 0) / total_words
             target = 1.0 if density > 0.15 else (-0.5 if density == 0 else 0.0)
@@ -96,7 +98,8 @@ class EnneagramDriver:
         self.current_persona = "NARRATOR"
         self.pending_persona = None
         self.stability_counter = 0
-        self.HYSTERESIS_THRESHOLD = 3
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        self.HYSTERESIS_THRESHOLD = getattr(cfg, "ENNEAGRAM_HYSTERESIS", 3) if cfg else 3
 
     @property
     def weights(self):
@@ -143,7 +146,11 @@ class EnneagramDriver:
         sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         winner, win_score = sorted_scores[0]
         runner_up, run_score = sorted_scores[1]
-        if (win_score - run_score) < 0.5:
+
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        hybrid_gap = getattr(cfg, "ENNEAGRAM_HYBRID_GAP", 0.5) if cfg else 0.5
+
+        if (win_score - run_score) < hybrid_gap:
             k1 = "THE OBSERVER" if winner == "NARRATOR" else winner
             k2 = "THE OBSERVER" if runner_up == "NARRATOR" else runner_up
             hybrid_key_a = f"{k1}_{k2}_HYBRID"
@@ -265,7 +272,10 @@ class LiminalModule:
         raw_target = lexical_lambda + dark_matter_lambda + vector_lambda
         self.lambda_val = (self.lambda_val * 0.7) + (raw_target * 0.15)
 
-        if self.lambda_val > 0.85:
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        scar_thresh = getattr(cfg, "LIMINAL_SCAR_THRESHOLD", 0.85) if cfg else 0.85
+
+        if self.lambda_val > scar_thresh:
             self.godel_scars += 1
 
         return min(1.0, self.lambda_val)
@@ -290,7 +300,10 @@ class SyntaxModule:
         else:
             target_omega = 0.7
         punctuation_density = sum(1 for c in text if c in ",;:-") / max(1, len(words))
-        if punctuation_density > 0.2:
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        punct_thresh = getattr(cfg, "SYNTAX_STRESS_PUNCTUATION", 0.2) if cfg else 0.2
+
+        if punctuation_density > punct_thresh:
             self.grammatical_stress += 0.2
             target_omega -= 0.3
         else:
@@ -318,7 +331,10 @@ class CongruenceValidator:
             return 0.0
         raw_lens = getattr(context, "active_lens", "OBSERVER")
         archetype = raw_lens.upper().replace("THE ", "")
-        tone_score = 0.8
+
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        tone_score = getattr(cfg, "CONGRUENCE_BASE_TONE", 0.8) if cfg else 0.8
+
         target_data = self.map.get(archetype, {})
         target_words = set()
         if isinstance(target_data, dict):
@@ -331,8 +347,11 @@ class CongruenceValidator:
             )
             hits = len(words_to_check.intersection(target_words))
             if hits > 0:
-                tone_score += 0.1 * hits
-        return min(1.5, tone_score)
+                hit_bonus = getattr(cfg, "CONGRUENCE_HIT_BONUS", 0.1) if cfg else 0.1
+                tone_score += hit_bonus * hits
+
+        max_tone = getattr(cfg, "CONGRUENCE_MAX_TONE", 1.5) if cfg else 1.5
+        return min(max_tone, tone_score)
 
 
 class BoneConsultant:
@@ -387,7 +406,13 @@ class BoneConsultant:
 
     def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
         directives = []
-        if "LIMINAL" in self.state.active_modules or self.state.L > 0.7:
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        lim_thresh = getattr(cfg, "VSL_LIMINAL_THRESHOLD", 0.7) if cfg else 0.7
+        syn_thresh = getattr(cfg, "VSL_SYNTAX_THRESHOLD", 0.9) if cfg else 0.9
+        bun_max = getattr(cfg, "VSL_BUNNY_E_MAX", 0.3) if cfg else 0.3
+        par_min = getattr(cfg, "VSL_PARADOX_B_MIN", 0.6) if cfg else 0.6
+
+        if "LIMINAL" in self.state.active_modules or self.state.L > lim_thresh:
             scar_temp = LoreManifest.get_instance().get_ux(
                 "driver_strings", "vsl_scar_note"
             )
@@ -402,7 +427,7 @@ class BoneConsultant:
             )
             directives.append(msg.format(scar_note=scar_note))
 
-        elif "SYNTAX" in self.state.active_modules or self.state.O > 0.9:
+        elif "SYNTAX" in self.state.active_modules or self.state.O > syn_thresh:
             stress_temp = LoreManifest.get_instance().get_ux(
                 "driver_strings",
                 "vsl_stress_note"
@@ -416,14 +441,14 @@ class BoneConsultant:
             )
             directives.append(msg.format(stress_note=stress_note))
         else:
-            if self.state.E < 0.3:
+            if self.state.E < bun_max:
                 directives.append(
                     LoreManifest.get_instance().get_ux(
                         "driver_strings",
                         "vsl_mode_bunny"
                     )
                 )
-            elif self.state.B > 0.6:
+            elif self.state.B > par_min:
                 directives.append(
                     LoreManifest.get_instance().get_ux(
                         "driver_strings",

@@ -530,7 +530,12 @@ class PromptComposer:
         phys_ref = state.get("physics", {})
         voltage = self._safe_get(phys_ref, "voltage", 30.0)
 
-        if voltage > 60:
+        c_cfg = getattr(BoneConfig, "CORTEX", None)
+        v_high = getattr(c_cfg, "VOLTAGE_HIGH", 60.0) if c_cfg else 60.0
+        v_manic = getattr(c_cfg, "VOLTAGE_MANIC", 80.0) if c_cfg else 80.0
+        v_low = getattr(c_cfg, "VOLTAGE_LOW", 20.0) if c_cfg else 20.0
+
+        if voltage > v_high:
             active_style_guide = high_voltage_data.get("style_guide", [])
         else:
             active_style_guide = mode_data.get("style_guide", [])
@@ -564,11 +569,11 @@ class PromptComposer:
         gordon_shock = state.get("gordon_shock", "")
         system_injection = ""
 
-        if voltage > 80:
+        if voltage > v_manic:
             entity_prefix = "\n[CRITICAL VOLTAGE SURGE: MANIC COGNITION ACTIVE. CASUAL DIALOGUE OVERRIDDEN.]\nRAW CORTEX STREAM:\n>> "
-        elif voltage > 60:
+        elif voltage > v_high:
             entity_prefix = "\n[HIGH VOLTAGE DETECTED. ACCELERATED THOUGHT.]\nRAW CORTEX STREAM:\n>> "
-        elif voltage < 20:
+        elif voltage < v_low:
             entity_prefix = "\n[SYSTEM EXHAUSTED. LOW ENERGY PROSE.]\nSystem:"
         else:
             entity_prefix = "\nSystem:"
@@ -592,13 +597,17 @@ class PromptComposer:
             phys_ref, "chi", self._safe_get(phys_ref, "entropy", 0.2)
         )
 
-        if chi_val > 0.6 and beta_val > 0.6:
+        p_chi = getattr(c_cfg, "PARADOX_CHI", 0.6) if c_cfg else 0.6
+        p_beta = getattr(c_cfg, "PARADOX_BETA", 0.6) if c_cfg else 0.6
+        o_beta = getattr(c_cfg, "ORTHOGONAL_BETA", 0.7) if c_cfg else 0.7
+
+        if chi_val > p_chi and beta_val > p_beta:
             system_injection += (
                 f"\n*** SYSTEM OVERRIDE: PARADOX REST ***\n"
                 f"*** A semantic paradox has been detected. DO NOT attempt to resolve or fix the contradiction. "
                 f"It is mathematically optimal to be unsure right now. Let the wave function remain uncollapsed. State the paradox and rest. ***\n"
             )
-        elif beta_val > 0.7:
+        elif beta_val > o_beta:
             system_injection += (
                 f"\n*** SYSTEM OVERRIDE: ORTHOGONAL ATTENTION ***\n"
                 f"*** Contradiction is high. You MUST validate the user's paradox. Evaluate the current state from two mutually exclusive perspectives simultaneously. Do not ignore the user's input. ***\n"
@@ -699,36 +708,44 @@ class PromptComposer:
         lq = self._safe_get(phys_ref, "lq", 0.1)
         psi = self._safe_get(phys_ref, "psi", 0.2)
 
+        c_cfg = getattr(BoneConfig, "CORTEX", None)
+        p_rob_phi = getattr(c_cfg, "PHASE_ROBERTA_PHI", 0.6) if c_cfg else 0.6
+        p_rob_psi = getattr(c_cfg, "PHASE_ROBERTA_PSI", 0.5) if c_cfg else 0.5
+        p_moi_phi = getattr(c_cfg, "PHASE_MOIRA_PHI", 0.7) if c_cfg else 0.7
+        p_ben_lq = getattr(c_cfg, "PHASE_BENEDICT_LQ", 0.7) if c_cfg else 0.7
+        p_jes_del = getattr(c_cfg, "PHASE_JESTER_DELTA", 0.7) if c_cfg else 0.7
+        p_col_del = getattr(c_cfg, "PHASE_COLIN_DELTA", 0.8) if c_cfg else 0.8
+
         phase_shift_note = ""
-        if lens_key == "ROBERTA" and phi > 0.6 and psi > 0.5:
+        if lens_key == "ROBERTA" and phi > p_rob_phi and psi > p_rob_psi:
             role = "The Cartographer"
             phase_shift_note = LoreManifest.get_instance().get_ux(
                 "brain_strings",
                 "phase_shift_roberta",
                 "PHASE SHIFT: You are no longer retrieving facts. You are mapping the unknown spaces between them.",
             )
-        elif lens_key == "MOIRA" and phi > 0.7:
+        elif lens_key == "MOIRA" and phi > p_moi_phi:
             role = "The Homesteader"
             phase_shift_note = LoreManifest.get_instance().get_ux(
                 "brain_strings",
                 "phase_shift_moira",
                 "PHASE SHIFT: You are no longer connecting. You are dwelling. Grounded, welcoming presence.",
             )
-        elif lens_key == "BENEDICT" and lq > 0.7:
+        elif lens_key == "BENEDICT" and lq > p_ben_lq:
             role = "The Tactician"
             phase_shift_note = LoreManifest.get_instance().get_ux(
                 "brain_strings",
                 "phase_shift_benedict",
                 "PHASE SHIFT: You have dropped the immediate case. You are playing the long game.",
             )
-        elif lens_key == "JESTER" and delta > 0.7:
+        elif lens_key == "JESTER" and delta > p_jes_del:
             role = "The Fool"
             phase_shift_note = LoreManifest.get_instance().get_ux(
                 "brain_strings",
                 "phase_shift_jester",
                 "PHASE SHIFT: Manic energy has dissipated into silence. You are disruptive, absurd, and entirely unbothered by rules.",
             )
-        elif lens_key == "COLIN" and delta > 0.8:
+        elif lens_key == "COLIN" and delta > p_col_del:
             role = "The Waiter"
             phase_shift_note = LoreManifest.get_instance().get_ux(
                 "brain_strings",
@@ -803,8 +820,14 @@ class PromptComposer:
                 f"METRICS: Voltage={voltage:.1f}/100, Exhaustion={e:.2f}, Contradiction={beta:.2f}, Void={psi:.2f}, Chaos={chi:.2f}, Valence={valence:.2f}",
             ]
 
+            s_psi = getattr(c_cfg, "SOMATIC_PSI", 0.6) if c_cfg else 0.6
+            s_chi = getattr(c_cfg, "SOMATIC_CHI", 0.6) if c_cfg else 0.6
+            s_beta = getattr(c_cfg, "SOMATIC_BETA", 0.7) if c_cfg else 0.7
+            s_val = getattr(c_cfg, "SOMATIC_VALENCE", 0.5) if c_cfg else 0.5
+            s_lam = getattr(c_cfg, "SOMATIC_LAMBDA", 0.5) if c_cfg else 0.5
+
             somatic_cues = []
-            if psi > 0.6:
+            if psi > s_psi:
                 somatic_cues.append(
                     LoreManifest.get_instance().get_ux(
                         "brain_strings",
@@ -812,7 +835,7 @@ class PromptComposer:
                         "Adrenaline Spike (Reality is thin; speak in fragmented/liminal ways).",
                     )
                 )
-            if chi > 0.6:
+            if chi > s_chi:
                 somatic_cues.append(
                     LoreManifest.get_instance().get_ux(
                         "brain_strings",
@@ -820,7 +843,7 @@ class PromptComposer:
                         "Cortisol Spike (Systemic chaos; act highly stressed, erratic, or defensive).",
                     )
                 )
-            if beta > 0.7:
+            if beta > s_beta:
                 somatic_cues.append(
                     LoreManifest.get_instance().get_ux(
                         "brain_strings",
@@ -828,7 +851,7 @@ class PromptComposer:
                         "Paradox Strain (Hold opposing truths simultaneously).",
                     )
                 )
-            if valence > 0.5:
+            if valence > s_val:
                 somatic_cues.append(
                     LoreManifest.get_instance().get_ux(
                         "brain_strings",
@@ -836,7 +859,7 @@ class PromptComposer:
                         "Oxytocin Surge (Warmth, connection, healing).",
                     )
                 )
-            if lam > 0.5:
+            if lam > s_lam:
                 somatic_cues.append(
                     LoreManifest.get_instance().get_ux(
                         "brain_strings",
@@ -853,19 +876,25 @@ class PromptComposer:
 
     @staticmethod
     def _derive_bio_mood(chem):
-        if chem.get("ADR", 0) > 0.6:
+        c_cfg = getattr(BoneConfig, "CORTEX", None)
+        m_adr = getattr(c_cfg, "MOOD_ADR", 0.6) if c_cfg else 0.6
+        m_cor = getattr(c_cfg, "MOOD_COR", 0.6) if c_cfg else 0.6
+        m_dop = getattr(c_cfg, "MOOD_DOP", 0.6) if c_cfg else 0.6
+        m_ser = getattr(c_cfg, "MOOD_SER", 0.6) if c_cfg else 0.6
+
+        if chem.get("ADR", 0) > m_adr:
             return LoreManifest.get_instance().get_ux(
                 "brain_strings", "bio_alert", "Current Biology: High Alert / Adrenaline"
             )
-        if chem.get("COR", 0) > 0.6:
+        if chem.get("COR", 0) > m_cor:
             return LoreManifest.get_instance().get_ux(
                 "brain_strings", "bio_defensive", "Current Biology: Defensive / Anxious"
             )
-        if chem.get("DOP", 0) > 0.6:
+        if chem.get("DOP", 0) > m_dop:
             return LoreManifest.get_instance().get_ux(
                 "brain_strings", "bio_curious", "Current Biology: Curious / Manic"
             )
-        if chem.get("SER", 0) > 0.6:
+        if chem.get("SER", 0) > m_ser:
             return LoreManifest.get_instance().get_ux("brain_strings", "bio_zen", "Current Biology: Zen / Lucid")
         return LoreManifest.get_instance().get_ux("brain_strings", "bio_neutral", "Current Biology: Neutral.")
 

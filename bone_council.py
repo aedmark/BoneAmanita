@@ -59,8 +59,9 @@ class TheLeveragePoint:
     def __init__(self):
         self.last_drag = 0.0
         self.static_flow_turns = 0
-        self.TARGET_VOLTAGE = 12.0
-        self.TARGET_DRAG = 3.0
+        cfg = getattr(BoneConfig, "COUNCIL", None)
+        self.TARGET_VOLTAGE = getattr(cfg, "LEVERAGE_TARGET_VOLTAGE", 12.0) if cfg else 12.0
+        self.TARGET_DRAG = getattr(cfg, "LEVERAGE_TARGET_DRAG", 3.0) if cfg else 3.0
 
     def audit(
         self, physics: dict, _bio_state: dict = None
@@ -166,122 +167,69 @@ class TheVillageCouncil:
         phi = get_val("resonance", "PHI_RES", 0.0)
         delta = get_val("silence", "DELTA", 0.0)
         lq = get_val("lq", "LQ", 0.0)
+        ros = get_val("ros", "ROS", 0.0)
 
-        if V < 20 and F > 5.0:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_gordon"
-            )
+        cfg = getattr(BoneConfig, "COUNCIL", None)
+
+        if V < getattr(cfg, "TRIG_GORDON_V", 20.0) and F > getattr(cfg, "TRIG_GORDON_F", 5.0):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_gordon")
             logs.append(f"{Prisma.SLATE}{msg}{Prisma.RST}")
-        if V > 60 and chi > 0.6:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_jester"
-            )
+        if V > getattr(cfg, "TRIG_JESTER_V", 60.0) and chi > getattr(cfg, "TRIG_JESTER_CHI", 0.6):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_jester")
             logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
-        if T > 0 or (V < 20 and valence > 0.5):
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_mercy"
-            )
+        if T > 0 or (V < getattr(cfg, "TRIG_MERCY_V", 20.0) and valence > getattr(cfg, "TRIG_MERCY_VAL", 0.5)):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_mercy")
             logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
-        if beta > 0.7 and chi < 0.3 and D > 0.7 and C > 0.8:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_benedict"
-            )
+        if beta > getattr(cfg, "TRIG_BENEDICT_BETA", 0.7) and chi < getattr(cfg, "TRIG_BENEDICT_CHI", 0.3) and D > getattr(cfg, "TRIG_BENEDICT_D", 0.7) and C > getattr(cfg, "TRIG_BENEDICT_C", 0.8):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_benedict")
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
-        if S < 0.4 and D > 0.8 and C < 0.4:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_roberta_missing"
-            )
+        if S < getattr(cfg, "TRIG_ROBERTA_S", 0.4) and D > getattr(cfg, "TRIG_ROBERTA_D", 0.8) and C < getattr(cfg, "TRIG_ROBERTA_C", 0.4):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_roberta_missing")
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
-        if C > 0.7 and D > 0.8 and P < 20:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_casper"
-            )
+        if C > getattr(cfg, "TRIG_CASPER_C", 0.7) and D > getattr(cfg, "TRIG_CASPER_D", 0.8) and P < getattr(cfg, "TRIG_CASPER_P", 20.0):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_casper")
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
-        if valence > 0.5:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_moira"
-            )
+        if valence > getattr(cfg, "TRIG_MOIRA_VAL", 0.5):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_moira")
             logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
-        if psi > 0.6:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_cassandra"
-            )
+        if psi > getattr(cfg, "TRIG_CASSANDRA_PSI", 0.6):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_cassandra")
             logs.append(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
-        if chi > 0.6:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_colin"
-            )
+        if chi > getattr(cfg, "TRIG_COLIN_CHI", 0.6):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_colin")
             logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
-        if lam > 0.7:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_revenant"
-            )
+        if lam > getattr(cfg, "TRIG_REVENANT_LAM", 0.7):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_revenant")
             logs.append(f"{Prisma.INDIGO}{msg}{Prisma.RST}")
-        if V > 70:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_gideon"
-            )
+        if V > getattr(cfg, "TRIG_GIDEON_V", 70.0):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_gideon")
             logs.append(f"{Prisma.YEL}{msg}{Prisma.RST}")
 
-        if psi > 0.6 and phi > 0.4 > beta:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_roberta_carto"
-            )
+        # Phase Shift Context Logging
+        if psi > getattr(cfg, "PHASE_ROBERTA_PSI", 0.6) and phi > getattr(cfg, "PHASE_ROBERTA_PHI", 0.4) > beta:
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_roberta_carto")
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
-        if phi > 0.7 and F < 2.0:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_moira_home"
-            )
+        if phi > getattr(cfg, "PHASE_MOIRA_PHI", 0.7) and F < getattr(cfg, "PHASE_MOIRA_F", 2.0):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_moira_home")
             logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
-        if lq > 0.6 and beta > 0.4:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_benedict_tact"
-            )
+        if lq > getattr(cfg, "PHASE_BENEDICT_LQ", 0.6) and beta > getattr(cfg, "PHASE_BENEDICT_BETA", 0.4):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_benedict_tact")
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
-        if delta > 0.7 and V < 20.0:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_jester_fool"
-            )
+        if delta > getattr(cfg, "PHASE_JESTER_DELTA", 0.7) and V < getattr(cfg, "PHASE_JESTER_V", 20.0):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_jester_fool")
             logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
-        if psi > 0.85:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_revenant_door"
-            )
+        if psi > getattr(cfg, "PHASE_REVENANT_PSI", 0.85):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_revenant_door")
             logs.append(f"{Prisma.INDIGO}{msg}{Prisma.RST}")
-        if beta > 0.6 and delta > 0.6:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_casper_ghost"
-            )
+        if beta > getattr(cfg, "PHASE_CASPER_BETA", 0.6) and delta > getattr(cfg, "PHASE_CASPER_DELTA", 0.6):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_casper_ghost")
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
-        if delta > 0.8 and lq < 0.3:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_colin_waiter"
-            )
+        if delta > getattr(cfg, "PHASE_COLIN_DELTA", 0.8) and lq < getattr(cfg, "PHASE_COLIN_LQ", 0.3):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_colin_waiter")
             logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
-        ros = get_val("ros", "ROS", 0.0)
-        if ros > 20.0 or abs(V - 30.0) > 20:
-            msg = LoreManifest.get_instance().get_ux(
-                "council_strings",
-                "village_april"
-            )
+
+        if ros > getattr(cfg, "TRIG_APRIL_ROS", 20.0) or abs(V - 30.0) > getattr(cfg, "TRIG_APRIL_V_DEV", 20.0):
+            msg = LoreManifest.get_instance().get_ux("council_strings", "village_april")
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
         return logs

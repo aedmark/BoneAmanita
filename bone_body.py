@@ -9,9 +9,6 @@ from bone_lexicon import LexiconService
 from bone_core import Prisma, LoreManifest
 from bone_config import BoneConfig
 
-MAX_ACCEPTED_DRAG = 15.0
-DRAG_EXPONENT = 1.2
-
 
 @dataclass
 class Biometrics:
@@ -150,14 +147,14 @@ class MitochondrialState:
 
 @dataclass
 class MitochondrialForge:
-    MAX_SAFE_BURN = 25.0
-    ANAEROBIC_THRESHOLD = 40.0
-
     def __init__(self, state_ref: MitochondrialState, events_ref):
         self.state = state_ref
         self.events = events_ref
         full_narrative = LoreManifest.get_instance().get("BIO_NARRATIVE") or {}
         self.narrative = full_narrative.get("MITO", {})
+
+        self.MAX_SAFE_BURN = getattr(BoneConfig.BIO, "MAX_SAFE_BURN", 25.0)
+        self.ANAEROBIC_THRESHOLD = getattr(BoneConfig.BIO, "ANAEROBIC_THRESHOLD", 40.0)
 
     def get_status_report(self) -> str:
         narrative = getattr(self, "narrative_map", {})
@@ -332,14 +329,13 @@ class MitochondrialForge:
 
 
 class DigestiveTrack:
-    SAMPLING_THRESHOLD = 1000
-    BASE_WORD_VALUE = 0.5
-    COMPLEX_WORD_BONUS = 2.0
-    CLICHE_TAX_RATE = 0.5
-
     def __init__(self, bio_system_ref: BioSystem):
         self.bio = bio_system_ref
         self.enzyme_map = LoreManifest.get_instance().get("BODY_CONFIG", "ENZYME_MAP") or {}
+        self.SAMPLING_THRESHOLD = getattr(BoneConfig.BIO, "SAMPLING_THRESHOLD", 1000)
+        self.BASE_WORD_VALUE = getattr(BoneConfig.BIO, "BASE_WORD_VALUE", 0.5)
+        self.COMPLEX_WORD_BONUS = getattr(BoneConfig.BIO, "COMPLEX_WORD_BONUS", 2.0)
+        self.CLICHE_TAX_RATE = getattr(BoneConfig.BIO, "CLICHE_TAX_RATE", 0.5)
 
     def harvest(self, phys: Any, logs: List[str]) -> Tuple[str, float, int]:
         clean_words = getattr(phys, "clean_words", [])
@@ -662,24 +658,8 @@ class EndocrineSystem:
     _REACTION_MAP: Dict = field(default_factory=dict, init=False)
 
     def __post_init__(self):
-        if hasattr(BoneConfig, "BIO"):
-            self._REACTION_MAP = {
-                "PROTEASE": {"ADR": BoneConfig.BIO.REWARD_MEDIUM},
-                "CELLULASE": {
-                    "COR": -BoneConfig.BIO.REWARD_MEDIUM,
-                    "OXY": BoneConfig.BIO.REWARD_SMALL,
-                },
-                "CHITINASE": {"DOP": BoneConfig.BIO.REWARD_LARGE},
-                "LIGNASE": {"SER": BoneConfig.BIO.REWARD_MEDIUM},
-                "DECRYPTASE": {
-                    "ADR": BoneConfig.BIO.REWARD_SMALL,
-                    "DOP": BoneConfig.BIO.REWARD_SMALL,
-                },
-                "AMYLASE": {
-                    "SER": BoneConfig.BIO.REWARD_LARGE,
-                    "OXY": BoneConfig.BIO.REWARD_MEDIUM,
-                },
-            }
+        body_config = LoreManifest.get_instance().get("BODY_CONFIG") or {}
+        self._REACTION_MAP = body_config.get("REACTION_MAP", {})
 
     @staticmethod
     def _clamp(val: float) -> float:
@@ -924,8 +904,13 @@ class MetabolicGovernor:
     STATE_THRESHOLDS = getattr(BoneConfig.BIO, "GOVERNOR_THRESHOLDS", [])
 
     def __post_init__(self):
-        self.voltage_pid = PIDController(kp=0.6, ki=0.05, kd=0.2, setpoint=10.0)
-        self.drag_pid = PIDController(kp=0.4, ki=0.1, kd=0.1, setpoint=1.5)
+        pid_cfg = getattr(BoneConfig.BIO, "PID_SETTINGS", {})
+        v_cfg = pid_cfg.get("VOLTAGE", {"kp": 0.6, "ki": 0.05, "kd": 0.2, "setpoint": 10.0})
+        d_cfg = pid_cfg.get("DRAG", {"kp": 0.4, "ki": 0.1, "kd": 0.1, "setpoint": 1.5})
+
+        self.voltage_pid = PIDController(kp=v_cfg["kp"], ki=v_cfg["ki"], kd=v_cfg["kd"], setpoint=v_cfg["setpoint"])
+        self.drag_pid = PIDController(kp=d_cfg["kp"], ki=d_cfg["ki"], kd=d_cfg["kd"], setpoint=d_cfg["setpoint"])
+
         self._sorted_thresholds = sorted(
             self.STATE_THRESHOLDS, key=lambda x: x[3], reverse=True
         )

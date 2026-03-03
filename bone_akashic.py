@@ -4,6 +4,7 @@ import json, os, uuid
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
 from bone_core import BoneJSONEncoder, LoreManifest
 from bone_types import Prisma
+from bone_config import BoneConfig
 
 
 class TheAkashicRecord:
@@ -13,9 +14,12 @@ class TheAkashicRecord:
         self.ingredient_affinity: Dict[str, int] = {}
         self.known_recipes: Set[Tuple[str, str]] = set()
         self.recipe_candidates: Dict[Tuple[str, str], Dict[str, int]] = {}
-        self.RECIPE_THRESHOLD = 3
-        self.HYBRID_LENS_THRESHOLD = 5
-        self.MAX_SHADOW_CAPACITY = 50
+
+        cfg = getattr(BoneConfig, "AKASHIC", None)
+        self.RECIPE_THRESHOLD = getattr(cfg, "RECIPE_THRESHOLD", 3) if cfg else 3
+        self.HYBRID_LENS_THRESHOLD = getattr(cfg, "HYBRID_LENS_THRESHOLD", 5) if cfg else 5
+        self.MAX_SHADOW_CAPACITY = getattr(cfg, "MAX_SHADOW_CAPACITY", 50) if cfg else 50
+
         self.lore = lore_manifest if lore_manifest else LoreManifest.get_instance()
         self.events = events_ref
         self.shadow_stock: List[Dict] = []
@@ -35,6 +39,9 @@ class TheAkashicRecord:
         print(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
     def trigger_autophagy(self) -> Tuple[float, str]:
+        cfg = getattr(BoneConfig, "AKASHIC", None)
+        yield_val = getattr(cfg, "AUTOPHAGY_YIELD", 15.0) if cfg else 15.0
+
         if not self.subconscious_strata:
             if self.discovered_words:
                 word = next(iter(self.discovered_words))
@@ -43,7 +50,7 @@ class TheAkashicRecord:
                     "akashic_strings",
                     "autophagy_lexical"
                 )
-                return 15.0, msg.format(word=word)
+                return yield_val, msg.format(word=word)
             msg = LoreManifest.get_instance().get_ux(
                 "akashic_strings",
                 "autophagy_failed"
@@ -55,7 +62,7 @@ class TheAkashicRecord:
             "akashic_strings",
             "autophagy_memory"
         )
-        return 15.0, msg.format(target=target)
+        return yield_val, msg.format(target=target)
 
     def record_scar(self, concept: str, p: Any):
         coords = {
@@ -183,12 +190,15 @@ class TheAkashicRecord:
             hazards.append("TOXIC_HAZARD")
 
         desc_template = LoreManifest.get_instance().get_ux("akashic_strings", "artifact_desc")
+        cfg = getattr(BoneConfig, "AKASHIC", None)
+        artifact_val = getattr(cfg, "ARTIFACT_VALUE", 50.0) if cfg else 50.0
+
         new_data = {
             "name": new_name,
             "description": desc_template.format(dominant_force=dominant_force),
             "function": "ARTIFACT",
             "passive_traits": hazards,
-            "value": 50.0,
+            "value": artifact_val,
         }
         gordon_data = self.lore.get("GORDON") or {}
         registry = gordon_data.get("ITEM_REGISTRY", {})
@@ -439,7 +449,11 @@ class TheAkashicRecord:
                 "lexicon_learned"
             )
             print(msg.format(word=word, category=category))
-            if len(lexicon_data[category]) > 50 and category != "heavy":
+
+            cfg = getattr(BoneConfig, "AKASHIC", None)
+            bloat_limit = getattr(cfg, "BLOAT_THRESHOLD", 50) if cfg else 50
+
+            if len(lexicon_data[category]) > bloat_limit and category != "heavy":
                 bloat_msg = LoreManifest.get_instance().get_ux(
                     "akashic_strings",
                     "lexicon_bloat"

@@ -3,6 +3,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Counter, Tuple, Deque
 from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
+from bone_config import BoneConfig
 
 
 class BoneJSONEncoder(json.JSONEncoder):
@@ -19,8 +20,10 @@ class BoneJSONEncoder(json.JSONEncoder):
 
 
 class EventBus:
-    def __init__(self, max_memory=1024):
-        self.buffer = deque(maxlen=max_memory)
+    def __init__(self, max_memory=None):
+        cfg = getattr(BoneConfig, "CORE", None)
+        limit = max_memory if max_memory else (getattr(cfg, "EVENT_MAX_MEMORY", 1024) if cfg else 1024)
+        self.buffer = deque(maxlen=limit)
         self.subscribers = {}
 
     def subscribe(self, event_type, callback):
@@ -120,13 +123,17 @@ class LoreManifest:
 class TheObserver:
     def __init__(self):
         self.start_time = time.time()
-        self.cycle_times = deque(maxlen=20)
-        self.llm_latencies = deque(maxlen=20)
-        self.memory_snapshots = deque(maxlen=20)
+
+        cfg = getattr(BoneConfig, "CORE", None)
+        max_len = getattr(cfg, "OBSERVER_MAX_LEN", 20) if cfg else 20
+
+        self.cycle_times = deque(maxlen=max_len)
+        self.llm_latencies = deque(maxlen=max_len)
+        self.memory_snapshots = deque(maxlen=max_len)
         self.error_counts = Counter()
         self.user_turns = 0
-        self.LATENCY_WARNING = 5.0
-        self.CYCLE_WARNING = 8.0
+        self.LATENCY_WARNING = getattr(cfg, "OBSERVER_LATENCY_WARN", 5.0) if cfg else 5.0
+        self.CYCLE_WARNING = getattr(cfg, "OBSERVER_CYCLE_WARN", 8.0) if cfg else 8.0
         self.last_cycle_duration = 0.0
 
     @staticmethod
@@ -333,10 +340,13 @@ class ArchetypeArbiter:
 class TelemetryService:
     log_dir = "logs/telemetry"
     _tracer_instance = None
-    BUFFER_SIZE = 50
 
     def __init__(self):
-        self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=50)
+        cfg = getattr(BoneConfig, "CORE", None)
+        self.BUFFER_SIZE = getattr(cfg, "TELEMETRY_BUFFER_SIZE", 50) if cfg else 50
+        self.MAX_ERRORS = getattr(cfg, "TELEMETRY_MAX_ERRORS", 5) if cfg else 5
+
+        self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=self.BUFFER_SIZE)
         self.write_buffer: List[str] = []
         self.active_crystal = None
         self.disabled = False
@@ -431,7 +441,7 @@ class TelemetryService:
             self.write_errors = 0
         except IOError as e:
             self.write_errors += 1
-            if self.write_errors >= 5:
+            if self.write_errors >= getattr(self, "MAX_ERRORS", 5):
                 msg = LoreManifest.get_instance().get_ux("core_strings", "tel_crit_write_fail") or ""
                 if msg: print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
                 self.disabled = True

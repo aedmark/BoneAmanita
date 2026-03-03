@@ -9,6 +9,7 @@ from bone_protocols import TheBureau, ZenGarden, TheCriticsCircle, TherapyProtoc
 from bone_symbiosis import SymbiosisManager
 from bone_spores import LiteraryReproduction
 from bone_drivers import DriverRegistry, BoneConsultant
+from bone_config import BoneConfig
 
 
 class BoneGenesis:
@@ -49,7 +50,9 @@ class BoneGenesis:
             soul.load_from_dict(embryo.soul_legacy)
         oroboros = TheOroboros()
         if hasattr(embryo.physics, "observer"):
-            dummy_phys = {"narrative_drag": 0.0, "voltage": 10.0}
+            cfg_gen = getattr(BoneConfig, "GENESIS", None)
+            dummy_v = getattr(cfg_gen, "DUMMY_VOLTAGE", 10.0) if cfg_gen else 10.0
+            dummy_phys = {"narrative_drag": 0.0, "voltage": dummy_v}
             live_bio_state = embryo.bio.to_dict()
             logs = oroboros.apply_legacy(dummy_phys, live_bio_state)
             if logs:
@@ -69,11 +72,14 @@ class BoneGenesis:
                         )
                 if embryo.bio.biometrics:
                     biometrics = live_bio_state.get("biometrics", {})
-                    embryo.bio.biometrics.health = biometrics.get("health", 100.0)
-                    embryo.bio.biometrics.stamina = biometrics.get("stamina", 100.0)
+                    max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+                    max_s = getattr(BoneConfig, "MAX_STAMINA", 100.0)
+                    embryo.bio.biometrics.health = biometrics.get("health", max_h)
+                    embryo.bio.biometrics.stamina = biometrics.get("stamina", max_s)
                 if embryo.bio.mito:
+                    start_atp = getattr(cfg_gen, "STARTING_ATP", 60.0) if cfg_gen else 60.0
                     embryo.bio.mito.state.atp_pool = live_bio_state.get("mito", {}).get(
-                        "atp", 60.0
+                        "atp", start_atp
                     )
         drivers = DriverRegistry(events)
         symbiosis = SymbiosisManager(events)

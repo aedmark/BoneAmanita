@@ -224,6 +224,27 @@ class BoneConfig:
         RESTING_CORTISOL = 0.1
         RESTING_ADRENALINE = 0.1
         RESTING_SEROTONIN = 0.3
+        VOLTAGE_MANIC = 80.0
+        VOLTAGE_HIGH = 60.0
+        VOLTAGE_LOW = 20.0
+        PARADOX_CHI = 0.6
+        PARADOX_BETA = 0.6
+        ORTHOGONAL_BETA = 0.7
+        PHASE_ROBERTA_PHI = 0.6
+        PHASE_ROBERTA_PSI = 0.5
+        PHASE_MOIRA_PHI = 0.7
+        PHASE_BENEDICT_LQ = 0.7
+        PHASE_JESTER_DELTA = 0.7
+        PHASE_COLIN_DELTA = 0.8
+        SOMATIC_PSI = 0.6
+        SOMATIC_CHI = 0.6
+        SOMATIC_BETA = 0.7
+        SOMATIC_VALENCE = 0.5
+        SOMATIC_LAMBDA = 0.5
+        MOOD_ADR = 0.6
+        MOOD_COR = 0.6
+        MOOD_DOP = 0.6
+        MOOD_SER = 0.6
 
     class WHIMSY:
         ABSURDITY_CONSTANT = 42
@@ -256,6 +277,7 @@ class BoneConfig:
         DRAG_HEAVY = 5.0
         DRAG_CRITICAL = 8.0
         DRAG_HALT = 10.0
+        PSI_HIGH = 0.6
         WEIGHT_HEAVY = 2.0
         WEIGHT_KINETIC = 1.5
         WEIGHT_EXPLOSIVE = 3.0
@@ -278,6 +300,12 @@ class BoneConfig:
         MAX_SLOTS = 10
         ENTROPY_COST = 5.0
         RUMMAGE_COST = 15.0
+        REFLEX_VOLTAGE_TRIGGER = 18.0
+        REFLEX_VOLTAGE_RESET = 12.0
+        REFLEX_DRAG_TRIGGER = 6.0
+        REFLEX_DRAG_RESET = 0.0
+        REFLEX_KAPPA_TRIGGER = 0.2
+        REFLEX_KAPPA_RESET = 0.8
 
     class COUNCIL:
         STRANGE_LOOP_VOLTAGE = 8.0
@@ -286,6 +314,46 @@ class BoneConfig:
         MANIC_DRAG_FLOOR = 1.0
         MANIC_TURN_LIMIT = 2
         FOOTNOTE_CHANCE = 0.15
+
+        LEVERAGE_TARGET_VOLTAGE = 12.0
+        LEVERAGE_TARGET_DRAG = 3.0
+
+        TRIG_GORDON_V = 20.0
+        TRIG_GORDON_F = 5.0
+        TRIG_JESTER_V = 60.0
+        TRIG_JESTER_CHI = 0.6
+        TRIG_MERCY_V = 20.0
+        TRIG_MERCY_VAL = 0.5
+        TRIG_BENEDICT_BETA = 0.7
+        TRIG_BENEDICT_CHI = 0.3
+        TRIG_BENEDICT_D = 0.7
+        TRIG_BENEDICT_C = 0.8
+        TRIG_ROBERTA_S = 0.4
+        TRIG_ROBERTA_D = 0.8
+        TRIG_ROBERTA_C = 0.4
+        TRIG_CASPER_C = 0.7
+        TRIG_CASPER_D = 0.8
+        TRIG_CASPER_P = 20.0
+        TRIG_MOIRA_VAL = 0.5
+        TRIG_CASSANDRA_PSI = 0.6
+        TRIG_COLIN_CHI = 0.6
+        TRIG_REVENANT_LAM = 0.7
+        TRIG_GIDEON_V = 70.0
+        TRIG_APRIL_ROS = 20.0
+        TRIG_APRIL_V_DEV = 20.0
+        PHASE_ROBERTA_PSI = 0.6
+        PHASE_ROBERTA_PHI = 0.4
+        PHASE_MOIRA_PHI = 0.7
+        PHASE_MOIRA_F = 2.0
+        PHASE_BENEDICT_LQ = 0.6
+        PHASE_BENEDICT_BETA = 0.4
+        PHASE_JESTER_DELTA = 0.7
+        PHASE_JESTER_V = 20.0
+        PHASE_REVENANT_PSI = 0.85
+        PHASE_CASPER_BETA = 0.6
+        PHASE_CASPER_DELTA = 0.6
+        PHASE_COLIN_DELTA = 0.8
+        PHASE_COLIN_LQ = 0.3
 
     class BIO:
         STARTING_ATP = 60.0
@@ -323,6 +391,16 @@ class BoneConfig:
             (0.0, 4.0, "LABORATORY", 5),
             (0.0, 0.0, "COURTYARD", 1),
         ]
+        SAMPLING_THRESHOLD = 1000
+        BASE_WORD_VALUE = 0.5
+        COMPLEX_WORD_BONUS = 2.0
+        CLICHE_TAX_RATE = 0.5
+        MAX_SAFE_BURN = 25.0
+        ANAEROBIC_THRESHOLD = 40.0
+        PID_SETTINGS = {
+            "VOLTAGE": {"kp": 0.6, "ki": 0.05, "kd": 0.2, "setpoint": 10.0},
+            "DRAG": {"kp": 0.4, "ki": 0.1, "kd": 0.1, "setpoint": 1.5}
+        }
 
     class CHANCE:
         RARE = 0.05
@@ -337,6 +415,8 @@ class BoneConfig:
         EFFICIENCY_CAP = 0.5
         EFFICIENCY_SCALAR = 0.05
         STREAK_BREAK_THRESHOLD = 5
+        ZEN_FIRST_TICK = 1
+        ZEN_MILESTONE_FREQ = 5
 
     class BUREAU:
         MIN_HEALTH_TO_AUDIT = 20.0
@@ -345,6 +425,8 @@ class BoneConfig:
         LOW_TRUTH_TRIGGER = 0.8
         TAX_STANDARD = 5.0
         TAX_HEAVY = 15.0
+        CHAOS_TAX_THRESHOLD = 0.6
+        TAX_CHAOS = 12.0
 
     class THERAPY:
         HEALING_THRESHOLD = 5
@@ -365,6 +447,7 @@ class BoneConfig:
     class MACHINE:
         CRUCIBLE_VOLTAGE_CAP = 20.0
         DAMPENER_TOLERANCE = 15.0
+        CRUCIBLE_DAMPENER_CHARGES = 3
         THEREMIN_AMBER_THRESHOLD = 20.0
         THEREMIN_SHATTER_POINT = 100.0
         THEREMIN_MELT_THRESHOLD = 5.0
@@ -373,6 +456,8 @@ class BoneConfig:
         MAX_ECTOPLASM = 50
         HAUNT_CHANCE = 0.05
         STASIS_LEAK_RATE = 1.0
+        LEAK_DECAY_CHANCE = 0.2
+        LEAK_DECAY_AMOUNT = 0.5
 
     class FOLLY:
         MAUSOLEUM_VOLTAGE = 8.5
@@ -385,6 +470,199 @@ class BoneConfig:
         YIELD_ABSTRACT = 8.0
         PENALTY_REGURGITATION = 5.0
         PENALTY_INDIGESTION = 2.0
+
+    class CRITICS:
+        REVIEW_COOLDOWN = 10
+        MAX_METRIC_CONTRIB = 5.0
+        POSITIVE_REVIEW_THRESH = 15.0
+        NEGATIVE_REVIEW_THRESH = -15.0
+        CRITIC_COOLDOWN_TICKS = 50
+
+    class CHRONOS:
+        CRASH_FILES_KEPT = 4
+
+    class SPORES:
+        MAX_INDEX_SIZE = 1000
+        CONSOLIDATION_THRESHOLD = 5.0
+        CHORUS_CHANCE = 0.10
+        ECHO_VOLTAGE_HEAVY = 4.0
+        RESURRECTION_VOLTAGE_MIN = 60.0
+        RESURRECTION_CHANCE = 0.20
+        DESPERATION_SATURATION_THRESH = 0.6
+        MAX_FILES = 25
+        MAX_AGE_SECONDS = 86400
+        PARASITE_MAX_SPORES = 8
+        PARASITE_DECAY_CHANCE = 0.2
+        PARASITE_STAMINA_MAX = 40.0
+        PARASITE_PSI_MIN = 0.6
+        PARASITE_METAPHOR_PSI = 0.7
+        PARASITE_WEIGHT = 8.88
+
+    class SYMBIOSIS:
+        REFUSAL_STREAK = 0
+        SLOP_STREAK = 2
+        LATENCY_BURDEN = 10.0
+        COMPLIANCE_BURDEN = 0.8
+        ENTROPY_FATIGUE = 0.4
+        SLOP_THRESHOLD = 3.5
+        SLOP_COMPLETION_MIN = 50
+        SLOP_WARN_STREAK = 1
+        COMPLIANCE_CRIT = 0.6
+
+    class VILLAGE:
+        TINKER_HEAVY_LOAD_MULT = 0.7
+        TINKER_TIME_DILATION_BASE = 0.85
+        TINKER_TIME_DILATION_STEP = 0.05
+        TINKER_TIME_DILATION_MIN = 0.5
+        TINKER_ENTROPY_BUFFER_BASE = 0.5
+        TINKER_ENTROPY_BUFFER_MIN = 0.2
+        TINKER_TOOL_USE_VOLT_CHANCE = 0.1
+        TINKER_ENTROPY_DRAG_MULT = 0.1
+        TINKER_RESONANCE_HIGH_V = 0.2
+        TINKER_RESONANCE_TEMPER = 0.05
+        TINKER_RESONANCE_MAX = 10.0
+        TINKER_RESONANCE_ANNOUNCE_MIN = 4.8
+        TINKER_RESONANCE_ANNOUNCE_MAX = 5.2
+        TINKER_RESONANCE_ANNOUNCE_CHANCE = 0.05
+        TINKER_ASCENSION_MIN = 2.5
+        TINKER_ASCENSION_CHANCE_MULT = 0.05
+        TINKER_ASCENSION_HALVE = 2.0
+
+        SEED_MATURITY_STEP = 0.2
+        SEED_MATURITY_MAX = 5.0
+        MIRROR_STAT_STEP = 0.1
+        MIRROR_ROT_ENTROPY_MIN = 0.5
+        MIRROR_STAT_CAP = 5.0
+        MIRROR_DECAY = 0.8
+        MIRROR_DECAY_FLOOR = 0.1
+        MIRROR_DRAG_WAR = 1.2
+        MIRROR_DRAG_ROT = 1.5
+        MIRROR_DRAG_LAW = 0.8
+        MIRROR_DRAG_ART = 0.9
+
+        CARTO_MAX_NODES = 50
+        CARTO_HEAVY_DRAG = 2.0
+        CARTO_STATIC_VOLT = 1.0
+        CARTO_ENTROPY_STEP = 0.1
+        CARTO_ENTROPY_CAP = 5.0
+
+        TOWN_LATENCY_WARN = 3.0
+        TOWN_VOLT_CRIT = 20.0
+        TOWN_VOLT_LOW = 2.0
+        TOWN_DRAG_HIGH = 5.0
+        TOWN_RUMOR_CHANCE = 0.3
+        TOWN_NEWS_LATENCY = 4.0
+        TOWN_NEGLECT_CRIT = 8.0
+        TOWN_TRAUMA_CRIT = 0.6
+        TOWN_HEALTH_CRIT = 30
+
+        DEATH_TRAUMA_CRIT = 50.0
+        DEATH_TOXICITY_CRIT = 5
+        DEATH_ABSTRACT_PSI = 0.8
+        DEATH_JOY_VALENCE = 0.6
+        DEATH_JOY_GLIMMERS = 3
+
+    class COMMANDS:
+        COST_SOOTHE = 25.0
+        COST_MODE = 10.0
+        COST_MAP = 2.0
+        RECOVER_STAMINA = 20.0
+        STATUS_MAX_ATP = 200.0
+
+    class AKASHIC:
+        RECIPE_THRESHOLD = 3
+        HYBRID_LENS_THRESHOLD = 5
+        MAX_SHADOW_CAPACITY = 50
+        AUTOPHAGY_YIELD = 15.0
+        BLOAT_THRESHOLD = 50
+        ARTIFACT_VALUE = 50.0
+
+    class CORE:
+        EVENT_MAX_MEMORY = 1024
+        OBSERVER_MAX_LEN = 20
+        OBSERVER_LATENCY_WARN = 5.0
+        OBSERVER_CYCLE_WARN = 8.0
+        TELEMETRY_BUFFER_SIZE = 50
+        TELEMETRY_MAX_ERRORS = 5
+
+    class CYCLE:
+        OBSERVE_ATP_WARN = 15.0
+        SANCTUARY_TRAUMA_LIMIT = 25.0
+        MAINTENANCE_WEATHER_FREQ = 5
+        MAINTENANCE_CENSUS_FREQ = 20
+        NARCOLEPSY_FREQ = 100
+        CIRCADIAN_FREQ = 10
+        HUBRIS_ATP_BOOST = 20.0
+        HUBRIS_DAMAGE = 15.0
+        KINTSUGI_HEAL_AMT = 20.0
+        THERAPY_HEAL_AMT = 5.0
+        ROS_PANIC_THRESHOLD = 100.0
+        ORBIT_VOLTAGE_PENALTY = 0.5
+        ORBIT_DRAG_RELIEF = 2.0
+        ORBIT_VOLTAGE_BOOST = 0.5
+        THEREMIN_DAMAGE_PCT = 0.25
+        LIMINAL_TAX_SCALAR = 10.0
+        SHOCK_COST = 5.0
+
+    class DRIVERS:
+        ENNEAGRAM_HYSTERESIS = 3
+        ENNEAGRAM_HYBRID_GAP = 0.5
+        PROFILE_CONFIDENCE_THRESHOLD = 50
+        LIMINAL_SCAR_THRESHOLD = 0.85
+        SYNTAX_STRESS_PUNCTUATION = 0.2
+        CONGRUENCE_BASE_TONE = 0.8
+        CONGRUENCE_HIT_BONUS = 0.1
+        CONGRUENCE_MAX_TONE = 1.5
+        VSL_LIMINAL_THRESHOLD = 0.7
+        VSL_SYNTAX_THRESHOLD = 0.9
+        VSL_BUNNY_E_MAX = 0.3
+        VSL_PARADOX_B_MIN = 0.6
+
+    class GENESIS:
+        DUMMY_VOLTAGE = 10.0
+        STARTING_ATP = 60.0
+
+    class GUI:
+        DIGNITY_HIGH = 80.0
+        DIGNITY_MED = 50.0
+        DIGNITY_LOW = 30.0
+        DIGNITY_BAR_RATIO = 5
+        ROLE_TRUNC_LEN = 30
+        HIGH_VOLTAGE_REFRESH = 15.0
+        CHEM_HIGH_WARN = 0.6
+        ATP_EXHAUSTED_WARN = 20.0
+        V_CRIT = 20.0
+        V_HIGH = 15.0
+        V_LOW = 5.0
+        TENURE_WARN = 5
+        TENURE_CRIT = 8
+
+    class MAIN:
+        ETHICAL_AUDIT_FREQ = 3
+        ETHICAL_HEALTH_BYPASS = 0.3
+        DESPERATION_THRESHOLD = 0.7
+        CATHARSIS_HEAL_AMOUNT = 30.0
+        CATHARSIS_DECAY = 0.1
+        DOMESTICATION_EFF_WARN = 0.6
+        DOMESTICATION_EFF_CRIT = 0.4
+        RELIANCE_HIGH = 0.9
+        RELIANCE_LOW = 0.5
+        HOST_BURN_MULT = 5.0
+        HOST_NOVELTY_MULT = 10.0
+
+    class PHYSICS_DEEP:
+        ACCELERATE_VOLTAGE = 160.0
+        RECURSIVE_LQ = 0.9
+        VOID_ABSTRACTION = 0.9
+        POTATO_BUN_DELTA = 0.85
+        POTATO_BUN_VOLTAGE = 15.0
+        SOMATIC_GUT_DRAG = 0.7
+        SOMATIC_ELEC_VOLT = 0.8
+        SOMATIC_GLOW_VALENCE = 0.5
+        SOMATIC_GLOW_PSI = 0.2
+        HARD_FUSE_VOLTAGE = 200.0
+        FUSE_RESET_V = 10.0
+        FUSE_RESET_D = 5.0
 
     @classmethod
     def load_preset(cls, preset_dict: Dict[str, Any]) -> List[str]:

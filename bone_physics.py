@@ -273,19 +273,26 @@ class QuantumObserver:
         ) = self._calculate_metrics(text, counts)
 
         text_upper = text.upper()
+        cfg_deep = getattr(BoneConfig, "PHYSICS_DEEP", None)
+
         if text.count("!") >= 3 or "ACCELERATE" in text_upper or "FASTER" in text_upper:
-            smoothed_voltage = max(smoothed_voltage, 160.0)
+            v_accel = getattr(cfg_deep, "ACCELERATE_VOLTAGE", 160.0) if cfg_deep else 160.0
+            smoothed_voltage = max(smoothed_voltage, v_accel)
 
         if "RECURSIVE" in text_upper or "LOOP" in text_upper:
-            lq_val = max(lq_val, 0.9)
-            beta_val = max(beta_val, 0.9)
+            v_rec = getattr(cfg_deep, "RECURSIVE_LQ", 0.9) if cfg_deep else 0.9
+            lq_val = max(lq_val, v_rec)
+            beta_val = max(beta_val, v_rec)
 
         if "VOID" in text_upper or "ABYSS" in text_upper:
-            geo.abstraction = max(geo.abstraction, 0.9)
+            v_void = getattr(cfg_deep, "VOID_ABSTRACTION", 0.9) if cfg_deep else 0.9
+            geo.abstraction = max(geo.abstraction, v_void)
 
         if "POTATO BUN" in text_upper or "NONSENSE" in text_upper:
-            delta_val = max(delta_val, 0.85)
-            smoothed_voltage = min(smoothed_voltage, 15.0)
+            v_pot_d = getattr(cfg_deep, "POTATO_BUN_DELTA", 0.85) if cfg_deep else 0.85
+            v_pot_v = getattr(cfg_deep, "POTATO_BUN_VOLTAGE", 15.0) if cfg_deep else 15.0
+            delta_val = max(delta_val, v_pot_d)
+            smoothed_voltage = min(smoothed_voltage, v_pot_v)
 
         valence = LexiconService.get_valence(clean_words)
         graph_mass = self._calculate_graph_mass(clean_words, graph)
@@ -758,13 +765,20 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> Physic
         if hasattr(feedback, key):
             current = getattr(feedback, key)
             setattr(feedback, key, current + delta)
+    cfg_deep = getattr(BoneConfig, "PHYSICS_DEEP", None)
+
     if "Gut Tightening" in qualia.somatic_sensation:
-        feedback.narrative_drag += 0.7
+        gut_d = getattr(cfg_deep, "SOMATIC_GUT_DRAG", 0.7) if cfg_deep else 0.7
+        feedback.narrative_drag += gut_d
     if "Electric Vibration" in qualia.somatic_sensation:
-        feedback.voltage += 0.8
+        elec_v = getattr(cfg_deep, "SOMATIC_ELEC_VOLT", 0.8) if cfg_deep else 0.8
+        feedback.voltage += elec_v
     if "Golden Glow" in qualia.somatic_sensation:
-        feedback.valence += 0.5
-        feedback.psi += 0.2
+        glow_v = getattr(cfg_deep, "SOMATIC_GLOW_VALENCE", 0.5) if cfg_deep else 0.5
+        glow_p = getattr(cfg_deep, "SOMATIC_GLOW_PSI", 0.2) if cfg_deep else 0.2
+        feedback.valence += glow_v
+        feedback.psi += glow_p
+
     drag_floor = getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0)
     drag_halt = getattr(BoneConfig.PHYSICS, "DRAG_HALT", 10.0)
 
@@ -781,7 +795,9 @@ class CycleStabilizer:
         self.last_tick_time = time.time()
         self.pending_drag = 0.0
         self.manifolds = getattr(BoneConfig.PHYSICS, "MANIFOLDS", {})
-        self.HARD_FUSE_VOLTAGE = 200.0
+
+        cfg_deep = getattr(BoneConfig, "PHYSICS_DEEP", None)
+        self.HARD_FUSE_VOLTAGE = getattr(cfg_deep, "HARD_FUSE_VOLTAGE", 200.0) if cfg_deep else 200.0
         if hasattr(self.events, "subscribe"):
             self.events.subscribe(
                 "DOMESTICATION_PENALTY", self._on_domestication_penalty
@@ -802,10 +818,14 @@ class CycleStabilizer:
             ctx.log(
                 f"{Prisma.RED}{msg.format(voltage=self.HARD_FUSE_VOLTAGE)}{Prisma.RST}"
             )
-            p.voltage, p.narrative_drag = 10.0, 5.0
-            p.flow_state = "SAFE_MODE"
-            ctx.record_flux(
-                current_phase, "voltage", self.HARD_FUSE_VOLTAGE, 10.0, "FUSE_BLOWN"
+
+            cfg_deep = getattr(BoneConfig, "PHYSICS_DEEP", None)
+            rst_v = getattr(cfg_deep, "FUSE_RESET_V", 10.0) if cfg_deep else 10.0
+            rst_d = getattr(cfg_deep, "FUSE_RESET_D", 5.0) if cfg_deep else 5.0
+
+            p.voltage, p.narrative_drag = rst_v, rst_d
+            self._apply_force(
+                ctx, current_phase, "voltage", self.HARD_FUSE_VOLTAGE, rst_v, "FUSE_BLOWN"
             )
             return True
         if self.pending_drag > 0:

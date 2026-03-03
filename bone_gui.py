@@ -1,6 +1,7 @@
 from typing import Dict, List, Any, Tuple
 from bone_core import Prisma, LoreManifest
 from bone_physics import ChromaScope
+from bone_config import BoneConfig
 
 
 class Projector:
@@ -72,16 +73,25 @@ class Projector:
         return f"{div}\n{status_line}\n{mid_section}\n{context_line}\n{div}"
 
     def _render_vital_strip(self, data: Dict, mind: tuple, labels: Dict) -> str:
-        health = data.get("health", 100)
-        stamina = data.get("stamina", 100)
+        max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+        max_s = getattr(BoneConfig, "MAX_STAMINA", 100.0)
+
+        cfg = getattr(BoneConfig, "GUI", None)
+        d_med = getattr(cfg, "DIGNITY_MED", 50.0) if cfg else 50.0
+        d_high = getattr(cfg, "DIGNITY_HIGH", 80.0) if cfg else 80.0
+        r_len = getattr(cfg, "ROLE_TRUNC_LEN", 30) if cfg else 30
+
+        health = data.get("health", max_h)
+        stamina = data.get("stamina", max_s)
         atp = data.get("bio", {}).get("atp") or 0
         dignity = data.get("dignity", 100)
-        hp_bar = self._mini_bar(health, 100, 6, Prisma.RED)
-        stm_bar = self._mini_bar(stamina, 100, 6, Prisma.GRN)
-        dig_color = Prisma.VIOLET if dignity > 50 else Prisma.GRY
+
+        hp_bar = self._mini_bar(health, max_h, 6, Prisma.RED)
+        stm_bar = self._mini_bar(stamina, max_s, 6, Prisma.GRN)
+        dig_color = Prisma.VIOLET if dignity > d_med else Prisma.GRY
 
         sym = LoreManifest.get_instance().get_ux("projector", "symbols") or {}
-        dig_icon = sym.get("dig_high", "") if dignity > 80 else sym.get("dig_low", "")
+        dig_icon = sym.get("dig_high", "") if dignity > d_high else sym.get("dig_low", "")
 
         raw_role = mind[2] if mind and len(mind) > 2 else None
         role = (
@@ -90,8 +100,8 @@ class Projector:
             else LoreManifest.get_instance().get_ux("projector", "default_role")
         )
         role = role.replace(LoreManifest.get_instance().get_ux("projector", "role_redundancy"), "THE ")
-        if len(role) > 30:
-            role = role[:27] + "..."
+        if len(role) > r_len:
+            role = role[:r_len-3] + "..."
         l_hp = labels.get("HP", "HP")
         l_stm = labels.get("STM", "STM")
 
@@ -370,7 +380,10 @@ class CachedRenderer:
             if isinstance(ctx.physics, dict)
             else ctx.physics.voltage
         )
-        if voltage > 15.0 or tick != self._cache["last_tick"]:
+        cfg = getattr(BoneConfig, "GUI", None)
+        v_refresh = getattr(cfg, "HIGH_VOLTAGE_REFRESH", 15.0) if cfg else 15.0
+
+        if voltage > v_refresh or tick != self._cache["last_tick"]:
             frame = self._base.render_frame(ctx, tick, events)
             self._cache["dashboard"]["content"] = frame["ui"]
             self._cache["last_tick"] = tick
@@ -466,27 +479,36 @@ class TruthRenderer(GeodesicRenderer):
 class PulseReader:
     @staticmethod
     def derive_mood(bio_state: Dict) -> str:
+        cfg = getattr(BoneConfig, "GUI", None)
+        c_warn = getattr(cfg, "CHEM_HIGH_WARN", 0.6) if cfg else 0.6
+        a_warn = getattr(cfg, "ATP_EXHAUSTED_WARN", 20.0) if cfg else 20.0
+
         chem = bio_state.get("chem", {})
-        if chem.get("COR", 0) > 0.6:
+        if chem.get("COR", 0) > c_warn:
             return LoreManifest.get_instance().get_ux("pulse_reader", "mood_defensive")
-        if chem.get("DA", 0) > 0.6:
+        if chem.get("DA", 0) > c_warn:
             return LoreManifest.get_instance().get_ux("pulse_reader", "mood_manic")
-        if chem.get("OXY", 0) > 0.6:
+        if chem.get("OXY", 0) > c_warn:
             return LoreManifest.get_instance().get_ux("pulse_reader", "mood_affectionate")
         atp = bio_state.get("mito", {}).get("atp", 100)
-        if atp < 20:
+        if atp < a_warn:
             return LoreManifest.get_instance().get_ux("pulse_reader", "mood_exhausted")
         return LoreManifest.get_instance().get_ux("pulse_reader", "mood_neutral")
 
     @staticmethod
     def analyze_voltage(voltage: float) -> Tuple[str, str]:
-        if voltage > 20.0:
+        cfg = getattr(BoneConfig, "GUI", None)
+        v_crit_t = getattr(cfg, "V_CRIT", 20.0) if cfg else 20.0
+        v_high_t = getattr(cfg, "V_HIGH", 15.0) if cfg else 15.0
+        v_low_t = getattr(cfg, "V_LOW", 5.0) if cfg else 5.0
+
+        if voltage > v_crit_t:
             v_crit = LoreManifest.get_instance().get_ux("pulse_reader", "voltage_critical")
             return v_crit[0], v_crit[1]
-        if voltage > 15.0:
+        if voltage > v_high_t:
             v_high = LoreManifest.get_instance().get_ux("pulse_reader", "voltage_high")
             return v_high[0], v_high[1]
-        if voltage < 5.0:
+        if voltage < v_low_t:
             v_low = LoreManifest.get_instance().get_ux("pulse_reader", "voltage_low")
             return v_low[0], v_low[1]
         v_nom = LoreManifest.get_instance().get_ux("pulse_reader", "voltage_nominal")
@@ -505,14 +527,23 @@ class SoulDashboard:
         anchor = self.eng.soul.anchor
         soul = self.eng.soul
         dig = anchor.dignity_reserve
-        if dig > 80:
+
+        cfg = getattr(BoneConfig, "GUI", None)
+        d_high = getattr(cfg, "DIGNITY_HIGH", 80.0) if cfg else 80.0
+        d_med = getattr(cfg, "DIGNITY_MED", 50.0) if cfg else 50.0
+        d_low = getattr(cfg, "DIGNITY_LOW", 30.0) if cfg else 30.0
+        d_ratio = getattr(cfg, "DIGNITY_BAR_RATIO", 5) if cfg else 5
+        t_warn = getattr(cfg, "TENURE_WARN", 5) if cfg else 5
+        t_crit = getattr(cfg, "TENURE_CRIT", 8) if cfg else 8
+
+        if dig > d_high:
             color = Prisma.GRN
-        elif dig > 30:
+        elif dig > d_low:
             color = Prisma.OCHRE
         else:
             color = Prisma.RED
 
-        filled = int(dig / 5)
+        filled = int(dig / d_ratio)
         c_fill = LoreManifest.get_instance().get_ux("status_menu", "bar_filled") or ""
         c_empty = LoreManifest.get_instance().get_ux("status_menu", "bar_empty") or ""
 
@@ -521,15 +552,15 @@ class SoulDashboard:
         lock_status = ""
         if anchor.agency_lock:
             lock_status = f" {Prisma.RED}{LoreManifest.get_instance().get_ux('soul_dashboard', 'agency_locked')}{Prisma.RST}"
-        elif dig < 30:
+        elif dig < d_low:
             lock_status = f" {Prisma.OCHRE}{LoreManifest.get_instance().get_ux('soul_dashboard', 'fading')}{Prisma.RST}"
 
         arch = soul.archetype
         tenure = soul.archetype_tenure
         tenure_color = Prisma.GRY
-        if tenure > 5:
+        if tenure > t_warn:
             tenure_color = Prisma.OCHRE
-        if tenure > 8:
+        if tenure > t_crit:
             tenure_color = Prisma.RED
         arch_display = (
             f"{Prisma.CYN}{arch}{Prisma.RST} ({tenure_color}T:{tenure}{Prisma.RST})"
@@ -537,7 +568,7 @@ class SoulDashboard:
 
         pet_icon = (
             LoreManifest.get_instance().get_ux("soul_dashboard", "pet_icon")
-            if (dig < 50 and not anchor.agency_lock)
+            if (dig < d_med and not anchor.agency_lock)
             else ""
         )
         muse = (

@@ -100,12 +100,14 @@ class CommandStateInterface:
 
     def get_vitals(self) -> Dict[str, float]:
         metrics = self.eng.get_metrics()
+        cmd_cfg = getattr(self.Config, "COMMANDS", None)
         return {
             "health": metrics.get("health", 0.0),
             "stamina": metrics.get("stamina", 0.0),
             "atp": metrics.get("atp", 0.0),
             "max_health": getattr(self.Config, "MAX_HEALTH", 100.0),
             "max_stamina": getattr(self.Config, "MAX_STAMINA", 100.0),
+            "max_atp": getattr(cmd_cfg, "STATUS_MAX_ATP", 200.0) if cmd_cfg else 200.0,
         }
 
     def get_inventory(self) -> List[str]:
@@ -288,7 +290,9 @@ class CommandProcessor:
             self.interface.log(
                 f"{self.P.GRN}{_vn('recover')}{self.P.RST}"
             )
-            self.interface.modify_resource("stamina", 20.0)
+            cmd_cfg = getattr(BoneConfig, "COMMANDS", None)
+            recover_val = getattr(cmd_cfg, "RECOVER_STAMINA", 20.0) if cmd_cfg else 20.0
+            self.interface.modify_resource("stamina", recover_val)
 
         if text.startswith("/"):
             return self.registry.execute(text)
@@ -296,7 +300,8 @@ class CommandProcessor:
         return False
 
     def _cmd_soothe(self, _parts):
-        cost = 25.0
+        cmd_cfg = getattr(BoneConfig, "COMMANDS", None)
+        cost = getattr(cmd_cfg, "COST_SOOTHE", 25.0) if cmd_cfg else 25.0
         current_stamina = self.interface.get_resource("stamina")
         if current_stamina < cost:
             msg = LoreManifest.get_instance().get_ux("command_alerts", "soothe_weak")
@@ -385,7 +390,7 @@ class CommandProcessor:
         self.interface.log(
             f"{h_lbl}{bar(v['health'], v['max_health'], self.P.RED)} {v['health']:.0f}\n"
             f"{s_lbl}{bar(v['stamina'], v['max_stamina'], self.P.GRN)} {v['stamina']:.0f}\n"
-            f"{e_lbl}{bar(v['atp'], 200, self.P.YEL)} {v['atp']:.0f}"
+            f"{e_lbl}{bar(v['atp'], v['max_atp'], self.P.YEL)} {v['atp']:.0f}"
         )
         return True
 
@@ -405,7 +410,9 @@ class CommandProcessor:
             )
             self.interface.log(f"{self.P.RED}{msg.format(mode=mode_name)}{self.P.RST}")
             return True
-        if self.tax.levy("MODE_SWITCH", {"stamina": 10.0}):
+        cmd_cfg = getattr(BoneConfig, "COMMANDS", None)
+        cost = getattr(cmd_cfg, "COST_MODE", 10.0) if cmd_cfg else 10.0
+        if self.tax.levy("MODE_SWITCH", {"stamina": cost}):
             preset = getattr(BonePresets, mode_name)
             logs = self.interface.Config.load_preset(preset)
             for log in logs:
@@ -472,7 +479,9 @@ class CommandProcessor:
         return True
 
     def _cmd_map(self, _parts):
-        if not self.tax.levy("MAP", {"stamina": 2.0}):
+        cmd_cfg = getattr(BoneConfig, "COMMANDS", None)
+        cost = getattr(cmd_cfg, "COST_MAP", 2.0) if cmd_cfg else 2.0
+        if not self.tax.levy("MAP", {"stamina": cost}):
             return True
         nav_report = self.interface.get_navigation_report()
         self.interface.log(nav_report)

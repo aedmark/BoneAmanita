@@ -66,5 +66,10 @@
       "You bored the machine to death.",
       "Stagnation is fatal."
     ]
-  }
+  },
+  "BOREDOM": ["Gravity Sickness", "narrative_drag", 1.5, "Died of stagnation."],
+  "STARVATION": ["Gravity Sickness", "narrative_drag", 1.5, "Died of stagnation."],
+  "GLUTTONY": ["Burnt Synapses", "voltage_cap", -2.0, "Died of excess."],
+  "TOXICITY": ["Burnt Synapses", "voltage_cap", -2.0, "Died of excess."],
+  "TRAUMA": ["Ghost Pains", "trauma_baseline", 5.0, "Died of pain."]
 }

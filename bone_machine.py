@@ -17,10 +17,8 @@ class TheCrucible:
     def __init__(self):
         self.max_voltage_cap = getattr(BoneConfig.MACHINE, "CRUCIBLE_VOLTAGE_CAP", 20.0)
         self.active_state = "COLD"
-        self.dampener_charges = 3
-        self.dampener_tolerance = getattr(
-            BoneConfig.MACHINE, "DAMPENER_TOLERANCE", 15.0
-        )
+        self.dampener_charges = getattr(BoneConfig.MACHINE, "CRUCIBLE_DAMPENER_CHARGES", 3)
+        self.dampener_tolerance = getattr(BoneConfig.MACHINE, "DAMPENER_TOLERANCE", 15.0)
         self.instability_index = 0.0
         self.logs = self._load_logs()
 
@@ -224,8 +222,11 @@ class TheTheremin:
     def __init__(self):
         self.decoherence_buildup = 0.0
         self.classical_turns = 0
-        self.AMBER_THRESHOLD = 20.0
-        self.SHATTER_POINT = 100.0
+
+        cfg = getattr(BoneConfig, "MACHINE", None)
+        self.AMBER_THRESHOLD = getattr(cfg, "THEREMIN_AMBER_THRESHOLD", 20.0) if cfg else 20.0
+        self.SHATTER_POINT = getattr(cfg, "THEREMIN_SHATTER_POINT", 100.0) if cfg else 100.0
+
         self.is_stuck = False
         self.logs = self._load_logs()
 
@@ -331,15 +332,6 @@ class SystemEmbryo:
     is_gestating: bool = True
     soul_legacy: Optional[Dict] = None
     continuity: Optional[Dict] = None
-
-
-SAFE_BIO_DEFAULTS: Dict[str, Any] = {
-    "is_alive": True,
-    "atp": 10.0,
-    "respiration": "NECROSIS",
-    "enzyme": "NONE",
-    "chem": {"DOP": 0.0, "COR": 0.0, "OXY": 0.0, "SER": 0.0, "ADR": 0.0, "MEL": 0.0},
-}
 
 
 class PanicRoom:

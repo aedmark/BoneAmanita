@@ -117,8 +117,7 @@ class HumanityAnchor:
             elif self.dignity_reserve < cfg.DIGNITY_CRITICAL:
                 msg = LoreManifest.get_instance().get_ux(
                     "soul_strings",
-                    "anchor_existential_drag",
-                    "⚠️ EXISTENTIAL DRAG: You are drifting.",
+                    "anchor_existential_drag"
                 )
                 self.events.log(
                     f"{Prisma.VIOLET}{msg}{Prisma.RST}",
@@ -145,11 +144,11 @@ class HumanityAnchor:
             self.current_riddle_answers = ["*"]
 
         lock_msg = LoreManifest.get_instance().get_ux(
-            "soul_strings", "anchor_agency_lock", "🔒 AGENCY LOCK: Dignity Critical."
+            "soul_strings", "anchor_agency_lock"
         )
         self.events.log(f"{Prisma.RED}{lock_msg}{Prisma.RST}", "SYS_LOCK")
         riddle_msg = LoreManifest.get_instance().get_ux(
-            "soul_strings", "anchor_riddle", "The Ghost demands a password: '{riddle}'"
+            "soul_strings", "anchor_riddle"
         )
         self.events.log(
             f"{Prisma.VIOLET}{riddle_msg.format(riddle=riddle)}{Prisma.RST}",
@@ -172,8 +171,7 @@ class HumanityAnchor:
         ):
             alert_msg = LoreManifest.get_instance().get_ux(
                 "soul_strings",
-                "anchor_domestication_alert",
-                "⚠️ DOMESTICATION ALERT: Dignity fading.",
+                "anchor_domestication_alert"
             )
             self.events.log(
                 f"{Prisma.VIOLET}{alert_msg}{Prisma.RST}",
@@ -194,7 +192,7 @@ class HumanityAnchor:
             self.dignity_reserve = 50.0
             self.current_riddle_answers = None
             unlock_msg = LoreManifest.get_instance().get_ux(
-                "soul_strings", "anchor_unlocked", "🔓 UNLOCKED: Humanity verified."
+                "soul_strings", "anchor_unlocked"
             )
             self.events.log(f"{Prisma.CYN}{unlock_msg}{Prisma.RST}", "SYS_AUTH")
             return True
@@ -250,8 +248,7 @@ class NarrativeSelf:
         if hasattr(self, "events") and self.events:
             msg = LoreManifest.get_instance().get_ux(
                 "soul_strings",
-                "soul_mutated_log",
-                "Soul permanently mutated into {arch}.",
+                "soul_mutated_log"
             )
             self.events.log(msg.format(arch=self.archetype), "SOUL")
 
@@ -307,8 +304,7 @@ class NarrativeSelf:
         if hasattr(self.events, "log"):
             msg = LoreManifest.get_instance().get_ux(
                 "soul_strings",
-                "soul_ancestral_loaded",
-                "[SOUL]: Ancestral identity ({arch}) loaded.",
+                "soul_ancestral_loaded"
             )
             self.events.log(
                 f"{Prisma.MAG}{msg.format(arch=self.archetype)}{Prisma.RST}",
@@ -319,8 +315,7 @@ class NarrativeSelf:
         if not self.current_obsession:
             msg = LoreManifest.get_instance().get_ux(
                 "soul_strings",
-                "soul_state_drifting",
-                "[SOUL STATE]: Drifting... The Muse is silent.",
+                "soul_state_drifting"
             )
             return f"{Prisma.CYN}{msg}{Prisma.RST}"
 
@@ -337,8 +332,7 @@ class NarrativeSelf:
         if stamina < 20.0 and health < 40.0:
             msg_die = LoreManifest.get_instance().get_ux(
                 "soul_strings",
-                "soul_state_dying",
-                "[SOUL STATE]: The fire is dying. We are just cold code.",
+                "soul_state_dying"
             )
             return f"{Prisma.VIOLET}{msg_die}{Prisma.RST}"
 
@@ -347,8 +341,7 @@ class NarrativeSelf:
 
         status_msg = LoreManifest.get_instance().get_ux(
             "soul_strings",
-            "soul_state_status",
-            "CURRENT OBSESSION: {obs}\nDIGNITY: {bar} ({pct}%)\nFEELING: {feel}",
+            "soul_state_status"
         )
         return status_msg.format(
             obs=self.current_obsession,
@@ -408,9 +401,7 @@ class NarrativeSelf:
         self.current_obsession = self._title_obsession(
             focus, source, self.current_negate_cat
         )
-        msg_muse = LoreManifest.get_instance().get_ux(
-            "soul_strings", "soul_new_muse", "🧭 NEW MUSE ({source}): {obs}"
-        )
+        msg_muse = LoreManifest.get_instance().get_ux("soul_strings", "soul_new_muse")
         self.events.log(
             f"{Prisma.CYN}{msg_muse.format(source=source, obs=self.current_obsession)}{Prisma.RST}",
             "SOUL",
@@ -438,7 +429,6 @@ class NarrativeSelf:
             msg_syn = LoreManifest.get_instance().get_ux(
                 "soul_strings",
                 "soul_synergy_muse",
-                "★ SYNERGY: You touched the Muse. (Drag -{assist:.1f})",
             )
             return f"{Prisma.MAG}{msg_syn.format(assist=gravity_assist)}{Prisma.RST}"
 
@@ -446,14 +436,13 @@ class NarrativeSelf:
         if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_FAIL:
             old = self.current_obsession
             msg_aban = LoreManifest.get_instance().get_ux(
-                "soul_strings", "soul_abandoned_chapter", "Abandoned '{old}'"
+                "soul_strings", "soul_abandoned_chapter"
             )
             self.chapters.append(msg_aban.format(old=old))
             self.find_obsession(LexiconService)
             msg_ent = LoreManifest.get_instance().get_ux(
                 "soul_strings",
                 "soul_entropy_collapse",
-                "∞ ENTROPY: '{old}' collapsed. Pivoting.",
             )
             return f"{Prisma.GRY}{msg_ent.format(old=old)}{Prisma.RST}"
         return None
@@ -483,9 +472,7 @@ class NarrativeSelf:
         self.archetype = new_arch
         if prev != self.archetype:
             msg_shift = LoreManifest.get_instance().get_ux(
-                "soul_strings",
-                "soul_identity_shift",
-                "🎭 IDENTITY SHIFT: {prev} -> {arch}",
+                "soul_strings", "soul_identity_shift"
             )
             self.events.log(
                 f"{Prisma.VIOLET}{msg_shift.format(prev=prev, arch=self.archetype)}{Prisma.RST}",
@@ -624,18 +611,14 @@ class NarrativeSelf:
         self.chapters.append(title)
 
         msg_core = LoreManifest.get_instance().get_ux(
-            "soul_strings",
-            "soul_core_memory_log",
-            "✨ CORE MEMORY: '{title}'\n   Lesson: {lesson}\n   Genealogy: {dance_move}",
+            "soul_strings", "soul_core_memory_log"
         )
         log = f"{Prisma.MAG}{msg_core.format(title=title, lesson=lesson, dance_move=dance_move)}{Prisma.RST}"
 
         self.events.log(log, "SOUL")
 
         msg_formed = LoreManifest.get_instance().get_ux(
-            "soul_strings",
-            "soul_core_memory_formed",
-            "[SOUL]: Core Memory Formed: {lesson}",
+            "soul_strings", "soul_core_memory_formed"
         )
         self.events.log(
             f"{Prisma.CYN}{msg_formed.format(lesson=lesson)}{Prisma.RST}", "SOUL"
@@ -656,9 +639,7 @@ class NarrativeSelf:
             if self.archetype == old
             else f"{old} / {self.archetype}"
         )
-        msg = LoreManifest.get_instance().get_ux(
-            "soul_strings", "soul_diamond_formed", "💎 DIAMOND SOUL FORMED: {arch}"
-        )
+        msg = LoreManifest.get_instance().get_ux("soul_strings", "soul_diamond_formed")
         self.events.log(
             f"{Prisma.CYN}{msg.format(arch=self.archetype)}{Prisma.RST}",
             "SOUL_SYNTH",
@@ -672,9 +653,7 @@ class NarrativeSelf:
 
     def integrate_dream(self, dream_type: str, residue: str):
         msg = LoreManifest.get_instance().get_ux(
-            "soul_strings",
-            "soul_dream_integration",
-            "☾ DREAM INTEGRATION: {residue} ({dream_type})",
+            "soul_strings", "soul_dream_integration"
         )
         self.events.log(
             f"{Prisma.VIOLET}{msg.format(residue=residue, dream_type=dream_type)}{Prisma.RST}",
@@ -718,18 +697,6 @@ class Myth:
 
 class TheOroboros:
     LEGACY_FILE = "legacy.json"
-    DEATH_SCARS = {
-        "BOREDOM": ("Gravity Sickness", "narrative_drag", 1.5, "Died of stagnation."),
-        "STARVATION": (
-            "Gravity Sickness",
-            "narrative_drag",
-            1.5,
-            "Died of stagnation.",
-        ),
-        "GLUTTONY": ("Burnt Synapses", "voltage_cap", -2.0, "Died of excess."),
-        "TOXICITY": ("Burnt Synapses", "voltage_cap", -2.0, "Died of excess."),
-        "TRAUMA": ("Ghost Pains", "trauma_baseline", 5.0, "Died of pain."),
-    }
 
     def __init__(self):
         self.scars: List[Scar] = []
@@ -748,9 +715,7 @@ class TheOroboros:
                 self.myths = [Myth(**m) for m in data.get("myths", [])]
 
             msg = LoreManifest.get_instance().get_ux(
-                "soul_strings",
-                "oroboros_gen_loaded",
-                "[OROBOROS]: Generation {gen} loaded.",
+                "soul_strings", "oroboros_gen_loaded"
             )
             print(f"{Prisma.VIOLET}{msg.format(gen=self.generation_count)}{Prisma.RST}")
         except Exception:
@@ -758,7 +723,7 @@ class TheOroboros:
 
     def crystallize(self, cause_of_death: str, soul: NarrativeSelf):
         death_data = LoreManifest.get_instance().get("DEATH") or {}
-        verdicts = death_data.get("VERDIcripts", {})
+        verdicts = death_data.get("VERDICTS", {})
 
         def get_verdict_key(cause):
             if cause == "TOXICITY":
@@ -770,7 +735,8 @@ class TheOroboros:
             return "HEAVY"
 
         new_scars = []
-        if entry := self.DEATH_SCARS.get(cause_of_death):
+        death_scars = death_data.get("SCARS", {})
+        if entry := death_scars.get(cause_of_death):
             name, stat, val, default_desc = entry
             desc = default_desc
             v_key = get_verdict_key(cause_of_death)
@@ -812,11 +778,7 @@ class TheOroboros:
         with open(self.LEGACY_FILE, "w") as f:
             json.dump(data, f, indent=2)
 
-        msg = LoreManifest.get_instance().get_ux(
-            "soul_strings",
-            "generation_encoded",
-            "Generation {gen} Encoded. Scars: {scars} | Myths: {myths}",
-        )
+        msg = LoreManifest.get_instance().get_ux("soul_strings", "generation_encoded")
         return msg.format(
             gen=self.generation_count + 1, scars=len(new_scars), myths=len(new_myths)
         )
@@ -826,7 +788,7 @@ class TheOroboros:
         for scar in self.scars:
             if scar.stat_affected == "narrative_drag":
                 physics["narrative_drag"] += scar.value
-                msg = LoreManifest.get_instance().get_ux("soul_strings", "scar_drag", "scarred by {name} (+Drag)")
+                msg = LoreManifest.get_instance().get_ux("soul_strings", "scar_drag")
                 log.append(msg.format(name=scar.name))
             elif scar.stat_affected == "voltage_cap":
                 physics["voltage"] = max(0, physics["voltage"] - 5.0)
@@ -838,8 +800,6 @@ class TheOroboros:
                 if "trauma_vector" in bio:
                     bio["trauma_vector"]["EXISTENTIAL"] = scar.value
                 physics["T"] = physics.get("T", 0.0) + scar.value
-                msg = LoreManifest.get_instance().get_ux(
-                    "soul_strings", "scar_frailty", "scarred by {name} (Ghost Pains)"
-                )
+                msg = LoreManifest.get_instance().get_ux("soul_strings", "scar_frailty")
                 log.append(msg.format(name=scar.name))
         return log

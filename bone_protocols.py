@@ -51,30 +51,32 @@ class ZenGarden:
             efficiency_boost = min(
                 BoneConfig.ZEN.EFFICIENCY_CAP,
                 self.stillness_streak * BoneConfig.ZEN.EFFICIENCY_SCALAR,
-            )
+                )
+
+            cfg = getattr(BoneConfig, "ZEN", None)
+            first_tick = getattr(cfg, "ZEN_FIRST_TICK", 1) if cfg else 1
+            ms_freq = getattr(cfg, "ZEN_MILESTONE_FREQ", 5) if cfg else 5
+
             msg = None
-            if self.stillness_streak == 1:
+            if self.stillness_streak == first_tick:
                 raw_enter = LoreManifest.get_instance().get_ux(
                     "protocol_strings",
-                    "zen_enter",
-                    "⛩️ ZEN GARDEN: Entering the quiet zone.",
+                    "zen_enter"
                 )
                 msg = f"{Prisma.GRY}{raw_enter}{Prisma.RST}"
-            elif self.stillness_streak % 5 == 0:
+            elif self.stillness_streak % ms_freq == 0:
                 self.pebbles_collected += 1
                 koan = random.choice(self.koans)
                 raw_streak = LoreManifest.get_instance().get_ux(
                     "protocol_strings",
-                    "zen_streak",
-                    '⛩️ ZEN GARDEN: {streak} ticks of poise.\n   "{koan}" (Efficiency +{boost}%)',
+                    "zen_streak"
                 )
                 msg = f"{Prisma.CYN}{raw_streak.format(streak=self.stillness_streak, koan=koan, boost=int(efficiency_boost * 100))}{Prisma.RST}"
             return efficiency_boost, msg
         if self.stillness_streak > BoneConfig.ZEN.STREAK_BREAK_THRESHOLD:
             break_msg = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "zen_break",
-                "🍂 ZEN GARDEN: Leaf falls. Turbulence broke the streak.",
+                "zen_break"
             )
             self.events.log(
                 f"{Prisma.GRY}{break_msg}{Prisma.RST}",
@@ -115,8 +117,7 @@ class TheBureau:
                 except re.error as e:
                     err_msg = LoreManifest.get_instance().get_ux(
                         "protocol_strings",
-                        "bureau_compile_fail",
-                        "[BUREAU]: Failed to compile law '{name}': {e}",
+                        "bureau_compile_fail"
                     )
                     print(
                         f"{Prisma.RED}{err_msg.format(name=p.get('name'), e=e)}{Prisma.RST}"
@@ -162,11 +163,16 @@ class TheBureau:
             else:
                 selected_form = "Form 202-A"
                 tax = BoneConfig.BUREAU.TAX_STANDARD
+
         chi = _get(physics, "chi", _get(physics, "entropy", 0.0))
-        if not selected_form and chi > 0.6:
+        cfg_bureau = getattr(BoneConfig, "BUREAU", None)
+        chaos_thresh = getattr(cfg_bureau, "CHAOS_TAX_THRESHOLD", 0.6) if cfg_bureau else 0.6
+        tax_chaos = getattr(cfg_bureau, "TAX_CHAOS", 12.0) if cfg_bureau else 12.0
+
+        if not selected_form and chi > chaos_thresh:
             selected_form = "Form 666: Unlicensed Chaos"
-            evidence = ["Unlicensed Chaos (Χ > 0.6)", f"Level: {chi:.2f}"]
-            tax = 12.0
+            evidence = [f"Unlicensed Chaos (Χ > {chaos_thresh})", f"Level: {chi:.2f}"]
+            tax = tax_chaos
         elif not selected_form:
             buzz_hits = [w for w in clean_words if w in self.buzzwords]
             cliche_hits = [c for c in self.cliches if c.lower() in raw_text.lower()]
@@ -185,25 +191,23 @@ class TheBureau:
         bureau_resp = random.choice(self.responses)
         prefix = f"{Prisma.GRY}{LoreManifest.get_instance().get_ux('protocol_strings', 'bureau_prefix_normal', '🏢 THE BUREAU')}"
         if origin == "SYSTEM":
-            prefix = f"{Prisma.RED}{LoreManifest.get_instance().get_ux('protocol_strings', 'bureau_prefix_internal', '🏢 INTERNAL AFFAIRS')}"
+            prefix = f"{Prisma.RED}{LoreManifest.get_instance().get_ux('protocol_strings', 'bureau_prefix_internal')}"
             bureau_resp = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "bureau_sys_violation",
-                "System Output Violation detected.",
+                "bureau_sys_violation"
             )
         filed_msg = LoreManifest.get_instance().get_ux(
-            "protocol_strings", "bureau_filed", "[Filed: {form} against {origin}]"
+            "protocol_strings", "bureau_filed"
         )
         ui_msg = f"{prefix}: {bureau_resp}{Prisma.RST}\n   {Prisma.WHT}{filed_msg.format(form=selected_form, origin=origin)}{Prisma.RST}"
         if evidence:
             ev_msg = LoreManifest.get_instance().get_ux(
-                "protocol_strings", "bureau_evidence", "Evidence: {evidence}"
+                "protocol_strings", "bureau_evidence"
             )
             ui_msg += f"\n   {Prisma.RED}{ev_msg.format(evidence=', '.join(evidence))}{Prisma.RST}"
         log_msg = LoreManifest.get_instance().get_ux(
             "protocol_strings",
-            "bureau_log",
-            "BUREAUCRACY: Filed {form} against {origin}. Chaos Tax: -{tax:.1f} ATP.",
+            "bureau_log"
         )
         return {
             "status": "AUDITED",
@@ -241,8 +245,7 @@ class TheBureau:
                 corrected_text = self._apply_correction(text, crime, match)
                 corr_msg = LoreManifest.get_instance().get_ux(
                     "protocol_strings",
-                    "bureau_correction",
-                    "BUREAU CORRECTION: {msg} -> Text optimized.",
+                    "bureau_correction"
                 )
                 log_msg = corr_msg.format(msg=crime["msg"])
                 return corrected_text, log_msg
@@ -263,7 +266,9 @@ class TherapyProtocol:
         default_vector = {"SEPTIC": 0, "EXHAUSTION": 0, "PARANOIA": 0}
         vector_keys = getattr(BoneConfig, "TRAUMA_VECTOR", default_vector).keys()
         self.streaks = {k: 0 for k in vector_keys}
-        self.HEALING_THRESHOLD = 5
+
+        cfg = getattr(BoneConfig, "THERAPY", None)
+        self.HEALING_THRESHOLD = getattr(cfg, "HEALING_THRESHOLD", 5) if cfg else 5
 
     def to_dict(self) -> Dict[str, Any]:
         return {"streaks": self.streaks}
@@ -284,9 +289,13 @@ class TherapyProtocol:
             if not isinstance(phys, dict)
             else phys.get("vector", {})
         )
+        cfg_therapy = getattr(BoneConfig, "THERAPY", None)
+        str_req = getattr(cfg_therapy, "STRENGTH_REQ", 0.3) if cfg_therapy else 0.3
+        t_reduct = getattr(cfg_therapy, "TRAUMA_REDUCTION", 0.5) if cfg_therapy else 0.5
+
         healed_types = []
         is_clean = counts.get("toxin", 0) == 0
-        has_strength = vector.get("STR", 0.0) > 0.3
+        has_strength = vector.get("STR", 0.0) > str_req
         if is_clean and has_strength:
             self.streaks["SEPTIC"] += 1
         else:
@@ -296,7 +305,7 @@ class TherapyProtocol:
                 self.streaks[trauma_type] = 0
                 if current_trauma_accum.get(trauma_type, 0.0) > 0.0:
                     current_trauma_accum[trauma_type] = max(
-                        0.0, current_trauma_accum[trauma_type] - 0.5
+                        0.0, current_trauma_accum[trauma_type] - t_reduct
                     )
                     healed_types.append(trauma_type)
         return healed_types
@@ -320,7 +329,9 @@ class KintsugiProtocol:
         self.active_koan = data.get("active_koan", None)
 
     def check_integrity(self, stamina):
-        if stamina < 15.0 and not self.active_koan:
+        cfg = getattr(BoneConfig, "KINTSUGI", None)
+        s_trig = getattr(cfg, "STAMINA_TRIGGER", 15.0) if cfg else 15.0
+        if stamina < s_trig and not self.active_koan:
             self.active_koan = random.choice(self.koans)
             return True, self.active_koan
         return False, None
@@ -337,9 +348,16 @@ class KintsugiProtocol:
         )
         whimsy_score = play_count / max(1, len(clean))
         pathway = self.PATH_SCAR
-        if vol > 15.0 and whimsy_score > 0.4:
+
+        cfg = getattr(BoneConfig, "KINTSUGI", None)
+        al_v = getattr(cfg, "ALCHEMY_VOLTAGE", 15.0) if cfg else 15.0
+        al_w = getattr(cfg, "ALCHEMY_WHIMSY", 0.4) if cfg else 0.4
+        in_v = getattr(cfg, "INTEGRATION_VOLTAGE", 8.0) if cfg else 8.0
+        in_w = getattr(cfg, "INTEGRATION_WHIMSY", 0.2) if cfg else 0.2
+
+        if vol > al_v and whimsy_score > al_w:
             pathway = self.PATH_ALCHEMY
-        elif vol > 8.0 and whimsy_score > 0.2:
+        elif vol > in_v and whimsy_score > in_w:
             pathway = self.PATH_INTEGRATION
         return self._execute_pathway(pathway, trauma_accum, soul_ref)
 
@@ -348,21 +366,24 @@ class KintsugiProtocol:
             return {
                 "success": False,
                 "msg": LoreManifest.get_instance().get_ux(
-                    "protocol_strings", "kintsugi_no_fissures", "No fissures found."
+                    "protocol_strings", "kintsugi_no_fissures"
                 ),
             }
         target = max(trauma_accum, key=trauma_accum.get)
         severity = trauma_accum[target]
         healed_log = []
 
+        cfg = getattr(BoneConfig, "KINTSUGI", None)
+
         if pathway == self.PATH_ALCHEMY:
-            reduction = severity * 0.8
+            r_alc = getattr(cfg, "REDUCTION_ALCHEMY_FACTOR", 0.8) if cfg else 0.8
+            a_fac = getattr(cfg, "ALCHEMY_ATP_FACTOR", 15.0) if cfg else 15.0
+            reduction = severity * r_alc
             trauma_accum[target] = max(0.0, severity - reduction)
-            atp_boost = reduction * 15.0
+            atp_boost = reduction * a_fac
             msg_raw = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "kintsugi_alchemy",
-                "🔮 ALCHEMY: The wound '{target}' burns into pure fuel. (+{boost:.1f} ATP)",
+                "kintsugi_alchemy"
             )
             msg = f"{Prisma.VIOLET}{msg_raw.format(target=target, boost=atp_boost)}{Prisma.RST}"
             healed_log.append(f"Transmuted {target}")
@@ -373,21 +394,22 @@ class KintsugiProtocol:
                 "atp_gain": atp_boost,
             }
         elif pathway == self.PATH_INTEGRATION:
-            reduction = 2.0
+            r_int = getattr(cfg, "REDUCTION_INTEGRATION", 2.0) if cfg else 2.0
+            reduction = r_int
             trauma_accum[target] = max(0.0, severity - reduction)
             if soul_ref:
                 soul_ref.traits.adjust("WISDOM", 0.1)
                 healed_log.append("Wisdom +0.1")
             msg_raw = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "kintsugi_mercy",
-                "🏺 MERCY (KINTSUGI): The gold sets. The '{target}' crack becomes a story.",
+                "kintsugi_mercy"
             )
             msg = f"{Prisma.OCHRE}{msg_raw.format(target=target)}{Prisma.RST}"
             healed_log.append(f"Integrated {target}")
             success = True
         else:
-            reduction = 0.5
+            r_scar = getattr(cfg, "REDUCTION_SCAR", 0.5) if cfg else 0.5
+            reduction = r_scar
             trauma_accum[target] = max(0.0, severity - reduction)
             msg_raw = LoreManifest.get_instance().get_ux(
                 "protocol_strings", "kintsugi_scar", "🩹 SCAR: It's ugly, but it holds."
@@ -416,7 +438,9 @@ class TheCriticsCircle:
         self.last_review_turn = data.get("last_review_turn", 0)
 
     def audit_performance(self, physics: Any, turn_count: int) -> Optional[str]:
-        if turn_count - self.last_review_turn < 10:
+        cfg = getattr(BoneConfig, "CRITICS", None)
+        rev_cd = getattr(cfg, "REVIEW_COOLDOWN", 10) if cfg else 10
+        if turn_count - self.last_review_turn < rev_cd:
             return None
         p = physics if isinstance(physics, dict) else getattr(physics, "__dict__", {})
         voltage = p.get("voltage", 0.0)
@@ -437,7 +461,8 @@ class TheCriticsCircle:
                     category = metric_str.replace("counts_", "")
                     counts = p.get("counts", {})
                     raw_count = counts.get(category, 0)
-                    current = min(5.0, raw_count * 0.5)
+                    max_contrib = getattr(cfg, "MAX_METRIC_CONTRIB", 5.0) if cfg else 5.0
+                    current = min(max_contrib, raw_count * 0.5)
                 else:
                     current = p.get(metric_str, 0.0)
                 if target > 0:
@@ -445,25 +470,28 @@ class TheCriticsCircle:
                 else:
                     score -= current * abs(target)
 
-            if score > 15.0:
+            pos_thresh = getattr(cfg, "POSITIVE_REVIEW_THRESH", 15.0) if cfg else 15.0
+            neg_thresh = getattr(cfg, "NEGATIVE_REVIEW_THRESH", -15.0) if cfg else -15.0
+
+            if score > pos_thresh:
                 best_match = (key, critic)
                 review_type = "high"
-            elif score < -15.0:
+            elif score < neg_thresh:
                 best_match = (key, critic)
                 review_type = "low"
 
         if best_match:
             key, critic = best_match
             self.last_review_turn = turn_count
-            self.active_cooldowns[key] = turn_count + 50
+            crit_cd = getattr(cfg, "CRITIC_COOLDOWN_TICKS", 50) if cfg else 50
+            self.active_cooldowns[key] = turn_count + crit_cd
             reviews = critic["reviews"].get(review_type, ["Hrm."])
             comment = random.choice(reviews)
             color = Prisma.GRN if review_type == "high" else Prisma.RED
             icon = "🌟" if review_type == "high" else "💢"
             rev_msg = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "critic_review",
-                '{icon} CRITIC REVIEW ({name}): "{comment}"',
+                "critic_review"
             )
             return f"{color}{rev_msg.format(icon=icon, name=critic['name'], comment=comment)}{Prisma.RST}"
         return None
@@ -495,8 +523,7 @@ class LimboLayer:
         except (IOError, json.JSONDecodeError) as e:
             err_msg = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "limbo_absorb_fail",
-                "[LIMBO] Failed to absorb timeline '{filepath}': {e}",
+                "limbo_absorb_fail"
             )
             print(f"{Prisma.RED}{err_msg.format(filepath=filepath, e=e)}{Prisma.RST}")
 
@@ -504,7 +531,7 @@ class LimboLayer:
         if "trauma_vector" in data:
             for k, v in data["trauma_vector"].items():
                 if v > 0.3:
-                    echo_msg = LoreManifest.get_instance().get_ux("protocol_strings", "limbo_echo", "👻{k}_ECHO")
+                    echo_msg = LoreManifest.get_instance().get_ux("protocol_strings", "limbo_echo")
                     self.ghosts.append(echo_msg.format(k=k))
         if "mutations" in data and "heavy" in data["mutations"]:
             bones = list(data["mutations"]["heavy"])
@@ -517,15 +544,18 @@ class LimboLayer:
         self.ghosts.append(f"{Prisma.VIOLET}{horror}{Prisma.RST}")
         err_msg = LoreManifest.get_instance().get_ux(
             "protocol_strings",
-            "limbo_stasis_err",
-            "STASIS ERROR: '{thought}' froze halfway. {horror}.",
+            "limbo_stasis_err"
         )
         return f"{Prisma.CYN}{err_msg.format(thought=intended_thought, horror=horror)}{Prisma.RST}"
 
     def haunt(self, text):
+        cfg = getattr(BoneConfig, "LIMBO", None)
+        l_chance = getattr(cfg, "LEAK_DECAY_CHANCE", 0.2) if cfg else 0.2
+        l_amount = getattr(cfg, "LEAK_DECAY_AMOUNT", 0.5) if cfg else 0.5
+
         if self.stasis_leak > 0:
-            if random.random() < 0.2:
-                self.stasis_leak = max(0.0, self.stasis_leak - 0.5)
+            if random.random() < l_chance:
+                self.stasis_leak = max(0.0, self.stasis_leak - l_amount)
                 scream = random.choice(self.STASIS_SCREAMS)
                 return f"{text} ...{Prisma.RED}{scream}{Prisma.RST}..."
         if self.ghosts and random.random() < self.haunt_chance:
@@ -561,13 +591,11 @@ class TheFolly:
         ):
             msg1 = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "folly_mausoleum",
-                "THE MAUSOLEUM: No battle is ever won. We are just spinning hands.",
+                "folly_mausoleum"
             )
             msg2 = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "folly_dilation",
-                "TIME DILATION: Voltage 0.0. The field reveals your folly.",
+                "folly_dilation"
             )
             return (
                 "MAUSOLEUM_CLAMP",
@@ -590,13 +618,11 @@ class TheFolly:
             target = meat_words[0]
             msg1 = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "folly_reflex",
-                "REFLEX: You already fed me '{target}'. It is ash to me now.",
+                "folly_reflex"
             )
             msg2 = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "folly_penalty",
-                "► PENALTY: -{penalty} ATP. Find new fuel.",
+                "folly_penalty"
             )
             msg = (
                 f"{Prisma.OCHRE}{msg1.format(target=target)}{Prisma.RST}\n"
@@ -618,8 +644,7 @@ class TheFolly:
         if target in suburban_set:
             gags = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "folly_gags",
-                "THE FOLLY GAGS: It coughs up a piece of office equipment.",
+                "folly_gags"
             )
             return (
                 "INDIGESTION",
@@ -630,8 +655,7 @@ class TheFolly:
         if target in play_set:
             chews = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "folly_chews",
-                "THE FOLLY CHEWS: It compresses the chaos into a small, sticky ball.",
+                "folly_chews"
             )
             return (
                 "SUGAR_RUSH",
@@ -651,10 +675,9 @@ class TheFolly:
         flavor_text = f" (Stale: {times_eaten}x)" if times_eaten > 3 else ""
         msg1 = LoreManifest.get_instance().get_ux(
             "protocol_strings",
-            "folly_caffeine",
-            "CROWD CAFFEINE: I chewed on '{target}'{flavor_text}.",
+            "folly_caffeine"
         )
-        msg2 = LoreManifest.get_instance().get_ux("protocol_strings", "folly_yield", "Yield: {yield_val:.1f} ATP.")
+        msg2 = LoreManifest.get_instance().get_ux("protocol_strings", "folly_yield")
         msg = (
             f"{Prisma.RED}{msg1.format(target=target.upper(), flavor_text=flavor_text)}{Prisma.RST}\n"
             f"   {Prisma.WHT}{msg2.format(yield_val=actual_yield)}{Prisma.RST}"
@@ -682,13 +705,11 @@ class TheFolly:
             yield_val = BoneConfig.FOLLY.YIELD_ABSTRACT
             msg1 = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "folly_sighs",
-                "THE FOLLY SIGHS: It grinds the ABSTRACT concept '{target}'.",
+                "folly_sighs"
             )
             msg2 = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "folly_chalk",
-                "It tastes like chalk dust. +{yield_val} ATP.",
+                "folly_chalk"
             )
             msg = (
                 f"{Prisma.GRY}{msg1.format(target=target.upper())}{Prisma.RST}\n"
@@ -697,16 +718,14 @@ class TheFolly:
             return "GRUEL", msg, yield_val, None
         msg1 = LoreManifest.get_instance().get_ux(
             "protocol_strings",
-            "folly_indigestion",
-            "INDIGESTION: I tried to eat your words, but they were just air.",
+            "folly_indigestion"
         )
         msg2 = LoreManifest.get_instance().get_ux(
             "protocol_strings",
-            "folly_cannot_grind",
-            "Cannot grind this input into fuel.",
+            "folly_cannot_grind"
         )
         msg3 = LoreManifest.get_instance().get_ux(
-            "protocol_strings", "folly_starvation", "► STARVATION CONTINUES."
+            "protocol_strings", "folly_starvation"
         )
         msg = (
             f"{Prisma.OCHRE}{msg1}{Prisma.RST}\n"
@@ -762,18 +781,18 @@ class ChronosKeeper:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(state_data, f, indent=2, default=str)
             msg_save = LoreManifest.get_instance().get_ux(
-                "protocol_strings", "chronos_save_success", "✔ Checkpoint Saved: {path}"
+                "protocol_strings", "chronos_save_success"
             )
             return msg_save.format(path=path)
         except Exception as e:
             self.eng.events.log(
                 LoreManifest.get_instance().get_ux(
-                    "protocol_strings", "chronos_save_failed_log", "SAVE FAILED: {e}"
+                    "protocol_strings", "chronos_save_failed_log"
                 ).format(e=e),
                 "SYS_ERR",
             )
             return LoreManifest.get_instance().get_ux(
-                "protocol_strings", "chronos_save_failed_msg", "❌ Save Failed: {e}"
+                "protocol_strings", "chronos_save_failed_msg"
             ).format(e=e)
 
     def resume_checkpoint(self) -> Tuple[bool, list]:
@@ -781,16 +800,14 @@ class ChronosKeeper:
         if not os.path.exists(path):
             msg = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "chronos_resume_none",
-                "[RESUME]: No quicksave found. Starting fresh.",
+                "chronos_resume_none"
             )
             print(f"{Prisma.GRY}{msg}{Prisma.RST}")
             return False, []
         try:
             msg1 = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "chronos_resume_hydrating",
-                "[RESUME]: Hydrating from {path}...",
+                "chronos_resume_hydrating"
             )
             print(f"{Prisma.CYN}{msg1.format(path=path)}{Prisma.RST}")
             with open(path, "r", encoding="utf-8") as f:
@@ -809,22 +826,20 @@ class ChronosKeeper:
             restored_history = data.get("chat_history", [])
             msg2 = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "chronos_resume_success",
-                "[RESUME]: System State & Logs Restored.",
+                "chronos_resume_success"
             )
             print(f"{Prisma.GRN}{msg2}{Prisma.RST}")
             return True, restored_history
         except Exception as e:
             msg3 = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "chronos_resume_failed",
-                "[RESUME]: Failed to hydrate: {e}",
+                "chronos_resume_failed"
             )
             print(f"{Prisma.RED}{msg3.format(e=e)}{Prisma.RST}")
             return False, []
 
     def perform_shutdown(self):
-        msg = LoreManifest.get_instance().get_ux("protocol_strings", "chronos_halt", "...System Halt...")
+        msg = LoreManifest.get_instance().get_ux("protocol_strings", "chronos_halt")
         print(f"{Prisma.GRY}{msg}{Prisma.RST}")
         self.eng.events.publish("SYSTEM_HALT", {"tick": self.eng.tick_count})
 
@@ -847,7 +862,7 @@ class ChronosKeeper:
         }
         try:
             msg2 = LoreManifest.get_instance().get_ux(
-                "protocol_strings", "chronos_freezing", "[MEMORY]: Freezing State..."
+                "protocol_strings", "chronos_freezing"
             )
             print(f"{Prisma.GRY}{msg2}{Prisma.RST}")
             mito_traits = {}
@@ -873,8 +888,7 @@ class ChronosKeeper:
         except Exception as e:
             msg3 = LoreManifest.get_instance().get_ux(
                 "protocol_strings",
-                "chronos_mem_save_fail",
-                "[MEMORY]: Save Failed: {e}",
+                "chronos_mem_save_fail"
             )
             print(f"{Prisma.RED}{msg3.format(e=e)}{Prisma.RST}")
         subsystems = [
@@ -886,16 +900,14 @@ class ChronosKeeper:
                 try:
                     msg4 = LoreManifest.get_instance().get_ux(
                         "protocol_strings",
-                        "chronos_persisting",
-                        "[{name}]: Persisting...",
+                        "chronos_persisting"
                     )
                     print(f"{Prisma.GRY}{msg4.format(name=name)}{Prisma.RST}")
                     getattr(sys, method)()
                 except Exception as e:
                     msg5 = LoreManifest.get_instance().get_ux(
                         "protocol_strings",
-                        "chronos_persist_fail",
-                        "[{name}]: Failed: {e}",
+                        "chronos_persist_fail"
                     )
                     print(f"{Prisma.RED}{msg5.format(name=name, e=e)}{Prisma.RST}")
 
@@ -920,8 +932,7 @@ class ChronosKeeper:
                 except Exception as e:
                     msg = LoreManifest.get_instance().get_ux(
                         "protocol_strings",
-                        "chronos_hydrate_fail",
-                        "[RESUME]: Failed to hydrate {name}: {e}",
+                        "chronos_hydrate_fail"
                     )
                     print(f"{Prisma.RED}{msg.format(name=name, e=e)}{Prisma.RST}")
 
@@ -935,7 +946,10 @@ class ChronosKeeper:
             files = sorted(
                 [f for f in os.listdir(self.CRASH_DIR) if f.startswith(prefix)]
             )
-            for oldest in files[:-4]:
+            cfg = getattr(BoneConfig, "CHRONOS", None)
+            kept = getattr(cfg, "CRASH_FILES_KEPT", 4) if cfg else 4
+
+            for oldest in files[:-kept] if kept > 0 else files:
                 os.remove(os.path.join(self.CRASH_DIR, oldest))
         except Exception:
             pass
@@ -944,6 +958,6 @@ class ChronosKeeper:
     @staticmethod
     def emergency_dump(exit_cause="UNKNOWN") -> str:
         msg = LoreManifest.get_instance().get_ux(
-            "protocol_strings", "chronos_emerg_dump", "✔ Emergency Dump: {exit_cause}"
+            "protocol_strings", "chronos_emerg_dump"
         )
         return msg.format(exit_cause=exit_cause)

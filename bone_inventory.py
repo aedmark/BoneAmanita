@@ -268,16 +268,22 @@ class GordonKnot:
         voltage = physics.get("voltage", 0.0)
         drag = physics.get("narrative_drag", 0.0)
         psi = physics.get("psi", 0.0)
+
+        v_high = getattr(BoneConfig.PHYSICS, "VOLTAGE_HIGH", 12.0)
+        v_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
+        d_heavy = getattr(BoneConfig.PHYSICS, "DRAG_HEAVY", 5.0)
+        psi_high = getattr(BoneConfig.PHYSICS, "PSI_HIGH", 0.6)
+
         for name in set(self.registry) | set(self.ITEM_REGISTRY):
             if not (item := self.get_item_data(name)):
                 continue
             ctx = item.spawn_context
             if (
-                ctx in ("COMMON", "STANDARD")
-                or (ctx == "VOLTAGE_HIGH" and voltage > 12.0)
-                or (ctx == "VOLTAGE_CRITICAL" and voltage > 18.0)
-                or (ctx == "DRAG_HEAVY" and drag > 4.0)
-                or (ctx == "PSI_HIGH" and psi > 0.6)
+                    ctx in ("COMMON", "STANDARD")
+                    or (ctx == "VOLTAGE_HIGH" and voltage > v_high)
+                    or (ctx == "VOLTAGE_CRITICAL" and voltage > v_crit)
+                    or (ctx == "DRAG_HEAVY" and drag > d_heavy)
+                    or (ctx == "PSI_HIGH" and psi > psi_high)
             ):
                 candidates.append(name)
         return candidates
@@ -403,31 +409,40 @@ class GordonKnot:
     def emergency_reflex(self, physics_ref: Dict) -> Tuple[bool, Optional[str]]:
         voltage = physics_ref.get("voltage", 0.0)
         drag = physics_ref.get("narrative_drag", 0.0)
+        kappa = physics_ref.get("kappa", 0.5)
+
+        cfg = getattr(BoneConfig, "INVENTORY", None)
+        v_trig = getattr(cfg, "REFLEX_VOLTAGE_TRIGGER", 18.0) if cfg else 18.0
+        v_reset = getattr(cfg, "REFLEX_VOLTAGE_RESET", 12.0) if cfg else 12.0
+        d_trig = getattr(cfg, "REFLEX_DRAG_TRIGGER", 6.0) if cfg else 6.0
+        d_reset = getattr(cfg, "REFLEX_DRAG_RESET", 0.0) if cfg else 0.0
+        k_trig = getattr(cfg, "REFLEX_KAPPA_TRIGGER", 0.2) if cfg else 0.2
+        k_reset = getattr(cfg, "REFLEX_KAPPA_RESET", 0.8) if cfg else 0.8
+
         for name in self.inventory:
             item = self.get_item_data(name)
             if not item:
                 continue
             trigger = item.reflex_trigger
-            if trigger == "VOLTAGE_CRITICAL" and voltage > 18.0:
+            if trigger == "VOLTAGE_CRITICAL" and voltage > v_trig:
                 self.safe_remove_item(name)
-                physics_ref["voltage"] = 12.0
+                physics_ref["voltage"] = v_reset
                 msg = LoreManifest.get_instance().get_ux(
                     "gordon_strings",
                     "reflex_voltage"
                 )
                 return True, f"{Prisma.CYN}{msg.format(name=name)}{Prisma.RST}"
-            if trigger == "DRIFT_CRITICAL" and drag > 6.0:
+            if trigger == "DRIFT_CRITICAL" and drag > d_trig:
                 self.safe_remove_item(name)
-                physics_ref["narrative_drag"] = 0.0
+                physics_ref["narrative_drag"] = d_reset
                 msg = LoreManifest.get_instance().get_ux(
                     "gordon_strings",
                     "reflex_drift"
                 )
                 return True, f"{Prisma.OCHRE}{msg.format(name=name)}{Prisma.RST}"
-            kappa = physics_ref.get("kappa", 0.5)
-            if trigger == "KAPPA_CRITICAL" and kappa < 0.2:
+            if trigger == "KAPPA_CRITICAL" and kappa < k_trig:
                 self.safe_remove_item(name)
-                physics_ref["kappa"] = 0.8
+                physics_ref["kappa"] = k_reset
                 msg = LoreManifest.get_instance().get_ux(
                     "gordon_strings",
                     "reflex_kappa"

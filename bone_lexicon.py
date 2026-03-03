@@ -144,79 +144,24 @@ class LinguisticAnalyzer:
     def __init__(self, store_ref):
         self.store = store_ref
         self._TRANSLATOR = getattr(self.store, "_TRANSLATOR", None)
-        self.PHONETICS = {
-            "PLOSIVE": set("bdgkpt"),
-            "FRICATIVE": set("fthszsh"),
-            "LIQUID": set("lr"),
-            "NASAL": set("mn"),
-            "VOWELS": set("aeiouy"),
-        }
-        self.ROOTS = {
-            "HEAVY": (
-                "lith",
-                "ferr",
-                "petr",
-                "dens",
-                "grav",
-                "struct",
-                "base",
-                "fund",
-                "mound",
-            ),
-            "KINETIC": ("mot", "mov", "ject", "tract", "pel", "crat", "dynam", "flux"),
-            "ABSTRACT": (
-                "tion",
-                "ism",
-                "ence",
-                "ance",
-                "ity",
-                "ology",
-                "ness",
-                "ment",
-                "idea",
-            ),
-            "SUBURBAN": ("norm", "comm", "stand", "pol", "reg", "mod"),
-            "VITAL": (
-                "viv",
-                "vita",
-                "spir",
-                "anim",
-                "bio",
-                "luc",
-                "lum",
-                "phot",
-                "phon",
-                "surg",
-                "bloom",
-            ),
-            "TOXIN": (
-                "necro",
-                "path",
-                "tox",
-                "vir",
-                "mort",
-                "rot",
-                "rupt",
-                "flict",
-                "plasm",
-                "fester",
-                "decay",
-                "plagu",
-                "tumor",
-                "bleed",
-                "blood",
-                "sick",
-                "carcin",
-                "pus",
-                "bile",
-            ),
-        }
-        self.thresholds = {
+
+        # Pull configuration from JSON via LoreManifest
+        ling_data = LoreManifest.get_instance().get("LINGUISTICS") or {}
+
+        # Reconstruct Python sets and tuples from the JSON lists/strings
+        raw_phonetics = ling_data.get("PHONETICS", {})
+        self.PHONETICS = {k: set(v) for k, v in raw_phonetics.items()}
+
+        raw_roots = ling_data.get("ROOTS", {})
+        self.ROOTS = {k: tuple(v) for k, v in raw_roots.items()}
+
+        self.thresholds = ling_data.get("THRESHOLDS", {
             "heavy_density": 0.55,
             "play_vitality": 0.6,
             "kinetic_flow": 0.6,
-        }
-        self.biases = {"heavy": 1.0, "play": 1.0, "kinetic": 1.0}
+        })
+        self.biases = ling_data.get("BIASES", {"heavy": 1.0, "play": 1.0, "kinetic": 1.0})
+        self.dimension_map = ling_data.get("DIMENSION_MAP", {})
 
     def measure_viscosity(self, word: str) -> float:
         if not word:
@@ -250,29 +195,6 @@ class LinguisticAnalyzer:
         words = self.sanitize(text)
         if not words:
             return {}
-        DIMENSION_MAP = {
-            "kinetic": "VEL",
-            "explosive": "CHI",
-            "heavy": "STR",
-            "constructive": "STR",
-            "antigen": "CHI",
-            "toxin": "CHI",
-            "thermal": "PHI",
-            "photo": "PHI",
-            "abstract": "PSI",
-            "sacred": "PSI",
-            "suburban": "BET",
-            "buffer": "BET",
-            "play": "DEL",
-            "aerobic": "DEL",
-            "harvest": "STR",
-            "meat": "CHI",
-            "void": "PSI",
-            "liminal": "LAMBDA",
-            "pareidolia": "PSI",
-            "crisis_term": "CHI",
-            "cursed": "CHI",
-        }
         dims = {
             "VEL": 0.0,
             "STR": 0.0,
@@ -287,8 +209,8 @@ class LinguisticAnalyzer:
         for w in words:
             cats = self.store.get_categories_for_word(w)
             for cat in cats:
-                if cat in DIMENSION_MAP:
-                    target_dim = DIMENSION_MAP[cat]
+                if cat in self.dimension_map:
+                    target_dim = self.dimension_map[cat]
                     dims[target_dim] += 1.0
         total = max(1.0, sum(dims.values()))
         result = {k: round(v / total, 3) for k, v in dims.items()}
@@ -523,26 +445,12 @@ class LexiconService:
 
     @classmethod
     def classify(cls, word):
-        PRIORITY_ORDER = [
-            "toxin",
-            "heavy",
-            "kinetic",
-            "explosive",
-            "thermal",
-            "cryo",
-            "sacred",
-            "antigen",
-            "meat",
-            "void",
-            "liminal",
-            "pareidolia",
-            "play",
-            "suburban",
-            "abstract",
-        ]
+        ling_data = LoreManifest.get_instance().get("LINGUISTICS") or {}
+        priority_order = ling_data.get("PRIORITY_ORDER", [])
+
         known_cats = cls._STORE.get_categories_for_word(word)
         if known_cats:
-            for p_cat in PRIORITY_ORDER:
+            for p_cat in priority_order:
                 if p_cat in known_cats:
                     return p_cat, 1.0
             return next(iter(known_cats)), 1.0

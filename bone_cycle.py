@@ -68,7 +68,11 @@ class ObservationPhase(SimulationPhase):
         ctx.physics.narrative_drag = (curr_d * 0.7) + (input_d * 0.3)
         ctx.clean_words = gaze_result["clean_words"]
         current_atp = self.eng.bio.mito.state.atp_pool
-        if current_atp < 15.0:
+
+        cfg = getattr(BoneConfig, "CYCLE", None)
+        atp_warn = getattr(cfg, "OBSERVE_ATP_WARN", 15.0) if cfg else 15.0
+
+        if current_atp < atp_warn:
             msg = LoreManifest.get_instance().get_ux(
                 "cycle_strings",
                 "observe_low_energy"
@@ -99,7 +103,10 @@ class SanctuaryPhase(SimulationPhase):
             if getattr(self.eng, "trauma_accum", None)
             else 0.0
         )
-        if in_safe_zone and trauma_sum < 25.0:
+        cfg = getattr(BoneConfig, "CYCLE", None)
+        t_limit = getattr(cfg, "SANCTUARY_TRAUMA_LIMIT", 25.0) if cfg else 25.0
+
+        if in_safe_zone and trauma_sum < t_limit:
             self._enter_sanctuary(ctx)
             self._apply_restoration(ctx)
             if random.random() < 0.3:
@@ -183,11 +190,16 @@ class MaintenancePhase(SimulationPhase):
             blooms = self.eng.town_hall.tend_garden(ctx.clean_words) or []
             for bloom in blooms:
                 ctx.log(bloom)
-            if self.eng.tick_count % 5 == 0:
+
+            cfg = getattr(BoneConfig, "CYCLE", None)
+            w_freq = getattr(cfg, "MAINTENANCE_WEATHER_FREQ", 5) if cfg else 5
+            c_freq = getattr(cfg, "MAINTENANCE_CENSUS_FREQ", 20) if cfg else 20
+
+            if self.eng.tick_count % w_freq == 0:
                 weather_report = self.eng.town_hall.consult_almanac(ctx.physics)
                 if weather_report:
                     ctx.log(f"{Prisma.CYN}{weather_report}{Prisma.RST}")
-            is_census_due = self.eng.tick_count > 0 and self.eng.tick_count % 20 == 0
+            is_census_due = self.eng.tick_count > 0 and self.eng.tick_count % c_freq == 0
             if is_census_due or "census" in ctx.clean_words:
                 report = self.eng.town_hall.conduct_census(
                     ctx.physics, self.eng.host_stats
@@ -409,7 +421,9 @@ class MetabolismPhase(SimulationPhase):
             ctx.log(f"{Prisma.GRN}{msg_wake.format(reboot_val=reboot_val)}{Prisma.RST}")
 
     def _check_circadian_rhythm(self):
-        if self.eng.tick_count % 10 == 0:
+        cfg = getattr(BoneConfig, "CYCLE", None)
+        c_freq = getattr(cfg, "CIRCADIAN_FREQ", 10) if cfg else 10
+        if self.eng.tick_count % c_freq == 0:
             bias, msg = self.eng.bio.endo.calculate_circadian_bias()
             if msg:
                 self.eng.events.log(f"{Prisma.CYN}🕒 {msg}{Prisma.RST}", "BIO")
@@ -420,10 +434,13 @@ class MetabolismPhase(SimulationPhase):
         hit, msg, evt = self.eng.phys.tension.audit_hubris(physics.to_dict())
         if hit:
             ctx.log(msg)
+            cfg = getattr(BoneConfig, "CYCLE", None)
+            boost = getattr(cfg, "HUBRIS_ATP_BOOST", 20.0) if cfg else 20.0
+            damage = getattr(cfg, "HUBRIS_DAMAGE", 15.0) if cfg else 15.0
+
             if evt == "FLOW_BOOST":
-                self.eng.bio.mito.state.atp_pool += 20.0
+                self.eng.bio.mito.state.atp_pool += boost
             elif evt == "ICARUS_CRASH":
-                damage = 15.0
                 msg_impact = LoreManifest.get_instance().get_ux(
                     "cycle_strings",
                     "metabolism_impact"
@@ -453,7 +470,8 @@ class MetabolismPhase(SimulationPhase):
             )
             if repair and repair["success"]:
                 ctx.log(repair["msg"])
-                heal_amt = 20.0
+                cfg = getattr(BoneConfig, "CYCLE", None)
+                heal_amt = getattr(cfg, "KINTSUGI_HEAL_AMT", 20.0) if cfg else 20.0
 
                 if hasattr(self.eng.mind.mem, "record_scar"):
                     self.eng.mind.mem.record_scar(
@@ -476,11 +494,14 @@ class MetabolismPhase(SimulationPhase):
                 "metabolism_therapy"
             )
             ctx.log(f"{Prisma.GRN}{msg}{Prisma.RST}")
+            cfg = getattr(BoneConfig, "CYCLE", None)
+            t_heal = getattr(cfg, "THERAPY_HEAL_AMT", 5.0) if cfg else 5.0
+
             if self.eng.bio.biometrics:
                 self.eng.bio.biometrics.health = min(
-                    BoneConfig.MAX_HEALTH, self.eng.bio.biometrics.health + 5.0
+                    BoneConfig.MAX_HEALTH, self.eng.bio.biometrics.health + t_heal
                 )
-            self.eng.health = min(BoneConfig.MAX_HEALTH, self.eng.health + 5.0)
+            self.eng.health = min(BoneConfig.MAX_HEALTH, self.eng.health + t_heal)
 
     def _check_autophagy(self, ctx: CycleContext):
         if self.eng.bio.mito.state.atp_pool <= 0:
@@ -490,7 +511,10 @@ class MetabolismPhase(SimulationPhase):
                 ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
 
     def _check_ros_toxicity(self, ctx: CycleContext):
-        if self.eng.bio.mito.state.ros_buildup >= 100.0:
+        cfg = getattr(BoneConfig, "CYCLE", None)
+        ros_limit = getattr(cfg, "ROS_PANIC_THRESHOLD", 100.0) if cfg else 100.0
+
+        if self.eng.bio.mito.state.ros_buildup >= ros_limit:
             msg = LoreManifest.get_instance().get_ux(
                 "cycle_strings",
                 "metabolism_panic"

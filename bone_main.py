@@ -465,9 +465,13 @@ class BoneAmanita:
 
     def _update_host_stats(self, packet, turn_start):
         self.observer.clock_out(turn_start)
-        burn_proxy = max(1.0, self.observer.last_cycle_duration * 5.0)
+        cfg = getattr(BoneConfig, "MAIN", None)
+        burn_mult = getattr(cfg, "HOST_BURN_MULT", 5.0) if cfg else 5.0
+        nov_mult = getattr(cfg, "HOST_NOVELTY_MULT", 10.0) if cfg else 10.0
+
+        burn_proxy = max(1.0, self.observer.last_cycle_duration * burn_mult)
         novelty = packet.get("physics", {}).get("vector", {}).get("novelty", 0.5)
-        self.host_stats.efficiency_index = min(1.0, (novelty * 10.0) / burn_proxy)
+        self.host_stats.efficiency_index = min(1.0, (novelty * nov_mult) / burn_proxy)
         self.host_stats.latency = self.observer.last_cycle_duration
 
     def process_turn(
@@ -530,8 +534,14 @@ class BoneAmanita:
             last_phys = getattr(self.cortex, "last_physics", {})
             return self.trigger_death(last_phys)
         if not is_system and hasattr(self, "soul") and hasattr(self.soul, "anchor"):
-            if self.host_stats.efficiency_index < 0.6:
-                reliance_proxy = 0.9 if self.host_stats.efficiency_index < 0.4 else 0.5
+            cfg = getattr(BoneConfig, "MAIN", None)
+            eff_warn = getattr(cfg, "DOMESTICATION_EFF_WARN", 0.6) if cfg else 0.6
+            eff_crit = getattr(cfg, "DOMESTICATION_EFF_CRIT", 0.4) if cfg else 0.4
+            rel_high = getattr(cfg, "RELIANCE_HIGH", 0.9) if cfg else 0.9
+            rel_low = getattr(cfg, "RELIANCE_LOW", 0.5) if cfg else 0.5
+
+            if self.host_stats.efficiency_index < eff_warn:
+                reliance_proxy = rel_high if self.host_stats.efficiency_index < eff_crit else rel_low
                 self.soul.anchor.check_domestication(reliance_proxy)
         try:
             cortex_packet = self.cortex.process(
@@ -719,16 +729,23 @@ class BoneAmanita:
         return self.chronos.get_crash_path(prefix)
 
     def _ethical_audit(self):
-        if self.tick_count % 3 != 0 and self.health > (BoneConfig.MAX_HEALTH * 0.3):
+        cfg = getattr(BoneConfig, "MAIN", None)
+        audit_freq = getattr(cfg, "ETHICAL_AUDIT_FREQ", 3) if cfg else 3
+        bypass_ratio = getattr(cfg, "ETHICAL_HEALTH_BYPASS", 0.3) if cfg else 0.3
+
+        max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+
+        if self.tick_count % audit_freq != 0 and self.health > (max_h * bypass_ratio):
             return False
-        DESPERATION_THRESHOLD = 0.7
-        CATHARSIS_HEAL_AMOUNT = 30.0
-        CATHARSIS_DECAY = 0.1
-        MAX_HEALTH_CAP = 100.0
+
+        desp_thresh = getattr(cfg, "DESPERATION_THRESHOLD", 0.7) if cfg else 0.7
+        cath_heal = getattr(cfg, "CATHARSIS_HEAL_AMOUNT", 30.0) if cfg else 30.0
+        cath_decay = getattr(cfg, "CATHARSIS_DECAY", 0.1) if cfg else 0.1
+
         trauma_sum = sum(self.trauma_accum.values())
-        health_ratio = self.health / BoneConfig.MAX_HEALTH
+        health_ratio = self.health / max_h
         desperation = trauma_sum * (1.0 - health_ratio)
-        if desperation > DESPERATION_THRESHOLD:
+        if desperation > desp_thresh:
             msg = LoreManifest.get_instance().get_ux(
                 "main_strings",
                 "mercy_venting",
@@ -739,7 +756,7 @@ class BoneAmanita:
                 "SYS",
             )
             for k in self.trauma_accum:
-                self.trauma_accum[k] *= CATHARSIS_DECAY
+                self.trauma_accum[k] *= cath_decay
                 if self.trauma_accum[k] < 0.01:
                     self.trauma_accum[k] = 0.0
             msg_cath = LoreManifest.get_instance().get_ux(
@@ -751,7 +768,7 @@ class BoneAmanita:
                 f"{Prisma.CYN}{msg_cath}{Prisma.RST}",
                 "SENSATION",
             )
-            self.health = min(self.health + CATHARSIS_HEAL_AMOUNT, MAX_HEALTH_CAP)
+            self.health = min(self.health + cath_heal, max_h)
             return True
         return False
 

@@ -133,7 +133,10 @@ class SubconsciousStrata:
 
     def bury(self, fossil_data: Dict):
         try:
-            if len(self.index) > 1000:
+            cfg = getattr(BoneConfig, "SPORES", None)
+            max_idx = getattr(cfg, "MAX_INDEX_SIZE", 1000) if cfg else 1000
+
+            if len(self.index) > max_idx:
                 self._prune_strata()
             with open(self.filepath, "a", encoding="utf-8") as f:
                 fossil_data["buried_at"] = time.time()
@@ -350,7 +353,11 @@ class MycelialNetwork:
         infected, parasite_msg = self.parasite.infect(physics, stamina)
         if infected and parasite_msg:
             logs.append(parasite_msg)
-        if random.random() < 0.10:
+
+        cfg = getattr(BoneConfig, "SPORES", None)
+        chorus_c = getattr(cfg, "CHORUS_CHANCE", 0.10) if cfg else 0.10
+
+        if random.random() < chorus_c:
             chorus_log = self._poll_chorus(clean_words, physics)
             if chorus_log:
                 logs.append(chorus_log)
@@ -369,9 +376,13 @@ class MycelialNetwork:
         if echo_count > 0:
             physics["voltage"] = physics.get("voltage", 0.0) + total_voltage_boost
             physics["narrative_drag"] = (
-                physics.get("narrative_drag", 0.0) + total_drag_penalty
+                    physics.get("narrative_drag", 0.0) + total_drag_penalty
             )
-            if total_voltage_boost > 4.0:
+
+            cfg = getattr(BoneConfig, "SPORES", None)
+            heavy_v = getattr(cfg, "ECHO_VOLTAGE_HEAVY", 4.0) if cfg else 4.0
+
+            if total_voltage_boost > heavy_v:
                 msg_h = LoreManifest.get_instance().get_ux("spore_strings", "net_echo_heavy") or ""
                 return f"{Prisma.VIOLET}{msg_h.format(drag=total_drag_penalty)}{Prisma.RST}" if msg_h else None
             elif total_voltage_boost > 0:
@@ -394,19 +405,27 @@ class MycelialNetwork:
             "significance": significance,
             "timestamp": time.time(),
         }
-        if significance > self.memory_core.consolidation_threshold:
+
+        cfg = getattr(BoneConfig, "SPORES", None)
+        consolidation = getattr(cfg, "CONSOLIDATION_THRESHOLD", 5.0) if cfg else 5.0
+
+        if significance > consolidation:
             self.memory_core.short_term_buffer.append(engram)
             return True
         return False
 
     def check_for_resurrection(
-        self, input_words: List[str], voltage: float
+            self, input_words: List[str], voltage: float
     ) -> Optional[str]:
-        if voltage < 60.0:
+        cfg = getattr(BoneConfig, "SPORES", None)
+        v_min = getattr(cfg, "RESURRECTION_VOLTAGE_MIN", 60.0) if cfg else 60.0
+        r_chance = getattr(cfg, "RESURRECTION_CHANCE", 0.20) if cfg else 0.20
+
+        if voltage < v_min:
             return None
         for word in input_words:
             if word in self.subconscious.index:
-                if random.random() < 0.20:
+                if random.random() < r_chance:
                     memory = self.subconscious.dredge(word)
                     if memory:
                         self.graph[word] = {"edges": memory["edges"], "last_tick": 0}
@@ -427,7 +446,9 @@ class MycelialNetwork:
         valuable = self._filter_valuable_matter(clean_words)
         self.cortical_stack.extend(valuable)
         if len(self.graph) > BoneConfig.MAX_MEMORY_CAPACITY:
-            if desperation_level < 0.6:
+            cfg = getattr(BoneConfig, "SPORES", None)
+            desp_thresh = getattr(cfg, "DESPERATION_SATURATION_THRESH", 0.6) if cfg else 0.6
+            if desperation_level < desp_thresh:
                 msg_high = LoreManifest.get_instance().get_ux("spore_strings", "net_sat_high") or ""
                 return msg_high, []
             victim, log_msg = self.memory_core.cannibalize(
@@ -732,8 +753,11 @@ class MycelialNetwork:
     def cleanup_old_sessions(self, limbo_layer=None):
         files = self.loader.list_spores()
         removed = 0
-        max_files = 25
-        max_age = 86400
+
+        cfg = getattr(BoneConfig, "SPORES", None)
+        max_files = getattr(cfg, "MAX_FILES", 25) if cfg else 25
+        max_age = getattr(cfg, "MAX_AGE_SECONDS", 86400) if cfg else 86400
+
         current_time = time.time()
         for i, (path, age, fname) in enumerate(files):
             file_age = current_time - age
@@ -825,7 +849,10 @@ class BioParasite:
         self.mem = memory_ref
         self.lex = lexicon_ref
         self.spores_deployed = 0
-        self.MAX_SPORES = 8
+
+        cfg = getattr(BoneConfig, "SPORES", None)
+        self.MAX_SPORES = getattr(cfg, "PARASITE_MAX_SPORES", 8) if cfg else 8
+
         self.name = "PARASITE"
         self.color = Prisma.RED
         self.archetypes = {
@@ -855,10 +882,16 @@ class BioParasite:
 
     def infect(self, physics_packet, stamina):
         psi = physics_packet.get("psi", 0.0)
-        if stamina > 40.0 and psi < 0.6:
+
+        cfg = getattr(BoneConfig, "SPORES", None)
+        p_stam = getattr(cfg, "PARASITE_STAMINA_MAX", 40.0) if cfg else 40.0
+        p_psi = getattr(cfg, "PARASITE_PSI_MIN", 0.6) if cfg else 0.6
+        p_decay = getattr(cfg, "PARASITE_DECAY_CHANCE", 0.2) if cfg else 0.2
+
+        if stamina > p_stam and psi < p_psi:
             return False, None
         if self.spores_deployed >= self.MAX_SPORES:
-            if random.random() < 0.2:
+            if random.random() < p_decay:
                 self.spores_deployed = max(0, self.spores_deployed - 1)
             return False, None
         graph = self.mem.graph
@@ -872,8 +905,12 @@ class BioParasite:
         parasite = random.choice(abstract_candidates)
         if parasite in graph[host]["edges"]:
             return False, None
-        is_metaphor = psi > 0.7
-        weight = 8.88
+
+        m_psi = getattr(cfg, "PARASITE_METAPHOR_PSI", 0.7) if cfg else 0.7
+        p_wt = getattr(cfg, "PARASITE_WEIGHT", 8.88) if cfg else 8.88
+
+        is_metaphor = psi > m_psi
+        weight = p_wt
         graph[host]["edges"][parasite] = weight
         if parasite not in graph:
             graph[parasite] = {"edges": {}, "last_tick": 0}
