@@ -119,8 +119,8 @@ class TheForge:
         if kinetic > 3:
             return (
                 True,
-                LoreManifest.get_instance().get_ux("machine_strings", "forge_safety_scissors"),"SAFETY_SCISSORS")
-        return True, LoreManifest.get_instance().get_ux("machine_strings", "forge_anchor_stone"), "ANCHOR_STONE"
+                LoreManifest.get_instance().get_ux("machine_strings", "forge_safety_scissors") or "", "SAFETY_SCISSORS")
+        return True, LoreManifest.get_instance().get_ux("machine_strings", "forge_anchor_stone") or "", "ANCHOR_STONE"
 
     def attempt_crafting(
         self, physics: Dict, inventory_list: List[str]) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
@@ -231,18 +231,18 @@ class TheTheremin:
             return False, resin_flow, self.logs.get("COLLAPSE", ""), "AIRSTRIKE",
         if self.classical_turns > 3:
             critical_event = "CORROSION"
-            theremin_msg = f"{theremin_msg or ''}{LoreManifest.get_instance().get_ux('machine_strings', 'theremin_corrosion')}"
+            theremin_msg = f"{theremin_msg or ''}{LoreManifest.get_instance().get_ux('machine_strings', 'theremin_corrosion') or ''}"
         if self.decoherence_buildup > self.AMBER_THRESHOLD:
             self.is_stuck = True
-            theremin_msg = f"{theremin_msg or ''}{LoreManifest.get_instance().get_ux('machine_strings', 'theremin_stuck')}"
+            theremin_msg = f"{theremin_msg or ''}{LoreManifest.get_instance().get_ux('machine_strings', 'theremin_stuck') or ''}"
         elif self.is_stuck and self.decoherence_buildup < 5.0:
             self.is_stuck = False
-            theremin_msg = f"{theremin_msg or ''}{LoreManifest.get_instance().get_ux('machine_strings', 'theremin_free')}"
+            theremin_msg = f"{theremin_msg or ''}{LoreManifest.get_instance().get_ux('machine_strings', 'theremin_free') or ''}"
         return self.is_stuck, resin_flow, theremin_msg, critical_event
 
     def get_readout(self):
         status = "STUCK" if self.is_stuck else "FLOW"
-        msg = LoreManifest.get_instance().get_ux("machine_strings", "theremin_readout")
+        msg = LoreManifest.get_instance().get_ux("machine_strings", "theremin_readout") or ""
         return msg.format(resin=self.decoherence_buildup, status=status)
 
 @dataclass
@@ -276,7 +276,7 @@ class PanicRoom:
         safe_packet.kappa = 0.0
         safe_packet.vector = {k: 0.0 for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "LAMBDA", "CHI"]}
         safe_packet.clean_words = ["white", "room", "safe", "mode"]
-        safe_packet.raw_text = LoreManifest.get_instance().get_ux("machine_strings", "panic_physics_text")
+        safe_packet.raw_text = LoreManifest.get_instance().get_ux("machine_strings", "panic_physics_text") or ""
         safe_packet.flow_state = "SAFE_MODE"
         safe_packet.zone = "PANIC_ROOM"
         safe_packet.manifold = "WHITE_ROOM"
@@ -284,7 +284,7 @@ class PanicRoom:
 
     @staticmethod
     def get_safe_bio(previous_state=None):
-        log_msg = LoreManifest.get_instance().get_ux("machine_strings", "panic_bio_log")
+        log_msg = LoreManifest.get_instance().get_ux("machine_strings", "panic_bio_log") or ""
         base = {"is_alive": True, "atp": 10.0, "respiration": "NECROSIS", "enzyme": "NONE",
                 "chem": {"DOP": 0.0, "COR": 0.0, "OXY": 0.0, "SER": 0.0, "ADR": 0.0, "MEL": 0.0, },
                 "logs": [f"{Prisma.RED}{log_msg}{Prisma.RST}"], }
@@ -299,7 +299,7 @@ class PanicRoom:
     @staticmethod
     def get_safe_mind():
         return {"lens": "GORDON", "role": "Panic Room Overseer", "thought": LoreManifest.get_instance().get_ux(
-            "machine_strings", "panic_mind_thought"), }
+            "machine_strings", "panic_mind_thought") or "", }
 
     @staticmethod
     def get_safe_soul():

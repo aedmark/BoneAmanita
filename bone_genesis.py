@@ -1,3 +1,5 @@
+""" bone_genesis.py """
+
 from typing import Dict, Any, Set
 from bone_core import EventBus, LoreManifest
 from bone_akashic import TheAkashicRecord
@@ -11,7 +13,6 @@ from bone_spores import LiteraryReproduction
 from bone_drivers import DriverRegistry, BoneConsultant
 from bone_config import BoneConfig
 
-
 class BoneGenesis:
     @staticmethod
     def ignite(
@@ -19,16 +20,11 @@ class BoneGenesis:
     ) -> Dict[str, Any]:
         events = events_ref or EventBus()
         if events_ref:
-            msg = LoreManifest.get_instance().get_ux(
-                "genesis_strings", "ignite_log"
-            )
+            msg = LoreManifest.get_instance().get_ux("genesis_strings", "ignite_log") or ""
             events.log(msg, "GENESIS")
         else:
-            msg = LoreManifest.get_instance().get_ux(
-                "genesis_strings", "ignite_print"
-            )
+            msg = LoreManifest.get_instance().get_ux("genesis_strings", "ignite_print") or ""
             print(msg)
-
         lore = LoreManifest()
         akashic = TheAkashicRecord(lore_manifest=lore, events_ref=events)
         akashic.setup_listeners(events)
@@ -37,15 +33,8 @@ class BoneGenesis:
         mode_settings = config.get("mode_settings", {})
         suppressed = set(mode_settings.get("village_suppression", []))
         boot_mode = config.get("boot_mode", "ADVENTURE")
-        village_bundle = BoneGenesis._summon_village(
-            events, embryo, akashic, suppressed, boot_mode
-        )
-        soul = NarrativeSelf(
-            engine_ref=None,
-            events_ref=events,
-            memory_ref=embryo.mind.mem,
-            akashic_ref=akashic,
-        )
+        village_bundle = BoneGenesis._summon_village(events, embryo, akashic, suppressed, boot_mode)
+        soul = NarrativeSelf(engine_ref=None, events_ref=events, memory_ref=embryo.mind.mem, akashic_ref=akashic, )
         if embryo.soul_legacy:
             soul.load_from_dict(embryo.soul_legacy)
         oroboros = TheOroboros()
@@ -56,20 +45,13 @@ class BoneGenesis:
             live_bio_state = embryo.bio.to_dict()
             logs = oroboros.apply_legacy(dummy_phys, live_bio_state)
             if logs:
-                msg_scars = LoreManifest.get_instance().get_ux(
-                    "genesis_strings",
-                    "legacy_scars"
-                )
+                msg_scars = LoreManifest.get_instance().get_ux("genesis_strings", "legacy_scars") or ""
                 events.log(msg_scars.format(logs=", ".join(logs)), "OROBOROS")
                 if getattr(embryo.physics, "dynamics", None):
                     if hasattr(embryo.physics.dynamics, "base_drag"):
-                        embryo.physics.dynamics.base_drag += dummy_phys[
-                            "narrative_drag"
-                        ]
+                        embryo.physics.dynamics.base_drag += dummy_phys["narrative_drag"]
                     elif hasattr(embryo.physics.dynamics, "strain_gauge"):
-                        embryo.physics.dynamics.strain_gauge += (
-                            dummy_phys.get("narrative_drag", 0.0) * 0.1
-                        )
+                        embryo.physics.dynamics.strain_gauge += (dummy_phys.get("narrative_drag", 0.0) * 0.1)
                 if embryo.bio.biometrics:
                     biometrics = live_bio_state.get("biometrics", {})
                     max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
@@ -78,22 +60,12 @@ class BoneGenesis:
                     embryo.bio.biometrics.stamina = biometrics.get("stamina", max_s)
                 if embryo.bio.mito:
                     start_atp = getattr(cfg_gen, "STARTING_ATP", 60.0) if cfg_gen else 60.0
-                    embryo.bio.mito.state.atp_pool = live_bio_state.get("mito", {}).get(
-                        "atp", start_atp
-                    )
+                    embryo.bio.mito.state.atp_pool = live_bio_state.get("mito", {}).get("atp", start_atp)
         drivers = DriverRegistry(events)
         symbiosis = SymbiosisManager(events)
-        return {
-            "events": events,
-            "akashic": akashic,
-            "embryo": embryo,
-            "village": village_bundle,
-            "soul": soul,
-            "oroboros": oroboros,
-            "drivers": drivers,
-            "consultant": village_bundle["consultant"],
-            "symbiosis": symbiosis,
-        }
+        return {"events": events, "akashic": akashic, "embryo": embryo, "village": village_bundle, "soul": soul,
+                "oroboros": oroboros, "drivers": drivers, "consultant": village_bundle["consultant"],
+                "symbiosis": symbiosis, }
 
     @staticmethod
     def _summon_village(

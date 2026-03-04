@@ -1,7 +1,8 @@
+""" bone_lexicon.py"""
+
 import json, random, re, string, time, unicodedata, os
 from typing import Tuple, Dict, Set, Optional, List
 from bone_core import Prisma, LoreManifest
-
 
 class LexiconStore:
     HIVE_FILENAME = "cortex_hive.json"
@@ -9,39 +10,11 @@ class LexiconStore:
     _TRANSLATOR = str.maketrans(_PUNCTUATION, " " * len(_PUNCTUATION))
 
     def __init__(self):
-        self.categories = {
-            "heavy",
-            "kinetic",
-            "explosive",
-            "constructive",
-            "abstract",
-            "photo",
-            "aerobic",
-            "thermal",
-            "cryo",
-            "suburban",
-            "play",
-            "sacred",
-            "buffer",
-            "antigen",
-            "diversion",
-            "meat",
-            "gradient_stop",
-            "liminal",
-            "void",
-            "bureau_buzzwords",
-            "crisis_term",
-            "harvest",
-            "pareidolia",
-            "passive_watch",
-            "repair_trigger",
-            "refusal_guru",
-            "cursed",
-            "sentiment_pos",
-            "sentiment_neg",
-            "sentiment_negators",
-            "toxin",
-        }
+        self.categories = {"heavy", "kinetic", "explosive", "constructive", "abstract", "photo", "aerobic", "thermal",
+                           "cryo", "suburban", "play", "sacred", "buffer", "antigen", "diversion", "meat",
+                           "gradient_stop", "liminal", "void", "bureau_buzzwords", "crisis_term", "harvest",
+                           "pareidolia", "passive_watch", "repair_trigger", "refusal_guru", "cursed", "sentiment_pos",
+                           "sentiment_neg", "sentiment_negators", "toxin", }
         self.VOCAB: Dict[str, Set[str]] = {k: set() for k in self.categories}
         self.LEARNED_VOCAB: Dict[str, Dict[str, int]] = {}
         self.USER_FLAGGED_BIAS = set()
@@ -84,16 +57,10 @@ class LexiconStore:
                     self._index_word(word, cat)
                     count += 1
             self.hive_loaded = True
-            msg = LoreManifest.get_instance().get_ux(
-                "lexicon_strings",
-                "hive_restored"
-            )
+            msg = LoreManifest.get_instance().get_ux("lexicon_strings", "hive_restored") or ""
             print(f"{Prisma.CYN}{msg.format(count=count)}{Prisma.RST}")
         except (IOError, json.JSONDecodeError) as e:
-            msg = LoreManifest.get_instance().get_ux(
-                "lexicon_strings",
-                "hive_corruption"
-            )
+            msg = LoreManifest.get_instance().get_ux("lexicon_strings", "hive_corruption") or ""
             print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
 
     def save_hive(self):
@@ -139,27 +106,17 @@ class LexiconStore:
                 results[cat].append(w)
         return results
 
-
 class LinguisticAnalyzer:
     def __init__(self, store_ref):
         self.store = store_ref
         self._TRANSLATOR = getattr(self.store, "_TRANSLATOR", None)
-
-        # Pull configuration from JSON via LoreManifest
         ling_data = LoreManifest.get_instance().get("LINGUISTICS") or {}
-
-        # Reconstruct Python sets and tuples from the JSON lists/strings
         raw_phonetics = ling_data.get("PHONETICS", {})
         self.PHONETICS = {k: set(v) for k, v in raw_phonetics.items()}
-
         raw_roots = ling_data.get("ROOTS", {})
         self.ROOTS = {k: tuple(v) for k, v in raw_roots.items()}
-
-        self.thresholds = ling_data.get("THRESHOLDS", {
-            "heavy_density": 0.55,
-            "play_vitality": 0.6,
-            "kinetic_flow": 0.6,
-        })
+        self.thresholds = ling_data.get("THRESHOLDS",
+                                        {"heavy_density": 0.55, "play_vitality": 0.6, "kinetic_flow": 0.6, })
         self.biases = ling_data.get("BIASES", {"heavy": 1.0, "play": 1.0, "kinetic": 1.0})
         self.dimension_map = ling_data.get("DIMENSION_MAP", {})
 
@@ -195,17 +152,8 @@ class LinguisticAnalyzer:
         words = self.sanitize(text)
         if not words:
             return {}
-        dims = {
-            "VEL": 0.0,
-            "STR": 0.0,
-            "CHI": 0.0,
-            "PHI": 0.0,
-            "PSI": 0.0,
-            "BET": 0.0,
-            "DEL": 0.0,
-            "LAMBDA": 0.0,
-            "ENT": 0.0,
-        }
+        dims = {"VEL": 0.0, "STR": 0.0, "CHI": 0.0, "PHI": 0.0, "PSI": 0.0, "BET": 0.0, "DEL": 0.0, "LAMBDA": 0.0,
+                "ENT": 0.0, }
         for w in words:
             cats = self.store.get_categories_for_word(w)
             for cat in cats:
@@ -239,11 +187,9 @@ class LinguisticAnalyzer:
         if not text:
             return []
         try:
-            normalized = (
-                unicodedata.normalize("NFKD", text)
+            normalized = (unicodedata.normalize("NFKD", text)
                 .encode("ASCII", "ignore")
-                .decode("utf-8")
-            )
+                .decode("utf-8"))
         except (TypeError, AttributeError):
             normalized = text
         xlate = self._TRANSLATOR if self._TRANSLATOR else str.maketrans("", "")
@@ -264,8 +210,7 @@ class LinguisticAnalyzer:
         char_to_sound = {
             char: sound_type
             for sound_type, chars in self.PHONETICS.items()
-            for char in chars
-        }
+            for char in chars}
         for char in w:
             if sound_type := char_to_sound.get(char):
                 counts[sound_type] += 1
@@ -377,19 +322,12 @@ class LexiconService:
             cls.compile_antigens()
             cls.SOLVENTS = cls._STORE.SOLVENTS
             total_words = sum(len(s) for s in cls._STORE.VOCAB.values())
-            msg = LoreManifest.get_instance().get_ux(
-                "lexicon_strings",
-                "sys_nominal",
-                "[LEXICON]: Systems Nominal. {total_words} words loaded.",
-            )
+            msg = LoreManifest.get_instance().get_ux("lexicon_strings", "sys_nominal") or ""
             print(f"{Prisma.GRN}{msg.format(total_words=total_words)}{Prisma.RST}")
 
         except Exception as e:
             cls._INITIALIZED = False
-            msg = LoreManifest.get_instance().get_ux(
-                "lexicon_strings",
-                "sys_init_fail"
-            )
+            msg = LoreManifest.get_instance().get_ux("lexicon_strings", "sys_init_fail") or ""
             print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
             raise e
 
@@ -485,9 +423,7 @@ class LexiconService:
     def save(cls):
         if cls._INITIALIZED and cls._STORE:
             cls._STORE.save_hive()
-            msg = LoreManifest.get_instance().get_ux(
-                "lexicon_strings", "hive_saved"
-            )
+            msg = LoreManifest.get_instance().get_ux("lexicon_strings", "hive_saved") or ""
             print(f"{Prisma.GRN}{msg}{Prisma.RST}")
 
     @classmethod

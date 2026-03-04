@@ -438,7 +438,12 @@
     "dream_hallucination": "\ud83d\udc41\ufe0f HALLUCINATION: {txt}",
     "defrag_empty": "No memories to defrag.",
     "defrag_pruned": "DEFRAG: Pruned {count} dead nodes ({joined}...). Neural load lightened.",
-    "defrag_efficient": "DEFRAG: Memory structure is efficient. No pruning needed."
+    "defrag_efficient": "DEFRAG: Memory structure is efficient. No pruning needed.",
+    "cortex_prefix_manic": "\n[CRITICAL VOLTAGE SURGE: MANIC COGNITION ACTIVE. CASUAL DIALOGUE OVERRIDDEN.]\nRAW CORTEX STREAM:\n>> ",
+    "cortex_prefix_high": "\n[HIGH VOLTAGE DETECTED. ACCELERATED THOUGHT.]\nRAW CORTEX STREAM:\n>> ",
+    "cortex_prefix_low": "\n[SYSTEM EXHAUSTED. LOW ENERGY PROSE.]\nSystem:",
+    "cortex_prefix_norm": "\nSystem:",
+    "noetic_ignition": "Cognition active. Ignition: {ignition:.2f}"
   },
   "council_strings": {
     "strange_loop_fatal": "\u221e FATAL REGRESS DETECTED: Abstraction layer unstable. GROUNDING INITIATED.",
@@ -792,5 +797,35 @@
     "energy_label": "Energy:  ",
     "bar_filled": "█",
     "bar_empty": "░"
+  },
+  "physics_strings": {
+    "gatekeeper_starved": "Energy critical. The inputs dissolve into the void.",
+    "gatekeeper_toxic": "IMMUNE REACTION: Input rejected as pathogenic.",
+    "gatekeeper_cursed": "The Gatekeeper recoils. Cursed syntax detected.",
+    "gatekeeper_syntax": "The mechanism jams. Syntax anomaly detected.",
+    "gatekeeper_overload": "Input too long. Compress your thought.",
+    "cosmic_gravity": "⚓ GRAVITY: The narrative is heavy. (Drag {drag:.1f})",
+    "cosmic_void": "VOID: Drifting outside the filaments.",
+    "cosmic_nebula": "NEBULA: Floating near '{node}' (Mass {mass}). Not enough mass for orbit.",
+    "cosmic_lagrange": "LAGRANGE: Caught between '{p}' and '{s}'",
+    "cosmic_flow": "FLOW: Streaming towards '{node}'",
+    "cosmic_orbit": "ORBIT: Circling '{node}' (Mass {mass})",
+    "anchor_failed": "⚡ SNAP! The narrative current was too strong. Anchor failed.",
+    "anchor_holding": "⚓ ANCHORED: Resisting drift to '{proposed_zone}' (Strain {strain:.1f}/{limit})",
+    "zone_migration": ">>> MIGRATION: {old} -> {proposed_zone}.",
+    "hubris_detected": "⚠️ HUBRIS DETECTED: Voltage ({voltage:.1f}v) exceeds structural integrity. Wings melting.",
+    "hubris_flow": "🌊 SURFACE TENSION OPTIMAL: Entering Flow State.",
+    "stabilizer_fuse": "⚡ FUSE BLOWN: Voltage > {voltage}V.",
+    "stabilizer_domestication": "⚖️ DOMESTICATION: Drag +{drag:.1f}"
+  },
+  "config_strings": {
+    "preset_tuned": "Tuned {sector}.{param}: {old_val} -> {new_val}",
+    "repair_floor_max": "⚠️ PHYSICS REPAIR: Floor > Max. Clamped Floor.",
+    "repair_drag_halt": "⚠️ PHYSICS REPAIR: Drag Floor > Halt. Clamped Floor.",
+    "pareidolia_smoke": "👀 PAREIDOLIA: You see a face in the smoke.",
+    "tune_sector_err": "❌ SECTOR ERROR: '{sector}' does not exist.",
+    "tune_param_err": "❌ PARAM ERROR: '{parameter}' not found in {sector}.",
+    "tune_type_err": "⚠️ TYPE MISMATCH: Cannot replace {curr_type} with {new_type}.",
+    "tune_success": "✅ TUNED: {sector}.{parameter} -> {value}"
   }
 }

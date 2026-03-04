@@ -6,10 +6,8 @@ from bone_config import BonePresets, BoneConfig
 from bone_lexicon import LexiconService
 from bone_types import PhysicsPacket
 
-
 SCENARIOS = LoreManifest.get_instance().get("scenarios") or {}
 LENSES = (LoreManifest.get_instance().get("narrative_data") or {}).get("lenses", {})
-
 
 class SoulDriver:
     def __init__(self, soul_ref):
@@ -30,14 +28,11 @@ class SoulDriver:
         chaos = min(0.5, (paradox - 5.0) * 0.05) if paradox > 5.0 else 0.0
         dignity = 1.0
         if hasattr(self.soul, "anchor") and hasattr(
-            self.soul.anchor, "dignity_reserve"
-        ):
+            self.soul.anchor, "dignity_reserve"):
             dignity = max(0.2, self.soul.anchor.dignity_reserve / 100.0)
         return {
             p: (w + random.uniform(-chaos, chaos)) * dignity
-            for p, w in base_weights.items()
-        }
-
+            for p, w in base_weights.items()}
 
 class UserProfile:
     def __init__(self, name="USER"):
@@ -49,8 +44,7 @@ class UserProfile:
             "photo": 0.0,
             "aerobic": 0.0,
             "thermal": 0.0,
-            "cryo": 0.0,
-        }
+            "cryo": 0.0,}
         self.confidence = 0
         self.file_path = "user_profile.json"
         self.load()
@@ -66,8 +60,7 @@ class UserProfile:
             density = counts.get(cat, 0) / total_words
             target = 1.0 if density > 0.15 else (-0.5 if density == 0 else 0.0)
             self.affinities[cat] = (alpha * target) + (
-                (1 - alpha) * self.affinities[cat]
-            )
+                (1 - alpha) * self.affinities[cat])
 
     def get_preferences(self):
         likes = [k for k, v in self.affinities.items() if v > 0.3]
@@ -146,10 +139,8 @@ class EnneagramDriver:
         sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         winner, win_score = sorted_scores[0]
         runner_up, run_score = sorted_scores[1]
-
         cfg = getattr(BoneConfig, "DRIVERS", None)
         hybrid_gap = getattr(cfg, "ENNEAGRAM_HYBRID_GAP", 0.5) if cfg else 0.5
-
         if (win_score - run_score) < hybrid_gap:
             k1 = "THE OBSERVER" if winner == "NARRATOR" else winner
             k2 = "THE OBSERVER" if runner_up == "NARRATOR" else runner_up
@@ -161,22 +152,14 @@ class EnneagramDriver:
             elif hybrid_key_b in LENSES:
                 final_hybrid = hybrid_key_b
             if final_hybrid:
-                msg = LoreManifest.get_instance().get_ux(
-                    "driver_strings",
-                    "ennea_synthesis"
-                )
+                msg = LoreManifest.get_instance().get_ux("driver_strings", "ennea_synthesis") or ""
                 return (
                     final_hybrid,
                     "SYNTHESIS",
-                    msg.format(winner=winner, runner_up=runner_up),
-                )
-        msg_winner = LoreManifest.get_instance().get_ux(
-            "driver_strings",
-            "ennea_winner"
-        )
+                    msg.format(winner=winner, runner_up=runner_up),)
+        msg_winner = LoreManifest.get_instance().get_ux("driver_strings", "ennea_winner") or ""
         reason = msg_winner.format(
-            winner=winner, score=scores[winner], v=p_vol, d=p_drag
-        )
+            winner=winner, score=scores[winner], v=p_vol, d=p_drag)
         state_map = LoreManifest.get_instance().get("DRIVER_CONFIG", "PERSONA_STATE_MAP") or {}
         return winner, state_map.get(winner, "ACTIVE"), reason
 
@@ -191,8 +174,7 @@ class EnneagramDriver:
         else:
             self.pending_persona = candidate
             self.stability_counter = 1
-
-        msg_shift = LoreManifest.get_instance().get_ux("driver_strings", "ennea_shift")
+        msg_shift = LoreManifest.get_instance().get_ux("driver_strings", "ennea_shift") or ""
         if "HYBRID" in candidate:
             self.current_persona = candidate
             self.stability_counter = 0
@@ -203,21 +185,14 @@ class EnneagramDriver:
             self.stability_counter = 0
             self.pending_persona = None
             return self.current_persona, state_desc, msg_shift.format(reason=reason)
-
-        msg_resisting = LoreManifest.get_instance().get_ux(
-            "driver_strings",
-            "ennea_resisting"
-        )
+        msg_resisting = LoreManifest.get_instance().get_ux("driver_strings", "ennea_resisting") or ""
         return (
             self.current_persona,
             "STABLE",
             msg_resisting.format(
                 candidate=candidate,
                 count=self.stability_counter,
-                thresh=self.HYSTERESIS_THRESHOLD,
-            ),
-        )
-
+                thresh=self.HYSTERESIS_THRESHOLD,),)
 
 @dataclass
 class VSLState:
@@ -228,12 +203,10 @@ class VSLState:
     O: float = 1.0
     active_modules: List[str] = field(default_factory=list)
 
-
 class DriverRegistry:
     def __init__(self, events_ref):
         self.enneagram = EnneagramDriver(events_ref)
         self.current_focus = "NONE"
-
 
 class LiminalModule:
     def __init__(self):
@@ -243,10 +216,8 @@ class LiminalModule:
     def analyze(self, text: str, physics_vector: Dict[str, float]) -> float:
         liminal_vocab = LexiconService.get("liminal") or set()
         words = text.lower().split()
-
         void_hits = sum(1 for w in words if w in liminal_vocab)
         lexical_lambda = min(1.0, void_hits * 0.15)
-
         dark_matter_sparks = 0
         if len(words) > 1:
             categories = [LexiconService.get_current_category(w) for w in words]
@@ -258,28 +229,20 @@ class LiminalModule:
                         and c2 in ["abstract", "liminal", "void"]
                     ) or (c1 in ["abstract", "liminal", "void"] and c2 in ["heavy"]):
                         dark_matter_sparks += 1
-
         dark_matter_lambda = min(1.0, dark_matter_sparks * 0.25)
-
         vector_lambda = 0.0
         if physics_vector:
             vector_lambda = (
                 (physics_vector.get("PSI", 0) * 0.5)
                 + (physics_vector.get("ENT", 0) * 0.3)
-                + (physics_vector.get("DEL", 0) * 0.2)
-            )
-
+                + (physics_vector.get("DEL", 0) * 0.2))
         raw_target = lexical_lambda + dark_matter_lambda + vector_lambda
         self.lambda_val = (self.lambda_val * 0.7) + (raw_target * 0.15)
-
         cfg = getattr(BoneConfig, "DRIVERS", None)
         scar_thresh = getattr(cfg, "LIMINAL_SCAR_THRESHOLD", 0.85) if cfg else 0.85
-
         if self.lambda_val > scar_thresh:
             self.godel_scars += 1
-
         return min(1.0, self.lambda_val)
-
 
 class SyntaxModule:
     def __init__(self):
@@ -302,7 +265,6 @@ class SyntaxModule:
         punctuation_density = sum(1 for c in text if c in ",;:-") / max(1, len(words))
         cfg = getattr(BoneConfig, "DRIVERS", None)
         punct_thresh = getattr(cfg, "SYNTAX_STRESS_PUNCTUATION", 0.2) if cfg else 0.2
-
         if punctuation_density > punct_thresh:
             self.grammatical_stress += 0.2
             target_omega -= 0.3
@@ -310,7 +272,6 @@ class SyntaxModule:
             self.grammatical_stress = max(0.0, self.grammatical_stress - 0.1)
         self.omega_val = (self.omega_val * 0.8) + (max(0.1, target_omega) * 0.2)
         return self.omega_val
-
 
 class CongruenceValidator:
     def __init__(self):
@@ -331,10 +292,8 @@ class CongruenceValidator:
             return 0.0
         raw_lens = getattr(context, "active_lens", "OBSERVER")
         archetype = raw_lens.upper().replace("THE ", "")
-
         cfg = getattr(BoneConfig, "DRIVERS", None)
         tone_score = getattr(cfg, "CONGRUENCE_BASE_TONE", 0.8) if cfg else 0.8
-
         target_data = self.map.get(archetype, {})
         target_words = set()
         if isinstance(target_data, dict):
@@ -343,16 +302,13 @@ class CongruenceValidator:
             target_words.update(target_data.get("keywords", []))
         if target_words:
             words_to_check = (
-                set(context.clean_words) if hasattr(context, "clean_words") else set()
-            )
+                set(context.clean_words) if hasattr(context, "clean_words") else set())
             hits = len(words_to_check.intersection(target_words))
             if hits > 0:
                 hit_bonus = getattr(cfg, "CONGRUENCE_HIT_BONUS", 0.1) if cfg else 0.1
                 tone_score += hit_bonus * hits
-
         max_tone = getattr(cfg, "CONGRUENCE_MAX_TONE", 1.5) if cfg else 1.5
         return min(max_tone, tone_score)
-
 
 class BoneConsultant:
     def __init__(self):
@@ -363,23 +319,17 @@ class BoneConsultant:
 
     @staticmethod
     def engage():
-        return LoreManifest.get_instance().get_ux(
-            "driver_strings", "vsl_engage"
-        )
+        return LoreManifest.get_instance().get_ux("driver_strings", "vsl_engage") or ""
 
     @staticmethod
     def disengage():
-        return LoreManifest.get_instance().get_ux(
-            "driver_strings",
-            "vsl_disengage"
-        )
+        return LoreManifest.get_instance().get_ux("driver_strings", "vsl_disengage") or ""
 
     def update_coordinates(
         self,
         user_text: str,
         bio_state: Optional[Dict] = None,
-        physics: Optional[PhysicsPacket] = None,
-    ):
+        physics: Optional[PhysicsPacket] = None,):
         word_count = len(user_text.split())
         self.state.E = min(1.0, self.state.E + (word_count * 0.002))
         if bio_state and "fatigue" in bio_state:
@@ -411,65 +361,30 @@ class BoneConsultant:
         syn_thresh = getattr(cfg, "VSL_SYNTAX_THRESHOLD", 0.9) if cfg else 0.9
         bun_max = getattr(cfg, "VSL_BUNNY_E_MAX", 0.3) if cfg else 0.3
         par_min = getattr(cfg, "VSL_PARADOX_B_MIN", 0.6) if cfg else 0.6
-
         if "LIMINAL" in self.state.active_modules or self.state.L > lim_thresh:
-            scar_temp = LoreManifest.get_instance().get_ux(
-                "driver_strings", "vsl_scar_note"
-            )
+            scar_temp = LoreManifest.get_instance().get_ux("driver_strings", "vsl_scar_note") or ""
             scar_note = (
                 scar_temp.format(scars=self.liminal_mod.godel_scars)
                 if self.liminal_mod.godel_scars > 0
-                else ""
-            )
-            msg = LoreManifest.get_instance().get_ux(
-                "driver_strings",
-                "vsl_arch_revenant"
-            )
+                else "")
+            msg = LoreManifest.get_instance().get_ux("driver_strings", "vsl_arch_revenant") or ""
             directives.append(msg.format(scar_note=scar_note))
-
         elif "SYNTAX" in self.state.active_modules or self.state.O > syn_thresh:
-            stress_temp = LoreManifest.get_instance().get_ux(
-                "driver_strings",
-                "vsl_stress_note"
-            )
+            stress_temp = LoreManifest.get_instance().get_ux("driver_strings", "vsl_stress_note") or ""
             stress_note = (
-                stress_temp if self.syntax_mod.grammatical_stress > 0.5 else ""
-            )
-            msg = LoreManifest.get_instance().get_ux(
-                "driver_strings",
-                "vsl_arch_bureau"
-            )
+                stress_temp if self.syntax_mod.grammatical_stress > 0.5 else "")
+            msg = LoreManifest.get_instance().get_ux("driver_strings", "vsl_arch_bureau") or ""
             directives.append(msg.format(stress_note=stress_note))
         else:
             if self.state.E < bun_max:
-                directives.append(
-                    LoreManifest.get_instance().get_ux(
-                        "driver_strings",
-                        "vsl_mode_bunny"
-                    )
-                )
+                directives.append(LoreManifest.get_instance().get_ux("driver_strings", "vsl_mode_bunny") or "")
             elif self.state.B > par_min:
-                directives.append(
-                    LoreManifest.get_instance().get_ux(
-                        "driver_strings",
-                        "vsl_mode_paradox"
-                    )
-                )
+                directives.append(LoreManifest.get_instance().get_ux("driver_strings", "vsl_mode_paradox") or "")
             else:
-                directives.append(
-                    LoreManifest.get_instance().get_ux(
-                        "driver_strings",
-                        "vsl_mode_glacier"
-                    )
-                )
-
+                directives.append(LoreManifest.get_instance().get_ux("driver_strings", "vsl_mode_glacier") or "")
         if soul_snapshot:
             arch = soul_snapshot.get("archetype", "UNKNOWN")
             muse = (soul_snapshot.get("obsession") or {}).get("title", "None")
-            msg = LoreManifest.get_instance().get_ux(
-                "driver_strings",
-                "vsl_layer_muse"
-            )
+            msg = LoreManifest.get_instance().get_ux("driver_strings", "vsl_layer_muse") or ""
             directives.append(msg.format(arch=arch, muse=muse))
-
         return "\n".join(directives)

@@ -1,5 +1,6 @@
-from typing import Dict, Any, List
+"""bone_config.py"""
 
+from typing import Dict, Any, List
 
 class BonePresets:
     ZEN_GARDEN = {
@@ -115,7 +116,6 @@ class BonePresets:
             "default_ui_depth": "DEEP",
         },
     }
-
     STANDARD = {
         "PHYSICS": {"VOLTAGE_MAX": 20.0, "BASE_DRAG": 1.0},
         "BIO": {"METABOLISM_RATE": 1.0},
@@ -132,7 +132,6 @@ class BonePresets:
         "PHYSICS": {"VOLTAGE_MAX": 100.0, "BASE_DRAG": 0.0},
         "BIO": {"METABOLISM_RATE": 0.0},
     }
-
 
 class BoneConfig:
     GRAVITY_WELL_THRESHOLD = 15.0
@@ -174,8 +173,7 @@ class BoneConfig:
         "ollama": "http://127.0.0.1:11434/v1/chat/completions",
         "openai": "https://api.openai.com/v1/chat/completions",
         "lm_studio": "http://127.0.0.1:1234/v1/chat/completions",
-        "mock": "N/A",
-    }
+        "mock": "N/A",}
     PROVIDER = "ollama"
     BASE_URL = None
     API_KEY = "ollama"
@@ -289,8 +287,7 @@ class BoneConfig:
             "THE_AERIE": {"voltage": 10.0, "drag": 0.5},
             "LABORATORY": {"voltage": 12.0, "drag": 1.0},
             "COURTYARD": {"voltage": 8.0, "drag": 2.0},
-            "DEFAULT": {"voltage": 10.0, "drag": 1.5},
-        }
+            "DEFAULT": {"voltage": 10.0, "drag": 1.5},}
 
     class INVENTORY:
         CONDUCTIVE_THRESHOLD = 12.0
@@ -314,10 +311,8 @@ class BoneConfig:
         MANIC_DRAG_FLOOR = 1.0
         MANIC_TURN_LIMIT = 2
         FOOTNOTE_CHANCE = 0.15
-
         LEVERAGE_TARGET_VOLTAGE = 12.0
         LEVERAGE_TARGET_DRAG = 3.0
-
         TRIG_GORDON_V = 20.0
         TRIG_GORDON_F = 5.0
         TRIG_JESTER_V = 60.0
@@ -389,8 +384,7 @@ class BoneConfig:
             (15.0, 0.0, "FORGE", 8),
             (10.0, 0.0, "FORGE", 6),
             (0.0, 4.0, "LABORATORY", 5),
-            (0.0, 0.0, "COURTYARD", 1),
-        ]
+            (0.0, 0.0, "COURTYARD", 1),]
         SAMPLING_THRESHOLD = 1000
         BASE_WORD_VALUE = 0.5
         COMPLEX_WORD_BONUS = 2.0
@@ -399,8 +393,7 @@ class BoneConfig:
         ANAEROBIC_THRESHOLD = 40.0
         PID_SETTINGS = {
             "VOLTAGE": {"kp": 0.6, "ki": 0.05, "kd": 0.2, "setpoint": 10.0},
-            "DRAG": {"kp": 0.4, "ki": 0.1, "kd": 0.1, "setpoint": 1.5}
-        }
+            "DRAG": {"kp": 0.4, "ki": 0.1, "kd": 0.1, "setpoint": 1.5}}
 
     class CHANCE:
         RARE = 0.05
@@ -527,7 +520,6 @@ class BoneConfig:
         TINKER_ASCENSION_MIN = 2.5
         TINKER_ASCENSION_CHANCE_MULT = 0.05
         TINKER_ASCENSION_HALVE = 2.0
-
         SEED_MATURITY_STEP = 0.2
         SEED_MATURITY_MAX = 5.0
         MIRROR_STAT_STEP = 0.1
@@ -539,13 +531,11 @@ class BoneConfig:
         MIRROR_DRAG_ROT = 1.5
         MIRROR_DRAG_LAW = 0.8
         MIRROR_DRAG_ART = 0.9
-
         CARTO_MAX_NODES = 50
         CARTO_HEAVY_DRAG = 2.0
         CARTO_STATIC_VOLT = 1.0
         CARTO_ENTROPY_STEP = 0.1
         CARTO_ENTROPY_CAP = 5.0
-
         TOWN_LATENCY_WARN = 3.0
         TOWN_VOLT_CRIT = 20.0
         TOWN_VOLT_LOW = 2.0
@@ -555,7 +545,6 @@ class BoneConfig:
         TOWN_NEGLECT_CRIT = 8.0
         TOWN_TRAUMA_CRIT = 0.6
         TOWN_HEALTH_CRIT = 30
-
         DEATH_TRAUMA_CRIT = 50.0
         DEATH_TOXICITY_CRIT = 5
         DEATH_ABSTRACT_PSI = 0.8
@@ -666,7 +655,9 @@ class BoneConfig:
 
     @classmethod
     def load_preset(cls, preset_dict: Dict[str, Any]) -> List[str]:
+        from bone_core import LoreManifest
         logs = []
+        msg_tuned = LoreManifest.get_instance().get_ux("config_strings", "preset_tuned") or "Tuned {sector}.{param}: {old_val} -> {new_val}"
         for key, value in preset_dict.items():
             if "." in key:
                 sector_name, param_name = key.split(".", 1)
@@ -675,9 +666,7 @@ class BoneConfig:
                     if hasattr(target_class, param_name):
                         old_val = getattr(target_class, param_name)
                         setattr(target_class, param_name, value)
-                        logs.append(
-                            f"Tuned {sector_name}.{param_name}: {old_val} -> {value}"
-                        )
+                        logs.append(msg_tuned.format(sector=sector_name, param=param_name, old_val=old_val, new_val=value))
             else:
                 sector_name = key
                 sector_data = value
@@ -687,24 +676,29 @@ class BoneConfig:
                         if hasattr(target_class, k):
                             old_val = getattr(target_class, k)
                             setattr(target_class, k, v)
-                            logs.append(f"Tuned {sector_name}.{k}: {old_val} -> {v}")
+                            logs.append(msg_tuned.format(sector=sector_name, param=k, old_val=old_val, new_val=v))
         return logs
 
     @classmethod
     def validate_integrity(cls) -> List[str]:
+        from bone_core import LoreManifest
         errors = []
         if cls.PHYSICS.VOLTAGE_FLOOR > cls.PHYSICS.VOLTAGE_MAX:
             cls.PHYSICS.VOLTAGE_FLOOR = cls.PHYSICS.VOLTAGE_MAX - 1.0
-            errors.append("⚠️ PHYSICS REPAIR: Floor > Max. Clamped Floor.")
+            msg = LoreManifest.get_instance().get_ux("config_strings", "repair_floor_max") or ""
+            if msg: errors.append(msg)
         if cls.PHYSICS.DRAG_FLOOR > cls.PHYSICS.DRAG_HALT:
             cls.PHYSICS.DRAG_FLOOR = cls.PHYSICS.DRAG_HALT - 1.0
-            errors.append("⚠️ PHYSICS REPAIR: Drag Floor > Halt. Clamped Floor.")
+            msg = LoreManifest.get_instance().get_ux("config_strings", "repair_drag_halt") or ""
+            if msg: errors.append(msg)
         return errors
 
     @classmethod
     def check_pareidolia(cls, words: List[str]) -> Any:
+        from bone_core import LoreManifest
         if "face" in words and "smoke" in words:
-            return True, "👀 PAREIDOLIA: You see a face in the smoke."
+            msg = LoreManifest.get_instance().get_ux("config_strings", "pareidolia_smoke") or ""
+            return True, msg
         return False, ""
 
     @classmethod
@@ -712,41 +706,32 @@ class BoneConfig:
         if isinstance(physics_packet, dict):
             current_v = physics_packet.get("voltage", 5.0)
             current_d = physics_packet.get("narrative_drag", 1.0)
-            physics_packet["voltage"] = max(
-                cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX)
-            )
-            physics_packet["narrative_drag"] = max(
-                cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT)
-            )
+            physics_packet["voltage"] = max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX))
+            physics_packet["narrative_drag"] = max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT))
         else:
             current_v = getattr(physics_packet, "voltage", 5.0)
             current_d = getattr(physics_packet, "narrative_drag", 1.0)
-            setattr(
-                physics_packet,
-                "voltage",
-                max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX)),
-            )
-            setattr(
-                physics_packet,
-                "narrative_drag",
-                max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT)),
-            )
-
+            setattr(physics_packet, "voltage", max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX)),)
+            setattr( physics_packet, "narrative_drag", max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT)),)
         return physics_packet
 
     @classmethod
     def tune(cls, sector: str, parameter: str, value: Any) -> str:
+        from bone_core import LoreManifest
         if not hasattr(cls, sector):
-            return f"❌ SECTOR ERROR: '{sector}' does not exist."
+            msg = LoreManifest.get_instance().get_ux("config_strings", "tune_sector_err") or ""
+            return msg.format(sector=sector)
         target_sector = getattr(cls, sector)
         if not hasattr(target_sector, parameter):
-            return f"❌ PARAM ERROR: '{parameter}' not found in {sector}."
+            msg = LoreManifest.get_instance().get_ux("config_strings", "tune_param_err") or ""
+            return msg.format(parameter=parameter, sector=sector)
         current_val = getattr(target_sector, parameter)
         if type(current_val) != type(value):
             if not (
-                isinstance(current_val, (int, float))
-                and isinstance(value, (int, float))
-            ):
-                return f"⚠️ TYPE MISMATCH: Cannot replace {type(current_val).__name__} with {type(value).__name__}."
+                    isinstance(current_val, (int, float))
+                    and isinstance(value, (int, float))):
+                msg = LoreManifest.get_instance().get_ux("config_strings", "tune_type_err") or ""
+                return msg.format(curr_type=type(current_val).__name__, new_type=type(value).__name__)
         setattr(target_sector, parameter, value)
-        return f"✅ TUNED: {sector}.{parameter} -> {value}"
+        msg = LoreManifest.get_instance().get_ux("config_strings", "tune_success") or ""
+        return msg.format(sector=sector, parameter=parameter, value=value)

@@ -1,10 +1,11 @@
+"""bone_core.py"""
+
 import glob, json, os, random, time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Counter, Tuple, Deque
 from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
 from bone_config import BoneConfig
-
 
 class BoneJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -17,7 +18,6 @@ class BoneJSONEncoder(json.JSONEncoder):
         if hasattr(obj, "__dict__"):
             return obj.__dict__
         return super().default(obj)
-
 
 class EventBus:
     def __init__(self, max_memory=None):
@@ -55,7 +55,6 @@ class EventBus:
 
     def get_recent_logs(self, count=10):
         return list(self.buffer)[-count:]
-
 
 class LoreManifest:
     DATA_DIR = "lore"
@@ -119,7 +118,6 @@ class LoreManifest:
             self._cache = {}
             print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
 
-
 class TheObserver:
     def __init__(self):
         self.start_time = time.time()
@@ -173,8 +171,7 @@ class TheObserver:
             jokes = [
                 LoreManifest.get_instance().get_ux("core_strings", "obs_fog") or "",
                 LoreManifest.get_instance().get_ux("core_strings", "obs_degraded") or "",
-                LoreManifest.get_instance().get_ux("core_strings", "obs_ponderous") or "",
-                ]
+                LoreManifest.get_instance().get_ux("core_strings", "obs_ponderous") or "",]
             valid_jokes = [j for j in jokes if j]
             return random.choice(valid_jokes) if valid_jokes else ""
         if avg_cycle > self.CYCLE_WARNING:
@@ -193,9 +190,7 @@ class TheObserver:
             "avg_llm_sec": round(avg_llm, 2),
             "status": status_msg,
             "errors": dict(self.error_counts),
-            "graph_size": self.memory_snapshots[-1] if self.memory_snapshots else 0,
-        }
-
+            "graph_size": self.memory_snapshots[-1] if self.memory_snapshots else 0,}
 
 @dataclass
 class SystemHealth:
@@ -234,7 +229,6 @@ class SystemHealth:
         self.hints.clear()
         return feedback
 
-
 class RealityStack:
     def __init__(self):
         self._stack = [RealityLayer.SIMULATION]
@@ -270,9 +264,7 @@ class RealityStack:
             "allow_commands": depth >= RealityLayer.SIMULATION,
             "allow_meta": depth >= RealityLayer.DEBUG,
             "raw_output": depth == RealityLayer.DEEP_CX,
-            "system_override": depth == RealityLayer.DEBUG,
-        }
-
+            "system_override": depth == RealityLayer.DEBUG,}
 
 class ArchetypeArbiter:
     @staticmethod
@@ -284,26 +276,12 @@ class ArchetypeArbiter:
     ) -> Tuple[str, str, str]:
         for mandate in council_mandates:
             if mandate.get("type") == "LOCKDOWN":
-                return (
-                    "THE CENSOR",
-                    "COUNCIL",
-                    LoreManifest.get_instance().get_ux("core_strings", "arb_martial_law") or "",
-                )
+                return "THE CENSOR", "COUNCIL", LoreManifest.get_instance().get_ux("core_strings", "arb_martial_law") or "",
             if mandate.get("type") == "FORCE_MODE":
-                return (
-                    "THE MACHINE",
-                    "COUNCIL",
-                    LoreManifest.get_instance().get_ux("core_strings", "arb_bureaucratic") or "",
-                )
-
+                return "THE MACHINE", "COUNCIL", LoreManifest.get_instance().get_ux("core_strings", "arb_bureaucratic") or "",
         if "/" in soul_archetype:
             msg = LoreManifest.get_instance().get_ux("core_strings", "arb_diamond") or ""
-            return (
-                soul_archetype,
-                "SOUL",
-                msg.format(soul_archetype=soul_archetype) if msg else "",
-            )
-
+            return soul_archetype, "SOUL", msg.format(soul_archetype=soul_archetype) if msg else "",
         if trigram:
             trigram_name = trigram.get("name")
             mythos = LoreManifest.get_instance().get("MYTHOS") or {}
@@ -316,26 +294,11 @@ class ArchetypeArbiter:
                     match_soul = (required_soul == soul_archetype) if required_soul else True
                     if match_lens and match_soul:
                         msg = rule.get("msg") or LoreManifest.get_instance().get_ux("core_strings", "arb_resonance") or ""
-                        return (
-                            rule["result"],
-                            rule.get("source", "COSMIC"),
-                            msg,
-                        )
-
+                        return rule["result"], rule.get("source", "COSMIC"), msg
         if physics_lens in ["THE MANIC", "THE VOID"]:
             msg = LoreManifest.get_instance().get_ux("core_strings", "arb_loud") or ""
-            return (
-                physics_lens,
-                "PHYSICS",
-                msg.format(physics_lens=physics_lens) if msg else "",
-            )
-
-        return (
-            soul_archetype,
-            "SOUL",
-            LoreManifest.get_instance().get_ux("core_strings", "arb_soul") or "",
-        )
-
+            return physics_lens, "PHYSICS", msg.format(physics_lens=physics_lens) if msg else "",
+        return soul_archetype, "SOUL",  LoreManifest.get_instance().get_ux("core_strings", "arb_soul") or ""
 
 class TelemetryService:
     log_dir = "logs/telemetry"
@@ -345,7 +308,6 @@ class TelemetryService:
         cfg = getattr(BoneConfig, "CORE", None)
         self.BUFFER_SIZE = getattr(cfg, "TELEMETRY_BUFFER_SIZE", 50) if cfg else 50
         self.MAX_ERRORS = getattr(cfg, "TELEMETRY_MAX_ERRORS", 5) if cfg else 5
-
         self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=self.BUFFER_SIZE)
         self.write_buffer: List[str] = []
         self.active_crystal = None
@@ -354,8 +316,7 @@ class TelemetryService:
         try:
             os.makedirs(self.log_dir, exist_ok=True)
             self.current_trace_file = os.path.join(
-                self.log_dir, f"trace_{int(time.time())}.jsonl"
-            )
+                self.log_dir, f"trace_{int(time.time())}.jsonl")
         except OSError:
             msg = LoreManifest.get_instance().get_ux("core_strings", "tel_disk_denied") or ""
             if msg: print(f"{Prisma.RED}{msg}{Prisma.RST}")
@@ -379,8 +340,7 @@ class TelemetryService:
         decision_type: str,
         inputs: Any,
         reasoning: str,
-        outcome: str,
-    ):
+        outcome: str,):
         if self.disabled or not self.active_crystal:
             return
         trace = DecisionTrace(
@@ -390,8 +350,7 @@ class TelemetryService:
             decision_type=decision_type,
             inputs=inputs if isinstance(inputs, dict) else {"raw": str(inputs)},
             reasoning=reasoning,
-            outcome=outcome,
-        )
+            outcome=outcome,)
         self.trace_buffer.append(trace)
         self._buffer_line(trace.to_json())
 
@@ -401,22 +360,10 @@ class TelemetryService:
         self._buffer_line(crystal.crystallize())
 
     def start_phase(self, phase_name: str, _context: Any):
-        self.log_decision(
-            phase_name,
-            "PHASE_START",
-            {"timestamp": time.time()},
-            "Phase execution initiated.",
-            "RUNNING",
-        )
+        self.log_decision(phase_name, "PHASE_START", {"timestamp": time.time()}, "Phase execution initiated.", "RUNNING",)
 
     def end_phase(self, phase_name: str, _ctx_before: Any, _ctx_after: Any):
-        self.log_decision(
-            phase_name,
-            "PHASE_END",
-            {"timestamp": time.time()},
-            "Phase execution completed.",
-            "SUCCESS",
-        )
+        self.log_decision( phase_name, "PHASE_END", {"timestamp": time.time()}, "Phase execution completed.", "SUCCESS",)
 
     def finalize_cycle(self):
         if self.active_crystal:
@@ -471,8 +418,7 @@ class TelemetryService:
                             data = json.loads(line)
                             if (
                                 data.get("_type") == "CRYSTAL"
-                                or "final_response" in data
-                            ):
+                                or "final_response" in data):
                                 resp = data.get("final_response", "")
                                 if not resp:
                                     continue
