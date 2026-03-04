@@ -1,42 +1,17 @@
+"""bone_types.py"""
+
 import time, copy, uuid, json, re
 from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
 
-
 class Prisma:
     RST = "\033[0m"
-    RED, GRN, YEL, BLU, MAG, CYN, WHT, GRY = (
-        "\033[31m",
-        "\033[32m",
-        "\033[33m",
-        "\033[34m",
-        "\033[35m",
-        "\033[36m",
-        "\033[97m",
-        "\033[90m",
-    )
-    INDIGO, OCHRE, VIOLET, SLATE = (
-        "\033[34;1m",
-        "\033[33;2m",
-        "\033[35;2m",
-        "\033[30;1m",
-    )
+    RED, GRN, YEL, BLU, MAG, CYN, WHT, GRY = ("\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[97m", "\033[90m",)
+    INDIGO, OCHRE, VIOLET, SLATE = ("\033[34;1m", "\033[33;2m", "\033[35;2m", "\033[30;1m",)
     _STRIP_PATTERN = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-    _COLOR_MAP = {
-        "R": RED,
-        "G": GRN,
-        "Y": YEL,
-        "B": BLU,
-        "M": MAG,
-        "C": CYN,
-        "W": WHT,
-        "0": GRY,
-        "I": INDIGO,
-        "O": OCHRE,
-        "V": VIOLET,
-        "S": SLATE,
-    }
+    _COLOR_MAP = {"R": RED, "G": GRN, "Y": YEL, "B": BLU, "M": MAG, "C": CYN, "W": WHT, "0": GRY, "I": INDIGO,
+                  "O": OCHRE, "V": VIOLET, "S": SLATE, }
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
@@ -51,7 +26,6 @@ class Prisma:
     def strip(cls, text: str) -> str:
         return cls._STRIP_PATTERN.sub("", str(text))
 
-
 class LoreCategory(Enum):
     LEXICON = "LEXICON"
     SCENARIOS = "scenarios"
@@ -62,7 +36,6 @@ class LoreCategory(Enum):
     ALMANAC = "almanac"
     DREAMS = "dreams"
 
-
 class RealityLayer:
     TERMINAL = 0
     SIMULATION = 1
@@ -70,14 +43,12 @@ class RealityLayer:
     DEBUG = 3
     DEEP_CX = 4
 
-
 @dataclass
 class ErrorLog:
     component: str
     error_msg: str
     timestamp: float = field(default_factory=time.time)
     severity: str = "WARNING"
-
 
 @dataclass
 class EnergyState:
@@ -87,23 +58,19 @@ class EnergyState:
     trauma: float = 0.0
     ros: float = 0.0
     glimmers: int = 0
-
     exhaustion: float = 0.2
     contradiction: float = 0.4
     scope: float = 0.3
     depth: float = 0.3
     connectivity: float = 0.2
-
     psi: float = 0.2
     chi: float = 0.2
     valence: float = 0.0
-
     gamma: float = 0.0
     sigma: float = 0.0
     eta: float = 0.0
     theta: float = 0.0
     upsilon: float = 0.0
-
     entropy: float = 0.2
     mass: float = 0.0
     velocity: float = 0.0
@@ -119,7 +86,6 @@ class EnergyState:
     lq: float = 0.0
     perfection_streak: int = 0
 
-
 @dataclass
 class MaterialState:
     clean_words: List[str] = field(default_factory=list)
@@ -130,7 +96,6 @@ class MaterialState:
     truth_ratio: float = 0.0
     repetition: float = 0.0
 
-
 @dataclass
 class SpatialState:
     zone: str = "COURTYARD"
@@ -139,7 +104,6 @@ class SpatialState:
     friction: float = 0.6
     atmosphere: str = "NEUTRAL"
     flow_state: str = "LAMINAR"
-
 
 @dataclass
 class PhysicsPacket:
@@ -349,8 +313,7 @@ class PhysicsPacket:
         energy: Optional[EnergyState] = None,
         matter: Optional[MaterialState] = None,
         space: Optional[SpatialState] = None,
-        **kwargs,
-    ):
+        **kwargs,):
         self.energy = energy or EnergyState()
         self.matter = matter or MaterialState()
         self.space = space or SpatialState()
@@ -385,7 +348,6 @@ class PhysicsPacket:
     def __contains__(self, key):
         return hasattr(self, key)
 
-
 @dataclass
 class CycleContext:
     input_text: str
@@ -404,9 +366,7 @@ class CycleContext:
     mind_state: Dict = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
     bureau_ui: str = ""
-    user_profile: Dict = field(
-        default_factory=lambda: {"name": "TRAVELER", "confidence": 0}
-    )
+    user_profile: Dict = field(default_factory=lambda: {"name": "TRAVELER", "confidence": 0})
     last_impulse: Any = None
     reality_stack: Any = None
     active_lens: str = "NARRATOR"
@@ -424,21 +384,12 @@ class CycleContext:
         self.logs.append(message)
 
     def record_flux(
-        self, phase: str, metric: str, initial: float, final: float, reason: str = ""
-    ):
+        self, phase: str, metric: str, initial: float, final: float, reason: str = ""):
         delta = final - initial
         if abs(delta) > 0.001:
             self.flux_log.append(
-                {
-                    "phase": phase,
-                    "metric": metric,
-                    "initial": initial,
-                    "final": final,
-                    "delta": delta,
-                    "reason": reason,
-                    "timestamp": time.time(),
-                }
-            )
+                {"phase": phase, "metric": metric, "initial": initial, "final": final, "delta": delta, "reason": reason,
+                 "timestamp": time.time(), })
 
     def snapshot(self) -> "CycleContext":
         new_ctx = copy.copy(self)
@@ -451,7 +402,6 @@ class CycleContext:
                 setattr(new_ctx, name, copy.deepcopy(val))
         return new_ctx
 
-
 @dataclass
 class MindSystem:
     mem: Any
@@ -459,7 +409,6 @@ class MindSystem:
     dreamer: Any
     mirror: Any
     tracer: Any
-
 
 @dataclass
 class PhysSystem:
@@ -473,7 +422,6 @@ class PhysSystem:
     tension: Optional[Any] = None
     dynamics: Any = None
 
-
 @dataclass
 class DecisionTrace:
     trace_id: str
@@ -486,7 +434,6 @@ class DecisionTrace:
 
     def to_json(self):
         return json.dumps(asdict(self))
-
 
 @dataclass
 class DecisionCrystal:
@@ -504,15 +451,12 @@ class DecisionCrystal:
     def __str__(self):
         from bone_core import LoreManifest
         e_val = self.leverage_metrics.get("E", 0.0)
-
         icon = LoreManifest.get_instance().get_ux("types_strings", "crystal_icon") or ""
         lbl = LoreManifest.get_instance().get_ux("types_strings", "crystal_label") or ""
         arch = LoreManifest.get_instance().get_ux("types_strings", "crystal_arch") or ""
-
         return (
             f"{icon} {lbl} [{self.decision_id}] {self.system_state} | "
-            f"{arch} {self.active_archetype} | E: {e_val:.2f}"
-        ).strip()
+            f"{arch} {self.active_archetype} | E: {e_val:.2f}").strip()
 
     def crystallize(self) -> str:
         data = asdict(self)
