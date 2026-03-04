@@ -12,7 +12,6 @@ from typing import List, Dict, Any, Optional, Counter, Tuple, Deque
 from bone_config import BoneConfig
 from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
 
-
 class BoneJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, set):
@@ -127,10 +126,8 @@ class LoreManifest:
 class TheObserver:
     def __init__(self):
         self.start_time = time.time()
-
         cfg = getattr(BoneConfig, "CORE", None)
         max_len = getattr(cfg, "OBSERVER_MAX_LEN", 20) if cfg else 20
-
         self.cycle_times = deque(maxlen=max_len)
         self.llm_latencies = deque(maxlen=max_len)
         self.memory_snapshots = deque(maxlen=max_len)
@@ -174,8 +171,7 @@ class TheObserver:
         if avg_cycle < 0.1 and avg_llm < 0.5:
             return LoreManifest.get_instance().get_ux("core_strings", "obs_efficient") or ""
         if avg_llm > self.LATENCY_WARNING:
-            jokes = [
-                LoreManifest.get_instance().get_ux("core_strings", "obs_fog") or "",
+            jokes = [LoreManifest.get_instance().get_ux("core_strings", "obs_fog") or "",
                 LoreManifest.get_instance().get_ux("core_strings", "obs_degraded") or "",
                 LoreManifest.get_instance().get_ux("core_strings", "obs_ponderous") or "",]
             valid_jokes = [j for j in jokes if j]
@@ -189,14 +185,9 @@ class TheObserver:
         avg_llm = sum(self.llm_latencies) / max(1, len(self.llm_latencies))
         uptime = time.time() - self.start_time
         status_msg = self.pass_judgment(avg_cycle, avg_llm)
-        return {
-            "uptime_sec": int(uptime),
-            "turns": self.user_turns,
-            "avg_cycle_sec": round(avg_cycle, 2),
-            "avg_llm_sec": round(avg_llm, 2),
-            "status": status_msg,
-            "errors": dict(self.error_counts),
-            "graph_size": self.memory_snapshots[-1] if self.memory_snapshots else 0,}
+        return {"uptime_sec": int(uptime), "turns": self.user_turns, "avg_cycle_sec": round(avg_cycle, 2),
+                "avg_llm_sec": round(avg_llm, 2), "status": status_msg, "errors": dict(self.error_counts),
+                "graph_size": self.memory_snapshots[-1] if self.memory_snapshots else 0, }
 
 @dataclass
 class SystemHealth:
@@ -264,22 +255,14 @@ class RealityStack:
 
     def get_grammar_rules(self) -> Dict[str, bool]:
         depth = self.current_depth
-        return {
-            "allow_narrative": depth
-            in [RealityLayer.SIMULATION, RealityLayer.DEEP_CX, RealityLayer.DEBUG],
-            "allow_commands": depth >= RealityLayer.SIMULATION,
-            "allow_meta": depth >= RealityLayer.DEBUG,
-            "raw_output": depth == RealityLayer.DEEP_CX,
-            "system_override": depth == RealityLayer.DEBUG,}
+        return {"allow_narrative": depth
+                                   in [RealityLayer.SIMULATION, RealityLayer.DEEP_CX, RealityLayer.DEBUG],
+                "allow_commands": depth >= RealityLayer.SIMULATION, "allow_meta": depth >= RealityLayer.DEBUG,
+                "raw_output": depth == RealityLayer.DEEP_CX, "system_override": depth == RealityLayer.DEBUG, }
 
 class ArchetypeArbiter:
     @staticmethod
-    def arbitrate(
-            physics_lens: str,
-            soul_archetype: str,
-            council_mandates: List[Dict],
-            trigram: Dict = None,
-    ) -> Tuple[str, str, str]:
+    def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Dict = None, ) -> Tuple[str, str, str]:
         for mandate in council_mandates:
             if mandate.get("type") == "LOCKDOWN":
                 return "THE CENSOR", "COUNCIL", LoreManifest.get_instance().get_ux("core_strings", "arb_martial_law") or "",
@@ -340,23 +323,13 @@ class TelemetryService:
             return
         self.active_crystal = DecisionCrystal(decision_id=trace_id)
 
-    def log_decision(
-        self,
-        component: str,
-        decision_type: str,
-        inputs: Any,
-        reasoning: str,
-        outcome: str,):
+    def log_decision(self, component: str, decision_type: str, inputs: Any, reasoning: str, outcome: str, ):
         if self.disabled or not self.active_crystal:
             return
-        trace = DecisionTrace(
-            trace_id=self.active_crystal.decision_id,
-            timestamp=time.time(),
-            component=component,
-            decision_type=decision_type,
-            inputs=inputs if isinstance(inputs, dict) else {"raw": str(inputs)},
-            reasoning=reasoning,
-            outcome=outcome,)
+        trace = DecisionTrace(trace_id=self.active_crystal.decision_id, timestamp=time.time(), component=component,
+                              decision_type=decision_type,
+                              inputs=inputs if isinstance(inputs, dict) else {"raw": str(inputs)}, reasoning=reasoning,
+                              outcome=outcome, )
         self.trace_buffer.append(trace)
         self._buffer_line(trace.to_json())
 
@@ -422,8 +395,7 @@ class TelemetryService:
                             break
                         try:
                             data = json.loads(line)
-                            if (
-                                data.get("_type") == "CRYSTAL"
+                            if (data.get("_type") == "CRYSTAL"
                                 or "final_response" in data):
                                 resp = data.get("final_response", "")
                                 if not resp:

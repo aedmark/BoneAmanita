@@ -1,3 +1,5 @@
+""" bone_drivers.py"""
+
 import json
 import os
 import random
@@ -40,14 +42,8 @@ class SoulDriver:
 class UserProfile:
     def __init__(self, name="USER"):
         self.name = name
-        self.affinities = {
-            "heavy": 0.0,
-            "kinetic": 0.0,
-            "abstract": 0.0,
-            "photo": 0.0,
-            "aerobic": 0.0,
-            "thermal": 0.0,
-            "cryo": 0.0,}
+        self.affinities = {"heavy": 0.0, "kinetic": 0.0, "abstract": 0.0, "photo": 0.0, "aerobic": 0.0, "thermal": 0.0,
+                           "cryo": 0.0, }
         self.confidence = 0
         self.file_path = "user_profile.json"
         self.load()
@@ -86,7 +82,6 @@ class UserProfile:
                     self.confidence = data.get("confidence", 0)
             except (IOError, json.JSONDecodeError):
                 pass
-
 
 class EnneagramDriver:
     def __init__(self, events_ref):
@@ -192,10 +187,7 @@ class EnneagramDriver:
         return (
             self.current_persona,
             "STABLE",
-            msg_resisting.format(
-                candidate=candidate,
-                count=self.stability_counter,
-                thresh=self.HYSTERESIS_THRESHOLD,),)
+            msg_resisting.format(candidate=candidate, count=self.stability_counter, thresh=self.HYSTERESIS_THRESHOLD, ),)
 
 @dataclass
 class VSLState:

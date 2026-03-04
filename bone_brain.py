@@ -9,12 +9,10 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional, Tuple
-
 from bone_config import BoneConfig, BonePresets
 from bone_core import EventBus, TelemetryService, BoneJSONEncoder, LoreManifest
 from bone_symbiosis import SymbiosisManager
 from bone_types import Prisma, DecisionCrystal
-
 
 @dataclass
 class CortexServices:
@@ -39,22 +37,15 @@ class ChemicalState:
 
     def homeostasis(self, rate: float = 0.1):
         cfg = BoneConfig.CORTEX
-        targets = {
-            "dopamine": cfg.RESTING_DOPAMINE,
-            "cortisol": cfg.RESTING_CORTISOL,
-            "adrenaline": cfg.RESTING_ADRENALINE,
-            "serotonin": cfg.RESTING_SEROTONIN,}
+        targets = {"dopamine": cfg.RESTING_DOPAMINE, "cortisol": cfg.RESTING_CORTISOL,
+                   "adrenaline": cfg.RESTING_ADRENALINE, "serotonin": cfg.RESTING_SEROTONIN, }
         for attr, target in targets.items():
             current = getattr(self, attr)
             delta = (target - current) * rate
             setattr(self, attr, current + delta)
 
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
-        mapping = [
-            ("DOP", "dopamine"),
-            ("COR", "cortisol"),
-            ("ADR", "adrenaline"),
-            ("SER", "serotonin"),]
+        mapping = [("DOP", "dopamine"), ("COR", "cortisol"), ("ADR", "adrenaline"), ("SER", "serotonin"), ]
         for key, attr in mapping:
             val = new_state.get(key, 0.0)
             current = getattr(self, attr)
@@ -78,8 +69,7 @@ class NeurotransmitterModulator:
         self,
         base_voltage: float,
         latency_penalty: float = 0.0,
-        physics_state: Dict[str, float] = None,
-    ) -> Dict[str, Any]:
+        physics_state: Dict[str, float] = None,) -> Dict[str, Any]:
         if physics_state is None:
             physics_state = {}
         if self.bio and hasattr(self.bio, "endo"):
@@ -109,9 +99,7 @@ class NeurotransmitterModulator:
         elif c.serotonin > 0.8:
             current_mood = "ZEN"
         if current_mood != self.last_mood and self.events:
-            self.events.publish(
-                "NEURAL_STATE_SHIFT",
-                {"state": current_mood,"chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin},},)
+            self.events.publish("NEURAL_STATE_SHIFT", {"state": current_mood,"chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin},},)
             self.last_mood = current_mood
         voltage_heat = math.log1p(max(0.0, base_voltage - 5.0)) * 0.1
         chemical_delta = (c.dopamine * 0.4) - (c.adrenaline * 0.3) - (c.cortisol * 0.2)
@@ -125,12 +113,12 @@ class NeurotransmitterModulator:
         final_top_p = min(1.0, base_top_p + (chi * 0.05))
         freq_pen = min(1.2, 0.5 + (beta * 0.3) + (chi * 0.2))
         pres_pen = min(1.2, 0.5 + (beta * 0.3) + (chi * 0.2))
-        return {
-            "temperature": final_temp,
-            "top_p": final_top_p,
-            "frequency_penalty": round(freq_pen, 2),
-            "presence_penalty": round(pres_pen, 2),
-            "max_tokens": int(max(150.0,min(float(self.MAX_TOKENS),self.BASE_TOKENS + ((c.dopamine * 800) - (c.adrenaline * 400) - (c.cortisol * 200)),),)),}
+        return {"temperature": final_temp, "top_p": final_top_p, "frequency_penalty": round(freq_pen, 2),
+                "presence_penalty": round(pres_pen, 2), "max_tokens": int(max(150.0, min(float(self.MAX_TOKENS),
+                                                                                         self.BASE_TOKENS + ((
+                                                                                                                     c.dopamine * 800) - (
+                                                                                                                     c.adrenaline * 400) - (
+                                                                                                                     c.cortisol * 200)), ), )), }
 
     def _treat_yourself(self):
         if self.events:
@@ -166,22 +154,14 @@ class TransientError(SynapseError):
     pass
 
 class LLMInterface:
-    def __init__(
-        self,
-        events_ref: Optional[EventBus] = None,
-        provider: str = None,
-        base_url: str = None,
-        api_key: str = None,
-        model: str = None,
-        dreamer: Any = None,):
+    def __init__(self, events_ref: Optional[EventBus] = None, provider: str = None, base_url: str = None,
+                 api_key: str = None, model: str = None, dreamer: Any = None, ):
         self.events = events_ref
         self.provider = (provider or BoneConfig.PROVIDER).lower()
         self.api_key = api_key or BoneConfig.API_KEY
         self.model = model or BoneConfig.MODEL
         defaults = getattr(BoneConfig, "DEFAULT_LLM_ENDPOINTS", {})
-        self.base_url = base_url or defaults.get(
-            self.provider,
-            "https://api.openai.com/v1/chat/completions",)
+        self.base_url = base_url or defaults.get(self.provider, "https://api.openai.com/v1/chat/completions", )
         self.dreamer = dreamer
         self.failure_count = 0
         cfg = getattr(BoneConfig, "CORTEX", None)
@@ -203,14 +183,8 @@ class LLMInterface:
             return False
         return True
 
-    def _transmit(
-        self,
-        payload: Dict[str, Any],
-        timeout: float = 60.0,
-        max_retries: int = 2,
-        override_url: str = None,
-        override_key: str = None,
-    ) -> str:
+    def _transmit(self, payload: Dict[str, Any], timeout: float = 60.0, max_retries: int = 2, override_url: str = None,
+                  override_key: str = None, ) -> str:
         err = ""
         target_url = override_url or self.base_url
         target_key = override_key or self.api_key
@@ -267,18 +241,10 @@ class LLMInterface:
             return self.mock_generation(prompt, reason="CIRCUIT_BROKEN")
         if self.provider == "mock":
             return self.mock_generation(prompt)
-        payload = {
-            "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": False,
-            "stop": [
-                "=== PARTNER INPUT ===",
-                "=== SYSTEM KERNEL ===",
-                "=== INITIATION DIRECTIVE ===",
-                "\n\nTraveler:",
-                "\nTraveler:",
-                "Traveler:",
-                "| System:",],}
+        payload = {"model": self.model, "messages": [{"role": "user", "content": prompt}], "stream": False,
+                   "stop": ["=== PARTNER INPUT ===", "=== SYSTEM KERNEL ===", "=== INITIATION DIRECTIVE ===",
+                            "\n\nTraveler:",
+                            "\nTraveler:", "Traveler:", "| System:", ], }
         payload.update(params)
         try:
             content = self._transmit(payload)
@@ -314,30 +280,18 @@ class LLMInterface:
         return self.mock_generation(prompt, reason="SILENCE")
 
     def _local_fallback(self, prompt: str, params: Dict) -> str:
-        url = getattr(
-            BoneConfig,
-            "OLLAMA_URL",
-            "http://127.0.0.1:11434/v1/chat/completions",)
+        url = getattr(BoneConfig, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions", )
         model = getattr(BoneConfig, "OLLAMA_MODEL_ID", "llama3")
-        fallback_payload = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": False,
-            "temperature": params.get("temperature", 0.4),
-            "frequency_penalty": params.get("frequency_penalty", 0.8),
-            "presence_penalty": params.get("presence_penalty", 0.4),
-            "stop": [
-                "=== PARTNER INPUT ===",
-                "\n\nTraveler:",
-                "\nTraveler:",
-                "Traveler:",],}
+        fallback_payload = {"model": model, "messages": [{"role": "user", "content": prompt}], "stream": False,
+                            "temperature": params.get("temperature", 0.4),
+                            "frequency_penalty": params.get("frequency_penalty", 0.8),
+                            "presence_penalty": params.get("presence_penalty", 0.4), "stop": ["=== PARTNER INPUT ===",
+                                                                                              "\n\nTraveler:",
+                                                                                              "\nTraveler:",
+                                                                                              "Traveler:", ], }
         try:
-            return self._transmit(
-                fallback_payload,
-                timeout=10.0,
-                max_retries=1,
-                override_url=url,
-                override_key="ollama",)
+            return self._transmit(fallback_payload, timeout=10.0, max_retries=1, override_url=url,
+                                  override_key="ollama", )
         except Exception:
             return None
 
@@ -347,9 +301,7 @@ class LLMInterface:
                 hallucination, relief = self.dreamer.hallucinate(
                     {"ENTROPY": len(prompt) % 10}, trauma_level=2.0)
                 if relief > 0 and self.events:
-                    msg = LoreManifest.get_instance().get_ux(
-                        "brain_strings",
-                        "mock_pressure_release")
+                    msg = LoreManifest.get_instance().get_ux("brain_strings", "mock_pressure_release") or ""
                     self.events.log(
                         f"{Prisma.VIOLET}{msg.format(relief=relief)}{Prisma.RST}",
                         "DREAM",)

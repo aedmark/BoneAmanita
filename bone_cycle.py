@@ -17,7 +17,6 @@ from bone_physics import TheGatekeeper, apply_somatic_feedback, CycleStabilizer
 from bone_symbiosis import SymbiosisManager
 from bone_types import Prisma, CycleContext
 
-
 class SimulationPhase:
     def __init__(self, engine_ref):
         self.eng = engine_ref
@@ -39,28 +38,9 @@ class ObservationPhase(SimulationPhase):
                 ctx.log(acquire_msg)
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
         input_phys = gaze_result["physics"]
-        transfer_keys = {
-            "clean_words",
-            "counts",
-            "vector",
-            "valence",
-            "entropy",
-            "beta",
-            "S",
-            "D",
-            "C",
-            "PHI_RES",
-            "DELTA",
-            "LQ",
-            "ROS",
-            "G",
-            "raw_text",
-            "antigens",
-            "psi",
-            "kappa",
-            "zone",
-            "flow_state",
-            "repetition",}
+        transfer_keys = {"clean_words", "counts", "vector", "valence", "entropy", "beta", "S", "D", "C", "PHI_RES",
+                         "DELTA", "LQ", "ROS", "G", "raw_text", "antigens", "psi", "kappa", "zone", "flow_state",
+                         "repetition", }
         for k in transfer_keys:
             if hasattr(input_phys, k):
                 setattr(ctx.physics, k, getattr(input_phys, k))
@@ -99,7 +79,6 @@ class SanctuaryPhase(SimulationPhase):
             else 0.0)
         cfg = getattr(BoneConfig, "CYCLE", None)
         t_limit = getattr(cfg, "SANCTUARY_TRAUMA_LIMIT", 25.0) if cfg else 25.0
-
         if in_safe_zone and trauma_sum < t_limit:
             self._enter_sanctuary(ctx)
             self._apply_restoration(ctx)
@@ -138,8 +117,7 @@ class SanctuaryPhase(SimulationPhase):
             else 0.0)
         bio_packet = {
             "chem": self.eng.bio.endo.get_state(),
-            "mito": {
-                "atp": self.eng.bio.mito.state.atp_pool,
+            "mito": {"atp": self.eng.bio.mito.state.atp_pool,
                 "ros": self.eng.bio.mito.state.ros_buildup,},
             "physics": (
                 ctx.physics.to_dict()
@@ -190,10 +168,9 @@ class MaintenancePhase(SimulationPhase):
             session_snapshot = {
                 "trauma_vector": self.eng.trauma_accum,
                 "meta": {"final_health": self.eng.health},}
-            status, advice = self.eng.town_hall.diagnose_condition(
-                session_data=session_snapshot,
-                _host_health=self.eng.bio.biometrics if self.eng.bio else None,
-                soul=self.eng.soul,)
+            status, advice = self.eng.town_hall.diagnose_condition(session_data=session_snapshot,
+                                                                   _host_health=self.eng.bio.biometrics if self.eng.bio else None,
+                                                                   soul=self.eng.soul, )
             if status != "BALANCED":
                 msg = LoreManifest.get_instance().get_ux("cycle_strings", "town_hall_vitals") or ""
                 ctx.log(
@@ -234,11 +211,8 @@ class GatekeeperPhase(SimulationPhase):
             if coupling_error:
                 log_msg = LoreManifest.get_instance().get_ux("cycle_strings", "gatekeep_log_premise") or ""
                 ctx.refusal_triggered = True
-                ctx.refusal_packet = {
-                    "type": "PREMISE_VIOLATION",
-                    "ui": f"\n{coupling_error}",
-                    "logs": [log_msg] if log_msg else [],
-                    "metrics": self.eng.get_metrics(),}
+                ctx.refusal_packet = {"type": "PREMISE_VIOLATION", "ui": f"\n{coupling_error}",
+                                      "logs": [log_msg] if log_msg else [], "metrics": self.eng.get_metrics(), }
                 return ctx
         is_allowed, refusal_packet = self.gatekeeper.check_entry(ctx)
         if not is_allowed:
@@ -253,14 +227,11 @@ class GatekeeperPhase(SimulationPhase):
                     ctx.refusal_triggered = True
                     injunction_fb = LoreManifest.get_instance().get_ux("cycle_strings", "gatekeep_bureau_injunction") or ""
                     log_msg = LoreManifest.get_instance().get_ux("cycle_strings", "gatekeep_log_bureau_block") or ""
-                    ctx.refusal_packet = {
-                        "type": "BUREAU_BLOCK",
-                        "ui": audit_result.get("ui", injunction_fb),
-                        "logs": [log_msg] if log_msg else [],
-                        "metrics": (
+                    ctx.refusal_packet = {"type": "BUREAU_BLOCK", "ui": audit_result.get("ui", injunction_fb),
+                                          "logs": [log_msg] if log_msg else [], "metrics": (
                             self.eng.get_metrics()
                             if hasattr(self.eng, "get_metrics")
-                            else {}),}
+                            else {}), }
                     return ctx
                 if self.eng.bio and self.eng.bio.mito:
                     fine_msg = LoreManifest.get_instance().get_ux("cycle_strings", "gatekeep_bureau_fine") or ""
@@ -302,24 +273,17 @@ class MetabolismPhase(SimulationPhase):
             self.eng.events.log(gov_msg, "GOV")
         physics.manifold = self.eng.bio.governor.mode
         max_v = getattr(BoneConfig.PHYSICS, "VOLTAGE_MAX", 20.0)
-        bio_feedback = {
-            "INTEGRITY": getattr(physics, "truth_ratio", 1.0),
-            "STATIC": getattr(physics, "repetition", 0.0),
-            "FORCE": getattr(physics, "voltage", 0.0) / max_v,
-            "BETA": getattr(physics, "beta_index", 0.0),
-            "PSI": getattr(physics, "psi", 0.0),
-            "ENTROPY": getattr(physics, "entropy", 0.0),
-            "VALENCE": getattr(physics, "valence", 0.0),}
+        bio_feedback = {"INTEGRITY": getattr(physics, "truth_ratio", 1.0),
+                        "STATIC": getattr(physics, "repetition", 0.0),
+                        "FORCE": getattr(physics, "voltage", 0.0) / max_v, "BETA": getattr(physics, "beta_index", 0.0),
+                        "PSI": getattr(physics, "psi", 0.0), "ENTROPY": getattr(physics, "entropy", 0.0),
+                        "VALENCE": getattr(physics, "valence", 0.0), }
         metrics = self.eng.get_metrics()
-        ctx.bio_result = self.eng.soma.digest_cycle(
-            ctx.input_text,
-            physics,
-            bio_feedback,
-            metrics["health"],
-            metrics["stamina"],
-            self.eng.bio.governor.get_stress_modifier(self.eng.tick_count),
-            self.eng.tick_count,
-            circadian_bias=self._check_circadian_rhythm(),)
+        ctx.bio_result = self.eng.soma.digest_cycle(ctx.input_text, physics, bio_feedback, metrics["health"],
+                                                    metrics["stamina"],
+                                                    self.eng.bio.governor.get_stress_modifier(self.eng.tick_count),
+                                                    self.eng.tick_count,
+                                                    circadian_bias=self._check_circadian_rhythm(), )
         if self.eng.bio.biometrics:
             self.eng.health = self.eng.bio.biometrics.health
             self.eng.stamina = self.eng.bio.biometrics.stamina
@@ -375,7 +339,6 @@ class MetabolismPhase(SimulationPhase):
             cfg = getattr(BoneConfig, "CYCLE", None)
             boost = getattr(cfg, "HUBRIS_ATP_BOOST", 20.0) if cfg else 20.0
             damage = getattr(cfg, "HUBRIS_DAMAGE", 15.0) if cfg else 15.0
-
             if evt == "FLOW_BOOST":
                 self.eng.bio.mito.state.atp_pool += boost
             elif evt == "ICARUS_CRASH":
@@ -554,8 +517,7 @@ class MachineryPhase(SimulationPhase):
             return ctx
         phys_dict = ctx.physics.to_dict()
         if hasattr(self.eng, "critics") and (
-                review := self.eng.critics.audit_performance(phys_dict, self.eng.tick_count)
-        ):
+                review := self.eng.critics.audit_performance(phys_dict, self.eng.tick_count)):
             ctx.log(review)
             good_icon = LoreManifest.get_instance().get_ux("cycle_strings", "machinery_critic_good_icon")
             ctx.physics.narrative_drag += -1.0 if good_icon in review else 1.0
@@ -653,8 +615,7 @@ class IntrusionPhase(SimulationPhase):
                     ctx.log(f"{Prisma.CYN}{msg.format(rewire_msg=rewire_msg)}{Prisma.RST}")
                     self.eng.bio.endo.dopamine += 0.2
                     ctx.physics.narrative_drag = max(0.0, drag - 2.0)
-        trauma_sum = (
-            sum(self.eng.trauma_accum.values())
+        trauma_sum = (sum(self.eng.trauma_accum.values())
             if getattr(self.eng, "trauma_accum", None)
             else 0.0)
         is_bored = self.eng.phys.pulse.is_bored()
@@ -684,7 +645,6 @@ class IntrusionPhase(SimulationPhase):
                 msg_drain = LoreManifest.get_instance().get_ux("cycle_strings", "intrusion_hallucination_drain") or ""
                 ctx.log(f"{Prisma.GRY}{msg_drain}{Prisma.RST}")
         return ctx
-
 
 class SoulPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -771,8 +731,7 @@ class SoulPhase(SimulationPhase):
         council_data = LoreManifest.get_instance().get("council_data") or {}
         mandates_text = council_data.get("SOUL_MANDATES", {})
 
-        rules = [
-            "CYNICISM", 0.8, "LOCKDOWN", mandates_text.get("CYNICISM", ""), {"narrative_drag": 5.0, "voltage": -5.0}, Prisma.OCHRE,
+        rules = ["CYNICISM", 0.8, "LOCKDOWN", mandates_text.get("CYNICISM", ""), {"narrative_drag": 5.0, "voltage": -5.0}, Prisma.OCHRE,
             "HOPE", 0.8, "STIMULUS", mandates_text.get("HOPE", ""), {"voltage": 5.0, "narrative_drag": -2.0}, Prisma.MAG,
             "DISCIPLINE", 0.8,"STANDARDIZE", mandates_text.get("DISCIPLINE", ""), {"kappa": -0.5, "beta_index": 1.0}, Prisma.CYN]
         mandates = []
@@ -801,11 +760,8 @@ class ArbitrationPhase(SimulationPhase):
         soul_arch = self.eng.soul.archetype
         mandates = getattr(ctx, "council_mandates", [])
         current_trigram = ctx.world_state.get("trigram", None)
-        final_lens, source, opinion = self.eng.arbiter.arbitrate(
-            physics_lens=phys_lens,
-            soul_archetype=soul_arch,
-            council_mandates=mandates,
-            trigram=current_trigram,)
+        final_lens, source, opinion = self.eng.arbiter.arbitrate(physics_lens=phys_lens, soul_archetype=soul_arch,
+                                                                 council_mandates=mandates, trigram=current_trigram, )
         tension = getattr(ctx.physics, "beta_index", 0.0)
         silence = getattr(ctx.physics, "silence", 0.0)
         synergy_active = False
@@ -899,12 +855,9 @@ class CognitionPhase(SimulationPhase):
                 current_h = max(0.0, self.eng.bio.biometrics.health)
             desperation = 1.0 - (current_h / max_h)
             learn_mod = getattr(BoneConfig, "PRIORITY_LEARNING_RATE", 1.0)
-            bury_msg, new_wells = self.eng.mind.mem.bury(
-                ctx.clean_words,
-                self.eng.tick_count,
-                resonance=ctx.physics.voltage,
-                desperation_level=desperation,
-                learning_mod=learn_mod,)
+            bury_msg, new_wells = self.eng.mind.mem.bury(ctx.clean_words, self.eng.tick_count,
+                                                         resonance=ctx.physics.voltage, desperation_level=desperation,
+                                                         learning_mod=learn_mod, )
             if bury_msg:
                 if "SATURATION" in bury_msg:
                     prefix = f"{Prisma.YEL}{LoreManifest.get_instance().get_ux('cycle_strings', 'cog_memory_warn').format(bury_msg=bury_msg)}{Prisma.RST}"
@@ -915,13 +868,10 @@ class CognitionPhase(SimulationPhase):
                 msg = LoreManifest.get_instance().get_ux("cycle_strings", "cog_gravity_well") or ""
                 ctx.log(f"{Prisma.CYN}{msg.format(new_wells=new_wells)}{Prisma.RST}")
         inventory_data = self.eng.gordon.inventory if self.eng.gordon else []
-        ctx.mind_state = self.eng.noetic.think(
-            physics_packet=ctx.physics.to_dict(),
-            _bio=ctx.bio_result,
-            _inventory=inventory_data,
-            voltage_history=self.eng.phys.dynamics.voltage_history,
-            _tick_count=self.eng.tick_count,
-            soul_ref=self.eng.soul,)
+        ctx.mind_state = self.eng.noetic.think(physics_packet=ctx.physics.to_dict(), _bio=ctx.bio_result,
+                                               _inventory=inventory_data,
+                                               voltage_history=self.eng.phys.dynamics.voltage_history,
+                                               _tick_count=self.eng.tick_count, soul_ref=self.eng.soul, )
         thought = ctx.mind_state.get("context_msg", ctx.mind_state.get("thought"))
         if thought:
             ctx.log(thought)
@@ -1005,21 +955,14 @@ class CycleSimulator:
         self.shared_governor = self.eng.bio.governor
         self.stabilizer = CycleStabilizer(self.eng.events, self.shared_governor)
         self.executor = PhaseExecutor()
-        self.pipeline: List[SimulationPhase] = [
-            ObservationPhase(engine_ref),
-            MaintenancePhase(engine_ref),
-            SensationPhase(engine_ref),
-            GatekeeperPhase(engine_ref),
-            SanctuaryPhase(engine_ref, self.shared_governor),
-            MetabolismPhase(engine_ref),
-            NavigationPhase(engine_ref),
-            MachineryPhase(engine_ref),
-            RealityFilterPhase(engine_ref),
-            IntrusionPhase(engine_ref),
-            SoulPhase(engine_ref),
-            ArbitrationPhase(engine_ref),
-            CognitionPhase(engine_ref),
-            StabilizationPhase(engine_ref, self.stabilizer),]
+        self.pipeline: List[SimulationPhase] = [ObservationPhase(engine_ref), MaintenancePhase(engine_ref),
+                                                SensationPhase(engine_ref), GatekeeperPhase(engine_ref),
+                                                SanctuaryPhase(engine_ref, self.shared_governor),
+                                                MetabolismPhase(engine_ref), NavigationPhase(engine_ref),
+                                                MachineryPhase(engine_ref), RealityFilterPhase(engine_ref),
+                                                IntrusionPhase(engine_ref), SoulPhase(engine_ref),
+                                                ArbitrationPhase(engine_ref), CognitionPhase(engine_ref),
+                                                StabilizationPhase(engine_ref, self.stabilizer), ]
 
     def run_simulation(self, ctx: CycleContext) -> CycleContext:
         ctx = self.executor.execute_phases(self, ctx)
@@ -1068,8 +1011,7 @@ class GeodesicOrchestrator:
             self.symbiosis = SymbiosisManager(self.eng.events)
 
     def _execute_core_cycle(
-        self, user_message: str, is_system: bool = False
-    ) -> CycleContext:
+        self, user_message: str, is_system: bool = False) -> CycleContext:
         cycle_id = str(uuid.uuid4())[:8]
         try:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
@@ -1154,15 +1096,10 @@ class GeodesicOrchestrator:
             return {}
 
         snapshot.update(
-            {"trace_id": getattr(ctx, "trace_id", "UNKNOWN"),
-                "is_alive": True,
-                "physics": _safe_dict(ctx.physics),
-                "bio": _safe_dict(ctx.bio_result),
-                "mind": _safe_dict(ctx.mind_state),
-                "world": _safe_dict(ctx.world_state),
-                "soul": _safe_dict(getattr(self.eng, "soul", {})),
-                "council_mandates": getattr(ctx, "council_mandates", []),
-                "dream": getattr(ctx, "last_dream", None),})
+            {"trace_id": getattr(ctx, "trace_id", "UNKNOWN"), "is_alive": True, "physics": _safe_dict(ctx.physics),
+             "bio": _safe_dict(ctx.bio_result), "mind": _safe_dict(ctx.mind_state),
+             "world": _safe_dict(ctx.world_state), "soul": _safe_dict(getattr(self.eng, "soul", {})),
+             "council_mandates": getattr(ctx, "council_mandates", []), "dream": getattr(ctx, "last_dream", None), })
 
     @staticmethod
     def _generate_crash_report(e: Exception) -> Dict[str, Any]:
@@ -1171,12 +1108,6 @@ class GeodesicOrchestrator:
         safe_bio = PanicRoom.get_safe_bio()
         msg = LoreManifest.get_instance().get_ux("cycle_strings", "orch_reality_fracture") or ""
         ui_report = f"{Prisma.RED}{msg.format(error=e, trace=full_trace)}{Prisma.RST}"
-        return {
-            "type": "CRASH",
-            "ui": ui_report,
-            "physics": safe_phys.to_dict(),
-            "bio": safe_bio,
-            "mind": PanicRoom.get_safe_mind(),
-            "world": {"orbit": ["VOID"], "loci_description": "System Failure"},
-            "logs": ["CRITICAL FAILURE", "SAFE MODE ACTIVE"],
-            "is_alive": True,}
+        return {"type": "CRASH", "ui": ui_report, "physics": safe_phys.to_dict(), "bio": safe_bio,
+                "mind": PanicRoom.get_safe_mind(), "world": {"orbit": ["VOID"], "loci_description": "System Failure"},
+                "logs": ["CRITICAL FAILURE", "SAFE MODE ACTIVE"], "is_alive": True, }

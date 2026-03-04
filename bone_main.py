@@ -10,7 +10,6 @@ import traceback
 import uuid
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
-
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_commands import CommandProcessor
@@ -44,12 +43,10 @@ def typewriter(text: str, speed: float = 0.00025, end: str = "\n"):
     sys.stdout.write(end)
     sys.stdout.flush()
 
-
 @dataclass
 class HostStats:
     latency: float
     efficiency_index: float
-
 
 class SessionGuardian:
     def __init__(self, engine_ref):
@@ -58,7 +55,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system("cls" if os.name == "nt" else "clear")
         top_bar = LoreManifest.get_instance().get_ux("main_strings", "term_header_top") or "┌──────────────────────────────────────────┐"
-        mid_bar = LoreManifest.get_instance().get_ux("main_strings", "term_header_mid") or "│ BONEAMANITA TERMINAL // VERSION 16.3.3   │"
+        mid_bar = LoreManifest.get_instance().get_ux("main_strings", "term_header_mid") or "│ BONEAMANITA TERMINAL // VERSION 16.3.2   │"
         bot_bar = LoreManifest.get_instance().get_ux("main_strings", "term_header_bot") or "└──────────────────────────────────────────┘"
         print(f"{Prisma.paint(top_bar, 'M')}")
         print(f"{Prisma.paint(mid_bar, 'M')}")
@@ -67,11 +64,8 @@ class SessionGuardian:
         for log in boot_logs:
             print(f"{Prisma.GRY}   >>> {log['text']}{Prisma.RST}")
             time.sleep(0.05)
-
         init_msg = LoreManifest.get_instance().get_ux("main_strings", "init_hash") or ""
-        typewriter(
-            f"{Prisma.GRY}{init_msg.format(hash=self.engine_instance.kernel_hash)}{Prisma.RST}"
-        )
+        typewriter(f"{Prisma.GRY}{init_msg.format(hash=self.engine_instance.kernel_hash)}{Prisma.RST}")
         sys_msg = LoreManifest.get_instance().get_ux("main_strings", "sys_listening") or ""
         typewriter(f"{Prisma.paint(sys_msg, 'G')}")
         return self.engine_instance
@@ -81,16 +75,13 @@ class SessionGuardian:
         print(f"\n{Prisma.paint(halt_msg, 'R')}")
         if self.engine_instance:
             self.engine_instance.shutdown()
-
         if exc_type:
             is_interrupt = issubclass(exc_type, KeyboardInterrupt)
             if not is_interrupt:
                 crash_msg = LoreManifest.get_instance().get_ux("main_strings", "crash_msg") or ""
                 print(f"{Prisma.RED}{crash_msg.format(exc_val=exc_val)}{Prisma.RST}")
                 if getattr(self.engine_instance, "boot_mode", "") == "TECHNICAL":
-                    full_trace = "".join(
-                        traceback.format_exception(exc_type, exc_val, exc_tb)
-                    )
+                    full_trace = "".join(traceback.format_exception(exc_type, exc_val, exc_tb))
                     print(f"{Prisma.GRY}{full_trace}{Prisma.RST}")
                 else:
                     lattice_msg = LoreManifest.get_instance().get_ux("main_strings", "lattice_collapsed") or ""
@@ -98,7 +89,6 @@ class SessionGuardian:
         conn_msg = LoreManifest.get_instance().get_ux("main_strings", "conn_severed") or ""
         print(f"{Prisma.paint(conn_msg)}")
         return exc_type is KeyboardInterrupt
-
 
 class ConfigWizard:
     CONFIG_FILE = "bone_config.json"
@@ -132,94 +122,46 @@ class ConfigWizard:
         hyp_msg = LoreManifest.get_instance().get_ux("main_strings", "init_hypervisor") or ""
         print(f"{Prisma.paint(seq_msg, 'C')}")
         typewriter(hyp_msg, speed=0.02)
-
         step1 = LoreManifest.get_instance().get_ux("main_strings", "step1_id") or ""
         prompt1 = LoreManifest.get_instance().get_ux("main_strings", "prompt_id") or ""
         print(f"\n{Prisma.paint(step1, 'W')}")
         user_name = input(f"{Prisma.GRY}{prompt1}{Prisma.RST}").strip() or "TRAVELER"
-
         step2 = LoreManifest.get_instance().get_ux("main_strings", "step2_mode") or ""
         print(f"\n{Prisma.paint(step2, 'W')}")
         modes = [
-            (
-                "1",
-                "ADVENTURE",
-                LoreManifest.get_instance().get_ux("main_strings", "mode_adv_desc") or "",
-                "G",
-            ),
-            (
-                "2",
-                "CONVERSATION",
-                LoreManifest.get_instance().get_ux("main_strings", "mode_conv_desc") or "",
-                "C",
-            ),
-            (
-                "3",
-                "CREATIVE",
-                LoreManifest.get_instance().get_ux("main_strings", "mode_crea_desc") or "",
-                "V",
-            ),
-            (
-                "4",
-                "TECHNICAL",
-                LoreManifest.get_instance().get_ux("main_strings", "mode_tech_desc") or "",
-                "0",
-            ),
-        ]
+            ("1", "ADVENTURE", LoreManifest.get_instance().get_ux("main_strings", "mode_adv_desc") or "", "G",),
+            ("2", "CONVERSATION", LoreManifest.get_instance().get_ux("main_strings", "mode_conv_desc") or "", "C",),
+            ("3", "CREATIVE", LoreManifest.get_instance().get_ux("main_strings", "mode_crea_desc") or "", "V",),
+            ("4", "TECHNICAL", LoreManifest.get_instance().get_ux("main_strings", "mode_tech_desc") or "", "0",),]
         for k, name, desc, col in modes:
             print(f"  {k}. {Prisma.paint(name, col):<25} - {desc}")
-
         prompt_mode = LoreManifest.get_instance().get_ux("main_strings", "prompt_mode") or ""
         mode_choice = input(f"{Prisma.paint(prompt_mode, 'C')} ").strip()
-        mode_map = {
-            "1": "ADVENTURE",
-            "2": "CONVERSATION",
-            "3": "CREATIVE",
-            "4": "TECHNICAL",
-        }
+        mode_map = {"1": "ADVENTURE", "2": "CONVERSATION", "3": "CREATIVE", "4": "TECHNICAL", }
         boot_mode = mode_map.get(mode_choice, "ADVENTURE")
-
         step3 = LoreManifest.get_instance().get_ux("main_strings", "step3_backend") or ""
         print(f"\n{Prisma.paint(step3, 'W')}")
-        backends = [
-            ("1", "Ollama (Local)", "G"),
-            ("2", "OpenAI (Cloud)", "C"),
-            ("3", "LM Studio (Local)", "V"),
-            ("4", "Mock (Simulation)", "0"),
-        ]
+        backends = [("1", "Ollama (Local)", "G"), ("2", "OpenAI (Cloud)", "C"), ("3", "LM Studio (Local)", "V"),
+                    ("4", "Mock (Simulation)", "0"), ]
         for k, name, col in backends:
             print(f"{k}. {Prisma.paint(name, col)}")
         choice = input(f"{Prisma.paint('>', 'C')} ").strip()
         config = {"user_name": user_name, "boot_mode": boot_mode}
         if choice == "2":
-            config.update(
-                {
-                    "provider": "openai",
-                    "base_url": "https://api.openai.com/v1/chat/completions",
-                }
-            )
+            config.update({"provider": "openai", "base_url": "https://api.openai.com/v1/chat/completions", })
             config["model"] = input(f"Model ID [gpt-4]: ").strip() or "gpt-4"
             prompt_api = LoreManifest.get_instance().get_ux("main_strings", "prompt_api") or ""
             config["api_key"] = input(f"{Prisma.paint(prompt_api, 'R')} ").strip()
         elif choice == "3":
             config.update(
-                {
-                    "provider": "lm_studio",
-                    "base_url": "http://127.0.0.1:1234/v1/chat/completions",
-                    "model": "local-model",
-                }
-            )
+                {"provider": "lm_studio", "base_url": "http://127.0.0.1:1234/v1/chat/completions",
+                 "model": "local-model", })
         elif choice == "4":
             config.update({"provider": "mock", "model": "simulation"})
         else:
             config.update(
-                {
-                    "provider": "ollama",
-                    "base_url": "http://127.0.0.1:11434/v1/chat/completions",
-                }
-            )
+                {"provider": "ollama", "base_url": "http://127.0.0.1:11434/v1/chat/completions", })
             config["model"] = input(f"Model ID [llama3]: ").strip() or "llama3"
-
         try:
             with open(ConfigWizard.CONFIG_FILE, "w") as f:
                 json.dump(config, f, indent=4)
@@ -231,7 +173,6 @@ class ConfigWizard:
             print(f"{Prisma.paint(fail_msg.format(e=e), 'R')}")
             sys.exit(1)
         return config
-
 
 class BoneAmanita:
     events: EventBus
@@ -301,11 +242,9 @@ class BoneAmanita:
         self.noetic = NoeticLoop(self.mind, self.bio, self.events)
         self.cycle_controller = GeodesicOrchestrator(self)
         self.orchestrator = self.cycle_controller
-        llm_args = {
-            k: v
+        llm_args = {k: v
             for k, v in self.config.items()
-            if k in ["provider", "base_url", "api_key", "model"]
-        }
+            if k in ["provider", "base_url", "api_key", "model"]}
         client = LLMInterface(events_ref=self.events, **llm_args)
         self.cortex = TheCortex.from_engine(self, llm_client=client)
 
@@ -347,7 +286,6 @@ class BoneAmanita:
     def get_avg_voltage(self):
         observer = getattr(self.phys, "observer", self.phys)
         hist = getattr(observer, "voltage_history", [])
-
         if not hist:
             return 0.0
         return sum(hist) / len(hist)
@@ -380,83 +318,56 @@ class BoneAmanita:
         self.kintsugi = v.get("kintsugi")
         self.soul.engine = self
         self.council = CouncilChamber(self)
-        self.village = {
-            "town_hall": self.town_hall,
-            "bureau": self.bureau,
-            "zen": self.zen,
-            "tinkerer": self.tinkerer,
-            "critics": self.critics,
-            "navigator": self.navigator,
-            "limbo": self.limbo,
-            "council": self.council,
-            "therapy": self.therapy,
-            "enneagram": self.drivers.enneagram,
-            "suppressed_agents": self.suppressed_agents,
-        }
+        self.village = {"town_hall": self.town_hall, "bureau": self.bureau, "zen": self.zen, "tinkerer": self.tinkerer,
+                        "critics": self.critics, "navigator": self.navigator, "limbo": self.limbo,
+                        "council": self.council, "therapy": self.therapy, "enneagram": self.drivers.enneagram,
+                        "suppressed_agents": self.suppressed_agents, }
 
     def _update_host_stats(self, packet, turn_start):
         self.observer.clock_out(turn_start)
         cfg = getattr(BoneConfig, "MAIN", None)
         burn_mult = getattr(cfg, "HOST_BURN_MULT", 5.0) if cfg else 5.0
         nov_mult = getattr(cfg, "HOST_NOVELTY_MULT", 10.0) if cfg else 10.0
-
         burn_proxy = max(1.0, self.observer.last_cycle_duration * burn_mult)
         novelty = packet.get("physics", {}).get("vector", {}).get("novelty", 0.5)
         self.host_stats.efficiency_index = min(1.0, (novelty * nov_mult) / burn_proxy)
         self.host_stats.latency = self.observer.last_cycle_duration
 
     def process_turn(
-        self, user_message: str, is_system: bool = False
-    ) -> Dict[str, Any]:
+        self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         turn_start = self.observer.clock_in()
         self.observer.user_turns += 1
         self.tick_count += 1
-
         if self.cmd and self.cmd.execute(user_message):
             return self._phase_check_commands(user_message, already_executed=True)
         elif user_message.strip().startswith("//"):
             return self._handle_meta_command(user_message.strip())
-
         if not is_system and self.gordon:
             self.gordon.mode = "ADVENTURE"
             current_zone = "Unknown"
             if hasattr(self, "cortex") and hasattr(self.cortex, "last_physics"):
-                current_zone = (
-                    self.cortex.gather_state(self.cortex.last_physics or {})
+                current_zone = (self.cortex.gather_state(self.cortex.last_physics or {})
                     .get("world", {})
-                    .get("orbit", ["Unknown"])[0]
-                )
-
-            violation_msg = self.gordon.enforce_object_action_coupling(
-                user_message, current_zone
-            )
+                    .get("orbit", ["Unknown"])[0])
+            violation_msg = self.gordon.enforce_object_action_coupling(user_message, current_zone)
             if violation_msg:
                 msg = LoreManifest.get_instance().get_ux("main_strings", "gordon_intercept") or ""
                 self.events.log(msg, "SYS")
                 if hasattr(self, "cortex"):
                     self.cortex.ballast_active = True
                     self.cortex.gordon_shock = violation_msg
-
         rules = self.reality_stack.get_grammar_rules()
         if not rules["allow_narrative"]:
             halt_msg = LoreManifest.get_instance().get_ux("main_strings", "narrative_halt") or ""
-            return {
-                "ui": f"{Prisma.RED}{halt_msg}{Prisma.RST}",
-                "logs": [],
-                "metrics": self.get_metrics(),
-            }
+            return {"ui": f"{Prisma.RED}{halt_msg}{Prisma.RST}", "logs": [], "metrics": self.get_metrics(), }
         if self._ethical_audit():
-            mercy_logs = [
-                e["text"]
+            mercy_logs = [e["text"]
                 for e in self.events.get_recent_logs(2)
-                if "CATHARSIS" in e["text"]
-            ]
+                if "CATHARSIS" in e["text"]]
             if mercy_logs:
-                return {
-                    "ui": f"\n\n{mercy_logs[-1]}",
+                return {"ui": f"\n\n{mercy_logs[-1]}",
                     "logs": mercy_logs,
-                    "metrics": self.get_metrics(),
-                }
+                    "metrics": self.get_metrics(),}
         if self.health <= 0.0:
             last_phys = getattr(self.cortex, "last_physics", {})
             return self.trigger_death(last_phys)
@@ -466,14 +377,11 @@ class BoneAmanita:
             eff_crit = getattr(cfg, "DOMESTICATION_EFF_CRIT", 0.4) if cfg else 0.4
             rel_high = getattr(cfg, "RELIANCE_HIGH", 0.9) if cfg else 0.9
             rel_low = getattr(cfg, "RELIANCE_LOW", 0.5) if cfg else 0.5
-
             if self.host_stats.efficiency_index < eff_warn:
                 reliance_proxy = rel_high if self.host_stats.efficiency_index < eff_crit else rel_low
                 self.soul.anchor.check_domestication(reliance_proxy)
         try:
-            cortex_packet = self.cortex.process(
-                user_input=user_message, is_system=is_system
-            )
+            cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
             if hasattr(self.mind, "mem"):
                 self.health = self.mind.mem.session_health
                 self.stamina = self.mind.mem.session_stamina
@@ -483,11 +391,8 @@ class BoneAmanita:
         except Exception:
             full_trace = traceback.format_exc()
             crit_msg = LoreManifest.get_instance().get_ux("main_strings", "cortex_crit_fail") or ""
-            return {
-                "ui": f"{Prisma.RED}{crit_msg.format(trace=full_trace)}{Prisma.RST}",
-                "logs": ["CRITICAL FAILURE"],
-                "metrics": self.get_metrics(),
-            }
+            return {"ui": f"{Prisma.RED}{crit_msg.format(trace=full_trace)}{Prisma.RST}", "logs": ["CRITICAL FAILURE"],
+                    "metrics": self.get_metrics(), }
         self._update_host_stats(cortex_packet, turn_start)
         self.save_checkpoint()
         return cortex_packet
@@ -498,23 +403,13 @@ class BoneAmanita:
             return self._handle_meta_command(clean_cmd)
         if self.cmd is None:
             err_msg = LoreManifest.get_instance().get_ux("main_strings", "cmd_err_init") or ""
-            return {
-                "ui": f"{Prisma.RED}{err_msg}{Prisma.RST}",
-                "logs": [],
-            }
-
+            return {"ui": f"{Prisma.RED}{err_msg}{Prisma.RST}", "logs": [], }
         if not already_executed:
             self.cmd.execute(clean_cmd)
-
         cmd_logs = [e["text"] for e in self.events.flush()]
         default_exec = LoreManifest.get_instance().get_ux("main_strings", "cmd_executed") or ""
         ui_output = "\n".join(cmd_logs) if cmd_logs else default_exec
-        return {
-            "type": "COMMAND",
-            "ui": f"\n{ui_output}",
-            "logs": cmd_logs,
-            "metrics": self.get_metrics(),
-        }
+        return {"type": "COMMAND", "ui": f"\n{ui_output}", "logs": cmd_logs, "metrics": self.get_metrics(), }
 
     def _handle_meta_command(self, text: str) -> Dict[str, Any]:
         meta_parts = text.strip().split()
@@ -544,92 +439,54 @@ class BoneAmanita:
         else:
             msg = LoreManifest.get_instance().get_ux("main_strings", "unknown_meta") or ""
             ui_msg = msg.format(cmd=cmd)
-        return {
-            "ui": f"{Prisma.GRY}[META] {ui_msg}{Prisma.RST}",
-            "logs": [],
-            "metrics": self.get_metrics(),
-        }
+        return {"ui": f"{Prisma.GRY}[META] {ui_msg}{Prisma.RST}", "logs": [], "metrics": self.get_metrics(), }
 
     def trigger_death(self, last_phys) -> Dict:
         if self.death_gen is None:
             crit_msg = LoreManifest.get_instance().get_ux("main_strings", "death_no_proto") or ""
-            return {
-                "type": "DEATH",
-                "ui": f"{Prisma.RED}{crit_msg}{Prisma.RST}",
-                "logs": [],
-            }
-        eulogy_text, cause_code = self.death_gen.eulogy(
-            last_phys, self.bio.mito.state, self.trauma_accum
-        )
+            return {"type": "DEATH", "ui": f"{Prisma.RED}{crit_msg}{Prisma.RST}", "logs": [], }
+        eulogy_text, cause_code = self.death_gen.eulogy(last_phys, self.bio.mito.state, self.trauma_accum)
         halt_msg = LoreManifest.get_instance().get_ux("main_strings", "death_halt") or ""
-        death_log = [
-            f"\n{Prisma.RED}{halt_msg.format(eulogy_text=eulogy_text)}{Prisma.RST}"
-        ]
+        death_log = [f"\n{Prisma.RED}{halt_msg.format(eulogy_text=eulogy_text)}{Prisma.RST}"]
         legacy_msg = self.oroboros.crystallize(cause_code, self.soul)
         death_log.append(f"{Prisma.MAG}🐍 {legacy_msg}{Prisma.RST}")
-        continuity_packet = {
-            "location": self.cortex.gather_state(self.cortex.last_physics or {})
-            .get("world", {})
-            .get("orbit", ["Void"])[0],
-            "last_output": (
-                self.cortex.dialogue_buffer[-1]
-                if self.cortex.dialogue_buffer
-                else "Silence."
-            ),
-            "inventory": self.gordon.inventory if self.gordon else [],
-        }
+        continuity_packet = {"location": self.cortex.gather_state(self.cortex.last_physics or {})
+        .get("world", {})
+        .get("orbit", ["Void"])[0], "last_output": (
+            self.cortex.dialogue_buffer[-1]
+            if self.cortex.dialogue_buffer
+            else "Silence."), "inventory": self.gordon.inventory if self.gordon else [], }
         try:
             mutations_data = (
                 self.repro.attempt_reproduction(self, "MITOSIS")[1]
                 if getattr(self, "repro", None)
-                else {}
-            )
+                else {})
             immune_data = (
                 list(self.bio.immune.active_antibodies)
                 if getattr(self.bio, "immune", None)
-                else []
-            )
+                else [])
             self.bio.mito.adapt(0)
             mito_state = (
                 self.bio.mito.state.__dict__
                 if hasattr(self.bio.mito.state, "__dict__")
-                else {}
-            )
-
-            path = self.mind.mem.save(
-                health=0,
-                stamina=self.stamina,
-                mutations=mutations_data,
-                trauma_accum=self.trauma_accum,
-                joy_history=[],
-                mitochondria_traits=mito_state,
-                antibodies=immune_data,
-                soul_data=self.soul.to_dict(),
-                continuity=continuity_packet,
-            )
+                else {})
+            path = self.mind.mem.save(health=0, stamina=self.stamina, mutations=mutations_data,
+                                      trauma_accum=self.trauma_accum, joy_history=[], mitochondria_traits=mito_state,
+                                      antibodies=immune_data, soul_data=self.soul.to_dict(),
+                                      continuity=continuity_packet, )
             saved_msg = LoreManifest.get_instance().get_ux("main_strings", "legacy_saved") or ""
             death_log.append(f"{Prisma.WHT}{saved_msg.format(path=path)}{Prisma.RST}")
         except Exception as e:
             fail_msg = LoreManifest.get_instance().get_ux("main_strings", "save_failed") or ""
             death_log.append(fail_msg.format(e=e))
-        return {
-            "type": "DEATH",
-            "ui": "\n".join(death_log),
-            "logs": death_log,
-            "metrics": self.get_metrics(),
-        }
+        return {"type": "DEATH", "ui": "\n".join(death_log), "logs": death_log, "metrics": self.get_metrics(), }
 
     def get_metrics(self, atp=0.0):
         real_atp = atp
         if real_atp <= 0.0 and hasattr(self, "bio") and hasattr(self.bio, "mito"):
             real_atp = getattr(self.bio.mito.state, "atp_pool", 0.0)
-        return {
-            "health": self.health,
-            "stamina": self.stamina,
-            "atp": real_atp,
-            "tick": self.tick_count,
-            "efficiency": getattr(self.host_stats, "efficiency_index", 1.0),
-        }
+        return {"health": self.health, "stamina": self.stamina, "atp": real_atp, "tick": self.tick_count,
+                "efficiency": getattr(self.host_stats, "efficiency_index", 1.0), }
 
     def emergency_save(self, exit_cause="UNKNOWN"):
         return self.chronos.emergency_dump(exit_cause)
@@ -641,34 +498,24 @@ class BoneAmanita:
         cfg = getattr(BoneConfig, "MAIN", None)
         audit_freq = getattr(cfg, "ETHICAL_AUDIT_FREQ", 3) if cfg else 3
         bypass_ratio = getattr(cfg, "ETHICAL_HEALTH_BYPASS", 0.3) if cfg else 0.3
-
         max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
-
         if self.tick_count % audit_freq != 0 and self.health > (max_h * bypass_ratio):
             return False
-
         desp_thresh = getattr(cfg, "DESPERATION_THRESHOLD", 0.7) if cfg else 0.7
         cath_heal = getattr(cfg, "CATHARSIS_HEAL_AMOUNT", 30.0) if cfg else 30.0
         cath_decay = getattr(cfg, "CATHARSIS_DECAY", 0.1) if cfg else 0.1
-
         trauma_sum = sum(self.trauma_accum.values())
         health_ratio = self.health / max_h
         desperation = trauma_sum * (1.0 - health_ratio)
         if desperation > desp_thresh:
             msg = LoreManifest.get_instance().get_ux("main_strings", "mercy_venting") or ""
-            self.events.log(
-                f"{Prisma.WHT}{msg}{Prisma.RST}",
-                "SYS",
-            )
+            self.events.log(f"{Prisma.WHT}{msg}{Prisma.RST}", "SYS", )
             for k in self.trauma_accum:
                 self.trauma_accum[k] *= cath_decay
                 if self.trauma_accum[k] < 0.01:
                     self.trauma_accum[k] = 0.0
             msg_cath = LoreManifest.get_instance().get_ux("main_strings", "catharsis") or ""
-            self.events.log(
-                f"{Prisma.CYN}{msg_cath}{Prisma.RST}",
-                "SENSATION",
-            )
+            self.events.log(f"{Prisma.CYN}{msg_cath}{Prisma.RST}", "SENSATION", )
             self.health = min(self.health + cath_heal, max_h)
             return True
         return False
@@ -686,32 +533,24 @@ class BoneAmanita:
                 loc = (
                     self.embryo.continuity.get("location", "Unknown")
                     if self.embryo.continuity
-                    else "Unknown"
-                )
-
+                    else "Unknown")
                 last_scene = "Silence."
                 if self.cortex and self.cortex.dialogue_buffer:
                     last_scene = self.cortex.dialogue_buffer[-1]
                 elif self.embryo.continuity:
                     last_scene = self.embryo.continuity.get("last_output", "Silence.")
-
                 msg_resume = LoreManifest.get_instance().get_ux("main_strings", "resuming_timeline") or ""
                 msg_restored = LoreManifest.get_instance().get_ux("main_strings", "timeline_restored") or ""
                 resume_text = msg_resume.format(loc=loc, last_scene=last_scene)
                 return {"ui": resume_text, "logs": [msg_restored]}
-
         msg_synth = LoreManifest.get_instance().get_ux("main_strings", "synth_reality") or ""
         print(f"{Prisma.GRY}{msg_synth}{Prisma.RST}")
         scenarios = LoreManifest.get_instance().get("SCENARIOS", {})
-        archetypes = scenarios.get(
-            "ARCHETYPES", ["A quiet room", "The edge of a forest", "A terminal screen"]
-        )
+        archetypes = scenarios.get("ARCHETYPES", ["A quiet room", "The edge of a forest", "A terminal screen"])
         seed = random.choice(archetypes)
         msg_seed = LoreManifest.get_instance().get_ux("main_strings", "seed_loaded") or ""
         print(f"{Prisma.CYN}{msg_seed.format(seed=seed)}{Prisma.RST}")
-
         boot_prompt = f"SYSTEM_BOOT: {seed}"
-
         cold_result = self.process_turn(boot_prompt, is_system=True)
         return cold_result
 
@@ -724,7 +563,6 @@ class BoneAmanita:
     def shutdown(self):
         self.chronos.perform_shutdown()
 
-
 if __name__ == "__main__":
     sys_config = ConfigWizard.load_or_create()
     engine = BoneAmanita(config=sys_config)
@@ -732,11 +570,9 @@ if __name__ == "__main__":
         boot_packet = session.engage_cold_boot()
         if boot_packet and boot_packet.get("ui"):
             typewriter(boot_packet["ui"])
-
         prompt_ind = LoreManifest.get_instance().get_ux("main_strings", "prompt_indicator") or ""
         term_div = LoreManifest.get_instance().get_ux("main_strings", "terminal_divider") or ""
         split_token = LoreManifest.get_instance().get_ux("main_strings", "ui_split_token") or ""
-
         while True:
             try:
                 user_in = input(f"\n{Prisma.paint(f'{session.user_name} {prompt_ind}', 'W')} ")
@@ -746,15 +582,11 @@ if __name__ == "__main__":
             if clean_in in ["exit", "quit", "/exit", "/quit"]:
                 break
             res = session.process_turn(user_in)
-
             print(f"\n{Prisma.GRY}{term_div}{Prisma.RST}")
-
             if res.get("ui"):
                 if split_token and split_token in res["ui"]:
                     dashboard, _, content = res["ui"].partition("\n\n")
-
                     print(f"\n{dashboard.strip()}\n")
-
                     typewriter(content.strip() + "\n", speed=0.005)
                 else:
                     typewriter(res["ui"] + "\n", speed=0.005)

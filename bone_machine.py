@@ -3,7 +3,6 @@
 import random
 from dataclasses import dataclass
 from typing import Tuple, Optional, List, Dict, Any
-
 from bone_body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, MetabolicGovernor
 from bone_brain import DreamEngine, ShimmerState
 from bone_config import BoneConfig
@@ -13,7 +12,6 @@ from bone_physics import TheGatekeeper, QuantumObserver, SurfaceTension, ZoneIne
 from bone_protocols import LimboLayer
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_types import MindSystem, PhysSystem, PhysicsPacket, Prisma
-
 
 class TheCrucible:
     def __init__(self):

@@ -6,7 +6,6 @@ from bone_config import BoneConfig
 from bone_core import Prisma, LoreManifest
 from bone_physics import ChromaScope
 
-
 class Projector:
     def __init__(self):
         self.width = 80
@@ -104,8 +103,7 @@ class Projector:
         if vectors:
             dom_vec = max(vectors, key=vectors.get)
             dom_val = vectors[dom_vec]
-        return (
-            f"  {Prisma.CYN}VOLT:{Prisma.RST} {volt:04.1f}v   "
+        return (f"  {Prisma.CYN}VOLT:{Prisma.RST} {volt:04.1f}v   "
             f"{Prisma.SLATE}DRAG:{Prisma.RST} {drag:04.1f}   "
             f"{Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})")
 
@@ -214,14 +212,10 @@ class GeodesicRenderer:
                 self.eng.navigator.current_node_id)
             if node:
                 world_loc = node.name
-        data_ctx = {
-            "health": self.eng.health,
-            "stamina": self.eng.stamina,
-            "bio": bio_data,
-            "dignity": (getattr(self.eng.soul.anchor, "dignity_reserve", 100.0)if hasattr(self.eng, "soul")else 100.0),
-            "vectors": physics.get("vector", {}),
-            "ui_depth": getattr(self.eng, "ui_mode", "IDLE"),
-            "world_loc": world_loc}
+        data_ctx = {"health": self.eng.health, "stamina": self.eng.stamina, "bio": bio_data, "dignity": (
+            getattr(self.eng.soul.anchor, "dignity_reserve", 100.0) if hasattr(self.eng, "soul") else 100.0),
+                    "vectors": physics.get("vector", {}), "ui_depth": getattr(self.eng, "ui_mode", "IDLE"),
+                    "world_loc": world_loc}
         if hasattr(self.eng, "consultant"):
             data_ctx["vsl"] = {"E": self.eng.consultant.state.E, "B": self.eng.consultant.state.B,
                                "L": getattr(self.eng.consultant.state, "L", 0.0),
@@ -463,8 +457,7 @@ class SoulDashboard:
             LoreManifest.get_instance().get_ux("soul_dashboard", "pet_icon") or ""
             if (dig < d_med and not anchor.agency_lock)
             else "")
-        muse = (
-            soul.current_obsession.title
+        muse = (soul.current_obsession.title
             if soul.current_obsession
             else (LoreManifest.get_instance().get_ux("soul_dashboard", "default_muse") or "None"))
         l_soul = LoreManifest.get_instance().get_ux("soul_dashboard", "soul_prefix") or "Soul:"
@@ -494,7 +487,7 @@ class CycleReporter:
         if hasattr(self.eng, "village") and isinstance(self.eng.village, dict):
             strunk_instance = self.eng.village.get("bureau")
         self.renderer = get_renderer(self.eng, self.vsl_chroma, strunk_instance, getattr(self, "valve", None),
-                                     mode=mode, )
+                                     mode=mode)
         self.renderers[mode] = self.renderer
         self.current_mode = mode
 
@@ -568,12 +561,7 @@ class CycleReporter:
                 if hasattr(self.renderer, "base_renderer")
                 else self.renderer)
             bio_res = ctx.bio_result or {}
-            return {
-                "type": "BUREAUCRACY",
-                "ui": ctx.bureau_ui,
-                "logs": base.compose_logs(
-                    ctx.logs, self.eng.events.flush(), self.eng.tick_count
-                ),
-                "metrics": self.eng.get_metrics(bio_res.get("atp", 0.0)),
-            }
+            return {"type": "BUREAUCRACY", "ui": ctx.bureau_ui,
+                    "logs": base.compose_logs(ctx.logs, self.eng.events.flush(), self.eng.tick_count),
+                    "metrics": self.eng.get_metrics(bio_res.get("atp", 0.0)), }
         return None

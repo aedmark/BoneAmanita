@@ -4,11 +4,9 @@ import random
 import re
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
-
 from bone_config import BoneConfig
 from bone_core import LoreManifest
 from bone_types import Prisma
-
 
 @dataclass
 class Item:
@@ -24,16 +22,11 @@ class Item:
 
     @classmethod
     def from_dict(cls, name: str, data: Dict):
-        return cls(
-            name=name,
-            description=data.get("description", "Unknown Artifact"),
-            function=data.get("function", "MISC"),
-            passive_traits=data.get("passive_traits", []),
-            spawn_context=data.get("spawn_context", "COMMON"),
-            value=data.get("value", 1.0),
-            usage_msg=data.get("usage_msg", f"You use the {name}."),
-            consume_on_use=data.get("consume_on_use", False),
-            reflex_trigger=data.get("reflex_trigger", None))
+        return cls(name=name, description=data.get("description", "Unknown Artifact"),
+                   function=data.get("function", "MISC"), passive_traits=data.get("passive_traits", []),
+                   spawn_context=data.get("spawn_context", "COMMON"), value=data.get("value", 1.0),
+                   usage_msg=data.get("usage_msg", f"You use the {name}."),
+                   consume_on_use=data.get("consume_on_use", False), reflex_trigger=data.get("reflex_trigger", None))
 
 class GordonKnot:
     def __init__(self, events=None, mode="ADVENTURE"):

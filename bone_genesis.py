@@ -14,7 +14,6 @@ from bone_spores import LiteraryReproduction
 from bone_symbiosis import SymbiosisManager
 from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer
 
-
 class BoneGenesis:
     @staticmethod
     def ignite(
@@ -71,25 +70,17 @@ class BoneGenesis:
 
     @staticmethod
     def _summon_village(
-        events, embryo, akashic, suppressed: Set[str], boot_mode: str = "ADVENTURE"
-    ) -> Dict[str, Any]:
-        gordon = (
-            GordonKnot(events=events, mode=boot_mode)
+        events, embryo, akashic, suppressed: Set[str], boot_mode: str = "ADVENTURE") -> Dict[str, Any]:
+        gordon = (GordonKnot(events=events, mode=boot_mode)
             if "GORDON" not in suppressed
-            else None
-        )
-        navigator = (
-            TheCartographer(embryo.shimmer)
+            else None)
+        navigator = (TheCartographer(embryo.shimmer)
             if {"CARTOGRAPHER", "NAVIGATOR"}.isdisjoint(suppressed)
-            else None
-        )
-        tinkerer = (
-            TheTinkerer(gordon, events, akashic)
+            else None)
+        tinkerer = (TheTinkerer(gordon, events, akashic)
             if "TINKERER" not in suppressed
-            else None
-        )
+            else None)
         bureau = TheBureau() if "BUREAU" not in suppressed else None
-
         death_gen = None
         if "DEATH" not in suppressed:
             death_gen = DeathGen()
@@ -103,18 +94,6 @@ class BoneGenesis:
         limbo = LimboLayer()
         kintsugi = KintsugiProtocol()
         consultant = BoneConsultant()
-        return {
-            "gordon": gordon,
-            "navigator": navigator,
-            "tinkerer": tinkerer,
-            "death_gen": death_gen,
-            "bureau": bureau,
-            "town_hall": town_hall,
-            "repro": repro,
-            "zen": zen,
-            "critics": critics,
-            "therapy": therapy,
-            "limbo": limbo,
-            "kintsugi": kintsugi,
-            "consultant": consultant,
-        }
+        return {"gordon": gordon, "navigator": navigator, "tinkerer": tinkerer, "death_gen": death_gen,
+                "bureau": bureau, "town_hall": town_hall, "repro": repro, "zen": zen, "critics": critics,
+                "therapy": therapy, "limbo": limbo, "kintsugi": kintsugi, "consultant": consultant, }

@@ -53,25 +53,16 @@ class TheAkashicRecord:
         return yield_val, msg.format(target=target)
 
     def record_scar(self, concept: str, p: Any):
-        coords = {
-            "E": getattr(p, "E", 0.2),
-            "beta": getattr(p, "beta", 0.4),
-            "S": getattr(p, "S", 0.3),
-            "D": getattr(p, "D", 0.3),
-            "C": getattr(p, "C", 0.2),
-            "T": getattr(p, "T", 0.0),
-            "psi": getattr(p, "psi", 0.0),
-            "chi": getattr(p, "chi", 0.0),
-            "valence": getattr(p, "valence", 0.0),
-            "ROS": getattr(p, "ROS", 0.0),}
+        coords = {"E": getattr(p, "E", 0.2), "beta": getattr(p, "beta", 0.4), "S": getattr(p, "S", 0.3),
+                  "D": getattr(p, "D", 0.3), "C": getattr(p, "C", 0.2), "T": getattr(p, "T", 0.0),
+                  "psi": getattr(p, "psi", 0.0), "chi": getattr(p, "chi", 0.0), "valence": getattr(p, "valence", 0.0),
+                  "ROS": getattr(p, "ROS", 0.0), }
         scar = {"concept": concept, "coordinates": coords, "gilded": True}
         self.scar_map.append(scar)
-        self.store_ghost_echo(
-            {"type": "SCAR_GHOST", "concept": concept, "coords": coords})
+        self.store_ghost_echo({"type": "SCAR_GHOST", "concept": concept, "coords": coords})
         if self.events:
             msg = LoreManifest.get_instance().get_ux("akashic_strings", "mercy_scar") or ""
-            self.events.log(
-                f"{Prisma.OCHRE}{msg.format(concept=concept)}{Prisma.RST}", "VILLAGE")
+            self.events.log(f"{Prisma.OCHRE}{msg.format(concept=concept)}{Prisma.RST}", "VILLAGE")
 
     def bury_memory(self, concept: str, data: Dict):
         self.subconscious_strata.append({"concept": concept, "data": data})
@@ -141,16 +132,8 @@ class TheAkashicRecord:
 
     def forge_new_item(self, vector: Dict[str, float]) -> Tuple[str, Dict]:
         dominant_force = max(vector, key=vector.__getitem__) if vector else "CHI"
-        prefixes = {
-            "VEL": "Kinetic",
-            "STR": "Heavy",
-            "CHI": "Cursed",
-            "ENT": "Cursed",
-            "PHI": "Solar",
-            "PSI": "Void",
-            "BET": "Paradox",
-            "LAMBDA": "Liminal",
-            "DEL": "Manic",}
+        prefixes = {"VEL": "Kinetic", "STR": "Heavy", "CHI": "Cursed", "ENT": "Cursed", "PHI": "Solar", "PSI": "Void",
+                    "BET": "Paradox", "LAMBDA": "Liminal", "DEL": "Manic", }
         prefix = prefixes.get(dominant_force, "Ascended")
         unique_suffix = str(uuid.uuid4())[:4].upper()
         new_name = f"{prefix.upper()}_ARTIFACT_{int(vector.get(dominant_force, 0) * 10)}_{unique_suffix}"
@@ -162,12 +145,8 @@ class TheAkashicRecord:
         desc_template = LoreManifest.get_instance().get_ux("akashic_strings", "artifact_desc") or ""
         cfg = getattr(BoneConfig, "AKASHIC", None)
         artifact_val = getattr(cfg, "ARTIFACT_VALUE", 50.0) if cfg else 50.0
-        new_data = {
-            "name": new_name,
-            "description": desc_template.format(dominant_force=dominant_force),
-            "function": "ARTIFACT",
-            "passive_traits": hazards,
-            "value": artifact_val,}
+        new_data = {"name": new_name, "description": desc_template.format(dominant_force=dominant_force),
+                    "function": "ARTIFACT", "passive_traits": hazards, "value": artifact_val, }
         gordon_data = self.lore.get("GORDON") or {}
         registry = gordon_data.get("ITEM_REGISTRY", {})
         registry[new_name] = new_data
@@ -181,13 +160,10 @@ class TheAkashicRecord:
         print(f"{Prisma.GRY}{msg}{Prisma.RST}")
 
     def _save_user_state(self):
-        state = {
-            "lens_cooccurrence": {
-                f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
-            "ingredient_affinity": self.ingredient_affinity,
-            "shadow_stock": self.shadow_stock,
-            "subconscious_strata": self.subconscious_strata,
-            "scar_map": self.scar_map,}
+        state = {"lens_cooccurrence": {
+            f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
+            "ingredient_affinity": self.ingredient_affinity, "shadow_stock": self.shadow_stock,
+            "subconscious_strata": self.subconscious_strata, "scar_map": self.scar_map, }
         if not os.path.exists("saves"):
             os.makedirs("saves")
         try:
@@ -294,16 +270,12 @@ class TheAkashicRecord:
             return existing_lenses.get(l_name, {}).get("weights", {"v": 0, "d": 0})
         w_a = get_weights(lens_a)
         w_b = get_weights(lens_b)
-        new_weights = {
-            "voltage": round(
-                (w_a.get("voltage", w_a.get("v", 0))
-                    + w_b.get("voltage", w_b.get("v", 0)))/ 2,2,),
+        new_weights = {"voltage": round((w_a.get("voltage", w_a.get("v", 0))
+                              + w_b.get("voltage", w_b.get("v", 0))) / 2, 2, ),
             "drag": round((w_a.get("drag", w_a.get("d", 0)) + w_b.get("drag", w_b.get("d", 0)))/ 2,2,),}
         desc_template = LoreManifest.get_instance().get_ux("akashic_strings", "lens_desc") or ""
-        new_lens_data = {
-            "description": desc_template.format(lens_a=lens_a, lens_b=lens_b),
-            "weights": new_weights,
-            "parentage": [lens_a, lens_b],}
+        new_lens_data = {"description": desc_template.format(lens_a=lens_a, lens_b=lens_b), "weights": new_weights,
+                         "parentage": [lens_a, lens_b], }
         self.lore.inject("LENSES", {new_name: new_lens_data})
         self.discovered_words[new_name] = "LENS"
         msg = LoreManifest.get_instance().get_ux("akashic_strings", "paradigm_crystallized") or ""
@@ -314,12 +286,9 @@ class TheAkashicRecord:
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
         self.known_recipes.add((ingredient, catalyst))
         msg_template = LoreManifest.get_instance().get_ux("akashic_strings", "recipe_msg") or ""
-        new_recipe = {
-            "ingredient": ingredient,
-            "catalyst_category": catalyst,
-            "result": result_item,
-            "msg": msg_template.format(
-                ingredient=ingredient, catalyst=catalyst, result_item=result_item),}
+        new_recipe = {"ingredient": ingredient, "catalyst_category": catalyst, "result": result_item,
+                      "msg": msg_template.format(
+                          ingredient=ingredient, catalyst=catalyst, result_item=result_item), }
         current_recipes = (self.lore.get("GORDON") or {}).get("RECIPES", [])
         if not any(
                 r["ingredient"] == ingredient and r["catalyst_category"] == catalyst

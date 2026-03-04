@@ -1,5 +1,11 @@
 # BONEAMANITA v16 CHANGELOG
 
+### **BONEAMANITA v16.3.2 "The Condensing"**
+
+* Boring code cleaning that doesn't change any functionality. Most magic numbers and strings have been decoupled to the lore folder or `bone_config.py`
+
+---
+
 ### **BONEAMANITA v16.3.1 "The Silent Substrate"**
 
 ---

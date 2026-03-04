@@ -6,7 +6,6 @@ from typing import Dict, Callable, List, Optional
 from bone_config import BonePresets, BoneConfig
 from bone_core import LoreManifest, Prisma
 
-
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
         self.eng = engine_ref
@@ -54,10 +53,7 @@ class CommandStateInterface:
                 last_out = self.eng.cortex.dialogue_buffer[-1]
         if hasattr(self.eng, "gordon"):
             inv = getattr(self.eng.gordon, "inventory", [])
-        continuity_packet = {
-            "location": loc,
-            "last_output": last_out,
-            "inventory": inv,}
+        continuity_packet = {"location": loc, "last_output": last_out, "inventory": inv, }
         atlas_data = None
         if hasattr(self.eng, "navigator") and self.eng.navigator:
             atlas_data = self.eng.navigator.export_atlas()
@@ -68,30 +64,20 @@ class CommandStateInterface:
                 mito_traits = self.eng.bio.mito.state.__dict__
             if hasattr(self.eng.bio, "immune"):
                 antibodies = list(self.eng.bio.immune.active_antibodies)
-            return self.eng.mind.mem.save(
-                health=self.eng.health,
-                stamina=self.eng.stamina,
-                mutations={},
-                trauma_accum=getattr(self.eng, "trauma_accum", {}),
-                joy_history=[],
-                mitochondria_traits=mito_traits,
-                antibodies=antibodies,
-                soul_data=(self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None),
-                continuity=continuity_packet,
-                world_atlas=atlas_data,
-                village_data=None,)
+            return self.eng.mind.mem.save(health=self.eng.health, stamina=self.eng.stamina, mutations={},
+                                          trauma_accum=getattr(self.eng, "trauma_accum", {}), joy_history=[],
+                                          mitochondria_traits=mito_traits, antibodies=antibodies,
+                                          soul_data=(self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None),
+                                          continuity=continuity_packet, world_atlas=atlas_data, village_data=None, )
         return LoreManifest.get_instance().get_ux("command_state", "unreachable_error") or ""
 
     def get_vitals(self) -> Dict[str, float]:
         metrics = self.eng.get_metrics()
         cmd_cfg = getattr(self.Config, "COMMANDS", None)
-        return {
-            "health": metrics.get("health", 0.0),
-            "stamina": metrics.get("stamina", 0.0),
-            "atp": metrics.get("atp", 0.0),
-            "max_health": getattr(self.Config, "MAX_HEALTH", 100.0),
-            "max_stamina": getattr(self.Config, "MAX_STAMINA", 100.0),
-            "max_atp": getattr(cmd_cfg, "STATUS_MAX_ATP", 200.0) if cmd_cfg else 200.0,}
+        return {"health": metrics.get("health", 0.0), "stamina": metrics.get("stamina", 0.0),
+                "atp": metrics.get("atp", 0.0), "max_health": getattr(self.Config, "MAX_HEALTH", 100.0),
+                "max_stamina": getattr(self.Config, "MAX_STAMINA", 100.0),
+                "max_atp": getattr(cmd_cfg, "STATUS_MAX_ATP", 200.0) if cmd_cfg else 200.0, }
 
     def get_inventory(self) -> List[str]:
         if hasattr(self.eng, "gordon"):
@@ -136,7 +122,6 @@ class ResourceTax:
             self.state.modify_resource("atp", -atp_cost)
         return True
 
-
 class CommandRegistry:
     def __init__(self, state: CommandStateInterface):
         self.state = state
@@ -164,13 +149,7 @@ class CommandRegistry:
             return True
 
 class CommandProcessor:
-    def __init__(
-        self,
-        engine,
-        prisma_ref,
-        _lexicon_ref=None,
-        config_ref=None,
-        _cartographer_ref=None,):
+    def __init__(self, engine, prisma_ref, _lexicon_ref=None, config_ref=None, _cartographer_ref=None, ):
         real_config = config_ref if config_ref else BoneConfig
         self.interface = CommandStateInterface(engine, prisma_ref, real_config)
         self.tax = ResourceTax(self.interface)
@@ -207,7 +186,6 @@ class CommandProcessor:
 
         def _vn(key):
             return LoreManifest.get_instance().get_ux("vsl_notifications", key) or ""
-
         if "[VSL_LITE]" in text_upper:
             self.interface.eng.ui_mode = "LITE"
             self.interface.log(f"{self.P.CYN}{_vn('lite')}{self.P.RST}")
@@ -219,10 +197,8 @@ class CommandProcessor:
             self.interface.log(f"{self.P.MAG}{_vn('deep')}{self.P.RST}")
         if "[MOD:CODING]" in text_upper or "[SLASH]" in text_upper:
             self.interface.log(f"{self.P.INDIGO}{_vn('coding')}{self.P.RST}")
-            if hasattr(self.interface.eng, "council") and hasattr(
-                    self.interface.eng.council, "slash_council"):
+            if hasattr(self.interface.eng, "council") and hasattr(self.interface.eng.council, "slash_council"):
                 self.interface.eng.council.slash_council.active = True
-
         if "[VSL_IDLE]" in text_upper:
             self.interface.log(f"{self.P.VIOLET}{_vn('idle')}{self.P.RST}")
             self.interface.eng.mode_settings = {"atp_drain_enabled": False}
@@ -243,8 +219,7 @@ class CommandProcessor:
             msg = LoreManifest.get_instance().get_ux("command_alerts", "soothe_weak") or ""
             self.interface.log(f"{self.P.RED}{msg.format(cost=cost)}{self.P.RST}")
             return True
-        if (
-                not hasattr(self.interface.eng, "mind")
+        if (not hasattr(self.interface.eng, "mind")
                 or not hasattr(self.interface.eng.mind, "mem")
                 or not hasattr(self.interface.eng.mind.mem, "soothe_conscience")):
             msg = LoreManifest.get_instance().get_ux("command_alerts", "soothe_missing_mem") or ""
@@ -263,9 +238,7 @@ class CommandProcessor:
         footer = LoreManifest.get_instance().get_ux("help_menu", "footer") or ""
         uncat = LoreManifest.get_instance().get_ux("help_menu", "uncategorized") or ""
         structure = LoreManifest.get_instance().get_ux("help_menu", "structure") or {}
-        lines = [
-            f"\n{self.P.CYN}{header}{self.P.RST}",
-            f"{self.P.GRY}{phase_pfx}{self.interface.get_soul_status() or def_phase}{self.P.RST}\n",]
+        lines = [f"\n{self.P.CYN}{header}{self.P.RST}", f"{self.P.GRY}{phase_pfx}{self.interface.get_soul_status() or def_phase}{self.P.RST}\n",]
         buckets = {k: [] for k in structure.keys()}
         buckets[uncat] = []
         cmd_to_cat = {cmd: cat for cat, cmds in structure.items() for cmd in cmds}
@@ -405,7 +378,6 @@ class CommandProcessor:
             self.interface.log(LoreManifest.get_instance().get_ux("command_alerts", "truth_usage") or "")
             return True
         from bone_gui import TruthRenderer
-
         try:
             mode = int(parts[1])
             if not (0 <= mode <= 3):
@@ -427,7 +399,6 @@ class CommandProcessor:
             reporter.renderer.dial_setting = mode
             modes = LoreManifest.get_instance().get_ux("command_alerts", "truth_modes", ["BOARDROOM", "WORKSHOP", "RED TEAM", "PALIMPSEST"])
             msg = LoreManifest.get_instance().get_ux("command_alerts", "truth_dial_set") or ""
-
             selected_mode = modes[mode] if mode < len(modes) else "UNKNOWN"
             self.interface.log(f"{self.P.CYN}{msg.format(mode=selected_mode)}{self.P.RST}")
         except ValueError:

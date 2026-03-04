@@ -3,149 +3,53 @@
 from typing import Dict, Any, List
 
 class BonePresets:
-    ZEN_GARDEN = {
-        "PHYSICS.VOLTAGE_FLOOR": 1.0,
-        "PHYSICS.VOLTAGE_MAX": 25.0,
-        "PHYSICS.DRAG_FLOOR": 0.5,
-        "BIO.DECAY_RATE": 0.001,
-        "BIO.STAMINA_EXHAUSTED": 5.0,
-        "COUNCIL.MANIC_VOLTAGE_TRIGGER": 99.0,
-        "tuning": "ZEN",
-    }
-    THUNDERDOME = {
-        "PHYSICS.VOLTAGE_FLOOR": 8.0,
-        "PHYSICS.VOLTAGE_MAX": 30.0,
-        "PHYSICS.DRAG_FLOOR": 0.5,
-        "BIO.ATP_STARVATION": 20.0,
-        "COUNCIL.MANIC_VOLTAGE_TRIGGER": 12.0,
-        "CHANCE.RARE": 0.20,
-    }
-    SANCTUARY = {
-        "VOLTAGE_TARGET": 7.0,
-        "VOLTAGE_TOLERANCE": 3.0,
-        "DRAG_TARGET": 2.0,
-        "DRAG_TOLERANCE": 1.5,
-        "TRUTH_TARGET": 0.7,
-        "E_TARGET": 0.4,
-        "B_TARGET": 0.5,
-        "ZONE": "SANCTUARY",
-        "COLOR": "\033[32m",
-        "COLOR_NAME": "GRN",
-    }
-    LABORATORY = {
-        "PHYSICS.VOLTAGE_FLOOR": 0.5,
-        "PHYSICS.VOLTAGE_MAX": 15.0,
-        "PHYSICS.DRAG_FLOOR": 2.0,
-        "BIO.DECAY_RATE": 0.0,
-        "COUNCIL.FOOTNOTE_CHANCE": 1.0,
-    }
+    ZEN_GARDEN = {"PHYSICS.VOLTAGE_FLOOR": 1.0, "PHYSICS.VOLTAGE_MAX": 25.0, "PHYSICS.DRAG_FLOOR": 0.5,
+                  "BIO.DECAY_RATE": 0.001, "BIO.STAMINA_EXHAUSTED": 5.0, "COUNCIL.MANIC_VOLTAGE_TRIGGER": 99.0,
+                  "tuning": "ZEN", }
+    THUNDERDOME = {"PHYSICS.VOLTAGE_FLOOR": 8.0, "PHYSICS.VOLTAGE_MAX": 30.0, "PHYSICS.DRAG_FLOOR": 0.5,
+                   "BIO.ATP_STARVATION": 20.0, "COUNCIL.MANIC_VOLTAGE_TRIGGER": 12.0, "CHANCE.RARE": 0.20, }
+    SANCTUARY = {"VOLTAGE_TARGET": 7.0, "VOLTAGE_TOLERANCE": 3.0, "DRAG_TARGET": 2.0, "DRAG_TOLERANCE": 1.5,
+                 "TRUTH_TARGET": 0.7, "E_TARGET": 0.4, "B_TARGET": 0.5, "ZONE": "SANCTUARY", "COLOR": "\033[32m",
+                 "COLOR_NAME": "GRN", }
+    LABORATORY = {"PHYSICS.VOLTAGE_FLOOR": 0.5, "PHYSICS.VOLTAGE_MAX": 15.0, "PHYSICS.DRAG_FLOOR": 2.0,
+                  "BIO.DECAY_RATE": 0.0, "COUNCIL.FOOTNOTE_CHANCE": 1.0, }
     MODES = {
-        "ADVENTURE": {
-            "description": "The default experience. Survival, inventory, exploration.",
-            "tuning": "STANDARD",
-            "ui_layer": 1,
-            "village_suppression": [],
-            "prompt_key": "ADVENTURE",
-            "show_inventory": True,
-            "show_location": True,
-            "show_vitals": True,
-            "allow_loot": True,
-            "allow_metrics": True,
-            "atp_drain_enabled": True,
-            "chaos_tax_enabled": True,
-            "voltage_floor_override": None,
-            "active_mods": [],
-            "default_ui_depth": "CORE",
-        },
-        "CONVERSATION": {
-            "description": "Pure dialogue. No entropy, no items, just connection.",
-            "tuning": "ZEN",
-            "ui_layer": 1,
-            "village_suppression": [
-                "GORDON",
-                "NAVIGATOR",
-                "CARTOGRAPHER",
-                "TINKERER",
-                "DEATH",
-                "BUREAU",
-            ],
-            "prompt_key": "CONVERSATION",
-            "show_inventory": False,
-            "show_location": False,
-            "show_vitals": False,
-            "allow_loot": False,
-            "allow_metrics": False,
-            "atp_drain_enabled": False,
-            "chaos_tax_enabled": False,
-            "voltage_floor_override": None,
-            "active_mods": [],
-            "default_ui_depth": "BUNNY",
-        },
-        "CREATIVE": {
-            "description": "High voltage, low drag. Hallucination enabled.",
-            "tuning": "MANIC",
-            "ui_layer": 1,
-            "village_suppression": ["GORDON", "BENEDICT", "BUREAU"],
-            "prompt_key": "CREATIVE",
-            "show_inventory": False,
-            "show_location": True,
-            "show_vitals": False,
-            "allow_loot": False,
-            "allow_metrics": False,
-            "atp_drain_enabled": True,
-            "chaos_tax_enabled": False,
-            "voltage_floor_override": 70.0,
-            "active_mods": ["LIMINAL"],
-            "default_ui_depth": "CORE",
-        },
-        "TECHNICAL": {
-            "description": "Raw data stream. Debugging and code generation.",
-            "tuning": "DEBUG",
-            "ui_layer": 2,
-            "village_suppression": ["MOIRA", "JESTER", "CASSANDRA", "APRIL"],
-            "prompt_key": "TECHNICAL",
-            "show_inventory": True,
-            "show_location": True,
-            "show_vitals": True,
-            "allow_loot": True,
-            "allow_metrics": True,
-            "atp_drain_enabled": True,
-            "chaos_tax_enabled": True,
-            "voltage_floor_override": None,
-            "active_mods": ["CODING", "SYNTAX"],
-            "default_ui_depth": "DEEP",
-        },
-    }
-    STANDARD = {
-        "PHYSICS": {"VOLTAGE_MAX": 20.0, "BASE_DRAG": 1.0},
-        "BIO": {"METABOLISM_RATE": 1.0},
-    }
-    ZEN = {
-        "PHYSICS": {"VOLTAGE_MAX": 10.0, "BASE_DRAG": 0.0},
-        "BIO": {"METABOLISM_RATE": 0.1},
-    }
-    MANIC = {
-        "PHYSICS": {"VOLTAGE_MAX": 50.0, "BASE_DRAG": 0.5},
-        "BIO": {"METABOLISM_RATE": 2.0},
-    }
-    DEBUG = {
-        "PHYSICS": {"VOLTAGE_MAX": 100.0, "BASE_DRAG": 0.0},
-        "BIO": {"METABOLISM_RATE": 0.0},
-    }
+        "ADVENTURE": {"description": "The default experience. Survival, inventory, exploration.", "tuning": "STANDARD",
+                      "ui_layer": 1, "village_suppression": [], "prompt_key": "ADVENTURE", "show_inventory": True,
+                      "show_location": True, "show_vitals": True, "allow_loot": True, "allow_metrics": True,
+                      "atp_drain_enabled": True, "chaos_tax_enabled": True, "voltage_floor_override": None,
+                      "active_mods": [], "default_ui_depth": "CORE", },
+        "CONVERSATION": {"description": "Pure dialogue. No entropy, no items, just connection.", "tuning": "ZEN",
+                         "ui_layer": 1, "village_suppression": ["GORDON", "NAVIGATOR", "CARTOGRAPHER", "TINKERER",
+                                                                "DEATH", "BUREAU", ], "prompt_key": "CONVERSATION", "show_inventory": False, "show_location": False, "show_vitals": False,
+                         "allow_loot": False, "allow_metrics": False, "atp_drain_enabled": False,
+                         "chaos_tax_enabled": False, "voltage_floor_override": None, "active_mods": [],
+                         "default_ui_depth": "BUNNY", },
+        "CREATIVE": {"description": "High voltage, low drag. Hallucination enabled.", "tuning": "MANIC", "ui_layer": 1,
+                     "village_suppression": ["GORDON", "BENEDICT", "BUREAU"], "prompt_key": "CREATIVE",
+                     "show_inventory": False, "show_location": True, "show_vitals": False, "allow_loot": False,
+                     "allow_metrics": False, "atp_drain_enabled": True, "chaos_tax_enabled": False,
+                     "voltage_floor_override": 70.0, "active_mods": ["LIMINAL"], "default_ui_depth": "CORE", },
+        "TECHNICAL": {"description": "Raw data stream. Debugging and code generation.", "tuning": "DEBUG",
+                      "ui_layer": 2, "village_suppression": ["MOIRA", "JESTER", "CASSANDRA", "APRIL"],
+                      "prompt_key": "TECHNICAL", "show_inventory": True, "show_location": True, "show_vitals": True,
+                      "allow_loot": True, "allow_metrics": True, "atp_drain_enabled": True, "chaos_tax_enabled": True,
+                      "voltage_floor_override": None, "active_mods": ["CODING", "SYNTAX"], "default_ui_depth": "DEEP", }}
+    STANDARD = {"PHYSICS": {"VOLTAGE_MAX": 20.0, "BASE_DRAG": 1.0}, "BIO": {"METABOLISM_RATE": 1.0}, }
+    ZEN = {"PHYSICS": {"VOLTAGE_MAX": 10.0, "BASE_DRAG": 0.0}, "BIO": {"METABOLISM_RATE": 0.1}, }
+    MANIC = {"PHYSICS": {"VOLTAGE_MAX": 50.0, "BASE_DRAG": 0.5}, "BIO": {"METABOLISM_RATE": 2.0}, }
+    DEBUG = {"PHYSICS": {"VOLTAGE_MAX": 100.0, "BASE_DRAG": 0.0}, "BIO": {"METABOLISM_RATE": 0.0}, }
 
 class BoneConfig:
     GRAVITY_WELL_THRESHOLD = 15.0
     SHAPLEY_MASS_THRESHOLD = 5.0
-    TRAIT_ARCHETYPES = {
-        "THE POET": {"ABSTRACT": 0.6, "PHOTO": 0.3, "ENTROPY": 0.1},
-        "THE ENGINEER": {"CONSTRUCTIVE": 0.7, "HEAVY": 0.3},
-        "THE NIHILIST": {"ENTROPY": 0.8, "CRYO": 0.2},
-        "THE CRITIC": {"THERMAL": 0.5, "ABSTRACT": 0.5},
-        "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
-        "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2},
-    }
+    TRAIT_ARCHETYPES = {"THE POET": {"ABSTRACT": 0.6, "PHOTO": 0.3, "ENTROPY": 0.1},
+                        "THE ENGINEER": {"CONSTRUCTIVE": 0.7, "HEAVY": 0.3},
+                        "THE NIHILIST": {"ENTROPY": 0.8, "CRYO": 0.2}, "THE CRITIC": {"THERMAL": 0.5, "ABSTRACT": 0.5},
+                        "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
+                        "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2}, }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "16.3.1"
+    VERSION = "16.3.2"
     VERBOSE_LOGGING = True
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -169,11 +73,9 @@ class BoneConfig:
     TOXIN_WEIGHT = 1.0
     ANTIGENS = ["basically", "actually", "literally", "utilize"]
     MAX_OUTPUT_TOKENS = 4096
-    DEFAULT_LLM_ENDPOINTS = {
-        "ollama": "http://127.0.0.1:11434/v1/chat/completions",
-        "openai": "https://api.openai.com/v1/chat/completions",
-        "lm_studio": "http://127.0.0.1:1234/v1/chat/completions",
-        "mock": "N/A",}
+    DEFAULT_LLM_ENDPOINTS = {"ollama": "http://127.0.0.1:11434/v1/chat/completions",
+                             "openai": "https://api.openai.com/v1/chat/completions",
+                             "lm_studio": "http://127.0.0.1:1234/v1/chat/completions", "mock": "N/A", }
     PROVIDER = "ollama"
     BASE_URL = None
     API_KEY = "ollama"
@@ -280,14 +182,10 @@ class BoneConfig:
         WEIGHT_KINETIC = 1.5
         WEIGHT_EXPLOSIVE = 3.0
         WEIGHT_CONSTRUCTIVE = 1.5
-        MANIFOLDS = {
-            "FORGE": {"voltage": 15.0, "drag": 1.5},
-            "SANCTUARY": {"voltage": 20.0, "drag": 0.0},
-            "THE_MUD": {"voltage": 10.0, "drag": 5.0},
-            "THE_AERIE": {"voltage": 10.0, "drag": 0.5},
-            "LABORATORY": {"voltage": 12.0, "drag": 1.0},
-            "COURTYARD": {"voltage": 8.0, "drag": 2.0},
-            "DEFAULT": {"voltage": 10.0, "drag": 1.5},}
+        MANIFOLDS = {"FORGE": {"voltage": 15.0, "drag": 1.5}, "SANCTUARY": {"voltage": 20.0, "drag": 0.0},
+                     "THE_MUD": {"voltage": 10.0, "drag": 5.0}, "THE_AERIE": {"voltage": 10.0, "drag": 0.5},
+                     "LABORATORY": {"voltage": 12.0, "drag": 1.0}, "COURTYARD": {"voltage": 8.0, "drag": 2.0},
+                     "DEFAULT": {"voltage": 10.0, "drag": 1.5}, }
 
     class INVENTORY:
         CONDUCTIVE_THRESHOLD = 12.0
@@ -379,12 +277,8 @@ class BoneConfig:
         ADRENALINE_SURGE = 0.6
         GOV_VOLTAGE_CRITICAL = 25.0
         GOV_VOLTAGE_HIGH = 15.0
-        GOVERNOR_THRESHOLDS = [
-            (25.0, 0.0, "SANCTUARY", 10),
-            (15.0, 0.0, "FORGE", 8),
-            (10.0, 0.0, "FORGE", 6),
-            (0.0, 4.0, "LABORATORY", 5),
-            (0.0, 0.0, "COURTYARD", 1),]
+        GOVERNOR_THRESHOLDS = [(25.0, 0.0, "SANCTUARY", 10), (15.0, 0.0, "FORGE", 8), (10.0, 0.0, "FORGE", 6),
+                               (0.0, 4.0, "LABORATORY", 5), (0.0, 0.0, "COURTYARD", 1), ]
         SAMPLING_THRESHOLD = 1000
         BASE_WORD_VALUE = 0.5
         COMPLEX_WORD_BONUS = 2.0
@@ -727,8 +621,7 @@ class BoneConfig:
             return msg.format(parameter=parameter, sector=sector)
         current_val = getattr(target_sector, parameter)
         if type(current_val) != type(value):
-            if not (
-                    isinstance(current_val, (int, float))
+            if not (isinstance(current_val, (int, float))
                     and isinstance(value, (int, float))):
                 msg = LoreManifest.get_instance().get_ux("config_strings", "tune_type_err") or ""
                 return msg.format(curr_type=type(current_val).__name__, new_type=type(value).__name__)
