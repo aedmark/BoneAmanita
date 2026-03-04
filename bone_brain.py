@@ -1,12 +1,20 @@
 """bone_brain.py - "The brain is a machine for jumping to conclusions." - S. Pinker"""
 
-import re, time, json, urllib.request, urllib.error, random, math
-from typing import Dict, Any, List, Optional, Tuple
+import json
+import math
+import random
+import re
+import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
-from bone_core import EventBus, TelemetryService, BoneJSONEncoder, LoreManifest
-from bone_types import Prisma, DecisionCrystal
+from typing import Dict, Any, List, Optional, Tuple
+
 from bone_config import BoneConfig, BonePresets
+from bone_core import EventBus, TelemetryService, BoneJSONEncoder, LoreManifest
 from bone_symbiosis import SymbiosisManager
+from bone_types import Prisma, DecisionCrystal
+
 
 @dataclass
 class CortexServices:

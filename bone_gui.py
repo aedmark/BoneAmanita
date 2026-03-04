@@ -1,9 +1,11 @@
 """ bone_gui.py """
 
 from typing import Dict, List, Any, Tuple
+
+from bone_config import BoneConfig
 from bone_core import Prisma, LoreManifest
 from bone_physics import ChromaScope
-from bone_config import BoneConfig
+
 
 class Projector:
     def __init__(self):

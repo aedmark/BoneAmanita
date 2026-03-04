@@ -1,17 +1,19 @@
 """ bone_genesis.py """
 
 from typing import Dict, Any, Set
-from bone_core import EventBus, LoreManifest
+
 from bone_akashic import TheAkashicRecord
-from bone_machine import BoneArchitect
-from bone_soul import NarrativeSelf, TheOroboros
-from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer
-from bone_inventory import GordonKnot
-from bone_protocols import TheBureau, ZenGarden, TheCriticsCircle, TherapyProtocol, KintsugiProtocol, LimboLayer
-from bone_symbiosis import SymbiosisManager
-from bone_spores import LiteraryReproduction
-from bone_drivers import DriverRegistry, BoneConsultant
 from bone_config import BoneConfig
+from bone_core import EventBus, LoreManifest
+from bone_drivers import DriverRegistry, BoneConsultant
+from bone_inventory import GordonKnot
+from bone_machine import BoneArchitect
+from bone_protocols import TheBureau, ZenGarden, TheCriticsCircle, TherapyProtocol, KintsugiProtocol, LimboLayer
+from bone_soul import NarrativeSelf, TheOroboros
+from bone_spores import LiteraryReproduction
+from bone_symbiosis import SymbiosisManager
+from bone_village import TownHall, DeathGen, TheCartographer, TheTinkerer
+
 
 class BoneGenesis:
     @staticmethod

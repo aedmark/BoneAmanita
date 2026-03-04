@@ -1,21 +1,28 @@
 """bone_main.py"""
 
-import os, time, json, uuid, random, traceback, sys, re
+import json
+import os
+import random
+import re
+import sys
+import time
+import traceback
+import uuid
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
 
+from bone_body import SomaticLoop
+from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_commands import CommandProcessor
-from bone_core import EventBus, SystemHealth, TheObserver, LoreManifest, TelemetryService, RealityStack
-from bone_types import Prisma, RealityLayer
 from bone_config import BoneConfig, BonePresets
+from bone_core import EventBus, SystemHealth, TheObserver, LoreManifest, TelemetryService, RealityStack
+from bone_council import CouncilChamber
+from bone_cycle import GeodesicOrchestrator
 from bone_genesis import BoneGenesis
 from bone_lexicon import LexiconService
 from bone_physics import CosmicDynamics, ZoneInertia
 from bone_protocols import ChronosKeeper
-from bone_body import SomaticLoop
-from bone_brain import TheCortex, LLMInterface, NoeticLoop
-from bone_cycle import GeodesicOrchestrator
-from bone_council import CouncilChamber
+from bone_types import Prisma, RealityLayer
 
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
 

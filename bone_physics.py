@@ -1,7 +1,10 @@
-import math, random, time
+import math
+import random
+import time
 from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Dict, List, Any, Tuple, Optional, Deque
+
 from bone_config import BoneConfig
 from bone_core import LoreManifest
 from bone_lexicon import LexiconService

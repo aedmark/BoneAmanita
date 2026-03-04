@@ -1,13 +1,17 @@
 """bone_body.py"""
 
-import math, random, time
+import math
+import random
+import time
 from collections import deque, Counter
 from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, List, Any, Tuple
-from bone_spores import ImmuneMycelium, BioLichen, BioParasite
-from bone_lexicon import LexiconService
-from bone_core import Prisma, LoreManifest
+
 from bone_config import BoneConfig
+from bone_core import Prisma, LoreManifest
+from bone_lexicon import LexiconService
+from bone_spores import ImmuneMycelium, BioLichen, BioParasite
+
 
 @dataclass
 class Biometrics:

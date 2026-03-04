@@ -14,6 +14,7 @@ from bone_protocols import LimboLayer
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_types import MindSystem, PhysSystem, PhysicsPacket, Prisma
 
+
 class TheCrucible:
     def __init__(self):
         self.max_voltage_cap = getattr(BoneConfig.MACHINE, "CRUCIBLE_VOLTAGE_CAP", 20.0)

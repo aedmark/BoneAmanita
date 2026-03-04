@@ -2,8 +2,10 @@
 
 import shlex
 from typing import Dict, Callable, List, Optional
+
 from bone_config import BonePresets, BoneConfig
 from bone_core import LoreManifest, Prisma
+
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):

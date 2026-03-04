@@ -1,11 +1,17 @@
 """bone_core.py"""
 
-import glob, json, os, random, time
+import glob
+import json
+import os
+import random
+import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Counter, Tuple, Deque
-from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
+
 from bone_config import BoneConfig
+from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
+
 
 class BoneJSONEncoder(json.JSONEncoder):
     def default(self, obj):

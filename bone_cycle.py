@@ -1,16 +1,22 @@
 """bone_cycle.py"""
 
-import traceback, random, time, uuid, re
+import random
+import re
+import time
+import traceback
+import uuid
 from typing import Dict, Any, List
+
+from bone_body import SynestheticCortex
+from bone_config import BoneConfig, BonePresets
 from bone_core import ArchetypeArbiter, LoreManifest
-from bone_types import Prisma, CycleContext
-from bone_physics import TheGatekeeper, apply_somatic_feedback, CycleStabilizer
+from bone_drivers import CongruenceValidator
 from bone_gui import SoulDashboard, CycleReporter
 from bone_machine import PanicRoom
-from bone_body import SynestheticCortex
+from bone_physics import TheGatekeeper, apply_somatic_feedback, CycleStabilizer
 from bone_symbiosis import SymbiosisManager
-from bone_config import BoneConfig, BonePresets
-from bone_drivers import CongruenceValidator
+from bone_types import Prisma, CycleContext
+
 
 class SimulationPhase:
     def __init__(self, engine_ref):

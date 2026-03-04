@@ -1,8 +1,16 @@
 """ bone_lexicon.py"""
 
-import json, random, re, string, time, unicodedata, os
+import json
+import os
+import random
+import re
+import string
+import time
+import unicodedata
 from typing import Tuple, Dict, Set, Optional, List
+
 from bone_core import Prisma, LoreManifest
+
 
 class LexiconStore:
     HIVE_FILENAME = "cortex_hive.json"

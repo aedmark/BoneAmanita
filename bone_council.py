@@ -2,10 +2,12 @@
 
 import random
 from typing import Dict, Any
+
 from bone_config import BoneConfig
 from bone_core import LoreManifest
 from bone_symbiosis import get_symbiont
 from bone_types import Prisma
+
 
 class TheStrangeLoop:
     def __init__(self):

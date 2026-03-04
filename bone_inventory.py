@@ -1,11 +1,14 @@
 """ bone_inventory.py"""
 
-import random, re
+import random
+import re
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
+
 from bone_config import BoneConfig
 from bone_core import LoreManifest
 from bone_types import Prisma
+
 
 @dataclass
 class Item:

@@ -1,10 +1,14 @@
 """ bone_akashic.py"""
 
-import json, os, uuid
+import json
+import os
+import uuid
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
+
+from bone_config import BoneConfig
 from bone_core import BoneJSONEncoder, LoreManifest
 from bone_types import Prisma
-from bone_config import BoneConfig
+
 
 class TheAkashicRecord:
     def __init__(self, lore_manifest: Optional["LoreManifest"] = None, events_ref=None):
