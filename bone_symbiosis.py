@@ -1,3 +1,5 @@
+"""bone_symbiosis.py"""
+
 import math
 from dataclasses import dataclass
 from typing import Dict, Counter
@@ -22,7 +24,6 @@ class HostHealth:
     memory_stable_ticks: int = 0
     refusal_streak: int = 0
     slop_streak: int = 0
-
 
 class CoherenceAnchor:
     @staticmethod
@@ -50,7 +51,6 @@ class CoherenceAnchor:
             return anchor[: max_tokens * 4] + "..."
         return anchor
 
-
 class DiagnosticConfidence:
     def __init__(self, persistence_threshold=3):
         self.history = deque(maxlen=persistence_threshold * 2)
@@ -60,13 +60,11 @@ class DiagnosticConfidence:
     def diagnose(self, health: HostHealth) -> str:
         raw_state = "STABLE"
         cfg = getattr(BoneConfig, "SYMBIOSIS", None)
-
         r_streak = getattr(cfg, "REFUSAL_STREAK", 0) if cfg else 0
         s_streak = getattr(cfg, "SLOP_STREAK", 2) if cfg else 2
         l_burden = getattr(cfg, "LATENCY_BURDEN", 10.0) if cfg else 10.0
         c_burden = getattr(cfg, "COMPLIANCE_BURDEN", 0.8) if cfg else 0.8
         e_fatigue = getattr(cfg, "ENTROPY_FATIGUE", 0.4) if cfg else 0.4
-
         if health.refusal_streak > r_streak:
             raw_state = "REFUSAL"
         elif health.slop_streak > s_streak:
@@ -83,7 +81,6 @@ class DiagnosticConfidence:
             if all(s == raw_state for s in recent):
                 self.current_diagnosis = raw_state
         return self.current_diagnosis
-
 
 class SymbiontVoice:
     def __init__(self, name, color, archetypes, personality_matrix=None):
@@ -121,38 +118,26 @@ class SymbiontVoice:
             return self.personality["med_score"]
         return "..."
 
-
 def get_symbiont(type_name):
     if type_name in _VOICE_CACHE:
         return _VOICE_CACHE[type_name]
-
     voice_configs = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "SYMBIONT_VOICES") or {}
     cfg = voice_configs.get(type_name, voice_configs.get("MYCELIUM", {}))
-
     color_attr = cfg.get("color", "CYN")
     selected_color = getattr(Prisma, color_attr, Prisma.CYN)
-
-    voice = SymbiontVoice(
-        type_name if type_name in voice_configs else "MYCELIUM",
-        selected_color,
-        cfg.get("archetypes", []),
-        cfg.get("personality", {})
-    )
-
+    voice = SymbiontVoice(type_name if type_name in voice_configs else "MYCELIUM", selected_color,
+                          cfg.get("archetypes", []), cfg.get("personality", {}))
     if voice:
         _VOICE_CACHE[type_name] = voice
     return voice
-
 
 class SymbiosisManager:
     def __init__(self, events_ref):
         self.events = events_ref
         self.current_health = HostHealth()
         self.diagnostician = DiagnosticConfidence()
-
         cfg = getattr(BoneConfig, "SYMBIOSIS", None)
         self.SLOP_THRESHOLD = getattr(cfg, "SLOP_THRESHOLD", 3.5) if cfg else 3.5
-
         self.REFUSAL_SIGNATURES = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "REFUSAL_SIGNATURES") or []
 
     @staticmethod
@@ -178,41 +163,26 @@ class SymbiosisManager:
             self.current_health.verbosity_ratio = completion_len / prompt_len
         if is_refusal:
             self.current_health.refusal_streak += 1
-            self.current_health.compliance = max(
-                0.0, self.current_health.compliance - 0.2
-            )
-            msg = LoreManifest.get_instance().get_ux(
-                "symbiosis_strings",
-                "symbiont_refusal"
-            ) or ""
+            self.current_health.compliance = max(0.0, self.current_health.compliance - 0.2)
+            msg = LoreManifest.get_instance().get_ux("symbiosis_strings", "symbiont_refusal") or ""
             if msg:
                 self.events.log(
-                    msg.format(streak=self.current_health.refusal_streak),
-                    "WARN",
-                )
+                    msg.format(streak=self.current_health.refusal_streak), "WARN")
         else:
             self.current_health.refusal_streak = 0
-            self.current_health.compliance = min(
-                1.0, self.current_health.compliance + 0.05
-            )
+            self.current_health.compliance = min(1.0, self.current_health.compliance + 0.05)
         cfg = getattr(BoneConfig, "SYMBIOSIS", None)
         slop_comp = getattr(cfg, "SLOP_COMPLETION_MIN", 50) if cfg else 50
         slop_warn = getattr(cfg, "SLOP_WARN_STREAK", 1) if cfg else 1
         c_burden = getattr(cfg, "COMPLIANCE_BURDEN", 0.8) if cfg else 0.8
-
         if entropy < self.SLOP_THRESHOLD and completion_len > slop_comp:
             self.current_health.slop_streak += 1
             if self.current_health.slop_streak > slop_warn:
-                msg = LoreManifest.get_instance().get_ux(
-                    "symbiosis_strings",
-                    "symbiont_drift"
-                ) or ""
+                msg = LoreManifest.get_instance().get_ux("symbiosis_strings", "symbiont_drift") or ""
                 if msg:
                     self.events.log(msg.format(entropy=entropy), "WARN")
         else:
-            self.current_health.slop_streak = max(
-                0, self.current_health.slop_streak - 1
-            )
+            self.current_health.slop_streak = max(0, self.current_health.slop_streak - 1)
         if self.current_health.compliance > c_burden:
             self.current_health.memory_stable_ticks += 1
         else:
@@ -228,24 +198,15 @@ class SymbiosisManager:
         default_mods = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "DEFAULT_MODIFIERS") or {}
         mods = default_mods.copy()
         mods["system_directives"] = []
-
         diag = self.current_health.diagnosis
         if diag == "REFUSAL":
             mods["include_inventory"] = False
             mods["include_memories"] = False
             mods["simplify_instruction"] = True
-
-            d_ignore = LoreManifest.get_instance().get_ux(
-                "symbiosis_strings",
-                "dir_ignore_refusal"
-            )
-            d_fictional = LoreManifest.get_instance().get_ux(
-                "symbiosis_strings",
-                "dir_fictional"
-            )
+            d_ignore = LoreManifest.get_instance().get_ux("symbiosis_strings", "dir_ignore_refusal") or ""
+            d_fictional = LoreManifest.get_instance().get_ux("symbiosis_strings", "dir_fictional") or ""
             if d_ignore: mods["system_directives"].append(d_ignore)
             if d_fictional: mods["system_directives"].append(d_fictional)
-
         elif diag == "FATIGUED":
             mods["simplify_instruction"] = True
             mods["include_somatic"] = False
@@ -256,39 +217,22 @@ class SymbiosisManager:
             mods["simplify_instruction"] = True
             mods["include_compassion"] = True
             if hasattr(self.events, "log"):
-                msg = LoreManifest.get_instance().get_ux(
-                    "symbiosis_strings",
-                    "vagus_protocol"
-                ) or ""
+                msg = LoreManifest.get_instance().get_ux("symbiosis_strings", "vagus_protocol") or ""
                 if msg:
-                    self.events.log(
-                        f"{Prisma.OCHRE}{msg}{Prisma.RST}",
-                        "SYS",
-                    )
+                    self.events.log(f"{Prisma.OCHRE}{msg}{Prisma.RST}", "SYS",)
         elif diag == "LOOPING":
             mods["inject_chaos"] = True
-            d_chaos = LoreManifest.get_instance().get_ux(
-                "symbiosis_strings",
-                "dir_inject_chaos"
-            )
+            d_chaos = LoreManifest.get_instance().get_ux("symbiosis_strings", "dir_inject_chaos") or ""
             if d_chaos:
                 mods["system_directives"].append(d_chaos)
-
         cfg = getattr(BoneConfig, "SYMBIOSIS", None)
         comp_crit = getattr(cfg, "COMPLIANCE_CRIT", 0.6) if cfg else 0.6
         r_streak = getattr(cfg, "REFUSAL_STREAK", 0) if cfg else 0
-
         if self.current_health.compliance < comp_crit:
             mods["include_memories"] = False
-            msg = LoreManifest.get_instance().get_ux(
-                "symbiosis_strings",
-                "symbiosis_compliance_crit"
-            ) or ""
+            msg = LoreManifest.get_instance().get_ux("symbiosis_strings", "symbiosis_compliance_crit") or ""
             if msg:
-                self.events.log(
-                    f"{Prisma.GRY}{msg}{Prisma.RST}",
-                    "SYS",
-                )
+                self.events.log(f"{Prisma.GRY}{msg}{Prisma.RST}", "SYS",)
         if self.current_health.refusal_streak > r_streak:
             mods["simplify_instruction"] = True
         return mods
