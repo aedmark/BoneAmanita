@@ -832,7 +832,19 @@
     "town_guilt": "Guilt over '{obsession}' is thickening the air.",
     "town_trauma": "Warning: High levels of {trauma} residue detected.",
     "town_critical": "System critical. Structural damage.",
-    "town_nominal": "System nominal."
+    "town_nominal": "System nominal.",
+    "genesis_name": "THE CONSTRUCT (Origin)",
+    "genesis_atmos": "Clean white void. Infinite potential.",
+    "genesis_smell": "Ozone and new plastic.",
+    "loci_flux_suffix": "Flux",
+    "loci_flux_atmos": "The air has an electric jitter. Geometry is unstable.",
+    "loci_flux_smell": "Ozone and burning copper.",
+    "loci_deep_suffix": "Deep",
+    "loci_deep_atmos": "Heavy gravity. Dust motes hang suspended.",
+    "loci_deep_smell": "Wet wool and ancient dust.",
+    "loci_prime_suffix": "Prime",
+    "loci_prime_atmos": "Stable reality matrix. Standard definition.",
+    "loci_prime_smell": "Clean air."
   },
   "status_menu": {
     "health_label": "Health:  ",
