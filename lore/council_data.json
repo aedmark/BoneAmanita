@@ -23,6 +23,16 @@
     "SCHUR": ["Exception", "try:", "catch"],
     "MEADOWS": ["while ", "for ", "queue", "recursion"]
   },
+  "SLASH_MODIFIERS": {
+    "PINKER_HIT": -0.2,
+    "PINKER_MISS": 0.1,
+    "FULLER_HIT": 0.1,
+    "SCHUR_HIT": 0.2,
+    "SCHUR_GLIMMERS": 1,
+    "MEADOWS_HIT": -0.1,
+    "INTEGRITY_DRAG_THRESH": 5.0,
+    "INTEGRITY_HIT": -0.3
+  },
   "CHAIRHOLDER_PHRASES": [
     "You just got Jammed.",
     "I'm voting present.",
@@ -34,6 +44,11 @@
     "HOPE": "The Optimist filibustered. 'We can build it!'",
     "DISCIPLINE": "The Engineer demands efficiency."
   },
+  "SOUL_MANDATE_RULES": [
+    ["CYNICISM", 0.8, "LOCKDOWN", "CYNICISM", {"narrative_drag": 5.0, "voltage": -5.0}, "OCHRE"],
+    ["HOPE", 0.8, "STIMULUS", "HOPE", {"voltage": 5.0, "narrative_drag": -2.0}, "MAG"],
+    ["DISCIPLINE", 0.8, "STANDARDIZE", "DISCIPLINE", {"kappa": -0.5, "beta_index": 1.0}, "CYN"]
+  ],
   "ARBITRATION_OPINIONS": {
     "TENSION_CUT": "The tension is too high. The Stage Manager cuts the mic. Silence is enforced.",
     "SILENCE_HOLD": "The Stage Manager holds the silence. No archetype is called."
