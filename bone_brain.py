@@ -88,37 +88,44 @@ class NeurotransmitterModulator:
         else:
             self.starvation_ticks = 0
         c = self.current_chem
-        if latency_penalty > 2.0:
-            c.cortisol = min(1.0, c.cortisol + 0.1)
-            c.adrenaline = min(1.0, c.adrenaline + 0.05)
+        latency_thresh = getattr(cfg, "LATENCY_PENALTY_THRESHOLD", 2.0)
+        if latency_penalty > latency_thresh:
+            c.cortisol = min(1.0, c.cortisol + getattr(cfg, "LATENCY_CORTISOL_PENALTY", 0.1))
+            c.adrenaline = min(1.0, c.adrenaline + getattr(cfg, "LATENCY_ADRENALINE_PENALTY", 0.05))
         current_mood = "NEUTRAL"
-        if c.dopamine > 0.8:
+        mood_thresholds = getattr(cfg, "MOOD_THRESHOLDS", {"MANIC_DOP": 0.8, "PANIC_COR": 0.7, "ZEN_SER": 0.8})
+        if c.dopamine > mood_thresholds.get("MANIC_DOP", 0.8):
             current_mood = "MANIC"
-        elif c.cortisol > 0.7:
+        elif c.cortisol > mood_thresholds.get("PANIC_COR", 0.7):
             current_mood = "PANIC"
-        elif c.serotonin > 0.8:
+        elif c.serotonin > mood_thresholds.get("ZEN_SER", 0.8):
             current_mood = "ZEN"
         if current_mood != self.last_mood and self.events:
             self.events.publish("NEURAL_STATE_SHIFT", {"state": current_mood,"chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin},},)
             self.last_mood = current_mood
-        voltage_heat = math.log1p(max(0.0, base_voltage - 5.0)) * 0.1
-        chemical_delta = (c.dopamine * 0.4) - (c.adrenaline * 0.3) - (c.cortisol * 0.2)
-        base_temp = getattr(BrainConfig, "BASE_TEMP", 0.4)
-        base_top_p = getattr(BrainConfig, "BASE_TOP_P", 0.95)
+        v_offset = getattr(cfg, "TEMP_VOLTAGE_OFFSET", 5.0)
+        v_scalar = getattr(cfg, "TEMP_VOLTAGE_SCALAR", 0.1)
+        voltage_heat = math.log1p(max(0.0, base_voltage - v_offset)) * v_scalar
+        chem_weights = getattr(cfg, "TEMP_CHEM_WEIGHTS", {"dop": 0.4, "adr": 0.3, "cor": 0.2})
+        chemical_delta = (c.dopamine * chem_weights.get("dop", 0.4)) - (c.adrenaline * chem_weights.get("adr", 0.3)) - (c.cortisol * chem_weights.get("cor", 0.2))
+        base_temp = getattr(cfg, "BASE_TEMP", 0.4)
+        base_top_p = getattr(cfg, "BASE_TOP_P", 0.95)
         chi = physics_state.get("chi", physics_state.get("entropy", 0.2))
         beta = physics_state.get("contradiction", physics_state.get("beta_index", 0.4))
-        entropy_bonus = max(0.0, chi - 0.5) * 1.5
-        final_temp = round(
-            max(0.4, min(1.5, base_temp + chemical_delta + voltage_heat + entropy_bonus)),2,)
-        final_top_p = min(1.0, base_top_p + (chi * 0.05))
-        freq_pen = min(1.2, 0.5 + (beta * 0.3) + (chi * 0.2))
-        pres_pen = min(1.2, 0.5 + (beta * 0.3) + (chi * 0.2))
+        ent_offset = getattr(cfg, "TEMP_ENTROPY_OFFSET", 0.5)
+        ent_scalar = getattr(cfg, "TEMP_ENTROPY_SCALAR", 1.5)
+        entropy_bonus = max(0.0, chi - ent_offset) * ent_scalar
+        t_limits = getattr(cfg, "TEMP_LIMITS", (0.4, 1.5))
+        final_temp = round(max(t_limits[0], min(t_limits[1], base_temp + chemical_delta + voltage_heat + entropy_bonus)), 2)
+        final_top_p = min(1.0, base_top_p + (chi * getattr(cfg, "TOP_P_CHI_SCALAR", 0.05)))
+        freq_pen = min(1.2, 0.5 + (beta * getattr(cfg, "PEN_BETA_SCALAR", 0.3)) + (chi * getattr(cfg, "PEN_CHI_SCALAR", 0.2)))
+        pres_pen = min(1.2, 0.5 + (beta * getattr(cfg, "PEN_BETA_SCALAR", 0.3)) + (chi * getattr(cfg, "PEN_CHI_SCALAR", 0.2)))
+        token_mods = getattr(cfg, "TOKEN_CHEM_MODIFIERS", {"dop": 800, "adr": 400, "cor": 200})
+        token_delta = (c.dopamine * token_mods.get("dop", 800)) - (c.adrenaline * token_mods.get("adr", 400)) - (c.cortisol * token_mods.get("cor", 200))
+        min_tokens = getattr(cfg, "MIN_TOKENS", 150.0)
+        max_t = int(max(min_tokens, min(float(self.MAX_TOKENS), self.BASE_TOKENS + token_delta)))
         return {"temperature": final_temp, "top_p": final_top_p, "frequency_penalty": round(freq_pen, 2),
-                "presence_penalty": round(pres_pen, 2), "max_tokens": int(max(150.0, min(float(self.MAX_TOKENS),
-                                                                                         self.BASE_TOKENS + ((
-                                                                                                                     c.dopamine * 800) - (
-                                                                                                                     c.adrenaline * 400) - (
-                                                                                                                     c.cortisol * 200)), ), )), }
+                "presence_penalty": round(pres_pen, 2), "max_tokens": max_t}
 
     def _treat_yourself(self):
         if self.events:
@@ -174,7 +181,9 @@ class LLMInterface:
             return True
         if self.circuit_state == "OPEN":
             elapsed = time.time() - self.last_failure_time
-            if elapsed > 10.0:
+            cfg = getattr(BoneConfig, "CORTEX", None)
+            heal_time = getattr(cfg, "LLM_CIRCUIT_HEAL_TIME", 10.0) if cfg else 10.0
+            if elapsed > heal_time:
                 self.circuit_state = "HALF_OPEN"
                 if self.events:
                     msg = LoreManifest.get_instance().get_ux("brain_strings", "synapse_healing") or ""
@@ -290,7 +299,9 @@ class LLMInterface:
                                                                                               "\nTraveler:",
                                                                                               "Traveler:", ], }
         try:
-            return self._transmit(fallback_payload, timeout=10.0, max_retries=1, override_url=url,
+            cfg = getattr(BoneConfig, "CORTEX", None)
+            fallback_timeout = getattr(cfg, "LLM_FALLBACK_TIMEOUT", 10.0) if cfg else 10.0
+            return self._transmit(fallback_payload, timeout=fallback_timeout, max_retries=1, override_url=url,
                                   override_key="ollama", )
         except Exception:
             return None
@@ -788,11 +799,8 @@ class ResponseValidator:
         low_resp = sanitized_response.lower()
         for phrase in self.banned_phrases:
             if phrase.lower() in low_resp:
-                return {
-                    "valid": False,
-                    "reason": "IMMISSION_BREAK",
-                    "replacement": self._generate_dynamic_rejection(phrase),
-                    "meta_logs": extracted_meta_logs,}
+                return {"valid": False, "reason": "IMMISSION_BREAK",
+                        "replacement": self._generate_dynamic_rejection(phrase), "meta_logs": extracted_meta_logs, }
         phys_ref = _state.get("physics", {})
         if isinstance(phys_ref, dict):
             voltage = phys_ref.get("energy", {}).get(
@@ -801,11 +809,9 @@ class ResponseValidator:
             voltage = getattr(phys_ref, "voltage", 30.0)
         if voltage > 60 and "?" in sanitized_response:
             msg_q = LoreManifest.get_instance().get_ux("brain_strings", "val_gordon_question") or ""
-            return {
-                "valid": False,
-                "reason": "IMMISSION_BREAK",
-                "replacement": f"{self._generate_dynamic_rejection('QUESTION_ASKED')}{msg_q}",
-                "meta_logs": extracted_meta_logs,}
+            return {"valid": False, "reason": "IMMISSION_BREAK",
+                    "replacement": f"{self._generate_dynamic_rejection('QUESTION_ASKED')}{msg_q}",
+                    "meta_logs": extracted_meta_logs, }
         for p in self.regex_patterns:
             regex_str = p.get("regex", "")
             if regex_str:
@@ -814,21 +820,16 @@ class ResponseValidator:
                     error_msg = p.get("error_msg", "Cursed syntax detected.")
                     base_rejection = self._generate_dynamic_rejection(trigger_name)
                     msg_reg = LoreManifest.get_instance().get_ux("brain_strings", "val_gordon_regex") or ""
-                    return {
-                        "valid": False,
-                        "reason": "IMMISSION_BREAK",
-                        "replacement": f"{base_rejection}{msg_reg.format(error_msg=error_msg)}",
-                        "meta_logs": extracted_meta_logs,}
-        if len(sanitized_response.strip()) < 5:
-            return {
-                "valid": False,
-                "reason": "STUTTER",
-                "replacement": LoreManifest.get_instance().get_ux("brain_strings", "val_stutter") or "",
-                "meta_logs": extracted_meta_logs,}
-        return {
-            "valid": True,
-            "content": sanitized_response,
-            "meta_logs": extracted_meta_logs,}
+                    return {"valid": False, "reason": "IMMISSION_BREAK",
+                            "replacement": f"{base_rejection}{msg_reg.format(error_msg=error_msg)}",
+                            "meta_logs": extracted_meta_logs, }
+        cfg = getattr(BoneConfig, "CORTEX", None)
+        stutter_len = getattr(cfg, "VALIDATOR_STUTTER_LENGTH", 5) if cfg else 5
+        if len(sanitized_response.strip()) < stutter_len:
+            return {"valid": False, "reason": "STUTTER",
+                    "replacement": LoreManifest.get_instance().get_ux("brain_strings", "val_stutter") or "",
+                    "meta_logs": extracted_meta_logs, }
+        return {"valid": True, "content": sanitized_response, "meta_logs": extracted_meta_logs, }
 
 class TheCortex:
     def __init__(self, services: CortexServices, llm_client=None):
@@ -1241,19 +1242,17 @@ class NoeticLoop:
         self.mind = mind_layer
         self.bio = bio_layer
 
-    def think(
-        self,
-        physics_packet,
-        _bio,
-        _inventory,
-        voltage_history,
-        _tick_count,
-        soul_ref=None,):
+    def think(self, physics_packet, _bio, _inventory, voltage_history, _tick_count, soul_ref=None, ):
         voltage = physics_packet.get("voltage", 0.0)
         clean_words = physics_packet.get("clean_words", [])
         avg_v = sum(voltage_history) / len(voltage_history) if voltage_history else 0
-        ignition = min(1.0, (avg_v / 20.0) * (len(clean_words) / 10.0))
-        if voltage > 12.0 and random.random() < 0.15:
+        cfg = getattr(BoneConfig, "CORTEX", None)
+        v_div = getattr(cfg, "IGNITION_V_DIV", 20.0)
+        w_div = getattr(cfg, "IGNITION_W_DIV", 10.0)
+        link_v = getattr(cfg, "LINK_VOLTAGE_THRESH", 12.0)
+        link_chance = getattr(cfg, "LINK_CHANCE", 0.15)
+        ignition = min(1.0, (avg_v / v_div) * (len(clean_words) / w_div))
+        if voltage > link_v and random.random() < link_chance:
             if len(clean_words) >= 2:
                 w1, w2 = random.sample(clean_words, 2)
                 self._force_link(self.mind.mem.graph, w1, w2)
@@ -1278,7 +1277,10 @@ class NoeticLoop:
 
     @staticmethod
     def _force_link(graph, wa, wb):
+        cfg = getattr(BoneConfig, "CORTEX", None)
+        max_edge = getattr(cfg, "LINK_MAX_WEIGHT", 10.0)
+        edge_boost = getattr(cfg, "LINK_BOOST", 2.5)
         for a, b in [(wa, wb), (wb, wa)]:
             if a not in graph:
                 graph[a] = {"edges": {}, "last_tick": 0}
-            graph[a]["edges"][b] = min(10.0, graph[a]["edges"].get(b, 0) + 2.5)
+            graph[a]["edges"][b] = min(max_edge, graph[a]["edges"].get(b, 0) + edge_boost)

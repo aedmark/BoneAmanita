@@ -7,7 +7,6 @@ import tempfile
 import time
 from collections import deque
 from typing import List, Tuple, Optional, Dict
-
 from bone_config import BoneConfig
 from bone_core import EventBus, LoreManifest, BoneJSONEncoder
 from bone_lexicon import LexiconService
@@ -204,8 +203,12 @@ class MemoryCore:
         for score, name, data in scored_memories[:limit]:
             connections = list(data.get("edges", {}).keys())
             conn_str = f" -> [{', '.join(connections[:2])}]" if connections else ""
-            prefix = "Resonant" if score > 0.5 else "Associated"
-            results.append(f"{prefix} Engram: '{name.upper()}'{conn_str}")
+            if score > 0.5:
+                prefix = LoreManifest.get_instance().get_ux("spore_strings", "core_illuminate_resonant") or "Resonant"
+            else:
+                prefix = LoreManifest.get_instance().get_ux("spore_strings", "core_illuminate_associated") or "Associated"
+            fmt = LoreManifest.get_instance().get_ux("spore_strings", "core_illuminate_format") or "{prefix} Engram: '{name}'{conn_str}"
+            results.append(fmt.format(prefix=prefix, name=name.upper(), conn_str=conn_str))
         return results
 
     def calculate_mass(self, node):
@@ -638,8 +641,11 @@ class MycelialNetwork:
         max_trauma = max(trauma_vec, key=trauma_vec.get) if trauma_vec else "NONE"
         if trauma_vec.get(max_trauma, 0) > 0.6 or temp_health < 30:
             condition = "HIGH_TRAUMA"
-        seeds = {"HIGH_TRAUMA": "Recovery", "BALANCED": "Growth"}
-        return seeds.get(condition, "Hope")
+        seed_high = LoreManifest.get_instance().get_ux("spore_strings", "future_seed_high_trauma") or "Recovery"
+        seed_bal = LoreManifest.get_instance().get_ux("spore_strings", "future_seed_balanced") or "Growth"
+        seed_def = LoreManifest.get_instance().get_ux("spore_strings", "future_seed_default") or "Hope"
+        seeds = {"HIGH_TRAUMA": seed_high, "BALANCED": seed_bal}
+        return seeds.get(condition, seed_def)
 
     def cleanup_old_sessions(self, limbo_layer=None):
         files = self.loader.list_spores()
@@ -888,7 +894,8 @@ class LiteraryReproduction:
             with open(parent_b_path, "r") as f:
                 parent_b_data = json.load(f)
         except (IOError, json.JSONDecodeError):
-            return None, "Dead Spore (Corrupt File)."
+            err_msg = LoreManifest.get_instance().get_ux("spore_strings", "repro_corrupt_spore") or "Dead Spore (Corrupt File)."
+            return None, err_msg
         parent_b_id = parent_b_data.get("session_id", "UNKNOWN")
         trauma_a = parent_a_bio.get("trauma_vector", {})
         trauma_b = parent_b_data.get("trauma_vector", {})

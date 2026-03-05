@@ -274,17 +274,21 @@ class PanicRoom:
         safe_packet.valence = 0.0
         safe_packet.kappa = 0.0
         safe_packet.vector = {k: 0.0 for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "LAMBDA", "CHI"]}
-        safe_packet.clean_words = ["white", "room", "safe", "mode"]
+        default_words = ["white", "room", "safe", "mode"]
+        manifest_words = LoreManifest.get_instance().get_ux("machine_strings", "panic_clean_words")
+        safe_packet.clean_words = manifest_words if isinstance(manifest_words, list) else default_words
         safe_packet.raw_text = LoreManifest.get_instance().get_ux("machine_strings", "panic_physics_text") or ""
-        safe_packet.flow_state = "SAFE_MODE"
-        safe_packet.zone = "PANIC_ROOM"
-        safe_packet.manifold = "WHITE_ROOM"
+        safe_packet.flow_state = LoreManifest.get_instance().get_ux("machine_strings", "panic_flow_state") or "SAFE_MODE"
+        safe_packet.zone = LoreManifest.get_instance().get_ux("machine_strings", "panic_zone") or "PANIC_ROOM"
+        safe_packet.manifold = LoreManifest.get_instance().get_ux("machine_strings", "panic_manifold") or "WHITE_ROOM"
         return safe_packet
 
     @staticmethod
     def get_safe_bio(previous_state=None):
         log_msg = LoreManifest.get_instance().get_ux("machine_strings", "panic_bio_log") or ""
-        base = {"is_alive": True, "atp": 10.0, "respiration": "NECROSIS", "enzyme": "NONE",
+        resp_fallback = LoreManifest.get_instance().get_ux("machine_strings", "panic_resp_fallback") or "NECROSIS"
+        enz_fallback = LoreManifest.get_instance().get_ux("machine_strings", "panic_enz_fallback") or "NONE"
+        base = {"is_alive": True, "atp": 10.0, "respiration": resp_fallback, "enzyme": enz_fallback,
                 "chem": {"DOP": 0.0, "COR": 0.0, "OXY": 0.0, "SER": 0.0, "ADR": 0.0, "MEL": 0.0, },
                 "logs": [f"{Prisma.RED}{log_msg}{Prisma.RST}"], }
         state = previous_state or {}

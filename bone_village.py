@@ -141,8 +141,8 @@ class ParadoxSeed:
         if self.bloomed:
             return False
         hits = sum(1 for w in words if w in self.triggers)
+        cfg = getattr(BoneConfig, "VILLAGE", None)
         if hits > 0:
-            cfg = getattr(BoneConfig, "VILLAGE", None)
             m_step = getattr(cfg, "SEED_MATURITY_STEP", 0.2) if cfg else 0.2
             self.maturity += hits * m_step
         m_max = getattr(cfg, "SEED_MATURITY_MAX", 5.0) if cfg else 5.0

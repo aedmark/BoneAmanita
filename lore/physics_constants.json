@@ -31,5 +31,30 @@
     "BET": ["☴", "XUN", "Wind", "CYN"],
     "E": ["☷", "KUN", "Earth", "OCHRE"],
     "DEL": ["☱", "DUI", "Lake", "MAG"]
+  },
+  "FALLBACK_TRIGRAMS": {
+    "CHI": "KAN",
+    "LAMBDA": "KUN"
+  },
+  "FALLBACK_DEFAULT": "KAN",
+  "MANIFOLD_SHIFTS": {
+    "BIAS_LENSES": {
+      "POET": 2.0,
+      "HEALER": 2.0
+    },
+    "SCALAR_LENSES": {
+      "CRITIC": 1.2,
+      "NIHILIST": 1.2
+    },
+    "VECTOR_THRESHOLDS": {
+      "HOPE": {
+        "threshold": 0.7,
+        "scalar_mod": 0.9
+      },
+      "DISCIPLINE": {
+        "threshold": 0.7,
+        "bias_mod": 1.0
+      }
+    }
   }
 }

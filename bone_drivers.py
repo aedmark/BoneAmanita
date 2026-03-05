@@ -45,25 +45,36 @@ class UserProfile:
         self.affinities = {"heavy": 0.0, "kinetic": 0.0, "abstract": 0.0, "photo": 0.0, "aerobic": 0.0, "thermal": 0.0,
                            "cryo": 0.0, }
         self.confidence = 0
-        self.file_path = "user_profile.json"
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        self.file_path = getattr(cfg, "PROFILE_FILE_PATH", "user_profile.json") if cfg else "user_profile.json"
         self.load()
 
     def update(self, counts, total_words):
-        if total_words < 3:
-            return
-        self.confidence += 1
         cfg = getattr(BoneConfig, "DRIVERS", None)
+        min_words = getattr(cfg, "PROFILE_MIN_WORDS", 3) if cfg else 3
+        if total_words < min_words:
+            return
+
+        self.confidence += 1
         conf_thresh = getattr(cfg, "PROFILE_CONFIDENCE_THRESHOLD", 50) if cfg else 50
-        alpha = 0.2 if self.confidence < conf_thresh else 0.05
+        alpha_high = getattr(cfg, "PROFILE_ALPHA_HIGH", 0.2) if cfg else 0.2
+        alpha_low = getattr(cfg, "PROFILE_ALPHA_LOW", 0.05) if cfg else 0.05
+        density_high = getattr(cfg, "PROFILE_DENSITY_HIGH", 0.15) if cfg else 0.15
+
+        alpha = alpha_high if self.confidence < conf_thresh else alpha_low
         for cat in self.affinities:
             density = counts.get(cat, 0) / total_words
-            target = 1.0 if density > 0.15 else (-0.5 if density == 0 else 0.0)
+            target = 1.0 if density > density_high else (-0.5 if density == 0 else 0.0)
             self.affinities[cat] = (alpha * target) + (
-                (1 - alpha) * self.affinities[cat])
+                    (1 - alpha) * self.affinities[cat])
 
     def get_preferences(self):
-        likes = [k for k, v in self.affinities.items() if v > 0.3]
-        hates = [k for k, v in self.affinities.items() if v < -0.2]
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        like_thresh = getattr(cfg, "PROFILE_LIKE_THRESH", 0.3) if cfg else 0.3
+        hate_thresh = getattr(cfg, "PROFILE_HATE_THRESH", -0.2) if cfg else -0.2
+
+        likes = [k for k, v in self.affinities.items() if v > like_thresh]
+        hates = [k for k, v in self.affinities.items() if v < hate_thresh]
         return likes, hates
 
     def save(self):
@@ -209,10 +220,18 @@ class LiminalModule:
         self.godel_scars = 0
 
     def analyze(self, text: str, physics_vector: Dict[str, float]) -> float:
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        lex_weight = getattr(cfg, "LIMINAL_LEXICAL_WEIGHT", 0.15) if cfg else 0.15
+        dm_weight = getattr(cfg, "LIMINAL_DARK_MATTER_WEIGHT", 0.25) if cfg else 0.25
+        psi_mult = getattr(cfg, "LIMINAL_VEC_PSI_MULT", 0.5) if cfg else 0.5
+        ent_mult = getattr(cfg, "LIMINAL_VEC_ENT_MULT", 0.3) if cfg else 0.3
+        del_mult = getattr(cfg, "LIMINAL_VEC_DEL_MULT", 0.2) if cfg else 0.2
+        decay = getattr(cfg, "LIMINAL_DECAY", 0.7) if cfg else 0.7
+        growth = getattr(cfg, "LIMINAL_GROWTH", 0.15) if cfg else 0.15
         liminal_vocab = LexiconService.get("liminal") or set()
         words = text.lower().split()
         void_hits = sum(1 for w in words if w in liminal_vocab)
-        lexical_lambda = min(1.0, void_hits * 0.15)
+        lexical_lambda = min(1.0, void_hits * lex_weight)
         dark_matter_sparks = 0
         if len(words) > 1:
             categories = [LexiconService.get_current_category(w) for w in words]
@@ -220,20 +239,19 @@ class LiminalModule:
                 c1, c2 = categories[i], categories[i + 1]
                 if c1 and c2 and c1 != c2:
                     if (
-                        c1 in ["heavy", "kinetic"]
-                        and c2 in ["abstract", "liminal", "void"]
+                            c1 in ["heavy", "kinetic"]
+                            and c2 in ["abstract", "liminal", "void"]
                     ) or (c1 in ["abstract", "liminal", "void"] and c2 in ["heavy"]):
                         dark_matter_sparks += 1
-        dark_matter_lambda = min(1.0, dark_matter_sparks * 0.25)
+        dark_matter_lambda = min(1.0, dark_matter_sparks * dm_weight)
         vector_lambda = 0.0
         if physics_vector:
             vector_lambda = (
-                (physics_vector.get("PSI", 0) * 0.5)
-                + (physics_vector.get("ENT", 0) * 0.3)
-                + (physics_vector.get("DEL", 0) * 0.2))
+                    (physics_vector.get("PSI", 0) * psi_mult)
+                    + (physics_vector.get("ENT", 0) * ent_mult)
+                    + (physics_vector.get("DEL", 0) * del_mult))
         raw_target = lexical_lambda + dark_matter_lambda + vector_lambda
-        self.lambda_val = (self.lambda_val * 0.7) + (raw_target * 0.15)
-        cfg = getattr(BoneConfig, "DRIVERS", None)
+        self.lambda_val = (self.lambda_val * decay) + (raw_target * growth)
         scar_thresh = getattr(cfg, "LIMINAL_SCAR_THRESHOLD", 0.85) if cfg else 0.85
         if self.lambda_val > scar_thresh:
             self.godel_scars += 1
@@ -248,24 +266,37 @@ class SyntaxModule:
         words = text.split()
         if not words:
             return 1.0
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        avg_len_high = getattr(cfg, "SYNTAX_AVG_LEN_HIGH", 6.0) if cfg else 6.0
+        drag_high = getattr(cfg, "SYNTAX_DRAG_HIGH", 5.0) if cfg else 5.0
+        avg_len_low = getattr(cfg, "SYNTAX_AVG_LEN_LOW", 3.5) if cfg else 3.5
+        drag_low = getattr(cfg, "SYNTAX_DRAG_LOW", 1.0) if cfg else 1.0
+        t_high = getattr(cfg, "SYNTAX_OMEGA_TARGET_HIGH", 1.0) if cfg else 1.0
+        t_low = getattr(cfg, "SYNTAX_OMEGA_TARGET_LOW", 0.4) if cfg else 0.4
+        t_mid = getattr(cfg, "SYNTAX_OMEGA_TARGET_MID", 0.7) if cfg else 0.7
         bureau_vocab = LexiconService.get("bureau_buzzwords") or set()
         buzz_count = sum(1 for w in words if w.lower() in bureau_vocab)
         avg_len = sum(len(w) for w in words) / len(words)
-        if (avg_len > 6.0 and narrative_drag > 5.0) or buzz_count > 0:
-            target_omega = 1.0
-        elif avg_len < 3.5 and narrative_drag < 1.0:
-            target_omega = 0.4
+        if (avg_len > avg_len_high and narrative_drag > drag_high) or buzz_count > 0:
+            target_omega = t_high
+        elif avg_len < avg_len_low and narrative_drag < drag_low:
+            target_omega = t_low
         else:
-            target_omega = 0.7
+            target_omega = t_mid
         punctuation_density = sum(1 for c in text if c in ",;:-") / max(1, len(words))
-        cfg = getattr(BoneConfig, "DRIVERS", None)
         punct_thresh = getattr(cfg, "SYNTAX_STRESS_PUNCTUATION", 0.2) if cfg else 0.2
         if punctuation_density > punct_thresh:
-            self.grammatical_stress += 0.2
-            target_omega -= 0.3
+            stress_inc = getattr(cfg, "SYNTAX_STRESS_INCREASE", 0.2) if cfg else 0.2
+            omega_pen = getattr(cfg, "SYNTAX_OMEGA_PENALTY", 0.3) if cfg else 0.3
+            self.grammatical_stress += stress_inc
+            target_omega -= omega_pen
         else:
-            self.grammatical_stress = max(0.0, self.grammatical_stress - 0.1)
-        self.omega_val = (self.omega_val * 0.8) + (max(0.1, target_omega) * 0.2)
+            stress_dec = getattr(cfg, "SYNTAX_STRESS_DECAY", 0.1) if cfg else 0.1
+            self.grammatical_stress = max(0.0, self.grammatical_stress - stress_dec)
+        omega_decay = getattr(cfg, "SYNTAX_OMEGA_DECAY", 0.8) if cfg else 0.8
+        omega_growth = getattr(cfg, "SYNTAX_OMEGA_GROWTH", 0.2) if cfg else 0.2
+        omega_min = getattr(cfg, "SYNTAX_OMEGA_MIN", 0.1) if cfg else 0.1
+        self.omega_val = (self.omega_val * omega_decay) + (max(omega_min, target_omega) * omega_growth)
         return self.omega_val
 
 class CongruenceValidator:
@@ -285,7 +316,9 @@ class CongruenceValidator:
     def calculate_resonance(self, text: str, context: Any) -> float:
         if not text:
             return 0.0
-        raw_lens = getattr(context, "active_lens", "OBSERVER")
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        default_lens = getattr(cfg, "DEFAULT_LENS", "OBSERVER") if cfg else "OBSERVER"
+        raw_lens = getattr(context, "active_lens", default_lens)
         archetype = raw_lens.upper().replace("THE ", "")
         cfg = getattr(BoneConfig, "DRIVERS", None)
         tone_score = getattr(cfg, "CONGRUENCE_BASE_TONE", 0.8) if cfg else 0.8
@@ -320,15 +353,17 @@ class BoneConsultant:
     def disengage():
         return LoreManifest.get_instance().get_ux("driver_strings", "vsl_disengage") or ""
 
-    def update_coordinates(
-        self,
-        user_text: str,
-        bio_state: Optional[Dict] = None,
-        physics: Optional[PhysicsPacket] = None,):
+    def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None,
+                           physics: Optional[PhysicsPacket] = None, ):
+        cfg = getattr(BoneConfig, "DRIVERS", None)
+        e_growth = getattr(cfg, "VSL_E_GROWTH_MULT", 0.002) if cfg else 0.002
+        fatigue_mult = getattr(cfg, "VSL_FATIGUE_MULT", 0.3) if cfg else 0.3
+        b_decay = getattr(cfg, "VSL_B_DECAY", 0.8) if cfg else 0.8
+        b_growth = getattr(cfg, "VSL_B_GROWTH", 0.2) if cfg else 0.2
         word_count = len(user_text.split())
-        self.state.E = min(1.0, self.state.E + (word_count * 0.002))
+        self.state.E = min(1.0, self.state.E + (word_count * e_growth))
         if bio_state and "fatigue" in bio_state:
-            self.state.E = max(self.state.E, bio_state["fatigue"] * 0.3)
+            self.state.E = max(self.state.E, bio_state["fatigue"] * fatigue_mult)
         phys_beta = 0.0
         phys_vec = {}
         drag = 0.0
@@ -339,7 +374,7 @@ class BoneConsultant:
                 phys_vec = physics.vector
             if hasattr(physics, "narrative_drag"):
                 drag = physics.narrative_drag
-        self.state.B = (self.state.B * 0.8) + (phys_beta * 0.2)
+        self.state.B = (self.state.B * b_decay) + (phys_beta * b_growth)
         self.state.L = self.liminal_mod.analyze(user_text, phys_vec)
         self.state.O = self.syntax_mod.analyze(user_text, drag)
         if "[VSL_LIMINAL]" in user_text:

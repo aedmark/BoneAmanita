@@ -451,9 +451,9 @@ class DecisionCrystal:
     def __str__(self):
         from bone_core import LoreManifest
         e_val = self.leverage_metrics.get("E", 0.0)
-        icon = LoreManifest.get_instance().get_ux("types_strings", "crystal_icon") or ""
-        lbl = LoreManifest.get_instance().get_ux("types_strings", "crystal_label") or ""
-        arch = LoreManifest.get_instance().get_ux("types_strings", "crystal_arch") or ""
+        icon = LoreManifest.get_instance().get_ux("types_strings", "crystal_icon") or "💎"
+        lbl = LoreManifest.get_instance().get_ux("types_strings", "crystal_label") or "CRYSTAL"
+        arch = LoreManifest.get_instance().get_ux("types_strings", "crystal_arch") or "ARCH:"
         return (
             f"{icon} {lbl} [{self.decision_id}] {self.system_state} | "
             f"{arch} {self.active_archetype} | E: {e_val:.2f}").strip()

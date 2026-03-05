@@ -25,8 +25,10 @@ from bone_types import Prisma, RealityLayer
 
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
 
-def typewriter(text: str, speed: float = 0.00025, end: str = "\n"):
-    if speed < 0.001:
+def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
+    cfg = getattr(BoneConfig, "GUI", None)
+    actual_speed = speed if speed is not None else (getattr(cfg, "RENDER_SPEED_FAST", 0.00025) if cfg else 0.00025)
+    if actual_speed < 0.001:
         print(text, end=end)
         return
     type_parts = ANSI_SPLIT.split(text)
@@ -39,7 +41,7 @@ def typewriter(text: str, speed: float = 0.00025, end: str = "\n"):
             for char in part:
                 sys.stdout.write(char)
                 sys.stdout.flush()
-                time.sleep(speed)
+                time.sleep(actual_speed)
     sys.stdout.write(end)
     sys.stdout.flush()
 
@@ -60,10 +62,12 @@ class SessionGuardian:
         print(f"{Prisma.paint(top_bar, 'M')}")
         print(f"{Prisma.paint(mid_bar, 'M')}")
         print(f"{Prisma.paint(bot_bar, 'M')}")
+        cfg = getattr(BoneConfig, "GUI", None)
+        boot_delay = getattr(cfg, "RENDER_SPEED_BOOT", 0.05) if cfg else 0.05
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
             print(f"{Prisma.GRY}   >>> {log['text']}{Prisma.RST}")
-            time.sleep(0.05)
+            time.sleep(boot_delay)
         init_msg = LoreManifest.get_instance().get_ux("main_strings", "init_hash") or ""
         typewriter(f"{Prisma.GRY}{init_msg.format(hash=self.engine_instance.kernel_hash)}{Prisma.RST}")
         sys_msg = LoreManifest.get_instance().get_ux("main_strings", "sys_listening") or ""
@@ -117,11 +121,13 @@ class ConfigWizard:
 
     @staticmethod
     def _run_setup():
+        cfg = getattr(BoneConfig, "GUI", None)
+        setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02) if cfg else 0.02
         os.system("cls" if os.name == "nt" else "clear")
         seq_msg = LoreManifest.get_instance().get_ux("main_strings", "init_seq") or ""
         hyp_msg = LoreManifest.get_instance().get_ux("main_strings", "init_hypervisor") or ""
         print(f"{Prisma.paint(seq_msg, 'C')}")
-        typewriter(hyp_msg, speed=0.02)
+        typewriter(hyp_msg, speed=setup_speed)
         step1 = LoreManifest.get_instance().get_ux("main_strings", "step1_id") or ""
         prompt1 = LoreManifest.get_instance().get_ux("main_strings", "prompt_id") or ""
         print(f"\n{Prisma.paint(step1, 'W')}")
@@ -166,7 +172,9 @@ class ConfigWizard:
             with open(ConfigWizard.CONFIG_FILE, "w") as f:
                 json.dump(config, f, indent=4)
             commit_msg = LoreManifest.get_instance().get_ux("main_strings", "config_committed") or ""
-            typewriter(f"\n{Prisma.paint(commit_msg, 'G')}", speed=0.02)
+            cfg = getattr(BoneConfig, "GUI", None)
+            setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02) if cfg else 0.02
+            typewriter(f"\n{Prisma.paint(commit_msg, 'G')}", speed=setup_speed)
             time.sleep(1)
         except Exception as e:
             fail_msg = LoreManifest.get_instance().get_ux("main_strings", "write_failed") or ""
@@ -584,12 +592,14 @@ if __name__ == "__main__":
             res = session.process_turn(user_in)
             print(f"\n{Prisma.GRY}{term_div}{Prisma.RST}")
             if res.get("ui"):
+                cfg = getattr(BoneConfig, "GUI", None)
+                slow_speed = getattr(cfg, "RENDER_SPEED_SLOW", 0.005) if cfg else 0.005
                 if split_token and split_token in res["ui"]:
                     dashboard, _, content = res["ui"].partition("\n\n")
                     print(f"\n{dashboard.strip()}\n")
-                    typewriter(content.strip() + "\n", speed=0.005)
+                    typewriter(content.strip() + "\n", speed=slow_speed)
                 else:
-                    typewriter(res["ui"] + "\n", speed=0.005)
+                    typewriter(res["ui"] + "\n", speed=slow_speed)
             if res.get("type") == "DEATH":
                 term_msg = LoreManifest.get_instance().get_ux("main_strings", "session_term") or ""
                 print(f"\n{Prisma.GRY}{term_msg}{Prisma.RST}")

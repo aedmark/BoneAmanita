@@ -419,7 +419,9 @@ class LexiconService:
     @classmethod
     def get_random(cls, category: str) -> str:
         words = list(cls.get(category))
-        return random.choice(words) if words else "void"
+        if not words:
+            return LoreManifest.get_instance().get_ux("lexicon_strings", "default_random_word") or "void"
+        return random.choice(words)
 
     @classmethod
     def teach(cls, word: str, category: str, tick: int = 0):

@@ -420,7 +420,7 @@ class CosmicDynamics:
                 or not network
                 or not hasattr(network, "graph")
                 or not network.graph):
-            fallback_msg = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_void") or "VOID"
+            fallback_msg = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_void") or ""
             return "VOID_DRIFT", 3.0, self.logs.get("VOID", fallback_msg),
         current_time = int(time.time())
         if (not self.cached_wells
@@ -474,11 +474,11 @@ class CosmicDynamics:
         for w in words:
             hub_mass = geodesic_hubs.get(w)
             if hub_mass is not None:
-                fallback_msg = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_nebula") or "NEBULA"
+                fallback_msg = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_nebula") or ""
                 msg = self.logs.get("NEBULA", fallback_msg).format(
                     node=w.upper(), mass=int(hub_mass))
                 return "PROTO_COSMOS", 1.0, msg
-        fallback_void = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_void") or "VOID"
+        fallback_void = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_void") or ""
         return "VOID_DRIFT", 3.0, self.logs.get("VOID", fallback_void)
 
     def _resolve_orbit(
@@ -489,16 +489,16 @@ class CosmicDynamics:
         if len(sorted_basins) > 1:
             secondary_node, secondary_str = sorted_basins[1]
             if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:
-                fallback_msg = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_lagrange") or "LAGRANGE"
+                fallback_msg = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_lagrange") or ""
                 msg = self.logs.get("LAGRANGE", fallback_msg).format(p=primary_node.upper(), s=secondary_node.upper())
                 return "LAGRANGE_POINT", 0.0, msg
         flow_ratio = active_filaments / max(1, word_count)
         well_threshold = getattr(BoneConfig, "GRAVITY_WELL_THRESHOLD", 15.0)
         if flow_ratio > 0.5 and primary_str < (well_threshold * 2):
-            fallback_msg = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_flow") or "FLOW"
+            fallback_msg = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_flow") or ""
             msg = self.logs.get("FLOW", fallback_msg).format(node=primary_node.upper())
             return "WATERSHED_FLOW", 0.0, msg
-        fallback_msg = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_orbit") or "ORBIT"
+        fallback_msg = LoreManifest.get_instance().get_ux("physics_strings", "cosmic_orbit") or ""
         msg = self.logs.get("ORBIT", fallback_msg).format(node=primary_node.upper(), mass=int(gravity_wells[primary_node]))
         return "ORBITAL", 0.0, msg
 

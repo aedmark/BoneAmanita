@@ -306,7 +306,9 @@ class CommandProcessor:
 
     def _cmd_save(self, _parts):
         res = self.interface.save_state()
-        if "Error" in res or "Failed" in res:
+        cfg = getattr(BoneConfig, "COMMANDS", None)
+        error_flags = getattr(cfg, "SAVE_ERROR_FLAGS", ["Error", "Failed", "Exception"])
+        if any(flag in res for flag in error_flags):
             msg = LoreManifest.get_instance().get_ux("command_alerts", "save_failed") or ""
             self.interface.log(f"{self.P.RED}{msg.format(res=res)}{self.P.RST}")
         else:

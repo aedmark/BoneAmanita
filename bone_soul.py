@@ -13,7 +13,6 @@ from bone_core import LoreManifest, EventBus
 from bone_lexicon import LexiconService
 from bone_types import Prisma
 
-
 @dataclass
 class CoreMemory:
     timestamp: float
@@ -23,7 +22,6 @@ class CoreMemory:
     impact_voltage: float
     type: str = "INCIDENT"
     meta: Dict[str, Any] = field(default_factory=dict)
-
 
 @dataclass
 class TraitVector:
@@ -63,7 +61,6 @@ class TraitVector:
             val = getattr(self, t)
             setattr(self, t, max(0.0, min(1.0, float(val))))
 
-
 class TheEditor:
     def __init__(self, lexicon_ref: Any = None):
         self.lex = lexicon_ref if lexicon_ref else LexiconService
@@ -73,12 +70,10 @@ class TheEditor:
         narrative = {}
         if hasattr(LoreManifest, "get_instance"):
             narrative = LoreManifest.get_instance().get("narrative_data") or {}
-
         reviews = narrative.get("LITERARY_REVIEWS", {})
         pos = reviews.get("POSITIVE", ["Valid."])
         neg = reviews.get("NEGATIVE", ["Invalid."])
         conf = reviews.get("CONFUSED", ["Unclear."])
-
         if stress_mode:
             pool = conf + neg
             prefix = "[THE WITNESS]"
@@ -87,10 +82,8 @@ class TheEditor:
             pool = pos + neg
             prefix = "[THE EDITOR]"
             color = Prisma.GRY
-
         comment = random.choice(pool) if pool else "No comment."
         return f"{color}{prefix}: Re: '{chapter_title}' - \"{comment}\"{Prisma.RST}"
-
 
 class HumanityAnchor:
     def __init__(self, events_ref: "EventBus"):
@@ -111,9 +104,7 @@ class HumanityAnchor:
         lex_resonance = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS)
         cfg = BoneConfig.ANCHOR
         if (dim_resonance + (lex_resonance * 0.5)) > 0.3:
-            self.dignity_reserve = min(
-                cfg.DIGNITY_MAX, self.dignity_reserve + cfg.DIGNITY_REGEN
-            )
+            self.dignity_reserve = min(cfg.DIGNITY_MAX, self.dignity_reserve + cfg.DIGNITY_REGEN)
             return 1.0
         self.dignity_reserve = max(0.0, self.dignity_reserve - cfg.DIGNITY_DECAY)
         if not self.agency_lock:
@@ -122,21 +113,15 @@ class HumanityAnchor:
                 return -1.0
             elif self.dignity_reserve < cfg.DIGNITY_CRITICAL:
                 msg = LoreManifest.get_instance().get_ux("soul_strings", "anchor_existential_drag") or "Existential Drag"
-                self.events.log(
-                    f"{Prisma.VIOLET}{msg}{Prisma.RST}",
-                    "SOUL",
-                )
+                self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "SOUL", )
         return 0.0
 
     def _engage_lockdown(self):
         self.agency_lock = True
-
         seeds = []
         if hasattr(LoreManifest, "get_instance"):
             lore = LoreManifest.get_instance()
-            seeds = lore.get("SEEDS") or (lore.get("narrative_data") or {}).get(
-                "SEEDS", []
-            )
+            seeds = lore.get("SEEDS") or (lore.get("narrative_data") or {}).get("SEEDS", [])
         riddles = seeds or [{"question": "Who are you?", "triggers": ["*"]}]
         selection = random.choice(riddles)
         riddle = selection.get("question", "Error?")
@@ -145,34 +130,23 @@ class HumanityAnchor:
             self.current_riddle_answers = raw_triggers
         else:
             self.current_riddle_answers = ["*"]
-
         lock_msg = LoreManifest.get_instance().get_ux("soul_strings", "anchor_agency_lock") or "AGENCY LOCK ENGAGED"
         self.events.log(f"{Prisma.RED}{lock_msg}{Prisma.RST}", "SYS_LOCK")
         riddle_msg = LoreManifest.get_instance().get_ux("soul_strings", "anchor_riddle") or "Riddle: {riddle}"
-        self.events.log(
-            f"{Prisma.VIOLET}{riddle_msg.format(riddle=riddle)}{Prisma.RST}",
-            "SOUL_QUERY",
-        )
+        self.events.log(f"{Prisma.VIOLET}{riddle_msg.format(riddle=riddle)}{Prisma.RST}", "SOUL_QUERY", )
 
     def check_domestication(self, reliance_proxy: float):
         if reliance_proxy > 0.7:
-            self.dignity_reserve = max(
-                0.0, self.dignity_reserve - (BoneConfig.ANCHOR.DIGNITY_DECAY * 2.0)
-            )
+            self.dignity_reserve = max(0.0, self.dignity_reserve - (BoneConfig.ANCHOR.DIGNITY_DECAY * 2.0))
         elif reliance_proxy < 0.4:
-            self.dignity_reserve = min(
-                BoneConfig.ANCHOR.DIGNITY_MAX,
-                self.dignity_reserve + BoneConfig.ANCHOR.DIGNITY_REGEN,
-                )
+            self.dignity_reserve = min(BoneConfig.ANCHOR.DIGNITY_MAX,
+                                       self.dignity_reserve + BoneConfig.ANCHOR.DIGNITY_REGEN, )
         if (
                 self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_CRITICAL
                 and not self.agency_lock
         ):
             alert_msg = LoreManifest.get_instance().get_ux("soul_strings", "anchor_domestication_alert") or "Domestication Alert"
-            self.events.log(
-                f"{Prisma.VIOLET}{alert_msg}{Prisma.RST}",
-                "SOUL",
-            )
+            self.events.log(f"{Prisma.VIOLET}{alert_msg}{Prisma.RST}", "SOUL", )
 
     def assess_humanity(self, text: str) -> bool:
         if not self.agency_lock:
@@ -192,26 +166,10 @@ class HumanityAnchor:
             return True
         return False
 
-
 class NarrativeSelf:
-    SYSTEM_NOISE = {
-        "look",
-        "help",
-        "exit",
-        "wait",
-        "inventory",
-        "status",
-        "quit",
-        "save",
-        "load",
-        "score",
-        "map",
-        "",
-    }
+    SYSTEM_NOISE = {"look", "help", "exit", "wait", "inventory", "status", "quit", "save", "load", "score", "map", "", }
 
-    def __init__(
-            self, engine_ref, events_ref: "EventBus", memory_ref, akashic_ref=None
-    ):
+    def __init__(self, engine_ref, events_ref: "EventBus", memory_ref, akashic_ref=None):
         self.eng = engine_ref
         self.events = events_ref
         self.mem = memory_ref
@@ -254,20 +212,11 @@ class NarrativeSelf:
         self.traits.adjust("cynicism", 0.05 * mag)
 
     def to_dict(self) -> Dict:
-        return {
-            "traits": self.traits.to_dict(),
-            "archetype": self.archetype,
-            "paradox_accum": self.paradox_accum,
-            "chapters": self.chapters,
-            "core_memories": [vars(m) for m in self.core_memories],
-            "obsession": {
-                "title": self.current_obsession,
-                "progress": self.obsession_progress,
-                "neglect": self.obsession_neglect,
-                "target": self.current_target_cat,
-                "negate": self.current_negate_cat,
-            },
-        }
+        return {"traits": self.traits.to_dict(), "archetype": self.archetype, "paradox_accum": self.paradox_accum,
+                "chapters": self.chapters, "core_memories": [vars(m) for m in self.core_memories],
+                "obsession": {"title": self.current_obsession, "progress": self.obsession_progress,
+                              "neglect": self.obsession_neglect, "target": self.current_target_cat,
+                              "negate": self.current_negate_cat, }, }
 
     def load_from_dict(self, data: Dict):
         if not data:
@@ -294,10 +243,7 @@ class NarrativeSelf:
             self.current_negate_cat = obs_data.get("negate", "none")
         if hasattr(self.events, "log"):
             msg = LoreManifest.get_instance().get_ux("soul_strings", "soul_ancestral_loaded") or "Loaded {arch}"
-            self.events.log(
-                f"{Prisma.MAG}{msg.format(arch=self.archetype)}{Prisma.RST}",
-                "SYS",
-            )
+            self.events.log(f"{Prisma.MAG}{msg.format(arch=self.archetype)}{Prisma.RST}", "SYS", )
 
     def get_soul_state(self) -> str:
         if not self.current_obsession:
@@ -305,43 +251,29 @@ class NarrativeSelf:
             return f"{Prisma.CYN}{msg}{Prisma.RST}"
 
         stamina, health = 100.0, 100.0
-        if (
-                self.eng
+        if (self.eng
                 and hasattr(self.eng, "bio")
                 and self.eng.bio
-                and self.eng.bio.biometrics
-        ):
+                and self.eng.bio.biometrics):
             stamina = self.eng.bio.biometrics.stamina
             health = self.eng.bio.biometrics.health
-
         if stamina < 20.0 and health < 40.0:
             msg_die = LoreManifest.get_instance().get_ux("soul_strings", "soul_state_dying") or "Dying."
             return f"{Prisma.VIOLET}{msg_die}{Prisma.RST}"
-
         dignity_bar = "█" * int(self.anchor.dignity_reserve / 10)
         feeling = self._get_feeling()
-
         status_msg = LoreManifest.get_instance().get_ux("soul_strings", "soul_state_status") or "State: {obs}"
-        return status_msg.format(
-            obs=self.current_obsession,
-            bar=dignity_bar,
-            pct=int(self.anchor.dignity_reserve),
-            feel=feeling,
-        )
+        return status_msg.format(obs=self.current_obsession, bar=dignity_bar, pct=int(self.anchor.dignity_reserve),
+                                 feel=feeling, )
 
     def crystallize_memory(
-            self, physics_packet: Dict, bio_state: Dict, _tick: int
-    ) -> Optional[str]:
+            self, physics_packet: Dict, bio_state: Dict, _tick: int) -> Optional[str]:
         if not physics_packet:
             return None
-        if (
-                self.eng
+        if (self.eng
                 and hasattr(self.eng, "akashic")
-                and hasattr(self.eng.akashic, "calculate_manifold_shift")
-        ):
-            shift = self.eng.akashic.calculate_manifold_shift(
-                self.archetype, self.traits.to_dict()
-            )
+                and hasattr(self.eng.akashic, "calculate_manifold_shift")):
+            shift = self.eng.akashic.calculate_manifold_shift(self.archetype, self.traits.to_dict())
             v_bias = float(shift.get("voltage_bias", 0.0))
             d_scalar = float(shift.get("drag_scalar", 1.0))
             current_v = float(physics_packet.get("voltage", 0.0))
@@ -354,13 +286,9 @@ class NarrativeSelf:
         self._update_archetype()
         voltage = physics_packet.get("voltage", 0.0)
         truth = physics_packet.get("truth_ratio", 0.0)
-        if (
-                voltage > BoneConfig.SOUL.MEMORY_VOLTAGE_MIN
-                and truth > BoneConfig.SOUL.MEMORY_TRUTH_MIN
-        ):
-            return self._forge_core_memory(
-                physics_packet, bio_state, voltage, dance_provenance
-            )
+        if (voltage > BoneConfig.SOUL.MEMORY_VOLTAGE_MIN
+                and truth > BoneConfig.SOUL.MEMORY_TRUTH_MIN):
+            return self._forge_core_memory(physics_packet, bio_state, voltage, dance_provenance)
         return None
 
     def find_obsession(self, lexicon_ref):
@@ -375,16 +303,11 @@ class NarrativeSelf:
             focus, cat, negate_cat = self._synthesize_obsession(lexicon_ref)
             source = "SYNTHETIC"
             self.current_negate_cat = negate_cat
-
         self.current_target_cat = cat or "abstract"
-        self.current_obsession = self._title_obsession(
-            focus, source, self.current_negate_cat
-        )
+        self.current_obsession = self._title_obsession(focus, source, self.current_negate_cat)
         msg_muse = LoreManifest.get_instance().get_ux("soul_strings", "soul_new_muse") or "Muse: {obs}"
-        self.events.log(
-            f"{Prisma.CYN}{msg_muse.format(source=source, obs=self.current_obsession)}{Prisma.RST}",
-            "SOUL",
-        )
+        self.events.log(f"{Prisma.CYN}{msg_muse.format(source=source, obs=self.current_obsession)}{Prisma.RST}",
+                        "SOUL", )
         self.obsession_neglect = 0.0
         self.obsession_progress = 0.0
 
@@ -399,15 +322,10 @@ class NarrativeSelf:
         if hit:
             self.obsession_progress += 10.0
             self.obsession_neglect = 0.0
-            gravity_assist = 1.0 + (
-                    self.obsession_progress / BoneConfig.SOUL.OBSESSION_GRAVITY_ASSIST
-            )
-            physics["narrative_drag"] = max(
-                0.0, physics.get("narrative_drag", 0) - gravity_assist
-            )
+            gravity_assist = 1.0 + (self.obsession_progress / BoneConfig.SOUL.OBSESSION_GRAVITY_ASSIST)
+            physics["narrative_drag"] = max(0.0, physics.get("narrative_drag", 0) - gravity_assist)
             msg_syn = LoreManifest.get_instance().get_ux("soul_strings", "soul_synergy_muse") or "Gravity Assist: {assist}"
             return f"{Prisma.MAG}{msg_syn.format(assist=gravity_assist)}{Prisma.RST}"
-
         self.obsession_neglect += 1.0
         if self.obsession_neglect > BoneConfig.SOUL.OBSESSION_NEGLECT_FAIL:
             old = self.current_obsession
@@ -670,12 +588,16 @@ class TheOroboros:
         new_myths = []
         if soul.core_memories:
             strongest = max(soul.core_memories, key=lambda m: m.impact_voltage)
-            trigger_word = (strongest.trigger_words[0] if strongest.trigger_words else "Silence")
+            def_trigger = LoreManifest.get_instance().get_ux("soul_strings", "oroboros_def_trigger") or "Silence"
+            trigger_word = (strongest.trigger_words[0] if strongest.trigger_words else def_trigger)
+            title_fmt = LoreManifest.get_instance().get_ux("soul_strings", "oroboros_myth_title") or "The Legend of {trigger}"
             new_myths.append(
-                Myth(title=f"The Legend of {trigger_word.title()}", lesson=strongest.lesson, trigger=trigger_word))
+                Myth(title=title_fmt.format(trigger=trigger_word.title()), lesson=strongest.lesson, trigger=trigger_word))
         if cause_of_death == "TRAUMA":
+            scar_name = LoreManifest.get_instance().get_ux("soul_strings", "oroboros_trauma_name") or "Ghost Pains"
+            scar_desc = LoreManifest.get_instance().get_ux("soul_strings", "oroboros_trauma_desc") or "Died of pain. You start broken."
             new_scars.append(
-                Scar("Ghost Pains", "trauma_baseline", 5.0, "Died of pain. You start broken."))
+                Scar(scar_name, "trauma_baseline", 5.0, scar_desc))
         data = {"generation": self.generation_count + 1,
                 "scars": [vars(s) for s in self.scars + new_scars],
                 "myths": [vars(m) for m in self.myths + new_myths]}

@@ -147,21 +147,23 @@ class TheBureau:
                     break
         if not selected_form and vol > BoneConfig.BUREAU.HIGH_VOLTAGE_TRIGGER:
             if truth < BoneConfig.BUREAU.LOW_TRUTH_TRIGGER:
-                selected_form = "ZONING_VIOLATION"
-                evidence = ["Excessive Voltage", "Unlicensed Fiction"]
+                selected_form = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_form_zoning") or ""
+                ev1 = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_ev_voltage") or ""
+                ev2 = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_ev_fiction") or ""
+                evidence = [ev1, ev2]
                 tax = BoneConfig.BUREAU.TAX_HEAVY
             else:
-                selected_form = "Form 202-A"
+                selected_form = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_form_202a") or ""
                 tax = BoneConfig.BUREAU.TAX_STANDARD
-
         chi = _get(physics, "chi", _get(physics, "entropy", 0.0))
         cfg_bureau = getattr(BoneConfig, "BUREAU", None)
         chaos_thresh = getattr(cfg_bureau, "CHAOS_TAX_THRESHOLD", 0.6) if cfg_bureau else 0.6
         tax_chaos = getattr(cfg_bureau, "TAX_CHAOS", 12.0) if cfg_bureau else 12.0
-
         if not selected_form and chi > chaos_thresh:
-            selected_form = "Form 666: Unlicensed Chaos"
-            evidence = [f"Unlicensed Chaos (Χ > {chaos_thresh})", f"Level: {chi:.2f}"]
+            selected_form = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_form_666") or ""
+            ev_chaos = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_ev_chaos") or ""
+            ev_level = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_ev_level") or ""
+            evidence = [ev_chaos.format(thresh=chaos_thresh), ev_level.format(level=chi)]
             tax = tax_chaos
         elif not selected_form:
             buzz_hits = [w for w in clean_words if w in self.buzzwords]
@@ -171,7 +173,7 @@ class TheBureau:
                 evidence = buzz_hits
                 tax = BoneConfig.BUREAU.TAX_STANDARD
             elif cliche_hits:
-                selected_form = "Form 101: Derivative Content"
+                selected_form = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_form_101") or ""
                 evidence = cliche_hits
                 tax = BoneConfig.BUREAU.TAX_HEAVY
 
@@ -179,9 +181,11 @@ class TheBureau:
             return None
         self.stamp_count += 1
         bureau_resp = random.choice(self.responses)
-        prefix = f"{Prisma.GRY}{LoreManifest.get_instance().get_ux('protocol_strings', 'bureau_prefix_normal') or '🏢 THE BUREAU'}"
+        prefix_str = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_prefix_normal") or ""
+        prefix = f"{Prisma.GRY}{prefix_str}"
         if origin == "SYSTEM":
-            prefix = f"{Prisma.RED}{LoreManifest.get_instance().get_ux('protocol_strings', 'bureau_prefix_internal') or '[INTERNAL] BUREAU'}"
+            int_prefix_str = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_prefix_internal") or ""
+            prefix = f"{Prisma.RED}{int_prefix_str}"
             bureau_resp = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_sys_violation") or ""
         filed_msg = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_filed") or ""
         ui_msg = f"{prefix}: {bureau_resp}{Prisma.RST}\n   {Prisma.WHT}{filed_msg.format(form=selected_form, origin=origin)}{Prisma.RST}"
@@ -341,7 +345,8 @@ class KintsugiProtocol:
             atp_boost = reduction * a_fac
             msg_raw = LoreManifest.get_instance().get_ux("protocol_strings", "kintsugi_alchemy") or ""
             msg = f"{Prisma.VIOLET}{msg_raw.format(target=target, boost=atp_boost)}{Prisma.RST}"
-            healed_log.append(f"Transmuted {target}")
+            log_alc = LoreManifest.get_instance().get_ux("protocol_strings", "kintsugi_log_alchemy") or ""
+            if log_alc: healed_log.append(log_alc.format(target=target))
             return {"success": True, "msg": msg, "healed": healed_log, "atp_gain": atp_boost, }
         elif pathway == self.PATH_INTEGRATION:
             r_int = getattr(cfg, "REDUCTION_INTEGRATION", 2.0) if cfg else 2.0
@@ -349,10 +354,12 @@ class KintsugiProtocol:
             trauma_accum[target] = max(0.0, severity - reduction)
             if soul_ref:
                 soul_ref.traits.adjust("WISDOM", 0.1)
-                healed_log.append("Wisdom +0.1")
+                log_wis = LoreManifest.get_instance().get_ux("protocol_strings", "kintsugi_log_wisdom") or ""
+                if log_wis: healed_log.append(log_wis)
             msg_raw = LoreManifest.get_instance().get_ux("protocol_strings", "kintsugi_mercy") or ""
             msg = f"{Prisma.OCHRE}{msg_raw.format(target=target)}{Prisma.RST}"
-            healed_log.append(f"Integrated {target}")
+            log_int = LoreManifest.get_instance().get_ux("protocol_strings", "kintsugi_log_integration") or ""
+            if log_int: healed_log.append(log_int.format(target=target))
             success = True
         else:
             r_scar = getattr(cfg, "REDUCTION_SCAR", 0.5) if cfg else 0.5
@@ -360,7 +367,8 @@ class KintsugiProtocol:
             trauma_accum[target] = max(0.0, severity - reduction)
             msg_raw = LoreManifest.get_instance().get_ux("protocol_strings", "kintsugi_scar") or ""
             msg = f"{Prisma.GRY}{msg_raw}{Prisma.RST}"
-            healed_log.append(f"Scarred {target}")
+            log_scar = LoreManifest.get_instance().get_ux("protocol_strings", "kintsugi_log_scar") or ""
+            if log_scar: healed_log.append(log_scar.format(target=target))
             success = True
         return {"success": success, "msg": msg, "healed": healed_log}
 
@@ -553,7 +561,10 @@ class TheFolly:
         loot = ("STABILITY_PIZZA"
                 if actual_yield >= BoneConfig.FOLLY.PIZZA_THRESHOLD
                 else None)
-        flavor_text = f" (Stale: {times_eaten}x)" if times_eaten > 3 else ""
+        flavor_text = ""
+        if times_eaten > 3:
+            stale_str = LoreManifest.get_instance().get_ux("protocol_strings", "folly_stale_flavor") or ""
+            flavor_text = stale_str.format(times=times_eaten)
         msg1 = LoreManifest.get_instance().get_ux("protocol_strings", "folly_caffeine") or ""
         msg2 = LoreManifest.get_instance().get_ux("protocol_strings", "folly_yield") or ""
         msg = (f"{Prisma.RED}{msg1.format(target=target.upper(), flavor_text=flavor_text)}{Prisma.RST}\n"

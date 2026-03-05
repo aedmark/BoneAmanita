@@ -22,10 +22,13 @@ class Item:
 
     @classmethod
     def from_dict(cls, name: str, data: Dict):
-        return cls(name=name, description=data.get("description", "Unknown Artifact"),
+        default_desc = LoreManifest.get_instance().get_ux("gordon_strings", "default_item_desc") or "Unknown Artifact"
+        default_usage = LoreManifest.get_instance().get_ux("gordon_strings", "default_item_use") or f"You use the {name}."
+
+        return cls(name=name, description=data.get("description", default_desc),
                    function=data.get("function", "MISC"), passive_traits=data.get("passive_traits", []),
                    spawn_context=data.get("spawn_context", "COMMON"), value=data.get("value", 1.0),
-                   usage_msg=data.get("usage_msg", f"You use the {name}."),
+                   usage_msg=data.get("usage_msg", default_usage),
                    consume_on_use=data.get("consume_on_use", False), reflex_trigger=data.get("reflex_trigger", None))
 
 class GordonKnot:
@@ -172,7 +175,8 @@ class GordonKnot:
         if not item_obj:
             item_obj = self.get_item_data(tool_name.lower())
         if not item_obj:
-            new_item = Item(name=tool_name, description="???", function="MISC")
+            fallback_desc = LoreManifest.get_instance().get_ux("gordon_strings", "fallback_desc") or "???"
+            new_item = Item(name=tool_name, description=fallback_desc, function="MISC")
             self.registry[tool_name] = new_item
             self.ITEM_REGISTRY[tool_name] = new_item.__dict__
         if len(self.inventory) >= self.max_slots:
@@ -248,14 +252,16 @@ class GordonKnot:
         archetype = dim_map.get(dom_dim, "void")
         prefixes = self.blueprints.get("PREFIXES", {}).get(archetype, fallbacks.get("PREFIX", ["Strange"]))
         suffixes = self.blueprints.get("SUFFIXES", {}).get(archetype, fallbacks.get("SUFFIX", ["of Mystery"]))
+
         if self.mode in ["CREATIVE", "CONVERSATION"]:
-            base_cat = "ABSTRACT"
+            base_cat = self.blueprints.get("CREATIVE_BASE_CAT", "ABSTRACT")
             bases = self.blueprints.get("BASES", {}).get(base_cat, fallbacks.get("BASE", ["Concept"]))
             creative_overrides = self.blueprints.get("CREATIVE_OVERRIDES", {})
             prefixes = creative_overrides.get("PREFIXES", prefixes)
             suffixes = creative_overrides.get("SUFFIXES", suffixes)
         else:
-            adv_cats = self.blueprints.get("ADVENTURE_CATEGORIES", ["TOOL", "JUNK", "ARTIFACT"])
+            default_adv_cats = ["TOOL", "JUNK", "ARTIFACT"]
+            adv_cats = self.blueprints.get("ADVENTURE_CATEGORIES", default_adv_cats)
             base_cat = random.choice(adv_cats)
             bases = self.blueprints.get("BASES", {}).get(base_cat, fallbacks.get("BASE", ["Object"]))
         prefix = random.choice(prefixes)
@@ -288,7 +294,8 @@ class GordonKnot:
         sorted_triggers = sorted(self.loot_triggers, key=len, reverse=True)
         for t in sorted_triggers:
             if t in text:
-                pattern = f"{re.escape(t)}\s+(?:the\s+|a\s+|an\s+)?(?P<item>[\w\s]{{1,30}}?)(?:\s+(?:from|on|in|under|with|by|near|at|to|you|it|he|she|we|they)|[\.,!?]|$)"
+                pattern = (f"{re.escape(t)}\\s+(?:the\\s+|a\\s+|an\\s+)?(?P<item>[\\w\\s]{{1,30}}?)"
+                           f"(?:\\s+(?:from|on|in|under|with|by|near|at|to|you|it|he|she|we|they)|[\\.,!?]|$)")
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     candidate = match.group("item").strip()

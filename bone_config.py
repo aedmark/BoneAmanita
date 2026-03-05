@@ -2,6 +2,7 @@
 
 from typing import Dict, Any, List
 
+
 class BonePresets:
     ZEN_GARDEN = {"PHYSICS.VOLTAGE_FLOOR": 1.0, "PHYSICS.VOLTAGE_MAX": 25.0, "PHYSICS.DRAG_FLOOR": 0.5,
                   "BIO.DECAY_RATE": 0.001, "BIO.STAMINA_EXHAUSTED": 5.0, "COUNCIL.MANIC_VOLTAGE_TRIGGER": 99.0,
@@ -21,7 +22,8 @@ class BonePresets:
                       "active_mods": [], "default_ui_depth": "CORE", },
         "CONVERSATION": {"description": "Pure dialogue. No entropy, no items, just connection.", "tuning": "ZEN",
                          "ui_layer": 1, "village_suppression": ["GORDON", "NAVIGATOR", "CARTOGRAPHER", "TINKERER",
-                                                                "DEATH", "BUREAU", ], "prompt_key": "CONVERSATION", "show_inventory": False, "show_location": False, "show_vitals": False,
+                                                                "DEATH", "BUREAU", ], "prompt_key": "CONVERSATION",
+                         "show_inventory": False, "show_location": False, "show_vitals": False,
                          "allow_loot": False, "allow_metrics": False, "atp_drain_enabled": False,
                          "chaos_tax_enabled": False, "voltage_floor_override": None, "active_mods": [],
                          "default_ui_depth": "BUNNY", },
@@ -34,11 +36,13 @@ class BonePresets:
                       "ui_layer": 2, "village_suppression": ["MOIRA", "JESTER", "CASSANDRA", "APRIL"],
                       "prompt_key": "TECHNICAL", "show_inventory": True, "show_location": True, "show_vitals": True,
                       "allow_loot": True, "allow_metrics": True, "atp_drain_enabled": True, "chaos_tax_enabled": True,
-                      "voltage_floor_override": None, "active_mods": ["CODING", "SYNTAX"], "default_ui_depth": "DEEP", }}
+                      "voltage_floor_override": None, "active_mods": ["CODING", "SYNTAX"],
+                      "default_ui_depth": "DEEP", }}
     STANDARD = {"PHYSICS": {"VOLTAGE_MAX": 20.0, "BASE_DRAG": 1.0}, "BIO": {"METABOLISM_RATE": 1.0}, }
     ZEN = {"PHYSICS": {"VOLTAGE_MAX": 10.0, "BASE_DRAG": 0.0}, "BIO": {"METABOLISM_RATE": 0.1}, }
     MANIC = {"PHYSICS": {"VOLTAGE_MAX": 50.0, "BASE_DRAG": 0.5}, "BIO": {"METABOLISM_RATE": 2.0}, }
     DEBUG = {"PHYSICS": {"VOLTAGE_MAX": 100.0, "BASE_DRAG": 0.0}, "BIO": {"METABOLISM_RATE": 0.0}, }
+
 
 class BoneConfig:
     GRAVITY_WELL_THRESHOLD = 15.0
@@ -110,6 +114,26 @@ class BoneConfig:
         BASE_SENSITIVITY = 0.1
         LATENCY_PENALTY_THRESHOLD = 2.0
         DRAG_STRESS_THRESHOLD = 8.0
+        LATENCY_CORTISOL_PENALTY = 0.1
+        LATENCY_ADRENALINE_PENALTY = 0.05
+        MOOD_THRESHOLDS = {"MANIC_DOP": 0.8, "PANIC_COR": 0.7, "ZEN_SER": 0.8}
+        TEMP_VOLTAGE_OFFSET = 5.0
+        TEMP_VOLTAGE_SCALAR = 0.1
+        TEMP_CHEM_WEIGHTS = {"dop": 0.4, "adr": 0.3, "cor": 0.2}
+        TEMP_ENTROPY_OFFSET = 0.5
+        TEMP_ENTROPY_SCALAR = 1.5
+        TEMP_LIMITS = (0.4, 1.5)
+        TOP_P_CHI_SCALAR = 0.05
+        PEN_BETA_SCALAR = 0.3
+        PEN_CHI_SCALAR = 0.2
+        TOKEN_CHEM_MODIFIERS = {"dop": 800, "adr": 400, "cor": 200}
+        MIN_TOKENS = 150.0
+        IGNITION_V_DIV = 20.0
+        IGNITION_W_DIV = 10.0
+        LINK_VOLTAGE_THRESH = 12.0
+        LINK_CHANCE = 0.15
+        LINK_MAX_WEIGHT = 10.0
+        LINK_BOOST = 2.5
         TOXIN_SCALAR = 0.4
         ADRENALINE_KINETIC_SCALAR = 0.08
         VOLTAGE_ARC_TRIGGER = 15.0
@@ -145,6 +169,9 @@ class BoneConfig:
         MOOD_COR = 0.6
         MOOD_DOP = 0.6
         MOOD_SER = 0.6
+        LLM_CIRCUIT_HEAL_TIME = 10.0
+        LLM_FALLBACK_TIMEOUT = 10.0
+        VALIDATOR_STUTTER_LENGTH = 5
 
     class WHIMSY:
         ABSURDITY_CONSTANT = 42
@@ -211,6 +238,18 @@ class BoneConfig:
         FOOTNOTE_CHANCE = 0.15
         LEVERAGE_TARGET_VOLTAGE = 12.0
         LEVERAGE_TARGET_DRAG = 3.0
+        STRANGE_LOOP_LIMIT = 3
+        LEVERAGE_DAMPENING_MAX = 0.5
+        LEVERAGE_DAMPENING_SCALAR = 0.1
+        LEVERAGE_CORRECTION_MIN = 1.0
+        LEVERAGE_CORRECTION_SCALAR = 0.3
+        SLASH_STAMINA_COST = 10.0
+        TENSION_DRAG_PENALTY = 3.0
+        VOTE_YEA_THRESHOLD = 1.2
+        VOTE_NAY_THRESHOLD = 0.8
+        VOTE_DRAG_RELIEF = 1.0
+        VOTE_DRAG_PENALTY = 1.0
+        VOTE_VOLTAGE_PENALTY = 1.0
         TRIG_GORDON_V = 20.0
         TRIG_GORDON_F = 5.0
         TRIG_JESTER_V = 60.0
@@ -249,6 +288,25 @@ class BoneConfig:
         PHASE_COLIN_LQ = 0.3
 
     class BIO:
+        REST_HEALTH_RECOVERY = 0.5
+        REST_STAMINA_RECOVERY = 1.0
+        REST_SEROTONIN_BOOST = 0.05
+        REST_CORTISOL_DROP = 0.05
+        MIN_WORD_LENGTH = 4
+        COMPLEX_WORD_LENGTH = 7
+        GLIMMER_INTEGRITY_THRESH = 0.85
+        GLIMMER_NOVELTY_THRESH = 0.8
+        GLIMMER_HARVEST_MIN = 2
+        GLIMMER_DOPAMINE_MIN = 0.7
+        BUFFER_WARN_LIMIT = 10000
+        SLUDGE_DRAG_THRESH = 8.0
+        SLUDGE_TICK_MOD = 10
+        SLUDGE_DRAG_REDUCTION = 2.0
+        WASTE_PSI_MULT = 5.0
+        WASTE_CHI_MULT = 5.0
+        WASTE_VOLT_DIV = 20.0
+        WASTE_BASE_REDUCTION = 2.0
+        MITOPHAGY_COST = 30.0
         STARTING_ATP = 60.0
         ATP_STARVATION = 5.0
         METABOLISM_RATE = 1.0
@@ -271,7 +329,7 @@ class BoneConfig:
         BASE_ATP_YIELD = 2.0
         LONG_WORD_BONUS = 2.5
         VOLTAGE_BONUS_THRESHOLD = 8.0
-        PROTEASE_BONUS = 10.0
+        PROTEASE_BONUS = 5.0
         DOPAMINE_SATIETY = 0.7
         CORTISOL_STRESS = 0.6
         ADRENALINE_SURGE = 0.6
@@ -285,9 +343,25 @@ class BoneConfig:
         CLICHE_TAX_RATE = 0.5
         MAX_SAFE_BURN = 25.0
         ANAEROBIC_THRESHOLD = 40.0
-        PID_SETTINGS = {
-            "VOLTAGE": {"kp": 0.6, "ki": 0.05, "kd": 0.2, "setpoint": 10.0},
-            "DRAG": {"kp": 0.4, "ki": 0.1, "kd": 0.1, "setpoint": 1.5}}
+        PID_SETTINGS = {"VOLTAGE": {"kp": 0.6, "ki": 0.05, "kd": 0.2, "setpoint": 10.0},
+                        "DRAG": {"kp": 0.4, "ki": 0.1, "kd": 0.1, "setpoint": 1.5}}
+        AUTOPHAGY_MIN_HEALTH = 10.0
+        AUTOPHAGY_BURN = 5.0
+        VOLTAGE_OVERLOAD = 30.0
+        VOLTAGE_TAX_MULT = 0.05
+        DEPTH_TAX_MULT = 2.0
+        CONN_TAX_MULT = 3.0
+        CHAOS_TAX_THRESHOLD = 0.6
+        CHAOS_TAX_MULT = 8.0
+        ENTROPY_BASE_BIAS = 0.2
+        SHIELD_MAX_STRENGTH = 0.8
+        SHIELD_MULTIPLIER = 0.1
+        HEAT_THRESHOLD = 0.8
+        THERMAL_FEEDBACK_MULT = 5.0
+        NEURAL_SHIFTS = {"PANIC": {"adr": 0.3, "cor": 0.2},
+            "ZEN": {"cor": -0.3, "ser": 0.2},
+            "MANIC": {"atp": -10.0}
+        }
 
     class CHANCE:
         RARE = 0.05
@@ -451,6 +525,7 @@ class BoneConfig:
         COST_MAP = 2.0
         RECOVER_STAMINA = 20.0
         STATUS_MAX_ATP = 200.0
+        SAVE_ERROR_FLAGS = ["Error", "Failed", "Exception"]
 
     class AKASHIC:
         RECIPE_THRESHOLD = 3
@@ -459,6 +534,11 @@ class BoneConfig:
         AUTOPHAGY_YIELD = 15.0
         BLOAT_THRESHOLD = 50
         ARTIFACT_VALUE = 50.0
+        SAVE_DIR = "saves"
+        STATE_FILE = "akashic_state.json"
+        BLOAT_EXEMPT_CATEGORIES = ["heavy"]
+        DEFAULT_SCAR_COORDS = {"E": 0.2, "beta": 0.4, "S": 0.3, "D": 0.3, "C": 0.2,
+            "T": 0.0, "psi": 0.0, "chi": 0.0, "valence": 0.0, "ROS": 0.0}
 
     class CORE:
         EVENT_MAX_MEMORY = 1024
@@ -467,6 +547,11 @@ class BoneConfig:
         OBSERVER_CYCLE_WARN = 8.0
         TELEMETRY_BUFFER_SIZE = 50
         TELEMETRY_MAX_ERRORS = 5
+        LORE_DIR = "lore"
+        OBSERVER_CYCLE_EFFICIENT = 0.1
+        OBSERVER_LLM_EFFICIENT = 0.5
+        LOUD_LENSES = ["THE MANIC", "THE VOID"]
+        TELEMETRY_LOG_DIR = "logs/telemetry"
 
     class CYCLE:
         OBSERVE_ATP_WARN = 15.0
@@ -486,13 +571,54 @@ class BoneConfig:
         THEREMIN_DAMAGE_PCT = 0.25
         LIMINAL_TAX_SCALAR = 10.0
         SHOCK_COST = 5.0
+        NAV_VOID_PENALTY = 0.5
+        NAV_LAGRANGE_RELIEF = 2.0
+        NAV_WATERSHED_BOOST = 0.5
+        INTRUSION_DRAG_THRESH = 4.0
+        INTRUSION_KAPPA_THRESH = 0.3
+        INTRUSION_REWIRE_DOP = 0.2
+        INTRUSION_REWIRE_RELIEF = 2.0
+        INTRUSION_NIGHTMARE_THRESH = 10.0
+        INTRUSION_DREAM_CHANCE = 0.2
+        ARB_TENSION_THRESH = 0.85
+        ARB_SILENCE_LOW = 0.5
+        ARB_SILENCE_HIGH = 0.85
+        ARB_CUT_SILENCE = 0.9
+        ARB_CUT_DRAG = 2.0
 
     class DRIVERS:
         ENNEAGRAM_HYSTERESIS = 3
         ENNEAGRAM_HYBRID_GAP = 0.5
         PROFILE_CONFIDENCE_THRESHOLD = 50
+        PROFILE_FILE_PATH = "user_profile.json"
+        PROFILE_MIN_WORDS = 3
+        PROFILE_ALPHA_HIGH = 0.2
+        PROFILE_ALPHA_LOW = 0.05
+        PROFILE_DENSITY_HIGH = 0.15
+        PROFILE_LIKE_THRESH = 0.3
+        PROFILE_HATE_THRESH = -0.2
         LIMINAL_SCAR_THRESHOLD = 0.85
+        LIMINAL_LEXICAL_WEIGHT = 0.15
+        LIMINAL_DARK_MATTER_WEIGHT = 0.25
+        LIMINAL_VEC_PSI_MULT = 0.5
+        LIMINAL_VEC_ENT_MULT = 0.3
+        LIMINAL_VEC_DEL_MULT = 0.2
+        LIMINAL_DECAY = 0.7
+        LIMINAL_GROWTH = 0.15
         SYNTAX_STRESS_PUNCTUATION = 0.2
+        SYNTAX_AVG_LEN_HIGH = 6.0
+        SYNTAX_DRAG_HIGH = 5.0
+        SYNTAX_AVG_LEN_LOW = 3.5
+        SYNTAX_DRAG_LOW = 1.0
+        SYNTAX_OMEGA_TARGET_HIGH = 1.0
+        SYNTAX_OMEGA_TARGET_LOW = 0.4
+        SYNTAX_OMEGA_TARGET_MID = 0.7
+        SYNTAX_STRESS_INCREASE = 0.2
+        SYNTAX_STRESS_DECAY = 0.1
+        SYNTAX_OMEGA_PENALTY = 0.3
+        SYNTAX_OMEGA_DECAY = 0.8
+        SYNTAX_OMEGA_GROWTH = 0.2
+        SYNTAX_OMEGA_MIN = 0.1
         CONGRUENCE_BASE_TONE = 0.8
         CONGRUENCE_HIT_BONUS = 0.1
         CONGRUENCE_MAX_TONE = 1.5
@@ -500,12 +626,21 @@ class BoneConfig:
         VSL_SYNTAX_THRESHOLD = 0.9
         VSL_BUNNY_E_MAX = 0.3
         VSL_PARADOX_B_MIN = 0.6
+        DEFAULT_LENS = "OBSERVER"
+        VSL_E_GROWTH_MULT = 0.002
+        VSL_FATIGUE_MULT = 0.3
+        VSL_B_DECAY = 0.8
+        VSL_B_GROWTH = 0.2
 
     class GENESIS:
         DUMMY_VOLTAGE = 10.0
+        DUMMY_DRAG = 0.0
+        LEGACY_STRAIN_SCALAR = 0.1
         STARTING_ATP = 60.0
 
     class GUI:
+        RENDER_SPEED_FAST = 0.00025
+        RENDER_SPEED_SLOW = 0.005
         DIGNITY_HIGH = 80.0
         DIGNITY_MED = 50.0
         DIGNITY_LOW = 30.0
@@ -519,6 +654,9 @@ class BoneConfig:
         V_LOW = 5.0
         TENURE_WARN = 5
         TENURE_CRIT = 8
+        RENDER_SPEED = 0.005
+        RENDER_SPEED_BOOT = 0.05
+        RENDER_SPEED_SETUP = 0.02
 
     class MAIN:
         ETHICAL_AUDIT_FREQ = 3
@@ -551,7 +689,8 @@ class BoneConfig:
     def load_preset(cls, preset_dict: Dict[str, Any]) -> List[str]:
         from bone_core import LoreManifest
         logs = []
-        msg_tuned = LoreManifest.get_instance().get_ux("config_strings", "preset_tuned") or "Tuned {sector}.{param}: {old_val} -> {new_val}"
+        msg_tuned = LoreManifest.get_instance().get_ux("config_strings",
+                                                       "preset_tuned") or "Tuned {sector}.{param}: {old_val} -> {new_val}"
         for key, value in preset_dict.items():
             if "." in key:
                 sector_name, param_name = key.split(".", 1)
@@ -560,7 +699,8 @@ class BoneConfig:
                     if hasattr(target_class, param_name):
                         old_val = getattr(target_class, param_name)
                         setattr(target_class, param_name, value)
-                        logs.append(msg_tuned.format(sector=sector_name, param=param_name, old_val=old_val, new_val=value))
+                        logs.append(
+                            msg_tuned.format(sector=sector_name, param=param_name, old_val=old_val, new_val=value))
             else:
                 sector_name = key
                 sector_data = value
@@ -605,8 +745,10 @@ class BoneConfig:
         else:
             current_v = getattr(physics_packet, "voltage", 5.0)
             current_d = getattr(physics_packet, "narrative_drag", 1.0)
-            setattr(physics_packet, "voltage", max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX)),)
-            setattr( physics_packet, "narrative_drag", max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT)),)
+            setattr(physics_packet, "voltage",
+                    max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX)), )
+            setattr(physics_packet, "narrative_drag",
+                    max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT)), )
         return physics_packet
 
     @classmethod

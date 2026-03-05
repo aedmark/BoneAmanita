@@ -482,12 +482,13 @@ class NavigationPhase(SimulationPhase):
         if orbit_msg:
             ctx.log(orbit_msg)
         physics.narrative_drag += drag_pen
+        cfg = getattr(BoneConfig, "CYCLE", None)
         if orbit_state == "VOID_DRIFT":
-            physics.voltage = max(0.0, physics.voltage - 0.5)
+            physics.voltage = max(0.0, physics.voltage - getattr(cfg, "NAV_VOID_PENALTY", 0.5))
         elif orbit_state == "LAGRANGE_POINT":
-            physics.narrative_drag = max(0.1, physics.narrative_drag - 2.0)
+            physics.narrative_drag = max(0.1, physics.narrative_drag - getattr(cfg, "NAV_LAGRANGE_RELIEF", 2.0))
         elif orbit_state == "WATERSHED_FLOW":
-            physics.voltage += 0.5
+            physics.voltage += getattr(cfg, "NAV_WATERSHED_BOOST", 0.5)
         raw_zone = getattr(physics, "zone", "COURTYARD")
         stabilization_result = self.eng.stabilizer.stabilize(
             proposed_zone=raw_zone,
@@ -605,7 +606,9 @@ class IntrusionPhase(SimulationPhase):
                 ctx.log(self.eng.limbo.haunt(msg))
         drag = getattr(ctx.physics, "narrative_drag", 0.0)
         kappa = getattr(ctx.physics, "kappa", 1.0)
-        if (drag > 4.0 or kappa < 0.3) and ctx.clean_words:
+        cfg = getattr(BoneConfig, "CYCLE", None)
+
+        if (drag > getattr(cfg, "INTRUSION_DRAG_THRESH", 4.0) or kappa < getattr(cfg, "INTRUSION_KAPPA_THRESH", 0.3)) and ctx.clean_words:
             start_node = random.choice(ctx.clean_words)
             loop_path = self.eng.mind.tracer.inject(start_node)
             if loop_path:
@@ -613,13 +616,15 @@ class IntrusionPhase(SimulationPhase):
                 if rewire_msg:
                     msg = LoreManifest.get_instance().get_ux("cycle_strings", "intrusion_immune") or ""
                     ctx.log(f"{Prisma.CYN}{msg.format(rewire_msg=rewire_msg)}{Prisma.RST}")
-                    self.eng.bio.endo.dopamine += 0.2
-                    ctx.physics.narrative_drag = max(0.0, drag - 2.0)
+                    self.eng.bio.endo.dopamine += getattr(cfg, "INTRUSION_REWIRE_DOP", 0.2)
+                    ctx.physics.narrative_drag = max(0.0, drag - getattr(cfg, "INTRUSION_REWIRE_RELIEF", 2.0))
+
         trauma_sum = (sum(self.eng.trauma_accum.values())
-            if getattr(self.eng, "trauma_accum", None)
-            else 0.0)
+                      if getattr(self.eng, "trauma_accum", None)
+                      else 0.0)
         is_bored = self.eng.phys.pulse.is_bored()
-        if (trauma_sum > 10.0 or is_bored) and random.random() < 0.2:
+
+        if (trauma_sum > getattr(cfg, "INTRUSION_NIGHTMARE_THRESH", 10.0) or is_bored) and random.random() < getattr(cfg, "INTRUSION_DREAM_CHANCE", 0.2):
             dream_text, relief = self.eng.mind.dreamer.hallucinate(ctx.physics.vector, trauma_level=trauma_sum)
             if trauma_sum > 10.0:
                 prefix = LoreManifest.get_instance().get_ux("cycle_strings", "intrusion_nightmare") or ""
@@ -728,17 +733,22 @@ class SoulPhase(SimulationPhase):
             if hasattr(traits, "to_dict")
             else traits.__dict__ if hasattr(traits, "__dict__") else traits)
         get_t = lambda k: t_map.get(k, t_map.get(k.lower(), 0.0))
-        council_data = LoreManifest.get_instance().get("council_data") or {}
+        council_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
         mandates_text = council_data.get("SOUL_MANDATES", {})
 
-        rules = ["CYNICISM", 0.8, "LOCKDOWN", mandates_text.get("CYNICISM", ""), {"narrative_drag": 5.0, "voltage": -5.0}, Prisma.OCHRE,
-            "HOPE", 0.8, "STIMULUS", mandates_text.get("HOPE", ""), {"voltage": 5.0, "narrative_drag": -2.0}, Prisma.MAG,
-            "DISCIPLINE", 0.8,"STANDARDIZE", mandates_text.get("DISCIPLINE", ""), {"kappa": -0.5, "beta_index": 1.0}, Prisma.CYN]
+        rules = council_data.get("SOUL_MANDATE_RULES", [
+            ["CYNICISM", 0.8, "LOCKDOWN", "CYNICISM", {"narrative_drag": 5.0, "voltage": -5.0}, "OCHRE"],
+            ["HOPE", 0.8, "STIMULUS", "HOPE", {"voltage": 5.0, "narrative_drag": -2.0}, "MAG"],
+            ["DISCIPLINE", 0.8, "STANDARDIZE", "DISCIPLINE", {"kappa": -0.5, "beta_index": 1.0}, "CYN"]
+        ])
+
         mandates = []
-        for trait, thresh, m_type, msg, eff, col in rules:
+        for trait, thresh, m_type, msg_key, eff, col_attr in rules:
             if get_t(trait) > thresh:
+                col = getattr(Prisma, col_attr, Prisma.GRY)
+                msg = mandates_text.get(msg_key, "")
                 str_msg = LoreManifest.get_instance().get_ux("cycle_strings", "council_log") or ""
-                mandates.append({"type": m_type, "log": f"{col}{str_msg.format(msg=msg)}{Prisma.RST}", "effect": eff,})
+                mandates.append({"type": m_type, "log": f"{col}{str_msg.format(msg=msg)}{Prisma.RST}", "effect": eff})
         return mandates
 
     @staticmethod
@@ -773,18 +783,20 @@ class ArbitrationPhase(SimulationPhase):
                     synergy_name = log.split("fuse into [")[1].split("]")[0]
                 except Exception:
                     pass
-        council_data = LoreManifest.get_instance().get("council_data") or {}
+        council_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
         arb_opinions = council_data.get("ARBITRATION_OPINIONS", {})
-        if tension > 0.85 and silence < 0.5 and not synergy_active:
+        cfg = getattr(BoneConfig, "CYCLE", None)
+
+        if tension > getattr(cfg, "ARB_TENSION_THRESH", 0.85) and silence < getattr(cfg, "ARB_SILENCE_LOW", 0.5) and not synergy_active:
             final_lens = "THE STAGE MANAGER"
             opinion = arb_opinions.get("TENSION_CUT", "")
-            ctx.physics.silence = 0.9
-            ctx.physics.narrative_drag += 2.0
+            ctx.physics.silence = getattr(cfg, "ARB_CUT_SILENCE", 0.9)
+            ctx.physics.narrative_drag += getattr(cfg, "ARB_CUT_DRAG", 2.0)
             msg = LoreManifest.get_instance().get_ux("cycle_strings", "arbiter_stage_manager_cut") or ""
             ctx.log(f"{Prisma.WHT}{msg}{Prisma.RST}")
             msg_silence = LoreManifest.get_instance().get_ux("cycle_strings", "arbiter_silence") or ""
             ctx.log(f"{Prisma.GRY}{msg_silence}{Prisma.RST}")
-        elif silence > 0.85 and not synergy_active:
+        elif silence > getattr(cfg, "ARB_SILENCE_HIGH", 0.85) and not synergy_active:
             final_lens = "THE STAGE MANAGER"
             opinion = arb_opinions.get("SILENCE_HOLD", "")
             msg = LoreManifest.get_instance().get_ux("cycle_strings", "arbiter_stage_manager_hold") or ""

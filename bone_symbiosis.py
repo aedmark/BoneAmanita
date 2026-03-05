@@ -28,21 +28,22 @@ class HostHealth:
 class CoherenceAnchor:
     @staticmethod
     def forge_anchor(soul_state: Dict, physics_state: Dict) -> str:
-        identity = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_identity_unknown") or "Identity: UNKNOWN"
+        identity = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_identity_unknown") or ""
         if "traits" in soul_state:
             traits_list = [f"{k[:3]}:{v:.1f}" for k, v in soul_state["traits"].items()]
-            msg_traits = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_identity") or "Traits: [{traits}]"
-            identity = msg_traits.format(traits=", ".join(traits_list))
+            msg_traits = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_identity") or ""
+            if msg_traits: identity = msg_traits.format(traits=", ".join(traits_list))
         voltage = physics_state.get("voltage", 0.0)
         drag = physics_state.get("narrative_drag", 0.0)
         zone = physics_state.get("zone", "VOID")
-        msg_reality = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_reality") or "Loc: {zone} || V:{voltage:.1f} / D:{drag:.1f}"
-        reality = msg_reality.format(zone=zone, voltage=voltage, drag=drag)
+        msg_reality = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_reality") or ""
+        reality = msg_reality.format(zone=zone, voltage=voltage, drag=drag) if msg_reality else ""
         obsession = soul_state.get("obsession", {}).get("title", "None")
-        msg_focus = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_focus") or "Focus: {obsession}"
-        focus_str = msg_focus.format(obsession=obsession)
-        header = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_header") or "*** COHERENCE ANCHOR ***"
-        return f"{header}\n{identity}\n{reality}\n{focus_str}"
+        msg_focus = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_focus") or ""
+        focus_str = msg_focus.format(obsession=obsession) if msg_focus else ""
+        header = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_header") or ""
+        parts = [p for p in [header, identity, reality, focus_str] if p]
+        return "\n".join(parts)
 
     @staticmethod
     def compress_anchor(soul_state: Dict, physics_state: Dict, max_tokens=200) -> str:
@@ -51,8 +52,8 @@ class CoherenceAnchor:
         traits = soul_state.get("traits", {})
         top_traits = sorted(traits.items(), key=lambda x: x[1], reverse=True)[:3]
         trait_str = ",".join(f"{k[:3]}:{v:.1f}" for k, v in top_traits)
-        template = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_compressed") or "*** ANCHOR: {loc} || {vits} || [{traits}] ***"
-        anchor = template.format(loc=loc, vits=vits, traits=trait_str)
+        template = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_compressed") or ""
+        anchor = template.format(loc=loc, vits=vits, traits=trait_str) if template else ""
         if len(anchor) > max_tokens * 4:
             return anchor[: max_tokens * 4] + "..."
         return anchor
@@ -118,7 +119,7 @@ class SymbiontVoice:
         if voltage < 5.0 and "low_volt" in self.personality: return self.personality["low_volt"]
         if score > 3.0 and "high_score" in self.personality: return self.personality["high_score"]
         if score > 1.0 and "med_score" in self.personality: return self.personality["med_score"]
-        return "..."
+        return LoreManifest.get_instance().get_ux("symbiosis_strings", "symbiont_default_comment") or ""
 
 def get_symbiont(type_name):
     if type_name in _VOICE_CACHE: return _VOICE_CACHE[type_name]

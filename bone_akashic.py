@@ -53,10 +53,11 @@ class TheAkashicRecord:
         return yield_val, msg.format(target=target)
 
     def record_scar(self, concept: str, p: Any):
-        coords = {"E": getattr(p, "E", 0.2), "beta": getattr(p, "beta", 0.4), "S": getattr(p, "S", 0.3),
-                  "D": getattr(p, "D", 0.3), "C": getattr(p, "C", 0.2), "T": getattr(p, "T", 0.0),
-                  "psi": getattr(p, "psi", 0.0), "chi": getattr(p, "chi", 0.0), "valence": getattr(p, "valence", 0.0),
-                  "ROS": getattr(p, "ROS", 0.0), }
+        cfg = getattr(BoneConfig, "AKASHIC", None)
+        default_coords = getattr(cfg, "DEFAULT_SCAR_COORDS", {
+            "E": 0.2, "beta": 0.4, "S": 0.3, "D": 0.3, "C": 0.2,
+            "T": 0.0, "psi": 0.0, "chi": 0.0, "valence": 0.0, "ROS": 0.0})
+        coords = {k: getattr(p, k, v) for k, v in default_coords.items()}
         scar = {"concept": concept, "coordinates": coords, "gilded": True}
         self.scar_map.append(scar)
         self.store_ghost_echo({"type": "SCAR_GHOST", "concept": concept, "coords": coords})
@@ -84,11 +85,13 @@ class TheAkashicRecord:
         if not vector:
             return "KAN"
         dom = max(vector, key=vector.get)
-        trigrams = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
-        fallback_mapping = {"CHI": "KAN", "LAMBDA": "KUN"}
+        constants = LoreManifest.get_instance().get("PHYSICS_CONSTANTS") or {}
+        trigrams = constants.get("TRIGRAM_MAP", {})
+        fallback_mapping = constants.get("FALLBACK_TRIGRAMS", {"CHI": "KAN", "LAMBDA": "KUN"})
+        fallback_default = constants.get("FALLBACK_DEFAULT", "KAN")
         if dom in trigrams and len(trigrams[dom]) > 1:
             return trigrams[dom][1]
-        return fallback_mapping.get(dom, "KAN")
+        return fallback_mapping.get(dom, fallback_default)
 
     def _on_mythology_update(self, payload):
         if not payload or not isinstance(payload, dict):
@@ -116,14 +119,17 @@ class TheAkashicRecord:
         bias = 0.0
         scalar = 1.0
         theta_upper = theta.upper()
-        if "POET" in theta_upper or "HEALER" in theta_upper:
-            bias += 2.0
-        elif "NIHILIST" in theta_upper or "CRITIC" in theta_upper:
-            scalar *= 1.2
-        if e.get("HOPE", 0.5) > 0.7:
-            scalar *= 0.9
-        if e.get("DISCIPLINE", 0.5) > 0.7:
-            bias += 1.0
+        constants = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "MANIFOLD_SHIFTS") or {}
+        for word, b_val in constants.get("BIAS_LENSES", {}).items():
+            if word in theta_upper:
+                bias += b_val
+        for word, s_val in constants.get("SCALAR_LENSES", {}).items():
+            if word in theta_upper:
+                scalar *= s_val
+        for key, params in constants.get("VECTOR_THRESHOLDS", {}).items():
+            if e.get(key, 0.5) > params.get("threshold", 0.7):
+                scalar *= params.get("scalar_mod", 1.0)
+                bias += params.get("bias_mod", 0.0)
         return {"voltage_bias": bias, "drag_scalar": scalar}
 
     def _on_ghost_signal(self, payload):
@@ -132,16 +138,16 @@ class TheAkashicRecord:
 
     def forge_new_item(self, vector: Dict[str, float]) -> Tuple[str, Dict]:
         dominant_force = max(vector, key=vector.__getitem__) if vector else "CHI"
-        prefixes = {"VEL": "Kinetic", "STR": "Heavy", "CHI": "Cursed", "ENT": "Cursed", "PHI": "Solar", "PSI": "Void",
-                    "BET": "Paradox", "LAMBDA": "Liminal", "DEL": "Manic", }
-        prefix = prefixes.get(dominant_force, "Ascended")
+        item_gen_data = self.lore.get("ITEM_GENERATION") or {}
+        prefixes = item_gen_data.get("PREFIXES", {})
+        prefix = prefixes.get(dominant_force, item_gen_data.get("FALLBACK_PREFIX", "Ascended"))
         unique_suffix = str(uuid.uuid4())[:4].upper()
         new_name = f"{prefix.upper()}_ARTIFACT_{int(vector.get(dominant_force, 0) * 10)}_{unique_suffix}"
         hazards = []
-        if vector.get("PHI", 0) > 0.5:
-            hazards.append("CONDUCTIVE_HAZARD")
-        if vector.get("CHI", 0) > 0.5:
-            hazards.append("TOXIC_HAZARD")
+        hazard_thresholds = item_gen_data.get("HAZARD_THRESHOLDS", {})
+        for force, threshold_data in hazard_thresholds.items():
+            if vector.get(force, 0) > threshold_data.get("threshold", 0.5):
+                hazards.append(threshold_data.get("hazard_name"))
         desc_template = LoreManifest.get_instance().get_ux("akashic_strings", "artifact_desc") or ""
         cfg = getattr(BoneConfig, "AKASHIC", None)
         artifact_val = getattr(cfg, "ARTIFACT_VALUE", 50.0) if cfg else 50.0
@@ -164,10 +170,14 @@ class TheAkashicRecord:
             f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
             "ingredient_affinity": self.ingredient_affinity, "shadow_stock": self.shadow_stock,
             "subconscious_strata": self.subconscious_strata, "scar_map": self.scar_map, }
-        if not os.path.exists("saves"):
-            os.makedirs("saves")
+        cfg = getattr(BoneConfig, "AKASHIC", None)
+        save_dir = getattr(cfg, "SAVE_DIR", "saves")
+        state_file = getattr(cfg, "STATE_FILE", "akashic_state.json")
+        save_path = os.path.join(save_dir, state_file)
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
         try:
-            with open("saves/akashic_state.json", "w", encoding="utf-8") as f:
+            with open(save_path, "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2)
         except Exception as e:
             msg = LoreManifest.get_instance().get_ux("akashic_strings", "save_failed") or ""
@@ -195,9 +205,13 @@ class TheAkashicRecord:
 
     def _load_mythos_state(self):
         data = {}
-        if os.path.exists("saves/akashic_state.json"):
+        cfg = getattr(BoneConfig, "AKASHIC", None)
+        save_dir = getattr(cfg, "SAVE_DIR", "saves")
+        state_file = getattr(cfg, "STATE_FILE", "akashic_state.json")
+        save_path = os.path.join(save_dir, state_file)
+        if os.path.exists(save_path):
             try:
-                with open("saves/akashic_state.json", "r") as f:
+                with open(save_path, "r") as f:
                     data = json.load(f)
             except Exception as e:
                 msg = LoreManifest.get_instance().get_ux("akashic_strings", "state_load_failed") or ""
@@ -336,7 +350,8 @@ class TheAkashicRecord:
             print(msg.format(word=word, category=category))
             cfg = getattr(BoneConfig, "AKASHIC", None)
             bloat_limit = getattr(cfg, "BLOAT_THRESHOLD", 50) if cfg else 50
-            if len(lexicon_data[category]) > bloat_limit and category != "heavy":
+            exempt_categories = getattr(cfg, "BLOAT_EXEMPT_CATEGORIES", ["heavy"])
+            if len(lexicon_data[category]) > bloat_limit and category not in exempt_categories:
                 bloat_msg = LoreManifest.get_instance().get_ux("akashic_strings", "lexicon_bloat") or ""
                 print(bloat_msg.format(category=category))
             return True

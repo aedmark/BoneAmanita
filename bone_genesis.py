@@ -42,7 +42,9 @@ class BoneGenesis:
         if hasattr(embryo.physics, "observer"):
             cfg_gen = getattr(BoneConfig, "GENESIS", None)
             dummy_v = getattr(cfg_gen, "DUMMY_VOLTAGE", 10.0) if cfg_gen else 10.0
-            dummy_phys = {"narrative_drag": 0.0, "voltage": dummy_v}
+            dummy_d = getattr(cfg_gen, "DUMMY_DRAG", 0.0) if cfg_gen else 0.0
+            strain_scalar = getattr(cfg_gen, "LEGACY_STRAIN_SCALAR", 0.1) if cfg_gen else 0.1
+            dummy_phys = {"narrative_drag": dummy_d, "voltage": dummy_v}
             live_bio_state = embryo.bio.to_dict()
             logs = oroboros.apply_legacy(dummy_phys, live_bio_state)
             if logs:
@@ -52,7 +54,7 @@ class BoneGenesis:
                     if hasattr(embryo.physics.dynamics, "base_drag"):
                         embryo.physics.dynamics.base_drag += dummy_phys["narrative_drag"]
                     elif hasattr(embryo.physics.dynamics, "strain_gauge"):
-                        embryo.physics.dynamics.strain_gauge += (dummy_phys.get("narrative_drag", 0.0) * 0.1)
+                        embryo.physics.dynamics.strain_gauge += (dummy_phys.get("narrative_drag", 0.0) * strain_scalar)
                 if embryo.bio.biometrics:
                     biometrics = live_bio_state.get("biometrics", {})
                     max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)

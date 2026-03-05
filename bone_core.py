@@ -62,11 +62,12 @@ class EventBus:
         return list(self.buffer)[-count:]
 
 class LoreManifest:
-    DATA_DIR = "lore"
     _instance = None
 
     def __init__(self, data_dir=None):
-        self.DATA_DIR = data_dir or self.DATA_DIR
+        cfg = getattr(BoneConfig, "CORE", None)
+        default_dir = getattr(cfg, "LORE_DIR", "lore") if cfg else "lore"
+        self.DATA_DIR = data_dir or default_dir
         self._cache = {}
 
     @classmethod
@@ -168,7 +169,10 @@ class TheObserver:
     def pass_judgment(self, avg_cycle, avg_llm):
         if avg_cycle == 0.0 and avg_llm == 0.0:
             return LoreManifest.get_instance().get_ux("core_strings", "obs_asleep") or ""
-        if avg_cycle < 0.1 and avg_llm < 0.5:
+        cfg = getattr(BoneConfig, "CORE", None)
+        cycle_eff = getattr(cfg, "OBSERVER_CYCLE_EFFICIENT", 0.1) if cfg else 0.1
+        llm_eff = getattr(cfg, "OBSERVER_LLM_EFFICIENT", 0.5) if cfg else 0.5
+        if avg_cycle < cycle_eff and avg_llm < llm_eff:
             return LoreManifest.get_instance().get_ux("core_strings", "obs_efficient") or ""
         if avg_llm > self.LATENCY_WARNING:
             jokes = [LoreManifest.get_instance().get_ux("core_strings", "obs_fog") or "",
@@ -284,17 +288,19 @@ class ArchetypeArbiter:
                     if match_lens and match_soul:
                         msg = rule.get("msg") or LoreManifest.get_instance().get_ux("core_strings", "arb_resonance") or ""
                         return rule["result"], rule.get("source", "COSMIC"), msg
-        if physics_lens in ["THE MANIC", "THE VOID"]:
+        cfg = getattr(BoneConfig, "CORE", None)
+        loud_lenses = getattr(cfg, "LOUD_LENSES", ["THE MANIC", "THE VOID"]) if cfg else ["THE MANIC", "THE VOID"]
+        if physics_lens in loud_lenses:
             msg = LoreManifest.get_instance().get_ux("core_strings", "arb_loud") or ""
             return physics_lens, "PHYSICS", msg.format(physics_lens=physics_lens) if msg else "",
         return soul_archetype, "SOUL",  LoreManifest.get_instance().get_ux("core_strings", "arb_soul") or ""
 
 class TelemetryService:
-    log_dir = "logs/telemetry"
     _tracer_instance = None
 
     def __init__(self):
         cfg = getattr(BoneConfig, "CORE", None)
+        self.log_dir = getattr(cfg, "TELEMETRY_LOG_DIR", "logs/telemetry") if cfg else "logs/telemetry"
         self.BUFFER_SIZE = getattr(cfg, "TELEMETRY_BUFFER_SIZE", 50) if cfg else 50
         self.MAX_ERRORS = getattr(cfg, "TELEMETRY_MAX_ERRORS", 5) if cfg else 5
         self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=self.BUFFER_SIZE)
@@ -339,10 +345,12 @@ class TelemetryService:
         self._buffer_line(crystal.crystallize())
 
     def start_phase(self, phase_name: str, _context: Any):
-        self.log_decision(phase_name, "PHASE_START", {"timestamp": time.time()}, "Phase execution initiated.", "RUNNING",)
+        msg = LoreManifest.get_instance().get_ux("core_strings", "tel_phase_start") or ""
+        self.log_decision(phase_name, "PHASE_START", {"timestamp": time.time()}, msg, "RUNNING",)
 
     def end_phase(self, phase_name: str, _ctx_before: Any, _ctx_after: Any):
-        self.log_decision( phase_name, "PHASE_END", {"timestamp": time.time()}, "Phase execution completed.", "SUCCESS",)
+        msg = LoreManifest.get_instance().get_ux("core_strings", "tel_phase_end") or ""
+        self.log_decision( phase_name, "PHASE_END", {"timestamp": time.time()}, msg, "SUCCESS",)
 
     def finalize_cycle(self):
         if self.active_crystal:

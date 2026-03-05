@@ -27,7 +27,9 @@ class TheStrangeLoop:
             self.recursion_depth += 1
             mandate = {}
             corrections = {}
-            if self.recursion_depth > 3:
+            cfg = getattr(BoneConfig, "COUNCIL", None)
+            limit = getattr(cfg, "STRANGE_LOOP_LIMIT", 3) if cfg else 3
+            if self.recursion_depth > limit:
                 mandate = {"action": "FORCE_MODE", "value": "MAINTENANCE"}
                 msg = LoreManifest.get_instance().get_ux("council_strings", "strange_loop_fatal") or ""
                 return True, f"{Prisma.RED}{msg}{Prisma.RST}", corrections, mandate,
@@ -58,8 +60,11 @@ class TheLeveragePoint:
         manic_v_trig = getattr(BoneConfig.COUNCIL, "MANIC_VOLTAGE_TRIGGER", 18.0)
         manic_d_floor = getattr(BoneConfig.COUNCIL, "MANIC_DRAG_FLOOR", 1.0)
         manic_turns = getattr(BoneConfig.COUNCIL, "MANIC_TURN_LIMIT", 2)
+        cfg = getattr(BoneConfig, "COUNCIL", None)
         if abs(delta) > osc_limit:
-            dampening_factor = min(0.5, (abs(delta) - osc_limit) * 0.1)
+            damp_max = getattr(cfg, "LEVERAGE_DAMPENING_MAX", 0.5) if cfg else 0.5
+            damp_scalar = getattr(cfg, "LEVERAGE_DAMPENING_SCALAR", 0.1) if cfg else 0.1
+            dampening_factor = min(damp_max, (abs(delta) - osc_limit) * damp_scalar)
             corrections = {"voltage": -dampening_factor}
             msg = LoreManifest.get_instance().get_ux("council_strings", "leverage_oscillating") or ""
             return True, f"{Prisma.CYN}{msg.format(delta=delta, dampening_factor=dampening_factor)}{Prisma.RST}", corrections, {}
@@ -69,7 +74,9 @@ class TheLeveragePoint:
             self.static_flow_turns = 0
         if self.static_flow_turns > manic_turns:
             excess_voltage = current_voltage - self.TARGET_VOLTAGE
-            voltage_correction = max(1.0, excess_voltage * 0.3)
+            v_corr_min = getattr(cfg, "LEVERAGE_CORRECTION_MIN", 1.0) if cfg else 1.0
+            v_corr_scalar = getattr(cfg, "LEVERAGE_CORRECTION_SCALAR", 0.3) if cfg else 0.3
+            voltage_correction = max(v_corr_min, excess_voltage * v_corr_scalar)
             corrections = {"voltage": -voltage_correction}
             mandate = {"action": "FORCE_MODE", "value": "SANCTUARY"}
             msg = LoreManifest.get_instance().get_ux("council_strings", "market_correction") or ""
@@ -228,7 +235,8 @@ class CouncilChamber:
             for slog in slash_logs:
                 transcript.append(self.footnote.commentary(slog))
             adjustments.update(slash_corr)
-            adjustments["stamina_cost"] = 10.0
+            cfg = getattr(BoneConfig, "COUNCIL", None)
+            adjustments["stamina_cost"] = getattr(cfg, "SLASH_STAMINA_COST", 10.0) if cfg else 10.0
         village_logs = self.village.audit(physics_packet, _bio_result)
         import itertools
         c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
@@ -261,7 +269,9 @@ class CouncilChamber:
             msg_s = LoreManifest.get_instance().get_ux("council_strings", "stage_manager_silence") or ""
             transcript.append(f"{Prisma.WHT}{msg_t}{Prisma.RST}")
             transcript.append(f"{Prisma.GRY}{msg_s}{Prisma.RST}")
-            adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + 3.0
+            cfg = getattr(BoneConfig, "COUNCIL", None)
+            tension_drag = getattr(cfg, "TENSION_DRAG_PENALTY", 3.0) if cfg else 3.0
+            adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + tension_drag
             for vlog in village_logs[:2]:
                 transcript.append(self.footnote.commentary(vlog))
         else:
@@ -273,24 +283,30 @@ class CouncilChamber:
             votes["YEA"] = 1
         clean_words = physics_packet.get("clean_words", [])
         voltage = physics_packet.get("voltage", 0.0)
+        cfg = getattr(BoneConfig, "COUNCIL", None)
+        yea_thresh = getattr(cfg, "VOTE_YEA_THRESHOLD", 1.2) if cfg else 1.2
+        nay_thresh = getattr(cfg, "VOTE_NAY_THRESHOLD", 0.8) if cfg else 0.8
+        drag_relief = getattr(cfg, "VOTE_DRAG_RELIEF", 1.0) if cfg else 1.0
+        drag_penalty = getattr(cfg, "VOTE_DRAG_PENALTY", 1.0) if cfg else 1.0
+        volt_penalty = getattr(cfg, "VOTE_VOLTAGE_PENALTY", 1.0) if cfg else 1.0
         for voice in active_voices:
             if hasattr(voice, "opine"):
                 score, comment = voice.opine(clean_words, voltage)
-                if score > 1.2:
+                if score > yea_thresh:
                     votes["YEA"] += 1
                     transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
-                elif score < 0.8:
+                elif score < nay_thresh:
                     votes["NAY"] += 1
                     transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
         if votes["YEA"] > votes["NAY"]:
             msg = LoreManifest.get_instance().get_ux("council_strings", "motion_carried") or ""
             final_log = f"{Prisma.GRN}{msg.format(yea=votes['YEA'], nay=votes['NAY'])}{Prisma.RST}"
-            adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - 1.0
+            adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - drag_relief
         elif votes["NAY"] > votes["YEA"]:
             msg = LoreManifest.get_instance().get_ux("council_strings", "motion_denied") or ""
             final_log = f"{Prisma.RED}{msg.format(nay=votes['NAY'], yea=votes['YEA'])}{Prisma.RST}"
-            adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + 1.0
-            adjustments["voltage"] = adjustments.get("voltage", 0) - 1.0
+            adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + drag_penalty
+            adjustments["voltage"] = adjustments.get("voltage", 0) - volt_penalty
         else:
             msg = LoreManifest.get_instance().get_ux("council_strings", "council_adjourned") or ""
             final_log = f"{Prisma.YEL}{msg}{Prisma.RST}"
@@ -335,28 +351,31 @@ class TheSlashCouncil:
         r_fuller = self.rules.get("FULLER", ["import ", "class ", "def "])
         r_schur = self.rules.get("SCHUR", ["Exception", "try:", "catch"])
         r_meadows = self.rules.get("MEADOWS", ["while ", "for ", "queue", "recursion"])
+        c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
+        mods = c_data.get("SLASH_MODIFIERS", {})
         if any(k in text for k in r_pinker):
             msg = LoreManifest.get_instance().get_ux("council_strings", "slash_pinker") or ""
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
-            corrections["gamma"] = -0.2
+            corrections["gamma"] = mods.get("PINKER_HIT", -0.2)
         else:
-            corrections["gamma"] = 0.1
+            corrections["gamma"] = mods.get("PINKER_MISS", 0.1)
         if any(k in text for k in r_fuller):
             msg = LoreManifest.get_instance().get_ux("council_strings", "slash_fuller") or ""
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
-            corrections["sigma"] = 0.1
+            corrections["sigma"] = mods.get("FULLER_HIT", 0.1)
         if any(k in text for k in r_schur):
             msg = LoreManifest.get_instance().get_ux("council_strings", "slash_schur") or ""
             logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
-            corrections["eta"] = 0.2
-            corrections["glimmers"] = 1
+            corrections["eta"] = mods.get("SCHUR_HIT", 0.2)
+            corrections["glimmers"] = mods.get("SCHUR_GLIMMERS", 1)
         if any(k in text_lower for k in r_meadows):
             msg = LoreManifest.get_instance().get_ux("council_strings", "slash_meadows") or ""
             logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
-            corrections["theta"] = -0.1
+            corrections["theta"] = mods.get("MEADOWS_HIT", -0.1)
         drag = physics.get("narrative_drag", 0.0)
-        if drag > 5.0:
-            corrections["upsilon"] = -0.3
+        drag_thresh = mods.get("INTEGRITY_DRAG_THRESH", 5.0)
+        if drag > drag_thresh:
+            corrections["upsilon"] = mods.get("INTEGRITY_HIT", -0.3)
             msg = LoreManifest.get_instance().get_ux("council_strings", "slash_integrity") or ""
             logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
         return True, logs, corrections
