@@ -1,0 +1,130 @@
+{
+  "STRANGE_LOOP_TRIGGERS": [
+    "who are you",
+    "what are you",
+    "system status",
+    "narrative loop",
+    "simulation boundaries",
+    "fourth wall",
+    "recursive",
+    "infinite regress",
+    "strange loop"
+  ],
+  "STRANGE_LOOP_KEYWORDS": ["self", "mirror", "define"],
+  "PANTHEON": [
+    "GORDON", "JESTER", "MERCY", "BENEDICT", "ROBERTA", "CASPER",
+    "MOIRA", "CASSANDRA", "COLIN", "REVENANT", "GIDEON", "APRIL"
+  ],
+  "SLASH_TRIGGERS": ["[MOD:CODING]", "[SLASH]", "review this code", "refactor"],
+  "CODE_KEYWORDS": ["def ", "class ", "return ", "import ", "=>", "function", "struct "],
+  "SLASH_RULES": {
+    "PINKER": ["var ", "x =", "data ="],
+    "FULLER": ["import ", "class ", "def "],
+    "SCHUR": ["Exception", "try:", "catch"],
+    "MEADOWS": ["while ", "for ", "queue", "recursion"]
+  },
+  "SLASH_MODIFIERS": {
+    "PINKER_HIT": -0.2,
+    "PINKER_MISS": 0.1,
+    "FULLER_HIT": 0.1,
+    "SCHUR_HIT": 0.2,
+    "SCHUR_GLIMMERS": 1,
+    "MEADOWS_HIT": -0.1,
+    "INTEGRITY_DRAG_THRESH": 5.0,
+    "INTEGRITY_HIT": -0.3
+  },
+  "CHAIRHOLDER_PHRASES": [
+    "You just got Jammed.",
+    "I'm voting present.",
+    "Retroactive approval denied.",
+    "This meeting is adjourned."
+  ],
+  "SOUL_MANDATES": {
+    "CYNICISM": "The Cynic holds the gavel. 'Stop doing things.'",
+    "HOPE": "The Optimist filibustered. 'We can build it!'",
+    "DISCIPLINE": "The Engineer demands efficiency."
+  },
+  "SOUL_MANDATE_RULES": [
+    ["CYNICISM", 0.8, "LOCKDOWN", "CYNICISM", {"narrative_drag": 5.0, "voltage": -5.0}, "OCHRE"],
+    ["HOPE", 0.8, "STIMULUS", "HOPE", {"voltage": 5.0, "narrative_drag": -2.0}, "MAG"],
+    ["DISCIPLINE", 0.8, "STANDARDIZE", "DISCIPLINE", {"kappa": -0.5, "beta_index": 1.0}, "CYN"]
+  ],
+  "ARBITRATION_OPINIONS": {
+    "TENSION_CUT": "The tension is too high. The Stage Manager cuts the mic. Silence is enforced.",
+    "SILENCE_HOLD": "The Stage Manager holds the silence. No archetype is called."
+  },
+  "SYNERGY_MAP": {
+    "JESTER|REVENANT": {
+      "name": "THE LIMINAL JESTER",
+      "log": "\ud83c\udfad STAGE MANAGER: The lenses align. Jester and Revenant fuse into [THE LIMINAL JESTER]. Absurdity redefines the frontier.",
+      "adjustments": {
+        "voltage": 10.0,
+        "narrative_drag": -3.0,
+        "silence": 0.4
+      }
+    },
+    "CASSANDRA|ROBERTA": {
+      "name": "THE DOPPELG\u00c4NGER FACTORY",
+      "log": "\ud83c\udfad STAGE MANAGER: The lenses align. Cassandra and Roberta fuse into [THE DOPPELG\u00c4NGER FACTORY]. Truth extracted from within.",
+      "adjustments": {
+        "psi": 0.3,
+        "lq": 0.4,
+        "resonance": 0.2
+      }
+    },
+    "GORDON|MERCY": {
+      "name": "THE RETROACTIVE STRATIGRAPHER",
+      "log": "\ud83c\udfad STAGE MANAGER: The lenses align. Gordon and Mercy fuse into [THE RETROACTIVE STRATIGRAPHER]. Editing history to change present structure.",
+      "adjustments": {
+        "health": 15.0,
+        "beta_index": -0.2,
+        "kappa": 0.3
+      }
+    },
+    "BENEDICT|GIDEON": {
+      "name": "THE AUTOCATALYTIC REACTOR",
+      "log": "\ud83c\udfad STAGE MANAGER: The lenses align. Benedict and Gideon fuse into [THE AUTOCATALYTIC REACTOR]. Self-generating complexity explosion.",
+      "adjustments": {
+        "voltage": 15.0,
+        "lq": 0.5,
+        "stamina": 10.0
+      }
+    },
+    "APRIL|MOIRA": {
+      "name": "THE PERFECT MEDIATOR",
+      "log": "\ud83c\udfad STAGE MANAGER: The lenses align. April and Moira fuse into [THE PERFECT MEDIATOR]. Resolution through flawless reflection.",
+      "adjustments": {
+        "resonance": 0.8,
+        "narrative_drag": -4.0,
+        "beta_index": -0.5
+      }
+    },
+    "CASPER|COLIN": {
+      "name": "THE SALVAGE ECHO",
+      "log": "\ud83c\udfad STAGE MANAGER: The lenses align. Casper and Colin fuse into [THE SALVAGE ECHO]. Finding value in ruins and absences.",
+      "adjustments": {
+        "glimmers": 2,
+        "entropy": -0.3,
+        "stamina": 5.0
+      }
+    },
+    "BENEDICT|GORDON": {
+      "name": "THE TRIBUNAL",
+      "log": "\ud83c\udfad STAGE MANAGER: The lenses align. Benedict and Gordon fuse into [THE TRIBUNAL]. Judgment rendered by unwavering law.",
+      "adjustments": {
+        "kappa": 0.5,
+        "beta_index": -0.3,
+        "entropy": -0.4
+      }
+    },
+    "COLIN|REVENANT": {
+      "name": "THE NEGATIVE SPACE COMPOSER",
+      "log": "\ud83c\udfad STAGE MANAGER: The lenses align. Colin and Revenant fuse into [THE NEGATIVE SPACE COMPOSER]. Orchestration through strategic silence.",
+      "adjustments": {
+        "silence": 0.8,
+        "narrative_drag": -2.0,
+        "voltage": -5.0
+      }
+    }
+  }
+}

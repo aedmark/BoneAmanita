@@ -1,0 +1,167 @@
+{
+  "MUTATIONS": {
+    "HEAVY": {
+      "trait": "DENSITY",
+      "mod": {
+        "SIGNAL_DRAG_MULTIPLIER": 1.5,
+        "PHYSICS.VOLTAGE_MAX": 30.0,
+        "PHYSICS.WEIGHT_HEAVY": 3.0
+      },
+      "lexicon": [
+        "anchor",
+        "monolith",
+        "gravity",
+        "foundation",
+        "lead",
+        "iron",
+        "core",
+        "sediment"
+      ]
+    },
+    "KINETIC": {
+      "trait": "VELOCITY",
+      "mod": {
+        "STAMINA_REGEN": 10.0,
+        "SIGNAL_DRAG_MULTIPLIER": 0.5,
+        "PHYSICS.WEIGHT_KINETIC": 2.0
+      },
+      "lexicon": [
+        "vector",
+        "thrust",
+        "ignite",
+        "propel",
+        "ballistic",
+        "orbit",
+        "rush",
+        "impulse"
+      ]
+    },
+    "ABSTRACT": {
+      "trait": "GHOST",
+      "mod": {
+        "PHYSICS.VOLTAGE_FLOOR": 5.0,
+        "BIO.CORTEX_SENSITIVITY": 0.2
+      },
+      "lexicon": [
+        "concept",
+        "schema",
+        "metaphor",
+        "symbol",
+        "axiom",
+        "logic",
+        "syntax",
+        "recursive"
+      ]
+    },
+    "THERMAL": {
+      "trait": "FEVER",
+      "mod": {
+        "FLASHPOINT_THRESHOLD": 4.0,
+        "BIO.ROS_CRITICAL": 120.0
+      },
+      "lexicon": [
+        "burn",
+        "scorch",
+        "radiate",
+        "plasma",
+        "cauterize",
+        "ash",
+        "ember",
+        "ignition"
+      ]
+    },
+    "CRYO": {
+      "trait": "STASIS",
+      "mod": {
+        "MAX_MEMORY_CAPACITY": 200,
+        "STAMINA_REGEN": 3.0
+      },
+      "lexicon": [
+        "preserve",
+        "freeze",
+        "crystal",
+        "hibernation",
+        "zero",
+        "shard",
+        "glacier",
+        "halt"
+      ]
+    },
+    "PHOTO": {
+      "trait": "PRISM",
+      "mod": {
+        "METABOLISM.PHOTOSYNTHESIS_GAIN": 10.0,
+        "PHYSICS.VOLTAGE_MAX": 25.0
+      },
+      "lexicon": [
+        "refract",
+        "spectrum",
+        "glimmer",
+        "lumen",
+        "flash",
+        "optic",
+        "fiber",
+        "beacon"
+      ]
+    },
+    "ENTROPY": {
+      "trait": "ROT",
+      "mod": {
+        "BIO.DECAY_RATE": 0.05,
+        "METABOLISM.ROS_GENERATION_FACTOR": 0.08
+      },
+      "lexicon": [
+        "decay",
+        "rust",
+        "mold",
+        "spore",
+        "wither",
+        "collapse",
+        "ruin",
+        "dust"
+      ]
+    }
+  },
+  "JOY_CLADE": {
+    "KINETIC": {
+      "title": "THE DYNAMO",
+      "desc": "Infinite Motion.",
+      "buff": {
+        "STAMINA_REGEN": 10.0,
+        "KINETIC_GAIN": 2.0
+      }
+    },
+    "HEAVY": {
+      "title": "THE MOUNTAIN",
+      "desc": "Unmovable Object.",
+      "buff": {
+        "MAX_DRAG_LIMIT": 9.0,
+        "GRAVITY_WELL_THRESHOLD": 8.0
+      }
+    },
+    "ABSTRACT": {
+      "title": "THE ORACLE",
+      "desc": "All Seeing.",
+      "buff": {
+        "COUNCIL.FOOTNOTE_CHANCE": 0.5,
+        "PRIORITY_LEARNING_RATE": 3.0
+      }
+    },
+    "THERMAL": {
+      "title": "THE PHOENIX",
+      "desc": "Reborn in Fire.",
+      "buff": {
+        "FLASHPOINT_THRESHOLD": 12.0,
+        "ANVIL_TRIGGER_VOLTAGE": 5.0
+      }
+    },
+    "CRYO": {
+      "title": "THE VAULT",
+      "desc": "Perfect Memory.",
+      "buff": {
+        "MAX_MEMORY_CAPACITY": 150,
+        "MAX_REPETITION_LIMIT": 0.8
+      }
+    }
+  }
+}

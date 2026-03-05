@@ -1,0 +1,72 @@
+{
+  "TONE": {
+    "CRITICAL_HIGH": "Manic, high-frequency, bordering on incoherent.",
+    "HIGH": "Energetic, engaged, productive.",
+    "TRANSITION_UP": "Warming up, accelerating, finding rhythm.",
+    "NEUTRAL": "Neutral, observant, balanced.",
+    "TRANSITION_DOWN": "Groggy, slowing down, heavy.",
+    "LOW": "Lethargic, depressive, heavy. Introspective.",
+    "VOID": "Hollow, absent, null."
+  },
+  "PACING": {
+    "CRITICAL_HIGH": "Rapid-fire stream of conciousness.",
+    "HIGH": "Active voice. Forward momentum. Punchy.",
+    "NEUTRAL": "Standard conversational rhythm.",
+    "LOW": "Slower, more deliberate. slightly aloof but still centered.",
+    "VOID": "Silence. Static. Sedated existentialism."
+  },
+  "SENSATION": {
+    "MUD": "Encumbered",
+    "SOLID": "Stable.",
+    "FLOAT": "Hover.",
+    "VOID": "Emptiness"
+  },
+  "PACING_RESERVOIR": {
+    "HIGH": [
+      "Frenetic",
+      "Staccato",
+      "Accelerating",
+      "Breathless",
+      "Manic"
+    ],
+    "LOW": [
+      "Languid",
+      "Glacial",
+      "Drifting",
+      "Meditative",
+      "Stagnant"
+    ]
+  },
+  "METAPHOR_RESERVOIR": {
+    "HIGH_DRAG": [
+      "A tightrope walk",
+      "Trudging through mud",
+      "Swimming upstream",
+      "Gravity is heavy here",
+      "The air is thick"
+    ],
+    "LOW_DRAG": [
+      "A calm ocean",
+      "Freefall",
+      "Sliding on ice",
+      "A feather in wind",
+      "Zero-G"
+    ]
+  },
+  "FOCUS": {
+    "LOCKED": "You are rigid, dogmatic, obsessed with order and structure.",
+    "COHERENT": "You are flexible but coherent.",
+    "DRIFT": "You are running off vibes. Drift is high.",
+    "VOID": "No signal."
+  },
+  "MATTER": {
+    "MAGMA": "MAGMA (Molten Solid)",
+    "PLASMA": "PLASMA (Ionized Gas)",
+    "SUBLIMATION": "SUBLIMATION (Solid to Gas)",
+    "GAS": "GAS/VAPOR (High Entropy)",
+    "SOLID": "SOLID/STONE (High Resistance)",
+    "ENERGY": "ELECTRICITY (Pure Energy)",
+    "LIQUID": "LIQUID (Flow State)",
+    "VOID": "VOID (Null State)"
+  }
+}

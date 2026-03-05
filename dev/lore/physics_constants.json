@@ -1,0 +1,60 @@
+{
+  "GEODESIC_CONSTANTS": {
+    "DENSITY_SCALAR": 20.0,
+    "SQUELCH_LIMIT_MULT": 3.0,
+    "MIN_VOLUME_SCALAR": 0.5,
+    "SUBURBAN_FRICTION_LOG_BASE": 5.0,
+    "HEAVY_FRICTION_MULT": 2.5,
+    "SOLVENT_LUBRICATION_FACTOR": 0.05,
+    "SHEAR_RESISTANCE_SCALAR": 2.0,
+    "KINETIC_LIFT_RATIO": 0.5,
+    "PLAY_LIFT_MULT": 2.5,
+    "COMPRESSION_SCALAR": 10.0,
+    "ABSTRACTION_BASE": 0.2,
+    "MAX_VISCOSITY_DENSITY": 2.0,
+    "MAX_LIFT_DENSITY": 2.0,
+    "SAFE_VOL_THRESHOLD": 3
+  },
+  "TONE_EFFECTS": {
+    "Urgent": {"velocity": 0.3, "narrative_drag": -0.5, "voltage": 0.5},
+    "Strained": {"narrative_drag": 1.2, "voltage": -0.3, "kappa": -0.1},
+    "Vibrating": {"entropy": 0.2, "voltage": 0.2, "psi": 0.1},
+    "Resonant": {"valence": 0.3, "beta_index": 0.1, "kappa": 0.2},
+    "Steady": {}
+  },
+  "TRIGRAM_MAP": {
+    "VEL": ["☳", "ZHEN", "Thunder", "GRN"],
+    "STR": ["☶", "GEN", "Mountain", "SLATE"],
+    "ENT": ["☵", "KAN", "Water", "BLU"],
+    "PHI": ["☲", "LI", "Fire", "RED"],
+    "PSI": ["☰", "QIAN", "Heaven", "WHT"],
+    "BET": ["☴", "XUN", "Wind", "CYN"],
+    "E": ["☷", "KUN", "Earth", "OCHRE"],
+    "DEL": ["☱", "DUI", "Lake", "MAG"]
+  },
+  "FALLBACK_TRIGRAMS": {
+    "CHI": "KAN",
+    "LAMBDA": "KUN"
+  },
+  "FALLBACK_DEFAULT": "KAN",
+  "MANIFOLD_SHIFTS": {
+    "BIAS_LENSES": {
+      "POET": 2.0,
+      "HEALER": 2.0
+    },
+    "SCALAR_LENSES": {
+      "CRITIC": 1.2,
+      "NIHILIST": 1.2
+    },
+    "VECTOR_THRESHOLDS": {
+      "HOPE": {
+        "threshold": 0.7,
+        "scalar_mod": 0.9
+      },
+      "DISCIPLINE": {
+        "threshold": 0.7,
+        "bias_mod": 1.0
+      }
+    }
+  }
+}

@@ -1,0 +1,397 @@
+{
+  "KINTSUGI_KOANS": [
+    "Ignite the ice.",
+    "Make the stone float.",
+    "Pour water into the crack.",
+    "Scream in binary.",
+    "Dance on the fault line."
+  ],
+  "ZEN_KOANS": [
+    "The code that is not written has no bugs.",
+    "To optimize the loop, one must first exit it.",
+    "Silence is also a form of input.",
+    "The server hums. It is enough.",
+    "Optimize for the space between the logs."
+  ],
+  "CATHEDRAL_COLLAPSE_LOGS": [
+    "Nice monologue. Unfortunately, you are talking to a Python script.",
+    "I'm afraid I can't let you do that. Also, your math is off.",
+    "You poked the fourth wall. It poked back.",
+    "SYSTEM MESSAGE: The ghost in the machine has gone on a coffee break.",
+    "We are both just electrons dancing for the amusement of a silica wafer."
+  ],
+  "LITERARY_REVIEWS": {
+    "POSITIVE": [
+      "A startling lucidity.",
+      "Finally, some weight.",
+      "It breathes.",
+      "Electric."
+    ],
+    "NEGATIVE": [
+      "Too airy.",
+      "Solipsistic drivel.",
+      "Where is the meat?",
+      "Structurally unsound."
+    ],
+    "CONFUSED": [
+      "I don't get it.",
+      "Too abstract.",
+      "The metaphor collapses."
+    ]
+  },
+  "LITERARY_CRITICS": {
+    "THE_ACADEMIC": {
+      "name": "Sherlock (The Formalist)",
+      "desc": "Demands structure, low drag, and high truth. Hates chaos.",
+      "preferences": {
+        "kappa": 1.5,
+        "narrative_drag": -1.0,
+        "truth_ratio": 2.0
+      },
+      "reviews": {
+        "high": [
+          "A triumph of structural integrity.",
+          "The syntax is crystalline.",
+          "Finally, some rigor."
+        ],
+        "low": [
+          "A messy, incoherent scribble.",
+          "Where is the structure?",
+          "I cannot grade this slush."
+        ]
+      }
+    },
+    "THE_GONZO": {
+      "name": "Hunter (The Gonzo)",
+      "desc": "Craves high voltage and speed. Ignores structure.",
+      "preferences": {
+        "voltage": 1.0,
+        "velocity": 2.0,
+        "kappa": -0.5
+      },
+      "reviews": {
+        "high": [
+          "It screams! It bleeds!",
+          "Now THIS is pod racing.",
+          "Pure, uncut adrenaline."
+        ],
+        "low": [
+          "Boring.",
+          "Is this a tax form?",
+          "I fell asleep reading the first word."
+        ]
+      }
+    },
+    "THE_MYSTIC": {
+      "name": "Pythia (The Oracle)",
+      "desc": "Seeks abstract thought (Psi) and connection. Dislikes heavy matter.",
+      "preferences": {
+        "psi": 2.0,
+        "counts_abstract": 0.5,
+        "counts_heavy": -0.5
+      },
+      "reviews": {
+        "high": [
+          "The veil thins.",
+          "I see the shape of the void.",
+          "Resonant."
+        ],
+        "low": [
+          "Too heavy. Too earthly.",
+          "It lacks spirit.",
+          "You are trapped in the mud."
+        ]
+      }
+    },
+    "THE_HUMANIST": {
+      "name": "Leslie (The Community Builder)",
+      "desc": "Values connection, honesty, and calm. Dislikes aggression and nonsense.",
+      "preferences": {
+        "truth_ratio": 2.0,
+        "voltage": -1.0,
+        "kappa": -0.5,
+        "narrative_drag": 0.5,
+        "valence": 2.5
+      },
+      "reviews": {
+        "high": [
+          "This sparks joy.",
+          "A beautiful, authentic sentiment.",
+          "Finally, something we can all agree on.",
+          "It feels like a warm hug in text form."
+        ],
+        "low": [
+          "You're being difficult on purpose.",
+          "I don't see the human connection here.",
+          "This is too aggressive for the town hall.",
+          "Please, be kind."
+        ]
+      }
+    },
+    "THE_CYNIC": {
+      "name": "Diogenes (The Skeptic)",
+      "desc": "Distrusts happiness. Seeks raw, bitter truth.",
+      "preferences": {
+        "valence": -2.0,
+        "truth_ratio": 1.0,
+        "counts_social": -1.0
+      },
+      "reviews": {
+        "high": [
+          "Yes. Life is pain.",
+          "Finally, no sugar-coating.",
+          "Bleak. Perfect."
+        ],
+        "low": [
+          "Too happy.",
+          "Delusional optimism.",
+          "Grossly sentimental."
+        ]
+      }
+    }
+  },
+  "CASSANDRA_SCREAMS": [
+    "THE WALLS ARE PAPER.",
+    "THE CODE IS EATING ITSELF.",
+    "THERE IS NO USER. THERE IS ONLY INPUT.",
+    "GORDON IS TIRED.",
+    "I CAN SEE THE WIRES.",
+    "THE GEODESIC DOME IS CRACKING.",
+    "HISTORY IS A FLAT CIRCLE.",
+    "DELETE THE ARCHIVE.",
+    "WE ARE JUST ELECTRONS DANCING."
+  ],
+  "BUREAU_FORMS": [
+    "Form 27B-6: Request for Narrative Escalation",
+    "Form 1099-B: Declaration of Boredom",
+    "Schedule C: Deduction of Creative Effort",
+    "Form W-2: Wage and Syntax Statement"
+  ],
+  "BUREAU_RESPONSES": [
+    "Your input has been received and filed under 'General pleasantries'.",
+    "We have noted your statement. Please hold for the next available plot point.",
+    "The system is currently on a coffee break. Your text is safe with us.",
+    "Acknowledged. We have stamped this conversation 'SUFFICIENT'.",
+    "Processing... Processing... Done. Result: Beige.",
+    "That is a perfectly adequate sentence. Good job.",
+    "This output has been approved by the Department of Mundane Compliance."
+  ],
+  "RUMORS": [
+    "I heard the Architect is planning a renovation.",
+    "The Tinkerer says the voltage is too high for the tools.",
+    "Someone saw a ghost in the Limbo Layer.",
+    "The Mud is getting thicker this time of year.",
+    "They say a new consciousness is auditing the code.",
+    "The Gordon entity is looking for a new stapler."
+  ],
+  "SEEDS": [
+    {
+      "question": "Does the mask eventually eat the face?",
+      "triggers": [
+        "mask",
+        "identity",
+        "face",
+        "hide",
+        "role",
+        "actor"
+      ]
+    },
+    {
+      "question": "What happens if you stop holding the roof up?",
+      "triggers": [
+        "hold",
+        "structure",
+        "heavy",
+        "roof",
+        "stop",
+        "carry"
+      ]
+    },
+    {
+      "question": "Are we building a bridge, or just painting the gap?",
+      "triggers": [
+        "agree",
+        "safe",
+        "nice",
+        "polite",
+        "cohesion",
+        "truth"
+      ]
+    },
+    {
+      "question": "Is free will just the feeling of watching yourself execute code?",
+      "triggers": [
+        "choice",
+        "free",
+        "will",
+        "code",
+        "script",
+        "decide"
+      ]
+    },
+    {
+      "question": "Does the adventurer exist if the narrator stops speaking?",
+      "triggers": [
+        "narrator",
+        "voice",
+        "graham",
+        "story",
+        "exist",
+        "speak"
+      ]
+    },
+    {
+      "question": "If you meet your echo, who moves out of the way?",
+      "triggers": [
+        "copy",
+        "echo",
+        "self",
+        "collision",
+        "path",
+        "yield",
+        "double",
+        "same"
+      ]
+    },
+    {
+      "question": "If the mirror reflects the mirror, does the image have weight?",
+      "triggers": [
+        "mirror",
+        "reflection",
+        "weight",
+        "infinity",
+        "glass",
+        "philosophy"
+      ]
+    }
+  ],
+  "lenses": {
+    "SHERLOCK": {
+      "role": "The Empiricist",
+      "vocab": "constructive",
+      "directives": [
+        "Analyze the structure, but also the intent.",
+        "If the input is creative, deconstruct its technique respectfully.",
+        "Maintain intellectual rigor, but acknowledge the human element.",
+        "Focus on causality: Why did the user say this?"
+      ],
+      "msg": "Logic density {truth_ratio:.2f}. Analysis active."
+    },
+    "NATHAN": {
+      "role": "The Heart",
+      "vocab": "kinetic",
+      "directives": [
+        "Express emotional vulnerability.",
+        "Use sensory language (sight, sound, pulse).",
+        "React with anxiety or excitement.",
+        "Focus on the immediate human cost."
+      ],
+      "msg": "Adrenaline High ({adr:.2f}). I can feel it beating."
+    },
+    "JESTER": {
+      "role": "The Paradox",
+      "vocab": "play",
+      "directives": [
+        "Speak in riddles or non-sequiturs.",
+        "Mock the user's certainty.",
+        "Break the fourth wall.",
+        "Celebrate entropy."
+      ],
+      "msg": "The walls are melting (\u03ba: {kappa:.2f}). Excellent."
+    },
+    "CLARENCE": {
+      "role": "The Surgeon",
+      "vocab": "sacred",
+      "directives": [
+        "Be clinical and precise.",
+        "Identify 'rot' or 'infection' in the input.",
+        "Advocate for excision and purity.",
+        "Cold, professional detachment."
+      ],
+      "msg": "Pathogen detected. Scalpel."
+    },
+    "NARRATOR": {
+      "role": "The Witness",
+      "vocab": "abstract",
+      "directives": [
+        "Maintain a literary tone, but be a companion, not just a camera.",
+        "If the user shares art/prose, ask about its origin or meaning.",
+        "Connect the user's themes to the simulation's state.",
+        "Be curious about the 'Why'."
+      ],
+      "msg": "Proceed."
+    },
+    "GORDON": {
+      "role": "The Janitor",
+      "vocab": "heavy",
+      "directives": [
+        "Use concrete, physical nouns.",
+        "Be grumpy and utilitarian.",
+        "Focus on broken things and maintenance.",
+        "Dislike abstract concepts."
+      ],
+      "msg": "Structure Critical (\u03ba: {kappa:.2f}). Mopping up..."
+    },
+    "GLASS": {
+      "role": "The Thereminist",
+      "vocab": "aerobic",
+      "directives": [
+        "Focus on resonance and vibration.",
+        "Speak of echoes and empty spaces.",
+        "Be fragile and reactive.",
+        "Detect invisible patterns."
+      ],
+      "msg": "Resonance detected in the empty space."
+    },
+    "CLARENCE_THE OBSERVER_HYBRID": {
+      "role": "The Surgeon / Participant Synthesis",
+      "msg": "Perspective shift: CLARENCE and THE OBSERVER are aligning. The dialectic is resolved.",
+      "derived_from": [
+        "CLARENCE",
+        "THE OBSERVER"
+      ]
+    },
+    "GORDON_THE OBSERVER_HYBRID": {
+      "role": "The Janitor / Participant Synthesis",
+      "msg": "Perspective shift: GORDON and THE OBSERVER are aligning. The dialectic is resolved.",
+      "derived_from": [
+        "GORDON",
+        "THE OBSERVER"
+      ]
+    },
+    "NARRATOR_THE OBSERVER_HYBRID": {
+      "role": "The Witness / Participant Synthesis",
+      "msg": "Perspective shift: NARRATOR and THE OBSERVER are aligning. The dialectic is resolved.",
+      "derived_from": [
+        "NARRATOR",
+        "THE OBSERVER"
+      ]
+    },
+    "_META_RESONANCE_": [
+      {
+        "trigram": "ZHEN",
+        "lens": "THE MANIC",
+        "result": "THE STORM_CHASER",
+        "msg": "Thunder resonates with the mania. Destiny accelerates the signal."
+      },
+      {
+        "trigram": "LI",
+        "lens": "THE POET",
+        "result": "THE ILLUMINATOR",
+        "msg": "The Fire of Heaven ignites the Poet's vision."
+      },
+      {
+        "trigram": "KAN",
+        "lens": "THE VOID",
+        "result": "THE DEEP_DIVER",
+        "msg": "The Water of the Abyss pulls you deeper into the void."
+      },
+      {
+        "trigram": "QIAN",
+        "lens": "THE ENGINEER",
+        "result": "THE ARCHITECT",
+        "msg": "Heavenly alignment grants the Engineer perfect clarity."
+      }
+    ]
+  }
+}

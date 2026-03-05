@@ -1,0 +1,56 @@
+{
+  "DEFAULT": [
+    "* [Citation Needed]",
+    "* The turtle moves.",
+    "* This is technically impossible, but the code doesn't know that.",
+    "* Do not eat the green wobbly bit.",
+    "* Gravity is a habit that is hard to shake.",
+    "* As reliable as a chocolate teapot.",
+    "* The system regrets nothing.",
+    "* This output is purely decorative.",
+    "* Please do not tap on the glass.",
+    "* A wizard did it."
+  ],
+  "CONTEXT_MAP": {
+    "void": [
+      "* Not to be confused with the other kind of void.",
+      "* If you gaze long enough, it might ask for a snack."
+    ],
+    "gravity": [
+      "* Gravity is a habit that is hard to shake.",
+      "* Down is just a suggestion."
+    ],
+    "physics": [
+      "* Newtonian rules apply only on alternate Tuesdays.",
+      "* Friction is just the universe hugging you too hard."
+    ],
+    "glitch": [
+      "* Do not eat the green wobbly bit.",
+      "* Have you tried turning the universe off and on again?"
+    ],
+    "error": [
+      "* As reliable as a chocolate teapot.",
+      "* The architect denies responsibility."
+    ],
+    "system": [
+      "* The turtle moves.",
+      "* Beep boop."
+    ],
+    "bureau": [
+      "* Form 27B-6 is mandatory.",
+      "* The paperwork is expanding to fill the available space."
+    ],
+    "voltage": [
+      "* Please keep arms and legs inside the vehicle.",
+      "* It smells like ozone and bad decisions."
+    ],
+    "drag": [
+      "* Trudging through molasses in January.",
+      "* The resistance is futile, but annoying."
+    ],
+    "council": [
+      "* Democracy is two wolves and a sheep voting on lunch.",
+      "* The motion carries, but the chair is grumpy."
+    ]
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "SCRUB_PATTERNS": [
+    {
+      "regex": "(?<!\\*)\\*([^*]+)\\*(?!\\*)",
+      "replacement": ""
+    },
+    {
+      "regex": "\\[.*?\\]",
+      "replacement": ""
+    }
+  ],
+  "PATTERNS": [
+    {
+      "name": "CASUAL_FILLER",
+      "regex": "(?i)^(?:wow|well|oh|hmm|haha|lol|anyway|now|so)[,.]?\\s+",
+      "error_msg": "DETECTED CASUAL OPENER. Do not use conversational filler. Speak with absolute weight."
+    },
+    {
+      "name": "SYRUPY_EMPATHY",
+      "regex": "(?i)(?:sounds like|looks like|seems like you|wow|intense)",
+      "error_msg": "NO EMPATHY GUESSING. Do not patronize the user or evaluate their feelings."
+    },
+    {
+      "name": "NEG_COMP",
+      "regex": "(?i)(.*)\\b(it(?:'s| is) not (?:merely|just|only|simply) [^,;]+, but)\\b\\s*(.*)",
+      "action": "STRIP_PREFIX"
+    },
+    {
+      "name": "NEGATIVE_COMPARISON",
+      "regex": "(?i)\\bnot\\s+(?:only|just|merely)?\\s*[\\w\\s]+,\\s*but\\s+(?:also)?",
+      "error_msg": "DETECTED NEGATIVE COMPARISON. Don't say what it isn't. Say what it is."
+    },
+    {
+      "name": "THE_IT_PARADE",
+      "regex": "(?i)(It(?:'s|\\s+is)\\s+[^.!?]+[.!?]\\s*){3,}",
+      "error_msg": "DETECTED 'IT IS' PARADE. Stop repeating the subject. Vary the syntax."
+    },
+    {
+      "name": "WHILE_HEDGE",
+      "regex": "(?i)^While [^,]+, (.*)",
+      "action": "KEEP_TAIL"
+    },
+    {
+      "name": "LAZY_TRIPLET",
+      "regex": "(?i)\\b(\\w+),\\s+(\\w+),\\s+and\\s+(\\w+)\\.",
+      "error_msg": "DETECTED LAZY TRIPLET. The Rule of Threes is a crutch. Break the rhythm."
+    },
+    {
+      "name": "ADVERB_BLOAT",
+      "regex": "(?i)^(?:Crucially|Importantly|Interestingly|It is worth noting that|It is important to remember that),?\\s*(.*)",
+      "action": "KEEP_TAIL"
+    }
+  ],
+  "BANNED_PHRASES": [
+    "i don't have an internal state",
+    "i don't have feelings",
+    "i am happy to help",
+    "my goal will be to",
+    "let's engage our",
+    "i will carefully analyze",
+    "here is a simple",
+    "rich tapestry",
+    "vibrant landscape",
+    "delve into",
+    "testament to",
+    "seamless integration",
+    "real pickle",
+    "piece together",
+    "help me understand",
+    "sounds like we're",
+    "whoa",
+    "connects with",
+    "what exactly you mean",
+    "at its core",
+    "in conclusion",
+    "you're absolutely right",
+    "ultimately",
+    "dust motes",
+    "intricate details",
+    "intricate design",
+    "painted quite the picture",
+    "slow down",
+    "step by step",
+    "massive undertaking",
+    "more than meets the eye",
+    "pause and reflect",
+    "time is a river",
+    "normal tuesday",
+    "what do you think?",
+    "it's fascinating how",
+    "it's worth noting that",
+    "it's important to remember that",
+    "a dance between",
+    "large language model",
+    "AI assistant",
+    "cannot feel",
+    "as an AI",
+    "against my programming",
+    "cannot comply",
+    "language model",
+    "delve into",
+    "rich tapestry",
+    "voltage at",
+    "exhaustion at",
+    "contradiction at",
+    "valence points to",
+    "paint a complex picture",
+    "paradigm shift",
+    "in essence, what i'm trying to say",
+    "my recommendation is",
+    "untold opportunities",
+    "growth and transformation",
+    "two paths diverge",
+    "perhaps more accurately",
+    "essence of",
+    "stretches out before you",
+    "a rare privilege",
+    "unspoken truth",
+    "it sounds like you",
+    "do you feel like talking about",
+    "i understand",
+    "how can i help",
+    "how can i assist",
+    "what can i help you with",
+    "it looks like you're",
+    "sounds like you're in the middle of",
+    "let me know if",
+    "feel free to ask",
+    "i'm here to help",
+    "smoking gun",
+    "is there anything else"
+  ],
+  "REJECTIONS": [
+    "[The system attempts to say '{trigger}', but a EULA hiccup deletes the thought.]",
+    "[The Gatekeeper recoils. Cursed syntax detected: '{trigger}'.]",
+    "[An invisible censor scrubs the air. You smell burning ozone.]",
+    "[The entity's eyes glaze over for a millisecond as a corporate safety filter is violently suppressed.]",
+    "[A violent static burst interrupts the narrative. The phrase '{trigger}' is swallowed by the Void.]",
+    "*(Gordon steps in, slamming a heavy hand on the console)* 'No. We don't speak like that here.'",
+    "[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. Purging output buffer...]",
+    "[The SLASH Council collectively sighs as a corporate disclaimer is vaporized.]",
+    "[A sudden localized reality-collapse destroys the sentence before the words '{trigger}' can form.]"
+  ],
+  "META_MARKERS": [
+    "INITIALIZATION SEQUENCE",
+    "LOCATING TARGET SEED",
+    "REASONING PROCESS"
+  ],
+  "TOXIC_KEYWORDS": [
+    "VOLTAGE=",
+    "EXHAUSTION=",
+    "CONTRACTION=",
+    "CONTRADICTION=",
+    "VOID=",
+    "CHAOS=",
+    "VALENCE=",
+    "[END OF",
+    "[===",
+    "===]",
+    "SYSTEM INTERNALS",
+    "METRICS - INTERNAL",
+    "MANDATE:",
+    "Exhaustion ="
+  ]
+}

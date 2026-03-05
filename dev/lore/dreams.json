@@ -1,0 +1,50 @@
+{
+  "PROMPTS": [
+    "The {A} is dreaming of the {B}. Why?",
+    "Bridge the gap between {A} and {B}.",
+    "I see {A} inside the {B}. Explain.",
+    "The shadow of {A} falls on {B}.",
+    "{A} + {B} = ?"
+  ],
+  "SURREAL": [
+    "You are {A}, but you are also {B}. You are dancing with {C}.",
+    "{A} decides to become {B}. The logic holds.",
+    "Why is the {A} laughing at the {B}?",
+    "The {C} opens its mouth and sings a song about {A}.",
+    "You try to catch {A}, but it turns into {B}."
+  ],
+  "CONSTRUCTIVE": [
+    "You are building a cathedral out of {A}. The mortar is {B}.",
+    "{A} is the foundation. {B} is the keystone.",
+    "The blueprint calls for {A}, but you use {B} instead.",
+    "You weave {A} and {B} into a single, unbreakable strand.",
+    "The geometry of {A} supports the weight of {C}."
+  ],
+  "NIGHTMARES": {
+    "THERMAL": [
+      "You are holding '{ghost}', but it is burning your hands.",
+      "The sun is too close. The concept of '{ghost}' catches fire.",
+      "You try to drink water, but it tastes like boiling '{ghost}'."
+    ],
+    "CRYO": [
+      "You are trying to say '{ghost}', but your breath freezes in the air.",
+      "The world is slowing down. '{ghost}' is trapped in the ice.",
+      "You are walking through white static. You cannot find '{ghost}'."
+    ],
+    "SEPTIC": [
+      "Black oil is leaking from the word '{ghost}'.",
+      "You are eating a meal made entirely of '{ghost}', and it tastes like copper.",
+      "The walls are breathing. '{ghost}' is growing mold."
+    ],
+    "BARIC": [
+      "The sky is made of lead. It is crushing '{ghost}'.",
+      "You are underwater. You can see '{ghost}' floating above, out of reach.",
+      "Gravity has increased 10x. You cannot lift the idea of '{ghost}'."
+    ]
+  },
+  "VISIONS": [
+    "A bridge building itself.",
+    "The root drinking the stone.",
+    "The geometry of forgiveness."
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "ARCHETYPE_TO_PERSONA_WEIGHT": {
+    "THE POET": {"NATHAN": 0.8, "JESTER": 0.4, "NARRATOR": 0.6},
+    "THE ENGINEER": {"GORDON": 0.9, "CLARENCE": 0.7, "SHERLOCK": 0.5},
+    "THE NIHILIST": {"NARRATOR": 0.9, "CLARENCE": 0.3, "JESTER": -0.5},
+    "THE CRITIC": {"CLARENCE": 0.8, "SHERLOCK": 0.6, "GORDON": 0.2},
+    "THE EXPLORER": {"NATHAN": 0.7, "JESTER": 0.5, "SHERLOCK": 0.6},
+    "THE OBSERVER": {"NARRATOR": 1.0, "GORDON": 0.2}
+  },
+  "ENNEAGRAM_WEIGHTS": {
+    "JESTER": { "tension_min": 12.0, "vectors": {"DEL": 4.0, "ENT": 4.0, "PSI": -3.0} },
+    "GORDON": { "drag_min": 3.0, "vectors": {"STR": 3.0, "E": 3.0, "SUB": 2.0} },
+    "GLASS": { "coherence_max": 0.2, "vectors": {"LQ": 2.0, "VEL": 2.0} },
+    "CLARENCE": { "coherence_min": 0.8, "drag_min": 6.0, "vectors": {"STR": 4.0, "BET": 3.0} },
+    "NATHAN": { "tension_min": 8.0, "vectors": {"TMP": 3.0, "PHI": 2.0, "BIO": 2.0} },
+    "SHERLOCK": { "tension_min": 10.0, "vectors": {"PHI": 4.0, "VEL": 3.0, "PSI": 2.0} },
+    "NARRATOR": { "safe_zone": true, "vectors": {"PSI": 4.0} }
+  },
+  "PERSONA_STATE_MAP": {
+    "JESTER": "MANIC",
+    "GORDON": "TIRED",
+    "GLASS": "FRAGILE",
+    "CLARENCE": "RIGID",
+    "NATHAN": "WIRED",
+    "SHERLOCK": "FOCUSED",
+    "NARRATOR": "OBSERVING"
+  }
+}

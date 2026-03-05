@@ -1,0 +1,37 @@
+{
+  "FORECASTS": {
+    "HIGH_VOLTAGE": [
+      "The wire is hot. Write immediately, without editing.",
+      "Burn the fuel before it explodes. Speed is your friend.",
+      "Do not seek structure. Seek impact."
+    ],
+    "HIGH_DRAG": [
+      "The mud is deep. Stop trying to run.",
+      "Focus on texture. Describe the weight of things.",
+      "Slow down. The obstacle *is* the path."
+    ],
+    "HIGH_ENTROPY": [
+      "The center is not holding. Find one true sentence.",
+      "Simplify. Cut the adjectives. Locate the noun.",
+      "Anchor yourself. Pick a physical object and describe it."
+    ],
+    "HIGH_TRAUMA": [
+      "The wound is open. Treat it with care.",
+      "Write what hurts, but write it in the third person.",
+      "Use the pain as fuel, but filter it through the lens."
+    ],
+    "BALANCED": [
+      "The Garden is growing. Tend to the edges.",
+      "Structure and flow are aligned. Build something tall.",
+      "You are in the zone. Maintain the rhythm."
+    ]
+  },
+  "STRATEGIES": {
+    "HIGH_VOLTAGE": "What if you whispered instead of screamed?",
+    "HIGH_DRAG": "Honor the error as a hidden intention.",
+    "HIGH_ENTROPY": "Repetition is a form of change.",
+    "HIGH_TRAUMA": "Turn it into a wallpaper pattern.",
+    "BALANCED": "Discard the first idea. Trust the third."
+  },
+  "DEFAULT_SEED": "Look closely at the most boring thing in the room."
+}

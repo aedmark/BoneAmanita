@@ -1,0 +1,28 @@
+{
+  "FUMBLE": [
+    "FUMBLE: The narrative turbulence knocked '{item}' from your pocket!",
+    "OOPS: Gravity inverted momentarily. You dropped '{item}'.",
+    "BUTTERFINGERS: The syntax got slippery. '{item}' is gone.",
+    "LOST: Gordon got distracted by a shiny plot hole and dropped '{item}'.",
+    "THEFT: The Entropy Goblin stole '{item}' while you weren't looking."
+  ],
+  "RUMMAGE": {
+    "EMPTY": [
+      "Gordon dug through the trash. Just lint and old receipts.",
+      "Nothing but dust bunnies and rejected adjectives.",
+      "Empty. The void stares back from the bottom of the pocket."
+    ],
+    "TOO_TIRED": [
+      "Gordon: 'Too tired to dig. Eat something first.'",
+      "Gordon leans on the shovel. 'Union break. Need stamina.'",
+      "Gordon refuses. 'My back hurts. Feed me ATP.'"
+    ]
+  },
+  "CONDUCTIVE_HAZARD": "CONDUCTIVE HAZARD: {item} acts as a lightning rod! -{damage:.1f} HP.",
+  "HEAVY_LOAD": "HEAVY LOAD: The {item} are dragging you down.",
+  "TIME_DILATION": "TIME DILATION: {item} hums. Drag capped at {cap}.",
+  "BUREAUCRATIC_ANCHOR": "{item}: Policy enforced. (Beta +0.2, Drag +0.5)",
+  "GROUNDING_GEAR": "{item}: Gravity re-asserted. You sink out of the {zone} into the Mud.",
+  "SAFETY_SCISSORS": "{item}: Gordon snips the red tape. {count} suburban words discarded.",
+  "CAFFEINE_JITTERS": "CAFFEINE JITTERS: Velocity UP, Stability DOWN."
+}

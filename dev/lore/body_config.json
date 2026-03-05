@@ -1,0 +1,69 @@
+{
+  "ENZYME_MAP": {
+    "static": "CELLULASE",
+    "abstract": "DECRYPTASE",
+    "natural": "LIGNASE",
+    "synthetic": "CHITINASE",
+    "social": "AMYLASE",
+    "antigen": "OXIDASE"
+  },
+  "REACTION_MAP": {
+    "PROTEASE": { "ADR": 0.2 },
+    "CELLULASE": { "COR": -0.2, "OXY": 0.1 },
+    "CHITINASE": { "DOP": 0.3 },
+    "LIGNASE": { "SER": 0.2 },
+    "DECRYPTASE": { "ADR": 0.1, "DOP": 0.1 },
+    "AMYLASE": { "SER": 0.3, "OXY": 0.2 }
+  },
+  "CIRCADIAN_SCHEDULE": [
+    [6, 10, {"COR": 0.1}, "DAWN", "Sunrise."],
+    [10, 18, {"SER": 0.1}, "SOLAR", "High Noon."],
+    [18, 23, {"MEL": 0.1}, "TWILIGHT", "Sunset."]
+  ],
+  "CIRCADIAN_NIGHT": [{"MEL": 0.3, "COR": -0.1}, "LUNAR", "Night."],
+  "GOVERNOR_SHIFT": {
+    "COLORS": {
+      "SANCTUARY": "GRN",
+      "FORGE": "RED",
+      "LABORATORY": "CYN",
+      "COURTYARD": "GRN"
+    },
+    "DEFAULTS": {
+      "SANCTUARY": "SANCTUARY ACTIVE",
+      "LABORATORY": "LAB ACTIVE",
+      "COURTYARD": "SYSTEM CLEAR",
+      "FORGE": "FORGE ACTIVE ({volts:.1f}v)"
+    }
+  },
+  "QUALIA_STRINGS": {
+    "tones": {
+      "urgent": "Urgent",
+      "vibrating": "Vibrating",
+      "strained": "Strained",
+      "resonant": "Resonant",
+      "steady": "Steady"
+    },
+    "hints": {
+      "guarded": "Something is wrong. Be guarded.",
+      "fast": "Move fast. Don't overthink.",
+      "connect": "Connect. Be vulnerable.",
+      "explore": "Explore. Find the pattern.",
+      "observe": "Observe."
+    },
+    "reflexes": {
+      "fight_flight": "Trembling (Fight or Flight).",
+      "electric": "Electric Vibration.",
+      "pupils": "Pupils Dilating.",
+      "glow": "Golden Glow.",
+      "chest": "Chest Softening.",
+      "gut": "Gut Tightening.",
+      "spark": "Synaptic Spark.",
+      "liminal": "Scalp Prickling (Liminal).",
+      "static": "Skin Crawling (Static).",
+      "arcing": "Electrical Arcing.",
+      "dimming": "Metabolic Dimming.",
+      "sagging": "Shoulders Sagging.",
+      "steady": "Steady Pulse."
+    }
+  }
+}

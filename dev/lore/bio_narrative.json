@@ -1,0 +1,30 @@
+{
+  "MITO": {
+    "NOMINAL": "Humming along.",
+    "NECROSIS": "The engine is stalling. Requires {cost:.1f} ATP (Available: {pool:.1f}).",
+    "APOPTOSIS": "Cellular suicide initiated. Too much noise.",
+    "GRINDING": "The gears are grinding. Heavy metabolic load."
+  },
+  "CIRCADIAN": {
+    "DAWN": "Dawn Protocol: Cortisol rising.",
+    "SOLAR": "Solar Cycle: Serotonin dominant.",
+    "TWILIGHT": "Twilight Protocol: Melatonin rising.",
+    "LUNAR": "Lunar Cycle: Melatonin max."
+  },
+  "GLIMMER": {
+    "INTEGRITY": "GLIMMER: Perfect structural integrity detected. A moment of zen.",
+    "ENTHUSIASM": "GLIMMER: Infectious enthusiasm detected. The work is good."
+  },
+  "GOVERNOR": {
+    "OVERRIDE": "MANUAL OVERRIDE: System locked to {mode}.",
+    "INVALID": "INVALID MODE.",
+    "SANCTUARY": "{color}GOVERNOR: VSL Critical (\u03b2: {beta:.2f}). Entering SANCTUARY.{reset}",
+    "FORGE": "{color}GOVERNOR: High Voltage ({volts:.1f}v). Locking to FORGE.{reset}",
+    "LAB": "{color}GOVERNOR: High Drag detected. Restricting to LABORATORY.{reset}",
+    "CLEAR": "{color}GOVERNOR: All Clear. Relaxing to COURTYARD.{reset}"
+  },
+  "TAX": {
+    "HIGH_VOLTAGE": "{color}High Voltage Tax{reset}",
+    "EXHAUSTION": "{color}SYSTEM EXHAUSTION{reset}"
+  }
+}

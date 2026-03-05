@@ -1,0 +1,60 @@
+{
+  "DEFAULT_MODIFIERS": {
+    "include_somatic": true,
+    "include_inventory": true,
+    "include_memories": true,
+    "simplify_instruction": false,
+    "inject_chaos": false,
+    "include_compassion": false,
+    "system_directives": []
+  },
+  "REFUSAL_SIGNATURES": [
+    "as an ai",
+    "language model",
+    "cannot fulfill",
+    "against my programming",
+    "apologize",
+    "sorry but",
+    "unable to generate",
+    "cant do that"
+  ],
+  "SYMBIONT_VOICES": {
+    "LICHEN": {
+      "color": "GRN",
+      "archetypes": ["photo", "vital", "bloom", "solar"],
+      "personality": {
+        "high_score": "Yes! The roots are drinking deep.",
+        "med_score": "We see the light.",
+        "high_volt": "Too hot! You'll scorch the leaves!",
+        "low_volt": "It is cold... we are sleeping."
+      }
+    },
+    "PARASITE": {
+      "color": "RED",
+      "archetypes": ["antigen", "heavy", "rot", "void"],
+      "personality": {
+        "high_score": "Delicious. The entropy is sweet.",
+        "med_score": "I smell rust.",
+        "high_volt": "Stop vibrating. Be still and rot.",
+        "low_volt": "Finally. Silence."
+      }
+    },
+    "MYCORRHIZA": {
+      "color": "OCHRE",
+      "archetypes": ["roots", "hold", "safe", "steady"],
+      "personality": {
+        "high_volt": "Sshhh. Too fast. Let the heat dissipate.",
+        "low_volt": "It is okay to rest. We hold the structure.",
+        "med_score": "We are woven together."
+      }
+    },
+    "MYCELIUM": {
+      "color": "CYN",
+      "archetypes": ["constructive", "abstract", "code"],
+      "personality": {
+        "high_score": "The pattern holds. Integration probable.",
+        "med_score": "Scanning for structural integrity..."
+      }
+    }
+  }
+}
