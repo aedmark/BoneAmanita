@@ -1,4 +1,12 @@
-"""bone_core.py"""
+"""
+bone_core.py
+
+The Central Nervous System.
+This module provides the foundational infrastructure for the entire lattice.
+It contains the EventBus (pub/sub message routing), the LoreManifest (lazy-loaded data),
+the RealityStack (which manages layers of simulation vs. reality), and the
+TelemetryService (the black box recorder).
+"""
 
 import glob
 import json
@@ -8,11 +16,14 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Counter, Tuple, Deque
-
 from bone_config import BoneConfig
 from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
 
 class BoneJSONEncoder(json.JSONEncoder):
+    """
+    A custom JSON encoder to handle the specific data structures used
+    throughout the lattice (sets, deques, and custom objects with a to_dict method).
+    """
     def default(self, obj):
         if isinstance(obj, set):
             return list(obj)
@@ -25,6 +36,11 @@ class BoneJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 class EventBus:
+    """
+    The Vagus Nerve. A pub/sub architecture that allows the MitochondrialForge,
+    Cortex, and Council to broadcast state changes without needing direct,
+    tightly-coupled Python references to one another.
+    """
     def __init__(self, max_memory=None):
         cfg = getattr(BoneConfig, "CORE", None)
         limit = max_memory if max_memory else (getattr(cfg, "EVENT_MAX_MEMORY", 1024) if cfg else 1024)
@@ -37,12 +53,16 @@ class EventBus:
         self.subscribers[event_type].append(callback)
 
     def publish(self, event_type, data=None):
+        """ Broadcasts an event to all interested organs. """
         if event_type not in self.subscribers:
             return
+
         for callback in list(self.subscribers[event_type]):
             try:
                 callback(data)
             except Exception as e:
+                # Gracefully catch errors in event handlers so a single
+                # failing callback doesn't crash the entire nervous system.
                 cb_name = getattr(callback, "__name__", str(callback))
                 raw_err = f"Error in '{cb_name}' for '{event_type}': {e}"
                 msg = LoreManifest.get_instance().get_ux("core_strings", "bus_error") or ""
@@ -50,10 +70,12 @@ class EventBus:
                 self.log(f"EVENT_FAILURE: {raw_err}", category="CRIT")
 
     def log(self, text: str, category: str = "SYSTEM"):
+        """Buffers logs to be consumed and cleared by the cycle runner for the UI."""
         entry = {"text": text, "category": category, "timestamp": time.time()}
         self.buffer.append(entry)
 
     def flush(self) -> List[Dict]:
+        """Flushes the buffer. Used to display logs to the UI at the end of a cycle."""
         current_logs = list(self.buffer)
         self.buffer.clear()
         return current_logs
@@ -62,6 +84,10 @@ class EventBus:
         return list(self.buffer)[-count:]
 
 class LoreManifest:
+    """
+    The Akashic index of static data. It lazy-loads JSON files from the 'lore'
+    directory, acting as a centralized configuration dictionary for the entire architecture.
+    """
     _instance = None
 
     def __init__(self, data_dir=None):
@@ -72,6 +98,7 @@ class LoreManifest:
 
     @classmethod
     def get_instance(cls):
+        # Singleton pattern ensures all modules read from the same cached memory.
         if cls._instance is None:
             cls._instance = LoreManifest()
         return cls._instance
@@ -86,6 +113,7 @@ class LoreManifest:
         return data
 
     def get_ux(self, section: str, key: str, default: Any = "") -> Any:
+        """A specialized getter for UI strings, allowing for easy localization or reskinning."""
         section_data = self.get("ux_strings", section)
         if isinstance(section_data, dict):
             return section_data.get(key, default)
@@ -106,6 +134,7 @@ class LoreManifest:
             return None
 
     def inject(self, category: str, data: Any):
+        """Allows dynamic injection of new lore during runtime without writing to disk."""
         if category not in self._cache:
             self._cache[category] = {}
         if isinstance(self._cache[category], dict) and isinstance(data, dict):
@@ -125,6 +154,12 @@ class LoreManifest:
             print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
 
 class TheObserver:
+    """
+    A crucial monitoring loop. It tracks the time it takes for the internal
+    Python execution (cycle) vs the external API call (llm). It uses these metrics
+    to pass judgment on the system's "health" and "efficiency," adding physical
+    latency penalties to the metabolism if the system runs too slowly.
+    """
     def __init__(self):
         self.start_time = time.time()
         cfg = getattr(BoneConfig, "CORE", None)
@@ -156,6 +191,7 @@ class TheObserver:
         return time.time() - self.start_time
 
     def calculate_efficiency(self, health: float, stamina: float) -> float:
+        """Efficiency is modeled as resources retained divided by time spent thinking."""
         duration = max(0.01, self.last_cycle_duration)
         resource_sum = health + stamina
         return resource_sum / duration
@@ -167,6 +203,7 @@ class TheObserver:
         self.memory_snapshots.append(node_count)
 
     def pass_judgment(self, avg_cycle, avg_llm):
+        """Translates raw latency metrics into somatic feedback (e.g., 'fog', 'sluggish')."""
         if avg_cycle == 0.0 and avg_llm == 0.0:
             return LoreManifest.get_instance().get_ux("core_strings", "obs_asleep") or ""
         cfg = getattr(BoneConfig, "CORE", None)
@@ -176,8 +213,8 @@ class TheObserver:
             return LoreManifest.get_instance().get_ux("core_strings", "obs_efficient") or ""
         if avg_llm > self.LATENCY_WARNING:
             jokes = [LoreManifest.get_instance().get_ux("core_strings", "obs_fog") or "",
-                LoreManifest.get_instance().get_ux("core_strings", "obs_degraded") or "",
-                LoreManifest.get_instance().get_ux("core_strings", "obs_ponderous") or "",]
+                     LoreManifest.get_instance().get_ux("core_strings", "obs_degraded") or "",
+                     LoreManifest.get_instance().get_ux("core_strings", "obs_ponderous") or "",]
             valid_jokes = [j for j in jokes if j]
             return random.choice(valid_jokes) if valid_jokes else ""
         if avg_cycle > self.CYCLE_WARNING:
@@ -195,6 +232,7 @@ class TheObserver:
 
 @dataclass
 class SystemHealth:
+    """Tracks the structural integrity of the primary modules so they can be gracefully rebooted if they fail."""
     physics_online: bool = True
     bio_online: bool = True
     mind_online: bool = True
@@ -231,6 +269,11 @@ class SystemHealth:
         return feedback
 
 class RealityStack:
+    """
+    A literal stack that dictates the governing laws of the simulation.
+    By pushing RealityLayer.DEBUG, the system temporarily suspends narrative generation
+    (hallucination) to allow for raw technical output, then pops back into character.
+    """
     def __init__(self):
         self._stack = [RealityLayer.SIMULATION]
         self._lock = False
@@ -258,6 +301,7 @@ class RealityStack:
         self._stack = [layer]
 
     def get_grammar_rules(self) -> Dict[str, bool]:
+        """Maps the current structural layer to executable permissions (e.g., can the user run commands?)."""
         depth = self.current_depth
         return {"allow_narrative": depth
                                    in [RealityLayer.SIMULATION, RealityLayer.DEEP_CX, RealityLayer.DEBUG],
@@ -265,16 +309,24 @@ class RealityStack:
                 "raw_output": depth == RealityLayer.DEEP_CX, "system_override": depth == RealityLayer.DEBUG, }
 
 class ArchetypeArbiter:
+    """
+    The final judge of who holds the microphone.
+    It checks council mandates (e.g., LOCKDOWN), then checks for hybrid archetypes (Diamond),
+    then checks for trigram resonance, and finally defaults to the base Soul archetype.
+    """
     @staticmethod
     def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Dict = None, ) -> Tuple[str, str, str]:
+        # 1. Council Overrides (Absolute Authority)
         for mandate in council_mandates:
             if mandate.get("type") == "LOCKDOWN":
                 return "THE CENSOR", "COUNCIL", LoreManifest.get_instance().get_ux("core_strings", "arb_martial_law") or "",
             if mandate.get("type") == "FORCE_MODE":
                 return "THE MACHINE", "COUNCIL", LoreManifest.get_instance().get_ux("core_strings", "arb_bureaucratic") or "",
+        # 2. Hybrid Archetypes (e.g., JESTER/SHERLOCK)
         if "/" in soul_archetype:
             msg = LoreManifest.get_instance().get_ux("core_strings", "arb_diamond") or ""
             return soul_archetype, "SOUL", msg.format(soul_archetype=soul_archetype) if msg else "",
+        # 3. Trigram Resonance (If the physical math aligns perfectly with the current lens)
         if trigram:
             trigram_name = trigram.get("name")
             mythos = LoreManifest.get_instance().get("MYTHOS") or {}
@@ -288,14 +340,21 @@ class ArchetypeArbiter:
                     if match_lens and match_soul:
                         msg = rule.get("msg") or LoreManifest.get_instance().get_ux("core_strings", "arb_resonance") or ""
                         return rule["result"], rule.get("source", "COSMIC"), msg
+        # 4. Loud Lenses (Certain lenses demand the mic regardless of Soul state)
         cfg = getattr(BoneConfig, "CORE", None)
         loud_lenses = getattr(cfg, "LOUD_LENSES", ["THE MANIC", "THE VOID"]) if cfg else ["THE MANIC", "THE VOID"]
         if physics_lens in loud_lenses:
             msg = LoreManifest.get_instance().get_ux("core_strings", "arb_loud") or ""
             return physics_lens, "PHYSICS", msg.format(physics_lens=physics_lens) if msg else "",
+        # 5. Default to the current NarrativeSelf
         return soul_archetype, "SOUL",  LoreManifest.get_instance().get_ux("core_strings", "arb_soul") or ""
 
 class TelemetryService:
+    """
+    An optional black box recorder. It writes every state transition, phase shift,
+    and LLM query out to a JSONL file. Crucial for tracing the exact physics vector that
+    caused the lattice to collapse.
+    """
     _tracer_instance = None
 
     def __init__(self):
@@ -334,8 +393,7 @@ class TelemetryService:
             return
         trace = DecisionTrace(trace_id=self.active_crystal.decision_id, timestamp=time.time(), component=component,
                               decision_type=decision_type,
-                              inputs=inputs if isinstance(inputs, dict) else {"raw": str(inputs)}, reasoning=reasoning,
-                              outcome=outcome, )
+                              inputs=inputs if isinstance(inputs, dict) else {"raw": str(inputs)}, reasoning=reasoning, outcome=outcome)
         self.trace_buffer.append(trace)
         self._buffer_line(trace.to_json())
 
@@ -403,8 +461,9 @@ class TelemetryService:
                             break
                         try:
                             data = json.loads(line)
+                            # We extract the final output from the CRYSTAL object to rebuild the chat history.
                             if (data.get("_type") == "CRYSTAL"
-                                or "final_response" in data):
+                                    or "final_response" in data):
                                 resp = data.get("final_response", "")
                                 if not resp:
                                     continue

@@ -9,8 +9,12 @@ from bone_config import BoneConfig
 from bone_core import BoneJSONEncoder, LoreManifest
 from bone_types import Prisma
 
-
 class TheAkashicRecord:
+    """
+    The master repository for long-term, structural memory. 
+    It tracks newly learned words, the synthesis of new archetypes, and the location of scars. 
+    It writes this data to disk, ensuring the lattice persists between sessions.
+    """
     def __init__(self, lore_manifest: Optional["LoreManifest"] = None, events_ref=None):
         self.discovered_words: Dict[str, str] = {}
         self.lens_cooccurrence: Dict[Tuple[str, str], int] = {}
@@ -23,12 +27,14 @@ class TheAkashicRecord:
         self.MAX_SHADOW_CAPACITY = getattr(cfg, "MAX_SHADOW_CAPACITY", 50) if cfg else 50
         self.lore = lore_manifest if lore_manifest else LoreManifest.get_instance()
         self.events = events_ref
+        # The physical storage arrays for the organism's mental life.
         self.shadow_stock: List[Dict] = []
         self.subconscious_strata: List[Dict] = []
         self.scar_map: List[Dict] = []
         self._load_mythos_state()
 
     def setup_listeners(self, event_bus):
+        """Subscribes to the EventBus to passively observe and record systemic shifts."""
         event_bus.subscribe("MYTHOLOGY_UPDATE", self._on_mythology_update)
         event_bus.subscribe("LENS_INTERACTION", self._on_lens_interaction)
         event_bus.subscribe("FORGE_SUCCESS", self._on_forge_event)
@@ -37,6 +43,11 @@ class TheAkashicRecord:
         print(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
     def trigger_autophagy(self) -> Tuple[float, str]:
+        """
+        The ultimate survival loop. When ATP is zero, the organism 
+        permanently deletes a node from its subconscious strata (or a learned word) 
+        to generate a burst of metabolic fuel.
+        """
         cfg = getattr(BoneConfig, "AKASHIC", None)
         yield_val = getattr(cfg, "AUTOPHAGY_YIELD", 15.0) if cfg else 15.0
         if not self.subconscious_strata:
@@ -53,6 +64,7 @@ class TheAkashicRecord:
         return yield_val, msg.format(target=target)
 
     def record_scar(self, concept: str, p: Any):
+        """When the system suffers a paradox or logic collapse, it records the structural coordinates (E, beta, S, etc.)."""
         cfg = getattr(BoneConfig, "AKASHIC", None)
         default_coords = getattr(cfg, "DEFAULT_SCAR_COORDS", {
             "E": 0.2, "beta": 0.4, "S": 0.3, "D": 0.3, "C": 0.2,
@@ -60,6 +72,7 @@ class TheAkashicRecord:
         coords = {k: getattr(p, k, v) for k, v in default_coords.items()}
         scar = {"concept": concept, "coordinates": coords, "gilded": True}
         self.scar_map.append(scar)
+        # Leaves a ghost in the coordinates so future traversal knows something broke here.
         self.store_ghost_echo({"type": "SCAR_GHOST", "concept": concept, "coords": coords})
         if self.events:
             msg = LoreManifest.get_instance().get_ux("akashic_strings", "mercy_scar") or ""
@@ -81,6 +94,7 @@ class TheAkashicRecord:
 
     @staticmethod
     def _extract_dominant_trigram(physics: Dict) -> str:
+        """Maps the dominant numeric physics vector to its corresponding I-Ching Trigram."""
         vector = physics.get("vector", {})
         if not vector:
             return "KAN"
@@ -98,6 +112,7 @@ class TheAkashicRecord:
             return
         word = payload.get("word")
         category = payload.get("category")
+
         if word and category:
             self.register_word(word, category)
             return
@@ -107,6 +122,7 @@ class TheAkashicRecord:
             active_lens = payload.get("lens", "OBSERVER")
             lenses_data = self.lore.get("LENSES") or {}
             resonances = lenses_data.get("_META_RESONANCE_", [])
+            # If the mathematical physics perfectly align with the current archetype, it triggers a Resonance event.
             for resonance in resonances:
                 if resonance["trigram"] == trigram:
                     target_lens = resonance.get("lens", resonance.get("soul"))
@@ -116,6 +132,7 @@ class TheAkashicRecord:
 
     @staticmethod
     def calculate_manifold_shift(theta: str, e: Dict[str, float]) -> Dict[str, float]:
+        """Calculates how much the current word (theta) biases the structural narrative drag and voltage."""
         bias = 0.0
         scalar = 1.0
         theta_upper = theta.upper()
@@ -137,6 +154,7 @@ class TheAkashicRecord:
             self.store_ghost_echo(payload)
 
     def forge_new_item(self, vector: Dict[str, float]) -> Tuple[str, Dict]:
+        """Procedurally generates a new item based on the current physics vector and injects it into Gordon's registry."""
         dominant_force = max(vector, key=vector.__getitem__) if vector else "CHI"
         item_gen_data = self.lore.get("ITEM_GENERATION") or {}
         prefixes = item_gen_data.get("PREFIXES", {})
@@ -236,7 +254,8 @@ class TheAkashicRecord:
                     self.known_recipes.add((ing, cat))
 
     def record_interaction(
-        self, lenses_active: list, ingredients_used: Optional[list] = None):
+            self, lenses_active: list, ingredients_used: Optional[list] = None):
+        """A reinforcing feedback loop. If two archetypes speak together enough, they merge into a hybrid."""
         if len(lenses_active) >= 2:
             key = cast(Tuple[str, str], tuple(sorted(lenses_active[:2])))
             self.lens_cooccurrence[key] = self.lens_cooccurrence.get(key, 0) + 1
@@ -245,13 +264,14 @@ class TheAkashicRecord:
         if ingredients_used:
             for item in ingredients_used:
                 self.ingredient_affinity[item] = (
-                    self.ingredient_affinity.get(item, 0) + 1)
+                        self.ingredient_affinity.get(item, 0) + 1)
 
     def track_successful_forge(self, ingredient_name, catalyst_type, result_item):
         if not ingredient_name or not catalyst_type:
             return
         if (ingredient_name, catalyst_type) in self.known_recipes:
             return
+
         key = (ingredient_name, catalyst_type)
         if key not in self.recipe_candidates:
             self.recipe_candidates[key] = {}
@@ -267,11 +287,12 @@ class TheAkashicRecord:
             else:
                 result_name = result_item
         self.recipe_candidates[key][result_name] = (
-            self.recipe_candidates[key].get(result_name, 0) + 1)
+                self.recipe_candidates[key].get(result_name, 0) + 1)
         if self.recipe_candidates[key][result_name] >= self.RECIPE_THRESHOLD:
             self._crystallize_recipe(ingredient_name, catalyst_type, result_item)
 
     def _hybridize_lenses(self, lens_a: str, lens_b: str):
+        """Averages the physical weights of two archetypes to create a stable, new structural node."""
         if lens_a == lens_b:
             return
         roots = sorted([lens_a.replace("THE ", ""), lens_b.replace("THE ", "")])
@@ -282,11 +303,11 @@ class TheAkashicRecord:
 
         def get_weights(l_name):
             return existing_lenses.get(l_name, {}).get("weights", {"v": 0, "d": 0})
+
         w_a = get_weights(lens_a)
         w_b = get_weights(lens_b)
-        new_weights = {"voltage": round((w_a.get("voltage", w_a.get("v", 0))
-                              + w_b.get("voltage", w_b.get("v", 0))) / 2, 2, ),
-            "drag": round((w_a.get("drag", w_a.get("d", 0)) + w_b.get("drag", w_b.get("d", 0)))/ 2,2,),}
+        new_weights = {"voltage": round((w_a.get("voltage", w_a.get("v", 0)) + w_b.get("voltage", w_b.get("v", 0))) / 2, 2, ),
+                       "drag": round((w_a.get("drag", w_a.get("d", 0)) + w_b.get("drag", w_b.get("d", 0)))/ 2,2,),}
         desc_template = LoreManifest.get_instance().get_ux("akashic_strings", "lens_desc") or ""
         new_lens_data = {"description": desc_template.format(lens_a=lens_a, lens_b=lens_b), "weights": new_weights,
                          "parentage": [lens_a, lens_b], }
@@ -298,11 +319,11 @@ class TheAkashicRecord:
             self.events.publish("SOUL_MUTATION", {"new_archetype": new_name})
 
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
+        """Once a crafting interaction has occurred enough times, it is permanently added to the known lore."""
         self.known_recipes.add((ingredient, catalyst))
         msg_template = LoreManifest.get_instance().get_ux("akashic_strings", "recipe_msg") or ""
         new_recipe = {"ingredient": ingredient, "catalyst_category": catalyst, "result": result_item,
-                      "msg": msg_template.format(
-                          ingredient=ingredient, catalyst=catalyst, result_item=result_item), }
+                      "msg": msg_template.format(ingredient=ingredient, catalyst=catalyst, result_item=result_item), }
         current_recipes = (self.lore.get("GORDON") or {}).get("RECIPES", [])
         if not any(
                 r["ingredient"] == ingredient and r["catalyst_category"] == catalyst
@@ -337,6 +358,7 @@ class TheAkashicRecord:
         print(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
 
     def register_word(self, word: str, category: str) -> bool:
+        """The literal act of learning. Dynamically expanding the semantic boundary of the system."""
         if word in self.discovered_words:
             if self.discovered_words[word] == category:
                 return False
@@ -351,6 +373,7 @@ class TheAkashicRecord:
             cfg = getattr(BoneConfig, "AKASHIC", None)
             bloat_limit = getattr(cfg, "BLOAT_THRESHOLD", 50) if cfg else 50
             exempt_categories = getattr(cfg, "BLOAT_EXEMPT_CATEGORIES", ["heavy"])
+            # Too many words without meaning causes 'bloat'. The system warns the user of its own cognitive load.
             if len(lexicon_data[category]) > bloat_limit and category not in exempt_categories:
                 bloat_msg = LoreManifest.get_instance().get_ux("akashic_strings", "lexicon_bloat") or ""
                 print(bloat_msg.format(category=category))

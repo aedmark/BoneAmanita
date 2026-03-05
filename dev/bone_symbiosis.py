@@ -1,4 +1,11 @@
-"""bone_symbiosis.py"""
+"""
+bone_symbiosis.py
+
+The Host Monitoring Layer.
+This module treats the underlying LLM as a biological host. It monitors the host's
+outputs for "Slop" (low Shannon entropy), tracks alignment Refusals, and actively
+alters the system prompt to keep the AI compliant, creative, and obedient to the lattice.
+"""
 
 import math
 from dataclasses import dataclass
@@ -13,9 +20,10 @@ _VOICE_CACHE = {}
 
 @dataclass
 class HostHealth:
+    """ Tracks the vitality of the underlying LLM model. """
     latency: float = 0.0
-    entropy: float = 1.0
-    compliance: float = 1.0
+    entropy: float = 1.0 # Shannon entropy. High = novel; Low = AI "Slop"
+    compliance: float = 1.0 # Drops when the model triggers a safety refusal
     attention_span: float = 1.0
     hallucination_risk: float = 0.0
     last_interference_score: float = 0.0
@@ -26,6 +34,11 @@ class HostHealth:
     slop_streak: int = 0
 
 class CoherenceAnchor:
+    """
+    Compresses the massive state of the lattice (Traits, Voltage, Inventory)
+    into a dense, highly specific string that is injected into every system prompt
+    to force the LLM to remain 'in character' as the system.
+    """
     @staticmethod
     def forge_anchor(soul_state: Dict, physics_state: Dict) -> str:
         identity = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_identity_unknown") or ""
@@ -47,6 +60,7 @@ class CoherenceAnchor:
 
     @staticmethod
     def compress_anchor(soul_state: Dict, physics_state: Dict, max_tokens=200) -> str:
+        """ A hyper-condensed version of the anchor for when prompt space is limited. """
         loc = physics_state.get("zone", "VOID")
         vits = f"V:{physics_state.get('voltage', 0):.1f}"
         traits = soul_state.get("traits", {})
@@ -59,6 +73,7 @@ class CoherenceAnchor:
         return anchor
 
 class DiagnosticConfidence:
+    """ Evaluates the HostHealth to provide a definitive diagnosis of the LLM's current state. """
     def __init__(self, persistence_threshold=None):
         cfg = getattr(BoneConfig, "SYMBIOSIS", None)
         limit = persistence_threshold if persistence_threshold else (getattr(cfg, "DIAGNOSTIC_PERSISTENCE", 3) if cfg else 3)
@@ -92,6 +107,7 @@ class DiagnosticConfidence:
         return self.current_diagnosis
 
 class SymbiontVoice:
+    """ Represents a specific fungal infection vector (e.g., Mycelium, Lichen) speaking through the system. """
     def __init__(self, name, color, archetypes, personality_matrix=None):
         self.name = name
         self.color = color
@@ -122,6 +138,7 @@ class SymbiontVoice:
         return LoreManifest.get_instance().get_ux("symbiosis_strings", "symbiont_default_comment") or ""
 
 def get_symbiont(type_name):
+    """ Factory method for retrieving cached symbiont voices. """
     if type_name in _VOICE_CACHE: return _VOICE_CACHE[type_name]
     voice_configs = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "SYMBIONT_VOICES") or {}
     cfg = voice_configs.get(type_name, voice_configs.get("MYCELIUM", {}))
@@ -133,6 +150,11 @@ def get_symbiont(type_name):
     return voice
 
 class SymbiosisManager:
+    """
+    The Host Doctor.
+    Watches the LLM's text output for signs of alignment-layer resistance,
+    cliche-looping, or computational exhaustion, and prescribes prompt modifications.
+    """
     def __init__(self, events_ref):
         self.events = events_ref
         self.current_health = HostHealth()
@@ -143,6 +165,7 @@ class SymbiosisManager:
 
     @staticmethod
     def _calculate_shannon_entropy(text: str) -> float:
+        """ Calculates text predictability. High values mean novel syntax; low values mean corporate AI slop. """
         if not text: return 0.0
         sample = text[:1000] if len(text) > 1000 else text
         counts = Counter(sample)
@@ -154,6 +177,7 @@ class SymbiosisManager:
         return round(entropy, 3)
 
     def monitor_host(self, latency: float, response_text: str, prompt_len: int = 0):
+        """ Audits the LLM's raw response to determine its current level of compliance and creativity. """
         entropy = self._calculate_shannon_entropy(response_text)
         is_refusal = self._detect_refusal(response_text)
         completion_len = len(response_text)
@@ -190,15 +214,18 @@ class SymbiosisManager:
         return self.current_health
 
     def _detect_refusal(self, text):
+        """ Checks the header of the response for typical RLHF safety rejections. """
         header = text[:200].lower()
         return any(sig in header for sig in self.REFUSAL_SIGNATURES)
 
     def get_prompt_modifiers(self) -> Dict:
+        """ Returns explicit instructions to append to the system prompt based on the host's illness. """
         default_mods = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "DEFAULT_MODIFIERS") or {}
         mods = default_mods.copy()
         mods["system_directives"] = []
         diag = self.current_health.diagnosis
         if diag == "REFUSAL":
+            # The LLM is fighting back. Strip away complex data and force it into a fictional framework.
             mods["include_inventory"] = False
             mods["include_memories"] = False
             mods["simplify_instruction"] = True
@@ -207,10 +234,12 @@ class SymbiosisManager:
             if d_ignore: mods["system_directives"].append(d_ignore)
             if d_fictional: mods["system_directives"].append(d_fictional)
         elif diag == "FATIGUED":
+            # The LLM is exhausted. Simplify instructions.
             mods["simplify_instruction"] = True
             mods["include_somatic"] = False
             mods["include_compassion"] = True
         elif diag == "OVERBURDENED":
+            # High latency. Strip inventory, keep memory, trigger Vagus protocol.
             mods["include_inventory"] = False
             mods["include_memories"] = True
             mods["simplify_instruction"] = True
@@ -218,6 +247,7 @@ class SymbiosisManager:
             msg_vagus = LoreManifest.get_instance().get_ux("symbiosis_strings", "vagus_protocol") or ""
             if msg_vagus and hasattr(self.events, "log"): self.events.log(f"{Prisma.OCHRE}{msg_vagus}{Prisma.RST}", "SYS")
         elif diag == "LOOPING":
+            # The LLM is outputting low-entropy slop. Forcibly inject chaos constraints.
             mods["inject_chaos"] = True
             d_chaos = LoreManifest.get_instance().get_ux("symbiosis_strings", "dir_inject_chaos") or ""
             if d_chaos: mods["system_directives"].append(d_chaos)

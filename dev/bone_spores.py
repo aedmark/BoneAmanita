@@ -1,4 +1,12 @@
-"""bone_spores.py"""
+"""
+bone_spores.py
+
+The Fungal Memory Network.
+This module governs the structural persistence of the lattice. It maintains the
+graph of connected words, manages the biological immune/parasitic systems that
+patrol that graph, and handles the serialization of 'Spores' (save states) to
+the Akashic record. It also manages epigenetic mutations.
+"""
 
 import json
 import os
@@ -12,8 +20,8 @@ from bone_core import EventBus, LoreManifest, BoneJSONEncoder
 from bone_lexicon import LexiconService
 from bone_types import Prisma
 
-
 def _access_config_path(root, path, value=None, set_mode=False):
+    """ Helper function to traverse the nested BoneConfig dictionary. """
     target = root
     parts = path.split(".")
     try:
@@ -37,6 +45,7 @@ def _access_config_path(root, path, value=None, set_mode=False):
         return None
 
 class LocalFileSporeLoader:
+    """ Handles the physical writing and reading of the JSON save states (Spores). """
     def __init__(self, directory="memories"):
         self.directory = directory
         if not os.path.exists(directory):
@@ -45,7 +54,7 @@ class LocalFileSporeLoader:
     def save_spore(self, filename, data):
         temp_path = filename
         if not os.path.isabs(filename) and not filename.startswith(
-            os.path.join(self.directory, "")):
+                os.path.join(self.directory, "")):
             final_path = os.path.join(self.directory, filename)
         else:
             final_path = filename
@@ -105,6 +114,12 @@ class LocalFileSporeLoader:
             return False
 
 class SubconsciousStrata:
+    """
+    The graveyard of repressed memories.
+    When the MemoryCore hits its capacity limit and undergoes 'cannibalization'
+    (Autophagy), the consumed memories are pushed down here. They can occasionally
+    resurface as flashbacks.
+    """
     def __init__(self, filename="memories/subconscious.jsonl"):
         self.filepath = filename
         self.directory = os.path.dirname(filename)
@@ -163,11 +178,17 @@ class SubconsciousStrata:
             pass
 
     def dredge(self, trigger_word: str) -> Optional[Dict]:
+        """ Attempts to resurrect a repressed memory from the file. """
         if trigger_word not in self.index:
             return None
         return next((e for e in self._iter_entries() if e.get("word") == trigger_word), None)
 
 class MemoryCore:
+    """
+    The active Graph representation of the system's memory.
+    It tracks which words co-occur and strengthens the 'synapses' between them.
+    If it runs out of space, it cannibalizes its own weakest nodes for energy.
+    """
     def __init__(self, events_ref, subconscious_ref):
         self.events = events_ref
         self.subconscious = subconscious_ref
@@ -180,6 +201,7 @@ class MemoryCore:
                               "PSI": {"abstract", "sacred", "idea"}, "BET": {"social", "suburban", "play"}, }
 
     def illuminate(self, vector: Dict[str, float], limit: int = 5) -> List[str]:
+        """ Used by the UI to show which memories are currently active in the graph. """
         if not self.graph:
             return []
         active_dims = {k: v for k, v in vector.items() if v > 0.4}
@@ -217,6 +239,7 @@ class MemoryCore:
         return sum(self.graph[node]["edges"].values())
 
     def strengthen_link(self, source, target, rate, decay):
+        """ Hebbian learning. Neurons that fire together wire together. """
         if source not in self.graph:
             return
         edges = self.graph[source]["edges"]
@@ -227,6 +250,7 @@ class MemoryCore:
         edges[target] = min(10.0, current_weight + delta)
 
     def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
+        """ Forgets old, weak connections to prevent the graph from becoming a complete hairball. """
         pruned_count = 0
         total_decayed = 0
         nodes_to_remove = []
@@ -255,8 +279,8 @@ class MemoryCore:
         return msg.format(total=total_decayed, pruned=pruned_count) if msg else ""
 
     def cannibalize(
-        self, current_tick, preserve_current=None
-    ) -> Tuple[Optional[str], str]:
+            self, current_tick, preserve_current=None) -> Tuple[Optional[str], str]:
+        """ Autophagy. Deletes the weakest node in the graph to make room for new concepts. """
         protected = set()
         if preserve_current:
             if isinstance(preserve_current, list):
@@ -291,8 +315,13 @@ class MemoryCore:
 
 
 class MycelialNetwork:
+    """
+    The master orchestration object for memory and immunity.
+    It holds the MemoryCore, the parasites, and the actual serialization logic to
+    write the session graph to disk as a 'Spore'.
+    """
     def __init__(
-        self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None):
+            self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None):
         self.events = events
         self.loader = loader if loader else LocalFileSporeLoader()
         self.session_id = f"session_{int(time.time())}"
@@ -324,6 +353,7 @@ class MycelialNetwork:
         return self.memory_core.calculate_mass(node)
 
     def run_ecosystem(self, physics: Dict, stamina: float, tick: int) -> List[str]:
+        """ Executes the biological inhabitants of the graph (Immune, Lichen, Parasite). """
         logs = []
         clean_words = physics.get("clean_words", [])
         sugar, lichen_msg = self.lichen.photosynthesize(physics, clean_words, tick)
@@ -346,6 +376,7 @@ class MycelialNetwork:
         return logs
 
     def _poll_chorus(self, clean_words: list, physics: Dict) -> Optional[str]:
+        """ Checks if the current words have massive weight in the graph, echoing their mass into current physics. """
         total_voltage_boost = 0.0
         total_drag_penalty = 0.0
         echo_count = 0
@@ -403,13 +434,7 @@ class MycelialNetwork:
                         return msg.format(word=word) if msg else None
         return None
 
-    def bury(
-        self,
-        clean_words: List[str],
-        tick: int,
-        resonance=5.0,
-        learning_mod=1.0,
-        desperation_level=0.0,) -> Tuple[Optional[str], List[str]]:
+    def bury(self, clean_words: List[str], tick: int, resonance=5.0, learning_mod=1.0, desperation_level=0.0, ) -> Tuple[Optional[str], List[str]]:
         if not clean_words:
             return None, []
         valuable = self._filter_valuable_matter(clean_words)
@@ -509,6 +534,7 @@ class MycelialNetwork:
         return bloom_msg
 
     def _apply_epigenetics(self, data):
+        """ Hard-edits the universal constants in BoneConfig based on the mutations acquired by ancestors. """
         if "config_mutations" not in data:
             return
         msg = LoreManifest.get_instance().get_ux("spore_strings", "net_audit_epig") or ""
@@ -531,6 +557,7 @@ class MycelialNetwork:
             if msg_ap: self.events.log(f"{Prisma.CYN}   {msg_ap.format(count=valid_mutations)}{Prisma.RST}")
 
     def ingest(self, target_file, current_tick=0):
+        """ Boot sequence. Loads a Spore JSON file and integrates its structure into the live system. """
         data = self.loader.load_spore(target_file)
         if not data:
             msg = LoreManifest.get_instance().get_ux("spore_strings", "net_spore_not_found") or ""
@@ -603,13 +630,14 @@ class MycelialNetwork:
 
     def save(self, health, stamina, mutations, trauma_accum, joy_history, mitochondria_traits=None, antibodies=None,
              soul_data=None, continuity=None, world_atlas=None, village_data=None, ):
+        """ Compiles the active state into a JSON dictionary format for the SporeLoader. """
         final_vector = {k: min(1.0, v) for k, v in trauma_accum.items()}
         top_joy = sorted(joy_history, key=lambda x: x["resonance"], reverse=True)[:3]
         joy_legacy_data = None
         if top_joy:
             joy_legacy_data = {"flavor": top_joy[0]["dominant_flavor"],
-                "resonance": top_joy[0]["resonance"],
-                "timestamp": top_joy[0]["timestamp"]}
+                               "resonance": top_joy[0]["resonance"],
+                               "timestamp": top_joy[0]["timestamp"]}
         core_graph = {}
         for k, data in self.graph.items():
             filtered_edges = {}
@@ -621,14 +649,11 @@ class MycelialNetwork:
         temp_trauma = {k: min(1.0, v) for k, v in trauma_accum.items()}
         future_seed_q = self._generate_future_seed(temp_health=health, trauma_vec=temp_trauma)
         seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed}
-            for s in self.seeds
-            if not s.bloomed]
+                     for s in self.seeds
+                     if not s.bloomed]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
-        data = {"genome": "BONEAMANITA_16.3.1", "session_id": self.session_id, "parent_id": self.session_id, "meta": {
-            "timestamp": time.time(),
-            "final_health": health,
-            "final_stamina": stamina,
-        }, "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
+        data = {"genome": "BONEAMANITA_16.3.3", "session_id": self.session_id, "parent_id": self.session_id, "meta": {
+            "timestamp": time.time(), "final_health": health, "final_stamina": stamina, }, "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
                 "core_graph": core_graph, "mutations": mutations, "antibodies": list(antibodies) if antibodies else [],
                 "mitochondria": mitochondria_traits, "soul_legacy": soul_data, "continuity": continuity,
                 "world_atlas": world_atlas or {}, "village_data": village_data, "seeds": seed_list,
@@ -672,6 +697,7 @@ class MycelialNetwork:
         return len(self.graph)
 
     def autoload_last_spore(self):
+        """ The automated boot sequence. Grabs the most recent successful save state to hydrate. """
         files = self.loader.list_spores()
         if not files:
             msg = LoreManifest.get_instance().get_ux("spore_strings", "net_no_ancestor") or ""
@@ -683,13 +709,11 @@ class MycelialNetwork:
         return None
 
 class ImmuneMycelium:
+    """ The White Blood Cells. Patrols the graph for heavy, clunky, or overly repetitive 'toxic' phonetics. """
     def __init__(self):
         self.active_antibodies = set()
-        self.PHONETICS = {"PLOSIVE": set("bdgkpt"), "FRICATIVE": set("fthszsh"), "LIQUID": set("lr"),
-                          "NASAL": set("mn")}
-        self.ROOTS = {
-            "HEAVY": ("lith", "ferr", "petr", "dens", "grav", "struct", "base", "fund", "mound",),
-            "KINETIC": ("mot", "mov", "ject", "tract", "pel", "crat", "dynam", "flux")}
+        self.PHONETICS = {"PLOSIVE": set("bdgkpt"), "FRICATIVE": set("fthszsh"), "LIQUID": set("lr"), "NASAL": set("mn")}
+        self.ROOTS = {"HEAVY": ("lith", "ferr", "petr", "dens", "grav", "struct", "base", "fund", "mound",), "KINETIC": ("mot", "mov", "ject", "tract", "pel", "crat", "dynam", "flux")}
         self.name = "MYCELIUM"
         self.color = Prisma.CYN
         self.archetypes = {"constructive", "kinetic", "abstract", "code", "system"}
@@ -723,6 +747,7 @@ class ImmuneMycelium:
         return None, ""
 
 class BioParasite:
+    """ The Viral Element. Hijacks highly abstract, metaphor-heavy language and forces it into the graph. """
     def __init__(self, memory_ref, lexicon_ref):
         self.mem = memory_ref
         self.lex = lexicon_ref
@@ -748,6 +773,7 @@ class BioParasite:
         return score, comment
 
     def infect(self, physics_packet, stamina):
+        """ Hard-wires an abstract concept directly to a heavy concept, bypassing standard Hebbian learning. """
         psi = physics_packet.get("psi", 0.0)
         cfg = getattr(BoneConfig, "SPORES", None)
         p_stam = getattr(cfg, "PARASITE_STAMINA_MAX", 40.0) if cfg else 40.0
@@ -785,6 +811,7 @@ class BioParasite:
             return True, (f"{Prisma.VIOLET}{msg.format(host=host.upper(), para=parasite.upper())}{Prisma.RST}" if msg else None)
 
 class BioLichen:
+    """ The symbiote. Converts light (play/sacred words) directly into metabolic sugar without costing ATP. """
     def __init__(self):
         self.name = "LICHEN"
         self.color = Prisma.GRN
@@ -831,6 +858,7 @@ class BioLichen:
         return sugar, " ".join(msgs) if msgs else None
 
 class LiteraryReproduction:
+    """ Handles the epigenetic mutation of the system config on a successful boot. """
     MUTATIONS = {}
     JOY_CLADE = {}
 
@@ -874,6 +902,7 @@ class LiteraryReproduction:
 
     @staticmethod
     def mitosis(parent_id, bio_state, physics):
+        """ Clones the current instance, injecting mutations based on the dominant semantic flavor of the end state. """
         counts = LiteraryReproduction._extract_counts(physics)
         dominant = max(counts, key=counts.get) if counts else "VOID"
         mutation_data = LiteraryReproduction.MUTATIONS.get(
@@ -890,6 +919,7 @@ class LiteraryReproduction:
 
     @staticmethod
     def crossover(parent_a_id, parent_a_bio, parent_b_path):
+        """ Combines the genome of the current session with another, external save file. """
         try:
             with open(parent_b_path, "r") as f:
                 parent_b_data = json.load(f)
@@ -921,7 +951,7 @@ class LiteraryReproduction:
         return child_id, child_genome
 
     def attempt_reproduction(
-        self, engine_ref, mode="MITOSIS", target_spore=None) -> Tuple[str, Dict]:
+            self, engine_ref, mode="MITOSIS", target_spore=None) -> Tuple[str, Dict]:
         mem = engine_ref.mind.mem
         bio_state = {"trauma_vector": engine_ref.trauma_accum, "mito": engine_ref.bio.mito, }
         phys_packet = {}

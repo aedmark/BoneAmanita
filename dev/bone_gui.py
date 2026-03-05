@@ -7,11 +7,16 @@ from bone_core import Prisma, LoreManifest
 from bone_physics import ChromaScope
 
 class Projector:
+    """
+    The master display engine. It extracts deep systemic data (Physics vectors,
+    Biometrics, VSL coordinates) and projects them onto a fixed-width ASCII terminal interface.
+    """
     def __init__(self):
         self.width = 80
 
     @staticmethod
     def _extract(physics_obj: Any, field: str, sub_field: str, default: Any = 0.0):
+        """A safe extraction utility to pull nested data regardless of whether it's a dict or an object."""
         val = None
         if hasattr(physics_obj, sub_field):
             val = getattr(physics_obj, sub_field)
@@ -29,6 +34,7 @@ class Projector:
             mind_ctx: tuple,
             reality_depth: int = 1,
             labels: Dict = None,) -> str:
+        """Assembles the multi-line HUD, sandwiching the vitals, physics, and location between borders."""
         if not labels:
             labels = LoreManifest.get_instance().get_ux("projector", "default_labels") or {}
         physics = physics_ctx.get("physics", {})
@@ -77,6 +83,7 @@ class Projector:
         return f"  {Prisma.WHT}{i_role} {role}{Prisma.RST}"
 
     def _render_vital_strip(self, data: Dict, mind: tuple, labels: Dict) -> str:
+        """Draws the physical health and stamina bars, turning dignity purple when high."""
         max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
         max_s = getattr(BoneConfig, "MAX_STAMINA", 100.0)
         cfg = getattr(BoneConfig, "GUI", None)
@@ -112,6 +119,7 @@ class Projector:
             f"{Prisma.YEL}ATP:{int(atp)}{Prisma.RST}")
 
     def _render_physics_strip(self, physics: Any, vectors: Dict) -> str:
+        """Renders the immediate voltage and narrative drag constraints."""
         volt = self._extract(physics, "energy", "voltage", 0.0)
         drag = self._extract(physics, "space", "narrative_drag", 0.0)
         dom_vec = "NEUTRAL"
@@ -120,11 +128,12 @@ class Projector:
             dom_vec = max(vectors, key=vectors.get)
             dom_val = vectors[dom_vec]
         return (f"  {Prisma.CYN}VOLT:{Prisma.RST} {volt:04.1f}v   "
-            f"{Prisma.SLATE}DRAG:{Prisma.RST} {drag:04.1f}   "
-            f"{Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})")
+                f"{Prisma.SLATE}DRAG:{Prisma.RST} {drag:04.1f}   "
+                f"{Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})")
 
     @staticmethod
     def _render_lattice_strip(physics: Dict, depth: str = "DEEP") -> str:
+        """The core VSL module interface. Renders the coordinates of the semantic state space."""
         if depth == "IDLE" or not physics:
             return ""
 
@@ -187,6 +196,7 @@ class Projector:
         return f"{color}{c_fill * fill}{Prisma.GRY}{c_empty * empty}{Prisma.RST}"
 
 class GeodesicRenderer:
+    """The top-level compositor. Combines the HUD layout with the colorization from ChromaScope."""
     def __init__(self, engine_ref, chroma_ref, strunk_ref, valve_ref=None):
         self.eng = engine_ref
         self.projector = Projector()
@@ -201,6 +211,7 @@ class GeodesicRenderer:
         physics = ctx.physics
         bio = ctx.bio_result
         raw_dashboard = self.render_dashboard(ctx)
+        # Colorize the output based on dominant physics vectors
         colored_ui = self.vsl_chroma.modulate(raw_dashboard, physics.get("vector", {}))
         if self.strunk_white:
             clean_ui, style_log = self.strunk_white.sanitize(colored_ui)
@@ -234,8 +245,7 @@ class GeodesicRenderer:
         data_ctx = {"health": self.eng.health, "stamina": self.eng.stamina, "bio": bio_data, "dignity": (
             getattr(self.eng.soul.anchor, "dignity_reserve", 100.0) if hasattr(self.eng, "soul") else 100.0),
                     "vectors": physics.get("vector", {}), "ui_depth": mode_settings.get("default_ui_depth", "IDLE"),
-                    "world_loc": world_loc,
-                    "show_vitals": mode_settings.get("show_vitals", True),
+                    "world_loc": world_loc, "show_vitals": mode_settings.get("show_vitals", True),
                     "show_location": mode_settings.get("show_location", True)}
         if hasattr(self.eng, "consultant"):
             data_ctx["vsl"] = {"E": self.eng.consultant.state.E, "B": self.eng.consultant.state.B,
@@ -308,6 +318,7 @@ class GeodesicRenderer:
             self.eng.events.log(log_msg, "SYS")
 
 class CachedRenderer:
+    """Optimization. If voltage is low and the state hasn't changed, reuse the last UI frame to save cycles."""
     def __init__(self, base_renderer):
         self._base = base_renderer
         self._cache = {"dashboard": {"hash": 0, "content": ""}, "last_tick": -1}
@@ -335,12 +346,14 @@ def get_renderer(engine_ref, chroma_ref, strunk_ref, valve_ref=None, mode="STAND
     return base
 
 class AmbiguityDial:
+    """Toggles how much of the internal argument the user is allowed to see."""
     BOARDROOM = 0
     WORKSHOP = 1
     RED_TEAM = 2
     PALIMPSEST = 3
 
 class TruthRenderer(GeodesicRenderer):
+    """A specialized renderer for high-contradiction states. Exposes the drafts and redlines of the system's thought process."""
     def __init__(self, engine_ref):
         super().__init__(engine_ref, None, None)
         self.engine = engine_ref
@@ -389,6 +402,7 @@ class TruthRenderer(GeodesicRenderer):
         return None
 
 class PulseReader:
+    """Translates underlying chemical and physical arrays into human-readable states."""
     @staticmethod
     def derive_mood(bio_state: Dict) -> str:
         cfg = getattr(BoneConfig, "GUI", None)
@@ -412,7 +426,6 @@ class PulseReader:
         v_crit_t = getattr(cfg, "V_CRIT", 20.0) if cfg else 20.0
         v_high_t = getattr(cfg, "V_HIGH", 15.0) if cfg else 15.0
         v_low_t = getattr(cfg, "V_LOW", 5.0) if cfg else 5.0
-
         if voltage > v_crit_t:
             v_crit = LoreManifest.get_instance().get_ux("pulse_reader", "voltage_critical") or ""
             return v_crit[0], v_crit[1]
@@ -426,6 +439,7 @@ class PulseReader:
         return v_nom[0], v_nom[1]
 
 class SoulDashboard:
+    """Displays the systemic Dignity bar and current driving archetype."""
     def __init__(self, engine_ref):
         self.eng = engine_ref
 
@@ -473,8 +487,8 @@ class SoulDashboard:
             if (dig < d_med and not anchor.agency_lock)
             else "")
         muse = (soul.current_obsession.title
-            if soul.current_obsession
-            else (LoreManifest.get_instance().get_ux("soul_dashboard", "default_muse") or "None"))
+                if soul.current_obsession
+                else (LoreManifest.get_instance().get_ux("soul_dashboard", "default_muse") or "None"))
         l_soul = LoreManifest.get_instance().get_ux("soul_dashboard", "soul_prefix") or "Soul:"
         l_driver = LoreManifest.get_instance().get_ux("soul_dashboard", "driver_prefix") or "Driver:"
         l_muse = LoreManifest.get_instance().get_ux("soul_dashboard", "muse_prefix") or "Muse:"
@@ -483,6 +497,7 @@ class SoulDashboard:
         return f"{line1}\n{line2}"
 
 class CycleReporter:
+    """Centralizes the injection of feedback, diagnostics, and flux logs into the final UI packet."""
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.vsl_chroma = ChromaScope()
@@ -501,8 +516,7 @@ class CycleReporter:
         strunk_instance = None
         if hasattr(self.eng, "village") and isinstance(self.eng.village, dict):
             strunk_instance = self.eng.village.get("bureau")
-        self.renderer = get_renderer(self.eng, self.vsl_chroma, strunk_instance, getattr(self, "valve", None),
-                                     mode=mode)
+        self.renderer = get_renderer(self.eng, self.vsl_chroma, strunk_instance, getattr(self, "valve", None), mode=mode)
         self.renderers[mode] = self.renderer
         self.current_mode = mode
 
@@ -532,6 +546,7 @@ class CycleReporter:
                 ctx.logs.append(f"{Prisma.OCHRE}{i_warn} {w}{Prisma.RST}")
 
     def _inject_somatic_pulse(self, ctx):
+        """Appends the internal biological feeling (Qualia) of the turn directly to the log stack."""
         if not hasattr(self.eng, "somatic"):
             return
         qualia = self.eng.somatic.get_current_qualia(getattr(ctx, "last_impulse", None))
@@ -541,6 +556,7 @@ class CycleReporter:
 
     @staticmethod
     def _inject_flux_readout(ctx):
+        """Exposes the feedback loop deltas to the user so they can understand the physical weight of their words."""
         if not ctx.flux_log:
             return
         significant = []

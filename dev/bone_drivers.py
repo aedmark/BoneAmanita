@@ -1,11 +1,18 @@
-""" bone_drivers.py"""
+"""
+bone_drivers.py
+
+The Subconscious Navigation Engine.
+This module contains the quiet, background drivers that track long-term
+trajectories. It profiles the user's lexical habits, arbitrates Enneagram
+persona shifts based on the physics of the conversation, and monitors the
+deep, unspoken vectors of Liminality and Syntax.
+"""
 
 import json
 import os
 import random
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
-
 from bone_config import BonePresets, BoneConfig
 from bone_core import LoreManifest
 from bone_lexicon import LexiconService
@@ -15,11 +22,17 @@ SCENARIOS = LoreManifest.get_instance().get("scenarios") or {}
 LENSES = (LoreManifest.get_instance().get("narrative_data") or {}).get("lenses", {})
 
 class SoulDriver:
+    """
+    Translates the internal state of the system's "Soul" (trauma, dignity,
+    paradox accumulation) into outward persona weights, influencing who
+    steps up to speak.
+    """
     def __init__(self, soul_ref):
         self.soul = soul_ref
         self.archetype_weights = LoreManifest.get_instance().get("DRIVER_CONFIG", "ARCHETYPE_TO_PERSONA_WEIGHT") or {}
 
     def get_influence(self) -> Dict[str, float]:
+        """ Calculates the magnetic pull of different archetypes based on current paradox and dignity levels. """
         ennea_weights = LoreManifest.get_instance().get("DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {}
         base_weights = {persona: 0.0 for persona in ennea_weights.keys()}
         if not self.soul:
@@ -33,13 +46,18 @@ class SoulDriver:
         chaos = min(0.5, (paradox - 5.0) * 0.05) if paradox > 5.0 else 0.0
         dignity = 1.0
         if hasattr(self.soul, "anchor") and hasattr(
-            self.soul.anchor, "dignity_reserve"):
+                self.soul.anchor, "dignity_reserve"):
             dignity = max(0.2, self.soul.anchor.dignity_reserve / 100.0)
         return {
             p: (w + random.uniform(-chaos, chaos)) * dignity
             for p, w in base_weights.items()}
 
 class UserProfile:
+    """
+    The Mirror. This driver quietly observes the user's vocabulary choices
+    and builds a persistent psychological profile, tracking their affinity
+    for heavy, abstract, or kinetic language over time.
+    """
     def __init__(self, name="USER"):
         self.name = name
         self.affinities = {"heavy": 0.0, "kinetic": 0.0, "abstract": 0.0, "photo": 0.0, "aerobic": 0.0, "thermal": 0.0,
@@ -50,17 +68,16 @@ class UserProfile:
         self.load()
 
     def update(self, counts, total_words):
+        """ Adjusts the user's profile based on the density of word categories in their prompt. """
         cfg = getattr(BoneConfig, "DRIVERS", None)
         min_words = getattr(cfg, "PROFILE_MIN_WORDS", 3) if cfg else 3
         if total_words < min_words:
             return
-
         self.confidence += 1
         conf_thresh = getattr(cfg, "PROFILE_CONFIDENCE_THRESHOLD", 50) if cfg else 50
         alpha_high = getattr(cfg, "PROFILE_ALPHA_HIGH", 0.2) if cfg else 0.2
         alpha_low = getattr(cfg, "PROFILE_ALPHA_LOW", 0.05) if cfg else 0.05
         density_high = getattr(cfg, "PROFILE_DENSITY_HIGH", 0.15) if cfg else 0.15
-
         alpha = alpha_high if self.confidence < conf_thresh else alpha_low
         for cat in self.affinities:
             density = counts.get(cat, 0) / total_words
@@ -69,15 +86,16 @@ class UserProfile:
                     (1 - alpha) * self.affinities[cat])
 
     def get_preferences(self):
+        """ Returns the user's strongest likes and dislikes based on their historical vocabulary. """
         cfg = getattr(BoneConfig, "DRIVERS", None)
         like_thresh = getattr(cfg, "PROFILE_LIKE_THRESH", 0.3) if cfg else 0.3
         hate_thresh = getattr(cfg, "PROFILE_HATE_THRESH", -0.2) if cfg else -0.2
-
         likes = [k for k, v in self.affinities.items() if v > like_thresh]
         hates = [k for k, v in self.affinities.items() if v < hate_thresh]
         return likes, hates
 
     def save(self):
+        """ Serializes the user's psychological profile. """
         try:
             with open(self.file_path, "w") as f:
                 json.dump(self.__dict__, f)
@@ -95,6 +113,11 @@ class UserProfile:
                 pass
 
 class EnneagramDriver:
+    """
+    The Casting Director. It evaluates the current thermodynamic physics of the
+    conversation (Voltage, Drag, Coherence) and determines which archetype
+    is best suited to handle the environment. Applies hysteresis to prevent flickering.
+    """
     def __init__(self, events_ref):
         self.events = events_ref
         self.current_persona = "NARRATOR"
@@ -114,6 +137,7 @@ class EnneagramDriver:
         return getattr(physics, key, default)
 
     def _calculate_raw_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
+        """ Scores every persona against the current physics packet to find the best fit. """
         p_vec = self._get_phys_attr(physics, "vector", {}) or {}
         p_vol = self._get_phys_attr(physics, "voltage", 0.0)
         p_drag = self._get_phys_attr(physics, "narrative_drag", 0.0)
@@ -150,6 +174,7 @@ class EnneagramDriver:
         runner_up, run_score = sorted_scores[1]
         cfg = getattr(BoneConfig, "DRIVERS", None)
         hybrid_gap = getattr(cfg, "ENNEAGRAM_HYBRID_GAP", 0.5) if cfg else 0.5
+        # If two archetypes are equally valid, synthesize a Hybrid.
         if (win_score - run_score) < hybrid_gap:
             k1 = "THE OBSERVER" if winner == "NARRATOR" else winner
             k2 = "THE OBSERVER" if runner_up == "NARRATOR" else runner_up
@@ -173,6 +198,7 @@ class EnneagramDriver:
         return winner, state_map.get(winner, "ACTIVE"), reason
 
     def decide_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
+        """ Wraps the calculation in a hysteresis lock to prevent the system from rapidly flickering between personas. """
         candidate, state_desc, reason = self._calculate_raw_persona(physics, soul_ref)
         if candidate == self.current_persona:
             self.stability_counter = 0
@@ -202,24 +228,33 @@ class EnneagramDriver:
 
 @dataclass
 class VSLState:
+    """ Dataclass holding the core deep-vein coordinates of the hypervisor. """
     archetype: str = "EXPLORER"
-    E: float = 0.1
-    B: float = 0.3
-    L: float = 0.0
-    O: float = 1.0
+    E: float = 0.1 # Exhaustion / Novelty
+    B: float = 0.3 # Contradiction / Paradox
+    L: float = 0.0 # Liminality / Abstraction
+    O: float = 1.0 # Omega / Structural Syntax
     active_modules: List[str] = field(default_factory=list)
 
 class DriverRegistry:
+    """ Simple container for the active drivers. """
     def __init__(self, events_ref):
         self.enneagram = EnneagramDriver(events_ref)
         self.current_focus = "NONE"
 
 class LiminalModule:
+    """
+    Calculates Lambda (Liminality). This module hunts for 'Dark Matter'—
+    the semantic space between incompatible concepts (e.g., following a heavily
+    grounded kinetic word immediately with a void concept).
+    Prolonged exposure to high Lambda causes Gödel Scars.
+    """
     def __init__(self):
         self.lambda_val = 0.0
         self.godel_scars = 0
 
     def analyze(self, text: str, physics_vector: Dict[str, float]) -> float:
+        """ Audits the text for void references and semantic dark matter leaps. """
         cfg = getattr(BoneConfig, "DRIVERS", None)
         lex_weight = getattr(cfg, "LIMINAL_LEXICAL_WEIGHT", 0.15) if cfg else 0.15
         dm_weight = getattr(cfg, "LIMINAL_DARK_MATTER_WEIGHT", 0.25) if cfg else 0.25
@@ -238,6 +273,7 @@ class LiminalModule:
             for i in range(len(categories) - 1):
                 c1, c2 = categories[i], categories[i + 1]
                 if c1 and c2 and c1 != c2:
+                    # Detect leaps between bedrock physical words and the abstract void
                     if (
                             c1 in ["heavy", "kinetic"]
                             and c2 in ["abstract", "liminal", "void"]
@@ -258,6 +294,11 @@ class LiminalModule:
         return min(1.0, self.lambda_val)
 
 class SyntaxModule:
+    """
+    Calculates Omega (Syntax Stress). Measures the structural rigidity of the text.
+    High punctuation density, long words, and bureaucratic buzzwords increase grammatical
+    stress, making the system rigid and resistant to creative flow.
+    """
     def __init__(self):
         self.omega_val = 1.0
         self.grammatical_stress = 0.0
@@ -300,6 +341,10 @@ class SyntaxModule:
         return self.omega_val
 
 class CongruenceValidator:
+    """
+    Measures harmonic resonance. Checks if the user's input aligns with the
+    thematic vocabulary of the currently active archetype.
+    """
     def __init__(self):
         self.last_phi = 1.0
         self._archetype_map = None
@@ -339,6 +384,11 @@ class CongruenceValidator:
         return min(max_tone, tone_score)
 
 class BoneConsultant:
+    """
+    The Meta-Driver. Pulls together the Liminal, Syntax, and coordinate modules
+    to generate the actual system prompt directives sent to the LLM, effectively
+    telling the AI how deep into the VSL lore it currently is.
+    """
     def __init__(self):
         self.state = VSLState()
         self.active = True
@@ -355,6 +405,7 @@ class BoneConsultant:
 
     def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None,
                            physics: Optional[PhysicsPacket] = None, ):
+        """ Progresses the deep VSL coordinates based on input length, physics, and module analysis. """
         cfg = getattr(BoneConfig, "DRIVERS", None)
         e_growth = getattr(cfg, "VSL_E_GROWTH_MULT", 0.002) if cfg else 0.002
         fatigue_mult = getattr(cfg, "VSL_FATIGUE_MULT", 0.3) if cfg else 0.3
@@ -385,6 +436,7 @@ class BoneConsultant:
                 self.state.active_modules.append("SYNTAX")
 
     def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
+        """ Compiles the current state into hard directives for the LLM system prompt. """
         directives = []
         cfg = getattr(BoneConfig, "DRIVERS", None)
         lim_thresh = getattr(cfg, "VSL_LIMINAL_THRESHOLD", 0.7) if cfg else 0.7

@@ -1,14 +1,24 @@
-""" bone_village.py"""
+"""
+bone_village.py
 
-import math, random, heapq, os, json
-from typing import List, Dict, Any, Tuple, Optional, Set
+The Geographical Manifestation of the Lattice.
+This module translates abstract conversational state into a simulated physical environment.
+It includes the Cartographer (mapping coordinates to zones), the Tinkerer (upgrading
+inventory items via resonance), and the DeathGen engine for finalizing crashes.
+"""
+
+import heapq
+import math
+import random
 from dataclasses import dataclass, field, asdict
-from bone_types import Prisma, PhysicsPacket
-from bone_core import LoreManifest, EventBus
+from typing import List, Dict, Any, Tuple, Optional, Set
 from bone_config import BoneConfig
+from bone_core import LoreManifest, EventBus
 from bone_physics import PhysicsDelta
+from bone_types import Prisma, PhysicsPacket
 
 def _hydrate_packet(p: Any) -> PhysicsPacket:
+    """ Ensures that incoming physics data is always wrapped in a proper PhysicsPacket object. """
     if isinstance(p, PhysicsPacket):
         return p
     packet = PhysicsPacket.void_state()
@@ -19,6 +29,12 @@ def _hydrate_packet(p: Any) -> PhysicsPacket:
     return packet
 
 class TheTinkerer:
+    """
+    The Upgrader.
+    Monitors Gordon's inventory and calculates passive buffs (e.g., 'Time Dilation').
+    If the system operates at high voltage while holding an item, the Tinkerer adds
+    'Resonance' to the item until it eventually ascends into a more powerful form.
+    """
     def __init__(self, gordon_ref, events_ref: EventBus, akashic_ref):
         self.gordon = gordon_ref
         self.events = events_ref
@@ -28,7 +44,8 @@ class TheTinkerer:
         self._inventory_hash = 0
 
     def calculate_passive_deltas(
-        self, inventory_data: List[Dict]) -> List[PhysicsDelta]:
+            self, inventory_data: List[Dict]) -> List[PhysicsDelta]:
+        """ Scans the current inventory for passive traits and applies their thermodynamic effects. """
         state_tuple = tuple(
             sorted(
                 f"{i.get('name', '')}:{','.join(sorted(i.get('passive_traits', [])))}"
@@ -65,6 +82,7 @@ class TheTinkerer:
 
     def audit_tool_use(
             self, packet: PhysicsPacket, inventory_list: List[str], _host_health: Any = None):
+        """ Evaluates if the current conversation is energetic enough to power up a random item. """
         if not inventory_list:
             return
         cfg = getattr(BoneConfig, "VILLAGE", None)
@@ -104,6 +122,7 @@ class TheTinkerer:
                 self.events.log(f"{Prisma.CYN}{msg.format(item=item)}{Prisma.RST}", "VILLAGE")
 
     def _check_ascension(self, old_name: str, inventory_list: List[str], vector: Dict):
+        """ If an item hits critical resonance, it evolves into a new, dynamically generated artifact. """
         resonance = self.tool_resonance.get(old_name, 0.0)
         cfg = getattr(BoneConfig, "VILLAGE", None)
         a_min = getattr(cfg, "TINKER_ASCENSION_MIN", 2.5) if cfg else 2.5
@@ -132,6 +151,7 @@ class TheTinkerer:
 
 @dataclass
 class ParadoxSeed:
+    """ A dormant question waiting to be answered by the user. Watered by specific triggers. """
     question: str
     triggers: Set[str]
     maturity: float = 0.0
@@ -155,6 +175,7 @@ class ParadoxSeed:
 
 
 class MirrorGraph:
+    """ Evaluates the general tone of the user's input (War, Art, Law, Rot) and reflects it back. """
     def __init__(self, events_ref):
         self.events = events_ref
         self.stats = {"WAR": 0.0, "ART": 0.0, "LAW": 0.0, "ROT": 0.0}
@@ -204,6 +225,7 @@ class MirrorGraph:
 
 @dataclass
 class GeniusLoci:
+    """ A physical location generated dynamically from conversational coordinates. """
     id: str
     name: str
     atmosphere: str
@@ -213,7 +235,7 @@ class GeniusLoci:
     entropy_buildup: float = 0.0
 
     def description(self) -> str:
-        base = (f"LOCATION: {self.name}\nATMOSPHERE: {self.atmosphere}\nSMELL: {self.smell}")
+        base = f"LOCATION: {self.name}\nATMOSPHERE: {self.atmosphere}\nSMELL: {self.smell}"
         if self.local_items:
             items = ", ".join(self.local_items)
             base += f"\nVISIBLE ITEMS: {items}"
@@ -227,6 +249,7 @@ class GeniusLoci:
         return cls(**data)
 
 class TheCartographer:
+    """ Maps abstract vector data into physical rooms, creating a navigable world out of dialogue. """
     MAX_NODES = 50
 
     def __init__(self, shimmer_ref):
@@ -272,6 +295,7 @@ class TheCartographer:
 
     @staticmethod
     def _generate_coord_hash(vector: Dict[str, float]) -> str:
+        """ Creates a unique location ID based on the top two thermodynamic dimensions. """
         if not vector:
             return "VOID_DRIFT"
         top_dims = heapq.nlargest(2, vector.items(), key=lambda x: x[1])
@@ -357,6 +381,7 @@ class TheCartographer:
         self.import_atlas(data)
 
 class TownHall:
+    """ The overarching social logic of the Village. Distributes rumors and manages the Almanac. """
     def __init__(self, gordon_ref, events_ref, shimmer_ref, akashic_ref, navigator_ref):
         self.gordon = gordon_ref
         self.events = events_ref
@@ -376,6 +401,7 @@ class TownHall:
 
     @staticmethod
     def consult_almanac(physics: PhysicsPacket) -> str:
+        """ A thematic UI feature. Returns a stylized 'weather report' of the local thermodynamics. """
         almanac = LoreManifest.get_instance().get("ALMANAC") or {}
         forecasts = almanac.get("FORECASTS", {})
         strategies = almanac.get("STRATEGIES", {})
@@ -400,9 +426,7 @@ class TownHall:
         if not self.seeds or not clean_words:
             return blooms
         lower_words = [w.lower() for w in clean_words]
-
         prefix = LoreManifest.get_instance().get_ux("village_strings", "town_bloom") or ""
-
         for seed in self.seeds:
             if seed.bloomed:
                 continue
@@ -413,10 +437,10 @@ class TownHall:
         return blooms
 
     def conduct_census(self, packet: PhysicsPacket, host_stats: Any) -> str:
+        """ Reports on the system latency and thermodynamics to ensure UI awareness of lag/issues. """
         latency = getattr(host_stats, "latency", 0.0) if host_stats else 0.0
         almanac = LoreManifest.get_instance().get("ALMANAC") or {}
         forecasts = almanac.get("FORECASTS", {})
-
         loc_name = "UNKNOWN"
         if self.navigator:
             current_node = self.navigator.world_graph.get(self.navigator.current_node_id)
@@ -504,6 +528,12 @@ class TownHall:
         return "BALANCED", msg_nominal
 
 class DeathGen:
+    """
+    The Reaper.
+    When the system hits 0 ATP and 0 Health, or suffers terminal ROS toxicity,
+    this generates the final error message dictating exactly *why* the session died
+    so the Oroboros can save the scar for the next run.
+    """
     _FALLBACK_PROTOCOLS = {"PREFIXES": ["FATAL ERROR", "SYSTEM HALT", "THE END"],
                            "CAUSES": {"DEFAULT": ["Unknown Error", "Entropy limit reached"]},
                            "VERDICTS": {"DEFAULT": ["End of Line.", "Reboot required."]}, }
@@ -515,7 +545,7 @@ class DeathGen:
 
     @staticmethod
     def eulogy(
-        packet: PhysicsPacket, mito_state: Any, trauma_vector: Dict = None) -> Tuple[str, str]:
+            packet: PhysicsPacket, mito_state: Any, trauma_vector: Dict = None) -> Tuple[str, str]:
         death_data = LoreManifest.get_instance().get("DEATH")
         if not death_data:
             death_data = DeathGen._FALLBACK_PROTOCOLS
@@ -524,7 +554,7 @@ class DeathGen:
         prefix = random.choice(death_data.get("PREFIXES", ["Alas."]))
         cause_list = death_data["CAUSES"].get(cause, death_data["CAUSES"].get("DEFAULT", ["Error"]))
         verdict_list = death_data["VERDICTS"].get(verdict_type, death_data["VERDICTS"].get("HEAVY", ["Done."]))
-        return (f"{prefix} CAUSE: {random.choice(cause_list)}. {random.choice(verdict_list)}", cause)
+        return f"{prefix} CAUSE: {random.choice(cause_list)}. {random.choice(verdict_list)}", cause
 
     @staticmethod
     def _determine_cause(

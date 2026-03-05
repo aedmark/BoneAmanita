@@ -1,4 +1,11 @@
-""" bone_inventory.py"""
+"""
+bone_inventory.py
+
+The Superintendent's Ledger.
+This module handles the physical grounding of the lattice. It manages Gordon's
+inventory, processes the materialization of items from thermodynamic states (Loot),
+and brutally enforces Object-Action Coupling to prevent narrative hallucination.
+"""
 
 import random
 import re
@@ -10,6 +17,11 @@ from bone_types import Prisma
 
 @dataclass
 class Item:
+    """
+    A crystallized packet of thermodynamic reality.
+    Items are not just props; they hold intrinsic value, passive traits,
+    and can possess 'reflex_triggers' that act as emergency fuses for the system.
+    """
     name: str
     description: str
     function: str
@@ -32,6 +44,12 @@ class Item:
                    consume_on_use=data.get("consume_on_use", False), reflex_trigger=data.get("reflex_trigger", None))
 
 class GordonKnot:
+    """
+    The grounding anchor of the VSL.
+    Gordon manages the spatial and material continuity of the simulation.
+    He tracks what you hold, synthesizes abstract concepts into physical items,
+    and vetoes actions that violate local physics.
+    """
     def __init__(self, events=None, mode="ADVENTURE"):
         self.mode = mode.upper()
         self.blueprints = None
@@ -54,9 +72,16 @@ class GordonKnot:
 
     def enforce_object_action_coupling(
             self, user_input: str, current_zone: str) -> Optional[str]:
+        """
+        The Universal Axiom: An action cannot be performed on an object unless
+        the object is present at the location of the action.
+        If the user tries to unlock a door without a key, Gordon interrupts the LLM
+        and rejects the prompt entirely.
+        """
         if self.mode in ["CREATIVE", "CONVERSATION", "TECHNICAL"]:
             return None
         text = user_input.lower()
+        # 1. Location-based Action Coupling
         for action_obj_pair, required_loc in self.location_coupling.items():
             words = action_obj_pair.split()
             if all(re.search(rf"\b{w}\b", text) for w in words):
@@ -64,6 +89,7 @@ class GordonKnot:
                     msg = LoreManifest.get_instance().get_ux("gordon_strings", "premise_loc") or ""
                     return f"{Prisma.SLATE}{msg.format(loc=required_loc, zone=current_zone)}{Prisma.RST}"
         inventory_items = " ".join([i.get("name", "").lower() for i in self.get_inventory_data()])
+        # 2. Inventory-based Action Coupling
         for action, required_objects in self.action_coupling.items():
             verb_pattern = rf"\b(?:i\s+(?:will\s+)?{action}|to\s+{action}|{action}\s+(?:the|a|an|my|some|it|this|that)|{action}ing)\b|^{action}\b"
             if re.search(verb_pattern, text):
@@ -73,6 +99,7 @@ class GordonKnot:
                     req_str = ", ".join(required_objects)
                     msg = LoreManifest.get_instance().get_ux("gordon_strings", "premise_req") or ""
                     return f"{Prisma.SLATE}{msg.format(action=action, req_str=req_str)}{Prisma.RST}"
+        # 3. Explicit Interaction Checks (e.g., 'examine', 'use')
         has_interaction = any(re.search(rf"\b{v}\b", text) for v in self.interaction_verbs)
         if has_interaction:
             all_known = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
@@ -81,6 +108,7 @@ class GordonKnot:
                 if item_lower in text and item_name.upper() not in self.inventory:
                     msg = LoreManifest.get_instance().get_ux("gordon_strings", "premise_inv") or ""
                     return f"{Prisma.SLATE}{msg.format(item=item_lower)}{Prisma.RST}"
+
         return None
 
     def load_config(self):
@@ -110,6 +138,10 @@ class GordonKnot:
             self.max_slots = getattr(BoneConfig.INVENTORY, "MAX_SLOTS", 10)
 
     def process_loot_tags(self, text: str, user_input: str) -> Tuple[str, List[str]]:
+        """
+        Scrapes the LLM's narrative output for explicit [[LOOT: Item]] tags,
+        or falls back to NLP parsing to see if the user organically picked something up.
+        """
         loot_pattern = r"\[\[LOOT:\s*(.*?)\]\]"
         lost_pattern = r"\[\[LOST:\s*(.*?)\]\]"
         raw_loot = re.findall(loot_pattern, text, re.IGNORECASE)
@@ -167,6 +199,7 @@ class GordonKnot:
                 if (item := self.get_item_data(name))]
 
     def acquire(self, tool_name: str) -> str:
+        """ Adds an item to inventory, forcing the oldest item out if pockets are full. """
         tool_name = tool_name.upper() if tool_name else "UNKNOWN"
         if tool_name in self.inventory:
             msg = LoreManifest.get_instance().get_ux("gordon_strings", "inv_duplicate") or ""
@@ -175,6 +208,7 @@ class GordonKnot:
         if not item_obj:
             item_obj = self.get_item_data(tool_name.lower())
         if not item_obj:
+            # On-the-fly registration of unmapped items
             fallback_desc = LoreManifest.get_instance().get_ux("gordon_strings", "fallback_desc") or "???"
             new_item = Item(name=tool_name, description=fallback_desc, function="MISC")
             self.registry[tool_name] = new_item
@@ -199,6 +233,10 @@ class GordonKnot:
 
     def rummage(
             self, physics_ref: Dict, stamina_pool: float) -> Tuple[bool, str, float]:
+        """
+        Burns physical stamina to actively search the semantic noise for items.
+        Only returns items appropriate to the current Voltage/Drag state.
+        """
         cost = 15.0
         if hasattr(BoneConfig, "INVENTORY"):
             cost = getattr(BoneConfig.INVENTORY, "RUMMAGE_COST", 15.0)
@@ -214,6 +252,7 @@ class GordonKnot:
         return True, msg, cost
 
     def _get_loot_candidates(self, physics: Dict) -> List[str]:
+        """ Filters the global registry down to items matching the current thermodynamic weather. """
         candidates = []
         voltage = physics.get("voltage", 0.0)
         drag = physics.get("narrative_drag", 0.0)
@@ -244,6 +283,11 @@ class GordonKnot:
                 self.events.log(f"{Prisma.CYN}{msg.format(name=name)}{Prisma.RST}", "INV")
 
     def synthesize_item(self, physics_vector: Dict[str, float]) -> str:
+        """
+        Procedural generation of artifacts. It looks at the dominant physical dimension
+        (e.g., PSI, VEL, STR) and combines prefixes and suffixes to forge a unique item
+        out of pure conversational energy.
+        """
         if not hasattr(self, "blueprints") or not self.blueprints:
             self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
         fallbacks = self.blueprints.get("FALLBACKS", {})
@@ -252,7 +296,6 @@ class GordonKnot:
         archetype = dim_map.get(dom_dim, "void")
         prefixes = self.blueprints.get("PREFIXES", {}).get(archetype, fallbacks.get("PREFIX", ["Strange"]))
         suffixes = self.blueprints.get("SUFFIXES", {}).get(archetype, fallbacks.get("SUFFIX", ["of Mystery"]))
-
         if self.mode in ["CREATIVE", "CONVERSATION"]:
             base_cat = self.blueprints.get("CREATIVE_BASE_CAT", "ABSTRACT")
             bases = self.blueprints.get("BASES", {}).get(base_cat, fallbacks.get("BASE", ["Concept"]))
@@ -280,6 +323,7 @@ class GordonKnot:
         return clean_id
 
     def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
+        """ Secondary NLP parser to catch implicit item acquisitions without formal tags. """
         text = (user_text + " " + sys_text).lower()
         sys_lower = sys_text.lower()
         for refusal in self.refusal_markers:
@@ -320,6 +364,11 @@ class GordonKnot:
         return True, msg.format(item=item_name, usage_msg=item.usage_msg)
 
     def emergency_reflex(self, physics_ref: Dict) -> Tuple[bool, Optional[str]]:
+        """
+        Hardware Fuses. If the lattice approaches a critical collapse state
+        (e.g., Voltage > 18.0), and Gordon holds an item with a matching reflex trigger,
+        that item is instantly consumed to absorb the blow and reset the physics to a safe state.
+        """
         voltage = physics_ref.get("voltage", 0.0)
         drag = physics_ref.get("narrative_drag", 0.0)
         kappa = physics_ref.get("kappa", 0.5)
@@ -350,4 +399,5 @@ class GordonKnot:
                 physics_ref["kappa"] = k_reset
                 msg = LoreManifest.get_instance().get_ux("gordon_strings", "reflex_kappa") or ""
                 return True, f"{Prisma.GRN}{msg.format(name=name)}{Prisma.RST}"
+
         return False, None
