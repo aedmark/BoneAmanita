@@ -2,6 +2,7 @@
 
 import json
 import math
+import os
 import random
 import re
 import time
@@ -177,11 +178,12 @@ class LLMInterface:
     def __init__(self, events_ref: Optional[EventBus] = None, provider: str = None, base_url: str = None,
                  api_key: str = None, model: str = None, dreamer: Any = None, ):
         self.events = events_ref
+        env_url = os.environ.get("OLLAMA_BASE_URL")
         self.provider = (provider or BoneConfig.PROVIDER).lower()
         self.api_key = api_key or BoneConfig.API_KEY
         self.model = model or BoneConfig.MODEL
         defaults = getattr(BoneConfig, "DEFAULT_LLM_ENDPOINTS", {})
-        self.base_url = base_url or defaults.get(self.provider, "https://api.openai.com/v1/chat/completions", )
+        self.base_url = env_url or base_url or defaults.get(self.provider, "https://api.openai.com/v1/chat/completions", )
         self.dreamer = dreamer
         self.failure_count = 0
         cfg = getattr(BoneConfig, "CORTEX", None)
@@ -303,7 +305,7 @@ class LLMInterface:
         return self.mock_generation(prompt, reason="SILENCE")
 
     def _local_fallback(self, prompt: str, params: Dict) -> str:
-        url = getattr(BoneConfig, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions", )
+        url = os.environ.get("OLLAMA_BASE_URL") or getattr(BoneConfig, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
         model = getattr(BoneConfig, "OLLAMA_MODEL_ID", "llama3")
         fallback_payload = {"model": model, "messages": [{"role": "user", "content": prompt}], "stream": False,
                             "temperature": params.get("temperature", 0.4),

@@ -38,6 +38,24 @@
             gap: 20px;
             overflow-y: auto;
         }
+        /* Markdown Rendering Styles */
+        strong {
+            color: #ffffff;
+            font-weight: bold;
+            text-shadow: 0 0 3px rgba(255,255,255,0.3);
+        }
+        em {
+            color: var(--accent-cyn);
+            font-style: italic;
+        }
+        .md-code {
+            background: #222222;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: var(--accent-grn);
+            border: 1px solid #333;
+        }
 
         .metric-block { margin-bottom: 15px; }
         .metric-title { color: var(--text-dim); font-size: 0.8em; text-transform: uppercase; margin-bottom: 5px; }
@@ -51,14 +69,29 @@
         #main-view {
             display: flex;
             flex-direction: column;
-            height: 100%;
+            height: 100vh; /* Anchor it strictly to the viewport height */
+            min-height: 0; /* Prevent flexbox from overflowing */
         }
 
         #chat-history {
-            flex-grow: 1;
+            flex: 1 1 0; /* The critical strut: grow, shrink, but start at 0 height */
             padding: 20px 40px;
-            overflow-y: auto;
+            overflow-y: auto; /* Force the scrollbar */
             line-height: 1.6;
+        }
+
+        #chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-history::-webkit-scrollbar-track {
+            background: var(--panel-bg);
+        }
+        #chat-history::-webkit-scrollbar-thumb {
+            background: var(--text-dim);
+            border-radius: 4px;
+        }
+        #chat-history::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-cyn);
         }
 
         .log-entry { margin-bottom: 10px; }
@@ -177,17 +210,31 @@
         const btnReset = document.getElementById("btn-reset");
 
         // The ANSI to HTML Translator
-        function ansiToHtml(text) {
+        // The ANSI & Markdown to HTML Translator
+        function formatText(text) {
             if (!text) return "";
 
+            // 1. Parse ANSI Color Codes
             const ansiMap = {
                 '30': 'black', '31': 'var(--accent-red)', '32': 'var(--accent-grn)',
                 '33': '#dddd00', '34': 'blue', '35': 'var(--accent-mag)',
                 '36': 'var(--accent-cyn)', '37': 'white', '90': 'var(--text-dim)',
-                '97': 'white'};
+                '97': 'white'
+            };
             let html = text.replace(/\x1b\[(\d+)(;\d+)*m/g, (match, p1) => {
                 if (p1 === '0') return '</span>';
-                return ansiMap[p1] ? `<span style="color: ${ansiMap[p1]}">` : '<span>';});
+                return ansiMap[p1] ? `<span style="color: ${ansiMap[p1]}">` : '<span>';
+            });
+
+            // 2. Parse Basic Markdown
+            // Bold (**text**)
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Italic (*text*)
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            // Inline Code (`text`)
+            html = html.replace(/`([^`]+)`/g, '<span class="md-code">$1</span>');
+
+            // 3. Parse Line Breaks
             return html.replace(/\n/g, '<br>');
         }
 
@@ -226,9 +273,41 @@
                 /** @type {VSLResponse} */
                 const data = JSON.parse(event.data);
 
-                // Now the linter knows exactly what logs, ui, metrics, and physics are.
-                if (data.logs) data.logs.forEach((log) => appendLog(log, "log-sys"));
-                if (data.ui) appendLog(data.ui, "log-sys");
+                // 1. Group the system logs into a collapsible details box
+                if (data.logs && data.logs.length > 0) {
+                    const details = document.createElement("details");
+                    details.className = "log-entry log-sys";
+                    details.style.marginBottom = "15px";
+
+                    const summary = document.createElement("summary");
+                    summary.innerText = "SYSTEM LOGS";
+                    summary.style.cursor = "pointer";
+                    summary.style.color = "var(--text-dim)";
+                    summary.style.userSelect = "none";
+                    summary.style.fontWeight = "bold";
+                    details.appendChild(summary);
+
+                    const logsContainer = document.createElement("div");
+                    logsContainer.style.paddingLeft = "15px";
+                    logsContainer.style.marginTop = "8px";
+                    logsContainer.style.borderLeft = "1px solid #444";
+
+                    data.logs.forEach((log) => {
+                        const logLine = document.createElement("div");
+                        logLine.innerHTML = formatText(log);
+                        logsContainer.appendChild(logLine);
+                    });
+
+                    details.appendChild(logsContainer);
+                    chatHistory.appendChild(details);
+                }
+
+                // 2. Output the actual narrative text normally
+                if (data.ui) {
+                    appendLog(data.ui, "log-sys");
+                }
+
+                chatHistory.scrollTop = chatHistory.scrollHeight;
 
                 updateHUD(data);
             } catch (error) {
@@ -241,8 +320,8 @@
             div.className = `log-entry ${className}`;
             if (id) div.id = id;
 
-            // Use our ANSI parser and inject as HTML
-            div.innerHTML = ansiToHtml(text);
+            // Use our new multi-layered parser
+            div.innerHTML = formatText(text);
 
             chatHistory.appendChild(div);
             chatHistory.scrollTop = chatHistory.scrollHeight;

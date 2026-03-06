@@ -59,24 +59,28 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     app.state.reset_triggered = False # Reset the flag on new connection
 
-    if engine.tick_count == 0:
-        boot_packet = engine.engage_cold_boot()
-        if boot_packet:
-            if "ui" in boot_packet:
-                boot_packet["ui"] = strip_hud(boot_packet["ui"])
-            inject_metrics(boot_packet)
-            clean_boot = sanitize_payload(boot_packet)
-            await websocket.send_text(json.dumps(clean_boot, cls=BoneJSONEncoder))
-
     try:
+        # --- THE FIX: Wrap the boot sequence in the try block ---
+        if engine.tick_count == 0:
+            boot_packet = engine.engage_cold_boot()
+            if boot_packet:
+                if "ui" in boot_packet:
+                    boot_packet["ui"] = strip_hud(boot_packet["ui"])
+                inject_metrics(boot_packet)
+                clean_boot = sanitize_payload(boot_packet)
+                # If the browser timed out while waiting for this, it will throw here.
+                await websocket.send_text(json.dumps(clean_boot, cls=BoneJSONEncoder))
+
+        # --- The Main Loop ---
         while True:
             user_message = await websocket.receive_text()
-            snapshot = orchestrator.run_headless_turn(user_message)
+            snapshot = engine.process_turn(user_message)
             inject_metrics(snapshot)
 
             clean_snapshot = sanitize_payload(snapshot)
             await websocket.send_text(json.dumps(clean_snapshot, cls=BoneJSONEncoder))
 
+    # --- Catch ALL disconnects gracefully ---
     except WebSocketDisconnect:
         print("[SERVER] Client disconnected.")
         if not getattr(app.state, "reset_triggered", False):
@@ -95,8 +99,8 @@ async def factory_reset():
         shutil.rmtree("logs")
     if os.path.exists("memories"):
         shutil.rmtree("memories")
-    if os.path.exists("saves/quicksave.json"):
-        os.remove("saves/quicksave.json")
+    if os.path.exists("saves"):
+        shutil.rmtree("saves")
     if os.path.exists("bone_config.json"):
         os.rename("bone_config.json", f"bone_config.json.{int(time.time())}.bak")
 
