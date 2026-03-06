@@ -3,3 +3,4 @@
 /.venv/
 /.idea/
 /bone_config.json
+/dev/venv/
