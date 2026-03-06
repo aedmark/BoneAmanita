@@ -1,4 +1,11 @@
-""" bone_physics"""
+"""
+bone_physics.py
+
+The literal physics engine of the VSL lattice.
+This module is responsible for collapsing the subjective meaning of user input into
+objective, mathematical vectors: Energy (Voltage, ATP), Matter (Lexical Mass), and
+Space (Narrative Drag, Zones). It enforces the laws of thermodynamics on the conversation.
+"""
 
 import math
 import random
@@ -13,12 +20,14 @@ from bone_types import Prisma, PhysicsPacket, CycleContext, SpatialState, Materi
 
 @dataclass
 class PhysicsDelta:
+    """ A discrete unit of change applied to the physical state (e.g., +15 Voltage from Adrenaline). """
     operator: str
     field: str
     value: float
     source: str
     message: Optional[str] = None
 
+# Core thermodynamic limits. Exceeding V_MAX blows the system fuse.
 PHYS_CFG = {"V_MAX": 150.0, "V_FLOOR": getattr(BoneConfig.PHYSICS, "VOLTAGE_FLOOR", 0.0),
             "V_CRIT": getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0),
             "DRAG_FLOOR": getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0),
@@ -26,6 +35,7 @@ PHYS_CFG = {"V_MAX": 150.0, "V_FLOOR": getattr(BoneConfig.PHYSICS, "VOLTAGE_FLOO
 
 @dataclass
 class GeodesicVector:
+    """ The collapsed state of a sentence, containing its structural forces and deep dimensions. """
     tension: float
     compression: float
     coherence: float
@@ -33,9 +43,14 @@ class GeodesicVector:
     dimensions: Dict[str, float]
 
 class GeodesicEngine:
+    """
+    The core mathematical forge. It takes raw token counts from the Lexicon
+    and translates them into physical forces like tension, compression, and viscosity.
+    """
     @staticmethod
     def collapse_wavefunction(
-        clean_words: List[str], counts: Dict[str, int]) -> GeodesicVector:
+            clean_words: List[str], counts: Dict[str, int]) -> GeodesicVector:
+        """ The moment of observation. Converts a cloud of lexical probabilities into hard physical forces. """
         volume = max(1, len(clean_words))
         masses = GeodesicEngine._weigh_mass(counts)
         forces = GeodesicEngine._calculate_forces(masses, counts, volume)
@@ -45,16 +60,22 @@ class GeodesicEngine:
 
     @staticmethod
     def _weigh_mass(counts: Dict[str, int]) -> Dict[str, float]:
+        """ Groups specific semantic categories into primary 'masses' that exert gravity. """
         keys = ["heavy", "kinetic", "constructive", "abstract", "play", "social", "explosive", "void", "liminal",
                 "meat", "harvest", "pareidolia", "crisis_term", ]
         return {k: float(counts.get(k, 0)) for k in keys}
 
     @staticmethod
     def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int) -> Dict[str, float]:
+        """
+        Calculates Tension (Creative Electrical Charge) and Compression (Narrative Drag/Friction).
+        Heavy words increase friction; Kinetic and Play words create lift; Solvents provide lubrication.
+        """
         cfg = BoneConfig.PHYSICS
         gc_dict = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
         GC = type('GC', (), gc_dict)
         safe_volume = max(1, volume)
+        # Tension calculation (electrical buildup)
         w_heavy = getattr(cfg, "WEIGHT_HEAVY", 2.0)
         w_kinetic = getattr(cfg, "WEIGHT_KINETIC", 1.5)
         w_explosive = getattr(cfg, "WEIGHT_EXPLOSIVE", 3.0)
@@ -63,16 +84,19 @@ class GeodesicEngine:
         total_kinetic = masses["kinetic"] + masses["explosive"]
         kinetic_gain = getattr(BoneConfig, "KINETIC_GAIN", 1.0)
         base_tension = ((raw_tension_mass / safe_volume) * GC.DENSITY_SCALAR * kinetic_gain)
+        # Squelch limits prevent tiny, single-word inputs from having massive voltage
         squelch_limit = (getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0) * GC.SQUELCH_LIMIT_MULT)
         mass_scalar = min(1.0, safe_volume / squelch_limit)
         if safe_volume < GC.SAFE_VOL_THRESHOLD:
             mass_scalar *= GC.MIN_VOLUME_SCALAR
         tension = round(min(100.0, base_tension * mass_scalar), 2)
+        # Drag/Friction calculation
         shear_rate = total_kinetic / safe_volume
         suburban_friction = (math.log1p(counts.get("suburban", 0)) * GC.SUBURBAN_FRICTION_LOG_BASE)
         raw_friction = suburban_friction + (masses["heavy"] * GC.HEAVY_FRICTION_MULT)
         lubrication = 1.0 + (counts.get("solvents", 0) * GC.SOLVENT_LUBRICATION_FACTOR)
         dynamic_viscosity = (raw_friction / lubrication) / (1.0 + (shear_rate * GC.SHEAR_RESISTANCE_SCALAR))
+        # Lift calculation (counteracts Drag)
         kinetic_lift = (total_kinetic * GC.KINETIC_LIFT_RATIO) / (masses["heavy"] * 0.5 + 1.0)
         lift = (masses["play"] * GC.PLAY_LIFT_MULT) + kinetic_lift
         viscosity_density = dynamic_viscosity / safe_volume
@@ -80,6 +104,7 @@ class GeodesicEngine:
         raw_compression = (viscosity_density - lift_density) * GC.COMPRESSION_SCALAR
         raw_compression *= getattr(BoneConfig, "SIGNAL_DRAG_MULTIPLIER", 1.0)
         compression = round(max(-5.0, min(PHYS_CFG["DRAG_HALT"], raw_compression * mass_scalar)), 2)
+        # Coherence and Abstraction
         structural_mass = masses["heavy"] + masses["constructive"] + masses["harvest"]
         structural_mass -= masses["void"] * 0.5
         structural_mass = max(0.0, structural_mass)
@@ -92,24 +117,33 @@ class GeodesicEngine:
 
     @staticmethod
     def _calculate_dimensions(masses, forces, counts, volume) -> Dict[str, float]:
+        """ Maps the forces into the 8 core dimensions of the I-Ching/Trigram system (VEL, STR, ENT, etc.). """
         inv_vol = 1.0 / max(1, volume)
         base_mass = 0.1
         str_mass = masses["heavy"] * 2.0 + masses["constructive"] + masses["harvest"]
         ent_mass = ((counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"])
         psi_mass = forces["abstraction"]
-        return {"VEL": max(0.0, min(1.0, (masses["kinetic"] * 2.0 - forces["compression"] + base_mass)
-                                    * inv_vol, ), ), "STR": max(0.0, min(1.0, (str_mass + base_mass) * inv_vol)), "ENT": max(0.0, min(1.0, ent_mass * inv_vol)),
-            "PHI": max(0.0, min(1.0, (masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol), ), "PSI": max(0.0, min(1.0, psi_mass)), "BET": max(0.0, min(1.0, (masses["social"] * 2.0) * inv_vol)),
-            "DEL": max(0.0, min(1.0, (masses["play"] * 3.0) * inv_vol)),
-            "E": max(0.0, min(1.0, (counts.get("solvents", 0)) * inv_vol)), }
+        return {"VEL": max(0.0, min(1.0, (masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol, ), ),
+                "STR": max(0.0, min(1.0, (str_mass + base_mass) * inv_vol)),
+                "ENT": max(0.0, min(1.0, ent_mass * inv_vol)),
+                "PHI": max(0.0, min(1.0, (masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol), ),
+                "PSI": max(0.0, min(1.0, psi_mass)),
+                "BET": max(0.0, min(1.0, (masses["social"] * 2.0) * inv_vol)),
+                "DEL": max(0.0, min(1.0, (masses["play"] * 3.0) * inv_vol)),
+                "E": max(0.0, min(1.0, (counts.get("solvents", 0)) * inv_vol)), }
 
 class TheGatekeeper:
+    """
+    Phase 4 Security. The bouncer at the edge of the metabolism.
+    Halts execution before ATP is drained if the input is fundamentally incompatible with life.
+    """
     def __init__(self, lexicon_ref, memory_ref=None):
         self.lex = lexicon_ref
         self.mem = memory_ref
 
     def check_entry(
-        self, ctx: CycleContext, current_atp: float = 20.0) -> Tuple[bool, Optional[Dict]]:
+            self, ctx: CycleContext, current_atp: float = 20.0) -> Tuple[bool, Optional[Dict]]:
+        """ Audits the incoming packet for fatal toxicity, starvation, curses, or syntax overflow. """
         phys = ctx.physics
         starvation_threshold = getattr(BoneConfig.BIO, "ATP_STARVATION", 5.0)
         if current_atp < (starvation_threshold * 0.5):
@@ -131,10 +165,11 @@ class TheGatekeeper:
         return True, None
 
     def _audit_safety(self, words: List[str]) -> bool:
+        """ Checks the input array against the Lexicon's list of memetic hazards. """
         cursed = self.lex.get("cursed")
         return (not cursed.isdisjoint(words)
-            if isinstance(cursed, set)
-            else any(w in cursed for w in words))
+                if isinstance(cursed, set)
+                else any(w in cursed for w in words))
 
     @staticmethod
     def _pack_refusal(ctx, type_str, ui_msg):
@@ -142,12 +177,20 @@ class TheGatekeeper:
 
 
 class QuantumObserver:
+    """
+    The core monitoring lens. It reads the text string and creates the formal `PhysicsPacket`,
+    unifying Energy, Matter, and Space into a single state object that drives the rest of the cycle.
+    """
     def __init__(self, events):
         self.events = events
         self.voltage_history: Deque[float] = deque(maxlen=5)
         self.last_physics_packet: Optional[PhysicsPacket] = None
 
     def gaze(self, text: str, graph: Dict = None) -> Dict:
+        """
+        The primary observation method. Cleans text, tallies categories, collapses the
+        wavefunction, and applies hardcoded semantic triggers (e.g., 'VOID' spikes Abstraction).
+        """
         clean_words = LexiconService.clean(text)
         counts = self._tally_categories(clean_words)
         geo = GeodesicEngine.collapse_wavefunction(clean_words, counts)
@@ -156,6 +199,7 @@ class QuantumObserver:
         (e_metric, beta_val, scope_val, depth_val, conn_val, phi_val, delta_val, lq_val,) = self._calculate_metrics(text, counts)
         text_upper = text.upper()
         cfg_deep = getattr(BoneConfig, "PHYSICS_DEEP", None)
+        # Hardcoded environmental overrides (Systemic Triggers)
         if text.count("!") >= 3 or "ACCELERATE" in text_upper or "FASTER" in text_upper:
             v_accel = getattr(cfg_deep, "ACCELERATE_VOLTAGE", 160.0) if cfg_deep else 160.0
             smoothed_voltage = max(smoothed_voltage, v_accel)
@@ -166,13 +210,14 @@ class QuantumObserver:
         if "VOID" in text_upper or "ABYSS" in text_upper:
             v_void = getattr(cfg_deep, "VOID_ABSTRACTION", 0.9) if cfg_deep else 0.9
             geo.abstraction = max(geo.abstraction, v_void)
-        if "POTATO BUN" in text_upper or "NONSENSE" in text_upper:
+        if "POTATO BUN" in text_upper or "NONSENSE" in text_upper: # Jester invocation
             v_pot_d = getattr(cfg_deep, "POTATO_BUN_DELTA", 0.85) if cfg_deep else 0.85
             v_pot_v = getattr(cfg_deep, "POTATO_BUN_VOLTAGE", 15.0) if cfg_deep else 15.0
             delta_val = max(delta_val, v_pot_d)
             smoothed_voltage = min(smoothed_voltage, v_pot_v)
         valence = LexiconService.get_valence(clean_words)
         graph_mass = self._calculate_graph_mass(clean_words, graph)
+        # Assemble the 3-part Holy Trinity of the Physics Packet
         energy = EnergyState(voltage=smoothed_voltage, entropy=e_metric, beta_index=beta_val, contradiction=beta_val,
                              scope=scope_val, depth=depth_val, connectivity=conn_val, resonance=phi_val,
                              silence=delta_val, lq=lq_val, mass=round(graph_mass, 1), psi=geo.abstraction,
@@ -181,14 +226,17 @@ class QuantumObserver:
                                vector=geo.dimensions, truth_ratio=0.5, )
         space = SpatialState(narrative_drag=geo.compression, zone=self._determine_zone(geo.dimensions),
                              atmosphere="NEUTRAL", flow_state=self._determine_flow(smoothed_voltage, geo.coherence), )
+
         self.last_physics_packet = PhysicsPacket(energy=energy, matter=matter, space=space)
         packet_dict = self.last_physics_packet.to_dict()
+
         if hasattr(self.events, "publish"):
             self.events.publish("PHYSICS_CALCULATED", packet_dict)
         return {"physics": self.last_physics_packet, "clean_words": clean_words}
 
     @staticmethod
     def _tally_categories(clean_words: List[str]) -> Counter:
+        """ Sorts individual words into their semantic categories (e.g., 'heavy', 'kinetic', 'antigen'). """
         counts = Counter()
         solvents = LexiconService.get("solvents") or set()
         for w in clean_words:
@@ -206,6 +254,7 @@ class QuantumObserver:
 
     @staticmethod
     def _calculate_graph_mass(words: List[str], graph: Optional[Dict]) -> float:
+        """ Calculates how much 'memory weight' the current sentence touches in the Mycelial Network. """
         if not graph:
             return 0.0
         total_mass = 0.0
@@ -220,10 +269,15 @@ class QuantumObserver:
     @staticmethod
     def _calculate_metrics(
             text: str, counts: Dict[str, int]) -> Tuple[float, float, float, float, float, float, float, float]:
+        """
+        The algorithmic calculation of the deep vein dimensions:
+        Entropy (Chaos), Beta (Contradiction), Resonance, Silence (Delta), and Loop Quotient (LQ).
+        """
         length = len(text)
         if length == 0:
             return 0.0, 0.0, 0.3, 0.3, 0.2
         cfg = getattr(BoneConfig, "PHYSICS", None)
+        # Entropy & Glue
         scalar = getattr(cfg, "TEXT_LENGTH_SCALAR", 1500.0) if cfg else 1500.0
         g_mult = getattr(cfg, "GLUE_FACTOR_MULT", 2.0) if cfg else 2.0
         g_div = getattr(cfg, "GLUE_SOLVENT_DIV", 5.0) if cfg else 5.0
@@ -233,6 +287,7 @@ class QuantumObserver:
         solvent_density = solvents / max(1.0, length / g_div)
         glue_factor = min(1.0, solvent_density * g_mult)
         e_metric = min(1.0, raw_chaos * (1.0 - (glue_factor * e_red)))
+        # Structure & Contradiction (Beta)
         structure_chars = sum(1 for char in text if char in "!?%@#$;,")
         heavy_words = (counts.get("heavy", 0) + counts.get("constructive", 0) + counts.get("sacred", 0))
         b_pen = getattr(cfg, "BETA_SCORE_PENALTY", 2) if cfg else 2
@@ -242,6 +297,7 @@ class QuantumObserver:
         beta_index = min(1.0, math.log1p(structure_score + 1) / math.log1p(length * b_log_scalar + 1))
         if length < b_short_lim:
             beta_index *= length / float(b_short_lim)
+        # Scope, Depth, Connectivity, Resonance
         safe_len = max(1, len(text.split()))
         s_base = getattr(cfg, "SCOPE_BASE", 0.2) if cfg else 0.2
         d_base = getattr(cfg, "DEPTH_BASE", 0.1) if cfg else 0.1
@@ -251,6 +307,7 @@ class QuantumObserver:
         depth = min(1.0, (counts.get("heavy", 0) + counts.get("constructive", 0)) / safe_len + d_base)
         connectivity = min(1.0, (counts.get("social", 0) + solvents) / safe_len + c_base)
         resonance = min(1.0, ((counts.get("social", 0) * r_mult) + counts.get("constructive", 0)) / safe_len + (1.0 - e_metric))
+        # Silence & Loop Quotient
         sil_div = getattr(cfg, "SILENCE_DIV", 100.0) if cfg else 100.0
         sil_min = getattr(cfg, "SILENCE_MIN", 0.8) if cfg else 0.8
         sil_short = getattr(cfg, "SILENCE_SHORT_LIMIT", 10) if cfg else 10
@@ -265,6 +322,7 @@ class QuantumObserver:
 
     @staticmethod
     def _determine_flow(v: float, k: float) -> str:
+        """ Classifies the energetic state. High Voltage + High Coherence = Superconductive. """
         volt_flow = getattr(BoneConfig.PHYSICS, "VOLTAGE_HIGH", 12.0)
         kappa_strong = 0.8
         if v > volt_flow and k > kappa_strong:
@@ -275,6 +333,7 @@ class QuantumObserver:
 
     @staticmethod
     def _determine_zone(vector: Dict[str, float]) -> str:
+        """ Maps the dominant numeric dimension to a thematic structural zone. """
         if not vector:
             return "COURTYARD"
         dom = max(vector, key=vector.get)
@@ -287,8 +346,13 @@ class QuantumObserver:
         return "COURTYARD"
 
 class SurfaceTension:
+    """ Checks the structural integrity limits of the current physics packet. """
     @staticmethod
     def audit_hubris(physics: Dict[str, Any]) -> Tuple[bool, str, str]:
+        """
+        Detects if the user is attempting to build too high (Voltage) without
+        a solid foundation (Coherence/Kappa). The Icarus check.
+        """
         voltage = physics.get("voltage", 0.0)
         coherence = physics.get("kappa", 0.5)
         volt_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
@@ -302,6 +366,7 @@ class SurfaceTension:
         return False, "", ""
 
 class ChromaScope:
+    """ The visualizer. Paints text with ANSI escape codes based on its dominant physical vector. """
     @staticmethod
     def modulate(text: str, vector: Dict[str, float]) -> str:
         if not vector or not any(vector.values()):
@@ -316,6 +381,10 @@ class ChromaScope:
         return f"{selected_color}{text}{Prisma.RST}"
 
 class ZoneInertia:
+    """
+    Prevents the system from violently oscillating between zones (e.g., Courtyard to Forge to Aerie)
+    by applying a mathematical friction (inertia) and a 'strain gauge' to narrative shifts.
+    """
     def __init__(self, inertia=0.7):
         self.inertia = inertia
         cfg = getattr(BoneConfig, "PHYSICS", None)
@@ -329,15 +398,13 @@ class ZoneInertia:
         self.strain_gauge = 0.0
 
     def toggle_anchor(self) -> bool:
+        """ Manually locks the current zone, forcing the system to resist migration. """
         self.is_anchored = not self.is_anchored
         self.strain_gauge = 0.0
         return self.is_anchored
 
-    def stabilize(
-            self,
-            proposed_zone: str,
-            physics: Dict[str, Any],
-            cosmic_state: Tuple[str, float, str],) -> Tuple[str, Optional[str]]:
+    def stabilize(self, proposed_zone: str, physics: Dict[str, Any], cosmic_state: Tuple[str, float, str], ) -> Tuple[str, Optional[str]]:
+        """ Determines if a proposed zone change has enough pressure to overcome inertia. """
         beta = physics.get("beta_index", 1.0)
         truth = physics.get("truth_ratio", 0.5)
         grav_pull = 1.0 if cosmic_state[0] != "VOID_DRIFT" else 0.0
@@ -360,6 +427,7 @@ class ZoneInertia:
 
     def _handle_anchored_state(
             self, proposed_zone: str, pressure: float) -> Tuple[str, Optional[str]]:
+        """ Calculates strain on an active anchor. If strain exceeds the limit, the anchor breaks. """
         if proposed_zone == self.current_zone:
             self.strain_gauge = max(0.0, self.strain_gauge - 0.1)
             return self.current_zone, None
@@ -375,7 +443,7 @@ class ZoneInertia:
                 f"{Prisma.OCHRE}{msg.format(proposed_zone=proposed_zone, strain=self.strain_gauge, limit=self.strain_limit)}{Prisma.RST}",)
 
     def _attempt_migration(
-        self, proposed_zone: str, pressure: float) -> Tuple[str, Optional[str]]:
+            self, proposed_zone: str, pressure: float) -> Tuple[str, Optional[str]]:
         prob = (1.0 - self.inertia) + pressure
         if proposed_zone in ["AERIE", "THE_FORGE"]:
             prob += 0.2
@@ -393,6 +461,11 @@ class ZoneInertia:
         return cosmic_drag_penalty
 
 class CosmicDynamics:
+    """
+    Models the conversational state space as an astrophysical map. Words that are used
+    heavily in the Mycelial Network become 'Gravity Wells', and the system checks to see
+    if the current thought is orbiting one of these memories or drifting in the Void.
+    """
     def __init__(self):
         self.voltage_history: Deque[float] = deque(maxlen=20)
         self.cached_wells: Dict = {}
@@ -415,7 +488,8 @@ class CosmicDynamics:
         self.voltage_history.append(voltage)
 
     def check_gravity(
-        self, current_drift: float, psi: float) -> Tuple[float, List[str]]:
+            self, current_drift: float, psi: float) -> Tuple[float, List[str]]:
+        """ Applies gravitational drag. High Abstraction (PSI) reduces drag (floatation in the Void). """
         logs = []
         new_drag = current_drift
         drag_floor = getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0)
@@ -433,6 +507,10 @@ class CosmicDynamics:
 
     def analyze_orbit(
             self, network: Any, clean_words: List[str]) -> Tuple[str, float, str]:
+        """
+        Calculates if the current conversation is trapped in the orbit of an old memory well,
+        balanced between two competing topics (Lagrange point), or forging new territory (Flow).
+        """
         if (not clean_words
                 or not network
                 or not hasattr(network, "graph")
@@ -441,7 +519,7 @@ class CosmicDynamics:
             return "VOID_DRIFT", 3.0, self.logs.get("VOID", fallback_msg),
         current_time = int(time.time())
         if (not self.cached_wells
-            or (current_time - self.last_scan_tick) > self.SCAN_INTERVAL):
+                or (current_time - self.last_scan_tick) > self.SCAN_INTERVAL):
             gravity_wells, geodesic_hubs = self._scan_network_mass(network)
             self.cached_wells = gravity_wells
             self.cached_hubs = geodesic_hubs
@@ -503,6 +581,7 @@ class CosmicDynamics:
         sorted_basins = sorted(basin_pulls.items(), key=lambda x: x[1], reverse=True)
         primary_node, primary_str = sorted_basins[0]
         lagrange_tol = getattr(BoneConfig, "LAGRANGE_TOLERANCE", 2.0)
+        # Check if caught perfectly between two competing gravity wells
         if len(sorted_basins) > 1:
             secondary_node, secondary_str = sorted_basins[1]
             if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:
@@ -520,6 +599,10 @@ class CosmicDynamics:
         return "ORBITAL", 0.0, msg
 
 def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> PhysicsPacket:
+    """
+    Closes the loop between mind and body. Translates the biological 'feelings' (Qualia)
+    back into hard physical limits (e.g., a 'Gut Tightening' increases Narrative Drag).
+    """
     feedback = physics_packet.snapshot()
     tone_effects = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TONE_EFFECTS") or {}
     effects = tone_effects.get(qualia.tone, {})
@@ -546,6 +629,11 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> Physic
     return feedback
 
 class CycleStabilizer:
+    """
+    A Proportional-Integral-Derivative (PID) control layer that ensures the lattice
+    does not tear itself apart. If voltage spikes too rapidly, the stabilizer applies
+    counter-force. If voltage hits the HARD_FUSE limit, the system blows a fuse and resets.
+    """
     def __init__(self, events_ref, governor_ref):
         self.events = events_ref
         self.governor = governor_ref
@@ -558,10 +646,12 @@ class CycleStabilizer:
             self.events.subscribe("DOMESTICATION_PENALTY", self._on_domestication_penalty)
 
     def _on_domestication_penalty(self, payload):
+        """ Tracks penalties applied by the HumanityAnchor when the system relies too heavily on algorithmic safety. """
         amount = payload.get("drag_penalty", 0.0)
         self.pending_drag += amount
 
     def stabilize(self, ctx: CycleContext, current_phase: str):
+        """ Executes the PID loop, calculating dt and applying restorative force to Voltage and Drag. """
         p = ctx.physics
         if p.voltage >= self.HARD_FUSE_VOLTAGE:
             msg = LoreManifest.get_instance().get_ux("physics_strings", "stabilizer_fuse") or ""

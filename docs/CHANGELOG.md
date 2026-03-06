@@ -1,5 +1,26 @@
 # BONEAMANITA v16 CHANGELOG
 
+### **BONEAMANITA v16.4.0 "The Somatic Web"**
+
+#### **🌐 THE MIDDLEWARE BRIDGE (`bone_server.py`)**
+
+* **FastAPI & WebSockets:** Decoupled the engine from the terminal REPL. The `GeodesicOrchestrator` now runs via `run_headless_turn()` over a persistent WebSocket connection, allowing the system to breathe asynchronously.
+* **Payload Sanitation:** Added a recursive `sanitize_payload()` membrane to intercept nested physics outputs. This automatically casts strict Python types (like `tuple` dictionary keys from the semantic node map) into JSON-safe strings, preventing serialization crashes at the API boundary.
+* **Boot HUD Stripping:** Implemented `strip_hud()` to surgically extract the ASCII dashboard from the `engage_cold_boot` narrative string, preventing legacy terminal artifacts from bleeding into the web UI.
+
+#### **🖥️ THE VANILLA FRONTEND (`index.html`)**
+
+* **Zero-Bloat DOM Mapping:** Built a pure HTML/CSS/JS dashboard (no React, no Webpack). The frontend binds raw JSON metrics (ATP, ROS, Voltage, Drag, Entropy, Void) directly to dynamic CSS progress bars and text spans.
+* **The ANSI Translator (`ansiToHtml`):** Rather than deleting `Prisma`'s semantic color codes (which convey systemic qualia), a custom regex parser intercepts terminal escape sequences (`\x1b[36m`) and translates them into styled HTML spans on the fly.
+* **Strict Mode Isolation:** Wrapped the frontend logic in an IIFE with `"use strict"` and replaced inline HTML attributes with explicit DOM event listeners, silencing linter warnings and sealing the global namespace.
+
+#### **🛠️ QUALITY OF LIFE APIs (The Schur Lens)**
+
+* **Factory Reset (`/api/reset`):** Added a dedicated endpoint to burn `bone_config.json`, `quicksave.json`, and cached `memories`/`logs` directories. Includes a state flag (`app.state.reset_triggered`) to prevent the WebSocket `onclose` event from immediately recreating the purged save file.
+* **Transcript Export (`/api/export_transcript`):** Leveraged the `TelemetryService` black box to expose a human-readable, downloadable `.txt` transcript of the last 50 exchanges.
+
+---
+
 ### **BONEAMANITA v16.3.2 "The Condensing"**
 
 * Boring code cleaning that doesn't change any functionality. Most magic numbers and strings have been decoupled to the lore folder or `bone_config.py`

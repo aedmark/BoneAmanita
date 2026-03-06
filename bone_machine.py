@@ -1,4 +1,12 @@
-""" bone_machine.py"""
+"""
+bone_machine.py
+
+The Hardware Layer.
+This module contains the heavy pressure valves and structural systems that
+prevent the lattice from shaking itself apart. It houses the Crucible (circuit breaker),
+the Forge (item synthesis), and the Architect (the factory that wires the body
+and mind together during boot).
+"""
 
 import random
 from dataclasses import dataclass
@@ -14,6 +22,12 @@ from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_types import MindSystem, PhysSystem, PhysicsPacket, Prisma
 
 class TheCrucible:
+    """
+    The Circuit Breaker.
+    Monitors for extreme voltage spikes (hallucination, manic tangents).
+    If the system gets too hot, it deploys a dampener charge to aggressively lower
+    Voltage and increase Drag, forcing the narrative back to reality.
+    """
     def __init__(self):
         self.max_voltage_cap = getattr(BoneConfig.MACHINE, "CRUCIBLE_VOLTAGE_CAP", 20.0)
         self.active_state = "COLD"
@@ -33,6 +47,7 @@ class TheCrucible:
 
     def dampen(
             self, voltage_spike: float, stability_index: float) -> Tuple[bool, str, float]:
+        """ Fires a dampening charge to physically suppress runaway generation. """
         if self.dampener_charges <= 0:
             return False, self.logs.get("DAMPER_EMPTY", ""), 0.0
         should_dampen = False
@@ -54,6 +69,10 @@ class TheCrucible:
         return False, self.logs.get("HOLDING", ""), 0.0
 
     def audit_fire(self, physics: Dict) -> Tuple[str, float, Optional[str]]:
+        """
+        Compares current voltage against structural coherence (Kappa).
+        If the AI is talking fast but making no sense, it tightens the drag.
+        """
         voltage = physics.get("voltage", 0.0)
         structure = physics.get("kappa", 0.0)
         ideal_voltage = structure * 20.0
@@ -90,6 +109,12 @@ class TheCrucible:
         return "REGULATED", adjustment, msg
 
 class TheForge:
+    """
+    The Anvil of Meaning.
+    If a thought is dense enough (high kinetic/heavy lexical mass), the Forge
+    strikes it, transmuting the abstract concept into a physical inventory
+    item that Gordon can pick up and use later.
+    """
     def __init__(self):
         gordon_data = LoreManifest.get_instance().get("gordon") or {}
         raw_recipes = gordon_data.get("RECIPES", [])
@@ -103,6 +128,7 @@ class TheForge:
 
     @staticmethod
     def hammer_alloy(physics: Dict) -> Tuple[bool, Optional[str], Optional[str]]:
+        """ Tests if the current sentence has enough mass to trigger item synthesis. """
         counts = physics.get("counts", {})
         clean_words = physics.get("clean_words", [])
         if not clean_words:
@@ -110,6 +136,7 @@ class TheForge:
         heavy = counts.get("heavy", 0)
         kinetic = counts.get("kinetic", 0)
         avg_density = ((heavy * 2.0) + (kinetic * 0.5)) / len(clean_words)
+        # High voltage + high density = creation event
         if random.random() >= (physics.get("voltage", 0) / 20.0) * avg_density:
             return False, None, None
         if heavy > 3:
@@ -122,7 +149,11 @@ class TheForge:
         return True, LoreManifest.get_instance().get_ux("machine_strings", "forge_anchor_stone") or "", "ANCHOR_STONE"
 
     def attempt_crafting(
-        self, physics: Dict, inventory_list: List[str]) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
+            self, physics: Dict, inventory_list: List[str]) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
+        """
+        Checks if the user's current abstract conversation accidentally fulfills
+        a crafting recipe using an item Gordon is already holding.
+        """
         if not inventory_list:
             return False, None, None, None
         clean_words = physics.get("clean_words", [])
@@ -163,6 +194,12 @@ class TheForge:
         return None
 
 class TheTheremin:
+    """
+    The Resonance Trap.
+    It tracks conversational repetition and abstraction. If the conversation
+    stays abstract for too long without heavy grounding, it 'calcifies' in amber,
+    increasing drag until a thermal event shatters the buildup.
+    """
     def __init__(self):
         self.decoherence_buildup = 0.0
         self.classical_turns = 0
@@ -178,7 +215,7 @@ class TheTheremin:
         return manifest.get("THEREMIN_LOGS", {})
 
     def listen(
-        self, physics: Dict, governor_mode="COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
+            self, physics: Dict, governor_mode="COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
         counts = physics.get("counts", {})
         voltage = float(physics.get("voltage", 0.0))
         turb = float(physics.get("turbulence", 0.0))
@@ -246,6 +283,7 @@ class TheTheremin:
 
 @dataclass
 class SystemEmbryo:
+    """ The un-booted structural shell holding the mind, body, and physics packages. """
     mind: MindSystem
     limbo: LimboLayer
     bio: BioSystem
@@ -256,6 +294,12 @@ class SystemEmbryo:
     continuity: Optional[Dict] = None
 
 class PanicRoom:
+    """
+    The Safety Net.
+    If the system attempts to process an incredibly toxic/high-entropy packet
+    and throws an exception, the exception handler catches it, replaces the physics
+    packet with the 'Panic Room' payload (zero stats), and prevents total failure.
+    """
     @staticmethod
     def get_safe_physics():
         safe_packet = PhysicsPacket.void_state()
@@ -263,11 +307,6 @@ class PanicRoom:
         safe_packet.narrative_drag = 0.0
         safe_packet.exhaustion = 0.0
         safe_packet.beta_index = 0.0
-        safe_packet.psi = 0.0
-        safe_packet.chi = 0.0
-        safe_packet.entropy = 0.0
-        safe_packet.valence = 0.0
-        safe_packet.kappa = 0.0
         safe_packet.psi = 0.0
         safe_packet.chi = 0.0
         safe_packet.entropy = 0.0
@@ -316,6 +355,7 @@ class PanicRoom:
         return LoreManifest.get_instance().get_ux("machine_strings", "panic_limbo") or default_limbo
 
 class ViralTracer:
+    """ The structural pathogen scanner. Detects semantic loops in the memory graph. """
     def __init__(self, memory_ref):
         self.memory = memory_ref
         self.active_loops = []
@@ -350,6 +390,12 @@ class ThePacemaker:
         return self.boredom_level > self.BOREDOM_THRESHOLD
 
 class BoneArchitect:
+    """
+    The Factory.
+    This class handles the highly complex dependency injection required to get the VSL running.
+    It builds the Mind, the Body, and the Physics Engine, passing the EventBus to all of them,
+    and then wraps them in the SystemEmbryo to be awakened by the Genesis file.
+    """
     @staticmethod
     def _construct_mind(events, lex) -> Tuple[MindSystem, LimboLayer]:
         from bone_village import MirrorGraph
@@ -393,6 +439,7 @@ class BoneArchitect:
 
     @staticmethod
     def awaken(embryo: SystemEmbryo) -> SystemEmbryo:
+        """ The Breath of Life. Checks the Akashic record for epigenetic scars to inherit. """
         events = embryo.bio.mito.events
         load_result = None
         try:
@@ -410,10 +457,9 @@ class BoneArchitect:
             mito_legacy, immune_legacy, soul_legacy, continuity, atlas = padded_result[:5]
             if mito_legacy and hasattr(embryo.bio.mito, "apply_inheritance"):
                 embryo.bio.mito.apply_inheritance(mito_legacy)
-            if (
-                immune_legacy
-                and isinstance(immune_legacy, (list, set))
-                and hasattr(embryo.bio.immune, "load_antibodies")):
+            if (immune_legacy
+                    and isinstance(immune_legacy, (list, set))
+                    and hasattr(embryo.bio.immune, "load_antibodies")):
                 embryo.bio.immune.load_antibodies(immune_legacy)
             if isinstance(soul_legacy, dict):
                 embryo.soul_legacy = soul_legacy

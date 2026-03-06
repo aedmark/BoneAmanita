@@ -71,7 +71,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system("cls" if os.name == "nt" else "clear")
         top_bar = LoreManifest.get_instance().get_ux("main_strings", "term_header_top") or "┌──────────────────────────────────────────┐"
-        mid_bar = LoreManifest.get_instance().get_ux("main_strings", "term_header_mid") or "│ BONEAMANITA TERMINAL // VERSION 16.3.3   │"
+        mid_bar = LoreManifest.get_instance().get_ux("main_strings", "term_header_mid") or "│ BONEAMANITA TERMINAL // VERSION 16.4.0   │"
         bot_bar = LoreManifest.get_instance().get_ux("main_strings", "term_header_bot") or "└──────────────────────────────────────────┘"
         print(f"{Prisma.paint(top_bar, 'M')}")
         print(f"{Prisma.paint(mid_bar, 'M')}")

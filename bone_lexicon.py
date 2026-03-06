@@ -1,4 +1,11 @@
-""" bone_lexicon.py"""
+"""
+bone_lexicon.py
+
+The Sensory Cortex and Phonetic Spectrometer.
+This module translates raw human text strings into physical, thermodynamic properties.
+It categorizes words by mass, measures the fluid dynamics of a sentence (viscosity and turbulence),
+and filters out semantic toxins (clichés) before they hit the core metabolism.
+"""
 
 import json
 import os
@@ -11,6 +18,12 @@ from typing import Tuple, Dict, Set, Optional, List
 from bone_core import Prisma, LoreManifest
 
 class LexiconStore:
+    """
+    The Hive Mind.
+    Stores the hardcoded base vocabulary and dynamically learns new words over time,
+    saving them to the cortex_hive.json. It maps concepts to physical categories
+    like 'heavy', 'kinetic', 'void', or 'toxin'.
+    """
     HIVE_FILENAME = "cortex_hive.json"
     _PUNCTUATION = string.punctuation.replace("_", "")
     _TRANSLATOR = str.maketrans(_PUNCTUATION, " " * len(_PUNCTUATION))
@@ -30,6 +43,7 @@ class LexiconStore:
         self.hive_loaded = False
 
     def load_vocabulary(self):
+        """ Ingests the baseline genetic vocabulary from the LoreManifest. """
         data = LoreManifest.get_instance().get("LEXICON") or {}
         self.SOLVENTS = set(data.get("solvents", []))
         self.ANTIGEN_REPLACEMENTS = data.get("antigen_replacements", {})
@@ -49,6 +63,7 @@ class LexiconStore:
         self.REVERSE_INDEX[w].add(category)
 
     def _load_hive(self):
+        """ Bootstraps the epigenetic memory—words the system has learned from users across sessions. """
         if not os.path.exists(self.HIVE_FILENAME):
             return
         try:
@@ -70,6 +85,7 @@ class LexiconStore:
             print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
 
     def save_hive(self):
+        """ Serializes learned vocabulary to disk to survive reboots. """
         try:
             with open(self.HIVE_FILENAME, "w", encoding="utf-8") as f:
                 json.dump(self.LEARNED_VOCAB, f, indent=2)
@@ -99,6 +115,7 @@ class LexiconStore:
         return True
 
     def harvest(self, text: str) -> Dict[str, List[str]]:
+        """ Scrapes a raw text block and bins all known words into their thermodynamic categories. """
         results = {}
         if not text:
             return results
@@ -113,6 +130,12 @@ class LexiconStore:
         return results
 
 class LinguisticAnalyzer:
+    """
+    The Atomic Parser.
+    If a word isn't in the LexiconStore, this class mathematically dissects it.
+    It counts plosives (hard stops) vs. liquids (flow) to determine if a word
+    feels 'heavy' or 'kinetic' based purely on its mouthfeel and syllable density.
+    """
     def __init__(self, store_ref):
         self.store = store_ref
         self._TRANSLATOR = getattr(self.store, "_TRANSLATOR", None)
@@ -127,6 +150,7 @@ class LinguisticAnalyzer:
         self.dimension_map = ling_data.get("DIMENSION_MAP", {})
 
     def measure_viscosity(self, word: str) -> float:
+        """ Calculates friction. Hard consonants increase viscosity; 'solvents' (like 'the', 'a') reduce it. """
         if not word:
             return 0.0
         w = word.lower()
@@ -146,6 +170,7 @@ class LinguisticAnalyzer:
 
     @staticmethod
     def get_turbulence(words: List[str]) -> float:
+        """ Measures the variance in word length. Choppy, irregular sentences generate high turbulence. """
         if len(words) < 2:
             return 0.0
         lengths = [len(w) for w in words]
@@ -155,6 +180,7 @@ class LinguisticAnalyzer:
         return round(turbulence, 2)
 
     def vectorize(self, text: str) -> Dict[str, float]:
+        """ Maps the sentence into the 8-dimensional Trigram coordinate space. """
         words = self.sanitize(text)
         if not words:
             return {}
@@ -180,6 +206,7 @@ class LinguisticAnalyzer:
         return round(diff_sq**0.5, 3)
 
     def contextualize(self, word: str, field_vector: Dict[str, float]) -> str:
+        """ Alters a word's physical classification based on the surrounding atmosphere (e.g., heavy objects float in the void). """
         base_cat, _score = self.classify_word(word)
         if not field_vector or not base_cat:
             return base_cat
@@ -190,12 +217,13 @@ class LinguisticAnalyzer:
         return base_cat
 
     def sanitize(self, text: str) -> List[str]:
+        """ Strips punctuation and unreadable characters, leaving only the raw semantic bones. """
         if not text:
             return []
         try:
             normalized = (unicodedata.normalize("NFKD", text)
-                .encode("ASCII", "ignore")
-                .decode("utf-8"))
+                          .encode("ASCII", "ignore")
+                          .decode("utf-8"))
         except (TypeError, AttributeError):
             normalized = text
         xlate = self._TRANSLATOR if self._TRANSLATOR else str.maketrans("", "")
@@ -205,6 +233,7 @@ class LinguisticAnalyzer:
         return [w for w in words if w.strip() and w not in bias_set]
 
     def classify_word(self, word: str) -> Tuple[Optional[str], float]:
+        """ Fallback phonetic analysis. If a word is unmapped, we taste its syllables to guess its weight. """
         w = word.lower()
         if len(w) < 3:
             return None, 0.0
@@ -238,6 +267,7 @@ class LinguisticAnalyzer:
         return None, 0.0
 
     def measure_valence(self, words: List[str]) -> float:
+        """ Calculates emotional charge (-1 to +1) by scanning for hope, despair, and semantic negators. """
         if not words:
             return 0.0
         pos_set = self.store.get_raw("sentiment_pos")
@@ -260,6 +290,7 @@ class LinguisticAnalyzer:
         return max(-1.0, min(1.0, normalized))
 
     def tune_sensitivity(self, voltage: float, drag: float):
+        """ Dynamically alters the parser's sensitivity based on the current thermodynamic weather. """
         if voltage > 15.0:
             self.biases["kinetic"] = 0.8
         elif voltage < 5.0:
@@ -273,6 +304,11 @@ class LinguisticAnalyzer:
 
 
 class SemanticField:
+    """
+    The Weather Radar.
+    Tracks the conversational vector across multiple turns, calculating
+    momentum and declaring the localized 'Atmosphere' (e.g., 'Volatile CHI Storm').
+    """
     def __init__(self, analyzer_ref):
         self.analyzer = analyzer_ref
         self.current_vector = {}
@@ -304,6 +340,11 @@ class SemanticField:
 
 
 class LexiconService:
+    """
+    The Global API for the Sensory Cortex.
+    A singleton interface used by the rest of the organism to 'taste', 'clean',
+    and 'harvest' language without dealing with the underlying phonetics.
+    """
     _INITIALIZED = False
     _STORE = None
     _ANALYZER = None
@@ -372,6 +413,7 @@ class LexiconService:
 
     @classmethod
     def compile_antigens(cls):
+        """ Compiles a highly optimized regex for purging semantic toxins (clichés). """
         if not cls._INITIALIZED:
             cls.initialize()
             return

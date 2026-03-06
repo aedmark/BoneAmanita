@@ -427,7 +427,10 @@ class PromptComposer:
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
         inv_str = self._format_inventory(state, modifiers)
         inventory_block = (
-            f"INVENTORY: {inv_str}\n" if modifiers["include_inventory"] else "")
+            f"=== PHYSICAL GROUND TRUTH ===\n"
+            f"INVENTORY: {inv_str}\n"
+            f"CRITICAL AXIOM: The inventory listed above is absolute physical law. NEVER narrate the user's hands or pockets as empty if items are present. DO NOT hallucinate missing gear.\n"
+            if modifiers["include_inventory"] else "")
         raw_history = state.get("dialogue_history", [])
         cfg_cortex = getattr(BoneConfig, "CORTEX", None)
         char_limit = getattr(cfg_cortex, "MAX_HISTORY_CHARS", 4096) if cfg_cortex else 4096

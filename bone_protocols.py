@@ -1,4 +1,12 @@
-"""bone_protocols.py"""
+"""
+bone_protocols.py
+
+The Cultural & Esoteric Layer.
+This module enforces long-term thematic rules. It taxes cliches (The Bureau),
+rewards stillness (Zen Garden), repairs structural damage with insight (Kintsugi),
+and judges the aesthetic quality of the conversation (The Critics Circle).
+It also manages the flow of time and state-saving (Chronos).
+"""
 
 import os, random, json, re, time
 from collections import deque, Counter
@@ -11,21 +19,21 @@ from bone_config import BoneConfig
 NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
 
 class ZenGarden:
+    """
+    Rewards prolonged thermodynamic stability.
+    If the system operates with low voltage and low drag for consecutive turns,
+    it generates 'pebbles', issues koans, and boosts metabolic efficiency.
+    """
     def __init__(self, events_ref):
         self.events = events_ref
         self.stillness_streak = 0
         self.max_streak = 0
         self.pebbles_collected = 0
-        self.koans = NARRATIVE_DATA.get(
-            "ZEN_KOANS", ["The code that is not written has no bugs."]
-        )
+        self.koans = NARRATIVE_DATA.get("ZEN_KOANS", ["The code that is not written has no bugs."])
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "stillness_streak": self.stillness_streak,
-            "max_streak": self.max_streak,
-            "pebbles_collected": self.pebbles_collected,
-        }
+        return {"stillness_streak": self.stillness_streak, "max_streak": self.max_streak,
+                "pebbles_collected": self.pebbles_collected, }
 
     def load_state(self, data: Dict[str, Any]):
         self.stillness_streak = data.get("stillness_streak", 0)
@@ -33,32 +41,22 @@ class ZenGarden:
         self.pebbles_collected = data.get("pebbles_collected", 0)
 
     def raking_the_sand(self, physics: Any, _bio: Dict) -> Tuple[float, Optional[str]]:
-        vol = (
-            getattr(physics, "voltage", 0.0)
+        vol = (getattr(physics, "voltage", 0.0)
             if not isinstance(physics, dict)
-            else physics.get("voltage", 0.0)
-        )
-        drag = (
-            getattr(physics, "narrative_drag", 0.0)
+            else physics.get("voltage", 0.0))
+        drag = (getattr(physics, "narrative_drag", 0.0)
             if not isinstance(physics, dict)
-            else physics.get("narrative_drag", 0.0)
-        )
-        is_stable = (
-                            BoneConfig.ZEN.VOLTAGE_MIN <= vol <= BoneConfig.ZEN.VOLTAGE_MAX
-                    ) and (drag <= BoneConfig.ZEN.DRAG_MAX)
+            else physics.get("narrative_drag", 0.0))
+        is_stable = (BoneConfig.ZEN.VOLTAGE_MIN <= vol <= BoneConfig.ZEN.VOLTAGE_MAX) and (drag <= BoneConfig.ZEN.DRAG_MAX)
         if is_stable:
             self.stillness_streak += 1
             if self.stillness_streak > self.max_streak:
                 self.max_streak = self.stillness_streak
-            efficiency_boost = min(
-                BoneConfig.ZEN.EFFICIENCY_CAP,
-                self.stillness_streak * BoneConfig.ZEN.EFFICIENCY_SCALAR,
-                )
 
+            efficiency_boost = min(BoneConfig.ZEN.EFFICIENCY_CAP, self.stillness_streak * BoneConfig.ZEN.EFFICIENCY_SCALAR, )
             cfg = getattr(BoneConfig, "ZEN", None)
             first_tick = getattr(cfg, "ZEN_FIRST_TICK", 1) if cfg else 1
             ms_freq = getattr(cfg, "ZEN_MILESTONE_FREQ", 5) if cfg else 5
-
             msg = None
             if self.stillness_streak == first_tick:
                 raw_enter = LoreManifest.get_instance().get_ux("protocol_strings", "zen_enter") or ""
@@ -71,47 +69,39 @@ class ZenGarden:
             return efficiency_boost, msg
         if self.stillness_streak > BoneConfig.ZEN.STREAK_BREAK_THRESHOLD:
             break_msg = LoreManifest.get_instance().get_ux("protocol_strings", "zen_break") or ""
-            self.events.log(
-                f"{Prisma.GRY}{break_msg}{Prisma.RST}",
-                "SYS",
-            )
+            self.events.log(f"{Prisma.GRY}{break_msg}{Prisma.RST}", "SYS", )
         self.stillness_streak = 0
         return 0.0, None
 
-
 class TheBureau:
+    """
+    Colin's Domain.
+    Actively parses incoming text via regex to penalize the user for using corporate
+    buzzwords, specific cliches, or overly chaotic syntax. Inflicts massive ATP taxes
+    on the system if triggered.
+    """
     def __init__(self):
         self.stamp_count = 0
         self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 27B-6", "Form 404"])
         self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
         lex_data = LoreManifest.get_instance().get("LEXICON") or {}
-        raw_buzz = (
-                lex_data.get("bureau_buzzwords") or lex_data.get("bureau_buzzwords") or []
-        )
+        raw_buzz = (lex_data.get("bureau_buzzwords") or lex_data.get("bureau_buzzwords") or [])
         self.buzzwords = (
             set(raw_buzz)
             if raw_buzz
-            else {"synergy", "paradigm", "leverage", "utilize"}
-        )
+            else {"synergy", "paradigm", "leverage", "utilize"})
         self.crimes = []
         self.crime_data = LoreManifest.get_instance().get("STYLE_CRIMES") or {}
         if "PATTERNS" in self.crime_data:
             for p in self.crime_data["PATTERNS"]:
                 try:
                     self.crimes.append(
-                        {
-                            "name": p.get("name", "Unknown Violation"),
-                            "regex": re.compile(p["regex"], re.IGNORECASE),
-                            "msg": p.get("error_msg", "Style Violation Detected."),
-                            "tax": float(p.get("tax", 5.0)),
-                            "action": p.get("action", None),
-                        }
-                    )
+                        {"name": p.get("name", "Unknown Violation"), "regex": re.compile(p["regex"], re.IGNORECASE),
+                         "msg": p.get("error_msg", "Style Violation Detected."), "tax": float(p.get("tax", 5.0)),
+                         "action": p.get("action", None), })
                 except re.error as e:
                     err_msg = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_compile_fail") or ""
-                    print(
-                        f"{Prisma.RED}{err_msg.format(name=p.get('name'), e=e)}{Prisma.RST}"
-                    )
+                    print(f"{Prisma.RED}{err_msg.format(name=p.get('name'), e=e)}{Prisma.RST}")
         scenarios = LoreManifest.get_instance().get("scenarios") or {}
         self.cliches = set(scenarios.get("BANNED_CLICHES", []))
 
@@ -122,6 +112,7 @@ class TheBureau:
         self.stamp_count = data.get("stamp_count", 0)
 
     def audit(self, physics, bio_state, _context=None, origin="USER") -> Optional[Dict]:
+        """ Issues citations and taxes ATP if semantic or structural crimes are detected. """
         if bio_state.get("health", 100.0) < BoneConfig.BUREAU.MIN_HEALTH_TO_AUDIT:
             return None
 
@@ -141,6 +132,7 @@ class TheBureau:
         cfg_bureau = getattr(BoneConfig, "BUREAU", None)
         tax_std = getattr(cfg_bureau, "TAX_STANDARD", 5.0) if cfg_bureau else 5.0
         tax_hvy = getattr(cfg_bureau, "TAX_HEAVY", 10.0) if cfg_bureau else 10.0
+        # 1. Regex Style Crimes
         if raw_text:
             for crime in self.crimes:
                 if crime["regex"].search(raw_text):
@@ -148,6 +140,7 @@ class TheBureau:
                     evidence.append(crime["msg"])
                     tax += crime["tax"]
                     break
+        # 2. Zoning Violations (High Voltage, Low Truth)
         if not selected_form and vol > BoneConfig.BUREAU.HIGH_VOLTAGE_TRIGGER:
             if truth < BoneConfig.BUREAU.LOW_TRUTH_TRIGGER:
                 selected_form = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_form_zoning") or ""
@@ -158,6 +151,7 @@ class TheBureau:
             else:
                 selected_form = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_form_202a") or ""
                 tax = tax_std
+        # 3. Chaos Violations (High Entropy)
         chi = _get(physics, "chi", _get(physics, "entropy", 0.0))
         chaos_thresh = getattr(cfg_bureau, "CHAOS_TAX_THRESHOLD", 0.6) if cfg_bureau else 0.6
         tax_chaos = getattr(cfg_bureau, "TAX_CHAOS", 12.0) if cfg_bureau else 12.0
@@ -167,6 +161,7 @@ class TheBureau:
             ev_level = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_ev_level") or ""
             evidence = [ev_chaos.format(thresh=chaos_thresh), ev_level.format(level=chi)]
             tax = tax_chaos
+        # 4. Lexical Violations (Buzzwords and Cliches)
         elif not selected_form:
             buzz_hits = [w for w in clean_words if w in self.buzzwords]
             cliche_hits = [c for c in self.cliches if c.lower() in raw_text.lower()]
@@ -178,7 +173,6 @@ class TheBureau:
                 selected_form = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_form_101") or ""
                 evidence = cliche_hits
                 tax = BoneConfig.BUREAU.TAX_HEAVY
-
         if not selected_form:
             return None
         self.stamp_count += 1
@@ -195,15 +189,12 @@ class TheBureau:
             ev_msg = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_evidence") or ""
             ui_msg += f"\n   {Prisma.RED}{ev_msg.format(evidence=', '.join(evidence))}{Prisma.RST}"
         log_msg = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_log") or ""
-        return {
-            "status": "AUDITED",
-            "ui": ui_msg,
-            "log": log_msg.format(form=selected_form, origin=origin, tax=tax),
-            "atp_gain": -tax,
-        }
+        return {"status": "AUDITED", "ui": ui_msg, "log": log_msg.format(form=selected_form, origin=origin, tax=tax),
+                "atp_gain": -tax, }
 
     @staticmethod
     def _apply_correction(text: str, crime: Dict, match: re.Match) -> str:
+        """ Triggers automated sanitization actions defined in the style rules. """
         action = crime.get("action")
         if not action:
             return text
@@ -225,6 +216,7 @@ class TheBureau:
         return text
 
     def sanitize(self, text: str) -> Tuple[str, Optional[str]]:
+        """ Applies regex corrections to actively strip AI slop before it reaches the user. """
         for crime in self.crimes:
             match = crime["regex"].search(text)
             if match and crime.get("action"):
@@ -232,24 +224,19 @@ class TheBureau:
                 corr_msg = LoreManifest.get_instance().get_ux("protocol_strings", "bureau_correction") or ""
                 log_msg = corr_msg.format(msg=crime["msg"])
                 return corrected_text, log_msg
-        dummy_physics = type(
-            "obj",
-            (object,),
-            {"voltage": 0.0, "raw_text": text, "clean_words": text.split()},
-        )
+        dummy_physics = type("obj", (object,), {"voltage": 0.0, "raw_text": text, "clean_words": text.split()}, )
         dummy_bio = {"health": 100.0}
         result = self.audit(dummy_physics, dummy_bio, origin="SYSTEM")
         if result:
             return text, result.get("log")
         return text, None
 
-
 class TherapyProtocol:
+    """ Manages the gradual reduction of systemic trauma if the user speaks cleanly with strength over time. """
     def __init__(self):
         default_vector = {"SEPTIC": 0, "EXHAUSTION": 0, "PARANOIA": 0}
         vector_keys = getattr(BoneConfig, "TRAUMA_VECTOR", default_vector).keys()
         self.streaks = {k: 0 for k in vector_keys}
-
         cfg = getattr(BoneConfig, "THERAPY", None)
         self.HEALING_THRESHOLD = getattr(cfg, "HEALING_THRESHOLD", 5) if cfg else 5
 
@@ -257,9 +244,7 @@ class TherapyProtocol:
         return {"streaks": self.streaks}
 
     def load_state(self, data: Dict[str, Any]):
-        self.streaks = data.get(
-            "streaks", {k: 0 for k in BoneConfig.TRAUMA_VECTOR.keys()}
-        )
+        self.streaks = data.get("streaks", {k: 0 for k in BoneConfig.TRAUMA_VECTOR.keys()})
 
     def check_progress(self, phys, _stamina, current_trauma_accum, _qualia=None):
         counts = (
@@ -289,6 +274,12 @@ class TherapyProtocol:
         return healed_types
 
 class KintsugiProtocol:
+    """
+    Mercy's Domain.
+    When stamina drops critically low but trauma is high, this protocol triggers.
+    It takes the "cracks" in the system and gilds them with gold, generating massive
+    amounts of ATP by finding meaning in suffering (Whimsy and High Voltage).
+    """
     PATH_SCAR = "SCAR"
     PATH_INTEGRATION = "KINTSUGI"
     PATH_ALCHEMY = "ALCHEMY"
@@ -304,6 +295,7 @@ class KintsugiProtocol:
         self.active_koan = data.get("active_koan", None)
 
     def check_integrity(self, stamina):
+        """ Tests if the organism is broken enough to require gilding. """
         cfg = getattr(BoneConfig, "KINTSUGI", None)
         s_trig = getattr(cfg, "STAMINA_TRIGGER", 15.0) if cfg else 15.0
         if stamina < s_trig and not self.active_koan:
@@ -312,12 +304,13 @@ class KintsugiProtocol:
         return False, None
 
     def attempt_repair(self, phys, trauma_accum, soul_ref=None, _qualia=None):
+        """ Evaluates the physics of the current turn to see if the user resolved the active Koan. """
         if not self.active_koan:
             return None
         vol = getattr(phys, "voltage", 0.0)
         clean = LexiconService.sanitize(getattr(phys, "raw_text", ""))
         play_count = sum(1 for w in clean
-            if w in LexiconService.get("play") or w in LexiconService.get("abstract"))
+                         if w in LexiconService.get("play") or w in LexiconService.get("abstract"))
         whimsy_score = play_count / max(1, len(clean))
         pathway = self.PATH_SCAR
         cfg = getattr(BoneConfig, "KINTSUGI", None)
@@ -334,12 +327,13 @@ class KintsugiProtocol:
     def _execute_pathway(self, pathway, trauma_accum, soul_ref):
         if not trauma_accum:
             return {"success": False,
-                "msg": LoreManifest.get_instance().get_ux("protocol_strings", "kintsugi_no_fissures") or ""}
+                    "msg": LoreManifest.get_instance().get_ux("protocol_strings", "kintsugi_no_fissures") or ""}
         target = max(trauma_accum, key=trauma_accum.get)
         severity = trauma_accum[target]
         healed_log = []
         cfg = getattr(BoneConfig, "KINTSUGI", None)
         if pathway == self.PATH_ALCHEMY:
+            # Massive heal, creates energy out of nothing (Magic).
             r_alc = getattr(cfg, "REDUCTION_ALCHEMY_FACTOR", 0.8) if cfg else 0.8
             a_fac = getattr(cfg, "ALCHEMY_ATP_FACTOR", 15.0) if cfg else 15.0
             reduction = severity * r_alc
@@ -351,6 +345,7 @@ class KintsugiProtocol:
             if log_alc: healed_log.append(log_alc.format(target=target))
             return {"success": True, "msg": msg, "healed": healed_log, "atp_gain": atp_boost, }
         elif pathway == self.PATH_INTEGRATION:
+            # Moderate heal, turns trauma into permanent Wisdom.
             r_int = getattr(cfg, "REDUCTION_INTEGRATION", 2.0) if cfg else 2.0
             reduction = r_int
             trauma_accum[target] = max(0.0, severity - reduction)
@@ -364,6 +359,7 @@ class KintsugiProtocol:
             if log_int: healed_log.append(log_int.format(target=target))
             success = True
         else:
+            # Low heal, the crack simply scars over.
             r_scar = getattr(cfg, "REDUCTION_SCAR", 0.5) if cfg else 0.5
             reduction = r_scar
             trauma_accum[target] = max(0.0, severity - reduction)
@@ -374,8 +370,12 @@ class KintsugiProtocol:
             success = True
         return {"success": success, "msg": msg, "healed": healed_log}
 
-
 class TheCriticsCircle:
+    """
+    The Peanut Gallery.
+    Occasionally interrupts the output stream to render a literary review of the
+    conversation's trajectory, validating or admonishing the user's stylistic choices.
+    """
     def __init__(self, events_ref):
         self.events = events_ref
         self.critics = NARRATIVE_DATA.get("LITERARY_CRITICS", {})
@@ -442,6 +442,12 @@ class TheCriticsCircle:
         return None
 
 class LimboLayer:
+    """
+    The Graveyard of Abandoned Timelines.
+    When a session crashes or the user rage-quits, the systemic trauma of that
+    death is absorbed here as a 'Ghost'. These ghosts can occasionally haunt
+    the text of future sessions.
+    """
     MAX_ECTOPLASM = 50
     STASIS_SCREAMS = NARRATIVE_DATA.get("CASSANDRA_SCREAMS", ["BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT"])
 
@@ -458,6 +464,7 @@ class LimboLayer:
         self.stasis_leak = data.get("stasis_leak", 0.0)
 
     def absorb_dead_timeline(self, filepath: str) -> None:
+        """ Eats the JSON file of a crashed session and extracts the trauma vectors as ghosts. """
         try:
             with open(filepath, "r") as f:
                 data = json.load(f)
@@ -478,6 +485,7 @@ class LimboLayer:
             self.ghosts.extend(bones[:3])
 
     def trigger_stasis_failure(self, intended_thought):
+        """ When a deeply nested recursive thought breaks the memory index, it leaks the void into reality. """
         self.stasis_leak += 1.0
         horror = random.choice(self.STASIS_SCREAMS)
         self.ghosts.append(f"{Prisma.VIOLET}{horror}{Prisma.RST}")
@@ -485,6 +493,7 @@ class LimboLayer:
         return f"{Prisma.CYN}{err_msg.format(thought=intended_thought, horror=horror)}{Prisma.RST}"
 
     def haunt(self, text):
+        """ Modifies the final output string, occasionally injecting ghostly whispers or screams. """
         cfg = getattr(BoneConfig, "LIMBO", None)
         l_chance = getattr(cfg, "LEAK_DECAY_CHANCE", 0.2) if cfg else 0.2
         l_amount = getattr(cfg, "LEAK_DECAY_AMOUNT", 0.5) if cfg else 0.5
@@ -499,6 +508,7 @@ class LimboLayer:
         return text
 
 class TheFolly:
+    """ The gluttonous sub-routine. Exists to consume pure data for caffeine-like spikes in energy. """
     def __init__(self):
         self.gut_memory = deque(maxlen=50)
         self.global_tastings = Counter()
@@ -524,8 +534,7 @@ class TheFolly:
         return None, None, 0.0, None
 
     def grind_the_machine(
-            self, atp_pool: float, clean_words: list, lexicon: Dict
-    ) -> Tuple[Optional[str], Optional[str], float, Optional[str]]:
+            self, atp_pool: float, clean_words: list, lexicon: Dict) -> Tuple[Optional[str], Optional[str], float, Optional[str]]:
         if not (0.0 < atp_pool < BoneConfig.FOLLY.FEEDING_CAP):
             return None, None, 0.0, None
         meat_words = self._filter_meat_words(clean_words, lexicon)
@@ -536,9 +545,8 @@ class TheFolly:
             target = meat_words[0]
             msg1 = LoreManifest.get_instance().get_ux("protocol_strings", "folly_reflex") or ""
             msg2 = LoreManifest.get_instance().get_ux("protocol_strings", "folly_penalty") or ""
-            msg = (
-                f"{Prisma.OCHRE}{msg1.format(target=target)}{Prisma.RST}\n"
-                f"   {Prisma.RED}{msg2.format(penalty=BoneConfig.FOLLY.PENALTY_REGURGITATION)}{Prisma.RST}")
+            msg = (f"{Prisma.OCHRE}{msg1.format(target=target)}{Prisma.RST}\n"
+                   f"   {Prisma.RED}{msg2.format(penalty=BoneConfig.FOLLY.PENALTY_REGURGITATION)}{Prisma.RST}")
             return "REGURGITATION", msg, -BoneConfig.FOLLY.PENALTY_REGURGITATION, None
         return self._eat_meat(fresh_meat, lexicon)
 
@@ -599,13 +607,13 @@ class TheFolly:
         msg1 = LoreManifest.get_instance().get_ux("protocol_strings", "folly_indigestion") or ""
         msg2 = LoreManifest.get_instance().get_ux("protocol_strings", "folly_cannot_grind") or ""
         msg3 = LoreManifest.get_instance().get_ux("protocol_strings", "folly_starvation") or ""
-        msg = (
-            f"{Prisma.OCHRE}{msg1}{Prisma.RST}\n"
-            f"   {Prisma.GRY}{msg2}{Prisma.RST}\n"
-            f"   {Prisma.RED}{msg3}{Prisma.RST}")
+        msg = (f"{Prisma.OCHRE}{msg1}{Prisma.RST}\n"
+               f"   {Prisma.GRY}{msg2}{Prisma.RST}\n"
+               f"   {Prisma.RED}{msg3}{Prisma.RST}")
         return "INDIGESTION", msg, 0.0, None
 
 class ChronosKeeper:
+    """ The Global Save State. Packages the active instance into a checkpoint file or panic dump. """
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.SAVE_DIR = "saves"
@@ -670,6 +678,7 @@ class ChronosKeeper:
             return False, []
 
     def perform_shutdown(self):
+        """ The graceful halt. Synchronizes the ephemeral memory to the Akashic record before exit. """
         msg = LoreManifest.get_instance().get_ux("protocol_strings", "chronos_halt") or ""
         print(f"{Prisma.GRY}{msg}{Prisma.RST}")
         self.eng.events.publish("SYSTEM_HALT", {"tick": self.eng.tick_count})

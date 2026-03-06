@@ -68,6 +68,7 @@ class GordonKnot:
         self.creative_loot_triggers = []
         self.interaction_verbs = []
         self.acquisition_verbs = []
+        self.abandonment_phrases = []
         self.load_config()
 
     def enforce_object_action_coupling(
@@ -125,6 +126,10 @@ class GordonKnot:
             self.loot_triggers = data.get("LOOT_TRIGGERS", [])
         self.interaction_verbs = data.get("INTERACTION_VERBS", [])
         self.acquisition_verbs = data.get("ACQUISITION_VERBS", [])
+        lexicon_data = LoreManifest.get_instance().get("lexicon") or {}
+        if not lexicon_data and hasattr(LoreManifest, "get_raw"):
+            lexicon_data = LoreManifest.get_raw("lexicon.json") or {}
+        self.abandonment_phrases = lexicon_data.get("abandonment_phrases", ["put back", "leave", "drop", "ignore"])
         self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
         self.ITEM_REGISTRY = data.get("ITEM_REGISTRY", {})
         for name, props in self.ITEM_REGISTRY.items():
@@ -146,6 +151,9 @@ class GordonKnot:
         lost_pattern = r"\[\[LOST:\s*(.*?)\]\]"
         raw_loot = re.findall(loot_pattern, text, re.IGNORECASE)
         raw_lost = re.findall(lost_pattern, text, re.IGNORECASE)
+        combined_text = (user_input + " " + text).lower()
+        if any(phrase in combined_text for phrase in self.abandonment_phrases):
+            raw_loot = []
 
         def normalize(items):
             return list(
@@ -200,7 +208,7 @@ class GordonKnot:
 
     def acquire(self, tool_name: str) -> str:
         """ Adds an item to inventory, forcing the oldest item out if pockets are full. """
-        tool_name = tool_name.upper() if tool_name else "UNKNOWN"
+        tool_name = tool_name.strip().upper().replace(" ", "_") if tool_name else "UNKNOWN"
         if tool_name in self.inventory:
             msg = LoreManifest.get_instance().get_ux("gordon_strings", "inv_duplicate") or ""
             return f"{Prisma.OCHRE}{msg.format(item=tool_name)}{Prisma.RST}"
@@ -324,6 +332,9 @@ class GordonKnot:
 
     def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
         """ Secondary NLP parser to catch implicit item acquisitions without formal tags. """
+        combined_text = (user_text + " " + sys_text).lower()
+        if any(phrase in combined_text for phrase in self.abandonment_phrases):
+            return None
         text = (user_text + " " + sys_text).lower()
         sys_lower = sys_text.lower()
         for refusal in self.refusal_markers:

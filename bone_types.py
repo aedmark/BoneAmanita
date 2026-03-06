@@ -6,6 +6,7 @@ from enum import Enum
 from typing import List, Dict, Any, Optional
 
 class Prisma:
+    """The universal color palette. It handles rendering ANSI escape codes for the terminal and safely stripping them for logs."""
     RST = "\033[0m"
     RED, GRN, YEL, BLU, MAG, CYN, WHT, GRY = ("\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[97m", "\033[90m",)
     INDIGO, OCHRE, VIOLET, SLATE = ("\033[34;1m", "\033[33;2m", "\033[35;2m", "\033[30;1m",)
@@ -37,6 +38,7 @@ class LoreCategory(Enum):
     DREAMS = "dreams"
 
 class RealityLayer:
+    """Represents the current structural ruleset of the application."""
     TERMINAL = 0
     SIMULATION = 1
     VILLAGE = 2
@@ -52,6 +54,7 @@ class ErrorLog:
 
 @dataclass
 class EnergyState:
+    """The quantitative variables that describe the systemic energy, stress, and abstract coordinates of a thought."""
     voltage: float = 30.0
     health: float = 100.0
     stamina: float = 100.0
@@ -88,6 +91,7 @@ class EnergyState:
 
 @dataclass
 class MaterialState:
+    """The literal syntax and vocabulary of a thought."""
     clean_words: List[str] = field(default_factory=list)
     raw_text: str = ""
     counts: Dict[str, int] = field(default_factory=dict)
@@ -98,6 +102,7 @@ class MaterialState:
 
 @dataclass
 class SpatialState:
+    """The context in which the thought exists."""
     zone: str = "COURTYARD"
     manifold: str = "DEFAULT"
     narrative_drag: float = 0.6
@@ -107,10 +112,16 @@ class SpatialState:
 
 @dataclass
 class PhysicsPacket:
+    """
+    The master state object. It unifies Energy, Matter, and Space into a single entity.
+    Provides single-letter aliases (E, V, F) to keep the math in bone_cycle legible 
+    while preserving strict categorization underneath.
+    """
     energy: EnergyState = field(default_factory=EnergyState)
     matter: MaterialState = field(default_factory=MaterialState)
     space: SpatialState = field(default_factory=SpatialState)
 
+    # ALIASES FOR READABILITY IN MATH FUNCTIONS
     @property
     def E(self):
         return self.energy.exhaustion
@@ -309,11 +320,11 @@ class PhysicsPacket:
         self.space.zone = v
 
     def __init__(
-        self,
-        energy: Optional[EnergyState] = None,
-        matter: Optional[MaterialState] = None,
-        space: Optional[SpatialState] = None,
-        **kwargs,):
+            self,
+            energy: Optional[EnergyState] = None,
+            matter: Optional[MaterialState] = None,
+            space: Optional[SpatialState] = None,
+            **kwargs,):
         self.energy = energy or EnergyState()
         self.matter = matter or MaterialState()
         self.space = space or SpatialState()
@@ -322,6 +333,7 @@ class PhysicsPacket:
 
     @classmethod
     def void_state(cls):
+        """A safe fallback state used during catastrophic failures to prevent NoneType crashes."""
         p = cls()
         p.space.atmosphere = "VOID"
         p.space.zone = "VOID"
@@ -350,6 +362,7 @@ class PhysicsPacket:
 
 @dataclass
 class CycleContext:
+    """The master state object that gets passed through the 14 phases of the CycleSimulator."""
     input_text: str
     is_system_event: bool = False
     clean_words: List[str] = field(default_factory=list)
@@ -384,7 +397,8 @@ class CycleContext:
         self.logs.append(message)
 
     def record_flux(
-        self, phase: str, metric: str, initial: float, final: float, reason: str = ""):
+            self, phase: str, metric: str, initial: float, final: float, reason: str = ""):
+        """Explicitly tracks when a variable shifts significantly between phases."""
         delta = final - initial
         if abs(delta) > 0.001:
             self.flux_log.append(
@@ -437,6 +451,7 @@ class DecisionTrace:
 
 @dataclass
 class DecisionCrystal:
+    """A serialized fossil of a single execution cycle, preserving exactly what the system knew when it made a choice."""
     decision_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     timestamp: float = field(default_factory=time.time)
     leverage_metrics: Dict[str, float] = field(default_factory=dict)
@@ -454,8 +469,7 @@ class DecisionCrystal:
         icon = LoreManifest.get_instance().get_ux("types_strings", "crystal_icon") or "💎"
         lbl = LoreManifest.get_instance().get_ux("types_strings", "crystal_label") or "CRYSTAL"
         arch = LoreManifest.get_instance().get_ux("types_strings", "crystal_arch") or "ARCH:"
-        return (
-            f"{icon} {lbl} [{self.decision_id}] {self.system_state} | "
+        return (f"{icon} {lbl} [{self.decision_id}] {self.system_state} | "
             f"{arch} {self.active_archetype} | E: {e_val:.2f}").strip()
 
     def crystallize(self) -> str:

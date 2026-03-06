@@ -7,23 +7,31 @@ from bone_config import BonePresets, BoneConfig
 from bone_core import LoreManifest, Prisma
 
 class CommandStateInterface:
+    """
+    An adapter layer that safely bridges the CLI commands with the delicate biological
+    and cognitive engines. Prevents out-of-band queries from crashing the lattice if
+    certain organs (like the Cartographer or BioSystem) are offline or damaged.
+    """
     def __init__(self, engine_ref, prisma_ref, config_ref):
         self.eng = engine_ref
         self.P = prisma_ref
         self.Config = config_ref
 
     def log(self, text: str, category: str = "CMD"):
+        """ Routes standard output through the EventBus to be properly metabolized and rendered, or falls back to standard print if the bus is down. """
         if hasattr(self.eng, "events"):
             self.eng.events.log(text, category)
         else:
             print(f"[{category}] {text}")
 
     def trigger_visual_cortex(self) -> Optional[Dict]:
+        """ Forces the engine to re-evaluate and render the current spatial and inventory context without advancing the metabolic clock. """
         if hasattr(self.eng, "process_turn"):
             return self.eng.process_turn("LOOK")
         return None
 
     def modify_resource(self, resource: str, delta: float):
+        """ Directly manipulates the core metabolic pools (ATP, Stamina) without passing through the standard digestive cycle. """
         if resource == "stamina":
             self.eng.stamina = max(0.0, self.eng.stamina + delta)
         elif resource == "atp":
@@ -31,6 +39,7 @@ class CommandStateInterface:
                 self.eng.bio.mito.state.atp_pool = max(0.0, self.eng.bio.mito.state.atp_pool + delta)
 
     def get_resource(self, resource: str) -> float:
+        """ Safely extracts vital metrics, defaulting to zero if the organism is severely degraded. """
         if resource == "stamina":
             return self.eng.stamina
         if resource == "atp":
@@ -40,6 +49,7 @@ class CommandStateInterface:
         return 0.0
 
     def save_state(self) -> str:
+        """ Serializes the entire physical, mental, and spatial state of the lattice into a stable fossil for later resurrection. """
         if not hasattr(self.eng, "mind") or not hasattr(self.eng.mind, "mem"):
             return LoreManifest.get_instance().get_ux("command_state", "mem_error") or ""
         loc = LoreManifest.get_instance().get_ux("command_state", "default_loc") or ""
@@ -72,6 +82,7 @@ class CommandStateInterface:
         return LoreManifest.get_instance().get_ux("command_state", "unreachable_error") or ""
 
     def get_vitals(self) -> Dict[str, float]:
+        """ Packages the core survival metrics (Health, Stamina, ATP) for UI rendering. """
         metrics = self.eng.get_metrics()
         cmd_cfg = getattr(self.Config, "COMMANDS", None)
         return {"health": metrics.get("health", 0.0), "stamina": metrics.get("stamina", 0.0),
@@ -80,11 +91,13 @@ class CommandStateInterface:
                 "max_atp": getattr(cmd_cfg, "STATUS_MAX_ATP", 200.0) if cmd_cfg else 200.0, }
 
     def get_inventory(self) -> List[str]:
+        """ Peeks into Gordon's pockets to retrieve current structural items. """
         if hasattr(self.eng, "gordon"):
             return getattr(self.eng.gordon, "inventory", [])
         return []
 
     def get_navigation_report(self) -> str:
+        """ Asks the Cartographer where the system currently resides within the semantic manifold. """
         if not hasattr(self.eng, "navigator") or not hasattr(self.eng, "phys"):
             return LoreManifest.get_instance().get_ux("command_state", "nav_offline") or ""
         nav = self.eng.navigator
@@ -96,16 +109,22 @@ class CommandStateInterface:
         return LoreManifest.get_instance().get_ux("command_state", "nav_unresponsive") or ""
 
     def get_soul_status(self) -> Optional[str]:
+        """ Checks the current driving archetype occupying the narrative seat. """
         soul = getattr(self.eng, "soul", None)
         if soul:
             return soul.get_soul_state()
         return None
 
 class ResourceTax:
+    """
+    The metabolic tollbooth for out-of-band actions. Ensures that even
+    system commands carry a physical weight, preventing free lunches.
+    """
     def __init__(self, state: CommandStateInterface):
         self.state = state
 
     def levy(self, _context: str, costs: Dict[str, float]) -> bool:
+        """ Deducts the physical cost of running a command, halting execution if the system is starved or exhausted. """
         stamina_cost = costs.get("stamina", 0.0)
         atp_cost = costs.get("atp", 0.0)
         msg_exh = LoreManifest.get_instance().get_ux("resource_tax", "exhausted") or ""
@@ -123,16 +142,19 @@ class ResourceTax:
         return True
 
 class CommandRegistry:
+    """ A simple dictionary mapping string inputs (slash commands) to their execution pathways. """
     def __init__(self, state: CommandStateInterface):
         self.state = state
         self.commands: Dict[str, Callable] = {}
         self.help_text: Dict[str, str] = {}
 
     def register(self, name: str, func: Callable, help_str: str):
+        """ Binds a command string to its corresponding class method. """
         self.commands[name] = func
         self.help_text[name] = help_str
 
     def execute(self, text: str) -> bool:
+        """ Safely tokenizes user input and routes it to the appropriate command function. """
         if not text.startswith("/"):
             return False
         try:
@@ -149,6 +171,10 @@ class CommandRegistry:
             return True
 
 class CommandProcessor:
+    """
+    The master router for terminal interactions. It intercepts user input before
+    it hits the LLM, checking for reality locks, VSL meta-tags, and slash commands.
+    """
     def __init__(self, engine, prisma_ref, _lexicon_ref=None, config_ref=None, _cartographer_ref=None, ):
         real_config = config_ref if config_ref else BoneConfig
         self.interface = CommandStateInterface(engine, prisma_ref, real_config)
@@ -175,6 +201,7 @@ class CommandProcessor:
         self.registry.register("/use", self._cmd_use, _cd("use"))
 
     def execute(self, text: str):
+        """ The primary intercept block. Checks for narrative lockouts and parses architectural flags (like [VSL_DEEP] or [SLASH]). """
         if hasattr(self.interface.eng, "reality_stack"):
             stack = self.interface.eng.reality_stack
             rules = stack.get_grammar_rules()
@@ -212,6 +239,7 @@ class CommandProcessor:
         return False
 
     def _cmd_soothe(self, _parts):
+        """ A manual override to clear trauma or reset anxiety, costing heavy Stamina. """
         cmd_cfg = getattr(BoneConfig, "COMMANDS", None)
         cost = getattr(cmd_cfg, "COST_SOOTHE", 25.0) if cmd_cfg else 25.0
         current_stamina = self.interface.get_resource("stamina")
@@ -232,6 +260,7 @@ class CommandProcessor:
         return True
 
     def _cmd_help(self, _parts):
+        """ Dynamically compiles and formats the help menu using localized strings. """
         header = LoreManifest.get_instance().get_ux("help_menu", "header") or ""
         phase_pfx = LoreManifest.get_instance().get_ux("help_menu", "phase_prefix") or ""
         def_phase = LoreManifest.get_instance().get_ux("help_menu", "default_phase") or ""
@@ -259,6 +288,7 @@ class CommandProcessor:
         return True
 
     def _cmd_status(self, _parts):
+        """ Renders an ASCII bar chart of the organism's core biological state. """
         v = self.interface.get_vitals()
         menu_cfg = LoreManifest.get_instance().get("ux_strings", "status_menu") or {}
         h_lbl = menu_cfg.get("health_label", "Health:  ")
@@ -278,6 +308,7 @@ class CommandProcessor:
         return True
 
     def _cmd_mode(self, parts):
+        """ Swaps the operating mode, re-hydrating presets and attempting to reconcile physics constraints. """
         if len(parts) < 2:
             self.interface.log(LoreManifest.get_instance().get_ux("command_alerts", "mode_usage") or "")
             return True
@@ -305,6 +336,7 @@ class CommandProcessor:
         return True
 
     def _cmd_save(self, _parts):
+        """ Forces a manual save state. """
         res = self.interface.save_state()
         cfg = getattr(BoneConfig, "COMMANDS", None)
         error_flags = getattr(cfg, "SAVE_ERROR_FLAGS", ["Error", "Failed", "Exception"])
@@ -317,6 +349,7 @@ class CommandProcessor:
         return True
 
     def _cmd_inventory(self, _parts):
+        """ Formats and displays Gordon's current item cache. """
         items = self.interface.get_inventory()
         P = self.interface.P
         header = LoreManifest.get_instance().get_ux("inventory_strings", "header") or ""
@@ -332,6 +365,7 @@ class CommandProcessor:
         return True
 
     def _cmd_map(self, _parts):
+        """ Deducts stamina to poll the Cartographer for our exact semantic coordinates. """
         cmd_cfg = getattr(BoneConfig, "COMMANDS", None)
         cost = getattr(cmd_cfg, "COST_MAP", 2.0) if cmd_cfg else 2.0
         if not self.tax.levy("MAP", {"stamina": cost}):
@@ -341,22 +375,26 @@ class CommandProcessor:
         return True
 
     def _cmd_debug(self, _parts):
+        """ Toggles verbose internal logging. """
         self.interface.Config.VERBOSE_LOGGING = (not self.interface.Config.VERBOSE_LOGGING)
         msg = LoreManifest.get_instance().get_ux("command_alerts", "debug_mode") or ""
         self.interface.log(msg.format(state=self.interface.Config.VERBOSE_LOGGING))
         return True
 
     def _cmd_exit(self, _parts):
+        """ Triggers a system halt. """
         msg = LoreManifest.get_instance().get_ux("command_alerts", "exit_halt") or ""
         self.interface.log(f"{Prisma.RED}{msg}{Prisma.RST}", "SYS")
 
     def _cmd_soul(self, _parts):
+        """ Interrogates the NarrativeSelf for the current driving archetype. """
         soul_msg = self.interface.get_soul_status()
         if soul_msg:
             self.interface.log(f"{self.P.MAG}{soul_msg}{self.P.RST}")
         return True
 
     def _cmd_look(self, _parts):
+        """ Probes the visual cortex for immediate environmental context. """
         result = self.interface.trigger_visual_cortex()
         if result and result.get("ui"):
             self.interface.log(result["ui"])
@@ -365,6 +403,7 @@ class CommandProcessor:
         return True
 
     def _cmd_reload(self, parts):
+        """ Hot-reloads specific or global caches from the LoreManifest without restarting the system. """
         if len(parts) > 1:
             target = parts[1].upper()
             LoreManifest.get_instance().flush_cache(target)
@@ -376,6 +415,10 @@ class CommandProcessor:
         return True
 
     def _cmd_truth(self, parts):
+        """
+        A highly meta command that hot-swaps the UI Renderer to TruthRenderer,
+        exposing the raw, internal argument between the archetypes before final output.
+        """
         if len(parts) < 2:
             self.interface.log(LoreManifest.get_instance().get_ux("command_alerts", "truth_usage") or "")
             return True
@@ -411,6 +454,7 @@ class CommandProcessor:
         return True
 
     def _cmd_use(self, parts):
+        """ Direct hook into the GordonKnot to consume an item from inventory. """
         if len(parts) < 2:
             self.interface.log(LoreManifest.get_instance().get_ux("command_alerts", "use_usage") or "")
             return True

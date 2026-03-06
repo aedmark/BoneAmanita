@@ -1,0 +1,15 @@
+
+services:
+  hypervisor:
+    build: .
+    user: "root"
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app:z
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - VSL_MODE=DEEP
+      - DEBUG=True
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434/v1/chat/completions

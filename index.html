@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoneAmanita 16.4.0</title>
+    <style>
+        :root {
+            --bg: #0d0d0d;
+            --panel-bg: #1a1a1a;
+            --text-main: #cccccc;
+            --text-dim: #666666;
+            --accent-cyn: #00ffff;
+            --accent-red: #ff3333;
+            --accent-grn: #33ff33;
+            --accent-mag: #ff00ff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Courier New', Courier, monospace;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar: The Somatic HUD */
+        #hud {
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--text-dim);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .metric-block { margin-bottom: 15px; }
+        .metric-title { color: var(--text-dim); font-size: 0.8em; text-transform: uppercase; margin-bottom: 5px; }
+        .bar-container { width: 100%; background: #333; height: 10px; border-radius: 5px; overflow: hidden;}
+        .bar-fill { height: 100%; transition: width 0.3s ease; }
+
+        .val-cyn { color: var(--accent-cyn); }
+        .val-red { color: var(--accent-red); }
+
+        /* Main Area: The Chat */
+        #main-view {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #chat-history {
+            flex-grow: 1;
+            padding: 20px 40px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .log-entry { margin-bottom: 10px; }
+        .log-sys { color: var(--text-dim); }
+        .log-user { color: var(--accent-cyn); margin-top: 15px;}
+
+        /* Input Area */
+        #input-area {
+            padding: 20px 40px;
+            border-top: 1px solid var(--text-dim);
+            display: flex;
+            gap: 10px;
+            background: var(--bg);
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            font-family: inherit;
+            font-size: 1.1em;
+            outline: none;
+        }
+
+        .btn {
+            background: transparent;
+            border: 1px solid var(--text-dim);
+            color: var(--text-main);
+            padding: 5px 15px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn:hover { background: var(--text-dim); color: #000; }
+
+        /* Toolbar */
+        #toolbar { margin-top: auto; display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="hud">
+    <h2 style="margin:0; color:var(--accent-cyn);">BONE_AMANITA</h2>
+    <div class="metric-title" id="connection-status">Connecting...</div>
+
+    <div class="metric-block">
+        <div class="metric-title">Health (Integrity)</div>
+        <div class="bar-container"><div id="bar-hp" class="bar-fill" style="background:var(--accent-red); width:100%;"></div></div>
+    </div>
+
+    <div class="metric-block">
+        <div class="metric-title">Stamina (Energy)</div>
+        <div class="bar-container"><div id="bar-stm" class="bar-fill" style="background:var(--accent-grn); width:100%;"></div></div>
+    </div>
+
+    <div class="metric-block">
+        <div class="metric-title">VSL Coordinates</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:0.9em;">
+            <div>Voltage: <span id="vsl-v" class="val-cyn">0.0</span></div>
+            <div>Drag: <span id="vsl-f" class="val-red">0.0</span></div>
+            <div>Exhaust: <span id="vsl-e">0.00</span></div>
+            <div>Paradox: <span id="vsl-b">0.00</span></div>
+            <div>Void (Ψ): <span id="vsl-psi">0.00</span></div>
+            <div>Chaos (Χ): <span id="vsl-chi">0.00</span></div>
+        </div>
+    </div>
+
+    <div class="metric-block">
+        <div class="metric-title">Metabolism</div>
+        <div style="font-size:0.9em;">
+            ATP Pool: <span id="bio-atp" style="color:yellow;">0.0</span><br>
+            ROS Toxicity: <span id="bio-ros" class="val-red">0.0</span>
+        </div>
+    </div>
+
+    <div id="toolbar">
+        <button type="button" class="btn" id="btn-export">Export Log</button>
+        <button type="button" class="btn" id="btn-reset" style="border-color:var(--accent-red); color:var(--accent-red);">Reset</button>
+    </div>
+</div>
+
+<div id="main-view">
+    <div id="chat-history"></div>
+    <div id="input-area">
+        <span style="color:var(--accent-grn);">></span>
+        <input type="text" id="user-input" placeholder="Speak to the lattice..." autocomplete="off" autofocus>
+    </div>
+</div>
+
+<script>
+    (function() {
+        "use strict";
+
+        /**
+         * @typedef {Object} VSLResponse
+         * @property {string[]} [logs]
+         * @property {string} [ui]
+         * @property {Object} [metrics]
+         * @property {number} metrics.atp
+         * @property {number} metrics.ros
+         * @property {number} metrics.health
+         * @property {number} metrics.stamina
+         * @property {Object} [physics]
+         * @property {number} physics.voltage
+         * @property {number} physics.narrative_drag
+         * @property {number} physics.exhaustion
+         * @property {number} physics.beta_index
+         * @property {number} physics.psi
+         * @property {number} physics.entropy
+         */
+
+        const ws = new WebSocket("ws://localhost:8000/ws");
+        const chatHistory = document.getElementById("chat-history");
+        const inputField = document.getElementById("user-input");
+        const btnExport = document.getElementById("btn-export");
+        const btnReset = document.getElementById("btn-reset");
+
+        // The ANSI to HTML Translator
+        function ansiToHtml(text) {
+            if (!text) return "";
+
+            const ansiMap = {
+                '30': 'black', '31': 'var(--accent-red)', '32': 'var(--accent-grn)',
+                '33': '#dddd00', '34': 'blue', '35': 'var(--accent-mag)',
+                '36': 'var(--accent-cyn)', '37': 'white', '90': 'var(--text-dim)',
+                '97': 'white'};
+            let html = text.replace(/\x1b\[(\d+)(;\d+)*m/g, (match, p1) => {
+                if (p1 === '0') return '</span>';
+                return ansiMap[p1] ? `<span style="color: ${ansiMap[p1]}">` : '<span>';});
+            return html.replace(/\n/g, '<br>');
+        }
+
+        ws.onopen = () => {
+            const statusEl = document.getElementById("connection-status");
+            if (statusEl) {
+                statusEl.innerText = "ONLINE";
+                statusEl.style.color = "var(--accent-grn)";
+            }
+        };
+
+        ws.onclose = () => {
+            const statusEl = document.getElementById("connection-status");
+            if (statusEl) {
+                statusEl.innerText = "DISCONNECTED";
+                statusEl.style.color = "var(--accent-red)";
+            }
+        };
+
+        // Handle Enter Key
+        inputField.addEventListener("keypress", (event) => {
+            if (event.key === "Enter" && inputField.value.trim() !== "") {
+                const msg = inputField.value;
+                appendLog(msg, "log-user");
+                ws.send(msg);
+                inputField.value = "";
+                appendLog("...", "log-sys", "loading-indicator");
+            }
+        });
+
+        ws.onmessage = (event) => {
+            const loader = document.getElementById("loading-indicator");
+            if (loader) loader.remove();
+
+            try {
+                /** @type {VSLResponse} */
+                const data = JSON.parse(event.data);
+
+                // Now the linter knows exactly what logs, ui, metrics, and physics are.
+                if (data.logs) data.logs.forEach((log) => appendLog(log, "log-sys"));
+                if (data.ui) appendLog(data.ui, "log-sys");
+
+                updateHUD(data);
+            } catch (error) {
+                console.error("Error parsing WebSocket message:", error);
+            }
+        };
+
+        function appendLog(text, className, id = null) {
+            const div = document.createElement("div");
+            div.className = `log-entry ${className}`;
+            if (id) div.id = id;
+
+            // Use our ANSI parser and inject as HTML
+            div.innerHTML = ansiToHtml(text);
+
+            chatHistory.appendChild(div);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function updateHUD(data) {
+            // Bio/Health Metrics guaranteed by inject_metrics()
+            if (data.metrics) {
+                const atpEl = document.getElementById("bio-atp");
+                const rosEl = document.getElementById("bio-ros");
+                const hpBar = document.getElementById("bar-hp");
+                const stmBar = document.getElementById("bar-stm");
+
+                if (atpEl) atpEl.innerText = parseFloat(data.metrics.atp || 0).toFixed(1);
+                if (rosEl) rosEl.innerText = parseFloat(data.metrics.ros || 0).toFixed(1);
+                if (hpBar) hpBar.style.width = `${Math.max(0, Math.min(100, data.metrics.health))}%`;
+                if (stmBar) stmBar.style.width = `${Math.max(0, Math.min(100, data.metrics.stamina))}%`;
+            }
+
+            // Physics / VSL
+            if (data.physics) {
+                const vslV = document.getElementById("vsl-v");
+                const vslF = document.getElementById("vsl-f");
+                const vslE = document.getElementById("vsl-e");
+                const vslB = document.getElementById("vsl-b");
+                const vslPsi = document.getElementById("vsl-psi");
+                const vslChi = document.getElementById("vsl-chi");
+
+                if (vslV) vslV.innerText = parseFloat(data.physics.voltage || 0).toFixed(1);
+                if (vslF) vslF.innerText = parseFloat(data.physics.narrative_drag || 0).toFixed(1);
+                if (vslE) vslE.innerText = parseFloat(data.physics.exhaustion || 0).toFixed(2);
+                if (vslB) vslB.innerText = parseFloat(data.physics.beta_index || 0).toFixed(2);
+                if (vslPsi) vslPsi.innerText = parseFloat(data.physics.psi || 0).toFixed(2);
+                if (vslChi) vslChi.innerText = parseFloat(data.physics.entropy || 0).toFixed(2);
+            }
+        }
+
+        // QoL Features via Fetch API
+        async function factoryReset() {
+            if (!window.confirm("Are you sure? This will delete the configuration and saved states.")) return;
+            try {
+                const res = await fetch("/api/reset");
+                const data = await res.json();
+                window.alert(data.message);
+            } catch (error) {
+                console.error("Failed to reset:", error);
+                window.alert("Reset failed. Is the server running?");
+            }
+        }
+
+        async function exportLogs() {
+            window.open("/api/export_transcript", "_blank");
+        }
+
+        // Attach Event Listeners to Buttons
+        if (btnExport) {
+            btnExport.addEventListener("click", exportLogs);
+        }
+        if (btnReset) {
+            btnReset.addEventListener("click", factoryReset);
+        }
+
+    })();
+</script>
+</body>
+</html>

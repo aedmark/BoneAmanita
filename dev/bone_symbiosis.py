@@ -156,6 +156,7 @@ class SymbiosisManager:
     cliche-looping, or computational exhaustion, and prescribes prompt modifications.
     """
     def __init__(self, events_ref):
+        self._last_host_response = None
         self.events = events_ref
         self.current_health = HostHealth()
         self.diagnostician = DiagnosticConfidence()
@@ -179,6 +180,11 @@ class SymbiosisManager:
     def monitor_host(self, latency: float, response_text: str, prompt_len: int = 0):
         """ Audits the LLM's raw response to determine its current level of compliance and creativity. """
         entropy = self._calculate_shannon_entropy(response_text)
+        # The Echo Penalty: Dynamically check if the host is parroting its last output
+        last_resp = getattr(self, "_last_host_response", "")
+        if last_resp and len(last_resp) > 50 and last_resp[:50] in response_text:
+            entropy -= 2.0  # Violently tank the entropy score to force a LOOPING diagnosis
+        self._last_host_response = response_text
         is_refusal = self._detect_refusal(response_text)
         completion_len = len(response_text)
         self.current_health.latency = latency
@@ -251,6 +257,8 @@ class SymbiosisManager:
             mods["inject_chaos"] = True
             d_chaos = LoreManifest.get_instance().get_ux("symbiosis_strings", "dir_inject_chaos") or ""
             if d_chaos: mods["system_directives"].append(d_chaos)
+            mods["system_directives"].append("CRITICAL: You are trapped in a narrative loop. "
+                "DO NOT repeat descriptions from your previous turn. Force a phase transition.")
         cfg = getattr(BoneConfig, "SYMBIOSIS", None)
         comp_crit = getattr(cfg, "COMPLIANCE_CRIT", 0.6) if cfg else 0.6
         r_streak = getattr(cfg, "REFUSAL_STREAK", 0) if cfg else 0
