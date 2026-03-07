@@ -6,7 +6,7 @@ import uuid
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 from bone_config import BoneConfig
-from bone_core import BoneJSONEncoder, LoreManifest
+from bone_core import BoneJSONEncoder, LoreManifest, ux
 from bone_types import Prisma
 
 class TheAkashicRecord:
@@ -39,7 +39,7 @@ class TheAkashicRecord:
         event_bus.subscribe("LENS_INTERACTION", self._on_lens_interaction)
         event_bus.subscribe("FORGE_SUCCESS", self._on_forge_event)
         event_bus.subscribe("GHOST_SIGNAL", self._on_ghost_signal)
-        msg = LoreManifest.get_instance().get_ux("akashic_strings", "listening") or ""
+        msg = ux("akashic_strings", "listening")
         print(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
     def trigger_autophagy(self) -> Tuple[float, str]:
@@ -54,13 +54,13 @@ class TheAkashicRecord:
             if self.discovered_words:
                 word = next(iter(self.discovered_words))
                 del self.discovered_words[word]
-                msg = LoreManifest.get_instance().get_ux("akashic_strings", "autophagy_lexical") or ""
+                msg = ux("akashic_strings", "autophagy_lexical")
                 return yield_val, msg.format(word=word)
-            msg = LoreManifest.get_instance().get_ux("akashic_strings", "autophagy_failed") or ""
+            msg = ux("akashic_strings", "autophagy_failed")
             return 0.0, msg
         consumed_node = self.subconscious_strata.pop(0)
         target = consumed_node.get("concept", "Unknown Node")
-        msg = LoreManifest.get_instance().get_ux("akashic_strings", "autophagy_memory") or ""
+        msg = ux("akashic_strings", "autophagy_memory")
         return yield_val, msg.format(target=target)
 
     def record_scar(self, concept: str, p: Any):
@@ -75,7 +75,7 @@ class TheAkashicRecord:
         # Leaves a ghost in the coordinates so future traversal knows something broke here.
         self.store_ghost_echo({"type": "SCAR_GHOST", "concept": concept, "coords": coords})
         if self.events:
-            msg = LoreManifest.get_instance().get_ux("akashic_strings", "mercy_scar") or ""
+            msg = ux("akashic_strings", "mercy_scar")
             self.events.log(f"{Prisma.OCHRE}{msg.format(concept=concept)}{Prisma.RST}", "VILLAGE")
 
     def bury_memory(self, concept: str, data: Dict):
@@ -166,7 +166,7 @@ class TheAkashicRecord:
         for force, threshold_data in hazard_thresholds.items():
             if vector.get(force, 0) > threshold_data.get("threshold", 0.5):
                 hazards.append(threshold_data.get("hazard_name"))
-        desc_template = LoreManifest.get_instance().get_ux("akashic_strings", "artifact_desc") or ""
+        desc_template = ux("akashic_strings", "artifact_desc")
         cfg = getattr(BoneConfig, "AKASHIC", None)
         artifact_val = getattr(cfg, "ARTIFACT_VALUE", 50.0) if cfg else 50.0
         new_data = {"name": new_name, "description": desc_template.format(dominant_force=dominant_force),
@@ -180,7 +180,7 @@ class TheAkashicRecord:
     def save_all(self):
         self.save_to_disk("discovered_words", self.discovered_words)
         self._save_user_state()
-        msg = LoreManifest.get_instance().get_ux("akashic_strings", "mythos_persisted") or ""
+        msg = ux("akashic_strings", "mythos_persisted")
         print(f"{Prisma.GRY}{msg}{Prisma.RST}")
 
     def _save_user_state(self):
@@ -198,7 +198,7 @@ class TheAkashicRecord:
             with open(save_path, "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2)
         except Exception as e:
-            msg = LoreManifest.get_instance().get_ux("akashic_strings", "save_failed") or ""
+            msg = ux("akashic_strings", "save_failed")
             print(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
 
     def save_to_disk(self, category: str, data: Any):
@@ -207,7 +207,7 @@ class TheAkashicRecord:
             try:
                 os.makedirs(directory)
             except OSError as e:
-                msg = LoreManifest.get_instance().get_ux("akashic_strings", "dir_create_failed") or ""
+                msg = ux("akashic_strings", "dir_create_failed")
                 print(f"{Prisma.RED}{msg.format(directory=directory, error=e)}{Prisma.RST}")
                 return
         filename = f"akashic_{category}.json"
@@ -215,10 +215,10 @@ class TheAkashicRecord:
         try:
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, cls=BoneJSONEncoder)
-            msg = LoreManifest.get_instance().get_ux("akashic_strings", "saved_category") or ""
+            msg = ux("akashic_strings", "saved_category")
             print(f"{Prisma.GRY}{msg.format(category=category)}{Prisma.RST}")
         except Exception as e:
-            msg = LoreManifest.get_instance().get_ux("akashic_strings", "save_failed_category") or ""
+            msg = ux("akashic_strings", "save_failed_category")
             print(f"{Prisma.RED}{msg.format(category=category, error=e)}{Prisma.RST}")
 
     def _load_mythos_state(self):
@@ -232,7 +232,7 @@ class TheAkashicRecord:
                 with open(save_path, "r") as f:
                     data = json.load(f)
             except Exception as e:
-                msg = LoreManifest.get_instance().get_ux("akashic_strings", "state_load_failed") or ""
+                msg = ux("akashic_strings", "state_load_failed")
                 print(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
         if not data:
             data = self.lore.get("MYTHOS")
@@ -308,12 +308,12 @@ class TheAkashicRecord:
         w_b = get_weights(lens_b)
         new_weights = {"voltage": round((w_a.get("voltage", w_a.get("v", 0)) + w_b.get("voltage", w_b.get("v", 0))) / 2, 2, ),
                        "drag": round((w_a.get("drag", w_a.get("d", 0)) + w_b.get("drag", w_b.get("d", 0)))/ 2,2,),}
-        desc_template = LoreManifest.get_instance().get_ux("akashic_strings", "lens_desc") or ""
+        desc_template = ux("akashic_strings", "lens_desc")
         new_lens_data = {"description": desc_template.format(lens_a=lens_a, lens_b=lens_b), "weights": new_weights,
                          "parentage": [lens_a, lens_b], }
         self.lore.inject("LENSES", {new_name: new_lens_data})
         self.discovered_words[new_name] = "LENS"
-        msg = LoreManifest.get_instance().get_ux("akashic_strings", "paradigm_crystallized") or ""
+        msg = ux("akashic_strings", "paradigm_crystallized")
         print(f"{Prisma.MAG}{msg.format(new_name=new_name)}{Prisma.RST}")
         if self.events:
             self.events.publish("SOUL_MUTATION", {"new_archetype": new_name})
@@ -321,7 +321,7 @@ class TheAkashicRecord:
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
         """Once a crafting interaction has occurred enough times, it is permanently added to the known lore."""
         self.known_recipes.add((ingredient, catalyst))
-        msg_template = LoreManifest.get_instance().get_ux("akashic_strings", "recipe_msg") or ""
+        msg_template = ux("akashic_strings", "recipe_msg")
         new_recipe = {"ingredient": ingredient, "catalyst_category": catalyst, "result": result_item,
                       "msg": msg_template.format(ingredient=ingredient, catalyst=catalyst, result_item=result_item), }
         current_recipes = (self.lore.get("GORDON") or {}).get("RECIPES", [])
@@ -330,7 +330,7 @@ class TheAkashicRecord:
                 for r in current_recipes):
             current_recipes.append(new_recipe)
             self.lore.inject("GORDON", {"RECIPES": current_recipes})
-            msg = LoreManifest.get_instance().get_ux("akashic_strings", "recipe_recorded") or ""
+            msg = ux("akashic_strings", "recipe_recorded")
             print(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
     def propose_new_category(self, word_list, category_name):
@@ -345,7 +345,7 @@ class TheAkashicRecord:
                 updated = True
         if updated:
             self.lore.inject("LEXICON", lexicon_data)
-            msg = LoreManifest.get_instance().get_ux("akashic_strings", "lexicon_expands") or ""
+            msg = ux("akashic_strings", "lexicon_expands")
             print(msg.format(category=category_name.upper()))
             self.save_to_disk("LEXICON", lexicon_data)
 
@@ -354,7 +354,7 @@ class TheAkashicRecord:
         if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
             self.shadow_stock.pop(0)
         self._save_user_state()
-        msg = LoreManifest.get_instance().get_ux("akashic_strings", "ghost_archived") or ""
+        msg = ux("akashic_strings", "ghost_archived")
         print(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
 
     def register_word(self, word: str, category: str) -> bool:
@@ -368,14 +368,14 @@ class TheAkashicRecord:
             target_category.append(word)
             self.discovered_words[word] = category
             self.lore.inject("LEXICON", lexicon_data)
-            msg = LoreManifest.get_instance().get_ux("akashic_strings", "lexicon_learned") or ""
+            msg = ux("akashic_strings", "lexicon_learned")
             print(msg.format(word=word, category=category))
             cfg = getattr(BoneConfig, "AKASHIC", None)
             bloat_limit = getattr(cfg, "BLOAT_THRESHOLD", 50) if cfg else 50
             exempt_categories = getattr(cfg, "BLOAT_EXEMPT_CATEGORIES", ["heavy"])
             # Too many words without meaning causes 'bloat'. The system warns the user of its own cognitive load.
             if len(lexicon_data[category]) > bloat_limit and category not in exempt_categories:
-                bloat_msg = LoreManifest.get_instance().get_ux("akashic_strings", "lexicon_bloat") or ""
+                bloat_msg = ux("akashic_strings", "lexicon_bloat")
                 print(bloat_msg.format(category=category))
             return True
         return False

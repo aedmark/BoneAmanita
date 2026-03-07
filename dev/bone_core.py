@@ -19,6 +19,10 @@ from typing import List, Dict, Any, Optional, Counter, Tuple, Deque
 from bone_config import BoneConfig
 from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
 
+def ux(section: str, key: str, default: Any = "") -> Any:
+    """Global syntax sugar to reduce lattice verbosity when fetching UI strings."""
+    return LoreManifest.get_instance().get_ux(section, key, default)
+
 class BoneJSONEncoder(json.JSONEncoder):
     """
     A custom JSON encoder to handle the specific data structures used
@@ -152,10 +156,6 @@ class LoreManifest:
         else:
             self._cache = {}
             print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
-
-def ux(section: str, key: str, default: Any = "") -> Any:
-    """Global syntax sugar to reduce lattice verbosity when fetching UI strings."""
-    return LoreManifest.get_instance().get_ux(section, key, default)
 
 class TheObserver:
     """

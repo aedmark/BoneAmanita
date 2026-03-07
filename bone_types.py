@@ -1,9 +1,14 @@
 """bone_types.py"""
 
-import time, copy, uuid, json, re
+import copy
+import json
+import re
+import time
+import uuid
 from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
+
 
 class Prisma:
     """The universal color palette. It handles rendering ANSI escape codes for the terminal and safely stripping them for logs."""
@@ -464,11 +469,11 @@ class DecisionCrystal:
     final_response: str = ""
 
     def __str__(self):
-        from bone_core import LoreManifest
+        from bone_core import ux
         e_val = self.leverage_metrics.get("E", 0.0)
-        icon = LoreManifest.get_instance().get_ux("types_strings", "crystal_icon") or "💎"
-        lbl = LoreManifest.get_instance().get_ux("types_strings", "crystal_label") or "CRYSTAL"
-        arch = LoreManifest.get_instance().get_ux("types_strings", "crystal_arch") or "ARCH:"
+        icon = ux("types_strings", "crystal_icon")
+        lbl = ux("types_strings", "crystal_label")
+        arch = ux("types_strings", "crystal_arch")
         return (f"{icon} {lbl} [{self.decision_id}] {self.system_state} | "
             f"{arch} {self.active_archetype} | E: {e_val:.2f}").strip()
 

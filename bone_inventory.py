@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
 from bone_config import BoneConfig
-from bone_core import LoreManifest
+from bone_core import LoreManifest, ux
 from bone_types import Prisma
 
 @dataclass
@@ -34,8 +34,8 @@ class Item:
 
     @classmethod
     def from_dict(cls, name: str, data: Dict):
-        default_desc = LoreManifest.get_instance().get_ux("gordon_strings", "default_item_desc") or "Unknown Artifact"
-        default_usage = LoreManifest.get_instance().get_ux("gordon_strings", "default_item_use") or f"You use the {name}."
+        default_desc = ux("gordon_strings", "default_item_desc") or "Unknown Artifact"
+        default_usage = ux("gordon_strings", "default_item_use") or f"You use the {name}."
 
         return cls(name=name, description=data.get("description", default_desc),
                    function=data.get("function", "MISC"), passive_traits=data.get("passive_traits", []),
@@ -87,7 +87,7 @@ class GordonKnot:
             words = action_obj_pair.split()
             if all(re.search(rf"\b{w}\b", text) for w in words):
                 if required_loc not in current_zone.lower():
-                    msg = LoreManifest.get_instance().get_ux("gordon_strings", "premise_loc") or ""
+                    msg = ux("gordon_strings", "premise_loc")
                     return f"{Prisma.SLATE}{msg.format(loc=required_loc, zone=current_zone)}{Prisma.RST}"
         inventory_items = " ".join([i.get("name", "").lower() for i in self.get_inventory_data()])
         # 2. Inventory-based Action Coupling
@@ -98,7 +98,7 @@ class GordonKnot:
                 mentions_item = any(obj in text for obj in required_objects)
                 if not has_item and not mentions_item:
                     req_str = ", ".join(required_objects)
-                    msg = LoreManifest.get_instance().get_ux("gordon_strings", "premise_req") or ""
+                    msg = ux("gordon_strings", "premise_req")
                     return f"{Prisma.SLATE}{msg.format(action=action, req_str=req_str)}{Prisma.RST}"
         # 3. Explicit Interaction Checks (e.g., 'examine', 'use')
         has_interaction = any(re.search(rf"\b{v}\b", text) for v in self.interaction_verbs)
@@ -107,7 +107,7 @@ class GordonKnot:
             for item_name in all_known:
                 item_lower = item_name.lower().replace("_", " ")
                 if item_lower in text and item_name.upper() not in self.inventory:
-                    msg = LoreManifest.get_instance().get_ux("gordon_strings", "premise_inv") or ""
+                    msg = ux("gordon_strings", "premise_inv")
                     return f"{Prisma.SLATE}{msg.format(item=item_lower)}{Prisma.RST}"
 
         return None
@@ -178,14 +178,14 @@ class GordonKnot:
             else:
                 if self.events:
                     for item in new_loot:
-                        msg = LoreManifest.get_instance().get_ux("gordon_strings", "consent_loot") or ""
+                        msg = ux("gordon_strings", "consent_loot")
                         self.events.log(msg.format(item=item), "GORDON")
         for item in lost_loot:
             if self.safe_remove_item(item):
-                msg = LoreManifest.get_instance().get_ux("gordon_strings", "entropy_lost") or ""
+                msg = ux("gordon_strings", "entropy_lost")
                 logs.append(f"{Prisma.GRY}{msg.format(item=item)}{Prisma.RST}")
             else:
-                msg = LoreManifest.get_instance().get_ux("gordon_strings", "glitch_lose") or ""
+                msg = ux("gordon_strings", "glitch_lose")
                 logs.append(f"{Prisma.OCHRE}{msg.format(item=item)}{Prisma.RST}")
         clean_text = re.sub(loot_pattern, "", text, flags=re.IGNORECASE)
         clean_text = re.sub(lost_pattern, "", clean_text, flags=re.IGNORECASE)
@@ -210,26 +210,26 @@ class GordonKnot:
         """ Adds an item to inventory, forcing the oldest item out if pockets are full. """
         tool_name = tool_name.strip().upper().replace(" ", "_") if tool_name else "UNKNOWN"
         if tool_name in self.inventory:
-            msg = LoreManifest.get_instance().get_ux("gordon_strings", "inv_duplicate") or ""
+            msg = ux("gordon_strings", "inv_duplicate")
             return f"{Prisma.OCHRE}{msg.format(item=tool_name)}{Prisma.RST}"
         item_obj = self.get_item_data(tool_name)
         if not item_obj:
             item_obj = self.get_item_data(tool_name.lower())
         if not item_obj:
             # On-the-fly registration of unmapped items
-            fallback_desc = LoreManifest.get_instance().get_ux("gordon_strings", "fallback_desc") or "???"
+            fallback_desc = ux("gordon_strings", "fallback_desc", "???")
             new_item = Item(name=tool_name, description=fallback_desc, function="MISC")
             self.registry[tool_name] = new_item
             self.ITEM_REGISTRY[tool_name] = new_item.__dict__
         if len(self.inventory) >= self.max_slots:
             dropped = self.inventory.pop(0)
             if self.events:
-                msg = LoreManifest.get_instance().get_ux("gordon_strings", "inv_full_drop") or ""
+                msg = ux("gordon_strings", "inv_full_drop")
                 self.events.log(msg.format(dropped=dropped), "INV")
         self.inventory.append(tool_name)
         if self.events:
             self.events.publish("ITEM_ACQUIRED", {"item": tool_name})
-        msg = LoreManifest.get_instance().get_ux("gordon_strings", "acquired")
+        msg = ux("gordon_strings", "acquired")
         return f"{Prisma.GRN}{msg.format(item=tool_name)}{Prisma.RST}"
 
     def safe_remove_item(self, item_name: str) -> bool:
@@ -249,11 +249,11 @@ class GordonKnot:
         if hasattr(BoneConfig, "INVENTORY"):
             cost = getattr(BoneConfig.INVENTORY, "RUMMAGE_COST", 15.0)
         if stamina_pool < cost:
-            msg = LoreManifest.get_instance().get_ux("gordon_strings", "rummage_tired") or ""
+            msg = ux("gordon_strings", "rummage_tired")
             return False, f"{Prisma.OCHRE}{msg}{Prisma.RST}", 0.0
         loot_table = self._get_loot_candidates(physics_ref)
         if not loot_table:
-            msg = LoreManifest.get_instance().get_ux("gordon_strings", "rummage_empty") or ""
+            msg = ux("gordon_strings", "rummage_empty")
             return False, msg, cost
         found_item = random.choice(loot_table)
         msg = self.acquire(found_item)
@@ -287,7 +287,7 @@ class GordonKnot:
             new_item = Item.from_dict(name, data)
             self.registry[name] = new_item
             if self.events:
-                msg = LoreManifest.get_instance().get_ux("gordon_strings", "make_space") or ""
+                msg = ux("gordon_strings", "make_space")
                 self.events.log(f"{Prisma.CYN}{msg.format(name=name)}{Prisma.RST}", "INV")
 
     def synthesize_item(self, physics_vector: Dict[str, float]) -> str:
@@ -323,7 +323,7 @@ class GordonKnot:
             if self.mode == "ADVENTURE"
             else f"{prefix} {base} {suffix}")
         clean_id = full_name.upper().replace(" ", "_")
-        desc_template = LoreManifest.get_instance().get_ux("gordon_strings", "synthesis_desc") or ""
+        desc_template = ux("gordon_strings", "synthesis_desc")
         item_data = {"description": desc_template.format(base=base.lower(), archetype=archetype),
                      "function": "ARTIFACT", "passive_traits": ["DYNAMIC"],
                      "value": round(physics_vector.get(dom_dim, 0.0) * 10, 1), "spawn_context": "FORGED", }
@@ -362,16 +362,16 @@ class GordonKnot:
     def consume(self, item_name: str) -> Tuple[bool, str]:
         item_name = item_name.upper()
         if item_name not in self.inventory:
-            return False, LoreManifest.get_instance().get_ux("gordon_strings", "consume_missing") or ""
+            return False, ux("gordon_strings", "consume_missing")
         item = self.get_item_data(item_name)
         if not item or not item.consume_on_use:
-            msg = LoreManifest.get_instance().get_ux("gordon_strings", "consume_invalid") or ""
+            msg = ux("gordon_strings", "consume_invalid")
             return False, msg.format(item=item_name)
         self.inventory.remove(item_name)
         if item.function == "STABILITY":
-            msg = LoreManifest.get_instance().get_ux( "gordon_strings", "consume_pizza") or ""
+            msg = ux( "gordon_strings", "consume_pizza")
             return True, msg.format(item=item_name)
-        msg = LoreManifest.get_instance().get_ux("gordon_strings", "consume_used")
+        msg = ux("gordon_strings", "consume_used")
         return True, msg.format(item=item_name, usage_msg=item.usage_msg)
 
     def emergency_reflex(self, physics_ref: Dict) -> Tuple[bool, Optional[str]]:
@@ -398,17 +398,17 @@ class GordonKnot:
             if trigger == "VOLTAGE_CRITICAL" and voltage > v_trig:
                 self.safe_remove_item(name)
                 physics_ref["voltage"] = v_reset
-                msg = LoreManifest.get_instance().get_ux( "gordon_strings", "reflex_voltage") or ""
+                msg = ux( "gordon_strings", "reflex_voltage")
                 return True, f"{Prisma.CYN}{msg.format(name=name)}{Prisma.RST}"
             if trigger == "DRIFT_CRITICAL" and drag > d_trig:
                 self.safe_remove_item(name)
                 physics_ref["narrative_drag"] = d_reset
-                msg = LoreManifest.get_instance().get_ux( "gordon_strings", "reflex_drift") or ""
+                msg = ux( "gordon_strings", "reflex_drift")
                 return True, f"{Prisma.OCHRE}{msg.format(name=name)}{Prisma.RST}"
             if trigger == "KAPPA_CRITICAL" and kappa < k_trig:
                 self.safe_remove_item(name)
                 physics_ref["kappa"] = k_reset
-                msg = LoreManifest.get_instance().get_ux("gordon_strings", "reflex_kappa") or ""
+                msg = ux("gordon_strings", "reflex_kappa")
                 return True, f"{Prisma.GRN}{msg.format(name=name)}{Prisma.RST}"
 
         return False, None

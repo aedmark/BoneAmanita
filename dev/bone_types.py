@@ -9,8 +9,6 @@ from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
 
-from dev.bone_core import ux
-
 
 class Prisma:
     """The universal color palette. It handles rendering ANSI escape codes for the terminal and safely stripping them for logs."""
@@ -471,6 +469,7 @@ class DecisionCrystal:
     final_response: str = ""
 
     def __str__(self):
+        from bone_core import ux
         e_val = self.leverage_metrics.get("E", 0.0)
         icon = ux("types_strings", "crystal_icon")
         lbl = ux("types_strings", "crystal_label")

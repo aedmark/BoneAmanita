@@ -14,7 +14,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
 from bone_config import BonePresets, BoneConfig
-from bone_core import LoreManifest
+from bone_core import LoreManifest, ux
 from bone_lexicon import LexiconService
 from bone_types import PhysicsPacket
 
@@ -186,12 +186,12 @@ class EnneagramDriver:
             elif hybrid_key_b in LENSES:
                 final_hybrid = hybrid_key_b
             if final_hybrid:
-                msg = LoreManifest.get_instance().get_ux("driver_strings", "ennea_synthesis") or ""
+                msg = ux("driver_strings", "ennea_synthesis") 
                 return (
                     final_hybrid,
                     "SYNTHESIS",
                     msg.format(winner=winner, runner_up=runner_up),)
-        msg_winner = LoreManifest.get_instance().get_ux("driver_strings", "ennea_winner") or ""
+        msg_winner = ux("driver_strings", "ennea_winner") 
         reason = msg_winner.format(
             winner=winner, score=scores[winner], v=p_vol, d=p_drag)
         state_map = LoreManifest.get_instance().get("DRIVER_CONFIG", "PERSONA_STATE_MAP") or {}
@@ -209,7 +209,7 @@ class EnneagramDriver:
         else:
             self.pending_persona = candidate
             self.stability_counter = 1
-        msg_shift = LoreManifest.get_instance().get_ux("driver_strings", "ennea_shift") or ""
+        msg_shift = ux("driver_strings", "ennea_shift") 
         if "HYBRID" in candidate:
             self.current_persona = candidate
             self.stability_counter = 0
@@ -220,7 +220,7 @@ class EnneagramDriver:
             self.stability_counter = 0
             self.pending_persona = None
             return self.current_persona, state_desc, msg_shift.format(reason=reason)
-        msg_resisting = LoreManifest.get_instance().get_ux("driver_strings", "ennea_resisting") or ""
+        msg_resisting = ux("driver_strings", "ennea_resisting") 
         return (
             self.current_persona,
             "STABLE",
@@ -397,11 +397,11 @@ class BoneConsultant:
 
     @staticmethod
     def engage():
-        return LoreManifest.get_instance().get_ux("driver_strings", "vsl_engage") or ""
+        return ux("driver_strings", "vsl_engage") 
 
     @staticmethod
     def disengage():
-        return LoreManifest.get_instance().get_ux("driver_strings", "vsl_disengage") or ""
+        return ux("driver_strings", "vsl_disengage") 
 
     def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None,
                            physics: Optional[PhysicsPacket] = None, ):
@@ -444,29 +444,29 @@ class BoneConsultant:
         bun_max = getattr(cfg, "VSL_BUNNY_E_MAX", 0.3) if cfg else 0.3
         par_min = getattr(cfg, "VSL_PARADOX_B_MIN", 0.6) if cfg else 0.6
         if "LIMINAL" in self.state.active_modules or self.state.L > lim_thresh:
-            scar_temp = LoreManifest.get_instance().get_ux("driver_strings", "vsl_scar_note") or ""
+            scar_temp = ux("driver_strings", "vsl_scar_note") 
             scar_note = (
                 scar_temp.format(scars=self.liminal_mod.godel_scars)
                 if self.liminal_mod.godel_scars > 0
                 else "")
-            msg = LoreManifest.get_instance().get_ux("driver_strings", "vsl_arch_revenant") or ""
+            msg = ux("driver_strings", "vsl_arch_revenant") 
             directives.append(msg.format(scar_note=scar_note))
         elif "SYNTAX" in self.state.active_modules or self.state.O > syn_thresh:
-            stress_temp = LoreManifest.get_instance().get_ux("driver_strings", "vsl_stress_note") or ""
+            stress_temp = ux("driver_strings", "vsl_stress_note") 
             stress_note = (
                 stress_temp if self.syntax_mod.grammatical_stress > 0.5 else "")
-            msg = LoreManifest.get_instance().get_ux("driver_strings", "vsl_arch_bureau") or ""
+            msg = ux("driver_strings", "vsl_arch_bureau") 
             directives.append(msg.format(stress_note=stress_note))
         else:
             if self.state.E < bun_max:
-                directives.append(LoreManifest.get_instance().get_ux("driver_strings", "vsl_mode_bunny") or "")
+                directives.append(ux("driver_strings", "vsl_mode_bunny") )
             elif self.state.B > par_min:
-                directives.append(LoreManifest.get_instance().get_ux("driver_strings", "vsl_mode_paradox") or "")
+                directives.append(ux("driver_strings", "vsl_mode_paradox") )
             else:
-                directives.append(LoreManifest.get_instance().get_ux("driver_strings", "vsl_mode_glacier") or "")
+                directives.append(ux("driver_strings", "vsl_mode_glacier") )
         if soul_snapshot:
             arch = soul_snapshot.get("archetype", "UNKNOWN")
             muse = (soul_snapshot.get("obsession") or {}).get("title", "None")
-            msg = LoreManifest.get_instance().get_ux("driver_strings", "vsl_layer_muse") or ""
+            msg = ux("driver_strings", "vsl_layer_muse") 
             directives.append(msg.format(arch=arch, muse=muse))
         return "\n".join(directives)

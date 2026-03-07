@@ -4,7 +4,7 @@ from typing import Dict, Any, Set
 
 from bone_akashic import TheAkashicRecord
 from bone_config import BoneConfig
-from bone_core import EventBus, LoreManifest
+from bone_core import EventBus, LoreManifest, ux
 from bone_drivers import DriverRegistry, BoneConsultant
 from bone_inventory import GordonKnot
 from bone_machine import BoneArchitect
@@ -30,10 +30,10 @@ class BoneGenesis:
         # Establish the foundational communication layer (EventBus) [cite: 40] and reality context (LoreManifest)[cite: 41].
         events = events_ref or EventBus()
         if events_ref:
-            msg = LoreManifest.get_instance().get_ux("genesis_strings", "ignite_log") or ""
+            msg = ux("genesis_strings", "ignite_log") 
             events.log(msg, "GENESIS")
         else:
-            msg = LoreManifest.get_instance().get_ux("genesis_strings", "ignite_print") or ""
+            msg = ux("genesis_strings", "ignite_print") 
             print(msg)
         lore = LoreManifest()
         akashic = TheAkashicRecord(lore_manifest=lore, events_ref=events)
@@ -64,7 +64,7 @@ class BoneGenesis:
             # altering its starting drag, health, and mitochondria ATP limits.
             logs = oroboros.apply_legacy(dummy_phys, live_bio_state)
             if logs:
-                msg_scars = LoreManifest.get_instance().get_ux("genesis_strings", "legacy_scars") or ""
+                msg_scars = ux("genesis_strings", "legacy_scars") 
                 events.log(msg_scars.format(logs=", ".join(logs)), "OROBOROS")
                 # Apply the inherited epigenetic drag directly to the physics dynamics
                 if getattr(embryo.physics, "dynamics", None):

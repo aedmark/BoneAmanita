@@ -9,8 +9,14 @@ starves, what voltage triggers a hallucination, and how trauma decays over time.
 
 from typing import Dict, Any, List
 
-from dev.bone_core import ux
-
+def ux(section: str, key: str, default: Any = "") -> Any:
+    """
+    A localized lazy-valve.
+    Because the import is inside the function, Python won't execute it
+    until the system is fully booted and a method actually asks for a string.
+    """
+    from bone_core import LoreManifest
+    return LoreManifest.get_instance().get_ux(section, key, default)
 
 class BonePresets:
     """

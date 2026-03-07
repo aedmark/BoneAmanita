@@ -9,6 +9,15 @@ starves, what voltage triggers a hallucination, and how trauma decays over time.
 
 from typing import Dict, Any, List
 
+def ux(section: str, key: str, default: Any = "") -> Any:
+    """
+    A localized lazy-valve.
+    Because the import is inside the function, Python won't execute it
+    until the system is fully booted and a method actually asks for a string.
+    """
+    from bone_core import LoreManifest
+    return LoreManifest.get_instance().get_ux(section, key, default)
+
 class BonePresets:
     """
     Epigenetic Lineages. These are predefined, holistic shifts in the organism's
@@ -786,10 +795,8 @@ class BoneConfig:
     @classmethod
     def load_preset(cls, preset_dict: Dict[str, Any]) -> List[str]:
         """ Applies an Epigenetic Lineage map over the global parameters, tuning the lattice in real-time. """
-        from bone_core import LoreManifest
         logs = []
-        msg_tuned = LoreManifest.get_instance().get_ux("config_strings",
-                                                       "preset_tuned") or "Tuned {sector}.{param}: {old_val} -> {new_val}"
+        msg_tuned = ux("config_strings", "preset_tuned") or "Tuned {sector}.{param}: {old_val} -> {new_val}"
         for key, value in preset_dict.items():
             if "." in key:
                 sector_name, param_name = key.split(".", 1)
@@ -815,24 +822,22 @@ class BoneConfig:
     @classmethod
     def validate_integrity(cls) -> List[str]:
         """ DNA Repair Mechanism. Validates that physics floors have not exceeded their ceilings. """
-        from bone_core import LoreManifest
         errors = []
         if cls.PHYSICS.VOLTAGE_FLOOR > cls.PHYSICS.VOLTAGE_MAX:
             cls.PHYSICS.VOLTAGE_FLOOR = cls.PHYSICS.VOLTAGE_MAX - 1.0
-            msg = LoreManifest.get_instance().get_ux("config_strings", "repair_floor_max") or ""
+            msg = ux("config_strings", "repair_floor_max") 
             if msg: errors.append(msg)
         if cls.PHYSICS.DRAG_FLOOR > cls.PHYSICS.DRAG_HALT:
             cls.PHYSICS.DRAG_FLOOR = cls.PHYSICS.DRAG_HALT - 1.0
-            msg = LoreManifest.get_instance().get_ux("config_strings", "repair_drag_halt") or ""
+            msg = ux("config_strings", "repair_drag_halt") 
             if msg: errors.append(msg)
         return errors
 
     @classmethod
     def check_pareidolia(cls, words: List[str]) -> Any:
         """ A thematic check. Detects the ghost in the static. """
-        from bone_core import LoreManifest
         if "face" in words and "smoke" in words:
-            msg = LoreManifest.get_instance().get_ux("config_strings", "pareidolia_smoke") or ""
+            msg = ux("config_strings", "pareidolia_smoke") 
             return True, msg
         return False, ""
 
@@ -856,20 +861,19 @@ class BoneConfig:
     @classmethod
     def tune(cls, sector: str, parameter: str, value: Any) -> str:
         """ Manual genetic editing. Allows runtime alteration of individual constants without requiring a reboot. """
-        from bone_core import LoreManifest
         if not hasattr(cls, sector):
-            msg = LoreManifest.get_instance().get_ux("config_strings", "tune_sector_err") or ""
+            msg = ux("config_strings", "tune_sector_err") 
             return msg.format(sector=sector)
         target_sector = getattr(cls, sector)
         if not hasattr(target_sector, parameter):
-            msg = LoreManifest.get_instance().get_ux("config_strings", "tune_param_err") or ""
+            msg = ux("config_strings", "tune_param_err") 
             return msg.format(parameter=parameter, sector=sector)
         current_val = getattr(target_sector, parameter)
         if type(current_val) != type(value):
             if not (isinstance(current_val, (int, float))
                     and isinstance(value, (int, float))):
-                msg = LoreManifest.get_instance().get_ux("config_strings", "tune_type_err") or ""
+                msg = ux("config_strings", "tune_type_err") 
                 return msg.format(curr_type=type(current_val).__name__, new_type=type(value).__name__)
         setattr(target_sector, parameter, value)
-        msg = LoreManifest.get_instance().get_ux("config_strings", "tune_success") or ""
+        msg = ux("config_strings", "tune_success") 
         return msg.format(sector=sector, parameter=parameter, value=value)
