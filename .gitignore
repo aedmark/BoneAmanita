@@ -5,3 +5,12 @@
 /bone_config.json
 /dev/venv/
 /dev/bone_config.json
+/dev/vsl_training_data*.jsonl
+/dev/bone_sifter.py
+/dev/vsl_seed_vault*.json
+/dev/bone_seed.py
+/dev/bone_scrubber.py
+/dev/bone_pruner.py
+/dev/bone_forge.py
+/dev/lore/akashic_discovered_words.json
+/lore/akashic_discovered_words.json

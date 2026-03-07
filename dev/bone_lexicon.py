@@ -15,7 +15,8 @@ import string
 import time
 import unicodedata
 from typing import Tuple, Dict, Set, Optional, List
-from bone_core import Prisma, LoreManifest
+from bone_core import Prisma, LoreManifest, ux
+
 
 class LexiconStore:
     """
@@ -78,10 +79,10 @@ class LexiconStore:
                     self._index_word(word, cat)
                     count += 1
             self.hive_loaded = True
-            msg = LoreManifest.get_instance().get_ux("lexicon_strings", "hive_restored") or ""
+            msg = ux("lexicon_strings", "hive_restored")
             print(f"{Prisma.CYN}{msg.format(count=count)}{Prisma.RST}")
         except (IOError, json.JSONDecodeError) as e:
-            msg = LoreManifest.get_instance().get_ux("lexicon_strings", "hive_corruption") or ""
+            msg = ux("lexicon_strings", "hive_corruption")
             print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
 
     def save_hive(self):
@@ -369,12 +370,12 @@ class LexiconService:
             cls.compile_antigens()
             cls.SOLVENTS = cls._STORE.SOLVENTS
             total_words = sum(len(s) for s in cls._STORE.VOCAB.values())
-            msg = LoreManifest.get_instance().get_ux("lexicon_strings", "sys_nominal") or ""
+            msg = ux("lexicon_strings", "sys_nominal")
             print(f"{Prisma.GRN}{msg.format(total_words=total_words)}{Prisma.RST}")
 
         except Exception as e:
             cls._INITIALIZED = False
-            msg = LoreManifest.get_instance().get_ux("lexicon_strings", "sys_init_fail") or ""
+            msg = ux("lexicon_strings", "sys_init_fail")
             print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
             raise e
 
@@ -462,7 +463,7 @@ class LexiconService:
     def get_random(cls, category: str) -> str:
         words = list(cls.get(category))
         if not words:
-            return LoreManifest.get_instance().get_ux("lexicon_strings", "default_random_word") or "void"
+            return ux("lexicon_strings", "default_random_word") or "void"
         return random.choice(words)
 
     @classmethod
@@ -473,7 +474,7 @@ class LexiconService:
     def save(cls):
         if cls._INITIALIZED and cls._STORE:
             cls._STORE.save_hive()
-            msg = LoreManifest.get_instance().get_ux("lexicon_strings", "hive_saved") or ""
+            msg = ux("lexicon_strings", "hive_saved")
             print(f"{Prisma.GRN}{msg}{Prisma.RST}")
 
     @classmethod

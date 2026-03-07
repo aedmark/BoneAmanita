@@ -13,7 +13,7 @@ import random
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Tuple, Optional, Set
 from bone_config import BoneConfig
-from bone_core import LoreManifest, EventBus
+from bone_core import LoreManifest, EventBus, ux
 from bone_physics import PhysicsDelta
 from bone_types import Prisma, PhysicsPacket
 
@@ -117,7 +117,7 @@ class TheTinkerer:
         self.tool_resonance[item] = min(r_max, self.tool_resonance[item] + amount)
         curr = self.tool_resonance[item]
         if a_min < curr < a_max and random.random() < a_chance:
-            msg = LoreManifest.get_instance().get_ux("village_strings", "tinkerer_resonance") or ""
+            msg = ux("village_strings", "tinkerer_resonance")
             if msg:
                 self.events.log(f"{Prisma.CYN}{msg.format(item=item)}{Prisma.RST}", "VILLAGE")
 
@@ -143,7 +143,7 @@ class TheTinkerer:
                         a_halve = getattr(cfg, "TINKER_ASCENSION_HALVE", 2.0) if cfg else 2.0
                         self.tool_resonance[new_name] = resonance / a_halve
                         del self.tool_resonance[old_name]
-                        msg = LoreManifest.get_instance().get_ux("village_strings", "tinkerer_ascension") or ""
+                        msg = ux("village_strings", "tinkerer_ascension")
                         if msg:
                             self.events.log(f"{Prisma.MAG}{msg.format(old=old_name, new=new_name)}{Prisma.RST}", "AKASHIC",)
                     except ValueError:
@@ -170,7 +170,7 @@ class ParadoxSeed:
 
     def bloom(self) -> str:
         self.bloomed = True
-        msg = LoreManifest.get_instance().get_ux("village_strings", "paradox_bloom") or ""
+        msg = ux("village_strings", "paradox_bloom")
         return msg.format(question=self.question) if msg else ""
 
 
@@ -210,7 +210,7 @@ class MirrorGraph:
 
     def get_reflection_modifiers(self) -> Dict:
         if not self.stats or sum(self.stats.values()) == 0:
-            msg_neutral = LoreManifest.get_instance().get_ux("village_strings", "mirror_neutral") or ""
+            msg_neutral = ux("village_strings", "mirror_neutral")
             return {"flavor": msg_neutral, "drag_mult": 1.0}
         top_stat = max(self.stats, key=self.stats.get)
         cfg = getattr(BoneConfig, "VILLAGE", None)
@@ -219,7 +219,7 @@ class MirrorGraph:
                     "LAW": getattr(cfg, "MIRROR_DRAG_LAW", 0.8) if cfg else 0.8,
                     "ART": getattr(cfg, "MIRROR_DRAG_ART", 0.9) if cfg else 0.9}
         mult = drag_map.get(top_stat, 1.0)
-        msg_raw = LoreManifest.get_instance().get_ux("village_strings", "mirror_stat") or ""
+        msg_raw = ux("village_strings", "mirror_stat")
         msg_stat = msg_raw.format(stat=top_stat) if msg_raw else ""
         return {"flavor": msg_stat, "drag_mult": mult}
 
@@ -271,13 +271,13 @@ class TheCartographer:
         c_ent_cap = getattr(cfg, "CARTO_ENTROPY_CAP", 5.0) if cfg else 5.0
         if "heavy" in node.atmosphere.lower():
             packet.narrative_drag += c_heavy
-            msg_raw = LoreManifest.get_instance().get_ux("village_strings", "carto_env_heavy") or ""
+            msg_raw = ux("village_strings", "carto_env_heavy")
             if msg_raw:
                 msg = msg_raw.format(c_heavy=c_heavy)
                 logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         if "vibrating" in node.atmosphere.lower():
             packet.voltage += c_static
-            msg_raw = LoreManifest.get_instance().get_ux("village_strings", "carto_env_static") or ""
+            msg_raw = ux("village_strings", "carto_env_static")
             if msg_raw:
                 msg = msg_raw.format(c_static=c_static)
                 logs.append(f"{Prisma.YEL}{msg}{Prisma.RST}")
@@ -288,9 +288,9 @@ class TheCartographer:
 
     def _init_genesis(self):
         manifest = LoreManifest.get_instance()
-        msg_name = manifest.get_ux("village_strings", "genesis_name") or ""
-        msg_atmos = manifest.get_ux("village_strings", "genesis_atmos") or ""
-        msg_smell = manifest.get_ux("village_strings", "genesis_smell") or ""
+        msg_name = manifest.get_ux("village_strings", "genesis_name")
+        msg_atmos = manifest.get_ux("village_strings", "genesis_atmos")
+        msg_smell = manifest.get_ux("village_strings", "genesis_smell")
         self.world_graph["GENESIS_POINT"] = GeniusLoci(id="GENESIS_POINT", name=msg_name, atmosphere=msg_atmos, smell=msg_smell, )
 
     @staticmethod
@@ -312,12 +312,12 @@ class TheCartographer:
                 self._prune_graph()
             new_node = self._generate_loci_data(target_id, packet)
             self.world_graph[target_id] = new_node
-            msg_str = LoreManifest.get_instance().get_ux("village_strings", "carto_new_sector") or ""
+            msg_str = ux("village_strings", "carto_new_sector")
             msg = f"{Prisma.MAG}{msg_str.format(name=new_node.name)}{Prisma.RST}" if msg_str else None
         else:
             new_node = self.world_graph[target_id]
             if new_node.id != self.current_node_id:
-                msg_str = LoreManifest.get_instance().get_ux("village_strings", "carto_arriving") or ""
+                msg_str = ux("village_strings", "carto_arriving")
                 msg = f"{Prisma.CYN}{msg_str.format(name=new_node.name)}{Prisma.RST}" if msg_str else None
         self.current_node_id = target_id
         current_node = self.world_graph[target_id]
@@ -333,17 +333,17 @@ class TheCartographer:
         roots = scenarios.get("ROOTS", ["Construct", "Forge", "Garden"]) or {}
         name = f"{random.choice(prefixes)} {random.choice(roots)}"
         if packet.voltage > BoneConfig.COUNCIL.MANIC_VOLTAGE_TRIGGER:
-            suffix = manifest.get_ux("village_strings", "loci_flux_suffix") or ""
-            atmosphere = manifest.get_ux("village_strings", "loci_flux_atmos") or ""
-            smell = manifest.get_ux("village_strings", "loci_flux_smell") or ""
+            suffix = manifest.get_ux("village_strings", "loci_flux_suffix")
+            atmosphere = manifest.get_ux("village_strings", "loci_flux_atmos")
+            smell = manifest.get_ux("village_strings", "loci_flux_smell")
         elif packet.narrative_drag > BoneConfig.PHYSICS.DRAG_HALT:
-            suffix = manifest.get_ux("village_strings", "loci_deep_suffix") or ""
-            atmosphere = manifest.get_ux("village_strings", "loci_deep_atmos") or ""
-            smell = manifest.get_ux("village_strings", "loci_deep_smell") or ""
+            suffix = manifest.get_ux("village_strings", "loci_deep_suffix")
+            atmosphere = manifest.get_ux("village_strings", "loci_deep_atmos")
+            smell = manifest.get_ux("village_strings", "loci_deep_smell")
         else:
-            suffix = manifest.get_ux("village_strings", "loci_prime_suffix") or ""
-            atmosphere = manifest.get_ux("village_strings", "loci_prime_atmos") or ""
-            smell = manifest.get_ux("village_strings", "loci_prime_smell") or ""
+            suffix = manifest.get_ux("village_strings", "loci_prime_suffix")
+            atmosphere = manifest.get_ux("village_strings", "loci_prime_atmos")
+            smell = manifest.get_ux("village_strings", "loci_prime_smell")
         final_name = f"{name} {suffix}".upper()
         return GeniusLoci(id=node_id, name=final_name, atmosphere=atmosphere, smell=smell)
 
@@ -426,7 +426,7 @@ class TownHall:
         if not self.seeds or not clean_words:
             return blooms
         lower_words = [w.lower() for w in clean_words]
-        prefix = LoreManifest.get_instance().get_ux("village_strings", "town_bloom") or ""
+        prefix = ux("village_strings", "town_bloom")
         for seed in self.seeds:
             if seed.bloomed:
                 continue
@@ -450,7 +450,7 @@ class TownHall:
         l_warn = getattr(cfg, "TOWN_LATENCY_WARN", 3.0) if cfg else 3.0
         if latency > l_warn:
             status = "HIGH_LATENCY"
-            advice = LoreManifest.get_instance().get_ux("village_strings", "town_lag") or ""
+            advice = ux("village_strings", "town_lag")
         elif packet.voltage > BoneConfig.PHYSICS.VOLTAGE_HIGH:
             status = "HIGH_VOLTAGE"
             advice = random.choice(forecasts.get("HIGH_VOLTAGE", ["Manic energy."]))
@@ -460,7 +460,7 @@ class TownHall:
         else:
             status = "BALANCED"
             advice = random.choice(forecasts.get("BALANCED", ["Nominal."]))
-        census_fmt = LoreManifest.get_instance().get_ux("village_strings", "town_census") or ""
+        census_fmt = ux("village_strings", "town_census")
         report = census_fmt.format(loc=loc_name, status=status, advice=advice) if census_fmt else ""
         news = self._get_town_news(latency, packet.voltage)
         if news:
@@ -470,14 +470,14 @@ class TownHall:
         d_high = getattr(cfg, "TOWN_DRAG_HIGH", 5.0) if cfg else 5.0
         r_chance = getattr(cfg, "TOWN_RUMOR_CHANCE", 0.3) if cfg else 0.3
         if packet.voltage > v_crit:
-            msg = LoreManifest.get_instance().get_ux("village_strings", "town_restrain") or ""
+            msg = ux("village_strings", "town_restrain")
             if msg: report += f"\n{Prisma.RED}{msg}{Prisma.RST}"
         elif packet.voltage < v_low and packet.narrative_drag > d_high:
-            msg = LoreManifest.get_instance().get_ux("village_strings", "town_loops") or ""
+            msg = ux("village_strings", "town_loops")
             if msg: report += f"\n{Prisma.MAG}{msg}{Prisma.RST}"
         elif status == "BALANCED" and self.rumors and random.random() < r_chance:
             rumor = random.choice(self.rumors)
-            msg = LoreManifest.get_instance().get_ux("village_strings", "town_rumor") or ""
+            msg = ux("village_strings", "town_rumor")
             if msg: report += f"\n{Prisma.GRY}{msg.format(rumor=rumor)}{Prisma.RST}"
         return report.strip()
 
@@ -486,17 +486,17 @@ class TownHall:
         cfg = getattr(BoneConfig, "VILLAGE", None)
         news_lat = getattr(cfg, "TOWN_NEWS_LATENCY", 4.0) if cfg else 4.0
         if latency > news_lat:
-            msg = LoreManifest.get_instance().get_ux("village_strings", "town_crier_slow") or ""
+            msg = ux("village_strings", "town_crier_slow")
             return f"{Prisma.OCHRE}{msg}{Prisma.RST}" if msg else None
         if volt > BoneConfig.PHYSICS.VOLTAGE_CRITICAL:
-            msg = LoreManifest.get_instance().get_ux("village_strings", "town_crier_volt") or ""
+            msg = ux("village_strings", "town_crier_volt")
             return f"{Prisma.YEL}{msg}{Prisma.RST}" if msg else None
         return None
 
     def on_item_drop(self, payload):
         item = payload.get("item")
         if item:
-            msg = LoreManifest.get_instance().get_ux("village_strings", "town_item_drop") or ""
+            msg = ux("village_strings", "town_item_drop")
             if msg:
                 self.events.log(msg.format(item=item), "VILLAGE")
 
@@ -514,17 +514,17 @@ class TownHall:
             neglect = getattr(soul, "obsession_neglect", 0.0)
             if neglect > neg_crit:
                 obsession = getattr(soul, "current_obsession", "work")
-                msg = LoreManifest.get_instance().get_ux("village_strings", "town_guilt") or ""
+                msg = ux("village_strings", "town_guilt")
                 return "HIGH_DRAG", msg.format(obsession=obsession) if msg else ""
         if trauma:
             max_trauma = max(trauma, key=trauma.get) if trauma else "NONE"
             if trauma.get(max_trauma, 0) > t_crit:
-                msg = LoreManifest.get_instance().get_ux("village_strings", "town_trauma") or ""
+                msg = ux("village_strings", "town_trauma")
                 return "HIGH_TRAUMA", msg.format(trauma=max_trauma) if msg else ""
         if final_health < h_crit:
-            msg = LoreManifest.get_instance().get_ux("village_strings", "town_critical") or ""
+            msg = ux("village_strings", "town_critical")
             return "HIGH_TRAUMA", msg
-        msg_nominal = LoreManifest.get_instance().get_ux("village_strings", "town_nominal") or ""
+        msg_nominal = ux("village_strings", "town_nominal")
         return "BALANCED", msg_nominal
 
 class DeathGen:

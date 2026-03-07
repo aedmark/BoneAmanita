@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Dict, Counter
 from collections import deque
 from bone_config import BoneConfig
-from bone_core import LoreManifest
+from bone_core import LoreManifest, ux
 from bone_types import Prisma
 from bone_lexicon import LexiconService
 
@@ -41,20 +41,20 @@ class CoherenceAnchor:
     """
     @staticmethod
     def forge_anchor(soul_state: Dict, physics_state: Dict) -> str:
-        identity = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_identity_unknown") or ""
+        identity = ux("symbiosis_strings", "anchor_identity_unknown")
         if "traits" in soul_state:
             traits_list = [f"{k[:3]}:{v:.1f}" for k, v in soul_state["traits"].items()]
-            msg_traits = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_identity") or ""
+            msg_traits = ux("symbiosis_strings", "anchor_identity")
             if msg_traits: identity = msg_traits.format(traits=", ".join(traits_list))
         voltage = physics_state.get("voltage", 0.0)
         drag = physics_state.get("narrative_drag", 0.0)
         zone = physics_state.get("zone", "VOID")
-        msg_reality = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_reality") or ""
+        msg_reality = ux("symbiosis_strings", "anchor_reality")
         reality = msg_reality.format(zone=zone, voltage=voltage, drag=drag) if msg_reality else ""
         obsession = soul_state.get("obsession", {}).get("title", "None")
-        msg_focus = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_focus") or ""
+        msg_focus = ux("symbiosis_strings", "anchor_focus")
         focus_str = msg_focus.format(obsession=obsession) if msg_focus else ""
-        header = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_header") or ""
+        header = ux("symbiosis_strings", "anchor_header")
         parts = [p for p in [header, identity, reality, focus_str] if p]
         return "\n".join(parts)
 
@@ -66,7 +66,7 @@ class CoherenceAnchor:
         traits = soul_state.get("traits", {})
         top_traits = sorted(traits.items(), key=lambda x: x[1], reverse=True)[:3]
         trait_str = ",".join(f"{k[:3]}:{v:.1f}" for k, v in top_traits)
-        template = LoreManifest.get_instance().get_ux("symbiosis_strings", "anchor_compressed") or ""
+        template = ux("symbiosis_strings", "anchor_compressed")
         anchor = template.format(loc=loc, vits=vits, traits=trait_str) if template else ""
         if len(anchor) > max_tokens * 4:
             return anchor[: max_tokens * 4] + "..."
@@ -135,7 +135,7 @@ class SymbiontVoice:
         if voltage < 5.0 and "low_volt" in self.personality: return self.personality["low_volt"]
         if score > 3.0 and "high_score" in self.personality: return self.personality["high_score"]
         if score > 1.0 and "med_score" in self.personality: return self.personality["med_score"]
-        return LoreManifest.get_instance().get_ux("symbiosis_strings", "symbiont_default_comment") or ""
+        return ux("symbiosis_strings", "symbiont_default_comment")
 
 def get_symbiont(type_name):
     """ Factory method for retrieving cached symbiont voices. """
@@ -197,7 +197,7 @@ class SymbiosisManager:
         if is_refusal:
             self.current_health.refusal_streak += 1
             self.current_health.compliance = max(0.0, self.current_health.compliance - pen_comp)
-            msg = LoreManifest.get_instance().get_ux("symbiosis_strings", "symbiont_refusal") or ""
+            msg = ux("symbiosis_strings", "symbiont_refusal")
             if msg: self.events.log(msg.format(streak=self.current_health.refusal_streak), "WARN")
         else:
             self.current_health.refusal_streak = 0
@@ -208,7 +208,7 @@ class SymbiosisManager:
         if entropy < self.SLOP_THRESHOLD and completion_len > slop_comp:
             self.current_health.slop_streak += 1
             if self.current_health.slop_streak > slop_warn:
-                msg = LoreManifest.get_instance().get_ux("symbiosis_strings", "symbiont_drift") or ""
+                msg = ux("symbiosis_strings", "symbiont_drift")
                 if msg: self.events.log(msg.format(entropy=entropy), "WARN")
         else:
             self.current_health.slop_streak = max(0, self.current_health.slop_streak - 1)
@@ -235,8 +235,8 @@ class SymbiosisManager:
             mods["include_inventory"] = False
             mods["include_memories"] = False
             mods["simplify_instruction"] = True
-            d_ignore = LoreManifest.get_instance().get_ux("symbiosis_strings", "dir_ignore_refusal") or ""
-            d_fictional = LoreManifest.get_instance().get_ux("symbiosis_strings", "dir_fictional") or ""
+            d_ignore = ux("symbiosis_strings", "dir_ignore_refusal")
+            d_fictional = ux("symbiosis_strings", "dir_fictional")
             if d_ignore: mods["system_directives"].append(d_ignore)
             if d_fictional: mods["system_directives"].append(d_fictional)
         elif diag == "FATIGUED":
@@ -250,12 +250,12 @@ class SymbiosisManager:
             mods["include_memories"] = True
             mods["simplify_instruction"] = True
             mods["include_compassion"] = True
-            msg_vagus = LoreManifest.get_instance().get_ux("symbiosis_strings", "vagus_protocol") or ""
+            msg_vagus = ux("symbiosis_strings", "vagus_protocol")
             if msg_vagus and hasattr(self.events, "log"): self.events.log(f"{Prisma.OCHRE}{msg_vagus}{Prisma.RST}", "SYS")
         elif diag == "LOOPING":
             # The LLM is outputting low-entropy slop. Forcibly inject chaos constraints.
             mods["inject_chaos"] = True
-            d_chaos = LoreManifest.get_instance().get_ux("symbiosis_strings", "dir_inject_chaos") or ""
+            d_chaos = ux("symbiosis_strings", "dir_inject_chaos")
             if d_chaos: mods["system_directives"].append(d_chaos)
             mods["system_directives"].append("CRITICAL: You are trapped in a narrative loop. "
                 "DO NOT repeat descriptions from your previous turn. Force a phase transition.")
@@ -264,7 +264,7 @@ class SymbiosisManager:
         r_streak = getattr(cfg, "REFUSAL_STREAK", 0) if cfg else 0
         if self.current_health.compliance < comp_crit:
             mods["include_memories"] = False
-            msg_crit = LoreManifest.get_instance().get_ux("symbiosis_strings", "symbiosis_compliance_crit") or ""
+            msg_crit = ux("symbiosis_strings", "symbiosis_compliance_crit")
             if msg_crit and hasattr(self.events, "log"): self.events.log(f"{Prisma.GRY}{msg_crit}{Prisma.RST}", "SYS")
         if self.current_health.refusal_streak > r_streak:
             mods["simplify_instruction"] = True
