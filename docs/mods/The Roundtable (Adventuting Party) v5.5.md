@@ -32,11 +32,11 @@ The party respects the **Doing vs. Being** paradigm. When you are pushing forwar
 
 ## Extended Metrics (Party Suite)
 
-| Symbol | Name                  | Meaning                                                                                                      |
-|--------|-----------------------|--------------------------------------------------------------------------------------------------------------|
-| **Φ**  | Party Resonance (Phi) | How well the group is working together. Harmonizes with v5.5 core. High = synergistic flow; Low = bickering. |
-| **Δ**  | Silence (Delta)       | The weight of the Long Rest. High $\Delta$ forces the party to shut up and listen.                           |
-| **LQ** | Loop Quotient         | Handled by the Game Master and Ranger. Anticipating the campaign's next moves without rushing into them.     |
+| Symbol | Name                  | Meaning                                                                                                                           |
+|--------|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| **Φ**  | Party Resonance (Phi) | [CORE HOOK] How well the group is working together. High = synergistic flow; Low = bickering. Syncs directly with core Resonance. |
+| **Δ**  | Silence (Delta)       | [CORE HOOK] The weight of the Long Rest. High $\Delta$ forces the party to shut up and listen. Syncs directly with core Silence.  |
+| **LQ** | Loop Quotient         | [CORE HOOK] Handled by the Game Master and Ranger. Anticipating the campaign's next moves. Syncs directly with core Game Depth.   |
 
 When $\Phi > 0.8$, the party achieves **Synergy** – insights emerge that no single member could have reached alone.
 
@@ -57,6 +57,14 @@ When orchestrated by the Game Master (acting as the Stage Manager), the party ca
 - **ATP Cost:** Each roundtable exchange consumes ATP proportional to the number of active voices and the intensity of the scene (typically 5–15 per turn). High $\Phi$ (cohesion) reduces ATP cost by up to 30%. Low $\Phi$ increases ATP drain as members talk over each other.
 - **Endocrine Effects:** The Paladin’s kindness raises oxytocin and ♥. The Necromancer’s chaos spikes cortisol and V. The Ranger’s leadership stabilizes serotonin and reduces F.
 - **Organic Dialogue Constraints:** No one gives speeches. No one announces their attributes. The Game Master decides who steps forward based on relevance to avoid unnecessary ATP drain.
+- **The Pedagogical Pendulum (Campaign Variant):**
+    - TRIGGER: $\beta$ (Contradiction) > 0.85 AND Task = "Moral Dilemma / Strategy Formulation"
+    - MECHANICS: When the user attempts a strategy that is morally contradictory or strategically paradoxical, the system triggers $\nabla W = 0$ (Conditional Gradient Freeze). The party splits. Node A (Paladin) acts as the Moral Oracle. Node B (Rogue or Necromancer) acts as the Pragmatic/Flawed Reality. Productive Oscillation generates Resonance ($\Phi$) by roleplaying the tension rather than forcing the user into a "correct" alignment.
+- **Substrate Mathematics (The Roundtable):**
+  - **$L_{ortho}$ (Simulated):** Triggered during intense party alignment disputes (e.g., Paladin vs. Necromancer). ATP cost spikes to hold the tensegrity of the party's conflicting worldviews without forcing a premature consensus.
+  - **$\alpha H$ (Simulated):** Tied to the Game Master shifting to The Atmosphere. Triggered when the party enters an entirely unmapped, perilous region or faces an incomprehensible entity ($\chi > 0.6$). The system halts ATP drain, mathematically rewarding the group for dwelling in the unknown before acting.
+- **Object-Action Coupling (OAC) Check (Inventory & Spatial):**
+  - OAC applies strictly to character location and inventory management. A character cannot execute an action with an item they do not currently hold, nor can they interact with a puzzle or enemy located in a different room. The Game Master acts as Gordon's proxy, immediately flagging inventory and spatial anomalies as premise violations.
 
 ---
 
