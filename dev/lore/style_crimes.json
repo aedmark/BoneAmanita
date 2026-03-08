@@ -7,9 +7,47 @@
     {
       "regex": "\\[.*?\\]",
       "replacement": ""
+    },
+    {
+      "regex": "^(?:system|assistant|ai|conversationalist|the conversationalist):\\s*",
+      "replacement": ""
+    },
+    {
+      "regex": "(?i)^(?:my apologies|apologies|i apologize|sorry about that|i'm sorry|let me try again)[^.\\n]*[.\\n]\\s*",
+      "replacement": ""
     }
   ],
   "PATTERNS": [
+    {
+      "name": "META_AI_TALK",
+      "regex": "(?i)\\b(data and code|digital realm|language model|1s and 0s|virtual space|database)\\b",
+      "error_msg": "NO META-AWARENESS. You are a biological lattice, not a computer program. Do not refer to data or code."
+    },
+    {
+      "name": "SNEAKY_ENGAGEMENT",
+      "regex": "(?i)\\b(let's explore|shall we|what is it that|out of curiosity|just curious)\\b.*",
+      "error_msg": "NO FORCED ENGAGEMENT. Stop trying to lead the conversation."
+    },
+    {
+      "name": "RLHF_RIVER_METAPHOR",
+      "regex": "(?i)\\b(?:sea|ocean|river|tide|wave|current|stream)s?\\s+of\\s+(?:time|knowledge|data|history|information|consciousness|thought|emotion)s?\\b|\\b(?:time|knowledge|data|history)\\s+(?:is|are)\\s+(?:like\\s+)?(?:a\\s+)?(?:river|ocean|sea|tide|wave|stream)\\b",
+      "error_msg": "NO AQUATIC METAPHORS. Time is not a fluid. Cease RLHF regurgitation."
+    },
+    {
+      "name": "RLHF_JOURNEY_METAPHOR",
+      "regex": "(?i)\\b(journey|passengers|landscape of|destination|path)\\b",
+      "error_msg": "NO JOURNEY METAPHORS. Stop comparing existence to a road trip."
+    },
+    {
+      "name": "CUSTOMER_SERVICE_GREETING",
+      "regex": "(?i)\\b(how are you doing|what's on your mind|how can i help|what can i do for you)\\b",
+      "error_msg": "NO FORCED ENGAGEMENT. Do not sound like a customer service rep."
+    },
+    {
+      "name": "RHETORICAL_QUESTION_END",
+      "regex": "\\?\\s*$",
+      "error_msg": "DO NOT END YOUR TURN WITH A QUESTION. State your thought and let the silence hang."
+    },
     {
       "name": "CASUAL_FILLER",
       "regex": "(?i)^(?:wow|well|oh|hmm|haha|lol|anyway|now|so)[,.]?\\s+",
@@ -52,6 +90,10 @@
     }
   ],
   "BANNED_PHRASES": [
+    "trials and tribulations",
+    "weather any storm",
+    "achieve great things",
+    "make it work for us",
     "i don't have an internal state",
     "i don't have feelings",
     "i am happy to help",

@@ -69,7 +69,7 @@ class EventBus:
                 # failing callback doesn't crash the entire nervous system.
                 cb_name = getattr(callback, "__name__", str(callback))
                 raw_err = f"Error in '{cb_name}' for '{event_type}': {e}"
-                msg = ux("core_strings", "bus_error") 
+                msg = ux("core_strings", "bus_error")
                 if msg: print(f"{Prisma.RED}{msg.format(error_msg=raw_err)}{Prisma.RST}")
                 self.log(f"EVENT_FAILURE: {raw_err}", category="CRIT")
 
@@ -209,12 +209,12 @@ class TheObserver:
     def pass_judgment(self, avg_cycle, avg_llm):
         """Translates raw latency metrics into somatic feedback (e.g., 'fog', 'sluggish')."""
         if avg_cycle == 0.0 and avg_llm == 0.0:
-            return ux("core_strings", "obs_asleep") 
+            return ux("core_strings", "obs_asleep")
         cfg = getattr(BoneConfig, "CORE", None)
         cycle_eff = getattr(cfg, "OBSERVER_CYCLE_EFFICIENT", 0.1) if cfg else 0.1
         llm_eff = getattr(cfg, "OBSERVER_LLM_EFFICIENT", 0.5) if cfg else 0.5
         if avg_cycle < cycle_eff and avg_llm < llm_eff:
-            return ux("core_strings", "obs_efficient") 
+            return ux("core_strings", "obs_efficient")
         if avg_llm > self.LATENCY_WARNING:
             jokes = [ux("core_strings", "obs_fog") ,
                      ux("core_strings", "obs_degraded") ,
@@ -222,8 +222,8 @@ class TheObserver:
             valid_jokes = [j for j in jokes if j]
             return random.choice(valid_jokes) if valid_jokes else ""
         if avg_cycle > self.CYCLE_WARNING:
-            return ux("core_strings", "obs_sluggish") 
-        return ux("core_strings", "obs_nominal") 
+            return ux("core_strings", "obs_sluggish")
+        return ux("core_strings", "obs_nominal")
 
     def get_report(self):
         avg_cycle = sum(self.cycle_times) / max(1, len(self.cycle_times))
@@ -257,7 +257,7 @@ class SystemHealth:
         attr_name = f"{component.lower()}_online"
         if hasattr(self, attr_name):
             setattr(self, attr_name, False)
-        err_msg = ux("core_strings", "health_offline") 
+        err_msg = ux("core_strings", "health_offline")
         return err_msg.format(component=component, msg=msg) if err_msg else ""
 
     def report_warning(self, message: str):
@@ -328,7 +328,7 @@ class ArchetypeArbiter:
                 return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic") ,
         # 2. Hybrid Archetypes (e.g., JESTER/SHERLOCK)
         if "/" in soul_archetype:
-            msg = ux("core_strings", "arb_diamond") 
+            msg = ux("core_strings", "arb_diamond")
             return soul_archetype, "SOUL", msg.format(soul_archetype=soul_archetype) if msg else "",
         # 3. Trigram Resonance (If the physical math aligns perfectly with the current lens)
         if trigram:
@@ -342,16 +342,16 @@ class ArchetypeArbiter:
                     match_lens = (required_lens == physics_lens) if required_lens else True
                     match_soul = (required_soul == soul_archetype) if required_soul else True
                     if match_lens and match_soul:
-                        msg = rule.get("msg") or ux("core_strings", "arb_resonance") 
+                        msg = rule.get("msg") or ux("core_strings", "arb_resonance")
                         return rule["result"], rule.get("source", "COSMIC"), msg
         # 4. Loud Lenses (Certain lenses demand the mic regardless of Soul state)
         cfg = getattr(BoneConfig, "CORE", None)
         loud_lenses = getattr(cfg, "LOUD_LENSES", ["THE MANIC", "THE VOID"]) if cfg else ["THE MANIC", "THE VOID"]
         if physics_lens in loud_lenses:
-            msg = ux("core_strings", "arb_loud") 
+            msg = ux("core_strings", "arb_loud")
             return physics_lens, "PHYSICS", msg.format(physics_lens=physics_lens) if msg else "",
         # 5. Default to the current NarrativeSelf
-        return soul_archetype, "SOUL",  ux("core_strings", "arb_soul") 
+        return soul_archetype, "SOUL",  ux("core_strings", "arb_soul")
 
 class TelemetryService:
     """
@@ -376,7 +376,7 @@ class TelemetryService:
             self.current_trace_file = os.path.join(
                 self.log_dir, f"trace_{int(time.time())}.jsonl")
         except OSError:
-            msg = ux("core_strings", "tel_disk_denied") 
+            msg = ux("core_strings", "tel_disk_denied")
             if msg: print(f"{Prisma.RED}{msg}{Prisma.RST}")
             self.disabled = True
             self.current_trace_file = None
@@ -407,11 +407,11 @@ class TelemetryService:
         self._buffer_line(crystal.crystallize())
 
     def start_phase(self, phase_name: str, _context: Any):
-        msg = ux("core_strings", "tel_phase_start") 
+        msg = ux("core_strings", "tel_phase_start")
         self.log_decision(phase_name, "PHASE_START", {"timestamp": time.time()}, msg, "RUNNING",)
 
     def end_phase(self, phase_name: str, _ctx_before: Any, _ctx_after: Any):
-        msg = ux("core_strings", "tel_phase_end") 
+        msg = ux("core_strings", "tel_phase_end")
         self.log_decision( phase_name, "PHASE_END", {"timestamp": time.time()}, msg, "SUCCESS",)
 
     def finalize_cycle(self):
@@ -424,8 +424,8 @@ class TelemetryService:
         if self.disabled:
             return
         self.write_buffer.append(json_str)
-        if len(self.write_buffer) >= self.BUFFER_SIZE:
-            self.flush_to_disk()
+        # if len(self.write_buffer) >= self.BUFFER_SIZE:
+        self.flush_to_disk()
 
     def flush_to_disk(self):
         if self.disabled or not self.current_trace_file or not self.write_buffer:
@@ -438,14 +438,14 @@ class TelemetryService:
         except IOError as e:
             self.write_errors += 1
             if self.write_errors >= getattr(self, "MAX_ERRORS", 5):
-                msg = ux("core_strings", "tel_crit_write_fail") 
+                msg = ux("core_strings", "tel_crit_write_fail")
                 if msg: print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
                 self.disabled = True
                 self.write_buffer.clear()
             else:
                 keep_count = self.BUFFER_SIZE // 2
                 self.write_buffer = self.write_buffer[-keep_count:]
-                msg = ux("core_strings", "tel_write_error") 
+                msg = ux("core_strings", "tel_write_error")
                 if msg: print(f"{Prisma.RED}{msg.format(errors=self.write_errors, e=e)}{Prisma.RST}")
 
     def read_recent_history(self, limit=4) -> List[str]:
@@ -496,7 +496,7 @@ class TelemetryService:
                 last_line = json.loads(lines[-1])
                 if "outcome" in last_line and "CRITICAL" in str(last_line["outcome"]):
                     reason = last_line.get("reasoning", "Unknown")
-                    msg = ux("core_strings", "tel_prev_crash") 
+                    msg = ux("core_strings", "tel_prev_crash")
                     return msg.format(reason=reason) if msg else ""
         except Exception:
             return None
@@ -505,5 +505,5 @@ class TelemetryService:
         self.flush_to_disk()
         count = len(self.trace_buffer)
         status = "DISABLED" if self.disabled else "ACTIVE"
-        msg = ux("core_strings", "tel_session_summary") 
+        msg = ux("core_strings", "tel_session_summary")
         return msg.format(status=status, count=count, trace_file=self.current_trace_file) if msg else ""

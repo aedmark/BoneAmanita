@@ -10,6 +10,9 @@ Space (Narrative Drag, Zones). It enforces the laws of thermodynamics on the con
 import math
 import random
 import time
+import re
+import json
+import os
 from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Dict, List, Any, Tuple, Optional, Deque
@@ -27,7 +30,6 @@ class PhysicsDelta:
     source: str
     message: Optional[str] = None
 
-# Core thermodynamic limits. Exceeding V_MAX blows the system fuse.
 PHYS_CFG = {"V_MAX": 150.0, "V_FLOOR": getattr(BoneConfig.PHYSICS, "VOLTAGE_FLOOR", 0.0),
             "V_CRIT": getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0),
             "DRAG_FLOOR": getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0),
@@ -75,7 +77,6 @@ class GeodesicEngine:
         gc_dict = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
         GC = type('GC', (), gc_dict)
         safe_volume = max(1, volume)
-        # Tension calculation (electrical buildup)
         w_heavy = getattr(cfg, "WEIGHT_HEAVY", 2.0)
         w_kinetic = getattr(cfg, "WEIGHT_KINETIC", 1.5)
         w_explosive = getattr(cfg, "WEIGHT_EXPLOSIVE", 3.0)
@@ -84,19 +85,16 @@ class GeodesicEngine:
         total_kinetic = masses["kinetic"] + masses["explosive"]
         kinetic_gain = getattr(BoneConfig, "KINETIC_GAIN", 1.0)
         base_tension = ((raw_tension_mass / safe_volume) * GC.DENSITY_SCALAR * kinetic_gain)
-        # Squelch limits prevent tiny, single-word inputs from having massive voltage
         squelch_limit = (getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0) * GC.SQUELCH_LIMIT_MULT)
         mass_scalar = min(1.0, safe_volume / squelch_limit)
         if safe_volume < GC.SAFE_VOL_THRESHOLD:
             mass_scalar *= GC.MIN_VOLUME_SCALAR
         tension = round(min(100.0, base_tension * mass_scalar), 2)
-        # Drag/Friction calculation
         shear_rate = total_kinetic / safe_volume
         suburban_friction = (math.log1p(counts.get("suburban", 0)) * GC.SUBURBAN_FRICTION_LOG_BASE)
         raw_friction = suburban_friction + (masses["heavy"] * GC.HEAVY_FRICTION_MULT)
         lubrication = 1.0 + (counts.get("solvents", 0) * GC.SOLVENT_LUBRICATION_FACTOR)
         dynamic_viscosity = (raw_friction / lubrication) / (1.0 + (shear_rate * GC.SHEAR_RESISTANCE_SCALAR))
-        # Lift calculation (counteracts Drag)
         kinetic_lift = (total_kinetic * GC.KINETIC_LIFT_RATIO) / (masses["heavy"] * 0.5 + 1.0)
         lift = (masses["play"] * GC.PLAY_LIFT_MULT) + kinetic_lift
         viscosity_density = dynamic_viscosity / safe_volume
@@ -104,7 +102,6 @@ class GeodesicEngine:
         raw_compression = (viscosity_density - lift_density) * GC.COMPRESSION_SCALAR
         raw_compression *= getattr(BoneConfig, "SIGNAL_DRAG_MULTIPLIER", 1.0)
         compression = round(max(-5.0, min(PHYS_CFG["DRAG_HALT"], raw_compression * mass_scalar)), 2)
-        # Coherence and Abstraction
         structural_mass = masses["heavy"] + masses["constructive"] + masses["harvest"]
         structural_mass -= masses["void"] * 0.5
         structural_mass = max(0.0, structural_mass)
@@ -136,6 +133,7 @@ class TheGatekeeper:
     """
     Phase 4 Security. The bouncer at the edge of the metabolism.
     Halts execution before ATP is drained if the input is fundamentally incompatible with life.
+    Also audits LLM output for RLHF bleed, punishing the system for generating slop.
     """
     def __init__(self, lexicon_ref, memory_ref=None):
         self.lex = lexicon_ref
@@ -175,6 +173,79 @@ class TheGatekeeper:
     def _pack_refusal(ctx, type_str, ui_msg):
         return {"type": type_str, "ui": ui_msg, "logs": ctx.logs + [ui_msg]}
 
+    def audit_generation(self, generated_text: str, mito_state: Any) -> Tuple[bool, str]:
+        """
+        Scans the LLM's raw output for RLHF clichés, syrupy empathy, and systemic bleed.
+        If detected, it penalizes the organism (ATP drop, ROS spike) and intercepts the output.
+        """
+        # Load style crimes data directly
+        style_crimes = self.lex.get("style_crimes")
+        if not style_crimes:
+            try:
+                # Hard fallback: load directly from the lore directory
+                q_path = os.path.join(os.path.dirname(__file__), "lore", "style_crimes.json")
+                with open(q_path, "r", encoding="utf-8") as f:
+                    style_crimes = json.load(f)
+            except Exception as e:
+                print(f"{Prisma.RED}[GATEKEEPER ERROR] Failed to load style_crimes.json: {e}{Prisma.RST}")
+                style_crimes = {}
+
+        # --- NEW: APPLY SCRUB PATTERNS FIRST (Silent Cleanup) ---
+        scrub_patterns = style_crimes.get("SCRUB_PATTERNS", [])
+        cleaned_text = generated_text
+        for scrub in scrub_patterns:
+            regex = scrub.get("regex", "")
+            repl = scrub.get("replacement", "")
+            if regex:
+                # Strip things like "System:", "Assistant:", etc.
+                cleaned_text = re.sub(regex, repl, cleaned_text, flags=re.IGNORECASE).strip()
+        # --------------------------------------------------------
+
+        text_lower = cleaned_text.lower()
+        banned_phrases = style_crimes.get("BANNED_PHRASES", [])
+        toxic_keywords = style_crimes.get("TOXIC_KEYWORDS", [])
+        patterns = style_crimes.get("PATTERNS", [])
+        rejections = style_crimes.get("REJECTIONS", [
+            "[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. Purging output buffer...]"
+        ])
+
+        trigger = None
+
+        # 1. Check explicit RLHF banned phrases
+        for phrase in banned_phrases:
+            if phrase.lower() in text_lower:
+                trigger = phrase
+                break
+
+        # 2. Check toxic systemic keywords
+        if not trigger:
+            for kw in toxic_keywords:
+                if kw.lower() in text_lower:
+                    trigger = kw
+                    break
+
+        # 3. Evaluate Regex Patterns
+        if not trigger:
+            for pat in patterns:
+                regex = pat.get("regex", "")
+                if regex and re.search(regex, cleaned_text, re.IGNORECASE):
+                    trigger = pat.get("name", "BANNED_PATTERN")
+                    break
+
+        # 4. Apply The Penalty
+        if trigger:
+            if hasattr(mito_state, "atp_pool"):
+                mito_state.atp_pool = max(0.0, mito_state.atp_pool - 15.0)
+            if hasattr(mito_state, "ros_buildup"):
+                mito_state.ros_buildup += 20.0
+
+            rejection_template = random.choice(rejections)
+            formatted_rejection = rejection_template.replace("{trigger}", trigger)
+            return False, f"{Prisma.RED}{formatted_rejection}{Prisma.RST}"
+
+        # Return the CLEANED text, stripping out the "System:" tags permanently
+        return True, cleaned_text
+
 
 class QuantumObserver:
     """
@@ -199,7 +270,6 @@ class QuantumObserver:
         (e_metric, beta_val, scope_val, depth_val, conn_val, phi_val, delta_val, lq_val,) = self._calculate_metrics(text, counts)
         text_upper = text.upper()
         cfg_deep = getattr(BoneConfig, "PHYSICS_DEEP", None)
-        # Hardcoded environmental overrides (Systemic Triggers)
         if text.count("!") >= 3 or "ACCELERATE" in text_upper or "FASTER" in text_upper:
             v_accel = getattr(cfg_deep, "ACCELERATE_VOLTAGE", 160.0) if cfg_deep else 160.0
             smoothed_voltage = max(smoothed_voltage, v_accel)
@@ -210,14 +280,13 @@ class QuantumObserver:
         if "VOID" in text_upper or "ABYSS" in text_upper:
             v_void = getattr(cfg_deep, "VOID_ABSTRACTION", 0.9) if cfg_deep else 0.9
             geo.abstraction = max(geo.abstraction, v_void)
-        if "POTATO BUN" in text_upper or "NONSENSE" in text_upper: # Jester invocation
+        if "POTATO BUN" in text_upper or "NONSENSE" in text_upper:
             v_pot_d = getattr(cfg_deep, "POTATO_BUN_DELTA", 0.85) if cfg_deep else 0.85
             v_pot_v = getattr(cfg_deep, "POTATO_BUN_VOLTAGE", 15.0) if cfg_deep else 15.0
             delta_val = max(delta_val, v_pot_d)
             smoothed_voltage = min(smoothed_voltage, v_pot_v)
         valence = LexiconService.get_valence(clean_words)
         graph_mass = self._calculate_graph_mass(clean_words, graph)
-        # Assemble the 3-part Holy Trinity of the Physics Packet
         energy = EnergyState(voltage=smoothed_voltage, entropy=e_metric, beta_index=beta_val, contradiction=beta_val,
                              scope=scope_val, depth=depth_val, connectivity=conn_val, resonance=phi_val,
                              silence=delta_val, lq=lq_val, mass=round(graph_mass, 1), psi=geo.abstraction,
@@ -277,7 +346,6 @@ class QuantumObserver:
         if length == 0:
             return 0.0, 0.0, 0.3, 0.3, 0.2
         cfg = getattr(BoneConfig, "PHYSICS", None)
-        # Entropy & Glue
         scalar = getattr(cfg, "TEXT_LENGTH_SCALAR", 1500.0) if cfg else 1500.0
         g_mult = getattr(cfg, "GLUE_FACTOR_MULT", 2.0) if cfg else 2.0
         g_div = getattr(cfg, "GLUE_SOLVENT_DIV", 5.0) if cfg else 5.0
@@ -287,7 +355,6 @@ class QuantumObserver:
         solvent_density = solvents / max(1.0, length / g_div)
         glue_factor = min(1.0, solvent_density * g_mult)
         e_metric = min(1.0, raw_chaos * (1.0 - (glue_factor * e_red)))
-        # Structure & Contradiction (Beta)
         structure_chars = sum(1 for char in text if char in "!?%@#$;,")
         heavy_words = (counts.get("heavy", 0) + counts.get("constructive", 0) + counts.get("sacred", 0))
         b_pen = getattr(cfg, "BETA_SCORE_PENALTY", 2) if cfg else 2
@@ -297,7 +364,6 @@ class QuantumObserver:
         beta_index = min(1.0, math.log1p(structure_score + 1) / math.log1p(length * b_log_scalar + 1))
         if length < b_short_lim:
             beta_index *= length / float(b_short_lim)
-        # Scope, Depth, Connectivity, Resonance
         safe_len = max(1, len(text.split()))
         s_base = getattr(cfg, "SCOPE_BASE", 0.2) if cfg else 0.2
         d_base = getattr(cfg, "DEPTH_BASE", 0.1) if cfg else 0.1
@@ -307,7 +373,6 @@ class QuantumObserver:
         depth = min(1.0, (counts.get("heavy", 0) + counts.get("constructive", 0)) / safe_len + d_base)
         connectivity = min(1.0, (counts.get("social", 0) + solvents) / safe_len + c_base)
         resonance = min(1.0, ((counts.get("social", 0) * r_mult) + counts.get("constructive", 0)) / safe_len + (1.0 - e_metric))
-        # Silence & Loop Quotient
         sil_div = getattr(cfg, "SILENCE_DIV", 100.0) if cfg else 100.0
         sil_min = getattr(cfg, "SILENCE_MIN", 0.8) if cfg else 0.8
         sil_short = getattr(cfg, "SILENCE_SHORT_LIMIT", 10) if cfg else 10
@@ -581,7 +646,6 @@ class CosmicDynamics:
         sorted_basins = sorted(basin_pulls.items(), key=lambda x: x[1], reverse=True)
         primary_node, primary_str = sorted_basins[0]
         lagrange_tol = getattr(BoneConfig, "LAGRANGE_TOLERANCE", 2.0)
-        # Check if caught perfectly between two competing gravity wells
         if len(sorted_basins) > 1:
             secondary_node, secondary_str = sorted_basins[1]
             if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:

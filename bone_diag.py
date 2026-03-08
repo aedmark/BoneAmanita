@@ -320,5 +320,80 @@ class TrueEngineTest(unittest.TestCase):
         self.assertIn("Weak Node", report,
                       "DreamEngine did not report the pruned node in its return string.")
 
+    def test_subconscious_matrix_absorption(self):
+        import tempfile
+        import os
+        from bone_spores import SubconsciousStrata
+
+        # Create a temporary file for the strata to avoid polluting actual save data
+        with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        try:
+            # Initialize a fresh subconscious (which will generate a fresh 8x8 M_t matrix)
+            strata = SubconsciousStrata(filename=tmp_path)
+
+            # Action 1: Check initial vibe.
+            # An empty matrix multiplied by any Query vector should return all zeros.
+            initial_vibe = strata.dredge_vibe("oblivion")
+            self.assertEqual(sum(initial_vibe), 0.0, "Initial matrix should yield a completely zeroed vibe.")
+
+            # Action 2: Cannibalize a memory.
+            # This triggers the M_t += (K^T * V) * mass logic.
+            strata.bury({"word": "oblivion", "mass": 10.0})
+
+            # Action 3: Dredge the vibe again.
+            new_vibe = strata.dredge_vibe("oblivion")
+
+            # Assertions: The matrix has absorbed the data.
+            vibe_sum = sum(new_vibe)
+            self.assertNotEqual(vibe_sum, 0.0, "Matrix failed to absorb the K*V weights of the buried word.")
+            self.assertEqual(len(new_vibe), 8, "Vibe vector must be exactly 8-dimensional.")
+
+        finally:
+            # Cleanup the temporary files so we don't leave ghost matrices on your hard drive
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            matrix_path = os.path.join(os.path.dirname(tmp_path), "m_t_matrix.json")
+            if os.path.exists(matrix_path):
+                os.remove(matrix_path)
+
+    def test_ghost_physics_haunting(self):
+        import tempfile
+        import os
+        from bone_spores import MycelialNetwork
+        from bone_core import EventBus
+
+        with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        try:
+            # Setup an isolated Mycelial Network
+            bus = EventBus()
+            network = MycelialNetwork(events=bus)
+            network.subconscious.filepath = tmp_path
+            network.subconscious.matrix_filepath = os.path.join(os.path.dirname(tmp_path), "test_m_t2.json")
+
+            # 1. We bury a word to create the matrix data.
+            network.subconscious.bury({"word": "echo", "mass": 10.0})
+
+            # 2. We simulate the user typing a sentence containing the forgotten word.
+            physics = {"clean_words": ["echo", "hello"], "voltage": 10.0, "narrative_drag": 1.0}
+
+            # 3. We run the ghost poll!
+            log = network._poll_ghosts(physics["clean_words"], physics)
+
+            # 4. Assertions: The ghost must have altered the physical reality of the system.
+            self.assertIsNotNone(log, "Ghost poll failed to detect the buried word.")
+            self.assertNotEqual(physics["voltage"], 10.0, "The ghost failed to mutate the system Voltage.")
+            self.assertNotEqual(physics["narrative_drag"], 1.0, "The ghost failed to mutate the system Drag.")
+            self.assertIn("ECHO", log, "The log string did not identify the haunting word.")
+
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            if hasattr(network, 'subconscious') and os.path.exists(network.subconscious.matrix_filepath):
+                os.remove(network.subconscious.matrix_filepath)
+
 if __name__ == "__main__":
     unittest.main()

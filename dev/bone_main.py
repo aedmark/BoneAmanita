@@ -11,7 +11,6 @@ import uuid
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
 
-# Importing the core geodesic struts. 
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_commands import CommandProcessor
@@ -25,7 +24,6 @@ from bone_physics import CosmicDynamics, ZoneInertia
 from bone_protocols import ChronosKeeper
 from bone_types import Prisma, RealityLayer
 
-# Regex to split text by ANSI color codes so the typewriter effect doesn't print raw escape sequences.
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
 
 def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
@@ -35,7 +33,6 @@ def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
     """
     cfg = getattr(BoneConfig, "GUI", None)
     actual_speed = speed if speed is not None else (getattr(cfg, "RENDER_SPEED_FAST", 0.00025) if cfg else 0.00025)
-    # If the speed is effectively zero, just print it instantly to save ATP.
     if actual_speed < 0.001:
         print(text, end=end)
         return
@@ -44,12 +41,12 @@ def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
         if not part:
             continue
         if part.startswith("\x1b"):
-            sys.stdout.write(part) # Print color codes instantly
+            sys.stdout.write(part)
         else:
             for char in part:
                 sys.stdout.write(char)
                 sys.stdout.flush()
-                time.sleep(actual_speed) # Delay for visible characters
+                time.sleep(actual_speed)
     sys.stdout.write(end)
     sys.stdout.flush()
 
@@ -61,8 +58,8 @@ class HostStats:
 
 class SessionGuardian:
     """
-    A context manager that wraps the entire runtime. It ensures that 
-    the terminal is cleared on startup, displays the boot sequence, and gracefully 
+    A context manager that wraps the entire runtime. It ensures that
+    the terminal is cleared on startup, displays the boot sequence, and gracefully
     handles unexpected exceptions (like a Cathedral Collapse) without leaving the user in the dark.
     """
     def __init__(self, engine_ref):
@@ -78,7 +75,6 @@ class SessionGuardian:
         print(f"{Prisma.paint(bot_bar, 'M')}")
         cfg = getattr(BoneConfig, "GUI", None)
         boot_delay = getattr(cfg, "RENDER_SPEED_BOOT", 0.05) if cfg else 0.05
-        # Flush the initial boot logs to the terminal
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
             print(f"{Prisma.GRY}   >>> {log['text']}{Prisma.RST}")
@@ -92,10 +88,8 @@ class SessionGuardian:
     def __exit__(self, exc_type, exc_val, exc_tb):
         halt_msg = ux("main_strings", "sys_halt")
         print(f"\n{Prisma.paint(halt_msg, 'R')}")
-        # Attempt a graceful unmounting of the architecture.
         if self.engine_instance:
             self.engine_instance.shutdown()
-        # If we crashed, tell the user why. If we are in TECHNICAL mode, show the traceback.
         if exc_type:
             is_interrupt = issubclass(exc_type, KeyboardInterrupt)
             if not is_interrupt:
@@ -114,7 +108,7 @@ class SessionGuardian:
 
 class ConfigWizard:
     """
-    A utility class to ensure the foundational parameters are sound before boot. 
+    A utility class to ensure the foundational parameters are sound before boot.
     If the config is corrupt, it backs it up and walks the user through creating a new one.
     """
     CONFIG_FILE = "bone_config.json"
@@ -133,7 +127,6 @@ class ConfigWizard:
 
     @staticmethod
     def _backup_corrupt_file():
-        # Never delete the user's data outright. Move it aside.
         backup_name = f"{ConfigWizard.CONFIG_FILE}.{int(time.time())}.bak"
         try:
             os.rename(ConfigWizard.CONFIG_FILE, backup_name)
@@ -209,7 +202,7 @@ class ConfigWizard:
 class BoneAmanita:
     """
     The master hypervisor. It orchestrates the flow of data between the
-    Mycelial Substrate, the Endocrine System, and the LLM Policy Layer. 
+    Mycelial Substrate, the Endocrine System, and the LLM Policy Layer.
     It doesn't "think"—it regulates the components that do.
     """
     events: EventBus
@@ -218,7 +211,6 @@ class BoneAmanita:
         self.config = config
         self.events = EventBus()
         self.kernel_hash = str(uuid.uuid4())[:8].upper()
-        # CommandProcessor handles user inputs that start with / or are explicit commands
         self.cmd = CommandProcessor(self, Prisma, config_ref=BoneConfig)
         self.user_name = config.get("user_name", "TRAVELER")
         self.boot_mode = config.get("boot_mode", "ADVENTURE").upper()
@@ -227,18 +219,15 @@ class BoneAmanita:
         self.mode_settings = BonePresets.MODES[self.boot_mode]
         self.suppressed_agents = self.mode_settings.get("village_suppression", [])
         self.config["mode_settings"] = self.mode_settings
-        # Initializing the primary somatic reservoirs.
         self.health = BoneConfig.MAX_HEALTH
         self.stamina = BoneConfig.MAX_STAMINA
         self.trauma_accum = {}
         self.tick_count = 0
         boot_msg = ux("main_strings", "boot_core")
         self.events.log(boot_msg, "BOOT")
-        # Construct the geodesic lattice. Chronos handles time/saves, Lexicon handles semantics.
         self.chronos = ChronosKeeper(self)
         self.lex = LexiconService
         self.lex.initialize()
-        # BoneGenesis reads the config and instantiates the complex bodily systems.
         anatomy = BoneGenesis.ignite(self.config, self.lex, events_ref=self.events)
         self._unpack_anatomy(anatomy)
         self.events.subscribe("ITEM_DROP", self.town_hall.on_item_drop)
@@ -307,8 +296,12 @@ class BoneAmanita:
         msg = ux("main_strings", "engaging_mode")
         self.events.log(msg.format(boot_mode=self.boot_mode))
         layer = self.mode_settings.get("ui_layer", RealityLayer.SIMULATION)
-        if self.boot_mode == "TECHNICAL":
-            layer = RealityLayer.SIMULATION
+        if self.boot_mode == "CONVERSATION":
+            self.soul.force_mutation("THE CONVERSATIONALIST")
+        elif self.boot_mode == "TECHNICAL":
+            self.soul.force_mutation("THE SYSTEM_KERNEL")
+        elif self.boot_mode == "CREATIVE":
+            self.soul.force_mutation("THE CATALYST")
         self.reality_stack.stabilize_at(layer)
         prompt_key = self.mode_settings.get("prompt_key", "ADVENTURE")
         if self.prompt_library and prompt_key in self.prompt_library:
@@ -364,7 +357,6 @@ class BoneAmanita:
         self.kintsugi = v.get("kintsugi")
         self.soul.engine = self
         self.council = CouncilChamber(self)
-        # Collect them all into a single dictionary for easier council auditing down the line.
         self.village = {"town_hall": self.town_hall, "bureau": self.bureau, "zen": self.zen, "tinkerer": self.tinkerer,
                         "critics": self.critics, "navigator": self.navigator, "limbo": self.limbo,
                         "council": self.council, "therapy": self.therapy, "enneagram": self.drivers.enneagram,
@@ -383,13 +375,11 @@ class BoneAmanita:
 
     def _pre_flight_checks(self, user_message: str, is_system: bool) -> Optional[Dict[str, Any]]:
         """Handles commands, Gordon's OAC, Reality Stack rules, and Trauma Audits before LLM execution."""
-        # 1 & 2. Commands & Meta
         if self.cmd and self.cmd.execute(user_message):
             return self._phase_check_commands(user_message, already_executed=True)
         if user_message.strip().startswith("//"):
             return self._handle_meta_command(user_message.strip())
 
-        # 3. Gordon's Object-Action Coupling
         if not is_system and self.gordon:
             self.gordon.mode = "ADVENTURE"
             current_zone = (getattr(self, "cortex", None) and getattr(self.cortex, "last_physics", {}))
@@ -402,33 +392,28 @@ class BoneAmanita:
                     self.cortex.ballast_active = True
                     self.cortex.gordon_shock = violation_msg
 
-        # 4. Reality Layer Check
         if not self.reality_stack.get_grammar_rules()["allow_narrative"]:
             return {"ui": f"{Prisma.RED}{ux('main_strings', 'narrative_halt')}{Prisma.RST}", "logs": [], "metrics": self.get_metrics()}
 
-        # 5. Ethical Audit / Catharsis
         if self._ethical_audit():
             mercy_logs = [e["text"] for e in self.events.get_recent_logs(2) if "CATHARSIS" in e["text"]]
             if mercy_logs:
                 return {"ui": f"\n\n{mercy_logs[-1]}", "logs": mercy_logs, "metrics": self.get_metrics()}
 
-        # 6. Death Check
         if self.health <= 0.0:
             return self.trigger_death(getattr(self.cortex, "last_physics", {}))
 
-        return None # All clear to proceed to Cortex
+        return None
 
     def process_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         turn_start = self.observer.clock_in()
         self.observer.user_turns += 1
         self.tick_count += 1
 
-        # Guard Clauses
         pre_flight_halt = self._pre_flight_checks(user_message, is_system)
         if pre_flight_halt:
             return pre_flight_halt
 
-        # 7. Domestication Check (Non-blocking)
         if not is_system and hasattr(self, "soul") and hasattr(self.soul, "anchor"):
             cfg = getattr(BoneConfig, "MAIN", None)
             eff_warn = getattr(cfg, "DOMESTICATION_EFF_WARN", 0.6) if cfg else 0.6
@@ -437,7 +422,6 @@ class BoneAmanita:
                     getattr(cfg, "RELIANCE_HIGH", 0.9) if self.host_stats.efficiency_index < getattr(cfg, "DOMESTICATION_EFF_CRIT", 0.4) else getattr(cfg, "RELIANCE_LOW", 0.5)
                 )
 
-        # 8. Cortex Execution
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
             if hasattr(self.mind, "mem"):
@@ -449,7 +433,6 @@ class BoneAmanita:
             full_trace = traceback.format_exc()
             return {"ui": f"{Prisma.RED}{ux('main_strings', 'cortex_crit_fail').format(trace=full_trace)}{Prisma.RST}", "logs": ["CRITICAL FAILURE"], "metrics": self.get_metrics()}
 
-        # 9. Cleanup
         self._update_host_stats(cortex_packet, turn_start)
         self.save_checkpoint()
         return cortex_packet
@@ -502,8 +485,8 @@ class BoneAmanita:
 
     def trigger_death(self, last_phys) -> Dict:
         """
-        The system has exhausted its health. It does not just crash; 
-        it invokes DeathGen to eulogize its own passing, determines the cause, 
+        The system has exhausted its health. It does not just crash;
+        it invokes DeathGen to eulogize its own passing, determines the cause,
         and extracts epigenetic lineage traits for the next session via the Oroboros loop.
         """
         if self.death_gen is None:
@@ -521,7 +504,6 @@ class BoneAmanita:
             if self.cortex.dialogue_buffer
             else "Silence."), "inventory": self.gordon.inventory if self.gordon else [], }
         try:
-            # Extract mutations and antibodies to pass to the next boot.
             mutations_data = (
                 self.repro.attempt_reproduction(self, "MITOSIS")[1]
                 if getattr(self, "repro", None)
@@ -535,7 +517,6 @@ class BoneAmanita:
                 self.bio.mito.state.__dict__
                 if hasattr(self.bio.mito.state, "__dict__")
                 else {})
-            # Save the final state to the Mycelial Network.
             path = self.mind.mem.save(health=0, stamina=self.stamina, mutations=mutations_data,
                                       trauma_accum=self.trauma_accum, joy_history=[], mitochondria_traits=mito_state,
                                       antibodies=immune_data, soul_data=self.soul.to_dict(),
@@ -563,8 +544,8 @@ class BoneAmanita:
 
     def _ethical_audit(self):
         """
-        Evaluates systemic stress. If the trauma (scars, unvented entropy) 
-        exceeds a desperation threshold, it triggers a forced Catharsis. This vents 
+        Evaluates systemic stress. If the trauma (scars, unvented entropy)
+        exceeds a desperation threshold, it triggers a forced Catharsis. This vents
         trauma and heals the system, explicitly mimicking a psychological break or release.
         """
         cfg = getattr(BoneConfig, "MAIN", None)
@@ -594,7 +575,7 @@ class BoneAmanita:
 
     def engage_cold_boot(self) -> Optional[Dict[str, Any]]:
         """
-        Triggers the initial system sequence. Checks for quicksaves to restore 
+        Triggers the initial system sequence. Checks for quicksaves to restore
         session continuity, or generates a fresh foundational scenario to start.
         """
         if self.tick_count > 0:
@@ -604,6 +585,7 @@ class BoneAmanita:
             print(f"{Prisma.GRY}{msg_pod}{Prisma.RST}")
             success, history = self.resume_checkpoint()
             if success:
+                self._apply_boot_mode()
                 if self.cortex:
                     self.cortex.restore_context(history)
                 loc = (
@@ -619,7 +601,6 @@ class BoneAmanita:
                 msg_restored = ux("main_strings", "timeline_restored")
                 resume_text = msg_resume.format(loc=loc, last_scene=last_scene)
                 return {"ui": resume_text, "logs": [msg_restored]}
-        # If no save exists, bootstrap a synthetic reality
         msg_synth = ux("main_strings", "synth_reality")
         print(f"{Prisma.GRY}{msg_synth}{Prisma.RST}")
         scenarios = LoreManifest.get_instance().get("SCENARIOS", {})
@@ -627,7 +608,7 @@ class BoneAmanita:
         seed = random.choice(archetypes)
         msg_seed = ux("main_strings", "seed_loaded")
         print(f"{Prisma.CYN}{msg_seed.format(seed=seed)}{Prisma.RST}")
-        boot_prompt = f"SYSTEM_BOOT: {seed}"
+        boot_prompt = f"SYSTEM_BOOT DETECTED. The system is waking up. The user provided the thought seed: '{seed}'. Greet the user casually using this seed. DO NOT describe physical environments."
         cold_result = self.process_turn(boot_prompt, is_system=True)
         return cold_result
 
@@ -639,6 +620,8 @@ class BoneAmanita:
 
     def shutdown(self):
         """Wrapper routing unmount sequence to Chronos."""
+        if hasattr(self, "telemetry") and self.telemetry:
+            self.telemetry.flush_to_disk()
         self.chronos.perform_shutdown()
 
 if __name__ == "__main__":
@@ -669,8 +652,6 @@ if __name__ == "__main__":
             if res.get("ui"):
                 cfg = getattr(BoneConfig, "GUI", None)
                 slow_speed = getattr(cfg, "RENDER_SPEED_SLOW", 0.005) if cfg else 0.005
-                # Parse UI tokens. If a split token exists, render the dashboard instantly, 
-                # then apply the typewriter effect to the narrative text.
                 if split_token and split_token in res["ui"]:
                     dashboard, _, content = res["ui"].partition("\n\n")
                     print(f"\n{dashboard.strip()}\n")

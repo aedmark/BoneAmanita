@@ -13,6 +13,13 @@ import os
 import random
 import tempfile
 import time
+import hashlib
+
+def _word_to_vector(word: str, dim: int = 8) -> list:
+    """Hashes a forgotten word into a pseudo-random mathematical vector between -1.0 and 1.0"""
+    h = hashlib.md5(word.encode('utf-8')).digest()
+    return [(b / 127.5) - 1.0 for b in h[:dim]]
+
 from collections import deque
 from typing import List, Tuple, Optional, Dict
 from bone_config import BoneConfig
@@ -127,6 +134,26 @@ class SubconsciousStrata:
             os.makedirs(self.directory)
         self.index = set()
         self._load_index()
+        self.matrix_filepath = os.path.join(self.directory, "m_t_matrix.json")
+        self.M_t = self._load_matrix()
+
+    def _load_matrix(self):
+        """Loads the continuous matrix from disk, or creates a blank 8x8 space."""
+        if os.path.exists(self.matrix_filepath):
+            try:
+                with open(self.matrix_filepath, "r") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return [[0.0 for _ in range(8)] for _ in range(8)]
+
+    def _save_matrix(self):
+        """Saves the continuous matrix state."""
+        try:
+            with open(self.matrix_filepath, "w") as f:
+                json.dump(self.M_t, f)
+        except Exception:
+            pass
 
     def _iter_entries(self):
         if not os.path.exists(self.filepath):
@@ -156,6 +183,15 @@ class SubconsciousStrata:
                 fossil_data["buried_at"] = time.time()
                 f.write(json.dumps(fossil_data, cls=BoneJSONEncoder) + "\n")
             self.index.add(fossil_data["word"])
+            word = fossil_data["word"]
+            mass = fossil_data.get("mass", 1.0)
+            K = _word_to_vector(word)
+            V = _word_to_vector(word + "_val")
+            scale = min(1.0, mass / 10.0)
+            for i in range(8):
+                for j in range(8):
+                    self.M_t[i][j] += (K[i] * V[j]) * scale
+            self._save_matrix()
             return True
         except IOError:
             return False
@@ -182,6 +218,15 @@ class SubconsciousStrata:
         if trigger_word not in self.index:
             return None
         return next((e for e in self._iter_entries() if e.get("word") == trigger_word), None)
+
+    def dredge_vibe(self, trigger_word: str) -> list:
+        """Multiplies a Query vector against the Matrix to feel the ghost of what was lost."""
+        Q = _word_to_vector(trigger_word)
+        out = [0.0] * 8
+        for i in range(8):
+            for j in range(8):
+                out[j] += Q[i] * self.M_t[i][j]
+        return [round(val, 3) for val in out]
 
 class MemoryCore:
     """
@@ -373,6 +418,15 @@ class MycelialNetwork:
             chorus_log = self._poll_chorus(clean_words, physics)
             if chorus_log:
                 logs.append(chorus_log)
+        cfg = getattr(BoneConfig, "SPORES", None)
+        chorus_c = getattr(cfg, "CHORUS_CHANCE", 0.10) if cfg else 0.10
+        if random.random() < chorus_c:
+            chorus_log = self._poll_chorus(clean_words, physics)
+            if chorus_log:
+                logs.append(chorus_log)
+        ghost_log = self._poll_ghosts(clean_words, physics)
+        if ghost_log:
+            logs.append(ghost_log)
         return logs
 
     def _poll_chorus(self, clean_words: list, physics: Dict) -> Optional[str]:
@@ -397,6 +451,26 @@ class MycelialNetwork:
             elif total_voltage_boost > 0:
                 msg_l = ux("spore_strings", "net_echo_light") or ""
                 return f"{Prisma.GRY}{msg_l}{Prisma.RST}" if msg_l else None
+        return None
+
+    def _poll_ghosts(self, clean_words: list, physics: Dict) -> Optional[str]:
+        """Checks if the current words have been forgotten. If so, their matrix vibe alters the physical state."""
+        total_v_shift = 0.0
+        total_d_shift = 0.0
+        haunted_words = []
+        for w in clean_words:
+            if w in self.subconscious.index:
+                vibe = self.subconscious.dredge_vibe(w)
+                v_shift = vibe[0] * 2.0
+                d_shift = vibe[1] * 0.5
+                total_v_shift += v_shift
+                total_d_shift += d_shift
+                haunted_words.append(w)
+        if haunted_words:
+            physics["voltage"] = max(0.0, physics.get("voltage", 0.0) + total_v_shift)
+            physics["narrative_drag"] = max(0.0, physics.get("narrative_drag", 0.0) + total_d_shift)
+            msg = ux("spore_strings", "net_ghost_haunt") or "The ghosts of [{words}] alter the atmosphere (V:{v:+.2f}, D:{d:+.2f})."
+            return f"{Prisma.VIOLET}{msg.format(words=', '.join(haunted_words).upper(), v=total_v_shift, d=total_d_shift)}{Prisma.RST}"
         return None
 
     def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
@@ -430,8 +504,11 @@ class MycelialNetwork:
                     memory = self.subconscious.dredge(word)
                     if memory:
                         self.graph[word] = {"edges": memory["edges"], "last_tick": 0}
-                        msg = ux("spore_strings", "net_flashback") or ""
-                        return msg.format(word=word) if msg else None
+                        vibe = self.subconscious.dredge_vibe(word)
+                        vibe_str = f"[{vibe[0]}, {vibe[1]}, {vibe[2]}]"
+                        msg = ux("spore_strings", "net_flashback") or "A memory resurfaces: {word}."
+                        base_str = msg.format(word=word.upper())
+                        return f"{base_str} It carries a dark matter gravity of {vibe_str}."
         return None
 
     def bury(self, clean_words: List[str], tick: int, resonance=5.0, learning_mod=1.0, desperation_level=0.0, ) -> Tuple[Optional[str], List[str]]:

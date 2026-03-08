@@ -955,9 +955,10 @@ class TheCortex:
                     msg_prompt = ux("brain_strings", "cortex_reject_prompt")
                     final_prompt += msg_prompt.format(attempt=attempt + 1, rejection_reason=rejection_reason)
                 else:
-                    final_output = val_res["replacement"]
+                    final_output = val_res.get("replacement", "SYSTEM FAILURE.")
                     extracted_logs = val_res.get("meta_logs", [])
-        self._log_telemetry(final_prompt, final_output, full_state, sim_result)
+        telemetry_output = raw_resp if not val_res["valid"] else final_output
+        self._log_telemetry(final_prompt, telemetry_output, full_state, sim_result)
         self.learn_from_response(final_output)
         self.svc.symbiosis.monitor_host(time.time() - start_time, final_output, len(final_prompt))
         self._update_history("SYSTEM_INIT" if "SYSTEM_BOOT" in user_input else user_input, final_output)
@@ -1033,19 +1034,32 @@ class TheCortex:
     @staticmethod
     def _log_telemetry(prompt, response, state, sim_result):
         try:
+            tel = TelemetryService.get_instance()
             phys = state.get("physics", {})
-            crystal = DecisionCrystal(
-                prompt_snapshot=prompt[:500],
-                physics_state={
+
+            # SLASH PATCH: Populate the Orchestrator's active crystal instead of overwriting it
+            if tel.active_crystal:
+                tel.active_crystal.prompt_snapshot = prompt[:500]
+                tel.active_crystal.physics_state = {
                     "voltage": phys.get("voltage", 0),
-                    "narrative_drag": phys.get("narrative_drag", 0),},
-                active_archetype=state["mind"].get("lens", "UNKNOWN"),
-                council_mandates=[
-                    str(m) for m in sim_result.get("council_mandates", [])],
-                final_response=response,)
-            TelemetryService.get_instance().log_crystal(crystal)
-        except Exception:
-            pass
+                    "narrative_drag": phys.get("narrative_drag", 0),}
+                tel.active_crystal.active_archetype = state["mind"].get("lens", "UNKNOWN")
+                tel.active_crystal.council_mandates = [str(m) for m in sim_result.get("council_mandates", [])]
+                tel.active_crystal.final_response = response
+            else:
+                crystal = DecisionCrystal(
+                    decision_id=sim_result.get("trace_id", "UNKNOWN"),
+                    prompt_snapshot=prompt[:500],
+                    physics_state={
+                        "voltage": phys.get("voltage", 0),
+                        "narrative_drag": phys.get("narrative_drag", 0),},
+                    active_archetype=state["mind"].get("lens", "UNKNOWN"),
+                    council_mandates=[str(m) for m in sim_result.get("council_mandates", [])],
+                    final_response=response,)
+                tel.log_crystal(crystal)
+        except Exception as e:
+            from bone_types import Prisma
+            print(f"\n{Prisma.RED}[TELEMETRY CRASH]: {e}{Prisma.RST}")
 
     def _check_consent(self, user_input: str, new_loot: List[str]) -> List[str]:
         if not new_loot:
