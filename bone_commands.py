@@ -376,10 +376,18 @@ class CommandProcessor:
         return True
 
     def _cmd_debug(self, _parts):
-        """ Toggles verbose internal logging. """
+        """ Toggles verbose internal logging AND elevates the Reality Stack. """
         self.interface.Config.VERBOSE_LOGGING = (not self.interface.Config.VERBOSE_LOGGING)
+        is_debug = self.interface.Config.VERBOSE_LOGGING
+        if hasattr(self.interface.eng, "reality_stack"):
+            if is_debug:
+                self.interface.eng.reality_stack.stabilize_at(3)
+            else:
+                self.interface.eng.reality_stack.stabilize_at(1)
         msg = ux("command_alerts", "debug_mode")
-        self.interface.log(msg.format(state=self.interface.Config.VERBOSE_LOGGING))
+        base_msg = msg.format(state=is_debug)
+        layer_msg = "[D3:DBG] (Filters off)" if is_debug else "[D1:SIM] (Filters on)"
+        self.interface.log(f"{base_msg} | Layer: {layer_msg}")
         return True
 
     def _cmd_exit(self, _parts):

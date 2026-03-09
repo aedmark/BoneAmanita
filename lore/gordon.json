@@ -1,7 +1,6 @@
 {
   "STARTING_INVENTORY": [
-    "POCKET_ROCKS",
-    "SILENT_KNIFE"
+    "TCL9_QUANTUM_COMB"
   ],
   "SCAR_TISSUE": {
     "FEAR": 0.8,
@@ -192,6 +191,14 @@
         "CUT_THE_CRAP"
       ],
       "usage_msg": "Snip. Gordon trims the adjectives."
+    },
+    "TCL9_QUANTUM_COMB": {
+      "description": "A fine-tooth comb made of pure script. It strips away fluffy adjectives.",
+      "function": "INPUT_MODIFIER",
+      "spawn_context": "VOLTAGE_CRITICAL",
+      "passive_traits": ["CUT_THE_CRAP"],
+      "value": 20.0,
+      "usage_msg": "Gordon rakes the comb through your prompt. The fluff falls away."
     },
     "BUCKET_OF_LIME": {
       "description": "Industrial-grade whitewash. For erasing mistakes.",

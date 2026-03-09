@@ -1,11 +1,23 @@
 """ bone_gui.py """
-
+import re
 from typing import Dict, List, Any, Tuple
-
 from bone_config import BoneConfig
 from bone_core import Prisma, ux
 from bone_physics import ChromaScope
 
+def beautify_thoughts(text: str) -> str:
+    """Transforms raw XML <think> tags into a stylized terminal data-pipe."""
+    def replacer(match):
+        content = match.group(1).strip()
+        if not content:
+            return ""
+        lines = content.split('\n')
+        formatted_lines = [f"{Prisma.CYN}  │ {Prisma.GRY}{line.strip()}{Prisma.RST}" for line in lines if line.strip()]
+        header = f"{Prisma.CYN}  ┌─ {Prisma.MAG}[ COGNITIVE SUBSTRATE ]{Prisma.RST}"
+        footer = f"{Prisma.CYN}  └─{Prisma.RST}"
+        return f"{header}\n" + "\n".join(formatted_lines) + f"\n{footer}"
+    pattern = re.compile(r"<(?:think|thought)>(.*?)(?:</(?:think|thought)>|$)", re.DOTALL | re.IGNORECASE)
+    return pattern.sub(replacer, text)
 
 class Projector:
     """

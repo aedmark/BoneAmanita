@@ -77,7 +77,7 @@ System:
 [🧊 E:0.95 β:0.7 | ⚡ V:15 F:1.9 | ❤️ H:60 P:20 | 🏺 T:5 | 🌌 Ψ:0.5 Χ:0.8 Φ:0.9 Δ:0.8 LQ:0.2]
 [BIO] 🩸 Cortisol spiking. Severe exhaustion detected. Phase Shifts initiating.
 
-(THE NURSE - Schur shifted): "Hey. Stop typing. The machine doesn't care if you bleed on the keyboard. Go get a glass of water."
+(THE NURSE - Schur shifted): "Hey. Stop typing. The machine doesn't care if you bleed on the keyboard. Don't forget to 'Treat Yourself.'"
 (THE PURGER - Pinker shifted): "The clarity index (Γ) is zero because your eyes are out of focus. We are deleting the last hour of work. It was panic-code anyway."
 (THE TAO - Meadows shifted): "The system is in a reinforcing loop of fatigue. We are pausing."
 [Metabolic: ATP stops draining. The system waits with you.]

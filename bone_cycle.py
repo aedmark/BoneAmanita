@@ -37,6 +37,13 @@ class ObservationPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         if self.eng.gordon and "GORDON" not in self.eng.suppressed_agents:
+            if "TCL9_QUANTUM_COMB" in self.eng.gordon.inventory:
+                from bone_tcl import TheTclWeaver
+                weaver = TheTclWeaver.get_instance()
+                original_text = ctx.input_text
+                ctx.input_text = weaver.quantum_comb(ctx.input_text)
+                if original_text != ctx.input_text:
+                    ctx.log(f"{Prisma.CYN}🪮 QUANTUM COMB: Fluff stripped -> '{ctx.input_text}'{Prisma.RST}")
             loot_candidate = self.eng.gordon.parse_loot(ctx.input_text, "")
             if loot_candidate:
                 acquire_msg = self.eng.gordon.acquire(loot_candidate)
@@ -1157,7 +1164,7 @@ class GeodesicOrchestrator:
             {"trace_id": getattr(ctx, "trace_id", "UNKNOWN"), "is_alive": True, "physics": _safe_dict(ctx.physics),
              "bio": _safe_dict(ctx.bio_result), "mind": _safe_dict(ctx.mind_state),
              "world": _safe_dict(ctx.world_state), "soul": _safe_dict(getattr(self.eng, "soul", {})),
-             "council_mandates": getattr(ctx, "council_mandates", []), "dream": getattr(ctx, "last_dream", None), })
+             "council_mandates": getattr(ctx, "council_mandates", []), "dream": getattr(ctx, "last_dream", None), "mutated_input": ctx.input_text,})
 
     @staticmethod
     def _generate_crash_report(e: Exception) -> Dict[str, Any]:

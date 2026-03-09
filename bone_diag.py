@@ -210,22 +210,32 @@ class TrueEngineTest(unittest.TestCase):
 
     def test_prompt_composer_anti_bleed_membranes(self):
         from bone_brain import PromptComposer
+        from bone_config import BonePresets
+
         mock_lore = {"system_prompts": self.engine.prompt_library, "lenses": {}}
         composer = PromptComposer(mock_lore)
+
+        # --- THE FIX: Explicitly set the cortex's internal mode tracker ---
+        self.engine.cortex.active_mode = "CONVERSATION"
+
         conv_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-        conv_state["meta"]["mode_settings"] = BonePresets.MODES["CONVERSATION"]
-        conv_state["meta"]["mode_settings"]["name"] = "CONVERSATION"
+
         conv_prompt = composer.compose(conv_state, "Hello?", modifiers={"include_inventory": False})
+
         self.assertNotIn("Object-Action Coupling", conv_prompt,
                          "ADVENTURE mechanics bled into CONVERSATION mode prompt.")
         self.assertIn("Do not act like a Dungeon Master", conv_prompt,
                       "CONVERSATION Anti-Bleed constraint was not injected.")
         self.assertNotIn("INVENTORY:", conv_prompt,
                          "Inventory block rendered in Conversation mode despite being suppressed.")
+
+        # --- Do the same for Technical Mode ---
+        self.engine.cortex.active_mode = "TECHNICAL"
+
         tech_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-        tech_state["meta"]["mode_settings"] = BonePresets.MODES["TECHNICAL"]
-        tech_state["meta"]["mode_settings"]["name"] = "TECHNICAL"
+
         tech_prompt = composer.compose(tech_state, "Refactor this.", modifiers={"include_inventory": False})
+
         self.assertIn("Clinical, precise", tech_prompt,
                       "TECHNICAL style guide missing.")
         self.assertIn("Do not write prose, poetry, or narrative descriptions.", tech_prompt,

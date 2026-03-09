@@ -131,11 +131,20 @@ class SymbiontVoice:
         return score, self._get_comment(score, voltage)
 
     def _get_comment(self, score, voltage):
-        if voltage > 18.0 and "high_volt" in self.personality: return self.personality["high_volt"]
-        if voltage < 5.0 and "low_volt" in self.personality: return self.personality["low_volt"]
-        if score > 3.0 and "high_score" in self.personality: return self.personality["high_score"]
-        if score > 1.0 and "med_score" in self.personality: return self.personality["med_score"]
-        return ux("symbiosis_strings", "symbiont_default_comment")
+        comment = ux("symbiosis_strings", "symbiont_default_comment")
+        if voltage > 18.0 and "high_volt" in self.personality: comment = self.personality["high_volt"]
+        elif voltage < 5.0 and "low_volt" in self.personality: comment = self.personality["low_volt"]
+        elif score > 3.0 and "high_score" in self.personality: comment = self.personality["high_score"]
+        elif score > 1.0 and "med_score" in self.personality: comment = self.personality["med_score"]
+
+        # --- TCL INTEGRATION: THE PARASITE ECHO ---
+        if self.name == "PARASITE":
+            from bone_tcl import TheTclWeaver
+            weaver = TheTclWeaver.get_instance()
+            comment = weaver.haunt_string(comment)
+        # ------------------------------------------
+
+        return comment
 
 def get_symbiont(type_name):
     """ Factory method for retrieving cached symbiont voices. """

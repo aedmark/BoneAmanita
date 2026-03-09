@@ -68,7 +68,7 @@ class SessionGuardian:
     def __enter__(self):
         os.system("cls" if os.name == "nt" else "clear")
         top_bar = ux("main_strings", "term_header_top", "┌──────────────────────────────────────────┐")
-        mid_bar = ux("main_strings", "term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 16.4.0   │")
+        mid_bar = ux("main_strings", "term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 16.5.0   │")
         bot_bar = ux("main_strings", "term_header_bot", "└──────────────────────────────────────────┘")
         print(f"{Prisma.paint(top_bar, 'M')}")
         print(f"{Prisma.paint(mid_bar, 'M')}")
@@ -298,6 +298,8 @@ class BoneAmanita:
         layer = self.mode_settings.get("ui_layer", RealityLayer.SIMULATION)
         if self.boot_mode == "CONVERSATION":
             self.soul.force_mutation("THE CONVERSATIONALIST")
+        elif self.boot_mode == "ADVENTURE":
+            self.soul.force_mutation("THE ARCHITECT")
         elif self.boot_mode == "TECHNICAL":
             self.soul.force_mutation("THE SYSTEM_KERNEL")
         elif self.boot_mode == "CREATIVE":
@@ -392,7 +394,7 @@ class BoneAmanita:
                     self.cortex.ballast_active = True
                     self.cortex.gordon_shock = violation_msg
 
-        if not self.reality_stack.get_grammar_rules()["allow_narrative"]:
+        if not self.reality_stack.get_grammar_rules()["allow_narrative"] and self.boot_mode != "TECHNICAL":
             return {"ui": f"{Prisma.RED}{ux('main_strings', 'narrative_halt')}{Prisma.RST}", "logs": [], "metrics": self.get_metrics()}
 
         if self._ethical_audit():
@@ -414,6 +416,19 @@ class BoneAmanita:
         if pre_flight_halt:
             return pre_flight_halt
 
+        if not is_system and self.gordon:
+            pruning_active = any(
+                "CUT_THE_CRAP" in self.gordon.get_item_data(i).passive_traits
+                for i in self.gordon.inventory
+                if self.gordon.get_item_data(i))
+            if pruning_active:
+                from bone_tcl import TheTclWeaver
+                from bone_types import Prisma
+                original_msg = user_message
+                user_message = TheTclWeaver.get_instance().quantum_comb(user_message)
+                if original_msg != user_message:
+                    msg = f"{Prisma.CYN}Gordon rakes the comb through your prompt. Fluff discarded. -> '{user_message}'{Prisma.RST}"
+                    self.events.log(msg, "SYS")
         if not is_system and hasattr(self, "soul") and hasattr(self.soul, "anchor"):
             cfg = getattr(BoneConfig, "MAIN", None)
             eff_warn = getattr(cfg, "DOMESTICATION_EFF_WARN", 0.6) if cfg else 0.6

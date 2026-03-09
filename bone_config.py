@@ -29,12 +29,26 @@ class BonePresets:
                   "tuning": "ZEN", }
     THUNDERDOME = {"PHYSICS.VOLTAGE_FLOOR": 8.0, "PHYSICS.VOLTAGE_MAX": 30.0, "PHYSICS.DRAG_FLOOR": 0.5,
                    "BIO.ATP_STARVATION": 20.0, "COUNCIL.MANIC_VOLTAGE_TRIGGER": 12.0, "CHANCE.RARE": 0.20, }
-    SANCTUARY = {"VOLTAGE_TARGET": 7.0, "VOLTAGE_TOLERANCE": 3.0, "DRAG_TARGET": 2.0, "DRAG_TOLERANCE": 1.5,
-                 "TRUTH_TARGET": 0.7, "E_TARGET": 0.4, "B_TARGET": 0.5, "ZONE": "SANCTUARY", "COLOR": "\033[32m",
-                 "COLOR_NAME": "GRN", }
+    SANCTUARY = {
+        "COUNCIL.LEVERAGE_TARGET_VOLTAGE": 7.0,
+        "COUNCIL.LEVERAGE_TARGET_DRAG": 2.0,
+        "PHYSICS.VOLTAGE_MAX": 15.0,
+        "PHYSICS.DRAG_FLOOR": 0.0,
+        "BIO.METABOLISM_RATE": 0.5,
+        "tuning": "ZEN",
+        "VOLTAGE_TARGET": 7.0,
+        "VOLTAGE_TOLERANCE": 3.0,
+        "DRAG_TARGET": 2.0,
+        "DRAG_TOLERANCE": 1.5,
+        "TRUTH_TARGET": 0.7,
+        "E_TARGET": 0.4,
+        "B_TARGET": 0.5,
+        "ZONE": "SANCTUARY",
+        "COLOR": "\033[32m",
+        "COLOR_NAME": "GRN",
+    }
     LABORATORY = {"PHYSICS.VOLTAGE_FLOOR": 0.5, "PHYSICS.VOLTAGE_MAX": 15.0, "PHYSICS.DRAG_FLOOR": 2.0,
                   "BIO.DECAY_RATE": 0.0, "COUNCIL.FOOTNOTE_CHANCE": 1.0, }
-    # The Core Operating Modes. These define which archetypes are suppressed and which UI modules run.
     MODES = {
         "ADVENTURE": {"description": "The default experience. Survival, inventory, exploration.", "tuning": "STANDARD",
                       "ui_layer": 1, "village_suppression": [], "prompt_key": "ADVENTURE", "show_inventory": True,
@@ -74,16 +88,14 @@ class BoneConfig:
     """
     GRAVITY_WELL_THRESHOLD = 15.0
     SHAPLEY_MASS_THRESHOLD = 5.0
-    # Baseline psychological archetypes and their dominant vectors
     TRAIT_ARCHETYPES = {"THE POET": {"ABSTRACT": 0.6, "PHOTO": 0.3, "ENTROPY": 0.1},
                         "THE ENGINEER": {"CONSTRUCTIVE": 0.7, "HEAVY": 0.3},
                         "THE NIHILIST": {"ENTROPY": 0.8, "CRYO": 0.2}, "THE CRITIC": {"THERMAL": 0.5, "ABSTRACT": 0.5},
                         "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
                         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2}, }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "16.4.0"
+    VERSION = "16.5.0"
     VERBOSE_LOGGING = True
-    # Absolute Biological Maximums
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
     MAX_ATP = 100.0
@@ -104,9 +116,8 @@ class BoneConfig:
     PRIORITY_LEARNING_RATE = 1.0
     ZONE_THRESHOLDS = {"LABORATORY": 1.5, "COURTYARD": 0.8}
     TOXIN_WEIGHT = 1.0
-    ANTIGENS = ["basically", "actually", "literally", "utilize"] # Clichés act as literal cellular toxins
+    ANTIGENS = ["basically", "actually", "literally", "utilize"]
     MAX_OUTPUT_TOKENS = 4096
-    # LLM Inference Targets
     DEFAULT_LLM_ENDPOINTS = {"ollama": "http://127.0.0.1:11434/v1/chat/completions",
                              "openai": "https://api.openai.com/v1/chat/completions",
                              "lm_studio": "http://127.0.0.1:1234/v1/chat/completions", "mock": "N/A", }
@@ -159,7 +170,7 @@ class BoneConfig:
         DIGNITY_CRITICAL = 20.0
         DIGNITY_LOCKDOWN = 10.0
         PET_WARNING_THRESHOLD = 0.8
-        DOMESTICATION_PENALTY = 5.0 # Tax levied when the system acts too "helpful" without truth
+        DOMESTICATION_PENALTY = 5.0
         AUDIT_ATP_MIN = 5.0
         AUDIT_VOLTAGE_MIN = 5.0
         AUDIT_RESONANCE_THRESH = 0.3
@@ -187,7 +198,7 @@ class BoneConfig:
         MOOD_THRESHOLDS = {"MANIC_DOP": 0.8, "PANIC_COR": 0.7, "ZEN_SER": 0.8}
         TEMP_VOLTAGE_OFFSET = 5.0
         TEMP_VOLTAGE_SCALAR = 0.1
-        TEMP_CHEM_WEIGHTS = {"dop": 0.4, "adr": 0.3, "cor": 0.2} # Chemical weights mapped to LLM Temp
+        TEMP_CHEM_WEIGHTS = {"dop": 0.4, "adr": 0.3, "cor": 0.2}
         TEMP_ENTROPY_OFFSET = 0.5
         TEMP_ENTROPY_SCALAR = 1.5
         TEMP_LIMITS = (0.4, 1.5)
@@ -337,14 +348,13 @@ class BoneConfig:
         LEVERAGE_DAMPENING_SCALAR = 0.1
         LEVERAGE_CORRECTION_MIN = 1.0
         LEVERAGE_CORRECTION_SCALAR = 0.3
-        SLASH_STAMINA_COST = 10.0 # Cost to invoke the Mod Chip code review
+        SLASH_STAMINA_COST = 10.0
         TENSION_DRAG_PENALTY = 3.0
         VOTE_YEA_THRESHOLD = 1.2
         VOTE_NAY_THRESHOLD = 0.8
         VOTE_DRAG_RELIEF = 1.0
         VOTE_DRAG_PENALTY = 1.0
         VOTE_VOLTAGE_PENALTY = 1.0
-        # Character Triggers
         TRIG_GORDON_V = 20.0
         TRIG_GORDON_F = 5.0
         TRIG_JESTER_V = 60.0
@@ -368,7 +378,6 @@ class BoneConfig:
         TRIG_GIDEON_V = 70.0
         TRIG_APRIL_ROS = 20.0
         TRIG_APRIL_V_DEV = 20.0
-        # Phase Shift Triggers
         PHASE_ROBERTA_PSI = 0.6
         PHASE_ROBERTA_PHI = 0.4
         PHASE_MOIRA_PHI = 0.7
@@ -441,7 +450,6 @@ class BoneConfig:
         CLICHE_TAX_RATE = 0.5
         MAX_SAFE_BURN = 25.0
         ANAEROBIC_THRESHOLD = 40.0
-        # The PID settings for the Cycle Stabilizer
         PID_SETTINGS = {"VOLTAGE": {"kp": 0.6, "ki": 0.05, "kd": 0.2, "setpoint": 10.0},
                         "DRAG": {"kp": 0.4, "ki": 0.1, "kd": 0.1, "setpoint": 1.5}}
         AUTOPHAGY_MIN_HEALTH = 10.0
