@@ -222,14 +222,6 @@
   ],
   "SCRUB_PATTERNS": [
     {
-      "regex": "(?<!\\*)\\*([^*]+)\\*(?!\\*)",
-      "replacement": ""
-    },
-    {
-      "regex": "\\[.*?\\]",
-      "replacement": ""
-    },
-    {
       "regex": "^(?:system|assistant|ai|conversationalist|the conversationalist):\\s*",
       "replacement": ""
     },

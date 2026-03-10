@@ -87,20 +87,20 @@ class BioSystem:
                 "governor_mode": self.governor.mode if self.governor else "UNKNOWN", }
 
     def rest(self, factor: float = 1.0) -> List[str]:
-        """Sleep mechanic. Restores health/stamina while flushing cortisol and boosting serotonin."""
-        if not self.biometrics:
+        """Sleep mechanic. Restores health/stamina while flushing cortisol."""
+        b = self.biometrics
+        if not b:
             return []
-        MAX_H, MAX_S = getattr(BoneConfig, "MAX_HEALTH", 100.0), getattr(
-            BoneConfig, "MAX_STAMINA", 100.0)
+        MAX_H = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+        MAX_S = getattr(BoneConfig, "MAX_STAMINA", 100.0)
         cfg = getattr(BoneConfig, "BIO", None)
         h_rec = getattr(cfg, "REST_HEALTH_RECOVERY", 0.5) if cfg else 0.5
         s_rec = getattr(cfg, "REST_STAMINA_RECOVERY", 1.0) if cfg else 1.0
-        ser_boost = getattr(cfg, "REST_SEROTONIN_BOOST", 0.05) if cfg else 0.05
-        cor_drop = getattr(cfg, "REST_CORTISOL_DROP", 0.05) if cfg else 0.05
-        b = self.biometrics
         b.health = min(MAX_H, b.health + (h_rec * factor))
         b.stamina = min(MAX_S, b.stamina + (s_rec * factor))
         if self.endo:
+            ser_boost = getattr(cfg, "REST_SEROTONIN_BOOST", 0.05) if cfg else 0.05
+            cor_drop = getattr(cfg, "REST_CORTISOL_DROP", 0.05) if cfg else 0.05
             self.endo.serotonin = min(1.0, self.endo.serotonin + (ser_boost * factor))
             self.endo.cortisol = max(0.0, self.endo.cortisol - (cor_drop * factor))
         return []
@@ -285,7 +285,6 @@ class MitochondrialForge:
             icon = ux("mito_forge", "icon_grinding")
             if msg: self.events.log(f"{Prisma.OCHRE}{icon}{msg}{Prisma.RST}", "BIO_WARN")
         total_metabolic_cost = raw_cost
-        # Calculating ROS (Waste). Abstract and chaotic concepts poison the blood.
         psi = getattr(physics_packet, "psi", 0.0)
         chi = getattr(physics_packet, "chi", 0.0)
         voltage = getattr(physics_packet, "V", 30.0)
@@ -470,15 +469,20 @@ class BioFeedback:
         self.bio = bio_system_ref
 
     def check_vital_signs(self, phys: Any, stamina: float, logs: List[str]) -> str:
-        """ Triggers Autophagy (eating memory for energy) or clamps output if limits are exceeded. """
+        """ Triggers Autophagy or clamps output if limits are exceeded. """
+        b = self.bio.biometrics
+        if not b:
+            msg = ux("bio_feedback", "interface_lost")
+            if msg: logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
+            return "MAUSOLEUM_CLAMP"
         voltage = getattr(phys, "voltage", 0.0)
         cfg = getattr(BoneConfig, "BIO", None)
         min_health = getattr(cfg, "AUTOPHAGY_MIN_HEALTH", 10.0)
         burn_amount = getattr(cfg, "AUTOPHAGY_BURN", 5.0)
         v_overload = getattr(cfg, "VOLTAGE_OVERLOAD", 30.0)
         if stamina <= 0:
-            if self.bio.biometrics.health > min_health:
-                self.bio.biometrics.health -= burn_amount
+            if b.health > min_health:
+                b.health -= burn_amount
                 msg = ux("bio_feedback", "autophagy")
                 if msg: logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
                 return "AUTOPHAGY"
@@ -565,73 +569,60 @@ class SomaticLoop:
         if getattr(self.bio, "governor", None):
             self.bio.governor.narrative_data = self.narrative_data
 
-    def digest_cycle(self, text: str, physics_data: Any, feedback: Dict, health: float, stamina: float,
-                     stress_modifier: float, tick_count: int = 0, circadian_bias: Dict = None, ) -> Dict:
+    def digest_cycle(self, text: str, physics_data: Any, fb_dict: Dict, health: float, stamina: float,
+                     stress_modifier: float, tick_count: int = 0, circadian_bias: Dict = None) -> Dict:
         """ Executes the biological sequence for a single conversational turn. """
         if not isinstance(text, str):
             text = str(text) if text is not None else ""
         phys = physics_data
         logs = []
-        if self.bio.biometrics:
-            max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
-            max_s = getattr(BoneConfig, "MAX_STAMINA", 100.0)
-            self.bio.biometrics.health = max(0.0, min(max_h, health))
-            self.bio.biometrics.stamina = max(0.0, min(max_s, stamina))
-        if self.bio.events and hasattr(self.bio, "apply_environmental_entropy"):
+        b = self.bio.biometrics
+        if not b:
+            return self._package_result("NECROSIS", ["Critical: Biological interface disconnected."])
+        max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+        max_s = getattr(BoneConfig, "MAX_STAMINA", 100.0)
+        b.health = max(0.0, min(max_h, health))
+        b.stamina = max(0.0, min(max_s, stamina))
+        if hasattr(self.bio, "apply_environmental_entropy"):
             self.bio.apply_environmental_entropy(phys)
         modifier = self.regulator.get_metabolic_modifier(phys, logs)
-        # Silence generates healing mechanics.
         delta_silence = getattr(phys, "delta", 0.0)
         if delta_silence > 0.6:
             if hasattr(phys, "narrative_drag"):
                 phys.narrative_drag = max(1.0, phys.narrative_drag - (delta_silence * 2.0))
-            if self.bio.biometrics:
-                self.bio.biometrics.stamina = min(
-                    getattr(BoneConfig, "MAX_STAMINA", 100.0),
-                    self.bio.biometrics.stamina + (delta_silence * 5.0),)
+            b.stamina = min(max_s, b.stamina + (delta_silence * 5.0))
             msg = ux("somatic_loop", "silence_heals")
             logs.append(f"{Prisma.CYN}{msg.format(recovery=delta_silence * 5.0)}{Prisma.RST}")
         receipt = self.bio.mito.process_cycle(phys, modifier=modifier)
-        if receipt.status == "ANAEROBIC" and self.bio.biometrics:
-            self.bio.biometrics.health = max(
-                0.0, self.bio.biometrics.health - receipt.total_burn)
+        if receipt.status == "ANAEROBIC":
+            b.health = max(0.0, b.health - receipt.total_burn)
             msg = ux("somatic_loop", "anaerobic_burn")
             logs.append(f"{Prisma.RED}{msg.format(burn=receipt.total_burn)}{Prisma.RST}")
-        if receipt.waste_generated > 1.0:
-            self.bio.endo.cortisol = min(
-                1.0, self.bio.endo.cortisol + (receipt.waste_generated * 0.05))
-        safety_status = self.feedback.check_vital_signs(
-            phys, self.bio.biometrics.stamina, logs)
+        safety_status = self.feedback.check_vital_signs(phys, b.stamina, logs)
         if safety_status == "MAUSOLEUM_CLAMP":
             return self._package_result(receipt.status, logs)
         elif safety_status == "AUTOPHAGY":
-            self.bio.biometrics.stamina = 10.0
+            b.stamina = 10.0
         total_yield = 0.0
         enzyme = "NONE"
         if self.bio.lichen:
-            sugar, photo_log = self.bio.lichen.photosynthesize(
-                phys, getattr(phys, "clean_words", []), tick_count)
-            if sugar > 0:
-                total_yield += sugar
-            if photo_log:
-                logs.append(photo_log)
+            sugar, photo_log = self.bio.lichen.photosynthesize(phys, getattr(phys, "clean_words", []), tick_count)
+            if sugar > 0: total_yield += sugar
+            if photo_log: logs.append(photo_log)
         soma_enzyme, soma_yield, harvest_hits = self.digestive.harvest(phys, logs)
         total_yield += soma_yield
-        if enzyme == "NONE":
-            enzyme = soma_enzyme
+        enzyme = soma_enzyme if enzyme == "NONE" else enzyme
         self.bio.mito.adjust_atp(total_yield, "Symbiotic Yield")
         self.feedback.perform_maintenance(text, phys, logs, tick_count)
         clean_words = getattr(phys, "clean_words", [])
         semantic_sig = self.semantic_doctor.assess(clean_words, phys)
-        if not feedback:
-            feedback = {}
-        feedback["PSI"] = getattr(phys, "psi", 0.0)
-        feedback["CHI"] = getattr(phys, "chi", 0.0)
-        feedback["VALENCE"] = getattr(phys, "valence", 0.0)
-        chem_state = self.bio.endo.metabolize(feedback, self.bio.biometrics.health, self.bio.biometrics.stamina,
-                                              self.bio.mito.state.ros_buildup, receipt=receipt,
+        fb_dict["PSI"] = getattr(phys, "psi", 0.0)
+        fb_dict["CHI"] = getattr(phys, "chi", 0.0)
+        fb_dict["VALENCE"] = getattr(phys, "valence", 0.0)
+        chem_state = self.bio.endo.metabolize(feedback=fb_dict, health=b.health, stamina=b.stamina,
+                                              ros_level=self.bio.mito.state.ros_buildup, receipt=receipt,
                                               harvest_hits=harvest_hits, stress_mod=stress_modifier, enzyme_type=enzyme,
-                                              circadian_bias=circadian_bias, semantic_signal=semantic_sig, )
+                                              circadian_bias=circadian_bias, semantic_signal=semantic_sig)
         return self._package_result(receipt.status, logs, chem_state, enzyme)
 
     def _package_result(self, resp_status, logs, chem_state=None, enzyme="NONE"):

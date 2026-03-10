@@ -73,6 +73,14 @@ class ObservationPhase(SimulationPhase):
             if diag != "STABLE":
                 msg = ux("cycle_strings", "observe_symbiont")
                 ctx.log(f"{Prisma.OCHRE}{msg.format(diag=diag)}{Prisma.RST}")
+        if hasattr(self.eng, "shared_lattice") and not ctx.is_system_event:
+            shared_logs, atp_cost = self.eng.shared_lattice.infer_and_couple(text=ctx.input_text, sys_phys=ctx.physics,
+                                                                             input_phys=input_phys,
+                                                                             atp_pool=current_atp)
+            for s_log in shared_logs:
+                ctx.log(s_log)
+            if atp_cost > 0 and self.eng.bio and self.eng.bio.mito:
+                self.eng.bio.mito.adjust_atp(-atp_cost, "Carrier Mode (System lent stamina to User)")
         self.eng.phys.dynamics.commit(ctx.physics.voltage)
         self.eng.tick_count += 1
         return ctx
@@ -1065,19 +1073,21 @@ class GeodesicOrchestrator:
             self.symbiosis = self.eng.symbiosis
         else:
             self.symbiosis = SymbiosisManager(self.eng.events)
+        from bone_drivers import SharedLatticeDriver
+        if not hasattr(self.eng, "shared_lattice"):
+            self.eng.shared_lattice = SharedLatticeDriver()
 
     def _execute_core_cycle(
             self, user_message: str, is_system: bool = False) -> CycleContext:
         cycle_id = str(uuid.uuid4())[:8]
-
         if hasattr(self.eng, "telemetry") and self.eng.telemetry:
             self.eng.telemetry.start_cycle(cycle_id)
-
         try:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
             ctx.trace_id = cycle_id
-            if (
-                    self.eng.phys
+            ctx.user_state = self.eng.shared_lattice.u
+            ctx.shared_dyn = self.eng.shared_lattice.shared
+            if (self.eng.phys
                     and hasattr(self.eng.phys, "observer")
                     and self.eng.phys.observer.last_physics_packet):
                 ctx.physics = self.eng.phys.observer.last_physics_packet.snapshot()

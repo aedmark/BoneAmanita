@@ -21,7 +21,7 @@ def _word_to_vector(word: str, dim: int = 8) -> list:
     return [(b / 127.5) - 1.0 for b in h[:dim]]
 
 from collections import deque
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Any
 from bone_config import BoneConfig
 from bone_core import EventBus, LoreManifest, BoneJSONEncoder, ux
 from bone_lexicon import LexiconService
@@ -99,10 +99,10 @@ class LocalFileSporeLoader:
             if msg: print(f"{Prisma.RED}{msg.format(filepath=filepath, e=e)}{Prisma.RST}")
             return None
 
-    def list_spores(self):
+    def list_spores(self) -> List[Tuple[str, float, str]]:
         if not os.path.exists(self.directory):
             return []
-        files = []
+        files: List[Tuple[str, float, str]] = []
         for f in os.listdir(self.directory):
             if f.endswith(".json"):
                 try:
@@ -351,6 +351,11 @@ class MemoryCore:
         fossil_data = {"word": victim, "mass": round(mass, 2), "lifespan": lifespan, "edges": data["edges"],
                        "death_tick": current_tick, }
         self.subconscious.bury(fossil_data)
+        if hasattr(self, 'events') and self.events and victim:
+            self.events.publish("AUTOPHAGY_EVENT", {
+                "node": victim,
+                "atp_gained": 15.0 # Ensure this maps to your METABOLISM constraints
+            })
         del self.graph[victim]
         for node in self.graph:
             if victim in self.graph[node]["edges"]:
@@ -636,21 +641,22 @@ class MycelialNetwork:
     def ingest(self, target_file, current_tick=0):
         """ Boot sequence. Loads a Spore JSON file and integrates its structure into the live system. """
         data = self.loader.load_spore(target_file)
-        if not data:
+        if not isinstance(data, dict):
             msg = ux("spore_strings", "net_spore_not_found") or ""
             if msg: self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}")
-            return None, set(), {}, None
+            return {}, set(), {}, None, {}
         required_keys = ["meta", "trauma_vector", "core_graph"]
         if not all(k in data for k in required_keys):
             msg = ux("spore_strings", "net_spore_reject") or ""
             if msg: self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}")
-            return None, set(), {}, None
+            return {}, set(), {}, None, {}
         self._process_lineage(data)
         self._process_mutations(data)
         self._apply_epigenetics(data)
-        if "core_graph" in data:
-            self.graph.update(data["core_graph"])
-            for node in data["core_graph"]:
+        core_graph_data = data.get("core_graph")
+        if isinstance(core_graph_data, dict):
+            self.graph.update(core_graph_data)
+            for node in core_graph_data:
                 if node in self.graph:
                     self.graph[node]["last_tick"] = current_tick
         return self._extract_legacy_traits(data)
@@ -681,13 +687,13 @@ class MycelialNetwork:
             if msg: self.events.log(f"{Prisma.CYN}{msg.format(count=accepted_count)}{Prisma.RST}")
 
     def _extract_legacy_traits(self, data):
-        if "joy_legacy" in data and data["joy_legacy"]:
+        if "joy_legacy" in data and isinstance(data["joy_legacy"], dict):
             joy = data["joy_legacy"]
             clade = LiteraryReproduction.JOY_CLADE.get(joy.get("flavor"))
-            if clade:
+            if isinstance(clade, dict):
                 msg = ux("spore_strings", "net_glory") or ""
                 if msg: self.events.log(f"{Prisma.CYN}{msg.format(title=clade['title'])}{Prisma.RST}")
-                for stat, ancestral_bonus in clade["buff"].items():
+                for stat, ancestral_bonus in clade.get("buff", {}).items():
                     if hasattr(BoneConfig, stat):
                         setattr(BoneConfig, stat, ancestral_bonus)
         if "seeds" in data:
@@ -705,16 +711,18 @@ class MycelialNetwork:
             data.get("continuity", None),
             data.get("world_atlas", {}))
 
-    def save(self, health, stamina, mutations, trauma_accum, joy_history, mitochondria_traits=None, antibodies=None,
+    def save(self, health: float, stamina: float, mutations: dict, trauma_accum: dict,
+             joy_history: List[Dict[str, Any]], mitochondria_traits=None, antibodies=None,
              soul_data=None, continuity=None, world_atlas=None, village_data=None, ):
         """ Compiles the active state into a JSON dictionary format for the SporeLoader. """
         final_vector = {k: min(1.0, v) for k, v in trauma_accum.items()}
-        top_joy = sorted(joy_history, key=lambda x: x["resonance"], reverse=True)[:3]
+        valid_joy = [j for j in joy_history if isinstance(j, dict)]
+        top_joy = sorted(valid_joy, key=lambda x: x.get("resonance", 0), reverse=True)[:3]
         joy_legacy_data = None
         if top_joy:
-            joy_legacy_data = {"flavor": top_joy[0]["dominant_flavor"],
-                               "resonance": top_joy[0]["resonance"],
-                               "timestamp": top_joy[0]["timestamp"]}
+            joy_legacy_data = {"flavor": top_joy[0].get("dominant_flavor", "UNKNOWN"),
+                               "resonance": top_joy[0].get("resonance", 0),
+                               "timestamp": top_joy[0].get("timestamp", 0)}
         core_graph = {}
         for k, data in self.graph.items():
             filtered_edges = {}

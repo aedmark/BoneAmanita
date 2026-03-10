@@ -293,12 +293,13 @@ class QuantumObserver:
                              kappa=geo.coherence, valence=valence, velocity=0.0, turbulence=0.0, )
         matter = MaterialState(clean_words=clean_words, raw_text=text, counts=counts, antigens=counts.get("antigen", 0),
                                vector=geo.dimensions, truth_ratio=0.5, )
-        space = SpatialState(narrative_drag=geo.compression, zone=self._determine_zone(geo.dimensions),
-                             atmosphere="NEUTRAL", flow_state=self._determine_flow(smoothed_voltage, geo.coherence), )
-
-        self.last_physics_packet = PhysicsPacket(energy=energy, matter=matter, space=space)
-        packet_dict = self.last_physics_packet.to_dict()
-
+        space = SpatialState()
+        space.narrative_drag = geo.compression
+        space.zone = self._determine_zone(geo.dimensions)
+        space.flow_state = self._determine_flow(smoothed_voltage, geo.coherence)
+        packet = PhysicsPacket(energy=energy, matter=matter, space=space)
+        self.last_physics_packet = packet
+        packet_dict = packet.to_dict()
         if hasattr(self.events, "publish"):
             self.events.publish("PHYSICS_CALCULATED", packet_dict)
         return {"physics": self.last_physics_packet, "clean_words": clean_words}

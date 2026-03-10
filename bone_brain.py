@@ -749,7 +749,7 @@ class ResponseValidator:
         clean_text = re.sub(r"(?i)^FAILED OUTPUT(?: MODIFIED)?:\s*", "", clean_text)
         clean_text = re.sub(r"(?i)^REWRITTEN OUTPUT:\s*", "", clean_text)
         clean_text = re.sub(r"(?i)^Here is the (?:corrected |rewritten )?response:?\s*", "", clean_text)
-        clean_text = re.sub(r"(?i)\[REMAINING IN STRICT MODE\].*", "", clean_text, flags=re.DOTALL)
+        clean_text = re.sub(r"(?i)\[REMAINING IN STRICT MODE].*", "", clean_text, flags=re.DOTALL)
         clean_text = re.sub(r"(?i)ERRORS TO FIX:.*", "", clean_text, flags=re.DOTALL)
         clean_text = re.sub(r"(?i)^MANIFEST SEED:.*", "", clean_text, flags=re.MULTILINE)
         clean_text = re.sub(r"(?i)^TASK:.*", "", clean_text, flags=re.MULTILINE)
@@ -813,7 +813,7 @@ class ResponseValidator:
                 if toxic.lower() in stripped_line.lower():
                     is_meta = True
                     break
-            if re.match(r"^\[.*?\]$", stripped_line) or stripped_line == "[]":
+            if re.match(r"^\[.*?]$", stripped_line) or stripped_line == "[]":
                 is_meta = True
             if re.match(r"^[A-Z]+\s*=\s*[0-9./]+$", stripped_line):
                 is_meta = True
@@ -993,6 +993,8 @@ class TheCortex:
         final_output = ""
         inv_logs = []
         extracted_logs = []
+        raw_resp = {}
+        val_res = {}
         for attempt in range(max_retries):
             raw_resp = self.llm.generate(final_prompt, llm_params)
             inv_logs = []

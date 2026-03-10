@@ -547,13 +547,22 @@ class DeathGen:
     def eulogy(
             packet: PhysicsPacket, mito_state: Any, trauma_vector: Dict = None) -> Tuple[str, str]:
         death_data = LoreManifest.get_instance().get("DEATH")
-        if not death_data:
+        if not isinstance(death_data, dict):
             death_data = DeathGen._FALLBACK_PROTOCOLS
         cause = DeathGen._determine_cause(packet, mito_state, trauma_vector)
         verdict_type = DeathGen._determine_verdict_type(packet, cause)
-        prefix = random.choice(death_data.get("PREFIXES", ["Alas."]))
-        cause_list = death_data["CAUSES"].get(cause, death_data["CAUSES"].get("DEFAULT", ["Error"]))
-        verdict_list = death_data["VERDICTS"].get(verdict_type, death_data["VERDICTS"].get("HEAVY", ["Done."]))
+        prefixes = death_data.get("PREFIXES", ["Alas."])
+        prefix = random.choice(prefixes if isinstance(prefixes, list) else ["Alas."])
+        causes_raw = death_data.get("CAUSES", {})
+        causes_dict = causes_raw if isinstance(causes_raw, dict) else {}
+        cause_list = causes_dict.get(cause, causes_dict.get("DEFAULT", ["Error"]))
+        if not isinstance(cause_list, list):
+            cause_list = ["Error"]
+        verdicts_raw = death_data.get("VERDICTS", {})
+        verdicts_dict = verdicts_raw if isinstance(verdicts_raw, dict) else {}
+        verdict_list = verdicts_dict.get(verdict_type, verdicts_dict.get("HEAVY", ["Done."]))
+        if not isinstance(verdict_list, list):
+            verdict_list = ["Done."]
         return f"{prefix} CAUSE: {random.choice(cause_list)}. {random.choice(verdict_list)}", cause
 
     @staticmethod

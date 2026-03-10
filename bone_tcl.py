@@ -1,8 +1,7 @@
 """bone_tcl.py - The Homoiconic Weaver"""
 
 import tkinter
-from typing import Dict
-from bone_types import Prisma
+
 
 class TheTclWeaver:
     """
@@ -77,7 +76,7 @@ class TheTclWeaver:
     def haunt_string(self, text: str) -> str:
         try:
             return self.interp.call('semantic_echo', text)
-        except tkinter.TclError as e:
+        except tkinter.TclError:
             return text
 
     def quantum_comb(self, text: str) -> str:

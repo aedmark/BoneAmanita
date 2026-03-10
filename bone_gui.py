@@ -40,14 +40,11 @@ class Projector:
                 val = physics_obj[field].get(sub_field)
         return default if val is None else val
 
-    def render(
-            self,
-            physics_ctx: Dict,
-            data_ctx: Dict,
-            mind_ctx: tuple,
-            reality_depth: int = 1,
-            labels: Dict = None,) -> str:
+    def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1, labels: Dict = None, ) -> str:
         """Assembles the multi-line HUD, sandwiching the vitals, physics, and location between borders."""
+        ui_depth = data_ctx.get("ui_depth", "IDLE")
+        if ui_depth == "WARM":
+            return ""
         if not labels:
             labels = ux("projector", "default_labels", {})
         physics = physics_ctx.get("physics", {})
@@ -57,7 +54,7 @@ class Projector:
         if labels.get("SHOW_PHYSICS", True):
             physics_line = self._render_physics_strip(physics, data_ctx.get("vectors", {}))
         ui_depth = data_ctx.get("ui_depth", "IDLE")
-        vsl_line = self._render_lattice_strip(physics, depth=ui_depth)
+        vsl_line = self._render_lattice_strip(physics, data_ctx=data_ctx, depth=ui_depth)
         lens = mind_ctx[0] if mind_ctx else (ux("projector", "default_lens") or "RAW")
         depth_map = ux("projector", "depth_map", {})
         depth_label = depth_map.get(str(reality_depth), "?")
@@ -135,21 +132,38 @@ class Projector:
         """Renders the immediate voltage and narrative drag constraints."""
         volt = self._extract(physics, "energy", "voltage", 0.0)
         drag = self._extract(physics, "space", "narrative_drag", 0.0)
+        drag_profile_str = ""
+        if hasattr(physics, "drag_profile") or (isinstance(physics, dict) and "drag_profile" in physics):
+            dp = getattr(physics, "drag_profile", None) or physics.get("drag_profile", {})
+            sem = getattr(dp, "semantic", 0.0) if hasattr(dp, "semantic") else dp.get("semantic", 0.0)
+            met = getattr(dp, "metabolic", 0.0) if hasattr(dp, "metabolic") else dp.get("metabolic", 0.0)
+            emo = getattr(dp, "emotional", 0.0) if hasattr(dp, "emotional") else dp.get("emotional", 0.0)
+            struc = getattr(dp, "structural", 0.0) if hasattr(dp, "structural") else dp.get("structural", 0.0)
+            tra = getattr(dp, "trauma", 0.0) if hasattr(dp, "trauma") else dp.get("trauma", 0.0)
+            parts = []
+            if sem > 0: parts.append(f"Sem:{sem:.1f}")
+            if met > 0: parts.append(f"Met:{met:.1f}")
+            if emo > 0: parts.append(f"Emo:{emo:.1f}")
+            if struc > 0: parts.append(f"Str:{struc:.1f}")
+            if tra > 0: parts.append(f"Tra:{tra:.1f}")
+            if parts:
+                drag_profile_str = f" [{Prisma.GRY}{'|'.join(parts)}{Prisma.RST}]"
         dom_vec = "NEUTRAL"
         dom_val = 0.0
         if vectors:
             dom_vec = max(vectors, key=vectors.get)
             dom_val = vectors[dom_vec]
         return (f"  {Prisma.CYN}VOLT:{Prisma.RST} {volt:04.1f}v   "
-                f"{Prisma.SLATE}DRAG:{Prisma.RST} {drag:04.1f}   "
+                f"{Prisma.SLATE}DRAG:{Prisma.RST} {drag:04.1f}{drag_profile_str}   "
                 f"{Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})")
 
     @staticmethod
-    def _render_lattice_strip(physics: Dict, depth: str = "DEEP") -> str:
+    def _render_lattice_strip(physics: Dict, data_ctx: Dict = None, depth: str = "DEEP") -> str:
         """The core VSL module interface. Renders the coordinates of the semantic state space."""
         if depth == "IDLE" or not physics:
             return ""
-
+        if data_ctx is None:
+            data_ctx = {}
         def _get_val(k1, k2, default_val):
             v = physics.get(k1)
             if v is None:
@@ -173,12 +187,26 @@ class Projector:
         i_deep = sym.get("deep", "")
         core = f"{Prisma.CYN}[{i_core} E:{E:.2f} β:{beta:.2f} | {i_volt} V:{V:.0f} F:{F:.1f} | {i_hlth} H:{H:.0f} P:{P:.0f} | {i_trau} T:{T:.0f}]{Prisma.RST}"
         deep = f"{Prisma.VIOLET} [{i_deep} Ψ:{psi:.2f} Χ:{chi:.2f} ♥:{valence:.2f}]{Prisma.RST}"
+        shared = data_ctx.get("shared_dyn")
+        paradox = data_ctx.get("paradox")
+        shared_str = ""
+        if shared:
+            phi = getattr(shared, "phi", 0.5) if hasattr(shared, "phi") else shared.get("phi", 0.5)
+            delta = getattr(shared, "delta", 0.0) if hasattr(shared, "delta") else shared.get("delta", 0.0)
+            g_pool = getattr(shared, "g_pool", 0) if hasattr(shared, "g_pool") else shared.get("g_pool", 0)
+            sigma = getattr(shared, "sigma_silence", 0) if hasattr(shared, "sigma_silence") else shared.get("sigma_silence", 0)
+            shared_str = f" {Prisma.INDIGO}[Φ:{phi:.2f} ∇:{delta:.2f} (Σ{sigma}) G:{g_pool}]{Prisma.RST}"
+        paradox_str = ""
+        if paradox and paradox.get("active"):
+            y = paradox.get("yield", 0)
+            b_max = paradox.get("beta_max", 0.0)
+            paradox_str = f" {Prisma.MAG}[Πx: ACTIVE | Ω:{y} | β_max:{b_max:.2f}]{Prisma.RST}"
         if depth == "DEEP":
-            return core + deep
+            return core + deep + shared_str + paradox_str
         elif depth == "CORE":
-            return core
+            return core + shared_str
         elif depth == "LITE":
-            return f"{Prisma.CYN}[{i_volt} V:{V:.0f} | {i_hlth} H:{H:.0f} P:{P:.0f}]{Prisma.RST}"
+            return f"{Prisma.CYN}[{i_volt} V:{V:.0f} | {i_hlth} H:{H:.0f} P:{P:.0f}]{Prisma.RST}" + shared_str
         return ""
 
     def render_technical(self, physics: Dict, data: Dict, mind: tuple) -> str:
@@ -224,7 +252,6 @@ class GeodesicRenderer:
         physics = ctx.physics
         bio = ctx.bio_result
         raw_dashboard = self.render_dashboard(ctx)
-        # Colorize the output based on dominant physics vectors
         colored_ui = self.vsl_chroma.modulate(raw_dashboard, physics.get("vector", {}))
         if self.strunk_white:
             clean_ui, style_log = self.strunk_white.sanitize(colored_ui)
@@ -260,6 +287,15 @@ class GeodesicRenderer:
                     "vectors": physics.get("vector", {}), "ui_depth": mode_settings.get("default_ui_depth", "IDLE"),
                     "world_loc": world_loc, "show_vitals": mode_settings.get("show_vitals", True),
                     "show_location": mode_settings.get("show_location", True)}
+        if hasattr(ctx, "shared_dyn"):
+            data_ctx["shared_dyn"] = ctx.shared_dyn
+            data_ctx["user_state"] = ctx.user_state
+        if hasattr(self.eng, "paradox_engine"):
+            data_ctx["paradox"] = {
+                "active": self.eng.paradox_engine.is_active,
+                "yield": self.eng.paradox_engine.paradox_yield,
+                "beta_max": self.eng.paradox_engine.beta_max
+            }
         if hasattr(self.eng, "consultant"):
             data_ctx["vsl"] = {"E": self.eng.consultant.state.E, "B": self.eng.consultant.state.B,
                                "L": getattr(self.eng.consultant.state, "L", 0.0),
@@ -293,6 +329,10 @@ class GeodesicRenderer:
         for e in events:
             if e and e.get("text"):
                 all_logs.append(e["text"])
+        mode_settings = self.eng.config.get("mode_settings", {}) if hasattr(self, "eng") else {}
+        if mode_settings.get("default_ui_depth", "IDLE") == "WARM":
+            muted_tags = ["[BIO]", "[CRITIC]", "[SYS]", "[MERCY]", "(The system feels"]
+            all_logs = [l for l in all_logs if not any(tag in l for tag in muted_tags)]
         if not all_logs:
             return []
         unique_logs = []
@@ -334,7 +374,9 @@ class CachedRenderer:
     """Optimization. If voltage is low and the state hasn't changed, reuse the last UI frame to save cycles."""
     def __init__(self, base_renderer):
         self._base = base_renderer
-        self._cache = {"dashboard": {"hash": 0, "content": ""}, "last_tick": -1}
+        # Flattened state variables to prevent mixed-type dictionary inference
+        self._cached_ui_content = ""
+        self._last_tick = -1
 
     def render_frame(self, ctx, tick: int, events: List[Dict]) -> Dict:
         voltage = (
@@ -343,12 +385,12 @@ class CachedRenderer:
             else ctx.physics.voltage)
         cfg = getattr(BoneConfig, "GUI", None)
         v_refresh = getattr(cfg, "HIGH_VOLTAGE_REFRESH", 15.0) if cfg else 15.0
-        if voltage > v_refresh or tick != self._cache["last_tick"]:
+        if voltage > v_refresh or tick != self._last_tick:
             frame = self._base.render_frame(ctx, tick, events)
-            self._cache["dashboard"]["content"] = frame["ui"]
-            self._cache["last_tick"] = tick
+            self._cached_ui_content = frame["ui"]
+            self._last_tick = tick
             return frame
-        return {"type": "GEODESIC_FRAME", "ui": self._cache["dashboard"]["content"],
+        return {"type": "GEODESIC_FRAME", "ui": self._cached_ui_content,
                 "logs": self._base.compose_logs(ctx.logs, events, tick),
                 "metrics": ctx.bio_result if hasattr(ctx, "bio_result") else {}, }
 

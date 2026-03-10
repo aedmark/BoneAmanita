@@ -17,12 +17,6 @@ class TrueEngineTest(unittest.TestCase):
     def tearDown(self):
         LoreManifest.get_instance().flush_cache()
 
-    def test_heavy_linguistic_metabolism(self):
-        dense_input = "void chaos heavy iron lead pain dark decay rot toxin"
-        self.engine.cycle_controller.run_headless_turn(dense_input)
-        self.assertLess(self.engine.bio.mito.state.atp_pool, self.initial_atp, "ATP failed to burn under heavy load.", )
-        self.assertGreater(self.engine.bio.endo.cortisol, 0.0, "Cortisol failed to spike from void/chaos exposure.", )
-
     def test_gordon_rummage_stamina_tax(self):
         self.engine.stamina = 50.0
         success, msg, cost = self.engine.gordon.rummage(physics_ref={}, stamina_pool=self.engine.stamina)

@@ -27,7 +27,6 @@ class BoneGenesis:
         The 'ignite' method is the exact moment of Big Bang for the application.
         It boots the event bus, queries the lore, and incubates the embryonic system.
         """
-        # Establish the foundational communication layer (EventBus) [cite: 40] and reality context (LoreManifest)[cite: 41].
         events = events_ref or EventBus()
         if events_ref:
             msg = ux("genesis_strings", "ignite_log") 
@@ -38,20 +37,15 @@ class BoneGenesis:
         lore = LoreManifest()
         akashic = TheAkashicRecord(lore_manifest=lore, events_ref=events)
         akashic.setup_listeners(events)
-        # BoneArchitect literally builds the Mind, Bio, and Physics subsystems and binds them into an 'embryo'[cite: 89].
         embryo = BoneArchitect.incubate(events, lexicon_ref)
         embryo = BoneArchitect.awaken(embryo)
-        # Check configuration for suppressed modes (e.g., stripping out the Bureau if we want raw creative mode)
         mode_settings = config.get("mode_settings", {})
         suppressed = set(mode_settings.get("village_suppression", []))
         boot_mode = config.get("boot_mode", "ADVENTURE")
-        # Populate the Village. The agents that aren't suppressed are instantiated here.
         village_bundle = BoneGenesis._summon_village(events, embryo, akashic, suppressed, boot_mode)
-        # Birth the "NarrativeSelf", giving the system an archetype and an identity[cite: 114, 115].
         soul = NarrativeSelf(engine_ref=None, events_ref=events, memory_ref=embryo.mind.mem, akashic_ref=akashic, )
         if embryo.soul_legacy:
             soul.load_from_dict(embryo.soul_legacy)
-        # The Oroboros loop. This is crucial epigenetic inheritance.
         oroboros = TheOroboros()
         if hasattr(embryo.physics, "observer"):
             cfg_gen = getattr(BoneConfig, "GENESIS", None)
@@ -60,19 +54,15 @@ class BoneGenesis:
             strain_scalar = getattr(cfg_gen, "LEGACY_STRAIN_SCALAR", 0.1) if cfg_gen else 0.1
             dummy_phys = {"narrative_drag": dummy_d, "voltage": dummy_v}
             live_bio_state = embryo.bio.to_dict()
-            # If the previous instance died of exhaustion or trauma, this new system inherits the "scars",
-            # altering its starting drag, health, and mitochondria ATP limits.
             logs = oroboros.apply_legacy(dummy_phys, live_bio_state)
             if logs:
                 msg_scars = ux("genesis_strings", "legacy_scars") 
                 events.log(msg_scars.format(logs=", ".join(logs)), "OROBOROS")
-                # Apply the inherited epigenetic drag directly to the physics dynamics
                 if getattr(embryo.physics, "dynamics", None):
                     if hasattr(embryo.physics.dynamics, "base_drag"):
                         embryo.physics.dynamics.base_drag += dummy_phys["narrative_drag"]
                     elif hasattr(embryo.physics.dynamics, "strain_gauge"):
                         embryo.physics.dynamics.strain_gauge += (dummy_phys.get("narrative_drag", 0.0) * strain_scalar)
-                # Adjust starting vitality based on inherited legacy
                 if embryo.bio.biometrics:
                     biometrics = live_bio_state.get("biometrics", {})
                     max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
@@ -106,8 +96,6 @@ class BoneGenesis:
                     if "TINKERER" not in suppressed
                     else None)
         bureau = TheBureau() if "BUREAU" not in suppressed else None
-        # Death is an instantiated protocol. It must be explicitly suppressed if we want immortality,
-        # but immortality usually breaks the narrative tension[cite: 157].
         death_gen = None
         if "DEATH" not in suppressed:
             death_gen = DeathGen()

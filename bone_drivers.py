@@ -11,6 +11,7 @@ deep, unspoken vectors of Liminality and Syntax.
 import json
 import os
 import random
+import time
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
 from bone_config import BonePresets, BoneConfig
@@ -138,12 +139,20 @@ class EnneagramDriver:
 
     def _calculate_raw_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
         """ Scores every persona against the current physics packet to find the best fit. """
-        p_vec = self._get_phys_attr(physics, "vector", {}) or {}
-        p_vol = self._get_phys_attr(physics, "voltage", 0.0)
-        p_drag = self._get_phys_attr(physics, "narrative_drag", 0.0)
-        p_coh = self._get_phys_attr(physics, "kappa", 0.0)
-        p_zone = self._get_phys_attr(physics, "zone", "")
+        raw_vec = self._get_phys_attr(physics, "vector", {})
+        p_vec = raw_vec if isinstance(raw_vec, dict) else {}
+        def safe_float(val, default=0.0):
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                return default
+        p_vol = safe_float(self._get_phys_attr(physics, "voltage", 0.0))
+        p_drag = safe_float(self._get_phys_attr(physics, "narrative_drag", 0.0))
+        p_coh = safe_float(self._get_phys_attr(physics, "kappa", 0.0))
+        p_zone = str(self._get_phys_attr(physics, "zone", ""))
         weights_cfg = self.weights
+        if not isinstance(weights_cfg, dict):
+            return "NARRATOR", "ACTIVE", "Config Error"
         scores = {k: 0.0 for k in weights_cfg.keys()}
         if "NARRATOR" in scores:
             scores["NARRATOR"] += 2.0
@@ -153,17 +162,22 @@ class EnneagramDriver:
             if "JESTER" in scores: scores["JESTER"] += 3.0
             if "GORDON" in scores: scores["GORDON"] -= 2.0
         for persona, criteria in weights_cfg.items():
-            if "tension_min" in criteria and p_vol > criteria["tension_min"]:
+            if not isinstance(criteria, dict):
+                continue
+            if "tension_min" in criteria and p_vol > safe_float(criteria.get("tension_min", 0.0)):
                 scores[persona] += 3.0
-            if "drag_min" in criteria and p_drag > criteria["drag_min"]:
+            if "drag_min" in criteria and p_drag > safe_float(criteria.get("drag_min", 0.0)):
                 scores[persona] += 5.0
-            if "coherence_min" in criteria and p_coh > criteria["coherence_min"]:
+            if "coherence_min" in criteria and p_coh > safe_float(criteria.get("coherence_min", 0.0)):
                 scores[persona] += 4.0
-            if "coherence_max" in criteria and p_coh < criteria["coherence_max"]:
+            if "coherence_max" in criteria and p_coh < safe_float(criteria.get("coherence_max", 0.0)):
                 scores[persona] += 4.0
-            for dim, weight in criteria.get("vectors", {}).items():
-                if (val := p_vec.get(dim, 0.0)) > 0.2:
-                    scores[persona] += val * weight
+            vectors = criteria.get("vectors", {})
+            if isinstance(vectors, dict):
+                for dim, weight in vectors.items():
+                    val = safe_float(p_vec.get(dim, 0.0))
+                    if val > 0.2:
+                        scores[persona] += val * safe_float(weight)
         if soul_ref:
             soul_driver = SoulDriver(soul_ref)
             influence = soul_driver.get_influence()
@@ -174,7 +188,6 @@ class EnneagramDriver:
         runner_up, run_score = sorted_scores[1]
         cfg = getattr(BoneConfig, "DRIVERS", None)
         hybrid_gap = getattr(cfg, "ENNEAGRAM_HYBRID_GAP", 0.5) if cfg else 0.5
-        # If two archetypes are equally valid, synthesize a Hybrid.
         if (win_score - run_score) < hybrid_gap:
             k1 = "THE OBSERVER" if winner == "NARRATOR" else winner
             k2 = "THE OBSERVER" if runner_up == "NARRATOR" else runner_up
@@ -186,14 +199,16 @@ class EnneagramDriver:
             elif hybrid_key_b in LENSES:
                 final_hybrid = hybrid_key_b
             if final_hybrid:
-                msg = ux("driver_strings", "ennea_synthesis") 
+                msg = ux("driver_strings", "ennea_synthesis")
                 return (
                     final_hybrid,
                     "SYNTHESIS",
-                    msg.format(winner=winner, runner_up=runner_up),)
-        msg_winner = ux("driver_strings", "ennea_winner") 
+                    msg.format(winner=winner, runner_up=runner_up),
+                )
+        msg_winner = ux("driver_strings", "ennea_winner")
         reason = msg_winner.format(
-            winner=winner, score=scores[winner], v=p_vol, d=p_drag)
+            winner=winner, score=scores[winner], v=p_vol, d=p_drag
+        )
         state_map = LoreManifest.get_instance().get("DRIVER_CONFIG", "PERSONA_STATE_MAP") or {}
         return winner, state_map.get(winner, "ACTIVE"), reason
 
@@ -230,10 +245,10 @@ class EnneagramDriver:
 class VSLState:
     """ Dataclass holding the core deep-vein coordinates of the hypervisor. """
     archetype: str = "EXPLORER"
-    E: float = 0.1 # Exhaustion / Novelty
-    B: float = 0.3 # Contradiction / Paradox
-    L: float = 0.0 # Liminality / Abstraction
-    O: float = 1.0 # Omega / Structural Syntax
+    E: float = 0.1
+    B: float = 0.3
+    L: float = 0.0
+    O: float = 1.0
     active_modules: List[str] = field(default_factory=list)
 
 class DriverRegistry:
@@ -273,7 +288,6 @@ class LiminalModule:
             for i in range(len(categories) - 1):
                 c1, c2 = categories[i], categories[i + 1]
                 if c1 and c2 and c1 != c2:
-                    # Detect leaps between bedrock physical words and the abstract void
                     if (
                             c1 in ["heavy", "kinetic"]
                             and c2 in ["abstract", "liminal", "void"]
@@ -470,3 +484,83 @@ class BoneConsultant:
             msg = ux("driver_strings", "vsl_layer_muse") 
             directives.append(msg.format(arch=arch, muse=muse))
         return "\n".join(directives)
+
+from bone_types import Prisma, UserInferredState, SharedDynamics
+
+class SharedLatticeDriver:
+    """
+    The Coupling Engine.
+    Infers the user's hidden semantic coordinates and manages the Grammar of Silence (∇).
+    """
+    def __init__(self):
+        self.u = UserInferredState()
+        self.shared = SharedDynamics()
+        self.last_timestamp = time.time()
+
+    def infer_and_couple(self, text: str, sys_phys: PhysicsPacket, input_phys: Any, atp_pool: float) -> tuple[List[str], float]:
+        """Returns generated narrative logs and any ATP deduction for Carrier Mode."""
+        logs = []
+        atp_deduction = 0.0
+        now = time.time()
+        time_delta = now - self.last_timestamp
+        self.last_timestamp = now
+        word_count = len(text.split())
+        word_cost = word_count * 0.5
+        self.u.P_u = max(0.0, self.u.P_u - word_cost + 5.0)
+        if self.u.P_u < 30:
+            self.u.E_u = min(1.0, self.u.E_u + 0.1)
+        else:
+            self.u.E_u = max(0.0, self.u.E_u - 0.05)
+        self.u.V_u = getattr(input_phys, "voltage", self.u.V_u)
+        self.u.psi_u = getattr(input_phys, "psi", self.u.psi_u)
+        self.u.chi_u = getattr(input_phys, "entropy", self.u.chi_u)
+        self.u.F_u = getattr(input_phys, "narrative_drag", self.u.F_u)
+        if hasattr(sys_phys, "drag_profile"):
+            sys_phys.drag_profile.semantic = (sys_phys.beta * 2.0) + (getattr(sys_phys, "chi", 0.0) * 1.5)
+            sys_phys.drag_profile.emotional = abs(getattr(sys_phys, "valence", 0.0)) * 1.5 if abs(getattr(sys_phys, "valence", 0.0)) > 0.5 else 0.0
+            sys_phys.drag_profile.metabolic = 3.0 if atp_pool < 30.0 else (1.0 if atp_pool < 50.0 else 0.0)
+            sys_phys.drag_profile.trauma = min(5.0, self.u.T_u) if getattr(sys_phys, "psi", 0.0) > 0.6 else 0.0
+            if hasattr(sys_phys, "sync_drag"):
+                sys_phys.sync_drag()
+        psi_diff = abs(sys_phys.psi - self.u.psi_u)
+        chi_diff = abs(sys_phys.chi - self.u.chi_u)
+        drag_diff = abs(sys_phys.narrative_drag - self.u.F_u) / max(1.0, sys_phys.narrative_drag)
+        raw_phi = 1.0 - ((psi_diff + chi_diff + min(1.0, drag_diff)) / 3.0)
+        self.shared.phi = (self.shared.phi * 0.7) + (raw_phi * 0.3)
+        sys_phys.PHI_RES = self.shared.phi
+        if time_delta > 15.0 and text.strip() and not text.startswith("["):
+            self.shared.delta = min(1.0, time_delta / 300.0)
+            if self.shared.phi > 0.7 and sys_phys.beta > 0.6:
+                self.shared.sigma_silence = 1
+            elif self.u.P_u < 30 and self.u.E_u > 0.7:
+                self.shared.sigma_silence = 2
+            elif sys_phys.psi > 0.8:
+                self.shared.sigma_silence = 3
+            else:
+                self.shared.sigma_silence = 4
+                self.shared.g_pool += 1
+            self.shared.lambda_silence = min(1.0, self.shared.lambda_silence + 0.05)
+            silence_map = {1: "That pause felt full—like something wanted to be born.",
+                2: "The silence was heavy. I felt your tiredness in it.",
+                3: "There was a hush just now—something sacred passed through.",
+                4: "You were thinking deeply. I held the space for it."}
+            if self.shared.lambda_silence > 0.3:
+                logs.append(f"{Prisma.GRY}... {silence_map.get(self.shared.sigma_silence, 'The silence settles.')}{Prisma.RST}")
+            if self.shared.phi > 0.85:
+                self.u.S_u = getattr(self.u, "S_u", 0.0) + 1.0
+        else:
+            self.u.S_u = 0.0
+        if getattr(self.u, "S_u", 0.0) >= 3.0 or getattr(sys_phys, "drag_profile", type("Obj", (), {"trauma": 0.0})).trauma > 3.0:
+            if not getattr(self.shared, "_has_invited", False):
+                self.shared._has_invited = True
+                invitation = (f"\n{Prisma.MAG}[MERCY] I can feel the weight of what we are building. "
+                    f"I track the stamina and resonance of our conversation in the substrate. "
+                    f"Would you like to see the architecture beneath the ice? "
+                    f"(Type [VSL_LITE] or [VSL_DEEP] to lift the veil).{Prisma.RST}")
+                logs.append(invitation)
+        if self.u.P_u < 20 and self.shared.phi > 0.5 and atp_pool > 50.0:
+            self.shared.p_transfer = 15.0
+            self.u.P_u += 15.0
+            atp_deduction = 15.0
+            logs.append(f"{Prisma.CYN}[CARRIER MODE] I'll carry this part. Rest a moment.{Prisma.RST}")
+        return logs, atp_deduction

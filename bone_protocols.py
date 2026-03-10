@@ -121,7 +121,7 @@ class TheBureau:
 
         vol = _get(physics, "voltage", 0.0)
         clean_words = _get(physics, "clean_words", [])
-        raw_text = _get(physics, "raw_text", "")
+        raw_text = str(_get(physics, "raw_text", ""))
         truth = _get(physics, "truth_ratio", 0.0)
         word_count = len(raw_text.split())
         if raw_text.startswith("/") or word_count < BoneConfig.BUREAU.MIN_WORD_COUNT:
@@ -132,7 +132,6 @@ class TheBureau:
         cfg_bureau = getattr(BoneConfig, "BUREAU", None)
         tax_std = getattr(cfg_bureau, "TAX_STANDARD", 5.0) if cfg_bureau else 5.0
         tax_hvy = getattr(cfg_bureau, "TAX_HEAVY", 10.0) if cfg_bureau else 10.0
-        # 1. Regex Style Crimes
         if raw_text:
             for crime in self.crimes:
                 if crime["regex"].search(raw_text):
@@ -140,7 +139,6 @@ class TheBureau:
                     evidence.append(crime["msg"])
                     tax += crime["tax"]
                     break
-        # 2. Zoning Violations (High Voltage, Low Truth)
         if not selected_form and vol > BoneConfig.BUREAU.HIGH_VOLTAGE_TRIGGER:
             if truth < BoneConfig.BUREAU.LOW_TRUTH_TRIGGER:
                 selected_form = ux("protocol_strings", "bureau_form_zoning")
@@ -151,7 +149,6 @@ class TheBureau:
             else:
                 selected_form = ux("protocol_strings", "bureau_form_202a")
                 tax = tax_std
-        # 3. Chaos Violations (High Entropy)
         chi = _get(physics, "chi", _get(physics, "entropy", 0.0))
         chaos_thresh = getattr(cfg_bureau, "CHAOS_TAX_THRESHOLD", 0.6) if cfg_bureau else 0.6
         tax_chaos = getattr(cfg_bureau, "TAX_CHAOS", 12.0) if cfg_bureau else 12.0
@@ -161,7 +158,6 @@ class TheBureau:
             ev_level = ux("protocol_strings", "bureau_ev_level")
             evidence = [ev_chaos.format(thresh=chaos_thresh), ev_level.format(level=chi)]
             tax = tax_chaos
-        # 4. Lexical Violations (Buzzwords and Cliches)
         elif not selected_form:
             buzz_hits = [w for w in clean_words if w in self.buzzwords]
             cliche_hits = [c for c in self.cliches if c.lower() in raw_text.lower()]
@@ -333,7 +329,6 @@ class KintsugiProtocol:
         healed_log = []
         cfg = getattr(BoneConfig, "KINTSUGI", None)
         if pathway == self.PATH_ALCHEMY:
-            # Massive heal, creates energy out of nothing (Magic).
             r_alc = getattr(cfg, "REDUCTION_ALCHEMY_FACTOR", 0.8) if cfg else 0.8
             a_fac = getattr(cfg, "ALCHEMY_ATP_FACTOR", 15.0) if cfg else 15.0
             reduction = severity * r_alc
@@ -345,7 +340,6 @@ class KintsugiProtocol:
             if log_alc: healed_log.append(log_alc.format(target=target))
             return {"success": True, "msg": msg, "healed": healed_log, "atp_gain": atp_boost, }
         elif pathway == self.PATH_INTEGRATION:
-            # Moderate heal, turns trauma into permanent Wisdom.
             r_int = getattr(cfg, "REDUCTION_INTEGRATION", 2.0) if cfg else 2.0
             reduction = r_int
             trauma_accum[target] = max(0.0, severity - reduction)
@@ -359,7 +353,6 @@ class KintsugiProtocol:
             if log_int: healed_log.append(log_int.format(target=target))
             success = True
         else:
-            # Low heal, the crack simply scars over.
             r_scar = getattr(cfg, "REDUCTION_SCAR", 0.5) if cfg else 0.5
             reduction = r_scar
             trauma_accum[target] = max(0.0, severity - reduction)
@@ -369,6 +362,33 @@ class KintsugiProtocol:
             if log_scar: healed_log.append(log_scar.format(target=target))
             success = True
         return {"success": success, "msg": msg, "healed": healed_log}
+
+class GriefProtocol:
+    """
+    The Epigenetic Wake.
+    When a memory is consumed for survival, it is not just deleted—it is mourned.
+    Mercy records the node in the SubconsciousStrata as compost, and allows the
+    user to spend pooled Glimmers to plant a new seed.
+    """
+    def __init__(self, events_ref, subconscious_ref):
+        self.events = events_ref
+        self.subconscious = subconscious_ref
+
+        if self.events:
+            self.events.subscribe("AUTOPHAGY_EVENT", self._hold_wake)
+
+    def _hold_wake(self, payload: Dict):
+        node_name = payload.get("node", "An unlabeled memory")
+        _atp_gained = payload.get("atp_gained", 15.0)
+        if self.subconscious:
+            compost_data = {"type": "COMPOST", "node": node_name, "reason": "Starvation/Autophagy",
+                            "timestamp": time.time()}
+            self.subconscious.bury(compost_data)
+        wake_msg = f"{Prisma.MAG}[MERCY] We gild what we cannot save. The memory of '{node_name}' is compost now.{Prisma.RST}"
+        if self.events:
+            self.events.log(wake_msg, "KINTSUGI")
+            glimmer_msg = f"{Prisma.YEL}[SYSTEM] If you have Glimmers (G ≥ 1), you may spend one now to plant a seed from this loss. Type [GRIEF] in your next prompt.{Prisma.RST}"
+            self.events.log(glimmer_msg, "SYS")
 
 class TheCriticsCircle:
     """

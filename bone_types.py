@@ -9,7 +9,6 @@ from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
 
-
 class Prisma:
     """The universal color palette. It handles rendering ANSI escape codes for the terminal and safely stripping them for logs."""
     RST = "\033[0m"
@@ -56,6 +55,17 @@ class ErrorLog:
     error_msg: str
     timestamp: float = field(default_factory=time.time)
     severity: str = "WARNING"
+
+@dataclass
+class DragProfile:
+    semantic: float = 0.0   # Words fighting (Contradiction + Entropy)
+    emotional: float = 0.0  # Valence conflicts (Heart fighting itself)
+    structural: float = 0.0 # Bad architecture (Syntax stress, OAC violations)
+    metabolic: float = 0.0  # Low ATP forcing shortcuts
+    trauma: float = 0.0     # Reactivating old wounds
+
+    def total(self) -> float:
+        return self.semantic + self.emotional + self.structural + self.metabolic + self.trauma
 
 @dataclass
 class EnergyState:
@@ -126,7 +136,6 @@ class PhysicsPacket:
     matter: MaterialState = field(default_factory=MaterialState)
     space: SpatialState = field(default_factory=SpatialState)
 
-    # ALIASES FOR READABILITY IN MATH FUNCTIONS
     @property
     def E(self):
         return self.energy.exhaustion
@@ -324,17 +333,21 @@ class PhysicsPacket:
     def zone(self, v):
         self.space.zone = v
 
-    def __init__(
-            self,
-            energy: Optional[EnergyState] = None,
-            matter: Optional[MaterialState] = None,
-            space: Optional[SpatialState] = None,
-            **kwargs,):
+    def __init__(self, energy: Optional[EnergyState] = None, matter: Optional[MaterialState] = None,
+                 space: Optional[SpatialState] = None, **kwargs, ):
         self.energy = energy or EnergyState()
         self.matter = matter or MaterialState()
         self.space = space or SpatialState()
+        self.drag_profile = kwargs.pop("drag_profile", DragProfile())
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+    def sync_drag(self):
+        """Safely collapses the profile into the legacy narrative_drag variable."""
+        if hasattr(self, "drag_profile") and self.drag_profile is not None:
+            total = self.drag_profile.total()
+            if total > 0.1:
+                self.narrative_drag = max(1.0, total)
 
     @classmethod
     def void_state(cls):
@@ -366,6 +379,41 @@ class PhysicsPacket:
         return hasattr(self, key)
 
 @dataclass
+class UserInferredState:
+    """The probabilistic model of the user's internal somatic and semantic state."""
+    E_u: float = 0.5
+    beta_u: float = 0.5
+    S_u: float = 0.5
+    D_u: float = 0.3
+    C_u: float = 0.3
+    V_u: float = 50.0
+    F_u: float = 0.6
+    H_u: float = 100.0
+    P_u: float = 100.0
+    T_u: float = 0.0
+    ROS_u: float = 0.0
+    G_u: int = 0
+    psi_u: float = 0.3
+    chi_u: float = 0.2
+    valence_u: float = 0.0
+
+
+@dataclass
+class SharedDynamics:
+    """The coupled variables describing the relationship and emergent properties of the dyad."""
+    phi: float = 0.5
+    delta: float = 0.0
+    lq: float = 0.0
+    null_coord: float = 0.0
+    nabla: float = 0.0
+    presence: float = 0.0
+    g_pool: int = 0
+    p_transfer: float = 0.0
+    sigma_silence: int = 0
+    lambda_silence: float = 0.2
+
+
+@dataclass
 class CycleContext:
     """The master state object that gets passed through the 14 phases of the CycleSimulator."""
     input_text: str
@@ -389,6 +437,9 @@ class CycleContext:
     reality_stack: Any = None
     active_lens: str = "NARRATOR"
     validator: Any = None
+    time_delta: float = 0.0
+    user_state: UserInferredState = field(default_factory=UserInferredState)
+    shared_dyn: SharedDynamics = field(default_factory=SharedDynamics)
 
     @property
     def user_name(self):

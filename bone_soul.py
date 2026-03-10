@@ -652,8 +652,9 @@ class TheOroboros:
             name, stat, val, default_desc = entry
             desc = default_desc
             v_key = get_verdict_key(cause_of_death)
-            if v_key in verdicts and verdicts[v_key]:
-                desc = random.choice(verdicts[v_key])
+            verdict_list = verdicts.get(v_key)
+            if isinstance(verdict_list, list) and verdict_list:
+                desc = random.choice(verdict_list)
             new_scars.append(Scar(name, stat, val, desc))
         new_myths = []
         if soul.core_memories:
@@ -664,21 +665,15 @@ class TheOroboros:
             new_myths.append(
                 Myth(title=title_fmt.format(trigger=trigger_word.title()), lesson=strongest.lesson, trigger=trigger_word))
         cfg = getattr(BoneConfig, "OROBOROS", None)
-        trauma_val = getattr(cfg, "TRAUMA_VALUE", 5.0) if cfg else 5.0
-        if cause_of_death == "TRAUMA":
-            scar_name = ux("soul_strings", "oroboros_trauma_name")
-            scar_desc = ux("soul_strings", "oroboros_trauma_desc")
-            new_scars.append(
-                Scar(scar_name, "trauma_baseline", trauma_val, scar_desc))
-        data = {"generation": self.generation_count + 1,
-                "scars": [vars(s) for s in self.scars + new_scars],
-                "myths": [vars(m) for m in self.myths + new_myths]}
         max_scars = getattr(cfg, "MAX_SCARS", 5) if cfg else 5
         max_myths = getattr(cfg, "MAX_MYTHS", 10) if cfg else 10
-        if len(data["scars"]) > max_scars:
-            data["scars"] = data["scars"][-max_scars:]
-        if len(data["myths"]) > max_myths:
-            data["myths"] = data["myths"][-max_myths:]
+        scars_payload = [vars(s) for s in self.scars + new_scars]
+        myths_payload = [vars(m) for m in self.myths + new_myths]
+        if len(scars_payload) > max_scars:
+            scars_payload = scars_payload[-max_scars:]
+        if len(myths_payload) > max_myths:
+            myths_payload = myths_payload[-max_myths:]
+        data = {"generation": self.generation_count + 1, "scars": scars_payload, "myths": myths_payload}
         with open(self.LEGACY_FILE, "w") as f:
             json.dump(data, f, indent=2)
         msg = ux("soul_strings", "generation_encoded")

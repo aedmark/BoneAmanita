@@ -7,6 +7,7 @@ import re
 import sys
 import time
 import traceback
+import subprocess
 import uuid
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
@@ -66,7 +67,7 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        os.system("cls" if os.name == "nt" else "clear")
+        subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         top_bar = ux("main_strings", "term_header_top", "┌──────────────────────────────────────────┐")
         mid_bar = ux("main_strings", "term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 16.5.0   │")
         bot_bar = ux("main_strings", "term_header_bot", "└──────────────────────────────────────────┘")
@@ -140,7 +141,7 @@ class ConfigWizard:
         """An interactive terminal wizard to set the initial constraints of the system (LLM backend, Mode)."""
         cfg = getattr(BoneConfig, "GUI", None)
         setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02) if cfg else 0.02
-        os.system("cls" if os.name == "nt" else "clear")
+        subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         seq_msg = ux("main_strings", "init_seq")
         hyp_msg = ux("main_strings", "init_hypervisor")
         print(f"{Prisma.paint(seq_msg, 'C')}")
@@ -381,22 +382,50 @@ class BoneAmanita:
             return self._phase_check_commands(user_message, already_executed=True)
         if user_message.strip().startswith("//"):
             return self._handle_meta_command(user_message.strip())
+        upper_msg = user_message.upper()
+        if "[VSL_WARM]" in upper_msg:
+            self.mode_settings["default_ui_depth"] = "WARM"
+            self.events.log(f"{Prisma.GRY}[SYSTEM] The veil falls. HUD muted.{Prisma.RST}", "SYS")
+            user_message = user_message.replace("[VSL_WARM]", "").replace("[vsl_warm]", "").strip()
+        elif "[VSL_LITE]" in upper_msg:
+            self.mode_settings["default_ui_depth"] = "LITE"
+            self.events.log(f"{Prisma.CYN}[SYSTEM] LITE HUD engaged.{Prisma.RST}", "SYS")
+            user_message = user_message.replace("[VSL_LITE]", "").replace("[vsl_lite]", "").strip()
+        elif "[VSL_CORE]" in upper_msg:
+            self.mode_settings["default_ui_depth"] = "CORE"
+            self.events.log(f"{Prisma.CYN}[SYSTEM] CORE HUD engaged.{Prisma.RST}", "SYS")
+            user_message = user_message.replace("[VSL_CORE]", "").replace("[vsl_core]", "").strip()
+        elif "[VSL_DEEP]" in upper_msg:
+            self.mode_settings["default_ui_depth"] = "DEEP"
+            self.events.log(f"{Prisma.VIOLET}[SYSTEM] DEEP HUD engaged. Full lattice visible.{Prisma.RST}", "SYS")
+            user_message = user_message.replace("[VSL_DEEP]", "").replace("[vsl_deep]", "").strip()
+        if "[GRIEF]" in upper_msg:
+            shared_lattice = getattr(self, "shared_lattice", None)
+            g_pool = shared_lattice.shared.g_pool if shared_lattice else 0
+            sys_g = getattr(self.phys, "G", 0) if self.phys else 0
 
+            if g_pool >= 1 or sys_g >= 1:
+                if g_pool >= 1:
+                    shared_lattice.shared.g_pool -= 1
+                else:
+                    self.phys.G -= 1
+                if shared_lattice:
+                    shared_lattice.u.T_u = max(0.0, shared_lattice.u.T_u - 2.0)
+                self.events.log(f"{Prisma.MAG}[MERCY] The glimmer is planted in the compost. Something new will grow. (Trauma -2){Prisma.RST}", "SYS")
+            else:
+                self.events.log(f"{Prisma.GRY}[SYSTEM] Insufficient Glimmers for the Grief Protocol. The loss remains.{Prisma.RST}", "WARN")
         if not is_system and self.gordon:
             self.gordon.mode = "ADVENTURE"
             current_zone = (getattr(self, "cortex", None) and getattr(self.cortex, "last_physics", {}))
             zone_name = self.cortex.gather_state(current_zone or {}).get("world", {}).get("orbit", ["Unknown"])[0] if current_zone else "Unknown"
-
             violation_msg = self.gordon.enforce_object_action_coupling(user_message, zone_name)
             if violation_msg:
                 self.events.log(ux("main_strings", "gordon_intercept"), "SYS")
                 if hasattr(self, "cortex"):
                     self.cortex.ballast_active = True
                     self.cortex.gordon_shock = violation_msg
-
         if not self.reality_stack.get_grammar_rules()["allow_narrative"] and self.boot_mode != "TECHNICAL":
             return {"ui": f"{Prisma.RED}{ux('main_strings', 'narrative_halt')}{Prisma.RST}", "logs": [], "metrics": self.get_metrics()}
-
         if self._ethical_audit():
             mercy_logs = [e["text"] for e in self.events.get_recent_logs(2) if "CATHARSIS" in e["text"]]
             if mercy_logs:
@@ -423,7 +452,6 @@ class BoneAmanita:
                 if self.gordon.get_item_data(i))
             if pruning_active:
                 from bone_tcl import TheTclWeaver
-                from bone_types import Prisma
                 original_msg = user_message
                 user_message = TheTclWeaver.get_instance().quantum_comb(user_message)
                 if original_msg != user_message:
