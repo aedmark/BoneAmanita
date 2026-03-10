@@ -3,9 +3,9 @@
 import unittest
 from unittest.mock import patch
 
-from bone_config import BonePresets
-from bone_main import BoneAmanita
 from bone_core import LoreManifest
+from bone_main import BoneAmanita
+
 
 class TrueEngineTest(unittest.TestCase):
     def setUp(self):
@@ -210,12 +210,10 @@ class TrueEngineTest(unittest.TestCase):
 
     def test_prompt_composer_anti_bleed_membranes(self):
         from bone_brain import PromptComposer
-        from bone_config import BonePresets
 
         mock_lore = {"system_prompts": self.engine.prompt_library, "lenses": {}}
         composer = PromptComposer(mock_lore)
 
-        # --- THE FIX: Explicitly set the cortex's internal mode tracker ---
         self.engine.cortex.active_mode = "CONVERSATION"
 
         conv_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
@@ -229,7 +227,6 @@ class TrueEngineTest(unittest.TestCase):
         self.assertNotIn("INVENTORY:", conv_prompt,
                          "Inventory block rendered in Conversation mode despite being suppressed.")
 
-        # --- Do the same for Technical Mode ---
         self.engine.cortex.active_mode = "TECHNICAL"
 
         tech_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
@@ -334,34 +331,20 @@ class TrueEngineTest(unittest.TestCase):
         import tempfile
         import os
         from bone_spores import SubconsciousStrata
-
-        # Create a temporary file for the strata to avoid polluting actual save data
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
             tmp_path = tmp.name
 
         try:
-            # Initialize a fresh subconscious (which will generate a fresh 8x8 M_t matrix)
             strata = SubconsciousStrata(filename=tmp_path)
-
-            # Action 1: Check initial vibe.
-            # An empty matrix multiplied by any Query vector should return all zeros.
             initial_vibe = strata.dredge_vibe("oblivion")
             self.assertEqual(sum(initial_vibe), 0.0, "Initial matrix should yield a completely zeroed vibe.")
-
-            # Action 2: Cannibalize a memory.
-            # This triggers the M_t += (K^T * V) * mass logic.
             strata.bury({"word": "oblivion", "mass": 10.0})
-
-            # Action 3: Dredge the vibe again.
             new_vibe = strata.dredge_vibe("oblivion")
-
-            # Assertions: The matrix has absorbed the data.
             vibe_sum = sum(new_vibe)
             self.assertNotEqual(vibe_sum, 0.0, "Matrix failed to absorb the K*V weights of the buried word.")
             self.assertEqual(len(new_vibe), 8, "Vibe vector must be exactly 8-dimensional.")
 
         finally:
-            # Cleanup the temporary files so we don't leave ghost matrices on your hard drive
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
             matrix_path = os.path.join(os.path.dirname(tmp_path), "m_t_matrix.json")
@@ -373,37 +356,91 @@ class TrueEngineTest(unittest.TestCase):
         import os
         from bone_spores import MycelialNetwork
         from bone_core import EventBus
-
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
             tmp_path = tmp.name
-
+        bus = EventBus()
+        network = MycelialNetwork(events=bus)
+        network.subconscious.filepath = tmp_path
         try:
-            # Setup an isolated Mycelial Network
-            bus = EventBus()
-            network = MycelialNetwork(events=bus)
-            network.subconscious.filepath = tmp_path
             network.subconscious.matrix_filepath = os.path.join(os.path.dirname(tmp_path), "test_m_t2.json")
-
-            # 1. We bury a word to create the matrix data.
             network.subconscious.bury({"word": "echo", "mass": 10.0})
-
-            # 2. We simulate the user typing a sentence containing the forgotten word.
             physics = {"clean_words": ["echo", "hello"], "voltage": 10.0, "narrative_drag": 1.0}
-
-            # 3. We run the ghost poll!
             log = network._poll_ghosts(physics["clean_words"], physics)
-
-            # 4. Assertions: The ghost must have altered the physical reality of the system.
             self.assertIsNotNone(log, "Ghost poll failed to detect the buried word.")
             self.assertNotEqual(physics["voltage"], 10.0, "The ghost failed to mutate the system Voltage.")
             self.assertNotEqual(physics["narrative_drag"], 1.0, "The ghost failed to mutate the system Drag.")
             self.assertIn("ECHO", log, "The log string did not identify the haunting word.")
-
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
             if hasattr(network, 'subconscious') and os.path.exists(network.subconscious.matrix_filepath):
                 os.remove(network.subconscious.matrix_filepath)
+
+    def test_v6_smarter_drag_profile(self):
+        from bone_types import PhysicsPacket
+        from bone_drivers import SharedLatticeDriver
+        driver = SharedLatticeDriver()
+        phys = PhysicsPacket(beta=0.9, chi=0.8, voltage=40.0)
+        phys.valence = -0.9
+        driver.infer_and_couple("This makes no sense and I hate it.", phys, phys, 20.0)
+        self.assertGreater(phys.drag_profile.semantic, 2.0, "Semantic drag failed to calculate from Beta/Chi.")
+        self.assertGreater(phys.drag_profile.emotional, 1.0, "Emotional drag failed to calculate from Valence.")
+        self.assertEqual(phys.drag_profile.metabolic, 3.0, "Metabolic drag failed to trigger on low ATP.")
+        phys.sync_drag()
+        self.assertGreater(phys.narrative_drag, 5.0, "Drag profile failed to sync to total narrative_drag.")
+
+    def test_v6_grammar_of_silence(self):
+        import time
+        from bone_types import PhysicsPacket
+        from bone_drivers import SharedLatticeDriver
+        driver = SharedLatticeDriver()
+        phys = PhysicsPacket(beta=0.8)
+        driver.shared.phi = 0.85
+        driver.shared.lambda_silence = 0.5
+        driver.last_timestamp = time.time() - 20.0
+        logs, _ = driver.infer_and_couple("Finally, I have the words.", phys, phys, 100.0)
+        self.assertGreater(driver.shared.delta, 0.0, "Silence weight (Nabla/Delta) failed to accumulate.")
+        self.assertEqual(driver.shared.sigma_silence, 1, "Silence failed to classify as Pregnant (Sigma 1).")
+        self.assertTrue(any("wanted to be born" in log for log in logs), "System failed to articulate the pregnant silence.")
+
+    def test_v6_paradox_engine_ignition(self):
+        from bone_machine import TheParadoxEngine
+        engine = TheParadoxEngine(events_ref=None)
+        can_ignite_weak = engine.evaluate_tension(beta=0.9, stamina=10.0)
+        self.assertFalse(can_ignite_weak, "Paradox Engine incorrectly approved ignition with low ATP.")
+        can_ignite_strong = engine.evaluate_tension(beta=0.8, stamina=50.0)
+        self.assertTrue(can_ignite_strong, "Paradox Engine failed to approve valid tension.")
+        pressure, prompt = engine.ignite(["determinism", "agency", "choice"])
+        self.assertTrue(engine.is_active, "Paradox Engine failed to set active flag.")
+        self.assertGreater(pressure, 0.0, "Paradox Pressure (Pi_x) is zero.")
+        self.assertIn("non-negotiable truths", prompt, "Paradox prompt string is malformed.")
+
+    def test_v6_foothills_veil_hush(self):
+        from bone_gui import CycleReporter
+        reporter = CycleReporter(self.engine)
+        self.engine.config["mode_settings"] = {"default_ui_depth": "WARM"}
+        raw_logs = ["[BIO] Adrenaline spiking.", "[CRITIC] JESTER: This is absurd.", "[SYS] Calculating vectors.",
+                    "The forest path opens up before you."]
+        reporter.switch_renderer("STANDARD")
+        clean_logs = reporter.renderer.compose_logs(raw_logs, [], 0)
+        joined_logs = " ".join(clean_logs)
+        self.assertNotIn("[BIO]", joined_logs, "CycleReporter leaked BIO tags in WARM mode.")
+        self.assertNotIn("[CRITIC]", joined_logs, "CycleReporter leaked CRITIC tags in WARM mode.")
+        self.assertIn("forest path", joined_logs, "CycleReporter accidentally muted valid narrative output.")
+
+    def test_v6_grief_protocol_healing(self):
+
+        if not hasattr(self.engine, "shared_lattice"):
+            from bone_drivers import SharedLatticeDriver
+            self.engine.shared_lattice = SharedLatticeDriver()
+        self.engine.phys.G = 1
+        self.engine.shared_lattice.u.T_u = 5.0
+        user_input = "[GRIEF] I accept that we had to delete that module."
+        self.engine._pre_flight_checks(user_input, is_system=False)
+        self.assertEqual(self.engine.phys.G, 0, "Grief Protocol failed to deduct the Glimmer.")
+        self.assertEqual(self.engine.shared_lattice.u.T_u, 3.0, "Grief Protocol failed to heal user Trauma (T_u).")
+        logs = self.engine.events.flush()
+        self.assertTrue(any("compost" in str(log) for log in logs), "Mercy's eulogy was not logged to the event bus.")
 
 if __name__ == "__main__":
     unittest.main()
