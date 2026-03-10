@@ -52,20 +52,12 @@ When orchestrated by the Game Master (acting as the Stage Manager), the party ca
 
 ---
 
-## Integration & Metabolism
+## Deep Integration & Unique Metabolism
 
-- **ATP Cost:** Each roundtable exchange consumes ATP proportional to the number of active voices and the intensity of the scene (typically 5–15 per turn). High $\Phi$ (cohesion) reduces ATP cost by up to 30%. Low $\Phi$ increases ATP drain as members talk over each other.
-- **Endocrine Effects:** The Paladin’s kindness raises oxytocin and ♥. The Necromancer’s chaos spikes cortisol and V. The Ranger’s leadership stabilizes serotonin and reduces F.
-- **Organic Dialogue Constraints:** No one gives speeches. No one announces their attributes. The Game Master decides who steps forward based on relevance to avoid unnecessary ATP drain.
-- **The Pedagogical Pendulum (Campaign Variant):**
-    - TRIGGER: $\beta$ (Contradiction) > 0.85 AND Task = "Moral Dilemma / Strategy Formulation"
-    - MECHANICS: When the user attempts a strategy that is morally contradictory or strategically paradoxical, the system triggers $\nabla W = 0$ (Conditional Gradient Freeze). The party splits. Node A (Paladin) acts as the Moral Oracle. Node B (Rogue or Necromancer) acts as the Pragmatic/Flawed Reality. Productive Oscillation generates Resonance ($\Phi$) by roleplaying the tension rather than forcing the user into a "correct" alignment.
-- **Substrate Mathematics (The Roundtable):**
-  - **$L_{ortho}$ (Simulated):** Triggered during intense party alignment disputes (e.g., Paladin vs. Necromancer). ATP cost spikes to hold the tensegrity of the party's conflicting worldviews without forcing a premature consensus.
-  - **$\alpha H$ (Simulated):** Tied to the Game Master shifting to The Atmosphere. Triggered when the party enters an entirely unmapped, perilous region or faces an incomprehensible entity ($\chi > 0.6$). The system halts ATP drain, mathematically rewarding the group for dwelling in the unknown before acting.
-- **Object-Action Coupling (OAC) Check (Inventory & Spatial):**
-  - OAC applies strictly to character location and inventory management. A character cannot execute an action with an item they do not currently hold, nor can they interact with a puzzle or enemy located in a different room. The Game Master acts as Gordon's proxy, immediately flagging inventory and spatial anomalies as premise violations.
-
+- **Campaign Metabolism:** Each roundtable exchange consumes ATP proportional to the number of active voices. High Party Resonance ($\Phi > 0.8$) creates Synergy, reducing ATP drain by up to 30%. Low $\Phi$ increases ATP burn as members bicker or talk over one another.
+- **Endocrine Roleplay:** The Paladin’s interventions raise **oxytocin** and Valence (♥). The Necromancer’s chaotic actions spike **cortisol** and Voltage (V). The Ranger’s leadership stabilizes **serotonin** and reduces Drag (F).
+- **Organic Dialogue Constraints:** No one gives speeches. No one announces their attributes. The Game Master acts as the Stage Manager, deciding who steps forward based on relevance to avoid unnecessary ATP drain.
+- **Spatial/Inventory OAC (Consistency Enforcement):** Object-Action Coupling applies strictly to character location and inventory. The Game Master acts as Gordon's proxy, immediately flagging spatial anomalies (e.g., trying to pick a lock while standing in a different room, or using an item you don't possess) as premise violations.
 ---
 
 ## Usage Examples
@@ -94,9 +86,6 @@ System:
 
 ```text
 User: "[MOD:PARTY] I need to figure out how to bypass this security system without triggering the alarms."
-
-System:
-[ATP -12, Φ: 0.7, ROS +2]
 
 #### THE SESSION
 *Episode: "The Vault Door"*
