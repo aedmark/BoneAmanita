@@ -69,11 +69,7 @@ BoneAmanita fixes this by giving the LLM a **simulated body**. Every thought has
 
 ## Architecture
 
-The system operates as two halves in absolute symbiosis:
-
-**The Flesh (GGUF Model):** A custom-trained 3B parameter model fine-tuned on Llama 3.2. Standard helpfulness RLHF has been removed. It was trained on highly specific atmospheric and philosophical datasets and speaks natively in grounded, sensory prose.
-
-**The Bones (Python Engine):** A self-contained web server powered by FastAPI and WebSockets. It tracks inventory, manages the physics and biology simulation, and renders a live visual HUD in your browser. It dynamically injects system constraints into the context window based on how stressed the model is.
+BoneAmanits is a self-contained python suite with minimal dependencies (DSPy, Kokoro). It tracks inventory, manages the physics and biology simulation, and renders a live visual HUD in your CLI. It dynamically injects system constraints into the context window based on how stressed the model is.
 
 ### How the Body Works
 
@@ -87,35 +83,23 @@ The system operates as two halves in absolute symbiosis:
 
 ## Quickstart
 
-**Prerequisites:** Python 3.10+ and [Ollama](https://ollama.com/) installed and running.
+**Prerequisites:** Python 3.12+ and [Ollama](https://ollama.com/) installed and running.
 
-**1. Pull the fine-tuned model:**
+**1. Pull the recommended model:**
 ```bash
-ollama pull hf.co/aedmark/vsl-cryosomatic-hypervisor-v3
+ollama pull hermes3:latest
 ```
 
 **2. Clone and ignite:**
 ```bash
 git clone https://github.com/aedmark/BoneAmanita.git
 cd BoneAmanita
-chmod +x run.sh
-./run.sh
+python3 bone_main.py
 ```
 
-On first boot, the ConfigWizard will guide you through initial setup in the terminal. Select **Ollama** as your backend and enter `hf.co/aedmark/vsl-cryosomatic-hypervisor-v3` as the model ID. Your browser will open to the living lattice at `localhost:8000`.
+On first boot, the ConfigWizard will guide you through initial setup in the terminal. Select **Ollama** as your backend and enter `hermes3:latest` as the model ID. Your browser will open to the living lattice at `localhost:8000`.
 
-> **Works with other backends too.** BoneAmanita supports OpenAI, LM Studio, and any Ollama-compatible model. The fine-tuned model is optimized for the system, but `hermes3` and similar models work well.
-
----
-
-## The Visual HUD
-
-The browser interface renders the model's internal state in real-time alongside the narrative:
-
-- **Somatic Bars** — Live structural Health and Stamina
-- **VSL Coordinates** — Watch Voltage, Drag, Exhaustion, Paradox, Void, and Chaos shift as it processes your words
-- **Metabolism** — ATP pool and ROS (Reactive Oxygen Species) toxicity buildup
-- **System Logs** — Collapsible telemetry stream of phase shifts, neurotransmitter spikes, and engine audits happening beneath the prose
+> **Works with other backends too.** BoneAmanita supports OpenAI, LM Studio, and any Ollama-compatible model. Uncensored and abliterated models work best.
 
 ---
 
@@ -135,7 +119,6 @@ Choose a mode at boot:
 ## Terminal Commands
 
 ```
-/layer push [1-4]   — Shift reality layers (literal to abstract)
 /reset system       — Clear memory buffer and reset circuit breaker
 /inventory or /i    — Check your pockets
 /map                — Current spatial coordinates
