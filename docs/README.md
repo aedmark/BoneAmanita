@@ -1,6 +1,6 @@
 # 🍄 BoneAmanita: The CryoSomatic Hypervisor
 
-**v17.420 (The Visual Lattice)**
+**v17.2.0 (The Visual Lattice)**
 
 ---
 
