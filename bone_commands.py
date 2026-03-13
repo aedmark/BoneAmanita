@@ -3,7 +3,7 @@
 import shlex
 from typing import Dict, Callable, List, Optional
 
-from bone_config import BonePresets, BoneConfig
+from bone_presets import BonePresets, BoneConfig
 from bone_core import LoreManifest, Prisma, ux
 
 

@@ -14,7 +14,7 @@ import random
 import time
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
-from bone_config import BonePresets, BoneConfig
+from bone_presets import BonePresets, BoneConfig
 from bone_core import LoreManifest, ux
 from bone_lexicon import LexiconService
 from bone_types import PhysicsPacket

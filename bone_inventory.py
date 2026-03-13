@@ -11,7 +11,7 @@ import random
 import re
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
-from bone_config import BoneConfig
+from bone_presets import BoneConfig
 from bone_core import LoreManifest, ux
 from bone_types import Prisma
 

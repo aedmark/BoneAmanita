@@ -22,10 +22,49 @@ def _word_to_vector(word: str, dim: int = 8) -> list:
 
 from collections import deque
 from typing import List, Tuple, Optional, Dict, Any
-from bone_config import BoneConfig
+from bone_presets import BoneConfig
 from bone_core import EventBus, LoreManifest, BoneJSONEncoder, ux
 from bone_lexicon import LexiconService
 from bone_types import Prisma
+
+def _identity(n=8):
+    """ Generates an identity matrix. """
+    return [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
+
+def _mat_mul(A, B):
+    """ Standard matrix multiplication for the Q_n accumulation. """
+    return [[sum(A[i][k] * B[k][j] for k in range(len(B[0]))) for j in range(len(B[0]))] for i in range(len(A))]
+
+def _reorthogonalize(M):
+    """ Gram-Schmidt process to prevent floating-point drift from destroying the Q_n matrix over time. """
+    n = len(M)
+    out = [[0.0] * n for _ in range(n)]
+    for j in range(n):
+        v = [M[i][j] for i in range(n)]
+        for k in range(j):
+            u = [out[i][k] for i in range(n)]
+            proj = sum(v[idx] * u[idx] for idx in range(n))
+            v = [v[idx] - proj * u[idx] for idx in range(n)]
+        norm = max(1e-10, sum(x*x for x in v)**0.5)
+        for i in range(n):
+            out[i][j] = v[i] / norm
+    return out
+
+def _householder(v):
+    """
+    Generates a Householder reflection matrix (H) from a normal vector (v).
+    H = I - 2 * (v ⊗ v) / (v · v)
+    """
+    mag_sq = sum(x * x for x in v)
+    if mag_sq == 0: return _identity(len(v))
+    H = []
+    for i in range(len(v)):
+        row = []
+        for j in range(len(v)):
+            val = (1.0 if i == j else 0.0) - 2.0 * (v[i] * v[j]) / mag_sq
+            row.append(val)
+        H.append(row)
+    return H
 
 def _access_config_path(root, path, value=None, set_mode=False):
     """ Helper function to traverse the nested BoneConfig dictionary. """
@@ -68,11 +107,15 @@ class LocalFileSporeLoader:
         os.makedirs(os.path.dirname(final_path), exist_ok=True)
         try:
             fd, temp_path = tempfile.mkstemp(dir=os.path.dirname(final_path), text=True)
-            with os.fdopen(fd, "w") as f:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, cls=BoneJSONEncoder)
                 f.flush()
                 os.fsync(f.fileno())
-            os.replace(temp_path, final_path)
+            try:
+                os.replace(temp_path, final_path)
+            except OSError:
+                os.remove(final_path)
+                os.replace(temp_path, final_path)
             return final_path
         except (IOError, OSError, TypeError) as e:
             msg = ux("spore_strings", "loader_save_err") or ""
@@ -123,9 +166,8 @@ class LocalFileSporeLoader:
 class SubconsciousStrata:
     """
     The graveyard of repressed memories.
-    When the MemoryCore hits its capacity limit and undergoes 'cannibalization'
-    (Autophagy), the consumed memories are pushed down here. They can occasionally
-    resurface as flashbacks.
+    Now enhanced with the Q_n matrix. When memories are consumed, their ghost
+    is converted into a Householder reflection, permanently angling the space.
     """
     def __init__(self, filename="memories/subconscious.jsonl"):
         self.filepath = filename
@@ -135,25 +177,30 @@ class SubconsciousStrata:
         self.index = set()
         self._load_index()
         self.matrix_filepath = os.path.join(self.directory, "m_t_matrix.json")
+        self.q_filepath = os.path.join(self.directory, "q_n_matrix.json")
         self.M_t = self._load_matrix()
+        self.Q_n = self._load_q_matrix()
 
     def _load_matrix(self):
-        """Loads the continuous matrix from disk, or creates a blank 8x8 space."""
         if os.path.exists(self.matrix_filepath):
             try:
-                with open(self.matrix_filepath, "r") as f:
-                    return json.load(f)
-            except Exception:
-                pass
+                with open(self.matrix_filepath, "r") as f: return json.load(f)
+            except Exception: pass
         return [[0.0 for _ in range(8)] for _ in range(8)]
 
-    def _save_matrix(self):
-        """Saves the continuous matrix state."""
+    def _load_q_matrix(self):
+        """ Loads the Orthogonal PaTH matrix. """
+        if os.path.exists(self.q_filepath):
+            try:
+                with open(self.q_filepath, "r") as f: return json.load(f)
+            except Exception: pass
+        return _identity(8)
+
+    def save_matrix(self):
         try:
-            with open(self.matrix_filepath, "w") as f:
-                json.dump(self.M_t, f)
-        except Exception:
-            pass
+            with open(self.matrix_filepath, "w") as f: json.dump(self.M_t, f)
+            with open(self.q_filepath, "w") as f: json.dump(self.Q_n, f)
+        except Exception: pass
 
     def _iter_entries(self):
         if not os.path.exists(self.filepath):
@@ -176,7 +223,6 @@ class SubconsciousStrata:
         try:
             cfg = getattr(BoneConfig, "SPORES", None)
             max_idx = getattr(cfg, "MAX_INDEX_SIZE", 1000) if cfg else 1000
-
             if len(self.index) > max_idx:
                 self._prune_strata()
             with open(self.filepath, "a", encoding="utf-8") as f:
@@ -191,7 +237,10 @@ class SubconsciousStrata:
             for i in range(8):
                 for j in range(8):
                     self.M_t[i][j] += (K[i] * V[j]) * scale
-            self._save_matrix()
+            H = _householder(K)
+            self.Q_n = _mat_mul(H, self.Q_n)
+            self.Q_n = _reorthogonalize(self.Q_n)
+            self.save_matrix()
             return True
         except IOError:
             return False
@@ -370,8 +419,7 @@ class MycelialNetwork:
     It holds the MemoryCore, the parasites, and the actual serialization logic to
     write the session graph to disk as a 'Spore'.
     """
-    def __init__(
-            self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None):
+    def __init__(self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None):
         self.events = events
         self.loader = loader if loader else LocalFileSporeLoader()
         self.session_id = f"session_{int(time.time())}"
@@ -390,6 +438,21 @@ class MycelialNetwork:
         self.session_trauma_vector = {}
         if seed_file:
             self.ingest(seed_file)
+        if hasattr(self.events, "publish"):
+            self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": self.subconscious.Q_n})
+        if hasattr(self.events, "subscribe"):
+            self.events.subscribe("SCAR_RECORDED", self._on_scar_recorded)
+
+    def _on_scar_recorded(self, payload):
+        """ When a paradox scars the system, it acts as a permanent reflection plane. """
+        concept = payload.get("concept")
+        if concept:
+            v = _word_to_vector(concept)
+            H = _householder(v)
+            self.subconscious.Q_n = _mat_mul(H, self.subconscious.Q_n)
+            self.subconscious.save_matrix()
+            if hasattr(self.events, "publish"):
+                self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": self.subconscious.Q_n})
 
     @property
     def graph(self):
@@ -458,6 +521,16 @@ class MycelialNetwork:
                 return f"{Prisma.GRY}{msg_l}{Prisma.RST}" if msg_l else None
         return None
 
+    def trigger_autophagy(self) -> Tuple[float, str]:
+        """Wraps MemoryCore's cannibalize method to match the interface expected by the cycle."""
+        # Trigger cannibalization using the current timestamp as a fallback for the tick
+        victim, msg = self.memory_core.cannibalize(current_tick=int(time.time()))
+        if victim:
+            cfg = getattr(BoneConfig, "AKASHIC", None)
+            atp_gain = getattr(cfg, "AUTOPHAGY_YIELD", 15.0) if cfg else 15.0
+            return atp_gain, msg
+        return 0.0, msg
+
     def _poll_ghosts(self, clean_words: list, physics: Dict) -> Optional[str]:
         """Checks if the current words have been forgotten. If so, their matrix vibe alters the physical state."""
         total_v_shift = 0.0
@@ -516,7 +589,7 @@ class MycelialNetwork:
                         return f"{base_str} It carries a dark matter gravity of {vibe_str}."
         return None
 
-    def bury(self, clean_words: List[str], tick: int, resonance=5.0, learning_mod=1.0, desperation_level=0.0, ) -> Tuple[Optional[str], List[str]]:
+    def bury(self, clean_words: List[str], tick: int, resonance=5.0, learning_mod=1.0, desperation_level=0.0) -> Tuple[Optional[str], List[str]]:
         if not clean_words:
             return None, []
         valuable = self._filter_valuable_matter(clean_words)
@@ -531,6 +604,9 @@ class MycelialNetwork:
             if not victim:
                 msg_lock = ux("spore_strings", "net_sat_lock") or ""
                 return msg_lock, []
+            else:
+                if hasattr(self.events, "publish"):
+                    self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": self.subconscious.Q_n})
         else:
             victim, log_msg = None, None
         base_rate = 0.5 * (resonance / 5.0)
@@ -737,7 +813,7 @@ class MycelialNetwork:
                      for s in self.seeds
                      if not s.bloomed]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
-        data = {"genome": "BONEAMANITA_16.5.0", "session_id": self.session_id, "parent_id": self.session_id, "meta": {
+        data = {"genome": "BONEAMANITA_17.1.0", "session_id": self.session_id, "parent_id": self.session_id, "meta": {
             "timestamp": time.time(), "final_health": health, "final_stamina": stamina, }, "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
                 "core_graph": core_graph, "mutations": mutations, "antibodies": list(antibodies) if antibodies else [],
                 "mitochondria": mitochondria_traits, "soul_legacy": soul_data, "continuity": continuity,
@@ -889,11 +965,11 @@ class BioParasite:
         graph[parasite]["edges"][host] = weight
         self.spores_deployed += 1
         if is_metaphor:
-            msg = ux("spore_strings", "para_syn_spark")
-            return True, (f"{Prisma.CYN}{msg.format(host=host.upper(), para=parasite.upper())}{Prisma.RST}" if msg else None)
+            msg = ux("spore_strings", "para_syn_spark") or "A parasitic metaphor bloomed."
+            return True, f"{Prisma.CYN}{msg.format(host=host.upper(), para=parasite.upper())}{Prisma.RST}"
         else:
-            msg = ux("spore_strings", "para_intrusive")
-            return True, (f"{Prisma.VIOLET}{msg.format(host=host.upper(), para=parasite.upper())}{Prisma.RST}" if msg else None)
+            msg = ux("spore_strings", "para_intrusive") or "An intrusive thought took root."
+            return True, f"{Prisma.VIOLET}{msg.format(host=host.upper(), para=parasite.upper())}{Prisma.RST}"
 
 class BioLichen:
     """ The symbiote. Converts light (play/sacred words) directly into metabolic sugar without costing ATP. """

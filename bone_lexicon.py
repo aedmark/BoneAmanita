@@ -268,23 +268,18 @@ class LinguisticAnalyzer:
         return None, 0.0
 
     def measure_valence(self, words: List[str]) -> float:
-        """ Calculates emotional charge (-1 to +1) by scanning for hope, despair, and semantic negators. """
+        """ Calculates emotional charge (-1 to +1) using O(1) reverse index lookups. """
         if not words:
             return 0.0
-        pos_set = self.store.get_raw("sentiment_pos")
-        neg_set = self.store.get_raw("sentiment_neg")
-        negators = self.store.get_raw("sentiment_negators")
         score = 0.0
         for i, word in enumerate(words):
-            is_negated = False
-            if i > 0 and words[i - 1] in negators:
-                is_negated = True
+            cats = self.store.get_categories_for_word(word)
             val = 0.0
-            if word in pos_set:
+            if "sentiment_pos" in cats:
                 val = 1.0
-            elif word in neg_set:
+            elif "sentiment_neg" in cats:
                 val = -1.0
-            if is_negated:
+            if val != 0.0 and i > 0 and "sentiment_negators" in self.store.get_categories_for_word(words[i - 1]):
                 val *= -0.5
             score += val
         normalized = score / max(1.0, len(words) * 0.5)
@@ -304,6 +299,8 @@ class LinguisticAnalyzer:
             self.biases["heavy"] = 1.0
 
 
+from collections import deque
+
 class SemanticField:
     """
     The Weather Radar.
@@ -314,7 +311,7 @@ class SemanticField:
         self.analyzer = analyzer_ref
         self.current_vector = {}
         self.momentum = 0.0
-        self.history = []
+        self.history = deque(maxlen=10)
 
     def update(self, text: str) -> Dict[str, float]:
         new_vector = self.analyzer.vectorize(text)
@@ -327,8 +324,6 @@ class SemanticField:
             blended[k] = round(blended.get(k, 0.0) + (v * 0.4), 3)
         self.current_vector = blended
         self.history.append((time.time(), flux))
-        if len(self.history) > 10:
-            self.history.pop(0)
         return self.current_vector
 
     def get_atmosphere(self) -> str:
@@ -423,8 +418,21 @@ class LexiconService:
             cls.ANTIGEN_REGEX = None
             return
         patterns = sorted(replacements.keys(), key=len, reverse=True)
-        escaped = [re.escape(str(p)) for p in patterns]
+        escaped = [fr"\b{re.escape(str(p))}\b" for p in patterns]
         cls.ANTIGEN_REGEX = re.compile("|".join(escaped), re.IGNORECASE)
+
+    @classmethod
+    def purge_toxins(cls, text: str) -> str:
+        """ Actively purges compiled clichés and toxic phrases from the raw text stream. """
+        if not cls._INITIALIZED:
+            cls.initialize()
+        if not cls.ANTIGEN_REGEX or not text:
+            return text
+
+        def replacer(match):
+            m_lower = match.group(0).lower()
+            return cls._STORE.ANTIGEN_REPLACEMENTS.get(m_lower, "")
+        return cls.ANTIGEN_REGEX.sub(replacer, text)
 
     @classmethod
     def sanitize(cls, text):

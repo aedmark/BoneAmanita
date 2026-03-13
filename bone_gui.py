@@ -1,7 +1,7 @@
 """ bone_gui.py """
 import re
 from typing import Dict, List, Any, Tuple
-from bone_config import BoneConfig
+from bone_presets import BoneConfig
 from bone_core import Prisma, ux
 from bone_physics import ChromaScope
 
@@ -174,7 +174,7 @@ class Projector:
         V = _get_val("voltage", "voltage", 30.0)
         F = _get_val("friction", "narrative_drag", 0.6)
         H = _get_val("health", "health", 100.0)
-        P = _get_val("stamina", "stamina", 100.0)
+        P = max(0.0, _get_val("stamina", "stamina", 100.0))
         T = _get_val("trauma", "T", 0.0)
         psi = _get_val("psi", "psi", 0.0)
         chi = _get_val("chi", "chi", 0.0)
@@ -201,12 +201,22 @@ class Projector:
             y = paradox.get("yield", 0)
             b_max = paradox.get("beta_max", 0.0)
             paradox_str = f" {Prisma.MAG}[Πx: ACTIVE | Ω:{y} | β_max:{b_max:.2f}]{Prisma.RST}"
+        strain = data_ctx.get("lattice_strain", 0.0)
+        if strain < 0.5:
+            strain_color = Prisma.GRN
+        elif strain < 5.0:
+            strain_color = Prisma.OCHRE
+        else:
+            strain_color = Prisma.RED
+        strain_str = f" {Prisma.GRY}[Q_n Strain:{strain_color}{strain:.2f}{Prisma.GRY}]{Prisma.RST}"
         if depth == "DEEP":
-            return core + deep + shared_str + paradox_str
+            return core + deep + shared_str + paradox_str + strain_str
         elif depth == "CORE":
-            return core + shared_str
+            return core + shared_str + strain_str
         elif depth == "LITE":
-            return f"{Prisma.CYN}[{i_volt} V:{V:.0f} | {i_hlth} H:{H:.0f} P:{P:.0f}]{Prisma.RST}" + shared_str
+            if data_ctx.get("show_vitals", True):
+                return f"{Prisma.CYN}[{i_volt} V:{V:.0f} | {i_hlth} H:{H:.0f} P:{P:.0f}]{Prisma.RST}" + shared_str
+            return f"{Prisma.CYN}[{i_volt} V:{V:.0f}]{Prisma.RST}" + shared_str
         return ""
 
     def render_technical(self, physics: Dict, data: Dict, mind: tuple) -> str:
@@ -291,15 +301,28 @@ class GeodesicRenderer:
             data_ctx["shared_dyn"] = ctx.shared_dyn
             data_ctx["user_state"] = ctx.user_state
         if hasattr(self.eng, "paradox_engine"):
-            data_ctx["paradox"] = {
-                "active": self.eng.paradox_engine.is_active,
-                "yield": self.eng.paradox_engine.paradox_yield,
-                "beta_max": self.eng.paradox_engine.beta_max
-            }
-        if hasattr(self.eng, "consultant"):
-            data_ctx["vsl"] = {"E": self.eng.consultant.state.E, "B": self.eng.consultant.state.B,
-                               "L": getattr(self.eng.consultant.state, "L", 0.0),
-                               "O": getattr(self.eng.consultant.state, "O", 1.0)}
+            data_ctx["paradox"] = {"active": self.eng.paradox_engine.is_active,
+                                   "yield": self.eng.paradox_engine.paradox_yield,
+                                   "beta_max": self.eng.paradox_engine.beta_max}
+        consultant = getattr(self.eng, "consultant", None)
+        if consultant and getattr(consultant, "state", None):
+            c_state = consultant.state
+            data_ctx["vsl"] = {"E": getattr(c_state, "E", 0.2), "B": getattr(c_state, "B", 0.4),
+                               "L": getattr(c_state, "L", 0.0), "O": getattr(c_state, "O", 1.0)}
+        q_matrix = None
+        phys = getattr(self.eng, "phys", None)
+        if phys:
+            observer = getattr(phys, "observer", None)
+            if observer:
+                q_matrix = getattr(observer, "Q_n", None)
+        strain = 0.0
+        if isinstance(q_matrix, list) and len(q_matrix) > 0 and isinstance(q_matrix[0], list):
+            strain = sum(
+                float(abs(q_matrix[i][j]))
+                for i in range(len(q_matrix))
+                for j in range(len(q_matrix[0]))
+                if i != j)
+        data_ctx["lattice_strain"] = float(strain)
         mode = self.eng.config.get("boot_mode", "ADVENTURE").upper()
         current_depth = 1
         if hasattr(ctx, "reality_stack"):
@@ -374,7 +397,6 @@ class CachedRenderer:
     """Optimization. If voltage is low and the state hasn't changed, reuse the last UI frame to save cycles."""
     def __init__(self, base_renderer):
         self._base = base_renderer
-        # Flattened state variables to prevent mixed-type dictionary inference
         self._cached_ui_content = ""
         self._last_tick = -1
 

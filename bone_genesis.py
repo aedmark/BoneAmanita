@@ -3,7 +3,7 @@
 from typing import Dict, Any, Set
 
 from bone_akashic import TheAkashicRecord
-from bone_config import BoneConfig
+from bone_presets import BoneConfig
 from bone_core import EventBus, LoreManifest, ux
 from bone_drivers import DriverRegistry, BoneConsultant
 from bone_inventory import GordonKnot

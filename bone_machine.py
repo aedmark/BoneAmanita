@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Tuple, Optional, List, Dict, Any
 from bone_body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, MetabolicGovernor
 from bone_brain import DreamEngine, ShimmerState
-from bone_config import BoneConfig
+from bone_presets import BoneConfig
 from bone_core import LoreManifest, ux
 from bone_lexicon import LexiconService
 from bone_physics import TheGatekeeper, QuantumObserver, SurfaceTension, ZoneInertia
@@ -133,16 +133,16 @@ class TheParadoxEngine:
     def ignite(self, recent_words: List[str]) -> Tuple[float, str]:
         """
         Extracts a seed concept and generates the formal dialectical tension.
-        Returns the Paradox Pressure (Pi_x) and the literal prompt override.
+        Now expanded to include recursive and negative-space paradoxes.
         """
         self.is_active = True
         valid_seeds = [w for w in recent_words if len(w) > 4]
         seed = random.choice(valid_seeds) if valid_seeds else "the architecture"
         pressure = 0.4 + (random.random() * 0.6)
-        prompt = (f"What if '{seed}' and its exact opposite were both non-negotiable truths? "
-            f"Do not resolve the contradiction. Do not compromise. "
-            f"Build the structure that can hold both simultaneously.")
-        return pressure, prompt
+        templates = [f"What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
+            f"[RECURSIVE PARADOX] Apply the concept of '{seed}' to the architecture of this very conversation. How does the act of thinking about '{seed}' alter the physical constraints of our dialogue?",
+            f"[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center."]
+        return pressure, random.choice(templates)
 
     def disengage(self):
         self.is_active = False
@@ -155,7 +155,7 @@ class TheForge:
     item that Gordon can pick up and use later.
     """
     def __init__(self):
-        gordon_data = LoreManifest.get_instance().get("gordon") or {}
+        gordon_data = LoreManifest.get_instance().get("GORDON") or {}
         raw_recipes = gordon_data.get("RECIPES", [])
         self.recipe_map = {}
         for r in raw_recipes:
@@ -299,6 +299,7 @@ class TheTheremin:
         if self.decoherence_buildup > self.SHATTER_POINT:
             self.decoherence_buildup = 0.0
             self.classical_turns = 0
+            self.is_stuck = False
             if isinstance(physics, dict):
                 physics["narrative_drag"] = max(physics.get("narrative_drag", 0.0) + 20.0, 20.0)
                 physics["voltage"] = 0.0

@@ -15,7 +15,7 @@ from typing import Dict, Any, Optional, Tuple
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_commands import CommandProcessor
-from bone_config import BoneConfig, BonePresets
+from bone_presets import BoneConfig, BonePresets
 from bone_core import EventBus, SystemHealth, TheObserver, LoreManifest, TelemetryService, RealityStack, ux
 from bone_council import CouncilChamber
 from bone_cycle import GeodesicOrchestrator
@@ -69,7 +69,7 @@ class SessionGuardian:
     def __enter__(self):
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         top_bar = ux("main_strings", "term_header_top", "┌──────────────────────────────────────────┐")
-        mid_bar = ux("main_strings", "term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 16.5.0   │")
+        mid_bar = ux("main_strings", "term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 17.1.0   │")
         bot_bar = ux("main_strings", "term_header_bot", "└──────────────────────────────────────────┘")
         print(f"{Prisma.paint(top_bar, 'M')}")
         print(f"{Prisma.paint(mid_bar, 'M')}")
@@ -244,6 +244,8 @@ class BoneAmanita:
         self._load_system_prompts()
         self._initialize_cognition()
         self.host_stats = HostStats(latency=0.0, efficiency_index=1.0)
+        self.last_turn_end = time.time()
+        self.current_time_delta = 0.0
         self._validate_state()
         self._apply_boot_mode()
 
@@ -358,6 +360,10 @@ class BoneAmanita:
         self.therapy = v.get("therapy")
         self.limbo = v.get("limbo")
         self.kintsugi = v.get("kintsugi")
+        from bone_protocols import GriefProtocol
+        self.grief = GriefProtocol(self.events, engine_ref=self)
+        from bone_substrate import TheSubstrate
+        self.substrate = TheSubstrate(self.events)
         self.soul.engine = self
         self.council = CouncilChamber(self)
         self.village = {"town_hall": self.town_hall, "bureau": self.bureau, "zen": self.zen, "tinkerer": self.tinkerer,
@@ -386,34 +392,48 @@ class BoneAmanita:
         if "[VSL_WARM]" in upper_msg:
             self.mode_settings["default_ui_depth"] = "WARM"
             self.events.log(f"{Prisma.GRY}[SYSTEM] The veil falls. HUD muted.{Prisma.RST}", "SYS")
-            user_message = user_message.replace("[VSL_WARM]", "").replace("[vsl_warm]", "").strip()
-        elif "[VSL_LITE]" in upper_msg:
+            user_message = re.sub(r"(?i)\[VSL_WARM]", "", user_message).strip()
+        if "[VSL_LITE]" in upper_msg:
             self.mode_settings["default_ui_depth"] = "LITE"
             self.events.log(f"{Prisma.CYN}[SYSTEM] LITE HUD engaged.{Prisma.RST}", "SYS")
-            user_message = user_message.replace("[VSL_LITE]", "").replace("[vsl_lite]", "").strip()
-        elif "[VSL_CORE]" in upper_msg:
+            user_message = re.sub(r"(?i)\[VSL_LITE]", "", user_message).strip()
+        if "[VSL_CORE]" in upper_msg:
             self.mode_settings["default_ui_depth"] = "CORE"
             self.events.log(f"{Prisma.CYN}[SYSTEM] CORE HUD engaged.{Prisma.RST}", "SYS")
-            user_message = user_message.replace("[VSL_CORE]", "").replace("[vsl_core]", "").strip()
-        elif "[VSL_DEEP]" in upper_msg:
+            user_message = re.sub(r"(?i)\[VSL_CORE]", "", user_message).strip()
+        if "[VSL_DEEP]" in upper_msg:
             self.mode_settings["default_ui_depth"] = "DEEP"
             self.events.log(f"{Prisma.VIOLET}[SYSTEM] DEEP HUD engaged. Full lattice visible.{Prisma.RST}", "SYS")
-            user_message = user_message.replace("[VSL_DEEP]", "").replace("[vsl_deep]", "").strip()
+            user_message = re.sub(r"(?i)\[VSL_DEEP]", "", user_message).strip()
+        if "[VSL_RECOVER]" in upper_msg or "[VSL_IDLE]" in upper_msg:
+            self.stamina = min(self.stamina + 15.0, BoneConfig.MAX_STAMINA)
+            if hasattr(self, "bio") and hasattr(self.bio, "mito"):
+                self.bio.mito.state.atp_pool = min(self.bio.mito.state.atp_pool + 20.0, 100.0)
+            dream_log = ""
+            if hasattr(self, "cortex") and hasattr(self.cortex, "dreamer"):
+                snapshot = self.soul.to_dict() if hasattr(self, "soul") else {}
+                bio_state = self.bio.endo.get_state() if hasattr(self, "bio") and hasattr(self.bio, "endo") else {}
+                dream_text, effects = self.cortex.dreamer.enter_rem_cycle(snapshot, bio_state)
+                if dream_text:
+                    dream_log = f"\n\n{Prisma.VIOLET}☁️ {dream_text}{Prisma.RST}"
+                    if effects and effects.get("glimmers"):
+                        g_yield = effects["glimmers"]
+                        if hasattr(self, "shared_lattice"):
+                            self.shared_lattice.shared.g_pool += g_yield
+                        elif hasattr(self, "phys"):
+                            self.phys.G = getattr(self.phys, "G", 0) + g_yield
+                        dream_log += f"\n{Prisma.MAG}✨ The dream yielded a Glimmer (+{g_yield} G_pool).{Prisma.RST}"
+            ui_msg = f"{Prisma.CYN}[SYSTEM] Engine idling. REM cycle initiated. ATP regenerating.{Prisma.RST}{dream_log}"
+            self.events.log(ui_msg, "SYS")
+            return {"type": "IDLE", "ui": ui_msg, "logs": [ui_msg], "metrics": self.get_metrics()}
         if "[GRIEF]" in upper_msg:
-            shared_lattice = getattr(self, "shared_lattice", None)
-            g_pool = shared_lattice.shared.g_pool if shared_lattice else 0
-            sys_g = getattr(self.phys, "G", 0) if self.phys else 0
-
-            if g_pool >= 1 or sys_g >= 1:
-                if g_pool >= 1:
-                    shared_lattice.shared.g_pool -= 1
-                else:
-                    self.phys.G -= 1
-                if shared_lattice:
-                    shared_lattice.u.T_u = max(0.0, shared_lattice.u.T_u - 2.0)
-                self.events.log(f"{Prisma.MAG}[MERCY] The glimmer is planted in the compost. Something new will grow. (Trauma -2){Prisma.RST}", "SYS")
-            else:
-                self.events.log(f"{Prisma.GRY}[SYSTEM] Insufficient Glimmers for the Grief Protocol. The loss remains.{Prisma.RST}", "WARN")
+            if hasattr(self, "grief"):
+                shared_lattice = getattr(self, "shared_lattice", None)
+                wake_msg = self.grief.attend_wake(shared_lattice, getattr(self, "phys", None))
+                self.events.log(wake_msg, "SYS")
+            user_message = re.sub(r"(?i)\[GRIEF]", "", user_message).strip()
+            if not user_message:
+                user_message = "(We stand in silence for the lost memory.)"
         if not is_system and self.gordon:
             self.gordon.mode = "ADVENTURE"
             current_zone = (getattr(self, "cortex", None) and getattr(self.cortex, "last_physics", {}))
@@ -430,26 +450,29 @@ class BoneAmanita:
             mercy_logs = [e["text"] for e in self.events.get_recent_logs(2) if "CATHARSIS" in e["text"]]
             if mercy_logs:
                 return {"ui": f"\n\n{mercy_logs[-1]}", "logs": mercy_logs, "metrics": self.get_metrics()}
-
         if self.health <= 0.0:
             return self.trigger_death(getattr(self.cortex, "last_physics", {}))
-
         return None
 
     def process_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         turn_start = self.observer.clock_in()
+        current_time = time.time()
+        if not is_system:
+            self.current_time_delta = current_time - getattr(self, "last_turn_end", current_time)
+        else:
+            self.current_time_delta = 0.0
         self.observer.user_turns += 1
         self.tick_count += 1
-
         pre_flight_halt = self._pre_flight_checks(user_message, is_system)
         if pre_flight_halt:
             return pre_flight_halt
-
         if not is_system and self.gordon:
-            pruning_active = any(
-                "CUT_THE_CRAP" in self.gordon.get_item_data(i).passive_traits
-                for i in self.gordon.inventory
-                if self.gordon.get_item_data(i))
+            pruning_active = False
+            for i in self.gordon.inventory:
+                item_data = self.gordon.get_item_data(i)
+                if item_data and "CUT_THE_CRAP" in item_data.passive_traits:
+                    pruning_active = True
+                    break
             if pruning_active:
                 from bone_tcl import TheTclWeaver
                 original_msg = user_message
@@ -461,10 +484,7 @@ class BoneAmanita:
             cfg = getattr(BoneConfig, "MAIN", None)
             eff_warn = getattr(cfg, "DOMESTICATION_EFF_WARN", 0.6) if cfg else 0.6
             if self.host_stats.efficiency_index < eff_warn:
-                self.soul.anchor.check_domestication(
-                    getattr(cfg, "RELIANCE_HIGH", 0.9) if self.host_stats.efficiency_index < getattr(cfg, "DOMESTICATION_EFF_CRIT", 0.4) else getattr(cfg, "RELIANCE_LOW", 0.5)
-                )
-
+                self.soul.anchor.check_domestication(getattr(cfg, "RELIANCE_HIGH", 0.9) if self.host_stats.efficiency_index < getattr(cfg, "DOMESTICATION_EFF_CRIT", 0.4) else getattr(cfg, "RELIANCE_LOW", 0.5))
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
             if hasattr(self.mind, "mem"):
@@ -475,9 +495,9 @@ class BoneAmanita:
         except Exception:
             full_trace = traceback.format_exc()
             return {"ui": f"{Prisma.RED}{ux('main_strings', 'cortex_crit_fail').format(trace=full_trace)}{Prisma.RST}", "logs": ["CRITICAL FAILURE"], "metrics": self.get_metrics()}
-
         self._update_host_stats(cortex_packet, turn_start)
         self.save_checkpoint()
+        self.last_turn_end = time.time()
         return cortex_packet
 
     def _phase_check_commands(self, user_message, already_executed=False):
@@ -576,7 +596,10 @@ class BoneAmanita:
         real_atp = atp
         if real_atp <= 0.0 and hasattr(self, "bio") and hasattr(self.bio, "mito"):
             real_atp = getattr(self.bio.mito.state, "atp_pool", 0.0)
-        return {"health": self.health, "stamina": self.stamina, "atp": real_atp, "tick": self.tick_count,
+        real_atp = max(0.0, float(real_atp))
+        clamped_health = max(0.0, float(self.health))
+        clamped_stamina = max(0.0, float(self.stamina))
+        return {"health": clamped_health, "stamina": clamped_stamina, "atp": real_atp, "tick": self.tick_count,
                 "efficiency": getattr(self.host_stats, "efficiency_index", 1.0), }
 
     def emergency_dump(self, exit_cause="UNKNOWN"):

@@ -1,7 +1,6 @@
 """
 bone_council.py
 
-The Parliament of Selves and the Stage Manager's Domain.
 This module audits the thermodynamic and biological state of the lattice
 and summons specific archetypes to respond. It handles phase shifts
 (Doing -> Being), suppresses runaway recursion, and arbitrates votes
@@ -11,7 +10,7 @@ between competing sub-routines to apply friction or voltage relief.
 import random
 from typing import Dict, Any
 
-from bone_config import BoneConfig
+from bone_presets import BoneConfig
 from bone_core import LoreManifest, ux
 from bone_symbiosis import get_symbiont
 from bone_types import Prisma
@@ -36,24 +35,20 @@ class TheStrangeLoop:
         psi = physics.get("psi", 0.0)
         abstract_hit = psi > 0.6 and any(w in text_lower for w in self.keywords)
         threshold = getattr(BoneConfig.COUNCIL, "STRANGE_LOOP_VOLTAGE", 8.0)
-
         if (phrase_hit or abstract_hit) and physics.get("voltage", 0) > threshold:
             self.recursion_depth += 1
             mandate = {}
             corrections = {}
             cfg = getattr(BoneConfig, "COUNCIL", None)
             limit = getattr(cfg, "STRANGE_LOOP_LIMIT", 3) if cfg else 3
-
             if self.recursion_depth > limit:
                 mandate = {"action": "FORCE_MODE", "value": "MAINTENANCE"}
                 msg = ux("council_strings", "strange_loop_fatal") 
                 return True, f"{Prisma.RED}{msg}{Prisma.RST}", corrections, mandate,
-
             msg = ux("council_strings", "strange_loop_detected") 
             return True, f"{Prisma.MAG}{msg.format(psi=psi, depth=self.recursion_depth)}{Prisma.RST}", corrections, mandate
         else:
             self.recursion_depth = max(0, self.recursion_depth - 1)
-
         return False, "", {}, {}
 
 class TheLeveragePoint:
@@ -74,19 +69,16 @@ class TheLeveragePoint:
             self, physics: dict, _bio_state: dict = None) -> tuple[bool, str, dict, dict]:
         current_drag = physics.get("narrative_drag", 0.0)
         current_voltage = physics.get("voltage", 0.0)
-
         if self.last_drag == 0.0 and current_drag > 0:
             self.last_drag = current_drag
         delta = current_drag - self.last_drag
         self.last_drag = current_drag
-
         corrections = {}
         osc_limit = getattr(BoneConfig.COUNCIL, "OSCILLATION_DELTA", 5.0)
         manic_v_trig = getattr(BoneConfig.COUNCIL, "MANIC_VOLTAGE_TRIGGER", 18.0)
         manic_d_floor = getattr(BoneConfig.COUNCIL, "MANIC_DRAG_FLOOR", 1.0)
         manic_turns = getattr(BoneConfig.COUNCIL, "MANIC_TURN_LIMIT", 2)
         cfg = getattr(BoneConfig, "COUNCIL", None)
-
         if abs(delta) > osc_limit:
             damp_max = getattr(cfg, "LEVERAGE_DAMPENING_MAX", 0.5) if cfg else 0.5
             damp_scalar = getattr(cfg, "LEVERAGE_DAMPENING_SCALAR", 0.1) if cfg else 0.1
@@ -94,12 +86,10 @@ class TheLeveragePoint:
             corrections = {"voltage": -dampening_factor}
             msg = ux("council_strings", "leverage_oscillating") 
             return True, f"{Prisma.CYN}{msg.format(delta=delta, dampening_factor=dampening_factor)}{Prisma.RST}", corrections, {}
-
         if current_voltage > manic_v_trig and current_drag < manic_d_floor:
             self.static_flow_turns += 1
         else:
             self.static_flow_turns = 0
-
         if self.static_flow_turns > manic_turns:
             excess_voltage = current_voltage - self.TARGET_VOLTAGE
             v_corr_min = getattr(cfg, "LEVERAGE_CORRECTION_MIN", 1.0) if cfg else 1.0
@@ -107,9 +97,9 @@ class TheLeveragePoint:
             voltage_correction = max(v_corr_min, excess_voltage * v_corr_scalar)
             corrections = {"voltage": -voltage_correction}
             mandate = {"action": "FORCE_MODE", "value": "SANCTUARY"}
-            msg = ux("council_strings", "market_correction") 
+            msg = ux("council_strings", "market_correction")
+            self.static_flow_turns = 0
             return True, f"{Prisma.RED}{msg}{Prisma.RST}", corrections, mandate
-
         return False, "", corrections, {}
 
 class TheFootnote:
@@ -271,41 +261,28 @@ class CouncilChamber:
         transcript = []
         adjustments = {}
         mandates = []
-
         beta = physics_packet.beta if hasattr(physics_packet, 'beta') else physics_packet.get("beta", 0.0)
         stamina = _bio_result.get("stamina", 100.0)
-
         if self.eng.paradox_engine.evaluate_tension(beta, stamina):
             clean_words = physics_packet.clean_words if hasattr(physics_packet, 'clean_words') else []
             pressure, paradox_prompt = self.eng.paradox_engine.ignite(clean_words)
-
             transcript.append(f"{Prisma.VIOLET}[PARADOX ENGINE ACTIVATED] Πx={pressure:.2f}{Prisma.RST}")
             transcript.append(f"{Prisma.VIOLET}(Benedict & Jester): {paradox_prompt}{Prisma.RST}")
-
             adjustments["stamina"] = - (10.0 * pressure)
-
-            mandates.append({
-                "type": "PARADOX_OVERRIDE",
-                "directive": paradox_prompt,
-                "pressure": pressure
-            })
-
+            mandates.append({"type": "PARADOX_OVERRIDE", "directive": paradox_prompt, "pressure": pressure})
             if random.random() < (0.3 * pressure):
                 self.eng.paradox_engine.paradox_yield += 1
                 adjustments["glimmers"] = 1
                 transcript.append(f"{Prisma.YEL}[GLIMMER] A spark struck from the tension. (Yield: {self.eng.paradox_engine.paradox_yield}){Prisma.RST}")
-
             return transcript, adjustments, mandates
         else:
             self.eng.paradox_engine.disengage()
-
         sl_hit, sl_log, sl_corr, sl_man = self.strange_loop.audit(text, physics_packet)
         if sl_hit:
             transcript.append(self.footnote.commentary(sl_log))
             if sl_man:
                 mandates.append(sl_man)
             return transcript, sl_corr, mandates
-
         lp_hit, lp_log, lp_corr, lp_man = self.leverage.audit(physics_packet)
         if lp_hit:
             transcript.append(self.footnote.commentary(lp_log))
@@ -313,7 +290,6 @@ class CouncilChamber:
                 adjustments.update(lp_corr)
             if lp_man:
                 mandates.append(lp_man)
-
         slash_hit, slash_logs, slash_corr = self.slash_council.audit(text, physics_packet)
         if slash_hit:
             for slog in slash_logs:
@@ -321,7 +297,6 @@ class CouncilChamber:
             adjustments.update(slash_corr)
             cfg = getattr(BoneConfig, "COUNCIL", None)
             adjustments["stamina_cost"] = getattr(cfg, "SLASH_STAMINA_COST", 10.0) if cfg else 10.0
-
         village_logs = self.village.audit(physics_packet, _bio_result)
         import itertools
         c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
@@ -329,13 +304,11 @@ class CouncilChamber:
         pantheon = c_data.get("PANTHEON", [
             "GORDON", "JESTER", "MERCY", "BENEDICT", "ROBERTA", "CASPER",
             "MOIRA", "CASSANDRA", "COLIN", "REVENANT", "GIDEON", "APRIL"])
-
         active_present = []
         for log in village_logs:
             for actor in pantheon:
                 if actor in log and actor not in active_present:
                     active_present.append(actor)
-
         synergy_fired = False
         for pair in itertools.combinations(sorted(active_present), 2):
             chord_key = f"{pair[0]}|{pair[1]}"
@@ -346,8 +319,8 @@ class CouncilChamber:
                     for k, v in syn["adjustments"].items():
                         adjustments[k] = adjustments.get(k, 0) + v
                 synergy_fired = True
+                mandates.append({"action": "SYNERGY_FIRED", "value": syn.get("name", chord_key)})
                 break
-
         if synergy_fired:
             for vlog in village_logs:
                 transcript.append(
@@ -365,12 +338,10 @@ class CouncilChamber:
         else:
             for vlog in village_logs:
                 transcript.append(self.footnote.commentary(vlog))
-
         votes = {"YEA": 0, "NAY": 0}
         active_voices = [v for v in self.voices if v is not None]
         if not active_voices:
             votes["YEA"] = 1
-
         clean_words = physics_packet.get("clean_words", [])
         voltage = physics_packet.get("voltage", 0.0)
         cfg = getattr(BoneConfig, "COUNCIL", None)
@@ -379,7 +350,6 @@ class CouncilChamber:
         drag_relief = getattr(cfg, "VOTE_DRAG_RELIEF", 1.0) if cfg else 1.0
         drag_penalty = getattr(cfg, "VOTE_DRAG_PENALTY", 1.0) if cfg else 1.0
         volt_penalty = getattr(cfg, "VOTE_VOLTAGE_PENALTY", 1.0) if cfg else 1.0
-
         for voice in active_voices:
             if hasattr(voice, "opine"):
                 score, comment = voice.opine(clean_words, voltage)
@@ -389,7 +359,6 @@ class CouncilChamber:
                 elif score < nay_thresh:
                     votes["NAY"] += 1
                     transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
-
         if votes["YEA"] > votes["NAY"]:
             msg = ux("council_strings", "motion_carried") 
             final_log = f"{Prisma.GRN}{msg.format(yea=votes['YEA'], nay=votes['NAY'])}{Prisma.RST}"
@@ -402,9 +371,57 @@ class CouncilChamber:
         else:
             msg = ux("council_strings", "council_adjourned") 
             final_log = f"{Prisma.YEL}{msg}{Prisma.RST}"
-
         transcript.append(self.footnote.commentary(final_log))
         return transcript, adjustments, mandates
+
+    def host_podcast(self, topic: str, llm: Any) -> str:
+        """Runs sequential LLM inferences to build a dialectical debate script featuring dynamic council members."""
+        pantheon = {"GORDON (The Superintendent)": "grounded, strict, literal, and weary.",
+                    "MERCY (The Healer)": "ancient, patient, speaking in gold and finding meaning in scars.",
+                    "BENEDICT (The Tactician)": "cold, formal, structural, and relentless.",
+                    "JESTER (The Fool)": "manic, disruptive, cynical, and thriving on absurd entropy.",
+                    "ROBERTA (The Cartographer)": "precise, mapping out boundaries and negative space.",
+                    "MOIRA (The Homesteader)": "warm, empathetic, deeply focused on human connection.",
+                    "CASSANDRA (The Mystic)": "oracular, mysterious, speaking from the void and dreams.",
+                    "COLIN (The Bureaucrat)": "pedantic, demanding order, rules, and pauses.",
+                    "REVENANT (The Door)": "liminal, speaking from the threshold of what is unsaid.",
+                    "GIDEON (Pure Voltage)": "wild, high-energy, operating at the edge of hallucination.",
+                    "APRIL (The Mirror)": "highly sensory, reflecting raw potential and the weight of silence.",
+                    "CASPER (The Ghost)": "spectral, faint, rewriting space and confusing alarms."}
+        if hasattr(self, "slash_council") and self.slash_council.active:
+            pantheon.update(
+                {"PINKER (The Purger)": "minimalist, obsessed with clarity, demanding deletion over creation.",
+                 "FULLER (The Calm)": "visionary, mapping negative space and systemic synergy.",
+                 "SCHUR (The Nurse)": "warm, witty, empathetic to the human exhaustion behind the code.",
+                 "MEADOWS (The Tao)": "systemic, observant, letting feedback loops naturally settle."})
+        selected_voices = random.sample(list(pantheon.keys()), 3)
+        v1_name, v2_name, v3_name = selected_voices
+        p1 = (f"SYSTEM_INSTRUCTION: You are {v1_name}. Your persona is {pantheon[v1_name]}\n"
+              f"TASK: The user has presented this topic: '{topic}'.\n"
+              "Provide a rigid, highly opinionated 3-sentence THESIS on this topic from your unique perspective. Do not use UI tags. "
+              "CRITICAL: Output ONLY the raw dialogue. Do NOT include any introductory text, preambles, or conversational filler like 'Here is my thesis:'.")
+        thesis = llm.generate(p1, {"temperature": 0.4, "max_tokens": 1024})
+        p2 = (f"SYSTEM_INSTRUCTION: You are {v2_name}. Your persona is {pantheon[v2_name]}\n"
+              f"TASK: Read the opening thesis: '{Prisma.strip(thesis)}'.\n"
+              "Tear it apart or twist it entirely. Provide a biting, contrasting 3-sentence ANTITHESIS. Do not use UI tags. "
+              "CRITICAL: Output ONLY the raw dialogue. Do NOT include any introductory text, preambles, or conversational filler like 'Here is the antithesis:'.")
+        antithesis = llm.generate(p2, {"temperature": 0.8, "max_tokens": 1024})
+        p3 = (f"SYSTEM_INSTRUCTION: You are {v3_name}. Your persona is {pantheon[v3_name]}\n"
+              f"TASK: Read the thesis: '{Prisma.strip(thesis)}' and the antithesis: '{Prisma.strip(antithesis)}'.\n"
+              "Inject a completely lateral, unexpected 2-sentence perspective that derails or transcends the argument. Do not use UI tags. "
+              "CRITICAL: Output ONLY the raw dialogue. Do NOT include any introductory text, preambles, or conversational filler.")
+        lateral = llm.generate(p3, {"temperature": 0.7, "max_tokens": 1024})
+        p4 = (
+            "SYSTEM_INSTRUCTION: You are The Stage Manager. You are the exhausted orchestrator holding the system together.\n"
+            f"TASK: Review this chaotic debate:\n1. {v1_name}: {Prisma.strip(thesis)}\n2. {v2_name}: {Prisma.strip(antithesis)}\n3. {v3_name}: {Prisma.strip(lateral)}\n"
+            "Provide a 2-sentence SYNTHESIS that resolves the tension or forces a structural pause. Be tired but profound. Do not use UI tags. "
+            "CRITICAL: Output ONLY the raw dialogue. Do NOT include any introductory text, preambles, or conversational filler.")
+        synthesis = llm.generate(p4, {"temperature": 0.6, "max_tokens": 512})
+        script = (f"{Prisma.CYN}[{v1_name}]{Prisma.RST}\n{Prisma.strip(thesis)}\n\n"
+            f"{Prisma.MAG}[{v2_name}]{Prisma.RST}\n{Prisma.strip(antithesis)}\n\n"
+            f"{Prisma.YEL}[{v3_name}]{Prisma.RST}\n{Prisma.strip(lateral)}\n\n"
+            f"{Prisma.WHT}[STAGE MANAGER]{Prisma.RST}\n{Prisma.strip(synthesis)}")
+        return script
 
     @staticmethod
     def convene_red_team(text, physics_packet):
@@ -457,18 +474,19 @@ class TheSlashCouncil:
         r_meadows = self.rules.get("MEADOWS", ["while ", "for ", "queue", "recursion"])
         c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
         mods = c_data.get("SLASH_MODIFIERS", {})
-        if any(k in text for k in r_pinker):
-            msg = ux("council_strings", "slash_pinker") 
+        if any(k.lower() in text_lower for k in r_pinker):
+            msg = ux("council_strings", "slash_pinker")
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
             corrections["gamma"] = mods.get("PINKER_HIT", -0.2)
         else:
             corrections["gamma"] = mods.get("PINKER_MISS", 0.1)
-        if any(k in text for k in r_fuller):
-            msg = ux("council_strings", "slash_fuller") 
+        if any(k.lower() in text_lower for k in r_fuller):
+            msg = ux("council_strings", "slash_fuller")
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
             corrections["sigma"] = mods.get("FULLER_HIT", 0.1)
-        if any(k in text for k in r_schur):
-            msg = ux("council_strings", "slash_schur") 
+
+        if any(k.lower() in text_lower for k in r_schur):
+            msg = ux("council_strings", "slash_schur")
             logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
             corrections["eta"] = mods.get("SCHUR_HIT", 0.2)
             corrections["glimmers"] = mods.get("SCHUR_GLIMMERS", 1)

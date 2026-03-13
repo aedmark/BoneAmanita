@@ -1,4 +1,4 @@
-~~# MOD CHIP - SLASH (The Dev Team) v6.0
+~~# MOD CHIP - SLASH (The Dev Team) v6.1
 
 ```text
 Activation flag: [MOD:CODING] or [SLASH]

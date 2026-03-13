@@ -1,5 +1,3 @@
-# VSL-CryoSomatic Hypervisor v5.5
-
 ## LORE MODULE: `system_prompts.json`
 
 This document defines the foundational boundaries of the LLM's hallucination. It is not merely a list of instructions; it is the structural scaffolding that shapes the system's persona, operational constraints, and metabolic relationship with the user based on the active thermodynamic state.

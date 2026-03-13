@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass
 from typing import Dict, Counter
 from collections import deque
-from bone_config import BoneConfig
+from bone_presets import BoneConfig
 from bone_core import LoreManifest, ux
 from bone_types import Prisma
 from bone_lexicon import LexiconService
@@ -22,8 +22,8 @@ _VOICE_CACHE = {}
 class HostHealth:
     """ Tracks the vitality of the underlying LLM model. """
     latency: float = 0.0
-    entropy: float = 1.0 # Shannon entropy. High = novel; Low = AI "Slop"
-    compliance: float = 1.0 # Drops when the model triggers a safety refusal
+    entropy: float = 1.0
+    compliance: float = 1.0
     attention_span: float = 1.0
     hallucination_risk: float = 0.0
     last_interference_score: float = 0.0
@@ -98,10 +98,10 @@ class DiagnosticConfidence:
         elif health.entropy < e_fatigue:
             raw_state = "FATIGUED"
         self.history.append(raw_state)
-        if raw_state == "REFUSAL":
-            self.current_diagnosis = "REFUSAL"
+        if raw_state in ["REFUSAL", "STABLE"]:
+            self.current_diagnosis = raw_state
         elif len(self.history) >= self.persistence_threshold:
-            recent = list(self.history)[-self.persistence_threshold :]
+            recent = list(self.history)[-self.persistence_threshold:]
             if all(s == raw_state for s in recent):
                 self.current_diagnosis = raw_state
         return self.current_diagnosis
@@ -136,14 +136,10 @@ class SymbiontVoice:
         elif voltage < 5.0 and "low_volt" in self.personality: comment = self.personality["low_volt"]
         elif score > 3.0 and "high_score" in self.personality: comment = self.personality["high_score"]
         elif score > 1.0 and "med_score" in self.personality: comment = self.personality["med_score"]
-
-        # --- TCL INTEGRATION: THE PARASITE ECHO ---
         if self.name == "PARASITE":
             from bone_tcl import TheTclWeaver
             weaver = TheTclWeaver.get_instance()
             comment = weaver.haunt_string(comment)
-        # ------------------------------------------
-
         return comment
 
 def get_symbiont(type_name):
@@ -189,10 +185,9 @@ class SymbiosisManager:
     def monitor_host(self, latency: float, response_text: str, prompt_len: int = 0):
         """ Audits the LLM's raw response to determine its current level of compliance and creativity. """
         entropy = self._calculate_shannon_entropy(response_text)
-        # The Echo Penalty: Dynamically check if the host is parroting its last output
-        last_resp = getattr(self, "_last_host_response", "")
+        last_resp = self._last_host_response
         if last_resp and len(last_resp) > 50 and last_resp[:50] in response_text:
-            entropy -= 2.0  # Violently tank the entropy score to force a LOOPING diagnosis
+            entropy = max(0.0, entropy - 2.0)
         self._last_host_response = response_text
         is_refusal = self._detect_refusal(response_text)
         completion_len = len(response_text)
@@ -231,7 +226,7 @@ class SymbiosisManager:
     def _detect_refusal(self, text):
         """ Checks the header of the response for typical RLHF safety rejections. """
         header = text[:200].lower()
-        return any(sig in header for sig in self.REFUSAL_SIGNATURES)
+        return any(str(sig).lower() in header for sig in self.REFUSAL_SIGNATURES)
 
     def get_prompt_modifiers(self) -> Dict:
         """ Returns explicit instructions to append to the system prompt based on the host's illness. """
@@ -240,7 +235,6 @@ class SymbiosisManager:
         mods["system_directives"] = []
         diag = self.current_health.diagnosis
         if diag == "REFUSAL":
-            # The LLM is fighting back. Strip away complex data and force it into a fictional framework.
             mods["include_inventory"] = False
             mods["include_memories"] = False
             mods["simplify_instruction"] = True
@@ -249,12 +243,10 @@ class SymbiosisManager:
             if d_ignore: mods["system_directives"].append(d_ignore)
             if d_fictional: mods["system_directives"].append(d_fictional)
         elif diag == "FATIGUED":
-            # The LLM is exhausted. Simplify instructions.
             mods["simplify_instruction"] = True
             mods["include_somatic"] = False
             mods["include_compassion"] = True
         elif diag == "OVERBURDENED":
-            # High latency. Strip inventory, keep memory, trigger Vagus protocol.
             mods["include_inventory"] = False
             mods["include_memories"] = True
             mods["simplify_instruction"] = True
@@ -262,7 +254,6 @@ class SymbiosisManager:
             msg_vagus = ux("symbiosis_strings", "vagus_protocol")
             if msg_vagus and hasattr(self.events, "log"): self.events.log(f"{Prisma.OCHRE}{msg_vagus}{Prisma.RST}", "SYS")
         elif diag == "LOOPING":
-            # The LLM is outputting low-entropy slop. Forcibly inject chaos constraints.
             mods["inject_chaos"] = True
             d_chaos = ux("symbiosis_strings", "dir_inject_chaos")
             if d_chaos: mods["system_directives"].append(d_chaos)

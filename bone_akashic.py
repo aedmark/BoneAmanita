@@ -5,7 +5,7 @@ import os
 import uuid
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
-from bone_config import BoneConfig
+from bone_presets import BoneConfig
 from bone_core import BoneJSONEncoder, LoreManifest, ux
 from bone_types import Prisma
 
@@ -27,7 +27,6 @@ class TheAkashicRecord:
         self.MAX_SHADOW_CAPACITY = getattr(cfg, "MAX_SHADOW_CAPACITY", 50) if cfg else 50
         self.lore = lore_manifest if lore_manifest else LoreManifest.get_instance()
         self.events = events_ref
-        # The physical storage arrays for the organism's mental life.
         self.shadow_stock: List[Dict] = []
         self.subconscious_strata: List[Dict] = []
         self.scar_map: List[Dict] = []
@@ -45,8 +44,7 @@ class TheAkashicRecord:
     def trigger_autophagy(self) -> Tuple[float, str]:
         """
         The ultimate survival loop. When ATP is zero, the organism 
-        permanently deletes a node from its subconscious strata (or a learned word) 
-        to generate a burst of metabolic fuel.
+        permanently deletes a node from its subconscious strata.
         """
         cfg = getattr(BoneConfig, "AKASHIC", None)
         yield_val = getattr(cfg, "AUTOPHAGY_YIELD", 15.0) if cfg else 15.0
@@ -55,28 +53,32 @@ class TheAkashicRecord:
                 word = next(iter(self.discovered_words))
                 del self.discovered_words[word]
                 msg = ux("akashic_strings", "autophagy_lexical")
+                if self.events:
+                    self.events.publish("AUTOPHAGY_EVENT", {"node": word, "atp_gained": yield_val})
                 return yield_val, msg.format(word=word)
             msg = ux("akashic_strings", "autophagy_failed")
             return 0.0, msg
         consumed_node = self.subconscious_strata.pop(0)
         target = consumed_node.get("concept", "Unknown Node")
         msg = ux("akashic_strings", "autophagy_memory")
+        if self.events:
+            self.events.publish("AUTOPHAGY_EVENT", {"node": target, "atp_gained": yield_val})
         return yield_val, msg.format(target=target)
 
     def record_scar(self, concept: str, p: Any):
-        """When the system suffers a paradox or logic collapse, it records the structural coordinates (E, beta, S, etc.)."""
+        """When the system suffers a paradox or logic collapse, it records the structural coordinates."""
         cfg = getattr(BoneConfig, "AKASHIC", None)
-        default_coords = getattr(cfg, "DEFAULT_SCAR_COORDS", {
+        default_coords = {
             "E": 0.2, "beta": 0.4, "S": 0.3, "D": 0.3, "C": 0.2,
-            "T": 0.0, "psi": 0.0, "chi": 0.0, "valence": 0.0, "ROS": 0.0})
+            "T": 0.0, "psi": 0.0, "chi": 0.0, "valence": 0.0, "ROS": 0.0}
         coords = {k: getattr(p, k, v) for k, v in default_coords.items()}
         scar = {"concept": concept, "coordinates": coords, "gilded": True}
         self.scar_map.append(scar)
-        # Leaves a ghost in the coordinates so future traversal knows something broke here.
         self.store_ghost_echo({"type": "SCAR_GHOST", "concept": concept, "coords": coords})
         if self.events:
             msg = ux("akashic_strings", "mercy_scar")
             self.events.log(f"{Prisma.OCHRE}{msg.format(concept=concept)}{Prisma.RST}", "VILLAGE")
+            self.events.publish("SCAR_RECORDED", {"concept": concept, "coords": coords})
 
     def bury_memory(self, concept: str, data: Dict):
         self.subconscious_strata.append({"concept": concept, "data": data})
@@ -122,7 +124,6 @@ class TheAkashicRecord:
             active_lens = payload.get("lens", "OBSERVER")
             lenses_data = self.lore.get("LENSES") or {}
             resonances = lenses_data.get("_META_RESONANCE_", [])
-            # If the mathematical physics perfectly align with the current archetype, it triggers a Resonance event.
             for resonance in resonances:
                 if resonance["trigram"] == trigram:
                     target_lens = resonance.get("lens", resonance.get("soul"))
@@ -352,16 +353,15 @@ class TheAkashicRecord:
     def store_ghost_echo(self, memory_data: Dict):
         self.shadow_stock.append(memory_data)
         if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
-            self.shadow_stock.pop(0)
+            self.shadow_stock = self.shadow_stock[-self.MAX_SHADOW_CAPACITY:]
         self._save_user_state()
         msg = ux("akashic_strings", "ghost_archived")
         print(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
 
     def register_word(self, word: str, category: str) -> bool:
         """The literal act of learning. Dynamically expanding the semantic boundary of the system."""
-        if word in self.discovered_words:
-            if self.discovered_words[word] == category:
-                return False
+        if self.discovered_words.get(word) == category:
+            return False
         lexicon_data = self.lore.get("LEXICON") or {}
         target_category = lexicon_data.setdefault(category, [])
         if word not in target_category:
@@ -373,7 +373,6 @@ class TheAkashicRecord:
             cfg = getattr(BoneConfig, "AKASHIC", None)
             bloat_limit = getattr(cfg, "BLOAT_THRESHOLD", 50) if cfg else 50
             exempt_categories = getattr(cfg, "BLOAT_EXEMPT_CATEGORIES", ["heavy"])
-            # Too many words without meaning causes 'bloat'. The system warns the user of its own cognitive load.
             if len(lexicon_data[category]) > bloat_limit and category not in exempt_categories:
                 bloat_msg = ux("akashic_strings", "lexicon_bloat")
                 print(bloat_msg.format(category=category))

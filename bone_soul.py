@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Any, Tuple
 from bone_akashic import TheAkashicRecord
-from bone_config import BoneConfig
+from bone_presets import BoneConfig
 from bone_core import LoreManifest, EventBus, ux
 from bone_lexicon import LexiconService
 from bone_types import Prisma
@@ -30,6 +30,8 @@ class CoreMemory:
     type: str = "INCIDENT"
     meta: Dict[str, Any] = field(default_factory=dict)
 
+from typing import ClassVar
+
 @dataclass
 class TraitVector:
     """ The six-axis personality core. These drift based on how the user treats the system. """
@@ -39,7 +41,7 @@ class TraitVector:
     discipline: float = 0.5
     wisdom: float = 0.1
     empathy: float = 0.5
-    _TRAITS = {"curiosity", "cynicism", "hope", "discipline", "wisdom", "empathy"}
+    _TRAITS: ClassVar[set] = {"curiosity", "cynicism", "hope", "discipline", "wisdom", "empathy"}
 
     def __post_init__(self):
         self._clamp_all()
@@ -287,22 +289,18 @@ class NarrativeSelf:
         if not self.current_obsession:
             msg = ux("soul_strings", "soul_state_drifting")
             return f"{Prisma.CYN}{msg}{Prisma.RST}"
-
         stamina, health = 100.0, 100.0
-        if (self.eng
-                and hasattr(self.eng, "bio")
-                and self.eng.bio
-                and self.eng.bio.biometrics):
-            stamina = self.eng.bio.biometrics.stamina
-            health = self.eng.bio.biometrics.health
+        if self.eng and hasattr(self.eng, "get_metrics"):
+            metrics = self.eng.get_metrics()
+            stamina = metrics.get("stamina", 100.0)
+            health = metrics.get("health", 100.0)
         if stamina < 20.0 and health < 40.0:
             msg_die = ux("soul_strings", "soul_state_dying")
             return f"{Prisma.VIOLET}{msg_die}{Prisma.RST}"
         dignity_bar = "█" * int(self.anchor.dignity_reserve / 10)
         feeling = self._get_feeling()
         status_msg = ux("soul_strings", "soul_state_status")
-        return status_msg.format(obs=self.current_obsession, bar=dignity_bar, pct=int(self.anchor.dignity_reserve),
-                                 feel=feeling, )
+        return status_msg.format(obs=self.current_obsession, bar=dignity_bar, pct=int(self.anchor.dignity_reserve), feel=feeling, )
 
     def crystallize_memory(
             self, physics_packet: Dict, bio_state: Dict, _tick: int) -> Optional[str]:
@@ -674,7 +672,7 @@ class TheOroboros:
         if len(myths_payload) > max_myths:
             myths_payload = myths_payload[-max_myths:]
         data = {"generation": self.generation_count + 1, "scars": scars_payload, "myths": myths_payload}
-        with open(self.LEGACY_FILE, "w") as f:
+        with open(self.LEGACY_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
         msg = ux("soul_strings", "generation_encoded")
         return msg.format(gen=self.generation_count + 1, scars=len(new_scars), myths=len(new_myths))
@@ -695,7 +693,8 @@ class TheOroboros:
                 log.append(msg.format(name=scar.name))
             elif scar.stat_affected == "trauma_baseline":
                 if "trauma_vector" in bio:
-                    bio["trauma_vector"]["EXISTENTIAL"] = scar.value
+                    current_trauma = bio["trauma_vector"].get("EXISTENTIAL", 0.0)
+                    bio["trauma_vector"]["EXISTENTIAL"] = current_trauma + scar.value
                 physics["T"] = physics.get("T", 0.0) + scar.value
                 msg = ux("soul_strings", "scar_frailty")
                 log.append(msg.format(name=scar.name))

@@ -16,7 +16,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Counter, Tuple, Deque
-from bone_config import BoneConfig
+from bone_presets import BoneConfig
 from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
 
 def ux(section: str, key: str, default: Any = "") -> Any:
@@ -54,7 +54,8 @@ class EventBus:
     def subscribe(self, event_type, callback):
         if event_type not in self.subscribers:
             self.subscribers[event_type] = []
-        self.subscribers[event_type].append(callback)
+        if callback not in self.subscribers[event_type]:
+            self.subscribers[event_type].append(callback)
 
     def publish(self, event_type, data=None):
         """ Broadcasts an event to all interested organs. """
@@ -390,6 +391,8 @@ class TelemetryService:
     def start_cycle(self, trace_id: str):
         if self.disabled:
             return
+        if self.active_crystal and self.active_crystal.decision_id == trace_id:
+            return
         self.active_crystal = DecisionCrystal(decision_id=trace_id)
 
     def log_decision(self, component: str, decision_type: str, inputs: Any, reasoning: str, outcome: str, ):
@@ -424,8 +427,8 @@ class TelemetryService:
         if self.disabled:
             return
         self.write_buffer.append(json_str)
-        # if len(self.write_buffer) >= self.BUFFER_SIZE:
-        self.flush_to_disk()
+        if len(self.write_buffer) >= self.BUFFER_SIZE:
+            self.flush_to_disk()
 
     def flush_to_disk(self):
         if self.disabled or not self.current_trace_file or not self.write_buffer:
@@ -489,11 +492,11 @@ class TelemetryService:
             return None
         prev_file = files[1]
         try:
-            with open(prev_file, "r") as f:
-                lines = f.readlines()
+            with open(prev_file, "r", encoding="utf-8") as f:
+                lines = deque(f, maxlen=1)
                 if not lines:
                     return None
-                last_line = json.loads(lines[-1])
+                last_line = json.loads(lines[0])
                 if "outcome" in last_line and "CRITICAL" in str(last_line["outcome"]):
                     reason = last_line.get("reasoning", "Unknown")
                     msg = ux("core_strings", "tel_prev_crash")

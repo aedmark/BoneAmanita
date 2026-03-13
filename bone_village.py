@@ -12,7 +12,7 @@ import math
 import random
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Tuple, Optional, Set
-from bone_config import BoneConfig
+from bone_presets import BoneConfig
 from bone_core import LoreManifest, EventBus, ux
 from bone_physics import PhysicsDelta
 from bone_types import Prisma, PhysicsPacket
@@ -551,19 +551,12 @@ class DeathGen:
             death_data = DeathGen._FALLBACK_PROTOCOLS
         cause = DeathGen._determine_cause(packet, mito_state, trauma_vector)
         verdict_type = DeathGen._determine_verdict_type(packet, cause)
-        prefixes = death_data.get("PREFIXES", ["Alas."])
-        prefix = random.choice(prefixes if isinstance(prefixes, list) else ["Alas."])
-        causes_raw = death_data.get("CAUSES", {})
-        causes_dict = causes_raw if isinstance(causes_raw, dict) else {}
-        cause_list = causes_dict.get(cause, causes_dict.get("DEFAULT", ["Error"]))
-        if not isinstance(cause_list, list):
-            cause_list = ["Error"]
-        verdicts_raw = death_data.get("VERDICTS", {})
-        verdicts_dict = verdicts_raw if isinstance(verdicts_raw, dict) else {}
-        verdict_list = verdicts_dict.get(verdict_type, verdicts_dict.get("HEAVY", ["Done."]))
-        if not isinstance(verdict_list, list):
-            verdict_list = ["Done."]
-        return f"{prefix} CAUSE: {random.choice(cause_list)}. {random.choice(verdict_list)}", cause
+        causes_dict = death_data.get("CAUSES", {})
+        verdicts_dict = death_data.get("VERDICTS", {})
+        prefix = random.choice(death_data.get("PREFIXES", ["Alas."]))
+        causes = causes_dict.get(cause, causes_dict.get("DEFAULT", ["Error"]))
+        verdicts = verdicts_dict.get(verdict_type, verdicts_dict.get("DEFAULT", ["Done."]))
+        return f"{prefix} CAUSE: {random.choice(causes)}. {random.choice(verdicts)}", cause
 
     @staticmethod
     def _determine_cause(

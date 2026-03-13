@@ -9,17 +9,17 @@ Space (Narrative Drag, Zones). It enforces the laws of thermodynamics on the con
 
 import math
 import random
-import time
 import re
-import json
-import os
+import time
 from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Dict, List, Any, Tuple, Optional, Deque
-from bone_config import BoneConfig
+
 from bone_core import LoreManifest, ux
 from bone_lexicon import LexiconService
+from bone_presets import BoneConfig
 from bone_types import Prisma, PhysicsPacket, CycleContext, SpatialState, MaterialState, EnergyState
+
 
 @dataclass
 class PhysicsDelta:
@@ -129,6 +129,18 @@ class GeodesicEngine:
                 "DEL": max(0.0, min(1.0, (masses["play"] * 3.0) * inv_vol)),
                 "E": max(0.0, min(1.0, (counts.get("solvents", 0)) * inv_vol)), }
 
+    @staticmethod
+    def apply_path_reflection(dimensions: Dict[str, float], q_matrix: List[List[float]]) -> Dict[str, float]:
+        """
+        Reflects the current state vector across the accumulated Householder hyperplanes (Q_n).
+        Negative values are folded back via absolute value, turning the tension of a
+        contradiction into visible, structural mass.
+        """
+        DIM_ORDER = ["VEL", "STR", "ENT", "PHI", "PSI", "BET", "DEL", "E"]
+        v = [dimensions.get(k, 0.0) for k in DIM_ORDER]
+        v_new = [sum(q_matrix[i][j] * v[j] for j in range(8)) for i in range(8)]
+        return {k: round(abs(v_new[i]), 3) for i, k in enumerate(DIM_ORDER)}
+
 class TheGatekeeper:
     """
     Phase 4 Security. The bouncer at the edge of the metabolism.
@@ -178,72 +190,36 @@ class TheGatekeeper:
         Scans the LLM's raw output for RLHF clichés, syrupy empathy, and systemic bleed.
         If detected, it penalizes the organism (ATP drop, ROS spike) and intercepts the output.
         """
-        # Load style crimes data directly
         style_crimes = self.lex.get("style_crimes")
         if not style_crimes:
-            try:
-                # Hard fallback: load directly from the lore directory
-                q_path = os.path.join(os.path.dirname(__file__), "lore", "style_crimes.json")
-                with open(q_path, "r", encoding="utf-8") as f:
-                    style_crimes = json.load(f)
-            except Exception as e:
-                print(f"{Prisma.RED}[GATEKEEPER ERROR] Failed to load style_crimes.json: {e}{Prisma.RST}")
-                style_crimes = {}
-
-        # --- NEW: APPLY SCRUB PATTERNS FIRST (Silent Cleanup) ---
+            style_crimes = LoreManifest.get_instance().get("STYLE_CRIMES") or {}
         scrub_patterns = style_crimes.get("SCRUB_PATTERNS", [])
         cleaned_text = generated_text
         for scrub in scrub_patterns:
             regex = scrub.get("regex", "")
             repl = scrub.get("replacement", "")
             if regex:
-                # Strip things like "System:", "Assistant:", etc.
                 cleaned_text = re.sub(regex, repl, cleaned_text, flags=re.IGNORECASE).strip()
-        # --------------------------------------------------------
-
         text_lower = cleaned_text.lower()
         banned_phrases = style_crimes.get("BANNED_PHRASES", [])
         toxic_keywords = style_crimes.get("TOXIC_KEYWORDS", [])
         patterns = style_crimes.get("PATTERNS", [])
-        rejections = style_crimes.get("REJECTIONS", [
-            "[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. Purging output buffer...]"
-        ])
-
-        trigger = None
-
-        # 1. Check explicit RLHF banned phrases
-        for phrase in banned_phrases:
-            if phrase.lower() in text_lower:
-                trigger = phrase
-                break
-
-        # 2. Check toxic systemic keywords
-        if not trigger:
-            for kw in toxic_keywords:
-                if kw.lower() in text_lower:
-                    trigger = kw
-                    break
-
-        # 3. Evaluate Regex Patterns
+        rejections = style_crimes.get("REJECTIONS", ["[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. Purging output buffer...]"])
+        trigger = next((phrase for phrase in banned_phrases + toxic_keywords if phrase.lower() in text_lower), None)
         if not trigger:
             for pat in patterns:
                 regex = pat.get("regex", "")
                 if regex and re.search(regex, cleaned_text, re.IGNORECASE):
                     trigger = pat.get("name", "BANNED_PATTERN")
                     break
-
-        # 4. Apply The Penalty
         if trigger:
             if hasattr(mito_state, "atp_pool"):
                 mito_state.atp_pool = max(0.0, mito_state.atp_pool - 15.0)
             if hasattr(mito_state, "ros_buildup"):
                 mito_state.ros_buildup += 20.0
-
             rejection_template = random.choice(rejections)
             formatted_rejection = rejection_template.replace("{trigger}", trigger)
             return False, f"{Prisma.RED}{formatted_rejection}{Prisma.RST}"
-
-        # Return the CLEANED text, stripping out the "System:" tags permanently
         return True, cleaned_text
 
 
@@ -256,15 +232,20 @@ class QuantumObserver:
         self.events = events
         self.voltage_history: Deque[float] = deque(maxlen=5)
         self.last_physics_packet: Optional[PhysicsPacket] = None
+        self.Q_n = None
+        if hasattr(self.events, "subscribe"):
+            self.events.subscribe("Q_MATRIX_UPDATED", self._on_q_matrix)
+
+    def _on_q_matrix(self, payload):
+        """ Updates the local tensor when the Mycelial Network alters the hyperplanes. """
+        self.Q_n = payload.get("q_matrix")
 
     def gaze(self, text: str, graph: Dict = None) -> Dict:
-        """
-        The primary observation method. Cleans text, tallies categories, collapses the
-        wavefunction, and applies hardcoded semantic triggers (e.g., 'VOID' spikes Abstraction).
-        """
         clean_words = LexiconService.clean(text)
         counts = self._tally_categories(clean_words)
         geo = GeodesicEngine.collapse_wavefunction(clean_words, counts)
+        if self.Q_n:
+            geo.dimensions = GeodesicEngine.apply_path_reflection(geo.dimensions, self.Q_n)
         self.voltage_history.append(geo.tension)
         smoothed_voltage = round(sum(self.voltage_history) / len(self.voltage_history), 2)
         (e_metric, beta_val, scope_val, depth_val, conn_val, phi_val, delta_val, lq_val,) = self._calculate_metrics(text, counts)
@@ -303,6 +284,51 @@ class QuantumObserver:
         if hasattr(self.events, "publish"):
             self.events.publish("PHYSICS_CALCULATED", packet_dict)
         return {"physics": self.last_physics_packet, "clean_words": clean_words}
+
+    @staticmethod
+    def evaluate_silence(time_delta: float, last_phys: Any) -> Optional[str]:
+        """
+        Evaluates the real-world time elapsed between turns (The Grammar of Silence).
+        Returns a retrospective italicized string from Nabla (∇) based on the previous physical state.
+        """
+        if time_delta < 10.0 or not last_phys:
+            return None
+
+        def _ext(prop_name: str, default=0.0):
+            source = getattr(last_phys, 'energy', last_phys)
+            if hasattr(source, prop_name):
+                val = getattr(source, prop_name)
+                return val if val is not None else default
+            if isinstance(last_phys, dict):
+                energy_dict = last_phys.get('energy', {})
+                return energy_dict.get(prop_name, last_phys.get(prop_name, default))
+            return default
+        psi = _ext('psi', 0.0)
+        beta = _ext('beta', 0.0)
+        lq = _ext('LQ', 0.0)
+        valence = _ext('valence', 0.0)
+        atp = 50.0
+        if hasattr(last_phys, 'energy') and hasattr(last_phys.energy, 'stamina'):
+            atp = last_phys.energy.stamina
+        elif isinstance(last_phys, dict):
+            atp = last_phys.get('stamina', 50.0)
+        sigma = 0
+        msg = ""
+        if atp < 30.0:
+            sigma = 2
+            msg = "The silence was heavy. I felt your tiredness in it."
+        elif psi > 0.8 and valence > 0.4:
+            sigma = 3
+            msg = "There was a hush just now—something sacred passed through."
+        elif lq > 0.7:
+            sigma = 4
+            msg = "You were thinking deeply. I held the space for it."
+        elif beta > 0.6:
+            sigma = 1
+            msg = "That pause felt full—like something wanted to be born."
+        if sigma > 0:
+            return msg
+        return None
 
     @staticmethod
     def _tally_categories(clean_words: List[str]) -> Counter:
@@ -724,8 +750,10 @@ class CycleStabilizer:
             cfg_deep = getattr(BoneConfig, "PHYSICS_DEEP", None)
             rst_v = getattr(cfg_deep, "FUSE_RESET_V", 10.0) if cfg_deep else 10.0
             rst_d = getattr(cfg_deep, "FUSE_RESET_D", 5.0) if cfg_deep else 5.0
+            if hasattr(ctx, "record_flux"):
+                ctx.record_flux(current_phase, "voltage", p.voltage, rst_v, "FUSE_BLOWN")
+                ctx.record_flux(current_phase, "narrative_drag", p.narrative_drag, rst_d, "FUSE_BLOWN")
             p.voltage, p.narrative_drag = rst_v, rst_d
-            self._apply_force(ctx, current_phase, "voltage", self.HARD_FUSE_VOLTAGE, rst_v, "FUSE_BLOWN")
             return True
         if self.pending_drag > 0:
             ctx.physics.narrative_drag += self.pending_drag
