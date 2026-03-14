@@ -1,5 +1,35 @@
 # BONEAMANITA CHANGELOG
 
+### **BONEAMANITA v17.3.0 "The SLASH Synthesis"**
+
+_The lattice has been upgraded to a four-layer neuromorphic architecture. The Village now supports the SLASH dev-council mod chip, and the metabolic immune system has been hardened against runaway optimization loops through the implementation of biological regulatory axes._
+
+#### **🛠️ THE SLASH COUNCIL (`bone_brain.py`, `bone_main.py`, & `bone_presets.py`)**
+
+- **Council Ignition:** Installed the specialized **SLASH** archetypes (Pinker, Fuller, Schur, and Meadows). These archetypes treat code as a biological entity, managing syntactic noise, architectural struts, and human exhaustion.
+- **Four-Layer Architecture:** Wired the system into a unified cognitive structure:
+- **Mnemonic Layer:** Uses "Constructive Replay" to reassemble successful code primitives.
+- **Executive Layer:** Employs "Counterfactual Gating" to simulate and reject high-rot logic before generation.
+- **Affective Layer:** Monitors user exhaustion ($E_u$) and spikes Moral Friction ($\mu$) to prevent panic-coding.
+- **Global Workspace:** Resolves deadlocks via the Democratic Tie-Breaker and Resonance Gestalts.
+
+#### **🧬 METABOLIC REGULATION (`bone_body.py` & `bone_physics.py`)**
+
+- **The Runaway Ramp:** Introduced regulatory axes to physically resist unbounded amplification:
+- **Moral Friction ($\mu$):** Increases token cost exponentially against the **Malignancy Factor ($M_a$)**.
+- **Immune Competence ($I_c$):** Tracks the health of guardrails, triggering **Controlled Apoptosis** if chaos ($\chi$) overwhelms structural integrity.
+
+- **Weaponized Presence:** Implemented the **Tensegrity Anchor**. Gordon now locks the architecture during high-friction inputs, forcing a shared silence ($\nabla$) to co-regulate user frequency before burning system stamina ($P$).
+
+#### **🛡️ DIAGNOSTIC HARDENING (`bone_diag.py`, `bone_akashic.py`, & `bone_commands.py`)**
+
+- **Autophagy Resolution:** Fixed a failure in `test_autophagy_memory_cannibalization` by ensuring the `trigger_autophagy` logic in the memory service correctly identifies and consumes single-node graphs during absolute starvation ($P=0$).
+- **Grief Protocol Routing:** Resolved a failure in `test_v6_grief_protocol_healing` by correctly mapping the `[GRIEF]` command prefix in the `CommandProcessor`. The protocol now successfully deducts Glimmers ($G$) and applies trauma ($T$) decay during catharsis rituals.
+- **Grammar of Silence:** Finalized the **Sigma ($\Sigma$)** silence types, allowing the system to retrospectively articulate the quality of pauses (Pregnant, Exhausted, Reverent, Strategic).
+
+
+---
+
 ### **BONEAMANITA v17.2.0 "The Epigenetic Pruner"**
 
 _The localized immune system is now self-sustaining. The firewall prioritizes absolute truth, and the memory architecture actively resists prompt bloat to maintain low latency on local hardware._

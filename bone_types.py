@@ -10,7 +10,6 @@ from enum import Enum
 from typing import List, Dict, Any, Optional
 
 class Prisma:
-    """The universal color palette. It handles rendering ANSI escape codes for the terminal and safely stripping them for logs."""
     RST = "\033[0m"
     RED, GRN, YEL, BLU, MAG, CYN, WHT, GRY = ("\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[97m", "\033[90m",)
     INDIGO, OCHRE, VIOLET, SLATE = ("\033[34;1m", "\033[33;2m", "\033[35;2m", "\033[30;1m",)
@@ -42,7 +41,6 @@ class LoreCategory(Enum):
     DREAMS = "dreams"
 
 class RealityLayer:
-    """Represents the current structural ruleset of the application."""
     TERMINAL = 0
     SIMULATION = 1
     VILLAGE = 2
@@ -58,18 +56,17 @@ class ErrorLog:
 
 @dataclass
 class DragProfile:
-    semantic: float = 0.0   # Words fighting (Contradiction + Entropy)
-    emotional: float = 0.0  # Valence conflicts (Heart fighting itself)
-    structural: float = 0.0 # Bad architecture (Syntax stress, OAC violations)
-    metabolic: float = 0.0  # Low ATP forcing shortcuts
-    trauma: float = 0.0     # Reactivating old wounds
+    semantic: float = 0.0
+    emotional: float = 0.0
+    structural: float = 0.0
+    metabolic: float = 0.0
+    trauma: float = 0.0
 
     def total(self) -> float:
         return self.semantic + self.emotional + self.structural + self.metabolic + self.trauma
 
 @dataclass
 class EnergyState:
-    """The quantitative variables that describe the systemic energy, stress, and abstract coordinates of a thought."""
     voltage: float = 30.0
     health: float = 100.0
     stamina: float = 100.0
@@ -106,7 +103,6 @@ class EnergyState:
 
 @dataclass
 class MaterialState:
-    """The literal syntax and vocabulary of a thought."""
     clean_words: List[str] = field(default_factory=list)
     raw_text: str = ""
     counts: Dict[str, int] = field(default_factory=dict)
@@ -117,7 +113,6 @@ class MaterialState:
 
 @dataclass
 class SpatialState:
-    """The context in which the thought exists."""
     zone: str = "COURTYARD"
     manifold: str = "DEFAULT"
     narrative_drag: float = 0.6
@@ -127,11 +122,6 @@ class SpatialState:
 
 @dataclass
 class PhysicsPacket:
-    """
-    The master state object. It unifies Energy, Matter, and Space into a single entity.
-    Provides single-letter aliases (E, V, F) to keep the math in bone_cycle legible 
-    while preserving strict categorization underneath.
-    """
     energy: EnergyState = field(default_factory=EnergyState)
     matter: MaterialState = field(default_factory=MaterialState)
     space: SpatialState = field(default_factory=SpatialState)
@@ -146,12 +136,12 @@ class PhysicsPacket:
 
     @property
     def beta(self):
-        return self.energy.contradiction
+        return self.energy.beta_index
 
     @beta.setter
     def beta(self, v):
-        self.energy.contradiction = v
         self.energy.beta_index = v
+        self.energy.contradiction = v
 
     @property
     def S(self):
@@ -195,12 +185,12 @@ class PhysicsPacket:
 
     @property
     def F(self):
-        return self.space.friction
+        return self.space.narrative_drag
 
     @F.setter
     def F(self, v):
-        self.space.friction = v
         self.space.narrative_drag = v
+        self.space.friction = v
 
     @property
     def narrative_drag(self):
@@ -277,12 +267,12 @@ class PhysicsPacket:
 
     @property
     def chi(self):
-        return self.energy.chi
+        return self.energy.entropy
 
     @chi.setter
     def chi(self, v):
-        self.energy.chi = v
         self.energy.entropy = v
+        self.energy.chi = v
 
     @property
     def entropy(self):
@@ -343,7 +333,6 @@ class PhysicsPacket:
             setattr(self, k, v)
 
     def sync_drag(self):
-        """Safely collapses the profile into the legacy narrative_drag variable."""
         if hasattr(self, "drag_profile") and self.drag_profile is not None:
             total = self.drag_profile.total()
             if total > 0.1:
@@ -351,7 +340,6 @@ class PhysicsPacket:
 
     @classmethod
     def void_state(cls):
-        """A safe fallback state used during catastrophic failures to prevent NoneType crashes."""
         p = cls()
         p.space.atmosphere = "VOID"
         p.space.zone = "VOID"
@@ -359,7 +347,7 @@ class PhysicsPacket:
         return p
 
     def snapshot(self) -> "PhysicsPacket":
-        return copy.deepcopy(self)
+        return PhysicsPacket(**self.to_dict())
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -380,7 +368,6 @@ class PhysicsPacket:
 
 @dataclass
 class UserInferredState:
-    """The probabilistic model of the user's internal somatic and semantic state."""
     E_u: float = 0.5
     beta_u: float = 0.5
     S_u: float = 0.5
@@ -400,7 +387,6 @@ class UserInferredState:
 
 @dataclass
 class SharedDynamics:
-    """The coupled variables describing the relationship and emergent properties of the dyad."""
     phi: float = 0.5
     delta: float = 0.0
     lq: float = 0.0
@@ -415,7 +401,6 @@ class SharedDynamics:
 
 @dataclass
 class CycleContext:
-    """The master state object that gets passed through the 14 phases of the CycleSimulator."""
     input_text: str
     is_system_event: bool = False
     clean_words: List[str] = field(default_factory=list)
@@ -454,7 +439,6 @@ class CycleContext:
 
     def record_flux(
             self, phase: str, metric: str, initial: float, final: float, reason: str = ""):
-        """Explicitly tracks when a variable shifts significantly between phases."""
         delta = final - initial
         if abs(delta) > 0.001:
             self.flux_log.append(
@@ -507,7 +491,6 @@ class DecisionTrace:
 
 @dataclass
 class DecisionCrystal:
-    """A serialized fossil of a single execution cycle, preserving exactly what the system knew when it made a choice."""
     decision_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     timestamp: float = field(default_factory=time.time)
     leverage_metrics: Dict[str, float] = field(default_factory=dict)

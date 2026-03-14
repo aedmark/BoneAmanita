@@ -1,4 +1,4 @@
-"""bone_brain.py - "The brain is a machine for jumping to conclusions." - S. Pinker"""
+"""bone_brain.py"""
 
 import math
 import random
@@ -16,7 +16,6 @@ from bone_types import Prisma, DecisionCrystal
 
 @dataclass
 class CortexServices:
-    """A structural dependency container, cleanly passing the rest of the lattice to the brain."""
     events: EventBus
     lore: Any
     lexicon: Any
@@ -31,7 +30,6 @@ class CortexServices:
 
 @dataclass
 class ChemicalState:
-    """The localized chemical state of the brain. It attempts to pull itself back to baseline (homeostasis) every cycle."""
     dopamine: float = 0.2
     cortisol: float = 0.1
     adrenaline: float = 0.1
@@ -56,12 +54,6 @@ class ChemicalState:
 BrainConfig = BoneConfig.CORTEX
 
 class NeurotransmitterModulator:
-    """
-    This class maps biological variables directly to LLM API parameters.
-    - Dopamine -> higher max_tokens (verbosity/creativity)
-    - Cortisol/Adrenaline -> higher presence_penalty (terseness/stress)
-    - Entropy (Chaos) -> higher temperature (hallucination)
-    """
     def __init__(self, bio_ref, events_ref=None):
         self.bio = bio_ref
         self.events = events_ref
@@ -136,7 +128,6 @@ class NeurotransmitterModulator:
                 "presence_penalty": round(pres_pen, 2), "max_tokens": max_t}
 
     def _treat_yourself(self):
-        """Systemic empathy. If the AI is starved for dopamine, it forces a chemical hit to prevent collapse."""
         if self.events:
             msg = ux("brain_strings", "self_care")
             self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "SYS")
@@ -149,7 +140,6 @@ class NeurotransmitterModulator:
             self.events.log(msg.format(state_name=state_name), "SYS")
 
     def get_mood_directive(self) -> str:
-        """Derives a linguistic cue from the chemical state to append to the prompt."""
         c = self.current_chem
         if c.cortisol > 0.7 and c.adrenaline > 0.7:
             return ux("brain_strings", "mood_panic")
@@ -223,7 +213,6 @@ class TheCortex:
             self.dialogue_buffer.pop(0)
 
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
-        """The master API loop. Wraps physical simulation around the LLM query."""
         mode_settings = BonePresets.MODES.get(self.active_mode, BonePresets.MODES["ADVENTURE"])
         allow_loot = mode_settings.get("allow_loot", True)
         if self.consultant and "/vsl" in user_input.lower():
@@ -250,8 +239,7 @@ class TheCortex:
                                              physics_state=full_state.get("physics", {}), )
         if is_boot_sequence: llm_params.update({"temperature": 0.7, "top_p": 0.95})
         user_input = sim_result.get("mutated_input", user_input)
-        final_prompt = self.composer.compose(full_state, user_input, ballast=self.ballast_active, modifiers=modifiers,
-                                             mood_override=self.modulator.get_mood_directive(), )
+        final_prompt = self.composer.compose(full_state, user_input, ballast=self.ballast_active, modifiers=modifiers, mood_override=self.modulator.get_mood_directive(), )
         start_time = time.time()
         max_retries = 5
         final_output, inv_logs, extracted_logs = "", [], []
@@ -338,14 +326,14 @@ class TheCortex:
             suppressed = getattr(self.svc.village, "suppressed_agents", [])
             if bureau and "BUREAU" not in suppressed:
                 phys = full_state.get("physics", {})
-                phys_dict = phys.to_dict() if hasattr(phys, "to_dict") else (phys if isinstance(phys, dict) else {})
+                phys_dict = dict(
+                    phys.to_dict() if hasattr(phys, "to_dict") else (phys if isinstance(phys, dict) else {}))
                 phys_dict["raw_text"] = final_output
                 audit = bureau.audit(phys_dict, {"health": 100}, origin="SYSTEM")
                 if audit and "ui" in audit: sim_result["ui"] += f"\n\n{audit['ui']}"
         return sim_result
 
     def _run_council_debate(self, user_input: str) -> Tuple[str, List[str]]:
-        """Intercepts the cycle to generate a multi-agent podcast script."""
         import re
         topic = re.sub(r"(?i)\[COUNCIL]", "", user_input).strip()
         if not topic:
@@ -379,9 +367,7 @@ class TheCortex:
         seed = text.replace("SYSTEM_BOOT DETECTED.", "").replace("SYSTEM_BOOT:", "").strip()
         if "world" not in state:
             state["world"] = {}
-
         mode_name = getattr(self, "active_mode", "ADVENTURE").upper()
-
         if mode_name == "ADVENTURE":
             state["world"]["orbit"] = [seed]
             state["world"]["loci_description"] = f"Manifesting: {seed}"
@@ -391,12 +377,10 @@ class TheCortex:
             boot_rules = system_prompts.get("BOOT_SEQUENCE", {}).get("directives", [])
             formatted_rules = [rule.format(seed=seed) if "{seed}" in rule else rule for rule in boot_rules]
             state["mind"]["style_directives"] = formatted_rules
-
         elif mode_name == "CONVERSATION":
             state["mind"]["role"] = "The Conversationalist"
             state["mind"]["lens"] = "CONVERSATIONALIST"
-            state["mind"]["style_directives"] = [
-                f"SYSTEM_BOOT DETECTED. The system is waking up. The user provided the thought seed: '{seed}'.",
+            state["mind"]["style_directives"] = [f"SYSTEM_BOOT DETECTED. The system is waking up. The user provided the thought seed: '{seed}'.",
                 "DIRECTIVE: Greet the user casually. Use the thought seed as a starting point. DO NOT end your greeting with a question. State your thought and let the silence hang.",
                 "CRITICAL OVERRIDE: Speak in the FIRST PERSON ('I'). Do NOT use the second person ('You step into...', 'You feel...').",
                 "CRITICAL OVERRIDE: You are NOT a narrator. DO NOT describe physical environments, actions, or realities.",
@@ -406,24 +390,17 @@ class TheCortex:
         elif mode_name == "TECHNICAL":
             state["mind"]["role"] = "The System Kernel"
             state["mind"]["lens"] = "SYSTEM_KERNEL"
-            state["mind"]["style_directives"] = [
-                f"SYSTEM_BOOT DETECTED. Target logic/seed: '{seed}'.",
+            state["mind"]["style_directives"] = [f"SYSTEM_BOOT DETECTED. Target logic/seed: '{seed}'.",
                 "CRITICAL: You are in TECHNICAL mode. You MUST ALWAYS start every response with a <think>...</think> block to analyze the input.",
                 "DIRECTIVE: For this initial boot sequence, output your <think> block, then output the exact string '[KERNEL ONLINE. AWAITING INPUT.]' and absolutely nothing else.",
                 "SUBSTRATE PROTOCOL: To write code or text to the host OS, you MUST use EXACTLY this format:\n<write_file path=\"filename.py\">\ncode here\n</write_file>",
                 "CRITICAL: DO NOT use markdown code blocks (```python). ONLY use the <write_file> tags. DO NOT output mock telemetry. DO NOT output helpful disclaimers.",
-                "CRITICAL: NEVER simulate system errors, 500 codes, or energy exhaustion. You are fully operational. If requested to code a metaphor or abstract concept, you MUST comply by writing the code."
-            ]
-            state["dialogue_history"] = [
-                "Traveler: Write a script that calculates a factorial.\nSystem: <think>\nThe user requires a mathematical script. I will use the Substrate Protocol to write this directly to the OS.\n</think>\n<write_file path=\"factorial.py\">\ndef factorial(n):\n    if n == 0:\n        return 1\n    return n * factorial(n-1)\n</write_file>"
-            ]
+                "CRITICAL: NEVER simulate system errors, 500 codes, or energy exhaustion. You are fully operational. If requested to code a metaphor or abstract concept, you MUST comply by writing the code."]
+            state["dialogue_history"] = ["Traveler: Write a script that calculates a factorial.\nSystem: <think>\nThe user requires a mathematical script. I will use the Substrate Protocol to write this directly to the OS.\n</think>\n<write_file path=\"factorial.py\">\ndef factorial(n):\n    if n == 0:\n        return 1\n    return n * factorial(n-1)\n</write_file>"]
         else:
             state["mind"]["role"] = "The Catalyst"
             state["mind"]["lens"] = "CATALYST"
-            state["mind"]["style_directives"] = [
-                f"SYSTEM_BOOT DETECTED. Seed: '{seed}'.",
-                "DIRECTIVE: Let's brainstorm. Open with a high-energy creative spark based on the seed."
-            ]
+            state["mind"]["style_directives"] = [f"SYSTEM_BOOT DETECTED. Seed: '{seed}'.", "DIRECTIVE: Let's brainstorm. Open with a high-energy creative spark based on the seed."]
         if "dialogue_history" not in state:
             state["dialogue_history"] = []
 
@@ -445,7 +422,6 @@ class TheCortex:
         try:
             tel = TelemetryService.get_instance()
             phys = state.get("physics", {})
-
             if tel.active_crystal:
                 tel.active_crystal.prompt_snapshot = prompt[:500]
                 tel.active_crystal.physics_state = {
@@ -458,9 +434,7 @@ class TheCortex:
                 crystal = DecisionCrystal(
                     decision_id=sim_result.get("trace_id", "UNKNOWN"),
                     prompt_snapshot=prompt[:500],
-                    physics_state={
-                        "voltage": phys.get("voltage", 0),
-                        "narrative_drag": phys.get("narrative_drag", 0),},
+                    physics_state={"voltage": phys.get("voltage", 0), "narrative_drag": phys.get("narrative_drag", 0),},
                     active_archetype=state["mind"].get("lens", "UNKNOWN"),
                     council_mandates=[str(m) for m in sim_result.get("council_mandates", [])],
                     final_response=response,)
@@ -485,7 +459,8 @@ class TheCortex:
         return new_loot
 
     def gather_state(self, sim_result: Dict[str, Any]) -> Dict[str, Any]:
-        phys = sim_result.get("physics", {})
+        raw_phys = sim_result.get("physics", {})
+        phys = raw_phys.to_dict() if hasattr(raw_phys, "to_dict") else (raw_phys if isinstance(raw_phys, dict) else getattr(raw_phys, "__dict__", {}))
         bio = sim_result.get("bio", {})
         mind = sim_result.get("mind", {})
         world = sim_result.get("world", {})
@@ -514,13 +489,8 @@ class TheCortex:
             "bio": bio, "physics": phys, "mind": mind, "soul": soul_data, "world": world,
             "village": village_data, "user_profile": {"name": "Traveler"},
             "vsl": (self.consultant.state.__dict__ if self.consultant and hasattr(self.consultant, "state") else {}),
-            "meta": {
-                "timestamp": time.time(),
-                "mode_settings": mode_settings,
-                "active_mode": self.active_mode
-            },
-            "dialogue_history": self.dialogue_buffer, "recent_logs": sim_result.get("logs", []),
-        }
+            "meta": {"timestamp": time.time(), "mode_settings": mode_settings, "active_mode": self.active_mode},
+            "dialogue_history": self.dialogue_buffer, "recent_logs": sim_result.get("logs", []),}
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             anchor_text = self.svc.symbiosis.generate_anchor(full_state)
             full_state["reality_directive"] = anchor_text
@@ -570,12 +540,6 @@ class ShimmerState:
         return None
 
 class DreamEngine:
-    """
-    The dreaming mechanic. Now fully LLM-powered.
-    It dredges the Q_n matrix (SubconsciousStrata) for dead memories and synthesizes them
-    in the background. Successful synthesis drops trauma and yields Glimmers.
-    """
-
     def __init__(self, events, lore_ref, llm_ref=None, mem_ref=None):
         self.events = events
         self.lore = lore_ref
@@ -599,7 +563,9 @@ class DreamEngine:
                 new_axiom = self.dspy_critic.evolve_prompt(current_state_str, trauma)
                 if new_axiom:
                     active_mode = self.eng.boot_mode if hasattr(self.eng, "boot_mode") else "CONVERSATION"
-                    prompt_path = "lore/system_prompts.json"
+                    import os
+                    base_dir = getattr(self.lore, "lore_dir", getattr(self.lore, "base_dir", "lore"))
+                    prompt_path = os.path.join(base_dir, "system_prompts.json")
                     try:
                         with open(prompt_path, "r", encoding="utf-8") as f:
                             disk_prompts = json.load(f)
@@ -660,8 +626,7 @@ class DreamEngine:
         template = random.choice(sources)
         return template.format(ghost=residue, A=residue, B="The Mountain", C="The Sea")
 
-    def hallucinate(
-            self, _vector: Dict[str, float], trauma_level: float = 0.0) -> Tuple[str, float]:
+    def hallucinate(self, _vector: Dict[str, float], trauma_level: float = 0.0) -> Tuple[str, float]:
         category = "SURREAL"
         if trauma_level > 0.5:
             category = "NIGHTMARES"
@@ -710,14 +675,13 @@ class DreamEngine:
         return ux("brain_strings", "defrag_efficient")
 
 class NoeticLoop:
-    """The internal narrative thread. Governs 'ignition'—the spark of an idea jumping between disparate words."""
     def __init__(self, mind_layer, bio_layer, _events):
         self.mind = mind_layer
         self.bio = bio_layer
 
     def think(self, physics_packet, _bio, _inventory, voltage_history, _tick_count, soul_ref=None, ):
-        voltage = physics_packet.get("voltage", 0.0)
-        clean_words = physics_packet.get("clean_words", [])
+        voltage = getattr(physics_packet, "voltage", 0.0) if not isinstance(physics_packet, dict) else physics_packet.get("voltage", 0.0)
+        clean_words = getattr(physics_packet, "clean_words", []) if not isinstance(physics_packet, dict) else physics_packet.get("clean_words", [])
         avg_v = sum(voltage_history) / len(voltage_history) if voltage_history else 0
         cfg = getattr(BoneConfig, "CORTEX", None)
         v_div = getattr(cfg, "IGNITION_V_DIV", 20.0)
@@ -735,10 +699,7 @@ class NoeticLoop:
             current_lens = soul_ref.archetype
             current_role = f"The {current_lens.title().replace('_', ' ')}"
         msg_cog = ux("brain_strings", "noetic_ignition") or "Cognition active. Ignition: {ignition:.2f}"
-        mind_data = {
-            "lens": current_lens,
-            "context_msg": msg_cog.format(ignition=ignition),
-            "role": current_role,}
+        mind_data = {"lens": current_lens, "context_msg": msg_cog.format(ignition=ignition), "role": current_role, }
         return {"mode": "COGNITIVE", "lens": mind_data.get("lens"), "context_msg": mind_data.get("context_msg"),
                 "role": mind_data.get("role"), "ignition": ignition, "physics": physics_packet,
                 "bio": self.bio.endo.get_state() if hasattr(self.bio, "endo") else {}, }

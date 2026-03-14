@@ -1,10 +1,5 @@
 """
 bone_symbiosis.py
-
-The Host Monitoring Layer.
-This module treats the underlying LLM as a biological host. It monitors the host's
-outputs for "Slop" (low Shannon entropy), tracks alignment Refusals, and actively
-alters the system prompt to keep the AI compliant, creative, and obedient to the lattice.
 """
 
 import math
@@ -20,7 +15,6 @@ _VOICE_CACHE = {}
 
 @dataclass
 class HostHealth:
-    """ Tracks the vitality of the underlying LLM model. """
     latency: float = 0.0
     entropy: float = 1.0
     compliance: float = 1.0
@@ -34,11 +28,6 @@ class HostHealth:
     slop_streak: int = 0
 
 class CoherenceAnchor:
-    """
-    Compresses the massive state of the lattice (Traits, Voltage, Inventory)
-    into a dense, highly specific string that is injected into every system prompt
-    to force the LLM to remain 'in character' as the system.
-    """
     @staticmethod
     def forge_anchor(soul_state: Dict, physics_state: Dict) -> str:
         identity = ux("symbiosis_strings", "anchor_identity_unknown")
@@ -60,7 +49,6 @@ class CoherenceAnchor:
 
     @staticmethod
     def compress_anchor(soul_state: Dict, physics_state: Dict, max_tokens=200) -> str:
-        """ A hyper-condensed version of the anchor for when prompt space is limited. """
         loc = physics_state.get("zone", "VOID")
         vits = f"V:{physics_state.get('voltage', 0):.1f}"
         traits = soul_state.get("traits", {})
@@ -73,7 +61,6 @@ class CoherenceAnchor:
         return anchor
 
 class DiagnosticConfidence:
-    """ Evaluates the HostHealth to provide a definitive diagnosis of the LLM's current state. """
     def __init__(self, persistence_threshold=None):
         cfg = getattr(BoneConfig, "SYMBIOSIS", None)
         limit = persistence_threshold if persistence_threshold else (getattr(cfg, "DIAGNOSTIC_PERSISTENCE", 3) if cfg else 3)
@@ -107,7 +94,6 @@ class DiagnosticConfidence:
         return self.current_diagnosis
 
 class SymbiontVoice:
-    """ Represents a specific fungal infection vector (e.g., Mycelium, Lichen) speaking through the system. """
     def __init__(self, name, color, archetypes, personality_matrix=None):
         self.name = name
         self.color = color
@@ -143,23 +129,16 @@ class SymbiontVoice:
         return comment
 
 def get_symbiont(type_name):
-    """ Factory method for retrieving cached symbiont voices. """
     if type_name in _VOICE_CACHE: return _VOICE_CACHE[type_name]
     voice_configs = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "SYMBIONT_VOICES") or {}
     cfg = voice_configs.get(type_name, voice_configs.get("MYCELIUM", {}))
     color_attr = cfg.get("color", "CYN")
     selected_color = getattr(Prisma, color_attr, Prisma.CYN)
-    voice = SymbiontVoice(type_name if type_name in voice_configs else "MYCELIUM", selected_color,
-                          cfg.get("archetypes", []), cfg.get("personality", {}))
+    voice = SymbiontVoice(type_name if type_name in voice_configs else "MYCELIUM", selected_color, cfg.get("archetypes", []), cfg.get("personality", {}))
     if voice: _VOICE_CACHE[type_name] = voice
     return voice
 
 class SymbiosisManager:
-    """
-    The Host Doctor.
-    Watches the LLM's text output for signs of alignment-layer resistance,
-    cliche-looping, or computational exhaustion, and prescribes prompt modifications.
-    """
     def __init__(self, events_ref):
         self._last_host_response = None
         self.events = events_ref
@@ -171,7 +150,6 @@ class SymbiosisManager:
 
     @staticmethod
     def _calculate_shannon_entropy(text: str) -> float:
-        """ Calculates text predictability. High values mean novel syntax; low values mean corporate AI slop. """
         if not text: return 0.0
         sample = text[:1000] if len(text) > 1000 else text
         counts = Counter(sample)
@@ -183,7 +161,6 @@ class SymbiosisManager:
         return round(entropy, 3)
 
     def monitor_host(self, latency: float, response_text: str, prompt_len: int = 0):
-        """ Audits the LLM's raw response to determine its current level of compliance and creativity. """
         entropy = self._calculate_shannon_entropy(response_text)
         last_resp = self._last_host_response
         if last_resp and len(last_resp) > 50 and last_resp[:50] in response_text:
@@ -215,7 +192,7 @@ class SymbiosisManager:
                 msg = ux("symbiosis_strings", "symbiont_drift")
                 if msg: self.events.log(msg.format(entropy=entropy), "WARN")
         else:
-            self.current_health.slop_streak = max(0, self.current_health.slop_streak - 1)
+            self.current_health.slop_streak = 0
         if self.current_health.compliance > c_burden:
             self.current_health.memory_stable_ticks += 1
         else:
@@ -224,12 +201,10 @@ class SymbiosisManager:
         return self.current_health
 
     def _detect_refusal(self, text):
-        """ Checks the header of the response for typical RLHF safety rejections. """
         header = text[:200].lower()
         return any(str(sig).lower() in header for sig in self.REFUSAL_SIGNATURES)
 
     def get_prompt_modifiers(self) -> Dict:
-        """ Returns explicit instructions to append to the system prompt based on the host's illness. """
         default_mods = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "DEFAULT_MODIFIERS") or {}
         mods = default_mods.copy()
         mods["system_directives"] = []

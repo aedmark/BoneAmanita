@@ -11,7 +11,6 @@ from typing import Dict, Any, Optional
 from bone_presets import BoneConfig
 from bone_core import Prisma, EventBus, ux, BoneJSONEncoder
 
-
 class SynapseError(Exception):
     pass
 
@@ -22,7 +21,6 @@ class TransientError(SynapseError):
     pass
 
 class LLMInterface:
-    """The actual network transport layer. It sends the prompt to the external AI and catches HTTP errors."""
     def __init__(self, events_ref: Optional[EventBus] = None, provider: str = None, base_url: str = None,
                  api_key: str = None, model: str = None, dreamer: Any = None, ):
         self.events = events_ref
@@ -62,7 +60,6 @@ class LLMInterface:
         target_key = override_key or self.api_key
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {target_key}",}
         data = json.dumps(payload, cls=BoneJSONEncoder).encode()
-
         for attempt in range(max_retries + 1):
             try:
                 req = urllib.request.Request(target_url, data=data, headers=headers)
@@ -157,10 +154,7 @@ class LLMInterface:
         fallback_payload = {"model": model, "messages": [{"role": "user", "content": prompt}], "stream": False,
                             "temperature": params.get("temperature", 0.4),
                             "frequency_penalty": params.get("frequency_penalty", 0.8),
-                            "presence_penalty": params.get("presence_penalty", 0.4), "stop": ["=== PARTNER INPUT ===",
-                                                                                              "\n\nTraveler:",
-                                                                                              "\nTraveler:",
-                                                                                              "Traveler:", ], }
+                            "presence_penalty": params.get("presence_penalty", 0.4), "stop": ["=== PARTNER INPUT ===", "\n\nTraveler:", "\nTraveler:", "Traveler:", ], }
         try:
             cfg = getattr(BoneConfig, "CORTEX", None)
             fallback_timeout = getattr(cfg, "LLM_FALLBACK_TIMEOUT", 10.0) if cfg else 10.0
@@ -382,18 +376,15 @@ class PromptComposer:
                 f"{inventory_block}\n"
             )
 
-        return (
-                f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n"
-                                                                      f"{vsl_hijack}\n"
-                                                                      f"{shared_reality_block}"
-                                                                      f"{dialogue_block}"
-                                                                      f"{mode_trigger}\n"
-                                                                      f"{system_injection}\n"
-                                                                      f"{input_block}"
-                                                                      f"{entity_prefix}")
+        return (f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n" f"{vsl_hijack}\n"
+                f"{shared_reality_block}"
+                f"{dialogue_block}"
+                f"{mode_trigger}\n"
+                f"{system_injection}\n"
+                f"{input_block}"
+                f"{entity_prefix}")
 
-    def _build_persona_block(self, mind, bio, mood_override, mode_data, global_data, high_voltage_data,
-                             vsl_state=None, ):
+    def _build_persona_block(self, mind, bio, mood_override, mode_data, global_data, high_voltage_data, vsl_state=None, ):
         lens_key = mind.get("lens", "OBSERVER").upper()
         lens_data = self.lenses.get(lens_key, {})
         role = lens_data.get("role", mind.get("role", "The Observer"))
@@ -569,7 +560,6 @@ class PromptComposer:
         return defaults
 
 class ResponseValidator:
-    """An automatic auditor. Catches cliches, excessive meta-chatter, or syntax failure before the user sees it, forcing a re-roll."""
     def __init__(self, lore_ref):
         self.lore = lore_ref
         crimes = self.lore.get("style_crimes") or {}
@@ -675,25 +665,23 @@ class ResponseValidator:
                 is_meta = True
             if re.match(r"^[A-Z]+\s*=\s*[0-9./]+$", stripped_line):
                 is_meta = True
-
             if not is_meta:
                 clean_lines.append(line)
-
         sanitized_response = "\n".join(clean_lines).strip()
         low_resp = sanitized_response.lower()
         errors_found = []
         primary_replacement = None
-        tech_allowed_phrases = [
-            "here is a",
-            "here is the",
-            "this metaphor",
-            "this code defines",
-            "running this code will"
-        ]
+        tech_allowed_phrases = ["here is a", "here is the", "this metaphor", "this code defines", "running this code will"]
         for phrase in self.banned_phrases:
-            if active_mode == "TECHNICAL" and phrase.lower() in tech_allowed_phrases:
-                continue
             if phrase.lower() in low_resp:
+                is_whitelisted = False
+                if active_mode == "TECHNICAL":
+                    for allowed in tech_allowed_phrases:
+                        if phrase.lower() in allowed and allowed in low_resp:
+                            is_whitelisted = True
+                            break
+                if is_whitelisted:
+                    continue
                 if not primary_replacement:
                     primary_replacement = self._generate_dynamic_rejection(phrase)
                 errors_found.append(f"BANNED PHRASE: '{phrase.upper()}'")
@@ -731,29 +719,12 @@ class ResponseValidator:
                         primary_replacement = f"{base_rejection}{msg_reg.format(error_msg=error_msg)}".replace("\\n", "\n")
                     errors_found.append(f"RULE VIOLATION: {p.get('error_msg', 'Cursed syntax')}")
         if errors_found:
-            return {
-                "valid": False,
-                "reason": "IMMISSION_BREAK",
-                "replacement": primary_replacement or self._generate_dynamic_rejection("MULTIPLE_CRIMES"),
-                "feedback_instruction": "FIX ALL OF THESE ERRORS: " + " | ".join(errors_found),
-                "meta_logs": extracted_meta_logs,
-            }
-        for p in self.regex_patterns:
-            regex_str = p.get("regex", "")
-            if regex_str:
-                if re.search(regex_str, sanitized_response):
-                    trigger_name = p.get("name", "REGEX_VIOLATION")
-                    error_msg = p.get("error_msg", "Cursed syntax detected.")
-                    base_rejection = self._generate_dynamic_rejection(trigger_name)
-                    msg_reg = ux("brain_strings", "val_gordon_regex")
-                    formatted_rejection = f"{base_rejection}{msg_reg.format(error_msg=error_msg)}".replace("\\n", "\n")
-                    return {"valid": False, "reason": "IMMISSION_BREAK",
-                            "replacement": formatted_rejection,
-                            "meta_logs": extracted_meta_logs, }
+            return {"valid": False, "reason": "IMMISSION_BREAK",
+                    "replacement": primary_replacement or self._generate_dynamic_rejection("MULTIPLE_CRIMES"),
+                    "feedback_instruction": "FIX ALL OF THESE ERRORS: " + " | ".join(errors_found),
+                    "meta_logs": extracted_meta_logs, }
         cfg = getattr(BoneConfig, "CORTEX", None)
         stutter_len = getattr(cfg, "VALIDATOR_STUTTER_LENGTH", 5) if cfg else 5
         if len(sanitized_response.strip()) < stutter_len:
-            return {"valid": False, "reason": "STUTTER",
-                    "replacement": ux("brain_strings", "val_stutter"),
-                    "meta_logs": extracted_meta_logs, }
+            return {"valid": False, "reason": "STUTTER", "replacement": ux("brain_strings", "val_stutter"), "meta_logs": extracted_meta_logs, }
         return {"valid": True, "content": sanitized_response, "meta_logs": extracted_meta_logs, }

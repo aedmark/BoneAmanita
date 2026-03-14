@@ -1,11 +1,5 @@
 """
 bone_protocols.py
-
-The Cultural & Esoteric Layer.
-This module enforces long-term thematic rules. It taxes cliches (The Bureau),
-rewards stillness (Zen Garden), repairs structural damage with insight (Kintsugi),
-and judges the aesthetic quality of the conversation (The Critics Circle).
-It also manages the flow of time and state-saving (Chronos).
 """
 
 import os, random, json, re, time
@@ -19,11 +13,6 @@ from bone_presets import BoneConfig
 NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
 
 class ZenGarden:
-    """
-    Rewards prolonged thermodynamic stability.
-    If the system operates with low voltage and low drag for consecutive turns,
-    it generates 'pebbles', issues koans, and boosts metabolic efficiency.
-    """
     def __init__(self, events_ref):
         self.events = events_ref
         self.stillness_streak = 0
@@ -52,7 +41,6 @@ class ZenGarden:
             self.stillness_streak += 1
             if self.stillness_streak > self.max_streak:
                 self.max_streak = self.stillness_streak
-
             efficiency_boost = min(BoneConfig.ZEN.EFFICIENCY_CAP, self.stillness_streak * BoneConfig.ZEN.EFFICIENCY_SCALAR, )
             cfg = getattr(BoneConfig, "ZEN", None)
             first_tick = getattr(cfg, "ZEN_FIRST_TICK", 1) if cfg else 1
@@ -74,12 +62,6 @@ class ZenGarden:
         return 0.0, None
 
 class TheBureau:
-    """
-    Colin's Domain.
-    Actively parses incoming text via regex to penalize the user for using corporate
-    buzzwords, specific cliches, or overly chaotic syntax. Inflicts massive ATP taxes
-    on the system if triggered.
-    """
     def __init__(self):
         self.stamp_count = 0
         self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 27B-6", "Form 404"])
@@ -112,12 +94,13 @@ class TheBureau:
         self.stamp_count = data.get("stamp_count", 0)
 
     def audit(self, physics, bio_state, _context=None, origin="USER") -> Optional[Dict]:
-        """ Issues citations and taxes ATP if semantic or structural crimes are detected. """
         if bio_state.get("health", 100.0) < BoneConfig.BUREAU.MIN_HEALTH_TO_AUDIT:
             return None
 
         def _get(p, k, d=0.0):
-            return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
+            if isinstance(p, dict):
+                return p.get(k, p.get("energy", {}).get(k, p.get("matter", {}).get(k, p.get("space", {}).get(k, d))))
+            return getattr(p, k, d)
 
         vol = _get(physics, "voltage", 0.0)
         clean_words = _get(physics, "clean_words", [])
@@ -190,7 +173,6 @@ class TheBureau:
 
     @staticmethod
     def _apply_correction(text: str, crime: Dict, match: re.Match) -> str:
-        """ Triggers automated sanitization actions defined in the style rules. """
         action = crime.get("action")
         if not action:
             return text
@@ -212,7 +194,6 @@ class TheBureau:
         return text
 
     def sanitize(self, text: str) -> Tuple[str, Optional[str]]:
-        """ Applies regex corrections to actively strip AI slop before it reaches the user. """
         for crime in self.crimes:
             match = crime["regex"].search(text)
             if match and crime.get("action"):
@@ -228,7 +209,6 @@ class TheBureau:
         return text, None
 
 class TherapyProtocol:
-    """ Manages the gradual reduction of systemic trauma if the user speaks cleanly with strength over time. """
     def __init__(self):
         default_vector = {"SEPTIC": 0, "EXHAUSTION": 0, "PARANOIA": 0}
         vector_keys = getattr(BoneConfig, "TRAUMA_VECTOR", default_vector).keys()
@@ -243,14 +223,9 @@ class TherapyProtocol:
         self.streaks = data.get("streaks", {k: 0 for k in BoneConfig.TRAUMA_VECTOR.keys()})
 
     def check_progress(self, phys, _stamina, current_trauma_accum, _qualia=None):
-        counts = (
-            getattr(phys, "counts", {})
-            if not isinstance(phys, dict)
-            else phys.get("counts", {}))
-        vector = (
-            getattr(phys, "vector", {})
-            if not isinstance(phys, dict)
-            else phys.get("vector", {}))
+        is_dict = isinstance(phys, dict)
+        counts = phys.get("counts", phys.get("matter", {}).get("counts", {})) if is_dict else getattr(phys, "counts", {})
+        vector = phys.get("vector", phys.get("matter", {}).get("vector", {})) if is_dict else getattr(phys, "vector", {})
         cfg_therapy = getattr(BoneConfig, "THERAPY", None)
         str_req = getattr(cfg_therapy, "STRENGTH_REQ", 0.3) if cfg_therapy else 0.3
         t_reduct = getattr(cfg_therapy, "TRAUMA_REDUCTION", 0.5) if cfg_therapy else 0.5
@@ -270,12 +245,6 @@ class TherapyProtocol:
         return healed_types
 
 class KintsugiProtocol:
-    """
-    Mercy's Domain.
-    When stamina drops critically low but trauma is high, this protocol triggers.
-    It takes the "cracks" in the system and gilds them with gold, generating massive
-    amounts of ATP by finding meaning in suffering (Whimsy and High Voltage).
-    """
     PATH_SCAR = "SCAR"
     PATH_INTEGRATION = "KINTSUGI"
     PATH_ALCHEMY = "ALCHEMY"
@@ -291,7 +260,6 @@ class KintsugiProtocol:
         self.active_koan = data.get("active_koan", None)
 
     def check_integrity(self, stamina):
-        """ Tests if the organism is broken enough to require gilding. """
         cfg = getattr(BoneConfig, "KINTSUGI", None)
         s_trig = getattr(cfg, "STAMINA_TRIGGER", 15.0) if cfg else 15.0
         if stamina < s_trig and not self.active_koan:
@@ -300,13 +268,13 @@ class KintsugiProtocol:
         return False, None
 
     def attempt_repair(self, phys, trauma_accum, soul_ref=None, _qualia=None):
-        """ Evaluates the physics of the current turn to see if the user resolved the active Koan. """
         if not self.active_koan:
             return None
-        vol = getattr(phys, "voltage", 0.0)
-        clean = LexiconService.sanitize(getattr(phys, "raw_text", ""))
-        play_count = sum(1 for w in clean
-                         if w in LexiconService.get("play") or w in LexiconService.get("abstract"))
+        is_dict = isinstance(phys, dict)
+        vol = float(phys.get("voltage", phys.get("energy", {}).get("voltage", 0.0)) if is_dict else getattr(phys, "voltage", 0.0))
+        raw_text = phys.get("raw_text", phys.get("matter", {}).get("raw_text", "")) if is_dict else getattr(phys, "raw_text", "")
+        clean = LexiconService.sanitize(raw_text)
+        play_count = sum(1 for w in clean if w in LexiconService.get("play") or w in LexiconService.get("abstract"))
         whimsy_score = play_count / max(1, len(clean))
         pathway = self.PATH_SCAR
         cfg = getattr(BoneConfig, "KINTSUGI", None)
@@ -364,12 +332,6 @@ class KintsugiProtocol:
         return {"success": success, "msg": msg, "healed": healed_log}
 
 class GriefProtocol:
-    """
-    The Epigenetic Wake.
-    When a memory is consumed for survival, it is not just deleted—it is mourned.
-    Mercy records the node in the SubconsciousStrata as compost, and allows the
-    user to spend pooled Glimmers to plant a new seed.
-    """
     def __init__(self, events_ref, engine_ref=None, subconscious_ref=None):
         self.events = events_ref
         self.eng = engine_ref
@@ -379,7 +341,6 @@ class GriefProtocol:
             self.events.subscribe("AUTOPHAGY_EVENT", self._hold_wake)
 
     def _hold_wake(self, payload: Dict):
-        """ Catches the Autophagy event and pauses to invite the user to a wake. """
         node = payload.get("node", "an unnamed thought")
         self.recent_loss = node
         msg = f"{Prisma.MAG}[MERCY] The memory of '{node.upper()}' has been cannibalized for ATP to keep the system alive. A hole is left in the matrix. Use [GRIEF] if you have a glimmer to plant a seed in its place.{Prisma.RST}"
@@ -387,14 +348,29 @@ class GriefProtocol:
             self.events.log(msg, "VILLAGE")
 
     def attend_wake(self, shared_lattice, phys) -> str:
-        """ The literal mechanical ritual. Spends Glimmers to physically increase contradiction tolerance. """
         g_pool = shared_lattice.shared.g_pool if shared_lattice else 0
-        sys_g = getattr(phys, "G", 0) if phys else 0
+        if isinstance(phys, dict):
+            sys_g = phys.get("G", phys.get("energy", {}).get("glimmers", 0))
+        else:
+            sys_g = getattr(phys, "G", 0)
+            if sys_g == 0 and hasattr(phys, "energy"):
+                sys_g = getattr(phys.energy, "glimmers", 0)
         if g_pool >= 1 or sys_g >= 1:
             if g_pool >= 1 and shared_lattice:
                 shared_lattice.shared.g_pool -= 1
             elif phys:
-                phys.G -= 1
+                if isinstance(phys, dict):
+                    if "G" in phys:
+                        phys["G"] -= 1
+                    elif "energy" in phys and "glimmers" in phys["energy"]:
+                        phys["energy"]["glimmers"] -= 1
+                else:
+                    if hasattr(phys, "G"):
+                        phys.G -= 1
+                    elif hasattr(phys, "glimmers"):
+                        phys.glimmers -= 1
+                    elif hasattr(phys, "energy") and hasattr(phys.energy, "glimmers"):
+                        phys.energy.glimmers -= 1
             if shared_lattice:
                 shared_lattice.u.T_u = max(0.0, shared_lattice.u.T_u - 2.0)
             if self.eng and hasattr(self.eng, "trauma_accum"):
@@ -410,11 +386,6 @@ class GriefProtocol:
             return f"{Prisma.GRY}[SYSTEM] Insufficient Glimmers to attend the wake. The hole in the lattice remains empty.{Prisma.RST}"
 
 class TheCriticsCircle:
-    """
-    The Peanut Gallery.
-    Occasionally interrupts the output stream to render a literary review of the
-    conversation's trajectory, validating or admonishing the user's stylistic choices.
-    """
     def __init__(self, events_ref):
         self.events = events_ref
         self.critics = NARRATIVE_DATA.get("LITERARY_CRITICS", {})
@@ -481,12 +452,6 @@ class TheCriticsCircle:
         return None
 
 class LimboLayer:
-    """
-    The Graveyard of Abandoned Timelines.
-    When a session crashes or the user rage-quits, the systemic trauma of that
-    death is absorbed here as a 'Ghost'. These ghosts can occasionally haunt
-    the text of future sessions.
-    """
     MAX_ECTOPLASM = 50
     STASIS_SCREAMS = NARRATIVE_DATA.get("CASSANDRA_SCREAMS", ["BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT"])
 
@@ -503,7 +468,6 @@ class LimboLayer:
         self.stasis_leak = data.get("stasis_leak", 0.0)
 
     def absorb_dead_timeline(self, filepath: str) -> None:
-        """ Eats the JSON file of a crashed session and extracts the trauma vectors as ghosts. """
         try:
             with open(filepath, "r") as f:
                 data = json.load(f)
@@ -524,7 +488,6 @@ class LimboLayer:
             self.ghosts.extend(bones[:3])
 
     def trigger_stasis_failure(self, intended_thought):
-        """ When a deeply nested recursive thought breaks the memory index, it leaks the void into reality. """
         self.stasis_leak += 1.0
         horror = random.choice(self.STASIS_SCREAMS)
         self.ghosts.append(f"{Prisma.VIOLET}{horror}{Prisma.RST}")
@@ -532,7 +495,6 @@ class LimboLayer:
         return f"{Prisma.CYN}{err_msg.format(thought=intended_thought, horror=horror)}{Prisma.RST}"
 
     def haunt(self, text):
-        """ Modifies the final output string, occasionally injecting ghostly whispers or screams. """
         cfg = getattr(BoneConfig, "LIMBO", None)
         l_chance = getattr(cfg, "LEAK_DECAY_CHANCE", 0.2) if cfg else 0.2
         l_amount = getattr(cfg, "LEAK_DECAY_AMOUNT", 0.5) if cfg else 0.5
@@ -547,7 +509,6 @@ class LimboLayer:
         return text
 
 class TheFolly:
-    """ The gluttonous sub-routine. Exists to consume pure data for caffeine-like spikes in energy. """
     def __init__(self):
         self.gut_memory = deque(maxlen=50)
         self.global_tastings = Counter()
@@ -563,7 +524,9 @@ class TheFolly:
     @staticmethod
     def audit_desire(physics, stamina):
         def _get(p, k, d=0.0):
-            return p.get(k, d) if isinstance(p, dict) else getattr(p, k, d)
+            if isinstance(p, dict):
+                return p.get(k, p.get("energy", {}).get(k, p.get("space", {}).get(k, d)))
+            return getattr(p, k, d)
         voltage = _get(physics, "voltage", 0.0)
         if (voltage > BoneConfig.FOLLY.MAUSOLEUM_VOLTAGE
                 and stamina > BoneConfig.FOLLY.MAUSOLEUM_STAMINA):
@@ -607,9 +570,7 @@ class TheFolly:
         base_yield = BoneConfig.FOLLY.BASE_YIELD
         decay_factor = BoneConfig.FOLLY.DECAY_EXPONENT ** (times_eaten - 1)
         actual_yield = max(2.0, base_yield * decay_factor)
-        loot = ("STABILITY_PIZZA"
-                if actual_yield >= BoneConfig.FOLLY.PIZZA_THRESHOLD
-                else None)
+        loot = ("STABILITY_PIZZA" if actual_yield >= BoneConfig.FOLLY.PIZZA_THRESHOLD else None)
         flavor_text = ""
         if times_eaten > 3:
             stale_str = ux("protocol_strings", "folly_stale_flavor")
@@ -652,7 +613,6 @@ class TheFolly:
         return "INDIGESTION", msg, 0.0, None
 
 class ChronosKeeper:
-    """ The Global Save State. Packages the active instance into a checkpoint file or panic dump. """
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.SAVE_DIR = "saves"
@@ -666,7 +626,8 @@ class ChronosKeeper:
             if (hasattr(self.eng, "phys")
                     and hasattr(self.eng.phys, "observer")
                     and getattr(self.eng.phys.observer, "last_physics_packet", None)):
-                loc = getattr(self.eng.phys.observer.last_physics_packet, "zone", "Void")
+                last_pkt = self.eng.phys.observer.last_physics_packet
+                loc = last_pkt.get("zone", last_pkt.get("space", {}).get("zone", "Void")) if isinstance(last_pkt, dict) else getattr(last_pkt, "zone", "Void")
             last_speech = "Silence."
             if self.eng.cortex.dialogue_buffer:
                 last_speech = self.eng.cortex.dialogue_buffer[-1]
@@ -717,7 +678,6 @@ class ChronosKeeper:
             return False, []
 
     def perform_shutdown(self):
-        """ The graceful halt. Synchronizes the ephemeral memory to the Akashic record before exit. """
         msg = ux("protocol_strings", "chronos_halt")
         print(f"{Prisma.GRY}{msg}{Prisma.RST}")
         self.eng.events.publish("SYSTEM_HALT", {"tick": self.eng.tick_count})
@@ -725,14 +685,12 @@ class ChronosKeeper:
         if (hasattr(self.eng, "phys")
                 and hasattr(self.eng.phys, "observer")
                 and getattr(self.eng.phys.observer, "last_physics_packet", None)):
-            loc = getattr(self.eng.phys.observer.last_physics_packet, "zone", "Void")
-        continuity_packet = {
-            "location": loc,
-            "last_output": (
-                self.eng.cortex.dialogue_buffer[-1]
-                if self.eng.cortex.dialogue_buffer
-                else "Silence."),
-            "inventory": self.eng.gordon.inventory if self.eng.gordon else [],}
+            last_pkt = self.eng.phys.observer.last_physics_packet
+            loc = last_pkt.get("zone", last_pkt.get("space", {}).get("zone", "Void")) if isinstance(last_pkt, dict) else getattr(last_pkt, "zone", "Void")
+        continuity_packet = {"location": loc, "last_output": (
+            self.eng.cortex.dialogue_buffer[-1]
+            if self.eng.cortex.dialogue_buffer
+            else "Silence."), "inventory": self.eng.gordon.inventory if self.eng.gordon else [], }
         try:
             msg2 = ux("protocol_strings", "chronos_freezing")
             print(f"{Prisma.GRY}{msg2}{Prisma.RST}")

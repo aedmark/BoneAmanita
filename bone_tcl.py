@@ -1,12 +1,12 @@
 """bone_tcl.py - The Homoiconic Weaver"""
 
-import tkinter
+try:
+    import tkinter
+    TCL_AVAILABLE = True
+except ImportError:
+    TCL_AVAILABLE = False
 
 class TheTclWeaver:
-    """
-    An embedded Tcl interpreter acting as a homoiconic string mutator.
-    It takes the concept 'Everything Is A String' literally.
-    """
     _instance = None
 
     @classmethod
@@ -16,8 +16,15 @@ class TheTclWeaver:
         return cls._instance
 
     def __init__(self):
-        self.interp = tkinter.Tcl()
-        self._load_tcl_spells()
+        self.interp = None
+        if TCL_AVAILABLE:
+            try:
+                self.interp = tkinter.Tcl()
+                self._load_tcl_spells()
+            except Exception as e:
+                from bone_types import Prisma
+                print(f"{Prisma.OCHRE}[TCL WEAVER OFFLINE]: {e}. Text deformation disabled.{Prisma.RST}")
+                self.interp = None
 
     def _load_tcl_spells(self):
         tcl_script = """
@@ -91,32 +98,35 @@ class TheTclWeaver:
         self.interp.eval(tcl_script)
 
     def deform_reality(self, text: str, chi: float, voltage: float) -> str:
+        if not self.interp: return text
         try:
             return self.interp.call('apply_entropy', text, chi, voltage)
-        except tkinter.TclError as e:
+        except Exception as e:
             from bone_types import Prisma
             print(f"{Prisma.RED}[TCL ENGINE FRACTURE]: {e}{Prisma.RST}")
             return text
 
     def haunt_string(self, text: str) -> str:
+        if not self.interp: return text
         try:
             return self.interp.call('semantic_echo', text)
-        except tkinter.TclError:
+        except Exception:
             return text
 
     def quantum_comb(self, text: str) -> str:
+        if not self.interp: return text
         try:
             return self.interp.call('strip_fluff', text)
-        except tkinter.TclError as e:
+        except Exception as e:
             from bone_types import Prisma
             print(f"{Prisma.RED}[TCL CRASH]: {e}{Prisma.RST}")
             return text
 
     def consume_by_void(self, text: str, psi: float) -> str:
-        """ Redacts random words if the system is drifting too close to abstraction. """
+        if not self.interp: return text
         try:
             return self.interp.call('apply_void', text, psi)
-        except tkinter.TclError as e:
+        except Exception as e:
             from bone_types import Prisma
             print(f"{Prisma.VIOLET}[TCL VOID FRACTURE]: {e}{Prisma.RST}")
             return text

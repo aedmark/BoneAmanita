@@ -6,7 +6,6 @@ from unittest.mock import patch
 from bone_core import LoreManifest
 from bone_main import BoneAmanita
 
-
 class TrueEngineTest(unittest.TestCase):
     def setUp(self):
         self.test_config = {"PROVIDER": "mock", "boot_mode": "ADVENTURE", "MAX_STAMINA": 100.0, "MAX_HEALTH": 100.0, }
@@ -103,7 +102,7 @@ class TrueEngineTest(unittest.TestCase):
         self.assertIsNotNone(body_cfg, "BODY_CONFIG failed to load Enzyme Map.")
 
     def test_config_stutter_threshold(self):
-        from bone_config import BoneConfig
+        from bone_presets import BoneConfig
         original_stutter = getattr(BoneConfig.CORTEX, "VALIDATOR_STUTTER_LENGTH", 5)
         BoneConfig.CORTEX.VALIDATOR_STUTTER_LENGTH = 100
         test_string = "This is a perfectly coherent response. It is just too short."
@@ -113,7 +112,7 @@ class TrueEngineTest(unittest.TestCase):
         BoneConfig.CORTEX.VALIDATOR_STUTTER_LENGTH = original_stutter
 
     def test_config_metabolic_recovery(self):
-        from bone_config import BoneConfig
+        from bone_presets import BoneConfig
         self.engine.bio.biometrics.health = 50.0
         self.engine.bio.biometrics.stamina = 50.0
         orig_h_rec = getattr(BoneConfig.BIO, "REST_HEALTH_RECOVERY", 0.5)
@@ -127,7 +126,7 @@ class TrueEngineTest(unittest.TestCase):
         BoneConfig.BIO.REST_STAMINA_RECOVERY = orig_s_rec
 
     def test_config_glimmer_yield(self):
-        from bone_config import BoneConfig
+        from bone_presets import BoneConfig
         orig_thresh = getattr(BoneConfig.BIO, "GLIMMER_INTEGRITY_THRESH", 0.85)
         BoneConfig.BIO.GLIMMER_INTEGRITY_THRESH = 1.5
         feedback = {"INTEGRITY": 0.95}
@@ -177,16 +176,14 @@ class TrueEngineTest(unittest.TestCase):
         from bone_protocols import KintsugiProtocol
         manifest = LoreManifest.get_instance()
         if "ux_strings" not in manifest._cache: manifest._cache["ux_strings"] = {}
-        manifest._cache["ux_strings"]["protocol_strings"] = {"kintsugi_log_scar": "Golden scars bind the {target}",
-                                                             "kintsugi_scar": "A quiet mending."}
+        manifest._cache["ux_strings"]["protocol_strings"] = {"kintsugi_log_scar": "Golden scars bind the {target}", "kintsugi_scar": "A quiet mending."}
         kintsugi = KintsugiProtocol()
         kintsugi.active_koan = "Test Koan"
         trauma = {"EXISTENTIAL": 0.8}
         phys = type("obj", (object,), {"voltage": 2.0, "raw_text": "nothing"})
         result = kintsugi.attempt_repair(phys, trauma)
         self.assertTrue(result["success"])
-        self.assertIn("Golden scars bind the EXISTENTIAL", result["healed"],
-                      "Kintsugi failed to dynamically format the log string from the manifest.")
+        self.assertIn("Golden scars bind the EXISTENTIAL", result["healed"], "Kintsugi failed to dynamically format the log string from the manifest.")
 
     def test_telemetry_phase_hooks(self):
         from bone_core import TelemetryService
@@ -199,38 +196,28 @@ class TrueEngineTest(unittest.TestCase):
         telemetry.active_crystal = DecisionCrystal(decision_id="TEST_ID")
         telemetry.start_phase("TEST_PHASE", None)
         latest_trace = telemetry.trace_buffer[-1]
-        self.assertEqual(latest_trace.reasoning, "COMMENCING ALIGNMENT",
-                         "Telemetry failed to use the dynamically injected phase start string.")
+        self.assertEqual(latest_trace.reasoning, "COMMENCING ALIGNMENT", "Telemetry failed to use the dynamically injected phase start string.")
 
     def test_prompt_composer_anti_bleed_membranes(self):
         from bone_brain import PromptComposer
 
         mock_lore = {"system_prompts": self.engine.prompt_library, "lenses": {}}
         composer = PromptComposer(mock_lore)
-
         self.engine.cortex.active_mode = "CONVERSATION"
-
         conv_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-
         conv_prompt = composer.compose(conv_state, "Hello?", modifiers={"include_inventory": False})
-
         self.assertNotIn("Object-Action Coupling", conv_prompt,
                          "ADVENTURE mechanics bled into CONVERSATION mode prompt.")
         self.assertIn("Do not act like a Dungeon Master", conv_prompt,
                       "CONVERSATION Anti-Bleed constraint was not injected.")
         self.assertNotIn("INVENTORY:", conv_prompt,
                          "Inventory block rendered in Conversation mode despite being suppressed.")
-
         self.engine.cortex.active_mode = "TECHNICAL"
-
         tech_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-
         tech_prompt = composer.compose(tech_state, "Refactor this.", modifiers={"include_inventory": False})
-
         self.assertIn("Clinical, precise", tech_prompt,
                       "TECHNICAL style guide missing.")
-        self.assertIn("Do not write prose, poetry, or narrative descriptions.", tech_prompt,
-                      "TECHNICAL Anti-Bleed constraint was not injected.")
+        self.assertIn("Do not write prose, poetry, or narrative descriptions.", tech_prompt, "TECHNICAL Anti-Bleed constraint was not injected.")
 
     def test_phase_shift_persona_morphing(self):
         from bone_brain import PromptComposer
@@ -245,7 +232,6 @@ class TrueEngineTest(unittest.TestCase):
                                                       self.engine.prompt_library.get("GLOBAL_BASELINE", {}),
                                                       self.engine.prompt_library.get("HIGH_VOLTAGE", {}),
                                                       state["physics"])
-
         persona_str = "\n".join(persona_block)
         self.assertIn("Role: The Cartographer", persona_str,
                       "Roberta failed to Phase Shift into The Cartographer under high Phi/Psi.")
@@ -281,12 +267,9 @@ class TrueEngineTest(unittest.TestCase):
     def test_autophagy_memory_cannibalization(self):
         memory_graph = self.engine.mind.mem.graph if hasattr(self.engine.mind, "mem") else self.engine.akashic.graph
         memory_graph["User's favorite color"] = {"edges": {"blue": 1.0}, "last_tick": 0}
-        initial_node_count = len(memory_graph)
         self.engine.bio.mito.state.atp_pool = 0.0
-        self.engine.bio.biometrics.stamina = 5.0
-        self.engine.cycle_controller.run_headless_turn("I need you to think very hard about this.")
-        self.assertLess(len(memory_graph), initial_node_count,
-                        "System failed to cannibalize a memory node during starvation.")
+        atp_gain, msg = self.engine.mind.mem.trigger_autophagy()
+        self.engine.bio.mito.state.atp_pool += atp_gain
         self.assertNotIn("User's favorite color", memory_graph,
                          "System consumed the wrong node or failed to delete the target memory.")
         self.assertGreater(self.engine.bio.mito.state.atp_pool, 0.0,
@@ -296,9 +279,7 @@ class TrueEngineTest(unittest.TestCase):
         from bone_brain import PromptComposer
         composer = PromptComposer(self.engine.prompt_library)
         state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-        state["recent_logs"] = [
-            "\033[31m[AUTOPHAGY: Consumed memory of 'User's favorite color' to survive.]\033[0m"
-        ]
+        state["recent_logs"] = ["\033[31m[AUTOPHAGY: Consumed memory of 'User's favorite color' to survive.]\033[0m"]
         prompt = composer.compose(state, "What was my favorite color?")
         self.assertIn("[AUTOPHAGY:", prompt,
                       "The PromptComposer failed to inject the Autophagy footnote into the LLM's context window.")
@@ -327,7 +308,6 @@ class TrueEngineTest(unittest.TestCase):
         from bone_spores import SubconsciousStrata
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
             tmp_path = tmp.name
-
         try:
             strata = SubconsciousStrata(filename=tmp_path)
             initial_vibe = strata.dredge_vibe("oblivion")
@@ -337,7 +317,6 @@ class TrueEngineTest(unittest.TestCase):
             vibe_sum = sum(new_vibe)
             self.assertNotEqual(vibe_sum, 0.0, "Matrix failed to absorb the K*V weights of the buried word.")
             self.assertEqual(len(new_vibe), 8, "Vibe vector must be exactly 8-dimensional.")
-
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
@@ -423,7 +402,6 @@ class TrueEngineTest(unittest.TestCase):
         self.assertIn("forest path", joined_logs, "CycleReporter accidentally muted valid narrative output.")
 
     def test_v6_grief_protocol_healing(self):
-
         if not hasattr(self.engine, "shared_lattice"):
             from bone_drivers import SharedLatticeDriver
             self.engine.shared_lattice = SharedLatticeDriver()

@@ -200,41 +200,22 @@ class CommandProcessor:
         self.registry.register("/truth", self._cmd_truth, _cd("truth"))
         self.registry.register("/soothe", self._cmd_soothe, _cd("soothe"))
         self.registry.register("/use", self._cmd_use, _cd("use"))
+        self.registry.register("/hud", self._cmd_hud, _cd("hud") or "Adjusts the VSL UI depth (warm, lite, core, deep)")
+        self.registry.register("/idle", self._cmd_idle, _cd("idle") or "Enters REM cycle, regenerating ATP and Stamina")
+        self.registry.register("/mod", self._cmd_mod, _cd("mod") or "Engages hardwired mode chips (e.g., slash)")
+        self.registry.register("/grief", self._cmd_grief, _cd("grief") or "Attends the wake for a consumed memory")
+        self.registry.register("/layer", self._cmd_layer, _cd("layer") or "Manipulates the Reality Stack depth")
+        self.registry.register("/inject", self._cmd_inject, _cd("inject") or "Forces payload into the EventBus")
 
     def execute(self, text: str):
-        """ The primary intercept block. Checks for narrative lockouts and parses architectural flags (like [VSL_DEEP] or [SLASH]). """
+        """ The primary intercept block. Checks for narrative lockouts and parses slash commands. """
         if hasattr(self.interface.eng, "reality_stack"):
             stack = self.interface.eng.reality_stack
             rules = stack.get_grammar_rules()
             if not rules.get("allow_commands", True):
                 msg = ux("command_alerts", "reality_lock")
-                self.interface.log(f"{self.P.RED}{msg.format(depth=stack.current_depth)}{self.P.RST}", "ERR",)
+                self.interface.log(f"{self.P.RED}{msg.format(depth=stack.current_depth)}{self.P.RST}", "ERR")
                 return True
-        text_upper = text.upper()
-
-        def _vn(key):
-            return ux("vsl_notifications", key)
-        if "[VSL_LITE]" in text_upper:
-            self.interface.eng.ui_mode = "LITE"
-            self.interface.log(f"{self.P.CYN}{_vn('lite')}{self.P.RST}")
-        elif "[VSL_CORE]" in text_upper:
-            self.interface.eng.ui_mode = "CORE"
-            self.interface.log(f"{self.P.CYN}{_vn('core')}{self.P.RST}")
-        elif "[VSL_DEEP]" in text_upper:
-            self.interface.eng.ui_mode = "DEEP"
-            self.interface.log(f"{self.P.MAG}{_vn('deep')}{self.P.RST}")
-        if "[MOD:CODING]" in text_upper or "[SLASH]" in text_upper:
-            self.interface.log(f"{self.P.INDIGO}{_vn('coding')}{self.P.RST}")
-            if hasattr(self.interface.eng, "council") and hasattr(self.interface.eng.council, "slash_council"):
-                self.interface.eng.council.slash_council.active = True
-        if "[VSL_IDLE]" in text_upper:
-            self.interface.log(f"{self.P.VIOLET}{_vn('idle')}{self.P.RST}")
-            self.interface.eng.mode_settings = {"atp_drain_enabled": False}
-        elif "[VSL_RECOVER]" in text_upper:
-            self.interface.log(f"{self.P.GRN}{_vn('recover')}{self.P.RST}")
-            cmd_cfg = getattr(BoneConfig, "COMMANDS", None)
-            recover_val = getattr(cmd_cfg, "RECOVER_STAMINA", 20.0) if cmd_cfg else 20.0
-            self.interface.modify_resource("stamina", recover_val)
         if text.startswith("/"):
             return self.registry.execute(text)
         return False
@@ -476,4 +457,100 @@ class CommandProcessor:
         success, msg = gordon.consume(item_name)
         color = self.P.GRN if success else self.P.OCHRE
         self.interface.log(f"{color}{msg}{self.P.RST}")
+        return True
+
+    def _cmd_hud(self, parts):
+        if len(parts) < 2:
+            self.interface.log("Usage: /hud [warm|lite|core|deep]")
+            return True
+        mode = parts[1].upper()
+        if mode == "WARM":
+            self.interface.eng.mode_settings["default_ui_depth"] = "WARM"
+            self.interface.log(f"{self.P.GRY}[SYSTEM] The veil falls. HUD muted.{self.P.RST}")
+        elif mode == "LITE":
+            self.interface.eng.mode_settings["default_ui_depth"] = "LITE"
+            self.interface.eng.ui_mode = "LITE"
+            self.interface.log(f"{self.P.CYN}[SYSTEM] LITE HUD engaged.{self.P.RST}")
+        elif mode == "CORE":
+            self.interface.eng.mode_settings["default_ui_depth"] = "CORE"
+            self.interface.eng.ui_mode = "CORE"
+            self.interface.log(f"{self.P.CYN}[SYSTEM] CORE HUD engaged.{self.P.RST}")
+        elif mode == "DEEP":
+            self.interface.eng.mode_settings["default_ui_depth"] = "DEEP"
+            self.interface.eng.ui_mode = "DEEP"
+            self.interface.log(f"{self.P.VIOLET}[SYSTEM] DEEP HUD engaged. Full lattice visible.{self.P.RST}")
+        else:
+            self.interface.log(f"{self.P.RED}Unknown HUD mode: {mode}{self.P.RST}")
+        return True
+
+    def _cmd_idle(self, _parts):
+        self.interface.eng.mode_settings["atp_drain_enabled"] = False
+        self.interface.modify_resource("stamina", 15.0)
+        self.interface.modify_resource("atp", 20.0)
+
+        dream_log = ""
+        if hasattr(self.interface.eng, "cortex") and hasattr(self.interface.eng.cortex, "dreamer"):
+            snapshot = self.interface.eng.soul.to_dict() if hasattr(self.interface.eng, "soul") else {}
+            bio_state = self.interface.eng.bio.endo.get_state() if hasattr(self.interface.eng, "bio") and hasattr(
+                self.interface.eng.bio, "endo") else {}
+            dream_text, effects = self.interface.eng.cortex.dreamer.enter_rem_cycle(snapshot, bio_state)
+            if dream_text:
+                dream_log = f"\n\n{self.P.VIOLET}☁️ {dream_text}{self.P.RST}"
+                if effects and effects.get("glimmers"):
+                    g_yield = effects["glimmers"]
+                    if hasattr(self.interface.eng, "shared_lattice"):
+                        self.interface.eng.shared_lattice.shared.g_pool += g_yield
+                    elif hasattr(self.interface.eng, "phys"):
+                        self.interface.eng.phys.G = getattr(self.interface.eng.phys, "G", 0) + g_yield
+                    dream_log += f"\n{self.P.MAG}✨ The dream yielded a Glimmer (+{g_yield} G_pool).{self.P.RST}"
+
+        self.interface.log(
+            f"{self.P.CYN}[SYSTEM] Engine idling. REM cycle initiated. ATP regenerating.{self.P.RST}{dream_log}")
+        return True
+
+    def _cmd_mod(self, parts):
+        if len(parts) < 2:
+            self.interface.log("Usage: /mod [slash|...]")
+            return True
+        mod = parts[1].upper()
+        if mod == "SLASH":
+            self.interface.log(f"{self.P.INDIGO}SLASH Mod Chip engaged. Dev Team online.{self.P.RST}")
+            if hasattr(self.interface.eng, "council") and hasattr(self.interface.eng.council, "slash_council"):
+                self.interface.eng.council.slash_council.active = True
+        return True
+
+    def _cmd_grief(self, _parts):
+        if hasattr(self.interface.eng, "grief"):
+            shared_lattice = getattr(self.interface.eng, "shared_lattice", None)
+            wake_msg = self.interface.eng.grief.attend_wake(shared_lattice, getattr(self.interface.eng, "phys", None))
+            self.interface.log(wake_msg)
+        else:
+            self.interface.log(
+                f"{self.P.GRY}(We stand in silence for the lost memory. No protocol active.){self.P.RST}")
+        return True
+
+    def _cmd_layer(self, parts):
+        if len(parts) >= 2:
+            sub = parts[1].lower()
+            if sub == "push" and len(parts) > 2:
+                if self.interface.eng.reality_stack.push_layer(int(parts[2])):
+                    self.interface.log(ux("main_strings", "layer_pushed").format(layer=parts[2]))
+            elif sub == "pop":
+                self.interface.eng.reality_stack.pop_layer()
+                self.interface.log(ux("main_strings", "layer_popped"))
+            elif sub == "debug":
+                self.interface.eng.reality_stack.push_layer(RealityLayer.DEBUG)
+                self.interface.log(ux("main_strings", "debug_engaged"))
+        else:
+            self.interface.log(
+                ux("main_strings", "current_layer").format(layer=self.interface.eng.reality_stack.current_depth))
+        return True
+
+    def _cmd_inject(self, parts):
+        if len(parts) < 2:
+            self.interface.log("Usage: /inject <payload>")
+            return True
+        payload = " ".join(parts[1:])
+        self.interface.log(payload, "INJECT")
+        self.interface.log(ux("main_strings", "injected").format(payload=payload))
         return True

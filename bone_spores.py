@@ -1114,7 +1114,8 @@ class LiteraryReproduction:
     def attempt_reproduction(
             self, engine_ref, mode="MITOSIS", target_spore=None) -> Tuple[str, Dict]:
         mem = engine_ref.mind.mem
-        bio_state = {"trauma_vector": engine_ref.trauma_accum, "mito": engine_ref.bio.mito, }
+        mito_data = engine_ref.bio.mito.state.__dict__ if hasattr(engine_ref.bio.mito, "state") else {}
+        bio_state = {"trauma_vector": engine_ref.trauma_accum, "mito": mito_data, }
         phys_packet = {}
         if hasattr(engine_ref, "cortex") and engine_ref.cortex.last_physics:
             phys_packet = engine_ref.cortex.last_physics

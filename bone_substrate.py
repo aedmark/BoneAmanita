@@ -20,8 +20,7 @@ class TheSubstrate:
         cost = 0.0
         if not self.pending_writes:
             return logs, cost
-        if not os.path.exists("output"):
-            os.makedirs("output")
+        os.makedirs("output", exist_ok=True)
         for write in self.pending_writes:
             safe_name = os.path.basename(write["path"])
             safe_path = os.path.join("output", safe_name)
@@ -45,12 +44,16 @@ class TheSubstrate:
 
     def _trigger_tts(self, safe_path: str):
         import threading
-        try:
-            from bone_audio import TheVocalCords
-            cords = TheVocalCords(self.events)
-            thread = threading.Thread(target=cords.synthesize_podcast, args=(safe_path,))
-            thread.start()
-            if self.events:
-                self.events.log(f"{Prisma.VIOLET}🎙️ Routing script to Vocal Cords (TTS generation in background)...{Prisma.RST}", "SYS")
-        except ImportError:
-            pass
+        def _async_tts_task(path, events):
+            try:
+                from bone_audio import TheVocalCords
+                cords = TheVocalCords(events)
+                cords.synthesize_podcast(path)
+                if events:
+                    events.log(f"{Prisma.VIOLET}SUBSTRATE: TTS synthesis complete for {path}.{Prisma.RST}")
+            except Exception as e:
+                if events:
+                    events.log(f"{Prisma.RED}SUBSTRATE FAULT: TTS failed - {e}{Prisma.RST}", "CRIT")
+        thread = threading.Thread(target=_async_tts_task, args=(safe_path, self.events))
+        thread.daemon = True
+        thread.start()

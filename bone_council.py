@@ -1,10 +1,5 @@
 """
 bone_council.py
-
-This module audits the thermodynamic and biological state of the lattice
-and summons specific archetypes to respond. It handles phase shifts
-(Doing -> Being), suppresses runaway recursion, and arbitrates votes
-between competing sub-routines to apply friction or voltage relief.
 """
 
 import random
@@ -16,12 +11,6 @@ from bone_symbiosis import get_symbiont
 from bone_types import Prisma
 
 class TheStrangeLoop:
-    """
-    The existential circuit breaker. Monitors the lattice for recursive,
-    navel-gazing loops (e.g., asking the AI to define itself repeatedly).
-    If the abstraction (PSI) and recursion depth hit critical mass, it forces
-    the system into maintenance mode to prevent an ego-death crash.
-    """
     def __init__(self):
         self.recursion_depth = 0
         lore = LoreManifest.get_instance()
@@ -29,13 +18,15 @@ class TheStrangeLoop:
         self.triggers = c_data.get("STRANGE_LOOP_TRIGGERS", ["who are you", "strange loop"])
         self.keywords = c_data.get("STRANGE_LOOP_KEYWORDS", ["self", "mirror", "define"])
 
-    def audit(self, text: str, physics: dict) -> tuple[bool, str, dict, dict]:
+    def audit(self, text: str, physics: Any) -> tuple[bool, str, dict, dict]:
         text_lower = text.lower()
         phrase_hit = any(t in text_lower for t in self.triggers)
-        psi = physics.get("psi", 0.0)
+        is_dict = isinstance(physics, dict)
+        psi = physics.get("psi", physics.get("energy", {}).get("psi", 0.0)) if is_dict else getattr(physics, "psi", 0.0)
+        voltage = physics.get("voltage", physics.get("energy", {}).get("voltage", 0.0)) if is_dict else getattr(physics, "voltage", 0.0)
         abstract_hit = psi > 0.6 and any(w in text_lower for w in self.keywords)
         threshold = getattr(BoneConfig.COUNCIL, "STRANGE_LOOP_VOLTAGE", 8.0)
-        if (phrase_hit or abstract_hit) and physics.get("voltage", 0) > threshold:
+        if (phrase_hit or abstract_hit) and voltage > threshold:
             self.recursion_depth += 1
             mandate = {}
             corrections = {}
@@ -52,12 +43,6 @@ class TheStrangeLoop:
         return False, "", {}, {}
 
 class TheLeveragePoint:
-    """
-    The narrative dampener. If the user and system get stuck in a rapid
-    oscillation of high-friction/low-friction, or if they stay in a manic
-    flow state for too long without grounding, this applies market corrections
-    to force stability.
-    """
     def __init__(self):
         self.last_drag = 0.0
         self.static_flow_turns = 0
@@ -65,10 +50,10 @@ class TheLeveragePoint:
         self.TARGET_VOLTAGE = getattr(cfg, "LEVERAGE_TARGET_VOLTAGE", 12.0) if cfg else 12.0
         self.TARGET_DRAG = getattr(cfg, "LEVERAGE_TARGET_DRAG", 3.0) if cfg else 3.0
 
-    def audit(
-            self, physics: dict, _bio_state: dict = None) -> tuple[bool, str, dict, dict]:
-        current_drag = physics.get("narrative_drag", 0.0)
-        current_voltage = physics.get("voltage", 0.0)
+    def audit(self, physics: Any, _bio_state: dict = None) -> tuple[bool, str, dict, dict]:
+        is_dict = isinstance(physics, dict)
+        current_drag = physics.get("narrative_drag", physics.get("space", {}).get("narrative_drag", 0.0)) if is_dict else getattr(physics, "narrative_drag", 0.0)
+        current_voltage = physics.get("voltage", physics.get("energy", {}).get("voltage", 0.0)) if is_dict else getattr(physics, "voltage", 0.0)
         if self.last_drag == 0.0 and current_drag > 0:
             self.last_drag = current_drag
         delta = current_drag - self.last_drag
@@ -103,10 +88,6 @@ class TheLeveragePoint:
         return False, "", corrections, {}
 
 class TheFootnote:
-    """
-    A subtle manifestation of the Mycelial Network. It occasionally injects
-    snarky, academic, or deeply existential footnotes to the system's internal monologue.
-    """
     def __init__(self):
         lore = LoreManifest.get_instance()
         data = lore.get("FOOTNOTES") or {}
@@ -132,12 +113,6 @@ class TheFootnote:
         return f"{log_text}{Prisma.RST} {Prisma.GRY}{note}{Prisma.RST}"
 
 class TheVillageCouncil:
-    """
-    The roster of the 12 Core Archetypes.
-    This engine evaluates the exact coordinate space (E, Beta, PSI, Voltage, etc.)
-    and returns a log for every Villager whose activation threshold is currently met.
-    It also evaluates Phase Shifts (e.g., when Jester's voltage drops but Silence spikes, he becomes The Fool).
-    """
     @staticmethod
     def audit(p: Any, _bio_state: dict) -> list[str]:
         logs = []
@@ -146,13 +121,24 @@ class TheVillageCouncil:
         def get_val(key: str, attr: str, default: float) -> float:
             try:
                 if is_dict:
-                    val = p.get(key, p.get(attr, default))
+                    val = p.get(key, p.get(attr))
+                    if val is None:
+                        for sub in ["energy", "space", "matter"]:
+                            if sub in p and (key in p[sub] or attr in p[sub]):
+                                val = p[sub].get(key, p[sub].get(attr))
+                                break
+                    return float(val) if val is not None else default
                 else:
-                    val = getattr(p, attr, getattr(p, key, default))
-                return float(val) if val is not None else default
+                    val = getattr(p, attr, getattr(p, key, None))
+                    if val is None:
+                        for sub in ["energy", "space", "matter"]:
+                            if hasattr(p, sub):
+                                sub_obj = getattr(p, sub)
+                                val = getattr(sub_obj, attr, getattr(sub_obj, key, None))
+                                if val is not None: break
+                    return float(val) if val is not None else default
             except (ValueError, TypeError):
                 return default
-
         V = get_val("voltage", "V", 30.0)
         F = get_val("narrative_drag", "F", 0.6)
         P = get_val("stamina", "P", 100.0)
@@ -233,11 +219,6 @@ class TheVillageCouncil:
         return logs
 
 class CouncilChamber:
-    """
-    The orchestrator. It summons the sub-councils, checks for resonance synergies
-    (e.g., Alchemist + Fractal Gardener), and manages the votes. If multiple archetypes
-    clamor to speak, it synthesizes the resulting narrative tension as mathematical drag.
-    """
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.voices = []
@@ -255,16 +236,15 @@ class CouncilChamber:
             self.voices.append(get_symbiont(s_name))
         self.speaker = "SOUL"
 
-    def convene(
-            self, text: str, physics_packet: Dict, _bio_result: Dict) -> tuple[list[str], dict, list[dict]]:
-        """ The primary arbitration cycle. Evaluates all voices and tallies votes for state changes. """
+    def convene(self, text: str, physics_packet: Any, _bio_result: Dict) -> tuple[list[str], dict, list[dict]]:
         transcript = []
         adjustments = {}
         mandates = []
-        beta = physics_packet.beta if hasattr(physics_packet, 'beta') else physics_packet.get("beta", 0.0)
+        is_dict = isinstance(physics_packet, dict)
+        beta = physics_packet.get("beta_index", physics_packet.get("energy", {}).get("beta_index", 0.0)) if is_dict else getattr(physics_packet, "beta_index", getattr(physics_packet, "beta", 0.0))
         stamina = _bio_result.get("stamina", 100.0)
+        clean_words = physics_packet.get("clean_words", physics_packet.get("matter", {}).get("clean_words", [])) if is_dict else getattr(physics_packet, "clean_words", getattr(physics_packet, "matter", {}).clean_words if hasattr(physics_packet, "matter") else [])
         if self.eng.paradox_engine.evaluate_tension(beta, stamina):
-            clean_words = physics_packet.clean_words if hasattr(physics_packet, 'clean_words') else []
             pressure, paradox_prompt = self.eng.paradox_engine.ignite(clean_words)
             transcript.append(f"{Prisma.VIOLET}[PARADOX ENGINE ACTIVATED] Πx={pressure:.2f}{Prisma.RST}")
             transcript.append(f"{Prisma.VIOLET}(Benedict & Jester): {paradox_prompt}{Prisma.RST}")
@@ -340,10 +320,8 @@ class CouncilChamber:
                 transcript.append(self.footnote.commentary(vlog))
         votes = {"YEA": 0, "NAY": 0}
         active_voices = [v for v in self.voices if v is not None]
-        if not active_voices:
-            votes["YEA"] = 1
-        clean_words = physics_packet.get("clean_words", [])
-        voltage = physics_packet.get("voltage", 0.0)
+        if not active_voices:votes["YEA"] = 1
+        voltage = physics_packet.get("voltage", physics_packet.get("energy", {}).get("voltage", 0.0)) if is_dict else getattr(physics_packet, "voltage", 0.0)
         cfg = getattr(BoneConfig, "COUNCIL", None)
         yea_thresh = getattr(cfg, "VOTE_YEA_THRESHOLD", 1.2) if cfg else 1.2
         nay_thresh = getattr(cfg, "VOTE_NAY_THRESHOLD", 0.8) if cfg else 0.8
@@ -375,7 +353,6 @@ class CouncilChamber:
         return transcript, adjustments, mandates
 
     def host_podcast(self, topic: str, llm: Any) -> str:
-        """Runs sequential LLM inferences to build a dialectical debate script featuring dynamic council members."""
         pantheon = {"GORDON (The Superintendent)": "grounded, strict, literal, and weary.",
                     "MERCY (The Healer)": "ancient, patient, speaking in gold and finding meaning in scars.",
                     "BENEDICT (The Tactician)": "cold, formal, structural, and relentless.",
@@ -425,7 +402,6 @@ class CouncilChamber:
 
     @staticmethod
     def convene_red_team(text, physics_packet):
-        """ Hardcore adversarial evaluation of output before it is shown to the user. """
         dissent_log = []
         if "confidence" in text.lower() or "certainty" in text.lower():
             msg = ux("council_strings", "red_team_bureau") 
@@ -442,12 +418,6 @@ class CouncilChamber:
         return dissent_log
 
 class TheSlashCouncil:
-    """
-    The Mod Chip. When activated via [MOD:CODING] or [SLASH], this sub-council
-    wakes up to evaluate the system not as a conversational partner, but as a
-    software engineer. It calculates Gamma (Clarity), Sigma (Synergy), Eta (Humanity),
-    Theta (Resilience), and Upsilon (Integrity).
-    """
     def __init__(self):
         self.active = False
         c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
@@ -456,10 +426,6 @@ class TheSlashCouncil:
         self.rules = c_data.get("SLASH_RULES", {})
 
     def audit(self, text: str, physics: dict) -> tuple[bool, list[str], dict]:
-        """
-        Scans for code patterns and summons Pinker, Fuller, Schur, or Meadows
-        to apply their specific philosophical metrics to the block.
-        """
         text_lower = text.lower()
         if any(t in text_lower for t in self.triggers):
             self.active = True
@@ -484,17 +450,18 @@ class TheSlashCouncil:
             msg = ux("council_strings", "slash_fuller")
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
             corrections["sigma"] = mods.get("FULLER_HIT", 0.1)
-
         if any(k.lower() in text_lower for k in r_schur):
             msg = ux("council_strings", "slash_schur")
             logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
             corrections["eta"] = mods.get("SCHUR_HIT", 0.2)
             corrections["glimmers"] = mods.get("SCHUR_GLIMMERS", 1)
         if any(k in text_lower for k in r_meadows):
-            msg = ux("council_strings", "slash_meadows") 
+            msg = ux("council_strings", "slash_meadows")
             logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
             corrections["theta"] = mods.get("MEADOWS_HIT", -0.1)
-        drag = physics.get("narrative_drag", 0.0)
+        is_dict = isinstance(physics, dict)
+        drag = physics.get("narrative_drag",
+                           physics.get("space", {}).get("narrative_drag", 0.0)) if is_dict else getattr(physics, "narrative_drag", 0.0)
         drag_thresh = mods.get("INTEGRITY_DRAG_THRESH", 5.0)
         if drag > drag_thresh:
             corrections["upsilon"] = mods.get("INTEGRITY_HIT", -0.3)

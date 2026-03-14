@@ -116,15 +116,70 @@ Choose a mode at boot:
 
 ---
 
-## Terminal Commands
+*(THE PURGER)*: "Documentation is the final strut in any architecture. If the user does not know how to hold the tools, the lattice is useless. Let's excise the outdated commands and replace them with a comprehensive guide to the new, unified reality."
 
-```
-/reset system       — Clear memory buffer and reset circuit breaker
-/inventory or /i    — Check your pockets
-/map                — Current spatial coordinates
-/save               — Cryogenically freeze your timeline
-/vsl                — Engage the deep VSL consultant overlay
-```
+Here is the exact markdown you should use to replace the old `## Terminal Commands` section in your `README.md`.
+
+---
+
+## The Unified Command System
+
+BoneAmanita operates on a single source of truth for all out-of-band meta-interactions: the Slash Command registry. Commands bypass narrative generation and interact directly with the biological, cognitive, and UI engines.
+
+### Command Reference
+
+**Survival & Navigation**
+
+* `/status` — Check vitals (Health, Stamina, Energy).
+* `/inventory` — Check Gordon's pockets.
+* `/look` — Observe environment.
+* `/use [item]` — Use/Consume an item.
+* `/map` — Navigation check.
+
+**Metabolism & Healing**
+
+* `/idle` — Enters REM cycle, regenerating ATP and Stamina.
+* `/soothe` — Burn ATP to quell memory guilt.
+* `/grief` — Attends the wake for a consumed memory.
+
+**System & Protocol**
+
+* `/mode [name]` — Switch operational mode.
+* `/save` — Persist state.
+* `/exit` — Shutdown.
+* `/help` — Show the dynamic help menu.
+
+**Mysticism & Meta**
+
+* `/soul` — Introspection (check current driving archetype).
+* `/truth [0-3]` — Adjust Reality Ambiguity dial (0=Boardroom, 1=Workshop, 2=Red Team, 3=Palimpsest).
+* `/debug` — Toggle verbose logs.
+* `/reload` — Hot-reload Lore files.
+
+---
+
+### UI Depth (`/hud`)
+
+The lattice can be viewed at different depths depending on how much of the underlying physics you wish to see.
+
+* `/hud warm` — The veil falls. HUD is muted for pure narrative immersion.
+* `/hud lite` — Simple energy meter engaged.
+* `/hud core` — 5-Coordinate display engaged.
+* `/hud deep` — Full 15-vector lattice exposed.
+
+### Mod Chips (`/mod`)
+
+Mod chips are hardwired cognitive grafts that completely alter the operational focus and friction of the system.
+
+* `/mod slash` — Engages the SLASH Mod Chip. This activates the Dev Team (The SLASH Council), overriding standard narrative generation to focus on clinical architectural analysis and exposing specialized coding metrics (Γ, Σ, Η, Θ, Υ).
+
+### The Reality Stack (`/layer`)
+
+The Reality Stack dictates the governing laws of the simulation. It allows you to temporarily suspend narrative hallucination to interact with the raw substrate.
+
+* `/layer push [depth]` — Pushes a new structural layer onto the stack.
+* `/layer pop` — Drops the current layer and returns to the previous reality.
+* `/layer debug` — Elevates the system directly into a raw simulation overlay.
 
 ---
 

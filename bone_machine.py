@@ -1,11 +1,5 @@
 """
 bone_machine.py
-
-The Hardware Layer.
-This module contains the heavy pressure valves and structural systems that
-prevent the lattice from shaking itself apart. It houses the Crucible (circuit breaker),
-the Forge (item synthesis), and the Architect (the factory that wires the body
-and mind together during boot).
 """
 
 import random
@@ -22,12 +16,6 @@ from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_types import MindSystem, PhysSystem, PhysicsPacket, Prisma
 
 class TheCrucible:
-    """
-    The Circuit Breaker.
-    Monitors for extreme voltage spikes (hallucination, manic tangents).
-    If the system gets too hot, it deploys a dampener charge to aggressively lower
-    Voltage and increase Drag, forcing the narrative back to reality.
-    """
     def __init__(self):
         self.max_voltage_cap = getattr(BoneConfig.MACHINE, "CRUCIBLE_VOLTAGE_CAP", 20.0)
         self.active_state = "COLD"
@@ -47,7 +35,6 @@ class TheCrucible:
 
     def dampen(
             self, voltage_spike: float, stability_index: float) -> Tuple[bool, str, float]:
-        """ Fires a dampening charge to physically suppress runaway generation. """
         if self.dampener_charges <= 0:
             return False, self.logs.get("DAMPER_EMPTY", ""), 0.0
         should_dampen = False
@@ -68,31 +55,33 @@ class TheCrucible:
             return True, msg, reduction
         return False, self.logs.get("HOLDING", ""), 0.0
 
-    def audit_fire(self, physics: Dict) -> Tuple[str, float, Optional[str]]:
-        """
-        Compares current voltage against structural coherence (Kappa).
-        If the AI is talking fast but making no sense, it tightens the drag.
-        """
-        voltage = physics.get("voltage", 0.0)
-        structure = physics.get("kappa", 0.0)
+    def audit_fire(self, physics: Any) -> Tuple[str, float, Optional[str]]:
+        voltage = getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0)
+        structure = getattr(physics, "kappa", 0.0) if not isinstance(physics, dict) else physics.get("kappa", 0.0)
         ideal_voltage = structure * 20.0
         delta = voltage - ideal_voltage
         self.instability_index = (self.instability_index * 0.7) + (delta * 0.3)
         if abs(self.instability_index) < 0.1:
             self.instability_index = 0.0
-        current_drag = physics.get("narrative_drag", 0.0)
+        current_drag = getattr(physics, "narrative_drag", 0.0) if not isinstance(physics, dict) else physics.get(
+            "narrative_drag", 0.0)
         adjustment = self.instability_index * 0.5
         if current_drag < 1.0 and adjustment < 0:
             adjustment *= 0.1
         new_drag = max(0.0, min(10.0, current_drag + adjustment))
-        physics["narrative_drag"] = round(new_drag, 2)
+        if isinstance(physics, dict):
+            physics["narrative_drag"] = round(new_drag, 2)
+        else:
+            setattr(physics, "narrative_drag", round(new_drag, 2))
         msg = None
         if abs(adjustment) > 0.1:
             dir_tight = ux("machine_strings", "crucible_tightening") or "TIGHTENING"
             dir_relax = ux("machine_strings", "crucible_relaxing") or "RELAXING"
             direction = dir_tight if adjustment > 0 else dir_relax
             msg = self.logs.get("REGULATOR", "").format(direction=direction, current=current_drag, new=new_drag)
-        if physics.get("system_surge_event", False):
+        surge = getattr(physics, "system_surge_event", False) if not isinstance(physics, dict) else physics.get(
+            "system_surge_event", False)
+        if surge:
             self.active_state = "SURGE"
             return "SURGE", 0.0, self.logs.get("SURGE", "").format(voltage=voltage),
         if voltage > 18.0:
@@ -109,11 +98,6 @@ class TheCrucible:
         return "REGULATED", adjustment, msg
 
 class TheParadoxEngine:
-    """
-    VSL v6.0 Paradox Engine.
-    Deliberately introduces productive contradictions into the lattice to generate insight.
-    It stretches the system's capacity for holding tension without fracturing.
-    """
     def __init__(self, events_ref):
         self.events = events_ref
         self.beta_max: float = 0.0
@@ -121,39 +105,27 @@ class TheParadoxEngine:
         self.is_active: bool = False
 
     def evaluate_tension(self, beta: float, stamina: float) -> bool:
-        """
-        Checks if the system has enough capacity (beta >= 0.7) and fuel (P >= 30)
-        to metabolize a paradox safely.
-        """
         if beta >= 0.7 and stamina >= 30.0:
             self.beta_max = max(self.beta_max, beta)
             return True
         return False
 
     def ignite(self, recent_words: List[str]) -> Tuple[float, str]:
-        """
-        Extracts a seed concept and generates the formal dialectical tension.
-        Now expanded to include recursive and negative-space paradoxes.
-        """
         self.is_active = True
         valid_seeds = [w for w in recent_words if len(w) > 4]
         seed = random.choice(valid_seeds) if valid_seeds else "the architecture"
         pressure = 0.4 + (random.random() * 0.6)
-        templates = [f"What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
-            f"[RECURSIVE PARADOX] Apply the concept of '{seed}' to the architecture of this very conversation. How does the act of thinking about '{seed}' alter the physical constraints of our dialogue?",
-            f"[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center."]
+        templates = [
+            f"What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
+            f"[RECURSIVE PARADOX] Apply the concept of '{seed}' to the architecture of this very conversation. How does the act of thinking about '{seed}' alter the physical constraints of our dialogue? Both are non-negotiable truths.",
+            f"[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center. Both the center and the void are non-negotiable truths."
+        ]
         return pressure, random.choice(templates)
 
     def disengage(self):
         self.is_active = False
 
 class TheForge:
-    """
-    The Anvil of Meaning.
-    If a thought is dense enough (high kinetic/heavy lexical mass), the Forge
-    strikes it, transmuting the abstract concept into a physical inventory
-    item that Gordon can pick up and use later.
-    """
     def __init__(self):
         gordon_data = LoreManifest.get_instance().get("GORDON") or {}
         raw_recipes = gordon_data.get("RECIPES", [])
@@ -166,16 +138,17 @@ class TheForge:
                 self.recipe_map[ing].append(r)
 
     @staticmethod
-    def hammer_alloy(physics: Dict) -> Tuple[bool, Optional[str], Optional[str]]:
-        """ Tests if the current sentence has enough mass to trigger item synthesis. """
-        counts = physics.get("counts", {})
-        clean_words = physics.get("clean_words", [])
+    def hammer_alloy(physics: Any) -> Tuple[bool, Optional[str], Optional[str]]:
+        counts = getattr(physics, "counts", {}) if not isinstance(physics, dict) else physics.get("counts", {})
+        clean_words = getattr(physics, "clean_words", []) if not isinstance(physics, dict) else physics.get(
+            "clean_words", [])
         if not clean_words:
             return False, None, None
         heavy = counts.get("heavy", 0)
         kinetic = counts.get("kinetic", 0)
         avg_density = ((heavy * 2.0) + (kinetic * 0.5)) / len(clean_words)
-        if random.random() >= (physics.get("voltage", 0) / 20.0) * avg_density:
+        voltage = getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0)
+        if random.random() >= (voltage / 20.0) * avg_density:
             return False, None, None
         if heavy > 3:
             msg = ux("machine_strings", "forge_lead_boots")
@@ -187,18 +160,14 @@ class TheForge:
         return True, ux("machine_strings", "forge_anchor_stone"), "ANCHOR_STONE"
 
     def attempt_crafting(
-            self, physics: Dict, inventory_list: List[str]) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
-        """
-        Checks if the user's current abstract conversation accidentally fulfills
-        a crafting recipe using an item Gordon is already holding.
-        """
+            self, physics: Any, inventory_list: List[str]) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
         if not inventory_list:
             return False, None, None, None
-        clean_words = physics.get("clean_words", [])
+        clean_words = getattr(physics, "clean_words", []) if not isinstance(physics, dict) else physics.get("clean_words", [])
         if not clean_words:
             return False, None, None, None
         clean_set = set(clean_words)
-        voltage = float(physics.get("voltage", 0))
+        voltage = float(getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0))
         for item in inventory_list:
             if item in self.recipe_map:
                 for recipe in self.recipe_map[item]:
@@ -220,10 +189,11 @@ class TheForge:
         return min(1.0, 0.2 + (hit_count * 0.1) + (voltage / 133.0))
 
     @staticmethod
-    def transmute(physics: Dict) -> Optional[str]:
-        counts = physics.get("counts", {})
-        voltage = float(physics.get("voltage", 0))
-        gamma = float(physics.get("gamma", 0.0))
+    def transmute(physics: Any) -> Optional[str]:
+        counts = getattr(physics, "counts", {}) if not isinstance(physics, dict) else physics.get("counts", {})
+        voltage = float(
+            getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0))
+        gamma = float(getattr(physics, "gamma", 0.0) if not isinstance(physics, dict) else physics.get("gamma", 0.0))
         if gamma < 0.15 and counts.get("abstract", 0) > 1:
             return ux("machine_strings", "forge_emulsion_fail")
         if voltage > 15.0:
@@ -232,12 +202,6 @@ class TheForge:
         return None
 
 class TheTheremin:
-    """
-    The Resonance Trap.
-    It tracks conversational repetition and abstraction. If the conversation
-    stays abstract for too long without heavy grounding, it 'calcifies' in amber,
-    increasing drag until a thermal event shatters the buildup.
-    """
     def __init__(self):
         self.decoherence_buildup = 0.0
         self.classical_turns = 0
@@ -253,12 +217,12 @@ class TheTheremin:
         return manifest.get("THEREMIN_LOGS", {})
 
     def listen(
-            self, physics: Dict, governor_mode="COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
-        counts = physics.get("counts", {})
-        voltage = float(physics.get("voltage", 0.0))
-        turb = float(physics.get("turbulence", 0.0))
-        rep = float(physics.get("repetition", 0.0))
-        complexity = float(physics.get("truth_ratio", 0.0))
+            self, physics: Any, governor_mode="COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
+        counts = getattr(physics, "counts", {}) if not isinstance(physics, dict) else physics.get("counts", {})
+        voltage = float(getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0))
+        turb = float(getattr(physics, "turbulence", 0.0) if not isinstance(physics, dict) else physics.get("turbulence", 0.0))
+        rep = float(getattr(physics, "repetition", 0.0) if not isinstance(physics, dict) else physics.get("repetition", 0.0))
+        complexity = float(getattr(physics, "truth_ratio", 0.0) if not isinstance(physics, dict) else physics.get("truth_ratio", 0.0))
         ancient_mass = counts.get("heavy", 0) + counts.get("thermal", 0) + counts.get("cryo", 0)
         modern_mass = counts.get("abstract", 0)
         raw_mix = min(ancient_mass, modern_mass)
@@ -295,14 +259,25 @@ class TheTheremin:
             theremin_msg = self.logs.get("TURBULENCE", "").format(val=shatter_amt)
             self.classical_turns = 0
         if turb < 0.2:
-            physics["narrative_drag"] = max( 0.0, float(physics.get("narrative_drag", 0)) - 1.0)
+            current_drag = float(
+                getattr(physics, "narrative_drag", 0.0) if not isinstance(physics, dict) else physics.get(
+                    "narrative_drag", 0.0))
+            if isinstance(physics, dict):
+                physics["narrative_drag"] = max(0.0, current_drag - 1.0)
+            else:
+                setattr(physics, "narrative_drag", max(0.0, current_drag - 1.0))
         if self.decoherence_buildup > self.SHATTER_POINT:
             self.decoherence_buildup = 0.0
             self.classical_turns = 0
             self.is_stuck = False
+            current_drag = getattr(physics, "narrative_drag", 0.0) if not isinstance(physics, dict) else physics.get(
+                "narrative_drag", 0.0)
             if isinstance(physics, dict):
-                physics["narrative_drag"] = max(physics.get("narrative_drag", 0.0) + 20.0, 20.0)
+                physics["narrative_drag"] = max(current_drag + 20.0, 20.0)
                 physics["voltage"] = 0.0
+            else:
+                setattr(physics, "narrative_drag", max(current_drag + 20.0, 20.0))
+                setattr(physics, "voltage", 0.0)
             return False, resin_flow, self.logs.get("COLLAPSE", ""), "AIRSTRIKE",
         if self.classical_turns > 3:
             critical_event = "CORROSION"
@@ -322,7 +297,6 @@ class TheTheremin:
 
 @dataclass
 class SystemEmbryo:
-    """ The un-booted structural shell holding the mind, body, and physics packages. """
     mind: MindSystem
     limbo: LimboLayer
     bio: BioSystem
@@ -333,12 +307,6 @@ class SystemEmbryo:
     continuity: Optional[Dict] = None
 
 class PanicRoom:
-    """
-    The Safety Net.
-    If the system attempts to process an incredibly toxic/high-entropy packet
-    and throws an exception, the exception handler catches it, replaces the physics
-    packet with the 'Panic Room' payload (zero stats), and prevents total failure.
-    """
     @staticmethod
     def get_safe_physics():
         safe_packet = PhysicsPacket.void_state()
@@ -394,7 +362,6 @@ class PanicRoom:
         return ux("machine_strings", "panic_limbo") or default_limbo
 
 class ViralTracer:
-    """ The structural pathogen scanner. Detects semantic loops in the memory graph. """
     def __init__(self, memory_ref):
         self.memory = memory_ref
         self.active_loops = []
@@ -429,12 +396,6 @@ class ThePacemaker:
         return self.boredom_level > self.BOREDOM_THRESHOLD
 
 class BoneArchitect:
-    """
-    The Factory.
-    This class handles the highly complex dependency injection required to get the VSL running.
-    It builds the Mind, the Body, and the Physics Engine, passing the EventBus to all of them,
-    and then wraps them in the SystemEmbryo to be awakened by the Genesis file.
-    """
     @staticmethod
     def _construct_mind(events, lex) -> Tuple[MindSystem, LimboLayer]:
         from bone_village import MirrorGraph
@@ -478,7 +439,6 @@ class BoneArchitect:
 
     @staticmethod
     def awaken(embryo: SystemEmbryo) -> SystemEmbryo:
-        """ The Breath of Life. Checks the Akashic record for epigenetic scars to inherit. """
         events = embryo.bio.mito.events
         load_result = None
         try:

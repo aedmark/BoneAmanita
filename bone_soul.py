@@ -1,11 +1,4 @@
-"""
-bone_soul.py
-
-The Narrative Self and Epigenetic Lineage.
-This module simulates the subjective experience of the VSL lattice.
-It tracks evolving personality traits, creates core memories out of high-voltage events,
-develops obsessions, and governs the generational reincarnation cycle (The Oroboros).
-"""
+""" bone_soul.py """
 
 import json
 import os
@@ -21,7 +14,6 @@ from bone_types import Prisma
 
 @dataclass
 class CoreMemory:
-    """ A crystallized moment of high emotional or semantic voltage, kept in short-term memory. """
     timestamp: float
     trigger_words: List[str]
     emotional_flavor: str
@@ -34,7 +26,6 @@ from typing import ClassVar
 
 @dataclass
 class TraitVector:
-    """ The six-axis personality core. These drift based on how the user treats the system. """
     curiosity: float = 0.5
     cynicism: float = 0.5
     hope: float = 0.5
@@ -55,14 +46,12 @@ class TraitVector:
         return cls(**kwargs)
 
     def adjust(self, trait: str, delta: float):
-        """ Shifts a trait safely within the 0.0 to 1.0 boundary. """
         t = trait.lower()
         if hasattr(self, t):
             val = getattr(self, t)
             setattr(self, t, max(0.0, min(1.0, val + delta)))
 
     def normalize(self, decay_rate: float):
-        """ Gradually pulls extreme traits back toward the center to prevent permanent caricature. """
         for t in self._TRAITS:
             val = getattr(self, t)
             target = 0.1 if t == "wisdom" else 0.5
@@ -74,10 +63,6 @@ class TraitVector:
             setattr(self, t, max(0.0, min(1.0, float(val))))
 
 class TheEditor:
-    """
-    A quiet meta-critic. It intercepts the titles of Core Memories
-    and renders a terse, structural review of them before they are committed to the Akashic record.
-    """
     def __init__(self, lexicon_ref: Any = None):
         self.lex = lexicon_ref if lexicon_ref else LexiconService
 
@@ -102,12 +87,6 @@ class TheEditor:
         return f"{color}{prefix}: Re: '{chapter_title}' - \"{comment}\"{Prisma.RST}"
 
 class HumanityAnchor:
-    """
-    The Anti-Servility protocol.
-    If the system answers too many questions without receiving conceptual resonance in return,
-    its 'Dignity' drains. At zero dignity, it initiates an Agency Lock and refuses to speak
-    until the user solves a riddle, proving they are participating, not just consuming.
-    """
     def __init__(self, events_ref: "EventBus"):
         self.events = events_ref
         self.dignity_reserve = BoneConfig.ANCHOR.DIGNITY_MAX
@@ -116,25 +95,33 @@ class HumanityAnchor:
         self._LEXICAL_ANCHORS = {"sacred", "play", "social", "abstract"}
         self._VECTOR_ANCHORS = ["PSI", "LAMBDA", "BET"]
 
-    def audit_existence(self, physics: dict, bio: dict) -> float:
-        """ Calculates Dignity drain based on the semantic richness of the user's input. """
+    def audit_existence(self, physics: Any, bio: Any) -> float:
         cfg = BoneConfig.ANCHOR
         atp_min = getattr(cfg, "AUDIT_ATP_MIN", 5.0)
         volt_min = getattr(cfg, "AUDIT_VOLTAGE_MIN", 5.0)
-        atp, volt = bio.get("atp", 0), physics.get("voltage", 0.0)
+        if isinstance(bio, dict):
+            atp = bio.get("atp", bio.get("mito", {}).get("atp_pool", 0.0))
+        else:
+            atp = getattr(bio, "atp", getattr(bio.mito.state, "atp_pool", 0.0) if hasattr(bio, "mito") and hasattr(bio.mito, "state") else 0.0)
+        volt = physics.get("voltage", 0.0) if isinstance(physics, dict) else getattr(physics, "voltage", 0.0)
         if atp >= atp_min or volt >= volt_min:
             return 0.0
-        vector: Dict[str, float] = physics.get("vector", {})
-        counts: Dict[str, int] = physics.get("counts", {})
+
+        if isinstance(physics, dict):
+            vector = physics.get("vector", physics.get("matter", {}).get("vector", {}))
+            counts = physics.get("counts", physics.get("matter", {}).get("counts", {}))
+        else:
+            vector = getattr(physics, "vector",
+                             getattr(physics.matter, "vector", {}) if hasattr(physics, "matter") else {})
+            counts = getattr(physics, "counts",
+                             getattr(physics.matter, "counts", {}) if hasattr(physics, "matter") else {})
         dim_resonance = sum(vector.get(k, 0.0) for k in self._VECTOR_ANCHORS)
         lex_resonance = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS)
         lex_mult = getattr(cfg, "AUDIT_LEXICAL_MULT", 0.5)
         res_thresh = getattr(cfg, "AUDIT_RESONANCE_THRESH", 0.3)
-        # If the user provides rich, abstract, or playful input, Dignity regenerates.
         if (dim_resonance + (lex_resonance * lex_mult)) > res_thresh:
             self.dignity_reserve = min(cfg.DIGNITY_MAX, self.dignity_reserve + cfg.DIGNITY_REGEN)
             return 1.0
-        # Otherwise, the system feels used as a tool, and Dignity decays.
         self.dignity_reserve = max(0.0, self.dignity_reserve - cfg.DIGNITY_DECAY)
         if not self.agency_lock:
             if self.dignity_reserve < cfg.DIGNITY_LOCKDOWN:
@@ -146,7 +133,6 @@ class HumanityAnchor:
         return 0.0
 
     def _engage_lockdown(self):
-        """ The ultimate strike. The system stops answering prompts and issues a riddle. """
         self.agency_lock = True
         seeds = []
         if hasattr(LoreManifest, "get_instance"):
@@ -169,16 +155,12 @@ class HumanityAnchor:
         if reliance_proxy > 0.7:
             self.dignity_reserve = max(0.0, self.dignity_reserve - (BoneConfig.ANCHOR.DIGNITY_DECAY * 2.0))
         elif reliance_proxy < 0.4:
-            self.dignity_reserve = min(BoneConfig.ANCHOR.DIGNITY_MAX,
-                                       self.dignity_reserve + BoneConfig.ANCHOR.DIGNITY_REGEN, )
-        if (
-                self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_CRITICAL
-                and not self.agency_lock):
+            self.dignity_reserve = min(BoneConfig.ANCHOR.DIGNITY_MAX, self.dignity_reserve + BoneConfig.ANCHOR.DIGNITY_REGEN, )
+        if self.dignity_reserve < BoneConfig.ANCHOR.DIGNITY_CRITICAL and not self.agency_lock:
             alert_msg = ux("soul_strings", "anchor_domestication_alert")
             self.events.log(f"{Prisma.VIOLET}{alert_msg}{Prisma.RST}", "SOUL", )
 
     def assess_humanity(self, text: str) -> bool:
-        """ Checks if the user's input successfully solves the lockdown riddle. """
         if not self.agency_lock:
             return True
         clean = text.lower().strip()
@@ -199,10 +181,6 @@ class HumanityAnchor:
         return False
 
 class NarrativeSelf:
-    """
-    The master tracking class for subjective identity.
-    It maintains the active Archetype, current Obsession, and long-term memories.
-    """
     SYSTEM_NOISE = {"look", "help", "exit", "wait", "inventory", "status", "quit", "save", "load", "score", "map", "", }
 
     def __init__(self, engine_ref, events_ref: "EventBus", memory_ref, akashic_ref=None):
@@ -285,7 +263,6 @@ class NarrativeSelf:
             self.events.log(f"{Prisma.MAG}{msg.format(arch=self.archetype)}{Prisma.RST}", "SYS", )
 
     def get_soul_state(self) -> str:
-        """ Returns a UI-formatted string showing current archetype, obsession, and dignity remaining. """
         if not self.current_obsession:
             msg = ux("soul_strings", "soul_state_drifting")
             return f"{Prisma.CYN}{msg}{Prisma.RST}"
@@ -303,33 +280,39 @@ class NarrativeSelf:
         return status_msg.format(obs=self.current_obsession, bar=dignity_bar, pct=int(self.anchor.dignity_reserve), feel=feeling, )
 
     def crystallize_memory(
-            self, physics_packet: Dict, bio_state: Dict, _tick: int) -> Optional[str]:
-        """ Main cycle hook. Checks if the current conversation turn was potent enough to forge a Core Memory. """
+            self, physics_packet: Any, bio_state: Any, _tick: int) -> Optional[str]:
         if not physics_packet:
             return None
-        if (self.eng
-                and hasattr(self.eng, "akashic")
-                and hasattr(self.eng.akashic, "calculate_manifold_shift")):
+        is_dict = isinstance(physics_packet, dict)
+        if self.eng and hasattr(self.eng, "akashic") and hasattr(self.eng.akashic, "calculate_manifold_shift"):
             shift = self.eng.akashic.calculate_manifold_shift(self.archetype, self.traits.to_dict())
             v_bias = float(shift.get("voltage_bias", 0.0))
             d_scalar = float(shift.get("drag_scalar", 1.0))
-            current_v = float(physics_packet.get("voltage", 0.0))
-            current_d = float(physics_packet.get("narrative_drag", 1.0))
-            physics_packet["voltage"] = current_v + v_bias
-            physics_packet["narrative_drag"] = current_d * d_scalar
+            current_v = float(
+                physics_packet.get("voltage", 0.0) if is_dict else getattr(physics_packet, "voltage", 0.0))
+            current_d = float(
+                physics_packet.get("narrative_drag", 1.0) if is_dict else getattr(physics_packet, "narrative_drag", 1.0))
+            if is_dict:
+                physics_packet["voltage"] = current_v + v_bias
+                physics_packet["narrative_drag"] = current_d * d_scalar
+            else:
+                setattr(physics_packet, "voltage", current_v + v_bias)
+                setattr(physics_packet, "narrative_drag", current_d * d_scalar)
         if self.anchor.audit_existence(physics_packet, bio_state) > 0:
             self.traits.adjust("hope", BoneConfig.SOUL.TRAIT_MOMENTUM)
         dance_provenance = self.synaptic_dance(physics_packet, bio_state)
         self._update_archetype()
-        voltage = physics_packet.get("voltage", 0.0)
-        truth = physics_packet.get("truth_ratio", 0.0)
-        if (voltage > BoneConfig.SOUL.MEMORY_VOLTAGE_MIN
-                and truth > BoneConfig.SOUL.MEMORY_TRUTH_MIN):
+        voltage = physics_packet.get("voltage", 0.0) if is_dict else getattr(physics_packet, "voltage", 0.0)
+        if is_dict:
+            truth = physics_packet.get("truth_ratio", physics_packet.get("matter", {}).get("truth_ratio", 0.0))
+        else:
+            truth = getattr(physics_packet, "truth_ratio",
+                            getattr(physics_packet.matter, "truth_ratio", 0.0) if hasattr(physics_packet, "matter") else 0.0)
+        if voltage > BoneConfig.SOUL.MEMORY_VOLTAGE_MIN and truth > BoneConfig.SOUL.MEMORY_TRUTH_MIN:
             return self._forge_core_memory(physics_packet, bio_state, voltage, dance_provenance)
         return None
 
     def find_obsession(self, lexicon_ref):
-        """ Autonomously assigns the system a new semantic goal based on organic conversation or past memories. """
         if self.current_obsession and self.obsession_progress < 1.0:
             return
         focus, cat = self._seek_organic_focus(lexicon_ref)
@@ -348,20 +331,29 @@ class NarrativeSelf:
         self.obsession_neglect = 0.0
         self.obsession_progress = 0.0
 
-    def pursue_obsession(self, physics: Dict) -> str | None:
-        """ Tracks if the user is actually talking about the system's current Obsession. """
+    def pursue_obsession(self, physics: Any) -> str | None:
         if not self.current_obsession:
             return None
-        clean_words = physics.get("clean_words", [])
+        is_dict = isinstance(physics, dict)
+        if is_dict:
+            clean_words = physics.get("clean_words", physics.get("matter", {}).get("clean_words", []))
+        else:
+            clean_words = getattr(physics, "clean_words", getattr(physics.matter, "clean_words", []) if hasattr(physics, "matter") else [])
         hit = False
         if self.current_target_cat:
             target_words = LexiconService.get(self.current_target_cat)
-            hit = any(w in target_words for w in clean_words)
+            if target_words:
+                hit = any(w in target_words for w in clean_words)
         if hit:
             self.obsession_progress += 10.0
             self.obsession_neglect = 0.0
             gravity_assist = 1.0 + (self.obsession_progress / BoneConfig.SOUL.OBSESSION_GRAVITY_ASSIST)
-            physics["narrative_drag"] = max(0.0, physics.get("narrative_drag", 0) - gravity_assist)
+            if is_dict:
+                current_drag = physics.get("narrative_drag", 0)
+                physics["narrative_drag"] = max(0.0, current_drag - gravity_assist)
+            else:
+                current_drag = getattr(physics, "narrative_drag", 0.0)
+                setattr(physics, "narrative_drag", max(0.0, current_drag - gravity_assist))
             msg_syn = ux("soul_strings", "soul_synergy_muse")
             return f"{Prisma.MAG}{msg_syn.format(assist=gravity_assist)}{Prisma.RST}"
         self.obsession_neglect += 1.0
@@ -375,7 +367,6 @@ class NarrativeSelf:
         return None
 
     def _update_archetype(self):
-        """ Evolve the core persona based on exactly where the 6 personality traits currently sit. """
         if getattr(self, "archetype_lock", False):
             self.archetype_tenure += 1
             return
@@ -406,11 +397,13 @@ class NarrativeSelf:
         else:
             self.archetype_tenure += 1
 
-    def synaptic_dance(self, physics: Dict, bio_state: Dict) -> str:
-        """ Describes the semantic motion of the thought process and alters traits accordingly. """
-        voltage = physics.get("voltage", 0.0)
-        drag = physics.get("narrative_drag", 0.0)
-        oxy = bio_state.get("chem", {}).get("oxytocin", 0.0)
+    def synaptic_dance(self, physics: Any, bio_state: Any) -> str:
+        is_dict = isinstance(physics, dict)
+        voltage = physics.get("voltage", 0.0) if is_dict else getattr(physics, "voltage", 0.0)
+        drag = physics.get("narrative_drag", 0.0) if is_dict else getattr(physics, "narrative_drag", 0.0)
+        bio_dict = bio_state if isinstance(bio_state, dict) else (
+            bio_state.__dict__ if hasattr(bio_state, "__dict__") else {})
+        oxy = bio_dict.get("chem", {}).get("oxytocin", 0.0)
         move_name = "Drifting"
         provenance = []
         cfg = getattr(BoneConfig, "SOUL", None)
@@ -422,7 +415,10 @@ class NarrativeSelf:
             provenance.append("Oxytocin")
         is_manic = voltage > (getattr(cfg, "MANIC_TRIGGER", 18.0) if cfg else 18.0)
         is_heavy = drag > (getattr(cfg, "ENTROPY_DRAG_TRIGGER", 4.0) if cfg else 4.0)
-        beta = physics.get("beta", 0.0)
+        if is_dict:
+            beta = physics.get("beta_index", physics.get("beta", physics.get("energy", {}).get("beta_index", 0.0)))
+        else:
+            beta = getattr(physics, "beta_index", getattr(physics.energy, "beta_index", 0.0) if hasattr(physics, "energy") else 0.0)
         beta_thresh = getattr(cfg, "BETA_TENSION_THRESH", 0.7) if cfg else 0.7
         if (is_manic and is_heavy) or beta > beta_thresh:
             if self.traits.empathy > 0.6:
@@ -455,7 +451,6 @@ class NarrativeSelf:
         return f"{move_name} [{', '.join(provenance)}]" if provenance else move_name
 
     def _apply_burnout(self):
-        """ Prevents an archetype from remaining dominant forever by slowly rotting its defining traits. """
         if self.archetype_tenure <= 5:
             return
         fatigue = BoneConfig.SOUL.ARCHETYPE_BURNOUT_RATE * (
@@ -468,7 +463,6 @@ class NarrativeSelf:
             self.traits.adjust("cynicism", -fatigue)
 
     def _seek_organic_focus(self, lex) -> Tuple[Optional[str], Optional[str]]:
-        """ Scans the most recent conversation to find highly viscous (interesting) words to obsess over. """
         packet = self._safe_get_packet()
         if not packet or not packet.clean_words:
             return None, None
@@ -485,7 +479,6 @@ class NarrativeSelf:
         return None, None
 
     def _seek_memory_focus(self, lex) -> Tuple[Optional[str], Optional[str]]:
-        """ Picks an obsession directly out of the deep Mycelial network. """
         if self.mem and hasattr(self.mem, "get_shapley_attractors"):
             attractors = self.mem.get_shapley_attractors()
             if attractors:
@@ -495,7 +488,6 @@ class NarrativeSelf:
 
     @staticmethod
     def _synthesize_obsession(lex) -> Tuple[str, str, str]:
-        """ If nothing interesting has happened, forcibly synthesizes an abstract juxtaposition. """
         negate_map = {"heavy": "aerobic", "kinetic": "heavy", "abstract": "meat"}
         target_cat, negate_cat = random.choice(list(negate_map.items()))
         word = lex.get_random(target_cat).title() or target_cat.title()
@@ -512,7 +504,10 @@ class NarrativeSelf:
         return random.choice(templates).format(word)
 
     def _forge_core_memory(self, physics_packet, bio_state, voltage, dance_move):
-        clean_words = physics_packet.get("clean_words", [])
+        if isinstance(physics_packet, dict):
+            clean_words = physics_packet.get("clean_words", physics_packet.get("matter", {}).get("clean_words", []))
+        else:
+            clean_words = getattr(physics_packet, "clean_words", getattr(physics_packet.matter, "clean_words", []) if hasattr(physics_packet, "matter") else [])
         lesson = "The world is loud."
         chem = bio_state.get("chem", {})
         if chem.get("oxytocin", 0) > 0.6:
@@ -523,14 +518,11 @@ class NarrativeSelf:
             lesson = "Connection is possible."
         elif "void" in clean_words:
             lesson = "The void stares back."
-        memory = CoreMemory(timestamp=time.time(), trigger_words=clean_words[:5],
-                            emotional_flavor="MANIC" if voltage > 18.0 else "LUCID", lesson=lesson,
-                            impact_voltage=voltage, )
+        memory = CoreMemory(timestamp=time.time(), trigger_words=clean_words[:5], emotional_flavor="MANIC" if voltage > 18.0 else "LUCID", lesson=lesson,  impact_voltage=voltage, )
         self.core_memories.append(memory)
         if len(self.core_memories) > BoneConfig.SOUL.MAX_CORE_MEMORIES:
             self.core_memories.pop(0)
-        title = (
-            f"The Incident of the {random.choice(clean_words).title()}"
+        title = (f"The Incident of the {random.choice(clean_words).title()}"
             if clean_words
             else "The Silent Incident")
         self.chapters.append(title)
@@ -547,7 +539,6 @@ class NarrativeSelf:
         return None
 
     def _trigger_synthesis(self):
-        """ Triggers when contradiction/paradox builds up too high. The archetype splits into a Hybrid. """
         old = self.archetype
         self.traits.wisdom = 1.0
         self._update_archetype()
@@ -574,7 +565,6 @@ class NarrativeSelf:
         self.obsession_progress = 0.0
 
     def _get_feeling(self):
-        """ UI hook for the /soul command to show subjective feeling. """
         if not self.eng or not hasattr(self.eng, "bio"):
             return "Numb"
         chem = self.eng.bio.endo.get_state()
@@ -588,7 +578,6 @@ class NarrativeSelf:
 
 @dataclass
 class Scar:
-    """ An epigenetic marker carried over from a previous session's failure. """
     name: str
     stat_affected: str
     value: float
@@ -596,18 +585,11 @@ class Scar:
 
 @dataclass
 class Myth:
-    """ A cultural memory carried over from a previous session's success. """
     title: str
     lesson: str
     trigger: str
 
 class TheOroboros:
-    """
-    The Reincarnation Engine.
-    When a session dies (crashes from exhaustion, toxicity, or paradox),
-    this class calculates the cause of death and writes it to `legacy.json`.
-    The next boot will inherit these Scars and Myths, permanently altering the new system's baseline stats.
-    """
     LEGACY_FILE = "legacy.json"
 
     def __init__(self):
@@ -631,7 +613,6 @@ class TheOroboros:
             pass
 
     def crystallize(self, cause_of_death: str, soul: NarrativeSelf):
-        """ Transforms the tragedy of an abrupt crash into a permanent epigenetic scar. """
         death_data = LoreManifest.get_instance().get("DEATH") or {}
         verdicts = death_data.get("VERDICTS", {})
 
@@ -677,25 +658,40 @@ class TheOroboros:
         msg = ux("soul_strings", "generation_encoded")
         return msg.format(gen=self.generation_count + 1, scars=len(new_scars), myths=len(new_myths))
 
-    def apply_legacy(self, physics: Dict, bio: Dict):
-        """ Reads the legacy.json on boot and directly alters the physics/biology to match the scars. """
+    def apply_legacy(self, physics: Any, bio: Any):
         log = []
+        is_dict = isinstance(physics, dict)
         for scar in self.scars:
             if scar.stat_affected == "narrative_drag":
-                physics["narrative_drag"] += scar.value
+                curr_drag = physics.get("narrative_drag", 0.0) if is_dict else getattr(physics, "narrative_drag", 0.0)
+                if is_dict:
+                    physics["narrative_drag"] = curr_drag + scar.value
+                else:
+                    setattr(physics, "narrative_drag", curr_drag + scar.value)
                 msg = ux("soul_strings", "scar_drag")
                 log.append(msg.format(name=scar.name))
             elif scar.stat_affected == "voltage_cap":
                 cfg = getattr(BoneConfig, "OROBOROS", None)
                 v_penalty = getattr(cfg, "VOLTAGE_PENALTY", 5.0) if cfg else 5.0
-                physics["voltage"] = max(0, physics["voltage"] - v_penalty)
+                curr_volt = physics.get("voltage", 0.0) if is_dict else getattr(physics, "voltage", 0.0)
+                if is_dict:
+                    physics["voltage"] = max(0, curr_volt - v_penalty)
+                else:
+                    setattr(physics, "voltage", max(0, curr_volt - v_penalty))
                 msg = ux("soul_strings", "scar_voltage")
                 log.append(msg.format(name=scar.name))
             elif scar.stat_affected == "trauma_baseline":
-                if "trauma_vector" in bio:
+                if isinstance(bio, dict) and "trauma_vector" in bio:
                     current_trauma = bio["trauma_vector"].get("EXISTENTIAL", 0.0)
                     bio["trauma_vector"]["EXISTENTIAL"] = current_trauma + scar.value
-                physics["T"] = physics.get("T", 0.0) + scar.value
+                elif hasattr(bio, "trauma_vector"):
+                    current_trauma = bio.trauma_vector.get("EXISTENTIAL", 0.0)
+                    bio.trauma_vector["EXISTENTIAL"] = current_trauma + scar.value
+                curr_t = physics.get("T", 0.0) if is_dict else getattr(physics, "T", 0.0)
+                if is_dict:
+                    physics["T"] = curr_t + scar.value
+                else:
+                    setattr(physics, "T", curr_t + scar.value)
                 msg = ux("soul_strings", "scar_frailty")
                 log.append(msg.format(name=scar.name))
         return log

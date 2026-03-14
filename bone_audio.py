@@ -6,9 +6,13 @@ import logging
 import warnings
 import contextlib
 import threading
+import importlib.util
 from typing import Dict, List
 from bone_types import Prisma
 
+AUDIO_AVAILABLE = all(
+    importlib.util.find_spec(pkg) is not None
+    for pkg in ["kokoro", "soundfile", "numpy"])
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 os.environ["TQDM_DISABLE"] = "True"
@@ -17,43 +21,24 @@ logging.getLogger("torch").setLevel(logging.ERROR)
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-
 class TheVocalCords:
-    """
-    The Direct-Inference Audio Engine.
-    Parses multi-agent scripts and runs them through the local Kokoro neural network.
-    Stitches all dialogue segments into a single master podcast file.
-    """
 
     def __init__(self, events_ref=None):
         self.events = events_ref
-        self.voice_map = {
-            "BENEDICT": "am_adam",  # Formal, measured
-            "JESTER": "am_puck",  # Chaotic, energetic
-            "STAGE MANAGER": "af_sky",  # Authoritative, calm
-            "GORDON": "am_michael",  # Grounded, weary
-            "MOIRA": "af_heart",  # Warm, empathetic
-            "MERCY": "af_heart",  # Gentle, ancient
-            "ROBERTA": "af_nicole",  # Clear, precise
-            "COLIN": "am_eric",  # Bureaucratic, flat
-            "CASSANDRA": "af_aoife",  # Mystic, resonant
-            "REVENANT": "am_fenrir",  # Deep, liminal
-            "GIDEON": "am_onyx",  # Intense, high voltage
-            "APRIL": "af_kore",  # Bright, sensory
-            "DEFAULT": "af_bella"
-        }
+        self.voice_map = {"BENEDICT": "am_adam", "JESTER": "am_puck", "STAGE MANAGER": "af_sky", "GORDON": "am_michael",
+                          "MOIRA": "af_heart", "MERCY": "af_heart", "ROBERTA": "af_nicole", "COLIN": "am_eric",
+                          "CASSANDRA": "af_aoife", "REVENANT": "am_fenrir", "GIDEON": "am_onyx", "APRIL": "af_kore",
+                          "DEFAULT": "af_bella"}
         self.pipeline = None
         self.sf = None
         self._synthesis_lock = threading.Lock()
 
     @staticmethod
     def strip_ansi(text: str) -> str:
-        """Strips terminal color codes from the script."""
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         return ansi_escape.sub('', text)
 
     def parse_script(self, script_text: str) -> List[Dict[str, str]]:
-        """Extracts the speaker tags and their corresponding dialogue blocks."""
         clean_text = self.strip_ansi(script_text)
         pattern = re.compile(r'^\[([^\]]+)\]:?\s*(.*?)(?=\n\[|\Z)', re.MULTILINE | re.DOTALL)
         segments = []
@@ -65,8 +50,12 @@ class TheVocalCords:
         return segments
 
     def synthesize_podcast(self, file_path: str):
-        """Generates a single combined audio file for the entire script."""
         if not os.path.exists(file_path):
+            return
+        if not AUDIO_AVAILABLE:
+            if self.events:
+                self.events.log(
+                    f"{Prisma.OCHRE}[AUDIO OFFLINE]: TTS dependencies (kokoro, soundfile, numpy) not found. Skipping podcast synthesis.{Prisma.RST}", "SYS")
             return
         combined_audio = []
         error_to_report = None
@@ -105,10 +94,8 @@ class TheVocalCords:
                 handoff_msg = f"\n{Prisma.GRY}[SYSTEM: Audio thread closed. Microphone is yours.]\nTRAVELER > {Prisma.RST}"
                 if error_to_report:
                     if self.events:
-                        self.events.log(f"{Prisma.RED}🎙️ AUDIO FAULT: {error_to_report}{Prisma.RST}{handoff_msg}",
-                                        "SYS")
+                        self.events.log(f"{Prisma.RED}🎙️ AUDIO FAULT: {error_to_report}{Prisma.RST}{handoff_msg}", "SYS")
                 elif combined_audio:
                     if self.events:
                         self.events.log(
-                            f"{Prisma.MAG}🎙️ MASTER PODCAST FORGED: {os.path.basename(master_file)}{Prisma.RST}{handoff_msg}",
-                            "SYS")
+                            f"{Prisma.MAG}🎙️ MASTER PODCAST FORGED: {os.path.basename(master_file)}{Prisma.RST}{handoff_msg}", "SYS")

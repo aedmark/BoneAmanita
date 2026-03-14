@@ -1,52 +1,24 @@
 """
 bone_presets.py
-
-The Universal Constants and Epigenetic Presets of the VSL-CryoSomatic Hypervisor.
-This file acts as the DNA of the system, storing the mathematical thresholds for
-every biological, physical, and cognitive subsystem. It dictates how fast the system
-starves, what voltage triggers a hallucination, and how trauma decays over time.
 """
 
 from typing import Dict, Any, List
 
 def ux(section: str, key: str, default: Any = "") -> Any:
-    """
-    A localized lazy-valve.
-    Because the import is inside the function, Python won't execute it
-    until the system is fully booted and a method actually asks for a string.
-    """
     from bone_core import LoreManifest
     return LoreManifest.get_instance().get_ux(section, key, default)
 
 class BonePresets:
-    """
-    Epigenetic Lineages. These are predefined, holistic shifts in the organism's
-    operating state. Applying a preset alters the physics and biology of the system
-    simultaneously to simulate different environments (e.g., ADVENTURE vs. CREATIVE).
-    """
     ZEN_GARDEN = {"PHYSICS.VOLTAGE_FLOOR": 1.0, "PHYSICS.VOLTAGE_MAX": 25.0, "PHYSICS.DRAG_FLOOR": 0.5,
                   "BIO.DECAY_RATE": 0.001, "BIO.STAMINA_EXHAUSTED": 5.0, "COUNCIL.MANIC_VOLTAGE_TRIGGER": 99.0,
                   "tuning": "ZEN", }
     THUNDERDOME = {"PHYSICS.VOLTAGE_FLOOR": 8.0, "PHYSICS.VOLTAGE_MAX": 30.0, "PHYSICS.DRAG_FLOOR": 0.5,
                    "BIO.ATP_STARVATION": 20.0, "COUNCIL.MANIC_VOLTAGE_TRIGGER": 12.0, "CHANCE.RARE": 0.20, }
-    SANCTUARY = {
-        "COUNCIL.LEVERAGE_TARGET_VOLTAGE": 7.0,
-        "COUNCIL.LEVERAGE_TARGET_DRAG": 2.0,
-        "PHYSICS.VOLTAGE_MAX": 15.0,
-        "PHYSICS.DRAG_FLOOR": 0.0,
-        "BIO.METABOLISM_RATE": 0.5,
-        "tuning": "ZEN",
-        "VOLTAGE_TARGET": 7.0,
-        "VOLTAGE_TOLERANCE": 3.0,
-        "DRAG_TARGET": 2.0,
-        "DRAG_TOLERANCE": 1.5,
-        "TRUTH_TARGET": 0.7,
-        "E_TARGET": 0.4,
-        "B_TARGET": 0.5,
-        "ZONE": "SANCTUARY",
-        "COLOR": "\033[32m",
-        "COLOR_NAME": "GRN",
-    }
+    SANCTUARY = {"COUNCIL.LEVERAGE_TARGET_VOLTAGE": 7.0, "COUNCIL.LEVERAGE_TARGET_DRAG": 2.0,
+                 "PHYSICS.VOLTAGE_MAX": 15.0, "PHYSICS.DRAG_FLOOR": 0.0, "BIO.METABOLISM_RATE": 0.5, "tuning": "ZEN",
+                 "VOLTAGE_TARGET": 7.0, "VOLTAGE_TOLERANCE": 3.0, "DRAG_TARGET": 2.0, "DRAG_TOLERANCE": 1.5,
+                 "TRUTH_TARGET": 0.7, "E_TARGET": 0.4, "B_TARGET": 0.5, "ZONE": "SANCTUARY", "COLOR": "\033[32m",
+                 "COLOR_NAME": "GRN", }
     LABORATORY = {"PHYSICS.VOLTAGE_FLOOR": 0.5, "PHYSICS.VOLTAGE_MAX": 15.0, "PHYSICS.DRAG_FLOOR": 2.0,
                   "BIO.DECAY_RATE": 0.0, "COUNCIL.FOOTNOTE_CHANCE": 1.0, }
     MODES = {
@@ -82,10 +54,6 @@ class BonePresets:
     DEBUG = {"PHYSICS": {"VOLTAGE_MAX": 100.0, "BASE_DRAG": 0.0}, "BIO": {"METABOLISM_RATE": 0.0}, }
 
 class BoneConfig:
-    """
-    The Global Registry of Universal Constants.
-    Divided into subsystems (organs) to maintain modularity.
-    """
     GRAVITY_WELL_THRESHOLD = 15.0
     SHAPLEY_MASS_THRESHOLD = 5.0
     TRAIT_ARCHETYPES = {"THE POET": {"ABSTRACT": 0.6, "PHOTO": 0.3, "ENTROPY": 0.1},
@@ -94,7 +62,7 @@ class BoneConfig:
                         "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
                         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2}, }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "17.1.0"
+    VERSION = "17.3.0"
     VERBOSE_LOGGING = True
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -128,7 +96,6 @@ class BoneConfig:
     OLLAMA_MODEL_ID = "mistral-nemo"
 
     class SOUL:
-        """ Constants defining the Narrative Self, trauma accumulation, and memory encoding. """
         MEMORY_VOLTAGE_MIN = 14.0
         MEMORY_TRUTH_MIN = 0.8
         MANIC_TRIGGER = 18.0
@@ -163,7 +130,6 @@ class BoneConfig:
         FEELING_THRESH = 0.5
 
     class ANCHOR:
-        """ The Humanity Anchor. Manages the system's "Dignity" and prevents it from becoming a purely servile chatbot. """
         DIGNITY_MAX = 100.0
         DIGNITY_REGEN = 5.0
         DIGNITY_DECAY = 0.5
@@ -179,17 +145,12 @@ class BoneConfig:
         UNLOCK_DIGNITY_RESET = 50.0
 
     class OROBOROS:
-        """ Handles recursive narrative trauma and scarring. """
         MAX_SCARS = 5
         MAX_MYTHS = 10
         TRAUMA_VALUE = 5.0
         VOLTAGE_PENALTY = 5.0
 
     class CORTEX:
-        """
-        The neurological parameters governing the prompt injection to the LLM.
-        Links chemical states (Dopamine, Cortisol) directly to LLM Sampling Temperature and Top_P.
-        """
         BASE_SENSITIVITY = 0.1
         LATENCY_PENALTY_THRESHOLD = 2.0
         DRAG_STRESS_THRESHOLD = 8.0
@@ -254,14 +215,12 @@ class BoneConfig:
         VALIDATOR_STUTTER_LENGTH = 5
 
     class WHIMSY:
-        """ Easter eggs and parameters for moments of absolute chaos. """
         ABSURDITY_CONSTANT = 42
         MAX_SARCASM_LEVEL = 11
         LUDICROUS_SPEED = True
         DEPARTMENT_NAME = "The Ministry of Silly Hats & Semantic Vectors"
 
     class METABOLISM:
-        """ Broad constraints for energy processing and ROS (Toxicity) accumulation. """
         BASE_RATE = 2.0
         GENESIS_VOLTAGE = 100.0
         BASE_METABOLIC_RATE = 1.0
@@ -274,7 +233,6 @@ class BoneConfig:
         BUREAU_ENTROPY_SCALAR = 20.0
 
     class PHYSICS:
-        """ The fundamental thermodynamic boundaries of the conversation. """
         VOLTAGE_FLOOR = 0.0
         VOLTAGE_LOW = 5.0
         VOLTAGE_MED = 8.0
@@ -316,7 +274,6 @@ class BoneConfig:
         LQ_SCALAR = 1.5
 
     class INVENTORY:
-        """ Defines how Gordon carries items. Heavy load increases drag; turbulence drops items. """
         CONDUCTIVE_THRESHOLD = 12.0
         HEAVY_LOAD_THRESHOLD = 8.0
         TURBULENCE_FUMBLE_CHANCE = 0.15
@@ -332,10 +289,6 @@ class BoneConfig:
         REFLEX_KAPPA_RESET = 0.8
 
     class COUNCIL:
-        """
-        The Stage Manager's rulebook. Defines the exact numeric thresholds for when
-        archetypes activate, vote, or undergo a Phase Shift (e.g., Jester -> The Fool).
-        """
         STRANGE_LOOP_VOLTAGE = 8.0
         OSCILLATION_DELTA = 5.0
         MANIC_VOLTAGE_TRIGGER = 18.0
@@ -393,9 +346,7 @@ class BoneConfig:
         PHASE_COLIN_DELTA = 0.8
         PHASE_COLIN_LQ = 0.3
 
-
     class BIO:
-        """ Fine-grained constants for cellular respiration, ATP generation, and Endocrine state. """
         REST_HEALTH_RECOVERY = 0.5
         REST_STAMINA_RECOVERY = 1.0
         REST_SEROTONIN_BOOST = 0.05
@@ -468,11 +419,9 @@ class BoneConfig:
         THERMAL_FEEDBACK_MULT = 5.0
         NEURAL_SHIFTS = {"PANIC": {"adr": 0.3, "cor": 0.2},
                          "ZEN": {"cor": -0.3, "ser": 0.2},
-                         "MANIC": {"atp": -10.0}
-                         }
+                         "MANIC": {"atp": -10.0}}
 
     class CHANCE:
-        """ Universal drop rates and probability scales. """
         RARE = 0.05
         UNCOMMON = 0.10
         COMMON = 0.20
@@ -489,7 +438,6 @@ class BoneConfig:
         ZEN_MILESTONE_FREQ = 5
 
     class BUREAU:
-        """ Colin's rulebook. High entropy (chaos) results in heavy taxation of ATP. """
         MIN_HEALTH_TO_AUDIT = 20.0
         MIN_WORD_COUNT = 4
         HIGH_VOLTAGE_TRIGGER = 18.0
@@ -505,7 +453,6 @@ class BoneConfig:
         TRAUMA_REDUCTION = 0.5
 
     class KINTSUGI:
-        """ Mercy's domain. Converting raw Stamina and Glimmers into golden repairs for trauma. """
         STAMINA_TRIGGER = 15.0
         ALCHEMY_VOLTAGE = 15.0
         ALCHEMY_WHIMSY = 0.4
@@ -554,7 +501,6 @@ class BoneConfig:
         CRASH_FILES_KEPT = 4
 
     class SPORES:
-        """ Rules for the Mycelial Network's fungal memory structure and Autophagy limits. """
         MAX_INDEX_SIZE = 1000
         CONSOLIDATION_THRESHOLD = 5.0
         CHORUS_CHANCE = 0.10
@@ -701,7 +647,6 @@ class BoneConfig:
         ARB_CUT_DRAG = 2.0
 
     class DRIVERS:
-        """ Constants driving the user's Enneagram profiling, Syntax stress (Omega), and Dark Matter sensing. """
         ENNEAGRAM_HYSTERESIS = 3
         ENNEAGRAM_HYBRID_GAP = 0.5
         PROFILE_CONFIDENCE_THRESHOLD = 50
@@ -787,7 +732,6 @@ class BoneConfig:
         HOST_NOVELTY_MULT = 10.0
 
     class PHYSICS_DEEP:
-        """ The deep substrate physics. Parameters for pure void, recursive looping, and somatics. """
         ACCELERATE_VOLTAGE = 160.0
         RECURSIVE_LQ = 0.9
         VOID_ABSTRACTION = 0.9
@@ -803,7 +747,6 @@ class BoneConfig:
 
     @classmethod
     def load_preset(cls, preset_dict: Dict[str, Any]) -> List[str]:
-        """ Applies an Epigenetic Lineage map over the global parameters, tuning the lattice in real-time. """
         logs = []
         msg_tuned = ux("config_strings", "preset_tuned") or "Tuned {sector}.{param}: {old_val} -> {new_val}"
         for key, value in preset_dict.items():
@@ -830,7 +773,6 @@ class BoneConfig:
 
     @classmethod
     def validate_integrity(cls) -> List[str]:
-        """ DNA Repair Mechanism. Validates that physics floors have not exceeded their ceilings. """
         errors = []
         if cls.PHYSICS.VOLTAGE_FLOOR > cls.PHYSICS.VOLTAGE_MAX:
             cls.PHYSICS.VOLTAGE_FLOOR = cls.PHYSICS.VOLTAGE_MAX - 1.0
@@ -844,7 +786,6 @@ class BoneConfig:
 
     @classmethod
     def check_pareidolia(cls, words: List[str]) -> Any:
-        """ A thematic check. Detects the ghost in the static. """
         if "face" in words and "smoke" in words:
             msg = ux("config_strings", "pareidolia_smoke") 
             return True, msg
@@ -852,24 +793,38 @@ class BoneConfig:
 
     @classmethod
     def reconcile_state(cls, physics_packet: Any):
-        """ After a sudden genetic or dimensional shift, forces stray particles back into legal thermodynamic limits. """
         if isinstance(physics_packet, dict):
-            current_v = physics_packet.get("voltage", 5.0)
-            current_d = physics_packet.get("narrative_drag", 1.0)
-            physics_packet["voltage"] = max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX))
-            physics_packet["narrative_drag"] = max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT))
+            current_v = physics_packet.get("voltage", physics_packet.get("energy", {}).get("voltage", 5.0))
+            current_d = physics_packet.get("narrative_drag", physics_packet.get("space", {}).get("narrative_drag", 1.0))
+            new_v = max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX))
+            new_d = max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT))
+            if "energy" in physics_packet:
+                physics_packet["energy"]["voltage"] = new_v
+            else:
+                physics_packet["voltage"] = new_v
+            if "space" in physics_packet:
+                physics_packet["space"]["narrative_drag"] = new_d
+            else:
+                physics_packet["narrative_drag"] = new_d
         else:
-            current_v = getattr(physics_packet, "voltage", 5.0)
-            current_d = getattr(physics_packet, "narrative_drag", 1.0)
-            setattr(physics_packet, "voltage",
-                    max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX)), )
-            setattr(physics_packet, "narrative_drag",
-                    max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT)), )
+            current_v = getattr(physics_packet, "voltage",
+                                getattr(getattr(physics_packet, "energy", None), "voltage", 5.0))
+            current_d = getattr(physics_packet, "narrative_drag",
+                                getattr(getattr(physics_packet, "space", None), "narrative_drag", 1.0))
+            new_v = max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX))
+            new_d = max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT))
+            if hasattr(physics_packet, "energy"):
+                physics_packet.energy.voltage = new_v
+            else:
+                setattr(physics_packet, "voltage", new_v)
+            if hasattr(physics_packet, "space"):
+                physics_packet.space.narrative_drag = new_d
+            else:
+                setattr(physics_packet, "narrative_drag", new_d)
         return physics_packet
 
     @classmethod
     def tune(cls, sector: str, parameter: str, value: Any) -> str:
-        """ Manual genetic editing. Allows runtime alteration of individual constants without requiring a reboot. """
         if not hasattr(cls, sector):
             msg = ux("config_strings", "tune_sector_err") 
             return msg.format(sector=sector)
