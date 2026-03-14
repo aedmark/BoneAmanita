@@ -323,12 +323,18 @@ class PhysicsPacket:
     def zone(self, v):
         self.space.zone = v
 
-    def __init__(self, energy: Optional[EnergyState] = None, matter: Optional[MaterialState] = None,
-                 space: Optional[SpatialState] = None, **kwargs, ):
-        self.energy = energy or EnergyState()
-        self.matter = matter or MaterialState()
-        self.space = space or SpatialState()
-        self.drag_profile = kwargs.pop("drag_profile", DragProfile())
+    def __init__(self, energy: Optional[Any] = None, matter: Optional[Any] = None,
+                 space: Optional[Any] = None, **kwargs, ):
+
+        def _safe_init(cls, data):
+            if isinstance(data, cls): return data
+            if not isinstance(data, dict): return cls()
+            valid_keys = {f.name for f in fields(cls)}
+            return cls(**{k: v for k, v in data.items() if k in valid_keys and v is not None})
+        self.energy = _safe_init(EnergyState, energy)
+        self.matter = _safe_init(MaterialState, matter)
+        self.space = _safe_init(SpatialState, space)
+        self.drag_profile = _safe_init(DragProfile, kwargs.pop("drag_profile", None))
         for k, v in kwargs.items():
             setattr(self, k, v)
 

@@ -299,7 +299,7 @@ class MetabolismPhase(SimulationPhase):
                                                     metrics["stamina"],
                                                     self.eng.bio.governor.get_stress_modifier(self.eng.tick_count),
                                                     self.eng.tick_count,
-                                                    circadian_bias=self._check_circadian_rhythm(), )
+                                                    circadian_bias=self._check_circadian_rhythm(ctx), )
         if self.eng.bio.mito and hasattr(self.eng.bio.mito.state, "atp_pool"):
             self.eng.bio.mito.state.atp_pool = max(0.0, float(self.eng.bio.mito.state.atp_pool))
         if self.eng.bio.biometrics:

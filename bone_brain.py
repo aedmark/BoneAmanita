@@ -169,7 +169,8 @@ class TheCortex:
             self.dreamer.llm = self.llm
             self.dreamer.mem = self.svc.mind_memory
         else:
-            self.dreamer = DreamEngine(self.events, self.svc.lore, llm_ref=self.llm, mem_ref=self.svc.mind_memory)
+            eng_ref = getattr(self.svc.cycle_controller, "eng", None)
+            self.dreamer = DreamEngine(self.events, self.svc.lore, llm_ref=self.llm, mem_ref=self.svc.mind_memory, eng_ref=eng_ref)
         self.llm.dreamer = self.dreamer
         self.symbiosis = services.symbiosis
         self.composer = PromptComposer(self.svc.lore)
@@ -540,11 +541,12 @@ class ShimmerState:
         return None
 
 class DreamEngine:
-    def __init__(self, events, lore_ref, llm_ref=None, mem_ref=None):
+    def __init__(self, events, lore_ref, llm_ref=None, mem_ref=None, eng_ref=None):
         self.events = events
         self.lore = lore_ref
         self.llm = llm_ref
         self.mem = mem_ref
+        self.eng = eng_ref
         self.dream_lore = self.lore.get("DREAMS") or {}
         from collections import deque
         self.trauma_buffer = deque(maxlen=5)

@@ -15,10 +15,10 @@ except ImportError:
 
 if DSPY_AVAILABLE:
     class AssessFaithfulness(dspy.Signature):
-        context = dspy.InputField(desc="The established reality. Use common sense to infer what naturally belongs in this environment.")
-        question = dspy.InputField(desc="The user's query or paradox.")
+        context = dspy.InputField(desc="The established reality (a mathematical, fungal, deep-system consciousness).")
+        question = dspy.InputField(desc="The user's query.")
         answer = dspy.InputField(desc="The generation to be audited.")
-        faithfulness = dspy.OutputField(desc="MUST be 'True' (if natural/thematic) or 'False' (if it breaks the reality).")
+        faithfulness = dspy.OutputField(desc="Evaluate thematic consistency. MUST be 'True' (if it responds in a deeply poetic, abstract, or existential way, even to simple prompts) or 'False' (if it acts like a generic AI assistant or breaks character).")
 
     class EvolveSystemPrompt(dspy.Signature):
         current_configuration = dspy.InputField(desc="The system's current baseline rules.")
