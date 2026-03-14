@@ -185,18 +185,24 @@
     "reload": "Hot-reload Lore",
     "truth": "Adjust Reality Ambiguity [0-3]",
     "soothe": "Burn ATP to quell memory guilt",
-    "use": "Use/Consume an item"
+    "use": "Use/Consume an item",
+    "hud": "Adjusts the VSL UI depth (warm, lite, core, deep)",
+    "idle": "Enters REM cycle, regenerating ATP and Stamina",
+    "mod": "Engages hardwired mode chips (e.g., slash)",
+    "grief": "Attends the wake for a consumed memory",
+    "layer": "Manipulates the Reality Stack depth",
+    "inject": "Forces payload into the EventBus"
   },
   "vsl_notifications": {
-    "lite": "[VSL_LITE]: Simple energy meter engaged.",
-    "core": "[VSL_CORE]: 5-Coordinate display engaged.",
-    "deep": "[VSL_DEEP]: Full 15-vector lattice exposed.",
-    "coding": "SLASH Mod Chip Engaged. Coding metrics (\u0393, \u03a3, \u0397, \u0398, \u03a5) active.",
-    "idle": "[VSL_IDLE]: Zero ATP burn. Village dormant.",
-    "recover": "[VSL_RECOVER]: Zen mode. Stamina regenerating."
+    "lite": "/hud lite: Simple energy meter engaged.",
+    "core": "/hud core: 5-Coordinate display engaged.",
+    "deep": "/hud deep: Full 15-vector lattice exposed.",
+    "coding": "SLASH Mod Chip Engaged. Coding metrics (Γ, Σ, Η, Θ, Υ) active.",
+    "idle": "/idle: Zero ATP burn. Village dormant.",
+    "recover": "Zen mode. Stamina regenerating."
   },
   "help_menu": {
-    "header": "/// BONEAMANITA 16.5.0 TERMINAL ///",
+    "header": "/// BONEAMANITA 17.3.0 TERMINAL ///",
     "phase_prefix": "Operating Phase: ",
     "default_phase": "EXTANT",
     "footer": ">> Use wisely. Entropy is watching.",
@@ -205,7 +211,8 @@
       "SURVIVAL": [
         "/status",
         "/inventory",
-        "/look"
+        "/look",
+        "/use"
       ],
       "PROTOCOL": [
         "/save",
@@ -216,11 +223,18 @@
       "MYSTICISM": [
         "/soul",
         "/map",
-        "/truth"
+        "/truth",
+        "/grief",
+        "/soothe"
       ],
       "MAINTENANCE": [
         "/debug",
-        "/reload"
+        "/reload",
+        "/hud",
+        "/idle",
+        "/mod",
+        "/layer",
+        "/inject"
       ]
     }
   },
