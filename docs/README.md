@@ -84,7 +84,7 @@ On first boot, the ConfigWizard will guide you through initial setup in the term
 Choose a mode at boot:
 
 | Mode             | Description                                                                                                                     |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+|------------------|---------------------------------------------------------------------------------------------------------------------------------|
 | **ADVENTURE**    | Grounded physical text adventure. Gordon strictly enforces object-action coupling. You cannot use what you don't have.          |
 | **CONVERSATION** | Pure philosophical dialogue driven by the system's simulated emotional state. No inventory, no physics.                         |
 | **CREATIVE**     | High-voltage ideation engine. Dream logic applies.                                                                              |
