@@ -2,14 +2,13 @@
 bone_judge.py
 """
 
-import json
-import os
 from bone_types import Prisma
 
 try:
     import dspy
     DSPY_AVAILABLE = True
 except ImportError:
+    dspy = None
     print(f"{Prisma.OCHRE}[DSPY OFFLINE]: The 'dspy' library is not installed. Immune guardrails and epigenetic learning disabled.{Prisma.RST}")
     DSPY_AVAILABLE = False
 
@@ -30,21 +29,30 @@ if DSPY_AVAILABLE:
         compressed_axioms = dspy.OutputField(
             desc="2 or 3 highly compressed, overarching rules. EACH rule MUST start with 'CRITICAL OVERRIDE: '")
 
+
 class DSPyCritic:
-    def __init__(self):
+    def __init__(self, config_ref=None):
         self.enabled = DSPY_AVAILABLE
+        self.cfg = config_ref
         if self.enabled:
             try:
-                base_dir = os.path.dirname(os.path.abspath(__file__))
-                config_path = os.path.join(base_dir, "bone_config.json")
-                config = {}
-                if os.path.exists(config_path):
-                    with open(config_path, "r", encoding="utf-8") as f:
-                        config = json.load(f)
-                provider = config.get("provider", "ollama")
-                model_name = config.get("model", "vsl-hermes")
-                base_url = config.get("base_url", "http://127.0.0.1:11434/v1/chat/completions").replace(
-                    "/chat/completions", "")
+                if self.cfg and hasattr(self.cfg, "PROVIDER"):
+                    provider = getattr(self.cfg, "PROVIDER", "ollama")
+                    model_name = getattr(self.cfg, "MODEL", "vsl-hermes")
+                    base_url = getattr(self.cfg, "BASE_URL", "http://127.0.0.1:11434/v1/chat/completions")
+                elif isinstance(self.cfg, dict):
+                    provider = self.cfg.get("provider", "ollama")
+                    model_name = self.cfg.get("model", "vsl-hermes")
+                    base_url = self.cfg.get("base_url", "http://127.0.0.1:11434/v1/chat/completions")
+                else:
+                    from bone_presets import BoneConfig
+                    provider = getattr(BoneConfig, "PROVIDER", "ollama")
+                    model_name = getattr(BoneConfig, "MODEL", "vsl-hermes")
+                    base_url = getattr(BoneConfig, "BASE_URL", "http://127.0.0.1:11434/v1/chat/completions")
+                if base_url:
+                    base_url = base_url.replace("/chat/completions", "")
+                else:
+                    base_url = "http://127.0.0.1:11434/v1"
                 if provider == "ollama" or provider == "lm_studio":
                     self.lm = dspy.LM(model=f"openai/{model_name}", api_base=base_url,
                                       api_key="local-model-doesnt-need-a-key")

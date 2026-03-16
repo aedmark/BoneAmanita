@@ -78,7 +78,7 @@ class LexiconStore:
         except IOError:
             pass
 
-    def get_raw(self, category):
+    def get_raw(self, category: str) -> Set[str]:
         base = self.VOCAB.get(category, set())
         learned = set(self.LEARNED_VOCAB.get(category, {}).keys())
         combined = base | learned
@@ -90,7 +90,7 @@ class LexiconStore:
         w = word.lower()
         return self.REVERSE_INDEX.get(w, set()).copy()
 
-    def teach(self, word, category, tick):
+    def teach(self, word: str, category: str, tick: int) -> bool:
         w = word.lower()
         if category not in self.LEARNED_VOCAB:
             self.LEARNED_VOCAB[category] = {}
@@ -298,170 +298,148 @@ class SemanticField:
         return f"Stable {dom.upper()} Atmosphere"
 
 class LexiconService:
+    def __init__(self):
+        self._INITIALIZED = False
+        self._STORE = None
+        self._ANALYZER = None
+        self.ANTIGEN_REGEX = None
+        self.SOLVENTS = set()
 
-    _INITIALIZED = False
-    _STORE = None
-    _ANALYZER = None
-    ANTIGEN_REGEX = None
-    SOLVENTS = set()
+    def get_store(self):
+        if not self._INITIALIZED:
+            self.initialize()
+        return self._STORE
 
-    @classmethod
-    def get_store(cls):
-        if not cls._INITIALIZED:
-            cls.initialize()
-        return cls._STORE
-
-    @classmethod
-    def initialize(cls):
-        if cls._INITIALIZED:
+    def initialize(self):
+        if self._INITIALIZED:
             return
-        cls._INITIALIZED = True
+        self._INITIALIZED = True
         try:
-            cls._STORE = LexiconStore()
-            cls._STORE.load_vocabulary()
-            cls._ANALYZER = LinguisticAnalyzer(cls._STORE)
-            cls.compile_antigens()
-            cls.SOLVENTS = cls._STORE.SOLVENTS
-            total_words = sum(len(s) for s in cls._STORE.VOCAB.values())
+            self._STORE = LexiconStore()
+            self._STORE.load_vocabulary()
+            self._ANALYZER = LinguisticAnalyzer(self._STORE)
+            self.compile_antigens()
+            self.SOLVENTS = self._STORE.SOLVENTS
+            total_words = sum(len(s) for s in self._STORE.VOCAB.values())
             msg = ux("lexicon_strings", "sys_nominal")
             print(f"{Prisma.GRN}{msg.format(total_words=total_words)}{Prisma.RST}")
 
         except Exception as e:
-            cls._INITIALIZED = False
+            self._INITIALIZED = False
             msg = ux("lexicon_strings", "sys_init_fail")
             print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
             raise e
 
-    @classmethod
-    def get_valence(cls, words: List[str]) -> float:
-        if not cls._INITIALIZED:
-            cls.initialize()
-        return cls._ANALYZER.measure_valence(words)
+    def get_valence(self, words: List[str]) -> float:
+        if not self._INITIALIZED:
+            self.initialize()
+        return self._ANALYZER.measure_valence(words)
 
-    @classmethod
-    def get_categories_for_word(cls, word: str) -> Set[str]:
-        if not cls._INITIALIZED:
-            cls.initialize()
-        return cls._STORE.get_categories_for_word(word)
+    def get_categories_for_word(self, word: str) -> Set[str]:
+        if not self._INITIALIZED:
+            self.initialize()
+        return self._STORE.get_categories_for_word(word)
 
-    @classmethod
-    def get_current_category(cls, word: str) -> Optional[str]:
-        if not cls._INITIALIZED:
-            cls.initialize()
-        categories = cls._STORE.get_categories_for_word(word)
+    def get_current_category(self, word: str) -> Optional[str]:
+        if not self._INITIALIZED:
+            self.initialize()
+        categories = self._STORE.get_categories_for_word(word)
         if categories:
             return next(iter(categories))
         return None
 
-    @classmethod
-    def measure_viscosity(cls, word: str) -> float:
-        if not cls._INITIALIZED:
-            cls.initialize()
-        return cls._ANALYZER.measure_viscosity(word)
+    def measure_viscosity(self, word: str) -> float:
+        if not self._INITIALIZED:
+            self.initialize()
+        return self._ANALYZER.measure_viscosity(word)
 
-    @classmethod
-    def get_turbulence(cls, words: List[str]) -> float:
-        if not cls._INITIALIZED:
-            cls.initialize()
-        return cls._ANALYZER.get_turbulence(words)
+    def get_turbulence(self, words: List[str]) -> float:
+        if not self._INITIALIZED:
+            self.initialize()
+        return self._ANALYZER.get_turbulence(words)
 
-    @classmethod
-    def vectorize(cls, text: str) -> Dict[str, float]:
-        if not cls._INITIALIZED:
-            cls.initialize()
-        return cls._ANALYZER.vectorize(text)
+    def vectorize(self, text: str) -> Dict[str, float]:
+        if not self._INITIALIZED:
+            self.initialize()
+        return self._ANALYZER.vectorize(text)
 
-    @classmethod
-    def compile_antigens(cls):
-        if not cls._INITIALIZED:
-            cls.initialize()
+    def compile_antigens(self):
+        if not self._INITIALIZED:
+            self.initialize()
             return
-        replacements = cls._STORE.ANTIGEN_REPLACEMENTS
+        replacements = self._STORE.ANTIGEN_REPLACEMENTS
         if not replacements:
-            cls.ANTIGEN_REGEX = None
+            self.ANTIGEN_REGEX = None
             return
         patterns = sorted(replacements.keys(), key=len, reverse=True)
         escaped = [fr"\b{re.escape(str(p))}\b" for p in patterns]
-        cls.ANTIGEN_REGEX = re.compile("|".join(escaped), re.IGNORECASE)
+        self.ANTIGEN_REGEX = re.compile("|".join(escaped), re.IGNORECASE)
 
-    @classmethod
-    def purge_toxins(cls, text: str) -> str:
-        if not cls._INITIALIZED:
-            cls.initialize()
-        if not cls.ANTIGEN_REGEX or not text:
+    def purge_toxins(self, text: str) -> str:
+        if not self._INITIALIZED:
+            self.initialize()
+        if not self.ANTIGEN_REGEX or not text:
             return text
 
         def replacer(match):
             m_lower = match.group(0).lower()
-            return cls._STORE.ANTIGEN_REPLACEMENTS.get(m_lower, "")
-        return cls.ANTIGEN_REGEX.sub(replacer, text)
+            return self._STORE.ANTIGEN_REPLACEMENTS.get(m_lower, "")
+        return self.ANTIGEN_REGEX.sub(replacer, text)
 
-    @classmethod
-    def sanitize(cls, text):
-        if not cls._INITIALIZED:
-            cls.initialize()
-        return cls._ANALYZER.sanitize(text)
+    def sanitize(self, text: str) -> List[str]:
+        if not self._INITIALIZED:
+            self.initialize()
+        return self._ANALYZER.sanitize(text)
 
-    @classmethod
-    def classify(cls, word):
-        if not cls._INITIALIZED:
-            cls.initialize()
+    def classify(self, word: str) -> Tuple[Optional[str], float]:
+        if not self._INITIALIZED:
+            self.initialize()
         ling_data = LoreManifest.get_instance().get("LINGUISTICS") or {}
         priority_order = ling_data.get("PRIORITY_ORDER", [])
-        known_cats = cls._STORE.get_categories_for_word(word)
+        known_cats = self._STORE.get_categories_for_word(word)
         if known_cats:
             for p_cat in priority_order:
                 if p_cat in known_cats:
                     return p_cat, 1.0
             return next(iter(known_cats)), 1.0
-        return cls._ANALYZER.classify_word(word)
+        return self._ANALYZER.classify_word(word)
 
-    @classmethod
-    def clean(cls, text):
-        return cls.sanitize(text)
+    def clean(self, text: str) -> List[str]:
+        return self.sanitize(text)
 
-    @classmethod
-    def taste(cls, word):
-        return cls.classify(word)
+    def taste(self, word: str) -> Tuple[Optional[str], float]:
+        return self.classify(word)
 
-    @classmethod
-    def create_field(cls):
-        if not cls._INITIALIZED:
-            cls.initialize()
-        return SemanticField(cls._ANALYZER)
+    def create_field(self):
+        if not self._INITIALIZED:
+            self.initialize()
+        return SemanticField(self._ANALYZER)
 
-    @classmethod
-    def get(cls, category: str) -> Set[str]:
-        return cls._STORE.get_raw(category)
+    def get(self, category: str) -> Set[str]:
+        return self._STORE.get_raw(category)
 
-    @classmethod
-    def get_random(cls, category: str) -> str:
-        words = list(cls.get(category))
+    def get_random(self, category: str) -> str:
+        words = list(self.get(category))
         if not words:
             return ux("lexicon_strings", "default_random_word") or "void"
         return random.choice(words)
 
-    @classmethod
-    def teach(cls, word: str, category: str, tick: int = 0):
-        cls._STORE.teach(word, category, tick)
+    def teach(self, word: str, category: str, tick: int = 0):
+        self._STORE.teach(word, category, tick)
 
-    @classmethod
-    def save(cls):
-        if cls._INITIALIZED and cls._STORE:
-            cls._STORE.save_hive()
+    def save(self):
+        if self._INITIALIZED and self._STORE:
+            self._STORE.save_hive()
             msg = ux("lexicon_strings", "hive_saved")
             print(f"{Prisma.GRN}{msg}{Prisma.RST}")
 
-    @classmethod
-    def harvest(cls, text: str) -> Dict[str, List[str]]:
-        return cls._STORE.harvest(text)
+    def harvest(self, text: str) -> Dict[str, List[str]]:
+        return self._STORE.harvest(text)
 
-    @classmethod
-    def learn_antigen(cls, word: str, replacement: str = ""):
-        cls._STORE.ANTIGEN_REPLACEMENTS[word] = replacement
-        cls.compile_antigens()
+    def learn_antigen(self, word: str, replacement: str = ""):
+        self._STORE.ANTIGEN_REPLACEMENTS[word] = replacement
+        self.compile_antigens()
 
-    @classmethod
-    def tune_perception(cls, voltage: float, narrative_drag: float):
-        if cls._ANALYZER:
-            cls._ANALYZER.tune_sensitivity(voltage, narrative_drag)
+    def tune_perception(self, voltage: float, narrative_drag: float):
+        if self._ANALYZER:
+            self._ANALYZER.tune_sensitivity(voltage, narrative_drag)

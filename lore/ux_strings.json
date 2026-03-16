@@ -184,7 +184,6 @@
     "look": "Observe environment",
     "reload": "Hot-reload Lore",
     "truth": "Adjust Reality Ambiguity [0-3]",
-    "soothe": "Burn ATP to quell memory guilt",
     "use": "Use/Consume an item",
     "hud": "Adjusts the VSL UI depth (warm, lite, core, deep)",
     "idle": "Enters REM cycle, regenerating ATP and Stamina",
@@ -202,7 +201,7 @@
     "recover": "Zen mode. Stamina regenerating."
   },
   "help_menu": {
-    "header": "/// BONEAMANITA 17.3.0 TERMINAL ///",
+    "header": "/// BONEAMANITA 17.5.0 TERMINAL ///",
     "phase_prefix": "Operating Phase: ",
     "default_phase": "EXTANT",
     "footer": ">> Use wisely. Entropy is watching.",
@@ -224,8 +223,7 @@
         "/soul",
         "/map",
         "/truth",
-        "/grief",
-        "/soothe"
+        "/grief"
       ],
       "MAINTENANCE": [
         "/debug",
@@ -245,9 +243,6 @@
   },
   "command_alerts": {
     "reality_lock": "COMMAND REJECTED: Reality Depth {depth} prohibits administrative override.",
-    "soothe_weak": "Too weak to mourn. (Req: {cost} Stamina)",
-    "soothe_missing_mem": "The subconscious is not installed.",
-    "soothe_success": "\ud83c\udffa {msg} (-{cost} Stamina)",
     "mode_usage": "Usage: /mode [ZEN_GARDEN | THUNDERDOME | SANCTUARY]",
     "mode_unknown": "Unknown mode: {mode}.",
     "mode_reconciled": "State reconciled to {mode} parameters.",
@@ -527,7 +522,12 @@
     "tel_crit_write_fail": "[TELEMETRY]: Critical write failure threshold reached. Telemetry disabled. {e}",
     "tel_write_error": "[TELEMETRY]: Write error ({errors}). Retrying later. {e}",
     "tel_prev_crash": "PREVIOUS SYSTEM CRASH: {reason}",
-    "tel_session_summary": "\\n[TELEMETRY] Session ended ({status}). {count} crystals crystallized.\\n            Trace: {trace_file}"
+    "tel_session_summary": "\\n[TELEMETRY] Session ended ({status}). {count} crystals crystallized.\\n            Trace: {trace_file}",
+    "obs_coupled": "💞 COUPLED (Second-Order Resonance Active)",
+    "obs_regulating": "🧘 CO-REGULATING (Presence > Efficiency)",
+    "obs_autonomous": "🤖 FIRST-ORDER (Pure Logic Mode)",
+    "tel_cyber_shift": "⚡ CYBERNETIC SHIFT: Order {order} Feedback Loop engaged.",
+    "tel_beth_alert": "ℶ  BETH INDEX: {beth:.2f} (Coupling: {status})"
   },
   "driver_strings": {
     "ennea_synthesis": "Dialectic Resonance: {winner} + {runner_up}",
@@ -612,7 +612,7 @@
   },
   "main_strings": {
     "term_header_top": "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510",
-    "term_header_mid": "\u2502 BONEAMANITA TERMINAL // VERSION 17.1.0   \u2502",
+    "term_header_mid": "\u2502 BONEAMANITA TERMINAL // VERSION 17.5.0   \u2502",
     "term_header_bot": "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518",
     "init_hash": "...Initializing KernelHash: {hash}...",
     "sys_listening": ">>> SYSTEM: LISTENING",

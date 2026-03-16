@@ -5,6 +5,10 @@ from typing import Dict, List, Any, Tuple
 from bone_presets import BoneConfig
 from bone_core import Prisma, ux
 from bone_physics import ChromaScope
+import markdown
+
+def render_markdown(text: str) -> str:
+    return markdown.markdown(text, extensions=['extra'])
 
 
 def beautify_thoughts(text: str) -> str:
@@ -13,17 +17,18 @@ def beautify_thoughts(text: str) -> str:
         if not content:
             return ""
         lines = content.split('\n')
-        formatted_lines = [f"{Prisma.CYN}  │ {Prisma.GRY}{line.strip()}{Prisma.RST}" for line in lines if line.strip()]
+        fmt = [f"{Prisma.CYN}  │ {Prisma.GRY}{line.strip()}{Prisma.RST}"
+               for line in lines if line.strip()]
         header = f"{Prisma.CYN}  ┌─ {Prisma.MAG}[ COGNITIVE SUBSTRATE ]{Prisma.RST}"
         footer = f"{Prisma.CYN}  └─{Prisma.RST}"
-        return f"{header}\n" + "\n".join(formatted_lines) + f"\n{footer}"
-
+        inner_content = "\n".join(fmt)
+        return f"<div class='substrate-block'>{header}\n{inner_content}\n{footer}</div>"
     pattern = re.compile(r"<(?:think|thought)>(.*?)(?:</(?:think|thought)>|$)", re.DOTALL | re.IGNORECASE)
     return pattern.sub(replacer, text)
 
-
 class Projector:
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.width = 80
 
     @staticmethod
@@ -92,9 +97,9 @@ class Projector:
         return f"  {Prisma.WHT}{i_role} {role}{Prisma.RST}"
 
     def _render_vital_strip(self, data: Dict, mind: tuple, labels: Dict) -> str:
-        max_h = float(getattr(BoneConfig, "MAX_HEALTH", 100.0) or 100.0)
-        max_s = float(getattr(BoneConfig, "MAX_STAMINA", 100.0) or 100.0)
-        cfg = getattr(BoneConfig, "GUI", None)
+        max_h = float(getattr(self.cfg, "MAX_HEALTH", 100.0) or 100.0)
+        max_s = float(getattr(self.cfg, "MAX_STAMINA", 100.0) or 100.0)
+        cfg = getattr(self.cfg, "GUI", None)
         d_med = getattr(cfg, "DIGNITY_MED", 50.0) if cfg else 50.0
         d_high = getattr(cfg, "DIGNITY_HIGH", 80.0) if cfg else 80.0
         r_len = getattr(cfg, "ROLE_TRUNC_LEN", 30) if cfg else 30
@@ -153,53 +158,50 @@ class Projector:
                 f"{Prisma.SLATE}DRAG:{Prisma.RST} {drag:04.1f}{drag_profile_str}   "
                 f"{Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})")
 
-    @staticmethod
-    def _render_lattice_strip(physics: Any, data_ctx: Dict = None, depth: str = "DEEP") -> str:
+    def _get_lattice_val(self, physics: Any, keys: List[str], default: float) -> float:
+        val = None
+        for k in keys:
+            if isinstance(physics, dict):
+                val = physics.get(k)
+                if val is None:
+                    for sub in ["energy", "space", "matter"]:
+                        if sub in physics and k in physics[sub]:
+                            val = physics[sub][k]
+                            break
+            else:
+                val = getattr(physics, k, None)
+                if val is None:
+                    for sub in ["energy", "space", "matter"]:
+                        sub_obj = getattr(physics, sub, None)
+                        if sub_obj and hasattr(sub_obj, k):
+                            val = getattr(sub_obj, k)
+                            break
+            if val is not None: break
+        try:
+            return float(val) if val is not None else default
+        except (ValueError, TypeError):
+            return default
+
+    def _render_lattice_strip(self, physics: Any, data_ctx: Dict = None, depth: str = "DEEP") -> str:
         if depth == "IDLE" or not physics:
             return ""
         if data_ctx is None:
             data_ctx = {}
-
-        def _get_val(keys, default_val):
-            val = None
-            if isinstance(physics, dict):
-                for k in keys:
-                    if k in physics and physics[k] is not None:
-                        val = physics[k]
-                        break
-                    for sub in ["energy", "space", "matter"]:
-                        if sub in physics and k in physics[sub] and physics[sub][k] is not None:
-                            val = physics[sub][k]
-                            break
-                    if val is not None: break
-            else:
-                for k in keys:
-                    if hasattr(physics, k) and getattr(physics, k) is not None:
-                        val = getattr(physics, k)
-                        break
-                    for sub in ["energy", "space", "matter"]:
-                        if hasattr(physics, sub) and hasattr(getattr(physics, sub), k) and getattr(
-                                getattr(physics, sub), k) is not None:
-                            val = getattr(getattr(physics, sub), k)
-                            break
-                    if val is not None: break
-            if val is None:
-                return default_val
-            try:
-                return float(val)
-            except (ValueError, TypeError):
-                return default_val
-
-        E = _get_val(["exhaustion", "E"], 0.2)
-        beta = _get_val(["beta_index", "contradiction", "beta"], 0.4)
-        V = _get_val(["voltage", "V"], 30.0)
-        F = _get_val(["narrative_drag", "friction", "F"], 0.6)
-        H = _get_val(["health", "H"], 100.0)
-        P = max(0.0, _get_val(["stamina", "P"], 100.0))
-        T = _get_val(["trauma", "T"], 0.0)
-        psi = _get_val(["psi", "PSI"], 0.0)
-        chi = _get_val(["entropy", "chi", "CHI"], 0.0)
-        valence = _get_val(["valence", "VALENCE"], 0.0)
+        E = self._get_lattice_val(physics, ["exhaustion", "E"], 0.2)
+        beta = self._get_lattice_val(physics, ["beta_index", "contradiction", "beta"], 0.4)
+        V = self._get_lattice_val(physics, ["voltage", "V"], 30.0)
+        F = self._get_lattice_val(physics, ["narrative_drag", "friction", "F"], 0.6)
+        H = self._get_lattice_val(physics, ["health", "H"], 100.0)
+        P = max(0.0, self._get_lattice_val(physics, ["stamina", "P"], 100.0))
+        T = self._get_lattice_val(physics, ["trauma", "T"], 0.0)
+        psi = self._get_lattice_val(physics, ["psi", "PSI"], 0.0)
+        chi = self._get_lattice_val(physics, ["entropy", "chi", "CHI"], 0.0)
+        valence = self._get_lattice_val(physics, ["valence", "VALENCE"], 0.0)
+        gamma = self._get_lattice_val(physics, ["gamma"], 0.0)
+        sigma = self._get_lattice_val(physics, ["sigma"], 0.0)
+        eta = self._get_lattice_val(physics, ["eta"], 0.0)
+        theta = self._get_lattice_val(physics, ["theta"], 0.0)
+        upsilon = self._get_lattice_val(physics, ["upsilon"], 0.0)
         sym = ux("projector", "symbols", {})
         i_core = sym.get("core", "")
         i_volt = sym.get("volt", "")
@@ -237,10 +239,13 @@ class Projector:
         else:
             strain_color = Prisma.RED
         strain_str = f" {Prisma.GRY}[Q_n Strain:{strain_color}{strain:.2f}{Prisma.GRY}]{Prisma.RST}"
+        slash_str = ""
+        if gamma > 0 or sigma > 0 or eta > 0 or theta > 0 or upsilon > 0:
+            slash_str = f" {Prisma.BLU}[SLASH Γ:{gamma:.1f} Σ:{sigma:.1f} Η:{eta:.1f} Θ:{theta:.1f} Υ:{upsilon:.1f}]{Prisma.RST}"
         if depth == "DEEP":
-            return core + deep + shared_str + paradox_str + strain_str
+            return core + deep + shared_str + paradox_str + strain_str + slash_str
         elif depth == "CORE":
-            return core + shared_str + strain_str
+            return core + shared_str + strain_str + slash_str
         elif depth == "LITE":
             if data_ctx.get("show_vitals", True):
                 return f"{Prisma.CYN}[{i_volt} V:{V:.0f} | {i_hlth} H:{H:.0f} P:{P:.0f}]{Prisma.RST}" + shared_str
@@ -276,7 +281,8 @@ class Projector:
 class GeodesicRenderer:
     def __init__(self, engine_ref, chroma_ref, strunk_ref, valve_ref=None):
         self.eng = engine_ref
-        self.projector = Projector()
+        target_cfg = getattr(self.eng, "bone_config", BoneConfig)
+        self.projector = Projector(config_ref=target_cfg)
         self.vsl_chroma = chroma_ref
         self.strunk_white = strunk_ref
         self.valve = valve_ref
@@ -420,8 +426,9 @@ class GeodesicRenderer:
             self.eng.events.log(log_msg, "SYS")
 
 class CachedRenderer:
-    def __init__(self, base_renderer):
+    def __init__(self, base_renderer, config_ref=None):
         self._base = base_renderer
+        self.cfg = config_ref or BoneConfig
         self._cached_ui_content = ""
         self._last_tick = -1
 
@@ -430,7 +437,7 @@ class CachedRenderer:
             ctx.physics.get("voltage", 0)
             if isinstance(ctx.physics, dict)
             else ctx.physics.voltage)
-        cfg = getattr(BoneConfig, "GUI", None)
+        cfg = getattr(self.cfg, "GUI", None)
         v_refresh = getattr(cfg, "HIGH_VOLTAGE_REFRESH", 15.0) if cfg else 15.0
         if voltage > v_refresh or tick != self._last_tick:
             frame = self._base.render_frame(ctx, tick, events)
@@ -442,9 +449,10 @@ class CachedRenderer:
                 "metrics": ctx.bio_result if hasattr(ctx, "bio_result") else {}, }
 
 def get_renderer(engine_ref, chroma_ref, strunk_ref, valve_ref=None, mode="STANDARD"):
+    target_cfg = getattr(engine_ref, "bone_config", BoneConfig)
     base = GeodesicRenderer(engine_ref, chroma_ref, strunk_ref, valve_ref)
     if mode == "PERFORMANCE":
-        return CachedRenderer(base)
+        return CachedRenderer(base, config_ref=target_cfg)
     return base
 
 class AmbiguityDial:
@@ -500,8 +508,9 @@ class TruthRenderer(GeodesicRenderer):
 
 class PulseReader:
     @staticmethod
-    def derive_mood(bio_state: Dict) -> str:
-        cfg = getattr(BoneConfig, "GUI", None)
+    def derive_mood(bio_state: Dict, config_ref=None) -> str:
+        target_cfg = config_ref or BoneConfig
+        cfg = getattr(target_cfg, "GUI", None)
         c_warn = getattr(cfg, "CHEM_HIGH_WARN", 0.6) if cfg else 0.6
         a_warn = getattr(cfg, "ATP_EXHAUSTED_WARN", 20.0) if cfg else 20.0
         chem = bio_state.get("chem", {})
@@ -517,8 +526,9 @@ class PulseReader:
         return ux("pulse_reader", "mood_neutral")
 
     @staticmethod
-    def analyze_voltage(voltage: float) -> Tuple[str, str]:
-        cfg = getattr(BoneConfig, "GUI", None)
+    def analyze_voltage(voltage: float, config_ref=None) -> Tuple[str, str]:
+        target_cfg = config_ref or BoneConfig
+        cfg = getattr(target_cfg, "GUI", None)
         v_crit_t = getattr(cfg, "V_CRIT", 20.0) if cfg else 20.0
         v_high_t = getattr(cfg, "V_HIGH", 15.0) if cfg else 15.0
         v_low_t = getattr(cfg, "V_LOW", 5.0) if cfg else 5.0
@@ -537,6 +547,7 @@ class PulseReader:
 class SoulDashboard:
     def __init__(self, engine_ref):
         self.eng = engine_ref
+        self.cfg = getattr(self.eng, "bone_config", BoneConfig)
 
     def render(self) -> str:
         if not hasattr(self.eng, "soul") or not self.eng.soul:
@@ -546,7 +557,7 @@ class SoulDashboard:
         anchor = self.eng.soul.anchor
         soul = self.eng.soul
         dig = anchor.dignity_reserve
-        cfg = getattr(BoneConfig, "GUI", None)
+        cfg = getattr(self.cfg, "GUI", None)
         d_high = getattr(cfg, "DIGNITY_HIGH", 80.0) if cfg else 80.0
         d_med = getattr(cfg, "DIGNITY_MED", 50.0) if cfg else 50.0
         d_low = getattr(cfg, "DIGNITY_LOW", 30.0) if cfg else 30.0

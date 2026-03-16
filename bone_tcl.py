@@ -4,6 +4,7 @@ try:
     import tkinter
     TCL_AVAILABLE = True
 except ImportError:
+    tkinter = None
     TCL_AVAILABLE = False
 
 class TheTclWeaver:

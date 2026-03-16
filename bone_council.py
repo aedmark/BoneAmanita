@@ -22,8 +22,8 @@ class TheStrangeLoop:
         text_lower = text.lower()
         phrase_hit = any(t in text_lower for t in self.triggers)
         is_dict = isinstance(physics, dict)
-        psi = physics.get("psi", physics.get("energy", {}).get("psi", 0.0)) if is_dict else getattr(physics, "psi", 0.0)
-        voltage = physics.get("voltage", physics.get("energy", {}).get("voltage", 0.0)) if is_dict else getattr(physics, "voltage", 0.0)
+        psi = physics.get("psi", physics.get("energy", {}).get("psi", 0.0)) if is_dict else getattr(physics, "psi", getattr(getattr(physics, "energy", None), "psi", 0.0))
+        voltage = physics.get("voltage", physics.get("energy", {}).get("voltage", 0.0)) if is_dict else getattr(physics, "voltage", getattr(getattr(physics, "energy", None), "voltage", 0.0))
         abstract_hit = psi > 0.6 and any(w in text_lower for w in self.keywords)
         threshold = getattr(BoneConfig.COUNCIL, "STRANGE_LOOP_VOLTAGE", 8.0)
         if (phrase_hit or abstract_hit) and voltage > threshold:
@@ -461,7 +461,7 @@ class TheSlashCouncil:
             corrections["theta"] = mods.get("MEADOWS_HIT", -0.1)
         is_dict = isinstance(physics, dict)
         drag = physics.get("narrative_drag",
-                           physics.get("space", {}).get("narrative_drag", 0.0)) if is_dict else getattr(physics, "narrative_drag", 0.0)
+                           physics.get("space", {}).get("narrative_drag", 0.0)) if is_dict else getattr(physics, "narrative_drag", getattr(getattr(physics, "space", None), "narrative_drag", 0.0))
         drag_thresh = mods.get("INTEGRITY_DRAG_THRESH", 5.0)
         if drag > drag_thresh:
             corrections["upsilon"] = mods.get("INTEGRITY_HIT", -0.3)

@@ -34,7 +34,8 @@ class Item:
                    consume_on_use=data.get("consume_on_use", False), reflex_trigger=data.get("reflex_trigger", None))
 
 class GordonKnot:
-    def __init__(self, events=None, mode="ADVENTURE"):
+    def __init__(self, events=None, mode="ADVENTURE", config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.mode = mode.upper()
         self.blueprints = None
         self.events = events
@@ -113,8 +114,8 @@ class GordonKnot:
         starters = data.get("STARTING_INVENTORY", [])
         if not self.inventory and starters:
             self.inventory = [s for s in starters if isinstance(s, str)]
-        if hasattr(BoneConfig, "INVENTORY"):
-            self.max_slots = getattr(BoneConfig.INVENTORY, "MAX_SLOTS", 10)
+        if hasattr(self.cfg, "INVENTORY"):
+            self.max_slots = getattr(self.cfg.INVENTORY, "MAX_SLOTS", 10)
 
     def process_loot_tags(self, text: str, user_input: str) -> Tuple[str, List[str]]:
         loot_pattern = r"\[\[LOOT:\s*(.*?)\]\]"
@@ -210,8 +211,8 @@ class GordonKnot:
     def rummage(
             self, physics_ref: Any, stamina_pool: float) -> Tuple[bool, str, float]:
         cost = 15.0
-        if hasattr(BoneConfig, "INVENTORY"):
-            cost = getattr(BoneConfig.INVENTORY, "RUMMAGE_COST", 15.0)
+        if hasattr(self.cfg, "INVENTORY"):
+            cost = getattr(self.cfg.INVENTORY, "RUMMAGE_COST", 15.0)
         if stamina_pool < cost:
             msg = ux("gordon_strings", "rummage_tired")
             return False, f"{Prisma.OCHRE}{msg}{Prisma.RST}", 0.0
@@ -229,10 +230,10 @@ class GordonKnot:
         voltage = physics.get("voltage", 0.0) if is_dict else getattr(physics, "voltage", 0.0)
         drag = physics.get("narrative_drag", 0.0) if is_dict else getattr(physics, "narrative_drag", 0.0)
         psi = physics.get("psi", 0.0) if is_dict else getattr(physics, "psi", 0.0)
-        v_high = getattr(BoneConfig.PHYSICS, "VOLTAGE_HIGH", 12.0)
-        v_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
-        d_heavy = getattr(BoneConfig.PHYSICS, "DRAG_HEAVY", 5.0)
-        psi_high = getattr(BoneConfig.PHYSICS, "PSI_HIGH", 0.6)
+        v_high = getattr(self.cfg.PHYSICS, "VOLTAGE_HIGH", 12.0)
+        v_crit = getattr(self.cfg.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
+        d_heavy = getattr(self.cfg.PHYSICS, "DRAG_HEAVY", 5.0)
+        psi_high = getattr(self.cfg.PHYSICS, "PSI_HIGH", 0.6)
         for name in set(self.registry) | set(self.ITEM_REGISTRY):
             if not (item := self.get_item_data(name)):
                 continue
@@ -337,7 +338,7 @@ class GordonKnot:
         voltage = physics_ref.get("voltage", 0.0) if is_dict else getattr(physics_ref, "voltage", 0.0)
         drag = physics_ref.get("narrative_drag", 0.0) if is_dict else getattr(physics_ref, "narrative_drag", 0.0)
         kappa = physics_ref.get("kappa", 0.5) if is_dict else getattr(physics_ref, "kappa", 0.5)
-        cfg = getattr(BoneConfig, "INVENTORY", None)
+        cfg = getattr(self.cfg, "INVENTORY", None)
         v_trig = getattr(cfg, "REFLEX_VOLTAGE_TRIGGER", 18.0) if cfg else 18.0
         v_reset = getattr(cfg, "REFLEX_VOLTAGE_RESET", 12.0) if cfg else 12.0
         d_trig = getattr(cfg, "REFLEX_DRAG_TRIGGER", 6.0) if cfg else 6.0

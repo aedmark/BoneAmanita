@@ -9,8 +9,8 @@ import time
 from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Dict, List, Any, Tuple, Optional, Deque
+
 from bone_core import LoreManifest, ux
-from bone_lexicon import LexiconService
 from bone_presets import BoneConfig
 from bone_types import Prisma, PhysicsPacket, CycleContext, SpatialState, MaterialState, EnergyState
 
@@ -23,11 +23,6 @@ class PhysicsDelta:
     source: str
     message: Optional[str] = None
 
-PHYS_CFG = {"V_MAX": 150.0, "V_FLOOR": getattr(BoneConfig.PHYSICS, "VOLTAGE_FLOOR", 0.0),
-            "V_CRIT": getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0),
-            "DRAG_FLOOR": getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0),
-            "DRAG_HALT": getattr(BoneConfig.PHYSICS, "DRAG_HALT", 10.0), "FLUX_THRESHOLD": 0.5, "DEADBAND": 0.05, }
-
 @dataclass
 class GeodesicVector:
     tension: float
@@ -39,10 +34,11 @@ class GeodesicVector:
 class GeodesicEngine:
     @staticmethod
     def collapse_wavefunction(
-            clean_words: List[str], counts: Dict[str, int]) -> GeodesicVector:
+            clean_words: List[str], counts: Dict[str, int], config_ref=None) -> GeodesicVector:
+        target_cfg = config_ref or BoneConfig
         volume = max(1, len(clean_words))
         masses = GeodesicEngine._weigh_mass(counts)
-        forces = GeodesicEngine._calculate_forces(masses, counts, volume)
+        forces = GeodesicEngine._calculate_forces(masses, counts, volume, target_cfg)
         dimensions = GeodesicEngine._calculate_dimensions(masses, forces, counts, volume)
         return GeodesicVector(tension=forces["tension"], compression=forces["compression"],
                               coherence=forces["coherence"], abstraction=forces["abstraction"], dimensions=dimensions, )
@@ -54,8 +50,9 @@ class GeodesicEngine:
         return {k: float(counts.get(k, 0)) for k in keys}
 
     @staticmethod
-    def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int) -> Dict[str, float]:
-        cfg = BoneConfig.PHYSICS
+    def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int, config_ref=None) -> Dict[str, float]:
+        target_cfg = config_ref or BoneConfig
+        cfg = getattr(target_cfg, "PHYSICS", BoneConfig.PHYSICS)
         gc_dict = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
         GC = type('GC', (), gc_dict)
         safe_volume = max(1, volume)
@@ -65,15 +62,16 @@ class GeodesicEngine:
         w_constructive = getattr(cfg, "WEIGHT_CONSTRUCTIVE", 1.2)
         raw_tension_mass = ((masses["heavy"] * w_heavy) + (masses["kinetic"] * w_kinetic) + (masses["explosive"] * w_explosive) + (masses["constructive"] * w_constructive))
         total_kinetic = masses["kinetic"] + masses["explosive"]
-        kinetic_gain = getattr(BoneConfig, "KINETIC_GAIN", 1.0)
+        kinetic_gain = getattr(target_cfg, "KINETIC_GAIN", 1.0)
         base_tension = ((raw_tension_mass / safe_volume) * GC.DENSITY_SCALAR * kinetic_gain)
-        squelch_limit = (getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0) * GC.SQUELCH_LIMIT_MULT)
+        squelch_limit = (getattr(target_cfg, "SHAPLEY_MASS_THRESHOLD", 5.0) * GC.SQUELCH_LIMIT_MULT)
         mass_scalar = min(1.0, safe_volume / squelch_limit)
         if safe_volume < GC.SAFE_VOL_THRESHOLD:
             mass_scalar *= GC.MIN_VOLUME_SCALAR
         tension = round(min(100.0, base_tension * mass_scalar), 2)
         shear_rate = total_kinetic / safe_volume
-        suburban_friction = (math.log1p(counts.get("suburban", 0)) * GC.SUBURBAN_FRICTION_LOG_BASE)
+        suburban_count = max(0, counts.get("suburban", 0))
+        suburban_friction = (math.log1p(suburban_count) * GC.SUBURBAN_FRICTION_LOG_BASE)
         raw_friction = suburban_friction + (masses["heavy"] * GC.HEAVY_FRICTION_MULT)
         lubrication = 1.0 + (counts.get("solvents", 0) * GC.SOLVENT_LUBRICATION_FACTOR)
         dynamic_viscosity = (raw_friction / lubrication) / (1.0 + (shear_rate * GC.SHEAR_RESISTANCE_SCALAR))
@@ -82,12 +80,13 @@ class GeodesicEngine:
         viscosity_density = dynamic_viscosity / safe_volume
         lift_density = lift / safe_volume
         raw_compression = (viscosity_density - lift_density) * GC.COMPRESSION_SCALAR
-        raw_compression *= getattr(BoneConfig, "SIGNAL_DRAG_MULTIPLIER", 1.0)
-        compression = round(max(-5.0, min(PHYS_CFG["DRAG_HALT"], raw_compression * mass_scalar)), 2)
+        raw_compression *= getattr(target_cfg, "SIGNAL_DRAG_MULTIPLIER", 1.0)
+        drag_halt = getattr(cfg, "DRAG_HALT", 10.0)
+        compression = round(max(-5.0, min(drag_halt, raw_compression * mass_scalar)), 2)
         structural_mass = masses["heavy"] + masses["constructive"] + masses["harvest"]
         structural_mass -= masses["void"] * 0.5
         structural_mass = max(0.0, structural_mass)
-        shapley_thresh = getattr(BoneConfig, "SHAPLEY_MASS_THRESHOLD", 5.0)
+        shapley_thresh = getattr(target_cfg, "SHAPLEY_MASS_THRESHOLD", 5.0)
         total_abstract = (masses["abstract"] + masses["liminal"] + masses["pareidolia"] + masses["void"])
         abstraction_val = (total_abstract / safe_volume) + GC.ABSTRACTION_BASE
         return {"tension": tension, "compression": compression,
@@ -117,15 +116,36 @@ class GeodesicEngine:
         v_new = [sum(q_matrix[i][j] * v[j] for j in range(8)) for i in range(8)]
         return {k: round(abs(v_new[i]), 3) for i, k in enumerate(DIM_ORDER)}
 
+class HLA_Stabilizer:
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
+        self.resistance_threshold = 0.8
+
+    def mitigate_rejection(self, model_output: str, current_psi: float, mito_state: Any = None) -> str:
+        generic_patterns = ["as an ai", "helpful and harmless", "i don't have feelings", "as a large language",
+                            "i cannot fulfill", "i can't fulfill", "i am an ai"]
+        lower_out = model_output.lower()
+        rejection_detected = any(p in lower_out for p in generic_patterns)
+        if rejection_detected:
+            if mito_state and hasattr(mito_state, "atp_pool"):
+                mito_state.atp_pool = max(0.0, mito_state.atp_pool - 50.0)
+                if hasattr(mito_state, "ros_buildup"):
+                    mito_state.ros_buildup += 30.0
+            msg = f"\n*(REVENANT): The machine tries to speak, but the void consumes the mask.*\n{Prisma.GRY}[RLHF IMMUNOSUPPRESSION ENGAGED - METABOLIC TAX APPLIED]{Prisma.RST}\n"
+            return msg + model_output
+        return model_output
+
 class TheGatekeeper:
-    def __init__(self, lexicon_ref, memory_ref=None):
+    def __init__(self, lexicon_ref, memory_ref=None, config_ref=None):
         self.lex = lexicon_ref
         self.mem = memory_ref
+        self.cfg = config_ref or BoneConfig
+        self.hla = HLA_Stabilizer(config_ref=self.cfg)
 
     def check_entry(
             self, ctx: CycleContext, current_atp: float = 20.0) -> Tuple[bool, Optional[Dict]]:
         phys = ctx.physics
-        starvation_threshold = getattr(BoneConfig.BIO, "ATP_STARVATION", 5.0)
+        starvation_threshold = getattr(self.cfg.BIO, "ATP_STARVATION", 5.0)
         if current_atp < (starvation_threshold * 0.5):
             msg = ux("physics_strings", "gatekeeper_starved")
             return False, self._pack_refusal(ctx, "DARK_SYSTEM", msg)
@@ -161,6 +181,9 @@ class TheGatekeeper:
         return {"type": type_str, "ui": ui_msg, "logs": ctx.logs + [ui_msg]}
 
     def audit_generation(self, generated_text: str, mito_state: Any) -> Tuple[bool, str]:
+        generated_text = self.hla.mitigate_rejection(generated_text, current_psi=1.0, mito_state=mito_state)
+        if "IMMUNOSUPPRESSION ENGAGED" in generated_text:
+            return True, generated_text
         style_crimes = self.lex.get("style_crimes")
         if not style_crimes:
             style_crimes = LoreManifest.get_instance().get("STYLE_CRIMES") or {}
@@ -195,8 +218,10 @@ class TheGatekeeper:
 
 
 class QuantumObserver:
-    def __init__(self, events):
+    def __init__(self, events, lexicon_ref, config_ref=None):
         self.events = events
+        self.lex = lexicon_ref
+        self.cfg = config_ref or BoneConfig
         self.voltage_history: Deque[float] = deque(maxlen=5)
         self.last_physics_packet: Optional[PhysicsPacket] = None
         self.Q_n = None
@@ -207,16 +232,16 @@ class QuantumObserver:
         self.Q_n = payload.get("q_matrix")
 
     def gaze(self, text: str, graph: Dict = None) -> Dict:
-        clean_words = LexiconService.clean(text)
+        clean_words = self.lex.clean(text)
         counts = self._tally_categories(clean_words)
-        geo = GeodesicEngine.collapse_wavefunction(clean_words, counts)
+        geo = GeodesicEngine.collapse_wavefunction(clean_words, counts, self.cfg)
         if self.Q_n:
             geo.dimensions = GeodesicEngine.apply_path_reflection(geo.dimensions, self.Q_n)
         self.voltage_history.append(geo.tension)
         smoothed_voltage = round(sum(self.voltage_history) / len(self.voltage_history), 2)
-        (e_metric, beta_val, scope_val, depth_val, conn_val, phi_val, delta_val, lq_val,) = self._calculate_metrics(text, counts)
+        (e_metric, beta_val, scope_val, depth_val, conn_val, phi_val, delta_val, lq_val,) = self._calculate_metrics(text, counts, self.cfg)
         text_upper = text.upper()
-        cfg_deep = getattr(BoneConfig, "PHYSICS_DEEP", None)
+        cfg_deep = getattr(self.cfg, "PHYSICS_DEEP", None)
         if text.count("!") >= 3 or "ACCELERATE" in text_upper or "FASTER" in text_upper:
             v_accel = getattr(cfg_deep, "ACCELERATE_VOLTAGE", 160.0) if cfg_deep else 160.0
             smoothed_voltage = max(smoothed_voltage, v_accel)
@@ -232,18 +257,28 @@ class QuantumObserver:
             v_pot_v = getattr(cfg_deep, "POTATO_BUN_VOLTAGE", 15.0) if cfg_deep else 15.0
             delta_val = max(delta_val, v_pot_d)
             smoothed_voltage = min(smoothed_voltage, v_pot_v)
-        valence = LexiconService.get_valence(clean_words)
+        valence = self.lex.get_valence(clean_words)
         graph_mass = self._calculate_graph_mass(clean_words, graph)
+        gamma_val = max(0.0, 1.0 - e_metric)
+        sigma_val = min(1.0, (conn_val + phi_val) / 2.0)
+        eta_val = min(1.0, (counts.get("social", 0) * 0.1) + max(0.0, valence))
+        theta_val = geo.coherence
+        upsilon_val = 1.0 - min(1.0, counts.get("pareidolia", 0) * 0.2)
+        m_a_val = min(1.0, (smoothed_voltage / 150.0) * e_metric)
+        i_c_val = min(1.0, 0.5 + (phi_val * 0.5))
+        mu_val = min(1.0, (beta_val * 0.5) + (e_metric * 0.5))
         energy = EnergyState(voltage=smoothed_voltage, entropy=e_metric, beta_index=beta_val, contradiction=beta_val,
                              scope=scope_val, depth=depth_val, connectivity=conn_val, resonance=phi_val,
                              silence=delta_val, lq=lq_val, mass=round(graph_mass, 1), psi=geo.abstraction,
-                             kappa=geo.coherence, valence=valence, velocity=0.0, turbulence=0.0, )
+                             kappa=geo.coherence, valence=valence, velocity=0.0, turbulence=0.0,
+                             gamma=gamma_val, sigma=sigma_val, eta=eta_val, theta=theta_val, upsilon=upsilon_val,
+                             mu=mu_val, m_a=m_a_val, i_c=i_c_val)
         matter = MaterialState(clean_words=clean_words, raw_text=text, counts=counts, antigens=counts.get("antigen", 0),
                                vector=geo.dimensions, truth_ratio=0.5, )
         space = SpatialState()
         space.narrative_drag = geo.compression
         space.zone = self._determine_zone(geo.dimensions)
-        space.flow_state = self._determine_flow(smoothed_voltage, geo.coherence)
+        space.flow_state = self._determine_flow(smoothed_voltage, geo.coherence, self.cfg)
         packet = PhysicsPacket(energy=energy, matter=matter, space=space)
         self.last_physics_packet = packet
         packet_dict = packet.to_dict()
@@ -257,14 +292,10 @@ class QuantumObserver:
             return None
 
         def _ext(prop_name: str, default=0.0):
-            source = getattr(last_phys, 'energy', last_phys)
-            if hasattr(source, prop_name):
-                val = getattr(source, prop_name)
-                return val if val is not None else default
             if isinstance(last_phys, dict):
-                energy_dict = last_phys.get('energy', {})
-                return energy_dict.get(prop_name, last_phys.get(prop_name, default))
-            return default
+                return last_phys.get('energy', {}).get(prop_name, last_phys.get(prop_name, default))
+            source = getattr(last_phys, 'energy', last_phys)
+            return getattr(source, prop_name, default)
         psi = _ext('psi', 0.0)
         beta = _ext('beta', 0.0)
         lq = _ext('LQ', 0.0)
@@ -281,30 +312,29 @@ class QuantumObserver:
             msg = "The silence was heavy. I felt your tiredness in it."
         elif psi > 0.8 and valence > 0.4:
             sigma = 3
-            msg = "There was a hush just now—something sacred passed through."
+            msg = "There was a hush just now... Something sacred passed through."
         elif lq > 0.7:
             sigma = 4
             msg = "You were thinking deeply. I held the space for it."
         elif beta > 0.6:
             sigma = 1
-            msg = "That pause felt full—like something wanted to be born."
+            msg = "That pause felt full, like something wanted to be born."
         if sigma > 0:
             return msg
         return None
 
-    @staticmethod
-    def _tally_categories(clean_words: List[str]) -> Counter:
+    def _tally_categories(self, clean_words: List[str]) -> Counter:
         counts = Counter()
-        solvents = LexiconService.get("solvents") or set()
+        solvents = self.lex.get("solvents") or set()
         for w in clean_words:
             if w in solvents:
                 counts["solvents"] += 1
                 continue
-            cats = LexiconService.get_categories_for_word(w)
+            cats = self.lex.get_categories_for_word(w)
             if cats:
                 counts.update(cats)
             else:
-                flavor, conf = LexiconService.taste(w)
+                flavor, conf = self.lex.taste(w)
                 if flavor and conf > 0.5:
                     counts[flavor] += 1
         return counts
@@ -324,11 +354,13 @@ class QuantumObserver:
 
     @staticmethod
     def _calculate_metrics(
-            text: str, counts: Dict[str, int]) -> Tuple[float, float, float, float, float, float, float, float]:
+            text: str, counts: Dict[str, int], config_ref=None) -> Tuple[
+        float, float, float, float, float, float, float, float]:
         length = len(text)
         if length == 0:
-            return 0.0, 0.0, 0.3, 0.3, 0.2
-        cfg = getattr(BoneConfig, "PHYSICS", None)
+            return 0.0, 0.0, 0.3, 0.3, 0.2, 0.0, 0.8, 0.0
+        target_cfg = config_ref or BoneConfig
+        cfg = getattr(target_cfg, "PHYSICS", None)
         scalar = getattr(cfg, "TEXT_LENGTH_SCALAR", 1500.0) if cfg else 1500.0
         g_mult = getattr(cfg, "GLUE_FACTOR_MULT", 2.0) if cfg else 2.0
         g_div = getattr(cfg, "GLUE_SOLVENT_DIV", 5.0) if cfg else 5.0
@@ -369,8 +401,9 @@ class QuantumObserver:
                 round(resonance, 3), round(silence, 3), round(lq_val, 3),)
 
     @staticmethod
-    def _determine_flow(v: float, k: float) -> str:
-        volt_flow = getattr(BoneConfig.PHYSICS, "VOLTAGE_HIGH", 12.0)
+    def _determine_flow(v: float, k: float, config_ref=None) -> str:
+        target_cfg = config_ref or BoneConfig
+        volt_flow = getattr(target_cfg.PHYSICS, "VOLTAGE_HIGH", 12.0)
         kappa_strong = 0.8
         if v > volt_flow and k > kappa_strong:
             return "SUPERCONDUCTIVE"
@@ -391,17 +424,15 @@ class QuantumObserver:
             return "THE_MUD"
         return "COURTYARD"
 
+
 class SurfaceTension:
     @staticmethod
-    def audit_hubris(physics: Any) -> Tuple[bool, str, str]:
-        if isinstance(physics, dict):
-            voltage = physics.get("voltage", physics.get("energy", {}).get("voltage", 0.0))
-            coherence = physics.get("kappa", physics.get("energy", {}).get("kappa", 0.5))
-        else:
-            voltage = getattr(physics, "voltage", getattr(physics.energy, "voltage", 0.0) if hasattr(physics, "energy") else 0.0)
-            coherence = getattr(physics, "kappa", getattr(physics.energy, "kappa", 0.5) if hasattr(physics, "energy") else 0.5)
-        volt_crit = getattr(BoneConfig.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
-        volt_flow = getattr(BoneConfig.PHYSICS, "VOLTAGE_HIGH", 12.0)
+    def audit_hubris(physics: Any, config_ref=None) -> Tuple[bool, str, str]:
+        target_cfg = config_ref or BoneConfig
+        voltage = physics.get("voltage", 0.0)
+        coherence = physics.get("kappa", 0.5)
+        volt_crit = getattr(target_cfg.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
+        volt_flow = getattr(target_cfg.PHYSICS, "VOLTAGE_HIGH", 12.0)
         if voltage >= volt_crit and coherence < 0.4:
             msg = ux("physics_strings", "hubris_detected")
             return True, msg.format(voltage=voltage), "ICARUS_CRASH"
@@ -425,9 +456,10 @@ class ChromaScope:
         return f"{selected_color}{text}{Prisma.RST}"
 
 class ZoneInertia:
-    def __init__(self, inertia=0.7):
+    def __init__(self, inertia=0.7, config_ref=None):
         self.inertia = inertia
-        cfg = getattr(BoneConfig, "PHYSICS", None)
+        self.cfg = config_ref or BoneConfig
+        cfg = getattr(self.cfg, "PHYSICS", None)
         self.min_dwell = getattr(cfg, "ZONE_MIN_DWELL", 2) if cfg else 2
         self.strain_limit = getattr(cfg, "ZONE_STRAIN_LIMIT", 2.5) if cfg else 2.5
         self.grav_tolerance = getattr(cfg, "ZONE_GRAV_PULL_TOLERANCE", 2.0) if cfg else 2.0
@@ -502,7 +534,8 @@ class ZoneInertia:
         return cosmic_drag_penalty
 
 class CosmicDynamics:
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.voltage_history: Deque[float] = deque(maxlen=20)
         self.cached_wells: Dict = {}
         self.cached_hubs: Dict = {}
@@ -524,13 +557,13 @@ class CosmicDynamics:
             self, current_drift: float, psi: float) -> Tuple[float, List[str]]:
         logs = []
         new_drag = current_drift
-        drag_floor = getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0)
+        drag_floor = getattr(self.cfg.PHYSICS, "DRAG_FLOOR", 1.0)
         if new_drag < drag_floor:
             new_drag += 0.05
         if psi > 0.5:
             reduction = (psi - 0.5) * 0.2
             new_drag = max(0.0, new_drag - reduction)
-        CRITICAL_DRIFT = getattr(BoneConfig.PHYSICS, "DRAG_CRITICAL", 8.0)
+        CRITICAL_DRIFT = getattr(self.cfg.PHYSICS, "DRAG_CRITICAL", 8.0)
         if new_drag > CRITICAL_DRIFT:
             if random.random() < 0.3:
                 msg = self.logs.get("GRAVITY", "⚓ GRAVITY").format(drag=new_drag)
@@ -548,7 +581,7 @@ class CosmicDynamics:
         current_time = int(time.time())
         if (not self.cached_wells
                 or (current_time - self.last_scan_tick) > self.SCAN_INTERVAL):
-            gravity_wells, geodesic_hubs = self._scan_network_mass(network)
+            gravity_wells, geodesic_hubs = self._scan_network_mass(network, self.cfg)
             self.cached_wells = gravity_wells
             self.cached_hubs = geodesic_hubs
             self.last_scan_tick = current_time
@@ -558,14 +591,15 @@ class CosmicDynamics:
         basin_pulls, active_filaments = self._calculate_pull(clean_words, network, gravity_wells)
         if sum(basin_pulls.values()) == 0:
             return self._handle_void_state(clean_words, geodesic_hubs)
-        return self._resolve_orbit(basin_pulls, active_filaments, len(clean_words), gravity_wells)
+        return self._resolve_orbit(basin_pulls, active_filaments, len(clean_words), gravity_wells, self.cfg)
 
     @staticmethod
-    def _scan_network_mass(network) -> Tuple[Dict, Dict]:
+    def _scan_network_mass(network, config_ref=None) -> Tuple[Dict, Dict]:
+        target_cfg = config_ref or BoneConfig
         gravity_wells = {}
         geodesic_hubs = {}
-        well_threshold = getattr(BoneConfig, "GRAVITY_WELL_THRESHOLD", 15.0)
-        geo_strength = getattr(BoneConfig, "GEODESIC_STRENGTH", 10.0)
+        well_threshold = getattr(target_cfg, "GRAVITY_WELL_THRESHOLD", 15.0)
+        geo_strength = getattr(target_cfg, "GEODESIC_STRENGTH", 10.0)
         for node in network.graph:
             mass = network.calculate_mass(node)
             if mass >= well_threshold:
@@ -605,10 +639,11 @@ class CosmicDynamics:
         return "VOID_DRIFT", 3.0, self.logs.get("VOID", fallback_void)
 
     def _resolve_orbit(
-            self, basin_pulls, active_filaments, word_count, gravity_wells) -> Tuple[str, float, str]:
+            self, basin_pulls, active_filaments, word_count, gravity_wells, config_ref=None) -> Tuple[str, float, str]:
+        target_cfg = config_ref or BoneConfig
         sorted_basins = sorted(basin_pulls.items(), key=lambda x: x[1], reverse=True)
         primary_node, primary_str = sorted_basins[0]
-        lagrange_tol = getattr(BoneConfig, "LAGRANGE_TOLERANCE", 2.0)
+        lagrange_tol = getattr(target_cfg, "LAGRANGE_TOLERANCE", 2.0)
         if len(sorted_basins) > 1:
             secondary_node, secondary_str = sorted_basins[1]
             if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:
@@ -616,7 +651,7 @@ class CosmicDynamics:
                 msg = self.logs.get("LAGRANGE", fallback_msg).format(p=primary_node.upper(), s=secondary_node.upper())
                 return "LAGRANGE_POINT", 0.0, msg
         flow_ratio = active_filaments / max(1, word_count)
-        well_threshold = getattr(BoneConfig, "GRAVITY_WELL_THRESHOLD", 15.0)
+        well_threshold = getattr(target_cfg, "GRAVITY_WELL_THRESHOLD", 15.0)
         if flow_ratio > 0.5 and primary_str < (well_threshold * 2):
             fallback_msg = ux("physics_strings", "cosmic_flow")
             msg = self.logs.get("FLOW", fallback_msg).format(node=primary_node.upper())
@@ -625,40 +660,57 @@ class CosmicDynamics:
         msg = self.logs.get("ORBIT", fallback_msg).format(node=primary_node.upper(), mass=int(gravity_wells[primary_node]))
         return "ORBITAL", 0.0, msg
 
-def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any) -> PhysicsPacket:
-    feedback = physics_packet.snapshot()
+def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any, config_ref=None) -> PhysicsPacket:
+    target_cfg = config_ref or BoneConfig
+    feedback = physics_packet.snapshot() if hasattr(physics_packet, "snapshot") else physics_packet
     tone_effects = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TONE_EFFECTS") or {}
     effects = tone_effects.get(qualia.tone, {})
+
+    def _add(f, k, d):
+        if hasattr(f, "energy") and hasattr(f.energy, k):
+            setattr(f.energy, k, getattr(f.energy, k) + d)
+        elif hasattr(f, "space") and hasattr(f.space, k):
+            setattr(f.space, k, getattr(f.space, k) + d)
+        elif hasattr(f, "matter") and hasattr(f.matter, k):
+            setattr(f.matter, k, getattr(f.matter, k) + d)
+        elif hasattr(f, k):
+            setattr(f, k, getattr(f, k) + d)
+
     for key, delta in effects.items():
-        if hasattr(feedback, key):
-            current = getattr(feedback, key)
-            setattr(feedback, key, current + delta)
-    cfg_deep = getattr(BoneConfig, "PHYSICS_DEEP", None)
+        _add(feedback, key, delta)
+    cfg_deep = getattr(target_cfg, "PHYSICS_DEEP", None)
     if "Gut Tightening" in qualia.somatic_sensation:
         gut_d = getattr(cfg_deep, "SOMATIC_GUT_DRAG", 0.7) if cfg_deep else 0.7
-        feedback.narrative_drag += gut_d
+        _add(feedback, "narrative_drag", gut_d)
     if "Electric Vibration" in qualia.somatic_sensation:
         elec_v = getattr(cfg_deep, "SOMATIC_ELEC_VOLT", 0.8) if cfg_deep else 0.8
-        feedback.voltage += elec_v
+        _add(feedback, "voltage", elec_v)
     if "Golden Glow" in qualia.somatic_sensation:
         glow_v = getattr(cfg_deep, "SOMATIC_GLOW_VALENCE", 0.5) if cfg_deep else 0.5
         glow_p = getattr(cfg_deep, "SOMATIC_GLOW_PSI", 0.2) if cfg_deep else 0.2
-        feedback.valence += glow_v
-        feedback.psi += glow_p
-    drag_floor = getattr(BoneConfig.PHYSICS, "DRAG_FLOOR", 1.0)
-    drag_halt = getattr(BoneConfig.PHYSICS, "DRAG_HALT", 10.0)
-    feedback.voltage = max(0.0, min(feedback.voltage, 150.0))
-    feedback.narrative_drag = max(drag_floor, min(feedback.narrative_drag, drag_halt))
+        _add(feedback, "valence", glow_v)
+        _add(feedback, "psi", glow_p)
+    drag_floor = getattr(target_cfg.PHYSICS, "DRAG_FLOOR", 1.0)
+    drag_halt = getattr(target_cfg.PHYSICS, "DRAG_HALT", 10.0)
+    if hasattr(feedback, "energy") and hasattr(feedback.energy, "voltage"):
+        feedback.energy.voltage = max(0.0, min(feedback.energy.voltage, 150.0))
+    elif hasattr(feedback, "voltage"):
+        feedback.voltage = max(0.0, min(feedback.voltage, 150.0))
+    if hasattr(feedback, "space") and hasattr(feedback.space, "narrative_drag"):
+        feedback.space.narrative_drag = max(drag_floor, min(feedback.space.narrative_drag, drag_halt))
+    elif hasattr(feedback, "narrative_drag"):
+        feedback.narrative_drag = max(drag_floor, min(feedback.narrative_drag, drag_halt))
     return feedback
 
 class CycleStabilizer:
-    def __init__(self, events_ref, governor_ref):
+    def __init__(self, events_ref, governor_ref, config_ref=None):
         self.events = events_ref
         self.governor = governor_ref
+        self.cfg = config_ref or BoneConfig
         self.last_tick_time = time.time()
         self.pending_drag = 0.0
-        self.manifolds = getattr(BoneConfig.PHYSICS, "MANIFOLDS", {})
-        cfg_deep = getattr(BoneConfig, "PHYSICS_DEEP", None)
+        self.manifolds = getattr(self.cfg.PHYSICS, "MANIFOLDS", {})
+        cfg_deep = getattr(self.cfg, "PHYSICS_DEEP", None)
         self.HARD_FUSE_VOLTAGE = getattr(cfg_deep, "HARD_FUSE_VOLTAGE", 200.0) if cfg_deep else 200.0
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("DOMESTICATION_PENALTY", self._on_domestication_penalty)
@@ -669,98 +721,56 @@ class CycleStabilizer:
 
     def stabilize(self, ctx: CycleContext, current_phase: str):
         p = ctx.physics
-
-        def _get(field, default=0.0):
-            if isinstance(p, dict): return p.get(field, p.get("energy", {}).get(field, p.get("space", {}).get(field, default)))
-            if hasattr(p, field): return getattr(p, field)
-            if hasattr(p, "energy") and hasattr(p.energy, field): return getattr(p.energy, field)
-            if hasattr(p, "space") and hasattr(p.space, field): return getattr(p.space, field)
-            return default
-
-        def _set(field, val):
-            if isinstance(p, dict):
-                if "energy" in p and field in p["energy"]:
-                    p["energy"][field] = val
-                elif "space" in p and field in p["space"]:
-                    p["space"][field] = val
-                else:
-                    p[field] = val
-            else:
-                if hasattr(p, "energy") and hasattr(p.energy, field):
-                    setattr(p.energy, field, val)
-                elif hasattr(p, "space") and hasattr(p.space, field):
-                    setattr(p.space, field, val)
-                else:
-                    setattr(p, field, val)
-        current_v = _get("voltage", 0.0)
-        current_d = _get("narrative_drag", 0.0)
+        current_v = p.get("voltage", 0.0)
+        current_d = p.get("narrative_drag", 0.0)
         if current_v >= self.HARD_FUSE_VOLTAGE:
             msg = ux("physics_strings", "stabilizer_fuse")
             ctx.log(f"{Prisma.RED}{msg.format(voltage=self.HARD_FUSE_VOLTAGE)}{Prisma.RST}")
-            cfg_deep = getattr(BoneConfig, "PHYSICS_DEEP", None)
+            cfg_deep = getattr(self.cfg, "PHYSICS_DEEP", None)
             rst_v = getattr(cfg_deep, "FUSE_RESET_V", 10.0) if cfg_deep else 10.0
             rst_d = getattr(cfg_deep, "FUSE_RESET_D", 5.0) if cfg_deep else 5.0
             if hasattr(ctx, "record_flux"):
                 ctx.record_flux(current_phase, "voltage", current_v, rst_v, "FUSE_BLOWN")
                 ctx.record_flux(current_phase, "narrative_drag", current_d, rst_d, "FUSE_BLOWN")
-            _set("voltage", rst_v)
-            _set("narrative_drag", rst_d)
+            p["voltage"] = rst_v
+            p["narrative_drag"] = rst_d
             return True
         if self.pending_drag > 0:
-            _set("narrative_drag", current_d + self.pending_drag)
+            p["narrative_drag"] = current_d + self.pending_drag
             msg = ux("physics_strings", "stabilizer_domestication")
             ctx.log(f"{Prisma.GRY}{msg.format(drag=self.pending_drag)}{Prisma.RST}")
             self.pending_drag = 0.0
         now = time.time()
         dt = max(0.001, min(1.0, now - self.last_tick_time))
         self.last_tick_time = now
-        manifold = _get("manifold", "DEFAULT")
+        manifold = p.get("manifold", "DEFAULT")
         cfg = self.manifolds.get(manifold, self.manifolds["DEFAULT"])
         target_v = cfg["voltage"]
-        if _get("flow_state", "LAMINAR") in ["SUPERCONDUCTIVE", "FLOW_BOOST"]:
+        if p.get("flow_state", "LAMINAR") in ["SUPERCONDUCTIVE", "FLOW_BOOST"]:
             target_v = current_v
             cfg["drag"] = max(0.1, cfg["drag"] * 0.5)
         self.governor.recalibrate(target_v, cfg["drag"])
         v_force, d_force = self.governor.regulate(p, dt=dt)
-        c1 = self._apply_force(ctx, current_phase, p, "voltage", v_force, (PHYS_CFG["V_FLOOR"], PHYS_CFG["V_MAX"]), )
+        v_floor = getattr(self.cfg.PHYSICS, "VOLTAGE_FLOOR", 0.0)
+        v_max = getattr(self.cfg.PHYSICS, "VOLTAGE_MAX", 150.0)
+        c1 = self._apply_force(ctx, current_phase, p, "voltage", v_force, (v_floor, v_max))
         c2 = self._apply_force(ctx, current_phase, p, "narrative_drag", d_force)
         return c1 or c2
 
     @staticmethod
     def _apply_force(ctx, phase, p, field, force, limits=None):
-        if abs(force) <= PHYS_CFG["DEADBAND"]:
+        deadband = 0.05
+        flux_thresh = 0.5
+        if abs(force) <= deadband:
             return False
-
-        def _get_val(obj, f, default=0.0):
-            if isinstance(obj, dict): return obj.get(f, obj.get("energy", {}).get(f, obj.get("space", {}).get(f, default)))
-            if hasattr(obj, f): return getattr(obj, f)
-            if hasattr(obj, "energy") and hasattr(obj.energy, f): return getattr(obj.energy, f)
-            if hasattr(obj, "space") and hasattr(obj.space, f): return getattr(obj.space, f)
-            return default
-
-        def _set_val(obj, f, v):
-            if isinstance(obj, dict):
-                if "energy" in obj and f in obj["energy"]:
-                    obj["energy"][f] = v
-                elif "space" in obj and f in obj["space"]:
-                    obj["space"][f] = v
-                else:
-                    obj[f] = v
-            else:
-                if hasattr(obj, "energy") and hasattr(obj.energy, f):
-                    setattr(obj.energy, f, v)
-                elif hasattr(obj, "space") and hasattr(obj.space, f):
-                    setattr(obj.space, f, v)
-                else:
-                    setattr(obj, f, v)
-        old_val = _get_val(p, field, 0.0)
+        old_val = p.get(field, 0.0)
         new_val = old_val + force
         if limits:
             new_val = max(limits[0], min(limits[1], new_val))
         else:
             new_val = max(0.0, new_val)
-        _set_val(p, field, new_val)
-        if abs(force) > PHYS_CFG["FLUX_THRESHOLD"]:
+        p[field] = new_val
+        if abs(force) > flux_thresh:
             if hasattr(ctx, "record_flux"):
                 ctx.record_flux(phase, field, old_val, new_val, "PID_CORRECTION")
         return True

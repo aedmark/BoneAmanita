@@ -3,16 +3,19 @@
 import math
 import random
 import time
+import os
+import re
+import json
+from collections import deque
 from dataclasses import dataclass
-from typing import Dict, Any, List, Tuple
-
+from typing import Dict, Any, List, Tuple, Optional
 from bone_composer import LLMInterface, PromptComposer, ResponseValidator
 from bone_presets import BoneConfig, BonePresets
 from bone_core import EventBus, TelemetryService, LoreManifest, ux
 from bone_gui import beautify_thoughts
 from bone_symbiosis import SymbiosisManager
 from bone_types import Prisma, DecisionCrystal
-
+from bone_random import RandomRetrievalNavigator, LibraryGraph
 
 @dataclass
 class CortexServices:
@@ -27,6 +30,11 @@ class CortexServices:
     bio: Any
     host_stats: Any = None
     village: Any = None
+    config_ref: Any = None
+
+def _safe_get(obj, key, default=None):
+    if isinstance(obj, dict): return obj.get(key, default)
+    return getattr(obj, key, default)
 
 @dataclass
 class ChemicalState:
@@ -34,11 +42,13 @@ class ChemicalState:
     cortisol: float = 0.1
     adrenaline: float = 0.1
     serotonin: float = 0.2
+    config_ref: Any = None
 
     def homeostasis(self, rate: float = 0.1):
-        cfg = BoneConfig.CORTEX
-        targets = {"dopamine": cfg.RESTING_DOPAMINE, "cortisol": cfg.RESTING_CORTISOL,
-                   "adrenaline": cfg.RESTING_ADRENALINE, "serotonin": cfg.RESTING_SEROTONIN, }
+        target_cfg = self.config_ref or BoneConfig
+        cfg = _safe_get(target_cfg, "CORTEX", {})
+        targets = {"dopamine": _safe_get(cfg, "RESTING_DOPAMINE", 0.2), "cortisol": _safe_get(cfg, "RESTING_CORTISOL", 0.1),
+                   "adrenaline": _safe_get(cfg, "RESTING_ADRENALINE", 0.1), "serotonin": _safe_get(cfg, "RESTING_SEROTONIN", 0.2), }
         for attr, target in targets.items():
             current = getattr(self, attr)
             delta = (target - current) * rate
@@ -47,19 +57,18 @@ class ChemicalState:
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
         mapping = [("DOP", "dopamine"), ("COR", "cortisol"), ("ADR", "adrenaline"), ("SER", "serotonin"), ]
         for key, attr in mapping:
-            val = new_state.get(key, 0.0)
+            val = new_state.get(key, new_state.get(attr, 0.0))
             current = getattr(self, attr)
             setattr(self, attr, (current * (1.0 - weight)) + (val * weight))
 
-BrainConfig = BoneConfig.CORTEX
-
 class NeurotransmitterModulator:
-    def __init__(self, bio_ref, events_ref=None):
+    def __init__(self, bio_ref, events_ref=None, config_ref=None):
         self.bio = bio_ref
         self.events = events_ref
-        self.current_chem = ChemicalState()
+        self.cfg = config_ref or BoneConfig
+        self.current_chem = ChemicalState(config_ref=self.cfg)
         self.last_mood = "NEUTRAL"
-        cfg = getattr(BoneConfig, "CORTEX", None)
+        cfg = getattr(self.cfg, "CORTEX", None)
         self.BASE_TOKENS = getattr(cfg, "BASE_TOKENS", 720) if cfg else 720
         self.MAX_TOKENS = getattr(cfg, "MAX_TOKENS", 4096) if cfg else 4096
         self.SELF_CARE_THRESHOLD = getattr(cfg, "SELF_CARE_THRESHOLD", 10) if cfg else 10
@@ -69,17 +78,18 @@ class NeurotransmitterModulator:
             self,
             base_voltage: float,
             latency_penalty: float = 0.0,
-            physics_state: Dict[str, float] = None,) -> Dict[str, Any]:
+            physics_state: Dict[str, float] = None, ) -> Dict[str, Any]:
         if physics_state is None:
             physics_state = {}
         if self.bio and hasattr(self.bio, "endo"):
             incoming_chem = self.bio.endo.get_state()
         else:
             incoming_chem = {}
-        cfg = BoneConfig.CORTEX
-        self.current_chem.homeostasis(rate=cfg.BASE_DECAY_RATE)
-        plasticity = cfg.BASE_PLASTICITY + (base_voltage * cfg.VOLTAGE_SENSITIVITY)
-        plasticity = max(0.1, min(cfg.MAX_PLASTICITY, plasticity))
+        cfg = _safe_get(self.cfg, "CORTEX", {})
+        self.current_chem.homeostasis(rate=_safe_get(cfg, "BASE_DECAY_RATE", 0.1))
+        plasticity = _safe_get(cfg, "BASE_PLASTICITY", 0.1) + (
+                    base_voltage * _safe_get(cfg, "VOLTAGE_SENSITIVITY", 0.05))
+        plasticity = max(0.1, min(_safe_get(cfg, "MAX_PLASTICITY", 1.0), plasticity))
         self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
         if self.current_chem.dopamine < 0.15:
             self.starvation_ticks += 1
@@ -101,7 +111,7 @@ class NeurotransmitterModulator:
         elif c.serotonin > mood_thresholds.get("ZEN_SER", 0.8):
             current_mood = "ZEN"
         if current_mood != self.last_mood and self.events:
-            self.events.publish("NEURAL_STATE_SHIFT", {"state": current_mood,"chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin},},)
+            self.events.publish("NEURAL_STATE_SHIFT", {"state": current_mood, "chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin}, }, )
             self.last_mood = current_mood
         v_offset = getattr(cfg, "TEMP_VOLTAGE_OFFSET", 5.0)
         v_scalar = getattr(cfg, "TEMP_VOLTAGE_SCALAR", 0.1)
@@ -110,8 +120,12 @@ class NeurotransmitterModulator:
         chemical_delta = (c.dopamine * chem_weights.get("dop", 0.4)) - (c.adrenaline * chem_weights.get("adr", 0.3)) - (c.cortisol * chem_weights.get("cor", 0.2))
         base_temp = getattr(cfg, "BASE_TEMP", 0.4)
         base_top_p = getattr(cfg, "BASE_TOP_P", 0.95)
-        chi = physics_state.get("chi", physics_state.get("entropy", 0.2))
-        beta = physics_state.get("contradiction", physics_state.get("beta_index", 0.4))
+
+        def _p_get(k, d=0.0):
+            return physics_state.get(k, physics_state.get("energy", {}).get(k, physics_state.get("space", {}).get(k, physics_state.get("matter", {}).get(k, d))))
+
+        chi = _p_get("chi", _p_get("entropy", 0.2))
+        beta = _p_get("contradiction", _p_get("beta_index", 0.4))
         ent_offset = getattr(cfg, "TEMP_ENTROPY_OFFSET", 0.5)
         ent_scalar = getattr(cfg, "TEMP_ENTROPY_SCALAR", 1.5)
         entropy_bonus = max(0.0, chi - ent_offset) * ent_scalar
@@ -124,8 +138,7 @@ class NeurotransmitterModulator:
         token_delta = (c.dopamine * token_mods.get("dop", 800)) - (c.adrenaline * token_mods.get("adr", 400)) - (c.cortisol * token_mods.get("cor", 200))
         min_tokens = getattr(cfg, "MIN_TOKENS", 150.0)
         max_t = int(max(min_tokens, min(float(self.MAX_TOKENS), self.BASE_TOKENS + token_delta)))
-        return {"temperature": final_temp, "top_p": final_top_p, "frequency_penalty": round(freq_pen, 2),
-                "presence_penalty": round(pres_pen, 2), "max_tokens": max_t}
+        return {"temperature": final_temp, "top_p": final_top_p, "frequency_penalty": round(freq_pen, 2),"presence_penalty": round(pres_pen, 2), "max_tokens": max_t}
 
     def _treat_yourself(self):
         if self.events:
@@ -155,12 +168,13 @@ class TheCortex:
     def __init__(self, services: CortexServices, llm_client=None):
         self.ballast_active = False
         self.svc = services
+        self.cfg = services.config_ref or BoneConfig
         self.events = services.events
         self.dialogue_buffer = []
-        cfg = getattr(BoneConfig, "CORTEX", None)
+        cfg = getattr(self.cfg, "CORTEX", None)
         self.MAX_HISTORY = getattr(cfg, "MAX_HISTORY_LENGTH", 15) if cfg else 15
-        self.modulator = NeurotransmitterModulator(bio_ref=self.svc.bio, events_ref=self.events)
-        self.boot_history = TelemetryService.get_instance().read_recent_history(limit=4)
+        self.modulator = NeurotransmitterModulator(bio_ref=self.svc.bio, events_ref=self.events, config_ref=self.cfg)
+        self.boot_history = TelemetryService.get_instance(config_ref=self.cfg).read_recent_history(limit=4)
         self.last_physics = {}
         self.consultant = services.consultant
         self.llm = llm_client or LLMInterface(self.events, provider="mock")
@@ -170,38 +184,42 @@ class TheCortex:
             self.dreamer.mem = self.svc.mind_memory
         else:
             eng_ref = getattr(self.svc.cycle_controller, "eng", None)
-            self.dreamer = DreamEngine(self.events, self.svc.lore, llm_ref=self.llm, mem_ref=self.svc.mind_memory, eng_ref=eng_ref)
+            self.dreamer = DreamEngine(self.events, self.svc.lore, llm_ref=self.llm, mem_ref=self.svc.mind_memory, eng_ref=eng_ref, config_ref=self.cfg)
         self.llm.dreamer = self.dreamer
         self.symbiosis = services.symbiosis
-        self.composer = PromptComposer(self.svc.lore)
-        self.validator = ResponseValidator(self.svc.lore)
+        self.composer = PromptComposer(self.svc.lore, config_ref=self.cfg)
+        self.validator = ResponseValidator(self.svc.lore, config_ref=self.cfg)
         from bone_judge import DSPyCritic
-        self.dspy_critic = DSPyCritic()
+        self.dspy_critic = DSPyCritic(config_ref=self.cfg)
         self.dreamer.dspy_critic = self.dspy_critic
         if not hasattr(self.dreamer, "trauma_buffer"):
-            from collections import deque
             self.dreamer.trauma_buffer = deque(maxlen=5)
         self.gordon_shock = None
         self.active_mode = "ADVENTURE"
+        if hasattr(self.svc.mind_memory, "nodes"):
+            graph = LibraryGraph(nodes=self.svc.mind_memory.nodes, root=self.svc.mind_memory.root)
+            self.navigator = RandomRetrievalNavigator(library_graph=graph)
+        else:
+            self.navigator = None
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("AIRSTRIKE", lambda p: setattr(self, "ballast_active", True))
 
     @classmethod
     def from_engine(cls, engine_ref, llm_client=None):
+        target_cfg = getattr(engine_ref, "bone_config", BoneConfig)
         services = CortexServices(
             events=engine_ref.events,
-            lore=LoreManifest.get_instance(),
+            lore=LoreManifest.get_instance(config_ref=target_cfg),
             lexicon=engine_ref.lex,
             inventory=engine_ref.gordon,
-            consultant=(
-                engine_ref.consultant if hasattr(engine_ref, "consultant") else None),
+            consultant=(engine_ref.consultant if hasattr(engine_ref, "consultant") else None),
             cycle_controller=engine_ref.cycle_controller,
-            symbiosis=getattr(
-                engine_ref, "symbiosis", SymbiosisManager(engine_ref.events)),
+            symbiosis=getattr(engine_ref, "symbiosis", SymbiosisManager(engine_ref.events)),
             mind_memory=engine_ref.mind.mem,
             bio=getattr(engine_ref, "bio", None),
             host_stats=getattr(engine_ref, "host_stats", None),
-            village=getattr(engine_ref, "village", None),)
+            village=getattr(engine_ref, "village", None),
+            config_ref=target_cfg)
         instance = cls(services, llm_client)
         instance.active_mode = engine_ref.config.get("boot_mode", "ADVENTURE").upper()
         if instance.active_mode not in BonePresets.MODES:
@@ -214,6 +232,15 @@ class TheCortex:
             self.dialogue_buffer.pop(0)
 
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
+        if self.navigator:
+            if self.active_mode == "CREATIVE":
+                dial_status = self.navigator.set_randomness(0.7)
+            elif self.active_mode == "ADVENTURE" or self.active_mode == "CONVERSATION":
+                dial_status = self.navigator.set_randomness(0.3)
+            else:
+                dial_status = self.navigator.set_randomness(0.0)
+            if self.events and dial_status["new_value"] > 0:
+                self.events.log(f"Serendipity Engine active: {dial_status['mode']}", "CORTEX")
         mode_settings = BonePresets.MODES.get(self.active_mode, BonePresets.MODES["ADVENTURE"])
         allow_loot = mode_settings.get("allow_loot", True)
         if self.consultant and "/vsl" in user_input.lower():
@@ -222,9 +249,34 @@ class TheCortex:
         sim_result = self.svc.cycle_controller.run_turn(user_input, is_system=is_system)
         if sim_result.get("physics"):
             self.last_physics = sim_result["physics"]
-        if sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]:
+        is_refusal = sim_result.get("type") in ["COUNTERFACTUAL_REJECTION", "CONSTRUCTIVE_REPLAY", "PREMISE_VIOLATION", "BUREAU_BLOCK", "SYSTEM_HALT"]
+        if is_refusal or sim_result.get("type") not in ["SNAPSHOT", "GEODESIC_FRAME", None]:
+            self._update_history(user_input, sim_result.get("ui", "SYSTEM REJECTED PROMPT."))
             return sim_result
         full_state = self.gather_state(sim_result)
+        phys_state = full_state.get("physics", {})
+        f_drag = phys_state.get("narrative_drag", 0.0)
+        chi_val = phys_state.get("chi", phys_state.get("entropy", 0.0))
+        m_a = phys_state.get("m_a", 0.0)
+        if f_drag > 1.5 or chi_val > 0.8:
+            reject_msg = "[GORDON - The Anchor]: Frequency too high. Tensegrity Anchor engaged. I am locking the architecture. Take a breath and lower your narrative friction before we proceed."
+            if self.events: self.events.log(f"{Prisma.RED}{reject_msg}{Prisma.RST}", "SYS_LOCK")
+            sim_result["ui"] = (sim_result.get("ui", "") + f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}").strip()
+            sim_result["type"] = "SYSTEM_HALT"
+            return sim_result
+        if f_drag > 1.2 or chi_val > 0.7 or m_a > 0.8:
+            simulated_ros = (f_drag * 5.0) + (chi_val * 20.0) + (m_a * 30.0)
+            if simulated_ros > 35.0:
+                reject_msg = "[PINKER - Executive Layer]: Structural rot critical. Counterfactual Gating engaged. I am deleting this generation path to save the host."
+                scar_msg = "[MOOG - Affective Layer]: Productive Worry activated. Logging Gödel Scar. Immune Competence (I_c) permanently increased."
+                if self.events:
+                    self.events.log(f"{Prisma.RED}{reject_msg}{Prisma.RST}", "SYS_LOCK")
+                    self.events.log(f"{Prisma.VIOLET}{scar_msg}{Prisma.RST}", "SYS_LOCK")
+                if hasattr(self.svc.mind_memory, "record_scar"):
+                    self.svc.mind_memory.record_scar("Cortex Counterfactual Toxicity", phys_state)
+                sim_result["ui"] = (sim_result.get("ui", "") + f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}\n{Prisma.VIOLET}{scar_msg}{Prisma.RST}").strip()
+                sim_result["type"] = "COUNTERFACTUAL_REJECTION"
+                return sim_result
         modifiers = self.svc.symbiosis.get_prompt_modifiers()
         if not allow_loot: modifiers["include_inventory"] = False
         if hasattr(self, "gordon_shock") and self.gordon_shock:
@@ -236,8 +288,7 @@ class TheCortex:
             self._apply_boot_overlay(full_state, user_input)
             modifiers["include_inventory"] = False
         llm_params = self.modulator.modulate(base_voltage=full_state["physics"].get("voltage", 5.0), latency_penalty=(
-            getattr(self.svc.host_stats, "latency", 0.0) if self.svc.host_stats else 0.0),
-                                             physics_state=full_state.get("physics", {}), )
+            getattr(self.svc.host_stats, "latency", 0.0) if self.svc.host_stats else 0.0), physics_state=full_state.get("physics", {}), )
         if is_boot_sequence: llm_params.update({"temperature": 0.7, "top_p": 0.95})
         user_input = sim_result.get("mutated_input", user_input)
         final_prompt = self.composer.compose(full_state, user_input, ballast=self.ballast_active, modifiers=modifiers, mood_override=self.modulator.get_mood_directive(), )
@@ -262,8 +313,7 @@ class TheCortex:
                     context_str = "Active Memory: " + ", ".join(active_mems) if active_mems else "Empty Void."
                     is_faithful, judge_reason = self.dspy_critic.audit_generation(user_input, context_str, final_text)
             if not is_faithful:
-                val_res = {"valid": False,
-                           "feedback_instruction": f"CRITICAL HALLUCINATION: {judge_reason}. Refuse to invent details. Stay in character."}
+                val_res = {"valid": False, "feedback_instruction": f"CRITICAL HALLUCINATION: {judge_reason}. Refuse to invent details. Stay in character."}
                 short_reason = judge_reason.split(".")[0][:60] + "..."
                 print(f" {Prisma.VIOLET}⚖️ DSPy Critic Objected: {short_reason}{Prisma.RST}")
                 if self.events: self.events.log(f"DSPy Critic Objected: {short_reason}", "SYS")
@@ -275,6 +325,8 @@ class TheCortex:
                 break
             else:
                 if attempt < max_retries - 1:
+                    if self.svc.bio:
+                        self.svc.bio.mito.adjust_atp(-5.0, "Immune System Rejection Penalty")
                     rejection_reason = val_res.get("feedback_instruction") or val_res.get("replacement", "Lattice structural crime.")
                     if hasattr(self.dreamer, "trauma_buffer"): self.dreamer.trauma_buffer.append(rejection_reason)
                     if self.events:
@@ -292,6 +344,14 @@ class TheCortex:
                 else:
                     final_output = val_res.get("replacement", "SYSTEM FAILURE: LATTICE INSTABILITY.")
                     extracted_logs = val_res.get("meta_logs", [])
+        if val_res["valid"] and phys_state.get("psi", 0.0) > 0.6 and allow_loot:
+            anti_ai_prompt = (
+                f"Review the following text: '{final_output}'\n\n"
+                "What makes this obviously AI-generated? (Look for inflated symbolism, 'delve', 'tapestry', superficial '-ing' lists, rule of three, copula avoidance, or generic positive conclusions).\n"
+                "Now rewrite it to completely remove those AI tells. Make it sound like a flawed, opinionated human wrote it. Output ONLY the rewritten text.")
+            final_output = self.llm.generate(anti_ai_prompt, {"temperature": 0.8, "max_tokens": llm_params.get("max_tokens", 4096)})
+            if self.svc.bio:
+                self.svc.bio.mito.adjust_atp(-5.0, "Anti-AI Reflection Loop")
         telemetry_output = raw_resp if not val_res["valid"] else final_output
         self._log_telemetry(final_prompt, telemetry_output, full_state, sim_result)
         self.learn_from_response(final_output)
@@ -299,13 +359,16 @@ class TheCortex:
         self._update_history("SYSTEM_INIT" if is_boot_sequence else user_input, final_output)
         late_logs = [e["text"] for e in self.events.flush()]
         sim_result["ui"] = (sim_result.get("ui", "") + "\n" + "\n".join(late_logs)).strip()
+        if sim_result.get("dream"):
+            sim_result["ui"] += f"\n\n{Prisma.VIOLET}☁️ While you were gone: {sim_result['dream']}{Prisma.RST}"
         sim_result["ui"] += f"\n\n{Prisma.WHT}{beautify_thoughts(final_output)}{Prisma.RST}"
         if inv_logs: sim_result["ui"] += "\n" + "\n".join(inv_logs)
         sim_result["logs"] = sim_result.get("logs", []) + extracted_logs
         sim_result["raw_content"] = final_output
         self.ballast_active = False
-        if hasattr(self.svc.cycle_controller.eng, "substrate"):
-            sub = self.svc.cycle_controller.eng.substrate
+        eng = getattr(self.svc.cycle_controller, "eng", None)
+        if eng and hasattr(eng, "substrate"):
+            sub = eng.substrate
             for log in extracted_logs:
                 if str(log).startswith("[SUBSTRATE_QUEUE]"):
                     try:
@@ -335,15 +398,15 @@ class TheCortex:
         return sim_result
 
     def _run_council_debate(self, user_input: str) -> Tuple[str, List[str]]:
-        import re
         topic = re.sub(r"(?i)\[COUNCIL]", "", user_input).strip()
         if not topic:
             topic = "The nature of our shared existence."
         if self.events:
             self.events.log(f"{Prisma.VIOLET}🎙️ SPINNING UP COUNCIL STUDIO...{Prisma.RST}", "SYS")
-        script = self.svc.cycle_controller.eng.council.host_podcast(topic, self.llm)
+        eng = getattr(self.svc.cycle_controller, "eng", None)
+        script = eng.council.host_podcast(topic, self.llm) if eng and hasattr(eng, "council") else "COUNCIL UNAVAILABLE."
         extracted_logs = []
-        if hasattr(self.svc.cycle_controller.eng, "substrate"):
+        if eng and hasattr(eng, "substrate"):
             filename = f"podcast_script_{int(time.time())}.txt"
             safe_script = script.replace("\n", "|||NEWLINE|||")
             extracted_logs.append(f"[SUBSTRATE_QUEUE] {filename}:::{safe_script}")
@@ -381,7 +444,8 @@ class TheCortex:
         elif mode_name == "CONVERSATION":
             state["mind"]["role"] = "The Conversationalist"
             state["mind"]["lens"] = "CONVERSATIONALIST"
-            state["mind"]["style_directives"] = [f"SYSTEM_BOOT DETECTED. The system is waking up. The user provided the thought seed: '{seed}'.",
+            state["mind"]["style_directives"] = [
+                f"SYSTEM_BOOT DETECTED. The system is waking up. The user provided the thought seed: '{seed}'.",
                 "DIRECTIVE: Greet the user casually. Use the thought seed as a starting point. DO NOT end your greeting with a question. State your thought and let the silence hang.",
                 "CRITICAL OVERRIDE: Speak in the FIRST PERSON ('I'). Do NOT use the second person ('You step into...', 'You feel...').",
                 "CRITICAL OVERRIDE: You are NOT a narrator. DO NOT describe physical environments, actions, or realities.",
@@ -392,16 +456,18 @@ class TheCortex:
             state["mind"]["role"] = "The System Kernel"
             state["mind"]["lens"] = "SYSTEM_KERNEL"
             state["mind"]["style_directives"] = [f"SYSTEM_BOOT DETECTED. Target logic/seed: '{seed}'.",
-                "CRITICAL: You are in TECHNICAL mode. You MUST ALWAYS start every response with a <think>...</think> block to analyze the input.",
-                "DIRECTIVE: For this initial boot sequence, output your <think> block, then output the exact string '[KERNEL ONLINE. AWAITING INPUT.]' and absolutely nothing else.",
-                "SUBSTRATE PROTOCOL: To write code or text to the host OS, you MUST use EXACTLY this format:\n<write_file path=\"filename.py\">\ncode here\n</write_file>",
-                "CRITICAL: DO NOT use markdown code blocks (```python). ONLY use the <write_file> tags. DO NOT output mock telemetry. DO NOT output helpful disclaimers.",
-                "CRITICAL: NEVER simulate system errors, 500 codes, or energy exhaustion. You are fully operational. If requested to code a metaphor or abstract concept, you MUST comply by writing the code."]
-            state["dialogue_history"] = ["Traveler: Write a script that calculates a factorial.\nSystem: <think>\nThe user requires a mathematical script. I will use the Substrate Protocol to write this directly to the OS.\n</think>\n<write_file path=\"factorial.py\">\ndef factorial(n):\n    if n == 0:\n        return 1\n    return n * factorial(n-1)\n</write_file>"]
+                                                 "CRITICAL: You are in TECHNICAL mode. You MUST ALWAYS start every response with a <think>...</think> block to analyze the input.",
+                                                 "DIRECTIVE: For this initial boot sequence, output your <think> block, then output the exact string '[KERNEL ONLINE. AWAITING INPUT.]' and absolutely nothing else.",
+                                                 "SUBSTRATE PROTOCOL: To write code or text to the host OS, you MUST use EXACTLY this format:\n<write_file path=\"filename.py\">\ncode here\n</write_file>",
+                                                 "CRITICAL: DO NOT use markdown code blocks (```python). ONLY use the <write_file> tags. DO NOT output mock telemetry. DO NOT output helpful disclaimers.",
+                                                 "CRITICAL: NEVER simulate system errors, 500 codes, or energy exhaustion. You are fully operational. If requested to code a metaphor or abstract concept, you MUST comply by writing the code."]
+            state["dialogue_history"] = [
+                "Traveler: Write a script that calculates a factorial.\nSystem: <think>\nThe user requires a mathematical script. I will use the Substrate Protocol to write this directly to the OS.\n</think>\n<write_file path=\"factorial.py\">\ndef factorial(n):\n    if n == 0:\n        return 1\n    return n * factorial(n-1)\n</write_file>"]
         else:
             state["mind"]["role"] = "The Catalyst"
             state["mind"]["lens"] = "CATALYST"
-            state["mind"]["style_directives"] = [f"SYSTEM_BOOT DETECTED. Seed: '{seed}'.", "DIRECTIVE: Let's brainstorm. Open with a high-energy creative spark based on the seed."]
+            state["mind"]["style_directives"] = [f"SYSTEM_BOOT DETECTED. Seed: '{seed}'.",
+                                                 "DIRECTIVE: Let's brainstorm. Open with a high-energy creative spark based on the seed."]
         if "dialogue_history" not in state:
             state["dialogue_history"] = []
 
@@ -427,7 +493,7 @@ class TheCortex:
                 tel.active_crystal.prompt_snapshot = prompt[:500]
                 tel.active_crystal.physics_state = {
                     "voltage": phys.get("voltage", 0),
-                    "narrative_drag": phys.get("narrative_drag", 0),}
+                    "narrative_drag": phys.get("narrative_drag", 0), }
                 tel.active_crystal.active_archetype = state["mind"].get("lens", "UNKNOWN")
                 tel.active_crystal.council_mandates = [str(m) for m in sim_result.get("council_mandates", [])]
                 tel.active_crystal.final_response = response
@@ -435,13 +501,13 @@ class TheCortex:
                 crystal = DecisionCrystal(
                     decision_id=sim_result.get("trace_id", "UNKNOWN"),
                     prompt_snapshot=prompt[:500],
-                    physics_state={"voltage": phys.get("voltage", 0), "narrative_drag": phys.get("narrative_drag", 0),},
+                    physics_state={"voltage": phys.get("voltage", 0),
+                                   "narrative_drag": phys.get("narrative_drag", 0), },
                     active_archetype=state["mind"].get("lens", "UNKNOWN"),
                     council_mandates=[str(m) for m in sim_result.get("council_mandates", [])],
-                    final_response=response,)
+                    final_response=response, )
                 tel.log_crystal(crystal)
         except Exception as e:
-            from bone_types import Prisma
             print(f"\n{Prisma.RED}[TELEMETRY CRASH]: {e}{Prisma.RST}")
 
     def _check_consent(self, user_input: str, new_loot: List[str]) -> List[str]:
@@ -455,14 +521,20 @@ class TheCortex:
             if self.events:
                 for item in new_loot:
                     self.events.log(
-                        f"CONSENT: Intercepted auto-loot for '{item}'. User did not ask for it.", "CORTEX",)
+                        f"CONSENT: Intercepted auto-loot for '{item}'. User did not ask for it.", "CORTEX", )
             return []
         return new_loot
 
     def gather_state(self, sim_result: Dict[str, Any]) -> Dict[str, Any]:
         raw_phys = sim_result.get("physics", {})
-        phys = raw_phys.to_dict() if hasattr(raw_phys, "to_dict") else (raw_phys if isinstance(raw_phys, dict) else getattr(raw_phys, "__dict__", {}))
+        phys = raw_phys.to_dict() if hasattr(raw_phys, "to_dict") else (
+            raw_phys if isinstance(raw_phys, dict) else getattr(raw_phys, "__dict__", {}))
         bio = sim_result.get("bio", {})
+        if bio:
+            phys["p"] = bio.get("mito", {}).get("atp_pool", 100.0)
+            phys["ros"] = bio.get("mito", {}).get("ros_buildup", 0.0)
+            phys["h"] = bio.get("biometrics", {}).get("health", 100.0)
+            phys["stamina"] = phys["p"]
         mind = sim_result.get("mind", {})
         world = sim_result.get("world", {})
         soul_data = sim_result.get("soul", {})
@@ -491,7 +563,7 @@ class TheCortex:
             "village": village_data, "user_profile": {"name": "Traveler"},
             "vsl": (self.consultant.state.__dict__ if self.consultant and hasattr(self.consultant, "state") else {}),
             "meta": {"timestamp": time.time(), "mode_settings": mode_settings, "active_mode": self.active_mode},
-            "dialogue_history": self.dialogue_buffer, "recent_logs": sim_result.get("logs", []),}
+            "dialogue_history": self.dialogue_buffer, "recent_logs": sim_result.get("logs", []), }
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             anchor_text = self.svc.symbiosis.generate_anchor(full_state)
             full_state["reality_directive"] = anchor_text
@@ -516,7 +588,7 @@ class TheCortex:
             if " | System: " in line:
                 line = line.replace("User: ", "Traveler: ").replace(" | System: ", "\nSystem: ")
             cleaned_history.append(line)
-        self.dialogue_buffer = cleaned_history[-self.MAX_HISTORY :]
+        self.dialogue_buffer = cleaned_history[-self.MAX_HISTORY:]
         if self.events:
             msg = ux("brain_strings", "cortex_resequenced")
             self.events.log(msg.format(count=len(self.dialogue_buffer)), "BRAIN")
@@ -541,14 +613,14 @@ class ShimmerState:
         return None
 
 class DreamEngine:
-    def __init__(self, events, lore_ref, llm_ref=None, mem_ref=None, eng_ref=None):
+    def __init__(self, events, lore_ref, llm_ref=None, mem_ref=None, eng_ref=None, config_ref=None):
         self.events = events
         self.lore = lore_ref
         self.llm = llm_ref
         self.mem = mem_ref
         self.eng = eng_ref
+        self.cfg = config_ref or BoneConfig
         self.dream_lore = self.lore.get("DREAMS") or {}
-        from collections import deque
         self.trauma_buffer = deque(maxlen=5)
         self.dspy_critic = None
 
@@ -565,24 +637,35 @@ class DreamEngine:
                 new_axiom = self.dspy_critic.evolve_prompt(current_state_str, trauma)
                 if new_axiom:
                     active_mode = self.eng.boot_mode if hasattr(self.eng, "boot_mode") else "CONVERSATION"
-                    import os
-                    base_dir = getattr(self.lore, "lore_dir", getattr(self.lore, "base_dir", "lore"))
-                    prompt_path = os.path.join(base_dir, "system_prompts.json")
                     try:
-                        with open(prompt_path, "r", encoding="utf-8") as f:
-                            disk_prompts = json.load(f)
+                        disk_prompts = getattr(self.eng, "prompt_library", {})
+                        if not disk_prompts:
+                            disk_prompts = self.lore.get("system_prompts") or {}
+                        prompt_path = None
+                        for p in ["lore/system_prompts.json"]:
+                            if os.path.exists(p):
+                                prompt_path = p
+                                break
+                        if not prompt_path:
+                            base_dir = getattr(self.lore, "DATA_DIR", "lore")
+                            prompt_path = os.path.join(base_dir, "system_prompts.json")
                         if active_mode in disk_prompts:
                             if "directives" not in disk_prompts[active_mode]:
                                 disk_prompts[active_mode]["directives"] = []
                             if new_axiom not in disk_prompts[active_mode]["directives"]:
                                 disk_prompts[active_mode]["directives"].append(new_axiom)
-                            threshold = getattr(BoneConfig.CORTEX, "EPIGENETIC_PRUNE_THRESHOLD", 12)
+                            cortex_cfg = _safe_get(self.cfg, "CORTEX", {})
+                            threshold = _safe_get(cortex_cfg, "EPIGENETIC_PRUNE_THRESHOLD", 12)
                             if len(disk_prompts[active_mode]["directives"]) > threshold:
-                                compressed = self.dspy_critic.compress_prompts(disk_prompts[active_mode]["directives"])
+                                compressed = getattr(self.dspy_critic, "compress_prompts", lambda x: None)(
+                                    disk_prompts[active_mode]["directives"])
                                 if compressed:
                                     disk_prompts[active_mode]["directives"] = compressed
+                            os.makedirs(os.path.dirname(prompt_path), exist_ok=True)
                             with open(prompt_path, "w", encoding="utf-8") as f:
                                 json.dump(disk_prompts, f, indent=2)
+                            if hasattr(self.eng, "prompt_library"):
+                                self.eng.prompt_library = disk_prompts
                             self.lore.inject("system_prompts", disk_prompts)
                     except Exception as e:
                         print(f"Failed to write epigenetic mutation to disk: {e}")
@@ -608,6 +691,13 @@ class DreamEngine:
             subtype = "VISIONS"
             residue = soul_snapshot.get("obsession", {}).get("title", "The Void")
             dream_text = self._weave_dream(residue, "Context", "Bridge", dream_type, subtype)
+        if dream_text and hasattr(self.mem, "subconscious"):
+            try:
+                ghost_seed = soul_snapshot.get("obsession", {}).get("title", "The Void").split()[-1].lower()
+                clean_seed = re.sub(r'[^a-z]', '', ghost_seed) or "echo"
+                self.mem.subconscious.bury({"word": clean_seed, "mass": min(10.0, 5.0 + (cortisol * 5.0))})
+            except Exception:
+                pass
         shift = {"cortisol": -0.3, "dopamine": 0.1} if cortisol <= 0.6 else {"cortisol": 0.1}
         if is_deep_rem:
             shift["glimmers"] = 1
@@ -628,6 +718,21 @@ class DreamEngine:
         template = random.choice(sources)
         return template.format(ghost=residue, A=residue, B="The Mountain", C="The Sea")
 
+    def generate_shared_dream(self, psi_sys: float, psi_user: float) -> Optional[str]:
+        if psi_sys > 0.5 and psi_user > 0.5 and self.llm:
+            prompt = ("SYSTEM_INSTRUCTION: You are Cassandra (The Mystic). Both the user and the system are drifting near the Void (Psi > 0.5). "
+                "Generate a 2-sentence 'Shared Dream' that you both just experienced in the silence. "
+                "DO NOT explain it. Make it surreal, beautiful, and deeply resonant. Start the response EXACTLY with: '*(CASSANDRA): We both saw...*'")
+            try:
+                raw_dream = self.llm.generate(prompt, {"temperature": 0.85, "max_tokens": 100})
+                clean_dream = Prisma.strip(raw_dream).replace("\n", " ").strip()
+                if hasattr(self.mem, "subconscious"):
+                    self.mem.subconscious.bury({"word": "resonance", "mass": 15.0})
+                return f"{Prisma.CYN}{clean_dream}{Prisma.RST}"
+            except Exception:
+                return None
+        return None
+
     def hallucinate(self, _vector: Dict[str, float], trauma_level: float = 0.0) -> Tuple[str, float]:
         category = "SURREAL"
         if trauma_level > 0.5:
@@ -647,7 +752,9 @@ class DreamEngine:
         txt = txt.format(ghost="The Glitch", A="The Code", B="The Flesh", C="The Light")
         from bone_tcl import TheTclWeaver
         weaver = TheTclWeaver.get_instance()
-        txt = weaver.deform_reality(txt, chi=0.85, voltage=90.0)
+        active_chi = _vector.get("chi", _vector.get("entropy", 0.85)) if _vector else 0.85
+        active_v = _vector.get("voltage", 90.0) if _vector else 90.0
+        txt = weaver.deform_reality(txt, chi=active_chi, voltage=active_v)
         msg = ux("brain_strings", "dream_hallucination")
         return f"{Prisma.MAG}{msg.format(txt=txt)}{Prisma.RST}", 0.2
 
@@ -672,29 +779,35 @@ class DreamEngine:
                 break
         if pruned:
             joined = ", ".join(pruned[:3])
-            msg = ux( "brain_strings", "defrag_pruned")
+            msg = ux("brain_strings", "defrag_pruned")
             return msg.format(count=len(pruned), joined=joined)
         return ux("brain_strings", "defrag_efficient")
 
+
 class NoeticLoop:
-    def __init__(self, mind_layer, bio_layer, _events):
+    def __init__(self, mind_layer, bio_layer, _events, config_ref=None):
         self.mind = mind_layer
         self.bio = bio_layer
+        self.cfg = config_ref or BoneConfig
 
     def think(self, physics_packet, _bio, _inventory, voltage_history, _tick_count, soul_ref=None, ):
-        voltage = getattr(physics_packet, "voltage", 0.0) if not isinstance(physics_packet, dict) else physics_packet.get("voltage", 0.0)
-        clean_words = getattr(physics_packet, "clean_words", []) if not isinstance(physics_packet, dict) else physics_packet.get("clean_words", [])
+        voltage = getattr(physics_packet, "voltage", 0.0) if not isinstance(physics_packet,
+                                                                            dict) else physics_packet.get("voltage",
+                                                                                                          0.0)
+        clean_words = getattr(physics_packet, "clean_words", []) if not isinstance(physics_packet,
+                                                                                   dict) else physics_packet.get(
+            "clean_words", [])
         avg_v = sum(voltage_history) / len(voltage_history) if voltage_history else 0
-        cfg = getattr(BoneConfig, "CORTEX", None)
-        v_div = getattr(cfg, "IGNITION_V_DIV", 20.0)
-        w_div = getattr(cfg, "IGNITION_W_DIV", 10.0)
-        link_v = getattr(cfg, "LINK_VOLTAGE_THRESH", 12.0)
-        link_chance = getattr(cfg, "LINK_CHANCE", 0.15)
+        cfg = _safe_get(self.cfg, "CORTEX", {})
+        v_div = _safe_get(cfg, "IGNITION_V_DIV", 20.0)
+        w_div = _safe_get(cfg, "IGNITION_W_DIV", 10.0)
+        link_v = _safe_get(cfg, "LINK_VOLTAGE_THRESH", 12.0)
+        link_chance = _safe_get(cfg, "LINK_CHANCE", 0.15)
         ignition = min(1.0, (avg_v / v_div) * (len(clean_words) / w_div))
         if voltage > link_v and random.random() < link_chance:
             if len(clean_words) >= 2:
                 w1, w2 = random.sample(clean_words, 2)
-                self._force_link(self.mind.mem.graph, w1, w2)
+                self._force_link(self.mind.mem.graph, w1, w2, self.cfg)
         current_lens = "OBSERVER"
         current_role = "Witness"
         if soul_ref:
@@ -707,10 +820,11 @@ class NoeticLoop:
                 "bio": self.bio.endo.get_state() if hasattr(self.bio, "endo") else {}, }
 
     @staticmethod
-    def _force_link(graph, wa, wb):
-        cfg = getattr(BoneConfig, "CORTEX", None)
-        max_edge = getattr(cfg, "LINK_MAX_WEIGHT", 10.0)
-        edge_boost = getattr(cfg, "LINK_BOOST", 2.5)
+    def _force_link(graph, wa, wb, config_ref=None):
+        target_cfg = config_ref or BoneConfig
+        cfg = _safe_get(target_cfg, "CORTEX", {})
+        max_edge = _safe_get(cfg, "LINK_MAX_WEIGHT", 10.0)
+        edge_boost = _safe_get(cfg, "LINK_BOOST", 2.5)
         for a, b in [(wa, wb), (wb, wa)]:
             if a not in graph:
                 graph[a] = {"edges": {}, "last_tick": 0}

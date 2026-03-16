@@ -62,7 +62,7 @@ class BoneConfig:
                         "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
                         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2}, }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "17.3.0"
+    VERSION = "17.5.0"
     VERBOSE_LOGGING = True
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -581,7 +581,6 @@ class BoneConfig:
         ALMANAC_ENTROPY_HIGH = 0.8
 
     class COMMANDS:
-        COST_SOOTHE = 25.0
         COST_MODE = 10.0
         COST_MAP = 2.0
         RECOVER_STAMINA = 20.0
@@ -745,59 +744,70 @@ class BoneConfig:
         FUSE_RESET_V = 10.0
         FUSE_RESET_D = 5.0
 
-    @classmethod
-    def load_preset(cls, preset_dict: Dict[str, Any]) -> List[str]:
+    def __init__(self):
+        import copy
+        for name in dir(self.__class__):
+            if not name.startswith("__"):
+                val = getattr(self.__class__, name)
+                if isinstance(val, type):
+                    clone = type(name + "Clone", (object,), {})()
+                    for k, v in vars(val).items():
+                        if not k.startswith("__") and not callable(v):
+                            setattr(clone, k, copy.deepcopy(v) if isinstance(v, (dict, list, set)) else v)
+                    setattr(self, name, clone)
+                elif not callable(val) and not isinstance(val, classmethod):
+                    setattr(self, name, copy.deepcopy(val) if isinstance(val, (dict, list, set)) else val)
+
+    def load_preset(self, preset_dict: Dict[str, Any]) -> List[str]:
         logs = []
         msg_tuned = ux("config_strings", "preset_tuned") or "Tuned {sector}.{param}: {old_val} -> {new_val}"
         for key, value in preset_dict.items():
             if "." in key:
                 sector_name, param_name = key.split(".", 1)
-                if hasattr(cls, sector_name):
-                    target_class = getattr(cls, sector_name)
-                    if hasattr(target_class, param_name):
-                        old_val = getattr(target_class, param_name)
-                        setattr(target_class, param_name, value)
+                if hasattr(self, sector_name):
+                    target_sector = getattr(self, sector_name)
+                    if hasattr(target_sector, param_name):
+                        old_val = getattr(target_sector, param_name)
+                        setattr(target_sector, param_name, value)
                         logs.append(
                             msg_tuned.format(sector=sector_name, param=param_name, old_val=old_val, new_val=value))
             else:
                 sector_name = key
                 sector_data = value
-                if hasattr(cls, sector_name) and isinstance(sector_data, dict):
-                    target_class = getattr(cls, sector_name)
+                if hasattr(self, sector_name) and isinstance(sector_data, dict):
+                    target_sector = getattr(self, sector_name)
                     for k, v in sector_data.items():
-                        if hasattr(target_class, k):
-                            old_val = getattr(target_class, k)
-                            setattr(target_class, k, v)
+                        if hasattr(target_sector, k):
+                            old_val = getattr(target_sector, k)
+                            setattr(target_sector, k, v)
                             logs.append(msg_tuned.format(sector=sector_name, param=k, old_val=old_val, new_val=v))
         return logs
 
-    @classmethod
-    def validate_integrity(cls) -> List[str]:
+    def validate_integrity(self) -> List[str]:
         errors = []
-        if cls.PHYSICS.VOLTAGE_FLOOR > cls.PHYSICS.VOLTAGE_MAX:
-            cls.PHYSICS.VOLTAGE_FLOOR = cls.PHYSICS.VOLTAGE_MAX - 1.0
-            msg = ux("config_strings", "repair_floor_max") 
+        if self.PHYSICS.VOLTAGE_FLOOR > self.PHYSICS.VOLTAGE_MAX:
+            self.PHYSICS.VOLTAGE_FLOOR = self.PHYSICS.VOLTAGE_MAX - 1.0
+            msg = ux("config_strings", "repair_floor_max")
             if msg: errors.append(msg)
-        if cls.PHYSICS.DRAG_FLOOR > cls.PHYSICS.DRAG_HALT:
-            cls.PHYSICS.DRAG_FLOOR = cls.PHYSICS.DRAG_HALT - 1.0
-            msg = ux("config_strings", "repair_drag_halt") 
+        if self.PHYSICS.DRAG_FLOOR > self.PHYSICS.DRAG_HALT:
+            self.PHYSICS.DRAG_FLOOR = self.PHYSICS.DRAG_HALT - 1.0
+            msg = ux("config_strings", "repair_drag_halt")
             if msg: errors.append(msg)
         return errors
 
-    @classmethod
-    def check_pareidolia(cls, words: List[str]) -> Any:
+    @staticmethod
+    def check_pareidolia(words: List[str]) -> Any:
         if "face" in words and "smoke" in words:
-            msg = ux("config_strings", "pareidolia_smoke") 
+            msg = ux("config_strings", "pareidolia_smoke")
             return True, msg
         return False, ""
 
-    @classmethod
-    def reconcile_state(cls, physics_packet: Any):
+    def reconcile_state(self, physics_packet: Any):
         if isinstance(physics_packet, dict):
             current_v = physics_packet.get("voltage", physics_packet.get("energy", {}).get("voltage", 5.0))
             current_d = physics_packet.get("narrative_drag", physics_packet.get("space", {}).get("narrative_drag", 1.0))
-            new_v = max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX))
-            new_d = max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT))
+            new_v = max(self.PHYSICS.VOLTAGE_FLOOR, min(current_v, self.PHYSICS.VOLTAGE_MAX))
+            new_d = max(self.PHYSICS.DRAG_FLOOR, min(current_d, self.PHYSICS.DRAG_HALT))
             if "energy" in physics_packet:
                 physics_packet["energy"]["voltage"] = new_v
             else:
@@ -811,8 +821,8 @@ class BoneConfig:
                                 getattr(getattr(physics_packet, "energy", None), "voltage", 5.0))
             current_d = getattr(physics_packet, "narrative_drag",
                                 getattr(getattr(physics_packet, "space", None), "narrative_drag", 1.0))
-            new_v = max(cls.PHYSICS.VOLTAGE_FLOOR, min(current_v, cls.PHYSICS.VOLTAGE_MAX))
-            new_d = max(cls.PHYSICS.DRAG_FLOOR, min(current_d, cls.PHYSICS.DRAG_HALT))
+            new_v = max(self.PHYSICS.VOLTAGE_FLOOR, min(current_v, self.PHYSICS.VOLTAGE_MAX))
+            new_d = max(self.PHYSICS.DRAG_FLOOR, min(current_d, self.PHYSICS.DRAG_HALT))
             if hasattr(physics_packet, "energy"):
                 physics_packet.energy.voltage = new_v
             else:
@@ -823,12 +833,11 @@ class BoneConfig:
                 setattr(physics_packet, "narrative_drag", new_d)
         return physics_packet
 
-    @classmethod
-    def tune(cls, sector: str, parameter: str, value: Any) -> str:
-        if not hasattr(cls, sector):
-            msg = ux("config_strings", "tune_sector_err") 
+    def tune(self, sector: str, parameter: str, value: Any) -> str:
+        if not hasattr(self, sector):
+            msg = ux("config_strings", "tune_sector_err")
             return msg.format(sector=sector)
-        target_sector = getattr(cls, sector)
+        target_sector = getattr(self, sector)
         if not hasattr(target_sector, parameter):
             msg = ux("config_strings", "tune_param_err") 
             return msg.format(parameter=parameter, sector=sector)

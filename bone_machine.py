@@ -14,19 +14,21 @@ from bone_physics import TheGatekeeper, QuantumObserver, SurfaceTension, ZoneIne
 from bone_protocols import LimboLayer
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_types import MindSystem, PhysSystem, PhysicsPacket, Prisma
+from bone_village import MirrorGraph, TheCartographer
 
 class TheCrucible:
-    def __init__(self):
-        self.max_voltage_cap = getattr(BoneConfig.MACHINE, "CRUCIBLE_VOLTAGE_CAP", 20.0)
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
+        cfg = getattr(self.cfg, "MACHINE", None)
+        self.max_voltage_cap = getattr(cfg, "CRUCIBLE_VOLTAGE_CAP", 20.0) if cfg else 20.0
         self.active_state = "COLD"
-        self.dampener_charges = getattr(BoneConfig.MACHINE, "CRUCIBLE_DAMPENER_CHARGES", 3)
-        self.dampener_tolerance = getattr(BoneConfig.MACHINE, "DAMPENER_TOLERANCE", 15.0)
+        self.dampener_charges = getattr(cfg, "CRUCIBLE_DAMPENER_CHARGES", 3) if cfg else 3
+        self.dampener_tolerance = getattr(cfg, "DAMPENER_TOLERANCE", 15.0) if cfg else 15.0
         self.instability_index = 0.0
         self.logs = self._load_logs()
 
-    @staticmethod
-    def _load_logs():
-        manifest = LoreManifest.get_instance().get("narrative_data") or {}
+    def _load_logs(self):
+        manifest = LoreManifest.get_instance(config_ref=self.cfg).get("narrative_data") or {}
         return manifest.get("CRUCIBLE_LOGS", {})
 
     def dampener_status(self):
@@ -115,18 +117,17 @@ class TheParadoxEngine:
         valid_seeds = [w for w in recent_words if len(w) > 4]
         seed = random.choice(valid_seeds) if valid_seeds else "the architecture"
         pressure = 0.4 + (random.random() * 0.6)
-        templates = [
-            f"What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
+        templates = [f"What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
             f"[RECURSIVE PARADOX] Apply the concept of '{seed}' to the architecture of this very conversation. How does the act of thinking about '{seed}' alter the physical constraints of our dialogue? Both are non-negotiable truths.",
-            f"[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center. Both the center and the void are non-negotiable truths."
-        ]
+            f"[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center. Both the center and the void are non-negotiable truths."]
         return pressure, random.choice(templates)
 
     def disengage(self):
         self.is_active = False
 
 class TheForge:
-    def __init__(self):
+    def __init__(self, lex_ref=None):
+        self.lex = lex_ref
         gordon_data = LoreManifest.get_instance().get("GORDON") or {}
         raw_recipes = gordon_data.get("RECIPES", [])
         self.recipe_map = {}
@@ -171,7 +172,8 @@ class TheForge:
         for item in inventory_list:
             if item in self.recipe_map:
                 for recipe in self.recipe_map[item]:
-                    cat_words = LexiconService.get(recipe["catalyst_category"])
+                    cat_words = self.lex.get(recipe["catalyst_category"]) if self.lex else LexiconService().get(
+                        recipe["catalyst_category"])
                     if not cat_words or clean_set.isdisjoint(cat_words):
                         continue
                     hits = len(clean_set.intersection(cat_words))
@@ -202,18 +204,18 @@ class TheForge:
         return None
 
 class TheTheremin:
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.decoherence_buildup = 0.0
         self.classical_turns = 0
-        cfg = getattr(BoneConfig, "MACHINE", None)
+        cfg = getattr(self.cfg, "MACHINE", None)
         self.AMBER_THRESHOLD = getattr(cfg, "THEREMIN_AMBER_THRESHOLD", 20.0) if cfg else 20.0
         self.SHATTER_POINT = getattr(cfg, "THEREMIN_SHATTER_POINT", 100.0) if cfg else 100.0
         self.is_stuck = False
         self.logs = self._load_logs()
 
-    @staticmethod
-    def _load_logs():
-        manifest = LoreManifest.get_instance().get("narrative_data") or {}
+    def _load_logs(self):
+        manifest = LoreManifest.get_instance(config_ref=self.cfg).get("narrative_data") or {}
         return manifest.get("THEREMIN_LOGS", {})
 
     def listen(
@@ -233,7 +235,8 @@ class TheTheremin:
             resin_flow = max(0.0, resin_flow - (voltage * 0.6))
         thermal_hits = counts.get("thermal", 0)
         theremin_msg = ""
-        melt_thresh = getattr(BoneConfig.MACHINE, "THEREMIN_MELT_THRESHOLD", 5.0)
+        cfg = getattr(self.cfg, "MACHINE", None)
+        melt_thresh = getattr(cfg, "THEREMIN_MELT_THRESHOLD", 5.0) if cfg else 5.0
         critical_event = None
         if thermal_hits > 0 and self.decoherence_buildup > melt_thresh:
             dissolved = thermal_hits * 15.0
@@ -366,22 +369,25 @@ class ViralTracer:
         self.memory = memory_ref
         self.active_loops = []
 
-    @staticmethod
-    def inject(start_node: str) -> Optional[List[str]]:
+    def inject(self, start_node: str) -> Optional[List[str]]:
         if random.random() < 0.05:
-            return [start_node, "echo", "void", start_node]
+            loop = [start_node, "echo", "void", start_node]
+            self.active_loops.append(loop)
+            return loop
         return None
 
-    @staticmethod
-    def psilocybin_rewire(loop_path: List[str]) -> str:
+    def psilocybin_rewire(self, loop_path: List[str]) -> str:
         msg = ux("machine_strings", "tracer_rewire")
+        if loop_path in self.active_loops:
+            self.active_loops.remove(loop_path)
         return msg.format(path="->".join(loop_path))
 
 class ThePacemaker:
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.boredom_level = 0.0
         self.heart_rate = 60
-        self.BOREDOM_THRESHOLD = getattr(BoneConfig, "BOREDOM_THRESHOLD", 10.0)
+        self.BOREDOM_THRESHOLD = getattr(self.cfg, "BOREDOM_THRESHOLD", 10.0)
 
     def beat(self, stress: float):
         self.heart_rate = 60 + (stress * 20)
@@ -397,44 +403,50 @@ class ThePacemaker:
 
 class BoneArchitect:
     @staticmethod
-    def _construct_mind(events, lex) -> Tuple[MindSystem, LimboLayer]:
-        from bone_village import MirrorGraph
+    def _construct_mind(events, lex, config_ref=None) -> Tuple[MindSystem, LimboLayer]:
+        target_cfg = config_ref or BoneConfig
         _mem = MycelialNetwork(events)
-        limbo = LimboLayer()
+        limbo = LimboLayer(config_ref=target_cfg)
         _mem.cleanup_old_sessions(limbo)
-        lore = LoreManifest.get_instance()
-        mind = MindSystem(mem=_mem, lex=lex, dreamer=DreamEngine(events, lore), mirror=MirrorGraph(events),
+        lore = LoreManifest.get_instance(config_ref=target_cfg)
+        mind = MindSystem(mem=_mem, lex=lex, dreamer=DreamEngine(events, lore, config_ref=target_cfg), mirror=MirrorGraph(events, config_ref=target_cfg),
                           tracer=ViralTracer(_mem), )
         return mind, limbo
 
     @staticmethod
-    def _construct_bio(events, mind, lex) -> BioSystem:
-        genesis_val = getattr(BoneConfig.METABOLISM, "GENESIS_VOLTAGE", 100.0)
+    def _construct_bio(events, mind, lex, config_ref=None) -> BioSystem:
+        target_cfg = config_ref or BoneConfig
+        cfg = getattr(target_cfg, "METABOLISM", None)
+        genesis_val = getattr(cfg, "GENESIS_VOLTAGE", 100.0) if cfg else 100.0
         mito_state = MitochondrialState(atp_pool=genesis_val)
-        start_health = getattr(BoneConfig, "MAX_HEALTH", 100.0)
-        start_stamina = getattr(BoneConfig, "MAX_STAMINA", 100.0)
+        start_health = getattr(target_cfg, "MAX_HEALTH", 100.0)
+        start_stamina = getattr(target_cfg, "MAX_STAMINA", 100.0)
         bio_metrics = Biometrics(health=start_health, stamina=start_stamina)
-        return BioSystem(mito=MitochondrialForge(mito_state, events), endo=EndocrineSystem(), immune=ImmuneMycelium(),
-                         lichen=BioLichen(), governor=MetabolicGovernor(), shimmer=ShimmerState(),
-                         parasite=BioParasite(mind.mem, lex), events=events, biometrics=bio_metrics, )
+        return BioSystem(mito=MitochondrialForge(mito_state, events, config_ref=target_cfg), endo=EndocrineSystem(config_ref=target_cfg), immune=ImmuneMycelium(),
+                         lichen=BioLichen(), governor=MetabolicGovernor(config_ref=target_cfg), shimmer=ShimmerState(),
+                         parasite=BioParasite(mind.mem, lex), events=events, biometrics=bio_metrics, config_ref=target_cfg)
 
     @staticmethod
-    def _construct_physics(events, bio, mind, lex) -> PhysSystem:
-        from bone_village import TheCartographer
-        gate = TheGatekeeper(lex, mind.mem)
-        return PhysSystem(observer=QuantumObserver(events), forge=TheForge(), crucible=TheCrucible(),
-                          theremin=TheTheremin(), pulse=ThePacemaker(), nav=TheCartographer(bio.shimmer), gate=gate,
-                          tension=SurfaceTension(), dynamics=ZoneInertia(), )
+    def _construct_physics(events, bio, mind, lex, config_ref=None) -> PhysSystem:
+        target_cfg = config_ref or BoneConfig
+        gate = TheGatekeeper(lex, mind.mem, config_ref=target_cfg)
+        return PhysSystem(observer=QuantumObserver(events, lex, config_ref=target_cfg),
+                          forge=TheForge(lex_ref=lex),
+                          crucible=TheCrucible(config_ref=target_cfg),
+                          theremin=TheTheremin(config_ref=target_cfg), pulse=ThePacemaker(config_ref=target_cfg),
+                          nav=TheCartographer(bio.shimmer, config_ref=target_cfg), gate=gate,
+                          tension=SurfaceTension(), dynamics=ZoneInertia(config_ref=target_cfg), )
 
     @staticmethod
-    def incubate(events, lex) -> SystemEmbryo:
+    def incubate(events, lex, config_ref=None) -> SystemEmbryo:
+        target_cfg = config_ref or BoneConfig
         if hasattr(events, "set_dormancy"):
             events.set_dormancy(True)
         msg = ux("machine_strings", "arch_incubate")
         events.log(f"{Prisma.GRY}{msg}{Prisma.RST}", "SYS", )
-        mind, limbo = BoneArchitect._construct_mind(events, lex)
-        bio = BoneArchitect._construct_bio(events, mind, lex)
-        physics = BoneArchitect._construct_physics(events, bio, mind, lex)
+        mind, limbo = BoneArchitect._construct_mind(events, lex, config_ref=target_cfg)
+        bio = BoneArchitect._construct_bio(events, mind, lex, config_ref=target_cfg)
+        physics = BoneArchitect._construct_physics(events, bio, mind, lex, config_ref=target_cfg)
         return SystemEmbryo(mind=mind, limbo=limbo, bio=bio, physics=physics, shimmer=bio.shimmer)
 
     @staticmethod
@@ -475,9 +487,11 @@ class BoneArchitect:
                 except Exception as e:
                     msg = ux("machine_strings", "arch_map_corrupt")
                     events.log(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}", "WARN", )
-        if embryo.bio.mito.state.atp_pool <= 0.0:
-            genesis_val = getattr(BoneConfig.METABOLISM, "GENESIS_VOLTAGE", 100.0)
+        if embryo.bio and embryo.bio.mito and embryo.bio.mito.state.atp_pool <= 0.0:
+            target_cfg = getattr(embryo.bio, "config_ref", None) or BoneConfig
+            cfg = getattr(target_cfg, "METABOLISM", None)
+            genesis_val = getattr(cfg, "GENESIS_VOLTAGE", 100.0) if cfg else 100.0
             msg = ux("machine_strings", "arch_cold_boot")
-            events.log(msg.format(genesis_val=genesis_val), "SYS")
+            events.log(msg.format(genesis_val=genesis_val) if msg else f"Cold Boot: {genesis_val} ATP", "SYS")
             embryo.bio.mito.adjust_atp(genesis_val, reason="GENESIS")
         return embryo

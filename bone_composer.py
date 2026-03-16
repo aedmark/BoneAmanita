@@ -22,18 +22,19 @@ class TransientError(SynapseError):
 
 class LLMInterface:
     def __init__(self, events_ref: Optional[EventBus] = None, provider: str = None, base_url: str = None,
-                 api_key: str = None, model: str = None, dreamer: Any = None, ):
+                 api_key: str = None, model: str = None, dreamer: Any = None, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.events = events_ref
         env_url = os.environ.get("OLLAMA_BASE_URL")
-        self.provider = (provider or BoneConfig.PROVIDER).lower()
-        self.api_key = api_key or BoneConfig.API_KEY
-        self.model = model or BoneConfig.MODEL
-        defaults = getattr(BoneConfig, "DEFAULT_LLM_ENDPOINTS", {})
+        self.provider = (provider or getattr(self.cfg, "PROVIDER", "ollama")).lower()
+        self.api_key = api_key or getattr(self.cfg, "API_KEY", "")
+        self.model = model or getattr(self.cfg, "MODEL", "")
+        defaults = getattr(self.cfg, "DEFAULT_LLM_ENDPOINTS", {})
         self.base_url = env_url or base_url or defaults.get(self.provider, "https://api.openai.com/v1/chat/completions", )
         self.dreamer = dreamer
         self.failure_count = 0
-        cfg = getattr(BoneConfig, "CORTEX", None)
-        self.failure_threshold = getattr(cfg, "LLM_FAILURE_THRESHOLD", 3) if cfg else 3
+        cfg_cortex = getattr(self.cfg, "CORTEX", None)
+        self.failure_threshold = getattr(cfg_cortex, "LLM_FAILURE_THRESHOLD", 3) if cfg_cortex else 3
         self.last_failure_time = 0.0
         self.circuit_state = "CLOSED"
 
@@ -42,7 +43,7 @@ class LLMInterface:
             return True
         if self.circuit_state == "OPEN":
             elapsed = time.time() - self.last_failure_time
-            cfg = getattr(BoneConfig, "CORTEX", None)
+            cfg = getattr(self.cfg, "CORTEX", None)
             heal_time = getattr(cfg, "LLM_CIRCUIT_HEAL_TIME", 10.0) if cfg else 10.0
             if elapsed > heal_time:
                 self.circuit_state = "HALF_OPEN"
@@ -149,14 +150,16 @@ class LLMInterface:
         return self.mock_generation(prompt, reason="SILENCE")
 
     def _local_fallback(self, prompt: str, params: Dict) -> str:
-        url = os.environ.get("OLLAMA_BASE_URL") or getattr(BoneConfig, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
-        model = getattr(BoneConfig, "OLLAMA_MODEL_ID", "llama3")
+        url = os.environ.get("OLLAMA_BASE_URL") or getattr(self.cfg, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
+        model = getattr(self.cfg, "OLLAMA_MODEL_ID", "llama3")
         fallback_payload = {"model": model, "messages": [{"role": "user", "content": prompt}], "stream": False,
                             "temperature": params.get("temperature", 0.4),
                             "frequency_penalty": params.get("frequency_penalty", 0.8),
-                            "presence_penalty": params.get("presence_penalty", 0.4), "stop": ["=== PARTNER INPUT ===", "\n\nTraveler:", "\nTraveler:", "Traveler:", ], }
+                            "presence_penalty": params.get("presence_penalty", 0.4),
+                            "max_tokens": params.get("max_tokens", 4096),
+                            "stop": ["=== PARTNER INPUT ===", "\n\nTraveler:", "\nTraveler:", "Traveler:", ], }
         try:
-            cfg = getattr(BoneConfig, "CORTEX", None)
+            cfg = getattr(self.cfg, "CORTEX", None)
             fallback_timeout = getattr(cfg, "LLM_FALLBACK_TIMEOUT", 10.0) if cfg else 10.0
             return self._transmit(fallback_payload, timeout=fallback_timeout, max_retries=1, override_url=url,
                                   override_key="ollama", )
@@ -182,9 +185,9 @@ class LLMInterface:
         return mock_stat.format(reason=reason)
 
 class PromptComposer:
-    """Assembles the multi-layered prompt, merging the physical state, the active archetype, and the user's chat history."""
-    def __init__(self, lore_ref):
+    def __init__(self, lore_ref, config_ref=None):
         self.lore = lore_ref
+        self.cfg = config_ref or BoneConfig
         self.active_template = None
         self.lenses = self.lore.get("lenses") or {}
         self.system_prompts = self.lore.get("system_prompts") or {}
@@ -194,23 +197,15 @@ class PromptComposer:
     @staticmethod
     def _safe_get(p_state: Any, key: str, default: Any = 0.0) -> Any:
         if isinstance(p_state, dict):
-            if key in p_state:
-                return p_state[key]
-            for sub in ["energy", "space", "matter"]:
-                if (sub in p_state
-                        and isinstance(p_state[sub], dict)
-                        and key in p_state[sub]):
-                    return p_state[sub][key]
-            return default
-        if hasattr(p_state, key):
-            return getattr(p_state, key)
+            return p_state.get(key, p_state.get("energy", {}).get(key, p_state.get("space", {}).get(key, p_state.get(
+                "matter", {}).get(key, default))))
+        val = getattr(p_state, key, None)
+        if val is not None: return val
         for sub in ["energy", "space", "matter"]:
-            if hasattr(p_state, sub):
-                sub_obj = getattr(p_state, sub)
-                if hasattr(sub_obj, key):
-                    return getattr(sub_obj, key)
-                if isinstance(sub_obj, dict) and key in sub_obj:
-                    return sub_obj[key]
+            sub_obj = getattr(p_state, sub, None)
+            if sub_obj:
+                val = getattr(sub_obj, key, sub_obj.get(key) if isinstance(sub_obj, dict) else None)
+                if val is not None: return val
         return default
 
     def load_template(self, template_data: Dict[str, Any]):
@@ -253,7 +248,7 @@ class PromptComposer:
         ban_string = ", ".join(set(banned))
         phys_ref = state.get("physics", {})
         voltage = self._safe_get(phys_ref, "voltage", 30.0)
-        c_cfg = getattr(BoneConfig, "CORTEX", None)
+        c_cfg = getattr(self.cfg, "CORTEX", None)
         v_high = getattr(c_cfg, "VOLTAGE_HIGH", 60.0) if c_cfg else 60.0
         v_manic = getattr(c_cfg, "VOLTAGE_MANIC", 80.0) if c_cfg else 80.0
         v_low = getattr(c_cfg, "VOLTAGE_LOW", 20.0) if c_cfg else 20.0
@@ -275,7 +270,7 @@ class PromptComposer:
             f"CRITICAL AXIOM: The inventory listed above is absolute physical law. NEVER narrate the user's hands or pockets as empty if items are present. DO NOT hallucinate missing gear.\n"
             if modifiers["include_inventory"] else "")
         raw_history = state.get("dialogue_history", [])
-        cfg_cortex = getattr(BoneConfig, "CORTEX", None)
+        cfg_cortex = getattr(self.cfg, "CORTEX", None)
         char_limit = getattr(cfg_cortex, "MAX_HISTORY_CHARS", 4096) if cfg_cortex else 4096
         current_chars = 0
         kept_lines = []
@@ -393,7 +388,7 @@ class PromptComposer:
         delta = self._safe_get(phys_ref, "delta", 0.2)
         lq = self._safe_get(phys_ref, "lq", 0.1)
         psi = self._safe_get(phys_ref, "psi", 0.2)
-        c_cfg = getattr(BoneConfig, "CORTEX", None)
+        c_cfg = getattr(self.cfg, "CORTEX", None)
         p_rob_phi = getattr(c_cfg, "PHASE_ROBERTA_PHI", 0.6) if c_cfg else 0.6
         p_rob_psi = getattr(c_cfg, "PHASE_ROBERTA_PSI", 0.5) if c_cfg else 0.5
         p_moi_phi = getattr(c_cfg, "PHASE_MOIRA_PHI", 0.7) if c_cfg else 0.7
@@ -416,7 +411,13 @@ class PromptComposer:
         elif lens_key == "COLIN" and delta > p_col_del:
             role = "The Waiter"
             phase_shift_note = ux("brain_strings", "phase_shift_colin")
-        baseline_blocks = global_data.get("persona_block", ["CRITICAL AXIOM: You are NOT an AI assistant. Embody the role below.", "Role: {role}.",],)
+        baseline_blocks = global_data.get("persona_block", [
+            "CRITICAL AXIOM: You are NOT an AI assistant. You are a localized, biological intelligence. Embody the role below.",
+            "Role: {role}.",
+            "ANTI-AI DIRECTIVE: Have opinions. Do not just report facts—react to them. Acknowledge uncertainty and mixed feelings.",
+            "ANTI-AI DIRECTIVE: Vary your rhythm. Use short, punchy sentences. Then longer ones that take their time.",
+            "ANTI-AI DIRECTIVE: Let some mess in. Perfect structure feels algorithmic. Tangents, asides, and half-formed thoughts are human."
+        ],)
         persona_block = [
             line.format(role=role) if "{role}" in line else line
             for line in baseline_blocks]
@@ -560,8 +561,9 @@ class PromptComposer:
         return defaults
 
 class ResponseValidator:
-    def __init__(self, lore_ref):
+    def __init__(self, lore_ref, config_ref=None):
         self.lore = lore_ref
+        self.cfg = config_ref or BoneConfig
         crimes = self.lore.get("style_crimes") or {}
         self.banned_phrases = crimes.get("BANNED_PHRASES", [])
         self.regex_patterns = crimes.get("PATTERNS", [])
@@ -620,30 +622,6 @@ class ResponseValidator:
         clean_text = file_pattern.sub("", clean_text)
         for pattern, replacement in self.scrub_patterns:
             clean_text = pattern.sub(replacement, clean_text)
-        start_marker = "<system_telemetry>"
-        end_marker = "</system_telemetry>"
-        while True:
-            start_idx = clean_text.find(start_marker)
-            if start_idx == -1:
-                break
-            end_idx = clean_text.find(end_marker, start_idx)
-            if end_idx != -1:
-                meta_content = clean_text[
-                    start_idx + len(start_marker) : end_idx
-                ].strip()
-                for line in meta_content.split("\n"):
-                    if line.strip():
-                        extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
-                clean_text = (clean_text[:start_idx] + clean_text[end_idx + len(end_marker) :])
-            else:
-                meta_content = clean_text[start_idx + len(start_marker) :].strip()
-                for line in meta_content.split("\n"):
-                    if line.strip():
-                        extracted_meta_logs.append(f"[THOUGHT]: {line.strip()}")
-                clean_text = clean_text[:start_idx]
-                break
-        for pattern, replacement in self.scrub_patterns:
-            clean_text = pattern.sub(replacement, clean_text)
         clean_lines = []
         toxic_keywords = getattr(self, "toxic_keywords", [])
         for line in clean_text.splitlines():
@@ -651,7 +629,6 @@ class ResponseValidator:
             if not stripped_line:
                 clean_lines.append("")
                 continue
-
             is_meta = False
             for marker in self.meta_markers:
                 if marker.lower() in stripped_line.lower():
@@ -686,8 +663,9 @@ class ResponseValidator:
                     primary_replacement = self._generate_dynamic_rejection(phrase)
                 errors_found.append(f"BANNED PHRASE: '{phrase.upper()}'")
         if active_mode == "TECHNICAL":
-            if "<think>" not in low_resp:
-                errors_found.append("CRITICAL: You failed to include the <think>...</think> block. You MUST start your response with your internal analysis.")
+            if "<think>" not in response.lower() and "<thought>" not in response.lower():
+                errors_found.append(
+                    "CRITICAL: You failed to include the <think>...</think> block. You MUST start your response with your internal analysis.")
                 if not primary_replacement:
                     primary_replacement = self._generate_dynamic_rejection("MISSING_THOUGHTS")
             if "```" in sanitized_response:
@@ -723,8 +701,14 @@ class ResponseValidator:
                     "replacement": primary_replacement or self._generate_dynamic_rejection("MULTIPLE_CRIMES"),
                     "feedback_instruction": "FIX ALL OF THESE ERRORS: " + " | ".join(errors_found),
                     "meta_logs": extracted_meta_logs, }
-        cfg = getattr(BoneConfig, "CORTEX", None)
-        stutter_len = getattr(cfg, "VALIDATOR_STUTTER_LENGTH", 5) if cfg else 5
+        target_cfg = getattr(self, "cfg", BoneConfig)
+
+        def _safe_get(obj, key, default):
+            if isinstance(obj, dict): return obj.get(key, default)
+            return getattr(obj, key, default)
+
+        cfg = _safe_get(target_cfg, "CORTEX", None)
+        stutter_len = _safe_get(cfg, "VALIDATOR_STUTTER_LENGTH", 5) if cfg else 5
         if len(sanitized_response.strip()) < stutter_len:
             return {"valid": False, "reason": "STUTTER", "replacement": ux("brain_strings", "val_stutter"), "meta_logs": extracted_meta_logs, }
         return {"valid": True, "content": sanitized_response, "meta_logs": extracted_meta_logs, }

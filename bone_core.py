@@ -7,11 +7,15 @@ import json
 import os
 import random
 import time
+import traceback
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Counter, Tuple, Deque
+
 from bone_presets import BoneConfig
 from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
+
 
 def ux(section: str, key: str, default: Any = "") -> Any:
     return LoreManifest.get_instance().get_ux(section, key, default)
@@ -29,11 +33,12 @@ class BoneJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 class EventBus:
-    def __init__(self, max_memory=None):
-        cfg = getattr(BoneConfig, "CORE", None)
-        limit = max_memory if max_memory else (getattr(cfg, "EVENT_MAX_MEMORY", 1024) if cfg else 1024)
+    def __init__(self, max_memory=None, config_ref=None, telemetry_ref=None):
+        self.cfg = config_ref or BoneConfig
+        limit = max_memory if max_memory else (getattr(self.cfg.CORE, "EVENT_MAX_MEMORY", 1024))
         self.buffer = deque(maxlen=limit)
         self.subscribers = {}
+        self.telemetry = telemetry_ref
 
     def subscribe(self, event_type, callback):
         if event_type not in self.subscribers:
@@ -49,17 +54,23 @@ class EventBus:
             try:
                 callback(data)
             except Exception as e:
-                import traceback
                 cb_name = getattr(callback, "__name__", str(callback))
                 full_trace = traceback.format_exc()
                 raw_err = f"Error in '{cb_name}' for '{event_type}': {e}\n{full_trace}"
                 msg = ux("core_strings", "bus_error")
                 if msg: print(f"{Prisma.RED}{msg.format(error_msg=raw_err)}{Prisma.RST}")
-                self.log(f"EVENT_FAILURE: {raw_err}", category="CRIT")
+                self.log(f"EVENT_FAILURE: {raw_err}", level="CRIT")
 
-    def log(self, text: str, category: str = "SYSTEM"):
-        entry = {"text": text, "category": category, "timestamp": time.time()}
-        self.buffer.append(entry)
+    def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
+        event = {"timestamp": time.time(), "source": source, "level": level, "message": message, "text": message, "_type": "EVENT_LOG"}
+        self.buffer.append(event)
+        if source in self.subscribers:
+            for cb in self.subscribers[source]:
+                cb(event)
+        if self.telemetry:
+            self.telemetry.record_event(event)
+        else:
+            print(f"[{source}] {message}")
 
     def flush(self) -> List[Dict]:
         current_logs = list(self.buffer)
@@ -72,16 +83,17 @@ class EventBus:
 class LoreManifest:
     _instance = None
 
-    def __init__(self, data_dir=None):
-        cfg = getattr(BoneConfig, "CORE", None)
-        default_dir = getattr(cfg, "LORE_DIR", "lore") if cfg else "lore"
+    def __init__(self, data_dir=None, config_ref=None):
+        self.cfg = config_ref or BoneConfig
+        cfg_core = getattr(self.cfg, "CORE", None)
+        default_dir = getattr(cfg_core, "LORE_DIR", "lore") if cfg_core else "lore"
         self.DATA_DIR = data_dir or default_dir
         self._cache = {}
 
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls, config_ref=None):
         if cls._instance is None:
-            cls._instance = LoreManifest()
+            cls._instance = LoreManifest(config_ref=config_ref)
         return cls._instance
 
     def get(self, category: str, sub_key: str = None) -> Any:
@@ -133,25 +145,27 @@ class LoreManifest:
             print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
 
 class TheObserver:
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
+        self.cyber_gov = CyberneticGovernor(config_ref=self.cfg)
         self.start_time = time.time()
-        cfg = getattr(BoneConfig, "CORE", None)
-        max_len = getattr(cfg, "OBSERVER_MAX_LEN", 20) if cfg else 20
+        cfg_core = getattr(self.cfg, "CORE", None)
+        max_len = getattr(cfg_core, "OBSERVER_MAX_LEN", 20) if cfg_core else 20
         self.cycle_times = deque(maxlen=max_len)
         self.llm_latencies = deque(maxlen=max_len)
         self.memory_snapshots = deque(maxlen=max_len)
         self.error_counts = Counter()
         self.user_turns = 0
-        self.LATENCY_WARNING = getattr(cfg, "OBSERVER_LATENCY_WARN", 5.0) if cfg else 5.0
-        self.CYCLE_WARNING = getattr(cfg, "OBSERVER_CYCLE_WARN", 8.0) if cfg else 8.0
+        self.LATENCY_WARNING = getattr(cfg_core, "OBSERVER_LATENCY_WARN", 5.0) if cfg_core else 5.0
+        self.CYCLE_WARNING = getattr(cfg_core, "OBSERVER_CYCLE_WARN", 8.0) if cfg_core else 8.0
         self.last_cycle_duration = 0.0
 
     @staticmethod
     def clock_in():
-        return time.time()
+        return time.perf_counter()
 
     def clock_out(self, start_time, metric_type="cycle"):
-        duration = time.time() - start_time
+        duration = time.perf_counter() - start_time
         if metric_type == "cycle":
             self.cycle_times.append(duration)
             self.last_cycle_duration = duration
@@ -177,9 +191,9 @@ class TheObserver:
     def pass_judgment(self, avg_cycle, avg_llm):
         if avg_cycle == 0.0 and avg_llm == 0.0:
             return ux("core_strings", "obs_asleep")
-        cfg = getattr(BoneConfig, "CORE", None)
-        cycle_eff = getattr(cfg, "OBSERVER_CYCLE_EFFICIENT", 0.1) if cfg else 0.1
-        llm_eff = getattr(cfg, "OBSERVER_LLM_EFFICIENT", 0.5) if cfg else 0.5
+        cfg_core = getattr(self.cfg, "CORE", None)
+        cycle_eff = getattr(cfg_core, "OBSERVER_CYCLE_EFFICIENT", 0.1) if cfg_core else 0.1
+        llm_eff = getattr(cfg_core, "OBSERVER_LLM_EFFICIENT", 0.5) if cfg_core else 0.5
         if avg_cycle < cycle_eff and avg_llm < llm_eff:
             return ux("core_strings", "obs_efficient")
         if avg_llm > self.LATENCY_WARNING:
@@ -190,6 +204,8 @@ class TheObserver:
             return random.choice(valid_jokes) if valid_jokes else ""
         if avg_cycle > self.CYCLE_WARNING:
             return ux("core_strings", "obs_sluggish")
+        if self.cyber_gov.order == 2:
+            return ux("core_strings", "obs_coupled") or "Harmonic Resonance: Presence Active."
         return ux("core_strings", "obs_nominal")
 
     def get_report(self):
@@ -272,17 +288,42 @@ class RealityStack:
                 "allow_commands": depth >= RealityLayer.SIMULATION, "allow_meta": depth >= RealityLayer.DEBUG,
                 "raw_output": depth == RealityLayer.DEEP_CX, "system_override": depth == RealityLayer.DEBUG, }
 
+
+class CyberneticGovernor:
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
+        self.beth_index: float = 0.5  # ℶ (Cybernetic Index)
+        self.order: int = 1
+
+    def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
+        coupling = (phi * 0.6) + (user_exhaustion * 0.4)
+        if coupling > 0.8:
+            self.order = 2
+        elif resonance_delta > 0.3:
+            self.order = 2
+        else:
+            self.order = 1
+        self.beth_index = coupling
+        return coupling
+
+    def get_policy_shift(self) -> str:
+        if self.order == 2:
+            return "CO_REGULATION"
+        return "EFFICIENCY"
+
+
 class ArchetypeArbiter:
     @staticmethod
-    def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Dict = None, ) -> Tuple[str, str, str]:
+    def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Dict = None, config_ref=None) -> Tuple[str, str, str]:
+        target_cfg = config_ref or BoneConfig
         for mandate in council_mandates:
             if mandate.get("type") == "LOCKDOWN":
-                return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law") ,
+                return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law")
             if mandate.get("type") == "FORCE_MODE":
-                return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic") ,
-        if "/" in soul_archetype:
-            msg = ux("core_strings", "arb_diamond")
-            return soul_archetype, "SOUL", msg.format(soul_archetype=soul_archetype) if msg else "",
+                return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic")
+            if "/" in soul_archetype:
+                msg = ux("core_strings", "arb_diamond")
+                return soul_archetype, "SOUL", (msg.format(soul_archetype=soul_archetype) if msg else "")
         if trigram:
             trigram_name = trigram.get("name")
             mythos = LoreManifest.get_instance().get("MYTHOS") or {}
@@ -296,21 +337,22 @@ class ArchetypeArbiter:
                     if match_lens and match_soul:
                         msg = rule.get("msg") or ux("core_strings", "arb_resonance")
                         return rule["result"], rule.get("source", "COSMIC"), msg
-        cfg = getattr(BoneConfig, "CORE", None)
-        loud_lenses = getattr(cfg, "LOUD_LENSES", ["THE MANIC", "THE VOID"]) if cfg else ["THE MANIC", "THE VOID"]
+        cfg_core = getattr(target_cfg, "CORE", None)
+        loud_lenses = getattr(cfg_core, "LOUD_LENSES", ["THE MANIC", "THE VOID"]) if cfg_core else ["THE MANIC", "THE VOID"]
         if physics_lens in loud_lenses:
             msg = ux("core_strings", "arb_loud")
-            return physics_lens, "PHYSICS", msg.format(physics_lens=physics_lens) if msg else "",
-        return soul_archetype, "SOUL",  ux("core_strings", "arb_soul")
+            return physics_lens, "PHYSICS", (msg.format(physics_lens=physics_lens) if msg else "")
+        return soul_archetype, "SOUL", ux("core_strings", "arb_soul")
 
 class TelemetryService:
     _tracer_instance = None
 
-    def __init__(self):
-        cfg = getattr(BoneConfig, "CORE", None)
-        self.log_dir = getattr(cfg, "TELEMETRY_LOG_DIR", "logs/telemetry") if cfg else "logs/telemetry"
-        self.BUFFER_SIZE = getattr(cfg, "TELEMETRY_BUFFER_SIZE", 50) if cfg else 50
-        self.MAX_ERRORS = getattr(cfg, "TELEMETRY_MAX_ERRORS", 5) if cfg else 5
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
+        cfg_core = getattr(self.cfg, "CORE", None)
+        self.log_dir = getattr(cfg_core, "TELEMETRY_LOG_DIR", "logs/telemetry") if cfg_core else "logs/telemetry"
+        self.BUFFER_SIZE = getattr(cfg_core, "TELEMETRY_BUFFER_SIZE", 50) if cfg_core else 50
+        self.MAX_ERRORS = getattr(cfg_core, "TELEMETRY_MAX_ERRORS", 5) if cfg_core else 5
         self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=self.BUFFER_SIZE)
         self.write_buffer: List[str] = []
         self.active_crystal = None
@@ -325,11 +367,20 @@ class TelemetryService:
             if msg: print(f"{Prisma.RED}{msg}{Prisma.RST}")
             self.disabled = True
             self.current_trace_file = None
+        self._executor = ThreadPoolExecutor(max_workers=1)
+
+    def record_event(self, event_dict: dict):
+        trace_file = os.path.join(self.log_dir, f"trace_{self.session_id}.jsonl")
+        try:
+            with open(trace_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(event_dict, cls=BoneJSONEncoder) + "\n")
+        except Exception:
+            pass
 
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls, config_ref=None):
         if cls._tracer_instance is None:
-            cls._tracer_instance = TelemetryService()
+            cls._tracer_instance = TelemetryService(config_ref=config_ref)
         return cls._tracer_instance
 
     def start_cycle(self, trace_id: str):
@@ -379,16 +430,15 @@ class TelemetryService:
             return
         lines_to_write = list(self.write_buffer)
         self.write_buffer.clear()
+
         def _bg_write(lines, filepath):
             try:
                 with open(filepath, "a", encoding="utf-8") as f:
                     f.write("\n".join(lines) + "\n")
-            except IOError as e:
+            except IOError:
                 pass
-        import threading
-        t = threading.Thread(target=_bg_write, args=(lines_to_write, self.current_trace_file))
-        t.daemon = True
-        t.start()
+
+        self._executor.submit(_bg_write, lines_to_write, self.current_trace_file)
         self.write_errors = 0
 
     def read_recent_history(self, limit=4) -> List[str]:

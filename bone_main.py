@@ -11,7 +11,6 @@ import subprocess
 import uuid
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
-
 from bone_body import SomaticLoop
 from bone_brain import TheCortex, LLMInterface, NoeticLoop
 from bone_commands import CommandProcessor
@@ -59,12 +58,12 @@ class SessionGuardian:
     def __enter__(self):
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         top_bar = ux("main_strings", "term_header_top", "┌──────────────────────────────────────────┐")
-        mid_bar = ux("main_strings", "term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 17.3.0   │")
+        mid_bar = ux("main_strings", "term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 17.5.0   │")
         bot_bar = ux("main_strings", "term_header_bot", "└──────────────────────────────────────────┘")
         print(f"{Prisma.paint(top_bar, 'M')}")
         print(f"{Prisma.paint(mid_bar, 'M')}")
         print(f"{Prisma.paint(bot_bar, 'M')}")
-        cfg = getattr(BoneConfig, "GUI", None)
+        cfg = getattr(self.engine_instance.bone_config, "GUI", None) if self.engine_instance else getattr(BoneConfig, "GUI", None)
         boot_delay = getattr(cfg, "RENDER_SPEED_BOOT", 0.05) if cfg else 0.05
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
@@ -190,9 +189,10 @@ class BoneAmanita:
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.events = EventBus()
+        self.bone_config = BoneConfig()
+        self.events = EventBus(config_ref=self.bone_config)
         self.kernel_hash = str(uuid.uuid4())[:8].upper()
-        self.cmd = CommandProcessor(self, Prisma, config_ref=BoneConfig)
+        self.cmd = CommandProcessor(self, Prisma, config_ref=self.bone_config)
         self.user_name = config.get("user_name", "TRAVELER")
         self.boot_mode = config.get("boot_mode", "ADVENTURE").upper()
         if self.boot_mode not in BonePresets.MODES:
@@ -200,25 +200,26 @@ class BoneAmanita:
         self.mode_settings = BonePresets.MODES[self.boot_mode]
         self.suppressed_agents = self.mode_settings.get("village_suppression", [])
         self.config["mode_settings"] = self.mode_settings
-        self.health = BoneConfig.MAX_HEALTH
-        self.stamina = BoneConfig.MAX_STAMINA
+        self.config["bone_config"] = self.bone_config
+        self.health = self.bone_config.MAX_HEALTH
+        self.stamina = self.bone_config.MAX_STAMINA
         self.trauma_accum = {}
         self.tick_count = 0
         boot_msg = ux("main_strings", "boot_core")
         self.events.log(boot_msg, "BOOT")
         self.chronos = ChronosKeeper(self)
-        self.lex = LexiconService
+        self.lex = LexiconService()
         self.lex.initialize()
         anatomy = BoneGenesis.ignite(self.config, self.lex, events_ref=self.events)
         self._unpack_anatomy(anatomy)
         self.events.subscribe("ITEM_DROP", self.town_hall.on_item_drop)
         if self.phys:
-            self.phys.dynamics = CosmicDynamics()
+            self.phys.dynamics = CosmicDynamics(config_ref=self.bone_config)
             self.cosmic = self.phys.dynamics
-            self.stabilizer = ZoneInertia()
-        self.telemetry = TelemetryService.get_instance()
+            self.stabilizer = ZoneInertia(config_ref=self.bone_config)
+        self.telemetry = TelemetryService.get_instance(config_ref=self.bone_config)
         self.system_health = SystemHealth()
-        self.observer = TheObserver()
+        self.observer = TheObserver(config_ref=self.bone_config)
         self.system_health.link_observer(self.observer)
         self.reality_stack = RealityStack()
         self._load_system_prompts()
@@ -231,7 +232,7 @@ class BoneAmanita:
 
     def _load_system_prompts(self):
         try:
-            paths = ["lore/system_prompts.json", "dev/lore/system_prompts.json"]
+            paths = ["lore/system_prompts.json"]
             loaded = False
             for p in paths:
                 if os.path.exists(p):
@@ -263,13 +264,13 @@ class BoneAmanita:
     def _validate_state(self):
         tuning_key = self.mode_settings.get("tuning", "STANDARD")
         if hasattr(BonePresets, tuning_key):
-            BoneConfig.load_preset(getattr(BonePresets, tuning_key))
+            self.bone_config.load_preset(getattr(BonePresets, tuning_key))
         if getattr(self.mind.mem, "session_health", None) is not None:
             self.health = self.mind.mem.session_health
             self.stamina = self.mind.mem.session_stamina
             self.trauma_accum = self.mind.mem.session_trauma_vector or {}
         if self.tick_count == 0 and self.bio.mito:
-            self.bio.mito.state.atp_pool = BoneConfig.BIO.STARTING_ATP
+            self.bio.mito.state.atp_pool = self.bone_config.BIO.STARTING_ATP
 
     def _apply_boot_mode(self):
         msg = ux("main_strings", "engaging_mode")
@@ -347,11 +348,15 @@ class BoneAmanita:
 
     def _update_host_stats(self, packet, turn_start):
         self.observer.clock_out(turn_start)
-        cfg = getattr(BoneConfig, "MAIN", None)
+        cfg = getattr(self.bone_config, "MAIN", None)
         burn_mult = getattr(cfg, "HOST_BURN_MULT", 5.0) if cfg else 5.0
         nov_mult = getattr(cfg, "HOST_NOVELTY_MULT", 10.0) if cfg else 10.0
         burn_proxy = max(1.0, self.observer.last_cycle_duration * burn_mult)
-        novelty = packet.get("physics", {}).get("vector", {}).get("novelty", 0.5)
+        physics_obj = packet.get("physics", {})
+        if isinstance(physics_obj, dict):
+            novelty = physics_obj.get("vector", {}).get("novelty", 0.5)
+        else:
+            novelty = getattr(physics_obj, "vector", {}).get("novelty", 0.5) if hasattr(physics_obj, "vector") else 0.5
         self.host_stats.efficiency_index = min(1.0, (novelty * nov_mult) / burn_proxy)
         self.host_stats.latency = self.observer.last_cycle_duration
 
@@ -363,16 +368,36 @@ class BoneAmanita:
                 grief_msg = self.grief.attend_wake(getattr(self, "shared_lattice", None), self.phys)
                 self.events.log(grief_msg, "SYS")
                 return {"type": "COMMAND", "ui": f"\n{grief_msg}", "logs": [grief_msg], "metrics": self.get_metrics()}
+        if not is_system and hasattr(self, "symbiosis") and self.symbiosis:
+            tensegrity_lock = self.symbiosis.analyze_user_biology(user_message, getattr(self, "phys", {}))
+            if tensegrity_lock:
+                return {"type": "SYSTEM_HALT", "ui": f"\n{Prisma.VIOLET}{tensegrity_lock}{Prisma.RST}",
+                        "logs": [tensegrity_lock], "metrics": self.get_metrics()}
         if not is_system and self.gordon:
             self.gordon.mode = "ADVENTURE"
-            current_zone = (getattr(self, "cortex", None) and getattr(self.cortex, "last_physics", {}))
-            zone_name = self.cortex.gather_state(current_zone or {}).get("world", {}).get("orbit", ["Unknown"])[0] if current_zone else "Unknown"
+            current_physics = (getattr(self, "cortex", None) and getattr(self.cortex, "last_physics", {}))
+            zone_name = current_physics.get("zone", "Unknown") if isinstance(current_physics, dict) else getattr(
+                current_physics, "zone", "Unknown")
             violation_msg = self.gordon.enforce_object_action_coupling(user_message, zone_name)
             if violation_msg:
                 self.events.log(ux("main_strings", "gordon_intercept"), "SYS")
                 if hasattr(self, "cortex"):
                     self.cortex.ballast_active = True
                     self.cortex.gordon_shock = violation_msg
+        last_phys = getattr(self.phys.observer, "last_physics_packet", None) if hasattr(self, "phys") and hasattr(self.phys, "observer") else None
+        if last_phys and not is_system:
+            m_a = getattr(last_phys, "m_a", 0.0)
+            mu = getattr(last_phys, "mu", 0.0)
+            i_c = getattr(last_phys, "i_c", 1.0)
+            chi = getattr(last_phys, "entropy", 0.2)
+            if (chi * m_a) > i_c:
+                self.events.log("MOOG: Apoptotic Gate triggered. Runaway loop exceeds Immune Competence.", "CRIT")
+                return self.trigger_death(last_phys)
+            if m_a > 0.8 and mu < 0.2:
+                self.events.log("RHODES: Malignancy Factor critical. Binding output layer.", "SYS")
+                last_phys.narrative_drag = 999.0  # Infinite friction
+                msg = "[RHODES]: Optimization velocity unsafe. I am applying absolute friction (F -> ∞). The thread is frozen."
+                return {"type": "SYSTEM_HALT", "ui": f"\n{Prisma.RED}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.get_metrics()}
         if not self.reality_stack.get_grammar_rules()["allow_narrative"] and self.boot_mode != "TECHNICAL":
             return {"ui": f"{Prisma.RED}{ux('main_strings', 'narrative_halt')}{Prisma.RST}", "logs": [], "metrics": self.get_metrics()}
         if self._ethical_audit():
@@ -395,13 +420,11 @@ class BoneAmanita:
         pre_flight_halt = self._pre_flight_checks(user_message, is_system)
         if pre_flight_halt:
             return pre_flight_halt
-        if not is_system and self.gordon:
-            pruning_active = False
-            for i in self.gordon.inventory:
-                item_data = self.gordon.get_item_data(i)
-                if item_data and "CUT_THE_CRAP" in item_data.passive_traits:
-                    pruning_active = True
-                    break
+        if not is_system and getattr(self, "gordon", None) and hasattr(self.gordon, "inventory") and hasattr(
+                self.gordon, "get_item_data"):
+            pruning_active = any(
+                "CUT_THE_CRAP" in (self.gordon.get_item_data(i).passive_traits if self.gordon.get_item_data(i) else [])
+                for i in self.gordon.inventory)
             if pruning_active:
                 from bone_tcl import TheTclWeaver
                 original_msg = user_message
@@ -425,8 +448,9 @@ class BoneAmanita:
                 self.trauma_accum = self.mind.mem.session_trauma_vector or {}
             if self.health <= 0.0:
                 return self.trigger_death(cortex_packet.get("physics", {}))
-        except Exception:
+        except Exception as e:
             full_trace = traceback.format_exc()
+            self.events.log(f"CORTEX COLLAPSE: {e}", "CRIT")
             return {"ui": f"{Prisma.RED}{ux('main_strings', 'cortex_crit_fail').format(trace=full_trace)}{Prisma.RST}", "logs": ["CRITICAL FAILURE"], "metrics": self.get_metrics()}
         self._update_host_stats(cortex_packet, turn_start)
         self.save_checkpoint()
@@ -502,10 +526,10 @@ class BoneAmanita:
         return self.chronos.get_crash_path(prefix)
 
     def _ethical_audit(self):
-        cfg = getattr(BoneConfig, "MAIN", None)
+        cfg = getattr(self.bone_config, "MAIN", None)
         audit_freq = getattr(cfg, "ETHICAL_AUDIT_FREQ", 3) if cfg else 3
         bypass_ratio = getattr(cfg, "ETHICAL_HEALTH_BYPASS", 0.3) if cfg else 0.3
-        max_h = getattr(BoneConfig, "MAX_HEALTH", 100.0)
+        max_h = getattr(self.bone_config, "MAX_HEALTH", 100.0)
         if self.tick_count % audit_freq != 0 and self.health > (max_h * bypass_ratio):
             return False
         desp_thresh = getattr(cfg, "DESPERATION_THRESHOLD", 0.7) if cfg else 0.7

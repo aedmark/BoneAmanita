@@ -56,17 +56,31 @@ class TheAkashicRecord:
         return yield_val, msg.format(target=target)
 
     def record_scar(self, concept: str, p: Any):
-        cfg = getattr(BoneConfig, "AKASHIC", None)
-        default_coords = {"E": ("exhaustion", 0.2), "beta": ("beta_index", 0.4), "S": ("scope", 0.3),
-                          "D": ("depth", 0.3), "C": ("connectivity", 0.2), "T": ("trauma", 0.0), "psi": ("psi", 0.0),
-                          "chi": ("entropy", 0.0), "valence": ("valence", 0.0), "ROS": ("ros", 0.0)}
+        cfg_defaults = getattr(getattr(BoneConfig, "AKASHIC", None), "DEFAULT_SCAR_COORDS", {})
+        default_coords = {
+            "E": ("exhaustion", cfg_defaults.get("E", 0.2)),
+            "beta": ("beta_index", cfg_defaults.get("beta", 0.4)),
+            "S": ("scope", cfg_defaults.get("S", 0.3)),
+            "D": ("depth", cfg_defaults.get("D", 0.3)),
+            "C": ("connectivity", cfg_defaults.get("C", 0.2)),
+            "T": ("trauma", cfg_defaults.get("T", 0.0)),
+            "psi": ("psi", cfg_defaults.get("psi", 0.0)),
+            "chi": ("entropy", cfg_defaults.get("chi", 0.0)),
+            "valence": ("valence", cfg_defaults.get("valence", 0.0)),
+            "ROS": ("ros", cfg_defaults.get("ROS", 0.0))
+        }
         coords = {}
         is_dict = isinstance(p, dict)
         for short_k, (real_k, default_v) in default_coords.items():
             if is_dict:
                 val = p.get(short_k, p.get("energy", {}).get(real_k, default_v))
             else:
-                val = getattr(p, short_k, getattr(p.energy, real_k, default_v) if hasattr(p, "energy") else default_v)
+                energy_obj = getattr(p, "energy", None)
+                if isinstance(energy_obj, dict):
+                    val = energy_obj.get(real_k, default_v)
+                else:
+                    val = getattr(energy_obj, real_k, default_v) if energy_obj else default_v
+                val = getattr(p, short_k, val)
             coords[short_k] = val
         scar = {"concept": concept, "coordinates": coords, "gilded": True}
         self.scar_map.append(scar)
@@ -123,7 +137,7 @@ class TheAkashicRecord:
             lenses_data = self.lore.get("LENSES") or {}
             resonances = lenses_data.get("_META_RESONANCE_", [])
             for resonance in resonances:
-                if resonance["trigram"] == trigram:
+                if resonance.get("trigram") == trigram:
                     target_lens = resonance.get("lens", resonance.get("soul"))
                     if target_lens == active_lens:
                         if self.events:
@@ -171,7 +185,8 @@ class TheAkashicRecord:
         gordon_data = self.lore.get("GORDON") or {}
         registry = gordon_data.get("ITEM_REGISTRY", {})
         registry[new_name] = new_data
-        self.lore.inject("GORDON", {"ITEM_REGISTRY": registry})
+        gordon_data["ITEM_REGISTRY"] = registry
+        self.lore.inject("GORDON", gordon_data)
         return new_name, new_data
 
     def save_all(self):
@@ -249,6 +264,14 @@ class TheAkashicRecord:
                 cat = r.get("catalyst_category")
                 if ing and cat:
                     self.known_recipes.add((ing, cat))
+        directory = getattr(self.lore, "DATA_DIR", "lore")
+        words_path = os.path.join(directory, "akashic_discovered_words.json")
+        if os.path.exists(words_path):
+            try:
+                with open(words_path, "r", encoding="utf-8") as f:
+                    self.discovered_words = json.load(f)
+            except Exception:
+                pass
 
     def record_interaction(
             self, lenses_active: list, ingredients_used: Optional[list] = None):
@@ -317,12 +340,14 @@ class TheAkashicRecord:
         msg_template = ux("akashic_strings", "recipe_msg")
         new_recipe = {"ingredient": ingredient, "catalyst_category": catalyst, "result": result_item,
                       "msg": msg_template.format(ingredient=ingredient, catalyst=catalyst, result_item=result_item), }
-        current_recipes = (self.lore.get("GORDON") or {}).get("RECIPES", [])
+        gordon_data = self.lore.get("GORDON") or {}
+        current_recipes = gordon_data.get("RECIPES", [])
         if not any(
-                r["ingredient"] == ingredient and r["catalyst_category"] == catalyst
+                r.get("ingredient") == ingredient and r.get("catalyst_category") == catalyst
                 for r in current_recipes):
             current_recipes.append(new_recipe)
-            self.lore.inject("GORDON", {"RECIPES": current_recipes})
+            gordon_data["RECIPES"] = current_recipes
+            self.lore.inject("GORDON", gordon_data)
             msg = ux("akashic_strings", "recipe_recorded")
             print(f"{Prisma.CYN}{msg}{Prisma.RST}")
 

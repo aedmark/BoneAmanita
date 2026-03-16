@@ -91,11 +91,11 @@ class TheVocalCords:
                             self.sf.write(master_file, final_array, 24000)
             except Exception as e:
                 error_to_report = str(e)
-                handoff_msg = f"\n{Prisma.GRY}[SYSTEM: Audio thread closed. Microphone is yours.]\nTRAVELER > {Prisma.RST}"
-                if error_to_report:
-                    if self.events:
-                        self.events.log(f"{Prisma.RED}🎙️ AUDIO FAULT: {error_to_report}{Prisma.RST}{handoff_msg}", "SYS")
-                elif combined_audio:
-                    if self.events:
-                        self.events.log(
-                            f"{Prisma.MAG}🎙️ MASTER PODCAST FORGED: {os.path.basename(master_file)}{Prisma.RST}{handoff_msg}", "SYS")
+            handoff_msg = f"\n{Prisma.GRY}[SYSTEM: Audio thread closed. Microphone is yours.]\nTRAVELER > {Prisma.RST}"
+            if error_to_report:
+                if self.events:
+                    self.events.log(f"{Prisma.RED}🎙️ AUDIO FAULT: {error_to_report}{Prisma.RST}{handoff_msg}", "SYS")
+            elif combined_audio:
+                if self.events:
+                    self.events.log(
+                        f"{Prisma.MAG}🎙️ MASTER PODCAST FORGED: {os.path.basename(master_file)}{Prisma.RST}{handoff_msg}", "SYS")

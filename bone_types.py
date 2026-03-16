@@ -9,13 +9,39 @@ from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
 
+
 class Prisma:
     RST = "\033[0m"
-    RED, GRN, YEL, BLU, MAG, CYN, WHT, GRY = ("\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[97m", "\033[90m",)
-    INDIGO, OCHRE, VIOLET, SLATE = ("\033[34;1m", "\033[33;2m", "\033[35;2m", "\033[30;1m",)
-    _STRIP_PATTERN = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    RED, GRN, YEL, BLU = "\033[31m", "\033[32m", "\033[33m", "\033[34m"
+    MAG, CYN, WHT, GRY = "\033[35m", "\033[36m", "\033[97m", "\033[90m"
+    INDIGO = "\033[34;1m"
+    OCHRE = "\033[33;2m"
+    VIOLET = "\033[35;2m"
+    SLATE = "\033[30;1m"
+    _STRIP_PATTERN = re.compile(
+        r"<span class='[^']+'>|</span>|"
+        r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"
+    )
     _COLOR_MAP = {"R": RED, "G": GRN, "Y": YEL, "B": BLU, "M": MAG, "C": CYN, "W": WHT, "0": GRY, "I": INDIGO,
                   "O": OCHRE, "V": VIOLET, "S": SLATE, }
+
+    @classmethod
+    def enable_web_mode(cls):
+        cls.RST = "</span>"
+        cls.RED = "<span class='prisma-red'>"
+        cls.GRN = "<span class='prisma-grn'>"
+        cls.YEL = "<span class='prisma-yel'>"
+        cls.BLU = "<span class='prisma-blu'>"
+        cls.MAG = "<span class='prisma-mag'>"
+        cls.CYN = "<span class='prisma-cyn'>"
+        cls.WHT = "<span class='prisma-wht'>"
+        cls.GRY = "<span class='prisma-gry'>"
+        cls.INDIGO = "<span class='prisma-indigo'>"
+        cls.OCHRE = "<span class='prisma-ochre'>"
+        cls.VIOLET = "<span class='prisma-violet'>"
+        cls.SLATE = "<span class='prisma-slate'>"
+        cls._COLOR_MAP = {"R": cls.RED, "G": cls.GRN, "Y": cls.YEL, "B": cls.BLU, "M": cls.MAG, "C": cls.CYN,
+                          "W": cls.WHT, "0": cls.GRY, "I": cls.INDIGO, "O": cls.OCHRE, "V": cls.VIOLET, "S": cls.SLATE}
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
@@ -86,6 +112,9 @@ class EnergyState:
     eta: float = 0.0
     theta: float = 0.0
     upsilon: float = 0.0
+    mu: float = 0.0
+    m_a: float = 0.0
+    i_c: float = 1.0
     entropy: float = 0.2
     mass: float = 0.0
     velocity: float = 0.0
@@ -275,6 +304,30 @@ class PhysicsPacket:
         self.energy.chi = v
 
     @property
+    def mu(self):
+        return self.energy.mu
+
+    @mu.setter
+    def mu(self, v):
+        self.energy.mu = v
+
+    @property
+    def m_a(self):
+        return self.energy.m_a
+
+    @m_a.setter
+    def m_a(self, v):
+        self.energy.m_a = v
+
+    @property
+    def i_c(self):
+        return self.energy.i_c
+
+    @i_c.setter
+    def i_c(self, v):
+        self.energy.i_c = v
+
+    @property
     def entropy(self):
         return self.energy.entropy
 
@@ -290,6 +343,46 @@ class PhysicsPacket:
     @valence.setter
     def valence(self, v):
         self.energy.valence = v
+
+    @property
+    def gamma(self):
+        return self.energy.gamma
+
+    @gamma.setter
+    def gamma(self, v):
+        self.energy.gamma = v
+
+    @property
+    def sigma(self):
+        return self.energy.sigma
+
+    @sigma.setter
+    def sigma(self, v):
+        self.energy.sigma = v
+
+    @property
+    def eta(self):
+        return self.energy.eta
+
+    @eta.setter
+    def eta(self, v):
+        self.energy.eta = v
+
+    @property
+    def theta(self):
+        return self.energy.theta
+
+    @theta.setter
+    def theta(self, v):
+        self.energy.theta = v
+
+    @property
+    def upsilon(self):
+        return self.energy.upsilon
+
+    @upsilon.setter
+    def upsilon(self, v):
+        self.energy.upsilon = v
 
     @property
     def clean_words(self):
@@ -359,18 +452,30 @@ class PhysicsPacket:
         return asdict(self)
 
     def get(self, key, default=None):
-        if hasattr(self, key):
-            return getattr(self, key)
+        if hasattr(self, key): return getattr(self, key)
+        if hasattr(self.energy, key): return getattr(self.energy, key)
+        if hasattr(self.space, key): return getattr(self.space, key)
+        if hasattr(self.matter, key): return getattr(self.matter, key)
         return default
 
     def __getitem__(self, key):
-        return getattr(self, key)
+        if hasattr(self, key): return getattr(self, key)
+        if hasattr(self.energy, key): return getattr(self.energy, key)
+        if hasattr(self.space, key): return getattr(self.space, key)
+        if hasattr(self.matter, key): return getattr(self.matter, key)
+        raise KeyError(f"'{key}' not found in PhysicsPacket or its sub-states.")
 
     def __setitem__(self, key, value):
-        setattr(self, key, value)
+        if hasattr(self.__class__, key) and isinstance(getattr(self.__class__, key), property):
+            setattr(self, key, value)
+        elif hasattr(self.energy, key): setattr(self.energy, key, value)
+        elif hasattr(self.space, key): setattr(self.space, key, value)
+        elif hasattr(self.matter, key): setattr(self.matter, key, value)
+        else: setattr(self, key, value)
 
     def __contains__(self, key):
-        return hasattr(self, key)
+        return (hasattr(self, key) or hasattr(self.energy, key) or
+                hasattr(self.space, key) or hasattr(self.matter, key))
 
 @dataclass
 class UserInferredState:

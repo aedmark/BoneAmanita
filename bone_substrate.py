@@ -1,13 +1,11 @@
 """bone_substrate.py"""
+
 import os
-from typing import List, Dict
+import threading
+from typing import List, Dict, Tuple
 from bone_types import Prisma
 
 class TheSubstrate:
-    """
-    The Physical Hands of the machine.
-    Allows the system to write files directly to the host OS.
-    """
     def __init__(self, events_ref):
         self.events = events_ref
         self.pending_writes: List[Dict[str, str]] = []
@@ -15,7 +13,7 @@ class TheSubstrate:
     def queue_write(self, path: str, content: str):
         self.pending_writes.append({"path": path, "content": content})
 
-    def execute_writes(self, stamina_pool: float) -> tuple[List[str], float]:
+    def execute_writes(self, stamina_pool: float) -> Tuple[List[str], float]:
         logs = []
         cost = 0.0
         if not self.pending_writes:
@@ -43,7 +41,6 @@ class TheSubstrate:
         return logs, cost
 
     def _trigger_tts(self, safe_path: str):
-        import threading
         def _async_tts_task(path, events):
             try:
                 from bone_audio import TheVocalCords

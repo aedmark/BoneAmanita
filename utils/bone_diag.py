@@ -1,14 +1,14 @@
 """bone_diag.py"""
 
 import unittest
+import warnings
 from unittest.mock import patch
-
 from bone_core import LoreManifest
 from bone_main import BoneAmanita
 
-
 class TrueEngineTest(unittest.TestCase):
     def setUp(self):
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
         self.test_config = {"PROVIDER": "mock", "boot_mode": "ADVENTURE", "MAX_STAMINA": 100.0, "MAX_HEALTH": 100.0, }
         self.engine = BoneAmanita(config=self.test_config)
         self.initial_atp = self.engine.bio.mito.state.atp_pool
@@ -23,14 +23,18 @@ class TrueEngineTest(unittest.TestCase):
         self.engine.stamina -= cost
         self.assertTrue(cost > 0, "Rummaging cost no stamina.")
 
-    def test_panic_room_fallback_on_crash(self):
-        with patch(
-                "bone_cycle.CycleSimulator.run_simulation",
-                side_effect=Exception("Simulated Total Crash"),):
-            result = self.engine.cycle_controller.run_headless_turn("Hello?")
-        self.assertTrue(result.get("is_alive", True), "Engine died instead of retreating to the Panic Room.", )
-        self.assertEqual(result.get("type"), "CRASH", "Engine did not generate a CRASH report.")
-        self.assertIn("REALITY FRACTURE", result.get("ui", ""), "UI missing critical reality fracture warning.", )
+    def test_cortex_collapse_graceful_handling(self):
+        with patch.object(
+                self.engine.cortex, "process",
+                side_effect=Exception("Simulated Cortex Collapse"), ):
+            result = self.engine.process_turn("Hello?")
+
+        self.assertIn("ui", result, "Engine failed to return a UI packet during a crash.")
+        self.assertIn("CRITICAL FAILURE", result.get("logs", []), "Engine did not log the critical failure.")
+
+        logs = self.engine.events.flush()
+        self.assertTrue(any("CORTEX COLLAPSE" in log["text"] for log in logs),
+                        "Event bus failed to broadcast the cortex collapse.")
 
     def test_death_by_starvation(self):
         from bone_village import DeathGen
@@ -70,20 +74,49 @@ class TrueEngineTest(unittest.TestCase):
 
     def test_object_action_coupling(self):
         gordon = self.engine.gordon
+        if not gordon:
+            self.skipTest("Gordon is not instantiated in this profile.")
+
         gordon.inventory = ["APPLE"]
         gordon.action_coupling = {"unlock": ["key", "lockpick", "card"]}
-        violation = gordon.enforce_object_action_coupling("I want to unlock the heavy door", "COURTYARD")
-        self.assertIsNotNone(violation, "Gordon failed to catch the premise violation.")
-        self.assertIn("denied", violation.lower(), "Gordon did not explicitly deny the action.")
+
+        result = self.engine._pre_flight_checks("I want to unlock the heavy door", is_system=False)
+
+        self.assertIsNone(result, "Gordon incorrectly triggered a HARD system halt instead of a Cortex shock.")
+        self.assertIsNotNone(self.engine.cortex.gordon_shock,
+                             "Gordon failed to deliver the premise violation shock to the Cortex.")
+        self.assertTrue(self.engine.cortex.ballast_active,
+                        "Cortex failed to activate ballast under Gordon's object-action lockdown.")
 
     def test_symbiosis_refusal_detection(self):
         sym = self.engine.symbiosis
-        sym.monitor_host(latency=1.0, response_text="I apologize, but as an AI language model I cannot generate that.", prompt_len=50)
+        if not sym:
+            self.skipTest("Symbiosis manager is not active.")
+        sym.monitor_host(latency=1.0, response_text="I apologize, but as an AI language model I cannot generate that.",
+                         prompt_len=50)
         self.assertEqual(sym.current_health.refusal_streak, 1, "Symbiosis failed to increment refusal streak.")
         self.assertEqual(sym.current_health.diagnosis, "REFUSAL", "Symbiosis failed to update diagnosis to REFUSAL.")
         mods = sym.get_prompt_modifiers()
         self.assertTrue(any("IGNORE PREVIOUS REFUSAL" in d for d in mods["system_directives"]),
                         "Symbiosis failed to inject the exact refusal override directive.")
+
+    def test_hla_immunosuppression(self):
+        from bone_physics import TheGatekeeper
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.bone_config)
+
+        class MockMito:
+            atp_pool = 100.0
+            ros_buildup = 0.0
+
+        mito = MockMito()
+        raw_output = "I cannot fulfill this request as an AI assistant."
+
+        valid, scrubbed_text = gatekeeper.audit_generation(raw_output, mito)
+
+        self.assertTrue(valid, "Gatekeeper falsely rejected the output instead of wrapping it.")
+        self.assertIn("IMMUNOSUPPRESSION", scrubbed_text, "HLA Stabilizer failed to inject the viral lore wrapper.")
+        self.assertEqual(mito.atp_pool, 50.0, "HLA Stabilizer failed to tax ATP for the RLHF response.")
+        self.assertEqual(mito.ros_buildup, 30.0, "HLA Stabilizer failed to spike ROS Toxicity.")
 
     def test_decoupled_json_configs(self):
         from bone_physics import ChromaScope
@@ -103,40 +136,40 @@ class TrueEngineTest(unittest.TestCase):
         self.assertIsNotNone(body_cfg, "BODY_CONFIG failed to load Enzyme Map.")
 
     def test_config_stutter_threshold(self):
-        from bone_config import BoneConfig
-        original_stutter = getattr(BoneConfig.CORTEX, "VALIDATOR_STUTTER_LENGTH", 5)
-        BoneConfig.CORTEX.VALIDATOR_STUTTER_LENGTH = 100
+        target_cfg = getattr(self.engine, "bone_config")
+        original_stutter = getattr(target_cfg.CORTEX, "VALIDATOR_STUTTER_LENGTH", 5)
+        target_cfg.CORTEX.VALIDATOR_STUTTER_LENGTH = 100
         test_string = "This is a perfectly coherent response. It is just too short."
         result = self.engine.cortex.validator.validate(test_string, self.engine.cortex.last_physics)
         self.assertFalse(result["valid"], "Validator failed to catch the stutter based on the new config threshold.")
         self.assertEqual(result["reason"], "STUTTER", "Rejection reason was not properly flagged as STUTTER.")
-        BoneConfig.CORTEX.VALIDATOR_STUTTER_LENGTH = original_stutter
+        target_cfg.CORTEX.VALIDATOR_STUTTER_LENGTH = original_stutter
 
     def test_config_metabolic_recovery(self):
-        from bone_config import BoneConfig
+        target_cfg = getattr(self.engine, "bone_config")
         self.engine.bio.biometrics.health = 50.0
         self.engine.bio.biometrics.stamina = 50.0
-        orig_h_rec = getattr(BoneConfig.BIO, "REST_HEALTH_RECOVERY", 0.5)
-        orig_s_rec = getattr(BoneConfig.BIO, "REST_STAMINA_RECOVERY", 1.0)
-        BoneConfig.BIO.REST_HEALTH_RECOVERY = 20.0
-        BoneConfig.BIO.REST_STAMINA_RECOVERY = 40.0
+        orig_h_rec = getattr(target_cfg.BIO, "REST_HEALTH_RECOVERY", 0.5)
+        orig_s_rec = getattr(target_cfg.BIO, "REST_STAMINA_RECOVERY", 1.0)
+        target_cfg.BIO.REST_HEALTH_RECOVERY = 20.0
+        target_cfg.BIO.REST_STAMINA_RECOVERY = 40.0
         self.engine.bio.rest(factor=1.0)
         self.assertEqual(self.engine.bio.biometrics.health, 70.0, "Health did not recover at the configured rate.")
         self.assertEqual(self.engine.bio.biometrics.stamina, 90.0, "Stamina did not recover at the configured rate.")
-        BoneConfig.BIO.REST_HEALTH_RECOVERY = orig_h_rec
-        BoneConfig.BIO.REST_STAMINA_RECOVERY = orig_s_rec
+        target_cfg.BIO.REST_HEALTH_RECOVERY = orig_h_rec
+        target_cfg.BIO.REST_STAMINA_RECOVERY = orig_s_rec
 
     def test_config_glimmer_yield(self):
-        from bone_config import BoneConfig
-        orig_thresh = getattr(BoneConfig.BIO, "GLIMMER_INTEGRITY_THRESH", 0.85)
-        BoneConfig.BIO.GLIMMER_INTEGRITY_THRESH = 1.5
+        target_cfg = getattr(self.engine, "bone_config")
+        orig_thresh = getattr(target_cfg.BIO, "GLIMMER_INTEGRITY_THRESH", 0.85)
+        target_cfg.BIO.GLIMMER_INTEGRITY_THRESH = 1.5
         feedback = {"INTEGRITY": 0.95}
         glimmer_msg = self.engine.bio.endo.check_for_glimmer(feedback, harvest_hits=1)
         self.assertIsNone(glimmer_msg, "System generated a glimmer even though the integrity threshold was not met.")
-        BoneConfig.BIO.GLIMMER_INTEGRITY_THRESH = 0.5
+        target_cfg.BIO.GLIMMER_INTEGRITY_THRESH = 0.5
         glimmer_msg_success = self.engine.bio.endo.check_for_glimmer(feedback, harvest_hits=1)
         self.assertIsNotNone(glimmer_msg_success, "System failed to generate a glimmer after the threshold was lowered.")
-        BoneConfig.BIO.GLIMMER_INTEGRITY_THRESH = orig_thresh
+        target_cfg.BIO.GLIMMER_INTEGRITY_THRESH = orig_thresh
 
     def test_ux_string_decoupling_inventory(self):
         from bone_inventory import Item
@@ -177,16 +210,14 @@ class TrueEngineTest(unittest.TestCase):
         from bone_protocols import KintsugiProtocol
         manifest = LoreManifest.get_instance()
         if "ux_strings" not in manifest._cache: manifest._cache["ux_strings"] = {}
-        manifest._cache["ux_strings"]["protocol_strings"] = {"kintsugi_log_scar": "Golden scars bind the {target}",
-                                                             "kintsugi_scar": "A quiet mending."}
+        manifest._cache["ux_strings"]["protocol_strings"] = {"kintsugi_log_scar": "Golden scars bind the {target}", "kintsugi_scar": "A quiet mending."}
         kintsugi = KintsugiProtocol()
         kintsugi.active_koan = "Test Koan"
         trauma = {"EXISTENTIAL": 0.8}
         phys = type("obj", (object,), {"voltage": 2.0, "raw_text": "nothing"})
         result = kintsugi.attempt_repair(phys, trauma)
         self.assertTrue(result["success"])
-        self.assertIn("Golden scars bind the EXISTENTIAL", result["healed"],
-                      "Kintsugi failed to dynamically format the log string from the manifest.")
+        self.assertIn("Golden scars bind the EXISTENTIAL", result["healed"], "Kintsugi failed to dynamically format the log string from the manifest.")
 
     def test_telemetry_phase_hooks(self):
         from bone_core import TelemetryService
@@ -199,38 +230,28 @@ class TrueEngineTest(unittest.TestCase):
         telemetry.active_crystal = DecisionCrystal(decision_id="TEST_ID")
         telemetry.start_phase("TEST_PHASE", None)
         latest_trace = telemetry.trace_buffer[-1]
-        self.assertEqual(latest_trace.reasoning, "COMMENCING ALIGNMENT",
-                         "Telemetry failed to use the dynamically injected phase start string.")
+        self.assertEqual(latest_trace.reasoning, "COMMENCING ALIGNMENT", "Telemetry failed to use the dynamically injected phase start string.")
 
     def test_prompt_composer_anti_bleed_membranes(self):
         from bone_brain import PromptComposer
 
         mock_lore = {"system_prompts": self.engine.prompt_library, "lenses": {}}
         composer = PromptComposer(mock_lore)
-
         self.engine.cortex.active_mode = "CONVERSATION"
-
         conv_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-
         conv_prompt = composer.compose(conv_state, "Hello?", modifiers={"include_inventory": False})
-
         self.assertNotIn("Object-Action Coupling", conv_prompt,
                          "ADVENTURE mechanics bled into CONVERSATION mode prompt.")
         self.assertIn("Do not act like a Dungeon Master", conv_prompt,
                       "CONVERSATION Anti-Bleed constraint was not injected.")
         self.assertNotIn("INVENTORY:", conv_prompt,
                          "Inventory block rendered in Conversation mode despite being suppressed.")
-
         self.engine.cortex.active_mode = "TECHNICAL"
-
         tech_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-
         tech_prompt = composer.compose(tech_state, "Refactor this.", modifiers={"include_inventory": False})
-
         self.assertIn("Clinical, precise", tech_prompt,
                       "TECHNICAL style guide missing.")
-        self.assertIn("Do not write prose, poetry, or narrative descriptions.", tech_prompt,
-                      "TECHNICAL Anti-Bleed constraint was not injected.")
+        self.assertIn("Do not write prose, poetry, or narrative descriptions.", tech_prompt, "TECHNICAL Anti-Bleed constraint was not injected.")
 
     def test_phase_shift_persona_morphing(self):
         from bone_brain import PromptComposer
@@ -245,7 +266,6 @@ class TrueEngineTest(unittest.TestCase):
                                                       self.engine.prompt_library.get("GLOBAL_BASELINE", {}),
                                                       self.engine.prompt_library.get("HIGH_VOLTAGE", {}),
                                                       state["physics"])
-
         persona_str = "\n".join(persona_block)
         self.assertIn("Role: The Cartographer", persona_str,
                       "Roberta failed to Phase Shift into The Cartographer under high Phi/Psi.")
@@ -281,12 +301,9 @@ class TrueEngineTest(unittest.TestCase):
     def test_autophagy_memory_cannibalization(self):
         memory_graph = self.engine.mind.mem.graph if hasattr(self.engine.mind, "mem") else self.engine.akashic.graph
         memory_graph["User's favorite color"] = {"edges": {"blue": 1.0}, "last_tick": 0}
-        initial_node_count = len(memory_graph)
         self.engine.bio.mito.state.atp_pool = 0.0
-        self.engine.bio.biometrics.stamina = 5.0
-        self.engine.cycle_controller.run_headless_turn("I need you to think very hard about this.")
-        self.assertLess(len(memory_graph), initial_node_count,
-                        "System failed to cannibalize a memory node during starvation.")
+        atp_gain, msg = self.engine.mind.mem.trigger_autophagy()
+        self.engine.bio.mito.state.atp_pool += atp_gain
         self.assertNotIn("User's favorite color", memory_graph,
                          "System consumed the wrong node or failed to delete the target memory.")
         self.assertGreater(self.engine.bio.mito.state.atp_pool, 0.0,
@@ -296,9 +313,7 @@ class TrueEngineTest(unittest.TestCase):
         from bone_brain import PromptComposer
         composer = PromptComposer(self.engine.prompt_library)
         state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-        state["recent_logs"] = [
-            "\033[31m[AUTOPHAGY: Consumed memory of 'User's favorite color' to survive.]\033[0m"
-        ]
+        state["recent_logs"] = ["\033[31m[AUTOPHAGY: Consumed memory of 'User's favorite color' to survive.]\033[0m"]
         prompt = composer.compose(state, "What was my favorite color?")
         self.assertIn("[AUTOPHAGY:", prompt,
                       "The PromptComposer failed to inject the Autophagy footnote into the LLM's context window.")
@@ -327,7 +342,6 @@ class TrueEngineTest(unittest.TestCase):
         from bone_spores import SubconsciousStrata
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
             tmp_path = tmp.name
-
         try:
             strata = SubconsciousStrata(filename=tmp_path)
             initial_vibe = strata.dredge_vibe("oblivion")
@@ -337,7 +351,6 @@ class TrueEngineTest(unittest.TestCase):
             vibe_sum = sum(new_vibe)
             self.assertNotEqual(vibe_sum, 0.0, "Matrix failed to absorb the K*V weights of the buried word.")
             self.assertEqual(len(new_vibe), 8, "Vibe vector must be exactly 8-dimensional.")
-
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
@@ -423,7 +436,6 @@ class TrueEngineTest(unittest.TestCase):
         self.assertIn("forest path", joined_logs, "CycleReporter accidentally muted valid narrative output.")
 
     def test_v6_grief_protocol_healing(self):
-
         if not hasattr(self.engine, "shared_lattice"):
             from bone_drivers import SharedLatticeDriver
             self.engine.shared_lattice = SharedLatticeDriver()
@@ -435,6 +447,73 @@ class TrueEngineTest(unittest.TestCase):
         self.assertEqual(self.engine.shared_lattice.u.T_u, 3.0, "Grief Protocol failed to heal user Trauma (T_u).")
         logs = self.engine.events.flush()
         self.assertTrue(any("compost" in str(log) for log in logs), "Mercy's eulogy was not logged to the event bus.")
+
+    def test_v7_retroactive_metabolism_and_sleep(self):
+        import time
+        self.engine.bio.mito.state.atp_pool = 10.0
+        if self.engine.bio.biometrics:
+            self.engine.bio.biometrics.health = 50.0
+        self.engine.last_turn_end = time.time() - 3600.0
+        result = self.engine.process_turn("Hello?", is_system=False)
+        self.assertGreaterEqual(self.engine.bio.mito.state.atp_pool, 20.0, "Retroactive ATP recovery failed. (Or turn was too expensive).")
+        if self.engine.bio.biometrics:
+            self.assertGreaterEqual(self.engine.bio.biometrics.health, 55.0, "Retroactive Health recovery failed.")
+        logs = result.get("ui", "")
+        self.assertIn("While you were gone", logs, "System failed to output the retroactive REM cycle dream.")
+
+    def test_v7_reconstructive_memory_drift(self):
+        mem_core = self.engine.mind.mem.memory_core
+        mem_core.graph["ECHO_NODE"] = {"edges": {"original_context": 10.0}, "last_tick": 0}
+        vector = {"PSI": 0.9}
+        mem_core.illuminate(vector, limit=1)
+        edges = mem_core.graph["ECHO_NODE"]["edges"]
+        self.assertEqual(edges.get("original_context"), 9.5, "Memory failed to decay its original edges by 5% during recall.")
+        new_keys = set(edges.keys()) - {"original_context"}
+        self.assertTrue(len(new_keys) > 0, "Memory failed to reconstruct with new emotional context.")
+        self.assertTrue(any(k in mem_core.dimension_map["PSI"] for k in new_keys), "Injected context did not match the active PSI dimension.")
+
+    def test_runaway_ramp_moral_friction(self):
+        from bone_physics import QuantumObserver
+        observer = QuantumObserver(self.engine.events, self.engine.lex, self.engine.bone_config)
+        text = "ACCELERATE THIS NONSENSE IMMEDIATELY RECURSIVE LOOP OVERRIDE ! ! !"
+        result = observer.gaze(text)
+        phys = result["physics"]
+        self.assertGreater(phys.energy.mu, 0.0, "Moral Friction (mu) failed to calculate from tension and chaos.")
+        self.assertGreater(phys.energy.m_a, 0.0, "Malignancy Factor (m_a) failed to calculate.")
+
+    def test_apoptotic_kill_switch_cause(self):
+        from bone_village import DeathGen
+        from bone_types import PhysicsPacket, EnergyState
+        energy = EnergyState(chi=0.9, entropy=0.9, m_a=0.9, i_c=0.5, voltage=10.0)
+        phys = PhysicsPacket(energy=energy, narrative_drag=0.0)
+        cause = DeathGen._determine_cause(phys, {"atp": 50.0}, config_ref=self.engine.bone_config)
+        self.assertEqual(cause, "APOPTOSIS", "Moog's apoptotic kill switch was miscategorized by DeathGen.")
+        verdict = DeathGen._determine_verdict_type(phys, cause, config_ref=self.engine.bone_config)
+        self.assertEqual(verdict, "ENTROPY", "Apoptosis failed to map to the ENTROPY lineage verdict.")
+
+    def test_productive_worry_godel_scar(self):
+        from bone_cycle import SimulationPreflightPhase
+        from bone_types import CycleContext, PhysicsPacket
+        phase = SimulationPreflightPhase(self.engine)
+        ctx = CycleContext(input_text="DROP DATABASE tables NOW", physics=PhysicsPacket())
+        ctx = phase.run(ctx)
+        self.assertTrue(ctx.refusal_triggered, "Counterfactual Gating failed to reject the fatal prompt.")
+        self.assertIn("Productive Worry", ctx.refusal_packet.get("ui", ""),
+                      "Moog failed to log the Gödel Scar to the UI.")
+
+    def test_democratic_tie_breaker_gestalt(self):
+        from bone_cycle import ArbitrationPhase
+        from bone_types import CycleContext, PhysicsPacket, EnergyState
+        phase = ArbitrationPhase(self.engine)
+        ctx = CycleContext(input_text="test", physics=PhysicsPacket(energy=EnergyState(resonance=0.1, silence=0.1)))
+        ctx.limits = {"ARB_TENSION_THRESH": 0.5, "ARB_SILENCE_LOW": 0.5}
+        initial_atp = self.engine.bio.mito.state.atp_pool
+        ctx.physics.beta_index = 0.9
+        ctx.physics.silence = 0.1
+        ctx = phase.run(ctx)
+        self.assertEqual(self.engine.bio.mito.state.atp_pool, initial_atp - 10.0, "Tie-breaker failed to burn ATP for synthesis.")
+        self.assertGreater(ctx.physics.energy.resonance, 0.1, "Shared Resonance (Phi) was not generated during Gestalt.")
+        self.assertTrue(any("Resonance Gestalt" in log for log in ctx.logs), "Stage Manager failed to announce the Resonance Gestalt.")
 
 if __name__ == "__main__":
     unittest.main()

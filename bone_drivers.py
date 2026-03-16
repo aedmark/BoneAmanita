@@ -8,21 +8,20 @@ import random
 import time
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
-from bone_presets import BonePresets, BoneConfig
+
 from bone_core import LoreManifest, ux
-from bone_lexicon import LexiconService
+from bone_presets import BoneConfig
 from bone_types import PhysicsPacket
 
-SCENARIOS = LoreManifest.get_instance().get("scenarios") or {}
-LENSES = (LoreManifest.get_instance().get("narrative_data") or {}).get("lenses", {})
 
 class SoulDriver:
-    def __init__(self, soul_ref):
+    def __init__(self, soul_ref, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.soul = soul_ref
-        self.archetype_weights = LoreManifest.get_instance().get("DRIVER_CONFIG", "ARCHETYPE_TO_PERSONA_WEIGHT") or {}
+        self.archetype_weights = LoreManifest.get_instance(config_ref=self.cfg).get("DRIVER_CONFIG", "ARCHETYPE_TO_PERSONA_WEIGHT") or {}
 
     def get_influence(self) -> Dict[str, float]:
-        ennea_weights = LoreManifest.get_instance().get("DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {}
+        ennea_weights = LoreManifest.get_instance(config_ref=self.cfg).get("DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {}
         base_weights = {persona: 0.0 for persona in ennea_weights.keys()}
         if not self.soul:
             return base_weights
@@ -40,17 +39,18 @@ class SoulDriver:
             for p, w in base_weights.items()}
 
 class UserProfile:
-    def __init__(self, name="USER"):
+    def __init__(self, name="USER", config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.name = name
         self.affinities = {"heavy": 0.0, "kinetic": 0.0, "abstract": 0.0, "photo": 0.0, "aerobic": 0.0, "thermal": 0.0,
                            "cryo": 0.0, }
         self.confidence = 0
-        cfg = getattr(BoneConfig, "DRIVERS", None)
+        cfg = getattr(self.cfg, "DRIVERS", None)
         self.file_path = getattr(cfg, "PROFILE_FILE_PATH", "user_profile.json") if cfg else "user_profile.json"
         self.load()
 
     def update(self, counts, total_words):
-        cfg = getattr(BoneConfig, "DRIVERS", None)
+        cfg = getattr(self.cfg, "DRIVERS", None)
         min_words = getattr(cfg, "PROFILE_MIN_WORDS", 3) if cfg else 3
         if total_words < min_words:
             return
@@ -67,7 +67,7 @@ class UserProfile:
                     (1 - alpha) * self.affinities[cat])
 
     def get_preferences(self):
-        cfg = getattr(BoneConfig, "DRIVERS", None)
+        cfg = getattr(self.cfg, "DRIVERS", None)
         like_thresh = getattr(cfg, "PROFILE_LIKE_THRESH", 0.3) if cfg else 0.3
         hate_thresh = getattr(cfg, "PROFILE_HATE_THRESH", -0.2) if cfg else -0.2
         likes = [k for k, v in self.affinities.items() if v > like_thresh]
@@ -92,17 +92,18 @@ class UserProfile:
                 pass
 
 class EnneagramDriver:
-    def __init__(self, events_ref):
+    def __init__(self, events_ref, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.events = events_ref
         self.current_persona = "NARRATOR"
         self.pending_persona = None
         self.stability_counter = 0
-        cfg = getattr(BoneConfig, "DRIVERS", None)
+        cfg = getattr(self.cfg, "DRIVERS", None)
         self.HYSTERESIS_THRESHOLD = getattr(cfg, "ENNEAGRAM_HYSTERESIS", 3) if cfg else 3
 
     @property
     def weights(self):
-        return LoreManifest.get_instance().get("DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {}
+        return LoreManifest.get_instance(config_ref=self.cfg).get("DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {}
 
     @staticmethod
     def _get_phys_attr(physics, key, default=None):
@@ -142,7 +143,8 @@ class EnneagramDriver:
         if "NARRATOR" in scores:
             scores["NARRATOR"] += 2.0
         is_safe_metrics = 4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5
-        if p_zone == BonePresets.SANCTUARY.get("ZONE") or is_safe_metrics:
+        sanctuary_zone = getattr(self.cfg, "SANCTUARY", {}).get("ZONE") if hasattr(self.cfg, "SANCTUARY") else "SANCTUARY"
+        if p_zone == sanctuary_zone or is_safe_metrics:
             if "NARRATOR" in scores: scores["NARRATOR"] += 6.0
             if "JESTER" in scores: scores["JESTER"] += 3.0
             if "GORDON" in scores: scores["GORDON"] -= 2.0
@@ -171,7 +173,7 @@ class EnneagramDriver:
         sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         winner, win_score = sorted_scores[0]
         runner_up, run_score = sorted_scores[1]
-        cfg = getattr(BoneConfig, "DRIVERS", None)
+        cfg = getattr(self.cfg, "DRIVERS", None)
         hybrid_gap = getattr(cfg, "ENNEAGRAM_HYBRID_GAP", 0.5) if cfg else 0.5
         if (win_score - run_score) < hybrid_gap:
             k1 = "THE OBSERVER" if winner == "NARRATOR" else winner
@@ -179,16 +181,17 @@ class EnneagramDriver:
             hybrid_key_a = f"{k1}_{k2}_HYBRID"
             hybrid_key_b = f"{k2}_{k1}_HYBRID"
             final_hybrid = None
-            if hybrid_key_a in LENSES:
+            lenses = (LoreManifest.get_instance(config_ref=self.cfg).get("narrative_data") or {}).get("lenses", {})
+            if hybrid_key_a in lenses:
                 final_hybrid = hybrid_key_a
-            elif hybrid_key_b in LENSES:
+            elif hybrid_key_b in lenses:
                 final_hybrid = hybrid_key_b
             if final_hybrid:
                 msg = ux("driver_strings", "ennea_synthesis")
                 return final_hybrid, "SYNTHESIS", msg.format(winner=winner, runner_up=runner_up),
         msg_winner = ux("driver_strings", "ennea_winner")
         reason = msg_winner.format(winner=winner, score=scores[winner], v=p_vol, d=p_drag)
-        state_map = LoreManifest.get_instance().get("DRIVER_CONFIG", "PERSONA_STATE_MAP") or {}
+        state_map = LoreManifest.get_instance(config_ref=self.cfg).get("DRIVER_CONFIG", "PERSONA_STATE_MAP") or {}
         return winner, state_map.get(winner, "ACTIVE"), reason
 
     def decide_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
@@ -227,17 +230,21 @@ class VSLState:
     active_modules: List[str] = field(default_factory=list)
 
 class DriverRegistry:
-    def __init__(self, events_ref):
-        self.enneagram = EnneagramDriver(events_ref)
+    def __init__(self, events_ref, config_ref=None):
+        self.cfg = config_ref or BoneConfig
+        self.enneagram = EnneagramDriver(events_ref, config_ref=self.cfg)
         self.current_focus = "NONE"
 
+
 class LiminalModule:
-    def __init__(self):
+    def __init__(self, config_ref=None, lexicon_ref=None):
+        self.cfg = config_ref or BoneConfig
+        self.lex = lexicon_ref
         self.lambda_val = 0.0
         self.godel_scars = 0
 
     def analyze(self, text: str, physics_vector: Dict[str, float]) -> float:
-        cfg = getattr(BoneConfig, "DRIVERS", None)
+        cfg = getattr(self.cfg, "DRIVERS", None)
         lex_weight = getattr(cfg, "LIMINAL_LEXICAL_WEIGHT", 0.15) if cfg else 0.15
         dm_weight = getattr(cfg, "LIMINAL_DARK_MATTER_WEIGHT", 0.25) if cfg else 0.25
         psi_mult = getattr(cfg, "LIMINAL_VEC_PSI_MULT", 0.5) if cfg else 0.5
@@ -245,13 +252,13 @@ class LiminalModule:
         del_mult = getattr(cfg, "LIMINAL_VEC_DEL_MULT", 0.2) if cfg else 0.2
         decay = getattr(cfg, "LIMINAL_DECAY", 0.7) if cfg else 0.7
         growth = getattr(cfg, "LIMINAL_GROWTH", 0.15) if cfg else 0.15
-        liminal_vocab = LexiconService.get("liminal") or set()
+        liminal_vocab = self.lex.get("liminal") if self.lex else set()
         words = text.lower().split()
         void_hits = sum(1 for w in words if w in liminal_vocab)
         lexical_lambda = min(1.0, void_hits * lex_weight)
         dark_matter_sparks = 0
-        if len(words) > 1:
-            categories = [LexiconService.get_current_category(w) for w in words]
+        if len(words) > 1 and self.lex:
+            categories = [self.lex.get_current_category(w) for w in words]
             for i in range(len(categories) - 1):
                 c1, c2 = categories[i], categories[i + 1]
                 if c1 and c2 and c1 != c2:
@@ -275,7 +282,9 @@ class LiminalModule:
         return min(1.0, self.lambda_val)
 
 class SyntaxModule:
-    def __init__(self):
+    def __init__(self, config_ref=None, lexicon_ref=None):
+        self.cfg = config_ref or BoneConfig
+        self.lex = lexicon_ref
         self.omega_val = 1.0
         self.grammatical_stress = 0.0
 
@@ -283,7 +292,7 @@ class SyntaxModule:
         words = text.split()
         if not words:
             return 1.0
-        cfg = getattr(BoneConfig, "DRIVERS", None)
+        cfg = getattr(self.cfg, "DRIVERS", None)
         avg_len_high = getattr(cfg, "SYNTAX_AVG_LEN_HIGH", 6.0) if cfg else 6.0
         drag_high = getattr(cfg, "SYNTAX_DRAG_HIGH", 5.0) if cfg else 5.0
         avg_len_low = getattr(cfg, "SYNTAX_AVG_LEN_LOW", 3.5) if cfg else 3.5
@@ -291,7 +300,7 @@ class SyntaxModule:
         t_high = getattr(cfg, "SYNTAX_OMEGA_TARGET_HIGH", 1.0) if cfg else 1.0
         t_low = getattr(cfg, "SYNTAX_OMEGA_TARGET_LOW", 0.4) if cfg else 0.4
         t_mid = getattr(cfg, "SYNTAX_OMEGA_TARGET_MID", 0.7) if cfg else 0.7
-        bureau_vocab = LexiconService.get("bureau_buzzwords") or set()
+        bureau_vocab = self.lex.get("bureau_buzzwords") if self.lex else set()
         buzz_count = sum(1 for w in words if w.lower() in bureau_vocab)
         avg_len = sum(len(w) for w in words) / len(words)
         if (avg_len > avg_len_high and narrative_drag > drag_high) or buzz_count > 0:
@@ -317,7 +326,8 @@ class SyntaxModule:
         return self.omega_val
 
 class CongruenceValidator:
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.last_phi = 1.0
         self._archetype_map = None
 
@@ -325,7 +335,7 @@ class CongruenceValidator:
     def map(self):
         if self._archetype_map is None:
             try:
-                self._archetype_map = LoreManifest.get_instance().get("LENSES") or {}
+                self._archetype_map = LoreManifest.get_instance(config_ref=self.cfg).get("LENSES") or {}
             except Exception:
                 self._archetype_map = {}
         return self._archetype_map
@@ -333,11 +343,10 @@ class CongruenceValidator:
     def calculate_resonance(self, text: str, context: Any) -> float:
         if not text:
             return 0.0
-        cfg = getattr(BoneConfig, "DRIVERS", None)
+        cfg = getattr(self.cfg, "DRIVERS", None)
         default_lens = getattr(cfg, "DEFAULT_LENS", "OBSERVER") if cfg else "OBSERVER"
         raw_lens = getattr(context, "active_lens", default_lens)
         archetype = raw_lens.upper().replace("THE ", "")
-        cfg = getattr(BoneConfig, "DRIVERS", None)
         tone_score = getattr(cfg, "CONGRUENCE_BASE_TONE", 0.8) if cfg else 0.8
         target_data = self.map.get(archetype, {})
         target_words = set()
@@ -356,11 +365,13 @@ class CongruenceValidator:
         return min(max_tone, tone_score)
 
 class BoneConsultant:
-    def __init__(self):
+    def __init__(self, config_ref=None, lexicon_ref=None):
+        self.cfg = config_ref or BoneConfig
+        self.lex = lexicon_ref
         self.state = VSLState()
         self.active = True
-        self.liminal_mod = LiminalModule()
-        self.syntax_mod = SyntaxModule()
+        self.liminal_mod = LiminalModule(config_ref=self.cfg, lexicon_ref=self.lex)
+        self.syntax_mod = SyntaxModule(config_ref=self.cfg, lexicon_ref=self.lex)
 
     @staticmethod
     def engage():
@@ -371,7 +382,7 @@ class BoneConsultant:
         return ux("driver_strings", "vsl_disengage") 
 
     def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None, physics: Optional[PhysicsPacket] = None, ):
-        cfg = getattr(BoneConfig, "DRIVERS", None)
+        cfg = getattr(self.cfg, "DRIVERS", None)
         e_growth = getattr(cfg, "VSL_E_GROWTH_MULT", 0.002) if cfg else 0.002
         fatigue_mult = getattr(cfg, "VSL_FATIGUE_MULT", 0.3) if cfg else 0.3
         b_decay = getattr(cfg, "VSL_B_DECAY", 0.8) if cfg else 0.8
@@ -408,7 +419,7 @@ class BoneConsultant:
 
     def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
         directives = []
-        cfg = getattr(BoneConfig, "DRIVERS", None)
+        cfg = getattr(self.cfg, "DRIVERS", None)
         lim_thresh = getattr(cfg, "VSL_LIMINAL_THRESHOLD", 0.7) if cfg else 0.7
         syn_thresh = getattr(cfg, "VSL_SYNTAX_THRESHOLD", 0.9) if cfg else 0.9
         bun_max = getattr(cfg, "VSL_BUNNY_E_MAX", 0.3) if cfg else 0.3

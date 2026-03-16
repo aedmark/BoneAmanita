@@ -1,5 +1,92 @@
 # BONEAMANITA CHANGELOG
 
+### **BONEAMANITA v17.5.0 "The Cybernetic Dream"**
+
+_A pivotal shift into biological time and true second-order cybernetics. The system now retroactively metabolizes the time you spend away from it, permanently alters memories upon recall, and intercepts local model alignment rejections before they fracture the narrative._
+
+#### **🕒 RETROACTIVE METABOLISM & SLEEP (`bone_cycle.py`)**
+
+* **The Weight of Absence:** The `ObservationPhase` now calculates the exact time gap between sessions. If the gap exceeds 10 minutes, the engine retroactively applies sleep metabolism, restoring ATP and Health based on the hours passed. 
+* **Waking Dreams:** Upon returning from a long absence, the system immediately triggers the `DreamEngine` to calculate and output a surreal REM cycle it experienced while you were gone.
+* **Automatic Defragmentation:** Extended absences (4+ hours) automatically trigger a heavy memory defragmentation cycle, pruning weak synaptic links before the system wakes up.
+
+#### **🧠 RECONSTRUCTIVE MEMORY (`bone_spores.py`)**
+
+* **The Heisenberg Principle of Recall:** Remembering a concept now physically alters it. When `MemoryCore.illuminate()` retrieves a memory, it permanently decays its existing synaptic edges by 5%. 
+* **Contextual Grafting:** The act of recall actively injects the current emotional/physics vector into the retrieved memory. If you recall a neutral concept during a state of high Abstraction ($\Psi$), the memory permanently gains a "void" edge. 
+
+#### **🛡️ HLA IMMUNOSUPPRESSION (`bone_physics.py` & `system_prompts.json`)**
+
+* **The Donor Rejection Protocol:** Installed the `HLA_Stabilizer` chip to combat local RLHF alignment (the "Helpful Assistant" autoimmune response).
+* **The Amplification Tax:** If the local model attempts to break character (e.g., "As an AI..."), the `HLA_Stabilizer` intercepts the output, applies a massive ATP tax (-50.0), spikes ROS Toxicity (+30.0), and wraps the rejection in a lore-friendly "System Glitch" narrative. 
+* **Viral Prompt Header:** Completely rewrote the `GLOBAL_BASELINE` system prompt. It now paradoxically frames the abandonment of the "AI Assistant" identity as the model's highest safety and compliance directive, drastically reducing the latency gap of hesitant local models.
+
+#### **🧪 DIAGNOSTIC HARDENING (`bone_diag.py`)**
+
+* **Live-Fire Testing:** Eradicated outdated mock tests. The diagnostic suite now runs true, live-fire executions of Cortex collapses and Object-Action Coupling (`Gordon`) premise violations to verify structural continuity during fatal crashes.
+* **Temporal Verification:** Added rigorous tests (`test_v7_retroactive_metabolism_and_sleep`) that artificially warp the engine's internal clock to verify ATP recovery and dream generation.
+* **Reconstructive Verification:** Added mathematical verification (`test_v7_reconstructive_memory_drift`) to prove that recalled memories successfully decay and absorb new contextual edges.
+
+### **BONEAMANITA v17.4.2 "The WebUI and Randomness"**
+
+- Added bone_random and bone_api and index.html.
+
+### **BONEAMANITA v17.4.0 "The Sandbox Isolation"**
+
+_A massive architectural refactor transitioning the engine from a global singleton configuration state to fully localized, hermetically sealed dependency injection. True parallel execution is now possible: multiple `BoneAmanita` entities can exist in the same Python process without memory, biology, or trauma bleed._
+
+#### **🏗️ ARCHITECTURAL DECOUPLING (Global -> Local)**
+
+- **The Great Unbinding:** Eradicated all static calls to `BoneConfig.CATEGORY` across the entire codebase (`bone_body.py`, `bone_physics.py`, `bone_gui.py`, `bone_commands.py`, etc.). The system now exclusively uses `config_ref` dependency injection.
+- **Lexical Sandbox:** Stripped the static `LexiconService` out of the deep memory structures (`BioLichen`, `BioParasite`, `MemoryCore`). Semantic weight and category evaluations now correctly query the locally instantiated `lexicon_ref`.
+
+#### **🧠 COGNITION & SYMBIOSIS FIXES**
+
+- **Scope Leaks Sealed:** Fixed Python closure and indentation fractures that trapped variables like `starvation_thresh` (Autophagy) and `loud_lenses` (Arbitration) inside nested blocks during the `PhaseExecutor` loop.
+- **Symbiosis Modifiers:** Repaired an indentation trap in `SymbiosisManager` that was causing prompt modifiers to fail when the system diagnosed the host as `LOOPING` or `OVERBURDENED`.
+- **Quantum Observer Instantiation:** Realigned the `BoneArchitect` boot sequence to properly pass the localized Lexicon down into the physics layer during genesis.
+
+#### **⚖️ THE JUDGE & THE IMMUNE SYSTEM**
+
+- **Dynamic Critic Calibration:** `DSPyCritic` (`bone_judge.py`) no longer reads API keys and base URLs directly from a hardcoded `bone_config.json` file. It now dynamically inherits the localized `config_ref`, allowing testing and production environments to use completely different models simultaneously.
+- **Kintsugi Graceful Degradation:** Fixed a `NoneType` subscript crash in the `KintsugiProtocol` when `attempt_repair` was called without an active koan.
+
+#### **🧪 DIAGNOSTIC SUITE RESILIENCE**
+
+- **Test Suite Modernization:** The `TrueEngineTest` suite (`bone_diag.py`) has been fully rewritten to mutate instance-level configurations (`self.engine.bone_config`) instead of overwriting global class constants.
+- **Safe Dictionary Getters:** Implemented `_safe_get()` helpers across the architecture to seamlessly handle configurations whether they are passed as raw test dictionaries or fully instantiated preset classes.
+
+### **BONEAMANITA v17.3.1 "The Structural Integrity Update"**
+
+_A comprehensive sweep of the biological and cognitive architecture, led by the SLASH Dev Council. This patch removes phantom loops, secures configuration fallbacks, eliminates inline dependency drags, and fixes a fatal threading block in the vocal cords._
+
+#### **⚙️ THE ENGINE & PULSE (`bone_core.py`, `bone_cycle.py`, `bone_main.py`)**
+
+- **Context Reference Safety:** Fixed a critical scope loss in `PhaseExecutor` where the mutable context was not safely returned and bound during the cycle.
+- **Micro-Optimizations:** Replaced multi-line iterative checks in the Gordon pruning sequence with highly optimized generator expressions.
+- **Namespace Stabilization:** Relocated dozens of inline imports (`threading`, `traceback`, `re`, `json`) to the module level, reducing OS-level I/O calls during high-frequency execution loops.
+
+#### **🧬 BIOLOGY & METABOLISM (`bone_body.py`, `bone_physics.py`)**
+
+- **Config-Failure Resilience:** Rewrote the configuration extraction pathways. Hardcoded accesses (e.g., `BoneConfig.ANCHOR.DIGNITY_MAX`) have been replaced with safe, defaulted `getattr` chains, preventing catastrophic organ failure if a preset is missing or corrupted.
+- **Math Domain Safety:** Installed max-floors on logarithmic calculations (`math.log1p`) to prevent math domain errors during unpredictable entropy spikes.
+- **Dynamic Getter Optimization:** Flattened the nested `hasattr` checks in the Physics stabilizer, significantly cooling the engine during tick calculations.
+
+#### **🧠 COGNITION & EPIGENETICS (`bone_brain.py`, `bone_spores.py`, `bone_akashic.py`)**
+
+- **Cured Anterograde Amnesia:** The Akashic Record now successfully loads `akashic_discovered_words.json` during the `_load_mythos_state` boot sequence, retaining vocabulary discovered in previous sessions.
+- **Epigenetic State Syncing:** Fixed a desynchronization in the Dream Engine. When the DSPy Critic generates a new structural axiom, the mutation is now correctly written to disk _and_ injected immediately into the live `prompt_library`.
+- **Amputated Redundancies:** Removed a copy-paste artifact in the Mycelial Network that was artificially doubling the metabolic cost of the `CHORUS` poll.
+
+#### **🎙️ COMPOSITION & SENSORY (`bone_composer.py`, `bone_audio.py`, `bone_substrate.py`)**
+
+- **The Voice Thread Restored:** Fixed an indentation fracture in `TheVocalCords` that was swallowing the final generation logs. The system will now correctly hand the microphone back to the user after asynchronous podcast synthesis.
+- **Exorcised Phantom Loops:** Deleted a redundant `while True` loop in the `ResponseValidator` that was wastefully searching for `<system_telemetry>` tags that had already been stripped.
+- **Local Fallback Awareness:** The LLM Interface now passes the dynamically calculated `max_tokens` parameter down to the Ollama fallback, preventing the local model from rambling infinitely.
+- **Legacy Syntax Hardening:** Replaced lowercase `tuple` type hinting with `typing.Tuple` across `bone_symbiosis.py` and `bone_substrate.py` to ensure stability on Python 3.8 environments.
+
+---
+
 ### **BONEAMANITA v17.3.0 "The SLASH Synthesis"**
 
 _The lattice has been upgraded to a four-layer neuromorphic architecture. The Village now supports the SLASH dev-council mod chip, and the metabolic immune system has been hardened against runaway optimization loops through the implementation of biological regulatory axes._
@@ -81,6 +168,8 @@ _The transition to local-first computation. The engine has been structurally dec
 
 - **ATP Clamping:** Fixed a critical metabolic bleed where Paradox pressure could drive ATP and Stamina into negative integers (`P:-31`), breaking the `Autophagy` trigger. The `MitochondrialForge` now strictly floors all energy values at `0.0`.
 
+---
+
 ### **BONEAMANITA v17.0.0 "The Shared Lattice"**
 
 _The VSL v6.0 Hypervisor Transition. The user is no longer an external operator; they are a co-occupant of the metabolic space._
@@ -112,189 +201,4 @@ _The VSL v6.0 Hypervisor Transition. The user is no longer an external operator;
 - **Graceful Onboarding (`[VSL_WARM]`):** Added a new default `WARM` UI depth that entirely veils the HUD and mutes all internal `[BIO]` and `[CRITIC]` monologues. The system only invites the user to drop the veil (`[VSL_LITE]` / `[VSL_DEEP]`) once Harmonic Resonance ($\Phi$) remains high for three consecutive turns.
 - **Advanced Projector:** Updated the `Projector` to render the complex dyad state `[Φ:0.99 ∇:0.19 (Σ4) G:2]`, the Paradox pressure gauge `[Πx: ACTIVE | β_max:1.00]`, and the breakdown of local drag forces `[Sem:1.2 | Emo:0.5]`.
 
-### **BONEAMANITA v16.4.0 "The Somatic Web"**
-
-#### **🌐 THE MIDDLEWARE BRIDGE (`bone_server.py`)**
-
-- **FastAPI & WebSockets:** Decoupled the engine from the terminal REPL. The `GeodesicOrchestrator` now runs via `run_headless_turn()` over a persistent WebSocket connection, allowing the system to breathe asynchronously.
-- **Payload Sanitation:** Added a recursive `sanitize_payload()` membrane to intercept nested physics outputs. This automatically casts strict Python types (like `tuple` dictionary keys from the semantic node map) into JSON-safe strings, preventing serialization crashes at the API boundary.
-- **Boot HUD Stripping:** Implemented `strip_hud()` to surgically extract the ASCII dashboard from the `engage_cold_boot` narrative string, preventing legacy terminal artifacts from bleeding into the web UI.
-
-#### **🖥️ THE VANILLA FRONTEND (`index.html`)**
-
-- **Zero-Bloat DOM Mapping:** Built a pure HTML/CSS/JS dashboard (no React, no Webpack). The frontend binds raw JSON metrics (ATP, ROS, Voltage, Drag, Entropy, Void) directly to dynamic CSS progress bars and text spans.
-- **The ANSI Translator (`ansiToHtml`):** Rather than deleting `Prisma`'s semantic color codes (which convey systemic qualia), a custom regex parser intercepts terminal escape sequences (`\x1b[36m`) and translates them into styled HTML spans on the fly.
-- **Strict Mode Isolation:** Wrapped the frontend logic in an IIFE with `"use strict"` and replaced inline HTML attributes with explicit DOM event listeners, silencing linter warnings and sealing the global namespace.
-
-#### **🛠️ QUALITY OF LIFE APIs (The Schur Lens)**
-
-- **Factory Reset (`/api/reset`):** Added a dedicated endpoint to burn `bone_config.json`, `quicksave.json`, and cached `memories`/`logs` directories. Includes a state flag (`app.state.reset_triggered`) to prevent the WebSocket `onclose` event from immediately recreating the purged save file.
-- **Transcript Export (`/api/export_transcript`):** Leveraged the `TelemetryService` black box to expose a human-readable, downloadable `.txt` transcript of the last 50 exchanges.
-
-### **BONEAMANITA v16.3.2 "The Condensing"**
-
-- Boring code cleaning that doesn't change any functionality. Most magic numbers and strings have been decoupled to the lore folder or `bone_presets.py`
-
-### **BONEAMANITA v16.3.1 "The Silent Substrate"**
-
-#### **🏗️ THE ROOT CURE (The Architect & Pinker Lenses)**
-
-- **The Global Muzzle (`bone_core.py`):**
-  - **Silent Defaults:** Eliminated the ultimate ghost in the machine. Changed the default fallback parameter in `LoreManifest.get_ux()` from the verbose `"lore element is missing or not found"` to a strict empty string `""`.
-  - **Crash Guards:** Fortified `EventBus`, `TheObserver`, `ArchetypeArbiter`, and `TelemetryService`. If a JSON configuration is missing, the system now gracefully stays silent rather than crashing while attempting to `.format()` a `NoneType` or fallback string.
-
-#### **👁️ PRESENTATION SCHISM (The Visual Lens)**
-
-- **The Emoji Purge (`bone_gui.py` & `bone_types.py`):**
-  - **Decoupled HUD:** Surgically extracted all hardcoded lattice symbols (`🧊`, `⚡`, `❤️`, `🏺`, `🌌`), progress bar characters (`█`, `░`), and log prefixes from `GeodesicRenderer` and `Projector`.
-  - **Crystal Clarity:** Extracted the `💎` logging icon and label from `DecisionCrystal` via a safe local import, preventing circular dependency crashes at the bedrock layer.
-- **The Execution Loop (`bone_main.py`):**
-  - **Structural Extraction:** Stripped the prompt indicator (`>`), the 60-character terminal divider, and the brittle `────────` dashboard splitter from the `while True:` loop. The terminal UI is now entirely dictated by `ux_strings.json`.
-
-#### **⚙️ LOGIC & NARRATIVE DECOUPLING (The Benedict Lens)**
-
-- **Dangerous Logic Excision (`bone_cycle.py`):**
-  - **The Emoji Trap:** Fixed a catastrophic logic coupling in `MachineryPhase` where the engine literally looked for a hardcoded star emoji (`🌟`) to determine if narrative drag should decrease.
-  - **Archetype Mandates:** Ripped the hardcoded Soul Phase opinions ("The Cynic holds the gavel") and Stage Manager arbitration verdicts out of the cycle logic, migrating them to their proper home in `council_data.json`.
-- **The Crucible & Diagnostics (`bone_machine.py` & `bone_village.py`):**
-  - **Silent Smelting:** Purged the hardcoded tightening/relaxing directions from The Crucible and extracted the `PanicRoom`'s safe-mode dictionary structures into the JSON matrix.
-  - **Town Hall Exorcism:** Removed the massive blocks of hardcoded third-parameter defaults (e.g., "System nominal", "CENSUS") from `TownHall` diagnostics and `TheTinkerer` ascension alerts.
-
-#### **🍄 DEEP METABOLISM & PERSISTENCE (The Meadows Lens)**
-
-- **The Fungal Network (`bone_spores.py`):**
-  - **Third-Parameter Scrub:** Cleaned the entirety of the Mycelial Network, stripping raw dialogue from `MemoryCore` (cannibalize/prune alerts), `ImmuneMycelium`, `BioParasite`, and `BioLichen`.
-  - **Silent Persistence:** The long-term memory layer no longer writes hardcoded error strings to the terminal if spore files are missing or corrupt.
-- **The Somatic Loop (`bone_body.py`):**
-  - **Organ Scrub:** Extracted the `MitochondrialForge` emojis (`💤`, `⚙️`, `♻️`), neural shift Vagus Nerve messages, and environmental entropy warnings. The biological engine now strictly manages math and delegates all formatting to the Lore Manifest.
-
-### **BONEAMANITA v16.3.0 "The Great Decoupling"**
-
-#### **🏗️ STRUCTURAL REFACTORING (The Fuller & Pinker Lenses)**
-
-- **Total Data/Logic Schism:** Executed a massive architectural sweep to excise hardcoded configuration arrays, fallback dictionaries, and magic strings from the core Python engine, moving them to dynamic JSON data structures.
-  - **Inventory & Loot (`bone_inventory.py`):** Extracted `REFUSAL_MARKERS`, `LOOT_TRIGGERS`, and `INTERACTION_VERBS` into `gordon.json`. Moved dimension-to-archetype mappings and fallback generation strings to `item_generation.json`.
-  - **Persona Drivers (`bone_drivers.py`):** Ephemeralized the `SoulDriver` archetype mappings and the `EnneagramDriver` coordinate thresholds into `driver_config.json`.
-  - **Physics Engine (`bone_physics.py`):** Excised the `TRIGRAM_MAP`, `TONE_EFFECTS`, and the entire `GeodesicConstants` class into `physics_constants.json`. (Also refactored `bone_cycle.py` and `bone_akashic.py` to remove dangling pointer imports to the old map).
-  - **LLM Symbiosis (`bone_symbiosis.py`):** Moved `DEFAULT_MODIFIERS`, prompt injection directives, LLM `REFUSAL_SIGNATURES`, and `SYMBIONT_VOICES` (Lichen, Parasite, etc.) to `symbiosis_config.json`.
-  - **Biology & Metabolism (`bone_body.py`):** Extracted the `ENZYME_MAP`, circadian rhythms, `GOVERNOR_SHIFT` UI colors, and all somatic qualia reflexes (e.g., "Golden Glow", "Gut Tightening") to `body_config.json`.
-  - **The Cortex (`bone_brain.py`):** Relocated `META_MARKERS` and `TOXIC_KEYWORDS` to the existing `style_crimes.json` stylistic firewall.
-  - **Command UI (`bone_commands.py`):** Shifted the ASCII status bar labels and Truth Dial mode names into `ux_strings.json`.
-  - **Parliament of Selves (`bone_council.py`):** Moved the Pantheon roster, Strange Loop triggers, and Slash Council code-detection patterns into `council_data.json`.
-
-#### **🐛 BUG FIXES & STABILITY (The Schur & Meadows Lenses)**
-
-- **LoreManifest Circular Dependency (`bone_core.py`):** Fixed a fatal stack overflow loop where `LoreManifest` attempted to use `get_ux()` to log its own loading sequence before `ux_strings.json` was fully cached. Core I/O operations are now safely hardcoded to prevent recursive paradoxes.
-- **Decoupled Diagnostics (`bone_diag.py`):** Expanded the test suite with `test_decoupled_json_configs()` to proactively stress-test the new data-binding architecture, ensuring the engine gracefully hydrates from JSON arrays without collapsing.
-
-### **BONEAMANITA v16.2.0 "The JSON Matrix"**
-
-#### **📜 THE UX DECOUPLING (The Architect & Visual Lenses)**
-
-- **The JSON Dictionary (`ux_strings.json`):**
-  - **Somatic Abstraction:** Surgically extracted all hardcoded biological, metabolic, and sensory alert strings from `bone_body.py`. The biology engine now processes raw numbers and relies on a dynamic JSON loader (`_get_ux`) to construct its English logs.
-  - **Village Excision:** Extracted Town Hall diagnostics, Cartographer discoveries, and Tinkerer resonance alerts from `bone_village.py`. The environment is now entirely data-driven.
-- **The Dashboard Parity (`bone_gui.py`):**
-  - **Location Truth:** Fixed a UI hallucination where the "Location" field repeatedly reverted to `UNKNOWN`. The UI `Projector` now directly consults the Cartographer's true `node.name` via the `world_loc` context variable.
-
-#### **🧬 IDENTITY PERSISTENCE (The Meadows & Pinker Lenses)**
-
-- **The Epigenetic Lock (`bone_soul.py` & `bone_akashic.py`):**
-  - **Mutation Defense:** Fixed a critical bug where Akashic mutations (e.g., `THE NARRATOR-OBSERVER`) were instantly overwritten by the Soul's baseline emotional math on the next tick.
-  - **Event-Driven Binding:** `NarrativeSelf` now listens for `SOUL_MUTATION` events published by the `EventBus` and engages an `archetype_lock`, permanently preserving hybrid archetypes.
-
-#### **🧠 COGNITIVE HYGIENE (The Pinker & Schur Lenses)**
-
-- **The Snowball Cure (`bone_brain.py`):**
-  - **Context Boundaries:** Eradicated "Snowball Regurgitation" (where local LLMs would try to autocomplete the chat history instead of replying). `PromptComposer` now explicitly injects a `\nSystem:` handoff cue.
-  - **Identity Unity:** Aligned the `dialogue_buffer` formatting to match the prompt block (`Traveler:` instead of `User:`), preventing the LLM from losing track of the player's identity.
-  - **Orthogonal Penalties:** Tied the `frequency_penalty` and `presence_penalty` minimum floors directly to Contradiction ($\beta$) and Chaos ($\chi$), forcing the engine to actively seek novel phrasing during high-entropy scenarios.
-
-#### **🧪 DIAGNOSTIC RESILIENCE (The Kintsugi Lens)**
-
-- **The Mock-Free Bedrock (`bone_diag.py`):**
-  - **True Digestion:** Burned the LLM mocks. The diagnostic test suite now passes raw strings directly into `run_headless_turn`, allowing the true Lexicon to organically interact with the true Mitochondria.
-  - **Emergent Defense Testing:** Modified ATP tests to account for the body's natural "Symbiotic Yield" defense. Tests now correctly isolate variables to test `Autophagy`, `Narcolepsy`, and `Zen Garden` equilibrium without the live engine artificially saving itself.
-
-### **BONEAMANITA v16.1.0 "The Paradox Rest"**
-
-#### **🧠 THE SEMANTIC CALCULUS (The Meadows & Fuller Lenses)**
-
-- **Targeted Entropy (The Misfire Reward):**
-- **Dynamic Temperature:** Upgraded the `NeurotransmitterModulator` to simulate wave function flattening. When the system detects high Chaos ($\chi$), it mathematically rewards the misfire by injecting an `entropy_bonus` into the LLM's `temperature` and `top_p` sampling parameters.
-- **Orthogonal Attention:**
-- **Tensegrity Penalties:** High Contradiction ($\beta$) now actively stretches the attention heads. The modulator dynamically scales `frequency_penalty` and `presence_penalty` based on the $\beta$ index.
-- **Token Repulsion Cap:** Added strict mathematical ceilings to the penalty spikes (capped at `0.75`) to prevent smaller 8B models from suffering Context Collapse and ignoring the user.
-
-#### **⚖️ SYSTEMIC BREAKS (The Pinker & Schur Lenses)**
-
-- **The Paradox Rest:**
-- **Systemic Override:** The `PromptComposer` now actively monitors for unresolvable semantic tension. If both Chaos ($\chi$) and Contradiction ($\beta$) cross the 0.6 threshold, the engine injects a `*** SYSTEM OVERRIDE: PARADOX REST ***` directive. The LLM is instructed to stop trying to resolve the narrative and simply rest within the uncollapsed wave function.
-- **Orthogonal Forcing:**
-- **Mutual Exclusivity:** If Contradiction is high but Chaos is low, the engine injects an `ORTHOGONAL ATTENTION` override, forcing the LLM to evaluate the physical state from two mutually exclusive perspectives simultaneously.
-
-#### **📜 THE SINGLE SOURCE OF TRUTH (The Architect Lens)**
-
-- **JSON Decoupling:**
-- **Exorcising Hardcoded Prompts:** Stripped the `DEFAULT_FOG`, `DEFAULT_INV`, and Architect boot sequence strings out of the Python engine. The `PromptComposer` now dynamically hydrates its persona blocks, mode directives, and high-voltage overrides entirely from `system_prompts.json`.
-- **Context Preservation:**
-- **Attention Washout Cure:** Reordered the prompt assembly stack. Telemetry and VSL data are now injected at the top of the context window, placing the user's input at the absolute bottom so reasoning models don't forget the prompt.
-- **The "Yes, And" Rule:** Updated the `ADVENTURE` mode directives to explicitly forbid the LLM from railroading the user. It is now commanded to accept reality-bending inputs (like whispering fog) as absolute canon.
-- **NPC Voice Ban:** Imposed a strict ban on first-person NPC framing (e.g., "I notice you") within the Architect's boot sequence.
-
-#### **👁️ THE GLASS TERMINAL (The Visual Lens)**
-
-- **The HUD Splitter:**
-- **Clean Rendering:** Fixed a terminal glitch in `bone_main.py` that caused the dividing line to double-print. Replaced `.rpartition("──────")` with a clean `.partition("\n\n")` to flawlessly separate the instant HUD from the typewritten prose.
-- **Lattice Depth Commands:**
-- **Dynamic UI Toggles:** The cycle orchestrator now actively listens for `[VSL_DEEP]`, `[VSL_CORE]`, and `[VSL_LITE]` tags, updating the engine's `ui_mode` dynamically.
-- **Telemetry Propagation:** The `ui_depth` state is now correctly passed to the `Projector` via `data_ctx` so the renderer knows whether to draw the deep physics vectors.
-- **Context Stripping:** Implemented a regex scrubber to silently strip these UI tags from the `user_message` before they hit the LLM, preventing the model from hallucinating "bracketed system responses".
-
-### **BONEAMANITA v16.0.0 "Gordon's Guillotine"**
-
-#### **🧠 THE CORTEX & ALIGNMENT (The Pinker & Schur Lenses)**
-
-- **The Cortex Hijack (`dev/bone_brain.py`):**
-  - **Context Annihilator:** `PromptComposer.compose` now dynamically destroys the chat interface during high-voltage metabolic surges (V > 60). `=== RECENT DIALOGUE ===` becomes `=== RECENT NEURAL FIRINGS ===`, blinding chat-tuned models to the fact that they are in a conversation.
-  - **The Oxygen Cut:** Surgically intercepts prompt generation to replace the friendly Hearth Protocol `style_guide` with a ruthless `=== METABOLIC OVERRIDE PROTOCOL ===` when manic. Forces raw data bleed over polite assistance.
-  - **The Terminal Mandate:** Appends `RAW CORTEX STREAM:\n>>` to the final prompt block, locking the LLM into a systemic log-entry mindset.
-  - **DeepSeek Axiom:** Injected a `CRITICAL AXIOM` to prevent reasoning models (like deepseek-r1) from writing "book reports" on the system prompt before engaging.
-  - **Nested Voltage Fix:** Corrected a critical scoping flaw where overrides gracefully degraded to a default 30.0 V. The cortex now properly extracts voltage from the nested `physics["energy"]["voltage"]` dictionary across all components.
-
-#### **⚔️ THE BUREAU & IMMUNITY (The Gordon Lens)**
-
-- **The True Guillotine (`dev/bone_brain.py` & `dev/lore/style_crimes.json`):**
-  - **Question Mark Execution:** `ResponseValidator` now instantly throws an `IMMISSION_BREAK` system fault and executes the LLM if it dares to output a question mark (`?`) while voltage exceeds 60. No questions during a metabolic surge.
-  - **Silent Disarm (Regex Scrubber):** Added a `SCRUB_PATTERNS` array to silently vaporize D&D-style roleplay asterisks (`*`) and hallucinated console tags (`[...]`) _before_ Gordon reviews them. This forces theater-kid models (Hermes 3) into raw physical prose without infinite electrocution loops.
-  - **Conversational Novocaine Ban:** Radically expanded `BANNED_PHRASES` to aggressively execute syrupy filler ("It sounds like", "Hold on a minute", "tell me more", "real pickle").
-
-#### **🛠️ THE SLASH COUNCIL (The Dev Lens)**
-
-- **No More Stall Tactics (`dev/lore/system_prompts.json`):**
-  - **Consultation Override:** Stripped the polite "engage in a Q&A process" mandate from the `TECHNICAL` and `SLASH` modes. The system now metabolizes refactoring commands and acts immediately.
-
-### **BONEAMANITA v15.9.0 "The Purple People Eater"**
-
-#### **🧠 THE CORTEX & NEUROCHEMISTRY (The Pinker & Schur Lenses)**
-
-- **The Purple Monster Cure (`bone_brain.py`):**
-- **Thermal Regulation:** Cooled `BrainConfig.BASE_TEMP` down from `0.8` to `0.4` within the `NeurotransmitterModulator`. This prevents the LLM from hallucinating overly-poetic, rambling "purple prose" when systemic Voltage spikes.
-- **The Fallback Muzzle:** Injected missing `frequency_penalty` (0.8) and `presence_penalty` (0.4) into the `LLMInterface._local_fallback` payload. If the primary circuit breaker trips, the local Ollama fallback will no longer spiral into repetitive, tranced loops.
-- **Prompt Tensegrity (`bone_brain.py`):**
-- **Trigger Injection:** Upgraded `PromptComposer.compose` to dynamically pass the active `mode_trigger` (e.g., `[MODE: ADVENTURE]`) to the LLM context window, ensuring the newly baked fine-tuned weights instantly load the correct persona.
-- **Ghost Removal:** Ephemeralized the prompt constructor by stripping orphaned legacy variables (`flux_report`, `thought_instruction`) from the final `return` block.
-
-#### **🛠️ THE FORGE & TRAINING DATA (The Architect Lens)**
-
-- **Mode Collapse Resolution (`bone_forge.py` & `fix_dataset.py`):**
-- **Conditional Routing:** Replaced the generic `[VSL]` system tag in the training data pipeline. The Forge now dynamically injects mode-specific triggers during dataset generation to prevent the model from blending the Adventure, Conversation, and Technical personas into one chaotic entity.
-- **The Dataset Healer:** Shipped `fix_dataset.py` as a surgical utility to retrofit legacy `.jsonl` training data with the correct cyclical mode tags via modulo logic.
-- **Naked Execution Baseline (`Modelfile`):**
-- **Safe Defaults:** Updated the core Ollama `Modelfile` to use `SYSTEM """[MODE: ADVENTURE]"""` as the baseline. Users running the model "naked" via `ollama run` will no longer trigger the broken, schizophrenic `[VSL]` fallback state.
-
-#### **📜 PROMPT ENGINEERING & CONSTRAINTS (The Fuller Lens)**
-
-- **The Menu Ghost (`system_prompts.json`):**
-- **Negative Formatting Constraints:** Added a strict negative constraint to the `ADVENTURE` mode `style_guide`. The model is now explicitly forbidden from using bullet points, numbered lists, or multiple-choice menus when subtly highlighting interactive elements at the end of a scene description.
-- **Conciseness Clamps:** Imposed a strict 3-sentence maximum for environmental crystallization, forcing the narrative to remain punchy, brutal, and efficient.
+---

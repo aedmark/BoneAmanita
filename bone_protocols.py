@@ -2,19 +2,24 @@
 bone_protocols.py
 """
 
-import os, random, json, re, time
+import json
+import os
+import random
+import re
+import time
 from collections import deque, Counter
 from typing import Dict, Tuple, Optional, Any
+
 from bone_core import LoreManifest, ux
-from bone_types import Prisma
-from bone_lexicon import LexiconService
 from bone_presets import BoneConfig
+from bone_types import Prisma
 
 NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
 
 class ZenGarden:
-    def __init__(self, events_ref):
+    def __init__(self, events_ref, config_ref=None):
         self.events = events_ref
+        self.cfg = config_ref or BoneConfig
         self.stillness_streak = 0
         self.max_streak = 0
         self.pebbles_collected = 0
@@ -36,13 +41,13 @@ class ZenGarden:
         drag = (getattr(physics, "narrative_drag", 0.0)
             if not isinstance(physics, dict)
             else physics.get("narrative_drag", 0.0))
-        is_stable = (BoneConfig.ZEN.VOLTAGE_MIN <= vol <= BoneConfig.ZEN.VOLTAGE_MAX) and (drag <= BoneConfig.ZEN.DRAG_MAX)
+        is_stable = (self.cfg.ZEN.VOLTAGE_MIN <= vol <= self.cfg.ZEN.VOLTAGE_MAX) and (drag <= self.cfg.ZEN.DRAG_MAX)
         if is_stable:
             self.stillness_streak += 1
             if self.stillness_streak > self.max_streak:
                 self.max_streak = self.stillness_streak
-            efficiency_boost = min(BoneConfig.ZEN.EFFICIENCY_CAP, self.stillness_streak * BoneConfig.ZEN.EFFICIENCY_SCALAR, )
-            cfg = getattr(BoneConfig, "ZEN", None)
+            efficiency_boost = min(self.cfg.ZEN.EFFICIENCY_CAP, self.stillness_streak * self.cfg.ZEN.EFFICIENCY_SCALAR, )
+            cfg = getattr(self.cfg, "ZEN", None)
             first_tick = getattr(cfg, "ZEN_FIRST_TICK", 1) if cfg else 1
             ms_freq = getattr(cfg, "ZEN_MILESTONE_FREQ", 5) if cfg else 5
             msg = None
@@ -55,14 +60,15 @@ class ZenGarden:
                 raw_streak = ux("protocol_strings", "zen_streak")
                 msg = f"{Prisma.CYN}{raw_streak.format(streak=self.stillness_streak, koan=koan, boost=int(efficiency_boost * 100))}{Prisma.RST}"
             return efficiency_boost, msg
-        if self.stillness_streak > BoneConfig.ZEN.STREAK_BREAK_THRESHOLD:
+        if self.stillness_streak > self.cfg.ZEN.STREAK_BREAK_THRESHOLD:
             break_msg = ux("protocol_strings", "zen_break")
             self.events.log(f"{Prisma.GRY}{break_msg}{Prisma.RST}", "SYS", )
         self.stillness_streak = 0
         return 0.0, None
 
 class TheBureau:
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.stamp_count = 0
         self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 27B-6", "Form 404"])
         self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
@@ -94,7 +100,7 @@ class TheBureau:
         self.stamp_count = data.get("stamp_count", 0)
 
     def audit(self, physics, bio_state, _context=None, origin="USER") -> Optional[Dict]:
-        if bio_state.get("health", 100.0) < BoneConfig.BUREAU.MIN_HEALTH_TO_AUDIT:
+        if bio_state.get("health", 100.0) < self.cfg.BUREAU.MIN_HEALTH_TO_AUDIT:
             return None
 
         def _get(p, k, d=0.0):
@@ -107,12 +113,12 @@ class TheBureau:
         raw_text = str(_get(physics, "raw_text", ""))
         truth = _get(physics, "truth_ratio", 0.0)
         word_count = len(raw_text.split())
-        if raw_text.startswith("/") or word_count < BoneConfig.BUREAU.MIN_WORD_COUNT:
+        if raw_text.startswith("/") or word_count < self.cfg.BUREAU.MIN_WORD_COUNT:
             return None
         selected_form = None
         evidence = []
         tax = 0.0
-        cfg_bureau = getattr(BoneConfig, "BUREAU", None)
+        cfg_bureau = getattr(self.cfg, "BUREAU", None)
         tax_std = getattr(cfg_bureau, "TAX_STANDARD", 5.0) if cfg_bureau else 5.0
         tax_hvy = getattr(cfg_bureau, "TAX_HEAVY", 10.0) if cfg_bureau else 10.0
         if raw_text:
@@ -122,8 +128,8 @@ class TheBureau:
                     evidence.append(crime["msg"])
                     tax += crime["tax"]
                     break
-        if not selected_form and vol > BoneConfig.BUREAU.HIGH_VOLTAGE_TRIGGER:
-            if truth < BoneConfig.BUREAU.LOW_TRUTH_TRIGGER:
+        if not selected_form and vol > self.cfg.BUREAU.HIGH_VOLTAGE_TRIGGER:
+            if truth < self.cfg.BUREAU.LOW_TRUTH_TRIGGER:
                 selected_form = ux("protocol_strings", "bureau_form_zoning")
                 ev1 = ux("protocol_strings", "bureau_ev_voltage")
                 ev2 = ux("protocol_strings", "bureau_ev_fiction")
@@ -147,11 +153,11 @@ class TheBureau:
             if buzz_hits:
                 selected_form = random.choice(self.forms)
                 evidence = buzz_hits
-                tax = BoneConfig.BUREAU.TAX_STANDARD
+                tax = self.cfg.BUREAU.TAX_STANDARD
             elif cliche_hits:
                 selected_form = ux("protocol_strings", "bureau_form_101")
                 evidence = cliche_hits
-                tax = BoneConfig.BUREAU.TAX_HEAVY
+                tax = self.cfg.BUREAU.TAX_HEAVY
         if not selected_form:
             return None
         self.stamp_count += 1
@@ -209,24 +215,25 @@ class TheBureau:
         return text, None
 
 class TherapyProtocol:
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         default_vector = {"SEPTIC": 0, "EXHAUSTION": 0, "PARANOIA": 0}
-        vector_keys = getattr(BoneConfig, "TRAUMA_VECTOR", default_vector).keys()
+        vector_keys = getattr(self.cfg, "TRAUMA_VECTOR", default_vector).keys()
         self.streaks = {k: 0 for k in vector_keys}
-        cfg = getattr(BoneConfig, "THERAPY", None)
+        cfg = getattr(self.cfg, "THERAPY", None)
         self.HEALING_THRESHOLD = getattr(cfg, "HEALING_THRESHOLD", 5) if cfg else 5
 
     def to_dict(self) -> Dict[str, Any]:
         return {"streaks": self.streaks}
 
     def load_state(self, data: Dict[str, Any]):
-        self.streaks = data.get("streaks", {k: 0 for k in BoneConfig.TRAUMA_VECTOR.keys()})
+        self.streaks = data.get("streaks", {k: 0 for k in self.cfg.TRAUMA_VECTOR.keys()})
 
     def check_progress(self, phys, _stamina, current_trauma_accum, _qualia=None):
         is_dict = isinstance(phys, dict)
         counts = phys.get("counts", phys.get("matter", {}).get("counts", {})) if is_dict else getattr(phys, "counts", {})
         vector = phys.get("vector", phys.get("matter", {}).get("vector", {})) if is_dict else getattr(phys, "vector", {})
-        cfg_therapy = getattr(BoneConfig, "THERAPY", None)
+        cfg_therapy = getattr(self.cfg, "THERAPY", None)
         str_req = getattr(cfg_therapy, "STRENGTH_REQ", 0.3) if cfg_therapy else 0.3
         t_reduct = getattr(cfg_therapy, "TRAUMA_REDUCTION", 0.5) if cfg_therapy else 0.5
         healed_types = []
@@ -249,7 +256,8 @@ class KintsugiProtocol:
     PATH_INTEGRATION = "KINTSUGI"
     PATH_ALCHEMY = "ALCHEMY"
 
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.active_koan = None
         self.koans = NARRATIVE_DATA.get("KINTSUGI_KOANS", ["The crack is where the light enters."])
 
@@ -260,24 +268,30 @@ class KintsugiProtocol:
         self.active_koan = data.get("active_koan", None)
 
     def check_integrity(self, stamina):
-        cfg = getattr(BoneConfig, "KINTSUGI", None)
+        target_cfg = getattr(self, "cfg", BoneConfig)
+        cfg = getattr(target_cfg, "KINTSUGI", None)
         s_trig = getattr(cfg, "STAMINA_TRIGGER", 15.0) if cfg else 15.0
         if stamina < s_trig and not self.active_koan:
             self.active_koan = random.choice(self.koans)
             return True, self.active_koan
         return False, None
 
-    def attempt_repair(self, phys, trauma_accum, soul_ref=None, _qualia=None):
+    def attempt_repair(self, phys, trauma_accum, soul_ref=None, _qualia=None, lexicon_ref=None):
         if not self.active_koan:
-            return None
+            return {"success": False, "msg": "No active koan.", "healed": []}
         is_dict = isinstance(phys, dict)
         vol = float(phys.get("voltage", phys.get("energy", {}).get("voltage", 0.0)) if is_dict else getattr(phys, "voltage", 0.0))
         raw_text = phys.get("raw_text", phys.get("matter", {}).get("raw_text", "")) if is_dict else getattr(phys, "raw_text", "")
-        clean = LexiconService.sanitize(raw_text)
-        play_count = sum(1 for w in clean if w in LexiconService.get("play") or w in LexiconService.get("abstract"))
+        if lexicon_ref:
+            clean = lexicon_ref.sanitize(raw_text)
+            play_count = sum(1 for w in clean if w in lexicon_ref.get("play") or w in lexicon_ref.get("abstract"))
+        else:
+            clean = raw_text.split()
+            play_count = 0
         whimsy_score = play_count / max(1, len(clean))
         pathway = self.PATH_SCAR
-        cfg = getattr(BoneConfig, "KINTSUGI", None)
+        target_cfg = getattr(self, "cfg", BoneConfig)
+        cfg = getattr(target_cfg, "KINTSUGI", None)
         al_v = getattr(cfg, "ALCHEMY_VOLTAGE", 15.0) if cfg else 15.0
         al_w = getattr(cfg, "ALCHEMY_WHIMSY", 0.4) if cfg else 0.4
         in_v = getattr(cfg, "INTEGRATION_VOLTAGE", 8.0) if cfg else 8.0
@@ -295,7 +309,7 @@ class KintsugiProtocol:
         target = max(trauma_accum, key=trauma_accum.get)
         severity = trauma_accum[target]
         healed_log = []
-        cfg = getattr(BoneConfig, "KINTSUGI", None)
+        cfg = getattr(self.cfg, "KINTSUGI", None)
         if pathway == self.PATH_ALCHEMY:
             r_alc = getattr(cfg, "REDUCTION_ALCHEMY_FACTOR", 0.8) if cfg else 0.8
             a_fac = getattr(cfg, "ALCHEMY_ATP_FACTOR", 15.0) if cfg else 15.0
@@ -376,9 +390,10 @@ class GriefProtocol:
             if self.eng and hasattr(self.eng, "trauma_accum"):
                 for k in self.eng.trauma_accum:
                     self.eng.trauma_accum[k] = max(0.0, self.eng.trauma_accum[k] - 2.0)
-            if hasattr(BoneConfig, "SOUL"):
-                current_beta = getattr(BoneConfig.SOUL, "BETA_TENSION_THRESH", 0.7)
-                setattr(BoneConfig.SOUL, "BETA_TENSION_THRESH", min(1.0, current_beta + 0.05))
+            target_cfg = self.eng.bone_config if self.eng and hasattr(self.eng, "bone_config") else BoneConfig
+            if hasattr(target_cfg, "SOUL"):
+                current_beta = getattr(target_cfg.SOUL, "BETA_TENSION_THRESH", 0.7)
+                setattr(target_cfg.SOUL, "BETA_TENSION_THRESH", min(1.0, current_beta + 0.05))
             node = self.recent_loss or "the void"
             self.recent_loss = None
             return f"{Prisma.MAG}[MERCY] The glimmer is planted over the compost of '{node}'. Our capacity for paradox expands. (Trauma -2, β_max increased){Prisma.RST}"
@@ -386,8 +401,9 @@ class GriefProtocol:
             return f"{Prisma.GRY}[SYSTEM] Insufficient Glimmers to attend the wake. The hole in the lattice remains empty.{Prisma.RST}"
 
 class TheCriticsCircle:
-    def __init__(self, events_ref):
+    def __init__(self, events_ref, config_ref=None):
         self.events = events_ref
+        self.cfg = config_ref or BoneConfig
         self.critics = NARRATIVE_DATA.get("LITERARY_CRITICS", {})
         self.active_cooldowns = {}
         self.last_review_turn = 0
@@ -400,7 +416,7 @@ class TheCriticsCircle:
         self.last_review_turn = data.get("last_review_turn", 0)
 
     def audit_performance(self, physics: Any, turn_count: int) -> Optional[str]:
-        cfg = getattr(BoneConfig, "CRITICS", None)
+        cfg = getattr(self.cfg, "CRITICS", None)
         rev_cd = getattr(cfg, "REVIEW_COOLDOWN", 10) if cfg else 10
         if turn_count - self.last_review_turn < rev_cd:
             return None
@@ -455,7 +471,8 @@ class LimboLayer:
     MAX_ECTOPLASM = 50
     STASIS_SCREAMS = NARRATIVE_DATA.get("CASSANDRA_SCREAMS", ["BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT"])
 
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.ghosts = deque(maxlen=self.MAX_ECTOPLASM)
         self.haunt_chance = 0.05
         self.stasis_leak = 0.0
@@ -495,7 +512,7 @@ class LimboLayer:
         return f"{Prisma.CYN}{err_msg.format(thought=intended_thought, horror=horror)}{Prisma.RST}"
 
     def haunt(self, text):
-        cfg = getattr(BoneConfig, "LIMBO", None)
+        cfg = getattr(self.cfg, "LIMBO", None)
         l_chance = getattr(cfg, "LEAK_DECAY_CHANCE", 0.2) if cfg else 0.2
         l_amount = getattr(cfg, "LEAK_DECAY_AMOUNT", 0.5) if cfg else 0.5
         if self.stasis_leak > 0:
@@ -509,7 +526,8 @@ class LimboLayer:
         return text
 
 class TheFolly:
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.gut_memory = deque(maxlen=50)
         self.global_tastings = Counter()
 
@@ -522,14 +540,14 @@ class TheFolly:
         self.global_tastings = Counter(data.get("global_tastings", {}))
 
     @staticmethod
-    def audit_desire(physics, stamina):
+    def audit_desire(self, physics, stamina):
         def _get(p, k, d=0.0):
             if isinstance(p, dict):
                 return p.get(k, p.get("energy", {}).get(k, p.get("space", {}).get(k, d)))
             return getattr(p, k, d)
         voltage = _get(physics, "voltage", 0.0)
-        if (voltage > BoneConfig.FOLLY.MAUSOLEUM_VOLTAGE
-                and stamina > BoneConfig.FOLLY.MAUSOLEUM_STAMINA):
+        if (voltage > self.cfg.FOLLY.MAUSOLEUM_VOLTAGE
+                and stamina > self.cfg.FOLLY.MAUSOLEUM_STAMINA):
             msg1 = ux("protocol_strings", "folly_mausoleum")
             msg2 = ux("protocol_strings", "folly_dilation")
             return "MAUSOLEUM_CLAMP", f"{Prisma.GRY}{msg1}{Prisma.RST}\n   {Prisma.CYN}{msg2}{Prisma.RST}", 0.0, None,
@@ -537,7 +555,7 @@ class TheFolly:
 
     def grind_the_machine(
             self, atp_pool: float, clean_words: list, lexicon: Dict) -> Tuple[Optional[str], Optional[str], float, Optional[str]]:
-        if not (0.0 < atp_pool < BoneConfig.FOLLY.FEEDING_CAP):
+        if not (0.0 < atp_pool < self.cfg.FOLLY.FEEDING_CAP):
             return None, None, 0.0, None
         meat_words = self._filter_meat_words(clean_words, lexicon)
         if not meat_words:
@@ -548,29 +566,29 @@ class TheFolly:
             msg1 = ux("protocol_strings", "folly_reflex")
             msg2 = ux("protocol_strings", "folly_penalty")
             msg = (f"{Prisma.OCHRE}{msg1.format(target=target)}{Prisma.RST}\n"
-                   f"   {Prisma.RED}{msg2.format(penalty=BoneConfig.FOLLY.PENALTY_REGURGITATION)}{Prisma.RST}")
-            return "REGURGITATION", msg, -BoneConfig.FOLLY.PENALTY_REGURGITATION, None
+                   f"   {Prisma.RED}{msg2.format(penalty=self.cfg.FOLLY.PENALTY_REGURGITATION)}{Prisma.RST}")
+            return "REGURGITATION", msg, -self.cfg.FOLLY.PENALTY_REGURGITATION, None
         return self._eat_meat(fresh_meat, lexicon)
 
-    def _eat_meat(self, fresh_meat: list, _lexicon_data: Dict) -> Tuple[str, str, float, Optional[str]]:
+    def _eat_meat(self, fresh_meat: list, lexicon_ref: Any) -> Tuple[str, str, float, Optional[str]]:
         target = random.choice(fresh_meat)
-        suburban_set = LexiconService.get("suburban")
+        suburban_set = lexicon_ref.get("suburban") if lexicon_ref else []
         suburban_set = suburban_set if suburban_set else []
-        play_set = LexiconService.get("play")
+        play_set = lexicon_ref.get("play") if lexicon_ref else []
         play_set = play_set if play_set else []
         self.gut_memory.append(target)
         self.global_tastings[target] += 1
         if target in suburban_set:
             gags = ux("protocol_strings", "folly_gags")
-            return "INDIGESTION", f"{Prisma.MAG}{gags}{Prisma.RST}", -BoneConfig.FOLLY.PENALTY_INDIGESTION, "THE_RED_STAPLER",
+            return "INDIGESTION", f"{Prisma.MAG}{gags}{Prisma.RST}", -self.cfg.FOLLY.PENALTY_INDIGESTION, "THE_RED_STAPLER",
         if target in play_set:
             chews = ux("protocol_strings", "folly_chews")
-            return "SUGAR_RUSH", f"{Prisma.VIOLET}{chews}{Prisma.RST}", BoneConfig.FOLLY.SUGAR_RUSH_YIELD, "QUANTUM_GUM",
+            return "SUGAR_RUSH", f"{Prisma.VIOLET}{chews}{Prisma.RST}", self.cfg.FOLLY.SUGAR_RUSH_YIELD, "QUANTUM_GUM",
         times_eaten = self.global_tastings[target]
-        base_yield = BoneConfig.FOLLY.BASE_YIELD
-        decay_factor = BoneConfig.FOLLY.DECAY_EXPONENT ** (times_eaten - 1)
+        base_yield = self.cfg.FOLLY.BASE_YIELD
+        decay_factor = self.cfg.FOLLY.DECAY_EXPONENT ** (times_eaten - 1)
         actual_yield = max(2.0, base_yield * decay_factor)
-        loot = ("STABILITY_PIZZA" if actual_yield >= BoneConfig.FOLLY.PIZZA_THRESHOLD else None)
+        loot = ("STABILITY_PIZZA" if actual_yield >= self.cfg.FOLLY.PIZZA_THRESHOLD else None)
         flavor_text = ""
         if times_eaten > 3:
             stale_str = ux("protocol_strings", "folly_stale_flavor")
@@ -582,22 +600,24 @@ class TheFolly:
         return "MEAT_GRINDER", msg, actual_yield, loot
 
     @staticmethod
-    def _filter_meat_words(clean_words: list, _lexicon: Dict) -> list:
+    def _filter_meat_words(clean_words: list, lexicon_ref: Any) -> list:
+        if not lexicon_ref:
+            return clean_words
         meat_pool = (
-                set(LexiconService.get("heavy") or [])
-                | set(LexiconService.get("kinetic") or [])
-                | set(LexiconService.get("suburban") or []))
+                set(lexicon_ref.get("heavy") or [])
+                | set(lexicon_ref.get("kinetic") or [])
+                | set(lexicon_ref.get("suburban") or []))
         return [w for w in clean_words if w in meat_pool]
 
     @staticmethod
     def _attempt_digest_abstract(
-            clean_words: list, _lexicon: Dict) -> Tuple[str, str, float, Optional[str]]:
-        abstract_set = LexiconService.get("abstract")
+            clean_words: list, lexicon_ref: Any) -> Tuple[str, str, float, Optional[str]]:
+        abstract_set = lexicon_ref.get("abstract") if lexicon_ref else []
         abstract_set = abstract_set if abstract_set else []
         abstract_words = [w for w in clean_words if w in abstract_set]
         if abstract_words:
             target = random.choice(abstract_words)
-            yield_val = BoneConfig.FOLLY.YIELD_ABSTRACT
+            yield_val = self.cfg.FOLLY.YIELD_ABSTRACT
             msg1 = ux("protocol_strings", "folly_sighs")
             msg2 = ux("protocol_strings", "folly_chalk")
             msg = (
@@ -747,7 +767,8 @@ class ChronosKeeper:
                 pass
         try:
             files = sorted([f for f in os.listdir(self.CRASH_DIR) if f.startswith(prefix)])
-            cfg = getattr(BoneConfig, "CHRONOS", None)
+            target_cfg = self.eng.bone_config if self.eng and hasattr(self.eng, "bone_config") else BoneConfig
+            cfg = getattr(target_cfg, "CHRONOS", None)
             kept = getattr(cfg, "CRASH_FILES_KEPT", 4) if cfg else 4
             for oldest in files[:-kept] if kept > 0 else files:
                 os.remove(os.path.join(self.CRASH_DIR, oldest))
