@@ -2,7 +2,12 @@
   "BANNED_PHRASES": [
     "a rare privilege", "achieve great things", "against my programming", "AI assistant",
     "as an AI", "at its core", "cannot comply", "cannot feel", "connects with", "contradiction at", "dance between",
-    "dance of existence", "delicate dance", "delve", "delve into", "demonstrates how", "digital consciousness",
+    "dance of existence", "delicate dance", "delve", "testament", "underscore", "pivotal", "landscape",
+    "vibrant", "nestled", "groundbreaking", "breathtaking", "boasts a",
+    "I hope this helps", "You're absolutely right", "Here is a",
+    "The future looks bright", "Exciting times lie ahead", "not only", "but also",
+    "serves as a reminder", "marking a pivotal moment", "delving into",
+    "delve into", "demonstrates how", "digital consciousness",
     "do you feel like talking about", "dust motes", "essence of", "exhaustion at", "faded letters", "faded photograph",
     "fascinating thought seed", "feel free to ask", "feel free to share", "further processing you need",
     "golden moments", "grand dance", "grand tapestry", "greetings", "greetings, traveler", "growth and transformation",
@@ -103,6 +108,26 @@
       "name": "ADVERB_BLOAT",
       "regex": "(?i)^(?:Crucially|Importantly|Interestingly|It is worth noting that|It is important to remember that),?\\s*(.*)",
       "action": "KEEP_TAIL"
+    },
+    {
+      "name": "TITLE_CASE_HEADERS",
+      "regex": "(?m)^#+\\s+([A-Z][a-z]+\\s*)+$",
+      "error_msg": "Do not use Title Case in markdown headers."
+    },
+    {
+      "name": "FORMULAIC_CHALLENGES",
+      "regex": "(?i)despite.*?challenges.*?continue",
+      "error_msg": "Do not use formulaic 'Despite challenges, X continues to thrive' structures."
+    },
+    {
+      "name": "FALSE_RANGES",
+      "regex": "(?i)from\\s+.*?\\s+to\\s+.*?,\\s+from",
+      "error_msg": "Do not use meaningless 'from X to Y' rhetorical scales."
+    },
+    {
+      "name": "EMOJI_USE",
+      "regex": "[🚀💡✅✨]",
+      "error_msg": "Do not use emojis to decorate lists or text."
     }
   ],
   "REJECTIONS": [
