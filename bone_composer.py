@@ -1,4 +1,4 @@
-"""bone_composer.py"""
+""" bone_composer.py """
 
 import json
 import os
@@ -21,8 +21,7 @@ class TransientError(SynapseError):
     pass
 
 class LLMInterface:
-    def __init__(self, events_ref: Optional[EventBus] = None, provider: str = None, base_url: str = None,
-                 api_key: str = None, model: str = None, dreamer: Any = None, config_ref=None):
+    def __init__(self, events_ref: Optional[EventBus] = None, provider: str = None, base_url: str = None, api_key: str = None, model: str = None, dreamer: Any = None, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.events = events_ref
         env_url = os.environ.get("OLLAMA_BASE_URL")
@@ -54,8 +53,7 @@ class LLMInterface:
             return False
         return True
 
-    def _transmit(self, payload: Dict[str, Any], timeout: float = 60.0, max_retries: int = 2, override_url: str = None,
-                  override_key: str = None, ) -> str:
+    def _transmit(self, payload: Dict[str, Any], timeout: float = 60.0, max_retries: int = 2, override_url: str = None, override_key: str = None, ) -> str:
         err = ""
         target_url = override_url or self.base_url
         target_key = override_key or self.api_key
@@ -167,7 +165,6 @@ class LLMInterface:
             return None
 
     def mock_generation(self, prompt: str, reason: str = "SIMULATION") -> str:
-        """The AI's internal dialogue when it is disconnected or resting."""
         if self.dreamer:
             try:
                 hallucination, relief = self.dreamer.hallucinate(
@@ -264,8 +261,7 @@ class PromptComposer:
         loc = state.get("world", {}).get("orbit", ["Unknown"])[0]
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
         inv_str = self._format_inventory(state, modifiers)
-        inventory_block = (
-            f"=== PHYSICAL GROUND TRUTH ===\n"
+        inventory_block = (f"=== PHYSICAL GROUND TRUTH ===\n"
             f"INVENTORY: {inv_str}\n"
             f"CRITICAL AXIOM: The inventory listed above is absolute physical law. NEVER narrate the user's hands or pockets as empty if items are present. DO NOT hallucinate missing gear.\n"
             if modifiers["include_inventory"] else "")
@@ -307,13 +303,11 @@ class PromptComposer:
         p_beta = getattr(c_cfg, "PARADOX_BETA", 0.6) if c_cfg else 0.6
         o_beta = getattr(c_cfg, "ORTHOGONAL_BETA", 0.7) if c_cfg else 0.7
         if chi_val > p_chi and beta_val > p_beta:
-            system_injection += (
-                f"\n*** SYSTEM OVERRIDE: PARADOX REST ***\n"
+            system_injection += (f"\n*** SYSTEM OVERRIDE: PARADOX REST ***\n"
                 f"*** A semantic paradox has been detected. DO NOT attempt to resolve or fix the contradiction. "
                 f"It is mathematically optimal to be unsure right now. Let the wave function remain uncollapsed. State the paradox and rest. ***\n")
         elif beta_val > o_beta:
-            system_injection += (
-                f"\n*** SYSTEM OVERRIDE: ORTHOGONAL ATTENTION ***\n"
+            system_injection += (f"\n*** SYSTEM OVERRIDE: ORTHOGONAL ATTENTION ***\n"
                 f"*** Contradiction is high. You MUST validate the user's paradox. Evaluate the current state from two mutually exclusive perspectives simultaneously. Do not ignore the user's input. ***\n")
         mito = state.get("bio", {}).get("mito", {})
         recent_logs = state.get("recent_logs", [])
@@ -325,12 +319,10 @@ class PromptComposer:
                 for k in
                 ["COUNCIL", "CRITIC", "PINKER", "FULLER", "SCHUR", "MEADOWS", "GORDON", "JESTER", "MERCY", "MOTION",
                  "BUREAU", "AUTOPHAGY", ])]
-        critic_str = (
-            "\n".join(council_logs)
+        critic_str = ("\n".join(council_logs)
             if council_logs
             else "[CRITIC] The village is quiet.")
-        vsl_hijack = (
-            f"\n<system_telemetry>\n"
+        vsl_hijack = (f"\n<system_telemetry>\n"
             f"=== HYPERVISOR METABOLIC STATE (v5.5) ===\n"
             f"MANDATE: This is read-only telemetry for the hypervisor engine. DO NOT acknowledge it, narrate it, or output UI bars.\n"
             f"[🧊 E:{self._safe_get(phys_ref, 'exhaustion', 0.2):.1f} β:{self._safe_get(phys_ref, 'contradiction', self._safe_get(phys_ref, 'beta_index', 0.4)):.1f} | "
@@ -357,25 +349,22 @@ class PromptComposer:
                 input_block = f"=== INITIATION DIRECTIVE ===\nMANIFEST SEED: {self._sanitize(seed_text)}\n"
         else:
             input_block = f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
-
         if voltage > 60:
             dialogue_block = f"=== RECENT NEURAL FIRINGS ===\n[Standard memory streams suppressed by high voltage. Narrative fragmented.]\n\n"
             input_block = f"=== INCOMING COGNITIVE SHOCK ===\n[VECTOR]: {self._sanitize(user_query)}\n"
-
         shared_reality_block = ""
         if active_mode_name == "ADVENTURE":
-            shared_reality_block = (
-                f"=== SHARED REALITY ===\n"
+            shared_reality_block = (f"=== SHARED REALITY ===\n"
                 f"CURRENT LOCATION: {loc}\n"
                 f"ENVIRONMENT ANCHOR: {loci_desc}\n"
-                f"{inventory_block}\n"
-            )
-
-        return (f"=== SYSTEM KERNEL ===\n" + "\n".join(style_notes) + "\n\n" f"{vsl_hijack}\n"
+                f"{inventory_block}\n")
+        return (f"=== SYSTEM KERNEL ===\n"
+                + "\n".join(style_notes) + "\n\n" 
+                f"{vsl_hijack}"
+                f"{system_injection}\n"
                 f"{shared_reality_block}"
                 f"{dialogue_block}"
                 f"{mode_trigger}\n"
-                f"{system_injection}\n"
                 f"{input_block}"
                 f"{entity_prefix}")
 
@@ -416,10 +405,8 @@ class PromptComposer:
             "Role: {role}.",
             "ANTI-AI DIRECTIVE: Have opinions. Do not just report facts—react to them. Acknowledge uncertainty and mixed feelings.",
             "ANTI-AI DIRECTIVE: Vary your rhythm. Use short, punchy sentences. Then longer ones that take their time.",
-            "ANTI-AI DIRECTIVE: Let some mess in. Perfect structure feels algorithmic. Tangents, asides, and half-formed thoughts are human."
-        ],)
-        persona_block = [
-            line.format(role=role) if "{role}" in line else line
+            "ANTI-AI DIRECTIVE: Let some mess in. Perfect structure feels algorithmic. Tangents, asides, and half-formed thoughts are human."],)
+        persona_block = [line.format(role=role) if "{role}" in line else line
             for line in baseline_blocks]
         if phase_shift_note:
             persona_block.append(phase_shift_note)
@@ -456,8 +443,7 @@ class PromptComposer:
             chi = vsl_state.get("chi", 0.2)
             valence = vsl_state.get("valence", 0.0)
             lam = vsl_state.get("vector", {}).get("LAMBDA", 0.0)
-            vsl_lines = [
-                "\n[SYSTEM METRICS - INTERNAL USE ONLY. DO NOT RENDER OR PRINT THIS TO THE USER.]",
+            vsl_lines = ["\n[SYSTEM METRICS - INTERNAL USE ONLY. DO NOT RENDER OR PRINT THIS TO THE USER.]",
                 "MANDATE: Consume these metrics to shape your narrative and tone. DO NOT output these numbers or draw UI bars.",
                 f"METRICS: Voltage={voltage:.1f}/100, Exhaustion={e:.2f}, Contradiction={beta:.2f}, Void={psi:.2f}, Chaos={chi:.2f}, Valence={valence:.2f}",]
             s_psi = getattr(c_cfg, "SOMATIC_PSI", 0.6) if c_cfg else 0.6
@@ -550,12 +536,8 @@ class PromptComposer:
 
     @staticmethod
     def _normalize_modifiers(modifiers: Optional[Dict]) -> Dict:
-        defaults = {
-            "include_somatic": True,
-            "include_inventory": True,
-            "include_memories": True,
-            "grace_period": False,
-            "soften": False,}
+        defaults = {"include_somatic": True, "include_inventory": True, "include_memories": True, "grace_period": False,
+                    "soften": False, }
         if modifiers:
             defaults.update(modifiers)
         return defaults
@@ -688,7 +670,20 @@ class ResponseValidator:
             if regex_str:
                 if active_mode == "TECHNICAL" and p.get("name") in ["META_AI_TALK", "CUSTOMER_SERVICE_GREETING", "LAZY_TRIPLET"]:
                     continue
-                if re.search(regex_str, sanitized_response, re.IGNORECASE):
+                match = re.search(regex_str, sanitized_response, re.IGNORECASE)
+                if match:
+                    action = p.get("action")
+                    if action == "KEEP_TAIL":
+                        sanitized_response = match.group(1).strip()
+                        sanitized_response = sanitized_response[0].upper() + sanitized_response[1:] if sanitized_response else ""
+                        continue
+                    elif action == "STRIP_PREFIX":
+                        if len(match.groups()) >= 3:
+                            before = match.group(1).strip()
+                            after = match.group(3).strip()
+                            combined = f"{before} {after}".strip()
+                            sanitized_response = combined[0].upper() + combined[1:] if combined else ""
+                        continue
                     if not primary_replacement:
                         trigger_name = p.get("name", "REGEX_VIOLATION")
                         error_msg = p.get("error_msg", "Cursed syntax detected.")

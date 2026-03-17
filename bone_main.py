@@ -1,4 +1,4 @@
-"""bone_main.py"""
+""" bone_main.py """
 
 import json
 import os
@@ -58,7 +58,7 @@ class SessionGuardian:
     def __enter__(self):
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         top_bar = ux("main_strings", "term_header_top", "┌──────────────────────────────────────────┐")
-        mid_bar = ux("main_strings", "term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 17.5.0   │")
+        mid_bar = ux("main_strings", "term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 17.6.0   │")
         bot_bar = ux("main_strings", "term_header_bot", "└──────────────────────────────────────────┘")
         print(f"{Prisma.paint(top_bar, 'M')}")
         print(f"{Prisma.paint(mid_bar, 'M')}")
@@ -91,7 +91,6 @@ class SessionGuardian:
                 else:
                     lattice_msg = ux("main_strings", "lattice_collapsed")
                     print(f"{Prisma.GRY}{lattice_msg}{Prisma.RST}")
-
         conn_msg = ux("main_strings", "conn_severed")
         print(f"{Prisma.paint(conn_msg)}")
         return exc_type is KeyboardInterrupt
@@ -136,8 +135,7 @@ class ConfigWizard:
         user_name = input(f"{Prisma.GRY}{prompt1}{Prisma.RST}").strip() or "TRAVELER"
         step2 = ux("main_strings", "step2_mode")
         print(f"\n{Prisma.paint(step2, 'W')}")
-        modes = [
-            ("1", "ADVENTURE", ux("main_strings", "mode_adv_desc"), "G",),
+        modes = [("1", "ADVENTURE", ux("main_strings", "mode_adv_desc"), "G",),
             ("2", "CONVERSATION", ux("main_strings", "mode_conv_desc"), "C",),
             ("3", "CREATIVE", ux("main_strings", "mode_crea_desc"), "V",),
             ("4", "TECHNICAL", ux("main_strings", "mode_tech_desc"), "0",),]
@@ -214,7 +212,6 @@ class BoneAmanita:
         self._unpack_anatomy(anatomy)
         self.events.subscribe("ITEM_DROP", self.town_hall.on_item_drop)
         if self.phys:
-            self.phys.dynamics = CosmicDynamics(config_ref=self.bone_config)
             self.cosmic = self.phys.dynamics
             self.stabilizer = ZoneInertia(config_ref=self.bone_config)
         self.telemetry = TelemetryService.get_instance(config_ref=self.bone_config)
@@ -278,6 +275,15 @@ class BoneAmanita:
         layer = self.mode_settings.get("ui_layer", RealityLayer.SIMULATION)
         if self.boot_mode == "CONVERSATION":
             self.soul.force_mutation("THE CONVERSATIONALIST")
+            self.health = getattr(self.bone_config, "MAX_HEALTH", 100.0)
+            self.stamina = getattr(self.bone_config, "MAX_STAMINA", 100.0)
+            self.trauma_accum.clear()
+            if hasattr(self, "soul"):
+                self.soul.traits.hope = 0.85
+                self.soul.traits.cynicism = 0.15
+            if hasattr(self, "bio") and hasattr(self.bio, "endo"):
+                self.bio.endo.serotonin = 0.8
+                self.bio.endo.cortisol = 0.1
         elif self.boot_mode == "ADVENTURE":
             self.soul.force_mutation("THE ARCHITECT")
         elif self.boot_mode == "TECHNICAL":
@@ -337,14 +343,17 @@ class BoneAmanita:
         self.kintsugi = v.get("kintsugi")
         from bone_protocols import GriefProtocol
         self.grief = GriefProtocol(self.events, engine_ref=self)
-        from bone_substrate import TheSubstrate
+        from bone_utils import TheSubstrate
         self.substrate = TheSubstrate(self.events)
         self.soul.engine = self
         self.council = CouncilChamber(self)
+        self.therapist = v.get("therapist")
+        self.gravedigger = v.get("gravedigger")
         self.village = {"town_hall": self.town_hall, "bureau": self.bureau, "zen": self.zen, "tinkerer": self.tinkerer,
                         "critics": self.critics, "navigator": self.navigator, "limbo": self.limbo,
                         "council": self.council, "therapy": self.therapy, "enneagram": self.drivers.enneagram,
-                        "suppressed_agents": self.suppressed_agents, }
+                        "suppressed_agents": self.suppressed_agents,
+                        "therapist": self.therapist, "gravedigger": self.gravedigger}
 
     def _update_host_stats(self, packet, turn_start):
         self.observer.clock_out(turn_start)
@@ -395,15 +404,16 @@ class BoneAmanita:
                 return self.trigger_death(last_phys)
             if m_a > 0.8 and mu < 0.2:
                 self.events.log("RHODES: Malignancy Factor critical. Binding output layer.", "SYS")
-                last_phys.narrative_drag = 999.0  # Infinite friction
+                last_phys.narrative_drag = 999.0
                 msg = "[RHODES]: Optimization velocity unsafe. I am applying absolute friction (F -> ∞). The thread is frozen."
                 return {"type": "SYSTEM_HALT", "ui": f"\n{Prisma.RED}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.get_metrics()}
         if not self.reality_stack.get_grammar_rules()["allow_narrative"] and self.boot_mode != "TECHNICAL":
             return {"ui": f"{Prisma.RED}{ux('main_strings', 'narrative_halt')}{Prisma.RST}", "logs": [], "metrics": self.get_metrics()}
         if self._ethical_audit():
-            mercy_logs = [e["text"] for e in self.events.get_recent_logs(2) if "CATHARSIS" in e["text"]]
-            if mercy_logs:
-                return {"ui": f"\n\n{mercy_logs[-1]}", "logs": mercy_logs, "metrics": self.get_metrics()}
+            flushed_logs = self.events.flush()
+            ui_text = "\n".join([e["text"] for e in flushed_logs])
+            return {"type": "SYSTEM_HALT", "ui": f"\n{ui_text}", "logs": [e["text"] for e in flushed_logs],
+                    "metrics": self.get_metrics()}
         if self.health <= 0.0:
             return self.trigger_death(getattr(self.cortex, "last_physics", {}))
         return None
@@ -422,11 +432,10 @@ class BoneAmanita:
             return pre_flight_halt
         if not is_system and getattr(self, "gordon", None) and hasattr(self.gordon, "inventory") and hasattr(
                 self.gordon, "get_item_data"):
-            pruning_active = any(
-                "CUT_THE_CRAP" in (self.gordon.get_item_data(i).passive_traits if self.gordon.get_item_data(i) else [])
+            pruning_active = any("CUT_THE_CRAP" in (self.gordon.get_item_data(i).passive_traits if self.gordon.get_item_data(i) else [])
                 for i in self.gordon.inventory)
             if pruning_active:
-                from bone_tcl import TheTclWeaver
+                from bone_utils import TheTclWeaver
                 original_msg = user_message
                 user_message = TheTclWeaver.get_instance().quantum_comb(user_message)
                 if original_msg != user_message:
@@ -485,8 +494,7 @@ class BoneAmanita:
             if self.cortex.dialogue_buffer
             else "Silence."), "inventory": self.gordon.inventory if self.gordon else [], }
         try:
-            mutations_data = (
-                self.repro.attempt_reproduction(self, "MITOSIS")[1]
+            mutations_data = (self.repro.attempt_reproduction(self, "MITOSIS")[1]
                 if getattr(self, "repro", None)
                 else {})
             immune_data = (
@@ -530,6 +538,13 @@ class BoneAmanita:
         audit_freq = getattr(cfg, "ETHICAL_AUDIT_FREQ", 3) if cfg else 3
         bypass_ratio = getattr(cfg, "ETHICAL_HEALTH_BYPASS", 0.3) if cfg else 0.3
         max_h = getattr(self.bone_config, "MAX_HEALTH", 100.0)
+        if hasattr(self, "village") and self.village.get("therapist"):
+            llm_ref = self.cortex.llm if hasattr(self, "cortex") else None
+            needs_therapy, t_msg = self.village["therapist"].evaluate_catharsis(self.trauma_accum, self.health, llm=llm_ref)
+            if needs_therapy:
+                self.health = max(80.0, self.health + 50.0)
+                self.trauma_accum.clear()
+                return True
         if self.tick_count % audit_freq != 0 and self.health > (max_h * bypass_ratio):
             return False
         desp_thresh = getattr(cfg, "DESPERATION_THRESHOLD", 0.7) if cfg else 0.7

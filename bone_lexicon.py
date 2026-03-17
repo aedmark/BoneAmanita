@@ -1,6 +1,4 @@
-"""
-bone_lexicon.py
-"""
+""" bone_lexicon.py """
 
 import json
 import os
@@ -169,7 +167,9 @@ class LinguisticAnalyzer:
                     dims[target_dim] += 1.0
         total = max(1.0, sum(dims.values()))
         result = {k: round(v / total, 3) for k, v in dims.items()}
-        result["ENT"] = result["CHI"]
+        word_count = len(words)
+        fragmentation = min(1.0, (total / max(1, word_count)))
+        result["ENT"] = round((result["CHI"] + fragmentation) / 2.0, 3)
         return result
 
     @staticmethod
@@ -201,6 +201,11 @@ class LinguisticAnalyzer:
             normalized = text
         xlate = self._TRANSLATOR if self._TRANSLATOR else str.maketrans("", "")
         cleaned_text = normalized.translate(xlate).lower()
+        if hasattr(self.store, "ANTIGEN_REPLACEMENTS") and self.store.ANTIGEN_REPLACEMENTS:
+            from bone_lexicon import LexiconService
+            lex_svc = LexiconService()
+            if lex_svc._INITIALIZED:
+                cleaned_text = lex_svc.purge_toxins(cleaned_text)
         words = cleaned_text.split()
         bias_set = getattr(self.store, "USER_FLAGGED_BIAS", set())
         return [w for w in words if w.strip() and w not in bias_set]

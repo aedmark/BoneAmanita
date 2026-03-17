@@ -1,6 +1,4 @@
-"""
-bone_inventory.py
-"""
+""" bone_inventory.py """
 
 import random
 import re
@@ -26,12 +24,12 @@ class Item:
     def from_dict(cls, name: str, data: Dict):
         default_desc = ux("gordon_strings", "default_item_desc") or "Unknown Artifact"
         default_usage = ux("gordon_strings", "default_item_use") or f"You use the {name}."
-
+        is_consumable = data.get("consume_on_use", False) or (data.get("cost") == "CONSUMABLE")
         return cls(name=name, description=data.get("description", default_desc),
                    function=data.get("function", "MISC"), passive_traits=data.get("passive_traits", []),
                    spawn_context=data.get("spawn_context", "COMMON"), value=data.get("value", 1.0),
                    usage_msg=data.get("usage_msg", default_usage),
-                   consume_on_use=data.get("consume_on_use", False), reflex_trigger=data.get("reflex_trigger", None))
+                   consume_on_use=is_consumable, reflex_trigger=data.get("reflex_trigger", None))
 
 class GordonKnot:
     def __init__(self, events=None, mode="ADVENTURE", config_ref=None):
@@ -301,7 +299,8 @@ class GordonKnot:
                 return None
         all_known_items = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
         for name in all_known_items:
-            if name.lower() in text and name.upper() not in self.inventory:
+            clean_name = name.lower().replace("_", " ")
+            if clean_name in text and name.upper() not in self.inventory:
                 for t in self.loot_triggers:
                     if t in text:
                         return name

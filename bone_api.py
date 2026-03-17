@@ -1,6 +1,4 @@
-"""
-bone_api.py
-"""
+""" bone_api.py """
 
 import asyncio
 import json
@@ -26,7 +24,6 @@ class EngineState:
     engine: BoneAmanita = None
     active_connections: list[WebSocket] = []
 state = EngineState()
-
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -60,7 +57,6 @@ def stringify_lattice_keys(obj: Any) -> Any:
         return [stringify_lattice_keys(item) for item in obj]
     else:
         return obj
-
 
 app = FastAPI(lifespan=lifespan, title="BoneAmanita Hypervisor API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"],

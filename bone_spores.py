@@ -1,6 +1,4 @@
-"""
-bone_spores.py
-"""
+""" bone_spores.py """
 
 import hashlib
 import json
@@ -10,12 +8,10 @@ import tempfile
 import time
 from collections import deque
 from typing import List, Tuple, Optional, Dict, Any
-
 from bone_core import EventBus, LoreManifest, BoneJSONEncoder, ux
 from bone_presets import BoneConfig
 from bone_types import Prisma
 from bone_village import ParadoxSeed
-
 
 def _word_to_vector(word: str, dim: int = 8) -> list:
     h = hashlib.md5(word.encode('utf-8')).digest()
@@ -298,6 +294,8 @@ class MemoryCore:
         scored_memories.sort(key=lambda x: x[0], reverse=True)
         results = []
         for score, name, data in scored_memories[:limit]:
+            connections = list(data.get("edges", {}).keys())
+            conn_str = f" -> [{', '.join(connections[:2])}]" if connections else ""
             if active_dims and hasattr(self, "subconscious"):
                 for edge in list(data.get("edges", {}).keys()):
                     data["edges"][edge] *= 0.95
@@ -310,8 +308,6 @@ class MemoryCore:
                     self.subconscious.bury({"word": name, "mass": 1.0, "reconstructive": True}, config_ref=self.cfg)
                 except Exception:
                     pass
-            connections = list(data.get("edges", {}).keys())
-            conn_str = f" -> [{', '.join(connections[:2])}]" if connections else ""
             if score > 0.5:
                 prefix = ux("spore_strings", "core_illuminate_resonant") or "Resonant"
             else:
@@ -387,8 +383,7 @@ class MemoryCore:
         victim, data, score = candidates[0]
         mass = sum(data["edges"].values())
         lifespan = current_tick - data.get("strata", {}).get("birth_tick", current_tick)
-        fossil_data = {"word": victim, "mass": round(mass, 2), "lifespan": lifespan, "edges": data["edges"],
-                       "death_tick": current_tick, }
+        fossil_data = {"word": victim, "mass": round(mass, 2), "lifespan": lifespan, "edges": data["edges"], "death_tick": current_tick, }
         self.subconscious.bury(fossil_data, config_ref=self.cfg)
         if hasattr(self, 'events') and self.events and victim:
             self.events.publish("AUTOPHAGY_EVENT", {"node": victim, "atp_gained": 15.0})
@@ -487,8 +482,7 @@ class MycelialNetwork:
                 v_targ = physics["energy"] if "energy" in physics else physics
                 d_targ = physics["space"] if "space" in physics else physics
                 v_targ["voltage"] = v_targ.get("voltage", physics.get("voltage", 0.0)) + total_voltage_boost
-                d_targ["narrative_drag"] = d_targ.get("narrative_drag",
-                                                      physics.get("narrative_drag", 0.0)) + total_drag_penalty
+                d_targ["narrative_drag"] = d_targ.get("narrative_drag", physics.get("narrative_drag", 0.0)) + total_drag_penalty
             else:
                 v_targ = physics.energy if hasattr(physics, "energy") else physics
                 d_targ = physics.space if hasattr(physics, "space") else physics
@@ -524,21 +518,20 @@ class MycelialNetwork:
                 total_v_shift += v_shift
                 total_d_shift += d_shift
                 haunted_words.append(w)
+        total_v_shift = min(15.0, total_v_shift)
+        total_d_shift = min(5.0, total_d_shift)
         if haunted_words:
             if isinstance(physics, dict):
                 v_targ = physics["energy"] if "energy" in physics else physics
                 d_targ = physics["space"] if "space" in physics else physics
                 v_targ["voltage"] = max(0.0, v_targ.get("voltage", physics.get("voltage", 0.0)) + total_v_shift)
-                d_targ["narrative_drag"] = max(0.0, d_targ.get("narrative_drag",
-                                                               physics.get("narrative_drag", 0.0)) + total_d_shift)
+                d_targ["narrative_drag"] = max(0.0, d_targ.get("narrative_drag", physics.get("narrative_drag", 0.0)) + total_d_shift)
             else:
                 v_targ = physics.energy if hasattr(physics, "energy") else physics
                 d_targ = physics.space if hasattr(physics, "space") else physics
                 if hasattr(v_targ, "voltage"): v_targ.voltage = max(0.0, v_targ.voltage + total_v_shift)
-                if hasattr(d_targ, "narrative_drag"): d_targ.narrative_drag = max(0.0,
-                                                                                  d_targ.narrative_drag + total_d_shift)
-            msg = ux("spore_strings",
-                     "net_ghost_haunt") or "The ghosts of [{words}] alter the atmosphere (V:{v:+.2f}, D:{d:+.2f})."
+                if hasattr(d_targ, "narrative_drag"): d_targ.narrative_drag = max(0.0, d_targ.narrative_drag + total_d_shift)
+            msg = ux("spore_strings", "net_ghost_haunt") or "The ghosts of [{words}] alter the atmosphere (V:{v:+.2f}, D:{d:+.2f})."
             return f"{Prisma.VIOLET}{msg.format(words=', '.join(haunted_words).upper(), v=total_v_shift, d=total_d_shift)}{Prisma.RST}"
         return None
 
@@ -670,7 +663,7 @@ class MycelialNetwork:
         from bone_village import ParadoxSeed
         loaded_seeds = []
         try:
-            raw_seeds = LoreManifest.get_instance().get("seeds") or []
+            raw_seeds = LoreManifest.get_instance().get("SEEDS") or []
             for item in raw_seeds:
                 q = item.get("question", "Undefined Paradox")
                 t = set(item.get("triggers", []))
@@ -803,7 +796,7 @@ class MycelialNetwork:
                      for s in self.seeds
                      if not s.bloomed]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
-        data = {"genome": "BONEAMANITA_17.5.0", "session_id": self.session_id, "parent_id": self.session_id, "meta": {
+        data = {"genome": "BONEAMANITA_17.6.0", "session_id": self.session_id, "parent_id": self.session_id, "meta": {
             "timestamp": time.time(), "final_health": health, "final_stamina": stamina, },
                 "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
                 "core_graph": core_graph, "mutations": mutations, "antibodies": list(antibodies) if antibodies else [],

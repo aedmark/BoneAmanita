@@ -1,6 +1,4 @@
-"""
-bone_presets.py
-"""
+""" bone_presets.py """
 
 from typing import Dict, Any, List
 

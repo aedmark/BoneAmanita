@@ -1,6 +1,4 @@
-"""
-bone_symbiosis.py
-"""
+""" bone_symbiosis.py """
 
 import math
 import re
@@ -129,7 +127,7 @@ class SymbiontVoice:
         elif score > 3.0 and "high_score" in self.personality: comment = self.personality["high_score"]
         elif score > 1.0 and "med_score" in self.personality: comment = self.personality["med_score"]
         if self.name == "PARASITE":
-            from bone_tcl import TheTclWeaver
+            from bone_utils import TheTclWeaver
             weaver = TheTclWeaver.get_instance()
             comment = weaver.haunt_string(comment)
         return comment
@@ -249,7 +247,7 @@ class SymbiosisManager:
         header = text[:200].lower()
         return any(str(sig).lower() in header for sig in self.REFUSAL_SIGNATURES)
 
-    def get_prompt_modifiers(self) -> Dict:
+    def get_prompt_modifiers(self, physics: Dict = None) -> Dict:
         default_mods = LoreManifest.get_instance(config_ref=self.cfg).get("SYMBIOSIS_CONFIG", "DEFAULT_MODIFIERS") or {}
         mods = default_mods.copy()
         mods["system_directives"] = []
@@ -294,6 +292,39 @@ class SymbiosisManager:
             if msg_crit and hasattr(self.events, "log"): self.events.log(f"{Prisma.GRY}{msg_crit}{Prisma.RST}", "SYS")
         if self.current_health.refusal_streak > r_streak:
             mods["simplify_instruction"] = True
+        if physics:
+            somatic_lib = LoreManifest.get_instance(config_ref=self.cfg).get("SOMATIC_LIBRARY") or {}
+            if somatic_lib:
+                v = physics.get("voltage", 0.0)
+                d = physics.get("narrative_drag", 0.0)
+                chi = physics.get("chi", physics.get("entropy", 0.0))
+                psi = physics.get("psi", 0.0)
+                v_key = "CRITICAL_HIGH" if v > 25.0 else "HIGH" if v > 15.0 else "VOID" if v < 2.0 else "LOW" if v < 5.0 else "NEUTRAL"
+                d_key = "MUD" if d > 5.0 else "SOLID" if d > 1.5 else "VOID" if d < 0.5 and psi > 0.6 else "FLOAT"
+                c_key = "DRIFT" if chi > 0.7 else "VOID" if psi > 0.8 else "LOCKED" if chi < 0.2 else "COHERENT"
+                m_key = "SOLID"
+                if v > 20 and d > 5:
+                    m_key = "MAGMA"
+                elif v > 20 and d < 2:
+                    m_key = "PLASMA"
+                elif v > 20:
+                    m_key = "ENERGY"
+                elif chi > 0.7:
+                    m_key = "GAS"
+                elif psi > 0.8:
+                    m_key = "VOID"
+                elif v > 10 and d < 2:
+                    m_key = "LIQUID"
+                tone = somatic_lib.get("TONE", {}).get(v_key)
+                pacing = somatic_lib.get("PACING", {}).get(v_key)
+                sensation = somatic_lib.get("SENSATION", {}).get(d_key)
+                focus = somatic_lib.get("FOCUS", {}).get(c_key)
+                matter = somatic_lib.get("MATTER", {}).get(m_key)
+                if tone: mods["system_directives"].append(f"SOMATIC TONE: {tone}")
+                if pacing: mods["system_directives"].append(f"SOMATIC PACING: {pacing}")
+                if sensation: mods["system_directives"].append(f"SOMATIC SENSATION: {sensation}")
+                if focus: mods["system_directives"].append(f"SOMATIC FOCUS: {focus}")
+                if matter: mods["system_directives"].append(f"SOMATIC STATE OF MATTER: {matter}")
         return mods
 
     def generate_anchor(self, current_state: Dict) -> str:

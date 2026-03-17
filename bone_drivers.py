@@ -1,6 +1,4 @@
-"""
-bone_drivers.py
-"""
+""" bone_drivers.py """
 
 import json
 import os
@@ -8,11 +6,9 @@ import random
 import time
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
-
 from bone_core import LoreManifest, ux
 from bone_presets import BoneConfig
 from bone_types import PhysicsPacket
-
 
 class SoulDriver:
     def __init__(self, soul_ref, config_ref=None):
@@ -235,7 +231,6 @@ class DriverRegistry:
         self.enneagram = EnneagramDriver(events_ref, config_ref=self.cfg)
         self.current_focus = "NONE"
 
-
 class LiminalModule:
     def __init__(self, config_ref=None, lexicon_ref=None):
         self.cfg = config_ref or BoneConfig
@@ -262,16 +257,14 @@ class LiminalModule:
             for i in range(len(categories) - 1):
                 c1, c2 = categories[i], categories[i + 1]
                 if c1 and c2 and c1 != c2:
-                    if (
-                            c1 in ["heavy", "kinetic"]
+                    if (c1 in ["heavy", "kinetic"]
                             and c2 in ["abstract", "liminal", "void"]
                     ) or (c1 in ["abstract", "liminal", "void"] and c2 in ["heavy"]):
                         dark_matter_sparks += 1
         dark_matter_lambda = min(1.0, dark_matter_sparks * dm_weight)
         vector_lambda = 0.0
         if physics_vector:
-            vector_lambda = (
-                    (physics_vector.get("PSI", 0) * psi_mult)
+            vector_lambda = ((physics_vector.get("PSI", 0) * psi_mult)
                     + (physics_vector.get("ENT", 0) * ent_mult)
                     + (physics_vector.get("DEL", 0) * del_mult))
         raw_target = lexical_lambda + dark_matter_lambda + vector_lambda
@@ -389,8 +382,7 @@ class BoneConsultant:
         b_growth = getattr(cfg, "VSL_B_GROWTH", 0.2) if cfg else 0.2
         word_count = len(user_text.split())
         self.state.E = min(1.0, self.state.E + (word_count * e_growth))
-        if bio_state and "fatigue" in bio_state:
-            self.state.E = max(self.state.E, bio_state["fatigue"] * fatigue_mult)
+        if bio_state and "fatigue" in bio_state:self.state.E = max(self.state.E, bio_state["fatigue"] * fatigue_mult)
         phys_beta = 0.0
         phys_vec = {}
         drag = 0.0
@@ -401,12 +393,9 @@ class BoneConsultant:
                 phys_vec = physics.get("vector", physics.get("matter", {}).get("vector", {}))
                 drag = physics.get("narrative_drag", physics.get("space", {}).get("narrative_drag", 0.0))
             else:
-                phys_beta = getattr(physics, "beta_index",
-                                    getattr(physics.energy, "beta_index", 0.0) if hasattr(physics, "energy") else 0.0)
-                phys_vec = getattr(physics, "vector",
-                                   getattr(physics.matter, "vector", {}) if hasattr(physics, "matter") else {})
-                drag = getattr(physics, "narrative_drag",
-                               getattr(physics.space, "narrative_drag", 0.0) if hasattr(physics, "space") else 0.0)
+                phys_beta = getattr(physics, "beta_index", getattr(physics.energy, "beta_index", 0.0) if hasattr(physics, "energy") else 0.0)
+                phys_vec = getattr(physics, "vector", getattr(physics.matter, "vector", {}) if hasattr(physics, "matter") else {})
+                drag = getattr(physics, "narrative_drag", getattr(physics.space, "narrative_drag", 0.0) if hasattr(physics, "space") else 0.0)
         self.state.B = (self.state.B * b_decay) + (phys_beta * b_growth)
         self.state.L = self.liminal_mod.analyze(user_text, phys_vec)
         self.state.O = self.syntax_mod.analyze(user_text, drag)
@@ -426,16 +415,14 @@ class BoneConsultant:
         par_min = getattr(cfg, "VSL_PARADOX_B_MIN", 0.6) if cfg else 0.6
         if "LIMINAL" in self.state.active_modules or self.state.L > lim_thresh:
             scar_temp = ux("driver_strings", "vsl_scar_note") 
-            scar_note = (
-                scar_temp.format(scars=self.liminal_mod.godel_scars)
+            scar_note = (scar_temp.format(scars=self.liminal_mod.godel_scars)
                 if self.liminal_mod.godel_scars > 0
                 else "")
             msg = ux("driver_strings", "vsl_arch_revenant") 
             directives.append(msg.format(scar_note=scar_note))
         elif "SYNTAX" in self.state.active_modules or self.state.O > syn_thresh:
             stress_temp = ux("driver_strings", "vsl_stress_note") 
-            stress_note = (
-                stress_temp if self.syntax_mod.grammatical_stress > 0.5 else "")
+            stress_note = (stress_temp if self.syntax_mod.grammatical_stress > 0.5 else "")
             msg = ux("driver_strings", "vsl_arch_bureau") 
             directives.append(msg.format(stress_note=stress_note))
         else:
@@ -542,8 +529,7 @@ class SharedLatticeDriver:
                            3: "There was a hush just now like something sacred passed through.",
                            4: "You were thinking deeply. I held the space for it."}
             if self.shared.lambda_silence > 0.3:
-                logs.append(
-                    f"{Prisma.GRY}... {silence_map.get(self.shared.sigma_silence, 'The silence settles.')}{Prisma.RST}")
+                logs.append(f"{Prisma.GRY}... {silence_map.get(self.shared.sigma_silence, 'The silence settles.')}{Prisma.RST}")
             if self.shared.phi > 0.85:
                 self.u.S_u = getattr(self.u, "S_u", 0.0) + 1.0
         else:

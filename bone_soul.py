@@ -53,7 +53,9 @@ class TraitVector:
         for t in self._TRAITS:
             val = getattr(self, t)
             target = 0.1 if t == "wisdom" else 0.5
-            setattr(self, t, max(0.0, min(1.0, val + ((target - val) * decay_rate))))
+            resistance = 1.0 - (1.5 * abs(val - target))
+            actual_decay = decay_rate * max(0.1, min(1.0, resistance))
+            setattr(self, t, max(0.0, min(1.0, val + ((target - val) * actual_decay))))
 
     def _clamp_all(self):
         for t in self._TRAITS:
@@ -68,7 +70,7 @@ class TheEditor:
     def critique(chapter_title: str, stress_mode: bool = False) -> str:
         narrative = {}
         if hasattr(LoreManifest, "get_instance"):
-            narrative = LoreManifest.get_instance().get("narrative_data") or {}
+            narrative = LoreManifest.get_instance().get("NARRATIVE_DATA") or {}
         reviews = narrative.get("LITERARY_REVIEWS", {})
         pos = reviews.get("POSITIVE", ["Valid."])
         neg = reviews.get("NEGATIVE", ["Invalid."])
@@ -139,7 +141,7 @@ class HumanityAnchor:
         seeds = []
         if hasattr(LoreManifest, "get_instance"):
             lore = LoreManifest.get_instance()
-            seeds = lore.get("SEEDS") or (lore.get("narrative_data") or {}).get("SEEDS", [])
+            seeds = lore.get("SEEDS") or (lore.get("NARRATIVE_DATA") or {}).get("SEEDS", [])
         riddles = seeds or [{"question": "Who are you?", "triggers": ["*"]}]
         selection = random.choice(riddles)
         riddle = selection.get("question", "Error?")
@@ -212,8 +214,8 @@ class NarrativeSelf:
         self.current_negate_cat: str = "none"
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("DREAM_COMPLETE", self._on_dream)
-        if hasattr(self, "events") and self.events:
             self.events.subscribe("SOUL_MUTATION", self._on_soul_mutation)
+            self.events.subscribe("TRAUMA_EVENT", self._on_trauma)
 
     def force_mutation(self, new_archetype: str):
         self.archetype = new_archetype.upper()
@@ -676,8 +678,7 @@ class TheOroboros:
             return "HEAVY"
 
         new_scars = []
-        death_scars = death_data.get("SCARS", {})
-        if entry := death_scars.get(cause_of_death):
+        if entry := death_data.get(cause_of_death):
             name, stat, val, default_desc = entry
             desc = default_desc
             v_key = get_verdict_key(cause_of_death)

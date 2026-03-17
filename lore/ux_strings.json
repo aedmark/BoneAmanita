@@ -201,7 +201,7 @@
     "recover": "Zen mode. Stamina regenerating."
   },
   "help_menu": {
-    "header": "/// BONEAMANITA 17.5.0 TERMINAL ///",
+    "header": "/// BONEAMANITA 17.6.0 TERMINAL ///",
     "phase_prefix": "Operating Phase: ",
     "default_phase": "EXTANT",
     "footer": ">> Use wisely. Entropy is watching.",
@@ -612,7 +612,7 @@
   },
   "main_strings": {
     "term_header_top": "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510",
-    "term_header_mid": "\u2502 BONEAMANITA TERMINAL // VERSION 17.5.0   \u2502",
+    "term_header_mid": "\u2502 BONEAMANITA TERMINAL // VERSION 17.6.0   \u2502",
     "term_header_bot": "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518",
     "init_hash": "...Initializing KernelHash: {hash}...",
     "sys_listening": ">>> SYSTEM: LISTENING",

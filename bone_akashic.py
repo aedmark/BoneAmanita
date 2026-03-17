@@ -1,4 +1,4 @@
-""" bone_akashic.py"""
+""" bone_akashic.py """
 
 import json
 import os
@@ -134,8 +134,8 @@ class TheAkashicRecord:
             physics = payload.get("physics", {})
             trigram = self._extract_dominant_trigram(physics)
             active_lens = payload.get("lens", "OBSERVER")
-            lenses_data = self.lore.get("LENSES") or {}
-            resonances = lenses_data.get("_META_RESONANCE_", [])
+            narrative_data = self.lore.get("NARRATIVE_DATA") or {}
+            resonances = narrative_data.get("_META_RESONANCE_", [])
             for resonance in resonances:
                 if resonance.get("trigram") == trigram:
                     target_lens = resonance.get("lens", resonance.get("soul"))
@@ -247,8 +247,6 @@ class TheAkashicRecord:
                 msg = ux("akashic_strings", "state_load_failed")
                 print(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
         if not data:
-            data = self.lore.get("MYTHOS")
-        if not data:
             return
         raw_cooc = data.get("lens_cooccurrence", {})
         for k, v in raw_cooc.items():
@@ -314,7 +312,7 @@ class TheAkashicRecord:
             return
         roots = sorted([lens_a.replace("THE ", ""), lens_b.replace("THE ", "")])
         new_name = f"THE {roots[0]}-{roots[1]}"
-        existing_lenses = self.lore.get("LENSES") or {}
+        existing_lenses = self.lore.get("NARRATIVE_DATA") or {}
         if new_name in existing_lenses:
             return
 

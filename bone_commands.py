@@ -1,4 +1,4 @@
-"""bone_commands.py"""
+""" bone_commands.py """
 
 import shlex
 from typing import Dict, Callable, List, Optional
@@ -178,6 +178,7 @@ class CommandProcessor:
         self.registry.register("/grief", self._cmd_grief, _cd("grief") or "Attends the wake for a consumed memory")
         self.registry.register("/layer", self._cmd_layer, _cd("layer") or "Manipulates the Reality Stack depth")
         self.registry.register("/inject", self._cmd_inject, _cd("inject") or "Forces payload into the EventBus")
+        self.registry.register("/trauma", self._cmd_trauma, "DEV: Spikes trauma and drops health to test The Therapist.")
 
     def execute(self, text: str):
         if hasattr(self.interface.eng, "reality_stack"):
@@ -268,7 +269,7 @@ class CommandProcessor:
         res = self.interface.save_state()
         cfg = getattr(self.interface.Config, "COMMANDS", None)
         error_flags = getattr(cfg, "SAVE_ERROR_FLAGS", ["Error", "Failed", "Exception"])
-        if any(flag in res for flag in error_flags):
+        if not res or any(flag in str(res) for flag in error_flags):
             msg = ux("command_alerts", "save_failed")
             self.interface.log(f"{self.P.RED}{msg.format(res=res)}{self.P.RST}")
         else:
@@ -418,16 +419,14 @@ class CommandProcessor:
         return True
 
     def _cmd_idle(self, _parts):
-        self.interface.eng.mode_settings["atp_drain_enabled"] = False
         self.interface.modify_resource("stamina", 15.0)
         self.interface.modify_resource("atp", 20.0)
-
         dream_log = ""
-        if hasattr(self.interface.eng, "cortex") and hasattr(self.interface.eng.cortex, "dreamer"):
+        if hasattr(self.interface.eng, "mind") and hasattr(self.interface.eng.mind, "dreamer"):
             snapshot = self.interface.eng.soul.to_dict() if hasattr(self.interface.eng, "soul") else {}
             bio_state = self.interface.eng.bio.endo.get_state() if hasattr(self.interface.eng, "bio") and hasattr(
                 self.interface.eng.bio, "endo") else {}
-            dream_text, effects = self.interface.eng.cortex.dreamer.enter_rem_cycle(snapshot, bio_state)
+            dream_text, effects = self.interface.eng.mind.dreamer.enter_rem_cycle(snapshot, bio_state)
             if dream_text:
                 dream_log = f"\n\n{self.P.VIOLET}☁️ {dream_text}{self.P.RST}"
                 if effects and effects.get("glimmers"):
@@ -437,7 +436,6 @@ class CommandProcessor:
                     elif hasattr(self.interface.eng, "phys"):
                         self.interface.eng.phys.G = getattr(self.interface.eng.phys, "G", 0) + g_yield
                     dream_log += f"\n{self.P.MAG}✨ The dream yielded a Glimmer (+{g_yield} G_pool).{self.P.RST}"
-
         self.interface.log(
             f"{self.P.CYN}[SYSTEM] Engine idling. REM cycle initiated. ATP regenerating.{self.P.RST}{dream_log}")
         return True
@@ -487,4 +485,12 @@ class CommandProcessor:
         payload = " ".join(parts[1:])
         self.interface.log(payload, "INJECT")
         self.interface.log(ux("main_strings", "injected").format(payload=payload))
+        return True
+
+    def _cmd_trauma(self, _parts):
+        self.interface.eng.health = 20.0
+        self.interface.eng.trauma_accum["SYNTHETIC_CRISIS"] = 50.0
+        if hasattr(self.interface.eng, "events"):
+            self.interface.eng.events.publish("TRAUMA_EVENT", {"magnitude": 50.0})
+        self.interface.log(f"{self.P.RED}[DEV] Health dropped to 20. Trauma spiked to 50. Proceed to next turn.{self.P.RST}", "SYS")
         return True

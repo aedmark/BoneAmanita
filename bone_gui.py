@@ -10,7 +10,6 @@ import markdown
 def render_markdown(text: str) -> str:
     return markdown.markdown(text, extensions=['extra'])
 
-
 def beautify_thoughts(text: str) -> str:
     def replacer(match):
         content = match.group(1).strip()
@@ -52,8 +51,7 @@ class Projector:
             labels = ux("projector", "default_labels", {})
         physics = physics_ctx.get("physics", {})
         show_vitals = data_ctx.get("show_vitals", True)
-        status_line = self._render_vital_strip(data_ctx, mind_ctx,
-                                               labels) if show_vitals else self._render_minimal_strip(mind_ctx)
+        status_line = self._render_vital_strip(data_ctx, mind_ctx, labels) if show_vitals else self._render_minimal_strip(mind_ctx)
         physics_line = ""
         if labels.get("SHOW_PHYSICS", True):
             physics_line = self._render_physics_strip(physics, data_ctx.get("vectors", {}))
@@ -68,8 +66,7 @@ class Projector:
         i_div = sym.get("divider", "")
         show_location = data_ctx.get("show_location", True)
         if show_location:
-            zone = self._extract(
-                physics, "space", "zone", ux("projector", "default_zone") or "UNKNOWN")
+            zone = self._extract(physics, "space", "zone", ux("projector", "default_zone") or "UNKNOWN")
             world_loc = data_ctx.get("world_loc", "UNKNOWN")
             display_loc = f"{world_loc.upper()[:20]} [{zone}]"
             i_loc = sym.get("loc", "")
@@ -138,8 +135,7 @@ class Projector:
             sem = float(getattr(dp, "semantic", 0.0) if hasattr(dp, "semantic") else dp.get("semantic", 0.0) or 0.0)
             met = float(getattr(dp, "metabolic", 0.0) if hasattr(dp, "metabolic") else dp.get("metabolic", 0.0) or 0.0)
             emo = float(getattr(dp, "emotional", 0.0) if hasattr(dp, "emotional") else dp.get("emotional", 0.0) or 0.0)
-            struc = float(
-                getattr(dp, "structural", 0.0) if hasattr(dp, "structural") else dp.get("structural", 0.0) or 0.0)
+            struc = float(getattr(dp, "structural", 0.0) if hasattr(dp, "structural") else dp.get("structural", 0.0) or 0.0)
             tra = float(getattr(dp, "trauma", 0.0) if hasattr(dp, "trauma") else dp.get("trauma", 0.0) or 0.0)
             parts = []
             if sem > 0: parts.append(f"Sem:{sem:.1f}")

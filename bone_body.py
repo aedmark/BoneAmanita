@@ -1,6 +1,4 @@
-"""
-bone_body.py
-"""
+""" bone_body.py """
 
 import math
 import random
@@ -8,11 +6,9 @@ import time
 from collections import deque, Counter
 from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, List, Any, Tuple
-
 from bone_core import Prisma, LoreManifest, ux
 from bone_presets import BoneConfig
 from bone_spores import ImmuneMycelium, BioLichen, BioParasite
-
 
 @dataclass
 class Biometrics:
@@ -55,6 +51,7 @@ class BioSystem:
     def setup_listeners(self):
         if self.events and hasattr(self.events, "subscribe"):
             self.events.subscribe("NEURAL_STATE_SHIFT", self._on_neural_shift)
+            self.events.subscribe("SUBSTRATE_FORGED", self.mito.on_substrate_forged)
             self.events.log("[BIO]: Vagus Nerve connected.", "SYS")
         narrative = LoreManifest.get_instance().get("BIO_NARRATIVE") or {}
         if self.mito:
@@ -188,6 +185,11 @@ class MitochondrialForge:
         if reason and (abs(delta) > 5.0 or self.state.atp_pool > 90.0):
             self.events.log(f"[ATP]: {reason} ({delta:+.1f})", "BIO")
 
+    def on_substrate_forged(self, payload: Dict):
+        cost = payload.get("cost", 0.0)
+        filename = payload.get("file", "unknown")
+        self.adjust_atp(-cost, f"Substrate Forging [{filename}]")
+
     def _get_text(self, key, **kwargs):
         tmpl = self.narrative.get(key, "")
         if not tmpl:
@@ -200,6 +202,7 @@ class MitochondrialForge:
     def _trigger_anaerobic_bypass(self, raw_cost: float) -> MetabolicReceipt:
         health_burn = 2.0
         self.state.ros_buildup += 2.0
+        self.adjust_atp(-20.0, "Anaerobic Burn")
         if self.events:
             msg = ux("mito_forge", "anaerobic_bypass")
             if msg: self.events.log(f"{Prisma.MAG}{msg.format(cost=raw_cost)}{Prisma.RST}", "BIO_WARN")
@@ -362,6 +365,9 @@ class DigestiveTrack:
         self.lex = lexicon_ref
         self.cfg = config_ref or BoneConfig
         self.enzyme_map = LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG", "ENZYME_MAP") or {}
+        if "heavy" not in self.enzyme_map:
+            self.enzyme_map.update(
+                {"heavy": "CELLULASE", "constructive": "CHITINASE", "aerobic": "LIGNASE", "meat": "PROTEASE"})
         self.SAMPLING_THRESHOLD = getattr(self.cfg.BIO, "SAMPLING_THRESHOLD", 1000)
         self.BASE_WORD_VALUE = getattr(self.cfg.BIO, "BASE_WORD_VALUE", 0.5)
         self.COMPLEX_WORD_BONUS = getattr(self.cfg.BIO, "COMPLEX_WORD_BONUS", 2.0)
@@ -606,6 +612,8 @@ class SomaticLoop:
         fb_dict["PSI"] = getattr(phys, "psi", 0.0)
         fb_dict["CHI"] = getattr(phys, "chi", 0.0)
         fb_dict["VALENCE"] = getattr(phys, "valence", 0.0)
+        fb_dict["INTEGRITY"] = semantic_sig.coherence
+        fb_dict["NOVELTY"] = semantic_sig.novelty
         chem_state = self.bio.endo.metabolize(feedback=fb_dict, health=b.health, stamina=b.stamina,
                                               ros_level=self.bio.mito.state.ros_buildup, receipt=receipt,
                                               harvest_hits=harvest_hits, stress_mod=stress_modifier, enzyme_type=enzyme,
@@ -765,7 +773,7 @@ class EndocrineSystem:
         if feedback.get("NOVELTY", 0) > nov_thresh:
             self.glimmers += 1
             self.dopamine += 0.1
-            return glimmer_text.get("DISCOVERY", "")
+            return glimmer_text.get("DISCOVERY", "GLIMMER: A novel connection formed. Discovery.")
         if harvest_hits > harv_min and self.dopamine > dop_min:
             self.glimmers += 1
             self.oxytocin += 0.2
@@ -923,16 +931,14 @@ class MetabolicGovernor:
             return self._check_override_safety(physics, gov_text)
         if (current_tick - self.last_shift_tick) < self.hysteresis_duration:
             return None
-        proposed = self._evaluate_state(physics, _voltage_history, current_tick)
+        proposed = self._evaluate_state(physics, _voltage_history)
         if proposed != self.mode:
             self.mode = proposed
             self.last_shift_tick = current_tick
             return self._get_shift_message(proposed, gov_text, physics)
         return None
 
-    def _evaluate_state(self, physics: Dict, v_history: List[float], tick: int) -> str:
-        if tick <= 5:
-            return "COURTYARD"
+    def _evaluate_state(self, physics: Dict, v_history: List[float]) -> str:
         volts = getattr(physics, "voltage", 0.0)
         drag = getattr(physics, "narrative_drag", 0.0)
         gov_high = getattr(self.cfg.BIO, "GOV_VOLTAGE_HIGH", 18.0)
@@ -981,7 +987,7 @@ class SynestheticCortex:
         self.bio = bio_ref
         self.cfg = config_ref or BoneConfig
         self.last_reflex = None
-        self.library = LoreManifest.get_instance(config_ref=self.cfg).get("BIO_NARRATIVE") or {}
+        self.library = LoreManifest.get_instance(config_ref=self.cfg).get("SOMATIC_LIBRARY") or {}
 
     @staticmethod
     def _normalize_physics(physics) -> Dict:

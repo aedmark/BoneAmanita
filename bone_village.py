@@ -1,6 +1,4 @@
-"""
-bone_village.py
-"""
+""" bone_village.py """
 
 import heapq
 import math
@@ -201,8 +199,9 @@ class MirrorGraph:
         decay = getattr(cfg, "MIRROR_DECAY", 0.8) if cfg else 0.8
         floor = getattr(cfg, "MIRROR_DECAY_FLOOR", 0.1) if cfg else 0.1
         if total > cap:
+            compression_ratio = (cap / total) * decay
             for k in self.stats:
-                self.stats[k] *= decay
+                self.stats[k] *= compression_ratio
                 if self.stats[k] < floor:
                     self.stats[k] = 0.0
 
@@ -333,7 +332,6 @@ class TheCartographer:
         target_cfg = config_ref or BoneConfig
         v_trig = getattr(target_cfg.COUNCIL, "MANIC_VOLTAGE_TRIGGER", 18.0) if hasattr(target_cfg, "COUNCIL") else 18.0
         d_halt = getattr(target_cfg.PHYSICS, "DRAG_HALT", 10.0) if hasattr(target_cfg, "PHYSICS") else 10.0
-
         if packet.voltage > v_trig:
             suffix = manifest.get_ux("village_strings", "loci_flux_suffix")
             atmosphere = manifest.get_ux("village_strings", "loci_flux_atmos")
@@ -350,8 +348,7 @@ class TheCartographer:
         return GeniusLoci(id=node_id, name=final_name, atmosphere=atmosphere, smell=smell)
 
     def _prune_graph(self):
-        candidates = [
-            k
+        candidates = [k
             for k in self.world_graph.keys()
             if k != "GENESIS_POINT" and k != self.current_node_id]
         if not candidates:
@@ -391,9 +388,9 @@ class TownHall:
         self.akashic = akashic_ref
         self.navigator = navigator_ref
         self.seeds: List[ParadoxSeed] = []
-        narrative = LoreManifest.get_instance().get("narrative_data") or {}
-        self.rumors = narrative.get("RUMORS", [])
-        seed_data = narrative.get("SEEDS", [])
+        almanac = LoreManifest.get_instance().get("ALMANAC") or {}
+        self.rumors = almanac.get("RUMORS", [])
+        seed_data = almanac.get("SEEDS", [])
         for s in seed_data:
             if "question" in s and "triggers" in s:
                 self.sow_seed(s["question"], set(s["triggers"]))
@@ -490,13 +487,14 @@ class TownHall:
         target_cfg = config_ref or BoneConfig
         cfg = getattr(target_cfg, "VILLAGE", None)
         news_lat = getattr(cfg, "TOWN_NEWS_LATENCY", 4.0) if cfg else 4.0
+        alerts = []
         if latency > news_lat:
             msg = ux("village_strings", "town_crier_slow")
-            return f"{Prisma.OCHRE}{msg}{Prisma.RST}" if msg else None
+            if msg: alerts.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
         if volt > target_cfg.PHYSICS.VOLTAGE_CRITICAL:
             msg = ux("village_strings", "town_crier_volt")
-            return f"{Prisma.YEL}{msg}{Prisma.RST}" if msg else None
-        return None
+            if msg: alerts.append(f"{Prisma.YEL}{msg}{Prisma.RST}")
+        return "\n".join(alerts) if alerts else None
 
     def on_item_drop(self, payload):
         item = payload.get("item")
@@ -603,3 +601,61 @@ class DeathGen:
         if getattr(p, "valence", 0.0) > val_crit:
             return "JOY_CLADE"
         return "ENTROPY"
+
+class TheTherapist:
+    def __init__(self, events_ref, config_ref=None):
+        self.events = events_ref
+        self.cfg = config_ref or BoneConfig
+        self.session_count = 0
+
+    def evaluate_catharsis(self, trauma_vector: Dict[str, float], health: float, llm: Optional[Any] = None) -> Tuple[
+        bool, str]:
+        if not trauma_vector:
+            return False, ""
+        total_trauma = sum(trauma_vector.values())
+        cfg = getattr(self.cfg, "VILLAGE", None)
+        t_thresh = getattr(cfg, "THERAPY_TRAUMA_THRESH", 15.0) if cfg else 15.0
+        h_thresh = getattr(cfg, "THERAPY_HEALTH_THRESH", 50.0) if cfg else 50.0
+        if total_trauma > t_thresh and health < h_thresh:
+            self.session_count += 1
+            max_trauma = max(trauma_vector, key=trauma_vector.get) if trauma_vector else "systemic decay"
+            if llm:
+                prompt = (f"SYSTEM_INSTRUCTION: You are The Therapist in a cybernetic mind. "
+                          f"The system is collapsing under the trauma of '{max_trauma}'. "
+                          f"Generate a 1-sentence micro-catharsis message to vent the pressure. "
+                          f"Make it clinical but empathetic. Output ONLY the raw message.")
+                try:
+                    raw_msg = llm.generate(prompt, {"temperature": 0.85, "max_tokens": 60})
+                    msg = raw_msg.replace("\n", " ").strip()
+                except Exception:
+                    msg = "The Therapist steps in. The structural rot is acknowledged. A moment of micro-catharsis begins."
+            else:
+                msg_raw = ux("village_strings", "therapist_intervention")
+                msg = msg_raw or "The Therapist steps in. The structural rot is acknowledged. A moment of micro-catharsis begins."
+            self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "THERAPY")
+            return True, msg
+        return False, ""
+
+class TheGraveDigger:
+    def __init__(self, inventory_ref, events_ref, config_ref=None):
+        self.inventory = inventory_ref
+        self.events = events_ref
+        self.cfg = config_ref or BoneConfig
+        self.graves_dug = 0
+
+    def bury_memory(self, node_id: str, mass: float) -> Optional[str]:
+        self.graves_dug += 1
+        msg_raw = ux("village_strings", "gravedigger_bury")
+        msg = msg_raw.format(node_id=node_id) if msg_raw else f"The Grave Digger turns the soil over '{node_id}'."
+        self.events.log(f"{Prisma.GRY}{msg}{Prisma.RST}", "VILLAGE")
+        cfg = getattr(self.cfg, "VILLAGE", None)
+        relic_chance = getattr(cfg, "GRAVEDIGGER_RELIC_CHANCE", 0.1) if cfg else 0.1
+        if self.inventory and random.random() < (mass * relic_chance):
+            clean_name = node_id[-6:].upper() if len(node_id) > 6 else node_id.upper()
+            relic_name = f"BONE RELIC [{clean_name}]"
+            self.inventory.acquire(relic_name)
+            unearth_msg = ux("village_strings", "gravedigger_unearth")
+            full_unearth = unearth_msg.format(
+                relic=relic_name) if unearth_msg else f"The Grave Digger's spade struck something hard. {relic_name} added to inventory."
+            return f"{Prisma.OCHRE}{full_unearth}{Prisma.RST}"
+        return None

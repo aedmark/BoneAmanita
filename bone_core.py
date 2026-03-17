@@ -1,6 +1,4 @@
-"""
-bone_core.py
-"""
+""" bone_core.py """
 
 import glob
 import json
@@ -49,7 +47,6 @@ class EventBus:
     def publish(self, event_type, data=None):
         if event_type not in self.subscribers:
             return
-
         for callback in list(self.subscribers[event_type]):
             try:
                 callback(data)
@@ -288,11 +285,10 @@ class RealityStack:
                 "allow_commands": depth >= RealityLayer.SIMULATION, "allow_meta": depth >= RealityLayer.DEBUG,
                 "raw_output": depth == RealityLayer.DEEP_CX, "system_override": depth == RealityLayer.DEBUG, }
 
-
 class CyberneticGovernor:
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
-        self.beth_index: float = 0.5  # ℶ (Cybernetic Index)
+        self.beth_index: float = 0.5
         self.order: int = 1
 
     def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
@@ -311,7 +307,6 @@ class CyberneticGovernor:
             return "CO_REGULATION"
         return "EFFICIENCY"
 
-
 class ArchetypeArbiter:
     @staticmethod
     def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Dict = None, config_ref=None) -> Tuple[str, str, str]:
@@ -326,8 +321,8 @@ class ArchetypeArbiter:
                 return soul_archetype, "SOUL", (msg.format(soul_archetype=soul_archetype) if msg else "")
         if trigram:
             trigram_name = trigram.get("name")
-            mythos = LoreManifest.get_instance().get("MYTHOS") or {}
-            rules = mythos.get("trigram_resonance", [])
+            narrative = LoreManifest.get_instance().get("NARRATIVE_DATA") or {}
+            rules = narrative.get("_META_RESONANCE_", [])
             for rule in rules:
                 if rule.get("trigram") == trigram_name:
                     required_lens = rule.get("lens")
@@ -346,7 +341,6 @@ class ArchetypeArbiter:
 
 class TelemetryService:
     _tracer_instance = None
-
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         cfg_core = getattr(self.cfg, "CORE", None)
@@ -461,7 +455,6 @@ class TelemetryService:
                             resp = data.get("final_response", "")
                             prompt = data.get("prompt_snapshot", "")
                             if not resp: continue
-
                             user_text = prompt.split("User:")[1].split("\n")[0].strip() if "User:" in prompt else "Unknown"
                             history.insert(0, f"User: {user_text} | System: {resp}")
                         except (json.JSONDecodeError, IndexError):

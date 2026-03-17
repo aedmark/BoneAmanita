@@ -1,6 +1,4 @@
-"""
-bone_protocols.py
-"""
+""" bone_protocols.py """
 
 import json
 import os
@@ -9,7 +7,6 @@ import re
 import time
 from collections import deque, Counter
 from typing import Dict, Tuple, Optional, Any
-
 from bone_core import LoreManifest, ux
 from bone_presets import BoneConfig
 from bone_types import Prisma
@@ -73,9 +70,8 @@ class TheBureau:
         self.forms = NARRATIVE_DATA.get("BUREAU_FORMS", ["Form 27B-6", "Form 404"])
         self.responses = NARRATIVE_DATA.get("BUREAU_RESPONSES", ["Processing..."])
         lex_data = LoreManifest.get_instance().get("LEXICON") or {}
-        raw_buzz = (lex_data.get("bureau_buzzwords") or lex_data.get("bureau_buzzwords") or [])
-        self.buzzwords = (
-            set(raw_buzz)
+        raw_buzz = lex_data.get("bureau_buzzwords") or []
+        self.buzzwords = (set(raw_buzz)
             if raw_buzz
             else {"synergy", "paradigm", "leverage", "utilize"})
         self.crimes = []
@@ -83,8 +79,7 @@ class TheBureau:
         if "PATTERNS" in self.crime_data:
             for p in self.crime_data["PATTERNS"]:
                 try:
-                    self.crimes.append(
-                        {"name": p.get("name", "Unknown Violation"), "regex": re.compile(p["regex"], re.IGNORECASE),
+                    self.crimes.append({"name": p.get("name", "Unknown Violation"), "regex": re.compile(p["regex"], re.IGNORECASE),
                          "msg": p.get("error_msg", "Style Violation Detected."), "tax": float(p.get("tax", 5.0)),
                          "action": p.get("action", None), })
                 except re.error as e:
@@ -160,6 +155,10 @@ class TheBureau:
                 tax = self.cfg.BUREAU.TAX_HEAVY
         if not selected_form:
             return None
+        if bio_state.get("health", 100.0) < 20.0:
+            return {"status": "WAIVED",
+                    "ui": f"{Prisma.CYN}[BUREAU]: Audit waived due to critical systemic instability.{Prisma.RST}",
+                    "log": "Audit waived (Mercy).", "atp_gain": 0.0}
         self.stamp_count += 1
         bureau_resp = random.choice(self.responses)
         prefix_str = ux("protocol_strings", "bureau_prefix_normal")
@@ -539,7 +538,6 @@ class TheFolly:
         self.gut_memory = deque(data.get("gut_memory", []), maxlen=50)
         self.global_tastings = Counter(data.get("global_tastings", {}))
 
-    @staticmethod
     def audit_desire(self, physics, stamina):
         def _get(p, k, d=0.0):
             if isinstance(p, dict):
@@ -651,8 +649,7 @@ class ChronosKeeper:
             last_speech = "Silence."
             if self.eng.cortex.dialogue_buffer:
                 last_speech = self.eng.cortex.dialogue_buffer[-1]
-            continuity_packet = {"location": loc, "last_output": last_speech,
-                                 "inventory": self.eng.gordon.inventory if self.eng.gordon else []}
+            continuity_packet = {"location": loc, "last_output": last_speech, "inventory": self.eng.gordon.inventory if self.eng.gordon else []}
             start_history = (history if history is not None else self.eng.cortex.dialogue_buffer)
             state_data = {"health": self.eng.health, "stamina": self.eng.stamina, "trauma_accum": self.eng.trauma_accum,
                           "soul_data": self.eng.soul.to_dict(), "village_data": self._gather_village_state(),

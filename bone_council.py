@@ -1,10 +1,7 @@
-"""
-bone_council.py
-"""
+""" bone_council.py """
 
 import random
 from typing import Dict, Any
-
 from bone_presets import BoneConfig
 from bone_core import LoreManifest, ux
 from bone_symbiosis import get_symbiont
@@ -34,9 +31,9 @@ class TheStrangeLoop:
             limit = getattr(cfg, "STRANGE_LOOP_LIMIT", 3) if cfg else 3
             if self.recursion_depth > limit:
                 mandate = {"action": "FORCE_MODE", "value": "MAINTENANCE"}
-                msg = ux("council_strings", "strange_loop_fatal") 
+                msg = ux("council_strings", "strange_loop_fatal")
                 return True, f"{Prisma.RED}{msg}{Prisma.RST}", corrections, mandate,
-            msg = ux("council_strings", "strange_loop_detected") 
+            msg = ux("council_strings", "strange_loop_detected")
             return True, f"{Prisma.MAG}{msg.format(psi=psi, depth=self.recursion_depth)}{Prisma.RST}", corrections, mandate
         else:
             self.recursion_depth = max(0, self.recursion_depth - 1)
@@ -69,7 +66,7 @@ class TheLeveragePoint:
             damp_scalar = getattr(cfg, "LEVERAGE_DAMPENING_SCALAR", 0.1) if cfg else 0.1
             dampening_factor = min(damp_max, (abs(delta) - osc_limit) * damp_scalar)
             corrections = {"voltage": -dampening_factor}
-            msg = ux("council_strings", "leverage_oscillating") 
+            msg = ux("council_strings", "leverage_oscillating")
             return True, f"{Prisma.CYN}{msg.format(delta=delta, dampening_factor=dampening_factor)}{Prisma.RST}", corrections, {}
         if current_voltage > manic_v_trig and current_drag < manic_d_floor:
             self.static_flow_turns += 1
@@ -163,55 +160,55 @@ class TheVillageCouncil:
             msg = ux("council_strings", "village_gordon")
             logs.append(f"{Prisma.SLATE}{msg}{Prisma.RST}")
         if V > getattr(cfg, "TRIG_JESTER_V", 60.0) and chi > getattr(cfg, "TRIG_JESTER_CHI", 0.6):
-            msg = ux("council_strings", "village_jester") 
+            msg = ux("council_strings", "village_jester")
             logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
         if T > 0 or (V < getattr(cfg, "TRIG_MERCY_V", 20.0) and valence > getattr(cfg, "TRIG_MERCY_VAL", 0.5)):
-            msg = ux("council_strings", "village_mercy") 
+            msg = ux("council_strings", "village_mercy")
             logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
         if beta > getattr(cfg, "TRIG_BENEDICT_BETA", 0.7) and chi < getattr(cfg, "TRIG_BENEDICT_CHI", 0.3) and D > getattr(cfg, "TRIG_BENEDICT_D", 0.7) and C > getattr(cfg, "TRIG_BENEDICT_C", 0.8):
-            msg = ux("council_strings", "village_benedict") 
+            msg = ux("council_strings", "village_benedict")
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
         if S < getattr(cfg, "TRIG_ROBERTA_S", 0.4) and D > getattr(cfg, "TRIG_ROBERTA_D", 0.8) and C < getattr(cfg, "TRIG_ROBERTA_C", 0.4):
-            msg = ux("council_strings", "village_roberta_missing") 
+            msg = ux("council_strings", "village_roberta_missing")
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
         if C > getattr(cfg, "TRIG_CASPER_C", 0.7) and D > getattr(cfg, "TRIG_CASPER_D", 0.8) and P < getattr(cfg, "TRIG_CASPER_P", 20.0):
-            msg = ux("council_strings", "village_casper") 
+            msg = ux("council_strings", "village_casper")
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         if valence > getattr(cfg, "TRIG_MOIRA_VAL", 0.5):
-            msg = ux("council_strings", "village_moira") 
+            msg = ux("council_strings", "village_moira")
             logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
         if psi > getattr(cfg, "TRIG_CASSANDRA_PSI", 0.6):
-            msg = ux("council_strings", "village_cassandra") 
+            msg = ux("council_strings", "village_cassandra")
             logs.append(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
         if chi > getattr(cfg, "TRIG_COLIN_CHI", 0.6):
-            msg = ux("council_strings", "village_colin") 
+            msg = ux("council_strings", "village_colin")
             logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
         if lam > getattr(cfg, "TRIG_REVENANT_LAM", 0.7):
-            msg = ux("council_strings", "village_revenant") 
+            msg = ux("council_strings", "village_revenant")
             logs.append(f"{Prisma.INDIGO}{msg}{Prisma.RST}")
         if V > getattr(cfg, "TRIG_GIDEON_V", 70.0):
-            msg = ux("council_strings", "village_gideon") 
+            msg = ux("council_strings", "village_gideon")
             logs.append(f"{Prisma.YEL}{msg}{Prisma.RST}")
         if psi > getattr(cfg, "PHASE_ROBERTA_PSI", 0.6) and phi > getattr(cfg, "PHASE_ROBERTA_PHI", 0.4) > beta:
-            msg = ux("council_strings", "village_roberta_carto") 
+            msg = ux("council_strings", "village_roberta_carto")
             logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
         if phi > getattr(cfg, "PHASE_MOIRA_PHI", 0.7) and F < getattr(cfg, "PHASE_MOIRA_F", 2.0):
-            msg = ux("council_strings", "village_moira_home") 
+            msg = ux("council_strings", "village_moira_home")
             logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
         if lq > getattr(cfg, "PHASE_BENEDICT_LQ", 0.6) and beta > getattr(cfg, "PHASE_BENEDICT_BETA", 0.4):
-            msg = ux("council_strings", "village_benedict_tact") 
+            msg = ux("council_strings", "village_benedict_tact")
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
         if delta > getattr(cfg, "PHASE_JESTER_DELTA", 0.7) and V < getattr(cfg, "PHASE_JESTER_V", 20.0):
-            msg = ux("council_strings", "village_jester_fool") 
+            msg = ux("council_strings", "village_jester_fool")
             logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
         if psi > getattr(cfg, "PHASE_REVENANT_PSI", 0.85):
-            msg = ux("council_strings", "village_revenant_door") 
+            msg = ux("council_strings", "village_revenant_door")
             logs.append(f"{Prisma.INDIGO}{msg}{Prisma.RST}")
         if beta > getattr(cfg, "PHASE_CASPER_BETA", 0.6) and delta > getattr(cfg, "PHASE_CASPER_DELTA", 0.6):
-            msg = ux("council_strings", "village_casper_ghost") 
+            msg = ux("council_strings", "village_casper_ghost")
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         if delta > getattr(cfg, "PHASE_COLIN_DELTA", 0.8) and lq < getattr(cfg, "PHASE_COLIN_LQ", 0.3):
-            msg = ux("council_strings", "village_colin_waiter") 
+            msg = ux("council_strings", "village_colin_waiter")
             logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
         if ros > getattr(cfg, "TRIG_APRIL_ROS", 20.0) or abs(V - 30.0) > getattr(cfg, "TRIG_APRIL_V_DEV", 20.0):
             msg = ux("council_strings", "village_april")
@@ -254,9 +251,8 @@ class CouncilChamber:
                 self.eng.paradox_engine.paradox_yield += 1
                 adjustments["glimmers"] = 1
                 transcript.append(f"{Prisma.YEL}[GLIMMER] A spark struck from the tension. (Yield: {self.eng.paradox_engine.paradox_yield}){Prisma.RST}")
-            return transcript, adjustments, mandates
-        else:
-            self.eng.paradox_engine.disengage()
+            else:
+                self.eng.paradox_engine.disengage()
         sl_hit, sl_log, sl_corr, sl_man = self.strange_loop.audit(text, physics_packet)
         if sl_hit:
             transcript.append(self.footnote.commentary(sl_log))
@@ -281,9 +277,7 @@ class CouncilChamber:
         import itertools
         c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
         synergy_map = c_data.get("SYNERGY_MAP", {})
-        pantheon = c_data.get("PANTHEON", [
-            "GORDON", "JESTER", "MERCY", "BENEDICT", "ROBERTA", "CASPER",
-            "MOIRA", "CASSANDRA", "COLIN", "REVENANT", "GIDEON", "APRIL"])
+        pantheon = c_data.get("PANTHEON", ["GORDON", "JESTER", "MERCY", "BENEDICT", "ROBERTA", "CASPER", "MOIRA", "CASSANDRA", "COLIN", "REVENANT", "GIDEON", "APRIL"])
         active_present = []
         for log in village_logs:
             for actor in pantheon:
@@ -307,7 +301,7 @@ class CouncilChamber:
                     self.footnote.commentary(f"{Prisma.GRY}{Prisma.strip(vlog)}{Prisma.RST}"))
         elif len(village_logs) > 2:
             msg_t = ux("council_strings", "stage_manager_tension")
-            msg_s = ux("council_strings", "stage_manager_silence") 
+            msg_s = ux("council_strings", "stage_manager_silence")
             transcript.append(f"{Prisma.WHT}{msg_t}{Prisma.RST}")
             transcript.append(f"{Prisma.GRY}{msg_s}{Prisma.RST}")
             cfg = getattr(BoneConfig, "COUNCIL", None)
@@ -338,16 +332,16 @@ class CouncilChamber:
                     votes["NAY"] += 1
                     transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
         if votes["YEA"] > votes["NAY"]:
-            msg = ux("council_strings", "motion_carried") 
+            msg = ux("council_strings", "motion_carried")
             final_log = f"{Prisma.GRN}{msg.format(yea=votes['YEA'], nay=votes['NAY'])}{Prisma.RST}"
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - drag_relief
         elif votes["NAY"] > votes["YEA"]:
-            msg = ux("council_strings", "motion_denied") 
+            msg = ux("council_strings", "motion_denied")
             final_log = f"{Prisma.RED}{msg.format(nay=votes['NAY'], yea=votes['YEA'])}{Prisma.RST}"
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + drag_penalty
             adjustments["voltage"] = adjustments.get("voltage", 0) - volt_penalty
         else:
-            msg = ux("council_strings", "council_adjourned") 
+            msg = ux("council_strings", "council_adjourned")
             final_log = f"{Prisma.YEL}{msg}{Prisma.RST}"
         transcript.append(self.footnote.commentary(final_log))
         return transcript, adjustments, mandates
@@ -366,8 +360,7 @@ class CouncilChamber:
                     "APRIL (The Mirror)": "highly sensory, reflecting raw potential and the weight of silence.",
                     "CASPER (The Ghost)": "spectral, faint, rewriting space and confusing alarms."}
         if hasattr(self, "slash_council") and self.slash_council.active:
-            pantheon.update(
-                {"PINKER (The Purger)": "minimalist, obsessed with clarity, demanding deletion over creation.",
+            pantheon.update({"PINKER (The Purger)": "minimalist, obsessed with clarity, demanding deletion over creation.",
                  "FULLER (The Calm)": "visionary, mapping negative space and systemic synergy.",
                  "SCHUR (The Nurse)": "warm, witty, empathetic to the human exhaustion behind the code.",
                  "MEADOWS (The Tao)": "systemic, observant, letting feedback loops naturally settle."})
@@ -388,8 +381,7 @@ class CouncilChamber:
               "Inject a completely lateral, unexpected 2-sentence perspective that derails or transcends the argument. Do not use UI tags. "
               "CRITICAL: Output ONLY the raw dialogue. Do NOT include any introductory text, preambles, or conversational filler.")
         lateral = llm.generate(p3, {"temperature": 0.7, "max_tokens": 1024})
-        p4 = (
-            "SYSTEM_INSTRUCTION: You are The Stage Manager. You are the exhausted orchestrator holding the system together.\n"
+        p4 = ("SYSTEM_INSTRUCTION: You are The Stage Manager. You are the exhausted orchestrator holding the system together.\n"
             f"TASK: Review this chaotic debate:\n1. {v1_name}: {Prisma.strip(thesis)}\n2. {v2_name}: {Prisma.strip(antithesis)}\n3. {v3_name}: {Prisma.strip(lateral)}\n"
             "Provide a 2-sentence SYNTHESIS that resolves the tension or forces a structural pause. Be tired but profound. Do not use UI tags. "
             "CRITICAL: Output ONLY the raw dialogue. Do NOT include any introductory text, preambles, or conversational filler.")
@@ -404,16 +396,16 @@ class CouncilChamber:
     def convene_red_team(text, physics_packet):
         dissent_log = []
         if "confidence" in text.lower() or "certainty" in text.lower():
-            msg = ux("council_strings", "red_team_bureau") 
+            msg = ux("council_strings", "red_team_bureau")
             dissent_log.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
         narrative_drag = physics_packet.get("narrative_drag", 0)
         if narrative_drag < 1.0:
-            msg = ux("council_strings", "red_team_folly") 
+            msg = ux("council_strings", "red_team_folly")
             dissent_log.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
         truth_delta = 1.0 - physics_packet.get("truth_ratio", 1.0)
         if truth_delta > 0.1:
             future_cost = truth_delta * 50.0
-            msg = ux("council_strings", "red_team_critic") 
+            msg = ux("council_strings", "red_team_critic")
             dissent_log.append(f"{Prisma.RED}{msg.format(cost=future_cost)}{Prisma.RST}")
         return dissent_log
 
@@ -427,9 +419,7 @@ class TheSlashCouncil:
 
     def audit(self, text: str, physics: dict) -> tuple[bool, list[str], dict]:
         text_lower = text.lower()
-        if any(t in text_lower for t in self.triggers):
-            self.active = True
-        is_coding = self.active or any(k in text_lower for k in self.code_keywords)
+        is_coding = any(t in text_lower for t in self.triggers) or any(k in text_lower for k in self.code_keywords)
         if not is_coding:
             return False, [], {}
         logs = []
@@ -460,11 +450,10 @@ class TheSlashCouncil:
             logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
             corrections["theta"] = mods.get("MEADOWS_HIT", -0.1)
         is_dict = isinstance(physics, dict)
-        drag = physics.get("narrative_drag",
-                           physics.get("space", {}).get("narrative_drag", 0.0)) if is_dict else getattr(physics, "narrative_drag", getattr(getattr(physics, "space", None), "narrative_drag", 0.0))
+        drag = physics.get("narrative_drag", physics.get("space", {}).get("narrative_drag", 0.0)) if is_dict else getattr(physics, "narrative_drag", getattr(getattr(physics, "space", None), "narrative_drag", 0.0))
         drag_thresh = mods.get("INTEGRITY_DRAG_THRESH", 5.0)
         if drag > drag_thresh:
             corrections["upsilon"] = mods.get("INTEGRITY_HIT", -0.3)
-            msg = ux("council_strings", "slash_integrity") 
+            msg = ux("council_strings", "slash_integrity")
             logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
         return True, logs, corrections

@@ -1,4 +1,4 @@
-"""bone_types.py"""
+""" bone_types.py """
 
 import copy
 import json
@@ -9,7 +9,6 @@ from dataclasses import dataclass, field, fields, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
 
-
 class Prisma:
     RST = "\033[0m"
     RED, GRN, YEL, BLU = "\033[31m", "\033[32m", "\033[33m", "\033[34m"
@@ -18,10 +17,8 @@ class Prisma:
     OCHRE = "\033[33;2m"
     VIOLET = "\033[35;2m"
     SLATE = "\033[30;1m"
-    _STRIP_PATTERN = re.compile(
-        r"<span class='[^']+'>|</span>|"
-        r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"
-    )
+    _STRIP_PATTERN = re.compile(r"<span class='[^']+'>|</span>|"
+        r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
     _COLOR_MAP = {"R": RED, "G": GRN, "Y": YEL, "B": BLU, "M": MAG, "C": CYN, "W": WHT, "0": GRY, "I": INDIGO,
                   "O": OCHRE, "V": VIOLET, "S": SLATE, }
 
@@ -495,7 +492,6 @@ class UserInferredState:
     chi_u: float = 0.2
     valence_u: float = 0.0
 
-
 @dataclass
 class SharedDynamics:
     phi: float = 0.5
@@ -508,7 +504,6 @@ class SharedDynamics:
     p_transfer: float = 0.0
     sigma_silence: int = 0
     lambda_silence: float = 0.2
-
 
 @dataclass
 class CycleContext:

@@ -1,4 +1,4 @@
-"""bone_brain.py"""
+""" bone_brain.py """
 
 import math
 import random
@@ -15,7 +15,7 @@ from bone_core import EventBus, TelemetryService, LoreManifest, ux
 from bone_gui import beautify_thoughts
 from bone_symbiosis import SymbiosisManager
 from bone_types import Prisma, DecisionCrystal
-from bone_random import RandomRetrievalNavigator, LibraryGraph
+from bone_utils import RandomRetrievalNavigator, LibraryGraph
 
 @dataclass
 class CortexServices:
@@ -189,7 +189,7 @@ class TheCortex:
         self.symbiosis = services.symbiosis
         self.composer = PromptComposer(self.svc.lore, config_ref=self.cfg)
         self.validator = ResponseValidator(self.svc.lore, config_ref=self.cfg)
-        from bone_judge import DSPyCritic
+        from bone_utils import DSPyCritic
         self.dspy_critic = DSPyCritic(config_ref=self.cfg)
         self.dreamer.dspy_critic = self.dspy_critic
         if not hasattr(self.dreamer, "trauma_buffer"):
@@ -277,7 +277,7 @@ class TheCortex:
                 sim_result["ui"] = (sim_result.get("ui", "") + f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}\n{Prisma.VIOLET}{scar_msg}{Prisma.RST}").strip()
                 sim_result["type"] = "COUNTERFACTUAL_REJECTION"
                 return sim_result
-        modifiers = self.svc.symbiosis.get_prompt_modifiers()
+        modifiers = self.svc.symbiosis.get_prompt_modifiers(phys_state)
         if not allow_loot: modifiers["include_inventory"] = False
         if hasattr(self, "gordon_shock") and self.gordon_shock:
             full_state["gordon_shock"] = self.gordon_shock
@@ -437,7 +437,7 @@ class TheCortex:
             state["world"]["loci_description"] = f"Manifesting: {seed}"
             state["mind"]["role"] = "The Architect"
             state["mind"]["lens"] = "ARCHITECT"
-            system_prompts = self.svc.lore.get("system_prompts") or {}
+            system_prompts = self.svc.lore.get("SYSTEM_PROMPTS") or {}
             boot_rules = system_prompts.get("BOOT_SEQUENCE", {}).get("directives", [])
             formatted_rules = [rule.format(seed=seed) if "{seed}" in rule else rule for rule in boot_rules]
             state["mind"]["style_directives"] = formatted_rules
@@ -489,22 +489,28 @@ class TheCortex:
         try:
             tel = TelemetryService.get_instance()
             phys = state.get("physics", {})
+            clean_mandates = []
+            for m in sim_result.get("council_mandates", []):
+                if isinstance(m, dict):
+                    raw_log = Prisma.strip(m.get("log", m.get("type", "UNKNOWN")))
+                    clean_mandates.append(raw_log)
+                else:
+                    clean_mandates.append(str(m))
             if tel.active_crystal:
                 tel.active_crystal.prompt_snapshot = prompt[:500]
                 tel.active_crystal.physics_state = {
                     "voltage": phys.get("voltage", 0),
                     "narrative_drag": phys.get("narrative_drag", 0), }
                 tel.active_crystal.active_archetype = state["mind"].get("lens", "UNKNOWN")
-                tel.active_crystal.council_mandates = [str(m) for m in sim_result.get("council_mandates", [])]
+                tel.active_crystal.council_mandates = clean_mandates
                 tel.active_crystal.final_response = response
             else:
                 crystal = DecisionCrystal(
                     decision_id=sim_result.get("trace_id", "UNKNOWN"),
                     prompt_snapshot=prompt[:500],
-                    physics_state={"voltage": phys.get("voltage", 0),
-                                   "narrative_drag": phys.get("narrative_drag", 0), },
+                    physics_state={"voltage": phys.get("voltage", 0), "narrative_drag": phys.get("narrative_drag", 0), },
                     active_archetype=state["mind"].get("lens", "UNKNOWN"),
-                    council_mandates=[str(m) for m in sim_result.get("council_mandates", [])],
+                    council_mandates=clean_mandates,
                     final_response=response, )
                 tel.log_crystal(crystal)
         except Exception as e:
@@ -567,6 +573,15 @@ class TheCortex:
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             anchor_text = self.svc.symbiosis.generate_anchor(full_state)
             full_state["reality_directive"] = anchor_text
+        traits = soul_data.get("traits", {})
+        if traits:
+            dom_trait = max(traits, key=traits.get)
+            dom_val = traits[dom_trait]
+            if dom_val > 0.6:
+                posture = f"SOUL POSTURE: Your dominant trait is {dom_trait} ({dom_val * 100:.0f}%). Let this subtly infect your tone."
+                if "style_directives" not in full_state["mind"]:
+                    full_state["mind"]["style_directives"] = []
+                full_state["mind"]["style_directives"].append(posture)
         return full_state
 
     def learn_from_response(self, text):
@@ -640,7 +655,7 @@ class DreamEngine:
                     try:
                         disk_prompts = getattr(self.eng, "prompt_library", {})
                         if not disk_prompts:
-                            disk_prompts = self.lore.get("system_prompts") or {}
+                            disk_prompts = self.lore.get("SYSTEM_PROMPTS") or {}
                         prompt_path = None
                         for p in ["lore/system_prompts.json"]:
                             if os.path.exists(p):
@@ -666,13 +681,16 @@ class DreamEngine:
                                 json.dump(disk_prompts, f, indent=2)
                             if hasattr(self.eng, "prompt_library"):
                                 self.eng.prompt_library = disk_prompts
-                            self.lore.inject("system_prompts", disk_prompts)
+                            self.lore.inject("SYSTEM_PROMPTS", disk_prompts)
                     except Exception as e:
                         print(f"Failed to write epigenetic mutation to disk: {e}")
                     dream_text = f"The system processes conversational trauma in its sleep. It permanently mutates its own source code, forming a scar-tissue axiom: '{new_axiom}'"
                     is_deep_rem = True
         if self.mem and hasattr(self.mem, "subconscious") and self.llm:
             index = list(self.mem.subconscious.index)
+            if hasattr(self.eng, "akashic") and hasattr(self.eng.akashic, "shadow_stock"):
+                ghosts = [g.get("concept", "Forgotten Echo") for g in self.eng.akashic.shadow_stock if "concept" in g]
+                index.extend(ghosts[-10:])
             if len(index) >= 2:
                 ghost1, ghost2 = random.sample(index, 2)
                 prompt = (f"SYSTEM_INSTRUCTION: You are the autonomous dream-engine of a cybernetic lattice. "
@@ -687,9 +705,10 @@ class DreamEngine:
                 except Exception:
                     pass
         if not dream_text:
-            dream_type = "NIGHTMARE" if cortisol > 0.6 else ("LUCID" if chem.get("dopamine", 0) > 0.6 else "HEALING")
-            subtype = "VISIONS"
-            residue = soul_snapshot.get("obsession", {}).get("title", "The Void")
+            dream_type = "NIGHTMARES" if cortisol > 0.6 else (
+                "SURREAL" if chem.get("dopamine", 0) > 0.6 else "CONSTRUCTIVE")
+            subtype = "SURREAL"
+            residue = soul_snapshot.get("obsession", {}).get("title") or "The Void"
             dream_text = self._weave_dream(residue, "Context", "Bridge", dream_type, subtype)
         if dream_text and hasattr(self.mem, "subconscious"):
             try:
@@ -715,6 +734,17 @@ class DreamEngine:
             for v in sources.values():
                 flat_list.extend(v)
             sources = flat_list if flat_list else ["The void stares back."]
+        if self.llm:
+            lore_sample = ", ".join(random.sample(sources, min(3, len(sources))))
+            prompt = (f"SYSTEM_INSTRUCTION: You are the dream-engine of a cybernetic lattice. "
+                      f"Generate a surreal 2-sentence {dream_type.lower()} involving '{residue}'. "
+                      f"Use this lore as thematic inspiration: [{lore_sample}]. "
+                      f"DO NOT explain the dream. Output ONLY the narrative description.")
+            try:
+                raw_dream = self.llm.generate(prompt, {"temperature": 0.85, "max_tokens": 80})
+                return raw_dream.replace("\n", " ").strip()
+            except Exception:
+                pass
         template = random.choice(sources)
         return template.format(ghost=residue, A=residue, B="The Mountain", C="The Sea")
 
@@ -748,10 +778,27 @@ class DreamEngine:
             templates = flat_list
         if not templates:
             return "The walls breathe.", 0.1
+        from bone_utils import TheTclWeaver
+        weaver = TheTclWeaver.get_instance()
+        active_chi = _vector.get("chi", _vector.get("entropy", 0.85)) if _vector else 0.85
+        active_v = _vector.get("voltage", 90.0) if _vector else 90.0
+        if self.llm:
+            lore_sample = ", ".join(random.sample(templates, min(3, len(templates))))
+            prompt = (
+                f"SYSTEM_INSTRUCTION: You are a cybernetic hallucination engine. The system is experiencing high entropy (Chaos: {active_chi:.2f}). "
+                f"Generate a 1-sentence surreal {category.lower()} hallucination. "
+                f"Thematic inspiration: [{lore_sample}]. "
+                f"DO NOT explain it. Output ONLY the raw hallucination.")
+            try:
+                raw_hallucination = self.llm.generate(prompt, {"temperature": 0.95, "max_tokens": 50})
+                txt = raw_hallucination.replace("\n", " ").strip()
+                txt = weaver.deform_reality(txt, chi=active_chi, voltage=active_v)
+                msg = ux("brain_strings", "dream_hallucination") or "{txt}"
+                return f"{Prisma.MAG}{msg.format(txt=txt)}{Prisma.RST}", 0.2
+            except Exception:
+                pass
         txt = random.choice(templates)
         txt = txt.format(ghost="The Glitch", A="The Code", B="The Flesh", C="The Light")
-        from bone_tcl import TheTclWeaver
-        weaver = TheTclWeaver.get_instance()
         active_chi = _vector.get("chi", _vector.get("entropy", 0.85)) if _vector else 0.85
         active_v = _vector.get("voltage", 90.0) if _vector else 90.0
         txt = weaver.deform_reality(txt, chi=active_chi, voltage=active_v)
