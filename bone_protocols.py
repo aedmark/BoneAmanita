@@ -7,7 +7,7 @@ import re
 import time
 from collections import deque, Counter
 from typing import Dict, Tuple, Optional, Any
-from bone_core import LoreManifest, ux
+from bone_core import LoreManifest, ux, safe_get, safe_set
 from bone_presets import BoneConfig
 from bone_types import Prisma
 
@@ -32,12 +32,8 @@ class ZenGarden:
         self.pebbles_collected = data.get("pebbles_collected", 0)
 
     def raking_the_sand(self, physics: Any, _bio: Dict) -> Tuple[float, Optional[str]]:
-        vol = (getattr(physics, "voltage", 0.0)
-            if not isinstance(physics, dict)
-            else physics.get("voltage", 0.0))
-        drag = (getattr(physics, "narrative_drag", 0.0)
-            if not isinstance(physics, dict)
-            else physics.get("narrative_drag", 0.0))
+        vol = float(safe_get(physics, "voltage", 0.0))
+        drag = float(safe_get(physics, "narrative_drag", 0.0))
         is_stable = (self.cfg.ZEN.VOLTAGE_MIN <= vol <= self.cfg.ZEN.VOLTAGE_MAX) and (drag <= self.cfg.ZEN.DRAG_MAX)
         if is_stable:
             self.stillness_streak += 1
@@ -86,7 +82,7 @@ class TheBureau:
                     err_msg = ux("protocol_strings", "bureau_compile_fail")
                     print(f"{Prisma.RED}{err_msg.format(name=p.get('name'), e=e)}{Prisma.RST}")
         scenarios = LoreManifest.get_instance().get("scenarios") or {}
-        self.cliches = set(scenarios.get("BANNED_CLICHES", []))
+        self.cliches = {str(c).lower() for c in scenarios.get("BANNED_CLICHES", [])}
 
     def to_dict(self) -> Dict[str, Any]:
         return {"stamp_count": self.stamp_count}
@@ -99,14 +95,18 @@ class TheBureau:
             return None
 
         def _get(p, k, d=0.0):
-            if isinstance(p, dict):
-                return p.get(k, p.get("energy", {}).get(k, p.get("matter", {}).get(k, p.get("space", {}).get(k, d))))
-            return getattr(p, k, d)
+            val = safe_get(p, k)
+            if val is None:
+                for sub in ["energy", "matter", "space"]:
+                    sub_obj = safe_get(p, sub)
+                    val = safe_get(sub_obj, k)
+                    if val is not None: break
+            return d if val is None else val
 
-        vol = _get(physics, "voltage", 0.0)
+        vol = float(_get(physics, "voltage", 0.0))
         clean_words = _get(physics, "clean_words", [])
         raw_text = str(_get(physics, "raw_text", ""))
-        truth = _get(physics, "truth_ratio", 0.0)
+        truth = float(_get(physics, "truth_ratio", 0.0))
         word_count = len(raw_text.split())
         if raw_text.startswith("/") or word_count < self.cfg.BUREAU.MIN_WORD_COUNT:
             return None
@@ -144,7 +144,8 @@ class TheBureau:
             tax = tax_chaos
         elif not selected_form:
             buzz_hits = [w for w in clean_words if w in self.buzzwords]
-            cliche_hits = [c for c in self.cliches if c.lower() in raw_text.lower()]
+            raw_text_lower = raw_text.lower()
+            cliche_hits = [c for c in self.cliches if c in raw_text_lower]
             if buzz_hits:
                 selected_form = random.choice(self.forms)
                 evidence = buzz_hits
@@ -229,9 +230,8 @@ class TherapyProtocol:
         self.streaks = data.get("streaks", {k: 0 for k in self.cfg.TRAUMA_VECTOR.keys()})
 
     def check_progress(self, phys, _stamina, current_trauma_accum, _qualia=None):
-        is_dict = isinstance(phys, dict)
-        counts = phys.get("counts", phys.get("matter", {}).get("counts", {})) if is_dict else getattr(phys, "counts", {})
-        vector = phys.get("vector", phys.get("matter", {}).get("vector", {})) if is_dict else getattr(phys, "vector", {})
+        counts = safe_get(phys, "counts", safe_get(safe_get(phys, "matter"), "counts", {}))
+        vector = safe_get(phys, "vector", safe_get(safe_get(phys, "matter"), "vector", {}))
         cfg_therapy = getattr(self.cfg, "THERAPY", None)
         str_req = getattr(cfg_therapy, "STRENGTH_REQ", 0.3) if cfg_therapy else 0.3
         t_reduct = getattr(cfg_therapy, "TRAUMA_REDUCTION", 0.5) if cfg_therapy else 0.5
@@ -278,12 +278,13 @@ class KintsugiProtocol:
     def attempt_repair(self, phys, trauma_accum, soul_ref=None, _qualia=None, lexicon_ref=None):
         if not self.active_koan:
             return {"success": False, "msg": "No active koan.", "healed": []}
-        is_dict = isinstance(phys, dict)
-        vol = float(phys.get("voltage", phys.get("energy", {}).get("voltage", 0.0)) if is_dict else getattr(phys, "voltage", 0.0))
-        raw_text = phys.get("raw_text", phys.get("matter", {}).get("raw_text", "")) if is_dict else getattr(phys, "raw_text", "")
+        vol = float(safe_get(phys, "voltage", safe_get(safe_get(phys, "energy"), "voltage", 0.0)))
+        raw_text = safe_get(phys, "raw_text", safe_get(safe_get(phys, "matter"), "raw_text", ""))
         if lexicon_ref:
             clean = lexicon_ref.sanitize(raw_text)
-            play_count = sum(1 for w in clean if w in lexicon_ref.get("play") or w in lexicon_ref.get("abstract"))
+            play_set = lexicon_ref.get("play") or []
+            abstract_set = lexicon_ref.get("abstract") or []
+            play_count = sum(1 for w in clean if w in play_set or w in abstract_set)
         else:
             clean = raw_text.split()
             play_count = 0
@@ -362,28 +363,20 @@ class GriefProtocol:
 
     def attend_wake(self, shared_lattice, phys) -> str:
         g_pool = shared_lattice.shared.g_pool if shared_lattice else 0
-        if isinstance(phys, dict):
-            sys_g = phys.get("G", phys.get("energy", {}).get("glimmers", 0))
-        else:
-            sys_g = getattr(phys, "G", 0)
-            if sys_g == 0 and hasattr(phys, "energy"):
-                sys_g = getattr(phys.energy, "glimmers", 0)
+        sys_g = int(safe_get(phys, "G", safe_get(safe_get(phys, "energy"), "glimmers", 0)))
+
         if g_pool >= 1 or sys_g >= 1:
             if g_pool >= 1 and shared_lattice:
                 shared_lattice.shared.g_pool -= 1
             elif phys:
-                if isinstance(phys, dict):
-                    if "G" in phys:
-                        phys["G"] -= 1
-                    elif "energy" in phys and "glimmers" in phys["energy"]:
-                        phys["energy"]["glimmers"] -= 1
+                if safe_get(phys, "G") is not None and safe_get(phys, "G") >= 1:
+                    safe_set(phys, "G", safe_get(phys, "G") - 1)
                 else:
-                    if hasattr(phys, "G"):
-                        phys.G -= 1
-                    elif hasattr(phys, "glimmers"):
-                        phys.glimmers -= 1
-                    elif hasattr(phys, "energy") and hasattr(phys.energy, "glimmers"):
-                        phys.energy.glimmers -= 1
+                    energy = safe_get(phys, "energy")
+                    if safe_get(energy, "glimmers") is not None and safe_get(energy, "glimmers") >= 1:
+                        safe_set(energy, "glimmers", safe_get(energy, "glimmers") - 1)
+                    else:
+                        safe_set(phys, "glimmers", safe_get(phys, "glimmers", 1) - 1)
             if shared_lattice:
                 shared_lattice.u.T_u = max(0.0, shared_lattice.u.T_u - 2.0)
             if self.eng and hasattr(self.eng, "trauma_accum"):
@@ -419,11 +412,13 @@ class TheCriticsCircle:
         rev_cd = getattr(cfg, "REVIEW_COOLDOWN", 10) if cfg else 10
         if turn_count - self.last_review_turn < rev_cd:
             return None
-        p = physics if isinstance(physics, dict) else getattr(physics, "__dict__", {})
-        voltage = p.get("voltage", 0.0)
-        drag = p.get("narrative_drag", 0.0)
-        if "velocity" not in p:
-            p["velocity"] = voltage * (1.0 / max(0.1, drag))
+
+        voltage = float(safe_get(physics, "voltage", 0.0))
+        drag = float(safe_get(physics, "narrative_drag", 0.0))
+        velocity = safe_get(physics, "velocity")
+        if velocity is None:
+            velocity = voltage * (1.0 / max(0.1, drag))
+
         best_match = None
         review_type = "neutral"
         for key, critic in self.critics.items():
@@ -435,12 +430,13 @@ class TheCriticsCircle:
                 metric_str = str(metric)
                 if metric_str.startswith("counts_"):
                     category = metric_str.replace("counts_", "")
-                    counts = p.get("counts", {})
-                    raw_count = counts.get(category, 0)
+                    counts = safe_get(physics, "counts", {})
+                    raw_count = counts.get(category, 0) if isinstance(counts, dict) else getattr(counts, category, 0)
                     max_contrib = getattr(cfg, "MAX_METRIC_CONTRIB", 5.0) if cfg else 5.0
                     current = min(max_contrib, raw_count * 0.5)
                 else:
-                    current = p.get(metric_str, 0.0)
+                    if metric_str == "velocity": current = velocity
+                    else: current = float(safe_get(physics, metric_str, 0.0))
                 if target > 0:
                     score += current * target
                 else:
@@ -499,9 +495,8 @@ class LimboLayer:
                     echo_msg = ux("protocol_strings", "limbo_echo")
                     self.ghosts.append(echo_msg.format(k=k))
         if "mutations" in data and "heavy" in data["mutations"]:
-            bones = list(data["mutations"]["heavy"])
-            random.shuffle(bones)
-            self.ghosts.extend(bones[:3])
+            bones = data["mutations"]["heavy"]
+            self.ghosts.extend(random.sample(bones, min(3, len(bones))))
 
     def trigger_stasis_failure(self, intended_thought):
         self.stasis_leak += 1.0
@@ -540,10 +535,14 @@ class TheFolly:
 
     def audit_desire(self, physics, stamina):
         def _get(p, k, d=0.0):
-            if isinstance(p, dict):
-                return p.get(k, p.get("energy", {}).get(k, p.get("space", {}).get(k, d)))
-            return getattr(p, k, d)
-        voltage = _get(physics, "voltage", 0.0)
+            val = safe_get(p, k)
+            if val is None:
+                for sub in ["energy", "space"]:
+                    sub_obj = safe_get(p, sub)
+                    val = safe_get(sub_obj, k)
+                    if val is not None: break
+            return d if val is None else val
+        voltage = float(_get(physics, "voltage", 0.0))
         if (voltage > self.cfg.FOLLY.MAUSOLEUM_VOLTAGE
                 and stamina > self.cfg.FOLLY.MAUSOLEUM_STAMINA):
             msg1 = ux("protocol_strings", "folly_mausoleum")
@@ -645,7 +644,7 @@ class ChronosKeeper:
                     and hasattr(self.eng.phys, "observer")
                     and getattr(self.eng.phys.observer, "last_physics_packet", None)):
                 last_pkt = self.eng.phys.observer.last_physics_packet
-                loc = last_pkt.get("zone", last_pkt.get("space", {}).get("zone", "Void")) if isinstance(last_pkt, dict) else getattr(last_pkt, "zone", "Void")
+                loc = safe_get(last_pkt, "zone", safe_get(safe_get(last_pkt, "space"), "zone", "Void"))
             last_speech = "Silence."
             if self.eng.cortex.dialogue_buffer:
                 last_speech = self.eng.cortex.dialogue_buffer[-1]
@@ -703,7 +702,7 @@ class ChronosKeeper:
                 and hasattr(self.eng.phys, "observer")
                 and getattr(self.eng.phys.observer, "last_physics_packet", None)):
             last_pkt = self.eng.phys.observer.last_physics_packet
-            loc = last_pkt.get("zone", last_pkt.get("space", {}).get("zone", "Void")) if isinstance(last_pkt, dict) else getattr(last_pkt, "zone", "Void")
+            loc = safe_get(last_pkt, "zone", safe_get(safe_get(last_pkt, "space"), "zone", "Void"))
         continuity_packet = {"location": loc, "last_output": (
             self.eng.cortex.dialogue_buffer[-1]
             if self.eng.cortex.dialogue_buffer

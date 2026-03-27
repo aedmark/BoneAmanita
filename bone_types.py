@@ -112,6 +112,11 @@ class EnergyState:
     mu: float = 0.0
     m_a: float = 0.0
     i_c: float = 1.0
+    h_s: float = 1.0
+    omega_r: float = 1.0
+    delta_t: float = 12.0
+    s_y: float = 0.5
+    r_a: float = 0.0
     entropy: float = 0.2
     mass: float = 0.0
     velocity: float = 0.0
@@ -325,6 +330,31 @@ class PhysicsPacket:
         self.energy.i_c = v
 
     @property
+    def h_s(self): return self.energy.h_s
+    @h_s.setter
+    def h_s(self, v): self.energy.h_s = v
+
+    @property
+    def omega_r(self): return self.energy.omega_r
+    @omega_r.setter
+    def omega_r(self, v): self.energy.omega_r = v
+
+    @property
+    def delta_t(self): return self.energy.delta_t
+    @delta_t.setter
+    def delta_t(self, v): self.energy.delta_t = v
+
+    @property
+    def s_y(self): return self.energy.s_y
+    @s_y.setter
+    def s_y(self, v): self.energy.s_y = v
+
+    @property
+    def r_a(self): return self.energy.r_a
+    @r_a.setter
+    def r_a(self, v): self.energy.r_a = v
+
+    @property
     def entropy(self):
         return self.energy.entropy
 
@@ -418,9 +448,10 @@ class PhysicsPacket:
 
         def _safe_init(cls, data):
             if isinstance(data, cls): return data
-            if not isinstance(data, dict): return cls()
+            if data is None: return cls()
+            from bone_core import safe_get
             valid_keys = {f.name for f in fields(cls)}
-            return cls(**{k: v for k, v in data.items() if k in valid_keys and v is not None})
+            return cls(**{k: safe_get(data, k) for k in valid_keys if safe_get(data, k) is not None})
         self.energy = _safe_init(EnergyState, energy)
         self.matter = _safe_init(MaterialState, matter)
         self.space = _safe_init(SpatialState, space)
@@ -474,6 +505,28 @@ class PhysicsPacket:
         return (hasattr(self, key) or hasattr(self.energy, key) or
                 hasattr(self.space, key) or hasattr(self.matter, key))
 
+    def __getattr__(self, key):
+        if key.startswith("_"):
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
+        if hasattr(self, "energy") and hasattr(self.energy, key): return getattr(self.energy, key)
+        if hasattr(self, "space") and hasattr(self.space, key): return getattr(self.space, key)
+        if hasattr(self, "matter") and hasattr(self.matter, key): return getattr(self.matter, key)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
+
+    def __setattr__(self, key, value):
+        if key in ["energy", "matter", "space", "drag_profile"]:
+            super().__setattr__(key, value)
+        elif hasattr(self.__class__, key) and isinstance(getattr(self.__class__, key), property):
+            super().__setattr__(key, value)
+        elif hasattr(self, "energy") and hasattr(self.energy, key):
+            setattr(self.energy, key, value)
+        elif hasattr(self, "space") and hasattr(self.space, key):
+            setattr(self.space, key, value)
+        elif hasattr(self, "matter") and hasattr(self.matter, key):
+            setattr(self.matter, key, value)
+        else:
+            super().__setattr__(key, value)
+
 @dataclass
 class UserInferredState:
     E_u: float = 0.5
@@ -491,6 +544,21 @@ class UserInferredState:
     psi_u: float = 0.3
     chi_u: float = 0.2
     valence_u: float = 0.0
+
+    @property
+    def E(self): return self.E_u
+    @property
+    def beta(self): return self.beta_u
+    @property
+    def V(self): return self.V_u
+    @property
+    def F(self): return self.F_u
+    @property
+    def H(self): return self.H_u
+    @property
+    def P(self): return self.P_u
+    @property
+    def T(self): return self.T_u
 
 @dataclass
 class SharedDynamics:

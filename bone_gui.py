@@ -3,12 +3,14 @@
 import re
 from typing import Dict, List, Any, Tuple
 from bone_presets import BoneConfig
-from bone_core import Prisma, ux
+from bone_core import Prisma, ux, safe_get
 from bone_physics import ChromaScope
 import markdown
 
 def render_markdown(text: str) -> str:
     return markdown.markdown(text, extensions=['extra'])
+
+_THOUGHT_PATTERN = re.compile(r"<(?:think|thought)>(.*?)(?:</(?:think|thought)>|$)", re.DOTALL | re.IGNORECASE)
 
 def beautify_thoughts(text: str) -> str:
     def replacer(match):
@@ -22,8 +24,7 @@ def beautify_thoughts(text: str) -> str:
         footer = f"{Prisma.CYN}  └─{Prisma.RST}"
         inner_content = "\n".join(fmt)
         return f"<div class='substrate-block'>{header}\n{inner_content}\n{footer}</div>"
-    pattern = re.compile(r"<(?:think|thought)>(.*?)(?:</(?:think|thought)>|$)", re.DOTALL | re.IGNORECASE)
-    return pattern.sub(replacer, text)
+    return _THOUGHT_PATTERN.sub(replacer, text)
 
 class Projector:
     def __init__(self, config_ref=None):
@@ -31,15 +32,20 @@ class Projector:
         self.width = 80
 
     @staticmethod
+    def _safe_val(obj, k, default):
+        v = safe_get(obj, k)
+        if v is None: return default
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return default
+
+    @staticmethod
     def _extract(physics_obj: Any, field: str, sub_field: str, default: Any = 0.0):
-        val = None
-        if hasattr(physics_obj, sub_field):
-            val = getattr(physics_obj, sub_field)
-        elif isinstance(physics_obj, dict):
-            if sub_field in physics_obj:
-                val = physics_obj[sub_field]
-            elif field in physics_obj and isinstance(physics_obj[field], dict):
-                val = physics_obj[field].get(sub_field)
+        val = safe_get(physics_obj, sub_field)
+        if val is None:
+            field_obj = safe_get(physics_obj, field)
+            val = safe_get(field_obj, sub_field)
         return default if val is None else val
 
     def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1,
@@ -130,13 +136,13 @@ class Projector:
         volt = float(self._extract(physics, "energy", "voltage", 0.0) or 0.0)
         drag = float(self._extract(physics, "space", "narrative_drag", 0.0) or 0.0)
         drag_profile_str = ""
-        if hasattr(physics, "drag_profile") or (isinstance(physics, dict) and "drag_profile" in physics):
-            dp = getattr(physics, "drag_profile", None) or physics.get("drag_profile", {})
-            sem = float(getattr(dp, "semantic", 0.0) if hasattr(dp, "semantic") else dp.get("semantic", 0.0) or 0.0)
-            met = float(getattr(dp, "metabolic", 0.0) if hasattr(dp, "metabolic") else dp.get("metabolic", 0.0) or 0.0)
-            emo = float(getattr(dp, "emotional", 0.0) if hasattr(dp, "emotional") else dp.get("emotional", 0.0) or 0.0)
-            struc = float(getattr(dp, "structural", 0.0) if hasattr(dp, "structural") else dp.get("structural", 0.0) or 0.0)
-            tra = float(getattr(dp, "trauma", 0.0) if hasattr(dp, "trauma") else dp.get("trauma", 0.0) or 0.0)
+        dp = safe_get(physics, "drag_profile")
+        if dp:
+            sem = float(safe_get(dp, "semantic", 0.0) or 0.0)
+            met = float(safe_get(dp, "metabolic", 0.0) or 0.0)
+            emo = float(safe_get(dp, "emotional", 0.0) or 0.0)
+            struc = float(safe_get(dp, "structural", 0.0) or 0.0)
+            tra = float(safe_get(dp, "trauma", 0.0) or 0.0)
             parts = []
             if sem > 0: parts.append(f"Sem:{sem:.1f}")
             if met > 0: parts.append(f"Met:{met:.1f}")
@@ -157,21 +163,12 @@ class Projector:
     def _get_lattice_val(self, physics: Any, keys: List[str], default: float) -> float:
         val = None
         for k in keys:
-            if isinstance(physics, dict):
-                val = physics.get(k)
-                if val is None:
-                    for sub in ["energy", "space", "matter"]:
-                        if sub in physics and k in physics[sub]:
-                            val = physics[sub][k]
-                            break
-            else:
-                val = getattr(physics, k, None)
-                if val is None:
-                    for sub in ["energy", "space", "matter"]:
-                        sub_obj = getattr(physics, sub, None)
-                        if sub_obj and hasattr(sub_obj, k):
-                            val = getattr(sub_obj, k)
-                            break
+            val = safe_get(physics, k)
+            if val is None:
+                for sub in ["energy", "space", "matter"]:
+                    sub_obj = safe_get(physics, sub)
+                    val = safe_get(sub_obj, k)
+                    if val is not None: break
             if val is not None: break
         try:
             return float(val) if val is not None else default
@@ -209,17 +206,10 @@ class Projector:
         shared_str = ""
         shared = data_ctx.get("shared_dyn")
         if shared:
-            def _safe_val(obj, k, default):
-                v = getattr(obj, k, None) if hasattr(obj, k) else obj.get(k) if isinstance(obj, dict) else None
-                if v is None: return default
-                try:
-                    return float(v)
-                except (ValueError, TypeError):
-                    return default
-            phi = _safe_val(shared, "phi", 0.5)
-            delta = _safe_val(shared, "delta", 0.0)
-            g_pool = int(_safe_val(shared, "g_pool", 0))
-            sigma = int(_safe_val(shared, "sigma_silence", 0))
+            phi = self._safe_val(shared, "phi", 0.5)
+            delta = self._safe_val(shared, "delta", 0.0)
+            g_pool = int(self._safe_val(shared, "g_pool", 0))
+            sigma = int(self._safe_val(shared, "sigma_silence", 0))
             shared_str = f" {Prisma.INDIGO}[Φ:{phi:.2f} ∇:{delta:.2f} (Σ{sigma}) G:{g_pool}]{Prisma.RST}"
         paradox_str = ""
         paradox = data_ctx.get("paradox")
@@ -320,9 +310,11 @@ class GeodesicRenderer:
                     world_loc = node.name
         else:
             world_loc = "OMNIPRESENT"
+        current_ui_depth = getattr(self.eng, "ui_mode", mode_settings.get("default_ui_depth", "WARM"))
+        if current_ui_depth == "IDLE": current_ui_depth = "WARM"
         data_ctx = {"health": self.eng.health, "stamina": self.eng.stamina, "bio": bio_data, "dignity": (
             getattr(self.eng.soul.anchor, "dignity_reserve", 100.0) if hasattr(self.eng, "soul") else 100.0),
-                    "vectors": physics.get("vector", {}), "ui_depth": mode_settings.get("default_ui_depth", "IDLE"),
+                    "vectors": physics.get("vector", {}), "ui_depth": current_ui_depth,
                     "world_loc": world_loc, "show_vitals": mode_settings.get("show_vitals", True),
                     "show_location": mode_settings.get("show_location", True)}
         if hasattr(ctx, "shared_dyn"):
@@ -381,7 +373,8 @@ class GeodesicRenderer:
             if e and e.get("text"):
                 all_logs.append(e["text"])
         mode_settings = self.eng.config.get("mode_settings", {}) if hasattr(self, "eng") else {}
-        if mode_settings.get("default_ui_depth", "IDLE") == "WARM":
+        current_ui_depth = getattr(self.eng, "ui_mode", mode_settings.get("default_ui_depth", "WARM"))
+        if current_ui_depth in ["IDLE", "WARM"]:
             muted_tags = ["[BIO]", "[CRITIC]", "[SYS]", "[MERCY]", "(The system feels"]
             all_logs = [l for l in all_logs if not any(tag in l for tag in muted_tags)]
         if not all_logs:
@@ -650,9 +643,10 @@ class CycleReporter:
         if not hasattr(self.eng, "somatic"):
             return
         qualia = self.eng.somatic.get_current_qualia(getattr(ctx, "last_impulse", None))
-        ctx.logs.insert(0, f"{Prisma.GRY}({qualia.internal_monologue_hint}){Prisma.RST}")
         l_sens = ux("cycle_reporter", "sensation_prefix") or "Felt:"
-        ctx.logs.insert(0, f"{qualia.color_code}{l_sens} {qualia.somatic_sensation} [{qualia.tone}]{Prisma.RST}", )
+        somatic_block = [f"{qualia.color_code}{l_sens} {qualia.somatic_sensation} [{qualia.tone}]{Prisma.RST}",
+            f"{Prisma.GRY}({qualia.internal_monologue_hint}){Prisma.RST}"]
+        ctx.logs[:0] = somatic_block
 
     @staticmethod
     def _inject_flux_readout(ctx):
@@ -677,11 +671,8 @@ class CycleReporter:
                 f"   {Prisma.GRY}{pipe}{Prisma.RST} {icon} {e['metric'][:3].upper()} {color}{arrow} {d:.1f}{Prisma.RST} ({e['reason']})")
         if significant:
             h_flux = ux("cycle_reporter", "flux_header") or "SYSTEM FLUX DETECTED:"
-            ctx.logs.insert(0, "")
-            ctx.logs.insert(1, f" {Prisma.GRY}{h_flux}{Prisma.RST}")
-            for line in reversed(significant):
-                ctx.logs.insert(2, line)
-            ctx.logs.insert(2 + len(significant), f" {Prisma.GRY}{footer}{Prisma.RST}")
+            flux_block = ["", f" {Prisma.GRY}{h_flux}{Prisma.RST}"] + significant + [f" {Prisma.GRY}{footer}{Prisma.RST}"]
+            ctx.logs[:0] = flux_block
 
     def _package_bureaucracy(self, ctx):
         if not self.eng.bureau:

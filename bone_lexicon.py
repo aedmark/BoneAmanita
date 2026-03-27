@@ -85,8 +85,7 @@ class LexiconStore:
         return combined
 
     def get_categories_for_word(self, word: str) -> Set[str]:
-        w = word.lower()
-        return self.REVERSE_INDEX.get(w, set()).copy()
+        return self.REVERSE_INDEX.get(word.lower(), set())
 
     def teach(self, word: str, category: str, tick: int) -> bool:
         w = word.lower()
@@ -124,6 +123,17 @@ class LinguisticAnalyzer:
         self.thresholds = ling_data.get("THRESHOLDS", {"heavy_density": 0.55, "play_vitality": 0.6, "kinetic_flow": 0.6, })
         self.biases = ling_data.get("BIASES", {"heavy": 1.0, "play": 1.0, "kinetic": 1.0})
         self.dimension_map = ling_data.get("DIMENSION_MAP", {})
+        self.char_to_sound = {char: sound for sound, chars in self.PHONETICS.items() for char in chars}
+        self._compile_antigens()
+
+    def _compile_antigens(self):
+        reps = getattr(self.store, "ANTIGEN_REPLACEMENTS", {})
+        if reps:
+            patterns = sorted(reps.keys(), key=len, reverse=True)
+            escaped = [fr"\b{re.escape(str(p))}\b" for p in patterns]
+            self.ANTIGEN_REGEX = re.compile("|".join(escaped), re.IGNORECASE)
+        else:
+            self.ANTIGEN_REGEX = None
 
     def measure_viscosity(self, word: str) -> float:
         if not word:
@@ -201,11 +211,10 @@ class LinguisticAnalyzer:
             normalized = text
         xlate = self._TRANSLATOR if self._TRANSLATOR else str.maketrans("", "")
         cleaned_text = normalized.translate(xlate).lower()
-        if hasattr(self.store, "ANTIGEN_REPLACEMENTS") and self.store.ANTIGEN_REPLACEMENTS:
-            from bone_lexicon import LexiconService
-            lex_svc = LexiconService()
-            if lex_svc._INITIALIZED:
-                cleaned_text = lex_svc.purge_toxins(cleaned_text)
+        if getattr(self, "ANTIGEN_REGEX", None):
+            def replacer(match):
+                return self.store.ANTIGEN_REPLACEMENTS.get(match.group(0).lower(), "")
+            cleaned_text = self.ANTIGEN_REGEX.sub(replacer, cleaned_text)
         words = cleaned_text.split()
         bias_set = getattr(self.store, "USER_FLAGGED_BIAS", set())
         return [w for w in words if w.strip() and w not in bias_set]
@@ -219,12 +228,8 @@ class LinguisticAnalyzer:
                 if root in w:
                     return category.lower(), 0.8
         counts = {k: 0 for k in self.PHONETICS}
-        char_to_sound = {
-            char: sound_type
-            for sound_type, chars in self.PHONETICS.items()
-            for char in chars}
         for char in w:
-            if sound_type := char_to_sound.get(char):
+            if sound_type := getattr(self, "char_to_sound", {}).get(char):
                 counts[sound_type] += 1
         density_score = (counts.get("PLOSIVE", 0) * 1.5) + (counts.get("NASAL", 0) * 0.8)
         flow_score = counts.get("LIQUID", 0) + counts.get("FRICATIVE", 0)
@@ -444,6 +449,8 @@ class LexiconService:
     def learn_antigen(self, word: str, replacement: str = ""):
         self._STORE.ANTIGEN_REPLACEMENTS[word] = replacement
         self.compile_antigens()
+        if self._ANALYZER:
+            self._ANALYZER._compile_antigens()
 
     def tune_perception(self, voltage: float, narrative_drag: float):
         if self._ANALYZER:

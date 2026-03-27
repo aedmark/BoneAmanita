@@ -4,7 +4,7 @@ from typing import Dict, Any, Set
 
 from bone_akashic import TheAkashicRecord
 from bone_presets import BoneConfig
-from bone_core import EventBus, LoreManifest, ux
+from bone_core import EventBus, LoreManifest, ux, safe_get, safe_set
 from bone_drivers import DriverRegistry, BoneConsultant
 from bone_inventory import GordonKnot
 from bone_machine import BoneArchitect
@@ -20,10 +20,10 @@ class BoneGenesis:
             config: Dict[str, Any], lexicon_ref: Any, events_ref: Any = None) -> Dict[str, Any]:
         events = events_ref or EventBus()
         if events_ref:
-            msg = ux("genesis_strings", "ignite_log") 
+            msg = ux("genesis_strings", "ignite_log")
             events.log(msg, "GENESIS")
         else:
-            msg = ux("genesis_strings", "ignite_print") 
+            msg = ux("genesis_strings", "ignite_print")
             print(msg)
         target_cfg = config.get("bone_config") or BoneConfig
         lore = LoreManifest.get_instance(config_ref=target_cfg)
@@ -34,7 +34,6 @@ class BoneGenesis:
         mode_settings = config.get("mode_settings", {})
         suppressed = set(mode_settings.get("village_suppression", []))
         boot_mode = config.get("boot_mode", "ADVENTURE")
-        target_cfg = config.get("bone_config") or BoneConfig
         village_bundle = BoneGenesis._summon_village(events, embryo, akashic, suppressed, boot_mode, target_cfg)
         soul = NarrativeSelf(engine_ref=None, events_ref=events, memory_ref=embryo.mind.mem, akashic_ref=akashic, config_ref=target_cfg)
         if embryo.soul_legacy:
@@ -54,11 +53,15 @@ class BoneGenesis:
             if logs:
                 msg_scars = ux("genesis_strings", "legacy_scars")
                 events.log(msg_scars.format(logs=", ".join(logs)), "OROBOROS")
+                applied_drag = dummy_phys.get("narrative_drag", 0.0)
                 if getattr(embryo.physics, "dynamics", None):
                     if hasattr(embryo.physics.dynamics, "base_drag"):
-                        embryo.physics.dynamics.base_drag += dummy_phys["narrative_drag"]
+                        embryo.physics.dynamics.base_drag += applied_drag
                     elif hasattr(embryo.physics.dynamics, "strain_gauge"):
-                        embryo.physics.dynamics.strain_gauge += (dummy_phys.get("narrative_drag", 0.0) * strain_scalar)
+                        embryo.physics.dynamics.strain_gauge += (applied_drag * strain_scalar)
+                else:
+                    curr_drag = float(safe_get(embryo.physics, "narrative_drag", 0.0))
+                    safe_set(embryo.physics, "narrative_drag", curr_drag + applied_drag)
                 if hasattr(embryo.mind, "mem"):
                     embryo.mind.mem.session_trauma_vector = safe_bio_proxy.get("trauma_vector", {})
         drivers = DriverRegistry(events, config_ref=target_cfg)

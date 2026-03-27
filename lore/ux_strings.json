@@ -201,7 +201,7 @@
     "recover": "Zen mode. Stamina regenerating."
   },
   "help_menu": {
-    "header": "/// BONEAMANITA 17.6.0 TERMINAL ///",
+    "header": "/// BONEAMANITA 18.1.0 TERMINAL ///",
     "phase_prefix": "Operating Phase: ",
     "default_phase": "EXTANT",
     "footer": ">> Use wisely. Entropy is watching.",
@@ -543,7 +543,11 @@
     "vsl_mode_bunny": "MODE: BUNNY HILL. Be warm, simple, welcoming.",
     "vsl_mode_paradox": "MODE: PARADOX. Hold contradictory truths. Be Jester-like.",
     "vsl_mode_glacier": "MODE: GLACIER. Deep, slow, resonant.",
-    "vsl_layer_muse": "NARRATIVE_LAYER: You are {arch}. MUSE: {muse}."
+    "vsl_layer_muse": "NARRATIVE_LAYER: You are {arch}. MUSE: {muse}.",
+    "silence_pregnant": "That pause felt full like something wanted to be born.",
+    "silence_exhausted": "The silence was heavy. I felt your tiredness in it.",
+    "silence_reverent": "There was a hush just now like something sacred passed through.",
+    "silence_strategic": "You were thinking deeply. I held the space for it."
   },
   "genesis_strings": {
     "ignite_log": "Igniting Genesis Sequence...",
@@ -603,7 +607,12 @@
       "volatility": 0.0,
       "mask": "DEFAULT",
       "glitch_factor": 0.0
-    }
+    },
+    "paradox_templates": [
+      "What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
+      "[RECURSIVE PARADOX] Apply the concept of '{seed}' to the architecture of this very conversation. How does the act of thinking about '{seed}' alter the physical constraints of our dialogue? Both are non-negotiable truths.",
+      "[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center. Both the center and the void are non-negotiable truths."
+    ]
   },
   "types_strings": {
     "crystal_icon": "💎",
@@ -612,7 +621,7 @@
   },
   "main_strings": {
     "term_header_top": "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510",
-    "term_header_mid": "\u2502 BONEAMANITA TERMINAL // VERSION 17.6.0   \u2502",
+    "term_header_mid": "\u2502 BONEAMANITA TERMINAL // VERSION 18.1.0   \u2502",
     "term_header_bot": "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518",
     "init_hash": "...Initializing KernelHash: {hash}...",
     "sys_listening": ">>> SYSTEM: LISTENING",

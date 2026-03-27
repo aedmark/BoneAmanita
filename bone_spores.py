@@ -8,7 +8,8 @@ import tempfile
 import time
 from collections import deque
 from typing import List, Tuple, Optional, Dict, Any
-from bone_core import EventBus, LoreManifest, BoneJSONEncoder, ux
+from bone_core import EventBus, LoreManifest, BoneJSONEncoder, ux, safe_get, safe_set
+from bone_ann import HippocampalCache, CerebralIndex
 from bone_presets import BoneConfig
 from bone_types import Prisma
 from bone_village import ParadoxSeed
@@ -223,7 +224,8 @@ class SubconsciousStrata:
             H = _householder(K)
             self.Q_n = _mat_mul(H, self.Q_n)
             self.Q_n = _reorthogonalize(self.Q_n)
-            self.save_matrix()
+            if not fossil_data.get("reconstructive", False):
+                self.save_matrix()
             return True
         except IOError:
             return False
@@ -297,8 +299,12 @@ class MemoryCore:
             connections = list(data.get("edges", {}).keys())
             conn_str = f" -> [{', '.join(connections[:2])}]" if connections else ""
             if active_dims and hasattr(self, "subconscious"):
-                for edge in list(data.get("edges", {}).keys()):
-                    data["edges"][edge] *= 0.95
+                is_diamond_node = data.get("is_diamond", False)
+                if not is_diamond_node:
+                    for edge in list(data.get("edges", {}).keys()):
+                        if self.graph.get(edge, {}).get("is_diamond", False):
+                            continue
+                        data["edges"][edge] *= 0.95
                 top_current_dim = max(active_dims, key=active_dims.get)
                 dim_words = list(self.dimension_map.get(top_current_dim, {"static"}))
                 if dim_words:
@@ -349,13 +355,18 @@ class MemoryCore:
             for dead in dead_links:
                 del edges[dead]
                 pruned_count += 1
-            if not edges:
+            if not edges and not self.graph[node].get("is_diamond", False):
                 nodes_to_remove.append(node)
         for n in nodes_to_remove:
             del self.graph[n]
             for other_node in self.graph.values():
                 if n in other_node["edges"]:
                     del other_node["edges"][n]
+        for node in self.graph:
+            edges = self.graph[node]["edges"]
+            dead_edges = [k for k in edges if k not in self.graph]
+            for dead in dead_edges:
+                del edges[dead]
         msg = ux("spore_strings", "core_pruned") or ""
         return msg.format(total=total_decayed, pruned=pruned_count) if msg else ""
 
@@ -370,7 +381,7 @@ class MemoryCore:
         protected.update(self.cortical_stack)
         candidates = []
         for k, v in self.graph.items():
-            if k in protected:
+            if k in protected or v.get("is_diamond", False):
                 continue
             edge_count = len(v["edges"])
             age = max(1, current_tick - v.get("last_tick", 0))
@@ -385,8 +396,6 @@ class MemoryCore:
         lifespan = current_tick - data.get("strata", {}).get("birth_tick", current_tick)
         fossil_data = {"word": victim, "mass": round(mass, 2), "lifespan": lifespan, "edges": data["edges"], "death_tick": current_tick, }
         self.subconscious.bury(fossil_data, config_ref=self.cfg)
-        if hasattr(self, 'events') and self.events and victim:
-            self.events.publish("AUTOPHAGY_EVENT", {"node": victim, "atp_gained": 15.0})
         del self.graph[victim]
         for node in self.graph:
             if victim in self.graph[node]["edges"]:
@@ -402,6 +411,8 @@ class MycelialNetwork:
         self.loader = loader if loader else LocalFileSporeLoader()
         self.session_id = f"session_{int(time.time())}"
         self.filename = f"{self.session_id}.json"
+        self.hippocampus = HippocampalCache(max_capacity=500)
+        self.cortex = CerebralIndex(dimension=8, index_type="HNSW")
         self.subconscious = SubconsciousStrata(filename=f"memories/subconscious_{self.session_id}.jsonl")
         self.memory_core = MemoryCore(events, self.subconscious, config_ref=self.cfg, lexicon_ref=self.lex)
         self.lichen = BioLichen(lexicon_ref=self.lex)
@@ -444,7 +455,7 @@ class MycelialNetwork:
 
     def run_ecosystem(self, physics: Any, stamina: float, tick: int) -> List[str]:
         logs = []
-        clean_words = physics.get("clean_words", []) if isinstance(physics, dict) else getattr(physics, "clean_words", getattr(getattr(physics, "matter", None), "clean_words", []))
+        clean_words = safe_get(physics, "clean_words", safe_get(safe_get(physics, "matter"), "clean_words", []))
         sugar, lichen_msg = self.lichen.photosynthesize(physics, clean_words, tick)
         if lichen_msg:
             logs.append(lichen_msg)
@@ -478,16 +489,10 @@ class MycelialNetwork:
                 total_drag_penalty += d_pen
                 echo_count += 1
         if echo_count > 0:
-            if isinstance(physics, dict):
-                v_targ = physics["energy"] if "energy" in physics else physics
-                d_targ = physics["space"] if "space" in physics else physics
-                v_targ["voltage"] = v_targ.get("voltage", physics.get("voltage", 0.0)) + total_voltage_boost
-                d_targ["narrative_drag"] = d_targ.get("narrative_drag", physics.get("narrative_drag", 0.0)) + total_drag_penalty
-            else:
-                v_targ = physics.energy if hasattr(physics, "energy") else physics
-                d_targ = physics.space if hasattr(physics, "space") else physics
-                if hasattr(v_targ, "voltage"): v_targ.voltage += total_voltage_boost
-                if hasattr(d_targ, "narrative_drag"): d_targ.narrative_drag += total_drag_penalty
+            v_targ = safe_get(physics, "energy", physics)
+            d_targ = safe_get(physics, "space", physics)
+            safe_set(v_targ, "voltage", safe_get(v_targ, "voltage", safe_get(physics, "voltage", 0.0)) + total_voltage_boost)
+            safe_set(d_targ, "narrative_drag", safe_get(d_targ, "narrative_drag", safe_get(physics, "narrative_drag", 0.0)) + total_drag_penalty)
             cfg = getattr(self.cfg, "SPORES", None)
             heavy_v = getattr(cfg, "ECHO_VOLTAGE_HEAVY", 4.0) if cfg else 4.0
             if total_voltage_boost > heavy_v:
@@ -503,6 +508,8 @@ class MycelialNetwork:
         if victim:
             cfg = getattr(self.cfg, "AKASHIC", None)
             atp_gain = getattr(cfg, "AUTOPHAGY_YIELD", 15.0) if cfg else 15.0
+            if hasattr(self.events, "publish"):
+                self.events.publish("AUTOPHAGY_EVENT", {"node": victim, "atp_gained": atp_gain})
             return atp_gain, msg
         return 0.0, msg
 
@@ -521,16 +528,10 @@ class MycelialNetwork:
         total_v_shift = min(15.0, total_v_shift)
         total_d_shift = min(5.0, total_d_shift)
         if haunted_words:
-            if isinstance(physics, dict):
-                v_targ = physics["energy"] if "energy" in physics else physics
-                d_targ = physics["space"] if "space" in physics else physics
-                v_targ["voltage"] = max(0.0, v_targ.get("voltage", physics.get("voltage", 0.0)) + total_v_shift)
-                d_targ["narrative_drag"] = max(0.0, d_targ.get("narrative_drag", physics.get("narrative_drag", 0.0)) + total_d_shift)
-            else:
-                v_targ = physics.energy if hasattr(physics, "energy") else physics
-                d_targ = physics.space if hasattr(physics, "space") else physics
-                if hasattr(v_targ, "voltage"): v_targ.voltage = max(0.0, v_targ.voltage + total_v_shift)
-                if hasattr(d_targ, "narrative_drag"): d_targ.narrative_drag = max(0.0, d_targ.narrative_drag + total_d_shift)
+            v_targ = safe_get(physics, "energy", physics)
+            d_targ = safe_get(physics, "space", physics)
+            safe_set(v_targ, "voltage", max(0.0, safe_get(v_targ, "voltage", safe_get(physics, "voltage", 0.0)) + total_v_shift))
+            safe_set(d_targ, "narrative_drag", max(0.0, safe_get(d_targ, "narrative_drag", safe_get(physics, "narrative_drag", 0.0)) + total_d_shift))
             msg = ux("spore_strings", "net_ghost_haunt") or "The ghosts of [{words}] alter the atmosphere (V:{v:+.2f}, D:{d:+.2f})."
             return f"{Prisma.VIOLET}{msg.format(words=', '.join(haunted_words).upper(), v=total_v_shift, d=total_d_shift)}{Prisma.RST}"
         return None
@@ -539,10 +540,7 @@ class MycelialNetwork:
         return self.memory_core.prune_synapses(scaling_factor, prune_threshold)
 
     def encode(self, clean_words, physics, governor_mode):
-        if isinstance(physics, dict):
-            significance = physics.get("voltage", physics.get("energy", {}).get("voltage", 0.0))
-        else:
-            significance = getattr(physics, "voltage", getattr(getattr(physics, "energy", None), "voltage", 0.0))
+        significance = float(safe_get(physics, "voltage", safe_get(safe_get(physics, "energy"), "voltage", 0.0)))
         if governor_mode == "FORGE":
             significance *= 2.0
         elif governor_mode == "LABORATORY":
@@ -779,9 +777,7 @@ class MycelialNetwork:
         top_joy = sorted(valid_joy, key=lambda x: x.get("resonance", 0), reverse=True)[:3]
         joy_legacy_data = None
         if top_joy:
-            joy_legacy_data = {"flavor": top_joy[0].get("dominant_flavor", "UNKNOWN"),
-                               "resonance": top_joy[0].get("resonance", 0),
-                               "timestamp": top_joy[0].get("timestamp", 0)}
+            joy_legacy_data = {"flavor": top_joy[0].get("dominant_flavor", "UNKNOWN"), "resonance": top_joy[0].get("resonance", 0), "timestamp": top_joy[0].get("timestamp", 0)}
         core_graph = {}
         for k, data in self.graph.items():
             filtered_edges = {}
@@ -796,10 +792,11 @@ class MycelialNetwork:
                      for s in self.seeds
                      if not s.bloomed]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
-        data = {"genome": "BONEAMANITA_17.6.0", "session_id": self.session_id, "parent_id": self.session_id, "meta": {
+        data = {"genome": "BONEAMANITA_18.1.0", "session_id": self.session_id, "parent_id": self.session_id, "meta": {
             "timestamp": time.time(), "final_health": health, "final_stamina": stamina, },
                 "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
-                "core_graph": core_graph, "mutations": mutations, "antibodies": list(antibodies) if antibodies else [],
+                "core_graph": core_graph, "mutations": mutations or {},
+                "antibodies": list(antibodies) if antibodies else [],
                 "mitochondria": mitochondria_traits, "soul_legacy": soul_data, "continuity": continuity,
                 "world_atlas": world_atlas or {}, "village_data": village_data, "seeds": seed_list,
                 "fossils": list(self.fossils), }
@@ -852,6 +849,19 @@ class MycelialNetwork:
             return self.ingest(candidates[0][0])
         return None
 
+    def retrieve_semantic(self, trigger_word: str, query_vector: list, scope: float = 0.5,
+                          resonance: float = 0.5) -> list:
+        results = []
+        exact_match = self.hippocampus.retrieve_exact(trigger_word)
+        if exact_match:
+            results.append({"source": "hippocampus", "data": exact_match})
+            if scope < 0.3:
+                return results
+        k_neighbors = max(1, int(scope * 10))
+        deep_results = self.cortex.query_neighborhood(query_vector=query_vector, k=k_neighbors, resonance_threshold=resonance)
+        for res in deep_results:
+            results.append({"source": "cortex", "data": res})
+        return results
 
 class ImmuneMycelium:
     def __init__(self):
@@ -918,7 +928,7 @@ class BioParasite:
         return score, comment
 
     def infect(self, physics_packet, stamina):
-        psi = physics_packet.get("psi", 0.0)
+        psi = safe_get(physics_packet, "psi", 0.0)
         cfg = getattr(self.cfg, "SPORES", None)
         p_stam = getattr(cfg, "PARASITE_STAMINA_MAX", 40.0) if cfg else 40.0
         p_psi = getattr(cfg, "PARASITE_PSI_MIN", 0.6) if cfg else 0.6
@@ -977,12 +987,8 @@ class BioLichen:
 
     def photosynthesize(self, phys, clean_words, tick_count):
         msgs = []
-        if hasattr(phys, "counts"):
-            counts = phys.counts
-            drag = getattr(phys, "narrative_drag", 0.0)
-        else:
-            counts = phys.get("counts", {})
-            drag = phys.get("narrative_drag", 0.0)
+        counts = safe_get(phys, "counts", {})
+        drag = float(safe_get(phys, "narrative_drag", 0.0))
         light = counts.get("photo", 0)
         sugar = 0.0
         light_words = [w for w in clean_words if w in self.archetypes]
@@ -1021,11 +1027,7 @@ class LiteraryReproduction:
 
     @staticmethod
     def _extract_counts(physics_container):
-        if hasattr(physics_container, "counts"):
-            return physics_container.counts
-        if isinstance(physics_container, dict):
-            return physics_container.get("counts", {})
-        return {}
+        return safe_get(physics_container, "counts", {})
 
     @staticmethod
     def mutate_config(current_config):
@@ -1079,7 +1081,7 @@ class LiteraryReproduction:
         enzymes_a = set()
         if "mito" in parent_a_bio:
             if hasattr(parent_a_bio["mito"], "state"):
-                enzymes_a = set(parent_a_bio["mito"].state.enzymes)
+                enzymes_a = set(getattr(parent_a_bio["mito"].state, "enzymes", []))
             elif isinstance(parent_a_bio["mito"], dict):
                 enzymes_a = set(parent_a_bio["mito"].get("enzymes", []))
         enzymes_b = set(parent_b_data.get("mitochondria", {}).get("enzymes", []))

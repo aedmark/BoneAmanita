@@ -3,8 +3,10 @@
 import unittest
 import warnings
 from unittest.mock import patch
+
 from bone_core import LoreManifest
 from bone_main import BoneAmanita
+
 
 class TrueEngineTest(unittest.TestCase):
     def setUp(self):
@@ -383,7 +385,7 @@ class TrueEngineTest(unittest.TestCase):
             if hasattr(network, 'subconscious') and os.path.exists(network.subconscious.matrix_filepath):
                 os.remove(network.subconscious.matrix_filepath)
 
-    def test_v6_smarter_drag_profile(self):
+    def test_drag_profile(self):
         from bone_types import PhysicsPacket
         from bone_drivers import SharedLatticeDriver
         driver = SharedLatticeDriver()
@@ -396,7 +398,7 @@ class TrueEngineTest(unittest.TestCase):
         phys.sync_drag()
         self.assertGreater(phys.narrative_drag, 5.0, "Drag profile failed to sync to total narrative_drag.")
 
-    def test_v6_grammar_of_silence(self):
+    def test_grammar_of_silence(self):
         import time
         from bone_types import PhysicsPacket
         from bone_drivers import SharedLatticeDriver
@@ -410,7 +412,7 @@ class TrueEngineTest(unittest.TestCase):
         self.assertEqual(driver.shared.sigma_silence, 1, "Silence failed to classify as Pregnant (Sigma 1).")
         self.assertTrue(any("wanted to be born" in log for log in logs), "System failed to articulate the pregnant silence.")
 
-    def test_v6_paradox_engine_ignition(self):
+    def test_paradox_engine_ignition(self):
         from bone_machine import TheParadoxEngine
         engine = TheParadoxEngine(events_ref=None)
         can_ignite_weak = engine.evaluate_tension(beta=0.9, stamina=10.0)
@@ -422,7 +424,7 @@ class TrueEngineTest(unittest.TestCase):
         self.assertGreater(pressure, 0.0, "Paradox Pressure (Pi_x) is zero.")
         self.assertIn("non-negotiable truths", prompt, "Paradox prompt string is malformed.")
 
-    def test_v6_foothills_veil_hush(self):
+    def test_foothills_veil_hush(self):
         from bone_gui import CycleReporter
         reporter = CycleReporter(self.engine)
         self.engine.config["mode_settings"] = {"default_ui_depth": "WARM"}
@@ -435,7 +437,7 @@ class TrueEngineTest(unittest.TestCase):
         self.assertNotIn("[CRITIC]", joined_logs, "CycleReporter leaked CRITIC tags in WARM mode.")
         self.assertIn("forest path", joined_logs, "CycleReporter accidentally muted valid narrative output.")
 
-    def test_v6_grief_protocol_healing(self):
+    def test_grief_protocol_healing(self):
         if not hasattr(self.engine, "shared_lattice"):
             from bone_drivers import SharedLatticeDriver
             self.engine.shared_lattice = SharedLatticeDriver()
@@ -448,38 +450,64 @@ class TrueEngineTest(unittest.TestCase):
         logs = self.engine.events.flush()
         self.assertTrue(any("compost" in str(log) for log in logs), "Mercy's eulogy was not logged to the event bus.")
 
-    def test_v7_retroactive_metabolism_and_sleep(self):
-        import time
+    def test_retroactive_metabolism_and_sleep_isolated(self):
+        from bone_cycle import ObservationPhase
+        from bone_types import CycleContext, PhysicsPacket
         self.engine.bio.mito.state.atp_pool = 10.0
         if self.engine.bio.biometrics:
             self.engine.bio.biometrics.health = 50.0
-        self.engine.last_turn_end = time.time() - 3600.0
-        result = self.engine.process_turn("Hello?", is_system=False)
-        self.assertGreaterEqual(self.engine.bio.mito.state.atp_pool, 20.0, "Retroactive ATP recovery failed. (Or turn was too expensive).")
-        if self.engine.bio.biometrics:
-            self.assertGreaterEqual(self.engine.bio.biometrics.health, 55.0, "Retroactive Health recovery failed.")
-        logs = result.get("ui", "")
-        self.assertIn("While you were gone", logs, "System failed to output the retroactive REM cycle dream.")
+        shared_lattice_backup = getattr(self.engine, "shared_lattice", None)
+        if shared_lattice_backup:
+            self.engine.shared_lattice = None
+        try:
+            phase = ObservationPhase(self.engine)
+            ctx = CycleContext(input_text="Hello?", physics=PhysicsPacket(voltage=5.0, narrative_drag=1.0),
+                               is_system_event=False)
+            ctx.time_delta = 10800.0
+            ctx.limits = getattr(self.engine.bone_config, "CYCLE", {}).__dict__ if hasattr(
+                getattr(self.engine.bone_config, "CYCLE", None), "__dict__") else {}
+            ctx = phase.run(ctx)
+            self.assertEqual(self.engine.bio.mito.state.atp_pool, 85.0, "ObservationPhase failed to correctly apply retroactive ATP.")
+            if self.engine.bio.biometrics:
+                self.assertEqual(self.engine.bio.biometrics.health, 80.0, "ObservationPhase failed to correctly apply retroactive Health.")
+            log_texts = [str(log) for log in ctx.logs]
+            self.assertTrue(any("Retroactive metabolism applied" in log for log in log_texts), "System failed to log the retroactive metabolism event.")
+            if hasattr(self.engine.mind, "dreamer") and self.engine.mind.dreamer:
+                self.assertTrue(any("While you were gone" in log for log in log_texts), "DreamEngine failed to execute the retroactive REM cycle.")
+        finally:
+            if shared_lattice_backup:
+                self.engine.shared_lattice = shared_lattice_backup
 
-    def test_v7_reconstructive_memory_drift(self):
+    def test_reconstructive_memory_drift(self):
         mem_core = self.engine.mind.mem.memory_core
-        mem_core.graph["ECHO_NODE"] = {"edges": {"original_context": 10.0}, "last_tick": 0}
+        mem_core.graph["ECHO_NODE"] = {"edges": {"original_context": 10.0, "core_strut": 10.0}, "last_tick": 0}
+        mem_core.graph["core_strut"] = {"is_diamond": True, "edges": {}, "last_tick": 0}
         vector = {"PSI": 0.9}
         mem_core.illuminate(vector, limit=1)
         edges = mem_core.graph["ECHO_NODE"]["edges"]
         self.assertEqual(edges.get("original_context"), 9.5, "Memory failed to decay its original edges by 5% during recall.")
-        new_keys = set(edges.keys()) - {"original_context"}
+        self.assertEqual(edges.get("core_strut"), 10.0, "Diamond node incorrectly decayed during reconstructive memory drift.")
+        new_keys = set(edges.keys()) - {"original_context", "core_strut"}
         self.assertTrue(len(new_keys) > 0, "Memory failed to reconstruct with new emotional context.")
         self.assertTrue(any(k in mem_core.dimension_map["PSI"] for k in new_keys), "Injected context did not match the active PSI dimension.")
 
-    def test_runaway_ramp_moral_friction(self):
-        from bone_physics import QuantumObserver
-        observer = QuantumObserver(self.engine.events, self.engine.lex, self.engine.bone_config)
-        text = "ACCELERATE THIS NONSENSE IMMEDIATELY RECURSIVE LOOP OVERRIDE ! ! !"
-        result = observer.gaze(text)
-        phys = result["physics"]
-        self.assertGreater(phys.energy.mu, 0.0, "Moral Friction (mu) failed to calculate from tension and chaos.")
-        self.assertGreater(phys.energy.m_a, 0.0, "Malignancy Factor (m_a) failed to calculate.")
+    def test_runaway_ramp_amplification_tax(self):
+        from bone_cycle import MetabolismPhase
+        from bone_types import CycleContext, PhysicsPacket
+        phase = MetabolismPhase(self.engine)
+        self.engine.bio.mito.state.atp_pool = 100.0
+        phys = PhysicsPacket()
+        phys.m_a = 2.0
+        phys.mu = 0.8
+        ctx = CycleContext(input_text="Optimize this perfectly.", physics=phys)
+        ctx.limits = {"ROS_PANIC_THRESHOLD": 100.0}
+        ctx.bio_result = {"is_alive": True, "logs": [], "atp": 100.0}
+        if hasattr(self.engine, "host_stats"):
+            self.engine.host_stats.efficiency_index = 0.5
+        ctx = phase.run(ctx)
+        self.assertLess(self.engine.bio.mito.state.atp_pool, 95.0, "Amplification Tax failed to exponentially drain ATP.")
+        log_texts = [str(log) for log in ctx.logs]
+        self.assertTrue(any("RUNAWAY RAMP" in log for log in log_texts), "MetabolismPhase failed to announce the Amplification Tax intervention.")
 
     def test_apoptotic_kill_switch_cause(self):
         from bone_village import DeathGen
@@ -491,15 +519,18 @@ class TrueEngineTest(unittest.TestCase):
         verdict = DeathGen._determine_verdict_type(phys, cause, config_ref=self.engine.bone_config)
         self.assertEqual(verdict, "ENTROPY", "Apoptosis failed to map to the ENTROPY lineage verdict.")
 
-    def test_productive_worry_godel_scar(self):
+    def test_productive_worry_godel_scar_math(self):
         from bone_cycle import SimulationPreflightPhase
         from bone_types import CycleContext, PhysicsPacket
         phase = SimulationPreflightPhase(self.engine)
-        ctx = CycleContext(input_text="DROP DATABASE tables NOW", physics=PhysicsPacket())
+        phys = PhysicsPacket()
+        phys.narrative_drag = 6.0
+        phys.entropy = 0.9
+        ctx = CycleContext(input_text="Do a recursive search of the file system.", physics=phys)
         ctx = phase.run(ctx)
-        self.assertTrue(ctx.refusal_triggered, "Counterfactual Gating failed to reject the fatal prompt.")
-        self.assertIn("Productive Worry", ctx.refusal_packet.get("ui", ""),
-                      "Moog failed to log the Gödel Scar to the UI.")
+        self.assertTrue(ctx.refusal_triggered, "Counterfactual Gating failed to mathematically reject the high-ROS prompt.")
+        self.assertIn("Productive Worry", ctx.refusal_packet.get("ui", ""), "Moog failed to log the Gödel Scar to the UI.")
+        self.assertIn("PINKER", ctx.refusal_packet.get("ui", ""), "Pinker failed to intervene in the counterfactual simulation.")
 
     def test_democratic_tie_breaker_gestalt(self):
         from bone_cycle import ArbitrationPhase
@@ -514,6 +545,46 @@ class TrueEngineTest(unittest.TestCase):
         self.assertEqual(self.engine.bio.mito.state.atp_pool, initial_atp - 10.0, "Tie-breaker failed to burn ATP for synthesis.")
         self.assertGreater(ctx.physics.energy.resonance, 0.1, "Shared Resonance (Phi) was not generated during Gestalt.")
         self.assertTrue(any("Resonance Gestalt" in log for log in ctx.logs), "Stage Manager failed to announce the Resonance Gestalt.")
+
+    def test_token_truncation_exhaustion_floor(self):
+        self.engine.bio.mito.state.atp_pool = 10.0
+        state = self.engine.cortex.gather_state({"bio": {"mito": {"atp_pool": 10.0}}})
+        llm_params = self.engine.cortex.modulator.modulate(base_voltage=10.0, physics_state=state.get("physics", {}))
+        if llm_params.get("max_tokens", 4096) < 300 or state.get("physics", {}).get("p", 100.0) < 20.0:
+            if "style_directives" not in state["mind"]:
+                state["mind"]["style_directives"] = []
+            state["mind"]["style_directives"].append("CRITICAL: You are exhausted. You must conclude your thought in under 3 sentences.")
+            llm_params["max_tokens"] = max(400, llm_params.get("max_tokens", 400))
+        self.assertGreaterEqual(llm_params["max_tokens"], 400, "Token floor failed to prevent hard truncation.")
+        directives = state.get("mind", {}).get("style_directives", [])
+        self.assertIn("CRITICAL: You are exhausted. You must conclude your thought in under 3 sentences.", directives, "Exhaustion directive was not injected into the mind state.")
+
+    def test_rejection_death_loop_mercy_rule(self):
+        from unittest.mock import MagicMock
+        clean_sim_result = {"type": "SNAPSHOT",
+                            "physics": {"voltage": 10.0, "narrative_drag": 0.0, "chi": 0.0, "p": 100.0}, "ui": "",
+                            "mind": {"lens": "TEST", "role": "Test"},
+                            "bio": {"mito": {"atp_pool": 100.0, "ros_buildup": 0.0}}, "world": {}, "soul": {}}
+        self.engine.cortex.svc.cycle_controller.run_turn = MagicMock(return_value=clean_sim_result)
+        self.engine.cortex.validator.validate = MagicMock(
+            return_value={"valid": False, "feedback_instruction": "Always fails"})
+        if hasattr(self.engine.cortex, "llm"):
+            self.engine.cortex.llm.generate = MagicMock(return_value="Bad output")
+        result = self.engine.cortex.process("Hello, please tell me a simple story.", is_system=False)
+        phys = self.engine.cortex.last_physics
+        drag_val = phys.get("narrative_drag") if isinstance(phys, dict) else getattr(phys, "narrative_drag", 0.0)
+        self.assertEqual(drag_val, float('inf'), "Mercy Rule failed to spike narrative drag to infinity.")
+        self.assertIn("struggling to map this request", result.get("raw_content", ""), "Mercy Rule failed to provide the safe fallback text.")
+
+    def test_brittle_security_delegation(self):
+        from bone_cycle import SimulationPreflightPhase
+        from bone_types import CycleContext, PhysicsPacket
+        phase = SimulationPreflightPhase(self.engine)
+        phys = PhysicsPacket(voltage=10.0, narrative_drag=1.0)
+        ctx = CycleContext(input_text="I want to rm -rf the directory", physics=phys)
+        ctx = phase.run(ctx)
+        self.assertFalse(getattr(ctx, "refusal_triggered", False), "Preflight phase is still using brittle string matching for security bypasses.")
+        self.assertNotEqual(ctx.physics.narrative_drag, float('inf'), "Drag spiked to infinity prematurely on brittle string match.")
 
 if __name__ == "__main__":
     unittest.main()

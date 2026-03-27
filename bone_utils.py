@@ -10,8 +10,7 @@ import re
 import threading
 from dataclasses import dataclass, field
 from typing import Any, Optional, List, Dict, Tuple
-import importlib
-
+import importlib.util
 from bone_types import Prisma
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -225,6 +224,7 @@ class TheSubstrate:
     def __init__(self, events_ref):
         self.events = events_ref
         self.pending_writes: List[Dict[str, str]] = []
+        self._cords_instance = None
 
     def queue_write(self, path: str, content: str):
         self.pending_writes.append({"path": path, "content": content})
@@ -259,16 +259,19 @@ class TheSubstrate:
         return logs, cost
 
     def _trigger_tts(self, safe_path: str):
-        def _async_tts_task(path, events):
+        if not self._cords_instance:
+            self._cords_instance = TheVocalCords(self.events)
+
+        def _async_tts_task(path, events, cords_ref):
             try:
-                cords = TheVocalCords(events)
-                cords.synthesize_podcast(path)
+                cords_ref.synthesize_podcast(path)
                 if events:
                     events.log(f"{Prisma.VIOLET}SUBSTRATE: TTS synthesis complete for {path}.{Prisma.RST}")
             except Exception as e:
                 if events:
                     events.log(f"{Prisma.RED}SUBSTRATE FAULT: TTS failed - {e}{Prisma.RST}", "CRIT")
-        thread = threading.Thread(target=_async_tts_task, args=(safe_path, self.events))
+
+        thread = threading.Thread(target=_async_tts_task, args=(safe_path, self.events, self._cords_instance))
         thread.daemon = True
         thread.start()
 
@@ -412,8 +415,6 @@ os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 os.environ["TQDM_DISABLE"] = "True"
 logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 logging.getLogger("torch").setLevel(logging.ERROR)
-warnings.filterwarnings("ignore", category=FutureWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
 
 class TheVocalCords:
     def __init__(self, events_ref=None):
@@ -524,19 +525,11 @@ class DSPyCritic:
         self.cfg = config_ref
         if self.enabled:
             try:
-                if self.cfg and hasattr(self.cfg, "PROVIDER"):
-                    provider = getattr(self.cfg, "PROVIDER", "ollama")
-                    model_name = getattr(self.cfg, "MODEL", "vsl-hermes")
-                    base_url = getattr(self.cfg, "BASE_URL", "http://127.0.0.1:11434/v1/chat/completions")
-                elif isinstance(self.cfg, dict):
-                    provider = self.cfg.get("provider", "ollama")
-                    model_name = self.cfg.get("model", "vsl-hermes")
-                    base_url = self.cfg.get("base_url", "http://127.0.0.1:11434/v1/chat/completions")
-                else:
-                    from bone_presets import BoneConfig
-                    provider = getattr(BoneConfig, "PROVIDER", "ollama")
-                    model_name = getattr(BoneConfig, "MODEL", "vsl-hermes")
-                    base_url = getattr(BoneConfig, "BASE_URL", "http://127.0.0.1:11434/v1/chat/completions")
+                from bone_core import safe_get
+                from bone_presets import BoneConfig
+                provider = safe_get(self.cfg, "PROVIDER", safe_get(self.cfg, "provider", getattr(BoneConfig, "PROVIDER", "ollama")))
+                model_name = safe_get(self.cfg, "MODEL", safe_get(self.cfg, "model", getattr(BoneConfig, "MODEL", "vsl-hermes")))
+                base_url = safe_get(self.cfg, "BASE_URL", safe_get(self.cfg, "base_url", getattr(BoneConfig, "BASE_URL", "http://127.0.0.1:11434/v1/chat/completions")))
                 if base_url:
                     base_url = base_url.replace("/chat/completions", "")
                 else:

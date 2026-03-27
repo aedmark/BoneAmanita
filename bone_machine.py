@@ -1,18 +1,21 @@
 """ bone_machine.py """
 
 import random
+import math
 from dataclasses import dataclass
 from typing import Tuple, Optional, List, Dict, Any
+
 from bone_body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, MetabolicGovernor
 from bone_brain import DreamEngine, ShimmerState
-from bone_presets import BoneConfig
-from bone_core import LoreManifest, ux
+from bone_core import LoreManifest, ux, safe_get, safe_set
 from bone_lexicon import LexiconService
-from bone_physics import TheGatekeeper, QuantumObserver, SurfaceTension, ZoneInertia, CosmicDynamics
+from bone_physics import TheGatekeeper, QuantumObserver, SurfaceTension, CosmicDynamics
+from bone_presets import BoneConfig
 from bone_protocols import LimboLayer
 from bone_spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
 from bone_types import MindSystem, PhysSystem, PhysicsPacket, Prisma
 from bone_village import MirrorGraph, TheCartographer
+
 
 class TheCrucible:
     def __init__(self, config_ref=None):
@@ -55,44 +58,42 @@ class TheCrucible:
         return False, self.logs.get("HOLDING", ""), 0.0
 
     def audit_fire(self, physics: Any) -> Tuple[str, float, Optional[str]]:
-        voltage = getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0)
-        structure = getattr(physics, "kappa", 0.0) if not isinstance(physics, dict) else physics.get("kappa", 0.0)
+        voltage = float(safe_get(physics, "voltage", 0.0))
+        structure = float(safe_get(physics, "kappa", 0.0))
         ideal_voltage = structure * 20.0
         delta = voltage - ideal_voltage
         self.instability_index = (self.instability_index * 0.7) + (delta * 0.3)
         if abs(self.instability_index) < 0.1:
             self.instability_index = 0.0
-        current_drag = getattr(physics, "narrative_drag", 0.0) if not isinstance(physics, dict) else physics.get(
-            "narrative_drag", 0.0)
+        current_drag = float(safe_get(physics, "narrative_drag", 0.0))
         adjustment = self.instability_index * 0.5
         if current_drag < 1.0 and adjustment < 0:
             adjustment *= 0.1
-        new_drag = max(0.0, min(10.0, current_drag + adjustment))
-        if isinstance(physics, dict):
-            physics["narrative_drag"] = round(new_drag, 2)
+        if math.isinf(current_drag):
+            final_drag = current_drag
         else:
-            setattr(physics, "narrative_drag", round(new_drag, 2))
+            final_drag = round(max(0.0, min(10.0, current_drag + adjustment)), 2)
+        safe_set(physics, "narrative_drag", final_drag)
         msg = None
         if abs(adjustment) > 0.1:
             dir_tight = ux("machine_strings", "crucible_tightening") or "TIGHTENING"
             dir_relax = ux("machine_strings", "crucible_relaxing") or "RELAXING"
             direction = dir_tight if adjustment > 0 else dir_relax
-            msg = self.logs.get("REGULATOR", "").format(direction=direction, current=current_drag, new=new_drag)
-        surge = getattr(physics, "system_surge_event", False) if not isinstance(physics, dict) else physics.get(
-            "system_surge_event", False)
+            msg = self.logs.get("REGULATOR", "").format(direction=direction, current=current_drag, new=final_drag)
+        surge = safe_get(physics, "system_surge_event", False)
         if surge:
             self.active_state = "SURGE"
-            return "SURGE", 0.0, self.logs.get("SURGE", "").format(voltage=voltage),
+            return "SURGE", 0.0, self.logs.get("SURGE", "").format(voltage=voltage)
         if voltage > 18.0:
             if structure > 0.5:
                 gain = voltage * 0.1
                 self.max_voltage_cap += gain
                 self.active_state = "RITUAL"
-                return "RITUAL", gain, self.logs.get("RITUAL", "").format(gain=gain),
+                return "RITUAL", gain, self.logs.get("RITUAL", "").format(gain=gain)
             else:
                 damage = voltage * 0.5
                 self.active_state = "MELTDOWN"
-                return "MELTDOWN", damage, self.logs.get("MELTDOWN", "").format(damage=damage),
+                return "MELTDOWN", damage, self.logs.get("MELTDOWN", "").format(damage=damage)
         self.active_state = "REGULATED"
         return "REGULATED", adjustment, msg
 
@@ -114,10 +115,14 @@ class TheParadoxEngine:
         valid_seeds = [w for w in recent_words if len(w) > 4]
         seed = random.choice(valid_seeds) if valid_seeds else "the architecture"
         pressure = 0.4 + (random.random() * 0.6)
-        templates = [f"What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
-            f"[RECURSIVE PARADOX] Apply the concept of '{seed}' to the architecture of this very conversation. How does the act of thinking about '{seed}' alter the physical constraints of our dialogue? Both are non-negotiable truths.",
-            f"[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center. Both the center and the void are non-negotiable truths."]
-        return pressure, random.choice(templates)
+        templates = ux("machine_strings", "paradox_templates") or [
+            "What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
+            "[RECURSIVE PARADOX] Apply the concept of '{seed}' to the architecture of this very conversation. How does the act of thinking about '{seed}' alter the physical constraints of our dialogue? Both are non-negotiable truths.",
+            "[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center. Both the center and the void are non-negotiable truths."
+        ]
+
+        chosen_template = random.choice(templates)
+        return pressure, chosen_template.format(seed=seed)
 
     def disengage(self):
         self.is_active = False
@@ -137,15 +142,14 @@ class TheForge:
 
     @staticmethod
     def hammer_alloy(physics: Any) -> Tuple[bool, Optional[str], Optional[str]]:
-        counts = getattr(physics, "counts", {}) if not isinstance(physics, dict) else physics.get("counts", {})
-        clean_words = getattr(physics, "clean_words", []) if not isinstance(physics, dict) else physics.get(
-            "clean_words", [])
-        if not clean_words:
+        counts = safe_get(physics, "counts", {})
+        clean_words = safe_get(physics, "clean_words", [])
+        if not clean_words or len(clean_words) == 0:
             return False, None, None
         heavy = counts.get("heavy", 0)
         kinetic = counts.get("kinetic", 0)
         avg_density = ((heavy * 2.0) + (kinetic * 0.5)) / len(clean_words)
-        voltage = getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0)
+        voltage = float(safe_get(physics, "voltage", 0.0))
         if random.random() >= (voltage / 20.0) * avg_density:
             return False, None, None
         if heavy > 3:
@@ -160,11 +164,11 @@ class TheForge:
             self, physics: Any, inventory_list: List[str]) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
         if not inventory_list:
             return False, None, None, None
-        clean_words = getattr(physics, "clean_words", []) if not isinstance(physics, dict) else physics.get("clean_words", [])
+        clean_words = safe_get(physics, "clean_words", [])
         if not clean_words:
             return False, None, None, None
         clean_set = set(clean_words)
-        voltage = float(getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0))
+        voltage = float(safe_get(physics, "voltage", 0.0))
         for item in inventory_list:
             if item in self.recipe_map:
                 for recipe in self.recipe_map[item]:
@@ -176,10 +180,10 @@ class TheForge:
                     entanglement = self._calculate_entanglement(hits, voltage)
                     if random.random() < entanglement:
                         msg = ux("machine_strings", "forge_alchemy_success")
-                        return True, msg.format(result=recipe["result"], item=item), item, recipe["result"],
+                        return True, msg.format(result=recipe["result"], item=item), item, recipe["result"]
                     else:
                         msg = ux("machine_strings", "forge_alchemy_fail")
-                        return False, msg.format(entanglement=int(entanglement * 100)), None, None,
+                        return False, msg.format(entanglement=int(entanglement * 100)), None, None
         return False, None, None, None
 
     @staticmethod
@@ -188,10 +192,9 @@ class TheForge:
 
     @staticmethod
     def transmute(physics: Any) -> Optional[str]:
-        counts = getattr(physics, "counts", {}) if not isinstance(physics, dict) else physics.get("counts", {})
-        voltage = float(
-            getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0))
-        gamma = float(getattr(physics, "gamma", 0.0) if not isinstance(physics, dict) else physics.get("gamma", 0.0))
+        counts = safe_get(physics, "counts", {})
+        voltage = float(safe_get(physics, "voltage", 0.0))
+        gamma = float(safe_get(physics, "gamma", 0.0))
         if gamma < 0.15 and counts.get("abstract", 0) > 1:
             return ux("machine_strings", "forge_emulsion_fail")
         if voltage > 15.0:
@@ -215,11 +218,11 @@ class TheTheremin:
         return manifest.get("THEREMIN_LOGS", {})
 
     def listen(self, physics: Any, governor_mode="COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
-        counts = getattr(physics, "counts", {}) if not isinstance(physics, dict) else physics.get("counts", {})
-        voltage = float(getattr(physics, "voltage", 0.0) if not isinstance(physics, dict) else physics.get("voltage", 0.0))
-        turb = float(getattr(physics, "turbulence", 0.0) if not isinstance(physics, dict) else physics.get("turbulence", 0.0))
-        rep = float(getattr(physics, "repetition", 0.0) if not isinstance(physics, dict) else physics.get("repetition", 0.0))
-        complexity = float(getattr(physics, "truth_ratio", 0.0) if not isinstance(physics, dict) else physics.get("truth_ratio", 0.0))
+        counts = safe_get(physics, "counts", {})
+        voltage = float(safe_get(physics, "voltage", 0.0))
+        turb = float(safe_get(physics, "turbulence", 0.0))
+        rep = float(safe_get(physics, "repetition", 0.0))
+        complexity = float(safe_get(physics, "truth_ratio", 0.0))
         ancient_mass = counts.get("heavy", 0) + counts.get("thermal", 0) + counts.get("cryo", 0)
         modern_mass = counts.get("abstract", 0)
         raw_mix = min(ancient_mass, modern_mass)
@@ -257,22 +260,15 @@ class TheTheremin:
             theremin_msg = self.logs.get("TURBULENCE", "").format(val=shatter_amt)
             self.classical_turns = 0
         if turb < 0.2:
-            current_drag = float(getattr(physics, "narrative_drag", 0.0) if not isinstance(physics, dict) else physics.get("narrative_drag", 0.0))
-            if isinstance(physics, dict):
-                physics["narrative_drag"] = max(0.0, current_drag - 1.0)
-            else:
-                setattr(physics, "narrative_drag", max(0.0, current_drag - 1.0))
+            current_drag = float(safe_get(physics, "narrative_drag", 0.0))
+            safe_set(physics, "narrative_drag", max(0.0, current_drag - 1.0))
         if self.decoherence_buildup > self.SHATTER_POINT:
             self.decoherence_buildup = 0.0
             self.classical_turns = 0
             self.is_stuck = False
-            current_drag = getattr(physics, "narrative_drag", 0.0) if not isinstance(physics, dict) else physics.get("narrative_drag", 0.0)
-            if isinstance(physics, dict):
-                physics["narrative_drag"] = max(current_drag + 20.0, 20.0)
-                physics["voltage"] = 0.0
-            else:
-                setattr(physics, "narrative_drag", max(current_drag + 20.0, 20.0))
-                setattr(physics, "voltage", 0.0)
+            current_drag = float(safe_get(physics, "narrative_drag", 0.0))
+            safe_set(physics, "narrative_drag", max(current_drag + 20.0, 20.0))
+            safe_set(physics, "voltage", 0.0)
             return False, resin_flow, self.logs.get("COLLAPSE", ""), "AIRSTRIKE"
         if self.classical_turns > 3:
             critical_event = "CORROSION"
@@ -302,6 +298,8 @@ class SystemEmbryo:
     continuity: Optional[Dict] = None
 
 class PanicRoom:
+    _SAFE_VECTOR = {k: 0.0 for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "LAMBDA", "CHI"]}
+
     @staticmethod
     def get_safe_physics():
         safe_packet = PhysicsPacket.void_state()
@@ -314,7 +312,7 @@ class PanicRoom:
         safe_packet.entropy = 0.0
         safe_packet.valence = 0.0
         safe_packet.kappa = 0.0
-        safe_packet.vector = {k: 0.0 for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "LAMBDA", "CHI"]}
+        safe_packet.vector = PanicRoom._SAFE_VECTOR.copy()
         default_words = ["white", "room", "safe", "mode"]
         manifest_words = ux("machine_strings", "panic_clean_words")
         safe_packet.clean_words = manifest_words if isinstance(manifest_words, list) else default_words
@@ -332,11 +330,11 @@ class PanicRoom:
         chem_state: Dict[str, float] = {"DOP": 0.0, "COR": 0.0, "OXY": 0.0, "SER": 0.0, "ADR": 0.0, "MEL": 0.0, }
         base: Dict[str, Any] = {"is_alive": True, "atp": 10.0, "respiration": resp_fallback, "enzyme": enz_fallback, "chem": chem_state, "logs": [f"{Prisma.RED}{log_msg}{Prisma.RST}"], }
         state = previous_state or {}
-        if isinstance(state, dict):
-            if old_chem := state.get("chemistry", {}):
-                chem_state["COR"] = 0.0
-                chem_state["ADR"] = 0.0
-                chem_state["SER"] = max(0.2, float(old_chem.get("SER", 0.0)))
+        old_chem = safe_get(state, "chemistry", {})
+        if old_chem:
+            chem_state["COR"] = 0.0
+            chem_state["ADR"] = 0.0
+            chem_state["SER"] = max(0.2, float(old_chem.get("SER", 0.0) if isinstance(old_chem, dict) else getattr(old_chem, "SER", 0.0)))
         return base
 
     @staticmethod
@@ -414,8 +412,8 @@ class BoneArchitect:
         start_stamina = getattr(target_cfg, "MAX_STAMINA", 100.0)
         bio_metrics = Biometrics(health=start_health, stamina=start_stamina)
         return BioSystem(mito=MitochondrialForge(mito_state, events, config_ref=target_cfg), endo=EndocrineSystem(config_ref=target_cfg), immune=ImmuneMycelium(),
-                         lichen=BioLichen(), governor=MetabolicGovernor(config_ref=target_cfg), shimmer=ShimmerState(),
-                         parasite=BioParasite(mind.mem, lex), events=events, biometrics=bio_metrics, config_ref=target_cfg)
+                         lichen=BioLichen(lexicon_ref=lex), governor=MetabolicGovernor(config_ref=target_cfg), shimmer=ShimmerState(),
+                         parasite=BioParasite(mind.mem, lex, config_ref=target_cfg), events=events, biometrics=bio_metrics, config_ref=target_cfg)
 
     @staticmethod
     def _construct_physics(events, bio, mind, lex, config_ref=None) -> PhysSystem:
@@ -448,7 +446,7 @@ class BoneArchitect:
             if hasattr(embryo.mind.mem, "autoload_last_spore"):
                 load_result = embryo.mind.mem.autoload_last_spore()
         except Exception as e:
-            msg = ux("machine_strings", "arch_spore_fail") 
+            msg = ux("machine_strings", "arch_spore_fail") or "[ARCHITECT]: Spore resurrection failed: {e}"
             events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "CRIT", )
             load_result = None
         embryo.soul_legacy = {}
@@ -459,10 +457,11 @@ class BoneArchitect:
             mito_legacy, immune_legacy, soul_legacy, continuity, atlas = padded_result[:5]
             if mito_legacy and hasattr(embryo.bio.mito, "apply_inheritance"):
                 embryo.bio.mito.apply_inheritance(mito_legacy)
-            if (immune_legacy
-                    and isinstance(immune_legacy, (list, set))
-                    and hasattr(embryo.bio.immune, "load_antibodies")):
-                embryo.bio.immune.load_antibodies(immune_legacy)
+            if immune_legacy and isinstance(immune_legacy, (list, set)):
+                if hasattr(embryo.bio.immune, "load_antibodies"):
+                    embryo.bio.immune.load_antibodies(immune_legacy)
+                else:
+                    embryo.bio.immune.active_antibodies.update(immune_legacy)
             if isinstance(soul_legacy, dict):
                 embryo.soul_legacy = soul_legacy
             if isinstance(continuity, dict):
@@ -473,10 +472,10 @@ class BoneArchitect:
             if hasattr(embryo.physics.nav, "import_atlas"):
                 try:
                     embryo.physics.nav.import_atlas(recovered_atlas)
-                    msg = ux("machine_strings", "arch_map_restored")
+                    msg = ux("machine_strings", "arch_map_restored") or "[ARCHITECT]: World Map restored."
                     events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS", )
                 except Exception as e:
-                    msg = ux("machine_strings", "arch_map_corrupt")
+                    msg = ux("machine_strings", "arch_map_corrupt") or "[ARCHITECT]: Atlas corrupt, discarding map: {e}"
                     events.log(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}", "WARN", )
         if embryo.bio and embryo.bio.mito and embryo.bio.mito.state.atp_pool <= 0.0:
             target_cfg = getattr(embryo.bio, "config_ref", None) or BoneConfig

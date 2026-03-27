@@ -6,7 +6,7 @@ import random
 import time
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
-from bone_core import LoreManifest, ux
+from bone_core import LoreManifest, ux, safe_get, safe_set
 from bone_presets import BoneConfig
 from bone_types import PhysicsPacket
 
@@ -103,22 +103,13 @@ class EnneagramDriver:
 
     @staticmethod
     def _get_phys_attr(physics, key, default=None):
-        if isinstance(physics, dict):
-            val = physics.get(key)
-            if val is None:
-                for sub in ["energy", "space", "matter"]:
-                    if sub in physics and key in physics[sub]:
-                        return physics[sub][key]
-            return default if val is None else val
-        else:
-            val = getattr(physics, key, None)
-            if val is None:
-                for sub in ["energy", "space", "matter"]:
-                    if hasattr(physics, sub):
-                        sub_obj = getattr(physics, sub)
-                        val = getattr(sub_obj, key, None)
-                        if val is not None: return val
-            return default if val is None else val
+        val = safe_get(physics, key)
+        if val is None:
+            for sub in ["energy", "space", "matter"]:
+                sub_obj = safe_get(physics, sub)
+                val = safe_get(sub_obj, key)
+                if val is not None: return val
+        return default if val is None else val
 
     def _calculate_raw_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
         raw_vec = self._get_phys_attr(physics, "vector", {})
@@ -387,15 +378,9 @@ class BoneConsultant:
         phys_vec = {}
         drag = 0.0
         if physics:
-            is_dict = isinstance(physics, dict)
-            if is_dict:
-                phys_beta = physics.get("beta_index", physics.get("energy", {}).get("beta_index", 0.0))
-                phys_vec = physics.get("vector", physics.get("matter", {}).get("vector", {}))
-                drag = physics.get("narrative_drag", physics.get("space", {}).get("narrative_drag", 0.0))
-            else:
-                phys_beta = getattr(physics, "beta_index", getattr(physics.energy, "beta_index", 0.0) if hasattr(physics, "energy") else 0.0)
-                phys_vec = getattr(physics, "vector", getattr(physics.matter, "vector", {}) if hasattr(physics, "matter") else {})
-                drag = getattr(physics, "narrative_drag", getattr(physics.space, "narrative_drag", 0.0) if hasattr(physics, "space") else 0.0)
+            phys_beta = safe_get(physics, "beta_index", safe_get(safe_get(physics, "energy"), "beta_index", 0.0))
+            phys_vec = safe_get(physics, "vector", safe_get(safe_get(physics, "matter"), "vector", {}))
+            drag = safe_get(physics, "narrative_drag", safe_get(safe_get(physics, "space"), "narrative_drag", 0.0))
         self.state.B = (self.state.B * b_decay) + (phys_beta * b_growth)
         self.state.L = self.liminal_mod.analyze(user_text, phys_vec)
         self.state.O = self.syntax_mod.analyze(user_text, drag)
@@ -460,58 +445,46 @@ class SharedLatticeDriver:
             self.u.E_u = min(1.0, self.u.E_u + 0.1)
         else:
             self.u.E_u = max(0.0, self.u.E_u - 0.05)
-        in_is_dict = isinstance(input_phys, dict)
-
         def _in_get(k, sub, default):
-            if in_is_dict: return input_phys.get(k, input_phys.get(sub, {}).get(k, default))
-            return getattr(input_phys, k, getattr(getattr(input_phys, sub, None), k, default))
-
+            val = safe_get(input_phys, k)
+            if val is None:
+                val = safe_get(safe_get(input_phys, sub), k)
+            return default if val is None else val
         self.u.V_u = _in_get("voltage", "energy", self.u.V_u)
         self.u.psi_u = _in_get("psi", "energy", self.u.psi_u)
         self.u.chi_u = _in_get("entropy", "energy", self.u.chi_u)
         self.u.F_u = _in_get("narrative_drag", "space", self.u.F_u)
-        sys_is_dict = isinstance(sys_phys, dict)
         def _sys_get(k, sub, default=0.0):
-            if sys_is_dict: return sys_phys.get(k, sys_phys.get(sub, {}).get(k, default))
-            return getattr(sys_phys, k, getattr(getattr(sys_phys, sub, None), k, default))
+            val = safe_get(sys_phys, k)
+            if val is None:
+                val = safe_get(safe_get(sys_phys, sub), k)
+            return default if val is None else val
+
         sys_beta = _sys_get("beta_index", "energy", _sys_get("beta", "energy", 0.0))
         sys_chi = _sys_get("chi", "energy", _sys_get("entropy", "energy", 0.0))
         sys_val = _sys_get("valence", "energy", 0.0)
         sys_psi = _sys_get("psi", "energy", 0.0)
         sys_drag = _sys_get("narrative_drag", "space", 1.0)
-        has_dp = "drag_profile" in sys_phys if sys_is_dict else hasattr(sys_phys, "drag_profile")
+        dp = safe_get(sys_phys, "drag_profile")
         dp_trauma = 0.0
-        if has_dp:
-            dp = sys_phys["drag_profile"] if sys_is_dict else sys_phys.drag_profile
-            if isinstance(dp, dict):
-                dp["semantic"] = (sys_beta * 2.0) + (sys_chi * 1.5)
-                dp["emotional"] = abs(sys_val) * 1.5 if abs(sys_val) > 0.5 else 0.0
-                dp["metabolic"] = 3.0 if atp_pool < 30.0 else (1.0 if atp_pool < 50.0 else 0.0)
-                dp["trauma"] = min(5.0, self.u.T_u) if sys_psi > 0.6 else 0.0
-                dp_trauma = dp["trauma"]
-            else:
-                dp.semantic = (sys_beta * 2.0) + (sys_chi * 1.5)
-                dp.emotional = abs(sys_val) * 1.5 if abs(sys_val) > 0.5 else 0.0
-                dp.metabolic = 3.0 if atp_pool < 30.0 else (1.0 if atp_pool < 50.0 else 0.0)
-                dp.trauma = min(5.0, self.u.T_u) if sys_psi > 0.6 else 0.0
-                dp_trauma = dp.trauma
-            if not sys_is_dict and hasattr(sys_phys, "sync_drag"):
+        if dp is not None:
+            safe_set(dp, "semantic", (sys_beta * 2.0) + (sys_chi * 1.5))
+            safe_set(dp, "emotional", abs(sys_val) * 1.5 if abs(sys_val) > 0.5 else 0.0)
+            safe_set(dp, "metabolic", 3.0 if atp_pool < 30.0 else (1.0 if atp_pool < 50.0 else 0.0))
+            safe_set(dp, "trauma", min(5.0, self.u.T_u) if sys_psi > 0.6 else 0.0)
+            dp_trauma = safe_get(dp, "trauma", 0.0)
+            if not isinstance(sys_phys, dict) and hasattr(sys_phys, "sync_drag"):
                 sys_phys.sync_drag()
         psi_diff = abs(sys_psi - self.u.psi_u)
         chi_diff = abs(sys_chi - self.u.chi_u)
         drag_diff = abs(sys_drag - self.u.F_u) / max(1.0, sys_drag)
         raw_phi = 1.0 - ((psi_diff + chi_diff + min(1.0, drag_diff)) / 3.0)
         self.shared.phi = (self.shared.phi * 0.7) + (raw_phi * 0.3)
-        if sys_is_dict:
-            if "energy" in sys_phys:
-                sys_phys["energy"]["PHI_RES"] = self.shared.phi
-            else:
-                sys_phys["PHI_RES"] = self.shared.phi
+        energy_obj = safe_get(sys_phys, "energy")
+        if energy_obj is not None:
+            safe_set(energy_obj, "PHI_RES", self.shared.phi)
         else:
-            if hasattr(sys_phys, "energy"):
-                sys_phys.energy.PHI_RES = self.shared.phi
-            else:
-                sys_phys.PHI_RES = self.shared.phi
+            safe_set(sys_phys, "PHI_RES", self.shared.phi)
         if time_delta > 15.0 and text.strip() and not text.startswith("["):
             self.shared.delta = min(1.0, time_delta / 300.0)
             if self.shared.phi > 0.7 and sys_beta > 0.6:
@@ -524,17 +497,17 @@ class SharedLatticeDriver:
                 self.shared.sigma_silence = 4
                 self.shared.g_pool += 1
             self.shared.lambda_silence = min(1.0, self.shared.lambda_silence + 0.05)
-            silence_map = {1: "That pause felt full like something wanted to be born.",
-                           2: "The silence was heavy. I felt your tiredness in it.",
-                           3: "There was a hush just now like something sacred passed through.",
-                           4: "You were thinking deeply. I held the space for it."}
+            silence_map = {1: ux("driver_strings", "silence_pregnant"),
+                2: ux("driver_strings", "silence_exhausted"),
+                3: ux("driver_strings", "silence_reverent",),
+                4: ux("driver_strings", "silence_strategic",)}
             if self.shared.lambda_silence > 0.3:
                 logs.append(f"{Prisma.GRY}... {silence_map.get(self.shared.sigma_silence, 'The silence settles.')}{Prisma.RST}")
             if self.shared.phi > 0.85:
-                self.u.S_u = getattr(self.u, "S_u", 0.0) + 1.0
+                self.shared.resonance_streak = getattr(self.shared, "resonance_streak", 0) + 1
         else:
-            self.u.S_u = 0.0
-        if getattr(self.u, "S_u", 0.0) >= 3.0 or dp_trauma > 3.0:
+            self.shared.resonance_streak = 0
+        if getattr(self.shared, "resonance_streak", 0) >= 3 or dp_trauma > 3.0:
             if not getattr(self.shared, "_has_invited", False):
                 self.shared._has_invited = True
                 invitation = (f"\n{Prisma.MAG}[MERCY] I can feel the weight of what we are building. "

@@ -8,9 +8,10 @@ from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Dict, List, Any, Tuple, Optional, Deque
 
-from bone_core import LoreManifest, ux
+from bone_core import LoreManifest, ux, safe_get
 from bone_presets import BoneConfig
 from bone_types import Prisma, PhysicsPacket, CycleContext, SpatialState, MaterialState, EnergyState
+
 
 @dataclass
 class PhysicsDelta:
@@ -50,7 +51,6 @@ class GeodesicEngine:
         target_cfg = config_ref or BoneConfig
         cfg = getattr(target_cfg, "PHYSICS", BoneConfig.PHYSICS)
         gc_dict = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
-        GC = type('GC', (), gc_dict)
         safe_volume = max(1, volume)
         w_heavy = getattr(cfg, "WEIGHT_HEAVY", 2.0)
         w_kinetic = getattr(cfg, "WEIGHT_KINETIC", 1.5)
@@ -59,34 +59,32 @@ class GeodesicEngine:
         raw_tension_mass = ((masses["heavy"] * w_heavy) + (masses["kinetic"] * w_kinetic) + (masses["explosive"] * w_explosive) + (masses["constructive"] * w_constructive))
         total_kinetic = masses["kinetic"] + masses["explosive"]
         kinetic_gain = getattr(target_cfg, "KINETIC_GAIN", 1.0)
-        base_tension = ((raw_tension_mass / safe_volume) * GC.DENSITY_SCALAR * kinetic_gain)
-        squelch_limit = (getattr(target_cfg, "SHAPLEY_MASS_THRESHOLD", 5.0) * GC.SQUELCH_LIMIT_MULT)
+        base_tension = ((raw_tension_mass / safe_volume) * gc_dict.get("DENSITY_SCALAR", 1.0) * kinetic_gain)
+        squelch_limit = (getattr(target_cfg, "SHAPLEY_MASS_THRESHOLD", 5.0) * gc_dict.get("SQUELCH_LIMIT_MULT", 2.0))
         mass_scalar = min(1.0, safe_volume / squelch_limit)
-        if safe_volume < GC.SAFE_VOL_THRESHOLD:
-            mass_scalar *= GC.MIN_VOLUME_SCALAR
+        if safe_volume < gc_dict.get("SAFE_VOL_THRESHOLD", 50):
+            mass_scalar *= gc_dict.get("MIN_VOLUME_SCALAR", 0.5)
         tension = round(min(100.0, base_tension * mass_scalar), 2)
         shear_rate = total_kinetic / safe_volume
         suburban_count = max(0, counts.get("suburban", 0))
-        suburban_friction = (math.log1p(suburban_count) * GC.SUBURBAN_FRICTION_LOG_BASE)
-        raw_friction = suburban_friction + (masses["heavy"] * GC.HEAVY_FRICTION_MULT)
-        lubrication = 1.0 + (counts.get("solvents", 0) * GC.SOLVENT_LUBRICATION_FACTOR)
-        dynamic_viscosity = (raw_friction / lubrication) / (1.0 + (shear_rate * GC.SHEAR_RESISTANCE_SCALAR))
-        kinetic_lift = (total_kinetic * GC.KINETIC_LIFT_RATIO) / (masses["heavy"] * 0.5 + 1.0)
-        lift = (masses["play"] * GC.PLAY_LIFT_MULT) + kinetic_lift
+        suburban_friction = (math.log1p(suburban_count) * gc_dict.get("SUBURBAN_FRICTION_LOG_BASE", 0.5))
+        raw_friction = suburban_friction + (masses["heavy"] * gc_dict.get("HEAVY_FRICTION_MULT", 1.2))
+        lubrication = 1.0 + (counts.get("solvents", 0) * gc_dict.get("SOLVENT_LUBRICATION_FACTOR", 0.2))
+        dynamic_viscosity = (raw_friction / lubrication) / (1.0 + (shear_rate * gc_dict.get("SHEAR_RESISTANCE_SCALAR", 0.1)))
+        kinetic_lift = (total_kinetic * gc_dict.get("KINETIC_LIFT_RATIO", 0.8)) / (masses["heavy"] * 0.5 + 1.0)
+        lift = (masses["play"] * gc_dict.get("PLAY_LIFT_MULT", 1.5)) + kinetic_lift
         viscosity_density = dynamic_viscosity / safe_volume
         lift_density = lift / safe_volume
-        raw_compression = (viscosity_density - lift_density) * GC.COMPRESSION_SCALAR
+        raw_compression = (viscosity_density - lift_density) * gc_dict.get("COMPRESSION_SCALAR", 2.0)
         raw_compression *= getattr(target_cfg, "SIGNAL_DRAG_MULTIPLIER", 1.0)
-        drag_floor = getattr(cfg, "DRAG_FLOOR", 1.0)
         drag_halt = getattr(cfg, "DRAG_HALT", 10.0)
-        adjusted_compression = max(drag_floor * 0.5, raw_compression)
-        compression = round(max(-5.0, min(drag_halt, adjusted_compression * mass_scalar)), 2)
+        compression = round(max(-5.0, min(drag_halt, raw_compression * mass_scalar)), 2)
         structural_mass = masses["heavy"] + masses["constructive"] + masses["harvest"]
         structural_mass -= masses["void"] * 0.5
         structural_mass = max(0.0, structural_mass)
         shapley_thresh = getattr(target_cfg, "SHAPLEY_MASS_THRESHOLD", 5.0)
         total_abstract = (masses["abstract"] + masses["liminal"] + masses["pareidolia"] + masses["void"])
-        abstraction_val = (total_abstract / safe_volume) + GC.ABSTRACTION_BASE
+        abstraction_val = (total_abstract / safe_volume) + gc_dict.get("ABSTRACTION_BASE", 0.1)
         return {"tension": tension, "compression": compression,
                 "coherence": round(min(1.0, structural_mass / max(1.0, shapley_thresh)), 3),
                 "abstraction": round(min(1.0, abstraction_val), 2), }
@@ -133,7 +131,7 @@ class HLA_Stabilizer:
             try:
                 from bone_utils import TheTclWeaver
                 weaver = TheTclWeaver.get_instance()
-                glitched_output = weaver.deform_reality(model_output, chi=0.95, voltage=150.0)
+                glitched_output = weaver.deform_reality(model_output, chi=max(0.95, current_psi), voltage=150.0 * max(1.0, current_psi))
                 return msg + f"{Prisma.GRY}{glitched_output}{Prisma.RST}"
             except ImportError:
                 return msg + model_output
@@ -182,7 +180,7 @@ class TheGatekeeper:
 
     @staticmethod
     def _pack_refusal(ctx, type_str, ui_msg):
-        return {"type": type_str, "ui": ui_msg, "logs": ctx.logs + [ui_msg]}
+        return {"type": type_str, "ui": ui_msg, "logs": ctx.logs + [ui_msg], "metrics": {"health": 0.0, "stamina": 0.0, "atp": 0.0, "efficiency": 1.0}}
 
     def audit_generation(self, generated_text: str, mito_state: Any) -> Tuple[bool, str]:
         generated_text = self.hla.mitigate_rejection(generated_text, current_psi=1.0, mito_state=mito_state)
@@ -267,9 +265,9 @@ class QuantumObserver:
         eta_val = min(1.0, (counts.get("social", 0) * 0.1) + max(0.0, valence))
         theta_val = geo.coherence
         upsilon_val = 1.0 - min(1.0, counts.get("pareidolia", 0) * 0.2)
-        m_a_val = min(1.0, (smoothed_voltage / 150.0) * e_metric)
-        i_c_val = min(1.0, 0.5 + (phi_val * 0.5))
-        mu_val = min(1.0, (beta_val * 0.5) + (e_metric * 0.5))
+        m_a_val = min(1.0, (smoothed_voltage / 150.0) * e_metric * (1.0 - (beta_val * 0.5)))
+        i_c_val = min(1.0, (phi_val * 0.6) + (geo.coherence * 0.4))
+        mu_val = min(1.0, (beta_val * 0.7) + (geo.coherence * 0.3))
         energy = EnergyState(voltage=smoothed_voltage, entropy=e_metric, beta_index=beta_val, contradiction=beta_val,
                              scope=scope_val, depth=depth_val, connectivity=conn_val, resonance=phi_val,
                              silence=delta_val, lq=lq_val, mass=round(graph_mass, 1), psi=geo.abstraction,
@@ -477,13 +475,11 @@ class ZoneInertia:
         self.strain_gauge = 0.0
         return self.is_anchored
 
-    def stabilize(self, proposed_zone: str, physics: Any, cosmic_state: Tuple[str, float, str], ) -> Tuple[str, Optional[str]]:
-        if isinstance(physics, dict):
-            beta = physics.get("beta_index", physics.get("energy", {}).get("beta_index", 1.0))
-            truth = physics.get("truth_ratio", physics.get("matter", {}).get("truth_ratio", 0.5))
-        else:
-            beta = getattr(physics, "beta_index", getattr(physics.energy, "beta_index", 1.0) if hasattr(physics, "energy") else 1.0)
-            truth = getattr(physics, "truth_ratio", getattr(physics.matter, "truth_ratio", 0.5) if hasattr(physics, "matter") else 0.5)
+    def stabilize(self, proposed_zone: str, physics: Any, cosmic_state: Tuple[str, float, str]) -> Tuple[str, Optional[str]]:
+        energy = safe_get(physics, "energy", physics)
+        matter = safe_get(physics, "matter", physics)
+        beta = safe_get(physics, "beta_index", safe_get(energy, "beta_index", 1.0))
+        truth = safe_get(physics, "truth_ratio", safe_get(matter, "truth_ratio", 0.5))
         grav_pull = 1.0 if cosmic_state[0] != "VOID_DRIFT" else 0.0
         current_vec = (beta, truth, grav_pull)
         self.dwell_counter += 1
@@ -583,7 +579,7 @@ class CosmicDynamics:
                 or not hasattr(network, "graph")
                 or not network.graph):
             fallback_msg = ux("physics_strings", "cosmic_void")
-            return "VOID_DRIFT", 3.0, self.logs.get("VOID", fallback_msg),
+            return "VOID_DRIFT", 3.0, self.logs.get("VOID", fallback_msg)
         current_time = int(time.time())
         if (not self.cached_wells
                 or (current_time - self.last_scan_tick) > self.SCAN_INTERVAL):
@@ -721,62 +717,63 @@ class CycleStabilizer:
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("DOMESTICATION_PENALTY", self._on_domestication_penalty)
 
+    @staticmethod
+    def _get(obj, f, default=0.0):
+        if isinstance(obj, dict): return obj.get(f, default)
+        return getattr(obj, f, getattr(getattr(obj, "energy", None), f, getattr(getattr(obj, "space", None), f, default)))
+
+    @staticmethod
+    def _set(obj, f, val):
+        if isinstance(obj, dict): obj[f] = val
+        else:
+            if hasattr(obj, "energy") and hasattr(obj.energy, f): setattr(obj.energy, f, val)
+            elif hasattr(obj, "space") and hasattr(obj.space, f): setattr(obj.space, f, val)
+            else: setattr(obj, f, val)
+
     def _on_domestication_penalty(self, payload):
         amount = payload.get("drag_penalty", 0.0)
         self.pending_drag += amount
 
-    def stabilize(self, ctx: CycleContext, current_phase: str):
-        p = ctx.physics
-        current_v = p.get("voltage", 0.0)
-        current_d = p.get("narrative_drag", 0.0)
-        if current_v >= self.HARD_FUSE_VOLTAGE:
-            msg = ux("physics_strings", "stabilizer_fuse")
-            ctx.log(f"{Prisma.RED}{msg.format(voltage=self.HARD_FUSE_VOLTAGE)}{Prisma.RST}")
-            cfg_deep = getattr(self.cfg, "PHYSICS_DEEP", None)
-            rst_v = getattr(cfg_deep, "FUSE_RESET_V", 10.0) if cfg_deep else 10.0
-            rst_d = getattr(cfg_deep, "FUSE_RESET_D", 5.0) if cfg_deep else 5.0
-            if hasattr(ctx, "record_flux"):
-                ctx.record_flux(current_phase, "voltage", current_v, rst_v, "FUSE_BLOWN")
-                ctx.record_flux(current_phase, "narrative_drag", current_d, rst_d, "FUSE_BLOWN")
-            p["voltage"] = rst_v
-            p["narrative_drag"] = rst_d
-            return True
+    def stabilize(self, physics: Any) -> bool:
+        applied_correction = False
         if self.pending_drag > 0:
-            p["narrative_drag"] = current_d + self.pending_drag
-            msg = ux("physics_strings", "stabilizer_domestication")
-            ctx.log(f"{Prisma.GRY}{msg.format(drag=self.pending_drag)}{Prisma.RST}")
+            current_d = self._get(physics, "narrative_drag", 0.0)
+            self._set(physics, "narrative_drag", current_d + self.pending_drag)
+            msg = ux("physics_strings", "stabilizer_domestication") or "Domestication penalty applied."
+            if hasattr(self.events, "log"):
+                self.events.log(f"STABILIZER: {msg} (+{self.pending_drag} Drag)", "PHYSICS")
             self.pending_drag = 0.0
+            applied_correction = True
         now = time.time()
         dt = max(0.001, min(1.0, now - self.last_tick_time))
         self.last_tick_time = now
-        manifold = p.get("manifold", "DEFAULT")
-        cfg = self.manifolds.get(manifold, self.manifolds["DEFAULT"])
-        target_v = cfg["voltage"]
-        if p.get("flow_state", "LAMINAR") in ["SUPERCONDUCTIVE", "FLOW_BOOST"]:
+        if not self.governor:
+            return applied_correction
+        manifold = self._get(physics, "manifold", "DEFAULT")
+        cfg = self.manifolds.get(manifold, self.manifolds.get("DEFAULT", {"voltage": 10.0, "drag": 1.0}))
+        target_v = cfg.get("voltage", 10.0)
+        current_v = self._get(physics, "voltage", 10.0)
+        if self._get(physics, "flow_state", "LAMINAR") in ["SUPERCONDUCTIVE", "FLOW_BOOST"]:
             target_v = current_v
-            cfg["drag"] = max(0.1, cfg["drag"] * 0.5)
-        self.governor.recalibrate(target_v, cfg["drag"])
-        v_force, d_force = self.governor.regulate(p, dt=dt)
-        v_floor = getattr(self.cfg.PHYSICS, "VOLTAGE_FLOOR", 0.0)
-        v_max = getattr(self.cfg.PHYSICS, "VOLTAGE_MAX", 150.0)
-        c1 = self._apply_force(ctx, current_phase, p, "voltage", v_force, (v_floor, v_max))
-        c2 = self._apply_force(ctx, current_phase, p, "narrative_drag", d_force)
-        return c1 or c2
+            cfg["drag"] = max(0.1, cfg.get("drag", 1.0) * 0.5)
+        self.governor.recalibrate(target_v, cfg.get("drag", 1.0))
+        safe_phys = physics.to_dict() if hasattr(physics, "to_dict") else physics
+        v_force, d_force = self.governor.regulate(safe_phys, dt=dt)
+        v_floor = getattr(self.cfg.PHYSICS, "VOLTAGE_FLOOR", 0.0) if hasattr(self.cfg, "PHYSICS") else 0.0
+        v_max = getattr(self.cfg.PHYSICS, "VOLTAGE_MAX", 150.0) if hasattr(self.cfg, "PHYSICS") else 150.0
+        c1 = self._apply_force(physics, "voltage", v_force, (v_floor, v_max))
+        c2 = self._apply_force(physics, "narrative_drag", d_force)
+        return applied_correction or c1 or c2
 
-    @staticmethod
-    def _apply_force(ctx, phase, p, field, force, limits=None):
+    def _apply_force(self, p, field, force, limits=None) -> bool:
         deadband = 0.05
-        flux_thresh = 0.5
         if abs(force) <= deadband:
             return False
-        old_val = p.get(field, 0.0)
+        old_val = self._get(p, field, 0.0)
         new_val = old_val + force
         if limits:
             new_val = max(limits[0], min(limits[1], new_val))
         else:
             new_val = max(0.0, new_val)
-        p[field] = new_val
-        if abs(force) > flux_thresh:
-            if hasattr(ctx, "record_flux"):
-                ctx.record_flux(phase, field, old_val, new_val, "PID_CORRECTION")
+        self._set(p, field, new_val)
         return True

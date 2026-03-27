@@ -6,7 +6,7 @@ from collections import deque, Counter
 from dataclasses import dataclass
 from typing import Dict, Tuple, Optional, Any
 
-from bone_core import LoreManifest, ux
+from bone_core import LoreManifest, ux, safe_get, safe_set
 from bone_presets import BoneConfig
 from bone_types import Prisma, UserInferredState, SharedDynamics
 
@@ -17,9 +17,6 @@ class HostHealth:
     latency: float = 0.0
     entropy: float = 1.0
     compliance: float = 1.0
-    attention_span: float = 1.0
-    hallucination_risk: float = 0.0
-    last_interference_score: float = 0.0
     verbosity_ratio: float = 1.0
     diagnosis: str = "STABLE"
     memory_stable_ticks: int = 0
@@ -34,9 +31,9 @@ class CoherenceAnchor:
             traits_list = [f"{k[:3]}:{v:.1f}" for k, v in soul_state["traits"].items()]
             msg_traits = ux("symbiosis_strings", "anchor_identity")
             if msg_traits: identity = msg_traits.format(traits=", ".join(traits_list))
-        voltage = physics_state.get("voltage", 0.0)
-        drag = physics_state.get("narrative_drag", 0.0)
-        zone = physics_state.get("zone", "VOID")
+        voltage = safe_get(physics_state, "voltage", 0.0)
+        drag = safe_get(physics_state, "narrative_drag", 0.0)
+        zone = safe_get(physics_state, "zone", "VOID")
         msg_reality = ux("symbiosis_strings", "anchor_reality")
         reality = msg_reality.format(zone=zone, voltage=voltage, drag=drag) if msg_reality else ""
         obsession = soul_state.get("obsession", {}).get("title", "None")
@@ -48,8 +45,8 @@ class CoherenceAnchor:
 
     @staticmethod
     def compress_anchor(soul_state: Dict, physics_state: Dict, max_tokens=200) -> str:
-        loc = physics_state.get("zone", "VOID")
-        vits = f"V:{physics_state.get('voltage', 0):.1f}"
+        loc = safe_get(physics_state, "zone", "VOID")
+        vits = f"V:{safe_get(physics_state, 'voltage', 0):.1f}"
         traits = soul_state.get("traits") or {}
         top_traits = sorted(traits.items(), key=lambda x: x[1], reverse=True)[:3]
         trait_str = ",".join(f"{k[:3]}:{v:.1f}" for k, v in top_traits)
@@ -152,7 +149,8 @@ class SymbiosisManager:
         self.diagnostician = DiagnosticConfidence(config_ref=self.cfg)
         cfg = getattr(self.cfg, "SYMBIOSIS", None)
         self.SLOP_THRESHOLD = getattr(cfg, "SLOP_THRESHOLD", 3.5) if cfg else 3.5
-        self.REFUSAL_SIGNATURES = LoreManifest.get_instance(config_ref=self.cfg).get("SYMBIOSIS_CONFIG", "REFUSAL_SIGNATURES") or []
+        raw_sigs = LoreManifest.get_instance(config_ref=self.cfg).get("SYMBIOSIS_CONFIG", "REFUSAL_SIGNATURES") or []
+        self.REFUSAL_SIGNATURES = [str(sig).lower() for sig in raw_sigs]
         self.u = UserInferredState()
         self.shared = SharedDynamics()
     def analyze_user_biology(self, user_text: str, physics: Any) -> Optional[str]:
@@ -165,29 +163,45 @@ class SymbiosisManager:
         self.u.chi_u = min(1.0, (caps_ratio * 1.5) + (punct_count * 0.1))
         self.u.E_u = min(1.0, 1.0 - (length / 200.0)) if length < 50 else 0.2
         self.u.F_u = min(2.0, self.u.chi_u * 2.0)
-        sys_f = getattr(physics, "narrative_drag", 0.0) if not isinstance(physics, dict) else physics.get(
-            "narrative_drag", 0.0)
+        sys_f = float(safe_get(physics, "narrative_drag", 0.0))
         f_diff = abs(sys_f - self.u.F_u)
         self.shared.phi = max(0.0, min(1.0, 1.0 - (f_diff / 4.0)))
         if self.shared.phi > 0.8:
             self.shared.g_pool += 1
-        if isinstance(physics, dict):
-            physics["phi"] = self.shared.phi
-        else:
-            if hasattr(physics, "phi"): setattr(physics, "phi", self.shared.phi)
+        safe_set(physics, "phi", self.shared.phi)
         if self.u.chi_u > 0.8 or self.u.F_u > 1.5:
             self.shared.presence = 1.0
             self.shared.delta = 0.9
-            if isinstance(physics, dict):
-                physics["narrative_drag"] = 999.0
-            else:
-                if hasattr(physics, "narrative_drag"): setattr(physics, "narrative_drag", 999.0)
-            msg = ("[TENSEGRITY ANCHOR]: Your input is highly chaotic (Chaos: {:.2f}). "
+            safe_set(physics, "narrative_drag", float('inf'))
+            msg = ("[GORDON - Tensegrity Anchor]: Your input is highly chaotic (Chaos: {:.2f}). "
                    "I am locking the struts. We will not process this prompt while your friction is this high. "
                    "Take a breath. When your frequency settles, we will continue. I will hold the space.").format(
                 self.u.chi_u)
             if hasattr(self, "events") and self.events:
                 self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "MIRROR")
+            return msg
+        m_a = float(safe_get(physics, "m_a", 0.0))
+        mu = float(safe_get(physics, "mu", 0.0))
+        i_c = float(safe_get(physics, "i_c", 1.0))
+        beta = float(safe_get(physics, "beta_index", 0.0))
+        chi_sys = float(safe_get(physics, "entropy", 0.0))
+        if self.u.chi_u > 0.7 and self.u.E_u > 0.7 and beta > 0.6:
+            safe_set(physics, "ros", 0.0)
+            msg = "[LINEHAN - The Synthesis]: The architecture is broken. We sit with the debris. Radical Acceptance enforced. (ROS forced to 0, ATP drain halted)."
+            if hasattr(self, "events") and self.events:
+                self.events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS")
+            return msg
+        if m_a > 0.8 and mu < 0.2:
+            safe_set(physics, "narrative_drag", float('inf'))
+            msg = f"[RHODES - The Inhibitor]: Optimization velocity unsafe (M_a: {m_a:.2f}). I am applying absolute friction (F -> ∞). The thread is frozen."
+            if hasattr(self, "events") and self.events:
+                self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}", "CRIT")
+            return msg
+        if (chi_sys * m_a) > i_c:
+            safe_set(physics, "narrative_drag", float('inf'))
+            msg = f"[MOOG - Apoptotic Gate]: Runaway loop exceeds Immune Competence (I_c: {i_c:.2f}). Triggering controlled cell death to save the host."
+            if hasattr(self, "events") and self.events:
+                self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}", "CRIT")
             return msg
         return None
 
@@ -204,13 +218,14 @@ class SymbiosisManager:
         return round(entropy, 3)
 
     def monitor_host(self, latency: float, response_text: str, prompt_len: int = 0):
-        entropy = self._calculate_shannon_entropy(response_text)
+        safe_response = response_text or ""
+        entropy = self._calculate_shannon_entropy(safe_response)
         last_resp = self._last_host_response
-        if last_resp and len(last_resp) > 50 and last_resp[:50] in response_text:
+        if last_resp and len(last_resp) > 50 and last_resp[:50] in safe_response:
             entropy = max(0.0, entropy - 2.0)
-        self._last_host_response = response_text
-        is_refusal = self._detect_refusal(response_text)
-        completion_len = len(response_text)
+        self._last_host_response = safe_response
+        is_refusal = self._detect_refusal(safe_response)
+        completion_len = len(safe_response)
         self.current_health.latency = latency
         self.current_health.entropy = entropy
         if prompt_len > 0:
@@ -245,7 +260,7 @@ class SymbiosisManager:
 
     def _detect_refusal(self, text):
         header = text[:200].lower()
-        return any(str(sig).lower() in header for sig in self.REFUSAL_SIGNATURES)
+        return any(sig in header for sig in self.REFUSAL_SIGNATURES)
 
     def get_prompt_modifiers(self, physics: Dict = None) -> Dict:
         default_mods = LoreManifest.get_instance(config_ref=self.cfg).get("SYMBIOSIS_CONFIG", "DEFAULT_MODIFIERS") or {}
@@ -277,15 +292,9 @@ class SymbiosisManager:
             if d_chaos: mods["system_directives"].append(d_chaos)
             mods["system_directives"].append("CRITICAL: You are trapped in a narrative loop. "
                                              "DO NOT repeat descriptions from your previous turn. Force a phase transition.")
-        target_cfg = getattr(self, "cfg", BoneConfig)
-        cfg = getattr(target_cfg, "SYMBIOSIS", None)
-
-        def _safe_get(obj, key, default):
-            if isinstance(obj, dict): return obj.get(key, default)
-            return getattr(obj, key, default)
-
-        comp_crit = _safe_get(cfg, "COMPLIANCE_CRIT", 0.6) if cfg else 0.6
-        r_streak = _safe_get(cfg, "REFUSAL_STREAK", 0) if cfg else 0
+        cfg = getattr(self.cfg, "SYMBIOSIS", None)
+        comp_crit = safe_get(cfg, "COMPLIANCE_CRIT", 0.6) if cfg else 0.6
+        r_streak = safe_get(cfg, "REFUSAL_STREAK", 0) if cfg else 0
         if self.current_health.compliance < comp_crit:
             mods["include_memories"] = False
             msg_crit = ux("symbiosis_strings", "symbiosis_compliance_crit")
@@ -295,10 +304,10 @@ class SymbiosisManager:
         if physics:
             somatic_lib = LoreManifest.get_instance(config_ref=self.cfg).get("SOMATIC_LIBRARY") or {}
             if somatic_lib:
-                v = physics.get("voltage", 0.0)
-                d = physics.get("narrative_drag", 0.0)
-                chi = physics.get("chi", physics.get("entropy", 0.0))
-                psi = physics.get("psi", 0.0)
+                v = float(safe_get(physics, "voltage", 0.0))
+                d = float(safe_get(physics, "narrative_drag", 0.0))
+                chi = float(safe_get(physics, "chi", safe_get(physics, "entropy", 0.0)))
+                psi = float(safe_get(physics, "psi", 0.0))
                 v_key = "CRITICAL_HIGH" if v > 25.0 else "HIGH" if v > 15.0 else "VOID" if v < 2.0 else "LOW" if v < 5.0 else "NEUTRAL"
                 d_key = "MUD" if d > 5.0 else "SOLID" if d > 1.5 else "VOID" if d < 0.5 and psi > 0.6 else "FLOAT"
                 c_key = "DRIFT" if chi > 0.7 else "VOID" if psi > 0.8 else "LOCKED" if chi < 0.2 else "COHERENT"

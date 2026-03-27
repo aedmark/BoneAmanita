@@ -1,6 +1,10 @@
 """ bone_presets.py """
 
+import copy
 from typing import Dict, Any, List
+
+class _ConfigNode:
+    pass
 
 def ux(section: str, key: str, default: Any = "") -> Any:
     from bone_core import LoreManifest
@@ -19,26 +23,24 @@ class BonePresets:
                  "COLOR_NAME": "GRN", }
     LABORATORY = {"PHYSICS.VOLTAGE_FLOOR": 0.5, "PHYSICS.VOLTAGE_MAX": 15.0, "PHYSICS.DRAG_FLOOR": 2.0,
                   "BIO.DECAY_RATE": 0.0, "COUNCIL.FOOTNOTE_CHANCE": 1.0, }
-    MODES = {
-        "ADVENTURE": {"description": "The default experience. Survival, inventory, exploration.", "tuning": "STANDARD",
+    MODES = {"ADVENTURE": {"description": "The default experience. Survival, inventory, exploration.", "tuning": "STANDARD",
                       "ui_layer": 1, "village_suppression": [], "prompt_key": "ADVENTURE", "show_inventory": True,
                       "show_location": True, "show_vitals": True, "allow_loot": True, "allow_metrics": False,
                       "atp_drain_enabled": True, "chaos_tax_enabled": True, "voltage_floor_override": None,
-                      "active_mods": [], "default_ui_depth": "CORE", },
+                      "active_mods": [], "default_ui_depth": "WARM", },
         "CONVERSATION": {"description": "Pure dialogue. No entropy, no items, just connection.", "tuning": "ZEN",
-                         "ui_layer": 1, "village_suppression": ["GORDON", "NAVIGATOR", "CARTOGRAPHER", "TINKERER",
-                                                                "DEATH", "BUREAU", ], "prompt_key": "CONVERSATION",
+                         "ui_layer": 1, "village_suppression": ["GORDON", "NAVIGATOR", "CARTOGRAPHER", "TINKERER", "DEATH", "BUREAU", ], "prompt_key": "CONVERSATION",
                          "show_inventory": False, "show_location": False, "show_vitals": False,
                          "allow_loot": False, "allow_metrics": False, "atp_drain_enabled": False,
                          "chaos_tax_enabled": False, "voltage_floor_override": None, "active_mods": [],
-                         "default_ui_depth": "LITE", },
+                         "default_ui_depth": "WARM", },
         "CREATIVE": {"description": "High voltage, low drag. Hallucination enabled.", "tuning": "MANIC", "ui_layer": 1,
                      "village_suppression": ["GORDON", "BENEDICT", "BUREAU", "NAVIGATOR"],
                      "prompt_key": "CREATIVE",
                      "show_inventory": False, "show_location": False,
                      "show_vitals": False, "allow_loot": False,
                      "allow_metrics": False, "atp_drain_enabled": True, "chaos_tax_enabled": False,
-                     "voltage_floor_override": 70.0, "active_mods": ["LIMINAL"], "default_ui_depth": "CORE", },
+                     "voltage_floor_override": 70.0, "active_mods": ["LIMINAL"], "default_ui_depth": "LITE", },
         "TECHNICAL": {"description": "Raw data stream. Debugging and code generation.", "tuning": "DEBUG",
                       "ui_layer": 2, "village_suppression": ["MOIRA", "JESTER", "CASSANDRA", "APRIL"],
                       "prompt_key": "TECHNICAL", "show_inventory": False,
@@ -60,7 +62,7 @@ class BoneConfig:
                         "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
                         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2}, }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "17.5.0"
+    VERSION = "18.1.0"
     VERBOSE_LOGGING = True
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -378,7 +380,7 @@ class BoneConfig:
         PANIC_TRIGGERS = {"error", "fail", "critical", "bug"}
         ROS_SIGNAL = 3.0
         ROS_DAMAGE = 8.0
-        ROS_PURGE = 12.0
+        ROS_PURGE = 60.0
         ATP_CRITICAL = 20.0
         ATP_COLLAPSE = 0.0
         SHORT_WORD_LEN = 4
@@ -743,12 +745,11 @@ class BoneConfig:
         FUSE_RESET_D = 5.0
 
     def __init__(self):
-        import copy
         for name in dir(self.__class__):
             if not name.startswith("__"):
                 val = getattr(self.__class__, name)
                 if isinstance(val, type):
-                    clone = type(name + "Clone", (object,), {})()
+                    clone = _ConfigNode()
                     for k, v in vars(val).items():
                         if not k.startswith("__") and not callable(v):
                             setattr(clone, k, copy.deepcopy(v) if isinstance(v, (dict, list, set)) else v)
@@ -801,34 +802,13 @@ class BoneConfig:
         return False, ""
 
     def reconcile_state(self, physics_packet: Any):
-        if isinstance(physics_packet, dict):
-            current_v = physics_packet.get("voltage", physics_packet.get("energy", {}).get("voltage", 5.0))
-            current_d = physics_packet.get("narrative_drag", physics_packet.get("space", {}).get("narrative_drag", 1.0))
-            new_v = max(self.PHYSICS.VOLTAGE_FLOOR, min(current_v, self.PHYSICS.VOLTAGE_MAX))
-            new_d = max(self.PHYSICS.DRAG_FLOOR, min(current_d, self.PHYSICS.DRAG_HALT))
-            if "energy" in physics_packet:
-                physics_packet["energy"]["voltage"] = new_v
-            else:
-                physics_packet["voltage"] = new_v
-            if "space" in physics_packet:
-                physics_packet["space"]["narrative_drag"] = new_d
-            else:
-                physics_packet["narrative_drag"] = new_d
-        else:
-            current_v = getattr(physics_packet, "voltage",
-                                getattr(getattr(physics_packet, "energy", None), "voltage", 5.0))
-            current_d = getattr(physics_packet, "narrative_drag",
-                                getattr(getattr(physics_packet, "space", None), "narrative_drag", 1.0))
-            new_v = max(self.PHYSICS.VOLTAGE_FLOOR, min(current_v, self.PHYSICS.VOLTAGE_MAX))
-            new_d = max(self.PHYSICS.DRAG_FLOOR, min(current_d, self.PHYSICS.DRAG_HALT))
-            if hasattr(physics_packet, "energy"):
-                physics_packet.energy.voltage = new_v
-            else:
-                setattr(physics_packet, "voltage", new_v)
-            if hasattr(physics_packet, "space"):
-                physics_packet.space.narrative_drag = new_d
-            else:
-                setattr(physics_packet, "narrative_drag", new_d)
+        from bone_core import safe_get, safe_set
+        current_v = float(safe_get(physics_packet, "voltage", safe_get(safe_get(physics_packet, "energy"), "voltage", 5.0)))
+        current_d = float(safe_get(physics_packet, "narrative_drag", safe_get(safe_get(physics_packet, "space"), "narrative_drag", 1.0)))
+        new_v = max(self.PHYSICS.VOLTAGE_FLOOR, min(current_v, self.PHYSICS.VOLTAGE_MAX))
+        new_d = max(self.PHYSICS.DRAG_FLOOR, min(current_d, self.PHYSICS.DRAG_HALT))
+        safe_set(physics_packet, "voltage", new_v)
+        safe_set(physics_packet, "narrative_drag", new_d)
         return physics_packet
 
     def tune(self, sector: str, parameter: str, value: Any) -> str:

@@ -6,7 +6,7 @@ import uuid
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 from bone_presets import BoneConfig
-from bone_core import BoneJSONEncoder, LoreManifest, ux
+from bone_core import BoneJSONEncoder, LoreManifest, ux, safe_get
 from bone_types import Prisma
 
 class TheAkashicRecord:
@@ -57,38 +57,50 @@ class TheAkashicRecord:
 
     def record_scar(self, concept: str, p: Any):
         cfg_defaults = getattr(getattr(BoneConfig, "AKASHIC", None), "DEFAULT_SCAR_COORDS", {})
-        default_coords = {
-            "E": ("exhaustion", cfg_defaults.get("E", 0.2)),
-            "beta": ("beta_index", cfg_defaults.get("beta", 0.4)),
-            "S": ("scope", cfg_defaults.get("S", 0.3)),
-            "D": ("depth", cfg_defaults.get("D", 0.3)),
-            "C": ("connectivity", cfg_defaults.get("C", 0.2)),
-            "T": ("trauma", cfg_defaults.get("T", 0.0)),
-            "psi": ("psi", cfg_defaults.get("psi", 0.0)),
-            "chi": ("entropy", cfg_defaults.get("chi", 0.0)),
-            "valence": ("valence", cfg_defaults.get("valence", 0.0)),
-            "ROS": ("ros", cfg_defaults.get("ROS", 0.0))
-        }
+        default_coords = {"E": ("exhaustion", cfg_defaults.get("E", 0.2)),
+                          "beta": ("beta_index", cfg_defaults.get("beta", 0.4)),
+                          "S": ("scope", cfg_defaults.get("S", 0.3)), "D": ("depth", cfg_defaults.get("D", 0.3)),
+                          "C": ("connectivity", cfg_defaults.get("C", 0.2)),
+                          "T": ("trauma", cfg_defaults.get("T", 0.0)), "psi": ("psi", cfg_defaults.get("psi", 0.0)),
+                          "chi": ("entropy", cfg_defaults.get("chi", 0.0)),
+                          "valence": ("valence", cfg_defaults.get("valence", 0.0)),
+                          "ROS": ("ros", cfg_defaults.get("ROS", 0.0))}
         coords = {}
-        is_dict = isinstance(p, dict)
         for short_k, (real_k, default_v) in default_coords.items():
-            if is_dict:
-                val = p.get(short_k, p.get("energy", {}).get(real_k, default_v))
-            else:
-                energy_obj = getattr(p, "energy", None)
-                if isinstance(energy_obj, dict):
-                    val = energy_obj.get(real_k, default_v)
-                else:
-                    val = getattr(energy_obj, real_k, default_v) if energy_obj else default_v
-                val = getattr(p, short_k, val)
+            val = safe_get(p, short_k)
+            if val is None:
+                val = safe_get(safe_get(p, "energy"), real_k, default_v)
             coords[short_k] = val
         scar = {"concept": concept, "coordinates": coords, "gilded": True}
         self.scar_map.append(scar)
         self.store_ghost_echo({"type": "SCAR_GHOST", "concept": concept, "coords": coords})
+        self._save_user_state()
+        self._mutate_system_prompts(concept, coords)
         if self.events:
             msg = ux("akashic_strings", "mercy_scar")
             self.events.log(f"{Prisma.OCHRE}{msg.format(concept=concept)}{Prisma.RST}", "VILLAGE")
             self.events.publish("SCAR_RECORDED", {"concept": concept, "coords": coords})
+
+    def _mutate_system_prompts(self, concept: str, coords: dict):
+        prompt_path = os.path.join(getattr(self.lore, "DATA_DIR", "lore"), "system_prompts.json")
+        if not os.path.exists(prompt_path):
+            prompt_path = "system_prompts.json"
+        try:
+            prompts = self.lore.get("system_prompts") or {}
+            if "EPIGENETIC_SCARS" not in prompts.get("GLOBAL_BASELINE", {}):
+                prompts.setdefault("GLOBAL_BASELINE", {})["EPIGENETIC_SCARS"] = []
+            tension = coords.get("beta", 0.0)
+            axiom = f"SCAR TISSUE [{concept.upper()}]: The system previously collapsed here (Tension: {tension}). You must structurally avoid repeating the failure that caused this."
+            if axiom not in prompts["GLOBAL_BASELINE"]["EPIGENETIC_SCARS"]:
+                prompts["GLOBAL_BASELINE"]["EPIGENETIC_SCARS"].append(axiom)
+            with open(prompt_path, "w", encoding="utf-8") as f:
+                json.dump(prompts, f, indent=2)
+            self.lore.inject("system_prompts", prompts)
+            if self.events:
+                self.events.log(f"{Prisma.VIOLET}🧬 [EPIGENETICS] Scar '{concept}' compiled into bedrock.{Prisma.RST}", "SYS")
+        except Exception as e:
+            if self.events:
+                self.events.log(f"{Prisma.RED}Failed to mutate system_prompts.json: {e}{Prisma.RST}", "SYS")
 
     def bury_memory(self, concept: str, data: Dict):
         self.subconscious_strata.append({"concept": concept, "data": data})
@@ -106,13 +118,13 @@ class TheAkashicRecord:
 
     @staticmethod
     def _extract_dominant_trigram(physics: Any) -> str:
-        if isinstance(physics, dict):
-            vector = physics.get("vector", physics.get("matter", {}).get("vector", {}))
-        else:
-            vector = getattr(physics, "vector", getattr(physics.matter, "vector", {}) if hasattr(physics, "matter") else {})
-        if not vector:
+        vector = safe_get(physics, "vector", safe_get(safe_get(physics, "matter"), "vector", {}))
+        if not vector or not isinstance(vector, dict):
             return "KAN"
-        dom = max(vector, key=vector.get)
+        valid_items = {k: v for k, v in vector.items() if v is not None}
+        if not valid_items:
+            return "KAN"
+        dom = max(valid_items, key=valid_items.get)
         constants = LoreManifest.get_instance().get("PHYSICS_CONSTANTS") or {}
         trigrams = constants.get("TRIGRAM_MAP", {})
         fallback_mapping = constants.get("FALLBACK_TRIGRAMS", {"CHI": "KAN", "LAMBDA": "KUN"})
@@ -166,7 +178,11 @@ class TheAkashicRecord:
             self.store_ghost_echo(payload)
 
     def forge_new_item(self, vector: Dict[str, float]) -> Tuple[str, Dict]:
-        dominant_force = max(vector, key=vector.__getitem__) if vector else "CHI"
+        if not vector or not isinstance(vector, dict):
+            dominant_force = "CHI"
+        else:
+            valid_items = {k: v for k, v in vector.items() if v is not None}
+            dominant_force = max(valid_items, key=valid_items.get) if valid_items else "CHI"
         item_gen_data = self.lore.get("ITEM_GENERATION") or {}
         prefixes = item_gen_data.get("PREFIXES", {})
         prefix = prefixes.get(dominant_force, item_gen_data.get("FALLBACK_PREFIX", "Ascended"))
@@ -317,12 +333,16 @@ class TheAkashicRecord:
             return
 
         def get_weights(l_name):
-            return existing_lenses.get(l_name, {}).get("weights", {"v": 0, "d": 0})
+            data = safe_get(existing_lenses, l_name, {})
+            return safe_get(data, "weights", {"v": 0.0, "d": 0.0})
 
         w_a = get_weights(lens_a)
         w_b = get_weights(lens_b)
-        new_weights = {"voltage": round((w_a.get("voltage", w_a.get("v", 0)) + w_b.get("voltage", w_b.get("v", 0))) / 2, 2, ),
-                       "drag": round((w_a.get("drag", w_a.get("d", 0)) + w_b.get("drag", w_b.get("d", 0)))/ 2,2,),}
+        v_a = float(safe_get(w_a, "voltage", safe_get(w_a, "v", 0.0)))
+        v_b = float(safe_get(w_b, "voltage", safe_get(w_b, "v", 0.0)))
+        d_a = float(safe_get(w_a, "drag", safe_get(w_a, "d", 0.0)))
+        d_b = float(safe_get(w_b, "drag", safe_get(w_b, "d", 0.0)))
+        new_weights = {"voltage": round((v_a + v_b) / 2, 2), "drag": round((d_a + d_b) / 2, 2)}
         desc_template = ux("akashic_strings", "lens_desc")
         new_lens_data = {"description": desc_template.format(lens_a=lens_a, lens_b=lens_b), "weights": new_weights,
                          "parentage": [lens_a, lens_b], }

@@ -18,6 +18,16 @@ from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCr
 def ux(section: str, key: str, default: Any = "") -> Any:
     return LoreManifest.get_instance().get_ux(section, key, default)
 
+def safe_get(obj: Any, key: str, default: Any = None) -> Any:
+    if obj is None: return default
+    if isinstance(obj, dict): return obj.get(key, default)
+    return getattr(obj, key, default)
+
+def safe_set(obj: Any, key: str, value: Any) -> None:
+    if obj is None: return
+    if isinstance(obj, dict): obj[key] = value
+    else: setattr(obj, key, value)
+
 class BoneJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, set):
@@ -63,7 +73,10 @@ class EventBus:
         self.buffer.append(event)
         if source in self.subscribers:
             for cb in self.subscribers[source]:
-                cb(event)
+                try:
+                    cb(event)
+                except Exception:
+                    pass
         if self.telemetry:
             self.telemetry.record_event(event)
         else:
@@ -293,7 +306,7 @@ class CyberneticGovernor:
 
     def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
         coupling = (phi * 0.6) + (user_exhaustion * 0.4)
-        if coupling > 0.8:
+        if coupling > 0.7:
             self.order = 2
         elif resonance_delta > 0.3:
             self.order = 2
@@ -311,14 +324,14 @@ class ArchetypeArbiter:
     @staticmethod
     def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Dict = None, config_ref=None) -> Tuple[str, str, str]:
         target_cfg = config_ref or BoneConfig
-        for mandate in council_mandates:
+        for mandate in (council_mandates or []):
             if mandate.get("type") == "LOCKDOWN":
                 return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law")
             if mandate.get("type") == "FORCE_MODE":
                 return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic")
-            if "/" in soul_archetype:
-                msg = ux("core_strings", "arb_diamond")
-                return soul_archetype, "SOUL", (msg.format(soul_archetype=soul_archetype) if msg else "")
+        if soul_archetype and "/" in soul_archetype:
+            msg = ux("core_strings", "arb_diamond")
+            return soul_archetype, "SOUL", (msg.format(soul_archetype=soul_archetype) if msg else "")
         if trigram:
             trigram_name = trigram.get("name")
             narrative = LoreManifest.get_instance().get("NARRATIVE_DATA") or {}
@@ -352,6 +365,8 @@ class TelemetryService:
         self.active_crystal = None
         self.disabled = False
         self.write_errors = 0
+        import threading
+        self._lock = threading.Lock()
         try:
             os.makedirs(self.log_dir, exist_ok=True)
             self.current_trace_file = os.path.join(
@@ -364,9 +379,10 @@ class TelemetryService:
         self._executor = ThreadPoolExecutor(max_workers=1)
 
     def record_event(self, event_dict: dict):
-        trace_file = os.path.join(self.log_dir, f"trace_{self.session_id}.jsonl")
+        if not self.current_trace_file or self.disabled:
+            return
         try:
-            with open(trace_file, "a", encoding="utf-8") as f:
+            with open(self.current_trace_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps(event_dict, cls=BoneJSONEncoder) + "\n")
         except Exception:
             pass
@@ -415,25 +431,36 @@ class TelemetryService:
     def _buffer_line(self, json_str: str):
         if self.disabled:
             return
-        self.write_buffer.append(json_str)
-        if len(self.write_buffer) >= self.BUFFER_SIZE:
-            self.flush_to_disk()
+        with self._lock:
+            self.write_buffer.append(json_str)
+            if len(self.write_buffer) >= self.BUFFER_SIZE:
+                self.flush_to_disk_locked()
 
-    def flush_to_disk(self):
+    def flush_to_disk_locked(self):
         if self.disabled or not self.current_trace_file or not self.write_buffer:
             return
         lines_to_write = list(self.write_buffer)
         self.write_buffer.clear()
-
-        def _bg_write(lines, filepath):
-            try:
-                with open(filepath, "a", encoding="utf-8") as f:
-                    f.write("\n".join(lines) + "\n")
-            except IOError:
-                pass
-
-        self._executor.submit(_bg_write, lines_to_write, self.current_trace_file)
+        self._executor.submit(self._bg_write, lines_to_write, self.current_trace_file)
         self.write_errors = 0
+
+    def flush_to_disk(self):
+        if not hasattr(self, "_lock"): return
+        with self._lock:
+            self.flush_to_disk_locked()
+
+    @staticmethod
+    def _bg_write(lines, filepath):
+        try:
+            with open(filepath, "a", encoding="utf-8") as f:
+                f.write("\n".join(lines) + "\n")
+        except IOError:
+            pass
+
+    def shutdown(self):
+        self.flush_to_disk()
+        if hasattr(self, "_executor"):
+            self._executor.shutdown(wait=True)
 
     def read_recent_history(self, limit=4) -> List[str]:
         if not os.path.exists(self.log_dir):

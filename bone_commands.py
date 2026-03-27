@@ -59,17 +59,20 @@ class CommandStateInterface:
             atlas_data = self.eng.navigator.export_atlas()
         mito_traits = {}
         antibodies = None
-        if hasattr(self.eng, "bio"):
+        if hasattr(self.eng, "bio") and self.eng.bio:
             if hasattr(self.eng.bio, "mito") and hasattr(self.eng.bio.mito, "state"):
                 mito_traits = self.eng.bio.mito.state.__dict__
             if hasattr(self.eng.bio, "immune"):
                 antibodies = list(self.eng.bio.immune.active_antibodies)
+        try:
             return self.eng.mind.mem.save(health=self.eng.health, stamina=self.eng.stamina, mutations={},
                                           trauma_accum=getattr(self.eng, "trauma_accum", {}), joy_history=[],
                                           mitochondria_traits=mito_traits, antibodies=antibodies,
                                           soul_data=(self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None),
                                           continuity=continuity_packet, world_atlas=atlas_data, village_data=None, )
-        return ux("command_state", "unreachable_error")
+        except Exception as e:
+            self.log(f"{self.P.RED}Save failed at memory core: {e}{self.P.RST}", "ERR")
+            return ux("command_state", "unreachable_error")
 
     def get_vitals(self) -> Dict[str, float]:
         metrics = self.eng.get_metrics()
@@ -442,13 +445,19 @@ class CommandProcessor:
 
     def _cmd_mod(self, parts):
         if len(parts) < 2:
-            self.interface.log("Usage: /mod [slash|...]")
+            self.interface.log("Usage: /mod [slash|md]")
             return True
         mod = parts[1].upper()
         if mod == "SLASH":
             self.interface.log(f"{self.P.INDIGO}SLASH Mod Chip engaged. Dev Team online.{self.P.RST}")
             if hasattr(self.interface.eng, "council") and hasattr(self.interface.eng.council, "slash_council"):
                 self.interface.eng.council.slash_council.active = True
+        elif mod == "MD" or mod == "SYSTEMIC_HEALTH":
+            self.interface.log(f"{self.P.GRN}MD Mod Chip engaged. Systemic Health protocols online.{self.P.RST}")
+            if hasattr(self.interface.eng, "council") and hasattr(self.interface.eng.council, "overseer_council"):
+                self.interface.eng.council.overseer_council.active = True
+        else:
+            self.interface.log(f"{self.P.RED}Unknown mod chip: {mod}{self.P.RST}")
         return True
 
     def _cmd_grief(self, _parts):
@@ -493,4 +502,25 @@ class CommandProcessor:
         if hasattr(self.interface.eng, "events"):
             self.interface.eng.events.publish("TRAUMA_EVENT", {"magnitude": 50.0})
         self.interface.log(f"{self.P.RED}[DEV] Health dropped to 20. Trauma spiked to 50. Proceed to next turn.{self.P.RST}", "SYS")
+        return True
+
+    def _cmd_podcast(self, parts):
+        if len(parts) < 2:
+            self.interface.log("Usage: /podcast <topic>")
+            return True
+
+        topic = " ".join(parts[1:])
+        self.interface.log(f"{self.P.CYN}🎙️ Assembling the Parliament for topic: '{topic}'...{self.P.RST}")
+        cortex = getattr(self.interface.eng, "cortex", None)
+        llm = getattr(cortex, "llm", None) if cortex else None
+        council = getattr(self.interface.eng, "council", None)
+        if not llm or not council or not hasattr(council, "host_podcast"):
+            self.interface.log(f"{self.P.RED}Error: Cortex LLM or Council 'host_podcast' method unavailable.{self.P.RST}")
+            return True
+        try:
+            script = council.host_podcast(topic, llm)
+            self.interface.log(f"\n{script}\n")
+            self.interface.log(f"{self.P.GRN}Podcast script generated. Ready for Kokoro ingestion.{self.P.RST}")
+        except Exception as e:
+            self.interface.log(f"{self.P.RED}Podcast generation failed: {e}{self.P.RST}")
         return True

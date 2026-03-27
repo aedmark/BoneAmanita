@@ -6,7 +6,7 @@ import time
 from collections import deque, Counter
 from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, List, Any, Tuple
-from bone_core import Prisma, LoreManifest, ux
+from bone_core import Prisma, LoreManifest, ux, safe_get, safe_set
 from bone_presets import BoneConfig
 from bone_spores import ImmuneMycelium, BioLichen, BioParasite
 
@@ -215,32 +215,26 @@ class MitochondrialForge:
         if self.state.atp_pool > 95.0 and self.state.ros_buildup < 1.0:
             return MetabolicReceipt(0, 0, 0, 0, 0, "NOMINAL", "Fresh Start")
         cfg = getattr(self.cfg, "BIO", None)
-
-        def _p(k, d=0.0):
-            if isinstance(physics_packet, dict):
-                return physics_packet.get(k, physics_packet.get("energy", {}).get(k, physics_packet.get("space", {}).get(k, physics_packet.get("matter", {}).get(k, d))))
-            return getattr(physics_packet, k, getattr(getattr(physics_packet, "energy", None), k, getattr(getattr(physics_packet, "space", None), k, getattr(getattr(physics_packet, "matter", None), k, d))))
-
         base_yield = getattr(cfg, "BASE_ATP_YIELD", 2.0)
         v_tax_mult = getattr(cfg, "VOLTAGE_TAX_MULT", 0.05)
         depth_mult = getattr(cfg, "DEPTH_TAX_MULT", 2.0)
         conn_mult = getattr(cfg, "CONN_TAX_MULT", 3.0)
         chaos_thresh = getattr(cfg, "CHAOS_TAX_THRESHOLD", 0.6)
         chaos_mult = getattr(cfg, "CHAOS_TAX_MULT", 8.0)
-        depth = _p("depth", 0.3)
-        connectivity = _p("connectivity", 0.2)
-        current_voltage = _p("voltage", 30.0)
+        depth = safe_get(physics_packet, "depth", 0.3)
+        connectivity = safe_get(physics_packet, "connectivity", 0.2)
+        current_voltage = safe_get(physics_packet, "voltage", 30.0)
         base_cost = base_yield + (current_voltage * v_tax_mult)
         cognitive_load_tax = (depth * depth_mult) + (connectivity * conn_mult)
-        chi = _p("chi", _p("entropy", 0.0))
+        chi = safe_get(physics_packet, "chi", safe_get(physics_packet, "entropy", 0.0))
         if chi > chaos_thresh:
             chaos_tax = chaos_mult * chi
             cognitive_load_tax += chaos_tax
             if self.events:
                 msg = ux("mito_forge", "chaos_tax")
                 if msg: self.events.log(f"{Prisma.RED}{msg.format(tax=chaos_tax)}{Prisma.RST}", "BIO_WARN")
-        mu = _p("mu", 0.0)
-        m_a = _p("m_a", 0.0)
+        mu = safe_get(physics_packet, "mu", 0.0)
+        m_a = safe_get(physics_packet, "m_a", 0.0)
         if mu > 0:
             amplification_tax = mu * math.exp(m_a)
             cognitive_load_tax += amplification_tax
@@ -251,7 +245,7 @@ class MitochondrialForge:
         if liminal_intensity > 0:
             liminal_tax = liminal_intensity**2
             cognitive_load_tax += liminal_tax
-        base_demand = base_cost + (self.state.ros_buildup * 0.5)
+        base_demand = base_cost + (math.log1p(max(0.0, self.state.ros_buildup)) * 2.0)
         atp_crit = getattr(cfg, "ATP_CRITICAL", 20.0) if cfg else 20.0
         is_critical = self.state.atp_pool < atp_crit
         if is_critical:
@@ -277,11 +271,10 @@ class MitochondrialForge:
             icon = ux("mito_forge", "icon_grinding")
             if msg: self.events.log(f"{Prisma.OCHRE}{icon}{msg}{Prisma.RST}", "BIO_WARN")
         total_metabolic_cost = raw_cost
-        psi = _p("psi", 0.0)
-        chi = _p("entropy", _p("chi", 0.0))
-        voltage = _p("voltage", 30.0)
+        psi = float(safe_get(physics_packet, "psi", 0.0))
+        voltage = float(safe_get(physics_packet, "voltage", 30.0))
         waste_generated = 0.0
-        cfg = getattr(BoneConfig, "BIO", None)
+        cfg = getattr(self.cfg, "BIO", None)
         psi_mult = getattr(cfg, "WASTE_PSI_MULT", 5.0) if cfg else 5.0
         chi_mult = getattr(cfg, "WASTE_CHI_MULT", 5.0) if cfg else 5.0
         volt_div = getattr(cfg, "WASTE_VOLT_DIV", 20.0) if cfg else 20.0
@@ -311,9 +304,9 @@ class MitochondrialForge:
 
     def _apply_adaptive_dynamics(self):
         cfg = getattr(self.cfg, "BIO", None)
-        ros_sig = getattr(cfg, "ROS_SIGNAL", 3.0) if cfg else 3.0
-        ros_dam = getattr(cfg, "ROS_DAMAGE", 8.0) if cfg else 8.0
-        ros_purge = getattr(cfg, "ROS_PURGE", 12.0) if cfg else 12.0
+        ros_sig = getattr(cfg, "ROS_SIGNAL", 5.0) if cfg else 5.0
+        ros_dam = getattr(cfg, "ROS_DAMAGE", 25.0) if cfg else 25.0
+        ros_purge = getattr(cfg, "ROS_PURGE", 40.0) if cfg else 40.0
         if self.state.ros_buildup < ros_sig:
             self.state.membrane_potential = max(0.5, self.state.membrane_potential - 0.001)
             self.state.retrograde_signal = "QUIET"
@@ -425,7 +418,10 @@ class DigestiveTrack:
             if cat == "antigen":
                 cliche_tax += self.CLICHE_TAX_RATE * count
                 continue
-            if cat not in ["kinetic", "explosive"]:
+            if cat in ["kinetic", "explosive"]:
+                val = self.COMPLEX_WORD_BONUS if len(word) > comp_len else self.BASE_WORD_VALUE
+                atp_yield += (val * 1.5) * (1.0 + math.log1p(max(0, count - 1)))
+            else:
                 enzyme = self.enzyme_map.get(cat, "AMYLASE")
                 if enzyme != "AMYLASE":
                     enzymes.append(enzyme)
@@ -553,6 +549,7 @@ class SomaticLoop:
         self.regulator = EndocrineRegulator(self.bio)
         self.feedback = BioFeedback(self.bio, config_ref=self.cfg)
         self.semantic_doctor = SemanticEndocrinologist(memory_ref, lexicon_ref)
+        self.synesthesia = SynestheticCortex(self.bio, config_ref=self.cfg)
         self.narrative_data = LoreManifest.get_instance(config_ref=self.cfg).get("BIO_NARRATIVE") or {}
         if not self.narrative_data:
             if hasattr(self.events, "log"):
@@ -876,10 +873,12 @@ class MetabolicGovernor:
         self.voltage_pid.setpoint = target_voltage
         self.drag_pid.setpoint = target_drag
 
-    def regulate(self, physics, dt: float) -> Tuple[float, float]:
+    def regulate(self, physics: Any, dt: float) -> Tuple[float, float]:
         safe_dt = max(0.001, dt)
-        v_force = self.voltage_pid.update(getattr(physics, "voltage"), safe_dt)
-        d_force = self.drag_pid.update(getattr(physics, "narrative_drag"), safe_dt)
+        v_val = safe_get(physics, "voltage", safe_get(safe_get(physics, "energy", physics), "voltage", 0.0))
+        d_val = safe_get(physics, "narrative_drag", safe_get(safe_get(physics, "space", physics), "narrative_drag", 0.0))
+        v_force = self.voltage_pid.update(v_val, safe_dt)
+        d_force = self.drag_pid.update(d_val, safe_dt)
         return v_force, d_force
 
     def assess(self, physics_packet) -> Tuple[bool, float]:
@@ -953,7 +952,7 @@ class MetabolicGovernor:
         return "COURTYARD"
 
     @staticmethod
-    def _get_shift_message(mode: str, text_map: Dict, physics: Dict) -> str:
+    def _get_shift_message(mode: str, text_map: Dict, physics: Any) -> str:
         shift_cfg = LoreManifest.get_instance().get("BODY_CONFIG", "GOVERNOR_SHIFT") or {}
         raw_colors = shift_cfg.get("COLORS", {})
         defaults = shift_cfg.get("DEFAULTS", {})
@@ -961,8 +960,7 @@ class MetabolicGovernor:
         lookup = {"LABORATORY": "LAB", "COURTYARD": "CLEAR"}.get(mode, mode)
         tmpl = text_map.get(lookup, defaults.get(mode, ""))
         try:
-            return tmpl.format(color=colors.get(mode, Prisma.WHT), reset=Prisma.RST,
-                               volts=getattr(physics, "voltage", 0), beta=getattr(physics, "beta_index", 0), )
+            return tmpl.format(color=colors.get(mode, Prisma.WHT), reset=Prisma.RST, volts=safe_get(physics, "voltage", 0.0), beta=safe_get(physics, "beta_index", 0.0), )
         except:
             return f"{colors.get(mode, '')}{defaults.get(mode, '')}{Prisma.RST}"
 
@@ -998,7 +996,6 @@ class SynestheticCortex:
         return getattr(physics, "__dict__", {})
 
     def perceive(self, physics: Dict, traits: Any = None, latency: float = 0.0) -> BiologicalImpulse:
-        physics = self._normalize_physics(physics)
         impulse = BiologicalImpulse()
         impulse.stamina_impact -= 1.0
         cortex_cfg = getattr(self.cfg, "CORTEX", None)
@@ -1008,10 +1005,10 @@ class SynestheticCortex:
             discipline = getattr(traits, "discipline", 0.5)
             base_sens *= 1.0 + curiosity - discipline
         sens = max(0.0, base_sens)
-        valence = physics.get("valence", 0.0)
-        counts = physics.get("counts", {})
-        voltage = physics.get("voltage", 0)
-        drag = physics.get("narrative_drag", 0)
+        valence = safe_get(physics, "valence", 0.0)
+        counts = safe_get(physics, "counts", safe_get(safe_get(physics, "matter", physics), "counts", {}))
+        voltage = safe_get(physics, "voltage", 0.0)
+        drag = safe_get(physics, "narrative_drag", 0.0)
         if drag > 3.0:
             impulse.stamina_impact -= drag * 0.4
         if valence < -0.5:
