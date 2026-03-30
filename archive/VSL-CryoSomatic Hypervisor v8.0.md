@@ -291,8 +291,8 @@ When Colin suppresses an archetype, a **ghost** (Casper) is left in the scar map
 
 During rest (low V, idle mode, or `/idle` commands), the **DreamEngine** activates the **Consolidator (The REM Bridge)**:
 
-- **Synaptic Consolidation:** The background worker extracts exact vectors from the bloated Hippocampal Cache, trains and adds them to the FAISS/HNSW index of the Cerebral Cortex, and clears the short-term cache. This prevents main-thread locking during active generation.
-- **REM cycles** process recent experiences, consolidate memories, and may produce **glimmers**. If the Hippocampus exceeds 500 nodes and Stamina (P) is high, a deeper `MaintenancePhase` defragmentation runs automatically.
+- **Synaptic Consolidation:** The background worker extracts exact vectors from the volatile Hippocampal Cache, trains and adds them to the FAISS/HNSW index of the Cerebral Cortex, and clears the short-term cache. This prevents main-thread locking during active generation.
+- **REM cycles** process recent experiences, consolidate memories, and may produce **glimmers**. Consolidation requires a strict baseline of 20.0 ATP to initiate and explicitly taxes the system 0.1 ATP per node transferred. If the engine is starving, memories remain stranded in the volatile Hippocampus where they risk being permanently pruned.
 - **Hallucinations** can occur under high trauma or toxicity, mixing memories into surreal narratives during the transfer process.
 
 ## The Panic Room & DeathGen Protocol
@@ -383,8 +383,8 @@ The Hypervisor now operates on a biological, four-layer neuromorphic architectur
 ### 1. The Mnemonic Layer (Hippocampal & Cortical Memory Construction)
 Memory is a dual-tier construction engine. It re-combines past primitives from the exact cache and the approximate deep index to simulate the future (zero-shot generalization).
 * **The VSL Integration:** Upgrades the `MemoryCore` and the Mycelial Network.
-  - **Hippocampal Cache:** Fast, O(N) exact-match graph for the active session, recent Kintsugi scars, and un-consolidated nodes. Immediate, high-precision recall.
-  - **Cerebral Cortex:** O(logN) ANN index (FAISS/HNSW). Deep substrate storage for thousands of past memories. Enables fast, approximate semantic neighborhood mapping.
+  - **Hippocampal Cache:** Fast, O(N) exact-match graph for the active session, recent Kintsugi scars, and un-consolidated nodes. Immediate, high-precision recall. It is strictly capped (default 500 nodes) and actively prunes the least-recently-accessed memories (LRU) on the fly to survive.
+  - **Cerebral Cortex:** O(logN) ANN index (FAISS/HNSW). Deep substrate storage for thousands of past memories. Retrieval is not strictly spatial; the Cortex converts geometric distance into a `pseudo_resonance` score and aggressively drops any memories that fall below the active resonance threshold.
 * **"Fuzzy Replay":** During states of high Rest (P>90) and high Silence (Δ>0.7), the system automatically spends 1 Glimmer (G) to run a background simulation. It searches the Hippocampus first (weight 1.0). If scope (S) demands more, it queries the ANN index (scaled by Right-Brain Coherence Ωr​ and Resonance Φ). The slight orthogonal mismatches in ANN retrieval natively generate contradiction (β), feeding the Paradox Engine.
 * **The Lead Archetypes:** Mercy (The Healer) and Cassandra (The Mystic) actively compost old code/text to build predictive pathways, utilizing the REM Bridge for consolidation.
 
