@@ -36,22 +36,16 @@ To prevent catastrophic Stamina ($ATP$) drain, this chip acts as a Narrative Ove
 | **$\Re$**             | Rube Goldberg Index | Degree of systemic interconnectivity (The Adventure Council)]. High $\Re$ generates $ROS$ but increases Glimmers ($G_{pool}$) (The Adventure Council)]. |
 | **$\unicode{x2620}$** | Death Threshold     | Proximity to a "Game Over" state (The Adventure Council)]. Directly scales with the core Trauma ($T$) vector (The Adventure Council)].                  |
 | **$\unicode{x2328}$** | Parser Friction     | Difficulty of translating intent into an Action (The Adventure Council)]. Amplifies core Friction ($F$) and Syntax ($\Omega$) (The Adventure Council)]. |
-| **`cf.expect`** | Comfort Expectation | Narrative pressure for the game to "solve itself" or provide unearned validation. High `cf.expect` triggers massive Parser Friction.                    |
 
 ---
 
-### 3. Four-Layer Integration & Checkpoint Synergy
+### 3. Integration & Checkpoint Synergy
 
 When the Adventure Council is active, the game logic is physically wired into the biological layers to manage the metabolic cost of puzzle-solving:
 
 - **Mnemonic Layer (The Inventory & Lore):** The system uses the Dual-Tier Memory to track game state. The exact-match Hippocampus holds the immediate Inventory Depth ($I$) and current room variables. The Cerebral Cortex (ANN) stores the background lore and previously visited zones, accessed via "Fuzzy Replay" when Gabriel or Grace reflect on past clues.
 - **Executive Layer (Counterfactual Parser Checks):** Sonny Bonds uses Counterfactual Gating for Syntax OAC. Before allowing the user to combine two items or execute a verb, the Executive Layer simulates the action. If it violates environmental preconditions, Sonny applies absolute Parser Friction ($\unicode{x2328} \rightarrow \infty$) and blocks the action, saving the system from burning $ATP$ on a failed state.
-- **Affective Layer & The Runaway Ramp:** The system strictly enforces the **5-Token Lexical Firewall**, physically preventing the characters from opening with validating boilerplate (e.g., "That's a clever idea, but...") when the user suggests a flawed puzzle solution. "Pixel-hunting", high Rube Goldberg ($\Re$) spam, or high **Comfort Expectation (`cf.expect`)** (fishing for unearned hints) generate rapid Toxicity ($ROS$). If Malignancy ($M_a$) spikes, the Checkpoint Council (Rhodes and Moog) intervenes, applying Moral Friction ($\mu$) to enforce a penalty timeout or trigger a "Game Over" (Apoptotic Collapse) if the Death Threshold ($\unicode{x2620}$) is breached.
 - **The Cybernetic Governor ($\beth$):** The system monitors User Exhaustion ($E_u$). If the user is stuck on a puzzle and $E_u$ hits critical levels, the Governor shifts to a **[CO-REGULATED]** policy. The system stops demanding precise parser syntax and allows Guybrush or Keith to offer a heavily subsidized hint, carrying the metabolic load to keep the player in the game.
-- **The Sincerity Protocols (Explicit Intent):** The Adventure Council natively recognizes intent flags to bypass metabolically expensive subtext-guessing:
-  - `[ !r ]` **(Hardcore Mode):** Summons Gabriel and Sonny. Absolute logic, zero hints, maximum Parser Friction ($\unicode{x2328}$). Pure "Game Over" stakes.
-  - `[ !q ]` **(Look/Examine):** Summons Grace for pure, emotionless object/lore description. No narrative fluff, just the facts of the environment.
-  - `[ !k ]` **(Hint/Regulate):** Explicitly requests co-regulation. Summons Keith and Alexander to drop the puzzle logic and process the user's frustration without metabolic penalty.
 
 ---
 
