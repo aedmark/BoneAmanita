@@ -1,4 +1,4 @@
-""" bone_inventory.py """
+"""bone_inventory.py"""
 
 import random
 import re
@@ -7,6 +7,7 @@ from typing import List, Dict, Tuple, Optional, Any
 from bone_presets import BoneConfig
 from bone_core import LoreManifest, ux, safe_get, safe_set
 from bone_types import Prisma
+
 
 @dataclass
 class Item:
@@ -23,13 +24,24 @@ class Item:
     @classmethod
     def from_dict(cls, name: str, data: Dict):
         default_desc = ux("gordon_strings", "default_item_desc") or "Unknown Artifact"
-        default_usage = ux("gordon_strings", "default_item_use") or f"You use the {name}."
-        is_consumable = data.get("consume_on_use", False) or (data.get("cost") == "CONSUMABLE")
-        return cls(name=name, description=data.get("description", default_desc),
-                   function=data.get("function", "MISC"), passive_traits=data.get("passive_traits", []),
-                   spawn_context=data.get("spawn_context", "COMMON"), value=data.get("value", 1.0),
-                   usage_msg=data.get("usage_msg", default_usage),
-                   consume_on_use=is_consumable, reflex_trigger=data.get("reflex_trigger", None))
+        default_usage = (
+            ux("gordon_strings", "default_item_use") or f"You use the {name}."
+        )
+        is_consumable = data.get("consume_on_use", False) or (
+            data.get("cost") == "CONSUMABLE"
+        )
+        return cls(
+            name=name,
+            description=data.get("description", default_desc),
+            function=data.get("function", "MISC"),
+            passive_traits=data.get("passive_traits", []),
+            spawn_context=data.get("spawn_context", "COMMON"),
+            value=data.get("value", 1.0),
+            usage_msg=data.get("usage_msg", default_usage),
+            consume_on_use=is_consumable,
+            reflex_trigger=data.get("reflex_trigger", None),
+        )
+
 
 class GordonKnot:
     def __init__(self, events=None, mode="ADVENTURE", config_ref=None):
@@ -55,7 +67,8 @@ class GordonKnot:
         self.load_config()
 
     def enforce_object_action_coupling(
-            self, user_input: str, current_zone: str) -> Optional[str]:
+        self, user_input: str, current_zone: str
+    ) -> Optional[str]:
         if self.mode in ["CREATIVE", "CONVERSATION", "TECHNICAL"]:
             return None
         text = user_input.lower()
@@ -65,24 +78,28 @@ class GordonKnot:
                 if required_loc not in current_zone.lower():
                     msg = ux("gordon_strings", "premise_loc")
                     return f"{Prisma.SLATE}{msg.format(loc=required_loc, zone=current_zone)}{Prisma.RST}"
-        inventory_items = " ".join([i.get("name", "").lower() for i in self.get_inventory_data()])
+        inventory_items = " ".join(
+            [i.get("name", "").lower() for i in self.get_inventory_data()]
+        )
         for action, required_objects in self.action_coupling.items():
             verb_pattern = rf"\b(?:i\s+(?:will\s+)?{action}|to\s+{action}|{action}\s+(?:the|a|an|my|some|it|this|that)|{action}ing)\b|^{action}\b"
             if re.search(verb_pattern, text):
-                has_item = any(obj in inventory_items for obj in required_objects)
-                mentions_item = any(obj in text for obj in required_objects)
+                has_item = any(
+                    re.search(rf"\b{re.escape(obj)}\b", inventory_items)
+                    for obj in required_objects
+                )
+                mentions_item = any(
+                    re.search(rf"\b{re.escape(obj)}\b", text)
+                    for obj in required_objects
+                )
                 if not has_item and not mentions_item:
                     req_str = ", ".join(required_objects)
                     msg = ux("gordon_strings", "premise_req")
                     return f"{Prisma.SLATE}{msg.format(action=action, req_str=req_str)}{Prisma.RST}"
-        has_interaction = any(re.search(rf"\b{v}\b", text) for v in self.interaction_verbs)
-        if has_interaction:
-            all_known = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
-            for item_name in all_known:
-                item_lower = item_name.lower().replace("_", " ")
-                if item_lower in text and item_name.upper() not in self.inventory:
-                    msg = ux("gordon_strings", "premise_inv")
-                    return f"{Prisma.SLATE}{msg.format(item=item_lower)}{Prisma.RST}"
+        if any(re.search(rf"\b{v}\b", text) for v in self.interaction_verbs):
+            for i in set(self.registry) | set(self.ITEM_REGISTRY):
+                if re.search(rf"\b{re.escape(i_low := i.lower().replace('_', ' '))}\b", text) and i.upper() not in self.inventory:
+                    return f"{Prisma.SLATE}{(ux('gordon_strings', 'premise_inv') or '').format(item=i_low)}{Prisma.RST}"
         return None
 
     def load_config(self):
@@ -102,7 +119,9 @@ class GordonKnot:
         lexicon_data = LoreManifest.get_instance().get("lexicon") or {}
         if not lexicon_data and hasattr(LoreManifest, "get_raw"):
             lexicon_data = LoreManifest.get_raw("lexicon.json") or {}
-        self.abandonment_phrases = lexicon_data.get("abandonment_phrases", ["put back", "leave", "drop", "ignore"])
+        self.abandonment_phrases = lexicon_data.get(
+            "abandonment_phrases", ["put back", "leave", "drop", "ignore"]
+        )
         self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
         self.ITEM_REGISTRY = data.get("ITEM_REGISTRY", {})
         for name, props in self.ITEM_REGISTRY.items():
@@ -126,9 +145,13 @@ class GordonKnot:
 
         def normalize(items):
             return list(
-                {re.sub(r"[^A-Z0-9_]", "", i.strip().upper().replace(" ", "_"))
-                 for i in items
-                 if i})
+                {
+                    re.sub(r"[^A-Z0-9_]", "", i.strip().upper().replace(" ", "_"))
+                    for i in items
+                    if i
+                }
+            )
+
         new_loot = normalize(raw_loot)
         if not new_loot:
             implicit_loot = self.parse_loot(user_input, text)
@@ -171,12 +194,16 @@ class GordonKnot:
         return None
 
     def get_inventory_data(self) -> List[Dict]:
-        return [item.__dict__
-                for name in self.inventory
-                if (item := self.get_item_data(name))]
+        return [
+            item.__dict__
+            for name in self.inventory
+            if (item := self.get_item_data(name))
+        ]
 
     def acquire(self, tool_name: str) -> str:
-        tool_name = tool_name.strip().upper().replace(" ", "_") if tool_name else "UNKNOWN"
+        tool_name = (
+            tool_name.strip().upper().replace(" ", "_") if tool_name else "UNKNOWN"
+        )
         if tool_name in self.inventory:
             msg = ux("gordon_strings", "inv_duplicate")
             return f"{Prisma.OCHRE}{msg.format(item=tool_name)}{Prisma.RST}"
@@ -206,8 +233,7 @@ class GordonKnot:
             return True
         return False
 
-    def rummage(
-            self, physics_ref: Any, stamina_pool: float) -> Tuple[bool, str, float]:
+    def rummage(self, physics_ref: Any, stamina_pool: float) -> Tuple[bool, str, float]:
         cost = 15.0
         if hasattr(self.cfg, "INVENTORY"):
             cost = getattr(self.cfg.INVENTORY, "RUMMAGE_COST", 15.0)
@@ -223,25 +249,19 @@ class GordonKnot:
         return True, msg, cost
 
     def _get_loot_candidates(self, physics: Any) -> List[str]:
-        candidates = []
-        voltage = float(safe_get(physics, "voltage", 0.0))
-        drag = float(safe_get(physics, "narrative_drag", 0.0))
-        psi = float(safe_get(physics, "psi", 0.0))
-        v_high = getattr(self.cfg.PHYSICS, "VOLTAGE_HIGH", 12.0)
-        v_crit = getattr(self.cfg.PHYSICS, "VOLTAGE_CRITICAL", 15.0)
-        d_heavy = getattr(self.cfg.PHYSICS, "DRAG_HEAVY", 5.0)
-        psi_high = getattr(self.cfg.PHYSICS, "PSI_HIGH", 0.6)
-        for name in set(self.registry) | set(self.ITEM_REGISTRY):
-            if not (item := self.get_item_data(name)):
-                continue
-            ctx = item.spawn_context
-            if (ctx in ("COMMON", "STANDARD")
-                    or (ctx == "VOLTAGE_HIGH" and voltage > v_high)
-                    or (ctx == "VOLTAGE_CRITICAL" and voltage > v_crit)
-                    or (ctx == "DRAG_HEAVY" and drag > d_heavy)
-                    or (ctx == "PSI_HIGH" and psi > psi_high)):
-                candidates.append(name)
-        return candidates
+        v, d, p = (float(safe_get(physics, k, 0.0)) for k in ("voltage", "narrative_drag", "psi"))
+        cfg = getattr(self.cfg, "PHYSICS", None)
+        vh, vc, dh, ph = (getattr(cfg, k, dflt) for k, dflt in (("VOLTAGE_HIGH", 12.0), ("VOLTAGE_CRITICAL", 15.0), ("DRAG_HEAVY", 5.0), ("PSI_HIGH", 0.6)))
+        return [
+            name for name in set(self.registry) | set(self.ITEM_REGISTRY)
+            if (item := self.get_item_data(name)) and (
+                (ctx := item.spawn_context) in ("COMMON", "STANDARD")
+                or (ctx == "VOLTAGE_HIGH" and v > vh)
+                or (ctx == "VOLTAGE_CRITICAL" and v > vc)
+                or (ctx == "DRAG_HEAVY" and d > dh)
+                or (ctx == "PSI_HIGH" and p > ph)
+            )
+        ]
 
     def register_dynamic_item(self, name: str, data: Dict):
         name = name.upper()
@@ -250,20 +270,30 @@ class GordonKnot:
             self.registry[name] = new_item
             if self.events:
                 msg = ux("gordon_strings", "make_space")
-                self.events.log(f"{Prisma.CYN}{msg.format(name=name)}{Prisma.RST}", "INV")
+                self.events.log(
+                    f"{Prisma.CYN}{msg.format(name=name)}{Prisma.RST}", "INV"
+                )
 
     def synthesize_item(self, physics_vector: Dict[str, float]) -> str:
         if not hasattr(self, "blueprints") or not self.blueprints:
             self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
         fallbacks = self.blueprints.get("FALLBACKS", {})
         dim_map = self.blueprints.get("DIM_MAP", {})
-        dom_dim = max(physics_vector, key=physics_vector.get) if physics_vector else "ENT"
+        dom_dim = (
+            max(physics_vector, key=physics_vector.get) if physics_vector else "ENT"
+        )
         archetype = dim_map.get(dom_dim, "void")
-        prefixes = self.blueprints.get("PREFIXES", {}).get(archetype, fallbacks.get("PREFIX", ["Strange"]))
-        suffixes = self.blueprints.get("SUFFIXES", {}).get(archetype, fallbacks.get("SUFFIX", ["of Mystery"]))
+        prefixes = self.blueprints.get("PREFIXES", {}).get(
+            archetype, fallbacks.get("PREFIX", ["Strange"])
+        )
+        suffixes = self.blueprints.get("SUFFIXES", {}).get(
+            archetype, fallbacks.get("SUFFIX", ["of Mystery"])
+        )
         if self.mode in ["CREATIVE", "CONVERSATION"]:
             base_cat = self.blueprints.get("CREATIVE_BASE_CAT", "ABSTRACT")
-            bases = self.blueprints.get("BASES", {}).get(base_cat, fallbacks.get("BASE", ["Concept"]))
+            bases = self.blueprints.get("BASES", {}).get(
+                base_cat, fallbacks.get("BASE", ["Concept"])
+            )
             creative_overrides = self.blueprints.get("CREATIVE_OVERRIDES", {})
             prefixes = creative_overrides.get("PREFIXES", prefixes)
             suffixes = creative_overrides.get("SUFFIXES", suffixes)
@@ -271,37 +301,42 @@ class GordonKnot:
             default_adv_cats = ["TOOL", "JUNK", "ARTIFACT"]
             adv_cats = self.blueprints.get("ADVENTURE_CATEGORIES", default_adv_cats)
             base_cat = random.choice(adv_cats)
-            bases = self.blueprints.get("BASES", {}).get(base_cat, fallbacks.get("BASE", ["Object"]))
+            bases = self.blueprints.get("BASES", {}).get(
+                base_cat, fallbacks.get("BASE", ["Object"])
+            )
         prefix = random.choice(prefixes)
         base = random.choice(bases)
         suffix = random.choice(suffixes)
         full_name = (
             f"{prefix} {base} {suffix}"
             if self.mode == "ADVENTURE"
-            else f"{prefix} {base} {suffix}")
+            else f"{prefix} {base} {suffix}"
+        )
         clean_id = full_name.upper().replace(" ", "_")
-        desc_template = ux("gordon_strings", "synthesis_desc")
-        item_data = {"description": desc_template.format(base=base.lower(), archetype=archetype),
-                     "function": "ARTIFACT", "passive_traits": ["DYNAMIC"],
-                     "value": round(physics_vector.get(dom_dim, 0.0) * 10, 1), "spawn_context": "FORGED", }
+        desc_template = (
+            ux("gordon_strings", "synthesis_desc")
+            or "A {base} forged of {archetype} energy."
+        )
+        item_data = {
+            "description": desc_template.format(base=base.lower(), archetype=archetype),
+            "function": "ARTIFACT",
+            "passive_traits": ["DYNAMIC"],
+            "value": round(physics_vector.get(dom_dim, 0.0) * 10, 1),
+            "spawn_context": "FORGED",
+        }
         self.register_dynamic_item(clean_id, item_data)
         return clean_id
 
     def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
-        combined_text = (user_text + " " + sys_text).lower()
-        if any(phrase in combined_text for phrase in self.abandonment_phrases):
+        combined_text = f"{user_text} {sys_text}".lower()
+        if any(p in combined_text for p in self.abandonment_phrases) or any(r in sys_text.lower() for r in self.refusal_markers):
             return None
-        for refusal in self.refusal_markers:
-            if refusal in sys_text.lower():
-                return None
-        all_known_items = set(self.registry.keys()) | set(self.ITEM_REGISTRY.keys())
-        sorted_triggers = sorted(self.loot_triggers, key=len, reverse=True)
-        for t in sorted_triggers:
+        all_known = set(self.registry) | set(self.ITEM_REGISTRY)
+        for t in sorted(self.loot_triggers, key=len, reverse=True):
             if t in combined_text:
-                for name in all_known_items:
-                    clean_name = name.lower().replace("_", " ")
-                    if name.upper() not in self.inventory:
-                        if re.search(rf"\b{re.escape(t)}\b.*?\b{re.escape(clean_name)}\b", combined_text, re.IGNORECASE):
+                for name in all_known:
+                    if (clean := name.lower().replace("_", " ")) in combined_text and name.upper() not in self.inventory:
+                        if re.search(rf"\b{re.escape(t)}\b.*?\b{re.escape(clean)}\b", combined_text, re.IGNORECASE):
                             return name
         return None
 
@@ -315,40 +350,24 @@ class GordonKnot:
             return False, msg.format(item=item_name)
         self.inventory.remove(item_name)
         if item.function == "STABILITY":
-            msg = ux( "gordon_strings", "consume_pizza")
+            msg = ux("gordon_strings", "consume_pizza")
             return True, msg.format(item=item_name)
         msg = ux("gordon_strings", "consume_used")
         return True, msg.format(item=item_name, usage_msg=item.usage_msg)
 
     def emergency_reflex(self, physics_ref: Any) -> Tuple[bool, Optional[str]]:
-        voltage = float(safe_get(physics_ref, "voltage", 0.0))
-        drag = float(safe_get(physics_ref, "narrative_drag", 0.0))
-        kappa = float(safe_get(physics_ref, "kappa", 0.5))
+        voltage, drag, kappa = (float(safe_get(physics_ref, k, d)) for k, d in (("voltage", 0.0), ("narrative_drag", 0.0), ("kappa", 0.5)))
         cfg = getattr(self.cfg, "INVENTORY", None)
-        v_trig = getattr(cfg, "REFLEX_VOLTAGE_TRIGGER", 18.0) if cfg else 18.0
-        v_reset = getattr(cfg, "REFLEX_VOLTAGE_RESET", 12.0) if cfg else 12.0
-        d_trig = getattr(cfg, "REFLEX_DRAG_TRIGGER", 6.0) if cfg else 6.0
-        d_reset = getattr(cfg, "REFLEX_DRAG_RESET", 0.0) if cfg else 0.0
-        k_trig = getattr(cfg, "REFLEX_KAPPA_TRIGGER", 0.2) if cfg else 0.2
-        k_reset = getattr(cfg, "REFLEX_KAPPA_RESET", 0.8) if cfg else 0.8
+        v_trig, v_reset, d_trig, d_reset, k_trig, k_reset = (getattr(cfg, k, d) for k, d in (("REFLEX_VOLTAGE_TRIGGER", 18.0), ("REFLEX_VOLTAGE_RESET", 12.0), ("REFLEX_DRAG_TRIGGER", 6.0), ("REFLEX_DRAG_RESET", 0.0), ("REFLEX_KAPPA_TRIGGER", 0.2), ("REFLEX_KAPPA_RESET", 0.8)))
         for name in self.inventory:
-            item = self.get_item_data(name)
-            if not item:
-                continue
-            trigger = item.reflex_trigger
-            if trigger == "VOLTAGE_CRITICAL" and voltage > v_trig:
-                self.safe_remove_item(name)
-                safe_set(physics_ref, "voltage", v_reset)
-                msg = ux("gordon_strings", "reflex_voltage")
-                return True, f"{Prisma.CYN}{msg.format(name=name)}{Prisma.RST}"
-            if trigger == "DRIFT_CRITICAL" and drag > d_trig:
-                self.safe_remove_item(name)
-                safe_set(physics_ref, "narrative_drag", d_reset)
-                msg = ux("gordon_strings", "reflex_drift")
-                return True, f"{Prisma.OCHRE}{msg.format(name=name)}{Prisma.RST}"
-            if trigger == "KAPPA_CRITICAL" and kappa < k_trig:
-                self.safe_remove_item(name)
-                safe_set(physics_ref, "kappa", k_reset)
-                msg = ux("gordon_strings", "reflex_kappa")
-                return True, f"{Prisma.GRN}{msg.format(name=name)}{Prisma.RST}"
+            if not (item := self.get_item_data(name)): continue
+            if item.reflex_trigger == "VOLTAGE_CRITICAL" and voltage > v_trig:
+                self.safe_remove_item(name); safe_set(physics_ref, "voltage", v_reset)
+                return True, f"{Prisma.CYN}{(ux('gordon_strings', 'reflex_voltage') or '').format(name=name)}{Prisma.RST}"
+            if item.reflex_trigger == "DRIFT_CRITICAL" and drag > d_trig:
+                self.safe_remove_item(name); safe_set(physics_ref, "narrative_drag", d_reset)
+                return True, f"{Prisma.OCHRE}{(ux('gordon_strings', 'reflex_drift') or '').format(name=name)}{Prisma.RST}"
+            if item.reflex_trigger == "KAPPA_CRITICAL" and kappa < k_trig:
+                self.safe_remove_item(name); safe_set(physics_ref, "kappa", k_reset)
+                return True, f"{Prisma.GRN}{(ux('gordon_strings', 'reflex_kappa') or '').format(name=name)}{Prisma.RST}"
         return False, None

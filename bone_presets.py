@@ -8,7 +8,8 @@ class _ConfigNode:
 
 def ux(section: str, key: str, default: Any = "") -> Any:
     from bone_core import LoreManifest
-    return LoreManifest.get_instance().get_ux(section, key, default)
+    data = LoreManifest.get_instance().get("ux_strings", section)
+    return data.get(key, default) if isinstance(data, dict) else default
 
 class BonePresets:
     ZEN_GARDEN = {"PHYSICS.VOLTAGE_FLOOR": 1.0, "PHYSICS.VOLTAGE_MAX": 25.0, "PHYSICS.DRAG_FLOOR": 0.5,
@@ -62,7 +63,7 @@ class BoneConfig:
                         "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
                         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2}, }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "18.1.0"
+    VERSION = "18.3.0"
     VERBOSE_LOGGING = True
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -803,8 +804,10 @@ class BoneConfig:
 
     def reconcile_state(self, physics_packet: Any):
         from bone_core import safe_get, safe_set
-        current_v = float(safe_get(physics_packet, "voltage", safe_get(safe_get(physics_packet, "energy"), "voltage", 5.0)))
-        current_d = float(safe_get(physics_packet, "narrative_drag", safe_get(safe_get(physics_packet, "space"), "narrative_drag", 1.0)))
+        e_obj = safe_get(physics_packet, "energy") or {}
+        s_obj = safe_get(physics_packet, "space") or {}
+        current_v = float(safe_get(physics_packet, "voltage", safe_get(e_obj, "voltage", 5.0)) or 5.0)
+        current_d = float(safe_get(physics_packet, "narrative_drag", safe_get(s_obj, "narrative_drag", 1.0)) or 1.0)
         new_v = max(self.PHYSICS.VOLTAGE_FLOOR, min(current_v, self.PHYSICS.VOLTAGE_MAX))
         new_d = max(self.PHYSICS.DRAG_FLOOR, min(current_d, self.PHYSICS.DRAG_HALT))
         safe_set(physics_packet, "voltage", new_v)
@@ -813,18 +816,18 @@ class BoneConfig:
 
     def tune(self, sector: str, parameter: str, value: Any) -> str:
         if not hasattr(self, sector):
-            msg = ux("config_strings", "tune_sector_err")
+            msg = ux("config_strings", "tune_sector_err") or "Sector {sector} not found."
             return msg.format(sector=sector)
         target_sector = getattr(self, sector)
         if not hasattr(target_sector, parameter):
-            msg = ux("config_strings", "tune_param_err") 
+            msg = ux("config_strings", "tune_param_err") or "Param {parameter} missing in {sector}."
             return msg.format(parameter=parameter, sector=sector)
         current_val = getattr(target_sector, parameter)
         if type(current_val) != type(value):
             if not (isinstance(current_val, (int, float))
                     and isinstance(value, (int, float))):
-                msg = ux("config_strings", "tune_type_err") 
+                msg = ux("config_strings", "tune_type_err") or "Type mismatch: {curr_type} vs {new_type}."
                 return msg.format(curr_type=type(current_val).__name__, new_type=type(value).__name__)
         setattr(target_sector, parameter, value)
-        msg = ux("config_strings", "tune_success") 
+        msg = ux("config_strings", "tune_success") or "Tuned {sector}.{parameter} to {value}."
         return msg.format(sector=sector, parameter=parameter, value=value)

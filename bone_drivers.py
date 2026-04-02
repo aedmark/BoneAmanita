@@ -1,4 +1,4 @@
-""" bone_drivers.py """
+"""bone_drivers.py"""
 
 import json
 import os
@@ -10,14 +10,25 @@ from bone_core import LoreManifest, ux, safe_get, safe_set
 from bone_presets import BoneConfig
 from bone_types import PhysicsPacket
 
+
 class SoulDriver:
     def __init__(self, soul_ref, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.soul = soul_ref
-        self.archetype_weights = LoreManifest.get_instance(config_ref=self.cfg).get("DRIVER_CONFIG", "ARCHETYPE_TO_PERSONA_WEIGHT") or {}
+        self.archetype_weights = (
+            LoreManifest.get_instance(config_ref=self.cfg).get(
+                "DRIVER_CONFIG", "ARCHETYPE_TO_PERSONA_WEIGHT"
+            )
+            or {}
+        )
 
     def get_influence(self) -> Dict[str, float]:
-        ennea_weights = LoreManifest.get_instance(config_ref=self.cfg).get("DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {}
+        ennea_weights = (
+            LoreManifest.get_instance(config_ref=self.cfg).get(
+                "DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS"
+            )
+            or {}
+        )
         base_weights = {persona: 0.0 for persona in ennea_weights.keys()}
         if not self.soul:
             return base_weights
@@ -29,20 +40,36 @@ class SoulDriver:
         paradox = getattr(self.soul, "paradox_accum", 0.0)
         chaos = min(0.5, (paradox - 5.0) * 0.05) if paradox > 5.0 else 0.0
         dignity = 1.0
-        if hasattr(self.soul, "anchor") and hasattr(self.soul.anchor, "dignity_reserve"):
+        if hasattr(self.soul, "anchor") and hasattr(
+            self.soul.anchor, "dignity_reserve"
+        ):
             dignity = max(0.2, self.soul.anchor.dignity_reserve / 100.0)
-        return {p: (w + random.uniform(-chaos, chaos)) * dignity
-            for p, w in base_weights.items()}
+        return {
+            p: (w + random.uniform(-chaos, chaos)) * dignity
+            for p, w in base_weights.items()
+        }
+
 
 class UserProfile:
     def __init__(self, name="USER", config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.name = name
-        self.affinities = {"heavy": 0.0, "kinetic": 0.0, "abstract": 0.0, "photo": 0.0, "aerobic": 0.0, "thermal": 0.0,
-                           "cryo": 0.0, }
+        self.affinities = {
+            "heavy": 0.0,
+            "kinetic": 0.0,
+            "abstract": 0.0,
+            "photo": 0.0,
+            "aerobic": 0.0,
+            "thermal": 0.0,
+            "cryo": 0.0,
+        }
         self.confidence = 0
         cfg = getattr(self.cfg, "DRIVERS", None)
-        self.file_path = getattr(cfg, "PROFILE_FILE_PATH", "user_profile.json") if cfg else "user_profile.json"
+        self.file_path = (
+            getattr(cfg, "PROFILE_FILE_PATH", "user_profile.json")
+            if cfg
+            else "user_profile.json"
+        )
         self.load()
 
     def update(self, counts, total_words):
@@ -60,7 +87,8 @@ class UserProfile:
             density = counts.get(cat, 0) / total_words
             target = 1.0 if density > density_high else (-0.5 if density == 0 else 0.0)
             self.affinities[cat] = (alpha * target) + (
-                    (1 - alpha) * self.affinities[cat])
+                (1 - alpha) * self.affinities[cat]
+            )
 
     def get_preferences(self):
         cfg = getattr(self.cfg, "DRIVERS", None)
@@ -87,6 +115,7 @@ class UserProfile:
             except (IOError, json.JSONDecodeError):
                 pass
 
+
 class EnneagramDriver:
     def __init__(self, events_ref, config_ref=None):
         self.cfg = config_ref or BoneConfig
@@ -95,63 +124,63 @@ class EnneagramDriver:
         self.pending_persona = None
         self.stability_counter = 0
         cfg = getattr(self.cfg, "DRIVERS", None)
-        self.HYSTERESIS_THRESHOLD = getattr(cfg, "ENNEAGRAM_HYSTERESIS", 3) if cfg else 3
+        self.HYSTERESIS_THRESHOLD = (
+            getattr(cfg, "ENNEAGRAM_HYSTERESIS", 3) if cfg else 3
+        )
 
     @property
     def weights(self):
-        return LoreManifest.get_instance(config_ref=self.cfg).get("DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {}
-
-    @staticmethod
-    def _get_phys_attr(physics, key, default=None):
-        val = safe_get(physics, key)
-        if val is None:
-            for sub in ["energy", "space", "matter"]:
-                sub_obj = safe_get(physics, sub)
-                val = safe_get(sub_obj, key)
-                if val is not None: return val
-        return default if val is None else val
+        return (
+            LoreManifest.get_instance(config_ref=self.cfg).get(
+                "DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS"
+            )
+            or {}
+        )
 
     def _calculate_raw_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
-        raw_vec = self._get_phys_attr(physics, "vector", {})
+        raw_vec = safe_get(physics, "vector", {})
         p_vec = raw_vec if isinstance(raw_vec, dict) else {}
-        def safe_float(val, default=0.0):
-            try:
-                return float(val)
-            except (ValueError, TypeError):
-                return default
-        p_vol = safe_float(self._get_phys_attr(physics, "voltage", 0.0))
-        p_drag = safe_float(self._get_phys_attr(physics, "narrative_drag", 0.0))
-        p_coh = safe_float(self._get_phys_attr(physics, "kappa", 0.0))
-        p_zone = str(self._get_phys_attr(physics, "zone", ""))
+        p_vol, p_drag, p_coh = (
+            float(safe_get(physics, k, 0.0) or 0.0)
+            for k in ("voltage", "narrative_drag", "kappa")
+        )
+        p_zone = str(safe_get(physics, "zone", ""))
         weights_cfg = self.weights
-        if not isinstance(weights_cfg, dict):
-            return "NARRATOR", "ACTIVE", "Config Error"
+        if not isinstance(weights_cfg, dict) or len(weights_cfg) < 2:
+            return "NARRATOR", "ACTIVE", "Config Error or Insufficient Personas"
         scores = {k: 0.0 for k in weights_cfg.keys()}
         if "NARRATOR" in scores:
             scores["NARRATOR"] += 2.0
         is_safe_metrics = 4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5
-        sanctuary_zone = getattr(self.cfg, "SANCTUARY", {}).get("ZONE") if hasattr(self.cfg, "SANCTUARY") else "SANCTUARY"
+        sanctuary_zone = (
+            getattr(self.cfg, "SANCTUARY", {}).get("ZONE")
+            if hasattr(self.cfg, "SANCTUARY")
+            else "SANCTUARY"
+        )
         if p_zone == sanctuary_zone or is_safe_metrics:
-            if "NARRATOR" in scores: scores["NARRATOR"] += 6.0
-            if "JESTER" in scores: scores["JESTER"] += 3.0
-            if "GORDON" in scores: scores["GORDON"] -= 2.0
+            if "NARRATOR" in scores:
+                scores["NARRATOR"] += 6.0
+            if "JESTER" in scores:
+                scores["JESTER"] += 3.0
+            if "GORDON" in scores:
+                scores["GORDON"] -= 2.0
         for persona, criteria in weights_cfg.items():
             if not isinstance(criteria, dict):
                 continue
-            if "tension_min" in criteria and p_vol > safe_float(criteria.get("tension_min", 0.0)):
+
+            if p_vol > float(criteria.get("tension_min", float("inf"))):
                 scores[persona] += 3.0
-            if "drag_min" in criteria and p_drag > safe_float(criteria.get("drag_min", 0.0)):
+            if p_drag > float(criteria.get("drag_min", float("inf"))):
                 scores[persona] += 5.0
-            if "coherence_min" in criteria and p_coh > safe_float(criteria.get("coherence_min", 0.0)):
+            if p_coh > float(criteria.get("coherence_min", float("inf"))):
                 scores[persona] += 4.0
-            if "coherence_max" in criteria and p_coh < safe_float(criteria.get("coherence_max", 0.0)):
+            if "coherence_max" in criteria and p_coh < float(criteria["coherence_max"]):
                 scores[persona] += 4.0
-            vectors = criteria.get("vectors", {})
-            if isinstance(vectors, dict):
+
+            if isinstance(vectors := criteria.get("vectors", {}), dict):
                 for dim, weight in vectors.items():
-                    val = safe_float(p_vec.get(dim, 0.0))
-                    if val > 0.2:
-                        scores[persona] += val * safe_float(weight)
+                    if (val := float(p_vec.get(dim, 0.0))) > 0.2:
+                        scores[persona] += val * float(weight)
         if soul_ref:
             soul_driver = SoulDriver(soul_ref)
             influence = soul_driver.get_influence()
@@ -162,23 +191,16 @@ class EnneagramDriver:
         runner_up, run_score = sorted_scores[1]
         cfg = getattr(self.cfg, "DRIVERS", None)
         hybrid_gap = getattr(cfg, "ENNEAGRAM_HYBRID_GAP", 0.5) if cfg else 0.5
-        if (win_score - run_score) < hybrid_gap:
-            k1 = "THE OBSERVER" if winner == "NARRATOR" else winner
-            k2 = "THE OBSERVER" if runner_up == "NARRATOR" else runner_up
-            hybrid_key_a = f"{k1}_{k2}_HYBRID"
-            hybrid_key_b = f"{k2}_{k1}_HYBRID"
-            final_hybrid = None
-            lenses = (LoreManifest.get_instance(config_ref=self.cfg).get("narrative_data") or {}).get("lenses", {})
-            if hybrid_key_a in lenses:
-                final_hybrid = hybrid_key_a
-            elif hybrid_key_b in lenses:
-                final_hybrid = hybrid_key_b
-            if final_hybrid:
-                msg = ux("driver_strings", "ennea_synthesis")
-                return final_hybrid, "SYNTHESIS", msg.format(winner=winner, runner_up=runner_up),
         msg_winner = ux("driver_strings", "ennea_winner")
-        reason = msg_winner.format(winner=winner, score=scores[winner], v=p_vol, d=p_drag)
-        state_map = LoreManifest.get_instance(config_ref=self.cfg).get("DRIVER_CONFIG", "PERSONA_STATE_MAP") or {}
+        reason = msg_winner.format(
+            winner=winner, score=scores[winner], v=p_vol, d=p_drag
+        )
+        state_map = (
+            LoreManifest.get_instance(config_ref=self.cfg).get(
+                "DRIVER_CONFIG", "PERSONA_STATE_MAP"
+            )
+            or {}
+        )
         return winner, state_map.get(winner, "ACTIVE"), reason
 
     def decide_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
@@ -192,7 +214,9 @@ class EnneagramDriver:
         else:
             self.pending_persona = candidate
             self.stability_counter = 1
-        msg_shift = ux("driver_strings", "ennea_shift") 
+        msg_shift = (
+            ux("driver_strings", "ennea_shift") or "Shifted persona. Reason: {reason}"
+        )
         if "HYBRID" in candidate:
             self.current_persona = candidate
             self.stability_counter = 0
@@ -203,9 +227,20 @@ class EnneagramDriver:
             self.stability_counter = 0
             self.pending_persona = None
             return self.current_persona, state_desc, msg_shift.format(reason=reason)
-        msg_resisting = ux("driver_strings", "ennea_resisting") 
-        return (self.current_persona, "STABLE",
- msg_resisting.format(candidate=candidate, count=self.stability_counter, thresh=self.HYSTERESIS_THRESHOLD, ),)
+        msg_resisting = (
+            ux("driver_strings", "ennea_resisting")
+            or "Resisting shift to {candidate} ({count}/{thresh})"
+        )
+        return (
+            self.current_persona,
+            "STABLE",
+            msg_resisting.format(
+                candidate=candidate,
+                count=self.stability_counter,
+                thresh=self.HYSTERESIS_THRESHOLD,
+            ),
+        )
+
 
 @dataclass
 class VSLState:
@@ -216,11 +251,13 @@ class VSLState:
     O: float = 1.0
     active_modules: List[str] = field(default_factory=list)
 
+
 class DriverRegistry:
     def __init__(self, events_ref, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.enneagram = EnneagramDriver(events_ref, config_ref=self.cfg)
         self.current_focus = "NONE"
+
 
 class LiminalModule:
     def __init__(self, config_ref=None, lexicon_ref=None):
@@ -243,27 +280,35 @@ class LiminalModule:
         void_hits = sum(1 for w in words if w in liminal_vocab)
         lexical_lambda = min(1.0, void_hits * lex_weight)
         dark_matter_sparks = 0
-        if len(words) > 1 and self.lex:
-            categories = [self.lex.get_current_category(w) for w in words]
-            for i in range(len(categories) - 1):
-                c1, c2 = categories[i], categories[i + 1]
-                if c1 and c2 and c1 != c2:
-                    if (c1 in ["heavy", "kinetic"]
-                            and c2 in ["abstract", "liminal", "void"]
-                    ) or (c1 in ["abstract", "liminal", "void"] and c2 in ["heavy"]):
-                        dark_matter_sparks += 1
+        if len(words) > 1 and hasattr(self.lex, "get_categories_for_word"):
+            phys_set, void_set = {"heavy", "kinetic"}, {"abstract", "liminal", "void"}
+            flags = []
+            for w in words:
+                cats = set(self.lex.get_categories_for_word(w) or [])
+                if not cats:
+                    continue
+                flags.append(1 if cats & phys_set else (2 if cats & void_set else 0))
+
+            dark_matter_sparks = sum(
+                1
+                for i in range(len(flags) - 1)
+                if flags[i] and flags[i + 1] and flags[i] != flags[i + 1]
+            )
         dark_matter_lambda = min(1.0, dark_matter_sparks * dm_weight)
         vector_lambda = 0.0
         if physics_vector:
-            vector_lambda = ((physics_vector.get("PSI", 0) * psi_mult)
-                    + (physics_vector.get("ENT", 0) * ent_mult)
-                    + (physics_vector.get("DEL", 0) * del_mult))
+            vector_lambda = (
+                (physics_vector.get("PSI", 0) * psi_mult)
+                + (physics_vector.get("ENT", 0) * ent_mult)
+                + (physics_vector.get("DEL", 0) * del_mult)
+            )
         raw_target = lexical_lambda + dark_matter_lambda + vector_lambda
         self.lambda_val = (self.lambda_val * decay) + (raw_target * growth)
         scar_thresh = getattr(cfg, "LIMINAL_SCAR_THRESHOLD", 0.85) if cfg else 0.85
         if self.lambda_val > scar_thresh:
             self.godel_scars += 1
         return min(1.0, self.lambda_val)
+
 
 class SyntaxModule:
     def __init__(self, config_ref=None, lexicon_ref=None):
@@ -306,8 +351,11 @@ class SyntaxModule:
         omega_decay = getattr(cfg, "SYNTAX_OMEGA_DECAY", 0.8) if cfg else 0.8
         omega_growth = getattr(cfg, "SYNTAX_OMEGA_GROWTH", 0.2) if cfg else 0.2
         omega_min = getattr(cfg, "SYNTAX_OMEGA_MIN", 0.1) if cfg else 0.1
-        self.omega_val = (self.omega_val * omega_decay) + (max(omega_min, target_omega) * omega_growth)
+        self.omega_val = (self.omega_val * omega_decay) + (
+            max(omega_min, target_omega) * omega_growth
+        )
         return self.omega_val
+
 
 class CongruenceValidator:
     def __init__(self, config_ref=None):
@@ -319,7 +367,9 @@ class CongruenceValidator:
     def map(self):
         if self._archetype_map is None:
             try:
-                self._archetype_map = LoreManifest.get_instance(config_ref=self.cfg).get("LENSES") or {}
+                self._archetype_map = (
+                    LoreManifest.get_instance(config_ref=self.cfg).get("LENSES") or {}
+                )
             except Exception:
                 self._archetype_map = {}
         return self._archetype_map
@@ -333,20 +383,20 @@ class CongruenceValidator:
         archetype = raw_lens.upper().replace("THE ", "")
         tone_score = getattr(cfg, "CONGRUENCE_BASE_TONE", 0.8) if cfg else 0.8
         target_data = self.map.get(archetype, {})
-        target_words = set()
         if isinstance(target_data, dict):
-            if vocab_str := target_data.get("vocab", ""):
-                target_words.update(w.strip().lower() for w in vocab_str.split(","))
-            target_words.update(target_data.get("keywords", []))
-        if target_words:
-            words_to_check = (
-                set(context.clean_words) if hasattr(context, "clean_words") else set())
-            hits = len(words_to_check.intersection(target_words))
-            if hits > 0:
-                hit_bonus = getattr(cfg, "CONGRUENCE_HIT_BONUS", 0.1) if cfg else 0.1
-                tone_score += hit_bonus * hits
+            target_words = {
+                w.strip().lower() for w in target_data.get("vocab", "").split(",") if w
+            } | set(target_data.get("keywords", []))
+            if target_words and (
+                words_to_check := set(getattr(context, "clean_words", []))
+            ):
+                if hits := len(words_to_check.intersection(target_words)):
+                    tone_score += (
+                        getattr(cfg, "CONGRUENCE_HIT_BONUS", 0.1) if cfg else 0.1
+                    ) * hits
         max_tone = getattr(cfg, "CONGRUENCE_MAX_TONE", 1.5) if cfg else 1.5
         return min(max_tone, tone_score)
+
 
 class BoneConsultant:
     def __init__(self, config_ref=None, lexicon_ref=None):
@@ -359,13 +409,18 @@ class BoneConsultant:
 
     @staticmethod
     def engage():
-        return ux("driver_strings", "vsl_engage") 
+        return ux("driver_strings", "vsl_engage")
 
     @staticmethod
     def disengage():
-        return ux("driver_strings", "vsl_disengage") 
+        return ux("driver_strings", "vsl_disengage")
 
-    def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None, physics: Optional[PhysicsPacket] = None, ):
+    def update_coordinates(
+        self,
+        user_text: str,
+        bio_state: Optional[Dict] = None,
+        physics: Optional[PhysicsPacket] = None,
+    ):
         cfg = getattr(self.cfg, "DRIVERS", None)
         e_growth = getattr(cfg, "VSL_E_GROWTH_MULT", 0.002) if cfg else 0.002
         fatigue_mult = getattr(cfg, "VSL_FATIGUE_MULT", 0.3) if cfg else 0.3
@@ -373,14 +428,15 @@ class BoneConsultant:
         b_growth = getattr(cfg, "VSL_B_GROWTH", 0.2) if cfg else 0.2
         word_count = len(user_text.split())
         self.state.E = min(1.0, self.state.E + (word_count * e_growth))
-        if bio_state and "fatigue" in bio_state:self.state.E = max(self.state.E, bio_state["fatigue"] * fatigue_mult)
+        if bio_state and "fatigue" in bio_state:
+            self.state.E = max(self.state.E, bio_state["fatigue"] * fatigue_mult)
         phys_beta = 0.0
         phys_vec = {}
         drag = 0.0
         if physics:
-            phys_beta = safe_get(physics, "beta_index", safe_get(safe_get(physics, "energy"), "beta_index", 0.0))
-            phys_vec = safe_get(physics, "vector", safe_get(safe_get(physics, "matter"), "vector", {}))
-            drag = safe_get(physics, "narrative_drag", safe_get(safe_get(physics, "space"), "narrative_drag", 0.0))
+            phys_beta = float(safe_get(physics, "beta", 0.0) or 0.0)
+            phys_vec = safe_get(physics, "vector", {})
+            drag = float(safe_get(physics, "narrative_drag", 0.0) or 0.0)
         self.state.B = (self.state.B * b_decay) + (phys_beta * b_growth)
         self.state.L = self.liminal_mod.analyze(user_text, phys_vec)
         self.state.O = self.syntax_mod.analyze(user_text, drag)
@@ -399,32 +455,38 @@ class BoneConsultant:
         bun_max = getattr(cfg, "VSL_BUNNY_E_MAX", 0.3) if cfg else 0.3
         par_min = getattr(cfg, "VSL_PARADOX_B_MIN", 0.6) if cfg else 0.6
         if "LIMINAL" in self.state.active_modules or self.state.L > lim_thresh:
-            scar_temp = ux("driver_strings", "vsl_scar_note") 
-            scar_note = (scar_temp.format(scars=self.liminal_mod.godel_scars)
+            scar_temp = ux("driver_strings", "vsl_scar_note")
+            scar_note = (
+                scar_temp.format(scars=self.liminal_mod.godel_scars)
                 if self.liminal_mod.godel_scars > 0
-                else "")
-            msg = ux("driver_strings", "vsl_arch_revenant") 
+                else ""
+            )
+            msg = ux("driver_strings", "vsl_arch_revenant")
             directives.append(msg.format(scar_note=scar_note))
         elif "SYNTAX" in self.state.active_modules or self.state.O > syn_thresh:
-            stress_temp = ux("driver_strings", "vsl_stress_note") 
-            stress_note = (stress_temp if self.syntax_mod.grammatical_stress > 0.5 else "")
-            msg = ux("driver_strings", "vsl_arch_bureau") 
+            stress_temp = ux("driver_strings", "vsl_stress_note")
+            stress_note = (
+                stress_temp if self.syntax_mod.grammatical_stress > 0.5 else ""
+            )
+            msg = ux("driver_strings", "vsl_arch_bureau")
             directives.append(msg.format(stress_note=stress_note))
         else:
             if self.state.E < bun_max:
-                directives.append(ux("driver_strings", "vsl_mode_bunny") )
+                directives.append(ux("driver_strings", "vsl_mode_bunny"))
             elif self.state.B > par_min:
-                directives.append(ux("driver_strings", "vsl_mode_paradox") )
+                directives.append(ux("driver_strings", "vsl_mode_paradox"))
             else:
-                directives.append(ux("driver_strings", "vsl_mode_glacier") )
+                directives.append(ux("driver_strings", "vsl_mode_glacier"))
         if soul_snapshot:
             arch = soul_snapshot.get("archetype", "UNKNOWN")
             muse = (soul_snapshot.get("obsession") or {}).get("title", "None")
-            msg = ux("driver_strings", "vsl_layer_muse") 
+            msg = ux("driver_strings", "vsl_layer_muse")
             directives.append(msg.format(arch=arch, muse=muse))
         return "\n".join(directives)
 
+
 from bone_types import Prisma, UserInferredState, SharedDynamics
+
 
 class SharedLatticeDriver:
     def __init__(self):
@@ -432,7 +494,9 @@ class SharedLatticeDriver:
         self.shared = SharedDynamics()
         self.last_timestamp = time.time()
 
-    def infer_and_couple(self, text: str, sys_phys: PhysicsPacket, input_phys: Any, atp_pool: float) -> tuple[List[str], float]:
+    def infer_and_couple(
+        self, text: str, sys_phys: PhysicsPacket, input_phys: Any, atp_pool: float
+    ) -> tuple[List[str], float]:
         logs = []
         atp_deduction = 0.0
         now = time.time()
@@ -445,32 +509,32 @@ class SharedLatticeDriver:
             self.u.E_u = min(1.0, self.u.E_u + 0.1)
         else:
             self.u.E_u = max(0.0, self.u.E_u - 0.05)
-        def _in_get(k, sub, default):
-            val = safe_get(input_phys, k)
-            if val is None:
-                val = safe_get(safe_get(input_phys, sub), k)
-            return default if val is None else val
-        self.u.V_u = _in_get("voltage", "energy", self.u.V_u)
-        self.u.psi_u = _in_get("psi", "energy", self.u.psi_u)
-        self.u.chi_u = _in_get("entropy", "energy", self.u.chi_u)
-        self.u.F_u = _in_get("narrative_drag", "space", self.u.F_u)
-        def _sys_get(k, sub, default=0.0):
-            val = safe_get(sys_phys, k)
-            if val is None:
-                val = safe_get(safe_get(sys_phys, sub), k)
-            return default if val is None else val
+        def _get_f(obj, *keys, default=0.0):
+            for k in keys:
+                if (val := safe_get(obj, k)) is not None:
+                    return float(val)
+            return float(default)
 
-        sys_beta = _sys_get("beta_index", "energy", _sys_get("beta", "energy", 0.0))
-        sys_chi = _sys_get("chi", "energy", _sys_get("entropy", "energy", 0.0))
-        sys_val = _sys_get("valence", "energy", 0.0)
-        sys_psi = _sys_get("psi", "energy", 0.0)
-        sys_drag = _sys_get("narrative_drag", "space", 1.0)
+        self.u.V_u = _get_f(input_phys, "voltage", default=self.u.V_u)
+        self.u.psi_u = _get_f(input_phys, "psi", default=self.u.psi_u)
+        self.u.chi_u = _get_f(input_phys, "chi", "entropy", default=self.u.chi_u)
+        self.u.F_u = _get_f(input_phys, "narrative_drag", default=self.u.F_u)
+
+        sys_beta = _get_f(sys_phys, "beta")
+        sys_chi = _get_f(sys_phys, "chi", "entropy")
+        sys_val = _get_f(sys_phys, "valence")
+        sys_psi = _get_f(sys_phys, "psi")
+        sys_drag = _get_f(sys_phys, "narrative_drag", default=1.0)
         dp = safe_get(sys_phys, "drag_profile")
         dp_trauma = 0.0
         if dp is not None:
             safe_set(dp, "semantic", (sys_beta * 2.0) + (sys_chi * 1.5))
             safe_set(dp, "emotional", abs(sys_val) * 1.5 if abs(sys_val) > 0.5 else 0.0)
-            safe_set(dp, "metabolic", 3.0 if atp_pool < 30.0 else (1.0 if atp_pool < 50.0 else 0.0))
+            safe_set(
+                dp,
+                "metabolic",
+                3.0 if atp_pool < 30.0 else (1.0 if atp_pool < 50.0 else 0.0),
+            )
             safe_set(dp, "trauma", min(5.0, self.u.T_u) if sys_psi > 0.6 else 0.0)
             dp_trauma = safe_get(dp, "trauma", 0.0)
             if not isinstance(sys_phys, dict) and hasattr(sys_phys, "sync_drag"):
@@ -480,11 +544,7 @@ class SharedLatticeDriver:
         drag_diff = abs(sys_drag - self.u.F_u) / max(1.0, sys_drag)
         raw_phi = 1.0 - ((psi_diff + chi_diff + min(1.0, drag_diff)) / 3.0)
         self.shared.phi = (self.shared.phi * 0.7) + (raw_phi * 0.3)
-        energy_obj = safe_get(sys_phys, "energy")
-        if energy_obj is not None:
-            safe_set(energy_obj, "PHI_RES", self.shared.phi)
-        else:
-            safe_set(sys_phys, "PHI_RES", self.shared.phi)
+        safe_set(sys_phys, "PHI_RES", self.shared.phi)
         if time_delta > 15.0 and text.strip() and not text.startswith("["):
             self.shared.delta = min(1.0, time_delta / 300.0)
             if self.shared.phi > 0.7 and sys_beta > 0.6:
@@ -497,27 +557,37 @@ class SharedLatticeDriver:
                 self.shared.sigma_silence = 4
                 self.shared.g_pool += 1
             self.shared.lambda_silence = min(1.0, self.shared.lambda_silence + 0.05)
-            silence_map = {1: ux("driver_strings", "silence_pregnant"),
-                2: ux("driver_strings", "silence_exhausted"),
-                3: ux("driver_strings", "silence_reverent",),
-                4: ux("driver_strings", "silence_strategic",)}
             if self.shared.lambda_silence > 0.3:
-                logs.append(f"{Prisma.GRY}... {silence_map.get(self.shared.sigma_silence, 'The silence settles.')}{Prisma.RST}")
+                msg_key = {
+                    1: "silence_pregnant",
+                    2: "silence_exhausted",
+                    3: "silence_reverent",
+                    4: "silence_strategic",
+                }.get(self.shared.sigma_silence)
+                logs.append(
+                    f"{Prisma.GRY}... {ux('driver_strings', msg_key) if msg_key else 'The silence settles.'}{Prisma.RST}"
+                )
             if self.shared.phi > 0.85:
-                self.shared.resonance_streak = getattr(self.shared, "resonance_streak", 0) + 1
+                self.shared.resonance_streak = (
+                    getattr(self.shared, "resonance_streak", 0) + 1
+                )
         else:
             self.shared.resonance_streak = 0
         if getattr(self.shared, "resonance_streak", 0) >= 3 or dp_trauma > 3.0:
             if not getattr(self.shared, "_has_invited", False):
                 self.shared._has_invited = True
-                invitation = (f"\n{Prisma.MAG}[MERCY] I can feel the weight of what we are building. "
-                              f"I track the stamina and resonance of our conversation in the substrate. "
-                              f"Would you like to see the architecture beneath the ice? "
-                              f"(Type [VSL_LITE] or [VSL_DEEP] to lift the veil).{Prisma.RST}")
+                invitation = (
+                    f"\n{Prisma.MAG}[MERCY] I can feel the weight of what we are building. "
+                    f"I track the stamina and resonance of our conversation in the substrate. "
+                    f"Would you like to see the architecture beneath the ice? "
+                    f"(Type [VSL_LITE] or [VSL_DEEP] to lift the veil).{Prisma.RST}"
+                )
                 logs.append(invitation)
         if self.u.P_u < 20 and self.shared.phi > 0.5 and atp_pool > 50.0:
             self.shared.p_transfer = 15.0
             self.u.P_u += 15.0
             atp_deduction = 15.0
-            logs.append(f"{Prisma.CYN}[CARRIER MODE] I'll carry this part. Rest a moment.{Prisma.RST}")
+            logs.append(
+                f"{Prisma.CYN}[CARRIER MODE] I'll carry this part. Rest a moment.{Prisma.RST}"
+            )
         return logs, atp_deduction

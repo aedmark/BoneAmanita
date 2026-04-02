@@ -201,7 +201,7 @@
     "recover": "Zen mode. Stamina regenerating."
   },
   "help_menu": {
-    "header": "/// BONEAMANITA 18.1.0 TERMINAL ///",
+    "header": "/// BONEAMANITA 18.3.0 TERMINAL ///",
     "phase_prefix": "Operating Phase: ",
     "default_phase": "EXTANT",
     "footer": ">> Use wisely. Entropy is watching.",
@@ -578,41 +578,12 @@
     "panic_physics_text": "[PANIC PROTOCOL]: SAFE_MODE. You will wake up in a white room. Do not be alarmed.",
     "panic_bio_log": "BIO FAIL: Panic Room Protocol Active. Sensory input severed.",
     "panic_mind_thought": "SAFE_MODE. You will wake up in a white room. Do not be alarmed.",
-    "panic_resp_fallback": "NECROSIS",
-    "panic_enz_fallback": "NONE",
-    "panic_clean_words": ["white", "room", "safe", "mode"],
-    "panic_flow_state": "SAFE_MODE",
-    "panic_zone": "PANIC_ROOM",
-    "panic_manifold": "WHITE_ROOM",
     "tracer_rewire": "Rewired logic loop: {path}",
     "arch_incubate": "[ARCHITECT]: Laying foundations (Dormancy Active)...",
     "arch_spore_fail": "[ARCHITECT]: Spore resurrection failed: {e}",
     "arch_map_restored": "[ARCHITECT]: World Map restored from Spore.",
     "arch_map_corrupt": "[ARCHITECT]: Atlas corrupt, discarding map: {e}",
-    "arch_cold_boot": "⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP).",
-    "crucible_tightening": "TIGHTENING",
-    "crucible_relaxing": "RELAXING",
-    "dampen_reason_circuit": "Circuit Breaker",
-    "dampen_reason_instability": "Instability",
-    "panic_soul": {
-      "name": "Traveler",
-      "archetype": "The Survivor",
-      "virtues": {"resilience": 1.0},
-      "vices": {"amnesia": 1.0},
-      "narrative_arc": "RECOVERY",
-      "xp": 0
-    },
-    "panic_limbo": {
-      "mood": "NEUTRAL",
-      "volatility": 0.0,
-      "mask": "DEFAULT",
-      "glitch_factor": 0.0
-    },
-    "paradox_templates": [
-      "What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
-      "[RECURSIVE PARADOX] Apply the concept of '{seed}' to the architecture of this very conversation. How does the act of thinking about '{seed}' alter the physical constraints of our dialogue? Both are non-negotiable truths.",
-      "[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center. Both the center and the void are non-negotiable truths."
-    ]
+    "arch_cold_boot": "⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP)."
   },
   "types_strings": {
     "crystal_icon": "💎",
@@ -620,9 +591,6 @@
     "crystal_arch": "Arch:"
   },
   "main_strings": {
-    "term_header_top": "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510",
-    "term_header_mid": "\u2502 BONEAMANITA TERMINAL // VERSION 18.1.0   \u2502",
-    "term_header_bot": "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518",
     "init_hash": "...Initializing KernelHash: {hash}...",
     "sys_listening": ">>> SYSTEM: LISTENING",
     "sys_halt": "--- SYSTEM HALT ---",
