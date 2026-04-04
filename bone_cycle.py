@@ -27,7 +27,7 @@ from bone_phases import (
     SimulationPreflightPhase,
     CognitionPhase,
     SensationPhase,
-    StabilizationPhase,
+    StabilizationPhase, SimulationPhase,
 )
 from bone_physics import CycleStabilizer
 from bone_presets import BoneConfig
@@ -107,11 +107,9 @@ class CycleSimulator:
         return ctx
 
     def check_circuit_breaker(self, phase_name: str) -> bool:
-        health = self.eng.system_health
-        if phase_name == "OBSERVE": return health.physics_online
-        if phase_name == "METABOLISM": return health.bio_online
-        if phase_name == "COGNITION": return health.mind_online
-        return True
+        h = self.eng.system_health
+        return {"OBSERVE": h.physics_online, "METABOLISM": h.bio_online, "COGNITION": h.mind_online}.get(phase_name,
+                                                                                                         True)
 
     def handle_phase_crash(self, ctx, phase_name, error):
         msg_crash = ux("cycle_strings", "sim_crash_header")
@@ -151,7 +149,7 @@ class GeodesicOrchestrator:
             self.eng.shared_lattice = SharedLatticeDriver()
 
     def _execute_core_cycle(
-        self, user_message: str, is_system: bool = False
+            self, user_message: str, is_system: bool = False
     ) -> CycleContext:
         cycle_id = str(uuid.uuid4())[:8]
         if hasattr(self.eng, "telemetry") and self.eng.telemetry:
@@ -160,30 +158,23 @@ class GeodesicOrchestrator:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
             ctx.trace_id = cycle_id
             ctx.time_delta = getattr(self.eng, "current_time_delta", 0.0)
-            ctx.user_state = self.eng.shared_lattice.u
-            ctx.shared_dyn = self.eng.shared_lattice.shared
-            target_cfg = getattr(self.eng, "bone_config", BoneConfig)
-            cfg_obj = getattr(target_cfg, "CYCLE", None)
-            ctx.limits = (
-                vars(cfg_obj) if hasattr(cfg_obj, "__dict__") else (cfg_obj or {})
-            )
-            if (
-                hasattr(self.eng, "observer")
-                and self.eng.observer
-                and getattr(self.eng.observer, "last_physics_packet", None)
-            ):
-                ctx.physics = self.eng.observer.last_physics_packet.snapshot()
+            ctx.user_state, ctx.shared_dyn = self.eng.shared_lattice.u, self.eng.shared_lattice.shared
+            cfg_obj = getattr(getattr(self.eng, "bone_config", BoneConfig), "CYCLE", None)
+            ctx.limits = vars(cfg_obj) if hasattr(cfg_obj, "__dict__") else (cfg_obj or {})
+
+            obs = getattr(self.eng, "observer", None)
+            if obs and (packet := getattr(obs, "last_physics_packet", None)) and hasattr(packet, "snapshot"):
+                ctx.physics = packet.snapshot()
             elif not ctx.physics:
                 ctx.physics = PanicRoom.get_safe_physics()
-                msg = ux("cycle_strings", "orch_physics_bypass")
-                self.eng.events.log(msg, "SYS")
-            ctx.validator = CongruenceValidator()
-            ctx.reality_stack = getattr(self.eng, "reality_stack", None)
-            ctx.user_name = self.eng.user_name
-            ctx.council_mandates = []
-            ctx.timestamp = time.time()
-            pre_logs = [e["text"] for e in self.eng.events.flush()]
-            ctx.logs.extend(pre_logs)
+                if msg := ux("cycle_strings", "orch_physics_bypass"): self.eng.events.log(msg, "SYS")
+
+            ctx.validator, ctx.reality_stack, ctx.user_name = CongruenceValidator(), getattr(self.eng, "reality_stack",
+                                                                                             None), getattr(self.eng,
+                                                                                                            "user_name",
+                                                                                                            "User")
+            ctx.council_mandates, ctx.timestamp = [], time.time()
+            ctx.logs.extend(e["text"] for e in self.eng.events.flush())
             ctx = self.simulator.run_simulation(ctx)
             if hasattr(self.eng, "observer") and self.eng.observer:
                 self.eng.observer.last_physics_packet = ctx.physics.snapshot()
@@ -203,15 +194,11 @@ class GeodesicOrchestrator:
 
     def _check_early_exit(self, ctx: CycleContext) -> Optional[Dict[str, Any]]:
         if not ctx.is_alive:
-            return (
-                self._generate_crash_report(ctx.crash_error)
-                if hasattr(ctx, "crash_error")
-                else self.eng.trigger_death(ctx.physics)
-            )
-        if getattr(ctx, "refusal_triggered", False) and getattr(
-            ctx, "refusal_packet", None
-        ):
-            return ctx.refusal_packet
+            return self._generate_crash_report(ctx.crash_error) if hasattr(ctx,
+                                                                           "crash_error") else self.eng.trigger_death(
+                ctx.physics)
+        if getattr(ctx, "refusal_triggered", False) and (packet := getattr(ctx, "refusal_packet", None)):
+            return packet
         return None
 
     def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
@@ -222,7 +209,7 @@ class GeodesicOrchestrator:
             )
 
         clean_message = (
-            re.sub(r"(?i)\[VSL_[A-Z]+]", "", user_message).strip() or "(Waiting)"
+                re.sub(r"(?i)\[VSL_[A-Z]+]", "", user_message).strip() or "(Waiting)"
         )
 
         if clean_message.lower() == "/idle":
@@ -242,7 +229,7 @@ class GeodesicOrchestrator:
             safe_phys = (
                 self.eng.observer.last_physics_packet.snapshot().to_dict()
                 if hasattr(self.eng, "observer")
-                and getattr(self.eng.observer, "last_physics_packet", None)
+                   and getattr(self.eng.observer, "last_physics_packet", None)
                 else PanicRoom.get_safe_physics().to_dict()
             )
             return {
@@ -269,7 +256,7 @@ class GeodesicOrchestrator:
         return snapshot
 
     def run_headless_turn(
-        self, user_message: str, latency: float = 0.0
+            self, user_message: str, latency: float = 0.0
     ) -> Dict[str, Any]:
         ctx = self._execute_core_cycle(user_message)
 

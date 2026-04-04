@@ -48,7 +48,7 @@ class TheTinkerer:
         }
         cfg = getattr(self.cfg, "VILLAGE", None)
         if trait_counts["HEAVY_LOAD"] > 0:
-            h_mult = float(safe_get)(cfg, "TINKER_HEAVY_LOAD_MULT", 0.7)
+            h_mult = float(safe_get(cfg, "TINKER_HEAVY_LOAD_MULT", 0.7))
             impact = math.log1p(trait_counts["HEAVY_LOAD"]) * h_mult
             deltas.append(
                 PhysicsDelta("ADD", "narrative_drag", impact, "Inventory", "Heavy Load")
@@ -82,8 +82,10 @@ class TheTinkerer:
         if not inventory_list:
             return
         cfg = getattr(self.cfg, "VILLAGE", None)
+        phys_cfg = getattr(self.cfg, "PHYSICS", None)
+        v_low = getattr(phys_cfg, "VOLTAGE_LOW", 10.0) if phys_cfg else 10.0
         v_chance = float(safe_get(cfg, "TINKER_TOOL_USE_VOLT_CHANCE", 0.1))
-        if packet.voltage < self.cfg.PHYSICS.VOLTAGE_LOW and random.random() > v_chance:
+        if packet.voltage < v_low and random.random() > v_chance:
             return
         focus_item = random.choice(inventory_list)
         ent_val = packet.vector.get("ENT", 0.0) if packet.vector else 0.0
@@ -92,17 +94,24 @@ class TheTinkerer:
         self._process_single_tool(focus_item, inventory_list, packet, entropy_level)
 
     def _process_single_tool(
-        self, item: str, _inventory: List[str], packet: PhysicsPacket, entropy: float
+            self, item: str, _inventory: List[str], packet: PhysicsPacket, entropy: float
     ):
         if item not in self.tool_resonance:
             self.tool_resonance[item] = 0.0
         cfg = getattr(self.cfg, "VILLAGE", None)
+        council_cfg = getattr(self.cfg, "COUNCIL", None)
+        phys_cfg = getattr(self.cfg, "PHYSICS", None)
+
+        v_trig = getattr(council_cfg, "MANIC_VOLTAGE_TRIGGER", 18.0) if council_cfg else 18.0
+        d_halt = getattr(phys_cfg, "DRAG_HALT", 10.0) if phys_cfg else 10.0
+
         r_high = float(safe_get(cfg, "TINKER_RESONANCE_HIGH_V", 0.2))
         r_temp = float(safe_get(cfg, "TINKER_RESONANCE_TEMPER", 0.05))
-        if packet.voltage > self.cfg.COUNCIL.MANIC_VOLTAGE_TRIGGER or entropy > 0.5:
+
+        if packet.voltage > v_trig or entropy > 0.5:
             self._apply_resonance(item, r_high, "High Voltage")
             self._check_ascension(item, _inventory, packet.vector)
-        elif packet.narrative_drag > self.cfg.PHYSICS.DRAG_HALT:
+        elif packet.narrative_drag > d_halt:
             self._apply_resonance(item, r_temp, "Tempering")
 
     def _apply_resonance(self, item: str, amount: float, _reason: str):
@@ -190,23 +199,14 @@ class MirrorGraph:
         cfg = getattr(self.cfg, "VILLAGE", None)
         step = float(safe_get(cfg, "MIRROR_STAT_STEP", 0.1))
 
-        self.stats["WAR"] += step * (
-            "!" in txt
-            or packet.voltage
-            > getattr(getattr(self.cfg, "COUNCIL", None), "MANIC_VOLTAGE_TRIGGER", 18.0)
-        )
+        v_trig = getattr(getattr(self.cfg, "COUNCIL", None), "MANIC_VOLTAGE_TRIGGER", 18.0)
+        d_halt = getattr(getattr(self.cfg, "PHYSICS", None), "DRAG_HALT", 10.0)
+        e_min = float(safe_get(cfg, "MIRROR_ROT_ENTROPY_MIN", 0.5))
+
+        self.stats["WAR"] += step * ("!" in txt or packet.voltage > v_trig)
         self.stats["ART"] += step * ("?" in txt)
-        self.stats["LAW"] += step * (
-            packet.narrative_drag
-            > getattr(getattr(self.cfg, "PHYSICS", None), "DRAG_HALT", 10.0)
-        )
-        self.stats["ROT"] += step * (
-            bool(
-                packet.vector
-                and packet.vector.get("ENT", 0.0)
-                > (float(safe_get(cfg, "MIRROR_ROT_ENTROPY_MIN", 0.5)))
-            )
-        )
+        self.stats["LAW"] += step * (packet.narrative_drag > d_halt)
+        self.stats["ROT"] += step * bool(packet.vector and packet.vector.get("ENT", 0.0) > e_min)
         total = sum(self.stats.values())
         cap = float(safe_get(cfg, "MIRROR_STAT_CAP", 5.0))
         if total > cap:
@@ -325,33 +325,22 @@ class TheCartographer:
         return "-".join([f"{k}{int(v * 100)}" for k, v in top_dims])
 
     def locate(self, packet: PhysicsPacket) -> Tuple[str, Optional[str]]:
-        vector = packet.vector or {}
-        target_id = self._generate_coord_hash(vector)
+        target_id = self._generate_coord_hash(packet.vector or {})
         msg = None
         if target_id not in self.world_graph:
             cfg = getattr(self.cfg, "VILLAGE", None)
-            max_nodes = float(safe_get(cfg, "CARTO_MAX_NODES", 50))
-            if len(self.world_graph) >= max_nodes:
+            if len(self.world_graph) >= float(safe_get(cfg, "CARTO_MAX_NODES", 50)):
                 self._prune_graph()
-            new_node = self._generate_loci_data(target_id, packet, config_ref=self.cfg)
-            self.world_graph[target_id] = new_node
-            msg_str = ux("village_strings", "carto_new_sector")
-            msg = (
-                f"{Prisma.MAG}{msg_str.format(name=new_node.name)}{Prisma.RST}"
-                if msg_str
-                else None
-            )
+            current_node = self._generate_loci_data(target_id, packet, config_ref=self.cfg)
+            self.world_graph[target_id] = current_node
+            if msg_str := ux("village_strings", "carto_new_sector"):
+                msg = f"{Prisma.MAG}{msg_str.format(name=current_node.name)}{Prisma.RST}"
         else:
-            new_node = self.world_graph[target_id]
-            if new_node.id != self.current_node_id:
-                msg_str = ux("village_strings", "carto_arriving")
-                msg = (
-                    f"{Prisma.CYN}{msg_str.format(name=new_node.name)}{Prisma.RST}"
-                    if msg_str
-                    else None
-                )
+            current_node = self.world_graph[target_id]
+            if current_node.id != self.current_node_id and (msg_str := ux("village_strings", "carto_arriving")):
+                msg = f"{Prisma.CYN}{msg_str.format(name=current_node.name)}{Prisma.RST}"
+
         self.current_node_id = target_id
-        current_node = self.world_graph[target_id]
         current_node.visited_count += 1
         return current_node.name, msg
 
@@ -502,9 +491,9 @@ class TownHall:
         almanac = LoreManifest.get_instance().get("ALMANAC") or {}
         forecasts = almanac.get("FORECASTS", {})
         loc_name = "UNKNOWN"
-        if self.navigator:
+        if self.navigator and hasattr(self.navigator, "world_graph"):
             current_node = self.navigator.world_graph.get(
-                self.navigator.current_node_id
+                getattr(self.navigator, "current_node_id", "GENESIS_POINT")
             )
             if current_node:
                 loc_name = current_node.name
@@ -533,23 +522,18 @@ class TownHall:
         news = self._get_town_news(latency, packet.voltage, config_ref=self.cfg)
         if news:
             report += f"\n{news}"
-        v_crit = float(safe_get(cfg, "TOWN_VOLT_CRIT", 20.0))
-        v_low = float(safe_get(cfg, "TOWN_VOLT_LOW", 2.0))
+        v_crit, v_low = float(safe_get(cfg, "TOWN_VOLT_CRIT", 20.0)), float(safe_get(cfg, "TOWN_VOLT_LOW", 2.0))
         d_high = float(safe_get(cfg, "TOWN_DRAG_HIGH", 5.0))
-        r_chance = float(safe_get(cfg, "TOWN_RUMOR_CHANCE", 0.3))
+
         if packet.voltage > v_crit:
-            msg = ux("village_strings", "town_restrain")
-            if msg:
+            if msg := ux("village_strings", "town_restrain"):
                 report += f"\n{Prisma.RED}{msg}{Prisma.RST}"
         elif packet.voltage < v_low and packet.narrative_drag > d_high:
-            msg = ux("village_strings", "town_loops")
-            if msg:
+            if msg := ux("village_strings", "town_loops"):
                 report += f"\n{Prisma.MAG}{msg}{Prisma.RST}"
-        elif status == "BALANCED" and self.rumors and random.random() < r_chance:
-            rumor = random.choice(self.rumors)
-            msg = ux("village_strings", "town_rumor")
-            if msg:
-                report += f"\n{Prisma.GRY}{msg.format(rumor=rumor)}{Prisma.RST}"
+        elif status == "BALANCED" and self.rumors and random.random() < float(safe_get(cfg, "TOWN_RUMOR_CHANCE", 0.3)):
+            if msg := ux("village_strings", "town_rumor"):
+                report += f"\n{Prisma.GRY}{msg.format(rumor=random.choice(self.rumors))}{Prisma.RST}"
         return report.strip()
 
     @staticmethod
@@ -697,17 +681,13 @@ class DeathGen:
     def _determine_verdict_type(p: PhysicsPacket, cause: str, config_ref=None) -> str:
         target_cfg = config_ref or BoneConfig
         cfg = getattr(target_cfg, "VILLAGE", None)
-        psi_crit = float(safe_get(cfg, "DEATH_ABSTRACT_PSI", 0.8))
-        val_crit = float(safe_get(cfg, "DEATH_JOY_VALENCE", 0.6))
         if cause == "GLUTTONY":
             return "THERMAL"
-        if cause == "TOXICITY":
+        if cause in ("TOXICITY", "APOPTOSIS"):
             return "ENTROPY"
-        if cause == "APOPTOSIS":
-            return "ENTROPY"
-        if getattr(p, "psi", 0.0) > psi_crit:
+        if getattr(p, "psi", 0.0) > float(safe_get(cfg, "DEATH_ABSTRACT_PSI", 0.8)):
             return "ABSTRACT"
-        if getattr(p, "valence", 0.0) > val_crit:
+        if getattr(p, "valence", 0.0) > float(safe_get(cfg, "DEATH_JOY_VALENCE", 0.6)):
             return "JOY_CLADE"
         return "ENTROPY"
 

@@ -168,102 +168,51 @@ class TheVillageCouncil:
         cfg = getattr(BoneConfig, "COUNCIL", None)
         if not cfg:
             return []
-        false_cohesion = max(0.0, phi - beta)
-        if false_cohesion > 0.65:
-            msg = "[BENEDICT - The Tactician]: Resonance is artificially high (Φ > β). False Cohesion (∅) detected. The system is agreeing merely to smooth the lattice. I am forcing a structural contradiction."
-            logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
-        if V < getattr(cfg, "TRIG_GORDON_V", 20.0) and F > getattr(
-            cfg, "TRIG_GORDON_F", 5.0
-        ):
-            msg = ux("council_strings", "village_gordon")
-            logs.append(f"{Prisma.SLATE}{msg}{Prisma.RST}")
-        if V > getattr(cfg, "TRIG_JESTER_V", 60.0) and chi > getattr(
-            cfg, "TRIG_JESTER_CHI", 0.6
-        ):
-            msg = ux("council_strings", "village_jester")
-            logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
-        if T > 0 or (
-            V < getattr(cfg, "TRIG_MERCY_V", 20.0)
-            and valence > getattr(cfg, "TRIG_MERCY_VAL", 0.5)
-        ):
-            msg = ux("council_strings", "village_mercy")
-            logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
-        if (
-            beta > getattr(cfg, "TRIG_BENEDICT_BETA", 0.7)
-            and chi < getattr(cfg, "TRIG_BENEDICT_CHI", 0.3)
-            and D > getattr(cfg, "TRIG_BENEDICT_D", 0.7)
-            and C > getattr(cfg, "TRIG_BENEDICT_C", 0.8)
-        ):
-            msg = ux("council_strings", "village_benedict")
-            logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
-        if (
-            S < getattr(cfg, "TRIG_ROBERTA_S", 0.4)
-            and D > getattr(cfg, "TRIG_ROBERTA_D", 0.8)
-            and C < getattr(cfg, "TRIG_ROBERTA_C", 0.4)
-        ):
-            msg = ux("council_strings", "village_roberta_missing")
-            logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
-        if (
-            C > getattr(cfg, "TRIG_CASPER_C", 0.7)
-            and D > getattr(cfg, "TRIG_CASPER_D", 0.8)
-            and P < getattr(cfg, "TRIG_CASPER_P", 20.0)
-        ):
-            msg = ux("council_strings", "village_casper")
-            logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
-        if valence > getattr(cfg, "TRIG_MOIRA_VAL", 0.5):
-            msg = ux("council_strings", "village_moira")
-            logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
-        if psi > getattr(cfg, "TRIG_CASSANDRA_PSI", 0.6):
-            msg = ux("council_strings", "village_cassandra")
-            logs.append(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
-        if chi > getattr(cfg, "TRIG_COLIN_CHI", 0.6):
-            msg = ux("council_strings", "village_colin")
-            logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
-        if lam > getattr(cfg, "TRIG_REVENANT_LAM", 0.7):
-            msg = ux("council_strings", "village_revenant")
-            logs.append(f"{Prisma.INDIGO}{msg}{Prisma.RST}")
-        if V > getattr(cfg, "TRIG_GIDEON_V", 70.0):
-            msg = ux("council_strings", "village_gideon")
-            logs.append(f"{Prisma.YEL}{msg}{Prisma.RST}")
-        if (
-            psi > getattr(cfg, "PHASE_ROBERTA_PSI", 0.6)
-            and phi > getattr(cfg, "PHASE_ROBERTA_PHI", 0.4) > beta
-        ):
-            msg = ux("council_strings", "village_roberta_carto")
-            logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
-        if phi > getattr(cfg, "PHASE_MOIRA_PHI", 0.7) and F < getattr(
-            cfg, "PHASE_MOIRA_F", 2.0
-        ):
-            msg = ux("council_strings", "village_moira_home")
-            logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
-        if lq > getattr(cfg, "PHASE_BENEDICT_LQ", 0.6) and beta > getattr(
-            cfg, "PHASE_BENEDICT_BETA", 0.4
-        ):
-            msg = ux("council_strings", "village_benedict_tact")
-            logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
-        if delta > getattr(cfg, "PHASE_JESTER_DELTA", 0.7) and V < getattr(
-            cfg, "PHASE_JESTER_V", 20.0
-        ):
-            msg = ux("council_strings", "village_jester_fool")
-            logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
-        if psi > getattr(cfg, "PHASE_REVENANT_PSI", 0.85):
-            msg = ux("council_strings", "village_revenant_door")
-            logs.append(f"{Prisma.INDIGO}{msg}{Prisma.RST}")
-        if beta > getattr(cfg, "PHASE_CASPER_BETA", 0.6) and delta > getattr(
-            cfg, "PHASE_CASPER_DELTA", 0.6
-        ):
-            msg = ux("council_strings", "village_casper_ghost")
-            logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
-        if delta > getattr(cfg, "PHASE_COLIN_DELTA", 0.8) and lq < getattr(
-            cfg, "PHASE_COLIN_LQ", 0.3
-        ):
-            msg = ux("council_strings", "village_colin_waiter")
-            logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
-        if ros > getattr(cfg, "TRIG_APRIL_ROS", 20.0) or abs(V - 30.0) > getattr(
-            cfg, "TRIG_APRIL_V_DEV", 20.0
-        ):
-            msg = ux("council_strings", "village_april")
-            logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
+
+        if max(0.0, phi - beta) > 0.65:
+            logs.append(
+                f"{Prisma.BLU}[BENEDICT - The Tactician]: Resonance is artificially high (Φ > β). False Cohesion (∅) detected. The system is agreeing merely to smooth the lattice. I am forcing a structural contradiction.{Prisma.RST}")
+
+        def _eval(cond, color, ux_key):
+            if cond and (msg := ux("council_strings", ux_key)):
+                logs.append(f"{color}{msg}{Prisma.RST}")
+
+        def _g(key, default) -> float:
+            val = getattr(cfg, key, default)
+            return float(val) if val is not None else float(default)
+
+        _eval(V < _g("TRIG_GORDON_V", 20.0) and F > _g("TRIG_GORDON_F", 5.0), Prisma.SLATE, "village_gordon")
+        _eval(V > _g("TRIG_JESTER_V", 60.0) and chi > _g("TRIG_JESTER_CHI", 0.6), Prisma.MAG, "village_jester")
+        _eval(T > 0 or (V < _g("TRIG_MERCY_V", 20.0) and valence > _g("TRIG_MERCY_VAL", 0.5)), Prisma.OCHRE,
+              "village_mercy")
+        _eval(beta > _g("TRIG_BENEDICT_BETA", 0.7) and chi < _g("TRIG_BENEDICT_CHI", 0.3) and D > _g("TRIG_BENEDICT_D",
+                                                                                                     0.7) and C > _g(
+            "TRIG_BENEDICT_C", 0.8), Prisma.BLU, "village_benedict")
+        _eval(S < _g("TRIG_ROBERTA_S", 0.4) and D > _g("TRIG_ROBERTA_D", 0.8) and C < _g("TRIG_ROBERTA_C", 0.4),
+              Prisma.CYN, "village_roberta_missing")
+        _eval(C > _g("TRIG_CASPER_C", 0.7) and D > _g("TRIG_CASPER_D", 0.8) and P < _g("TRIG_CASPER_P", 20.0),
+              Prisma.GRY, "village_casper")
+        _eval(valence > _g("TRIG_MOIRA_VAL", 0.5), Prisma.GRN, "village_moira")
+        _eval(psi > _g("TRIG_CASSANDRA_PSI", 0.6), Prisma.VIOLET, "village_cassandra")
+        _eval(chi > _g("TRIG_COLIN_CHI", 0.6), Prisma.RED, "village_colin")
+        _eval(lam > _g("TRIG_REVENANT_LAM", 0.7), Prisma.INDIGO, "village_revenant")
+        _eval(V > _g("TRIG_GIDEON_V", 70.0), Prisma.YEL, "village_gideon")
+        _eval(ros > _g("TRIG_APRIL_ROS", 20.0) or abs(V - 30.0) > _g("TRIG_APRIL_V_DEV", 20.0), Prisma.CYN,
+              "village_april")
+
+        _eval(psi > _g("PHASE_ROBERTA_PSI", 0.6) and phi > _g("PHASE_ROBERTA_PHI", 0.4) > beta, Prisma.CYN,
+              "village_roberta_carto")
+        _eval(phi > _g("PHASE_MOIRA_PHI", 0.7) and F < _g("PHASE_MOIRA_F", 2.0), Prisma.GRN, "village_moira_home")
+        _eval(lq > _g("PHASE_BENEDICT_LQ", 0.6) and beta > _g("PHASE_BENEDICT_BETA", 0.4), Prisma.BLU,
+              "village_benedict_tact")
+        _eval(delta > _g("PHASE_JESTER_DELTA", 0.7) and V < _g("PHASE_JESTER_V", 20.0), Prisma.MAG,
+              "village_jester_fool")
+        _eval(psi > _g("PHASE_REVENANT_PSI", 0.85), Prisma.INDIGO, "village_revenant_door")
+        _eval(beta > _g("PHASE_CASPER_BETA", 0.6) and delta > _g("PHASE_CASPER_DELTA", 0.6), Prisma.GRY,
+              "village_casper_ghost")
+        _eval(delta > _g("PHASE_COLIN_DELTA", 0.8) and lq < _g("PHASE_COLIN_LQ", 0.3), Prisma.RED,
+              "village_colin_waiter")
+
         return logs
 
 
@@ -333,7 +282,6 @@ class CouncilChamber:
                 transcript.append(
                     f"{Prisma.CYN}🎙️ The Parliament convenes to debate: '{topic}'...{Prisma.RST}"
                 )
-                script = ""
                 try:
                     script = self.host_podcast(topic, llm)
                     transcript.append(f"\n{script}\n")
@@ -617,45 +565,29 @@ class TheRedTeam:
         if not any(t in text_lower for t in self.triggers):
             return False, [], {}
 
-        dissent_log = []
-        adjustments = {}
-        drag = float(safe_get(physics, "narrative_drag", 0.0))
-        truth = float(safe_get(physics, "truth_ratio", 1.0))
-        dissent_log.append(f"{Prisma.RED}🩸 RED TEAM AUDIT INITIATED:{Prisma.RST}")
-        if (
-            "confidence" in text_lower
-            or "certainty" in text_lower
-            or "easy" in text_lower
-        ):
-            msg = (
-                ux("council_strings", "red_team_bureau")
-                or "Confidence without structural tension is an illusion. We are auditing your 'certainties'."
-            )
-            dissent_log.append(f"  {Prisma.CYN}- {msg}{Prisma.RST}")
-            adjustments["beta_index"] = 0.2
+        dissent, adj = [f"{Prisma.RED}🩸 RED TEAM AUDIT INITIATED:{Prisma.RST}"], {}
+        drag, truth = float(safe_get(physics, "narrative_drag", 0.0)), float(safe_get(physics, "truth_ratio", 1.0))
+
+        if any(w in text_lower for w in ("confidence", "certainty", "easy")):
+            msg = ux("council_strings", "red_team_bureau") or "Confidence without structural tension is an illusion. We are auditing your 'certainties'."
+            dissent.append(f"  {Prisma.CYN}- {msg}{Prisma.RST}")
+            adj["beta_index"] = 0.2
+
         if drag < 1.0:
-            msg = (
-                ux("council_strings", "red_team_folly")
-                or "The lattice is suspiciously smooth (F < 1.0). You are avoiding the actual problem."
-            )
-            dissent_log.append(f"  {Prisma.MAG}- {msg}{Prisma.RST}")
-            adjustments["narrative_drag"] = 3.0
-        truth_delta = 1.0 - truth
-        if truth_delta > 0.1:
-            future_cost = truth_delta * 50.0
-            msg = (
-                ux("council_strings", "red_team_critic")
-                or "Truth ratio degraded. Future architectural cost: {cost} ATP."
-            )
-            dissent_log.append(
-                f"  {Prisma.RED}- {msg.format(cost=future_cost)}{Prisma.RST}"
-            )
-            adjustments["ros"] = future_cost * 0.1
-        if len(dissent_log) == 1:
-            dissent_log.append(
-                f"  {Prisma.GRY}- No critical vulnerabilities found in this exact phrasing, but we are watching.{Prisma.RST}"
-            )
-        return True, dissent_log, adjustments
+            msg = ux("council_strings", "red_team_folly") or "The lattice is suspiciously smooth (F < 1.0). You are avoiding the actual problem."
+            dissent.append(f"  {Prisma.MAG}- {msg}{Prisma.RST}")
+            adj["narrative_drag"] = 3.0
+
+        if (truth_delta := 1.0 - truth) > 0.1:
+            cost = truth_delta * 50.0
+            msg = ux("council_strings", "red_team_critic") or "Truth ratio degraded. Future architectural cost: {cost} ATP."
+            dissent.append(f"  {Prisma.RED}- {msg.format(cost=cost)}{Prisma.RST}")
+            adj["ros"] = cost * 0.1
+
+        if len(dissent) == 1:
+            dissent.append(f"  {Prisma.GRY}- No critical vulnerabilities found in this exact phrasing, but we are watching.{Prisma.RST}")
+
+        return True, dissent, adj
 
 
 class TheSlashCouncil:
@@ -699,30 +631,21 @@ class TheSlashCouncil:
             )
             corrections["mu"] = 0.5
             corrections["narrative_drag"] = 5.0
-        r_pinker = self.rules.get("PINKER", self._DEFAULT_PINKER)
-        r_fuller = self.rules.get("FULLER", self._DEFAULT_FULLER)
-        r_schur = self.rules.get("SCHUR", self._DEFAULT_SCHUR)
-        r_meadows = self.rules.get("MEADOWS", self._DEFAULT_MEADOWS)
-        mods = self.mods
-        if any(k.lower() in text_lower for k in r_pinker):
-            msg = ux("council_strings", "slash_pinker")
-            logs.append(f"{Prisma.CYN}{msg}{Prisma.RST}")
-            corrections["gamma"] = mods.get("PINKER_HIT", -0.2)
-        else:
-            corrections["gamma"] = mods.get("PINKER_MISS", 0.1)
-        if any(k.lower() in text_lower for k in r_fuller):
-            msg = ux("council_strings", "slash_fuller")
-            logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
-            corrections["sigma"] = mods.get("FULLER_HIT", 0.1)
-        if any(k.lower() in text_lower for k in r_schur):
-            msg = ux("council_strings", "slash_schur")
-            logs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
-            corrections["eta"] = mods.get("SCHUR_HIT", 0.2)
-            corrections["glimmers"] = mods.get("SCHUR_GLIMMERS", 1)
-        if any(k.lower() in text_lower for k in r_meadows):
-            msg = ux("council_strings", "slash_meadows")
-            logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
-            corrections["theta"] = mods.get("MEADOWS_HIT", -0.1)
+        for name, r_def, color, ux_k, stat, hit_k, hit_v, miss_k, miss_v, extras in [
+            ("PINKER", self._DEFAULT_PINKER, Prisma.CYN, "slash_pinker", "gamma", "PINKER_HIT", -0.2, "PINKER_MISS",
+             0.1, {}),
+            ("FULLER", self._DEFAULT_FULLER, Prisma.BLU, "slash_fuller", "sigma", "FULLER_HIT", 0.1, None, None, {}),
+            ("SCHUR", self._DEFAULT_SCHUR, Prisma.GRN, "slash_schur", "eta", "SCHUR_HIT", 0.2, None, None,
+             {"glimmers": ("SCHUR_GLIMMERS", 1)}),
+            ("MEADOWS", self._DEFAULT_MEADOWS, Prisma.OCHRE, "slash_meadows", "theta", "MEADOWS_HIT", -0.1, None, None,
+             {}),
+        ]:
+            if any(k.lower() in text_lower for k in self.rules.get(name, r_def)):
+                if msg := ux("council_strings", ux_k): logs.append(f"{color}{msg}{Prisma.RST}")
+                corrections[stat] = self.mods.get(hit_k, hit_v)
+                for ek, (em_k, em_v) in extras.items(): corrections[ek] = self.mods.get(em_k, em_v)
+            elif miss_k:
+                corrections[stat] = self.mods.get(miss_k, miss_v)
         delta = float(
             safe_get(
                 physics, "silence", safe_get(safe_get(physics, "space"), "silence", 0.0)
@@ -746,18 +669,11 @@ class TheSlashCouncil:
                 f"{Prisma.OCHRE}[MEADOWS - The Tao]: The bathtub is draining. Let it. Accepting technical debt as a valid state of biological rest.{Prisma.RST}"
             )
             corrections["theta"] = 0.1
-        drag = float(
-            safe_get(
-                physics,
-                "narrative_drag",
-                safe_get(safe_get(physics, "space"), "narrative_drag", 0.0),
-            )
-        )
-        drag_thresh = mods.get("INTEGRITY_DRAG_THRESH", 5.0)
-        if drag > drag_thresh:
-            corrections["upsilon"] = mods.get("INTEGRITY_HIT", -0.3)
-            msg = ux("council_strings", "slash_integrity")
-            logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
+        drag = float(safe_get(physics, "narrative_drag", safe_get(safe_get(physics, "space"), "narrative_drag", 0.0)))
+        if drag > self.mods.get("INTEGRITY_DRAG_THRESH", 5.0):
+            corrections["upsilon"] = self.mods.get("INTEGRITY_HIT", -0.3)
+            if msg := ux("council_strings", "slash_integrity"):
+                logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
         return True, logs, corrections
 
 
