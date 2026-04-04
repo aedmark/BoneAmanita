@@ -146,7 +146,6 @@ class Projector:
             physics_line = self._render_physics_strip(
                 physics, data_ctx.get("vectors", {})
             )
-        ui_depth = data_ctx.get("ui_depth", "IDLE")
         vsl_line = self._render_lattice_strip(
             physics, data_ctx=data_ctx, depth=ui_depth
         )
@@ -468,9 +467,9 @@ class GeodesicRenderer:
             and isinstance(q_matrix[0], list)
         ):
             strain = sum(
-                float(abs(q_matrix[i][j]))
-                for i in range(len(q_matrix))
-                for j in range(len(q_matrix[0]))
+                float(abs(val))
+                for i, row in enumerate(q_matrix)
+                for j, val in enumerate(row)
                 if i != j
             )
         data_ctx["lattice_strain"] = float(strain)
@@ -505,10 +504,9 @@ class GeodesicRenderer:
         return f"{Prisma.GRY}{formatted_strip}{Prisma.RST}"
 
     def compose_logs(self, logs: list, events: list, _tick: int = 0) -> List[str]:
-        all_logs = [str(l) for l in logs if l is not None]
-        for e in events:
-            if e and e.get("text"):
-                all_logs.append(e["text"])
+        all_logs = [str(l) for l in logs if l is not None] + [
+            e["text"] for e in events if e and e.get("text")
+        ]
         mode_settings = (
             getattr(self.eng, "mode_settings", {}) if hasattr(self, "eng") else {}
         )

@@ -282,16 +282,15 @@ class GeodesicOrchestrator:
         return snapshot
 
     def _hydrate_snapshot_metadata(self, snapshot: Dict, ctx: CycleContext):
-        def _sd(obj): return obj.to_dict() if hasattr(obj, "to_dict") else (obj if isinstance(obj, dict) else {})
         snapshot.update(
             {
                 "trace_id": getattr(ctx, "trace_id", "UNKNOWN"),
                 "is_alive": True,
-                "physics": _sd(ctx.physics),
-                "bio": _sd(ctx.bio_result),
-                "mind": _sd(ctx.mind_state),
-                "world": _sd(ctx.world_state),
-                "soul": _sd(getattr(self.eng, "soul", {})),
+                "physics": _safe_dict(ctx.physics),
+                "bio": _safe_dict(ctx.bio_result),
+                "mind": _safe_dict(ctx.mind_state),
+                "world": _safe_dict(ctx.world_state),
+                "soul": _safe_dict(getattr(self.eng, "soul", {})),
                 "council_mandates": getattr(ctx, "council_mandates", []),
                 "dream": getattr(ctx, "last_dream", None),
                 "mutated_input": ctx.input_text,

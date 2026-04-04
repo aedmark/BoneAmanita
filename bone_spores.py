@@ -25,9 +25,10 @@ def _identity(n=8):
 
 
 def _mat_mul(A, B):
+    B_cols = list(zip(*B))
     return [
-        [sum(A[i][k] * B[k][j] for k in range(len(B[0]))) for j in range(len(B[0]))]
-        for i in range(len(A))
+        [sum(a * b for a, b in zip(row, col)) for col in B_cols]
+        for row in A
     ]
 
 
@@ -50,14 +51,10 @@ def _householder(v):
     mag_sq = sum(x * x for x in v)
     if mag_sq == 0:
         return _identity(len(v))
-    H = []
-    for i in range(len(v)):
-        row = []
-        for j in range(len(v)):
-            val = (1.0 if i == j else 0.0) - 2.0 * (v[i] * v[j]) / mag_sq
-            row.append(val)
-        H.append(row)
-    return H
+    return [
+        [(1.0 if i == j else 0.0) - 2.0 * (v[i] * v[j]) / mag_sq for j in range(len(v))]
+        for i in range(len(v))
+    ]
 
 
 def _access_config_path(root, path, value=None, set_mode=False):
@@ -1256,7 +1253,8 @@ class BioLichen:
                     f"{Prisma.GRN}{msg.format(source=source_str, sugar=s)}{Prisma.RST}"
                 )
         if sugar > 0 and self.lex:
-            heavy_words = [w for w in clean_words if w in (self.lex.get("heavy") or [])]
+            heavy_set = self.lex.get("heavy") or set()
+            heavy_words = [w for w in clean_words if w in heavy_set]
             if heavy_words:
                 h_word = random.choice(heavy_words)
                 self.lex.teach(h_word, "photo", tick_count)

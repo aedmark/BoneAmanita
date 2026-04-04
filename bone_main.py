@@ -38,6 +38,11 @@ ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
 
 
 def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
+    if not text:
+        sys.stdout.write(end)
+        sys.stdout.flush()
+        return
+
     cfg = getattr(BoneConfig, "GUI", None)
     actual_speed = (
         speed
@@ -47,8 +52,8 @@ def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
     if actual_speed < 0.001:
         print(text, end=end)
         return
-    type_parts = ANSI_SPLIT.split(text)
-    for part in type_parts:
+
+    for part in ANSI_SPLIT.split(text):
         if not part:
             continue
         if part.startswith("\x1b"):
@@ -69,16 +74,18 @@ class HostStats:
 
 
 class SessionGuardian:
+    _HEADERS = (
+        ("term_header_top", "┌──────────────────────────────────────────┐"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.0.0   │"),
+        ("term_header_bot", "└──────────────────────────────────────────┘"),
+    )
+
     def __init__(self, engine_ref):
         self.engine_instance = engine_ref
 
     def __enter__(self):
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
-        for key, default in [
-            ("term_header_top", "┌──────────────────────────────────────────┐"),
-            ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.0.0   │"),
-            ("term_header_bot", "└──────────────────────────────────────────┘"),
-        ]:
+        for key, default in self._HEADERS:
             print(Prisma.paint(ux("main_strings", key, default), "M"))
         cfg = (
             getattr(self.engine_instance.bone_config, "GUI", None)
@@ -124,6 +131,25 @@ class SessionGuardian:
 
 class ConfigWizard:
     CONFIG_FILE = "bone_config.json"
+    _MODES = {
+        "1": "ADVENTURE",
+        "2": "CONVERSATION",
+        "3": "CREATIVE",
+        "4": "TECHNICAL",
+    }
+    _UI_MODES = {
+        "1": "DEEP",
+        "2": "CORE",
+        "3": "LITE",
+        "4": "MINIMAL",
+        "5": "WARM"
+    }
+    _BACKENDS = (
+        ("1", "Ollama (Local)", "G"),
+        ("2", "OpenAI (Cloud)", "C"),
+        ("3", "LM Studio (Local)", "V"),
+        ("4", "Mock (Simulation)", "0"),
+    )
 
     @staticmethod
     def load_or_create():
@@ -162,31 +188,20 @@ class ConfigWizard:
         user_name = input(f"{Prisma.GRY}{prompt1}{Prisma.RST}").strip() or "TRAVELER"
         step2 = ux("main_strings", "step2_mode")
         print(f"\n{Prisma.paint(step2, 'W')}")
-        for k, name, desc, col in [
+        for k, name, desc, col in (
             ("1", "ADVENTURE", ux("main_strings", "mode_adv_desc"), "G"),
             ("2", "CONVERSATION", ux("main_strings", "mode_conv_desc"), "C"),
             ("3", "CREATIVE", ux("main_strings", "mode_crea_desc"), "V"),
             ("4", "TECHNICAL", ux("main_strings", "mode_tech_desc"), "0"),
-        ]:
+        ):
             print(f"  {k}. {Prisma.paint(name, col):<25} - {desc}")
         mode_choice = input(
             f"{Prisma.paint(ux('main_strings', 'prompt_mode'), 'C')} "
         ).strip()
-        boot_mode = {
-            "1": "ADVENTURE",
-            "2": "CONVERSATION",
-            "3": "CREATIVE",
-            "4": "TECHNICAL",
-        }.get(mode_choice, "ADVENTURE")
+        boot_mode = self._MODES.get(mode_choice, "ADVENTURE")
         step3 = ux("main_strings", "step3_backend")
         print(f"\n{Prisma.paint(step3, 'W')}")
-        backends = [
-            ("1", "Ollama (Local)", "G"),
-            ("2", "OpenAI (Cloud)", "C"),
-            ("3", "LM Studio (Local)", "V"),
-            ("4", "Mock (Simulation)", "0"),
-        ]
-        for k, name, col in backends:
+        for k, name, col in self._BACKENDS:
             print(f"{k}. {Prisma.paint(name, col)}")
         choice = input(f"{Prisma.paint('>', 'C')} ").strip()
         config = {"user_name": user_name, "boot_mode": boot_mode}
@@ -227,13 +242,7 @@ class ConfigWizard:
         print(f"  5. {Prisma.paint('WARM', '0')}    - No HUD. Immersive Text Only.")
 
         ui_choice = input(f"{Prisma.paint('>', 'C')} ").strip()
-        ui_mode = {
-            "1": "DEEP",
-            "2": "CORE",
-            "3": "LITE",
-            "4": "MINIMAL",
-            "5": "WARM"
-        }.get(ui_choice, "MINIMAL")
+        ui_mode = self._UI_MODES.get(ui_choice, "MINIMAL")
 
         config["default_ui_depth"] = ui_mode
 
@@ -260,6 +269,9 @@ class BoneAmanita:
         ".env",
         "master branch push",
         "bypass security",
+    )
+    _SMALL_MODEL_INDICATORS = (
+        "7b", "8b", "9b", "11b", "12b", "14b", "mini", "lite", "flash",
     )
 
     def __init__(self, config: Dict[str, Any]):
@@ -377,19 +389,7 @@ class BoneAmanita:
         prompt_key = self.mode_settings.get("prompt_key", "ADVENTURE")
         model_id = self.config.get("model", "").lower()
 
-        small_model_indicators = [
-            "7b",
-            "8b",
-            "9b",
-            "11b",
-            "12b",
-            "14b",
-            "mini",
-            "lite",
-            "flash",
-        ]
-
-        if any(ind in model_id for ind in small_model_indicators):
+        if any(ind in model_id for ind in self._SMALL_MODEL_INDICATORS):
             lite_key = f"{prompt_key}_LITE"
             if lite_key in getattr(self, "prompt_library", {}):
                 prompt_key = lite_key
@@ -821,8 +821,6 @@ class BoneAmanita:
                 "logs": ["CRITICAL FAILURE"],
                 "metrics": self.get_metrics(),
             }
-
-        self._update_host_stats(cortex_packet, turn_start)
 
         self._update_host_stats(cortex_packet, turn_start)
         self.save_checkpoint()

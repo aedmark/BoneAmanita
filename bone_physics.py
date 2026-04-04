@@ -189,9 +189,9 @@ class GeodesicEngine:
         dimensions: Dict[str, float], q_matrix: List[List[float]]
     ) -> Dict[str, float]:
         v = [dimensions.get(k, 0.0) for k in GeodesicEngine._DIM_ORDER]
-        v_new = [sum(q_matrix[i][j] * v[j] for j in range(8)) for i in range(8)]
+        v_new = [sum(row[j] * v[j] for j in range(8)) for row in q_matrix]
         return {
-            k: round(abs(v_new[i]), 3) for i, k in enumerate(GeodesicEngine._DIM_ORDER)
+            k: round(abs(val), 3) for k, val in zip(GeodesicEngine._DIM_ORDER, v_new)
         }
 
 
@@ -416,16 +416,22 @@ class QuantumObserver:
         mu_val = min(1.0, (beta_val * 0.7) + (geo.coherence * 0.3))
 
         text_lower = text.lower()
-        val_phrases = [
-            "right?",
-            "good?",
-            "make sense",
-            "makes sense",
-            "agree",
-            "validate",
-            "comfort",
-        ]
-        cf_expect_val = 0.8 if any(p in text_lower for p in val_phrases) else 0.0
+        cf_expect_val = (
+            0.8
+            if any(
+                p in text_lower
+                for p in (
+                    "right?",
+                    "good?",
+                    "make sense",
+                    "makes sense",
+                    "agree",
+                    "validate",
+                    "comfort",
+                )
+            )
+            else 0.0
+        )
         novelty_val = min(1.0, (e_metric * 0.6) + (counts.get("play", 0) * 0.15))
 
         energy = EnergyState(

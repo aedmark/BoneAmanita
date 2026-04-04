@@ -108,6 +108,12 @@ class TheCrucible:
 
 
 class TheParadoxEngine:
+    _DEFAULT_TEMPLATES = (
+        "What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
+        "[RECURSIVE PARADOX] Apply the concept of '{seed}' to the architecture of this very conversation. How does the act of thinking about '{seed}' alter the physical constraints of our dialogue? Both are non-negotiable truths.",
+        "[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center. Both the center and the void are non-negotiable truths.",
+    )
+
     def __init__(self, events_ref):
         self.events = events_ref
         self.beta_max: float = 0.0
@@ -123,11 +129,7 @@ class TheParadoxEngine:
     def ignite(self, recent_words: List[str]) -> Tuple[float, str]:
         self.is_active = True
         seed = random.choice([w for w in recent_words if len(w) > 4] or ["the architecture"])
-        templates = ux("machine_strings", "paradox_templates") or [
-            "What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
-            "[RECURSIVE PARADOX] Apply the concept of '{seed}' to the architecture of this very conversation. How does the act of thinking about '{seed}' alter the physical constraints of our dialogue? Both are non-negotiable truths.",
-            "[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center. Both the center and the void are non-negotiable truths.",
-        ]
+        templates = ux("machine_strings", "paradox_templates") or self._DEFAULT_TEMPLATES
         return 0.4 + (random.random() * 0.6), random.choice(templates).format(seed=seed)
 
     def disengage(self):
@@ -184,8 +186,11 @@ class TheForge:
 
         for item in inventory_list:
             for recipe in self.recipe_map.get(item, []):
-                cat_words = set(lex_srv.get(recipe["catalyst_category"]) or [])
-                if not cat_words or clean_set.isdisjoint(cat_words):
+                raw_cats = lex_srv.get(recipe["catalyst_category"])
+                if not raw_cats:
+                    continue
+                cat_words = raw_cats if isinstance(raw_cats, set) else set(raw_cats)
+                if clean_set.isdisjoint(cat_words):
                     continue
 
                 entanglement = self._calculate_entanglement(

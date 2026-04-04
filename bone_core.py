@@ -66,7 +66,7 @@ class EventBus:
     def publish(self, event_type, data=None):
         if event_type not in self.subscribers:
             return
-        for callback in list(self.subscribers[event_type]):
+        for callback in tuple(self.subscribers[event_type]):
             try:
                 callback(data)
             except Exception as e:
@@ -89,7 +89,7 @@ class EventBus:
         }
         self.buffer.append(event)
         if source in self.subscribers:
-            for cb in list(self.subscribers[source]):
+            for cb in tuple(self.subscribers[source]):
                 try:
                     cb(event)
                 except Exception:
@@ -132,7 +132,7 @@ class LoreManifest:
         return data.get(sub_key) if sub_key and isinstance(data, dict) else data
 
     def _load_from_disk(self, category: str) -> Optional[Dict]:
-        filename = f"{category.lower()}.json"
+        filename = f"{category}.json"
         filepath = os.path.join(self.DATA_DIR, filename)
         if not os.path.exists(filepath):
             return None
@@ -354,7 +354,7 @@ class ArchetypeArbiter:
         config_ref=None,
     ) -> Tuple[str, str, str]:
         target_cfg = config_ref or BoneConfig
-        for mandate in council_mandates or []:
+        for mandate in council_mandates or ():
             if mandate.get("type") == "LOCKDOWN":
                 return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law")
             if mandate.get("type") == "FORCE_MODE":
@@ -380,9 +380,7 @@ class ArchetypeArbiter:
                         msg = rule.get("msg") or ux("core_strings", "arb_resonance")
                         return rule["result"], rule.get("source", "COSMIC"), msg
         cfg_core = getattr(target_cfg, "CORE", None)
-        loud_lenses = (
-            safe_get(cfg_core, "LOUD_LENSES", ["THE MANIC", "THE VOID"])
-        )
+        loud_lenses = safe_get(cfg_core, "LOUD_LENSES", ("THE MANIC", "THE VOID"))
         if physics_lens in loud_lenses:
             msg = ux("core_strings", "arb_loud")
             return (

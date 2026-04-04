@@ -968,14 +968,16 @@ class TheCortex:
     def restore_context(self, history: List[str]):
         if not history:
             return
-        cleaned_history = []
-        for line in history:
-            if " | System: " in line:
-                line = line.replace("User: ", "Traveler: ").replace(
+        self.dialogue_buffer = [
+            (
+                line.replace("User: ", "Traveler: ").replace(
                     " | System: ", "\nSystem: "
                 )
-            cleaned_history.append(line)
-        self.dialogue_buffer = cleaned_history[-self.MAX_HISTORY :]
+                if " | System: " in line
+                else line
+            )
+            for line in history
+        ][-self.MAX_HISTORY :]
         if self.events:
             msg = ux("brain_strings", "cortex_resequenced")
             self.events.log(msg.format(count=len(self.dialogue_buffer)), "BRAIN")

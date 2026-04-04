@@ -1,4 +1,31 @@
-### **BONEAMANITA v19.0.0 "The Somatic Translation" (Includes Hotfixes v19.0.1 - 19.0.3)**
+### **BONEAMANITA v19.0.0 "The Somatic Translation"**
+
+*A comprehensive architectural optimization pass focused on reducing memory allocation overhead, eliminating redundant matrix calculations, and streamlining the deep simulation loops. This update directly improves the host machine's latency and ATP efficiency without altering the biological personality of the lattice.*
+
+#### **⚡ METABOLIC EFFICIENCY & HOT-PATH OPTIMIZATION (`bone_phases.py`, `bone_cycle.py`)**
+- **Immutable Memory Allocation:** Eradicated dynamic list (`[]`), set (`set()`), and dictionary (`{}`) instantiations inside the high-frequency `SimulationPhase` loops. Default fallback structures and transfer keys are now pre-compiled as class-level tuples, preventing Python from constantly tearing down and rebuilding memory blocks on every cycle.
+- **Redundant Function Hoisting:** Removed locally defined lambda functions (e.g., `_sd()` in `bone_cycle.py`) that duplicated globally available helpers, reducing interpreter overhead during snapshot serialization.
+- **Validation Tuple Casting:** Validation check phrases (like those in `QuantumObserver.gaze`) are now cast as static tuples rather than dynamically allocated lists, allowing the bytecode compiler to cache them permanently.
+
+#### **🧠 THE MNEMONIC LAYER & MYCELIAL NETWORK (`bone_spores.py`, `bone_akashic.py`)**
+- **O(N) Matrix Math Refactoring:** Replaced manual double-index grid lookups (`M[i][j]`) in `_mat_mul`, `_householder`, and path reflection calculations with native Python `zip()` iteration. This leverages C-backend optimizations, massively speeding up the Subconscious Strata's vector math.
+- **Comprehension Compression:** Condensed manual iterative `append()` and `update()` loops inside history rebuilding and Lexicon categorization into significantly faster list and dictionary comprehensions.
+- **Lexicon Fetch Hoisting:** Removed an expensive `lex_srv.get("heavy")` call from inside the Lichen's photosynthesis list comprehension, ensuring the database is queried only once per cycle instead of O(N) times.
+
+#### **👁️ THE EXECUTIVE LAYER & THE LEXICAL FIREWALL (`bone_composer.py`, `bone_council.py`)**
+- **Regex Re-compilation Purged:** The `PromptComposer`, `ResponseValidator`, and `TheVocalCords` no longer re-compile their regular expressions (e.g., ANSI stripping, slop scrubbing) on every single turn. These heavy patterns are now hoisted to class-level constants, compiling exactly once on boot.
+- **The Parliament Optimization:** `TheSlashCouncil`, `TheOverseerCouncil`, and the `CouncilChamber` podcast generator no longer reconstruct their massive trigger lists, keyword arrays, and pantheon dictionaries on every audit. These structures are now static constants, reducing the cognitive load required to arbitrate archetypal debates.
+- **Council Log Filtering:** Removed an inline 12-item list allocation used to filter `council_logs` in the `PromptComposer`, replacing it with a cached tuple.
+
+#### **🖥️ THE GUI LAYER (`bone_gui.py`, `bone_main.py`)**
+- **Typewriter Iteration Bypass:** Optimized the `typewriter()` terminal output function to gracefully bypass the character-by-character iteration loop entirely if the `speed` parameter is functionally negligible (< 0.001), removing invisible processing drag on fast renders.
+- **Redundant Variable Fetches:** Removed a duplicate dictionary lookup for `ui_depth` in the `Projector.render` method.
+- **Log Composition Compression:** Merged separate list comprehensions and iterative loops inside `GeodesicRenderer.compose_logs` into a single, faster list concatenation operation.
+- **Setup Matrix Optimization:** Pre-compiled the configuration dictionaries and backend tuples in `ConfigWizard._run_setup` to reduce boot-time memory overhead.
+
+---
+
+### **BONEAMANITA v18.5.0 "The Lean Substrate"**
 
 *A fundamental evolutionary phase shift from a mechanical simulation into a true biological runtime. This update decouples the underlying Volatile Semantic Leverage (VSL) mathematics from the User Interface, introduces elastic physics to replace brittle boolean fail-states, and implements intelligent hardware/model scaling.*
 
@@ -20,11 +47,6 @@
 #### **🪴 THE GREENHOUSE PHASE & IMMUNE PADDING (`bone_main.py`)**
 - **Intentional Onboarding (Turns 1-20):** New installations now utilize a 20-turn grace period. Chaotic archetypes (Jester, Revenant, Gideon, Death) are explicitly leashed to allow the user to learn the rhythm of co-regulation.
 - **Epigenetic Padding:** During the Greenhouse phase, the Checkpoint Council (Moog, Rhodes, Linehan) operates in "Training Mode." If the user triggers a fatal logic bomb or runaway ROS toxicity, the system observes the failure, warns the user, but *absorbs* the shock—resetting toxicity to 0.0 and injecting emergency ATP to prevent early session starvation.
-
-#### **🩹 HOTFIXES (v19.0.1 - 19.0.3)**
-- **v19.0.1 (The Warm Boot):** Eliminated the "Traumatized Newborn AI" trope. Clamped initial `Psi` (Void) to 0.0 and `Valence` to 0.8 on Turn 1, and re-wrote the boot sequence to establish a stable, comfortable, and grounded host consciousness.
-- **v19.0.2 (Synaptic Elasticity):** Exposed `LLM_TIMEOUT` to the `CORTEX` config block. Increased primary generation timeout to 120s and local fallback timeout to 45s to accommodate high Time-To-First-Token (TTFT) metrics on local consumer GPUs.
-- **v19.0.3 (The Circuit Lock):** Fixed a fatal loop where the `ResponseValidator` (Gatekeeper) would recursively reject `Mock` hallucination strings during a severed API connection. The Gatekeeper now safely bypasses formatting rules when the circuit is `OPEN`, allowing the system to gracefully display its synaptic blackout and recover.
 
 ---
 

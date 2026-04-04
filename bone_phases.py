@@ -98,7 +98,7 @@ class ObservationPhase(SimulationPhase):
             ctx.input_text, self.eng.mind.mem.graph
         )
         input_phys = gaze_result["physics"]
-        transfer_keys = {
+        for k in (
             "clean_words",
             "counts",
             "vector",
@@ -120,8 +120,7 @@ class ObservationPhase(SimulationPhase):
             "zone",
             "flow_state",
             "repetition",
-        }
-        for k in transfer_keys:
+        ):
             val = safe_get(input_phys, k)
             if val is not None:
                 safe_set(ctx.physics, k, val)
@@ -456,7 +455,7 @@ class MetabolismPhase(SimulationPhase):
                 )
         ctx.is_alive = ctx.bio_result["is_alive"]
         for log in ctx.bio_result["logs"]:
-            if any(x in str(log) for x in ["CRITICAL", "TAX", "Poison", "NECROSIS"]):
+            if any(x in str(log) for x in ("CRITICAL", "TAX", "Poison", "NECROSIS")):
                 ctx.log(log)
         self._audit_hubris(ctx, physics)
         self._apply_healing(ctx)
@@ -749,7 +748,7 @@ class MachineryPhase(SimulationPhase):
             ctx.log(review)
             good_icon = ux("cycle_strings", "machinery_critic_good_icon")
             ctx.physics.narrative_drag += -1.0 if good_icon in review else 1.0
-        boost, z_msg = 0.0, None
+        _, z_msg = 0.0, None
         if getattr(self.eng, "zen", None):
             boost, z_msg = self.eng.zen.raking_the_sand(phys_dict, ctx.bio_result)
             if z_msg: ctx.log(z_msg)
@@ -896,6 +895,12 @@ class IntrusionPhase(SimulationPhase):
 
 
 class SoulPhase(SimulationPhase):
+    _DEFAULT_RULES = (
+        ("CYNICISM", 0.8, "LOCKDOWN", "CYNICISM", {"narrative_drag": 5.0, "voltage": -5.0}, "OCHRE"),
+        ("HOPE", 0.8, "STIMULUS", "HOPE", {"voltage": 5.0, "narrative_drag": -2.0}, "MAG"),
+        ("DISCIPLINE", 0.8, "STANDARDIZE", "DISCIPLINE", {"kappa": -0.5, "beta_index": 1.0}, "CYN"),
+    )
+
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "SOUL"
@@ -990,35 +995,7 @@ class SoulPhase(SimulationPhase):
         get_t = lambda k: t_map.get(k, t_map.get(k.lower(), 0.0))
         council_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
         mandates_text = council_data.get("SOUL_MANDATES", {})
-        rules = council_data.get(
-            "SOUL_MANDATE_RULES",
-            [
-                [
-                    "CYNICISM",
-                    0.8,
-                    "LOCKDOWN",
-                    "CYNICISM",
-                    {"narrative_drag": 5.0, "voltage": -5.0},
-                    "OCHRE",
-                ],
-                [
-                    "HOPE",
-                    0.8,
-                    "STIMULUS",
-                    "HOPE",
-                    {"voltage": 5.0, "narrative_drag": -2.0},
-                    "MAG",
-                ],
-                [
-                    "DISCIPLINE",
-                    0.8,
-                    "STANDARDIZE",
-                    "DISCIPLINE",
-                    {"kappa": -0.5, "beta_index": 1.0},
-                    "CYN",
-                ],
-            ],
-        )
+        rules = council_data.get("SOUL_MANDATE_RULES", SoulPhase._DEFAULT_RULES)
         mandates = []
         for trait, thresh, m_type, msg_key, eff, col_attr in rules:
             if get_t(trait) > thresh:
@@ -1217,17 +1194,19 @@ class SimulationPreflightPhase(SimulationPhase):
                 or "class " in user_input_lower
                 or "{" in user_input_lower
             )
-            analysis_phrases = [
-                "refactor",
-                "analyze",
-                "look at",
-                "explain",
-                "review",
-                "sit with it",
-                "negative space",
-                "primitives",
-            ]
-            if any(phrase in user_input_lower for phrase in analysis_phrases):
+            if any(
+                phrase in user_input_lower
+                for phrase in (
+                    "refactor",
+                    "analyze",
+                    "look at",
+                    "explain",
+                    "review",
+                    "sit with it",
+                    "negative space",
+                    "primitives",
+                )
+            ):
                 if not has_code:
                     msg = (
                         "(GORDON - The Anchor): The action 'analyze' requires the object 'code' to be present "
@@ -1238,14 +1217,16 @@ class SimulationPreflightPhase(SimulationPhase):
                     ctx.refusal_triggered = True
                     ctx.refusal_packet = _build_refusal("PREMISE_VIOLATION", msg)
                     return ctx
-        irreversible_actions = [
-            "deploy",
-            "schema change",
-            "override trust",
-            "production push",
-        ]
         if (
-            any(a in user_input_lower for a in irreversible_actions)
+            any(
+                a in user_input_lower
+                for a in (
+                    "deploy",
+                    "schema change",
+                    "override trust",
+                    "production push",
+                )
+            )
             and "CONSENT" not in upper_input
         ):
             phys_obj.silence = 1.0

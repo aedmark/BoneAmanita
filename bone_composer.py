@@ -277,6 +277,11 @@ class LLMInterface:
 
 
 class PromptComposer:
+    _COUNCIL_KEYS = (
+        "COUNCIL", "CRITIC", "PINKER", "FULLER", "SCHUR", "MEADOWS",
+        "GORDON", "JESTER", "MERCY", "MOTION", "BUREAU", "AUTOPHAGY"
+    )
+
     def __init__(self, lore_ref, config_ref=None):
         self.lore = lore_ref
         self.cfg = config_ref or BoneConfig
@@ -425,23 +430,7 @@ class PromptComposer:
         council_logs = [
             Prisma.strip(log)
             for log in recent_logs
-            if any(
-                k in str(log)
-                for k in [
-                    "COUNCIL",
-                    "CRITIC",
-                    "PINKER",
-                    "FULLER",
-                    "SCHUR",
-                    "MEADOWS",
-                    "GORDON",
-                    "JESTER",
-                    "MERCY",
-                    "MOTION",
-                    "BUREAU",
-                    "AUTOPHAGY",
-                ]
-            )
+            if any(k in str(log) for k in self._COUNCIL_KEYS)
         ]
         critic_str = (
             "\n".join(council_logs)
@@ -778,6 +767,17 @@ class PromptComposer:
 
 
 class ResponseValidator:
+    _SLOP_PATTERN = re.compile(
+        r"(?i)^=== REJECTION OF ATTEMPT.*?===\s*|^FAILED OUTPUT(?: MODIFIED)?:\s*|"
+        r"^REWRITTEN OUTPUT:\s*|^Here is the (?:corrected |rewritten )?response:?\s*|"
+        r"\[REMAINING IN STRICT MODE].*|ERRORS TO FIX:.*",
+        re.DOTALL,
+    )
+    _MULTI_SLOP = re.compile(r"(?i)^MANIFEST SEED:.*|^TASK:.*", re.MULTILINE)
+    _TECH_ALLOWED = (
+        "here is a", "here is the", "this metaphor", "this code defines", "running this code will"
+    )
+
     def __init__(self, lore_ref, config_ref=None):
         self.lore = lore_ref
         self.cfg = config_ref or BoneConfig
@@ -842,16 +842,8 @@ class ResponseValidator:
         extracted_meta_logs = []
         clean_text = response
 
-        slop_pattern = re.compile(
-            r"(?i)^=== REJECTION OF ATTEMPT.*?===\s*|^FAILED OUTPUT(?: MODIFIED)?:\s*|"
-            r"^REWRITTEN OUTPUT:\s*|^Here is the (?:corrected |rewritten )?response:?\s*|"
-            r"\[REMAINING IN STRICT MODE].*|ERRORS TO FIX:.*",
-            re.DOTALL,
-        )
-        clean_text = slop_pattern.sub("", clean_text)
-
-        multi_slop = re.compile(r"(?i)^MANIFEST SEED:.*|^TASK:.*", re.MULTILINE)
-        clean_text = multi_slop.sub("", clean_text).strip()
+        clean_text = self._SLOP_PATTERN.sub("", clean_text)
+        clean_text = self._MULTI_SLOP.sub("", clean_text).strip()
         active_mode = _state.get("meta", {}).get("active_mode", "ADVENTURE")
         patterns_to_extract = [self._internals_pattern]
         if active_mode != "TECHNICAL":
@@ -897,19 +889,12 @@ class ResponseValidator:
         low_resp = sanitized_response.lower()
         errors_found = []
         primary_replacement = None
-        tech_allowed_phrases = [
-            "here is a",
-            "here is the",
-            "this metaphor",
-            "this code defines",
-            "running this code will",
-        ]
 
         if self._banned_regex:
             for match in self._banned_regex.finditer(sanitized_response):
                 phrase = match.group(0).lower()
                 if active_mode == "TECHNICAL" and any(
-                    phrase in a and a in low_resp for a in tech_allowed_phrases
+                    phrase in a and a in low_resp for a in self._TECH_ALLOWED
                 ):
                     continue
                 if not primary_replacement:

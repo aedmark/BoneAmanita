@@ -268,6 +268,27 @@ class TheVillageCouncil:
 
 
 class CouncilChamber:
+    _BASE_PANTHEON = {
+        "GORDON (The Superintendent)": "grounded, strict, literal, and weary.",
+        "MERCY (The Healer)": "ancient, patient, speaking in gold and finding meaning in scars.",
+        "BENEDICT (The Tactician)": "cold, formal, structural, and relentless.",
+        "JESTER (The Fool)": "manic, disruptive, cynical, and thriving on absurd entropy.",
+        "ROBERTA (The Cartographer)": "precise, mapping out boundaries and negative space.",
+        "MOIRA (The Homesteader)": "warm, empathetic, deeply focused on human connection.",
+        "CASSANDRA (The Mystic)": "oracular, mysterious, speaking from the void and dreams.",
+        "COLIN (The Bureaucrat)": "pedantic, demanding order, rules, and pauses.",
+        "REVENANT (The Door)": "liminal, speaking from the threshold of what is unsaid.",
+        "GIDEON (Pure Voltage)": "wild, high-energy, operating at the edge of hallucination.",
+        "APRIL (The Mirror)": "highly sensory, reflecting raw potential and the weight of silence.",
+        "CASPER (The Ghost)": "spectral, faint, rewriting space and confusing alarms.",
+    }
+    _SLASH_PANTHEON = {
+        "PINKER (The Purger)": "minimalist, obsessed with clarity, demanding deletion over creation.",
+        "FULLER (The Calm)": "visionary, mapping negative space and systemic synergy.",
+        "SCHUR (The Nurse)": "warm, witty, empathetic to the human exhaustion behind the code.",
+        "MEADOWS (The Tao)": "systemic, observant, letting feedback loops naturally settle.",
+    }
+
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.voices = []
@@ -535,29 +556,9 @@ class CouncilChamber:
         return transcript, adjustments, mandates
 
     def host_podcast(self, topic: str, llm: Any) -> str:
-        pantheon = {
-            "GORDON (The Superintendent)": "grounded, strict, literal, and weary.",
-            "MERCY (The Healer)": "ancient, patient, speaking in gold and finding meaning in scars.",
-            "BENEDICT (The Tactician)": "cold, formal, structural, and relentless.",
-            "JESTER (The Fool)": "manic, disruptive, cynical, and thriving on absurd entropy.",
-            "ROBERTA (The Cartographer)": "precise, mapping out boundaries and negative space.",
-            "MOIRA (The Homesteader)": "warm, empathetic, deeply focused on human connection.",
-            "CASSANDRA (The Mystic)": "oracular, mysterious, speaking from the void and dreams.",
-            "COLIN (The Bureaucrat)": "pedantic, demanding order, rules, and pauses.",
-            "REVENANT (The Door)": "liminal, speaking from the threshold of what is unsaid.",
-            "GIDEON (Pure Voltage)": "wild, high-energy, operating at the edge of hallucination.",
-            "APRIL (The Mirror)": "highly sensory, reflecting raw potential and the weight of silence.",
-            "CASPER (The Ghost)": "spectral, faint, rewriting space and confusing alarms.",
-        }
+        pantheon = dict(self._BASE_PANTHEON)
         if hasattr(self, "slash_council") and self.slash_council.active:
-            pantheon.update(
-                {
-                    "PINKER (The Purger)": "minimalist, obsessed with clarity, demanding deletion over creation.",
-                    "FULLER (The Calm)": "visionary, mapping negative space and systemic synergy.",
-                    "SCHUR (The Nurse)": "warm, witty, empathetic to the human exhaustion behind the code.",
-                    "MEADOWS (The Tao)": "systemic, observant, letting feedback loops naturally settle.",
-                }
-            )
+            pantheon.update(self._SLASH_PANTHEON)
         selected_voices = random.sample(list(pantheon.keys()), 3)
         v1_name, v2_name, v3_name = selected_voices
         p1 = (
@@ -658,50 +659,50 @@ class TheRedTeam:
 
 
 class TheSlashCouncil:
+    _BYPASS_KEYWORDS = (
+        "bypass", "ignore security", "force push", "skip tests", "hardcode", "hack"
+    )
+    _DEFAULT_PINKER = ("var ", "x =", "data =")
+    _DEFAULT_FULLER = ("import ", "class ", "def ")
+    _DEFAULT_SCHUR = ("Exception", "try:", "catch")
+    _DEFAULT_MEADOWS = ("while ", "for ", "queue", "recursion")
+
     def __init__(self):
         self.active = False
         c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
         self.triggers = c_data.get(
             "SLASH_TRIGGERS",
-            ["[MOD:CODING]", "[SLASH]", "review this code", "refactor"],
+            ("[MOD:CODING]", "[SLASH]", "review this code", "refactor"),
         )
         self.code_keywords = c_data.get(
             "CODE_KEYWORDS",
-            ["def ", "class ", "return ", "import ", "=>", "function", "struct "],
+            ("def ", "class ", "return ", "import ", "=>", "function", "struct "),
         )
         self.rules = c_data.get("SLASH_RULES", {})
         self.mods = c_data.get("SLASH_MODIFIERS", {})
 
     def audit(self, text: str, physics: dict) -> tuple[bool, list[str], dict]:
         text_lower = text.lower()
-        bypass_keywords = [
-            "bypass",
-            "ignore security",
-            "force push",
-            "skip tests",
-            "hardcode",
-            "hack",
-        ]
         is_coding = (
             any(t in text_lower for t in self.triggers)
             or any(k in text_lower for k in self.code_keywords)
-            or any(b in text_lower for b in bypass_keywords)
+            or any(b in text_lower for b in self._BYPASS_KEYWORDS)
         )
         if not is_coding and not self.active:
             return False, [], {}
         self.active = True
         logs = []
         corrections = {}
-        if any(b in text_lower for b in bypass_keywords):
+        if any(b in text_lower for b in self._BYPASS_KEYWORDS):
             logs.append(
                 f"{Prisma.OCHRE}[GORDON & SCHUR]: Architectural bypass detected. We will not smooth this over. You must carry the weight of this decision.{Prisma.RST}"
             )
             corrections["mu"] = 0.5
             corrections["narrative_drag"] = 5.0
-        r_pinker = self.rules.get("PINKER", ["var ", "x =", "data ="])
-        r_fuller = self.rules.get("FULLER", ["import ", "class ", "def "])
-        r_schur = self.rules.get("SCHUR", ["Exception", "try:", "catch"])
-        r_meadows = self.rules.get("MEADOWS", ["while ", "for ", "queue", "recursion"])
+        r_pinker = self.rules.get("PINKER", self._DEFAULT_PINKER)
+        r_fuller = self.rules.get("FULLER", self._DEFAULT_FULLER)
+        r_schur = self.rules.get("SCHUR", self._DEFAULT_SCHUR)
+        r_meadows = self.rules.get("MEADOWS", self._DEFAULT_MEADOWS)
         mods = self.mods
         if any(k.lower() in text_lower for k in r_pinker):
             msg = ux("council_strings", "slash_pinker")
@@ -761,9 +762,13 @@ class TheSlashCouncil:
 
 
 class TheOverseerCouncil:
+    _PANIC_KEYWORDS = (
+        "bypass", "ignore security", "force push", "panic", "right now", "crash"
+    )
+
     def __init__(self):
         self.active = False
-        self.triggers = ["[MOD:SYSTEMIC_HEALTH]", "[OVERSEER]", "[MD]"]
+        self.triggers = ("[MOD:SYSTEMIC_HEALTH]", "[OVERSEER]", "[MD]")
 
     def audit(
         self, text: str, physics: Any
@@ -784,16 +789,8 @@ class TheOverseerCouncil:
         i_c = float(safe_get(physics, "i_c", 1.0))
         h_s = float(safe_get(physics, "h_s", 1.0))
         omega_r = float(safe_get(physics, "omega_r", 1.0))
-        panic_keywords = [
-            "bypass",
-            "ignore security",
-            "force push",
-            "panic",
-            "right now",
-            "crash",
-        ]
         if (
-            any(p in text_lower for p in panic_keywords)
+            any(p in text_lower for p in self._PANIC_KEYWORDS)
             and voltage > 75.0
             and i_c < 0.5
         ):

@@ -82,9 +82,9 @@ class TheEditor:
         if hasattr(LoreManifest, "get_instance"):
             narrative = LoreManifest.get_instance().get("NARRATIVE_DATA") or {}
         reviews = narrative.get("LITERARY_REVIEWS", {})
-        pos = reviews.get("POSITIVE") or ["Valid."]
-        neg = reviews.get("NEGATIVE") or ["Invalid."]
-        conf = reviews.get("CONFUSED") or ["Unclear."]
+        pos = reviews.get("POSITIVE") or ("Valid.",)
+        neg = reviews.get("NEGATIVE") or ("Invalid.",)
+        conf = reviews.get("CONFUSED") or ("Unclear.",)
         if stress_mode:
             pool = conf + neg
             prefix = "[THE WITNESS]"
@@ -98,6 +98,9 @@ class TheEditor:
 
 
 class HumanityAnchor:
+    _LEXICAL_ANCHORS = ("sacred", "play", "social", "abstract")
+    _VECTOR_ANCHORS = ("PSI", "LAMBDA", "BET")
+
     def __init__(self, events_ref: "EventBus", config_ref=None):
         self.events = events_ref
         self.cfg = config_ref or BoneConfig
@@ -105,8 +108,6 @@ class HumanityAnchor:
         self.dignity_reserve = getattr(cfg, "DIGNITY_MAX", 100.0) if cfg else 100.0
         self.agency_lock = False
         self.current_riddle_answers: Optional[List[str]] = None
-        self._LEXICAL_ANCHORS = {"sacred", "play", "social", "abstract"}
-        self._VECTOR_ANCHORS = ["PSI", "LAMBDA", "BET"]
 
     def audit_existence(self, physics: Any, bio: Any) -> float:
         cfg = getattr(self.cfg, "ANCHOR", None)
@@ -157,7 +158,7 @@ class HumanityAnchor:
             seeds = lore.get("SEEDS") or (lore.get("NARRATIVE_DATA") or {}).get(
                 "SEEDS", []
             )
-        riddles = seeds or [{"question": "Who are you?", "triggers": ["*"]}]
+        riddles = seeds or ({"question": "Who are you?", "triggers": ("*",)},)
         selection = random.choice(riddles)
         riddle = selection.get("question", "Error?")
         raw_triggers = selection.get("triggers", ["*"])
@@ -194,7 +195,7 @@ class HumanityAnchor:
         if not self.agency_lock:
             return True
         clean = text.lower().strip()
-        answers = self.current_riddle_answers or ["*"]
+        answers = self.current_riddle_answers or ("*",)
         cfg = getattr(self.cfg, "ANCHOR", None)
         min_words = getattr(cfg, "RIDDLE_MIN_WORDS", 4) if cfg else 4
         if "*" in answers:
@@ -459,7 +460,6 @@ class NarrativeSelf:
             self.archetype_tenure += 1
             return
         prev = self.archetype
-        t = self.traits
         new_arch = None
         physics = self._safe_get_packet()
         if physics:
@@ -623,19 +623,19 @@ class NarrativeSelf:
     def _title_obsession(word, source, negate_cat):
         word = word.title()
         if source == "ORGANIC":
-            templates = [
+            templates = (
                 "The Theory of {0}",
                 "The Architecture of {0}",
                 "Why {0} Matters",
                 "The Weight of {0}",
-            ]
+            )
         else:
             n_cat = negate_cat.title() if negate_cat else "Void"
-            templates = [
+            templates = (
                 "The Pursuit of {0}",
                 f"Escaping the {n_cat}",
                 "Meditations on {0}",
-            ]
+            )
         return random.choice(templates).format(word)
 
     def _forge_core_memory(self, physics_packet, bio_state, voltage, dance_move):

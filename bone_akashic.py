@@ -250,8 +250,7 @@ class TheAkashicRecord:
         save_dir = getattr(cfg, "SAVE_DIR", "saves")
         state_file = getattr(cfg, "STATE_FILE", "akashic_state.json")
         save_path = os.path.join(save_dir, state_file)
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
+        os.makedirs(save_dir, exist_ok=True)
         try:
             with open(save_path, "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2)
@@ -261,15 +260,12 @@ class TheAkashicRecord:
 
     def save_to_disk(self, category: str, data: Any):
         directory = getattr(self.lore, "DATA_DIR", "lore")
-        if not os.path.exists(directory):
-            try:
-                os.makedirs(directory)
-            except OSError as e:
-                msg = ux("akashic_strings", "dir_create_failed")
-                print(
-                    f"{Prisma.RED}{msg.format(directory=directory, error=e)}{Prisma.RST}"
-                )
-                return
+        try:
+            os.makedirs(directory, exist_ok=True)
+        except OSError as e:
+            msg = ux("akashic_strings", "dir_create_failed")
+            print(f"{Prisma.RED}{msg.format(directory=directory, error=e)}{Prisma.RST}")
+            return
         filename = f"akashic_{category}.json"
         filepath = os.path.join(directory, filename)
         try:
@@ -296,11 +292,11 @@ class TheAkashicRecord:
                 print(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
         if not data:
             return
-        raw_cooc = data.get("lens_cooccurrence", {})
-        for k, v in raw_cooc.items():
-            if "|" in k:
-                p1, p2 = k.split("|", 1)
-                self.lens_cooccurrence[(p1, p2)] = v
+        self.lens_cooccurrence = {
+            tuple(k.split("|", 1)): v
+            for k, v in data.get("lens_cooccurrence", {}).items()
+            if "|" in k
+        }
         self.ingredient_affinity = data.get("ingredient_affinity", {})
         self.shadow_stock = data.get("shadow_stock", [])
         gordon_data = self.lore.get("GORDON")
@@ -427,8 +423,7 @@ class TheAkashicRecord:
         new_words = [w for w in word_list if w not in target_list]
         if new_words:
             target_list.extend(new_words)
-            for w in new_words:
-                self.discovered_words[w] = category_name
+            self.discovered_words.update({w: category_name for w in new_words})
             self.lore.inject("LEXICON", lexicon_data)
             msg = ux("akashic_strings", "lexicon_expands")
             print(msg.format(category=category_name.upper()))

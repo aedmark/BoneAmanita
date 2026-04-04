@@ -402,18 +402,19 @@ class TheVocalCords:
         self.np = None
         self._synthesis_lock = threading.Lock()
 
+    _ANSI_ESCAPE = re.compile(r"\x1B\[[0-9;]*[a-zA-Z]")
+    _SCRIPT_PATTERN = re.compile(
+        r"^\[([^]]+)]:?\s*(.*?)(?=\n\[|\Z)", re.MULTILINE | re.DOTALL
+    )
+
     @staticmethod
     def strip_ansi(text: str) -> str:
-        ansi_escape = re.compile(r"\x1B\[[0-9;]*[a-zA-Z]")
-        return ansi_escape.sub("", text)
+        return TheVocalCords._ANSI_ESCAPE.sub("", text)
 
     def parse_script(self, script_text: str) -> List[Dict[str, str]]:
         clean_text = self.strip_ansi(script_text)
-        pattern = re.compile(
-            r"^\[([^]]+)]:?\s*(.*?)(?=\n\[|\Z)", re.MULTILINE | re.DOTALL
-        )
         segments = []
-        for match in pattern.finditer(clean_text):
+        for match in self._SCRIPT_PATTERN.finditer(clean_text):
             speaker = match.group(1).split("(")[0].strip().upper()
             dialogue = match.group(2).strip()
             if dialogue:

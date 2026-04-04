@@ -498,7 +498,7 @@ class DigestiveTrack:
                 if len(word) > comp_len
                 else self.BASE_WORD_VALUE
             )
-            log_mult = 1.0 + math.log1p(max(0, count - 1))
+            log_mult = 1.0 + math.log(count)
 
             if cat in ("kinetic", "explosive"):
                 atp_yield += (val * 1.5) * log_mult
