@@ -59,6 +59,66 @@ class Projector:
             val = safe_get(field_obj, sub_field)
         return default if val is None else val
 
+    def _render_clear_hud(self, physics: Any, data_ctx: Dict, mind: tuple) -> str:
+        energy = float(data_ctx.get("stamina", 100.0))
+        friction = self._get_lattice_val(
+            physics, ["narrative_drag", "friction", "F"], 0.0
+        )
+        chem = data_ctx.get("bio", {}).get("chemistry", {})
+        stress = min(
+            100.0, (chem.get("COR", 0.0) * 100.0) + (chem.get("ADR", 0.0) * 50.0)
+        )
+        phi = float(self._safe_val(data_ctx.get("shared_dyn", {}), "phi", 0.5))
+
+        def bar(v, mx, col):
+            f = int(max(0.0, min(1.0, v / mx if mx else 0)) * 10)
+            return f"[{col}{'█'*f}{Prisma.GRY}{'░'*(10-f)}{Prisma.RST}]"
+
+        e_txt = (
+            "Healthy. Ready for complex tasks."
+            if energy > 50
+            else (
+                "Fatigued. Proceed with care."
+                if energy > 20
+                else "Critical. Autophagy risk."
+            )
+        )
+        f_txt = (
+            "Low. The current logic flows easily."
+            if friction < 2.0
+            else (
+                "Moderate. Bearing structural weight."
+                if friction < 6.0
+                else "High. Heavy systemic drag."
+            )
+        )
+        s_txt = (
+            "Nominal. No resting required."
+            if stress < 30
+            else (
+                "Elevated. Consider pacing."
+                if stress < 70
+                else "High. Toxicity accumulating."
+            )
+        )
+        st_txt = (
+            "Flow State. Highly aligned with your inputs."
+            if phi >= 0.7
+            else (
+                "Stable. Processing normally."
+                if phi >= 0.4
+                else "Desynchronized. Friction expected."
+            )
+        )
+
+        return (
+            f"\n{Prisma.CYN}### SYSTEM TELEMETRY{Prisma.RST}\n"
+            f"{Prisma.WHT}Energy:  {Prisma.RST} {bar(energy, 100, Prisma.GRN)} {int(energy)}% {Prisma.GRY}({e_txt}){Prisma.RST}\n"
+            f"{Prisma.WHT}Friction:{Prisma.RST} {bar(friction, 10, Prisma.CYN)} {friction:.1f} {Prisma.GRY}({f_txt}){Prisma.RST}\n"
+            f"{Prisma.WHT}Stress:  {Prisma.RST} {bar(stress, 100, Prisma.OCHRE)} {int(stress)}% {Prisma.GRY}({s_txt}){Prisma.RST}\n"
+            f"{Prisma.WHT}Status:  {Prisma.RST} {Prisma.MAG}{st_txt}{Prisma.RST}\n"
+        )
+
     def render(
         self,
         physics_ctx: Dict,
@@ -70,6 +130,8 @@ class Projector:
         ui_depth = data_ctx.get("ui_depth", "IDLE")
         if ui_depth == "WARM":
             return ""
+        if ui_depth == "MINIMAL":
+            return self._render_clear_hud(physics_ctx.get("physics", {}), data_ctx, mind_ctx)
         if not labels:
             labels = ux("projector", "default_labels", {})
         physics = physics_ctx.get("physics", {})

@@ -387,10 +387,24 @@ class CongruenceValidator:
             target_words = {
                 w.strip().lower() for w in target_data.get("vocab", "").split(",") if w
             } | set(target_data.get("keywords", []))
-            if target_words and (
-                words_to_check := set(getattr(context, "clean_words", []))
-            ):
-                if hits := len(words_to_check.intersection(target_words)):
+
+            if target_words and hasattr(context, "clean_words"):
+                words_to_check = [w.lower() for w in context.clean_words]
+                hits = 0
+
+                import difflib
+
+                for word in words_to_check:
+                    if word in target_words:
+                        hits += 1
+                    else:
+                        close_matches = difflib.get_close_matches(
+                            word, target_words, n=1, cutoff=0.75
+                        )
+                        if close_matches:
+                            hits += 1
+
+                if hits > 0:
                     tone_score += (
                         getattr(cfg, "CONGRUENCE_HIT_BONUS", 0.1) if cfg else 0.1
                     ) * hits

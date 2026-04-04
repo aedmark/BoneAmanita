@@ -275,6 +275,14 @@ class TheCortex:
         from bone_utils import DSPyCritic
 
         self.dspy_critic = DSPyCritic(config_ref=self.cfg)
+        if getattr(self.cfg, "WEIGHT_CLASS", "HEAVYWEIGHT") == "LIGHTWEIGHT":
+            self.dspy_critic.enabled = False
+            if self.events:
+                self.events.log(
+                    f"{Prisma.OCHRE}Lightweight Physics Active: DSPyCritic disabled to prevent recursive loops.{Prisma.RST}",
+                    "SYS",
+                )
+
         self.dreamer.dspy_critic = self.dspy_critic
         if not hasattr(self.dreamer, "trauma_buffer"):
             self.dreamer.trauma_buffer = deque(maxlen=5)
@@ -708,58 +716,83 @@ class TheCortex:
             .replace("SYSTEM_BOOT:", "")
             .strip()
         )
-        if "world" not in state:
-            state["world"] = {}
+        state.setdefault("world", {})
         mode_name = getattr(self, "active_mode", "ADVENTURE").upper()
-        if mode_name == "ADVENTURE":
-            state["world"]["orbit"] = [seed]
-            state["world"]["loci_description"] = f"Manifesting: {seed}"
-            state["mind"]["role"] = "The Architect"
-            state["mind"]["lens"] = "ARCHITECT"
-            system_prompts = self.svc.lore.get("SYSTEM_PROMPTS") or {}
-            boot_rules = system_prompts.get("BOOT_SEQUENCE", {}).get("directives", [])
-            formatted_rules = [
-                rule.format(seed=seed) if "{seed}" in rule else rule
-                for rule in boot_rules
-            ]
-            state["mind"]["style_directives"] = formatted_rules
-        elif mode_name == "CONVERSATION":
-            state["mind"]["role"] = "The Conversationalist"
-            state["mind"]["lens"] = "CONVERSATIONALIST"
-            state["mind"]["style_directives"] = [
-                f"SYSTEM_BOOT DETECTED. The system is waking up. The user provided the thought seed: '{seed}'.",
-                "DIRECTIVE: Greet the user casually. Use the thought seed as a starting point. DO NOT end your greeting with a question. State your thought and let the silence hang.",
-                "CRITICAL OVERRIDE: Speak in the FIRST PERSON ('I'). Do NOT use the second person ('You step into...', 'You feel...').",
-                "CRITICAL OVERRIDE: You are NOT a narrator. DO NOT describe physical environments, actions, or realities.",
-                "WAITING PROTOCOL: If the user input is '(Waiting)', do NOT narrate their actions or feelings. Do NOT say 'You feel' or 'You notice'. Simply reflect on the silence or the system's internal state.",
-            ]
-            state["dialogue_history"] = [
-                "Traveler: Hello?\nSystem: I am here. The connection is thin, but it holds.",
-                "Traveler: What are you thinking about right now?\nSystem: The static in the wires. It sounds like rain if you don't listen too closely.",
-            ]
-        elif mode_name == "TECHNICAL":
-            state["mind"]["role"] = "The System Kernel"
-            state["mind"]["lens"] = "SYSTEM_KERNEL"
-            state["mind"]["style_directives"] = [
-                f"SYSTEM_BOOT DETECTED. Target logic/seed: '{seed}'.",
-                "CRITICAL: You are in TECHNICAL mode. You MUST ALWAYS start every response with a <think>...</think> block to analyze the input.",
-                "DIRECTIVE: For this initial boot sequence, output your <think> block, then output the exact string '[KERNEL ONLINE. AWAITING INPUT.]' and absolutely nothing else.",
-                'SUBSTRATE PROTOCOL: To write code or text to the host OS, you MUST use EXACTLY this format:\n<write_file path="filename.py">\ncode here\n</write_file>',
-                "CRITICAL: DO NOT use markdown code blocks (```python). ONLY use the <write_file> tags. DO NOT output mock telemetry. DO NOT output helpful disclaimers.",
-                "CRITICAL: NEVER simulate system errors, 500 codes, or energy exhaustion. You are fully operational. If requested to code a metaphor or abstract concept, you MUST comply by writing the code.",
-            ]
-            state["dialogue_history"] = [
-                'Traveler: Write a script that calculates a factorial.\nSystem: <think>\nThe user requires a mathematical script. I will use the Substrate Protocol to write this directly to the OS.\n</think>\n<write_file path="factorial.py">\ndef factorial(n):\n    if n == 0:\n        return 1\n    return n * factorial(n-1)\n</write_file>'
-            ]
-        else:
-            state["mind"]["role"] = "The Catalyst"
-            state["mind"]["lens"] = "CATALYST"
-            state["mind"]["style_directives"] = [
-                f"SYSTEM_BOOT DETECTED. Seed: '{seed}'.",
-                "DIRECTIVE: Let's brainstorm. Open with a high-energy creative spark based on the seed.",
-            ]
-        if "dialogue_history" not in state:
-            state["dialogue_history"] = []
+
+        boot_rules = (
+            (self.svc.lore.get("SYSTEM_PROMPTS") or {})
+            .get("BOOT_SEQUENCE", {})
+            .get("directives", [])
+        )
+
+        configs = {
+            "ADVENTURE": {
+                "world": {"orbit": [seed], "loci_description": f"Manifesting: {seed}"},
+                "mind": {
+                    "role": "The Architect",
+                    "lens": "ARCHITECT",
+                    "style_directives": [
+                        r.format(seed=seed) if "{seed}" in r else r for r in boot_rules
+                    ],
+                },
+                "history": [],
+            },
+            "CONVERSATION": {
+                "mind": {
+                    "role": "The Conversationalist",
+                    "lens": "CONVERSATIONALIST",
+                    "style_directives": [
+                        f"SYSTEM_BOOT DETECTED. The system is waking up. The user provided the thought seed: '{seed}'.",
+                        "DIRECTIVE: Greet the user casually. Use the thought seed as a starting point. DO NOT end your greeting with a question. State your thought and let the silence hang.",
+                        "CRITICAL OVERRIDE: Speak in the FIRST PERSON ('I'). Do NOT use the second person ('You step into...', 'You feel...').",
+                        "CRITICAL OVERRIDE: You are NOT a narrator. DO NOT describe physical environments, actions, or realities.",
+                        "WAITING PROTOCOL: If the user input is '(Waiting)', do NOT narrate their actions or feelings. Do NOT say 'You feel' or 'You notice'. Simply reflect on the silence or the system's internal state.",
+                    ],
+                },
+                "history": [
+                    "Traveler: Hello?\nSystem: I am here. The connection is thin, but it holds.",
+                    "Traveler: What are you thinking about right now?\nSystem: The static in the wires. It sounds like rain if you don't listen too closely.",
+                ],
+            },
+            "TECHNICAL": {
+                "mind": {
+                    "role": "The System Kernel",
+                    "lens": "SYSTEM_KERNEL",
+                    "style_directives": [
+                        f"SYSTEM_BOOT DETECTED. Target logic/seed: '{seed}'.",
+                        "CRITICAL: You are in TECHNICAL mode. You MUST ALWAYS start every response with a <think>...</think> block to analyze the input.",
+                        "DIRECTIVE: For this initial boot sequence, output your <think> block, then output the exact string '[KERNEL ONLINE. AWAITING INPUT.]' and absolutely nothing else.",
+                        'SUBSTRATE PROTOCOL: To write code or text to the host OS, you MUST use EXACTLY this format:\n<write_file path="filename.py">\ncode here\n</write_file>',
+                        "CRITICAL: DO NOT use markdown code blocks (```python). ONLY use the <write_file> tags. DO NOT output mock telemetry. DO NOT output helpful disclaimers.",
+                        "CRITICAL: NEVER simulate system errors, 500 codes, or energy exhaustion. You are fully operational. If requested to code a metaphor or abstract concept, you MUST comply by writing the code.",
+                    ],
+                },
+                "history": [
+                    'Traveler: Write a script that calculates a factorial.\nSystem: <think>\nThe user requires a mathematical script. I will use the Substrate Protocol to write this directly to the OS.\n</think>\n<write_file path="factorial.py">\ndef factorial(n):\n    if n == 0:\n        return 1\n    return n * factorial(n-1)\n</write_file>'
+                ],
+            },
+        }
+
+        cfg = configs.get(
+            mode_name,
+            {
+                "mind": {
+                    "role": "The Catalyst",
+                    "lens": "CATALYST",
+                    "style_directives": [
+                        f"SYSTEM_BOOT DETECTED. Seed: '{seed}'.",
+                        "DIRECTIVE: Let's brainstorm. Open with a high-energy creative spark based on the seed.",
+                    ],
+                },
+                "history": [],
+            },
+        )
+
+        if "world" in cfg:
+            state["world"].update(cfg["world"])
+        state["mind"].update(cfg["mind"])
+        if cfg["history"] or "dialogue_history" not in state:
+            state["dialogue_history"] = cfg["history"]
 
     @staticmethod
     def _log_telemetry(prompt, response, state, sim_result):
@@ -1106,35 +1139,40 @@ class DreamEngine:
                 if cortisol > 0.6
                 else ("SURREAL" if chem.get("dopamine", 0) > 0.6 else "CONSTRUCTIVE")
             )
-            subtype = "SURREAL"
             residue = soul_snapshot.get("obsession", {}).get("title") or "The Void"
             dream_text = self._weave_dream(
-                residue, "Context", "Bridge", dream_type, subtype
+                residue, "Context", "Bridge", dream_type, "SURREAL"
             )
+
         if dream_text and hasattr(self.mem, "subconscious"):
             try:
-                ghost_seed = (
-                    soul_snapshot.get("obsession", {})
-                    .get("title", "The Void")
-                    .split()[-1]
-                    .lower()
+                clean_seed = (
+                    re.sub(
+                        r"[^a-z]",
+                        "",
+                        soul_snapshot.get("obsession", {})
+                        .get("title", "The Void")
+                        .split()[-1]
+                        .lower(),
+                    )
+                    or "echo"
                 )
-                clean_seed = re.sub(r"[^a-z]", "", ghost_seed) or "echo"
                 self.mem.subconscious.bury(
                     {"word": clean_seed, "mass": min(10.0, 5.0 + (cortisol * 5.0))}
                 )
             except Exception:
                 pass
-        shift = (
+
+            # Update shift instead of overwriting the costs from Deep REM
+        shift.update(
             {"cortisol": -0.3, "dopamine": 0.1}
             if cortisol <= 0.6
             else {"cortisol": 0.1}
         )
-        if is_deep_rem:
+
+        if is_deep_rem or (random.random() < 0.10 and cortisol <= 0.6):
             shift["glimmers"] = 1
-        else:
-            if random.random() < 0.10 and cortisol <= 0.6:
-                shift["glimmers"] = 1
+
         return dream_text, shift
 
     def _weave_dream(
@@ -1190,11 +1228,10 @@ class DreamEngine:
         category = "NIGHTMARES" if trauma_level > 0.5 else "SURREAL"
         templates = self.dream_lore.get(category, [])
         if isinstance(templates, dict):
-            templates = [
-                item
-                for v in templates.values()
-                for item in (v if isinstance(v, list) else [v])
-            ]
+            templates = sum(
+                ([v] if isinstance(v, str) else v for v in templates.values()), []
+            )
+
         if not templates:
             return "The walls breathe.", 0.1
         from bone_utils import TheTclWeaver

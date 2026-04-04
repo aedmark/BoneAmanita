@@ -5,6 +5,7 @@ import re
 import time
 import traceback
 import uuid
+import threading
 from typing import Dict, Any, List, Optional
 
 from bone_core import LoreManifest, ux, safe_get
@@ -107,12 +108,10 @@ class CycleSimulator:
 
     def check_circuit_breaker(self, phase_name: str) -> bool:
         health = self.eng.system_health
-        checks = {
-            "OBSERVE": health.physics_online,
-            "METABOLISM": health.bio_online,
-            "COGNITION": health.mind_online
-        }
-        return checks.get(phase_name, True)
+        if phase_name == "OBSERVE": return health.physics_online
+        if phase_name == "METABOLISM": return health.bio_online
+        if phase_name == "COGNITION": return health.mind_online
+        return True
 
     def handle_phase_crash(self, ctx, phase_name, error):
         msg_crash = ux("cycle_strings", "sim_crash_header")
@@ -225,6 +224,37 @@ class GeodesicOrchestrator:
         clean_message = (
             re.sub(r"(?i)\[VSL_[A-Z]+]", "", user_message).strip() or "(Waiting)"
         )
+
+        if clean_message.lower() == "/idle":
+
+            def _background_dream_worker():
+                try:
+                    self.eng.events.log(
+                        "Spawning detached worker for Dream Engine...", "SYS"
+                    )
+                    self.run_headless_turn("/idle")
+                except Exception as e:
+                    self.eng.events.log(f"Async Dream Engine Crash: {e}", "CRIT")
+
+            worker = threading.Thread(target=_background_dream_worker, daemon=True)
+            worker.start()
+
+            safe_phys = (
+                self.eng.observer.last_physics_packet.snapshot().to_dict()
+                if hasattr(self.eng, "observer")
+                and getattr(self.eng.observer, "last_physics_packet", None)
+                else PanicRoom.get_safe_physics().to_dict()
+            )
+            return {
+                "type": "SNAPSHOT",
+                "ui": f"\n{Prisma.VIOLET}☁️ The system slips into deep background REM. Memory consolidation and epigenetic autopoiesis are running asynchronously...{Prisma.RST}",
+                "physics": safe_phys,
+                "bio": {"is_alive": True},
+                "mind": {"lens": "DREAMER", "role": "The Dream Engine"},
+                "world": {},
+                "logs": ["[SYSTEM] Triggered Asynchronous Autopoiesis."],
+            }
+
         ctx = self._execute_core_cycle(clean_message, is_system)
 
         if exit_pkt := self._check_early_exit(ctx):
@@ -252,15 +282,16 @@ class GeodesicOrchestrator:
         return snapshot
 
     def _hydrate_snapshot_metadata(self, snapshot: Dict, ctx: CycleContext):
+        def _sd(obj): return obj.to_dict() if hasattr(obj, "to_dict") else (obj if isinstance(obj, dict) else {})
         snapshot.update(
             {
                 "trace_id": getattr(ctx, "trace_id", "UNKNOWN"),
                 "is_alive": True,
-                "physics": _safe_dict(ctx.physics),
-                "bio": _safe_dict(ctx.bio_result),
-                "mind": _safe_dict(ctx.mind_state),
-                "world": _safe_dict(ctx.world_state),
-                "soul": _safe_dict(getattr(self.eng, "soul", {})),
+                "physics": _sd(ctx.physics),
+                "bio": _sd(ctx.bio_result),
+                "mind": _sd(ctx.mind_state),
+                "world": _sd(ctx.world_state),
+                "soul": _sd(getattr(self.eng, "soul", {})),
                 "council_mandates": getattr(ctx, "council_mandates", []),
                 "dream": getattr(ctx, "last_dream", None),
                 "mutated_input": ctx.input_text,

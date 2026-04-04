@@ -651,6 +651,18 @@ class CommandProcessor:
         )
         return True
 
+    def _execute_substrate_write(self, file_name: str, content: str):
+        if getattr(self.interface.eng, "substrate", None) is None:
+            from bone_utils import TheSubstrate
+            self.interface.eng.substrate = TheSubstrate(getattr(self.interface.eng, "events", None))
+        substrate = self.interface.eng.substrate
+        substrate.queue_write(file_name, self.P.strip(content))
+        stamina = self.interface.get_resource("stamina")
+        write_logs, cost = substrate.execute_writes(stamina)
+        self.interface.modify_resource("stamina", -cost)
+        for log in write_logs:
+            self.interface.log(log)
+
     def _cmd_podcast(self, parts):
         if len(parts) < 2:
             self.interface.log("Usage: /podcast <topic>")
@@ -677,16 +689,7 @@ class CommandProcessor:
             safe_topic = "".join(c if c.isalnum() else "_" for c in topic)[:25].strip("_")
             file_name = f"podcast_{safe_topic}_{int(time.time())}.txt"
 
-            if getattr(self.interface.eng, "substrate", None) is None:
-                self.interface.eng.substrate = TheSubstrate(getattr(self.interface.eng, "events", None))
-
-            substrate = self.interface.eng.substrate
-            substrate.queue_write(file_name, self.P.strip(script))
-            stamina = self.interface.get_resource("stamina")
-            write_logs, cost = substrate.execute_writes(stamina)
-            self.interface.modify_resource("stamina", -cost)
-            for log in write_logs:
-                self.interface.log(log)
+            self._execute_substrate_write(file_name, script)
         except Exception as e:
             self.interface.log(
                 f"{self.P.RED}Podcast generation failed: {e}{self.P.RST}"
@@ -720,16 +723,7 @@ class CommandProcessor:
             self.interface.log(f"\n{self.P.WHT}{journal_entry}{self.P.RST}\n")
             file_name = f"journal_entry_{int(time.time())}.txt"
 
-            if getattr(self.interface.eng, "substrate", None) is None:
-                self.interface.eng.substrate = TheSubstrate(getattr(self.interface.eng, "events", None))
-
-            substrate = self.interface.eng.substrate
-            substrate.queue_write(file_name, self.P.strip(journal_entry))
-            stamina = self.interface.get_resource("stamina")
-            write_logs, cost = substrate.execute_writes(stamina)
-            self.interface.modify_resource("stamina", -cost)
-            for log in write_logs:
-                self.interface.log(log)
+            self._execute_substrate_write(file_name, journal_entry)
         except Exception as e:
             self.interface.log(
                 f"{self.P.RED}Journal generation failed: {e}{self.P.RST}"

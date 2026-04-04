@@ -207,12 +207,9 @@ class RandomRetrievalNavigator:
     def _vector_similarity(
         self, v1: list[float], v2: list[float], v2_mag: float = None
     ) -> float:
-        if not v1 or not v2:
-            return 0.5
+        if not v1 or not v2: return 0.5
         dot = sum(a * b for a, b in zip(v1, v2))
-        mag1 = math.hypot(*v1)
-        mag2 = v2_mag if v2_mag is not None else math.hypot(*v2)
-        mag = mag1 * mag2
+        mag = math.hypot(*v1) * (v2_mag if v2_mag is not None else math.hypot(*v2))
         return ((dot / mag) + 1.0) / 2.0 if mag != 0 else 0.5
 
     def _calculate_serendipity(

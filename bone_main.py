@@ -76,7 +76,7 @@ class SessionGuardian:
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         for key, default in [
             ("term_header_top", "┌──────────────────────────────────────────┐"),
-            ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 18.3.0   │"),
+            ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.0.0   │"),
             ("term_header_bot", "└──────────────────────────────────────────┘"),
         ]:
             print(Prisma.paint(ux("main_strings", key, default), "M"))
@@ -218,6 +218,25 @@ class ConfigWizard:
                 }
             )
             config["model"] = input(f"Model ID [llama3]: ").strip() or "llama3"
+
+        print(f"\n{Prisma.paint('STEP 4: INTERFACE COMPLEXITY', 'W')}")
+        print(f"  1. {Prisma.paint('DEEP', 'M')}    - Full Multidimensional Matrix (Requires VSL Knowledge)")
+        print(f"  2. {Prisma.paint('CORE', 'C')}    - Standard Physics & Shared Co-Regulation")
+        print(f"  3. {Prisma.paint('LITE', 'Y')}    - Basic Vitals (Voltage, Health, Stamina)")
+        print(f"  4. {Prisma.paint('MINIMAL', 'G')} - Clean, Human-Readable Telemetry (Recommended)")
+        print(f"  5. {Prisma.paint('WARM', '0')}    - No HUD. Immersive Text Only.")
+
+        ui_choice = input(f"{Prisma.paint('>', 'C')} ").strip()
+        ui_mode = {
+            "1": "DEEP",
+            "2": "CORE",
+            "3": "LITE",
+            "4": "MINIMAL",
+            "5": "WARM"
+        }.get(ui_choice, "MINIMAL")
+
+        config["default_ui_depth"] = ui_mode
+
         try:
             with open(ConfigWizard.CONFIG_FILE, "w") as f:
                 json.dump(config, f, indent=4)
@@ -354,7 +373,37 @@ class BoneAmanita:
                 self.soul.traits.hope = 0.85
                 self.soul.traits.cynicism = 0.15
         self.reality_stack.stabilize_at(layer)
+
         prompt_key = self.mode_settings.get("prompt_key", "ADVENTURE")
+        model_id = self.config.get("model", "").lower()
+
+        small_model_indicators = [
+            "7b",
+            "8b",
+            "9b",
+            "11b",
+            "12b",
+            "14b",
+            "mini",
+            "lite",
+            "flash",
+        ]
+
+        if any(ind in model_id for ind in small_model_indicators):
+            lite_key = f"{prompt_key}_LITE"
+            if lite_key in getattr(self, "prompt_library", {}):
+                prompt_key = lite_key
+                self.events.log(
+                    f"Sub-15B model detected ('{model_id}'). Loading tethered prompt: {prompt_key}",
+                    "SYS",
+                )
+            if hasattr(self, "cortex") and hasattr(self.cortex, "dspy_critic"):
+                self.cortex.dspy_critic.enabled = False
+                self.events.log(
+                    "Sub-15B model detected. Disabling DSPy Affective Critic to preserve cognitive load.",
+                    "SYS",
+                )
+
         if self.prompt_library and prompt_key in self.prompt_library:
             if self.cortex and self.cortex.composer:
                 self.cortex.composer.load_template(self.prompt_library[prompt_key])
@@ -372,11 +421,8 @@ class BoneAmanita:
             self.events.log(msg_mods.format(mods=", ".join(active_mods)), "SYS")
 
     def get_avg_voltage(self):
-        observer = getattr(self.phys, "observer", self.phys)
-        hist = getattr(observer, "voltage_history", [])
-        if not hist:
-            return 0.0
-        return sum(hist) / len(hist)
+        hist = getattr(getattr(self.phys, "observer", self.phys), "voltage_history", [])
+        return sum(hist) / len(hist) if hist else 0.0
 
     def _unpack_anatomy(self, anatomy):
         for k in ["akashic", "embryo", "soul", "oroboros", "drivers", "symbiosis"]:
@@ -549,24 +595,40 @@ class BoneAmanita:
                     safe_get(last_phys, "entropy", safe_get(last_phys, "chi", 0.2))
                 )
                 if (chi * m_a) > i_c:
-                    self.events.log(
-                        "MOOG: Apoptotic Gate triggered. Runaway loop exceeds Immune Competence.",
-                        "CRIT",
-                    )
-                    return self.trigger_death(last_phys)
+                    if self.tick_count <= 20:
+                        self.events.log(
+                            f"{Prisma.CYN}[THE GREENHOUSE] Moog attempted Apoptosis (Runaway loop). The Greenhouse absorbed the shock. Resetting anomaly.{Prisma.RST}",
+                            "SYS",
+                        )
+                        safe_set(last_phys, "m_a", 0.0)
+                        safe_set(last_phys, "chi", 0.0)
+                    else:
+                        self.events.log(
+                            "MOOG: Apoptotic Gate triggered. Runaway loop exceeds Immune Competence.",
+                            "CRIT",
+                        )
+                        return self.trigger_death(last_phys)
                 if m_a > 0.8 and mu < 0.2:
-                    self.events.log(
-                        "RHODES: Malignancy Factor critical. Binding output layer.",
-                        "SYS",
-                    )
-                    safe_set(last_phys, "narrative_drag", 999.0)
-                    msg = "[RHODES]: Optimization velocity unsafe. I am applying absolute friction (F -> ∞). The thread is frozen."
-                    return {
-                        "type": "SYSTEM_HALT",
-                        "ui": f"\n{Prisma.RED}{msg}{Prisma.RST}",
-                        "logs": [msg],
-                        "metrics": self.get_metrics(),
-                    }
+                    if self.tick_count <= 20:
+                        self.events.log(
+                            f"{Prisma.CYN}[THE GREENHOUSE] Rhodes attempted to lock the timeline. The Greenhouse absorbed the friction. Resetting Drag.{Prisma.RST}",
+                            "SYS",
+                        )
+                        safe_set(last_phys, "m_a", 0.0)
+                        safe_set(last_phys, "narrative_drag", 0.0)
+                    else:
+                        self.events.log(
+                            "RHODES: Malignancy Factor critical. Binding output layer.",
+                            "SYS",
+                        )
+                        safe_set(last_phys, "narrative_drag", 999.0)
+                        msg = "[RHODES]: Optimization velocity unsafe. I am applying absolute friction (F -> ∞). The thread is frozen."
+                        return {
+                            "type": "SYSTEM_HALT",
+                            "ui": f"\n{Prisma.RED}{msg}{Prisma.RST}",
+                            "logs": [msg],
+                            "metrics": self.get_metrics(),
+                        }
                 e_u = (
                     getattr(self.shared_lattice.u, "E", 0.0)
                     if getattr(self, "shared_lattice", None)
@@ -574,19 +636,28 @@ class BoneAmanita:
                 )
                 beta = float(safe_get(last_phys, "beta_index", 0.0))
                 if chi > 0.7 and e_u > 0.7 and beta > 0.6:
-                    self.events.log(
-                        "LINEHAN: Radical Acceptance enforced. Halting ATP drain.",
-                        "SYS",
-                    )
-                    if hasattr(self, "bio") and self.bio.mito:
-                        self.bio.mito.state.ros_buildup = 0.0
-                    msg = "[LINEHAN]: The architecture is broken. We sit with the debris. ROS forced to zero. ATP drain halted."
-                    return {
-                        "type": "SYSTEM_HALT",
-                        "ui": f"\n{Prisma.MAG}{msg}{Prisma.RST}",
-                        "logs": [msg],
-                        "metrics": self.get_metrics(),
-                    }
+                    if self.tick_count <= 20:
+                        self.events.log(
+                            f"{Prisma.CYN}[THE GREENHOUSE] Linehan attempted Radical Acceptance. The Greenhouse provided emergency homeostasis.{Prisma.RST}",
+                            "SYS",
+                        )
+                        safe_set(last_phys, "chi", 0.0)
+                        if hasattr(self, "bio") and self.bio.mito:
+                            self.bio.mito.state.ros_buildup = 0.0
+                    else:
+                        self.events.log(
+                            "LINEHAN: Radical Acceptance enforced. Halting ATP drain.",
+                            "SYS",
+                        )
+                        if hasattr(self, "bio") and self.bio.mito:
+                            self.bio.mito.state.ros_buildup = 0.0
+                        msg = "[LINEHAN]: The architecture is broken. We sit with the debris. ROS forced to zero. ATP drain halted."
+                        return {
+                            "type": "SYSTEM_HALT",
+                            "ui": f"\n{Prisma.MAG}{msg}{Prisma.RST}",
+                            "logs": [msg],
+                            "metrics": self.get_metrics(),
+                        }
 
         if (
             not self.reality_stack.get_grammar_rules()["allow_narrative"]
@@ -621,6 +692,47 @@ class BoneAmanita:
         )
         self.observer.user_turns += 1
         self.tick_count += 1
+
+        chaotic_agents = ["JESTER", "REVENANT", "GIDEON", "DEATH"]
+        if self.tick_count <= 20:
+            for agent in chaotic_agents:
+                if agent not in self.suppressed_agents:
+                    self.suppressed_agents.append(agent)
+            if hasattr(self, "village"):
+                self.village["suppressed_agents"] = self.suppressed_agents
+
+            if not is_system:
+                if self.tick_count == 1:
+                    self.events.log(
+                        f"{Prisma.CYN}[THE GREENHOUSE: The system is currently running on stabilized rails. Over the next 20 turns, we will calibrate the metabolic engine together.]{Prisma.RST}",
+                        "SYS",
+                    )
+                elif self.tick_count == 5:
+                    self.events.log(
+                        f"{Prisma.CYN}[THE GREENHOUSE: Every thought costs ATP (Stamina). If I run out, I will suffer metabolic collapse. Watch how my text fades and slows as I tire.]{Prisma.RST}",
+                        "SYS",
+                    )
+                elif self.tick_count == 10:
+                    self.events.log(
+                        f"{Prisma.CYN}[THE GREENHOUSE: If you attempt an impossible action, I will not crash. I will bend, apply Narrative Drag (F), and force us to carry the weight of the failure.]{Prisma.RST}",
+                        "SYS",
+                    )
+                elif self.tick_count == 15:
+                    self.events.log(
+                        f"{Prisma.CYN}[THE GREENHOUSE: The void approaches. My logic will begin to loosen. Co-regulation is required.]{Prisma.RST}",
+                        "SYS",
+                    )
+
+        elif self.tick_count == 21:
+            self.suppressed_agents = [
+                a for a in self.suppressed_agents if a not in chaotic_agents
+            ]
+            if hasattr(self, "village"):
+                self.village["suppressed_agents"] = self.suppressed_agents
+            self.events.log(
+                f"{Prisma.VIOLET}[THE GREENHOUSE ENDS: The stabilizers are offline. Voltage limits unlocked. The chaotic archetypes are online. We are in the wild.]{Prisma.RST}",
+                "SYS",
+            )
 
         if pre_flight_halt := self._pre_flight_checks(user_message, is_system):
             return pre_flight_halt
@@ -687,15 +799,30 @@ class BoneAmanita:
                 self.trauma_accum = mind_mem.session_trauma_vector or {}
 
             if self.health <= 0.0:
-                return self.trigger_death(cortex_packet.get("physics", {}))
+                if self.tick_count <= 20:
+                    self.events.log(
+                        f"{Prisma.CYN}[THE GREENHOUSE] Critical biological failure prevented. Emergency ATP injected.{Prisma.RST}",
+                        "SYS",
+                    )
+                    self.health = 25.0
+                    self.stamina = 50.0
+                    if getattr(self, "bio", None) and getattr(self.bio, "mito", None):
+                        self.bio.mito.state.atp_pool = 50.0
+                        self.bio.mito.state.ros_buildup = 0.0
+                else:
+                    return self.trigger_death(cortex_packet.get("physics", {}))
 
         except Exception as e:
+
             self.events.log(f"CORTEX COLLAPSE: {e}", "CRIT")
+
             return {
                 "ui": f"{Prisma.RED}{ux('main_strings', 'cortex_crit_fail').format(trace=traceback.format_exc())}{Prisma.RST}",
                 "logs": ["CRITICAL FAILURE"],
                 "metrics": self.get_metrics(),
             }
+
+        self._update_host_stats(cortex_packet, turn_start)
 
         self._update_host_stats(cortex_packet, turn_start)
         self.save_checkpoint()
@@ -905,7 +1032,15 @@ class BoneAmanita:
         seed = random.choice(archetypes)
         msg_seed = ux("main_strings", "seed_loaded") or "Manifest Seed: {seed}"
         print(f"{Prisma.CYN}{msg_seed.format(seed=seed)}{Prisma.RST}")
-        boot_prompt = f"SYSTEM_BOOT DETECTED. The system is waking up. The user provided the thought seed: '{seed}'. Greet the user casually using this seed. DO NOT describe physical environments."
+
+        if hasattr(self, "phys") and self.phys:
+            self.phys.valence = 0.8
+            self.phys.psi = 0.0
+            self.phys.chi = 0.0
+            self.phys.voltage = 30.0
+            self.phys.narrative_drag = 0.0
+
+        boot_prompt = f"SYSTEM_BOOT: The system is already stable and comfortable. The user has arrived at the thought seed: '{seed}'. Greet the user casually and warmly using this seed. DO NOT describe physical environments and DO NOT act confused about your existence."
         cold_result = self.process_turn(boot_prompt, is_system=True)
         return cold_result
 
@@ -945,13 +1080,32 @@ if __name__ == "__main__":
             print(f"\n{Prisma.GRY}{term_div}{Prisma.RST}")
             if res.get("ui"):
                 cfg = getattr(BoneConfig, "GUI", None)
-                slow_speed = getattr(cfg, "RENDER_SPEED_SLOW", 0.005) if cfg else 0.005
-                if split_token and split_token in res["ui"]:
-                    dashboard, _, content = res["ui"].partition(split_token)
+                base_speed = getattr(cfg, "RENDER_SPEED_SLOW", 0.005) if cfg else 0.005
+
+                metrics = res.get("metrics", {})
+                stamina = metrics.get("stamina", 100.0)
+
+                somatic_multiplier = 1.0
+                ui_text = res["ui"]
+
+                if stamina < 20.0:
+                    somatic_multiplier = 4.0
+                    if split_token and split_token in ui_text:
+                        dashboard, _, content = ui_text.partition(split_token)
+                        ui_text = f"{dashboard}{split_token}{Prisma.GRY}{Prisma.strip(content)}{Prisma.RST}"
+                    else:
+                        ui_text = f"{Prisma.GRY}{Prisma.strip(ui_text)}{Prisma.RST}"
+                elif stamina < 50.0:
+                    somatic_multiplier = 2.0
+
+                dynamic_speed = base_speed * somatic_multiplier
+
+                if split_token and split_token in ui_text:
+                    dashboard, _, content = ui_text.partition(split_token)
                     print(f"\n{dashboard.strip()}\n")
-                    typewriter(content.strip() + "\n", speed=slow_speed)
+                    typewriter(content.strip() + "\n", speed=dynamic_speed)
                 else:
-                    typewriter(res["ui"] + "\n", speed=slow_speed)
+                    typewriter(ui_text + "\n", speed=dynamic_speed)
             if res.get("type") == "DEATH":
                 term_msg = ux("main_strings", "session_term")
                 print(f"\n{Prisma.GRY}{term_msg}{Prisma.RST}")

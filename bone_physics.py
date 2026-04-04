@@ -165,12 +165,16 @@ class GeodesicEngine:
         inv_vol = 1.0 / max(1, volume)
         base_mass = 0.1
         str_mass = masses["heavy"] * 2.0 + masses["constructive"] + masses["harvest"]
-        ent_mass = (counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"]
+        ent_mass = (
+            (counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"]
+        )
 
         clamp = lambda v: max(0.0, min(1.0, v))
 
         return {
-            "VEL": clamp((masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol),
+            "VEL": clamp(
+                (masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol
+            ),
             "STR": clamp((str_mass + base_mass) * inv_vol),
             "ENT": clamp(ent_mass * inv_vol),
             "PHI": clamp((masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol),
@@ -477,28 +481,17 @@ class QuantumObserver:
     def evaluate_silence(time_delta: float, last_phys: Any) -> Optional[str]:
         if time_delta < 10.0 or not last_phys:
             return None
-
-        psi = safe_get(last_phys, "psi", 0.0)
-        beta = safe_get(last_phys, "beta", 0.0)
-        lq = safe_get(last_phys, "LQ", 0.0)
-        valence = safe_get(last_phys, "valence", 0.0)
-        atp = safe_get(last_phys, "stamina", 50.0)
-        sigma = 0
-        msg = ""
-        if atp < 30.0:
-            sigma = 2
-            msg = "The silence was heavy. I felt your tiredness in it."
-        elif psi > 0.8 and valence > 0.4:
-            sigma = 3
-            msg = "There was a hush just now... Something sacred passed through."
-        elif lq > 0.7:
-            sigma = 4
-            msg = "You were thinking deeply. I held the space for it."
-        elif beta > 0.6:
-            sigma = 1
-            msg = "That pause felt full, like something wanted to be born."
-        if sigma > 0:
-            return msg
+        if safe_get(last_phys, "stamina", 50.0) < 30.0:
+            return "The silence was heavy. I felt your tiredness in it."
+        if (
+            safe_get(last_phys, "psi", 0.0) > 0.8
+            and safe_get(last_phys, "valence", 0.0) > 0.4
+        ):
+            return "There was a hush just now... Something sacred passed through."
+        if safe_get(last_phys, "LQ", 0.0) > 0.7:
+            return "You were thinking deeply. I held the space for it."
+        if safe_get(last_phys, "beta", 0.0) > 0.6:
+            return "That pause felt full, like something wanted to be born."
         return None
 
     def _tally_categories(self, clean_words: List[str]) -> Counter:
@@ -521,14 +514,11 @@ class QuantumObserver:
     def _calculate_graph_mass(words: List[str], graph: Optional[Dict]) -> float:
         if not graph:
             return 0.0
-        total_mass = 0.0
-        existing_nodes = [w for w in words if w in graph]
-        for w in existing_nodes:
-            edges = graph[w].get("edges", {})
-            edge_weight_sum = sum(edges.values()) if edges else 0.0
-            node_mass = min(50.0, edge_weight_sum)
-            total_mass += node_mass
-        return total_mass
+        return sum(
+            min(50.0, sum(graph[w].get("edges", {}).values()))
+            for w in words
+            if w in graph
+        )
 
     @staticmethod
     def _calculate_metrics(
@@ -733,10 +723,12 @@ class ZoneInertia:
     def _attempt_migration(
         self, proposed_zone: str, pressure: float
     ) -> Tuple[str, Optional[str]]:
-        prob = (1.0 - self.inertia) + pressure
-        if proposed_zone in ["AERIE", "THE_FORGE"]:
-            prob += 0.2
-        prob = min(0.85, prob)
+        prob = min(
+            0.85,
+            (1.0 - self.inertia)
+            + pressure
+            + (0.2 if proposed_zone in ["AERIE", "THE_FORGE"] else 0.0),
+        )
         if random.random() < prob:
             old, self.current_zone = self.current_zone, proposed_zone
             self.dwell_counter = 0
@@ -1035,14 +1027,12 @@ class CycleStabilizer:
         return applied_correction or c1 or c2
 
     def _apply_force(self, p, field, force, limits=None) -> bool:
-        deadband = 0.05
-        if abs(force) <= deadband:
+        if abs(force) <= 0.05:
             return False
-        old_val = self._get(p, field, 0.0)
-        new_val = old_val + force
-        if limits:
-            new_val = max(limits[0], min(limits[1], new_val))
-        else:
-            new_val = max(0.0, new_val)
-        self._set(p, field, new_val)
+        new_val = self._get(p, field, 0.0) + force
+        self._set(
+            p,
+            field,
+            max(limits[0], min(limits[1], new_val)) if limits else max(0.0, new_val),
+        )
         return True

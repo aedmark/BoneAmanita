@@ -239,18 +239,15 @@ class SanctuaryPhase(SimulationPhase):
             log_msg, effects = dream_packet
             ctx.log(f"{Prisma.VIOLET}☁️ {log_msg}{Prisma.RST}")
             if effects:
-                for k, target in [("adrenaline", self.eng.bio.endo), ("cortisol", self.eng.bio.endo)]:
-                    if k in effects: setattr(target, k, max(0.0, getattr(target, k) + effects[k]))
-                if "voltage" in effects:
-                    ctx.physics.voltage = max(0.0, ctx.physics.voltage + effects["voltage"])
-                if "glimmers" in effects and effects["glimmers"] > 0:
-                    if hasattr(self.eng, "shared_lattice"):
-                        self.eng.shared_lattice.shared.g_pool += effects["glimmers"]
-                    elif hasattr(ctx.physics, "G"):
-                        ctx.physics.G += effects["glimmers"]
-                    ctx.log(
-                        f"{Prisma.MAG}✨ The dream yielded a Glimmer (+1 G_pool).{Prisma.RST}"
-                    )
+                endo = getattr(self.eng.bio, "endo", None)
+                if endo:
+                    if adr := effects.get("adrenaline"): endo.adrenaline = max(0.0, endo.adrenaline + adr)
+                    if cor := effects.get("cortisol"): endo.cortisol = max(0.0, endo.cortisol + cor)
+                if v := effects.get("voltage"): ctx.physics.voltage = max(0.0, ctx.physics.voltage + v)
+                if (g := effects.get("glimmers")) and g > 0:
+                    if hasattr(self.eng, "shared_lattice"): self.eng.shared_lattice.shared.g_pool += g
+                    elif hasattr(ctx.physics, "G"): ctx.physics.G += g
+                    ctx.log(f"{Prisma.MAG}✨ The dream yielded a Glimmer (+1 G_pool).{Prisma.RST}")
 
 
 class MaintenancePhase(SimulationPhase):
@@ -337,15 +334,25 @@ class GatekeeperPhase(SimulationPhase):
                 ctx.input_text, current_zone
             )
             if coupling_error:
-                log_msg = ux("cycle_strings", "gatekeep_log_premise")
-                ctx.refusal_triggered = True
-                ctx.refusal_packet = {
-                    "type": "PREMISE_VIOLATION",
-                    "ui": f"\n{coupling_error}",
-                    "logs": [log_msg] if log_msg else [],
-                    "metrics": self.eng.get_metrics(),
-                }
-                return ctx
+                log_msg = (
+                    ux("cycle_strings", "gatekeep_log_premise")
+                    or f"Premise Violation: {coupling_error}"
+                )
+                ctx.log(
+                    f"{Prisma.OCHRE}[GORDON] {log_msg}. Applying massive Narrative Drag.{Prisma.RST}"
+                )
+
+                current_drag = float(getattr(ctx.physics, "narrative_drag", 0.0) or 0.0)
+                setattr(ctx.physics, "narrative_drag", current_drag + 50.0)
+
+                if not hasattr(ctx, "council_mandates"):
+                    ctx.council_mandates = []
+                ctx.council_mandates.append(
+                    {
+                        "action": "STYLE_INJECTION",
+                        "log": f"CRITICAL CONTEXT: The user attempted an impossible action ({coupling_error}). Do NOT fulfill the action. React to their failure in-character based on your current archetype.",
+                    }
+                )
         is_allowed, refusal_packet = self.gatekeeper.check_entry(ctx)
         if not is_allowed:
             ctx.refusal_triggered = True
@@ -1180,12 +1187,10 @@ class SimulationPreflightPhase(SimulationPhase):
                 msg = f"[SINCERITY PROTOCOL]: {data['desc']} Summoning {lens}."
                 ctx.log(f"{data['col']}{msg}{Prisma.RST}")
                 phys_obj.valence = data["v"]
-                if "d_mod" in data:
-                    phys_obj.narrative_drag = max(
-                        0.1, phys_obj.narrative_drag + data["d_mod"]
-                    )
-                if "psi" in data:
-                    phys_obj.psi = data["psi"]
+                if d_mod := data.get("d_mod"):
+                    phys_obj.narrative_drag = max(0.1, phys_obj.narrative_drag + d_mod)
+                if psi := data.get("psi"):
+                    phys_obj.psi = psi
                 ctx.council_mandates.append(
                     {"action": "SYNERGY_FIRED", "value": lens, "log": msg}
                 )
@@ -1196,9 +1201,7 @@ class SimulationPreflightPhase(SimulationPhase):
                 "type": rtype,
                 "ui": f"\n{Prisma.RED if rtype == 'COUNTERFACTUAL_REJECTION' else Prisma.CYN}{msg}{Prisma.RST}",
                 "logs": [msg],
-                "metrics": (
-                    self.eng.get_metrics() if hasattr(self.eng, "get_metrics") else {}
-                ),
+                "metrics": self.eng.get_metrics() if hasattr(self.eng, "get_metrics") else {},
                 "physics": _safe_dict(phys_obj),
                 "bio": getattr(ctx, "bio_result", {}),
                 "mind": {"thought": "System rejected prompt.", "context_msg": msg},

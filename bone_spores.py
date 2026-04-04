@@ -143,17 +143,12 @@ class LocalFileSporeLoader:
             return None
 
     def list_spores(self) -> List[Tuple[str, float, str]]:
-        if not os.path.exists(self.directory):
-            return []
-        files: List[Tuple[str, float, str]] = []
-        for f in os.listdir(self.directory):
-            if f.endswith(".json") and f.startswith("session_"):
-                try:
-                    p = os.path.join(self.directory, f)
-                    files.append((p, os.path.getmtime(p), f))
-                except OSError:
-                    continue
-        return sorted(files, key=lambda x: x[1], reverse=True)
+        if not os.path.exists(self.directory): return []
+        try:
+            files = [(p := os.path.join(self.directory, f), os.path.getmtime(p), f)
+                     for f in os.listdir(self.directory) if f.endswith(".json") and f.startswith("session_")]
+            return sorted(files, key=lambda x: x[1], reverse=True)
+        except OSError: return []
 
     @staticmethod
     def delete_spore(filepath):
@@ -994,7 +989,7 @@ class MycelialNetwork:
         ]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BONEAMANITA_18.3.0",
+            "genome": "BONEAMANITA_19.0.0",
             "session_id": self.session_id,
             "parent_id": self.session_id,
             "meta": {
@@ -1132,11 +1127,11 @@ class ImmuneMycelium:
                 if r in w:
                     if w.startswith(r) or w.endswith(r) or (len(r) / clean_len > 0.5):
                         return None, ""
-        plosive = sum(1 for c in w if c in self.PHONETICS["PLOSIVE"])
-        nasal = sum(1 for c in w if c in self.PHONETICS["NASAL"])
-        density = ((plosive * 1.2) + (nasal * 0.8)) / clean_len
-        if clean_len <= 4:
-            density *= 1.2
+        plosive_mass = sum(1 for c in w if c in self.PHONETICS["PLOSIVE"]) * 1.2
+        nasal_mass = sum(1 for c in w if c in self.PHONETICS["NASAL"]) * 0.8
+        density = ((plosive_mass + nasal_mass) / clean_len) * (
+            1.2 if clean_len <= 4 else 1.0
+        )
         if density > 1.0:
             msg = ux("spore_strings", "immune_tox_phon")
             return "TOXIN_HEAVY", (msg.format(word=w) if msg else "")
@@ -1182,14 +1177,13 @@ class BioParasite:
                 self.spores_deployed = max(0, self.spores_deployed - 1)
             return False, None
         graph = self.mem.graph
-        heavy_candidates = (
-            [w for w in graph if w in (self.lex.get("heavy") or [])] if self.lex else []
+        if not self.lex:
+            return False, None
+        heavy_set, abstract_set = set(self.lex.get("heavy") or []), set(
+            self.lex.get("abstract") or []
         )
-        abstract_candidates = (
-            [w for w in graph if w in (self.lex.get("abstract") or [])]
-            if self.lex
-            else []
-        )
+        heavy_candidates = [w for w in graph if w in heavy_set]
+        abstract_candidates = [w for w in graph if w in abstract_set]
         if not heavy_candidates or not abstract_candidates:
             return False, None
         host = random.choice(heavy_candidates)

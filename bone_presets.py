@@ -63,7 +63,7 @@ class BoneConfig:
                         "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
                         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2}, }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "18.3.0"
+    VERSION = "19.0.0"
     VERBOSE_LOGGING = True
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -212,7 +212,8 @@ class BoneConfig:
         MOOD_DOP = 0.6
         MOOD_SER = 0.6
         LLM_CIRCUIT_HEAL_TIME = 10.0
-        LLM_FALLBACK_TIMEOUT = 10.0
+        LLM_TIMEOUT = 180.0
+        LLM_FALLBACK_TIMEOUT = 60.0
         VALIDATOR_STUTTER_LENGTH = 5
 
     class WHIMSY:

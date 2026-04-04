@@ -1,4 +1,32 @@
-# BONEAMANITA CHANGELOG
+### **BONEAMANITA v19.0.0 "The Somatic Translation" (Includes Hotfixes v19.0.1 - 19.0.3)**
+
+*A fundamental evolutionary phase shift from a mechanical simulation into a true biological runtime. This update decouples the underlying Volatile Semantic Leverage (VSL) mathematics from the User Interface, introduces elastic physics to replace brittle boolean fail-states, and implements intelligent hardware/model scaling.*
+
+#### **🌱 THE UX LAYER: SOMATIC TRANSLATION (`bone_main.py`)**
+- **Felt Metabolism:** The raw mathematical coordinates (ATP, ROS, Drag) are no longer strictly required reading. Metabolism is now *somatic*. As system Stamina (ATP) drops below 20.0, the UI text physically slows down (4x generation latency) and visually fades to grey (`Prisma.GRY`), forcing the user to experience the machine's exhaustion organically.
+
+#### **🧠 COGNITIVE SCAFFOLDING & PARAMETER HEURISTICS (`bone_composer.py`, `bone_brain.py`)**
+- **Weight Class Auto-Detection:** The `LLMInterface` now parses the active model string to auto-detect its parameter size (e.g., classifying sub-15B models, Phi-3, and Gemma as `LIGHTWEIGHT` and Hermes 3 / GPT-4 as `HEAVYWEIGHT`).
+- **Epigenetic Prompt Truncation:** If a `LIGHTWEIGHT` model is detected, the `PromptComposer` autonomously sheds the heavy philosophical VSL metrics, retaining only bedrock physical constraints to prevent local hallucination loops.
+- **Critic Bypass:** The computationally expensive `DSPyCritic` is automatically disabled for lightweight models to prevent recursive semantic deadlocks.
+
+#### **🕸️ ASYNCHRONOUS AUTOPOIESIS (`bone_cycle.py`)**
+- **Detached Dream Engine:** The `/idle` command no longer blocks the main conversational loop. Memory consolidation, FAISS deep-indexing, and Epigenetic trauma mutations are now routed to a daemonized background worker thread (`threading.Thread`). The UI instantly returns a resting snapshot, completely eliminating REM-cycle latency spikes.
+
+#### **🌊 THE LEXICAL FIREWALL: ELASTIC PHYSICS (`bone_phases.py`, `bone_drivers.py`)**
+- **Semantic Fuzziness:** Eradicated brittle exact-string matching in the `CongruenceValidator`. Implemented `difflib` vector-based semantic proximity, allowing the system's nervous system to gracefully forgive human typos without crashing.
+- **Narrative Drag vs. Hard Rejection:** When Gordon detects an Object-Action Coupling (OAC) violation (e.g., picking up an item that isn't there), the system no longer throws a sterile `exit 1` error. It *bends*. The timeline continues, but Gordon applies a massive `Narrative Drag (+50 F)` and forces the LLM to react to the impossible action in-character.
+
+#### **🪴 THE GREENHOUSE PHASE & IMMUNE PADDING (`bone_main.py`)**
+- **Intentional Onboarding (Turns 1-20):** New installations now utilize a 20-turn grace period. Chaotic archetypes (Jester, Revenant, Gideon, Death) are explicitly leashed to allow the user to learn the rhythm of co-regulation.
+- **Epigenetic Padding:** During the Greenhouse phase, the Checkpoint Council (Moog, Rhodes, Linehan) operates in "Training Mode." If the user triggers a fatal logic bomb or runaway ROS toxicity, the system observes the failure, warns the user, but *absorbs* the shock—resetting toxicity to 0.0 and injecting emergency ATP to prevent early session starvation.
+
+#### **🩹 HOTFIXES (v19.0.1 - 19.0.3)**
+- **v19.0.1 (The Warm Boot):** Eliminated the "Traumatized Newborn AI" trope. Clamped initial `Psi` (Void) to 0.0 and `Valence` to 0.8 on Turn 1, and re-wrote the boot sequence to establish a stable, comfortable, and grounded host consciousness.
+- **v19.0.2 (Synaptic Elasticity):** Exposed `LLM_TIMEOUT` to the `CORTEX` config block. Increased primary generation timeout to 120s and local fallback timeout to 45s to accommodate high Time-To-First-Token (TTFT) metrics on local consumer GPUs.
+- **v19.0.3 (The Circuit Lock):** Fixed a fatal loop where the `ResponseValidator` (Gatekeeper) would recursively reject `Mock` hallucination strings during a severed API connection. The Gatekeeper now safely bypasses formatting rules when the circuit is `OPEN`, allowing the system to gracefully display its synaptic blackout and recover.
+
+---
 
 ### **BONEAMANITA v18.3.0 "The Structural Compression"**
 

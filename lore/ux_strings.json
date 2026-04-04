@@ -201,7 +201,7 @@
     "recover": "Zen mode. Stamina regenerating."
   },
   "help_menu": {
-    "header": "/// BONEAMANITA 18.3.0 TERMINAL ///",
+    "header": "/// BONEAMANITA 19.0.0 TERMINAL ///",
     "phase_prefix": "Operating Phase: ",
     "default_phase": "EXTANT",
     "footer": ">> Use wisely. Entropy is watching.",
@@ -534,6 +534,7 @@
     "ennea_winner": "Winner: {winner} ({score:.1f}) [V:{v:.1f} D:{d:.1f}]",
     "ennea_shift": "SHIFT: {reason}",
     "ennea_resisting": "Resisting {candidate} ({count}/{thresh})",
+    "vsl_engage": "VSL HYPERVISOR: LATTICE REVEALED.",
     "vsl_engage": "VSL HYPERVISOR: LATTICE REVEALED.",
     "vsl_disengage": "VSL HYPERVISOR: RETURNING TO SURFACE MODE.",
     "vsl_scar_note": " (Godel Scars: {scars})",

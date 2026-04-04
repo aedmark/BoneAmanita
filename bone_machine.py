@@ -28,16 +28,10 @@ class TheCrucible:
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         cfg = getattr(self.cfg, "MACHINE", None)
-        self.max_voltage_cap = (
-            safe_get(cfg, "CRUCIBLE_VOLTAGE_CAP", 20.0)
-        )
+        self.max_voltage_cap = safe_get(cfg, "CRUCIBLE_VOLTAGE_CAP", 20.0)
         self.active_state = "COLD"
-        self.dampener_charges = (
-            safe_get(cfg, "CRUCIBLE_DAMPENER_CHARGES", 3)
-        )
-        self.dampener_tolerance = (
-            safe_get(cfg, "DAMPENER_TOLERANCE", 15.0)
-        )
+        self.dampener_charges = safe_get(cfg, "CRUCIBLE_DAMPENER_CHARGES", 3)
+        self.dampener_tolerance = safe_get(cfg, "DAMPENER_TOLERANCE", 15.0)
         self.instability_index = 0.0
         self.logs = self._load_logs()
 
@@ -51,9 +45,7 @@ class TheCrucible:
         msg = ux("machine_strings", "crucible_dampener_status")
         return msg.format(charges=self.dampener_charges)
 
-    def dampen(
-        self, voltage_spike: float, stability_index: float
-    ) -> Tuple[bool, str, float]:
+    def dampen(self, voltage_spike: float, stability_index: float) -> Tuple[bool, str, float]:
         if self.dampener_charges <= 0:
             return False, self.logs.get("DAMPER_EMPTY", ""), 0.0
 
@@ -65,8 +57,7 @@ class TheCrucible:
             return False, self.logs.get("HOLDING", ""), 0.0
 
         self.dampener_charges -= 1
-        reduction = voltage_spike * factor
-        return True, self.logs.get("DAMPER_HIT", "").format(reduction=reduction, reason=reason), reduction
+        return True, self.logs.get("DAMPER_HIT", "").format(reduction=(r := voltage_spike * factor), reason=reason), r
 
     def audit_fire(self, physics: Any) -> Tuple[str, float, Optional[str]]:
         current_drag = float(safe_get(physics, "narrative_drag", 0.0) or 0.0)
@@ -86,8 +77,14 @@ class TheCrucible:
         safe_set(physics, "narrative_drag", final_drag)
         msg = None
         if abs(adjustment) > 0.1:
-            direction = (ux("machine_strings", "crucible_tightening") or "TIGHTENING") if adjustment > 0 else (ux("machine_strings", "crucible_relaxing") or "RELAXING")
-            msg = self.logs.get("REGULATOR", "").format(direction=direction, current=current_drag, new=final_drag)
+            direction = (
+                (ux("machine_strings", "crucible_tightening") or "TIGHTENING")
+                if adjustment > 0
+                else (ux("machine_strings", "crucible_relaxing") or "RELAXING")
+            )
+            msg = self.logs.get("REGULATOR", "").format(
+                direction=direction, current=current_drag, new=final_drag
+            )
         surge = safe_get(physics, "system_surge_event", False)
         if surge:
             self.active_state = "SURGE"
@@ -125,17 +122,13 @@ class TheParadoxEngine:
 
     def ignite(self, recent_words: List[str]) -> Tuple[float, str]:
         self.is_active = True
-        valid_seeds = [w for w in recent_words if len(w) > 4]
-        seed = random.choice(valid_seeds) if valid_seeds else "the architecture"
-        pressure = 0.4 + (random.random() * 0.6)
+        seed = random.choice([w for w in recent_words if len(w) > 4] or ["the architecture"])
         templates = ux("machine_strings", "paradox_templates") or [
             "What if '{seed}' and its exact opposite were both non-negotiable truths? Do not resolve the contradiction. Do not compromise. Build the structure that can hold both simultaneously.",
             "[RECURSIVE PARADOX] Apply the concept of '{seed}' to the architecture of this very conversation. How does the act of thinking about '{seed}' alter the physical constraints of our dialogue? Both are non-negotiable truths.",
             "[NEGATIVE SPACE] Define '{seed}' entirely by what it is not. Construct the boundary of the concept without ever naming the center. Both the center and the void are non-negotiable truths.",
         ]
-
-        chosen_template = random.choice(templates)
-        return pressure, chosen_template.format(seed=seed)
+        return 0.4 + (random.random() * 0.6), random.choice(templates).format(seed=seed)
 
     def disengage(self):
         self.is_active = False
@@ -180,42 +173,46 @@ class TheForge:
     def attempt_crafting(
         self, physics: Any, inventory_list: List[str]
     ) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
-        if not inventory_list:
+        if not inventory_list or not (
+            clean_words := safe_get(physics, "clean_words", [])
+        ):
             return False, None, None, None
-        clean_words = safe_get(physics, "clean_words", [])
-        if not clean_words:
-            return False, None, None, None
+
         clean_set = set(clean_words)
         voltage = float(safe_get(physics, "voltage", 0.0))
+        lex_srv = self.lex or LexiconService()
+
         for item in inventory_list:
-            if item in self.recipe_map:
-                for recipe in self.recipe_map[item]:
-                    raw_cat_words = (
-                        self.lex.get(recipe["catalyst_category"])
-                        if self.lex
-                        else LexiconService().get(recipe["catalyst_category"])
+            for recipe in self.recipe_map.get(item, []):
+                cat_words = set(lex_srv.get(recipe["catalyst_category"]) or [])
+                if not cat_words or clean_set.isdisjoint(cat_words):
+                    continue
+
+                entanglement = self._calculate_entanglement(
+                    len(clean_set & cat_words), voltage
+                )
+                if random.random() < entanglement:
+                    msg = (
+                        ux("machine_strings", "forge_alchemy_success")
+                        or "Alchemy successful! {item} -> {result}"
                     )
-                    cat_words = set(raw_cat_words) if raw_cat_words else set()
-                    if not cat_words or clean_set.isdisjoint(cat_words):
-                        continue
-                    hits = len(clean_set.intersection(cat_words))
-                    entanglement = self._calculate_entanglement(hits, voltage)
-                    if random.random() < entanglement:
-                        msg = ux("machine_strings", "forge_alchemy_success")
-                        return (
-                            True,
-                            msg.format(result=recipe["result"], item=item),
-                            item,
-                            recipe["result"],
-                        )
-                    else:
-                        msg = ux("machine_strings", "forge_alchemy_fail")
-                        return (
-                            False,
-                            msg.format(entanglement=int(entanglement * 100)),
-                            None,
-                            None,
-                        )
+                    return (
+                        True,
+                        msg.format(result=recipe["result"], item=item),
+                        item,
+                        recipe["result"],
+                    )
+                else:
+                    msg = (
+                        ux("machine_strings", "forge_alchemy_fail")
+                        or "Alchemy failed. Entanglement: {entanglement}%"
+                    )
+                    return (
+                        False,
+                        msg.format(entanglement=int(entanglement * 100)),
+                        None,
+                        None,
+                    )
         return False, None, None, None
 
     @staticmethod
@@ -241,12 +238,8 @@ class TheTheremin:
         self.decoherence_buildup = 0.0
         self.classical_turns = 0
         cfg = getattr(self.cfg, "MACHINE", None)
-        self.AMBER_THRESHOLD = (
-            safe_get(cfg, "THEREMIN_AMBER_THRESHOLD", 20.0)
-        )
-        self.SHATTER_POINT = (
-            safe_get(cfg, "THEREMIN_SHATTER_POINT", 100.0)
-        )
+        self.AMBER_THRESHOLD = safe_get(cfg, "THEREMIN_AMBER_THRESHOLD", 20.0)
+        self.SHATTER_POINT = safe_get(cfg, "THEREMIN_SHATTER_POINT", 100.0)
         self.is_stuck = False
         self.logs = self._load_logs()
 

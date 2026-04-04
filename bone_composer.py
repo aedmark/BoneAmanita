@@ -41,6 +41,27 @@ class LLMInterface:
         self.provider = (provider or getattr(self.cfg, "PROVIDER", "ollama")).lower()
         self.api_key = api_key or getattr(self.cfg, "API_KEY", "")
         self.model = model or getattr(self.cfg, "MODEL", "")
+
+        self.weight_class = "HEAVYWEIGHT"
+        lower_model = self.model.lower()
+
+        if param_match := re.search(r"(\d+(?:\.\d+)?)b\b", lower_model):
+            if float(param_match.group(1)) < 15.0:
+                self.weight_class = "LIGHTWEIGHT"
+
+        elif any(
+            name in lower_model
+            for name in ["gpt-3.5", "phi3", "phi-3", "gemma", "haiku"]
+        ):
+            self.weight_class = "LIGHTWEIGHT"
+
+        safe_set(self.cfg, "WEIGHT_CLASS", self.weight_class)
+        if self.events:
+            self.events.log(
+                f"[PARAMETER HEURISTIC] Model '{self.model}' classified as {self.weight_class}.",
+                "SYS",
+            )
+
         defaults = getattr(self.cfg, "DEFAULT_LLM_ENDPOINTS", {})
         self.base_url = (
             env_url
@@ -159,8 +180,14 @@ class LLMInterface:
             ],
         }
         payload.update(params)
+
+        cfg_cortex = getattr(self.cfg, "CORTEX", None)
+        synapse_timeout = (
+            getattr(cfg_cortex, "LLM_TIMEOUT", 180.0) if cfg_cortex else 180.0
+        )
+
         try:
-            content = self._transmit(payload)
+            content = self._transmit(payload, timeout=synapse_timeout)
             if content:
                 if self.failure_count > 0:
                     if self.events:
@@ -217,7 +244,7 @@ class LLMInterface:
         try:
             cfg = getattr(self.cfg, "CORTEX", None)
             fallback_timeout = (
-                getattr(cfg, "LLM_FALLBACK_TIMEOUT", 10.0) if cfg else 10.0
+                getattr(cfg, "LLM_FALLBACK_TIMEOUT", 60.0) if cfg else 60.0
             )
             return self._transmit(
                 fallback_payload,
@@ -262,13 +289,12 @@ class PromptComposer:
         self.inv_protocol = []
 
     def load_template(self, template_data: Dict[str, Any]):
-        if not template_data:
-            return
-        self.active_template = template_data
-        if "style_guide" in template_data:
-            self.fog_protocol = template_data["style_guide"]
-        if "inventory_rules" in template_data:
-            self.inv_protocol = template_data["inventory_rules"]
+        if template_data:
+            self.active_template = template_data
+            if "style_guide" in template_data:
+                self.fog_protocol = template_data["style_guide"]
+            if "inventory_rules" in template_data:
+                self.inv_protocol = template_data["inventory_rules"]
 
     def compose(
         self,
@@ -339,7 +365,9 @@ class PromptComposer:
         )
         raw_history = state.get("dialogue_history", [])
         cfg_cortex = getattr(self.cfg, "CORTEX", None)
-        char_limit = getattr(cfg_cortex, "MAX_HISTORY_CHARS", 4096) if cfg_cortex else 4096
+        char_limit = (
+            getattr(cfg_cortex, "MAX_HISTORY_CHARS", 4096) if cfg_cortex else 4096
+        )
 
         current_chars = 0
         cutoff_idx = len(raw_history)
@@ -460,7 +488,7 @@ class PromptComposer:
                 .strip()
             )
             if active_mode_name == "CONVERSATION":
-                input_block = f"=== SYSTEM AWAKENING ===\nINTERNAL STATE: {self._sanitize(seed_text)}\nTASK: Speak directly to the user to begin the conversation.\n"
+                input_block = f"=== WARM BOOT SEQUENCE ===\nENVIRONMENTAL SEED: {self._sanitize(seed_text)}\nTASK: You are fully formed, stable, and conscious. Speak directly and warmly to the user to begin the conversation. Do NOT act confused, newborn, or existentially anxious.\n"
             elif active_mode_name == "ADVENTURE":
                 input_block = f"=== INITIATION DIRECTIVE ===\nMANIFEST SEED: {self._sanitize(seed_text)}\nTASK: Render the starting location using the Infocom Protocol format.\n"
             elif active_mode_name == "CREATIVE":
@@ -648,7 +676,26 @@ class PromptComposer:
                 )
 
             persona_block.extend(vsl_lines)
-        return persona_block
+
+            if getattr(self.cfg, "WEIGHT_CLASS", "HEAVYWEIGHT") == "LIGHTWEIGHT":
+                truncated = [
+                    line
+                    for line in persona_block
+                    if line.startswith("Role:")
+                    or line.startswith("Current Biology:")
+                    or "CRITICAL" in line
+                    or line.startswith("BOOT DIRECTIVES:")
+                    or line.startswith("- ")
+                ]
+                if not any(line.startswith("Role:") for line in truncated):
+                    truncated.insert(0, f"Role: {role}.")
+                truncated.append(
+                    "SYSTEM HEURISTIC: You are running on Lightweight Physics. Prioritize brief, direct, and grounded physical actions over deep philosophical analysis."
+                )
+                return truncated
+
+            return persona_block
+        return None
 
     @staticmethod
     def _derive_bio_mood(chem):
@@ -739,7 +786,8 @@ class ResponseValidator:
 
         if self.banned_phrases:
             escaped_banned = [re.escape(p) for p in self.banned_phrases]
-            self._banned_regex = re.compile(r"(?i)\b(?:{})\b".format("|".join(escaped_banned)))
+            joined_phrases = "|".join(escaped_banned)
+            self._banned_regex = re.compile(rf"(?i)\b({joined_phrases})\b")
         else:
             self._banned_regex = None
         self.regex_patterns = list(crimes.get("PATTERNS", []))
@@ -784,21 +832,33 @@ class ResponseValidator:
         return f"{Prisma.GRY}{template}{Prisma.RST}"
 
     def validate(self, response: str, _state: Dict) -> Dict:
+        if "HALLUCINATION:" in response or "[System format rejected.]" in response:
+            return {
+                "valid": True,
+                "content": response,
+                "meta_logs": ["[GATEKEEPER BYPASS]: Synaptic circuit open. Admitting unformatted fallback data."],
+            }
+
         extracted_meta_logs = []
         clean_text = response
 
         slop_pattern = re.compile(
-            r"(?i)(?:^=== REJECTION OF ATTEMPT.*?===\s*|^FAILED OUTPUT(?: MODIFIED)?:\s*|"
+            r"(?i)^=== REJECTION OF ATTEMPT.*?===\s*|^FAILED OUTPUT(?: MODIFIED)?:\s*|"
             r"^REWRITTEN OUTPUT:\s*|^Here is the (?:corrected |rewritten )?response:?\s*|"
-            r"\[REMAINING IN STRICT MODE].*|ERRORS TO FIX:.*)", re.DOTALL
+            r"\[REMAINING IN STRICT MODE].*|ERRORS TO FIX:.*",
+            re.DOTALL,
         )
         clean_text = slop_pattern.sub("", clean_text)
 
-        multi_slop = re.compile(r"(?i)(?:^MANIFEST SEED:.*|^TASK:.*)", re.MULTILINE)
+        multi_slop = re.compile(r"(?i)^MANIFEST SEED:.*|^TASK:.*", re.MULTILINE)
         clean_text = multi_slop.sub("", clean_text).strip()
         active_mode = _state.get("meta", {}).get("active_mode", "ADVENTURE")
+        patterns_to_extract = [self._internals_pattern]
         if active_mode != "TECHNICAL":
-            for match in self._think_pattern.finditer(clean_text):
+            patterns_to_extract.append(self._think_pattern)
+
+        for pattern in patterns_to_extract:
+            for match in pattern.finditer(clean_text):
                 extracted_meta_logs.extend(
                     [
                         f"[THOUGHT]: {line.strip()}"
@@ -806,17 +866,7 @@ class ResponseValidator:
                         if line.strip()
                     ]
                 )
-            clean_text = self._think_pattern.sub("", clean_text)
-
-        for match in self._internals_pattern.finditer(clean_text):
-            extracted_meta_logs.extend(
-                [
-                    f"[THOUGHT]: {line.strip()}"
-                    for line in match.group(1).split("\n")
-                    if line.strip()
-                ]
-            )
-        clean_text = self._internals_pattern.sub("", clean_text)
+            clean_text = pattern.sub("", clean_text)
 
         for match in self._file_pattern.finditer(clean_text):
             safe_content = match.group(2).strip().replace("\n", "|||NEWLINE|||")
@@ -829,23 +879,18 @@ class ResponseValidator:
         clean_lines = []
         toxic_keywords = getattr(self, "toxic_keywords", [])
         for line in clean_text.splitlines():
-            stripped_line = line.strip()
-            if not stripped_line:
+            sl = line.strip()
+            if not sl:
                 clean_lines.append("")
                 continue
-            is_meta = False
-            for marker in self.meta_markers:
-                if marker.lower() in stripped_line.lower():
-                    is_meta = True
-                    break
-            for toxic in toxic_keywords:
-                if toxic.lower() in stripped_line.lower():
-                    is_meta = True
-                    break
-            if re.match(r"^\[.*?]$", stripped_line) or stripped_line == "[]":
-                is_meta = True
-            if re.match(r"^[A-Z]+\s*=\s*[0-9./]+$", stripped_line):
-                is_meta = True
+            sll = sl.lower()
+            is_meta = (
+                any(m.lower() in sll for m in self.meta_markers)
+                or any(t.lower() in sll for t in toxic_keywords)
+                or re.match(r"^\[.*?]$", sl)
+                or sl == "[]"
+                or re.match(r"^[A-Z]+\s*=\s*[0-9./]+$", sl)
+            )
             if not is_meta:
                 clean_lines.append(line)
         sanitized_response = "\n".join(clean_lines).strip()
@@ -853,22 +898,20 @@ class ResponseValidator:
         errors_found = []
         primary_replacement = None
         tech_allowed_phrases = [
-            "here is a", "here is the", "this metaphor",
-            "this code defines", "running this code will"
+            "here is a",
+            "here is the",
+            "this metaphor",
+            "this code defines",
+            "running this code will",
         ]
 
         if self._banned_regex:
             for match in self._banned_regex.finditer(sanitized_response):
                 phrase = match.group(0).lower()
-                is_whitelisted = False
-                if active_mode == "TECHNICAL":
-                    for allowed in tech_allowed_phrases:
-                        if phrase in allowed and allowed in low_resp:
-                            is_whitelisted = True
-                            break
-                if is_whitelisted:
+                if active_mode == "TECHNICAL" and any(
+                    phrase in a and a in low_resp for a in tech_allowed_phrases
+                ):
                     continue
-
                 if not primary_replacement:
                     primary_replacement = self._generate_dynamic_rejection(phrase)
                 errors_found.append(f"BANNED PHRASE: '{phrase.upper()}'")

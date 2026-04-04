@@ -127,12 +127,9 @@ class LoreManifest:
     def get(self, category: str, sub_key: str = None) -> Any:
         cat_key = category.lower()
         if cat_key not in self._cache:
-            data = self._load_from_disk(cat_key)
-            self._cache[cat_key] = data if data is not None else {}
+            self._cache[cat_key] = self._load_from_disk(cat_key) or {}
         data = self._cache[cat_key]
-        if sub_key and isinstance(data, dict):
-            return data.get(sub_key)
-        return data
+        return data.get(sub_key) if sub_key and isinstance(data, dict) else data
 
     def _load_from_disk(self, category: str) -> Optional[Dict]:
         filename = f"{category.lower()}.json"
@@ -337,15 +334,9 @@ class CyberneticGovernor:
     def calculate_coupling(
         self, phi: float, resonance_delta: float, user_exhaustion: float
     ) -> float:
-        coupling = (phi * 0.6) + (user_exhaustion * 0.4)
-        if coupling > 0.7:
-            self.order = 2
-        elif resonance_delta > 0.3:
-            self.order = 2
-        else:
-            self.order = 1
-        self.beth_index = coupling
-        return coupling
+        self.beth_index = (phi * 0.6) + (user_exhaustion * 0.4)
+        self.order = 2 if self.beth_index > 0.7 or resonance_delta > 0.3 else 1
+        return self.beth_index
 
     def get_policy_shift(self) -> str:
         if self.order == 2:

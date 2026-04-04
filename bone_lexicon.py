@@ -123,13 +123,10 @@ class LexiconStore:
         return True
 
     def harvest(self, text: str) -> Dict[str, List[str]]:
+        if not text: return {}
         results = {}
-        if not text:
-            return results
-        clean_text = text.translate(self._TRANSLATOR).lower()
-        for w in clean_text.split():
-            for cat in self.get_categories_for_word(w):
-                results.setdefault(cat, []).append(w)
+        for w in text.translate(self._TRANSLATOR).lower().split():
+            for cat in self.get_categories_for_word(w): results.setdefault(cat, []).append(w)
         return results
 
 
@@ -171,21 +168,18 @@ class LinguisticAnalyzer:
 
     def measure_viscosity(self, word: str) -> float:
         if not word: return 0.0
-        w = word.lower()
-        if w in self.store.SOLVENTS: return 0.1
+        if (w := word.lower()) in self.store.SOLVENTS: return 0.1
         stops = sum(1 for c in w if c in self.PHONETICS.get("PLOSIVE", set()))
         flow = sum(1 for c in w if c in self.PHONETICS.get("LIQUID", set()) | self.PHONETICS.get("VOWELS", set()))
         return (min(1.0, len(w) / 12.0) * 0.5) + (max(min(1.0, stops / 3.0), min(1.0, flow / 4.0)) * 0.5)
 
     @staticmethod
     def get_turbulence(words: List[str]) -> float:
-        if len(words) < 2:
+        if (n := len(words)) < 2:
             return 0.0
         lengths = [len(w) for w in words]
-        avg_len = sum(lengths) / len(lengths)
-        variance = sum((l - avg_len) ** 2 for l in lengths) / len(lengths)
-        turbulence = min(1.0, variance / 10.0)
-        return round(turbulence, 2)
+        avg_len = sum(lengths) / n
+        return round(min(1.0, (sum((l - avg_len) ** 2 for l in lengths) / n) / 10.0), 2)
 
     def vectorize(self, text: str) -> Dict[str, float]:
         if not (words := self.sanitize(text)): return {}

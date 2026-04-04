@@ -34,23 +34,23 @@ class TheStrangeLoop:
         threshold = getattr(BoneConfig.COUNCIL, "STRANGE_LOOP_VOLTAGE", 8.0)
         if (phrase_hit or abstract_hit) and voltage > threshold:
             self.recursion_depth += 1
-            mandate = {}
-            corrections = {}
-            cfg = getattr(BoneConfig, "COUNCIL", None)
-            limit = getattr(cfg, "STRANGE_LOOP_LIMIT", 3) if cfg else 3
-            if self.recursion_depth > limit:
-                mandate = {"action": "FORCE_MODE", "value": "MAINTENANCE"}
-                msg = ux("council_strings", "strange_loop_fatal")
-                return True, f"{Prisma.RED}{msg}{Prisma.RST}", corrections, mandate
-            msg = ux("council_strings", "strange_loop_detected")
-            return (
-                True,
-                f"{Prisma.MAG}{msg.format(psi=psi, depth=self.recursion_depth)}{Prisma.RST}",
-                corrections,
-                mandate,
+            limit = getattr(
+                getattr(BoneConfig, "COUNCIL", None), "STRANGE_LOOP_LIMIT", 3
             )
-        else:
-            self.recursion_depth = max(0, self.recursion_depth - 1)
+            if self.recursion_depth > limit:
+                return (
+                    True,
+                    f"{Prisma.RED}{ux('council_strings', 'strange_loop_fatal')}{Prisma.RST}",
+                    {},
+                    {"action": "FORCE_MODE", "value": "MAINTENANCE"},
+                )
+
+            msg = ux("council_strings", "strange_loop_detected").format(
+                psi=psi, depth=self.recursion_depth
+            )
+            return True, f"{Prisma.MAG}{msg}{Prisma.RST}", {}, {}
+
+        self.recursion_depth = max(0, self.recursion_depth - 1)
         return False, "", {}, {}
 
 
@@ -124,22 +124,12 @@ class TheFootnote:
         self.context_map = data.get("CONTEXT_MAP", {})
 
     def commentary(self, log_text: str) -> str:
-        chance = 0.1
-        if hasattr(BoneConfig, "COUNCIL") and hasattr(
-            BoneConfig.COUNCIL, "FOOTNOTE_CHANCE"
-        ):
-            chance = BoneConfig.COUNCIL.FOOTNOTE_CHANCE
+        chance = getattr(getattr(BoneConfig, "COUNCIL", None), "FOOTNOTE_CHANCE", 0.1)
         if random.random() > chance:
             return log_text
         text_lower = log_text.lower()
-        candidates = []
-        for trigger, notes in self.context_map.items():
-            if trigger in text_lower:
-                candidates.extend(notes)
-        if candidates:
-            note = random.choice(candidates)
-        else:
-            note = random.choice(self.footnotes)
+        candidates = [note for trig, notes in self.context_map.items() if trig in text_lower for note in notes]
+        note = random.choice(candidates if candidates else self.footnotes)
         return f"{log_text}{Prisma.RST} {Prisma.GRY}{note}{Prisma.RST}"
 
 
@@ -449,11 +439,9 @@ class CouncilChamber:
                 "APRIL",
             ],
         )
-        active_present = []
-        for log in village_logs:
-            for actor in pantheon:
-                if actor in log and actor not in active_present:
-                    active_present.append(actor)
+        active_present = list(
+            {actor for actor in pantheon for log in village_logs if actor in log}
+        )
         synergy_fired = False
         for a, b in itertools.combinations(sorted(active_present), 2):
             if (chord_key := f"{a}|{b}") in synergy_map:
