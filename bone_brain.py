@@ -112,16 +112,12 @@ class NeurotransmitterModulator:
         else:
             self.starvation_ticks = 0
         c = self.current_chem
-        latency_thresh = getattr(cfg, "LATENCY_PENALTY_THRESHOLD", 2.0)
-        if latency_penalty > latency_thresh:
-            c.cortisol = min(
-                1.0, c.cortisol + getattr(cfg, "LATENCY_CORTISOL_PENALTY", 0.1)
-            )
-            c.adrenaline = min(
-                1.0, c.adrenaline + getattr(cfg, "LATENCY_ADRENALINE_PENALTY", 0.05)
-            )
+        if latency_penalty > safe_get(cfg, "LATENCY_PENALTY_THRESHOLD", 2.0):
+            c.cortisol = min(1.0, c.cortisol + safe_get(cfg, "LATENCY_CORTISOL_PENALTY", 0.1))
+            c.adrenaline = min(1.0, c.adrenaline + safe_get(cfg, "LATENCY_ADRENALINE_PENALTY", 0.05))
+
         current_mood = "NEUTRAL"
-        mood_thresholds = getattr(
+        mood_thresholds = safe_get(
             cfg, "MOOD_THRESHOLDS", {"MANIC_DOP": 0.8, "PANIC_COR": 0.7, "ZEN_SER": 0.8}
         )
         if c.dopamine > mood_thresholds.get("MANIC_DOP", 0.8):
@@ -139,35 +135,27 @@ class NeurotransmitterModulator:
                 },
             )
             self.last_mood = current_mood
-        v_offset = getattr(cfg, "TEMP_VOLTAGE_OFFSET", 5.0)
-        v_scalar = getattr(cfg, "TEMP_VOLTAGE_SCALAR", 0.1)
+        v_offset = safe_get(cfg, "TEMP_VOLTAGE_OFFSET", 5.0)
+        v_scalar = safe_get(cfg, "TEMP_VOLTAGE_SCALAR", 0.1)
         voltage_heat = math.log1p(max(0.0, base_voltage - v_offset)) * v_scalar
-        chem_weights = getattr(
+        chem_weights = safe_get(
             cfg, "TEMP_CHEM_WEIGHTS", {"dop": 0.4, "adr": 0.3, "cor": 0.2}
         )
         chemical_delta = (
-            (c.dopamine * chem_weights.get("dop", 0.4))
-            - (c.adrenaline * chem_weights.get("adr", 0.3))
-            - (c.cortisol * chem_weights.get("cor", 0.2))
+                (c.dopamine * chem_weights.get("dop", 0.4))
+                - (c.adrenaline * chem_weights.get("adr", 0.3))
+                - (c.cortisol * chem_weights.get("cor", 0.2))
         )
-        base_temp = getattr(cfg, "BASE_TEMP", 0.4)
-        base_top_p = getattr(cfg, "BASE_TOP_P", 0.95)
-        chi = float(
-            safe_get(physics_state, "chi", safe_get(physics_state, "entropy", 0.2))
-        )
-        beta = float(
-            safe_get(
-                physics_state,
-                "contradiction",
-                safe_get(physics_state, "beta_index", 0.4),
-            )
-        )
-        ent_offset = getattr(cfg, "TEMP_ENTROPY_OFFSET", 0.5)
-        ent_scalar = getattr(cfg, "TEMP_ENTROPY_SCALAR", 1.5)
+        base_temp = safe_get(cfg, "BASE_TEMP", 0.4)
+        base_top_p = safe_get(cfg, "BASE_TOP_P", 0.95)
+        chi = float(physics_state.get("chi", physics_state.get("entropy", 0.2)))
+        beta = float(physics_state.get("contradiction", physics_state.get("beta_index", 0.4)))
+        ent_offset = safe_get(cfg, "TEMP_ENTROPY_OFFSET", 0.5)
+        ent_scalar = safe_get(cfg, "TEMP_ENTROPY_SCALAR", 1.5)
         entropy_bonus = max(0.0, chi - ent_offset) * ent_scalar
         clamp = lambda v, mn, mx: max(mn, min(mx, v))
 
-        t_limits = getattr(cfg, "TEMP_LIMITS", (0.4, 1.5))
+        t_limits = safe_get(cfg, "TEMP_LIMITS", (0.4, 1.5))
         final_temp = round(
             clamp(
                 base_temp + chemical_delta + voltage_heat + entropy_bonus,
@@ -177,27 +165,27 @@ class NeurotransmitterModulator:
             2,
         )
         final_top_p = min(
-            1.0, base_top_p + (chi * getattr(cfg, "TOP_P_CHI_SCALAR", 0.05))
+            1.0, base_top_p + (chi * safe_get(cfg, "TOP_P_CHI_SCALAR", 0.05))
         )
 
         base_penalty = min(
             1.2,
             0.5
-            + (beta * getattr(cfg, "PEN_BETA_SCALAR", 0.3))
-            + (chi * getattr(cfg, "PEN_CHI_SCALAR", 0.2)),
+            + (beta * safe_get(cfg, "PEN_BETA_SCALAR", 0.3))
+            + (chi * safe_get(cfg, "PEN_CHI_SCALAR", 0.2)),
         )
         freq_pen = pres_pen = base_penalty
 
-        token_mods = getattr(
+        token_mods = safe_get(
             cfg, "TOKEN_CHEM_MODIFIERS", {"dop": 800, "adr": 400, "cor": 200}
         )
         token_delta = (
-            (c.dopamine * token_mods.get("dop", 800))
-            - (c.adrenaline * token_mods.get("adr", 400))
-            - (c.cortisol * token_mods.get("cor", 200))
+                (c.dopamine * token_mods.get("dop", 800))
+                - (c.adrenaline * token_mods.get("adr", 400))
+                - (c.cortisol * token_mods.get("cor", 200))
         )
 
-        min_tokens = getattr(cfg, "MIN_TOKENS", 150.0)
+        min_tokens = safe_get(cfg, "MIN_TOKENS", 150.0)
         max_t = int(
             clamp(self.BASE_TOKENS + token_delta, min_tokens, float(self.MAX_TOKENS))
         )
@@ -353,21 +341,8 @@ class TheCortex:
         sim_result = self.svc.cycle_controller.run_turn(user_input, is_system=is_system)
         if sim_result.get("physics"):
             self.last_physics = sim_result["physics"]
-        is_refusal = sim_result.get("type") in [
-            "COUNTERFACTUAL_REJECTION",
-            "CONSTRUCTIVE_REPLAY",
-            "PREMISE_VIOLATION",
-            "BUREAU_BLOCK",
-            "SYSTEM_HALT",
-        ]
-        if is_refusal or sim_result.get("type") not in [
-            "SNAPSHOT",
-            "GEODESIC_FRAME",
-            None,
-        ]:
-            self._update_history(
-                user_input, sim_result.get("ui", "SYSTEM REJECTED PROMPT.")
-            )
+        if sim_result.get("type") not in ("SNAPSHOT", "GEODESIC_FRAME", None):
+            self._update_history(user_input, sim_result.get("ui", "SYSTEM REJECTED PROMPT."))
             return sim_result
         full_state = self.gather_state(sim_result)
         phys_state = full_state.get("physics", {})
@@ -425,13 +400,8 @@ class TheCortex:
         )
         if is_boot_sequence:
             llm_params.update({"temperature": 0.7, "top_p": 0.95})
-        if (
-            llm_params.get("max_tokens", 4096) < 300
-            or float(safe_get(phys, "p", 100.0)) < 20.0
-        ):
-            if "style_directives" not in full_state["mind"]:
-                full_state["mind"]["style_directives"] = []
-            full_state["mind"]["style_directives"].append(
+        if llm_params.get("max_tokens", 4096) < 300 or float(phys.get("p", 100.0)) < 20.0:
+            full_state["mind"].setdefault("style_directives", []).append(
                 "CRITICAL: You are exhausted. You must conclude your thought in under 3 sentences."
             )
             llm_params["max_tokens"] = max(400, llm_params.get("max_tokens", 400))
@@ -545,55 +515,41 @@ class TheCortex:
                 final_output = val_res["content"]
                 extracted_logs = val_res.get("meta_logs", [])
                 break
-            if attempt < max_retries - 1:
-                if attempt >= max_retries - 2:
-                    final_output = "The system is struggling to map this request to its current architecture. Narrative friction is too high. Please rephrase or simplify your intent."
-                    extracted_logs.append(
-                        "[SYSTEM MERCY RULE]: Rejection loop broken to prevent ATP starvation. Spiking Drag (F -> ∞)."
-                    )
-                    if hasattr(self.svc.cycle_controller, "eng"):
-                        eng = self.svc.cycle_controller.eng
-                        obs_packet = getattr(
-                            getattr(getattr(eng, "phys", None), "observer", None),
-                            "last_physics_packet",
-                            None,
-                        )
-                        if obs_packet:
-                            safe_set(obs_packet, "narrative_drag", 999.0)
-                    if self.last_physics:
-                        safe_set(self.last_physics, "narrative_drag", 999.0)
-                    break
-                if self.svc.bio:
-                    self.svc.bio.mito.adjust_atp(
-                        -5.0, "Immune System Rejection Penalty"
-                    )
-                    self.svc.bio.mito.state.ros_buildup += 15.0
-                rejection_reason = val_res.get("feedback_instruction") or val_res.get(
-                    "replacement", "Lattice structural crime."
-                )
-                if hasattr(self.dreamer, "trauma_buffer"):
-                    self.dreamer.trauma_buffer.append(rejection_reason)
-                if self.events:
-                    msg = ux("brain_strings", "cortex_retry")
-                    self.events.log(
-                        f"{Prisma.OCHRE}{msg.format(attempt=attempt + 1)}{Prisma.RST}",
-                        "CORTEX",
-                    )
-                retry_injection = (
-                    "\n\n=== SYSTEM REJECTION ===\n"
-                    f"REASON: {rejection_reason}\n\n"
-                    "DIRECTIVE: The previous attempt was factually or structurally invalid. DISCARD IT. "
-                    "Generate a NEW response from scratch. DO NOT apologize or mention the fix. "
-                    "Output ONLY the raw in-character response and nothing else."
-                )
-                if "=== SYSTEM REJECTION ===" in final_prompt:
-                    final_prompt = final_prompt.split("=== SYSTEM REJECTION ===")[0]
-                final_prompt += retry_injection
-            else:
-                final_output = val_res.get(
-                    "replacement", "SYSTEM FAILURE: LATTICE INSTABILITY."
-                )
-                extracted_logs = val_res.get("meta_logs", [])
+            if attempt == max_retries - 2:
+                final_output = "The system is struggling to map this request to its current architecture. Narrative friction is too high. Please rephrase or simplify your intent."
+                extracted_logs.append(
+                    "[SYSTEM MERCY RULE]: Rejection loop broken to prevent ATP starvation. Spiking Drag (F -> ∞).")
+                if hasattr(self.svc.cycle_controller, "eng"):
+                    obs_packet = getattr(
+                        getattr(getattr(self.svc.cycle_controller.eng, "phys", None), "observer", None),
+                        "last_physics_packet", None)
+                    if obs_packet: safe_set(obs_packet, "narrative_drag", 999.0)
+                if self.last_physics: safe_set(self.last_physics, "narrative_drag", 999.0)
+                break
+
+            if self.svc.bio:
+                self.svc.bio.mito.adjust_atp(-5.0, "Immune System Rejection Penalty")
+                self.svc.bio.mito.state.ros_buildup += 15.0
+
+            rejection_reason = val_res.get("feedback_instruction") or val_res.get("replacement",
+                                                                                  "Lattice structural crime.")
+            if hasattr(self.dreamer, "trauma_buffer"):
+                self.dreamer.trauma_buffer.append(rejection_reason)
+
+            if self.events:
+                self.events.log(
+                    f"{Prisma.OCHRE}{(ux('brain_strings', 'cortex_retry') or '').format(attempt=attempt + 1)}{Prisma.RST}",
+                    "CORTEX")
+
+            if "=== SYSTEM REJECTION ===" in final_prompt:
+                final_prompt = final_prompt.split("=== SYSTEM REJECTION ===")[0]
+
+            final_prompt += (
+                f"\n\n=== SYSTEM REJECTION ===\nREASON: {rejection_reason}\n\n"
+                "DIRECTIVE: The previous attempt was factually or structurally invalid. DISCARD IT. "
+                "Generate a NEW response from scratch. DO NOT apologize or mention the fix. "
+                "Output ONLY the raw in-character response and nothing else."
+            )
         if val_res["valid"] and phys_state.get("psi", 0.0) > 0.6 and allow_loot:
             if self.svc.bio:
                 self.svc.bio.mito.adjust_atp(-1.0, "Anti-AI Substrate Filter")
@@ -606,19 +562,14 @@ class TheCortex:
         self._update_history(
             "SYSTEM_INIT" if is_boot_sequence else user_input, final_output
         )
-        late_logs = [e["text"] for e in self.events.flush()]
-        sim_result["ui"] = (
-            sim_result.get("ui", "") + "\n" + "\n".join(late_logs)
-        ).strip()
+        ui_parts = [sim_result.get("ui", ""), "\n".join(e["text"] for e in self.events.flush())]
         if sim_result.get("dream"):
-            sim_result[
-                "ui"
-            ] += f"\n\n{Prisma.VIOLET}☁️ While you were gone: {sim_result['dream']}{Prisma.RST}"
-        sim_result[
-            "ui"
-        ] += f"\n\n{Prisma.WHT}{beautify_thoughts(final_output)}{Prisma.RST}"
+            ui_parts.append(f"{Prisma.VIOLET}☁️ While you were gone: {sim_result['dream']}{Prisma.RST}")
+        ui_parts.append(f"{Prisma.WHT}{beautify_thoughts(final_output)}{Prisma.RST}")
         if inv_logs:
-            sim_result["ui"] += "\n" + "\n".join(inv_logs)
+            ui_parts.append("\n".join(inv_logs))
+
+        sim_result["ui"] = "\n\n".join(filter(None, (p.strip() for p in ui_parts)))
         sim_result["logs"] = sim_result.get("logs", []) + extracted_logs
         sim_result["raw_content"] = final_output
         self.ballast_active = False
@@ -626,7 +577,7 @@ class TheCortex:
         if eng and hasattr(eng, "substrate"):
             sub = eng.substrate
             for log in extracted_logs:
-                if str(log).startswith("[SUBSTRATE_QUEUE]"):
+                if isinstance(log, str) and log.startswith("[SUBSTRATE_QUEUE]"):
                     try:
                         _, data = log.split(" ", 1)
                         path, safe_content = data.split(":::", 1)
@@ -788,25 +739,19 @@ class TheCortex:
             tel = TelemetryService.get_instance()
             phys = state.get("physics", {})
             clean_mandates = [Prisma.strip(m.get("log", m.get("type", "UNKNOWN"))) if isinstance(m, dict) else str(m) for m in sim_result.get("council_mandates", [])]
+            physics_payload = {"voltage": phys.get("voltage", 0), "narrative_drag": phys.get("narrative_drag", 0)}
+
             if tel.active_crystal:
                 tel.active_crystal.prompt_snapshot = prompt[:500]
-                tel.active_crystal.physics_state = {
-                    "voltage": phys.get("voltage", 0),
-                    "narrative_drag": phys.get("narrative_drag", 0),
-                }
-                tel.active_crystal.active_archetype = state["mind"].get(
-                    "lens", "UNKNOWN"
-                )
+                tel.active_crystal.physics_state = physics_payload
+                tel.active_crystal.active_archetype = state["mind"].get("lens", "UNKNOWN")
                 tel.active_crystal.council_mandates = clean_mandates
                 tel.active_crystal.final_response = response
             else:
                 crystal = DecisionCrystal(
                     decision_id=sim_result.get("trace_id", "UNKNOWN"),
                     prompt_snapshot=prompt[:500],
-                    physics_state={
-                        "voltage": phys.get("voltage", 0),
-                        "narrative_drag": phys.get("narrative_drag", 0),
-                    },
+                    physics_state=physics_payload,
                     active_archetype=state["mind"].get("lens", "UNKNOWN"),
                     council_mandates=clean_mandates,
                     final_response=response,
@@ -819,11 +764,10 @@ class TheCortex:
         phys = sim_result.get("physics", {})
         bio = sim_result.get("bio", {})
         if bio:
-            mito_state = safe_get(safe_get(bio, "mito"), "state") or {}
-            safe_set(phys, "p", safe_get(mito_state, "atp_pool", 100.0))
-            safe_set(phys, "ros", safe_get(mito_state, "ros_buildup", 0.0))
-            safe_set(phys, "h", safe_get(safe_get(bio, "biometrics"), "health", 100.0))
-            safe_set(phys, "stamina", safe_get(phys, "p"))
+            mito_state = safe_get(bio.get("mito"), "state") or {}
+            phys["p"] = phys["stamina"] = safe_get(mito_state, "atp_pool", 100.0)
+            phys["ros"] = safe_get(mito_state, "ros_buildup", 0.0)
+            phys["h"] = safe_get(bio.get("biometrics"), "health", 100.0)
         mind = sim_result.get("mind", {})
         world = sim_result.get("world", {})
         soul_data = sim_result.get("soul", {})
@@ -1101,13 +1045,6 @@ class DreamEngine:
             except Exception:
                 pass
 
-            # Update shift instead of overwriting the costs from Deep REM
-        shift.update(
-            {"cortisol": -0.3, "dopamine": 0.1}
-            if cortisol <= 0.6
-            else {"cortisol": 0.1}
-        )
-
         if is_deep_rem or (random.random() < 0.10 and cortisol <= 0.6):
             shift["glimmers"] = 1
 
@@ -1122,7 +1059,8 @@ class DreamEngine:
                 subtype.upper(), ["You stare into the static."]
             )
         if isinstance(sources, dict):
-            sources = sum((v if isinstance(v, list) else [v] for v in sources.values()), []) or ["The void stares back."]
+            sources = [item for v in sources.values() for item in (v if isinstance(v, list) else [v])] or [
+                "The void stares back."]
         if self.llm:
             lore_sample = ", ".join(random.sample(sources, min(3, len(sources))))
             prompt = (
@@ -1166,19 +1104,16 @@ class DreamEngine:
         category = "NIGHTMARES" if trauma_level > 0.5 else "SURREAL"
         templates = self.dream_lore.get(category, [])
         if isinstance(templates, dict):
-            templates = sum(
-                ([v] if isinstance(v, str) else v for v in templates.values()), []
-            )
+            templates = [item for v in templates.values() for item in ([v] if isinstance(v, str) else v)]
 
         if not templates:
             return "The walls breathe.", 0.1
         from bone_utils import TheTclWeaver
 
         weaver = TheTclWeaver.get_instance()
-        active_chi = (
-            _vector.get("chi", _vector.get("entropy", 0.85)) if _vector else 0.85
-        )
-        active_v = _vector.get("voltage", 90.0) if _vector else 90.0
+        v = _vector or {}
+        active_chi = v.get("chi", v.get("entropy", 0.85))
+        active_v = v.get("voltage", 90.0)
         txt = None
         if self.llm:
             lore_sample = ", ".join(random.sample(templates, min(3, len(templates))))
@@ -1209,19 +1144,12 @@ class DreamEngine:
             return ux("brain_strings", "defrag_empty")
         graph = memory_system.graph
         candidates = sorted([(n, sum(d.get("edges", {}).values())) for n, d in graph.items() if not d.get("is_diamond", False)], key=lambda x: x[1])
-        pruned = []
-        count = 0
-        for node, mass in candidates:
-            if mass < 2.0 and count < limit:
-                del graph[node]
-                pruned.append(node)
-                count += 1
-            else:
-                break
+        pruned = [n for n, mass in candidates if mass < 2.0][:limit]
+        for node in pruned:
+            del graph[node]
+
         if pruned:
-            joined = ", ".join(pruned[:3])
-            msg = ux("brain_strings", "defrag_pruned")
-            return msg.format(count=len(pruned), joined=joined)
+            return ux("brain_strings", "defrag_pruned").format(count=len(pruned), joined=", ".join(pruned[:3]))
         return ux("brain_strings", "defrag_efficient")
 
 
@@ -1258,25 +1186,14 @@ class NoeticLoop:
                     and hasattr(self.mind.mem, "graph")
                 ):
                     self._force_link(self.mind.mem.graph, w1, w2, self.cfg)
-        current_lens = "OBSERVER"
-        current_role = "Witness"
-        if soul_ref:
-            current_lens = soul_ref.archetype
-            current_role = f"The {current_lens.title().replace('_', ' ')}"
-        msg_cog = (
-            ux("brain_strings", "noetic_ignition")
-            or "Cognition active. Ignition: {ignition:.2f}"
-        )
-        mind_data = {
+        current_lens = soul_ref.archetype if soul_ref else "OBSERVER"
+        current_role = f"The {current_lens.title().replace('_', ' ')}" if soul_ref else "Witness"
+        msg_cog = ux("brain_strings", "noetic_ignition") or "Cognition active. Ignition: {ignition:.2f}"
+        return {
+            "mode": "COGNITIVE",
             "lens": current_lens,
             "context_msg": msg_cog.format(ignition=ignition),
             "role": current_role,
-        }
-        return {
-            "mode": "COGNITIVE",
-            "lens": mind_data.get("lens"),
-            "context_msg": mind_data.get("context_msg"),
-            "role": mind_data.get("role"),
             "ignition": ignition,
             "physics": physics_packet,
             "bio": self.bio.endo.get_state() if hasattr(self.bio, "endo") else {},

@@ -88,12 +88,9 @@ class RandomRetrievalNavigator:
     def retrieve(
         self, query_coordinates: Coordinates, query_vector: list[float]
     ) -> dict[str, Any]:
-        r_val = self.randomness_dial
-        mode = self._get_mode(r_val)
-        structural_target = self._find_structural_match(query_coordinates)
-        retrieval_path = self._generate_traversal_path(structural_target, r_val)
-        results = self._traverse_and_collect(retrieval_path, query_vector, r_val)
-        tagged_results = self._calculate_serendipity(results, query_coordinates)
+        r_val, mode = self.randomness_dial, self._get_mode(self.randomness_dial)
+        retrieval_path = self._generate_traversal_path(self._find_structural_match(query_coordinates), r_val)
+        tagged_results = self._calculate_serendipity(self._traverse_and_collect(retrieval_path, query_vector, r_val), query_coordinates)
 
         return {
             "mode": mode,
@@ -154,21 +151,12 @@ class RandomRetrievalNavigator:
         )
 
     def _structural_similarity(self, a: LibraryNode, b: LibraryNode) -> float:
-        dist = math.dist(
-            (a.coords.S, a.coords.D, a.coords.C), (b.coords.S, b.coords.D, b.coords.C)
-        )
-        return 1.0 / (1.0 + dist)
+        return 1.0 / (1.0 + math.dist((a.coords.S, a.coords.D, a.coords.C), (b.coords.S, b.coords.D, b.coords.C)))
 
     def _get_random_branch(self, current_node: LibraryNode) -> Optional[LibraryNode]:
         lineage = self._get_lineage(current_node)
-        candidates = [
-            n
-            for n in self.library.nodes
-            if n.id not in lineage and n.id != current_node.id
-        ]
-        if not candidates:
-            return None
-        return random.choice(candidates)
+        c = [n for n in self.library.nodes if n.id not in lineage and n.id != current_node.id]
+        return random.choice(c) if c else None
 
     def _get_lineage(self, node: LibraryNode) -> set[str]:
         lineage = {node.id}
@@ -181,28 +169,17 @@ class RandomRetrievalNavigator:
     def _traverse_and_collect(
         self, path: list[LibraryNode], query_vector: list[float], r_val: float
     ) -> list[RetrievalResult]:
-        collected = []
         path_len = len(path)
         query_mag = math.hypot(*query_vector) if query_vector else 0.0
-        for i, node in enumerate(path):
-            relevance = self._vector_similarity(node.vector, query_vector, query_mag)
-            position_weight = 1.0 - (i / path_len) * 0.5
-            serendipity_bonus = r_val * (i / path_len) * 0.7
-            score = (relevance * position_weight) + serendipity_bonus
-            collected.append(
-                RetrievalResult(
-                    node_id=node.id,
-                    title=node.title,
-                    content=node.content,
-                    coords=node.coords,
-                    path_position=i,
-                    relevance_score=relevance,
-                    serendipity_bonus=serendipity_bonus,
-                    final_score=score,
-                    snippet=node.content[:150] + "...",
-                )
-            )
-        return sorted(collected, key=lambda x: x.final_score, reverse=True)
+        return sorted([
+            RetrievalResult(
+                node_id=n.id, title=n.title, content=n.content, coords=n.coords, path_position=i,
+                relevance_score=(rel := self._vector_similarity(n.vector, query_vector, query_mag)),
+                serendipity_bonus=(ser := r_val * (i / path_len) * 0.7),
+                final_score=(rel * (1.0 - (i / path_len) * 0.5)) + ser,
+                snippet=n.content[:150] + "..."
+            ) for i, n in enumerate(path)
+        ], key=lambda x: x.final_score, reverse=True)
 
     def _vector_similarity(
         self, v1: list[float], v2: list[float], v2_mag: float = None
@@ -216,19 +193,15 @@ class RandomRetrievalNavigator:
         self, results: list[RetrievalResult], query_coords: Coordinates
     ) -> list[RetrievalResult]:
         for r in results:
-            expected_delta = math.dist(
-                (r.coords.S, r.coords.D, r.coords.C),
-                (query_coords.S, query_coords.D, query_coords.C),
-            )
-            r.serendipity = r.relevance_score * expected_delta
+            r.serendipity = r.relevance_score * math.dist((r.coords.S, r.coords.D, r.coords.C), (query_coords.S, query_coords.D, query_coords.C))
             r.is_surprising = r.serendipity > 0.5
         return results
 
     def _get_mode(self, r_val: float) -> dict[str, str]:
-        for name, spec in self.modes.items():
-            if spec["range"][0] <= r_val <= spec["range"][1]:
-                return {"name": name, "description": spec["desc"]}
-        return {"name": "TOURIST", "description": "Default mode"}
+        return next(
+            ({"name": name, "description": spec["desc"]} for name, spec in self.modes.items() if spec["range"][0] <= r_val <= spec["range"][1]),
+            {"name": "TOURIST", "description": "Default mode"}
+        )
 
     def _generate_path_note(
         self, mode: dict[str, str], results: list[RetrievalResult]
@@ -242,20 +215,16 @@ class RandomRetrievalNavigator:
             "FLANEUR": "The library started talking. I just listened.",
             "CHAOS": "At this point, the books are reading you.",
         }
-        base_note = notes.get(mode["name"], "Wandering...")
-        if surprising_count > 0:
-            noun = "gem" if surprising_count == 1 else "gems"
-            surprise_note = f" Found {surprising_count} unexpected {noun}."
-        else:
-            surprise_note = " Nothing surprising—but sometimes that's the point."
-        return base_note + surprise_note
+        return notes.get(mode["name"], "Wandering...") + (
+            f" Found {surprising_count} unexpected {'gem' if surprising_count == 1 else 'gems'}."
+            if surprising_count > 0 else " Nothing surprising—but sometimes that's the point."
+        )
 
     def set_randomness(self, value: float) -> dict[str, Any]:
         self.randomness_dial = max(0.0, min(1.0, float(value)))
-        mode = self._get_mode(self.randomness_dial)
         return {
             "new_value": self.randomness_dial,
-            "mode": mode["name"],
+            "mode": self._get_mode(self.randomness_dial)["name"],
             "message": f"Random retrieval dial set to {self.randomness_dial:.2f}",
         }
 
@@ -284,8 +253,7 @@ class TheSubstrate:
         for w in self.pending_writes:
             s_name = os.path.basename(w["path"])
             s_path = os.path.join("output", s_name)
-            w_cost = len(w["content"]) * 0.02
-            if stamina_pool - cost < w_cost:
+            if stamina_pool - cost < (w_cost := len(w["content"]) * 0.02):
                 logs.append(f"{Prisma.RED}SUBSTRATE FAULT: Insufficient stamina to forge {s_name}.{Prisma.RST}")
                 continue
             try:
@@ -305,22 +273,11 @@ class TheSubstrate:
         def _async_tts_task(path, events, cords_ref):
             try:
                 cords_ref.synthesize_podcast(path)
-                if events:
-                    events.log(
-                        f"{Prisma.VIOLET}SUBSTRATE: TTS synthesis complete for {path}.{Prisma.RST}"
-                    )
+                if events: events.log(f"{Prisma.VIOLET}SUBSTRATE: TTS synthesis complete for {path}.{Prisma.RST}")
             except Exception as e:
-                if events:
-                    events.log(
-                        f"{Prisma.RED}SUBSTRATE FAULT: TTS failed - {e}{Prisma.RST}",
-                        "CRIT",
-                    )
+                if events: events.log(f"{Prisma.RED}SUBSTRATE FAULT: TTS failed - {e}{Prisma.RST}", "CRIT")
 
-        thread = threading.Thread(
-            target=_async_tts_task, args=(safe_path, self.events, self._cords_instance)
-        )
-        thread.daemon = True
-        thread.start()
+        threading.Thread(target=_async_tts_task, args=(safe_path, self.events, self._cords_instance), daemon=True).start()
 
 
 class TheTclWeaver:
@@ -334,18 +291,16 @@ class TheTclWeaver:
         return cls._instance
 
     def deform_reality(self, text: str, chi: float, voltage: float) -> str:
-        out = []
-        for w in text.split(" "):
+        def _warp(w):
             L = len(w)
-            if chi > 0.85 and L > 4 and random.random() < (chi / 3.0): out.append(f"{w[0]}{w[1:-1][::-1]}{w[-1]}")
-            elif chi > 0.6 and L > 4 and random.random() < (chi / 2.0): out.append(f"{w[:L//2]}·{w[L//2:]}")
-            elif voltage > 80.0 and random.random() < 0.1: out.append(w.upper())
-            else: out.append(w)
-        return " ".join(out)
+            if chi > 0.85 and L > 4 and random.random() < (chi / 3.0): return f"{w[0]}{w[1:-1][::-1]}{w[-1]}"
+            if chi > 0.6 and L > 4 and random.random() < (chi / 2.0): return f"{w[:L//2]}·{w[L//2:]}"
+            if voltage > 80.0 and random.random() < 0.1: return w.upper()
+            return w
+        return " ".join(_warp(w) for w in text.split(" "))
 
     def haunt_string(self, text: str) -> str:
-        words = text.split(" ")
-        if not words:
+        if not (words := text.split(" ")):
             return text
         clean = re.sub(r"[^a-zA-Z0-9]", "", words[-1]).lower()
         return f"{text}... {clean}..." if clean else f"{text}..."
@@ -412,14 +367,11 @@ class TheVocalCords:
         return TheVocalCords._ANSI_ESCAPE.sub("", text)
 
     def parse_script(self, script_text: str) -> List[Dict[str, str]]:
-        clean_text = self.strip_ansi(script_text)
-        segments = []
-        for match in self._SCRIPT_PATTERN.finditer(clean_text):
-            speaker = match.group(1).split("(")[0].strip().upper()
-            dialogue = match.group(2).strip()
-            if dialogue:
-                segments.append({"speaker": speaker, "text": dialogue})
-        return segments
+        return [
+            {"speaker": m.group(1).split("(")[0].strip().upper(), "text": m.group(2).strip()}
+            for m in self._SCRIPT_PATTERN.finditer(self.strip_ansi(script_text))
+            if m.group(2).strip()
+        ]
 
     def synthesize_podcast(self, file_path: str):
         if not os.path.exists(file_path):
@@ -428,14 +380,15 @@ class TheVocalCords:
             if self.events:
                 self.events.log(
                     f"{Prisma.OCHRE}[AUDIO OFFLINE]: TTS dependencies (kokoro, soundfile, numpy) not found. Skipping podcast synthesis.{Prisma.RST}",
-                    "SYS",
-                )
+                    "SYS")
             return
+
         combined_audio = []
         error_to_report = None
         output_dir = os.path.dirname(file_path)
         base_name = os.path.splitext(os.path.basename(file_path))[0]
         master_file = os.path.join(output_dir, f"{base_name}_MASTER.wav")
+
         with self._synthesis_lock:
             with open(file_path, "r", encoding="utf-8") as f:
                 script_text = f.read()
@@ -443,54 +396,38 @@ class TheVocalCords:
             if not segments:
                 return
             try:
-                with open(os.devnull, "w") as fnull:
-                    with contextlib.redirect_stdout(fnull), contextlib.redirect_stderr(
-                        fnull
-                    ):
-                        if not self.pipeline:
-                            from kokoro import KPipeline
-                            import soundfile as sf
-                            import numpy as np
+                with open(os.devnull, "w") as fnull, contextlib.redirect_stdout(fnull), contextlib.redirect_stderr(
+                        fnull):
+                    if not self.pipeline:
+                        from kokoro import KPipeline
+                        import soundfile as sf
+                        import numpy as np
 
-                            self.pipeline = KPipeline(
-                                lang_code="a", repo_id="hexgrad/Kokoro-82M"
-                            )
-                            self.sf = sf
-                            self.np = np
+                        self.pipeline = KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M")
+                        self.sf = sf
+                        self.np = np
 
-                        silence_pad = self.np.zeros(int(24000 * 0.6))
-                        for seg in segments:
-                            speaker = seg["speaker"]
-                            text = seg["text"]
-                            voice = self.voice_map.get(
-                                speaker, self.voice_map["DEFAULT"]
-                            )
-                            generator = self.pipeline(text, voice=voice, speed=1.0)
-                            for _, _, audio in generator:
-                                if audio is not None and len(audio) > 0:
-                                    combined_audio.append(
-                                        self.np.array(audio).flatten()
-                                    )
-                            combined_audio.append(silence_pad)
-                        if combined_audio:
-                            final_array = self.np.concatenate(combined_audio)
-                            self.sf.write(master_file, final_array, 24000)
+                    silence_pad = self.np.zeros(int(24000 * 0.6))
+                    for seg in segments:
+                        voice = self.voice_map.get(seg["speaker"], self.voice_map["DEFAULT"])
+                        generator = self.pipeline(seg["text"], voice=voice, speed=1.0)
+                        for _, _, audio in generator:
+                            if audio is not None and len(audio) > 0:
+                                combined_audio.append(self.np.array(audio).flatten())
+                        combined_audio.append(silence_pad)
+                    if combined_audio:
+                        self.sf.write(master_file, self.np.concatenate(combined_audio), 24000)
             except Exception as e:
                 error_to_report = str(e)
+
+        if self.events:
             handoff_msg = f"\n{Prisma.GRY}[SYSTEM: Audio thread closed. Microphone is yours.]\nTRAVELER > {Prisma.RST}"
             if error_to_report:
-                if self.events:
-                    self.events.log(
-                        f"{Prisma.RED}🎙️ AUDIO FAULT: {error_to_report}{Prisma.RST}{handoff_msg}",
-                        "SYS",
-                    )
+                self.events.log(f"{Prisma.RED}🎙️ AUDIO FAULT: {error_to_report}{Prisma.RST}{handoff_msg}", "SYS")
             elif combined_audio:
-                if self.events:
-                    self.events.log(
-                        f"{Prisma.MAG}🎙️ MASTER PODCAST FORGED: {os.path.basename(master_file)}{Prisma.RST}{handoff_msg}",
-                        "SYS",
-                    )
-
+                self.events.log(
+                    f"{Prisma.MAG}🎙️ MASTER PODCAST FORGED: {os.path.basename(master_file)}{Prisma.RST}{handoff_msg}",
+                    "SYS")
 
 try:
     import dspy
@@ -552,19 +489,9 @@ class DSPyCritic:
                 )
                 provider = cfg_val("provider", "ollama")
                 model_name = cfg_val("model", "vsl-hermes")
-                raw_base_url = (
-                    cfg_val("base_url", "http://127.0.0.1:11434/v1")
-                    or "http://127.0.0.1:11434/v1"
-                )
-                base_url = raw_base_url.replace("/chat/completions", "")
-                if provider == "ollama" or provider == "lm_studio":
-                    self.lm = dspy.LM(
-                        model=f"openai/{model_name}",
-                        api_base=base_url,
-                        api_key="local-model-doesnt-need-a-key",
-                    )
-                else:
-                    self.lm = dspy.LM(model=model_name)
+                base_url = (cfg_val("base_url", "http://127.0.0.1:11434/v1") or "http://127.0.0.1:11434/v1").replace("/chat/completions", "")
+
+                self.lm = dspy.LM(model=f"openai/{model_name}", api_base=base_url, api_key="local-model-doesnt-need-a-key") if provider in ("ollama", "lm_studio") else dspy.LM(model=model_name)
                 dspy.settings.configure(lm=self.lm)
                 self.judge = dspy.ChainOfThought(AssessFaithfulness)
                 self.evolver = dspy.ChainOfThought(EvolveSystemPrompt)
@@ -582,13 +509,9 @@ class DSPyCritic:
         if not self.enabled:
             return True, "Critic Offline"
         try:
-            result = self.judge(
-                context=memory_context, question=user_query, answer=generated_response
-            )
-            is_faithful = "true" in str(result.faithfulness).lower()
-            reasoning = getattr(result, "reasoning", "No reasoning provided.")
-            if not is_faithful:
-                return False, reasoning
+            result = self.judge(context=memory_context, question=user_query, answer=generated_response)
+            if "true" not in str(result.faithfulness).lower():
+                return False, getattr(result, "reasoning", "No reasoning provided.")
             return True, "Faithful."
         except Exception as e:
             print(f"\n{Prisma.RED}⚖️ DSPy JUDGE FATAL ERROR: {e}{Prisma.RST}")
@@ -611,25 +534,12 @@ class DSPyCritic:
             return ""
 
     def compress_prompts(self, directives: list) -> list:
-        if not self.enabled or len(directives) == 0:
-            return directives
-        print(
-            f"\n{Prisma.MAG}🧬 [EPIGENETIC LOAD HIGH]: Compressing {len(directives)} directives into foundational axioms...{Prisma.RST}"
-        )
+        if not self.enabled or not directives: return directives
+        print(f"\n{Prisma.MAG}🧬 [EPIGENETIC LOAD HIGH]: Compressing {len(directives)} directives into foundational axioms...{Prisma.RST}")
         try:
-            dirs_str = "\n".join(directives)
-            result = self.compressor(current_directives=dirs_str)
-            raw_output = str(result.compressed_axioms).split("\n")
-            new_rules = [
-                line.strip()
-                for line in raw_output
-                if "CRITICAL OVERRIDE:" in line.upper()
-            ]
-            if not new_rules:
-                new_rules = [line.strip() for line in raw_output if line.strip()]
-            print(
-                f"{Prisma.GRN}🧬 [COMPRESSION SUCCESS]: Reduced to {len(new_rules)} axioms.{Prisma.RST}"
-            )
+            raw_output = str(self.compressor(current_directives="\n".join(directives)).compressed_axioms).split("\n")
+            new_rules = [line.strip() for line in raw_output if "CRITICAL OVERRIDE:" in line.upper()] or [line.strip() for line in raw_output if line.strip()]
+            print(f"{Prisma.GRN}🧬 [COMPRESSION SUCCESS]: Reduced to {len(new_rules)} axioms.{Prisma.RST}")
             return new_rules
         except Exception as e:
             print(f"\n{Prisma.RED}⚖️ DSPy COMPRESSOR FATAL ERROR: {e}{Prisma.RST}")

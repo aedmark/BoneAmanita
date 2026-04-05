@@ -76,7 +76,7 @@ class HostStats:
 class SessionGuardian:
     _HEADERS = (
         ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.0.0   │"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.2.0   │"),
         ("term_header_bot", "└──────────────────────────────────────────┘"),
     )
 

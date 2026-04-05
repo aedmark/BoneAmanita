@@ -37,13 +37,9 @@ class SoulDriver:
         for persona, weight in mapping.items():
             if persona in base_weights:
                 base_weights[persona] += weight
-        paradox = getattr(self.soul, "paradox_accum", 0.0)
-        chaos = min(0.5, (paradox - 5.0) * 0.05) if paradox > 5.0 else 0.0
-        dignity = 1.0
-        if hasattr(self.soul, "anchor") and hasattr(
-            self.soul.anchor, "dignity_reserve"
-        ):
-            dignity = max(0.2, self.soul.anchor.dignity_reserve / 100.0)
+        chaos = min(0.5, (paradox - 5.0) * 0.05) if (paradox := getattr(self.soul, "paradox_accum", 0.0)) > 5.0 else 0.0
+        dignity = max(0.2, self.soul.anchor.dignity_reserve / 100.0) if getattr(self.soul, "anchor", None) and hasattr(
+            self.soul.anchor, "dignity_reserve") else 1.0
         return {
             p: (w + random.uniform(-chaos, chaos)) * dignity
             for p, w in base_weights.items()
@@ -74,29 +70,20 @@ class UserProfile:
 
     def update(self, counts, total_words):
         cfg = getattr(self.cfg, "DRIVERS", None)
-        min_words = getattr(cfg, "PROFILE_MIN_WORDS", 3) if cfg else 3
-        if total_words < min_words:
+        if total_words < safe_get(cfg, "PROFILE_MIN_WORDS", 3):
             return
         self.confidence += 1
-        conf_thresh = getattr(cfg, "PROFILE_CONFIDENCE_THRESHOLD", 50) if cfg else 50
-        alpha_high = getattr(cfg, "PROFILE_ALPHA_HIGH", 0.2) if cfg else 0.2
-        alpha_low = getattr(cfg, "PROFILE_ALPHA_LOW", 0.05) if cfg else 0.05
-        density_high = getattr(cfg, "PROFILE_DENSITY_HIGH", 0.15) if cfg else 0.15
-        alpha = alpha_high if self.confidence < conf_thresh else alpha_low
+        alpha = safe_get(cfg, "PROFILE_ALPHA_HIGH", 0.2) if self.confidence < safe_get(cfg, "PROFILE_CONFIDENCE_THRESHOLD", 50) else safe_get(cfg, "PROFILE_ALPHA_LOW", 0.05)
+        density_high = safe_get(cfg, "PROFILE_DENSITY_HIGH", 0.15)
         for cat in self.affinities:
-            density = counts.get(cat, 0) / total_words
-            target = 1.0 if density > density_high else (-0.5 if density == 0 else 0.0)
-            self.affinities[cat] = (alpha * target) + (
-                (1 - alpha) * self.affinities[cat]
-            )
+            target = 1.0 if (density := counts.get(cat, 0) / total_words) > density_high else (-0.5 if density == 0 else 0.0)
+            self.affinities[cat] = (alpha * target) + ((1 - alpha) * self.affinities[cat])
 
     def get_preferences(self):
         cfg = getattr(self.cfg, "DRIVERS", None)
-        like_thresh = getattr(cfg, "PROFILE_LIKE_THRESH", 0.3) if cfg else 0.3
-        hate_thresh = getattr(cfg, "PROFILE_HATE_THRESH", -0.2) if cfg else -0.2
-        likes = [k for k, v in self.affinities.items() if v > like_thresh]
-        hates = [k for k, v in self.affinities.items() if v < hate_thresh]
-        return likes, hates
+        like_thresh = safe_get(cfg, "PROFILE_LIKE_THRESH", 0.3)
+        hate_thresh = safe_get(cfg, "PROFILE_HATE_THRESH", -0.2)
+        return [k for k, v in self.affinities.items() if v > like_thresh], [k for k, v in self.affinities.items() if v < hate_thresh]
 
     def save(self):
         try:
@@ -151,19 +138,10 @@ class EnneagramDriver:
         scores = {k: 0.0 for k in weights_cfg.keys()}
         if "NARRATOR" in scores:
             scores["NARRATOR"] += 2.0
-        is_safe_metrics = 4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5
-        sanctuary_zone = (
-            getattr(self.cfg, "SANCTUARY", {}).get("ZONE")
-            if hasattr(self.cfg, "SANCTUARY")
-            else "SANCTUARY"
-        )
-        if p_zone == sanctuary_zone or is_safe_metrics:
-            if "NARRATOR" in scores:
-                scores["NARRATOR"] += 6.0
-            if "JESTER" in scores:
-                scores["JESTER"] += 3.0
-            if "GORDON" in scores:
-                scores["GORDON"] -= 2.0
+        if p_zone == safe_get(getattr(self.cfg, "SANCTUARY", {}), "ZONE", "SANCTUARY") or (
+                4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5):
+            for persona, mod in [("NARRATOR", 6.0), ("JESTER", 3.0), ("GORDON", -2.0)]:
+                if persona in scores: scores[persona] += mod
         for persona, criteria in weights_cfg.items():
             if not isinstance(criteria, dict):
                 continue
@@ -217,12 +195,7 @@ class EnneagramDriver:
         msg_shift = (
             ux("driver_strings", "ennea_shift") or "Shifted persona. Reason: {reason}"
         )
-        if "HYBRID" in candidate:
-            self.current_persona = candidate
-            self.stability_counter = 0
-            self.pending_persona = None
-            return self.current_persona, state_desc, msg_shift.format(reason=reason)
-        if self.stability_counter >= self.HYSTERESIS_THRESHOLD:
+        if "HYBRID" in candidate or self.stability_counter >= self.HYSTERESIS_THRESHOLD:
             self.current_persona = candidate
             self.stability_counter = 0
             self.pending_persona = None
@@ -268,44 +241,28 @@ class LiminalModule:
 
     def analyze(self, text: str, physics_vector: Dict[str, float]) -> float:
         cfg = getattr(self.cfg, "DRIVERS", None)
-        lex_weight = getattr(cfg, "LIMINAL_LEXICAL_WEIGHT", 0.15) if cfg else 0.15
-        dm_weight = getattr(cfg, "LIMINAL_DARK_MATTER_WEIGHT", 0.25) if cfg else 0.25
-        psi_mult = getattr(cfg, "LIMINAL_VEC_PSI_MULT", 0.5) if cfg else 0.5
-        ent_mult = getattr(cfg, "LIMINAL_VEC_ENT_MULT", 0.3) if cfg else 0.3
-        del_mult = getattr(cfg, "LIMINAL_VEC_DEL_MULT", 0.2) if cfg else 0.2
-        decay = getattr(cfg, "LIMINAL_DECAY", 0.7) if cfg else 0.7
-        growth = getattr(cfg, "LIMINAL_GROWTH", 0.15) if cfg else 0.15
-        liminal_vocab = self.lex.get("liminal") if self.lex else set()
         words = text.lower().split()
-        void_hits = sum(1 for w in words if w in liminal_vocab)
-        lexical_lambda = min(1.0, void_hits * lex_weight)
+        void_hits = sum(1 for w in words if w in (self.lex.get("liminal") if self.lex else set()))
+        lexical_lambda = min(1.0, void_hits * safe_get(cfg, "LIMINAL_LEXICAL_WEIGHT", 0.15))
+
         dark_matter_sparks = 0
         if len(words) > 1 and hasattr(self.lex, "get_categories_for_word"):
             phys_set, void_set = {"heavy", "kinetic"}, {"abstract", "liminal", "void"}
-            flags = []
-            for w in words:
-                cats = set(self.lex.get_categories_for_word(w) or [])
-                if not cats:
-                    continue
-                flags.append(1 if cats & phys_set else (2 if cats & void_set else 0))
+            flags = [1 if cats & phys_set else (2 if cats & void_set else 0) for w in words if (cats := set(self.lex.get_categories_for_word(w) or []))]
+            dark_matter_sparks = sum(1 for i in range(len(flags) - 1) if flags[i] and flags[i + 1] and flags[i] != flags[i + 1])
 
-            dark_matter_sparks = sum(
-                1
-                for i in range(len(flags) - 1)
-                if flags[i] and flags[i + 1] and flags[i] != flags[i + 1]
-            )
-        dark_matter_lambda = min(1.0, dark_matter_sparks * dm_weight)
+        dark_matter_lambda = min(1.0, dark_matter_sparks * safe_get(cfg, "LIMINAL_DARK_MATTER_WEIGHT", 0.25))
+
         vector_lambda = 0.0
         if physics_vector:
             vector_lambda = (
-                (physics_vector.get("PSI", 0) * psi_mult)
-                + (physics_vector.get("ENT", 0) * ent_mult)
-                + (physics_vector.get("DEL", 0) * del_mult)
+                (physics_vector.get("PSI", 0) * safe_get(cfg, "LIMINAL_VEC_PSI_MULT", 0.5)) +
+                (physics_vector.get("ENT", 0) * safe_get(cfg, "LIMINAL_VEC_ENT_MULT", 0.3)) +
+                (physics_vector.get("DEL", 0) * safe_get(cfg, "LIMINAL_VEC_DEL_MULT", 0.2))
             )
-        raw_target = lexical_lambda + dark_matter_lambda + vector_lambda
-        self.lambda_val = (self.lambda_val * decay) + (raw_target * growth)
-        scar_thresh = getattr(cfg, "LIMINAL_SCAR_THRESHOLD", 0.85) if cfg else 0.85
-        if self.lambda_val > scar_thresh:
+
+        self.lambda_val = (self.lambda_val * safe_get(cfg, "LIMINAL_DECAY", 0.7)) + ((lexical_lambda + dark_matter_lambda + vector_lambda) * safe_get(cfg, "LIMINAL_GROWTH", 0.15))
+        if self.lambda_val > safe_get(cfg, "LIMINAL_SCAR_THRESHOLD", 0.85):
             self.godel_scars += 1
         return min(1.0, self.lambda_val)
 
@@ -322,13 +279,13 @@ class SyntaxModule:
         if not words:
             return 1.0
         cfg = getattr(self.cfg, "DRIVERS", None)
-        avg_len_high = getattr(cfg, "SYNTAX_AVG_LEN_HIGH", 6.0) if cfg else 6.0
-        drag_high = getattr(cfg, "SYNTAX_DRAG_HIGH", 5.0) if cfg else 5.0
-        avg_len_low = getattr(cfg, "SYNTAX_AVG_LEN_LOW", 3.5) if cfg else 3.5
-        drag_low = getattr(cfg, "SYNTAX_DRAG_LOW", 1.0) if cfg else 1.0
-        t_high = getattr(cfg, "SYNTAX_OMEGA_TARGET_HIGH", 1.0) if cfg else 1.0
-        t_low = getattr(cfg, "SYNTAX_OMEGA_TARGET_LOW", 0.4) if cfg else 0.4
-        t_mid = getattr(cfg, "SYNTAX_OMEGA_TARGET_MID", 0.7) if cfg else 0.7
+        avg_len_high = safe_get(cfg, "SYNTAX_AVG_LEN_HIGH", 6.0)
+        drag_high = safe_get(cfg, "SYNTAX_DRAG_HIGH", 5.0)
+        avg_len_low = safe_get(cfg, "SYNTAX_AVG_LEN_LOW", 3.5)
+        drag_low = safe_get(cfg, "SYNTAX_DRAG_LOW", 1.0)
+        t_high = safe_get(cfg, "SYNTAX_OMEGA_TARGET_HIGH", 1.0)
+        t_low = safe_get(cfg, "SYNTAX_OMEGA_TARGET_LOW", 0.4)
+        t_mid = safe_get(cfg, "SYNTAX_OMEGA_TARGET_MID", 0.7)
         bureau_vocab = self.lex.get("bureau_buzzwords") if self.lex else set()
         buzz_count = sum(1 for w in words if w.lower() in bureau_vocab)
         avg_len = sum(len(w) for w in words) / len(words)
@@ -339,21 +296,16 @@ class SyntaxModule:
         else:
             target_omega = t_mid
         punctuation_density = sum(1 for c in text if c in ",;:-") / max(1, len(words))
-        punct_thresh = getattr(cfg, "SYNTAX_STRESS_PUNCTUATION", 0.2) if cfg else 0.2
-        if punctuation_density > punct_thresh:
-            stress_inc = getattr(cfg, "SYNTAX_STRESS_INCREASE", 0.2) if cfg else 0.2
-            omega_pen = getattr(cfg, "SYNTAX_OMEGA_PENALTY", 0.3) if cfg else 0.3
-            self.grammatical_stress += stress_inc
-            target_omega -= omega_pen
+        if punctuation_density > safe_get(cfg, "SYNTAX_STRESS_PUNCTUATION", 0.2):
+            self.grammatical_stress += safe_get(cfg, "SYNTAX_STRESS_INCREASE", 0.2)
+            target_omega -= safe_get(cfg, "SYNTAX_OMEGA_PENALTY", 0.3)
         else:
-            stress_dec = getattr(cfg, "SYNTAX_STRESS_DECAY", 0.1) if cfg else 0.1
-            self.grammatical_stress = max(0.0, self.grammatical_stress - stress_dec)
-        omega_decay = getattr(cfg, "SYNTAX_OMEGA_DECAY", 0.8) if cfg else 0.8
-        omega_growth = getattr(cfg, "SYNTAX_OMEGA_GROWTH", 0.2) if cfg else 0.2
-        omega_min = getattr(cfg, "SYNTAX_OMEGA_MIN", 0.1) if cfg else 0.1
+            self.grammatical_stress = max(0.0, self.grammatical_stress - safe_get(cfg, "SYNTAX_STRESS_DECAY", 0.1))
+
+        omega_decay = safe_get(cfg, "SYNTAX_OMEGA_DECAY", 0.8)
+        omega_growth = safe_get(cfg, "SYNTAX_OMEGA_GROWTH", 0.2)
         self.omega_val = (self.omega_val * omega_decay) + (
-            max(omega_min, target_omega) * omega_growth
-        )
+                    max(safe_get(cfg, "SYNTAX_OMEGA_MIN", 0.1), target_omega) * omega_growth)
         return self.omega_val
 
 
@@ -395,21 +347,12 @@ class CongruenceValidator:
                 import difflib
 
                 for word in words_to_check:
-                    if word in target_words:
+                    if word in target_words or difflib.get_close_matches(word, target_words, n=1, cutoff=0.75):
                         hits += 1
-                    else:
-                        close_matches = difflib.get_close_matches(
-                            word, target_words, n=1, cutoff=0.75
-                        )
-                        if close_matches:
-                            hits += 1
 
                 if hits > 0:
-                    tone_score += (
-                        getattr(cfg, "CONGRUENCE_HIT_BONUS", 0.1) if cfg else 0.1
-                    ) * hits
-        max_tone = getattr(cfg, "CONGRUENCE_MAX_TONE", 1.5) if cfg else 1.5
-        return min(max_tone, tone_score)
+                    tone_score += safe_get(cfg, "CONGRUENCE_HIT_BONUS", 0.1) * hits
+                return min(safe_get(cfg, "CONGRUENCE_MAX_TONE", 1.5), tone_score)
 
 
 class BoneConsultant:
@@ -436,10 +379,10 @@ class BoneConsultant:
         physics: Optional[PhysicsPacket] = None,
     ):
         cfg = getattr(self.cfg, "DRIVERS", None)
-        e_growth = getattr(cfg, "VSL_E_GROWTH_MULT", 0.002) if cfg else 0.002
-        fatigue_mult = getattr(cfg, "VSL_FATIGUE_MULT", 0.3) if cfg else 0.3
-        b_decay = getattr(cfg, "VSL_B_DECAY", 0.8) if cfg else 0.8
-        b_growth = getattr(cfg, "VSL_B_GROWTH", 0.2) if cfg else 0.2
+        e_growth = safe_get(cfg, "VSL_E_GROWTH_MULT", 0.002)
+        fatigue_mult = safe_get(cfg, "VSL_FATIGUE_MULT", 0.3)
+        b_decay = safe_get(cfg, "VSL_B_DECAY", 0.8)
+        b_growth = safe_get(cfg, "VSL_B_GROWTH", 0.2)
         word_count = len(user_text.split())
         self.state.E = min(1.0, self.state.E + (word_count * e_growth))
         if bio_state and "fatigue" in bio_state:
@@ -454,36 +397,24 @@ class BoneConsultant:
         self.state.B = (self.state.B * b_decay) + (phys_beta * b_growth)
         self.state.L = self.liminal_mod.analyze(user_text, phys_vec)
         self.state.O = self.syntax_mod.analyze(user_text, drag)
-        if "[VSL_LIMINAL]" in user_text:
-            if "LIMINAL" not in self.state.active_modules:
-                self.state.active_modules.append("LIMINAL")
-        if "[VSL_SYNTAX]" in user_text:
-            if "SYNTAX" not in self.state.active_modules:
-                self.state.active_modules.append("SYNTAX")
+        for mod in ("LIMINAL", "SYNTAX"):
+            if f"[VSL_{mod}]" in user_text and mod not in self.state.active_modules:
+                self.state.active_modules.append(mod)
 
     def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
         directives = []
         cfg = getattr(self.cfg, "DRIVERS", None)
-        lim_thresh = getattr(cfg, "VSL_LIMINAL_THRESHOLD", 0.7) if cfg else 0.7
-        syn_thresh = getattr(cfg, "VSL_SYNTAX_THRESHOLD", 0.9) if cfg else 0.9
-        bun_max = getattr(cfg, "VSL_BUNNY_E_MAX", 0.3) if cfg else 0.3
-        par_min = getattr(cfg, "VSL_PARADOX_B_MIN", 0.6) if cfg else 0.6
+        lim_thresh = safe_get(cfg, "VSL_LIMINAL_THRESHOLD", 0.7)
+        syn_thresh = safe_get(cfg, "VSL_SYNTAX_THRESHOLD", 0.9)
+        bun_max = safe_get(cfg, "VSL_BUNNY_E_MAX", 0.3)
+        par_min = safe_get(cfg, "VSL_PARADOX_B_MIN", 0.6)
         if "LIMINAL" in self.state.active_modules or self.state.L > lim_thresh:
-            scar_temp = ux("driver_strings", "vsl_scar_note")
-            scar_note = (
-                scar_temp.format(scars=self.liminal_mod.godel_scars)
-                if self.liminal_mod.godel_scars > 0
-                else ""
-            )
-            msg = ux("driver_strings", "vsl_arch_revenant")
-            directives.append(msg.format(scar_note=scar_note))
+            scar_note = ux("driver_strings", "vsl_scar_note").format(
+                scars=self.liminal_mod.godel_scars) if self.liminal_mod.godel_scars > 0 else ""
+            directives.append(ux("driver_strings", "vsl_arch_revenant").format(scar_note=scar_note))
         elif "SYNTAX" in self.state.active_modules or self.state.O > syn_thresh:
-            stress_temp = ux("driver_strings", "vsl_stress_note")
-            stress_note = (
-                stress_temp if self.syntax_mod.grammatical_stress > 0.5 else ""
-            )
-            msg = ux("driver_strings", "vsl_arch_bureau")
-            directives.append(msg.format(stress_note=stress_note))
+            stress_note = ux("driver_strings", "vsl_stress_note") if self.syntax_mod.grammatical_stress > 0.5 else ""
+            directives.append(ux("driver_strings", "vsl_arch_bureau").format(stress_note=stress_note))
         else:
             if self.state.E < bun_max:
                 directives.append(ux("driver_strings", "vsl_mode_bunny"))
@@ -508,49 +439,45 @@ class SharedLatticeDriver:
         self.shared = SharedDynamics()
         self.last_timestamp = time.time()
 
+    @staticmethod
+    def _get_f(obj, *keys, default=0.0):
+        for k in keys:
+            if (val := safe_get(obj, k)) is not None:
+                return float(val)
+        return float(default)
+
     def infer_and_couple(
-        self, text: str, sys_phys: PhysicsPacket, input_phys: Any, atp_pool: float
+            self, text: str, sys_phys: PhysicsPacket, input_phys: Any, atp_pool: float
     ) -> tuple[List[str], float]:
         logs = []
         atp_deduction = 0.0
         now = time.time()
         time_delta = now - self.last_timestamp
         self.last_timestamp = now
-        word_count = len(text.split())
-        word_cost = word_count * 0.5
+        word_cost = len(text.split()) * 0.5
+
         self.u.P_u = max(0.0, self.u.P_u - word_cost + 5.0)
-        if self.u.P_u < 30:
-            self.u.E_u = min(1.0, self.u.E_u + 0.1)
-        else:
-            self.u.E_u = max(0.0, self.u.E_u - 0.05)
-        def _get_f(obj, *keys, default=0.0):
-            for k in keys:
-                if (val := safe_get(obj, k)) is not None:
-                    return float(val)
-            return float(default)
+        self.u.E_u = min(1.0, self.u.E_u + 0.1) if self.u.P_u < 30 else max(0.0, self.u.E_u - 0.05)
 
-        self.u.V_u = _get_f(input_phys, "voltage", default=self.u.V_u)
-        self.u.psi_u = _get_f(input_phys, "psi", default=self.u.psi_u)
-        self.u.chi_u = _get_f(input_phys, "chi", "entropy", default=self.u.chi_u)
-        self.u.F_u = _get_f(input_phys, "narrative_drag", default=self.u.F_u)
+        self.u.V_u = self._get_f(input_phys, "voltage", default=self.u.V_u)
+        self.u.psi_u = self._get_f(input_phys, "psi", default=self.u.psi_u)
+        self.u.chi_u = self._get_f(input_phys, "chi", "entropy", default=self.u.chi_u)
+        self.u.F_u = self._get_f(input_phys, "narrative_drag", default=self.u.F_u)
 
-        sys_beta = _get_f(sys_phys, "beta")
-        sys_chi = _get_f(sys_phys, "chi", "entropy")
-        sys_val = _get_f(sys_phys, "valence")
-        sys_psi = _get_f(sys_phys, "psi")
-        sys_drag = _get_f(sys_phys, "narrative_drag", default=1.0)
-        dp = safe_get(sys_phys, "drag_profile")
+        sys_beta = self._get_f(sys_phys, "beta")
+        sys_chi = self._get_f(sys_phys, "chi", "entropy")
+        sys_val = self._get_f(sys_phys, "valence")
+        sys_psi = self._get_f(sys_phys, "psi")
+        sys_drag = self._get_f(sys_phys, "narrative_drag", default=1.0)
         dp_trauma = 0.0
-        if dp is not None:
+        if (dp := safe_get(sys_phys, "drag_profile")) is not None:
             safe_set(dp, "semantic", (sys_beta * 2.0) + (sys_chi * 1.5))
             safe_set(dp, "emotional", abs(sys_val) * 1.5 if abs(sys_val) > 0.5 else 0.0)
-            safe_set(
-                dp,
-                "metabolic",
-                3.0 if atp_pool < 30.0 else (1.0 if atp_pool < 50.0 else 0.0),
-            )
-            safe_set(dp, "trauma", min(5.0, self.u.T_u) if sys_psi > 0.6 else 0.0)
-            dp_trauma = safe_get(dp, "trauma", 0.0)
+            safe_set(dp, "metabolic", 3.0 if atp_pool < 30.0 else (1.0 if atp_pool < 50.0 else 0.0))
+
+            dp_trauma = min(5.0, self.u.T_u) if sys_psi > 0.6 else 0.0
+            safe_set(dp, "trauma", dp_trauma)
+
             if not isinstance(sys_phys, dict) and hasattr(sys_phys, "sync_drag"):
                 sys_phys.sync_drag()
         psi_diff = abs(sys_psi - self.u.psi_u)
@@ -572,15 +499,9 @@ class SharedLatticeDriver:
                 self.shared.g_pool += 1
             self.shared.lambda_silence = min(1.0, self.shared.lambda_silence + 0.05)
             if self.shared.lambda_silence > 0.3:
-                msg_key = {
-                    1: "silence_pregnant",
-                    2: "silence_exhausted",
-                    3: "silence_reverent",
-                    4: "silence_strategic",
-                }.get(self.shared.sigma_silence)
-                logs.append(
-                    f"{Prisma.GRY}... {ux('driver_strings', msg_key) if msg_key else 'The silence settles.'}{Prisma.RST}"
-                )
+                msg_key = {1: "silence_pregnant", 2: "silence_exhausted", 3: "silence_reverent",
+                           4: "silence_strategic"}.get(self.shared.sigma_silence)
+                logs.append(f"{Prisma.GRY}... {ux('driver_strings', msg_key) or 'The silence settles.'}{Prisma.RST}")
             if self.shared.phi > 0.85:
                 self.shared.resonance_streak = (
                     getattr(self.shared, "resonance_streak", 0) + 1

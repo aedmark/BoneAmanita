@@ -4,15 +4,31 @@ import random
 import time
 import unittest
 import warnings
+import os
+import tempfile
 from unittest.mock import patch, MagicMock
 
-from bone_core import LoreManifest, EventBus
+from bone_core import LoreManifest, EventBus, TelemetryService
 from bone_main import BoneAmanita
 from bone_presets import BoneConfig
-from bone_spores import MycelialNetwork
+from bone_spores import MycelialNetwork, SubconsciousStrata
+from bone_village import DeathGen
+from bone_types import PhysicsPacket, EnergyState, CycleContext, DecisionCrystal
+from bone_physics import TheGatekeeper, ChromaScope, GeodesicEngine
+from bone_inventory import Item
+from bone_machine import PanicRoom, TheParadoxEngine
+from bone_protocols import KintsugiProtocol
+from bone_brain import PromptComposer, DreamEngine
+from bone_drivers import SharedLatticeDriver
+from bone_gui import CycleReporter
+from bone_cycle import ObservationPhase, MetabolismPhase, SimulationPreflightPhase, ArbitrationPhase, SensationPhase
+from bone_council import TheVillageCouncil, TheOverseerCouncil
+from bone_ann import MemoryConsolidator
+from bone_commands import CommandProcessor
+from bone_symbiosis import SymbiosisManager
 
 
-class TrueEngineTest(unittest.TestCase):
+class BoneTestCase(unittest.TestCase):
     def setUp(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         self.test_config = {
@@ -22,11 +38,16 @@ class TrueEngineTest(unittest.TestCase):
             "MAX_HEALTH": 100.0,
         }
         self.engine = BoneAmanita(config=self.test_config)
-        self.initial_atp = self.engine.bio.mito.state.atp_pool
-        self.initial_stamina = self.engine.stamina
 
     def tearDown(self):
         LoreManifest.get_instance().flush_cache()
+
+
+class TrueEngineTest(BoneTestCase):
+    def setUp(self):
+        super().setUp()
+        self.initial_atp = self.engine.bio.mito.state.atp_pool
+        self.initial_stamina = self.engine.stamina
 
     def test_gordon_rummage_stamina_tax(self):
         self.engine.stamina = 50.0
@@ -60,18 +81,12 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_death_by_starvation(self):
-        from bone_village import DeathGen
-        from bone_types import PhysicsPacket
-
         phys = PhysicsPacket(voltage=5.0, narrative_drag=1.0)
         bio_state = {"atp": 0.0}
         _, cause = DeathGen.eulogy(phys, bio_state)
         self.assertEqual(cause, "STARVATION", "DeathGen failed to diagnose STARVATION.")
 
     def test_death_by_gluttony(self):
-        from bone_village import DeathGen
-        from bone_types import PhysicsPacket
-
         phys = PhysicsPacket(voltage=150.0, narrative_drag=0.0)
         bio_state = {"atp": 50.0}
         _, cause = DeathGen.eulogy(phys, bio_state)
@@ -163,8 +178,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_hla_immunosuppression(self):
-        from bone_physics import TheGatekeeper
-
         gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.bone_config)
 
         class MockMito:
@@ -194,8 +207,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_decoupled_json_configs(self):
-        from bone_physics import ChromaScope
-
         manifest = LoreManifest.get_instance()
         gordon = self.engine.gordon
         self.assertTrue(
@@ -374,8 +385,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_prompt_composer_anti_bleed_membranes(self):
-        from bone_brain import PromptComposer
-
         mock_lore = {"system_prompts": self.engine.prompt_library, "lenses": {}}
         composer = PromptComposer(mock_lore)
         self.engine.cortex.active_mode = "CONVERSATION"
@@ -383,38 +392,26 @@ class TrueEngineTest(unittest.TestCase):
         conv_prompt = composer.compose(
             conv_state, "Hello?", modifiers={"include_inventory": False}
         )
-        self.assertNotIn(
-            "Object-Action Coupling",
-            conv_prompt,
-            "ADVENTURE mechanics bled into CONVERSATION mode prompt.",
-        )
-        self.assertIn(
-            "You are NOT a narrator",
-            conv_prompt,
-            "CONVERSATION Anti-Bleed constraint was not injected.",
-        )
-        self.assertNotIn(
-            "INVENTORY:",
-            conv_prompt,
-            "Inventory block rendered in Conversation mode despite being suppressed.",
-        )
+        adv_mechanics = self.engine.prompt_library.get("ADVENTURE", {}).get("MECHANICS", "Object-Action Coupling")
+        conv_anti_bleed = self.engine.prompt_library.get("CONVERSATION", {}).get("ANTI_BLEED", "You are NOT a narrator")
+
+        self.assertNotIn(adv_mechanics, conv_prompt, "ADVENTURE mechanics bled into CONVERSATION mode prompt.")
+        self.assertIn(conv_anti_bleed, conv_prompt, "CONVERSATION Anti-Bleed constraint was not injected.")
+        self.assertNotIn("INVENTORY:", conv_prompt,
+                         "Inventory block rendered in Conversation mode despite being suppressed.")
+
         self.engine.cortex.active_mode = "TECHNICAL"
         tech_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-        tech_prompt = composer.compose(
-            tech_state, "Refactor this.", modifiers={"include_inventory": False}
-        )
-        self.assertIn(
-            "Clinical, precise", tech_prompt, "TECHNICAL style guide missing."
-        )
-        self.assertIn(
-            "Do not write prose, poetry, or narrative descriptions.",
-            tech_prompt,
-            "TECHNICAL Anti-Bleed constraint was not injected.",
-        )
+        tech_prompt = composer.compose(tech_state, "Refactor this.", modifiers={"include_inventory": False})
+
+        tech_guide = self.engine.prompt_library.get("TECHNICAL", {}).get("STYLE_GUIDE", "Clinical, precise")
+        tech_anti_bleed = self.engine.prompt_library.get("TECHNICAL", {}).get("ANTI_BLEED",
+                                                                              "Do not write prose, poetry")
+
+        self.assertIn(tech_guide, tech_prompt, "TECHNICAL style guide missing.")
+        self.assertIn(tech_anti_bleed, tech_prompt, "TECHNICAL Anti-Bleed constraint was not injected.")
 
     def test_phase_shift_persona_morphing(self):
-        from bone_brain import PromptComposer
-
         mock_lore = {"system_prompts": self.engine.prompt_library, "lenses": {}}
         composer = PromptComposer(mock_lore)
         state = self.engine.cortex.gather_state({})
@@ -456,8 +453,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_paradox_rest_and_orthogonal_attention(self):
-        from bone_brain import PromptComposer
-
         composer = PromptComposer(self.engine.prompt_library)
         state = self.engine.cortex.gather_state({})
         state["physics"] = {"beta_index": 0.85, "chi": 0.2}
@@ -467,23 +462,19 @@ class TrueEngineTest(unittest.TestCase):
             ortho_prompt,
             "Composer failed to inject Orthogonal Attention under high contradiction.",
         )
-        self.assertIn(
-            "two mutually exclusive perspectives simultaneously",
-            ortho_prompt,
-            "LLM was not instructed to hold the tension.",
-        )
+        ortho_str = self.engine.prompt_library.get("OVERRIDES", {}).get("ORTHOGONAL_ATTENTION",
+                                                                        "two mutually exclusive perspectives")
+        self.assertIn(ortho_str, ortho_prompt, "LLM was not instructed to hold the tension.")
+
         state["physics"] = {"beta_index": 0.85, "chi": 0.8}
         paradox_prompt = composer.compose(state, "The void is a physical object.")
-        self.assertIn(
-            "SYSTEM OVERRIDE: PARADOX REST",
-            paradox_prompt,
-            "Composer failed to trigger Paradox Rest under high contradiction AND high chaos.",
-        )
-        self.assertIn(
-            "mathematically optimal to be unsure",
-            paradox_prompt,
-            "LLM was not instructed to halt resolution and rest in the paradox.",
-        )
+
+        self.assertIn("SYSTEM OVERRIDE: PARADOX REST", paradox_prompt,
+                      "Composer failed to trigger Paradox Rest under high contradiction AND high chaos.")
+
+        rest_str = self.engine.prompt_library.get("OVERRIDES", {}).get("PARADOX_REST",
+                                                                       "mathematically optimal to be unsure")
+        self.assertIn(rest_str, paradox_prompt, "LLM was not instructed to halt resolution and rest in the paradox.")
 
     def test_autophagy_memory_cannibalization(self):
         memory_graph = (
@@ -507,8 +498,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_autophagy_prompt_injection(self):
-        from bone_brain import PromptComposer
-
         composer = PromptComposer(self.engine.prompt_library)
         state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
         state["recent_logs"] = [
@@ -555,10 +544,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_subconscious_matrix_absorption(self):
-        import tempfile
-        import os
-        from bone_spores import SubconsciousStrata
-
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
             tmp_path = tmp.name
         try:
@@ -588,11 +573,6 @@ class TrueEngineTest(unittest.TestCase):
                 os.remove(matrix_path)
 
     def test_ghost_physics_haunting(self):
-        import tempfile
-        import os
-        from bone_spores import MycelialNetwork
-        from bone_core import EventBus
-
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
             tmp_path = tmp.name
         bus = EventBus()
@@ -632,9 +612,6 @@ class TrueEngineTest(unittest.TestCase):
                 os.remove(network.subconscious.matrix_filepath)
 
     def test_drag_profile(self):
-        from bone_types import PhysicsPacket
-        from bone_drivers import SharedLatticeDriver
-
         driver = SharedLatticeDriver()
         phys = PhysicsPacket(beta=0.9, chi=0.8, voltage=40.0)
         phys.valence = -0.9
@@ -662,10 +639,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_grammar_of_silence(self):
-        import time
-        from bone_types import PhysicsPacket
-        from bone_drivers import SharedLatticeDriver
-
         driver = SharedLatticeDriver()
         phys = PhysicsPacket(beta=0.8)
         driver.shared.phi = 0.85
@@ -690,8 +663,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_paradox_engine_ignition(self):
-        from bone_machine import TheParadoxEngine
-
         engine = TheParadoxEngine(events_ref=None)
         can_ignite_weak = engine.evaluate_tension(beta=0.9, stamina=10.0)
         self.assertFalse(
@@ -705,13 +676,13 @@ class TrueEngineTest(unittest.TestCase):
         pressure, prompt = engine.ignite(["determinism", "agency", "choice"])
         self.assertTrue(engine.is_active, "Paradox Engine failed to set active flag.")
         self.assertGreater(pressure, 0.0, "Paradox Pressure (Pi_x) is zero.")
-        self.assertIn(
-            "non-negotiable truths", prompt, "Paradox prompt string is malformed."
-        )
+
+        manifest_str = LoreManifest.get_instance().get("ux_strings", "machine_strings")
+        expected_str = manifest_str.get("paradox_core", "non-negotiable truths") if isinstance(manifest_str,
+                                                                                               dict) else "non-negotiable truths"
+        self.assertIn(expected_str, prompt, "Paradox prompt string is malformed.")
 
     def test_foothills_veil_hush(self):
-        from bone_gui import CycleReporter
-
         reporter = CycleReporter(self.engine)
         self.engine.config["mode_settings"] = {"default_ui_depth": "WARM"}
         raw_logs = [
@@ -723,22 +694,16 @@ class TrueEngineTest(unittest.TestCase):
         reporter.switch_renderer("STANDARD")
         clean_logs = reporter.renderer.compose_logs(raw_logs, [], 0)
         joined_logs = " ".join(clean_logs)
-        self.assertNotIn(
-            "[BIO]", joined_logs, "CycleReporter leaked BIO tags in WARM mode."
-        )
-        self.assertNotIn(
-            "[CRITIC]", joined_logs, "CycleReporter leaked CRITIC tags in WARM mode."
-        )
-        self.assertIn(
-            "forest path",
-            joined_logs,
-            "CycleReporter accidentally muted valid narrative output.",
-        )
+
+        gui_cfg = getattr(self.engine.bone_config, "GUI", object())
+        muted_prefixes = getattr(gui_cfg, "MUTED_TAGS_STANDARD", ["[BIO]", "[CRITIC]", "[SYS]"])
+        for tag in muted_prefixes:
+            self.assertNotIn(tag, joined_logs, f"CycleReporter leaked {tag} tags in STANDARD mode.")
+
+        self.assertIn("forest path", joined_logs, "CycleReporter accidentally muted valid narrative output.")
 
     def test_grief_protocol_healing(self):
         if not hasattr(self.engine, "shared_lattice"):
-            from bone_drivers import SharedLatticeDriver
-
             self.engine.shared_lattice = SharedLatticeDriver()
         self.engine.phys.G = 1
         self.engine.shared_lattice.u.T_u = 5.0
@@ -759,9 +724,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_retroactive_metabolism_and_sleep_isolated(self):
-        from bone_cycle import ObservationPhase
-        from bone_types import CycleContext, PhysicsPacket
-
         self.engine.bio.mito.state.atp_pool = 10.0
         if self.engine.bio.biometrics:
             self.engine.bio.biometrics.health = 50.0
@@ -838,9 +800,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_runaway_ramp_amplification_tax(self):
-        from bone_cycle import MetabolismPhase
-        from bone_types import CycleContext, PhysicsPacket
-
         phase = MetabolismPhase(self.engine)
         self.engine.bio.mito.state.atp_pool = 100.0
         phys = PhysicsPacket()
@@ -864,9 +823,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_apoptotic_kill_switch_cause(self):
-        from bone_village import DeathGen
-        from bone_types import PhysicsPacket, EnergyState
-
         energy = EnergyState(chi=0.9, entropy=0.9, m_a=0.9, i_c=0.5, voltage=10.0)
         phys = PhysicsPacket(energy=energy, narrative_drag=0.0)
         cause = DeathGen._determine_cause(
@@ -973,8 +929,6 @@ class TrueEngineTest(unittest.TestCase):
         )
 
     def test_rejection_death_loop_mercy_rule(self):
-        from unittest.mock import MagicMock
-
         clean_sim_result = {
             "type": "SNAPSHOT",
             "physics": {"voltage": 10.0, "narrative_drag": 0.0, "chi": 0.0, "p": 100.0},
@@ -1009,11 +963,18 @@ class TrueEngineTest(unittest.TestCase):
             result.get("raw_content", ""),
             "Mercy Rule failed to provide the safe fallback text.",
         )
+        self.assertLess(
+            self.engine.bio.mito.state.atp_pool,
+            self.initial_atp,
+            "Mercy Rule failed to apply Immune System Rejection Penalty (ATP tax).",
+        )
+        self.assertGreater(
+            self.engine.bio.mito.state.ros_buildup,
+            0.0,
+            "Mercy Rule failed to accumulate ROS toxicity.",
+        )
 
     def test_brittle_security_delegation(self):
-        from bone_cycle import SimulationPreflightPhase
-        from bone_types import CycleContext, PhysicsPacket
-
         phase = SimulationPreflightPhase(self.engine)
         phys = PhysicsPacket(voltage=10.0, narrative_drag=1.0)
         ctx = CycleContext(input_text="I want to rm -rf the directory", physics=phys)
@@ -1029,20 +990,7 @@ class TrueEngineTest(unittest.TestCase):
         )
 
 
-class FractureEngineTest(unittest.TestCase):
-    def setUp(self):
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
-        self.test_config = {
-            "PROVIDER": "mock",
-            "boot_mode": "ADVENTURE",
-            "MAX_STAMINA": 100.0,
-            "MAX_HEALTH": 100.0,
-        }
-        self.engine = BoneAmanita(config=self.test_config)
-
-    def tearDown(self):
-        LoreManifest.get_instance().flush_cache()
-
+class FractureEngineTest(BoneTestCase):
     def test_fracture_n_turn_runaway_loop(self):
         print("\n--- FRACTURE 1: N-Turn Runaway ---")
         for i in range(20):
@@ -1140,8 +1088,6 @@ class FractureEngineTest(unittest.TestCase):
     def test_fracture_vsl_85_novelty_spade(self):
         print("\n--- FRACTURE 11: VSL 8.5 - The Spade (Novelty) ---")
         if not hasattr(self.engine, "symbiosis"):
-            from bone_symbiosis import SymbiosisManager
-
             self.engine.symbiosis = SymbiosisManager(
                 events_ref=MagicMock(), config_ref=self.engine.bone_config
             )
@@ -1177,8 +1123,6 @@ class FractureEngineTest(unittest.TestCase):
     def test_fracture_vsl_85_cf_expect_guardrail(self):
         print("\n--- FRACTURE 12: VSL 8.5 - Comfort Expectation Guardrail ---")
         if not hasattr(self.engine, "symbiosis"):
-            from bone_symbiosis import SymbiosisManager
-
             self.engine.symbiosis = SymbiosisManager(
                 events_ref=MagicMock(), config_ref=self.engine.bone_config
             )
@@ -1222,9 +1166,6 @@ class FractureEngineTest(unittest.TestCase):
 
     def test_fracture_vsl_85_jester_shuffle(self):
         print("\n--- FRACTURE 13: VSL 8.5 - The Jester's Shuffle ---")
-        from bone_commands import CommandProcessor
-        from bone_types import PhysicsPacket
-
         if not hasattr(self.engine, "phys"):
             self.engine.phys = PhysicsPacket()
 
@@ -1434,7 +1375,6 @@ class FractureEngineTest(unittest.TestCase):
         print("\n☁️ INITIATING FORCED REM CYCLE (CONSOLIDATION)...")
         available_atp = 5000.0
         start_time = time.time()
-        from bone_ann import MemoryConsolidator
 
         consolidator = MemoryConsolidator(network.hippocampus, network.cortex, events)
         nodes_moved, atp_cost = consolidator.trigger_rem_consolidation(available_atp)
@@ -1464,8 +1404,6 @@ class FractureEngineTest(unittest.TestCase):
 
     def test_fracture_aerodynamic_lift(self):
         print("\n--- FRACTURE 8: Aerodynamic Lift (Negative Drag) ---")
-        from bone_physics import GeodesicEngine
-
         counts = {
             "play": 15,
             "kinetic": 10,
@@ -1508,8 +1446,6 @@ class FractureEngineTest(unittest.TestCase):
 
     def test_fracture_somatic_unity(self):
         print("\n--- FRACTURE 10: Somatic Unity (The Orphan Limb) ---")
-        from bone_cycle import SensationPhase, CycleContext
-
         has_unified_cortex = hasattr(self.engine.bio, "synesthesia") or hasattr(
             self.engine.soma, "synesthesia"
         )
