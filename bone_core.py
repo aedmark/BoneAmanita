@@ -289,7 +289,6 @@ class SystemHealth:
 class RealityStack:
     def __init__(self):
         self._stack = [RealityLayer.SIMULATION]
-        self._lock = False
 
     @property
     def current_depth(self) -> int:
@@ -304,8 +303,6 @@ class RealityStack:
         return False
 
     def pop_layer(self) -> int:
-        if self._lock:
-            return self.current_depth
         if len(self._stack) > 1:
             return self._stack.pop()
         return self._stack[0]
@@ -410,7 +407,6 @@ class TelemetryService:
         self.write_buffer: List[str] = []
         self.active_crystal = None
         self.disabled = False
-        self.write_errors = 0
 
         self._lock = threading.Lock()
         try:
@@ -515,7 +511,6 @@ class TelemetryService:
         lines_to_write = list(self.write_buffer)
         self.write_buffer.clear()
         self._executor.submit(self._bg_write, lines_to_write, self.current_trace_file)
-        self.write_errors = 0
 
     def flush_to_disk(self):
         if not hasattr(self, "_lock"):

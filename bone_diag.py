@@ -330,25 +330,6 @@ class TrueEngineTest(unittest.TestCase):
             "PanicRoom failed to load the injected clean words array.",
         )
 
-    def test_symbiosis_anchor_graceful_degradation(self):
-        from bone_symbiosis import CoherenceAnchor
-
-        manifest = LoreManifest.get_instance()
-        if "ux_strings" in manifest._cache:
-            manifest._cache["ux_strings"]["symbiosis_strings"] = {}
-        soul_state = {
-            "traits": {"curiosity": 0.8},
-            "obsession": {"title": "Testing Silence"},
-        }
-        phys_state = {"voltage": 12.0, "narrative_drag": 1.0, "zone": "TEST_ZONE"}
-        try:
-            anchor_str = CoherenceAnchor.forge_anchor(soul_state, phys_state)
-            self.assertIsInstance(
-                anchor_str, str, "Anchor generation failed to return a string."
-            )
-        except Exception as e:
-            self.fail(f"CoherenceAnchor crashed when deprived of UX strings: {e}")
-
     def test_kintsugi_dynamic_logs(self):
         from bone_protocols import KintsugiProtocol
 

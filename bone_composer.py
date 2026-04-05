@@ -179,46 +179,6 @@ class LLMInterface:
                 "| System:",
             ],
         }
-
-        import re
-        atp = 100.0
-        ros = 0.0
-        phi = 0.5
-
-        atp_match = re.search(r"P:([0-9.]+)", prompt)
-        if atp_match: atp = float(atp_match.group(1))
-
-        ros_match = re.search(r"ROS:([0-9.]+)", prompt)
-        if ros_match: ros = float(ros_match.group(1))
-
-        phi_match = re.search(r"Φ:([0-9.]+)", prompt)
-        if phi_match: phi = float(phi_match.group(1))
-
-        base_temp = 0.7
-        temp_spike = (ros / 100.0) * 0.8
-        temp_cool = (max(0, phi - 0.5) * 0.5)
-        dynamic_temp = max(0.1, min(1.5, base_temp + temp_spike - temp_cool))
-
-        dynamic_max_tokens = 2048
-        if atp < 30.0:
-            dynamic_max_tokens = max(20, int((atp / 30.0) * 500))
-
-        dynamic_freq_penalty = 0.0
-        if atp < 25.0:
-            dynamic_freq_penalty = 1.0 + ((25.0 - atp) / 25.0) * 1.0
-
-        dynamic_params = {
-            "temperature": round(dynamic_temp, 2),
-            "max_tokens": dynamic_max_tokens,
-            "frequency_penalty": round(dynamic_freq_penalty, 2),
-        }
-
-        if self.events and (dynamic_temp > 1.0 or dynamic_max_tokens < 100):
-            self.events.log(
-                f"[METABOLIC INFERENCE] API params warped by biology: Temp={dynamic_temp:.2f}, MaxTokens={dynamic_max_tokens}",
-                "SYS")
-
-        payload.update(dynamic_params)
         payload.update(params)
 
         cfg_cortex = getattr(self.cfg, "CORTEX", None)

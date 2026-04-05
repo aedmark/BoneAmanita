@@ -216,11 +216,6 @@ class NeurotransmitterModulator:
         self.current_chem.dopamine += 0.2
         self.starvation_ticks = 0
 
-    def force_state(self, state_name: str):
-        if self.events:
-            msg = ux("brain_strings", "manual_override")
-            self.events.log(msg.format(state_name=state_name), "SYS")
-
     def get_mood_directive(self) -> str:
         c = self.current_chem
         if c.cortisol > 0.7 and c.adrenaline > 0.7:
@@ -246,9 +241,6 @@ class TheCortex:
         self.modulator = NeurotransmitterModulator(
             bio_ref=self.svc.bio, events_ref=self.events, config_ref=self.cfg
         )
-        self.boot_history = TelemetryService.get_instance(
-            config_ref=self.cfg
-        ).read_recent_history(limit=4)
         self.last_physics = {}
         self.consultant = services.consultant
         self.llm = llm_client or LLMInterface(self.events, provider="mock")
@@ -286,7 +278,6 @@ class TheCortex:
         self.dreamer.dspy_critic = self.dspy_critic
         if not hasattr(self.dreamer, "trauma_buffer"):
             self.dreamer.trauma_buffer = deque(maxlen=5)
-        self.gordon_shock = None
         self.active_mode = "ADVENTURE"
         if hasattr(self.svc.mind_memory, "nodes"):
             graph = LibraryGraph(
@@ -417,9 +408,6 @@ class TheCortex:
         modifiers = self.svc.symbiosis.get_prompt_modifiers(phys_state)
         if not allow_loot:
             modifiers["include_inventory"] = False
-        if hasattr(self, "gordon_shock") and self.gordon_shock:
-            full_state["gordon_shock"] = self.gordon_shock
-            self.gordon_shock = None
         if self.consultant and self.consultant.active:
             self._apply_vsl_overlay(full_state, user_input, sim_result)
         if is_boot_sequence:
@@ -827,35 +815,6 @@ class TheCortex:
         except Exception as e:
             print(f"\n{Prisma.RED}[TELEMETRY CRASH]: {e}{Prisma.RST}")
 
-    def _check_consent(self, user_input: str, new_loot: List[str]) -> List[str]:
-        if not new_loot:
-            return []
-        acquisition_verbs = [
-            "take",
-            "grab",
-            "pick",
-            "get",
-            "steal",
-            "seize",
-            "collect",
-            "snatch",
-            "acquire",
-            "pocket",
-            "loot",
-            "harvest",
-        ]
-        clean_input = user_input.lower()
-        has_intent = any(verb in clean_input for verb in acquisition_verbs)
-        if not has_intent:
-            if self.events:
-                for item in new_loot:
-                    self.events.log(
-                        f"CONSENT: Intercepted auto-loot for '{item}'. User did not ask for it.",
-                        "CORTEX",
-                    )
-            return []
-        return new_loot
-
     def gather_state(self, sim_result: Dict[str, Any]) -> Dict[str, Any]:
         phys = sim_result.get("physics", {})
         bio = sim_result.get("bio", {})
@@ -981,27 +940,6 @@ class TheCortex:
         if self.events:
             msg = ux("brain_strings", "cortex_resequenced")
             self.events.log(msg.format(count=len(self.dialogue_buffer)), "BRAIN")
-
-
-class ShimmerState:
-    def __init__(self, max_val=50.0):
-        self.current = max_val
-        self.max_val = max_val
-
-    def recharge(self, amount):
-        self.current = min(self.max_val, self.current + amount)
-
-    def spend(self, amount):
-        if self.current >= amount:
-            self.current -= amount
-            return True
-        return False
-
-    def get_bias(self):
-        if self.current < (self.max_val * 0.2):
-            return "CONSERVE"
-        return None
-
 
 class DreamEngine:
     def __init__(
@@ -1142,9 +1080,7 @@ class DreamEngine:
                 else ("SURREAL" if chem.get("dopamine", 0) > 0.6 else "CONSTRUCTIVE")
             )
             residue = soul_snapshot.get("obsession", {}).get("title") or "The Void"
-            dream_text = self._weave_dream(
-                residue, "Context", "Bridge", dream_type, "SURREAL"
-            )
+            dream_text = self._weave_dream(residue, dream_type, "SURREAL")
 
         if dream_text and hasattr(self.mem, "subconscious"):
             try:
@@ -1178,7 +1114,7 @@ class DreamEngine:
         return dream_text, shift
 
     def _weave_dream(
-        self, residue: str, _context: str, _bridge: str, dream_type: str, subtype: str
+        self, residue: str, dream_type: str, subtype: str
     ) -> str:
         sources = self.dream_lore.get(dream_type.upper())
         if not sources:

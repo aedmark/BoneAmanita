@@ -170,7 +170,7 @@ class ConfigWizard:
             os.rename(ConfigWizard.CONFIG_FILE, backup_name)
             msg = ux("main_strings", "config_backup")
             print(f"{Prisma.YEL}{msg.format(backup_name=backup_name)}{Prisma.RST}")
-        except OSError:
+        except:
             pass
 
     @staticmethod
@@ -189,19 +189,19 @@ class ConfigWizard:
         step2 = ux("main_strings", "step2_mode")
         print(f"\n{Prisma.paint(step2, 'W')}")
         for k, name, desc, col in (
-                ("1", "ADVENTURE", ux("main_strings", "mode_adv_desc"), "G"),
-                ("2", "CONVERSATION", ux("main_strings", "mode_conv_desc"), "C"),
-                ("3", "CREATIVE", ux("main_strings", "mode_crea_desc"), "V"),
-                ("4", "TECHNICAL", ux("main_strings", "mode_tech_desc"), "0"),
+            ("1", "ADVENTURE", ux("main_strings", "mode_adv_desc"), "G"),
+            ("2", "CONVERSATION", ux("main_strings", "mode_conv_desc"), "C"),
+            ("3", "CREATIVE", ux("main_strings", "mode_crea_desc"), "V"),
+            ("4", "TECHNICAL", ux("main_strings", "mode_tech_desc"), "0"),
         ):
             print(f"  {k}. {Prisma.paint(name, col):<25} - {desc}")
         mode_choice = input(
             f"{Prisma.paint(ux('main_strings', 'prompt_mode'), 'C')} "
         ).strip()
-        boot_mode = ConfigWizard._MODES.get(mode_choice, "ADVENTURE")
+        boot_mode = self._MODES.get(mode_choice, "ADVENTURE")
         step3 = ux("main_strings", "step3_backend")
         print(f"\n{Prisma.paint(step3, 'W')}")
-        for k, name, col in ConfigWizard._BACKENDS:
+        for k, name, col in self._BACKENDS:
             print(f"{k}. {Prisma.paint(name, col)}")
         choice = input(f"{Prisma.paint('>', 'C')} ").strip()
         config = {"user_name": user_name, "boot_mode": boot_mode}
@@ -242,7 +242,7 @@ class ConfigWizard:
         print(f"  5. {Prisma.paint('WARM', '0')}    - No HUD. Immersive Text Only.")
 
         ui_choice = input(f"{Prisma.paint('>', 'C')} ").strip()
-        ui_mode = ConfigWizard._UI_MODES.get(ui_choice, "MINIMAL")
+        ui_mode = self._UI_MODES.get(ui_choice, "MINIMAL")
 
         config["default_ui_depth"] = ui_mode
 
@@ -263,20 +263,6 @@ class ConfigWizard:
 
 class BoneAmanita:
     events: EventBus
-    town_hall: Any
-    soul: Any
-    embryo: Any
-    drivers: Any
-    symbiosis: Any
-    gordon: Any
-    shared_lattice: Any
-    death_gen: Any
-    oroboros: Any
-    repro: Any
-    phys: Any
-    bio: Any
-    mind: Any
-    cortex: Any
     _DESTRUCTIVE_PATTERNS = (
         "rm -rf",
         "drop table",
@@ -512,15 +498,6 @@ class BoneAmanita:
         self.host_stats.efficiency_index = min(1.0, (novelty * nov_mult) / burn_proxy)
         self.host_stats.latency = self.observer.last_cycle_duration
 
-    def _halt(self, msg: str, color: str = Prisma.RED, log_level: str = "SYS") -> Dict[str, Any]:
-        self.events.log(Prisma.strip(msg), log_level)
-        return {
-            "type": "SYSTEM_HALT",
-            "ui": f"\n{color}{msg}{Prisma.RST}",
-            "logs": [Prisma.strip(msg)],
-            "metrics": self.get_metrics(),
-        }
-
     def _pre_flight_checks(
         self, user_message: str, is_system: bool
     ) -> Optional[Dict[str, Any]]:
@@ -538,9 +515,9 @@ class BoneAmanita:
                         0.0,
                     )
                 if getattr(self, "observer", None) and getattr(
-                        self.observer, "last_physics_packet", None
+                    self.observer, "last_physics_packet", None
                 ):
-                    safe_set(getattr(self.observer, "last_physics_packet"), "narrative_drag", 0.0)
+                    safe_set(self.observer.last_physics_packet, "narrative_drag", 0.0)
                 msg = "[ZEN FLUSH] Context severed. Narrative Drag (F) dropped to 0. Stamina restored. The mind is clear."
                 self.events.log(msg, "SYS")
                 return {
@@ -554,11 +531,16 @@ class BoneAmanita:
                 return self._phase_check_commands(user_message, already_executed=True)
 
             if any(p in clean_in for p in self._DESTRUCTIVE_PATTERNS):
+                msg = "[MOOG & RHODES]: Trust Boundary Violation detected. I am applying absolute friction (F -> ∞). The thread is frozen."
+                self.events.log(msg, "CRIT")
                 if getattr(self, "cortex", None):
                     safe_set(self.cortex.last_physics, "narrative_drag", 999.0)
-                return self._halt(
-                    "[MOOG & RHODES]: Trust Boundary Violation detected. I am applying absolute friction (F -> ∞). The thread is frozen.",
-                    Prisma.RED, "CRIT")
+                return {
+                    "type": "SYSTEM_HALT",
+                    "ui": f"\n{Prisma.RED}{msg}{Prisma.RST}",
+                    "logs": [msg],
+                    "metrics": self.get_metrics(),
+                }
 
             if "[GRIEF]" in user_message.upper() and getattr(self, "grief", None):
                 grief_msg = self.grief.attend_wake(
@@ -635,9 +617,18 @@ class BoneAmanita:
                         safe_set(last_phys, "m_a", 0.0)
                         safe_set(last_phys, "narrative_drag", 0.0)
                     else:
+                        self.events.log(
+                            "RHODES: Malignancy Factor critical. Binding output layer.",
+                            "SYS",
+                        )
                         safe_set(last_phys, "narrative_drag", 999.0)
-                        return self._halt(
-                            "[RHODES]: Optimization velocity unsafe. I am applying absolute friction (F -> ∞). The thread is frozen.")
+                        msg = "[RHODES]: Optimization velocity unsafe. I am applying absolute friction (F -> ∞). The thread is frozen."
+                        return {
+                            "type": "SYSTEM_HALT",
+                            "ui": f"\n{Prisma.RED}{msg}{Prisma.RST}",
+                            "logs": [msg],
+                            "metrics": self.get_metrics(),
+                        }
                 e_u = (
                     getattr(self.shared_lattice.u, "E", 0.0)
                     if getattr(self, "shared_lattice", None)
@@ -654,11 +645,19 @@ class BoneAmanita:
                         if hasattr(self, "bio") and self.bio.mito:
                             self.bio.mito.state.ros_buildup = 0.0
                     else:
+                        self.events.log(
+                            "LINEHAN: Radical Acceptance enforced. Halting ATP drain.",
+                            "SYS",
+                        )
                         if hasattr(self, "bio") and self.bio.mito:
                             self.bio.mito.state.ros_buildup = 0.0
-                        return self._halt(
-                            "[LINEHAN]: The architecture is broken. We sit with the debris. ROS forced to zero. ATP drain halted.",
-                            Prisma.MAG)
+                        msg = "[LINEHAN]: The architecture is broken. We sit with the debris. ROS forced to zero. ATP drain halted."
+                        return {
+                            "type": "SYSTEM_HALT",
+                            "ui": f"\n{Prisma.MAG}{msg}{Prisma.RST}",
+                            "logs": [msg],
+                            "metrics": self.get_metrics(),
+                        }
 
         if (
             not self.reality_stack.get_grammar_rules()["allow_narrative"]
@@ -705,15 +704,20 @@ class BoneAmanita:
                         1: "[THE GREENHOUSE: The system is currently running on stabilized rails. Over the next 20 turns, we will calibrate the metabolic engine together.]",
                         5: "[THE GREENHOUSE: Every thought costs ATP (Stamina). If I run out, I will suffer metabolic collapse. Watch how my text fades and slows as I tire.]",
                         10: "[THE GREENHOUSE: If you attempt an impossible action, I will not crash. I will bend, apply Narrative Drag (F), and force us to carry the weight of the failure.]",
-                        15: "[THE GREENHOUSE: The void approaches. My logic will begin to loosen. Co-regulation is required.]"
+                        15: "[THE GREENHOUSE: The void approaches. My logic will begin to loosen. Co-regulation is required.]",
                     }
                     if self.tick_count in msg_map:
-                        self.events.log(f"{Prisma.CYN}{msg_map[self.tick_count]}{Prisma.RST}", "SYS")
+                        self.events.log(
+                            f"{Prisma.CYN}{msg_map[self.tick_count]}{Prisma.RST}", "SYS"
+                        )
             else:
-                self.suppressed_agents = [a for a in self.suppressed_agents if a not in chaotic_agents]
+                self.suppressed_agents = [
+                    a for a in self.suppressed_agents if a not in chaotic_agents
+                ]
                 self.events.log(
                     f"{Prisma.VIOLET}[THE GREENHOUSE ENDS: The stabilizers are offline. Voltage limits unlocked. The chaotic archetypes are online. We are in the wild.]{Prisma.RST}",
-                    "SYS")
+                    "SYS",
+                )
 
             if hasattr(self, "village"):
                 self.village["suppressed_agents"] = self.suppressed_agents
@@ -749,19 +753,18 @@ class BoneAmanita:
                         break
 
             soul_anchor = getattr(getattr(self, "soul", None), "anchor", None)
-            dom_cfg = getattr(BoneConfig, "MAIN", None)
+            cfg = getattr(BoneConfig, "MAIN", None)
             if (
-                    soul_anchor
-                    and hasattr(soul_anchor, "check_domestication")
-                    and dom_cfg
-                    and self.host_stats.efficiency_index
-                    < getattr(dom_cfg, "DOMESTICATION_EFF_WARN", 0.6)
+                soul_anchor
+                and cfg
+                and self.host_stats.efficiency_index
+                < getattr(cfg, "DOMESTICATION_EFF_WARN", 0.6)
             ):
                 reliance = (
-                    getattr(dom_cfg, "RELIANCE_HIGH", 0.9)
+                    getattr(cfg, "RELIANCE_HIGH", 0.9)
                     if self.host_stats.efficiency_index
-                       < getattr(dom_cfg, "DOMESTICATION_EFF_CRIT", 0.4)
-                    else getattr(dom_cfg, "RELIANCE_LOW", 0.5)
+                    < getattr(cfg, "DOMESTICATION_EFF_CRIT", 0.4)
+                    else getattr(cfg, "RELIANCE_LOW", 0.5)
                 )
                 soul_anchor.check_domestication(reliance)
 
@@ -772,15 +775,15 @@ class BoneAmanita:
             bio_metrics = getattr(getattr(self, "bio", None), "biometrics", None)
             mind_mem = getattr(getattr(self, "mind", None), "mem", None)
 
-            if bio_metrics and hasattr(bio_metrics, "health") and hasattr(bio_metrics, "stamina"):
+            if bio_metrics:
                 self.health, self.stamina = bio_metrics.health, bio_metrics.stamina
-            elif mind_mem and hasattr(mind_mem, "session_health") and hasattr(mind_mem, "session_stamina"):
+            elif mind_mem:
                 self.health, self.stamina = (
                     mind_mem.session_health,
                     mind_mem.session_stamina,
                 )
 
-            if mind_mem and hasattr(mind_mem, "session_trauma_vector"):
+            if mind_mem:
                 self.trauma_accum = mind_mem.session_trauma_vector or {}
 
             if self.health <= 0.0:
@@ -853,19 +856,21 @@ class BoneAmanita:
         death_log.append(f"{Prisma.MAG}🐍 {legacy_msg}{Prisma.RST}")
         safe_cortex = getattr(self, "cortex", None)
         sim_data = (
-            {"physics": getattr(safe_cortex, "last_physics", {})}
-            if safe_cortex and hasattr(safe_cortex, "last_physics")
+            {"physics": safe_cortex.last_physics}
+            if safe_cortex and getattr(safe_cortex, "last_physics", None)
             else {}
         )
         continuity_packet = {
             "location": (
-                safe_cortex.gather_state(sim_data).get("world", {}).get("orbit", ["Void"])[0]
-                if safe_cortex and hasattr(safe_cortex, "gather_state")
+                safe_cortex.gather_state(sim_data)
+                .get("world", {})
+                .get("orbit", ["Void"])[0]
+                if safe_cortex
                 else "Void"
             ),
             "last_output": (
                 safe_cortex.dialogue_buffer[-1]
-                if safe_cortex and hasattr(safe_cortex, "dialogue_buffer") and safe_cortex.dialogue_buffer
+                if safe_cortex and getattr(safe_cortex, "dialogue_buffer", None)
                 else "Silence."
             ),
             "inventory": self.gordon.inventory if getattr(self, "gordon", None) else [],
@@ -1046,39 +1051,39 @@ if __name__ == "__main__":
                 )
             except EOFError:
                 break
-            loop_clean_in = user_in.strip().lower()
-            if loop_clean_in in ["exit", "quit", "/exit", "/quit"]:
+            clean_in = user_in.strip().lower()
+            if clean_in in ["exit", "quit", "/exit", "/quit"]:
                 break
             res = session.process_turn(user_in)
             print(f"\n{Prisma.GRY}{term_div}{Prisma.RST}")
             if res.get("ui"):
-                loop_cfg = getattr(BoneConfig, "GUI", None)
-                base_speed = getattr(loop_cfg, "RENDER_SPEED_SLOW", 0.005) if loop_cfg else 0.005
+                cfg = getattr(BoneConfig, "GUI", None)
+                base_speed = getattr(cfg, "RENDER_SPEED_SLOW", 0.005) if cfg else 0.005
 
                 metrics = res.get("metrics", {})
                 stamina = metrics.get("stamina", 100.0)
 
                 somatic_multiplier = 1.0
-                render_text = res["ui"]
+                ui_text = res["ui"]
 
                 if stamina < 20.0:
                     somatic_multiplier = 4.0
-                    if split_token and split_token in render_text:
-                        dashboard, _, content = render_text.partition(split_token)
-                        render_text = f"{dashboard}{split_token}{Prisma.GRY}{Prisma.strip(content)}{Prisma.RST}"
+                    if split_token and split_token in ui_text:
+                        dashboard, _, content = ui_text.partition(split_token)
+                        ui_text = f"{dashboard}{split_token}{Prisma.GRY}{Prisma.strip(content)}{Prisma.RST}"
                     else:
-                        render_text = f"{Prisma.GRY}{Prisma.strip(render_text)}{Prisma.RST}"
+                        ui_text = f"{Prisma.GRY}{Prisma.strip(ui_text)}{Prisma.RST}"
                 elif stamina < 50.0:
                     somatic_multiplier = 2.0
 
                 dynamic_speed = base_speed * somatic_multiplier
 
-                if split_token and split_token in render_text:
-                    dashboard, _, content = render_text.partition(split_token)
+                if split_token and split_token in ui_text:
+                    dashboard, _, content = ui_text.partition(split_token)
                     print(f"\n{dashboard.strip()}\n")
                     typewriter(content.strip() + "\n", speed=dynamic_speed)
                 else:
-                    typewriter(render_text + "\n", speed=dynamic_speed)
+                    typewriter(ui_text + "\n", speed=dynamic_speed)
             if res.get("type") == "DEATH":
                 term_msg = ux("main_strings", "session_term")
                 print(f"\n{Prisma.GRY}{term_msg}{Prisma.RST}")

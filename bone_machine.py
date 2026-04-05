@@ -13,7 +13,7 @@ from bone_body import (
     EndocrineSystem,
     MetabolicGovernor,
 )
-from bone_brain import DreamEngine, ShimmerState
+from bone_brain import DreamEngine
 from bone_core import LoreManifest, ux, safe_get, safe_set
 from bone_lexicon import LexiconService
 from bone_physics import TheGatekeeper, QuantumObserver, SurfaceTension, CosmicDynamics
@@ -509,7 +509,6 @@ class BoneArchitect:
             immune=ImmuneMycelium(),
             lichen=BioLichen(lexicon_ref=lex),
             governor=MetabolicGovernor(config_ref=target_cfg),
-            shimmer=ShimmerState(),
             parasite=BioParasite(mind.mem, lex, config_ref=target_cfg),
             events=events,
             biometrics=bio_metrics,
@@ -519,7 +518,7 @@ class BoneArchitect:
     @staticmethod
     def _construct_physics(events, bio, mind, lex, config_ref=None) -> PhysSystem:
         target_cfg = config_ref or BoneConfig
-        gate = TheGatekeeper(lex, mind.mem, config_ref=target_cfg)
+        gate = TheGatekeeper(lex, config_ref=target_cfg)
         return PhysSystem(
             observer=QuantumObserver(events, lex, config_ref=target_cfg),
             forge=TheForge(lex_ref=lex),

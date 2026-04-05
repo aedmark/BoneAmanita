@@ -39,16 +39,32 @@ class Prisma:
     @classmethod
     def enable_web_mode(cls):
         cls.RST = "</span>"
-        css_map = {
-            "RED": ("R", "red"), "GRN": ("G", "grn"), "YEL": ("Y", "yel"),
-            "BLU": ("B", "blu"), "MAG": ("M", "mag"), "CYN": ("C", "cyn"),
-            "WHT": ("W", "wht"), "GRY": ("0", "gry"), "INDIGO": ("I", "indigo"),
-            "OCHRE": ("O", "ochre"), "VIOLET": ("V", "violet"), "SLATE": ("S", "slate")
+        cls.RED = "<span class='prisma-red'>"
+        cls.GRN = "<span class='prisma-grn'>"
+        cls.YEL = "<span class='prisma-yel'>"
+        cls.BLU = "<span class='prisma-blu'>"
+        cls.MAG = "<span class='prisma-mag'>"
+        cls.CYN = "<span class='prisma-cyn'>"
+        cls.WHT = "<span class='prisma-wht'>"
+        cls.GRY = "<span class='prisma-gry'>"
+        cls.INDIGO = "<span class='prisma-indigo'>"
+        cls.OCHRE = "<span class='prisma-ochre'>"
+        cls.VIOLET = "<span class='prisma-violet'>"
+        cls.SLATE = "<span class='prisma-slate'>"
+        cls._COLOR_MAP = {
+            "R": cls.RED,
+            "G": cls.GRN,
+            "Y": cls.YEL,
+            "B": cls.BLU,
+            "M": cls.MAG,
+            "C": cls.CYN,
+            "W": cls.WHT,
+            "0": cls.GRY,
+            "I": cls.INDIGO,
+            "O": cls.OCHRE,
+            "V": cls.VIOLET,
+            "S": cls.SLATE,
         }
-        for attr, (key, css) in css_map.items():
-            val = f"<span class='prisma-{css}'>"
-            setattr(cls, attr, val)
-            cls._COLOR_MAP[key] = val
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
@@ -206,7 +222,7 @@ class PhysicsPacket:
             return data
         if data is None:
             return cls()
-        valid_keys = cls.__dataclass_fields__.keys()
+        valid_keys = {f.name for f in fields(cls)}
         if isinstance(data, dict):
             return cls(
                 **{k: data.get(k) for k in valid_keys if data.get(k) is not None}

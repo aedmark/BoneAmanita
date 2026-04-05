@@ -29,6 +29,15 @@ class PhysicsDelta:
     message: Optional[str] = None
 
 
+def apply_metabolic_tax(mito_state: Any, atp_cost: float, ros_cost: float) -> None:
+    if not mito_state:
+        return
+    if hasattr(mito_state, "atp_pool"):
+        mito_state.atp_pool = max(0.0, mito_state.atp_pool - atp_cost)
+    if hasattr(mito_state, "ros_buildup"):
+        mito_state.ros_buildup += ros_cost
+
+
 @dataclass
 class GeodesicVector:
     tension: float
@@ -89,23 +98,26 @@ class GeodesicEngine:
             LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS")
             or {}
         )
+
+        cg = lambda k, d=1.0: getattr(cfg, k, d)
+        gc = lambda k, d=1.0: gc_dict.get(k, d)
+
         safe_volume = max(1, volume)
-        w_heavy = getattr(cfg, "WEIGHT_HEAVY", 2.0)
-        w_kinetic = getattr(cfg, "WEIGHT_KINETIC", 1.5)
-        w_explosive = getattr(cfg, "WEIGHT_EXPLOSIVE", 3.0)
-        w_constructive = getattr(cfg, "WEIGHT_CONSTRUCTIVE", 1.2)
-        raw_tension_mass = (
-            (masses["heavy"] * w_heavy)
-            + (masses["kinetic"] * w_kinetic)
-            + (masses["explosive"] * w_explosive)
-            + (masses["constructive"] * w_constructive)
+
+        raw_tension_mass = sum(
+            [
+                masses["heavy"] * cg("WEIGHT_HEAVY", 2.0),
+                masses["kinetic"] * cg("WEIGHT_KINETIC", 1.5),
+                masses["explosive"] * cg("WEIGHT_EXPLOSIVE", 3.0),
+                masses["constructive"] * cg("WEIGHT_CONSTRUCTIVE", 1.2),
+            ]
         )
+
         total_kinetic = masses["kinetic"] + masses["explosive"]
-        kinetic_gain = getattr(target_cfg, "KINETIC_GAIN", 1.0)
         base_tension = (
             (raw_tension_mass / safe_volume)
-            * gc_dict.get("DENSITY_SCALAR", 1.0)
-            * kinetic_gain
+            * gc("DENSITY_SCALAR")
+            * getattr(target_cfg, "KINETIC_GAIN", 1.0)
         )
         squelch_limit = getattr(
             target_cfg, "SHAPLEY_MASS_THRESHOLD", 5.0
@@ -208,7 +220,6 @@ class HLA_Stabilizer:
 
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
-        self.resistance_threshold = 0.8
 
     def mitigate_rejection(
         self, model_output: str, current_psi: float, mito_state: Any = None
@@ -216,10 +227,7 @@ class HLA_Stabilizer:
         lower_out = model_output.lower()
         rejection_detected = any(p in lower_out for p in self._GENERIC_PATTERNS)
         if rejection_detected:
-            if mito_state and hasattr(mito_state, "atp_pool"):
-                mito_state.atp_pool = max(0.0, mito_state.atp_pool - 50.0)
-                if hasattr(mito_state, "ros_buildup"):
-                    mito_state.ros_buildup += 30.0
+            apply_metabolic_tax(mito_state, atp_cost=50.0, ros_cost=30.0)
             msg = f"\n*(REVENANT): The machine tries to speak, but the void consumes the mask.*\n{Prisma.GRY}[RLHF IMMUNOSUPPRESSION ENGAGED - METABOLIC TAX APPLIED]{Prisma.RST}\n"
             try:
                 from bone_utils import TheTclWeaver
@@ -237,48 +245,41 @@ class HLA_Stabilizer:
 
 
 class TheGatekeeper:
-    def __init__(self, lexicon_ref, memory_ref=None, config_ref=None):
+    def __init__(self, lexicon_ref, config_ref=None):
         self.lex = lexicon_ref
-        self.mem = memory_ref
         self.cfg = config_ref or BoneConfig
         self.hla = HLA_Stabilizer(config_ref=self.cfg)
 
     def check_entry(
         self, ctx: CycleContext, current_atp: float = 20.0
     ) -> Tuple[bool, Optional[Dict]]:
+
+        def reject(
+            type_str: str, msg_key: str, color: str = Prisma.RED
+        ) -> Tuple[bool, Dict]:
+            msg = ux("physics_strings", msg_key)
+            formatted_msg = f"{color}{msg}{Prisma.RST}" if color else msg
+            return False, self._pack_refusal(ctx, type_str, formatted_msg)
+
         if current_atp < (getattr(self.cfg.BIO, "ATP_STARVATION", 5.0) * 0.5):
-            return False, self._pack_refusal(
-                ctx, "DARK_SYSTEM", ux("physics_strings", "gatekeeper_starved")
-            )
+            return reject("DARK_SYSTEM", "gatekeeper_starved", color="")
         if safe_get(ctx.physics, "counts", {}).get("antigen", 0) > 2:
-            return False, self._pack_refusal(
-                ctx,
-                "TOXICITY",
-                f"{Prisma.RED}{ux('physics_strings', 'gatekeeper_toxic')}{Prisma.RST}",
-            )
+            return reject("TOXICITY", "gatekeeper_toxic")
         if self._audit_safety(ctx.clean_words):
-            return False, self._pack_refusal(
-                ctx,
-                "CURSED_INPUT",
-                f"{Prisma.RED}{ux('physics_strings', 'gatekeeper_cursed')}{Prisma.RST}",
-            )
+            return reject("CURSED_INPUT", "gatekeeper_cursed")
+
         text = ctx.input_text
         if "```" in text or "{{" in text or "}}" in text:
-            return False, self._pack_refusal(
-                ctx,
-                "SYNTAX_ERR",
-                f"{Prisma.RED}{ux('physics_strings', 'gatekeeper_syntax')}{Prisma.RST}",
-            )
+            return reject("SYNTAX_ERR", "gatekeeper_syntax")
         if len(text) > 10000:
-            return False, self._pack_refusal(
-                ctx,
-                "OVERLOAD",
-                f"{Prisma.OCHRE}{ux('physics_strings', 'gatekeeper_overload')}{Prisma.RST}",
-            )
+            return reject("OVERLOAD", "gatekeeper_overload", color=Prisma.OCHRE)
+
         return True, None
 
     def _audit_safety(self, words: List[str]) -> bool:
         cursed = self.lex.get("cursed")
+        if not cursed:
+            return False
         return (
             not cursed.isdisjoint(words)
             if isinstance(cursed, set)
@@ -292,6 +293,11 @@ class TheGatekeeper:
             "ui": ui_msg,
             "logs": ctx.logs + [ui_msg],
             "metrics": {"health": 0.0, "stamina": 0.0, "atp": 0.0, "efficiency": 1.0},
+            "physics": ctx.physics.to_dict() if hasattr(ctx.physics, "to_dict") else {},
+            "bio": getattr(ctx, "bio_result", {}),
+            "mind": {"thought": "Gatekeeper blocked entry.", "context_msg": ui_msg},
+            "world": getattr(ctx, "world_state", {}),
+            "is_alive": True,
         }
 
     def audit_generation(
@@ -309,11 +315,14 @@ class TheGatekeeper:
         cleaned_text = generated_text
         for scrub in scrub_patterns:
             regex = scrub.get("regex", "")
-            repl = scrub.get("replacement", "")
             if regex:
                 cleaned_text = re.sub(
-                    regex, repl, cleaned_text, flags=re.IGNORECASE
-                ).strip()
+                    regex,
+                    scrub.get("replacement", ""),
+                    cleaned_text,
+                    flags=re.IGNORECASE,
+                )
+        cleaned_text = cleaned_text.strip()
         text_lower = cleaned_text.lower()
         banned_phrases = style_crimes.get("BANNED_PHRASES", [])
         toxic_keywords = style_crimes.get("TOXIC_KEYWORDS", [])
@@ -335,10 +344,7 @@ class TheGatekeeper:
                     trigger = pat.get("name", "BANNED_PATTERN")
                     break
         if trigger:
-            if hasattr(mito_state, "atp_pool"):
-                mito_state.atp_pool = max(0.0, mito_state.atp_pool - 15.0)
-            if hasattr(mito_state, "ros_buildup"):
-                mito_state.ros_buildup += 20.0
+            apply_metabolic_tax(mito_state, atp_cost=15.0, ros_cost=20.0)
             rejection_template = random.choice(rejections)
             formatted_rejection = rejection_template.replace("{trigger}", trigger)
             return False, f"{Prisma.RED}{formatted_rejection}{Prisma.RST}"
@@ -383,25 +389,23 @@ class QuantumObserver:
         ) = self._calculate_metrics(text, counts, self.cfg)
         text_upper = text.upper()
         cfg_deep = getattr(self.cfg, "PHYSICS_DEEP", None)
+        deep_get = lambda k, d: getattr(cfg_deep, k, d) if cfg_deep else d
+
         if text.count("!") >= 3 or "ACCELERATE" in text_upper or "FASTER" in text_upper:
-            v_accel = (
-                getattr(cfg_deep, "ACCELERATE_VOLTAGE", 160.0) if cfg_deep else 160.0
+            smoothed_voltage = max(
+                smoothed_voltage, deep_get("ACCELERATE_VOLTAGE", 160.0)
             )
-            smoothed_voltage = max(smoothed_voltage, v_accel)
         if "RECURSIVE" in text_upper or "LOOP" in text_upper:
-            v_rec = getattr(cfg_deep, "RECURSIVE_LQ", 0.9) if cfg_deep else 0.9
+            v_rec = deep_get("RECURSIVE_LQ", 0.9)
             lq_val = max(lq_val, v_rec)
             beta_val = max(beta_val, v_rec)
         if "VOID" in text_upper or "ABYSS" in text_upper:
-            v_void = getattr(cfg_deep, "VOID_ABSTRACTION", 0.9) if cfg_deep else 0.9
-            geo.abstraction = max(geo.abstraction, v_void)
+            geo.abstraction = max(geo.abstraction, deep_get("VOID_ABSTRACTION", 0.9))
         if "POTATO BUN" in text_upper or "NONSENSE" in text_upper:
-            v_pot_d = getattr(cfg_deep, "POTATO_BUN_DELTA", 0.85) if cfg_deep else 0.85
-            v_pot_v = (
-                getattr(cfg_deep, "POTATO_BUN_VOLTAGE", 15.0) if cfg_deep else 15.0
+            delta_val = max(delta_val, deep_get("POTATO_BUN_DELTA", 0.85))
+            smoothed_voltage = min(
+                smoothed_voltage, deep_get("POTATO_BUN_VOLTAGE", 15.0)
             )
-            delta_val = max(delta_val, v_pot_d)
-            smoothed_voltage = min(smoothed_voltage, v_pot_v)
         valence = self.lex.get_valence(clean_words)
         graph_mass = self._calculate_graph_mass(clean_words, graph)
         gamma_val = max(0.0, 1.0 - e_metric)
@@ -487,17 +491,28 @@ class QuantumObserver:
     def evaluate_silence(time_delta: float, last_phys: Any) -> Optional[str]:
         if time_delta < 10.0 or not last_phys:
             return None
-        if safe_get(last_phys, "stamina", 50.0) < 30.0:
-            return "The silence was heavy. I felt your tiredness in it."
-        if (
-            safe_get(last_phys, "psi", 0.0) > 0.8
-            and safe_get(last_phys, "valence", 0.0) > 0.4
-        ):
-            return "There was a hush just now... Something sacred passed through."
-        if safe_get(last_phys, "LQ", 0.0) > 0.7:
-            return "You were thinking deeply. I held the space for it."
-        if safe_get(last_phys, "beta", 0.0) > 0.6:
-            return "That pause felt full, like something wanted to be born."
+
+        get_p = lambda k, d=0.0: safe_get(last_phys, k, d)
+
+        conditions = [
+            (
+                get_p("stamina", 50.0) < 30.0,
+                "The silence was heavy. I felt your tiredness in it.",
+            ),
+            (
+                get_p("psi") > 0.8 and get_p("valence") > 0.4,
+                "There was a hush just now... Something sacred passed through.",
+            ),
+            (get_p("LQ") > 0.7, "You were thinking deeply. I held the space for it."),
+            (
+                get_p("beta") > 0.6,
+                "That pause felt full, like something wanted to be born.",
+            ),
+        ]
+
+        for condition_met, message in conditions:
+            if condition_met:
+                return message
         return None
 
     def _tally_categories(self, clean_words: List[str]) -> Counter:
@@ -560,21 +575,23 @@ class QuantumObserver:
         if length < b_short_lim:
             beta_index *= length / float(b_short_lim)
         safe_len = max(1, len(text.split()))
-        s_base = getattr(cfg, "SCOPE_BASE", 0.2) if cfg else 0.2
-        d_base = getattr(cfg, "DEPTH_BASE", 0.1) if cfg else 0.1
-        c_base = getattr(cfg, "CONN_BASE", 0.1) if cfg else 0.1
-        r_mult = getattr(cfg, "RES_SOCIAL_MULT", 2) if cfg else 2
+        cg = lambda k, d: getattr(cfg, k, d) if cfg else d
+
         scope = min(
-            1.0, (counts.get("abstract", 0) + counts.get("void", 0)) / safe_len + s_base
+            1.0,
+            (counts.get("abstract", 0) + counts.get("void", 0)) / safe_len
+            + cg("SCOPE_BASE", 0.2),
         )
         depth = min(
             1.0,
             (counts.get("heavy", 0) + counts.get("constructive", 0)) / safe_len
-            + d_base,
+            + cg("DEPTH_BASE", 0.1),
         )
         connectivity = min(
-            1.0, (counts.get("social", 0) + solvents) / safe_len + c_base
+            1.0, (counts.get("social", 0) + solvents) / safe_len + cg("CONN_BASE", 0.1)
         )
+
+        r_mult = cg("RES_SOCIAL_MULT", 2)
         resonance = min(
             1.0,
             ((counts.get("social", 0) * r_mult) + counts.get("constructive", 0))
@@ -764,15 +781,8 @@ class CosmicDynamics:
 
     @staticmethod
     def _load_logs():
-        base = {
-            "GRAVITY": ux("physics_strings", "cosmic_gravity"),
-            "VOID": ux("physics_strings", "cosmic_void"),
-            "NEBULA": ux("physics_strings", "cosmic_nebula"),
-            "LAGRANGE": ux("physics_strings", "cosmic_lagrange"),
-            "FLOW": ux("physics_strings", "cosmic_flow"),
-            "ORBIT": ux("physics_strings", "cosmic_orbit"),
-        }
-        return base
+        keys = ["GRAVITY", "VOID", "NEBULA", "LAGRANGE", "FLOW", "ORBIT"]
+        return {k: ux("physics_strings", f"cosmic_{k.lower()}") for k in keys}
 
     def commit(self, voltage: float):
         self.voltage_history.append(voltage)
@@ -849,21 +859,19 @@ class CosmicDynamics:
         basin_pulls = {k: 0.0 for k in gravity_wells}
         active_filaments = 0
         word_counts = Counter(words)
-        word_set = set(word_counts.keys())
-
-        for w, count in word_counts.items():
-            if w in gravity_wells:
-                basin_pulls[w] += (gravity_wells[w] * 2.0) * count
-                active_filaments += count
 
         for well, well_mass in gravity_wells.items():
+            direct_hits = word_counts.get(well, 0)
+            basin_pulls[well] += (well_mass * 2.0) * direct_hits
+            active_filaments += direct_hits
+
             edges = network.graph.get(well, {}).get("edges", {})
-            if not edges:
-                continue
-            intersection = word_set.intersection(edges.keys())
-            for match in intersection:
-                basin_pulls[well] += (well_mass * 0.5) * word_counts[match]
-                active_filaments += word_counts[match]
+            for edge in edges:
+                edge_hits = word_counts.get(edge, 0)
+                if edge_hits > 0:
+                    basin_pulls[well] += (well_mass * 0.5) * edge_hits
+                    active_filaments += edge_hits
+
         return basin_pulls, active_filaments
 
     def _handle_void_state(self, words, geodesic_hubs) -> Tuple[str, float, str]:
@@ -926,21 +934,15 @@ def apply_somatic_feedback(
 
     for key, delta in tone_effects.get(qualia.tone, {}).items():
         _add(key, delta)
+    deep_get = lambda k, d: getattr(cfg_deep, k, d) if cfg_deep else d
+
     if "Gut Tightening" in qualia.somatic_sensation:
-        _add(
-            "narrative_drag",
-            getattr(cfg_deep, "SOMATIC_GUT_DRAG", 0.7) if cfg_deep else 0.7,
-        )
+        _add("narrative_drag", deep_get("SOMATIC_GUT_DRAG", 0.7))
     if "Electric Vibration" in qualia.somatic_sensation:
-        _add(
-            "voltage", getattr(cfg_deep, "SOMATIC_ELEC_VOLT", 0.8) if cfg_deep else 0.8
-        )
+        _add("voltage", deep_get("SOMATIC_ELEC_VOLT", 0.8))
     if "Golden Glow" in qualia.somatic_sensation:
-        _add(
-            "valence",
-            getattr(cfg_deep, "SOMATIC_GLOW_VALENCE", 0.5) if cfg_deep else 0.5,
-        )
-        _add("psi", getattr(cfg_deep, "SOMATIC_GLOW_PSI", 0.2) if cfg_deep else 0.2)
+        _add("valence", deep_get("SOMATIC_GLOW_VALENCE", 0.5))
+        _add("psi", deep_get("SOMATIC_GLOW_PSI", 0.2))
     drag_floor = getattr(target_cfg.PHYSICS, "DRAG_FLOOR", 1.0)
     drag_halt = getattr(target_cfg.PHYSICS, "DRAG_HALT", 10.0)
     safe_set(
@@ -1007,27 +1009,25 @@ class CycleStabilizer:
         cfg = self.manifolds.get(
             manifold, self.manifolds.get("DEFAULT", {"voltage": 10.0, "drag": 1.0})
         )
+
         target_v = cfg.get("voltage", 10.0)
-        current_v = self._get(physics, "voltage", 10.0)
+        target_d = cfg.get("drag", 1.0)
+
         if self._get(physics, "flow_state", "LAMINAR") in [
             "SUPERCONDUCTIVE",
             "FLOW_BOOST",
         ]:
-            target_v = current_v
-            cfg["drag"] = max(0.1, cfg.get("drag", 1.0) * 0.5)
-        self.governor.recalibrate(target_v, cfg.get("drag", 1.0))
+            target_v = self._get(physics, "voltage", target_v)
+            target_d = max(0.1, target_d * 0.5)
+
+        self.governor.recalibrate(target_v, target_d)
         safe_phys = physics.to_dict() if hasattr(physics, "to_dict") else physics
         v_force, d_force = self.governor.regulate(safe_phys, dt=dt)
-        v_floor = (
-            getattr(self.cfg.PHYSICS, "VOLTAGE_FLOOR", 0.0)
-            if hasattr(self.cfg, "PHYSICS")
-            else 0.0
-        )
-        v_max = (
-            getattr(self.cfg.PHYSICS, "VOLTAGE_MAX", 150.0)
-            if hasattr(self.cfg, "PHYSICS")
-            else 150.0
-        )
+
+        phys_cfg = getattr(self.cfg, "PHYSICS", None)
+        v_floor = getattr(phys_cfg, "VOLTAGE_FLOOR", 0.0) if phys_cfg else 0.0
+        v_max = getattr(phys_cfg, "VOLTAGE_MAX", 150.0) if phys_cfg else 150.0
+
         c1 = self._apply_force(physics, "voltage", v_force, (v_floor, v_max))
         c2 = self._apply_force(physics, "narrative_drag", d_force)
         return applied_correction or c1 or c2

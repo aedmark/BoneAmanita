@@ -20,36 +20,11 @@ class HostHealth:
     compliance: float = 1.0
     verbosity_ratio: float = 1.0
     diagnosis: str = "STABLE"
-    memory_stable_ticks: int = 0
     refusal_streak: int = 0
     slop_streak: int = 0
 
 
 class CoherenceAnchor:
-    @staticmethod
-    def forge_anchor(soul_state: Dict, physics_state: Dict) -> str:
-        identity = ux("symbiosis_strings", "anchor_identity_unknown")
-        if "traits" in soul_state:
-            traits_list = [f"{k[:3]}:{v:.1f}" for k, v in soul_state["traits"].items()]
-            msg_traits = ux("symbiosis_strings", "anchor_identity")
-            if msg_traits:
-                identity = msg_traits.format(traits=", ".join(traits_list))
-        voltage = safe_get(physics_state, "voltage", 0.0)
-        drag = safe_get(physics_state, "narrative_drag", 0.0)
-        zone = safe_get(physics_state, "zone", "VOID")
-        msg_reality = ux("symbiosis_strings", "anchor_reality")
-        reality = (
-            msg_reality.format(zone=zone, voltage=voltage, drag=drag)
-            if msg_reality
-            else ""
-        )
-        obsession = soul_state.get("obsession", {}).get("title", "None")
-        msg_focus = ux("symbiosis_strings", "anchor_focus")
-        focus_str = msg_focus.format(obsession=obsession) if msg_focus else ""
-        header = ux("symbiosis_strings", "anchor_header")
-        parts = [p for p in [header, identity, reality, focus_str] if p]
-        return "\n".join(parts)
-
     @staticmethod
     def compress_anchor(soul_state: Dict, physics_state: Dict, max_tokens=200) -> str:
         loc = safe_get(physics_state, "zone", "VOID")
@@ -309,10 +284,6 @@ class SymbiosisManager:
                     self.events.log(msg.format(entropy=entropy), "WARN")
         else:
             self.current_health.slop_streak = 0
-        if self.current_health.compliance > c_burden:
-            self.current_health.memory_stable_ticks += 1
-        else:
-            self.current_health.memory_stable_ticks = 0
         self.current_health.diagnosis = self.diagnostician.diagnose(self.current_health)
         return self.current_health
 
