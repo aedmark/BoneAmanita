@@ -438,9 +438,8 @@ class MemoryCore:
         }
         self.subconscious.bury(fossil_data, config_ref=self.cfg)
         del self.graph[victim]
-        for node in self.graph:
-            if victim in self.graph[node]["edges"]:
-                del self.graph[node]["edges"][victim]
+        for node_data in self.graph.values():
+            node_data["edges"].pop(victim, None)
         msg = ux("spore_strings", "core_repressed") or ""
         return victim, msg.format(victim=victim, score=score) if msg else ""
 
@@ -510,11 +509,10 @@ class MycelialNetwork:
 
     def run_ecosystem(self, physics: Any, stamina: float, tick: int) -> List[str]:
         logs = []
-        clean_words = safe_get(
-            physics,
-            "clean_words",
-            safe_get(safe_get(physics, "matter"), "clean_words", []),
-        )
+
+        matter_node = safe_get(physics, "matter")
+        fallback_words = safe_get(matter_node, "clean_words", []) if matter_node else []
+        clean_words = safe_get(physics, "clean_words", fallback_words)
         sugar, lichen_msg = self.lichen.photosynthesize(physics, clean_words, tick)
         if lichen_msg:
             logs.append(lichen_msg)
@@ -551,24 +549,17 @@ class MycelialNetwork:
                 total_drag_penalty += d_pen
                 echo_count += 1
         if echo_count > 0:
-            v_targ = safe_get(physics, "energy", physics)
-            d_targ = safe_get(physics, "space", physics)
-            safe_set(
-                v_targ,
-                "voltage",
-                safe_get(v_targ, "voltage", safe_get(physics, "voltage", 0.0))
-                + total_voltage_boost,
-            )
-            safe_set(
-                d_targ,
-                "narrative_drag",
-                safe_get(
-                    d_targ, "narrative_drag", safe_get(physics, "narrative_drag", 0.0)
-                )
-                + total_drag_penalty,
-            )
-            cfg = getattr(self.cfg, "SPORES", None)
-            heavy_v = getattr(cfg, "ECHO_VOLTAGE_HEAVY", 4.0) if cfg else 4.0
+            v_targ = safe_get(physics, "energy") or physics
+            d_targ = safe_get(physics, "space") or physics
+
+            curr_v = safe_get(v_targ, "voltage", safe_get(physics, "voltage", 0.0))
+            curr_d = safe_get(d_targ, "narrative_drag", safe_get(physics, "narrative_drag", 0.0))
+
+            safe_set(v_targ, "voltage", curr_v + total_voltage_boost)
+            safe_set(d_targ, "narrative_drag", curr_d + total_drag_penalty)
+
+            cfg = getattr(self.cfg, "SPORES", object())
+            heavy_v = getattr(cfg, "ECHO_VOLTAGE_HEAVY", 4.0)
             if total_voltage_boost > heavy_v:
                 msg_h = ux("spore_strings", "net_echo_heavy") or ""
                 return (
@@ -584,8 +575,8 @@ class MycelialNetwork:
     def trigger_autophagy(self) -> Tuple[float, str]:
         victim, msg = self.memory_core.cannibalize(current_tick=int(time.time()))
         if victim:
-            cfg = getattr(self.cfg, "AKASHIC", None)
-            atp_gain = getattr(cfg, "AUTOPHAGY_YIELD", 15.0) if cfg else 15.0
+            cfg = getattr(self.cfg, "AKASHIC", object())
+            atp_gain = getattr(cfg, "AUTOPHAGY_YIELD", 15.0)
             if hasattr(self.events, "publish"):
                 self.events.publish(
                     "AUTOPHAGY_EVENT", {"node": victim, "atp_gained": atp_gain}
@@ -620,11 +611,15 @@ class MycelialNetwork:
             )
             safe_set(v_targ, "voltage", max(0.0, curr_v + total_v_shift))
             safe_set(d_targ, "narrative_drag", max(0.0, curr_d + total_d_shift))
-            msg = (
+            msg_template = (
                 ux("spore_strings", "net_ghost_haunt")
                 or "The ghosts of [{words}] alter the atmosphere (V:{v:+.2f}, D:{d:+.2f})."
             )
-            return f"{Prisma.VIOLET}{msg.format(words=', '.join(haunted_words).upper(), v=total_v_shift, d=total_d_shift)}{Prisma.RST}"
+
+            haunted_str = ", ".join(haunted_words).upper()
+            formatted_msg = msg_template.format(words=haunted_str, v=total_v_shift, d=total_d_shift)
+
+            return f"{Prisma.VIOLET}{formatted_msg}{Prisma.RST}"
         return None
 
     def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
@@ -656,27 +651,30 @@ class MycelialNetwork:
         return False
 
     def check_for_resurrection(
-        self, input_words: List[str], voltage: float
+            self, input_words: List[str], voltage: float
     ) -> Optional[str]:
-        cfg = getattr(self.cfg, "SPORES", None)
-        v_min = getattr(cfg, "RESURRECTION_VOLTAGE_MIN", 60.0) if cfg else 60.0
-        r_chance = getattr(cfg, "RESURRECTION_CHANCE", 0.20) if cfg else 0.20
+        cfg = getattr(self.cfg, "SPORES", object())
+        v_min = getattr(cfg, "RESURRECTION_VOLTAGE_MIN", 60.0)
+        r_chance = getattr(cfg, "RESURRECTION_CHANCE", 0.20)
+
         if voltage < v_min:
             return None
-        for word in input_words:
-            if word in self.subconscious.index:
-                if random.random() < r_chance:
-                    memory = self.subconscious.dredge(word)
-                    if memory:
-                        self.graph[word] = {"edges": memory["edges"], "last_tick": 0}
-                        vibe = self.subconscious.dredge_vibe(word)
-                        vibe_str = f"[{vibe[0]}, {vibe[1]}, {vibe[2]}]"
-                        msg = (
-                            ux("spore_strings", "net_flashback")
-                            or "A memory resurfaces: {word}."
-                        )
-                        base_str = msg.format(word=word.upper())
-                        return f"{base_str} It carries a dark matter gravity of {vibe_str}."
+
+        if random.random() > r_chance:
+            return None
+
+        valid_ghosts = [w for w in input_words if w in self.subconscious.index]
+        if valid_ghosts:
+            word = random.choice(valid_ghosts)
+            memory = self.subconscious.dredge(word)
+            if memory:
+                self.graph[word] = {"edges": memory["edges"], "last_tick": 0}
+                vibe = self.subconscious.dredge_vibe(word)
+                vibe_str = f"[{vibe[0]}, {vibe[1]}, {vibe[2]}]"
+                msg = ux("spore_strings", "net_flashback") or "A memory resurfaces: {word}."
+                base_str = msg.format(word=word.upper())
+                return f"{base_str} It carries a dark matter gravity of {vibe_str}."
+
         return None
 
     def bury(
@@ -692,27 +690,28 @@ class MycelialNetwork:
         valuable = self._filter_valuable_matter(clean_words)
         self.cortical_stack.extend(valuable)
         max_cap = getattr(self.cfg, "MAX_MEMORY_CAPACITY", 100)
-        if len(self.graph) > max_cap:
-            cfg = getattr(self.cfg, "SPORES", None)
-            desp_thresh = (
-                getattr(cfg, "DESPERATION_SATURATION_THRESH", 0.6) if cfg else 0.6
-            )
+        victims = []
+        log_msg = None
+
+        excess_mass = (len(self.graph) + len(valuable)) - max_cap
+        if excess_mass > 0:
+            cfg = getattr(self.cfg, "SPORES", object())
+            desp_thresh = getattr(cfg, "DESPERATION_SATURATION_THRESH", 0.6)
+
             if desperation_level < desp_thresh:
-                msg_high = ux("spore_strings", "net_sat_high") or ""
-                return msg_high, []
-            victim, log_msg = self.memory_core.cannibalize(
-                tick, preserve_current=clean_words[0]
-            )
-            if not victim:
-                msg_lock = ux("spore_strings", "net_sat_lock") or ""
-                return msg_lock, []
-            else:
-                if hasattr(self.events, "publish"):
-                    self.events.publish(
-                        "Q_MATRIX_UPDATED", {"q_matrix": self.subconscious.Q_n}
-                    )
-        else:
-            victim, log_msg = None, None
+                return ux("spore_strings", "net_sat_high") or "", []
+
+            for _ in range(excess_mass):
+                v, l_msg = self.memory_core.cannibalize(tick, preserve_current=valuable)
+                if not v: break
+                victims.append(v)
+                log_msg = l_msg
+
+            if not victims:
+                return ux("spore_strings", "net_sat_lock") or "", []
+            elif hasattr(self.events, "publish"):
+                self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": self.subconscious.Q_n})
+
         base_rate = 0.5 * (resonance / 5.0)
         learning_rate = max(0.1, min(1.0, base_rate * learning_mod))
         decay_rate = 0.1
@@ -735,7 +734,7 @@ class MycelialNetwork:
                     prev, current, learning_rate, decay_rate
                 )
         new_wells = self._detect_new_wells(valuable, tick)
-        return log_msg, ([victim] if victim else []) + new_wells
+        return log_msg, victims + new_wells
 
     def _filter_valuable_matter(self, words: List[str]) -> List[str]:
         solvents = (
@@ -1026,13 +1025,13 @@ class MycelialNetwork:
     def cleanup_old_sessions(self, limbo_layer=None):
         files = self.loader.list_spores()
         removed = 0
-        cfg = getattr(self.cfg, "SPORES", None)
-        max_files = getattr(cfg, "MAX_FILES", 25) if cfg else 25
-        max_age = getattr(cfg, "MAX_AGE_SECONDS", 86400) if cfg else 86400
+        cfg = getattr(self.cfg, "SPORES", object())
+        max_files = getattr(cfg, "MAX_FILES", 25)
+        max_age = getattr(cfg, "MAX_AGE_SECONDS", 86400)
         current_time = time.time()
         for i, (path, age, fname) in enumerate(files):
             file_age = current_time - age
-            if i >= max_files and file_age > max_age:
+            if i >= max_files or file_age > max_age:
                 try:
                     if limbo_layer:
                         limbo_layer.absorb_dead_timeline(path)
@@ -1159,15 +1158,26 @@ class BioParasite:
 
     def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
         score = (sum(1 for w in clean_words if w in self.archetypes) / max(1, len(clean_words))) * 10.0
-        comment = ux("spore_strings", "para_op_great") if score > 3.0 else (ux("spore_strings", "para_op_good") if score > 1.0 else (ux("spore_strings", "para_op_hot") if voltage > 15.0 else (ux("spore_strings", "para_op_cold") if voltage < 5.0 else "")))
+
+        if score > 3.0:
+            comment = ux("spore_strings", "para_op_great")
+        elif score > 1.0:
+            comment = ux("spore_strings", "para_op_good")
+        elif voltage > 15.0:
+            comment = ux("spore_strings", "para_op_hot")
+        elif voltage < 5.0:
+            comment = ux("spore_strings", "para_op_cold")
+        else:
+            comment = ""
+
         return score, comment
 
     def infect(self, physics_packet, stamina):
         psi = safe_get(physics_packet, "psi", 0.0)
-        cfg = getattr(self.cfg, "SPORES", None)
-        p_stam = getattr(cfg, "PARASITE_STAMINA_MAX", 40.0) if cfg else 40.0
-        p_psi = getattr(cfg, "PARASITE_PSI_MIN", 0.6) if cfg else 0.6
-        p_decay = getattr(cfg, "PARASITE_DECAY_CHANCE", 0.2) if cfg else 0.2
+        cfg = getattr(self.cfg, "SPORES", object())
+        p_stam = getattr(cfg, "PARASITE_STAMINA_MAX", 40.0)
+        p_psi = getattr(cfg, "PARASITE_PSI_MIN", 0.6)
+        p_decay = getattr(cfg, "PARASITE_DECAY_CHANCE", 0.2)
         if stamina > p_stam and psi < p_psi:
             return False, None
         if self.spores_deployed >= self.MAX_SPORES:
@@ -1177,19 +1187,20 @@ class BioParasite:
         graph = self.mem.graph
         if not self.lex:
             return False, None
-        heavy_set, abstract_set = set(self.lex.get("heavy") or []), set(
-            self.lex.get("abstract") or []
-        )
-        heavy_candidates = [w for w in graph if w in heavy_set]
-        abstract_candidates = [w for w in graph if w in abstract_set]
+        heavy_set = set(self.lex.get("heavy") or [])
+        abstract_set = set(self.lex.get("abstract") or [])
+        graph_keys = graph.keys()
+
+        heavy_candidates = list(heavy_set & graph_keys)
+        abstract_candidates = list(abstract_set & graph_keys)
         if not heavy_candidates or not abstract_candidates:
             return False, None
         host = random.choice(heavy_candidates)
         parasite = random.choice(abstract_candidates)
         if parasite in graph[host]["edges"]:
             return False, None
-        m_psi = getattr(cfg, "PARASITE_METAPHOR_PSI", 0.7) if cfg else 0.7
-        p_wt = getattr(cfg, "PARASITE_WEIGHT", 8.88) if cfg else 8.88
+        m_psi = getattr(cfg, "PARASITE_METAPHOR_PSI", 0.7)
+        p_wt = getattr(cfg, "PARASITE_WEIGHT", 8.88)
         is_metaphor = psi > m_psi
         weight = p_wt
         graph[host]["edges"][parasite] = weight
@@ -1234,7 +1245,18 @@ class BioLichen:
 
     def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
         score = (sum(1 for w in clean_words if w in self.archetypes) / max(1, len(clean_words))) * 10.0
-        comment = ux("spore_strings", "lichen_op_great") if score > 3.0 else (ux("spore_strings", "lichen_op_good") if score > 1.0 else (ux("spore_strings", "lichen_op_hot") if voltage > 18.0 else (ux("spore_strings", "lichen_op_cold") if voltage < 2.0 else "")))
+
+        if score > 3.0:
+            comment = ux("spore_strings", "lichen_op_great")
+        elif score > 1.0:
+            comment = ux("spore_strings", "lichen_op_good")
+        elif voltage > 18.0:
+            comment = ux("spore_strings", "lichen_op_hot")
+        elif voltage < 2.0:
+            comment = ux("spore_strings", "lichen_op_cold")
+        else:
+            comment = ""
+
         return score, comment
 
     def photosynthesize(self, phys, clean_words, tick_count):
@@ -1346,10 +1368,9 @@ class LiteraryReproduction:
         parent_b_id = parent_b_data.get("session_id", "UNKNOWN")
         trauma_a = parent_a_bio.get("trauma_vector", {})
         trauma_b = parent_b_data.get("trauma_vector", {})
-        child_trauma = {}
-        all_keys = set(trauma_a.keys()) | set(trauma_b.keys())
-        for k in all_keys:
-            child_trauma[k] = max(trauma_a.get(k, 0), trauma_b.get(k, 0))
+
+        all_keys = trauma_a.keys() | trauma_b.keys()
+        child_trauma = {k: max(trauma_a.get(k, 0), trauma_b.get(k, 0)) for k in all_keys}
         enzymes_a = set()
         if "mito" in parent_a_bio:
             if hasattr(parent_a_bio["mito"], "state"):

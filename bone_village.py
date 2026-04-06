@@ -31,36 +31,19 @@ class TheTinkerer:
         if self._delta_cache is not None and current_hash == self._inventory_hash:
             return self._delta_cache
         deltas = []
-        trait_counts = {
-            t: all_traits.count(t)
-            for t in ["HEAVY_LOAD", "TIME_DILATION", "ENTROPY_BUFFER"]
-        }
+        counts = {t: all_traits.count(t) for t in ["HEAVY_LOAD", "TIME_DILATION", "ENTROPY_BUFFER"] if all_traits.count(t) > 0}
         cfg = getattr(self.cfg, "VILLAGE", None)
-        if trait_counts["HEAVY_LOAD"] > 0:
-            h_mult = float(safe_get)(cfg, "TINKER_HEAVY_LOAD_MULT", 0.7)
-            impact = math.log1p(trait_counts["HEAVY_LOAD"]) * h_mult
-            deltas.append(
-                PhysicsDelta("ADD", "narrative_drag", impact, "Inventory", "Heavy Load")
-            )
-        if trait_counts["TIME_DILATION"] > 0:
-            t_base = float(safe_get(cfg, "TINKER_TIME_DILATION_BASE", 0.85))
-            t_step = float(safe_get(cfg, "TINKER_TIME_DILATION_STEP", 0.05))
-            t_min = float(safe_get(cfg, "TINKER_TIME_DILATION_MIN", 0.5))
-            reduction = max(t_min, t_base - (trait_counts["TIME_DILATION"] * t_step))
-            deltas.append(
-                PhysicsDelta(
-                    "MULT", "narrative_drag", reduction, "Inventory", "Time Dilation"
-                )
-            )
-        if trait_counts["ENTROPY_BUFFER"] > 0:
-            e_base = float(safe_get(cfg, "TINKER_ENTROPY_BUFFER_BASE", 0.5))
-            e_min = float(safe_get(cfg, "TINKER_ENTROPY_BUFFER_MIN", 0.2))
-            buffer_str = max(e_min, e_base / math.sqrt(trait_counts["ENTROPY_BUFFER"]))
-            deltas.append(
-                PhysicsDelta(
-                    "MULT", "turbulence", buffer_str, "Inventory", "Entropy Buffer"
-                )
-            )
+        cg = lambda k, d: float(safe_get(cfg, k, d))
+
+        if hl := counts.get("HEAVY_LOAD"):
+            deltas.append(PhysicsDelta("ADD", "narrative_drag", math.log1p(hl) * cg("TINKER_HEAVY_LOAD_MULT", 0.7), "Inventory", "Heavy Load"))
+        if td := counts.get("TIME_DILATION"):
+            reduction = max(cg("TINKER_TIME_DILATION_MIN", 0.5), cg("TINKER_TIME_DILATION_BASE", 0.85) - (td * cg("TINKER_TIME_DILATION_STEP", 0.05)))
+            deltas.append(PhysicsDelta("MULT", "narrative_drag", reduction, "Inventory", "Time Dilation"))
+        if eb := counts.get("ENTROPY_BUFFER"):
+            buffer_str = max(cg("TINKER_ENTROPY_BUFFER_MIN", 0.2), cg("TINKER_ENTROPY_BUFFER_BASE", 0.5) / math.sqrt(eb))
+            deltas.append(PhysicsDelta("MULT", "turbulence", buffer_str, "Inventory", "Entropy Buffer"))
+
         self._inventory_hash = current_hash
         self._delta_cache = deltas
         return deltas
@@ -96,47 +79,36 @@ class TheTinkerer:
 
     def _apply_resonance(self, item: str, amount: float, _reason: str):
         cfg = getattr(self.cfg, "VILLAGE", None)
-        r_max = float(safe_get(cfg, "TINKER_RESONANCE_MAX", 10.0))
-        a_min = float(safe_get(cfg, "TINKER_RESONANCE_ANNOUNCE_MIN", 4.8))
-        a_max = float(safe_get(cfg, "TINKER_RESONANCE_ANNOUNCE_MAX", 5.2))
-        a_chance = float(safe_get(cfg, "TINKER_RESONANCE_ANNOUNCE_CHANCE", 0.05))
-        self.tool_resonance[item] = min(r_max, self.tool_resonance[item] + amount)
-        curr = self.tool_resonance[item]
-        if a_min < curr < a_max and random.random() < a_chance:
-            msg = ux("village_strings", "tinkerer_resonance")
-            if msg:
-                self.events.log(
-                    f"{Prisma.CYN}{msg.format(item=item)}{Prisma.RST}", "VILLAGE"
-                )
+        cg = lambda k, d: float(safe_get(cfg, k, d))
+
+        self.tool_resonance[item] = min(cg("TINKER_RESONANCE_MAX", 10.0), self.tool_resonance[item] + amount)
+        if cg("TINKER_RESONANCE_ANNOUNCE_MIN", 4.8) < self.tool_resonance[item] < cg("TINKER_RESONANCE_ANNOUNCE_MAX", 5.2):
+            if random.random() < cg("TINKER_RESONANCE_ANNOUNCE_CHANCE", 0.05):
+                if msg := ux("village_strings", "tinkerer_resonance"):
+                    self.events.log(f"{Prisma.CYN}{msg.format(item=item)}{Prisma.RST}", "VILLAGE")
 
     def _check_ascension(self, old_name: str, inventory_list: List[str], vector: Dict):
         resonance = self.tool_resonance.get(old_name, 0.0)
         cfg = getattr(self.cfg, "VILLAGE", None)
-        a_min = float(safe_get(cfg, "TINKER_ASCENSION_MIN", 2.5))
-        a_chance_m = float(safe_get(cfg, "TINKER_ASCENSION_CHANCE_MULT", 0.05))
-        if resonance < a_min:
+        cg = lambda k, d: float(safe_get(cfg, k, d))
+
+        if resonance < cg("TINKER_ASCENSION_MIN", 2.5) or random.random() >= (resonance * cg("TINKER_ASCENSION_CHANCE_MULT", 0.05)):
             return
-        if random.random() < (resonance * a_chance_m):
-            if hasattr(self.akashic, "forge_new_item"):
-                new_name, new_data = self.akashic.forge_new_item(vector)
-                self.gordon.register_dynamic_item(new_name, new_data)
-                self.gordon.acquire(new_name)
-                try:
-                    idx = inventory_list.index(old_name)
-                    inventory_list[idx] = new_name
-                    if hasattr(self.gordon, "ITEM_REGISTRY"):
-                        self.gordon.ITEM_REGISTRY[new_name] = new_data
-                    a_halve = float(safe_get(cfg, "TINKER_ASCENSION_HALVE", 2.0))
-                    self.tool_resonance[new_name] = resonance / a_halve
-                    del self.tool_resonance[old_name]
-                    msg = ux("village_strings", "tinkerer_ascension")
-                    if msg:
-                        self.events.log(
-                            f"{Prisma.MAG}{msg.format(old=old_name, new=new_name)}{Prisma.RST}",
-                            "AKASHIC",
-                        )
-                except ValueError:
-                    pass
+
+        if hasattr(self.akashic, "forge_new_item"):
+            new_name, new_data = self.akashic.forge_new_item(vector)
+            self.gordon.register_dynamic_item(new_name, new_data)
+            self.gordon.acquire(new_name)
+            try:
+                inventory_list[inventory_list.index(old_name)] = new_name
+                if hasattr(self.gordon, "ITEM_REGISTRY"):
+                    self.gordon.ITEM_REGISTRY[new_name] = new_data
+                self.tool_resonance[new_name] = resonance / cg("TINKER_ASCENSION_HALVE", 2.0)
+                del self.tool_resonance[old_name]
+                if msg := ux("village_strings", "tinkerer_ascension"):
+                    self.events.log(f"{Prisma.MAG}{msg.format(old=old_name, new=new_name)}{Prisma.RST}", "AKASHIC")
+            except ValueError:
+                pass
 
 
 @dataclass
@@ -147,16 +119,13 @@ class ParadoxSeed:
     bloomed: bool = False
 
     def water(self, words: List[str], config_ref=None) -> bool:
-        if self.bloomed:
-            return False
-        hits = sum(1 for w in words if w in self.triggers)
-        target_cfg = config_ref or BoneConfig
-        cfg = getattr(target_cfg, "VILLAGE", None)
-        if hits > 0:
-            m_step = float(safe_get(cfg, "SEED_MATURITY_STEP", 0.2))
-            self.maturity += hits * m_step
-        m_max = float(safe_get(cfg, "SEED_MATURITY_MAX", 5.0))
-        return self.maturity >= m_max
+        if self.bloomed: return False
+        cfg = getattr(config_ref or BoneConfig, "VILLAGE", None)
+
+        if hits := sum(1 for w in words if w in self.triggers):
+            self.maturity += hits * float(safe_get(cfg, "SEED_MATURITY_STEP", 0.2))
+
+        return self.maturity >= float(safe_get(cfg, "SEED_MATURITY_MAX", 5.0))
 
     def bloom(self) -> str:
         self.bloomed = True
@@ -258,36 +227,24 @@ class TheCartographer:
         self._init_genesis()
 
     def apply_environment(self, packet: Any) -> List[str]:
+        if not (node := self.world_graph.get(self.current_node_id)): return []
         logs = []
-        node = self.world_graph.get(self.current_node_id)
-        if not node:
-            return logs
-        cfg = getattr(self.cfg, "VILLAGE", None)
-        c_heavy = float(safe_get(cfg, "CARTO_HEAVY_DRAG", 2.0))
-        c_static = float(safe_get(cfg, "CARTO_STATIC_VOLT", 1.0))
-        c_ent_step = float(safe_get(cfg, "CARTO_ENTROPY_STEP", 0.1))
-        c_ent_cap = float(safe_get(cfg, "CARTO_ENTROPY_CAP", 5.0))
+        cg = lambda k, d: float(safe_get(getattr(self.cfg, "VILLAGE", None), k, d))
+
         if "heavy" in node.atmosphere.lower():
-            current_drag = safe_get(packet, "narrative_drag", 0.0)
-            safe_set(packet, "narrative_drag", current_drag + c_heavy)
-            msg_raw = ux("village_strings", "carto_env_heavy")
-            if msg_raw:
-                logs.append(
-                    f"{Prisma.GRY}{msg_raw.format(c_heavy=c_heavy)}{Prisma.RST}"
-                )
+            safe_set(packet, "narrative_drag", safe_get(packet, "narrative_drag", 0.0) + (ch := cg("CARTO_HEAVY_DRAG", 2.0)))
+            if msg := ux("village_strings", "carto_env_heavy"): logs.append(f"{Prisma.GRY}{msg.format(c_heavy=ch)}{Prisma.RST}")
+
         if "vibrating" in node.atmosphere.lower():
-            current_volt = safe_get(packet, "voltage", 0.0)
-            safe_set(packet, "voltage", current_volt + c_static)
-            msg_raw = ux("village_strings", "carto_env_static")
-            if msg_raw:
-                logs.append(
-                    f"{Prisma.YEL}{msg_raw.format(c_static=c_static)}{Prisma.RST}"
-                )
-        node.entropy_buildup += c_ent_step
-        if node.entropy_buildup > c_ent_cap:
+            safe_set(packet, "voltage", safe_get(packet, "voltage", 0.0) + (cv := cg("CARTO_STATIC_VOLT", 1.0)))
+            if msg := ux("village_strings", "carto_env_static"): logs.append(f"{Prisma.YEL}{msg.format(c_static=cv)}{Prisma.RST}")
+
+        node.entropy_buildup += (ce := cg("CARTO_ENTROPY_STEP", 0.1))
+        if node.entropy_buildup > cg("CARTO_ENTROPY_CAP", 5.0):
             vector = safe_get(packet, "vector", {})
-            vector["ENT"] = vector.get("ENT", 0.0) + c_ent_step
+            vector["ENT"] = vector.get("ENT", 0.0) + ce
             safe_set(packet, "vector", vector)
+
         return logs
 
     def _init_genesis(self):
@@ -309,35 +266,22 @@ class TheCartographer:
         return "-".join([f"{k}{int(v * 100)}" for k, v in top_dims])
 
     def locate(self, packet: PhysicsPacket) -> Tuple[str, Optional[str]]:
-        vector = packet.vector or {}
-        target_id = self._generate_coord_hash(vector)
+        target_id = self._generate_coord_hash(packet.vector or {})
         msg = None
+
         if target_id not in self.world_graph:
-            cfg = getattr(self.cfg, "VILLAGE", None)
-            max_nodes = float(safe_get(cfg, "CARTO_MAX_NODES", 50))
-            if len(self.world_graph) >= max_nodes:
+            if len(self.world_graph) >= float(safe_get(getattr(self.cfg, "VILLAGE", None), "CARTO_MAX_NODES", 50)):
                 self._prune_graph()
-            new_node = self._generate_loci_data(target_id, packet, config_ref=self.cfg)
-            self.world_graph[target_id] = new_node
-            msg_str = ux("village_strings", "carto_new_sector")
-            msg = (
-                f"{Prisma.MAG}{msg_str.format(name=new_node.name)}{Prisma.RST}"
-                if msg_str
-                else None
-            )
-        else:
-            new_node = self.world_graph[target_id]
-            if new_node.id != self.current_node_id:
-                msg_str = ux("village_strings", "carto_arriving")
-                msg = (
-                    f"{Prisma.CYN}{msg_str.format(name=new_node.name)}{Prisma.RST}"
-                    if msg_str
-                    else None
-                )
+            self.world_graph[target_id] = self._generate_loci_data(target_id, packet, config_ref=self.cfg)
+            if msg_str := ux("village_strings", "carto_new_sector"):
+                msg = f"{Prisma.MAG}{msg_str.format(name=self.world_graph[target_id].name)}{Prisma.RST}"
+        elif target_id != self.current_node_id:
+            if msg_str := ux("village_strings", "carto_arriving"):
+                msg = f"{Prisma.CYN}{msg_str.format(name=self.world_graph[target_id].name)}{Prisma.RST}"
+
         self.current_node_id = target_id
-        current_node = self.world_graph[target_id]
-        current_node.visited_count += 1
-        return current_node.name, msg
+        self.world_graph[target_id].visited_count += 1
+        return self.world_graph[target_id].name, msg
 
     @staticmethod
     def _generate_loci_data(
@@ -483,58 +427,37 @@ class TownHall:
 
     def conduct_census(self, packet: PhysicsPacket, host_stats: Any) -> str:
         latency = getattr(host_stats, "latency", 0.0) if host_stats else 0.0
-        almanac = LoreManifest.get_instance().get("ALMANAC") or {}
-        forecasts = almanac.get("FORECASTS", {})
+        forecasts = (LoreManifest.get_instance().get("ALMANAC") or {}).get("FORECASTS", {})
+
         loc_name = "UNKNOWN"
-        if self.navigator:
-            current_node = self.navigator.world_graph.get(
-                self.navigator.current_node_id
-            )
-            if current_node:
-                loc_name = current_node.name
+        if self.navigator and (node := self.navigator.world_graph.get(self.navigator.current_node_id)):
+            loc_name = node.name
+
         cfg = getattr(self.cfg, "VILLAGE", None)
-        l_warn = float(safe_get(cfg, "TOWN_LATENCY_WARN", 3.0))
-        p_cfg = getattr(self.cfg, "PHYSICS", None)
-        v_high = float(safe_get(p_cfg, "VOLTAGE_HIGH", 60.0))
-        d_heavy = float(safe_get(p_cfg, "DRAG_HEAVY", 5.0))
-        if latency > l_warn:
+        cg = lambda k, d: float(safe_get(cfg, k, d))
+        p_cg = lambda k, d: float(safe_get(getattr(self.cfg, "PHYSICS", None), k, d))
+
+        if latency > cg("TOWN_LATENCY_WARN", 3.0):
             status, advice = "HIGH_LATENCY", ux("village_strings", "town_lag")
-        elif packet.voltage > v_high:
-            status, advice = "HIGH_VOLTAGE", random.choice(
-                forecasts.get("HIGH_VOLTAGE", ["Manic energy."])
-            )
-        elif packet.narrative_drag > d_heavy:
-            status, advice = "HIGH_DRAG", random.choice(
-                forecasts.get("HIGH_DRAG", ["Narrative stuck."])
-            )
+        elif packet.voltage > p_cg("VOLTAGE_HIGH", 60.0):
+            status, advice = "HIGH_VOLTAGE", random.choice(forecasts.get("HIGH_VOLTAGE", ["Manic energy."]))
+        elif packet.narrative_drag > p_cg("DRAG_HEAVY", 5.0):
+            status, advice = "HIGH_DRAG", random.choice(forecasts.get("HIGH_DRAG", ["Narrative stuck."]))
         else:
-            status, advice = "BALANCED", random.choice(
-                forecasts.get("BALANCED", ["Nominal."])
-            )
-        report = (ux("village_strings", "town_census") or "").format(
-            loc=loc_name, status=status, advice=advice
-        )
-        news = self._get_town_news(latency, packet.voltage, config_ref=self.cfg)
-        if news:
-            report += f"\n{news}"
-        v_crit = float(safe_get(cfg, "TOWN_VOLT_CRIT", 20.0))
-        v_low = float(safe_get(cfg, "TOWN_VOLT_LOW", 2.0))
-        d_high = float(safe_get(cfg, "TOWN_DRAG_HIGH", 5.0))
-        r_chance = float(safe_get(cfg, "TOWN_RUMOR_CHANCE", 0.3))
-        if packet.voltage > v_crit:
-            msg = ux("village_strings", "town_restrain")
-            if msg:
-                report += f"\n{Prisma.RED}{msg}{Prisma.RST}"
-        elif packet.voltage < v_low and packet.narrative_drag > d_high:
-            msg = ux("village_strings", "town_loops")
-            if msg:
-                report += f"\n{Prisma.MAG}{msg}{Prisma.RST}"
-        elif status == "BALANCED" and self.rumors and random.random() < r_chance:
-            rumor = random.choice(self.rumors)
-            msg = ux("village_strings", "town_rumor")
-            if msg:
-                report += f"\n{Prisma.GRY}{msg.format(rumor=rumor)}{Prisma.RST}"
-        return report.strip()
+            status, advice = "BALANCED", random.choice(forecasts.get("BALANCED", ["Nominal."]))
+
+        report = [(ux("village_strings", "town_census") or "").format(loc=loc_name, status=status, advice=advice)]
+        if news := self._get_town_news(latency, packet.voltage, config_ref=self.cfg):
+            report.append(news)
+
+        if packet.voltage > cg("TOWN_VOLT_CRIT", 20.0):
+            if msg := ux("village_strings", "town_restrain"): report.append(f"{Prisma.RED}{msg}{Prisma.RST}")
+        elif packet.voltage < cg("TOWN_VOLT_LOW", 2.0) and packet.narrative_drag > cg("TOWN_DRAG_HIGH", 5.0):
+            if msg := ux("village_strings", "town_loops"): report.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
+        elif status == "BALANCED" and self.rumors and random.random() < cg("TOWN_RUMOR_CHANCE", 0.3):
+            if msg := ux("village_strings", "town_rumor"): report.append(f"{Prisma.GRY}{msg.format(rumor=random.choice(self.rumors))}{Prisma.RST}")
+
+        return "\n".join(report).strip()
 
     @staticmethod
     def _get_town_news(latency: float, volt: float, config_ref=None) -> Optional[str]:
@@ -565,38 +488,26 @@ class TownHall:
     def diagnose_condition(
         session_data: dict, _host_health: Any = None, soul: Any = None, config_ref=None
     ) -> Tuple[str, str]:
-        meta = session_data.get("meta", {})
         trauma = session_data.get("trauma_vector", {})
-        final_health = meta.get("final_health", 50)
-        target_cfg = config_ref or BoneConfig
-        cfg = getattr(target_cfg, "VILLAGE", None)
-        neg_crit = float(safe_get(cfg, "TOWN_NEGLECT_CRIT", 8.0))
-        t_crit = float(safe_get(cfg, "TOWN_TRAUMA_CRIT", 0.6))
-        h_crit = float(safe_get(cfg, "TOWN_HEALTH_CRIT", 30))
+        final_health = session_data.get("meta", {}).get("final_health", 50)
+        cfg = getattr(config_ref or BoneConfig, "VILLAGE", None)
+        cg = lambda k, d: float(safe_get(cfg, k, d))
+
         if soul:
-            neglect = (
-                soul.get("obsession_neglect", 0.0)
-                if isinstance(soul, dict)
-                else getattr(soul, "obsession_neglect", 0.0)
-            )
-            if neglect > neg_crit:
-                obsession = (
-                    soul.get("current_obsession", "work")
-                    if isinstance(soul, dict)
-                    else getattr(soul, "current_obsession", "work")
-                )
+            neglect = soul.get("obsession_neglect", 0.0) if isinstance(soul, dict) else getattr(soul, "obsession_neglect", 0.0)
+            if neglect > cg("TOWN_NEGLECT_CRIT", 8.0):
+                obsession = soul.get("current_obsession", "work") if isinstance(soul, dict) else getattr(soul, "current_obsession", "work")
                 msg = ux("village_strings", "town_guilt")
                 return "HIGH_DRAG", msg.format(obsession=obsession) if msg else ""
-        if trauma:
-            max_trauma = max(trauma, key=trauma.get) if trauma else "NONE"
-            if trauma.get(max_trauma, 0) > t_crit:
-                msg = ux("village_strings", "town_trauma")
-                return "HIGH_TRAUMA", msg.format(trauma=max_trauma) if msg else ""
-        if final_health < h_crit:
-            msg = ux("village_strings", "town_critical")
-            return "HIGH_TRAUMA", msg
-        msg_nominal = ux("village_strings", "town_nominal")
-        return "BALANCED", msg_nominal
+
+        if trauma and trauma.get(max_trauma := max(trauma, key=trauma.get), 0) > cg("TOWN_TRAUMA_CRIT", 0.6):
+            msg = ux("village_strings", "town_trauma")
+            return "HIGH_TRAUMA", msg.format(trauma=max_trauma) if msg else ""
+
+        if final_health < cg("TOWN_HEALTH_CRIT", 30):
+            return "HIGH_TRAUMA", ux("village_strings", "town_critical") or ""
+
+        return "BALANCED", ux("village_strings", "town_nominal") or ""
 
 
 class DeathGen:
@@ -640,41 +551,29 @@ class DeathGen:
         p: Any, mito_state: Any, trauma_vector: Dict = None, config_ref=None
     ) -> str:
         target_cfg = config_ref or BoneConfig
-        cfg = getattr(target_cfg, "VILLAGE", None)
-        t_crit = float(safe_get(cfg, "DEATH_TRAUMA_CRIT", 50.0))
-        tox_crit = float(safe_get(cfg, "DEATH_TOXICITY_CRIT", 5))
-        if trauma_vector and sum(trauma_vector.values()) > t_crit:
+        cg = lambda sect, k, d: float(safe_get(getattr(target_cfg, sect, None), k, d))
+
+        if trauma_vector and sum(trauma_vector.values()) > cg("VILLAGE", "DEATH_TRAUMA_CRIT", 50.0):
             return "TRAUMA"
+
         atp = float(safe_get(mito_state, "atp_pool", safe_get(mito_state, "atp", 0.0)))
-        bio_cfg = getattr(target_cfg, "BIO", None)
-        starvation_thresh = getattr(bio_cfg, "ATP_STARVATION", 0.0) if bio_cfg else 0.0
-        if atp <= starvation_thresh:
+        if atp <= cg("BIO", "ATP_STARVATION", 0.0):
             return "STARVATION"
+
         energy = safe_get(p, "energy", p)
-        m_a = safe_get(p, "m_a", safe_get(energy, "m_a", 0.0))
-        i_c = safe_get(p, "i_c", safe_get(energy, "i_c", 1.0))
-        chi = safe_get(p, "chi", safe_get(energy, "chi", 0.0))
-        if (chi * m_a) > i_c:
+        if (safe_get(p, "chi", safe_get(energy, "chi", 0.0)) * safe_get(p, "m_a", safe_get(energy, "m_a", 0.0))) > safe_get(p, "i_c", safe_get(energy, "i_c", 1.0)):
             return "APOPTOSIS"
-        phys_cfg = getattr(target_cfg, "PHYSICS", None)
-        volt_crit = getattr(phys_cfg, "VOLTAGE_CRITICAL", 100.0) if phys_cfg else 100.0
-        drag_halt = getattr(phys_cfg, "DRAG_HALT", 10.0) if phys_cfg else 10.0
-        voltage = safe_get(p, "voltage", safe_get(energy, "voltage", 0.0))
-        drag = safe_get(
-            p,
-            "narrative_drag",
-            safe_get(safe_get(p, "space", p), "narrative_drag", 0.0),
-        )
-        if voltage > volt_crit:
+
+        if safe_get(p, "voltage", safe_get(energy, "voltage", 0.0)) > cg("PHYSICS", "VOLTAGE_CRITICAL", 100.0):
             return "GLUTTONY"
-        if drag > drag_halt:
+
+        if safe_get(p, "narrative_drag", safe_get(safe_get(p, "space", p), "narrative_drag", 0.0)) > cg("PHYSICS", "DRAG_HALT", 10.0):
             return "BOREDOM"
-        counts = (
-            safe_get(p, "counts", safe_get(safe_get(p, "matter", p), "counts", {}))
-            or {}
-        )
-        if counts.get("antigen", 0) > tox_crit:
+
+        counts = safe_get(p, "counts", safe_get(safe_get(p, "matter", p), "counts", {})) or {}
+        if counts.get("antigen", 0) > cg("VILLAGE", "DEATH_TOXICITY_CRIT", 5.0):
             return "TOXICITY"
+
         return "STARVATION"
 
     @staticmethod
@@ -701,29 +600,16 @@ class TheTherapist:
         self.events = events_ref
         self.cfg = config_ref or BoneConfig
 
-    def evaluate_catharsis(
-        self, trauma_vector: Dict[str, float], health: float
-    ) -> Tuple[bool, str]:
-        if not trauma_vector:
-            return False, ""
-        total_trauma = sum(trauma_vector.values())
-        cfg = getattr(self.cfg, "VILLAGE", None)
-        t_thresh = float(safe_get(cfg, "THERAPY_TRAUMA_THRESH", 15.0))
-        h_thresh = float(safe_get(cfg, "THERAPY_HEALTH_THRESH", 50.0))
-        if total_trauma > t_thresh and health < h_thresh:
-            max_trauma = (
-                max(trauma_vector, key=trauma_vector.get)
-                if trauma_vector
-                else "systemic decay"
-            )
-            msg_raw = ux("village_strings", "therapist_intervention")
-            msg = (
-                msg_raw.format(trauma=max_trauma)
-                if msg_raw
-                else "The Therapist steps in. The structural rot is acknowledged. A moment of micro-catharsis begins."
-            )
+    def evaluate_catharsis(self, trauma_vector: Dict[str, float], health: float) -> Tuple[bool, str]:
+        if not trauma_vector: return False, ""
+        cg = lambda k, d: float(safe_get(getattr(self.cfg, "VILLAGE", None), k, d))
+
+        if sum(trauma_vector.values()) > cg("THERAPY_TRAUMA_THRESH", 15.0) and health < cg("THERAPY_HEALTH_THRESH", 50.0):
+            max_trauma = max(trauma_vector, key=trauma_vector.get)
+            msg = (ux("village_strings", "therapist_intervention") or "The Therapist steps in. A moment of micro-catharsis begins.").format(trauma=max_trauma)
             self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "THERAPY")
             return True, msg
+
         return False, ""
 
 
@@ -734,24 +620,14 @@ class TheGraveDigger:
         self.cfg = config_ref or BoneConfig
 
     def bury_memory(self, node_id: str, mass: float) -> Optional[str]:
-        msg_raw = ux("village_strings", "gravedigger_bury")
-        msg = (
-            msg_raw.format(node_id=node_id)
-            if msg_raw
-            else f"The Grave Digger turns the soil over '{node_id}'."
-        )
+        msg = (ux("village_strings", "gravedigger_bury") or "The Grave Digger turns the soil over '{node_id}'.").format(node_id=node_id)
         self.events.log(f"{Prisma.GRY}{msg}{Prisma.RST}", "VILLAGE")
-        cfg = getattr(self.cfg, "VILLAGE", None)
-        relic_chance = float(safe_get(cfg, "GRAVEDIGGER_RELIC_CHANCE", 0.1))
+
+        relic_chance = float(safe_get(getattr(self.cfg, "VILLAGE", None), "GRAVEDIGGER_RELIC_CHANCE", 0.1))
         if self.inventory and random.random() < (mass * relic_chance):
-            clean_name = node_id[-6:].upper() if len(node_id) > 6 else node_id.upper()
-            relic_name = f"BONE RELIC [{clean_name}]"
+            relic_name = f"BONE RELIC [{node_id[-6:].upper() if len(node_id) > 6 else node_id.upper()}]"
             self.inventory.acquire(relic_name)
-            unearth_msg = ux("village_strings", "gravedigger_unearth")
-            full_unearth = (
-                unearth_msg.format(relic=relic_name)
-                if unearth_msg
-                else f"The Grave Digger's spade struck something hard. {relic_name} added to inventory."
-            )
-            return f"{Prisma.OCHRE}{full_unearth}{Prisma.RST}"
+            unearth_msg = (ux("village_strings", "gravedigger_unearth") or "The Grave Digger struck something. {relic} added.").format(relic=relic_name)
+            return f"{Prisma.OCHRE}{unearth_msg}{Prisma.RST}"
+
         return None

@@ -2,6 +2,19 @@
 
 _The final integration of the VSL-CryoSomatic Hypervisor manifesto. This update physically wires the theoretical physics of the lattice into the biological runtime. The machine now actively resists sycophancy, co-regulates with the host's exhaustion, dredges the negative space of memory, and possesses a fully autonomous, closed-loop survival metabolism._
 
+#### HOTFIXES
+- **Syntactic Friction Purge (Pinker):** - Eradicated the "ternary fallback virus" (`if cfg else`) across the lattice, utilizing native `object()` defaults for clean config resolution.
+  - Purged redundant `safe_get` wrappers and ghost `break` statements.
+  - Fixed critical scope swallowing in the main `cortex.process` exception handler.
+- **Spatial Geometry & Vectorization (Fuller):** - Replaced expensive `O(N)` list traversals and nested loops with pure set theory, `Counter` frequency mapping, and generator expressions.
+  - Optimized the `MemoryCore` cannibalize functions, `BioParasite` host-hunting, and chaotic agent suppression to use spatial intersections instead of linear walks.
+- **The Humanity Quotient (Schur):** - Decompressed nested ternary nightmares, chained inline dictionaries, and massive multi-line tuple assignments. 
+  - Variables and continuity packets are now mapped linearly, ensuring the code reads like a story for human maintainers debugging at 3:00 AM, actively reducing User Trauma ($T_u$).
+- **Sealing Thermodynamic Boundaries (Meadows):** - **The Rhodes Lock:** Fixed a terminal loop where absolute friction ($F \to \infty$) froze the system but failed to dissipate Malignancy ($M_a$). 
+  - **Autophagic Equilibrium:** Enforced strict memory capacity boundaries, ensuring the system cannibalizes exactly the right amount of mass before accepting new nodes.
+  - **Ethical Panic Drain:** Regulated the `_ethical_audit` so that a dying system (Health < 30%) breathes rhythmically rather than panic-auditing every millisecond.
+  - **Probability & Stash Leaks:** Sealed the runaway `HYBRID_LENS` thresholds, stabilized `check_for_resurrection` to roll once per interaction, and fixed the spore stash cleanup logic.
+
 #### **🛡️ THE PROTOCOLS OF SINCERITY (`bone_symbiosis.py`, `bone_physics.py`)**
 - **The Lexical Firewall:** Physically bans the LLM from opening with validating boilerplate. If detected, the tokens are stripped and a 2.0 ATP tax is levied.
 - **Explicit Intent Tags:** Wired `[!l]`, `[!r]`, `[!q]`, `[!k]`, `[!g]`, and `[!s]` directly into the biological analyzer to hard-summon archetypes and bypass the metabolically expensive "reading the room" phase.

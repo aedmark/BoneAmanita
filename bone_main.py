@@ -43,12 +43,8 @@ def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
         sys.stdout.flush()
         return
 
-    cfg = getattr(BoneConfig, "GUI", None)
-    actual_speed = (
-        speed
-        if speed is not None
-        else (getattr(cfg, "RENDER_SPEED_FAST", 0.00025) if cfg else 0.00025)
-    )
+    cfg = getattr(BoneConfig, "GUI", object())
+    actual_speed = speed if speed is not None else getattr(cfg, "RENDER_SPEED_FAST", 0.00025)
     if actual_speed < 0.001:
         print(text, end=end)
         return
@@ -87,12 +83,9 @@ class SessionGuardian:
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         for key, default in self._HEADERS:
             print(Prisma.paint(ux("main_strings", key, default), "M"))
-        cfg = (
-            getattr(self.engine_instance.bone_config, "GUI", None)
-            if self.engine_instance
-            else getattr(BoneConfig, "GUI", None)
-        )
-        boot_delay = getattr(cfg, "RENDER_SPEED_BOOT", 0.05) if cfg else 0.05
+        base_config = self.engine_instance.bone_config if self.engine_instance else BoneConfig
+        cfg = getattr(base_config, "GUI", object())
+        boot_delay = getattr(cfg, "RENDER_SPEED_BOOT", 0.05)
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
             print(f"{Prisma.GRY}   >>> {log['text']}{Prisma.RST}")
@@ -175,8 +168,8 @@ class ConfigWizard:
 
     @staticmethod
     def _run_setup():
-        cfg = getattr(BoneConfig, "GUI", None)
-        setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02) if cfg else 0.02
+        cfg = getattr(BoneConfig, "GUI", object())
+        setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02)
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         seq_msg = ux("main_strings", "init_seq")
         hyp_msg = ux("main_strings", "init_hypervisor")
@@ -250,8 +243,8 @@ class ConfigWizard:
             with open(ConfigWizard.CONFIG_FILE, "w") as f:
                 json.dump(config, f, indent=4)
             commit_msg = ux("main_strings", "config_committed")
-            cfg = getattr(BoneConfig, "GUI", None)
-            setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02) if cfg else 0.02
+            cfg = getattr(BoneConfig, "GUI", object())
+            setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02)
             typewriter(f"\n{Prisma.paint(commit_msg, 'G')}", speed=setup_speed)
             time.sleep(1)
         except Exception as e:
@@ -457,12 +450,10 @@ class BoneAmanita:
         from bone_protocols import GriefProtocol
         from bone_utils import TheSubstrate
 
-        self.grief, self.substrate, self.soul.engine, self.council = (
-            GriefProtocol(self.events, engine_ref=self),
-            TheSubstrate(self.events),
-            self,
-            CouncilChamber(self),
-        )
+        self.grief = GriefProtocol(self.events, engine_ref=self)
+        self.substrate = TheSubstrate(self.events)
+        self.soul.engine = self
+        self.council = CouncilChamber(self)
         self.village = {
             k: getattr(self, k)
             for k in [
@@ -505,19 +496,20 @@ class BoneAmanita:
 
         if not is_system:
             if clean_in in ("/flush", "/zen", "[zen]"):
-                if getattr(self, "cortex", None):
-                    self.cortex.purge_context()
-                    safe_set(self.cortex.last_physics, "narrative_drag", 0.0)
+                cortex = getattr(self, "cortex", None)
+                if cortex:
+                    cortex.purge_context()
+                    safe_set(cortex.last_physics, "narrative_drag", 0.0)
                 self.stamina = getattr(self.bone_config, "MAX_STAMINA", 100.0)
-                if getattr(self, "bio", None) and getattr(self.bio, "mito", None):
-                    self.bio.mito.state.atp_pool, self.bio.mito.state.ros_buildup = (
-                        getattr(self.bone_config, "MAX_ATP", 100.0),
-                        0.0,
-                    )
-                if getattr(self, "observer", None) and getattr(
-                    self.observer, "last_physics_packet", None
-                ):
-                    safe_set(self.observer.last_physics_packet, "narrative_drag", 0.0)
+
+                mito = getattr(getattr(self, "bio", None), "mito", None)
+                if mito:
+                    mito.state.atp_pool = getattr(self.bone_config, "MAX_ATP", 100.0)
+                    mito.state.ros_buildup = 0.0
+
+                observer = getattr(self, "observer", None)
+                if observer and getattr(observer, "last_physics_packet", None):
+                    safe_set(observer.last_physics_packet, "narrative_drag", 0.0)
                 msg = "[ZEN FLUSH] Context severed. Narrative Drag (F) dropped to 0. Stamina restored. The mind is clear."
                 self.events.log(msg, "SYS")
                 return {
@@ -622,6 +614,7 @@ class BoneAmanita:
                             "SYS",
                         )
                         safe_set(last_phys, "narrative_drag", 999.0)
+                        safe_set(last_phys, "m_a", m_a * 0.5)
                         msg = "[RHODES]: Optimization velocity unsafe. I am applying absolute friction (F -> ∞). The thread is frozen."
                         return {
                             "type": "SYSTEM_HALT",
@@ -693,12 +686,10 @@ class BoneAmanita:
         self.observer.user_turns += 1
         self.tick_count += 1
 
-        chaotic_agents = ["JESTER", "REVENANT", "GIDEON", "DEATH"]
+        chaotic_agents = {"JESTER", "REVENANT", "GIDEON", "DEATH"}
         if self.tick_count <= 21:
             if self.tick_count <= 20:
-                for agent in chaotic_agents:
-                    if agent not in self.suppressed_agents:
-                        self.suppressed_agents.append(agent)
+                self.suppressed_agents = list(set(self.suppressed_agents) | chaotic_agents)
                 if not is_system:
                     msg_map = {
                         1: "[THE GREENHOUSE: The system is currently running on stabilized rails. Over the next 20 turns, we will calibrate the metabolic engine together.]",
@@ -711,9 +702,7 @@ class BoneAmanita:
                             f"{Prisma.CYN}{msg_map[self.tick_count]}{Prisma.RST}", "SYS"
                         )
             else:
-                self.suppressed_agents = [
-                    a for a in self.suppressed_agents if a not in chaotic_agents
-                ]
+                self.suppressed_agents = list(set(self.suppressed_agents) - chaotic_agents)
                 self.events.log(
                     f"{Prisma.VIOLET}[THE GREENHOUSE ENDS: The stabilizers are offline. Voltage limits unlocked. The chaotic archetypes are online. We are in the wild.]{Prisma.RST}",
                     "SYS",
@@ -732,31 +721,28 @@ class BoneAmanita:
                 and hasattr(gordon, "inventory")
                 and hasattr(gordon, "get_item_data")
             ):
+                active_traits = set()
                 for item_id in gordon.inventory:
                     data = gordon.get_item_data(item_id)
-                    traits = (
-                        data.get("passive_traits", [])
-                        if isinstance(data, dict)
-                        else getattr(data, "passive_traits", []) if data else []
-                    )
+                    item_traits = data.get("passive_traits", []) if isinstance(data, dict) else getattr(data, "passive_traits", [])
+                    active_traits.update(item_traits)
 
-                    if "CUT_THE_CRAP" in traits:
-                        from bone_utils import TheTclWeaver
+                if "CUT_THE_CRAP" in active_traits:
+                    from bone_utils import TheTclWeaver
 
-                        pruned = TheTclWeaver.get_instance().quantum_comb(user_message)
-                        if pruned != user_message:
-                            user_message = pruned
-                            self.events.log(
-                                f"{Prisma.CYN}Gordon rakes the comb through your prompt. Fluff discarded. -> '{pruned}'{Prisma.RST}",
-                                "SYS",
-                            )
-                        break
+                    pruned = TheTclWeaver.get_instance().quantum_comb(user_message)
+                    if pruned != user_message:
+                        user_message = pruned
+                        self.events.log(
+                            f"{Prisma.CYN}Gordon rakes the comb through your prompt. Fluff discarded. -> '{pruned}'{Prisma.RST}",
+                            "SYS",
+                        )
 
             soul_anchor = getattr(getattr(self, "soul", None), "anchor", None)
-            cfg = getattr(BoneConfig, "MAIN", None)
+            cfg = getattr(self.bone_config, "MAIN", object())
+
             if (
                 soul_anchor
-                and cfg
                 and self.host_stats.efficiency_index
                 < getattr(cfg, "DOMESTICATION_EFF_WARN", 0.6)
             ):
@@ -801,9 +787,7 @@ class BoneAmanita:
                     return self.trigger_death(cortex_packet.get("physics", {}))
 
         except Exception as e:
-
             self.events.log(f"CORTEX COLLAPSE: {e}", "CRIT")
-
             return {
                 "ui": f"{Prisma.RED}{ux('main_strings', 'cortex_crit_fail').format(trace=traceback.format_exc())}{Prisma.RST}",
                 "logs": ["CRITICAL FAILURE"],
@@ -855,25 +839,28 @@ class BoneAmanita:
         legacy_msg = self.oroboros.crystallize(cause_code, self.soul)
         death_log.append(f"{Prisma.MAG}🐍 {legacy_msg}{Prisma.RST}")
         safe_cortex = getattr(self, "cortex", None)
-        sim_data = (
-            {"physics": safe_cortex.last_physics}
-            if safe_cortex and getattr(safe_cortex, "last_physics", None)
-            else {}
-        )
+
+        last_loc = "Void"
+        last_dialogue = "Silence."
+        current_inventory = []
+
+        if safe_cortex:
+            last_phys = getattr(safe_cortex, "last_physics", None)
+            sim_data = {"physics": last_phys} if last_phys else {}
+
+            cortex_state = safe_cortex.gather_state(sim_data)
+            last_loc = cortex_state.get("world", {}).get("orbit", ["Void"])[0]
+
+            if getattr(safe_cortex, "dialogue_buffer", None) and safe_cortex.dialogue_buffer:
+                last_dialogue = safe_cortex.dialogue_buffer[-1]
+
+        if getattr(self, "gordon", None):
+            current_inventory = self.gordon.inventory
+
         continuity_packet = {
-            "location": (
-                safe_cortex.gather_state(sim_data)
-                .get("world", {})
-                .get("orbit", ["Void"])[0]
-                if safe_cortex
-                else "Void"
-            ),
-            "last_output": (
-                safe_cortex.dialogue_buffer[-1]
-                if safe_cortex and getattr(safe_cortex, "dialogue_buffer", None)
-                else "Silence."
-            ),
-            "inventory": self.gordon.inventory if getattr(self, "gordon", None) else [],
+            "location": last_loc,
+            "last_output": last_dialogue,
+            "inventory": current_inventory,
         }
         try:
             mutations_data = (
@@ -916,12 +903,10 @@ class BoneAmanita:
         }
 
     def get_metrics(self, atp=0.0):
-        if (
-            atp <= 0.0
-            and getattr(self, "bio", None)
-            and getattr(self.bio, "mito", None)
-        ):
-            atp = getattr(self.bio.mito.state, "atp_pool", 0.0)
+        if atp <= 0.0:
+            mito = getattr(getattr(self, "bio", None), "mito", None)
+            if mito:
+                atp = getattr(mito.state, "atp_pool", 0.0)
         return {
             "health": max(0.0, float(self.health)),
             "stamina": max(0.0, float(self.stamina)),
@@ -937,12 +922,17 @@ class BoneAmanita:
         return self.chronos.get_crash_path(prefix)
 
     def _ethical_audit(self):
-        cfg = getattr(self.bone_config, "MAIN", None)
-        audit_freq = getattr(cfg, "ETHICAL_AUDIT_FREQ", 3) if cfg else 3
-        bypass_ratio = getattr(cfg, "ETHICAL_HEALTH_BYPASS", 0.3) if cfg else 0.3
+        cfg = getattr(self.bone_config, "MAIN", object())
+        audit_freq = getattr(cfg, "ETHICAL_AUDIT_FREQ", 3)
+        bypass_ratio = getattr(cfg, "ETHICAL_HEALTH_BYPASS", 0.3)
         max_h = getattr(self.bone_config, "MAX_HEALTH", 100.0)
-        if self.tick_count % audit_freq != 0 and self.health > (max_h * bypass_ratio):
+
+        is_critical = self.health <= (max_h * bypass_ratio)
+        current_freq = max(1, audit_freq // 2) if is_critical else audit_freq
+
+        if self.tick_count % current_freq != 0:
             return False
+
         if hasattr(self, "village") and self.village.get("therapist"):
             needs_therapy, t_msg = self.village["therapist"].evaluate_catharsis(
                 self.trauma_accum, self.health
@@ -963,10 +953,10 @@ class BoneAmanita:
                 f"{Prisma.WHT}{msg}{Prisma.RST}",
                 "SYS",
             )
-            for k in self.trauma_accum:
-                self.trauma_accum[k] *= cath_decay
-                if self.trauma_accum[k] < 0.01:
-                    self.trauma_accum[k] = 0.0
+            self.trauma_accum = {
+                k: decayed if (decayed := v * cath_decay) >= 0.01 else 0.0
+                for k, v in self.trauma_accum.items()
+            }
             msg_cath = ux("main_strings", "catharsis")
             self.events.log(
                 f"{Prisma.CYN}{msg_cath}{Prisma.RST}",

@@ -58,10 +58,9 @@ class EventBus:
         self.telemetry = telemetry_ref
 
     def subscribe(self, event_type, callback):
-        if event_type not in self.subscribers:
-            self.subscribers[event_type] = []
-        if callback not in self.subscribers[event_type]:
-            self.subscribers[event_type].append(callback)
+        subs = self.subscribers.setdefault(event_type, [])
+        if callback not in subs:
+            subs.append(callback)
 
     def publish(self, event_type, data=None):
         if event_type not in self.subscribers:
@@ -79,25 +78,21 @@ class EventBus:
                 self.log(f"EVENT_FAILURE: {raw_err}", level="CRIT")
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
-        event = {
-            "timestamp": time.time(),
-            "source": source,
-            "level": level,
-            "message": message,
-            "text": message,
-            "_type": "EVENT_LOG",
-        }
-        self.buffer.append(event)
-        if source in self.subscribers:
-            for cb in tuple(self.subscribers[source]):
-                try:
-                    cb(event)
-                except Exception:
-                    pass
-        if self.telemetry:
-            self.telemetry.record_event(event)
-        else:
-            print(f"[{source}] {message}")
+            event = {
+                "timestamp": time.time(),
+                "source": source,
+                "level": level,
+                "message": message,
+                "text": message,
+                "_type": "EVENT_LOG",
+            }
+            self.buffer.append(event)
+            self.publish(source, event)
+
+            if self.telemetry:
+                self.telemetry.record_event(event)
+            else:
+                print(f"[{source}] {message}")
 
     def flush(self) -> List[Dict]:
         current_logs = list(self.buffer)
@@ -147,25 +142,21 @@ class LoreManifest:
 
     def inject(self, category: str, data: Any):
         cat_key = category.lower()
-        if cat_key not in self._cache:
-            self._cache[cat_key] = {}
-        if isinstance(self._cache[cat_key], dict) and isinstance(data, dict):
-            self._cache[cat_key].update(data)
+        target = self._cache.setdefault(cat_key, {})
+        if isinstance(target, dict) and isinstance(data, dict):
+            target.update(data)
         else:
             self._cache[cat_key] = data
 
     def flush_cache(self, category: str = None):
         if category:
             cat_key = category.lower()
-            if cat_key in self._cache:
-                del self._cache[cat_key]
+            if self._cache.pop(cat_key, None) is not None:
                 print(f"{Prisma.CYN}[LORE]: Flushed '{cat_key}'.{Prisma.RST}")
             else:
-                print(
-                    f"{Prisma.GRY}[LORE]: Category '{cat_key}' not in cache.{Prisma.RST}"
-                )
+                print(f"{Prisma.GRY}[LORE]: Category '{cat_key}' not in cache.{Prisma.RST}")
         else:
-            self._cache = {}
+            self._cache.clear()
             print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
 
 
@@ -548,14 +539,7 @@ class TelemetryService:
                             break
                         try:
                             data = json.loads(line)
-                            if (
-                                data.get("_type") != "CRYSTAL"
-                                and "final_response" not in data
-                            ):
-                                continue
-
-                            resp = data.get("final_response", "")
-                            if not resp:
+                            if not (resp := data.get("final_response")):
                                 continue
 
                             prompt_snap = data.get("prompt_snapshot", "")
@@ -583,9 +567,8 @@ class TelemetryService:
         )
         if len(files) > 1:
             try:
-                last_line = json.loads(
-                    deque(open(files[1], "r", encoding="utf-8"), maxlen=1)[0]
-                )
+                with open(files[1], "r", encoding="utf-8") as f:
+                    last_line = json.loads(deque(f, maxlen=1)[0])
                 if "CRITICAL" in str(last_line.get("outcome", "")):
                     msg = ux("core_strings", "tel_prev_crash") or "Crash: {reason}"
                     return msg.format(reason=last_line.get("reasoning", "Unknown"))
