@@ -1,4 +1,4 @@
-# MOD CHIP - SLASH (The Dev Team) v8.5
+# MOD CHIP - SLASH (The Dev Team) 
 
 **Activation flag:** `[MOD:CODE]` or `[SLASH]`
 
