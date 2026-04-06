@@ -243,6 +243,22 @@ class GeodesicOrchestrator:
         if exit_pkt := self._check_early_exit(ctx):
             return exit_pkt
 
+        if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
+            atp_val = float(self.eng.bio.mito.state.atp_pool)
+            lattice = getattr(self.eng, "shared_lattice", None)
+            delta_val = float(getattr(lattice.shared, "delta", 0.0)) if lattice else 0.0
+
+            if atp_val >= 80.0 and delta_val >= 0.6 and clean_message == "(Waiting)":
+                def _auto_rem_worker():
+                    try:
+                        self.eng.events.log(
+                            "Automatic REM Bridge engaged (High ATP, High Silence). Consolidating synapses...", "SYS")
+                        self.run_headless_turn("/idle")
+                    except Exception as e:
+                        self.eng.events.log(f"Auto REM Crash: {e}", "CRIT")
+
+                threading.Thread(target=_auto_rem_worker, daemon=True).start()
+
         snapshot = self.reporter.render_snapshot(ctx)
         self._hydrate_snapshot_metadata(snapshot, ctx)
         if "ui" in snapshot:

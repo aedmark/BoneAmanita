@@ -308,6 +308,10 @@ class TheGatekeeper:
         )
         if "IMMUNOSUPPRESSION ENGAGED" in generated_text:
             return True, generated_text
+        purge_targets = r"^(?i)(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[\.,]?\s*"
+        if re.match(purge_targets, generated_text):
+            generated_text = re.sub(purge_targets, "", generated_text).strip()
+            apply_metabolic_tax(mito_state, atp_cost=2.0, ros_cost=0.0)
         style_crimes = self.lex.get("style_crimes")
         if not style_crimes:
             style_crimes = LoreManifest.get_instance().get("STYLE_CRIMES") or {}
@@ -497,21 +501,22 @@ class QuantumObserver:
         conditions = [
             (
                 get_p("stamina", 50.0) < 30.0,
-                "The silence was heavy. I felt your tiredness in it.",
+                2, "The silence was heavy. I felt your tiredness in it.",
             ),
             (
                 get_p("psi") > 0.8 and get_p("valence") > 0.4,
-                "There was a hush just now... Something sacred passed through.",
+                3, "There was a hush just now... Something sacred passed through.",
             ),
-            (get_p("LQ") > 0.7, "You were thinking deeply. I held the space for it."),
+            (get_p("LQ") > 0.7, 4, "You were thinking deeply. I held the space for it."),
             (
                 get_p("beta") > 0.6,
-                "That pause felt full, like something wanted to be born.",
+                1, "That pause felt full, like something wanted to be born.",
             ),
         ]
 
-        for condition_met, message in conditions:
+        for condition_met, sigma_val, message in conditions:
             if condition_met:
+                safe_set(last_phys, "sigma", sigma_val)
                 return message
         return None
 

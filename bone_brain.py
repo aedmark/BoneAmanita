@@ -855,6 +855,31 @@ class TheCortex:
                     f"CRITICAL [SINCERITY PROTOCOL]: The user has explicitly summoned {val}. "
                     f"You MUST adopt the persona of {val} entirely. Drop all other pretexts."
                 )
+
+        if hasattr(self.svc.mind_memory, "cortex") and self.svc.mind_memory.cortex.is_trained:
+            scope_val = float(safe_get(phys, "scope", 1.0))
+            depth_val = float(safe_get(phys, "depth", 0.0))
+            omega_r = float(safe_get(phys, "omega_r", 0.5))
+
+            if scope_val > 0.6 or depth_val > 0.6:
+                query_vec = phys.get("vector", {})
+                if query_vec:
+                    ordered_keys = ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "E"]
+                    q_list = [float(query_vec.get(k, 0.0)) for k in ordered_keys]
+
+                    shadow_nodes = self.svc.mind_memory.cortex.query_neighborhood(
+                        q_list, k=2, resonance_threshold=max(0.2, 0.8 - omega_r)
+                    )
+
+                    if shadow_nodes:
+                        shadow_concepts = [n.get("id", "Unknown") for n in shadow_nodes]
+                        shadow_str = ", ".join(shadow_concepts)
+                        mind["style_directives"].append(
+                            f"SHADOW CAST [APERTURE COMPLETENESS]: While answering the direct prompt, you MUST briefly illuminate these adjacent/unasked concepts pulled from deep memory: [{shadow_str}]. Offer them as a generous 'door' the user can choose to open, do not lecture."
+                        )
+                        if self.events:
+                            self.events.log(f"{Prisma.CYN}Shadow Cast retrieved: {shadow_str}{Prisma.RST}", "CORTEX")
+
         return full_state
 
     def learn_from_response(self, text):

@@ -37,6 +37,8 @@ class TheAkashicRecord:
         event_bus.subscribe("LENS_INTERACTION", self._on_lens_interaction)
         event_bus.subscribe("FORGE_SUCCESS", self._on_forge_event)
         event_bus.subscribe("GHOST_SIGNAL", self._on_ghost_signal)
+        event_bus.subscribe("SYSTEM_STARVING", lambda p: self.trigger_autophagy())
+
         msg = ux("akashic_strings", "listening")
         print(f"{Prisma.CYN}{msg}{Prisma.RST}")
 

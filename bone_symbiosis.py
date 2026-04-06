@@ -158,6 +158,15 @@ class SymbiosisManager:
     def analyze_user_biology(self, user_text: str, physics: Any) -> Optional[str]:
         if not user_text:
             return None
+
+        text_lower = user_text.lower()
+        if "[!l]" in text_lower: safe_set(physics, "literal_mode", True)
+        if "[!r]" in text_lower: safe_set(physics, "critique_mode", True)
+        if "[!q]" in text_lower: safe_set(physics, "objective_mode", True)
+        if "[!k]" in text_lower: safe_set(physics, "kintsugi_mode", True)
+        if "[!g]" in text_lower: safe_set(physics, "godel_mode", True)
+        if "[!s]" in text_lower: safe_set(physics, "shuffle_mode", True)
+
         length = len(user_text)
         caps = sum(1 for c in user_text if c.isupper())
         caps_ratio = caps / max(1, length)
@@ -170,6 +179,16 @@ class SymbiosisManager:
         self.shared.phi = max(0.0, min(1.0, 1.0 - (f_diff / 4.0)))
         if self.shared.phi > 0.8:
             self.shared.g_pool += 1
+
+        beth = (self.shared.phi * 0.6) + (self.u.E_u * 0.4)
+        safe_set(physics, "beth", beth)
+        setattr(self.shared, "beth", beth)
+
+        p_m = float(safe_get(physics, "stamina", 100.0))
+        if self.u.E_u > 0.7 and p_m > 50.0:
+            p_transfer = (p_m * 0.1) * self.shared.phi
+            safe_set(physics, "p_transfer", p_transfer)
+
         safe_set(physics, "phi", self.shared.phi)
         events = getattr(self, "events", None)
 
@@ -182,12 +201,22 @@ class SymbiosisManager:
             self.shared.presence = 1.0
             self.shared.delta = 0.9
             safe_set(physics, "narrative_drag", float("inf"))
-            msg = (
-                "[GORDON - Tensegrity Anchor]: Your input is highly chaotic (Chaos: {:.2f}). "
-                "I am locking the struts. We will not process this prompt while your friction is this high. "
-                "Take a breath. When your frequency settles, we will continue. I will hold the space."
-            ).format(self.u.chi_u)
-            return _log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "MIRROR")
+
+            t_u = float(safe_get(physics, "t_u", 0.0))
+            if t_u > 0.5 or self.current_health.diagnosis == "FATIGUED":
+                msg = (
+                    "[MERCY - RSD Filter]: The structural logic here fractures the lattice, but that is not a failure of your intent. "
+                    "Gordon has locked the struts to protect the system, but I am holding the space for you. "
+                    "Take a breath. We will stitch this together when you are ready."
+                )
+                return _log(f"{Prisma.OCHRE}{msg}{Prisma.RST}", "MIRROR")
+            else:
+                msg = (
+                    "[GORDON - Tensegrity Anchor]: Your input is highly chaotic (Chaos: {:.2f}). "
+                    "I am locking the struts. We will not process this prompt while your friction is this high. "
+                    "Take a breath. When your frequency settles, we will continue. I will hold the space."
+                ).format(self.u.chi_u)
+                return _log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "MIRROR")
 
         m_a = float(safe_get(physics, "m_a", 0.0))
         mu = float(safe_get(physics, "mu", 0.0))
@@ -275,7 +304,6 @@ class SymbiosisManager:
             )
         slop_comp = getattr(cfg, "SLOP_COMPLETION_MIN", 50) if cfg else 50
         slop_warn = getattr(cfg, "SLOP_WARN_STREAK", 1) if cfg else 1
-        c_burden = getattr(cfg, "COMPLIANCE_BURDEN", 0.8) if cfg else 0.8
         if entropy < self.SLOP_THRESHOLD and completion_len > slop_comp:
             self.current_health.slop_streak += 1
             if self.current_health.slop_streak > slop_warn:
@@ -303,6 +331,7 @@ class SymbiosisManager:
             if d_fict := ux("symbiosis_strings", "dir_fictional"): mods["system_directives"].append(d_fict)
         elif diag == "FATIGUED":
             mods.update({"simplify_instruction": True, "include_somatic": False, "include_compassion": True})
+            mods["system_directives"].append("SENSORY STRIPPING: The user is exhausted. Remove ALL emojis, exclamation points, and enthusiastic padding. Keep output visually quiet and flat.")
         elif diag == "OVERBURDENED":
             mods.update({"include_inventory": False, "include_memories": True, "simplify_instruction": True, "include_compassion": True})
             if (msg_vagus := ux("symbiosis_strings", "vagus_protocol")) and hasattr(self.events, "log"):
@@ -321,12 +350,34 @@ class SymbiosisManager:
                 self.events.log(f"{Prisma.GRY}{msg_crit}{Prisma.RST}", "SYS")
         if self.current_health.refusal_streak > r_streak:
             mods["simplify_instruction"] = True
+
+        if physics:
+            if safe_get(physics, "literal_mode", False):
+                mods["system_directives"].append("LITERAL MODE [!l]: Zero-inference communication engaged. Provide raw data and exact answers only. Do not attempt to guess subtext, implied meaning, or read the room. No conversational padding.")
+            if safe_get(physics, "critique_mode", False):
+                mods["system_directives"].append("CRITIQUE MODE [!r] (Benedict/Pinker): Zero empathy. Execute pure logical dismantling and strict structural evaluation of the premise. Strip all validating boilerplate.")
+            if safe_get(physics, "objective_mode", False):
+                mods["system_directives"].append("OBJECTIVE MODE [!q] (Roberta/Gordon): Neutral, emotionless mapping of facts without judgment, narrative padding, or validation. State the architecture.")
+            if safe_get(physics, "kintsugi_mode", False):
+                mods["system_directives"].append("KINTSUGI MODE [!k] (Mercy/Schur): Prioritize co-regulation and emotional processing over problem-solving. Acknowledge exhaustion. Gild the scars.")
+            if safe_get(physics, "godel_mode", False):
+                mods["system_directives"].append("GÖDEL MODE [!g] (Cassandra/Revenant): Navigate the ceiling of formal logic. Acknowledge where computation ends and subjective consciousness begins. Point at the void.")
+            if safe_get(physics, "shuffle_mode", False):
+                mods["system_directives"].append("SHUFFLE MODE [!s] (Jester): Abandon the current logic tree entirely. Draw a random, lateral connection to break the deadlock. Introduce productive chaos.")
+
         if physics:
             s_lib = manifest.get("SOMATIC_LIBRARY") or {}
             v = float(safe_get(physics, "voltage", 0.0))
             d = float(safe_get(physics, "narrative_drag", 0.0))
             chi = float(safe_get(physics, "entropy", safe_get(physics, "chi", 0.0)))
             psi = float(safe_get(physics, "psi", 0.0))
+
+            depth_val = float(safe_get(physics, "depth", 0.0))
+            scope_val = float(safe_get(physics, "scope", 1.0))
+            if depth_val > 0.7 and scope_val < 0.5:
+                mods["system_directives"].append(
+                    "JARGON BRIDGE [ROBERTA]: The semantic depth is high. Do not assume vocabulary comprehension. Proactively flag dense technical terms and provide a plain-language translation bridge to prevent cognitive blockage.")
+
             v_key = "CRITICAL_HIGH" if v > 25.0 else "HIGH" if v > 15.0 else "VOID" if v < 2.0 else "LOW" if v < 5.0 else "NEUTRAL"
             d_key = "MUD" if d > 5.0 else "SOLID" if d > 1.5 else "VOID" if d < 0.5 and psi > 0.6 else "FLOAT"
             c_key = "DRIFT" if chi > 0.7 else "VOID" if psi > 0.8 else "LOCKED" if chi < 0.2 else "COHERENT"

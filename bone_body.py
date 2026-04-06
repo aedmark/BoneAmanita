@@ -56,6 +56,7 @@ class BioSystem:
         if self.events and hasattr(self.events, "subscribe"):
             self.events.subscribe("NEURAL_STATE_SHIFT", self._on_neural_shift)
             self.events.subscribe("SUBSTRATE_FORGED", self.mito.on_substrate_forged)
+            self.events.subscribe("AUTOPHAGY_EVENT", self._on_autophagy_event)
             self.events.log("[BIO]: Vagus Nerve connected.", "SYS")
         narrative = LoreManifest.get_instance().get("BIO_NARRATIVE") or {}
         if self.mito:
@@ -66,6 +67,11 @@ class BioSystem:
         if self.governor:
             self.governor.text_map = narrative.get("GOVERNOR", {})
             self.governor.tax_map = narrative.get("TAX", {})
+
+    def _on_autophagy_event(self, payload):
+        atp_gained = payload.get("atp_gained", 15.0)
+        if self.mito:
+            self.mito.adjust_atp(atp_gained, "Emergency Autophagy")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -302,6 +308,11 @@ class MitochondrialForge:
         if total_metabolic_cost >= self.MAX_SAFE_BURN and not is_critical:
             self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.005)
         self._apply_adaptive_dynamics()
+
+        if self.state.atp_pool <= safe_get(cfg, "ATP_COLLAPSE", 0.0):
+            if self.events:
+                self.events.publish("SYSTEM_STARVING", {})
+
         status = "LOW_POWER" if is_critical else "RESPIRING"
         if self.state.atp_pool <= safe_get(cfg, "ATP_COLLAPSE", 0.0):
             status = "NECROSIS"

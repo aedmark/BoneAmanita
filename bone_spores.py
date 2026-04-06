@@ -416,7 +416,8 @@ class MemoryCore:
         candidates = []
         for k, v in self.graph.items():
             if k not in protected and not v.get("is_diamond", False):
-                score = len(v.get("edges", {})) + (
+                mass = sum(v.get("edges", {}).values())
+                score = mass + (
                     100.0 / max(1, current_tick - v.get("last_tick", 0))
                 )
                 candidates.append((k, v, score))
