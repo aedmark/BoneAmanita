@@ -7,8 +7,8 @@ import re
 import string
 import time
 import unicodedata
+from collections import defaultdict
 from typing import Tuple, Dict, Set, Optional, List
-
 from bone_core import Prisma, LoreManifest, ux
 
 
@@ -18,45 +18,17 @@ class LexiconStore:
     _TRANSLATOR = str.maketrans(_PUNCTUATION, " " * len(_PUNCTUATION))
 
     def __init__(self):
-        self.categories = {
-            "heavy",
-            "kinetic",
-            "explosive",
-            "constructive",
-            "abstract",
-            "photo",
-            "aerobic",
-            "thermal",
-            "cryo",
-            "suburban",
-            "play",
-            "sacred",
-            "buffer",
-            "antigen",
-            "diversion",
-            "meat",
-            "gradient_stop",
-            "liminal",
-            "void",
-            "bureau_buzzwords",
-            "crisis_term",
-            "harvest",
-            "pareidolia",
-            "passive_watch",
-            "repair_trigger",
-            "refusal_guru",
-            "cursed",
-            "sentiment_pos",
-            "sentiment_neg",
-            "sentiment_negators",
-            "toxin",
-        }
+        self.categories = {"heavy", "kinetic", "explosive", "constructive", "abstract", "photo", "aerobic", "thermal",
+                           "cryo", "suburban", "play", "sacred", "buffer", "antigen", "diversion", "meat",
+                           "gradient_stop", "liminal", "void", "bureau_buzzwords", "crisis_term", "harvest",
+                           "pareidolia", "passive_watch", "repair_trigger", "refusal_guru", "cursed", "sentiment_pos",
+                           "sentiment_neg", "sentiment_negators", "toxin", }
         self.VOCAB: Dict[str, Set[str]] = {k: set() for k in self.categories}
         self.LEARNED_VOCAB: Dict[str, Dict[str, int]] = {}
         self.USER_FLAGGED_BIAS = set()
         self.ANTIGEN_REPLACEMENTS = {}
         self.SOLVENTS = set()
-        self.REVERSE_INDEX: Dict[str, Set[str]] = {}
+        self.REVERSE_INDEX = defaultdict(set)
         self.hive_loaded = False
 
     def load_vocabulary(self):
@@ -73,10 +45,7 @@ class LexiconStore:
         self._load_hive()
 
     def _index_word(self, word: str, category: str):
-        w = word.lower()
-        if w not in self.REVERSE_INDEX:
-            self.REVERSE_INDEX[w] = set()
-        self.REVERSE_INDEX[w].add(category)
+        self.REVERSE_INDEX[word.lower()].add(category)
 
     def _load_hive(self):
         if not os.path.exists(self.HIVE_FILENAME): return
@@ -91,8 +60,8 @@ class LexiconStore:
                     count += 1
             self.hive_loaded = True
             if msg := ux("lexicon_strings", "hive_restored"): print(f"{Prisma.CYN}{msg.format(count=count)}{Prisma.RST}")
-        except (IOError, json.JSONDecodeError) as e:
-            if msg := ux("lexicon_strings", "hive_corruption"): print(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}")
+        except (IOError, json.JSONDecodeError):
+            if msg := ux("lexicon_strings", "hive_corruption"): print(f"{Prisma.OCHRE}{msg.format(e='Amnesia detected. Rebuilding pathways.')}{Prisma.RST}")
 
     def save_hive(self):
         try:
@@ -184,8 +153,12 @@ class LinguisticAnalyzer:
     def vectorize(self, text: str) -> Dict[str, float]:
         if not (words := self.sanitize(text)): return {}
         dims = {k: 0.0 for k in ("VEL", "STR", "CHI", "PHI", "PSI", "BET", "DEL", "LAMBDA", "ENT")}
-        for cat in (c for w in words for c in self.store.get_categories_for_word(w)):
-            if cat in self.dimension_map: dims[self.dimension_map[cat]] += 1.0
+
+        for w in words:
+            for cat in self.store.get_categories_for_word(w):
+                if cat in self.dimension_map:
+                    dims[self.dimension_map[cat]] += 1.0
+
         total = max(1.0, sum(dims.values()))
         result = {k: round(v / total, 3) for k, v in dims.items()}
         result["ENT"] = round((result.get("CHI", 0.0) + min(1.0, total / max(1, len(words)))) / 2.0, 3)
@@ -222,15 +195,15 @@ class LinguisticAnalyzer:
             normalized = text
         xlate = self._TRANSLATOR if self._TRANSLATOR else str.maketrans("", "")
         cleaned_text = normalized.translate(xlate).lower()
+
         if getattr(self, "ANTIGEN_REGEX", None):
+            cleaned_text = self.ANTIGEN_REGEX.sub(
+                lambda m: self.store.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""),
+                cleaned_text
+            )
 
-            def replacer(match):
-                return self.store.ANTIGEN_REPLACEMENTS.get(match.group(0).lower(), "")
-
-            cleaned_text = self.ANTIGEN_REGEX.sub(replacer, cleaned_text)
-        words = cleaned_text.split()
         bias_set = getattr(self.store, "USER_FLAGGED_BIAS", set())
-        return [w for w in words if w.strip() and w not in bias_set]
+        return [w for w in cleaned_text.split() if w not in bias_set]
 
     def classify_word(self, word: str) -> Tuple[Optional[str], float]:
         w = word.lower()
@@ -242,7 +215,7 @@ class LinguisticAnalyzer:
                     return category.lower(), 0.8
         counts = {k: 0 for k in self.PHONETICS}
         for char in w:
-            if sound_type := getattr(self, "char_to_sound", {}).get(char):
+            if sound_type := self.char_to_sound.get(char):
                 counts[sound_type] += 1
         density_score = (counts.get("PLOSIVE", 0) * 1.5) + (
             counts.get("NASAL", 0) * 0.8
@@ -313,17 +286,18 @@ class SemanticField:
             return self.current_vector
         flux = self.analyzer.calculate_flux(self.current_vector, new_vector)
         self.momentum = (self.momentum * 0.7) + (flux * 0.3)
-        self.current_vector = {k: round((self.current_vector.get(k, 0.0) * 0.6) + (new_vector.get(k, 0.0) * 0.4), 3) for k in set(self.current_vector) | set(new_vector)}
+        self.current_vector = {k: round((self.current_vector.get(k, 0.0) * 0.6) + (v * 0.4), 3) for k, v in
+                               new_vector.items()}
         self.history.append((time.time(), flux))
         return self.current_vector
 
     def get_atmosphere(self) -> str:
         if not self.current_vector:
-            return "VOID"
+            return f"{Prisma.GRY}VOID{Prisma.RST}"
         dom = max(self.current_vector, key=self.current_vector.get)
         if self.momentum > 0.5:
-            return f"Volatile {dom.upper()} Storm"
-        return f"Stable {dom.upper()} Atmosphere"
+            return f"{Prisma.VIOLET}Volatile {dom.upper()} Storm{Prisma.RST}"
+        return f"{Prisma.CYN}Stable {dom.upper()} Atmosphere{Prisma.RST}"
 
 
 class LexiconService:
@@ -413,11 +387,10 @@ class LexiconService:
         if not self.ANTIGEN_REGEX or not text:
             return text
 
-        def replacer(match):
-            m_lower = match.group(0).lower()
-            return self._STORE.ANTIGEN_REPLACEMENTS.get(m_lower, "")
-
-        return self.ANTIGEN_REGEX.sub(replacer, text)
+        return self.ANTIGEN_REGEX.sub(
+            lambda m: self._STORE.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""),
+            text
+        )
 
     def sanitize(self, text: str) -> List[str]:
         if not self._INITIALIZED:

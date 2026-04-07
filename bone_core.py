@@ -63,10 +63,11 @@ class EventBus:
             except Exception as e:
                 cb_name = getattr(callback, "__name__", str(callback))
                 full_trace = traceback.format_exc()
-                raw_err = f"Error in '{cb_name}' for '{event_type}': {e}\n{full_trace}"
+                short_err = f"Error in '{cb_name}': {e}"
+                raw_err = f"{short_err}\n{full_trace}"
                 msg = ux("core_strings", "bus_error")
                 if msg:
-                    print(f"{Prisma.RED}{msg.format(error_msg=raw_err)}{Prisma.RST}")
+                    print(f"{Prisma.RED}{msg.format(error_msg=short_err)}{Prisma.RST}")
                 if event_type != "EVENT_FAILURE":
                     self.log(f"EVENT_FAILURE: {raw_err}", source="EVENT_FAILURE", level="CRIT")
 

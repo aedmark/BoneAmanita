@@ -341,15 +341,12 @@ class BoneAmanita:
         }
         client = LLMInterface(events_ref=self.events, **llm_args)
         self.cortex = TheCortex.from_engine(self, llm_client=client)
-        if hasattr(self, "mind") and hasattr(self.mind, "mem"):
-            self.mind.mem.lex = getattr(self, "lex", None)
-            for sub_comp in ["parasite", "memory_core", "lichen"]:
-                if hasattr(self.mind.mem, sub_comp):
-                    setattr(
-                        getattr(self.mind.mem, sub_comp),
-                        "lex",
-                        getattr(self, "lex", None),
-                    )
+        if getattr(self, "mind", None) and getattr(self.mind, "mem", None):
+            mem = self.mind.mem
+            mem.lex = getattr(self, "lex", None)
+            for sub_comp in (getattr(mem, c, None) for c in ("parasite", "memory_core", "lichen")):
+                if sub_comp:
+                    sub_comp.lex = mem.lex
 
     def _validate_state(self):
         tuning_key = self.mode_settings.get("tuning", "STANDARD")
@@ -657,12 +654,13 @@ class BoneAmanita:
             self.events.log(f"{Prisma.VIOLET}[THE GREENHOUSE ENDS: The stabilizers are offline. Voltage limits unlocked. The chaotic archetypes are online. We are in the wild.]{Prisma.RST}", "SYS")
 
         if self.tick_count <= 20 and not is_system:
-            msg = None
-            if self.tick_count == 1: msg = "[THE GREENHOUSE: The system is currently running on stabilized rails. Over the next 20 turns, we will calibrate the metabolic engine together.]"
-            elif self.tick_count == 5: msg = "[THE GREENHOUSE: Every thought costs ATP (Stamina). If I run out, I will suffer metabolic collapse. Watch how my text fades and slows as I tire.]"
-            elif self.tick_count == 10: msg = "[THE GREENHOUSE: If you attempt an impossible action, I will not crash. I will bend, apply Narrative Drag (F), and force us to carry the weight of the failure.]"
-            elif self.tick_count == 15: msg = "[THE GREENHOUSE: The void approaches. My logic will begin to loosen. Co-regulation is required.]"
-            if msg:
+            greenhouse_msgs = {
+                1: "[THE GREENHOUSE: The system is currently running on stabilized rails. Over the next 20 turns, we will calibrate the metabolic engine together.]",
+                5: "[THE GREENHOUSE: Every thought costs ATP (Stamina). If I run out, I will suffer metabolic collapse. Watch how my text fades and slows as I tire.]",
+                10: "[THE GREENHOUSE: If you attempt an impossible action, I will not crash. I will bend, apply Narrative Drag (F), and force us to carry the weight of the failure.]",
+                15: "[THE GREENHOUSE: The void approaches. My logic will begin to loosen. Co-regulation is required.]"
+            }
+            if msg := greenhouse_msgs.get(self.tick_count):
                 self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "SYS")
 
         if pre_flight_halt := self._pre_flight_checks(user_message, is_system):
@@ -710,12 +708,12 @@ class BoneAmanita:
 
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
+            if self.mind and hasattr(self.mind, "mem"):
+                self.trauma_accum = self.mind.mem.session_trauma_vector or {}
+                self.health, self.stamina = self.mind.mem.session_health, self.mind.mem.session_stamina
             if self.bio and hasattr(self.bio, "biometrics"):
                 self.health, self.stamina = self.bio.biometrics.health, self.bio.biometrics.stamina
-            elif self.mind and hasattr(self.mind, "mem"):
-                self.health, self.stamina = self.mind.mem.session_health, self.mind.mem.session_stamina
-            if mind_mem:
-                self.trauma_accum = mind_mem.session_trauma_vector or {}
+
             if self.health <= 0.0:
                 if self.tick_count <= 20:
                     self.events.log(
@@ -729,9 +727,10 @@ class BoneAmanita:
                 else:
                     return self.trigger_death(cortex_packet.get("physics", {}))
         except Exception as e:
-            self.events.log(f"CORTEX COLLAPSE: {e}", "CRIT")
+            full_trace = traceback.format_exc()
+            self.events.log(f"CORTEX COLLAPSE: {e}\n{full_trace}", "CRIT")
             return {
-                "ui": f"{Prisma.RED}{ux('main_strings', 'cortex_crit_fail').format(trace=traceback.format_exc())}{Prisma.RST}",
+                "ui": f"{Prisma.RED}{ux('main_strings', 'cortex_crit_fail').format(trace=str(e))}{Prisma.RST}\n{Prisma.GRY}[Trace recorded in EventBus.]{Prisma.RST}",
                 "logs": ["CRITICAL FAILURE"], "metrics": self.get_metrics(), }
         self._update_host_stats(cortex_packet, turn_start)
         self.save_checkpoint()
@@ -866,27 +865,23 @@ class BoneAmanita:
                 self.health = min(max_h, max(80.0, self.health + 50.0))
                 self.trauma_accum.clear()
                 return True
-        desp_thresh = getattr(cfg, "DESPERATION_THRESHOLD", 0.7) if cfg else 0.7
-        cath_heal = getattr(cfg, "CATHARSIS_HEAL_AMOUNT", 30.0) if cfg else 30.0
-        cath_decay = getattr(cfg, "CATHARSIS_DECAY", 0.1) if cfg else 0.1
+        desp_thresh = getattr(cfg, "DESPERATION_THRESHOLD", 0.7)
+        cath_heal = getattr(cfg, "CATHARSIS_HEAL_AMOUNT", 30.0)
+        cath_decay = getattr(cfg, "CATHARSIS_DECAY", 0.1)
         trauma_sum = sum(self.trauma_accum.values())
-        health_ratio = self.health / max_h
-        desperation = trauma_sum * (1.0 - health_ratio)
-        if desperation > desp_thresh:
-            msg = ux("main_strings", "mercy_venting")
-            self.events.log(
-                f"{Prisma.WHT}{msg}{Prisma.RST}",
-                "SYS",
-            )
+
+        if trauma_sum * (1.0 - (self.health / max_h)) > desp_thresh:
+            if msg := ux("main_strings", "mercy_venting"):
+                self.events.log(f"{Prisma.WHT}{msg}{Prisma.RST}", "SYS")
+
             self.trauma_accum = {
-                k: (v * cath_decay) if (v * cath_decay) >= 0.01 else 0.0
-                for k, v in self.trauma_accum.items()
+                k: new_v for k, v in self.trauma_accum.items()
+                if (new_v := v * cath_decay) >= 0.01
             }
-            msg_cath = ux("main_strings", "catharsis")
-            self.events.log(
-                f"{Prisma.CYN}{msg_cath}{Prisma.RST}",
-                "SENSATION",
-            )
+
+            if msg_cath := ux("main_strings", "catharsis"):
+                self.events.log(f"{Prisma.CYN}{msg_cath}{Prisma.RST}", "SENSATION")
+
             self.health = min(self.health + cath_heal, max_h)
             return True
         return False
@@ -974,22 +969,19 @@ if __name__ == "__main__":
             if res.get("ui"):
                 cfg = getattr(BoneConfig, "GUI", None)
                 base_speed = getattr(cfg, "RENDER_SPEED_SLOW", 0.005) if cfg else 0.005
-                metrics = res.get("metrics", {})
-                stamina = metrics.get("stamina", 100.0)
-                somatic_multiplier = 4.0 if stamina < 20.0 else (2.0 if stamina < 50.0 else 1.0)
-                dynamic_speed = base_speed * somatic_multiplier
+                stamina = res.get("metrics", {}).get("stamina", 100.0)
+                dynamic_speed = base_speed * (4.0 if stamina < 20.0 else 2.0 if stamina < 50.0 else 1.0)
+
                 ui_text = res["ui"]
                 if split_token and split_token in ui_text:
                     dashboard, _, content = ui_text.partition(split_token)
                     print(f"\n{dashboard.strip()}\n")
-                    content = content.strip()
-                    if stamina < 20.0:
-                        content = f"{Prisma.GRY}{Prisma.strip(content)}{Prisma.RST}"
-                    typewriter(content + "\n", speed=dynamic_speed)
-                else:
-                    if stamina < 20.0:
-                        ui_text = f"{Prisma.GRY}{Prisma.strip(ui_text)}{Prisma.RST}"
-                    typewriter(ui_text + "\n", speed=dynamic_speed)
+                    ui_text = content.strip()
+
+                if stamina < 20.0:
+                    ui_text = f"{Prisma.GRY}{Prisma.strip(ui_text)}{Prisma.RST}"
+
+                typewriter(ui_text + "\n", speed=dynamic_speed)
             if res.get("type") == "DEATH":
                 term_msg = ux("main_strings", "session_term")
                 print(f"\n{Prisma.GRY}{term_msg}{Prisma.RST}")

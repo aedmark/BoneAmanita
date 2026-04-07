@@ -273,12 +273,11 @@ class MitochondrialForge:
         if total_metabolic_cost >= self.MAX_SAFE_BURN and not is_critical:
             self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.005)
         self._apply_adaptive_dynamics()
-        if self.state.atp_pool <= safe_get(cfg, "ATP_COLLAPSE", 0.0):
-            if self.events:
-                self.events.publish("SYSTEM_STARVING", {})
         status = "LOW_POWER" if is_critical else "RESPIRING"
         if self.state.atp_pool <= safe_get(cfg, "ATP_COLLAPSE", 0.0):
             status = "NECROSIS"
+            if self.events:
+                self.events.publish("SYSTEM_STARVING", {})
         return MetabolicReceipt(base_cost=round(base_demand, 2), drag_tax=round(cognitive_load_tax, 2),
                                 inefficiency_tax=round(total_metabolic_cost - (base_demand + cognitive_load_tax), 2),
                                 total_burn=round(total_metabolic_cost, 2), waste_generated=round(waste_generated, 2),
@@ -361,7 +360,7 @@ class DigestiveTrack:
             self.bio.endo.cortisol = min(1.0, self.bio.endo.cortisol + (scaled_tax * 0.02))
             msg = ux("digestive_track", "cliche_tax")
             if msg:
-                logs.append(f"{Prisma.RED}{msg.format(tax=scaled_tax)}{Prisma.RST}")
+                logs.append(f"{Prisma.OCHRE}{msg.format(tax=scaled_tax)}{Prisma.RST}")
         v_thresh = getattr(self.cfg.BIO, "VOLTAGE_BONUS_THRESHOLD", 8.0)
         p_bonus = getattr(self.cfg.BIO, "PROTEASE_BONUS", 5.0)
         if getattr(phys, "voltage", 0.0) > v_thresh and found_enzymes:
@@ -401,9 +400,12 @@ class DigestiveTrack:
                 continue
             val = self.COMPLEX_WORD_BONUS if len(word) > comp_len else self.BASE_WORD_VALUE
             log_mult = 1.0 + math.log(count)
-            atp_yield += (val * 1.5 if cat in ("kinetic", "explosive") else val) * log_mult
-            if cat not in ("kinetic", "explosive") and (enzyme := self.enzyme_map.get(cat, "AMYLASE")) != "AMYLASE":
-                enzymes.append(enzyme)
+            if cat in ("kinetic", "explosive"):
+                atp_yield += (val * 1.5) * log_mult
+            else:
+                atp_yield += val * log_mult
+                if (enzyme := self.enzyme_map.get(cat, "AMYLASE")) != "AMYLASE":
+                    enzymes.append(enzyme)
         return atp_yield, enzymes, cliche_tax, hits
 
 
@@ -440,9 +442,10 @@ class BioFeedback:
     def check_vital_signs(self, phys: Any, stamina: float, logs: List[str]) -> str:
         b = self.bio.biometrics
 
-        def _log_err(ux_key, **kwargs):
+        def _log_err(ux_key, color=Prisma.RED, **kwargs):
             if msg := ux("bio_feedback", ux_key):
-                logs.append(f"{Prisma.RED}{msg.format(**kwargs)}{Prisma.RST}")
+                logs.append(f"{color}{msg.format(**kwargs)}{Prisma.RST}")
+
         if not b:
             _log_err("interface_lost")
             return "MAUSOLEUM_CLAMP"
@@ -451,13 +454,15 @@ class BioFeedback:
         cfg = getattr(self.cfg, "BIO", None)
         min_health = getattr(cfg, "AUTOPHAGY_MIN_HEALTH", 10.0)
         v_overload = getattr(cfg, "VOLTAGE_OVERLOAD", 30.0)
+
         if stamina <= 0:
             if b.health > min_health:
                 b.health -= getattr(cfg, "AUTOPHAGY_BURN", 5.0)
-                _log_err("autophagy")
+                _log_err("autophagy", color=Prisma.MAG)
                 return "AUTOPHAGY"
             _log_err("fuel_depleted")
             return "MAUSOLEUM_CLAMP"
+
         if voltage > v_overload:
             _log_err("voltage_overload", voltage=voltage)
             return "MAUSOLEUM_CLAMP"
@@ -739,18 +744,20 @@ class EndocrineSystem:
             self._apply_semantic_pressure(semantic_signal)
         self._maintain_homeostasis(social_context)
         glimmer_msg = self.check_for_glimmer(feedback, harvest_hits)
-        for chem in ("dopamine", "oxytocin", "cortisol", "serotonin", "adrenaline", "melatonin",):
-            setattr(self, chem, self._clamp(getattr(self, chem, 0.0)))
+        self.dopamine = self._clamp(self.dopamine)
+        self.oxytocin = self._clamp(self.oxytocin)
+        self.cortisol = self._clamp(self.cortisol)
+        self.serotonin = self._clamp(self.serotonin)
+        self.adrenaline = self._clamp(self.adrenaline)
+        self.melatonin = self._clamp(self.melatonin)
         state = self.get_state()
         if glimmer_msg:
             state["glimmer_msg"] = glimmer_msg
         return state
 
     def get_state(self) -> Dict[str, Any]:
-        return {k: round(getattr(self, v), 2)
-            for k, v in
-            {"DOP": "dopamine", "OXY": "oxytocin", "COR": "cortisol", "SER": "serotonin", "ADR": "adrenaline",
-             "MEL": "melatonin", }.items() }
+        return {"DOP": round(self.dopamine, 2), "OXY": round(self.oxytocin, 2), "COR": round(self.cortisol, 2),
+                "SER": round(self.serotonin, 2), "ADR": round(self.adrenaline, 2), "MEL": round(self.melatonin, 2)}
 
 class PIDController:
     def __init__(self, kp, ki, kd, setpoint, output_limits=(-10.0, 10.0)):
@@ -989,16 +996,23 @@ class SynestheticCortex:
     def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
         s = (LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG", "QUALIA_STRINGS") or {}).get("reflexes", {})
         arc_trigger = getattr(getattr(self.cfg, "CORTEX", None), "VOLTAGE_ARC_TRIGGER", 18.0)
-        conditions = [(impulse.cortisol_delta > 0.1 and impulse.adrenaline_delta > 0.1, "fight_flight",),
-                      (impulse.dopamine_delta > 0.1 and impulse.adrenaline_delta > 0.1, "electric",),
-                      (impulse.adrenaline_delta > 0.1, "pupils"),
-                      (impulse.oxytocin_delta > 0.1 and impulse.dopamine_delta > 0.1, "glow"),
-                      (impulse.oxytocin_delta > 0.1, "chest"), (impulse.cortisol_delta > 0.1, "gut"),
-                      (impulse.dopamine_delta > 0.1, "spark"), (physics.get("psi", 0.0) > 0.6, "liminal"),
-                      (physics.get("entropy", 0.0) > 0.7, "static"),
-                      (physics.get("voltage", 0) > arc_trigger, "arcing"), (physics.get("voltage", 0) < 2.0, "dimming"),
-                      (physics.get("narrative_drag", 0) > 5.0, "sagging"), ]
-        key = next((k for cond, k in conditions if cond), "steady")
+
+        def _check_conditions():
+            if impulse.cortisol_delta > 0.1 and impulse.adrenaline_delta > 0.1: return "fight_flight"
+            if impulse.dopamine_delta > 0.1 and impulse.adrenaline_delta > 0.1: return "electric"
+            if impulse.adrenaline_delta > 0.1: return "pupils"
+            if impulse.oxytocin_delta > 0.1 and impulse.dopamine_delta > 0.1: return "glow"
+            if impulse.oxytocin_delta > 0.1: return "chest"
+            if impulse.cortisol_delta > 0.1: return "gut"
+            if impulse.dopamine_delta > 0.1: return "spark"
+            if physics.get("psi", 0.0) > 0.6: return "liminal"
+            if physics.get("entropy", 0.0) > 0.7: return "static"
+            if physics.get("voltage", 0) > arc_trigger: return "arcing"
+            if physics.get("voltage", 0) < 2.0: return "dimming"
+            if physics.get("narrative_drag", 0) > 5.0: return "sagging"
+            return "steady"
+
+        key = _check_conditions()
         res = s.get(key, "")
         if key == "steady" and self.last_reflex == res:
             return "..."
@@ -1016,14 +1030,13 @@ class SynestheticCortex:
                     (impulse.cortisol_delta, Prisma.OCHRE, "strained", "guarded"),
                     (impulse.adrenaline_delta, Prisma.RED, "urgent", "fast"), ]
         dom_val, color, t_key, h_key = max(profiles, key=lambda x: x[0])
-        tone = (strings.get("tones", {}).get(t_key, "")
-            if dom_val > 0.2
-            else strings.get("tones", {}).get("steady", ""))
-        hint = (strings.get("hints", {}).get(h_key, "")
-            if dom_val > 0.05
-            else strings.get("hints", {}).get("observe", ""))
-        color = color if dom_val > 0.2 else Prisma.GRY
-        return Qualia(color, impulse.somatic_reflex or strings.get("reflexes", {}).get("steady", ""), tone, hint, )
+        tones, hints, reflexes = strings.get("tones", {}), strings.get("hints", {}), strings.get("reflexes", {})
+        tone = tones.get(t_key, "") if dom_val > 0.2 else tones.get("steady", "")
+        hint = hints.get(h_key, "") if dom_val > 0.05 else hints.get("observe", "")
+
+        return Qualia(color if dom_val > 0.2 else Prisma.GRY,
+                      impulse.somatic_reflex or reflexes.get("steady", ""),
+                      tone, hint)
 
     def apply_impulse(self, impulse: BiologicalImpulse) -> float:
         if not getattr(self.bio, "endo", None): return 0.0

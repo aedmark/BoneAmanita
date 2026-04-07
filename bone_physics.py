@@ -135,16 +135,19 @@ class GeodesicEngine:
 
     @staticmethod
     def _calculate_dimensions(masses, forces, counts, volume) -> Dict[str, float]:
-        iv, bm, cl = 1.0 / max(1, volume), 0.1, lambda v: max(0.0, min(1.0, v))
+        inv_vol = 1.0 / max(1, volume)
+        base_mass = 0.1
+        clamp = lambda v: max(0.0, min(1.0, v))
+
         return {
-            "VEL": cl((masses["kinetic"] * 2.0 - forces["compression"] + bm) * iv),
-            "STR": cl((masses["heavy"] * 2.0 + masses["constructive"] + masses["harvest"] + bm) * iv),
-            "ENT": cl(((counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"]) * iv),
-            "PHI": cl((masses["heavy"] + masses["kinetic"] + bm) * iv),
-            "PSI": cl(forces["abstraction"]),
-            "BET": cl((masses["social"] * 2.0) * iv),
-            "DEL": cl((masses["play"] * 3.0) * iv),
-            "E": cl(counts.get("solvents", 0) * iv),
+            "VEL": clamp((masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol),
+            "STR": clamp((masses["heavy"] * 2.0 + masses["constructive"] + masses["harvest"] + base_mass) * inv_vol),
+            "ENT": clamp(((counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"]) * inv_vol),
+            "PHI": clamp((masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol),
+            "PSI": clamp(forces["abstraction"]),
+            "BET": clamp((masses["social"] * 2.0) * inv_vol),
+            "DEL": clamp((masses["play"] * 3.0) * inv_vol),
+            "E": clamp(counts.get("solvents", 0) * inv_vol),
         }
 
     @staticmethod
@@ -196,6 +199,8 @@ class HLA_Stabilizer:
 
 
 class TheGatekeeper:
+    _FIREWALL_PATTERN = re.compile(r"^(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[\.,]?\s*", re.IGNORECASE)
+
     def __init__(self, lexicon_ref, config_ref=None):
         self.lex = lexicon_ref
         self.cfg = config_ref or BoneConfig
@@ -250,22 +255,20 @@ class TheGatekeeper:
         gen_txt = self.hla.mitigate_rejection(generated_text, current_psi=1.0, mito_state=mito_state)
         if "IMMUNOSUPPRESSION ENGAGED" in gen_txt: return True, gen_txt
 
-        if re.match(
-                pt := r"^(?i)(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[\.,]?\s*",
-                gen_txt):
-            gen_txt = re.sub(pt, "", gen_txt).strip()
+        if self._FIREWALL_PATTERN.match(gen_txt):
+            gen_txt = self._FIREWALL_PATTERN.sub("", gen_txt).strip()
             apply_metabolic_tax(mito_state, atp_cost=2.0, ros_cost=0.0)
 
         sc = self.lex.get("style_crimes") or LoreManifest.get_instance().get("STYLE_CRIMES") or {}
         for scrub in sc.get("SCRUB_PATTERNS", []):
-            if reg := scrub.get("regex"): gen_txt = re.sub(reg, scrub.get("replacement", ""), gen_txt,
-                                                           flags=re.IGNORECASE)
+            if reg := scrub.get("regex"):
+                gen_txt = re.sub(reg, scrub.get("replacement", ""), gen_txt, flags=re.IGNORECASE)
 
         gen_txt = gen_txt.strip()
         tl = gen_txt.lower()
 
-        trigger = next((p for p in sc.get("BANNED_PHRASES", []) + sc.get("TOXIC_KEYWORDS", []) if p.lower() in tl),
-                       None)
+        banned, toxic = sc.get("BANNED_PHRASES", []), sc.get("TOXIC_KEYWORDS", [])
+        trigger = next((p for src in (banned, toxic) for p in src if p.lower() in tl), None)
         if not trigger:
             trigger = next((pat.get("name", "BANNED_PATTERN") for pat in sc.get("PATTERNS", []) if
                             (r := pat.get("regex")) and re.search(r, gen_txt, re.IGNORECASE)), None)
@@ -620,14 +623,14 @@ class CosmicDynamics:
 
     def analyze_orbit(self, network: Any, clean_words: List[str]) -> Tuple[str, float, str]:
         if not (clean_words and network and getattr(network, "graph", None)):
-            return "VOID_DRIFT", 3.0, self.logs.get("VOID", ux("physics_strings", "cosmic_void"))
+            return "VOID_DRIFT", 3.0, self.logs.get("VOID") or "Drifting in the Void."
 
         if not self.cached_wells or ((current_time := int(time.time())) - self.last_scan_tick) > self.SCAN_INTERVAL:
             self.cached_wells, self.cached_hubs = self._scan_network_mass(network, self.cfg)
             self.last_scan_tick = current_time
 
         basin_pulls, active_filaments = self._calculate_pull(clean_words, network, self.cached_wells)
-        if not sum(basin_pulls.values()):
+        if not any(basin_pulls.values()):
             return self._handle_void_state(clean_words, self.cached_hubs)
 
         return self._resolve_orbit(basin_pulls, active_filaments, len(clean_words), self.cached_wells, self.cfg)
@@ -670,13 +673,11 @@ class CosmicDynamics:
         for w in words:
             hub_mass = geodesic_hubs.get(w)
             if hub_mass is not None:
-                fallback_msg = ux("physics_strings", "cosmic_nebula")
-                msg = self.logs.get("NEBULA", fallback_msg).format(
+                msg = (self.logs.get("NEBULA") or "Approaching {node} ({mass})").format(
                     node=w.upper(), mass=int(hub_mass)
                 )
                 return "PROTO_COSMOS", 1.0, msg
-        fallback_void = ux("physics_strings", "cosmic_void")
-        return "VOID_DRIFT", 3.0, self.logs.get("VOID", fallback_void)
+        return "VOID_DRIFT", 3.0, self.logs.get("VOID") or "Drifting in the Void."
 
     def _resolve_orbit(
         self, basin_pulls, active_filaments, word_count, gravity_wells, config_ref=None
@@ -688,19 +689,16 @@ class CosmicDynamics:
         if len(sorted_basins) > 1:
             secondary_node, secondary_str = sorted_basins[1]
             if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:
-                fallback_msg = ux("physics_strings", "cosmic_lagrange")
-                msg = self.logs.get("LAGRANGE", fallback_msg).format(
+                msg = (self.logs.get("LAGRANGE") or "Lagrange equilibrium between {p} and {s}").format(
                     p=primary_node.upper(), s=secondary_node.upper()
                 )
                 return "LAGRANGE_POINT", 0.0, msg
         flow_ratio = active_filaments / max(1, word_count)
         well_threshold = getattr(target_cfg, "GRAVITY_WELL_THRESHOLD", 15.0)
         if flow_ratio > 0.5 and primary_str < (well_threshold * 2):
-            fallback_msg = ux("physics_strings", "cosmic_flow")
-            msg = self.logs.get("FLOW", fallback_msg).format(node=primary_node.upper())
+            msg = (self.logs.get("FLOW") or "Caught in the flow of {node}").format(node=primary_node.upper())
             return "WATERSHED_FLOW", 0.0, msg
-        fallback_msg = ux("physics_strings", "cosmic_orbit")
-        msg = self.logs.get("ORBIT", fallback_msg).format(
+        msg = (self.logs.get("ORBIT") or "Orbiting {node} ({mass})").format(
             node=primary_node.upper(), mass=int(gravity_wells[primary_node])
         )
         return "ORBITAL", 0.0, msg
@@ -756,30 +754,24 @@ class CycleStabilizer:
                 msg = ux("physics_strings", "stabilizer_domestication") or "Domestication penalty applied."
                 self.events.log(f"STABILIZER: {msg} (+{self.pending_drag} Drag)", "PHYSICS")
             self.pending_drag, applied_correction = 0.0, True
-
         dt = max(0.001, min(1.0, (now := time.time()) - self.last_tick_time))
         self.last_tick_time = now
         if not self.governor: return applied_correction
-
-        cfg = self.manifolds.get(self._get(physics, "manifold", "DEFAULT"), self.manifolds.get("DEFAULT", {"voltage": 10.0, "drag": 1.0}))
+        cfg = self.manifolds.get(safe_get(physics, "manifold", "DEFAULT"), self.manifolds.get("DEFAULT", {"voltage": 10.0, "drag": 1.0}))
         target_v, target_d = cfg.get("voltage", 10.0), cfg.get("drag", 1.0)
-
-        if self._get(physics, "flow_state", "LAMINAR") in ("SUPERCONDUCTIVE", "FLOW_BOOST"):
-            target_v, target_d = self._get(physics, "voltage", target_v), max(0.1, target_d * 0.5)
-
+        if safe_get(physics, "flow_state", "LAMINAR") in ("SUPERCONDUCTIVE", "FLOW_BOOST"):
+            target_v, target_d = safe_get(physics, "voltage", target_v), max(0.1, target_d * 0.5)
         self.governor.recalibrate(target_v, target_d)
         v_force, d_force = self.governor.regulate(physics.to_dict() if hasattr(physics, "to_dict") else physics, dt=dt)
-
         phys_cfg = getattr(self.cfg, "PHYSICS", None)
-        return applied_correction | self._apply_force(physics, "voltage", v_force, (getattr(phys_cfg, "VOLTAGE_FLOOR", 0.0), getattr(phys_cfg, "VOLTAGE_MAX", 150.0))) | self._apply_force(physics, "narrative_drag", d_force)
+        v_limits = (getattr(phys_cfg, "VOLTAGE_FLOOR", 0.0), getattr(phys_cfg, "VOLTAGE_MAX", 150.0))
+        voltage_applied = self._apply_force(physics, "voltage", v_force, v_limits)
+        drag_applied = self._apply_force(physics, "narrative_drag", d_force)
+        return applied_correction or voltage_applied or drag_applied
 
     def _apply_force(self, p, field, force, limits=None) -> bool:
         if abs(force) <= 0.05:
             return False
         new_val = safe_get(p, field, 0.0) + force
-        safe_set(
-            p,
-            field,
-            max(limits[0], min(limits[1], new_val)) if limits else max(0.0, new_val),
-        )
+        safe_set(p, field, max(limits[0], min(limits[1], new_val)) if limits else max(0.0, new_val), )
         return True

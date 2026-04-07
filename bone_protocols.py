@@ -40,32 +40,29 @@ class ZenGarden:
     def raking_the_sand(self, physics: Any, _bio: Dict) -> Tuple[float, Optional[str]]:
         vol = float(safe_get(physics, "voltage", 0.0))
         drag = float(safe_get(physics, "narrative_drag", 0.0))
-        cfg = getattr(self.cfg, "ZEN", None)
-        v_min = getattr(cfg, "VOLTAGE_MIN", 5.0) if cfg else 5.0
-        v_max = getattr(cfg, "VOLTAGE_MAX", 12.0) if cfg else 12.0
-        d_max = getattr(cfg, "DRAG_MAX", 2.0) if cfg else 2.0
+
+        cfg = getattr(self.cfg, "ZEN", object())
+        v_min = getattr(cfg, "VOLTAGE_MIN", 5.0)
+        v_max = getattr(cfg, "VOLTAGE_MAX", 12.0)
+        d_max = getattr(cfg, "DRAG_MAX", 2.0)
+
         is_stable = (v_min <= vol <= v_max) and (drag <= d_max)
         if is_stable:
             self.stillness_streak += 1
-            if self.stillness_streak > self.max_streak:
-                self.max_streak = self.stillness_streak
-            eff_cap = getattr(cfg, "EFFICIENCY_CAP", 0.5) if cfg else 0.5
-            eff_scalar = getattr(cfg, "EFFICIENCY_SCALAR", 0.05) if cfg else 0.05
-            efficiency_boost = min(eff_cap, self.stillness_streak * eff_scalar)
-            first_tick = getattr(cfg, "ZEN_FIRST_TICK", 1) if cfg else 1
-            ms_freq = getattr(cfg, "ZEN_MILESTONE_FREQ", 5) if cfg else 5
+            self.max_streak = max(self.max_streak, self.stillness_streak)
+
+            efficiency_boost = min(getattr(cfg, "EFFICIENCY_CAP", 0.5), self.stillness_streak * getattr(cfg, "EFFICIENCY_SCALAR", 0.05))
+
             msg = None
-            if self.stillness_streak == first_tick:
-                raw_enter = ux("protocol_strings", "zen_enter")
-                msg = f"{Prisma.GRY}{raw_enter}{Prisma.RST}"
-            elif self.stillness_streak % ms_freq == 0:
+            if self.stillness_streak == getattr(cfg, "ZEN_FIRST_TICK", 1):
+                msg = f"{Prisma.GRY}{ux('protocol_strings', 'zen_enter')}{Prisma.RST}"
+            elif self.stillness_streak % getattr(cfg, "ZEN_MILESTONE_FREQ", 5) == 0:
                 self.pebbles_collected += 1
                 koan = random.choice(self.koans)
-                raw_streak = ux("protocol_strings", "zen_streak")
-                msg = f"{Prisma.CYN}{raw_streak.format(streak=self.stillness_streak, koan=koan, boost=int(efficiency_boost * 100))}{Prisma.RST}"
+                msg = f"{Prisma.CYN}{ux('protocol_strings', 'zen_streak').format(streak=self.stillness_streak, koan=koan, boost=int(efficiency_boost * 100))}{Prisma.RST}"
             return efficiency_boost, msg
-        break_thresh = getattr(cfg, "STREAK_BREAK_THRESHOLD", 3) if cfg else 3
-        if self.stillness_streak > break_thresh:
+
+        if self.stillness_streak > getattr(cfg, "STREAK_BREAK_THRESHOLD", 3):
             break_msg = ux("protocol_strings", "zen_break")
             self.events.log(
                 f"{Prisma.GRY}{break_msg}{Prisma.RST}",
@@ -130,48 +127,44 @@ class TheBureau:
         selected_form = None
         evidence = []
         tax = 0.0
-        cfg_bureau = getattr(self.cfg, "BUREAU", None)
-        tax_std = getattr(cfg_bureau, "TAX_STANDARD", 5.0) if cfg_bureau else 5.0
-        tax_hvy = getattr(cfg_bureau, "TAX_HEAVY", 10.0) if cfg_bureau else 10.0
+        cfg_bureau = getattr(self.cfg, "BUREAU", object())
+        tax_std = getattr(cfg_bureau, "TAX_STANDARD", 5.0)
+        tax_hvy = getattr(cfg_bureau, "TAX_HEAVY", 10.0)
+
         if raw_text and (crime := next((c for c in self.crimes if c["regex"].search(raw_text)), None)):
             selected_form, tax = f"VIOLATION: {crime['name']}", tax + crime["tax"]
             evidence.append(crime["msg"])
-        if not selected_form and vol > self.cfg.BUREAU.HIGH_VOLTAGE_TRIGGER:
-            if truth < self.cfg.BUREAU.LOW_TRUTH_TRIGGER:
+
+        if not selected_form and vol > getattr(cfg_bureau, "HIGH_VOLTAGE_TRIGGER", 18.0):
+            if truth < getattr(cfg_bureau, "LOW_TRUTH_TRIGGER", 0.4):
                 selected_form = ux("protocol_strings", "bureau_form_zoning")
-                ev1 = ux("protocol_strings", "bureau_ev_voltage")
-                ev2 = ux("protocol_strings", "bureau_ev_fiction")
-                evidence = [ev1, ev2]
+                evidence = [ux("protocol_strings", "bureau_ev_voltage"), ux("protocol_strings", "bureau_ev_fiction")]
                 tax = tax_hvy
             else:
                 selected_form = ux("protocol_strings", "bureau_form_202a")
                 tax = tax_std
+
         chi = float(safe_get(physics, "chi", safe_get(physics, "entropy", 0.0)))
-        chaos_thresh = (
-            getattr(cfg_bureau, "CHAOS_TAX_THRESHOLD", 0.6) if cfg_bureau else 0.6
-        )
-        tax_chaos = getattr(cfg_bureau, "TAX_CHAOS", 12.0) if cfg_bureau else 12.0
+        chaos_thresh = getattr(cfg_bureau, "CHAOS_TAX_THRESHOLD", 0.6)
+
         if not selected_form and chi > chaos_thresh:
             selected_form = ux("protocol_strings", "bureau_form_666")
-            ev_chaos = ux("protocol_strings", "bureau_ev_chaos")
-            ev_level = ux("protocol_strings", "bureau_ev_level")
             evidence = [
-                ev_chaos.format(thresh=chaos_thresh),
-                ev_level.format(level=chi),
+                ux("protocol_strings", "bureau_ev_chaos").format(thresh=chaos_thresh),
+                ux("protocol_strings", "bureau_ev_level").format(level=chi),
             ]
-            tax = tax_chaos
+            tax = getattr(cfg_bureau, "TAX_CHAOS", 12.0)
         elif not selected_form:
             buzz_hits = [w for w in clean_words if w in self.buzzwords]
-            raw_text_lower = raw_text.lower()
-            cliche_hits = [c for c in self.cliches if c in raw_text_lower]
+            cliche_hits = [c for c in self.cliches if c in raw_text.lower()]
             if buzz_hits:
                 selected_form = random.choice(self.forms)
                 evidence = buzz_hits
-                tax = self.cfg.BUREAU.TAX_STANDARD
+                tax = tax_std
             elif cliche_hits:
                 selected_form = ux("protocol_strings", "bureau_form_101")
                 evidence = cliche_hits
-                tax = self.cfg.BUREAU.TAX_HEAVY
+                tax = tax_hvy
         if not selected_form:
             return None
         if bio_state.get("health", 100.0) < 20.0:
@@ -497,11 +490,11 @@ class TheCriticsCircle:
                         getattr(cfg, "MAX_METRIC_CONTRIB", 5.0) if cfg else 5.0
                     )
                     current = min(max_contrib, raw_count * 0.5)
+                elif metric_str == "velocity":
+                    current = velocity
                 else:
-                    if metric_str == "velocity":
-                        current = velocity
-                    else:
-                        current = float(safe_get(physics, metric_str, 0.0))
+                    current = float(safe_get(physics, metric_str, 0.0))
+
                 if target > 0:
                     score += current * target
                 else:
@@ -641,10 +634,8 @@ class TheFolly:
         self, fresh_meat: list, lexicon_ref: Any
     ) -> Tuple[str, str, float, Optional[str]]:
         target = random.choice(fresh_meat)
-        suburban_set = lexicon_ref.get("suburban") if lexicon_ref else []
-        suburban_set = suburban_set if suburban_set else []
-        play_set = lexicon_ref.get("play") if lexicon_ref else []
-        play_set = play_set if play_set else []
+        suburban_set = (lexicon_ref.get("suburban") or []) if lexicon_ref else []
+        play_set = (lexicon_ref.get("play") or []) if lexicon_ref else []
         self.gut_memory.append(target)
         self.global_tastings[target] += 1
         if target in suburban_set:
@@ -688,12 +679,11 @@ class TheFolly:
     def _filter_meat_words(clean_words: list, lexicon_ref: Any) -> list:
         if not lexicon_ref:
             return clean_words
-        meat_pool = (
-            set(lexicon_ref.get("heavy") or [])
-            | set(lexicon_ref.get("kinetic") or [])
-            | set(lexicon_ref.get("suburban") or [])
-        )
-        return [w for w in clean_words if w in meat_pool]
+        heavy = lexicon_ref.get("heavy") or []
+        kinetic = lexicon_ref.get("kinetic") or []
+        suburban = lexicon_ref.get("suburban") or []
+
+        return [w for w in clean_words if w in heavy or w in kinetic or w in suburban]
 
     def _attempt_digest_abstract(
         self, clean_words: list, lexicon_ref: Any
@@ -719,30 +709,26 @@ class ChronosKeeper:
         self.SAVE_DIR = "saves"
         self.CRASH_DIR = "crashes"
 
+    def _build_continuity_packet(self) -> Dict[str, Any]:
+        loc = "Void"
+        if (hasattr(self.eng, "phys") and hasattr(self.eng.phys, "observer")
+                and getattr(self.eng.phys.observer, "last_physics_packet", None)):
+            last_pkt = self.eng.phys.observer.last_physics_packet
+            loc = safe_get(last_pkt, "zone", safe_get(safe_get(last_pkt, "space"), "zone", "Void"))
+
+        last_speech = self.eng.cortex.dialogue_buffer[-1] if getattr(self.eng.cortex, "dialogue_buffer", None) else "Silence."
+
+        return {
+            "location": loc,
+            "last_output": last_speech,
+            "inventory": self.eng.gordon.inventory if getattr(self.eng, "gordon", None) else [],
+        }
+
     def save_checkpoint(self, history: list = None) -> str:
         try:
             if not os.path.exists(self.SAVE_DIR):
                 os.makedirs(self.SAVE_DIR)
-            loc = "Void"
-            if (
-                hasattr(self.eng, "phys")
-                and hasattr(self.eng.phys, "observer")
-                and getattr(self.eng.phys.observer, "last_physics_packet", None)
-            ):
-                last_pkt = self.eng.phys.observer.last_physics_packet
-                loc = safe_get(
-                    last_pkt,
-                    "zone",
-                    safe_get(safe_get(last_pkt, "space"), "zone", "Void"),
-                )
-            last_speech = "Silence."
-            if self.eng.cortex.dialogue_buffer:
-                last_speech = self.eng.cortex.dialogue_buffer[-1]
-            continuity_packet = {
-                "location": loc,
-                "last_output": last_speech,
-                "inventory": self.eng.gordon.inventory if self.eng.gordon else [],
-            }
+            continuity_packet = self._build_continuity_packet()
             start_history = (
                 history if history is not None else self.eng.cortex.dialogue_buffer
             )
@@ -803,48 +789,22 @@ class ChronosKeeper:
         msg = ux("protocol_strings", "chronos_halt")
         print(f"{Prisma.GRY}{msg}{Prisma.RST}")
         self.eng.events.publish("SYSTEM_HALT", {"tick": self.eng.tick_count})
-        loc = "Void"
-        if (
-            hasattr(self.eng, "phys")
-            and hasattr(self.eng.phys, "observer")
-            and getattr(self.eng.phys.observer, "last_physics_packet", None)
-        ):
-            last_pkt = self.eng.phys.observer.last_physics_packet
-            loc = safe_get(
-                last_pkt, "zone", safe_get(safe_get(last_pkt, "space"), "zone", "Void")
-            )
-        continuity_packet = {
-            "location": loc,
-            "last_output": (
-                self.eng.cortex.dialogue_buffer[-1]
-                if self.eng.cortex.dialogue_buffer
-                else "Silence."
-            ),
-            "inventory": self.eng.gordon.inventory if self.eng.gordon else [],
-        }
+        continuity_packet = self._build_continuity_packet()
         try:
             msg2 = ux("protocol_strings", "chronos_freezing")
             print(f"{Prisma.GRY}{msg2}{Prisma.RST}")
             mito_traits = {}
             if hasattr(self.eng.bio.mito, "state"):
                 mito_traits = self.eng.bio.mito.state.__dict__
-            self.eng.mind.mem.save(
-                health=self.eng.health,
-                stamina=self.eng.stamina,
-                mutations={},
-                trauma_accum=self.eng.trauma_accum,
-                joy_history=[],
-                mitochondria_traits=mito_traits,
-                antibodies=list(self.eng.bio.immune.active_antibodies),
-                soul_data=self.eng.soul.to_dict(),
-                village_data=self._gather_village_state(),
-                continuity=continuity_packet,
-                world_atlas=(
+            self.eng.mind.mem.save(health=self.eng.health, stamina=self.eng.stamina, mutations={},
+                                   trauma_accum=self.eng.trauma_accum, joy_history=[], mitochondria_traits=mito_traits,
+                                   antibodies=list(self.eng.bio.immune.active_antibodies),
+                                   soul_data=self.eng.soul.to_dict(), village_data=self._gather_village_state(),
+                                   continuity=continuity_packet, world_atlas=(
                     self.eng.phys.nav.export_atlas()
                     if hasattr(self.eng.phys, "nav")
                     else {}
-                ),
-            )
+                ), )
         except Exception as e:
             msg3 = ux("protocol_strings", "chronos_mem_save_fail")
             print(f"{Prisma.RED}{msg3.format(e=e)}{Prisma.RST}")
@@ -860,7 +820,9 @@ class ChronosKeeper:
                     getattr(sys, method)()
                 except Exception as e:
                     msg5 = ux("protocol_strings", "chronos_persist_fail")
-                    print(f"{Prisma.RED}{msg5.format(name=name, e=e)}{Prisma.RST}")
+                    if hasattr(self.eng, "events"):
+                        self.eng.events.log(f"Subsystem Persistence Error [{name}]: {e}", "SYS_ERR")
+                    print(f"{Prisma.OCHRE}{msg5.format(name=name, e='The connection severed before it could be written.')}{Prisma.RST}")
 
     def _gather_village_state(self) -> Dict[str, Any]:
         state = {}
@@ -874,15 +836,17 @@ class ChronosKeeper:
             return
         for name, data in state_data.items():
             if (
-                name in self.eng.village
-                and self.eng.village[name]
-                and hasattr(self.eng.village[name], "load_state")
+                    name in self.eng.village
+                    and self.eng.village[name]
+                    and hasattr(self.eng.village[name], "load_state")
             ):
                 try:
                     self.eng.village[name].load_state(data)
                 except Exception as e:
                     msg = ux("protocol_strings", "chronos_hydrate_fail")
-                    print(f"{Prisma.RED}{msg.format(name=name, e=e)}{Prisma.RST}")
+                    if hasattr(self.eng, "events"):
+                        self.eng.events.log(f"Village Hydration Error [{name}]: {e}", "SYS_ERR")
+                    print(f"{Prisma.OCHRE}{msg.format(name=name, e='Trauma prevented full recall.')}{Prisma.RST}")
 
     def get_crash_path(self, prefix="crash"):
         os.makedirs(self.CRASH_DIR, exist_ok=True)

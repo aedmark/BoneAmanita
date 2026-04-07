@@ -196,6 +196,9 @@ class PhysicsPacket:
     matter: MaterialState = field(default_factory=MaterialState)
     space: SpatialState = field(default_factory=SpatialState)
 
+    _CORE_DOMAINS = ("energy", "space", "matter")
+    _BASE_FIELDS = frozenset({"energy", "matter", "space", "drag_profile"})
+
     _ALIAS_MAP = {
         "E": [("energy", "exhaustion")],
         "beta": [("energy", "beta_index"), ("energy", "contradiction")],
@@ -222,7 +225,7 @@ class PhysicsPacket:
             return data
         if data is None:
             return cls()
-        valid_keys = {f.name for f in fields(cls)}
+        valid_keys = cls.__dataclass_fields__.keys()
         if isinstance(data, dict):
             return cls(
                 **{k: data.get(k) for k in valid_keys if data.get(k) is not None}
@@ -276,22 +279,18 @@ class PhysicsPacket:
 
     def __getattr__(self, key):
         if key.startswith("_"):
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute '{key}'"
-            )
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
         if key in self._ALIAS_MAP:
             domain, t_key = self._ALIAS_MAP[key][0]
             return getattr(getattr(self, domain), t_key)
-        for domain in ("energy", "space", "matter"):
+        for domain in self._CORE_DOMAINS:
             obj = self.__dict__.get(domain)
             if hasattr(obj, key):
                 return getattr(obj, key)
-        raise AttributeError(
-            f"'{self.__class__.__name__}' object has no attribute '{key}'"
-        )
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
     def __setattr__(self, key, value):
-        if key in ["energy", "matter", "space", "drag_profile"]:
+        if key in self._BASE_FIELDS:
             super().__setattr__(key, value)
             return
         if hasattr(self, "_ALIAS_MAP") and key in self._ALIAS_MAP:
@@ -299,7 +298,7 @@ class PhysicsPacket:
                 setattr(getattr(self, domain), t_key, value)
             return
         d = self.__dict__
-        for domain in ("energy", "space", "matter"):
+        for domain in self._CORE_DOMAINS:
             if domain in d and hasattr(d[domain], key):
                 setattr(d[domain], key, value)
                 return
@@ -342,34 +341,11 @@ class UserInferredState:
     chi_u: float = 0.2
     valence_u: float = 0.0
 
-    @property
-    def E(self):
-        return self.E_u
-
-    @property
-    def beta(self):
-        return self.beta_u
-
-    @property
-    def V(self):
-        return self.V_u
-
-    @property
-    def F(self):
-        return self.F_u
-
-    @property
-    def H(self):
-        return self.H_u
-
-    @property
-    def P(self):
-        return self.P_u
-
-    @property
-    def T(self):
-        return self.T_u
-
+    def __getattr__(self, key):
+        u_key = f"{key}_u"
+        if u_key in self.__dataclass_fields__:
+            return getattr(self, u_key)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
 @dataclass
 class SharedDynamics:
@@ -444,8 +420,7 @@ class CycleContext:
 
     def snapshot(self) -> "CycleContext":
         new_ctx = copy.copy(self)
-        for f in fields(self):
-            name = f.name
+        for name in self.__dataclass_fields__:
             val = getattr(self, name)
             if name == "physics" and hasattr(val, "snapshot"):
                 setattr(new_ctx, name, val.snapshot())
@@ -504,16 +479,11 @@ class DecisionCrystal:
     final_response: str = ""
 
     def __str__(self):
-        from bone_core import ux
-
         e_val = self.leverage_metrics.get("E", 0.0)
-        icon = ux("types_strings", "crystal_icon")
-        lbl = ux("types_strings", "crystal_label")
-        arch = ux("types_strings", "crystal_arch")
         return (
-            f"{icon} {lbl} [{self.decision_id}] {self.system_state} | "
-            f"{arch} {self.active_archetype} | E: {e_val:.2f}"
-        ).strip()
+            f"♦ CRYSTAL [{self.decision_id}] {self.system_state} | "
+            f"ARCHETYPE: {self.active_archetype} | E: {e_val:.2f}"
+        )
 
     def crystallize(self) -> str:
         data = asdict(self)

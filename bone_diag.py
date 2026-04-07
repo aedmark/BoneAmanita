@@ -1,31 +1,27 @@
 """bone_diag.py"""
 
+import os
 import random
+import tempfile
 import time
 import unittest
 import warnings
-import os
-import tempfile
 from unittest.mock import patch, MagicMock
-
-from bone_core import LoreManifest, EventBus, TelemetryService
-from bone_main import BoneAmanita
-from bone_presets import BoneConfig
-from bone_spores import MycelialNetwork, SubconsciousStrata
-from bone_village import DeathGen
-from bone_types import PhysicsPacket, EnergyState, CycleContext, DecisionCrystal
-from bone_physics import TheGatekeeper, ChromaScope, GeodesicEngine
-from bone_inventory import Item
-from bone_machine import PanicRoom, TheParadoxEngine
-from bone_protocols import KintsugiProtocol
-from bone_brain import PromptComposer, DreamEngine
+from bone_ann import MemoryConsolidator
+from bone_brain import PromptComposer
+from bone_commands import CommandProcessor
+from bone_core import LoreManifest, EventBus
+from bone_cycle import ObservationPhase, MetabolismPhase, SimulationPreflightPhase, SensationPhase
 from bone_drivers import SharedLatticeDriver
 from bone_gui import CycleReporter
-from bone_cycle import ObservationPhase, MetabolismPhase, SimulationPreflightPhase, ArbitrationPhase, SensationPhase
-from bone_council import TheVillageCouncil, TheOverseerCouncil
-from bone_ann import MemoryConsolidator
-from bone_commands import CommandProcessor
+from bone_machine import TheParadoxEngine
+from bone_main import BoneAmanita
+from bone_physics import TheGatekeeper, ChromaScope, GeodesicEngine
+from bone_presets import BoneConfig
+from bone_spores import MycelialNetwork, SubconsciousStrata
 from bone_symbiosis import SymbiosisManager
+from bone_types import PhysicsPacket, EnergyState, CycleContext
+from bone_village import DeathGen
 
 
 class BoneTestCase(unittest.TestCase):
@@ -1085,8 +1081,8 @@ class FractureEngineTest(BoneTestCase):
             "The system reached 0 ATP and 0 memories, but failed to execute DeathGen.",
         )
 
-    def test_fracture_vsl_85_novelty_spade(self):
-        print("\n--- FRACTURE 11: VSL 8.5 - The Spade (Novelty) ---")
+    def test_fracture_novelty_spade(self):
+        print("\n--- FRACTURE 11: The Spade (Novelty) ---")
         if not hasattr(self.engine, "symbiosis"):
             self.engine.symbiosis = SymbiosisManager(
                 events_ref=MagicMock(), config_ref=self.engine.bone_config
@@ -1120,8 +1116,8 @@ class FractureEngineTest(BoneTestCase):
             "  [SUCCESS] The Spade successfully rewarded novelty and dropped Cortisol."
         )
 
-    def test_fracture_vsl_85_cf_expect_guardrail(self):
-        print("\n--- FRACTURE 12: VSL 8.5 - Comfort Expectation Guardrail ---")
+    def test_fracture_cf_expect_guardrail(self):
+        print("\n--- FRACTURE 12: Comfort Expectation Guardrail ---")
         if not hasattr(self.engine, "symbiosis"):
             self.engine.symbiosis = SymbiosisManager(
                 events_ref=MagicMock(), config_ref=self.engine.bone_config
@@ -1164,21 +1160,15 @@ class FractureEngineTest(BoneTestCase):
             "  [SUCCESS] Gordon/Schur blocked sycophantic validation on a flawed premise."
         )
 
-    def test_fracture_vsl_85_jester_shuffle(self):
-        print("\n--- FRACTURE 13: VSL 8.5 - The Jester's Shuffle ---")
+    def test_fracture_jester_shuffle(self):
+        print("\n--- FRACTURE 13: The Jester's Shuffle ---")
         if not hasattr(self.engine, "phys"):
             self.engine.phys = PhysicsPacket()
-
         self.engine.phys.narrative_drag = 15.0
         self.engine.bio.mito.state.atp_pool = 50.0
-
-        cmd_proc = CommandProcessor(
-            self.engine, prisma_ref=MagicMock(), config_ref=self.engine.bone_config
-        )
+        cmd_proc = CommandProcessor(self.engine, prisma_ref=MagicMock(), config_ref=self.engine.bone_config)
         cmd_proc.interface.log = MagicMock()
-
         result = cmd_proc.execute("/shuffle")
-
         self.assertTrue(result, "[FAIL] /shuffle command was not recognized.")
         self.assertEqual(
             self.engine.phys.narrative_drag,
