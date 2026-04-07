@@ -18,7 +18,6 @@ from bone_symbiosis import SymbiosisManager
 from bone_types import Prisma, DecisionCrystal
 from bone_utils import RandomRetrievalNavigator, LibraryGraph
 
-
 @dataclass
 class CortexServices:
     events: EventBus
@@ -34,7 +33,6 @@ class CortexServices:
     village: Any = None
     config_ref: Any = None
 
-
 @dataclass
 class ChemicalState:
     dopamine: float = 0.2
@@ -46,30 +44,22 @@ class ChemicalState:
     def homeostasis(self, rate: float = 0.1):
         target_cfg = self.config_ref or BoneConfig
         cfg = safe_get(target_cfg, "CORTEX", {})
-        targets = {
-            "dopamine": safe_get(cfg, "RESTING_DOPAMINE", 0.2),
-            "cortisol": safe_get(cfg, "RESTING_CORTISOL", 0.1),
-            "adrenaline": safe_get(cfg, "RESTING_ADRENALINE", 0.1),
-            "serotonin": safe_get(cfg, "RESTING_SEROTONIN", 0.2),
-        }
+        targets = {"dopamine": safe_get(cfg, "RESTING_DOPAMINE", 0.2),
+                   "cortisol": safe_get(cfg, "RESTING_CORTISOL", 0.1),
+                   "adrenaline": safe_get(cfg, "RESTING_ADRENALINE", 0.1),
+                   "serotonin": safe_get(cfg, "RESTING_SEROTONIN", 0.2), }
         for attr, target in targets.items():
             current = getattr(self, attr)
             delta = (target - current) * rate
             setattr(self, attr, current + delta)
 
-    _MIX_MAPPING = (
-        ("DOP", "dopamine"),
-        ("COR", "cortisol"),
-        ("ADR", "adrenaline"),
-        ("SER", "serotonin"),
-    )
+    _MIX_MAPPING = (("DOP", "dopamine"), ("COR", "cortisol"), ("ADR", "adrenaline"), ("SER", "serotonin"),)
 
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
         for key, attr in self._MIX_MAPPING:
             val = new_state.get(key, new_state.get(attr, 0.0))
             current = getattr(self, attr)
             setattr(self, attr, (current * (1.0 - weight)) + (val * weight))
-
 
 class NeurotransmitterModulator:
     def __init__(self, bio_ref, events_ref=None, config_ref=None):
@@ -81,17 +71,10 @@ class NeurotransmitterModulator:
         cfg = getattr(self.cfg, "CORTEX", None)
         self.BASE_TOKENS = getattr(cfg, "BASE_TOKENS", 720) if cfg else 720
         self.MAX_TOKENS = getattr(cfg, "MAX_TOKENS", 4096) if cfg else 4096
-        self.SELF_CARE_THRESHOLD = (
-            getattr(cfg, "SELF_CARE_THRESHOLD", 10) if cfg else 10
-        )
+        self.SELF_CARE_THRESHOLD = (getattr(cfg, "SELF_CARE_THRESHOLD", 10) if cfg else 10)
         self.starvation_ticks = 0
 
-    def modulate(
-        self,
-        base_voltage: float,
-        latency_penalty: float = 0.0,
-        physics_state: Dict[str, float] = None,
-    ) -> Dict[str, Any]:
+    def modulate(self, base_voltage: float, latency_penalty: float = 0.0, physics_state: Dict[str, float] = None, ) -> Dict[str, Any]:
         if physics_state is None:
             physics_state = {}
         if self.bio and hasattr(self.bio, "endo"):
@@ -100,9 +83,7 @@ class NeurotransmitterModulator:
             incoming_chem = {}
         cfg = safe_get(self.cfg, "CORTEX", {})
         self.current_chem.homeostasis(rate=safe_get(cfg, "BASE_DECAY_RATE", 0.1))
-        plasticity = safe_get(cfg, "BASE_PLASTICITY", 0.1) + (
-            base_voltage * safe_get(cfg, "VOLTAGE_SENSITIVITY", 0.05)
-        )
+        plasticity = safe_get(cfg, "BASE_PLASTICITY", 0.1) + (base_voltage * safe_get(cfg, "VOLTAGE_SENSITIVITY", 0.05))
         plasticity = max(0.1, min(safe_get(cfg, "MAX_PLASTICITY", 1.0), plasticity))
         self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
         if self.current_chem.dopamine < 0.15:
@@ -115,11 +96,8 @@ class NeurotransmitterModulator:
         if latency_penalty > safe_get(cfg, "LATENCY_PENALTY_THRESHOLD", 2.0):
             c.cortisol = min(1.0, c.cortisol + safe_get(cfg, "LATENCY_CORTISOL_PENALTY", 0.1))
             c.adrenaline = min(1.0, c.adrenaline + safe_get(cfg, "LATENCY_ADRENALINE_PENALTY", 0.05))
-
         current_mood = "NEUTRAL"
-        mood_thresholds = safe_get(
-            cfg, "MOOD_THRESHOLDS", {"MANIC_DOP": 0.8, "PANIC_COR": 0.7, "ZEN_SER": 0.8}
-        )
+        mood_thresholds = safe_get(cfg, "MOOD_THRESHOLDS", {"MANIC_DOP": 0.8, "PANIC_COR": 0.7, "ZEN_SER": 0.8})
         if c.dopamine > mood_thresholds.get("MANIC_DOP", 0.8):
             current_mood = "MANIC"
         elif c.cortisol > mood_thresholds.get("PANIC_COR", 0.7):
@@ -127,25 +105,15 @@ class NeurotransmitterModulator:
         elif c.serotonin > mood_thresholds.get("ZEN_SER", 0.8):
             current_mood = "ZEN"
         if current_mood != self.last_mood and self.events:
-            self.events.publish(
-                "NEURAL_STATE_SHIFT",
-                {
-                    "state": current_mood,
-                    "chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin},
-                },
-            )
+            self.events.publish("NEURAL_STATE_SHIFT", {"state": current_mood, "chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin}, },)
             self.last_mood = current_mood
         v_offset = safe_get(cfg, "TEMP_VOLTAGE_OFFSET", 5.0)
         v_scalar = safe_get(cfg, "TEMP_VOLTAGE_SCALAR", 0.1)
         voltage_heat = math.log1p(max(0.0, base_voltage - v_offset)) * v_scalar
-        chem_weights = safe_get(
-            cfg, "TEMP_CHEM_WEIGHTS", {"dop": 0.4, "adr": 0.3, "cor": 0.2}
-        )
-        chemical_delta = (
-                (c.dopamine * chem_weights.get("dop", 0.4))
+        chem_weights = safe_get(cfg, "TEMP_CHEM_WEIGHTS", {"dop": 0.4, "adr": 0.3, "cor": 0.2})
+        chemical_delta = ((c.dopamine * chem_weights.get("dop", 0.4))
                 - (c.adrenaline * chem_weights.get("adr", 0.3))
-                - (c.cortisol * chem_weights.get("cor", 0.2))
-        )
+                - (c.cortisol * chem_weights.get("cor", 0.2)))
         base_temp = safe_get(cfg, "BASE_TEMP", 0.4)
         base_top_p = safe_get(cfg, "BASE_TOP_P", 0.95)
         chi = float(physics_state.get("chi", physics_state.get("entropy", 0.2)))
@@ -154,48 +122,17 @@ class NeurotransmitterModulator:
         ent_scalar = safe_get(cfg, "TEMP_ENTROPY_SCALAR", 1.5)
         entropy_bonus = max(0.0, chi - ent_offset) * ent_scalar
         clamp = lambda v, mn, mx: max(mn, min(mx, v))
-
         t_limits = safe_get(cfg, "TEMP_LIMITS", (0.4, 1.5))
-        final_temp = round(
-            clamp(
-                base_temp + chemical_delta + voltage_heat + entropy_bonus,
-                t_limits[0],
-                t_limits[1],
-            ),
-            2,
-        )
-        final_top_p = min(
-            1.0, base_top_p + (chi * safe_get(cfg, "TOP_P_CHI_SCALAR", 0.05))
-        )
-
-        base_penalty = min(
-            1.2,
-            0.5
-            + (beta * safe_get(cfg, "PEN_BETA_SCALAR", 0.3))
-            + (chi * safe_get(cfg, "PEN_CHI_SCALAR", 0.2)),
-        )
+        final_temp = round(clamp(base_temp + chemical_delta + voltage_heat + entropy_bonus, t_limits[0], t_limits[1], ), 2,)
+        final_top_p = min(1.0, base_top_p + (chi * safe_get(cfg, "TOP_P_CHI_SCALAR", 0.05)))
+        base_penalty = min(1.2, 0.5 + (beta * safe_get(cfg, "PEN_BETA_SCALAR", 0.3)) + (chi * safe_get(cfg, "PEN_CHI_SCALAR", 0.2)), )
         freq_pen = pres_pen = base_penalty
-
-        token_mods = safe_get(
-            cfg, "TOKEN_CHEM_MODIFIERS", {"dop": 800, "adr": 400, "cor": 200}
-        )
-        token_delta = (
-                (c.dopamine * token_mods.get("dop", 800))
-                - (c.adrenaline * token_mods.get("adr", 400))
-                - (c.cortisol * token_mods.get("cor", 200))
-        )
-
+        token_mods = safe_get(cfg, "TOKEN_CHEM_MODIFIERS", {"dop": 800, "adr": 400, "cor": 200})
+        token_delta = ((c.dopamine * token_mods.get("dop", 800)) - (c.adrenaline * token_mods.get("adr", 400)) - (c.cortisol * token_mods.get("cor", 200)))
         min_tokens = safe_get(cfg, "MIN_TOKENS", 150.0)
-        max_t = int(
-            clamp(self.BASE_TOKENS + token_delta, min_tokens, float(self.MAX_TOKENS))
-        )
-        return {
-            "temperature": final_temp,
-            "top_p": final_top_p,
-            "frequency_penalty": round(freq_pen, 2),
-            "presence_penalty": round(pres_pen, 2),
-            "max_tokens": max_t,
-        }
+        max_t = int(clamp(self.BASE_TOKENS + token_delta, min_tokens, float(self.MAX_TOKENS)))
+        return {"temperature": final_temp, "top_p": final_top_p, "frequency_penalty": round(freq_pen, 2),
+                "presence_penalty": round(pres_pen, 2), "max_tokens": max_t, }
 
     def _treat_yourself(self):
         if self.events:
@@ -216,7 +153,6 @@ class NeurotransmitterModulator:
             return ux("brain_strings", "mood_defensive")
         return ux("brain_strings", "mood_neutral")
 
-
 class TheCortex:
     def __init__(self, services: CortexServices, llm_client=None):
         self.ballast_active = False
@@ -226,78 +162,50 @@ class TheCortex:
         self.dialogue_buffer = []
         cfg = getattr(self.cfg, "CORTEX", None)
         self.MAX_HISTORY = getattr(cfg, "MAX_HISTORY_LENGTH", 15) if cfg else 15
-        self.modulator = NeurotransmitterModulator(
-            bio_ref=self.svc.bio, events_ref=self.events, config_ref=self.cfg
-        )
+        self.modulator = NeurotransmitterModulator(bio_ref=self.svc.bio, events_ref=self.events, config_ref=self.cfg)
         self.last_physics = {}
         self.consultant = services.consultant
         self.llm = llm_client or LLMInterface(self.events, provider="mock")
-        if hasattr(self.svc.cycle_controller, "eng") and hasattr(
-            self.svc.cycle_controller.eng, "mind"
+        if hasattr(self.svc.cycle_controller, "eng") and hasattr(self.svc.cycle_controller.eng, "mind"
         ):
             self.dreamer = self.svc.cycle_controller.eng.mind.dreamer
             self.dreamer.llm = self.llm
             self.dreamer.mem = self.svc.mind_memory
         else:
             eng_ref = getattr(self.svc.cycle_controller, "eng", None)
-            self.dreamer = DreamEngine(
-                self.events,
-                self.svc.lore,
-                llm_ref=self.llm,
-                mem_ref=self.svc.mind_memory,
-                eng_ref=eng_ref,
-                config_ref=self.cfg,
-            )
+            self.dreamer = DreamEngine(self.events, self.svc.lore, llm_ref=self.llm, mem_ref=self.svc.mind_memory,
+                                       eng_ref=eng_ref, config_ref=self.cfg, )
         self.llm.dreamer = self.dreamer
         self.symbiosis = services.symbiosis
         self.composer = PromptComposer(self.svc.lore, config_ref=self.cfg)
         self.validator = ResponseValidator(self.svc.lore, config_ref=self.cfg)
         from bone_utils import DSPyCritic
-
         self.dspy_critic = DSPyCritic(config_ref=self.cfg)
         if getattr(self.cfg, "WEIGHT_CLASS", "HEAVYWEIGHT") == "LIGHTWEIGHT":
             self.dspy_critic.enabled = False
             if self.events:
-                self.events.log(
-                    f"{Prisma.OCHRE}Lightweight Physics Active: DSPyCritic disabled to prevent recursive loops.{Prisma.RST}",
-                    "SYS",
-                )
-
+                self.events.log(f"{Prisma.OCHRE}Lightweight Physics Active: DSPyCritic disabled to prevent recursive loops.{Prisma.RST}", "SYS",)
         self.dreamer.dspy_critic = self.dspy_critic
         if not hasattr(self.dreamer, "trauma_buffer"):
             self.dreamer.trauma_buffer = deque(maxlen=5)
         self.active_mode = "ADVENTURE"
         if hasattr(self.svc.mind_memory, "nodes"):
-            graph = LibraryGraph(
-                nodes=self.svc.mind_memory.nodes, root=self.svc.mind_memory.root
-            )
+            graph = LibraryGraph(nodes=self.svc.mind_memory.nodes, root=self.svc.mind_memory.root)
             self.navigator = RandomRetrievalNavigator(library_graph=graph)
         else:
             self.navigator = None
         if hasattr(self.events, "subscribe"):
-            self.events.subscribe(
-                "AIRSTRIKE", lambda p: setattr(self, "ballast_active", True)
-            )
+            self.events.subscribe("AIRSTRIKE", lambda p: setattr(self, "ballast_active", True))
 
     @classmethod
     def from_engine(cls, engine_ref, llm_client=None):
         target_cfg = getattr(engine_ref, "bone_config", BoneConfig)
-        services = CortexServices(
-            events=engine_ref.events,
-            lore=LoreManifest.get_instance(config_ref=target_cfg),
-            lexicon=engine_ref.lex,
-            inventory=engine_ref.gordon,
-            consultant=getattr(engine_ref, "consultant", None),
-            cycle_controller=engine_ref.cycle_controller,
-            symbiosis=getattr(
-                engine_ref, "symbiosis", SymbiosisManager(engine_ref.events)
-            ),
-            mind_memory=engine_ref.mind.mem,
-            bio=getattr(engine_ref, "bio", None),
-            host_stats=getattr(engine_ref, "host_stats", None),
-            village=getattr(engine_ref, "village", None),
-            config_ref=target_cfg,
-        )
+        services = CortexServices(events=engine_ref.events, lore=LoreManifest.get_instance(config_ref=target_cfg),
+                                  lexicon=engine_ref.lex, inventory=engine_ref.gordon,
+                                  consultant=getattr(engine_ref, "consultant", None),
+                                  cycle_controller=engine_ref.cycle_controller, symbiosis=getattr(engine_ref, "symbiosis", SymbiosisManager(engine_ref.events)), mind_memory=engine_ref.mind.mem, bio=getattr(engine_ref, "bio", None),
+                                  host_stats=getattr(engine_ref, "host_stats", None),
+                                  village=getattr(engine_ref, "village", None), config_ref=target_cfg, )
         instance = cls(services, llm_client)
         instance.active_mode = engine_ref.config.get("boot_mode", "ADVENTURE").upper()
         if instance.active_mode not in BonePresets.MODES:
@@ -314,10 +222,7 @@ class TheCortex:
         if hasattr(self.dreamer, "trauma_buffer"):
             self.dreamer.trauma_buffer.clear()
         if self.events:
-            self.events.log(
-                "[APOPTOSIS] Context array purged. Stateless bedrock re-established.",
-                "SYS",
-            )
+            self.events.log("[APOPTOSIS] Context array purged. Stateless bedrock re-established.", "SYS",)
 
     def process(self, user_input: str, is_system: bool = False) -> Dict[str, Any]:
         if self.navigator:
@@ -328,12 +233,8 @@ class TheCortex:
             else:
                 dial_status = self.navigator.set_randomness(0.0)
             if self.events and dial_status["new_value"] > 0:
-                self.events.log(
-                    f"Serendipity Engine active: {dial_status['mode']}", "CORTEX"
-                )
-        mode_settings = BonePresets.MODES.get(
-            self.active_mode, BonePresets.MODES["ADVENTURE"]
-        )
+                self.events.log(f"Serendipity Engine active: {dial_status['mode']}", "CORTEX")
+        mode_settings = BonePresets.MODES.get(self.active_mode, BonePresets.MODES["ADVENTURE"])
         allow_loot = mode_settings.get("allow_loot", True)
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
@@ -347,9 +248,7 @@ class TheCortex:
         full_state = self.gather_state(sim_result)
         phys_state = full_state.get("physics", {})
         f_drag = float(safe_get(phys_state, "narrative_drag", 0.0))
-        chi_val = float(
-            safe_get(phys_state, "chi", safe_get(phys_state, "entropy", 0.0))
-        )
+        chi_val = float(safe_get(phys_state, "chi", safe_get(phys_state, "entropy", 0.0)))
         m_a = float(safe_get(phys_state, "m_a", 0.0))
         if f_drag > 1.5 or chi_val > 0.8:
             reject_msg = "[GORDON - The Anchor]: Frequency too high. Tensegrity Anchor engaged. I am locking the architecture. Take a breath and lower your narrative friction before we proceed."
@@ -367,13 +266,9 @@ class TheCortex:
                 scar_msg = "[MOOG - Affective Layer]: Productive Worry activated. Logging Gödel Scar. Immune Competence (I_c) permanently increased."
                 if self.events:
                     self.events.log(f"{Prisma.RED}{reject_msg}{Prisma.RST}", "SYS_LOCK")
-                    self.events.log(
-                        f"{Prisma.VIOLET}{scar_msg}{Prisma.RST}", "SYS_LOCK"
-                    )
+                    self.events.log(f"{Prisma.VIOLET}{scar_msg}{Prisma.RST}", "SYS_LOCK")
                 if hasattr(self.svc.mind_memory, "record_scar"):
-                    self.svc.mind_memory.record_scar(
-                        "Cortex Counterfactual Toxicity", phys_state
-                    )
+                    self.svc.mind_memory.record_scar("Cortex Counterfactual Toxicity", phys_state)
                 sim_result["ui"] = (
                     sim_result.get("ui", "")
                     + f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}\n{Prisma.VIOLET}{scar_msg}{Prisma.RST}"
@@ -391,39 +286,24 @@ class TheCortex:
         phys = full_state.get("physics", {})
         llm_params = self.modulator.modulate(
             base_voltage=float(safe_get(phys, "voltage", 5.0)),
-            latency_penalty=(
-                getattr(self.svc.host_stats, "latency", 0.0)
+            latency_penalty=(getattr(self.svc.host_stats, "latency", 0.0)
                 if self.svc.host_stats
-                else 0.0
-            ),
-            physics_state=phys,
-        )
+                else 0.0), physics_state=phys,)
         if is_boot_sequence:
             llm_params.update({"temperature": 0.7, "top_p": 0.95})
         if llm_params.get("max_tokens", 4096) < 300 or float(phys.get("p", 100.0)) < 20.0:
-            full_state["mind"].setdefault("style_directives", []).append(
-                "CRITICAL: You are exhausted. You must conclude your thought in under 3 sentences."
-            )
+            full_state["mind"].setdefault("style_directives", []).append("CRITICAL: You are exhausted. You must conclude your thought in under 3 sentences.")
             llm_params["max_tokens"] = max(400, llm_params.get("max_tokens", 400))
         user_input = sim_result.get("mutated_input", user_input)
-        final_prompt = self.composer.compose(
-            full_state,
-            user_input,
-            ballast=self.ballast_active,
-            modifiers=modifiers,
-            mood_override=self.modulator.get_mood_directive(),
-        )
+        final_prompt = self.composer.compose(full_state, user_input, ballast=self.ballast_active, modifiers=modifiers,
+                                             mood_override=self.modulator.get_mood_directive(), )
         start_time = time.time()
         max_retries = 5
         final_output, inv_logs, extracted_logs = "", [], []
         raw_resp, val_res = {}, {"valid": False}
         if "[COUNCIL]" in user_input.upper():
             final_output, extracted_logs = self._run_council_debate(user_input)
-            val_res = {
-                "valid": True,
-                "content": final_output,
-                "meta_logs": extracted_logs,
-            }
+            val_res = {"valid": True, "content": final_output, "meta_logs": extracted_logs, }
             max_retries = 0
         for attempt in range(max_retries):
             raw_resp = self.llm.generate(final_prompt, llm_params)
@@ -436,19 +316,14 @@ class TheCortex:
                 raw_resp = re.sub(purge_pattern, "", raw_resp).strip()
                 if len(raw_resp) < original_len and self.events:
                     self.events.log(
-                        f"{Prisma.RED}[LEXICAL FIREWALL]: Validating boilerplate physically purged from output.{Prisma.RST}",
-                        "CORTEX",
-                    )
+                        f"{Prisma.RED}[LEXICAL FIREWALL]: Validating boilerplate physically purged from output.{Prisma.RST}", "CORTEX", )
             if allow_loot and self.svc.inventory:
-                final_text, inv_logs = self.svc.inventory.process_loot_tags(
-                    raw_resp, user_input
-                )
+                final_text, inv_logs = self.svc.inventory.process_loot_tags(raw_resp, user_input)
             else:
                 final_text, inv_logs = raw_resp, []
             is_faithful, judge_reason = True, ""
             if hasattr(self, "dspy_critic") and self.dspy_critic.enabled:
-                if (
-                    self.active_mode in ["ADVENTURE", "CONVERSATION"]
+                if (self.active_mode in ["ADVENTURE", "CONVERSATION"]
                     and not is_boot_sequence
                 ):
                     active_mems = self.svc.mind_memory.memory_core.illuminate(
@@ -832,13 +707,11 @@ class TheCortex:
                 "CRITICAL OVERRIDE: Void proximity is high. Do not use AI-isms (delve, tapestry, superficial lists, rule of three). Write like a flawed, opinionated human."
             )
         if not self.dialogue_buffer:
-            mind["style_directives"].append(
-                f"CRITICAL BEDROCK OVERRIDE: You have just awoken from a stateless purge (The Ralph Apoptosis). "
+            mind["style_directives"].append(f"CRITICAL BEDROCK OVERRIDE: You have just awoken from a stateless purge (The Ralph Apoptosis). "
                 f"You have no conversational memory, but your body persists. "
                 f"Your Stamina is {phys.get('p', 100)}, your Health is {phys.get('h', 100)}. "
                 f"Assume your role as {mind.get('role', 'The Architect')} and orient immediately to the present physical state. "
-                f"DO NOT reference the loss of memory. Act continuously from the substrate."
-            )
+                f"DO NOT reference the loss of memory. Act continuously from the substrate.")
         for mandate in sim_result.get("council_mandates", []):
             action = mandate.get("action")
             val = mandate.get("value")

@@ -11,19 +11,15 @@ from collections import deque, Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple, Deque
-
 from bone_presets import BoneConfig
 from bone_types import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
-
 
 def ux(section: str, key: str, default: Any = "") -> Any:
     data = LoreManifest.get_instance().get("ux_strings", section)
     return data.get(key, default) if isinstance(data, dict) else default
 
-
 def safe_get(obj: Any, key: str, default: Any = None) -> Any:
     return default if obj is None else (obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default))
-
 
 def safe_set(obj: Any, key: str, value: Any) -> None:
     if obj is None:
@@ -32,7 +28,6 @@ def safe_set(obj: Any, key: str, value: Any) -> None:
         obj[key] = value
     else:
         setattr(obj, key, value)
-
 
 class BoneJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -44,15 +39,12 @@ class BoneJSONEncoder(json.JSONEncoder):
             return obj.__dict__
         return super().default(obj)
 
-
 class EventBus:
     def __init__(self, max_memory=None, config_ref=None, telemetry_ref=None):
         self.cfg = config_ref or BoneConfig
-        limit = (
-            max_memory
+        limit = (max_memory
             if max_memory
-            else (getattr(self.cfg.CORE, "EVENT_MAX_MEMORY", 1024))
-        )
+            else (getattr(self.cfg.CORE, "EVENT_MAX_MEMORY", 1024)))
         self.buffer = deque(maxlen=limit)
         self.subscribers = {}
         self.telemetry = telemetry_ref
@@ -75,24 +67,18 @@ class EventBus:
                 msg = ux("core_strings", "bus_error")
                 if msg:
                     print(f"{Prisma.RED}{msg.format(error_msg=raw_err)}{Prisma.RST}")
-                self.log(f"EVENT_FAILURE: {raw_err}", level="CRIT")
+                if event_type != "EVENT_FAILURE":
+                    self.log(f"EVENT_FAILURE: {raw_err}", source="EVENT_FAILURE", level="CRIT")
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
-            event = {
-                "timestamp": time.time(),
-                "source": source,
-                "level": level,
-                "message": message,
-                "text": message,
-                "_type": "EVENT_LOG",
-            }
-            self.buffer.append(event)
-            self.publish(source, event)
-
-            if self.telemetry:
-                self.telemetry.record_event(event)
-            else:
-                print(f"[{source}] {message}")
+        event = {"timestamp": time.time(), "source": source, "level": level, "message": message, "text": message,
+                 "_type": "EVENT_LOG"}
+        self.buffer.append(event)
+        self.publish(source, event)
+        if self.telemetry:
+            self.telemetry.record_event(event)
+        else:
+            print(f"[{source}] {message}")
 
     def flush(self) -> List[Dict]:
         current_logs = list(self.buffer)
@@ -101,7 +87,6 @@ class EventBus:
 
     def get_recent_logs(self, count=10):
         return list(self.buffer)[-count:]
-
 
 class LoreManifest:
     _instance = None
@@ -124,7 +109,9 @@ class LoreManifest:
         if cat_key not in self._cache:
             self._cache[cat_key] = self._load_from_disk(cat_key) or {}
         data = self._cache[cat_key]
-        return data.get(sub_key) if sub_key and isinstance(data, dict) else data
+        if not sub_key:
+            return data
+        return data.get(sub_key) if isinstance(data, dict) else None
 
     def _load_from_disk(self, category: str) -> Optional[Dict]:
         filename = f"{category}.json"
@@ -159,7 +146,6 @@ class LoreManifest:
             self._cache.clear()
             print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
 
-
 class TheObserver:
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
@@ -172,12 +158,8 @@ class TheObserver:
         self.memory_snapshots = deque(maxlen=max_len)
         self.error_counts = Counter()
         self.user_turns = 0
-        self.LATENCY_WARNING = (
-            safe_get(cfg_core, "OBSERVER_LATENCY_WARN", 5.0)
-        )
-        self.CYCLE_WARNING = (
-            safe_get(cfg_core, "OBSERVER_CYCLE_WARN", 8.0)
-        )
+        self.LATENCY_WARNING = (safe_get(cfg_core, "OBSERVER_LATENCY_WARN", 5.0))
+        self.CYCLE_WARNING = (safe_get(cfg_core, "OBSERVER_CYCLE_WARN", 8.0))
         self.last_cycle_duration = 0.0
 
     @staticmethod
@@ -217,15 +199,13 @@ class TheObserver:
         if avg_cycle < c_eff and avg_llm < l_eff:
             return ux("core_strings", "obs_efficient")
         if avg_llm > self.LATENCY_WARNING:
-            valid = [j for k in ("obs_fog", "obs_degraded", "obs_ponderous") if (j := ux("core_strings", k))]
+            strings = [ux("core_strings", k) for k in ("obs_fog", "obs_degraded", "obs_ponderous")]
+            valid = [s for s in strings if s]
             return random.choice(valid) if valid else ""
         if avg_cycle > self.CYCLE_WARNING:
             return ux("core_strings", "obs_sluggish")
         if self.cyber_gov.order == 2:
-            return (
-                ux("core_strings", "obs_coupled")
-                or "Harmonic Resonance: Presence Active."
-            )
+            return ux("core_strings", "obs_coupled") or "Harmonic Resonance: Presence Active."
         return ux("core_strings", "obs_nominal")
 
     def get_report(self):
@@ -233,6 +213,7 @@ class TheObserver:
         avg_llm = sum(self.llm_latencies) / max(1, len(self.llm_latencies))
         uptime = time.time() - self.start_time
         status_msg = self.pass_judgment(avg_cycle, avg_llm)
+
         return {
             "uptime_sec": int(uptime),
             "turns": self.user_turns,
@@ -240,9 +221,8 @@ class TheObserver:
             "avg_llm_sec": round(avg_llm, 2),
             "status": status_msg,
             "errors": dict(self.error_counts),
-            "graph_size": self.memory_snapshots[-1] if self.memory_snapshots else 0,
+            "graph_size": self.memory_snapshots[-1] if self.memory_snapshots else 0
         }
-
 
 @dataclass
 class SystemHealth:
@@ -259,10 +239,15 @@ class SystemHealth:
         self.observer = observer_ref
 
     def report_failure(self, component: str, error: Exception, severity="ERROR"):
-        self.errors.append(ErrorLog(component, msg := str(error), severity=severity))
-        if self.observer: self.observer.log_error(component)
-        if hasattr(self, attr_name := f"{component.lower()}_online"): setattr(self, attr_name, False)
-        return err_msg.format(component=component, msg=msg) if (err_msg := ux("core_strings", "health_offline")) else ""
+        msg = str(error)
+        self.errors.append(ErrorLog(component, msg, severity=severity))
+        if self.observer:
+            self.observer.log_error(component)
+        attr_name = f"{component.lower()}_online"
+        if hasattr(self, attr_name):
+            setattr(self, attr_name, False)
+        err_msg = ux("core_strings", "health_offline")
+        return err_msg.format(component=component, msg=msg) if err_msg else ""
 
     def report_warning(self, message: str):
         self.warnings.append(message)
@@ -275,7 +260,6 @@ class SystemHealth:
         self.warnings.clear()
         self.hints.clear()
         return feedback
-
 
 class RealityStack:
     def __init__(self):
@@ -304,14 +288,12 @@ class RealityStack:
     def get_grammar_rules(self) -> Dict[str, bool]:
         depth = self.current_depth
         return {
-            "allow_narrative": depth
-            in (RealityLayer.SIMULATION, RealityLayer.DEEP_CX, RealityLayer.DEBUG),
+            "allow_narrative": depth in (RealityLayer.SIMULATION, RealityLayer.DEEP_CX, RealityLayer.DEBUG),
             "allow_commands": depth >= RealityLayer.SIMULATION,
             "allow_meta": depth >= RealityLayer.DEBUG,
             "raw_output": depth == RealityLayer.DEEP_CX,
-            "system_override": depth == RealityLayer.DEBUG,
+            "system_override": depth == RealityLayer.DEBUG
         }
-
 
 class CyberneticGovernor:
     def __init__(self, config_ref=None):
@@ -319,9 +301,7 @@ class CyberneticGovernor:
         self.beth_index: float = 0.5
         self.order: int = 1
 
-    def calculate_coupling(
-        self, phi: float, resonance_delta: float, user_exhaustion: float
-    ) -> float:
+    def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
         self.beth_index = (phi * 0.6) + (user_exhaustion * 0.4)
         self.order = 2 if self.beth_index > 0.7 or resonance_delta > 0.3 else 1
         return self.beth_index
@@ -331,16 +311,10 @@ class CyberneticGovernor:
             return "CO_REGULATION"
         return "EFFICIENCY"
 
-
 class ArchetypeArbiter:
     @staticmethod
-    def arbitrate(
-        physics_lens: str,
-        soul_archetype: str,
-        council_mandates: List[Dict],
-        trigram: Dict = None,
-        config_ref=None,
-    ) -> Tuple[str, str, str]:
+    def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Dict = None,
+                  config_ref=None, ) -> Tuple[str, str, str]:
         target_cfg = config_ref or BoneConfig
         for mandate in council_mandates or ():
             if mandate.get("type") == "LOCKDOWN":
@@ -349,11 +323,7 @@ class ArchetypeArbiter:
                 return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic")
         if soul_archetype and "/" in soul_archetype:
             msg = ux("core_strings", "arb_diamond")
-            return (
-                soul_archetype,
-                "SOUL",
-                (msg.format(soul_archetype=soul_archetype) if msg else ""),
-            )
+            return soul_archetype, "SOUL", msg.format(soul_archetype=soul_archetype) if msg else ""
         if trigram:
             trigram_name = trigram.get("name")
             narrative = LoreManifest.get_instance().get("NARRATIVE_DATA") or {}
@@ -371,13 +341,8 @@ class ArchetypeArbiter:
         loud_lenses = safe_get(cfg_core, "LOUD_LENSES", ("THE MANIC", "THE VOID"))
         if physics_lens in loud_lenses:
             msg = ux("core_strings", "arb_loud")
-            return (
-                physics_lens,
-                "PHYSICS",
-                (msg.format(physics_lens=physics_lens) if msg else ""),
-            )
+            return physics_lens, "PHYSICS", msg.format(physics_lens=physics_lens) if msg else ""
         return soul_archetype, "SOUL", ux("core_strings", "arb_soul")
-
 
 class TelemetryService:
     _tracer_instance = None
@@ -385,26 +350,17 @@ class TelemetryService:
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         cfg_core = getattr(self.cfg, "CORE", None)
-        self.log_dir = (
-            safe_get(cfg_core, "TELEMETRY_LOG_DIR", "logs/telemetry")
-        )
-        self.BUFFER_SIZE = (
-            safe_get(cfg_core, "TELEMETRY_BUFFER_SIZE", 50)
-        )
-        self.MAX_ERRORS = (
-            safe_get(cfg_core, "TELEMETRY_MAX_ERRORS", 5)
-        )
+        self.log_dir = (safe_get(cfg_core, "TELEMETRY_LOG_DIR", "logs/telemetry"))
+        self.BUFFER_SIZE = (safe_get(cfg_core, "TELEMETRY_BUFFER_SIZE", 50))
+        self.MAX_ERRORS = (safe_get(cfg_core, "TELEMETRY_MAX_ERRORS", 5))
         self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=self.BUFFER_SIZE)
         self.write_buffer: List[str] = []
         self.active_crystal = None
         self.disabled = False
-
         self._lock = threading.Lock()
         try:
             os.makedirs(self.log_dir, exist_ok=True)
-            self.current_trace_file = os.path.join(
-                self.log_dir, f"trace_{int(time.time())}.jsonl"
-            )
+            self.current_trace_file = os.path.join(self.log_dir, f"trace_{int(time.time())}.jsonl")
         except OSError:
             msg = ux("core_strings", "tel_disk_denied")
             if msg:
@@ -431,20 +387,16 @@ class TelemetryService:
     def start_cycle(self, trace_id: str):
         if self.disabled:
             return
-        if self.active_crystal and self.active_crystal.decision_id == trace_id:
-            return
+        if self.active_crystal:
+            if self.active_crystal.decision_id == trace_id:
+                return
+            self.finalize_cycle()
         self.active_crystal = DecisionCrystal(decision_id=trace_id)
 
-    def log_decision(
-        self,
-        component: str,
-        decision_type: str,
-        inputs: Any,
-        reasoning: str,
-        outcome: str,
-    ):
+    def log_decision(self, component: str, decision_type: str, inputs: Any, reasoning: str, outcome: str):
         if self.disabled or not self.active_crystal:
             return
+
         trace = DecisionTrace(
             trace_id=self.active_crystal.decision_id,
             timestamp=time.time(),
@@ -452,8 +404,9 @@ class TelemetryService:
             decision_type=decision_type,
             inputs=inputs if isinstance(inputs, dict) else {"raw": str(inputs)},
             reasoning=reasoning,
-            outcome=outcome,
+            outcome=outcome
         )
+
         self.trace_buffer.append(trace)
         self._buffer_line(trace.to_json())
 
@@ -464,23 +417,11 @@ class TelemetryService:
 
     def start_phase(self, phase_name: str, _context: Any):
         msg = ux("core_strings", "tel_phase_start")
-        self.log_decision(
-            phase_name,
-            "PHASE_START",
-            {"timestamp": time.time()},
-            msg,
-            "RUNNING",
-        )
+        self.log_decision(phase_name, "PHASE_START", {"timestamp": time.time()}, msg, "RUNNING", )
 
     def end_phase(self, phase_name: str, _ctx_before: Any, _ctx_after: Any):
         msg = ux("core_strings", "tel_phase_end")
-        self.log_decision(
-            phase_name,
-            "PHASE_END",
-            {"timestamp": time.time()},
-            msg,
-            "SUCCESS",
-        )
+        self.log_decision(phase_name, "PHASE_END", {"timestamp": time.time()}, msg, "SUCCESS", )
 
     def finalize_cycle(self):
         if self.active_crystal:
@@ -539,15 +480,12 @@ class TelemetryService:
                             break
                         try:
                             data = json.loads(line)
-                            if not (resp := data.get("final_response")):
+                            resp = data.get("final_response")
+                            if not resp:
                                 continue
-
                             prompt_snap = data.get("prompt_snapshot", "")
-                            user_text = (
-                                prompt_snap.split("User:")[1].split("\n")[0].strip()
-                                if "User:" in prompt_snap
-                                else "Unknown"
-                            )
+                            user_text = prompt_snap.split("User:")[1].split("\n")[
+                                0].strip() if "User:" in prompt_snap else "Unknown"
                             history.insert(0, f"User: {user_text} | System: {resp}")
                         except (json.JSONDecodeError, IndexError):
                             continue
@@ -560,11 +498,7 @@ class TelemetryService:
         return [h.split("System: ")[-1] for h in history if "System: " in h]
 
     def get_last_fatal_error(self) -> Optional[str]:
-        files = sorted(
-            glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")),
-            key=os.path.getmtime,
-            reverse=True,
-        )
+        files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), key=os.path.getmtime, reverse=True, )
         if len(files) > 1:
             try:
                 with open(files[1], "r", encoding="utf-8") as f:
@@ -581,8 +515,6 @@ class TelemetryService:
         count = len(self.trace_buffer)
         status = "DISABLED" if self.disabled else "ACTIVE"
         msg = ux("core_strings", "tel_session_summary")
-        return (
-            msg.format(status=status, count=count, trace_file=self.current_trace_file)
+        return (msg.format(status=status, count=count, trace_file=self.current_trace_file)
             if msg
-            else ""
-        )
+            else "")

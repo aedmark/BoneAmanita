@@ -1325,8 +1325,7 @@ class CognitionPhase(SimulationPhase):
                     f"{Prisma.CYN}[PINKER]: Syntactic friction identified and purged. (F reduced){Prisma.RST}"
                 )
         if ctx.validator and ctx.input_text:
-            phi = ctx.validator.calculate_resonance(ctx.input_text, ctx)
-
+            phi = ctx.validator.calculate_resonance(ctx.input_text, ctx) or 0.0
             self.eng.sycophancy_streak = getattr(self.eng, "sycophancy_streak", 0) + 1 if phi > 0.9 else 0
 
             if self.eng.sycophancy_streak >= 3:

@@ -2,12 +2,9 @@
 
 import time
 from typing import Dict, List, Any, Tuple, Optional
-
 import faiss
 import numpy as np
-
 from bone_core import EventBus
-
 
 class HippocampalCache:
     def __init__(self, max_capacity: int = 500):
@@ -17,11 +14,7 @@ class HippocampalCache:
     def encode(self, node_id: str, vector: List[float], metadata: Dict[str, Any]):
         if node_id in self.nodes:
             del self.nodes[node_id]
-        self.nodes[node_id] = {
-            "vector": vector,
-            "meta": metadata,
-            "timestamp": time.time(),
-        }
+        self.nodes[node_id] = {"vector": vector, "meta": metadata, "timestamp": time.time(), }
         if len(self.nodes) > self.max_capacity:
             self._prune_weakest()
 
@@ -68,29 +61,22 @@ class CerebralIndex:
         self.total_nodes += len(vectors)
         self.is_trained = True
 
-    def query_neighborhood(
-        self, query_vector: List[float], k: int = 5, resonance_threshold: float = 0.5
-    ) -> List[Dict]:
+    def query_neighborhood(self, query_vector: List[float], k: int = 5, resonance_threshold: float = 0.5) -> List[Dict]:
         if (
             not self.is_trained
             or self.total_nodes == 0
-            or len(query_vector) != self.dimension
-        ):
+            or len(query_vector) != self.dimension ):
             return []
         np_query = np.ascontiguousarray(np.array([query_vector]).astype("float32"))
         actual_k = min(k, self.total_nodes)
         distances, indices = self._index.search(np_query, actual_k)
-        return [
-            {**self._payloads[idx], "resonance": 1.0 / (1.0 + float(dist))}
+        return [{**self._payloads[idx], "resonance": 1.0 / (1.0 + float(dist))}
             for dist, idx in zip(distances[0], indices[0])
-            if idx != -1 and (1.0 / (1.0 + float(dist))) >= resonance_threshold
-        ]
-
+            if idx != -1 and (1.0 / (1.0 + float(dist))) >= resonance_threshold]
 
 class MemoryConsolidator:
     def __init__(
-        self, hippocampus: HippocampalCache, cortex: CerebralIndex, events: EventBus
-    ):
+        self, hippocampus: HippocampalCache, cortex: CerebralIndex, events: EventBus ):
         self.hippocampus = hippocampus
         self.cortex = cortex
         self.events = events
@@ -99,9 +85,7 @@ class MemoryConsolidator:
         if available_atp < 20.0:
             return 0, 0.0
         max_affordable_nodes = int(available_atp / 0.1)
-        pending_nodes = self.hippocampus.extract_for_consolidation(
-            limit=max_affordable_nodes
-        )
+        pending_nodes = self.hippocampus.extract_for_consolidation(limit=max_affordable_nodes)
         valid_nodes = [(nid, d) for nid, d in pending_nodes if "vector" in d]
         if not valid_nodes:
             return 0, 0.0
@@ -110,8 +94,5 @@ class MemoryConsolidator:
         self.cortex.add_memories(vectors, payloads)
         atp_cost = len(valid_nodes) * 0.1
         if self.events:
-            self.events.publish(
-                "SYNAPTIC_CONSOLIDATION",
-                {"count": len(pending_nodes), "atp_burned": atp_cost},
-            )
+            self.events.publish("SYNAPTIC_CONSOLIDATION", {"count": len(pending_nodes), "atp_burned": atp_cost}, )
         return len(pending_nodes), atp_cost

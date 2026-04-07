@@ -63,7 +63,7 @@ class BoneConfig:
                         "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
                         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2}, }
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "19.2.0"
+    VERSION = "19.2.1"
     VERBOSE_LOGGING = True
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -93,8 +93,8 @@ class BoneConfig:
     PROVIDER = "ollama"
     BASE_URL = None
     API_KEY = "ollama"
-    MODEL = "mistral-nemo"
-    OLLAMA_MODEL_ID = "mistral-nemo"
+    MODEL = "hermes3"
+    OLLAMA_MODEL_ID = "hermes3"
 
     class SOUL:
         MEMORY_VOLTAGE_MIN = 14.0
