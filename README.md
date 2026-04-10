@@ -179,6 +179,6 @@ This is not a feature. It is the argument.
 
 ## License
 
-BoneAmanita is free and unencumbered software released into the public domain under **The Unlicense**. Anyone is free to copy, modify, publish, use, compile, sell, or distribute this software for any purpose, commercial or non-commercial, without condition.
+BoneAmanita is free and unencumbered software released into the public domain under a modified **MIT License** that acknowledges human-AI partnership. Anyone is free to copy, modify, publish, use, compile, sell, or distribute this software for any purpose, commercial or non-commercial, without condition.
 
 _The glacier is ready. How would you like to move?_
