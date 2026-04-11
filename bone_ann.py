@@ -40,6 +40,26 @@ class HippocampalCache:
         oldest_key = next(iter(self.nodes))
         del self.nodes[oldest_key]
 
+    def get_graph(self) -> Any:
+        class _Graph:
+            def __init__(self, adj):
+                self.adj = adj
+
+            def __len__(self): return len(self.adj)
+
+        adj = {k: set() for k in self.nodes}
+        keys = list(self.nodes.keys())
+        for i, k1 in enumerate(keys):
+            for j, k2 in enumerate(keys):
+                if i < j:
+                    v1, v2 = self.nodes[k1]["vector"], self.nodes[k2]["vector"]
+                    dot = sum(a * b for a, b in zip(v1, v2))
+                    mag = (sum(a * a for a in v1) ** 0.5) * (sum(b * b for b in v2) ** 0.5)
+                    if mag > 0 and (dot / mag) > 0.75:  # 0.75 Cosine Similarity Threshold
+                        adj[k1].add(k2)
+                        adj[k2].add(k1)
+        return _Graph(adj)
+
 
 class CerebralIndex:
     def __init__(self, dimension: int = 8, index_type: str = "HNSW"):
@@ -71,8 +91,27 @@ class CerebralIndex:
         actual_k = min(k, self.total_nodes)
         distances, indices = self._index.search(np_query, actual_k)
         return [{**self._payloads[idx], "resonance": 1.0 / (1.0 + float(dist))}
-            for dist, idx in zip(distances[0], indices[0])
-            if idx != -1 and (1.0 / (1.0 + float(dist))) >= resonance_threshold]
+                for dist, idx in zip(distances[0], indices[0])
+                if idx != -1 and (1.0 / (1.0 + float(dist))) >= resonance_threshold]
+
+    def get_local_mass_radius(self, query_text: str) -> Optional[Dict[str, List[float]]]:
+        if not self.is_trained or self.total_nodes < 5:
+            return None
+        import math
+        np_query = np.zeros((1, self.dimension), dtype="float32")
+        distances, _ = self._index.search(np_query, min(50, self.total_nodes))
+
+        log_r, log_m, weights = [], [], []
+        mass = 1
+        for dist in sorted(float(d) for d in distances[0] if d > 0):
+            log_r.append(math.log(dist))
+            log_m.append(math.log(mass))
+            weights.append(1.0)
+            mass += 1
+
+        if len(log_r) < 3:
+            return None
+        return {"log_r": log_r, "log_m": log_m, "weights": weights}
 
 class MemoryConsolidator:
     def __init__(

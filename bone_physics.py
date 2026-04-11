@@ -29,6 +29,37 @@ class PhysicsDelta:
     message: Optional[str] = None
 
 
+class CreativeDeterminantEngine:
+    """
+    Mathematical integration of the Creative Determinant (CD) framework.
+    Original CD equations and field theory authored by Nelson Spence (Project Navi LLC).
+    Licensed under Apache 2.0.
+    """
+    def __init__(self, lambda_base=1.0, eta=0.1, rho=0.05):
+        self.coherence_debt = 0.0      # D(t)
+        self.lambda_base = lambda_base # Base contradiction cost
+        self.eta = eta                 # Rate of debt accumulation
+        self.rho = rho                 # Rate of debt recovery
+
+    def calculate_viability(self, kappa: float, gamma: float, mu: float) -> float:
+        """Canonical viability closure: b(x) = κγ - λ_eff * μ"""
+        lambda_eff = self.lambda_base * (1.0 + self.coherence_debt)
+        return (kappa * gamma) - (lambda_eff * mu)
+
+    def update_coherence_debt(self, actual_coherence: float, sustainable_capacity: float) -> float:
+        """Coherence Debt Dynamics: D_dot = η[ψ - ψ_s]⁺ - ρD"""
+        overcapacity = max(0.0, actual_coherence - sustainable_capacity)
+        delta_d = (self.eta * overcapacity) - (self.rho * self.coherence_debt)
+        self.coherence_debt = max(0.0, self.coherence_debt + delta_d)
+        return self.coherence_debt
+
+    def calculate_atp_cost(self, base_cost: float, viability_potential: float) -> float:
+        """Translates CD's Viability Threshold into metabolic load."""
+        if viability_potential >= 0:
+            return base_cost * max(0.1, (1.0 - viability_potential))
+        return base_cost * math.exp(abs(viability_potential))
+
+
 def apply_metabolic_tax(mito_state: Any, atp_cost: float, ros_cost: float) -> None:
     if not mito_state:
         return
@@ -287,6 +318,7 @@ class QuantumObserver:
         self.events = events
         self.lex = lexicon_ref
         self.cfg = config_ref or BoneConfig
+        self.cd_engine = CreativeDeterminantEngine()
         self.voltage_history: Deque[float] = deque(maxlen=5)
         self.last_physics_packet: Optional[PhysicsPacket] = None
         self.Q_n = None
@@ -331,6 +363,24 @@ class QuantumObserver:
         sycophancy_triggers = ("right?", "good?", "make sense", "makes sense", "agree", "validate", "comfort")
         cf_expect = 0.8 if any(p in t_low for p in sycophancy_triggers) else 0.0
 
+        # --- CREATIVE DETERMINANT (CD) INTEGRATION ---
+        # 1. Coherence Debt Dynamics
+        actual_coherence = p_v # Resonance as empirical witness (ψ)
+        sustainable_capacity = max(0.1, 1.0 - (sv / 150.0) * e_m) # Spectral capacity witness (ψ_s)
+        current_debt = self.cd_engine.update_coherence_debt(actual_coherence, sustainable_capacity)
+
+        # 2. Canonical Viability Closure: b(x) = κγ - λ_eff * μ
+        viability = self.cd_engine.calculate_viability(kappa=p_v, gamma=gamma_idx, mu=b_v)
+
+        # 3. The Generative Gap (Redefining Narrative Drag)
+        # Gap = |Strong Coherence (Ideal = κ*γ*μ) - Weak Coherence (actual)|
+        strong_coherence_ideal = p_v * gamma_idx * b_v
+        generative_gap = abs(strong_coherence_ideal - actual_coherence)
+
+        # Blend legacy compression drag with the CD Generative Gap
+        cd_drag = (geo.compression * 0.5) + (generative_gap * getattr(self.cfg.PHYSICS, "DRAG_HALT", 10.0) * 0.5)
+        # ---------------------------------------------
+
         energy = EnergyState(
             voltage=sv, entropy=e_m, beta_index=b_v, contradiction=b_v,
             scope=s_v, depth=d_v, connectivity=c_v, resonance=p_v,
@@ -340,8 +390,13 @@ class QuantumObserver:
             theta=geo.coherence, upsilon=upsilon_integrity, mu=mu_friction,
             m_a=malignancy, i_c=immune_comp, cf_expect=cf_expect, novelty=novelty
         )
+
+        # Store CD metrics for downstream access (e.g. ATP calculations)
+        safe_set(energy, "viability_potential", viability)
+        safe_set(energy, "coherence_debt", current_debt)
+
         matter = MaterialState(clean_words=clean_words, raw_text=text, counts=counts, antigens=counts.get("antigen", 0), vector=geo.dimensions, truth_ratio=0.5)
-        space = SpatialState(narrative_drag=geo.compression, zone=self._determine_zone(geo.dimensions), flow_state=self._determine_flow(sv, geo.coherence, self.cfg))
+        space = SpatialState(narrative_drag=cd_drag, zone=self._determine_zone(geo.dimensions), flow_state=self._determine_flow(sv, geo.coherence, self.cfg))
 
         self.last_physics_packet = PhysicsPacket(energy=energy, matter=matter, space=space)
         if hasattr(self.events, "publish"): self.events.publish("PHYSICS_CALCULATED", self.last_physics_packet.to_dict())

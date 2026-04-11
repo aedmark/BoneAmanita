@@ -188,6 +188,7 @@ class SpatialState:
     friction: float = 0.6
     atmosphere: str = "NEUTRAL"
     flow_state: str = "LAMINAR"
+    godel_scar: Optional[tuple] = None
 
 
 @dataclass

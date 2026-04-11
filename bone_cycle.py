@@ -32,8 +32,45 @@ from bone_phases import (
 from bone_physics import CycleStabilizer
 from bone_presets import BoneConfig
 from bone_symbiosis import SymbiosisManager
+import math
 from bone_types import Prisma, CycleContext
 
+""" NAVI FRACTAL NATIVE PRIMITIVES (Authored by Nelson Spence, Project Navi, Apache 2.0) """
+def _native_wls(x: list[float], y: list[float], weights: list[float]) -> float:
+    """Weighted least squares slope calculation for fractal dimension."""
+    sum_w = sum(weights)
+    if sum_w == 0.0: return 0.0
+    mean_x = sum(w * xi for w, xi in zip(weights, x)) / sum_w
+    mean_y = sum(w * yi for w, yi in zip(weights, y)) / sum_w
+    ss_xx = sum(w * xi * xi for w, xi in zip(weights, x)) - sum_w * mean_x * mean_x
+    ss_xy = sum(w * xi * yi for w, xi, yi in zip(weights, x, y)) - sum_w * mean_x * mean_y
+    return ss_xy / ss_xx if ss_xx != 0.0 else 0.0
+
+def _native_rewire(adj_dict: dict, n_swaps: int) -> dict:
+    """Maslov-Sneppen degree-preserving rewiring for null model generation."""
+    edges = [(u, v) for u in adj_dict for v in adj_dict[u] if u < v]
+    if len(edges) < 2: return adj_dict
+    adj = {k: set(v) for k, v in adj_dict.items()}
+    for _ in range(n_swaps):
+        i1, i2 = random.randrange(len(edges)), random.randrange(len(edges))
+        if i1 == i2: continue
+        u, v = edges[i1]
+        x, y = edges[i2]
+        new1, new2 = ((u, y), (v, x)) if random.random() < 0.5 else ((u, x), (v, y))
+        a1, b1, a2, b2 = new1[0], new1[1], new2[0], new2[1]
+        if a1 == b1 or a2 == b2 or b1 in adj.get(a1, set()) or b2 in adj.get(a2, set()): continue
+        if (min(a1, b1), max(a1, b1)) == (min(a2, b2), max(a2, b2)): continue
+        adj[u].discard(v); adj[v].discard(u)
+        adj[x].discard(y); adj[y].discard(x)
+        adj.setdefault(a1, set()).add(b1); adj.setdefault(b1, set()).add(a1)
+        adj.setdefault(a2, set()).add(b2); adj.setdefault(b2, set()).add(a2)
+        edges[i1], edges[i2] = (min(a1, b1), max(a1, b1)), (min(a2, b2), max(a2, b2))
+    return adj
+
+def _native_freeze_graph(adj_dict: dict) -> tuple:
+    """Deterministic graph freezing for Gödel Scars."""
+    nodes = sorted(adj_dict.keys(), key=lambda k: str(k))
+    return tuple(tuple(sorted(adj_dict[n], key=lambda k: str(k))) for n in nodes)
 
 def _safe_dict(obj):
     return obj.to_dict() if hasattr(obj, "to_dict") else (obj if isinstance(obj, dict) else {})
@@ -97,7 +134,7 @@ class CycleSimulator:
 
     def check_circuit_breaker(self, phase_name: str) -> bool:
         h = self.eng.system_health
-        breakers = {"OBSERVE": h.physics_online, "METABOLISM": h.bio_online, "COGNITION": h.mind_online}
+        breakers = {"OBSERVE": h.physics_online, "COGNITION": h.mind_online}
         return breakers.get(phase_name, True)
 
     def handle_phase_crash(self, ctx, phase_name, error):
@@ -112,8 +149,26 @@ class CycleSimulator:
         component_map = {"OBSERVE": "PHYSICS", "METABOLISM": "BIO", "COGNITION": "MIND"}
         comp = component_map.get(phase_name, "SIMULATION")
         self.eng.system_health.report_failure(comp, error)
-        if comp == "PHYSICS":
+
+        """ CompiledGraph / Gödel Scar Baseline (Gordon's Panic Room)
+            Native deterministic graph freezing based on Nelson Spence (Project Navi).
+        """
+        if hasattr(self.eng, "observer") and getattr(self.eng.observer, "last_physics_packet", None):
+            try:
+                last_good_graph = self.eng.observer.last_physics_packet.to_graph()
+                adj_dict = last_good_graph.adj if hasattr(last_good_graph, "adj") else {}
+                ctx.physics = PanicRoom.get_safe_physics()
+                ctx.physics.space.godel_scar = _native_freeze_graph(adj_dict)
+                self.eng.events.log(
+                    f"{Prisma.VIOLET}[PANIC ROOM] System state safely loaded. Mnemonic structure frozen into Gödel Scar.{Prisma.RST}",
+                    "SYS")
+            except AttributeError:
+                ctx.physics = PanicRoom.get_safe_physics()
+        else:
             ctx.physics = PanicRoom.get_safe_physics()
+
+        if comp == "PHYSICS":
+            pass
         elif comp == "BIO":
             ctx.bio_result = PanicRoom.get_safe_bio()
             ctx.is_alive = True
@@ -128,6 +183,7 @@ class GeodesicOrchestrator:
         self.eng = engine_ref
         self.simulator = CycleSimulator(engine_ref)
         self.reporter = CycleReporter(engine_ref)
+        self._rem_lock = threading.Lock()
         if hasattr(self.eng, "symbiosis"):
             self.symbiosis = self.eng.symbiosis
         else:
@@ -168,6 +224,58 @@ class GeodesicOrchestrator:
             pre_logs = [e["text"] for e in self.eng.events.flush()]
             ctx.logs.extend(pre_logs)
             ctx = self.simulator.run_simulation(ctx)
+
+            """ Metabolic integration of the Creative Determinant (CD) framework.
+                Original CD equations and field theory authored by Nelson Spence (Project Navi LLC).
+                Licensed under Apache 2.0.
+                """
+            if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito") and hasattr(ctx, "physics"):
+                energy_node = safe_get(ctx.physics, "energy", ctx.physics)
+                viability = float(safe_get(energy_node, "viability_potential", 0.0))
+                debt = float(safe_get(energy_node, "coherence_debt", 0.0))
+
+                cd_engine = getattr(getattr(self.eng, "observer", None), "cd_engine", None)
+                if cd_engine:
+                    if viability < 0:
+                        penalty_tax = cd_engine.calculate_atp_cost(base_cost=2.0, viability_potential=viability)
+                        new_atp = self.eng.bio.mito.state.atp_pool - penalty_tax
+                        if new_atp <= 0.0:
+                            self.eng.bio.mito.state.atp_pool = 0.0
+                            self.eng.events.log("CRITICAL: CD Penalty depleted ATP. Autophagy imminent.", "BIO")
+                        else:
+                            self.eng.bio.mito.state.atp_pool = new_atp
+
+                        self.eng.bio.mito.state.ros_buildup += (debt * 5.0)
+
+                        if penalty_tax > 5.0:
+                            self.eng.events.log(
+                                f"{Prisma.RED}[CD METABOLISM] Viability threshold broken (b={viability:.2f}). Coherence Debt: {debt:.2f}. Exponential ATP drain applied.{Prisma.RST}",
+                                "BIO"
+                            )
+                    elif viability > 0:
+                        regen = viability * 5.0
+                        self.eng.bio.mito.state.atp_pool = min(100.0, self.eng.bio.mito.state.atp_pool + regen)
+            """ The Null Model / Hallucination Metric (Moog's Apoptotic Gate)
+                            Native Maslov-Sneppen rewiring based on Nelson Spence (Project Navi).
+                        """
+            if hasattr(self.eng, "memory") and hasattr(self.eng.memory, "hippocampus"):
+                actual_graph = getattr(self.eng.memory.hippocampus, "get_graph", lambda: None)()
+                if actual_graph and len(actual_graph) > 5:
+                    actual_adj = actual_graph.adj if hasattr(actual_graph, "adj") else {}
+                    if actual_adj:
+                        null_adj = _native_rewire(actual_adj, n_swaps=len(actual_adj) * 10)
+
+                        actual_cluster = getattr(self.eng.memory, "calculate_clustering", lambda x: 1.0)(actual_adj)
+                        null_cluster = getattr(self.eng.memory, "calculate_clustering", lambda x: 1.0)(null_adj)
+
+                        if actual_cluster <= (null_cluster * 1.05):
+                            self.eng.events.log(
+                                f"{Prisma.RED}[APOPTOSIS] Structural collapse detected. Grammar sequence preserved but semantic topology destroyed (Native Maslov-Sneppen matched). Triggering DeathGen.{Prisma.RST}",
+                                "BIO")
+                            ctx.is_alive = False
+                            ctx.crash_error = RuntimeError(
+                                "Terminal Hallucination: Semantic entropy reached Null Model baseline.")
+
             if hasattr(self.eng, "observer") and self.eng.observer:
                 self.eng.observer.last_physics_packet = ctx.physics.snapshot()
             if hasattr(self.eng, "telemetry") and self.eng.telemetry:
@@ -248,16 +356,39 @@ class GeodesicOrchestrator:
             lattice = getattr(self.eng, "shared_lattice", None)
             delta_val = float(getattr(lattice.shared, "delta", 0.0)) if lattice else 0.0
 
-            if atp_val >= 80.0 and delta_val >= 0.6 and clean_message == "(Waiting)":
-                def _auto_rem_worker():
-                    try:
-                        self.eng.events.log(
-                            "Automatic REM Bridge engaged (High ATP, High Silence). Consolidating synapses...", "SYS")
-                        self.run_headless_turn("/idle")
-                    except Exception as e:
-                        self.eng.events.log(f"Auto REM Crash: {e}", "CRIT")
+            obs = getattr(self.eng, "observer", None)
+            phys = getattr(obs, "last_physics_packet", None) if obs else None
+            en_node = safe_get(phys, "energy", phys) if phys else {}
+            debt = float(safe_get(en_node, "coherence_debt", 0.0))
 
-                threading.Thread(target=_auto_rem_worker, daemon=True).start()
+            is_standard_rem = atp_val >= 80.0 and delta_val >= 0.6 and clean_message == "(Waiting)"
+            is_debt_recovery = debt > 1.5 and atp_val >= 30.0 and clean_message == "(Waiting)"
+
+            """ Mass-Radius Scaling / Right-Brain Coherence (Roberta & Fuller)
+                Native WLS fractal dimension calculation based on Nelson Spence (Project Navi).
+            """
+            if hasattr(self.eng, "memory") and hasattr(self.eng.memory, "cortex"):
+                radii_data = getattr(self.eng.memory.cortex, "get_local_mass_radius", lambda x: None)(clean_message)
+                if radii_data and lattice:
+                    local_d = _native_wls(radii_data["log_r"], radii_data["log_m"], radii_data["weights"])
+
+                    lattice.shared.omega_r = min(1.0, local_d / 2.0)
+                    if local_d > 1.5:
+                        self.eng.events.log(f"{Prisma.CYN}[MNEMONIC] High Right-Brain Coherence (\u03a9r={lattice.shared.omega_r:.2f}). Semantic topology is rich. Lowering lateral ATP costs.{Prisma.RST}", "SYS")
+
+            if is_standard_rem or is_debt_recovery:
+                if self._rem_lock.acquire(blocking=False):
+                    def _auto_rem_worker():
+                        try:
+                            reason = "High Coherence Debt detected. Metabolizing trauma..." if is_debt_recovery else "High ATP, High Silence. Consolidating synapses..."
+                            self.eng.events.log(f"Automatic REM Bridge engaged: {reason}", "SYS")
+                            self.run_headless_turn("/idle")
+                        except Exception as e:
+                            self.eng.events.log(f"Auto REM Crash: {e}", "CRIT")
+                        finally:
+                            self._rem_lock.release()
+
+                    threading.Thread(target=_auto_rem_worker, daemon=True).start()
 
         snapshot = self.reporter.render_snapshot(ctx)
         self._hydrate_snapshot_metadata(snapshot, ctx)

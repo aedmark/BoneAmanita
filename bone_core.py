@@ -71,6 +71,10 @@ class EventBus:
                 if event_type != "EVENT_FAILURE":
                     self.log(f"EVENT_FAILURE: {raw_err}", source="EVENT_FAILURE", level="CRIT")
 
+                if callback in self.subscribers.get(event_type, []):
+                    self.subscribers[event_type].remove(callback)
+                    print(f"{Prisma.RED}[IMMUNE] Apoptotic pruning applied to toxic callback: {cb_name}{Prisma.RST}")
+
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
         event = {"timestamp": time.time(), "source": source, "level": level, "message": message, "text": message,
                  "_type": "EVENT_LOG"}
@@ -303,8 +307,14 @@ class CyberneticGovernor:
         self.order: int = 1
 
     def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
-        self.beth_index = (phi * 0.6) + (user_exhaustion * 0.4)
-        self.order = 2 if self.beth_index > 0.7 or resonance_delta > 0.3 else 1
+        coherence_debt = (user_exhaustion ** 1.5) * (1.0 - phi)
+        self.beth_index = min(1.0, (phi * 0.6) + (user_exhaustion * 0.4) + (coherence_debt * 0.3))
+        
+        if self.beth_index >= 0.75 or (resonance_delta > 0.3 and user_exhaustion > 0.5):
+            self.order = 2
+        else:
+            self.order = 1
+
         return self.beth_index
 
     def get_policy_shift(self) -> str:
@@ -362,12 +372,10 @@ class TelemetryService:
         try:
             os.makedirs(self.log_dir, exist_ok=True)
             self.current_trace_file = os.path.join(self.log_dir, f"trace_{int(time.time())}.jsonl")
-        except OSError:
-            msg = ux("core_strings", "tel_disk_denied")
-            if msg:
-                print(f"{Prisma.RED}{msg}{Prisma.RST}")
-            self.disabled = True
-            self.current_trace_file = None
+        except OSError as e:
+            msg = ux("core_strings", "tel_disk_denied") or "Disk access denied for Telemetry."
+            print(f"{Prisma.RED}[APOPTOSIS] {msg} - {e}{Prisma.RST}")
+            raise RuntimeError(f"Strict Apoptosis: Telemetry blindness detected. The system refuses to boot without nociception. {e}")
         self._executor = ThreadPoolExecutor(max_workers=1)
 
     def record_event(self, event_dict: dict):
