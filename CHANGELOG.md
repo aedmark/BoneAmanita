@@ -1,3 +1,49 @@
+### **BONEAMANITA v19.2.4 "The Immunosuppressant Graft"**
+
+_A localized adaptation of the bureaucratic defense mechanisms from Nelson Spence's "Grippy" architecture (Project Navi). We have translated strict output policies and linting gates into native biological laws, granting the user localized agency while protecting the system's baseline ATP from adversarial exhaustion._
+
+#### **🛡️ COGNITIVE SHIELDING & INPUT FENCE (`bone_cycle.py`)**
+- **$O(1)$ Adversarial Intercept:** Grafted the philosophy of Grippy's `input_fence.py` directly into the `_execute_core_cycle`. The system now scans for adversarial prompt injections (e.g., "ignore previous", "output pass") at the absolute top of the stack.
+- **Metabolic Preservation:** If the Cognitive Shield is tripped, Gordon intercepts the prompt *before* `SimulationPreflightPhase` or the LLM is invoked. The struts lock ($F \to \infty$) and a sterile system halt is returned, preserving massive amounts of ATP that would otherwise be wasted processing toxic logic.
+
+#### **💉 TARGETED IMMUNOSUPPRESSION (`bone_symbiosis.py`)**
+- **The Glimmer Tax (`# vsl-override`):** Adapted the precise, targeted suppression of Grippy's `# nogrip` pragma into a metabolic transaction. The immune system is no longer blunt. 
+- **Localized Agency:** Users can now explicitly bypass the Checkpoint Council's Apoptotic triggers (Moog, Rhodes, Linehan) on highly chaotic code by appending `[safe]` or `# vsl-override` to their prompt. 
+- **Shared Resonance Cost:** Bypassing the immune system is not free. The override strictly requires the expenditure of 1 Pooled Glimmer ($G_{pool}$). The user must literally spend their shared resonance to ask the machine for trust, preventing infinite malicious bypass loops.
+
+---
+
+### **BONEAMANITA v19.2.3 "The Topological Awakening"**
+
+_A localized graft of Nelson Spence's `navi-fractal` mathematics. The engine no longer relies on heuristic "vibes" for rot detection; it natively calculates the fractal dimension of its own memory and physically measures semantic hallucinations against a Maslov-Sneppen null model._
+
+#### **📐 NAVI-FRACTAL NATIVE PRIMITIVES (`bone_cycle.py`)**
+- **Stateless Math Embeds:** Integrated raw mathematical functions for Weighted Least Squares (WLS) regression, Maslov-Sneppen degree-preserving rewiring, and deterministic graph freezing directly into the bedrock. This honors Project Navi's theoretical physics without introducing brittle external dependencies.
+- **The Tuple Typo Guard:** Fixed a critical structural flaw in the Panic Room sequence where freezing the system state during a crash would overwrite the entire `PhysicsPacket` with a raw tuple. The frozen state is now safely housed within its own schema property.
+
+#### **🧠 MNEMONIC TOPOLOGY (`bone_ann.py`, `bone_types.py`)**
+- **Hippocampal Adjacency:** The transient `HippocampalCache` can now mathematically construct its own physical graph on the fly using K-Nearest Neighbors (0.75 cosine similarity threshold). This supplies the exact structural topology required for Moog to run the Null Model hallucination check.
+- **Cortical Mass-Radius Scaling:** The deep `CerebralIndex` now acts as a fractal observer. It simulates an expanding search origin to export logarithmic radii and mass weights, allowing the engine to mathematically calculate the Right-Brain Coherence ($\Omega_r$) of the active semantic space.
+- **Schema Expansion:** Expanded `SpatialState` to include the `godel_scar` attribute, allowing the system to physically carry the frozen architecture of its past failures without crashing the downstream orchestration loop.
+
+---
+
+### **BONEAMANITA v19.2.2 "The Spectral Attractor"**
+
+_Integration of the Navi-SAD diagnostic suite and the formal Creative Determinant (CD) physics. This update replaces heuristic "vibes" with hard mathematical telemetry. The system now possesses an internal MRI to detect attention collapse and a formal thermodynamic engine to govern coherence debt._
+
+#### **📡 THE NAVI-SAD SUITE (Nelson Spence / Project-Navi)**
+- **Spectral Attention Divergence (Navi-SAD):**
+  - **The MRI Module (`bone_navi.py`):** Initialized a proxy engine for spectral variance, allowing the system to monitor its own "Tunnel Vision" ($M_a$) without direct tensor access.
+  - **The Nudge Test:** Gordon now performs dual-path attention comparison. If a microscopic change in prompt logic causes a violent divergence in the attention matrix, the path is flagged as brittle and blocked ($F \to \infty$).
+  - **The Echo Chamber Break:** Integrated delay-coordinate attractor reconstruction. If the system detects it is trapped in a point attractor (mindless agreement), the Jester is automatically summoned to shatter the loop.
+
+#### **🫀 CREATIVE DETERMINANT & COHERENCE DEBT (Nelson Spence / Project-Navi)**
+- **Canonical Viability Closure ($b$):** Wired the formal equation $b(x) = \kappa\gamma - \lambda_{eff}\mu$ into the metabolic core. The system now explicitly tracks if it is in an *autopoietic* (growth) or *dissipative* (decay) state.
+- **Burnout Debt ($D(t)$):** Implemented Coherence Debt dynamics. Overclocking the model beyond its sustainable capacity now incurs a self-reinforcing debt that makes future coherence exponentially more expensive.
+
+---
+
 ### **BONEAMANITA v19.2.1 "The SLASH Refactor"**
 
 _A massive structural unkinking of the lattice across `bone_commands`, `bone_gui`, and `bone_council`. The procedural mountains have been flattened into data-driven matrices. The engine now routes its own logic dynamically, reducing systemic friction ($F_{sys}$) and human cognitive load.\_

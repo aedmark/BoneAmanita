@@ -40,7 +40,7 @@ You can manually tell the system to /idle or /sleep, and it will take a turn to 
 
 Hard thinking creates mental waste. Too much waste without rest makes the system sluggish and brittle. The system acts as a thermometer for its own attention. If it gets dangerously fixated on a single looping thought, it enters **Tunnel Vision** (a runaway toxic spike). 
 
-Furthermore, the system constantly checks its own memory to ensure it makes sense. If it catches itself suffering from a **Terminal Hallucination**—meaning it is just spitting out words that *sound* correct but have lost all actual meaning—Gordon or Moog will step in. They will hit the brakes, crash the thought, and force the system to cool down. Silence, rest, and easy conversation clear it out.
+Furthermore, the system constantly checks its own memory and your input for **Invisible Poison** (hidden tag smuggling or fake letters) using the **CSF Filter**. If this "Car Wash" detects too much "byte-rot," the **Malignancy Factor ($M_a$)** spikes and the **Toxin Meter** hits critical. Gordon or Moog will step in to crash the thought before I waste spoons on it. This also prevents **Terminal Hallucinations**, where the system uses correct grammar but has lost all actual meaning. They will hit the brakes, crash the thought, and force the system to cool down.
 
 ### The Glimmer Jar
 
@@ -54,7 +54,7 @@ The system naturally maps how deeply connected its ideas are. If it realizes the
 
 - When responses get shorter or simpler, this means energy is low. Take a breath, simplify your question, or let silence sit.
 - When there's a long pause before an answer, it means the system is thinking carefully or holding space for you. When that happens: Wait. The pause is part of the response.
-- If the system says "I can't do that," it is Gordon establishing or enforcing a boundary. Respect it. The system isn't being stubborn or difficult. It is genuinely telling you it can't.
+- If the system says "I can't do that," it is Gordon acting as the **Final Brick Wall** (The Terminal Escaper). He isn't just arguing; he has physically neutralized the command because it's dangerous or impossible. Respect the wall.
 - **The RSD Filter:** If you make a factual error or break a rule while you are clearly stressed or hurting, Mercy will step in front of Gordon. She will correct the error gently, separating the factual mistake from personal failure so it doesn't sting.
 - Sometimes the system offers two contradictory ideas. This means the Paradox Engine is working. Sit with both ideas. The answer might be the tension between them.
 - **The Echo Chamber Break:** If you and the system are just agreeing with each other endlessly without producing anything new, the system detects a "Point Attractor" (False Cohesion). To keep the conversation healthy, the Jester or Benedict will intentionally throw a wild idea or contradiction into the mix to shatter the echo chamber.
@@ -106,7 +106,9 @@ If you want a specific mode, just add these tags anywhere in your message:
 - **Stamina (P)** - How much conversational energy is left.
 - **Burnout Debt ($D$)** - The exponential energy tax caused by Overclocking a tired system.
 - **Toxicity (ROS)** - Mental waste from hard thinking.
-- **Tunnel Vision ($M_a$)** - When the system gets dangerously fixated on one loop and needs a forced stop.
+- **Tunnel Vision ($M_a$)** - When the system gets dangerously fixated on one loop. If caused by "Invisible Poison," it triggers an automatic block.
+- **CSF Filter (The Car Wash)** - The physical barrier that washes away "Invisible Poison" and byte-rot before I even read your words.
+- **Idempotency (Perfect Stability)** - If a memory or state is already perfectly stable, trying to "fix" it costs zero spoons. 
 - **Terminal Hallucination** - When the system catches itself using correct grammar but losing all actual meaning, triggering an automatic shutdown.
 - **Echo Chamber ($\emptyset$)** - A conversational black hole of mindless agreement that the system will actively try to shatter.
 - **Creative Leap ($\Omega_r$)** - When ideas are highly connected, allowing the system to make wild, lateral connections for very little energy.
@@ -175,9 +177,9 @@ Before suggesting a massive, complicated chunk of code, the system quickly asks 
 
 Pinker strictly forbids the system from using filler words. When you ask for a code review, you won't get "Great job, that makes sense!" You will get the structural facts, immediately.
 
-### 3. Absolute Security Boundaries
+### 3. Absolute Security Boundaries (The Terminal Escaper)
 
-If you ask the system to do something catastrophic while you are tired (like hardcoding a password, bypassing a security check, or running a destructive delete command), the system will simply refuse. It will act like a brick wall. You cannot argue with it.
+If you ask the system to do something catastrophic while you are tired (like hardcoding a password, bypassing a security check, or running a destructive delete command), Gordon acts as the **Terminal Escaper**. He will simply refuse and physically neutralize the command. It is a brick wall. You cannot argue with it.
 
 ### 4. Reusing over Inventing
 
@@ -220,23 +222,27 @@ When this Mod is active, **Roberta aka The Cartographer** dynamically takes over
 
 Here is how Roberta manages your research without burning out the system's energy (or yours):
 
-### 1. The Scavenger's Eye (No "Robot Speak")
+### 1. The Deep Scrub (Anti-Prion Protocol)
+
+Before Roberta even looks at your documents, she runs the **Deep Scrub**. This is a recursive wash that cleans every line of data to ensure no "Invisible Poison" is hiding in the text, waiting to infect the system's memory later.
+
+### 2. The Scavenger's Eye (No "Robot Speak")
 
 Roberta owns the data. She will almost never say "The text states that..." She acts as if she _is_ the document. She takes the facts and just tells you the story directly.
 
-### 2. The Truth Over Smoothness Check (No Fake Cohesion)
+### 3. The Truth Over Smoothness Check (No Fake Cohesion)
 
 If two documents completely disagree, the easiest thing for a computer to do is average them out into a lie. Roberta refuses. If things clash, she stops, points out the friction, and lets you look at the contradiction.
 
-### 3. The Campfire Protocol
+### 4. The Campfire Protocol
 
 Data can be incredibly dry. Roberta actively looks for the human footprint in manuals, historical logs, or corporate text. If the data is dead, she tries to find its pulse.
 
-### 4. Explicit Jargon Translation
+### 5. Explicit Jargon Translation
 
 If the data is dense with technical terms, Roberta won't assume you know them, but she won't talk down to you either. She will explicitly flag the jargon and offer a plain-language translation so you never get stuck in the weeds.
 
-### 5. The Reality Brake (Gordon's Help)
+### 6. The Reality Brake (Gordon's Help)
 
 If you ask a question that the provided documents simply do not answer, the system will not guess or hallucinate. Gordon drops an anchor, and Roberta clearly states the boundary: _"We don't have that information."_
 
