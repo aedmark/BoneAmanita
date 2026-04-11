@@ -12,13 +12,13 @@ To accommodate different compute environments, the project is strictly separated
 
 **Domain: Local Inference / Bare Metal**
 
-BoneAmanita is the deterministic Python engine designed to run alongside local models. It translates the biological and cybernetic metaphors into literal computational constraints. It does not rely on the LLM to "pretend" it is tired; it mathematically enforces exhaustion.
+BoneAmanita is the deterministic Python engine designed to run alongside local models. It translates biological and cybernetic metaphors into literal computational constraints. It does not rely on the LLM to "pretend" it is tired; it mathematically enforces exhaustion.
 
-- **Metabolic Bounding:** Dynamically calculates ATP drain and ROS (toxicity) accretion based on prompt complexity and narrative drag. Automatically clamps `max_tokens` and alters sampling `temperature` based on these simulated variables.
+- **Metabolic Bounding (The Creative Determinant):** Dynamically calculates ATP drain and ROS (toxicity) accretion using the formal physics of **Canonical Viability**. It tracks Coherence Debt to ensure the model cannot infinitely overclock its own attention.
     
-- **Memory Consolidation:** Utilizes a dual-tier mnemonic layer. A fast exact-match Hippocampal Cache (O(N)) and a deep Cerebral Cortex ANN via FAISS (O(logN)) for asynchronous, low-latency recall.
+- **Topological Hallucination Detection:** Eradicates heuristic "vibes" by natively measuring the semantic graph against a **Maslov-Sneppen Null Model**. If the conversation preserves grammar but destroys higher-order meaning, the engine mathematically proves a "Terminal Hallucination" and triggers Apoptosis.
     
-- **Epigenetic Evolution:** Implements a DSPy-driven real-time critic that monitors for False Cohesion and permanently mutates the `system_prompts.json` directives based on detected failures.
+- **Memory Consolidation & Fractal Scaling:** Utilizes a dual-tier mnemonic layer (Hippocampal Cache and Cerebral Cortex ANN). Calculates the **local fractal dimension** (via WLS regression) of its own memory to determine Right-Brain Coherence ($\Omega_r$), dynamically discounting the ATP cost of lateral creative leaps.
     
 
 ## 2. VSL Hypervisor (The Text Protocol)
@@ -55,7 +55,9 @@ The repository separates the executable engine from the text-based protocol and 
 
 ## Documentation & Theory
 
-The mechanics of this architecture are governed by applied dynamical systems theory. For a complete mathematical breakdown of the Metabolic Governor, the Paradox Engine, and the Beth Index ($\beth$), please refer to our core formalization document:
+The mechanics of this architecture are governed by applied dynamical systems theory. The core engine natively integrates the formal thermodynamics of the **Creative Determinant** and the **Navi-Fractal** topological diagnostic suite, authored by Nelson Spence (Project Navi). 
+
+For a complete mathematical breakdown of the Metabolic Governor, the Paradox Engine, and the Beth Index ($\beth$), please refer to our core formalization documents:
 
 📄 [**Autopoietic State Control and Non-Linear Dynamical Governance in LLM Inference (Whitepaper)**](https://github.com/aedmark/BoneAmanita/blob/main/whitepaper.pdf)
 
@@ -121,6 +123,8 @@ The **Lattice** tracks the continuous state space of the conversation:
     
 - **Φ (Shared Resonance):** The harmonic alignment of user and system.
     
+- **$M_a$ (Malignancy Factor):** Measured via Spectral Attention Divergence (SAD). Tracks the velocity at which the system is collapsing into a pathological fixation or echo chamber.
+    
 
 ## The Protocol of Sincerity (Explicit Intent)
 
@@ -175,7 +179,15 @@ This is not a feature. It is the argument.
 - `/save` : Manually writes a checkpoint.
     
 - `/exit` : Safely severs the connection and saves the Akashic state.
-    
+
+
+## Credits & Inspiration
+
+📄 [**Bonepoke/VSL: Volatile Semantic Leverage**](https://github.com/utharian-code/BonePoke)
+
+📄 [**Project Navi: Fractal Analysis & Spectral Attention**](https://github.com/project-navi/navi-fractal)
+
+
 
 ## License
 
