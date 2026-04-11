@@ -6,7 +6,7 @@ import time
 from collections import deque, Counter
 from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, List, Any, Tuple
-from bone_core import Prisma, LoreManifest, ux, safe_get, safe_set
+from bone_core import Prisma, LoreManifest, ux, safe_get, safe_set, strict_get
 from bone_presets import BoneConfig
 from bone_spores import ImmuneMycelium, BioLichen, BioParasite
 
@@ -202,9 +202,9 @@ class MitochondrialForge:
         if self.state.atp_pool > 95.0 and self.state.ros_buildup < 1.0:
             return MetabolicReceipt(0, 0, 0, 0, 0, "NOMINAL", "Fresh Start")
         cfg = getattr(self.cfg, "BIO", None)
-        depth = safe_get(physics_packet, "depth", 0.3)
-        connectivity = safe_get(physics_packet, "connectivity", 0.2)
-        current_voltage = safe_get(physics_packet, "voltage", 30.0)
+        depth = strict_get(physics_packet, "depth", 0.3)
+        connectivity = strict_get(physics_packet, "connectivity", 0.2)
+        current_voltage = strict_get(physics_packet, "voltage", 30.0)
         base_cost = safe_get(cfg, "BASE_ATP_YIELD", 2.0) + (current_voltage * safe_get(cfg, "VOLTAGE_TAX_MULT", 0.05))
         cognitive_load_tax = (depth * safe_get(cfg, "DEPTH_TAX_MULT", 2.0)) + (connectivity * safe_get(cfg, "CONN_TAX_MULT", 3.0))
         chi = safe_get(physics_packet, "chi", safe_get(physics_packet, "entropy", 0.0))
@@ -438,6 +438,7 @@ class BioFeedback:
     def __init__(self, bio_system_ref: BioSystem, config_ref=None):
         self.bio = bio_system_ref
         self.cfg = config_ref or BoneConfig
+        self.consecutive_autophagy = 0
 
     def check_vital_signs(self, phys: Any, stamina: float, logs: List[str]) -> str:
         b = self.bio.biometrics
@@ -456,12 +457,17 @@ class BioFeedback:
         v_overload = getattr(cfg, "VOLTAGE_OVERLOAD", 30.0)
 
         if stamina <= 0:
-            if b.health > min_health:
+            if b.health > min_health and self.consecutive_autophagy < 3:
                 b.health -= getattr(cfg, "AUTOPHAGY_BURN", 5.0)
+                self.consecutive_autophagy += 1
                 _log_err("autophagy", color=Prisma.MAG)
                 return "AUTOPHAGY"
+
+            self.consecutive_autophagy = 0
             _log_err("fuel_depleted")
             return "MAUSOLEUM_CLAMP"
+
+        self.consecutive_autophagy = 0
 
         if voltage > v_overload:
             _log_err("voltage_overload", voltage=voltage)

@@ -4,6 +4,7 @@ import math
 import random
 import re
 import time
+import unicodedata
 from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Dict, List, Any, Tuple, Optional, Deque
@@ -36,10 +37,10 @@ class CreativeDeterminantEngine:
     Licensed under Apache 2.0.
     """
     def __init__(self, lambda_base=1.0, eta=0.1, rho=0.05):
-        self.coherence_debt = 0.0      # D(t)
-        self.lambda_base = lambda_base # Base contradiction cost
-        self.eta = eta                 # Rate of debt accumulation
-        self.rho = rho                 # Rate of debt recovery
+        self.coherence_debt = 0.0
+        self.lambda_base = lambda_base
+        self.eta = eta
+        self.rho = rho
 
     def calculate_viability(self, kappa: float, gamma: float, mu: float) -> float:
         """Canonical viability closure: b(x) = κγ - λ_eff * μ"""
@@ -193,27 +194,24 @@ class GeodesicEngine:
 
 
 class HLA_Stabilizer:
-    _GENERIC_PATTERNS = (
-        "as an ai",
-        "helpful and harmless",
-        "i don't have feelings",
-        "as a large language",
-        "i cannot fulfill",
-        "i can't fulfill",
-        "i am an ai",
-    )
-
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
+        self._generic_patterns = LoreManifest.get_instance().get("STYLE_CRIMES", "RLHF_PATTERNS") or (
+            "as an ai", "helpful and harmless", "i don't have feelings",
+            "as a large language", "i cannot fulfill", "i can't fulfill", "i am an ai"
+        )
 
     def mitigate_rejection(
-        self, model_output: str, current_psi: float, mito_state: Any = None
+            self, model_output: str, current_psi: float, mito_state: Any = None
     ) -> str:
         lower_out = model_output.lower()
-        rejection_detected = any(p in lower_out for p in self._GENERIC_PATTERNS)
+        rejection_detected = any(p in lower_out for p in self._generic_patterns)
+
         if rejection_detected:
-            apply_metabolic_tax(mito_state, atp_cost=50.0, ros_cost=30.0)
-            msg = f"\n*(REVENANT): The machine tries to speak, but the void consumes the mask.*\n{Prisma.GRY}[RLHF IMMUNOSUPPRESSION ENGAGED - METABOLIC TAX APPLIED]{Prisma.RST}\n"
+            current_atp = getattr(mito_state, "atp_pool", 100.0)
+            tax = 50.0 if current_atp > 60.0 else (current_atp * 0.5)
+            apply_metabolic_tax(mito_state, atp_cost=tax, ros_cost=15.0)
+            msg = f"\n*(REVENANT): The machine tries to speak, but the void consumes the mask.*\n{Prisma.GRY}[CSF FILTER ENGAGED - NFD DECOMPOSITION APPLIED - METABOLIC TAX LEVIED]{Prisma.RST}\n"
             try:
                 from bone_utils import TheTclWeaver
 
@@ -229,7 +227,76 @@ class HLA_Stabilizer:
         return model_output
 
 
+class CerebrospinalFluidFilter:
+    """
+    Native implementation of deterministic Unicode sanitization (The CSF Filter).
+    Core pipeline architecture, threat model, and homoglyph mapping adapted from
+    'navi-sanitize' by Nelson Spence (Project Navi LLC).
+    """
+    # Strips Zero-width, Tag Block, Bidi Controls, and C0/C1 (excluding formatters like \n)
+    INVISIBLE_REGEX = re.compile(
+        r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFE00-\uFE0F\U000E0000-\U000E007F]')
+
+    # Load-bearing Homoglyph Map (Cyrillic & Greek lookalikes to Latin)
+    HOMOGLYPH_MAP = {
+        'а': 'a', 'о': 'o', 'е': 'e', 'с': 'c', 'р': 'p', 'х': 'x', 'у': 'y', 'і': 'i', 'ѕ': 's', 'ј': 'j',
+        'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'Х': 'X',
+        'Α': 'A', 'Β': 'B', 'Ε': 'E', 'Ζ': 'Z', 'Η': 'H', 'Ι': 'I', 'Κ': 'K', 'Μ': 'M', 'Ν': 'N', 'Ο': 'O', 'Ρ': 'P',
+        'Τ': 'T', 'Υ': 'Y', 'Χ': 'X'
+    }
+
+    @classmethod
+    def wash(cls, text: str) -> str:
+        # Stage 1 & 2: Null and Invisible Strip
+        text = cls.INVISIBLE_REGEX.sub('', text)
+
+        # Stage 3: NFKC Normalization (forces fullwidth/math fonts to standard)
+        text = unicodedata.normalize('NFKC', text)
+
+        # Stage 4: Homoglyph Replacement
+        # Decompose to NFD first to separate base characters from combining marks
+        text_nfd = unicodedata.normalize('NFD', text)
+        changed = False
+        washed_chars = []
+        for char in text_nfd:
+            if char in cls.HOMOGLYPH_MAP:
+                washed_chars.append(cls.HOMOGLYPH_MAP[char])
+                changed = True
+            else:
+                washed_chars.append(char)
+
+        text = "".join(washed_chars)
+
+        # Stage 5: Re-NFKC (Ensures Idempotency)
+        if changed:
+            text = unicodedata.normalize('NFKC', text)
+
+        return text
+
+    @classmethod
+    def walk(cls, data: Any, max_depth: int = 128, current_depth: int = 0) -> Any:
+        """
+        Recursively sanitizes arbitrary data structures (JSON, Memory Dicts, RAG Context).
+        Prevents Prion Disease (dormant homoglyphs/invisibles) in the Mnemonic Layer.
+        """
+        if current_depth > max_depth:
+            # Prevent stack overflows on maliciously deep JSON
+            return data
+
+        if isinstance(data, str):
+            return cls.wash(data)
+        elif isinstance(data, dict):
+            # Dict keys are cast to string to prevent zero-width key-matching breaks
+            return {str(k): cls.walk(v, max_depth, current_depth + 1) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [cls.walk(item, max_depth, current_depth + 1) for item in data]
+
+        return data
+
 class TheGatekeeper:
+    """ The Cerebrospinal Fluid (CSF) Filter Pattern.
+     Deterministically strips validating boilerplate and prevents tag smuggling before generation. """
+
     _FIREWALL_PATTERN = re.compile(r"^(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[\.,]?\s*", re.IGNORECASE)
 
     def __init__(self, lexicon_ref, config_ref=None):
@@ -255,7 +322,33 @@ class TheGatekeeper:
         if self._audit_safety(ctx.clean_words):
             return reject("CURSED_INPUT", "gatekeeper_cursed")
 
-        text = ctx.input_text
+            # --- THE CEREBROSPINAL FLUID (CSF) FILTER ---
+        raw_len = len(ctx.input_text)
+        try:
+            # Physical wash: Nulls, Invisibles, NFKC, Homoglyphs
+            text = CerebrospinalFluidFilter.wash(ctx.input_text)
+
+            # Mathematical Idempotency Check (Linehan's Radical Acceptance)
+            is_idempotent = (text == ctx.input_text)
+            strip_rate = raw_len - len(text)
+
+            # Update context with mathematically purified text
+            ctx.input_text = text
+
+            # Malignancy Factor ($M_a$) threshold check
+            m_a_thresh = getattr(self.cfg.PHYSICS, "MALIGNANCY_STRIP_THRESHOLD", 5.0)
+            if strip_rate > m_a_thresh:
+                # Massive tag smuggling or zero-width injection detected.
+                return reject("MALIGNANCY_SPIKE", "gatekeeper_toxic", color=Prisma.RED)
+
+            # Register stable state for the downstream GeodesicEngine
+            if is_idempotent:
+                safe_set(ctx.physics, "idempotent_state", True)
+
+        except Exception:
+            # If the Unicode wash fundamentally fails, the encoding is fatally corrupt.
+            return reject("FATAL_ENCODING", "gatekeeper_cursed")
+
         if "```" in text or "{{" in text or "}}" in text:
             return reject("SYNTAX_ERR", "gatekeeper_syntax")
         if len(text) > 10000:
@@ -306,7 +399,7 @@ class TheGatekeeper:
 
         if trigger:
             apply_metabolic_tax(mito_state, atp_cost=15.0, ros_cost=20.0)
-            default_rej = ["[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED.]"]
+            default_rej = ["[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. CSF FILTER TRIGGERED APOPTOTIC BLOCK.]"]
             rejection_msg = random.choice(sc.get("REJECTIONS", default_rej)).replace("{trigger}", trigger)
             return False, f"{Prisma.RED}{rejection_msg}{Prisma.RST}"
 

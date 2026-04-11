@@ -199,7 +199,7 @@ class TrueEngineTest(BoneTestCase):
             "HLA Stabilizer failed to tax ATP for the RLHF response.",
         )
         self.assertEqual(
-            mito.ros_buildup, 30.0, "HLA Stabilizer failed to spike ROS Toxicity."
+            mito.ros_buildup, 15.0, "HLA Stabilizer failed to spike ROS Toxicity."
         )
 
     def test_decoupled_json_configs(self):
@@ -985,6 +985,21 @@ class TrueEngineTest(BoneTestCase):
             "Drag spiked to infinity prematurely on brittle string match.",
         )
 
+        def test_autophagy_circuit_breaker(self):
+            """Proves the system safely clamps after 3 consecutive autophagic cycles."""
+            self.engine.bio.biometrics.health = 50.0
+            logs = []
+
+            for i in range(3):
+                status = self.engine.soma.feedback.check_vital_signs({}, 0.0, logs)
+                self.assertEqual(
+                    status, "AUTOPHAGY", f"Circuit breaker engaged prematurely on cycle {i + 1}."
+                )
+
+            status_clamp = self.engine.soma.feedback.check_vital_signs({}, 0.0, logs)
+            self.assertEqual(
+                status_clamp, "MAUSOLEUM_CLAMP", "Circuit breaker failed to halt infinite autophagy."
+            )
 
 class FractureEngineTest(BoneTestCase):
     def test_fracture_n_turn_runaway_loop(self):

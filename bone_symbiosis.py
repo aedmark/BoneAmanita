@@ -235,6 +235,15 @@ class SymbiosisManager:
                 "SYS",
             )
 
+        has_override = "[safe]" in text_lower or "# vsl-override" in text_lower
+        if has_override:
+            if self.shared.g_pool >= 1:
+                self.shared.g_pool -= 1
+                _log(f"{Prisma.CYN}[IMMUNOSUPPRESSANT] Override accepted. 1 Glimmer spent. Bypassing Checkpoint Council.{Prisma.RST}", "SYS")
+                return None
+            else:
+                _log(f"{Prisma.OCHRE}[IMMUNOSUPPRESSANT] Override denied. Insufficient Pooled Glimmers (G_pool = 0).{Prisma.RST}", "SYS")
+
         if cf_expect > 0.6 and beta > 0.5:
             safe_set(physics, "mu", 1.0)
             safe_set(physics, "narrative_drag", float("inf"))

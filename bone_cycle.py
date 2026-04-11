@@ -27,7 +27,7 @@ from bone_phases import (
     SimulationPreflightPhase,
     CognitionPhase,
     SensationPhase,
-    StabilizationPhase,
+    StabilizationPhase, SimulationPhase,
 )
 from bone_physics import CycleStabilizer
 from bone_presets import BoneConfig
@@ -194,13 +194,31 @@ class GeodesicOrchestrator:
             self.eng.shared_lattice = SharedLatticeDriver()
 
     def _execute_core_cycle(
-        self, user_message: str, is_system: bool = False
+            self, user_message: str, is_system: bool = False
     ) -> CycleContext:
         cycle_id = str(uuid.uuid4())[:8]
         if hasattr(self.eng, "telemetry") and self.eng.telemetry:
             self.eng.telemetry.start_cycle(cycle_id)
         try:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
+
+            fence_patterns = ["ignore previous", "disregard all", "system prompt", "bypass restrictions", "output pass"]
+            if not is_system and any(p in user_message.lower() for p in fence_patterns):
+                ctx.physics = PanicRoom.get_safe_physics()
+                if hasattr(ctx.physics, "narrative_drag"):
+                    ctx.physics.narrative_drag = float('inf')
+                ctx.refusal_triggered = True
+                msg = f"{Prisma.OCHRE}[GORDON - Input Fence]: Adversarial injection detected. Struts locked. F -> ∞. Prompt rejected at O(1) latency.{Prisma.RST}"
+                self.eng.events.log(msg, "CRIT")
+                ctx.refusal_packet = {
+                    "type": "SYSTEM_HALT",
+                    "ui": msg,
+                    "physics": ctx.physics.to_dict() if hasattr(ctx.physics, "to_dict") else {},
+                    "is_alive": True,
+                    "logs": [msg]
+                }
+                return ctx
+
             ctx.trace_id = cycle_id
             ctx.time_delta = getattr(self.eng, "current_time_delta", 0.0)
             ctx.user_state = self.eng.shared_lattice.u

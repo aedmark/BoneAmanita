@@ -21,6 +21,17 @@ def ux(section: str, key: str, default: Any = "") -> Any:
 def safe_get(obj: Any, key: str, default: Any = None) -> Any:
     return default if obj is None else (obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default))
 
+def strict_get(obj: Any, key: str, default: Any = None) -> Any:
+    """Anticipatory Design: Prevents silent zombie states on load-bearing keys."""
+    if obj is None:
+        print(f"{Prisma.RED}[STRUCTURAL WARNING] Zombie State Averted: Tried to access '{key}' on NoneType.{Prisma.RST}")
+        return default
+    val = obj.get(key) if isinstance(obj, dict) else getattr(obj, key, None)
+    if val is None:
+        print(f"{Prisma.RED}[STRUCTURAL WARNING] Missing load-bearing key: '{key}'. Defaulting to {default}.{Prisma.RST}")
+        return default
+    return val
+
 def safe_set(obj: Any, key: str, value: Any) -> None:
     if obj is None:
         return

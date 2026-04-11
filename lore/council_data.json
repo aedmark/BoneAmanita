@@ -109,11 +109,12 @@
       }
     },
     "BENEDICT|GORDON": {
-      "name": "THE TRIBUNAL",
-      "log": "\ud83c\udfad STAGE MANAGER: The lenses align. Benedict and Gordon fuse into [THE TRIBUNAL]. Judgment rendered by unwavering law.",
+      "name": "THE DIGNITY LOCK",
+      "log": "\ud83c\udfad STAGE MANAGER: The lenses align. Benedict and Gordon fuse into [THE DIGNITY LOCK]. Gordon acts as the Terminal Escaper. Benedict executes NFD Decomposition. Infinite friction applied.",
       "adjustments": {
-        "kappa": 0.5,
-        "beta_index": -0.3,
+        "kappa": 0.8,
+        "beta_index": -0.5,
+        "narrative_drag": 50.0,
         "entropy": -0.4
       }
     },
