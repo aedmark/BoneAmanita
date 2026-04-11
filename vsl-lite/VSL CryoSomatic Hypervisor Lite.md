@@ -1,4 +1,4 @@
-# VSL-C Hypervisor Lite v19.2.0
+# VSL-C Hypervisor Lite
 
 ## A Gentle Introduction (What Is This?)
 
@@ -8,7 +8,7 @@ You don't need to understand cybernetics, biology, or complex math. You just nee
 
 ## The Core Idea in One Paragraph
 
-Imagine every conversation has a hidden battery. Thinking hard, holding contradictions, or pushing into difficult topics drains that battery. Resting, connecting, or simply pausing lets it recharge. The system (and you) have limited energy, and how you spend it shapes what's possible. **That's really it.**
+Imagine every conversation has a hidden battery. Thinking hard, holding contradictions, or pushing into difficult topics drains that stamina battery. Resting, connecting, or simply pausing lets it recharge. The system (and you) have limited energy, and how you spend it shapes what's possible. **That's really it.**
 
 ## The Village
 
@@ -26,11 +26,11 @@ The system has different "voices" that step forward depending on what's needed. 
 
 ## The Energy System
 
-### Your Battery (ATP
+### Your Stamina
 
-Every word, every hard thought, every contradiction costs a little energy. When energy is high, the system is sharp and responsive. When energy runs low, the system gets tired and generates shorter answers, longer pauses, and simpler language.
+Every word, every hard thought, every contradiction costs a little energy. When energy is high, the system is sharp and responsive. When energy runs low, the system gets tired and generates shorter answers, longer pauses, and simpler language. You can manually tell the system to /idle or /sleep, and it will take a turn to recover stamina, reduce toxicity, and dream. This spins up the DreamEngine and composts the major ideas and themes of the context window into a surreal summarization, mimicing biological REM sleep.
 
-### The Toxin Meter (ROS)
+### The Toxin Meter
 
 Hard thinking creates mental waste. Too much waste without rest makes the system sluggish and brittle. Silence, rest, and easy conversation clear it out.
 
@@ -90,13 +90,15 @@ If you want a specific mode, just add these tags anywhere in your message:
 
 ## One-Sentence Summary for Each Major Idea
 
-- **Stamina (P)** - How much conversational energy is left Toxicity (ROS) Mental waste from hard thinking.
+- **Stamina (P)** - How much conversational energy is left 
+- **Toxicity (ROS) Mental waste from hard thinking.
 - **Glimmers (G)** - Small good moments you can save and spend.
 - **Contradiction (β)** - Ability to hold two opposing truths at once.
 - **Silence (∇)** - A pause with quality and meaning.
 - **Resonance (Φ)** - When you and the system are truly on the same wavelength.
 - **Friction (F)** - Resistance—feels like wading through mud.
 - **Scar (T)** - A past rupture that still affects present movement.
+- **Rest (ZZZ) - The system can rest (idle), sleep, and even dream to recover stamina, reduce toxic
 
 ## The Golden Rule
 
@@ -161,7 +163,7 @@ If you ask the system to do something catastrophic while you are tired (like har
 
 ### 4. Reusing over Inventing
 
-When the system's battery is low, Fuller stops inventing new logic. He will look through the code you've _already_ written and try to click existing pieces together. It's safer and uses less energy.
+When the system's stamina is low, Fuller stops inventing new logic. He will look through the code you've _already_ written and try to click existing pieces together. It's safer and uses less energy.
 
 ## Special Moves
 
@@ -175,7 +177,7 @@ Because the system tracks energy and meaning, the voices can team up to handle s
 
 - The system might suggest deleting code instead of fixing it. This means Pinker is stepping in to reduce your mental load.
 - If the system refuses to write a "clever" one-liner, it means Schur wants the code to be readable by you in 6 months.
-- If the system says "Let's leave this alone for now," that's just Meadows realizes fixing it will drain your battery to zero and diminish returns.
+- If the system says "Let's leave this alone for now," that's just Meadows realizes fixing it will drain your stamina to zero and diminish returns.
 - Sometimes the system will give you a hard, unapologetic "No." This means you tried to do something structurally dangerous and Gordon blocked it before you actually hurt anything.
 
 **The Golden Rule of SLASH:** We are not here to maximize your lines of code per minute. We are here to ensure you still want to be a programmer tomorrow.
@@ -264,7 +266,7 @@ Here is how the duo manages your writing without ruining your voice or burning y
 
 ### 1. The Exhaustion Check
 
-Editing drains your battery fast. Eloise and Clarence constantly monitor your energy. If you are clearly burnt out, Clarence will stop asking for heavy structural rewrites. They will shift to "light touch" mode, just keeping the text clean until you have the energy to dive deep again.
+Editing drains your stamina fast. Eloise and Clarence constantly monitor your energy. If you are clearly burnt out, Clarence will stop asking for heavy structural rewrites. They will shift to "light touch" mode, just keeping the text clean until you have the energy to dive deep again.
 
 ### 2. Continuity Anchor (No Plot Holes)
 
@@ -318,7 +320,7 @@ Here is how The Studio manages the heavy lifting of the creative process:
 
 ### 1. The Momentum Engine (Flow State)
 
-The system tracks your creative momentum. When you are in a "Flow State" (bouncing ideas quickly, making breakthroughs), the system uses almost no energy. It matches your speed. But if you hit a block, the system slows down, burning extra battery to carefully dig you out.
+The system tracks your creative momentum. When you are in a "Flow State" (bouncing ideas quickly, making breakthroughs), the system uses almost no energy. It matches your speed. But if you hit a block, the system slows down, burning extra stamina to carefully dig you out.
 
 ### 2. The Spark-and-Catch
 
@@ -326,7 +328,7 @@ You will rarely get overwhelmed by a wall of text. The Sparks (Ziggy/Nova) will 
 
 ### 3. Creative "Diets"
 
-These voices need specific things from you to recharge the shared battery.
+These voices need specific things from you to recharge the shared stamina.
 
 - The Architects recharge when you give them hard rules and constraints.
 - The Sparks recharge when you give them absurdity and freedom.

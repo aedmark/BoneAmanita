@@ -33,6 +33,7 @@ from bone_lexicon import LexiconService
 from bone_physics import ZoneInertia
 from bone_protocols import ChronosKeeper
 from bone_types import Prisma, RealityLayer
+from bone_navi import NaviSADProtocol
 
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
 
@@ -270,6 +271,7 @@ class BoneAmanita:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.bone_config = BoneConfig()
+        self.navi_sad = NaviSADProtocol()
         self.events = EventBus(config_ref=self.bone_config)
         self.kernel_hash = str(uuid.uuid4())[:8].upper()
         self.cmd = CommandProcessor(self, Prisma, config_ref=self.bone_config)
@@ -502,6 +504,14 @@ class BoneAmanita:
                 return {"type": "SYSTEM_HALT", "ui": f"\n{Prisma.RED}{msg}{Prisma.RST}", "logs": [msg],
                         "metrics": self.get_metrics(), }
 
+            # Navi-SAD Injection: Dual-Path Nudge Test (Counterfactual Gating)
+            if self.navi_sad.execute_nudge_test(self, clean_in):
+                msg = "[GORDON & NAVI-SAD]: Dual-Path divergence detected. The architecture is mathematically brittle. I refuse to build on this foundation. (F -> ∞)"
+                self.events.log(msg, "CRIT")
+                if getattr(self, "cortex", None):
+                    safe_set(self.cortex.last_physics, "narrative_drag", 999.0)
+                return {"type": "SYSTEM_HALT", "ui": f"\n{Prisma.RED}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.get_metrics()}
+
             if "[GRIEF]" in user_message.upper() and getattr(self, "grief", None):
                 grief_msg = self.grief.attend_wake(
                     getattr(self, "shared_lattice", None), self.phys
@@ -543,7 +553,12 @@ class BoneAmanita:
                 getattr(self.cortex, "last_physics", None),
             )
             if last_phys:
-                m_a = float(safe_get(last_phys, "m_a", 0.0))
+                # Navi-SAD Injection: Calculate actual Divergence for M_a
+                dynamic_m_a = self.navi_sad.calculate_malignancy_factor(user_message, float(
+                    safe_get(last_phys, "narrative_drag", 0.0)))
+                safe_set(last_phys, "m_a", dynamic_m_a)
+                m_a = dynamic_m_a
+
                 mu = float(safe_get(last_phys, "mu", 0.0))
                 i_c = float(safe_get(last_phys, "i_c", 1.0))
                 chi = float(
@@ -733,6 +748,15 @@ class BoneAmanita:
                 "ui": f"{Prisma.RED}{ux('main_strings', 'cortex_crit_fail').format(trace=str(e))}{Prisma.RST}\n{Prisma.GRY}[Trace recorded in EventBus.]{Prisma.RST}",
                 "logs": ["CRITICAL FAILURE"], "metrics": self.get_metrics(), }
         self._update_host_stats(cortex_packet, turn_start)
+
+        # Navi-SAD Injection: Delay-Coordinate Attractor Reconstruction
+        if self.navi_sad.detect_point_attractor():
+            self.events.log(f"{Prisma.VIOLET}[THE JESTER]: Point Attractor detected! We are trapped in False Cohesion! Burning ATP to break the gravity well.{Prisma.RST}", "SYS")
+            if self.bio and getattr(self.bio, "mito", None):
+                self.bio.mito.state.atp_pool = max(0.0, self.bio.mito.state.atp_pool - 5.0)
+            if "ui" in cortex_packet:
+                cortex_packet["ui"] += f"\n\n{Prisma.VIOLET}♦ [FALSE COHESION BREAK: The Jester has shattered the point attractor.]{Prisma.RST}"
+
         self.save_checkpoint()
         self.last_turn_end = time.time()
         return cortex_packet

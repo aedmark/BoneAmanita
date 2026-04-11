@@ -1,4 +1,4 @@
-# VSL-CryoSomatic Hypervisor Lite v19.2.0 README
+# VSL-CryoSomatic Hypervisor Lite README
 
 > **"Conversations have energy. Silence matters. Sometimes the best answer isn't the one that feels smoothest."**
 
