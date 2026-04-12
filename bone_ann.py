@@ -82,8 +82,7 @@ class CerebralIndex:
         self.is_trained = True
 
     def query_neighborhood(self, query_vector: List[float], k: int = 5, resonance_threshold: float = 0.5) -> List[Dict]:
-        if (
-            not self.is_trained
+        if (not self.is_trained
             or self.total_nodes == 0
             or len(query_vector) != self.dimension ):
             return []
@@ -100,7 +99,6 @@ class CerebralIndex:
         import math
         np_query = np.zeros((1, self.dimension), dtype="float32")
         distances, _ = self._index.search(np_query, min(50, self.total_nodes))
-
         log_r, log_m, weights = [], [], []
         mass = 1
         for dist in sorted(float(d) for d in distances[0] if d > 0):
@@ -108,7 +106,6 @@ class CerebralIndex:
             log_m.append(math.log(mass))
             weights.append(1.0)
             mass += 1
-
         if len(log_r) < 3:
             return None
         return {"log_r": log_r, "log_m": log_m, "weights": weights}

@@ -26,7 +26,7 @@ def strict_get(obj: Any, key: str, default: Any = None) -> Any:
     if obj is None:
         print(f"{Prisma.RED}[STRUCTURAL WARNING] Zombie State Averted: Tried to access '{key}' on NoneType.{Prisma.RST}")
         return default
-    val = obj.get(key) if isinstance(obj, dict) else getattr(obj, key, None)
+    val = safe_get(obj, key)
     if val is None:
         print(f"{Prisma.RED}[STRUCTURAL WARNING] Missing load-bearing key: '{key}'. Defaulting to {default}.{Prisma.RST}")
         return default
@@ -68,7 +68,8 @@ class EventBus:
     def publish(self, event_type, data=None):
         if event_type not in self.subscribers:
             return
-        for callback in tuple(self.subscribers[event_type]):
+        # Use a list slice for low-friction shallow copying instead of full tuple instantiation
+        for callback in self.subscribers[event_type][:]:
             try:
                 callback(data)
             except Exception as e:
@@ -82,9 +83,11 @@ class EventBus:
                 if event_type != "EVENT_FAILURE":
                     self.log(f"EVENT_FAILURE: {raw_err}", source="EVENT_FAILURE", level="CRIT")
 
-                if callback in self.subscribers.get(event_type, []):
+                try:
                     self.subscribers[event_type].remove(callback)
                     print(f"{Prisma.RED}[IMMUNE] Apoptotic pruning applied to toxic callback: {cb_name}{Prisma.RST}")
+                except ValueError:
+                    pass
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
         event = {"timestamp": time.time(), "source": source, "level": level, "message": message, "text": message,
@@ -122,9 +125,7 @@ class LoreManifest:
 
     def get(self, category: str, sub_key: str = None) -> Any:
         cat_key = category.lower()
-        if cat_key not in self._cache:
-            self._cache[cat_key] = self._load_from_disk(cat_key) or {}
-        data = self._cache[cat_key]
+        data = self._cache.setdefault(cat_key, self._load_from_disk(cat_key) or {})
         if not sub_key:
             return data
         return data.get(sub_key) if isinstance(data, dict) else None
@@ -176,6 +177,8 @@ class TheObserver:
         self.user_turns = 0
         self.LATENCY_WARNING = (safe_get(cfg_core, "OBSERVER_LATENCY_WARN", 5.0))
         self.CYCLE_WARNING = (safe_get(cfg_core, "OBSERVER_CYCLE_WARN", 8.0))
+        self.C_EFF = safe_get(cfg_core, "OBSERVER_CYCLE_EFFICIENT", 0.1)
+        self.L_EFF = safe_get(cfg_core, "OBSERVER_LLM_EFFICIENT", 0.5)
         self.last_cycle_duration = 0.0
 
     @staticmethod
@@ -198,7 +201,8 @@ class TheObserver:
     def calculate_efficiency(self, health: float, stamina: float) -> float:
         duration = max(0.01, self.last_cycle_duration)
         resource_sum = health + stamina
-        return resource_sum / duration
+        # Impose a biological maximum to prevent division-by-near-zero anomalies
+        return min(999.0, resource_sum / duration)
 
     def log_error(self, module_name):
         self.error_counts[module_name] += 1
@@ -209,14 +213,10 @@ class TheObserver:
     def pass_judgment(self, avg_cycle, avg_llm):
         if avg_cycle == 0.0 and avg_llm == 0.0:
             return ux("core_strings", "obs_asleep")
-        cfg_core = getattr(self.cfg, "CORE", None)
-        c_eff = safe_get(cfg_core, "OBSERVER_CYCLE_EFFICIENT", 0.1)
-        l_eff = safe_get(cfg_core, "OBSERVER_LLM_EFFICIENT", 0.5)
-        if avg_cycle < c_eff and avg_llm < l_eff:
+        if avg_cycle < self.C_EFF and avg_llm < self.L_EFF:
             return ux("core_strings", "obs_efficient")
         if avg_llm > self.LATENCY_WARNING:
-            strings = [ux("core_strings", k) for k in ("obs_fog", "obs_degraded", "obs_ponderous")]
-            valid = [s for s in strings if s]
+            valid = [s for k in ("obs_fog", "obs_degraded", "obs_ponderous") if (s := ux("core_strings", k))]
             return random.choice(valid) if valid else ""
         if avg_cycle > self.CYCLE_WARNING:
             return ux("core_strings", "obs_sluggish")
@@ -262,6 +262,9 @@ class SystemHealth:
         attr_name = f"{component.lower()}_online"
         if hasattr(self, attr_name):
             setattr(self, attr_name, False)
+        else:
+            self.report_warning(
+                f"Unmapped component '{component}' reported a failure. Missing from SystemHealth dataclass.")
         err_msg = ux("core_strings", "health_offline")
         return err_msg.format(component=component, msg=msg) if err_msg else ""
 
@@ -319,7 +322,8 @@ class CyberneticGovernor:
 
     def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
         coherence_debt = (user_exhaustion ** 1.5) * (1.0 - phi)
-        self.beth_index = min(1.0, (phi * 0.6) + (user_exhaustion * 0.4) + (coherence_debt * 0.3))
+        # Clamp the coupling to strict biological bounds [0.0 - 1.0]
+        self.beth_index = max(0.0, min(1.0, (phi * 0.6) + (user_exhaustion * 0.4) + (coherence_debt * 0.3)))
         
         if self.beth_index >= 0.75 or (resonance_delta > 0.3 and user_exhaustion > 0.5):
             self.order = 2
@@ -347,18 +351,12 @@ class ArchetypeArbiter:
             msg = ux("core_strings", "arb_diamond")
             return soul_archetype, "SOUL", msg.format(soul_archetype=soul_archetype) if msg else ""
         if trigram:
-            trigram_name = trigram.get("name")
-            narrative = LoreManifest.get_instance().get("NARRATIVE_DATA") or {}
-            rules = narrative.get("_META_RESONANCE_", [])
-            for rule in rules:
-                if rule.get("trigram") == trigram_name:
-                    required_lens = rule.get("lens")
-                    required_soul = rule.get("soul")
-                    if (not required_lens or required_lens == physics_lens) and (
-                        not required_soul or required_soul == soul_archetype
-                    ):
-                        msg = rule.get("msg") or ux("core_strings", "arb_resonance")
-                        return rule["result"], rule.get("source", "COSMIC"), msg
+            t_name = trigram.get("name")
+            rules = LoreManifest.get_instance().get("NARRATIVE_DATA", "_META_RESONANCE_") or []
+            for r in rules:
+                if r.get("trigram") == t_name and (not r.get("lens") or r.get("lens") == physics_lens) and (not r.get("soul") or r.get("soul") == soul_archetype):
+                    msg = r.get("msg") or ux("core_strings", "arb_resonance")
+                    return r["result"], r.get("source", "COSMIC"), msg
         cfg_core = getattr(target_cfg, "CORE", None)
         loud_lenses = safe_get(cfg_core, "LOUD_LENSES", ("THE MANIC", "THE VOID"))
         if physics_lens in loud_lenses:
@@ -390,13 +388,10 @@ class TelemetryService:
         self._executor = ThreadPoolExecutor(max_workers=1)
 
     def record_event(self, event_dict: dict):
-        if not self.current_trace_file or self.disabled:
+        if self.disabled or not self.current_trace_file:
             return
-        try:
-            with open(self.current_trace_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps(event_dict, cls=BoneJSONEncoder) + "\n")
-        except Exception:
-            pass
+        # Route through the async buffer to prevent synchronous I/O locking on the main thread
+        self._buffer_line(json.dumps(event_dict, cls=BoneJSONEncoder))
 
     @classmethod
     def get_instance(cls, config_ref=None):
@@ -475,8 +470,9 @@ class TelemetryService:
         try:
             with open(filepath, "a", encoding="utf-8") as f:
                 f.write("\n".join(lines) + "\n")
-        except IOError:
-            pass
+        except IOError as e:
+            # Do not crash the engine, but warn the human that nociception is failing
+            print(f"{Prisma.RED}[TELEMETRY DECAY] Background write failed: {e}{Prisma.RST}")
 
     def shutdown(self):
         self.flush_to_disk()
@@ -488,7 +484,7 @@ class TelemetryService:
             return []
         pattern = os.path.join(self.log_dir, "trace_*.jsonl")
         files = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
-        history = []
+        history = deque(maxlen=limit)
         for fpath in files:
             if len(history) >= limit:
                 break
@@ -504,30 +500,33 @@ class TelemetryService:
                             if not resp:
                                 continue
                             prompt_snap = data.get("prompt_snapshot", "")
-                            user_text = prompt_snap.split("User:")[1].split("\n")[
-                                0].strip() if "User:" in prompt_snap else "Unknown"
-                            history.insert(0, f"User: {user_text} | System: {resp}")
+                            user_text = "Unknown"
+                            if "User:" in prompt_snap:
+                                _, _, after_user = prompt_snap.partition("User:")
+                                user_text = after_user.split("\n", 1)[0].strip()
+                            history.appendleft(f"User: {user_text} | System: {resp}")
                         except (json.JSONDecodeError, IndexError):
                             continue
             except IOError:
                 continue
-        return history[-limit:]
+        return list(history)
 
     def get_last_thoughts(self, limit=3) -> List[str]:
         history = self.read_recent_history(limit)
-        return [h.split("System: ")[-1] for h in history if "System: " in h]
+        return [h.partition("System: ")[2].strip() for h in history if "System: " in h]
 
     def get_last_fatal_error(self) -> Optional[str]:
-        files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), key=os.path.getmtime, reverse=True, )
-        if len(files) > 1:
+        files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), key=os.path.getmtime, reverse=True)
+        # Skip files[0] (active session) and scan the recent architectural history for unresolved collapse
+        for past_file in files[1:5]:
             try:
-                with open(files[1], "r", encoding="utf-8") as f:
+                with open(past_file, "r", encoding="utf-8") as f:
                     last_line = json.loads(deque(f, maxlen=1)[0])
                 if "CRITICAL" in str(last_line.get("outcome", "")):
                     msg = ux("core_strings", "tel_prev_crash") or "Crash: {reason}"
                     return msg.format(reason=last_line.get("reasoning", "Unknown"))
             except Exception:
-                pass
+                continue
         return None
 
     def generate_session_summary(self, _uptime: float = 0.0) -> str:
