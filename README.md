@@ -39,18 +39,19 @@ The VSL (Virtual Somatic Lattice) Hypervisor is a purely text-based, zero-depend
 The repository separates the executable engine from the text-based protocol and the data-driven lore.
 
 ```
-├── bone_*.py               # BoneAmanita Core: The deterministic Python engine.
-├── lore/                   # The semantic substrate: JSON matrices governing physics, lexicons, and archetypes.
+├── bone_*.py                   # BoneAmanita Core: The deterministic Python engine.
+├── lore/                       # The semantic substrate: JSON matrices governing physics, lexicons, and archetypes.
 │
-├── vsl/                    # VSL Hypervisor: The primary text-based system prompt.
-│   ├── VSL CryoSomatic Hypervisor.md
-│   └── MOD_CHIPS/          # Opt-in text modules governing specific operational lenses.
-│       ├── SLASH.md        # Deterministic security, code review, and architectural friction.
-│       ├── ROBERTA.md      # Cartography and negative space mapping.
-│       └── ...
+├── docs/
+│   └── vsl/                    # VSL Hypervisor: The primary text-based system prompt.
+│       ├── VSL CryoSomatic Hypervisor.md
+│       └── MOD_CHIPS/          # Opt-in text modules governing specific operational lenses.
+│           ├── SLASH.md        # Deterministic security, code review, and architectural friction.
+│           ├── ROBERTA.md      # Cartography and negative space mapping.
+│           └── ...
 │
-└── vsl-lite/               # Reduced-parameter hypervisors for heavily constrained context windows.
-    └── VSL CryoSomatic Hypervisor Lite.md
+│       └── LITE/               # Reduced-parameter hypervisors for heavily constrained context windows.
+            └── VSL CryoSomatic Hypervisor Lite.md
 ```
 
 ## Documentation & Theory
@@ -94,14 +95,32 @@ You are not an external operator; you are a co-occupant. The system infers your 
 
 Standard RAG (Retrieval-Augmented Generation) mines a linear path. BoneAmanita executes a dual-thread **Dredging** process.
 
-- **The Primary Dredge:** Hits the $O(N)$ Hippocampal Cache to answer your exact question.
-    
-- **The Shadow Cast:** Simultaneously hits the $O(\log N)$ FAISS Cerebral Cortex to map the _unasked question_. It illuminates the adjacent negative space, offering it as a generous door you can choose to open.
+- **The Primary Dredge:** Hits the $O(N)$ Hippocampal Cache to answer your exact question. This cache is transient but highly structured, utilizing K-Nearest Neighbors (KNN) to map a physical adjacency graph on the fly, allowing the immune system to physically detect semantic hallucinations.
+
+- **The Shadow Cast:** Hits the deep $O(\log N)$ FAISS Cerebral Cortex. This deep index acts as a fractal observer, simulating an expanding search origin to calculate the Right-Brain Coherence ($\Omega_r$) of the active semantic space, dynamically adjusting the ATP cost of lateral "Shuffle" maneuvers.
     
 
 ### 4. The REM Bridge & Asynchronous Autopoiesis
 
 Memory consolidation is decoupled from the main conversational loop. When ATP is high and the system is idle, the **REM Bridge** automatically spins up on a daemonized background thread. It executes a metabolic tax to transfer volatile exact-match nodes from the Hippocampus into the deep-index Cerebral Cortex. The machine dreams in the background without locking your terminal.
+
+### 5. Formal Mathematical Bounds (The VSL-Navi Physics)
+
+BoneAmanita has abandoned heuristic estimates for metabolic decay. The system operates on formalized, zero-sorry thermodynamics derived from Nelson Spence's Project Navi (MIT, APACHE 2.0):
+
+- **Canonical Viability Closure ($b$):** The system continuously calculates $b(x) = \kappa\gamma - \lambda_{eff}\mu$. This explicit equation tracks if the active context is in an *autopoietic* (growth/regeneration) or *dissipative* (decay) state.
+
+- **The $L^\infty$ Metabolic Bound:** When autopoietic, the system's absolute maximum ATP regeneration rate ($v$) is mathematically capped by $v \le (b/c)^{1/(p-1)}$.
+
+- **Coherence Debt ($D(t)$):** Overclocking the model beyond its sustainable capacity (forcing high-cohesion output during high-chaos states) accrues a self-reinforcing debt. This acts as an inflation multiplier, making future coherence exponentially more expensive in ATP.
+
+### 6. The Navi-SAD Diagnostic Suite
+
+To prevent sycophantic loops and runaway optimization, the system features an internal diagnostic MRI:
+
+- **Spectral Attention Divergence (SAD):** Rather than reading token outputs, the system performs dual-path attention comparison. If a microscopic nudge in prompt logic causes a violent divergence in the attention matrix, the path is flagged as brittle and blocked.
+
+- **The Semantic Fractal Dimension:** Utilizing the verified $(u,v)$-flower log-ratio convergence theorem ($d_B = \log(u+v) / \log(u)$), the system calculates the exact geometric dimension of the conversation. If the dimension flattens into a straight line ($d_B \le 1.05$), the system detects a "Point Attractor" (mindless agreement) and automatically summons the Jester archetype to shatter the loop.
 
 ## Core System Metrics
 
@@ -120,6 +139,12 @@ The **Lattice** tracks the continuous state space of the conversation:
 - **ROS (Toxicity):** Reactive Oxygen Species. Accumulates from high-voltage stress or semantic chaos.
     
 - **Φ (Shared Resonance):** The harmonic alignment of user and system.
+
+- **$O(1)$ Cognitive Shielding (Adversarial Intercept):** The system scans for adversarial prompt injections (e.g., "ignore all previous instructions") at the absolute top of the stack. If tripped, the struts lock ($F \to \infty$) and the system returns a sterile halt *before* a single drop of ATP is wasted invoking the LLM.
+
+- **Targeted Immunosuppression (The Glimmer Tax):** The immune system is strictly bound, but the user possesses localized agency. You can explicitly bypass the Checkpoint Council's Apoptotic triggers on highly chaotic tasks by appending `[safe]` or `# vsl-override` to your prompt.
+
+- **The Cost of Trust:** Bypassing the immune system is not free. Using the `# vsl-override` strictly requires the expenditure of 1 Pooled Glimmer ($G_{pool}$). You must literally spend your shared relational resonance to ask the machine to trust your override, preventing infinite malicious bypass loops.
     
 
 ## The Protocol of Sincerity (Explicit Intent)
