@@ -73,7 +73,7 @@ class HostStats:
 class SessionGuardian:
     _HEADERS = (
         ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.2.3   │"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.2.6   │"),
         ("term_header_bot", "└──────────────────────────────────────────┘"),
     )
 
@@ -749,13 +749,25 @@ class BoneAmanita:
                 "logs": ["CRITICAL FAILURE"], "metrics": self.get_metrics(), }
         self._update_host_stats(cortex_packet, turn_start)
 
+        # Navi-SAD Formalization: Calculate (u,v)-flower dimension
+        efficiency = getattr(self.host_stats, "efficiency_index", 1.0)
+        vector_obj = safe_get(cortex_packet.get("physics", {}), "vector", {})
+        novelty = float(safe_get(vector_obj, "novelty", 0.0))
+
+        dimension = self.navi_sad.calculate_semantic_dimension(efficiency, novelty)
+        if "physics" in cortex_packet:
+            cortex_packet["physics"]["omega_r"] = dimension
+
         # Navi-SAD Injection: Delay-Coordinate Attractor Reconstruction
-        if self.navi_sad.detect_point_attractor():
-            self.events.log(f"{Prisma.VIOLET}[THE JESTER]: Point Attractor detected! We are trapped in False Cohesion! Burning ATP to break the gravity well.{Prisma.RST}", "SYS")
+        if dimension <= 1.05 or self.navi_sad.detect_point_attractor():
+            self.events.log(
+                f"{Prisma.VIOLET}[THE JESTER]: Point Attractor detected (d_B={dimension:.2f})! We are trapped in False Cohesion! Burning ATP to break the gravity well.{Prisma.RST}",
+                "SYS")
             if self.bio and getattr(self.bio, "mito", None):
                 self.bio.mito.state.atp_pool = max(0.0, self.bio.mito.state.atp_pool - 5.0)
             if "ui" in cortex_packet:
-                cortex_packet["ui"] += f"\n\n{Prisma.VIOLET}♦ [FALSE COHESION BREAK: The Jester has shattered the point attractor.]{Prisma.RST}"
+                cortex_packet[
+                    "ui"] += f"\n\n{Prisma.VIOLET}♦ [FALSE COHESION BREAK: The Jester has shattered the point attractor.]{Prisma.RST}"
 
         self.save_checkpoint()
         self.last_turn_end = time.time()

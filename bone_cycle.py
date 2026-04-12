@@ -254,25 +254,30 @@ class GeodesicOrchestrator:
 
                 cd_engine = getattr(getattr(self.eng, "observer", None), "cd_engine", None)
                 if cd_engine:
+                    # Apply the Lean 4 formalization L_infty bounds natively
+                    delta_atp, delta_ros = cd_engine.execute_metabolic_tick(viability)
+
                     if viability < 0:
-                        penalty_tax = cd_engine.calculate_atp_cost(base_cost=2.0, viability_potential=viability)
-                        new_atp = self.eng.bio.mito.state.atp_pool - penalty_tax
+                        # Incorporate debt into the ROS penalty
+                        delta_ros += (debt * 5.0)
+
+                        new_atp = self.eng.bio.mito.state.atp_pool + delta_atp  # delta_atp is negative here
                         if new_atp <= 0.0:
                             self.eng.bio.mito.state.atp_pool = 0.0
                             self.eng.events.log("CRITICAL: CD Penalty depleted ATP. Autophagy imminent.", "BIO")
                         else:
                             self.eng.bio.mito.state.atp_pool = new_atp
 
-                        self.eng.bio.mito.state.ros_buildup += (debt * 5.0)
+                        self.eng.bio.mito.state.ros_buildup += delta_ros
 
-                        if penalty_tax > 5.0:
+                        if abs(delta_atp) > 5.0:
                             self.eng.events.log(
                                 f"{Prisma.RED}[CD METABOLISM] Viability threshold broken (b={viability:.2f}). Coherence Debt: {debt:.2f}. Exponential ATP drain applied.{Prisma.RST}",
                                 "BIO"
                             )
                     elif viability > 0:
-                        regen = viability * 5.0
-                        self.eng.bio.mito.state.atp_pool = min(100.0, self.eng.bio.mito.state.atp_pool + regen)
+                        self.eng.bio.mito.state.atp_pool = min(100.0, self.eng.bio.mito.state.atp_pool + delta_atp)
+                        self.eng.bio.mito.state.ros_buildup = max(0.0, self.eng.bio.mito.state.ros_buildup + delta_ros)
             """ The Null Model / Hallucination Metric (Moog's Apoptotic Gate)
                             Native Maslov-Sneppen rewiring based on Nelson Spence (Project Navi).
                         """

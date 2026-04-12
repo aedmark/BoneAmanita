@@ -3,11 +3,26 @@
 # under the Apache 2.0 License.
 
 from collections import deque
+import math
 
 class NaviSADProtocol:
     def __init__(self, history_size: int = 10):
         self.history_size = history_size
         self.attention_proxy_history = deque(maxlen=history_size)
+
+    def calculate_semantic_dimension(self, efficiency_index: float, novelty: float) -> float:
+        """
+        Calculates the semantic fractal dimension based on the (u,v)-flower
+        log-ratio convergence theorem: d_B = log(u+v) / log(u).
+        """
+        # 1. Map to u (direct path). Must be > 1 to satisfy the theorem's hu: 1 < u requirement.
+        u = max(1.1, 1.1 + (efficiency_index * 5.0))
+
+        # 2. Map to v (lateral path).
+        v = max(0.0, novelty * 10.0)
+
+        # 3. Calculate Box-Counting Dimension (d_B)
+        return math.log(u + v) / math.log(u)
 
     def calculate_malignancy_factor(self, current_text: str, current_drag: float) -> float:
         """

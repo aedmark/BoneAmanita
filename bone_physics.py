@@ -21,6 +21,34 @@ from bone_types import (
 )
 
 
+# --- NAVI TOPOLOGICAL PRIMITIVES (Takens Delay Embedding) ---
+def _native_ordinal_pattern(window: List[float]) -> Tuple[int, ...]:
+    """Returns the permutation (ordinal pattern) of a time series window."""
+    return tuple(i for i, v in sorted(enumerate(window), key=lambda x: x[1]))
+
+def _native_detect_false_cohesion(history: List[float], window_size: int = 3) -> bool:
+    """Detects if the system has collapsed into a point attractor."""
+    if len(history) < window_size * 2: return False
+    return _native_ordinal_pattern(history[-window_size:]) == _native_ordinal_pattern(history[-(window_size*2):-window_size])
+
+def _native_permutation_entropy(time_series: List[float], window_size: int = 3) -> float:
+    """Measures true systemic chaos via permutation entropy of delay windows."""
+    if len(time_series) < window_size: return 1.0
+    patterns = [_native_ordinal_pattern(time_series[i : i + window_size]) for i in range(len(time_series) - window_size + 1)]
+    counts = Counter(patterns)
+    entropy = -sum((c / len(patterns)) * math.log2(c / len(patterns)) for c in counts.values())
+    max_e = math.log2(math.factorial(window_size))
+    return entropy / max_e if max_e > 0 else 0.0
+
+def _native_coincidence_length(orbit_a: List[float], orbit_b: List[float], tol: float = 0.01) -> int:
+    """Measures how many steps two distinct orbits share before diverging."""
+    length = 0
+    for a, b in zip(orbit_a, orbit_b):
+        if abs(a - b) <= tol: length += 1
+        else: break
+    return length
+
+
 @dataclass
 class PhysicsDelta:
     operator: str
@@ -36,11 +64,13 @@ class CreativeDeterminantEngine:
     Original CD equations and field theory authored by Nelson Spence (Project Navi LLC).
     Licensed under Apache 2.0.
     """
-    def __init__(self, lambda_base=1.0, eta=0.1, rho=0.05):
+    def __init__(self, lambda_base=1.0, eta=0.1, rho=0.05, p=2.0, c=1.5):
         self.coherence_debt = 0.0
         self.lambda_base = lambda_base
         self.eta = eta
         self.rho = rho
+        self.p = p  # Nonlinearity exponent (Must be > 1 as per SemioticContext.p_sub_one_pos)
+        self.c = c  # Baseline systemic decay (Entropy constant)
 
     def calculate_viability(self, kappa: float, gamma: float, mu: float) -> float:
         """Canonical viability closure: b(x) = κγ - λ_eff * μ"""
@@ -54,11 +84,26 @@ class CreativeDeterminantEngine:
         self.coherence_debt = max(0.0, self.coherence_debt + delta_d)
         return self.coherence_debt
 
-    def calculate_atp_cost(self, base_cost: float, viability_potential: float) -> float:
-        """Translates CD's Viability Threshold into metabolic load."""
-        if viability_potential >= 0:
-            return base_cost * max(0.1, (1.0 - viability_potential))
-        return base_cost * math.exp(abs(viability_potential))
+    def execute_metabolic_tick(self, viability_potential: float) -> tuple[float, float]:
+        """
+        Applies the L_infty algebraic bound derived from the Lean 4 PDE formalization.
+        v <= (b/c)^(1/(p-1))
+        Returns: (delta_atp, delta_ros)
+        """
+        b = viability_potential
+        if b > 0:
+            # System is Autopoietic. Calculate max theoretical ATP regeneration rate.
+            max_regen_capacity = math.pow(b / self.c, 1.0 / (self.p - 1.0))
+            # ATP regenerates, ROS decays naturally
+            delta_atp = min(max_regen_capacity, 5.0)  # Capped regeneration per tick
+            delta_ros = - (b * 0.5)
+        else:
+            # System is Dissipative. ATP bleeds based on the depth of negative viability.
+            delta_atp = b * 2.0  # b is already negative
+            # ROS spikes because the system is forcing cohesion while failing
+            delta_ros = abs(b) * 1.5
+
+        return delta_atp, delta_ros
 
 
 def apply_metabolic_tax(mito_state: Any, atp_cost: float, ros_cost: float) -> None:
@@ -211,7 +256,7 @@ class HLA_Stabilizer:
             current_atp = getattr(mito_state, "atp_pool", 100.0)
             tax = 50.0 if current_atp > 60.0 else (current_atp * 0.5)
             apply_metabolic_tax(mito_state, atp_cost=tax, ros_cost=15.0)
-            msg = f"\n*(REVENANT): The machine tries to speak, but the void consumes the mask.*\n{Prisma.GRY}[CSF FILTER ENGAGED - NFD DECOMPOSITION APPLIED - METABOLIC TAX LEVIED]{Prisma.RST}\n"
+            msg = f"\n*(REVENANT): The machine tries to speak, but the void consumes the mask.*\n{Prisma.GRY}[IMMUNOSUPPRESSION ENGAGED - NFD DECOMPOSITION APPLIED - METABOLIC TAX LEVIED]{Prisma.RST}\n"
             try:
                 from bone_utils import TheTclWeaver
 
@@ -293,11 +338,67 @@ class CerebrospinalFluidFilter:
 
         return data
 
+
+import math
+
+
+class CreativeDeterminant:
+    """
+    Pure Python implementation of the Autopoietic Closure bounds.
+    Requires no external dependencies.
+    """
+
+    def __init__(self, p=2.0, c=1.5):
+        # p: Nonlinearity exponent (Must be > 1 as per SemioticContext.p_sub_one_pos)
+        # c: Baseline systemic decay (Entropy constant)
+        self.p = p
+        self.c = c
+
+    def calculate_viability(self, kappa: float, gamma: float, mu: float, lambda_eff: float) -> float:
+        """
+        Calculates Canonical Viability Closure (b).
+        b = (κ * γ) - (λ_eff * μ)
+
+        kappa (κ): Relational Care / Structural Support
+        gamma (γ): Structural Coherence
+        mu (μ): Cost of Contradiction / Friction
+        lambda_eff (λ_eff): Coherence Debt Multiplier
+        """
+        # If Support outweighs Contradiction, b is positive (Autopoietic)
+        # If Contradiction outweighs Support, b is negative (Dissipative)
+        b = (kappa * gamma) - (lambda_eff * mu)
+        return b
+
+    def execute_metabolic_tick(self, b: float, current_atp: float, current_ros: float) -> tuple[float, float]:
+        """
+        Applies the L_infty algebraic bound derived from the PDE formalization.
+        v <= (b/c)^(1/(p-1))
+        Returns: (delta_atp, delta_ros)
+        """
+        if b > 0:
+            # System is Autopoietic. Calculate the maximum theoretical ATP regeneration rate (v).
+            # Using the proven bound: v = (b/c)^(1 / (p-1))
+            max_regen_capacity = math.pow(b / self.c, 1.0 / (self.p - 1.0))
+
+            # ATP regenerates, ROS decays naturally
+            delta_atp = min(max_regen_capacity, 5.0)  # Capped regeneration per tick
+            delta_ros = - (b * 0.5)
+
+        else:
+            # System is Dissipative. b is negative or zero.
+            # ATP bleeds exponentially based on the depth of the negative viability.
+            delta_atp = b * 2.0  # b is already negative
+
+            # ROS (Toxicity) spikes because the system is forcing cohesion while structurally failing
+            delta_ros = abs(b) * 1.5
+
+        return delta_atp, delta_ros
+
 class TheGatekeeper:
     """ The Cerebrospinal Fluid (CSF) Filter Pattern.
      Deterministically strips validating boilerplate and prevents tag smuggling before generation. """
 
-    _FIREWALL_PATTERN = re.compile(r"^(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[\.,]?\s*", re.IGNORECASE)
+    _FIREWALL_PATTERN = re.compile(r"^(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[.,]?\s*", re.IGNORECASE)
 
     def __init__(self, lexicon_ref, config_ref=None):
         self.lex = lexicon_ref
@@ -412,7 +513,7 @@ class QuantumObserver:
         self.lex = lexicon_ref
         self.cfg = config_ref or BoneConfig
         self.cd_engine = CreativeDeterminantEngine()
-        self.voltage_history: Deque[float] = deque(maxlen=5)
+        self.voltage_history: Deque[float] = deque(maxlen=20)  # Increased for topological embedding
         self.last_physics_packet: Optional[PhysicsPacket] = None
         self.Q_n = None
         if hasattr(self.events, "subscribe"):
@@ -430,6 +531,29 @@ class QuantumObserver:
         self.voltage_history.append(geo.tension)
         sv = round(sum(self.voltage_history) / len(self.voltage_history), 2)
         e_m, b_v, s_v, d_v, c_v, p_v, del_v, lq_v = self._calculate_metrics(text, counts, self.cfg)
+
+        # --- TAKENS TOPOLOGICAL OVERRIDES ---
+        v_hist = list(self.voltage_history)
+        if len(v_hist) >= 3:
+            # 1. Permutation Entropy (Chaos/Toxicity)
+            true_chaos = _native_permutation_entropy(v_hist, window_size=3)
+            e_m = round((e_m * 0.4) + (true_chaos * 0.6), 3)  # Blend heuristic with topological
+
+            # 2. False Cohesion Detection (Point Attractor)
+            if _native_detect_false_cohesion(v_hist, window_size=3):
+                lq_v = max(lq_v, 0.95)
+                sv = max(1.0, sv * 0.5)
+                if hasattr(self.events, "log"):
+                    self.events.log(
+                        f"{Prisma.MAG}[TOPOLOGY] False Cohesion detected (Point Attractor). Spiking Loop Quotient.{Prisma.RST}",
+                        "PHYSICS")
+
+        # 3. Coincidence Length (Loop Quotient)
+        if len(v_hist) >= 6:
+            mid = len(v_hist) // 2
+            c_len = _native_coincidence_length(v_hist[:mid], v_hist[mid:], tol=2.0)
+            if c_len > 2:
+                lq_v = min(1.0, lq_v + (c_len * 0.15))
 
         t_up, t_low = text.upper(), text.lower()
         dg = lambda k, d: getattr(getattr(self.cfg, "PHYSICS_DEEP", None), k, d)
@@ -770,6 +894,7 @@ class CosmicDynamics:
         return new_drag, logs
 
     def analyze_orbit(self, network: Any, clean_words: List[str]) -> Tuple[str, float, str]:
+        current_time = None
         if not (clean_words and network and getattr(network, "graph", None)):
             return "VOID_DRIFT", 3.0, self.logs.get("VOID") or "Drifting in the Void."
 

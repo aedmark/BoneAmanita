@@ -16,7 +16,15 @@ from bone_drivers import SharedLatticeDriver
 from bone_gui import CycleReporter
 from bone_machine import TheParadoxEngine
 from bone_main import BoneAmanita
-from bone_physics import TheGatekeeper, ChromaScope, GeodesicEngine
+from bone_physics import (
+    TheGatekeeper,
+    ChromaScope,
+    GeodesicEngine,
+    _native_ordinal_pattern,
+    _native_detect_false_cohesion,
+    _native_permutation_entropy,
+    _native_coincidence_length
+)
 from bone_presets import BoneConfig
 from bone_spores import MycelialNetwork, SubconsciousStrata
 from bone_symbiosis import SymbiosisManager
@@ -1467,6 +1475,75 @@ class FractureEngineTest(BoneTestCase):
             )
         except AttributeError as e:
             self.fail(f"[FAIL] Somatic unity fractured during execution: {e}")
+
+        def test_fracture_semantic_dimension_formalization(self):
+            print("\n--- FRACTURE 14: Semantic Dimension (fd-formalization) ---")
+            from bone_navi import NaviSADProtocol
+            navi = NaviSADProtocol()
+
+            # 1. Test the pure math (Point Attractor vs Fractal)
+            # High efficiency, zero novelty -> should be a point attractor (dimension ~ 1.0)
+            dim_flat = navi.calculate_semantic_dimension(efficiency_index=1.0, novelty=0.0)
+            self.assertAlmostEqual(dim_flat, 1.0, places=2, msg="[FAIL] Flat logic did not yield a dimension of 1.0.")
+
+            # High novelty -> should be fractal (dimension > 1.2)
+            dim_fractal = navi.calculate_semantic_dimension(efficiency_index=0.5, novelty=0.8)
+            self.assertGreater(dim_fractal, 1.2, "[FAIL] Novel logic failed to expand the fractal dimension.")
+
+            # 2. Test the engine integration (False Cohesion Trigger)
+            initial_atp = self.engine.bio.mito.state.atp_pool
+            self.engine.host_stats.efficiency_index = 1.0
+
+            # Mock cortex to return 0 novelty, forcing a dimension of 1.0
+            with patch.object(self.engine.cortex, 'process',
+                              return_value={"physics": {"vector": {"novelty": 0.0}}, "ui": "I agree completely."}):
+                result = self.engine.process_turn("Do you agree?")
+
+            self.assertIn("FALSE COHESION BREAK", result.get("ui", ""),
+                          "[FAIL] The Jester failed to shatter the mathematically proven point attractor.")
+            self.assertLess(self.engine.bio.mito.state.atp_pool, initial_atp,
+                            "[FAIL] ATP was not burned to break the false cohesion.")
+            self.assertIn("omega_r", result.get("physics", {}),
+                          "[FAIL] Right-Brain Coherence (omega_r) was not appended to the physics packet.")
+
+            print("  [SUCCESS] Semantic dimension formalization correctly triggered the False Cohesion break.")
+
+
+class TopologicalPrimitivesTest(BoneTestCase):
+    """
+    Rigorously tests the zero-dependency Takens Delay Embedding math.
+    (Route B - Discrete Combinatorial Logic)
+    """
+    def test_ordinal_pattern(self):
+        # A sequence of [1.2, 1.8, 1.5] should sort to indices (0, 2, 1)
+        self.assertEqual(_native_ordinal_pattern([1.2, 1.8, 1.5]), (0, 2, 1), "[FAIL] Ordinal pattern extraction failed.")
+
+        # A descending sequence should reverse indices
+        self.assertEqual(_native_ordinal_pattern([3.0, 2.0, 1.0]), (2, 1, 0), "[FAIL] Descending pattern extraction failed.")
+
+    def test_false_cohesion(self):
+        # Two identical consecutive windows of size 3 (Total length 6)
+        history_stuck = [1.0, 5.0, 2.0, 1.0, 5.0, 2.0]
+        self.assertTrue(_native_detect_false_cohesion(history_stuck, window_size=3), "[FAIL] Point Attractor went undetected.")
+
+        # A changing signal should not flag as False Cohesion
+        history_changing = [1.0, 2.0, 3.0, 3.0, 2.0, 1.0]
+        self.assertFalse(_native_detect_false_cohesion(history_changing, window_size=3), "[FAIL] False positive on Cohesion trigger.")
+
+    def test_permutation_entropy(self):
+        # A flatline or monotonically increasing signal only has ONE pattern. Entropy = 0.
+        flatline = [1.0, 2.0, 3.0, 4.0, 5.0]
+        self.assertEqual(_native_permutation_entropy(flatline, window_size=3), 0.0, "[FAIL] Flatline entropy must be exactly 0.0.")
+
+        # A chaotic signal should have measurable entropy (> 0.0)
+        chaotic = [1.0, 5.0, 2.0, 8.0, 1.0, 9.0]
+        self.assertGreater(_native_permutation_entropy(chaotic, window_size=3), 0.0, "[FAIL] Chaotic signal yielded zero entropy.")
+
+    def test_coincidence_length(self):
+        # Two orbits that run parallel for exactly 3 steps before diverging
+        orbit_a = [1.0, 2.0, 3.0, 4.0, 5.0]
+        orbit_b = [1.0, 2.0, 3.0, 9.0, 9.0]
+        self.assertEqual(_native_coincidence_length(orbit_a, orbit_b, tol=0.1), 3, "[FAIL] Orbit coincidence length miscalculated.")
 
 
 if __name__ == "__main__":
