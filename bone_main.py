@@ -73,7 +73,7 @@ class HostStats:
 class SessionGuardian:
     _HEADERS = (
         ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.2.6   │"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.3.0   │"),
         ("term_header_bot", "└──────────────────────────────────────────┘"),
     )
 
@@ -192,10 +192,10 @@ class ConfigWizard:
         mode_choice = input(
             f"{Prisma.paint(ux('main_strings', 'prompt_mode'), 'C')} "
         ).strip()
-        boot_mode = self._MODES.get(mode_choice, "ADVENTURE")
+        boot_mode = ConfigWizard._MODES.get(mode_choice, "ADVENTURE")
         step3 = ux("main_strings", "step3_backend")
         print(f"\n{Prisma.paint(step3, 'W')}")
-        for k, name, col in self._BACKENDS:
+        for k, name, col in ConfigWizard._BACKENDS:
             print(f"{k}. {Prisma.paint(name, col)}")
         choice = input(f"{Prisma.paint('>', 'C')} ").strip()
         config = {"user_name": user_name, "boot_mode": boot_mode}
@@ -236,7 +236,7 @@ class ConfigWizard:
         print(f"  5. {Prisma.paint('WARM', '0')}    - No HUD. Immersive Text Only.")
 
         ui_choice = input(f"{Prisma.paint('>', 'C')} ").strip()
-        ui_mode = self._UI_MODES.get(ui_choice, "MINIMAL")
+        ui_mode = ConfigWizard._UI_MODES.get(ui_choice, "MINIMAL")
 
         config["default_ui_depth"] = ui_mode
 

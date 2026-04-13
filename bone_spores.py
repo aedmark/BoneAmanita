@@ -986,14 +986,12 @@ class MycelialNetwork:
         ]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BA_1926",
+            "genome": "BA_01930",
             "session_id": self.session_id,
             "parent_id": self.session_id,
-            "meta": {
-                "timestamp": time.time(),
+            "meta": {"timestamp": time.time(),
                 "final_health": health,
-                "final_stamina": stamina,
-            },
+                "final_stamina": stamina,},
             "trauma_vector": final_vector,
             "joy_vectors": top_joy or [],
             "joy_legacy": joy_legacy_data,
@@ -1006,8 +1004,7 @@ class MycelialNetwork:
             "world_atlas": world_atlas or {},
             "village_data": village_data,
             "seeds": seed_list,
-            "fossils": list(self.fossils),
-        }
+            "fossils": list(self.fossils)}
         return self.loader.save_spore(self.filename, data)
 
     @staticmethod

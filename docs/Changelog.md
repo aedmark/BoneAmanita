@@ -1,3 +1,51 @@
+### **BONEAMANITA v19.3.1 "The SLASH Ephemeralization"**
+
+_The SLASH Council completes a targeted, four-pass sweep through the Physics engine and the Village architecture. Focus placed on translating heuristic python loops into C-level set logic, sealing spatial entropy leaks, and enforcing human-readable syntax thresholds._
+
+#### **⚙️ PHYSICS & TOPOLOGY (`bone_physics.py`)**
+- **C-Level CSF Pipeline:** Replaced the manual iterative loop in the `CerebrospinalFluidFilter` with a compiled `str.translate` mapping table, vastly reducing the metabolic latency of the lexical firewall.
+- **Spatial Geometry Vectorization:** Ephemeralized `CosmicDynamics` mapping. Replaced $O(N \times M)$ nested word-edge traversals with native `O(1)` Set Intersections to instantly lock onto load-bearing geodesic hubs.
+- **Temporal Loop Stabilization:** Disarmed a brittle walrus operator (`:=`) in the orbital analyzer that caused fatal `NoneType` math errors during the system's first cognitive revolution.
+- **Artifact Purge:** Deleted the uninstantiated, duplicate `CreativeDeterminant` class, strictly enforcing reliance on the unified, debt-tracking `CreativeDeterminantEngine`.
+
+#### **🏘️ THE VILLAGE ARCHITECTURE (`bone_village.py`)**
+- **Global Entropy Unfrozen:** `TheCartographer` now instantiates localized, ephemeral `random.Random` seeds. It no longer overwrites the system's overarching stochastic pool, preventing artificial stabilization of the Jester's Loop Quotient ($LQ$).
+- **Runaway Entropy Vented:** Fixed an oversight where `TheCartographer` bled infinite entropy into the physics packet. Environmental rot is now properly vented back to baseline (`0.0`) after a storm breaks.
+- **Syntactic Friction Purge:** Flattened deep `safe_get` recursive nightmares and unrolled nested walrus traps in `TownHall` and `DeathGen`. Replaced computationally tense `MirrorGraph` dictionary comprehensions with smooth, in-place decay matrices.
+- **Exception Flow Eradicated:** `TheCartographer` no longer relies on `try/except ValueError` to catch empty generators when pruning dead spatial graphs, falling back to explicit, mathematically pure candidate filtering.
+- **Tinkerer Memory Ephemeralization:** Replaced massive `O(N)` list counts and `O(N log N)` sorts with native `Counter` dictionaries and mathematically pure `frozenset` hashes for calculating passive item deltas.
+
+#### **💻 KERNEL & CORE (`bone_main.py`)**
+- **Static Reference Alignment:** Resolved `ConfigWizard` linter errors by correctly routing UI configuration variables (`_MODES`, `_BACKENDS`) to the class namespace rather than relying on detached `self` parameters.
+
+---
+
+### **BONEAMANITA v19.3.0 "The SLASH Optimization"**
+
+_A comprehensive, four-pass architectural refactor executed across the core biological and cognitive engines. Focused on purging syntactic friction, flattening memory topology, reducing maintainer cognitive load, and mathematically bounding dynamic feedback loops._
+
+#### **⚙️ CORE INFRASTRUCTURE (`bone_core.py`)**
+- **Asynchronous Telemetry Routing:** Eradicated synchronous main-thread I/O blocking in `record_event`. Telemetry now routes exclusively through the async buffer.
+- **Topological Flattening ($O(1)$ Optimization):** Replaced $O(N^2)$ memory shifting in `read_recent_history` using `deque.appendleft`, and removed $O(N)$ double-check penalties during apoptotic event pruning.
+- **Aperture Completeness in Crash Detection:** Widened the temporal search radius in `get_last_fatal_error` to catch terminal states hidden in older history files.
+- **Feedback Stabilization:** Clamped the `Beth Index` floor to absolute biological zero ($0.0$) and capped infinite systemic efficiency spikes to prevent false anomaly detection.
+
+#### **🫀 SOMATIC & METABOLIC SYSTEMS (`bone_body.py`)**
+- **Closure Allocation Purge:** Flattened massive inline ASTs by purging nested `lambda` closures in `SynestheticCortex._derive_reflex` and `BioFeedback.check_vital_signs`, ending cyclical garbage collection churn.
+- **Biological Half-Lives:** Converted linear hormone subtraction to true asymptotic half-life decay curves, eliminating jagged sawtooth waves at the biological floor.
+- **Thermal Runaway Cap:** Imposed a mathematical ceiling on environmental entropy drain, preventing highly chaotic prompts from vaporizing the system's `health` in a single tick.
+- **Autophagy Hysteresis:** Replaced the hard reset on starvation strikes with a gradual cooldown (`-1` per tick), closing a micro-oscillation exploit that allowed infinite ATP cannibalization.
+- **Substrate Poisoning Fix:** Prevented global `LoreManifest` dictionary poisoning by enforcing shallow copies for local `ENZYME_MAP` instantiation.
+
+#### **🧠 COGNITIVE & NOETIC LOOPS (`bone_brain.py`)**
+- **$O(N \log N)$ Defragmentation Drag Eradicated:** The `DreamEngine` now topologically filters dead synapses *before* sorting them by weight, drastically speeding up REM cycles.
+- **Lexicon Poisoning Exploit Closed:** Unknown words hallucinatory strings are no longer universally tagged as `kinetic` (which generated runaway ATP). They are rate-limited and mapped to neutral `structure`.
+- **DSPy Audit Flattening:** Extracted the Affective Real-Time Critic into a dedicated method (`_run_affective_audit`), allowing the `process` loop to breathe and surfacing hidden networking errors.
+- **Mercy Rule Calibration:** Fixed the "magic number" trap in the generation loop. The Cortex now fully exhausts its retry limit before yielding to infinite narrative friction.
+- **Nociception Enabled:** Removed silent failures across the board. Substrate Queue write failures, `MitochondrialForge` dictionary bugs, and Governor formatting errors now scream to the console instead of dying in the void.
+
+---
+
 ### **BONEAMANITA v19.2.6 "The Semantic Dimension"**
 
 _Continuing the integration of formal verification into the biological runtime. We have wired the $(u,v)$-flower log-ratio convergence theorem directly into the Navi-SAD protocol, replacing vague heuristics for "conversational depth" with a zero-dependency, mathematically sound fractal dimension calculator._
