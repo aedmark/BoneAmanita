@@ -1,6 +1,6 @@
 """bone_commands.py"""
 
-import shlex
+import time, shlex
 from typing import Dict, Callable, List, Optional
 from bone_presets import BonePresets, BoneConfig
 from bone_core import LoreManifest, Prisma, ux
@@ -11,25 +11,22 @@ class CommandStateInterface:
         self.eng = engine_ref
         self.P = prisma_ref
         self.Config = config_ref
-
     def log(self, text: str, category: str = "CMD"):
         if hasattr(self.eng, "events"):
             self.eng.events.log(text, category)
         else:
             print(f"[{category}] {text}")
-
     def trigger_visual_cortex(self) -> Optional[Dict]:
         if hasattr(self.eng, "process_turn"):
             return self.eng.process_turn("LOOK", is_system=True)
         return None
-
     def modify_resource(self, resource: str, delta: float):
+        vitals = self.get_vitals()
         if resource == "stamina":
-            self.eng.stamina = max(0.0, self.eng.stamina + delta)
+            self.eng.stamina = max(0.0, min(self.eng.stamina + delta, vitals.get("max_stamina", 100.0)))
         elif resource == "atp":
             if hasattr(self.eng, "bio"):
-                self.eng.bio.mito.state.atp_pool = max(0.0, self.eng.bio.mito.state.atp_pool + delta)
-
+                self.eng.bio.mito.state.atp_pool = max(0.0, min(self.eng.bio.mito.state.atp_pool + delta, vitals.get("max_atp", 200.0)))
     def get_resource(self, resource: str) -> float:
         if resource == "stamina": return getattr(self.eng, "stamina", 0.0)
         if resource == "health": return getattr(self.eng, "health", 0.0)
@@ -37,7 +34,6 @@ class CommandStateInterface:
             try: return self.eng.bio.mito.state.atp_pool
             except AttributeError: return 0.0
         return 0.0
-
     def save_state(self) -> str:
         mind = getattr(self.eng, "mind", None)
         if not mind or not getattr(mind, "mem", None):
@@ -58,15 +54,22 @@ class CommandStateInterface:
         atlas_data = nav.export_atlas() if nav else None
         mito_traits = mito_state.__dict__ if mito_state else {}
         antibodies = list(immune.active_antibodies) if immune else None
+        payload = {"health": self.eng.health,
+            "stamina": self.eng.stamina,
+            "mutations": {},
+            "trauma_accum": getattr(self.eng, "trauma_accum", {}),
+            "joy_history": [],
+            "mitochondria_traits": mito_traits,
+            "antibodies": antibodies,
+            "soul_data": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None,
+            "continuity": continuity_packet,
+            "world_atlas": atlas_data,
+            "village_data": None}
         try:
-            return self.eng.mind.mem.save(health=self.eng.health, stamina=self.eng.stamina, mutations={},
-                                          trauma_accum=getattr(self.eng, "trauma_accum", {}), joy_history=[],
-                                          mitochondria_traits=mito_traits, antibodies=antibodies, soul_data=(
-                    self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None), continuity=continuity_packet, world_atlas=atlas_data, village_data=None, )
+            return self.eng.mind.mem.save(**payload)
         except Exception as e:
             self.log(f"{self.P.RED}Save failed at memory core: {e}{self.P.RST}", "ERR")
             return ux("command_state", "unreachable_error")
-
     def get_vitals(self) -> Dict[str, float]:
         metrics = self.eng.get_metrics()
         cmd_cfg = getattr(self.Config, "COMMANDS", None)
@@ -74,12 +77,10 @@ class CommandStateInterface:
                 "atp": metrics.get("atp", 0.0), "max_health": getattr(self.Config, "MAX_HEALTH", 100.0),
                 "max_stamina": getattr(self.Config, "MAX_STAMINA", 100.0),
                 "max_atp": getattr(cmd_cfg, "STATUS_MAX_ATP", 200.0) if cmd_cfg else 200.0, }
-
     def get_inventory(self) -> List[str]:
         if hasattr(self.eng, "gordon"):
             return getattr(self.eng.gordon, "inventory", [])
         return []
-
     def get_navigation_report(self) -> str:
         if not hasattr(self.eng, "navigator") or not hasattr(self.eng, "phys"):
             return ux("command_state", "nav_offline")
@@ -90,7 +91,6 @@ class CommandStateInterface:
         if nav and packet:
             return nav.report_position(packet)
         return ux("command_state", "nav_unresponsive")
-
     def get_soul_status(self) -> Optional[str]:
         soul = getattr(self.eng, "soul", None)
         if soul:
@@ -100,7 +100,6 @@ class CommandStateInterface:
 class ResourceTax:
     def __init__(self, state: CommandStateInterface):
         self.state = state
-
     def levy(self, _context: str, costs: Dict[str, float]) -> bool:
         limits = {"stamina": "exhausted", "atp": "starving"}
         for res, limit_key in limits.items():
@@ -112,17 +111,15 @@ class ResourceTax:
             if (cost := costs.get(res, 0.0)) > 0:
                 self.state.modify_resource(res, -cost)
         return True
-
+        
 class CommandRegistry:
     def __init__(self, state: CommandStateInterface):
         self.state = state
         self.commands: Dict[str, Callable] = {}
         self.help_text: Dict[str, str] = {}
-
     def register(self, name: str, func: Callable, help_str: str):
         self.commands[name] = func
         self.help_text[name] = help_str
-
     def execute(self, text: str) -> bool:
         if not text.startswith("/"): return False
         try:
@@ -152,24 +149,22 @@ class CommandProcessor:
                     "podcast": "Assembles the Parliament to generate a podcast script",
                     "journal": "Generates a narrative diary entry of the session so far",
                     "shuffle": "Explicit intent [ !s ]: The Jester's Gambit. Breaks loops, resets drag, lateral shift."}
-        for name in ["help", "status", "save", "inventory", "map", "mode", "debug", "exit",
-                     "soul", "look", "reload", "truth", "use", "hud", "idle", "mod", "grief",
-                     "layer", "inject", "trauma", "podcast", "journal", "shuffle"]:
-            desc = ux("command_descriptions", name) or defaults.get(name, "")
-            self.registry.register(f"/{name}", getattr(self, f"_cmd_{name}"), desc)
-
+        for attr in dir(self):
+            if attr.startswith("_cmd_"):
+                name = attr[5:]
+                desc = ux("command_descriptions", name) or defaults.get(name, "")
+                self.registry.register(f"/{name}", getattr(self, attr), desc)
     def execute(self, text: str):
+        if not text.startswith("/"):
+            return False
         if hasattr(self.interface.eng, "reality_stack"):
             stack = self.interface.eng.reality_stack
             rules = stack.get_grammar_rules()
             if not rules.get("allow_commands", True):
                 msg = ux("command_alerts", "reality_lock")
-                self.interface.log(f"{self.P.RED}{msg.format(depth=stack.current_depth)}{self.P.RST}", "ERR", )
+                self.interface.log(f"{self.P.RED}{msg.format(depth=stack.current_depth)}{self.P.RST}", "ERR")
                 return True
-        if text.startswith("/"):
-            return self.registry.execute(text)
-        return False
-
+        return self.registry.execute(text)
     def _cmd_help(self, _parts):
         header = ux("help_menu", "header")
         phase_pfx = ux("help_menu", "phase_prefix")
@@ -181,12 +176,9 @@ class CommandProcessor:
             f"{self.P.GRY}{phase_pfx}{self.interface.get_soul_status() or def_phase}{self.P.RST}\n",]
         if not hasattr(self, "_cmd_to_cat_cache"):
             self._cmd_to_cat_cache = {cmd: cat for cat, cmds in structure.items() for cmd in cmds}
-        buckets = {}
-        for cat in structure.keys(): buckets[cat] = []
-        buckets[uncat] = []
+        buckets = {cat: [] for cat in list(structure.keys()) + [uncat]}
         for cmd, desc in self.registry.help_text.items():
-            cat = self._cmd_to_cat_cache.get(cmd, uncat)
-            buckets.setdefault(cat, []).append((cmd, desc))
+            buckets[self._cmd_to_cat_cache.get(cmd, uncat)].append((cmd, desc))
         for cat, cmds in buckets.items():
             if not cmds:
                 continue
@@ -197,22 +189,18 @@ class CommandProcessor:
         lines.append(f"{self.P.GRY}{footer}{self.P.RST}")
         self.interface.log("\n".join(lines))
         return True
-
     def _cmd_status(self, _parts):
         v = self.interface.get_vitals()
         menu_cfg = LoreManifest.get_instance(config_ref=self.interface.Config).get("ux_strings", "status_menu") or {}
         b_f, b_e = menu_cfg.get("bar_filled", "█"), menu_cfg.get("bar_empty", "░")
-
         def render(lbl_key, default_lbl, curr, max_v, color):
             lbl = menu_cfg.get(lbl_key, default_lbl)
             filled = int(max(0.0, min(1.0, curr / max(1.0, max_v))) * 10)
             return f"{lbl}{color}{b_f*filled}{b_e*(10-filled)}{self.P.RST} {curr:.0f}"
-
         self.interface.log("\n".join([render("health_label", "Health:  ", v['health'], v['max_health'], self.P.RED),
             render("stamina_label", "Stamina: ", v['stamina'], v['max_stamina'], self.P.GRN),
             render("energy_label", "Energy:  ", v['atp'], v['max_atp'], self.P.YEL)]))
         return True
-
     def _cmd_mode(self, parts):
         if len(parts) < 2:
             self.interface.log(ux("command_alerts", "mode_usage"))
@@ -237,7 +225,6 @@ class CommandProcessor:
             msg = ux("command_alerts", "mode_switched")
             self.interface.log(msg.format(mode=mode_name))
         return True
-
     def _cmd_save(self, _parts):
         res = self.interface.save_state()
         cfg = getattr(self.interface.Config, "COMMANDS", None)
@@ -249,7 +236,6 @@ class CommandProcessor:
             msg = ux("command_alerts", "save_success")
             self.interface.log(f"{self.P.GRN}{msg.format(res=res)}{self.P.RST}")
         return True
-
     def _cmd_inventory(self, _parts):
         items = self.interface.get_inventory()
         P = self.interface.P
@@ -264,7 +250,6 @@ class CommandProcessor:
             self.interface.log(f" {P.GRY}{i + 1}.{P.RST} {P.CYN}{item.upper()}{P.RST}")
         self.interface.log(f"{P.GRY}   ({len(items)}/{self.interface.Config.INVENTORY.MAX_SLOTS} {slots_str}){P.RST}")
         return True
-
     def _cmd_map(self, _parts):
         cmd_cfg = getattr(self.interface.Config, "COMMANDS", None)
         cost = getattr(cmd_cfg, "COST_MAP", 2.0) if cmd_cfg else 2.0
@@ -273,7 +258,6 @@ class CommandProcessor:
         nav_report = self.interface.get_navigation_report()
         self.interface.log(nav_report)
         return True
-
     def _cmd_debug(self, _parts):
         self.interface.Config.VERBOSE_LOGGING = (not self.interface.Config.VERBOSE_LOGGING)
         is_debug = self.interface.Config.VERBOSE_LOGGING
@@ -287,17 +271,14 @@ class CommandProcessor:
         layer_msg = "[D3:DBG] (Filters off)" if is_debug else "[D1:SIM] (Filters on)"
         self.interface.log(f"{base_msg} | Layer: {layer_msg}")
         return True
-
     def _cmd_exit(self, _parts):
         msg = ux("command_alerts", "exit_halt")
         self.interface.log(f"{Prisma.RED}{msg}{Prisma.RST}", "SYS")
-
     def _cmd_soul(self, _parts):
         soul_msg = self.interface.get_soul_status()
         if soul_msg:
             self.interface.log(f"{self.P.MAG}{soul_msg}{self.P.RST}")
         return True
-
     def _cmd_look(self, _parts):
         result = self.interface.trigger_visual_cortex()
         if result and result.get("ui"):
@@ -305,7 +286,6 @@ class CommandProcessor:
         else:
             self.interface.log(ux("command_alerts", "look_blind"))
         return True
-
     def _cmd_reload(self, parts):
         if len(parts) > 1:
             target = parts[1].upper()
@@ -316,7 +296,6 @@ class CommandProcessor:
             LoreManifest.get_instance(config_ref=self.interface.Config).flush_cache()
             self.interface.log(ux("command_alerts", "reload_all"))
         return True
-
     def _cmd_truth(self, parts):
         if len(parts) < 2:
             self.interface.log(ux("command_alerts", "truth_usage"))
@@ -341,7 +320,6 @@ class CommandProcessor:
         except Exception as e:
             self.interface.log(ux("command_alerts", "truth_failure").format(error=e))
         return True
-
     def _cmd_use(self, parts):
         if len(parts) < 2:
             self.interface.log(ux("command_alerts", "use_usage"))
@@ -356,7 +334,6 @@ class CommandProcessor:
         color = self.P.GRN if success else self.P.OCHRE
         self.interface.log(f"{color}{msg}{self.P.RST}")
         return True
-
     def _cmd_hud(self, parts):
         if len(parts) < 2:
             self.interface.log("Usage: /hud [warm|lite|core|deep]")
@@ -374,7 +351,6 @@ class CommandProcessor:
         else:
             self.interface.log(f"{self.P.RED}Unknown HUD mode: {mode}{self.P.RST}")
         return True
-
     def _cmd_idle(self, _parts):
         self.interface.modify_resource("stamina", 15.0)
         self.interface.modify_resource("atp", 20.0)
@@ -394,21 +370,16 @@ class CommandProcessor:
                     elif hasattr(self.interface.eng, "phys"):
                         self.interface.eng.phys.G = (getattr(self.interface.eng.phys, "G", 0) + g_yield)
                     dream_log += f"\n{self.P.MAG}✨ The dream yielded a Glimmer (+{g_yield} G_pool).{self.P.RST}"
-        self.interface.log(
-            f"{self.P.CYN}[SYSTEM] Engine idling. REM cycle initiated. ATP regenerating.{self.P.RST}{dream_log}"
-        )
+        self.interface.log(f"{self.P.CYN}[SYSTEM] Engine idling. REM cycle initiated. ATP regenerating.{self.P.RST}{dream_log}")
         return True
-
     def _cmd_mod(self, parts):
         if len(parts) < 2:
             self.interface.log("Usage: /mod [slash|md]")
             return True
-
         mod = parts[1].upper()
         mods = {"SLASH": ("slash_council", self.P.INDIGO, "Dev Team online."),
             "MD": ("overseer_council", self.P.GRN, "Systemic Health protocols online."),
             "SYSTEMIC_HEALTH": ("overseer_council", self.P.GRN, "Systemic Health protocols online.")}
-
         if mod in mods:
             council_attr, color, msg = mods[mod]
             self.interface.log(f"{color}{mod} Mod Chip engaged. {msg}{self.P.RST}")
@@ -418,7 +389,6 @@ class CommandProcessor:
         else:
             self.interface.log(f"{self.P.RED}Unknown mod chip: {mod}{self.P.RST}")
         return True
-
     def _cmd_grief(self, _parts):
         if hasattr(self.interface.eng, "grief"):
             shared_lattice = getattr(self.interface.eng, "shared_lattice", None)
@@ -427,7 +397,6 @@ class CommandProcessor:
         else:
             self.interface.log(f"{self.P.GRY}(We stand in silence for the lost memory. No protocol active.){self.P.RST}")
         return True
-
     def _cmd_layer(self, parts):
         stack = getattr(self.interface.eng, "reality_stack", None)
         if not stack: return True
@@ -444,7 +413,6 @@ class CommandProcessor:
             stack.push_layer(RealityLayer.DEBUG)
             self.interface.log(ux("main_strings", "debug_engaged"))
         return True
-
     def _cmd_inject(self, parts):
         if len(parts) < 2:
             self.interface.log("Usage: /inject <payload>")
@@ -453,7 +421,6 @@ class CommandProcessor:
         self.interface.log(payload, "INJECT")
         self.interface.log(ux("main_strings", "injected").format(payload=payload))
         return True
-
     def _cmd_trauma(self, _parts):
         self.interface.eng.health = 20.0
         self.interface.eng.trauma_accum["SYNTHETIC_CRISIS"] = 50.0
@@ -461,19 +428,17 @@ class CommandProcessor:
             self.interface.eng.events.publish("TRAUMA_EVENT", {"magnitude": 50.0})
         self.interface.log(f"{self.P.RED}[DEV] Health dropped to 20. Trauma spiked to 50. Proceed to next turn.{self.P.RST}", "SYS",)
         return True
-
     def _execute_substrate_write(self, file_name: str, content: str):
-        if getattr(self.interface.eng, "substrate", None) is None:
+        substrate = getattr(self.interface.eng, "substrate", None)
+        if substrate is None:
             from bone_utils import TheSubstrate
-            self.interface.eng.substrate = TheSubstrate(getattr(self.interface.eng, "events", None))
-        substrate = self.interface.eng.substrate
+            substrate = TheSubstrate(getattr(self.interface.eng, "events", None))
         substrate.queue_write(file_name, self.P.strip(content))
         stamina = self.interface.get_resource("stamina")
         write_logs, cost = substrate.execute_writes(stamina)
         self.interface.modify_resource("stamina", -cost)
         for log in write_logs:
             self.interface.log(log)
-
     def _cmd_podcast(self, parts):
         if len(parts) < 2:
             self.interface.log("Usage: /podcast <topic>")
@@ -487,7 +452,6 @@ class CommandProcessor:
             self.interface.log(f"{self.P.RED}Error: Cortex LLM or Council 'host_podcast' method unavailable.{self.P.RST}")
             return True
         try:
-            import time
             script = council.host_podcast(topic, llm)
             self.interface.log(f"\n{script}\n")
             safe_topic = "".join(c if c.isalnum() else "_" for c in topic)[:25].strip("_")
@@ -496,7 +460,6 @@ class CommandProcessor:
         except Exception as e:
             self.interface.log(f"{self.P.RED}Podcast generation failed: {e}{self.P.RST}")
         return True
-
     def _cmd_journal(self, _parts):
         self.interface.log(f"{self.P.CYN}📖 Compiling narrative journal...{self.P.RST}")
         cortex = getattr(self.interface.eng, "cortex", None)
@@ -505,7 +468,6 @@ class CommandProcessor:
             self.interface.log(f"{self.P.RED}Error: Cortex LLM unavailable or memory buffer is empty.{self.P.RST}")
             return True
         try:
-            import time
             history = "\n".join(cortex.dialogue_buffer)
             prompt = ("SYSTEM_INSTRUCTION: You are the archivist of a surreal cybernetic journey. "
                 "Read the following recent dialogue history and write a whimsical, reflective, first-person diary entry (1-2 paragraphs) "
@@ -519,7 +481,6 @@ class CommandProcessor:
         except Exception as e:
             self.interface.log(f"{self.P.RED}Journal generation failed: {e}{self.P.RST}")
         return True
-
     def _cmd_shuffle(self, _parts):
         cmd_cfg = getattr(self.interface.Config, "COMMANDS", None)
         cost = getattr(cmd_cfg, "COST_SHUFFLE", 5.0) if cmd_cfg else 5.0

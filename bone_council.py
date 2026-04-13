@@ -1,28 +1,19 @@
 """bone_council.py"""
 
-import concurrent.futures
-import itertools
-import random
-import re
+import concurrent.futures, itertools, random, re
 from typing import Dict, Any
-
 from bone_core import LoreManifest, ux, safe_get
 from bone_presets import BoneConfig
 from bone_symbiosis import get_symbiont
 from bone_types import Prisma
-
 
 class TheStrangeLoop:
     def __init__(self):
         self.recursion_depth = 0
         lore = LoreManifest.get_instance()
         c_data = lore.get("COUNCIL_DATA") or {}
-        self.triggers = c_data.get(
-            "STRANGE_LOOP_TRIGGERS", ["who are you", "strange loop"]
-        )
-        self.keywords = c_data.get(
-            "STRANGE_LOOP_KEYWORDS", ["self", "mirror", "define"]
-        )
+        self.triggers = c_data.get("STRANGE_LOOP_TRIGGERS", ["who are you", "strange loop"])
+        self.keywords = c_data.get("STRANGE_LOOP_KEYWORDS", ["self", "mirror", "define"])
 
     def audit(self, text: str, physics: Any) -> tuple[bool, str, dict, dict]:
         text_lower = text.lower()

@@ -1,3 +1,30 @@
+### **BONEAMANITA v19.3.2 "The SLASH Mnemonic & Cognitive Sweep"**
+
+_The SLASH Council executes a targeted, four-pass sweep across the active memory substrates, command interfaces, and the central cognitive composer. Focus placed on unspooling human cognitive load, anchoring spatial geometry to reduce architectural thrashing, and strictly enforcing the biological $L^\infty$ bounds against runaway loops._
+
+#### **🧠 MNEMONIC SUBSTRATE (`bone_akashic.py` & `bone_ann.py`)**
+
+- **C-Optimized Combinatorics (`bone_ann`):** Replaced manual $O(N^2)$ graph generation with native `itertools.combinations`, purging index boundary checks and redundant dictionary lookups during hippocampal analysis.
+- **Autopoietic Baseline Protection (`bone_ann`):** Fixed a fatal metabolic flaw in the REM Consolidator. The engine now correctly calculates and spends only the _surplus_ $ATP$ above the 20.0 survival threshold, preventing the system from working itself into autophagic collapse while sleeping.
+- **Spatial Anchoring (`bone_akashic`):** Pulled `BoneConfig` Euclidean coordinates into `__init__`. The system no longer dynamically rebuilds file paths and config calls on every state save/load.
+- **Ephemeral Decoupling (`bone_akashic`):** Uncoupled `store_ghost_echo` from synchronous disk writes. High-frequency ephemeral memories are now safely held in memory until a formal cycle ends, eliminating massive disk I/O bottlenecks.
+- **Prion Excised (`bone_akashic`):** Removed a latent `NameError` trap inside the forging threshold logic.
+
+#### **⚙️ COMMAND & CONTROL (`bone_commands.py`)**
+
+- **Metabolic Ceiling Enforcement:** Sealed the `modify_resource` accumulator. The `/idle` loop is now strictly bound by dynamically fetched $L^\infty$ maximums, mathematically preventing users from artificially inflating Stamina and $ATP$ into infinity.
+- **The Reality Gate:** Re-aligned the command execution flow. The system no longer interrogates the reality stack grammar rules or allocates memory on standard dialogue turns, dropping the $ATP$ cost of simply saying "Hello".
+- **Dynamic Auto-Discovery:** Purged the brittle, hardcoded command array. The `CommandProcessor` now utilizes C-level `dir(self)` method introspection to natively discover and register command functions.
+- **Payload Unspooling:** Flattened the massive, inline `save_state` payload and decoupled the `_execute_substrate_write` method to prevent transient commands from permanently mutating the host engine's architecture.
+
+#### **🗣️ COGNITIVE COMPOSER (`bone_composer.py`)**
+
+- **Regex Anchoring:** Pre-compiled all `ResponseValidator` regex engines exactly once during instantiation. The system no longer tears down and rebuilds massive regular expressions on every dialogue turn.
+- **Lazy Archetypal Geometry:** Flattened the phase-shift evaluations in the `PromptComposer`. The system now only executes the metaphysical threshold logic (e.g., measuring $LQ$, $\Psi$, $\Delta$) for the single room the active archetype actually occupies.
+- **Temporal Loop Cooling:** Fixed the exponential backoff in the LLM transmitter to immediately release the thread upon terminal failure. Corrected a trauma-tracking bug during `AuthError` spikes, allowing the synaptic circuit breaker to accurately measure its 10-second healing cooldown.
+- **Cognitive Load Purge:** Extracted hidden localized tripwire imports (`math`, `time`, `random`), flattened dictionary unpacking arrays (`**()`), and stripped computationally redundant native string validations.
+
+
 ### **BONEAMANITA v19.3.1 "The SLASH Ephemeralization"**
 
 _The SLASH Council completes a targeted, four-pass sweep through the Physics engine and the Village architecture. Focus placed on translating heuristic python loops into C-level set logic, sealing spatial entropy leaks, and enforcing human-readable syntax thresholds._
