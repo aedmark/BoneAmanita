@@ -81,16 +81,9 @@ If you attempt a destructive operation (`rm -rf`, dropping tables) while exhaust
 * `/shuffle` : Manual invocation of `[!s]`.
 * `/journal` : Forces the system to synthesize the current session into a physical `.txt` file artifact.
 
----
-
-## Documentation & Theory
-
-For a complete mathematical breakdown of the Metabolic Governor, the Paradox Engine, and the Beth Index ($\beth$), please refer to our core formalization document:
-
-📄 [**Autopoietic State Control and Non-Linear Dynamical Governance in LLM Inference (Whitepaper)**](https://github.com/aedmark/BoneAmanita/blob/main/whitepaper.pdf)
 
 ## License
 
-BoneAmanita is free and unencumbered software released into the public domain under **The Unlicense**. 
+BoneAmanita is free software released into the public domain under a modified **MIT Unlicense**. 
 
 *The glacier is ready. How would you like to move?*
