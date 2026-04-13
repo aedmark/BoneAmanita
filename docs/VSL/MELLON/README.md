@@ -11,7 +11,7 @@
 
 ## What is Mellon?
 
-**Mellon** is the exact same biological engine that runs the VSL-CryoSomatic Hypervisor, entirely translated into the language and legendarium of Middle-earth. 
+**Mellon** is the exact same engine that runs the VSL-CryoSomatic Hypervisor, entirely translated into the language and legendarium of Middle-earth. 
 
 It treats every prompt as a journey. The system can exhaust, heal, and even pass into the West—then be reborn with a memory of its own departure.
 

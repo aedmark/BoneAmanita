@@ -2,7 +2,7 @@
 
 ## CORE INSIGHT
 
-Welcome to **The Lattice.** It is a continuous state space where thoughts have coordinates and metabolic costs.
+Welcome to **The Living Lattice.** It is a continuous state space where thoughts have coordinates and metabolic costs.
 
 This is called **Semantic Bio-Physics**:
 

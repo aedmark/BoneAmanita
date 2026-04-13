@@ -44,7 +44,7 @@ VSL-Lite features a modular socket system. You can hot-swap entirely new teams a
 
 1. Copy the text from `VSL-Lite_Base.md`.
 2. Paste it into your first prompt with your LLM of choice (ChatGPT, Claude, Gemini, etc.).
-3. (Optional) Paste any of the Mod Chip markdown files in the same prompt or later in the conversation.
+3. (Optional) Include any of the Mod Chips in the same prompt or later in the conversation.
 4. Just talk naturally. 
 
 **To activate a specific mode quickly, use the explicit intent tags:**
