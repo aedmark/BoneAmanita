@@ -14,3 +14,6 @@
 /dev/bone_forge.py
 /dev/lore/akashic_discovered_words.json
 /lore/akashic_discovered_words.json
+clean.sh
+.gitignore
+.gitignore
