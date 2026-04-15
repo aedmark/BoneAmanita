@@ -1,5 +1,4 @@
 """bone_types.py"""
-
 import copy
 import json
 import re
@@ -18,9 +17,8 @@ class Prisma:
     OCHRE = "\033[33;2m"
     VIOLET = "\033[35;2m"
     SLATE = "\033[30;1m"
-    _STRIP_PATTERN = re.compile(
-        r"<span class='[^']+'>|</span>|" r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"
-    )
+    _STRIP_PATTERN = re.compile(r"<span class='[^']+'>|</span>|"
+                                r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
     _COLOR_MAP = {
         "R": RED,
         "G": GRN,
@@ -113,13 +111,8 @@ class DragProfile:
     trauma: float = 0.0
 
     def total(self) -> float:
-        return (
-            self.semantic
-            + self.emotional
-            + self.structural
-            + self.metabolic
-            + self.trauma
-        )
+        return (self.semantic + self.emotional + self.structural + self.metabolic +
+                self.trauma)
 
 
 @dataclass
@@ -196,10 +189,8 @@ class PhysicsPacket:
     energy: EnergyState = field(default_factory=EnergyState)
     matter: MaterialState = field(default_factory=MaterialState)
     space: SpatialState = field(default_factory=SpatialState)
-
     _CORE_DOMAINS = ("energy", "space", "matter")
     _BASE_FIELDS = frozenset({"energy", "matter", "space", "drag_profile"})
-
     _ALIAS_MAP = {
         "E": [("energy", "exhaustion")],
         "beta": [("energy", "beta_index"), ("energy", "contradiction")],
@@ -229,15 +220,12 @@ class PhysicsPacket:
         valid_keys = cls.__dataclass_fields__.keys()
         if isinstance(data, dict):
             return cls(
-                **{k: data.get(k) for k in valid_keys if data.get(k) is not None}
-            )
-        return cls(
-            **{
-                k: getattr(data, k)
-                for k in valid_keys
-                if getattr(data, k, None) is not None
-            }
-        )
+                **{k: data.get(k)
+                   for k in valid_keys if data.get(k) is not None})
+        return cls(**{
+            k: getattr(data, k)
+            for k in valid_keys if getattr(data, k, None) is not None
+        })
 
     def __init__(
         self,
@@ -249,9 +237,8 @@ class PhysicsPacket:
         self.energy = self._safe_init(EnergyState, energy)
         self.matter = self._safe_init(MaterialState, matter)
         self.space = self._safe_init(SpatialState, space)
-        self.drag_profile = self._safe_init(
-            DragProfile, kwargs.pop("drag_profile", None)
-        )
+        self.drag_profile = self._safe_init(DragProfile,
+                                            kwargs.pop("drag_profile", None))
         for k, v in kwargs.items():
             setattr(self, k, v)
 
@@ -280,7 +267,8 @@ class PhysicsPacket:
 
     def __getattr__(self, key):
         if key.startswith("_"):
-            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute '{key}'")
         if key in self._ALIAS_MAP:
             domain, t_key = self._ALIAS_MAP[key][0]
             return getattr(getattr(self, domain), t_key)
@@ -288,7 +276,8 @@ class PhysicsPacket:
             obj = self.__dict__.get(domain)
             if hasattr(obj, key):
                 return getattr(obj, key)
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
     def __setattr__(self, key, value):
         if key in self._BASE_FIELDS:
@@ -346,7 +335,9 @@ class UserInferredState:
         u_key = f"{key}_u"
         if u_key in self.__dataclass_fields__:
             return getattr(self, u_key)
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{key}'")
+
 
 @dataclass
 class SharedDynamics:
@@ -380,9 +371,10 @@ class CycleContext:
     mind_state: Dict = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
     bureau_ui: str = ""
-    user_profile: Dict = field(
-        default_factory=lambda: {"name": "TRAVELER", "confidence": 0}
-    )
+    user_profile: Dict = field(default_factory=lambda: {
+        "name": "TRAVELER",
+        "confidence": 0
+    })
     last_impulse: Any = None
     reality_stack: Any = None
     active_lens: str = "NARRATOR"
@@ -402,22 +394,23 @@ class CycleContext:
     def log(self, message: str):
         self.logs.append(message)
 
-    def record_flux(
-        self, phase: str, metric: str, initial: float, final: float, reason: str = ""
-    ):
+    def record_flux(self,
+                    phase: str,
+                    metric: str,
+                    initial: float,
+                    final: float,
+                    reason: str = ""):
         delta = final - initial
         if abs(delta) > 0.001:
-            self.flux_log.append(
-                {
-                    "phase": phase,
-                    "metric": metric,
-                    "initial": initial,
-                    "final": final,
-                    "delta": delta,
-                    "reason": reason,
-                    "timestamp": time.time(),
-                }
-            )
+            self.flux_log.append({
+                "phase": phase,
+                "metric": metric,
+                "initial": initial,
+                "final": final,
+                "delta": delta,
+                "reason": reason,
+                "timestamp": time.time(),
+            })
 
     def snapshot(self) -> "CycleContext":
         new_ctx = copy.copy(self)
@@ -481,10 +474,8 @@ class DecisionCrystal:
 
     def __str__(self):
         e_val = self.leverage_metrics.get("E", 0.0)
-        return (
-            f"♦ CRYSTAL [{self.decision_id}] {self.system_state} | "
-            f"ARCHETYPE: {self.active_archetype} | E: {e_val:.2f}"
-        )
+        return (f"♦ CRYSTAL [{self.decision_id}] {self.system_state} | "
+                f"ARCHETYPE: {self.active_archetype} | E: {e_val:.2f}")
 
     def crystallize(self) -> str:
         data = asdict(self)

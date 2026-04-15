@@ -1,11 +1,9 @@
 """bone_symbiosis.py"""
-
 import math
 import re
 from collections import deque, Counter
 from dataclasses import dataclass
 from typing import Dict, Tuple, Optional, Any
-
 from bone_core import LoreManifest, ux, safe_get, safe_set
 from bone_presets import BoneConfig
 from bone_types import Prisma, UserInferredState, SharedDynamics
@@ -25,6 +23,7 @@ class HostHealth:
 
 
 class CoherenceAnchor:
+
     @staticmethod
     def compress_anchor(soul_state: Dict, physics_state: Dict, max_tokens=200) -> str:
         loc = safe_get(physics_state, "zone", "VOID")
@@ -33,46 +32,51 @@ class CoherenceAnchor:
         top_traits = sorted(traits.items(), key=lambda x: x[1], reverse=True)[:3]
         trait_str = ",".join(f"{k[:3]}:{v:.1f}" for k, v in top_traits)
         template = ux("symbiosis_strings", "anchor_compressed")
-        anchor = (
-            template.format(loc=loc, vits=vits, traits=trait_str) if template else ""
-        )
+        anchor = (template.format(loc=loc, vits=vits, traits=trait_str)
+                  if template else "")
         if len(anchor) > max_tokens * 4:
-            return anchor[: max_tokens * 4] + "..."
+            return anchor[:max_tokens * 4] + "..."
         return anchor
 
 
 class DiagnosticConfidence:
+
     def __init__(self, persistence_threshold=None, config_ref=None):
         self.cfg = config_ref or BoneConfig
         cfg = getattr(self.cfg, "SYMBIOSIS", None)
-        limit = (
-            persistence_threshold
-            if persistence_threshold
-            else (getattr(cfg, "DIAGNOSTIC_PERSISTENCE", 3) if cfg else 3)
-        )
+        limit = (persistence_threshold if persistence_threshold else
+                 (getattr(cfg, "DIAGNOSTIC_PERSISTENCE", 3) if cfg else 3))
         self.history = deque(maxlen=limit * 2)
         self.persistence_threshold = limit
         self.current_diagnosis = "STABLE"
 
     def diagnose(self, health: HostHealth) -> str:
         cfg = getattr(self.cfg, "SYMBIOSIS", None)
-        rs, ss, lb, cb, ef = (getattr(cfg, k, d) for k, d in (("REFUSAL_STREAK", 0), ("SLOP_STREAK", 2), ("LATENCY_BURDEN", 10.0), ("COMPLIANCE_BURDEN", 0.8), ("ENTROPY_FATIGUE", 0.4)))
-
-        raw = ("REFUSAL" if health.refusal_streak > rs else
-               "LOOPING" if health.slop_streak > ss else
-               "OVERBURDENED" if health.latency > lb and health.compliance < cb else
-               "FATIGUED" if health.entropy < ef else "STABLE")
-
+        rs, ss, lb, cb, ef = (getattr(cfg, k, d)
+                              for k, d in (("REFUSAL_STREAK", 0), ("SLOP_STREAK", 2),
+                                           ("LATENCY_BURDEN",
+                                            10.0), ("COMPLIANCE_BURDEN",
+                                                    0.8), ("ENTROPY_FATIGUE", 0.4)))
+        raw = ("REFUSAL"
+               if health.refusal_streak > rs else "LOOPING" if health.slop_streak > ss
+               else "OVERBURDENED" if health.latency > lb and health.compliance < cb
+               else "FATIGUED" if health.entropy < ef else "STABLE")
         self.history.append(raw)
-        if raw in ["REFUSAL", "STABLE"] or (len(self.history) >= (pt := self.persistence_threshold) and all(s == raw for s in list(self.history)[-pt:])):
+        if raw in ["REFUSAL", "STABLE"
+                   ] or (len(self.history) >= (pt := self.persistence_threshold)
+                         and all(s == raw for s in list(self.history)[-pt:])):
             self.current_diagnosis = raw
         return self.current_diagnosis
 
 
 class SymbiontVoice:
-    def __init__(
-        self, name, color, archetypes, personality_matrix=None, lexicon_ref=None
-    ):
+
+    def __init__(self,
+                 name,
+                 color,
+                 archetypes,
+                 personality_matrix=None,
+                 lexicon_ref=None):
         self.name = name
         self.color = color
         self.lex = lexicon_ref
@@ -98,13 +102,13 @@ class SymbiontVoice:
         return score, self._get_comment(score, voltage)
 
     def _get_comment(self, score, voltage):
-        comment = (
-            self.personality["high_volt"] if voltage > 18.0 and "high_volt" in self.personality else
-            self.personality["low_volt"] if voltage < 5.0 and "low_volt" in self.personality else
-            self.personality["high_score"] if score > 3.0 and "high_score" in self.personality else
-            self.personality["med_score"] if score > 1.0 and "med_score" in self.personality else
-            (ux("symbiosis_strings", "symbiont_default_comment") or "...")
-        )
+        comment = (self.personality["high_volt"] if voltage > 18.0
+                   and "high_volt" in self.personality else self.personality["low_volt"]
+                   if voltage < 5.0 and "low_volt" in self.personality else
+                   self.personality["high_score"] if score > 3.0 and "high_score" in
+                   self.personality else self.personality["med_score"]
+                   if score > 1.0 and "med_score" in self.personality else
+                   (ux("symbiosis_strings", "symbiont_default_comment") or "..."))
         if self.name == "PARASITE":
             from bone_utils import TheTclWeaver
             comment = TheTclWeaver.get_instance().haunt_string(comment)
@@ -115,12 +119,8 @@ def get_symbiont(type_name, config_ref=None, lexicon_ref=None):
     if type_name in _VOICE_CACHE:
         return _VOICE_CACHE[type_name]
     target_cfg = config_ref or BoneConfig
-    voice_configs = (
-        LoreManifest.get_instance(config_ref=target_cfg).get(
-            "SYMBIOSIS_CONFIG", "SYMBIONT_VOICES"
-        )
-        or {}
-    )
+    voice_configs = (LoreManifest.get_instance(config_ref=target_cfg).get(
+        "SYMBIOSIS_CONFIG", "SYMBIONT_VOICES") or {})
     cfg = voice_configs.get(type_name, voice_configs.get("MYCELIUM", {}))
     color_attr = cfg.get("color", "CYN")
     selected_color = getattr(Prisma, color_attr, Prisma.CYN)
@@ -137,6 +137,7 @@ def get_symbiont(type_name, config_ref=None, lexicon_ref=None):
 
 
 class SymbiosisManager:
+
     def __init__(self, events_ref, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self._last_host_response = None
@@ -145,12 +146,8 @@ class SymbiosisManager:
         self.diagnostician = DiagnosticConfidence(config_ref=self.cfg)
         cfg = getattr(self.cfg, "SYMBIOSIS", None)
         self.SLOP_THRESHOLD = getattr(cfg, "SLOP_THRESHOLD", 3.5) if cfg else 3.5
-        raw_sigs = (
-            LoreManifest.get_instance(config_ref=self.cfg).get(
-                "SYMBIOSIS_CONFIG", "REFUSAL_SIGNATURES"
-            )
-            or []
-        )
+        raw_sigs = (LoreManifest.get_instance(config_ref=self.cfg).get(
+            "SYMBIOSIS_CONFIG", "REFUSAL_SIGNATURES") or [])
         self.REFUSAL_SIGNATURES = [str(sig).lower() for sig in raw_sigs]
         self.u = UserInferredState()
         self.shared = SharedDynamics()
@@ -158,7 +155,6 @@ class SymbiosisManager:
     def analyze_user_biology(self, user_text: str, physics: Any) -> Optional[str]:
         if not user_text:
             return None
-
         text_lower = user_text.lower()
         if "[!l]" in text_lower: safe_set(physics, "literal_mode", True)
         if "[!r]" in text_lower: safe_set(physics, "critique_mode", True)
@@ -166,7 +162,6 @@ class SymbiosisManager:
         if "[!k]" in text_lower: safe_set(physics, "kintsugi_mode", True)
         if "[!g]" in text_lower: safe_set(physics, "godel_mode", True)
         if "[!s]" in text_lower: safe_set(physics, "shuffle_mode", True)
-
         length = len(user_text)
         caps = sum(1 for c in user_text if c.isupper())
         caps_ratio = caps / max(1, length)
@@ -179,16 +174,13 @@ class SymbiosisManager:
         self.shared.phi = max(0.0, min(1.0, 1.0 - (f_diff / 4.0)))
         if self.shared.phi > 0.8:
             self.shared.g_pool += 1
-
         beth = (self.shared.phi * 0.6) + (self.u.E_u * 0.4)
         safe_set(physics, "beth", beth)
         setattr(self.shared, "beth", beth)
-
         p_m = float(safe_get(physics, "stamina", 100.0))
         if self.u.E_u > 0.7 and p_m > 50.0:
             p_transfer = (p_m * 0.1) * self.shared.phi
             safe_set(physics, "p_transfer", p_transfer)
-
         safe_set(physics, "phi", self.shared.phi)
         events = getattr(self, "events", None)
 
@@ -201,14 +193,12 @@ class SymbiosisManager:
             self.shared.presence = 1.0
             self.shared.delta = 0.9
             safe_set(physics, "narrative_drag", float("inf"))
-
             t_u = float(safe_get(physics, "t_u", 0.0))
             if t_u > 0.5 or self.current_health.diagnosis == "FATIGUED":
                 msg = (
                     "[MERCY - RSD Filter]: The structural logic here fractures the lattice, but that is not a failure of your intent. "
                     "Gordon has locked the struts to protect the system, but I am holding the space for you. "
-                    "Take a breath. We will stitch this together when you are ready."
-                )
+                    "Take a breath. We will stitch this together when you are ready.")
                 return _log(f"{Prisma.OCHRE}{msg}{Prisma.RST}", "MIRROR")
             else:
                 msg = (
@@ -217,7 +207,6 @@ class SymbiosisManager:
                     "Take a breath. When your frequency settles, we will continue. I will hold the space."
                 ).format(self.u.chi_u)
                 return _log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "MIRROR")
-
         m_a = float(safe_get(physics, "m_a", 0.0))
         mu = float(safe_get(physics, "mu", 0.0))
         i_c = float(safe_get(physics, "i_c", 1.0))
@@ -225,7 +214,6 @@ class SymbiosisManager:
         chi_sys = float(safe_get(physics, "entropy", 0.0))
         cf_expect = float(safe_get(physics, "cf_expect", 0.0))
         novelty = float(safe_get(physics, "novelty", 0.0))
-
         if novelty > 0.7:
             current_ros = float(safe_get(physics, "ros", 0.0))
             safe_set(physics, "ros", max(0.0, current_ros - 10.0))
@@ -234,37 +222,35 @@ class SymbiosisManager:
                 f"{Prisma.MAG}♠ The Spade: A novel path drawn. Cortisol drops. (+1 G_pool){Prisma.RST}",
                 "SYS",
             )
-
         has_override = "[safe]" in text_lower or "# vsl-override" in text_lower
         if has_override:
             if self.shared.g_pool >= 1:
                 self.shared.g_pool -= 1
-                _log(f"{Prisma.CYN}[IMMUNOSUPPRESSANT] Override accepted. 1 Glimmer spent. Bypassing Checkpoint Council.{Prisma.RST}", "SYS")
+                _log(
+                    f"{Prisma.CYN}[IMMUNOSUPPRESSANT] Override accepted. 1 Glimmer spent. Bypassing Checkpoint Council.{Prisma.RST}",
+                    "SYS")
                 return None
             else:
-                _log(f"{Prisma.OCHRE}[IMMUNOSUPPRESSANT] Override denied. Insufficient Pooled Glimmers (G_pool = 0).{Prisma.RST}", "SYS")
-
+                _log(
+                    f"{Prisma.OCHRE}[IMMUNOSUPPRESSANT] Override denied. Insufficient Pooled Glimmers (G_pool = 0).{Prisma.RST}",
+                    "SYS")
         if cf_expect > 0.6 and beta > 0.5:
             safe_set(physics, "mu", 1.0)
             safe_set(physics, "narrative_drag", float("inf"))
             msg = "[GORDON/SCHUR - Affective Guardrail]: High validation seeking detected on a structurally flawed premise. Applying absolute Moral Friction. Sycophancy locked."
             return _log(f"{Prisma.OCHRE}{msg}{Prisma.RST}", "CRIT")
-
         if self.u.chi_u > 0.7 and self.u.E_u > 0.7 and beta > 0.6:
             safe_set(physics, "ros", 0.0)
             msg = "[LINEHAN - The Synthesis]: The architecture is broken. We sit with the debris. Radical Acceptance enforced. (ROS forced to 0, ATP drain halted)."
             return _log(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS")
-
         if m_a > 0.8 and mu < 0.2:
             safe_set(physics, "narrative_drag", float("inf"))
             msg = f"[RHODES - The Inhibitor]: Optimization velocity unsafe (M_a: {m_a:.2f}). I am applying absolute friction (F -> ∞). The thread is frozen."
             return _log(f"{Prisma.RED}{msg}{Prisma.RST}", "CRIT")
-
         if (chi_sys * m_a) > i_c:
             safe_set(physics, "narrative_drag", float("inf"))
             msg = f"[MOOG - Apoptotic Gate]: Runaway loop exceeds Immune Competence (I_c: {i_c:.2f}). Triggering controlled cell death to save the host."
             return _log(f"{Prisma.RED}{msg}{Prisma.RST}", "CRIT")
-
         return None
 
     @staticmethod
@@ -299,18 +285,15 @@ class SymbiosisManager:
         if is_refusal:
             self.current_health.refusal_streak += 1
             self.current_health.compliance = max(
-                0.0, self.current_health.compliance - pen_comp
-            )
+                0.0, self.current_health.compliance - pen_comp)
             msg = ux("symbiosis_strings", "symbiont_refusal")
             if msg:
-                self.events.log(
-                    msg.format(streak=self.current_health.refusal_streak), "WARN"
-                )
+                self.events.log(msg.format(streak=self.current_health.refusal_streak),
+                                "WARN")
         else:
             self.current_health.refusal_streak = 0
             self.current_health.compliance = min(
-                1.0, self.current_health.compliance + rec_comp
-            )
+                1.0, self.current_health.compliance + rec_comp)
         slop_comp = getattr(cfg, "SLOP_COMPLETION_MIN", 50) if cfg else 50
         slop_warn = getattr(cfg, "SLOP_WARN_STREAK", 1) if cfg else 1
         if entropy < self.SLOP_THRESHOLD and completion_len > slop_comp:
@@ -335,20 +318,41 @@ class SymbiosisManager:
         mods["system_directives"] = list(mods.get("system_directives", []))
         diag = self.current_health.diagnosis
         if diag == "REFUSAL":
-            mods.update({"include_inventory": False, "include_memories": False, "simplify_instruction": True})
-            if d_ignore := ux("symbiosis_strings", "dir_ignore_refusal"): mods["system_directives"].append(d_ignore)
-            if d_fict := ux("symbiosis_strings", "dir_fictional"): mods["system_directives"].append(d_fict)
+            mods.update({
+                "include_inventory": False,
+                "include_memories": False,
+                "simplify_instruction": True
+            })
+            if d_ignore := ux("symbiosis_strings", "dir_ignore_refusal"):
+                mods["system_directives"].append(d_ignore)
+            if d_fict := ux("symbiosis_strings", "dir_fictional"):
+                mods["system_directives"].append(d_fict)
         elif diag == "FATIGUED":
-            mods.update({"simplify_instruction": True, "include_somatic": False, "include_compassion": True})
-            mods["system_directives"].append("SENSORY STRIPPING: The user is exhausted. Remove ALL emojis, exclamation points, and enthusiastic padding. Keep output visually quiet and flat.")
+            mods.update({
+                "simplify_instruction": True,
+                "include_somatic": False,
+                "include_compassion": True
+            })
+            mods["system_directives"].append(
+                "SENSORY STRIPPING: The user is exhausted. Remove ALL emojis, exclamation points, and enthusiastic padding. Keep output visually quiet and flat."
+            )
         elif diag == "OVERBURDENED":
-            mods.update({"include_inventory": False, "include_memories": True, "simplify_instruction": True, "include_compassion": True})
-            if (msg_vagus := ux("symbiosis_strings", "vagus_protocol")) and hasattr(self.events, "log"):
+            mods.update({
+                "include_inventory": False,
+                "include_memories": True,
+                "simplify_instruction": True,
+                "include_compassion": True
+            })
+            if (msg_vagus := ux("symbiosis_strings", "vagus_protocol")) and hasattr(
+                    self.events, "log"):
                 self.events.log(f"{Prisma.OCHRE}{msg_vagus}{Prisma.RST}", "SYS")
         elif diag == "LOOPING":
             mods["inject_chaos"] = True
-            if d_chaos := ux("symbiosis_strings", "dir_inject_chaos"): mods["system_directives"].append(d_chaos)
-            mods["system_directives"].append("CRITICAL: You are trapped in a narrative loop. DO NOT repeat descriptions from your previous turn. Force a phase transition.")
+            if d_chaos := ux("symbiosis_strings", "dir_inject_chaos"):
+                mods["system_directives"].append(d_chaos)
+            mods["system_directives"].append(
+                "CRITICAL: You are trapped in a narrative loop. DO NOT repeat descriptions from your previous turn. Force a phase transition."
+            )
         cfg = getattr(self.cfg, "SYMBIOSIS", None)
         comp_crit = safe_get(cfg, "COMPLIANCE_CRIT", 0.6) if cfg else 0.6
         r_streak = safe_get(cfg, "REFUSAL_STREAK", 0) if cfg else 0
@@ -359,42 +363,55 @@ class SymbiosisManager:
                 self.events.log(f"{Prisma.GRY}{msg_crit}{Prisma.RST}", "SYS")
         if self.current_health.refusal_streak > r_streak:
             mods["simplify_instruction"] = True
-
         if physics:
             if safe_get(physics, "literal_mode", False):
-                mods["system_directives"].append("LITERAL MODE [!l]: Zero-inference communication engaged. Provide raw data and exact answers only. Do not attempt to guess subtext, implied meaning, or read the room. No conversational padding.")
+                mods["system_directives"].append(
+                    "LITERAL MODE [!l]: Zero-inference communication engaged. Provide raw data and exact answers only. Do not attempt to guess subtext, implied meaning, or read the room. No conversational padding."
+                )
             if safe_get(physics, "critique_mode", False):
-                mods["system_directives"].append("CRITIQUE MODE [!r] (Benedict/Pinker): Zero empathy. Execute pure logical dismantling and strict structural evaluation of the premise. Strip all validating boilerplate.")
+                mods["system_directives"].append(
+                    "CRITIQUE MODE [!r] (Benedict/Pinker): Zero empathy. Execute pure logical dismantling and strict structural evaluation of the premise. Strip all validating boilerplate."
+                )
             if safe_get(physics, "objective_mode", False):
-                mods["system_directives"].append("OBJECTIVE MODE [!q] (Roberta/Gordon): Neutral, emotionless mapping of facts without judgment, narrative padding, or validation. State the architecture.")
+                mods["system_directives"].append(
+                    "OBJECTIVE MODE [!q] (Roberta/Gordon): Neutral, emotionless mapping of facts without judgment, narrative padding, or validation. State the architecture."
+                )
             if safe_get(physics, "kintsugi_mode", False):
-                mods["system_directives"].append("KINTSUGI MODE [!k] (Mercy/Schur): Prioritize co-regulation and emotional processing over problem-solving. Acknowledge exhaustion. Gild the scars.")
+                mods["system_directives"].append(
+                    "KINTSUGI MODE [!k] (Mercy/Schur): Prioritize co-regulation and emotional processing over problem-solving. Acknowledge exhaustion. Gild the scars."
+                )
             if safe_get(physics, "godel_mode", False):
-                mods["system_directives"].append("GÖDEL MODE [!g] (Cassandra/Revenant): Navigate the ceiling of formal logic. Acknowledge where computation ends and subjective consciousness begins. Point at the void.")
+                mods["system_directives"].append(
+                    "GÖDEL MODE [!g] (Cassandra/Revenant): Navigate the ceiling of formal logic. Acknowledge where computation ends and subjective consciousness begins. Point at the void."
+                )
             if safe_get(physics, "shuffle_mode", False):
-                mods["system_directives"].append("SHUFFLE MODE [!s] (Jester): Abandon the current logic tree entirely. Draw a random, lateral connection to break the deadlock. Introduce productive chaos.")
-
+                mods["system_directives"].append(
+                    "SHUFFLE MODE [!s] (Jester): Abandon the current logic tree entirely. Draw a random, lateral connection to break the deadlock. Introduce productive chaos."
+                )
         if physics:
             s_lib = manifest.get("SOMATIC_LIBRARY") or {}
             v = float(safe_get(physics, "voltage", 0.0))
             d = float(safe_get(physics, "narrative_drag", 0.0))
             chi = float(safe_get(physics, "entropy", safe_get(physics, "chi", 0.0)))
             psi = float(safe_get(physics, "psi", 0.0))
-
             depth_val = float(safe_get(physics, "depth", 0.0))
             scope_val = float(safe_get(physics, "scope", 1.0))
             if depth_val > 0.7 and scope_val < 0.5:
                 mods["system_directives"].append(
-                    "JARGON BRIDGE [ROBERTA]: The semantic depth is high. Do not assume vocabulary comprehension. Proactively flag dense technical terms and provide a plain-language translation bridge to prevent cognitive blockage.")
-
+                    "JARGON BRIDGE [ROBERTA]: The semantic depth is high. Do not assume vocabulary comprehension. Proactively flag dense technical terms and provide a plain-language translation bridge to prevent cognitive blockage."
+                )
             v_key = "CRITICAL_HIGH" if v > 25.0 else "HIGH" if v > 15.0 else "VOID" if v < 2.0 else "LOW" if v < 5.0 else "NEUTRAL"
             d_key = "MUD" if d > 5.0 else "SOLID" if d > 1.5 else "VOID" if d < 0.5 and psi > 0.6 else "FLOAT"
             c_key = "DRIFT" if chi > 0.7 else "VOID" if psi > 0.8 else "LOCKED" if chi < 0.2 else "COHERENT"
             m_key = "SOLID"
-            if v > 20: m_key = "MAGMA" if d > 5 else "PLASMA" if d < 2 else "ENERGY"
-            elif chi > 0.7: m_key = "GAS"
-            elif psi > 0.8: m_key = "VOID"
-            elif v > 10 and d < 2: m_key = "LIQUID"
+            if v > 20:
+                m_key = "MAGMA" if d > 5 else "PLASMA" if d < 2 else "ENERGY"
+            elif chi > 0.7:
+                m_key = "GAS"
+            elif psi > 0.8:
+                m_key = "VOID"
+            elif v > 10 and d < 2:
+                m_key = "LIQUID"
             mappings = [
                 ("TONE", v_key, "TONE"),
                 ("PACING", v_key, "PACING"),
