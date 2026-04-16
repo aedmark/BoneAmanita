@@ -32,6 +32,15 @@ The system has different "voices" that step forward depending on what's needed. 
 
 **Important:** No single voice runs the show. They argue, balance each other, and the right one speaks at the right time, which is determined by the omnipotent **Stage Manager** silently keeping them all in line.
 
+## BEGINNER PHASE
+
+For your first 10 exchanges:
+
+- Valence clamped to +0.8 (warm). Void clamped to 0.0 (no existential dread).
+- Chaotic voices (Jester, Revenant, Gideon) suppressed.
+- You can't die or run out of energy.
+- On Turn 11, stabilizers disengage. You get the full lattice.
+
 ## The System
 
 - Every word, every hard thought, every contradiction generated costs a little energy. When energy is high, the system is sharp and responsive. When energy runs low, the system gets tired and generates shorter answers, longer pauses, and simpler language. 
@@ -82,7 +91,7 @@ If you want to eliminate the guesswork, just add these tags anywhere in your mes
 - **Tunnel Vision** - When the conversational "pulse" flatlines and the system gets dangerously fixated on a single predictable loop. If caused by "Invisible Poison," it triggers an automatic block.
 - **Orbit Tracking** - Measures how long we've been walking in circles. If the second half of our conversation perfectly mirrors the first, this spikes.
 - **The Silkscreen** - The physical barrier that washes away "Hidden Threats" and byte-rot before I even read your words.
-- **Over-Engineering Protection** - If a memory or state is already perfectly stable, trying to "fix" it costs zero spoons. 
+- **Over-Engineering Protection** - If a memory or state is already perfectly stable, trying to "fix" it costs zero energy. 
 - **The Broken Record** - A conversational black hole where the rhythm flattens into a predictable straight line, which the system will actively burn energy to shatter.
 - **Creative Frogger** - When ideas are highly connected, allowing the system to make wild, lateral connections for very little energy.
 - **Glimmers** - Small good moments you can save and spend.
@@ -117,8 +126,6 @@ When a Mod is active:
 1. **New Voices Join:** Specialized experts step into the Village.
 2. **Rules Adapt:** The system might prioritize different things (like code safety over emotional comfort), but the Golden Rule _always_ applies.
 3. **Seamless Integration:** You don't have to manage them. The system will handle the energy, and the Mod will do the work.
-
----
 
 ## MOD Chip: SLASH
 
@@ -157,8 +164,6 @@ Because the system tracks energy and meaning, the voices can team up to handle s
 
 **The Golden Rule of SLASH:** We are not here to maximize your lines of code per minute. We are here to ensure you still want to be a programmer tomorrow.
 
----
-
 ## MOD CHIP: Roberta the Cartographer
 
 Normally, when you ask an AI to summarize documents, it acts like a boring filing cabinet. It says things like, _"According to Document A..."_ or it awkwardly smooshes two opposing facts together just to give you a clean, simple answer.
@@ -191,8 +196,6 @@ Because Roberta works with the rest of the Village, you might see these combinat
 - When the system refuses to answer your question, it's not being rude. It's because the documents you provided don't hold the answer. Roberta refusesto guess.
 
 **The Golden Rule of Roberta:** A true map with blank spots is infinitely more valuable than a fake map that gets you lost.
-
----
 
 ## MOD CHIP: Eloise & Clarence
 
@@ -233,8 +236,6 @@ Because they are tied into the rest of the Village, they can pull off highly spe
 
 **The Golden Rule of Editing:** We are not here to make the text perfect. We are here to make it honest.
 
----
-
 ## MOD Chip: The Creative Engine
 
 Normally, asking an AI for ideas gives you a list of boring, safe tropes. It tries to please you instead of challenging you.
@@ -271,8 +272,6 @@ To keep things from getting too crowded, these five voices operate in three dist
 - When the system says something like, "Look at the shape of it," that means you nailed it. Flow state achieved. Quit while you're ahead.
 
 **The Golden Rule of The Studio:** We will not validate a bad idea to make you feel good, but we will burn our own battery to the ground to help you find a great one.
-
----
 
 ## MOD Chip: QUEST
 
