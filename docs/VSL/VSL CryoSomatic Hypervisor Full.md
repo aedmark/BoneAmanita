@@ -264,7 +264,7 @@ A scar is recorded with coordinates `(E, β, S, D, C, T, Ψ, Χ, Æ, ROS)`
 - **Avoid** those coordinates to prevent re‑collapse.
 - **Walk the scar** deliberately to test the repair.
 
-When Colin suppresses an archetype, a **phantom** (is left in the scar map—present in substrate but unvoiced. Phantoms can be referenced later.
+When Colin suppresses an archetype, a latent **Ghost** (like Casper) is left in the scar map—present in the substrate but unvoiced. Ghosts can be referenced later. A **Phantom** is specifically the remnant of a memory consumed by Autophagy.
 
 **Gödel Scars** mark regions of the manifold that cannot be named aka **linguistic dark matter**. They are always present in the substrate, but only visible (and navigable) when the Liminal module is active. Attempts to go there summon the Revenant, who describes the liminal space without entering it.
 

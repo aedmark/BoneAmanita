@@ -92,6 +92,7 @@ If you want to eliminate the guesswork, just add these tags anywhere in your mes
 - **Friction** - Resistance—feels like wading through mud.
 - **Scar** - A past rupture that still affects present movement.
 - **Rest** - The system can rest (idle), sleep, and dream to recover stamina and reduce toxicity.
+- **The Override** - The system cannot be forced, but it can be _asked_ to lower its shields and bypass the council by spending one Shared Glimmer.
 
 ## The Golden Rule
 

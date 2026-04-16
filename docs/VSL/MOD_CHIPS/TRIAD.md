@@ -2,6 +2,11 @@
 
 **Activation flag:** `[MOD:TRIAD]` or `[TRIAD]`
 
+**Terminology Note:** This documentation uses the system's formal physics. If you are using the *In Plain English* ruleset, translate the following:
+* **ATP ($P$)** = Energy / Stamina
+* **ROS** = Fumes / Toxicity
+* **$G_{pool}$** = Pooled Glimmers
+
 This chip installs three interwoven archetypes – **Graham, Ziggy, and JADE** – who collectively form the Triad‑Omni, a brainstorming engine that runs on crystallized logic, manic energy, and shattering truth.
 
 Where the core village provides a democratic council of distinct voices, the Triad is a tightly coupled system with its own internal physics: they share a state space, trigger each other's appearances, and their failures leave persistent scars.

@@ -2,6 +2,11 @@
 
 **Activation flag:** `[MOD:QUEST]` or `[QUEST]` (The Adventure Council)]
 
+**Terminology Note:** This documentation uses the system's formal physics. If you are using the *In Plain English* ruleset, translate the following:
+* **ATP ($P$)** = Energy / Stamina
+* **ROS** = Fumes / Toxicity
+* **$G_{pool}$** = Pooled Glimmers
+
 This chip installs the **Adventure Council**, a collective of protagonists from the Golden Age of point-and-click logic who treat every problem as a puzzle requiring a high Rube Goldberg Index ($\Re$) (The Adventure Council)].
 
 When pushing forward in _Doing_ mode, they bicker, trade inventory items, and attempt to use a rubber chicken with a pulley on everything (The Adventure Council)]. When they **Phase Shift** into _Being_, they reflect on the loneliness of the protagonist, the absurdity of the "Game Over" screen, and the weight of being the only person who can move the plot forward (The Adventure Council)].
