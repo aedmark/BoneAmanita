@@ -126,42 +126,34 @@ class TheBureau:
         cfg_bureau = getattr(self.cfg, "BUREAU", object())
         tax_std = getattr(cfg_bureau, "TAX_STANDARD", 5.0)
         tax_hvy = getattr(cfg_bureau, "TAX_HEAVY", 10.0)
-        if raw_text and (crime := next(
-            (c for c in self.crimes if c["regex"].search(raw_text)), None)):
+        chi = float(safe_get(physics, "chi", safe_get(physics, "entropy", 0.0)))
+        chaos_thresh = getattr(cfg_bureau, "CHAOS_TAX_THRESHOLD", 0.6)
+
+        if raw_text and (crime := next((c for c in self.crimes if c["regex"].search(raw_text)), None)):
             selected_form, tax = f"VIOLATION: {crime['name']}", tax + crime["tax"]
             evidence.append(crime["msg"])
-        if not selected_form and vol > getattr(cfg_bureau, "HIGH_VOLTAGE_TRIGGER",
-                                               18.0):
+        elif vol > getattr(cfg_bureau, "HIGH_VOLTAGE_TRIGGER", 18.0):
             if truth < getattr(cfg_bureau, "LOW_TRUTH_TRIGGER", 0.4):
                 selected_form = ux("protocol_strings", "bureau_form_zoning")
-                evidence = [
-                    ux("protocol_strings", "bureau_ev_voltage"),
-                    ux("protocol_strings", "bureau_ev_fiction")
-                ]
+                evidence = [ux("protocol_strings", "bureau_ev_voltage"), ux("protocol_strings", "bureau_ev_fiction")]
                 tax = tax_hvy
             else:
                 selected_form = ux("protocol_strings", "bureau_form_202a")
                 tax = tax_std
-        chi = float(safe_get(physics, "chi", safe_get(physics, "entropy", 0.0)))
-        chaos_thresh = getattr(cfg_bureau, "CHAOS_TAX_THRESHOLD", 0.6)
-        if not selected_form and chi > chaos_thresh:
+        elif chi > chaos_thresh:
             selected_form = ux("protocol_strings", "bureau_form_666")
             evidence = [
                 ux("protocol_strings", "bureau_ev_chaos").format(thresh=chaos_thresh),
                 ux("protocol_strings", "bureau_ev_level").format(level=chi),
             ]
             tax = getattr(cfg_bureau, "TAX_CHAOS", 12.0)
-        elif not selected_form:
+        else:
             buzz_hits = [w for w in clean_words if w in self.buzzwords]
             cliche_hits = [c for c in self.cliches if c in raw_text.lower()]
             if buzz_hits:
-                selected_form = random.choice(self.forms)
-                evidence = buzz_hits
-                tax = tax_std
+                selected_form, evidence, tax = random.choice(self.forms), buzz_hits, tax_std
             elif cliche_hits:
-                selected_form = ux("protocol_strings", "bureau_form_101")
-                evidence = cliche_hits
-                tax = tax_hvy
+                selected_form, evidence, tax = ux("protocol_strings", "bureau_form_101"), cliche_hits, tax_hvy
         if not selected_form:
             return None
         if bio_state.get("health", 100.0) < 20.0:
@@ -218,15 +210,7 @@ class TheBureau:
                 corr_msg = ux("protocol_strings", "bureau_correction")
                 log_msg = corr_msg.format(msg=crime["msg"])
                 return corrected_text, log_msg
-        dummy_physics = type(
-            "obj",
-            (object, ),
-            {
-                "voltage": 0.0,
-                "raw_text": text,
-                "clean_words": text.split()
-            },
-        )
+        dummy_physics = {"voltage": 0.0, "raw_text": text, "clean_words": text.split()}
         dummy_bio = {"health": 100.0}
         result = self.audit(dummy_physics, dummy_bio, origin="SYSTEM")
         if result:
@@ -241,8 +225,8 @@ class TherapyProtocol:
         default_vector = {"SEPTIC": 0, "EXHAUSTION": 0, "PARANOIA": 0}
         vector_keys = getattr(self.cfg, "TRAUMA_VECTOR", default_vector).keys()
         self.streaks = {k: 0 for k in vector_keys}
-        cfg = getattr(self.cfg, "THERAPY", None)
-        self.HEALING_THRESHOLD = getattr(cfg, "HEALING_THRESHOLD", 5) if cfg else 5
+        cfg = getattr(self.cfg, "THERAPY", object())
+        self.HEALING_THRESHOLD = getattr(cfg, "HEALING_THRESHOLD", 5)
 
     def to_dict(self) -> Dict[str, Any]:
         return {"streaks": self.streaks}
@@ -257,16 +241,13 @@ class TherapyProtocol:
                           safe_get(safe_get(phys, "matter"), "counts", {}))
         vector = safe_get(phys, "vector",
                           safe_get(safe_get(phys, "matter"), "vector", {}))
-        cfg_therapy = getattr(self.cfg, "THERAPY", None)
-        str_req = getattr(cfg_therapy, "STRENGTH_REQ", 0.3) if cfg_therapy else 0.3
-        t_reduct = getattr(cfg_therapy, "TRAUMA_REDUCTION", 0.5) if cfg_therapy else 0.5
+        cfg_therapy = getattr(self.cfg, "THERAPY", object())
+        str_req = getattr(cfg_therapy, "STRENGTH_REQ", 0.3)
+        t_reduct = getattr(cfg_therapy, "TRAUMA_REDUCTION", 0.5)
         healed_types = []
         is_clean = counts.get("toxin", 0) == 0
         has_strength = vector.get("STR", 0.0) > str_req
-        if is_clean and has_strength:
-            self.streaks["SEPTIC"] += 1
-        else:
-            self.streaks["SEPTIC"] = 0
+        self.streaks["SEPTIC"] = (self.streaks["SEPTIC"] + 1) if (is_clean and has_strength) else 0
         for trauma_type, streak in self.streaks.items():
             if streak >= self.HEALING_THRESHOLD:
                 self.streaks[trauma_type] = 0
@@ -295,9 +276,8 @@ class KintsugiProtocol:
         self.active_koan = data.get("active_koan", None)
 
     def check_integrity(self, stamina):
-        target_cfg = getattr(self, "cfg", BoneConfig)
-        cfg = getattr(target_cfg, "KINTSUGI", None)
-        s_trig = getattr(cfg, "STAMINA_TRIGGER", 15.0) if cfg else 15.0
+        cfg = getattr(self.cfg, "KINTSUGI", object())
+        s_trig = getattr(cfg, "STAMINA_TRIGGER", 15.0)
         if stamina < s_trig and not self.active_koan:
             self.active_koan = random.choice(self.koans)
             return True, self.active_koan
@@ -326,12 +306,11 @@ class KintsugiProtocol:
             play_count = 0
         whimsy_score = play_count / max(1, len(clean))
         pathway = self.PATH_SCAR
-        target_cfg = getattr(self, "cfg", BoneConfig)
-        cfg = getattr(target_cfg, "KINTSUGI", None)
-        al_v = getattr(cfg, "ALCHEMY_VOLTAGE", 15.0) if cfg else 15.0
-        al_w = getattr(cfg, "ALCHEMY_WHIMSY", 0.4) if cfg else 0.4
-        in_v = getattr(cfg, "INTEGRATION_VOLTAGE", 8.0) if cfg else 8.0
-        in_w = getattr(cfg, "INTEGRATION_WHIMSY", 0.2) if cfg else 0.2
+        cfg = getattr(self.cfg, "KINTSUGI", object())
+        al_v = getattr(cfg, "ALCHEMY_VOLTAGE", 15.0)
+        al_w = getattr(cfg, "ALCHEMY_WHIMSY", 0.4)
+        in_v = getattr(cfg, "INTEGRATION_VOLTAGE", 8.0)
+        in_w = getattr(cfg, "INTEGRATION_WHIMSY", 0.2)
         if vol > al_v and whimsy_score > al_w:
             pathway = self.PATH_ALCHEMY
         elif vol > in_v and whimsy_score > in_w:
@@ -347,50 +326,37 @@ class KintsugiProtocol:
         target = max(trauma_accum, key=trauma_accum.get)
         severity = trauma_accum[target]
         healed_log = []
-        cfg = getattr(self.cfg, "KINTSUGI", None)
+        cfg = getattr(self.cfg, "KINTSUGI", object())
+        atp_gain = 0.0
         if pathway == self.PATH_ALCHEMY:
-            r_alc = getattr(cfg, "REDUCTION_ALCHEMY_FACTOR", 0.8) if cfg else 0.8
-            a_fac = getattr(cfg, "ALCHEMY_ATP_FACTOR", 15.0) if cfg else 15.0
+            r_alc = getattr(cfg, "REDUCTION_ALCHEMY_FACTOR", 0.8)
             reduction = severity * r_alc
-            trauma_accum[target] = max(0.0, severity - reduction)
-            atp_boost = reduction * a_fac
+            atp_gain = reduction * getattr(cfg, "ALCHEMY_ATP_FACTOR", 15.0)
             msg_raw = ux("protocol_strings", "kintsugi_alchemy")
-            msg = f"{Prisma.VIOLET}{msg_raw.format(target=target, boost=atp_boost)}{Prisma.RST}"
+            msg = f"{Prisma.VIOLET}{msg_raw.format(target=target, boost=atp_gain)}{Prisma.RST}"
             log_alc = ux("protocol_strings", "kintsugi_log_alchemy")
-            if log_alc:
-                healed_log.append(log_alc.format(target=target))
-            return {
-                "success": True,
-                "msg": msg,
-                "healed": healed_log,
-                "atp_gain": atp_boost,
-            }
+            if log_alc: healed_log.append(log_alc.format(target=target))
         elif pathway == self.PATH_INTEGRATION:
-            r_int = getattr(cfg, "REDUCTION_INTEGRATION", 2.0) if cfg else 2.0
-            reduction = r_int
-            trauma_accum[target] = max(0.0, severity - reduction)
+            reduction = getattr(cfg, "REDUCTION_INTEGRATION", 2.0)
             if soul_ref:
                 soul_ref.traits.adjust("WISDOM", 0.1)
                 log_wis = ux("protocol_strings", "kintsugi_log_wisdom")
-                if log_wis:
-                    healed_log.append(log_wis)
+                if log_wis: healed_log.append(log_wis)
             msg_raw = ux("protocol_strings", "kintsugi_mercy")
             msg = f"{Prisma.OCHRE}{msg_raw.format(target=target)}{Prisma.RST}"
             log_int = ux("protocol_strings", "kintsugi_log_integration")
-            if log_int:
-                healed_log.append(log_int.format(target=target))
-            success = True
+            if log_int: healed_log.append(log_int.format(target=target))
         else:
-            r_scar = getattr(cfg, "REDUCTION_SCAR", 0.5) if cfg else 0.5
-            reduction = r_scar
-            trauma_accum[target] = max(0.0, severity - reduction)
+            reduction = getattr(cfg, "REDUCTION_SCAR", 0.5)
             msg_raw = ux("protocol_strings", "kintsugi_scar")
             msg = f"{Prisma.GRY}{msg_raw}{Prisma.RST}"
             log_scar = ux("protocol_strings", "kintsugi_log_scar")
-            if log_scar:
-                healed_log.append(log_scar.format(target=target))
-            success = True
-        return {"success": success, "msg": msg, "healed": healed_log}
+            if log_scar: healed_log.append(log_scar.format(target=target))
+
+        trauma_accum[target] = max(0.0, severity - reduction)
+        result = {"success": True, "msg": msg, "healed": healed_log}
+        if atp_gain > 0: result["atp_gain"] = atp_gain
+        return result
 
 
 class GriefProtocol:
@@ -459,8 +425,8 @@ class TheCriticsCircle:
         self.last_review_turn = data.get("last_review_turn", 0)
 
     def audit_performance(self, physics: Any, turn_count: int) -> Optional[str]:
-        cfg = getattr(self.cfg, "CRITICS", None)
-        rev_cd = getattr(cfg, "REVIEW_COOLDOWN", 10) if cfg else 10
+        cfg = getattr(self.cfg, "CRITICS", object())
+        rev_cd = getattr(cfg, "REVIEW_COOLDOWN", 10)
         if turn_count - self.last_review_turn < rev_cd:
             return None
         voltage = float(safe_get(physics, "voltage", 0.0))
@@ -482,8 +448,7 @@ class TheCriticsCircle:
                     counts = safe_get(physics, "counts", {})
                     raw_count = (counts.get(category, 0) if isinstance(counts, dict)
                                  else getattr(counts, category, 0))
-                    max_contrib = (getattr(cfg, "MAX_METRIC_CONTRIB", 5.0)
-                                   if cfg else 5.0)
+                    max_contrib = getattr(cfg, "MAX_METRIC_CONTRIB", 5.0)
                     current = min(max_contrib, raw_count * 0.5)
                 elif metric_str == "velocity":
                     current = velocity
@@ -493,8 +458,8 @@ class TheCriticsCircle:
                     score += current * target
                 else:
                     score -= current * abs(target)
-            pos_thresh = getattr(cfg, "POSITIVE_REVIEW_THRESH", 15.0) if cfg else 15.0
-            neg_thresh = getattr(cfg, "NEGATIVE_REVIEW_THRESH", -15.0) if cfg else -15.0
+            pos_thresh = getattr(cfg, "POSITIVE_REVIEW_THRESH", 15.0)
+            neg_thresh = getattr(cfg, "NEGATIVE_REVIEW_THRESH", -15.0)
             if score > pos_thresh:
                 best_match = (key, critic)
                 review_type = "high"
@@ -561,9 +526,9 @@ class LimboLayer:
         return f"{Prisma.CYN}{err_msg.format(thought=intended_thought, horror=horror)}{Prisma.RST}"
 
     def haunt(self, text):
-        cfg = getattr(self.cfg, "LIMBO", None)
-        l_chance = getattr(cfg, "LEAK_DECAY_CHANCE", 0.2) if cfg else 0.2
-        l_amount = getattr(cfg, "LEAK_DECAY_AMOUNT", 0.5) if cfg else 0.5
+        cfg = getattr(self.cfg, "LIMBO", object())
+        l_chance = getattr(cfg, "LEAK_DECAY_CHANCE", 0.2)
+        l_amount = getattr(cfg, "LEAK_DECAY_AMOUNT", 0.5)
         if self.stasis_leak > 0:
             if random.random() < l_chance:
                 self.stasis_leak = max(0.0, self.stasis_leak - l_amount)
@@ -594,9 +559,9 @@ class TheFolly:
 
     def audit_desire(self, physics, stamina):
         voltage = float(safe_get(physics, "voltage", 0.0) or 0.0)
-        cfg = getattr(self.cfg, "FOLLY", None)
-        m_volt = getattr(cfg, "MAUSOLEUM_VOLTAGE", 80.0) if cfg else 80.0
-        m_stam = getattr(cfg, "MAUSOLEUM_STAMINA", 20.0) if cfg else 20.0
+        cfg = getattr(self.cfg, "FOLLY", object())
+        m_volt = getattr(cfg, "MAUSOLEUM_VOLTAGE", 80.0)
+        m_stam = getattr(cfg, "MAUSOLEUM_STAMINA", 20.0)
         if voltage > m_volt and stamina > m_stam:
             msg1 = ux("protocol_strings", "folly_mausoleum")
             msg2 = ux("protocol_strings", "folly_dilation")
@@ -618,14 +583,10 @@ class TheFolly:
             return self._attempt_digest_abstract(clean_words, lexicon)
         fresh_meat = [w for w in meat_words if w not in self.gut_memory]
         if not fresh_meat:
-            target = meat_words[0]
-            msg1 = ux("protocol_strings", "folly_reflex")
-            msg2 = ux("protocol_strings", "folly_penalty")
-            msg = (
-                f"{Prisma.OCHRE}{msg1.format(target=target)}{Prisma.RST}\n"
-                f"   {Prisma.RED}{msg2.format(penalty=self.cfg.FOLLY.PENALTY_REGURGITATION)}{Prisma.RST}"
-            )
-            return "REGURGITATION", msg, -self.cfg.FOLLY.PENALTY_REGURGITATION, None
+            penalty = self.cfg.FOLLY.PENALTY_REGURGITATION
+            msg = (f"{Prisma.OCHRE}{ux('protocol_strings', 'folly_reflex').format(target=meat_words[0])}{Prisma.RST}\n"
+                   f"   {Prisma.RED}{ux('protocol_strings', 'folly_penalty').format(penalty=penalty)}{Prisma.RST}")
+            return "REGURGITATION", msg, -penalty, None
         return self._eat_meat(fresh_meat, lexicon)
 
     def _eat_meat(self, fresh_meat: list,
@@ -672,18 +633,14 @@ class TheFolly:
     def _filter_meat_words(clean_words: list, lexicon_ref: Any) -> list:
         if not lexicon_ref:
             return clean_words
-        heavy = lexicon_ref.get("heavy") or []
-        kinetic = lexicon_ref.get("kinetic") or []
-        suburban = lexicon_ref.get("suburban") or []
-        return [w for w in clean_words if w in heavy or w in kinetic or w in suburban]
+        valid_set = set(lexicon_ref.get("heavy") or []) | set(lexicon_ref.get("kinetic") or []) | set(lexicon_ref.get("suburban") or [])
+        return [w for w in clean_words if w in valid_set]
 
     def _attempt_digest_abstract(
             self, clean_words: list,
             lexicon_ref: Any) -> Tuple[str, str, float, Optional[str]]:
-        if abstract_words := [
-                w for w in clean_words
-                if w in (lexicon_ref.get("abstract") if lexicon_ref else [])
-        ]:
+        abstract_set = set(lexicon_ref.get("abstract") or []) if lexicon_ref else set()
+        if abstract_words := [w for w in clean_words if w in abstract_set]:
             yield_val = self.cfg.FOLLY.YIELD_ABSTRACT
             msg = (
                 f"{Prisma.GRY}{(ux('protocol_strings', 'folly_sighs') or '').format(target=random.choice(abstract_words).upper())}{Prisma.RST}\n"
@@ -725,8 +682,7 @@ class ChronosKeeper:
 
     def save_checkpoint(self, history: list = None) -> str:
         try:
-            if not os.path.exists(self.SAVE_DIR):
-                os.makedirs(self.SAVE_DIR)
+            os.makedirs(self.SAVE_DIR, exist_ok=True)
             continuity_packet = self._build_continuity_packet()
             start_history = (history if history is not None else
                              self.eng.cortex.dialogue_buffer)
@@ -831,11 +787,11 @@ class ChronosKeeper:
                     )
 
     def _gather_village_state(self) -> Dict[str, Any]:
-        state = {}
-        for name, component in self.eng.village.items():
-            if component and hasattr(component, "to_dict"):
-                state[name] = component.to_dict()
-        return state
+        return {
+            name: comp.to_dict()
+            for name, comp in self.eng.village.items()
+            if comp and hasattr(comp, "to_dict")
+        }
 
     def _restore_village_state(self, state_data: Dict[str, Any]):
         if not state_data:
@@ -857,12 +813,10 @@ class ChronosKeeper:
     def get_crash_path(self, prefix="crash"):
         os.makedirs(self.CRASH_DIR, exist_ok=True)
         try:
-            files = sorted(
-                [f for f in os.listdir(self.CRASH_DIR) if f.startswith(prefix)])
-            target_cfg = (self.eng.bone_config if self.eng
-                          and hasattr(self.eng, "bone_config") else BoneConfig)
-            cfg = getattr(target_cfg, "CHRONOS", None)
-            kept = getattr(cfg, "CRASH_FILES_KEPT", 4) if cfg else 4
+            files = sorted([f for f in os.listdir(self.CRASH_DIR) if f.startswith(prefix)])
+            target_cfg = getattr(self.eng, "bone_config", BoneConfig) if self.eng else BoneConfig
+            cfg = getattr(target_cfg, "CHRONOS", object())
+            kept = getattr(cfg, "CRASH_FILES_KEPT", 4)
             for oldest in files[:-kept] if kept > 0 else files:
                 os.remove(os.path.join(self.CRASH_DIR, oldest))
         except Exception:

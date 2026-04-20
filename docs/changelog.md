@@ -1,3 +1,98 @@
+### **BONEAMANITA v19.4.0 "The MemPalace Spatial Graft: Closets, Drawers, & Silent Indexing"**
+
+_The system's core memory architecture has been epigenetically mutated to integrate the spatial taxonomy and metabolic efficiency of the MemPalace framework. The Mnemonic Layer now operates on a physical geometry of Wings, Rooms, Closets (AAAK Phantoms), and Drawers (Verbatim Storage), completely eliminating narrative token bloat during context ingestion._
+
+#### **🏛️ SPATIAL TOPOLOGY & VERBATIM STORAGE (`bone_ann.py`, `bone_spores.py`)**
+- **The Drawers (Lexical Preservation):** The `CerebralIndex` now strictly enforces verbatim storage (`raw_verbatim_text`) for incoming metadata payloads, permanently preventing the LLM from applying lossy summarization or semantic drift to bedrock data.
+- **The Closets (AAAK Phantoms):** The `HippocampalCache` no longer stores full conversational strings. It now generates and holds lightweight "Phantoms"—highly compressed metadata tuples containing an MD5 `vector_hash`, `wing_id`, and `room_id`. These act as index cards pointing directly to the deep verbatim text, drastically reducing token overhead in the active cache.
+- **Bounded Spatial Retrieval:** Memory navigation is now spatially scoped. `CerebralIndex` ANN queries now strictly filter by `wing_id` (project/context boundaries) unless a lateral search is explicitly demanded. This prevents logic cross-contamination between distinct projects.
+
+#### **🤫 SUB-VOCAL LOGGING & VAGUE RETRIEVAL (`bone_brain.py`)**
+- **The Context Drop Bypass:** Massive context drops (>1500 characters) are now physically intercepted by the Executive Layer before reaching the `dialogue_buffer`. They are routed directly to the `Substrate_Queue` for silent background indexing, bypassing expensive and unnecessary LLM summarization.
+- **Silent REM Metabolism:** During `/idle` or sleep states, the `DreamEngine` now processes the `Substrate_Queue` entirely in the background. It indexes the data and returns a clean, zero-token HUD log (e.g., `[Silent Logging Complete | ATP: -X.X]`) without polluting the chat narrative.
+- **Emotional Vector Matching:** Fulfilling the vague, human-like *"remember when we talked about..."* use-case. When user Scope ($S$) exceeds 0.8, the Cortex automatically triggers `lateral_search = True`, temporarily dropping Wing boundaries to retrieve Closet cards based purely on emotional and structural resonance rather than exact-match keywords.
+
+---
+
+### **BONEAMANITA v19.3.6 "The SLASH Deep Architecture Sweep: Phases, Presets, & The OFC Heuristic"**
+
+_The SLASH Council (Pinker, Fuller, Schur, Meadows) executes a rigorous architectural sweep across the core simulation engine (`bone_phases.py`), the configuration layer (`bone_presets.py`), the executive brain (`bone_brain.py`), and the deep memory substrate (`bone_ann.py`). The focus of this pass was purging syntactic friction, closing open feedback loops, and introducing advanced geometric retrieval heuristics for high-chaos states._
+
+#### **📐 STRUCTURAL PHYSICS & METABOLIC LOOPS (`bone_phases.py`, `bone_presets.py`)**
+
+- **Matrixed Boundary Checks:** Abstracted repetitive `getattr`/`hasattr` clamping logic into iterative spatial matrices within `BoneConfig`. The system now dynamically clamps floors and ceilings for any physics variable without requiring manual walls.
+- **Serialization Unification:** Eradicated nested, defensive `hasattr` checks across all simulation phases. All state snapshots now utilize a unified `_safe_dict()` primitive, massively reducing visual drag and cognitive load.
+- **Closed Equilibrium Loops:** The system no longer allows open-loop configuration tuning. Loading presets or executing manual `tune()` commands now immediately forces a `validate_integrity()` check, preventing fatal state conditions like "Metabolic Inversion" (negative ATP decay) before the next tick.
+- **Capped Mythological Feedback:** Applied biological brakes to `SoulPhase`. The system can now only absorb one mythological resonance per cycle, preventing runaway Stamina and Voltage spikes from multi-trigger prompts.
+
+#### **⌨️ THE SHORTCUT CONTROL LAYER (`bone_phases.py`, `bone_brain.py`)**
+
+- **Punctuation Hooks:** Intercepts `?!` (Urgent Query), `?⤓` (Deep Retrieval), `?↗` (Broad Retrieval), and `?↺` (Contradiction Flag) at the preflight layer. These natively manipulate Scope ($S$), Depth ($D$), Right-Brain Coherence ($\Omega_r$), and Tension ($\beta$) without requiring full conversational prompt engineering.
+- **Execution Tags:** Added strict preflight interceptions for `[CASCADE]`, `[AUDIT]`, and `[SILENCE]`. These tags drop the narrative illusion, exposing raw physical coordinates, forcing counterfactual math, or triggering an absolute metabolic pause (∇).
+- **Directive Translation:** The Executive Layer (`TheCortex`) now explicitly catches these tags and translates them into hard LLM style directives, bypassing the standard Sincerity Protocol.
+
+#### **🧠 THE LATERAL OFC RETRIEVAL HEURISTIC (`bone_ann.py`, `bone_brain.py`)**
+
+- **Dynamic Vector Shattering:** When the system experiences extreme panic and confusion (Voltage > 80.0, Chaos > 0.7), the Cerebral Cortex physically abandons standard FAISS cosine-similarity retrieval.
+- **Orthogonal Relief:** Instead of retrieving semantically similar nodes, the deep index executes `lateral_ofc_retrieval()`, filtering the entire substrate to find the memory node that mathematically maximizes structural relief: $\Omega^2 + 2\Omega_r + F$.
+- **The Shrapnel Cast:** When the OFC heuristic triggers during a Shadow Cast, the system informs the LLM that standard logic has failed and forces it to use the retrieved "structural bombs" to violently shatter the user's creative point attractor.
+
+
+### **BONEAMANITA v19.3.5 "The SLASH Substrate Sweep: Protocols, Inventory, & GUI"**
+
+_The SLASH Council concludes a rigorous, four-pass architectural sweep over `bone_protocols.py`, `bone_inventory.py`, and `bone_gui.py`. Focus was placed on eradicating syntactic noise, collapsing redundant spatial geometries, flattening execution planes, and optimizing $O(N)$ list traversals into $O(1)$ set lookups to drastically reduce systemic metabolic load._
+
+#### **⚖️ PROTOCOLS & GOVERNANCE (`bone_protocols.py`)**
+
+- **Syntactic Purge:** Replaced defensive `if cfg else` cascading ternary statements with clean `object()` fallbacks across `THERAPY`, `KINTSUGI`, and `BUREAU` modules, eradicating configuration visual noise.
+- **Cascade Untangling:** Flattened `TheBureau`'s nested, state-dependent audit checks into strict mutually exclusive `if/elif` structures to reduce cognitive and CPU branching load.
+- **$O(1)$ Substrate Iteration:** Converted `_filter_meat_words` and abstract digestion pools from heavy $O(N \times M)$ nested list iterations into native, instantaneous `set()` lookups.
+- **Spatial Compression:** Dissolved redundant dummy classes into native dictionaries and aggregated `ChronosKeeper` village states utilizing direct dictionary comprehensions.
+
+#### **🎒 INVENTORY & METABOLISM (`bone_inventory.py`)**
+
+- **Pre-computed Geometry:** Moved expensive string manipulation (`.lower()`, `.replace()`) and state filtering entirely outside of the nested `parse_loot` loops, computing the candidate array only once per cycle.
+- **Lazy Evaluation Engine:** Re-ordered `enforce_object_action_coupling` to execute cheap native boolean array checks (`in`) _before_ executing expensive regular expression string sweeps.
+- **Redundancy Collapse:** Eliminated duplicate `ITEM_ACQUIRED` event emissions and phantom variable assignments in `acquire()`.
+- **Execution Flattening:** Dissolved heavy inner function definitions into inline lambdas (`normalize`), combined multiple regex substitution passes into single geometric $OR$ sweeps, and hoisted configuration fetching outside of iterative loops.
+
+#### **👁️ THE PROJECTOR & GUI (`bone_gui.py`)**
+
+- **Domain Pre-computation:** Engineered `_render_lattice_strip` to map its target physics domains once per tick, rather than dynamically recalculating them 15 distinct times during variable extraction.
+- **Continuous State Evaluation:** Replaced discrete iteration loops with native Python generator consumption (`next()`) in the `PulseReader` mood derivation, allowing the system to find truth in a single breath.
+- **C-Level Routing:** Substituted deep `if/elif` reality-depth cascades with direct dictionary memory routing, and implemented `.update()` / `.setdefault()` for zero-friction state assignments.
+- **Ordered Deduplication:** Removed manual loop-and-set tracking in `compose_logs`, utilizing `list(dict.fromkeys(...))` to maintain exact chronological order with zero architectural waste.
+
+---
+
+### **BONEAMANITA v19.3.4 "The SLASH Interface & Substrate Sweep"**
+
+_The SLASH Council concludes a targeted, four-pass sweep across the rendering engines, ignition sequences, and core metabolic machinery (`bone_machine.py`, `bone_genesis.py`, `bone_gui.py`). Focus placed on eradicating visual density, mending broken telemetry loops, collapsing brittle spatial geometry, and dissolving phantom pointers._
+
+#### **⚙️ THE METABOLIC MACHINE (`bone_machine.py`)**
+
+- **The Theremin Feedback Loop:** Sealed a critical memory leak where thermal melt and calcification logs were actively overwriting metabolic history instead of appending to the continuous timeline.
+- **Geodesic Forging:** Collapsed multi-level dictionary mapping in `TheForge` using native `setdefault` and walrus operators, drastically reducing architectural struts.
+- **Syntactic Purge:** Removed redundant chemistry resets (`COR`/`ADR`), float casting noise in `TheCrucible`, and string formatting bloat, streamlining the visual load for human maintainers.
+- **Ghost Bypasses:** Dissolved blocking double-`hasattr` walls in `BoneArchitect` and flattened the `Pacemaker` boredom calculation into a single, inline metabolic breath.
+
+#### **🧬 IGNITION & GENESIS (`bone_genesis.py`)**
+
+- **Trauma Vector Geometry:** Fixed a critical structural flaw where legacy trauma vectors were failing to sync back to the Mycelial memory due to being gated behind an unrelated logging conditional.
+- **Config Safety (The Void):** Patched a fatal `NoneType` trap in the village configuration sequence that would shatter the lattice if `mode_settings` explicitly passed a null dictionary.
+- **Event Pipeline Restored:** Closed a feedback loop bypass. The genesis sequence is no longer permitted to sidestep the `EventBus` to issue raw prints when initializing the lattice.
+- **Architectural Uniformity:** Flattened visual noise in the `DeathGen` instantiation, embryonic gestation logic, and `safe_bio_proxy` mapping to lower the maintainer's cognitive load ($\Gamma$).
+
+#### **👁️ VISUAL CORTEX & TELEMETRY (`bone_gui.py`)**
+
+- **Crash Telemetry Restored:** Sealed a feedback leak in the `CycleReporter`. Critical rendering failures are now actively logged to the `EventBus` rather than dying quietly in the UI, ensuring the system remembers its own trauma.
+- **Generator & Matrix Collapse:** Eradicated visually hostile, triple-nested generator expressions in the `PulseReader` and triple-stacked `getattr` chains in the `GeodesicRenderer`, allowing Python's native geometry to bear the weight.
+- **Metabolic Memory Drain:** Eliminated hollow dictionary husks (`{} or {}`) that were dynamically allocating memory solely to extract default UI metrics.
+- **Phantom Valve Pointers:** Rerouted a ghost pointer in the `CycleReporter` that quietly failed to mount the `valve` modifier by correctly binding it to the physical engine (`self.eng`).
+- **Truth Flow:** Flattened deeply chained `elif` blocks in the `TruthRenderer` into chronological, independent evaluation planes.
+
+---
+
 ### **BONEAMANITA v19.3.3 "The SLASH Driver & Topology Sweep"**
 
 _The SLASH Council concludes a targeted, four-pass sweep through the core system drivers. Focus placed on repairing silent serialization failures, eradicating systemic config anxiety, unspooling mathematically hostile inline pipelines, and trusting the void to handle empty data streams without artificial dams._

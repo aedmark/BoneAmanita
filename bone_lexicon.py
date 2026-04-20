@@ -104,32 +104,28 @@ class LexiconStore:
 
     def get_raw(self, category: str) -> Set[str]:
         base = self.VOCAB.get(category, set())
-        learned = set(self.LEARNED_VOCAB.get(category, {}).keys())
+        learned = self.LEARNED_VOCAB.get(category, {}).keys()
         combined = base | learned
-        if category == "suburban":
-            return combined - self.USER_FLAGGED_BIAS
-        return combined
+        return combined - self.USER_FLAGGED_BIAS if category == "suburban" else combined
 
     def get_categories_for_word(self, word: str) -> Set[str]:
         return self.REVERSE_INDEX.get(word.lower(), set())
 
     def teach(self, word: str, category: str, tick: int) -> bool:
         w = word.lower()
-        if category not in self.LEARNED_VOCAB:
-            self.LEARNED_VOCAB[category] = {}
-        if w in self.LEARNED_VOCAB[category]:
-            return False
-        self.LEARNED_VOCAB[category][w] = tick
+        cat_dict = self.LEARNED_VOCAB.setdefault(category, {})
+        if w in cat_dict: return False
+        cat_dict[w] = tick
         self._index_word(w, category)
         return True
 
     def harvest(self, text: str) -> Dict[str, List[str]]:
         if not text: return {}
-        results = {}
+        results = defaultdict(list)
         for w in text.translate(self._TRANSLATOR).lower().split():
             for cat in self.get_categories_for_word(w):
-                results.setdefault(cat, []).append(w)
-        return results
+                results[cat].append(w)
+        return dict(results)
 
 
 class LinguisticAnalyzer:
@@ -176,12 +172,11 @@ class LinguisticAnalyzer:
     def measure_viscosity(self, word: str) -> float:
         if not word: return 0.0
         if (w := word.lower()) in self.store.SOLVENTS: return 0.1
-        stops = sum(1 for c in w if c in self.PHONETICS.get("PLOSIVE", set()))
-        flow = sum(1 for c in w if c in self.PHONETICS.get("LIQUID", set())
-                   | self.PHONETICS.get("VOWELS", set()))
-        return (min(1.0,
-                    len(w) / 12.0) *
-                0.5) + (max(min(1.0, stops / 3.0), min(1.0, flow / 4.0)) * 0.5)
+        plosives = self.PHONETICS.get("PLOSIVE", set())
+        flow_chars = self.PHONETICS.get("LIQUID", set()) | self.PHONETICS.get("VOWELS", set())
+        stops = sum(1 for c in w if c in plosives)
+        flow = sum(1 for c in w if c in flow_chars)
+        return (min(1.0, len(w) / 12.0) * 0.5) + (max(min(1.0, stops / 3.0), min(1.0, flow / 4.0)) * 0.5)
 
     @staticmethod
     def get_turbulence(words: List[str]) -> float:
@@ -193,35 +188,28 @@ class LinguisticAnalyzer:
 
     def vectorize(self, text: str) -> Dict[str, float]:
         if not (words := self.sanitize(text)): return {}
-        dims = {
-            k: 0.0
-            for k in ("VEL", "STR", "CHI", "PHI", "PSI", "BET", "DEL", "LAMBDA", "ENT")
-        }
+        dims = dict.fromkeys(("VEL", "STR", "CHI", "PHI", "PSI", "BET", "DEL", "LAMBDA", "ENT"), 0.0)
         for w in words:
             for cat in self.store.get_categories_for_word(w):
                 if cat in self.dimension_map:
                     dims[self.dimension_map[cat]] += 1.0
         total = max(1.0, sum(dims.values()))
         result = {k: round(v / total, 3) for k, v in dims.items()}
-        result["ENT"] = round(
-            (result.get("CHI", 0.0) + min(1.0, total / max(1, len(words)))) / 2.0, 3)
+        result["ENT"] = round((result.get("CHI", 0.0) + min(1.0, total / max(1, len(words)))) / 2.0, 3)
         return result
 
     @staticmethod
     def calculate_flux(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float:
         if not vec_a or not vec_b:
             return 0.0
-        keys = set(vec_a.keys()) | set(vec_b.keys())
-        diff_sq = sum((vec_a.get(k, 0.0) - vec_b.get(k, 0.0))**2 for k in keys)
-        return round(diff_sq**0.5, 3)
+        keys = vec_a.keys() | vec_b.keys()
+        return round(sum((vec_a.get(k, 0.0) - vec_b.get(k, 0.0)) ** 2 for k in keys) ** 0.5, 3)
 
     def contextualize(self, word: str, field_vector: Dict[str, float]) -> str:
-        base_cat, _score = self.classify_word(word)
-        if not field_vector or not base_cat:
-            return base_cat
-        dominant_field = max(field_vector, key=field_vector.get)
-        if field_vector.get(dominant_field, 0.0) > 0.8:
-            if dominant_field == "PSI" and base_cat == "heavy":
+        base_cat, _ = self.classify_word(word)
+        if field_vector and base_cat == "heavy":
+            dom = max(field_vector, key=field_vector.get)
+            if dom == "PSI" and field_vector.get(dom, 0.0) > 0.8:
                 return "abstract"
         return base_cat
 
@@ -229,17 +217,18 @@ class LinguisticAnalyzer:
         if not text:
             return []
         try:
-            normalized = (unicodedata.normalize("NFKD",
-                                                text).encode("ASCII",
-                                                             "ignore").decode("utf-8"))
+            normalized = unicodedata.normalize("NFKD", text).encode("ASCII", "ignore").decode("utf-8")
         except (TypeError, AttributeError):
             normalized = text
-        xlate = self._TRANSLATOR if self._TRANSLATOR else str.maketrans("", "")
+
+        xlate = self._TRANSLATOR or str.maketrans("", "")
         cleaned_text = normalized.translate(xlate).lower()
+
         if getattr(self, "ANTIGEN_REGEX", None):
             cleaned_text = self.ANTIGEN_REGEX.sub(
-                lambda m: self.store.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""),
-                cleaned_text)
+                lambda m: self.store.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""), cleaned_text
+            )
+
         bias_set = getattr(self.store, "USER_FLAGGED_BIAS", set())
         return [w for w in cleaned_text.split() if w not in bias_set]
 
@@ -248,9 +237,8 @@ class LinguisticAnalyzer:
         if len(w) < 3:
             return None, 0.0
         for category, roots in self.ROOTS.items():
-            for root in roots:
-                if root in w:
-                    return category.lower(), 0.8
+            if any(r in w for r in roots):
+                return category.lower(), 0.8
         counts = {k: 0 for k in self.PHONETICS}
         for char in w:
             if sound_type := self.char_to_sound.get(char):
@@ -274,35 +262,21 @@ class LinguisticAnalyzer:
         return None, 0.0
 
     def measure_valence(self, words: List[str]) -> float:
-        if not words:
-            return 0.0
+        if not words: return 0.0
         score = 0.0
-        prev_cats = set()
+        prev_negator = False
         for word in words:
             cats = self.store.get_categories_for_word(word)
-            val = 0.0
-            if "sentiment_pos" in cats:
-                val = 1.0
-            elif "sentiment_neg" in cats:
-                val = -1.0
-            if val != 0.0 and "sentiment_negators" in prev_cats:
+            val = 1.0 if "sentiment_pos" in cats else (-1.0 if "sentiment_neg" in cats else 0.0)
+            if val != 0.0 and prev_negator:
                 val *= -0.5
             score += val
-            prev_cats = cats
-        normalized = score / max(1.0, len(words) * 0.5)
-        return max(-1.0, min(1.0, normalized))
+            prev_negator = "sentiment_negators" in cats
+        return max(-1.0, min(1.0, score / max(1.0, len(words) * 0.5)))
 
     def tune_sensitivity(self, voltage: float, drag: float):
-        if voltage > 15.0:
-            self.biases["kinetic"] = 0.8
-        elif voltage < 5.0:
-            self.biases["kinetic"] = 1.2
-        else:
-            self.biases["kinetic"] = 1.0
-        if drag > 5.0:
-            self.biases["heavy"] = 0.8
-        else:
-            self.biases["heavy"] = 1.0
+        self.biases["kinetic"] = 0.8 if voltage > 15.0 else (1.2 if voltage < 5.0 else 1.0)
+        self.biases["heavy"] = 0.8 if drag > 5.0 else 1.0
 
 
 from collections import deque
@@ -321,14 +295,14 @@ class SemanticField:
             return self.current_vector
         if not self.current_vector:
             self.current_vector = new_vector
-            self.history.append((time.time(), 0.0))
-            return self.current_vector
-        flux = self.analyzer.calculate_flux(self.current_vector, new_vector)
-        self.momentum = (self.momentum * 0.7) + (flux * 0.3)
-        self.current_vector = {
-            k: round((self.current_vector.get(k, 0.0) * 0.6) + (v * 0.4), 3)
-            for k, v in new_vector.items()
-        }
+            flux = 0.0
+        else:
+            flux = self.analyzer.calculate_flux(self.current_vector, new_vector)
+            self.momentum = (self.momentum * 0.7) + (flux * 0.3)
+            self.current_vector = {
+                k: round((self.current_vector.get(k, 0.0) * 0.6) + (v * 0.4), 3) for k, v in new_vector.items()
+            }
+
         self.history.append((time.time(), flux))
         return self.current_vector
 
@@ -347,24 +321,23 @@ class LexiconService:
         self._INITIALIZED = False
         self._STORE = None
         self._ANALYZER = None
-        self.ANTIGEN_REGEX = None
         self.SOLVENTS = set()
         self.PRIORITY_ORDER = []
 
+    def _ensure(self):
+        if not self._INITIALIZED: self.initialize()
+
     def get_store(self):
-        if not self._INITIALIZED:
-            self.initialize()
+        self._ensure()
         return self._STORE
 
     def initialize(self):
-        if self._INITIALIZED:
-            return
+        if self._INITIALIZED: return
         self._INITIALIZED = True
         try:
             self._STORE = LexiconStore()
             self._STORE.load_vocabulary()
             self._ANALYZER = LinguisticAnalyzer(self._STORE)
-            self.compile_antigens()
             self.SOLVENTS = self._STORE.SOLVENTS
             ling_data = LoreManifest.get_instance().get("LINGUISTICS") or {}
             self.PRIORITY_ORDER = ling_data.get("PRIORITY_ORDER", [])
@@ -378,67 +351,46 @@ class LexiconService:
             raise e
 
     def get_valence(self, words: List[str]) -> float:
-        if not self._INITIALIZED:
-            self.initialize()
+        self._ensure()
         return self._ANALYZER.measure_valence(words)
 
     def get_categories_for_word(self, word: str) -> Set[str]:
-        if not self._INITIALIZED:
-            self.initialize()
+        self._ensure()
         return self._STORE.get_categories_for_word(word)
 
     def get_current_category(self, word: str) -> Optional[str]:
-        if not self._INITIALIZED:
-            self.initialize()
+        self._ensure()
         categories = self._STORE.get_categories_for_word(word)
         if categories:
             return next(iter(categories))
         return None
 
     def measure_viscosity(self, word: str) -> float:
-        if not self._INITIALIZED:
-            self.initialize()
+        self._ensure()
         return self._ANALYZER.measure_viscosity(word)
 
     def get_turbulence(self, words: List[str]) -> float:
-        if not self._INITIALIZED:
-            self.initialize()
+        self._ensure()
         return self._ANALYZER.get_turbulence(words)
 
     def vectorize(self, text: str) -> Dict[str, float]:
-        if not self._INITIALIZED:
-            self.initialize()
+        self._ensure()
         return self._ANALYZER.vectorize(text)
 
-    def compile_antigens(self):
-        if not self._INITIALIZED:
-            self.initialize()
-            return
-        replacements = self._STORE.ANTIGEN_REPLACEMENTS
-        if not replacements:
-            self.ANTIGEN_REGEX = None
-            return
-        patterns = sorted(replacements.keys(), key=len, reverse=True)
-        escaped = [rf"\b{re.escape(str(p))}\b" for p in patterns]
-        self.ANTIGEN_REGEX = re.compile("|".join(escaped), re.IGNORECASE)
-
     def purge_toxins(self, text: str) -> str:
-        if not self._INITIALIZED:
-            self.initialize()
-        if not self.ANTIGEN_REGEX or not text:
+        self._ensure()
+        if not self._ANALYZER.ANTIGEN_REGEX or not text:
             return text
-        return self.ANTIGEN_REGEX.sub(
+        return self._ANALYZER.ANTIGEN_REGEX.sub(
             lambda m: self._STORE.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""),
             text)
 
     def sanitize(self, text: str) -> List[str]:
-        if not self._INITIALIZED:
-            self.initialize()
+        self._ensure()
         return self._ANALYZER.sanitize(text)
 
     def classify(self, word: str) -> Tuple[Optional[str], float]:
-        if not self._INITIALIZED:
-            self.initialize()
+        self._ensure()
         known_cats = self._STORE.get_categories_for_word(word)
         if known_cats:
             for p_cat in getattr(self, "PRIORITY_ORDER", []):
@@ -454,11 +406,11 @@ class LexiconService:
         return self.classify(word)
 
     def create_field(self):
-        if not self._INITIALIZED:
-            self.initialize()
+        self._ensure()
         return SemanticField(self._ANALYZER)
 
     def get(self, category: str) -> Set[str]:
+        self._ensure()
         return self._STORE.get_raw(category)
 
     def get_random(self, category: str) -> str:
@@ -468,6 +420,7 @@ class LexiconService:
         return random.choice(words)
 
     def teach(self, word: str, category: str, tick: int = 0):
+        self._ensure()
         self._STORE.teach(word, category, tick)
 
     def save(self):
@@ -477,13 +430,13 @@ class LexiconService:
             print(f"{Prisma.GRN}{msg}{Prisma.RST}")
 
     def harvest(self, text: str) -> Dict[str, List[str]]:
+        self._ensure()
         return self._STORE.harvest(text)
 
     def learn_antigen(self, word: str, replacement: str = ""):
+        self._ensure()
         self._STORE.ANTIGEN_REPLACEMENTS[word] = replacement
-        self.compile_antigens()
-        if self._ANALYZER:
-            self._ANALYZER.compile_antigens()
+        self._ANALYZER.compile_antigens()
 
     def tune_perception(self, voltage: float, narrative_drag: float):
         if self._ANALYZER:

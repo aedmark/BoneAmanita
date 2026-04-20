@@ -2,15 +2,14 @@
 
 import math
 import time
+import hashlib
 from itertools import combinations
 from typing import Dict, List, Any, Tuple, Optional
 import faiss
 import numpy as np
 from bone_core import EventBus
 
-
 class HippocampalCache:
-
     def __init__(self, max_capacity: int = 500):
         self.max_capacity = max_capacity
         self.nodes: Dict[str, Any] = {}
@@ -18,11 +17,12 @@ class HippocampalCache:
     def encode(self, node_id: str, vector: List[float], metadata: Dict[str, Any]):
         if node_id in self.nodes:
             del self.nodes[node_id]
-        self.nodes[node_id] = {
-            "vector": vector,
-            "meta": metadata,
-            "timestamp": time.time(),
+        phantom = {
+            "vector_hash": hashlib.md5(str(vector).encode('utf-8')).hexdigest()[:8],
+            "wing_id": metadata.get("wing_id", "GLOBAL"),
+            "room_id": metadata.get("room_id", "GENERAL")
         }
+        self.nodes[node_id] = {"phantom": phantom, "vector": vector, "meta": metadata, "timestamp": time.time()}
         if len(self.nodes) > self.max_capacity:
             self._prune_weakest()
 
@@ -33,9 +33,7 @@ class HippocampalCache:
             return val
         return None
 
-    def extract_for_consolidation(self,
-                                  limit: Optional[int] = None
-                                  ) -> List[Tuple[str, Dict]]:
+    def extract_for_consolidation(self, limit: Optional[int] = None) -> List[Tuple[str, Dict]]:
         target_keys = list(self.nodes.keys())[:limit] if limit is not None else list(
             self.nodes.keys())
         return [(k, self.nodes.pop(k)) for k in target_keys]
@@ -49,7 +47,6 @@ class HippocampalCache:
     def get_graph(self) -> Any:
 
         class _Graph:
-
             def __init__(self, adj):
                 self.adj = adj
 
@@ -66,9 +63,7 @@ class HippocampalCache:
                 adj[k2].add(k1)
         return _Graph(adj)
 
-
 class CerebralIndex:
-
     def __init__(self, dimension: int = 8, index_type: str = "HNSW"):
         self.dimension = dimension
         self.index_type = index_type
@@ -77,6 +72,15 @@ class CerebralIndex:
         self._index = faiss.IndexHNSWFlat(self.dimension, 32)
         self._payloads: List[Dict] = []
 
+    def resolve_phantom(self, vector_hash: str) -> str:
+        """Instantly resolves an AAAK Phantom hash to its verbatim Drawer text."""
+        if not self._payloads:
+            return ""
+        for payload in self._payloads:
+            if payload.get("vector_hash") == vector_hash:
+                return payload.get("raw_verbatim_text", "")
+        return ""
+
     def add_memories(self, vectors: List[List[float]], metadata_payloads: List[Dict]):
         if not vectors:
             return
@@ -84,31 +88,55 @@ class CerebralIndex:
         if np_vectors.shape[1] != self.dimension:
             return
         self._index.add(np_vectors)
+        for p in metadata_payloads:
+            p.setdefault("raw_verbatim_text", "")
         self._payloads.extend(metadata_payloads)
         self.total_nodes += len(vectors)
         self.is_trained = True
 
-    def query_neighborhood(self,
-                           query_vector: List[float],
-                           k: int = 5,
-                           resonance_threshold: float = 0.5) -> List[Dict]:
-        if (not self.is_trained or self.total_nodes == 0
-                or len(query_vector) != self.dimension):
+    def lateral_ofc_retrieval(self, physics_state: Dict[str, float], k: int = 2) -> List[Dict]:
+        """Bypasses cosine similarity. Selects nodes that maximize: Ω² + 2Ω_r + F."""
+        if not self._payloads:
+            return []
+        omega = physics_state.get("omega", 0.5)
+        omega_r = physics_state.get("omega_r", 0.5)
+
+        def _score(payload):
+            f_cost = payload.get("narrative_drag", 1.0)
+            return (omega ** 2) + (2 * omega_r) + f_cost
+
+        scored = sorted(self._payloads, key=_score, reverse=True)
+        return scored[:k]
+
+    def query_neighborhood(self, query_vector: List[float], k: int = 5, resonance_threshold: float = 0.5,
+                           physics_state: Optional[Dict[str, float]] = None) -> List[Dict]:
+        if not self.is_trained or self.total_nodes == 0:
+            return []
+        if physics_state:
+            voltage = physics_state.get("voltage", 0.0)
+            chi = physics_state.get("chi", 0.0)
+            if voltage > 80.0 and chi > 0.7:
+                return self.lateral_ofc_retrieval(physics_state, k=k)
+        if len(query_vector) != self.dimension:
             return []
         np_query = np.ascontiguousarray(np.array([query_vector]).astype("float32"))
         actual_k = min(k, self.total_nodes)
         distances, indices = self._index.search(np_query, actual_k)
         valid_neighbors = []
+        target_wing = physics_state.get("wing_id", "GLOBAL") if physics_state else None
+        is_lateral = physics_state.get("lateral_search", False) if physics_state else False
         for dist, idx in zip(distances[0], indices[0]):
             if idx == -1:
                 continue
+            payload = self._payloads[idx]
+            if target_wing and payload.get("wing_id", "GLOBAL") != target_wing and not is_lateral:
+                continue
             resonance = 1.0 / (1.0 + float(dist))
             if resonance >= resonance_threshold:
-                valid_neighbors.append({**self._payloads[idx], "resonance": resonance})
+                valid_neighbors.append({**payload, "resonance": resonance})
         return valid_neighbors
 
-    def get_local_mass_radius(self,
-                              query_text: str) -> Optional[Dict[str, List[float]]]:
+    def get_local_mass_radius(self, query_text: str) -> Optional[Dict[str, List[float]]]:
         if not self.is_trained or self.total_nodes < 5:
             return None
         np_query = np.zeros((1, self.dimension), dtype="float32")
@@ -124,11 +152,8 @@ class CerebralIndex:
             return None
         return {"log_r": log_r, "log_m": log_m, "weights": weights}
 
-
 class MemoryConsolidator:
-
-    def __init__(self, hippocampus: HippocampalCache, cortex: CerebralIndex,
-                 events: EventBus):
+    def __init__(self, hippocampus: HippocampalCache, cortex: CerebralIndex, events: EventBus):
         self.hippocampus = hippocampus
         self.cortex = cortex
         self.events = events

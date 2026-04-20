@@ -1,16 +1,10 @@
 """bone_machine.py"""
+
 import random
 import math
 from dataclasses import dataclass
 from typing import Tuple, Optional, List, Dict, Any
-from bone_body import (
-    BioSystem,
-    MitochondrialState,
-    Biometrics,
-    MitochondrialForge,
-    EndocrineSystem,
-    MetabolicGovernor,
-)
+from bone_body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, MetabolicGovernor
 from bone_brain import DreamEngine
 from bone_core import LoreManifest, ux, safe_get, safe_set
 from bone_lexicon import LexiconService
@@ -35,37 +29,31 @@ class TheCrucible:
         self.logs = self._load_logs()
 
     def _load_logs(self):
-        manifest = (
-            LoreManifest.get_instance(config_ref=self.cfg).get("PHYSICS_STRINGS") or {})
+        manifest = LoreManifest.get_instance(config_ref=self.cfg).get("PHYSICS_STRINGS") or {}
         return manifest.get("CRUCIBLE_LOGS", {})
 
     def dampener_status(self):
         msg = ux("machine_strings", "crucible_dampener_status")
         return msg.format(charges=self.dampener_charges)
 
-    def dampen(self, voltage_spike: float,
-               stability_index: float) -> Tuple[bool, str, float]:
+    def dampen(self, voltage_spike: float, stability_index: float) -> Tuple[bool, str, float]:
         if self.dampener_charges <= 0:
             return False, self.logs.get("DAMPER_EMPTY", ""), 0.0
         if voltage_spike > self.dampener_tolerance:
-            factor, reason = 0.7, ux("machine_strings",
-                                     "dampen_reason_circuit") or "Circuit Breaker"
+            factor, reason = 0.7, ux("machine_strings", "dampen_reason_circuit") or "Circuit Breaker"
         elif voltage_spike > 8.0 and stability_index < 0.3:
-            factor, reason = 0.4, ux("machine_strings",
-                                     "dampen_reason_instability") or "Instability"
+            factor, reason = 0.4, ux("machine_strings", "dampen_reason_instability") or "Instability"
         else:
             return False, self.logs.get("HOLDING", ""), 0.0
         self.dampener_charges -= 1
-        return True, self.logs.get("DAMPER_HIT",
-                                   "").format(reduction=(r := voltage_spike * factor),
-                                              reason=reason), r
+        return True, self.logs.get("DAMPER_HIT", "").format(reduction=(r := voltage_spike * factor), reason=reason), r
 
     def audit_fire(self, physics: Any) -> Tuple[str, float, Optional[str]]:
-        current_drag = float(safe_get(physics, "narrative_drag", 0.0) or 0.0)
+        current_drag = float(safe_get(physics, "narrative_drag", 0.0))
         if math.isinf(current_drag) or current_drag > 900.0:
             return "LOCKED", 0.0, self.logs.get("HOLDING", "")
-        voltage = float(safe_get(physics, "voltage", 0.0) or 0.0)
-        structure = float(safe_get(physics, "kappa", 0.0) or 0.0)
+        voltage = float(safe_get(physics, "voltage", 0.0))
+        structure = float(safe_get(physics, "kappa", 0.0))
         ideal_voltage = structure * 20.0
         delta = voltage - ideal_voltage
         self.instability_index = (self.instability_index * 0.7) + (delta * 0.3)
@@ -78,12 +66,9 @@ class TheCrucible:
         safe_set(physics, "narrative_drag", final_drag)
         msg = None
         if abs(adjustment) > 0.1:
-            direction = ((ux("machine_strings", "crucible_tightening") or "TIGHTENING")
-                         if adjustment > 0 else
-                         (ux("machine_strings", "crucible_relaxing") or "RELAXING"))
-            msg = self.logs.get("REGULATOR", "").format(direction=direction,
-                                                        current=current_drag,
-                                                        new=final_drag)
+            ux_key = "crucible_tightening" if adjustment > 0 else "crucible_relaxing"
+            direction = ux("machine_strings", ux_key) or ux_key.split("_")[1].upper()
+            msg = self.logs.get("REGULATOR", "").format(direction=direction, current=current_drag, new=final_drag)
         surge = safe_get(physics, "system_surge_event", False)
         if surge:
             self.active_state = "SURGE"
@@ -97,11 +82,7 @@ class TheCrucible:
             else:
                 damage = voltage * 0.5
                 self.active_state = "MELTDOWN"
-                return (
-                    "MELTDOWN",
-                    damage,
-                    self.logs.get("MELTDOWN", "").format(damage=damage),
-                )
+                return ("MELTDOWN", damage, self.logs.get("MELTDOWN", "").format(damage=damage))
         self.active_state = "REGULATED"
         return "REGULATED", adjustment, msg
 
@@ -127,10 +108,8 @@ class TheParadoxEngine:
 
     def ignite(self, recent_words: List[str]) -> Tuple[float, str]:
         self.is_active = True
-        seed = random.choice([w for w in recent_words if len(w) > 4]
-                             or ["the architecture"])
-        templates = ux("machine_strings",
-                       "paradox_templates") or self._DEFAULT_TEMPLATES
+        seed = random.choice([w for w in recent_words if len(w) > 4] or ["the architecture"])
+        templates = ux("machine_strings", "paradox_templates") or self._DEFAULT_TEMPLATES
         return 0.4 + (random.random() * 0.6), random.choice(templates).format(seed=seed)
 
     def disengage(self):
@@ -142,14 +121,10 @@ class TheForge:
     def __init__(self, lex_ref=None):
         self.lex = lex_ref
         gordon_data = LoreManifest.get_instance().get("GORDON") or {}
-        raw_recipes = gordon_data.get("RECIPES", [])
         self.recipe_map = {}
-        for r in raw_recipes:
-            ing = r.get("ingredient")
-            if ing:
-                if ing not in self.recipe_map:
-                    self.recipe_map[ing] = []
-                self.recipe_map[ing].append(r)
+        for r in gordon_data.get("RECIPES", []):
+            if ing := r.get("ingredient"):
+                self.recipe_map.setdefault(ing, []).append(r)
 
     @staticmethod
     def hammer_alloy(physics: Any) -> Tuple[bool, Optional[str], Optional[str]]:
@@ -167,50 +142,31 @@ class TheForge:
             msg = ux("machine_strings", "forge_lead_boots")
             return True, msg.format(avg_density=avg_density), "LEAD_BOOTS"
         if kinetic > 3:
-            return (
-                True,
-                ux("machine_strings", "forge_safety_scissors"),
-                "SAFETY_SCISSORS",
-            )
+            return (True, ux("machine_strings", "forge_safety_scissors"), "SAFETY_SCISSORS")
         return True, ux("machine_strings", "forge_anchor_stone"), "ANCHOR_STONE"
 
     def attempt_crafting(
         self, physics: Any, inventory_list: List[str]
     ) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
-        if not inventory_list or not (clean_words := safe_get(
-                physics, "clean_words", [])):
+        if not inventory_list or not (clean_words := safe_get(physics, "clean_words", [])):
             return False, None, None, None
         clean_set = set(clean_words)
         voltage = float(safe_get(physics, "voltage", 0.0))
         lex_srv = self.lex or LexiconService()
         for item in inventory_list:
             for recipe in self.recipe_map.get(item, []):
-                raw_cats = lex_srv.get(recipe["catalyst_category"])
-                if not raw_cats:
+                cat_words = set(lex_srv.get(recipe["catalyst_category"]) or [])
+                if not cat_words:
                     continue
-                cat_words = raw_cats if isinstance(raw_cats, set) else set(raw_cats)
                 if clean_set.isdisjoint(cat_words):
                     continue
-                entanglement = self._calculate_entanglement(len(clean_set & cat_words),
-                                                            voltage)
+                entanglement = self._calculate_entanglement(len(clean_set & cat_words), voltage)
                 if random.random() < entanglement:
-                    msg = (ux("machine_strings", "forge_alchemy_success")
-                           or "Alchemy successful! {item} -> {result}")
-                    return (
-                        True,
-                        msg.format(result=recipe["result"], item=item),
-                        item,
-                        recipe["result"],
-                    )
+                    msg = ux("machine_strings", "forge_alchemy_success") or "Alchemy successful! {item} -> {result}"
+                    return (True, msg.format(result=recipe["result"], item=item), item, recipe["result"])
                 else:
-                    msg = (ux("machine_strings", "forge_alchemy_fail")
-                           or "Alchemy failed. Entanglement: {entanglement}%")
-                    return (
-                        False,
-                        msg.format(entanglement=int(entanglement * 100)),
-                        None,
-                        None,
-                    )
+                    msg = ux("machine_strings", "forge_alchemy_fail") or "Alchemy failed. Entanglement: {entanglement}%"
+                    return (False, msg.format(entanglement=int(entanglement * 100)), None, None)
         return False, None, None, None
 
     @staticmethod
@@ -243,22 +199,16 @@ class TheTheremin:
         self.logs = self._load_logs()
 
     def _load_logs(self):
-        manifest = (
-            LoreManifest.get_instance(config_ref=self.cfg).get("PHYSICS_STRINGS") or {})
+        manifest = LoreManifest.get_instance(config_ref=self.cfg).get("PHYSICS_STRINGS") or {}
         return manifest.get("THEREMIN_LOGS", {})
 
-    def listen(
-            self,
-            physics: Any,
-            governor_mode="COURTYARD"
-    ) -> Tuple[bool, float, Optional[str], Optional[str]]:
+    def listen(self, physics: Any, governor_mode="COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
         counts = safe_get(physics, "counts", {})
         voltage = float(safe_get(physics, "voltage", 0.0))
         turb = float(safe_get(physics, "turbulence", 0.0))
         rep = float(safe_get(physics, "repetition", 0.0))
         complexity = float(safe_get(physics, "truth_ratio", 0.0))
-        ancient_mass = (counts.get("heavy", 0) + counts.get("thermal", 0) +
-                        counts.get("cryo", 0))
+        ancient_mass = counts.get("heavy", 0) + counts.get("thermal", 0) + counts.get("cryo", 0)
         modern_mass = counts.get("abstract", 0)
         raw_mix = min(ancient_mass, modern_mass)
         resin_flow = raw_mix * 2.0
@@ -275,22 +225,21 @@ class TheTheremin:
             dissolved = thermal_hits * 15.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - dissolved)
             self.classical_turns = 0
-            theremin_msg = self.logs.get("MELT", "").format(val=dissolved)
+            theremin_msg = self.logs.get("MELT", "").format(val=dissolved) + " "
         if rep > 0.5:
             self.classical_turns += 1
             slag = self.classical_turns * 2.0
             self.decoherence_buildup += slag
-            theremin_msg = self.logs.get("CALCIFY",
-                                         "").format(turns=self.classical_turns,
-                                                    val=slag)
+            theremin_msg += self.logs.get("CALCIFY", "").format(turns=self.classical_turns, val=slag)
         elif complexity > 0.4 and self.classical_turns > 0:
             self.classical_turns = 0
             relief = 15.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - relief)
-            theremin_msg = self.logs.get("SHATTER", "").format(val=relief)
+            theremin_msg += self.logs.get("SHATTER", "").format(val=relief)
         elif resin_flow > 0.5:
             self.decoherence_buildup += resin_flow
-            theremin_msg = self.logs.get("RESIN", "").format(val=resin_flow)
+            theremin_msg += self.logs.get("RESIN", "").format(val=resin_flow)
+        theremin_msg = theremin_msg.strip()
         if turb > 0.6 and self.decoherence_buildup > 0:
             shatter_amt = turb * 10.0
             self.decoherence_buildup = max(0.0, self.decoherence_buildup - shatter_amt)
@@ -309,15 +258,13 @@ class TheTheremin:
             return False, resin_flow, self.logs.get("COLLAPSE", ""), "AIRSTRIKE"
         if self.classical_turns > 3:
             critical_event = "CORROSION"
-            theremin_msg = f"{theremin_msg or ''}{ux('machine_strings', 'theremin_corrosion') or ''}"
+            theremin_msg += ux('machine_strings', 'theremin_corrosion') or ''
         if self.decoherence_buildup > self.AMBER_THRESHOLD:
             self.is_stuck = True
-            theremin_msg = (
-                f"{theremin_msg or ''}{ux('machine_strings', 'theremin_stuck') or ''}")
+            theremin_msg += ux('machine_strings', 'theremin_stuck') or ''
         elif self.is_stuck and self.decoherence_buildup < 5.0:
             self.is_stuck = False
-            theremin_msg = (
-                f"{theremin_msg or ''}{ux('machine_strings', 'theremin_free') or ''}")
+            theremin_msg += ux('machine_strings', 'theremin_free') or ''
         return self.is_stuck, resin_flow, theremin_msg, critical_event
 
     def get_readout(self):
@@ -339,10 +286,7 @@ class SystemEmbryo:
 
 
 class PanicRoom:
-    _SAFE_VECTOR = {
-        k: 0.0
-        for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "LAMBDA", "CHI"]
-    }
+    _SAFE_VECTOR = {k: 0.0 for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "LAMBDA", "CHI"]}
 
     @staticmethod
     def get_safe_physics():
@@ -357,13 +301,12 @@ class PanicRoom:
         safe_packet.valence = 0.0
         safe_packet.kappa = 0.0
         safe_packet.vector = PanicRoom._SAFE_VECTOR.copy()
-        default_words = ["white", "room", "safe", "mode"]
         manifest_words = ux("machine_strings", "panic_clean_words")
-        safe_packet.clean_words = (manifest_words if isinstance(manifest_words, list)
-                                   else default_words)
+        safe_packet.clean_words = (
+            manifest_words if isinstance(manifest_words, list) else ["white", "room", "safe", "mode"]
+        )
         safe_packet.raw_text = ux("machine_strings", "panic_physics_text")
-        safe_packet.flow_state = (ux("machine_strings", "panic_flow_state")
-                                  or "SAFE_MODE")
+        safe_packet.flow_state = ux("machine_strings", "panic_flow_state") or "SAFE_MODE"
         safe_packet.zone = ux("machine_strings", "panic_zone") or "PANIC_ROOM"
         safe_packet.manifold = ux("machine_strings", "panic_manifold") or "WHITE_ROOM"
         return safe_packet
@@ -373,14 +316,7 @@ class PanicRoom:
         log_msg = ux("machine_strings", "panic_bio_log")
         resp_fallback = ux("machine_strings", "panic_resp_fallback") or "NECROSIS"
         enz_fallback = ux("machine_strings", "panic_enz_fallback") or "NONE"
-        chem_state: Dict[str, float] = {
-            "DOP": 0.0,
-            "COR": 0.0,
-            "OXY": 0.0,
-            "SER": 0.0,
-            "ADR": 0.0,
-            "MEL": 0.0,
-        }
+        chem_state: Dict[str, float] = {"DOP": 0.0, "COR": 0.0, "OXY": 0.0, "SER": 0.0, "ADR": 0.0, "MEL": 0.0}
         base: Dict[str, Any] = {
             "is_alive": True,
             "atp": 10.0,
@@ -389,33 +325,22 @@ class PanicRoom:
             "chem": chem_state,
             "logs": [f"{Prisma.RED}{log_msg}{Prisma.RST}"],
         }
-        state = previous_state or {}
-        old_chem = safe_get(state, "chemistry", {})
+        old_chem = safe_get(previous_state or {}, "chemistry", {})
         if old_chem:
-            chem_state["COR"] = 0.0
-            chem_state["ADR"] = 0.0
             chem_state["SER"] = max(0.2, float(safe_get(old_chem, "SER", 0.0)))
         return base
 
     @staticmethod
     def get_safe_mind():
-        return {
-            "lens": "GORDON",
-            "role": "Panic Room Overseer",
-            "thought": ux("machine_strings", "panic_mind_thought"),
-        }
+        return {"lens": "GORDON", "role": "Panic Room Overseer", "thought": ux("machine_strings", "panic_mind_thought")}
 
     @staticmethod
     def get_safe_soul():
         default_soul = {
             "name": "Traveler",
             "archetype": "The Survivor",
-            "virtues": {
-                "resilience": 1.0
-            },
-            "vices": {
-                "amnesia": 1.0
-            },
+            "virtues": {"resilience": 1.0},
+            "vices": {"amnesia": 1.0},
             "narrative_arc": "RECOVERY",
             "xp": 0,
         }
@@ -423,12 +348,7 @@ class PanicRoom:
 
     @staticmethod
     def get_safe_limbo():
-        default_limbo = {
-            "mood": "NEUTRAL",
-            "volatility": 0.0,
-            "mask": "DEFAULT",
-            "glitch_factor": 0.0,
-        }
+        default_limbo = {"mood": "NEUTRAL", "volatility": 0.0, "mask": "DEFAULT", "glitch_factor": 0.0}
         return ux("machine_strings", "panic_limbo") or default_limbo
 
 
@@ -464,10 +384,11 @@ class ThePacemaker:
         self.heart_rate = 60 + (stress * 20)
 
     def update(self, repetition_score: float, voltage: float):
-        if repetition_score > 0.5 or voltage < 5.0:
-            self.boredom_level += 1.0
-        else:
-            self.boredom_level = max(0.0, self.boredom_level - 2.0)
+        self.boredom_level = (
+            (self.boredom_level + 1.0)
+            if (repetition_score > 0.5 or voltage < 5.0)
+            else max(0.0, self.boredom_level - 2.0)
+        )
 
     def is_bored(self) -> bool:
         return self.boredom_level > self.BOREDOM_THRESHOLD
@@ -497,9 +418,9 @@ class BoneArchitect:
         cfg = getattr(target_cfg, "METABOLISM", None)
         genesis_val = safe_get(cfg, "GENESIS_VOLTAGE", 100.0)
         mito_state = MitochondrialState(atp_pool=genesis_val)
-        start_health = getattr(target_cfg, "MAX_HEALTH", 100.0)
-        start_stamina = getattr(target_cfg, "MAX_STAMINA", 100.0)
-        bio_metrics = Biometrics(health=start_health, stamina=start_stamina)
+        bio_metrics = Biometrics(
+            health=getattr(target_cfg, "MAX_HEALTH", 100.0), stamina=getattr(target_cfg, "MAX_STAMINA", 100.0)
+        )
         return BioSystem(
             mito=MitochondrialForge(mito_state, events, config_ref=target_cfg),
             endo=EndocrineSystem(config_ref=target_cfg),
@@ -538,18 +459,8 @@ class BoneArchitect:
             events.log(f"{Prisma.GRY}{msg}{Prisma.RST}", "SYS")
         mind, limbo = BoneArchitect._construct_mind(events, lex, config_ref=target_cfg)
         bio = BoneArchitect._construct_bio(events, mind, lex, config_ref=target_cfg)
-        physics = BoneArchitect._construct_physics(events,
-                                                   bio,
-                                                   mind,
-                                                   lex,
-                                                   config_ref=target_cfg)
-        return SystemEmbryo(
-            mind=mind,
-            limbo=limbo,
-            bio=bio,
-            physics=physics,
-            shimmer=getattr(bio, "shimmer", None),
-        )
+        physics = BoneArchitect._construct_physics(events, bio, mind, lex, config_ref=target_cfg)
+        return SystemEmbryo(mind=mind, limbo=limbo, bio=bio, physics=physics, shimmer=getattr(bio, "shimmer", None))
 
     @staticmethod
     def awaken(embryo: SystemEmbryo) -> SystemEmbryo:
@@ -559,19 +470,11 @@ class BoneArchitect:
             if hasattr(embryo.mind.mem, "autoload_last_spore"):
                 load_result = embryo.mind.mem.autoload_last_spore()
         except Exception as e:
-            msg = (ux("machine_strings", "arch_spore_fail")
-                   or "[ARCHITECT]: Spore resurrection failed: {e}")
-            events.log(
-                f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}",
-                "CRIT",
-            )
+            msg = ux("machine_strings", "arch_spore_fail") or "[ARCHITECT]: Spore resurrection failed: {e}"
+            events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "CRIT")
             load_result = None
-        embryo.soul_legacy = {}
-        embryo.continuity = None
-        recovered_atlas = {}
-        raw_result = list(load_result) if isinstance(load_result, (list, tuple)) else []
-        padded_result = raw_result + [None] * 5
-        mito_legacy, immune_legacy, soul_legacy, continuity, atlas = padded_result[:5]
+        results = list(load_result) if isinstance(load_result, (list, tuple)) else []
+        mito_legacy, immune_legacy, soul_legacy, continuity, atlas = (results + [None] * 5)[:5]
         if mito_legacy and hasattr(embryo.bio.mito, "apply_inheritance"):
             embryo.bio.mito.apply_inheritance(mito_legacy)
         if immune_legacy and isinstance(immune_legacy, (list, set)):
@@ -579,38 +482,22 @@ class BoneArchitect:
                 embryo.bio.immune.load_antibodies(immune_legacy)
             else:
                 embryo.bio.immune.active_antibodies.update(immune_legacy)
-        if isinstance(soul_legacy, dict):
-            embryo.soul_legacy = soul_legacy
-        if isinstance(continuity, dict):
-            embryo.continuity = continuity
-        if isinstance(atlas, dict):
-            recovered_atlas = atlas
-        if recovered_atlas and hasattr(embryo.physics, "nav"):
-            if hasattr(embryo.physics.nav, "import_atlas"):
-                try:
-                    embryo.physics.nav.import_atlas(recovered_atlas)
-                    msg = (ux("machine_strings", "arch_map_restored")
-                           or "[ARCHITECT]: World Map restored.")
-                    events.log(
-                        f"{Prisma.MAG}{msg}{Prisma.RST}",
-                        "SYS",
-                    )
-                except Exception as e:
-                    msg = (ux("machine_strings", "arch_map_corrupt")
-                           or "[ARCHITECT]: Atlas corrupt, discarding map: {e}")
-                    events.log(
-                        f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}",
-                        "WARN",
-                    )
+        embryo.soul_legacy = soul_legacy if isinstance(soul_legacy, dict) else {}
+        embryo.continuity = continuity if isinstance(continuity, dict) else None
+        recovered_atlas = atlas if isinstance(atlas, dict) else {}
+        if recovered_atlas and hasattr(getattr(embryo.physics, "nav", None), "import_atlas"):
+            try:
+                embryo.physics.nav.import_atlas(recovered_atlas)
+                msg = ux("machine_strings", "arch_map_restored") or "[ARCHITECT]: World Map restored."
+                events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS")
+            except Exception as e:
+                msg = ux("machine_strings", "arch_map_corrupt") or "[ARCHITECT]: Atlas corrupt, discarding map: {e}"
+                events.log(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}", "WARN")
         if embryo.bio and embryo.bio.mito and embryo.bio.mito.state.atp_pool <= 0.0:
             target_cfg = getattr(embryo.bio, "config_ref", None) or BoneConfig
             cfg = getattr(target_cfg, "METABOLISM", None)
             genesis_val = safe_get(cfg, "GENESIS_VOLTAGE", 100.0)
             msg = ux("machine_strings", "arch_cold_boot")
-            events.log(
-                (msg.format(genesis_val=genesis_val)
-                 if msg else f"Cold Boot: {genesis_val} ATP"),
-                "SYS",
-            )
+            events.log((msg.format(genesis_val=genesis_val) if msg else f"Cold Boot: {genesis_val} ATP"), "SYS")
             embryo.bio.mito.adjust_atp(genesis_val, reason="GENESIS")
         return embryo

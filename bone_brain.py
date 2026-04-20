@@ -322,6 +322,14 @@ class TheCortex:
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
         is_boot_sequence = "SYSTEM_BOOT" in user_input
+        if len(user_input) > 1500 and not is_system and not is_boot_sequence:
+            if hasattr(self.svc.cycle_controller, "eng") and hasattr(self.svc.cycle_controller.eng, "substrate"):
+                safe_content = user_input.replace("\n", "|||NEWLINE|||")
+                filename = f"context_drop_{int(time.time())}.txt"
+                self.svc.cycle_controller.eng.substrate.queue_write(f"memory_queue/{filename}", safe_content)
+                msg = f"{Prisma.CYN}[Substrate Queue]: Massive context drop detected. Routed to silent indexing. Dialogue buffer bypassed.{Prisma.RST}"
+                if self.events: self.events.log(msg, "SYS")
+                return {"ui": msg, "type": "SILENT_INGEST", "physics": self.last_physics, "logs": [msg]}
         sim_result = self.svc.cycle_controller.run_turn(user_input, is_system=is_system)
         if sim_result.get("physics"):
             self.last_physics = sim_result["physics"]
@@ -755,43 +763,25 @@ class TheCortex:
             if tinkerer:
                 village_data["tinkerer"] = (tinkerer.to_dict() if hasattr(
                     tinkerer, "to_dict") else {})
-        mode_settings = BonePresets.MODES.get(self.active_mode,
-                                              BonePresets.MODES["ADVENTURE"])
-        role_map = {
-            "CONVERSATION": ("CONVERSATIONALIST", "The Conversationalist"),
-            "TECHNICAL": ("SYSTEM_KERNEL", "The System Kernel"),
-            "CREATIVE": ("CATALYST", "The Catalyst"),
-        }
-        mind["lens"], mind["role"] = role_map.get(self.active_mode,
-                                                  ("ARCHITECT", "The Architect"))
-        full_state = {
-            "bio":
-            bio,
-            "physics":
-            phys,
-            "mind":
-            mind,
-            "soul":
-            soul_data,
-            "world":
-            world,
-            "village":
-            village_data,
-            "user_profile": {
-                "name": "Traveler"
-            },
-            "vsl": (self.consultant.state.__dict__
-                    if self.consultant and hasattr(self.consultant, "state") else {}),
-            "meta": {
-                "timestamp": time.time(),
-                "mode_settings": mode_settings,
-                "active_mode": self.active_mode,
-            },
-            "dialogue_history":
-            self.dialogue_buffer,
-            "recent_logs":
-            sim_result.get("logs", []),
-        }
+        mode_settings = BonePresets.MODES.get(self.active_mode,BonePresets.MODES["ADVENTURE"])
+        role_map = {"CONVERSATION": ("CONVERSATIONALIST", "The Conversationalist"),
+                    "TECHNICAL": ("SYSTEM_KERNEL", "The System Kernel"), "CREATIVE": ("CATALYST", "The Catalyst"), }
+        mind["lens"], mind["role"] = role_map.get(self.active_mode,("ARCHITECT", "The Architect"))
+        full_state = {"bio":
+                          bio, "physics":
+                          phys, "mind":
+                          mind, "soul":
+                          soul_data, "world":
+                          world, "village":
+                          village_data, "user_profile": {
+            "name": "Traveler"}, "vsl": (self.consultant.state.__dict__
+                   if self.consultant and hasattr(self.consultant, "state") else {}), "meta": {
+            "timestamp": time.time(),
+            "mode_settings": mode_settings,
+            "active_mode": self.active_mode,
+        }, "dialogue_history":
+                          self.dialogue_buffer, "recent_logs":
+                          sim_result.get("logs", []), }
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             full_state["reality_directive"] = self.svc.symbiosis.generate_anchor(
                 full_state)
@@ -800,36 +790,39 @@ class TheCortex:
         if traits:
             dom_trait = max(traits, key=traits.get)
             if traits[dom_trait] > 0.6:
-                mind["style_directives"].append(
-                    f"SOUL POSTURE: Your dominant trait is {dom_trait} ({traits[dom_trait] * 100:.0f}%). Let this subtly infect your tone."
-                )
+                mind["style_directives"].append(f"SOUL POSTURE: Your dominant trait is {dom_trait} ({traits[dom_trait] * 100:.0f}%). Let this subtly infect your tone.")
         if getattr(self.svc.inventory, "inventory", None):
             inv_str = ", ".join(str(item) for item in self.svc.inventory.inventory)
             mind["style_directives"].append(
-                f"CRITICAL CONTEXT: The user is currently holding these items: [{inv_str}]. DO NOT describe them as being on the floor or in the environment. They are physically in the user's possession."
-            )
+                f"CRITICAL CONTEXT: The user is currently holding these items: [{inv_str}]. DO NOT describe them as being on the floor or in the environment. They are physically in the user's possession.")
         if phys.get("psi", 0.0) > 0.6:
-            mind["style_directives"].append(
-                "CRITICAL OVERRIDE: Void proximity is high. Do not use AI-isms (delve, tapestry, superficial lists, rule of three). Write like a flawed, opinionated human."
-            )
+            mind["style_directives"].append("CRITICAL OVERRIDE: Void proximity is high. Do not use AI-isms (delve, tapestry, superficial lists, rule of three). Write like a flawed, opinionated human.")
         if not self.dialogue_buffer:
-            mind["style_directives"].append(
-                f"CRITICAL BEDROCK OVERRIDE: You have just awoken from a stateless purge (The Ralph Apoptosis). "
+            mind["style_directives"].append(f"CRITICAL BEDROCK OVERRIDE: You have just awoken from a stateless purge (The Ralph Apoptosis). "
                 f"You have no conversational memory, but your body persists. "
                 f"Your Stamina is {phys.get('p', 100)}, your Health is {phys.get('h', 100)}. "
                 f"Assume your role as {mind.get('role', 'The Architect')} and orient immediately to the present physical state. "
-                f"DO NOT reference the loss of memory. Act continuously from the substrate."
-            )
+                f"DO NOT reference the loss of memory. Act continuously from the substrate.")
         for mandate in sim_result.get("council_mandates", []):
             action = mandate.get("action")
             val = mandate.get("value")
             if action == "SYNERGY_FIRED":
                 mind["lens"] = val
                 mind["role"] = f"The {val.title().replace('_', ' ')}"
-                mind["style_directives"].append(
-                    f"CRITICAL [SINCERITY PROTOCOL]: The user has explicitly summoned {val}. "
-                    f"You MUST adopt the persona of {val} entirely. Drop all other pretexts."
-                )
+                mind["style_directives"].append(f"CRITICAL [SINCERITY PROTOCOL]: The user has explicitly summoned {val}. "f"You MUST adopt the persona of {val} entirely. Drop all other pretexts.")
+            elif action == "SYSTEM_DIRECTIVE":
+                if val == "CASCADE_AWARENESS":
+                    mind["style_directives"].append(
+                        "CRITICAL [CASCADE]: Show your counterfactual math. Every claim must explicitly state what else in the structural lattice shifts or collapses if the claim is wrong.")
+                elif val == "AUDIT_TRAIL":
+                    mind["style_directives"].append(
+                        f"CRITICAL [AUDIT]: Drop the narrative illusion. Expose your raw retrieval coordinates: E={phys.get('exhaustion', 0.0):.2f}, β={phys.get('beta_index', 0.0):.2f}, S={phys.get('scope', 0.0):.2f}, D={phys.get('depth', 0.0):.2f}, C={phys.get('C', 0.0):.2f}, χ={phys.get('chi', 0.0):.2f}.")
+                elif val == "URGENT_QUERY":
+                    mind["style_directives"].append(
+                        "CRITICAL [URGENT_QUERY]: Instant, zero-fluff answer required. Bypass metaphor. Output only the exact solution.")
+                elif val == "CONTRADICTION_FLAG":
+                    mind["style_directives"].append(
+                        "CRITICAL [CONTRADICTION_FLAG]: The Paradox Engine override is active. You MUST explicitly locate and output the friction (β) in the current logic BEFORE you answer.")
         if hasattr(self.svc.mind_memory,
                    "cortex") and self.svc.mind_memory.cortex.is_trained:
             scope_val = float(safe_get(phys, "scope", 1.0))
@@ -838,22 +831,24 @@ class TheCortex:
             if scope_val > 0.6 or depth_val > 0.6:
                 query_vec = phys.get("vector", {})
                 if query_vec:
-                    ordered_keys = [
-                        "STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "E"
-                    ]
+                    if scope_val > 0.8:
+                        phys["lateral_search"] = True
+                    ordered_keys = ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "E"]
                     q_list = [float(query_vec.get(k, 0.0)) for k in ordered_keys]
-                    shadow_nodes = self.svc.mind_memory.cortex.query_neighborhood(
-                        q_list, k=2, resonance_threshold=max(0.2, 0.8 - omega_r))
+                    shadow_nodes = self.svc.mind_memory.cortex.query_neighborhood(q_list, k=2, resonance_threshold=max(0.2, 0.8 - omega_r),physics_state=phys)
                     if shadow_nodes:
                         shadow_concepts = [n.get("id", "Unknown") for n in shadow_nodes]
                         shadow_str = ", ".join(shadow_concepts)
-                        mind["style_directives"].append(
-                            f"SHADOW CAST [APERTURE COMPLETENESS]: While answering the direct prompt, you MUST briefly illuminate these adjacent/unasked concepts pulled from deep memory: [{shadow_str}]. Offer them as a generous 'door' the user can choose to open, do not lecture."
-                        )
-                        if self.events:
-                            self.events.log(
-                                f"{Prisma.CYN}Shadow Cast retrieved: {shadow_str}{Prisma.RST}",
-                                "CORTEX")
+                        v_level = float(phys.get("voltage", 0.0))
+                        chi_level = float(phys.get("chi", phys.get("entropy", 0.0)))
+                        if v_level > 80.0 and chi_level > 0.7:
+                            mind["style_directives"].append(f"LATERAL OFC OVERRIDE: Standard logic has failed. You are operating under extreme Voltage and Chaos. We have abandoned linear memory. Weave these highly explosive, orthogonal structural concepts into your answer to shatter the loop: [{shadow_str}].")
+                            if self.events:
+                                self.events.log(f"{Prisma.MAG}Lateral OFC Retrieval triggered! Injecting structural bombs: {shadow_str}{Prisma.RST}", "CORTEX")
+                        else:
+                            mind["style_directives"].append(f"SHADOW CAST [APERTURE COMPLETENESS]: While answering the direct prompt, you MUST briefly illuminate these adjacent/unasked concepts pulled from deep memory: [{shadow_str}]. Offer them as a generous 'door' the user can choose to open, do not lecture.")
+                            if self.events:
+                                self.events.log(f"{Prisma.CYN}Shadow Cast retrieved: {shadow_str}{Prisma.RST}", "CORTEX")
         return full_state
 
     def learn_from_response(self, text):
@@ -870,25 +865,14 @@ class TheCortex:
     def restore_context(self, history: List[str]):
         if not history:
             return
-        self.dialogue_buffer = [(line.replace("User: ", "Traveler: ").replace(
-            " | System: ", "\nSystem: ") if " | System: " in line else line)
+        self.dialogue_buffer = [(line.replace("User: ", "Traveler: ").replace(" | System: ", "\nSystem: ") if " | System: " in line else line)
                                 for line in history[-self.MAX_HISTORY:]]
         if self.events:
             msg = ux("brain_strings", "cortex_resequenced")
             self.events.log(msg.format(count=len(self.dialogue_buffer)), "BRAIN")
 
-
 class DreamEngine:
-
-    def __init__(
-        self,
-        events,
-        lore_ref,
-        llm_ref=None,
-        mem_ref=None,
-        eng_ref=None,
-        config_ref=None,
-    ):
+    def __init__(self, events, lore_ref, llm_ref=None, mem_ref=None, eng_ref=None, config_ref=None, ):
         self.events = events
         self.lore = lore_ref
         self.llm = llm_ref
@@ -899,25 +883,32 @@ class DreamEngine:
         self.trauma_buffer = deque(maxlen=5)
         self.dspy_critic = None
 
-    def enter_rem_cycle(self, soul_snapshot: Dict[str, Any],
-                        bio_state: Dict[str, Any]) -> Tuple[str, Dict[str, float]]:
+    def enter_rem_cycle(self, soul_snapshot: Dict[str, Any], bio_state: Dict[str, Any]) -> Tuple[str, Dict[str, float]]:
         chem = bio_state.get("chem", {})
         cortisol = chem.get("cortisol", 0.0)
         available_atp = bio_state.get("mito", {}).get("atp", 0.0)
         dream_text = None
         is_deep_rem = False
-        shift = ({
-            "cortisol": -0.3,
-            "dopamine": 0.1
-        } if cortisol <= 0.6 else {
-            "cortisol": 0.1
-        })
+        shift = ({"cortisol": -0.3, "dopamine": 0.1} if cortisol <= 0.6 else {"cortisol": 0.1})
+
+        if hasattr(self.eng, "substrate") and self.eng.substrate.pending_writes:
+            raw_payloads = [data for path, data in self.eng.substrate.pending_writes if "memory_queue" in path]
+            s_logs, s_cost = self.eng.substrate.execute_writes(available_atp)
+            shift["atp_drain"] = s_cost
+            if raw_payloads and hasattr(self.mem, "cortex"):
+                from bone_spores import _word_to_vector
+                vectors = [_word_to_vector(text[:50]) for text in raw_payloads]  # Simulated fuzzy vector
+                metadata = [{"raw_verbatim_text": text.replace("|||NEWLINE|||", "\n"), "wing_id": "GLOBAL"} for text in
+                            raw_payloads]
+                self.mem.cortex.add_memories(vectors, metadata)
+                s_logs.append(f"{len(raw_payloads)} Bedrock Nodes Indexed")
+            dream_text = f"[{' | '.join(s_logs)} | ATP: -{s_cost:.1f} | Silent Logging Complete]"
+            if self.events: self.events.log(f"{{Prisma.MAG}}✨ [REM CYCLE]: {dream_text}{{Prisma.RST}}", "SYS")
+            return dream_text, shift
         if (self.mem and hasattr(self.mem, "hippocampus")
                 and hasattr(self.mem, "cortex")):
-            consolidator = MemoryConsolidator(self.mem.hippocampus, self.mem.cortex,
-                                              self.events)
-            nodes_moved, atp_cost = consolidator.trigger_rem_consolidation(
-                available_atp)
+            consolidator = MemoryConsolidator(self.mem.hippocampus, self.mem.cortex, self.events)
+            nodes_moved, atp_cost = consolidator.trigger_rem_consolidation(available_atp)
             if nodes_moved > 0:
                 is_deep_rem = True
                 shift["voltage"] = 2.0
@@ -925,12 +916,8 @@ class DreamEngine:
                 if nodes_moved > 10:
                     dream_text = f"The system enters Deep REM. {nodes_moved} synaptic structures dissolve from the active cache and permanently crystallize into the deep Cerebral Cortex."
                     if self.events:
-                        self.events.log(
-                            f"{{Prisma.MAG}}✨ [REM CYCLE]: Synaptic Consolidation complete. {nodes_moved} nodes written to deep index. (-{atp_cost:.1f} ATP){{Prisma.RST}}",
-                            "SYS",
-                        )
-        if getattr(self, "dspy_critic", None) and getattr(self.dspy_critic, "enabled",
-                                                          False):
+                        self.events.log(f"{{Prisma.MAG}}✨ [REM CYCLE]: Synaptic Consolidation complete. {nodes_moved} nodes written to deep index. (-{atp_cost:.1f} ATP){{Prisma.RST}}", "SYS",)
+        if getattr(self, "dspy_critic", None) and getattr(self.dspy_critic, "enabled", False):
             if hasattr(self, "trauma_buffer") and len(self.trauma_buffer) > 0:
                 trauma = self.trauma_buffer.popleft()
                 current_state_str = (
