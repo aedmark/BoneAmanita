@@ -67,6 +67,14 @@ To bypass the metabolically expensive task of the LLM trying to "read the room,"
 
 ---
 
+## Mnemonic Architecture [(The Memory Palace)](https://www.github.com/MemPalace/MemPalace)
+
+BoneAmanita maps latent space into physical topology rather than flat vector dumps, ensuring zero-shot fidelity and metabolic efficiency:
+* **The Drawers (Verbatim Storage):** Ingested context, code, and lore are stored *verbatim* in the deep Cerebral Cortex. The system is strictly forbidden from summarizing or paraphrasing bedrock data, completely preventing semantic drift over long contexts.
+* **The Closets (AAAK Phantoms):** The short-term Hippocampal Cache no longer holds heavy conversational strings. It holds lightweight, hyper-dense mathematical coordinate hashes (Phantoms) that act as index cards pointing directly to the raw text in the Drawers.
+* **Wings & Rooms (Spatial Scoping):** Distinct projects are isolated into "Wings," and topics into "Rooms." The system will not cross-contaminate logic between Wings unless the Paradox Engine is explicitly activated to find lateral connections.
+* **Sub-Vocal Logging:** Massive context drops physically bypass the active dialogue window. During rest or silence, the system indexes data seamlessly in the background, keeping the chat interface perfectly clean and token overhead near zero.
+
 ## Mod Chips & Extensibility
 
 BoneAmanita supports structural Mod Chips. The default inclusion is **[SLASH]** (The Dev Team). When building or analyzing code, this chip installs four specialized archetypes (Pinker, Fuller, Schur, Meadows) who evaluate your syntax as a biological entity. 
@@ -76,7 +84,7 @@ If you attempt a destructive operation (`rm -rf`, dropping tables) while exhaust
 ## System Commands
 
 * `/status` : Displays current Vitals (Health, Stamina, ATP).
-* `/idle` : Steps away from the terminal. Engages the Dream Engine for asynchronous memory consolidation.
+* `/idle` : Steps away from the terminal. Engages the `DreamEngine` for asynchronous memory consolidation and **silent background indexing** of the Substrate Queue.
 * `/grief` : Attends the wake for a memory that was permanently consumed (Autophagy) to keep the system alive during starvation.
 * `/shuffle` : Manual invocation of `[!s]`.
 * `/journal` : Forces the system to synthesize the current session into a physical `.txt` file artifact.
