@@ -1,19 +1,21 @@
 # ==========================================
-# BONEAMANITA & VSL HYPERVISOR DEPENDENCIES
+# BONEAMANITA DEPENDENCIES
 # ==========================================
 
-# 1. The Mnemonic Layer (Deep FAISS ANN Index)
-pip>=1.0.0
+#1. The Linguistics Vector
+markdown                  # Aids in markdown generation and rendering
 faiss-cpu>=1.13.2         # The O(logN) Cerebral Cortex for deep associative memory
 numpy>=1.24.0             # Required for FAISS vector contiguous arrays and matrix math
 
-# 2. The Affective Layer & Immune System (The Judge)
+# 2. The Affective Layer & Immune System
+dspy
 dspy-ai>=2.4.0            # Powers the Real-Time Critic, False Cohesion checks, and Epigenetic Pruning
 
-# 3. Acoustic Synthesis (The Vocal Cords)
+# 3. The Vocal Cords
 spacy>=3.8.9
-kokoro>=0.1.0             # TTS generation for the asynchronous podcast synthesizer (as seen in v17.6.0)
+kokoro>=0.1.0             # TTS generation for the asynchronous podcast synthesizer
+soundfile>=0.1.0
 
-
-# 4. Neural Transports (LLM API & Ollama fallback)
+# 4. Neural Transports
 requests>=2.31.0          # Required for standard HTTP calls to local LLMs and OpenAI-compatible endpoints
+
