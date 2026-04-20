@@ -4,10 +4,9 @@ import json
 import re
 import time
 import uuid
-from dataclasses import dataclass, field, fields, asdict
+from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import List, Dict, Any, Optional
-
 
 class Prisma:
     RST = "\033[0m"
@@ -19,20 +18,8 @@ class Prisma:
     SLATE = "\033[30;1m"
     _STRIP_PATTERN = re.compile(r"<span class='[^']+'>|</span>|"
                                 r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-    _COLOR_MAP = {
-        "R": RED,
-        "G": GRN,
-        "Y": YEL,
-        "B": BLU,
-        "M": MAG,
-        "C": CYN,
-        "W": WHT,
-        "0": GRY,
-        "I": INDIGO,
-        "O": OCHRE,
-        "V": VIOLET,
-        "S": SLATE,
-    }
+    _COLOR_MAP = {"R": RED, "G": GRN, "Y": YEL, "B": BLU, "M": MAG, "C": CYN, "W": WHT, "0": GRY, "I": INDIGO,
+                  "O": OCHRE, "V": VIOLET, "S": SLATE, }
 
     @classmethod
     def enable_web_mode(cls):
@@ -49,31 +36,19 @@ class Prisma:
         cls.OCHRE = "<span class='prisma-ochre'>"
         cls.VIOLET = "<span class='prisma-violet'>"
         cls.SLATE = "<span class='prisma-slate'>"
-        cls._COLOR_MAP = {
-            "R": cls.RED,
-            "G": cls.GRN,
-            "Y": cls.YEL,
-            "B": cls.BLU,
-            "M": cls.MAG,
-            "C": cls.CYN,
-            "W": cls.WHT,
-            "0": cls.GRY,
-            "I": cls.INDIGO,
-            "O": cls.OCHRE,
-            "V": cls.VIOLET,
-            "S": cls.SLATE,
-        }
+        cls._COLOR_MAP = {"R": cls.RED, "G": cls.GRN, "Y": cls.YEL, "B": cls.BLU, "M": cls.MAG, "C": cls.CYN,
+                          "W": cls.WHT, "0": cls.GRY, "I": cls.INDIGO, "O": cls.OCHRE, "V": cls.VIOLET,
+                          "S": cls.SLATE, }
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
         code = cls._COLOR_MAP.get(str(color_key)[0].upper(), cls.WHT)
-        txt = str(text)
+        txt = "" if text is None else str(text)
         return f"{code}{txt}" if txt.endswith(cls.RST) else f"{code}{txt}{cls.RST}"
 
     @classmethod
     def strip(cls, text: str) -> str:
         return cls._STRIP_PATTERN.sub("", str(text))
-
 
 class LoreCategory(Enum):
     LEXICON = "LEXICON"
@@ -85,14 +60,12 @@ class LoreCategory(Enum):
     ALMANAC = "almanac"
     DREAMS = "dreams"
 
-
 class RealityLayer:
     TERMINAL = 0
     SIMULATION = 1
     VILLAGE = 2
     DEBUG = 3
     DEEP_CX = 4
-
 
 @dataclass
 class ErrorLog:
@@ -101,6 +74,8 @@ class ErrorLog:
     timestamp: float = field(default_factory=time.time)
     severity: str = "WARNING"
 
+    def __str__(self):
+        return f"[{self.severity}] {self.component}: {self.error_msg}"
 
 @dataclass
 class DragProfile:
@@ -113,7 +88,6 @@ class DragProfile:
     def total(self) -> float:
         return (self.semantic + self.emotional + self.structural + self.metabolic +
                 self.trauma)
-
 
 @dataclass
 class EnergyState:
@@ -161,7 +135,6 @@ class EnergyState:
     cf_expect: float = 0.0
     novelty: float = 0.0
 
-
 @dataclass
 class MaterialState:
     clean_words: List[str] = field(default_factory=list)
@@ -171,7 +144,6 @@ class MaterialState:
     vector: Dict[str, float] = field(default_factory=dict)
     truth_ratio: float = 0.0
     repetition: float = 0.0
-
 
 @dataclass
 class SpatialState:
@@ -183,7 +155,6 @@ class SpatialState:
     flow_state: str = "LAMINAR"
     godel_scar: Optional[tuple] = None
 
-
 @dataclass
 class PhysicsPacket:
     energy: EnergyState = field(default_factory=EnergyState)
@@ -191,62 +162,39 @@ class PhysicsPacket:
     space: SpatialState = field(default_factory=SpatialState)
     _CORE_DOMAINS = ("energy", "space", "matter")
     _BASE_FIELDS = frozenset({"energy", "matter", "space", "drag_profile"})
-    _ALIAS_MAP = {
-        "E": [("energy", "exhaustion")],
-        "beta": [("energy", "beta_index"), ("energy", "contradiction")],
-        "S": [("energy", "scope")],
-        "D": [("energy", "depth")],
-        "C": [("energy", "connectivity")],
-        "V": [("energy", "voltage")],
-        "F": [("space", "narrative_drag"), ("space", "friction")],
-        "narrative_drag": [("space", "narrative_drag"), ("space", "friction")],
-        "H": [("energy", "health")],
-        "P": [("energy", "stamina")],
-        "ROS": [("energy", "ros")],
-        "G": [("energy", "glimmers")],
-        "PHI_RES": [("energy", "resonance")],
-        "DELTA": [("energy", "silence")],
-        "LQ": [("energy", "lq")],
-        "chi": [("energy", "entropy"), ("energy", "chi")],
-        "entropy": [("energy", "entropy"), ("energy", "chi")],
-    }
+    _ALIAS_MAP = {"E": [("energy", "exhaustion")], "beta": [("energy", "beta_index"), ("energy", "contradiction")],
+                  "S": [("energy", "scope")], "D": [("energy", "depth")], "C": [("energy", "connectivity")],
+                  "V": [("energy", "voltage")], "F": [("space", "narrative_drag"), ("space", "friction")],
+                  "narrative_drag": [("space", "narrative_drag"), ("space", "friction")], "H": [("energy", "health")],
+                  "P": [("energy", "stamina")], "ROS": [("energy", "ros")], "G": [("energy", "glimmers")],
+                  "PHI_RES": [("energy", "resonance")], "DELTA": [("energy", "silence")], "LQ": [("energy", "lq")],
+                  "chi": [("energy", "entropy"), ("energy", "chi")],
+                  "entropy": [("energy", "entropy"), ("energy", "chi")], }
 
     @staticmethod
     def _safe_init(cls, data):
         if isinstance(data, cls):
             return data
-        if data is None:
+        if not data:
             return cls()
         valid_keys = cls.__dataclass_fields__.keys()
         if isinstance(data, dict):
-            return cls(
-                **{k: data.get(k)
-                   for k in valid_keys if data.get(k) is not None})
-        return cls(**{
-            k: getattr(data, k)
-            for k in valid_keys if getattr(data, k, None) is not None
-        })
+            return cls(**{k: v for k, v in data.items() if k in valid_keys and v is not None})
+        return cls(**{k: getattr(data, k) for k in valid_keys if getattr(data, k, None) is not None})
 
-    def __init__(
-        self,
-        energy: Optional[Any] = None,
-        matter: Optional[Any] = None,
-        space: Optional[Any] = None,
-        **kwargs,
-    ):
+    def __init__(self, energy: Optional[Any] = None, matter: Optional[Any] = None, space: Optional[Any] = None,
+                 **kwargs, ):
         self.energy = self._safe_init(EnergyState, energy)
         self.matter = self._safe_init(MaterialState, matter)
         self.space = self._safe_init(SpatialState, space)
-        self.drag_profile = self._safe_init(DragProfile,
-                                            kwargs.pop("drag_profile", None))
+        self.drag_profile = self._safe_init(DragProfile, kwargs.pop("drag_profile", None))
         for k, v in kwargs.items():
             setattr(self, k, v)
 
     def sync_drag(self):
         if hasattr(self, "drag_profile") and self.drag_profile is not None:
             total = self.drag_profile.total()
-            if total > 0.1:
-                setattr(self, "narrative_drag", max(1.0, total))
+            setattr(self, "narrative_drag", max(0.6, total))
 
     @classmethod
     def void_state(cls):
@@ -273,7 +221,7 @@ class PhysicsPacket:
             domain, t_key = self._ALIAS_MAP[key][0]
             return getattr(getattr(self, domain), t_key)
         for domain in self._CORE_DOMAINS:
-            obj = self.__dict__.get(domain)
+            obj = getattr(self, domain, None)
             if hasattr(obj, key):
                 return getattr(obj, key)
         raise AttributeError(
@@ -283,7 +231,7 @@ class PhysicsPacket:
         if key in self._BASE_FIELDS:
             super().__setattr__(key, value)
             return
-        if hasattr(self, "_ALIAS_MAP") and key in self._ALIAS_MAP:
+        if key in self._ALIAS_MAP:
             for domain, t_key in self._ALIAS_MAP[key]:
                 setattr(getattr(self, domain), t_key, value)
             return
@@ -304,14 +252,13 @@ class PhysicsPacket:
         setattr(self, key, value)
 
     def __contains__(self, key):
-        if hasattr(self, "_ALIAS_MAP") and key in self._ALIAS_MAP:
+        if key in self._ALIAS_MAP:
             return True
         try:
             getattr(self, key)
             return True
         except AttributeError:
             return False
-
 
 @dataclass
 class UserInferredState:
@@ -338,6 +285,15 @@ class UserInferredState:
         raise AttributeError(
             f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
+    def __setattr__(self, key, value):
+        u_key = f"{key}_u"
+        if u_key in self.__dataclass_fields__ and key not in self.__dataclass_fields__:
+            super().__setattr__(u_key, value)
+        else:
+            super().__setattr__(key, value)
+
+    def snapshot(self) -> "UserInferredState":
+        return UserInferredState(**asdict(self))
 
 @dataclass
 class SharedDynamics:
@@ -352,6 +308,8 @@ class SharedDynamics:
     sigma_silence: int = 0
     lambda_silence: float = 0.2
 
+    def snapshot(self) -> "SharedDynamics":
+        return SharedDynamics(**asdict(self))
 
 @dataclass
 class CycleContext:
@@ -371,10 +329,7 @@ class CycleContext:
     mind_state: Dict = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
     bureau_ui: str = ""
-    user_profile: Dict = field(default_factory=lambda: {
-        "name": "TRAVELER",
-        "confidence": 0
-    })
+    user_profile: Dict = field(default_factory=lambda: {"name": "TRAVELER", "confidence": 0})
     last_impulse: Any = None
     reality_stack: Any = None
     active_lens: str = "NARRATOR"
@@ -394,34 +349,22 @@ class CycleContext:
     def log(self, message: str):
         self.logs.append(message)
 
-    def record_flux(self,
-                    phase: str,
-                    metric: str,
-                    initial: float,
-                    final: float,
-                    reason: str = ""):
+    def record_flux(self, phase: str, metric: str, initial: float, final: float, reason: str = ""):
         delta = final - initial
         if abs(delta) > 0.001:
-            self.flux_log.append({
-                "phase": phase,
-                "metric": metric,
-                "initial": initial,
-                "final": final,
-                "delta": delta,
-                "reason": reason,
-                "timestamp": time.time(),
-            })
+            self.flux_log.append(
+                {"phase": phase, "metric": metric, "initial": initial, "final": final, "delta": delta, "reason": reason,
+                 "timestamp": time.time(), })
 
     def snapshot(self) -> "CycleContext":
         new_ctx = copy.copy(self)
         for name in self.__dataclass_fields__:
             val = getattr(self, name)
-            if name == "physics" and hasattr(val, "snapshot"):
+            if hasattr(val, "snapshot") and callable(val.snapshot):
                 setattr(new_ctx, name, val.snapshot())
             elif isinstance(val, (list, dict, set)):
                 setattr(new_ctx, name, copy.deepcopy(val))
         return new_ctx
-
 
 @dataclass
 class MindSystem:
@@ -430,7 +373,6 @@ class MindSystem:
     dreamer: Any
     mirror: Any
     tracer: Any
-
 
 @dataclass
 class PhysSystem:
@@ -444,7 +386,6 @@ class PhysSystem:
     tension: Optional[Any] = None
     dynamics: Any = None
 
-
 @dataclass
 class DecisionTrace:
     trace_id: str
@@ -457,7 +398,6 @@ class DecisionTrace:
 
     def to_json(self):
         return json.dumps(asdict(self))
-
 
 @dataclass
 class DecisionCrystal:

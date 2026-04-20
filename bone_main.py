@@ -70,7 +70,7 @@ class HostStats:
 class SessionGuardian:
     _HEADERS = (
         ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.3.5   │"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.4.2   │"),
         ("term_header_bot", "└──────────────────────────────────────────┘"),
     )
 
@@ -606,15 +606,16 @@ class BoneAmanita:
                     )
                     active_traits.update(item_traits)
                 if "CUT_THE_CRAP" in active_traits:
-                    from bone_utils import TheTclWeaver
-
-                    pruned = TheTclWeaver.get_instance().quantum_comb(user_message)
-                    if pruned != user_message:
-                        user_message = pruned
-                        self.events.log(
-                            f"{Prisma.CYN}Gordon rakes the comb through your prompt. Fluff discarded. -> '{pruned}'{Prisma.RST}",
-                            "SYS",
-                        )
+                        from bone_utils import TheTclWeaver
+                        last_phys = getattr(self.observer, "last_physics_packet", getattr(self.cortex, "last_physics", {}))
+                        current_chi = float(safe_get(last_phys, "entropy", safe_get(last_phys, "chi", 0.5)))
+                        pruned = TheTclWeaver.get_instance().quantum_comb(user_message, chi=current_chi)
+                        if pruned != user_message:
+                            user_message = pruned
+                            self.events.log(
+                                f"{Prisma.CYN}Gordon rakes the comb through your prompt. Fluff discarded. -> '{pruned}'{Prisma.RST}",
+                                "SYS",
+                            )
             soul_anchor = getattr(getattr(self, "soul", None), "anchor", None)
             cfg = getattr(self.bone_config, "MAIN", object())
             if soul_anchor and self.host_stats.efficiency_index < getattr(cfg, "DOMESTICATION_EFF_WARN", 0.6):

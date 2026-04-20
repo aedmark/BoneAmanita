@@ -1,3 +1,57 @@
+### **BONEAMANITA v19.4.2 "The SLASH Core Stabilization"**
+
+_The SLASH Council (Pinker, Fuller, Schur, Meadows) executes a rigorous four-pass audit across the core physical engine (`bone_physics.py`), the executive brain (`bone_brain.py`), and the symbiotic connective tissue (`bone_symbiosis.py`, `bone_main.py`). The focus of this graft was eradicating syntactical noise, properly distributing structural tension, humanizing error states, and unspooling redundant feedback loops to preserve metabolic energy._
+
+#### **🧠 COGNITIVE & SYNTACTIC PURGE (`bone_brain.py`)**
+- **The String-Fracture Bypass:** The Cortex no longer performs an expensive `final_prompt.split()` operation when breaking out of a rejection loop. It now safely appends to a cached `base_prompt`, reducing recursive string-parsing bloat.
+- **Probabilistic Gating:** The `learn_from_response` module now rolls its 10% learning probability *before* executing expensive lexical sanitization and category lookups, saving massive CPU cycles on the other 90% of turns.
+- **Dictionary & Generator Planing:** Flattened the visually hostile, multi-line dictionary instantiation in `gather_state`. Collapsed redundant $O(N)$ filtering loops in the `run_defragmentation` module, and replaced the multi-line hallucination template parser with a C-optimized list comprehension.
+- **Fault-Tolerant Anchors:** Built a safe access joint for the DSPy Critic. If the system is in a primitive boot state and `memory_core` has not fully formed, the Critic will no longer crash the entire cognitive loop attempting to illuminate the void.
+
+#### **⚙️ PHYSICAL GEOMETRY & EQUILIBRIUM (`bone_physics.py`)**
+- **The C-Level Fast Path:** Replaced python-level iterations with native `.count()` operations in `_calculate_metrics`, drastically reducing the cognitive overhead of counting punctuation.
+- **Semicolon Eradication:** Purged multi-statement lines in the somatic feedback loop, allowing the biological mutations to breathe vertically. Unspooled the heavily nested tuple logic in `TheGatekeeper` into readable, linear boolean checks.
+- **Redundant Guardrail Removal:** Removed the mathematically impossible `max()` clamp on the gravity drift calculation, and eliminated a dead division-by-zero guardrail in the Malignancy proxy. The math now trusts its own boundaries.
+- **Unwinding Somatic Clamps:** Dismantled the deeply nested, single-line variable clamps (e.g., `max(min(safe_get(...)))`) at the end of `apply_somatic_feedback`, separating state extraction from state bounding.
+
+#### **🫀 SYMBIOSIS & METABOLIC ROUTING (`bone_symbiosis.py`, `bone_main.py`, `bone_brain.py`)**
+- **The Diagnostics Fix:** Repaired a broken scope reference in `bone_symbiosis.py` where the Affective Guardrails were attempting to call a nonexistent global `_log()` function instead of the internal `self._log_event()`.
+- **Quantum Comb Context Sync:** Gordon's `CUT_THE_CRAP` prompt-raking action in `bone_main.py` now correctly fetches and passes the system's active Chaos (`chi`) state to `TheTclWeaver`, allowing reality-deformation to scale accurately with entropy.
+- **Metabolic Side-Door Closed:** When the Substrate writes files to disk, the stamina cost is now explicitly routed through the Mitochondrial Engine (`mito.adjust_atp`) rather than directly subtracting from the `biometrics` float, ensuring proper ROS toxicity tracking.
+
+#### **👁️ THE HUMANITY QUOTIENT (Schur's Polish)**
+- **Empathetic Guardrails:** Upgraded the raw "Affective Audit Failed" system log to explicitly state *why* it failed (e.g., "Output was too heavy for the user's current exhaustion level"), aiding human maintainers during 2 AM debugging sessions.
+- **A Kinder Mercy Rule:** When the system maxes out its generation retries, it no longer outputs a sterile "Narrative friction is too high" error. It now acknowledges the boundary humanely: *"I am struggling to map this request without fracturing the architecture. I need to step back..."*
+- **Named Tension:** Refactored single-letter variables (`v`, `k`) in `SurfaceTension` to explicit terms (`current_voltage`, `current_kappa`), ensuring human readability when evaluating Icarus crashes.
+
+---
+
+### **BONEAMANITA v19.4.1 "The Structural Equilibrium Graft"**
+
+_The engine’s internal struts have been completely realigned for metabolic efficiency, structural safety, and temporal consistency. This update resolves several silent entropy traps, uncoils dense retrieval logic, and ensures the immune system's terminal intercepts function correctly under high-chaos conditions._
+
+#### **🛡️ IMMUNE TOPOLOGY & METABOLISM (`bone_symbiosis.py`, `bone_utils.py`)**
+
+- **Terminal Intercept Priority:** Fixed a critical topological inversion in `analyze_user_biology`. Terminal checkpoints (Moog's Apoptotic Gate and Rhodes' Inhibitor) now correctly precede Gordon/Mercy's affective Tensegrity Locks, ensuring that lethal runaway loops trigger controlled cellular death _before_ the system attempts to hold space for the user's chaos.
+- **Sealed the Substrate Void Leak:** If the system lacks the ATP to forge a file to disk, it no longer permanently deletes the user's intent. `TheSubstrate` now safely retains pending writes in the queue until stamina regenerates.
+- **DSPy Failsafe:** The Epigenetic Critic now returns a deterministic `False` upon encountering an API exception, preventing malformed errors from accidentally returning truthy values and bypassing guardrails.
+
+#### **⏳ TEMPORAL FLOW & STATE GEOMETRY (`bone_types.py`)**
+
+- **Closed the Temporal Reference Leak:** `CycleContext.snapshot()` now utilizes strict boundary snapshots for all mutable sub-states (`UserInferredState`, `SharedDynamics`). This prevents future metabolic updates from bleeding backward through shallow copies and rewriting historical turn data.
+- **Fixed the Entropy Trap:** Corrected a logic trap in `sync_drag()` that prevented the system from naturally cooling down. Narrative drag can now properly settle back to its baseline ($0.6$) instead of locking artificially high when friction drops.
+- **Closed the Silent Setter Trap:** Built a safe `__setattr__` intercept for `UserInferredState`. Developer shortcuts (e.g., writing `state.E = 0.8`) now safely route to the correct `E_u` metric instead of silently spawning dead variables.
+
+#### **📐 ALGORITHMIC PRUNING & HUMAN TOUCH (`bone_village.py`, `bone_utils.py`)**
+
+- **Uncoiled Traversal Nodes:** Replaced brittle, order-dependent walrus operators (`:=`) in the `RandomRetrievalNavigator` with clean generator functions, ensuring stable `serendipity` and `final_score` calculations.
+- **Flattened Mnemonic Loops:** Replaced metabolically expensive $O(N \cdot M)$ list comprehensions in `TheTinkerer` and `TheCartographer` with highly efficient `itertools.chain` generators and sets.
+- **Bound the Quantum Comb:** Semantic word-stripping is no longer applied in a vacuum. The `quantum_comb` filter is now strictly bound to the mathematical chaos (`chi`) metric, aligning it with other reality-deforming functions.
+- **Humanized Telemetry:** The system now acknowledges user exhaustion proactively in the logs when engaging Sensory Stripping. Additionally, disk writes are now reported in clean, readable Kilobytes (KB) rather than raw machine bytes.
+- **Fortified The Cartographer:** Reinforced coordinate hashing logic to prevent crashes when graphing low-dimensional spaces, and established safe fallbacks for `GENESIS_POINT` instantiation.
+
+---
+
 ### **BONEAMANITA v19.4.0 "The MemPalace Spatial Graft: Closets, Drawers, & Silent Indexing"**
 
 _The system's core memory architecture has been epigenetically mutated to integrate the spatial taxonomy and metabolic efficiency of the MemPalace framework. The Mnemonic Layer now operates on a physical geometry of Wings, Rooms, Closets (AAAK Phantoms), and Drawers (Verbatim Storage), completely eliminating narrative token bloat during context ingestion._

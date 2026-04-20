@@ -585,8 +585,7 @@ class MycelialNetwork:
             return True
         return False
 
-    def check_for_resurrection(self, input_words: List[str],
-                               voltage: float) -> Optional[str]:
+    def check_for_resurrection(self, input_words: List[str], voltage: float) -> Optional[str]:
         cfg = getattr(self.cfg, "SPORES", object())
         v_min = getattr(cfg, "RESURRECTION_VOLTAGE_MIN", 60.0)
         r_chance = getattr(cfg, "RESURRECTION_CHANCE", 0.20)
@@ -847,11 +846,8 @@ class MycelialNetwork:
         joy_legacy_data = None
         if top_joy:
             best_joy = top_joy[0]
-            joy_legacy_data = {
-                "flavor": best_joy.get("dominant_flavor", "UNKNOWN"),
-                "resonance": best_joy.get("resonance", 0),
-                "timestamp": best_joy.get("timestamp", 0),
-            }
+            joy_legacy_data = {"flavor": best_joy.get("dominant_flavor", "UNKNOWN"),
+                               "resonance": best_joy.get("resonance", 0), "timestamp": best_joy.get("timestamp", 0), }
         core_graph = {}
         for k, data in self.graph.items():
             valid_edges = {
@@ -863,7 +859,7 @@ class MycelialNetwork:
         future_seed_q = self._generate_future_seed(temp_health=health, trauma_vec=final_vector)
         seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in self.seeds if not s.bloomed]
         seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
-        data = {"genome": "BA_01935", "session_id": self.session_id, "parent_id": self.session_id,
+        data = {"genome": "BA_01941", "session_id": self.session_id, "parent_id": self.session_id,
                 "meta": {"timestamp": time.time(), "final_health": health, "final_stamina": stamina, },
                 "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
                 "core_graph": core_graph, "mutations": mutations or {},
