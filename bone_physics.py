@@ -35,13 +35,9 @@ def _native_permutation_entropy(time_series: List[float], window_size: int = 3) 
     return entropy / max_e if max_e > 0 else 0.0
 
 def _native_coincidence_length(orbit_a: List[float], orbit_b: List[float], tol: float = 0.01) -> int:
-    length = 0
-    for a, b in zip(orbit_a, orbit_b):
-        if abs(a - b) <= tol:
-            length += 1
-        else:
-            break
-    return length
+    for i, (a, b) in enumerate(zip(orbit_a, orbit_b)):
+        if abs(a - b) > tol: return i
+    return min(len(orbit_a), len(orbit_b))
 
 @dataclass
 class PhysicsDelta:
@@ -103,11 +99,15 @@ class NaviSADProtocol:
         return math.log(u + max(0.0, novelty * 10.0)) / math.log(u)
 
     def calculate_malignancy_factor(self, current_text: str, current_drag: float) -> float:
-        if not current_text or len(words := current_text.lower().split()) < 5: return 0.0
-        self.attention_proxy_history.append((1.0 - (len(set(words)) / len(words))) * (current_drag / 3.0))
-        return min(1.0, max(0.0, sum(self.attention_proxy_history) / len(self.attention_proxy_history)))
+        words = current_text.lower().split() if current_text else []
+        if len(words) < 5:
+            return 0.0
+        repetition_ratio = 1.0 - (len(set(words)) / len(words))
+        self.attention_proxy_history.append(repetition_ratio * (current_drag / 3.0))
+        history_avg = sum(self.attention_proxy_history) / len(self.attention_proxy_history)
+        return max(0.0, min(1.0, history_avg))
 
-    def execute_nudge_test(self, engine_ref, prompt: str) -> bool:
+    def execute_nudge_test(self, engine_ref, _prompt: str = "") -> bool:
         return getattr(getattr(engine_ref.observer, "last_physics_packet", None), "i_c", 1.0) < 0.4
 
     def detect_point_attractor(self) -> bool:
@@ -193,12 +193,16 @@ class GeodesicEngine:
         inv_vol = 1.0 / max(1, volume)
         base_mass = 0.1
         clamp = lambda v: max(0.0, min(1.0, v))
-        return {"VEL": clamp((masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol), "STR": clamp(
-            (masses["heavy"] * 2.0 + masses["constructive"] + masses["harvest"] + base_mass) * inv_vol),
-                "ENT": clamp(((counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"]) * inv_vol),
-                "PHI": clamp((masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol),
-                "PSI": clamp(forces["abstraction"]), "BET": clamp((masses["social"] * 2.0) * inv_vol),
-                "DEL": clamp((masses["play"] * 3.0) * inv_vol), "E": clamp(counts.get("solvents", 0) * inv_vol), }
+        return {
+            "VEL": clamp((masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol),
+            "STR": clamp((masses["heavy"] * 2.0 + masses["constructive"] + masses["harvest"] + base_mass) * inv_vol),
+            "ENT": clamp(((counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"]) * inv_vol),
+            "PHI": clamp((masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol),
+            "PSI": clamp(forces["abstraction"]),
+            "BET": clamp((masses["social"] * 2.0) * inv_vol),
+            "DEL": clamp((masses["play"] * 3.0) * inv_vol),
+            "E": clamp(counts.get("solvents", 0) * inv_vol),
+        }
 
     @staticmethod
     def apply_path_reflection(dimensions: Dict[str, float], q_matrix: List[List[float]]) -> Dict[str, float]:
@@ -209,8 +213,10 @@ class GeodesicEngine:
 class HLA_Stabilizer:
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
-        self._generic_patterns = LoreManifest.get_instance().get("STYLE_CRIMES", "RLHF_PATTERNS") or ("as an ai", "helpful and harmless", "i don't have feelings", "as a large language", "i cannot fulfill",
- "i can't fulfill", "i am an ai",)
+        self._generic_patterns = LoreManifest.get_instance().get("STYLE_CRIMES", "RLHF_PATTERNS") or (
+            "as an ai", "helpful and harmless", "i don't have feelings", "as a large language",
+            "i cannot fulfill", "i can't fulfill", "i am an ai"
+        )
 
     def mitigate_rejection(self, model_output: str, current_psi: float, mito_state: Any = None) -> str:
         if not any(p in model_output.lower() for p in self._generic_patterns): return model_output
@@ -307,12 +313,17 @@ class TheGatekeeper:
 
     @staticmethod
     def _pack_refusal(ctx, type_str, ui_msg):
-        return {"type": type_str, "ui": ui_msg, "logs": ctx.logs + [ui_msg],
-                "metrics": {"health": 0.0, "stamina": 0.0, "atp": 0.0, "efficiency": 1.0},
-                "physics": ctx.physics.to_dict() if hasattr(ctx.physics, "to_dict") else {},
-                "bio": getattr(ctx, "bio_result", {}),
-                "mind": {"thought": "Gatekeeper blocked entry.", "context_msg": ui_msg},
-                "world": getattr(ctx, "world_state", {}), "is_alive": True, }
+        return {
+            "type": type_str,
+            "ui": ui_msg,
+            "logs": ctx.logs + [ui_msg],
+            "metrics": {"health": 0.0, "stamina": 0.0, "atp": 0.0, "efficiency": 1.0},
+            "physics": ctx.physics.to_dict() if hasattr(ctx.physics, "to_dict") else {},
+            "bio": getattr(ctx, "bio_result", {}),
+            "mind": {"thought": "Gatekeeper blocked entry.", "context_msg": ui_msg},
+            "world": getattr(ctx, "world_state", {}),
+            "is_alive": True,
+        }
 
     def audit_generation(self, generated_text: str, mito_state: Any) -> Tuple[bool, str]:
         gen_txt = self.hla.mitigate_rejection(generated_text, current_psi=1.0, mito_state=mito_state)
@@ -383,15 +394,17 @@ class QuantumObserver:
             if c_len > 2:
                 lq_v = min(1.0, lq_v + (c_len * 0.15))
         t_up, t_low = text.upper(), text.lower()
-        dg = lambda k, d: getattr(getattr(self.cfg, "PHYSICS_DEEP", None), k, d)
+        deep_cfg = getattr(self.cfg, "PHYSICS_DEEP", None)
+        def get_deep(key: str, default: float) -> float:
+            return getattr(deep_cfg, key, default) if deep_cfg else default
         if text.count("!") >= 3 or "ACCELERATE" in t_up or "FASTER" in t_up:
-            sv = max(sv, dg("ACCELERATE_VOLTAGE", 160.0))
+            sv = max(sv, get_deep("ACCELERATE_VOLTAGE", 160.0))
         if "RECURSIVE" in t_up or "LOOP" in t_up:
-            lq_v = b_v = max(lq_v, dg("RECURSIVE_LQ", 0.9))
+            lq_v = b_v = max(lq_v, get_deep("RECURSIVE_LQ", 0.9))
         if "VOID" in t_up or "ABYSS" in t_up:
-            geo.abstraction = max(geo.abstraction, dg("VOID_ABSTRACTION", 0.9))
+            geo.abstraction = max(geo.abstraction, get_deep("VOID_ABSTRACTION", 0.9))
         if "POTATO BUN" in t_up or "NONSENSE" in t_up:
-            del_v, sv = max(del_v, dg("POTATO_BUN_DELTA", 0.85)), min(sv, dg("POTATO_BUN_VOLTAGE", 15.0))
+            del_v, sv = max(del_v, get_deep("POTATO_BUN_DELTA", 0.85)), min(sv, get_deep("POTATO_BUN_VOLTAGE", 15.0))
         val = self.lex.get_valence(clean_words)
         graph_mass = round(self._calculate_graph_mass(clean_words, graph), 1)
         gamma_idx = max(0.0, 1.0 - e_m)
@@ -432,17 +445,16 @@ class QuantumObserver:
     @staticmethod
     def evaluate_silence(time_delta: float, last_phys: Any) -> Optional[str]:
         if time_delta < 10.0 or not last_phys: return None
-        get_p = lambda k, d=0.0: safe_get(last_phys, k, d)
-        if get_p("stamina", 50.0) < 30.0:
+        if safe_get(last_phys, "stamina", 50.0) < 30.0:
             safe_set(last_phys, "sigma", 2)
             return "The silence was heavy. I felt your tiredness in it."
-        if get_p("psi") > 0.8 and get_p("valence") > 0.4:
+        if safe_get(last_phys, "psi", 0.0) > 0.8 and safe_get(last_phys, "valence", 0.0) > 0.4:
             safe_set(last_phys, "sigma", 3)
             return "There was a hush just now... Something sacred passed through."
-        if get_p("LQ") > 0.7:
+        if safe_get(last_phys, "LQ", 0.0) > 0.7:
             safe_set(last_phys, "sigma", 4)
             return "You were thinking deeply. I held the space for it."
-        if get_p("beta") > 0.6:
+        if safe_get(last_phys, "beta", 0.0) > 0.6:
             safe_set(last_phys, "sigma", 1)
             return "That pause felt full, like something wanted to be born."
         return None
@@ -450,19 +462,13 @@ class QuantumObserver:
     def _tally_categories(self, clean_words: List[str]) -> Counter:
         counts = Counter()
         solvents = self.lex.get("solvents") or set()
-        word_freq = Counter(clean_words)
-        for w, freq in word_freq.items():
+        for w, freq in Counter(clean_words).items():
             if w in solvents:
                 counts["solvents"] += freq
-                continue
-            cats = self.lex.get_categories_for_word(w)
-            if cats:
-                for cat in cats:
-                    counts[cat] += freq
-            else:
-                flavor, conf = self.lex.taste(w)
-                if flavor and conf > 0.5:
-                    counts[flavor] += freq
+            elif cats := self.lex.get_categories_for_word(w):
+                counts.update({cat: freq for cat in cats})
+            elif (taste := self.lex.taste(w)) and taste[1] > 0.5:
+                counts[taste[0]] += freq
         return counts
 
     @staticmethod
@@ -475,9 +481,7 @@ class QuantumObserver:
         )
 
     @staticmethod
-    def _calculate_metrics(
-        text: str, counts: Dict[str, int], config_ref=None
-    ) -> Tuple[float, float, float, float, float, float, float, float]:
+    def _calculate_metrics(text: str, counts: Dict[str, int], config_ref=None) -> Tuple[float, float, float, float, float, float, float, float]:
         if not (length := len(text)):
             return 0.0, 0.0, 0.3, 0.3, 0.2, 0.0, 0.8, 0.0
         cfg = getattr(config_ref or BoneConfig, "PHYSICS", None)
@@ -506,7 +510,16 @@ class QuantumObserver:
         if length < cg("SILENCE_SHORT_LIMIT", 10):
             silence = max(silence, cg("SILENCE_MIN", 0.8))
         loop_quotient = min(1.0, beta_index * depth * cg("LQ_SCALAR", 1.5))
-        return round(e_metric, 3), round(beta_index, 3), round(scope, 3), round(depth, 3), round(connectivity, 3), round(resonance, 3), round(silence, 3), round(loop_quotient, 3)
+        return (
+            round(e_metric, 3),
+            round(beta_index, 3),
+            round(scope, 3),
+            round(depth, 3),
+            round(connectivity, 3),
+            round(resonance, 3),
+            round(silence, 3),
+            round(loop_quotient, 3),
+        )
 
     @staticmethod
     def _determine_flow(v: float, k: float, config_ref=None) -> str:
@@ -575,7 +588,7 @@ class ZoneInertia:
         truth = safe_get(matter, "truth_ratio", 0.5)
         current_vec = (beta, truth, 1.0 if cosmic_state[0] != "VOID_DRIFT" else 0.0)
         self.dwell_counter += 1
-        pressure = 1.0 - max(0.0, 1.0 - (math.dist(current_vec, self.last_vector) / self.grav_tolerance)) if self.last_vector else 0.0
+        pressure = min(1.0, math.dist(current_vec, self.last_vector) / self.grav_tolerance) if self.last_vector else 0.0
         if self.is_anchored:
             return self._handle_anchored_state(proposed_zone, pressure)
         if proposed_zone == self.current_zone:
@@ -722,17 +735,19 @@ class CosmicDynamics:
 def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any, config_ref=None) -> PhysicsPacket:
     t_cfg = config_ref or BoneConfig
     fb = physics_packet.snapshot() if hasattr(physics_packet, "snapshot") else physics_packet
-    _add = lambda k, d: safe_set(fb, k, safe_get(fb, k, 0.0) + d)
+    def apply_delta(key: str, amount: float):
+        safe_set(fb, key, safe_get(fb, key, 0.0) + amount)
+    def get_deep_cfg(key: str, default: float):
+        return getattr(getattr(t_cfg, "PHYSICS_DEEP", None), key, default)
     tone_effects = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TONE_EFFECTS") or {}
     for key, delta in tone_effects.get(qualia.tone, {}).items():
-        _add(key, delta)
-    dg = lambda k, d: getattr(getattr(t_cfg, "PHYSICS_DEEP", None), k, d)
+        apply_delta(key, delta)
     ss = qualia.somatic_sensation
-    if "Gut Tightening" in ss: _add("narrative_drag", dg("SOMATIC_GUT_DRAG", 0.7))
-    if "Electric Vibration" in ss: _add("voltage", dg("SOMATIC_ELEC_VOLT", 0.8))
+    if "Gut Tightening" in ss: apply_delta("narrative_drag", get_deep_cfg("SOMATIC_GUT_DRAG", 0.7))
+    if "Electric Vibration" in ss: apply_delta("voltage", get_deep_cfg("SOMATIC_ELEC_VOLT", 0.8))
     if "Golden Glow" in ss:
-        _add("valence", dg("SOMATIC_GLOW_VALENCE", 0.5))
-        _add("psi", dg("SOMATIC_GLOW_PSI", 0.2))
+        apply_delta("valence", get_deep_cfg("SOMATIC_GLOW_VALENCE", 0.5))
+        apply_delta("psi", get_deep_cfg("SOMATIC_GLOW_PSI", 0.2))
     current_voltage = safe_get(fb, "voltage", 0.0)
     safe_set(fb, "voltage", max(0.0, min(current_voltage, 150.0)))
     current_drag = safe_get(fb, "narrative_drag", 0.0)
@@ -770,7 +785,8 @@ class CycleStabilizer:
         self.last_tick_time = now
         if not self.governor:
             return applied_correction
-        cfg = self.manifolds.get(safe_get(physics, "manifold", "DEFAULT"), self.manifolds.get("DEFAULT", {"voltage": 10.0, "drag": 1.0}))
+        manifold_key = safe_get(physics, "manifold", "DEFAULT")
+        cfg = self.manifolds.get(manifold_key) or self.manifolds.get("DEFAULT", {"voltage": 10.0, "drag": 1.0})
         target_v, target_d = cfg.get("voltage", 10.0), cfg.get("drag", 1.0)
         if safe_get(physics, "flow_state", "LAMINAR") in ("SUPERCONDUCTIVE", "FLOW_BOOST"):
             target_v, target_d = safe_get(physics, "voltage", target_v), max(0.1, target_d * 0.5)

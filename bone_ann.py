@@ -17,12 +17,19 @@ class HippocampalCache:
     def encode(self, node_id: str, vector: List[float], metadata: Dict[str, Any]):
         if node_id in self.nodes:
             del self.nodes[node_id]
+        raw_hash = hashlib.md5(str(vector).encode('utf-8')).hexdigest()
+        short_hash = raw_hash[:8]
         phantom = {
-            "vector_hash": hashlib.md5(str(vector).encode('utf-8')).hexdigest()[:8],
+            "vector_hash": short_hash,
             "wing_id": metadata.get("wing_id", "GLOBAL"),
             "room_id": metadata.get("room_id", "GENERAL")
         }
-        self.nodes[node_id] = {"phantom": phantom, "vector": vector, "meta": metadata, "timestamp": time.time()}
+        self.nodes[node_id] = {
+            "phantom": phantom,
+            "vector": vector,
+            "meta": metadata,
+            "timestamp": time.time()
+        }
         if len(self.nodes) > self.max_capacity:
             self._prune_weakest()
 
@@ -34,8 +41,7 @@ class HippocampalCache:
         return None
 
     def extract_for_consolidation(self, limit: Optional[int] = None) -> List[Tuple[str, Dict]]:
-        target_keys = list(self.nodes.keys())[:limit] if limit is not None else list(
-            self.nodes.keys())
+        target_keys = list(self.nodes.keys())[:limit]
         return [(k, self.nodes.pop(k)) for k in target_keys]
 
     def _prune_weakest(self):
@@ -45,22 +51,21 @@ class HippocampalCache:
         del self.nodes[oldest_key]
 
     def get_graph(self) -> Any:
-
         class _Graph:
             def __init__(self, adj):
                 self.adj = adj
 
             def __len__(self):
                 return len(self.adj)
-
         adj = {k: set() for k in self.nodes}
+        norms = {k: math.hypot(*n["vector"]) for k, n in self.nodes.items()}
         for (k1, n1), (k2, n2) in combinations(self.nodes.items(), 2):
-            v1, v2 = n1["vector"], n2["vector"]
-            dot = sum(a * b for a, b in zip(v1, v2))
-            mag = (sum(a * a for a in v1)**0.5) * (sum(b * b for b in v2)**0.5)
-            if mag > 0 and (dot / mag) > 0.75:  # 0.75 Cosine Similarity Threshold
-                adj[k1].add(k2)
-                adj[k2].add(k1)
+            mag = norms[k1] * norms[k2]
+            if mag > 0:
+                dot = sum(a * b for a, b in zip(n1["vector"], n2["vector"]))
+                if (dot / mag) > 0.75:
+                    adj[k1].add(k2)
+                    adj[k2].add(k1)
         return _Graph(adj)
 
 class CerebralIndex:
@@ -76,15 +81,14 @@ class CerebralIndex:
         """Instantly resolves an AAAK Phantom hash to its verbatim Drawer text."""
         if not self._payloads:
             return ""
-        for payload in self._payloads:
-            if payload.get("vector_hash") == vector_hash:
-                return payload.get("raw_verbatim_text", "")
-        return ""
+        return next((p.get("raw_verbatim_text", "") for p in self._payloads if p.get("vector_hash") == vector_hash), "")
 
     def add_memories(self, vectors: List[List[float]], metadata_payloads: List[Dict]):
         if not vectors:
             return
-        np_vectors = np.ascontiguousarray(np.array(vectors).astype("float32"))
+        base_array = np.array(vectors)
+        float_array = base_array.astype("float32")
+        np_vectors = np.ascontiguousarray(float_array)
         if np_vectors.shape[1] != self.dimension:
             return
         self._index.add(np_vectors)
@@ -123,8 +127,11 @@ class CerebralIndex:
         actual_k = min(k, self.total_nodes)
         distances, indices = self._index.search(np_query, actual_k)
         valid_neighbors = []
-        target_wing = physics_state.get("wing_id", "GLOBAL") if physics_state else None
-        is_lateral = physics_state.get("lateral_search", False) if physics_state else False
+        target_wing = None
+        is_lateral = False
+        if physics_state:
+            target_wing = physics_state.get("wing_id", "GLOBAL")
+            is_lateral = physics_state.get("lateral_search", False)
         for dist, idx in zip(distances[0], indices[0]):
             if idx == -1:
                 continue
@@ -141,16 +148,14 @@ class CerebralIndex:
             return None
         np_query = np.zeros((1, self.dimension), dtype="float32")
         distances, _ = self._index.search(np_query, min(50, self.total_nodes))
-        log_r, log_m, weights = [], [], []
-        mass = 1
-        for dist in (float(d) for d in distances[0] if d > 0):
-            log_r.append(math.log(dist))
-            log_m.append(math.log(mass))
-            weights.append(1.0)
-            mass += 1
-        if len(log_r) < 3:
+        valid_dists = [float(d) for d in distances[0] if d > 0]
+        if len(valid_dists) < 3:
             return None
-        return {"log_r": log_r, "log_m": log_m, "weights": weights}
+        return {
+            "log_r": [math.log(d) for d in valid_dists],
+            "log_m": [math.log(i + 1) for i in range(len(valid_dists))],
+            "weights": [1.0] * len(valid_dists)
+        }
 
 class MemoryConsolidator:
     def __init__(self, hippocampus: HippocampalCache, cortex: CerebralIndex, events: EventBus):
@@ -159,23 +164,25 @@ class MemoryConsolidator:
         self.events = events
 
     def trigger_rem_consolidation(self, available_atp: float) -> Tuple[int, float]:
-        if available_atp < 20.0:
+        base_rem_cost = 20.0
+        cost_per_node = 0.1
+        if available_atp < base_rem_cost:
             return 0, 0.0
-        max_affordable_nodes = int((available_atp - 20.0) / 0.1)
+        surplus_atp = available_atp - base_rem_cost
+        max_affordable_nodes = int(surplus_atp / cost_per_node)
         if max_affordable_nodes <= 0:
             return 0, 0.0
-        pending_nodes = self.hippocampus.extract_for_consolidation(
-            limit=max_affordable_nodes)
-        valid_nodes = [(nid, d) for nid, d in pending_nodes if "vector" in d]
-        if not valid_nodes:
+        pending_nodes = self.hippocampus.extract_for_consolidation(limit=max_affordable_nodes)
+        vectors, payloads = [], []
+        for nid, d in pending_nodes:
+            if "vector" in d:
+                vectors.append(d["vector"])
+                payloads.append({"id": nid, **d.get("meta", {})})
+        if not vectors:
             return 0, 0.0
-        vectors = [d["vector"] for _, d in valid_nodes]
-        payloads = [{"id": nid, **d.get("meta", {})} for nid, d in valid_nodes]
         self.cortex.add_memories(vectors, payloads)
-        atp_cost = len(valid_nodes) * 0.1
+        count = len(vectors)
+        atp_cost = count * 0.1
         if self.events:
-            self.events.publish("SYNAPTIC_CONSOLIDATION", {
-                "count": len(valid_nodes),
-                "atp_burned": atp_cost
-            })
-        return len(valid_nodes), atp_cost
+            self.events.publish("SYNAPTIC_CONSOLIDATION", {"count": count, "atp_burned": atp_cost})
+        return count, atp_cost

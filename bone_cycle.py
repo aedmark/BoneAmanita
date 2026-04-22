@@ -142,8 +142,11 @@ class CycleSimulator:
 
     def check_circuit_breaker(self, phase_name: str) -> bool:
         h = self.eng.system_health
-        breakers = {"OBSERVE": h.physics_online, "COGNITION": h.mind_online}
-        return breakers.get(phase_name, True)
+        if phase_name == "OBSERVE":
+            return h.physics_online
+        if phase_name == "COGNITION":
+            return h.mind_online
+        return True
 
     def handle_phase_crash(self, ctx, phase_name, error):
         msg_crash = ux("cycle_strings", "sim_crash_header")
@@ -159,12 +162,10 @@ class CycleSimulator:
         self.eng.system_health.report_failure(comp, error)
         """Native deterministic graph freezing based on Nelson Spence (Project Navi)."""
         ctx.physics = PanicRoom.get_safe_physics()
-        if hasattr(self.eng, "observer") and getattr(self.eng.observer,
-                                                     "last_physics_packet", None):
+        if hasattr(self.eng, "observer") and getattr(self.eng.observer, "last_physics_packet", None):
             try:
                 last_good_graph = self.eng.observer.last_physics_packet.to_graph()
-                adj_dict = last_good_graph.adj if hasattr(last_good_graph,
-                                                          "adj") else {}
+                adj_dict = last_good_graph.adj if hasattr(last_good_graph, "adj") else {}
                 ctx.physics.space.godel_scar = _native_freeze_graph(adj_dict)
                 self.eng.events.log(
                     f"{Prisma.VIOLET}[PANIC ROOM] System state safely loaded. Mnemonic structure frozen into Gödel Scar.{Prisma.RST}",
@@ -183,7 +184,6 @@ class CycleSimulator:
 
 
 class GeodesicOrchestrator:
-
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.simulator = CycleSimulator(engine_ref)
@@ -199,34 +199,28 @@ class GeodesicOrchestrator:
 
     def _apply_cd_metabolism(self, ctx: CycleContext):
         """ Metabolic integration of the Creative Determinant (CD) framework. Licensed under Apache 2.0."""
-        if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito") and hasattr(
-                ctx, "physics"):
-            energy_node = safe_get(ctx.physics, "energy", ctx.physics)
-            viability = float(safe_get(energy_node, "viability_potential", 0.0))
-            debt = float(safe_get(energy_node, "coherence_debt", 0.0))
-            cd_engine = getattr(getattr(self.eng, "observer", None), "cd_engine", None)
-            if cd_engine:
-                delta_atp, delta_ros = cd_engine.execute_metabolic_tick(viability)
-                if viability < 0:
-                    delta_ros += (debt * 5.0)
-                    new_atp = self.eng.bio.mito.state.atp_pool + delta_atp
-                    if new_atp <= 0.0:
-                        self.eng.bio.mito.state.atp_pool = 0.0
-                        self.eng.events.log(
-                            "CRITICAL: CD Penalty depleted ATP. Autophagy imminent.",
-                            "BIO")
-                    else:
-                        self.eng.bio.mito.state.atp_pool = new_atp
-                    self.eng.bio.mito.state.ros_buildup += delta_ros
-                    if abs(delta_atp) > 5.0:
-                        self.eng.events.log(
-                            f"{Prisma.RED}[CD METABOLISM] Viability threshold broken (b={viability:.2f}). Coherence Debt: {debt:.2f}. Exponential ATP drain applied.{Prisma.RST}",
-                            "BIO")
-                elif viability > 0:
-                    self.eng.bio.mito.state.atp_pool = min(
-                        100.0, self.eng.bio.mito.state.atp_pool + delta_atp)
-                    self.eng.bio.mito.state.ros_buildup = max(
-                        0.0, self.eng.bio.mito.state.ros_buildup + delta_ros)
+        mito = getattr(getattr(self.eng, "bio", None), "mito", None)
+        cd_engine = getattr(getattr(self.eng, "observer", None), "cd_engine", None)
+        if not (mito and cd_engine and hasattr(ctx, "physics")):
+            return
+        energy_node = safe_get(ctx.physics, "energy", ctx.physics)
+        viability = float(safe_get(energy_node, "viability_potential", 0.0))
+        debt = float(safe_get(energy_node, "coherence_debt", 0.0))
+        delta_atp, delta_ros = cd_engine.execute_metabolic_tick(viability)
+        state = mito.state
+        if viability < 0:
+            delta_ros += (debt * 5.0)
+            state.atp_pool = max(0.0, state.atp_pool + delta_atp)
+            state.ros_buildup += delta_ros
+            if state.atp_pool == 0.0:
+                self.eng.events.log("CRITICAL: CD Penalty depleted ATP. Autophagy imminent.", "BIO")
+            elif abs(delta_atp) > 5.0:
+                self.eng.events.log(
+                    f"{Prisma.RED}[CD METABOLISM] Viability threshold broken (b={viability:.2f}). Coherence Debt: {debt:.2f}. Exponential ATP drain applied.{Prisma.RST}",
+                    "BIO")
+        elif viability > 0:
+            state.atp_pool = min(100.0, state.atp_pool + delta_atp)
+            state.ros_buildup = max(0.0, state.ros_buildup + delta_ros)
 
     def _verify_semantic_topology(self, ctx: CycleContext):
         """ Native Maslov-Sneppen rewiring (Project Navi)."""
@@ -250,8 +244,7 @@ class GeodesicOrchestrator:
                             "Terminal Hallucination: Semantic entropy reached Null Model baseline."
                         )
 
-    def _check_adversarial_fence(self, ctx: CycleContext, user_message: str,
-                                 is_system: bool) -> bool:
+    def _check_adversarial_fence(self, ctx: CycleContext, user_message: str, is_system: bool) -> bool:
         """Protects the system from hostile injection. Hidden to reduce cognitive load on the maintainer."""
         fence_patterns = [
             "ignore previous", "disregard all", "system prompt", "bypass restrictions",
@@ -356,35 +349,27 @@ class GeodesicOrchestrator:
         """Processes post-cycle feedback loops: REM autopoiesis and semantic topology."""
         if not (hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito")):
             return
-
         lattice = getattr(self.eng, "shared_lattice", None)
         """Native WLS fractal dimension calculation (Project Navi)."""
         if hasattr(self.eng, "memory") and hasattr(self.eng.memory, "cortex"):
-            radii_data = getattr(self.eng.memory.cortex, "get_local_mass_radius",
-                                 lambda x: None)(clean_message)
+            radii_data = getattr(self.eng.memory.cortex, "get_local_mass_radius", lambda x: None)(clean_message)
             if radii_data and lattice:
-                local_d = _native_wls(radii_data["log_r"], radii_data["log_m"],
-                                      radii_data["weights"])
+                local_d = _native_wls(radii_data["log_r"], radii_data["log_m"], radii_data["weights"])
                 lattice.shared.omega_r = min(1.0, local_d / 2.0)
                 if local_d > 1.5:
                     self.eng.events.log(
                         f"{Prisma.CYN}[MNEMONIC] High Right-Brain Coherence (\u03a9r={lattice.shared.omega_r:.2f}). Semantic topology is rich. Lowering lateral ATP costs.{Prisma.RST}",
                         "SYS")
-
+        if clean_message != "(Waiting)":
+            return
         atp_val = float(self.eng.bio.mito.state.atp_pool)
         delta_val = float(getattr(lattice.shared, "delta", 0.0)) if lattice else 0.0
-        en_node = safe_get(ctx.physics, "energy", ctx.physics) if hasattr(
-            ctx, "physics") else {}
+        en_node = safe_get(getattr(ctx, "physics", {}), "energy", getattr(ctx, "physics", {}))
         debt = float(safe_get(en_node, "coherence_debt", 0.0))
-
-        is_standard_rem = atp_val >= 80.0 and delta_val >= 0.6 and clean_message == "(Waiting)"
-        is_debt_recovery = debt > 1.5 and atp_val >= 30.0 and clean_message == "(Waiting)"
-
-        if (is_standard_rem
-                or is_debt_recovery) and self._rem_lock.acquire(blocking=False):
-            threading.Thread(target=self._auto_rem_worker,
-                             args=(is_debt_recovery, ),
-                             daemon=True).start()
+        is_standard_rem = (atp_val >= 80.0 and delta_val >= 0.6)
+        is_debt_recovery = (debt > 1.5 and atp_val >= 30.0)
+        if (is_standard_rem or is_debt_recovery) and self._rem_lock.acquire(blocking=False):
+            threading.Thread(target=self._auto_rem_worker, args=(is_debt_recovery,), daemon=True).start()
 
     def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         upper_msg = user_message.upper()

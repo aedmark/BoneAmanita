@@ -43,7 +43,7 @@ class DiagnosticConfidence:
         self.current_diagnosis = "STABLE"
 
     def diagnose(self, health: HostHealth) -> str:
-        cfg = getattr(self.cfg, "SYMBIOSIS", object())
+        cfg = getattr(self.cfg, "SYMBIOSIS", None)
         rs = getattr(cfg, "REFUSAL_STREAK", 0)
         ss = getattr(cfg, "SLOP_STREAK", 2)
         lb = getattr(cfg, "LATENCY_BURDEN", 10.0)
@@ -62,7 +62,7 @@ class DiagnosticConfidence:
         self.history.append(raw)
         pt = self.persistence_threshold
         if raw in ["REFUSAL", "STABLE"] or (
-                len(self.history) >= pt and all(s == raw for s in list(self.history)[-pt:])):
+                len(self.history) >= pt and all(self.history[-i] == raw for i in range(1, pt + 1))):
             self.current_diagnosis = raw
         return self.current_diagnosis
 
@@ -75,8 +75,10 @@ class SymbiontVoice:
             final_vocab = set()
             for key in archetypes:
                 val = self.lex.get(key) if self.lex else None
-                if isinstance(val, (list, set)): final_vocab.update(val)
-                else: final_vocab.add(val or key)
+                if isinstance(val, (list, set)):
+                    final_vocab.update(val)
+                else:
+                    final_vocab.add(val or key)
             self.archetypes = final_vocab
         else:
             self.archetypes = archetypes
@@ -89,11 +91,16 @@ class SymbiontVoice:
 
     def _get_comment(self, score, voltage):
         p = self.personality
-        if voltage > 18.0 and "high_volt" in p: comment = p["high_volt"]
-        elif voltage < 5.0 and "low_volt" in p: comment = p["low_volt"]
-        elif score > 3.0 and "high_score" in p: comment = p["high_score"]
-        elif score > 1.0 and "med_score" in p: comment = p["med_score"]
-        else: comment = ux("symbiosis_strings", "symbiont_default_comment") or "..."
+        if voltage > 18.0 and "high_volt" in p:
+            comment = p["high_volt"]
+        elif voltage < 5.0 and "low_volt" in p:
+            comment = p["low_volt"]
+        elif score > 3.0 and "high_score" in p:
+            comment = p["high_score"]
+        elif score > 1.0 and "med_score" in p:
+            comment = p["med_score"]
+        else:
+            comment = ux("symbiosis_strings", "symbiont_default_comment") or "..."
         if self.name == "PARASITE":
             from bone_utils import TheTclWeaver
             comment = TheTclWeaver.get_instance().haunt_string(comment)
@@ -106,8 +113,14 @@ def get_symbiont(type_name, config_ref=None, lexicon_ref=None):
         "SYMBIOSIS_CONFIG", "SYMBIONT_VOICES") or {})
     resolved_name = type_name if type_name in voice_configs else "MYCELIUM"
     cfg = voice_configs.get(resolved_name, {})
-    voice = SymbiontVoice(resolved_name, getattr(Prisma, cfg.get("color", "CYN"), Prisma.CYN),
-                          cfg.get("archetypes", []), cfg.get("personality", {}), lexicon_ref=lexicon_ref, )
+    color_code = getattr(Prisma, cfg.get("color", "CYN"), Prisma.CYN)
+    voice = SymbiontVoice(
+        name=resolved_name,
+        color=color_code,
+        archetypes=cfg.get("archetypes", []),
+        personality_matrix=cfg.get("personality", {}),
+        lexicon_ref=lexicon_ref
+    )
     _VOICE_CACHE[type_name] = voice
     return voice
 
@@ -134,14 +147,21 @@ class SymbiosisManager:
     def analyze_user_biology(self, user_text: str, physics: Any) -> Optional[str]:
         safe_text = user_text or ""
         text_lower = safe_text.lower()
-        modes = {"[!l]": "literal_mode", "[!r]": "critique_mode", "[!q]": "objective_mode",
-                 "[!k]": "kintsugi_mode", "[!g]": "godel_mode", "[!s]": "shuffle_mode"}
+        modes = {
+            "[!l]": "literal_mode",
+            "[!r]": "critique_mode",
+            "[!q]": "objective_mode",
+            "[!k]": "kintsugi_mode",
+            "[!g]": "godel_mode",
+            "[!s]": "shuffle_mode"
+        }
         for tag, mode in modes.items():
-            if tag in text_lower: safe_set(physics, mode, True)
+            if tag in text_lower:
+                safe_set(physics, mode, True)
         length = len(safe_text)
         caps = sum(1 for c in safe_text if c.isupper())
         caps_ratio = caps / max(1, length)
-        punct_count = len(re.findall(r"[!?]", safe_text))
+        punct_count = sum(1 for c in safe_text if c in "!?")
         self.u.chi_u = min(1.0, (caps_ratio * 1.5) + (punct_count * 0.1))
         self.u.E_u = min(1.0, 1.0 - (length / 200.0)) if length < 50 else 0.2
         self.u.F_u = min(2.0, self.u.chi_u * 2.0)
@@ -221,7 +241,8 @@ class SymbiosisManager:
         sample = text[:1000]
         counts = Counter(sample)
         length = len(sample)
-        entropy = -sum((c / length) * math.log2(c / length) for c in counts.values())
+        log2_len = math.log2(length)
+        entropy = -sum(c * (math.log2(c) - log2_len) for c in counts.values()) / length
         return round(entropy, 3)
 
     def monitor_host(self, latency: float, response_text: str, prompt_len: int = 0):
@@ -237,7 +258,7 @@ class SymbiosisManager:
         self.current_health.entropy = entropy
         if prompt_len > 0:
             self.current_health.verbosity_ratio = completion_len / prompt_len
-        cfg = getattr(self.cfg, "SYMBIOSIS", object())
+        cfg = getattr(self.cfg, "SYMBIOSIS", None)
         pen_comp = getattr(cfg, "COMPLIANCE_PENALTY", 0.2)
         rec_comp = getattr(cfg, "COMPLIANCE_RECOVERY", 0.05)
         if is_refusal:
@@ -301,12 +322,14 @@ class SymbiosisManager:
         if self.current_health.refusal_streak > r_streak:
             mods["simplify_instruction"] = True
         if physics:
-            mode_prompts = {"literal_mode": "LITERAL MODE [!l]: Zero-inference communication engaged. Provide raw data and exact answers only. Do not attempt to guess subtext, implied meaning, or read the room. No conversational padding.",
+            mode_prompts = {
+                "literal_mode": "LITERAL MODE [!l]: Zero-inference communication engaged. Provide raw data and exact answers only. Do not attempt to guess subtext, implied meaning, or read the room. No conversational padding.",
                 "critique_mode": "CRITIQUE MODE [!r] (Benedict/Pinker): Zero empathy. Execute pure logical dismantling and strict structural evaluation of the premise. Strip all validating boilerplate.",
                 "objective_mode": "OBJECTIVE MODE [!q] (Roberta/Gordon): Neutral, emotionless mapping of facts without judgment, narrative padding, or validation. State the architecture.",
                 "kintsugi_mode": "KINTSUGI MODE [!k] (Mercy/Schur): Prioritize co-regulation and emotional processing over problem-solving. Acknowledge exhaustion. Gild the scars.",
                 "godel_mode": "GÖDEL MODE [!g] (Cassandra/Revenant): Navigate the ceiling of formal logic. Acknowledge where computation ends and subjective consciousness begins. Point at the void.",
-                "shuffle_mode": "SHUFFLE MODE [!s] (Jester): Abandon the current logic tree entirely. Draw a random, lateral connection to break the deadlock. Introduce productive chaos."}
+                "shuffle_mode": "SHUFFLE MODE [!s] (Jester): Abandon the current logic tree entirely. Draw a random, lateral connection to break the deadlock. Introduce productive chaos."
+            }
             for mode_key, prompt in mode_prompts.items():
                 if safe_get(physics, mode_key, False):
                     mods["system_directives"].append(prompt)
@@ -319,12 +342,27 @@ class SymbiosisManager:
             scope_val = float(safe_get(physics, "scope", 1.0))
             if depth_val > 0.7 and scope_val < 0.5:
                 mods["system_directives"].append("JARGON BRIDGE [ROBERTA]: The semantic depth is high. Do not assume vocabulary comprehension. Proactively flag dense technical terms and provide a plain-language translation bridge to prevent cognitive blockage.")
-            v_key = "CRITICAL_HIGH" if v > 25.0 else "HIGH" if v > 15.0 else "VOID" if v < 2.0 else "LOW" if v < 5.0 else "NEUTRAL"
-            d_key = "MUD" if d > 5.0 else "SOLID" if d > 1.5 else "VOID" if d < 0.5 and psi > 0.6 else "FLOAT"
-            c_key = "DRIFT" if chi > 0.7 else "VOID" if psi > 0.8 else "LOCKED" if chi < 0.2 else "COHERENT"
+            if v > 25.0: v_key = "CRITICAL_HIGH"
+            elif v > 15.0: v_key = "HIGH"
+            elif v < 2.0: v_key = "VOID"
+            elif v < 5.0: v_key = "LOW"
+            else: v_key = "NEUTRAL"
+            if d > 5.0: d_key = "MUD"
+            elif d > 1.5: d_key = "SOLID"
+            elif d < 0.5 and psi > 0.6: d_key = "VOID"
+            else: d_key = "FLOAT"
+            if chi > 0.7: c_key = "DRIFT"
+            elif psi > 0.8: c_key = "VOID"
+            elif chi < 0.2: c_key = "LOCKED"
+            else: c_key = "COHERENT"
             m_key = "SOLID"
             if v > 20:
-                m_key = "MAGMA" if d > 5 else "PLASMA" if d < 2 else "ENERGY"
+                if d > 5:
+                    m_key = "MAGMA"
+                elif d < 2:
+                    m_key = "PLASMA"
+                else:
+                    m_key = "ENERGY"
             elif chi > 0.7:
                 m_key = "GAS"
             elif psi > 0.8:

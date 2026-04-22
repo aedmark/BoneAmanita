@@ -70,7 +70,7 @@ class HostStats:
 class SessionGuardian:
     _HEADERS = (
         ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.4.2   │"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.4.3   │"),
         ("term_header_bot", "└──────────────────────────────────────────┘"),
     )
 
@@ -303,10 +303,11 @@ class BoneAmanita:
         tuning_key = self.mode_settings.get("tuning", "STANDARD")
         if hasattr(BonePresets, tuning_key):
             self.bone_config.load_preset(getattr(BonePresets, tuning_key))
-        if getattr(self.mind.mem, "session_health", None) is not None:
-            self.health = self.mind.mem.session_health
-            self.stamina = self.mind.mem.session_stamina
-            self.trauma_accum = self.mind.mem.session_trauma_vector or {}
+        mem = getattr(getattr(self, "mind", None), "mem", None)
+        if mem and getattr(mem, "session_health", None) is not None:
+            self.health = mem.session_health
+            self.stamina = mem.session_stamina
+            self.trauma_accum = mem.session_trauma_vector or {}
         if self.tick_count == 0 and self.bio.mito:
             self.bio.mito.state.atp_pool = self.bone_config.BIO.STARTING_ATP
 
@@ -329,7 +330,8 @@ class BoneAmanita:
         prompt_key = self.mode_settings.get("prompt_key", "ADVENTURE")
         model_id = self.config.get("model", "").lower()
         if any(ind in model_id for ind in self._SMALL_MODEL_INDICATORS):
-            if (lite_key := f"{prompt_key}_LITE") in getattr(self, "prompt_library", {}):
+            lite_key = f"{prompt_key}_LITE"
+            if lite_key in getattr(self, "prompt_library", {}):
                 prompt_key = lite_key
                 self.events.log(f"Sub-15B model detected ('{model_id}'). Loading tethered prompt: {prompt_key}", "SYS")
             if getattr(self, "cortex", None) and getattr(self.cortex, "dspy_critic", None):
@@ -368,36 +370,21 @@ class BoneAmanita:
             self.embryo.shimmer,
         )
         self.bio.setup_listeners()
-
         v = anatomy.get("village", {})
-        v_keys = [
-            "gordon",
-            "navigator",
-            "tinkerer",
-            "death_gen",
-            "bureau",
-            "town_hall",
-            "repro",
-            "zen",
-            "critics",
-            "therapy",
-            "limbo",
-            "kintsugi",
-            "therapist",
-            "gravedigger",
-        ]
+        v_keys = (
+            "gordon", "navigator", "tinkerer", "death_gen", "bureau", "town_hall",
+            "repro", "zen", "critics", "therapy", "limbo", "kintsugi", "therapist", "gravedigger"
+        )
         for k in v_keys:
             setattr(self, k, v.get(k))
-
         from bone_protocols import GriefProtocol
         from bone_utils import TheSubstrate
-
         self.grief = GriefProtocol(self.events, engine_ref=self)
         self.substrate = TheSubstrate(self.events)
         self.soul.engine = self
         self.council = CouncilChamber(self)
-
-        self.village = {k: getattr(self, k) for k in v_keys if k not in ["gordon", "death_gen", "repro", "kintsugi"]}
+        exclude_set = {"gordon", "death_gen", "repro", "kintsugi"}
+        self.village = {k: getattr(self, k) for k in v_keys if k not in exclude_set}
         self.village.update(
             {"council": self.council, "enneagram": self.drivers.enneagram, "suppressed_agents": self.suppressed_agents}
         )
@@ -405,24 +392,28 @@ class BoneAmanita:
     def _update_host_stats(self, packet, turn_start):
         self.observer.clock_out(turn_start)
         cfg = getattr(self.bone_config, "MAIN", object())
-        novelty = float(safe_get(safe_get(packet.get("physics", {}), "vector", {}), "novelty", 0.5))
-        burn_proxy = max(1.0, self.observer.last_cycle_duration * getattr(cfg, "HOST_BURN_MULT", 5.0))
-        self.host_stats.efficiency_index = min(1.0, (novelty * getattr(cfg, "HOST_NOVELTY_MULT", 10.0)) / burn_proxy)
+        phys_vec = safe_get(packet.get("physics", {}), "vector", {})
+        novelty = float(safe_get(phys_vec, "novelty", 0.5))
+        burn_mult = getattr(cfg, "HOST_BURN_MULT", 5.0)
+        nov_mult = getattr(cfg, "HOST_NOVELTY_MULT", 10.0)
+        burn_proxy = max(1.0, self.observer.last_cycle_duration * burn_mult)
+        efficiency = (novelty * nov_mult) / burn_proxy
+        self.host_stats.efficiency_index = min(1.0, efficiency)
         self.host_stats.latency = self.observer.last_cycle_duration
 
     def _pre_flight_checks(self, user_message: str, is_system: bool) -> Optional[Dict[str, Any]]:
         clean_in = user_message.lower().strip()
         if not is_system:
             if clean_in in ("/flush", "/zen", "[zen]"):
-                if getattr(self, "cortex", None):
-                    self.cortex.purge_context()
-                    safe_set(self.cortex.last_physics, "narrative_drag", 0.0)
+                if ctx := getattr(self, "cortex", None):
+                    ctx.purge_context()
+                    safe_set(ctx.last_physics, "narrative_drag", 0.0)
                 self.stamina = getattr(self.bone_config, "MAX_STAMINA", 100.0)
-                if getattr(self, "bio", None) and getattr(self.bio, "mito", None):
-                    self.bio.mito.state.atp_pool = getattr(self.bone_config, "MAX_ATP", 100.0)
-                    self.bio.mito.state.ros_buildup = 0.0
-                if getattr(self, "observer", None) and getattr(self.observer, "last_physics_packet", None):
-                    safe_set(self.observer.last_physics_packet, "narrative_drag", 0.0)
+                if mito := getattr(getattr(self, "bio", None), "mito", None):
+                    mito.state.atp_pool = getattr(self.bone_config, "MAX_ATP", 100.0)
+                    mito.state.ros_buildup = 0.0
+                if obs_phys := getattr(getattr(self, "observer", None), "last_physics_packet", None):
+                    safe_set(obs_phys, "narrative_drag", 0.0)
                 msg = (
                     "[ZEN FLUSH] Context severed. Narrative Drag (F) dropped to 0. Stamina restored. The mind is clear."
                 )
@@ -501,7 +492,6 @@ class BoneAmanita:
                             "MOOG: Apoptotic Gate triggered. Runaway loop exceeds Immune Competence.", "CRIT"
                         )
                         return self.trigger_death(last_phys)
-
                 if m_a > 0.8 and mu < 0.2:
                     if self.tick_count <= 20:
                         self.events.log(
@@ -520,11 +510,9 @@ class BoneAmanita:
                             "logs": [msg],
                             "metrics": self.get_metrics(),
                         }
-                e_u = (
-                    getattr(self.shared_lattice.u, "E", 0.0)
-                    if getattr(self, "shared_lattice", None)
-                    else float(safe_get(last_phys, "exhaustion", 0.0))
-                )
+                e_u = float(safe_get(last_phys, "exhaustion", 0.0))
+                if getattr(self, "shared_lattice", None):
+                    e_u = getattr(self.shared_lattice.u, "E", e_u)
                 beta = float(safe_get(last_phys, "beta_index", 0.0))
                 if chi > 0.7 and e_u > 0.7 and beta > 0.6:
                     if getattr(self, "bio", None) and getattr(self.bio, "mito", None):
@@ -569,19 +557,17 @@ class BoneAmanita:
         self.current_time_delta = (now - getattr(self, "last_turn_end", now)) if not is_system else 0.0
         self.observer.user_turns += 1
         self.tick_count += 1
-        chaotic_agents = {"JESTER", "REVENANT", "GIDEON", "DEATH"}
-        if self.tick_count == 1:
-            self.suppressed_agents = list(set(self.suppressed_agents) | chaotic_agents)
+        if self.tick_count in (1, 21):
+            chaotic = {"JESTER", "REVENANT", "GIDEON", "DEATH"}
+            active = set(self.suppressed_agents)
+            self.suppressed_agents = list(active | chaotic if self.tick_count == 1 else active - chaotic)
             if hasattr(self, "village"):
                 self.village["suppressed_agents"] = self.suppressed_agents
-        elif self.tick_count == 21:
-            self.suppressed_agents = list(set(self.suppressed_agents) - chaotic_agents)
-            if hasattr(self, "village"):
-                self.village["suppressed_agents"] = self.suppressed_agents
-            self.events.log(
-                f"{Prisma.VIOLET}[THE GREENHOUSE ENDS: The stabilizers are offline. Voltage limits unlocked. The chaotic archetypes are online. We are in the wild.]{Prisma.RST}",
-                "SYS",
-            )
+            if self.tick_count == 21:
+                self.events.log(
+                    f"{Prisma.VIOLET}[THE GREENHOUSE ENDS: The stabilizers are offline. Voltage limits unlocked. The chaotic archetypes are online. We are in the wild.]{Prisma.RST}",
+                    "SYS"
+                )
         if self.tick_count <= 20 and not is_system:
             greenhouse_msgs = {
                 1: "[THE GREENHOUSE: The system is currently running on stabilized rails. Over the next 20 turns, we will calibrate the metabolic engine together.]",
@@ -596,16 +582,10 @@ class BoneAmanita:
         if not is_system:
             gordon = getattr(self, "gordon", None)
             if gordon and hasattr(gordon, "inventory") and hasattr(gordon, "get_item_data"):
-                active_traits = set()
-                for item_id in gordon.inventory:
-                    data = gordon.get_item_data(item_id)
-                    item_traits = (
-                        data.get("passive_traits", [])
-                        if isinstance(data, dict)
-                        else getattr(data, "passive_traits", [])
-                    )
-                    active_traits.update(item_traits)
-                if "CUT_THE_CRAP" in active_traits:
+                def _get_traits(i_id):
+                    d = gordon.get_item_data(i_id)
+                    return d.get("passive_traits", []) if isinstance(d, dict) else getattr(d, "passive_traits", [])
+                if any("CUT_THE_CRAP" in _get_traits(item) for item in gordon.inventory):
                         from bone_utils import TheTclWeaver
                         last_phys = getattr(self.observer, "last_physics_packet", getattr(self.cortex, "last_physics", {}))
                         current_chi = float(safe_get(last_phys, "entropy", safe_get(last_phys, "chi", 0.5)))
@@ -627,10 +607,11 @@ class BoneAmanita:
                 soul_anchor.check_domestication(reliance)
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
-            if self.mind and hasattr(self.mind, "mem"):
-                self.trauma_accum = self.mind.mem.session_trauma_vector or {}
-                self.health, self.stamina = self.mind.mem.session_health, self.mind.mem.session_stamina
-            if self.bio and hasattr(self.bio, "biometrics"):
+            mem = getattr(getattr(self, "mind", None), "mem", None)
+            if mem:
+                self.trauma_accum = mem.session_trauma_vector or {}
+                self.health, self.stamina = mem.session_health, mem.session_stamina
+            if getattr(self, "bio", None) and getattr(self.bio, "biometrics", None):
                 self.health, self.stamina = self.bio.biometrics.health, self.bio.biometrics.stamina
             if self.health <= 0.0:
                 if self.tick_count <= 20:
@@ -698,16 +679,18 @@ class BoneAmanita:
         death_log.append(f"{Prisma.MAG}🐍 {legacy_msg}{Prisma.RST}")
 
         ctx = getattr(self, "cortex", None)
+        loc = "Void"
+        last_out = "Silence."
+        if ctx:
+            state = ctx.gather_state({"physics": getattr(ctx, "last_physics", {})})
+            loc = safe_get(safe_get(state, "world", {}), "orbit", ["Void"])[0]
+            if getattr(ctx, "dialogue_buffer", None):
+                last_out = ctx.dialogue_buffer[-1]
+        inv = getattr(self.gordon, "inventory", []) if getattr(self, "gordon", None) else []
         continuity_packet = {
-            "location": (
-                ctx.gather_state({"physics": getattr(ctx, "last_physics", {})})
-                .get("world", {})
-                .get("orbit", ["Void"])[0]
-                if ctx
-                else "Void"
-            ),
-            "last_output": ctx.dialogue_buffer[-1] if ctx and getattr(ctx, "dialogue_buffer", None) else "Silence.",
-            "inventory": getattr(self.gordon, "inventory", []) if getattr(self, "gordon", None) else [],
+            "location": loc,
+            "last_output": last_out,
+            "inventory": inv,
         }
         try:
             mutations_data = self.repro.attempt_reproduction(self, "MITOSIS")[1] if hasattr(self, "repro") else {}
@@ -775,9 +758,11 @@ class BoneAmanita:
         if trauma_sum * (1.0 - (self.health / max_h)) > desp_thresh:
             if msg := ux("main_strings", "mercy_venting"):
                 self.events.log(f"{Prisma.WHT}{msg}{Prisma.RST}", "SYS")
-
-            self.trauma_accum = {k: new_v for k, v in self.trauma_accum.items() if (new_v := v * cath_decay) >= 0.01}
-
+            for k, v in list(self.trauma_accum.items()):
+                if (decayed := v * cath_decay) >= 0.01:
+                    self.trauma_accum[k] = decayed
+                else:
+                    del self.trauma_accum[k]
             if msg_cath := ux("main_strings", "catharsis"):
                 self.events.log(f"{Prisma.CYN}{msg_cath}{Prisma.RST}", "SENSATION")
             self.health = min(self.health + cath_heal, max_h)
@@ -855,11 +840,15 @@ if __name__ == "__main__":
             res = session.process_turn(user_in)
             print(f"\n{Prisma.GRY}{term_div}{Prisma.RST}")
             if ui_text := res.get("ui"):
-                cfg = getattr(BoneConfig, "GUI", None)
-                base_speed = getattr(cfg, "RENDER_SPEED_SLOW", 0.005) if cfg else 0.005
+                gui_cfg = getattr(BoneConfig, "GUI", object())
+                base_speed = getattr(gui_cfg, "RENDER_SPEED_SLOW", 0.005)
                 stamina = res.get("metrics", {}).get("stamina", 100.0)
-                speed = base_speed * (4.0 if stamina < 20.0 else 2.0 if stamina < 50.0 else 1.0)
-
+                if stamina < 20.0:
+                    speed = base_speed * 4.0
+                elif stamina < 50.0:
+                    speed = base_speed * 2.0
+                else:
+                    speed = base_speed
                 if split_token and split_token in ui_text:
                     dashboard, _, ui_text = ui_text.partition(split_token)
                     print(f"\n{dashboard.strip()}\n")

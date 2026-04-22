@@ -38,26 +38,18 @@ class ChemicalState:
 
     def homeostasis(self, rate: float = 0.1):
         safe_rate = max(0.0, min(1.0, rate))
-        target_cfg = self.config_ref or BoneConfig
-        cfg = safe_get(target_cfg, "CORTEX", {})
-        targets = {
-                "dopamine": safe_get(cfg, "RESTING_DOPAMINE", 0.2),
-                "cortisol": safe_get(cfg, "RESTING_CORTISOL", 0.1),
-                "adrenaline": safe_get(cfg, "RESTING_ADRENALINE", 0.1),
-                "serotonin": safe_get(cfg, "RESTING_SEROTONIN", 0.2),
-            }
-        for attr, target in targets.items():
-            current = getattr(self, attr)
-            delta = (target - current) * safe_rate
-            setattr(self, attr, current + delta)
-
-    _MIX_MAPPING = {"DOP": "dopamine", "COR": "cortisol", "ADR": "adrenaline", "SER": "serotonin"}
+        cfg = safe_get(self.config_ref or BoneConfig, "CORTEX", {})
+        self.dopamine += (safe_get(cfg, "RESTING_DOPAMINE", 0.2) - self.dopamine) * safe_rate
+        self.cortisol += (safe_get(cfg, "RESTING_CORTISOL", 0.1) - self.cortisol) * safe_rate
+        self.adrenaline += (safe_get(cfg, "RESTING_ADRENALINE", 0.1) - self.adrenaline) * safe_rate
+        self.serotonin += (safe_get(cfg, "RESTING_SEROTONIN", 0.2) - self.serotonin) * safe_rate
 
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
-        for key, attr in self._MIX_MAPPING.items():
-            val = new_state.get(key, new_state.get(attr, 0.0))
-            current = getattr(self, attr)
-            setattr(self, attr, (current * (1.0 - weight)) + (val * weight))
+        inv_w = 1.0 - weight
+        self.dopamine = (self.dopamine * inv_w) + (new_state.get("DOP", new_state.get("dopamine", 0.0)) * weight)
+        self.cortisol = (self.cortisol * inv_w) + (new_state.get("COR", new_state.get("cortisol", 0.0)) * weight)
+        self.adrenaline = (self.adrenaline * inv_w) + (new_state.get("ADR", new_state.get("adrenaline", 0.0)) * weight)
+        self.serotonin = (self.serotonin * inv_w) + (new_state.get("SER", new_state.get("serotonin", 0.0)) * weight)
 
 class NeurotransmitterModulator:
     def __init__(self, bio_ref, events_ref=None, config_ref=None):
@@ -131,9 +123,11 @@ class NeurotransmitterModulator:
         t_limits = safe_get(cfg, "TEMP_LIMITS", (0.4, 1.5))
         raw_temp = base_temp + chemical_delta + voltage_heat + entropy_bonus
         final_temp = round(max(t_limits[0], min(t_limits[1], raw_temp)), 2)
-        final_top_p = min(1.0,
-                          base_top_p + (chi * safe_get(cfg, "TOP_P_CHI_SCALAR", 0.05)))
-        base_penalty = min(1.2, 0.5 + (beta * safe_get(cfg, "PEN_BETA_SCALAR", 0.3)) + (chi * safe_get(cfg, "PEN_CHI_SCALAR", 0.2)),)
+        chi_scalar = safe_get(cfg, "TOP_P_CHI_SCALAR", 0.05)
+        final_top_p = min(1.0, base_top_p + (chi * chi_scalar))
+        beta_weight = beta * safe_get(cfg, "PEN_BETA_SCALAR", 0.3)
+        chi_weight = chi * safe_get(cfg, "PEN_CHI_SCALAR", 0.2)
+        base_penalty = min(1.2, 0.5 + beta_weight + chi_weight)
         freq_pen = pres_pen = base_penalty
         token_mods = safe_get(cfg, "TOKEN_CHEM_MODIFIERS", {"dop": 800, "adr": 400, "cor": 200})
         token_delta = ((c.dopamine * token_mods.get("dop", 800)) -
@@ -216,14 +210,21 @@ class TheCortex:
     @classmethod
     def from_engine(cls, engine_ref, llm_client=None):
         target_cfg = getattr(engine_ref, "bone_config", BoneConfig)
-        services = CortexServices(events=engine_ref.events, lore=LoreManifest.get_instance(config_ref=target_cfg),
-                                  lexicon=engine_ref.lex, inventory=engine_ref.gordon,
-                                  consultant=getattr(engine_ref, "consultant", None),
-                                  cycle_controller=engine_ref.cycle_controller,
-                                  symbiosis=getattr(engine_ref, "symbiosis", SymbiosisManager(engine_ref.events)),
-                                  mind_memory=engine_ref.mind.mem, bio=getattr(engine_ref, "bio", None),
-                                  host_stats=getattr(engine_ref, "host_stats", None),
-                                  village=getattr(engine_ref, "village", None), config_ref=target_cfg, )
+        symbiosis_mgr = getattr(engine_ref, "symbiosis", None) or SymbiosisManager(engine_ref.events)
+        services = CortexServices(
+            events=engine_ref.events,
+            lore=LoreManifest.get_instance(config_ref=target_cfg),
+            lexicon=engine_ref.lex,
+            inventory=engine_ref.gordon,
+            consultant=getattr(engine_ref, "consultant", None),
+            cycle_controller=engine_ref.cycle_controller,
+            symbiosis=symbiosis_mgr,
+            mind_memory=engine_ref.mind.mem,
+            bio=getattr(engine_ref, "bio", None),
+            host_stats=getattr(engine_ref, "host_stats", None),
+            village=getattr(engine_ref, "village", None),
+            config_ref=target_cfg,
+        )
         instance = cls(services, llm_client)
         instance.active_mode = engine_ref.config.get("boot_mode", "ADVENTURE").upper()
         if instance.active_mode not in BonePresets.MODES:
@@ -348,12 +349,15 @@ class TheCortex:
                 final_text, inv_logs = raw_resp, []
             is_faithful, judge_reason = True, ""
             if hasattr(self, "dspy_critic") and self.dspy_critic.enabled:
-                if (self.active_mode in ["ADVENTURE", "CONVERSATION"]
-                        and not is_boot_sequence):
+                valid_mode = self.active_mode in ["ADVENTURE", "CONVERSATION"]
+                if valid_mode and not is_boot_sequence:
                     mem_core = getattr(self.svc.mind_memory, "memory_core", None)
-                    active_mems = mem_core.illuminate(full_state["physics"].get("vector", {})) if mem_core else []
-                    context_str = ("Active Memory: " + ", ".join(active_mems)
-                                   if active_mems else "Empty Void.")
+                    phys_vec = full_state["physics"].get("vector", {})
+                    active_mems = mem_core.illuminate(phys_vec) if mem_core else []
+                    if active_mems:
+                        context_str = "Active Memory: " + ", ".join(active_mems)
+                    else:
+                        context_str = "Empty Void."
                     is_faithful, judge_reason = self.dspy_critic.audit_generation(
                         user_input, context_str, final_text)
                     if is_faithful:
@@ -383,11 +387,12 @@ class TheCortex:
                 extracted_logs.append(
                     "[SYSTEM MERCY RULE]: Rejection loop broken to prevent ATP starvation. Spiking Drag (F -> ∞)."
                 )
-                if hasattr(self.svc.cycle_controller, "eng"):
-                    obs_packet = getattr(
-                        getattr(getattr(self.svc.cycle_controller.eng, "phys", None),
-                                "observer", None), "last_physics_packet", None)
-                    if obs_packet: safe_set(obs_packet, "narrative_drag", 999.0)
+                eng = getattr(self.svc.cycle_controller, "eng", None)
+                phys_module = getattr(eng, "phys", None) if eng else None
+                observer = getattr(phys_module, "observer", None) if phys_module else None
+                obs_packet = getattr(observer, "last_physics_packet", None) if observer else None
+                if obs_packet:
+                    safe_set(obs_packet, "narrative_drag", 999.0)
                 if self.last_physics:
                     safe_set(self.last_physics, "narrative_drag", 999.0)
                 break
@@ -432,9 +437,10 @@ class TheCortex:
             for log in extracted_logs:
                 if isinstance(log, str) and log.startswith("[SUBSTRATE_QUEUE]"):
                     try:
-                        _, data = log.split(" ", 1)
-                        path, safe_content = data.split(":::", 1)
-                        sub.queue_write(path.strip(), safe_content.replace("|||NEWLINE|||", "\n"))
+                        _, _, data = log.partition(" ")
+                        path, _, safe_content = data.partition(":::")
+                        if path and safe_content:
+                            sub.queue_write(path.strip(), safe_content.replace("|||NEWLINE|||", "\n"))
                     except Exception as e:
                         err_msg = f"Failed to parse or write file block. {e}"
                         print(f"{Prisma.RED}[SUBSTRATE QUEUE ERROR]: {err_msg}{Prisma.RST}")
@@ -462,8 +468,7 @@ class TheCortex:
                     sim_result["ui"] += f"\n\n{audit['ui']}"
         return sim_result
 
-    def _run_affective_audit(self, user_input: str, final_text: str, e_u: float,
-                             beta: float) -> Tuple[bool, str]:
+    def _run_affective_audit(self, user_input: str, final_text: str, e_u: float, beta: float) -> Tuple[bool, str]:
         affect_prompt = (
             "SYSTEM_INSTRUCTION: You are the Affective Real-Time Critic.\n"
             f"The user is currently highly exhausted or holding heavy emotional contradiction (Exhaustion: {e_u:.2f}, Tension: {beta:.2f}).\n"
@@ -801,9 +806,10 @@ class DreamEngine:
             shift["atp_drain"] = s_cost
             if raw_payloads and hasattr(self.mem, "cortex"):
                 from bone_spores import _word_to_vector
-                vectors = [_word_to_vector(text[:50]) for text in raw_payloads]  # Simulated fuzzy vector
-                metadata = [{"raw_verbatim_text": text.replace("|||NEWLINE|||", "\n"), "wing_id": "GLOBAL"} for text in
-                            raw_payloads]
+                vectors, metadata = [], []
+                for text in raw_payloads:
+                    vectors.append(_word_to_vector(text[:50]))
+                    metadata.append({"raw_verbatim_text": text.replace("|||NEWLINE|||", "\n"), "wing_id": "GLOBAL"})
                 self.mem.cortex.add_memories(vectors, metadata)
                 s_logs.append(f"{len(raw_payloads)} Bedrock Nodes Indexed")
             dream_text = f"[{' | '.join(s_logs)} | ATP: -{s_cost:.1f} | Silent Logging Complete]"
@@ -828,26 +834,23 @@ class DreamEngine:
                     f"Archetype: {soul_snapshot.get('archetype', 'UNKNOWN')}")
                 new_axiom = self.dspy_critic.evolve_prompt(current_state_str, trauma)
                 if new_axiom:
-                    active_mode = (self.eng.config.get(
-                        "boot_mode", "CONVERSATION").upper() if hasattr(
-                            self.eng, "config") else "CONVERSATION")
+                    active_mode = "CONVERSATION"
+                    if hasattr(self.eng, "config"):
+                        active_mode = self.eng.config.get("boot_mode", "CONVERSATION").upper()
                     try:
-                        disk_prompts = getattr(self.eng, "prompt_library", {})
-                        if not disk_prompts:
-                            disk_prompts = self.lore.get("SYSTEM_PROMPTS") or {}
+                        disk_prompts = getattr(self.eng, "prompt_library", None) or self.lore.get("SYSTEM_PROMPTS", {})
                         base_path = "lore/system_prompts.json"
-                        prompt_path = (base_path
-                                       if os.path.exists(base_path) else os.path.join(
-                                           getattr(self.lore, "DATA_DIR", "lore"),
-                                           "system_prompts.json",
-                                       ))
+                        if os.path.exists(base_path):
+                            prompt_path = base_path
+                        else:
+                            lore_dir = getattr(self.lore, "DATA_DIR", "lore")
+                            prompt_path = os.path.join(lore_dir, "system_prompts.json")
                         if active_mode in disk_prompts:
                             dirs = disk_prompts[active_mode].setdefault(
                                 "directives", [])
                             if new_axiom not in dirs:
                                 dirs.append(new_axiom)
-                            threshold = safe_get(safe_get(self.cfg, "CORTEX", {}),
-                                                 "EPIGENETIC_PRUNE_THRESHOLD", 12)
+                            threshold = safe_get(safe_get(self.cfg, "CORTEX", {}), "EPIGENETIC_PRUNE_THRESHOLD", 12)
                             if len(dirs) > threshold:
                                 compressed = getattr(self.dspy_critic, "compress_prompts", lambda x: None)(dirs)
                                 if compressed:
@@ -864,13 +867,9 @@ class DreamEngine:
                     is_deep_rem = True
         if self.mem and hasattr(self.mem, "subconscious") and self.llm:
             index = list(self.mem.subconscious.index)
-            if hasattr(self.eng, "akashic") and hasattr(self.eng.akashic,
-                                                        "shadow_stock"):
-                ghosts = [
-                    g.get("concept", "Forgotten Echo")
-                    for g in self.eng.akashic.shadow_stock if "concept" in g
-                ]
-                index.extend(ghosts[-10:])
+            if hasattr(self.eng, "akashic") and hasattr(self.eng.akashic, "shadow_stock"):
+                recent_shadows = self.eng.akashic.shadow_stock[-10:]
+                index.extend(g.get("concept", "Forgotten Echo") for g in recent_shadows if "concept" in g)
             if len(index) >= 2:
                 ghost1, ghost2 = random.sample(index, 2)
                 prompt = (
@@ -965,8 +964,16 @@ class DreamEngine:
                     trauma_level: float = 0.0) -> Tuple[str, float]:
         category = "NIGHTMARES" if trauma_level > 0.5 else "SURREAL"
         templates = self.dream_lore.get(category, [])
+
         if isinstance(templates, dict):
-            templates = [item for v in templates.values() for item in ([v] if isinstance(v, str) else v)]
+            flat_templates = []
+            for val in templates.values():
+                if isinstance(val, str):
+                    flat_templates.append(val)
+                else:
+                    flat_templates.extend(val)
+            templates = flat_templates
+
         if not templates:
             return "The walls breathe.", 0.1
         from bone_utils import TheTclWeaver
@@ -1001,13 +1008,13 @@ class DreamEngine:
         if not hasattr(memory_system, "graph") or not memory_system.graph:
             return ux("brain_strings", "defrag_empty")
         graph = memory_system.graph
-        prunable = [(n, sum(d.get("edges", {}).values())) for n, d in graph.items() if not d.get("is_diamond", False)]
-        pruned = [n for n, mass in sorted(prunable, key=lambda x: x[1]) if mass < 2.0][:limit]
+        prunable = ((n, sum(d.get("edges", {}).values())) for n, d in graph.items() if not d.get("is_diamond", False))
+        weak_nodes = [(n, mass) for n, mass in prunable if mass < 2.0]
+        pruned = [n for n, _ in sorted(weak_nodes, key=lambda x: x[1])[:limit]]
         for node in pruned:
             del graph[node]
         if pruned:
-            return ux("brain_strings",
-                      "defrag_pruned").format(count=len(pruned), joined=", ".join(pruned[:3]))
+            return ux("brain_strings", "defrag_pruned").format(count=len(pruned), joined=", ".join(pruned[:3]))
         return ux("brain_strings", "defrag_efficient")
 
 class NoeticLoop:
