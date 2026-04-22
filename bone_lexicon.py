@@ -6,6 +6,7 @@ import re
 import string
 import time
 import unicodedata
+import functools
 from collections import defaultdict
 from typing import Tuple, Dict, Set, Optional, List
 from bone_core import Prisma, LoreManifest, ux
@@ -17,39 +18,11 @@ class LexiconStore:
     _TRANSLATOR = str.maketrans(_PUNCTUATION, " " * len(_PUNCTUATION))
 
     def __init__(self):
-        self.categories = {
-            "heavy",
-            "kinetic",
-            "explosive",
-            "constructive",
-            "abstract",
-            "photo",
-            "aerobic",
-            "thermal",
-            "cryo",
-            "suburban",
-            "play",
-            "sacred",
-            "buffer",
-            "antigen",
-            "diversion",
-            "meat",
-            "gradient_stop",
-            "liminal",
-            "void",
-            "bureau_buzzwords",
-            "crisis_term",
-            "harvest",
-            "pareidolia",
-            "passive_watch",
-            "repair_trigger",
-            "refusal_guru",
-            "cursed",
-            "sentiment_pos",
-            "sentiment_neg",
-            "sentiment_negators",
-            "toxin",
-        }
+        self.categories = {"heavy", "kinetic", "explosive", "constructive", "abstract", "photo", "aerobic", "thermal",
+                           "cryo", "suburban", "play", "sacred", "buffer", "antigen", "diversion", "meat",
+                           "gradient_stop", "liminal", "void", "bureau_buzzwords", "crisis_term", "harvest",
+                           "pareidolia", "passive_watch", "repair_trigger", "refusal_guru", "cursed", "sentiment_pos",
+                           "sentiment_neg", "sentiment_negators", "toxin", }
         self.VOCAB: Dict[str, Set[str]] = {k: set() for k in self.categories}
         self.LEARNED_VOCAB: Dict[str, Dict[str, int]] = {}
         self.USER_FLAGGED_BIAS = set()
@@ -169,6 +142,7 @@ class LinguisticAnalyzer:
         else:
             self.ANTIGEN_REGEX = None
 
+    @functools.lru_cache(maxsize=5000)
     def measure_viscosity(self, word: str) -> float:
         if not word: return 0.0
         if (w := word.lower()) in self.store.SOLVENTS: return 0.1
@@ -232,6 +206,7 @@ class LinguisticAnalyzer:
         bias_set = getattr(self.store, "USER_FLAGGED_BIAS", set())
         return [w for w in cleaned_text.split() if w not in bias_set]
 
+    @functools.lru_cache(maxsize=5000)
     def classify_word(self, word: str) -> Tuple[Optional[str], float]:
         w = word.lower()
         if len(w) < 3:

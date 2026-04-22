@@ -773,7 +773,7 @@ class CycleStabilizer:
         amount = payload.get("drag_penalty", 0.0)
         self.pending_drag += amount
 
-    def stabilize(self, physics: Any) -> bool:
+    def stabilize(self, physics: Any, endocrine_state: Any = None) -> bool:
         applied_correction = False
         if self.pending_drag > 0:
             safe_set(physics, "narrative_drag", safe_get(physics, "narrative_drag", 0.0) + self.pending_drag)
@@ -791,7 +791,7 @@ class CycleStabilizer:
         if safe_get(physics, "flow_state", "LAMINAR") in ("SUPERCONDUCTIVE", "FLOW_BOOST"):
             target_v, target_d = safe_get(physics, "voltage", target_v), max(0.1, target_d * 0.5)
         self.governor.recalibrate(target_v, target_d)
-        v_force, d_force = self.governor.regulate(physics.to_dict() if hasattr(physics, "to_dict") else physics, dt=dt)
+        v_force, d_force = self.governor.regulate(physics.to_dict() if hasattr(physics, "to_dict") else physics, dt=dt, endocrine_state=endocrine_state)
         phys_cfg = getattr(self.cfg, "PHYSICS", None)
         v_limits = (getattr(phys_cfg, "VOLTAGE_FLOOR", 0.0), getattr(phys_cfg, "VOLTAGE_MAX", 150.0))
         voltage_applied = self._apply_force(physics, "voltage", v_force, v_limits)

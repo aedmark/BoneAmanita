@@ -35,7 +35,7 @@ class LLMInterface:
             if float(param_match.group(1)) < 15.0:
                 self.weight_class = "LIGHTWEIGHT"
         elif any(name in lower_model
-                 for name in ["gpt-3.5", "phi3", "phi-3", "gemma", "haiku"]):
+                 for name in ["gpt-3.5", "phi3", "phi-3", "haiku", "gemma-2b", "gemma-7b"]):
             self.weight_class = "LIGHTWEIGHT"
         safe_set(self.cfg, "WEIGHT_CLASS", self.weight_class)
         if self.events:

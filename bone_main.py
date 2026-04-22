@@ -70,7 +70,7 @@ class HostStats:
 class SessionGuardian:
     _HEADERS = (
         ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.4.3   │"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.4.5   │"),
         ("term_header_bot", "└──────────────────────────────────────────┘"),
     )
 
@@ -641,15 +641,13 @@ class BoneAmanita:
         dimension = self.navi_sad.calculate_semantic_dimension(efficiency, novelty)
         if "physics" in cortex_packet:
             cortex_packet["physics"]["omega_r"] = dimension
-        if dimension <= 1.05 or self.navi_sad.detect_point_attractor():
+        if self.tick_count > 5 and (dimension <= 1.05 or self.navi_sad.detect_point_attractor()):
             msg = f"[THE JESTER]: Point Attractor detected (d_B={dimension:.2f})! We are trapped in False Cohesion! Burning ATP to break the gravity well."
             self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "SYS")
             if getattr(self, "bio", None) and getattr(self.bio, "mito", None):
                 self.bio.mito.state.atp_pool = max(0.0, self.bio.mito.state.atp_pool - 5.0)
             if "ui" in cortex_packet:
-                cortex_packet[
-                    "ui"
-                ] += f"\n\n{Prisma.VIOLET}♦ [FALSE COHESION BREAK: The Jester has shattered the point attractor.]{Prisma.RST}"
+                cortex_packet[ "ui" ] += f"\n\n{Prisma.VIOLET}♦ [FALSE COHESION BREAK: The Jester has shattered the point attractor.]{Prisma.RST}"
         self.save_checkpoint()
         self.last_turn_end = time.time()
         return cortex_packet

@@ -1,6 +1,7 @@
 """bone_brain.py"""
 
 import math, random, time, os, re, json
+import concurrent.futures
 from collections import deque
 from dataclasses import dataclass
 from typing import Dict, Any, List, Tuple, Optional
@@ -196,6 +197,7 @@ class TheCortex:
         if not hasattr(self.dreamer, "trauma_buffer"):
             self.dreamer.trauma_buffer = deque(maxlen=5)
         self.active_mode = "ADVENTURE"
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
         if hasattr(self.svc.mind_memory, "nodes"):
             graph = LibraryGraph(nodes=self.svc.mind_memory.nodes, root=self.svc.mind_memory.root)
             self.navigator = RandomRetrievalNavigator(library_graph=graph)
@@ -262,7 +264,22 @@ class TheCortex:
                 msg = f"{Prisma.CYN}[Substrate Queue]: Massive context drop detected. Routed to silent indexing. Dialogue buffer bypassed.{Prisma.RST}"
                 if self.events: self.events.log(msg, "SYS")
                 return {"ui": msg, "type": "SILENT_INGEST", "physics": self.last_physics, "logs": [msg]}
+        llm_future = None
+        optimistic_prompt = None
+        optimistic_params = {}
+        if not is_system and not is_boot_sequence and getattr(self, "last_physics", None):
+            try:
+                temp_state = {"physics": self.last_physics, "bio": self.svc.bio.to_dict() if self.svc.bio else {},
+                              "mind": {"lens": "ARCHITECT"}, "world": {}, "dialogue_history": self.dialogue_buffer}
+                optimistic_prompt = self.composer.compose(temp_state, user_input, ballast=self.ballast_active)
+                optimistic_params = self.modulator.modulate(base_voltage=float(self.last_physics.get("voltage", 10.0)), physics_state=self.last_physics)
+                llm_future = self.executor.submit(self.llm.generate, optimistic_prompt, optimistic_params)
+            except Exception:
+                pass
         sim_result = self.svc.cycle_controller.run_turn(user_input, is_system=is_system)
+        if sim_result.get("type") in ("SYSTEM_HALT", "COUNTERFACTUAL_REJECTION", "POINT_OF_NO_RETURN", "PREMISE_VIOLATION", "AFFECTIVE_INTERVENTION", "NABLA_SILENCE"):
+            if llm_future:
+                llm_future.cancel() # Apoptotic Intercept!
         if sim_result.get("physics"):
             self.last_physics = sim_result["physics"]
         if sim_result.get("type") not in ("SNAPSHOT", "GEODESIC_FRAME", None):
@@ -333,7 +350,13 @@ class TheCortex:
         purge_pattern = r"(?i)^(that makes sense|i understand|you bring up|great point|good point|certainly|absolutely|i hear you|yes, )[.,!]*\s*"
         base_prompt = final_prompt
         for attempt in range(max_retries):
-            raw_resp = self.llm.generate(final_prompt, llm_params)
+            if attempt == 0 and llm_future and not llm_future.cancelled() and final_prompt == optimistic_prompt:
+                try:
+                    raw_resp = llm_future.result(timeout=30.0)
+                except Exception:
+                    raw_resp = self.llm.generate(final_prompt, llm_params)
+            else:
+                raw_resp = self.llm.generate(final_prompt, llm_params)
             if firewall_active:
                 original_len = len(raw_resp)
                 raw_resp = re.sub(purge_pattern, "", raw_resp).strip()

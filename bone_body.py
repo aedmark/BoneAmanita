@@ -365,6 +365,20 @@ class MitochondrialForge:
             self.state.membrane_potential = 1.1
             self.events.log("[MITO]: Ancestral High Metabolism activated.", "GENETICS")
 
+    def cellular_repair(self, survival_streak: int, g_pool: int, inherited_scars: dict) -> Tuple[bool, int, str]:
+        """Epigenetic Plasticity: Earn out of ancestral trauma."""
+        if survival_streak < 50 or self.state.ros_buildup > 10.0 or not inherited_scars:
+            return False, g_pool, ""
+        if g_pool >= 1:
+            healed_scar = random.choice(list(inherited_scars.keys()))
+            del inherited_scars[healed_scar]
+            g_pool -= 1
+            msg = f"Epigenetic Plasticity Achieved. Ancestral scar '{healed_scar}' permanently erased. (-1 Glimmer)"
+            if self.events:
+                self.events.log(f"{Prisma.MAG}✨ [MITO]: {msg}{Prisma.RST}", "BIO_HEAL")
+            return True, g_pool, msg
+        return False, g_pool, ""
+
 class DigestiveTrack:
     def __init__(self, bio_system_ref: BioSystem, lexicon_ref=None, config_ref=None):
         self.bio = bio_system_ref
@@ -423,34 +437,38 @@ class DigestiveTrack:
         return words, 1.0
 
     def _digest_words(self, words: List[str]) -> Tuple[float, List[str], float, int]:
-        atp_yield = 0.0
-        enzymes = []
-        cliche_tax = 0.0
-        hits = 0
         word_counts = Counter(words)
         cfg = getattr(self.cfg, "BIO", None)
         min_len = safe_get(cfg, "MIN_WORD_LENGTH", 4)
         comp_len = safe_get(cfg, "COMPLEX_WORD_LENGTH", 7)
-        for word, count in word_counts.items():
-            if len(word) < min_len:
-                continue
-            hits += count
-            cat = self.lex.get_current_category(word) if self.lex else "void"
-            if not cat or cat == "void":
-                atp_yield += self.BASE_WORD_VALUE * count
-                continue
-            if cat == "antigen":
+        valid_words = {w: c for w, c in word_counts.items() if len(w) >= min_len}
+        hits = sum(valid_words.values())
+        if not valid_words or not self.lex:
+            return sum(c * self.BASE_WORD_VALUE for c in valid_words.values()), [], 0.0, hits
+        user_set = set(valid_words.keys())
+        antigen_set = self.lex.get("antigen")
+        kinetic_set = self.lex.get("kinetic") | self.lex.get("explosive")
+        atp_yield = 0.0
+        enzymes = []
+        cliche_tax = 0.0
+        antigens_found = user_set.intersection(antigen_set)
+        kinetics_found = user_set.intersection(kinetic_set)
+        for word, count in valid_words.items():
+            if word in antigens_found:
                 cliche_tax += self.CLICHE_TAX_RATE * count
                 continue
-            val = self.COMPLEX_WORD_BONUS if len(
-                word) > comp_len else self.BASE_WORD_VALUE
+            val = self.COMPLEX_WORD_BONUS if len(word) > comp_len else self.BASE_WORD_VALUE
             log_mult = 1.0 + math.log(count)
-            if cat in ("kinetic", "explosive"):
+            if word in kinetics_found:
                 atp_yield += (val * 1.5) * log_mult
             else:
-                atp_yield += val * log_mult
-                if (enzyme := self.enzyme_map.get(cat, "AMYLASE")) != "AMYLASE":
-                    enzymes.append(enzyme)
+                cat = self.lex.get_current_category(word)
+                if not cat or cat == "void":
+                    atp_yield += self.BASE_WORD_VALUE * count
+                else:
+                    atp_yield += val * log_mult
+                    if (enzyme := self.enzyme_map.get(cat, "AMYLASE")) != "AMYLASE":
+                        enzymes.append(enzyme)
         return atp_yield, enzymes, cliche_tax, hits
 
 
@@ -951,7 +969,7 @@ class MetabolicGovernor:
         self.voltage_pid.setpoint = target_voltage
         self.drag_pid.setpoint = target_drag
 
-    def regulate(self, physics: Any, dt: float) -> Tuple[float, float]:
+    def regulate(self, physics: Any, dt: float, endocrine_state: Optional[Any] = None) -> Tuple[float, float]:
         safe_dt = max(0.001, dt)
         energy_dict = safe_get(physics, "energy") or {}
         space_dict = safe_get(physics, "space") or {}
@@ -959,7 +977,19 @@ class MetabolicGovernor:
         d_val = float(
             safe_get(physics, "narrative_drag")
             or space_dict.get("narrative_drag", 0.0))
-        updated_voltage = self.voltage_pid.update(v_val, safe_dt)
+        if endocrine_state:
+            adr_spike = getattr(endocrine_state, "adrenaline", 0.0) * 2.0
+            original_v_setpoint = self.voltage_pid.setpoint
+            self.voltage_pid.setpoint += adr_spike
+            deadband = 1.0 + (getattr(endocrine_state, "cortisol", 0.0) * 2.0)
+            v_error = self.voltage_pid.setpoint - v_val
+            if abs(v_error) > deadband:
+                updated_voltage = self.voltage_pid.update(v_val, safe_dt)
+            else:
+                updated_voltage = 0.0
+            self.voltage_pid.setpoint = original_v_setpoint
+        else:
+            updated_voltage = self.voltage_pid.update(v_val, safe_dt)
         updated_drag = self.drag_pid.update(d_val, safe_dt)
         return updated_voltage, updated_drag
 

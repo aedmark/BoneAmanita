@@ -322,7 +322,10 @@ class GeodesicRenderer:
         if mode_settings.get("show_location", True):
             nav = getattr(self.eng, "navigator", None)
             world_loc = getattr(nav.world_graph.get(nav.current_node_id) if nav else None, "name", "UNKNOWN")
-        current_ui_depth = getattr(self.eng, "ui_mode", mode_settings.get("default_ui_depth", "WARM"))
+        current_ui_depth = getattr(
+            self.eng, "ui_mode",
+            self.eng.config.get("default_ui_depth", mode_settings.get("default_ui_depth", "WARM"))
+        )
         if current_ui_depth == "IDLE":
             current_ui_depth = "WARM"
         data_ctx = {
