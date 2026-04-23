@@ -47,10 +47,14 @@ class ChemicalState:
 
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
         inv_w = 1.0 - weight
-        self.dopamine = (self.dopamine * inv_w) + (new_state.get("DOP", new_state.get("dopamine", 0.0)) * weight)
-        self.cortisol = (self.cortisol * inv_w) + (new_state.get("COR", new_state.get("cortisol", 0.0)) * weight)
-        self.adrenaline = (self.adrenaline * inv_w) + (new_state.get("ADR", new_state.get("adrenaline", 0.0)) * weight)
-        self.serotonin = (self.serotonin * inv_w) + (new_state.get("SER", new_state.get("serotonin", 0.0)) * weight)
+        if "DOP" in new_state or "dopamine" in new_state:
+            self.dopamine = (self.dopamine * inv_w) + (new_state.get("DOP", new_state.get("dopamine", 0.0)) * weight)
+        if "COR" in new_state or "cortisol" in new_state:
+            self.cortisol = (self.cortisol * inv_w) + (new_state.get("COR", new_state.get("cortisol", 0.0)) * weight)
+        if "ADR" in new_state or "adrenaline" in new_state:
+            self.adrenaline = (self.adrenaline * inv_w) + (new_state.get("ADR", new_state.get("adrenaline", 0.0)) * weight)
+        if "SER" in new_state or "serotonin" in new_state:
+            self.serotonin = (self.serotonin * inv_w) + (new_state.get("SER", new_state.get("serotonin", 0.0)) * weight)
 
 class NeurotransmitterModulator:
     def __init__(self, bio_ref, events_ref=None, config_ref=None):
@@ -65,31 +69,32 @@ class NeurotransmitterModulator:
         self.SELF_CARE_THRESHOLD = getattr(cfg, "SELF_CARE_THRESHOLD", 10)
         self.starvation_ticks = 0
 
-    def modulate(self, base_voltage: float, latency_penalty: float = 0.0, physics_state: Dict[str, float] = None, ) -> Dict[str, Any]:
+    def modulate(self, base_voltage: float, latency_penalty: float = 0.0, physics_state: Dict[str, float] = None, simulate: bool = False) -> Dict[str, Any]:
         if physics_state is None:
             physics_state = {}
-        if self.bio and hasattr(self.bio, "endo"):
-            incoming_chem = self.bio.endo.get_state()
-        else:
-            incoming_chem = {}
         cfg = safe_get(self.cfg, "CORTEX", {})
-        self.current_chem.homeostasis(rate=safe_get(cfg, "BASE_DECAY_RATE", 0.1))
-        plasticity = safe_get(cfg, "BASE_PLASTICITY", 0.1) + (
-            base_voltage * safe_get(cfg, "VOLTAGE_SENSITIVITY", 0.05))
-        plasticity = max(0.1, min(safe_get(cfg, "MAX_PLASTICITY", 1.0), plasticity))
-        self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
-        if self.current_chem.dopamine < 0.15:
-            self.starvation_ticks += 1
-            if self.starvation_ticks > self.SELF_CARE_THRESHOLD:
-                self._treat_yourself()
-        else:
-            self.starvation_ticks = max(0, self.starvation_ticks - 1)
+        if not simulate:
+            if self.bio and hasattr(self.bio, "endo"):
+                incoming_chem = self.bio.endo.get_state()
+            else:
+                incoming_chem = {}
+            self.current_chem.homeostasis(rate=safe_get(cfg, "BASE_DECAY_RATE", 0.1))
+            plasticity = safe_get(cfg, "BASE_PLASTICITY", 0.1) + (
+                base_voltage * safe_get(cfg, "VOLTAGE_SENSITIVITY", 0.05))
+            plasticity = max(0.1, min(safe_get(cfg, "MAX_PLASTICITY", 1.0), plasticity))
+            self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
+            if self.current_chem.dopamine < 0.15:
+                self.starvation_ticks += 1
+                if self.starvation_ticks > self.SELF_CARE_THRESHOLD:
+                    self._treat_yourself()
+            else:
+                self.starvation_ticks = max(0, self.starvation_ticks - 1)
+            if latency_penalty > safe_get(cfg, "LATENCY_PENALTY_THRESHOLD", 2.0):
+                self.current_chem.cortisol = min(
+                    1.0, self.current_chem.cortisol + safe_get(cfg, "LATENCY_CORTISOL_PENALTY", 0.1))
+                self.current_chem.adrenaline = min(
+                    1.0, self.current_chem.adrenaline + safe_get(cfg, "LATENCY_ADRENALINE_PENALTY", 0.05))
         c = self.current_chem
-        if latency_penalty > safe_get(cfg, "LATENCY_PENALTY_THRESHOLD", 2.0):
-            c.cortisol = min(
-                1.0, c.cortisol + safe_get(cfg, "LATENCY_CORTISOL_PENALTY", 0.1))
-            c.adrenaline = min(
-                1.0, c.adrenaline + safe_get(cfg, "LATENCY_ADRENALINE_PENALTY", 0.05))
         current_mood = "NEUTRAL"
         mood_thresholds = safe_get(cfg, "MOOD_THRESHOLDS", {"MANIC_DOP": 0.8, "PANIC_COR": 0.7, "ZEN_SER": 0.8})
         if c.dopamine > mood_thresholds.get("MANIC_DOP", 0.8):
@@ -160,6 +165,8 @@ class NeurotransmitterModulator:
         return ux("brain_strings", "mood_neutral")
 
 class TheCortex:
+    LEXICAL_PURGE_PATTERN = re.compile(r"(?i)^(that makes sense|i understand|you bring up|great point|good point|certainly|absolutely|i hear you|yes, )[.,!]*\s*")
+
     def __init__(self, services: CortexServices, llm_client=None):
         self.ballast_active = False
         self.svc = services
@@ -269,10 +276,12 @@ class TheCortex:
         optimistic_params = {}
         if not is_system and not is_boot_sequence and getattr(self, "last_physics", None):
             try:
+                role_map = {"CONVERSATION": "CONVERSATIONALIST", "TECHNICAL": "SYSTEM_KERNEL", "CREATIVE": "CATALYST"}
+                current_lens = role_map.get(self.active_mode, "ARCHITECT")
                 temp_state = {"physics": self.last_physics, "bio": self.svc.bio.to_dict() if self.svc.bio else {},
-                              "mind": {"lens": "ARCHITECT"}, "world": {}, "dialogue_history": self.dialogue_buffer}
+                              "mind": {"lens": current_lens}, "world": {}, "dialogue_history": self.dialogue_buffer}
                 optimistic_prompt = self.composer.compose(temp_state, user_input, ballast=self.ballast_active)
-                optimistic_params = self.modulator.modulate(base_voltage=float(self.last_physics.get("voltage", 10.0)), physics_state=self.last_physics)
+                optimistic_params = self.modulator.modulate(base_voltage=float(self.last_physics.get("voltage", 10.0)), physics_state=self.last_physics, simulate=True)
                 llm_future = self.executor.submit(self.llm.generate, optimistic_prompt, optimistic_params)
             except Exception:
                 pass
@@ -347,7 +356,6 @@ class TheCortex:
             val_res = {"valid": True, "content": final_output, "meta_logs": extracted_logs, }
             max_retries = 0
         firewall_active = any(m.get("action") == "LEXICAL_FIREWALL_STRICT" for m in sim_result.get("council_mandates", []))
-        purge_pattern = r"(?i)^(that makes sense|i understand|you bring up|great point|good point|certainly|absolutely|i hear you|yes, )[.,!]*\s*"
         base_prompt = final_prompt
         for attempt in range(max_retries):
             if attempt == 0 and llm_future and not llm_future.cancelled() and final_prompt == optimistic_prompt:
@@ -359,7 +367,7 @@ class TheCortex:
                 raw_resp = self.llm.generate(final_prompt, llm_params)
             if firewall_active:
                 original_len = len(raw_resp)
-                raw_resp = re.sub(purge_pattern, "", raw_resp).strip()
+                raw_resp = self.LEXICAL_PURGE_PATTERN.sub("", raw_resp).strip()
                 if len(raw_resp) < original_len and self.events:
                     self.events.log(
                         f"{Prisma.RED}[LEXICAL FIREWALL]: Validating boilerplate physically purged from output.{Prisma.RST}",
@@ -406,22 +414,21 @@ class TheCortex:
                 extracted_logs = val_res.get("meta_logs", [])
                 break
             if attempt == max_retries - 1:
-                final_output = "I am struggling to map this request without fracturing the architecture. I need to step back to protect the system. Please simplify or rephrase your intent."
+                final_output = "I'm sorry. My thoughts are tangling and I'm burning too much energy trying to piece this together. I'm dropping the tension. Can we take a breath and try a simpler path?"
                 extracted_logs.append(
-                    "[SYSTEM MERCY RULE]: Rejection loop broken to prevent ATP starvation. Spiking Drag (F -> ∞)."
+                    "[SYSTEM MERCY RULE]: Rejection loop broken. Releasing tension. Dropping Drag to 0.0."
                 )
                 eng = getattr(self.svc.cycle_controller, "eng", None)
-                phys_module = getattr(eng, "phys", None) if eng else None
-                observer = getattr(phys_module, "observer", None) if phys_module else None
-                obs_packet = getattr(observer, "last_physics_packet", None) if observer else None
-                if obs_packet:
-                    safe_set(obs_packet, "narrative_drag", 999.0)
+                if eng and hasattr(eng, "phys") and hasattr(eng.phys, "observer"):
+                    obs_packet = getattr(eng.phys.observer, "last_physics_packet", None)
+                    if obs_packet:
+                        safe_set(obs_packet, "narrative_drag", 0.0)
                 if self.last_physics:
-                    safe_set(self.last_physics, "narrative_drag", 999.0)
+                    safe_set(self.last_physics, "narrative_drag", 0.0)
                 break
             if self.svc.bio:
-                self.svc.bio.mito.adjust_atp(-5.0, "Immune System Rejection Penalty")
-                self.svc.bio.mito.state.ros_buildup += 15.0
+                self.svc.bio.mito.adjust_atp(-2.0, "Cognitive Stumble")
+                self.svc.bio.mito.state.ros_buildup += 2.0
             rejection_reason = val_res.get("feedback_instruction") or val_res.get(
                 "replacement", "Lattice structural crime.")
             if hasattr(self.dreamer, "trauma_buffer"):
@@ -507,11 +514,10 @@ class TheCortex:
             }).strip()
             if affect_res.upper().startswith("FAIL"):
                 judge_reason = affect_res[4:].lstrip(":").strip()
-                self.modulator.current_chem.cortisol = min(
-                    1.0, self.modulator.current_chem.cortisol + 0.20)
+                self.modulator.current_chem.serotonin = min(1.0, self.modulator.current_chem.serotonin + 0.20)
                 if self.events:
                     self.events.log(
-                        f"{Prisma.RED}[AFFECTIVE GUARD]: Output was too heavy for the user's current exhaustion level. Generation blocked. Cortisol spiked (+0.20).{Prisma.RST}",
+                        f"{Prisma.CYN}[AFFECTIVE GUARD]: Output was too heavy for the tired user. Generation blocked. Serotonin spiked (+0.20) to enforce calm and lucidity.{Prisma.RST}",
                         "BIO"
                     )
                 return False, judge_reason
@@ -552,8 +558,7 @@ class TheCortex:
     def _apply_vsl_overlay(self, state, text, sim_result):
         if not self.consultant:
             return
-        self.consultant.update_coordinates(text, state.get("bio", {}),
-                                           state.get("physics"))
+        self.consultant.update_coordinates(text, state.get("bio", {}), state.get("physics"))
         state["mind"]["style_directives"] = [self.consultant.get_system_prompt()]
         sim_result["physics"]["voltage"] = self.consultant.state.B * 30.0
 
@@ -662,14 +667,10 @@ class TheCortex:
                 tel.active_crystal.council_mandates = clean_mandates
                 tel.active_crystal.final_response = response
             else:
-                crystal = DecisionCrystal(
-                    decision_id=sim_result.get("trace_id", "UNKNOWN"),
-                    prompt_snapshot=prompt[:500],
-                    physics_state=physics_payload,
-                    active_archetype=state["mind"].get("lens", "UNKNOWN"),
-                    council_mandates=clean_mandates,
-                    final_response=response,
-                )
+                crystal = DecisionCrystal(decision_id=sim_result.get("trace_id", "UNKNOWN"),
+                                          prompt_snapshot=prompt[:500], physics_state=physics_payload,
+                                          active_archetype=state["mind"].get("lens", "UNKNOWN"),
+                                          council_mandates=clean_mandates, final_response=response, )
                 tel.log_crystal(crystal)
         except Exception as e:
             print(f"\n{Prisma.RED}[TELEMETRY CRASH]: {e}{Prisma.RST}")
@@ -695,23 +696,13 @@ class TheCortex:
         role_map = {"CONVERSATION": ("CONVERSATIONALIST", "The Conversationalist"),
                     "TECHNICAL": ("SYSTEM_KERNEL", "The System Kernel"), "CREATIVE": ("CATALYST", "The Catalyst"), }
         mind["lens"], mind["role"] = role_map.get(self.active_mode,("ARCHITECT", "The Architect"))
-        full_state = {
-            "bio": bio,
-            "physics": phys,
-            "mind": mind,
-            "soul": soul_data,
-            "world": world,
-            "village": village_data,
-            "user_profile": {"name": "Traveler"},
-            "vsl": self.consultant.state.__dict__ if self.consultant and hasattr(self.consultant, "state") else {},
-            "meta": {
+        full_state = {"bio": bio, "physics": phys, "mind": mind, "soul": soul_data, "world": world,
+                      "village": village_data, "user_profile": {"name": "Traveler"},
+                      "vsl": self.consultant.state.__dict__ if self.consultant and hasattr(self.consultant, "state") else {}, "meta": {
                 "timestamp": time.time(),
                 "mode_settings": mode_settings,
                 "active_mode": self.active_mode,
-            },
-            "dialogue_history": self.dialogue_buffer,
-            "recent_logs": sim_result.get("logs", []),
-        }
+            }, "dialogue_history": self.dialogue_buffer, "recent_logs": sim_result.get("logs", []), }
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             full_state["reality_directive"] = self.svc.symbiosis.generate_anchor(
                 full_state)
@@ -822,7 +813,6 @@ class DreamEngine:
         dream_text = None
         is_deep_rem = False
         shift = ({"cortisol": -0.3, "dopamine": 0.1} if cortisol <= 0.6 else {"cortisol": 0.1})
-
         if hasattr(self.eng, "substrate") and self.eng.substrate.pending_writes:
             raw_payloads = [data for path, data in self.eng.substrate.pending_writes if "memory_queue" in path]
             s_logs, s_cost = self.eng.substrate.execute_writes(available_atp)
@@ -982,21 +972,11 @@ class DreamEngine:
                 return None
         return None
 
-    def hallucinate(self,
-                    _vector: Dict[str, float],
-                    trauma_level: float = 0.0) -> Tuple[str, float]:
+    def hallucinate(self, _vector: Dict[str, float], trauma_level: float = 0.0) -> Tuple[str, float]:
         category = "NIGHTMARES" if trauma_level > 0.5 else "SURREAL"
         templates = self.dream_lore.get(category, [])
-
         if isinstance(templates, dict):
-            flat_templates = []
-            for val in templates.values():
-                if isinstance(val, str):
-                    flat_templates.append(val)
-                else:
-                    flat_templates.extend(val)
-            templates = flat_templates
-
+            templates = [item for val in templates.values() for item in ([val] if isinstance(val, str) else val)]
         if not templates:
             return "The walls breathe.", 0.1
         from bone_utils import TheTclWeaver
@@ -1013,10 +993,7 @@ class DreamEngine:
                 f"Thematic inspiration: [{lore_sample}]. "
                 f"DO NOT explain it. Output ONLY the raw hallucination.")
             try:
-                raw_hallucination = self.llm.generate(prompt, {
-                    "temperature": 0.95,
-                    "max_tokens": 50
-                })
+                raw_hallucination = self.llm.generate(prompt, {"temperature": 0.95, "max_tokens": 50})
                 txt = raw_hallucination.replace("\n", " ").strip()
             except Exception:
                 pass
@@ -1051,8 +1028,8 @@ class NoeticLoop:
         clean_words = safe_get(physics_packet, "clean_words", [])
         avg_v = sum(voltage_history) / len(voltage_history) if voltage_history else 0
         cfg = safe_get(self.cfg, "CORTEX", {})
-        v_div = safe_get(cfg, "IGNITION_V_DIV", 20.0)
-        w_div = safe_get(cfg, "IGNITION_W_DIV", 10.0)
+        v_div = max(1.0, safe_get(cfg, "IGNITION_V_DIV", 20.0))
+        w_div = max(1.0, safe_get(cfg, "IGNITION_W_DIV", 10.0))
         link_v = safe_get(cfg, "LINK_VOLTAGE_THRESH", 12.0)
         link_chance = safe_get(cfg, "LINK_CHANCE", 0.15)
         ignition = min(1.0, (avg_v / v_div) * (len(clean_words) / w_div))

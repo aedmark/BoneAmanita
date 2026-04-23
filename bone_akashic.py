@@ -1,4 +1,5 @@
 """bone_akashic.py"""
+
 import json, math, os, uuid
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
 from bone_core import BoneJSONEncoder, LoreManifest, ux, safe_get
@@ -54,18 +55,9 @@ class TheAkashicRecord:
     def record_scar(self, concept: str, p: Any):
         cfg = getattr(BoneConfig, "AKASHIC", object())
         cfg_defaults = getattr(cfg, "DEFAULT_SCAR_COORDS", {})
-        axis_map = {
-            "E": ("exhaustion", 0.2),
-            "beta": ("beta_index", 0.4),
-            "S": ("scope", 0.3),
-            "D": ("depth", 0.3),
-            "C": ("connectivity", 0.2),
-            "T": ("trauma", 0.0),
-            "psi": ("psi", 0.0),
-            "chi": ("entropy", 0.0),
-            "valence": ("valence", 0.0),
-            "ROS": ("ros", 0.0),
-        }
+        axis_map = {"E": ("exhaustion", 0.2), "beta": ("beta_index", 0.4), "S": ("scope", 0.3), "D": ("depth", 0.3),
+                    "C": ("connectivity", 0.2), "T": ("trauma", 0.0), "psi": ("psi", 0.0), "chi": ("entropy", 0.0),
+                    "valence": ("valence", 0.0), "ROS": ("ros", 0.0), }
         coords = {}
         energy_layer = safe_get(p, "energy") or {}
         for short_key, (full_key, default_val) in axis_map.items():
@@ -74,8 +66,11 @@ class TheAkashicRecord:
                 coords[short_key] = val
             else:
                 coords[short_key] = safe_get(energy_layer, full_key, config_default)
-        self.scar_map.append({"concept": concept, "coordinates": coords, "gilded": True})
-        self.store_ghost_echo({"type": "SCAR_GHOST", "concept": concept, "coords": coords})
+        self.scar_map.append({"concept": concept, "coordinates": coords.copy(), "gilded": True})
+        max_scars = getattr(self.cfg_akashic, "MAX_SCARS", 50)
+        if len(self.scar_map) > max_scars:
+            self.scar_map.pop(0)
+        self.store_ghost_echo({"type": "SCAR_GHOST", "concept": concept, "coords": coords.copy()})
         self._save_user_state()
         self._mutate_system_prompts(concept, coords)
         if self.events:
@@ -90,6 +85,9 @@ class TheAkashicRecord:
             axiom = f"SCAR TISSUE [{concept.upper()}]: The system previously collapsed here (Tension: {coords.get('beta', 0.0)}). You must structurally avoid repeating the failure that caused this."
             if axiom not in epigenetic_list:
                 epigenetic_list.append(axiom)
+                max_epi = getattr(self.cfg_akashic, "MAX_EPIGENETIC_SCARS", 10)
+                if len(epigenetic_list) > max_epi:
+                    epigenetic_list.pop(0)
                 self.lore.inject("SYSTEM_PROMPTS", prompts)
                 self.save_to_disk("system_prompts", prompts)
                 if self.events:
@@ -101,6 +99,9 @@ class TheAkashicRecord:
 
     def bury_memory(self, concept: str, data: Dict):
         self.subconscious_strata.append({"concept": concept, "data": data})
+        max_strata = getattr(self.cfg_akashic, "MAX_SUBCONSCIOUS_CAPACITY", 100)
+        if len(self.subconscious_strata) > max_strata:
+            self.subconscious_strata.pop(0)
 
     def _on_lens_interaction(self, payload):
         lenses = payload.get("lenses", [])
@@ -113,10 +114,14 @@ class TheAkashicRecord:
         self.track_successful_forge(payload.get("ingredient"), payload.get("catalyst"), payload.get("result"))
 
     @staticmethod
+    def _get_dominant_force(vector_dict: Dict, default: str) -> str:
+        safe_vector = vector_dict if isinstance(vector_dict, dict) else {}
+        return max((k for k, v in safe_vector.items() if v is not None), key=safe_vector.get, default=default)
+
+    @staticmethod
     def _extract_dominant_trigram(physics: Any) -> str:
         vector = safe_get(physics, "vector", {})
-        safe_vector = vector if isinstance(vector, dict) else {}
-        dom = max((k for k, v in safe_vector.items() if v is not None), key=safe_vector.get, default="KAN")
+        dom = TheAkashicRecord._get_dominant_force(vector, "KAN")
         constants = LoreManifest.get_instance().get("PHYSICS_CONSTANTS") or {}
         trigrams = constants.get("TRIGRAM_MAP", {})
         if dom in trigrams and len(trigrams[dom]) > 1:
@@ -134,12 +139,8 @@ class TheAkashicRecord:
             trigram = self._extract_dominant_trigram(payload["physics"])
             active_lens = payload.get("lens", "OBSERVER")
             resonances = (self.lore.get("NARRATIVE_DATA") or {}).get("_META_RESONANCE_", [])
-            valid_resonance = None
-            for r in resonances:
-                r_lens = r.get("lens") or r.get("soul")
-                if r.get("trigram") == trigram and r_lens == active_lens:
-                    valid_resonance = r
-                    break
+            valid_resonance = next((r for r in resonances if r.get("trigram") == trigram and (r.get("lens")
+                                            or r.get("soul")) == active_lens), None)
             if valid_resonance and self.events:
                 self.events.publish("RESONANCE_ACHIEVED", { "result": valid_resonance["result"], "msg": valid_resonance["msg"]})
 
@@ -147,8 +148,9 @@ class TheAkashicRecord:
     def calculate_manifold_shift(theta: str, e: Dict[str, float]) -> Dict[str, float]:
         theta_upper = theta.upper()
         c = (LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "MANIFOLD_SHIFTS") or {})
-        bias = sum(b_val for w, b_val in c.get("BIAS_LENSES", {}).items() if w in theta_upper)
-        scalar = math.prod(s_val for w, s_val in c.get("SCALAR_LENSES", {}).items() if w in theta_upper)
+        bias = c.get("BIAS_LENSES", {}).get(theta_upper, 0.0)
+        scalar = c.get("SCALAR_LENSES", {}).get(theta_upper, 1.0)
+
         for key, params in c.get("VECTOR_THRESHOLDS", {}).items():
             if e.get(key, 0.5) > params.get("threshold", 0.7):
                 scalar *= params.get("scalar_mod", 1.0)
@@ -160,8 +162,7 @@ class TheAkashicRecord:
             self.store_ghost_echo(payload)
 
     def forge_new_item(self, vector: Dict[str, float]) -> Tuple[str, Dict]:
-        safe_vector = vector if isinstance(vector, dict) else {}
-        dominant_force = max((k for k, v in safe_vector.items() if v is not None), key=safe_vector.get, default="CHI")
+        dominant_force = self._get_dominant_force(vector, "CHI")
         item_gen_data = self.lore.get("ITEM_GENERATION") or {}
         prefixes = item_gen_data.get("PREFIXES", {})
         prefix = prefixes.get(dominant_force, item_gen_data.get("FALLBACK_PREFIX", "Ascended"))
@@ -175,13 +176,8 @@ class TheAkashicRecord:
         desc_template = (ux("akashic_strings", "artifact_desc") or "A coalesced artifact of {dominant_force}.")
         cfg = getattr(BoneConfig, "AKASHIC", None)
         artifact_val = getattr(cfg, "ARTIFACT_VALUE", 50.0) if cfg else 50.0
-        new_data = {
-            "name": new_name,
-            "description": desc_template.format(dominant_force=dominant_force),
-            "function": "ARTIFACT",
-            "passive_traits": hazards,
-            "value": artifact_val,
-        }
+        new_data = {"name": new_name, "description": desc_template.format(dominant_force=dominant_force),
+                    "function": "ARTIFACT", "passive_traits": hazards, "value": artifact_val, }
         gordon_data = self.lore.get("GORDON") or {}
         registry = gordon_data.get("ITEM_REGISTRY", {})
         registry[new_name] = new_data
@@ -196,13 +192,9 @@ class TheAkashicRecord:
         print(f"{Prisma.GRY}{msg}{Prisma.RST}")
 
     def _save_user_state(self):
-        state = {
-            "lens_cooccurrence": {f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
-            "ingredient_affinity": self.ingredient_affinity,
-            "shadow_stock": self.shadow_stock,
-            "subconscious_strata": self.subconscious_strata,
-            "scar_map": self.scar_map,
-        }
+        state = {"lens_cooccurrence": {f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
+                 "ingredient_affinity": self.ingredient_affinity, "shadow_stock": self.shadow_stock,
+                 "subconscious_strata": self.subconscious_strata, "scar_map": self.scar_map, }
         os.makedirs(self.save_dir, exist_ok=True)
         try:
             with open(self.state_path, "w", encoding="utf-8") as f:
@@ -244,6 +236,7 @@ class TheAkashicRecord:
             tuple(k.split("|", 1)): v for k, v in data.get("lens_cooccurrence", {}).items() if "|" in k}
         self.ingredient_affinity = data.get("ingredient_affinity", {})
         self.shadow_stock = data.get("shadow_stock", [])
+        self.known_recipes.clear()
         gordon_data = self.lore.get("GORDON") or {}
         if recipes := gordon_data.get("RECIPES", []):
             self.known_recipes.update((r.get("ingredient"), r.get("catalyst_category")) for r in recipes
@@ -253,8 +246,8 @@ class TheAkashicRecord:
             try:
                 with open(words_path, "r", encoding="utf-8") as f:
                     self.discovered_words = json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"{Prisma.RED}[AKASHIC] Failed to load discovered words: {e}. Keeping current state.{Prisma.RST}")
 
     def record_interaction(self, lenses_active: list, ingredients_used: Optional[list] = None):
         if len(lenses_active) >= 2:
@@ -274,21 +267,23 @@ class TheAkashicRecord:
         if recipe_key in self.known_recipes:
             return
         self.recipe_candidates.setdefault(recipe_key, {})
+        result_name = "Unknown Artifact"
         if isinstance(result_item, dict):
-            result_name = result_item.get("name") or result_item.get("description") or "Unknown Artifact"
+            result_name = result_item.get("name") or result_item.get("description", result_name)
         elif isinstance(result_item, str):
             registry = (self.lore.get("GORDON") or {}).get("ITEM_REGISTRY", {})
             result_name = registry.get(result_item, {}).get("description", result_item)
-        else:
-            result_name = "Unknown Artifact"
-        self.recipe_candidates[recipe_key][result_name] = (self.recipe_candidates[recipe_key].get(result_name, 0) + 1)
+        self.recipe_candidates[recipe_key][result_name] = self.recipe_candidates[recipe_key].get(result_name, 0) + 1
         if self.recipe_candidates[recipe_key][result_name] == self.RECIPE_THRESHOLD:
             self._crystallize_recipe(ingredient_name, catalyst_type, result_item)
 
     def _hybridize_lenses(self, lens_a: str, lens_b: str):
         if lens_a == lens_b:
             return
-        roots = sorted([lens_a.replace("THE ", ""), lens_b.replace("THE ", "")])
+
+        def strip_prefix(s): return s[4:] if s.startswith("THE ") else s
+        roots = sorted([strip_prefix(lens_a), strip_prefix(lens_b)])
+
         new_name = f"THE {roots[0]}-{roots[1]}"
         existing_lenses = self.lore.get("LENSES") or {}
         if new_name in existing_lenses:
@@ -297,9 +292,9 @@ class TheAkashicRecord:
         w_b = safe_get(existing_lenses, lens_b, {}).get("weights", {})
         v_a = float(w_a.get("voltage") or w_a.get("v", 0.0))
         v_b = float(w_b.get("voltage") or w_b.get("v", 0.0))
-        d_a = float(w_a.get("drag") or w_a.get("d", 0.0))
-        d_b = float(w_b.get("drag") or w_b.get("d", 0.0))
-        new_weights = {"voltage": round((v_a + v_b) / 2, 2), "drag": round((d_a + d_b) / 2, 2)}
+        drag_vals = [float(w.get("drag") or w.get("d", 0.0)) for w in (w_a, w_b) if "drag" in w or "d" in w]
+        avg_drag = round(sum(drag_vals) / len(drag_vals), 2) if drag_vals else 0.0
+        new_weights = {"voltage": round((v_a + v_b) / 2, 2), "drag": avg_drag}
         desc_template = ux("akashic_strings", "lens_desc")
         new_lens_data = {"description": desc_template.format(lens_a=lens_a, lens_b=lens_b), "weights": new_weights,
             "parentage": [lens_a, lens_b], }

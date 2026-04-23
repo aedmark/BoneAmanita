@@ -79,9 +79,13 @@ class RandomRetrievalNavigator:
                 "note": self._generate_path_note(mode, tagged_results), }
 
     def _find_structural_match(self, coords: Coordinates) -> LibraryNode:
-        return next((n for n in self.library.nodes
-                     if abs(n.coords.S - coords.S) < 0.15 and abs(n.coords.D - coords.D) < 0.2
-                     and abs(n.coords.C - coords.C) < 0.25), self.library.root, )
+        for n in self.library.nodes:
+            s_match = abs(n.coords.S - coords.S) < 0.15
+            d_match = abs(n.coords.D - coords.D) < 0.20
+            c_match = abs(n.coords.C - coords.C) < 0.25
+            if s_match and d_match and c_match:
+                return n
+        return self.library.root
 
     def _generate_traversal_path(self, start_node: LibraryNode, r_val: float) -> list[LibraryNode]:
         path = [start_node]
@@ -106,10 +110,15 @@ class RandomRetrievalNavigator:
 
     def _get_neighbors(self, node: LibraryNode) -> list[LibraryNode]:
         refs_set = set(node.refs)
-        return [n for n in self.library.nodes
-            if n.id == node.parent_id or n.parent_id == node.id or (
-                node.parent_id and n.parent_id == node.parent_id and n.id != node.id)
-            or n.id in refs_set]
+        neighbors = []
+        for n in self.library.nodes:
+            is_parent = (n.id == node.parent_id)
+            is_child = (n.parent_id == node.id)
+            is_sibling = (node.parent_id and n.parent_id == node.parent_id and n.id != node.id)
+            is_referenced = (n.id in refs_set)
+            if is_parent or is_child or is_sibling or is_referenced:
+                neighbors.append(n)
+        return neighbors
 
     def _most_structural_neighbor(self, neighbors: list[LibraryNode], target_node: LibraryNode) -> LibraryNode:
         return max(neighbors, key=lambda current: self._structural_similarity(current, target_node),)
@@ -209,13 +218,14 @@ class TheSubstrate:
         os.makedirs("output", exist_ok=True)
         retained_writes = []
         for w in self.pending_writes:
-            s_name = os.path.basename(w["path"])
-            s_path = os.path.join("output", s_name)
+            s_path = os.path.join("output", w["path"].lstrip("/"))
+            s_name = os.path.basename(s_path)
             if stamina_pool - cost < (w_cost := len(w["content"]) * 0.02):
                 logs.append(f"{Prisma.RED}SUBSTRATE FAULT: Insufficient stamina to forge {s_name}. Retaining in queue.{Prisma.RST}")
                 retained_writes.append(w)
                 continue
             try:
+                os.makedirs(os.path.dirname(s_path), exist_ok=True)
                 with open(s_path, "w", encoding="utf-8") as f:
                     f.write(w["content"])
                 cost += w_cost
@@ -396,12 +406,20 @@ class DSPyCritic:
             try:
                 from bone_core import safe_get
                 from bone_presets import BoneConfig
-                cfg_val = lambda k, d: safe_get(self.cfg, k.upper(), safe_get(self.cfg, k.lower(), getattr(BoneConfig, k.upper(), d)),)
-                provider = cfg_val("provider", "ollama")
-                model_name = cfg_val("model", "vsl-hermes")
-                base_url = (cfg_val("base_url", "http://127.0.0.1:11434/v1") or "http://127.0.0.1:11434/v1").replace("/chat/completions", "")
-                self.lm = dspy.LM(model=f"openai/{model_name}", api_base=base_url, api_key="local-model-doesnt-need-a-key") if provider in (
-                        "ollama", "lm_studio") else dspy.LM(model=model_name)
+                def get_cfg(key: str, default: Any) -> Any:
+                    val_upper = safe_get(self.cfg, key.upper())
+                    if val_upper is not None: return val_upper
+                    val_lower = safe_get(self.cfg, key.lower())
+                    if val_lower is not None: return val_lower
+                    return getattr(BoneConfig, key.upper(), default)
+                provider = get_cfg("provider", "ollama")
+                model_name = get_cfg("model", "vsl-hermes")
+                raw_url = get_cfg("base_url", "http://127.0.0.1:11434/v1") or "http://127.0.0.1:11434/v1"
+                clean_url = raw_url.replace("/chat/completions", "")
+                if provider in ("ollama", "lm_studio"):
+                    self.lm = dspy.LM(model=f"openai/{model_name}", api_base=clean_url, api_key="local-model-doesnt-need-a-key")
+                else:
+                    self.lm = dspy.LM(model=model_name)
                 dspy.settings.configure(lm=self.lm)
                 self.judge = dspy.ChainOfThought(AssessFaithfulness)
                 self.evolver = dspy.ChainOfThought(EvolveSystemPrompt)
