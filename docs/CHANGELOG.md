@@ -1,3 +1,36 @@
+### **BONEAMANITA v19.4.8 "The SLASH Syntactic & Tensegrity Sweep"**
+
+_The SLASH Council (Pinker, Fuller, Schur, Meadows) executed a targeted four-pass architectural sweep across the metabolic engine (`bone_body.py`), the cognitive composer (`bone_composer.py`), the visual cortex (`bone_gui.py`), and the memory substrate (`bone_akashic.py`). The focus of this pass was defusing hidden syntactic landmines, capping infinite memory accumulations, eliminating double-fetches, and unspooling brittle nested geometries._
+
+#### **🧠 SYNTACTIC PURGE (Pinker's Pass)**
+
+- **Ternary Eradication (`bone_gui.py`):** Dismantled aggressive 4-level nested ternary operators and squashed walrus-generators in the `PulseReader` and HUD renderer. Replaced them with highly readable vertical control flows.
+- **Fatal Syntax Repaired (`bone_composer.py`):** Closed a missing parenthesis trap in `_local_fallback` that would have caused an instant interpreter failure.
+- **Cryptic Logic Flattening:** Purged monolithic boolean expressions and chained walrus (`:=`) tricks across the validation loop, decoupling multi-variable tuple assignments into discrete, explicitly named checks.
+
+#### **🌊 DYNAMIC EQUILIBRIUM & FLOW (Meadows' Pass)**
+
+- **Runaway Context Capped (`bone_akashic.py`):** Enforced strict carrying capacity limits on `EPIGENETIC_SCARS`, the biological `scar_map`, and the `subconscious_strata`. The system can no longer infinitely bloat its prompt or memory over long campaigns.
+- **Circuit Breaker Redundancy (`bone_composer.py`):** Fixed a bypass flaw where the LLM timeout threshold severed the connection _before_ the local fallback could attempt a rescue. The fallback now properly catches the structural weight.
+- **Membrane Potential Sinkhole (`bone_body.py`):** Placed a concrete floor on oxidative stress drain in the Mitochondria. Previously, prolonged stress would plunge membrane potential into negative infinity, permanently breaking metabolic math.
+- **$O(N \times M)$ Friction Removal (`bone_composer.py`):** Precompiled regex objects for `toxic_keywords` and `meta_markers` at initialization, eliminating massive redundant looping friction during token validation.
+
+#### **🩺 THE HUMANITY QUOTIENT (Schur's Pass)**
+
+- **Silent Gaslighting Eliminated (`bone_akashic.py`):** Removed bare `except Exception: pass` swallows during Akashic word-loading. Corrupted JSONs now scream to the terminal rather than silently deleting the user's discovered vocabulary on the next save.
+- **Bureaucracy Extracted (`bone_gui.py`):** Ripped heavy linear algebra (lattice strain calculation) out of the middle of the `render_dashboard` dictionary packager, relocating it to a clean helper function.
+- **Defused Substring Traps (`bone_akashic.py`):** Swapped `in` string checks for strict $O(1)$ dictionary lookups when calculating manifold shifts. This prevents configurations like "ART" from accidentally hijacking the "THE CARTOGRAPHER" lens.
+- **UI Scaling Protected (`bone_gui.py`):** Removed hardcoded magic numbers from the `SoulDashboard` progress bars, implementing dynamic capacity logic so the UI won't crash if config limits scale up.
+
+#### **⚙️ TOPOLOGICAL COLLAPSE & MATH (Fuller's Pass)**
+
+- **Payload Ephemeralization (`bone_composer.py`):** The local fallback engine now shallow-copies and inherits the primary LLM payload instead of manually rebuilding a rigid dictionary from scratch, preventing prompt drift.
+- **Metabolic Waste Eradication (`bone_gui.py`):** Prevented the UI projector from forcing the engine to aggregate full system metrics (`get_metrics`) twice per cycle just to fetch ATP, which was already present in the local payload.
+- **Tensegrity Restored (`bone_akashic.py`):** Deep-copied coordinate references in `record_scar` to decouple the transient ghost echoes from the bedrock structural scar map, preventing downstream mutations.
+- **Hybrid Lens Math Corrected (`bone_akashic.py`):** Altered the archetype hybridization formula to average _only_ existing weights. Hybridizing a lens with a nonexistent $0.0$ default no longer artificially halves the mathematical drag of its partner.
+
+---
+
 ### **BONEAMANITA v19.4.7 "The SLASH Autonomic & Endocrine Graft"**
 
 _The SLASH Council addressed four critical architectural stress tests, fundamentally altering how the system handles latency, hormonal feedback, and ancestral trauma. The engine is now a fully parallelized biological simulator._
