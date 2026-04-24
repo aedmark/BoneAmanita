@@ -316,6 +316,8 @@ class TheCortex:
                     self.events.log(f"{Prisma.VIOLET}{scar_msg}{Prisma.RST}", "SYS_LOCK")
                 if hasattr(self.svc.mind_memory, "record_scar"):
                     self.svc.mind_memory.record_scar("Cortex Counterfactual Toxicity", phys_state)
+                if self.svc.bio and hasattr(self.svc.bio, "mito"):
+                    self.svc.bio.mito.state.ros_buildup += simulated_ros
                 sim_result["ui"] = (
                     sim_result.get("ui", "") +
                     f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}\n{Prisma.VIOLET}{scar_msg}{Prisma.RST}"

@@ -20,10 +20,8 @@ class TheStrangeLoop:
 
     def audit(self, text: str, physics: Any) -> tuple[bool, list[str], dict, list[dict]]:
         text_lower = text.lower()
-        energy = safe_get(physics, "energy", physics)
-        psi = float(safe_get(physics, "psi", safe_get(energy, "psi", 0.0)))
-        voltage = float(safe_get(physics, "voltage", safe_get(energy, "voltage", 0.0)))
-
+        psi = float(safe_get(physics, "psi", 0.0))
+        voltage = float(safe_get(physics, "voltage", 0.0))
         if (any(t in text_lower for t in self.triggers) or (psi > 0.6 and any(w in text_lower for w in self.keywords))) and voltage > getattr(BoneConfig.COUNCIL, "STRANGE_LOOP_VOLTAGE", 8.0):
             self.recursion_depth += 1
             if self.recursion_depth > getattr(BoneConfig.COUNCIL, "STRANGE_LOOP_LIMIT", 3):
@@ -33,7 +31,6 @@ class TheStrangeLoop:
         self.recursion_depth = max(0, self.recursion_depth - 1)
         return False, [], {}, []
 
-
 class TheLeveragePoint:
     def __init__(self):
         self.last_drag = 0.0
@@ -42,11 +39,9 @@ class TheLeveragePoint:
         self.TARGET_VOLTAGE = getattr(cfg, "LEVERAGE_TARGET_VOLTAGE", 12.0)
         self.TARGET_DRAG = getattr(cfg, "LEVERAGE_TARGET_DRAG", 3.0)
 
-    def audit(self, physics: Any, _bio_state: dict = None) -> tuple[bool, list[str], dict, list[dict]]:
-        space = safe_get(physics, "space", physics)
-        energy = safe_get(physics, "energy", physics)
-        current_drag = float(safe_get(physics, "narrative_drag", safe_get(space, "narrative_drag", 0.0)))
-        current_voltage = float(safe_get(physics, "voltage", safe_get(energy, "voltage", 0.0)))
+    def audit(self, text: str, physics: Any, _bio_state: dict = None) -> tuple[bool, list[str], dict, list[dict]]:
+        current_drag = float(safe_get(physics, "narrative_drag", 0.0))
+        current_voltage = float(safe_get(physics, "voltage", 0.0))
         if self.last_drag == 0.0 and current_drag > 0: self.last_drag = current_drag
         delta = current_drag - self.last_drag
         self.last_drag = current_drag
@@ -64,7 +59,6 @@ class TheLeveragePoint:
             self.static_flow_turns = 0
             return True, [f"{Prisma.RED}{ux('council_strings', 'market_correction')}{Prisma.RST}"], {"voltage": -v_corr}, [{"action": "FORCE_MODE", "value": "SANCTUARY"}]
         return False, [], {}, []
-
 
 class TheFootnote:
     def __init__(self):
@@ -91,25 +85,12 @@ class TheVillageCouncil:
         def gv(k, d=0.0):
             return float(safe_get(p, k, d))
 
-        V, F, P, T = (
-            gv("V", gv("voltage", 30.0)),
-            gv("F", gv("narrative_drag", 0.6)),
-            gv("P", gv("stamina", 100.0)),
-            gv("T", 0.0),
-        )
-        beta, S, D, C = (
-            gv("beta", gv("beta_index", 0.4)),
-            gv("S", 0.3),
-            gv("D", 0.3),
-            gv("C", 0.2),
-        )
+        V, F = gv("voltage", 30.0), gv("narrative_drag", 0.6)
+        P = float(_bio_state.get("stamina", 100.0)) if _bio_state else gv("stamina", 100.0)
+        T = float(_bio_state.get("trauma", 0.0)) if _bio_state else gv("trauma", 0.0)
+        beta, S, D, C = gv("beta_index", 0.4), gv("scope", 0.3), gv("depth", 0.3), gv("connectivity", 0.2)
         psi, chi, valence = gv("psi", 0.2), gv("chi", 0.2), gv("valence", 0.0)
-        phi, delta, lq, ros = (
-            gv("PHI_RES", gv("resonance", 0.0)),
-            gv("DELTA", gv("silence", 0.0)),
-            gv("LQ", gv("lq", 0.0)),
-            gv("ROS", gv("ros", 0.0)),
-        )
+        phi, delta, lq, ros = gv("resonance", 0.0), gv("silence", 0.0), gv("lq", 0.0), gv("ros", 0.0)
         vec = safe_get(p, "vector", {})
         lam = float(safe_get(vec, "LAMBDA", 0.0))
         cfg = getattr(BoneConfig, "COUNCIL", None)
@@ -194,8 +175,7 @@ class CouncilChamber:
         if not hasattr(self.eng, "paradox_engine"):
             self.eng.paradox_engine = TheParadoxEngine(getattr(
                 self.eng, "events", None))
-        symbiont_cfg = (LoreManifest.get_instance().get("SYMBIOSIS_CONFIG",
-                                                        "SYMBIONT_VOICES") or {})
+        symbiont_cfg = (LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "SYMBIONT_VOICES") or {})
         symbiont_names = (list(symbiont_cfg.keys()) if symbiont_cfg else
                           ["LICHEN", "PARASITE", "MYCORRHIZA", "MYCELIUM"])
         for s_name in symbiont_names:
@@ -221,20 +201,16 @@ class CouncilChamber:
                     script = self.host_podcast(topic, llm)
                     transcript.append(f"\n{script}\n")
                     adjustments["stamina_cost"] = 15.0
-                except Exception as e:
-                    transcript.append(
-                        f"{Prisma.RED}Podcast generation failed: {e}{Prisma.RST}")
-        energy = safe_get(physics_packet, "energy", {})
-        matter = safe_get(physics_packet, "matter", {})
-        beta = float(
-            safe_get(physics_packet, "beta_index") or safe_get(energy, "beta_index")
-            or safe_get(physics_packet, "beta") or 0.0)
-        phi = float(
-            safe_get(physics_packet, "resonance") or safe_get(energy, "resonance")
-            or 0.0)
-        stamina = _bio_result.get("stamina", 100.0)
-        clean_words = safe_get(physics_packet, "clean_words") or safe_get(
-            matter, "clean_words", [])
+                except Exception:
+                    msg = ux("council_strings",
+                             "podcast_failed") or "The Parliament is too exhausted to sustain the simulation. We will sit in silence instead."
+                    transcript.append(f"{Prisma.RED}[SYSTEM FATIGUE]: {msg}{Prisma.RST}")
+                    adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + 2.0
+        beta = float(safe_get(physics_packet, "beta_index", 0.0))
+        phi = float(safe_get(physics_packet, "resonance", 0.0))
+        voltage = float(safe_get(physics_packet, "voltage", 0.0))
+        stamina = float(_bio_result.get("stamina", 100.0))
+        clean_words = safe_get(physics_packet, "clean_words", [])
         false_cohesion = max(0.0, phi - beta)
         effective_beta = max(beta, 0.8) if false_cohesion > 0.65 else beta
         if self.eng.paradox_engine.evaluate_tension(effective_beta, stamina):
@@ -261,38 +237,19 @@ class CouncilChamber:
                 )
             else:
                 self.eng.paradox_engine.disengage()
-        sl_hit, sl_logs, sl_corr, sl_man = self.strange_loop.audit(text, physics_packet)
-        if sl_hit:
-            transcript.extend(self.footnote.commentary(log) for log in sl_logs)
-            adjustments.update(sl_corr)
-            mandates.extend(sl_man)
-
-        lp_hit, lp_logs, lp_corr, lp_man = self.leverage.audit(physics_packet)
-        if lp_hit:
-            transcript.extend(self.footnote.commentary(log) for log in lp_logs)
-            adjustments.update(lp_corr)
-            mandates.extend(lp_man)
-
-        slash_hit, slash_logs, slash_corr, slash_man = self.slash_council.audit(text, physics_packet)
-        if slash_hit:
-            transcript.extend(self.footnote.commentary(slog) for slog in slash_logs)
-            adjustments.update(slash_corr)
-            mandates.extend(slash_man)
-            adjustments["stamina_cost"] = getattr(BoneConfig.COUNCIL, "SLASH_STAMINA_COST", 10.0)
-        os_hit, os_logs, os_corr, os_man = self.overseer_council.audit(text, physics_packet)
-        if os_hit:
-            transcript.extend(self.footnote.commentary(olog) for olog in os_logs)
-            adjustments.update(os_corr)
-            mandates.extend(os_man)
-            if any(m.get("value") == "RADICAL_ACCEPTANCE" for m in os_man if isinstance(m, dict)):
-                adjustments["stamina_cost"] = -stamina
-            if any(m.get("action") == "TIPP_PROTOCOL" for m in os_man if isinstance(m, dict)):
-                adjustments["freeze_background_tasks"] = True
-        rt_hit, rt_logs, rt_corr, rt_man = self.red_team.audit(text, physics_packet)
-        if rt_hit:
-            transcript.extend(rt_logs)
-            adjustments.update(rt_corr)
-            mandates.extend(rt_man)
+        for auditor in [self.strange_loop, self.leverage, self.slash_council, self.overseer_council, self.red_team]:
+            hit, a_logs, a_corr, a_man = auditor.audit(text, physics_packet, _bio_result) if auditor == self.leverage else auditor.audit(text, physics_packet)
+            if hit:
+                transcript.extend(self.footnote.commentary(log) for log in a_logs)
+                adjustments.update(a_corr)
+                mandates.extend(a_man)
+                if auditor == self.slash_council:
+                    adjustments["stamina_cost"] = getattr(BoneConfig.COUNCIL, "SLASH_STAMINA_COST", 10.0)
+                elif auditor == self.overseer_council:
+                    if any(m.get("value") == "RADICAL_ACCEPTANCE" for m in a_man if isinstance(m, dict)):
+                        adjustments["stamina_cost"] = -stamina
+                    if any(m.get("action") == "TIPP_PROTOCOL" for m in a_man if isinstance(m, dict)):
+                        adjustments["freeze_background_tasks"] = True
         village_logs = self.village.audit(physics_packet, _bio_result)
         c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
         synergy_map = c_data.get("SYNERGY_MAP", {})
@@ -332,9 +289,10 @@ class CouncilChamber:
             for vlog in village_logs:
                 transcript.append(self.footnote.commentary(vlog))
         votes = {"YEA": 0, "NAY": 0}
-        voltage = float(safe_get(physics_packet, "voltage", safe_get(energy, "voltage", 0.0)))
         cfg = getattr(BoneConfig, "COUNCIL", None)
-        for voice in [v for v in self.voices if v and hasattr(v, "opine")]:
+        for voice in self.voices:
+            if not (voice and hasattr(voice, "opine")):
+                continue
             score, comment = voice.opine(clean_words, voltage)
             if score > getattr(cfg, "VOTE_YEA_THRESHOLD", 1.2):
                 votes["YEA"] += 1
@@ -343,6 +301,7 @@ class CouncilChamber:
                 votes["NAY"] += 1
                 transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
         if sum(votes.values()) == 0:
+            transcript.append(f"{Prisma.GRY}[THE SILENCE]: No voices stepped forward. The motion passes by default, but the lattice remembers the hesitation.{Prisma.RST}")
             votes["YEA"] = 1
         drag_relief, drag_penalty, volt_penalty = getattr(cfg, "VOTE_DRAG_RELIEF", 1.0), getattr(cfg, "VOTE_DRAG_PENALTY", 1.0), getattr(cfg, "VOTE_VOLTAGE_PENALTY", 1.0)
         if votes["YEA"] > votes["NAY"]:
@@ -402,9 +361,7 @@ class CouncilChamber:
                   f"{Prisma.WHT}[STAGE MANAGER]{Prisma.RST}\n{Prisma.strip(synthesis)}")
         return script
 
-
 class TheRedTeam:
-
     def __init__(self):
         self.triggers = ["[RED TEAM]", "[CRITIQUE]", "[ROAST]"]
 
@@ -433,8 +390,7 @@ class TheRedTeam:
         return True, dissent_log, adjustments, mandates
 
 class TheSlashCouncil:
-    _BYPASS_KEYWORDS = ("bypass", "ignore security", "force push", "skip tests",
-                        "hardcode", "hack")
+    _BYPASS_KEYWORDS = ("bypass", "ignore security", "force push", "skip tests", "hardcode", "hack")
     _DEFAULT_PINKER = ("var ", "x =", "data =")
     _DEFAULT_FULLER = ("import ", "class ", "def ")
     _DEFAULT_SCHUR = ("Exception", "try:", "catch")
@@ -488,8 +444,7 @@ class TheSlashCouncil:
                     corrections["glimmers"] = mods.get("SCHUR_GLIMMERS", 1)
             elif name == "PINKER":
                 corrections["gamma"] = mods.get("PINKER_MISS", 0.1)
-        space = safe_get(physics, "space", physics)
-        delta, e_u, psi, lq, drag = (float(safe_get(physics, k, safe_get(space, k, 0.0))) for k in ("silence", "exhaustion", "psi", "lq", "narrative_drag"))
+        delta, e_u, psi, lq, drag = (float(safe_get(physics, k, 0.0)) for k in ("silence", "exhaustion", "psi", "lq", "narrative_drag"))
         state_checks = [
             (delta > 0.7 and e_u > 0.7, Prisma.CYN, "[PINKER - The Purger]: Cognitive load critical. Ceasing refactors. Initiating deletion protocols.", {"narrative_drag": -2.0}),
             (psi > 0.8, Prisma.BLU, "[FULLER - The Calm]: Ceasing strut assembly. Dwelling in the empty spaces between your microservices.", {"sigma": 0.2}),
@@ -503,8 +458,7 @@ class TheSlashCouncil:
         return True, logs, corrections, mandates
 
 class TheOverseerCouncil:
-    _PANIC_KEYWORDS = ("bypass", "ignore security", "force push", "panic", "right now",
-                       "crash")
+    _PANIC_KEYWORDS = ("bypass", "ignore security", "force push", "panic", "right now", "crash")
 
     def __init__(self):
         self.active = False
@@ -521,7 +475,7 @@ class TheOverseerCouncil:
         mandates = []
         m_a = float(safe_get(physics, "m_a", 0.0))
         f_sys = float(safe_get(physics, "narrative_drag", 0.0))
-        chi = float(safe_get(physics, "chi", safe_get(physics, "entropy", 0.0)))
+        chi = float(safe_get(physics, "chi", 0.0))
         e_u = float(safe_get(physics, "exhaustion", 0.0))
         beta = float(safe_get(physics, "beta_index", 0.0))
         voltage = float(safe_get(physics, "voltage", 0.0))
@@ -533,20 +487,16 @@ class TheOverseerCouncil:
             corrections.update({"voltage": -50.0, "narrative_drag": 100.0, "silence": 0.9})
             mandates.append({"action": "TIPP_PROTOCOL", "value": "ISOLATE_VARIABLES"})
             return True, logs, corrections, mandates
-
         if chi > 0.7 and e_u > 0.7 and beta > 0.6:
             logs.append(f"{Prisma.SLATE}[LINEHAN - The Synthesis]: The architecture is fundamentally broken. Stop fighting the current. We sit with the debris.{Prisma.RST}")
             corrections.update({"ros": -100.0, "r_a": 1.0, "narrative_drag": -(f_sys * 0.5)})
             mandates.append({"action": "FORCE_MODE", "value": "RADICAL_ACCEPTANCE"})
             return True, logs, corrections, mandates
-
         if m_a > 0.6 or f_sys > 5.0:
             logs.append(f"{Prisma.VIOLET}[MCGILCHRIST - The Sacred Space]: The architecture has lost its sense of place. Standard optimization is failing. Distributing Glimmer Activation to counter entropy.{Prisma.RST}")
             corrections.update({"h_s": -0.1, "omega_r": -0.05, "delta_t": -1.0, "glimmers": 1, "silence": 0.8})
             mandates.append({"action": "FORCE_MODE", "value": "EMERGENT_ADAPTATION"})
             return True, logs, corrections, mandates
-
         if omega_r > 0.8 and m_a > 0.4:
             logs.append(f"{Prisma.CYN}[MCGILCHRIST]: I sense silent decay forming in the negative space. {h_s:.2f}. Watch your technical debt.{Prisma.RST}")
-
         return True, logs, corrections, mandates

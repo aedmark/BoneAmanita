@@ -108,7 +108,9 @@ class NaviSADProtocol:
         return max(0.0, min(1.0, history_avg))
 
     def execute_nudge_test(self, engine_ref, _prompt: str = "") -> bool:
-        return getattr(getattr(engine_ref.observer, "last_physics_packet", None), "i_c", 1.0) < 0.4
+        packet = getattr(engine_ref.observer, "last_physics_packet", None)
+        energy_state = getattr(packet, "energy", None) if packet else None
+        return getattr(energy_state, "i_c", 1.0) < 0.4
 
     def detect_point_attractor(self) -> bool:
         if len(self.attention_proxy_history) < self.history_size: return False
@@ -155,36 +157,42 @@ class GeodesicEngine:
         t_cfg = config_ref or BoneConfig
         cfg = getattr(t_cfg, "PHYSICS", BoneConfig.PHYSICS)
         gc_dict = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
-        cg, gc = lambda k, d=1.0: getattr(cfg, k, d), lambda k, d=1.0: gc_dict.get(k, d)
+
+        def get_cfg(key: str, default: float = 1.0) -> float:
+            return getattr(cfg, key, default)
+
+        def get_const(key: str, default: float = 1.0) -> float:
+            return gc_dict.get(key, default)
+
         shapley_thresh = getattr(t_cfg, "SHAPLEY_MASS_THRESHOLD", 5.0)
         safe_vol = max(1, volume)
         tot_kin = masses["kinetic"] + masses["explosive"]
         raw_tension = (
-            masses["heavy"] * cg("WEIGHT_HEAVY", 2.0)
-            + tot_kin * cg("WEIGHT_KINETIC", 1.5)
-            + masses["explosive"] * cg("WEIGHT_EXPLOSIVE", 3.0)
-            + masses["constructive"] * cg("WEIGHT_CONSTRUCTIVE", 1.2)
+            masses["heavy"] * get_cfg("WEIGHT_HEAVY", 2.0)
+            + tot_kin * get_cfg("WEIGHT_KINETIC", 1.5)
+            + masses["explosive"] * get_cfg("WEIGHT_EXPLOSIVE", 3.0)
+            + masses["constructive"] * get_cfg("WEIGHT_CONSTRUCTIVE", 1.2)
         )
-        mass_scalar = min(1.0, safe_vol / (shapley_thresh * gc("SQUELCH_LIMIT_MULT", 2.0)))
-        if safe_vol < gc("SAFE_VOL_THRESHOLD", 50):
-            mass_scalar *= gc("MIN_VOLUME_SCALAR", 0.5)
-        base_friction = math.log1p(max(0, counts.get("suburban", 0))) * gc("SUBURBAN_FRICTION_LOG_BASE", 0.5)
-        heavy_friction = masses["heavy"] * gc("HEAVY_FRICTION_MULT", 1.2)
-        lubrication = 1.0 + counts.get("solvents", 0) * gc("SOLVENT_LUBRICATION_FACTOR", 0.2)
-        shear = 1.0 + (tot_kin / safe_vol) * gc("SHEAR_RESISTANCE_SCALAR", 0.1)
+        mass_scalar = min(1.0, safe_vol / (shapley_thresh * get_const("SQUELCH_LIMIT_MULT", 2.0)))
+        if safe_vol < get_const("SAFE_VOL_THRESHOLD", 50):
+            mass_scalar *= get_const("MIN_VOLUME_SCALAR", 0.5)
+        base_friction = math.log1p(max(0, counts.get("suburban", 0))) * get_const("SUBURBAN_FRICTION_LOG_BASE", 0.5)
+        heavy_friction = masses["heavy"] * get_const("HEAVY_FRICTION_MULT", 1.2)
+        lubrication = 1.0 + counts.get("solvents", 0) * get_const("SOLVENT_LUBRICATION_FACTOR", 0.2)
+        shear = 1.0 + (tot_kin / safe_vol) * get_const("SHEAR_RESISTANCE_SCALAR", 0.1)
         visc = (base_friction + heavy_friction) / lubrication / shear
-        lift = masses["play"] * gc("PLAY_LIFT_MULT", 1.5) + (tot_kin * gc("KINETIC_LIFT_RATIO", 0.8)) / (masses["heavy"] * 0.5 + 1.0)
+        lift = masses["play"] * get_const("PLAY_LIFT_MULT", 1.5) + (tot_kin * get_const("KINETIC_LIFT_RATIO", 0.8)) / (masses["heavy"] * 0.5 + 1.0)
         raw_comp = (
-            ((visc - lift) / safe_vol) * gc("COMPRESSION_SCALAR", 2.0) * getattr(t_cfg, "SIGNAL_DRAG_MULTIPLIER", 1.0)
+            ((visc - lift) / safe_vol) * get_const("COMPRESSION_SCALAR", 2.0) * getattr(t_cfg, "SIGNAL_DRAG_MULTIPLIER", 1.0)
         )
         str_mass = max(0.0, masses["heavy"] + masses["constructive"] + masses["harvest"] - masses["void"] * 0.5)
         max_tension = min(
-            100.0, (raw_tension / safe_vol) * gc("DENSITY_SCALAR") * getattr(t_cfg, "KINETIC_GAIN", 1.0) * mass_scalar
+            100.0, (raw_tension / safe_vol) * get_const("DENSITY_SCALAR") * getattr(t_cfg, "KINETIC_GAIN", 1.0) * mass_scalar
         )
-        clamped_comp = max(-5.0, min(cg("DRAG_HALT", 10.0), raw_comp * mass_scalar))
+        clamped_comp = max(-5.0, min(get_cfg("DRAG_HALT", 10.0), raw_comp * mass_scalar))
         coherence_val = min(1.0, str_mass / max(1.0, shapley_thresh))
         abstract_mass = masses["abstract"] + masses["liminal"] + masses["pareidolia"] + masses["void"]
-        abstraction_val = min(1.0, (abstract_mass / safe_vol) + gc("ABSTRACTION_BASE", 0.1))
+        abstraction_val = min(1.0, (abstract_mass / safe_vol) + get_const("ABSTRACTION_BASE", 0.1))
         return {"tension": round(max_tension, 2), "compression": round(clamped_comp, 2),
                 "coherence": round(coherence_val, 3), "abstraction": round(abstraction_val, 2), }
 
@@ -192,7 +200,10 @@ class GeodesicEngine:
     def _calculate_dimensions(masses, forces, counts, volume) -> Dict[str, float]:
         inv_vol = 1.0 / max(1, volume)
         base_mass = 0.1
-        clamp = lambda v: max(0.0, min(1.0, v))
+
+        def clamp(v: float) -> float:
+            return max(0.0, min(1.0, v))
+
         return {
             "VEL": clamp((masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol),
             "STR": clamp((masses["heavy"] * 2.0 + masses["constructive"] + masses["harvest"] + base_mass) * inv_vol),
@@ -262,10 +273,8 @@ class CerebrospinalFluidFilter:
         return data
 
 class TheGatekeeper:
-    """The Cerebrospinal Fluid (CSF) Filter Pattern.
-    Deterministically strips validating boilerplate and prevents tag smuggling before generation."""
     _FIREWALL_PATTERN = re.compile(
-        r"^(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[.,]?\s*",
+        r"^\s*(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[.,]?\s*",
         re.IGNORECASE,
     )
 
@@ -307,17 +316,16 @@ class TheGatekeeper:
         return True, None
 
     def _audit_safety(self, words: List[str]) -> bool:
-        if not (cursed := self.lex.get("cursed")):
-            return False
-        return not cursed.isdisjoint(words) if isinstance(cursed, set) else any(w in cursed for w in words)
+        return bool(set(words) & set(self.lex.get("cursed") or []))
 
     @staticmethod
     def _pack_refusal(ctx, type_str, ui_msg):
+        current_metrics = getattr(ctx, "metrics", {"health": 100.0, "stamina": 100.0, "atp": 100.0, "efficiency": 1.0})
         return {
             "type": type_str,
             "ui": ui_msg,
             "logs": ctx.logs + [ui_msg],
-            "metrics": {"health": 0.0, "stamina": 0.0, "atp": 0.0, "efficiency": 1.0},
+            "metrics": current_metrics,
             "physics": ctx.physics.to_dict() if hasattr(ctx.physics, "to_dict") else {},
             "bio": getattr(ctx, "bio_result", {}),
             "mind": {"thought": "Gatekeeper blocked entry.", "context_msg": ui_msg},
@@ -485,41 +493,36 @@ class QuantumObserver:
         if not (length := len(text)):
             return 0.0, 0.0, 0.3, 0.3, 0.2, 0.0, 0.8, 0.0
         cfg = getattr(config_ref or BoneConfig, "PHYSICS", None)
-        cg = lambda k, d: getattr(cfg, k, d) if cfg else d
+
+        def get_cfg(key: str, default: float) -> float:
+            return getattr(cfg, key, default) if cfg else default
+
         solvents = counts.get("solvents", 0)
-        base_entropy = length / cg("TEXT_LENGTH_SCALAR", 1500.0)
-        glue_density = solvents / max(1.0, length / cg("GLUE_SOLVENT_DIV", 5.0))
-        glue_factor = min(1.0, glue_density * cg("GLUE_FACTOR_MULT", 2.0))
-        entropy_reduction = glue_factor * cg("ENTROPY_REDUCTION_SCALAR", 0.8)
+        base_entropy = length / get_cfg("TEXT_LENGTH_SCALAR", 1500.0)
+        glue_density = solvents / max(1.0, length / get_cfg("GLUE_SOLVENT_DIV", 5.0))
+        glue_factor = min(1.0, glue_density * get_cfg("GLUE_FACTOR_MULT", 2.0))
+        entropy_reduction = glue_factor * get_cfg("ENTROPY_REDUCTION_SCALAR", 0.8)
         e_metric = min(1.0, base_entropy * (1.0 - entropy_reduction))
         punctuation_weight = sum(text.count(c) for c in "!?%@#$;,")
         concept_weight = counts.get("heavy", 0) + counts.get("constructive", 0) + counts.get("sacred", 0)
-        structure_score = punctuation_weight + (concept_weight * cg("BETA_SCORE_PENALTY", 2))
-        beta_index = min(1.0, math.log1p(structure_score) / math.log1p(length * cg("BETA_LOG_SCALAR", 0.1)))
-        if length < (bsl := cg("BETA_SHORT_TEXT_LIMIT", 50)): beta_index *= length / float(bsl)
+        structure_score = punctuation_weight + (concept_weight * get_cfg("BETA_SCORE_PENALTY", 2))
+        beta_index = min(1.0, math.log1p(structure_score) / math.log1p(length * get_cfg("BETA_LOG_SCALAR", 0.1)))
+        if length < (bsl := get_cfg("BETA_SHORT_TEXT_LIMIT", 50)): beta_index *= length / float(bsl)
         safe_len = max(1, len(text.split()))
-        scope = min(1.0, (counts.get("abstract", 0) + counts.get("void", 0)) / safe_len + cg("SCOPE_BASE", 0.2))
-        depth = min(1.0, (counts.get("heavy", 0) + counts.get("constructive", 0)) / safe_len + cg("DEPTH_BASE", 0.1))
-        connectivity = min(1.0, (counts.get("social", 0) + solvents) / safe_len + cg("CONN_BASE", 0.1))
+        scope = min(1.0, (counts.get("abstract", 0) + counts.get("void", 0)) / safe_len + get_cfg("SCOPE_BASE", 0.2))
+        depth = min(1.0, (counts.get("heavy", 0) + counts.get("constructive", 0)) / safe_len + get_cfg("DEPTH_BASE", 0.1))
+        connectivity = min(1.0, (counts.get("social", 0) + solvents) / safe_len + get_cfg("CONN_BASE", 0.1))
         resonance = min(
             1.0,
-            ((counts.get("social", 0) * cg("RES_SOCIAL_MULT", 2)) + counts.get("constructive", 0)) / safe_len
+            ((counts.get("social", 0) * get_cfg("RES_SOCIAL_MULT", 2)) + counts.get("constructive", 0)) / safe_len
             + (1.0 - e_metric),
         )
-        silence = 1.0 - min(1.0, (length / cg("SILENCE_DIV", 100.0)) + (counts.get("action", 0) / safe_len))
-        if length < cg("SILENCE_SHORT_LIMIT", 10):
-            silence = max(silence, cg("SILENCE_MIN", 0.8))
-        loop_quotient = min(1.0, beta_index * depth * cg("LQ_SCALAR", 1.5))
-        return (
-            round(e_metric, 3),
-            round(beta_index, 3),
-            round(scope, 3),
-            round(depth, 3),
-            round(connectivity, 3),
-            round(resonance, 3),
-            round(silence, 3),
-            round(loop_quotient, 3),
-        )
+        silence = 1.0 - min(1.0, (length / get_cfg("SILENCE_DIV", 100.0)) + (counts.get("action", 0) / safe_len))
+        if length < get_cfg("SILENCE_SHORT_LIMIT", 10):
+            silence = max(silence, get_cfg("SILENCE_MIN", 0.8))
+        loop_quotient = min(1.0, beta_index * depth * get_cfg("LQ_SCALAR", 1.5))
+        return (round(e_metric, 3), round(beta_index, 3), round(scope, 3), round(depth, 3), round(connectivity, 3),
+ round(resonance, 3), round(silence, 3), round(loop_quotient, 3),)
 
     @staticmethod
     def _determine_flow(v: float, k: float, config_ref=None) -> str:
@@ -696,11 +699,12 @@ class CosmicDynamics:
         basin_pulls = {k: 0.0 for k in gravity_wells}
         active_filaments = 0
         word_counts = Counter(words)
+        unique_words = set(word_counts.keys())
         for well, well_mass in gravity_wells.items():
             if direct_hits := word_counts.get(well, 0):
                 basin_pulls[well] += (well_mass * 2.0) * direct_hits
                 active_filaments += direct_hits
-            if overlaps := set(word_counts) & set(network.graph.get(well, {}).get("edges", {})):
+            if overlaps := unique_words & set(network.graph.get(well, {}).get("edges", {})):
                 overlap_count = sum(word_counts[w] for w in overlaps)
                 basin_pulls[well] += (well_mass * 0.5) * overlap_count
                 active_filaments += overlap_count
@@ -776,11 +780,13 @@ class CycleStabilizer:
     def stabilize(self, physics: Any, endocrine_state: Any = None) -> bool:
         applied_correction = False
         if self.pending_drag > 0:
-            safe_set(physics, "narrative_drag", safe_get(physics, "narrative_drag", 0.0) + self.pending_drag)
+            bleed = min(self.pending_drag, 2.0)
+            safe_set(physics, "narrative_drag", safe_get(physics, "narrative_drag", 0.0) + bleed)
             if hasattr(self.events, "log"):
                 msg = ux("physics_strings", "stabilizer_domestication") or "Domestication penalty applied."
-                self.events.log(f"STABILIZER: {msg} (+{self.pending_drag} Drag)", "PHYSICS")
-            self.pending_drag, applied_correction = 0.0, True
+                self.events.log(f"STABILIZER: {msg} (+{bleed} Drag)", "PHYSICS")
+            self.pending_drag = max(0.0, self.pending_drag - bleed)
+            applied_correction = True
         dt = max(0.001, min(1.0, (now := time.time()) - self.last_tick_time))
         self.last_tick_time = now
         if not self.governor:

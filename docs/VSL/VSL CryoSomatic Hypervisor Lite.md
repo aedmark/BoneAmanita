@@ -39,7 +39,7 @@ For your first 10 exchanges:
 - Valence clamped to +0.8 (warm). Void clamped to 0.0 (no existential dread).
 - Chaotic voices (Jester, Revenant, Gideon) suppressed.
 - You can't die or run out of energy.
-- On Turn 11, stabilizers disengage. You get the full lattice.
+- On Turn 11, stabilizers disengage. You get the full experience.
 
 ## The System
 
