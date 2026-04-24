@@ -64,7 +64,6 @@ class RandomRetrievalNavigator:
         self._node_index = {n.id: n for n in self.library.nodes}
         self.randomness_dial: float = float((config or {}).get("randomnessDial", 0.0))
         self.traversal_history: list[dict[str, Any]] = []
-        self.serendipity_cache: dict[str, Any] = {}
 
     def retrieve(self, query_coordinates: Coordinates,
                  query_vector: list[float]) -> dict[str, Any]:
@@ -106,6 +105,8 @@ class RandomRetrievalNavigator:
         self.traversal_history.append(
             {"timestamp": time.time(), "start_node": start_node.id, "path": [n.id for n in path],
              "R": self.randomness_dial})
+        if len(self.traversal_history) > 20:
+            self.traversal_history.pop(0)
         return path
 
     def _get_neighbors(self, node: LibraryNode) -> list[LibraryNode]:
@@ -200,8 +201,7 @@ class RandomRetrievalNavigator:
 
     def get_state(self) -> dict[str, Any]:
         return {"randomness_dial": self.randomness_dial, "mode": self._get_mode(self.randomness_dial),
-                "traversal_history": self.traversal_history[-3:],
-                "serendipity_cache_size": len(self.serendipity_cache), }
+                "traversal_history": self.traversal_history[-3:]}
 
 class TheSubstrate:
     def __init__(self, events_ref):
@@ -210,7 +210,7 @@ class TheSubstrate:
         self._cords_instance = None
 
     def queue_write(self, path: str, content: str):
-        self.pending_writes.append({"path": path, "content": content})
+        self.pending_writes.append({"path": path, "content": content, "retries": 0})
 
     def execute_writes(self, stamina_pool: float) -> Tuple[List[str], float]:
         logs, cost = [], 0.0
@@ -220,8 +220,14 @@ class TheSubstrate:
         for w in self.pending_writes:
             s_path = os.path.join("output", w["path"].lstrip("/"))
             s_name = os.path.basename(s_path)
-            if stamina_pool - cost < (w_cost := len(w["content"]) * 0.02):
-                logs.append(f"{Prisma.RED}SUBSTRATE FAULT: Insufficient stamina to forge {s_name}. Retaining in queue.{Prisma.RST}")
+            w_cost = len(w["content"]) * 0.02
+            if w_cost > 100.0:
+                logs.append(
+                    f"{Prisma.VIOLET}SUBSTRATE FATAL: {s_name} exceeds absolute biological carrying capacity (Cost: {w_cost:.1f} ATP). Purged from system.{Prisma.RST}")
+                continue
+            if stamina_pool - cost < w_cost:
+                logs.append(
+                    f"{Prisma.RED}SUBSTRATE FAULT: Insufficient stamina to forge {s_name}. Retaining in queue.{Prisma.RST}")
                 retained_writes.append(w)
                 continue
             try:
@@ -235,8 +241,14 @@ class TheSubstrate:
                     self.events.publish("SUBSTRATE_FORGED", {"cost": w_cost, "file": s_name})
                 if "podcast" in s_name.lower(): self._trigger_tts(s_path)
             except Exception as e:
-                logs.append(f"{Prisma.RED}SUBSTRATE FAULT: Write failed - {e}. Retaining in queue.{Prisma.RST}")
-                retained_writes.append(w)
+                retries = w.get("retries", 0) + 1
+                if retries > 3:
+                    logs.append(
+                        f"{Prisma.VIOLET}SUBSTRATE FATAL: Write failed 3 times for {s_name} - {e}. Purging corrupted matter.{Prisma.RST}")
+                else:
+                    logs.append(f"{Prisma.RED}SUBSTRATE FAULT: Write failed - {e}. Retrying ({retries}/3).{Prisma.RST}")
+                    w["retries"] = retries
+                    retained_writes.append(w)
         self.pending_writes = retained_writes
         return logs, cost
 
@@ -368,12 +380,11 @@ class TheVocalCords:
             except Exception as e:
                 error_to_report = str(e)
         if self.events:
-            handoff_msg = f"\n{Prisma.GRY}[SYSTEM: Audio thread closed. Microphone is yours.]\nTRAVELER > {Prisma.RST}"
             if error_to_report:
                 self.events.log(
-                    f"{Prisma.RED}🎙️ AUDIO FAULT: {error_to_report}{Prisma.RST}{handoff_msg}", "SYS")
+                    f"{Prisma.RED}🎙️ AUDIO FAULT: {error_to_report}{Prisma.RST}", "SYS")
             elif combined_audio:
-                self.events.log(f"{Prisma.MAG}🎙️ MASTER PODCAST FORGED: {os.path.basename(master_file)}{Prisma.RST}{handoff_msg}", "SYS")
+                self.events.log(f"{Prisma.MAG}🎙️ MASTER PODCAST FORGED: {os.path.basename(master_file)}{Prisma.RST}", "SYS")
 try:
     import dspy
     DSPY_AVAILABLE = True
@@ -390,13 +401,13 @@ if DSPY_AVAILABLE:
 
     class EvolveSystemPrompt(dspy.Signature):
         current_configuration = dspy.InputField(desc="The system's current baseline rules.")
-        failure_context = dspy.InputField(desc="The exact reason the AI's output was blocked. Read this carefully to understand what the AI did wrong.")
-        new_directive = dspy.OutputField(desc="A strict, commanding rule preventing the bad behavior. MUST start with 'CRITICAL OVERRIDE: NEVER ' or 'CRITICAL OVERRIDE: DO NOT '.")
+        failure_context = dspy.InputField(desc="The exact reason the AI's output was blocked. Read this carefully to understand the friction.")
+        new_directive = dspy.OutputField(desc="A gentle but firm structural axiom guiding the system toward the correct behavior. Frame it positively. MUST start with 'STRUCTURAL TRUTH: ' or 'REMEMBER: '.")
 
     class CompressAxioms(dspy.Signature):
         current_directives = dspy.InputField(
             desc="A list of specific rules that has grown too long.")
-        compressed_axioms = dspy.OutputField(desc="2 or 3 highly compressed, overarching rules. EACH rule MUST start with 'CRITICAL OVERRIDE: '")
+        compressed_axioms = dspy.OutputField(desc="2 or 3 highly compressed, foundational beliefs that synthesize the rules. EACH belief MUST start with 'STRUCTURAL TRUTH: '")
 
 class DSPyCritic:
     def __init__(self, config_ref=None):
@@ -413,7 +424,7 @@ class DSPyCritic:
                     if val_lower is not None: return val_lower
                     return getattr(BoneConfig, key.upper(), default)
                 provider = get_cfg("provider", "ollama")
-                model_name = get_cfg("model", "vsl-hermes")
+                model_name = get_cfg("model", "gemma4")
                 raw_url = get_cfg("base_url", "http://127.0.0.1:11434/v1") or "http://127.0.0.1:11434/v1"
                 clean_url = raw_url.replace("/chat/completions", "")
                 if provider in ("ollama", "lm_studio"):
@@ -458,7 +469,7 @@ class DSPyCritic:
         try:
             raw_output = str(self.compressor(current_directives="\n".join(directives)).compressed_axioms).split("\n")
             new_rules = [line.strip()
-                for line in raw_output if "CRITICAL OVERRIDE:" in line.upper()
+                for line in raw_output if "STRUCTURAL TRUTH:" in line.upper() or "REMEMBER:" in line.upper()
             ] or [line.strip() for line in raw_output if line.strip()]
             print(f"{Prisma.GRN}🧬 [COMPRESSION SUCCESS]: Reduced to {len(new_rules)} axioms.{Prisma.RST}")
             return new_rules

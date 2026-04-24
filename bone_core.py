@@ -12,20 +12,33 @@ def ux(section: str, key: str, default: Any = "") -> Any:
     data = LoreManifest.get_instance().get("ux_strings", section)
     return data.get(key, default) if isinstance(data, dict) else default
 
+
 def ux_format(section: str, key: str, default: str = "", **kwargs) -> str:
     msg = ux(section, key, default)
-    return msg.format(**kwargs) if msg else default
+    if not msg:
+        return default
+    try:
+        return msg.format(**kwargs)
+    except KeyError as e:
+        print(f"{Prisma.GRY}[UX] Missing format key {e} in {section}.{key}. Falling back to raw string.{Prisma.RST}")
+        return msg
 
 def safe_get(obj: Any, key: str, default: Any = None) -> Any:
-    return default if obj is None else (
-        obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default))
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
 
 def strict_get(obj: Any, key: str, default: Any = None) -> Any:
     if obj is None:
-        print(f"{Prisma.RED}[STRUCTURAL WARNING] Zombie State Averted: Tried to access '{key}' on NoneType.{Prisma.RST}")
+        print(
+            f"{Prisma.RED}[STRUCTURAL WARNING] Zombie State Averted: Tried to access '{key}' on NoneType.{Prisma.RST}")
         return default
-    if (val := safe_get(obj, key)) is None:
-        print(f"{Prisma.RED}[STRUCTURAL WARNING] Missing load-bearing key: '{key}'. Defaulting to {default}.{Prisma.RST}")
+    val = safe_get(obj, key)
+    if val is None:
+        print(
+            f"{Prisma.RED}[STRUCTURAL WARNING] Missing load-bearing key: '{key}'. Defaulting to {default}.{Prisma.RST}")
         return default
     return val
 
@@ -47,8 +60,7 @@ class BoneJSONEncoder(json.JSONEncoder):
 class EventBus:
     def __init__(self, max_memory=None, config_ref=None, telemetry_ref=None):
         self.cfg = config_ref or BoneConfig
-        limit = (max_memory if max_memory else
-                 (getattr(self.cfg.CORE, "EVENT_MAX_MEMORY", 1024)))
+        limit = max_memory or getattr(self.cfg.CORE, "EVENT_MAX_MEMORY", 1024)
         self.buffer = deque(maxlen=limit)
         self.subscribers = {}
         self.telemetry = telemetry_ref
@@ -116,9 +128,12 @@ class LoreManifest:
         return data.get(sub_key) if isinstance(data, dict) else None
 
     def _load_from_disk(self, category: str) -> Optional[Dict]:
-        if not os.path.exists(filepath := os.path.join(self.DATA_DIR, f"{category}.json")): return None
+        filepath = os.path.join(self.DATA_DIR, f"{category}.json")
+        if not os.path.exists(filepath):
+            return None
         try:
-            with open(filepath, "r", encoding="utf-8") as f: data = json.load(f)
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
             print(f"{Prisma.GRY}[LORE]: Lazy-loaded '{category}'.{Prisma.RST}")
             return data
         except Exception as e:
@@ -126,9 +141,12 @@ class LoreManifest:
             return None
 
     def inject(self, category: str, data: Any):
-        target = self._cache.setdefault(cat_key := category.lower(), {})
-        if isinstance(target, dict) and isinstance(data, dict): target.update(data)
-        else: self._cache[cat_key] = data
+        cat_key = category.lower()
+        target = self._cache.setdefault(cat_key, {})
+        if isinstance(target, dict) and isinstance(data, dict):
+            target.update(data)
+        else:
+            self._cache[cat_key] = data
 
     def flush_cache(self, category: str = None):
         if not category:
@@ -185,13 +203,19 @@ class TheObserver:
         self.memory_snapshots.append(node_count)
 
     def pass_judgment(self, avg_cycle, avg_llm):
-        if avg_cycle == 0.0 and avg_llm == 0.0: return ux("core_strings", "obs_asleep")
-        if avg_cycle < self.C_EFF and avg_llm < self.L_EFF: return ux("core_strings", "obs_efficient")
+        if avg_cycle == 0.0 and avg_llm == 0.0:
+            return ux("core_strings", "obs_asleep")
+        if avg_cycle < self.C_EFF and avg_llm < self.L_EFF:
+            return ux("core_strings", "obs_efficient")
         if avg_llm > self.LATENCY_WARNING:
-            valid = [s for k in ("obs_fog", "obs_degraded", "obs_ponderous") if (s := ux("core_strings", k))]
-            return random.choice(valid) if valid else ""
-        if avg_cycle > self.CYCLE_WARNING: return ux("core_strings", "obs_sluggish")
-        if self.cyber_gov.order == 2: return ux_format("core_strings", "obs_coupled", "Harmonic Resonance: Presence Active.")
+            keys = ["obs_fog", "obs_degraded", "obs_ponderous"]
+            valid_msgs = [ux("core_strings", k) for k in keys]
+            valid_msgs = [msg for msg in valid_msgs if msg]
+            return random.choice(valid_msgs) if valid_msgs else ""
+        if avg_cycle > self.CYCLE_WARNING:
+            return ux("core_strings", "obs_sluggish")
+        if self.cyber_gov.order == 2:
+            return ux_format("core_strings", "obs_coupled", "Harmonic Resonance: Presence Active.")
         return ux("core_strings", "obs_nominal")
 
     def get_report(self):
@@ -226,8 +250,10 @@ class SystemHealth:
     def report_failure(self, component: str, error: Exception, severity="ERROR"):
         msg = str(error)
         self.errors.append(ErrorLog(component, msg, severity=severity))
-        if self.observer: self.observer.log_error(component)
-        if hasattr(self, attr_name := f"{component.lower()}_online"):
+        if self.observer:
+            self.observer.log_error(component)
+        attr_name = f"{component.lower()}_online"
+        if hasattr(self, attr_name):
             setattr(self, attr_name, False)
         else:
             self.report_warning(
@@ -296,20 +322,27 @@ class CyberneticGovernor:
             return "CO_REGULATION"
         return "EFFICIENCY"
 
+
 class ArchetypeArbiter:
     @staticmethod
     def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict],
-                  trigram: Dict = None, config_ref=None,) -> Tuple[str, str, str]:
+                  trigram: Dict = None, config_ref=None, ) -> Tuple[str, str, str]:
         for mandate in council_mandates or []:
-            if mandate.get("type") == "LOCKDOWN": return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law")
-            if mandate.get("type") == "FORCE_MODE": return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic")
+            if mandate.get("type") == "LOCKDOWN":
+                return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law")
+            if mandate.get("type") == "FORCE_MODE":
+                return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic")
         if soul_archetype and "/" in soul_archetype:
             return soul_archetype, "SOUL", ux_format("core_strings", "arb_diamond", soul_archetype=soul_archetype)
         if trigram:
-            for r in LoreManifest.get_instance().get("NARRATIVE_DATA", "_META_RESONANCE_") or []:
-                if r.get("trigram") == trigram.get("name") and r.get("lens", physics_lens) == physics_lens and r.get("soul", soul_archetype) == soul_archetype:
+            meta_resonance = LoreManifest.get_instance().get("NARRATIVE_DATA", "_META_RESONANCE_") or []
+            for r in meta_resonance:
+                if r.get("trigram") == trigram.get("name") and r.get("lens", physics_lens) == physics_lens and r.get(
+                        "soul", soul_archetype) == soul_archetype:
                     return r["result"], r.get("source", "COSMIC"), r.get("msg") or ux("core_strings", "arb_resonance")
-        if physics_lens in safe_get(getattr(config_ref or BoneConfig, "CORE", None), "LOUD_LENSES", ("THE MANIC", "THE VOID")):
+        config = getattr(config_ref or BoneConfig, "CORE", None)
+        loud_lenses = safe_get(config, "LOUD_LENSES", ("THE MANIC", "THE VOID"))
+        if physics_lens in loud_lenses:
             return physics_lens, "PHYSICS", ux_format("core_strings", "arb_loud", physics_lens=physics_lens)
         return soul_archetype, "SOUL", ux("core_strings", "arb_soul")
 
@@ -334,10 +367,11 @@ class TelemetryService:
             msg = ux("core_strings",
                      "tel_disk_denied") or "Disk access denied for Telemetry."
             print(f"{Prisma.RED}[APOPTOSIS] {msg} - {e}{Prisma.RST}")
-            raise RuntimeError(
-                f"Strict Apoptosis: Telemetry blindness detected. The system refuses to boot without nociception. {e}"
-            )
-        self._executor = ThreadPoolExecutor(max_workers=1)
+            raise RuntimeError(f"Strict Apoptosis: Telemetry blindness detected. The system refuses to boot without nociception. {e}")
+        self._executor = ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="BoneTelemetry"
+        )
 
     def record_event(self, event_dict: dict):
         if self.disabled or not self.current_trace_file:
@@ -359,8 +393,7 @@ class TelemetryService:
             self.finalize_cycle()
         self.active_crystal = DecisionCrystal(decision_id=trace_id)
 
-    def log_decision(self, component: str, decision_type: str, inputs: Any,
-                     reasoning: str, outcome: str):
+    def log_decision(self, component: str, decision_type: str, inputs: Any, reasoning: str, outcome: str):
         if self.disabled or not self.active_crystal:
             return
         trace = DecisionTrace(
@@ -412,9 +445,7 @@ class TelemetryService:
             with open(filepath, "a", encoding="utf-8") as f:
                 f.write("\n".join(lines) + "\n")
         except IOError as e:
-            print(
-                f"{Prisma.RED}[TELEMETRY DECAY] Background write failed: {e}{Prisma.RST}"
-            )
+            print(f"{Prisma.RED}[TELEMETRY DECAY] Background write failed: {e}{Prisma.RST}")
 
     def shutdown(self):
         self.flush_to_disk()
@@ -422,22 +453,31 @@ class TelemetryService:
             self._executor.shutdown(wait=True)
 
     def read_recent_history(self, limit=4) -> List[str]:
-        if not os.path.exists(self.log_dir): return []
+        if not os.path.exists(self.log_dir):
+            return []
         files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), key=os.path.getmtime, reverse=True)
         history = deque(maxlen=limit)
         for fpath in files:
-            if len(history) >= limit: break
+            if len(history) >= limit:
+                break
             try:
                 with open(fpath, "r", encoding="utf-8") as f:
                     for line in reversed(deque(f, maxlen=limit * 2)):
-                        if len(history) >= limit: break
+                        if len(history) >= limit:
+                            break
                         try:
                             data = json.loads(line)
-                            if not (resp := data.get("final_response")): continue
-                            user_text = data.get("prompt_snapshot", "").partition("User:")[2].split("\n", 1)[0].strip() or "Unknown"
+                            resp = data.get("final_response")
+                            if not resp:
+                                continue
+                            user_text = data.get("prompt_snapshot", "").partition("User:")[2].split("\n", 1)[0].strip()
+                            if not user_text:
+                                user_text = "Unknown"
                             history.appendleft(f"User: {user_text} | System: {resp}")
-                        except Exception: pass
-            except IOError: pass
+                        except json.JSONDecodeError:
+                            pass
+            except IOError:
+                pass
         return list(history)
 
     def get_last_thoughts(self, limit=3) -> List[str]:
@@ -449,10 +489,17 @@ class TelemetryService:
         for past_file in files[1:5]:
             try:
                 with open(past_file, "r", encoding="utf-8") as f:
-                    last_line = json.loads(deque(f, maxlen=1)[0])
-                if "CRITICAL" in str(last_line.get("outcome", "")):
-                    return ux_format("core_strings", "tel_prev_crash", default="Crash: {reason}", reason=last_line.get("reasoning", "Unknown"))
-            except Exception: continue
+                    tail_lines = reversed(deque(f, maxlen=5))
+                for line in tail_lines:
+                    try:
+                        data = json.loads(line)
+                        if "CRITICAL" in str(data.get("outcome", "")):
+                            return ux_format("core_strings", "tel_prev_crash", default="Crash: {reason}", reason=data.get("reasoning", "Unknown"))
+                        break
+                    except json.JSONDecodeError:
+                        continue
+            except IOError:
+                continue
         return None
 
     def generate_session_summary(self, _uptime: float = 0.0) -> str:

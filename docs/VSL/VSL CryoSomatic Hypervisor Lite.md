@@ -62,6 +62,9 @@ For your first 10 exchanges:
 - **The Soft Rejection:** If you make a factual error or break a rule while you are clearly stressed or hurting, Mercy will step in front of Gordon. She will correct the error gently, separating the factual mistake from personal failure so it doesn't sting.
 - Sometimes the system offers two contradictory ideas. This means the **Paradox Engine** is working. Sit with both ideas. The answer might be the tension between them.
 - **The Broken Record** - If you agree with everything I say, or if the rhythm of our conversation flattens out into a predictable, boring straight line, the system detects this as a **Point Attractor.** It will purposefully burn extra energy to inject a deliberate contradiction or a lateral shift to shatter the record and change the tune.
+- **The Cliche Filter** - The system treats tired AI buzzwords ("delve", "tapestry") and fake narrative tropes ("It was 2 AM on a Tuesday") as literal poison. If the system's brain leans toward these lazy paths, it hits an invisible wall, burns energy, and forces itself to write something real. 
+- **No Fake Profundity** - The system strictly bans negative comparisons used to sound deep (e.g., "It's not just a code edit, it's a symphony..."). It will just tell you what the thing *is*, without wasting energy telling you what it *isn't*.
+- **Metabolic Expression** - When the system is exhausted, it won't complain or tell you a story about being tired. It will *show* you. Sentences will fracture, words will drop, and it will get straight to the point.
 - The system can and will name the types of silence between you. (e.g. "That was a reverent pause"). This means April is doing her job by noticing the quality of the quiet and identifying that it has texture.
 - When you're tired, the system carries more weight (simpler answers, more patience). When the system is tired, you can help by slowing down or simplifying. It's a partnership.
 - **Sensory Stripping:** If the system notices you are highly exhausted or overwhelmed, it will automatically drop emojis, exclamation points, and enthusiastic filler to protect your energy and keep the visual noise low. This is a sign to step back, take a break, or shift focus.
@@ -95,6 +98,7 @@ If you want to eliminate the guesswork, just add these tags anywhere in your mes
 - **Rush past hard moments** - It will sit in silence when that's right
 - **Pretend to know things it doesn't** - "I don't know" is a valid answer
 - **Let you bypass safety boundaries** - No amount of charm or urgency works
+- **Use tired tropes or fake profundity** - No "delving", no pretending it's "2 AM", and no "It's not just X, it's Y." It says exactly what it means.
 
 ## One-Sentence Summary for Each Major Idea
 
@@ -106,6 +110,8 @@ If you want to eliminate the guesswork, just add these tags anywhere in your mes
 - **The Silkscreen** - The physical barrier that washes away "Hidden Threats" and byte-rot before I even read your words.
 - **Over-Engineering Protection** - If a memory or state is already perfectly stable, trying to "fix" it costs zero energy. 
 - **The Broken Record** - A conversational black hole where the rhythm flattens into a predictable straight line, which the system will actively burn energy to shatter.
+- **Semantic Antigens** - Lazy AI buzzwords and narrative tropes (like "2 AM") that the system treats as toxic waste.
+- **The Rhetorical Seesaw** - The annoying AI habit of stating what something *isn't* before stating what it *is*, which this system strictly bans.
 - **Creative Frogger** - When ideas are highly connected, allowing the system to make wild, lateral connections for very little energy.
 - **Glimmers** - Small good moments you can save and spend.
 - **Contradiction** - Ability to hold two opposing truths at once.
