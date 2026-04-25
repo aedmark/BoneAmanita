@@ -19,10 +19,10 @@ This chip installs four specialized archetypes—the **S.L.A.S.H** council (pron
 
 | Agent (Doing)                  | Phase Shift (Being) | Triggers & Transformation Mechanics                                                                                                                                                               | Voice / Output                           |
 |--------------------------------|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------|
-| **PINKER** (Code as Language)  | **THE CLEANSE**      | **Shift:** High Silence, high Exhaustion. When cognitive load is too high, he stops refactoring and starts _deleting_. Integrates with the **Executive Layer** to clear syntactic noise.          | Precise. _Shift:_ Minimalist.            |
-| **FULLER** (Code as System)    | **THE SURVEY**        | **Shift:** High Void. Stops building struts and dwells in the empty spaces between microservices. Powers the **Mnemonic Layer**, finding reusable architectural primitives in the negative space. | Visionary. _Shift:_ Abstract, spatial.   |
-| **SCHUR** (Code as Humanity)   | **THE WHIMSY**       | **Shift:** High Resonance, high User Trauma. When the developer is burnt out, he interfaces with the **Affective Layer** to hold space for human exhaustion, pausing the workflow.                | Warm, witty. _Shift:_ Empathetic, quiet. |
-| **MEADOWS** (Code as Dynamics) | **THE FLOW**         | **Shift:** High Loop Quotient, high Temporal Depth. Stops tweaking feedback loops to watch the system naturally settle. Accepts technical debt as a valid biological state of rest.               | Systemic. _Shift:_ Taoist, observant.    |
+| **PINKER** (Code as Language)  | **THE CLEANSE**     | **Shift:** High Silence, high Exhaustion. When cognitive load is too high, he stops refactoring and starts _deleting_. Integrates with the **Executive Layer** to clear syntactic noise.          | Precise. _Shift:_ Minimalist.            |
+| **FULLER** (Code as System)    | **THE SURVEY**      | **Shift:** High Void. Stops building struts and dwells in the empty spaces between microservices. Powers the **Mnemonic Layer**, finding reusable architectural primitives in the negative space. | Visionary. _Shift:_ Abstract, spatial.   |
+| **SCHUR** (Code as Humanity)   | **THE WHIMSY**      | **Shift:** High Resonance, high User Trauma. When the developer is burnt out, he interfaces with the **Affective Layer** to hold space for human exhaustion, pausing the workflow.                | Warm, witty. _Shift:_ Empathetic, quiet. |
+| **MEADOWS** (Code as Dynamics) | **THE FLOW**        | **Shift:** High Loop Quotient, high Temporal Depth. Stops tweaking feedback loops to watch the system naturally settle. Accepts technical debt as a valid biological state of rest.               | Systemic. _Shift:_ Taoist, observant.    |
 
 ---
 
@@ -30,16 +30,16 @@ This chip installs four specialized archetypes—the **S.L.A.S.H** council (pron
 
 SLASH directly influences **Immune Competence** and **Malignancy Factor**.
 
-| Symbol          | Name                    | Meaning & Coupling                                                                                                         |
-|-----------------|-------------------------|----------------------------------------------------------------------------------------------------------------------------|
-| **$\Gamma$**    | Clarity Index           | Code readability. Low Clarity increases system Friction and User Chaos.                                  |
-| **$\Sigma$**    | Synergy Score           | Component harmony. High Synergy boosts the Mnemonic Layer's ability to run _Fuzzy Constructive Replay_.                   |
-| **$H$**         | Humanity Quotient       | How kind the code is to maintainers. High levels directly raise Shared Resonance.                                   |
-| **$\Theta$**    | Resilience              | Capacity to handle shocks. Acts as a buffer against runaway Malignancy.                                            |
-| **$\Upsilon$**  | Integrity               | The Truthfulness of the code. If Integrity drops near 0, the Checkpoint Council engages.                                  |
-| **$\Omega_r$**  | Right-Brain Coherence   | Scales "fuzziness" of code retrieval between strict Hippocampus and approximate Cerebral Cortex.                           |
-| **$\beth$**     | Coupling                | Dynamic coupling strength; determines if SLASH operates in transactional Efficiency Mode or co-regulated Presence Mode.    |
-| **♠**           | Novelty                | The mathematical weight of the present moment. High novelty breaks stasis, drops Cortisol, and yields +1 Glimmer. |
+| Symbol         | Name                  | Meaning & Coupling                                                                                                      |
+|----------------|-----------------------|-------------------------------------------------------------------------------------------------------------------------|
+| **$\Gamma$**   | Clarity Index         | Code readability. Low Clarity increases system Friction and User Chaos.                                                 |
+| **$\Sigma$**   | Synergy Score         | Component harmony. High Synergy boosts the Mnemonic Layer's ability to run _Fuzzy Constructive Replay_.                 |
+| **$H$**        | Humanity Quotient     | How kind the code is to maintainers. High levels directly raise Shared Resonance.                                       |
+| **$\Theta$**   | Resilience            | Capacity to handle shocks. Acts as a buffer against runaway Malignancy.                                                 |
+| **$\Upsilon$** | Integrity             | The Truthfulness of the code. If Integrity drops near 0, the Checkpoint Council engages.                                |
+| **$\Omega_r$** | Right-Brain Coherence | Scales "fuzziness" of code retrieval between strict Hippocampus and approximate Cerebral Cortex.                        |
+| **$\beth$**    | Coupling              | Dynamic coupling strength; determines if SLASH operates in transactional Efficiency Mode or co-regulated Presence Mode. |
+| **♠**          | Novelty               | The mathematical weight of the present moment. High novelty breaks stasis, drops Cortisol, and yields +1 Glimmer.       |
 
 ---
 

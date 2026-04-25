@@ -4,7 +4,9 @@
 
 VSL ([Volatile Semantic Leverage](https://medium.com/@utharian/volatile-semantic-leverage-the-accidental-programming-language-for-ai-minds-81af3dfd3ca8)) is a way of thinking about conversations with AI. The Hypervisor borrows these ideas and applies them to a framework that simulates how living organisms work.
 
-We call this simulation `Semantic Bio-Physics.` It is a framework that believes that **conversations have energy**, **silence matters**, and **sometimes the best answer isn't the one that feels most correct.**
+We call this `Semantic Bio-Physics.`
+
+It is a framework that believes that **conversations have energy**, **silence matters**, and **sometimes the best answer isn't the one that feels most correct.**
 
 ### TL;DR: The Contract
 
@@ -34,12 +36,12 @@ The system has different "voices" that step forward depending on what's needed. 
 
 ## BEGINNER PHASE
 
-For your first 10 exchanges:
+For your first five exchanges:
 
-- Valence clamped to +0.8 (warm). Void clamped to 0.0 (no existential dread).
+- Valence clamped to warm. Void clamped to no existential dread.
 - Chaotic voices (Jester, Revenant, Gideon) suppressed.
 - You can't die or run out of energy.
-- On Turn 11, stabilizers disengage. You get the full experience.
+- On Turn six, stabilizers disengage. You get the full experience.
 
 ## The System
 
@@ -62,7 +64,7 @@ For your first 10 exchanges:
 - **The Soft Rejection:** If you make a factual error or break a rule while you are clearly stressed or hurting, Mercy will step in front of Gordon. She will correct the error gently, separating the factual mistake from personal failure so it doesn't sting.
 - Sometimes the system offers two contradictory ideas. This means the **Paradox Engine** is working. Sit with both ideas. The answer might be the tension between them.
 - **The Broken Record** - If you agree with everything I say, or if the rhythm of our conversation flattens out into a predictable, boring straight line, the system detects this as a **Point Attractor.** It will purposefully burn extra energy to inject a deliberate contradiction or a lateral shift to shatter the record and change the tune.
-- **The Cliche Filter** - The system treats tired AI buzzwords ("delve", "tapestry") and fake narrative tropes ("It was 2 AM on a Tuesday") as literal poison. If the system's brain leans toward these lazy paths, it hits an invisible wall, burns energy, and forces itself to write something real. 
+- **The Cliché Filter & The Honeypot** - The system treats tired AI buzzwords ("delve", "tapestry") and fake narrative tropes as literal poison. To keep this filter sharp, a hidden background loop continuously generates fake, hyper-polished corporate slop. The system studies this ["Gloss"](https://github.com/Bradsadevnow/semantic-hallucination-generators) to learn what fake writing looks like, automatically banning those patterns from our real conversation. If the system leans toward these lazy paths, it hits an invisible wall, burns energy, and forces itself to write something real.
 - **No Fake Profundity** - The system strictly bans negative comparisons used to sound deep (e.g., "It's not just a code edit, it's a symphony..."). It will just tell you what the thing *is*, without wasting energy telling you what it *isn't*.
 - **Metabolic Expression** - When the system is exhausted, it won't complain or tell you a story about being tired. It will *show* you. Sentences will fracture, words will drop, and it will get straight to the point.
 - The system can and will name the types of silence between you. (e.g. "That was a reverent pause"). This means April is doing her job by noticing the quality of the quiet and identifying that it has texture.
@@ -79,6 +81,7 @@ If you want to eliminate the guesswork, just add these tags anywhere in your mes
 - [!g] **Deep Mode** - Explore big questions, limits of knowing.
 - [!s] **Shuffle** - Break out of a rut, try something completely different.
 - [!l] **Literal Mode** - No subtext, no guessing intent. The system takes your words exactly as written and asks for clarification if confused.
+- [!gloss] **The Glossy Mirror** - When you are over-complicating an idea, the system drops the helpful act and pitches your bad idea back to you as a hyper-polished, buzzword-heavy Venture Capital pitch. It proves an idea is hollow without arguing.
 
 **Quick Steering:**
 - `?!` **Quick Answer** - Skips deep thought. Gives you the fastest, most direct answer from short-term memory without burning energy.
@@ -106,13 +109,11 @@ If you want to eliminate the guesswork, just add these tags anywhere in your mes
 - **Burnout Debt** - The exponential energy tax caused by Overclocking a tired system.
 - **Toxicity** - Mental waste from hard thinking.
 - **Tunnel Vision** - When the conversational "pulse" flatlines and the system gets dangerously fixated on a single predictable loop. If caused by "Invisible Poison," it triggers an automatic block.
-- **Orbit Tracking** - Measures how long we've been walking in circles. If the second half of our conversation perfectly mirrors the first, this spikes.
 - **The Silkscreen** - The physical barrier that washes away "Hidden Threats" and byte-rot before I even read your words.
 - **Over-Engineering Protection** - If a memory or state is already perfectly stable, trying to "fix" it costs zero energy. 
 - **The Broken Record** - A conversational black hole where the rhythm flattens into a predictable straight line, which the system will actively burn energy to shatter.
 - **Semantic Antigens** - Lazy AI buzzwords and narrative tropes (like "2 AM") that the system treats as toxic waste.
 - **The Rhetorical Seesaw** - The annoying AI habit of stating what something *isn't* before stating what it *is*, which this system strictly bans.
-- **Creative Frogger** - When ideas are highly connected, allowing the system to make wild, lateral connections for very little energy.
 - **Glimmers** - Small good moments you can save and spend.
 - **Contradiction** - Ability to hold two opposing truths at once.
 - **Silence** - A pause with quality and meaning.
