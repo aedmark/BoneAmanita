@@ -17,7 +17,8 @@ class HippocampalCache:
     def encode(self, node_id: str, vector: List[float], metadata: Dict[str, Any]):
         if node_id in self.nodes:
             del self.nodes[node_id]
-        raw_hash = hashlib.md5(str(vector).encode('utf-8')).hexdigest()
+        vector_bytes = np.array(vector, dtype=np.float32).tobytes()
+        raw_hash = hashlib.md5(vector_bytes).hexdigest()
         short_hash = raw_hash[:8]
         phantom = {
             "vector_hash": short_hash,
@@ -31,7 +32,7 @@ class HippocampalCache:
             "timestamp": time.time()
         }
         if len(self.nodes) > self.max_capacity:
-            self._prune_weakest()
+            self._prune_oldest()
 
     def retrieve_exact(self, node_id: str) -> Optional[Dict]:
         if node_id in self.nodes:
@@ -41,71 +42,62 @@ class HippocampalCache:
         return None
 
     def extract_for_consolidation(self, limit: Optional[int] = None) -> List[Tuple[str, Dict]]:
-        target_keys = list(self.nodes.keys())[:limit]
+        from itertools import islice
+        target_keys = list(islice(self.nodes.keys(), limit))
         return [(k, self.nodes.pop(k)) for k in target_keys]
 
-    def _prune_weakest(self):
+    def _prune_oldest(self):
         if not self.nodes:
             return
         oldest_key = next(iter(self.nodes))
         del self.nodes[oldest_key]
 
-    def get_graph(self) -> Any:
-        class _Graph:
-            def __init__(self, adj):
-                self.adj = adj
-
-            def __len__(self):
-                return len(self.adj)
+    def get_graph(self) -> Dict[str, set]:
         adj = {k: set() for k in self.nodes}
         norms = {k: math.hypot(*n["vector"]) for k, n in self.nodes.items()}
         for (k1, n1), (k2, n2) in combinations(self.nodes.items(), 2):
             mag = norms[k1] * norms[k2]
             if mag > 0:
-                dot = sum(a * b for a, b in zip(n1["vector"], n2["vector"]))
+                dot = np.dot(n1["vector"], n2["vector"])
                 if (dot / mag) > 0.75:
                     adj[k1].add(k2)
                     adj[k2].add(k1)
-        return _Graph(adj)
+        return adj
 
 class CerebralIndex:
-    def __init__(self, dimension: int = 8, index_type: str = "HNSW"):
+    def __init__(self, dimension: int = 8):
         self.dimension = dimension
-        self.index_type = index_type
         self.is_trained = False
         self.total_nodes = 0
         self._index = faiss.IndexHNSWFlat(self.dimension, 32)
         self._payloads: List[Dict] = []
+        self._phantom_lookup: Dict[str, str] = {}
 
     def resolve_phantom(self, vector_hash: str) -> str:
-        """Instantly resolves an AAAK Phantom hash to its verbatim Drawer text."""
-        if not self._payloads:
-            return ""
-        return next((p.get("raw_verbatim_text", "") for p in self._payloads if p.get("vector_hash") == vector_hash), "")
+        return self._phantom_lookup.get(vector_hash, "")
 
     def add_memories(self, vectors: List[List[float]], metadata_payloads: List[Dict]):
         if not vectors:
             return
-        base_array = np.array(vectors)
-        float_array = base_array.astype("float32")
-        np_vectors = np.ascontiguousarray(float_array)
-        if np_vectors.shape[1] != self.dimension:
-            return
+        np_vectors = np.array(vectors, dtype=np.float32)
         self._index.add(np_vectors)
         for p in metadata_payloads:
             p.setdefault("raw_verbatim_text", "")
+            if "vector_hash" in p:
+                self._phantom_lookup[p["vector_hash"]] = p["raw_verbatim_text"]
         self._payloads.extend(metadata_payloads)
         self.total_nodes += len(vectors)
         self.is_trained = True
 
     def lateral_ofc_retrieval(self, physics_state: Dict[str, float], k: int = 2) -> List[Dict]:
-        """Bypasses cosine similarity. Selects nodes that maximize: Ω² + 2Ω_r + F."""
         if not self._payloads:
             return []
-        omega = physics_state.get("omega", 0.5)
-        omega_r = physics_state.get("omega_r", 0.5)
+        base_omega = physics_state.get("omega", 0.5)
+        base_omega_r = physics_state.get("omega_r", 0.5)
 
         def _score(payload):
+            omega = payload.get("omega", base_omega)
+            omega_r = payload.get("omega_r", base_omega_r)
             f_cost = payload.get("narrative_drag", 1.0)
             return (omega ** 2) + (2 * omega_r) + f_cost
 
@@ -123,7 +115,7 @@ class CerebralIndex:
                 return self.lateral_ofc_retrieval(physics_state, k=k)
         if len(query_vector) != self.dimension:
             return []
-        np_query = np.ascontiguousarray(np.array([query_vector]).astype("float32"))
+        np_query = np.array([query_vector], dtype=np.float32)
         actual_k = min(k, self.total_nodes)
         distances, indices = self._index.search(np_query, actual_k)
         valid_neighbors = []
@@ -143,9 +135,12 @@ class CerebralIndex:
                 valid_neighbors.append({**payload, "resonance": resonance})
         return valid_neighbors
 
-    def get_local_mass_radius(self, query_text: str) -> Optional[Dict[str, List[float]]]:
+    def get_local_mass_radius(self) -> Optional[Dict[str, List[float]]]:
         if not self.is_trained or self.total_nodes < 5:
             return None
+
+        """We don't know where the center is, so we just query the absolute void (0,0,0...)
+         and see what yells back. It works. Don't touch it."""
         np_query = np.zeros((1, self.dimension), dtype="float32")
         distances, _ = self._index.search(np_query, min(50, self.total_nodes))
         valid_dists = [float(d) for d in distances[0] if d > 0]
@@ -174,15 +169,15 @@ class MemoryConsolidator:
             return 0, 0.0
         pending_nodes = self.hippocampus.extract_for_consolidation(limit=max_affordable_nodes)
         vectors, payloads = [], []
-        for nid, d in pending_nodes:
-            if "vector" in d:
-                vectors.append(d["vector"])
-                payloads.append({"id": nid, **d.get("meta", {})})
+        for node_id, node_data in pending_nodes:
+            if "vector" in node_data:
+                vectors.append(node_data["vector"])
+                payloads.append({"id": node_id, **node_data.get("meta", {})})
         if not vectors:
             return 0, 0.0
         self.cortex.add_memories(vectors, payloads)
         count = len(vectors)
-        atp_cost = count * 0.1
+        atp_cost = base_rem_cost + (count * 0.1)
         if self.events:
             self.events.publish("SYNAPTIC_CONSOLIDATION", {"count": count, "atp_burned": atp_cost})
         return count, atp_cost

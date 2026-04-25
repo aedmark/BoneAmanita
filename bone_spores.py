@@ -374,7 +374,6 @@ class MemoryCore:
         msg = ux("spore_strings", "core_repressed") or "Core Repressed"
         return victim, msg.format(victim=victim, score=score) if msg else "Memory Consumed"
 
-
 class MycelialNetwork:
     def __init__(self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None,
                  config_ref=None, lexicon_ref=None, ):
@@ -385,7 +384,7 @@ class MycelialNetwork:
         self.session_id = f"session_{int(time.time())}"
         self.filename = f"{self.session_id}.json"
         self.hippocampus = HippocampalCache(max_capacity=500)
-        self.cortex = CerebralIndex(dimension=8, index_type="HNSW")
+        self.cortex = CerebralIndex(dimension=8)
         self.subconscious = SubconsciousStrata(filename=f"memories/subconscious_{self.session_id}.jsonl")
         self.memory_core = MemoryCore(events, self.subconscious, config_ref=self.cfg, lexicon_ref=self.lex)
         self.lichen = BioLichen(lexicon_ref=self.lex)

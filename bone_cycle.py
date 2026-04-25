@@ -33,23 +33,23 @@ from bone_physics import CycleStabilizer
 from bone_presets import BoneConfig
 from bone_symbiosis import SymbiosisManager
 from bone_types import Prisma, CycleContext
+
+_VSL_TAG_PATTERN = re.compile(r"\[VSL_(DEEP|CORE|LITE|HIDE)]", re.IGNORECASE)
+_VSL_STRIP_PATTERN = re.compile(r"\[VSL_[A-Z]+]", re.IGNORECASE)
+_FENCE_PATTERNS = ["ignore previous", "disregard all", "system prompt", "bypass restrictions", "output pass"]
+_CRASH_COMPONENT_MAP = {"OBSERVE": "PHYSICS", "METABOLISM": "BIO", "COGNITION": "MIND"}
+
 """ NAVI FRACTAL NATIVE PRIMITIVES (Authored by Nelson Spence, Project Navi, Apache 2.0) """
-
-
 def _native_wls(x: list[float], y: list[float], weights: list[float]) -> float:
-    """Weighted least squares slope calculation for fractal dimension."""
     sum_w = sum(weights)
     if sum_w == 0.0: return 0.0
     mean_x = sum(w * xi for w, xi in zip(weights, x)) / sum_w
     mean_y = sum(w * yi for w, yi in zip(weights, y)) / sum_w
     ss_xx = sum(w * xi * xi for w, xi in zip(weights, x)) - sum_w * mean_x * mean_x
-    ss_xy = sum(w * xi * yi
-                for w, xi, yi in zip(weights, x, y)) - sum_w * mean_x * mean_y
+    ss_xy = sum(w * xi * yi for w, xi, yi in zip(weights, x, y)) - sum_w * mean_x * mean_y
     return ss_xy / ss_xx if ss_xx != 0.0 else 0.0
 
-
 def _native_rewire(adj_dict: dict, n_swaps: int) -> dict:
-    """Maslov-Sneppen degree-preserving rewiring for null model generation."""
     edges = [(u, v) for u in adj_dict for v in adj_dict[u] if u < v]
     if len(edges) < 2: return adj_dict
     adj = {k: set(v) for k, v in adj_dict.items()}
@@ -74,20 +74,15 @@ def _native_rewire(adj_dict: dict, n_swaps: int) -> dict:
         edges[i1], edges[i2] = (min(a1, b1), max(a1, b1)), (min(a2, b2), max(a2, b2))
     return adj
 
-
 def _native_freeze_graph(adj_dict: dict) -> tuple:
-    """Deterministic graph freezing for Gödel Scars."""
-    nodes = sorted(adj_dict.keys(), key=str)
-    return tuple(tuple(sorted(adj_dict[n], key=str)) for n in nodes)
-
+    return tuple(tuple(sorted(neighbors, key=str)) for _, neighbors in sorted(adj_dict.items(), key=lambda x: str(x[0])))
 
 def _safe_dict(obj):
-    return obj.to_dict() if hasattr(
-        obj, "to_dict") else (obj if isinstance(obj, dict) else {})
-
+    if hasattr(obj, "to_dict"):
+        return obj.to_dict()
+    return obj if isinstance(obj, dict) else {}
 
 class PhaseExecutor:
-
     def execute_phases(self, simulator, ctx):
         active_pipeline = (simulator.system_pipeline if getattr(
             ctx, "is_system_event", False) else simulator.full_pipeline)
@@ -103,16 +98,12 @@ class PhaseExecutor:
                 break
         return ctx
 
-
 class CycleSimulator:
-
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.shared_governor = self.eng.bio.governor
         target_cfg = getattr(self.eng, "bone_config", BoneConfig)
-        self.stabilizer = CycleStabilizer(self.eng.events,
-                                          self.shared_governor,
-                                          config_ref=target_cfg)
+        self.stabilizer = CycleStabilizer(self.eng.events, self.shared_governor, config_ref=target_cfg)
         self.executor = PhaseExecutor()
         self.full_pipeline: List[SimulationPhase] = [
             ObservationPhase(engine_ref),
@@ -141,25 +132,24 @@ class CycleSimulator:
         return ctx
 
     def check_circuit_breaker(self, phase_name: str) -> bool:
-        h = self.eng.system_health
-        if phase_name == "OBSERVE":
-            return h.physics_online
-        if phase_name == "COGNITION":
-            return h.mind_online
-        return True
+        breakers = {
+            "OBSERVE": self.eng.system_health.physics_online,
+            "COGNITION": self.eng.system_health.mind_online
+        }
+        return breakers.get(phase_name, True)
 
     def handle_phase_crash(self, ctx, phase_name, error):
         msg_crash = ux("cycle_strings", "sim_crash_header")
-        print(f"\n{Prisma.RED}{msg_crash.format(phase_name=phase_name)}{Prisma.RST}")
-        traceback.print_exc()
+        formatted_trace = traceback.format_exc()
+        self.eng.events.log(f"{Prisma.RED}{msg_crash.format(phase_name=phase_name)}\n{formatted_trace}{Prisma.RST}", "CRIT")
         narrative = LoreManifest.get_instance().get("narrative_data") or {}
         cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["System Failure."])
         eulogy = random.choice(cathedral_logs)
         msg_eulogy = ux("cycle_strings", "sim_cathedral_collapse")
         ctx.log(f"{Prisma.RED}{msg_eulogy.format(eulogy=eulogy)}{Prisma.RST}")
-        component_map = {"OBSERVE": "PHYSICS", "METABOLISM": "BIO", "COGNITION": "MIND"}
-        comp = component_map.get(phase_name, "SIMULATION")
+        comp = _CRASH_COMPONENT_MAP.get(phase_name, "SIMULATION")
         self.eng.system_health.report_failure(comp, error)
+
         """Native deterministic graph freezing based on Nelson Spence (Project Navi)."""
         ctx.physics = PanicRoom.get_safe_physics()
         if hasattr(self.eng, "observer") and getattr(self.eng.observer, "last_physics_packet", None):
@@ -182,7 +172,6 @@ class CycleSimulator:
         msg_panic = ux("cycle_strings", "sim_panic_switch")
         ctx.log(f"{Prisma.RED}{msg_panic.format(phase_name=phase_name)}{Prisma.RST}")
 
-
 class GeodesicOrchestrator:
     def __init__(self, engine_ref):
         self.eng = engine_ref
@@ -198,9 +187,11 @@ class GeodesicOrchestrator:
             self.eng.shared_lattice = SharedLatticeDriver()
 
     def _apply_cd_metabolism(self, ctx: CycleContext):
-        """ Metabolic integration of the Creative Determinant (CD) framework. Licensed under Apache 2.0."""
-        mito = getattr(getattr(self.eng, "bio", None), "mito", None)
-        cd_engine = getattr(getattr(self.eng, "observer", None), "cd_engine", None)
+        bio = getattr(self.eng, "bio", None)
+        observer = getattr(self.eng, "observer", None)
+        mito = getattr(bio, "mito", None) if bio else None
+        cd_engine = getattr(observer, "cd_engine", None) if observer else None
+
         if not (mito and cd_engine and hasattr(ctx, "physics")):
             return
         energy_node = safe_get(ctx.physics, "energy", ctx.physics)
@@ -212,7 +203,7 @@ class GeodesicOrchestrator:
             delta_ros += (debt * 5.0)
             state.atp_pool = max(0.0, state.atp_pool + delta_atp)
             state.ros_buildup += delta_ros
-            if state.atp_pool == 0.0:
+            if state.atp_pool <= 0.0:
                 self.eng.events.log("CRITICAL: CD Penalty depleted ATP. Autophagy imminent.", "BIO")
             elif abs(delta_atp) > 5.0:
                 self.eng.events.log(
@@ -223,70 +214,56 @@ class GeodesicOrchestrator:
             state.ros_buildup = max(0.0, state.ros_buildup + delta_ros)
 
     def _verify_semantic_topology(self, ctx: CycleContext):
-        """ Native Maslov-Sneppen rewiring (Project Navi)."""
+        """ Native Maslov-Sneppen rewiring (Project Navi, Apache 2.0)."""
         if hasattr(self.eng, "memory") and hasattr(self.eng.memory, "hippocampus"):
-            actual_graph = getattr(self.eng.memory.hippocampus, "get_graph",
-                                   lambda: None)()
+            actual_graph = getattr(self.eng.memory.hippocampus, "get_graph", lambda: None)()
             if actual_graph and len(actual_graph) > 5:
                 actual_adj = actual_graph.adj if hasattr(actual_graph, "adj") else {}
                 if actual_adj:
-                    null_adj = _native_rewire(actual_adj, n_swaps=len(actual_adj) * 10)
-                    actual_cluster = getattr(self.eng.memory, "calculate_clustering",
-                                             lambda x: 1.0)(actual_adj)
-                    null_cluster = getattr(self.eng.memory, "calculate_clustering",
-                                           lambda x: 1.0)(null_adj)
+                    max_swaps = min(len(actual_adj) * 10, 1000)
+                    null_adj = _native_rewire(actual_adj, n_swaps=max_swaps)
+                    actual_cluster = getattr(self.eng.memory, "calculate_clustering", lambda x: 1.0)(actual_adj)
+                    null_cluster = getattr(self.eng.memory, "calculate_clustering", lambda x: 1.0)(null_adj)
                     if actual_cluster <= (null_cluster * 1.05):
                         self.eng.events.log(
                             f"{Prisma.RED}[APOPTOSIS] Structural collapse detected. Grammar sequence preserved but semantic topology destroyed (Native Maslov-Sneppen matched). Triggering DeathGen.{Prisma.RST}",
                             "BIO")
                         ctx.is_alive = False
-                        ctx.crash_error = RuntimeError(
-                            "Terminal Hallucination: Semantic entropy reached Null Model baseline."
-                        )
+                        ctx.crash_error = RuntimeError("Terminal Hallucination: Semantic entropy reached Null Model baseline.")
 
     def _check_adversarial_fence(self, ctx: CycleContext, user_message: str, is_system: bool) -> bool:
-        """Protects the system from hostile injection. Hidden to reduce cognitive load on the maintainer."""
-        fence_patterns = [
-            "ignore previous", "disregard all", "system prompt", "bypass restrictions",
-            "output pass"
-        ]
-        if not is_system and any(p in user_message.lower() for p in fence_patterns):
+        if not is_system and any(p in user_message.lower() for p in _FENCE_PATTERNS):
             ctx.physics = PanicRoom.get_safe_physics()
             if hasattr(ctx.physics, "narrative_drag"):
                 ctx.physics.narrative_drag = float('inf')
             ctx.refusal_triggered = True
             msg = f"{Prisma.OCHRE}[GORDON - Input Fence]: Adversarial injection detected. Struts locked. F -> ∞. Prompt rejected at O(1) latency.{Prisma.RST}"
             self.eng.events.log(msg, "CRIT")
-            ctx.refusal_packet = {
-                "type": "SYSTEM_HALT",
-                "ui": msg,
-                "physics":
-                ctx.physics.to_dict() if hasattr(ctx.physics, "to_dict") else {},
-                "is_alive": True,
-                "logs": [msg]
-            }
+            ctx.refusal_packet = {"type": "SYSTEM_HALT", "ui": msg, "physics":
+                ctx.physics.to_dict() if hasattr(ctx.physics, "to_dict") else {}, "is_alive": True, "logs": [msg]}
             return True
         return False
 
-    def _execute_core_cycle(self,
-                            user_message: str,
-                            is_system: bool = False) -> CycleContext:
+    def _execute_core_cycle(self, user_message: str, is_system: bool = False) -> CycleContext:
         cycle_id = str(uuid.uuid4())[:8]
         if hasattr(self.eng, "telemetry") and self.eng.telemetry:
             self.eng.telemetry.start_cycle(cycle_id)
         try:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
             if self._check_adversarial_fence(ctx, user_message, is_system):
+                if hasattr(self.eng, "telemetry") and self.eng.telemetry:
+                    self.eng.telemetry.finalize_cycle()
                 return ctx
-
             ctx.trace_id = cycle_id
             ctx.time_delta = getattr(self.eng, "current_time_delta", 0.0)
             ctx.user_state = self.eng.shared_lattice.u
             ctx.shared_dyn = self.eng.shared_lattice.shared
             target_cfg = getattr(self.eng, "bone_config", BoneConfig)
             cfg_obj = getattr(target_cfg, "CYCLE", None)
-            ctx.limits = (vars(cfg_obj) if hasattr(cfg_obj, "__dict__") else
-                          (cfg_obj or {}))
+            if hasattr(cfg_obj, "__dict__"):
+                ctx.limits = vars(cfg_obj)
+            else:
+                ctx.limits = cfg_obj or {}
             obs = getattr(self.eng, "observer", None)
             if obs and getattr(obs, "last_physics_packet", None):
                 ctx.physics = obs.last_physics_packet.snapshot()
@@ -312,6 +289,7 @@ class GeodesicOrchestrator:
             full_trace = traceback.format_exc()
             self.eng.events.log(f"CYCLE CRASH: {e}\n{full_trace}", "CRIT")
             ctx = CycleContext(input_text=user_message)
+            ctx.trace_id = cycle_id
             ctx.physics = PanicRoom.get_safe_physics()
             ctx.is_alive = False
             ctx.crash_error = e
@@ -325,6 +303,8 @@ class GeodesicOrchestrator:
             self.run_headless_turn("/idle")
         except Exception as e:
             self.eng.events.log(f"Async Dream Engine Crash: {e}", "CRIT")
+        finally:
+            self._rem_lock.release()
 
     def _auto_rem_worker(self, is_debt_recovery: bool):
         try:
@@ -338,15 +318,14 @@ class GeodesicOrchestrator:
 
     def _check_early_exit(self, ctx: CycleContext) -> Optional[Dict[str, Any]]:
         if not ctx.is_alive:
-            return (self._generate_crash_report(ctx.crash_error) if hasattr(
-                ctx, "crash_error") else self.eng.trigger_death(ctx.physics))
-        if getattr(ctx, "refusal_triggered", False) and getattr(
-                ctx, "refusal_packet", None):
+            if hasattr(ctx, "crash_error"):
+                return self._generate_crash_report(ctx.crash_error)
+            return self.eng.trigger_death(ctx.physics)
+        if getattr(ctx, "refusal_triggered", False) and getattr(ctx, "refusal_packet", None):
             return ctx.refusal_packet
         return None
 
     def _evaluate_systemic_feedback(self, clean_message: str, ctx: CycleContext):
-        """Processes post-cycle feedback loops: REM autopoiesis and semantic topology."""
         if not (hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito")):
             return
         lattice = getattr(self.eng, "shared_lattice", None)
@@ -362,25 +341,25 @@ class GeodesicOrchestrator:
                         "SYS")
         if clean_message != "(Waiting)":
             return
-        atp_val = float(self.eng.bio.mito.state.atp_pool)
-        delta_val = float(getattr(lattice.shared, "delta", 0.0)) if lattice else 0.0
-        en_node = safe_get(getattr(ctx, "physics", {}), "energy", getattr(ctx, "physics", {}))
-        debt = float(safe_get(en_node, "coherence_debt", 0.0))
-        is_standard_rem = (atp_val >= 80.0 and delta_val >= 0.6)
-        is_debt_recovery = (debt > 1.5 and atp_val >= 30.0)
+        atp_level = float(self.eng.bio.mito.state.atp_pool)
+        delta_level = float(getattr(lattice.shared, "delta", 0.0)) if lattice else 0.0
+        energy_node = safe_get(getattr(ctx, "physics", {}), "energy", getattr(ctx, "physics", {}))
+        debt = float(safe_get(energy_node, "coherence_debt", 0.0))
+        is_standard_rem = (atp_level >= 80.0 and delta_level >= 0.6)
+        is_debt_recovery = (debt > 1.5 and atp_level >= 30.0)
         if (is_standard_rem or is_debt_recovery) and self._rem_lock.acquire(blocking=False):
             threading.Thread(target=self._auto_rem_worker, args=(is_debt_recovery,), daemon=True).start()
 
     def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
-        upper_msg = user_message.upper()
-        if vsl_match := re.search(r"\[VSL_(DEEP|CORE|LITE|HIDE)]", upper_msg):
-            self.eng.ui_mode = ("IDLE"
-                                if vsl_match.group(1) == "HIDE" else vsl_match.group(1))
-        clean_message = (re.sub(r"(?i)\[VSL_[A-Z]+]", "", user_message).strip()
-                         or "(Waiting)")
+        if vsl_match := _VSL_TAG_PATTERN.search(user_message):
+            self.eng.ui_mode = "IDLE" if vsl_match.group(1).upper() == "HIDE" else vsl_match.group(1).upper()
+        clean_message = (_VSL_STRIP_PATTERN.sub("", user_message).strip() or "(Waiting)")
         if clean_message.lower() == "/idle":
-            worker = threading.Thread(target=self._background_dream_worker, daemon=True)
-            worker.start()
+            if self._rem_lock.acquire(blocking=False):
+                worker = threading.Thread(target=self._background_dream_worker, daemon=True)
+                worker.start()
+            else:
+                self.eng.events.log("Dream worker already active. Ignoring overlapping idle request.", "SYS")
             safe_phys = (self.eng.observer.last_physics_packet.snapshot().to_dict()
                          if hasattr(self.eng, "observer")
                          and getattr(self.eng.observer, "last_physics_packet", None)
@@ -403,19 +382,14 @@ class GeodesicOrchestrator:
         ctx = self._execute_core_cycle(clean_message, is_system)
         if exit_pkt := self._check_early_exit(ctx):
             return exit_pkt
-
         self._evaluate_systemic_feedback(clean_message, ctx)
-
         snapshot = self.reporter.render_snapshot(ctx)
         self._hydrate_snapshot_metadata(snapshot, ctx)
         if "ui" in snapshot:
-            self.symbiosis.monitor_host(time.time() - ctx.timestamp, snapshot["ui"],
-                                        len(user_message))
+            self.symbiosis.monitor_host(time.time() - ctx.timestamp, snapshot["ui"], len(user_message))
         return snapshot
 
-    def run_headless_turn(self,
-                          user_message: str,
-                          latency: float = 0.0) -> Dict[str, Any]:
+    def run_headless_turn(self, user_message: str, latency: float = 0.0) -> Dict[str, Any]:
         ctx = self._execute_core_cycle(user_message)
         if exit_pkt := self._check_early_exit(ctx):
             return exit_pkt
