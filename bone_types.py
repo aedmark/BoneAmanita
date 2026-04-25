@@ -1,4 +1,5 @@
 """bone_types.py"""
+
 import copy
 import json
 import re
@@ -16,8 +17,7 @@ class Prisma:
     OCHRE = "\033[33;2m"
     VIOLET = "\033[35;2m"
     SLATE = "\033[30;1m"
-    _STRIP_PATTERN = re.compile(r"<span class='[^']+'>|</span>|"
-                                r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    _STRIP_PATTERN = re.compile(r"<span class='[^']+'>|</span>|\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
     _COLOR_MAP = {"R": RED, "G": GRN, "Y": YEL, "B": BLU, "M": MAG, "C": CYN, "W": WHT, "0": GRY, "I": INDIGO,
                   "O": OCHRE, "V": VIOLET, "S": SLATE, }
 
@@ -171,6 +171,12 @@ class PhysicsPacket:
                   "chi": [("energy", "entropy"), ("energy", "chi")],
                   "entropy": [("energy", "entropy"), ("energy", "chi")], }
 
+    _DOMAIN_MAP = {
+        **{k: "energy" for k in EnergyState.__dataclass_fields__},
+        **{k: "matter" for k in MaterialState.__dataclass_fields__},
+        **{k: "space" for k in SpatialState.__dataclass_fields__},
+    }
+
     @staticmethod
     def _safe_init(cls, data):
         if isinstance(data, cls):
@@ -188,8 +194,7 @@ class PhysicsPacket:
         self.matter = self._safe_init(MaterialState, matter)
         self.space = self._safe_init(SpatialState, space)
         self.drag_profile = self._safe_init(DragProfile, kwargs.pop("drag_profile", None))
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+        for k, v in kwargs.items():setattr(self, k, v)
 
     def sync_drag(self):
         if hasattr(self, "drag_profile") and self.drag_profile is not None:
@@ -215,17 +220,14 @@ class PhysicsPacket:
 
     def __getattr__(self, key):
         if key.startswith("_"):
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute '{key}'")
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
         if key in self._ALIAS_MAP:
             domain, t_key = self._ALIAS_MAP[key][0]
             return getattr(getattr(self, domain), t_key)
-        for domain in self._CORE_DOMAINS:
-            obj = getattr(self, domain, None)
-            if hasattr(obj, key):
-                return getattr(obj, key)
-        raise AttributeError(
-            f"'{self.__class__.__name__}' object has no attribute '{key}'")
+        domain = self._DOMAIN_MAP.get(key)
+        if domain:
+            return getattr(getattr(self, domain), key)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
     def __setattr__(self, key, value):
         if key in self._BASE_FIELDS:
@@ -235,11 +237,10 @@ class PhysicsPacket:
             for domain, t_key in self._ALIAS_MAP[key]:
                 setattr(getattr(self, domain), t_key, value)
             return
-        d = self.__dict__
-        for domain in self._CORE_DOMAINS:
-            if domain in d and hasattr(d[domain], key):
-                setattr(d[domain], key, value)
-                return
+        domain = self._DOMAIN_MAP.get(key)
+        if domain and hasattr(self, domain):
+            setattr(getattr(self, domain), key, value)
+            return
         super().__setattr__(key, value)
 
     def __getitem__(self, key):
@@ -362,8 +363,12 @@ class CycleContext:
             val = getattr(self, name)
             if hasattr(val, "snapshot") and callable(val.snapshot):
                 setattr(new_ctx, name, val.snapshot())
-            elif isinstance(val, (list, dict, set)):
-                setattr(new_ctx, name, copy.deepcopy(val))
+            elif isinstance(val, list):
+                setattr(new_ctx, name, val[:])
+            elif isinstance(val, dict):
+                setattr(new_ctx, name, val.copy())
+            elif isinstance(val, set):
+                setattr(new_ctx, name, val.copy())
         return new_ctx
 
 @dataclass

@@ -1,3 +1,61 @@
+### **BONEAMANITA v19.5.0 "The S.L.A.S.H. Audit"**
+
+_The S.L.A.S.H. Council (Pinker, Fuller, Meadows, Schur) executed a massive, six-file systemic audit spanning the core metabolic engine, cognitive layers, and physics bedrock (`bone_physics.py`, `bone_spores.py`, `bone_main.py`, `bone_protocols.py`, `bone_inventory.py`, `bone_types.py`). Focus was placed on ephemeralization, cognitive ergonomics, dynamic equilibrium, and functional pragmatism._
+
+#### **🏛️ STRUCTURAL TENSEGRITY (Fuller's Pass: Architecture)**
+
+- **$O(1)$ Physics Routing (`bone_types.py`):** Replaced $O(N)$ dynamic attribute resolution with a static routing map, drastically reducing friction at the core coordinate layer.
+- **Loop Ephemeralization (`bone_spores.py`, `bone_protocols.py`):** Hoisted invariant configurations out of deep evaluation loops, preventing thousands of redundant dictionary lookups per cycle.
+- **Regex Shielding (`bone_inventory.py`):** Shielded expensive, on-the-fly regex compilations behind lightning-fast literal string-matching gates.
+
+#### **🧠 SYNTACTIC PURGE (Pinker's Pass: Language & Cognition)**
+
+- **Walrus Eradication:** Un-nested suffocating walrus operators (`:=`) from dictionary comprehensions, tuple assignments, and boolean chains across all audited files.
+- **Cognitive Ergonomics:** Disentangled `safe_get` singularities and deep `getattr` waterfalls into linear, readable exposition.
+- **Lambda Dismantling (`bone_inventory.py`):** Replaced inline lambda monstrosities in the loot parser with clear, declarative functions to protect maintainer working memory.
+
+#### **⚖️ DYNAMIC EQUILIBRIUM (Meadows' Pass: Systems & Dynamics)**
+
+- **Toxicity and Stasis Caps (`bone_physics.py`, `bone_protocols.py`):** Bounded infinite sinks—capped $ROS$ toxicity and Limbo stasis leaks at 100 to prevent terminal runaway states.
+- **Subconscious Decay (`bone_spores.py`):** Introduced a 1% decay rate to the Subconscious Strata translation matrix to prevent infinite mass accumulation and stabilize vector math.
+- **Trauma Dilution (`bone_spores.py`):** Fixed the terminal crossover ratchet by averaging parent trauma vectors instead of using `max()`, allowing offspring to actually heal across generations.
+- **Escaping Zeno's Loop (`bone_main.py`):** Patched the Greenhouse safety net to propagate emergency health back to the biological source, escaping an infinite death loop.
+
+#### **🛠️ FUNCTIONAL PRAGMATISM (Schur's Pass: Humanity)**
+
+- **Bypassing the DMV (`bone_main.py`, `bone_protocols.py`):** Eliminated paranoid `hasattr` checks and triplicate paperwork in favor of pythonic duck typing (`try/except`) for safer, faster object interrogation.
+- **The Trash Sorting Treadmill (`bone_spores.py`):** Replaced full $O(N \log N)$ list sorting with $O(N)$ `min()` lookups when cannibalizing dead memory.
+- **Shallow Copy Respiration (`bone_types.py`):** Replaced execution-halting `copy.deepcopy()` operations in `CycleContext.snapshot` with swift, biological shallow copies.
+
+---
+
+### **BONEAMANITA v19.4.9 "Deeper Sweeps"**
+
+_The S.L.A.S.H. Council (Pinker, Fuller, Meadows, Schur) executed a comprehensive, multi-pass architectural sweep across the core metabolic and physics engines (`bone_physics.py`, `bone_machine.py`, `bone_drivers.py`, `bone_brain.py`, `bone_genesis.py`). This sweep optimized cognitive ergonomics, patched memory leaks, smoothed violent oscillations, and eradicated bureaucratic syntax._
+
+#### **🧠 SYNTACTIC PURGE (Pinker's Pass: Language & Cognition)**
+- **Lambda Eradication (`bone_physics.py`):** Purged PEP-8 (E731) syntactic antigens by replacing inline `lambda` configuration lookups with explicit, properly named local functions to reduce maintainer cognitive load.
+- **Type Paradigm Alignment (`bone_drivers.py`):** Fixed cascading `AttributeError` and `TypeError` crashes by enforcing strict Dataclass property access (dot notation) versus dictionary access.
+- **Code-Golf Flattening (`bone_machine.py`, `bone_genesis.py`):** Dismantled cryptic walrus operators (`:=`) buried inside string formatters, unwound deeply nested ternary operators into readable `if/else` blocks, and replaced esoteric list-padding tricks with explicit variable unpacking.
+
+#### **🏛️ STRUCTURAL TENSEGRITY (Fuller's Pass: Architecture)**
+- **Sensor Realignment (`bone_physics.py`):** Fixed a blind `execute_nudge_test` probe by correcting the nested path to the Immune Competence (`i_c`) metric within the `EnergyState` packet.
+- **Autophagic Shock Prevention (`bone_physics.py`):** Corrected `TheGatekeeper` to inherit active biological metrics rather than hardcoding `health` and `ATP` to `0.0` during a minor syntax block.
+- **Memory Leak Sealed (`bone_genesis.py`):** Enforced Ephemeralization by ensuring `LiteraryReproduction` genetics are not loaded into the substrate if the `REPRO` module is actively suppressed.
+- **Load-Bearing Fallbacks (`bone_machine.py`):** Fixed a tensegrity failure in the `PanicRoom` (correcting a `chemistry` vs `chem` key mismatch) and added structural fallbacks to `ViralTracer` to prevent `NoneType` formatting crashes.
+
+#### **🌊 FLUID DYNAMICS (Meadows's Pass: Systems)**
+- **Domestication Shock Absorber (`bone_physics.py`):** Prevented violent systemic oscillations by bleeding `pending_drag` into the system at a maximum rate of 2.0 per tick, rather than dumping the entire accumulated stock at once.
+- **Toxicity Loop Closed (`bone_brain.py`):** Ensured that when the Executive Layer deletes a structurally rotten generation path, the calculated `simulated_ros` is actively applied back to the host's mitochondrial buildup, honoring the biological cost of counterfactual gating.
+- **Carrying Capacities Enforced (`bone_machine.py`):** Installed natural limits to growth across the engine. Added a soft ceiling to `TheCrucible`'s voltage cap, a natural decay outflow to `TheParadoxEngine`'s maximum tension (`beta_max`), and a maximum threshold to `ThePacemaker`'s boredom accumulation.
+
+#### **🪓 BUREAUCRATIC PRUNING (Schur's Pass: Humanity)**
+- **The "Philosophy Problem" Cut (`bone_physics.py`):** Replaced an overly defensive, ternary type-check in `_audit_safety` with a direct, highly efficient set intersection.
+- **UX Red Tape Shredded (`bone_machine.py`):** Eliminated an overly engineered localized string fallback that was dynamically parsing its own variable name. Replaced it with a standard hardcoded default.
+- **Linear Logic Restored (`bone_machine.py`):** Reordered state instantiation in `PanicRoom.get_safe_bio` to evaluate variables linearly before dictionary insertion, and stopped `TheTheremin` from aggressively overwriting its own diagnostic paperwork.
+
+---
+
 ### **BONEAMANITA v19.4.8 "The SLASH Syntactic & Tensegrity Sweep"**
 
 _The SLASH Council (Pinker, Fuller, Schur, Meadows) executed a targeted four-pass architectural sweep across the metabolic engine (`bone_body.py`), the cognitive composer (`bone_composer.py`), the visual cortex (`bone_gui.py`), and the memory substrate (`bone_akashic.py`). The focus of this pass was defusing hidden syntactic landmines, capping infinite memory accumulations, eliminating double-fetches, and unspooling brittle nested geometries._

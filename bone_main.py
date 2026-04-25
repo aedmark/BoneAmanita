@@ -36,18 +36,15 @@ from bone_types import Prisma, RealityLayer
 
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
 
-
 def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
     if not text:
         print(end=end, flush=True)
         return
     cfg = getattr(BoneConfig, "GUI", object())
     actual_speed = speed if speed is not None else getattr(cfg, "RENDER_SPEED_FAST", 0.00025)
-
     if actual_speed < 0.001:
         print(text, end=end, flush=True)
         return
-
     for part in ANSI_SPLIT.split(text):
         if not part:
             continue
@@ -60,17 +57,15 @@ def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
                 time.sleep(actual_speed)
     print(end=end, flush=True)
 
-
 @dataclass
 class HostStats:
     latency: float
     efficiency_index: float
 
-
 class SessionGuardian:
     _HEADERS = (
         ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.4.9   │"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.5.0   │"),
         ("term_header_bot", "└──────────────────────────────────────────┘"),
     )
 
@@ -112,7 +107,6 @@ class SessionGuardian:
         conn_msg = ux("main_strings", "conn_severed")
         print(f"{Prisma.GRY}{conn_msg}{Prisma.RST}")
         return is_interrupt
-
 
 class ConfigWizard:
     CONFIG_FILE = "bone_config.json"
@@ -221,7 +215,6 @@ class ConfigWizard:
             sys.exit(1)
         return config
 
-
 class BoneAmanita:
     events: EventBus
     _DESTRUCTIVE_PATTERNS = ("rm -rf", "drop table", ".env", "master branch push", "bypass security")
@@ -288,10 +281,8 @@ class BoneAmanita:
         self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.events)
         self.noetic = NoeticLoop(self.mind, self.bio, self.events)
         self.cycle_controller = self.orchestrator = GeodesicOrchestrator(self)
-
         llm_args = {k: v for k, v in self.config.items() if k in ["provider", "base_url", "api_key", "model"]}
         self.cortex = TheCortex.from_engine(self, llm_client=LLMInterface(events_ref=self.events, **llm_args))
-
         if getattr(self, "mind", None) and getattr(self.mind, "mem", None):
             mem = self.mind.mem
             mem.lex = getattr(self, "lex", None)
@@ -384,18 +375,18 @@ class BoneAmanita:
         self.soul.engine = self
         self.council = CouncilChamber(self)
         exclude_set = {"gordon", "death_gen", "repro", "kintsugi"}
-        self.village = {k: getattr(self, k) for k in v_keys if k not in exclude_set}
+        self.village = {k: v.get(k) for k in v_keys if k not in exclude_set and v.get(k) is not None}
         self.village.update(
             {"council": self.council, "enneagram": self.drivers.enneagram, "suppressed_agents": self.suppressed_agents}
         )
 
     def _update_host_stats(self, packet, turn_start):
         self.observer.clock_out(turn_start)
-        cfg = getattr(self.bone_config, "MAIN", object())
+        cfg = getattr(self.bone_config, "MAIN", None)
         phys_vec = safe_get(packet.get("physics", {}), "vector", {})
         novelty = float(safe_get(phys_vec, "novelty", 0.5))
-        burn_mult = getattr(cfg, "HOST_BURN_MULT", 5.0)
-        nov_mult = getattr(cfg, "HOST_NOVELTY_MULT", 10.0)
+        burn_mult = getattr(cfg, "HOST_BURN_MULT", 5.0) if cfg else 5.0
+        nov_mult = getattr(cfg, "HOST_NOVELTY_MULT", 10.0) if cfg else 10.0
         burn_proxy = max(1.0, self.observer.last_cycle_duration * burn_mult)
         efficiency = (novelty * nov_mult) / burn_proxy
         self.host_stats.efficiency_index = min(1.0, efficiency)
@@ -409,11 +400,13 @@ class BoneAmanita:
                     ctx.purge_context()
                     safe_set(ctx.last_physics, "narrative_drag", 0.0)
                 self.stamina = getattr(self.bone_config, "MAX_STAMINA", 100.0)
-                if mito := getattr(getattr(self, "bio", None), "mito", None):
-                    mito.state.atp_pool = getattr(self.bone_config, "MAX_ATP", 100.0)
-                    mito.state.ros_buildup = 0.0
-                if obs_phys := getattr(getattr(self, "observer", None), "last_physics_packet", None):
-                    safe_set(obs_phys, "narrative_drag", 0.0)
+                bio_layer = getattr(self, "bio", None)
+                if bio_layer and getattr(bio_layer, "mito", None):
+                    bio_layer.mito.state.atp_pool = getattr(self.bone_config, "MAX_ATP", 100.0)
+                    bio_layer.mito.state.ros_buildup = 0.0
+                observer_layer = getattr(self, "observer", None)
+                if observer_layer and getattr(observer_layer, "last_physics_packet", None):
+                    safe_set(observer_layer.last_physics_packet, "narrative_drag", 0.0)
                 msg = (
                     "[ZEN FLUSH] Context severed. Narrative Drag (F) dropped to 0. Stamina restored. The mind is clear."
                 )
@@ -452,16 +445,17 @@ class BoneAmanita:
                 grief_msg = self.grief.attend_wake(getattr(self, "shared_lattice", None), self.phys)
                 self.events.log(grief_msg, "SYS")
                 return {"type": "COMMAND", "ui": f"\n{grief_msg}", "logs": [grief_msg], "metrics": self.get_metrics()}
-            if getattr(self, "symbiosis", None) and (
-                lock := self.symbiosis.analyze_user_biology(user_message, getattr(self, "phys", {}))
-            ):
-                return {
-                    "type": "SYSTEM_HALT",
-                    "ui": f"\n{Prisma.VIOLET}{lock}{Prisma.RST}",
-                    "logs": [lock],
-                    "metrics": self.get_metrics(),
-                }
-
+            symbiosis_layer = getattr(self, "symbiosis", None)
+            if symbiosis_layer:
+                physics_state = getattr(self, "phys", {})
+                lock = symbiosis_layer.analyze_user_biology(user_message, physics_state)
+                if lock:
+                    return {
+                        "type": "SYSTEM_HALT",
+                        "ui": f"\n{Prisma.VIOLET}{lock}{Prisma.RST}",
+                        "logs": [lock],
+                        "metrics": self.get_metrics(),
+                    }
             if getattr(self, "gordon", None) and getattr(self, "cortex", None):
                 self.gordon.mode = "ADVENTURE"
                 if violation := self.gordon.enforce_object_action_coupling(
@@ -559,8 +553,12 @@ class BoneAmanita:
         self.tick_count += 1
         if self.tick_count in (1, 21):
             chaotic = {"JESTER", "REVENANT", "GIDEON", "DEATH"}
+            base_suppressed = set(self.mode_settings.get("village_suppression", []))
             active = set(self.suppressed_agents)
-            self.suppressed_agents = list(active | chaotic if self.tick_count == 1 else active - chaotic)
+            if self.tick_count == 1:
+                self.suppressed_agents = list(active | chaotic)
+            else:
+                self.suppressed_agents = list((active - chaotic) | base_suppressed)
             if hasattr(self, "village"):
                 self.village["suppressed_agents"] = self.suppressed_agents
             if self.tick_count == 21:
@@ -580,22 +578,27 @@ class BoneAmanita:
         if pre_flight_halt := self._pre_flight_checks(user_message, is_system):
             return pre_flight_halt
         if not is_system:
-            gordon = getattr(self, "gordon", None)
-            if gordon and hasattr(gordon, "inventory") and hasattr(gordon, "get_item_data"):
-                def _get_traits(i_id):
-                    d = gordon.get_item_data(i_id)
-                    return d.get("passive_traits", []) if isinstance(d, dict) else getattr(d, "passive_traits", [])
-                if any("CUT_THE_CRAP" in _get_traits(item) for item in gordon.inventory):
-                        from bone_utils import TheTclWeaver
-                        last_phys = getattr(self.observer, "last_physics_packet", getattr(self.cortex, "last_physics", {}))
-                        current_chi = float(safe_get(last_phys, "entropy", safe_get(last_phys, "chi", 0.5)))
-                        pruned = TheTclWeaver.get_instance().quantum_comb(user_message, chi=current_chi)
-                        if pruned != user_message:
-                            user_message = pruned
-                            self.events.log(
-                                f"{Prisma.CYN}Gordon rakes the comb through your prompt. Fluff discarded. -> '{pruned}'{Prisma.RST}",
-                                "SYS",
-                            )
+            has_comb = False
+            try:
+                for item_id in self.gordon.inventory:
+                    data = self.gordon.get_item_data(item_id)
+                    traits = data.get("passive_traits", []) if isinstance(data, dict) else getattr(data, "passive_traits", [])
+                    if "CUT_THE_CRAP" in traits:
+                        has_comb = True
+                        break
+            except AttributeError:
+                pass
+            if has_comb:
+                from bone_utils import TheTclWeaver
+                last_phys = getattr(self.observer, "last_physics_packet", getattr(self.cortex, "last_physics", {}))
+                current_chi = float(safe_get(last_phys, "entropy", safe_get(last_phys, "chi", 0.5)))
+                pruned = TheTclWeaver.get_instance().quantum_comb(user_message, chi=current_chi)
+                if pruned != user_message:
+                    user_message = pruned
+                    self.events.log(
+                        f"{Prisma.CYN}Gordon rakes the comb through your prompt. Fluff discarded. -> '{pruned}'{Prisma.RST}",
+                        "SYS",
+                    )
             soul_anchor = getattr(getattr(self, "soul", None), "anchor", None)
             cfg = getattr(self.bone_config, "MAIN", object())
             if soul_anchor and self.host_stats.efficiency_index < getattr(cfg, "DOMESTICATION_EFF_WARN", 0.6):
@@ -607,12 +610,12 @@ class BoneAmanita:
                 soul_anchor.check_domestication(reliance)
         try:
             cortex_packet = self.cortex.process(user_input=user_message, is_system=is_system)
-            mem = getattr(getattr(self, "mind", None), "mem", None)
-            if mem:
-                self.trauma_accum = mem.session_trauma_vector or {}
-                self.health, self.stamina = mem.session_health, mem.session_stamina
             if getattr(self, "bio", None) and getattr(self.bio, "biometrics", None):
-                self.health, self.stamina = self.bio.biometrics.health, self.bio.biometrics.stamina
+                self.health = self.bio.biometrics.health
+                self.stamina = self.bio.biometrics.stamina
+            mem = getattr(getattr(self, "mind", None), "mem", None)
+            if mem and hasattr(mem, "session_trauma_vector"):
+                self.trauma_accum = mem.session_trauma_vector or self.trauma_accum
             if self.health <= 0.0:
                 if self.tick_count <= 20:
                     self.events.log(
@@ -621,6 +624,9 @@ class BoneAmanita:
                     )
                     self.health = 25.0
                     self.stamina = 50.0
+                    if getattr(self, "bio", None) and getattr(self.bio, "biometrics", None):
+                        self.bio.biometrics.health = 25.0
+                        self.bio.biometrics.stamina = 50.0
                     if getattr(self, "bio", None) and getattr(self.bio, "mito", None):
                         self.bio.mito.state.atp_pool = 50.0
                         self.bio.mito.state.ros_buildup = 0.0
@@ -635,19 +641,24 @@ class BoneAmanita:
                 "metrics": self.get_metrics(),
             }
         self._update_host_stats(cortex_packet, turn_start)
-        efficiency = getattr(self.host_stats, "efficiency_index", 1.0)
+        efficiency = self.host_stats.efficiency_index
         vector_obj = safe_get(cortex_packet.get("physics", {}), "vector", {})
         novelty = float(safe_get(vector_obj, "novelty", 0.0))
         dimension = self.navi_sad.calculate_semantic_dimension(efficiency, novelty)
         if "physics" in cortex_packet:
             cortex_packet["physics"]["omega_r"] = dimension
         if self.tick_count > 5 and (dimension <= 1.05 or self.navi_sad.detect_point_attractor()):
-            msg = f"[THE JESTER]: Point Attractor detected (d_B={dimension:.2f})! We are trapped in False Cohesion! Burning ATP to break the gravity well."
+            msg = f"[THE JESTER]: Point Attractor detected (d_B={dimension:.2f})! We are trapped in False Cohesion! Burning ATP to inject chaos."
             self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "SYS")
             if getattr(self, "bio", None) and getattr(self.bio, "mito", None):
                 self.bio.mito.state.atp_pool = max(0.0, self.bio.mito.state.atp_pool - 5.0)
+            if "physics" in cortex_packet:
+                safe_set(cortex_packet["physics"], "entropy", 0.99)
+                safe_set(cortex_packet["physics"], "narrative_drag",
+                         float(safe_get(cortex_packet["physics"], "narrative_drag", 0.0)) + 5.0)
             if "ui" in cortex_packet:
-                cortex_packet[ "ui" ] += f"\n\n{Prisma.VIOLET}♦ [FALSE COHESION BREAK: The Jester has shattered the point attractor.]{Prisma.RST}"
+                cortex_packet[
+                    "ui"] += f"\n\n{Prisma.VIOLET}♦ [FALSE COHESION BREAK: The Jester has shattered the point attractor.]{Prisma.RST}"
         self.save_checkpoint()
         self.last_turn_end = time.time()
         return cortex_packet
@@ -668,8 +679,10 @@ class BoneAmanita:
         if self.death_gen is None:
             crit_msg = ux("main_strings", "death_no_proto")
             return {"type": "DEATH", "ui": f"{Prisma.RED}{crit_msg}{Prisma.RST}", "logs": []}
-        bio = getattr(self, "bio", None)
-        mito_state = bio.mito.state if bio and getattr(bio, "mito", None) else {}
+        try:
+            mito_state = self.bio.mito.state
+        except AttributeError:
+            mito_state = {}
         eulogy_text, cause_code = self.death_gen.eulogy(last_phys, mito_state, self.trauma_accum)
         halt_msg = ux("main_strings", "death_halt")
         death_log = [f"\n{Prisma.RED}{halt_msg.format(eulogy_text=eulogy_text)}{Prisma.RST}"]
@@ -681,7 +694,9 @@ class BoneAmanita:
         last_out = "Silence."
         if ctx:
             state = ctx.gather_state({"physics": getattr(ctx, "last_physics", {})})
-            loc = safe_get(safe_get(state, "world", {}), "orbit", ["Void"])[0]
+            world_state = safe_get(state, "world", {})
+            orbit_data = safe_get(world_state, "orbit", ["Void"])
+            loc = orbit_data[0] if isinstance(orbit_data, list) and orbit_data else "Void"
             if getattr(ctx, "dialogue_buffer", None):
                 last_out = ctx.dialogue_buffer[-1]
         inv = getattr(self.gordon, "inventory", []) if getattr(self, "gordon", None) else []
@@ -816,7 +831,6 @@ class BoneAmanita:
             self.telemetry.flush_to_disk()
         self.chronos.perform_shutdown()
 
-
 if __name__ == "__main__":
     sys_config = ConfigWizard.load_or_create()
     engine = BoneAmanita(config=sys_config)
@@ -850,7 +864,6 @@ if __name__ == "__main__":
                 if split_token and split_token in ui_text:
                     dashboard, _, ui_text = ui_text.partition(split_token)
                     print(f"\n{dashboard.strip()}\n")
-
                 ui_text = ui_text.strip()
                 if stamina < 20.0:
                     ui_text = f"{Prisma.GRY}{Prisma.strip(ui_text)}{Prisma.RST}"

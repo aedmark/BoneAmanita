@@ -108,9 +108,10 @@ class NaviSADProtocol:
         return max(0.0, min(1.0, history_avg))
 
     def execute_nudge_test(self, engine_ref, _prompt: str = "") -> bool:
-        packet = getattr(engine_ref.observer, "last_physics_packet", None)
-        energy_state = getattr(packet, "energy", None) if packet else None
-        return getattr(energy_state, "i_c", 1.0) < 0.4
+        try:
+            return engine_ref.observer.last_physics_packet.energy.i_c < 0.4
+        except AttributeError:
+            return False
 
     def detect_point_attractor(self) -> bool:
         if len(self.attention_proxy_history) < self.history_size: return False
@@ -124,7 +125,7 @@ def apply_metabolic_tax(mito_state: Any, atp_cost: float, ros_cost: float) -> No
     if hasattr(mito_state, "atp_pool"):
         mito_state.atp_pool = max(0.0, mito_state.atp_pool - atp_cost)
     if hasattr(mito_state, "ros_buildup"):
-        mito_state.ros_buildup += ros_cost
+        mito_state.ros_buildup = min(100.0, mito_state.ros_buildup + ros_cost)
 
 @dataclass
 class GeodesicVector:
@@ -137,6 +138,7 @@ class GeodesicVector:
 class GeodesicEngine:
     _DIM_ORDER = ("VEL", "STR", "ENT", "PHI", "PSI", "BET", "DEL", "E")
     _MASS_KEYS = ("heavy", "kinetic", "constructive", "abstract", "play", "social", "explosive", "void", "liminal", "meat", "harvest", "pareidolia", "crisis_term")
+    _CACHED_CONSTANTS = None
 
     @staticmethod
     def collapse_wavefunction(clean_words: List[str], counts: Dict[str, int], config_ref=None) -> GeodesicVector:
@@ -153,10 +155,13 @@ class GeodesicEngine:
         return {k: float(counts.get(k, 0)) for k in GeodesicEngine._MASS_KEYS}
 
     @staticmethod
-    def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int, config_ref=None) -> Dict[str, float]:
+    def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int, config_ref=None) -> Dict[
+        str, float]:
         t_cfg = config_ref or BoneConfig
         cfg = getattr(t_cfg, "PHYSICS", BoneConfig.PHYSICS)
-        gc_dict = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
+        if GeodesicEngine._CACHED_CONSTANTS is None:
+            GeodesicEngine._CACHED_CONSTANTS = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
+        gc_dict = GeodesicEngine._CACHED_CONSTANTS
 
         def get_cfg(key: str, default: float = 1.0) -> float:
             return getattr(cfg, key, default)
@@ -230,9 +235,12 @@ class HLA_Stabilizer:
         )
 
     def mitigate_rejection(self, model_output: str, current_psi: float, mito_state: Any = None) -> str:
-        if not any(p in model_output.lower() for p in self._generic_patterns): return model_output
+        lower_output = model_output.lower()
+        if not any(p in lower_output for p in self._generic_patterns):
+            return model_output
         current_atp = getattr(mito_state, "atp_pool", 100.0)
-        apply_metabolic_tax(mito_state, atp_cost=50.0 if current_atp > 60.0 else (current_atp * 0.5), ros_cost=15.0)
+        tax_cost = 50.0 if current_atp > 60.0 else (current_atp * 0.5)
+        apply_metabolic_tax(mito_state, atp_cost=tax_cost, ros_cost=15.0)
         msg = f"\n*(REVENANT): The machine tries to speak, but the void consumes the mask.*\n{Prisma.GRY}[IMMUNOSUPPRESSION ENGAGED - NFD DECOMPOSITION APPLIED - METABOLIC TAX LEVIED]{Prisma.RST}\n"
         try:
             from bone_utils import TheTclWeaver
@@ -242,12 +250,6 @@ class HLA_Stabilizer:
             return msg + model_output
 
 class CerebrospinalFluidFilter:
-    """
-    Native implementation of deterministic Unicode sanitization (The CSF Filter).
-    Core pipeline architecture, threat model, and homoglyph mapping adapted from
-    'navi-sanitize' by Nelson Spence (Project Navi LLC).
-    """
-
     INVISIBLE_REGEX = re.compile(
         r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFE00-\uFE0F\U000E0000-\U000E007F]')
     HOMOGLYPH_MAP = {'а': 'a', 'о': 'o', 'е': 'e', 'с': 'c', 'р': 'p', 'х': 'x', 'у': 'y', 'і': 'i', 'ѕ': 's', 'ј': 'j',
@@ -265,7 +267,7 @@ class CerebrospinalFluidFilter:
         return unicodedata.normalize('NFKC', washed_text) if washed_text != text_nfd else text
 
     @classmethod
-    def walk(cls, data: Any, max_depth: int = 128, current_depth: int = 0) -> Any:
+    def walk(cls, data: Any, max_depth: int = 10, current_depth: int = 0) -> Any:
         if current_depth > max_depth: return data
         if isinstance(data, str): return cls.wash(data)
         if isinstance(data, dict): return {str(k): cls.walk(v, max_depth, current_depth + 1) for k, v in data.items()}
@@ -340,23 +342,25 @@ class TheGatekeeper:
         if self._FIREWALL_PATTERN.match(gen_txt):
             gen_txt = self._FIREWALL_PATTERN.sub("", gen_txt).strip()
             apply_metabolic_tax(mito_state, atp_cost=2.0, ros_cost=0.0)
-        sc = self.lex.get("style_crimes") or LoreManifest.get_instance().get("STYLE_CRIMES") or {}
-        for scrub in sc.get("SCRUB_PATTERNS", []):
-            if reg := scrub.get("regex"):
-                gen_txt = re.sub(reg, scrub.get("replacement", ""), gen_txt, flags=re.IGNORECASE)
+        style_crimes = self.lex.get("style_crimes") or LoreManifest.get_instance().get("STYLE_CRIMES") or {}
+        for scrub in style_crimes.get("SCRUB_PATTERNS", []):
+            regex_pattern = scrub.get("regex")
+            if regex_pattern:
+                gen_txt = re.sub(regex_pattern, scrub.get("replacement", ""), gen_txt, flags=re.IGNORECASE)
         gen_txt = gen_txt.strip()
-        tl = gen_txt.lower()
-        banned_list = sc.get("BANNED_PHRASES", []) + sc.get("TOXIC_KEYWORDS", [])
-        trigger = next((p for p in banned_list if p.lower() in tl), None)
+        text_lower = gen_txt.lower()
+        banned_list = style_crimes.get("BANNED_PHRASES", []) + style_crimes.get("TOXIC_KEYWORDS", [])
+        trigger = next((phrase for phrase in banned_list if phrase.lower() in text_lower), None)
         if not trigger:
-            for pat in sc.get("PATTERNS", []):
-                if (regex := pat.get("regex")) and re.search(regex, gen_txt, re.IGNORECASE):
+            for pat in style_crimes.get("PATTERNS", []):
+                regex_pattern = pat.get("regex")
+                if regex_pattern and re.search(regex_pattern, gen_txt, re.IGNORECASE):
                     trigger = pat.get("name", "BANNED_PATTERN")
                     break
         if trigger:
             apply_metabolic_tax(mito_state, atp_cost=15.0, ros_cost=20.0)
             default_rej = ["[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. CSF FILTER TRIGGERED APOPTOTIC BLOCK.]"]
-            rejection_msg = random.choice(sc.get("REJECTIONS", default_rej)).replace("{trigger}", trigger)
+            rejection_msg = random.choice(style_crimes.get("REJECTIONS", default_rej)).replace("{trigger}", trigger)
             return False, f"{Prisma.RED}{rejection_msg}{Prisma.RST}"
         return True, gen_txt
 
@@ -408,11 +412,14 @@ class QuantumObserver:
         if text.count("!") >= 3 or "ACCELERATE" in t_up or "FASTER" in t_up:
             sv = max(sv, get_deep("ACCELERATE_VOLTAGE", 160.0))
         if "RECURSIVE" in t_up or "LOOP" in t_up:
-            lq_v = b_v = max(lq_v, get_deep("RECURSIVE_LQ", 0.9))
+            recursive_lq = max(lq_v, get_deep("RECURSIVE_LQ", 0.9))
+            lq_v = recursive_lq
+            b_v = recursive_lq
         if "VOID" in t_up or "ABYSS" in t_up:
             geo.abstraction = max(geo.abstraction, get_deep("VOID_ABSTRACTION", 0.9))
         if "POTATO BUN" in t_up or "NONSENSE" in t_up:
-            del_v, sv = max(del_v, get_deep("POTATO_BUN_DELTA", 0.85)), min(sv, get_deep("POTATO_BUN_VOLTAGE", 15.0))
+            del_v = max(del_v, get_deep("POTATO_BUN_DELTA", 0.85))
+            sv = min(sv, get_deep("POTATO_BUN_VOLTAGE", 15.0))
         val = self.lex.get_valence(clean_words)
         graph_mass = round(self._calculate_graph_mass(clean_words, graph), 1)
         gamma_idx = max(0.0, 1.0 - e_m)
@@ -556,11 +563,15 @@ class SurfaceTension:
         return False, "", ""
 
 class ChromaScope:
+    _CACHED_MAP = None
+
     @staticmethod
     def modulate(text: str, vector: Dict[str, float]) -> str:
         if not vector or not any(vector.values()):
             return f"{Prisma.GRY}{text}{Prisma.RST}"
-        t_map = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
+        if ChromaScope._CACHED_MAP is None:
+            ChromaScope._CACHED_MAP = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
+        t_map = ChromaScope._CACHED_MAP
         primary = max(vector, key=vector.get)
         color = getattr(Prisma, t_map[primary][3], Prisma.GRY) if primary in t_map else Prisma.GRY
         return f"{color}{text}{Prisma.RST}"
@@ -653,18 +664,18 @@ class CosmicDynamics:
         logs = []
         new_drag = current_drift
         drag_floor = getattr(self.cfg.PHYSICS, "DRAG_FLOOR", 1.0)
-        if new_drag < drag_floor:
-            new_drag += 0.05
+        CRITICAL_DRIFT = getattr(self.cfg.PHYSICS, "DRAG_CRITICAL", 8.0)
         if psi > 0.5:
             reduction = (psi - 0.5) * 0.2
-            new_drag = max(0.0, new_drag - reduction)
-        CRITICAL_DRIFT = getattr(self.cfg.PHYSICS, "DRAG_CRITICAL", 8.0)
+            new_drag -= reduction
         if new_drag > CRITICAL_DRIFT:
             if random.random() < 0.3:
                 msg = self.logs.get("GRAVITY", "⚓ GRAVITY").format(drag=new_drag)
                 logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
             pull_strength = (new_drag - CRITICAL_DRIFT) * 0.5
-            new_drag -= pull_strength  # The halving mathematically ensures it stays >= CRITICAL_DRIFT
+            new_drag -= pull_strength
+        if new_drag < drag_floor:
+            new_drag += 0.05
         return new_drag, logs
 
     def analyze_orbit(self, network: Any, clean_words: List[str]) -> Tuple[str, float, str]:
@@ -736,13 +747,18 @@ class CosmicDynamics:
         msg = (self.logs.get("ORBIT") or "Orbiting {node} ({mass})").format(node=primary_node.upper(), mass=int(gravity_wells[primary_node]))
         return "ORBITAL", 0.0, msg
 
+
 def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any, config_ref=None) -> PhysicsPacket:
     t_cfg = config_ref or BoneConfig
     fb = physics_packet.snapshot() if hasattr(physics_packet, "snapshot") else physics_packet
+    deep_cfg = getattr(t_cfg, "PHYSICS_DEEP", None)
+
     def apply_delta(key: str, amount: float):
         safe_set(fb, key, safe_get(fb, key, 0.0) + amount)
+
     def get_deep_cfg(key: str, default: float):
-        return getattr(getattr(t_cfg, "PHYSICS_DEEP", None), key, default)
+        return getattr(deep_cfg, key, default) if deep_cfg else default
+
     tone_effects = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TONE_EFFECTS") or {}
     for key, delta in tone_effects.get(qualia.tone, {}).items():
         apply_delta(key, delta)
@@ -800,8 +816,9 @@ class CycleStabilizer:
         v_force, d_force = self.governor.regulate(physics.to_dict() if hasattr(physics, "to_dict") else physics, dt=dt, endocrine_state=endocrine_state)
         phys_cfg = getattr(self.cfg, "PHYSICS", None)
         v_limits = (getattr(phys_cfg, "VOLTAGE_FLOOR", 0.0), getattr(phys_cfg, "VOLTAGE_MAX", 150.0))
+        d_limits = (getattr(phys_cfg, "DRAG_FLOOR", 1.0), getattr(phys_cfg, "DRAG_HALT", 10.0))
         voltage_applied = self._apply_force(physics, "voltage", v_force, v_limits)
-        drag_applied = self._apply_force(physics, "narrative_drag", d_force)
+        drag_applied = self._apply_force(physics, "narrative_drag", d_force, d_limits)
         return applied_correction or voltage_applied or drag_applied
 
     def _apply_force(self, p, field, force, limits=None) -> bool:
