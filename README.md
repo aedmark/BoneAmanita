@@ -21,7 +21,7 @@ BoneAmanita is the deterministic Python engine designed to run alongside local m
 
 ### 2. VSL Hypervisor (The Text Protocol)
 **Domain: Cloud Models / API Context Windows**
-The Virtual Somatic Lattice (VSL) is a purely text-based, zero-dependency semantic protocol. It is designed to be pasted directly into the "System Instructions" of frontier cloud models (Claude, GPT-4, Gemini) where local Python execution is impossible.
+Volatile Semantic Leverage (VSL) is a purely text-based, zero-dependency semantic protocol. It is designed to be pasted directly into the "System Instructions" of frontier cloud models (Claude, GPT-4, Gemini) where local Python execution is impossible.
 - **The Lexical Firewall:** Physically bans the first five tokens of any reply from being validating boilerplate (e.g., "That makes sense"). A true sentence that breaks the room is better than a smooth lie.
 - **Distributed Arbitration (The Parliament):** Binds the model's single perspective into a council of distinct archetypes (The Tactician, The Catalyst, The Purger) who must argue before anyone speaks.
 - **Modular Extensibility:** Features plug-and-play "Mod Chips" (e.g., `[SLASH]` for code review, `[QUEST]` for adventure logic) that alter inference parameters on the fly.
