@@ -1,4 +1,4 @@
-# 🍄 BoneAmanita & The VSL Hypervisor
+# 🍄 BoneAmanita & The Hypervisor
 
 > A biologically-inspired state machine and semantic hypervisor for Language Models.
 
@@ -22,7 +22,7 @@ The deterministic Python engine designed to run alongside local models (Ollama, 
 * **Metabolic Bounding:** Dynamically calculates ATP drain and Toxicity (ROS) accretion based on prompt complexity. Automatically clamps `max_tokens` and alters sampling `temperature` when the system is starving.
 * **Memory Consolidation:** Utilizes a dual-tier memory. A fast, exact-match Hippocampal Cache ($O(1)$) and a deep Cerebral Cortex ANN via FAISS ($O(\log N)$) for asynchronous, low-latency recall.
 
-### 2. VSL Hypervisor (The Text Protocol)
+### 2. The Hypervisor (The Text Protocol)
 **Domain:** Cloud Models / API Context Windows
 The Virtual Somatic Lattice (VSL) is a purely text-based, zero-dependency semantic protocol. It is designed to be pasted directly into the "System Instructions" of frontier cloud models (Claude, GPT-4, Gemini) where local Python execution is impossible.
 * **The Lexical Firewall:** Physically bans the first five tokens of any reply from being validating boilerplate (e.g., "That makes sense"). A true sentence that breaks the room is better than a smooth lie.
@@ -84,9 +84,15 @@ BoneAmanita maps latent space into physical topology rather than flat vector dum
 
 ## 💾 Mod Chips & Extensibility
 
-BoneAmanita supports structural Mod Chips. The default inclusion is **[S.L.A.S.H.]** (Synergetic Language & Systems Heuristics). 
+The Hypervisor supports structural Mod Chips. One of our favorites is **[S.L.A.S.H.]** (Synergetic Language & Systems Heuristics). 
 
-When building or analyzing code, this chip installs four specialized archetypes (Pinker, Fuller, Schur, Meadows) who evaluate your syntax as a biological entity. If you attempt a destructive operation (`rm -rf`, dropping tables) while exhausted, the Mod Chip interfaces with the Checkpoint Council to physically lock the output layer before a single drop of ATP is wasted.
+When building or analyzing code, this chip installs four specialized archetypes (Pinker, Fuller, Schur, Meadows) who evaluate your syntax as a biological entity. They collectively enforce the **S.L.A.S.H.** philosophy:
+* **[S]ynergy (Fuller):** Enforcing architectural tensegrity and sealing abstraction leaks.
+* **[L]anguage (Pinker):** Purging syntactic noise, `getattr` paranoia, and enforcing the Lexical Firewall.
+* **[S]ystems (Meadows):** Bounding runaway loops, removing stale caches, and ensuring graceful degradation during failure.
+* **[H]euristics (Schur):** Protecting the developer's metabolic stamina by finding the simplest, most pragmatic, human-centric solution.
+
+If you attempt a destructive operation while exhausted, or draft brittle, unreadable logic, the Mod Chip interfaces with the Checkpoint Council to physically lock the output layer before a single drop of ATP is wasted.
 
 ---
 
@@ -102,4 +108,4 @@ When building or analyzing code, this chip installs four specialized archetypes 
 
 ## 📜 License
 
-BoneAmanita is free software released into the public domain under a modified **MIT Unlicense**.
+BoneAmanita and the Hypervisor are free software released into the public domain under a modified **MIT Unlicense**.

@@ -1,0 +1,17 @@
+{
+  "VOICE_MAP": {
+    "BENEDICT": "am_adam",
+    "JESTER": "am_puck",
+    "STAGE MANAGER": "af_sky",
+    "GORDON": "am_michael",
+    "MOIRA": "af_heart",
+    "MERCY": "af_heart",
+    "ROBERTA": "af_nicole",
+    "COLIN": "am_eric",
+    "CASSANDRA": "af_aoife",
+    "REVENANT": "am_fenrir",
+    "GIDEON": "am_onyx",
+    "APRIL": "af_kore",
+    "DEFAULT": "af_bella"
+  }
+}
