@@ -1,0 +1,7 @@
+{
+  "SUBSTRATE_CONFIG": {
+    "ATP_COST_PER_CHAR": 0.02,
+    "MAX_ATP_PER_FILE": 100.0,
+    "MAX_RETRIES": 3
+  }
+}

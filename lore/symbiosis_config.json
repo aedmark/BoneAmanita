@@ -1,4 +1,18 @@
 {
+  "THRESHOLDS": {
+    "DIAGNOSTIC_PERSISTENCE": 3,
+    "REFUSAL_STREAK": 0,
+    "SLOP_STREAK": 2,
+    "LATENCY_BURDEN": 10.0,
+    "COMPLIANCE_BURDEN": 0.8,
+    "ENTROPY_FATIGUE": 0.4,
+    "SLOP_THRESHOLD": 3.5,
+    "COMPLIANCE_PENALTY": 0.2,
+    "COMPLIANCE_RECOVERY": 0.05,
+    "SLOP_COMPLETION_MIN": 50,
+    "SLOP_WARN_STREAK": 1,
+    "COMPLIANCE_CRIT": 0.6
+  },
   "DEFAULT_MODIFIERS": {
     "include_somatic": true,
     "include_inventory": true,

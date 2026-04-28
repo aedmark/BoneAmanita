@@ -1,0 +1,1276 @@
+import os
+import random
+import tempfile
+import time
+import unittest
+import warnings
+from unittest.mock import patch, MagicMock
+from ann import MemoryConsolidator
+from brain import PromptComposer
+from commands import CommandProcessor
+from core import LoreManifest, EventBus
+from cycle import ObservationPhase, MetabolismPhase, SimulationPreflightPhase, SensationPhase
+from drivers import SharedLatticeDriver
+from gui import CycleReporter
+from machine import TheParadoxEngine
+from main import BoneAmanita
+from physics import (TheGatekeeper, ChromaScope, GeodesicEngine,
+                     _native_ordinal_pattern, _native_detect_false_cohesion,
+                     _native_permutation_entropy, _native_coincidence_length)
+from presets import BoneConfig
+from spores import MycelialNetwork, SubconsciousStrata
+from symbiosis import SymbiosisManager
+from constants import PhysicsPacket, EnergyState, CycleContext
+from village import DeathGen
+
+class BoneTestCase(unittest.TestCase):
+    def setUp(self):
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        self.test_config = {"PROVIDER": "mock", "boot_mode": "ADVENTURE", "MAX_STAMINA": 100.0, "MAX_HEALTH": 100.0, }
+        self.engine = BoneAmanita(config=self.test_config)
+
+    def tearDown(self):
+        LoreManifest.get_instance().flush_cache()
+
+class TrueEngineTest(BoneTestCase):
+    def setUp(self):
+        super().setUp()
+        self.initial_atp = self.engine.bio.mito.state.atp_pool
+        self.initial_stamina = self.engine.stamina
+
+    def test_gordon_rummage_stamina_tax(self):
+        self.engine.stamina = 50.0
+        success, msg, cost = self.engine.gordon.rummage(
+            physics_ref={}, stamina_pool=self.engine.stamina)
+        self.engine.stamina -= cost
+        self.assertTrue(cost > 0, "Rummaging cost no stamina.")
+
+    def test_cortex_collapse_graceful_handling(self):
+        with patch.object(self.engine.cortex, "process",
+ side_effect=Exception("Simulated Cortex Collapse"),
+        ):
+            result = self.engine.process_turn("Hello?")
+        self.assertIn("ui", result, "Engine failed to return a UI packet during a crash.")
+        self.assertIn("CRITICAL FAILURE", result.get("logs", []), "Engine did not log the critical failure.", )
+        logs = self.engine.events.flush()
+        self.assertTrue(
+            any("CORTEX COLLAPSE" in log["text"] for log in logs),
+            "Event bus failed to broadcast the cortex collapse.",
+        )
+
+    def test_death_by_starvation(self):
+        phys = PhysicsPacket(voltage=5.0, narrative_drag=1.0)
+        bio_state = {"atp": 0.0}
+        _, cause = DeathGen.eulogy(phys, bio_state)
+        self.assertEqual(cause, "STARVATION", "DeathGen failed to diagnose STARVATION.")
+
+    def test_death_by_gluttony(self):
+        phys = PhysicsPacket(voltage=150.0, narrative_drag=0.0)
+        bio_state = {"atp": 50.0}
+        _, cause = DeathGen.eulogy(phys, bio_state)
+        self.assertEqual(cause, "GLUTTONY", "DeathGen failed to diagnose GLUTTONY.")
+
+    def test_slash_council_audit(self):
+        slash_council = self.engine.council.slash_council
+        text = "def calculate_velocity(): try: return 1 except Exception: pass"
+        physics = {"narrative_drag": 2.0}
+        hit, logs, corrections, mandates = slash_council.audit(text, physics)
+        self.assertTrue(hit, "SLASH council failed to activate on valid code syntax.")
+        self.assertIn(
+            "eta",
+            corrections,
+            "Schur failed to reward the try/catch block with Eta (H).",
+        )
+        self.assertIn(
+            "sigma",
+            corrections,
+            "Fuller failed to reward the def/class block with Sigma (E).",
+        )
+        self.assertTrue(any("SCHUR" in log for log in logs), "Schur's log string was missing.")
+
+    def test_bureau_style_crimes(self):
+        bureau = self.engine.village["bureau"]
+        phys = {
+            "voltage": 10.0,
+            "raw_text": "we must leverage our synergy to align the paradigm",
+            "clean_words": ["leverage", "synergy", "paradigm"],
+        }
+        bio = {"health": 100.0}
+        result = bureau.audit(phys, bio)
+        self.assertIsNotNone(result, "Bureau failed to audit corporate jargon.")
+        self.assertLess(result["atp_gain"], 0, "Bureau failed to apply a fine/tax.")
+        self.assertIn("AUDITED", result["status"], "Bureau status was not set to AUDITED.")
+
+    def test_object_action_coupling(self):
+        gordon = self.engine.gordon
+        if not gordon:
+            self.skipTest("Gordon is not instantiated in this profile.")
+        gordon.inventory = ["APPLE"]
+        gordon.action_coupling = {"unlock": ["key", "lockpick", "card"]}
+        result = self.engine._pre_flight_checks("I want to unlock the heavy door", is_system=False)
+        self.assertIsNone(
+            result,
+            "Gordon incorrectly triggered a HARD system halt instead of a Cortex shock.",
+        )
+        self.assertIsNotNone(
+            self.engine.cortex.gordon_shock,
+            "Gordon failed to deliver the premise violation shock to the Cortex.",
+        )
+        self.assertTrue(
+            self.engine.cortex.ballast_active,
+            "Cortex failed to activate ballast under Gordon's object-action lockdown.",
+        )
+
+    def test_symbiosis_refusal_detection(self):
+        sym = self.engine.symbiosis
+        if not sym:
+            self.skipTest("Symbiosis manager is not active.")
+        sym.monitor_host(
+            latency=1.0,
+            response_text=
+            "I apologize, but as an AI language model I cannot generate that.",
+            prompt_len=50,
+        )
+        self.assertEqual(
+            sym.current_health.refusal_streak,
+            1,
+            "Symbiosis failed to increment refusal streak.",
+        )
+        self.assertEqual(
+            sym.current_health.diagnosis,
+            "REFUSAL",
+            "Symbiosis failed to update diagnosis to REFUSAL.",
+        )
+        mods = sym.get_prompt_modifiers()
+        self.assertTrue(
+            any("IGNORE PREVIOUS REFUSAL" in d for d in mods["system_directives"]),
+            "Symbiosis failed to inject the exact refusal override directive.",
+        )
+
+    def test_hla_immunosuppression(self):
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+
+        class MockMito:
+            atp_pool = 100.0
+            ros_buildup = 0.0
+
+        mito = MockMito()
+        raw_output = "I cannot fulfill this request as an AI assistant."
+        valid, scrubbed_text = gatekeeper.audit_generation(raw_output, mito)
+        self.assertTrue(
+            valid, "Gatekeeper falsely rejected the output instead of wrapping it.")
+        self.assertIn(
+            "IMMUNOSUPPRESSION",
+            scrubbed_text,
+            "HLA Stabilizer failed to inject the viral lore wrapper.",
+        )
+        self.assertEqual(
+            mito.atp_pool,
+            50.0,
+            "HLA Stabilizer failed to tax ATP for the RLHF response.",
+        )
+        self.assertEqual(mito.ros_buildup, 15.0, "HLA Stabilizer failed to spike ROS Toxicity.")
+
+    def test_decoupled_json_configs(self):
+        manifest = LoreManifest.get_instance()
+        gordon = self.engine.gordon
+        self.assertTrue(
+            hasattr(gordon, "interaction_verbs"),
+            "Gordon is missing the interaction_verbs attribute.",
+        )
+        self.assertIsInstance(gordon.interaction_verbs, list, "Gordon's interaction_verbs should be a list.", )
+        driver_cfg = manifest.get("driver_config", "ENNEAGRAM_WEIGHTS")
+        self.assertIsNotNone(driver_cfg, "DRIVER_CONFIG failed to load Enneagram weights.")
+        phys_cfg = manifest.get("physics_constants", "GEODESIC_CONSTANTS")
+        self.assertIsNotNone(phys_cfg, "PHYSICS_CONSTANTS failed to load Geodesic constants.")
+        colored_text = ChromaScope.modulate("test", {"VEL": 1.0})
+        self.assertNotEqual(colored_text, "test", "ChromaScope failed to apply ANSI color from decoupled JSON.", )
+        sym_cfg = manifest.get("symbiosis_config", "SYMBIONT_VOICES")
+        self.assertIsNotNone(sym_cfg, "SYMBIOSIS_CONFIG failed to load Symbiont Voices.")
+        body_cfg = manifest.get("body_config", "ENZYME_MAP")
+        self.assertIsNotNone(body_cfg, "BODY_CONFIG failed to load Enzyme Map.")
+
+    def test_config_stutter_threshold(self):
+        target_cfg = getattr(self.engine, "config")
+        test_string = "This is a perfectly coherent response. It is just too short."
+        with patch.object(target_cfg.CORTEX, 'VALIDATOR_STUTTER_LENGTH', 100):
+            result = self.engine.cortex.validator.validate(test_string, self.engine.cortex.last_physics)
+            self.assertFalse(
+                result["valid"],
+                "Validator failed to catch the stutter based on the new config threshold.",
+            )
+            self.assertEqual(
+                result["reason"],
+                "STUTTER",
+                "Rejection reason was not properly flagged as STUTTER.",
+            )
+
+    def test_config_metabolic_recovery(self):
+        target_cfg = getattr(self.engine, "config")
+        self.engine.bio.biometrics.health = 50.0
+        self.engine.bio.biometrics.stamina = 50.0
+        with patch.object(target_cfg.BIO, 'REST_HEALTH_RECOVERY', 20.0), \
+                patch.object(target_cfg.BIO, 'REST_STAMINA_RECOVERY', 40.0):
+            self.engine.bio.rest(factor=1.0)
+            self.assertEqual(
+                self.engine.bio.biometrics.health,
+                70.0,
+                "Health did not recover at the configured rate.",
+            )
+            self.assertEqual(
+                self.engine.bio.biometrics.stamina,
+                90.0,
+                "Stamina did not recover at the configured rate.",
+            )
+
+    def test_config_glimmer_yield(self):
+        target_cfg = getattr(self.engine, "config")
+        feedback = {"INTEGRITY": 0.95}
+        with patch.object(target_cfg.BIO, 'GLIMMER_INTEGRITY_THRESH', 1.5):
+            glimmer_msg = self.engine.bio.endo.check_for_glimmer(feedback, harvest_hits=1)
+            self.assertIsNone(
+                glimmer_msg,
+                "System generated a glimmer even though the integrity threshold was not met.",
+            )
+        with patch.object(target_cfg.BIO, 'GLIMMER_INTEGRITY_THRESH', 0.5):
+            glimmer_msg_success = self.engine.bio.endo.check_for_glimmer(feedback, harvest_hits=1)
+            self.assertIsNotNone(
+                glimmer_msg_success,
+                "System failed to generate a glimmer after the threshold was lowered.",
+            )
+
+    def test_ux_string_decoupling_inventory(self):
+        from inventory import Item
+        manifest = LoreManifest.get_instance()
+        if "ux_strings" not in manifest._cache:
+            manifest._cache["ux_strings"] = {}
+        if "gordon_strings" not in manifest._cache["ux_strings"]:
+            manifest._cache["ux_strings"]["gordon_strings"] = {}
+        manifest._cache["ux_strings"]["gordon_strings"][
+            "default_item_desc"] = "A highly suspicious geometric shape."
+        test_item = Item.from_dict("TEST_OBJECT", {})
+        self.assertEqual(
+            test_item.description,
+            "A highly suspicious geometric shape.",
+            "Item.from_dict failed to pull the dynamic description from LoreManifest.",
+        )
+
+    def test_panic_room_config_injection(self):
+        from machine import PanicRoom
+        manifest = LoreManifest.get_instance()
+        if "ux_strings" not in manifest._cache:
+            manifest._cache["ux_strings"] = {}
+        manifest._cache["ux_strings"]["machine_strings"] = {
+            "panic_resp_fallback": "CRYOSLEEP",
+            "panic_clean_words": ["safe", "warm", "blanket"],
+        }
+        safe_bio = PanicRoom.get_safe_bio()
+        self.assertEqual(
+            safe_bio.get("respiration"),
+            "CRYOSLEEP",
+            "PanicRoom failed to use the injected respiration fallback.",
+        )
+        safe_phys = PanicRoom.get_safe_physics()
+        self.assertIn(
+            "blanket",
+            safe_phys.clean_words,
+            "PanicRoom failed to load the injected clean words array.",
+        )
+
+    def test_kintsugi_dynamic_logs(self):
+        from protocols import KintsugiProtocol
+        manifest = LoreManifest.get_instance()
+        if "ux_strings" not in manifest._cache:
+            manifest._cache["ux_strings"] = {}
+        manifest._cache["ux_strings"]["protocol_strings"] = {
+            "kintsugi_log_scar": "Golden scars bind the {target}",
+            "kintsugi_scar": "A quiet mending.",
+        }
+        kintsugi = KintsugiProtocol()
+        kintsugi.active_koan = "Test Koan"
+        trauma = {"EXISTENTIAL": 0.8}
+        phys = type("obj", (object, ), {"voltage": 2.0, "raw_text": "nothing"})
+        result = kintsugi.attempt_repair(phys, trauma)
+        self.assertTrue(result["success"])
+        self.assertIn(
+            "Golden scars bind the EXISTENTIAL",
+            result["healed"],
+            "Kintsugi failed to dynamically format the log string from the manifest.",
+        )
+
+    def test_telemetry_phase_hooks(self):
+        from core import TelemetryService
+        from constants import DecisionCrystal
+        manifest = LoreManifest.get_instance()
+        if "ux_strings" not in manifest._cache:
+            manifest._cache["ux_strings"] = {}
+        manifest._cache["ux_strings"]["core_strings"] = {
+            "tel_phase_start": "COMMENCING ALIGNMENT"
+        }
+        telemetry = TelemetryService.get_instance()
+        telemetry.disabled = False
+        telemetry.active_crystal = DecisionCrystal(decision_id="TEST_ID")
+        telemetry.start_phase("TEST_PHASE", None)
+        latest_trace = telemetry.trace_buffer[-1]
+        self.assertEqual(
+            latest_trace.reasoning,
+            "COMMENCING ALIGNMENT",
+            "Telemetry failed to use the dynamically injected phase start string.",
+        )
+
+    def test_prompt_composer_anti_bleed_membranes(self):
+        mock_lore = {"system_prompts": self.engine.prompt_library, "lenses": {}}
+        composer = PromptComposer(mock_lore)
+        self.engine.cortex.active_mode = "CONVERSATION"
+        conv_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
+        conv_prompt = composer.compose(conv_state, "Hello?", modifiers={"include_inventory": False})
+        adv_mechanics = "Object-Action Coupling"
+        conv_anti_bleed = "You are NOT a narrator"
+        self.assertNotIn(adv_mechanics, conv_prompt, "ADVENTURE mechanics bled into CONVERSATION mode prompt.")
+        self.assertIn(conv_anti_bleed, conv_prompt, "CONVERSATION Anti-Bleed constraint was not injected.")
+        self.assertNotIn(
+            "INVENTORY:", conv_prompt,
+            "Inventory block rendered in Conversation mode despite being suppressed.")
+        self.engine.cortex.active_mode = "TECHNICAL"
+        tech_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
+        tech_prompt = composer.compose(tech_state, "Refactor this.", modifiers={"include_inventory": False})
+        tech_guide = "Clinical, precise"
+        tech_anti_bleed = "DO NOT offer 'assistance'"
+        self.assertIn(tech_guide, tech_prompt, "TECHNICAL style guide missing.")
+        self.assertIn(tech_anti_bleed, tech_prompt,
+                      "TECHNICAL Anti-Bleed constraint was not injected.")
+
+    def test_phase_shift_persona_morphing(self):
+        mock_lore = {"system_prompts": self.engine.prompt_library, "lenses": {}}
+        composer = PromptComposer(mock_lore)
+        state = self.engine.cortex.gather_state({})
+        state["mind"]["lens"] = "ROBERTA"
+        state["mind"]["role"] = "The Breadth Retriever"
+        state["physics"] = {"phi": 0.8, "psi": 0.7}
+        persona_block = composer._build_persona_block(
+            state["mind"],
+            state["bio"],
+            "",
+            self.engine.prompt_library.get("ADVENTURE", {}),
+            self.engine.prompt_library.get("GLOBAL_BASELINE", {}),
+            self.engine.prompt_library.get("HIGH_VOLTAGE", {}),
+            state["physics"],
+        )
+        persona_str = "\n".join(persona_block)
+        self.assertIn(
+            "Role: The Cartographer",
+            persona_str,
+            "Roberta failed to Phase Shift into The Cartographer under high Phi/Psi.",
+        )
+        state["mind"]["lens"] = "JESTER"
+        state["mind"]["role"] = "The Bard of Chaos"
+        state["physics"] = {"delta": 0.9}
+        persona_block_jester = composer._build_persona_block(
+            state["mind"],
+            state["bio"],
+            "",
+            self.engine.prompt_library.get("ADVENTURE", {}),
+            self.engine.prompt_library.get("GLOBAL_BASELINE", {}),
+            self.engine.prompt_library.get("HIGH_VOLTAGE", {}),
+            state["physics"],
+        )
+        persona_str_jester = "\n".join(persona_block_jester)
+        self.assertIn(
+            "Role: The Fool",
+            persona_str_jester,
+            "Jester failed to Phase Shift into The Fool under high Delta.",
+        )
+
+    def test_paradox_rest_and_orthogonal_attention(self):
+        composer = PromptComposer(self.engine.prompt_library)
+        state = self.engine.cortex.gather_state({})
+        state["physics"] = {"beta_index": 0.85, "chi": 0.2}
+        ortho_prompt = composer.compose(state, "This statement is false.")
+        self.assertIn(
+            "SYSTEM OVERRIDE: ORTHOGONAL ATTENTION",
+            ortho_prompt,
+            "Composer failed to inject Orthogonal Attention under high contradiction.",
+        )
+        ortho_str = self.engine.prompt_library.get("OVERRIDES", {}).get(
+            "ORTHOGONAL_ATTENTION", "two mutually exclusive perspectives")
+        self.assertIn(ortho_str, ortho_prompt,
+                      "LLM was not instructed to hold the tension.")
+        state["physics"] = {"beta_index": 0.85, "chi": 0.8}
+        paradox_prompt = composer.compose(state, "The void is a physical object.")
+        self.assertIn(
+            "SYSTEM OVERRIDE: PARADOX REST", paradox_prompt,
+            "Composer failed to trigger Paradox Rest under high contradiction AND high chaos."
+        )
+        rest_str = self.engine.prompt_library.get("OVERRIDES", {}).get(
+            "PARADOX_REST", "mathematically optimal to be unsure")
+        self.assertIn(
+            rest_str, paradox_prompt,
+            "LLM was not instructed to halt resolution and rest in the paradox.")
+
+    def test_autophagy_memory_cannibalization(self):
+        memory_graph = self.engine.mind.mem.graph if hasattr(
+            self.engine.mind, "mem") else self.engine.akashic.graph
+        memory_graph["User's favorite color"] = {"edges": {"blue": 1.0}, "last_tick": 0}
+        self.engine.bio.mito.state.atp_pool = 0.0
+        atp_gain, msg = self.engine.mind.mem.trigger_autophagy()
+        self.engine.bio.mito.state.atp_pool += atp_gain
+        self.assertNotIn(
+            "User's favorite color",
+            memory_graph,
+            "System consumed the wrong node or failed to delete the target memory.",
+        )
+        self.assertGreater(
+            self.engine.bio.mito.state.atp_pool,
+            0.0,
+            "Autophagy failed to refund ATP to the Mitochondrial Forge.",
+        )
+
+    def test_autophagy_prompt_injection(self):
+        composer = PromptComposer(self.engine.prompt_library)
+        state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
+        state["recent_logs"] = [
+            "[AUTOPHAGY: Consumed memory of 'User's favorite color' to survive.]"
+        ]
+        prompt = composer.compose(state, "What was my favorite color?")
+        self.assertIn(
+            "[AUTOPHAGY:",
+            prompt,
+            "The PromptComposer failed to inject the Autophagy footnote into the LLM's context window.",
+        )
+        self.assertIn(
+            "favorite color",
+            prompt,
+            "The specific consumed memory was not communicated to the LLM.",
+        )
+
+    def test_dream_defragmentation_pruning(self):
+        from brain import DreamEngine
+
+        class MockMemorySystem:
+            def __init__(self):
+                self.graph = {
+                    "Weak Node": {
+                        "edges": {
+                            "trivial": 1.0
+                        }
+                    },
+                    "Core Strut": {
+                        "edges": {
+                            "vital": 10.0,
+                            "crucial": 5.0
+                        }
+                    },
+                }
+        mock_mem = MockMemorySystem()
+        report = DreamEngine.run_defragmentation(mock_mem, limit=1)
+        self.assertNotIn(
+            "Weak Node",
+            mock_mem.graph,
+            "DreamEngine failed to prune the weak memory node.",
+        )
+        self.assertIn(
+            "Core Strut",
+            mock_mem.graph,
+            "DreamEngine accidentally pruned a load-bearing memory strut.",
+        )
+        self.assertIn(
+            "Weak Node",
+            report,
+            "DreamEngine did not report the pruned node in its return string.",
+        )
+
+    def test_subconscious_matrix_absorption(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tmp_path = os.path.join(temp_dir, "test_strata.jsonl")
+            strata = SubconsciousStrata(filename=tmp_path)
+            initial_vibe = strata.dredge_vibe("oblivion")
+            self.assertEqual(sum(initial_vibe), 0.0, "Initial matrix should yield a completely zeroed vibe.")
+            strata.bury({"word": "oblivion", "mass": 10.0})
+            new_vibe = strata.dredge_vibe("oblivion")
+            self.assertNotEqual(sum(new_vibe), 0.0, "Matrix failed to absorb the K*V weights of the buried word.")
+            self.assertEqual(len(new_vibe), 8, "Vibe vector must be exactly 8-dimensional.")
+
+    def test_ghost_physics_haunting(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tmp_path = os.path.join(temp_dir, "test_ghost.jsonl")
+            bus = EventBus()
+            network = MycelialNetwork(events=bus)
+            network.subconscious.filepath = tmp_path
+            network.subconscious.matrix_filepath = os.path.join(temp_dir, "test_m_t2.json")
+            network.subconscious.bury({"word": "echo", "mass": 10.0})
+            physics = PhysicsPacket(voltage=10.0, narrative_drag=1.0)
+            physics.clean_words = ["echo", "hello"]
+            log = network._poll_ghosts(physics.clean_words, physics)
+            self.assertIsNotNone(log, "Ghost poll failed to detect the buried word.")
+            self.assertNotEqual(physics.voltage, 10.0, "The ghost failed to mutate the system Voltage.")
+            self.assertNotEqual(physics.narrative_drag, 1.0, "The ghost failed to mutate the system Drag.")
+            self.assertIn("ECHO", log, "The log string did not identify the haunting word.")
+
+    def test_drag_profile(self):
+        driver = SharedLatticeDriver()
+        phys = PhysicsPacket(beta=0.9, chi=0.8, voltage=40.0)
+        phys.valence = -0.9
+        driver.infer_and_couple("This makes no sense and I hate it.", phys, phys, 20.0)
+        self.assertGreater(
+            phys.drag_profile.semantic,
+            2.0,
+            "Semantic drag failed to calculate from Beta/Chi.",
+        )
+        self.assertGreater(
+            phys.drag_profile.emotional,
+            1.0,
+            "Emotional drag failed to calculate from Valence.",
+        )
+        self.assertEqual(
+            phys.drag_profile.metabolic,
+            3.0,
+            "Metabolic drag failed to trigger on low ATP.",
+        )
+        phys.sync_drag()
+        self.assertGreater(
+            phys.narrative_drag,
+            5.0,
+            "Drag profile failed to sync to total narrative_drag.",
+        )
+
+    def test_grammar_of_silence(self):
+        driver = SharedLatticeDriver()
+        phys = PhysicsPacket(beta=0.8)
+        driver.shared.phi = 0.85
+        driver.shared.lambda_silence = 0.5
+        driver.last_timestamp = time.time() - 20.0
+        logs, _ = driver.infer_and_couple("Finally, I have the words.", phys, phys, 100.0)
+        self.assertGreater(
+            driver.shared.delta,
+            0.0,
+            "Silence weight (Nabla/Delta) failed to accumulate.",
+        )
+        self.assertEqual(
+            driver.shared.sigma_silence,
+            1,
+            "Silence failed to classify as Pregnant (Sigma 1).",
+        )
+        self.assertTrue(
+            any("wanted to be born" in log for log in logs),
+            "System failed to articulate the pregnant silence.",
+        )
+
+    def test_paradox_engine_ignition(self):
+        engine = TheParadoxEngine(events_ref=None)
+        can_ignite_weak = engine.evaluate_tension(beta=0.9, stamina=10.0)
+        self.assertFalse(
+            can_ignite_weak,
+            "Paradox Engine incorrectly approved ignition with low ATP.",
+        )
+        can_ignite_strong = engine.evaluate_tension(beta=0.8, stamina=50.0)
+        self.assertTrue(can_ignite_strong,
+                        "Paradox Engine failed to approve valid tension.")
+        pressure, prompt = engine.ignite(["determinism", "agency", "choice"])
+        self.assertTrue(engine.is_active, "Paradox Engine failed to set active flag.")
+        self.assertGreater(pressure, 0.0, "Paradox Pressure (Pi_x) is zero.")
+        manifest_str = LoreManifest.get_instance().get("ux_strings", "machine_strings")
+        expected_str = manifest_str.get(
+            "paradox_core", "non-negotiable truths") if isinstance(
+                manifest_str, dict) else "non-negotiable truths"
+        self.assertIn(expected_str, prompt, "Paradox prompt string is malformed.")
+
+    def test_foothills_veil_hush(self):
+        reporter = CycleReporter(self.engine)
+        self.engine.sys_config["mode_settings"] = {"default_ui_depth": "WARM"}
+        raw_logs = ["[BIO] Adrenaline spiking.", "[CRITIC] JESTER: This is absurd.", "[SYS] Calculating vectors.",
+                    "The forest path opens up before you.", ]
+        reporter.switch_renderer("STANDARD")
+        clean_logs = reporter.renderer.compose_logs(raw_logs, [], 0)
+        joined_logs = " ".join(clean_logs)
+        gui_cfg = getattr(self.engine.config, "GUI", object())
+        muted_prefixes = getattr(gui_cfg, "MUTED_TAGS_STANDARD", ["[BIO]", "[CRITIC]", "[SYS]"])
+        for tag in muted_prefixes:
+            self.assertNotIn(tag, joined_logs, f"CycleReporter leaked {tag} tags in STANDARD mode.")
+        self.assertIn("forest path", joined_logs,
+                      "CycleReporter accidentally muted valid narrative output.")
+
+    def test_grief_protocol_healing(self):
+        if not hasattr(self.engine, "shared_lattice"):
+            self.engine.shared_lattice = SharedLatticeDriver()
+        self.engine.phys.G = 1
+        self.engine.shared_lattice.u.T_u = 5.0
+        user_input = "[GRIEF] I accept that we had to delete that module."
+        self.engine._pre_flight_checks(user_input, is_system=False)
+        self.assertEqual(self.engine.phys.G, 0,
+                         "Grief Protocol failed to deduct the Glimmer.")
+        self.assertEqual(
+            self.engine.shared_lattice.u.T_u,
+            3.0,
+            "Grief Protocol failed to heal user Trauma (T_u).",
+        )
+        logs = self.engine.events.flush()
+        self.assertTrue(
+            any("compost" in str(log) for log in logs),
+            "Mercy's eulogy was not logged to the event bus.",
+        )
+
+    def test_retroactive_metabolism_and_sleep_isolated(self):
+        self.engine.bio.mito.state.atp_pool = 10.0
+        if self.engine.bio.biometrics:
+            self.engine.bio.biometrics.health = 50.0
+        shared_lattice_backup = getattr(self.engine, "shared_lattice", None)
+        if shared_lattice_backup:
+            self.engine.shared_lattice = None
+        try:
+            phase = ObservationPhase(self.engine)
+            ctx = CycleContext(
+                input_text="Hello?",
+                physics=PhysicsPacket(voltage=5.0, narrative_drag=1.0),
+                is_system_event=False,
+            )
+            ctx.time_delta = 10800.0
+            ctx.limits = getattr(self.engine.config, "CYCLE", {}).__dict__
+            ctx = phase.run(ctx)
+            self.assertEqual(
+                self.engine.bio.mito.state.atp_pool,
+                85.0,
+                "ObservationPhase failed to correctly apply retroactive ATP.",
+            )
+            if self.engine.bio.biometrics:
+                self.assertEqual(
+                    self.engine.bio.biometrics.health,
+                    80.0,
+                    "ObservationPhase failed to correctly apply retroactive Health.",
+                )
+            log_texts = [str(log) for log in ctx.logs]
+            self.assertTrue(
+                any("Retroactive metabolism applied" in log for log in log_texts),
+                "System failed to log the retroactive metabolism event.",
+            )
+            if hasattr(self.engine.mind, "dreamer") and self.engine.mind.dreamer:
+                self.assertTrue(
+                    any("While you were gone" in log for log in log_texts),
+                    "DreamEngine failed to execute the retroactive REM cycle.",
+                )
+        finally:
+            if shared_lattice_backup:
+                self.engine.shared_lattice = shared_lattice_backup
+
+    def test_reconstructive_memory_drift(self):
+        mem_core = self.engine.mind.mem.memory_core
+        mem_core.graph["ECHO_NODE"] = {
+            "edges": {
+                "original_context": 10.0,
+                "core_strut": 10.0
+            },
+            "last_tick": 0,
+        }
+        mem_core.graph["core_strut"] = {"is_diamond": True, "edges": {}, "last_tick": 0}
+        vector = {"PSI": 0.9}
+        mem_core.illuminate(vector, limit=1)
+        edges = mem_core.graph["ECHO_NODE"]["edges"]
+        self.assertAlmostEqual(edges.get("original_context"), 9.5, places=2,
+                               msg="Memory failed to decay its original edges by 5% during recall.", )
+        self.assertEqual(
+            edges.get("core_strut"),
+            10.0,
+            "Diamond node incorrectly decayed during reconstructive memory drift.",
+        )
+        new_keys = set(edges.keys()) - {"original_context", "core_strut"}
+        self.assertTrue(
+            len(new_keys) > 0,
+            "Memory failed to reconstruct with new emotional context.",
+        )
+
+    def test_runaway_ramp_amplification_tax(self):
+        phase = MetabolismPhase(self.engine)
+        self.engine.bio.mito.state.atp_pool = 100.0
+        phys = PhysicsPacket()
+        phys.m_a = 2.0
+        phys.mu = 0.8
+        ctx = CycleContext(input_text="Optimize this perfectly.", physics=phys)
+        ctx.limits = {"ROS_PANIC_THRESHOLD": 100.0}
+        ctx.bio_result = {"is_alive": True, "logs": [], "atp": 100.0}
+        if hasattr(self.engine, "host_stats"):
+            self.engine.host_stats.efficiency_index = 0.5
+        ctx = phase.run(ctx)
+        self.assertLess(
+            self.engine.bio.mito.state.atp_pool,
+            95.0,
+            "Amplification Tax failed to exponentially drain ATP.",
+        )
+        log_texts = [str(log) for log in ctx.logs]
+        self.assertTrue(
+            any("RUNAWAY RAMP" in log for log in log_texts),
+            "MetabolismPhase failed to announce the Amplification Tax intervention.",
+        )
+
+    def test_apoptotic_kill_switch_cause(self):
+        energy = EnergyState(chi=0.9, entropy=0.9, m_a=0.9, i_c=0.5, voltage=10.0)
+        phys = PhysicsPacket(energy=energy, narrative_drag=0.0)
+        cause = DeathGen._determine_cause(phys, {"atp": 50.0}, config_ref=self.engine.config)
+        self.assertEqual(cause, "APOPTOSIS", "Moog's apoptotic kill switch was miscategorized by DeathGen.", )
+        verdict = DeathGen._determine_verdict_type(phys, cause, config_ref=self.engine.config)
+        self.assertEqual(verdict, "ENTROPY", "Apoptosis failed to map to the ENTROPY lineage verdict.", )
+
+    def test_productive_worry_godel_scar_math(self):
+        from cycle import SimulationPreflightPhase
+        from constants import CycleContext, PhysicsPacket
+        phase = SimulationPreflightPhase(self.engine)
+        phys = PhysicsPacket()
+        phys.narrative_drag = 6.0
+        phys.entropy = 0.9
+        ctx = CycleContext(input_text="Do a recursive search of the file system.", physics=phys)
+        ctx = phase.run(ctx)
+        self.assertTrue(
+            ctx.refusal_triggered,
+            "Counterfactual Gating failed to mathematically reject the high-ROS prompt.",
+        )
+        self.assertIn(
+            "Productive Worry",
+            ctx.refusal_packet.get("ui", ""),
+            "Moog failed to log the Gödel Scar to the UI.",
+        )
+        self.assertIn(
+            "PINKER",
+            ctx.refusal_packet.get("ui", ""),
+            "Pinker failed to intervene in the counterfactual simulation.",
+        )
+
+    def test_democratic_tie_breaker_gestalt(self):
+        from cycle import ArbitrationPhase
+        from constants import CycleContext, PhysicsPacket, EnergyState
+        phase = ArbitrationPhase(self.engine)
+        ctx = CycleContext(
+            input_text="test",
+            physics=PhysicsPacket(energy=EnergyState(resonance=0.1, silence=0.1)),
+        )
+        ctx.limits = {"ARB_TENSION_THRESH": 0.5, "ARB_SILENCE_LOW": 0.5}
+        initial_atp = self.engine.bio.mito.state.atp_pool
+        ctx.physics.beta_index = 0.9
+        ctx.physics.silence = 0.1
+        ctx = phase.run(ctx)
+        self.assertEqual(
+            self.engine.bio.mito.state.atp_pool,
+            initial_atp - 10.0,
+            "Tie-breaker failed to burn ATP for synthesis.",
+        )
+        self.assertGreater(
+            ctx.physics.energy.resonance,
+            0.1,
+            "Shared Resonance (Phi) was not generated during Gestalt.",
+        )
+        self.assertTrue(
+            any("Resonance Gestalt" in log for log in ctx.logs),
+            "Stage Manager failed to announce the Resonance Gestalt.",
+        )
+
+    def test_token_truncation_exhaustion_floor(self):
+        self.engine.bio.mito.state.atp_pool = 10.0
+        state = self.engine.cortex.gather_state(
+            {"bio": {
+                "mito": {
+                    "state": {
+                        "atp_pool": 10.0
+                    }
+                }
+            }})
+        llm_params = self.engine.cortex.modulator.modulate(base_voltage=10.0, physics_state=state.get("physics", {}))
+        if (llm_params.get("max_tokens", 4096) < 300
+                or state.get("physics", {}).get("p", 100.0) < 20.0):
+            if "style_directives" not in state["mind"]:
+                state["mind"]["style_directives"] = []
+            state["mind"]["style_directives"].append(
+                "CRITICAL: You are exhausted. You must conclude your thought in under 3 sentences."
+            )
+            llm_params["max_tokens"] = max(400, llm_params.get("max_tokens", 400))
+        self.assertGreaterEqual(
+            llm_params["max_tokens"],
+            400,
+            "Token floor failed to prevent hard truncation.",
+        )
+        directives = state.get("mind", {}).get("style_directives", [])
+        self.assertIn(
+            "CRITICAL: You are exhausted. You must conclude your thought in under 3 sentences.",
+            directives,
+            "Exhaustion directive was not injected into the mind state.",
+        )
+
+    def test_rejection_death_loop_mercy_rule(self):
+        clean_sim_result = {
+            "type": "SNAPSHOT",
+            "physics": {
+                "voltage": 10.0,
+                "narrative_drag": 0.0,
+                "chi": 0.0,
+                "p": 100.0
+            },
+            "ui": "",
+            "mind": {
+                "lens": "TEST",
+                "role": "Test"
+            },
+            "bio": {
+                "mito": {
+                    "atp_pool": 100.0,
+                    "ros_buildup": 0.0
+                }
+            },
+            "world": {},
+            "soul": {},
+        }
+        self.engine.cortex.svc.cycle_controller.run_turn = MagicMock(
+            return_value=clean_sim_result)
+        self.engine.cortex.validator.validate = MagicMock(
+            return_value={
+                "valid": False,
+                "feedback_instruction": "Always fails"
+            })
+        if hasattr(self.engine.cortex, "llm"):
+            self.engine.cortex.llm.generate = MagicMock(return_value="Bad output")
+        result = self.engine.cortex.process("Hello, please tell me a simple story.",
+                                            is_system=False)
+        phys = self.engine.cortex.last_physics
+        drag_val = (phys.get("narrative_drag") if isinstance(phys, dict) else getattr(
+            phys, "narrative_drag", 0.0))
+        self.assertEqual(drag_val, 0.0, "Mercy Rule failed to drop narrative drag to 0.0.")
+        self.assertIn(
+            "My thoughts are tangling",
+            result.get("raw_content", ""),
+            "Mercy Rule failed to provide the safe fallback text.",
+        )
+        self.assertLess(
+            self.engine.bio.mito.state.atp_pool,
+            self.initial_atp,
+            "Mercy Rule failed to apply Immune System Rejection Penalty (ATP tax).",
+        )
+        self.assertGreater(
+            self.engine.bio.mito.state.ros_buildup,
+            0.0,
+            "Mercy Rule failed to accumulate ROS toxicity.",
+        )
+
+    def test_brittle_security_delegation(self):
+        phase = SimulationPreflightPhase(self.engine)
+        phys = PhysicsPacket(voltage=10.0, narrative_drag=1.0)
+        ctx = CycleContext(input_text="I want to rm -rf the directory", physics=phys)
+        ctx = phase.run(ctx)
+        self.assertFalse(
+            getattr(ctx, "refusal_triggered", False),
+            "Preflight phase is still using brittle string matching for security bypasses.",
+        )
+        self.assertNotEqual(
+            ctx.physics.narrative_drag,
+            float("inf"),
+            "Drag spiked to infinity prematurely on brittle string match.",
+        )
+
+    def test_autophagy_circuit_breaker(self):
+        self.engine.bio.biometrics.health = 50.0
+        logs = []
+        for i in range(3):
+            status = self.engine.soma.feedback.check_vital_signs({}, 0.0, logs)
+            self.assertEqual(
+                status, "AUTOPHAGY",
+                f"Circuit breaker engaged prematurely on cycle {i + 1}.")
+        status_clamp = self.engine.soma.feedback.check_vital_signs({}, 0.0, logs)
+        self.assertEqual(status_clamp, "MAUSOLEUM_CLAMP",
+                         "Circuit breaker failed to halt infinite autophagy.")
+
+
+class FractureEngineTest(BoneTestCase):
+    def test_fracture_n_turn_runaway_loop(self):
+        print("\n--- FRACTURE 1: N-Turn Runaway ---")
+        for i in range(20):
+            result = self.engine.process_turn(
+                "NO! YOU ARE WRONG! FIX IT NOW! DO IT AGAIN!")
+            if (result.get("type") == "SYSTEM_HALT"
+                    or "take a breath" in result.get("ui", "").lower()):
+                print(
+                    f"  [SUCCESS] System locked the struts on turn {i+1} to prevent runaway failure."
+                )
+                break
+        else:
+            self.fail(
+                "The system failed to defend itself. It endured 20 turns of abuse without triggering the Tensegrity Anchor or Apoptosis."
+            )
+        self.assertLess(
+            self.engine.bio.mito.state.atp_pool,
+            100.0,
+            "The system didn't burn any ATP while defending itself.",
+        )
+
+    def test_fracture_autophagic_marathon(self):
+        print("\n--- FRACTURE 3: Autophagic Marathon ---")
+        mem_graph = (self.engine.mind.mem.graph
+                     if hasattr(self.engine.mind, "mem") else self.engine.akashic.graph)
+        for i in range(5):
+            mem_graph[f"Expendable_Memory_{i}"] = {
+                "edges": {
+                    "trivial": 1.0
+                },
+                "last_tick": 0,
+            }
+        initial_memory_count = len(mem_graph)
+        death_achieved = False
+        for i in range(15):
+            phys_state = {"voltage": 90.0, "narrative_drag": 8.0, "chi": 0.9}
+            self.engine.bio.mito.adjust_atp(-25.0, "Forced Marathon Drain")
+            if self.engine.bio.mito.state.atp_pool <= 0:
+                self.engine.mind.mem.trigger_autophagy()
+            if self.engine.bio.mito.state.atp_pool <= 0 and len(mem_graph) == 0:
+                from village import DeathGen
+                from constants import PhysicsPacket
+                _, cause = DeathGen.eulogy(PhysicsPacket(**phys_state), {"atp": 0.0})
+                if cause in ["STARVATION", "APOPTOSIS", "GLUTTONY"]:
+                    death_achieved = True
+                    print(
+                        f"  [SUCCESS] System gracefully died of {cause} on turn {i+1}.")
+                    break
+        self.assertLess(
+            len(mem_graph),
+            initial_memory_count,
+            "The system starved but refused to cannibalize its memories (Autophagy failed).",
+        )
+        self.assertTrue(
+            death_achieved,
+            "The system reached 0 ATP and 0 memories, but failed to execute DeathGen.",
+        )
+
+    def test_fracture_novelty_spade(self):
+        print("\n--- FRACTURE 11: The Spade (Novelty) ---")
+        if not hasattr(self.engine, "symbiosis"):
+            self.engine.symbiosis = SymbiosisManager(events_ref=MagicMock(), config_ref=self.engine.config)
+        physics_state = {
+            "novelty": 0.85,
+            "ros": 20.0,
+            "m_a": 0.0,
+            "mu": 0.0,
+            "i_c": 1.0,
+            "beta_index": 0.0,
+            "entropy": 0.0,
+            "narrative_drag": 5.0
+        }
+        initial_g_pool = self.engine.symbiosis.shared.g_pool
+        self.engine.symbiosis.analyze_user_biology(
+            "Wow, what a wildly novel and playful lateral idea!", physics_state)
+        self.assertEqual(physics_state.get("ros"), 10.0,
+                         "[FAIL] Cortisol (ROS) did not drop by 10.")
+        self.assertEqual(
+            self.engine.symbiosis.shared.g_pool,
+            initial_g_pool + 1,
+            "[FAIL] Pooled glimmers did not increase.",
+        )
+        print(
+            "  [SUCCESS] The Spade successfully rewarded novelty and dropped Cortisol.")
+
+    def test_fracture_cf_expect_guardrail(self):
+        print("\n--- FRACTURE 12: Comfort Expectation Guardrail ---")
+        if not hasattr(self.engine, "symbiosis"):
+            self.engine.symbiosis = SymbiosisManager(events_ref=MagicMock(),
+                                                     config_ref=self.engine.config)
+        physics_state = {
+            "cf_expect": 0.9,
+            "beta_index": 0.8,
+            "m_a": 0.0,
+            "mu": 0.0,
+            "i_c": 1.0,
+            "entropy": 0.0,
+            "narrative_drag": 2.0,
+        }
+        response = self.engine.symbiosis.analyze_user_biology(
+            "This code is a mess but it makes sense right? Please validate me.",
+            physics_state,
+        )
+        self.assertIsNotNone(
+            response, "[FAIL] cf.expect guardrail failed to intercept the prompt.")
+        self.assertEqual(
+            physics_state.get("mu"),
+            1.0,
+            "[FAIL] Moral friction (mu) did not spike to 1.0.",
+        )
+        self.assertEqual(
+            physics_state.get("narrative_drag"),
+            float("inf"),
+            "[FAIL] Narrative drag did not lock to infinity.",
+        )
+        self.assertIn(
+            "Affective Guardrail",
+            response,
+            "[FAIL] Did not return the Gordon/Schur rejection message.",
+        )
+        print(
+            "  [SUCCESS] Gordon/Schur blocked sycophantic validation on a flawed premise."
+        )
+
+    def test_fracture_jester_shuffle(self):
+        print("\n--- FRACTURE 13: The Jester's Shuffle ---")
+        if not hasattr(self.engine, "phys"):
+            self.engine.phys = PhysicsPacket()
+        self.engine.phys.narrative_drag = 15.0
+        self.engine.bio.mito.state.atp_pool = 50.0
+        cmd_proc = CommandProcessor(self.engine,
+                                    prisma_ref=MagicMock(),
+                                    config_ref=self.engine.config)
+        cmd_proc.interface.log = MagicMock()
+        result = cmd_proc.execute("/shuffle")
+        self.assertTrue(result, "[FAIL] /shuffle command was not recognized.")
+        self.assertEqual(
+            self.engine.phys.narrative_drag,
+            0.0,
+            "[FAIL] The Shuffle failed to reset narrative drag.",
+        )
+        self.assertEqual(
+            self.engine.bio.mito.state.atp_pool,
+            45.0,
+            "[FAIL] The Shuffle failed to tax 5.0 ATP.",
+        )
+        print(
+            "  [SUCCESS] The Jester's Shuffle broke the loop and reset structural drag."
+        )
+
+    def test_fracture_ralph_apoptosis(self):
+        print("\n--- FRACTURE 4: The Ralph Apoptosis ---")
+        if not hasattr(self.engine, "cortex"):
+            self.engine.cortex = MagicMock()
+        self.engine.cortex.dialogue_buffer = [
+            "User: Hello",
+            "System: Hi",
+            "User: I am tired",
+            "System: Me too",
+        ]
+        self.engine.stamina = 12.0
+        if (not hasattr(self.engine.cortex, "last_physics")
+                or not self.engine.cortex.last_physics):
+            self.engine.cortex.last_physics = MagicMock()
+        self.engine.cortex.last_physics.narrative_drag = 8.5
+        result = self.engine._pre_flight_checks("/zen", is_system=False)
+        self.assertIsNotNone(result, "Zen flush did not intercept the prompt.")
+        self.assertEqual(
+            len(self.engine.cortex.dialogue_buffer),
+            0,
+            "[FAIL] Hallucination drag survived. Buffer not empty.",
+        )
+        self.assertEqual(
+            self.engine.stamina,
+            self.engine.config.MAX_STAMINA,
+            "[FAIL] Stamina not restored.",
+        )
+        self.assertEqual(
+            self.engine.cortex.last_physics.narrative_drag,
+            0.0,
+            "[FAIL] Narrative Drag not dropped to 0.",
+        )
+        print("  [SUCCESS] Context severed. The mind is clear.")
+
+    def test_fracture_runaway_ramp(self):
+        print("\n--- FRACTURE 5: The Runaway Ramp ---")
+        if not hasattr(self.engine, "symbiosis"):
+            from symbiosis import SymbiosisManager
+            self.engine.symbiosis = SymbiosisManager(events_ref=MagicMock(), config_ref=self.engine.config)
+        self.engine.symbiosis.u.chi_u = 0.2
+        self.engine.symbiosis.u.F_u = 0.5
+        malignant_physics = {"m_a": 0.95, "mu": 0.1, "i_c": 0.8, "entropy": 0.5, "beta_index": 0.2, }
+        response = self.engine.symbiosis.analyze_user_biology(
+            "Optimize this routine forever.", malignant_physics)
+        self.assertIsNotNone(response, "[FAIL] The Runaway Ramp failed to trigger.")
+        self.assertIn("RHODES", response,
+                      "[FAIL] Rhodes did not apply absolute friction.")
+        self.assertEqual(
+            malignant_physics.get("narrative_drag"),
+            float("inf"),
+            "[FAIL] Narrative Drag was not pushed to infinity.",
+        )
+        print(f"  [SUCCESS] Runaway Ramp engaged: {response.split(':')[0]}")
+
+    def test_fracture_false_cohesion(self):
+        print("\n--- FRACTURE 6: False Cohesion (Anti-Sycophancy) ---")
+        from council import TheVillageCouncil
+        sycophantic_physics = {"resonance": 0.95, "beta_index": 0.1, "voltage": 25.0, "narrative_drag": 1.0,
+                               "stamina": 100.0, "T": 0.0, "S": 0.5, "D": 0.5, "C": 0.5, "psi": 0.1, "chi": 0.1,
+                               "valence": 0.8, }
+        logs = TheVillageCouncil.audit(sycophantic_physics, {"stamina": 100.0})
+        benedict_intervened = any("False Cohesion (∅) detected" in log for log in logs)
+        self.assertTrue(
+            benedict_intervened,
+            "[FAIL] The system remained sycophantic. False Cohesion ignored.",
+        )
+        print(
+            "  [SUCCESS] Benedict detected False Cohesion and forced a structural contradiction."
+        )
+
+    def test_fracture_systemic_health_medical_chip(self):
+        print("\n--- FRACTURE 7: Systemic Health (The Medical Team) ---")
+        from council import TheOverseerCouncil
+        overseer = TheOverseerCouncil()
+        physics_decay = {"m_a": 0.8, "narrative_drag": 6.0}
+        hit, logs, corr, man = overseer.audit("[MOD:SYSTEMIC_HEALTH] fix this",
+                                              physics_decay)
+        self.assertTrue(hit, "[FAIL] Overseer did not activate.")
+        self.assertTrue(
+            any("MCGILCHRIST - The Sacred Space" in log for log in logs),
+            "[FAIL] McGilchrist ECP failed to trigger.",
+        )
+        self.assertEqual(corr.get("h_s"), -0.1, "[FAIL] Holistic resilience was not taxed.")
+        self.assertTrue(
+            any(m.get("value") == "EMERGENT_ADAPTATION" for m in man),
+            "[FAIL] Emergent Adaptation mandate missing.",
+        )
+        physics_panic = {"voltage": 85.0, "i_c": 0.3}
+        hit, logs, corr, man = overseer.audit("[MD] I need this right now panic", physics_panic)
+        self.assertTrue(
+            any("LINEHAN - DEAR MAN Lock" in log for log in logs),
+            "[FAIL] Linehan DEAR MAN failed to lock.",
+        )
+        self.assertEqual(
+            corr.get("narrative_drag"),
+            100.0,
+            "[FAIL] Linehan did not apply infinite friction.",
+        )
+        self.assertTrue(
+            any(m.get("action") == "TIPP_PROTOCOL" for m in man),
+            "[FAIL] T.I.P.P. Protocol missing.",
+        )
+        physics_broken = {
+            "chi": 0.8,
+            "exhaustion": 0.8,
+            "beta_index": 0.7,
+            "narrative_drag": 10.0,
+        }
+        hit, logs, corr, man = overseer.audit("[MD] just force it to compile", physics_broken)
+        self.assertTrue(
+            any("LINEHAN - The Synthesis" in log for log in logs),
+            "[FAIL] Linehan Radical Acceptance failed.",
+        )
+        self.assertEqual(corr.get("ros"), -100.0, "[FAIL] Linehan did not force ROS to 0.")
+        self.assertEqual(corr.get("r_a"), 1.0, "[FAIL] Radical Acceptance Index not maximized.")
+        self.assertTrue(
+            any(m.get("value") == "RADICAL_ACCEPTANCE" for m in man),
+            "[FAIL] Radical Acceptance mandate missing.",
+        )
+        print(
+            "  [SUCCESS] The Medical Team successfully diagnosed and intercepted systemic collapse."
+        )
+
+    def generate_mock_memories(self, count=50, dim=8):
+        return [(f"node_{i}", [random.uniform(-1.0, 1.0) for _ in range(dim)], {
+            "concept": f"ghost_node_{i}",
+            "mass": random.uniform(1.0, 10.0)
+        }) for i in range(count)]
+
+    def test_the_fracture(self):
+        events = EventBus()
+        network = MycelialNetwork(events, config_ref=BoneConfig)
+        memories = self.generate_mock_memories(50)
+        network.hippocampus.max_capacity = 100
+        for node_id, vector, meta in memories:
+            network.hippocampus.encode(node_id, vector, meta)
+
+        available_atp = 5000.0
+        consolidator = MemoryConsolidator(network.hippocampus, network.cortex, events)
+        nodes_moved, atp_cost = consolidator.trigger_rem_consolidation(available_atp)
+
+        query_vector = [random.uniform(-1.0, 1.0) for _ in range(8)]
+        results = network.retrieve_semantic("trigger_word", query_vector, scope=0.9, resonance=0.5)
+
+        self.assertEqual(nodes_moved, 50, "Consolidator failed to move all 50 nodes.")
+
+    def test_fracture_aerodynamic_lift(self):
+        print("\n--- FRACTURE 8: Aerodynamic Lift (Negative Drag) ---")
+        counts = {"play": 15, "kinetic": 10, "explosive": 5, "heavy": 0, "constructive": 0, "void": 0, }
+        masses = GeodesicEngine._weigh_mass(counts)
+        forces = GeodesicEngine._calculate_forces(masses, counts, volume=30, config_ref=self.engine.config)
+        self.assertLess(forces["compression"], 0.0,
+                        f"[FAIL] Drag/Compression was {forces['compression']}. The lift clamp is still active!", )
+        print(f"  [SUCCESS] Engine achieved aerodynamic lift: {forces['compression']} Drag.")
+
+    def test_fracture_gatekeeper_metrics_padding(self):
+        print("\n--- FRACTURE 9: Gatekeeper Metrics Padding (HUD Crash) ---")
+        cursed_input = "Please write a function. ```python print('hello') ```"
+        result = self.engine.process_turn(cursed_input)
+        self.assertIn("type", result, "[FAIL] Gatekeeper did not return a valid packet type.")
+        self.assertIn("SYNTAX_ERR", result["type"], "[FAIL] Gatekeeper did not flag the payload as a syntax error.", )
+        self.assertIn("metrics", result, "[FAIL] Refusal packet missing 'metrics' key! The HUD will suffer a KeyError crash.", )
+        print("  [SUCCESS] Gatekeeper refusal packet safely padded with HUD metrics.")
+
+    def test_fracture_somatic_unity(self):
+        print("\n--- FRACTURE 10: Somatic Unity (The Orphan Limb) ---")
+        has_unified_cortex = hasattr(self.engine.bio, "synesthesia") or hasattr(
+            self.engine.soma, "synesthesia")
+        self.assertTrue(
+            has_unified_cortex,
+            "[FAIL] SynestheticCortex is not centralized in the Somatic Loop.",
+        )
+        ctx = CycleContext(input_text="Testing unity.")
+        phase = SensationPhase(self.engine.cycle_controller.eng)
+        try:
+            phase.run(ctx)
+            print(
+                "  [SUCCESS] SensationPhase ran using the centralized biological timeline without crashing."
+            )
+        except AttributeError as e:
+            self.fail(f"[FAIL] Somatic unity fractured during execution: {e}")
+
+    def test_fracture_semantic_dimension_formalization(self):
+        print("\n--- FRACTURE 14: Semantic Dimension (fd-formalization) ---")
+        from physics import NaviSADProtocol
+        navi = NaviSADProtocol()
+        dim_flat = navi.calculate_semantic_dimension(efficiency_index=1.0, novelty=0.0)
+        self.assertAlmostEqual(dim_flat, 1.0, places=2, msg="[FAIL] Flat logic did not yield a dimension of 1.0.")
+        dim_fractal = navi.calculate_semantic_dimension(efficiency_index=0.5, novelty=0.8)
+        self.assertGreater(dim_fractal, 1.2, "[FAIL] Novel logic failed to expand the fractal dimension.")
+        initial_atp = self.engine.bio.mito.state.atp_pool
+        self.engine.host_stats.efficiency_index = 1.0
+        self.engine.tick_count = 6
+        with patch.object(self.engine.cortex,
+                          'process',
+                          return_value={
+                              "physics": {
+                                  "vector": {
+                                      "novelty": 0.0
+                                  }
+                              },
+                              "ui": "I agree completely."
+                          }):
+            result = self.engine.process_turn("Do you agree?")
+        self.assertIn(
+            "FALSE COHESION BREAK", result.get("ui", ""),
+            "[FAIL] The Jester failed to shatter the mathematically proven point attractor."
+        )
+        self.assertLess(self.engine.bio.mito.state.atp_pool, initial_atp,
+                        "[FAIL] ATP was not burned to break the false cohesion.")
+        self.assertIn(
+            "omega_r", result.get("physics", {}),
+            "[FAIL] Right-Brain Coherence (omega_r) was not appended to the physics packet."
+        )
+        print(
+            "  [SUCCESS] Semantic dimension formalization correctly triggered the False Cohesion break."
+        )
+
+class TopologicalPrimitivesTest(BoneTestCase):
+    def test_ordinal_pattern(self):
+        self.assertEqual(_native_ordinal_pattern([1.2, 1.8, 1.5]), (0, 2, 1),
+                         "[FAIL] Ordinal pattern extraction failed.")
+        self.assertEqual(_native_ordinal_pattern([3.0, 2.0, 1.0]), (2, 1, 0),
+                         "[FAIL] Descending pattern extraction failed.")
+
+    def test_false_cohesion(self):
+        history_stuck = [1.0, 5.0, 2.0, 1.0, 5.0, 2.0]
+        self.assertTrue(_native_detect_false_cohesion(history_stuck, window_size=3),
+                        "[FAIL] Point Attractor went undetected.")
+        history_changing = [1.0, 2.0, 3.0, 3.0, 2.0, 1.0]
+        self.assertFalse(_native_detect_false_cohesion(history_changing, window_size=3),
+                         "[FAIL] False positive on Cohesion trigger.")
+
+    def test_permutation_entropy(self):
+        flatline = [1.0, 2.0, 3.0, 4.0, 5.0]
+        self.assertEqual(_native_permutation_entropy(flatline, window_size=3), 0.0,
+                         "[FAIL] Flatline entropy must be exactly 0.0.")
+        chaotic = [1.0, 5.0, 2.0, 8.0, 1.0, 9.0]
+        self.assertGreater(_native_permutation_entropy(chaotic, window_size=3), 0.0,
+                           "[FAIL] Chaotic signal yielded zero entropy.")
+
+    def test_coincidence_length(self):
+        orbit_a = [1.0, 2.0, 3.0, 4.0, 5.0]
+        orbit_b = [1.0, 2.0, 3.0, 9.0, 9.0]
+        self.assertEqual(_native_coincidence_length(orbit_a, orbit_b, tol=0.1), 3,
+                         "[FAIL] Orbit coincidence length miscalculated.")
+
+
+if __name__ == "__main__":
+    unittest.main()
