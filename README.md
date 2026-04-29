@@ -71,31 +71,6 @@ To bypass the metabolically expensive task of the LLM trying to "read the room,"
 
 ---
 
-## 🏛️ Mnemonic Architecture 
-
-BoneAmanita maps latent space into physical topology rather than flat vector dumps, ensuring zero-shot fidelity and metabolic efficiency (inspired by [The Memory Palace](https://www.github.com/MemPalace/MemPalace)):
-
-* **The Drawers (Verbatim Storage):** Ingested context, code, and lore are stored *verbatim* in the deep Cerebral Cortex. The system is strictly forbidden from summarizing or paraphrasing bedrock data, preventing semantic drift over long contexts.
-* **The Closets (AAAK Phantoms):** The short-term Hippocampal Cache holds lightweight, hyper-dense mathematical coordinate hashes (Phantoms) that act as index cards pointing directly to the raw text in the Drawers.
-* **Wings & Rooms (Spatial Scoping):** Distinct projects are isolated into "Wings," and topics into "Rooms." The system will not cross-contaminate logic unless the Paradox Engine is explicitly activated to find lateral connections.
-* **Sub-Vocal Logging:** Massive context drops physically bypass the active dialogue window. During rest or silence, the system indexes data seamlessly in the background, keeping the chat interface perfectly clean and token overhead near zero.
-
----
-
-## 💾 Mod Chips & Extensibility
-
-The Hypervisor supports structural Mod Chips. One of our favorites is **[S.L.A.S.H.]** (Synergetic Language & Systems Heuristics). 
-
-When building or analyzing code, this chip installs four specialized archetypes (Pinker, Fuller, Schur, Meadows) who evaluate your syntax as a biological entity. They collectively enforce the **S.L.A.S.H.** philosophy:
-* **[S]ynergy (Fuller):** Enforcing architectural tensegrity and sealing abstraction leaks.
-* **[L]anguage (Pinker):** Purging syntactic noise, `getattr` paranoia, and enforcing the Lexical Firewall.
-* **[S]ystems (Meadows):** Bounding runaway loops, removing stale caches, and ensuring graceful degradation during failure.
-* **[H]euristics (Schur):** Protecting the developer's metabolic stamina by finding the simplest, most pragmatic, human-centric solution.
-
-If you attempt a destructive operation while exhausted, or draft brittle, unreadable logic, the Mod Chip interfaces with the Checkpoint Council to physically lock the output layer before a single drop of ATP is wasted.
-
----
-
 ## ⌨️ System Commands
 
 * `/status` : Displays current Vitals (Health, Stamina, ATP, ROS).

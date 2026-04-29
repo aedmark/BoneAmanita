@@ -9,7 +9,7 @@ import threading
 from typing import Dict, Any, List, Optional
 from core import LoreManifest, ux, safe_get
 from drivers import CongruenceValidator
-from gui import CycleReporter
+from mechanics.gui import CycleReporter
 from machine import PanicRoom
 from phases import (ObservationPhase, SanctuaryPhase, MaintenancePhase, GatekeeperPhase,
     MetabolismPhase, RealityFilterPhase, NavigationPhase, MachineryPhase,
@@ -17,7 +17,7 @@ from phases import (ObservationPhase, SanctuaryPhase, MaintenancePhase, Gatekeep
     CognitionPhase, SensationPhase, StabilizationPhase, SimulationPhase)
 from physics import CycleStabilizer
 from presets import BoneConfig
-from symbiosis import SymbiosisManager
+from archetypes.symbiosis import SymbiosisManager
 from constants import Prisma, CycleContext
 
 _VSL_TAG_PATTERN = re.compile(r"\[VSL_(DEEP|CORE|LITE|HIDE)]", re.IGNORECASE)
@@ -124,7 +124,7 @@ class CycleSimulator:
 
         """Native deterministic graph freezing based on Nelson Spence (Project Navi)."""
         ctx.physics = PanicRoom.get_safe_physics()
-        last_packet = getattr(getattr(self.eng, "observer", None), "last_physics_packet", None)
+        last_packet = getattr(self.eng.observer, "last_physics_packet", None)
         if last_packet and hasattr(last_packet, "to_graph"):
             last_good_graph = last_packet.to_graph()
             adj_dict = getattr(last_good_graph, "adj", {})
@@ -146,17 +146,14 @@ class GeodesicOrchestrator:
         self.simulator = CycleSimulator(engine_ref)
         self.reporter = CycleReporter(engine_ref)
         self._rem_lock = threading.Lock()
-        if hasattr(self.eng, "symbiosis"):
-            self.symbiosis = self.eng.symbiosis
-        else:
-            self.symbiosis = SymbiosisManager(self.eng.events)
+        self.symbiosis = self.eng.symbiosis
         from drivers import SharedLatticeDriver
         if not hasattr(self.eng, "shared_lattice"):
             self.eng.shared_lattice = SharedLatticeDriver()
 
     def _apply_cd_metabolism(self, ctx: CycleContext):
         mito = getattr(self.eng.bio, "mito", None)
-        cd_engine = getattr(getattr(self.eng, "observer", None), "cd_engine", None)
+        cd_engine = getattr(self.eng.observer, "cd_engine", None)
 
         if not (mito and cd_engine and hasattr(ctx, "physics")):
             return
@@ -180,24 +177,38 @@ class GeodesicOrchestrator:
             state.ros_buildup = max(0.0, state.ros_buildup + delta_ros)
 
     def _verify_semantic_topology(self, ctx: CycleContext):
-        """ Native Maslov-Sneppen rewiring (Project Navi, Apache 2.0)."""
-        mem = getattr(self.eng, "memory", None)
+        """ Native Maslov-Sneppen rewiring (Project Navi, Apache 2.0).
+        Fuller Note: Offloaded to a background thread to protect main loop tensegrity.
+        A biological toxin doesn't kill instantly; it flags the system for apoptosis on the next cycle."""
+        mem = getattr(getattr(self.eng, "mind", None), "mem", None)
         hippo = getattr(mem, "hippocampus", None)
-        if hippo and hasattr(hippo, "get_graph"):
-            actual_graph = hippo.get_graph()
-            if actual_graph and len(actual_graph) > 5:
-                actual_adj = getattr(actual_graph, "adj", {})
-                if actual_adj and hasattr(mem, "calculate_clustering"):
-                    max_swaps = min(len(actual_adj) * 10, 1000)
-                    null_adj = _native_rewire(actual_adj, n_swaps=max_swaps)
-                    actual_cluster = mem.calculate_clustering(actual_adj)
-                    null_cluster = mem.calculate_clustering(null_adj)
-                    if actual_cluster <= (null_cluster * 1.05):
-                        self.eng.events.log(
-                            f"{Prisma.RED}[APOPTOSIS] Structural collapse detected. Grammar sequence preserved but semantic topology destroyed (Native Maslov-Sneppen matched). Triggering DeathGen.{Prisma.RST}",
-                            "BIO")
-                        ctx.is_alive = False
-                        ctx.crash_error = RuntimeError("Terminal Hallucination: Semantic entropy reached Null Model baseline.")
+        if not (hippo and hasattr(hippo, "get_graph") and hasattr(mem, "calculate_clustering")):
+            return
+        actual_graph = hippo.get_graph()
+        if not actual_graph or len(actual_graph) <= 5:
+            return
+
+        actual_adj = getattr(actual_graph, "adj", {})
+        if not actual_adj:
+            return
+
+        def _bg_topology_check(adj_copy):
+            try:
+                max_swaps = min(len(adj_copy) * 10, 1000)
+                null_adj = _native_rewire(adj_copy, n_swaps=max_swaps)
+                actual_cluster = mem.calculate_clustering(adj_copy)
+                null_cluster = mem.calculate_clustering(null_adj)
+                if actual_cluster <= (null_cluster * 1.05):
+                    self.eng.events.log(
+                        f"{Prisma.RED}[APOPTOSIS] Structural collapse detected. Semantic topology destroyed (Native Maslov-Sneppen matched). Engine flagged for terminal shutdown.{Prisma.RST}",
+                        "BIO")
+                    # Set health to 0 to trigger death on the next pre-flight check
+                    self.eng.health = 0.0
+            except Exception as e:
+                self.eng.events.log(f"Async Topology Error: {e}", "WARN")
+
+        # Pass a copy of the dictionary to avoid thread-safety mutation issues
+        threading.Thread(target=_bg_topology_check, args=({k: set(v) for k, v in actual_adj.items()},), daemon=True).start()
 
     def _check_adversarial_fence(self, ctx: CycleContext, user_message: str, is_system: bool) -> bool:
         if not is_system and any(p in user_message.lower() for p in _FENCE_PATTERNS):
@@ -218,7 +229,6 @@ class GeodesicOrchestrator:
         try:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
             if self._check_adversarial_fence(ctx, user_message, is_system):
-                if tel: tel.finalize_cycle()
                 return ctx
             ctx.trace_id = cycle_id
             ctx.time_delta = getattr(self.eng, "current_time_delta", 0.0)
@@ -248,7 +258,6 @@ class GeodesicOrchestrator:
             self._verify_semantic_topology(ctx)
             if obs:
                 obs.last_physics_packet = ctx.physics.snapshot()
-            if tel: tel.finalize_cycle()
             return ctx
 
         except Exception as e:
@@ -259,8 +268,9 @@ class GeodesicOrchestrator:
             ctx.physics = PanicRoom.get_safe_physics()
             ctx.is_alive = False
             ctx.crash_error = e
-            if tel: tel.finalize_cycle()
             return ctx
+        finally:
+            if tel: tel.finalize_cycle()
 
     def _background_dream_worker(self):
         try:
@@ -294,15 +304,27 @@ class GeodesicOrchestrator:
         if not getattr(self.eng.bio, "mito", None):
             return
         lattice = getattr(self.eng, "shared_lattice", None)
-        """Native WLS fractal dimension calculation (Project Navi)."""
-        cortex = getattr(getattr(self.eng, "memory", None), "cortex", None)
+
+        """Native WLS fractal dimension calculation (Project Navi). Offloaded to prevent UI drag."""
+        mem = getattr(getattr(self.eng, "mind", None), "mem", None)
+        cortex = getattr(mem, "cortex", None)
+
+        def _bg_wls_check(msg_str):
+            try:
+                radii_data = cortex.get_local_mass_radius(msg_str)
+                if radii_data and lattice:
+                    local_d = _native_wls(radii_data["log_r"], radii_data["log_m"], radii_data["weights"])
+                    lattice.shared.omega_r = min(1.0, local_d / 2.0)
+                    if local_d > 1.5:
+                        self.eng.events.log(
+                            f"{Prisma.CYN}[MNEMONIC] High Right-Brain Coherence (\u03a9r={lattice.shared.omega_r:.2f}). Semantic topology is rich. Lowering lateral ATP costs.{Prisma.RST}",
+                            "SYS")
+            except Exception:
+                pass  # Silent fail for background heuristic
+
         if cortex and hasattr(cortex, "get_local_mass_radius"):
-            radii_data = cortex.get_local_mass_radius(clean_message)
-            if radii_data and lattice:
-                local_d = _native_wls(radii_data["log_r"], radii_data["log_m"], radii_data["weights"])
-                lattice.shared.omega_r = min(1.0, local_d / 2.0)
-                if local_d > 1.5:
-                    self.eng.events.log(f"{Prisma.CYN}[MNEMONIC] High Right-Brain Coherence (\u03a9r={lattice.shared.omega_r:.2f}). Semantic topology is rich. Lowering lateral ATP costs.{Prisma.RST}", "SYS")
+            threading.Thread(target=_bg_wls_check, args=(clean_message,), daemon=True).start()
+
         if clean_message != "(Waiting)":
             return
         atp_level = float(self.eng.bio.mito.state.atp_pool)
@@ -324,21 +346,13 @@ class GeodesicOrchestrator:
                 worker.start()
             else:
                 self.eng.events.log("Dream worker already active. Ignoring overlapping idle request.", "SYS")
-            safe_phys = (self.eng.observer.last_physics_packet.snapshot().to_dict()
-                         if hasattr(self.eng, "observer")
-                         and getattr(self.eng.observer, "last_physics_packet", None)
-                         else PanicRoom.get_safe_physics().to_dict())
-            return {"type": "SNAPSHOT",
-                "ui":
+            packet = getattr(self.eng.observer, "last_physics_packet", None)
+            safe_phys = packet.snapshot().to_dict() if packet else PanicRoom.get_safe_physics().to_dict()
+            return {"type": "SNAPSHOT", "ui":
                 f"\n{Prisma.VIOLET}☁️ The system slips into deep background REM. Memory consolidation and epigenetic autopoiesis are running asynchronously...{Prisma.RST}",
-                "physics": safe_phys,
-                "bio": {
-                    "is_alive": True},
-                "mind": {
-                    "lens": "DREAMER",
-                    "role": "The Dream Engine"},
-                "world": {},
-                "logs": ["[SYSTEM] Triggered Asynchronous Autopoiesis."],}
+                "physics": safe_phys, "bio": {"is_alive": True},
+                "mind": {"lens": "DREAMER", "role": "The Dream Engine"},
+                "world": {}, "logs": ["[SYSTEM] Triggered Asynchronous Autopoiesis."],}
         ctx = self._execute_core_cycle(clean_message, is_system)
         if exit_pkt := self._check_early_exit(ctx):
             return exit_pkt

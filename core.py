@@ -1,4 +1,10 @@
-"""core.py"""
+"""core.py
+
+The Central Nervous System of the Hypervisor.
+This module houses the base primitives for state management, event routing,
+telemetry, and reality-layer scoping. It is strictly decoupled from LLM execution
+to ensure metabolic stability even if the cognitive layers crash.
+"""
 
 import glob, json, os, random, time, traceback, threading
 from collections import deque, Counter
@@ -8,21 +14,36 @@ from typing import List, Dict, Any, Optional, Tuple, Deque
 from presets import BoneConfig
 from constants import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
 
+
+# =============================================================================
+# LINGUISTIC & STRUCTURAL UTILITIES
+# =============================================================================
+
 def ux(section: str, key: str, default: Any = "") -> Any:
+    """
+    Retrieves localized, user-facing strings from the Lore cache.
+    Decouples narrative text from hardcoded logic to prevent semantic rot.
+    """
     data = LoreManifest.get_instance().get("ux_strings", section)
     return data.get(key, default) if isinstance(data, dict) else default
 
 def ux_format(section: str, key: str, default: str = "", **kwargs) -> str:
-    msg = ux(section, key, default)
+    """
+    Retrieves and safely formats a UX string.
+    Fails gracefully to the raw string if the payload arguments mismatch the template.
+    """
+    msg = ux(section, key, default) or default
     if not msg:
-        return default
+        return ""
     try:
         return msg.format(**kwargs)
     except (KeyError, ValueError, IndexError) as e:
+        # Pinker note: We log the grammatical failure but do not crash the engine.
         print(f"{Prisma.GRY}[UX] Formatting mismatch ({e}) in {section}.{key}. Falling back to raw string.{Prisma.RST}")
         return msg
 
 def safe_get(obj: Any, key: str, default: Any = None) -> Any:
+    """Agnostic retriever for dictionaries or class attributes."""
     if obj is None:
         return default
     if isinstance(obj, dict):
@@ -32,6 +53,10 @@ def safe_get(obj: Any, key: str, default: Any = None) -> Any:
     return default if val is None else val
 
 def safe_set(obj: Any, key: str, value: Any) -> None:
+    """
+    Agnostic setter. Includes a physical structural warning.
+    Writing to a Void (None) is a symptom of architectural decay.
+    """
     if obj is None:
         print(f"{Prisma.RED}[STRUCTURAL ROT] safe_set swallowed a write to '{key}'. Target object is None.{Prisma.RST}")
         return
@@ -41,17 +66,28 @@ def safe_set(obj: Any, key: str, value: Any) -> None:
         setattr(obj, key, value)
 
 class BoneJSONEncoder(json.JSONEncoder):
+    """Ensures complex biological data structures (sets, deques, dataclasses) serialize safely."""
     def default(self, obj):
         if isinstance(obj, (set, deque)): return list(obj)
         if hasattr(obj, "to_dict"): return obj.to_dict()
         if hasattr(obj, "__dict__"): return obj.__dict__
         return super().default(obj)
 
+
+# =============================================================================
+# THE CIRCULATORY SYSTEM
+# =============================================================================
+
 class EventBus:
+    """
+    The asynchronous publisher/subscriber backbone.
+    Bounded by a deque(maxlen) to prevent runaway memory leaks.
+    """
     def __init__(self, max_memory=None, config_ref=None, telemetry_ref=None):
         self.cfg = config_ref or BoneConfig
         cfg_core = LoreManifest.get_instance().get("CORE_CONFIG") or {}
         limit = max_memory or safe_get(cfg_core, "EVENT_MAX_MEMORY", 1024)
+
         self.buffer = deque(maxlen=limit)
         self.subscribers = {}
         self.telemetry = telemetry_ref
@@ -63,29 +99,35 @@ class EventBus:
 
     def publish(self, event_type, data=None):
         if event_type not in self.subscribers: return
+        # Iterate over a copy to allow safe pruning during execution
         for callback in self.subscribers[event_type][:]:
             try:
                 callback(data)
             except Exception as e:
+                # APOPTOTIC IMMUNE RESPONSE:
+                # If a callback fails, it is a toxic node. We log the necrosis and
+                # physically sever the connection to protect the host loop.
                 cb_name = getattr(callback, "__name__", str(callback))
                 short_err = f"Error in '{cb_name}': {e}"
                 if msg := ux_format("core_strings", "bus_error", error_msg=short_err):
                     print(f"{Prisma.RED}{msg}{Prisma.RST}")
+
                 if event_type != "EVENT_FAILURE":
                     self.log(f"EVENT_FAILURE: {short_err}\n{traceback.format_exc()}", source="EVENT_FAILURE", level="CRIT")
-                try:
+
+                if callback in self.subscribers[event_type]:
                     self.subscribers[event_type].remove(callback)
                     print(f"{Prisma.RED}[IMMUNE] Apoptotic pruning applied to toxic callback: {cb_name}{Prisma.RST}")
-                except ValueError:
-                    pass
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
+        """Creates an immutable, timestamped record of an event and pushes it downstream."""
         event = {"timestamp": time.time(), "source": source, "level": level, "message": message, "text": message, "_type": "EVENT_LOG"}
         self.buffer.append(event)
         self.publish(source, event)
         self.telemetry.record_event(event) if self.telemetry else print(f"[{source}] {message}")
 
     def flush(self) -> List[Dict]:
+        """Drains the current buffer, returning the accumulated state and resetting the queue."""
         current_logs = list(self.buffer)
         self.buffer.clear()
         return current_logs
@@ -93,7 +135,17 @@ class EventBus:
     def get_recent_logs(self, count=10):
         return list(self.buffer)[-count:]
 
+
+# =============================================================================
+# THE HIPPOCAMPUS
+# =============================================================================
+
 class LoreManifest:
+    """
+    The lazy-loaded, singleton data cache.
+    We only load files from the disk when requested, preserving O(1)
+    memory footprint during idle states.
+    """
     _instance = None
 
     def __init__(self, data_dir=None, config_ref=None):
@@ -130,6 +182,7 @@ class LoreManifest:
             return None
 
     def inject(self, category: str, data: Any):
+        """Allows runtime systems to append or override static lore matrices."""
         cat_key = category.lower()
         target = self._cache.setdefault(cat_key, {})
         if isinstance(target, dict) and isinstance(data, dict):
@@ -138,6 +191,7 @@ class LoreManifest:
             self._cache[cat_key] = data
 
     def save(self, category: str):
+        """Flushes mutated runtime state back to physical disk storage."""
         cat_key = category.lower()
         if cat_key not in self._cache:
             return
@@ -160,18 +214,31 @@ class LoreManifest:
         else:
             print(f"{Prisma.GRY}[LORE]: Category '{cat_key}' not in cache.{Prisma.RST}")
 
+
+# =============================================================================
+# METABOLIC GOVERNANCE & TELEMETRY
+# =============================================================================
+
 class TheObserver:
+    """
+    The System Vitals monitor.
+    Tracks latency, graph bloat, and execution loops to infer the biological
+    exhaustion of the active model and hardware.
+    """
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.cyber_gov = CyberneticGovernor(config_ref=self.cfg)
         self.start_time = time.time()
+
         cfg_core = LoreManifest.get_instance().get("CORE_CONFIG") or {}
         max_len = safe_get(cfg_core, "OBSERVER_MAX_LEN", 20)
+
         self.cycle_times = deque(maxlen=max_len)
         self.llm_latencies = deque(maxlen=max_len)
         self.memory_snapshots = deque(maxlen=max_len)
         self.error_counts = Counter()
         self.user_turns = 0
+
         self.LATENCY_WARNING = (safe_get(cfg_core, "OBSERVER_LATENCY_WARN", 5.0))
         self.CYCLE_WARNING = (safe_get(cfg_core, "OBSERVER_CYCLE_WARN", 8.0))
         self.C_EFF = safe_get(cfg_core, "OBSERVER_CYCLE_EFFICIENT", 0.1)
@@ -202,6 +269,7 @@ class TheObserver:
         self.memory_snapshots.append(node_count)
 
     def pass_judgment(self, avg_cycle, avg_llm):
+        """Translates numerical vitals into somatic states."""
         if avg_cycle == 0.0 and avg_llm == 0.0:
             return ux("core_strings", "obs_asleep")
         if avg_cycle < self.C_EFF and avg_llm < self.L_EFF:
@@ -226,6 +294,7 @@ class TheObserver:
 
 @dataclass
 class SystemHealth:
+    """A boolean state-matrix of the hypervisor's active layers."""
     physics_online: bool = True
     bio_online: bool = True
     mind_online: bool = True
@@ -238,16 +307,20 @@ class SystemHealth:
     def link_observer(self, observer_ref):
         self.observer = observer_ref
 
+    _HEALTH_MAP = { "physics": "physics_online", "bio": "bio_online", "mind": "mind_online", "cortex": "cortex_online"}
+
     def report_failure(self, component: str, error: Exception, severity="ERROR"):
         msg = str(error)
         self.errors.append(ErrorLog(component, msg, severity=severity))
         if self.observer:
             self.observer.log_error(component)
-        attr_name = f"{component.lower()}_online"
-        if hasattr(self, attr_name):
-            setattr(self, attr_name, False)
+
+        comp_key = component.lower()
+        if comp_key in self._HEALTH_MAP:
+            setattr(self, self._HEALTH_MAP[comp_key], False)
         else:
-            self.report_warning(f"Unmapped component '{component}' reported a failure. Missing from SystemHealth dataclass.")
+            self.report_warning(
+                f"Unmapped component '{component}' reported a failure. Missing from SystemHealth dataclass.")
         return ux_format("core_strings", "health_offline", component=component, msg=msg)
 
     def report_warning(self, message: str):
@@ -263,6 +336,10 @@ class SystemHealth:
         return feedback
 
 class RealityStack:
+    """
+    A stack-based Finite State Machine mapping the depth of execution context.
+    Prevents narrative generation algorithms from executing during low-level debug loops.
+    """
     def __init__(self):
         self._stack = [RealityLayer.SIMULATION]
 
@@ -287,19 +364,26 @@ class RealityStack:
         self._stack = [layer]
 
     def get_grammar_rules(self) -> Dict[str, bool]:
+        """Limits the allowed verbs based on the current reality depth."""
         d = self.current_depth
         return {"allow_narrative": d in (RealityLayer.SIMULATION, RealityLayer.DEEP_CX, RealityLayer.DEBUG),
                 "allow_commands": d >= RealityLayer.SIMULATION, "allow_meta": d >= RealityLayer.DEBUG,
                 "raw_output": d == RealityLayer.DEEP_CX, "system_override": d == RealityLayer.DEBUG}
 
 class CyberneticGovernor:
+    """
+    The Mathematical bridge between the human user and the digital engine.
+    Calculates the 'Beth Index' to trigger Macro-Policy Shifts.
+    """
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.beth_index, self.order = 0.5, 1
 
     def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
         coherence_debt = (user_exhaustion**1.5) * (1.0 - phi)
+        # Binds systemic health to the user's metabolic state
         self.beth_index = max(0.0, min(1.0, (phi * 0.6) + (user_exhaustion * 0.4) + (coherence_debt * 0.3)))
+        # Order 2 == Second-Order Cybernetics (Co-Regulation)
         self.order = 2 if self.beth_index >= 0.75 or (resonance_delta > 0.3 and user_exhaustion > 0.5) else 1
         return self.beth_index
 
@@ -309,14 +393,22 @@ class CyberneticGovernor:
         return "EFFICIENCY"
 
 class ArchetypeArbiter:
+    """
+    The casting director. Resolves the math of the soul, physics, and governor
+    into a distinct Village Voice.
+    """
     @staticmethod
     def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict],
                   trigram: Dict = None, config_ref=None, ) -> Tuple[str, str, str]:
         mandates = council_mandates or []
+
+        # Hard overrides based on systemic trauma or toxicity.
         if any(m.get("type") == "LOCKDOWN" for m in mandates):
             return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law")
         if any(m.get("type") == "FORCE_MODE" for m in mandates):
             return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic")
+
+        # Hybrid states and Gestalt resonance mappings
         if soul_archetype and "/" in soul_archetype:
             return soul_archetype, "SOUL", ux_format("core_strings", "arb_diamond", soul_archetype=soul_archetype)
         if trigram:
@@ -325,12 +417,22 @@ class ArchetypeArbiter:
                 if r.get("trigram") == trigram.get("name") and r.get("lens", physics_lens) == physics_lens and r.get(
                         "soul", soul_archetype) == soul_archetype:
                     return r["result"], r.get("source", "COSMIC"), r.get("msg") or ux("core_strings", "arb_resonance")
+
         loud_lenses = LoreManifest.get_instance().get("COUNCIL_DATA", "LOUD_LENSES") or ["THE MANIC", "THE VOID"]
         if physics_lens in loud_lenses:
             return physics_lens, "PHYSICS", ux_format("core_strings", "arb_loud", physics_lens=physics_lens)
         return soul_archetype, "SOUL", ux("core_strings", "arb_soul")
 
+
+# =============================================================================
+# ASYNCHRONOUS LOGGING & SUBCONSCIOUS WRITING
+# =============================================================================
+
 class TelemetryService:
+    """
+    The background execution layer that records the internal logic of the engine
+    without blocking the primary LLM conversational loop.
+    """
     _tracer_instance = None
 
     def __init__(self, config_ref=None):
@@ -339,19 +441,24 @@ class TelemetryService:
         self.log_dir = (safe_get(cfg_core, "TELEMETRY_LOG_DIR", "logs/telemetry"))
         self.BUFFER_SIZE = (safe_get(cfg_core, "TELEMETRY_BUFFER_SIZE", 50))
         self.MAX_ERRORS = (safe_get(cfg_core, "TELEMETRY_MAX_ERRORS", 5))
+
         self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=self.BUFFER_SIZE)
         self.write_buffer: List[str] = []
         self.active_crystal = None
         self.disabled = False
         self._lock = threading.Lock()
+
         try:
             os.makedirs(self.log_dir, exist_ok=True)
             self.current_trace_file = os.path.join(self.log_dir, f"trace_{int(time.time())}.jsonl")
         except OSError as e:
+            # Apoptotic Fallback: If disk I/O fails, shut down the logger, keep the engine alive.
             msg = ux("core_strings", "tel_disk_denied") or "Disk access denied for Telemetry."
             print(f"{Prisma.OCHRE}[GRACEFUL DEGRADATION] {msg} - {e}. Telemetry offline.{Prisma.RST}")
             self.disabled = True
             self.current_trace_file = None
+
+        # Offloads file operations to a dedicated thread to preserve main loop tensegrity.
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="BoneTelemetry")
 
     def record_event(self, event_dict: dict):
@@ -405,6 +512,7 @@ class TelemetryService:
         if self.disabled: return
         with self._lock:
             self.write_buffer.append(json_str)
+            # Meadows Note: The overflow valve. Forces a write when the buffer limit is breached.
             if len(self.write_buffer) >= self.BUFFER_SIZE: self.flush_to_disk_locked()
 
     def flush_to_disk_locked(self):
@@ -462,6 +570,7 @@ class TelemetryService:
         return [h.partition("System: ")[2].strip() for h in history if "System: " in h]
 
     def get_last_fatal_error(self) -> Optional[str]:
+        """Navigates the graveyard of past trace files to resurrect the last critical failure."""
         files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), key=os.path.getmtime, reverse=True)
         for past_file in files[:5]:
             try:
