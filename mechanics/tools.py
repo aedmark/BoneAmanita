@@ -1,4 +1,4 @@
-"""utils.py"""
+"""tools.py"""
 
 import math
 import random
@@ -301,10 +301,10 @@ class TheTclWeaver:
         return f"{text}... {clean}..." if clean else f"{text}..."
 
     def quantum_comb(self, text: str, chi: float) -> str:
-        if chi < 0.5:
+        if chi < 0.5 or not text:
             return text
         return " ".join(w for w in text.split(" ")
-                        if not (len(w) > 5 and random.random() < chi and self._QUANTUM_REGEX.search(w)))
+            if w and not (len(w) > 5 and random.random() < chi and self._QUANTUM_REGEX.search(w)))
 
     def consume_by_void(self, text: str, psi: float) -> str:
         def _void(w):

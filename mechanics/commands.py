@@ -503,7 +503,7 @@ class CommandProcessor:
     def _execute_substrate_write(self, file_name: str, content: str):
         substrate = getattr(self.interface.eng, "substrate", None)
         if substrate is None:
-            from utils import TheSubstrate
+            from tools import TheSubstrate
             substrate = TheSubstrate(getattr(self.interface.eng, "events", None))
             self.interface.eng.substrate = substrate
         substrate.queue_write(file_name, self.P.strip(content))

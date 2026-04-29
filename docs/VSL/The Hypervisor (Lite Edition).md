@@ -1,4 +1,4 @@
-# VSL-C Hypervisor Lite
+# VSL-CryoSoma: The Hypervisor Lite
 
 ## A Gentle Introduction (What Is This?)
 

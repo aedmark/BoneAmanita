@@ -114,25 +114,12 @@ class LinguisticAnalyzer:
         self.PHONETICS = {k: set(v) for k, v in raw_phonetics.items()}
         raw_roots = ling_data.get("ROOTS", {})
         self.ROOTS = {k: tuple(v) for k, v in raw_roots.items()}
-        self.thresholds = ling_data.get(
-            "THRESHOLDS",
-            {
-                "heavy_density": 0.55,
-                "play_vitality": 0.6,
-                "kinetic_flow": 0.6,
-            },
-        )
-        self.biases = ling_data.get("BIASES", {
-            "heavy": 1.0,
-            "play": 1.0,
-            "kinetic": 1.0
-        })
+        self.thresholds = ling_data.get("THRESHOLDS",{"heavy_density": 0.55, "play_vitality": 0.6, "kinetic_flow": 0.6,},)
+        self.biases = ling_data.get("BIASES", {"heavy": 1.0, "play": 1.0, "kinetic": 1.0})
         self.dimension_map = ling_data.get("DIMENSION_MAP", {})
-        self.char_to_sound = {
-            char: sound
+        self.char_to_sound = {char: sound
             for sound, chars in self.PHONETICS.items()
-            for char in chars
-        }
+            for char in chars}
         self.plosive_chars = self.PHONETICS.get("PLOSIVE", set())
         self.flow_chars = self.PHONETICS.get("LIQUID", set()) | self.PHONETICS.get("VOWELS", set())
         self.compile_antigens()
@@ -212,9 +199,7 @@ class LinguisticAnalyzer:
         xlate = self._TRANSLATOR or str.maketrans("", "")
         cleaned_text = normalized.translate(xlate).lower()
         if getattr(self, "ANTIGEN_REGEX", None):
-            cleaned_text = self.ANTIGEN_REGEX.sub(
-                lambda m: self.store.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""), cleaned_text
-            )
+            cleaned_text = self.ANTIGEN_REGEX.sub(lambda m: self.store.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""), cleaned_text)
         bias_set = getattr(self.store, "USER_FLAGGED_BIAS", set())
         return [w for w in cleaned_text.split() if w not in bias_set]
 
@@ -285,11 +270,9 @@ class SemanticField:
             flux = self.analyzer.calculate_flux(self.current_vector, new_vector)
             self.momentum = (self.momentum * 0.7) + (flux * 0.3)
             all_dimensions = self.current_vector.keys() | new_vector.keys()
-            self.current_vector = {
-                dimension: round(
+            self.current_vector = {dimension: round(
                     (self.current_vector.get(dimension, 0.0) * 0.6) + (new_vector.get(dimension, 0.0) * 0.4), 3)
-                for dimension in all_dimensions
-            }
+                for dimension in all_dimensions}
 
         self.history.append((time.time(), flux))
         return self.current_vector
@@ -310,15 +293,15 @@ class LexiconService:
         self._STORE.load_vocabulary()
         self._ANALYZER = LinguisticAnalyzer(self._STORE)
         self.SOLVENTS = self._STORE.SOLVENTS
+        ling_data = LoreManifest.get_instance().get("LINGUISTICS") or {}
+        self.PRIORITY_ORDER = ling_data.get("PRIORITY_ORDER", [])
         if events_ref:
             events_ref.subscribe("MYTHOLOGY_UPDATE", self._on_mythology_update)
-        ling_data = LoreManifest.get_instance().get("LINGUISTICS") or {}
 
     def _on_mythology_update(self, payload: dict):
         if not payload or not isinstance(payload, dict): return
         if (word := payload.get("word")) and (category := payload.get("category")):
             self.teach(word, category, tick=int(time.time()))
-        self.PRIORITY_ORDER = ling_data.get("PRIORITY_ORDER", [])
         total_words = sum(len(s) for s in self._STORE.VOCAB.values())
         msg = ux("lexicon_strings", "sys_nominal")
         if msg:
@@ -364,7 +347,7 @@ class LexiconService:
     def taste(self, word: str) -> Tuple[Optional[str], float]:
         known_cats = self._STORE.get_categories_for_word(word)
         if known_cats:
-            for p_cat in getattr(self, "PRIORITY_ORDER", []):
+            for p_cat in self.PRIORITY_ORDER:
                 if p_cat in known_cats:
                     return p_cat, 1.0
             return next(iter(known_cats)), 1.0

@@ -4,16 +4,12 @@ import random
 import math
 from dataclasses import dataclass
 from typing import Tuple, Optional, List, Dict, Any
-from body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, MetabolicGovernor
-from brain import DreamEngine
+from body import BioSystem
 from core import LoreManifest, ux, safe_get, safe_set
-from lexicon import LexiconService
-from physics import TheGatekeeper, QuantumObserver, SurfaceTension, CosmicDynamics
+from mechanics.lexicon import LexiconService
 from presets import BoneConfig
 from protocols import LimboLayer
-from spores import MycelialNetwork, ImmuneMycelium, BioLichen, BioParasite
-from constants import MindSystem, PhysSystem, PhysicsPacket, Prisma
-from village import MirrorGraph, TheCartographer
+from constants import PhysSystem, PhysicsPacket, Prisma, MindSystem
 
 class TheCrucible:
     def __init__(self, config_ref=None):
@@ -274,10 +270,10 @@ class TheTheremin:
 
 @dataclass
 class SystemEmbryo:
-    mind: MindSystem
-    limbo: LimboLayer
-    bio: BioSystem
-    physics: PhysSystem
+    mind: 'MindSystem'
+    limbo: 'LimboLayer'
+    bio: 'BioSystem'
+    physics: 'PhysSystem'
     shimmer: Any
     is_gestating: bool = True
     soul_legacy: Optional[Dict] = None
@@ -375,6 +371,9 @@ class ThePacemaker:
 class BoneArchitect:
     @staticmethod
     def _construct_mind(events, lex, config_ref=None) -> Tuple[MindSystem, LimboLayer]:
+        from spores.network import MycelialNetwork
+        from brain.mind import DreamEngine
+        from archetypes.village import MirrorGraph
         target_cfg = config_ref or BoneConfig
         _mem = MycelialNetwork(events)
         limbo = LimboLayer(config_ref=target_cfg)
@@ -386,6 +385,9 @@ class BoneArchitect:
 
     @staticmethod
     def _construct_bio(events, mind, lex, config_ref=None) -> BioSystem:
+        from body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, \
+            MetabolicGovernor
+        from spores import ImmuneMycelium, BioLichen, BioParasite
         target_cfg = config_ref or BoneConfig
         cfg = getattr(target_cfg, "METABOLISM", None)
         genesis_val = safe_get(cfg, "GENESIS_VOLTAGE", 100.0)
@@ -407,6 +409,8 @@ class BoneArchitect:
 
     @staticmethod
     def _construct_physics(events, bio, mind, lex, config_ref=None) -> PhysSystem:
+        from archetypes.village import TheCartographer
+        from physics import TheGatekeeper, QuantumObserver, SurfaceTension, CosmicDynamics
         target_cfg = config_ref or BoneConfig
         gate = TheGatekeeper(lex, config_ref=target_cfg)
         return PhysSystem(

@@ -7,9 +7,8 @@ import re
 from typing import Dict, Any
 from core import LoreManifest, ux, ux_format, safe_get
 from presets import BoneConfig
-from symbiosis import get_symbiont
+from archetypes.symbiosis import get_symbiont
 from constants import Prisma
-from machine import TheParadoxEngine
 
 class TheStrangeLoop:
     def __init__(self):
@@ -168,6 +167,7 @@ class CouncilChamber:
         self.overseer_council = TheOverseerCouncil()
         self.red_team = TheRedTeam()
         if not hasattr(self.eng, "paradox_engine"):
+            from machine import TheParadoxEngine
             self.eng.paradox_engine = TheParadoxEngine(getattr(
                 self.eng, "events", None))
         symbiont_cfg = LoreManifest.get_instance().get("SYMBIOSIS_CONFIG", "SYMBIONT_VOICES")

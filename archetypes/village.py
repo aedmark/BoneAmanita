@@ -8,7 +8,7 @@ from itertools import chain
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Tuple, Optional, Set
 from presets import BoneConfig
-from core import LoreManifest, EventBus, ux, safe_get, safe_set
+from core import LoreManifest, EventBus, ux, safe_get
 from physics import PhysicsDelta
 from constants import Prisma, PhysicsPacket
 
@@ -78,8 +78,15 @@ class TheTinkerer:
             new_name, new_data = self.akashic.forge_new_item(vector)
             self.gordon.register_dynamic_item(new_name, new_data)
             self.gordon.acquire(new_name)
+
+            if hasattr(self.gordon, "remove_item"):
+                self.gordon.remove_item(old_name)
+            elif old_name in getattr(self.gordon, "inventory", []):
+                self.gordon.inventory.remove(old_name)
+
             if old_name in inventory_list:
                 inventory_list[inventory_list.index(old_name)] = new_name
+
             self.tool_resonance[new_name] = resonance / _cfg_val(self.cfg, "VILLAGE", "TINKER_ASCENSION_HALVE", 2.0)
             self.tool_resonance.pop(old_name, None)
             if msg := ux("village_strings", "tinkerer_ascension"):
@@ -92,9 +99,9 @@ class ParadoxSeed:
     maturity: float = 0.0
     bloomed: bool = False
 
-    def water(self, words: List[str], config_ref=None) -> bool:
+    def water(self, word_counts: Dict[str, int], config_ref=None) -> bool:
         if self.bloomed: return False
-        if hits := sum(1 for w in words if w in self.triggers):
+        if hits := sum(word_counts[t] for t in self.triggers if t in word_counts):
             self.maturity += hits * _cfg_val(config_ref, "VILLAGE", "SEED_MATURITY_STEP", 0.2)
         return self.maturity >= _cfg_val(config_ref, "VILLAGE", "SEED_MATURITY_MAX", 5.0)
 
@@ -142,6 +149,7 @@ class GeniusLoci:
     local_items: List[str] = field(default_factory=list)
     visited_count: int = 0
     entropy_buildup: float = 0.0
+    state_key: str = "prime"
 
     def description(self) -> str:
         parts = [f"LOCATION: {self.name}", f"ATMOSPHERE: {self.atmosphere}", f"SMELL: {self.smell}"]
@@ -169,17 +177,18 @@ class TheCartographer:
     def apply_environment(self, packet: PhysicsPacket) -> List[str]:
         if not (node := self.world_graph.get(self.current_node_id)): return []
         logs = []
-        atmos = node.atmosphere.lower()
-        if "heavy" in atmos:
+
+        if node.state_key == "deep":
             ch = _cfg_val(self.cfg, "VILLAGE", "CARTO_HEAVY_DRAG", 2.0)
             packet.narrative_drag += ch
             if msg := ux("village_strings", "carto_env_heavy"):
                 logs.append(f"{Prisma.GRY}{msg.format(c_heavy=ch)}{Prisma.RST}")
-        if "vibrating" in atmos:
+        if node.state_key == "flux":
             cv = _cfg_val(self.cfg, "VILLAGE", "CARTO_STATIC_VOLT", 1.0)
             packet.voltage += cv
             if msg := ux("village_strings", "carto_env_static"):
                 logs.append(f"{Prisma.YEL}{msg.format(c_static=cv)}{Prisma.RST}")
+
         ce = _cfg_val(self.cfg, "VILLAGE", "CARTO_ENTROPY_STEP", 0.1)
         node.entropy_buildup += ce
         if node.entropy_buildup > _cfg_val(self.cfg, "VILLAGE", "CARTO_ENTROPY_CAP", 5.0):
@@ -228,7 +237,8 @@ class TheCartographer:
         name_suffix = ux("village_strings", f"loci_{state_key}_suffix") or ""
         atmos = ux("village_strings", f"loci_{state_key}_atmos") or "Unsettlingly quiet."
         smell = ux("village_strings", f"loci_{state_key}_smell") or "Dust and ozone."
-        return GeniusLoci(id=node_id, name=f"{name} {name_suffix}".strip().upper(), atmosphere=atmos, smell=smell)
+        return GeniusLoci(id=node_id, name=f"{name} {name_suffix}".strip().upper(), atmosphere=atmos, smell=smell,
+                          state_key=state_key)
 
     def _prune_graph(self):
         candidates = [k for k in self.world_graph if k not in ("GENESIS_POINT", self.current_node_id)]
@@ -289,10 +299,12 @@ class TownHall:
         blooms = []
         if not self.seeds or not clean_words:
             return blooms
-        lower_words = [w.lower() for w in clean_words]
+
+        word_counts = Counter(w.lower() for w in clean_words)
         prefix = ux("village_strings", "town_bloom") or "A paradox blooms:"
+
         for seed in self.seeds:
-            if not seed.bloomed and seed.water(lower_words, self.cfg):
+            if not seed.bloomed and seed.water(word_counts, self.cfg):
                 formatted_msg = f"{Prisma.MAG}{prefix}{Prisma.RST} {seed.bloom()}"
                 self.events.log(formatted_msg, "VILLAGE_EVENT")
                 blooms.append(formatted_msg)

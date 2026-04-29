@@ -1,4 +1,4 @@
-# VSL CryoSomatic Hypervisor aka The Hypervisor
+# VSL-CryoSoma aka The Hypervisor
 
 A Breakdown _In Plain English_
 

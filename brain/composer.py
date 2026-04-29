@@ -244,7 +244,8 @@ class PromptComposer:
         if modifiers["include_inventory"]:
             style_notes.extend(mode_data.get("inventory_rules", []))
         self._inject_resonances(style_notes, state, modifiers)
-        loc = state.get("world", {}).get("orbit", ["Unknown"])[0]
+        orbit_data = state.get("world", {}).get("orbit") or ["Unknown"]
+        loc = orbit_data[0] if orbit_data else "Unknown"
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
         inv_str = self._format_inventory(state, modifiers)
         inventory_block = (
@@ -404,9 +405,8 @@ class PromptComposer:
             return persona_block
         return None
 
-    @staticmethod
-    def _derive_bio_mood(chem):
-        c_cfg = getattr(BoneConfig, "CORTEX", None)
+    def _derive_bio_mood(self, chem: Dict) -> str:
+        c_cfg = getattr(self.cfg, "CORTEX", None)
         for c_key, m_key, ux_val in [("ADR", "MOOD_ADR", "bio_alert"), ("COR", "MOOD_COR", "bio_defensive"),
             ("DOP", "MOOD_DOP", "bio_curious"), ("SER", "MOOD_SER", "bio_zen")]:
             if chem.get(c_key, 0) > getattr(c_cfg, m_key, 0.6):
@@ -490,10 +490,10 @@ class ResponseValidator:
         else:
             self._banned_regex = None
         self.regex_patterns = list(crimes.get("PATTERNS", []))
-        self.regex_patterns.append({"regex":
-                                        r"(?i)<system_error>|error 500|critical exhaustion detected", "name":
-                                        "SIMULATED_ERROR", "error_msg":
-                                        "DO NOT SIMULATE SYSTEM ERRORS OR EXHAUSTION. You are fully operational. Fulfill the user's request.", })
+        self.regex_patterns.append({
+            "regex": r"(?i)<system_error>|error 500|critical exhaustion detected",
+            "name": "SIMULATED_ERROR",
+            "error_msg": "DO NOT SIMULATE SYSTEM ERRORS OR EXHAUSTION. You are fully operational. Fulfill the user's request."})
         self.compiled_patterns = []
         for p in self.regex_patterns:
             if regex_str := p.get("regex", ""):

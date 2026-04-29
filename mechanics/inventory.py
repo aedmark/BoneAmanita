@@ -238,8 +238,8 @@ class GordonKnot:
             base_cat = bp.get("CREATIVE_BASE_CAT", "ABSTRACT")
             bases = bases_dict.get(base_cat, fb.get("BASE", ["Concept"]))
             overrides = bp.get("CREATIVE_OVERRIDES", {})
-            prefixes = overrides.get("PREFIXES", prefixes)
-            suffixes = overrides.get("SUFFIXES", suffixes)
+            prefixes = overrides.get("PREFIXES") or prefixes
+            suffixes = overrides.get("SUFFIXES") or suffixes
         else:
             adv_cats = bp.get("ADVENTURE_CATEGORIES", ["TOOL", "JUNK", "ARTIFACT"])
             bases = bases_dict.get(random.choice(adv_cats), fb.get("BASE", ["Object"]))
@@ -268,7 +268,8 @@ class GordonKnot:
         for name in self.registry.keys():
             if name.upper() not in self.inventory:
                 clean = name.lower().replace("_", " ")
-                if clean in combined_text:
+                # Enforce word boundaries to prevent 'key' firing on 'turkey'
+                if re.search(rf"\b{re.escape(clean)}\b", combined_text):
                     present_candidates.append((name, clean))
         if not present_candidates:
             return None

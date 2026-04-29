@@ -1,14 +1,15 @@
 """soul.py"""
+
 import json
 import os
 import random
 import time
 from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple, ClassVar
-from akashic import TheAkashicRecord
+from brain.akashic import TheAkashicRecord
 from presets import BoneConfig
 from core import LoreManifest, EventBus, ux, ux_format, safe_get, safe_set
-from lexicon import LexiconService
+from mechanics.lexicon import LexiconService
 from constants import Prisma
 
 @dataclass

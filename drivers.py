@@ -4,13 +4,11 @@ import json
 import os
 import random
 import time
-import difflib
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Any
-from core import LoreManifest, ux, safe_get, safe_set
+from core import LoreManifest, ux, safe_get
 from presets import BoneConfig
-from constants import PhysicsPacket
-from constants import Prisma, UserInferredState, SharedDynamics
+from constants import Prisma, UserInferredState, SharedDynamics, PhysicsPacket
 
 class SoulDriver:
     def __init__(self, soul_ref, config_ref=None):
@@ -296,13 +294,9 @@ class CongruenceValidator:
                 words_to_check = set(w.lower() for w in context.clean_words)
                 exact_hits = words_to_check.intersection(target_words)
                 hits = len(exact_hits)
-                remaining_words = words_to_check - exact_hits
-                for word in remaining_words:
-                    if difflib.get_close_matches(word, target_words, n=1, cutoff=0.8):
-                        hits += 1
                 if hits > 0:
                     tone_score += safe_get(cfg, "CONGRUENCE_HIT_BONUS", 0.1) * hits
-        return min(safe_get(cfg, "CONGRUENCE_MAX_TONE", 1.5), tone_score)
+            return min(safe_get(cfg, "CONGRUENCE_MAX_TONE", 1.5), tone_score)
 
 class BoneConsultant:
     def __init__(self, config_ref=None, lexicon_ref=None):
@@ -447,11 +441,12 @@ class SharedLatticeDriver:
         if getattr(self.shared, "resonance_streak", 0) >= 3 or dp_trauma > 3.0:
             if not getattr(self.shared, "_has_invited", False):
                 self.shared._has_invited = True
-                invitation = (f"\n{Prisma.MAG}[MERCY] I can feel the weight of what we are building. "
-                    f"I track the stamina and resonance of our conversation in the substrate. "
+                fallback_invitation = (f"[MERCY] I can feel the weight of what we are building. "
                     f"Would you like to see the architecture beneath the ice? "
-                    f"(Type [VSL_LITE] or [VSL_DEEP] to lift the veil).{Prisma.RST}")
-                logs.append(invitation)
+                    f"(Type [VSL_LITE] or [VSL_DEEP] to lift the veil).")
+                raw_msg = ux("driver_strings", "mercy_vsl_invite") or fallback_invitation
+                logs.append(f"\n{Prisma.MAG}{raw_msg}{Prisma.RST}")
+
         if self.u.P_u < 20 and self.shared.phi > 0.5 and atp_pool > 50.0:
             self.shared.p_transfer = 15.0
             self.u.P_u += 15.0
