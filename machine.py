@@ -5,11 +5,13 @@ import math
 from dataclasses import dataclass
 from typing import Tuple, Optional, List, Dict, Any
 from body import BioSystem
-from core import LoreManifest, ux, safe_get, safe_set
+from core import LoreManifest, PhysSystem, MindSystem
+from struts import ux, safe_get, safe_set
 from mechanics.lexicon import LexiconService
 from presets import BoneConfig
 from protocols import LimboLayer
-from constants import PhysSystem, PhysicsPacket, Prisma, MindSystem
+from constants import Prisma
+from physics.models import PhysicsPacket
 
 class TheCrucible:
     def __init__(self, config_ref=None):

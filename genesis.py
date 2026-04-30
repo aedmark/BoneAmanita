@@ -3,7 +3,8 @@
 from typing import Dict, Any, Set
 from brain.akashic import TheAkashicRecord
 from presets import BoneConfig
-from core import EventBus, LoreManifest, ux
+from core import EventBus, LoreManifest
+from struts import ux
 from drivers import DriverRegistry, BoneConsultant
 from mechanics.inventory import GordonKnot
 from machine import BoneArchitect

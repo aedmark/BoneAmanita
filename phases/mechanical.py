@@ -1,11 +1,12 @@
 """phases/mechanical.py"""
 
-from constants import CycleContext, Prisma
+from constants import Prisma
 from typing import Any
 from presets import BoneConfig
 from physics import TheGatekeeper
-from core import LoreManifest, ux
-from mechanics.gui import SoulDashboard
+from core import LoreManifest, CycleContext
+from struts import ux
+from mechanics.projector import SoulDashboard
 from phases.base import SimulationPhase, _safe_dict, _deep_update
 
 class MaintenancePhase(SimulationPhase):

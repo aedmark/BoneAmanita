@@ -1,6 +1,8 @@
 """body/__init__.py"""
 
-from .models import (
+from body.endocrine import EndocrineSystem, SemanticEndocrinologist
+from .metabolism import MitochondrialForge, DigestiveTrack
+from body.models import (
     Biometrics,
     MetabolicReceipt,
     SemanticSignal,
@@ -8,8 +10,6 @@ from .models import (
     Qualia,
     MitochondrialState
 )
-from .metabolism import MitochondrialForge, DigestiveTrack
-from .endocrine import EndocrineSystem, SemanticEndocrinologist
 from .regulation import PIDController, MetabolicGovernor, BioFeedback, EndocrineRegulator
 from .somatic import SynestheticCortex
 from .system import BioSystem, SomaticLoop

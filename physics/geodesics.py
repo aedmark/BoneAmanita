@@ -3,7 +3,6 @@
 import math
 from dataclasses import dataclass
 from typing import Dict, List
-from core import LoreManifest
 from presets import BoneConfig
 
 @dataclass
@@ -39,6 +38,7 @@ class GeodesicEngine:
         t_cfg = config_ref or BoneConfig
         cfg = getattr(t_cfg, "PHYSICS", BoneConfig.PHYSICS)
         if GeodesicEngine._CACHED_CONSTANTS is None:
+            from core import LoreManifest
             GeodesicEngine._CACHED_CONSTANTS = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
         gc_dict = GeodesicEngine._CACHED_CONSTANTS
 

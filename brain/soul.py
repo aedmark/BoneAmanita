@@ -8,7 +8,8 @@ from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple, ClassVar
 from brain.akashic import TheAkashicRecord
 from presets import BoneConfig
-from core import LoreManifest, EventBus, ux, ux_format, safe_get, safe_set
+from core import LoreManifest, EventBus
+from struts import ux, ux_format, safe_get, safe_set
 from mechanics.lexicon import LexiconService
 from constants import Prisma
 

@@ -2,7 +2,8 @@
 
 import json, os, uuid
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
-from core import BoneJSONEncoder, LoreManifest, ux, safe_get
+from core import BoneJSONEncoder, LoreManifest
+from struts import ux, safe_get
 from presets import BoneConfig
 from constants import Prisma
 

@@ -8,7 +8,7 @@ from brain.composer import PromptComposer
 from core import EventBus
 from presets import BoneConfig
 from spores import MycelialNetwork, SubconsciousStrata
-from constants import PhysicsPacket
+from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 
 class MemoryTests(BoneTestCase):

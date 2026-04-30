@@ -6,7 +6,8 @@ import random
 import time
 from collections import deque
 from typing import List, Tuple, Optional, Dict
-from core import BoneJSONEncoder, ux, ux_format
+from core import BoneJSONEncoder
+from struts import ux, ux_format
 from presets import BoneConfig
 from spores.spore_utils import _identity, _word_to_vector, _mat_mul, _reorthogonalize, _householder
 

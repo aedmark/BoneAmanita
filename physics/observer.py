@@ -5,9 +5,9 @@ import time
 from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Dict, List, Any, Tuple, Optional, Deque
-from core import LoreManifest, ux, safe_get, safe_set
 from presets import BoneConfig
-from constants import Prisma, PhysicsPacket, SpatialState, MaterialState, EnergyState
+from constants import Prisma
+from physics.models import PhysicsPacket, SpatialState, MaterialState, EnergyState
 from physics.math import CreativeDeterminantEngine
 from physics.geodesics import GeodesicEngine
 
@@ -27,6 +27,7 @@ def apply_metabolic_tax(mito_state: Any, atp_cost: float, ros_cost: float) -> No
     target.ros_buildup = min(100.0, target.ros_buildup + ros_cost)
 
 def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any, config_ref=None) -> PhysicsPacket:
+    from core import LoreManifest
     t_cfg = config_ref or BoneConfig
     fb = physics_packet.snapshot()
     deep_cfg = getattr(t_cfg, "PHYSICS_DEEP", None)
@@ -68,6 +69,7 @@ class QuantumObserver:
         self.Q_n = payload.get("q_matrix")
 
     def gaze(self, text: str, graph: Dict = None) -> Dict:
+        from struts import safe_set
         clean_words = self.lex.clean(text)
         counts = self._tally_categories(clean_words)
         geo = GeodesicEngine.collapse_wavefunction(clean_words, counts, self.cfg)
@@ -149,6 +151,7 @@ class QuantumObserver:
 
     @staticmethod
     def evaluate_silence(time_delta: float, last_phys: Any) -> Optional[str]:
+        from struts import safe_get, safe_set
         if time_delta < 10.0 or not last_phys: return None
         if safe_get(last_phys, "stamina", 50.0) < 30.0:
             safe_set(last_phys, "sigma", 2)
@@ -258,6 +261,7 @@ class CycleStabilizer:
         self.pending_drag = min(50.0, self.pending_drag + amount)
 
     def stabilize(self, physics: Any, endocrine_state: Any = None) -> bool:
+        from struts import safe_get, safe_set, ux
         applied_correction = False
         if self.pending_drag > 0:
             space = getattr(physics, "space", physics)
@@ -295,6 +299,7 @@ class CycleStabilizer:
         return applied_correction or voltage_applied or drag_applied
 
     def _apply_force(self, p, field, force, limits=None) -> bool:
+        from struts import safe_get, safe_set
         if abs(force) <= 0.05:
             return False
         target = getattr(p, "space", p) if field == "narrative_drag" else getattr(p, "energy", p)

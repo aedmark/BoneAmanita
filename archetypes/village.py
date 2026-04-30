@@ -10,7 +10,8 @@ from typing import List, Dict, Any, Tuple, Optional, Set
 from presets import BoneConfig
 from core import LoreManifest, EventBus, ux, safe_get
 from physics import PhysicsDelta
-from constants import Prisma, PhysicsPacket
+from constants import Prisma
+from physics.models import PhysicsPacket
 
 def _cfg_val(cfg_ref, section: str, key: str, default: float) -> float:
     return float(safe_get(getattr(cfg_ref or BoneConfig, section, None), key, default))

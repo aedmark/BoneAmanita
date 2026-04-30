@@ -3,11 +3,13 @@
 import random
 import re
 import unicodedata
-from typing import Dict, List, Any, Tuple, Optional, Deque
-from core import LoreManifest, ux, safe_set
-from presets import BoneConfig
-from constants import Prisma, CycleContext
+from typing import Dict, List, Any, Tuple, Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from core import CycleContext
+from constants import Prisma
 from physics.observer import apply_metabolic_tax
+from presets import BoneConfig
+
 
 class CerebrospinalFluidFilter:
     INVISIBLE_REGEX = re.compile(
@@ -34,6 +36,7 @@ class CerebrospinalFluidFilter:
 
 class HLA_Stabilizer:
     def __init__(self, config_ref=None):
+        from core import LoreManifest
         self.cfg = config_ref or BoneConfig
         style_crimes = LoreManifest.get_instance().get("STYLE_CRIMES")
         if isinstance(style_crimes, dict):
@@ -46,9 +49,9 @@ class HLA_Stabilizer:
         self._weaver = None
 
     def _get_weaver(self):
+        from mechanics.tools import TheTclWeaver
         if self._weaver is None:
             try:
-                from tools import TheTclWeaver
                 self._weaver = TheTclWeaver.get_instance()
             except ImportError:
                 self._weaver = False
@@ -75,6 +78,7 @@ class TheGatekeeper:
     )
 
     def __init__(self, lexicon_ref, config_ref=None):
+        from core import LoreManifest
         self.lex = lexicon_ref
         self.cfg = config_ref or BoneConfig
         self.hla = HLA_Stabilizer(config_ref=self.cfg)
@@ -84,7 +88,9 @@ class TheGatekeeper:
         self._rejection_patterns = style_crimes.get("PATTERNS", [])
         self._default_rejections = style_crimes.get("REJECTIONS", ["[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. CSF FILTER TRIGGERED APOPTOTIC BLOCK.]"])
 
-    def check_entry(self, ctx: CycleContext, current_atp: float = 20.0) -> Tuple[bool, Optional[Dict]]:
+    def check_entry(self, ctx: 'CycleContext', current_atp: float = 20.0) -> Tuple[bool, Optional[Dict]]:
+        from struts import ux, safe_set
+
         def reject(type_str: str, msg_key: str, color: str = Prisma.RED) -> Tuple[bool, Dict]:
             msg = ux("physics_strings", msg_key)
             formatted_msg = f"{color}{msg}{Prisma.RST}" if color else msg

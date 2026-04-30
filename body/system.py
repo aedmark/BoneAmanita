@@ -4,7 +4,8 @@ import math
 from .models import Biometrics
 from dataclasses import dataclass, asdict
 from typing import Optional, Dict, List, Any, TYPE_CHECKING
-from core import Prisma, LoreManifest, ux, safe_get, safe_set
+from core import Prisma, LoreManifest
+from struts import ux, safe_get, safe_set
 from presets import BoneConfig
 from spores import ImmuneMycelium, BioLichen, BioParasite
 from body.metabolism import DigestiveTrack
@@ -132,9 +133,9 @@ class SomaticLoop:
         self.synesthesia = SynestheticCortex(self.bio, config_ref=self.cfg)
         self.narrative_data = (LoreManifest.get_instance(config_ref=self.cfg).get("BIO_NARRATIVE") or {})
         if not self.narrative_data:
-            if hasattr(self.events, "log"):
-                self.events.log(f"{Prisma.OCHRE}[BODY]: Warning - BIO_NARRATIVE missing.{Prisma.RST}", "SYS", )
-            self.narrative_data = {"symptoms": {}, "organs": {}, "GLIMMER": {}, "GOVERNOR": {}, }
+            if self.events:
+                self.events.log(f"{Prisma.OCHRE}[BODY]: Warning - BIO_NARRATIVE missing.{Prisma.RST}", "SYS")
+            self.narrative_data = {"symptoms": {}, "organs": {}, "GLIMMER": {}, "GOVERNOR": {}}
         self.bio.endo.narrative_data = self.narrative_data
         self.bio.governor.narrative_data = self.narrative_data
 
@@ -150,8 +151,7 @@ class SomaticLoop:
         max_stamina = float(safe_get(self.cfg, "MAX_STAMINA", 100.0))
         b.health = max(0.0, min(max_health, health))
         b.stamina = max(0.0, min(max_stamina, stamina))
-        if hasattr(self.bio, "apply_environmental_entropy"):
-            self.bio.apply_environmental_entropy(phys)
+        self.bio.apply_environmental_entropy(phys)
         modifier = self.regulator.get_metabolic_modifier(phys, logs)
         delta_silence = float(safe_get(phys, "silence", 0.0))
         if delta_silence > 0.6:
@@ -175,7 +175,7 @@ class SomaticLoop:
             b.stamina = 10.0
         total_yield = 0.0
         enzyme = "NONE"
-        clean_words = getattr(phys, "clean_words", [])
+        clean_words = safe_get(phys, "clean_words", [])
         if self.bio.lichen:
             sugar, photo_log = self.bio.lichen.photosynthesize(
                 phys, clean_words, tick_count)
@@ -194,12 +194,12 @@ class SomaticLoop:
         b.stamina = max(0.0, min(max_stamina, b.stamina + stamina_impact))
         qualia = self.synesthesia.get_current_qualia(impulse, config_ref=self.cfg)
         fb_dict.update({
-            "PSI": float(phys.get("psi", 0.0)),
-            "CHI": float(phys.get("chi", 0.0)),
-            "VALENCE": float(phys.get("valence", 0.0)),
+            "PSI": float(safe_get(phys, "psi", 0.0)),
+            "CHI": float(safe_get(phys, "chi", 0.0)),
+            "VALENCE": float(safe_get(phys, "valence", 0.0)),
             "INTEGRITY": semantic_sig.coherence,
             "NOVELTY": semantic_sig.novelty,
-            "STATIC": float(phys.get("entropy", 0.0)),
+            "STATIC": float(safe_get(phys, "entropy", 0.0)),
         })
         chem_state = self.bio.endo.metabolize(feedback=fb_dict, health=b.health, stamina=b.stamina,
             ros_level=self.bio.mito.state.ros_buildup, receipt=receipt,

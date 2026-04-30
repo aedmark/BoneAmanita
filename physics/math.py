@@ -3,7 +3,6 @@
 import math
 from collections import Counter, deque
 from typing import List, Tuple
-from core import safe_get
 
 def _native_ordinal_pattern(window: List[float]) -> Tuple[int, ...]:
     return tuple(i for i, v in sorted(enumerate(window), key=lambda x: x[1]))
@@ -94,7 +93,11 @@ class NaviSADProtocol:
 
     def execute_nudge_test(self, engine_ref, prompt: str = "") -> bool:
         obs = getattr(engine_ref, "observer", None)
-        energy = safe_get(getattr(obs, "last_physics_packet", None), "energy")
+        packet = getattr(obs, "last_physics_packet", None)
+        if isinstance(packet, dict):
+            energy = packet.get("energy")
+        else:
+            energy = getattr(packet, "energy", None)
         return getattr(energy, "i_c", 1.0) < 0.4
 
     def detect_point_attractor(self) -> bool:

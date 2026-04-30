@@ -2,12 +2,12 @@
 
 from unittest.mock import patch, MagicMock
 from brain.composer import PromptComposer
-from core import LoreManifest
+from core import LoreManifest, CycleContext
 from cycle import MetabolismPhase, SimulationPreflightPhase
 from drivers import SharedLatticeDriver
-from mechanics.gui import CycleReporter
+from mechanics.reporter import CycleReporter
 from physics import ChromaScope
-from constants import PhysicsPacket, EnergyState, CycleContext
+from physics.models import PhysicsPacket, EnergyState
 from archetypes.village import DeathGen
 from tests.base import BoneTestCase
 
@@ -126,8 +126,7 @@ class RandomTest(BoneTestCase):
             )
 
     def test_telemetry_phase_hooks(self):
-            from core import TelemetryService
-            from constants import DecisionCrystal
+            from core import TelemetryService, DecisionCrystal
             manifest = LoreManifest.get_instance()
             if "ux_strings" not in manifest._cache:
                 manifest._cache["ux_strings"] = {}
@@ -276,7 +275,8 @@ class RandomTest(BoneTestCase):
 
     def test_productive_worry_godel_scar_math(self):
             from cycle import SimulationPreflightPhase
-            from constants import CycleContext, PhysicsPacket
+            from core import CycleContext
+            from physics.models import PhysicsPacket
             phase = SimulationPreflightPhase(self.engine)
             phys = PhysicsPacket()
             phys.narrative_drag = 6.0
@@ -300,7 +300,8 @@ class RandomTest(BoneTestCase):
 
     def test_democratic_tie_breaker_gestalt(self):
             from cycle import ArbitrationPhase
-            from constants import CycleContext, PhysicsPacket, EnergyState
+            from core import CycleContext
+            from physics.models import PhysicsPacket, EnergyState
             phase = ArbitrationPhase(self.engine)
             ctx = CycleContext(
                 input_text="test",

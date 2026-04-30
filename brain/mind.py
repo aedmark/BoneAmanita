@@ -8,14 +8,18 @@ creativity, and capacity for REM sleep.
 It does NOT execute LLM calls directly; it prepares the biological soil for them.
 """
 
-import math, random, time, re
+import math
+import random
+import re
 from collections import deque
 from dataclasses import dataclass
-from typing import Dict, Any, List, Tuple, Optional
-from presets import BoneConfig
+from typing import Dict, Any, Tuple, Optional
+
 from brain.ann import MemoryConsolidator
-from core import LoreManifest, ux, safe_get, safe_set
 from constants import Prisma
+from struts import  ux, safe_get
+from presets import BoneConfig
+
 
 @dataclass
 class ChemicalState:
@@ -43,11 +47,13 @@ class ChemicalState:
             if val is not None:
                 setattr(self, attr, (getattr(self, attr) * inv_w) + (val * weight))
 
+
 class NeurotransmitterModulator:
     """
     The Mathematical Translator.
     Maps abstract feelings (Cortisol) to literal LLM API parameters (Top_P, Temp).
     """
+
     def __init__(self, bio_ref, events_ref=None, config_ref=None):
         self.bio = bio_ref
         self.events = events_ref
@@ -60,7 +66,8 @@ class NeurotransmitterModulator:
         self.SELF_CARE_THRESHOLD = getattr(cfg, "SELF_CARE_THRESHOLD", 10)
         self.starvation_ticks = 0
 
-    def modulate(self, base_voltage: float, latency_penalty: float = 0.0, physics_state: Dict[str, float] = None, simulate: bool = False) -> Dict[str, Any]:
+    def modulate(self, base_voltage: float, latency_penalty: float = 0.0, physics_state: Dict[str, float] = None,
+                 simulate: bool = False) -> Dict[str, Any]:
         """Calculates Temperature, Top_P, Penalties, and Max Tokens based on chemical mood."""
         if physics_state is None:
             physics_state = {}
@@ -69,7 +76,7 @@ class NeurotransmitterModulator:
             incoming_chem = self.bio.endo.get_state() if self.bio else {}
             self.current_chem.homeostasis(rate=safe_get(cfg, "BASE_DECAY_RATE", 0.1))
             plasticity = safe_get(cfg, "BASE_PLASTICITY", 0.1) + (
-                base_voltage * safe_get(cfg, "VOLTAGE_SENSITIVITY", 0.05))
+                    base_voltage * safe_get(cfg, "VOLTAGE_SENSITIVITY", 0.05))
             plasticity = max(0.1, min(safe_get(cfg, "MAX_PLASTICITY", 1.0), plasticity))
             self.current_chem.mix(incoming_chem, weight=min(0.5, plasticity))
             if self.current_chem.dopamine < 0.15:
@@ -93,25 +100,21 @@ class NeurotransmitterModulator:
         elif c.serotonin > mood_thresholds.get("ZEN_SER", 0.8):
             current_mood = "ZEN"
         if current_mood != self.last_mood and self.events:
-            self.events.publish(
-                "NEURAL_STATE_SHIFT",
-                {
-                    "state": current_mood, "chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin},
-                },
-            )
+            self.events.publish("NEURAL_STATE_SHIFT",
+                                {"state": current_mood,
+                                 "chem": {"DOP": c.dopamine, "COR": c.cortisol, "SER": c.serotonin}, }, )
             self.last_mood = current_mood
         v_offset = safe_get(cfg, "TEMP_VOLTAGE_OFFSET", 5.0)
         v_scalar = safe_get(cfg, "TEMP_VOLTAGE_SCALAR", 0.1)
         voltage_heat = math.log1p(max(0.0, base_voltage - v_offset)) * v_scalar
         chem_weights = safe_get(cfg, "TEMP_CHEM_WEIGHTS", {"dop": 0.4, "adr": 0.3, "cor": 0.2})
-        chemical_delta = ((c.dopamine * chem_weights.get("dop", 0.4)) -
-                          (c.adrenaline * chem_weights.get("adr", 0.3)) -
-                          (c.cortisol * chem_weights.get("cor", 0.2)))
+        chemical_delta = (
+                    (c.dopamine * chem_weights.get("dop", 0.4)) - (c.adrenaline * chem_weights.get("adr", 0.3)) - (
+                        c.cortisol * chem_weights.get("cor", 0.2)))
         base_temp = safe_get(cfg, "BASE_TEMP", 0.4)
         base_top_p = safe_get(cfg, "BASE_TOP_P", 0.95)
-        chi = float(physics_state.get("chi", physics_state.get("entropy", 0.2)))
-        beta = float(
-            physics_state.get("contradiction", physics_state.get("beta_index", 0.4)))
+        chi = float(safe_get(physics_state, "chi", safe_get(physics_state, "entropy", 0.2)))
+        beta = float(safe_get(physics_state, "contradiction", safe_get(physics_state, "beta_index", 0.4)))
         ent_offset = safe_get(cfg, "TEMP_ENTROPY_OFFSET", 0.5)
         ent_scalar = safe_get(cfg, "TEMP_ENTROPY_SCALAR", 1.5)
         entropy_bonus = max(0.0, chi - ent_offset) * ent_scalar
@@ -125,9 +128,8 @@ class NeurotransmitterModulator:
         base_penalty = min(1.2, 0.5 + beta_weight + chi_weight)
         freq_pen = pres_pen = base_penalty
         token_mods = safe_get(cfg, "TOKEN_CHEM_MODIFIERS", {"dop": 800, "adr": 400, "cor": 200})
-        token_delta = ((c.dopamine * token_mods.get("dop", 800)) -
-                       (c.adrenaline * token_mods.get("adr", 400)) -
-                       (c.cortisol * token_mods.get("cor", 200)))
+        token_delta = ((c.dopamine * token_mods.get("dop", 800)) - (c.adrenaline * token_mods.get("adr", 400)) - (
+                    c.cortisol * token_mods.get("cor", 200)))
         min_tokens = safe_get(cfg, "MIN_TOKENS", 150.0)
         raw_tokens = self.BASE_TOKENS + token_delta
         max_t = int(max(min_tokens, min(float(self.MAX_TOKENS), raw_tokens)))
@@ -137,7 +139,7 @@ class NeurotransmitterModulator:
     def _treat_yourself(self):
         """Mechanically injects dopamine to prevent system starvation."""
         if self.events:
-            msg = ux("brain_strings", "self_care")
+            msg = ux("brain_strings", "self_care") or "Engaging self-care protocols. Resting."
             self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "SYS")
         self.current_chem.dopamine += 0.2
         self.starvation_ticks = 0
@@ -146,17 +148,19 @@ class NeurotransmitterModulator:
         """Returns the natural language prompt injection for the current emotional state."""
         c = self.current_chem
         if c.cortisol > 0.7 and c.adrenaline > 0.7:
-            return ux("brain_strings", "mood_panic")
+            return ux("brain_strings", "mood_panic") or "You are panicking."
         if c.dopamine > 0.8 and c.adrenaline > 0.5:
-            return ux("brain_strings", "mood_manic")
+            return ux("brain_strings", "mood_manic") or "You are manic and inspired."
         if c.serotonin > 0.7:
-            return ux("brain_strings", "mood_lucid")
+            return ux("brain_strings", "mood_lucid") or "You are calm and lucid."
         if c.cortisol > 0.6:
-            return ux("brain_strings", "mood_defensive")
-        return ux("brain_strings", "mood_neutral")
+            return ux("brain_strings", "mood_defensive") or "You feel defensive and on edge."
+        return ux("brain_strings", "mood_neutral") or ""
+
 
 class NoeticLoop:
     """The background evaluator determining if physical tension should spark an autonomous thought."""
+
     def __init__(self, mind_layer, bio_layer, _events, config_ref=None):
         self.mind = mind_layer
         self.bio = bio_layer
@@ -197,11 +201,13 @@ class NoeticLoop:
                 graph[a] = {"edges": {}, "last_tick": 0}
             graph[a]["edges"][b] = min(max_edge, graph[a]["edges"].get(b, 0) + edge_boost)
 
+
 class DreamEngine:
     """
     Handles background processing, vector indexing, and trauma consolidation
     during periods of system REST or IDLE.
     """
+
     def __init__(self, events, lore_ref, llm_ref=None, mem_ref=None, eng_ref=None, config_ref=None, ):
         self.events = events
         self.lore = lore_ref
@@ -251,7 +257,9 @@ class DreamEngine:
                 if nodes_moved > 10:
                     dream_text = f"The system enters Deep REM. {nodes_moved} synaptic structures dissolve from the active cache and permanently crystallize into the deep Cerebral Cortex."
                     if self.events:
-                        self.events.log(f"{{Prisma.MAG}}✨ [REM CYCLE]: Synaptic Consolidation complete. {nodes_moved} nodes written to deep index. (-{atp_cost:.1f} ATP){{Prisma.RST}}", "SYS",)
+                        self.events.log(
+                            f"{{Prisma.MAG}}✨ [REM CYCLE]: Synaptic Consolidation complete. {nodes_moved} nodes written to deep index. (-{atp_cost:.1f} ATP){{Prisma.RST}}",
+                            "SYS", )
         if self.dspy_critic and self.dspy_critic.enabled:
             if self.trauma_buffer:
                 trauma = self.trauma_buffer.popleft()
@@ -288,9 +296,9 @@ class DreamEngine:
             if len(index) >= 2:
                 ghost1, ghost2 = random.sample(index, 2)
                 prompt = (f"SYSTEM_INSTRUCTION: You are the autonomous dream-engine of a cybernetic lattice. "
-                    f"Your task is to defragment two dead, cannibalized concepts: [{ghost1.upper()}] and [{ghost2.upper()}]. "
-                    f"Synthesize them into a single, highly surreal, abstract image. "
-                    f"DO NOT explain the dream. DO NOT use UI tags. Output ONLY the 2-3 sentence narrative description of the dream.")
+                          f"Your task is to defragment two dead, cannibalized concepts: [{ghost1.upper()}] and [{ghost2.upper()}]. "
+                          f"Synthesize them into a single, highly surreal, abstract image. "
+                          f"DO NOT explain the dream. DO NOT use UI tags. Output ONLY the 2-3 sentence narrative description of the dream.")
                 try:
                     raw_dream = self.llm.generate(prompt, {"temperature": 0.9, "max_tokens": 150})
                     clean_dream = Prisma.strip(raw_dream).replace("\n", " ").strip()
@@ -300,7 +308,8 @@ class DreamEngine:
                 except Exception:
                     pass
         if not dream_text:
-            dream_type = ("NIGHTMARES" if cortisol > 0.6 else ("SURREAL" if chem.get("dopamine", 0) > 0.6 else "CONSTRUCTIVE"))
+            dream_type = (
+                "NIGHTMARES" if cortisol > 0.6 else ("SURREAL" if chem.get("dopamine", 0) > 0.6 else "CONSTRUCTIVE"))
             residue = soul_snapshot.get("obsession", {}).get("title") or "The Void"
             dream_text = self._weave_dream(residue, dream_type, "SURREAL")
         if dream_text and hasattr(self.mem, "subconscious"):
@@ -326,13 +335,14 @@ class DreamEngine:
         if not sources:
             sources = self.dream_lore.get(subtype.upper(), ["You stare into the static."])
         if isinstance(sources, dict):
-            sources = [item for v in sources.values() for item in (v if isinstance(v, list) else [v])] or ["The void stares back."]
+            sources = [item for v in sources.values() for item in (v if isinstance(v, list) else [v])] or [
+                "The void stares back."]
         if self.llm:
             lore_sample = ", ".join(random.sample(sources, min(3, len(sources))))
             prompt = (f"SYSTEM_INSTRUCTION: You are the dream-engine of a cybernetic lattice. "
-                f"Generate a surreal 2-sentence {dream_type.lower()} involving '{residue}'. "
-                f"Use this lore as thematic inspiration: [{lore_sample}]. "
-                f"DO NOT explain the dream. Output ONLY the narrative description.")
+                      f"Generate a surreal 2-sentence {dream_type.lower()} involving '{residue}'. "
+                      f"Use this lore as thematic inspiration: [{lore_sample}]. "
+                      f"DO NOT explain the dream. Output ONLY the narrative description.")
             try:
                 raw_dream = self.llm.generate(prompt, {"temperature": 0.85, "max_tokens": 80})
                 return raw_dream.replace("\n", " ").strip()
@@ -343,7 +353,8 @@ class DreamEngine:
 
     def generate_shared_dream(self, psi_sys: float, psi_user: float) -> Optional[str]:
         if psi_sys > 0.5 and psi_user > 0.5 and self.llm:
-            prompt = ("SYSTEM_INSTRUCTION: You are Cassandra (The Mystic). Both the user and the system are drifting near the Void (Psi > 0.5). "
+            prompt = (
+                "SYSTEM_INSTRUCTION: You are Cassandra (The Mystic). Both the user and the system are drifting near the Void (Psi > 0.5). "
                 "Generate a 2-sentence 'Shared Dream' that you both just experienced in the silence. "
                 "DO NOT explain it. Make it surreal, beautiful, and deeply resonant. Start the response EXACTLY with: '*(CASSANDRA): We both saw...*'")
             try:
@@ -364,15 +375,17 @@ class DreamEngine:
             templates = [item for v in templates.values() for item in (v if isinstance(v, list) else [v])]
         if not templates:
             return "The walls breathe.", 0.1
-        from tools import TheTclWeaver
+        from mechanics.tools import TheTclWeaver
         weaver = TheTclWeaver.get_instance()
+
         v = _vector or {}
         active_chi = v.get("chi", v.get("entropy", 0.85))
         active_v = v.get("voltage", 90.0)
         txt = None
         if self.llm:
             lore_sample = ", ".join(random.sample(templates, min(3, len(templates))))
-            prompt = (f"SYSTEM_INSTRUCTION: You are a cybernetic hallucination engine. The system is experiencing high entropy (Chaos: {active_chi:.2f}). "
+            prompt = (
+                f"SYSTEM_INSTRUCTION: You are a cybernetic hallucination engine. The system is experiencing high entropy (Chaos: {active_chi:.2f}). "
                 f"Generate a 1-sentence surreal {category.lower()} hallucination. "
                 f"Thematic inspiration: [{lore_sample}]. "
                 f"DO NOT explain it. Output ONLY the raw hallucination.")
