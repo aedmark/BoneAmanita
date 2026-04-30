@@ -1,29 +1,25 @@
 """main.py
 
 The Macro-Organism and Central Orchestrator.
-This file contains the initialization wizard, the terminal UI wrapper,
-and the primary BoneAmanita engine loop that binds the physical, biological,
-and cognitive layers into a single continuous state machine.
+This file contains the primary BoneAmanita engine loop that binds the physical,
+biological, and cognitive layers into a single continuous state machine.
 """
 
-import json
 import os
-import random
-import re
-import sys
 import time
 import traceback
-import subprocess
 import uuid
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple
+
 from body import SomaticLoop
 from brain.cortex import TheCortex
 from brain.mind import NoeticLoop
 from brain.composer import LLMInterface
 from mechanics.commands import CommandProcessor
 from presets import BoneConfig, BonePresets
-from core import EventBus, SystemHealth, TheObserver, LoreManifest, TelemetryService, RealityStack, ux, safe_get, safe_set
+from core import EventBus, SystemHealth, TheObserver, LoreManifest, TelemetryService, RealityStack
+from struts import ux, safe_get, safe_set
 from archetypes.council import CouncilChamber
 from cycle import GeodesicOrchestrator
 from genesis import BoneGenesis
@@ -32,232 +28,15 @@ from physics import ZoneInertia, NaviSADProtocol
 from protocols import ChronosKeeper
 from constants import Prisma, RealityLayer
 
-ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
-
-# =============================================================================
-# SOMATIC UI RENDERING
-# =============================================================================
-
-def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
-    """
-    Renders text to the terminal sequentially.
-    This isn't just for retro aesthetics. It is a biological pacing mechanism.
-    When the system's Stamina drops, this function is mathematically throttled so the
-    user physically *feels* the engine's exhaustion through the delayed output.
-    """
-    if not text:
-        print(end=end, flush=True)
-        return
-    cfg = getattr(BoneConfig, "GUI", object())
-    actual_speed = speed if speed is not None else getattr(cfg, "RENDER_SPEED_FAST", 0.00025)
-
-    # Bypass for fast rendering
-    if actual_speed < 0.001:
-        print(text, end=end, flush=True)
-        return
-
-    for part in ANSI_SPLIT.split(text):
-        if not part:
-            continue
-        if part.startswith("\x1b"):
-            sys.stdout.write(part) # Dump color codes instantly
-        else:
-            for char in part:
-                sys.stdout.write(char)
-                sys.stdout.flush()
-                time.sleep(actual_speed)
-    print(end=end, flush=True)
-
+# Cleanly imported UI / Boot logic
+from mechanics.terminal import typewriter, SessionGuardian
+from mechanics.setup import ConfigWizard
 
 @dataclass
 class HostStats:
     """Tracks the latency and metabolic efficiency of the local hardware."""
     latency: float
     efficiency_index: float
-
-
-# =============================================================================
-# TERMINAL CONTEXT MANAGEMENT
-# =============================================================================
-
-class SessionGuardian:
-    """
-    A context manager that acts as the physical boundary of the terminal.
-    Ensures safe initialization and, crucially, intercepts fatal crashes to output
-    graceful degradation logs instead of raw Python tracebacks (unless in Tech mode).
-    """
-    _HEADERS = (
-        ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.6.0   │"),
-        ("term_header_bot", "└──────────────────────────────────────────┘"),
-    )
-
-    def __init__(self, engine_ref):
-        self.engine_instance = engine_ref
-
-    def __enter__(self):
-        subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
-        for key, default in self._HEADERS:
-            print(Prisma.paint(ux("main_strings", key, default), "M"))
-
-        base_config = self.engine_instance.config if self.engine_instance else BoneConfig
-        cfg = getattr(base_config, "GUI", object())
-        boot_delay = getattr(cfg, "RENDER_SPEED_BOOT", 0.05)
-
-        boot_logs = self.engine_instance.events.flush()
-        for log in boot_logs:
-            print(f"{Prisma.GRY}   >>> {log['text']}{Prisma.RST}")
-            time.sleep(boot_delay)
-
-        init_msg = ux("main_strings", "init_hash") or "Kernel initialized. [HASH: {hash}]"
-        typewriter(f"{Prisma.GRY}{init_msg.format(hash=self.engine_instance.kernel_hash)}{Prisma.RST}")
-        sys_msg = ux("main_strings", "sys_listening")
-        typewriter(f"{Prisma.paint(sys_msg, 'G')}")
-        return self.engine_instance
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        halt_msg = ux("main_strings", "sys_halt")
-        print(f"\n{Prisma.paint(halt_msg, 'R')}")
-        if self.engine_instance:
-            self.engine_instance.shutdown()
-
-        is_interrupt = exc_type and issubclass(exc_type, KeyboardInterrupt)
-
-        if exc_type and not is_interrupt:
-            # Apoptotic Fallback: Handle hard crashes with dignity.
-            crash_msg = ux("main_strings", "crash_msg")
-            print(f"{Prisma.RED}{crash_msg.format(exc_val=exc_val)}{Prisma.RST}")
-
-            if getattr(self.engine_instance, "boot_mode", "") == "TECHNICAL":
-                full_trace = "".join(traceback.format_exception(exc_type, exc_val, exc_tb))
-                print(f"{Prisma.GRY}{full_trace}{Prisma.RST}")
-            else:
-                lattice_msg = ux("main_strings", "lattice_collapsed")
-                print(f"{Prisma.GRY}{lattice_msg}{Prisma.RST}")
-
-        conn_msg = ux("main_strings", "conn_severed")
-        print(f"{Prisma.GRY}{conn_msg}{Prisma.RST}")
-        return is_interrupt
-
-
-# =============================================================================
-# BOOTSTRAPPING & CONFIGURATION
-# =============================================================================
-
-class ConfigWizard:
-    """
-    Interactive terminal setup. Bypasses bureaucracy to establish connection
-    to the underlying LLM provider and defines the system's baseline personality.
-    """
-    CONFIG_FILE = "config.json"
-    _MODES = {"1": "ADVENTURE", "2": "CONVERSATION", "3": "CREATIVE", "4": "TECHNICAL"}
-    _UI_MODES = {"1": "DEEP", "2": "CORE", "3": "LITE", "4": "MINIMAL", "5": "WARM"}
-    _BACKENDS = (
-        ("1", "Ollama (Local)", "G"),
-        ("2", "OpenAI (Cloud)", "C"),
-        ("3", "LM Studio (Local)", "V"),
-        ("4", "Mock (Simulation)", "0"),
-    )
-
-    @staticmethod
-    def load_or_create():
-        if os.path.exists(ConfigWizard.CONFIG_FILE):
-            try:
-                with open(ConfigWizard.CONFIG_FILE, encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception as e:
-                err_msg = ux("main_strings", "config_load_err")
-                print(f"{Prisma.RED}{err_msg.format(e=e)}{Prisma.RST}")
-                ConfigWizard._backup_corrupt_file()
-        return ConfigWizard._run_setup()
-
-    @staticmethod
-    def _backup_corrupt_file():
-        backup_name = f"{ConfigWizard.CONFIG_FILE}.{int(time.time())}.bak"
-        try:
-            os.rename(ConfigWizard.CONFIG_FILE, backup_name)
-            msg = ux("main_strings", "config_backup")
-            print(f"{Prisma.YEL}{msg.format(backup_name=backup_name)}{Prisma.RST}")
-        except:
-            pass
-
-    @staticmethod
-    def _run_setup():
-        # (Wizard setup prompts and inputs omitted for brevity - logic remains structurally identical)
-        # We force the user to make explicit choices about UI complexity to
-        # manage cognitive load before the engine even turns on.
-        cfg = getattr(BoneConfig, "GUI", object())
-        setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02)
-        subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
-        seq_msg = ux("main_strings", "init_seq")
-        hyp_msg = ux("main_strings", "init_hypervisor")
-        print(f"{Prisma.paint(seq_msg, 'C')}")
-        typewriter(hyp_msg, speed=setup_speed)
-
-        step1 = ux("main_strings", "step1_id")
-        prompt1 = ux("main_strings", "prompt_id")
-        print(f"\n{Prisma.paint(step1, 'W')}")
-        user_name = input(f"{Prisma.GRY}{prompt1}{Prisma.RST}").strip() or "TRAVELER"
-
-        step2 = ux("main_strings", "step2_mode")
-        print(f"\n{Prisma.paint(step2, 'W')}")
-        for k, name, desc, col in (
-            ("1", "ADVENTURE", ux("main_strings", "mode_adv_desc"), "G"),
-            ("2", "CONVERSATION", ux("main_strings", "mode_conv_desc"), "C"),
-            ("3", "CREATIVE", ux("main_strings", "mode_crea_desc"), "V"),
-            ("4", "TECHNICAL", ux("main_strings", "mode_tech_desc"), "0"),
-        ):
-            print(f"  {k}. {Prisma.paint(name, col):<25} - {desc}")
-        mode_choice = input(f"{Prisma.paint(ux('main_strings', 'prompt_mode'), 'C')} ").strip()
-        boot_mode = ConfigWizard._MODES.get(mode_choice, "ADVENTURE")
-
-        step3 = ux("main_strings", "step3_backend")
-        print(f"\n{Prisma.paint(step3, 'W')}")
-        for k, name, col in ConfigWizard._BACKENDS:
-            print(f"{k}. {Prisma.paint(name, col)}")
-        choice = input(f"{Prisma.paint('>', 'C')} ").strip()
-
-        config = {"user_name": user_name, "boot_mode": boot_mode}
-        if choice == "2":
-            config.update({"provider": "openai", "base_url": "https://api.openai.com/v1/chat/completions"})
-            config["model"] = input(f"Model ID [gpt-4]: ").strip() or "gpt-4"
-            prompt_api = ux("main_strings", "prompt_api")
-            config["api_key"] = input(f"{Prisma.paint(prompt_api, 'R')} ").strip()
-        elif choice == "3":
-            config.update({"provider": "lm_studio", "base_url": "http://127.0.0.1:1234/v1/chat/completions", "model": "local-model"})
-        elif choice == "4":
-            config.update({"provider": "mock", "model": "simulation"})
-        else:
-            config.update({"provider": "ollama", "base_url": "http://127.0.0.1:11434/v1/chat/completions"})
-            config["model"] = input(f"Model ID [llama3]: ").strip() or "llama3"
-
-        print(f"\n{Prisma.paint('STEP 4: INTERFACE COMPLEXITY', 'W')}")
-        for k, name, col, desc in [
-            ("1", "DEEP", "M", "Full Multidimensional Matrix (Requires VSL Knowledge)"),
-            ("2", "CORE", "C", "Standard Physics & Shared Co-Regulation"),
-            ("3", "LITE", "Y", "Basic Vitals (Voltage, Health, Stamina)"),
-            ("4", "MINIMAL", "G", "Clean, Human-Readable Telemetry (Recommended)"),
-            ("5", "WARM", "0", "No HUD. Immersive Text Only."),
-        ]:
-            print(f"  {k}. {Prisma.paint(name, col):<15} - {desc}")
-        ui_choice = input(f"{Prisma.paint('>', 'C')} ").strip()
-        ui_mode = ConfigWizard._UI_MODES.get(ui_choice, "MINIMAL")
-        config["default_ui_depth"] = ui_mode
-
-        try:
-            with open(ConfigWizard.CONFIG_FILE, "w") as f:
-                json.dump(config, f, indent=4)
-            commit_msg = ux("main_strings", "config_committed")
-            cfg = getattr(BoneConfig, "GUI", object())
-            setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02)
-            typewriter(f"\n{Prisma.paint(commit_msg, 'G')}", speed=setup_speed)
-            time.sleep(1)
-        except Exception as e:
-            fail_msg = ux("main_strings", "write_failed")
-            print(f"{Prisma.paint(fail_msg.format(e=e), 'R')}")
-            sys.exit(1)
-        return config
-
 
 # =============================================================================
 # THE MACRO-ORGANISM (THE HYPERVISOR)
@@ -332,7 +111,6 @@ class BoneAmanita:
         self._validate_state()
         self._apply_boot_mode()
 
-    # (Init helper methods _load_system_prompts, _initialize_cognition, _validate_state, _apply_boot_mode, _unpack_anatomy omitted for space, logic remains identical)
     def _load_system_prompts(self):
         try:
             self.prompt_library = LoreManifest.get_instance().get("system_prompts") or {}

@@ -4,7 +4,7 @@ import time
 from unittest.mock import patch
 from drivers import SharedLatticeDriver
 from physics import GeodesicEngine
-from constants import PhysicsPacket
+from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 from physics.math import _native_permutation_entropy, _native_detect_false_cohesion, _native_ordinal_pattern, _native_coincidence_length
 

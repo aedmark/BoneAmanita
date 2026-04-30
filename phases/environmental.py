@@ -1,10 +1,11 @@
 """phases/environmental.py"""
 
-from constants import CycleContext, Prisma
+from constants import Prisma
 import random
 from presets import BoneConfig, BonePresets
 from physics import QuantumObserver
-from core import LoreManifest, ux, safe_get, safe_set
+from core import LoreManifest, CycleContext
+from struts import ux, safe_get, safe_set
 from mechanics.tools import TheTclWeaver
 from phases.base import SimulationPhase, _safe_dict, _deep_update
 

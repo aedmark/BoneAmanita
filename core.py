@@ -6,64 +6,14 @@ telemetry, and reality-layer scoping. It is strictly decoupled from LLM executio
 to ensure metabolic stability even if the cognitive layers crash.
 """
 
-import glob, json, os, random, time, traceback, threading
+import copy, glob, json, os, random, time, traceback, threading, uuid
 from collections import deque, Counter
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Optional, Tuple, Deque
+from struts import ux, ux_format, safe_get
 from presets import BoneConfig
-from constants import Prisma, RealityLayer, ErrorLog, DecisionTrace, DecisionCrystal
-
-
-# =============================================================================
-# LINGUISTIC & STRUCTURAL UTILITIES
-# =============================================================================
-
-def ux(section: str, key: str, default: Any = "") -> Any:
-    """
-    Retrieves localized, user-facing strings from the Lore cache.
-    Decouples narrative text from hardcoded logic to prevent semantic rot.
-    """
-    data = LoreManifest.get_instance().get("ux_strings", section)
-    return data.get(key, default) if isinstance(data, dict) else default
-
-def ux_format(section: str, key: str, default: str = "", **kwargs) -> str:
-    """
-    Retrieves and safely formats a UX string.
-    Fails gracefully to the raw string if the payload arguments mismatch the template.
-    """
-    msg = ux(section, key, default) or default
-    if not msg:
-        return ""
-    try:
-        return msg.format(**kwargs)
-    except (KeyError, ValueError, IndexError) as e:
-        # Pinker note: We log the grammatical failure but do not crash the engine.
-        print(f"{Prisma.GRY}[UX] Formatting mismatch ({e}) in {section}.{key}. Falling back to raw string.{Prisma.RST}")
-        return msg
-
-def safe_get(obj: Any, key: str, default: Any = None) -> Any:
-    """Agnostic retriever for dictionaries or class attributes."""
-    if obj is None:
-        return default
-    if isinstance(obj, dict):
-        val = obj.get(key, default)
-    else:
-        val = getattr(obj, key, default)
-    return default if val is None else val
-
-def safe_set(obj: Any, key: str, value: Any) -> None:
-    """
-    Agnostic setter. Includes a physical structural warning.
-    Writing to a Void (None) is a symptom of architectural decay.
-    """
-    if obj is None:
-        print(f"{Prisma.RED}[STRUCTURAL ROT] safe_set swallowed a write to '{key}'. Target object is None.{Prisma.RST}")
-        return
-    if isinstance(obj, dict):
-        obj[key] = value
-    else:
-        setattr(obj, key, value)
+from constants import Prisma, RealityLayer
 
 class BoneJSONEncoder(json.JSONEncoder):
     """Ensures complex biological data structures (sets, deques, dataclasses) serialize safely."""
@@ -71,7 +21,135 @@ class BoneJSONEncoder(json.JSONEncoder):
         if isinstance(obj, (set, deque)): return list(obj)
         if hasattr(obj, "to_dict"): return obj.to_dict()
         if hasattr(obj, "__dict__"): return obj.__dict__
-        return super().default(obj)
+        return super().defau
+
+from physics.models import PhysicsPacket, UserInferredState, SharedDynamics
+
+# =============================================================================
+# CORE ORCHESTRATION MODELS
+# =============================================================================
+
+@dataclass
+class ErrorLog:
+    component: str
+    error_msg: str
+    timestamp: float = field(default_factory=time.time)
+    severity: str = "WARNING"
+
+    def __str__(self):
+        return f"[{self.severity}] {self.component}: {self.error_msg}"
+
+@dataclass
+class DecisionTrace:
+    trace_id: str
+    timestamp: float
+    component: str
+    decision_type: str
+    inputs: Dict[str, Any]
+    reasoning: str
+    outcome: str
+
+    def to_json(self):
+        return json.dumps(asdict(self))
+
+@dataclass
+class DecisionCrystal:
+    decision_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
+    timestamp: float = field(default_factory=time.time)
+    leverage_metrics: Dict[str, float] = field(default_factory=dict)
+    prompt_snapshot: str = ""
+    physics_state: Dict[str, Any] = field(default_factory=dict)
+    chorus_weights: Dict[str, float] = field(default_factory=dict)
+    system_state: str = "STABLE"
+    active_archetype: str = "OBSERVER"
+    council_mandates: List[str] = field(default_factory=list)
+    final_response: str = ""
+
+    def __str__(self):
+        e_val = self.leverage_metrics.get("E", 0.0)
+        return (f"♦ CRYSTAL [{self.decision_id}] {self.system_state} | "
+                f"ARCHETYPE: {self.active_archetype} | E: {e_val:.2f}")
+
+    def crystallize(self) -> str:
+        data = asdict(self)
+        data["_summary"] = f"{self.system_state}::{self.active_archetype}"
+        data["_type"] = "CRYSTAL"
+        return json.dumps(data)
+
+@dataclass
+class CycleContext:
+    input_text: str
+    is_system_event: bool = False
+    clean_words: List[str] = field(default_factory=list)
+    physics: PhysicsPacket = field(default_factory=PhysicsPacket.void_state)
+    logs: List[str] = field(default_factory=list)
+    flux_log: List[Dict[str, Any]] = field(default_factory=list)
+    is_alive: bool = True
+    refusal_triggered: bool = False
+    refusal_packet: Optional[Dict] = None
+    is_bureaucratic: bool = False
+    bio_result: Dict = field(default_factory=dict)
+    bio_snapshot: Optional[Dict] = None
+    world_state: Dict = field(default_factory=dict)
+    mind_state: Dict = field(default_factory=dict)
+    timestamp: float = field(default_factory=time.time)
+    bureau_ui: str = ""
+    user_profile: Dict = field(default_factory=lambda: {"name": "TRAVELER", "confidence": 0})
+    last_impulse: Any = None
+    reality_stack: Any = None
+    active_lens: str = "NARRATOR"
+    validator: Any = None
+    time_delta: float = 0.0
+    user_state: UserInferredState = field(default_factory=UserInferredState)
+    shared_dyn: SharedDynamics = field(default_factory=SharedDynamics)
+
+    @property
+    def user_name(self):
+        return self.user_profile.get("name", "TRAVELER")
+
+    @user_name.setter
+    def user_name(self, value):
+        self.user_profile["name"] = value
+
+    def log(self, message: str):
+        self.logs.append(message)
+
+    def record_flux(self, phase: str, metric: str, initial: float, final: float, reason: str = ""):
+        delta = final - initial
+        if abs(delta) > 0.001:
+            self.flux_log.append(
+                {"phase": phase, "metric": metric, "initial": initial, "final": final, "delta": delta, "reason": reason,
+                 "timestamp": time.time(), })
+
+    def snapshot(self) -> "CycleContext":
+        new_ctx = copy.copy(self)
+        for name in self.__dataclass_fields__:
+            val = getattr(self, name)
+            if hasattr(val, "snapshot") and callable(val.snapshot):
+                setattr(new_ctx, name, val.snapshot())
+            elif isinstance(val, (list, dict, set)):
+                setattr(new_ctx, name, val.copy())
+        return new_ctx
+
+@dataclass
+class MindSystem:
+    mem: Any
+    lex: Any
+    dreamer: Any
+    mirror: Any
+    tracer: Any
+
+@dataclass
+class PhysSystem:
+    observer: Any
+    forge: Any
+    crucible: Any
+    theremin: Any
+    pulse: Any
+    nav: Any
+    gate: Optional[Any] = None
+    tension: Optional[Any] = None
+    dynamics: Any = None
 
 
 # =============================================================================

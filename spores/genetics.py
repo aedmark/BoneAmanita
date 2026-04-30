@@ -3,7 +3,8 @@
 import json
 import random
 from typing import Tuple, Dict
-from core import LoreManifest, ux, safe_get
+from core import LoreManifest
+from struts import ux, safe_get
 from presets import BoneConfig
 from spores.spore_utils import _access_config_path
 

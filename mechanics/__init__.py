@@ -1,10 +1,10 @@
 """mechanics/__init__.py"""
 
-from .commands import CommandProcessor
-from .gui import CycleReporter
-from .inventory import GordonKnot, Item
-from .lexicon import LexiconStore, LexiconService
-from .tools import TheTclWeaver
+from mechanics.commands import CommandProcessor
+from mechanics.reporter import CycleReporter
+from mechanics.inventory import GordonKnot, Item
+from mechanics.lexicon import LexiconStore, LexiconService
+from mechanics.tools import TheTclWeaver
 
 __all__ = [
     "CommandProcessor",

@@ -4,7 +4,8 @@ import json
 import os
 import tempfile
 from typing import List, Tuple
-from core import BoneJSONEncoder, ux_format
+from core import BoneJSONEncoder
+from struts import ux_format
 from constants import Prisma
 
 class LocalFileSporeLoader:

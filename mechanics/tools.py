@@ -1,9 +1,6 @@
 """tools.py"""
 
-import math
-import random
-import os
-import logging
+import math, random, os, logging
 import contextlib
 import warnings
 import re
@@ -241,7 +238,9 @@ class TheSubstrate:
                 cost += w_cost
                 kb_size = len(w['content']) / 1024.0
                 logs.append(f"{Prisma.GRN}SUBSTRATE: Physically forged {s_path} ({kb_size:.1f} KB).{Prisma.RST}")
-                self.events.publish("SUBSTRATE_FORGED", {"cost": w_cost, "file": s_name})
+                if self.events:
+                    self.events.publish("SUBSTRATE_FORGED", {"cost": w_cost, "file": s_name})
+
                 if "podcast" in s_name.lower():
                     self._trigger_tts(s_path)
             except Exception as e:
@@ -417,7 +416,7 @@ class DSPyCritic:
         self.cfg = config_ref
         if self.enabled:
             try:
-                from core import safe_get
+                from struts import safe_get
                 from presets import BoneConfig
                 def get_cfg(key: str, default: Any) -> Any:
                     val_upper = safe_get(self.cfg, key.upper())
@@ -426,7 +425,7 @@ class DSPyCritic:
                     if val_lower is not None: return val_lower
                     return getattr(BoneConfig, key.upper(), default)
                 provider = get_cfg("provider", "ollama")
-                model_name = get_cfg("model", "gemma4")
+                model_name = get_cfg("model", "hermes3")
                 raw_url = get_cfg("base_url", "http://127.0.0.1:11434/v1") or "http://127.0.0.1:11434/v1"
                 clean_url = raw_url.replace("/chat/completions", "")
                 if provider in ("ollama", "lm_studio"):

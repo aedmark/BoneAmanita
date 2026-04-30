@@ -9,7 +9,8 @@ import urllib.error
 import urllib.request
 from typing import Dict, Any, Optional
 from presets import BoneConfig
-from core import Prisma, EventBus, ux, ux_format, BoneJSONEncoder, safe_get, safe_set
+from core import Prisma, EventBus, BoneJSONEncoder
+from struts import ux, ux_format, safe_get, safe_set
 
 class SynapseError(Exception):
     pass

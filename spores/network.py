@@ -4,7 +4,8 @@ import random
 import time
 from collections import deque
 from typing import List, Tuple, Optional, Dict, Any
-from core import EventBus, LoreManifest, ux, ux_format, safe_get, safe_set
+from core import EventBus, LoreManifest
+from struts import ux, ux_format, safe_get, safe_set
 from brain.ann import HippocampalCache, CerebralIndex
 from presets import BoneConfig
 from constants import Prisma

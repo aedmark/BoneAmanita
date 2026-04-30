@@ -1,11 +1,12 @@
 """phases/biological.py"""
 
-from constants import CycleContext, Prisma
+from constants import Prisma
 import random
 from typing import Any
 from presets import BoneConfig
 from physics import apply_somatic_feedback
-from core import ux, safe_set
+from core import CycleContext
+from struts import ux, safe_set
 from mechanics.tools import TheTclWeaver
 from phases.base import SimulationPhase, _safe_dict
 

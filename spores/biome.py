@@ -2,7 +2,7 @@
 
 import random
 from typing import Tuple
-from core import ux, ux_format, safe_get
+from struts import ux, ux_format, safe_get
 from presets import BoneConfig
 from constants import Prisma
 

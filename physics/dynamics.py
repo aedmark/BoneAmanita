@@ -5,7 +5,7 @@ import random
 import time
 from collections import Counter, deque
 from typing import Dict, List, Any, Tuple, Optional, Deque
-from core import LoreManifest, ux, safe_get
+from struts import ux, safe_get
 from presets import BoneConfig
 from constants import Prisma
 
@@ -27,6 +27,7 @@ class ChromaScope:
 
     @staticmethod
     def modulate(text: str, vector: Dict[str, float]) -> str:
+        from core import LoreManifest
         if not vector or not any(vector.values()):
             return f"{Prisma.GRY}{text}{Prisma.RST}"
         if ChromaScope._CACHED_MAP is None:

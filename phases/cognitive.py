@@ -2,7 +2,8 @@
 
 from constants import Prisma
 from presets import BoneConfig
-from core import ux, safe_set, LoreManifest, ArchetypeArbiter
+from core import LoreManifest, ArchetypeArbiter
+from struts import ux, safe_set
 from typing import Dict, List, Any
 from phases.base import SimulationPhase, _safe_dict
 

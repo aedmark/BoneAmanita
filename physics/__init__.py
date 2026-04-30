@@ -1,13 +1,13 @@
 """physics/__init__.py"""
 
-from .math import (
+from physics.math import (
     CreativeDeterminantEngine,
     NaviSADProtocol
 )
-from .geodesics import GeodesicVector, GeodesicEngine
-from .filters import CerebrospinalFluidFilter, HLA_Stabilizer, TheGatekeeper
-from .dynamics import SurfaceTension, ChromaScope, ZoneInertia, CosmicDynamics
-from .observer import (
+from physics.geodesics import GeodesicVector, GeodesicEngine
+from physics.filters import CerebrospinalFluidFilter, HLA_Stabilizer, TheGatekeeper
+from physics.dynamics import SurfaceTension, ChromaScope, ZoneInertia, CosmicDynamics
+from physics.observer import (
     PhysicsDelta,
     QuantumObserver,
     CycleStabilizer,

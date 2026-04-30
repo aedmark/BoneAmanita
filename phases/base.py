@@ -1,6 +1,6 @@
 """phases/base.py"""
 
-from constants import CycleContext
+from core import CycleContext
 
 def _safe_dict(obj):
     return obj.to_dict() if hasattr(

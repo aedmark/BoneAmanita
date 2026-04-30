@@ -10,7 +10,8 @@ import unicodedata
 import functools
 from collections import defaultdict, deque
 from typing import Tuple, Dict, Set, Optional, List
-from core import Prisma, LoreManifest, ux
+from core import Prisma, LoreManifest
+from struts import ux
 
 class LexiconStore:
     _PUNCTUATION = string.punctuation.replace("_", "")

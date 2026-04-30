@@ -2,7 +2,8 @@
 
 from unittest.mock import patch, MagicMock
 from cycle import ObservationPhase, SensationPhase
-from constants import PhysicsPacket, CycleContext
+from physics.models import PhysicsPacket
+from core import CycleContext
 from archetypes.village import DeathGen
 from tests.base import BoneTestCase
 

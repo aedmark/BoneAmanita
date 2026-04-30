@@ -2,7 +2,8 @@
 
 import random
 from typing import Optional, Dict, Any
-from core import Prisma, LoreManifest, safe_get
+from core import Prisma, LoreManifest
+from struts import safe_get
 from presets import BoneConfig
 from body.models import BiologicalImpulse, Qualia
 

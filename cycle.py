@@ -7,9 +7,10 @@ import traceback
 import uuid
 import threading
 from typing import Dict, Any, List, Optional
-from core import LoreManifest, ux, safe_get
+from core import LoreManifest
+from struts import ux, safe_get
 from drivers import CongruenceValidator
-from mechanics.gui import CycleReporter
+from mechanics.reporter import CycleReporter
 from machine import PanicRoom
 from phases import (ObservationPhase, SanctuaryPhase, MaintenancePhase, GatekeeperPhase,
     MetabolismPhase, RealityFilterPhase, NavigationPhase, MachineryPhase,
@@ -17,8 +18,8 @@ from phases import (ObservationPhase, SanctuaryPhase, MaintenancePhase, Gatekeep
     CognitionPhase, SensationPhase, StabilizationPhase, SimulationPhase)
 from physics import CycleStabilizer
 from presets import BoneConfig
-from archetypes.symbiosis import SymbiosisManager
-from constants import Prisma, CycleContext
+from constants import Prisma
+from core import CycleContext
 
 _VSL_TAG_PATTERN = re.compile(r"\[VSL_(DEEP|CORE|LITE|HIDE)]", re.IGNORECASE)
 _VSL_STRIP_PATTERN = re.compile(r"\[VSL_[A-Z]+]", re.IGNORECASE)

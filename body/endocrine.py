@@ -4,7 +4,8 @@ import math, time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Optional, Dict, List, Any, Tuple
-from core import LoreManifest, safe_get
+from core import LoreManifest
+from struts import safe_get
 from presets import BoneConfig
 from body.models import SemanticSignal
 

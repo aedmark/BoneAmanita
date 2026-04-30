@@ -1,10 +1,9 @@
 """tests/test_fractures.py"""
 
 from unittest.mock import MagicMock
-from brain.composer import PromptComposer
 from mechanics.commands import CommandProcessor
 from archetypes.symbiosis import SymbiosisManager
-from constants import PhysicsPacket
+from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 
 class FractureEngineTest(BoneTestCase):
@@ -49,7 +48,7 @@ class FractureEngineTest(BoneTestCase):
                 self.engine.mind.mem.trigger_autophagy()
             if self.engine.bio.mito.state.atp_pool <= 0 and len(mem_graph) == 0:
                 from archetypes.village import DeathGen
-                from constants import PhysicsPacket
+                from physics.models import PhysicsPacket
                 _, cause = DeathGen.eulogy(PhysicsPacket(**phys_state), {"atp": 0.0})
                 if cause in ["STARVATION", "APOPTOSIS", "GLUTTONY"]:
                     death_achieved = True
