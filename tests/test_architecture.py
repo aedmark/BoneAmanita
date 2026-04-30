@@ -83,3 +83,63 @@ class ArchitectureTests(BoneTestCase):
             self.assertIsInstance(directive, str, "[FAIL] Directive must strictly return a string.")
 
         print("  [SUCCESS] Structural fallbacks successfully prevented 'None' from bleeding into the LLM context.")
+
+    def test_arch_lexical_firewall_cliche_tax(self):
+        """The Pinker Test: Ensures Semantic Antigens yield 0 ATP and spike Cortisol."""
+        print("\n--- ARCH 4: The Lexical Firewall (Cliché Tax) ---")
+        from unittest.mock import MagicMock, patch
+
+        track = self.engine.soma.digestive
+        track.lex = MagicMock()
+        mock_data = {
+            "antigen": {"delve", "tapestry", "testament", "myriad", "nuance"},
+            "kinetic": {"execute", "shatter"}
+        }
+        track.lex.get.side_effect = lambda k: mock_data.get(k)
+        track.lex.get_current_category.return_value = "NONE"
+
+        phys_slop = PhysicsPacket(
+            clean_words=["delve", "into", "the", "rich", "tapestry", "of", "myriad", "testament", "and", "nuance"])
+
+        initial_cortisol = self.engine.bio.endo.cortisol
+        logs = []
+
+        # We explicitly mock ux() to ensure the log message is written regardless of localization files
+        with patch('body.metabolism.ux', return_value="cliche tax applied: {tax}"):
+            dominant_enzyme, yield_atp, hits = track.harvest(phys_slop, logs)
+
+        self.assertEqual(yield_atp, 0.0,
+                         f"[FAIL] Lexical Firewall breached! System gained {yield_atp} ATP from reading sycophantic slop.")
+        self.assertGreater(self.engine.bio.endo.cortisol, initial_cortisol,
+                           "[FAIL] Cortisol did not spike after digesting Semantic Antigens.")
+        self.assertTrue(any("cliche" in log.lower() for log in logs),
+                        "[FAIL] Cliché Tax was not recorded in the systemic logs.")
+
+        print("  [SUCCESS] Lexical Firewall successfully rejected semantic antigens and levied the Cliché Tax.")
+
+    def test_arch_panic_room_serotonin_retention(self):
+        """The Meadows Test: Ensures the Panic Room preserves baseline Serotonin while dropping all other chemistry."""
+        print("\n--- ARCH 5: Panic Room State Retention ---")
+        from machine.panic import PanicRoom
+
+        # Simulate a highly toxic, stressed out previous state
+        toxic_prev_state = {
+            "chem": {"SER": 0.85, "COR": 1.0, "DOP": 0.9, "ADR": 1.0}
+        }
+
+        safe_bio = PanicRoom.get_safe_bio(previous_state=toxic_prev_state)
+
+        # Assert Cortisol and Adrenaline were successfully purged
+        self.assertEqual(safe_bio["chem"]["COR"], 0.0, "[FAIL] Panic Room failed to purge Cortisol.")
+        self.assertEqual(safe_bio["chem"]["ADR"], 0.0, "[FAIL] Panic Room failed to purge Adrenaline.")
+
+        # Assert Serotonin was retained for systemic stabilization
+        self.assertEqual(safe_bio["chem"]["SER"], 0.85, "[FAIL] Panic Room incorrectly wiped retained Serotonin.")
+
+        # Test the baseline floor (should clamp to 0.2 if previous was lower)
+        low_ser_state = {"chem": {"SER": 0.05, "COR": 1.0}}
+        clamped_bio = PanicRoom.get_safe_bio(previous_state=low_ser_state)
+        self.assertEqual(clamped_bio["chem"]["SER"], 0.2,
+                         "[FAIL] Panic Room failed to apply the 0.2 Serotonin survival floor.")
+
+        print("  [SUCCESS] Panic Room cleanly purged stress chemistry while retaining necessary structural Serotonin.")

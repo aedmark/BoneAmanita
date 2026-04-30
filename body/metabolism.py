@@ -223,8 +223,8 @@ class MitochondrialForge:
         """
         cfg = getattr(self.cfg, "BIO", None)
         ros_sig = safe_get(cfg, "ROS_SIGNAL", 5.0)
-        ros_dam = safe_get(cfg, "ROS_DAMAGE", 25.0)
-        ros_purge = safe_get(cfg, "ROS_PURGE", 40.0)
+        ros_dam = safe_get(cfg, "ROS_DAMAGE", 20.0)
+        ros_purge = safe_get(cfg, "ROS_PURGE", 60.0)
 
         if self.state.ros_buildup < ros_sig:
             # Underutilized. The system grows slightly sluggish.

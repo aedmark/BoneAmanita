@@ -279,3 +279,65 @@ class FractureEngineTest(BoneTestCase):
         print(
             "  [SUCCESS] The Medical Team successfully diagnosed and intercepted systemic collapse."
         )
+
+    def test_fracture_mitophagy_and_hormesis(self):
+        print("\n--- FRACTURE 10: Mitohormesis & Mitophagy (Adaptive Dynamics) ---")
+
+        mito = self.engine.bio.mito
+        mito.state.membrane_potential = 0.5
+        mito.state.atp_pool = 80.0
+
+        # Phase 1: Hormesis
+        mito.state.ros_buildup = 6.0
+        mito._apply_adaptive_dynamics()
+        self.assertEqual(mito.state.retrograde_signal, "MITOHORMESIS_ACTIVE",
+                         "[FAIL] System failed to recognize hormetic stress zone.")
+        self.assertGreater(mito.state.membrane_potential, 0.5,
+                           "[FAIL] Hormesis failed to strengthen the cellular membrane.")
+
+        # Phase 2: Mitophagy
+        # We force ROS to 100.0 to absolutely guarantee we blow past any custom threshold in your config.
+        mito.state.ros_buildup = 100.0
+        initial_atp = mito.state.atp_pool
+        mito._apply_adaptive_dynamics()
+
+        self.assertEqual(mito.state.ros_buildup, 0.0, "[FAIL] Mitophagy failed to purge ROS toxicity.")
+        self.assertEqual(mito.state.retrograde_signal, "MITOPHAGY_RESET",
+                         "[FAIL] Retrograde signal not set to MITOPHAGY_RESET.")
+        self.assertLess(mito.state.atp_pool, initial_atp,
+                        "[FAIL] System executed Mitophagy without paying the massive ATP cost.")
+
+        print("  [SUCCESS] System successfully executed hormetic adaptation and emergency mitophagy.")
+
+    def test_fracture_anaerobic_bypass(self):
+        print("\n--- FRACTURE 11: The Anaerobic Bypass ---")
+
+        mito = self.engine.bio.mito
+
+        # We must drop ATP below 95.0 to bypass the "Fresh Start" free pass.
+        initial_atp = mito.state.atp_pool = 90.0
+        initial_ros = mito.state.ros_buildup = 0.0
+
+        heavy_phys = {
+            "depth": 1.0,
+            "connectivity": 1.0,
+            "voltage": 100.0,
+            "chi": 0.9,
+            "mu": 0.5,
+            "m_a": 1.0
+        }
+
+        mito.state.membrane_potential = 0.35
+
+        receipt = mito.process_cycle(heavy_phys)
+
+        self.assertEqual(receipt.status, "ANAEROBIC",
+                         "[FAIL] System failed to trigger Anaerobic Bypass on extreme cognitive load.")
+        self.assertEqual(receipt.symptom, "LACTATE_BUILDUP", "[FAIL] Did not register lactate buildup.")
+
+        self.assertEqual(mito.state.atp_pool, initial_atp - 20.0,
+                         "[FAIL] Anaerobic burn did not exact the 20.0 ATP emergency cost.")
+        self.assertEqual(mito.state.ros_buildup, initial_ros + 2.0,
+                         "[FAIL] Anaerobic burn did not tax the system with 2.0 ROS.")
+
+        print("  [SUCCESS] System correctly bypassed standard metabolism to survive an impossible cognitive load.")
