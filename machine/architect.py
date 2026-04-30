@@ -1,0 +1,136 @@
+"""machine/architect.py"""
+
+from dataclasses import dataclass
+from typing import Tuple, Optional, Dict, Any
+from body import BioSystem
+from core import LoreManifest, PhysSystem, MindSystem
+from struts import ux, safe_get
+from presets import BoneConfig
+from protocols import LimboLayer
+from constants import Prisma
+from machine.tracer import ViralTracer
+from machine.forge import TheForge
+from machine.crucible import TheCrucible
+from machine.theremin import TheTheremin
+from machine.pacemaker import ThePacemaker
+
+@dataclass
+class SystemEmbryo:
+    mind: 'MindSystem'
+    limbo: 'LimboLayer'
+    bio: 'BioSystem'
+    physics: 'PhysSystem'
+    shimmer: Any
+    is_gestating: bool = True
+    soul_legacy: Optional[Dict] = None
+    continuity: Optional[Dict] = None
+
+class BoneArchitect:
+    @staticmethod
+    def _construct_mind(events, lex, config_ref=None) -> Tuple[MindSystem, LimboLayer]:
+        from spores.network import MycelialNetwork
+        from brain.mind import DreamEngine
+        from archetypes.village import MirrorGraph
+        target_cfg = config_ref or BoneConfig
+        _mem = MycelialNetwork(events)
+        limbo = LimboLayer(config_ref=target_cfg)
+        _mem.cleanup_old_sessions(limbo)
+        lore = LoreManifest.get_instance(config_ref=target_cfg)
+        mind = MindSystem(mem=_mem, lex=lex, dreamer=DreamEngine(events, lore, config_ref=target_cfg),
+                          mirror=MirrorGraph(events, config_ref=target_cfg), tracer=ViralTracer(_mem), )
+        return mind, limbo
+
+    @staticmethod
+    def _construct_bio(events, mind, lex, config_ref=None) -> BioSystem:
+        from body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, \
+            MetabolicGovernor
+        from spores import ImmuneMycelium, BioLichen, BioParasite
+        target_cfg = config_ref or BoneConfig
+        cfg = getattr(target_cfg, "METABOLISM", None)
+        genesis_val = safe_get(cfg, "GENESIS_VOLTAGE", 100.0)
+        mito_state = MitochondrialState(atp_pool=genesis_val)
+        bio_metrics = Biometrics(
+            health=getattr(target_cfg, "MAX_HEALTH", 100.0), stamina=getattr(target_cfg, "MAX_STAMINA", 100.0)
+        )
+        return BioSystem(
+            mito=MitochondrialForge(mito_state, events, config_ref=target_cfg),
+            endo=EndocrineSystem(config_ref=target_cfg),
+            immune=ImmuneMycelium(),
+            lichen=BioLichen(lexicon_ref=lex),
+            governor=MetabolicGovernor(config_ref=target_cfg),
+            parasite=BioParasite(mind.mem, lex, config_ref=target_cfg),
+            events=events,
+            biometrics=bio_metrics,
+            config_ref=target_cfg,
+        )
+
+    @staticmethod
+    def _construct_physics(events, bio, mind, lex, config_ref=None) -> PhysSystem:
+        from archetypes.village import TheCartographer
+        from physics import TheGatekeeper, QuantumObserver, SurfaceTension, CosmicDynamics
+        target_cfg = config_ref or BoneConfig
+        gate = TheGatekeeper(lex, config_ref=target_cfg)
+        return PhysSystem(
+            observer=QuantumObserver(events, lex, config_ref=target_cfg),
+            forge=TheForge(lex_ref=lex),
+            crucible=TheCrucible(config_ref=target_cfg),
+            theremin=TheTheremin(config_ref=target_cfg),
+            pulse=ThePacemaker(config_ref=target_cfg),
+            nav=TheCartographer(getattr(bio, "shimmer", None), config_ref=target_cfg),
+            gate=gate,
+            tension=SurfaceTension(),
+            dynamics=CosmicDynamics(config_ref=target_cfg),
+        )
+
+    @staticmethod
+    def incubate(events, lex, config_ref=None) -> SystemEmbryo:
+        target_cfg = config_ref or BoneConfig
+        if hasattr(events, "set_dormancy"):
+            events.set_dormancy(True)
+        msg = ux("machine_strings", "arch_incubate")
+        if msg:
+            events.log(f"{Prisma.GRY}{msg}{Prisma.RST}", "SYS")
+        mind, limbo = BoneArchitect._construct_mind(events, lex, config_ref=target_cfg)
+        bio = BoneArchitect._construct_bio(events, mind, lex, config_ref=target_cfg)
+        physics = BoneArchitect._construct_physics(events, bio, mind, lex, config_ref=target_cfg)
+        return SystemEmbryo(mind=mind, limbo=limbo, bio=bio, physics=physics, shimmer=getattr(bio, "shimmer", None))
+
+    @staticmethod
+    def awaken(embryo: SystemEmbryo) -> SystemEmbryo:
+        events = embryo.bio.mito.events
+        load_result = None
+        try:
+            if hasattr(embryo.mind.mem, "autoload_last_spore"):
+                load_result = embryo.mind.mem.autoload_last_spore()
+        except Exception as e:
+            msg = ux("machine_strings", "arch_spore_fail") or "[ARCHITECT]: Spore resurrection failed: {e}"
+            events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "CRIT")
+            load_result = None
+        results = (list(load_result) if isinstance(load_result, (list, tuple)) else []) + [None] * 5
+        mito_legacy, immune_legacy, soul_legacy, continuity, atlas = results[:5]
+        if mito_legacy and hasattr(embryo.bio.mito, "apply_inheritance"):
+            embryo.bio.mito.apply_inheritance(mito_legacy)
+        if immune_legacy and isinstance(immune_legacy, (list, set)):
+            if hasattr(embryo.bio.immune, "load_antibodies"):
+                embryo.bio.immune.load_antibodies(immune_legacy)
+            else:
+                embryo.bio.immune.active_antibodies.update(immune_legacy)
+        embryo.soul_legacy = soul_legacy if isinstance(soul_legacy, dict) else {}
+        embryo.continuity = continuity if isinstance(continuity, dict) else None
+        recovered_atlas = atlas if isinstance(atlas, dict) else {}
+        if recovered_atlas and hasattr(getattr(embryo.physics, "nav", None), "import_atlas"):
+            try:
+                embryo.physics.nav.import_atlas(recovered_atlas)
+                msg = ux("machine_strings", "arch_map_restored") or "[ARCHITECT]: World Map restored."
+                events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS")
+            except Exception as e:
+                msg = ux("machine_strings", "arch_map_corrupt") or "[ARCHITECT]: Atlas corrupt, discarding map: {e}"
+                events.log(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}", "WARN")
+        if embryo.bio and embryo.bio.mito and embryo.bio.mito.state.atp_pool <= 0.0:
+            target_cfg = getattr(embryo.bio, "config_ref", None) or BoneConfig
+            cfg = getattr(target_cfg, "METABOLISM", None)
+            genesis_val = safe_get(cfg, "GENESIS_VOLTAGE", 100.0)
+            msg = ux("machine_strings", "arch_cold_boot")
+            events.log((msg.format(genesis_val=genesis_val) if msg else f"Cold Boot: {genesis_val} ATP"), "SYS")
+            embryo.bio.mito.adjust_atp(genesis_val, reason="GENESIS")
+        return embryo
