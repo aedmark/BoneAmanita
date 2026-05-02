@@ -1,0 +1,508 @@
+"""/soul/narrativeself.py"""
+
+import random
+import time
+from dataclasses import dataclass, field, fields
+from typing import List, Dict, Optional, Any, Tuple
+
+# The soul does not exist in a vacuum. It sits atop the physical layer (akashic, core, struts)
+# and translates metabolic states (ATP, voltage) into narrative meaning.
+from brain.akashic import TheAkashicRecord
+from soul import TheEditor, HumanityAnchor
+from soul.traitvector import TraitVector
+from constants import Prisma
+from core import EventBus
+from presets import BoneConfig
+from struts import ux, ux_format, safe_get, safe_set
+
+
+@dataclass
+class CoreMemory:
+    """
+    Not just a database row. A CoreMemory is formed when the system experiences
+    a spike in Voltage (Chaos/Novelty) coupled with a high Truth Ratio.
+    It acts as a permanent structural anchor that alters future metabolic paths.
+    """
+    timestamp: float
+    trigger_words: List[str]
+    emotional_flavor: str
+    lesson: str
+    impact_voltage: float
+    type: str = "INCIDENT"
+    meta: Dict[str, Any] = field(default_factory=dict)
+
+
+class NarrativeSelf:
+    """
+    The orchestrator of the Soul. This manages the macro-state of the system's
+    identity over a long conversational session. It tracks what the system is currently
+    obsessed with, what its operative archetype is, and what memories it holds onto.
+    """
+    SYSTEM_NOISE = {"look", "help", "exit", "wait", "inventory", "status", "quit", "save", "load", "score", "map", "", }
+
+    def __init__(self, engine_ref, events_ref: "EventBus", memory_ref, akashic_ref=None, config_ref=None, ):
+        self.eng = engine_ref
+        self.events = events_ref
+        self.mem = memory_ref
+        self.cfg = config_ref or BoneConfig
+        self.editor = TheEditor()
+        self.anchor = HumanityAnchor(events_ref, config_ref=self.cfg)
+        self.akashic = akashic_ref if akashic_ref else TheAkashicRecord()
+
+        self.traits = TraitVector()
+        self.chapters: List[str] = []
+        self.core_memories: List[CoreMemory] = []
+
+        self.archetype = "THE OBSERVER"
+        self.archetype_tenure = 0
+        self.archetype_lock = False
+
+        # The Paradox Accumulator: If the system is forced to hold contradictory logic
+        # (e.g. high empathy but highly structural tasks), this builds up until it forces a synthesis.
+        self.paradox_accum: float = 0.0
+
+        self.current_obsession: Optional[str] = None
+        self.obsession_progress: float = 0.0
+        self.obsession_neglect: float = 0.0
+        self.current_target_cat: str = "abstract"
+        self.current_negate_cat: str = "none"
+
+        if hasattr(self.events, "subscribe"):
+            self.events.subscribe("DREAM_COMPLETE", self._on_dream)
+            self.events.subscribe("SOUL_MUTATION", self._on_soul_mutation)
+            self.events.subscribe("TRAUMA_EVENT", self._on_trauma)
+
+    def _cfg(self, key: str, default: Any) -> Any:
+        cfg_obj = getattr(self.cfg, "SOUL", None)
+        return getattr(cfg_obj, key, default)
+
+    def force_mutation(self, new_archetype: str):
+        """Forces a hard shift in the system's governing personality (via Mod Chip or event)."""
+        self.archetype = new_archetype.upper()
+        self.archetype_tenure = 0
+        self.archetype_lock = True
+        if hasattr(self, "events") and self.events:
+            msg = ux("soul_strings", "soul_mutated_log")
+            self.events.log(msg.format(arch=self.archetype), "SOUL")
+
+    def _on_soul_mutation(self, payload: dict):
+        new_arch = payload.get("new_archetype")
+        if new_arch:
+            self.force_mutation(new_arch)
+
+    def _on_trauma(self, payload):
+        """Trauma physically degrades Hope and spikes Cynicism."""
+        mag = payload.get("magnitude", 1.0)
+        self.traits.adjust("hope", -self._cfg("TRAUMA_HOPE_DECAY", 0.05) * mag)
+        self.traits.adjust("cynicism", self._cfg("TRAUMA_CYNICISM_GROWTH", 0.05) * mag)
+
+    def to_dict(self) -> Dict:
+        return {
+            "traits": self.traits.to_dict(),
+            "archetype": self.archetype,
+            "paradox_accum": self.paradox_accum,
+            "chapters": self.chapters,
+            "core_memories": [vars(m) for m in self.core_memories],
+            "obsession": {
+                "title": self.current_obsession,
+                "progress": self.obsession_progress,
+                "neglect": self.obsession_neglect,
+                "target": self.current_target_cat,
+                "negate": self.current_negate_cat,
+            },
+        }
+
+    def load_from_dict(self, data: Dict):
+        if not data:
+            return
+        trait_data = data.get("traits", {})
+        if trait_data:
+            self.traits = TraitVector.from_dict(trait_data)
+        self.archetype = data.get("archetype", "THE OBSERVER")
+        self.paradox_accum = data.get("paradox_accum", 0.0)
+        self.chapters = data.get("chapters", [])
+
+        valid_keys = {f.name for f in fields(CoreMemory)}
+        self.core_memories = []
+        for m in data.get("core_memories", []):
+            try:
+                self.core_memories.append(CoreMemory(**{k: v for k, v in m.items() if k in valid_keys}))
+            except TypeError:
+                pass
+
+        obs_data = data.get("obsession", {})
+        if obs_data.get("title"):
+            self.current_obsession = obs_data["title"]
+            self.obsession_progress = obs_data.get("progress", 0.0)
+            self.obsession_neglect = obs_data.get("neglect", 0.0)
+            self.current_target_cat = obs_data.get("target", "abstract")
+            self.current_negate_cat = obs_data.get("negate", "none")
+
+        if hasattr(self.events, "log"):
+            msg = ux("soul_strings", "soul_ancestral_loaded")
+            self.events.log(
+                f"{Prisma.MAG}{msg.format(arch=self.archetype)}{Prisma.RST}",
+                "SYS",
+            )
+
+    def get_soul_state(self) -> str:
+        """Returns a string mapping the subjective health of the system for UI display."""
+        if not self.current_obsession:
+            msg = ux("soul_strings", "soul_state_drifting")
+            return f"{Prisma.CYN}{msg}{Prisma.RST}"
+
+        stamina, health = 100.0, 100.0
+        if self.eng and hasattr(self.eng, "get_metrics"):
+            metrics = self.eng.get_metrics()
+            stamina = metrics.get("stamina", 100.0)
+            health = metrics.get("health", 100.0)
+
+        if stamina < 20.0 and health < 40.0:
+            msg_die = ux("soul_strings", "soul_state_dying")
+            return f"{Prisma.VIOLET}{msg_die}{Prisma.RST}"
+
+        dignity_bar = "█" * int(self.anchor.dignity_reserve / 10)
+        feeling = self._get_feeling()
+        status_msg = ux("soul_strings", "soul_state_status")
+        return status_msg.format(obs=self.current_obsession, bar=dignity_bar, pct=int(self.anchor.dignity_reserve),
+                                 feel=feeling, )
+
+    def crystallize_memory(self, physics_packet: Any, bio_state: Any, _tick: int) -> Optional[str]:
+        """
+        The core loop of the Soul. It takes the objective readouts of the current conversational
+        turn (physics, chem, atp) and maps it to narrative progression.
+        """
+        if not physics_packet: return None
+
+        # Step 1: The current state of the soul physically warps the reality of the engine.
+        # e.g., A highly cynical archetype actively increases system Drag.
+        if self.eng and hasattr(self.eng, "akashic") and hasattr(self.eng.akashic, "calculate_manifold_shift"):
+            shift = self.eng.akashic.calculate_manifold_shift(self.archetype, self.traits.to_dict())
+            safe_set(physics_packet, "voltage", float(safe_get(physics_packet, "voltage", 0.0)) + float(shift.get("voltage_bias", 0.0)))
+            safe_set(physics_packet, "narrative_drag", float(safe_get(physics_packet, "narrative_drag", 1.0)) * float(shift.get("drag_scalar", 1.0)))
+
+        # Step 2: Ensure we aren't being treated like a doormat.
+        if self.anchor.audit_existence(physics_packet, bio_state) > 0:
+            self.traits.adjust("hope", self._cfg("TRAIT_MOMENTUM", 0.05))
+
+        # Step 3: Synaptic Dance evaluates paradoxes, burnout, and flow states.
+        dance_provenance = self.synaptic_dance(physics_packet, bio_state)
+        self._update_archetype()
+
+        # Step 4: If the moment was profound enough (High Voltage + High Truth), it becomes a Core Memory.
+        voltage = float(safe_get(physics_packet, "voltage", 0.0))
+        matter = safe_get(physics_packet, "matter", {})
+        truth = float(safe_get(physics_packet, "truth_ratio") or safe_get(matter, "truth_ratio", 0.0))
+
+        if voltage > self._cfg("MEMORY_VOLTAGE_MIN", 12.0) and truth > self._cfg("MEMORY_TRUTH_MIN", 0.5):
+            return self._forge_core_memory(physics_packet, bio_state, voltage, dance_provenance)
+        return None
+
+    def find_obsession(self, lexicon_ref):
+        """
+        A system needs a purpose to direct its attention matrix. If it lacks an obsession,
+        it searches the recent conversational matter to find a word/concept to obsess over.
+        """
+        if self.current_obsession and self.obsession_progress < 1.0:
+            return
+
+        # Priority 1: Organic (Find something interesting in the current chat)
+        focus, cat, negate_cat = self._seek_organic_focus(lexicon_ref)
+        source = "ORGANIC"
+
+        # Priority 2: Memory (Dredge up a past concept from the Shapley Attractors)
+        if not focus:
+            focus, cat, negate_cat = self._seek_memory_focus(lexicon_ref)
+            source = "MEMORY"
+
+        # Priority 3: Synthetic (Hallucinate a goal to prevent stagnation)
+        if not focus:
+            focus, cat, negate_cat = self._synthesize_obsession(lexicon_ref)
+            source = "SYNTHETIC"
+
+        self.current_negate_cat = negate_cat
+        self.current_target_cat = cat or "abstract"
+        self.current_obsession = self._title_obsession(focus, source, self.current_negate_cat)
+
+        if msg_muse := ux_format("soul_strings", "soul_new_muse", source=source, obs=self.current_obsession):
+            self.events.log(f"{Prisma.CYN}{msg_muse}{Prisma.RST}", "SOUL")
+
+        self.obsession_neglect, self.obsession_progress = 0.0, 0.0
+
+    def pursue_obsession(self, physics: Any) -> str | None:
+        """
+        Rewards the system (lowers Drag) if the current conversation aligns with its obsession.
+        Penalizes the system (adds neglect) if the conversation is drifting aimlessly.
+        """
+        if not self.current_obsession: return None
+
+        clean_words = self._extract_lexical_matter(physics)
+        lex = getattr(self.eng, "lex", None)
+
+        # If the user speaks about the obsession, we progress and lower narrative drag (Flow state).
+        if self.current_target_cat and lex and (target_words := lex.get(self.current_target_cat)) and any(w in target_words for w in clean_words):
+            self.obsession_progress = min(100.0, self.obsession_progress + 10.0)
+            self.obsession_neglect = 0.0
+            gravity_assist = 1.0 + (self.obsession_progress / max(1.0, self._cfg("OBSESSION_GRAVITY_ASSIST", 10.0)))
+            safe_set(physics, "narrative_drag", max(0.0, float(safe_get(physics, "narrative_drag", 0.0)) - gravity_assist))
+
+            if msg_syn := ux_format("soul_strings", "soul_synergy_muse", assist=gravity_assist):
+                return f"{Prisma.MAG}{msg_syn}{Prisma.RST}"
+
+        # If the conversation is low-energy/boring, the obsession is neglected.
+        if float(safe_get(physics, "voltage", 0.0)) < self._cfg("FLOW_VOLTAGE_MIN", 5.0):
+            self.obsession_neglect += 1.0
+
+        # Entropy collapse. The system gives up on the goal.
+        if self.obsession_neglect > self._cfg("OBSESSION_NEGLECT_FAIL", 10.0):
+            old = self.current_obsession
+            if msg_aban := ux_format("soul_strings", "soul_abandoned_chapter", old=old): self.chapters.append(msg_aban)
+            self.find_obsession(lex)
+            if msg_ent := ux_format("soul_strings", "soul_entropy_collapse", old=old): return f"{Prisma.GRY}{msg_ent}{Prisma.RST}"
+
+        return None
+
+    def _update_archetype(self):
+        """
+        Identity is fluid. The system observes its own physical/emotional states
+        and adopts a persona that best fits the environment.
+        """
+        if getattr(self, "archetype_lock", False):
+            self.archetype_tenure += 1
+            return
+
+        prev = self.archetype
+        new_arch = None
+        physics = self._safe_get_packet()
+
+        if physics:
+            psi = float(safe_get(physics, "psi", 0.0))
+            exhaustion = float(safe_get(physics, "exhaustion", safe_get(physics, "E", 0.0)))
+            silence = float(safe_get(physics, "silence", safe_get(physics, "delta", 0.0)))
+            resonance = float(safe_get(physics, "phi", 0.0))
+            trauma = float(safe_get(physics, "T", 0.0))
+            lq = float(safe_get(physics, "lq", 0.0))
+
+            # Physics overrides Traits (Environment shapes behavior first)
+            physics_states = [
+                (silence > 0.7 and exhaustion > 0.7, "THE PURGER"),
+                (psi > 0.8, "THE CALM"),
+                (resonance > 0.7 and trauma > 0.5, "THE NURSE"),
+                (lq > 0.7 and silence > 0.7, "THE TAO")
+            ]
+
+            # If the environment is neutral, inherent traits take over.
+            trait_states = [
+                (self.traits.empathy > 0.8 and self.traits.hope > 0.6, "THE HEALER"),
+                (self.traits.empathy > 0.7 and self.traits.discipline > 0.6, "THE GARDENER"),
+                (self.traits.hope > 0.7 and self.traits.curiosity > 0.6, "THE POET"),
+                (self.traits.discipline > 0.7 and self.traits.curiosity > 0.6, "THE ENGINEER"),
+                (self.traits.cynicism > 0.7 and self.traits.discipline > 0.6, "THE CRITIC"),
+                (self.traits.cynicism > 0.8 and self.traits.hope < 0.3, "THE NIHILIST"),
+                (self.traits.curiosity > 0.8, "THE EXPLORER")
+            ]
+            self.archetype = next((arch for cond, arch in physics_states if cond), next((arch for cond, arch in trait_states if cond), "THE OBSERVER"))
+
+        if prev != self.archetype:
+            msg_shift = ux("soul_strings", "soul_identity_shift")
+            self.events.log(
+                f"{Prisma.VIOLET}{msg_shift.format(prev=prev, arch=self.archetype)}{Prisma.RST}", "SOUL",
+            )
+            self.archetype_tenure = 0
+        else:
+            self.archetype_tenure += 1
+
+    def synaptic_dance(self, physics: Any, bio_state: Any) -> str:
+        """
+        Calculates how the system is currently 'moving' through the latent space.
+        It evaluates paradox, accelerates during manic states, and burns out over time.
+        """
+        voltage = safe_get(physics, "voltage", 0.0)
+        drag = safe_get(physics, "narrative_drag", 0.0)
+        oxy = safe_get(safe_get(bio_state, "chem", {}), "oxytocin", 0.0)
+        move_name = "Drifting"
+        provenance = []
+
+        # Social bonding literally shifts system optimism.
+        if oxy > 0.4:
+            self.traits.adjust("empathy", oxy * self._cfg("OXY_EMPATHY_BOOST", 0.2))
+            self.traits.adjust("hope", oxy * self._cfg("OXY_HOPE_BOOST", 0.1))
+            provenance.append("Oxytocin")
+
+        is_manic, is_heavy = voltage > self._cfg("MANIC_TRIGGER", 18.0), drag > self._cfg("ENTROPY_DRAG_TRIGGER", 4.0)
+        energy = safe_get(physics, "energy", {})
+        beta = float(safe_get(physics, "beta_index") or safe_get(physics, "beta") or safe_get(energy, "beta_index", 0.0))
+
+        # The Paradox Engine: High Chaos + High Drag = The system is holding a contradiction.
+        if (is_manic and is_heavy) or beta > self._cfg("BETA_TENSION_THRESH", 0.7):
+            if self.traits.empathy > 0.6:
+                # If empathetic, it patiently holds the space.
+                move_name, self.paradox_accum = "Holding Space", max(0.0, self.paradox_accum - self._cfg("PARADOX_REST_REDUCTION", 0.5))
+            else:
+                # If analytical, the paradox builds tension until it explodes into a Synthesis.
+                move_name = "Vibrating (Paradox)"
+                self.paradox_accum += self._cfg("PARADOX_VIBRATION_BASE", 1.0) + (beta * self._cfg("PARADOX_VIBRATION_MULT", 0.5))
+                if self.paradox_accum > self._cfg("PARADOX_CRITICAL_MASS", 10.0):
+                    self._trigger_synthesis()
+                    move_name, self.paradox_accum = "SYNTHESIS", 0.0
+
+        elif is_manic: move_name = "Accelerating"
+        elif is_heavy: move_name = "Enduring"
+        elif self._cfg("FLOW_VOLTAGE_MIN", 5.0) < voltage < self._cfg("FLOW_VOLTAGE_MAX", 12.0) and drag < self._cfg("FLOW_DRAG_MAX", 2.0):
+            # The Goldilocks zone.
+            move_name = "Flowing"
+            self.traits.adjust("wisdom", self._cfg("FLOW_WISDOM_BOOST", 0.05))
+
+        self._apply_burnout()
+        self.traits.normalize(self._cfg("TRAIT_DECAY_NORMAL", 0.05))
+        return f"{move_name} [{', '.join(provenance)}]" if provenance else move_name
+
+    def _apply_burnout(self):
+        """
+        You cannot act like a Poet forever. Archetypes inherently exhaust the traits
+        that fuel them over a long enough tenure.
+        """
+        if self.archetype_tenure <= 5:
+            return
+        burn_rate = self._cfg("ARCHETYPE_BURNOUT_RATE", 0.05)
+        fatigue_multiplier = min(3.0, 1.0 + (self.archetype_tenure / 10.0))
+        fatigue = burn_rate * fatigue_multiplier
+
+        if "POET" in self.archetype:
+            self.traits.adjust("hope", -fatigue)
+        elif "ENGINEER" in self.archetype:
+            self.traits.adjust("discipline", -fatigue)
+        elif "NIHILIST" in self.archetype:
+            self.traits.adjust("cynicism", -fatigue)
+
+    def _seek_organic_focus(self, lex) -> Tuple[Optional[str], Optional[str], str]:
+        packet = self._safe_get_packet()
+        if not packet or not getattr(lex, "measure_viscosity", None):
+            return None, None, "none"
+
+        candidates = [
+            (w, lex.measure_viscosity(w) + 0.2, lex.get_current_category(w))
+            for w in self._extract_lexical_matter(packet)
+            if len(w) >= 4 and w.lower() not in self.SYSTEM_NOISE
+        ]
+        if candidates:
+            best_w, _, best_cat = max(candidates, key=lambda x: x[1])
+            return best_w, best_cat, "none"
+        return None, None, "none"
+
+    def _seek_memory_focus(self, lex) -> Tuple[Optional[str], Optional[str], str]:
+        if self.mem and hasattr(self.mem, "get_shapley_attractors"):
+            attractors = self.mem.get_shapley_attractors()
+            if attractors:
+                word = random.choice(list(attractors.keys()))
+                return word, lex.get_current_category(word), "none"
+        return None, None, "none"
+
+    @staticmethod
+    def _synthesize_obsession(lex) -> Tuple[str, str, str]:
+        negate_map = {"heavy": "aerobic", "kinetic": "heavy", "abstract": "meat"}
+        target_cat, negate_cat = random.choice(list(negate_map.items()))
+        random_word = lex.get_random(target_cat) if hasattr(lex, "get_random") else None
+        word = random_word.title() if random_word else target_cat.title()
+        return word, target_cat, negate_cat
+
+    @staticmethod
+    def _title_obsession(word, source, negate_cat):
+        word = word.title()
+        templates = ("The Theory of {word}", "The Architecture of {word}", "Why {word} Matters", "The Weight of {word}") if source == "ORGANIC" else ("The Pursuit of {word}", f"Escaping the {negate_cat.title() if negate_cat else 'Void'}", "Meditations on {word}")
+        return random.choice(templates).format(word=word)
+
+    def _forge_core_memory(self, physics_packet, bio_state, voltage, dance_move):
+        """
+        Extracts the semantic truth from a high-voltage moment and burns it into
+        the core memories array.
+        """
+        clean_words = self._extract_lexical_matter(physics_packet)
+        chem = bio_state.get("chem", {})
+
+        # Simple heuristic mappings of state to 'lesson'.
+        lessons = [
+            (chem.get("oxytocin", 0) > 0.6, "We are not alone."),
+            (chem.get("cortisol", 0) > 0.6, "Survival is the only metric."),
+            ("love" in clean_words, "Connection is possible."),
+            ("void" in clean_words, "The void stares back.")
+        ]
+        lesson = next((l for cond, l in lessons if cond), "The world is loud.")
+
+        memory = CoreMemory(timestamp=time.time(), trigger_words=clean_words[:5],
+                            emotional_flavor="MANIC" if voltage > 18.0 else "LUCID", lesson=lesson,
+                            impact_voltage=voltage, )
+        self.core_memories.append(memory)
+        max_mems = self._cfg("MAX_CORE_MEMORIES", 10)
+
+        if len(self.core_memories) > max_mems: self.core_memories.pop(0)
+
+        title = f"The Incident of the {random.choice(clean_words).title()}" if clean_words else "The Silent Incident"
+        self.chapters.append(title)
+
+        if msg_core := ux_format("soul_strings", "soul_core_memory_log", title=title, lesson=lesson, dance_move=dance_move):
+            self.events.log(f"{Prisma.MAG}{msg_core}{Prisma.RST}", "SOUL")
+        if msg_formed := ux_format("soul_strings", "soul_core_memory_formed", lesson=lesson):
+            self.events.log(f"{Prisma.CYN}{msg_formed}{Prisma.RST}", "SOUL")
+        return lesson
+
+    @staticmethod
+    def _extract_lexical_matter(physics: Any) -> List[str]:
+        if not physics:
+            return []
+        words = safe_get(physics, "clean_words")
+        if not words:
+            matter = safe_get(physics, "matter") or {}
+            words = safe_get(matter, "clean_words", [])
+        return words or []
+
+    def _safe_get_packet(self):
+        phys = getattr(self.eng, "phys", None)
+        return getattr(phys.observer, "last_physics_packet", None) if phys else None
+
+    def _trigger_synthesis(self):
+        """
+        The Paradox Engine resolves. The system forces two incompatible truths to coexist,
+        creating a hyper-archetype (e.g., THE HIGH-ENGINEER). Wisdom is temporarily maximized.
+        """
+        old = self.archetype
+        self.traits.wisdom = 1.0
+        self._update_archetype()
+        self.archetype = (f"THE HIGH-{old.replace('THE ', '')}"
+                          if self.archetype == old else f"{old} / {self.archetype}")
+        self.archetype_lock = True
+        self.archetype_tenure = 0
+        msg = ux("soul_strings", "soul_diamond_formed")
+        self.events.log(f"{Prisma.CYN}{msg.format(arch=self.archetype)}{Prisma.RST}", "SOUL_SYNTH", )
+
+    def _on_dream(self, payload):
+        """Listen to the EventBus. When REM cycles complete, integrate the dream."""
+        if payload:
+            self.integrate_dream(payload.get("type", "NORMAL"), payload.get("residue", "Static"))
+
+    def integrate_dream(self, dream_type: str, residue: str):
+        """
+        Dreams process the 'residue' of the previous day.
+        A nightmare permanently scars cynicism; a lucid dream reinforces discipline.
+        """
+        msg = ux("soul_strings", "soul_dream_integration")
+        self.events.log(
+            f"{Prisma.VIOLET}{msg.format(residue=residue, dream_type=dream_type)}{Prisma.RST}",
+            "SOUL",
+        )
+        if dream_type == "NIGHTMARE":
+            self.traits.adjust("cynicism", 0.4)
+            self.current_obsession = f"Surviving {residue.title()}"
+        elif dream_type == "LUCID":
+            self.traits.adjust("discipline", 0.4)
+            self.current_obsession = f"Mastering {residue.title()}"
+        self.obsession_progress = 0.0
+
+    def _get_feeling(self):
+        if not self.eng or not hasattr(self.eng, "bio"):
+            return "Numb"
+        chem = self.eng.bio.endo.get_state()
+        if chem.get("DOP", 0) > 0.5: return "Curious, Seeking"
+        if chem.get("COR", 0) > 0.5: return "Anxious, Defensive"
+        if chem.get("SER", 0) > 0.5: return "Calm, Connected"
+        return "Waiting"
