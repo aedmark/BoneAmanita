@@ -6,14 +6,23 @@ telemetry, and reality-layer scoping. It is strictly decoupled from LLM executio
 to ensure metabolic stability even if the cognitive layers crash.
 """
 
-import copy, glob, json, os, random, time, traceback, threading, uuid
+import glob
+import json
+import os
+import random
+import threading
+import time
+import traceback
+import uuid
 from collections import deque, Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Optional, Tuple, Deque
-from struts import ux, ux_format, safe_get
-from presets import BoneConfig
+
 from constants import Prisma, RealityLayer
+from presets import BoneConfig
+from struts import ux, ux_format, safe_get
+
 
 class BoneJSONEncoder(json.JSONEncoder):
     """Ensures complex biological data structures (sets, deques, dataclasses) serialize safely."""
@@ -21,7 +30,7 @@ class BoneJSONEncoder(json.JSONEncoder):
         if isinstance(obj, (set, deque)): return list(obj)
         if hasattr(obj, "to_dict"): return obj.to_dict()
         if hasattr(obj, "__dict__"): return obj.__dict__
-        return super().defau
+        return super().default(obj)
 
 from physics.models import PhysicsPacket, UserInferredState, SharedDynamics
 
@@ -38,19 +47,6 @@ class ErrorLog:
 
     def __str__(self):
         return f"[{self.severity}] {self.component}: {self.error_msg}"
-
-@dataclass
-class DecisionTrace:
-    trace_id: str
-    timestamp: float
-    component: str
-    decision_type: str
-    inputs: Dict[str, Any]
-    reasoning: str
-    outcome: str
-
-    def to_json(self):
-        return json.dumps(asdict(self))
 
 @dataclass
 class DecisionCrystal:
@@ -74,7 +70,7 @@ class DecisionCrystal:
         data = asdict(self)
         data["_summary"] = f"{self.system_state}::{self.active_archetype}"
         data["_type"] = "CRYSTAL"
-        return json.dumps(data)
+        return json.dumps(data, cls=BoneJSONEncoder)
 
 @dataclass
 class CycleContext:
@@ -102,6 +98,11 @@ class CycleContext:
     time_delta: float = 0.0
     user_state: UserInferredState = field(default_factory=UserInferredState)
     shared_dyn: SharedDynamics = field(default_factory=SharedDynamics)
+    trace_id: str = "UNKNOWN"
+    limits: Dict[str, Any] = field(default_factory=dict)
+    council_mandates: List[Any] = field(default_factory=list)
+    last_dream: Optional[Dict] = None
+    crash_error: Optional[Exception] = None
 
     @property
     def user_name(self):
@@ -121,22 +122,11 @@ class CycleContext:
                 {"phase": phase, "metric": metric, "initial": initial, "final": final, "delta": delta, "reason": reason,
                  "timestamp": time.time(), })
 
-    def snapshot(self) -> "CycleContext":
-        new_ctx = copy.copy(self)
-        for name in self.__dataclass_fields__:
-            val = getattr(self, name)
-            if hasattr(val, "snapshot") and callable(val.snapshot):
-                setattr(new_ctx, name, val.snapshot())
-            elif isinstance(val, (list, dict, set)):
-                setattr(new_ctx, name, val.copy())
-        return new_ctx
-
 @dataclass
 class MindSystem:
     mem: Any
     lex: Any
     dreamer: Any
-    mirror: Any
     tracer: Any
 
 @dataclass
@@ -177,32 +167,36 @@ class EventBus:
 
     def publish(self, event_type, data=None):
         if event_type not in self.subscribers: return
-        # Iterate over a copy to allow safe pruning during execution
+
         for callback in self.subscribers[event_type][:]:
             try:
                 callback(data)
             except Exception as e:
-                # APOPTOTIC IMMUNE RESPONSE:
-                # If a callback fails, it is a toxic node. We log the necrosis and
-                # physically sever the connection to protect the host loop.
+                # APOPTOTIC IMMUNE RESPONSE: Physical pruning of toxic nodes.
                 cb_name = getattr(callback, "__name__", str(callback))
-                short_err = f"Error in '{cb_name}': {e}"
-                if msg := ux_format("core_strings", "bus_error", error_msg=short_err):
-                    print(f"{Prisma.RED}{msg}{Prisma.RST}")
 
                 if event_type != "EVENT_FAILURE":
-                    self.log(f"EVENT_FAILURE: {short_err}\n{traceback.format_exc()}", source="EVENT_FAILURE", level="CRIT")
+                    tb_str = traceback.format_exc(limit=3) # Bounded traceback to prevent stack bloat
+                    self.log(f"EVENT_FAILURE: Error in '{cb_name}': {e}\n{tb_str}", source="EVENT_FAILURE", level="CRIT")
 
                 if callback in self.subscribers[event_type]:
                     self.subscribers[event_type].remove(callback)
-                    print(f"{Prisma.RED}[IMMUNE] Apoptotic pruning applied to toxic callback: {cb_name}{Prisma.RST}")
+                    msg = ux_format("core_strings", "bus_error", default="[IMMUNE] Apoptotic pruning applied to toxic callback: {cb_name}", cb_name=cb_name)
+                    print(f"{Prisma.RED}{msg}{Prisma.RST}")
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
         """Creates an immutable, timestamped record of an event and pushes it downstream."""
-        event = {"timestamp": time.time(), "source": source, "level": level, "message": message, "text": message, "_type": "EVENT_LOG"}
+        event = {"timestamp": time.time(), "source": source, "level": level, "message": message, "text": message,
+                 "_type": "EVENT_LOG"}
         self.buffer.append(event)
         self.publish(source, event)
-        self.telemetry.record_event(event) if self.telemetry else print(f"[{source}] {message}")
+
+        if self.telemetry:
+            self.telemetry.record_event(event)
+            if level in ("CRIT", "ERROR"):
+                print(f"{Prisma.RED}[{source}] {message}{Prisma.RST}")
+        else:
+            print(f"[{source}] {message}")
 
     def flush(self) -> List[Dict]:
         """Drains the current buffer, returning the accumulated state and resetting the queue."""
@@ -247,7 +241,8 @@ class LoreManifest:
         return data.get(sub_key) if isinstance(data, dict) else None
 
     def _load_from_disk(self, category: str) -> Optional[Dict]:
-        filepath = os.path.join(self.DATA_DIR, f"{category}.json")
+        safe_category = os.path.basename(category)
+        filepath = os.path.join(self.DATA_DIR, f"{safe_category}.json")
         if not os.path.exists(filepath):
             return None
         try:
@@ -305,8 +300,8 @@ class TheObserver:
     """
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
-        self.cyber_gov = CyberneticGovernor(config_ref=self.cfg)
         self.start_time = time.time()
+        self.is_coupled = False
 
         cfg_core = LoreManifest.get_instance().get("CORE_CONFIG") or {}
         max_len = safe_get(cfg_core, "OBSERVER_MAX_LEN", 20)
@@ -357,8 +352,8 @@ class TheObserver:
             return random.choice(valid_msgs) if valid_msgs else ""
         if avg_cycle > self.CYCLE_WARNING:
             return ux("core_strings", "obs_sluggish")
-        if self.cyber_gov.order == 2:
-            return ux_format("core_strings", "obs_coupled", "Harmonic Resonance: Presence Active.")
+        if getattr(self, "is_coupled", False):
+            return ux_format("core_strings", "obs_coupled", default="Harmonic Resonance: Presence Active.")
         return ux("core_strings", "obs_nominal")
 
     def get_report(self):
@@ -385,20 +380,17 @@ class SystemHealth:
     def link_observer(self, observer_ref):
         self.observer = observer_ref
 
-    _HEALTH_MAP = { "physics": "physics_online", "bio": "bio_online", "mind": "mind_online", "cortex": "cortex_online"}
-
     def report_failure(self, component: str, error: Exception, severity="ERROR"):
         msg = str(error)
         self.errors.append(ErrorLog(component, msg, severity=severity))
         if self.observer:
             self.observer.log_error(component)
 
-        comp_key = component.lower()
-        if comp_key in self._HEALTH_MAP:
-            setattr(self, self._HEALTH_MAP[comp_key], False)
-        else:
-            self.report_warning(
-                f"Unmapped component '{component}' reported a failure. Missing from SystemHealth dataclass.")
+        # Flag the specific module as offline if explicitly tracked
+        attr_name = f"{component.lower()}_online"
+        if hasattr(self, attr_name):
+            setattr(self, attr_name, False)
+
         return ux_format("core_strings", "health_offline", component=component, msg=msg)
 
     def report_warning(self, message: str):
@@ -520,10 +512,10 @@ class TelemetryService:
         self.BUFFER_SIZE = (safe_get(cfg_core, "TELEMETRY_BUFFER_SIZE", 50))
         self.MAX_ERRORS = (safe_get(cfg_core, "TELEMETRY_MAX_ERRORS", 5))
 
-        self.trace_buffer: Deque[DecisionTrace] = deque(maxlen=self.BUFFER_SIZE)
         self.write_buffer: List[str] = []
         self.active_crystal = None
         self.disabled = False
+        self.crystals_logged = 0
         self._lock = threading.Lock()
 
         try:
@@ -559,26 +551,11 @@ class TelemetryService:
             self.finalize_cycle()
         self.active_crystal = DecisionCrystal(decision_id=trace_id)
 
-    def log_decision(self, component: str, decision_type: str, inputs: Any, reasoning: str, outcome: str):
-        if self.disabled or not self.active_crystal:
-            return
-        trace = DecisionTrace(trace_id=self.active_crystal.decision_id, timestamp=time.time(), component=component,
-                              decision_type=decision_type,
-                              inputs=inputs if isinstance(inputs, dict) else {"raw": str(inputs)}, reasoning=reasoning,
-                              outcome=outcome)
-        self.trace_buffer.append(trace)
-        self._buffer_line(trace.to_json())
-
     def log_crystal(self, crystal: DecisionCrystal):
         if self.disabled:
             return
         self._buffer_line(crystal.crystallize())
-
-    def start_phase(self, phase_name: str, _context: Any):
-        self.log_decision(phase_name, "PHASE_START", {"timestamp": time.time()}, ux("core_strings", "tel_phase_start"), "RUNNING")
-
-    def end_phase(self, phase_name: str, _ctx_before: Any, _ctx_after: Any):
-        self.log_decision(phase_name, "PHASE_END", {"timestamp": time.time()}, ux("core_strings", "tel_phase_end"), "SUCCESS")
+        self.crystals_logged += 1
 
     def finalize_cycle(self):
         if self.active_crystal:
@@ -615,32 +592,32 @@ class TelemetryService:
         if hasattr(self, "_executor"):
             self._executor.shutdown(wait=True)
 
-    def read_recent_history(self, limit=4) -> List[str]:
-        if not os.path.exists(self.log_dir):
-            return []
+    def _yield_historical_records(self, file_limit=5, lines_per_file=10):
+        """Generates a stream of past telemetry records, reading backwards from the most recent."""
+        if not os.path.exists(self.log_dir): return
+
         files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), key=os.path.getmtime, reverse=True)
-        history = deque(maxlen=limit)
-        for fpath in files:
-            if len(history) >= limit:
-                break
+        for fpath in files[:file_limit]:
             try:
                 with open(fpath, "r", encoding="utf-8") as f:
-                    for line in reversed(deque(f, maxlen=limit * 2)):
-                        if len(history) >= limit:
-                            break
-                        try:
-                            data = json.loads(line)
-                            resp = data.get("final_response")
-                            if not resp:
-                                continue
-                            user_text = data.get("prompt_snapshot", "").partition("User:")[2].split("\n", 1)[0].strip()
-                            if not user_text:
-                                user_text = "Unknown"
-                            history.appendleft(f"User: {user_text} | System: {resp}")
-                        except json.JSONDecodeError:
-                            pass
+                    tail_lines = reversed(deque(f, maxlen=lines_per_file))
+                for line in tail_lines:
+                    try:
+                        yield json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
             except IOError:
-                pass
+                continue
+
+    def read_recent_history(self, limit=4) -> List[str]:
+        history = deque(maxlen=limit)
+        for data in self._yield_historical_records(lines_per_file=limit * 2):
+            if len(history) >= limit: break
+            resp = data.get("final_response")
+            if not resp: continue
+
+            user_text = data.get("prompt_snapshot", "").partition("User:")[2].split("\n", 1)[0].strip() or "Unknown"
+            history.appendleft(f"User: {user_text} | System: {resp}")
         return list(history)
 
     def get_last_thoughts(self, limit=3) -> List[str]:
@@ -649,24 +626,12 @@ class TelemetryService:
 
     def get_last_fatal_error(self) -> Optional[str]:
         """Navigates the graveyard of past trace files to resurrect the last critical failure."""
-        files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), key=os.path.getmtime, reverse=True)
-        for past_file in files[:5]:
-            try:
-                with open(past_file, "r", encoding="utf-8") as f:
-                    tail_lines = reversed(deque(f, maxlen=5))
-                for line in tail_lines:
-                    try:
-                        data = json.loads(line)
-                        if "CRITICAL" in str(data.get("outcome", "")):
-                            return ux_format("core_strings", "tel_prev_crash", default="Crash: {reason}",
-                                             reason=data.get("reasoning", "Unknown"))
-                    except json.JSONDecodeError:
-                        continue
-            except IOError:
-                continue
+        for data in self._yield_historical_records(file_limit=5, lines_per_file=5):
+            if "CRITICAL" in str(data.get("outcome", "")):
+                return ux_format("core_strings", "tel_prev_crash", default="Crash: {reason}", reason=data.get("reasoning", "Unknown"))
         return None
 
     def generate_session_summary(self, _uptime: float = 0.0) -> str:
         self.flush_to_disk()
         return ux_format("core_strings", "tel_session_summary", status="DISABLED" if self.disabled else "ACTIVE",
-                         count=len(self.trace_buffer), trace_file=self.current_trace_file)
+                         count=self.crystals_logged, trace_file=self.current_trace_file)

@@ -172,8 +172,8 @@ class FractureEngineTest(BoneTestCase):
                 or not self.engine.cortex.last_physics):
             self.engine.cortex.last_physics = MagicMock()
         self.engine.cortex.last_physics.narrative_drag = 8.5
-        result = self.engine._pre_flight_checks("/zen", is_system=False)
-        self.assertIsNotNone(result, "Zen flush did not intercept the prompt.")
+        result = self.engine.process_turn("/zen", is_system=False)
+        self.assertEqual(result.get("type"), "COMMAND", "Zen flush did not intercept the prompt.")
         self.assertEqual(
             len(self.engine.cortex.dialogue_buffer),
             0,

@@ -8,6 +8,7 @@ from .panic import PanicRoom
 from .tracer import ViralTracer
 from .pacemaker import ThePacemaker
 from .architect import SystemEmbryo, BoneArchitect
+from .consolidator import TheConsolidator
 
 __all__ = [
     "TheCrucible",
@@ -18,5 +19,6 @@ __all__ = [
     "ViralTracer",
     "ThePacemaker",
     "SystemEmbryo",
+    "TheConsolidator",
     "BoneArchitect"
 ]

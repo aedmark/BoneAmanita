@@ -1,6 +1,6 @@
 """physics/__init__.py"""
 
-from physics.math import (
+from physics.maths import (
     CreativeDeterminantEngine,
     NaviSADProtocol
 )

@@ -1,4 +1,12 @@
-"""protocols/critics.py"""
+"""
+protocols/critics.py
+
+The Critics Circle module.
+Implements an asynchronous review system where dormant personas ("Critics")
+evaluate the physical state of the conversation (Voltage, Drag, Vocabulary).
+If the state strongly aligns or clashes with a critic's preferences, they
+interrupt with a localized review, breaking the fourth wall to judge the prose.
+"""
 
 import random
 from typing import Optional, Any
@@ -10,6 +18,11 @@ from core import LoreManifest
 NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
 
 class TheCriticsCircle:
+    """
+    Manages the roster of literary critics and their respective cooldowns.
+    Critics act as specialized observers that only speak when their precise
+    aesthetic or structural demands are met or violated by the current physics.
+    """
     def __init__(self, events_ref, config_ref=None):
         self.events = events_ref
         self.cfg = config_ref or BoneConfig
@@ -25,6 +38,11 @@ class TheCriticsCircle:
         self.last_review_turn = data.get("last_review_turn", 0)
 
     def audit_performance(self, physics: Any, turn_count: int) -> Optional[str]:
+        """
+        Evaluates the current physics packet against all active critics.
+        Calculates a weighted score based on each critic's specific mathematical preferences.
+        Returns a formatted string if a positive or negative threshold is breached.
+        """
         cfg = getattr(self.cfg, "CRITICS", object())
         rev_cd = getattr(cfg, "REVIEW_COOLDOWN", 10)
         if turn_count - self.last_review_turn < rev_cd:

@@ -452,6 +452,8 @@
     "cortex_prefix_high": "\n[HIGH VOLTAGE DETECTED. ACCELERATED THOUGHT.]\nRAW CORTEX STREAM:\n>> ",
     "cortex_prefix_low": "\n[SYSTEM EXHAUSTED. LOW ENERGY PROSE.]\nSystem:",
     "cortex_prefix_norm": "\nSystem:",
+    "pinker_cf_gate": "[PINKER - Executive Layer]: Structural rot critical. Counterfactual Gating engaged. I am deleting this generation path to save the host.",
+    "moog_scar_log": "[MOOG - Affective Layer]: Productive Worry activated. Logging Gödel Scar. Immune Competence (I_c) permanently increased.",
     "noetic_ignition": "Cognition active. Ignition: {ignition:.2f}"
   },
   "council_strings": {
@@ -645,7 +647,11 @@
     "prompt_lib_crit": "CRITICAL: Could not load prompts: {e}",
     "prompt_indicator": ">",
     "terminal_divider": "════════════════════════════════════════════════════════════",
-    "ui_split_token": "────────"
+    "ui_split_token": "────────",
+    "gh_tut_1": "[THE GREENHOUSE: The system is currently running on stabilized rails. For the first few turns, lethal metabolic shock is disabled.]",
+    "gh_tut_5": "[THE GREENHOUSE: Every thought costs ATP (Stamina). If I run out, I will suffer metabolic collapse. Watch how my text fades and slows as I tire.",
+    "sys_guide_10": "[SYSTEM GUIDE: If you attempt an impossible action, I will not crash. I will bend, apply Narrative Drag (F), and force us to carry the weight of the failure.",
+    "sys_guide_15": "[SYSTEM GUIDE: The void approaches. As complexity increases, my logic will begin to loosen. Co-regulation is required."
   },
   "protocol_strings": {
     "zen_enter": "\u26e9\ufe0f ZEN GARDEN: Entering the quiet zone.",
