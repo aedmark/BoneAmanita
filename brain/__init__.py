@@ -5,7 +5,6 @@ from .ann import MemoryConsolidator
 from .composer import PromptComposer
 from .cortex import TheCortex
 from .mind import DreamEngine, ChemicalState, NeurotransmitterModulator, NoeticLoop
-from .soul import CoreMemory
 
 __all__ = [
     "TheAkashicRecord",
@@ -16,5 +15,4 @@ __all__ = [
     "ChemicalState",
     "NeurotransmitterModulator",
     "NoeticLoop",
-    "CoreMemory"
 ]

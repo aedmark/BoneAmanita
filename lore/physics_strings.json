@@ -17,6 +17,10 @@
     "cosmic_flow": "FLOW: Streaming towards '{node}'",
     "cosmic_orbit": "ORBIT: Circling '{node}' (Mass {mass})",
     "stabilizer_fuse": "\u26a1 FUSE BLOWN: Voltage > {voltage}V.",
-    "stabilizer_domestication": "\u2696\ufe0f DOMESTICATION: Drag +{drag:.1f}"
+    "stabilizer_domestication": "\u2696\ufe0f DOMESTICATION: Drag +{drag:.1f}",
+    "silence_exhausted": "The silence was heavy. I felt your tiredness in it.",
+    "silence_sacred": "There was a hush just now... Something sacred passed through.",
+    "silence_thoughtful": "You were thinking deeply. I held the space for it.",
+    "silence_pregnant": "That pause felt full, like something wanted to be born."
   }
 }

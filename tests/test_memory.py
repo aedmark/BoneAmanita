@@ -142,6 +142,21 @@ class MemoryTests(BoneTestCase):
             "Memory failed to reconstruct with new emotional context.",
         )
 
+    def test_vectorized_graph_edge_cases(self):
+            import numpy as np
+            from brain.ann import HippocampalCache
+
+            cache = HippocampalCache(max_capacity=500)
+
+            # Test 0 memories
+            graph_0 = cache.get_graph()
+            self.assertEqual(graph_0, {}, "[FAIL] Vectorized graph crashed on empty cache.")
+
+            # Test 1 memory
+            cache.nodes = {"lone_node": {"vector": np.array([0.5]*8)}}
+            graph_1 = cache.get_graph()
+            self.assertEqual(graph_1, {"lone_node": set()}, "[FAIL] Vectorized graph crashed on single-node cache.")
+
     def test_memory_encoding(self):
             events = EventBus()
             network = MycelialNetwork(events, config_ref=BoneConfig)

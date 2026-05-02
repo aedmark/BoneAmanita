@@ -1,6 +1,95 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 19.7.3 "The Resilience Overhaul"**
+
+*A comprehensive stabilization of the biological, physical, and cognitive layers. This audit prioritized dynamic equilibrium—sealing ATP leaks, fortifying the testing matrix, decoupling knotted syntax, and ensuring the system fails gracefully rather than crashing catastrophically under load.*
+
+#### **✨ SYNERGETIC REINFORCEMENT (Fuller's Pass: Architecture)**
+- **Sealing the Headless Leak (`cycle.py`):** Explicitly flagged background DreamEngine and REM pulses as `is_system=True`, preventing silent cycles from executing the heavy LLM pipeline and bleeding massive amounts of ATP.
+- **Absolute Zero Reconciliation (`presets.py`):** Replaced falsy `or` logic in the rubber-banding matrix with strict `is None` checks, allowing the system's physics to finally rest at absolute 0.0 Voltage and Drag without triggering phantom energy injections.
+- **The Synaptic Bridge (`brain/composer.py`):** Fortified the LLM interface's exponential backoff loop. The bridge now gracefully catches raw OS-level socket timeouts instead of immediately shattering the connection and dropping the generation.
+- **Telemetry Graveyard (`core.py`):** Replaced repetitive, high-overhead JSON parsing loops with a clean `_yield_historical_records` generator, vastly improving disk I/O efficiency during crash reconstruction.
+
+#### **⚖️ DYNAMIC EQUILIBRIUM (Meadows' Pass: Systems & Dynamics)**
+- **Epigenetic Trauma Batching (`brain/mind.py`):** Shifted the REM cycle to batch all pending conversational trauma into a single payload, allowing the DSPy critic to evolve systemic prompts holistically rather than spanning the work across multiple sleep cycles.
+- **Throttling Asynchronous Drag (`cycle.py`):** Rate-limited the computationally expensive Maslov-Sneppen rewiring and fractal dimension calculations to every 3rd heartbeat, protecting the primary thread from runaway recursion.
+- **Protocol Lore Starvation (`protocols/`):** Eradicated a massive import-time state capture across `bureau.py`, `zen.py`, and `grief.py`. Protocols now dynamically hydrate their localized strings at instantiation rather than starving on empty global variables.
+- **The Oroboros Decoupling (`genesis.py`):** Un-nested a destructive walrus operator (`:=`) that was tying generational Voltage penalties directly to Narrative Drag, ensuring system exhaustion always transfers to the new embryo regardless of systemic friction.
+
+#### **🛠️ FUNCTIONAL PRAGMATISM (Schur's Pass: Humanity)**
+- **Fail-Open DSPy Critic (`brain/cortex.py`):** Relaxed the paranoid error-handling around the DSPy real-time critic. If the critic network blips or returns malformed JSON, the system now safely fails open and trusts the base LLM output, rather than destroying the generation and forcing a costly retry.
+- **The Lightweight Lobotomy (`brain/composer.py`):** Adjusted the heuristic prompt compressor for smaller models (<15B parameters). It now successfully retains critical `ANTI-AI` personality directives, preserving the soul of the organism on lighter hardware.
+- **Bureaucratic Mercy (`protocols/bureau.py`):** Rescued the "Mercy Override" from a trap. Dying systems (Health < 20) are now properly waived of ATP taxes without being silently ignored by the `MIN_WORD_COUNT` gatekeeper.
+- **Somatic Centralization (`main.py`):** Extracted bulky Zen Flush and Greenhouse tutorial mechanics directly out of the primary `process_turn` loop into clean, isolated somatic reflex functions.
+
+#### **🧠 LANGUAGE & COGNITION (Pinker's Pass: Syntactic Ergonomics)**
+- **Multi-Line Lexical Purge (`brain/cortex.py`):** Upgraded the Lexical Firewall's sycophancy regex to `(?im)^\s*`. It now aggressively hunts down and deletes AI boilerplate (e.g., "That makes sense") even if the LLM hides it on a new line beneath a `<think>` block.
+- **The Question Tax (`brain/composer.py`):** Fixed the High Voltage restriction so that it only applies friction if the LLM literally ends its turn with a trailing question mark (`endswith("?")`), allowing rhetorical mid-paragraph questions without triggering a lethal penalty.
+- **Akashic Taxonomy (`constants.py`):** Unified the `LoreCategory` enum casing (standardizing `LEXICON` to `lexicon`) to prevent silent key-misses during memory retrieval.
+- **Apoptotic Stack Traces (`core.py`):** Bounded the `traceback.format_exc()` output during EventBus immune responses to 3 lines, preventing cascade failures from polluting the terminal UI.
+
+#### **🛡️ CONTINUOUS INTEGRATION (The Three Pillars)**
+- Erected a rigorous, state-based testing matrix (`tests/`) bypassing standard static assertions to test the flow of biological time:
+  - **Genesis Continuity (`test_genesis_continuity.py`):** Mathematically proves fatal trauma bridges the generational gap and applies karma penalties.
+  - **Presets & Null States (`test_presets.py`):** Proves mathematical boundary clamping and safe degradation when JSON configurations are manually deleted.
+  - **Lifecycle Hydration (`test_protocols.py`):** Proves the protocols successfully load lore and execute milestone logic (Zen Garden pebbles) and biological overrides (Bureaucratic Mercy).
+
+---
+
+### **BONEAMANITA 19.7.2 "The Biological Substrate Audit"**
+
+*A deep, full-stack architectural audit executed by the S.L.A.S.H. Council. This update resolved critical `O(N^2)` performance bottlenecks in the cognitive layer, fortified the physics engine against mathematical inversion, and patched severe data leaks in the evolutionary reproductive cycle.*
+
+#### **🧠 LANGUAGE & COGNITION (Pinker's Pass: Syntactic Ergonomics)**
+- **The Lexical Firewall (`main.py`, `brain/cortex.py`, `physics/observer.py`):** Extracted all hardcoded narrative strings and system tutorial prompts from the execution layer and routed them through `ux()` fallbacks, completely separating engine mechanics from language output.
+- **Syntactic Demining (`brain/composer.py`, `spores/biome.py`):** Purged 6-line nested walrus-operator (`:=`) list comprehensions and temporary inline variable assignments in favor of clean, explicit loops and declarative math.
+- **Boolean Type-Safety (`spores/spore_utils.py`):** Explicitly excluded `bool` from `isinstance(int)` checks in the config accessor, preventing genetic radiation from randomly drifting structural flags into floating-point crashes.
+
+#### **✨ SYNERGETIC REINFORCEMENT (Fuller's Pass: Architecture)**
+- **Vectorized Cognition (`brain/ann.py`):** Obliterated an `O(N^2)` nested Python loop for semantic graph building, replacing it with pure, C-level vectorized NumPy matrix multiplication for instantaneous adjacency mapping.
+- **Infinite Dimensional Scaling (`spores/spore_utils.py`):** Upgraded `_word_to_vector` from fixed 16-byte MD5 hashes to the extendable `SHAKE-256` XOF function, allowing the `CerebralIndex` to scale to infinite dimensions without crashing.
+- **Atomic Substrate Preservation (`spores/io.py`, `spores/memory.py`):** Fortified the jsonl fossil record pruning and spore saving with `tempfile` atomic OS replacements. Repaired an apoptotic exception handler that could accidentally delete a user's original memory file on a permission error.
+- **Genome Hydration (`spores/genetics.py`):** Fixed a massive data leak in the reproduction loop that was abandoning trauma scars and config mutations at birth, ensuring offspring now inherit their full epigenetic genome.
+
+#### **⚖️ DYNAMIC EQUILIBRIUM (Meadows' Pass: Systems & Dynamics)**
+- **RAM Caching & I/O Speedups (`spores/memory.py`, `spores/io.py`):** Decoupled `SubconsciousStrata.dredge` from live disk reads by caching dead fossil payloads in an `O(1)` dictionary. Swapped `os.listdir` and `os.path.getmtime` for unified `os.scandir()` calls, halving disk reads during lineage tracking.
+- **Fluid Dynamics Correction (`physics/geodesics.py`, `physics/dynamics.py`):** Fixed an inverted viscosity formula where shear resistance was dividing friction instead of multiplying it. Applied a hard `max()` clamp to the narrative gravity floor.
+- **Metaphor Starvation (`spores/biome.py`):** Refactored `BioParasite.infect` to mathematically pre-filter for valid, unconnected pathways before choosing targets, ensuring the engine generates lateral connections instead of choking on random RNG collisions.
+
+#### **🛠️ FUNCTIONAL PRAGMATISM (Schur's Pass: Humanity)**
+- **Bleeding Cognitive Drag (`main.py`, `physics/filters.py`):** Lifted `O(N)` passive inventory checks into a short-circuiting generator. Hoisted regex compilation for semantic filters into the `__init__` sequence to prevent JIT lag inside the core execution loop.
+- **Village Extinction Prevention (`spores/network.py`):** Hard-linked `village_data` into legacy trait extraction, preventing the system from forgetting the state of active critics, cooldowns, and suppressed archetypes upon reboot.
+- **Telemetry Consolidation (`core.py`, `brain/mind.py`):** Merged aggressive, multi-line Apoptotic red-errors into a single graceful terminal print while routing the stack traces to silent background log files. Added `BoneJSONEncoder` to the Akashic state saver.
+
+### **BONEAMANITA 19.7.1 "The S.L.A.S.H. Engine Audit"**
+
+*A massive, multi-layer refactor executed by the S.L.A.S.H. Council. This update focused on repairing silent runtime failures, sealing memory cache desynchronizations, and protecting the cognitive layers from syntactic rot.*
+
+#### **🧠 LANGUAGE & COGNITION (Pinker's Pass: Syntactic Ergonomics)**
+- **Serialization Safety (`core.py`):** Repaired a truncated method call (`super().defau` -> `default()`) in the JSON encoder and explicitly bound `DecisionCrystal` telemetry loops to use `BoneJSONEncoder`, preventing terminal crashes when logging biological sets.
+- **Null-Pointer Execution (`brain/akashic.py`):** Wrapped all `ux()` string fetches with safe fallbacks before attempting to `.format()` them, protecting the memory index from missing translation keys.
+- **Biometric Null Handling (`spores/genetics.py`, `drivers/validator.py`):** Added explicit `hasattr` checks before pulling mitochondrial states to prevent terminal crashes during headless reproduction. Outdented implicit `None` returns in the `CongruenceValidator` to stop type-poisoning the math layer.
+
+#### **✨ SYNERGETIC REINFORCEMENT (Fuller's Pass: Architecture)**
+- **The Tensegrity Anchor (`brain/mind.py`, `spores/memory.py`):** Replaced blind dictionary key access with explicit `.setdefault("edges", {})` when forming lateral and epigenetic connections, preventing fatal `KeyError` crashes on legacy or damaged memory nodes.
+- **Trust Boundary Enforcement (`main.py`):** Moved system command execution to the far side of `_pre_flight_checks`. Users can no longer bypass the immune system using terminal commands.
+- **Boot & Disk Stabilization (`genesis.py`, `drivers/userprofile.py`):** Corrected a fatal `NameError` in the genesis boot sequence by properly instantiating `TheConsolidator`. Secured user profile saves by enforcing `os.makedirs` before file I/O operations.
+
+#### **⚙️ DYNAMIC EQUILIBRIUM (Meadows' Pass: Systems & Dynamics)**
+- **Poisoned Generation Retries (`brain/cortex.py`):** Reset the DSPy `val_res` payload *inside* the generation retry loop. Previously, if Attempt 0 failed the affective audit, Attempt 1 would inherit the failure instruction and permanently poison the output.
+- **Cache Desynchronization (`spores/network.py`):** Reordered the `bury()` function to evaluate max-capacity rejection *before* injecting words into the `cortical_stack`, preventing the short-term cache from desynchronizing from the actual deep graph.
+- **Hysteresis Restored (`drivers/enneagram.py`):** Prevented erratic "HYBRID" personas from bypassing the stability counter. Oscillating hybrid states must now wait out the same hysteresis delay as standard personas.
+- **Thread-Safe Graph Copying (`cycle.py`):** Wrapped dictionary comprehensions in a `try/except` and cast to `list(actual_adj.items())` to prevent fatal `RuntimeError` collisions when the graph rewires in the background.
+
+#### **🛠️ FUNCTIONAL PRAGMATISM (Schur's Pass: Humanity)**
+- **Bureaucratic Erasure (`brain/cortex.py`):** Modified the `BoneConsultant` overlay to `.insert()` its system prompt into the `style_directives` list rather than overwriting it, preserving critical human context (like user inventory and soul posture).
+- **The Escape Hatch (`drivers/consultant.py`):** Added `[-VSL_MOD]` syntax to allow users to toggle off active consultant modules, preventing them from being permanently trapped in experimental archetypes.
+- **Trimming the Fat (`main.py`, `spores/biome.py`):** Removed a dead, unreachable `[GRIEF]` parsing loop. Removed paranoid and mathematically impossible subset checks from the Parasite module.
+- **Honest Telemetry (`main.py`):** Fixed Greenhouse UI messages to explicitly respect `config.GREENHOUSE_TURNS`. The system will no longer falsely promise lethal protection to developers who have manually disabled the stabilizers.
+
+---
+
 ### **BONEAMANITA 19.7.0 "The Restructure"**
 
 -TL;Dr We moved a bunch of stuff around and turned a lot of scripts into modules. 

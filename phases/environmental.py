@@ -1,4 +1,10 @@
-"""phases/environmental.py"""
+"""
+phases/environmental.py
+
+The Environmental and Observational execution phases.
+These phases handle how the system navigates topological space (Gravity, Zones),
+how it perceives user input (The Observer), and how it recovers during downtime (Sanctuary).
+"""
 
 from constants import Prisma
 import random
@@ -10,6 +16,11 @@ from mechanics.tools import TheTclWeaver
 from phases.base import SimulationPhase, _safe_dict, _deep_update
 
 class NavigationPhase(SimulationPhase):
+    """
+    Handles spatial movement and cosmic gravity.
+    Calculates the topological drag, evaluates orbital states (e.g., Lagrange points),
+    and manages transitions between semantic zones based on inertia.
+    """
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "NAVIGATION"
@@ -88,14 +99,18 @@ class NavigationPhase(SimulationPhase):
         return ctx
 
 class RealityFilterPhase(SimulationPhase):
+    """
+    The presentation layer modifier.
+    Translates the 8-dimensional thought vector into an I-Ching Trigram,
+    applying corresponding UI colors to the terminal output to visually
+    represent the current state of mind.
+    """
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "REALITY_FILTER"
         self.trigrams = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
 
     def run(self, ctx: CycleContext):
-        reflection = self.eng.mind.mirror.get_reflection_modifiers()
-        ctx.physics.narrative_drag *= reflection["drag_mult"]
         vector = ctx.physics.vector
         sufficient_mass = len(ctx.clean_words) >= 3
         sufficient_tension = getattr(ctx.physics, "voltage", 0.0) >= 5.0
@@ -112,6 +127,11 @@ class RealityFilterPhase(SimulationPhase):
         return ctx
 
 class ObservationPhase(SimulationPhase):
+    """
+    The Sensory Ingestion layer.
+    Reads the user's prompt, processes silence/time delays, triggers retroactive
+    metabolism for long absences, and syncs the observed data into the active physics packet.
+    """
     _SYNC_KEYS = ("clean_words", "counts", "vector", "valence", "entropy", "beta", "S",
                   "D", "C", "PHI_RES", "DELTA", "LQ", "ROS", "G", "raw_text", "antigens",
                   "psi", "kappa", "zone", "flow_state", "repetition",)
@@ -201,6 +221,11 @@ class ObservationPhase(SimulationPhase):
         return ctx
 
 class SanctuaryPhase(SimulationPhase):
+    """
+    The Recovery layer.
+    If the system reaches a safe topological zone with low trauma, this phase
+    triggers rapid ATP restoration, trauma decay, and spontaneous REM sleep.
+    """
     def __init__(self, engine_ref, governor_ref):
         super().__init__(engine_ref)
         self.name = "SANCTUARY"

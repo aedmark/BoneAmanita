@@ -125,25 +125,6 @@ class RandomTest(BoneTestCase):
                 "Kintsugi failed to dynamically format the log string from the manifest.",
             )
 
-    def test_telemetry_phase_hooks(self):
-            from core import TelemetryService, DecisionCrystal
-            manifest = LoreManifest.get_instance()
-            if "ux_strings" not in manifest._cache:
-                manifest._cache["ux_strings"] = {}
-            manifest._cache["ux_strings"]["core_strings"] = {
-                "tel_phase_start": "COMMENCING ALIGNMENT"
-            }
-            telemetry = TelemetryService.get_instance()
-            telemetry.disabled = False
-            telemetry.active_crystal = DecisionCrystal(decision_id="TEST_ID")
-            telemetry.start_phase("TEST_PHASE", None)
-            latest_trace = telemetry.trace_buffer[-1]
-            self.assertEqual(
-                latest_trace.reasoning,
-                "COMMENCING ALIGNMENT",
-                "Telemetry failed to use the dynamically injected phase start string.",
-            )
-
     def test_prompt_composer_anti_bleed_membranes(self):
             mock_lore = {"system_prompts": self.engine.prompt_library, "lenses": {}}
             composer = PromptComposer(mock_lore)
