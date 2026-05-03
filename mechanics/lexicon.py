@@ -425,7 +425,8 @@ class LexiconService:
         if (word := payload.get("word")) and (category := payload.get("category")):
             self.teach(word, category, tick=int(time.time()))
 
-        total_words = sum(len(s) for s in self._STORE.VOCAB.values())
+        total_words = sum(len(s) for s in self._STORE.VOCAB.values()) + sum(
+            len(s) for s in self._STORE.LEARNED_VOCAB.values())
         msg = ux("lexicon_strings", "sys_nominal")
         if msg:
             print(f"{Prisma.GRN}{msg.format(total_words=total_words)}{Prisma.RST}")

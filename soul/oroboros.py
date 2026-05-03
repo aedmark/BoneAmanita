@@ -1,4 +1,4 @@
-"""/soul/narrativeself.py"""
+"""/soul/oroboros.py"""
 
 import json
 import os
@@ -8,6 +8,7 @@ from typing import List, Any
 
 from constants import Prisma
 from core import LoreManifest
+from soul import NarrativeSelf
 # The soul does not exist in a vacuum. It sits atop the physical layer (akashic, core, struts)
 # and translates metabolic states (ATP, voltage) into narrative meaning.
 from presets import BoneConfig
@@ -60,10 +61,9 @@ class TheOroboros:
                 self.myths = [Myth(**m) for m in data.get("myths", [])]
             msg = ux("soul_strings", "oroboros_gen_loaded")
             print(f"{Prisma.VIOLET}{msg.format(gen=self.generation_count)}{Prisma.RST}")
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"{Prisma.RED}[OROBOROS]: Legacy state corrupted or missing. Starting fresh. ({e}){Prisma.RST}")
 
-    from soul import NarrativeSelf
     def crystallize(self, cause_of_death: str, soul: NarrativeSelf):
         """
         Executed on death. Maps the accumulated trauma and highest voltage memories

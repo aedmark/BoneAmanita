@@ -156,31 +156,33 @@ class TheGatekeeper:
         if ctx.physics.matter.counts.get("antigen", 0) > 2:
             return reject("TOXICITY", "gatekeeper_toxic")
 
-        # 3. Check for explicitly banned/unsafe inputs
-        if self._audit_safety(ctx.clean_words):
-            return reject("CURSED_INPUT", "gatekeeper_cursed")
-
         raw_len = len(ctx.input_text)
 
         try:
-            # Run the input through the CSF wash
+            # 1. IMMEDIATE CSF WASH: Decontaminate the text before any security audits.
             text = CerebrospinalFluidFilter.wash(ctx.input_text)
             is_idempotent = text == ctx.input_text
             strip_rate = raw_len - len(text)
             ctx.input_text = text
 
-            # 4. Amplification/Malignancy factor: If the CSF filter had to strip massive
-            # amounts of hidden payload data, treat it as a hostile injection and block it.
+            # 2. Amplification factor: Treat massive payload stripping as a hostile injection.
             m_a_thresh = getattr(self.cfg.PHYSICS, "MALIGNANCY_STRIP_THRESHOLD", 5.0)
             if strip_rate > m_a_thresh:
                 return reject("MALIGNANCY_SPIKE", "gatekeeper_toxic", color=Prisma.RED)
 
-            # If the input required no washing, log it as structurally pure.
             if is_idempotent:
                 safe_set(ctx.physics, "idempotent_state", True)
 
         except Exception:
             return reject("FATAL_ENCODING", "gatekeeper_cursed")
+
+        # 3. Re-derive safe clean_words if we stripped invisible data
+        if strip_rate > 0:
+            ctx.clean_words = self.lex.clean(ctx.input_text)
+
+        # 4. Check for explicitly banned/unsafe inputs on the WISHED string
+        if self._audit_safety(ctx.clean_words):
+            return reject("CURSED_INPUT", "gatekeeper_cursed")
 
         # 5. Prevent raw syntax errors or template injection
         if "```" in text or "{{" in text or "}}" in text or "CRITICAL_RENDER_FAIL" in text:

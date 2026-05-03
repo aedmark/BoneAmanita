@@ -2,6 +2,7 @@
 
 from constants import Prisma
 import random
+import math
 from typing import Any
 from presets import BoneConfig
 from physics import apply_somatic_feedback
@@ -111,8 +112,8 @@ class MetabolismPhase(SimulationPhase):
         m_a = getattr(ctx.physics, "m_a", 0.0)
         mu = getattr(ctx.physics, "mu", 0.0)
 
-        # Euler's number used to calculate exponential runaway tax.
-        amplification_penalty = mu * (2.71828**m_a)
+        # Calculate exponential runaway tax mathematically.
+        amplification_penalty = mu * math.exp(m_a)
         total_tax = base_cost + amplification_penalty
 
         if total_tax > 0:
@@ -244,7 +245,7 @@ class MetabolismPhase(SimulationPhase):
         if current_atp <= starvation_thresh or current_atp <= 0.0 or respiration == "NECROSIS":
             if hasattr(self.eng.mind.mem, "trigger_autophagy"):
                 atp_gain, msg = self.eng.mind.mem.trigger_autophagy()
-                self.eng.bio.mito.state.atp_pool += atp_gain
+                self.eng.bio.mito.adjust_atp(atp_gain, "Autophagy")
                 ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
 
     def _check_ros_toxicity(self, ctx: CycleContext):
@@ -372,6 +373,8 @@ class IntrusionPhase(SimulationPhase):
                     target = random.choice(keys)
                     self.eng.trauma_accum[target] = max(
                         0.0, self.eng.trauma_accum[target] - relief)
+                    if self.eng.trauma_accum[target] <= 0.0:
+                        del self.eng.trauma_accum[target]
                     msg_relief = ux("cycle_strings", "intrusion_relief")
                     ctx.log(f"{Prisma.GRY}{msg_relief.format(relief=relief, target=target)}{Prisma.RST}")
             if is_bored:

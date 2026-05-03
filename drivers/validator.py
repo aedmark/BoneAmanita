@@ -59,10 +59,8 @@ class CongruenceValidator:
         if isinstance(target_data, dict):
             # Compile the target vocabulary into a mathematical Set (Pinker).
             # This allows for instant O(1) intersection lookups.
-            target_words = {
-                               w.strip().lower()
-                               for w in target_data.get("vocab", "").split(",") if w
-                           } | set(target_data.get("keywords", []))
+            target_words = ({w.strip().lower() for w in target_data.get("vocab", "").split(",") if w} |
+                            {k.lower() for k in target_data.get("keywords", [])})
 
             # If the context object has already pre-cleaned the generated words,
             # we intersect them with our target dictionary.

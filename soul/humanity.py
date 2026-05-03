@@ -82,9 +82,8 @@ class HumanityAnchor:
         seeds = []
         if hasattr(LoreManifest, "get_instance"):
             lore = LoreManifest.get_instance()
-            seeds = lore.get("SEEDS") or (lore.get("NARRATIVE_DATA") or {}).get(
-                "SEEDS", [])
-        riddles = seeds or ({"question": "Who are you?", "triggers": ("*", )}, )
+            seeds = (lore.get("SCENARIOS") or {}).get("SEEDS", [])
+        riddles = seeds or [{"question": "Who are you?", "triggers": ("*", )}]
         selection = random.choice(riddles)
         riddle = selection.get("question", "Error?")
         raw_triggers = selection.get("triggers", ["*"])

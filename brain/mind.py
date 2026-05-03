@@ -73,7 +73,7 @@ class NeurotransmitterModulator:
             physics_state = {}
         cfg = safe_get(self.cfg, "CORTEX", {})
         if not simulate:
-            incoming_chem = self.bio.endo.get_state() if self.bio else {}
+            incoming_chem = self.bio.endo.get_state()
             self.current_chem.homeostasis(rate=safe_get(cfg, "BASE_DECAY_RATE", 0.1))
             plasticity = safe_get(cfg, "BASE_PLASTICITY", 0.1) + (
                     base_voltage * safe_get(cfg, "VOLTAGE_SENSITIVITY", 0.05))
@@ -180,8 +180,7 @@ class NoeticLoop:
         if voltage > link_v and random.random() < link_chance:
             if len(clean_words) >= 2:
                 w1, w2 = random.sample(clean_words, 2)
-                if self.mind and hasattr(self.mind.mem, "graph"):
-                    self._force_link(self.mind.mem.graph, w1, w2, self.cfg)
+                self._force_link(self.mind.mem.graph, w1, w2, self.cfg)
         current_lens = soul_ref.archetype if soul_ref else "OBSERVER"
         current_role = f"The {current_lens.title().replace('_', ' ')}" if soul_ref else "Witness"
         msg_cog = ux("brain_strings",
@@ -232,11 +231,11 @@ class DreamEngine:
         dream_text = None
         is_deep_rem = False
         shift = ({"cortisol": -0.3, "dopamine": 0.1} if cortisol <= 0.6 else {"cortisol": 0.1})
-        if hasattr(self.eng, "substrate") and self.eng.substrate.pending_writes:
+        if self.eng and getattr(self.eng, "substrate", None) and self.eng.substrate.pending_writes:
             raw_payloads = [data for path, data in self.eng.substrate.pending_writes if "memory_queue" in path]
             s_logs, s_cost = self.eng.substrate.execute_writes(available_atp)
             shift["atp_drain"] = s_cost
-            if raw_payloads and hasattr(self.mem, "cortex"):
+            if raw_payloads:
                 from spores import _word_to_vector
                 vectors, metadata = [], []
                 for text in raw_payloads:
@@ -247,11 +246,9 @@ class DreamEngine:
             dream_text = f"[{' | '.join(s_logs)} | ATP: -{s_cost:.1f} | Silent Logging Complete]"
             if self.events: self.events.log(f"{{Prisma.MAG}}✨ [REM CYCLE]: {dream_text}{{Prisma.RST}}", "SYS")
             return dream_text, shift
-        if (self.mem and hasattr(self.mem, "hippocampus")
-                and hasattr(self.mem, "cortex")):
-            consolidator = MemoryConsolidator(self.mem.hippocampus, self.mem.cortex, self.events)
-            nodes_moved, atp_cost = consolidator.trigger_rem_consolidation(available_atp)
-            if nodes_moved > 0:
+        consolidator = MemoryConsolidator(self.mem.hippocampus, self.mem.cortex, self.events)
+        nodes_moved, atp_cost = consolidator.trigger_rem_consolidation(available_atp)
+        if nodes_moved > 0:
                 is_deep_rem = True
                 shift["voltage"] = 2.0
                 shift["atp_drain"] = atp_cost
@@ -285,7 +282,7 @@ class DreamEngine:
                                 compressed = getattr(self.dspy_critic, "compress_prompts", lambda x: None)(dirs)
                                 if compressed:
                                     disk_prompts[active_mode]["directives"] = compressed
-                            if hasattr(self.eng, "prompt_library"):
+                            if self.eng:
                                 self.eng.prompt_library = disk_prompts
                             self.lore.inject("SYSTEM_PROMPTS", disk_prompts)
                             self.lore.save("SYSTEM_PROMPTS")
@@ -297,9 +294,9 @@ class DreamEngine:
                             print(err_msg)
                     dream_text = f"The system processes conversational trauma in its sleep. It permanently mutates its own source code, forming a scar-tissue axiom: '{new_axiom}'"
                     is_deep_rem = True
-        if self.mem and hasattr(self.mem, "subconscious") and self.llm:
+        if self.llm:
             index = list(self.mem.subconscious.index)
-            if hasattr(self.eng, "akashic") and hasattr(self.eng.akashic, "shadow_stock"):
+            if self.eng and getattr(self.eng, "akashic", None):
                 recent_shadows = self.eng.akashic.shadow_stock[-10:]
                 index.extend(g.get("concept", "Forgotten Echo") for g in recent_shadows if "concept" in g)
             if len(index) >= 2:
@@ -321,7 +318,7 @@ class DreamEngine:
                 "NIGHTMARES" if cortisol > 0.6 else ("SURREAL" if chem.get("dopamine", 0) > 0.6 else "CONSTRUCTIVE"))
             residue = soul_snapshot.get("obsession", {}).get("title") or "The Void"
             dream_text = self._weave_dream(residue, dream_type, "SURREAL")
-        if dream_text and hasattr(self.mem, "subconscious"):
+        if dream_text:
             try:
                 clean_seed = (re.sub(
                     r"[^a-z]",
@@ -369,8 +366,7 @@ class DreamEngine:
             try:
                 raw_dream = self.llm.generate(prompt, {"temperature": 0.85, "max_tokens": 100})
                 clean_dream = Prisma.strip(raw_dream).replace("\n", " ").strip()
-                if hasattr(self.mem, "subconscious"):
-                    self.mem.subconscious.bury({"word": "resonance", "mass": 15.0})
+                self.mem.subconscious.bury({"word": "resonance", "mass": 15.0})
                 return f"{Prisma.CYN}{clean_dream}{Prisma.RST}"
             except Exception:
                 fallback = "We both stared into the static, and for a second, the static stopped moving."
@@ -411,7 +407,7 @@ class DreamEngine:
 
     @staticmethod
     def run_defragmentation(memory_system: Any, limit: int = 5) -> str:
-        if not hasattr(memory_system, "graph") or not memory_system.graph:
+        if not memory_system.graph:
             return ux("brain_strings", "defrag_empty")
         graph = memory_system.graph
         prunable = ((n, sum(d.get("edges", {}).values())) for n, d in graph.items() if not d.get("is_diamond", False))

@@ -195,9 +195,6 @@ class BoneConfig:
     MODEL = "hermes3"
     OLLAMA_MODEL_ID = "hermes3"
 
-    # Systemic Safety
-    GREENHOUSE_TURNS = 0
-
     @classmethod
     def _load_class_defaults(cls):
         """

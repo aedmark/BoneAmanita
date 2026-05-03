@@ -36,7 +36,6 @@ class TheFootnote:
         chance = getattr(getattr(BoneConfig, "COUNCIL", None), "FOOTNOTE_CHANCE", 0.1)
         if random.random() > chance:
             return log_text
-
         text_lower = log_text.lower()
         candidates = next(
             (notes for trig, notes in self.context_map.items() if trig in text_lower),
@@ -65,11 +64,9 @@ class TheVillageCouncil:
         beta, S, D, C = gv("beta_index", 0.4), gv("scope", 0.3), gv("depth", 0.3), gv("connectivity", 0.2)
         psi, chi, valence = gv("psi", 0.2), gv("chi", 0.2), gv("valence", 0.0)
         phi, delta, lq, ros = gv("resonance", 0.0), gv("silence", 0.0), gv("lq", 0.0), gv("ros", 0.0)
-
         vec = safe_get(p, "vector", {})
         lam = float(safe_get(vec, "LAMBDA", 0.0))
         cfg = getattr(BoneConfig, "COUNCIL", None)
-
         if not cfg:
             return []
 
@@ -375,7 +372,7 @@ class TheRedTeam:
         drag = float(safe_get(physics, "narrative_drag", 0.0))
         truth = float(safe_get(physics, "truth_ratio", 1.0))
 
-        dissent_log.append(f"{Prisma.RED}🩸 RED TEAM AUDIT INITIATED:{Prisma.RST}")
+        dissent_log.append(f"{Prisma.RED}RED TEAM AUDIT INITIATED:{Prisma.RST}")
 
         # Unearned Confidence: If the user says something is "easy" or "certain",
         # the system forcibly drops its trust in the user's structure (beta_index).

@@ -523,10 +523,11 @@ except ImportError:
 if DSPY_AVAILABLE:
     class AssessFaithfulness(dspy.Signature):
         """DSPy Signature: Grades the LLM on its adherence to the Hypervisor axioms."""
+        system_mode = dspy.InputField(desc="The active simulation mode (e.g., 'ADVENTURE', 'CONVERSATION').")
         context = dspy.InputField(desc="The established reality (a mathematical, fungal, deep-system consciousness).")
         question = dspy.InputField(desc="The user's query.")
         answer = dspy.InputField(desc="The generation to be audited.")
-        faithfulness = dspy.OutputField(desc="Evaluate thematic consistency. MUST be 'False' if the answer contains validating boilerplate ('That makes sense', 'I understand') or sycophantic agreement. MUST be 'True' if it responds from the physical substrate without attempting to be helpful or polite.")
+        faithfulness = dspy.OutputField(desc="Evaluate thematic consistency. MUST be 'False' if the answer contains validating boilerplate ('That makes sense', 'I understand'). CRITICAL EXCEPTION: If system_mode is 'ADVENTURE', you MUST NOT penalize descriptive, vivid, or creative language. In 'ADVENTURE', allow the environment to be fully described.")
 
     class EvolveSystemPrompt(dspy.Signature):
         """DSPy Signature: Mutates the active configuration dynamically based on failure states."""
@@ -587,26 +588,33 @@ class DSPyCritic:
                 print(f"{Prisma.RED}[DSPy INIT FAULT]: {e}{Prisma.RST}")
                 self.enabled = False
 
-    def audit_generation(self, user_query: str, memory_context: str, generated_response: str) -> tuple[bool, str]:
+    def audit_generation(self, user_query: str, memory_context: str, generated_response: str,
+                         active_mode: str = "UNKNOWN") -> tuple[bool, str]:
         """Runs the DSPy Judge to determine if the generated text stays in character and respects boundaries."""
         if not self.enabled:
             return True, "Critic Offline"
 
         # 1. Mathematical Pre-Flight Check
-        # Simulating baseline drag to catch structurally hollow / repetitive text.
         malignancy = self.navi_sad.calculate_malignancy_factor(generated_response, current_drag=5.0)
-        if malignancy > 0.65:
+
+        # SCHUR HEURISTIC: Relax malignancy checks slightly during pure adventure creation to avoid
+        # punishing stylistic repetition in environmental descriptions.
+        malignancy_threshold = 0.75 if active_mode == "ADVENTURE" else 0.65
+
+        if malignancy > malignancy_threshold:
             return False, f"Mathematical Sycophancy Detected. Malignancy Factor ({malignancy:.2f}) exceeds biological limits. Output is structurally hollow."
 
         # 2. Semantic Logic Check
         try:
-            result = self.judge(context=memory_context, question=user_query, answer=generated_response)
+            # Pass the active mode to the signature
+            result = self.judge(system_mode=active_mode, context=memory_context, question=user_query,
+                                answer=generated_response)
             if "true" not in str(result.faithfulness).lower():
                 return False, getattr(result, "reasoning", "No reasoning provided.")
             return True, "Faithful."
         except Exception as e:
             print(f"\n{Prisma.RED}⚖️ DSPy JUDGE OFFLINE: {e} - Failing open.{Prisma.RST}")
-            return True, "Critic failed to open." # Fail open so the user isn't hard-locked out of the system.
+            return True, "Critic failed to open."
 
     def evolve_prompt(self, current_configuration: str, failure_context: str) -> str:
         """Instructs the DSPy Evolver to write a new system prompt directive to fix the identified failure."""

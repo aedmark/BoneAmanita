@@ -1,5 +1,7 @@
 """
-brain/ann.py - The Dual-Tier Semantic Substrate
+brain/ann.py
+
+The Dual-Tier Semantic Substrate
 
 This module defines the spatial topology of the Hypervisor's memory.
 It rejects standard "lossy summarization" of context windows. Instead, it
@@ -9,23 +11,25 @@ relies on a biological two-stage memory system:
 3. The Consolidator: The REM sleep bridge that transfers data between them.
 """
 
+import hashlib
+import heapq
 import math
 import time
-import hashlib
-from itertools import combinations, islice
+from itertools import islice
 from typing import Dict, List, Any, Tuple, Optional
+
 import faiss
 import numpy as np
+
 from core import EventBus
 
 
 class HippocampalCache:
     """
-    The Short-Term Working Memory (The Closets).
-    A fast, O(N) dictionary cache. Instead of holding raw conversational strings,
-    it generates "Phantoms"—hyper-dense mathematical coordinate hashes that act
-    as index cards pointing to the raw text. Highly volatile; clears out old
-    memories if max_capacity is reached before a REM cycle can save them.
+    The Short-Term Working Memory.
+    A fast, O(N) dictionary cache. It generates "Phantoms"—hyper-dense mathematical
+    coordinate hashes that act as index cards pointing to the raw text. Highly volatile;
+    clears out old memories if max_capacity is reached before a REM cycle can save them.
     """
     def __init__(self, max_capacity: int = 500):
         self.max_capacity = max_capacity
@@ -100,10 +104,11 @@ class HippocampalCache:
 
 class CerebralIndex:
     """
-    The Deep Substrate Storage (The Drawers).
+    The Deep Substrate Storage
+
     Uses FAISS (Facebook AI Similarity Search) to manage an O(logN) Hierarchical
     Navigable Small World (HNSW) graph. This allows the system to instantly search
-    thousands of past memories across multiple sessions based on concept similarity.
+    thousands of memories across multiple sessions based on concept similarity.
     """
     def __init__(self, dimension: int = 8):
         self.dimension = dimension
@@ -115,7 +120,7 @@ class CerebralIndex:
         self._phantom_lookup: Dict[str, str] = {}
 
     def resolve_phantom(self, vector_hash: str) -> str:
-        """Looks up the raw verbatim text using the short 8-character hash."""
+        """Looks up the raw verbatim text."""
         return self._phantom_lookup.get(vector_hash, "")
 
     def add_memories(self, vectors: List[List[float]], metadata_payloads: List[Dict]):
@@ -137,7 +142,7 @@ class CerebralIndex:
 
     def lateral_ofc_retrieval(self, physics_state: Dict[str, float], k: int = 2) -> List[Dict]:
         """
-        The "Jester's Shuffle" / Shadow Retrieval.
+        The Shadow Retrieval.
         Activates when systemic Chaos/Voltage is extremely high. Instead of looking
         for the most 'similar' memory (cosine similarity), it runs an additive heuristic.
         It retrieves explosive, compounded structural patterns to force a paradigm shift.
@@ -149,15 +154,13 @@ class CerebralIndex:
         base_omega_r = physics_state.get("omega_r", 0.5) # Relational resonance
 
         def _score(payload):
-            # Maximizes: Structure squared + (2 * Connectivity) + Metabolic Drag
             # We want the heaviest, most structurally demanding memory available.
             omega = payload.get("omega", base_omega)
             omega_r = payload.get("omega_r", base_omega_r)
             f_cost = payload.get("narrative_drag", 1.0)
             return (omega ** 2) + (2 * omega_r) + f_cost
 
-        scored = sorted(self._payloads, key=_score, reverse=True)
-        return scored[:k]
+        return heapq.nlargest(k, self._payloads, key=_score)
 
     def query_neighborhood(self, query_vector: List[float], k: int = 5, resonance_threshold: float = 0.5, physics_state: Optional[Dict[str, float]] = None) -> List[Dict]:
         """
@@ -191,7 +194,7 @@ class CerebralIndex:
             if target_wing and not is_lateral and payload.get("wing_id", "GLOBAL") != target_wing:
                 continue
 
-            # Convert raw Euclidean distance into a 0.0-1.0 resonance score
+            # Convert raw Euclidean distance into a resonance score
             resonance = 1.0 / (1.0 + float(dist))
             if resonance >= resonance_threshold:
                 results.append({**payload, "resonance": resonance})
@@ -201,12 +204,21 @@ class CerebralIndex:
     def get_local_mass_radius(self, query_text: str = "") -> Optional[Dict[str, List[float]]]:
         """
         Calculates the topological density of the memory space around a given point.
-        Used to determine if the system is fixating on a single concept (a 'gravity well').
+        Used to determine if the system is fixating on a single concept.
         """
         if not self.is_trained or self.total_nodes < 5:
             return None
 
-        np_query = np.zeros((1, self.dimension), dtype="float32")
+        # Map the actual query text space instead of defaulting to the Void
+        if query_text:
+            from spores.spore_utils import _word_to_vector
+            vec = _word_to_vector(query_text)
+            # Failsafe: pad or truncate to match expected FAISS dimensions
+            vec = (vec + [0.0] * self.dimension)[:self.dimension]
+            np_query = np.array([vec], dtype="float32")
+        else:
+            np_query = np.zeros((1, self.dimension), dtype="float32")
+
         distances, _ = self._index.search(np_query, min(50, self.total_nodes))
 
         valid_dists = [float(d) for d in distances[0] if d > 0]
@@ -225,7 +237,7 @@ class MemoryConsolidator:
     The REM Sleep Bridge.
     Decouples memory writing from the active conversation loop.
     It transfers data from the volatile Hippocampus to the permanent Cortex,
-    but only if the system has enough energy (ATP) to pay the synaptic cost.
+    but only if the system has enough ATP to pay the synaptic cost.
     """
     def __init__(self, hippocampus: HippocampalCache, cortex: CerebralIndex, events: EventBus):
         self.hippocampus = hippocampus
@@ -249,7 +261,7 @@ class MemoryConsolidator:
         pending_nodes = self.hippocampus.extract_for_consolidation(limit=max_nodes)
         vectors = [n["vector"] for _, n in pending_nodes if "vector" in n]
 
-        # Package the meta-data, ensuring the Phantom hash points back to the raw text
+        # Package the metadata, ensuring the Phantom hash points back to the raw text
         payloads = [
             {"id": k, "vector_hash": n.get("phantom", {}).get("vector_hash", ""), **n.get("meta", {})}
             for k, n in pending_nodes if "vector" in n

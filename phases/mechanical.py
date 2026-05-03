@@ -113,7 +113,6 @@ class GatekeeperPhase(SimulationPhase):
 
                 # Apply immense friction to halt the false logic from propagating.
                 setattr(ctx.physics, "narrative_drag", min(max_drag, current_drag + 50.0))
-                ctx.council_mandates = getattr(ctx, "council_mandates", [])
 
                 # Instruct the downstream LLM to physically roleplay the failure of the action.
                 ctx.council_mandates.append({"action": "STYLE_INJECTION",
@@ -245,7 +244,7 @@ class MachineryPhase(SimulationPhase):
         target_cfg = getattr(self.eng, "config", BoneConfig)
         max_hp = getattr(target_cfg, "MAX_HEALTH", 100.0)
         damage = max_hp * 0.20
-        if self.eng.bio.biometrics:
+        if getattr(self.eng, "bio", None) and self.eng.bio.biometrics:
             self.eng.bio.biometrics.health = max(
                 0.0, self.eng.bio.biometrics.health - damage)
 

@@ -278,7 +278,7 @@ class SomaticLoop:
 
         soma_enzyme, soma_yield, harvest_hits = self.digestive.harvest(phys, logs)
         total_yield += soma_yield
-        enzyme = soma_enzyme if enzyme == "NONE" else enzyme
+        enzyme = soma_enzyme
         self.bio.mito.adjust_atp(total_yield, "Symbiotic Yield")
 
         # 9. Perform internal maintenance (e.g. context window clearing)

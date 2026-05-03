@@ -105,7 +105,8 @@ class UserProfile:
                 with open(self.file_path) as f:
                     data = json.load(f)
                     # Merge existing disk state into the live object.
-                    self.affinities = data.get("affinities", self.affinities)
+                    if "affinities" in data:
+                        self.affinities.update(data["affinities"])
                     self.confidence = data.get("confidence", 0)
             except (IOError, json.JSONDecodeError):
                 pass

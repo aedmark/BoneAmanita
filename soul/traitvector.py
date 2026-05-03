@@ -50,7 +50,7 @@ class TraitVector:
 
     def adjust(self, trait: str, delta: float):
         t = trait.lower()
-        if hasattr(self, t):
+        if t in self._TRAITS:
             setattr(self, t, self._clamp(getattr(self, t) + delta))
 
     def normalize(self, decay_rate: float):

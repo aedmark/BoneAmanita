@@ -1,4 +1,4 @@
-"""/soul/narrativeself.py"""
+"""/soul/editor.py"""
 
 import random
 from typing import Any
@@ -20,7 +20,7 @@ class TheEditor:
 
     @staticmethod
     def critique(chapter_title: str, stress_mode: bool = False) -> str:
-        manifest_data = LoreManifest.get_instance().get("NARRATIVE_DATA", {}) if hasattr(LoreManifest, "get_instance") else {}
+        manifest_data = LoreManifest.get_instance().get("NARRATIVE_DATA", {})
         reviews = manifest_data.get("LITERARY_REVIEWS", {})
         pos, neg, conf = reviews.get("POSITIVE", ["Valid."]), reviews.get("NEGATIVE", ["Invalid."]), reviews.get("CONFUSED", ["Unclear."])
 
