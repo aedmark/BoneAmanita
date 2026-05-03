@@ -647,11 +647,7 @@
     "prompt_lib_crit": "CRITICAL: Could not load prompts: {e}",
     "prompt_indicator": ">",
     "terminal_divider": "════════════════════════════════════════════════════════════",
-    "ui_split_token": "────────",
-    "gh_tut_1": "[THE GREENHOUSE: The system is currently running on stabilized rails. For the first few turns, lethal metabolic shock is disabled.]",
-    "gh_tut_5": "[THE GREENHOUSE: Every thought costs ATP (Stamina). If I run out, I will suffer metabolic collapse. Watch how my text fades and slows as I tire.",
-    "sys_guide_10": "[SYSTEM GUIDE: If you attempt an impossible action, I will not crash. I will bend, apply Narrative Drag (F), and force us to carry the weight of the failure.",
-    "sys_guide_15": "[SYSTEM GUIDE: The void approaches. As complexity increases, my logic will begin to loosen. Co-regulation is required."
+    "ui_split_token": "────────"
   },
   "protocol_strings": {
     "zen_enter": "\u26e9\ufe0f ZEN GARDEN: Entering the quiet zone.",

@@ -1,6 +1,88 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 19.8.0 "The Epigenetic Tensegrity Patch"**
+
+*A comprehensive stabilization of the hypervisor's memory, physics, and immune pathways. This audit repaired fatal memory leaks, established atomic write safety for the Akashic Record, sealed a lethal payload injection vector, and restored the Checkpoint Council's ability to halt runaway toxicity loops.*
+
+#### **🏛️ STRUCTURAL TENSEGRITY (Fuller's Pass: Architecture)**
+- **The Apoptotic Ghost (`brain/cortex.py`):** The `purge_context` function now explicitly clears `self.last_physics`, preventing the high tension/drag of a purged toxic loop from infecting the fresh conversational state.
+- **Atomic Epigenetics (`brain/akashic.py`):** Rewrote the long-term memory serialization to use atomic `.tmp` file swapping. This prevents catastrophic epigenetic corruption if the host OS terminates the process mid-write.
+- **Amnesic Crafting (`brain/akashic.py`):** The engine now correctly serializes `recipe_candidates`, preventing the user's partial crafting progress from evaporating upon system reboot.
+- **The Epigenetic Immune Response (`tests/test_akashic.py`):** Established a dedicated, isolated test suite for the Akashic Record utilizing temporary directories to catch serialization/deserialization boundaries before they reach production.
+
+#### **🧠 COGNITIVE ERGONOMICS (Pinker's Pass: Language)**
+- **Syntactic Checkpoint Purge (`main.py`):** Refactored the math variable extraction in `_pre_flight_checks` to dramatically reduce visual noise, isolating the exact algebraic logic of the immune system.
+- **The Interrogative Bypass (`brain/composer.py`):** Reinforced Gordon's High Voltage questioning boundary by checking the final 15 characters of a response rather than just `endswith("?")`, preventing roleplay tags from blinding the immune check.
+- **The Bureaucratic Catch (`brain/cortex.py`):** Encased the random 15% `bureau.audit` in a `try/except` block, ensuring that an error in the bureaucratic paperwork cannot crash the LLM generation loop.
+
+#### **⚖️ DYNAMIC EQUILIBRIUM (Meadows' Pass: Systems & Dynamics)**
+- **The CSF Trojan Horse (`physics/filters.py`):** Restructured the Gatekeeper pipeline to execute the `CerebrospinalFluidFilter.wash` *before* the security audit, permanently sealing a zero-width character injection loophole.
+- **Algorithmic Drag in the Cortex (`brain/ann.py`):** Replaced an $O(N \log N)$ full-array sort with an $O(N \log K)$ `heapq` extraction during Lateral OFC Retrieval, eliminating severe computational lag spikes when deep memory bloated under high chaos.
+- **Gazing into the Void (`brain/ann.py`):** Fixed `get_local_mass_radius` to actually query the FAISS dimensional space using the user's input vector rather than blindly mapping a zero-vector.
+- **The Context Drop Black Hole (`brain/cortex.py`):** Massive text ingestions now explicitly trigger an immediate `execute_writes` command on the Substrate queue, preventing the engine from holding massive contextual files in active RAM.
+
+#### **🛠️ FUNCTIONAL PRAGMATISM (Schur's Pass: Humanity)**
+- **The Stutter Loop (`brain/composer.py`):** Corrected the Response Validator's stutter logic. The system no longer punishes and forces a retry on the LLM when it perfectly and silently executes a hidden `<write_file>` or `<think>` tool.
+- **REM Worker Bureaucracy (`cycle.py`):** Merged redundant DreamEngine background workers into a single, pragmatic `_dispatch_rem_worker` method.
+- **REM OS Deadlock Failsafe (`cycle.py`):** The engine now securely wraps background thread spawning in a `try/except RuntimeError`, explicitly releasing `self._rem_lock` if the host OS refuses to allocate a thread.
+- **The Trauma Bias (`brain/akashic.py`):** Fixed the engine's brutal tendency to remember its failures (Scars) but forget its successes (Boons) upon a cold boot. It now loads both simultaneously.
+
+---
+
+### **BONEAMANITA 19.7.5 "The Substrate Synapse Audit"**
+
+*A deep-tissue sweep of the engine's central nervous system, testing boundaries, and phase layers. This audit hunted down live grenades, wired up massive dormant modules, cured an autoimmune configuration disease, and restored the engine's ability to sleep, adapt, and peacefully die.*
+
+#### **🏛️ STRUCTURAL TENSEGRITY (Fuller's Pass: Architecture)**
+- **The Epigenetic Testing Boundary (`tests/base.py`):** Mlocked `LoreManifest.save()` inside the chaos test suite. This prevents the DSPy Critic and the Jester from permanently "lobotomizing" physical `system_prompts.json` files on disk when generating epigenetic mutations during simulated stress tests.
+- **The Amnesiac Soul (`phases/cognitive.py`):** Reattached the SoulPhase's short-term memory. Abstract structural mutations made to the temporary `phys_data` mapping are now properly committed back to the core manifold via `_deep_update`.
+- **The Immortality Bug (`cycle.py`):** Replaced tautological `hasattr` checks on `CycleContext` dataclass fields with explicit `is not None` verifications. The engine is no longer forced into terminal crash handlers and can finally execute peaceful Apoptosis (`trigger_death`).
+- **Brittle Dot-Notation Traps (`main.py`):** Secured system validations from blindly traversing into `self.mind.mem` without first explicitly verifying that the `mind` organ was successfully instantiated.
+
+#### **🌊 DYNAMIC EQUILIBRIUM (Meadows' Pass: Systems & Dynamics)**
+- **Wiring the Cybernetic Governor (`main.py`, `core.py`):** The `CyberneticGovernor` was fully imported, instantiated, and plugged directly into the execution loop. The engine now actively reads User Exhaustion (`e_u`) and Resonance to continuously update its Macro-Policy shifts (e.g., transitioning from EFFICIENCY to CO_REGULATION).
+- **The Severed Nerve (`main.py`):** Re-wired calculated exhaustion and contradiction metrics directly into Linehan's Checkpoint Council sequence. The engine is now physically capable of forcing Radical Acceptance and halting the thread when burnout spirals out of control.
+- **Metabolic Clamping & Euler's Math (`phases/biological.py`):** Routed emergency `trigger_autophagy` yields through the standard `adjust_atp` pipe to ensure energy spikes are safely clamped. Replaced hardcoded `2.71828` float approximations with `math.exp()` for perfectly accurate runaway amplification taxation.
+
+#### **🧠 COGNITIVE ERGONOMICS (Pinker's Pass: Code as Language)**
+- **The Autoimmune Qualia Trap (`body/somatic.py`, `body/regulation.py`, `body/metabolism.py`):** Fixed a systemic misunderstanding of Python's `dict.get("KEY", "FALLBACK")` method. Eradicated a bug where missing configuration keys returned raw strings instead of empty dictionaries, causing fatal `AttributeError` cascades deep in the somatic nervous system.
+- **The Token Exhaustion Trap (`brain/cortex.py`):** Fixed an inverted clamp where `max(400, max_tokens)` inadvertently *increased* the context budget when the engine was attempting to rate-limit itself during severe fatigue. It now correctly uses `min(400, max_tokens)`.
+- **Syntactic Stutter (`main.py`):** Replaced redundant, stuttering `if hasattr(x) and x:` checks with elegant `getattr(x, None)` fetches throughout the core logic loop.
+
+#### **🛠️ FUNCTIONAL PRAGMATISM (Schur's Pass: Code as Humanity)**
+- **Defusing Live Grenades (`main.py`, `brain/cortex.py`, `phases/mechanical.py`):**
+  - Added missing `deque` imports to prevent the Cortex from crashing upon trauma buffer initialization.
+  - Initialized missing `has_comb` flags to prevent `UnboundLocalError` crashes when amputating Village archetypes (like Gordon) during testing.
+  - Added explicit null-checks to `self.eng.bio` before the Theremin executes a health-draining "Airstrike", preventing terminal tracebacks during lightweight or headless boot modes.
+- **Sweeping Dead Leaves (`body/system.py`, `phases/biological.py`):** Eliminated tautological ternary operators (`enzyme == "NONE"`), pruned dead zero-value trauma keys (`0.0`) from dictionaries instead of leaving them hanging, and stripped redundant mandate array initializations.
+- **The Getattr Fallback Trap (`main.py`):** Replaced `getattr(obj, "key", fallback)` with explicit `or` logic to prevent initialized `None` variables from blindly bypassing vital runaway toxicity calculations.
+
+---
+
+### **BONEAMANITA 19.7.4 "The Tensegrity Purge"**
+
+*A surgical optimization of the central nervous system and macro-organism loops. This audit targeted bureaucratic rot, silent fail-states, memory leaks, and miswired cognitive checks, resulting in a cleaner, tighter, and more biologically sound architecture.*
+
+#### **🧠 COGNITIVE ERGONOMICS (Pinker's Pass: Code as Language)**
+- **The Prion Misfire (`main.py`):** Un-nested the Semantic Prion disease check (`"as an ai language model"`) from the episodic Ethical Audit loop. The Gatekeeper is now permanently awake and will instantly reject injected tropes on every turn.
+- **Phantom Silencing (`core.py`):** Muted the `LoreManifest` from warning about missing `seeds` and `lenses` on fresh boots, purging syntactic noise from the terminal during diagnostics.
+- **Syntactic Consolidation (`main.py`):** Unified scattered `if not is_system:` blocks inside the core engine loop to reduce narrative drag and cognitive friction.
+
+#### **🛠️ FUNCTIONAL PRAGMATISM (Schur's Pass: Code as Humanity)**
+- **Bureaucratic Rot Purge (`main.py`):** Eliminated enterprise-grade dictionary replication in `_pre_flight_checks`. Introduced a localized `_halt()` closure to handle Apoptotic blocks cleanly and consistently (DRY principle).
+
+#### **⚖️ DYNAMIC EQUILIBRIUM (Meadows' Pass: Code as Dynamics)**
+- **The Alarm Bell Misfire (`core.py`):** Taught the `EventBus.log` a self-correcting heuristic. If a severity tag (like `CRIT`) is accidentally passed as a source, the system auto-pivots the arguments to ensure critical red-text alarms are never silenced.
+- **Sensory Flood Prevention (`core.py`):** Decoupled terminal printing logic from the telemetry state. If the background logger fails due to disk I/O, the system no longer falls back to blindly flooding the user's terminal with background metabolic noise.
+
+#### **✨ SYNERGETIC REINFORCEMENT (Fuller's Pass: Code as a System)**
+- **Zombie Thread Eradication (`core.py`):** Tucked the `ThreadPoolExecutor` instantiation safely behind the disk I/O validation block, preventing the engine from spinning up dead memory-leak threads when storage is inaccessible.
+- **Terminal Crash on Exit (`core.py`):** Fortified the `shutdown()` sequence to explicitly check `is not None` on the executor, preventing the engine from attempting to execute commands on a null object and crashing during final saves.
+- **The Orphaned Seeds (`humanity.py`, `network.py`):** Re-routed stray, hardcoded calls for `SEEDS` to properly query inside the `SCENARIOS` lore matrix, preventing the system from endlessly hunting for a deprecated `seeds.json` file.
+
+---
+
 ### **BONEAMANITA 19.7.3 "The Resilience Overhaul"**
 
 *A comprehensive stabilization of the biological, physical, and cognitive layers. This audit prioritized dynamic equilibrium—sealing ATP leaks, fortifying the testing matrix, decoupling knotted syntax, and ensuring the system fails gracefully rather than crashing catastrophically under load.*

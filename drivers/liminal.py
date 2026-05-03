@@ -44,8 +44,8 @@ class LiminalModule:
             phys_set, void_set = {"heavy", "kinetic"}, {"abstract", "liminal", "void"}
 
             # Map the sentence into a sequence of flags: 1 (Physical), 2 (Abstract), or 0 (Neutral).
-            flags = [1 if cats & phys_set else (2 if cats & void_set else 0) for w in words
-                     if (cats := set(self.lex.get_categories_for_word(w) or []))]
+            flags = [1 if (cats := set(self.lex.get_categories_for_word(w) or [])) & phys_set
+                     else (2 if cats & void_set else 0) for w in words]
 
             # A "spark" occurs when an explicitly physical word is placed immediately
             # adjacent to an explicitly abstract/void word, creating deliberate cognitive tension.

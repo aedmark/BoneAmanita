@@ -3,9 +3,9 @@ akashic.py
 
 The Persistent Epigenetic Layer.
 This module handles long-term, cross-session memory. It writes biological
-and structural changes to disk (JSON files) so the LLM remembers its
+and structural changes to disk via JSON files so the LLM remembers its
 "Scars" (failures) and "Glimmers" (successes) the next time it boots up.
-It also dynamically evolves the system's vocabulary and archetypal voices.
+It also dynamically evolves the system's vocabulary and archetypal voices across sessions.
 """
 
 import json, os, uuid
@@ -17,7 +17,7 @@ from constants import Prisma
 
 class TheAkashicRecord:
     """
-    The DNA / Hard Drive of the Hypervisor.
+    The DNA Hard Drive of the Hypervisor.
     Manages the long-term evolution of the LLM by tracking which words it uses,
     which archetypes work well together, and which architectural boundaries
     caused previous system failures.
@@ -317,6 +317,7 @@ class TheAkashicRecord:
         """Serializes current states, turning tuple keys into strings for JSON compatibility."""
         state = {
             "lens_cooccurrence": {f"{k[0]}|{k[1]}": v for k, v in self.lens_cooccurrence.items()},
+            "recipe_candidates": {f"{k[0]}|{k[1]}": v for k, v in self.recipe_candidates.items()},
             "ingredient_affinity": self.ingredient_affinity,
             "shadow_stock": self.shadow_stock,
             "subconscious_strata": self.subconscious_strata,
@@ -334,8 +335,12 @@ class TheAkashicRecord:
         filepath = os.path.join(self.save_dir, f"akashic_{category}.json")
         try:
             os.makedirs(self.save_dir, exist_ok=True)
-            with open(filepath, "w", encoding="utf-8") as f:
+            temp_path = f"{filepath}.tmp"
+            with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, cls=BoneJSONEncoder)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_path, filepath)
             if msg := ux("akashic_strings", "saved_category"):
                 print(f"{Prisma.GRY}{msg.format(category=category)}{Prisma.RST}")
         except Exception as e:
@@ -353,18 +358,16 @@ class TheAkashicRecord:
                 msg = ux("akashic_strings", "state_load_failed")
                 print(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
 
-        if not data:
-            return
-
-        # Reconstruct tuple keys for cooccurrence map
-        self.lens_cooccurrence = {tuple(k.split("|", 1)): v for k, v in data.get("lens_cooccurrence", {}).items() if "|" in k}
-        self.ingredient_affinity = data.get("ingredient_affinity", {})
-        self.shadow_stock = data.get("shadow_stock", [])
-        self.known_recipes.clear()
-
-        gordon_data = self.lore.get("GORDON") or {}
-        if recipes := gordon_data.get("RECIPES", []):
-            self.known_recipes.update((r.get("ingredient"), r.get("catalyst_category")) for r in recipes if r.get("ingredient") and r.get("catalyst_category"))
+        if data:
+            # Reconstruct tuple keys for cooccurrence map
+            self.lens_cooccurrence = {tuple(k.split("|", 1)): v for k, v in data.get("lens_cooccurrence", {}).items() if "|" in k}
+            self.recipe_candidates = {tuple(k.split("|", 1)): v for k, v in data.get("recipe_candidates", {}).items() if "|" in k}
+            self.ingredient_affinity = data.get("ingredient_affinity", {})
+            self.shadow_stock = data.get("shadow_stock", [])
+            self.known_recipes.clear()
+            gordon_data = self.lore.get("GORDON") or {}
+            if recipes := gordon_data.get("RECIPES", []):
+                self.known_recipes.update((r.get("ingredient"), r.get("catalyst_category")) for r in recipes if r.get("ingredient") and r.get("catalyst_category"))
 
         words_path = os.path.join(self.save_dir, "akashic_discovered_words.json")
         if os.path.exists(words_path):
@@ -375,15 +378,24 @@ class TheAkashicRecord:
                 print(f"{Prisma.RED}[AKASHIC] Failed to load discovered words: {e}. Keeping current state.{Prisma.RST}")
 
         scars_path = os.path.join(self.save_dir, "akashic_scars.json")
+        boons_path = os.path.join(self.save_dir, "akashic_boons.json")
+        prompts = self.lore.get("SYSTEM_PROMPTS") or {}
+
         if os.path.exists(scars_path):
             try:
                 with open(scars_path, "r", encoding="utf-8") as f:
-                    loaded_scars = json.load(f)
-                prompts = self.lore.get("SYSTEM_PROMPTS") or {}
-                prompts.setdefault("GLOBAL_BASELINE", {})["EPIGENETIC_SCARS"] = loaded_scars
-                self.lore.inject("SYSTEM_PROMPTS", prompts)
+                    prompts.setdefault("GLOBAL_BASELINE", {})["EPIGENETIC_SCARS"] = json.load(f)
             except Exception as e:
                 print(f"{Prisma.RED}[AKASHIC] Failed to load scars: {e}.{Prisma.RST}")
+
+        if os.path.exists(boons_path):
+            try:
+                with open(boons_path, "r", encoding="utf-8") as f:
+                    prompts.setdefault("GLOBAL_BASELINE", {})["EPIGENETIC_BOONS"] = json.load(f)
+            except Exception as e:
+                print(f"{Prisma.RED}[AKASHIC] Failed to load boons: {e}.{Prisma.RST}")
+
+        self.lore.inject("SYSTEM_PROMPTS", prompts)
 
     def record_interaction(self, lenses_active: list, ingredients_used: Optional[list] = None):
         """

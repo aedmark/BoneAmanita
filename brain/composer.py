@@ -391,10 +391,10 @@ class PromptComposer:
         else:
             input_block = f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
 
-        # Simulate neural fragmentation if voltage (stress) is critically high.
-        if voltage > 60:
-            dialogue_block = f"=== RECENT NEURAL FIRINGS ===\n[Standard memory streams suppressed by high voltage. Narrative fragmented.]\n\n"
-            input_block = f"=== INCOMING COGNITIVE SHOCK ===\n[VECTOR]: {self._sanitize(user_query)}\n"
+            # Simulate neural fragmentation if stress is critically high.
+            if voltage > 60:
+                dialogue_block = f"=== RECENT NEURAL FIRINGS ===\n{history_str}\n[System Note: Standard memory streams strained by high voltage. Narrative fragmented.]\n\n"
+                input_block = f"=== INCOMING COGNITIVE SHOCK ===\n[VECTOR]: {self._sanitize(user_query)}\n"
 
         shared_reality_block = ""
         if active_mode_name == "ADVENTURE":
@@ -731,8 +731,9 @@ class ResponseValidator:
         fallback_voltage = safe_get(energy_dict, "voltage", 30.0)
         voltage = float(safe_get(phys_ref, "voltage", fallback_voltage))
 
-        # High Voltage rule: The system cannot ask clarifying questions when under extreme stress.
-        if voltage > 60 and sanitized_response.rstrip().endswith("?"):
+        # The system cannot ask clarifying questions when under extreme stress.
+        # Checking the final 15 characters catches roleplay formatting (e.g. "? *walks away*") bypassing the boundary.
+        if voltage > 60 and "?" in sanitized_response[-15:]:
             if not primary_replacement:
                 primary_replacement = f"{self._generate_dynamic_rejection('QUESTION_ASKED')}{ux('brain_strings', 'val_gordon_question', '')}"
             errors_found.append("DO NOT END YOUR TURN WITH A QUESTION. Let the silence hang.")
@@ -767,7 +768,9 @@ class ResponseValidator:
         # Check if the output is just a single word or completely blank (Stuttering).
         cortex_cfg = getattr(self.cfg, "CORTEX", None)
         stutter_len = getattr(cortex_cfg, "VALIDATOR_STUTTER_LENGTH", 5)
-        if len(sanitized_response.strip()) < stutter_len:
+
+        # If the LLM successfully executed a silent tool or file-write, the text is supposed to be empty.
+        if len(sanitized_response.strip()) < stutter_len and not extracted_meta_logs:
             return {"valid": False, "reason": "STUTTER",
                     "replacement": ux("brain_strings", "val_stutter"),
                     "meta_logs": extracted_meta_logs}

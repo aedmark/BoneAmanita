@@ -252,7 +252,7 @@ class MetabolicGovernor:
     @staticmethod
     def _get_shift_message(mode: str, text_map: Dict, physics: Any) -> str:
         """Generates the UI string indicating a gear shift."""
-        shift_cfg = (LoreManifest.get_instance().get("BODY_CONFIG", "GOVERNOR_SHIFT") or {})
+        shift_cfg = (LoreManifest.get_instance().get("BODY_CONFIG") or {}).get("GOVERNOR_SHIFT", {})
         raw_colors = shift_cfg.get("COLORS", {})
         defaults = shift_cfg.get("DEFAULTS", {})
 

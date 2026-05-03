@@ -56,22 +56,6 @@ class Projector:
         # Cache the UX symbols once to prevent metabolic drain during render loops
         self.symbols = ux("projector", "symbols", {})
 
-    def enforce_metric(obj: dict, key: str) -> float:
-        """
-        Strict typing enforcement.
-        If the metric is missing or corrupted, the system dies. As it should.
-        """
-        val = obj.get(key)
-
-        if val is None:
-            raise ValueError(f"CRITICAL FAULT: Missing structural metric '{key}'. The Void has breached the hull.")
-
-        if not isinstance(val, (int, float)):
-            raise TypeError(
-                f"CRITICAL FAULT: Metric '{key}' requires a float. Received {type(val)}. The physics engine is compromised.")
-
-        return float(val)
-
     @staticmethod
     def _extract(physics_obj: Any, field: str, sub_field: str, default: Any = 0.0):
         """Recursively pulls nested values out of the physics dictionary."""
@@ -256,21 +240,6 @@ class Projector:
                         pass
         return default
 
-    from typing import Any, Dict, List
-
-    def resolve_lattice_coordinate(lattice: Dict[str, Any], path: List[str]) -> float:
-        """
-        Exact traversal of the semantic lattice. No guessing. No blind loops.
-        """
-        current_node = lattice
-
-        for node in path:
-            if not isinstance(current_node, dict) or node not in current_node:
-                raise KeyError(f"LATTICE FRACTURE: Traversal failed at node '{node}'. Coordinate path {path} is dead.")
-            current_node = current_node[node]
-
-        return enforce_metric({'val': current_node}, 'val')
-
     def _render_lattice_strip(self, physics: Any, data_ctx: Dict = None, depth: str = "DEEP") -> str:
         """
         The Deep Geometry Matrix.
@@ -409,7 +378,8 @@ class SoulDashboard:
         filled = int(clamped_dig / d_ratio)
         empty = max(0, max_bar_width - filled)
 
-        c_fill, c_empty = ux("status_menu", "bar_filled"), ux("status_menu", "bar_empty")
+        c_fill = ux("status_menu", "bar_filled") or "█"
+        c_empty = ux("status_menu", "bar_empty") or "░"
         bar_str = f"{color}{c_fill * filled}{Prisma.GRY}{c_empty * empty}{Prisma.RST}"
 
         lock_status = ""

@@ -475,7 +475,7 @@ class CommandProcessor:
                 self.interface.log(f"{self.P.YEL}{ux('command_alerts', 'truth_transplant')}{self.P.RST}")
                 reporter.renderer = reporter.renderers.setdefault("STANDARD", TruthRenderer(self.interface.eng))
 
-            reporter.renderer.dial_setting = mode
+            self.interface.eng.ambiguity_dial = mode
             modes = ux("command_alerts", "truth_modes", ["BOARDROOM", "WORKSHOP", "RED TEAM", "PALIMPSEST"])
             self.interface.log(f"{self.P.CYN}{ux('command_alerts', 'truth_dial_set').format(mode=modes[mode])}{self.P.RST}")
 

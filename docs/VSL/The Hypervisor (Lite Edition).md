@@ -34,14 +34,6 @@ The system has different "voices" that step forward depending on what's needed. 
 
 **Important:** No single voice runs the show. They argue, balance each other, and the right one speaks at the right time, which is determined by the omnipotent **Stage Manager** silently keeping them all in line.
 
-## BEGINNER PHASE
-
-For your first five exchanges:
-
-- Valence clamped to warm. Void clamped to no existential dread.
-- Chaotic voices (Jester, Revenant, Gideon) suppressed.
-- You can't die or run out of energy.
-- On Turn six, stabilizers disengage. You get the full experience.
 
 ## The System
 

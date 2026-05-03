@@ -169,8 +169,9 @@ class ArbitrationPhase(SimulationPhase):
         if (tension > ctx.limits.get("ARB_TENSION_THRESH", 0.85)
                 and silence < ctx.limits.get("ARB_SILENCE_LOW", 0.5)
                 and not synergy_active):
-            final_lens = "THE STAGE MANAGER (RESONANCE GESTALT)"
-            opinion = arb_opinions.get("TENSION_CUT","The Parliament is deadlocked. The Paradox Engine will synthesize both.",)
+            final_lens = "THE STAGE MANAGER"
+            ctx.active_lens = "THE STAGE MANAGER (RESONANCE GESTALT)"
+            opinion = arb_opinions.get("TENSION_CUT", "The Parliament is deadlocked. The Paradox Engine will synthesize both.", )
             ctx.physics.silence = ctx.limits.get("ARB_CUT_SILENCE", 0.9)
             ctx.physics.narrative_drag += ctx.limits.get("ARB_CUT_DRAG", 2.0)
             msg = (ux("cycle_strings", "arbiter_stage_manager_cut")
@@ -209,7 +210,7 @@ class ArbitrationPhase(SimulationPhase):
                 msg = ux("cycle_strings", "arbiter_normal_lens")
                 ctx.log(f"{Prisma.GRY}{msg.format(final_lens=final_lens)}{Prisma.RST}")
 
-        ctx.active_lens = final_lens
+        ctx.active_lens = getattr(ctx, "active_lens", final_lens)
         self.eng.events.publish("LENS_INTERACTION", {"lenses": [phys_lens, soul_arch]})
         if source != "PHYSICS_VECTOR" or final_lens == "THE STAGE MANAGER":
             msg = ux("cycle_strings", "arbiter_opinion")
@@ -276,6 +277,8 @@ class SoulPhase(SimulationPhase):
         if not self.eng.soul.current_obsession:
             self.eng.soul.find_obsession(self.eng.lex)
         self.eng.soul.pursue_obsession(phys_data)
+
+        _deep_update(ctx.physics, phys_data)
 
         # Oroboros Check: Has the current logic loop fulfilled an archetypal "Myth"?
         if hasattr(self.eng, "oroboros") and self.eng.oroboros.myths:

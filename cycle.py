@@ -9,29 +9,27 @@ the system stable over time.
 """
 
 import random
-import re
+import threading
 import time
 import traceback
 import uuid
-import threading
 from typing import Dict, Any, List, Optional
 
-# Core structural imports
-from core import LoreManifest
-from struts import ux, safe_get
-from drivers import CongruenceValidator
-from mechanics.reporter import CycleReporter
-from machine import PanicRoom
-
-# The sequence of reality
-from phases import (ObservationPhase, SanctuaryPhase, MaintenancePhase, GatekeeperPhase,
-    MetabolismPhase, RealityFilterPhase, NavigationPhase, MachineryPhase,
-    IntrusionPhase, SoulPhase, ArbitrationPhase, SimulationPreflightPhase,
-    CognitionPhase, SensationPhase, StabilizationPhase, SimulationPhase)
-from physics import CycleStabilizer
-from presets import BoneConfig
 from constants import Prisma
 from core import CycleContext
+# Core structural imports
+from core import LoreManifest
+from drivers import CongruenceValidator
+from machine import PanicRoom
+from mechanics.reporter import CycleReporter
+# The sequence of reality
+from phases import (ObservationPhase, SanctuaryPhase, MaintenancePhase, GatekeeperPhase,
+                    MetabolismPhase, RealityFilterPhase, NavigationPhase, MachineryPhase,
+                    IntrusionPhase, SoulPhase, ArbitrationPhase, SimulationPreflightPhase,
+                    CognitionPhase, SensationPhase, StabilizationPhase, SimulationPhase)
+from physics import CycleStabilizer
+from presets import BoneConfig
+from struts import ux
 
 # Maps specific phase failures to systemic health components so the engine knows *what* died.
 _CRASH_COMPONENT_MAP = {"OBSERVE": "PHYSICS", "METABOLISM": "BIO", "COGNITION": "MIND"}
@@ -270,9 +268,9 @@ class GeodesicOrchestrator:
         if getattr(self.eng, "tick_count", 0) % 3 != 0:
             return  # Meadows Dynamics: Limit runaway computational drag.
 
-        mem = getattr(getattr(self.eng, "mind", None), "mem", None)
-        hippo = getattr(mem, "hippocampus", None)
-        if not (hippo and hasattr(hippo, "get_graph") and hasattr(mem, "calculate_clustering")):
+        mem = self.eng.mind.mem
+        hippo = mem.hippocampus
+        if not (hasattr(hippo, "get_graph") and hasattr(mem, "calculate_clustering")):
             return
 
         actual_graph = hippo.get_graph()
@@ -334,8 +332,8 @@ class GeodesicOrchestrator:
             ctx.limits = _safe_dict(getattr(target_cfg, "CYCLE", {}))
 
             # Observe the physical world prior to this cycle.
-            obs = getattr(self.eng, "observer", None)
-            last_packet = getattr(obs, "last_physics_packet", None) if obs else None
+            obs = self.eng.observer
+            last_packet = getattr(obs, "last_physics_packet", None)
 
             if last_packet:
                 ctx.physics = last_packet.snapshot()
@@ -349,10 +347,7 @@ class GeodesicOrchestrator:
             ctx.user_name = self.eng.user_name
             ctx.council_mandates = []
             ctx.timestamp = time.time()
-
-            # ------ RUN REALITY ------
             ctx = self.simulator.run_simulation(ctx)
-            # -------------------------
 
             # Ingest all events generated during (and immediately before) this cycle.
             post_logs = [e["text"] for e in self.eng.events.flush()]
@@ -381,31 +376,20 @@ class GeodesicOrchestrator:
         finally:
             if tel: tel.finalize_cycle()
 
-    def _background_dream_worker(self):
-        """Spins up a headless turn to perform REM consolidation while the UI is released to the user."""
+    def _dispatch_rem_worker(self, log_msg: str):
+        """Handles asynchronous REM sleep consolidation."""
         try:
-            self.eng.events.log("Spawning detached worker for Dream Engine...", "SYS")
+            self.eng.events.log(log_msg, "SYS")
             self.run_headless_turn("/idle")
         except Exception as e:
-            self.eng.events.log(f"Async Dream Engine Crash: {e}", "CRIT")
-        finally:
-            self._rem_lock.release()
-
-    def _auto_rem_worker(self, is_debt_recovery: bool):
-        """Automatically triggers sleep cycles if biological parameters demand it."""
-        try:
-            reason = "High Coherence Debt detected. Metabolizing trauma..." if is_debt_recovery else "High ATP, High Silence. Consolidating synapses..."
-            self.eng.events.log(f"Automatic REM Bridge engaged: {reason}", "SYS")
-            self.run_headless_turn("/idle")
-        except Exception as e:
-            self.eng.events.log(f"Auto REM Crash: {e}", "CRIT")
+            self.eng.events.log(f"REM Engine Crash: {e}", "CRIT")
         finally:
             self._rem_lock.release()
 
     def _check_early_exit(self, ctx: CycleContext) -> Optional[Dict[str, Any]]:
         """Intercepts the pipeline return if the organism died or explicitly refused a toxic prompt."""
         if not ctx.is_alive:
-            if hasattr(ctx, "crash_error"):
+            if getattr(ctx, "crash_error", None) is not None:
                 return self._generate_crash_report(ctx.crash_error)
             return self.eng.trigger_death(ctx.physics)
 
@@ -419,13 +403,13 @@ class GeodesicOrchestrator:
         Meadows' Dynamics: This observes the state *after* the cycle and triggers autonomous
         reactions (like falling asleep) based on the resultant stocks and flows.
         """
-        if not getattr(self.eng.bio, "mito", None):
+        if not hasattr(self.eng.bio, "mito"):
             return
         lattice = getattr(self.eng, "shared_lattice", None)
 
         """Native WLS fractal dimension calculation (Project Navi). Offloaded to prevent UI drag."""
-        mem = getattr(getattr(self.eng, "mind", None), "mem", None)
-        cortex = getattr(mem, "cortex", None)
+        mem = self.eng.mind.mem
+        cortex = mem.cortex
 
         def _bg_wls_check(msg_str):
             try:
@@ -456,7 +440,7 @@ class GeodesicOrchestrator:
         atp_level = float(self.eng.bio.mito.state.atp_pool)
         delta_level = float(getattr(lattice.shared, "delta", 0.0)) if lattice else 0.0
 
-        phys_dict = _safe_dict(getattr(ctx, "physics", {}))
+        phys_dict = _safe_dict(ctx.physics)
         energy_node = phys_dict.get("energy", phys_dict)
         debt = float(energy_node.get("coherence_debt", 0.0))
 
@@ -466,7 +450,11 @@ class GeodesicOrchestrator:
         is_debt_recovery = (debt > 1.5 and atp_level >= 30.0)
 
         if (is_standard_rem or is_debt_recovery) and self._rem_lock.acquire(blocking=False):
-            threading.Thread(target=self._auto_rem_worker, args=(is_debt_recovery,), daemon=True).start()
+            log_msg = "Automatic REM Bridge engaged: High Coherence Debt detected." if is_debt_recovery else "Automatic REM Bridge engaged: High ATP, High Silence."
+            try:
+                threading.Thread(target=self._dispatch_rem_worker, args=(log_msg,), daemon=True).start()
+            except RuntimeError:
+                self._rem_lock.release()  # Failsafe: Release if thread creation is denied by host OS
 
     def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         """
@@ -479,8 +467,11 @@ class GeodesicOrchestrator:
         # Manual REM trigger via standard user input.
         if clean_message.lower() == "/idle":
             if self._rem_lock.acquire(blocking=False):
-                worker = threading.Thread(target=self._background_dream_worker, daemon=True)
-                worker.start()
+                try:
+                    worker = threading.Thread(target=self._dispatch_rem_worker, args=("Spawning detached worker for Dream Engine...",), daemon=True)
+                    worker.start()
+                except RuntimeError:
+                    self._rem_lock.release()
             else:
                 self.eng.events.log("Dream worker already active. Ignoring overlapping idle request.", "SYS")
 

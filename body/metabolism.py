@@ -319,7 +319,7 @@ class DigestiveTrack:
         self.cfg = config_ref or BoneConfig
 
         # Maps semantic categories to simulated enzymes for digestion.
-        base_map = (LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG", "ENZYME_MAP") or {})
+        base_map = (LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG") or {}).get("ENZYME_MAP", {})
         self.enzyme_map = dict(base_map)
         if "heavy" not in self.enzyme_map:
             self.enzyme_map.update({

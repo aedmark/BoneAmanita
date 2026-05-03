@@ -61,7 +61,7 @@ class PulseReader:
         else:
             key = "voltage_nominal"
 
-        res = ux("pulse_reader", key)
+        res = ux("pulse_reader", key) or ["NOMINAL", "Voltage is nominal."]
         return res[0], res[1]
 
 
@@ -191,7 +191,7 @@ class GeodesicRenderer:
         """Renders the single-line obsession indicator (e.g., 'Currently thinking about: Cats')."""
         if not soul_ref or not soul_ref.current_obsession:
             return ""
-        strip_format = ux("soul_dashboard", "obsession_strip")
+        strip_format = ux("soul_dashboard", "obsession_strip") or "Currently thinking about: {obs}"
         formatted_strip = strip_format.replace("{obs}", str(soul_ref.current_obsession))
         return f"{Prisma.GRY}{formatted_strip}{Prisma.RST}"
 

@@ -106,12 +106,14 @@ class BoneGenesis:
                 # Direct, native application of inherited physics.
                 applied_drag = dummy_phys.get("narrative_drag", base_drag) - base_drag
                 if applied_drag:
-                    embryo.physics.narrative_drag += float(applied_drag)
+                    current_drag = float(getattr(embryo.physics, "narrative_drag", base_drag))
+                    embryo.physics.narrative_drag = current_drag + float(applied_drag)
 
                 # Penalize starting energy (Voltage) if the last session was exhausted.
                 volt_penalty = base_voltage - dummy_phys.get("voltage", base_voltage)
                 if volt_penalty > 0:
-                    embryo.physics.voltage = max(0.0, embryo.physics.voltage - volt_penalty)
+                    current_voltage = float(getattr(embryo.physics, "voltage", base_voltage))
+                    embryo.physics.voltage = max(0.0, current_voltage - float(volt_penalty))
 
             # Re-attach the persistent trauma directly to the active session memory.
             if mem:

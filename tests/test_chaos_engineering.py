@@ -89,3 +89,83 @@ class TestChaosEngineering(BoneTestCase):
             lock_status,
             "CRITICAL: The REM lock was not released after the async crash. System paralyzed."
         )
+
+    def test_vector_4_linehan_radical_acceptance(self):
+        """
+        THE LINEHAN CHECKPOINT: High exhaustion and contradiction must force
+        a structural halt to protect the host's cognitive load.
+        """
+        # Inject extreme exhaustion and contradiction directly into the physics state
+        from struts import safe_set
+
+        # Ensure the physics packet exists
+        if not getattr(self.engine.cortex, "last_physics", None):
+            self.engine.cortex.last_physics = {}
+
+        safe_set(self.engine.cortex.last_physics, "exhaustion", 0.85)
+        safe_set(self.engine.cortex.last_physics, "beta_index", 0.75)
+
+        # The engine strictly prioritizes the Observer's state and the User's biological Lattice.
+        # We must physically mirror the exhaustion to these layers so it isn't overridden by a "healthy" baseline.
+        self.engine.observer.last_physics_packet = self.engine.cortex.last_physics
+        lattice = getattr(self.engine, "shared_lattice", None)
+        if lattice and hasattr(lattice, "u"):
+            safe_set(lattice.u, "E", 0.85)
+
+        snapshot = self.engine.process_turn("I am so tired and nothing makes sense anymore.")
+        logs = "\n".join(snapshot.get("logs", []))
+
+        # The engine MUST halt and invoke Linehan's specific string.
+        self.assertEqual(
+            snapshot.get("type"), "SYSTEM_HALT",
+            "Engine failed to execute a SYSTEM_HALT during critical exhaustion."
+        )
+        self.assertIn(
+            "LINEHAN", logs,
+            "Linehan failed to trigger Radical Acceptance during high exhaustion/contradiction."
+        )
+        self.assertIn(
+            "sit with the debris", logs,
+            "Linehan's radical acceptance protocol was not fired."
+        )
+
+    def test_vector_5_governor_macro_policy_shift(self):
+        """
+        THE CYBERNETIC GOVERNOR: High user exhaustion and resonance mismatch
+        must trigger a mathematically verified Macro-Policy Shift to CO_REGULATION.
+        """
+        from struts import safe_set
+        class MockLatticeU:
+            pass
+        class MockLattice:
+            u = MockLatticeU()
+
+        self.engine.shared_lattice = MockLattice()
+        safe_set(self.engine.shared_lattice.u, "E", 0.95)
+
+        snapshot = self.engine.process_turn("I am completely burned out and nothing is working.")
+
+        policy = snapshot.get("physics", {}).get("macro_policy", "UNKNOWN")
+
+        self.assertEqual(
+            policy, "CO_REGULATION",
+            f"Governor failed to shift policy during high user exhaustion! Policy stuck at {policy}."
+        )
+
+    def test_vector_6_missing_village_resilience(self):
+        """
+        The engine must not suffer an UnboundLocalError
+        or fatal crash if a core village member (like Gordon) is missing.
+        """
+        # Dynamically amputate Gordon to simulate a custom boot mode or strict suppression
+        if hasattr(self.engine, 'gordon'):
+            delattr(self.engine, 'gordon')
+
+        try:
+            # If `has_comb` or similar local variables are uninitialized, this will throw an UnboundLocalError
+            snapshot = self.engine.process_turn("Just a normal request to test architectural integrity.")
+            self.assertIsNotNone(snapshot)
+        except UnboundLocalError as e:
+            self.fail(f"[CRITICAL] Engine crashed with UnboundLocalError due to missing village member: {e}")
+        except Exception as e:
+            self.fail(f"[CRITICAL] Engine crashed unexpectedly when a village member was suppressed: {e}")

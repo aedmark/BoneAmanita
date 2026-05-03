@@ -412,7 +412,8 @@ class MycelialNetwork:
         from archetypes.village import ParadoxSeed
         loaded_seeds = []
         try:
-            raw_seeds = LoreManifest.get_instance().get("SEEDS") or []
+            scenarios = LoreManifest.get_instance().get("SCENARIOS") or {}
+            raw_seeds = scenarios.get("SEEDS", [])
             for item in raw_seeds:
                 q = item.get("question", "Undefined Paradox")
                 t = set(item.get("triggers", []))

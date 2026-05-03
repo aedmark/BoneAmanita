@@ -141,8 +141,8 @@ class SynestheticCortex:
         If the primary perception didn't explicitly name a feeling, this evaluates
         the final chemical cocktail and assigns the most appropriate physical sensation.
         """
-        s = (LoreManifest.get_instance(config_ref=self.cfg).get(
-            "BODY_CONFIG", "QUALIA_STRINGS") or {}).get("reflexes", {})
+        s = (LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG") or {}).get(
+            "QUALIA_STRINGS", {}).get("reflexes", {})
 
         arc_trigger = getattr(getattr(self.cfg, "CORTEX", None), "VOLTAGE_ARC_TRIGGER", 18.0)
         psi = float(safe_get(physics, "psi", 0.0))
@@ -184,7 +184,7 @@ class SynestheticCortex:
         vocal tone, and internal monologue prompt hint.
         """
         strings = (LoreManifest.get_instance(config_ref=config_ref or BoneConfig).get(
-            "BODY_CONFIG", "QUALIA_STRINGS") or {})
+            "BODY_CONFIG") or {}).get("QUALIA_STRINGS", {})
 
         if not impulse:
             return Qualia(Prisma.GRY, "...", strings.get("tones", {}).get("steady", ""), strings.get("hints", {}).get("observe", ""))

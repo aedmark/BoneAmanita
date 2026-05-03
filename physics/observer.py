@@ -46,10 +46,9 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any, config_re
     deep_cfg = getattr(t_cfg, "PHYSICS_DEEP", None)
 
     def apply_delta(key: str, amount: float):
-        if key == "narrative_drag":
-            fb.space.narrative_drag += amount
-        else:
-            setattr(fb.energy, key, getattr(fb.energy, key, 0.0) + amount)
+        # Leverages the PhysicsPacket magic __setattr__ to update all mapped targets synergistically
+        current_val = getattr(fb, key, 0.0)
+        setattr(fb, key, current_val + amount)
 
     def get_deep_cfg(key: str, default: float):
         return getattr(deep_cfg, key, default) if deep_cfg else default
@@ -443,13 +442,14 @@ class CycleStabilizer:
 
     def _apply_force(self, p, field, force, limits=None) -> bool:
         """Helper to apply a specific calculated force to the physics packet, ensuring it stays within bounds."""
-        from struts import safe_get, safe_set
-
         # Ignore micro-fluctuations to save computation
         if abs(force) <= 0.05:
             return False
 
-        target = getattr(p, "space", p) if field == "narrative_drag" else getattr(p, "energy", p)
-        new_val = safe_get(target, field, 0.0) + force
-        safe_set(target, field, max(limits[0], min(limits[1], new_val)) if limits else max(0.0, new_val))
+        # Trust the PhysicsPacket routing architecture instead of digging into sub-dataclasses
+        current_val = getattr(p, field, 0.0)
+        new_val = current_val + force
+        clamped_val = max(limits[0], min(limits[1], new_val)) if limits else max(0.0, new_val)
+
+        setattr(p, field, clamped_val)
         return True

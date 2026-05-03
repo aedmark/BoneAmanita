@@ -55,6 +55,7 @@ class SharedLatticeDriver:
         self.u.psi_u = self._get_f(input_phys, "psi", default=self.u.psi_u)                 # Void / Liminality
         self.u.chi_u = self._get_f(input_phys, "chi", "entropy", default=self.u.chi_u)      # Chaos
         self.u.F_u = self._get_f(input_phys, "narrative_drag", default=self.u.F_u)          # Friction
+        self.u.T_u = self._get_f(input_phys, "T", "trauma", default=getattr(self.u, "T_u", 0.0)) # Trauma
 
         # Unpack system physics for comparison.
         sys_beta, sys_chi = sys_phys.beta, sys_phys.chi
