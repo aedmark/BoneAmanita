@@ -63,7 +63,7 @@ class BiologyTests(BoneTestCase):
                 "[FAIL] SynestheticCortex is not centralized in the Somatic Loop.",
             )
             ctx = CycleContext(input_text="Testing unity.")
-            phase = SensationPhase(self.engine.cycle_controller.eng)
+            phase = SensationPhase(self.engine.orchestrator.eng)
             try:
                 phase.run(ctx)
                 print(

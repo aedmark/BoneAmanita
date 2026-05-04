@@ -336,8 +336,9 @@ class Projector:
         fill_count = int(ratio * width)
         empty_count = width - fill_count
 
-        char_fill = self.symbols.get("bar_fill", "")
-        char_empty = self.symbols.get("bar_empty", "")
+        # Hardcoded structural fallbacks prevent the UI from silently vanishing
+        char_fill = self.symbols.get("bar_fill") or "█"
+        char_empty = self.symbols.get("bar_empty") or "░"
 
         return f"{color}{char_fill * fill_count}{Prisma.GRY}{char_empty * empty_count}{Prisma.RST}"
 
@@ -366,23 +367,20 @@ class SoulDashboard:
         d_high = getattr(cfg, "DIGNITY_HIGH", 80.0)
         d_med = getattr(cfg, "DIGNITY_MED", 50.0)
         d_low = getattr(cfg, "DIGNITY_LOW", 30.0)
-        d_ratio = getattr(cfg, "DIGNITY_BAR_RATIO", 5)
+        d_ratio = max(1, int(getattr(cfg, "DIGNITY_BAR_RATIO", 5)))
         t_warn = getattr(cfg, "TENURE_WARN", 5)
         t_crit = getattr(cfg, "TENURE_CRIT", 8)
-
         color = Prisma.GRN if dig > d_high else Prisma.OCHRE if dig > d_low else Prisma.RED
         max_dig = getattr(cfg, "DIGNITY_MAX", 100.0)
         clamped_dig = max(0.0, min(max_dig, dig))
-
         max_bar_width = int(max_dig / d_ratio)
         filled = int(clamped_dig / d_ratio)
         empty = max(0, max_bar_width - filled)
-
         c_fill = ux("status_menu", "bar_filled") or "█"
         c_empty = ux("status_menu", "bar_empty") or "░"
         bar_str = f"{color}{c_fill * filled}{Prisma.GRY}{c_empty * empty}{Prisma.RST}"
-
         lock_status = ""
+
         if anchor.agency_lock:
             lock_status = f" {Prisma.RED}{ux('soul_dashboard', 'agency_locked') or '[AGENCY LOCKED]'}{Prisma.RST}"
         elif dig < d_low:
@@ -392,7 +390,7 @@ class SoulDashboard:
         tenure_color = Prisma.RED if tenure > t_crit else Prisma.OCHRE if tenure > t_warn else Prisma.GRY
         arch_display = f"{Prisma.CYN}{arch}{Prisma.RST} ({tenure_color}T:{tenure}{Prisma.RST})"
 
-        # If Dignity is low and the system is not locked, it begins to seek comfort (petting).
+        # If Dignity is low and the system is not locked, it begins to seek comfort.
         pet_icon = ux("soul_dashboard", "pet_icon") if (dig < d_med and not anchor.agency_lock) else ""
         muse = (str(soul.current_obsession) if soul.current_obsession else (ux("soul_dashboard", "default_muse") or "None"))
 

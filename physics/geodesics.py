@@ -86,7 +86,7 @@ class GeodesicEngine:
             return gc_dict.get(key, default)
 
         shapley_thresh = getattr(t_cfg, "SHAPLEY_MASS_THRESHOLD", 5.0)
-        safe_vol = max(1, volume)
+        safe_vol = volume
         tot_kin = masses["kinetic"] + masses["explosive"]
 
         # Tension is the expansive force. Heavy, kinetic, and explosive words increase tension.
@@ -148,8 +148,8 @@ class GeodesicEngine:
         Translates the physical masses into the 8 core dimensions of the system's mind state.
         Returns a normalized vector where each axis is clamped between 0.0 and 1.0.
         """
-        inv_vol = 1.0 / max(1, volume)
-        base_mass = 0.1 # Prevents vectors from zeroing out entirely
+        inv_vol = 1.0 / volume  # Parent function already guarantees volume >= 1
+        base_mass = 0.1  # Prevents vectors from zeroing out entirely
 
         def clamp(v: float) -> float:
             return max(0.0, min(1.0, v))

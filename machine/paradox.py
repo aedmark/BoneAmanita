@@ -64,11 +64,13 @@ class TheParadoxEngine:
         """
         self.is_active = True
 
-        # Pragmatic Fallback: Filter out meaningless short words. If the user
-        # hasn't provided any substantive vocabulary, default to questioning the system itself.
+        # Filter out meaningless short words.
         seed = random.choice([w for w in recent_words if len(w) > 4] or ["the architecture"])
-
         templates = ux("machine_strings", "paradox_templates") or self._DEFAULT_TEMPLATES
+
+        # If the Lore Manifest provided a single string, wrap it to prevent random character selection.
+        if isinstance(templates, str):
+            templates = [templates]
 
         # Calculate the reward yield (a random value between 0.4 and 1.0) and format the prompt.
         return 0.4 + (random.random() * 0.6), random.choice(templates).format(seed=seed)

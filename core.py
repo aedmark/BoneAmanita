@@ -1,11 +1,9 @@
 """core.py
-
 The Central Nervous System of the Hypervisor.
 This module houses the base primitives for state management, event routing,
 telemetry, and reality-layer scoping. It is strictly decoupled from LLM execution
 to ensure metabolic stability even if the cognitive layers crash.
 """
-
 import glob
 import json
 import os
@@ -17,8 +15,7 @@ import uuid
 from collections import deque, Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, asdict
-from typing import List, Dict, Any, Optional, Tuple, Deque
-
+from typing import List, Dict, Any, Optional, Tuple
 from constants import Prisma, RealityLayer
 from presets import BoneConfig
 from struts import ux, ux_format, safe_get
@@ -26,15 +23,16 @@ from struts import ux, ux_format, safe_get
 
 class BoneJSONEncoder(json.JSONEncoder):
     """Ensures complex biological data structures (sets, deques, dataclasses) serialize safely."""
+
     def default(self, obj):
         if isinstance(obj, (set, deque)): return list(obj)
         if hasattr(obj, "to_dict"): return obj.to_dict()
         if hasattr(obj, "__dict__"): return obj.__dict__
         return super().default(obj)
 
+
 from physics.models import PhysicsPacket, UserInferredState, SharedDynamics
 
-# CORE ORCHESTRATION MODELS
 
 @dataclass
 class ErrorLog:
@@ -45,6 +43,7 @@ class ErrorLog:
 
     def __str__(self):
         return f"[{self.severity}] {self.component}: {self.error_msg}"
+
 
 @dataclass
 class DecisionCrystal:
@@ -69,6 +68,7 @@ class DecisionCrystal:
         data["_summary"] = f"{self.system_state}::{self.active_archetype}"
         data["_type"] = "CRYSTAL"
         return json.dumps(data, cls=BoneJSONEncoder)
+
 
 @dataclass
 class CycleContext:
@@ -120,12 +120,14 @@ class CycleContext:
                 {"phase": phase, "metric": metric, "initial": initial, "final": final, "delta": delta, "reason": reason,
                  "timestamp": time.time(), })
 
+
 @dataclass
 class MindSystem:
     mem: Any
     lex: Any
     dreamer: Any
     tracer: Any
+
 
 @dataclass
 class PhysSystem:
@@ -139,18 +141,17 @@ class PhysSystem:
     tension: Optional[Any] = None
     dynamics: Any = None
 
-# THE CIRCULATORY SYSTEM
 
 class EventBus:
     """
     The asynchronous publisher/subscriber backbone.
     Bounded by a deque(maxlen) to prevent runaway memory leaks.
     """
+
     def __init__(self, max_memory=None, config_ref=None, telemetry_ref=None):
         self.cfg = config_ref or BoneConfig
         cfg_core = LoreManifest.get_instance().get("CORE_CONFIG") or {}
         limit = max_memory or safe_get(cfg_core, "EVENT_MAX_MEMORY", 1024)
-
         self.buffer = deque(maxlen=limit)
         self.subscribers = {}
         self.telemetry = telemetry_ref
@@ -160,23 +161,28 @@ class EventBus:
         if callback not in subs:
             subs.append(callback)
 
+    def unsubscribe(self, event_type, callback):
+        """Prevents memory leaks from ghost listeners."""
+        subs = self.subscribers.get(event_type)
+        if subs and callback in subs:
+            subs.remove(callback)
+
     def publish(self, event_type, data=None):
         if event_type not in self.subscribers: return
-
         for callback in self.subscribers[event_type][:]:
             try:
                 callback(data)
             except Exception as e:
-                # APOPTOTIC IMMUNE RESPONSE: Physical pruning of toxic nodes.
                 cb_name = getattr(callback, "__name__", str(callback))
-
                 if event_type != "EVENT_FAILURE":
-                    tb_str = traceback.format_exc(limit=3) # Bounded traceback to prevent stack bloat
-                    self.log(f"EVENT_FAILURE: Error in '{cb_name}': {e}\n{tb_str}", source="EVENT_FAILURE", level="CRIT")
-
+                    tb_str = traceback.format_exc(limit=3)
+                    self.log(f"EVENT_FAILURE: Error in '{cb_name}': {e}\n{tb_str}", source="EVENT_FAILURE",
+                             level="CRIT")
                 if callback in self.subscribers[event_type]:
                     self.subscribers[event_type].remove(callback)
-                    msg = ux_format("core_strings", "bus_error", default="[IMMUNE] Apoptotic pruning applied to toxic callback: {cb_name}", cb_name=cb_name)
+                    msg = ux_format("core_strings", "bus_error",
+                                    default="[IMMUNE] Apoptotic pruning applied to toxic callback: {cb_name}",
+                                    cb_name=cb_name)
                     print(f"{Prisma.RED}{msg}{Prisma.RST}")
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
@@ -185,29 +191,21 @@ class EventBus:
                  "_type": "EVENT_LOG"}
         self.buffer.append(event)
         self.publish(source, event)
-
         if self.telemetry:
             self.telemetry.record_event(event)
-
         if level in ("CRIT", "ERROR"):
             print(f"{Prisma.RED}[{source}] {message}{Prisma.RST}")
 
     def flush(self) -> List[Dict]:
-        """Drains the current buffer, returning the accumulated state and resetting the queue."""
+        """Drains the current buffer safely, returning the accumulated state."""
         current_logs = list(self.buffer)
         self.buffer.clear()
         return current_logs
 
-    def get_recent_logs(self, count=10):
-        return list(self.buffer)[-count:]
-
-# THE HIPPOCAMPUS
 
 class LoreManifest:
     """
-    The lazy-loaded, singleton data cache.
-    We only load files from the disk when requested, preserving O(1)
-    memory footprint during idle states.
+    The lazy-loaded, singleton data cache. We only load files from the disk when requested.
     """
     _instance = None
 
@@ -274,7 +272,6 @@ class LoreManifest:
         if self._cache.pop(cat_key, None) is not None:
             print(f"{Prisma.CYN}[LORE]: Flushed '{cat_key}'.{Prisma.RST}")
 
-# METABOLIC GOVERNANCE & TELEMETRY
 
 class TheObserver:
     """
@@ -282,20 +279,18 @@ class TheObserver:
     Tracks latency, graph bloat, and execution loops to infer the biological
     exhaustion of the active model and hardware.
     """
+
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.start_time = time.time()
         self.is_coupled = False
-
         cfg_core = LoreManifest.get_instance().get("CORE_CONFIG") or {}
         max_len = safe_get(cfg_core, "OBSERVER_MAX_LEN", 20)
-
         self.cycle_times = deque(maxlen=max_len)
         self.llm_latencies = deque(maxlen=max_len)
         self.memory_snapshots = deque(maxlen=max_len)
         self.error_counts = Counter()
         self.user_turns = 0
-
         self.LATENCY_WARNING = (safe_get(cfg_core, "OBSERVER_LATENCY_WARN", 5.0))
         self.CYCLE_WARNING = (safe_get(cfg_core, "OBSERVER_CYCLE_WARN", 8.0))
         self.C_EFF = safe_get(cfg_core, "OBSERVER_CYCLE_EFFICIENT", 0.1)
@@ -336,18 +331,18 @@ class TheObserver:
             return random.choice(valid_msgs) if valid_msgs else ""
         if avg_cycle > self.CYCLE_WARNING:
             return ux("core_strings", "obs_sluggish")
-        if getattr(self, "is_coupled", False):
+        if self.is_coupled:
             return ux_format("core_strings", "obs_coupled", default="Harmonic Resonance: Presence Active.")
         return ux("core_strings", "obs_nominal")
 
     def get_report(self):
         avg_cycle = sum(self.cycle_times) / max(1, len(self.cycle_times))
         avg_llm = sum(self.llm_latencies) / max(1, len(self.llm_latencies))
-        uptime = time.time() - self.start_time
         status_msg = self.pass_judgment(avg_cycle, avg_llm)
-        return {"uptime_sec": int(uptime), "turns": self.user_turns, "avg_cycle_sec": round(avg_cycle, 2),
+        return {"uptime_sec": int(self.uptime), "turns": self.user_turns, "avg_cycle_sec": round(avg_cycle, 2),
                 "avg_llm_sec": round(avg_llm, 2), "status": status_msg, "errors": dict(self.error_counts),
                 "graph_size": self.memory_snapshots[-1] if self.memory_snapshots else 0}
+
 
 @dataclass
 class SystemHealth:
@@ -356,7 +351,7 @@ class SystemHealth:
     bio_online: bool = True
     mind_online: bool = True
     cortex_online: bool = True
-    errors: List[ErrorLog] = field(default_factory=list)
+    errors: deque = field(default_factory=lambda: deque(maxlen=50))
     warnings: List[str] = field(default_factory=list)
     hints: List[str] = field(default_factory=list)
     observer: Optional["TheObserver"] = None
@@ -369,12 +364,9 @@ class SystemHealth:
         self.errors.append(ErrorLog(component, msg, severity=severity))
         if self.observer:
             self.observer.log_error(component)
-
-        # Flag the specific module as offline if explicitly tracked
         attr_name = f"{component.lower()}_online"
         if hasattr(self, attr_name):
             setattr(self, attr_name, False)
-
         return ux_format("core_strings", "health_offline", component=component, msg=msg)
 
     def report_warning(self, message: str):
@@ -389,11 +381,13 @@ class SystemHealth:
         self.hints.clear()
         return feedback
 
+
 class RealityStack:
     """
     A stack-based Finite State Machine mapping the depth of execution context.
     Prevents narrative generation algorithms from executing during low-level debug loops.
     """
+
     def __init__(self):
         self._stack = [RealityLayer.SIMULATION]
 
@@ -424,20 +418,20 @@ class RealityStack:
                 "allow_commands": d >= RealityLayer.SIMULATION, "allow_meta": d >= RealityLayer.DEBUG,
                 "raw_output": d == RealityLayer.DEEP_CX, "system_override": d == RealityLayer.DEBUG}
 
+
 class CyberneticGovernor:
     """
     The Mathematical bridge between the human user and the digital engine.
     Calculates the 'Beth Index' to trigger Macro-Policy Shifts.
     """
+
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.beth_index, self.order = 0.5, 1
 
     def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
-        coherence_debt = (user_exhaustion**1.5) * (1.0 - phi)
-        # Binds systemic health to the user's metabolic state
+        coherence_debt = (user_exhaustion ** 1.5) * (1.0 - phi)
         self.beth_index = max(0.0, min(1.0, (phi * 0.6) + (user_exhaustion * 0.4) + (coherence_debt * 0.3)))
-        # Order 2 == Second-Order Cybernetics (Co-Regulation)
         self.order = 2 if self.beth_index >= 0.75 or (resonance_delta > 0.3 and user_exhaustion > 0.5) else 1
         return self.beth_index
 
@@ -446,39 +440,39 @@ class CyberneticGovernor:
             return "CO_REGULATION"
         return "EFFICIENCY"
 
+
 class ArchetypeArbiter:
     """
     The casting director. Resolves the math of the soul, physics, and governor
     into a distinct Village Voice.
     """
+
     @staticmethod
     def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict],
                   trigram: Dict = None) -> Tuple[str, str, str]:
         mandates = council_mandates or []
-
-        # Hard overrides based on systemic trauma or toxicity.
         if any(m.get("type") == "LOCKDOWN" for m in mandates):
             return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law")
         if any(m.get("type") == "FORCE_MODE" for m in mandates):
             return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic")
-
-        # Hybrid states and Gestalt resonance mappings
         if soul_archetype and "/" in soul_archetype:
-            return soul_archetype, "SOUL", ux_format("core_strings", "arb_diamond", soul_archetype=soul_archetype)
+            msg = ux_format("core_strings", "arb_diamond", soul_archetype=soul_archetype,
+                            default=f"Gestalt Resonance: {soul_archetype}")
+            return soul_archetype, "SOUL", msg
         if trigram:
             meta_resonance = LoreManifest.get_instance().get("NARRATIVE_DATA", "_META_RESONANCE_") or []
             for r in meta_resonance:
                 if r.get("trigram") == trigram.get("name") and r.get("lens", physics_lens) == physics_lens and r.get(
                         "soul", soul_archetype) == soul_archetype:
-                    return r["result"], r.get("source", "COSMIC"), r.get("msg") or ux("core_strings", "arb_resonance")
-
+                    return r["result"], r.get("source", "COSMIC"), r.get("msg") or ux("core_strings",
+                                                                                      "arb_resonance") or "Cosmic Resonance."
         loud_lenses = LoreManifest.get_instance().get("COUNCIL_DATA", "LOUD_LENSES") or ["THE MANIC", "THE VOID"]
         if physics_lens in loud_lenses:
-            return physics_lens, "PHYSICS", ux_format("core_strings", "arb_loud", physics_lens=physics_lens)
-        return soul_archetype, "SOUL", ux("core_strings", "arb_soul")
+            msg = ux_format("core_strings", "arb_loud", physics_lens=physics_lens,
+                            default=f"Physics Override: {physics_lens}")
+            return physics_lens, "PHYSICS", msg
+        return soul_archetype, "SOUL", ux("core_strings", "arb_soul") or "The soul speaks."
 
-
-# ASYNCHRONOUS LOGGING & SUBCONSCIOUS WRITING
 
 class TelemetryService:
     """
@@ -493,20 +487,16 @@ class TelemetryService:
         self.log_dir = (safe_get(cfg_core, "TELEMETRY_LOG_DIR", "logs/telemetry"))
         self.BUFFER_SIZE = (safe_get(cfg_core, "TELEMETRY_BUFFER_SIZE", 50))
         self.MAX_ERRORS = (safe_get(cfg_core, "TELEMETRY_MAX_ERRORS", 5))
-
         self.write_buffer: List[str] = []
         self.active_crystal = None
         self.disabled = False
         self.crystals_logged = 0
         self._lock = threading.Lock()
-
         try:
             os.makedirs(self.log_dir, exist_ok=True)
             self.current_trace_file = os.path.join(self.log_dir, f"trace_{int(time.time())}.jsonl")
-            # Offloads file operations to a dedicated thread to preserve main loop tensegrity.
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="BoneTelemetry")
         except OSError as e:
-            # Apoptotic Fallback: If disk I/O fails, shut down the logger, keep the engine alive.
             msg = ux("core_strings", "tel_disk_denied") or "Disk access denied for Telemetry."
             print(f"{Prisma.OCHRE}[GRACEFUL DEGRADATION] {msg} - {e}. Telemetry offline.{Prisma.RST}")
             self.disabled = True
@@ -516,7 +506,11 @@ class TelemetryService:
     def record_event(self, event_dict: dict):
         if self.disabled or not self.current_trace_file:
             return
-        self._buffer_line(json.dumps(event_dict, cls=BoneJSONEncoder))
+        try:
+            serialized = json.dumps(event_dict, cls=BoneJSONEncoder)
+            self._buffer_line(serialized)
+        except (TypeError, ValueError) as e:
+            print(f"{Prisma.YEL}[TELEMETRY] Dropped un-serializable event: {e}{Prisma.RST}")
 
     @classmethod
     def get_instance(cls, config_ref=None):
@@ -549,7 +543,6 @@ class TelemetryService:
         if self.disabled: return
         with self._lock:
             self.write_buffer.append(json_str)
-            # Meadows Note: The overflow valve. Forces a write when the buffer limit is breached.
             if len(self.write_buffer) >= self.BUFFER_SIZE: self.flush_to_disk_locked()
 
     def flush_to_disk_locked(self):
@@ -577,7 +570,6 @@ class TelemetryService:
     def _yield_historical_records(self, file_limit=5, lines_per_file=10):
         """Generates a stream of past telemetry records, reading backwards from the most recent."""
         if not os.path.exists(self.log_dir): return
-
         files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), key=os.path.getmtime, reverse=True)
         for fpath in files[:file_limit]:
             try:
@@ -597,7 +589,6 @@ class TelemetryService:
             if len(history) >= limit: break
             resp = data.get("final_response")
             if not resp: continue
-
             user_text = data.get("prompt_snapshot", "").partition("User:")[2].split("\n", 1)[0].strip() or "Unknown"
             history.appendleft(f"User: {user_text} | System: {resp}")
         return list(history)
@@ -610,7 +601,8 @@ class TelemetryService:
         """Navigates the graveyard of past trace files to resurrect the last critical failure."""
         for data in self._yield_historical_records(file_limit=5, lines_per_file=5):
             if "CRITICAL" in str(data.get("outcome", "")):
-                return ux_format("core_strings", "tel_prev_crash", default="Crash: {reason}", reason=data.get("reasoning", "Unknown"))
+                return ux_format("core_strings", "tel_prev_crash", default="Crash: {reason}",
+                                 reason=data.get("reasoning", "Unknown"))
         return None
 
     def generate_session_summary(self, _uptime: float = 0.0) -> str:

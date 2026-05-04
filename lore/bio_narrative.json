@@ -18,7 +18,7 @@
   "GOVERNOR": {
     "OVERRIDE": "MANUAL OVERRIDE: System locked to {mode}.",
     "INVALID": "INVALID MODE.",
-    "SANCTUARY": "{color}GOVERNOR: VSL Critical (\u03b2: {beta:.2f}). Entering SANCTUARY.{reset}",
+    "SANCTUARY": "{color}GOVERNOR: VSL Critical! Entering SANCTUARY.{reset}",
     "FORGE": "{color}GOVERNOR: High Voltage ({volts:.1f}v). Locking to FORGE.{reset}",
     "LAB": "{color}GOVERNOR: High Drag detected. Restricting to LABORATORY.{reset}",
     "CLEAR": "{color}GOVERNOR: All Clear. Relaxing to COURTYARD.{reset}"

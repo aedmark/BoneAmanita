@@ -163,15 +163,12 @@ class NaviSADProtocol:
         If the immune system is severely degraded (< 0.4), the system requires a hard 'nudge'
         to break out of its current state and avoid total collapse.
         """
+        from struts import safe_get
         obs = getattr(engine_ref, "observer", None)
         packet = getattr(obs, "last_physics_packet", None)
 
-        if isinstance(packet, dict):
-            energy = packet.get("energy", {})
-            return float(energy.get("i_c", 1.0)) < 0.4
-        else:
-            energy = getattr(packet, "energy", None)
-            return float(getattr(energy, "i_c", 1.0)) < 0.4
+        energy = safe_get(packet, "energy", packet)
+        return float(safe_get(energy, "i_c", 1.0)) < 0.4
 
     def detect_point_attractor(self) -> bool:
         """

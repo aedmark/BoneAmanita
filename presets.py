@@ -3,48 +3,27 @@ presets.py
 
 The Universal Constants and Epigenetic Switches.
 This module establishes the baseline mathematical and biological constraints of the engine.
-It acts as the single source of truth for all reality tuning, modes of operation, and
-systemic boundaries.
 """
 
 import copy
 import json
 import os
 from typing import Dict, Any, List
+from struts import ux
 
 class _ConfigNode:
     """
-    Schur's Pragmatic Shortcut.
     A simple object wrapper that turns dictionary key-value pairs into object attributes.
-    This drastically reduces syntactic friction for developers, allowing them to type
-    `config.PHYSICS.VOLTAGE_MAX` instead of `config["PHYSICS"]["VOLTAGE_MAX"]`.
     """
     def __repr__(self):
         return f"ConfigNode({vars(self)})"
 
-def ux(section: str, key: str, default: Any = "") -> Any:
-    """
-    The Textual Decoupler.
-    Pinker insists that hardcoding UI text inside system logic is a style crime.
-    This function acts as a safe bridge to the LoreManifest, pulling narrative strings
-    dynamically. If the lore isn't loaded yet (e.g., during early boot), it fails safely
-    to the provided default.
-    """
-    try:
-        from core import LoreManifest
-        manifest = LoreManifest.get_instance()
-        data = manifest.get("ux_strings", section) if manifest else {}
-        return data.get(key, default) if isinstance(data, dict) else default
-    except (ImportError, AttributeError):
-        return default
-
 class BonePresets:
     """
-    Macro-State Defines (Epigenetic Packages).
-    These are pre-configured bundles of systemic tuning. Instead of tweaking fifty
-    variables manually, a developer or user can simply load a preset to completely
-    alter the metabolic and physical behavior of the engine.
+    These are pre-configured bundles of systemic tuning. A developer or user can
+    load their own presets to completely alter the metabolic and physical behavior of the engine.
     """
+
     # A state of absolute calm. Low friction, low energy requirement.
     ZEN_GARDEN = {"PHYSICS.VOLTAGE_FLOOR": 1.0,
         "PHYSICS.VOLTAGE_MAX": 25.0,
@@ -151,7 +130,7 @@ class BoneConfig:
         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2},}
 
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "19.7.3"
+    VERSION = "19.8.3"
     VERBOSE_LOGGING = True
 
     # Biological Maximums
@@ -192,8 +171,8 @@ class BoneConfig:
     PROVIDER = "ollama"
     BASE_URL = None
     API_KEY = "ollama"
-    MODEL = "hermes3"
-    OLLAMA_MODEL_ID = "hermes3"
+    MODEL = "gemma4"
+    OLLAMA_MODEL_ID = "gemma4"
 
     @classmethod
     def _load_class_defaults(cls):
@@ -263,10 +242,13 @@ class BoneConfig:
             elif isinstance(value, dict):
                 # E.g., "PHYSICS": {"VOLTAGE_MAX": 25.0}
                 updates.extend((key, k, v) for k, v in value.items())
+            else:
+                # Catch root-level/metadata flat keys (e.g., "tuning": "ZEN")
+                updates.append(("ROOT", key, value))
 
         # Apply the mutations
         for sector_name, param_name, val in updates:
-            target_sector = getattr(self, sector_name, None)
+            target_sector = self if sector_name == "ROOT" else getattr(self, sector_name, None)
             if target_sector and hasattr(target_sector, param_name):
                 old_val = getattr(target_sector, param_name)
                 setattr(target_sector, param_name, val)
@@ -289,8 +271,9 @@ class BoneConfig:
                   ("DRAG_FLOOR", "DRAG_HALT", 0.0, self.MAX_DRAG_LIMIT, "repair_drag_halt")]
 
         for floor, ceil, def_floor, def_ceil, ux_key in bounds:
-            f_val = getattr(self.PHYSICS, floor, def_floor)
-            c_val = getattr(self.PHYSICS, ceil, def_ceil)
+            # Explicit float cast prevents fatal TypeErrors or lexical string comparisons from dirty JSON
+            f_val = float(getattr(self.PHYSICS, floor, def_floor))
+            c_val = float(getattr(self.PHYSICS, ceil, def_ceil))
 
             # Anchor missing nodes so downstream systems don't crash
             setattr(self.PHYSICS, floor, f_val)
@@ -325,7 +308,6 @@ class BoneConfig:
 
     def reconcile_state(self, physics_packet: Any):
         """
-        The Rubber Band.
         Ensures physics values have not drifted outside the established boundaries,
         expressly allowing for absolute zero (0.0) states.
         """
@@ -337,7 +319,6 @@ class BoneConfig:
         v_val = safe_get(physics_packet, "voltage")
         v_val = safe_get(e_obj, "voltage") if v_val is None else v_val
         raw_v = float(v_val if v_val is not None else 5.0)
-
         v_floor = getattr(self.PHYSICS, "VOLTAGE_FLOOR", 0.0)
         v_max = getattr(self.PHYSICS, "VOLTAGE_MAX", 100.0)
         new_v = max(v_floor, min(raw_v, v_max))
@@ -346,11 +327,9 @@ class BoneConfig:
         d_val = safe_get(physics_packet, "narrative_drag")
         d_val = safe_get(s_obj, "narrative_drag") if d_val is None else d_val
         raw_d = float(d_val if d_val is not None else 1.0)
-
         d_floor = getattr(self.PHYSICS, "DRAG_FLOOR", 0.0)
         d_halt = getattr(self.PHYSICS, "DRAG_HALT", self.MAX_DRAG_LIMIT)
         new_d = max(d_floor, min(raw_d, d_halt))
-
         safe_set(physics_packet, "voltage", new_v)
         safe_set(physics_packet, "narrative_drag", new_d)
 
@@ -364,11 +343,9 @@ class BoneConfig:
         target_sector = getattr(self, sector, None)
         if not target_sector:
             return (ux("config_strings", "tune_sector_err") or "Sector {sector} not found.").format(sector=sector)
-
         if not hasattr(target_sector, parameter):
             return (ux("config_strings", "tune_param_err") or "Param {parameter} missing in {sector}.").format(
                 parameter=parameter, sector=sector)
-
         current_val = getattr(target_sector, parameter)
 
         # Strict Type Enforcement (with float/int leniency)
@@ -376,17 +353,12 @@ class BoneConfig:
                 isinstance(current_val, (int, float)) and isinstance(value, (int, float))):
             return (ux("config_strings", "tune_type_err") or "Type mismatch: {curr_type} vs {new_type}.").format(
                 curr_type=type(current_val).__name__, new_type=type(value).__name__)
-
         setattr(target_sector, parameter, value)
 
         # Ensure the manual tweak didn't break the rules of reality
         if errors := self.validate_integrity():
             return " | ".join(errors)
-
         return (ux("config_strings", "tune_success") or "Tuned {sector}.{parameter} to {value}.").format(
             sector=sector, parameter=parameter, value=value)
 
-
-# Immediately execute the load sequence when the module is imported, locking the
-# JSON configurations into the global class namespace.
 BoneConfig._load_class_defaults()

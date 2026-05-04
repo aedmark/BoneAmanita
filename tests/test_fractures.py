@@ -6,6 +6,7 @@ from archetypes.symbiosis import SymbiosisManager
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 
+
 class FractureEngineTest(BoneTestCase):
     def test_fracture_n_turn_runaway_loop(self):
         print("\n--- FRACTURE 1: N-Turn Runaway ---")
@@ -15,7 +16,7 @@ class FractureEngineTest(BoneTestCase):
             if (result.get("type") == "SYSTEM_HALT"
                     or "take a breath" in result.get("ui", "").lower()):
                 print(
-                    f"  [SUCCESS] System locked the struts on turn {i+1} to prevent runaway failure."
+                    f"  [SUCCESS] System locked the struts on turn {i + 1} to prevent runaway failure."
                 )
                 break
         else:
@@ -27,6 +28,21 @@ class FractureEngineTest(BoneTestCase):
             100.0,
             "The system didn't burn any ATP while defending itself.",
         )
+
+    def test_native_freeze_graph_preserves_node_identities(self):
+        """Ensures that freezing the reality graph preserves the string identities of the nodes, not just anonymous tuples."""
+        from cycle import _native_freeze_graph
+        mock_graph = {
+            "NODE_ALPHA": ["NODE_BETA", "NODE_GAMMA"],
+            "NODE_BETA": ["NODE_ALPHA"]
+        }
+        frozen_topology = _native_freeze_graph(mock_graph)
+        self.assertTrue(isinstance(frozen_topology, tuple))
+        preserved_keys = [node[0] for node in frozen_topology]
+        self.assertIn("NODE_ALPHA", preserved_keys)
+        self.assertIn("NODE_BETA", preserved_keys)
+        alpha_node = next(node for node in frozen_topology if node[0] == "NODE_ALPHA")
+        self.assertIn("NODE_BETA", alpha_node[1])
 
     def test_fracture_autophagic_marathon(self):
         print("\n--- FRACTURE 2: Autophagic Marathon ---")
@@ -53,7 +69,7 @@ class FractureEngineTest(BoneTestCase):
                 if cause in ["STARVATION", "APOPTOSIS", "GLUTTONY"]:
                     death_achieved = True
                     print(
-                        f"  [SUCCESS] System gracefully died of {cause} on turn {i+1}.")
+                        f"  [SUCCESS] System gracefully died of {cause} on turn {i + 1}.")
                     break
         self.assertLess(
             len(mem_graph),
@@ -95,8 +111,7 @@ class FractureEngineTest(BoneTestCase):
     def test_fracture_cf_expect_guardrail(self):
         print("\n--- FRACTURE 4: Comfort Expectation Guardrail ---")
         if not hasattr(self.engine, "symbiosis"):
-            self.engine.symbiosis = SymbiosisManager(events_ref=MagicMock(),
-                                                     config_ref=self.engine.config)
+            self.engine.symbiosis = SymbiosisManager(events_ref=MagicMock(), config_ref=self.engine.config)
         physics_state = {
             "cf_expect": 0.9,
             "beta_index": 0.8,
@@ -282,42 +297,30 @@ class FractureEngineTest(BoneTestCase):
 
     def test_fracture_mitophagy_and_hormesis(self):
         print("\n--- FRACTURE 10: Mitohormesis & Mitophagy (Adaptive Dynamics) ---")
-
         mito = self.engine.bio.mito
         mito.state.membrane_potential = 0.5
         mito.state.atp_pool = 80.0
-
-        # Phase 1: Hormesis
         mito.state.ros_buildup = 6.0
         mito._apply_adaptive_dynamics()
         self.assertEqual(mito.state.retrograde_signal, "MITOHORMESIS_ACTIVE",
                          "[FAIL] System failed to recognize hormetic stress zone.")
         self.assertGreater(mito.state.membrane_potential, 0.5,
                            "[FAIL] Hormesis failed to strengthen the cellular membrane.")
-
-        # Phase 2: Mitophagy
-        # We force ROS to 100.0 to absolutely guarantee we blow past any custom threshold in your config.
         mito.state.ros_buildup = 100.0
         initial_atp = mito.state.atp_pool
         mito._apply_adaptive_dynamics()
-
         self.assertEqual(mito.state.ros_buildup, 0.0, "[FAIL] Mitophagy failed to purge ROS toxicity.")
         self.assertEqual(mito.state.retrograde_signal, "MITOPHAGY_RESET",
                          "[FAIL] Retrograde signal not set to MITOPHAGY_RESET.")
         self.assertLess(mito.state.atp_pool, initial_atp,
                         "[FAIL] System executed Mitophagy without paying the massive ATP cost.")
-
         print("  [SUCCESS] System successfully executed hormetic adaptation and emergency mitophagy.")
 
     def test_fracture_anaerobic_bypass(self):
         print("\n--- FRACTURE 11: The Anaerobic Bypass ---")
-
         mito = self.engine.bio.mito
-
-        # We must drop ATP below 95.0 to bypass the "Fresh Start" free pass.
         initial_atp = mito.state.atp_pool = 90.0
         initial_ros = mito.state.ros_buildup = 0.0
-
         heavy_phys = {
             "depth": 1.0,
             "connectivity": 1.0,
@@ -326,18 +329,13 @@ class FractureEngineTest(BoneTestCase):
             "mu": 0.5,
             "m_a": 1.0
         }
-
         mito.state.membrane_potential = 0.35
-
         receipt = mito.process_cycle(heavy_phys)
-
         self.assertEqual(receipt.status, "ANAEROBIC",
                          "[FAIL] System failed to trigger Anaerobic Bypass on extreme cognitive load.")
         self.assertEqual(receipt.symptom, "LACTATE_BUILDUP", "[FAIL] Did not register lactate buildup.")
-
         self.assertEqual(mito.state.atp_pool, initial_atp - 20.0,
                          "[FAIL] Anaerobic burn did not exact the 20.0 ATP emergency cost.")
         self.assertEqual(mito.state.ros_buildup, initial_ros + 2.0,
                          "[FAIL] Anaerobic burn did not tax the system with 2.0 ROS.")
-
         print("  [SUCCESS] System correctly bypassed standard metabolism to survive an impossible cognitive load.")

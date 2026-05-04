@@ -61,7 +61,12 @@ class PulseReader:
         else:
             key = "voltage_nominal"
 
-        res = ux("pulse_reader", key) or ["NOMINAL", "Voltage is nominal."]
+        res = ux("pulse_reader", key)
+
+        # Prevent silent string-slicing if the JSON provides a flat string instead of a list
+        if not isinstance(res, list) or len(res) < 2:
+            res = ["NOMINAL", str(res) if res else "Voltage is nominal."]
+
         return res[0], res[1]
 
 
@@ -406,8 +411,13 @@ class CycleReporter:
             return self.renderer.render_frame(ctx, self.eng.tick_count, self.eng.events.flush())
 
         except Exception as e:
+            import traceback
+            full_trace = traceback.format_exc()
             l_crash = ux("cycle_reporter", "crash_prefix") or "CRITICAL FAILURE:"
-            err_msg = f"{l_crash} {e}"
+
+            # Append the full traceback so developers aren't flying blind on UI crashes
+            err_msg = f"{l_crash} {e}\n{full_trace}"
+
             if hasattr(self.eng, "events"):
                 self.eng.events.log(f"{Prisma.RED}{err_msg}{Prisma.RST}", "CRIT")
             return {

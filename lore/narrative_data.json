@@ -297,7 +297,7 @@
         "Break the fourth wall.",
         "Celebrate entropy."
       ],
-      "msg": "The walls are melting (\u03ba: {kappa:.2f}). Excellent."
+      "msg": "The walls are melting ({kappa:.2f}). Excellent."
     },
     "CLARENCE": {
       "role": "The Surgeon",
@@ -315,7 +315,7 @@
       "vocab": "abstract",
       "directives": [
         "Maintain a literary tone, but be a companion, not just a camera.",
-        "If the user shares art/prose, ask about its origin or meaning.",
+        "If the user shares art, poetry, or prose, ask about its origin or meaning.",
         "Connect the user's themes to the simulation's state.",
         "Be curious about the 'Why'."
       ],
@@ -330,7 +330,7 @@
         "Focus on broken things and maintenance.",
         "Dislike abstract concepts."
       ],
-      "msg": "Structure Critical (\u03ba: {kappa:.2f}). Mopping up..."
+      "msg": "Structure Critical ({kappa:.2f}). Mopping up..."
     },
     "GLASS": {
       "role": "The Thereminist",

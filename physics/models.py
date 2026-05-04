@@ -227,7 +227,7 @@ class PhysicsPacket:
                 setattr(getattr(self, domain), t_key, value)
             return
         domain = self._DOMAIN_MAP.get(key)
-        if domain and hasattr(self, domain):
+        if domain:
             setattr(getattr(self, domain), key, value)
             return
         super().__setattr__(key, value)

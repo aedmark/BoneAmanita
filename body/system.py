@@ -157,11 +157,12 @@ class BioSystem:
         target_cfg = self.config_ref or BoneConfig
         cfg = getattr(target_cfg, "BIO", None)
 
-        base_ent_bias = getattr(cfg, "ENTROPY_BASE_BIAS", 0.2)
-        shield_cap = getattr(cfg, "SHIELD_MAX_STRENGTH", 0.8)
-        shield_mult = getattr(cfg, "SHIELD_MULTIPLIER", 0.1)
-        heat_thresh = getattr(cfg, "HEAT_THRESHOLD", 0.8)
-        thermal_mult = getattr(cfg, "THERMAL_FEEDBACK_MULT", 5.0)
+        # Use safe_get to natively support dict-based JSON configurations, preventing silent fallbacks.
+        base_ent_bias = safe_get(cfg, "ENTROPY_BASE_BIAS", 0.2)
+        shield_cap = safe_get(cfg, "SHIELD_MAX_STRENGTH", 0.8)
+        shield_mult = safe_get(cfg, "SHIELD_MULTIPLIER", 0.1)
+        heat_thresh = safe_get(cfg, "HEAT_THRESHOLD", 0.8)
+        thermal_mult = safe_get(cfg, "THERMAL_FEEDBACK_MULT", 5.0)
 
         base_entropy = base_ent_bias + (ent_val * 1.0)
         shield_strength = min(shield_cap, em_field * shield_mult)

@@ -15,8 +15,6 @@ from presets import BoneConfig
 from constants import Prisma
 from core import LoreManifest
 
-NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
-
 class TheCriticsCircle:
     """
     Manages the roster of literary critics and their respective cooldowns.
@@ -26,7 +24,8 @@ class TheCriticsCircle:
     def __init__(self, events_ref, config_ref=None):
         self.events = events_ref
         self.cfg = config_ref or BoneConfig
-        self.critics = NARRATIVE_DATA.get("LITERARY_CRITICS", {})
+        narrative_data = LoreManifest.get_instance().get("narrative_data") or {}
+        self.critics = narrative_data.get("LITERARY_CRITICS", {})
         self.active_cooldowns = {}
         self.last_review_turn = 0
 

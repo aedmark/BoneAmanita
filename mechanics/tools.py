@@ -167,7 +167,7 @@ class RandomRetrievalNavigator:
         return 1.0 / (1.0 + math.dist((a.coords.S, a.coords.D, a.coords.C), (b.coords.S, b.coords.D, b.coords.C)))
 
     def _get_random_branch(self, current_node: LibraryNode) -> Optional[LibraryNode]:
-        """Fetches a node entirely outside the current thought lineage (lateral leap)."""
+        """Fetches a node entirely outside the current thought lineage."""
         lineage = self._get_lineage(current_node)
         c = [n for n in self.library.nodes
             if n.id not in lineage and n.id != current_node.id]
@@ -178,6 +178,8 @@ class RandomRetrievalNavigator:
         lineage = {node.id}
         current = node
         while current.parent_id and current.parent_id in self._node_index:
+            if current.parent_id in lineage:
+                break
             lineage.add(current.parent_id)
             current = self._node_index[current.parent_id]
         return lineage
@@ -292,8 +294,14 @@ class TheSubstrate:
         retained_writes = []
 
         for w in self.pending_writes:
-            s_path = os.path.join("output", w["path"].lstrip("/"))
+            base_dir = os.path.abspath("output")
+            s_path = os.path.abspath(os.path.join(base_dir, w["path"].lstrip("/")))
             s_name = os.path.basename(s_path)
+
+            if not s_path.startswith(base_dir):
+                logs.append(
+                    f"{Prisma.VIOLET}SUBSTRATE FATAL: Path traversal breach detected ({w['path']}). Purged.{Prisma.RST}")
+                continue
 
             # Calculate the metabolic tax of the output payload
             w_cost = len(w["content"]) * self.config.get("ATP_COST_PER_CHAR", 0.02)
@@ -306,9 +314,13 @@ class TheSubstrate:
 
             # 2. Dynamic limits (Protects against writing while exhausted)
             if stamina_pool - cost < w_cost:
-                logs.append(
-                    f"{Prisma.RED}SUBSTRATE FAULT: Insufficient stamina to forge {s_name}. Retaining in queue.{Prisma.RST}")
-                retained_writes.append(w)
+                retries = w.get("retries", 0) + 1
+                if retries > self.config.get("MAX_RETRIES", 3):
+                    logs.append(f"{Prisma.VIOLET}SUBSTRATE FATAL: {s_name} starved for ATP 3 times. Dropping file.{Prisma.RST}")
+                else:
+                    logs.append(f"{Prisma.OCHRE}SUBSTRATE FAULT: Insufficient stamina to forge {s_name}. Retaining in queue ({retries}/3).{Prisma.RST}")
+                    w["retries"] = retries
+                    retained_writes.append(w)
                 continue
 
             # 3. Execution

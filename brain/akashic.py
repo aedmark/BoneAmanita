@@ -68,7 +68,7 @@ class TheAkashicRecord:
     def trigger_autophagy(self) -> Tuple[float, str]:
         """
         The survival mechanism.
-        If the LLM is starving (out of ATP) but forced to process a prompt,
+        If the LLM is out of ATP but forced to process a prompt,
         it physically consumes its own long-term memories or acquired vocabulary,
         converting the semantic mass back into raw energy to survive the turn.
         """
@@ -84,7 +84,7 @@ class TheAkashicRecord:
             # Dynamic yield based on the density of the memory consumed
             yield_val = min(50.0, 10.0 + (mass * 2.5))
 
-            # Epigenetic benefit: digesting a memory makes the system better at digesting in the future
+            # Digesting a memory makes the system better at digesting in the future
             if bio_cfg and hasattr(bio_cfg, "DEPTH_TAX_MULT"):
                 bio_cfg.DEPTH_TAX_MULT = max(0.5, bio_cfg.DEPTH_TAX_MULT - 0.02)
 
@@ -93,7 +93,14 @@ class TheAkashicRecord:
         elif self.discovered_words:
             # If no memories are left, consume the vocabulary we learned
             target = next(iter(self.discovered_words))
-            del self.discovered_words[target]
+            category = self.discovered_words.pop(target)
+
+            # Fuller Constraint: Physically strip it from the Lexicon so the sacrifice is real
+            lexicon_data = self.lore.get("LEXICON") or {}
+            if category in lexicon_data and target in lexicon_data[category]:
+                lexicon_data[category].remove(target)
+                self.lore.inject("LEXICON", lexicon_data)
+
             yield_val = getattr(akashic_cfg, "AUTOPHAGY_YIELD", 15.0)
             msg_template = ux("akashic_strings", "autophagy_lexical") or "Lexical purge: consumed {target}."
             msg = msg_template.format(target=target, word=target)
@@ -118,8 +125,7 @@ class TheAkashicRecord:
         axis_map = {
             "E": ("exhaustion", 0.2), "beta": ("beta_index", 0.4), "S": ("scope", 0.3),
             "D": ("depth", 0.3), "C": ("connectivity", 0.2), "T": ("trauma", 0.0),
-            "psi": ("psi", 0.0), "chi": ("entropy", 0.0), "valence": ("valence", 0.0), "ROS": ("ros", 0.0)
-        }
+            "psi": ("psi", 0.0), "chi": ("entropy", 0.0), "valence": ("valence", 0.0), "ROS": ("ros", 0.0)}
         coords = {}
         energy_layer = safe_get(p, "energy") or {}
 
@@ -188,7 +194,7 @@ class TheAkashicRecord:
                 self.save_to_disk("scars", epigenetic_list)
 
                 if self.events:
-                    self.events.log(f"{Prisma.VIOLET}🧬 [EPIGENETICS] Scar '{concept}' compiled into flow.{Prisma.RST}", "SYS")
+                    self.events.log(f"{Prisma.VIOLET}[EPIGENETICS] Scar '{concept}' compiled into flow.{Prisma.RST}", "SYS")
         except Exception as e:
             if self.events:
                 self.events.log(f"{Prisma.RED}Failed to mutate system_prompts: {e}{Prisma.RST}", "SYS",)
@@ -323,13 +329,7 @@ class TheAkashicRecord:
             "subconscious_strata": self.subconscious_strata,
             "scar_map": self.scar_map,
         }
-        os.makedirs(self.save_dir, exist_ok=True)
-        try:
-            with open(self.state_path, "w", encoding="utf-8") as f:
-                json.dump(state, f, indent=2, cls=BoneJSONEncoder)
-        except Exception as e:
-            msg = ux("akashic_strings", "save_failed")
-            print(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
+        self.save_to_disk("state", state)
 
     def save_to_disk(self, category: str, data: Any):
         filepath = os.path.join(self.save_dir, f"akashic_{category}.json")
@@ -368,12 +368,19 @@ class TheAkashicRecord:
             gordon_data = self.lore.get("GORDON") or {}
             if recipes := gordon_data.get("RECIPES", []):
                 self.known_recipes.update((r.get("ingredient"), r.get("catalyst_category")) for r in recipes if r.get("ingredient") and r.get("catalyst_category"))
-
         words_path = os.path.join(self.save_dir, "akashic_discovered_words.json")
         if os.path.exists(words_path):
             try:
                 with open(words_path, "r", encoding="utf-8") as f:
                     self.discovered_words = json.load(f)
+
+                    # Re-hydrate the active Lexicon
+                    lexicon_data = self.lore.get("LEXICON") or {}
+                    for word, category in self.discovered_words.items():
+                        target_list = lexicon_data.setdefault(category, [])
+                        if word not in target_list:
+                            target_list.append(word)
+                    self.lore.inject("LEXICON", lexicon_data)
             except Exception as e:
                 print(f"{Prisma.RED}[AKASHIC] Failed to load discovered words: {e}. Keeping current state.{Prisma.RST}")
 
@@ -400,7 +407,7 @@ class TheAkashicRecord:
     def record_interaction(self, lenses_active: list, ingredients_used: Optional[list] = None):
         """
         Tracks simultaneous voices. If two archetypes speak together enough times
-        (e.g., JESTER + GORDON), it triggers a hybridization event to fuse them.
+        it triggers a hybridization event to fuse them.
         """
         if len(lenses_active) >= 2:
             key = cast(Tuple[str, str], tuple(sorted(lenses_active[:2])))
@@ -439,7 +446,7 @@ class TheAkashicRecord:
         """
         Dynamic Persona Generation.
         Fuses two archetypes that frequently co-occur into a brand new,
-        permanent system prompt (e.g., THE JESTER-GORDON) by averaging their weights.
+        permanent system prompt by averaging their weights.
         """
         if lens_a == lens_b:
             return

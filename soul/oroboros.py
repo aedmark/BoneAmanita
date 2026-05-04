@@ -98,11 +98,17 @@ class TheOroboros:
         self.myths.extend(new_myths)
         self.myths = self.myths[-self._cfg("MAX_MYTHS", 10):]
 
-        # Write the genetic inheritance to disk.
-        with open(self.LEGACY_FILE, "w", encoding="utf-8") as f:
-            payload = {"generation": self.generation_count + 1, "scars": [vars(s) for s in self.scars],
-                       "myths": [vars(m) for m in self.myths]}
-            json.dump(payload, f, indent=2)
+        # Enforce atomic writes so the generational lineage is never corrupted mid-death.
+        payload = {"generation": self.generation_count + 1, "scars": [vars(s) for s in self.scars], "myths": [vars(m) for m in self.myths]}
+        temp_path = f"{self.LEGACY_FILE}.tmp"
+        try:
+            with open(temp_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_path, self.LEGACY_FILE)
+        except Exception as e:
+            print(f"{Prisma.RED}[OROBOROS]: Failed to write legacy payload: {e}{Prisma.RST}")
 
         return ux_format("soul_strings", "generation_encoded", gen=self.generation_count + 1, scars=len(new_scars), myths=len(new_myths))
 
@@ -115,10 +121,8 @@ class TheOroboros:
         if not physics: return log
 
         for scar in self.scars:
-            if scar.stat_affected == "narrative_drag":
-                safe_set(physics, "narrative_drag", safe_get(physics, "narrative_drag", 0.0) + scar.value)
-                if msg := ux_format("soul_strings", "scar_drag", name=scar.name): log.append(msg)
-            elif scar.stat_affected == "voltage_cap":
+            # Support dynamic scar targets from the Lore Manifest.
+            if scar.stat_affected == "voltage_cap":
                 safe_set(physics, "voltage", max(0.0, safe_get(physics, "voltage", 0.0) - self._cfg("VOLTAGE_PENALTY", 5.0)))
                 if msg := ux_format("soul_strings", "scar_voltage", name=scar.name): log.append(msg)
             elif scar.stat_affected == "trauma_baseline":
@@ -127,5 +131,12 @@ class TheOroboros:
                 safe_set(bio, "trauma_vector", t_vec)
                 safe_set(physics, "T", safe_get(physics, "T", 0.0) + scar.value)
                 if msg := ux_format("soul_strings", "scar_frailty", name=scar.name): log.append(msg)
+            else:
+                # Dynamically apply the scar to any other valid physics parameter
+                safe_set(physics, scar.stat_affected, safe_get(physics, scar.stat_affected, 0.0) + scar.value)
+                if msg := ux_format("soul_strings", "scar_generic", name=scar.name, stat=scar.stat_affected):
+                    log.append(msg)
+                else:
+                    log.append(f"Legacy Scar applied: {scar.name} penalty added to {scar.stat_affected}.")
 
         return log

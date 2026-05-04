@@ -20,16 +20,18 @@ class RandomTest(BoneTestCase):
             self.assertTrue(cost > 0, "Rummaging cost no stamina.")
 
     def test_cortex_collapse_graceful_handling(self):
-            with patch.object(self.engine.cortex, "process",
-     side_effect=Exception("Simulated Cortex Collapse"),
+            with patch.object(self.engine.orchestrator.simulator, "run_simulation",
+     side_effect=Exception("Simulated Core Simulator Collapse"),
             ):
                 result = self.engine.process_turn("Hello?")
+
             self.assertIn("ui", result, "Engine failed to return a UI packet during a crash.")
-            self.assertIn("CRITICAL FAILURE", result.get("logs", []), "Engine did not log the critical failure.", )
+            self.assertIn("CRITICAL FAILURE", result.get("logs", []), "Engine did not log the critical failure.")
+
             logs = self.engine.events.flush()
             self.assertTrue(
-                any("CORTEX COLLAPSE" in log["text"] for log in logs),
-                "Event bus failed to broadcast the cortex collapse.",
+                any("CYCLE CRASH" in str(log) for log in logs),
+                "Event bus failed to broadcast the cycle crash.",
             )
 
     def test_decoupled_json_configs(self):
@@ -363,7 +365,7 @@ class RandomTest(BoneTestCase):
             "world": {},
             "soul": {},
         }
-        self.engine.cortex.svc.cycle_controller.run_turn = MagicMock(
+        self.engine.cortex.svc.orchestrator.run_turn = MagicMock(
             return_value=clean_sim_result)
         self.engine.cortex.validator.validate = MagicMock(
             return_value={

@@ -8,13 +8,10 @@ turns, the system automatically reduces its accumulated trauma load.
 """
 
 from typing import Dict, Any
-from core import LoreManifest
-from struts import safe_get
-from presets import BoneConfig
-from core import LoreManifest
 
-# Global cache retrieval for narrative strings (unused directly here, but standardized)
-NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
+from presets import BoneConfig
+from struts import safe_get
+
 
 class TherapyProtocol:
     """

@@ -59,8 +59,8 @@ class TheBureau:
                     print(f"{Prisma.RED}{err_msg.format(name=p.get('name'), e=e)}{Prisma.RST}")
 
         # Load broad cliches to penalize
-        scenarios = LoreManifest.get_instance().get("scenarios") or {}
-        self.cliches = {str(c).lower() for c in scenarios.get("BANNED_CLICHES", [])}
+        stylecrimes = LoreManifest.get_instance().get("style_crimes") or {}
+        self.cliches = {str(c).lower() for c in stylecrimes.get("BANNED_CLICHES", [])}
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the Bureau's state for persistence across sessions."""

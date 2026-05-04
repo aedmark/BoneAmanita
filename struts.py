@@ -1,36 +1,26 @@
 """
 struts.py
 
-The Structural Primitives Module.
-
-This file provides the low-level connective tissue (the "struts") that binds
-the deterministic execution layer to the narrative and data layers. By isolating
-these utilities here, we prevent the core logic from being polluted with repetitive
-dictionary lookups, type-checking boilerplate, and raw string formatting.
+This file provides the low-level struts that bind the deterministic execution layer
+to the narrative and data layers.
 """
 
 from typing import Any
 
 from constants import Prisma
 
-# =============================================================================
-# LINGUISTIC & STRUCTURAL UTILITIES
-# =============================================================================
 
 def ux(section: str, key: str, default: Any = "") -> Any:
     """
     Retrieves localized, user-facing strings from the Lore cache.
 
-    Architectural Intent (Pinker):
-    Hardcoding dialogue or UI text directly into execution logic causes semantic rot.
-    It makes the system rigid and impossible to iterate on cleanly. This function
-    acts as the Lexical Firewall, ensuring that all narrative text is drawn from a
-    centralized, easily modifiable manifest.
+    This function acts as the Lexical Firewall, ensuring that all narrative text is
+    drawn from a centralized, easily modifiable manifest.
 
     Args:
         section (str): The specific narrative domain (e.g., 'warnings', 'greetings').
         key (str): The precise string identifier within that domain.
-        default (Any): The fallback value if the key is missing. Defaults to "".
+        default (Any): The fallback value if the key is missing.
 
     Returns:
         Any: The requested narrative string, or the default if the lookup fails.
@@ -39,15 +29,11 @@ def ux(section: str, key: str, default: Any = "") -> Any:
     data = LoreManifest.get_instance().get("ux_strings", section)
     return data.get(key, default) if isinstance(data, dict) else default
 
-
 def ux_format(section: str, key: str, default: str = "", **kwargs) -> str:
     """
     Retrieves and safely interpolates dynamic variables into a UX string.
 
-    Architectural Intent (Meadows):
-    Systems fail. When a string template requires three variables but the payload
-    only provides two, a standard `.format()` will crash the entire execution thread.
-    This function prioritizes system resilience by gracefully degrading to the raw,
+    Prioritizes system resilience by gracefully degrading to the raw,
     unformatted string rather than triggering an apocalyptic stack trace for a typo.
 
     Args:
@@ -66,8 +52,7 @@ def ux_format(section: str, key: str, default: str = "", **kwargs) -> str:
         # Force string conversion to prevent AttributeError if the UX cache returns a list or dict.
         return str(msg).format(**kwargs)
     except (KeyError, ValueError, IndexError, AttributeError, TypeError) as e:
-        # We log the grammatical failure so the developer can fix it,
-        # but we do not crash the biological engine over a missing noun.
+        # We log the grammatical failure so the developer can fix it without crashing the engine.
         print(f"{Prisma.GRY}[UX] Formatting mismatch ({e}) in {section}.{key}. Falling back to raw string.{Prisma.RST}")
         return str(msg)
 
@@ -75,12 +60,7 @@ def ux_format(section: str, key: str, default: str = "", **kwargs) -> str:
 def safe_get(obj: Any, key: str, default: Any = None) -> Any:
     """
     Agnostic retriever for nested data structures.
-
-    Architectural Intent (Schur):
-    Python is dynamically typed, which means sometimes an object is a dictionary,
-    and sometimes it's a class instance. Writing `if isinstance(obj, dict): ...`
-    every time you want to check a property is bureaucratic nonsense. This primitive
-    handles the routing automatically so the developer can just ask for the data.
+    Handles the routing automatically so the developer can just ask for the data.
 
     Args:
         obj (Any): The target object (can be a dict or a class instance).
@@ -93,22 +73,15 @@ def safe_get(obj: Any, key: str, default: Any = None) -> Any:
     if obj is None:
         return default
     if isinstance(obj, dict):
-        val = obj.get(key, default)
-    else:
-        val = getattr(obj, key, default)
-    return default if val is None else val
+        return obj.get(key, default)
+    return getattr(obj, key, default)
 
 
 def safe_set(obj: Any, key: str, value: Any) -> None:
     """
-    Agnostic setter for nested data structures, equipped with structural alarms.
-
-    Architectural Intent (Fuller):
-    Writing data to an object that has unexpectedly become `None` is a critical
-    failure in tensegrity. It means a load-bearing strut is missing. Instead of
-    swallowing the error silently or throwing a generic AttributeError, this
-    function acts as a systemic smoke detector, explicitly warning the developer
-    that the architecture is rotting.
+    Agnostic setter for nested data structures.
+    If this fails, it indicates a foundational architectural fracture.
+    We do not swallow the error; we let the engine crash so the rot can be excised.
 
     Args:
         obj (Any): The target object to modify.
@@ -116,12 +89,9 @@ def safe_set(obj: Any, key: str, value: Any) -> None:
         value (Any): The new value to assign.
     """
     if obj is None:
-        print(f"{Prisma.RED}[STRUCTURAL ROT] safe_set swallowed a write to '{key}'. Target object is None.{Prisma.RST}")
-        return
-    try:
-        if isinstance(obj, dict):
-            obj[key] = value
-        else:
-            setattr(obj, key, value)
-    except (TypeError, AttributeError) as e:
-        print(f"{Prisma.RED}[STRUCTURAL ROT] safe_set failed on '{key}'. Target is immutable or rejects assignment: {e}{Prisma.RST}")
+        raise ValueError(f"[STRUCTURAL ROT] Attempted to safe_set '{key}', but the target object is None.")
+
+    if isinstance(obj, dict):
+        obj[key] = value
+    else:
+        setattr(obj, key, value)
