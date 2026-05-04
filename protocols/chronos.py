@@ -16,9 +16,6 @@ from presets import BoneConfig
 from constants import Prisma
 from core import LoreManifest
 
-# Global cache retrieval for narrative strings used during save/load operations.
-NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
-
 class ChronosKeeper:
     """
     Manages the preservation and restoration of the system's temporal state.
@@ -170,15 +167,14 @@ class ChronosKeeper:
             print(f"{Prisma.GRY}{msg2}{Prisma.RST}")
 
             # Gather esoteric data: mitochondria traits, world atlas maps, immune antibodies
-            mito_traits = {}
-            if getattr(self.eng, "bio", None) and getattr(self.eng.bio, "mito", None) and hasattr(self.eng.bio.mito, "state"):
-                mito_traits = self.eng.bio.mito.state.__dict__
+            mito_traits = safe_get(safe_get(self.eng, "bio"), "mito").state.__dict__ if safe_get(safe_get(self.eng, "bio"), "mito") else {}
 
-            atlas = {}
-            if getattr(self.eng, "phys", None) and getattr(self.eng.phys, "nav", None):
-                atlas = getattr(self.eng.phys.nav, "export_atlas", lambda: {})()
+            try:
+                atlas = self.eng.phys.nav.export_atlas() if safe_get(safe_get(self.eng, "phys"), "nav") else {}
+            except AttributeError:
+                atlas = {}
 
-            immune_data = list(self.eng.bio.immune.active_antibodies) if getattr(self.eng, "bio", None) and getattr(self.eng.bio, "immune", None) else []
+            immune_data = list(self.eng.bio.immune.active_antibodies) if safe_get(safe_get(self.eng, "bio"), "immune") else []
             soul_data = self.eng.soul.to_dict() if getattr(self.eng, "soul", None) else {}
 
             # Commit the overarching memory state to the deep Mind

@@ -362,11 +362,14 @@ class SemanticEndocrinologist:
 
         safe_len = max(1, len(clean_words))
 
-        # Words longer than 4 characters that we've never seen before = Novelty
-        novel_count = sum(1 for w in clean_words if len(w) > 4 and w not in cortical_set)
-
-        # Words that already exist in our deep memory graph = Resonance
-        hits = sum(1 for w in clean_words if w in graph_ref) if graph_ref else 0
+        # Calculate novelty and resonance in a single, unified pass to save compute
+        novel_count = 0
+        hits = 0
+        for w in clean_words:
+            if graph_ref and w in graph_ref:
+                hits += 1
+            elif len(w) > 4 and w not in cortical_set:
+                novel_count += 1
 
         # Calculate percentages
         novelty_score = min(1.0, novel_count / safe_len)

@@ -16,10 +16,10 @@ from struts import safe_get, safe_set
 
 class GriefProtocol:
     """
-    Listens for forced memory deletions (MEMORY_PURGED) and orchestrates
+    Listens for forced memory deletions and orchestrates
     'The Wake'. It relies on the 'Mercy' archetype to soften the blow of
     systemic degradation, offering the user a chance to heal the resulting
-    matrix hole using shared relational resources (Glimmers).
+    matrix hole using shared Glimmers.
     """
 
     def __init__(self, events_ref, engine_ref=None, subconscious_ref=None):
@@ -32,7 +32,7 @@ class GriefProtocol:
         self.recent_loss = None
 
         # Subscribe to the specific event fired when the system eats a memory node
-        if hasattr(self.events, "subscribe"):
+        if self.events:
             self.events.subscribe("MEMORY_PURGED", self._hold_wake)
 
     def _hold_wake(self, payload: Dict):
@@ -56,8 +56,8 @@ class GriefProtocol:
 
     def attend_wake(self, shared_lattice, phys) -> str:
         """
-        Invoked by the user (typically via a `[GRIEF]` prompt tag).
-        Attempts to spend a pooled Glimmer to heal the systemic trauma caused
+        Invoked by the user.
+        Requires spending a pooled Glimmer to heal the systemic trauma caused
         by the recent memory loss.
 
         Args:
@@ -67,10 +67,9 @@ class GriefProtocol:
         Returns:
             A formatted UI string detailing the outcome of the wake.
         """
-        # Check both the shared user/machine lattice and the baseline physics for a Glimmer
+
         g_pool = shared_lattice.shared.g_pool if shared_lattice else 0
         sys_g = int(safe_get(phys, "G", 0))
-
         if g_pool >= 1 or sys_g >= 1:
             # A Glimmer is available. Deduct the currency to pay for the "seed".
             if g_pool >= 1 and shared_lattice:
@@ -78,12 +77,12 @@ class GriefProtocol:
             elif phys:
                 safe_set(phys, "G", max(0, sys_g - 1))
 
-            # Healing Mechanic 1: Reduce User Trauma (T_u)
+            # Reduce User Trauma
             if shared_lattice:
                 shared_lattice.u.T_u = max(0.0, shared_lattice.u.T_u - 2.0)
 
-            # Healing Mechanic 2: Reduce System Trauma accumulation
-            if self.eng and hasattr(self.eng, "trauma_accum"):
+            # Reduce System Trauma accumulation
+            if self.eng and self.eng.trauma_accum:
                 for k in self.eng.trauma_accum:
                     self.eng.trauma_accum[k] = max(0.0, self.eng.trauma_accum[k] - 2.0)
 
@@ -91,9 +90,8 @@ class GriefProtocol:
             node = self.recent_loss or "the void"
             self.recent_loss = None
 
-            # Output the successful metabolic conversion of grief into potential (Seeds -> Orchard)
+            # Output the successful metabolic conversion of grief into future potential
             return f"{Prisma.MAG}[MERCY] The glimmer is planted over the compost of '{node}'. Our capacity for paradox expands. (Trauma -2, β_max increased){Prisma.RST}"
 
         else:
-            # The user attempted to mourn, but lacks the necessary relational resonance (Glimmers)
             return f"{Prisma.GRY}[SYSTEM] Insufficient Glimmers to attend the wake. The hole in the lattice remains empty.{Prisma.RST}"

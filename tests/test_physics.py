@@ -48,16 +48,7 @@ class TopologicalPrimitivesTest(BoneTestCase):
             initial_atp = self.engine.bio.mito.state.atp_pool
             self.engine.host_stats.efficiency_index = 1.0
             self.engine.tick_count = 6
-            with patch.object(self.engine.cortex,
-                              'process',
-                              return_value={
-                                  "physics": {
-                                      "vector": {
-                                          "novelty": 0.0
-                                      }
-                                  },
-                                  "ui": "I agree completely."
-                              }):
+            with patch.object(self.engine.cortex.llm, 'generate', return_value="I agree completely."):
                 result = self.engine.process_turn("Do you agree?")
             self.assertIn(
                 "FALSE COHESION BREAK", result.get("ui", ""),
@@ -134,11 +125,8 @@ class TopologicalPrimitivesTest(BoneTestCase):
     def test_gravity_floor_clamp(self):
             from physics.dynamics import CosmicDynamics
             dyn = CosmicDynamics(config_ref=self.engine.config)
-
-            # Simulate a scenario with high Void (psi) trying to pull drag below the floor
             new_drag, _ = dyn.check_gravity(current_drift=0.5, psi=1.0)
             floor = getattr(self.engine.config.PHYSICS, "DRAG_FLOOR", 1.0)
-
             self.assertGreaterEqual(new_drag, floor, "[FAIL] Gravity engine breached the physical floor.")
 
     def test_zone_inertia_vector_update(self):
@@ -147,15 +135,10 @@ class TopologicalPrimitivesTest(BoneTestCase):
             phys_mock = PhysicsPacket()
             phys_mock.energy.beta_index = 1.0
             cosmic_state = ("ORBITAL", 0.0, "msg")
-
-            # Initial state establishment
             zi.stabilize("THE_FORGE", phys_mock, cosmic_state)
             first_vector = zi.last_vector
-
-            # Drastically change the physics, but stay under the dwell limit to force a rejected zone migration
             phys_mock.energy.beta_index = 0.1
             zi.stabilize("AERIE", phys_mock, cosmic_state)
-
             self.assertNotEqual(zi.last_vector, first_vector, "[FAIL] ZoneInertia failed to update topology during a rejected migration.")
 
     def test_gatekeeper_metrics_padding(self):

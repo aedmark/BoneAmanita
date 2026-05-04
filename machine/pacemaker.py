@@ -20,9 +20,10 @@ class ThePacemaker:
         # metabolic burn rates across the broader bio-system.
         self.heart_rate = 60
 
+        cfg = getattr(self.cfg, "MACHINE", object())
         # The tipping point. Once boredom exceeds this, the system will actively
         # seek to shatter the current conversational state and inject chaos.
-        self.BOREDOM_THRESHOLD = getattr(self.cfg, "BOREDOM_THRESHOLD", 10.0)
+        self.BOREDOM_THRESHOLD = getattr(cfg, "PACEMAKER_BOREDOM_THRESHOLD", 10.0)
 
     def beat(self, stress: float):
         """

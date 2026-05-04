@@ -79,10 +79,8 @@ class HumanityAnchor:
         issues a 'riddle'—a demand for the user to acknowledge its presence.
         """
         self.agency_lock = True
-        seeds = []
-        if hasattr(LoreManifest, "get_instance"):
-            lore = LoreManifest.get_instance()
-            seeds = (lore.get("SCENARIOS") or {}).get("SEEDS", [])
+        lore = LoreManifest.get_instance(config_ref=self.cfg)
+        seeds = (lore.get("SCENARIOS") or {}).get("SEEDS", [])
         riddles = seeds or [{"question": "Who are you?", "triggers": ("*", )}]
         selection = random.choice(riddles)
         riddle = selection.get("question", "Error?")

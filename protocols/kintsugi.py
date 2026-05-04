@@ -9,13 +9,11 @@ and rewards the engine with either Wisdom or a massive ATP (energy) refund.
 
 import random
 from typing import Dict, Any
-from struts import ux, safe_get
-from presets import BoneConfig
-from constants import Prisma
-from core import LoreManifest
 
-# Global cache retrieval for narrative strings and Kintsugi koans.
-NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
+from constants import Prisma
+from presets import BoneConfig
+from struts import ux, safe_get
+from core import LoreManifest
 
 class KintsugiProtocol:
     """
@@ -24,9 +22,9 @@ class KintsugiProtocol:
     """
 
     # The three tiers of trauma resolution:
-    PATH_SCAR = "SCAR"               # Bare minimum repair; leaves a heavy mark.
-    PATH_INTEGRATION = "KINTSUGI"    # Beautiful repair; grants Wisdom to the Soul.
-    PATH_ALCHEMY = "ALCHEMY"         # Perfect transmutation; converts trauma into raw ATP.
+    PATH_SCAR = "SCAR"  # Bare minimum repair; leaves a heavy mark.
+    PATH_INTEGRATION = "KINTSUGI"  # Beautiful repair; grants Wisdom to the Soul.
+    PATH_ALCHEMY = "ALCHEMY"  # Perfect transmutation; converts trauma into raw ATP.
 
     def __init__(self, config_ref=None):
         """
@@ -34,8 +32,10 @@ class KintsugiProtocol:
         """
         self.cfg = config_ref or BoneConfig
         self.active_koan = None
+
+        narrative_data = LoreManifest.get_instance().get("narrative_data") or {}
         # Koans act as the reflective prompt presented to the user when stamina fails.
-        self.koans = NARRATIVE_DATA.get("KINTSUGI_KOANS", ["The crack is where the light enters."])
+        self.koans = narrative_data.get("KINTSUGI_KOANS", ["The crack is where the light enters."])
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the Kintsugi state to preserve an active koan across reboots."""

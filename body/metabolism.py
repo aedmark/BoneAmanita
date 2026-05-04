@@ -353,7 +353,7 @@ class DigestiveTrack:
         # The Lexical Firewall mechanism: Punish the system for reading trash data.
         if scaled_tax > 0:
             total_atp = max(0.0, total_atp - scaled_tax)
-            self.bio.endo.cortisol = min(1.0, self.bio.endo.cortisol + (scaled_tax * 0.02))
+            self.bio.endo.cortisol += (scaled_tax * 0.02)  # Endocrine loop will natively clamp this
             if msg := ux("digestive_track", "cliche_tax"):
                 logs.append(f"{Prisma.OCHRE}{msg.format(tax=scaled_tax)}{Prisma.RST}")
 

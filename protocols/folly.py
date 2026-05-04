@@ -10,13 +10,11 @@ use of overly corporate or empty vocabulary (Indigestion).
 import random
 from collections import deque, Counter
 from typing import Dict, Tuple, Optional, Any
-from struts import ux, safe_get
-from presets import BoneConfig
-from constants import Prisma
-from core import LoreManifest
 
-# Global cache retrieval for narrative strings and flavor text
-NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
+from constants import Prisma
+from presets import BoneConfig
+from struts import ux, safe_get
+
 
 class TheFolly:
     """

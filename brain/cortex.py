@@ -20,6 +20,7 @@ from constants import Prisma
 from core import EventBus, TelemetryService, LoreManifest, DecisionCrystal
 from mechanics.projector import beautify_thoughts
 from mechanics.tools import RandomRetrievalNavigator, LibraryGraph
+from mechanics.pragmatics import ThePragmatist
 from presets import BoneConfig, BonePresets
 from struts import safe_get, safe_set, ux
 
@@ -32,7 +33,7 @@ class CortexServices:
     lexicon: Any
     inventory: Any
     consultant: Any
-    cycle_controller: Any
+    orchestrator: Any
     symbiosis: Any
     mind_memory: Any
     bio: Any
@@ -65,10 +66,11 @@ class TheCortex:
         # Instantiate the Modulator from mind.py
         self.modulator = NeurotransmitterModulator(bio_ref=self.svc.bio, events_ref=self.events, config_ref=self.cfg)
         self.last_physics = {}
+        self.last_shadow_nodes = []
         self.consultant = services.consultant
         self.llm = llm_client or LLMInterface(self.events, provider="mock")
         # Link the DreamEngine (from mind.py)
-        eng_ref = getattr(self.svc.cycle_controller, "eng", None)
+        eng_ref = getattr(self.svc.orchestrator, "eng", None)
         self.dreamer = getattr(getattr(eng_ref, "mind", None), "dreamer", None)
         if self.dreamer:
             self.dreamer.llm = self.llm
@@ -80,6 +82,7 @@ class TheCortex:
         self.symbiosis = services.symbiosis
         self.composer = PromptComposer(self.svc.lore, config_ref=self.cfg)
         self.validator = ResponseValidator(self.svc.lore, config_ref=self.cfg)
+        self.pragmatist = ThePragmatist(events_ref=self.events)
         from mechanics.tools import DSPyCritic
         self.dspy_critic = DSPyCritic(config_ref=self.cfg)
 
@@ -107,7 +110,7 @@ class TheCortex:
         symbiosis_mgr = getattr(engine_ref, "symbiosis", None) or SymbiosisManager(engine_ref.events)
         services = CortexServices(events=engine_ref.events, lore=LoreManifest.get_instance(config_ref=target_cfg),
             lexicon=engine_ref.lex, inventory=engine_ref.gordon, consultant=getattr(engine_ref, "consultant", None),
-            cycle_controller=engine_ref.cycle_controller, symbiosis=symbiosis_mgr, mind_memory=engine_ref.mind.mem,
+            orchestrator=engine_ref.orchestrator, symbiosis=symbiosis_mgr, mind_memory=engine_ref.mind.mem,
             bio=getattr(engine_ref, "bio", None), host_stats=getattr(engine_ref, "host_stats", None),
             village=getattr(engine_ref, "village", None), config_ref=target_cfg, )
         instance = cls(services, llm_client)
@@ -126,6 +129,7 @@ class TheCortex:
 
     def purge_context(self):
         """Executes a hard flush of the active context window."""
+        self.last_shadow_nodes = []
         self.dialogue_buffer.clear()
         self.last_physics.clear()  # Purge the physical ghost of the previous session.
         if hasattr(self.dreamer, "trauma_buffer"):
@@ -156,15 +160,17 @@ class TheCortex:
         if len(user_input) > context_limit and not is_system and not is_boot_sequence:
             safe_content = user_input.replace("\n", "|||NEWLINE|||")
             filename = f"context_drop_{int(time.time())}.txt"
-            self.svc.cycle_controller.eng.substrate.queue_write(f"memory_queue/{filename}", safe_content)
+            self.svc.orchestrator.eng.substrate.queue_write(f"memory_queue/{filename}", safe_content)
 
             # Execute the pending write immediately so it doesn't bottleneck active RAM.
-            self.svc.cycle_controller.eng.substrate.execute_writes(stamina_override=100.0)
+            s_logs, s_cost = self.svc.orchestrator.eng.substrate.execute_writes(stamina_override=100.0)
+            if self.svc.bio:
+                self.svc.bio.mito.adjust_atp(-s_cost, "Massive Context Ingestion")
 
-            msg = f"{Prisma.CYN}[Substrate Queue]: Massive context drop detected. Routed to silent indexing. Dialogue buffer bypassed.{Prisma.RST}"
+            msg = f"{Prisma.CYN}[Substrate Queue]: Massive context drop detected. Routed to silent indexing. Dialogue buffer bypassed. (-{s_cost:.1f} ATP){Prisma.RST}"
             self.events.log(msg, "SYS")
             return {"ui": msg, "type": "SILENT_INGEST", "physics": self.last_physics, "logs": [msg]}
-        sim_result = self.svc.cycle_controller.run_turn(user_input, is_system=is_system)
+        sim_result = self.svc.orchestrator.run_turn(user_input, is_system=is_system)
 
         if sim_result.get("physics"):
             self.last_physics = sim_result["physics"]
@@ -172,15 +178,16 @@ class TheCortex:
             self._update_history(user_input, sim_result.get("ui", "SYSTEM REJECTED PROMPT."))
             return sim_result
         # Check if the user engaged with a shadow concept from the previous turn
-        if self.last_physics and "shadow_nodes_offered" in self.last_physics:
-            engaged = [node for node in self.last_physics["shadow_nodes_offered"] if node.lower() in user_input.lower()]
+        if hasattr(self, "last_shadow_nodes") and self.last_shadow_nodes:
+            engaged = [node for node in self.last_shadow_nodes if node.lower() in user_input.lower()]
             for node in engaged:
                 if self.events:
                     self.events.publish("SHADOW_ENGAGED", {
-                        "source": self.last_physics.get("primary_node", "core"),
+                        "source": self.last_physics.get("primary_node", "core") if self.last_physics else "core",
                         "target": node,
                         "user_input": user_input
                     })
+            self.last_shadow_nodes = []
         full_state = self.gather_state(sim_result)
         phys_state = full_state.get("physics", {})
         f_drag = float(safe_get(phys_state, "narrative_drag", 0.0))
@@ -259,8 +266,18 @@ class TheCortex:
                     raw_resp, user_input)
             else:
                 final_text, inv_logs = raw_resp, []
+
+            stamina_val = float(safe_get(phys_state, "p", 100.0))
+            final_text, needs_rewrite = self.pragmatist.enforce_maxims(final_text, user_input, phys_state, stamina_val)
+
             is_faithful, judge_reason = True, ""
-            if self.dspy_critic.enabled:
+
+            if needs_rewrite:
+                is_faithful = False
+                judge_reason = "Maxim of Quantity violated. Your response was too long. Compress your output drastically."
+                if self.svc.bio:
+                    self.svc.bio.mito.adjust_atp(-3.0, "Pragmatist Rewrite Tax")
+            elif self.dspy_critic.enabled:
                 valid_mode = self.active_mode in ["ADVENTURE", "CONVERSATION"]
                 if valid_mode and not is_boot_sequence:
                     mem_core = getattr(self.svc.mind_memory, "memory_core", None)
@@ -293,7 +310,7 @@ class TheCortex:
             else:
                 gate_txt = final_text
                 from physics import TheGatekeeper
-                eng = self.svc.cycle_controller.eng
+                eng = self.svc.orchestrator.eng
                 gk = getattr(eng, "gatekeeper", None) or TheGatekeeper(self.svc.lexicon, config_ref=self.cfg)
                 gate_pass, gate_txt = gk.audit_generation(final_text, self.svc.bio.mito)
                 if not gate_pass or "IMMUNOSUPPRESSION ENGAGED" in gate_txt:
@@ -316,7 +333,7 @@ class TheCortex:
                 final_output = ux("brain_strings", "cortex_tangled") or fallback_msg
                 extracted_logs.append(
                     "[SYSTEM MERCY RULE]: Rejection loop broken. Releasing tension. Dropping Drag to 0.0.")
-                if obs_packet := getattr(self.svc.cycle_controller.eng.observer, "last_physics_packet", None):
+                if obs_packet := getattr(self.svc.orchestrator.eng.observer, "last_physics_packet", None):
                     safe_set(obs_packet, "narrative_drag", 0.0)
                 if self.last_physics:
                     safe_set(self.last_physics, "narrative_drag", 0.0)
@@ -350,7 +367,7 @@ class TheCortex:
         sim_result["logs"] = sim_result.get("logs", []) + extracted_logs
         sim_result["raw_content"] = final_output
         self.ballast_active = False
-        sub = self.svc.cycle_controller.eng.substrate
+        sub = self.svc.orchestrator.eng.substrate
         for log in extracted_logs:
             if isinstance(log, str) and log.startswith("[SUBSTRATE_QUEUE]"):
                 try:
@@ -383,9 +400,46 @@ class TheCortex:
                     if audit and "ui" in audit:
                         sim_result["ui"] += f"\n\n{audit['ui']}"
                 except Exception as e:
-                    # [S]chur: Do not let bureaucratic paperwork crash the entire generation loop.
+                    # Do not let bureaucratic paperwork crash the entire generation loop.
                     if self.events:
                         self.events.log(f"{Prisma.RED}[BUREAU ERROR] Audit bypassed: {e}{Prisma.RST}", "SYS")
+
+        # HE GOVERNOR & THE JESTER
+        if not is_system:
+            eng = self.svc.orchestrator.eng
+            efficiency = getattr(self.svc.host_stats, "efficiency_index", 1.0) if self.svc.host_stats else 1.0
+            vector_obj = sim_result.get("physics", {}).get("vector", {})
+            novelty = float(vector_obj.get("novelty", 0.0)) if isinstance(vector_obj, dict) else 0.0
+
+            dimension = eng.navi_sad.calculate_semantic_dimension(efficiency, novelty)
+
+            phys_packet = sim_result.setdefault("physics", {})
+            phys_packet["omega_r"] = dimension
+
+            lattice_u = getattr(getattr(eng, "shared_lattice", None), "u", None)
+            user_exhaust = float(lattice_u.E) if lattice_u and hasattr(lattice_u, "E") else float(phys_packet.get("exhaustion", 0.0))
+            resonance_delta = float(phys_packet.get("resonance", 0.5))
+
+            if hasattr(eng.bio, "governor"):
+                beth_index = eng.bio.governor.calculate_coupling(phi=min(1.0, dimension / 2.0),
+                            resonance_delta=resonance_delta, user_exhaustion=user_exhaust)
+                phys_packet["beth_index"] = beth_index
+                phys_packet["macro_policy"] = eng.bio.governor.get_policy_shift()
+
+            if getattr(eng, "tick_count", 0) > 5 and (dimension <= 1.05 or eng.navi_sad.detect_point_attractor()):
+                msg = f"[THE JESTER]: Point Attractor detected (d_B={dimension:.2f})! We are trapped in False Cohesion! Burning ATP to inject chaos."
+                if self.events:
+                    self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "SYS")
+
+                eng.drain_atp(5.0)
+
+                phys_packet["entropy"] = 0.99
+                phys_packet["narrative_drag"] = float(phys_packet.get("narrative_drag", 0.0)) + 5.0
+                eng.soul.force_mutation("JESTER")
+                sim_result.setdefault("mind", {})["lens"] = "JESTER"
+
+                if "ui" in sim_result:
+                    sim_result["ui"] += f"\n\n{Prisma.VIOLET}[FALSE COHESION BREAK: The Jester has seized the architecture.]{Prisma.RST}"
 
         return sim_result
 
@@ -401,8 +455,11 @@ class TheCortex:
                 "temperature": 0.1,
                 "max_tokens": 50
             }).strip()
-            if affect_res.upper().startswith("FAIL"):
-                judge_reason = affect_res[4:].lstrip(":").strip()
+
+            upper_res = affect_res.upper()
+            if "FAIL" in upper_res:
+                fail_idx = upper_res.find("FAIL")
+                judge_reason = affect_res[fail_idx + 4:].lstrip(":- ").strip()
                 self.modulator.current_chem.serotonin = min(1.0, self.modulator.current_chem.serotonin + 0.20)
                 if self.events:
                     self.events.log(
@@ -422,7 +479,7 @@ class TheCortex:
         if not topic:
             topic = "The nature of our shared existence."
         self.events.log(f"{Prisma.VIOLET}🎙️ SPINNING UP COUNCIL STUDIO...{Prisma.RST}", "SYS")
-        eng = self.svc.cycle_controller.eng
+        eng = self.svc.orchestrator.eng
         script = eng.council.host_podcast(topic, self.llm)
         extracted_logs = []
         filename = f"podcast_script_{int(time.time())}.txt"
@@ -555,7 +612,14 @@ class TheCortex:
                 village_data["tinkerer"] = (tinkerer.to_dict() if hasattr(
                     tinkerer, "to_dict") else {})
         mode_settings = BonePresets.MODES.get(self.active_mode, BonePresets.MODES["ADVENTURE"])
-        mind["lens"], mind["role"] = self.ROLE_MAP.get(self.active_mode, ("ARCHITECT", "The Architect"))
+
+        # Protect dynamic lenses chosen by ArbitrationPhase
+        current_lens = mind.get("lens")
+        if not current_lens or current_lens in ("UNKNOWN", "NARRATOR"):
+            mind["lens"], mind["role"] = self.ROLE_MAP.get(self.active_mode, ("ARCHITECT", "The Architect"))
+        else:
+            mind["role"] = mind.get("role", f"The {current_lens.title().replace('_', ' ')}")
+
         full_state = {"bio": bio, "physics": phys, "mind": mind, "soul": soul_data, "world": world,
                       "village": village_data, "user_profile": {"name": "Traveler"},
                       "vsl": self.consultant.state.__dict__ if self.consultant
@@ -591,11 +655,10 @@ class TheCortex:
         for mandate in sim_result.get("council_mandates", []):
             action = mandate.get("action")
             val = mandate.get("value")
-            if action == "SYNERGY_FIRED":
-                mind["lens"] = val
-                mind["role"] = f"The {val.title().replace('_', ' ')}"
-                mind["style_directives"].append(
-                    f"CRITICAL [SINCERITY PROTOCOL]: The user has explicitly summoned {val}. "f"You MUST adopt the persona of {val} entirely. Drop all other pretexts.")
+            if action == "SYNERGY_FIRED" and val:
+                mind["lens"] = str(val)
+                mind["role"] = f"The {str(val).title().replace('_', ' ')}"
+                mind["style_directives"].append(f"CRITICAL [SINCERITY PROTOCOL]: The user has explicitly summoned {val}. You MUST adopt the persona of {val} entirely. Drop all other pretexts.")
             elif action == "SYSTEM_DIRECTIVE":
                 directive_map = {
                     "CASCADE_AWARENESS": "CRITICAL [CASCADE]: Show your counterfactual math. Every claim must explicitly state what else in the structural lattice shifts or collapses if the claim is wrong.",
@@ -622,22 +685,23 @@ class TheCortex:
         if shadow_nodes:
             shadow_concepts = [n.get("id", "Unknown") for n in shadow_nodes]
             shadow_str = ", ".join(shadow_concepts)
-            # Explicitly store these in the physical state for next turn's engagement check
-            if "physics" in full_state:
-                full_state["physics"]["shadow_nodes_offered"] = shadow_concepts
-                self.last_physics["shadow_nodes_offered"] = shadow_concepts
-            v_level = float(phys.get("voltage", 0.0))
-            chi_level = float(phys.get("chi", phys.get("entropy", 0.0)))
+            # Store directly on the Cortex instance; the physics packet will strip it on snapshot.
+            phys["shadow_nodes_offered"] = shadow_concepts
+            self.last_shadow_nodes = shadow_concepts
+
+            v_level = float(safe_get(phys, "voltage", 0.0))
+            chi_level = float(safe_get(phys, "chi", safe_get(phys, "entropy", 0.0)))
+
             if v_level > 80.0 and chi_level > 0.7:
                 mind["style_directives"].append(
-                    f"LATERAL OFC OVERRIDE: Standard logic has failed. You are operating under extreme Voltage and Chaos. We have abandoned linear memory. Weave these highly explosive, orthogonal structural concepts into your answer to shatter the loop: [{shadow_str}].")
+                    f"OVERRIDE: Standard logic has failed. You are operating under extreme Voltage and Chaos. We have abandoned linear memory. Weave these highly explosive, orthogonal structural concepts into your answer to shatter the loop: [{shadow_str}].")
                 if self.events:
                     self.events.log(
-                        f"{Prisma.MAG}Lateral OFC Retrieval triggered! Injecting structural bombs: {shadow_str}{Prisma.RST}",
+                        f"{Prisma.MAG}Injecting structural bombs: {shadow_str}{Prisma.RST}",
                         "CORTEX")
             else:
                 mind["style_directives"].append(
-                    f"SHADOW CAST [APERTURE COMPLETENESS]: While answering the direct prompt, you MUST briefly illuminate these adjacent/unasked concepts pulled from deep memory: [{shadow_str}]. Offer them as a generous 'door' the user can choose to open, do not lecture.")
+                    f"SHADOW CAST: While answering the direct prompt, you MUST briefly illuminate these adjacent/unasked concepts pulled from deep memory: [{shadow_str}]. Offer them as a generous 'door' the user can choose to open, do not lecture.")
                 if self.events:
                     self.events.log(f"{Prisma.CYN}Shadow Cast retrieved: {shadow_str}{Prisma.RST}", "CORTEX")
 

@@ -16,7 +16,7 @@ from typing import List, Dict, Tuple, Optional, Any
 
 from presets import BoneConfig
 from core import LoreManifest
-from struts import ux, safe_get, safe_set
+from struts import ux, ux_format, safe_get, safe_set
 from constants import Prisma
 
 @dataclass
@@ -115,9 +115,7 @@ class GordonKnot:
             if action in tokens and re.search(
                 rf"\b(?:i\s+(?:will\s+)?{action}|to\s+{action}|{action}\s+(?:the|a|an|my|some|it|this|that)|{action}ing)\b|^{action}\b", text,
             ):
-                if not any(
-                    obj.upper() in self.inventory or re.search(rf"\b{re.escape(obj)}\b", text) for obj in req_objs
-                ):
+                if not any(obj.upper() in self.inventory for obj in req_objs):
                     return f"{Prisma.SLATE}{(ux('gordon_strings', 'premise_req') or '').format(action=action, req_str=', '.join(req_objs))}{Prisma.RST}"
 
         # 3. Explicit Interaction Without Item Check
@@ -200,8 +198,8 @@ class GordonKnot:
         logs = []
 
         if new_loot:
-            clean_input = user_input.lower()
-            has_intent = any(verb in clean_input for verb in self.acquisition_verbs)
+            tokens = set(re.findall(r'\b\w+\b', user_input.lower()))
+            has_intent = any(verb in tokens for verb in self.acquisition_verbs)
 
             # If the user explicitly asked to take it, grant it immediately.
             if has_intent:
@@ -270,11 +268,11 @@ class GordonKnot:
 
     def safe_remove_item(self, item_name: str) -> bool:
         """Attempts to remove an item, failing gracefully if it does not exist."""
-        item_name = item_name.upper()
-        if item_name in self.inventory:
-            self.inventory.remove(item_name)
+        try:
+            self.inventory.remove(item_name.upper())
             return True
-        return False
+        except ValueError:
+            return False
 
     def rummage(self, physics_ref: Any, stamina_pool: float) -> Tuple[bool, str, float]:
         """
@@ -370,11 +368,10 @@ class GordonKnot:
 
         full_name = f"{prefix} {base} {suffix}"
         clean_id = full_name.upper().replace(" ", "_")
-        desc_template = ux("gordon_strings", "synthesis_desc") or "A {base} forged of {archetype} energy."
         clamped_value = min(100.0, round(physics_vector.get(dom_dim, 0.0) * 10, 1))
 
         item_data = {
-            "description": desc_template.format(base=base.lower(), archetype=archetype),
+            "description": ux_format("gordon_strings", "synthesis_desc", default="A {base} forged of {archetype} energy.", base=base.lower(), archetype=archetype),
             "function": "ARTIFACT",
             "passive_traits": ["DYNAMIC"],
             "value": clamped_value,
@@ -407,8 +404,8 @@ class GordonKnot:
         for name in self.registry.keys():
             if name.upper() not in self.inventory:
                 clean = name.lower().replace("_", " ")
-                # Enforce word boundaries to prevent 'key' firing on 'turkey'
-                if re.search(rf"\b{re.escape(clean)}\b", combined_text):
+                # Enforce word boundaries to prevent 'key' firing on 'turkey' (but only run Regex if sub-string exists)
+                if clean in combined_text and re.search(rf"\b{re.escape(clean)}\b", combined_text):
                     present_candidates.append((name, clean))
 
         if not present_candidates:

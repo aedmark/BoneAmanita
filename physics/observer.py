@@ -118,7 +118,7 @@ class QuantumObserver:
         avg_voltage = round(sum(self.voltage_history) / len(self.voltage_history), 2)
 
         # 3. Calculate systemic metrics (Entropy, Scope, Depth, Resonance)
-        entropy, beta, scope, depth, connectivity, resonance, silence, loop_quotient = self._calculate_metrics(text, counts, self.cfg)
+        entropy, beta, scope, depth, connectivity, resonance, silence, loop_quotient = self._calculate_metrics(text, counts, len(clean_words), self.cfg)
         v_hist = list(self.voltage_history)
 
         # 4. Chaos and Loop Detection
@@ -283,7 +283,7 @@ class QuantumObserver:
         )
 
     @staticmethod
-    def _calculate_metrics(text: str, counts: Dict[str, int], config_ref=None) -> Tuple[float, float, float, float, float, float, float, float]:
+    def _calculate_metrics(text: str, counts: Dict[str, int], word_volume: int, config_ref=None) -> Tuple[float, float, float, float, float, float, float, float]:
         """Calculates the raw floating-point ratios of the various semantic dimensions."""
         if not (length := len(text)):
             return 0.0, 0.0, 0.3, 0.3, 0.2, 0.0, 0.8, 0.0
@@ -308,7 +308,7 @@ class QuantumObserver:
         beta_index = min(1.0, math.log1p(structure_score) / math.log1p(length * get_cfg("BETA_LOG_SCALAR", 0.1)))
         if length < (bsl := get_cfg("BETA_SHORT_TEXT_LIMIT", 50)): beta_index *= length / float(bsl)
 
-        safe_len = max(1, len(text.split()))
+        safe_len = max(1, word_volume)
         scope = min(1.0, (counts.get("abstract", 0) + counts.get("void", 0)) / safe_len + get_cfg("SCOPE_BASE", 0.2))
         depth = min(1.0, (counts.get("heavy", 0) + counts.get("constructive", 0)) / safe_len + get_cfg("DEPTH_BASE", 0.1))
         connectivity = min(1.0, (counts.get("social", 0) + solvents) / safe_len + get_cfg("CONN_BASE", 0.1))
@@ -383,28 +383,27 @@ class CycleStabilizer:
         Slowly applies pending drag penalties, and uses the Cybernetic Governor to
         gently push the system's Voltage and Drag back toward the baseline for the active Manifold.
         """
-        from struts import safe_get, safe_set, ux
+        from struts import safe_get, ux
         applied_correction = False
 
         # Phase 1: Bleed off pending drag into the live system slowly
         if self.pending_drag > 0:
-            space = getattr(physics, "space", physics)
-            current_drag = safe_get(space, "narrative_drag", 0.0)
-            drag_halt = getattr(self.cfg.PHYSICS, "DRAG_HALT", 10.0) if hasattr(self.cfg, "PHYSICS") else 10.0
+            current_drag = getattr(physics, "narrative_drag", 0.0)
+            drag_halt = getattr(self.cfg.PHYSICS, "DRAG_HALT", 10.0)
 
             # Don't apply more drag than the system can currently handle
             available_capacity = max(0.0, drag_halt - current_drag)
             bleed = min(self.pending_drag, min(2.0, available_capacity))
 
             if bleed > 0:
-                safe_set(space, "narrative_drag", current_drag + bleed)
+                physics.narrative_drag = current_drag + bleed
                 if hasattr(self.events, "log"):
                     msg = ux("physics_strings", "stabilizer_domestication") or "Domestication penalty applied."
                     self.events.log(f"STABILIZER: {msg} (+{bleed:.2f} Drag)", "PHYSICS")
                 self.pending_drag = max(0.0, self.pending_drag - bleed)
                 applied_correction = True
             elif current_drag >= drag_halt:
-                pass # System is already halted; keep the penalty pending
+                pass  # System is already halted; keep the penalty pending
 
         # Phase 2: Cybernetic Governance (PID Regulation)
         dt = max(0.001, min(1.0, (now := time.time()) - self.last_tick_time))

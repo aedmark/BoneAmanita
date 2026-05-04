@@ -322,7 +322,7 @@ class SymbiosisManager:
             t_u = float(safe_get(physics, "t_u", 0.0)) # Trauma proxy
 
             if t_u > 0.5 or self.current_health.diagnosis == "FATIGUED":
-                msg = ("[MERCY - RSD Filter]: The structural logic here fractures the lattice, but that is not a failure of your intent. "
+                msg = ("[MERCY - RSD Filter]: The structural logic here fractured, but that is not a failure of your intent. "
                     "Gordon has locked the struts to protect the system, but I am holding the space for you. "
                     "Take a breath. We will stitch this together when you are ready.")
                 return self._log_event(f"{Prisma.OCHRE}{msg}{Prisma.RST}", "MIRROR")

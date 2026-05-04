@@ -277,7 +277,7 @@ class PromptComposer:
                                                 high_voltage_data, state.get("physics", {}), )
 
         scenarios = self.lore.get("scenarios") or {}
-        banned = scenarios.get("BANNED_CLICHES", [])
+        banned = self.lore.get("style_crimes", "BANNED_CLICHES") or []
         ban_string = ", ".join(set(banned))
 
         phys_ref = state.get("physics", {})
@@ -673,7 +673,7 @@ class ResponseValidator:
                 extracted_meta_logs.extend(f"[THOUGHT]: {line.strip()}" for line in match.group(1).split("\n") if line.strip())
             clean_text = pattern.sub("", clean_text)
 
-        # Parse output designated for disk storage (Code execution).
+        # Parse output designated for disk storage.
         for match in self._file_pattern.finditer(clean_text):
             safe_content = match.group(2).strip().replace("\n", "|||NEWLINE|||")
             extracted_meta_logs.append(
@@ -704,7 +704,7 @@ class ResponseValidator:
         low_resp, errors_found = sanitized_response.lower(), []
         primary_replacement = None
 
-        # Pinker's Antigen Scan: Check for banned boilerplate phrases.
+        # Check for banned boilerplate phrases.
         if self._banned_regex:
             for match in self._banned_regex.finditer(sanitized_response):
                 phrase = match.group(0).lower()
@@ -727,9 +727,7 @@ class ResponseValidator:
                     primary_replacement = self._generate_dynamic_rejection("MARKDOWN_DETECTED")
 
         phys_ref = _state.get("physics", {})
-        energy_dict = safe_get(phys_ref, "energy", {}) or {}
-        fallback_voltage = safe_get(energy_dict, "voltage", 30.0)
-        voltage = float(safe_get(phys_ref, "voltage", fallback_voltage))
+        voltage = float(safe_get(phys_ref, "voltage", 30.0))
 
         # The system cannot ask clarifying questions when under extreme stress.
         # Checking the final 15 characters catches roleplay formatting (e.g. "? *walks away*") bypassing the boundary.
@@ -770,7 +768,8 @@ class ResponseValidator:
         stutter_len = getattr(cortex_cfg, "VALIDATOR_STUTTER_LENGTH", 5)
 
         # If the LLM successfully executed a silent tool or file-write, the text is supposed to be empty.
-        if len(sanitized_response.strip()) < stutter_len and not extracted_meta_logs:
+        # We allow terse human responses (e.g., "Yes.") by dropping the stutter threshold to 2 characters.
+        if len(sanitized_response.strip()) < getattr(cortex_cfg, "VALIDATOR_STUTTER_LENGTH", 2) and not extracted_meta_logs:
             return {"valid": False, "reason": "STUTTER",
                     "replacement": ux("brain_strings", "val_stutter"),
                     "meta_logs": extracted_meta_logs}

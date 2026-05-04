@@ -177,23 +177,19 @@ class BoneArchitect:
         results = (list(load_result) if isinstance(load_result, (list, tuple)) else []) + [None] * 5
         mito_legacy, immune_legacy, soul_legacy, continuity, atlas = results[:5]
 
-        # -- Apply Restored State --
-
-        if mito_legacy and hasattr(embryo.bio.mito, "apply_inheritance"):
+        if mito_legacy:
             embryo.bio.mito.apply_inheritance(mito_legacy)
 
         if immune_legacy and isinstance(immune_legacy, (list, set)):
-            if hasattr(embryo.bio.immune, "load_antibodies"):
-                embryo.bio.immune.load_antibodies(immune_legacy)
-            else:
-                embryo.bio.immune.active_antibodies.update(immune_legacy)
+            # ImmuneMycelium handles antibody updates directly
+            embryo.bio.immune.active_antibodies.update(immune_legacy)
 
         embryo.soul_legacy = soul_legacy if isinstance(soul_legacy, dict) else {}
         embryo.continuity = continuity if isinstance(continuity, dict) else None
         recovered_atlas = atlas if isinstance(atlas, dict) else {}
 
         # Rebuild the map of the world
-        if recovered_atlas and hasattr(getattr(embryo.physics, "nav", None), "import_atlas"):
+        if recovered_atlas and getattr(embryo.physics, "nav", None):
             try:
                 embryo.physics.nav.import_atlas(recovered_atlas)
                 msg = ux("machine_strings", "arch_map_restored") or "[ARCHITECT]: World Map restored."
@@ -202,8 +198,8 @@ class BoneArchitect:
                 msg = ux("machine_strings", "arch_map_corrupt") or "[ARCHITECT]: Atlas corrupt, discarding map: {e}"
                 events.log(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}", "WARN")
 
-        # -- The Failsafe (Cold Boot) --
-        # Systemic safeguard: If the system managed to load a state but is effectively dead
+        # -- The Failsafe --
+        # If the system managed to load a state but is effectively dead
         # (ATP <= 0), we force a jumpstart so the developer isn't stuck with an unresponsive system.
         if embryo.bio and embryo.bio.mito and embryo.bio.mito.state.atp_pool <= 0.0:
             target_cfg = getattr(embryo.bio, "config_ref", None) or BoneConfig

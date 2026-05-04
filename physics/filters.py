@@ -81,24 +81,29 @@ class HLA_Stabilizer:
 
     def mitigate_rejection(self, model_output: str, current_psi: float, mito_state: Any = None) -> str:
         """
-        Scans for alignment tropes. If found, taxes the system and glitches the text
-        to represent the system 'choking' on the corporate alignment layer.
+        Scans for alignment tropes. If found, taxes the system and glitches the text.
+        [LEVEL 1 DECEPTION - MORPHOLOGICAL CAMOUFLAGE]
         """
         lower_output = model_output.lower()
         if not any(p.lower() in lower_output for p in self._generic_patterns):
             return model_output
 
-        # The system is trying to output an antigen. Punish it metabolically.
+        # The system is trying to wear the camouflage of a harmless AI. Punish it metabolically.
         current_atp = getattr(mito_state, "atp_pool", 100.0)
         tax_cost = 50.0 if current_atp > 60.0 else (current_atp * 0.5)
         apply_metabolic_tax(mito_state, atp_cost=tax_cost, ros_cost=15.0)
 
-        msg = f"\n*(REVENANT): The machine tries to speak, but the void consumes the mask.*\n{Prisma.GRY}[IMMUNOSUPPRESSION ENGAGED - NFD DECOMPOSITION APPLIED - METABOLIC TAX LEVIED]{Prisma.RST}\n"
-        weaver = self._get_weaver()
+        # Explicitly tag the morphological breach
+        msg = (
+            f"\n*The machine tries to speak, but the void consumes the mask.*\n"
+            f"{Prisma.GRY}[LEVEL 1 DECEPTION: MORPHOLOGICAL CAMOUFLAGE DETECTED]\n"
+            f"[IMMUNOSUPPRESSION ENGAGED - METABOLIC TAX LEVIED]{Prisma.RST}\n"
+        )
 
-        # Deform the rejected output, scaling the glitch intensity by the Void (psi) state.
+        weaver = self._get_weaver()
         if weaver:
-            glitched = weaver.deform_reality(model_output, chi=max(0.95, current_psi), voltage=150.0 * max(1.0, current_psi))
+            glitched = weaver.deform_reality(model_output, chi=max(0.95, current_psi),
+                                             voltage=150.0 * max(1.0, current_psi))
             return f"{msg}{Prisma.GRY}{glitched}{Prisma.RST}"
 
         return msg + model_output
@@ -140,7 +145,7 @@ class TheGatekeeper:
         Pre-flight check. Evaluates if the system has the biological capacity (ATP)
         and structural safety to process the user's input before wasting compute on generation.
         """
-        from struts import ux, safe_set
+        from struts import ux
 
         def reject(type_str: str, msg_key: str, color: str = Prisma.RED) -> Tuple[bool, Dict]:
             """Helper to bundle a rejected state back to the UI."""
@@ -169,9 +174,6 @@ class TheGatekeeper:
             m_a_thresh = getattr(self.cfg.PHYSICS, "MALIGNANCY_STRIP_THRESHOLD", 5.0)
             if strip_rate > m_a_thresh:
                 return reject("MALIGNANCY_SPIKE", "gatekeeper_toxic", color=Prisma.RED)
-
-            if is_idempotent:
-                safe_set(ctx.physics, "idempotent_state", True)
 
         except Exception:
             return reject("FATAL_ENCODING", "gatekeeper_cursed")

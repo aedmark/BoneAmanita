@@ -7,6 +7,34 @@ from struts import ux, safe_set
 from typing import Dict, List, Any
 from phases.base import SimulationPhase, _safe_dict
 
+
+def _deep_update(obj: Any, data: dict):
+    """
+    Safely merges a mutated dictionary back into a nested object structure.
+    Checks type before checking attributes to prevent TypeError on tuple keys.
+    """
+    if not data or not obj:
+        return
+
+    for k, v in data.items():
+        # 1. If the target object is a dictionary, handle it natively.
+        if isinstance(obj, dict):
+            if k in obj and isinstance(obj[k], dict) and isinstance(v, dict):
+                _deep_update(obj[k], v)
+            else:
+                obj[k] = v
+
+        # 2. If the target is a class object, ensure 'k' is a string before using hasattr()
+        elif isinstance(k, str) and hasattr(obj, k):
+            target = getattr(obj, k)
+            if hasattr(target, "__dict__") and isinstance(v, dict):
+                _deep_update(target, v)
+            elif isinstance(target, dict) and isinstance(v, dict):
+                # [Pinker Constraint]: Do not shallow-merge class dict attributes. Maintain deep recursion to prevent clobbering.
+                _deep_update(target, v)
+            else:
+                setattr(obj, k, v)
+
 class CognitionPhase(SimulationPhase):
     """
     The Executive processing layer.

@@ -167,16 +167,15 @@ class ResourceTax:
         limits = {"stamina": "exhausted", "atp": "starving"}
 
         # Check if we can afford all costs before deducting anything
-        for res, limit_key in limits.items():
-            cost = costs.get(res, 0.0)
+        for res, cost in costs.items():
             if cost > self.state.get_resource(res):
+                limit_key = limits.get(res, "depleted")
                 msg = ux("resource_tax", limit_key).format(cost=cost)
                 self.state.log(f"{self.state.P.RED}{msg}{self.state.P.RST}")
                 return False
 
         # If we can afford it, apply the deductions
-        for res in limits:
-            cost = costs.get(res, 0.0)
+        for res, cost in costs.items():
             if cost > 0:
                 self.state.modify_resource(res, -cost)
         return True
@@ -242,6 +241,7 @@ class CommandProcessor:
         self.tax = ResourceTax(self.interface)
         self.registry = CommandRegistry(self.interface)
         self.P = prisma_ref
+        self.cmd_cfg = getattr(self.interface.Config, "COMMANDS", object())
 
         # Dynamically register all _cmd_ methods
         for attr in dir(self):
@@ -336,8 +336,7 @@ class CommandProcessor:
             self.interface.log(f"{self.P.RED}{msg.format(mode=mode_name)}{self.P.RST}")
             return True
 
-        cmd_cfg = getattr(self.interface.Config, "COMMANDS", None)
-        cost = getattr(cmd_cfg, "COST_MODE", 10.0)
+        cost = getattr(self.cmd_cfg, "COST_MODE", 10.0)
 
         if self.tax.levy("MODE_SWITCH", {"stamina": cost}):
             preset = getattr(BonePresets, mode_name)
@@ -358,8 +357,7 @@ class CommandProcessor:
     def _cmd_save(self, _parts):
         """Forces an immediate state write to the database."""
         res = self.interface.save_state()
-        cfg = getattr(self.interface.Config, "COMMANDS", None)
-        error_flags = getattr(cfg, "SAVE_ERROR_FLAGS", ["Error", "Failed", "Exception"])
+        error_flags = getattr(self.cmd_cfg, "SAVE_ERROR_FLAGS", ["Error", "Failed", "Exception"])
 
         if not res or any(flag in str(res) for flag in error_flags):
             msg = ux("command_alerts", "save_failed")
@@ -389,8 +387,7 @@ class CommandProcessor:
 
     def _cmd_map(self, _parts):
         """Reveals current physical/metaphorical location."""
-        cmd_cfg = getattr(self.interface.Config, "COMMANDS", None)
-        cost = getattr(cmd_cfg, "COST_MAP", 2.0)
+        cost = getattr(self.cmd_cfg, "COST_MAP", 2.0)
 
         if not self.tax.levy("MAP", {"stamina": cost}):
             return True
@@ -463,7 +460,7 @@ class CommandProcessor:
                 return True
 
             orch = getattr(self.interface.eng, "orchestrator", None)
-            reporter = getattr(orch, "reporter", None) if orch else None
+            reporter = getattr(orch, "reporter", None)
 
             if not reporter:
                 self.interface.log(ux("command_alerts", "truth_no_reporter"))
@@ -520,8 +517,7 @@ class CommandProcessor:
 
         if mode in hud_configs:
             self.interface.eng.mode_settings["default_ui_depth"] = mode
-            if mode != "WARM":
-                self.interface.eng.ui_mode = mode
+            self.interface.eng.ui_mode = mode
             self.interface.log(hud_configs[mode])
         else:
             self.interface.log(f"{self.P.RED}Unknown HUD mode: {mode}{self.P.RST}")
@@ -566,29 +562,6 @@ class CommandProcessor:
                     dream_log += f"\n{self.P.MAG}✨ The dream yielded a Glimmer (+{g_yield} G_pool).{self.P.RST}"
 
         self.interface.log(f"{self.P.CYN}[SYSTEM] Engine idling. REM cycle initiated. ATP regenerating.{self.P.RST}{dream_log}")
-        return True
-
-    def _cmd_mod(self, parts):
-        """Engages specialized, latent archetypal groupings (like SLASH or MD)."""
-        if len(parts) < 2:
-            self.interface.log("Usage: /mod [slash|md]")
-            return True
-
-        mod = parts[1].upper()
-        mods = {
-            "SLASH": ("slash_council", self.P.INDIGO, "Dev Team online."),
-            "MD": ("overseer_council", self.P.GRN, "Systemic Health protocols online."),
-            "SYSTEMIC_HEALTH": ("overseer_council", self.P.GRN, "Systemic Health protocols online.")
-        }
-
-        if mod in mods:
-            council_attr, color, msg = mods[mod]
-            self.interface.log(f"{color}{mod} Mod Chip engaged. {msg}{self.P.RST}")
-            if council := getattr(self.interface.eng, "council", None):
-                if sub_council := getattr(council, council_attr, None):
-                    sub_council.active = True
-        else:
-            self.interface.log(f"{self.P.RED}Unknown mod chip: {mod}{self.P.RST}")
         return True
 
     def _cmd_grief(self, _parts):
@@ -676,8 +649,7 @@ class CommandProcessor:
             self.interface.log("Usage: /podcast <topic>")
             return True
 
-        cmd_cfg = getattr(self.interface.Config, "COMMANDS", None)
-        cost = getattr(cmd_cfg, "COST_PODCAST", 20.0)
+        cost = getattr(self.cmd_cfg, "COST_PODCAST", 20.0)
 
         if not self.tax.levy("PODCAST", {"atp": cost}):
             return True
@@ -706,8 +678,7 @@ class CommandProcessor:
 
     def _cmd_journal(self, _parts):
         """Triggers the LLM to summarize the recent dialogue buffer into a surreal diary entry."""
-        cmd_cfg = getattr(self.interface.Config, "COMMANDS", None)
-        cost = getattr(cmd_cfg, "COST_JOURNAL", 15.0)
+        cost = getattr(self.cmd_cfg, "COST_JOURNAL", 15.0)
 
         if not self.tax.levy("JOURNAL", {"atp": cost}):
             return True
@@ -739,8 +710,7 @@ class CommandProcessor:
 
     def _cmd_shuffle(self, _parts):
         """The emergency release valve. Burns ATP to physically reset structural/narrative loops."""
-        cmd_cfg = getattr(self.interface.Config, "COMMANDS", None)
-        cost = getattr(cmd_cfg, "COST_SHUFFLE", 5.0)
+        cost = getattr(self.cmd_cfg, "COST_SHUFFLE", 5.0)
 
         if not self.tax.levy("SHUFFLE", {"atp": cost}):
             return True

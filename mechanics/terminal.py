@@ -57,7 +57,7 @@ class SessionGuardian:
     """
     _HEADERS = (
         ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.7.3   │"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.8.3   │"),
         ("term_header_bot", "└──────────────────────────────────────────┘"),
     )
 
@@ -109,7 +109,8 @@ class SessionGuardian:
 
         # Handle actual fatal crashes (not standard interruptions)
         if exc_type and not is_interrupt:
-            crash_msg = ux("main_strings", "crash_msg")
+            # Prevent AttributeError from masking the original exception if UX localization fails
+            crash_msg = ux("main_strings", "crash_msg") or "CRITICAL SYSTEM FAILURE: {exc_val}"
             print(f"{Prisma.RED}{crash_msg.format(exc_val=exc_val)}{Prisma.RST}")
 
             # Conditional Error Reporting based on User Intent

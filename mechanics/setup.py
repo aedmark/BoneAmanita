@@ -144,7 +144,8 @@ class ConfigWizard:
 
         # Finalize and write the configuration to disk
         try:
-            with open(ConfigWizard.CONFIG_FILE, "w") as f:
+            # Enforce UTF-8 to prevent fatal read/write asymmetry on Windows
+            with open(ConfigWizard.CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(config, f, indent=4)
 
             commit_msg = ux("main_strings", "config_committed")

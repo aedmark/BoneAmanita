@@ -16,8 +16,6 @@ from struts import ux
 from presets import BoneConfig
 from constants import Prisma
 
-# Global cache retrieval for narrative strings and Cassandra's void screams.
-NARRATIVE_DATA = LoreManifest.get_instance().get("narrative_data") or {}
 
 class LimboLayer:
     """
@@ -28,8 +26,6 @@ class LimboLayer:
 
     # Cap the number of ghosts to prevent memory bloat
     MAX_ECTOPLASM = 50
-    # Fallback screams if Cassandra's void lore isn't loaded
-    STASIS_SCREAMS = NARRATIVE_DATA.get("CASSANDRA_SCREAMS", ["BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT"])
 
     def __init__(self, config_ref=None):
         """
@@ -38,7 +34,10 @@ class LimboLayer:
         self.cfg = config_ref or BoneConfig
         self.ghosts = deque(maxlen=self.MAX_ECTOPLASM)
         self.haunt_chance = 0.05  # Base 5% chance to append a ghost to standard text
-        self.stasis_leak = 0.0    # Tracks active structural hemorrhaging
+        self.stasis_leak = 0.0  # Tracks active structural hemorrhaging
+
+        narrative_data = LoreManifest.get_instance().get("narrative_data") or {}
+        self.stasis_screams = narrative_data.get("CASSANDRA_SCREAMS", ["BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT"])
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the ghostly artifacts and leak state for standard saves."""
