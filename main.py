@@ -65,8 +65,8 @@ class BoneAmanita:
         self.suppressed_agents = self.mode_settings.get("village_suppression", [])
         self.sys_config["mode_settings"] = self.mode_settings
         self.sys_config["config"] = self.config
-        self.health = self.config.MAX_HEALTH
-        self.stamina = self.config.MAX_STAMINA
+        self._health_fallback = self.config.MAX_HEALTH
+        self._stamina_fallback = self.config.MAX_STAMINA
         self.trauma_accum = {}
         self.tick_count = 0
         boot_msg = ux("main_strings", "boot_core")
@@ -76,8 +76,8 @@ class BoneAmanita:
         self.lex.initialize()
         anatomy = BoneGenesis.ignite(self.sys_config, self.lex, events_ref=self.events)
         self._unpack_anatomy(anatomy)
-        if getattr(self, "town_hall", None):
-            self.events.subscribe("ITEM_DROP", self.town_hall.on_item_drop)
+        if getattr(self.village, "town_hall", None):
+            self.events.subscribe("ITEM_DROP", self.village.town_hall.on_item_drop)
         self.cosmic = self.phys.dynamics
         self.stabilizer = ZoneInertia(config_ref=self.config)
         self.telemetry = TelemetryService.get_instance(config_ref=self.config)
@@ -171,6 +171,32 @@ class BoneAmanita:
             self.events.log(msg_mods.format(mods=", ".join(active_mods)), "SYS")
 
     @property
+    def health(self) -> float:
+        """Dynamic router to Biological biometrics. Prevents state duplication."""
+        if getattr(self, "bio", None) and hasattr(self.bio, "biometrics"):
+            return self.bio.biometrics.health
+        return getattr(self, "_health_fallback", 100.0)
+
+    @health.setter
+    def health(self, value: float):
+        if getattr(self, "bio", None) and hasattr(self.bio, "biometrics"):
+            self.bio.biometrics.health = float(value)
+        self._health_fallback = float(value)
+
+    @property
+    def stamina(self) -> float:
+        """Dynamic router to Biological biometrics. Prevents state duplication."""
+        if getattr(self, "bio", None) and hasattr(self.bio, "biometrics"):
+            return self.bio.biometrics.stamina
+        return getattr(self, "_stamina_fallback", 100.0)
+
+    @stamina.setter
+    def stamina(self, value: float):
+        if getattr(self, "bio", None) and hasattr(self.bio, "biometrics"):
+            self.bio.biometrics.stamina = float(value)
+        self._stamina_fallback = float(value)
+
+    @property
     def _mito_state(self):
         """Safe internal accessor for the mitochondrial state."""
         if getattr(self, "bio", None) and hasattr(self.bio, "mito"):
@@ -195,45 +221,49 @@ class BoneAmanita:
 
     def get_avg_voltage(self):
         """Calculates average voltage from the physics observer."""
-        # Prefer the dedicated observer, fallback to the base physics object if flattened
         target = getattr(self.phys, "observer", self.phys)
         hist = getattr(target, "voltage_history", [])
-        return sum(hist) / len(hist) if hist else 0.0
+        # Fuller: Enforce structural integrity by filtering out non-numeric rot before calculation.
+        valid_hist = [v for v in hist if isinstance(v, (int, float))] if hist else []
+        return sum(valid_hist) / len(valid_hist) if valid_hist else 0.0
 
     def _unpack_anatomy(self, anatomy):
+        from types import SimpleNamespace
         for k in ["akashic", "embryo", "soul", "oroboros", "drivers", "symbiosis", "consolidator"]:
             setattr(self, k, anatomy.get(k))
         self.consultant = anatomy.get("consultant", None)
         self.phys, self.mind, self.bio, self.shimmer = (self.embryo.physics, self.embryo.mind, self.embryo.bio,
                                                         self.embryo.shimmer)
         self.bio.setup_listeners()
+
         v = anatomy.get("village", {})
-        for k, val in v.items():
-            setattr(self, k, val)
+        self.village = SimpleNamespace(**{k: val for k, val in v.items() if val is not None})
+
         from protocols import GriefProtocol
         from mechanics.tools import TheSubstrate
         self.grief = GriefProtocol(self.events, engine_ref=self)
         self.substrate = TheSubstrate(self.events)
         self.soul.engine = self
-        self.council = CouncilChamber(self)
-        exclude_set = {"gordon", "death_gen", "repro", "kintsugi"}
-        self.village = {k: val for k, val in v.items() if k not in exclude_set and val is not None}
-        self.village.update(
-            {"council": self.council, "enneagram": self.drivers.enneagram, "suppressed_agents": self.suppressed_agents})
 
-    def _evaluate_immune_response(self, user_message: str, active_phys: Dict[str, Any], halt_func) -> Optional[
-        Dict[str, Any]]:
+        self.council = CouncilChamber(self)
+        self.village.council = self.council
+        self.village.enneagram = self.drivers.enneagram
+        self.village.suppressed_agents = self.suppressed_agents
+
+    def _evaluate_immune_response(self, user_message: str, active_phys: Any, halt_func) -> Optional[Dict[str, Any]]:
         """Isolates the Runaway Toxicity Math (Moog, Rhodes, Linehan) to prevent pre-flight monoliths."""
         if not active_phys:
             return None
-        m_a = self.navi_sad.calculate_malignancy_factor(user_message, float(safe_get(active_phys, "narrative_drag", 0.0)))
+
+        nav_drag = float(safe_get(active_phys, "narrative_drag", 0.0))
+        m_a = self.navi_sad.calculate_malignancy_factor(user_message, nav_drag)
         safe_set(active_phys, "m_a", m_a)
+
         mu = float(safe_get(active_phys, "mu", 0.0))
         i_c = float(safe_get(active_phys, "i_c", 1.0))
         chi = float(safe_get(active_phys, "entropy", safe_get(active_phys, "chi", 0.2)))
         base_exhaust = float(safe_get(active_phys, "exhaustion", 0.0))
         beta = float(safe_get(active_phys, "beta_index", 0.0))
-        # Safely resolve user exhaustion from the shared lattice
         lattice = getattr(self, "shared_lattice", None)
         e_u = float(getattr(lattice.u, "E", base_exhaust)) if lattice and hasattr(lattice, "u") else base_exhaust
         if (chi * m_a) > i_c:
@@ -284,16 +314,22 @@ class BoneAmanita:
         active_phys = getattr(self.observer, "last_physics_packet", None) or getattr(self.cortex, "last_physics", {})
         if not is_system:
             if any(p in clean_in for p in self._DESTRUCTIVE_PATTERNS):
-                safe_set(active_phys, "narrative_drag", 999.0)
-                return _halt("Trust Boundary Violation detected. Applying absolute friction.")
+                if "#override" in clean_in:
+                    # Assess the Glimmer Tax
+                    if getattr(self, "bio", None) and getattr(self.bio, "endo", None) and self.bio.endo.glimmers >= 1:
+                        self.bio.endo.glimmers -= 1
+                        self.events.log("[APOPTOTIC GATE]: OVERRIDE ACCEPTED. Glimmer tax paid.", "SYS")
+                    else:
+                        safe_set(active_phys, "narrative_drag", 999.0)
+                        return _halt(
+                            "[APOPTOTIC GATE]: Override denied. Insufficient Glimmers (Trust) to bypass safety.")
+                else:
+                    safe_set(active_phys, "narrative_drag", 999.0)
+                    return _halt("Trust Boundary Violation detected. Applying absolute friction.")
             if self.navi_sad.execute_nudge_test(self, clean_in):
                 safe_set(active_phys, "narrative_drag", 999.0)
                 return _halt(
                     "Dual-Path divergence detected. The architecture is mathematically brittle. Applying absolute friction")
-            if "[grief]" in clean_in and getattr(self, "grief", None):
-                grief_msg = self.grief.attend_wake(getattr(self, "shared_lattice", None), self.phys)
-                self.events.log(grief_msg, "SYS")
-                return {"type": "COMMAND", "ui": f"\n{grief_msg}", "logs": [grief_msg], "metrics": self.get_metrics()}
             symbiosis_layer = getattr(self, "symbiosis", None)
             if symbiosis_layer:
                 physics_state = getattr(self, "phys", {})
@@ -301,9 +337,9 @@ class BoneAmanita:
                 if lock:
                     return {"type": "SYSTEM_HALT", "ui": f"\n{Prisma.VIOLET}{lock}{Prisma.RST}", "logs": [lock],
                             "metrics": self.get_metrics(), }
-            if getattr(self, "gordon", None):
-                self.gordon.mode = "ADVENTURE"
-                if violation := self.gordon.enforce_object_action_coupling(
+            if getattr(self.village, "gordon", None):
+                self.village.gordon.mode = "ADVENTURE"
+                if violation := self.village.gordon.enforce_object_action_coupling(
                         user_message, safe_get(self.cortex.last_physics, "zone", "Unknown")
                 ):
                     self.events.log(ux("main_strings", "gordon_intercept"), "SYS")
@@ -347,7 +383,7 @@ class BoneAmanita:
                 cmd_logs = [e["text"] for e in self.events.flush()]
                 ui_output = "\n".join(cmd_logs) if cmd_logs else ux("main_strings", "cmd_executed")
                 return {"type": "COMMAND", "ui": f"\n{ui_output}", "logs": cmd_logs, "metrics": self.get_metrics()}
-            gordon_ref = getattr(self, "gordon", None)
+            gordon_ref = getattr(self.village, "gordon", None)
             has_comb = False
             if gordon_ref:
                 has_comb = any("CUT_THE_CRAP" in safe_get(gordon_ref.get_item_data(i), "passive_traits", [])
@@ -387,8 +423,6 @@ class BoneAmanita:
                         if self.host_stats.efficiency_index < getattr(cfg, "DOMESTICATION_EFF_CRIT", 0.4)
                         else getattr(cfg, "RELIANCE_LOW", 0.5))
             soul_anchor.check_domestication(reliance)
-        if hasattr(self.bio, "biometrics") and self.health > 0.0:
-            self.health, self.stamina = self.bio.biometrics.health, self.bio.biometrics.stamina
         if hasattr(self.mind.mem, "session_trauma_vector"):
             self.trauma_accum = self.mind.mem.session_trauma_vector or self.trauma_accum
         if self.health <= 0.0:
@@ -422,8 +456,8 @@ class BoneAmanita:
                 mito_state_dict = getattr(self.bio.mito.state, "__dict__", {})
             if hasattr(self.bio, "immune"):
                 immune_data = list(self.bio.immune.active_antibodies)
-        if self.death_gen is not None:
-            eulogy_text, cause_code = self.death_gen.eulogy(last_phys, mito_state_dict, self.trauma_accum)
+        if getattr(self.village, "death_gen", None) is not None:
+            eulogy_text, cause_code = self.village.death_gen.eulogy(last_phys, mito_state_dict, self.trauma_accum)
         else:
             eulogy_text = ux("main_strings", "death_no_proto") or "Critical systemic collapse. Eulogy missing."
             cause_code = "UNKNOWN_FATAL_ERROR"
@@ -438,11 +472,12 @@ class BoneAmanita:
                 loc = orbit_data[0] if isinstance(orbit_data, list) and orbit_data else orbit_data
             except Exception as e:
                 self.events.log(f"Cortex harvest failed during death sequence: {e}", "WARN")
-            last_out = self.cortex.dialogue_buffer[-1] if getattr(self.cortex, "dialogue_buffer", None) else "Silence."
-        gordon_inv = getattr(getattr(self, "gordon", None), "inventory", [])
+            buf = getattr(self.cortex, "dialogue_buffer", [])
+            last_out = buf[-1] if buf else "Silence."
+        gordon_inv = getattr(getattr(self.village, "gordon", None), "inventory", [])
         continuity_packet = {"location": loc, "last_output": last_out, "inventory": gordon_inv}
         try:
-            mutations_data = self.repro.attempt_reproduction(self, "MITOSIS")[1] if getattr(self, "repro", None) else {}
+            mutations_data = self.village.repro.attempt_reproduction(self, "MITOSIS")[1] if getattr(self.village, "repro", None) else {}
             path = self.mind.mem.save(health=0, stamina=self.stamina, mutations=mutations_data,
                                       trauma_accum=self.trauma_accum, joy_history=[],
                                       mitochondria_traits=mito_state_dict,
@@ -547,6 +582,8 @@ class BoneAmanita:
             self.telemetry.shutdown()
         if hasattr(self, "cortex") and self.cortex:
             self.cortex.shutdown()
+        if hasattr(self, "orchestrator") and self.orchestrator:
+            self.orchestrator.shutdown()
         self.chronos.perform_shutdown()
 
 

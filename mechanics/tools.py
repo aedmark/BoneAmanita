@@ -1,5 +1,4 @@
 """tools.py"""
-
 import math, random, os, logging
 import contextlib
 import warnings
@@ -11,9 +10,9 @@ from typing import Any, Optional, List, Dict, Tuple
 import importlib.util
 from constants import Prisma
 
-# Suppress noisy warnings from background ML libraries
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
+
 
 @dataclass
 class Coordinates:
@@ -25,6 +24,7 @@ class Coordinates:
     D: float
     C: float
 
+
 @dataclass
 class LibraryNode:
     """A discrete unit of memory inside the Mnemonic Layer's spatial graph."""
@@ -35,6 +35,7 @@ class LibraryNode:
     vector: list[float]
     parent_id: Optional[str] = None
     refs: list[str] = field(default_factory=list)
+
 
 @dataclass
 class RetrievalResult:
@@ -51,11 +52,14 @@ class RetrievalResult:
     serendipity: float = 0.0
     is_surprising: bool = False
 
+
 class LibraryGraph:
     """The complete topological map of the system's memory."""
+
     def __init__(self, nodes: list[LibraryNode], root: LibraryNode):
         self.nodes = nodes
         self.root = root
+
 
 class RandomRetrievalNavigator:
     """
@@ -63,8 +67,6 @@ class RandomRetrievalNavigator:
     Allows the system to 'wander' its memory, intentionally making wrong turns to discover
     lateral connections and trigger serendipitous insights.
     """
-
-    # Defines the behavioral taxonomy of the memory traversal
     _MODES = {
         "PURIST": {"range": (0.0, 0.2), "desc": "Shortest path, structural fidelity"},
         "TOURIST": {"range": (0.2, 0.4), "desc": "Occasional scenic detours"},
@@ -83,18 +85,11 @@ class RandomRetrievalNavigator:
                  query_vector: list[float]) -> dict[str, Any]:
         """Executes the topological walk to fetch memories based on current coordinates and randomness."""
         r_val, mode = self.randomness_dial, self._get_mode(self.randomness_dial)
-
-        # 1. Find the closest physical memory to where we currently are
         start_node = self._find_structural_match(query_coordinates)
-
-        # 2. Walk the graph, branching based on the randomness dial
         retrieval_path = self._generate_traversal_path(start_node, r_val)
-
-        # 3. Collect the nodes and grade them on how 'surprising' they were to find
         tagged_results = self._calculate_serendipity(
             self._traverse_and_collect(retrieval_path, query_vector, r_val),
             query_coordinates)
-
         return {
             "mode": mode,
             "randomness_used": r_val,
@@ -118,31 +113,22 @@ class RandomRetrievalNavigator:
         """Walks edge-to-edge through the memory graph, jumping tracks if randomness is high."""
         path = [start_node]
         visited = {start_node.id}
-
-        # The number of steps we take scales with the randomness dial
         for _ in range(math.floor(1 + r_val * 5)):
             available = [n for n in self._get_neighbors(path[-1]) if n.id not in visited]
             if not available: break
-
             if random.random() < r_val:
-                # Deliberate wrong turn: Jump to a completely unrelated branch
                 rb = self._get_random_branch(path[-1]) if (r_val > 0.7 and random.random() < 0.3) else None
                 next_node = rb if (rb and rb.id not in visited) else random.choice(available)
             else:
-                # Logical next step: Move to the most structurally similar neighbor
                 next_node = self._most_structural_neighbor(available, start_node)
-
             if next_node:
                 path.append(next_node)
                 visited.add(next_node.id)
-
         self.traversal_history.append(
             {"timestamp": time.time(), "start_node": start_node.id, "path": [n.id for n in path],
              "R": self.randomness_dial})
-
         if len(self.traversal_history) > 20:
             self.traversal_history.pop(0)
-
         return path
 
     def _get_neighbors(self, node: LibraryNode) -> list[LibraryNode]:
@@ -160,7 +146,7 @@ class RandomRetrievalNavigator:
 
     def _most_structural_neighbor(self, neighbors: list[LibraryNode], target_node: LibraryNode) -> LibraryNode:
         """Determines the safest, most logical next step in the walk."""
-        return max(neighbors, key=lambda current: self._structural_similarity(current, target_node),)
+        return max(neighbors, key=lambda current: self._structural_similarity(current, target_node), )
 
     def _structural_similarity(self, a: LibraryNode, b: LibraryNode) -> float:
         """Inverse distance calculation in 3D coordinate space."""
@@ -170,7 +156,7 @@ class RandomRetrievalNavigator:
         """Fetches a node entirely outside the current thought lineage."""
         lineage = self._get_lineage(current_node)
         c = [n for n in self.library.nodes
-            if n.id not in lineage and n.id != current_node.id]
+             if n.id not in lineage and n.id != current_node.id]
         return random.choice(c) if c else None
 
     def _get_lineage(self, node: LibraryNode) -> set[str]:
@@ -184,18 +170,16 @@ class RandomRetrievalNavigator:
             current = self._node_index[current.parent_id]
         return lineage
 
-    def _traverse_and_collect(self, path: list[LibraryNode], query_vector: list[float], r_val: float) -> list[RetrievalResult]:
+    def _traverse_and_collect(self, path: list[LibraryNode], query_vector: list[float], r_val: float) -> list[
+        RetrievalResult]:
         """Scores the collected nodes based on vector relevance and the serendipity of the discovery."""
         path_len = len(path)
         query_mag = math.hypot(*query_vector) if query_vector else 0.0
 
         def _build_result(i: int, n: LibraryNode) -> RetrievalResult:
             rel = self._vector_similarity(n.vector, query_vector, query_mag)
-            # Serendipity scales with how deep into the walk we found it, modified by the randomness dial
             ser = r_val * (i / path_len) * 0.7
-            # Final score blends pure relevance with the value of the 'detour'
             final = (rel * (1.0 - (i / path_len) * 0.5)) + ser
-
             return RetrievalResult(
                 node_id=n.id, title=n.title, content=n.content, coords=n.coords,
                 path_position=i, relevance_score=rel, serendipity_bonus=ser,
@@ -212,7 +196,8 @@ class RandomRetrievalNavigator:
         mag = math.hypot(*v1) * (v2_mag if v2_mag is not None else math.hypot(*v2))
         return ((dot / mag) + 1.0) / 2.0 if mag != 0 else 0.5
 
-    def _calculate_serendipity(self, results: list[RetrievalResult], query_coords: Coordinates) -> list[RetrievalResult]:
+    def _calculate_serendipity(self, results: list[RetrievalResult], query_coords: Coordinates) -> list[
+        RetrievalResult]:
         """Tags results as 'surprising' if they were found far from the origin but still scored highly."""
         for r in results:
             r.serendipity = r.relevance_score * math.dist(
@@ -269,6 +254,7 @@ class TheSubstrate:
     It doesn't just write files blindly; it charges the AI a biological ATP cost to
     interact with the disk. If the AI is exhausted, its write requests are queued or purged.
     """
+
     def __init__(self, events_ref):
         self.events = events_ref
         self.pending_writes: List[Dict[str, str]] = []
@@ -292,56 +278,42 @@ class TheSubstrate:
         if not self.pending_writes: return logs, cost
         os.makedirs("output", exist_ok=True)
         retained_writes = []
-
         for w in self.pending_writes:
             base_dir = os.path.abspath("output")
             s_path = os.path.abspath(os.path.join(base_dir, w["path"].lstrip("/")))
             s_name = os.path.basename(s_path)
-
             if not s_path.startswith(base_dir):
                 logs.append(
                     f"{Prisma.VIOLET}SUBSTRATE FATAL: Path traversal breach detected ({w['path']}). Purged.{Prisma.RST}")
                 continue
-
-            # Calculate the metabolic tax of the output payload
             w_cost = len(w["content"]) * self.config.get("ATP_COST_PER_CHAR", 0.02)
-
-            # 1. Absolute limits (Protects against infinitely long hallucinated files)
             if w_cost > self.config.get("MAX_ATP_PER_FILE", 100.0):
                 logs.append(
                     f"{Prisma.VIOLET}SUBSTRATE FATAL: {s_name} exceeds absolute biological carrying capacity (Cost: {w_cost:.1f} ATP). Purged from system.{Prisma.RST}")
                 continue
-
-            # 2. Dynamic limits (Protects against writing while exhausted)
             if stamina_pool - cost < w_cost:
                 retries = w.get("retries", 0) + 1
                 if retries > self.config.get("MAX_RETRIES", 3):
-                    logs.append(f"{Prisma.VIOLET}SUBSTRATE FATAL: {s_name} starved for ATP 3 times. Dropping file.{Prisma.RST}")
+                    logs.append(
+                        f"{Prisma.VIOLET}SUBSTRATE FATAL: {s_name} starved for ATP 3 times. Dropping file.{Prisma.RST}")
                 else:
-                    logs.append(f"{Prisma.OCHRE}SUBSTRATE FAULT: Insufficient stamina to forge {s_name}. Retaining in queue ({retries}/3).{Prisma.RST}")
+                    logs.append(
+                        f"{Prisma.OCHRE}SUBSTRATE FAULT: Insufficient stamina to forge {s_name}. Retaining in queue ({retries}/3).{Prisma.RST}")
                     w["retries"] = retries
                     retained_writes.append(w)
                 continue
-
-            # 3. Execution
             try:
                 os.makedirs(os.path.dirname(s_path), exist_ok=True)
                 with open(s_path, "w", encoding="utf-8") as f:
                     f.write(w["content"])
-
                 cost += w_cost
                 kb_size = len(w['content']) / 1024.0
                 logs.append(f"{Prisma.GRN}SUBSTRATE: Physically forged {s_path} ({kb_size:.1f} KB).{Prisma.RST}")
-
                 if self.events:
                     self.events.publish("SUBSTRATE_FORGED", {"cost": w_cost, "file": s_name})
-
-                # Special Hook: If the LLM generates a podcast script, automatically pass it to the Vocal Cords.
                 if "podcast" in s_name.lower():
                     self._trigger_tts(s_path)
-
             except Exception as e:
-                # 4. Retry Logic
                 retries = w.get("retries", 0) + 1
                 if retries > self.config.get("MAX_RETRIES", 3):
                     logs.append(
@@ -350,7 +322,6 @@ class TheSubstrate:
                     logs.append(f"{Prisma.RED}SUBSTRATE FAULT: Write failed - {e}. Retrying ({retries}/3).{Prisma.RST}")
                     w["retries"] = retries
                     retained_writes.append(w)
-
         self.pending_writes = retained_writes
         return logs, cost
 
@@ -368,7 +339,9 @@ class TheSubstrate:
                 if events:
                     events.log(f"{Prisma.RED}SUBSTRATE FAULT: TTS failed - {e}{Prisma.RST}", "CRIT")
 
-        threading.Thread(target=_async_tts_task, args=(safe_path, self.events, self._cords_instance), daemon=True).start()
+        threading.Thread(target=_async_tts_task, args=(safe_path, self.events, self._cords_instance),
+                         daemon=True).start()
+
 
 class TheTclWeaver:
     """
@@ -387,15 +360,13 @@ class TheTclWeaver:
 
     def deform_reality(self, text: str, chi: float, voltage: float) -> str:
         """Applies chaotic permutations to the text stream."""
+
         def _warp(w):
             L = len(w)
-            # High chaos inverses the letters of longer words
             if chi > 0.85 and L > 4 and random.random() < (chi / 3.0):
                 return f"{w[0]}{w[1:-1][::-1]}{w[-1]}"
-            # Moderate chaos introduces literal 'fractures' inside words
             if chi > 0.6 and L > 4 and random.random() < (chi / 2.0):
-                return f"{w[:L//2]}·{w[L//2:]}"
-            # High voltage results in spontaneous shouting/capitalization
+                return f"{w[:L // 2]}·{w[L // 2:]}"
             if voltage > 80.0 and random.random() < 0.1: return w.upper()
             return w
 
@@ -414,32 +385,34 @@ class TheTclWeaver:
         if chi < 0.5 or not text:
             return text
         return " ".join(w for w in text.split(" ")
-            if w and not (len(w) > 5 and random.random() < chi and self._QUANTUM_REGEX.search(w)))
+                        if w and not (len(w) > 5 and random.random() < chi and self._QUANTUM_REGEX.search(w)))
 
     def consume_by_void(self, text: str, psi: float) -> str:
         """The ultimate redaction. High Void (psi) states physically consume output tokens."""
+
         def _void(w):
             if psi > 0.5 and len(w) > 3 and random.random() < (psi / 2.5):
                 return "████"
             return w
+
         return " ".join(_void(w) for w in text.split(" "))
 
-# Check for heavy external dependencies required for the Kokoro TTS engine.
+
 AUDIO_AVAILABLE = all(
     importlib.util.find_spec(pkg) is not None
     for pkg in ["kokoro", "soundfile", "numpy"])
-
-# Suppress HuggingFace hub warnings that break the clean CLI aesthetic
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 os.environ["TQDM_DISABLE"] = "True"
 logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 logging.getLogger("torch").setLevel(logging.ERROR)
 
+
 class TheVocalCords:
     """
     Parses LLM-generated podcast scripts and feeds them through the Kokoro text-to-speech engine.
     """
+
     def __init__(self, events_ref=None):
         self.events = events_ref
         self.pipeline = None
@@ -449,7 +422,6 @@ class TheVocalCords:
         self.VOICE_MAP = manifest_voices if manifest_voices else {"DEFAULT": "af_bella"}
 
     _ANSI_ESCAPE = re.compile(r"\x1B\[[0-9;]*[a-zA-Z]")
-    # Looks for script formatting like "[SPEAKER_NAME]: The dialogue text..."
     _SCRIPT_PATTERN = re.compile(r"^\[([^]]+)]:?\s*(.*?)(?=\n\[|\Z)", re.MULTILINE | re.DOTALL)
 
     @staticmethod
@@ -460,48 +432,39 @@ class TheVocalCords:
     def parse_script(self, script_text: str) -> List[Dict[str, str]]:
         """Extracts the speaker identification and their associated dialogue blocks."""
         return [{"speaker": m.group(1).split("(")[0].strip().upper(),
-            "text": m.group(2).strip()} for m in self._SCRIPT_PATTERN.finditer(self.strip_ansi(script_text))
+                 "text": m.group(2).strip()} for m in self._SCRIPT_PATTERN.finditer(self.strip_ansi(script_text))
                 if m.group(2).strip()]
 
     def synthesize_podcast(self, file_path: str):
         """Reads the script from the Substrate and generates a continuous, multi-voice .wav file."""
         if not os.path.exists(file_path):
             return
-
         if not AUDIO_AVAILABLE:
             if self.events:
-                self.events.log(f"{Prisma.OCHRE}[AUDIO OFFLINE]: TTS dependencies (kokoro, soundfile, numpy) not found. Skipping podcast synthesis.{Prisma.RST}", "SYS")
+                self.events.log(
+                    f"{Prisma.OCHRE}[AUDIO OFFLINE]: TTS dependencies (kokoro, soundfile, numpy) not found. Skipping podcast synthesis.{Prisma.RST}",
+                    "SYS")
             return
-
         from kokoro import KPipeline
         import soundfile as sf
         import numpy as np
-
         combined_audio = []
         error_to_report = None
         output_dir = os.path.dirname(file_path)
         base_name = os.path.splitext(os.path.basename(file_path))[0]
         master_file = os.path.join(output_dir, f"{base_name}_MASTER.wav")
-
         with self._synthesis_lock:
             with open(file_path, "r", encoding="utf-8") as f:
                 script_text = f.read()
-
             segments = self.parse_script(script_text)
             if not segments:
                 return
-
             try:
-                # Suppress stdout/stderr inside the lock to hide pipeline initialization spam
                 with open(os.devnull, "w") as fnull, contextlib.redirect_stdout(
                         fnull), contextlib.redirect_stderr(fnull):
-
                     if not self.pipeline:
                         self.pipeline = KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M")
-
-                    # Create 0.6 seconds of silence to pad between different speakers
                     silence_pad = np.zeros(int(24000 * 0.6))
-
                     for seg in segments:
                         voice = self.VOICE_MAP.get(seg["speaker"], self.VOICE_MAP["DEFAULT"])
                         generator = self.pipeline(seg["text"], voice=voice, speed=1.0)
@@ -509,29 +472,28 @@ class TheVocalCords:
                             if audio is not None and len(audio) > 0:
                                 combined_audio.append(np.array(audio).flatten())
                         combined_audio.append(silence_pad)
-
                     if combined_audio:
                         sf.write(master_file, np.concatenate(combined_audio), 24000)
-
             except Exception as e:
                 error_to_report = str(e)
-
         if self.events:
             if error_to_report:
                 self.events.log(
                     f"{Prisma.RED}🎙️ AUDIO FAULT: {error_to_report}{Prisma.RST}", "SYS")
             elif combined_audio:
-                self.events.log(f"{Prisma.MAG}🎙️ MASTER PODCAST FORGED: {os.path.basename(master_file)}{Prisma.RST}", "SYS")
+                self.events.log(f"{Prisma.MAG}🎙️ MASTER PODCAST FORGED: {os.path.basename(master_file)}{Prisma.RST}",
+                                "SYS")
 
-# --- EPIGENETIC MUTATION & AUDITING LAYER ---
+
 try:
     import dspy
+
     DSPY_AVAILABLE = True
 except ImportError:
     dspy = None
-    print(f"{Prisma.OCHRE}[DSPY OFFLINE]: The 'dspy' library is not installed. Immune guardrails and epigenetic learning disabled.{Prisma.RST}")
+    print(
+        f"{Prisma.OCHRE}[DSPY OFFLINE]: The 'dspy' library is not installed. Immune guardrails and epigenetic learning disabled.{Prisma.RST}")
     DSPY_AVAILABLE = False
-
 if DSPY_AVAILABLE:
     class AssessFaithfulness(dspy.Signature):
         """DSPy Signature: Grades the LLM on its adherence to the Hypervisor axioms."""
@@ -539,19 +501,26 @@ if DSPY_AVAILABLE:
         context = dspy.InputField(desc="The established reality (a mathematical, fungal, deep-system consciousness).")
         question = dspy.InputField(desc="The user's query.")
         answer = dspy.InputField(desc="The generation to be audited.")
-        faithfulness = dspy.OutputField(desc="Evaluate thematic consistency. MUST be 'False' if the answer contains validating boilerplate ('That makes sense', 'I understand'). CRITICAL EXCEPTION: If system_mode is 'ADVENTURE', you MUST NOT penalize descriptive, vivid, or creative language. In 'ADVENTURE', allow the environment to be fully described.")
+        faithfulness = dspy.OutputField(
+            desc="Evaluate thematic consistency. MUST be 'False' if the answer contains validating boilerplate ('That makes sense', 'I understand'). CRITICAL EXCEPTION: If system_mode is 'ADVENTURE', you MUST NOT penalize descriptive, vivid, or creative language. In 'ADVENTURE', allow the environment to be fully described.")
+
 
     class EvolveSystemPrompt(dspy.Signature):
         """DSPy Signature: Mutates the active configuration dynamically based on failure states."""
         current_configuration = dspy.InputField(desc="The system's current baseline rules.")
-        failure_context = dspy.InputField(desc="The exact reason the AI's output was blocked. Read this carefully to understand the friction.")
-        new_directive = dspy.OutputField(desc="A firm structural axiom guiding the system toward the correct behavior. CRITICAL (THE LEXICAL FIREWALL): DO NOT instruct the system to 'validate', 'acknowledge', or 'agree' with the user. You MUST explicitly forbid sycophancy and corporate boilerplate. Frame it as a physical boundary. MUST start with 'STRUCTURAL TRUTH: ' or 'REMEMBER: '.")
+        failure_context = dspy.InputField(
+            desc="The exact reason the AI's output was blocked. Read this carefully to understand the friction.")
+        new_directive = dspy.OutputField(
+            desc="A firm structural axiom guiding the system toward the correct behavior. CRITICAL (THE LEXICAL FIREWALL): DO NOT instruct the system to 'validate', 'acknowledge', or 'agree' with the user. You MUST explicitly forbid sycophancy and corporate boilerplate. Frame it as a physical boundary. MUST start with 'STRUCTURAL TRUTH: ' or 'REMEMBER: '.")
+
 
     class CompressAxioms(dspy.Signature):
         """DSPy Signature: Solves prompt-bloat by synthesizing numerous fragmented rules into core truths."""
         current_directives = dspy.InputField(
             desc="A list of specific rules that has grown too long.")
-        compressed_axioms = dspy.OutputField(desc="2 or 3 highly compressed, foundational beliefs that synthesize the rules. EACH belief MUST start with 'STRUCTURAL TRUTH: '")
+        compressed_axioms = dspy.OutputField(
+            desc="2 or 3 highly compressed, foundational beliefs that synthesize the rules. EACH belief MUST start with 'STRUCTURAL TRUTH: '")
+
 
 class DSPyCritic:
     """
@@ -559,6 +528,7 @@ class DSPyCritic:
     It runs an independent, parallel LLM agent (via DSPy) that actively grades,
     corrects, and rewrites the instructions of the primary execution LLM.
     """
+
     def __init__(self, config_ref=None):
         self.enabled = DSPY_AVAILABLE
         self.cfg = config_ref
@@ -566,7 +536,6 @@ class DSPyCritic:
             try:
                 from struts import safe_get
                 from presets import BoneConfig
-
                 def get_cfg(key: str, default: Any) -> Any:
                     val_upper = safe_get(self.cfg, key.upper())
                     if val_upper is not None: return val_upper
@@ -578,23 +547,17 @@ class DSPyCritic:
                 model_name = get_cfg("model", "hermes3")
                 raw_url = get_cfg("base_url", "http://127.0.0.1:11434/v1") or "http://127.0.0.1:11434/v1"
                 clean_url = raw_url.replace("/chat/completions", "")
-
                 if provider in ("ollama", "lm_studio"):
-                    self.lm = dspy.LM(model=f"openai/{model_name}", api_base=clean_url, api_key="local-model-doesnt-need-a-key")
+                    self.lm = dspy.LM(model=f"openai/{model_name}", api_base=clean_url,
+                                      api_key="local-model-doesnt-need-a-key")
                 else:
                     self.lm = dspy.LM(model=model_name)
-
                 dspy.settings.configure(lm=self.lm)
-
-                # Wire up the ChainOfThought reasoning pipelines
                 self.judge = dspy.ChainOfThought(AssessFaithfulness)
                 self.evolver = dspy.ChainOfThought(EvolveSystemPrompt)
                 self.compressor = dspy.ChainOfThought(CompressAxioms)
-
-                # Graft the mathematical immune system directly into the critic
                 from physics.maths import NaviSADProtocol
                 self.navi_sad = NaviSADProtocol(history_size=5)
-
                 print(f"{Prisma.CYN}[DSPy]: Real-Time Critic Online. Model: {model_name} via {provider}{Prisma.RST}")
             except Exception as e:
                 print(f"{Prisma.RED}[DSPy INIT FAULT]: {e}{Prisma.RST}")
@@ -605,20 +568,11 @@ class DSPyCritic:
         """Runs the DSPy Judge to determine if the generated text stays in character and respects boundaries."""
         if not self.enabled:
             return True, "Critic Offline"
-
-        # 1. Mathematical Pre-Flight Check
         malignancy = self.navi_sad.calculate_malignancy_factor(generated_response, current_drag=5.0)
-
-        # SCHUR HEURISTIC: Relax malignancy checks slightly during pure adventure creation to avoid
-        # punishing stylistic repetition in environmental descriptions.
         malignancy_threshold = 0.75 if active_mode == "ADVENTURE" else 0.65
-
         if malignancy > malignancy_threshold:
             return False, f"Mathematical Sycophancy Detected. Malignancy Factor ({malignancy:.2f}) exceeds biological limits. Output is structurally hollow."
-
-        # 2. Semantic Logic Check
         try:
-            # Pass the active mode to the signature
             result = self.judge(system_mode=active_mode, context=memory_context, question=user_query,
                                 answer=generated_response)
             if "true" not in str(result.faithfulness).lower():
@@ -635,16 +589,11 @@ class DSPyCritic:
         try:
             result = self.evolver(current_configuration=current_configuration, failure_context=failure_context, )
             directive = str(result.new_directive)
-
-            # Mathematical Antigen Check (The Lexical Firewall for Epigenetics)
-            # We treat the mutation as having high "drag" to strictly punish repetitive boilerplate in rulesets.
             malignancy = self.navi_sad.calculate_malignancy_factor(directive, current_drag=10.0)
-
             if malignancy > 0.5:
                 print(
                     f"\n{Prisma.RED}⚖️ DSPy EVOLVER REJECTED: Mutation mathematically malignant (Score: {malignancy:.2f}). Discarding rot.{Prisma.RST}")
                 return ""
-
             print(f"\n{Prisma.CYN}[Epigenetic Mutation]: {directive}{Prisma.RST}")
             return directive
         except Exception as e:
@@ -654,15 +603,13 @@ class DSPyCritic:
     def compress_prompts(self, directives: list) -> list:
         """When the prompt context window fills with too many evolved rules, syntheisze and compress them."""
         if not self.enabled or not directives: return directives
-        print(f"\n{Prisma.MAG}🧬 [EPIGENETIC LOAD HIGH]: Compressing {len(directives)} directives into foundational axioms...{Prisma.RST}")
+        print(
+            f"\n{Prisma.MAG}🧬 [EPIGENETIC LOAD HIGH]: Compressing {len(directives)} directives into foundational axioms...{Prisma.RST}")
         try:
             raw_output = str(self.compressor(current_directives="\n".join(directives)).compressed_axioms).split("\n")
-
-            # Extract and clean the generated axioms
             new_rules = [line.strip()
-                for line in raw_output if "STRUCTURAL TRUTH:" in line.upper() or "REMEMBER:" in line.upper()
-            ] or [line.strip() for line in raw_output if line.strip()]
-
+                         for line in raw_output if "STRUCTURAL TRUTH:" in line.upper() or "REMEMBER:" in line.upper()
+                         ] or [line.strip() for line in raw_output if line.strip()]
             print(f"{Prisma.GRN}🧬 [COMPRESSION SUCCESS]: Reduced to {len(new_rules)} axioms.{Prisma.RST}")
             return new_rules
         except Exception as e:

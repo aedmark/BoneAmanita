@@ -16,7 +16,7 @@ class InventorySystemTests(BoneTestCase):
         and does not mistake sub-strings ('forget') for acquisition verbs ('get').
         """
         engine = BoneAmanita({})
-        gordon = engine.gordon
+        gordon = getattr(engine.village, "gordon", None)
         gordon.acquisition_verbs = ["get"]
         sys_text = "You see a [[LOOT: GOLD_COIN]]."
         user_input = "I think I will forget about the gold coin."
@@ -33,7 +33,7 @@ class InventorySystemTests(BoneTestCase):
         if the required topological item is missing from the inventory.
         """
         engine = BoneAmanita({})
-        gordon = engine.gordon
+        gordon = getattr(engine.village, "gordon", None)
         gordon.action_coupling = {"unlock": ["key", "passcard"]}
         gordon.inventory = []
         refusal = gordon.enforce_object_action_coupling("I want to unlock the door.", "HALLWAY")
@@ -48,7 +48,7 @@ class InventorySystemTests(BoneTestCase):
         states (like critical voltage) and consume themselves to save the host.
         """
         engine = BoneAmanita({})
-        gordon = engine.gordon
+        gordon = getattr(engine.village, "gordon", None)
         gordon.register_dynamic_item("COOLANT_ROD", {
             "description": "An emergency heat sink.",
             "reflex_trigger": "VOLTAGE_CRITICAL"
@@ -66,7 +66,7 @@ class InventorySystemTests(BoneTestCase):
         ValueErrors gracefully when attempting to remove phantom items.
         """
         engine = BoneAmanita({})
-        gordon = engine.gordon
+        gordon = getattr(engine.village, "gordon", None)
         gordon.inventory = ["REAL_ITEM"]
         try:
             result = gordon.safe_remove_item("GHOST_ITEM")

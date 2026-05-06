@@ -1,20 +1,17 @@
 """machine/panic.py
-
 The Panic Room (The White Room).
 This module acts as the absolute bottom of the architectural safety net.
 If the system experiences a terminal hallucination, infinite sycophantic loop,
 or lethal Apoptotic crash, it drops all corrupted state and reboots into these
 hardcoded, mathematically sterile parameters.
 """
-
 from typing import Dict
 from struts import ux, safe_get
 from constants import Prisma
 from physics.models import PhysicsPacket
 
+
 class PanicRoom:
-    # A perfectly zeroed 9-dimensional coordinate space.
-    # Used to instantly strip all momentum and chaos from the simulation.
     _SAFE_VECTOR = {k: 0.0 for k in ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "LAMBDA", "CHI"]}
 
     @staticmethod
@@ -34,21 +31,15 @@ class PanicRoom:
         safe_packet.entropy = 0.0
         safe_packet.valence = 0.0
         safe_packet.kappa = 0.0
-
-        # We must .copy() here to prevent a reference leak from mutating the class baseline.
         safe_packet.vector = PanicRoom._SAFE_VECTOR.copy()
-
         manifest_words = ux("machine_strings", "panic_clean_words")
         safe_packet.clean_words = (
             manifest_words if isinstance(manifest_words, list) else ["white", "room", "safe", "mode"]
         )
-
-        # Override the physical reality with sterile, neutral descriptors.
         safe_packet.raw_text = ux("machine_strings", "panic_physics_text") or "SYSTEM HALTED. VOID STATE ENGAGED."
         safe_packet.flow_state = ux("machine_strings", "panic_flow_state") or "SAFE_MODE"
         safe_packet.zone = ux("machine_strings", "panic_zone") or "PANIC_ROOM"
         safe_packet.manifold = ux("machine_strings", "panic_manifold") or "WHITE_ROOM"
-
         return safe_packet
 
     @staticmethod
@@ -58,16 +49,12 @@ class PanicRoom:
         Zeros out all high-energy and toxic chemicals (Adrenaline, Cortisol),
         but intentionally retains a trace of Serotonin to prevent total depressive collapse.
         """
-        log_msg = ux("machine_strings", "panic_bio_log") or "APOPTOTIC RESET: Biological parameters clamped to survival baseline."
+        log_msg = ux("machine_strings",
+                     "panic_bio_log") or "APOPTOTIC RESET: Biological parameters clamped to survival baseline."
         resp_fallback = ux("machine_strings", "panic_resp_fallback") or "NECROSIS"
         enz_fallback = ux("machine_strings", "panic_enz_fallback") or "NONE"
-
         old_chem = safe_get(previous_state or {}, "chem", {})
-
-        # Systemic safeguard: Retain the user's previous stability, or a baseline of 0.2.
-        # This ensures the system doesn't reboot into pure existential dread.
         retained_serotonin = max(0.2, float(safe_get(old_chem, "SER", 0.0)))
-
         chem_state: Dict[str, float] = {
             "DOP": 0.0,
             "COR": 0.0,
@@ -76,8 +63,6 @@ class PanicRoom:
             "ADR": 0.0,
             "MEL": 0.0
         }
-
-        # Reset ATP to a minimal life-support level (10.0).
         return {
             "is_alive": True,
             "atp": 10.0,
@@ -97,7 +82,8 @@ class PanicRoom:
         return {
             "lens": "GORDON",
             "role": "Panic Room Overseer",
-            "thought": ux("machine_strings", "panic_mind_thought") or "I am maintaining the boundaries. The core is safe."
+            "thought": ux("machine_strings",
+                          "panic_mind_thought") or "I am maintaining the boundaries. The core is safe."
         }
 
     @staticmethod

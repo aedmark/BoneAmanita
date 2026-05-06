@@ -4,7 +4,6 @@ Parliament of the mind. It is responsible for gathering the active physical,
 biological, and semantic state of the system and allowing the various sub-routines
 (Archetypes) to audit, vote on, and mutate the narrative flow.
 """
-
 import concurrent.futures
 import itertools
 import random
@@ -309,7 +308,8 @@ class CouncilChamber:
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             configs = [{"temperature": 0.4, "max_tokens": 1024}, {"temperature": 0.8, "max_tokens": 1024},
                        {"temperature": 0.7, "max_tokens": 1024}]
-            thesis, antithesis, lateral = [f.result() for f in
+            # Prevent indefinite thread locking. If the LLM hangs, the timeout breaks the block.
+            thesis, antithesis, lateral = [f.result(timeout=15.0) for f in
                                            [executor.submit(llm.generate, p, c) for p, c in zip([p1, p2, p3], configs)]]
         p4 = (
             "SYSTEM_INSTRUCTION: You are The Stage Manager. You are the exhausted orchestrator holding the system together.\n"

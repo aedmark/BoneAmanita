@@ -31,20 +31,9 @@
   },
   "renderer": {
     "noise_patterns": [
-      "stabilizer:",
-      "pid_",
-      "flux",
-      "phase execution",
-      "vector collapse",
-      "manifold",
-      "orbit:",
-      "update_coordinates",
-      "active correction",
-      "drag reduced",
-      "voltage spiked",
-      "live state mirror",
-      "auto_trace",
-      "wayfinder"
+      "stabilizer:", "pid_", "flux", "phase execution", "vector collapse", "manifold",
+      "orbit:", "update_coordinates", "active correction", "drag reduced", "voltage spiked",
+      "live state mirror", "auto_trace", "wayfinder"
     ],
     "ignore_msg": "The system is listening.",
     "mode_labels_conversation": {
@@ -194,7 +183,7 @@
     "recover": "Zen mode. Stamina regenerating."
   },
   "help_menu": {
-    "header": "/// BONEAMANITA 19.8.2 TERMINAL ///",
+    "header": "/// BONEAMANITA 19.8.8 TERMINAL ///",
     "phase_prefix": "Operating Phase: ",
     "default_phase": "EXTANT",
     "footer": ">> Use wisely. Entropy is watching.",

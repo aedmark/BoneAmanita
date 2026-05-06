@@ -215,9 +215,11 @@ class PhysicsPacket:
         Allows setting nested variables directly from the packet level.
         If an ALIAS is used (e.g., 'chi'), it may update multiple target variables simultaneously.
         """
-        # CLAMP: Ensure specific biological constraints cannot drop below zero.
-        if key in ("voltage", "narrative_drag", "psi", "chi", "ros") and isinstance(value, (int, float)):
-            value = max(0.0, float(value))
+        if key in ("voltage", "narrative_drag", "psi", "chi", "ros"):
+            try:
+                value = max(0.0, float(value))
+            except (TypeError, ValueError):
+                value = 0.0
 
         if key in self._BASE_FIELDS:
             super().__setattr__(key, value)

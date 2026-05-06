@@ -17,6 +17,7 @@ class AkashicContinuityTests(BoneTestCase):
         self.mock_lore.data = {"SYSTEM_PROMPTS": {"GLOBAL_BASELINE": {}}}
         self.akashic = TheAkashicRecord(lore_manifest=self.mock_lore)
         self.akashic.save_dir = self.save_dir
+        self.akashic.data_dir = self.save_dir
         self.akashic.state_path = os.path.join(self.save_dir, "akashic_state.json")
 
     def tearDown(self):
@@ -28,8 +29,8 @@ class AkashicContinuityTests(BoneTestCase):
         Ensures both trauma (scars) AND success (boons)
         are loaded into the system prompts. Prevents the 'Trauma Bias' regression.
         """
-        scars_path = os.path.join(self.save_dir, "akashic_scars.json")
-        boons_path = os.path.join(self.save_dir, "akashic_boons.json")
+        scars_path = os.path.join(self.akashic.data_dir, "akashic_scars.json")
+        boons_path = os.path.join(self.akashic.data_dir, "akashic_boons.json")
         with open(scars_path, "w") as f:
             json.dump(["SCAR TISSUE [FIRE]: Do not touch the stove."], f)
         with open(boons_path, "w") as f:

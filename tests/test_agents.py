@@ -26,7 +26,7 @@ class AgentTests(BoneTestCase):
             self.assertTrue(any("SCHUR" in log for log in logs), "Schur's log string was missing.")
 
     def test_bureau_style_crimes(self):
-            bureau = self.engine.village["bureau"]
+            bureau = getattr(self.engine.village, "bureau", None)
             phys = {
                 "voltage": 10.0,
                 "raw_text": "we must leverage our synergy to align the paradigm",
@@ -39,7 +39,7 @@ class AgentTests(BoneTestCase):
             self.assertIn("AUDITED", result["status"], "Bureau status was not set to AUDITED.")
 
     def test_object_action_coupling(self):
-            gordon = self.engine.gordon
+            gordon = getattr(self.engine.village, "gordon", None)
             if not gordon:
                 self.skipTest("Gordon is not instantiated in this profile.")
             gordon.inventory = ["APPLE"]

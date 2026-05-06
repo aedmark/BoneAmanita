@@ -1,21 +1,19 @@
 """spores/biome.py
-
 This module defines the biological/ecological subsystems of the language engine.
 It treats language processing not as a static algorithm, but as an active ecosystem
 where words have physical properties (mass, toxicity) and semantic interactions
 trigger organic responses (immunity, infection, photosynthesis).
-
 Classes:
     - ImmuneMycelium: Acts as a phonetic filter, calculating the "weight" and "toxicity" of words.
     - BioParasite: Injects intrusive or metaphorical connections into the semantic graph during high exhaustion.
     - BioLichen: Converts "light" concepts into metabolic energy (sugar/ATP) when the system is resting.
 """
-
 import random
 from typing import Tuple
 from struts import ux, ux_format, safe_get
 from presets import BoneConfig
 from constants import Prisma
+
 
 class ImmuneMycelium:
     """
@@ -23,16 +21,12 @@ class ImmuneMycelium:
     It scans incoming text for structural integrity and phonetic toxicity,
     preventing the system from bogging down in overly dense or "heavy" language.
     """
-
-    # Categorization of consonants to calculate phonetic friction and mass.
     PHONETICS = {
-        "PLOSIVE": set("bdgkpt"),  # Hard, abrupt sounds. High structural mass.
-        "FRICATIVE": set("fthszsh"), # Breath-based sounds.
-        "LIQUID": set("lr"),       # Flowing sounds.
-        "NASAL": set("mn"),        # Resonant sounds.
+        "PLOSIVE": set("bdgkpt"),
+        "FRICATIVE": set("fthszsh"),
+        "LIQUID": set("lr"),
+        "NASAL": set("mn"),
     }
-
-    # Semantic roots that indicate heavy, physical, or highly kinetic concepts.
     ROOTS = {
         "HEAVY": ("lith", "ferr", "petr", "dens", "grav", "struct", "base", "fund", "mound",),
         "KINETIC": ("mot", "mov", "ject", "tract", "pel", "crat", "dynam", "flux"),
@@ -42,9 +36,7 @@ class ImmuneMycelium:
         self.active_antibodies = set()
         self.name = "MYCELIUM"
         self.color = Prisma.CYN
-        # The archetypes this module naturally resonates with.
         self.archetypes = {"constructive", "kinetic", "abstract", "code", "system"}
-        # Flatten the ROOTS dictionary into a single searchable tuple for faster processing.
         self._flat_roots = tuple(r for roots in self.ROOTS.values() for r in roots)
 
     def opine(self, clean_words: list, _voltage: float) -> Tuple[float, str]:
@@ -52,16 +44,11 @@ class ImmuneMycelium:
         Calculates how aligned the current text stream is with the Mycelium's core archetypes.
         Returns a score (0 to 10) and an optional UX commentary string.
         """
-        # Count how many words in the text match the Mycelium's preferred archetypes
         hits = sum(1 for w in clean_words if w in self.archetypes)
-
-        # Normalize the score on a 10-point scale
         score = (hits / max(1, len(clean_words))) * 10.0
-
         comment = ux("spore_strings", "immune_op_scan")
         if score > 2.0:
             comment = ux("spore_strings", "immune_op_good")
-
         return score, comment
 
     def assay(self, word, _context, _rep_val, _phys, _pulse):
@@ -71,33 +58,20 @@ class ImmuneMycelium:
         """
         w = word.lower()
         clean_len = len(w)
-
-        # Ignore extremely short words (articles, prepositions, etc.)
         if clean_len < 3:
             return None, ""
-
-        # Fast exit if the word matches known foundational roots.
-        # Structural roots are allowed to be dense without triggering a toxin warning.
         for r in self._flat_roots:
             if r in w and (w.startswith(r) or w.endswith(r) or (len(r) / clean_len > 0.5)):
                 return None, ""
-
-        # Calculate phonetic mass based on character types
         plosive_mass = sum(1 for c in w if c in self.PHONETICS["PLOSIVE"]) * 1.2
         nasal_mass = sum(1 for c in w if c in self.PHONETICS["NASAL"]) * 0.8
-
-        # Shorter words with high mass are denser, therefore more likely to trigger friction
         length_multiplier = 1.2 if clean_len <= 4 else 1.0
-
-        # Calculate the final density ratio
         density = ((plosive_mass + nasal_mass) / clean_len) * length_multiplier
-
-        # If the word is phonetically overwhelming, flag it as a toxin
         if density > 1.0:
             msg = ux("spore_strings", "immune_tox_phon")
             return "TOXIN_HEAVY", (msg.format(word=w) if msg else "")
-
         return None, ""
+
 
 class BioParasite:
     """
@@ -105,14 +79,13 @@ class BioParasite:
     When the system is tired (low stamina) and abstracted (high psi), the parasite
     forces unnatural connections between grounded ("heavy") and conceptual ("abstract") nodes.
     """
+
     def __init__(self, memory_ref, lexicon_ref, config_ref=None):
         self.mem = memory_ref
         self.lex = lexicon_ref
         self.cfg = config_ref or BoneConfig
         self.spores_deployed = 0
         cfg = getattr(self.cfg, "SPORES", None)
-
-        # Absolute limit on how many parasitic connections can exist at once
         self.MAX_SPORES = getattr(cfg, "PARASITE_MAX_SPORES", 8)
         self.name = "PARASITE"
         self.color = Prisma.RED
@@ -125,7 +98,6 @@ class BioParasite:
         """
         score = (sum(1 for w in clean_words if w in self.archetypes) /
                  max(1, len(clean_words))) * 10.0
-
         if score > 3.0:
             comment = ux("spore_strings", "para_op_great")
         elif score > 1.0:
@@ -136,7 +108,6 @@ class BioParasite:
             comment = ux("spore_strings", "para_op_cold")
         else:
             comment = ""
-
         return score, comment
 
     def infect(self, physics_packet, stamina):
@@ -146,76 +117,51 @@ class BioParasite:
         """
         psi = safe_get(physics_packet, "psi", 0.0)
         cfg = getattr(self.cfg, "SPORES", object())
-
-        # Infection thresholds
         p_stam = getattr(cfg, "PARASITE_STAMINA_MAX", 40.0)
         p_psi = getattr(cfg, "PARASITE_PSI_MIN", 0.6)
         p_decay = getattr(cfg, "PARASITE_DECAY_CHANCE", 0.2)
-
-        # Abort if the host is too healthy (high stamina) or too grounded (low psi)
         if stamina > p_stam and psi < p_psi:
             return False, None
-
-        # Manage spore population; occasionally decay old spores to make room for new ones
         if self.spores_deployed >= self.MAX_SPORES:
             if random.random() < p_decay:
                 self.spores_deployed = max(0, self.spores_deployed - 1)
             return False, None
-
         if not self.lex or not hasattr(self.lex, "get"):
             return False, None
-
         graph = self.mem.graph
-
-        # Retrieve candidate concepts from the lexicon
         heavy_set = set(self.lex.get("heavy") or [])
         abstract_set = set(self.lex.get("abstract") or [])
-
         if not heavy_set or not abstract_set:
             return False, None
-
-        # Filter candidates to only those that actually exist in the current memory graph
         graph_keys = graph.keys()
         heavy_candidates = list(heavy_set & graph_keys)
         abstract_candidates = list(abstract_set & graph_keys)
-
         if not heavy_candidates or not abstract_candidates:
             return False, None
-
-        # Meadows & Fuller: Find valid pairs that aren't already connected to prevent RNG starvation
         valid_pairs = [
             (h, p) for h in heavy_candidates for p in abstract_candidates
             if p not in graph[h].get("edges", {})
         ]
-
         if not valid_pairs:
             return False, None
-
         host, parasite = random.choice(valid_pairs)
-
         m_psi = getattr(cfg, "PARASITE_METAPHOR_PSI", 0.7)
         p_wt = getattr(cfg, "PARASITE_WEIGHT", 8.88)
-
-        # Determine if this is a profound metaphor or just a toxic intrusion
         is_metaphor = psi > m_psi
         weight = p_wt
-
-        # Inject the connection bidirectionally with structural safety
         host_edges = graph[host].setdefault("edges", {})
         host_edges[parasite] = weight
-
         para_edges = graph[parasite].setdefault("edges", {})
         para_edges[host] = weight
-
         self.spores_deployed += 1
-
-        # Return the appropriate UX messaging based on the nature of the infection
         if is_metaphor:
-            msg = ux_format("spore_strings", "para_syn_spark", "A parasitic metaphor bloomed.", host=host.upper(), para=parasite.upper())
+            msg = ux_format("spore_strings", "para_syn_spark", "A parasitic metaphor bloomed.", host=host.upper(),
+                            para=parasite.upper())
             return True, f"{Prisma.CYN}{msg}{Prisma.RST}"
-
-        msg = ux_format("spore_strings", "para_intrusive", "An intrusive thought took root.", host=host.upper(), para=parasite.upper())
+        msg = ux_format("spore_strings", "para_intrusive", "An intrusive thought took root.", host=host.upper(),
+                        para=parasite.upper())
         return True, f"{Prisma.VIOLET}{msg}{Prisma.RST}"
+
 
 class BioLichen:
     """
@@ -223,6 +169,7 @@ class BioLichen:
     It operates during low-friction states to "photosynthesize" positive,
     generative words into usable systemic stamina (sugar).
     """
+
     def __init__(self, lexicon_ref=None):
         self.lex = lexicon_ref
         self.name = "LICHEN"
@@ -235,7 +182,6 @@ class BioLichen:
         """
         score = (sum(1 for w in clean_words if w in self.archetypes) /
                  max(1, len(clean_words))) * 10.0
-
         if score > 3.0:
             comment = ux("spore_strings", "lichen_op_great")
         elif score > 1.0:
@@ -246,7 +192,6 @@ class BioLichen:
             comment = ux("spore_strings", "lichen_op_cold")
         else:
             comment = ""
-
         return score, comment
 
     def photosynthesize(self, phys, clean_words, tick_count):
@@ -258,36 +203,21 @@ class BioLichen:
         msgs = []
         counts = safe_get(phys, "counts", {})
         drag = float(safe_get(phys, "narrative_drag", 0.0))
-
-        # Tally how many 'light' words were detected in the physics pass
         light = counts.get("photo", 0)
         sugar = 0.0
         light_words = [w for w in clean_words if w in self.archetypes]
-
-        # Photosynthesis requires light AND low systemic drag/friction
         if light > 0 and drag < 3.0:
-            # Yield is multiplied by 2 per unit of light
             sugar = float(light * 2)
             source_str = f" via '{random.choice(light_words)}'" if light_words else ""
-
             if msg := ux_format("spore_strings", "lichen_photo", source=source_str, sugar=sugar):
                 msgs.append(f"{Prisma.GRN}{msg}{Prisma.RST}")
-
-        # If successful synthesis occurred, attempt to 'colonize' heavy concepts
         if sugar > 0 and self.lex:
             heavy_lexicon = self.lex.get("heavy") or set()
             heavy_words = [w for w in clean_words if w in heavy_lexicon]
-
             if heavy_words:
-                # Randomly pick a heavy word from the current text
                 chosen_heavy_word = random.choice(heavy_words)
-
-                # Teach the lexicon to associate this previously heavy word with light/photo
-                # This simulates the lichen growing over the rock.
                 self.lex.teach(chosen_heavy_word, "photo", tick_count)
-
                 formatted_msg = ux_format("spore_strings", "lichen_sub", word=chosen_heavy_word)
                 if formatted_msg:
                     msgs.append(f"{Prisma.MAG}{formatted_msg}{Prisma.RST}")
-
         return sugar, " ".join(msgs) if msgs else None

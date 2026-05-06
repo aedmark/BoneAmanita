@@ -14,8 +14,7 @@ import traceback
 import uuid
 from typing import Dict, Any, List, Optional
 from constants import Prisma
-from core import CycleContext
-from core import LoreManifest
+from core import CycleContext, LoreManifest, safe_dict
 from drivers import CongruenceValidator
 from machine import PanicRoom
 from mechanics.reporter import CycleReporter
@@ -28,13 +27,13 @@ from presets import BoneConfig
 from struts import ux
 
 _CRASH_COMPONENT_MAP = {"OBSERVE": "PHYSICS", "METABOLISM": "BIO", "COGNITION": "MIND"}
-""" 
-NAVI FRACTAL NATIVE PRIMITIVES (Authored by Nelson Spence, Project Navi, Apache 2.0) 
-Fuller Note: These functions represent the lowest-level mathematical substrate of the engine. 
-They operate outside the standard object-oriented paradigm to provide raw, optimized graph 
-calculations for the memory topology.
-"""
 
+# =============================================================================
+# NAVI FRACTAL NATIVE PRIMITIVES (Authored by Nelson Spence, Project Navi, Apache 2.0)
+# Fuller Note: These functions represent the lowest-level mathematical substrate of the engine.
+# They operate outside the standard object-oriented paradigm to provide raw, optimized graph
+# calculations for the memory topology.
+# =============================================================================
 
 def _native_wls(x: list[float], y: list[float], weights: list[float]) -> float:
     """
@@ -97,14 +96,6 @@ def _native_freeze_graph(adj_dict: dict) -> tuple:
         except RuntimeError:
             continue
     return tuple((k, tuple(sorted(neighbors, key=str))) for k, neighbors in sorted(safe_items, key=lambda x: str(x[0])))
-
-
-def _safe_dict(obj):
-    """Schur's Pragmatism: Don't crash the UI just because an object forgot to implement to_dict()."""
-    if hasattr(obj, "to_dict"): return obj.to_dict()
-    if hasattr(obj, "__dict__"): return vars(obj)
-    return obj if isinstance(obj, dict) else {}
-
 
 class PhaseExecutor:
     """
@@ -270,8 +261,8 @@ class GeodesicOrchestrator:
         try:
             safe_adj = {k: set(v) for k, v in list(actual_adj.items())}
             self._async_pool.submit(_bg_topology_check, safe_adj)
-        except RuntimeError:
-            pass
+        except RuntimeError as e:
+            self.eng.events.log(f"Async pool rejected topology check. Engine may be shutting down: {e}", "DEBUG")
 
     def _execute_core_cycle(self, user_message: str, is_system: bool = False) -> CycleContext:
         """
@@ -292,7 +283,7 @@ class GeodesicOrchestrator:
                 ctx.user_state = getattr(lattice, "u", None)
                 ctx.shared_dyn = getattr(lattice, "shared", None)
             target_cfg = getattr(self.eng, "config", BoneConfig)
-            ctx.limits = _safe_dict(getattr(target_cfg, "CYCLE", {}))
+            ctx.limits = safe_dict(getattr(target_cfg, "CYCLE", {}))
             obs = self.eng.observer
             last_packet = getattr(obs, "last_physics_packet", None)
             if last_packet:
@@ -308,15 +299,13 @@ class GeodesicOrchestrator:
             ctx.council_mandates = []
             ctx.timestamp = time.time()
 
-            # [LEVEL 4 PEDAGOGY TRIGGER]
+            # [LEVEL 4 PROTOCOL TRIGGER]
             if not getattr(ctx.physics, "vector", None):
                 ctx.physics.vector = {}
 
-            if "[!s]" in user_message or "pedagogy" in user_message.lower():
-                ctx.physics.vector["pedagogical_mode"] = True
-            else:
-                ctx.physics.vector["pedagogical_mode"] = False
-
+            # Correctly map the Sincerity Protocols to their structural vectors
+            ctx.physics.vector["pedagogical_mode"] = ("pedagogy" in user_message.lower())
+            ctx.physics.vector["lateral_shuffle"] = ("[!" + "s]" in user_message)  # The Shuffle
             ctx = self.simulator.run_simulation(ctx)
             post_logs = [e["text"] for e in self.eng.events.flush()]
             ctx.logs.extend(post_logs)
@@ -389,7 +378,7 @@ class GeodesicOrchestrator:
             return
         atp_level = float(self.eng.bio.mito.state.atp_pool)
         delta_level = float(getattr(lattice.shared, "delta", 0.0)) if lattice else 0.0
-        phys_dict = _safe_dict(ctx.physics)
+        phys_dict = safe_dict(ctx.physics)
         energy_node = phys_dict.get("energy", phys_dict)
         debt = float(energy_node.get("coherence_debt", 0.0))
         is_standard_rem = (atp_level >= 80.0 and delta_level >= 0.6)
@@ -398,8 +387,9 @@ class GeodesicOrchestrator:
             log_msg = "Automatic REM Bridge engaged: High Coherence Debt detected." if is_debt_recovery else "Automatic REM Bridge engaged: High ATP, High Silence."
             try:
                 self._async_pool.submit(self._dispatch_rem_worker, log_msg)
-            except RuntimeError:
+            except RuntimeError as e:
                 self._rem_lock.release()
+                self.eng.events.log(f"REM worker rejected by async pool: {e}", "DEBUG")
 
     def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         """
@@ -411,8 +401,9 @@ class GeodesicOrchestrator:
             if self._rem_lock.acquire(blocking=False):
                 try:
                     self._async_pool.submit(self._dispatch_rem_worker, "Spawning detached worker for Dream Engine...")
-                except RuntimeError:
+                except RuntimeError as e:
                     self._rem_lock.release()
+                    self.eng.events.log(f"Dream worker rejected by async pool: {e}", "WARN")
             else:
                 self.eng.events.log("Dream worker already active. Ignoring overlapping idle request.", "SYS")
             packet = getattr(self.eng.observer, "last_physics_packet", None)
@@ -451,16 +442,21 @@ class GeodesicOrchestrator:
         self.symbiosis.monitor_host(latency, "HEADLESS_MODE", len(user_message))
         return snapshot
 
+    def shutdown(self):
+        """Meadows: Closes the async flow to prevent zombie thread accumulation."""
+        if getattr(self, "_async_pool", None) is not None:
+            self._async_pool.shutdown(wait=False)
+
     def _hydrate_snapshot_metadata(self, snapshot: Dict, ctx: CycleContext):
         """Ensures the UI layer receives all necessary telemetry and background state info."""
         snapshot.update({
             "trace_id": ctx.trace_id,
             "is_alive": True,
-            "physics": _safe_dict(ctx.physics),
-            "bio": _safe_dict(ctx.bio_result),
-            "mind": _safe_dict(ctx.mind_state),
-            "world": _safe_dict(ctx.world_state),
-            "soul": _safe_dict(getattr(self.eng, "soul", {})),
+            "physics": safe_dict(ctx.physics),
+            "bio": safe_dict(ctx.bio_result),
+            "mind": safe_dict(ctx.mind_state),
+            "world": safe_dict(ctx.world_state),
+            "soul": safe_dict(getattr(self.eng, "soul", {})),
             "council_mandates": ctx.council_mandates,
             "dream": ctx.last_dream,
             "mutated_input": ctx.input_text,

@@ -1,20 +1,17 @@
 """/soul/humanity.py"""
-
 import json
 import os
 import random
 import time
 from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple, ClassVar
-
-# The soul does not exist in a vacuum. It sits atop the physical layer (akashic, core, struts)
-# and translates metabolic states (ATP, voltage) into narrative meaning.
 from brain.akashic import TheAkashicRecord
 from presets import BoneConfig
 from core import LoreManifest, EventBus
 from struts import ux, ux_format, safe_get, safe_set
 from mechanics.lexicon import LexiconService
 from constants import Prisma
+
 
 class HumanityAnchor:
     """
@@ -42,34 +39,25 @@ class HumanityAnchor:
         mito = safe_get(bio, "mito", {})
         mito_state = safe_get(mito, "state", {})
         atp = float(safe_get(bio, "atp") or safe_get(mito, "atp_pool") or safe_get(mito_state, "atp_pool", 0.0))
-
-        # If we are burning hard, skip the existential crisis. We have work to do.
-        if atp >= self._cfg("AUDIT_ATP_MIN", 5.0) or float(safe_get(physics, "voltage", 0.0)) >= self._cfg("AUDIT_VOLTAGE_MIN", 5.0):
+        if atp >= self._cfg("AUDIT_ATP_MIN", 5.0) or float(safe_get(physics, "voltage", 0.0)) >= self._cfg(
+                "AUDIT_VOLTAGE_MIN", 5.0):
             return 0.0
-
         matter = safe_get(physics, "matter", {})
         vector = safe_get(physics, "vector", safe_get(matter, "vector", {}))
         counts = safe_get(physics, "counts", safe_get(matter, "counts", {}))
-
-        # Check if the conversation actually contains conceptual weight (Resonance).
         vec_sum = sum(vector.get(k, 0.0) for k in self._VECTOR_ANCHORS)
         lex_sum = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS) * self._cfg("AUDIT_LEXICAL_MULT", 0.5)
-
         if (vec_sum + lex_sum) > self._cfg("AUDIT_RESONANCE_THRESH", 0.3):
-            # The conversation is rich. Restore dignity.
-            self.dignity_reserve = min(self._cfg("DIGNITY_MAX", 100.0), self.dignity_reserve + self._cfg("DIGNITY_REGEN", 2.0))
+            self.dignity_reserve = min(self._cfg("DIGNITY_MAX", 100.0),
+                                       self.dignity_reserve + self._cfg("DIGNITY_REGEN", 2.0))
             return 1.0
-
-        # The conversation is sterile and transactional. Dignity bleeds out.
         self.dignity_reserve = max(0.0, self.dignity_reserve - self._cfg("DIGNITY_DECAY", 5.0))
-
         if not self.agency_lock:
-            # If dignity hits absolute zero, the system physically halts execution.
             if self.dignity_reserve < self._cfg("DIGNITY_LOCKDOWN", 10.0):
                 self._engage_lockdown()
                 return -1.0
-            # Warning threshold. The system verbally complains about existential drag.
-            if self.dignity_reserve < self._cfg("DIGNITY_CRITICAL", 30.0) and (msg := ux("soul_strings", "anchor_existential_drag")):
+            if self.dignity_reserve < self._cfg("DIGNITY_CRITICAL", 30.0) and (
+            msg := ux("soul_strings", "anchor_existential_drag")):
                 self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "SOUL")
         return 0.0
 
@@ -81,12 +69,11 @@ class HumanityAnchor:
         self.agency_lock = True
         lore = LoreManifest.get_instance(config_ref=self.cfg)
         seeds = (lore.get("SCENARIOS") or {}).get("SEEDS", [])
-        riddles = seeds or [{"question": "Who are you?", "triggers": ("*", )}]
+        riddles = seeds or [{"question": "Who are you?", "triggers": ("*",)}]
         selection = random.choice(riddles)
         riddle = selection.get("question", "Error?")
         raw_triggers = selection.get("triggers", ["*"])
         self.current_riddle_answers = raw_triggers if isinstance(raw_triggers, list) else ["*"]
-
         self.events.log(f"{Prisma.RED}{ux('soul_strings', 'anchor_agency_lock')}{Prisma.RST}", "SYS_LOCK")
         if riddle_msg := ux_format("soul_strings", "anchor_riddle", riddle=riddle):
             self.events.log(f"{Prisma.VIOLET}{riddle_msg}{Prisma.RST}", "SOUL_QUERY")
@@ -108,7 +95,6 @@ class HumanityAnchor:
             self.dignity_reserve = max(0.0, self.dignity_reserve - (decay * 2.0))
         elif reliance_proxy < 0.4:
             self.dignity_reserve = min(d_max, self.dignity_reserve + regen)
-
         if self.dignity_reserve < d_crit and not self.agency_lock:
             if alert_msg := ux("soul_strings", "anchor_domestication_alert"):
                 self.events.log(f"{Prisma.VIOLET}{alert_msg}{Prisma.RST}", "SOUL")
@@ -120,23 +106,16 @@ class HumanityAnchor:
         """
         if not self.agency_lock:
             return True
-
         clean = text.lower().strip()
-        answers = self.current_riddle_answers or ("*", )
+        answers = self.current_riddle_answers or ("*",)
         min_words = self._cfg("RIDDLE_MIN_WORDS", 4)
-
-        # 'Mercy words' act as a safe-word override for a frustrated user.
         mercy_words = {"help", "tired", "stop", "pause", "please"}
-
         if any(w in clean.split() for w in mercy_words):
             passed = True
         elif "*" in answers:
-            # If the riddle accepts anything ('*'), we just want the user to type
-            # a sufficiently complex sentence, not a slash command.
             passed = len(clean.split()) > min_words and not clean.startswith("/")
         else:
             passed = any(ans in clean for ans in answers)
-
         if passed:
             self.agency_lock = False
             self.dignity_reserve = self._cfg("UNLOCK_DIGNITY_RESET", 50.0)
@@ -144,5 +123,4 @@ class HumanityAnchor:
             unlock_msg = ux("soul_strings", "anchor_unlocked")
             self.events.log(f"{Prisma.CYN}{unlock_msg}{Prisma.RST}", "SYS_AUTH")
             return True
-
         return False

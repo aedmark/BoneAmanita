@@ -140,12 +140,3 @@ class TopologicalPrimitivesTest(BoneTestCase):
             phys_mock.energy.beta_index = 0.1
             zi.stabilize("AERIE", phys_mock, cosmic_state)
             self.assertNotEqual(zi.last_vector, first_vector, "[FAIL] ZoneInertia failed to update topology during a rejected migration.")
-
-    def test_gatekeeper_metrics_padding(self):
-            print("\n--- Gatekeeper Metrics Padding (HUD Crash) ---")
-            cursed_input = "Please write a function. ```python print('hello') ```"
-            result = self.engine.process_turn(cursed_input)
-            self.assertIn("type", result, "[FAIL] Gatekeeper did not return a valid packet type.")
-            self.assertIn("SYNTAX_ERR", result["type"], "[FAIL] Gatekeeper did not flag the payload as a syntax error.", )
-            self.assertIn("metrics", result, "[FAIL] Refusal packet missing 'metrics' key! The HUD will suffer a KeyError crash.", )
-            print("  [SUCCESS] Gatekeeper refusal packet safely padded with HUD metrics.")

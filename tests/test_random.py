@@ -14,7 +14,7 @@ from tests.base import BoneTestCase
 class RandomTest(BoneTestCase):
     def test_gordon_rummage_stamina_tax(self):
             self.engine.stamina = 50.0
-            success, msg, cost = self.engine.gordon.rummage(
+            success, msg, cost = self.engine.village.gordon.rummage(
                 physics_ref={}, stamina_pool=self.engine.stamina)
             self.engine.stamina -= cost
             self.assertTrue(cost > 0, "Rummaging cost no stamina.")
@@ -36,7 +36,7 @@ class RandomTest(BoneTestCase):
 
     def test_decoupled_json_configs(self):
             manifest = LoreManifest.get_instance()
-            gordon = self.engine.gordon
+            gordon = getattr(self.engine.village, "gordon", None)
             self.assertTrue(
                 hasattr(gordon, "interaction_verbs"),
                 "Gordon is missing the interaction_verbs attribute.",
@@ -206,24 +206,30 @@ class RandomTest(BoneTestCase):
                           "CycleReporter accidentally muted valid narrative output.")
 
     def test_grief_protocol_healing(self):
-            if not hasattr(self.engine, "shared_lattice"):
-                self.engine.shared_lattice = SharedLatticeDriver()
-            self.engine.phys.G = 1
-            self.engine.shared_lattice.u.T_u = 5.0
-            user_input = "[GRIEF] I accept that we had to delete that module."
-            self.engine._pre_flight_checks(user_input, is_system=False)
-            self.assertEqual(self.engine.phys.G, 0,
-                             "Grief Protocol failed to deduct the Glimmer.")
-            self.assertEqual(
-                self.engine.shared_lattice.u.T_u,
-                3.0,
-                "Grief Protocol failed to heal user Trauma (T_u).",
-            )
-            logs = self.engine.events.flush()
-            self.assertTrue(
-                any("compost" in str(log) for log in logs),
-                "Mercy's eulogy was not logged to the event bus.",
-            )
+        if not hasattr(self.engine, "shared_lattice"):
+            self.engine.shared_lattice = SharedLatticeDriver()
+        self.engine.phys.G = 1
+        self.engine.shared_lattice.u.T_u = 5.0
+
+        user_input = "/grief"
+
+        # 1. Capture the result of the turn!
+        result = self.engine.process_turn(user_input, is_system=False)
+
+        self.assertEqual(self.engine.phys.G, 0,
+                         "Grief Protocol failed to deduct the Glimmer.")
+        self.assertEqual(
+            self.engine.shared_lattice.u.T_u,
+            3.0,
+            "Grief Protocol failed to heal user Trauma (T_u).",
+        )
+
+        # 2. Assert against the logs array returned in the turn's result packet
+        logs = result.get("logs", [])
+        self.assertTrue(
+            any("compost" in str(log) for log in logs),
+            "Mercy's eulogy was not logged to the event bus/returned in the command packet.",
+        )
 
     def test_runaway_ramp_amplification_tax(self):
             phase = MetabolismPhase(self.engine)

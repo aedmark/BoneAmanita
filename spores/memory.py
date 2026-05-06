@@ -1,16 +1,13 @@
 """spores/memory.py
-
 This module governs the architecture of the engine's memory systems.
 It maps the transition of semantic data from volatile, highly connected
 short-term graph networks (MemoryCore) down into the permanent, compressed
 mathematical substrate of long-term storage (SubconsciousStrata).
-
 Classes:
     - SubconsciousStrata: The deep, append-only fossil record and matrix space.
     - MemoryCore: The active semantic graph (Hippocampus) that learns,
       forgets, and occasionally cannibalizes its own nodes to survive.
 """
-
 import json
 import os
 import random
@@ -22,32 +19,27 @@ from struts import ux, ux_format
 from presets import BoneConfig
 from spores.spore_utils import _identity, _word_to_vector, _mat_mul, _reorthogonalize, _householder
 
+
 class SubconsciousStrata:
     """
     The deep substrate. When active memories are destroyed (cannibalized)
     or deliberately repressed, they are "buried" here.
-
     Instead of just keeping a text log, this class maintains two mathematical
     matrices (M_t and Q_n) that constantly rotate and decay. This allows the
     system to retain the "vibe" or geometric signature of long-forgotten words
     without carrying the metabolic cost of keeping them in active memory.
     """
+
     def __init__(self, filename="memories/subconscious.jsonl"):
         self.filepath = filename
         self.directory = os.path.dirname(filename)
         if self.directory and not os.path.exists(self.directory):
             os.makedirs(self.directory)
-
-        # An O(1) lookup set to know if a word exists in the deep substrate
         self.index = set()
         self._load_index()
-
         self.matrix_filepath = os.path.join(self.directory, "m_t_matrix.json")
         self.q_filepath = os.path.join(self.directory, "q_n_matrix.json")
-
-        # M_t: The semantic gravity matrix. Tracks accumulated meaning over time.
         self.M_t = self._load_matrix()
-        # Q_n: The orthogonal rotation matrix. Tracks narrative trajectory.
         self.Q_n = self._load_q_matrix()
 
     def _load_json(self, path, default_factory):
@@ -61,15 +53,12 @@ class SubconsciousStrata:
         return default_factory()
 
     def _load_matrix(self):
-        # Initialize an empty 8x8 zero matrix
         return self._load_json(self.matrix_filepath, lambda: [[0.0] * 8 for _ in range(8)])
 
     def _load_q_matrix(self):
-        # Initialize an 8x8 identity matrix (baseline structure)
         return self._load_json(self.q_filepath, lambda: _identity(8))
 
     def save_matrix(self):
-        # Persist the math states. Swallows exceptions to prevent hard crashes during I/O spikes.
         try:
             with open(self.matrix_filepath, "w") as f:
                 json.dump(self.M_t, f)
@@ -95,7 +84,6 @@ class SubconsciousStrata:
             pass
 
     def _load_index(self):
-        # Rebuild the quick-lookup dictionary on boot to prevent O(N) disk reads
         self.index = {e.get("word"): e for e in self._iter_entries() if e.get("word")}
 
     def bury(self, fossil_data: Dict, config_ref=None):
@@ -107,43 +95,25 @@ class SubconsciousStrata:
         try:
             target_cfg = config_ref or BoneConfig
             cfg = getattr(target_cfg, "SPORES", None)
-
-            # [S]ystems Constraint: Carrying Capacity. Don't let the index bloat infinitely.
             max_idx = getattr(cfg, "MAX_INDEX_SIZE", 1000)
             if len(self.index) > max_idx:
                 self._prune_strata()
-
-            # Append the actual raw data
             with open(self.filepath, "a", encoding="utf-8") as f:
                 fossil_data["buried_at"] = time.time()
                 f.write(json.dumps(fossil_data, cls=BoneJSONEncoder) + "\n")
-
-            # Cache the payload in memory to ensure O(1) resurrection lookups
             self.index[fossil_data["word"]] = fossil_data
-
             word = fossil_data["word"]
             mass = fossil_data.get("mass", 1.0)
-
-            # Convert the word into an 8-dimensional structural vector
             K = _word_to_vector(word)
             V = _word_to_vector(word + "_val")
             scale = min(1.0, mass / 10.0)
-
-            # Decay the existing matrix by 1% to make room for the new data, then add the new vector
             decay = 0.99
             self.M_t = [[(self.M_t[i][j] * decay) + (K[i] * V[j]) * scale for j in range(8)] for i in range(8)]
-
-            # Apply a Householder reflection to track the structural shift
             H = _householder(K)
             self.Q_n = _mat_mul(H, self.Q_n)
-
-            # Gram-Schmidt reorthogonalization to prevent floating point drift over time
             self.Q_n = _reorthogonalize(self.Q_n)
-
-            # If this wasn't just a temporary dream cycle, lock it in
             if not fossil_data.get("reconstructive", False):
                 self.save_matrix()
-
             return True
         except IOError:
             return False
@@ -155,8 +125,6 @@ class SubconsciousStrata:
                 lines = f.readlines()
             keep_count = int(len(lines) * 0.9)
             survivors = lines[-keep_count:] if keep_count else []
-
-            # Meadows: Write atomically to prevent a complete subconscious wipe on an OS crash
             import tempfile
             fd, temp_path = tempfile.mkstemp(dir=self.directory, text=True)
             with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -164,7 +132,6 @@ class SubconsciousStrata:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temp_path, self.filepath)
-
             self._load_index()
         except Exception:
             pass
@@ -193,8 +160,6 @@ class MemoryCore:
     This is where current context lives. Words are nodes, and the frequency
     at which they appear together form weighted synaptic edges.
     """
-
-    # Maps abstract physical dimensions (Voltage, Drag) to concrete semantic lexicons
     DIMENSION_MAP = {
         "STR": {"heavy", "constructive", "base"},
         "VEL": {"kinetic", "explosive", "mot"},
@@ -209,15 +174,9 @@ class MemoryCore:
         self.subconscious = subconscious_ref
         self.cfg = config_ref or BoneConfig
         self.lex = lexicon_ref
-
-        # The primary associative graph { "word": {"edges": {"other_word": weight, ...}} }
         self.graph = {}
-
-        # Stacks governing immediate attention span
         self.cortical_stack = deque(maxlen=15)
         self.short_term_buffer = deque(maxlen=10)
-
-        # Threshold at which a short-term memory is allowed to write to the graph
         self.consolidation_threshold = 5.0
 
     def illuminate(self, vector: Dict[str, float], limit: int = 5) -> List[str]:
@@ -227,8 +186,6 @@ class MemoryCore:
         """
         if not self.graph:
             return []
-
-        # Determine what "frequency" the engine is currently operating on (e.g., highly toxic/ENT, or highly active/VEL)
         active_dims = {k: v for k, v in vector.items() if v > 0.4}
         if not active_dims and vector:
             top_dim = max(vector, key=vector.get)
@@ -236,63 +193,45 @@ class MemoryCore:
                 active_dims = {top_dim: vector[top_dim]}
             else:
                 active_dims = {"ENT": 0.2}
-
         active_dim_cats = {dim: self.DIMENSION_MAP.get(dim, set()) for dim in active_dims}
         scored_memories = []
-
-        # Score every node in the graph based on how well it matches the current frequency
         for node, data in self.graph.items():
             resonance_score = 0.0
             node_cats = self.lex.get_categories_for_word(node) if self.lex else set()
             for dim, val in active_dims.items():
                 if node_cats & active_dim_cats[dim]:
                     resonance_score += val * 1.5
-
-            # Denser memories (high mass) are easier to retrieve
             mass = sum(data.get("edges", {}).values())
             resonance_score += mass * 0.1
-
             if resonance_score > 0.5:
                 scored_memories.append((resonance_score, node, data))
-
         scored_memories.sort(key=lambda x: x[0], reverse=True)
         results = []
-
         res_prefix = ux("spore_strings", "core_illuminate_resonant") or "Resonant"
         assoc_prefix = ux("spore_strings", "core_illuminate_associated") or "Associated"
         fmt = (ux("spore_strings", "core_illuminate_format") or "{prefix} Engram: '{name}'{conn_str}")
-
         for score, name, data in scored_memories[:limit]:
             connections = list(data.get("edges", {}).keys())
-
-            # [S]ystems dynamic: Actively remembering a non-protected (diamond) node slightly degrades its surrounding edges (interference).
             if active_dims:
                 if not data.get("is_diamond", False):
                     for edge_k, edge_v in data.get("edges", {}).items():
                         if not self.graph.get(edge_k, {}).get("is_diamond", False):
                             data["edges"][edge_k] = edge_v * 0.95
-
-                # Cross-wire the memory by slightly attaching it to a random word from the current active dimension
                 top_active_dim = max(active_dims, key=active_dims.get)
                 dim_words = list(self.DIMENSION_MAP.get(top_active_dim, {"static"}))
                 if dim_words:
                     chosen_word = random.choice(dim_words)
                     edges = data.setdefault("edges", {})
                     edges[chosen_word] = edges.get(chosen_word, 0.0) + 1.0
-
-                # Temporarily flash the retrieved memory into the subconscious math matrix
                 try:
                     self.subconscious.bury({"word": name, "mass": 1.0, "reconstructive": True}, config_ref=self.cfg)
                 except Exception:
                     pass
-
             is_resonant = score > 0.5
             current_prefix = res_prefix if is_resonant else assoc_prefix
             connection_string = f" -> [{', '.join(connections[:2])}]" if connections else ""
-
-            formatted_result = fmt.format(prefix=current_prefix,  name=name.upper(), conn_str=connection_string)
+            formatted_result = fmt.format(prefix=current_prefix, name=name.upper(), conn_str=connection_string)
             results.append(formatted_result)
-
         return results
 
     def calculate_mass(self, node):
@@ -320,24 +259,17 @@ class MemoryCore:
             edges = self.graph[node]["edges"]
             new_edges = {}
             for t, w in edges.items():
-                # Heavier edges decay slightly slower than weak ones
                 decayed_w = w * (scaling_factor + (0.14 * min(1.0, w / 10.0)))
                 if decayed_w >= prune_threshold:
                     new_edges[t] = decayed_w
-
             total_decayed += len(edges)
             pruned_count += len(edges) - len(new_edges)
             self.graph[node]["edges"] = new_edges
-
-            # Forgetting: If a node is completely disconnected and isn't a core belief (diamond), delete it.
             if not new_edges and not self.graph[node].get("is_diamond", False):
                 del self.graph[node]
-
-        # Cleanup: Remove edges pointing to nodes that were just deleted
         valid_nodes = set(self.graph.keys())
         for data in self.graph.values():
             data["edges"] = {k: v for k, v in data["edges"].items() if k in valid_nodes}
-
         return ux_format("spore_strings", "core_pruned", default="", total=total_decayed, pruned=pruned_count)
 
     def cannibalize(self, current_tick, preserve_current=None) -> Tuple[Optional[str], str]:
@@ -349,26 +281,18 @@ class MemoryCore:
         protected = set(self.cortical_stack)
         if preserve_current:
             protected.update(preserve_current if isinstance(preserve_current, list) else [preserve_current])
-
         candidates = []
         for k, v in self.graph.items():
-            # Never cannibalize the exact thing we are currently thinking about, and never eat diamonds.
             if k not in protected and not v.get("is_diamond", False):
                 mass = sum(v.get("edges", {}).values())
-                # The "score" combines how lightweight it is with how long it has been ignored
-                score = mass + (100.0 / max(1, current_tick - v.get("last_tick", 0)))
+                age = max(1, current_tick - v.get("last_tick", 0))
+                score = (mass + 1.0) * (1.0 + (10.0 / age))
                 candidates.append((k, v, score))
-
-        # If everything is protected, the engine physically locks up (Cognitive Gridlock)
         if not candidates:
             return None, ux("spore_strings", "core_lock") or ""
-
-        # Select the weakest link
         victim, data, score = min(candidates, key=lambda x: x[2])
         mass = sum(data["edges"].values())
         lifespan = current_tick - data.get("strata", {}).get("birth_tick", current_tick)
-
-        # Format the fossil data
         fossil_data = {
             "word": victim,
             "mass": round(mass, 2),
@@ -376,14 +300,9 @@ class MemoryCore:
             "edges": data["edges"],
             "death_tick": current_tick,
         }
-
-        # Bury it in the Subconscious Matrix
         self.subconscious.bury(fossil_data, config_ref=self.cfg)
-
-        # Physically delete it from the active graph
         del self.graph[victim]
         for node_data in self.graph.values():
             node_data["edges"].pop(victim, None)
-
         msg = ux("spore_strings", "core_repressed") or "Core Repressed"
         return victim, msg.format(victim=victim, score=score) if msg else "Memory Consumed"

@@ -1,12 +1,10 @@
 """village.py
-
 The Village is the localized, physical manifestation of the system's consciousness.
 While the 'Council' handles the macro-debate, the Village handles the environment.
 It translates semantic math into physical locations (The Cartographer), tracks
 the resonance of the user's tools (The Tinkerer), and generates atmospheric flavor
 based on the system's health (The Town Hall).
 """
-
 import heapq
 import math
 import random
@@ -20,9 +18,11 @@ from physics import PhysicsDelta
 from constants import Prisma
 from physics.models import PhysicsPacket
 
+
 def _cfg_val(cfg_ref, section: str, key: str, default: float) -> float:
     """Helper to safely extract nested configuration floats with a fallback."""
     return float(safe_get(getattr(cfg_ref or BoneConfig, section, None), key, default))
+
 
 class TheTinkerer:
     """
@@ -31,6 +31,7 @@ class TheTinkerer:
     tracks 'Resonance'—how often and how intensely a tool is used—eventually
     upgrading (Ascending) items that hold enough conversational weight.
     """
+
     def __init__(self, gordon_ref, events_ref: EventBus, akashic_ref, config_ref=None):
         self.gordon = gordon_ref
         self.events = events_ref
@@ -45,35 +46,28 @@ class TheTinkerer:
         Calculates the physical weight and effects of the user's current inventory.
         Caches the result based on a hash of the traits to save CPU cycles.
         """
-        # Aggregate all passive traits from the user's items.
         counts = Counter(chain.from_iterable(item.get("passive_traits") or [] for item in inventory_data))
         current_hash = hash(frozenset(counts.items()))
-
         if self._delta_cache is not None and current_hash == self._inventory_hash:
             return self._delta_cache
-
         deltas = []
-
-        # Heavy items increase Narrative Drag (friction), scaled logarithmically.
         if hl := counts.get("HEAVY_LOAD"):
-            deltas.append(PhysicsDelta("ADD", "narrative_drag", math.log1p(hl) * _cfg_val(self.cfg, "VILLAGE", "TINKER_HEAVY_LOAD_MULT", 0.7), "Inventory", "Heavy Load"))
-
-        # Time Dilation items multiply (reduce) the system's overall Drag, down to a hard floor of 0.5x.
+            deltas.append(PhysicsDelta("ADD", "narrative_drag",
+                                       math.log1p(hl) * _cfg_val(self.cfg, "VILLAGE", "TINKER_HEAVY_LOAD_MULT", 0.7),
+                                       "Inventory", "Heavy Load"))
         if td := counts.get("TIME_DILATION"):
             reduction = max(
                 _cfg_val(self.cfg, "VILLAGE", "TINKER_TIME_DILATION_MIN", 0.5),
-                _cfg_val(self.cfg, "VILLAGE", "TINKER_TIME_DILATION_BASE", 0.85) - (td * _cfg_val(self.cfg, "VILLAGE", "TINKER_TIME_DILATION_STEP", 0.05))
+                _cfg_val(self.cfg, "VILLAGE", "TINKER_TIME_DILATION_BASE", 0.85) - (
+                        td * _cfg_val(self.cfg, "VILLAGE", "TINKER_TIME_DILATION_STEP", 0.05))
             )
             deltas.append(PhysicsDelta("MULT", "narrative_drag", reduction, "Inventory", "Time Dilation"))
-
-        # Entropy Buffers absorb chaos, reducing systemic turbulence.
         if eb := counts.get("ENTROPY_BUFFER"):
             buffer_str = max(
                 _cfg_val(self.cfg, "VILLAGE", "TINKER_ENTROPY_BUFFER_MIN", 0.2),
                 _cfg_val(self.cfg, "VILLAGE", "TINKER_ENTROPY_BUFFER_BASE", 0.5) / math.sqrt(eb)
             )
             deltas.append(PhysicsDelta("MULT", "turbulence", buffer_str, "Inventory", "Entropy Buffer"))
-
         self._inventory_hash, self._delta_cache = current_hash, deltas
         return deltas
 
@@ -81,39 +75,33 @@ class TheTinkerer:
         """Randomly selects an item to absorb the systemic tension of the current turn."""
         if not inventory_list:
             return
-
         cfg = getattr(self.cfg, "VILLAGE", None)
         v_chance = float(safe_get(cfg, "TINKER_TOOL_USE_VOLT_CHANCE", 0.1))
-
-        # Pragmatic optimization: Skip the audit 90% of the time if voltage is low to save cycles.
-        if packet.voltage < self.cfg.PHYSICS.VOLTAGE_LOW and random.random() > v_chance:
+        # Avoid brittle dot-notation access. Use the existing safe getter.
+        v_low = _cfg_val(self.cfg, "PHYSICS", "VOLTAGE_LOW", 5.0)
+        if packet.voltage < v_low and random.random() > v_chance:
             return
-
         focus_item = random.choice(inventory_list)
         ent_val = packet.vector.get("ENT", 0.0) if packet.vector else 0.0
         e_mult = float(safe_get(cfg, "TINKER_ENTROPY_DRAG_MULT", 0.1))
         entropy_level = ent_val + (packet.narrative_drag * e_mult)
-
         self._process_single_tool(focus_item, inventory_list, packet, entropy_level)
 
     def _process_single_tool(self, item: str, _inventory: List[str], packet: PhysicsPacket, entropy: float):
         """Applies resonance (wear and tear/experience) to a specific tool."""
         self.tool_resonance.setdefault(item, 0.0)
-
-        # Tools used in high-stress states grow faster and may trigger an Ascension event.
         if packet.voltage > _cfg_val(self.cfg, "COUNCIL", "MANIC_VOLTAGE_TRIGGER", 18.0) or entropy > 0.5:
             self._apply_resonance(item, _cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_HIGH_V", 0.2))
             self._check_ascension(item, _inventory, packet.vector)
-        # Tools used in high-friction states temper slowly.
         elif packet.narrative_drag > _cfg_val(self.cfg, "PHYSICS", "DRAG_HALT", 10.0):
             self._apply_resonance(item, _cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_TEMPER", 0.05))
 
     def _apply_resonance(self, item: str, amount: float):
         """Adds resonance to an item, capping at a defined max. Occassionally logs the growth."""
-        self.tool_resonance[item] = min(_cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_MAX", 10.0), self.tool_resonance[item] + amount)
-
-        # Check if the tool is hovering near a key threshold to announce its hum.
-        if _cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_ANNOUNCE_MIN", 4.8) < self.tool_resonance[item] < _cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_ANNOUNCE_MAX", 5.2):
+        self.tool_resonance[item] = min(_cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_MAX", 10.0),
+                                        self.tool_resonance[item] + amount)
+        if _cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_ANNOUNCE_MIN", 4.8) < self.tool_resonance[item] < _cfg_val(
+                self.cfg, "VILLAGE", "TINKER_RESONANCE_ANNOUNCE_MAX", 5.2):
             if random.random() < _cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_ANNOUNCE_CHANCE", 0.05):
                 if msg := ux("village_strings", "tinkerer_resonance"):
                     self.events.log(f"{Prisma.CYN}{msg.format(item=item)}{Prisma.RST}", "VILLAGE")
@@ -124,32 +112,24 @@ class TheTinkerer:
         transforms into a new, higher-tier item via the Akashic Forge.
         """
         resonance = self.tool_resonance.get(old_name, 0.0)
-
-        # Needs minimum resonance and a lucky dice roll to ascend.
-        if resonance < _cfg_val(self.cfg, "VILLAGE", "TINKER_ASCENSION_MIN", 2.5) or random.random() >= (resonance * _cfg_val(self.cfg, "VILLAGE", "TINKER_ASCENSION_CHANCE_MULT", 0.05)):
+        if resonance < _cfg_val(self.cfg, "VILLAGE", "TINKER_ASCENSION_MIN", 2.5) or random.random() >= (
+                resonance * _cfg_val(self.cfg, "VILLAGE", "TINKER_ASCENSION_CHANCE_MULT", 0.05)):
             return
-
         if hasattr(self.akashic, "forge_new_item"):
-            # Create the new item based on current semantic physics.
             new_name, new_data = self.akashic.forge_new_item(vector)
             self.gordon.register_dynamic_item(new_name, new_data)
             self.gordon.acquire(new_name)
-
-            # Strip the old item from all tracking arrays.
             if hasattr(self.gordon, "remove_item"):
                 self.gordon.remove_item(old_name)
             elif old_name in getattr(self.gordon, "inventory", []):
                 self.gordon.inventory.remove(old_name)
-
             if old_name in inventory_list:
                 inventory_list[inventory_list.index(old_name)] = new_name
-
-            # Transfer half of the accumulated resonance to the new item as a legacy.
             self.tool_resonance[new_name] = resonance / _cfg_val(self.cfg, "VILLAGE", "TINKER_ASCENSION_HALVE", 2.0)
             self.tool_resonance.pop(old_name, None)
-
             if msg := ux("village_strings", "tinkerer_ascension"):
                 self.events.log(f"{Prisma.MAG}{msg.format(old=old_name, new=new_name)}{Prisma.RST}", "AKASHIC")
+
 
 @dataclass
 class ParadoxSeed:
@@ -165,7 +145,6 @@ class ParadoxSeed:
     def water(self, word_counts: Dict[str, int], config_ref=None) -> bool:
         if self.bloomed:
             return False
-        # Calculate semantic overlap. Each hit matures the seed.
         if hits := sum(word_counts[t] for t in self.triggers if t in word_counts):
             self.maturity += hits * _cfg_val(config_ref, "VILLAGE", "SEED_MATURITY_STEP", 0.2)
         return self.maturity >= _cfg_val(config_ref, "VILLAGE", "SEED_MATURITY_MAX", 5.0)
@@ -174,6 +153,7 @@ class ParadoxSeed:
         self.bloomed = True
         msg = ux("village_strings", "paradox_bloom")
         return msg.format(question=self.question) if msg else ""
+
 
 @dataclass
 class GeniusLoci:
@@ -200,6 +180,7 @@ class GeniusLoci:
     def from_dict(cls, data):
         return cls(**data)
 
+
 class TheCartographer:
     """
     Translates the abstract math of the conversation into physical space.
@@ -219,32 +200,23 @@ class TheCartographer:
         """Applies the physical constraints of the current location to the system's physics."""
         if not (node := self.world_graph.get(self.current_node_id)):
             return []
-
         logs = []
-
-        # 'Deep' sectors are dense and add heavy narrative drag.
         if node.state_key == "deep":
             ch = _cfg_val(self.cfg, "VILLAGE", "CARTO_HEAVY_DRAG", 2.0)
             packet.narrative_drag += ch
             if msg := ux("village_strings", "carto_env_heavy"):
                 logs.append(f"{Prisma.GRY}{msg.format(c_heavy=ch)}{Prisma.RST}")
-
-        # 'Flux' sectors are highly energetic and spike systemic voltage.
         if node.state_key == "flux":
             cv = _cfg_val(self.cfg, "VILLAGE", "CARTO_STATIC_VOLT", 1.0)
             packet.voltage += cv
             if msg := ux("village_strings", "carto_env_static"):
                 logs.append(f"{Prisma.YEL}{msg.format(c_static=cv)}{Prisma.RST}")
-
-        # The location itself absorbs chaos. If it absorbs too much, it discharges
-        # it back into the conversation's active physics.
         ce = _cfg_val(self.cfg, "VILLAGE", "CARTO_ENTROPY_STEP", 0.1)
         node.entropy_buildup += ce
         if node.entropy_buildup > _cfg_val(self.cfg, "VILLAGE", "CARTO_ENTROPY_CAP", 5.0):
             if packet.vector is not None:
-                packet.vector["ENT"] = packet.vector.get("ENT", 0.0) + node.entropy_buildup
+                packet.vector["ENT"] = min(1.0, packet.vector.get("ENT", 0.0) + node.entropy_buildup)
             node.entropy_buildup = 0.0
-
         return logs
 
     def _init_genesis(self):
@@ -252,7 +224,8 @@ class TheCartographer:
         msg_name = ux("village_strings", "genesis_name") or "The White Room"
         msg_atmos = ux("village_strings", "genesis_atmos") or "Sterile, expectant."
         msg_smell = ux("village_strings", "genesis_smell") or "Ozone."
-        self.world_graph["GENESIS_POINT"] = GeniusLoci(id="GENESIS_POINT", name=msg_name, atmosphere=msg_atmos, smell=msg_smell)
+        self.world_graph["GENESIS_POINT"] = GeniusLoci(id="GENESIS_POINT", name=msg_name, atmosphere=msg_atmos,
+                                                       smell=msg_smell)
 
     @staticmethod
     def _generate_coord_hash(vector: Dict[str, float]) -> str:
@@ -270,20 +243,15 @@ class TheCartographer:
         """Determines where the user is currently standing within the semantic map."""
         target_id = self._generate_coord_hash(packet.vector or {})
         msg = None
-
-        # If this mathematical coordinate has never been visited, generate a new place.
         if target_id not in self.world_graph:
             if len(self.world_graph) >= _cfg_val(self.cfg, "VILLAGE", "CARTO_MAX_NODES", 50):
                 self._prune_graph()
             self.world_graph[target_id] = self._generate_loci_data(target_id, packet, config_ref=self.cfg)
             if msg_str := ux("village_strings", "carto_new_sector"):
                 msg = f"{Prisma.MAG}{msg_str.format(name=self.world_graph[target_id].name)}{Prisma.RST}"
-
-        # If we just moved from one known sector to another.
         elif target_id != self.current_node_id:
             if msg_str := ux("village_strings", "carto_arriving"):
                 msg = f"{Prisma.CYN}{msg_str.format(name=self.world_graph[target_id].name)}{Prisma.RST}"
-
         self.current_node_id = target_id
         self.world_graph[target_id].visited_count += 1
         return self.world_graph[target_id].name, msg
@@ -291,20 +259,15 @@ class TheCartographer:
     @staticmethod
     def _generate_loci_data(node_id: str, packet: PhysicsPacket, config_ref=None) -> GeniusLoci:
         """Procedurally generates the flavor text (name, smell) for a new map sector."""
-        rng = random.Random(node_id) # Deterministic generation based on the hash.
+        rng = random.Random(node_id)
         scenarios = LoreManifest.get_instance().get("SCENARIOS") or {}
         name = f"{rng.choice(scenarios.get('PREFIXES', ['The', 'Zone', 'Sector']))} {rng.choice(scenarios.get('ROOTS', ['Construct', 'Forge', 'Garden']))}"
-
         v_trig = _cfg_val(config_ref, "COUNCIL", "MANIC_VOLTAGE_TRIGGER", 18.0)
         d_halt = _cfg_val(config_ref, "PHYSICS", "DRAG_HALT", 10.0)
-
-        # Define the foundational nature of the sector based on the tension of its creation.
         state_key = "flux" if packet.voltage > v_trig else "deep" if packet.narrative_drag > d_halt else "prime"
-
         name_suffix = ux("village_strings", f"loci_{state_key}_suffix") or ""
         atmos = ux("village_strings", f"loci_{state_key}_atmos") or "Unsettlingly quiet."
         smell = ux("village_strings", f"loci_{state_key}_smell") or "Dust and ozone."
-
         return GeniusLoci(
             id=node_id,
             name=f"{name} {name_suffix}".strip().upper(),
@@ -336,12 +299,14 @@ class TheCartographer:
         if "GENESIS_POINT" not in self.world_graph:
             self._init_genesis()
 
+
 class TownHall:
     """
     The emotional and thematic weather center of the simulation.
     It reads the current physics and returns subjective 'Forecasts' and 'News',
     acting as a bridge between hard numbers and the narrative experience.
     """
+
     def __init__(self, gordon_ref, events_ref, shimmer_ref, akashic_ref, navigator_ref, config_ref=None, ):
         self.gordon = gordon_ref
         self.events = events_ref
@@ -350,7 +315,6 @@ class TownHall:
         self.akashic = akashic_ref
         self.navigator = navigator_ref
         self.seeds: List[ParadoxSeed] = []
-
         almanac = LoreManifest.get_instance().get("ALMANAC") or {}
         seed_data = almanac.get("SEEDS", [])
         for s in seed_data:
@@ -365,7 +329,6 @@ class TownHall:
         """Determines the current 'Weather' based on systemic state."""
         almanac = LoreManifest.get_instance().get("ALMANAC") or {}
         forecasts, strategies = almanac.get("FORECASTS", {}), almanac.get("STRATEGIES", {})
-
         volt, drag, entropy = physics.voltage, physics.narrative_drag, physics.entropy
         if volt > _cfg_val(config_ref, "VILLAGE", "ALMANAC_VOLT_HIGH", 15.0):
             state_key = "HIGH_VOLTAGE"
@@ -375,7 +338,6 @@ class TownHall:
             state_key = "HIGH_ENTROPY"
         else:
             state_key = "BALANCED"
-
         return f"☁️ FORECAST [{state_key}]: {random.choice(forecasts.get(state_key) or ['Weather unclear.'])} (Strategy: {strategies.get(state_key) or 'Keep breathing.'})"
 
     def tend_garden(self, clean_words: List[str]) -> List[str]:
@@ -383,17 +345,13 @@ class TownHall:
         blooms = []
         if not self.seeds or not clean_words:
             return blooms
-
         word_counts = Counter(w.lower() for w in clean_words)
         prefix = ux("village_strings", "town_bloom") or "A paradox blooms:"
-
         for seed in self.seeds:
             if not seed.bloomed and seed.water(word_counts, self.cfg):
                 formatted_msg = f"{Prisma.MAG}{prefix}{Prisma.RST} {seed.bloom()}"
                 self.events.log(formatted_msg, "VILLAGE_EVENT")
                 blooms.append(formatted_msg)
-
-        # Clear out seeds that have already bloomed.
         self.seeds = [s for s in self.seeds if not s.bloomed]
         return blooms
 
@@ -401,30 +359,27 @@ class TownHall:
         """Compiles the location, weather, and breaking 'news' of the system."""
         latency = getattr(host_stats, "latency", 0.0) if host_stats else 0.0
         forecasts = (LoreManifest.get_instance().get("ALMANAC") or {}).get("FORECASTS", {})
-
         loc_name = "UNKNOWN"
         if self.navigator and (node := self.navigator.world_graph.get(self.navigator.current_node_id)):
             loc_name = node.name
-
         if latency > _cfg_val(self.cfg, "VILLAGE", "TOWN_LATENCY_WARN", 3.0):
-            status, advice = "HIGH_LATENCY", ux("village_strings", "town_lag") or "The connection is fraying. Catch your breath."
+            status, advice = "HIGH_LATENCY", ux("village_strings",
+                                                "town_lag") or "The connection is fraying. Catch your breath."
         elif packet.voltage > _cfg_val(self.cfg, "PHYSICS", "VOLTAGE_HIGH", 60.0):
             status, advice = "HIGH_VOLTAGE", random.choice(forecasts.get("HIGH_VOLTAGE", ["Manic energy."]))
         elif packet.narrative_drag > _cfg_val(self.cfg, "PHYSICS", "DRAG_HEAVY", 5.0):
             status, advice = "HIGH_DRAG", random.choice(forecasts.get("HIGH_DRAG", ["Narrative stuck."]))
         else:
             status, advice = "BALANCED", random.choice(forecasts.get("BALANCED", ["Nominal."]))
-
         report_template = ux("village_strings", "town_census") or "Location: {loc} | Status: {status} | {advice}"
         report = [report_template.format(loc=loc_name, status=status, advice=advice)]
-
         if news := self._get_town_news(latency, packet.voltage, config_ref=self.cfg):
             report.append(news)
-
         if packet.voltage > _cfg_val(self.cfg, "VILLAGE", "TOWN_VOLT_CRIT", 20.0):
             if msg := ux("village_strings", "town_restrain"):
                 report.append(f"{Prisma.RED}{msg}{Prisma.RST}")
-        elif packet.voltage < _cfg_val(self.cfg, "VILLAGE", "TOWN_VOLT_LOW", 2.0) and packet.narrative_drag > _cfg_val(self.cfg, "VILLAGE", "TOWN_DRAG_HIGH", 5.0):
+        elif packet.voltage < _cfg_val(self.cfg, "VILLAGE", "TOWN_VOLT_LOW", 2.0) and packet.narrative_drag > _cfg_val(
+                self.cfg, "VILLAGE", "TOWN_DRAG_HIGH", 5.0):
             if msg := ux("village_strings", "town_loops"):
                 report.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
         elif status == "BALANCED" and random.random() < _cfg_val(self.cfg, "VILLAGE", "TOWN_RUMOR_CHANCE", 0.3):
@@ -432,7 +387,6 @@ class TownHall:
             if rumors := almanac.get("RUMORS", []):
                 if msg := ux("village_strings", "town_rumor"):
                     report.append(f"{Prisma.GRY}{msg.format(rumor=random.choice(rumors))}{Prisma.RST}")
-
         return "\n".join(report).strip()
 
     @staticmethod
@@ -453,22 +407,23 @@ class TownHall:
             self.events.log(msg.format(item=item), "VILLAGE")
 
     @staticmethod
-    def diagnose_condition(session_data: dict, _host_health: Any = None, soul: Any = None, config_ref=None) -> Tuple[str, str]:
+    def diagnose_condition(session_data: dict, _host_health: Any = None, soul: Any = None, config_ref=None) -> Tuple[
+        str, str]:
         """Evaluates psychological damage to the narrative 'soul' of the session."""
         trauma = session_data.get("trauma_vector") or {}
-
-        # Soul check: If the user is obsessing without resolving.
-        if soul and float(safe_get(soul, "obsession_neglect", 0.0)) > _cfg_val(config_ref, "VILLAGE", "TOWN_NEGLECT_CRIT", 8.0):
-            return "HIGH_DRAG", (ux("village_strings", "town_guilt") or "").format(obsession=safe_get(soul, "current_obsession", "work"))
-
+        if soul and float(safe_get(soul, "obsession_neglect", 0.0)) > _cfg_val(config_ref, "VILLAGE",
+                                                                               "TOWN_NEGLECT_CRIT", 8.0):
+            return "HIGH_DRAG", (ux("village_strings", "town_guilt") or "").format(
+                obsession=safe_get(soul, "current_obsession", "work"))
         if trauma and trauma[max(trauma, key=trauma.get)] > _cfg_val(config_ref, "VILLAGE", "TOWN_TRAUMA_CRIT", 0.6):
-            return "HIGH_TRAUMA", (ux("village_strings", "town_trauma") or "").format(trauma=max(trauma, key=trauma.get))
-
+            return "HIGH_TRAUMA", (ux("village_strings", "town_trauma") or "").format(
+                trauma=max(trauma, key=trauma.get))
         meta_data = session_data.get("meta") or {}
         if meta_data.get("final_health", 50) < _cfg_val(config_ref, "VILLAGE", "TOWN_HEALTH_CRIT", 30):
-            return "HIGH_TRAUMA", ux("village_strings", "town_critical") or "The lattice is fractured. We are holding it together with sheer will."
-
+            return "HIGH_TRAUMA", ux("village_strings",
+                                     "town_critical") or "The lattice is fractured. We are holding it together with sheer will."
         return "BALANCED", ux("village_strings", "town_nominal") or "The system hums quietly. All is well."
+
 
 class DeathGen:
     """
@@ -491,31 +446,29 @@ class DeathGen:
             LoreManifest.get_instance().inject("DEATH", cls._FALLBACK_PROTOCOLS)
 
     @staticmethod
-    def eulogy(packet: PhysicsPacket, mito_state: Any, trauma_vector: Dict = None, config_ref=None,) -> Tuple[str, str]:
+    def eulogy(packet: PhysicsPacket, mito_state: Any, trauma_vector: Dict = None, config_ref=None, ) -> Tuple[
+        str, str]:
         """Generates the final log entry before the Panic Room or reboot triggers."""
         death_data = LoreManifest.get_instance().get("DEATH")
         if not isinstance(death_data, dict):
             death_data = DeathGen._FALLBACK_PROTOCOLS
-
         cause = DeathGen._determine_cause(packet, mito_state, trauma_vector, config_ref)
         verdict_type = DeathGen._determine_verdict_type(packet, cause, config_ref)
-
         causes_dict = death_data.get("CAUSES", {})
         verdicts_dict = death_data.get("VERDICTS", {})
         prefix = random.choice(death_data.get("PREFIXES", ["Alas."]))
-
         causes = causes_dict.get(cause, causes_dict.get("DEFAULT", ["Error"]))
         verdicts = verdicts_dict.get(verdict_type, verdicts_dict.get("DEFAULT", ["Done."]))
-
         return f"{prefix} CAUSE: {random.choice(causes)}. {random.choice(verdicts)}", cause
 
     @staticmethod
     def _determine_cause(p: PhysicsPacket, mito_state: Any, trauma_vector: Dict = None, config_ref=None) -> str:
         if trauma_vector and sum(trauma_vector.values()) > _cfg_val(config_ref, "VILLAGE", "DEATH_TRAUMA_CRIT", 50.0):
             return "TRAUMA"
-        if float(safe_get(mito_state, "atp_pool", safe_get(mito_state, "atp", 0.0))) <= _cfg_val(config_ref, "BIO", "ATP_STARVATION", 0.0):
+        if float(safe_get(mito_state, "atp_pool", safe_get(mito_state, "atp", 0.0))) <= _cfg_val(config_ref, "BIO",
+                                                                                                 "ATP_STARVATION", 0.0):
             return "STARVATION"
-        if (p.chi * p.m_a) > p.i_c: # Chaos * Malignancy outpaces Immunity
+        if (p.chi * p.m_a) > p.i_c:
             return "APOPTOSIS"
         if p.voltage > _cfg_val(config_ref, "PHYSICS", "VOLTAGE_CRITICAL", 100.0):
             return "GLUTTONY"
@@ -537,8 +490,10 @@ class DeathGen:
             return "JOY_CLADE"
         return "ENTROPY"
 
+
 class TheTherapist:
     """Intervenes when the emotional trauma vector overrides systemic functionality."""
+
     def __init__(self, events_ref, config_ref=None):
         self.events = events_ref
         self.cfg = config_ref or BoneConfig
@@ -546,34 +501,37 @@ class TheTherapist:
     def evaluate_catharsis(self, trauma_vector: Dict[str, float], health: float) -> Tuple[bool, str]:
         trauma_threshold = _cfg_val(self.cfg, "VILLAGE", "THERAPY_TRAUMA_THRESH", 15.0)
         health_threshold = _cfg_val(self.cfg, "VILLAGE", "THERAPY_HEALTH_THRESH", 50.0)
-
         if trauma_vector and sum(trauma_vector.values()) > trauma_threshold and health < health_threshold:
             max_trauma = str(max(trauma_vector, key=trauma_vector.get)).lower()
-            msg = (ux("village_strings", "therapist_intervention") or "The Therapist steps in to address the {trauma}.").format(trauma=max_trauma)
+            msg = (ux("village_strings",
+                      "therapist_intervention") or "The Therapist steps in to address the {trauma}.").format(
+                trauma=max_trauma)
             self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "THERAPY")
             return True, msg
         return False, ""
+
 
 class TheGraveDigger:
     """
     Cleans up deprecated concepts or closed conversational loops.
     Sometimes unearths a conceptual 'Relic' that the user can keep in their inventory.
     """
+
     def __init__(self, inventory_ref, events_ref, config_ref=None):
         self.inventory = inventory_ref
         self.events = events_ref
         self.cfg = config_ref or BoneConfig
 
     def bury_memory(self, node_id: str, mass: float) -> Optional[str]:
-        msg = (ux("village_strings", "gravedigger_bury") or "The Grave Digger turns the soil over '{node_id}'.").format(node_id=node_id)
+        msg = (ux("village_strings", "gravedigger_bury") or "The Grave Digger turns the soil over '{node_id}'.").format(
+            node_id=node_id)
         self.events.log(f"{Prisma.GRY}{msg}{Prisma.RST}", "VILLAGE")
-
-        # Heavy concepts (high mass) have a higher chance of leaving behind a usable relic.
         if self.inventory and random.random() < (mass * _cfg_val(self.cfg, "VILLAGE", "GRAVEDIGGER_RELIC_CHANCE", 0.1)):
             clean_id = str(node_id).replace("-", "").upper()
             relic_name = f"BONE RELIC [{clean_id[-6:]}]"
             self.inventory.acquire(relic_name)
-            unearth_msg = (ux("village_strings", "gravedigger_unearth") or "The Grave Digger struck something. {relic} added.").format(relic=relic_name)
+            unearth_msg = (ux("village_strings",
+                              "gravedigger_unearth") or "The Grave Digger struck something. {relic} added.").format(
+                relic=relic_name)
             return f"{Prisma.OCHRE}{unearth_msg}{Prisma.RST}"
-
         return None

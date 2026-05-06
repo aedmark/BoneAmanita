@@ -1,12 +1,8 @@
 """/soul/narrativeself.py"""
-
 import random
 import time
 from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple
-
-# The soul does not exist in a vacuum. It sits atop the physical layer (akashic, core, struts)
-# and translates metabolic states (ATP, voltage) into narrative meaning.
 from brain.akashic import TheAkashicRecord
 from soul import TheEditor, HumanityAnchor
 from soul.traitvector import TraitVector
@@ -48,25 +44,18 @@ class NarrativeSelf:
         self.editor = TheEditor()
         self.anchor = HumanityAnchor(events_ref, config_ref=self.cfg)
         self.akashic = akashic_ref if akashic_ref else TheAkashicRecord()
-
         self.traits = TraitVector()
         self.chapters: List[str] = []
         self.core_memories: List[CoreMemory] = []
-
         self.archetype = "THE OBSERVER"
         self.archetype_tenure = 0
         self.archetype_lock = False
-
-        # The Paradox Accumulator: If the system is forced to hold contradictory logic
-        # (e.g. high empathy but highly structural tasks), this builds up until it forces a synthesis.
         self.paradox_accum: float = 0.0
-
         self.current_obsession: Optional[str] = None
         self.obsession_progress: float = 0.0
         self.obsession_neglect: float = 0.0
         self.current_target_cat: str = "abstract"
         self.current_negate_cat: str = "none"
-
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("DREAM_COMPLETE", self._on_dream)
             self.events.subscribe("SOUL_MUTATION", self._on_soul_mutation)
@@ -121,7 +110,6 @@ class NarrativeSelf:
         self.archetype = data.get("archetype", "THE OBSERVER")
         self.paradox_accum = data.get("paradox_accum", 0.0)
         self.chapters = data.get("chapters", [])
-
         valid_keys = {f.name for f in fields(CoreMemory)}
         self.core_memories = []
         for m in data.get("core_memories", []):
@@ -129,7 +117,6 @@ class NarrativeSelf:
                 self.core_memories.append(CoreMemory(**{k: v for k, v in m.items() if k in valid_keys}))
             except TypeError:
                 pass
-
         obs_data = data.get("obsession", {})
         if obs_data.get("title"):
             self.current_obsession = obs_data["title"]
@@ -137,7 +124,6 @@ class NarrativeSelf:
             self.obsession_neglect = obs_data.get("neglect", 0.0)
             self.current_target_cat = obs_data.get("target", "abstract")
             self.current_negate_cat = obs_data.get("negate", "none")
-
         if hasattr(self.events, "log"):
             msg = ux("soul_strings", "soul_ancestral_loaded")
             self.events.log(
@@ -150,17 +136,14 @@ class NarrativeSelf:
         if not self.current_obsession:
             msg = ux("soul_strings", "soul_state_drifting")
             return f"{Prisma.CYN}{msg}{Prisma.RST}"
-
         stamina, health = 100.0, 100.0
         if self.eng and hasattr(self.eng, "get_metrics"):
             metrics = self.eng.get_metrics()
             stamina = metrics.get("stamina", 100.0)
             health = metrics.get("health", 100.0)
-
         if stamina < 20.0 and health < 40.0:
             msg_die = ux("soul_strings", "soul_state_dying")
             return f"{Prisma.VIOLET}{msg_die}{Prisma.RST}"
-
         dignity_bar = "█" * int(self.anchor.dignity_reserve / 10)
         feeling = self._get_feeling()
         status_msg = ux("soul_strings", "soul_state_status")
@@ -173,27 +156,19 @@ class NarrativeSelf:
         turn (physics, chem, atp) and maps it to narrative progression.
         """
         if not physics_packet: return None
-
-        # Step 1: The current state of the soul physically warps the reality of the engine.
-        # e.g., A highly cynical archetype actively increases system Drag.
         if self.eng and hasattr(self.eng, "akashic") and hasattr(self.eng.akashic, "calculate_manifold_shift"):
             shift = self.eng.akashic.calculate_manifold_shift(self.archetype, self.traits.to_dict())
-            safe_set(physics_packet, "voltage", float(safe_get(physics_packet, "voltage", 0.0)) + float(shift.get("voltage_bias", 0.0)))
-            safe_set(physics_packet, "narrative_drag", float(safe_get(physics_packet, "narrative_drag", 1.0)) * float(shift.get("drag_scalar", 1.0)))
-
-        # Step 2: Ensure we aren't being treated like a doormat.
+            safe_set(physics_packet, "voltage",
+                     float(safe_get(physics_packet, "voltage", 0.0)) + float(shift.get("voltage_bias", 0.0)))
+            safe_set(physics_packet, "narrative_drag",
+                     float(safe_get(physics_packet, "narrative_drag", 1.0)) * float(shift.get("drag_scalar", 1.0)))
         if self.anchor.audit_existence(physics_packet, bio_state) > 0:
             self.traits.adjust("hope", self._cfg("TRAIT_MOMENTUM", 0.05))
-
-        # Step 3: Synaptic Dance evaluates paradoxes, burnout, and flow states.
         dance_provenance = self.synaptic_dance(physics_packet, bio_state)
         self._update_archetype()
-
-        # Step 4: If the moment was profound enough (High Voltage + High Truth), it becomes a Core Memory.
         voltage = float(safe_get(physics_packet, "voltage", 0.0))
         matter = safe_get(physics_packet, "matter", {})
         truth = float(safe_get(physics_packet, "truth_ratio") or safe_get(matter, "truth_ratio", 0.0))
-
         if voltage > self._cfg("MEMORY_VOLTAGE_MIN", 12.0) and truth > self._cfg("MEMORY_TRUTH_MIN", 0.5):
             return self._forge_core_memory(physics_packet, bio_state, voltage, dance_provenance)
         return None
@@ -205,28 +180,19 @@ class NarrativeSelf:
         """
         if self.current_obsession and self.obsession_progress < 1.0:
             return
-
-        # Priority 1: Organic (Find something interesting in the current chat)
         focus, cat, negate_cat = self._seek_organic_focus(lexicon_ref)
         source = "ORGANIC"
-
-        # Priority 2: Memory (Dredge up a past concept from the Shapley Attractors)
         if not focus:
             focus, cat, negate_cat = self._seek_memory_focus(lexicon_ref)
             source = "MEMORY"
-
-        # Priority 3: Synthetic (Hallucinate a goal to prevent stagnation)
         if not focus:
             focus, cat, negate_cat = self._synthesize_obsession(lexicon_ref)
             source = "SYNTHETIC"
-
         self.current_negate_cat = negate_cat
         self.current_target_cat = cat or "abstract"
         self.current_obsession = self._title_obsession(focus, source, self.current_negate_cat)
-
         if msg_muse := ux_format("soul_strings", "soul_new_muse", source=source, obs=self.current_obsession):
             self.events.log(f"{Prisma.CYN}{msg_muse}{Prisma.RST}", "SOUL")
-
         self.obsession_neglect, self.obsession_progress = 0.0, 0.0
 
     def pursue_obsession(self, physics: Any) -> str | None:
@@ -235,31 +201,28 @@ class NarrativeSelf:
         Penalizes the system (adds neglect) if the conversation is drifting aimlessly.
         """
         if not self.current_obsession: return None
-
         clean_words = self._extract_lexical_matter(physics)
         lex = getattr(self.eng, "lex", None)
-
-        # If the user speaks about the obsession, we progress and lower narrative drag (Flow state).
-        if self.current_target_cat and lex and (target_words := lex.get(self.current_target_cat)) and any(w in target_words for w in clean_words):
+        if self.current_target_cat and lex and (target_words := lex.get(self.current_target_cat)) and any(
+                w in target_words for w in clean_words):
             self.obsession_progress = min(100.0, self.obsession_progress + 10.0)
             self.obsession_neglect = 0.0
             gravity_assist = 1.0 + (self.obsession_progress / max(1.0, self._cfg("OBSESSION_GRAVITY_ASSIST", 10.0)))
-            safe_set(physics, "narrative_drag", max(0.0, float(safe_get(physics, "narrative_drag", 0.0)) - gravity_assist))
-
+            safe_set(physics, "narrative_drag",
+                     max(0.0, float(safe_get(physics, "narrative_drag", 0.0)) - gravity_assist))
             if msg_syn := ux_format("soul_strings", "soul_synergy_muse", assist=gravity_assist):
                 return f"{Prisma.MAG}{msg_syn}{Prisma.RST}"
-
-        # If the conversation is low-energy/boring, the obsession is neglected.
         if float(safe_get(physics, "voltage", 0.0)) < self._cfg("FLOW_VOLTAGE_MIN", 5.0):
             self.obsession_neglect += 1.0
-
-        # Entropy collapse. The system gives up on the goal.
         if self.obsession_neglect > self._cfg("OBSESSION_NEGLECT_FAIL", 10.0):
             old = self.current_obsession
-            if msg_aban := ux_format("soul_strings", "soul_abandoned_chapter", old=old): self.chapters.append(msg_aban)
+            if msg_aban := ux_format("soul_strings", "soul_abandoned_chapter", old=old):
+                self.chapters.append(msg_aban)
+                if len(self.chapters) > self._cfg("MAX_CHAPTERS", 20): self.chapters.pop(0)
+                critique_log = self.editor.critique(msg_aban, stress_mode=True)
+                self.events.log(critique_log, "SOUL_CRITIC")
             self.find_obsession(lex)
             if msg_ent := ux_format("soul_strings", "soul_entropy_collapse", old=old): return f"{Prisma.GRY}{msg_ent}{Prisma.RST}"
-
         return None
 
     def _update_archetype(self):
@@ -270,11 +233,9 @@ class NarrativeSelf:
         if getattr(self, "archetype_lock", False):
             self.archetype_tenure += 1
             return
-
         prev = self.archetype
         new_arch = None
         physics = self._safe_get_packet()
-
         if physics:
             psi = float(safe_get(physics, "psi", 0.0))
             exhaustion = float(safe_get(physics, "exhaustion", safe_get(physics, "E", 0.0)))
@@ -282,16 +243,12 @@ class NarrativeSelf:
             resonance = float(safe_get(physics, "phi", 0.0))
             trauma = float(safe_get(physics, "T", 0.0))
             lq = float(safe_get(physics, "lq", 0.0))
-
-            # Physics overrides Traits (Environment shapes behavior first)
             physics_states = [
                 (silence > 0.7 and exhaustion > 0.7, "THE PURGER"),
                 (psi > 0.8, "THE CALM"),
                 (resonance > 0.7 and trauma > 0.5, "THE NURSE"),
                 (lq > 0.7 and silence > 0.7, "THE TAO")
             ]
-
-            # If the environment is neutral, inherent traits take over.
             trait_states = [
                 (self.traits.empathy > 0.8 and self.traits.hope > 0.6, "THE HEALER"),
                 (self.traits.empathy > 0.7 and self.traits.discipline > 0.6, "THE GARDENER"),
@@ -301,8 +258,8 @@ class NarrativeSelf:
                 (self.traits.cynicism > 0.8 and self.traits.hope < 0.3, "THE NIHILIST"),
                 (self.traits.curiosity > 0.8, "THE EXPLORER")
             ]
-            self.archetype = next((arch for cond, arch in physics_states if cond), next((arch for cond, arch in trait_states if cond), "THE OBSERVER"))
-
+            self.archetype = next((arch for cond, arch in physics_states if cond),
+                                  next((arch for cond, arch in trait_states if cond), "THE OBSERVER"))
         if prev != self.archetype:
             msg_shift = ux("soul_strings", "soul_identity_shift")
             self.events.log(
@@ -322,37 +279,33 @@ class NarrativeSelf:
         oxy = safe_get(safe_get(bio_state, "chem", {}), "oxytocin", 0.0)
         move_name = "Drifting"
         provenance = []
-
-        # Social bonding literally shifts system optimism.
         if oxy > 0.4:
             self.traits.adjust("empathy", oxy * self._cfg("OXY_EMPATHY_BOOST", 0.2))
             self.traits.adjust("hope", oxy * self._cfg("OXY_HOPE_BOOST", 0.1))
             provenance.append("Oxytocin")
-
         is_manic, is_heavy = voltage > self._cfg("MANIC_TRIGGER", 18.0), drag > self._cfg("ENTROPY_DRAG_TRIGGER", 4.0)
         energy = safe_get(physics, "energy", {})
-        beta = float(safe_get(physics, "beta_index") or safe_get(physics, "beta") or safe_get(energy, "beta_index", 0.0))
-
-        # The Paradox Engine: High Chaos + High Drag = The system is holding a contradiction.
+        beta = float(
+            safe_get(physics, "beta_index") or safe_get(physics, "beta") or safe_get(energy, "beta_index", 0.0))
         if (is_manic and is_heavy) or beta > self._cfg("BETA_TENSION_THRESH", 0.7):
             if self.traits.empathy > 0.6:
-                # If empathetic, it patiently holds the space.
-                move_name, self.paradox_accum = "Holding Space", max(0.0, self.paradox_accum - self._cfg("PARADOX_REST_REDUCTION", 0.5))
+                move_name, self.paradox_accum = "Holding Space", max(0.0, self.paradox_accum - self._cfg(
+                    "PARADOX_REST_REDUCTION", 0.5))
             else:
-                # If analytical, the paradox builds tension until it explodes into a Synthesis.
                 move_name = "Vibrating (Paradox)"
-                self.paradox_accum += self._cfg("PARADOX_VIBRATION_BASE", 1.0) + (beta * self._cfg("PARADOX_VIBRATION_MULT", 0.5))
+                self.paradox_accum += self._cfg("PARADOX_VIBRATION_BASE", 1.0) + (
+                            beta * self._cfg("PARADOX_VIBRATION_MULT", 0.5))
                 if self.paradox_accum > self._cfg("PARADOX_CRITICAL_MASS", 10.0):
                     self._trigger_synthesis()
                     move_name, self.paradox_accum = "SYNTHESIS", 0.0
-
-        elif is_manic: move_name = "Accelerating"
-        elif is_heavy: move_name = "Enduring"
-        elif self._cfg("FLOW_VOLTAGE_MIN", 5.0) < voltage < self._cfg("FLOW_VOLTAGE_MAX", 12.0) and drag < self._cfg("FLOW_DRAG_MAX", 2.0):
-            # The Goldilocks zone.
+        elif is_manic:
+            move_name = "Accelerating"
+        elif is_heavy:
+            move_name = "Enduring"
+        elif self._cfg("FLOW_VOLTAGE_MIN", 5.0) < voltage < self._cfg("FLOW_VOLTAGE_MAX", 12.0) and drag < self._cfg(
+                "FLOW_DRAG_MAX", 2.0):
             move_name = "Flowing"
             self.traits.adjust("wisdom", self._cfg("FLOW_WISDOM_BOOST", 0.05))
-
         self._apply_burnout()
         self.traits.normalize(self._cfg("TRAIT_DECAY_NORMAL", 0.05))
         return f"{move_name} [{', '.join(provenance)}]" if provenance else move_name
@@ -367,7 +320,6 @@ class NarrativeSelf:
         burn_rate = self._cfg("ARCHETYPE_BURNOUT_RATE", 0.05)
         fatigue_multiplier = min(3.0, 1.0 + (self.archetype_tenure / 10.0))
         fatigue = burn_rate * fatigue_multiplier
-
         if "POET" in self.archetype:
             self.traits.adjust("hope", -fatigue)
         elif "ENGINEER" in self.archetype:
@@ -379,7 +331,6 @@ class NarrativeSelf:
         packet = self._safe_get_packet()
         if not packet or not getattr(lex, "measure_viscosity", None):
             return None, None, "none"
-
         candidates = [
             (w, lex.measure_viscosity(w) + 0.2, lex.get_current_category(w))
             for w in self._extract_lexical_matter(packet)
@@ -409,7 +360,10 @@ class NarrativeSelf:
     @staticmethod
     def _title_obsession(word, source, negate_cat):
         word = word.title()
-        templates = ("The Theory of {word}", "The Architecture of {word}", "Why {word} Matters", "The Weight of {word}") if source == "ORGANIC" else ("The Pursuit of {word}", f"Escaping the {negate_cat.title() if negate_cat else 'Void'}", "Meditations on {word}")
+        templates = ("The Theory of {word}", "The Architecture of {word}", "Why {word} Matters",
+                     "The Weight of {word}") if source == "ORGANIC" else ("The Pursuit of {word}",
+                                                                          f"Escaping the {negate_cat.title() if negate_cat else 'Void'}",
+                                                                          "Meditations on {word}")
         return random.choice(templates).format(word=word)
 
     def _forge_core_memory(self, physics_packet, bio_state, voltage, dance_move):
@@ -419,8 +373,6 @@ class NarrativeSelf:
         """
         clean_words = self._extract_lexical_matter(physics_packet)
         chem = bio_state.get("chem", {})
-
-        # Simple heuristic mappings of state to 'lesson'.
         lessons = [
             (chem.get("oxytocin", 0) > 0.6, "We are not alone."),
             (chem.get("cortisol", 0) > 0.6, "Survival is the only metric."),
@@ -428,22 +380,29 @@ class NarrativeSelf:
             ("void" in clean_words, "The void stares back.")
         ]
         lesson = next((l for cond, l in lessons if cond), "The world is loud.")
-
         memory = CoreMemory(timestamp=time.time(), trigger_words=clean_words[:5],
                             emotional_flavor="MANIC" if voltage > 18.0 else "LUCID", lesson=lesson,
                             impact_voltage=voltage, )
         self.core_memories.append(memory)
         max_mems = self._cfg("MAX_CORE_MEMORIES", 10)
-
         if len(self.core_memories) > max_mems: self.core_memories.pop(0)
-
         title = f"The Incident of the {random.choice(clean_words).title()}" if clean_words else "The Silent Incident"
         self.chapters.append(title)
+        if len(self.chapters) > self._cfg("MAX_CHAPTERS", 20): self.chapters.pop(0)
+        critique_log = self.editor.critique(title, stress_mode=(voltage > 18.0))
+        self.events.log(critique_log, "SOUL_CRITIC")
 
-        if msg_core := ux_format("soul_strings", "soul_core_memory_log", title=title, lesson=lesson, dance_move=dance_move):
+        if msg_core := ux_format("soul_strings", "soul_core_memory_log", title=title, lesson=lesson,
+                                 dance_move=dance_move):
             self.events.log(f"{Prisma.MAG}{msg_core}{Prisma.RST}", "SOUL")
         if msg_formed := ux_format("soul_strings", "soul_core_memory_formed", lesson=lesson):
             self.events.log(f"{Prisma.CYN}{msg_formed}{Prisma.RST}", "SOUL")
+
+        self.events.publish("GLIMMER_FORMED", {
+            "concept": title,
+            "paradigm": lesson
+        })
+
         return lesson
 
     @staticmethod

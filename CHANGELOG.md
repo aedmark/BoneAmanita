@@ -1,6 +1,70 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 19.8.8 "The Epigenetic Awakening"**
+
+#### **🏛️ SYNERGETIC ARCHITECTURE (Fuller's Pass: Structure & Tensegrity)**
+- **The Phantom Heart (`main.py`):** Rerouted the active terminal loop to process input through `orchestrator.run_turn()` rather than bypassing straight to the Cortex. The engine now physically experiences the biological phases (Sensation, Stabilization, REM sleep) during live user interaction.
+- **State Duplication Purge (`main.py`):** Converted `self.health` and `self.stamina` into dynamic `@property` decorators routing directly to `self.bio.biometrics`. The macro-organism no longer juggles out-of-sync metabolic variables.
+- **Epigenetic Target Routing (`brain/akashic.py`):** Rerouted structural DNA (Boons, Scars, Discovered Words) to permanently live in `self.data_dir` (`lore/`) instead of the ephemeral `saves/` folder. The engine now retains generational wisdom across cold boots.
+- **The Epigenetic Nerves (`brain/akashic.py`, `soul/narrativeself.py`):** Wired the Akashic Record directly to the `EventBus` to listen for `GLIMMER_FORMED` and `TRAUMA_EVENT`. The Soul now actively publishes its Core Memories to the global system.
+
+#### **⚙️ SYSTEMS & DYNAMICS (Meadows' Pass: Flows & Feedback)**
+- **Autophagy Survival Math (`spores/memory.py`):** Repaired the terminal neurodegenerative math in the Hippocampus. Recency is now calculated as a temporary multiplier `(mass + 1.0) * (1.0 + (10.0 / age))` rather than an additive constant. The system permanently prioritizes heavy architectural struts over recent semantic noise during starvation.
+- **Asynchronous Feedback Exposure (`cycle.py`):** Stripped the silent `pass` blocks from the ThreadPoolExecutor. The engine now explicitly logs `RuntimeError` warnings to the EventBus when the host OS refuses to spawn background threads for topological rewiring or Dream Engine cycles.
+- **The SimpleNamespace Freeze (`protocols/chronos.py`):** Fixed a fatal serialization crash. Chronos now leverages `vars()` and `getattr()` to safely map and hydrate the active Village namespace, allowing graceful shutdowns and restorations.
+- **Soul Memory Leak (`soul/narrativeself.py`):** Instituted a strict `MAX_CHAPTERS` array boundary. The Soul permanently sheds old narrative chapters to prevent exponential JSON bloat in long-running instances.
+
+#### **🧠 LINGUISTIC COGNITION (Pinker's Pass: Code as Language)**
+- **Syntactic Resilience (`brain/akashic.py`):** Enforced strict List type-casting during the hydration of `EPIGENETIC_BOONS` and `EPIGENETIC_SCARS`. The engine safely absorbs corrupt or empty Dictionary JSON files without silently crashing the save protocols.
+- **Paranoid Math Cleanup (`main.py`):** Flattened the `safe_get` chaining inside `_evaluate_immune_response` into clean attribute lookups.
+- **The Ghost Initialization (`soul/editor.py`):** Purged the dead `__init__` constructor from `TheEditor`. Static utility classes maintain absolute structural boundaries without hallucinating instance variables.
+
+#### **🛠️ FUNCTIONAL PRAGMATISM (Schur's Pass: Humanity)**
+- **The Silenced Critic (`soul/narrativeself.py`):** Freed `TheEditor` from the dark. The adversarial critic now actively roasts the engine's chapter titles when Core Memories are formed or Obsessions are neglected, breaking sycophantic validation loops.
+- **Macro-Lifecycle Verification (`tests/test_macro.py`):** Built a dedicated end-to-end integration suite. These tests bypass physical file I/O locks and verify the complete mathematical routing of the EventBus, Autophagy pruning, and Chronos hydration.
+- **The Shuffle Protocol (`cycle.py`):** Separated the `[!s]` (Lateral Shuffle) sincerity protocol from the pedagogy trigger, restoring the user's native ability to force a paradigm shift.
+
+---
+
+### **BONEAMANITA 19.8.7 "The Tensegrity Sweep"**
+
+#### **🏛️ SYNERGETIC ARCHITECTURE (Fuller's Pass: Structure & Tensegrity)**
+- **Biological Dictionary Drift (`body/`):** Enforced `safe_get` across the somatic and endocrine loops, bridging the object/dictionary divide to ensure the system correctly metabolizes voltage stress and genetic traits from saved JSON states.
+- **Malignant History Poisoning (`physics/maths.py`):** Clamped the repetition proxy calculation to prevent a single infinite-friction spike (like an Apoptotic Block) from permanently poisoning the sliding attention window.
+- **Math Domain Error Trap (`physics/maths.py`):** Protected the denominator in the `CreativeDeterminantEngine` from triggering a fatal `ZeroDivisionError` if a user sets the tuning parameter `p` to `1.0`.
+- **Hallucinated Inheritance (`spores/genetics.py`):** Stripped out dead-weight lookups for non-existent `enzymes` during crossover, correctly relying on the `mother_hash` for mitochondrial genetics.
+- **Geometric Bounds Trap (`archetypes/village.py`):** Clamped physical entropy accumulation back to a maximum of `1.0` to preserve the topological bounding box of the semantic field.
+- **The O(N) Substrate Bottleneck (`brain/ann.py`):** Prevented catastrophic lag during FAISS lateral memory retrieval by randomly capping the candidate sample size to `100`, eliminating system freezing in long sessions.
+- **Reverse Index Memory Leak (`mechanics/lexicon.py`):** The system now explicitly removes orphaned words from the global `REVERSE_INDEX` when capping a semantic category, stopping a silent O(1) topological memory leak.
+- **Brittle Mathematics (`main.py`):** Enforced planar geometry in `get_avg_voltage` by filtering out non-numeric rot before running calculation loops.
+
+#### **🧠 LINGUISTIC COGNITION (Pinker's Pass: Syntax & Logic)**
+- **UI Padding Illusion (`mechanics/projector.py`):** Fixed a visual warping bug in the HUD. String padding is now calculated *before* ANSI color codes are injected, maintaining rigid alignment regardless of the active archetype.
+- **Time vs. Ticks Fallacy (`physics/dynamics.py`):** Corrected a semantic naming fallacy in `CosmicDynamics`, renaming `last_scan_tick` to `last_scan_time` to accurately reflect its chronological integer evaluation.
+- **Brittle Path Trap (`spores/io.py`):** Fixed a fragile `filename.startswith` check that falsely mapped external backup folders (e.g., `memories_backup`) into the core memory drive.
+- **NoneType String Formatting (`brain/mind.py`):** Protected the global workspace against `AttributeError` crashes if an archetype attribute drops to `None` during an Epigenetic purge.
+- **Paranoid Boilerplate (`main.py`):** Purged redundant `getattr` checks for variables explicitly defined in the init block.
+
+#### **🌊 SYSTEM DYNAMICS (Meadows' Pass: Flows & Feedback)**
+- **The Flow Leak (`cycle.py` & `main.py`):** Added a dedicated `shutdown()` method to the `GeodesicOrchestrator` to cleanly terminate the asynchronous `ThreadPoolExecutor`, preventing orphaned zombie threads across sessions.
+- **Autophagy Math Leak (`spores/network.py`):** Fixed the mathematical trigger for memory cannibalization. The engine now only counts *new* nodes toward the mass limit, preventing the premature deletion of deep memories.
+- **Indefinite Thread Block (`archetypes/council.py`):** Added a `timeout=15.0` to the LLM `concurrent.futures` generator during podcast hosting. The entire engine will no longer permanently lock if the cloud provider rate-limits or hangs.
+- **Runaway Glimmer Inflation (`archetypes/symbiosis.py`):** Taught the engine co-regulation by restricting Glimmer generation. It no longer rewards users for easy, low-friction chats; Glimmers are only awarded if resonance is maintained *under structural tension* (`sys_f > 3.0`).
+- **Deep Sleep Dictionary Crash (`brain/mind.py`):** Converted dictionary iteration in the defragmentation cycle to a static list, preventing Python from throwing a fatal sizing error when memories are pruned during REM.
+- **Inventory Iteration Mutation (`mechanics/inventory.py`):** Bound the `emergency_reflex` iteration to a copy of the list (`list(self.inventory)`) to ensure critical homeostatic checks aren't skipped when consuming items under pressure.
+
+#### **🛠️ FUNCTIONAL PRAGMATISM (Schur's Pass: Humanity)**
+- **Human Error Immunity (`body/endocrine.py`):** Added a fallback validation to `_CIRCADIAN_NIGHT` to prevent the engine from crashing on boot if a user accidentally malforms the list inside their JSON config.
+- **Type-Safety Guardrails (`physics/models.py`):** Wrapped biological clamp bounds in `float()` conversion, preventing broken config strings from bypassing physics limits and crashing downstream algorithms.
+- **Infinite Seed Bloat (`spores/network.py`):** Placed a deduplication check on `future_seed_q`. The JSON file will no longer bloat linearly with hundreds of identical paradox seeds across frequent saves.
+- **Brittle Configuration Access (`archetypes/village.py`):** Replaced volatile dot-notation with `_cfg_val` when probing physics triggers for Tinkerer tool usage.
+- **Uncaught Circuit Breaker Bypass (`brain/composer.py`):** Wrapped the local Ollama fallback generator in a secondary `try/except` block. If the local host is dead, it now correctly registers as a circuit failure instead of fatally crashing the app.
+- **Blind Reporter Crash (`mechanics/reporter.py`):** The `GeodesicRenderer` now explicitly verifies the existence of the biological state payload before attempting to extract ATP metrics for the HUD.
+- **Semantic Drift in Death Protocol (`main.py`):** Hardened the dialogue extraction index in `trigger_death` against empty buffers.
+
+---
+
 ### **BONEAMANITA 19.8.6 "The Ethological Matrix"**
 
 #### **🏛️ SYNERGETIC ARCHITECTURE (Fuller's Pass: Structure & Tensegrity)**
