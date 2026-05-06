@@ -21,14 +21,20 @@ from presets import BoneConfig
 from struts import ux, ux_format, safe_get
 
 
-class BoneJSONEncoder(json.JSONEncoder):
-    """Ensures complex biological data structures (sets, deques, dataclasses) serialize safely."""
+def safe_dict(obj):
+    """Safe object-to-dict conversion without enforcing strict interfaces."""
+    if isinstance(obj, (set, deque)): return list(obj)
+    if hasattr(obj, "to_dict"): return obj.to_dict()
+    if hasattr(obj, "__dict__"): return vars(obj)
+    return obj if isinstance(obj, dict) else {}
 
+class BoneJSONEncoder(json.JSONEncoder):
+    """Ensures complex biological data structures serialize safely."""
     def default(self, obj):
-        if isinstance(obj, (set, deque)): return list(obj)
-        if hasattr(obj, "to_dict"): return obj.to_dict()
-        if hasattr(obj, "__dict__"): return obj.__dict__
-        return super().default(obj)
+        try:
+            return safe_dict(obj)
+        except Exception:
+            return super().default(obj)
 
 
 from physics.models import PhysicsPacket, UserInferredState, SharedDynamics

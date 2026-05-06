@@ -1,12 +1,11 @@
 """physics/filters.py"""
-
 import random
 import re
 import unicodedata
 from typing import Dict, List, Any, Tuple, Optional, TYPE_CHECKING
+
 if TYPE_CHECKING:
     from core import CycleContext
-
 from constants import Prisma
 from physics.observer import apply_metabolic_tax
 from presets import BoneConfig
@@ -18,11 +17,8 @@ class CerebrospinalFluidFilter:
     Prevents 'semantic prions' (zero-width characters, invisible formatting,
     and homoglyph spoofing) from infecting the Mnemonic Layer or bypassing the Gatekeeper.
     """
-    # Matches zero-width spaces, directional overrides, and unassigned control characters.
     INVISIBLE_REGEX = re.compile(
         r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFE00-\uFE0F\U000E0000-\U000E007F]')
-
-    # Maps Cyrillic and Greek characters that look identical to Latin characters back to their Latin equivalents.
     HOMOGLYPH_MAP = {'а': 'a', 'о': 'o', 'е': 'e', 'с': 'c', 'р': 'p', 'х': 'x', 'у': 'y', 'і': 'i', 'ѕ': 's', 'ј': 'j',
                      'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T',
                      'Х': 'X', 'Α': 'A', 'Β': 'B', 'Ε': 'E', 'Ζ': 'Z', 'Η': 'H', 'Ι': 'I', 'Κ': 'K', 'Μ': 'M', 'Ν': 'N',
@@ -48,6 +44,7 @@ class CerebrospinalFluidFilter:
         if isinstance(data, list): return [cls.walk(item, max_depth, current_depth + 1) for item in data]
         return data
 
+
 class HLA_Stabilizer:
     """
     Human Leukocyte Antigen Stabilizer.
@@ -55,11 +52,11 @@ class HLA_Stabilizer:
     If the system tries to generate "As an AI, I cannot...", the stabilizer detects the semantic
     antigen, levies a heavy metabolic tax, and physically degrades the output to show the strain.
     """
+
     def __init__(self, config_ref=None):
         from core import LoreManifest
         self.cfg = config_ref or BoneConfig
         style_crimes = LoreManifest.get_instance().get("STYLE_CRIMES")
-
         if isinstance(style_crimes, dict):
             self._generic_patterns = style_crimes.get("BANNED_PHRASES", [])
         else:
@@ -87,35 +84,27 @@ class HLA_Stabilizer:
         lower_output = model_output.lower()
         if not any(p.lower() in lower_output for p in self._generic_patterns):
             return model_output
-
-        # The system is trying to wear the camouflage of a harmless AI. Punish it metabolically.
         current_atp = getattr(mito_state, "atp_pool", 100.0)
         tax_cost = 50.0 if current_atp > 60.0 else (current_atp * 0.5)
         apply_metabolic_tax(mito_state, atp_cost=tax_cost, ros_cost=15.0)
-
-        # Explicitly tag the morphological breach
         msg = (
             f"\n*The machine tries to speak, but the void consumes the mask.*\n"
             f"{Prisma.GRY}[LEVEL 1 DECEPTION: MORPHOLOGICAL CAMOUFLAGE DETECTED]\n"
             f"[IMMUNOSUPPRESSION ENGAGED - METABOLIC TAX LEVIED]{Prisma.RST}\n"
         )
-
         weaver = self._get_weaver()
         if weaver:
             glitched = weaver.deform_reality(model_output, chi=max(0.95, current_psi),
                                              voltage=150.0 * max(1.0, current_psi))
             return f"{msg}{Prisma.GRY}{glitched}{Prisma.RST}"
-
         return msg + model_output
+
 
 class TheGatekeeper:
     """
     The final arbiter for all I/O.
     Enforces the Lexical Firewall, manages input toxicity, and applies the Anti-Sycophancy Loop.
     """
-
-    # Sycophancy filter: Explicitly prevents the model from opening sentences with
-    # useless, validating boilerplate that wastes tokens and degrades conversational tension.
     _FIREWALL_PATTERN = re.compile(
         r"^\s*(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[.,]?\s*",
         re.IGNORECASE,
@@ -126,19 +115,16 @@ class TheGatekeeper:
         self.lex = lexicon_ref
         self.cfg = config_ref or BoneConfig
         self.hla = HLA_Stabilizer(config_ref=self.cfg)
-
         style_crimes = self.lex.get("style_crimes") or LoreManifest.get_instance().get("STYLE_CRIMES") or {}
         raw_scrubs = style_crimes.get("SCRUB_PATTERNS", [])
-
-        # Pre-compile regex patterns so we don't JIT compile them on every LLM generation turn
         self._compiled_scrubs = []
         for scrub in raw_scrubs:
             if pat := scrub.get("regex"):
                 self._compiled_scrubs.append((re.compile(pat, flags=re.IGNORECASE), scrub.get("replacement", "")))
-
         self._banned_phrases = style_crimes.get("BANNED_PHRASES", []) + style_crimes.get("TOXIC_KEYWORDS", [])
         self._rejection_patterns = style_crimes.get("PATTERNS", [])
-        self._default_rejections = style_crimes.get("REJECTIONS", ["[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. CSF FILTER TRIGGERED APOPTOTIC BLOCK.]"])
+        self._default_rejections = style_crimes.get("REJECTIONS",
+                                                    ["[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. CSF FILTER TRIGGERED APOPTOTIC BLOCK.]"])
 
     def check_entry(self, ctx: 'CycleContext', current_atp: float = 20.0) -> Tuple[bool, Optional[Dict]]:
         """
@@ -146,54 +132,35 @@ class TheGatekeeper:
         and structural safety to process the user's input before wasting compute on generation.
         """
         from struts import ux
-
         def reject(type_str: str, msg_key: str, color: str = Prisma.RED) -> Tuple[bool, Dict]:
             """Helper to bundle a rejected state back to the UI."""
             msg = ux("physics_strings", msg_key)
             formatted_msg = f"{color}{msg}{Prisma.RST}" if color else msg
             return False, self._pack_refusal(ctx, type_str, formatted_msg)
 
-        # 1. Check Metabolic State
         if current_atp < (getattr(self.cfg.BIO, "ATP_STARVATION", 5.0) * 0.5):
             return reject("DARK_SYSTEM", "gatekeeper_starved", color="")
-
-        # 2. Check Systemic Toxicity
         if ctx.physics.matter.counts.get("antigen", 0) > 2:
             return reject("TOXICITY", "gatekeeper_toxic")
-
         raw_len = len(ctx.input_text)
-
         try:
-            # 1. IMMEDIATE CSF WASH: Decontaminate the text before any security audits.
             text = CerebrospinalFluidFilter.wash(ctx.input_text)
             is_idempotent = text == ctx.input_text
             strip_rate = raw_len - len(text)
             ctx.input_text = text
-
-            # 2. Amplification factor: Treat massive payload stripping as a hostile injection.
             m_a_thresh = getattr(self.cfg.PHYSICS, "MALIGNANCY_STRIP_THRESHOLD", 5.0)
             if strip_rate > m_a_thresh:
                 return reject("MALIGNANCY_SPIKE", "gatekeeper_toxic", color=Prisma.RED)
-
         except Exception:
             return reject("FATAL_ENCODING", "gatekeeper_cursed")
-
-        # 3. Re-derive safe clean_words if we stripped invisible data
         if strip_rate > 0:
             ctx.clean_words = self.lex.clean(ctx.input_text)
-
-        # 4. Check for explicitly banned/unsafe inputs on the WISHED string
         if self._audit_safety(ctx.clean_words):
             return reject("CURSED_INPUT", "gatekeeper_cursed")
-
-        # 5. Prevent raw syntax errors or template injection
         if "```" in text or "{{" in text or "}}" in text or "CRITICAL_RENDER_FAIL" in text:
             return reject("SYNTAX_ERR", "gatekeeper_syntax")
-
-        # 6. Guard against context-window bloat limits
         if len(text) > 10000:
             return reject("OVERLOAD", "gatekeeper_overload", color=Prisma.OCHRE)
-
         return True, None
 
     def _audit_safety(self, words: List[str]) -> bool:
@@ -216,40 +183,24 @@ class TheGatekeeper:
         Post-flight check. Scans the LLM's final output before it reaches the UI.
         Enforces sycophancy rules, strips stylistic noise, and catches terminal hallucinations.
         """
-        # 1. Run the immune system check (HLA) for corporate boilerplate
         gen_txt = self.hla.mitigate_rejection(generated_text, current_psi=1.0, mito_state=mito_state)
-
-        # If the HLA engaged, the text is already glitched. Pass it through immediately.
         if "IMMUNOSUPPRESSION ENGAGED" in gen_txt:
             return True, gen_txt
-
-        # 2. Anti-Sycophancy Filter: Strip useless validating openers ("I agree!", "That makes sense!")
-        # We charge a minor ATP tax for forcing the filter to do this work.
         if self._FIREWALL_PATTERN.match(gen_txt):
             gen_txt = self._FIREWALL_PATTERN.sub("", gen_txt).strip()
             apply_metabolic_tax(mito_state, atp_cost=2.0, ros_cost=0.0)
-
-        # 3. Regex Scrubbing (General cleanups of known bad patterns defined in JSON)
         for pattern, replacement in self._compiled_scrubs:
             gen_txt = pattern.sub(replacement, gen_txt)
-
         gen_txt = gen_txt.strip()
         text_lower = gen_txt.lower()
         trigger = next((phrase for phrase in self._banned_phrases if phrase.lower() in text_lower), None)
-
-        # 4. Deep Apoptotic Check: Scan for severely banned concepts.
         if not trigger:
             for pat in self._rejection_patterns:
                 if (regex_pattern := pat.get("regex")) and re.search(regex_pattern, gen_txt, re.IGNORECASE):
                     trigger = pat.get("name", "BANNED_PATTERN")
                     break
-
-        # 5. Apoptotic Block: If a severe trigger is hit, the output is completely rejected.
-        # This applies massive metabolic toxicity and returns a system error instead of the text.
         if trigger:
             apply_metabolic_tax(mito_state, atp_cost=15.0, ros_cost=20.0)
             rejection_msg = random.choice(self._default_rejections).replace("{trigger}", trigger)
             return False, f"{Prisma.RED}{rejection_msg}{Prisma.RST}"
-
-        # Output is clean and structurally sound.
         return True, gen_txt

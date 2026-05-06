@@ -95,6 +95,40 @@ class ProtocolLifecycleTests(BoneTestCase):
         self.assertIn("A beautiful sunset", result_msg, "[FAIL] Result message failed to mention the lost node.")
         print("  [SUCCESS] Grief Protocol successfully exchanged a Glimmer for trauma reduction.")
 
+    def test_sincerity_protocol_hard_routing(self):
+        ambiguous_prompt = "I guess it's fine if we delete the backup. [!l]"
+        # Track cortisol, not chi, and access directly:
+        initial_cortisol = self.engine.bio.endo.cortisol
+
+        snapshot = self.engine.process_turn(ambiguous_prompt)
+        logs = "\n".join(snapshot.get("logs", [])).upper()
+
+        final_cortisol = self.engine.bio.endo.cortisol
+        self.assertEqual(
+            initial_cortisol, final_cortisol,
+            "[FAIL] Affective layer mutated emotional state despite Literal Mode strict boundary."
+        )
+        self.assertIn("LITERAL_MODE", logs, "[FAIL] Literal mode routing was not logged.")
+
+    def test_grief_protocol_activation(self):
+        """
+        THE WAKE: Evaluating profound loss must yield a structural Glimmer.
+        """
+        # Bankrupt the system
+        self.engine.bio.endo.glimmers = 0
+
+        # Seed a ghost of a heavy failure into the physical state
+        self.engine.mind.mem.graph["project_fail"] = {"mass": 50.0}
+
+        # Explicitly trigger the wake
+        snapshot = self.engine.process_turn("We lost the project. [grief]")
+        final_glimmers = self.engine.bio.endo.glimmers
+
+        self.assertGreater(
+            final_glimmers, 0,
+            "[FAIL] The Grief Protocol failed to yield a Glimmer."
+        )
+
     def test_syntax_stress_penalty(self):
         """
         Syntactic friction (high punctuation density)

@@ -1,17 +1,16 @@
 """protocols/zen.py
-
 The Zen Garden protocol is a passive monitoring system that tracks conversational
 stability and "stillness." When the system operates within an optimal voltage
 range with low narrative drag over consecutive turns, the Zen Garden rewards
 the engine with an ATP/efficiency boost and outputs philosophical koans.
 """
-
 import random
 from typing import Dict, Tuple, Optional, Any
 from core import LoreManifest
 from struts import ux, safe_get, ux_format
 from presets import BoneConfig
 from constants import Prisma
+
 
 class ZenGarden:
     """
@@ -23,20 +22,15 @@ class ZenGarden:
     def __init__(self, events_ref, config_ref=None):
         """
         Initializes the Zen Garden state trackers and loads the koan database.
-
         Args:
             events_ref: Reference to the global event bus for logging streak breaks.
             config_ref: Configuration settings, falling back to BoneConfig if not provided.
         """
         self.events = events_ref
         self.cfg = config_ref or BoneConfig
-
-        # State tracking metrics
         self.stillness_streak = 0
         self.max_streak = 0
         self.pebbles_collected = 0
-
-        # Load koans from the lore manifest; fallback to a default coding koan
         narrative_data = LoreManifest.get_instance().get("narrative_data") or {}
         self.koans = narrative_data.get(
             "ZEN_KOANS",
@@ -61,60 +55,37 @@ class ZenGarden:
         """
         The core evaluation loop for the Zen protocol. Evaluates the current
         physical state of the prompt against stability thresholds.
-
         Args:
             physics: The dimensional state of the text (voltage, drag).
             _bio: The biological state of the system (unused in this specific check).
-
         Returns:
             A tuple containing the efficiency boost multiplier (float) and
             an optional string message to display to the user if a milestone is hit.
         """
-        # Safely extract the necessary physical metrics
         vol = float(safe_get(physics, "voltage", 0.0))
         drag = float(safe_get(physics, "narrative_drag", 0.0))
-
-        # Load configuration thresholds
         cfg = getattr(self.cfg, "ZEN", object())
         v_min = getattr(cfg, "VOLTAGE_MIN", 5.0)
         v_max = getattr(cfg, "VOLTAGE_MAX", 12.0)
         d_max = getattr(cfg, "DRAG_MAX", 2.0)
-
-        # Stability is defined by moderate, controlled voltage and low narrative friction
         is_stable = (v_min <= vol <= v_max) and (drag <= d_max)
-
         if is_stable:
-            # The system is in a state of flow; increment the streak
             self.stillness_streak += 1
             self.max_streak = max(self.max_streak, self.stillness_streak)
-
-            # Calculate the passive energy reward, scaling with the streak but hard-capped
             efficiency_boost = min(
                 getattr(cfg, "EFFICIENCY_CAP", 0.5),
                 self.stillness_streak * getattr(cfg, "EFFICIENCY_SCALAR", 0.05)
             )
-
             msg = None
-
-            # Check for milestones to provide narrative feedback to the user
             if self.stillness_streak == getattr(cfg, "ZEN_FIRST_TICK", 1):
-                # The user just entered a state of stillness
                 msg = f"{Prisma.GRY}{ux('protocol_strings', 'zen_enter')}{Prisma.RST}"
-
             elif self.stillness_streak % getattr(cfg, "ZEN_MILESTONE_FREQ", 5) == 0:
-                # Milestone reached: grant a pebble, drop a koan, announce the efficiency boost
                 self.pebbles_collected += 1
                 koan = random.choice(self.koans)
                 msg = f"{Prisma.CYN}{ux_format('protocol_strings', 'zen_streak', default='Stillness {streak}: {koan} (+{boost}%)', streak=self.stillness_streak, koan=koan, boost=int(efficiency_boost * 100))}{Prisma.RST}"
-
             return efficiency_boost, msg
-
-        # If the state is chaotic or highly tense, evaluate if we just broke a significant streak
         if self.stillness_streak > getattr(cfg, "STREAK_BREAK_THRESHOLD", 3):
-            # The streak was long enough that breaking it is a notable narrative event
             break_msg = ux("protocol_strings", "zen_break")
-            self.events.log(f"{Prisma.GRY}{break_msg}{Prisma.RST}", "SYS",)
-
-        # Reset the streak to zero; no passive efficiency boost is granted
+            self.events.log(f"{Prisma.GRY}{break_msg}{Prisma.RST}", "SYS", )
         self.stillness_streak = 0
         return 0.0, None

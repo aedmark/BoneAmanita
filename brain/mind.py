@@ -1,23 +1,19 @@
 """mind.py
-
 The Subconscious and Endocrine Bridge.
 This module translates the raw physical states of the host (Voltage, ATP, ROS)
 into the abstract chemical states (Dopamine, Cortisol) that govern the system's mood,
 creativity, and capacity for REM sleep.
-
 It does NOT execute LLM calls directly; it prepares the biological soil for them.
 """
-
 import math
 import random
 import re
 from collections import deque
 from dataclasses import dataclass
 from typing import Dict, Any, Tuple, Optional
-
 from brain.ann import MemoryConsolidator
 from constants import Prisma
-from struts import  ux, safe_get
+from struts import ux, safe_get
 from presets import BoneConfig
 
 
@@ -31,7 +27,6 @@ class ChemicalState:
     config_ref: Any = None
 
     def homeostasis(self, rate: float = 0.1):
-        # (Restores hormones to baseline over time)
         safe_rate = max(0.0, min(1.0, rate))
         cfg = safe_get(self.config_ref or BoneConfig, "CORTEX", {})
         self.dopamine += (safe_get(cfg, "RESTING_DOPAMINE", 0.2) - self.dopamine) * safe_rate
@@ -40,7 +35,6 @@ class ChemicalState:
         self.serotonin += (safe_get(cfg, "RESTING_SEROTONIN", 0.2) - self.serotonin) * safe_rate
 
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
-        # (Injects new somatic hormones into the cognitive layer)
         inv_w = 1.0 - weight
         for attr, short_key in [("dopamine", "DOP"), ("cortisol", "COR"), ("adrenaline", "ADR"), ("serotonin", "SER")]:
             val = new_state.get(short_key, new_state.get(attr))
@@ -109,8 +103,8 @@ class NeurotransmitterModulator:
         voltage_heat = math.log1p(max(0.0, base_voltage - v_offset)) * v_scalar
         chem_weights = safe_get(cfg, "TEMP_CHEM_WEIGHTS", {"dop": 0.4, "adr": 0.3, "cor": 0.2})
         chemical_delta = (
-                    (c.dopamine * chem_weights.get("dop", 0.4)) - (c.adrenaline * chem_weights.get("adr", 0.3)) - (
-                        c.cortisol * chem_weights.get("cor", 0.2)))
+                (c.dopamine * chem_weights.get("dop", 0.4)) - (c.adrenaline * chem_weights.get("adr", 0.3)) - (
+                c.cortisol * chem_weights.get("cor", 0.2)))
         base_temp = safe_get(cfg, "BASE_TEMP", 0.4)
         base_top_p = safe_get(cfg, "BASE_TOP_P", 0.95)
         chi = float(safe_get(physics_state, "chi", safe_get(physics_state, "entropy", 0.2)))
@@ -129,7 +123,7 @@ class NeurotransmitterModulator:
         freq_pen = pres_pen = base_penalty
         token_mods = safe_get(cfg, "TOKEN_CHEM_MODIFIERS", {"dop": 800, "adr": 400, "cor": 200})
         token_delta = ((c.dopamine * token_mods.get("dop", 800)) - (c.adrenaline * token_mods.get("adr", 400)) - (
-                    c.cortisol * token_mods.get("cor", 200)))
+                c.cortisol * token_mods.get("cor", 200)))
         min_tokens = safe_get(cfg, "MIN_TOKENS", 150.0)
         raw_tokens = self.BASE_TOKENS + token_delta
         max_t = int(max(min_tokens, min(float(self.MAX_TOKENS), raw_tokens)))
@@ -182,8 +176,8 @@ class NoeticLoop:
             if len(unique_words) >= 2:
                 w1, w2 = random.sample(unique_words, 2)
                 self._force_link(self.mind.mem.graph, w1, w2, self.cfg)
-        current_lens = soul_ref.archetype if soul_ref else "OBSERVER"
-        current_role = f"The {current_lens.title().replace('_', ' ')}" if soul_ref else "Witness"
+        current_lens = (getattr(soul_ref, "archetype", "OBSERVER") or "OBSERVER") if soul_ref else "OBSERVER"
+        current_role = f"The {current_lens.title().replace('_', ' ')}"
         msg_cog = ux("brain_strings",
                      "noetic_ignition") or "Cognition active. Ignition: {ignition:.2f}"
         return {"mode": "COGNITIVE", "lens": current_lens, "context_msg": msg_cog.format(ignition=ignition),
@@ -244,7 +238,6 @@ class DreamEngine:
                 for text in raw_payloads:
                     vec = _word_to_vector(text[:50])
                     vectors.append(vec)
-                    # Forge a Phantom Anchor natively so the FAISS index isn't filled with unresolvable Dark Matter.
                     v_hash = hashlib.md5(np.array(vec, dtype=np.float32).tobytes()).hexdigest()[:8]
                     metadata.append({
                         "vector_hash": v_hash,
@@ -266,14 +259,13 @@ class DreamEngine:
                 dream_text = f"The system enters Deep REM. {nodes_moved} synaptic structures dissolve from the active cache and permanently crystallize into the deep Cerebral Cortex."
                 if self.events:
                     self.events.log(
-                        f"{{Prisma.MAG}}✨ [REM CYCLE]: Synaptic Consolidation complete. {nodes_moved} nodes written to deep index. (-{atp_cost:.1f} ATP){{Prisma.RST}}", "SYS", )
+                        f"{{Prisma.MAG}}✨ [REM CYCLE]: Synaptic Consolidation complete. {nodes_moved} nodes written to deep index. (-{atp_cost:.1f} ATP){{Prisma.RST}}",
+                        "SYS", )
         if self.dspy_critic and self.dspy_critic.enabled:
             if self.trauma_buffer:
-                # Batch all lingering trauma into a single structural lesson.
                 traumas = list(self.trauma_buffer)
                 self.trauma_buffer.clear()
                 trauma_str = " | ".join(traumas)
-
                 current_state_str = f"Archetype: {soul_snapshot.get('archetype', 'UNKNOWN')}"
                 new_axiom = self.dspy_critic.evolve_prompt(current_state_str, trauma_str)
                 if new_axiom:
@@ -282,11 +274,9 @@ class DreamEngine:
                         active_mode = getattr(self.eng, "boot_mode", "CONVERSATION").upper()
                     try:
                         disk_prompts = getattr(self.eng, "prompt_library", None) or self.lore.get("SYSTEM_PROMPTS",
-                                                                                                      {})
-                        # Meadows: Force the node to exist so we don't leak memory on custom modes
+                                                                                                  {})
                         mode_data = disk_prompts.setdefault(active_mode, {})
                         dirs = mode_data.setdefault("directives", [])
-
                         if new_axiom not in dirs:
                             dirs.append(new_axiom)
                         threshold = safe_get(safe_get(self.cfg, "CORTEX", {}), "EPIGENETIC_PRUNE_THRESHOLD", 12)
@@ -394,7 +384,6 @@ class DreamEngine:
             return "The walls breathe.", 0.1
         from mechanics.tools import TheTclWeaver
         weaver = TheTclWeaver.get_instance()
-
         v = _vector or {}
         active_chi = v.get("chi", v.get("entropy", 0.85))
         active_v = v.get("voltage", 90.0)
@@ -427,7 +416,7 @@ class DreamEngine:
         pruned = [n for n, _ in sorted(weak_nodes, key=lambda x: x[1])[:limit]]
         for node in pruned:
             del graph[node]
-            for remaining_node in graph.values():
+            for remaining_node in list(graph.values()):
                 if "edges" in remaining_node and node in remaining_node["edges"]:
                     del remaining_node["edges"][node]
         if pruned:

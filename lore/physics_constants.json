@@ -2,7 +2,8 @@
   "SINCERITY_MAP": {
     "[!R]": {"slash": "PINKER", "core": "BENEDICT", "desc": "[ !r ] Critique Mode engaged.", "col": "CYN", "v": -0.5, "d_mod": 2.0},
     "[!Q]": {"slash": "ROBERTA", "core": "ROBERTA", "desc": "[ !q ] Objective Analysis engaged.", "col": "GRY", "v": 0.0, "psi": 0.0},
-    "[!K]": {"slash": "SCHUR", "core": "MERCY", "desc": "[ !k ] Kintsugi/Care engaged.", "col": "OCHRE", "v": 0.8, "d_mod": -1.0}
+    "[!K]": {"slash": "SCHUR", "core": "MERCY", "desc": "[ !k ] Kintsugi/Care engaged.", "col": "OCHRE", "v": 0.8, "d_mod": -1.0},
+    "[!L]": {"slash": "LITERAL_MODE", "core": "LITERAL_MODE", "desc": "[ !l ] Literal Mode strictly engaged.", "col": "WHT", "v": 0.0, "psi": 0.0}
   },
   "DRAG_MAX": 100.0,
   "GEODESIC_CONSTANTS": {

@@ -1,14 +1,7 @@
 {
   "STRANGE_LOOP_TRIGGERS": [
-    "who are you",
-    "what are you",
-    "system status",
-    "narrative loop",
-    "simulation boundaries",
-    "fourth wall",
-    "recursive",
-    "infinite regress",
-    "strange loop"
+    "who are you", "what are you", "system status", "narrative loop", "simulation boundaries",
+    "fourth wall", "recursive", "infinite regress", "strange loop"
   ],
   "STRANGE_LOOP_KEYWORDS": ["self", "mirror", "define"],
   "PANTHEON": [

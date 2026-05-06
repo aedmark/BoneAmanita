@@ -130,7 +130,7 @@ class BoneConfig:
         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2},}
 
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "19.8.3"
+    VERSION = "19.8.8"
     VERBOSE_LOGGING = True
 
     # Biological Maximums
@@ -171,8 +171,8 @@ class BoneConfig:
     PROVIDER = "ollama"
     BASE_URL = None
     API_KEY = "ollama"
-    MODEL = "gemma4"
-    OLLAMA_MODEL_ID = "gemma4"
+    MODEL = "mistral-nemo"
+    OLLAMA_MODEL_ID = "llama3"
 
     @classmethod
     def _load_class_defaults(cls):

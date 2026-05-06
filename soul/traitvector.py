@@ -1,20 +1,17 @@
 """/soul/traitvector.py"""
-
 import json
 import os
 import random
 import time
 from dataclasses import dataclass, field, fields
 from typing import List, Dict, Optional, Any, Tuple, ClassVar
-
-# The soul does not exist in a vacuum. It sits atop the physical layer (akashic, core, struts)
-# and translates metabolic states (ATP, voltage) into narrative meaning.
 from brain.akashic import TheAkashicRecord
 from presets import BoneConfig
 from core import LoreManifest, EventBus
 from struts import ux, ux_format, safe_get, safe_set
 from mechanics.lexicon import LexiconService
 from constants import Prisma
+
 
 @dataclass
 class TraitVector:
@@ -32,8 +29,6 @@ class TraitVector:
     _TRAITS: ClassVar[set] = {"curiosity", "cynicism", "hope", "discipline", "wisdom", "empathy", }
 
     def __post_init__(self):
-        # We enforce boundaries immediately. A system with infinite hope is delusional;
-        # a system with infinite cynicism is a brick.
         self._clamp_all()
 
     def to_dict(self):
@@ -63,7 +58,6 @@ class TraitVector:
         for t in self._TRAITS:
             val = getattr(self, t)
             target = 0.1 if t == "wisdom" else 0.5
-            # The closer a value is to its target, the more it resists changing.
             resistance = 1.0 - (1.5 * abs(val - target))
             actual_decay = decay_rate * max(0.1, min(1.0, resistance))
             setattr(self, t, self._clamp(val + ((target - val) * actual_decay)))
@@ -71,4 +65,3 @@ class TraitVector:
     def _clamp_all(self):
         for t in self._TRAITS:
             setattr(self, t, self._clamp(getattr(self, t)))
-

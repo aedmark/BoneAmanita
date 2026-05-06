@@ -1,15 +1,12 @@
 """spores/io.py
-
 This module handles the physical storage and retrieval of "Spores" (session states).
 If genetics.py handles the biological blueprint, this file handles the amber
 that preserves the DNA. It ensures that memory states are safely written to
 disk without risking data corruption during sudden system crashes or power loss.
-
 Classes:
     - LocalFileSporeLoader: The primary interface for reading, writing, and pruning
       dormant memory states on the local file system.
 """
-
 import json
 import os
 import tempfile
@@ -18,14 +15,15 @@ from core import BoneJSONEncoder
 from struts import ux_format
 from constants import Prisma
 
+
 class LocalFileSporeLoader:
     """
     Manages the Input/Output lifecycle of Spore files.
     Acts as the physical substrate layer, translating active memory graphs into
     dormant JSON structures and storing them safely on the disk.
     """
+
     def __init__(self, directory="memories"):
-        # Establish the physical boundary for memory storage
         self.directory = directory
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -33,46 +31,28 @@ class LocalFileSporeLoader:
     def save_spore(self, filename, data):
         """
         Preserves the active memory state to disk using an atomic write pattern.
-
-        [S]ynergetic Heuristic: We NEVER write directly over an existing memory file.
+        We NEVER write directly over an existing memory file.
         If the process dies halfway through a direct write, the JSON is corrupted,
         and the spore is dead. Instead, we write to a temporary file, flush the buffer,
         and then execute an atomic OS-level replacement.
         """
         temp_path = None
-
-        # Pinker: Purged the clunky path-string manipulation for clean os.path semantics
-        if os.path.isabs(filename) or filename.startswith(self.directory):
+        if os.path.isabs(filename) or os.path.dirname(filename) == self.directory:
             final_path = filename
         else:
-            final_path = os.path.join(self.directory, filename)
-
-        # Ensure the sub-directories exist before we attempt to write
+            final_path = os.path.join(self.directory, os.path.basename(filename))
         os.makedirs(os.path.dirname(final_path), exist_ok=True)
-
         try:
-            # 1. Create a secure temporary file in the same directory (prevents cross-device link errors)
             fd, temp_path = tempfile.mkstemp(dir=os.path.dirname(final_path), text=True)
-
             with os.fdopen(fd, "w", encoding="utf-8") as f:
-                # 2. Dump the data using our custom BoneJSONEncoder (handles sets, datetimes, etc.)
                 json.dump(data, f, indent=2, cls=BoneJSONEncoder)
-
-                # 3. Force the OS to flush internal buffers and write physically to the disk
                 f.flush()
                 os.fsync(f.fileno())
-
-            # 4. Atomically replace the old file with the new complete file
             os.replace(temp_path, final_path)
             return final_path
-
         except (IOError, OSError, TypeError) as e:
-            # If the write fails (disk full, permission error), catch it gracefully
             if msg := ux_format("spore_strings", "loader_save_err", e=e):
                 print(f"{Prisma.RED}{msg}{Prisma.RST}")
-
-            # Only clean up if mkstemp successfully assigned a new path.
-            # If we used the old logic, we might accidentally delete the original file!
             if temp_path and os.path.exists(temp_path):
                 os.remove(temp_path)
             return None
@@ -87,12 +67,10 @@ class LocalFileSporeLoader:
             if msg := ux_format("spore_strings", "loader_not_found", filepath=filepath):
                 print(f"{Prisma.RED}{msg}{Prisma.RST}")
             return None
-
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError) as e:
-            # Differentiate between a physical read error and biological corruption (bad JSON)
             err_type = "loader_corrupt" if isinstance(e, json.JSONDecodeError) else "loader_read_err"
             if msg := ux_format("spore_strings", err_type, filepath=filepath, e=e):
                 print(f"{Prisma.RED}{msg}{Prisma.RST}")
@@ -105,21 +83,14 @@ class LocalFileSporeLoader:
         """
         if not os.path.exists(self.directory):
             return []
-
         try:
             files = []
-            # Meadows: Using os.scandir() is significantly faster than os.listdir() + getmtime()
-            # because it retrieves the file stats in the same OS-level call, saving an I/O trip.
             with os.scandir(self.directory) as it:
                 for entry in it:
                     if entry.is_file() and entry.name.endswith(".json") and entry.name.startswith("session_"):
                         files.append((entry.path, entry.stat().st_mtime, entry.name))
-
-            # Sort newest-first based on the timestamp
             return sorted(files, key=lambda x: x[1], reverse=True)
-
         except OSError:
-            # Handle directory permission or disk read errors gracefully
             return []
 
     @staticmethod
