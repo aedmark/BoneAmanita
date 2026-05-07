@@ -140,7 +140,7 @@ class BioParasite:
             return False, None
         valid_pairs = [
             (h, p) for h in heavy_candidates for p in abstract_candidates
-            if p not in graph[h].get("edges", {})
+            if p not in graph[h].get("edges", {}) and h != p
         ]
         if not valid_pairs:
             return False, None

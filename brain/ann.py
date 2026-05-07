@@ -111,8 +111,10 @@ class CerebralIndex:
 
     def add_memories(self, vectors: List[List[float]], metadata_payloads: List[Dict]):
         """Injects consolidated memories from the Hippocampus into the deep FAISS index."""
-        if not vectors:
+        if not vectors or len(vectors) != len(metadata_payloads):
+            print(f"[ANN] Alignment failure. Vector count ({len(vectors)}) != Payload count ({len(metadata_payloads)}). Aborting ingestion.")
             return
+
         np_vectors = np.array(vectors, dtype=np.float32)
         self._index.add(np_vectors)
         for p in metadata_payloads:

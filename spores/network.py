@@ -18,7 +18,7 @@ from constants import Prisma
 from archetypes.village import ParadoxSeed
 from spores.io import LocalFileSporeLoader
 from spores.memory import SubconsciousStrata, MemoryCore
-from spores.spore_utils import _word_to_vector, _householder, _mat_mul
+from spores.spore_utils import _word_to_vector, _householder, _mat_mul, _reorthogonalize
 from spores.biome import BioLichen, BioParasite, ImmuneMycelium
 from spores.genetics import LiteraryReproduction
 
@@ -71,6 +71,7 @@ class MycelialNetwork:
             v = _word_to_vector(concept)
             H = _householder(v)
             self.subconscious.Q_n = _mat_mul(H, self.subconscious.Q_n)
+            self.subconscious.Q_n = _reorthogonalize(self.subconscious.Q_n)  # Fuller: Prevent structural collapse
             self.subconscious.save_matrix()
             if hasattr(self.events, "publish"):
                 self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": self.subconscious.Q_n})
@@ -471,8 +472,13 @@ class MycelialNetwork:
         for k, data in self.graph.items():
             valid_edges = {t: round(w, 2)
                            for t, w in data.get("edges", {}).items() if w > 1.0}
-            if valid_edges:
-                core_graph[k] = {"edges": valid_edges, "last_tick": 0}
+            if valid_edges or data.get("is_diamond", False):
+                core_graph[k] = {
+                    "edges": valid_edges,
+                    "last_tick": 0,
+                    "strata": data.get("strata"),
+                    "is_diamond": data.get("is_diamond", False)
+                }
         future_seed_q = self._generate_future_seed(temp_health=health, trauma_vec=final_vector)
         seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in self.seeds if not s.bloomed]
         if not any(s["q"] == future_seed_q for s in seed_list):
@@ -509,7 +515,7 @@ class MycelialNetwork:
         current_time = time.time()
         for i, (path, age, fname) in enumerate(files):
             file_age = current_time - age
-            if i >= max_files or file_age > max_age:
+            if i >= max_files or (file_age > max_age and i > 0):
                 try:
                     if limbo_layer:
                         limbo_layer.absorb_dead_timeline(path)

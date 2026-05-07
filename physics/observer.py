@@ -348,8 +348,7 @@ class CycleStabilizer:
         if safe_get(space, "flow_state", "LAMINAR") in ("SUPERCONDUCTIVE", "FLOW_BOOST"):
             target_v, target_d = safe_get(energy, "voltage", target_v), max(0.1, target_d * 0.5)
         self.governor.recalibrate(target_v, target_d)
-        v_force, d_force = self.governor.regulate(physics.to_dict() if hasattr(physics, "to_dict") else physics, dt=dt,
-                                                  endocrine_state=endocrine_state)
+        v_force, d_force = self.governor.regulate(physics, dt=dt, endocrine_state=endocrine_state)
         phys_cfg = getattr(self.cfg, "PHYSICS", None)
         v_limits = (getattr(phys_cfg, "VOLTAGE_FLOOR", 0.0), getattr(phys_cfg, "VOLTAGE_MAX", 150.0))
         d_limits = (getattr(phys_cfg, "DRAG_FLOOR", 1.0), getattr(phys_cfg, "DRAG_HALT", 10.0))

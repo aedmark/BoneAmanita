@@ -21,7 +21,7 @@ class TheConsolidator:
         """When a user explores an adjacent shadow concept, strengthen the physical link."""
         source = payload.get("source", "core")
         target = payload.get("target")
-        if not target or not hasattr(self.memory, "memory_core"):
+        if not target:
             return
         self.memory.memory_core.strengthen_link(source=source, target=target, rate=2.0, decay=0.85)
         msg = f"User engaged shadow concept '{target}'. Synaptic link {source} -> {target} strengthened."
@@ -31,6 +31,4 @@ class TheConsolidator:
         """When profound connection happens, extract the paradigm and grant an Epigenetic Boon."""
         result = payload.get("result", "Unknown Paradigm")
         msg = payload.get("msg", "Resonance stabilized.")
-        if not hasattr(self.akashic, "record_glimmer"):
-            return
         self.akashic.record_glimmer(concept=result, paradigm=msg)

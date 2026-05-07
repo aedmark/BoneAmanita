@@ -44,11 +44,11 @@ class BioSystem:
 
     def setup_listeners(self):
         """
-        Connects the biological layer to the system's global event bus.
-        This is the 'Vagus Nerve'—allowing the body to react autonomously
-        to abstract cognitive shifts or structural emergencies.
+        The 'Vagus Nerve'. Connects the biological layer to the global event bus
+        so the body can react autonomously to abstract cognitive shifts without
+        waiting for the next sequential heartbeat.
         """
-        if self.events and hasattr(self.events, "subscribe"):
+        if self.events:
             self.events.subscribe("NEURAL_STATE_SHIFT", self._on_neural_shift)
             self.events.subscribe("SUBSTRATE_FORGED", self.mito.on_substrate_forged)
             self.events.subscribe("AUTOPHAGY_EVENT", self._on_autophagy_event)
@@ -187,7 +187,9 @@ class SomaticLoop:
     def digest_cycle(self, text: str, physics_data: Any, fb_dict: Dict, health: float, stamina: float,
                      stress_modifier: float, tick_count: int = 0, circadian_bias: Dict = None) -> Dict:
         """
-        The Main Execution Loop. Run this once per conversational turn.
+        The Somatic Checkpoint. Binds the abstract physics of a conversation to physical metabolism.
+        If the cognitive load (physics) exceeds our energy (ATP), this loop physically degrades
+        the machine's health to force a response, preventing infinite friction-less thought.
         """
         text = str(text or "")
         phys = physics_data
@@ -204,8 +206,8 @@ class SomaticLoop:
         if delta_silence > 0.6:
             drag_relief = delta_silence * 2.0
             stamina_recovery = delta_silence * 5.0
-            current_drag = float(safe_get(phys, "narrative_drag", 1.0))
-            safe_set(phys, "narrative_drag", max(1.0, current_drag - drag_relief))
+            current_drag = float(safe_get(phys, "narrative_drag", 0.0))
+            safe_set(phys, "narrative_drag", max(0.0, current_drag - drag_relief))
             b.stamina = min(max_stamina, b.stamina + stamina_recovery)
             if msg := ux("somatic_loop", "silence_heals"):
                 logs.append(f"{Prisma.CYN}{msg.format(recovery=stamina_recovery)}{Prisma.RST}")

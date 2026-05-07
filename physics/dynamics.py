@@ -40,7 +40,6 @@ class ChromaScope:
     Handles terminal UI coloring by translating mathematical energy vectors
     into visual output. Decouples the raw logic from the presentation layer.
     """
-    _CACHED_MAP = None
 
     @staticmethod
     def modulate(text: str, vector: Dict[str, float]) -> str:
@@ -50,9 +49,8 @@ class ChromaScope:
         from core import LoreManifest
         if not vector or not any(vector.values()):
             return f"{Prisma.GRY}{text}{Prisma.RST}"
-        if ChromaScope._CACHED_MAP is None:
-            ChromaScope._CACHED_MAP = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
-        t_map = ChromaScope._CACHED_MAP
+
+        t_map = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
         primary = max(vector, key=vector.get)
         color = getattr(Prisma, t_map[primary][3], Prisma.GRY) if primary in t_map else Prisma.GRY
         return f"{color}{text}{Prisma.RST}"

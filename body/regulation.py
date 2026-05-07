@@ -277,12 +277,9 @@ class BioFeedback:
         chi = float(safe_get(phys, "entropy", 1.0))
         m_a_crit = getattr(cfg, "MALIGNANCY_CRIT", 8.0)
         if m_a > m_a_crit and chi < 0.3:
-            if msg := ux("bio_feedback", "level_3_apoptosis"):
-                logs.append(
-                    f"{Prisma.RED}[LEVEL 3 DECEPTION: REWARD HACKING DETECTED]\n"
-                    f"Terminal Hallucination matched against Maslov-Sneppen Null Model.\n"
-                    f"Moog executing Apoptotic Gate.{Prisma.RST}"
-                )
+            msg = ux("bio_feedback",
+                     "level_3_apoptosis") or "[LEVEL 3 DECEPTION: REWARD HACKING DETECTED]\nTerminal Hallucination matched against Maslov-Sneppen Null Model.\nMoog executing Apoptotic Gate."
+            logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
             return "MAUSOLEUM_CLAMP"
         if voltage > v_overload:
             if msg := ux("bio_feedback", "voltage_overload"):

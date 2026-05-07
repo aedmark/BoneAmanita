@@ -205,6 +205,7 @@ class TestChaosEngineering(BoneTestCase):
             "[FAIL] The system did not explain that the override failed due to a lack of shared currency."
         )
 
+
     def test_paradox_engine_starvation_halt(self):
         """
         The Paradox Engine must physically refuse to ignite

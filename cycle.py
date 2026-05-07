@@ -187,7 +187,7 @@ class CycleSimulator:
         ctx.log(f"{Prisma.RED}{msg_eulogy.format(eulogy=eulogy)}{Prisma.RST}")
         comp = _CRASH_COMPONENT_MAP.get(phase_name, "SIMULATION")
         self.eng.system_health.report_failure(comp, error)
-        """Native deterministic graph freezing based on Nelson Spence (Project Navi)."""
+        # Native deterministic graph freezing based on Nelson Spence (Project Navi).
         last_packet = getattr(self.eng.observer, "last_physics_packet", None)
         if comp == "PHYSICS" or not getattr(ctx, "physics", None):
             ctx.physics = PanicRoom.get_safe_physics()
@@ -303,9 +303,17 @@ class GeodesicOrchestrator:
             if not getattr(ctx.physics, "vector", None):
                 ctx.physics.vector = {}
 
-            # Correctly map the Sincerity Protocols to their structural vectors
-            ctx.physics.vector["pedagogical_mode"] = ("pedagogy" in user_message.lower())
-            ctx.physics.vector["lateral_shuffle"] = ("[!" + "s]" in user_message)  # The Shuffle
+            # Natively bind the Sincerity Protocols from the structural prompt into systemic vectors
+            usr_msg = user_message.lower()
+            ctx.physics.vector.update({
+                "critique_mode": "[!r]" in usr_msg,
+                "objective_mode": "[!q]" in usr_msg,
+                "healing_mode": "[!h]" in usr_msg,
+                "void_mode": "[!v]" in usr_msg,
+                "lateral_shuffle": "[!s]" in usr_msg,
+                "literal_mode": "[!l]" in usr_msg,
+                "yeetinator_mode": "[!y]" in usr_msg
+            })
             ctx = self.simulator.run_simulation(ctx)
             post_logs = [e["text"] for e in self.eng.events.flush()]
             ctx.logs.extend(post_logs)
@@ -346,14 +354,12 @@ class GeodesicOrchestrator:
         return None
 
     def _evaluate_systemic_feedback(self, clean_message: str, ctx: CycleContext):
-        """
-        Meadows' Dynamics: This observes the state *after* the cycle and triggers autonomous
-        reactions (like falling asleep) based on the resultant stocks and flows.
-        """
-        if not hasattr(self.eng.bio, "mito"):
+        mito_state = self.eng._mito_state
+        if not mito_state:
             return
+
         lattice = getattr(self.eng, "shared_lattice", None)
-        """Native WLS fractal dimension calculation (Project Navi). Offloaded to prevent UI drag."""
+        # Native WLS fractal dimension calculation (Project Navi). Offloaded to prevent UI drag.
         mem = self.eng.mind.mem
         cortex = mem.cortex
 
@@ -376,7 +382,7 @@ class GeodesicOrchestrator:
 
         if clean_message != "(Waiting)":
             return
-        atp_level = float(self.eng.bio.mito.state.atp_pool)
+        atp_level = float(getattr(mito_state, "atp_pool", 0.0))
         delta_level = float(getattr(lattice.shared, "delta", 0.0)) if lattice else 0.0
         phys_dict = safe_dict(ctx.physics)
         energy_node = phys_dict.get("energy", phys_dict)

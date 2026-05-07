@@ -8,6 +8,7 @@ increased paradox capacity and resilience.
 """
 from typing import Dict
 from constants import Prisma
+from struts import safe_get, safe_set
 
 
 class GriefProtocol:

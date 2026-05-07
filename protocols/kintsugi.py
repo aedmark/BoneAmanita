@@ -68,15 +68,12 @@ class KintsugiProtocol:
         matter = safe_get(phys, "matter", {}) or {}
         vol = float(safe_get(phys, "voltage", safe_get(energy, "voltage", 0.0)))
         raw_text = str(safe_get(phys, "raw_text", safe_get(matter, "raw_text", "")))
+        whimsy_score = 0.0
         if lexicon_ref:
             clean = lexicon_ref.sanitize(raw_text)
-            play_set = lexicon_ref.get("play") or []
-            abstract_set = lexicon_ref.get("abstract") or []
-            play_count = sum(1 for w in clean if w in play_set or w in abstract_set)
-        else:
-            clean = raw_text.split()
-            play_count = 0
-        whimsy_score = play_count / max(1, len(clean))
+            target_sets = set(lexicon_ref.get("play") or []) | set(lexicon_ref.get("abstract") or [])
+            play_count = sum(1 for w in clean if w in target_sets)
+            whimsy_score = play_count / max(1, len(clean))
         pathway = self.PATH_SCAR
         cfg = getattr(self.cfg, "KINTSUGI", object())
         al_v = getattr(cfg, "ALCHEMY_VOLTAGE", 15.0)
