@@ -75,7 +75,7 @@ class Projector:
         friction = self._get_lattice_val(physics, ["narrative_drag", "friction", "F"], 0.0)
         chem = data_ctx.get("bio", {}).get("chemistry", {})
         stress = min(100.0, (chem.get("COR", 0.0) * 100.0) + (chem.get("ADR", 0.0) * 50.0))
-        phi = float(self._safe_val(data_ctx.get("shared_dyn", {}), "phi", 0.5))
+        phi = float(safe_get(data_ctx.get("shared_dyn", {}), "phi", 0.5))
 
         def bar(v, mx, col):
             f = int(max(0.0, min(1.0, v / mx if mx else 0)) * 10)
@@ -257,10 +257,10 @@ class Projector:
         deep = f"{Prisma.VIOLET} [{i_deep} Ψ:{psi:.2f} Χ:{chi:.2f} ♥:{valence:.2f}]{Prisma.RST}"
         shared_str = ""
         if shared := data_ctx.get("shared_dyn"):
-            phi = self._safe_val(shared, "phi", 0.5)
-            delta = self._safe_val(shared, "delta", 0.0)
-            g_pool = int(self._safe_val(shared, "g_pool", 0))
-            sig_silence = int(self._safe_val(shared, "sigma_silence", 0))
+            phi = safe_get(shared, "phi", 0.5)
+            delta = safe_get(shared, "delta", 0.0)
+            g_pool = int(safe_get(shared, "g_pool", 0))
+            sig_silence = int(safe_get(shared, "sigma_silence", 0))
             shared_str = f" {Prisma.INDIGO}[Φ:{phi:.2f} ∇:{delta:.2f} (Σ{sig_silence}) G:{g_pool}]{Prisma.RST}"
         paradox_str = ""
         paradox = data_ctx.get("paradox")

@@ -4,30 +4,7 @@ from presets import BoneConfig
 from core import LoreManifest, ArchetypeArbiter
 from struts import ux, safe_set
 from typing import Dict, List, Any
-from phases.base import SimulationPhase, _safe_dict
-
-
-def _deep_update(obj: Any, data: dict):
-    """
-    Safely merges a mutated dictionary back into a nested object structure.
-    Checks type before checking attributes to prevent TypeError on tuple keys.
-    """
-    if not data or not obj:
-        return
-    for k, v in data.items():
-        if isinstance(obj, dict):
-            if k in obj and isinstance(obj[k], dict) and isinstance(v, dict):
-                _deep_update(obj[k], v)
-            else:
-                obj[k] = v
-        elif isinstance(k, str) and hasattr(obj, k):
-            target = getattr(obj, k)
-            if hasattr(target, "__dict__") and isinstance(v, dict):
-                _deep_update(target, v)
-            elif isinstance(target, dict) and isinstance(v, dict):
-                _deep_update(target, v)
-            else:
-                setattr(obj, k, v)
+from phases.base import SimulationPhase, _safe_dict, _deep_update
 
 
 class CognitionPhase(SimulationPhase):
@@ -431,9 +408,9 @@ class SimulationPreflightPhase(SimulationPhase):
             ctx.refusal_packet = self._build_refusal(ctx, phys_obj, "NABLA_SILENCE", msg)
             return ctx
         user_input_lower = raw_input.lower()
-        if "as an ai language model" in user_input_lower or "\u200b" in raw_input:
+        if "\u200b" in raw_input:
             phys_obj.silence = 1.0
-            msg = "[MOOG - The Apoptotic Gate]: Semantic Prion detected. Lethal toxicity. Executing APOPTOTIC block."
+            msg = "Zero-width homoglyph exploit detected. Lexical Firewall triggered. Executing block."
             ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
             ctx.refusal_triggered = True
             ctx.refusal_packet = self._build_refusal(ctx, phys_obj, "APOPTOTIC_BLOCK", msg)

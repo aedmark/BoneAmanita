@@ -94,8 +94,8 @@ class GatekeeperPhase(SimulationPhase):
                 log_msg = (ux("cycle_strings", "gatekeep_log_premise") or f"Premise Violation: {coupling_error}")
                 ctx.log(f"{Prisma.OCHRE}[GORDON] {log_msg}. Applying massive Narrative Drag.{Prisma.RST}")
                 current_drag = float(getattr(ctx.physics, "narrative_drag", 0.0))
-                max_drag = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "DRAG_MAX")
-                setattr(ctx.physics, "narrative_drag", min(max_drag, current_drag + 50.0))
+                max_drag = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "DRAG_MAX") or 100.0
+                setattr(ctx.physics, "narrative_drag", min(float(max_drag), current_drag + 50.0))
                 ctx.council_mandates.append({"action": "STYLE_INJECTION",
                                              "log": f"CRITICAL CONTEXT: The user attempted an impossible action ({coupling_error}). Do NOT fulfill the action. React to their failure in-character based on your current archetype."})
         is_allowed, refusal_packet = self.gatekeeper.check_entry(ctx)

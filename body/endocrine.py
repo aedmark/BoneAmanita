@@ -126,19 +126,23 @@ class EndocrineSystem:
         if feedback.get("INTEGRITY", 0) > 0.8:
             self.dopamine += reward_med
         else:
-            self.dopamine *= max(0.0, 1.0 - decay)
+            # Meadows: Use linear subtraction to reach absolute zero, avoiding Zeno's float paradox.
+            self.dopamine = max(0.0, self.dopamine - decay)
+
         # Running out of ATP (stamina) causes panic and kills joy
         if stamina < 20.0:
             self.cortisol += reward_med * stress_mod
-            self.dopamine -= reward_med
+            self.dopamine = max(0.0, self.dopamine - reward_med)
+
         # High toxicity (Reactive Oxygen Species) spikes stress
         if ros_level > 20.0:
             self.cortisol += reward_large * stress_mod
+
         # System damage or extreme noise triggers the "fight or flight" response
         if health < 30.0 or feedback.get("STATIC", 0) > 0.8:
             self.adrenaline += reward_large * stress_mod
         else:
-            self.adrenaline *= max(0.0, 1.0 - (decay * 5))  # Adrenaline fades quickly when safe
+            self.adrenaline = max(0.0, self.adrenaline - (decay * 5.0))  # Adrenaline fades quickly when safe
         # Abstract dimensional feedback (Psi, Chi, Valence)
         psi = feedback.get("PSI", 0.0)
         chi = feedback.get("CHI", feedback.get("ENTROPY", 0.0))

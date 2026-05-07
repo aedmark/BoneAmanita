@@ -36,10 +36,14 @@ class ChemicalState:
 
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
         inv_w = 1.0 - weight
-        for attr, short_key in [("dopamine", "DOP"), ("cortisol", "COR"), ("adrenaline", "ADR"), ("serotonin", "SER")]:
-            val = new_state.get(short_key, new_state.get(attr))
-            if val is not None:
-                setattr(self, attr, (getattr(self, attr) * inv_w) + (val * weight))
+        if (val := new_state.get("DOP", new_state.get("dopamine"))) is not None:
+            self.dopamine = (self.dopamine * inv_w) + (val * weight)
+        if (val := new_state.get("COR", new_state.get("cortisol"))) is not None:
+            self.cortisol = (self.cortisol * inv_w) + (val * weight)
+        if (val := new_state.get("ADR", new_state.get("adrenaline"))) is not None:
+            self.adrenaline = (self.adrenaline * inv_w) + (val * weight)
+        if (val := new_state.get("SER", new_state.get("serotonin"))) is not None:
+            self.serotonin = (self.serotonin * inv_w) + (val * weight)
 
 
 class NeurotransmitterModulator:

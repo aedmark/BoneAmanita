@@ -102,18 +102,24 @@ class BoneGenesis:
                         lexicon_ref=None) -> Dict[str, Any]:
         """
         Populates the regulatory and archetypal layer of the engine.
-        This is where we instantiate the various 'voices' and mechanics (Gordon, The Bureau, Zen)
-        that will govern the logic and constraints of the session.
         Args:
             suppressed: A set of string keys representing modules that should be intentionally
                         starved/disabled for this session to save on cognitive load.
         """
         c = config_ref
-        spawn = lambda key, cls, *args, **kwargs: cls(*args, **kwargs) if key not in suppressed else None
+
+        def spawn(key, cls, *args, **kwargs):
+            if key in suppressed:
+                return None
+            return cls(*args, **kwargs)
+
         gordon = spawn("GORDON", GordonKnot, events=events, mode=boot_mode, config_ref=c)
         navigator = spawn("NAVIGATOR", TheCartographer, embryo.shimmer, config_ref=c)
-        if "DEATH" not in suppressed: DeathGen.load_protocols()
-        if "REPRO" not in suppressed: LiteraryReproduction.load_genetics(config_ref=c)
+
+        if "DEATH" not in suppressed:
+            DeathGen.load_protocols()
+        if "REPRO" not in suppressed:
+            LiteraryReproduction.load_genetics(config_ref=c)
         return {
             "gordon": gordon,
             "navigator": navigator,

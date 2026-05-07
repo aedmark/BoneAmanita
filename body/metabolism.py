@@ -28,6 +28,8 @@ class MitochondrialForge:
         self.narrative = full_narrative.get("MITO", {})
         self.MAX_SAFE_BURN = getattr(self.cfg.BIO, "MAX_SAFE_BURN", 25.0)
         self.ANAEROBIC_THRESHOLD = getattr(self.cfg.BIO, "ANAEROBIC_THRESHOLD", 40.0)
+        self.MAX_ATP = getattr(self.cfg, "MAX_ATP", 100.0)
+        self.ATP_COLLAPSE = getattr(self.cfg.BIO, "ATP_COLLAPSE", 0.0)
 
     def get_status_report(self) -> str:
         """Translates raw ATP/ROS numbers into a human-readable systemic state."""
@@ -45,9 +47,7 @@ class MitochondrialForge:
     def adjust_atp(self, delta: float, reason: str = ""):
         """Safely credits or debits the energy pool, clamping it to physical limits."""
         old = self.state.atp_pool
-        max_limit = getattr(self.cfg, "MAX_ATP", 100.0)
-        atp_collapse = getattr(self.cfg.BIO, "ATP_COLLAPSE", 0.0)
-        self.state.atp_pool = max(atp_collapse, min(max_limit, old + delta))
+        self.state.atp_pool = max(self.ATP_COLLAPSE, min(self.MAX_ATP, old + delta))
         if reason and (abs(delta) > 5.0 or self.state.atp_pool > 90.0):
             self.events.log(f"[ATP]: {reason} ({delta:+.1f})", "BIO")
 
@@ -317,16 +317,22 @@ class DigestiveTrack:
         The molecular breakdown of syntax. Determines caloric value based on word length,
         kinetic energy, and explicit penalization of "Semantic Antigens" (alignment tropes).
         """
+        if not self.lex:
+            return 0.0, [], 0.0, 0
+
         word_counts = Counter(words)
         cfg = getattr(self.cfg, "BIO", None)
         min_len = safe_get(cfg, "MIN_WORD_LENGTH", 4)
         comp_len = safe_get(cfg, "COMPLEX_WORD_LENGTH", 7)
-        valid_words = {w: c for w, c in word_counts.items() if len(w) >= min_len}
-        hits = sum(valid_words.values())
-        if not valid_words or not self.lex:
-            return sum(c * self.BASE_WORD_VALUE for c in valid_words.values()), [], 0.0, hits
-        user_set = set(valid_words.keys())
         antigen_set = self.lex.get("antigen") or set()
+
+        valid_words = {w: c for w, c in word_counts.items() if len(w) >= min_len or w in antigen_set}
+        hits = sum(c for w, c in valid_words.items() if w not in antigen_set)
+
+        if not valid_words:
+            return 0.0, [], 0.0, hits
+
+        user_set = set(valid_words.keys())
         kinetic_set = (self.lex.get("kinetic") or set()) | (self.lex.get("explosive") or set())
         atp_yield = 0.0
         enzymes = []

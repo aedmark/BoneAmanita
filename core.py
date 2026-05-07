@@ -168,10 +168,11 @@ class EventBus:
             subs.append(callback)
 
     def unsubscribe(self, event_type, callback):
-        """Prevents memory leaks from ghost listeners."""
-        subs = self.subscribers.get(event_type)
-        if subs and callback in subs:
-            subs.remove(callback)
+        """Removes listeners safely. The try-except block avoids race conditions without double-scanning arrays."""
+        try:
+            self.subscribers.get(event_type, []).remove(callback)
+        except ValueError:
+            pass  # Already pruned or never existed.
 
     def publish(self, event_type, data=None):
         if event_type not in self.subscribers: return
@@ -184,12 +185,14 @@ class EventBus:
                     tb_str = traceback.format_exc(limit=3)
                     self.log(f"EVENT_FAILURE: Error in '{cb_name}': {e}\n{tb_str}", source="EVENT_FAILURE",
                              level="CRIT")
-                if callback in self.subscribers[event_type]:
+                try:
                     self.subscribers[event_type].remove(callback)
                     msg = ux_format("core_strings", "bus_error",
                                     default="[IMMUNE] Apoptotic pruning applied to toxic callback: {cb_name}",
                                     cb_name=cb_name)
                     print(f"{Prisma.RED}{msg}{Prisma.RST}")
+                except ValueError:
+                    pass  # Handled concurrently
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
         """Creates an immutable, timestamped record of an event and pushes it downstream."""
@@ -259,7 +262,8 @@ class LoreManifest:
     def save(self, category: str):
         """Flushes mutated runtime state back to physical disk storage."""
         cat_key = category.lower()
-        if cat_key not in self._cache:
+        if cat_key not in self._cache or not self._cache[cat_key]:
+            print(f"{Prisma.YEL}[LORE]: Refusing to save empty cache for '{cat_key}'. Preserving disk state.{Prisma.RST}")
             return
         filepath = os.path.join(self.DATA_DIR, f"{cat_key}.json")
         try:
@@ -328,18 +332,18 @@ class TheObserver:
 
     def pass_judgment(self, avg_cycle, avg_llm):
         """Translates numerical vitals into somatic states."""
-        if avg_cycle == 0.0 and avg_llm == 0.0:
-            return ux("core_strings", "obs_asleep")
+        if avg_cycle <= 0.001 and avg_llm <= 0.001:
+            return ux("core_strings", "obs_asleep") or "Dormant."
         if avg_cycle < self.C_EFF and avg_llm < self.L_EFF:
-            return ux("core_strings", "obs_efficient")
+            return ux("core_strings", "obs_efficient") or "High Efficiency."
         if avg_llm > self.LATENCY_WARNING:
-            valid_msgs = [msg for k in ("obs_fog", "obs_degraded", "obs_ponderous") if (msg := ux("core_strings", k))]
-            return random.choice(valid_msgs) if valid_msgs else ""
+            target_key = random.choice(["obs_fog", "obs_degraded", "obs_ponderous"])
+            return ux("core_strings", target_key) or "High Cognitive Load."
         if avg_cycle > self.CYCLE_WARNING:
-            return ux("core_strings", "obs_sluggish")
+            return ux("core_strings", "obs_sluggish") or "System Sluggish."
         if self.is_coupled:
             return ux_format("core_strings", "obs_coupled", default="Harmonic Resonance: Presence Active.")
-        return ux("core_strings", "obs_nominal")
+        return ux("core_strings", "obs_nominal") or "Nominal."
 
     def get_report(self):
         avg_cycle = sum(self.cycle_times) / max(1, len(self.cycle_times))
@@ -576,7 +580,9 @@ class TelemetryService:
     def _yield_historical_records(self, file_limit=5, lines_per_file=10):
         """Generates a stream of past telemetry records, reading backwards from the most recent."""
         if not os.path.exists(self.log_dir): return
-        files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), key=os.path.getmtime, reverse=True)
+        # Limit memory footprint by avoiding full directory array loads
+        iterator = glob.iglob(os.path.join(self.log_dir, "trace_*.jsonl"))
+        files = sorted(list(iterator)[-50:], reverse=True)  # Cap the sorting pool
         for fpath in files[:file_limit]:
             try:
                 with open(fpath, "r", encoding="utf-8") as f:

@@ -12,7 +12,8 @@ from struts import ux
 class ViralTracer:
     def __init__(self, memory_ref):
         """
-        Initializes the Tracer and binds it to the Mycelial Network.
+        Binds the Tracer directly to the Mycelial Network so it can physically traverse
+        the memory graph to detect and tag sycophantic echo chambers before they calcify.
         """
         self.memory = memory_ref
         self.active_loops = []
@@ -40,6 +41,8 @@ class ViralTracer:
         new, lateral connections.
         """
         msg = ux("machine_strings", "tracer_rewire") or "Rewired path: {path}"
-        if loop_path in self.active_loops:
+        try:
             self.active_loops.remove(loop_path)
+        except ValueError:
+            pass  # The pathway is already dissolved
         return msg.format(path="->".join(loop_path))

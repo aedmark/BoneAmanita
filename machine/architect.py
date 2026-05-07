@@ -120,8 +120,6 @@ class BoneArchitect:
         Constructs the raw, empty systems. No historical memory is loaded yet.
         """
         target_cfg = config_ref or BoneConfig
-        if hasattr(events, "set_dormancy"):
-            events.set_dormancy(True)
         msg = ux("machine_strings", "arch_incubate")
         if msg:
             events.log(f"{Prisma.GRY}{msg}{Prisma.RST}", "SYS")
@@ -158,9 +156,10 @@ class BoneArchitect:
             embryo.bio.mito.apply_inheritance(mito_legacy)
         if immune_legacy and isinstance(immune_legacy, (list, set)):
             embryo.bio.immune.active_antibodies.update(immune_legacy)
-        embryo.soul_legacy = soul_legacy if isinstance(soul_legacy, dict) else {}
-        embryo.continuity = continuity if isinstance(continuity, dict) else None
-        recovered_atlas = atlas if isinstance(atlas, dict) else {}
+
+        embryo.soul_legacy = soul_legacy or {}
+        embryo.continuity = continuity
+        recovered_atlas = atlas or {}
         if recovered_atlas and getattr(embryo.physics, "nav", None):
             try:
                 embryo.physics.nav.import_atlas(recovered_atlas)

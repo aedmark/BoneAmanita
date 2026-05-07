@@ -40,7 +40,7 @@ class CerebrospinalFluidFilter:
         """
         if current_depth > max_depth: return data
         if isinstance(data, str): return cls.wash(data)
-        if isinstance(data, dict): return {str(k): cls.walk(v, max_depth, current_depth + 1) for k, v in data.items()}
+        if isinstance(data, dict): return {cls.wash(str(k)): cls.walk(v, max_depth, current_depth + 1) for k, v in data.items()}
         if isinstance(data, list): return [cls.walk(item, max_depth, current_depth + 1) for item in data]
         return data
 

@@ -457,6 +457,10 @@ class TheCortex:
             topic = "The nature of our shared existence."
         self.events.log(f"{Prisma.VIOLET}🎙️ SPINNING UP COUNCIL STUDIO...{Prisma.RST}", "SYS")
         eng = self.svc.orchestrator.eng
+
+        if not getattr(eng, "council", None):
+            return "The studio is empty. The Council is offline.", ["[SYSTEM ERROR] Council module missing."]
+
         script = eng.council.host_podcast(topic, self.llm)
         extracted_logs = []
         filename = f"podcast_script_{int(time.time())}.txt"

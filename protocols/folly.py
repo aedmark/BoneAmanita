@@ -54,7 +54,7 @@ class TheFolly:
         if voltage > m_volt and stamina > m_stam:
             msg1 = ux("protocol_strings", "folly_mausoleum")
             msg2 = ux("protocol_strings", "folly_dilation")
-            return "MAUSOLEUM_CLAMP", f"{Prisma.GRY}{msg1}{Prisma.RST}\n   {Prisma.CYN}{msg2}{Prisma.RST}", 0.0, None,
+            return "MAUSOLEUM_CLAMP", f"{Prisma.GRY}{msg1}{Prisma.RST}\n   {Prisma.CYN}{msg2}{Prisma.RST}", 0.0, None
         return None, None, 0.0, None
 
     def grind_the_machine(
@@ -91,10 +91,10 @@ class TheFolly:
         self.global_tastings[target] += 1
         if target in suburban_set:
             gags = ux("protocol_strings", "folly_gags")
-            return "INDIGESTION", f"{Prisma.MAG}{gags}{Prisma.RST}", -self.cfg.FOLLY.PENALTY_INDIGESTION, "THE_RED_STAPLER",
+            return "INDIGESTION", f"{Prisma.MAG}{gags}{Prisma.RST}", -self.cfg.FOLLY.PENALTY_INDIGESTION, "THE_RED_STAPLER"
         if target in play_set:
             chews = ux("protocol_strings", "folly_chews")
-            return "SUGAR_RUSH", f"{Prisma.VIOLET}{chews}{Prisma.RST}", self.cfg.FOLLY.SUGAR_RUSH_YIELD, "QUANTUM_GUM",
+            return "SUGAR_RUSH", f"{Prisma.VIOLET}{chews}{Prisma.RST}", self.cfg.FOLLY.SUGAR_RUSH_YIELD, "QUANTUM_GUM"
         times_eaten = self.global_tastings[target]
         base_yield = getattr(self.cfg.FOLLY, "BASE_YIELD", 10.0)
         decay_exp = getattr(self.cfg.FOLLY, "DECAY_EXPONENT", 0.8)

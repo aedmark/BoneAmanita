@@ -135,8 +135,10 @@ class NaviSADProtocol:
         (high repetition + high drag), the malignancy factor spikes.
         """
         words = current_text.lower().split() if current_text else []
-        if len(words) < 5:
+        if not words:
+            self.attention_proxy_history.append(0.0)
             return 0.0
+
         repetition_ratio = 1.0 - (len(set(words)) / len(words))
         proxy_value = min(2.0, repetition_ratio * (current_drag / 3.0))
         self.attention_proxy_history.append(proxy_value)

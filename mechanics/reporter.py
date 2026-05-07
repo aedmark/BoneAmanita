@@ -109,7 +109,7 @@ class GeodesicRenderer:
             nav = getattr(self.eng, "navigator", None)
             world_loc = getattr(nav.world_graph.get(nav.current_node_id) if nav else None, "name", "UNKNOWN")
         cfg = getattr(self.eng, "config", {})
-        default_depth = cfg.get("default_ui_depth")  if isinstance(cfg, dict) else getattr(cfg, "default_ui_depth",  "WARM")
+        default_depth = safe_get(cfg, "default_ui_depth", "WARM")
         current_ui_depth = getattr(self.eng, "ui_mode", default_depth or mode_settings.get("default_ui_depth", "WARM"))
         soul = getattr(self.eng, "soul", None)
         anchor = getattr(soul, "anchor", None)
@@ -131,7 +131,7 @@ class GeodesicRenderer:
                 "O": getattr(c_state, "O", 1.0),
             }
         data_ctx["lattice_strain"] = self._calculate_lattice_strain(physics)
-        mode = cfg.get("boot_mode", "ADVENTURE").upper() if isinstance(cfg, dict) else getattr(cfg, "boot_mode", "ADVENTURE").upper()
+        mode = str(safe_get(cfg, "boot_mode", "ADVENTURE")).upper()
         stack = getattr(ctx, "reality_stack", None)
         current_depth = getattr(stack, "current_depth", 1) if stack else 1
         if mode == "TECHNICAL":
@@ -169,11 +169,9 @@ class GeodesicRenderer:
         current_ui_depth = getattr(self.eng, "ui_mode", mode_settings.get("default_ui_depth", "WARM"))
         if current_ui_depth in ("IDLE", "WARM"):
             cfg = getattr(self.eng, "config", {})
-            gui_cfg = getattr(cfg, "GUI", object()) if not isinstance(cfg, dict) else cfg.get("GUI", {})
+            gui_cfg = safe_get(cfg, "GUI", {})
             default_tags = ("[BIO]", "[CRITIC]", "[SYS]", "[MERCY]", "(The system feels")
-            muted_tags = getattr(gui_cfg, "MUTED_TAGS_WARM", default_tags) if not isinstance(gui_cfg,
-                                                                                             dict) else gui_cfg.get(
-                "MUTED_TAGS_WARM", default_tags)
+            muted_tags = safe_get(gui_cfg, "MUTED_TAGS_WARM", default_tags)
             all_logs = [l for l in all_logs if not any(tag in l for tag in muted_tags)]
         if not all_logs:
             return []

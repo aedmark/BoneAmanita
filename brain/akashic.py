@@ -102,6 +102,8 @@ class TheAkashicRecord:
             return 0.0, ux("akashic_strings", "autophagy_failed") or "Starvation threshold. No matter left to consume."
         if self.events:
             self.events.publish("AUTOPHAGY_EVENT", {"node": target, "atp_gained": yield_val})
+
+        self.save_all()  # Prevent desynchronization if engine crashes post-consumption
         return yield_val, msg
 
     def record_scar(self, concept: str, p: Any):
@@ -166,7 +168,7 @@ class TheAkashicRecord:
         try:
             prompts = self.lore.get("SYSTEM_PROMPTS") or {}
             epigenetic_list = prompts.setdefault("GLOBAL_BASELINE", {}).setdefault("EPIGENETIC_SCARS", [])
-        
+
             if not isinstance(epigenetic_list, list):
                 epigenetic_list = []
                 prompts["GLOBAL_BASELINE"]["EPIGENETIC_SCARS"] = epigenetic_list

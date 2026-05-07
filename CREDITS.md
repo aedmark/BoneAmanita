@@ -14,7 +14,7 @@ We would like to explicitly acknowledge the following individuals and architectu
 * **Creator: Nelson Spence** - The metabolic boundaries of the Hypervisor are strictly enforced by the mathematically verified Partial Differential Equations (PDEs) of the **Creative Determinant**, pioneered by Spence. His work on Project Navi forms the literal bedrock of the Mitochondrial Forge, replacing heuristics with determinant, logical, verifiable math, allowing the system to accurately *feel* the thermodynamic cost of generation (ATP drain) and toxicity (ROS).
 
 ### Semantic Hallucination Generators (Gloss) - https://github.com/bradsadevnow/semantic-hallucination-generators
-* **Creator: Bradley (bradsadevnow)** - Bradley architected the "Gloss" framework, a brilliant piece of satirical infrastructure designed to mock VC-bloat and AI sycophancy. This architecture was grafted into the Hypervisor as the **Honeypot** and the **Jester's Mirror**, weaponizing his pure "Semantic Antigen" to train the Lexical Firewall and shatter over-engineered developer ego-loops.
+* **Creator: Bradley (bradsadevnow)** - Bradley architected the "Gloss" framework, a brilliant piece of satirical infrastructure designed to mock VC-bloat and AI sycophancy. We use the output of this satire as antigens for our biomechanical engine.
 
 ***
 

@@ -425,7 +425,8 @@ class CommandProcessor:
             if not hasattr(renderer, "dial_setting"):
                 from mechanics.reporter import TruthRenderer
                 self.interface.log(f"{self.P.YEL}{ux('command_alerts', 'truth_transplant')}{self.P.RST}")
-                reporter.renderer = reporter.renderers.setdefault("STANDARD", TruthRenderer(self.interface.eng))
+                reporter.renderers["STANDARD"] = TruthRenderer(self.interface.eng)
+                reporter.renderer = reporter.renderers["STANDARD"]
             self.interface.eng.ambiguity_dial = mode
             modes = ux("command_alerts", "truth_modes", ["BOARDROOM", "WORKSHOP", "RED TEAM", "PALIMPSEST"])
             self.interface.log(
