@@ -1,19 +1,14 @@
 """/soul/humanity.py"""
-import json
-import os
 import random
-import time
-from dataclasses import dataclass, field, fields
-from typing import List, Dict, Optional, Any, Tuple, ClassVar
-from brain.akashic import TheAkashicRecord
-from presets import BoneConfig
-from core import LoreManifest, EventBus
-from struts import ux, ux_format, safe_get, safe_set
-from mechanics.lexicon import LexiconService
+from typing import List, Optional, Any
+
 from constants import Prisma
+from core import LoreManifest, EventBus
+from presets import BoneConfig
+from struts import ux, ux_format, safe_get
 
 
-class HumanityAnchor:
+class SchurProtocol:
     """
     The Michael Schur protocol.
     This prevents the AI from becoming a subservient vending machine.
@@ -42,9 +37,8 @@ class HumanityAnchor:
         if atp >= self._cfg("AUDIT_ATP_MIN", 5.0) or float(safe_get(physics, "voltage", 0.0)) >= self._cfg(
                 "AUDIT_VOLTAGE_MIN", 5.0):
             return 0.0
-        matter = safe_get(physics, "matter", {})
-        vector = safe_get(physics, "vector", safe_get(matter, "vector", {}))
-        counts = safe_get(physics, "counts", safe_get(matter, "counts", {}))
+        vector = getattr(physics, "vector", {})
+        counts = getattr(physics, "counts", {})
         vec_sum = sum(vector.get(k, 0.0) for k in self._VECTOR_ANCHORS)
         lex_sum = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS) * self._cfg("AUDIT_LEXICAL_MULT", 0.5)
         if (vec_sum + lex_sum) > self._cfg("AUDIT_RESONANCE_THRESH", 0.3):
@@ -79,8 +73,8 @@ class HumanityAnchor:
             self.events.log(f"{Prisma.VIOLET}{riddle_msg}{Prisma.RST}", "SOUL_QUERY")
 
     def _cfg(self, key: str, default: Any) -> Any:
-        cfg_obj = getattr(self.cfg, "ANCHOR", None)
-        return getattr(cfg_obj, key, default)
+        val = safe_get(safe_get(self.cfg, "ANCHOR", {}), key, default)
+        return float(val) if isinstance(default, float) else int(val) if isinstance(default, int) else val
 
     def check_domestication(self, reliance_proxy: float):
         """

@@ -72,12 +72,12 @@ class BoneArchitect:
             MetabolicGovernor
         from spores import ImmuneMycelium, BioLichen, BioParasite
         target_cfg = config_ref or BoneConfig
-        cfg = getattr(target_cfg, "METABOLISM", None)
-        genesis_val = safe_get(cfg, "GENESIS_VOLTAGE", 100.0)
+        cfg = safe_get(target_cfg, "METABOLISM", {})
+        genesis_val = float(safe_get(cfg, "GENESIS_VOLTAGE", 100.0))
         mito_state = MitochondrialState(atp_pool=genesis_val)
         bio_metrics = Biometrics(
-            health=getattr(target_cfg, "MAX_HEALTH", 100.0),
-            stamina=getattr(target_cfg, "MAX_STAMINA", 100.0)
+            health=float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
+            stamina=float(safe_get(target_cfg, "MAX_STAMINA", 100.0))
         )
         return BioSystem(
             mito=MitochondrialForge(mito_state, events, config_ref=target_cfg),
@@ -162,7 +162,7 @@ class BoneArchitect:
         recovered_atlas = atlas or {}
         if recovered_atlas and getattr(embryo.physics, "nav", None):
             try:
-                embryo.physics.nav.import_atlas(recovered_atlas)
+                embryo.physics.nav.load_state(recovered_atlas)
                 msg = ux("machine_strings", "arch_map_restored") or "[ARCHITECT]: World Map restored."
                 events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS")
             except Exception as e:
@@ -170,8 +170,8 @@ class BoneArchitect:
                 events.log(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}", "WARN")
         if embryo.bio and embryo.bio.mito and embryo.bio.mito.state.atp_pool <= 0.0:
             target_cfg = getattr(embryo.bio, "config_ref", None) or BoneConfig
-            cfg = getattr(target_cfg, "METABOLISM", None)
-            genesis_val = safe_get(cfg, "GENESIS_VOLTAGE", 100.0)
+            cfg = safe_get(target_cfg, "METABOLISM", {})
+            genesis_val = float(safe_get(cfg, "GENESIS_VOLTAGE", 100.0))
             msg = ux("machine_strings", "arch_cold_boot")
             events.log((msg.format(genesis_val=genesis_val) if msg else f"Cold Boot: {genesis_val} ATP"), "SYS")
             embryo.bio.mito.adjust_atp(genesis_val, reason="GENESIS")

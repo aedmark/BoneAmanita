@@ -6,9 +6,7 @@ to the narrative and data layers.
 """
 
 from typing import Any
-
 from constants import Prisma
-
 
 def ux(section: str, key: str, default: Any = "") -> Any:
     """
@@ -49,10 +47,8 @@ def ux_format(section: str, key: str, default: str = "", **kwargs) -> str:
     if not msg:
         return ""
     try:
-        # Force string conversion to prevent AttributeError if the UX cache returns a list or dict.
         return str(msg).format(**kwargs)
     except (KeyError, ValueError, IndexError, AttributeError, TypeError) as e:
-        # We log the grammatical failure so the developer can fix it without crashing the engine.
         print(f"{Prisma.GRY}[UX] Formatting mismatch ({e}) in {section}.{key}. Falling back to raw string.{Prisma.RST}")
         return str(msg)
 

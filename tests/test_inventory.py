@@ -1,20 +1,12 @@
 """
 tests/test_inventory.py
-The Physical Constraint Torture Chamber.
-Validates the GordonKnot's ability to maintain the physical reality of the simulation,
-enforce inventory coupling, and execute emergency metabolic reflexes.
 """
 
 from tests.base import BoneTestCase
 from main import BoneAmanita
 
-
 class InventorySystemTests(BoneTestCase):
     def test_pinker_substring_contamination(self):
-        """
-        Ensures the explicit extraction parser uses strict word boundary tokens
-        and does not mistake sub-strings ('forget') for acquisition verbs ('get').
-        """
         engine = BoneAmanita({})
         gordon = getattr(engine.village, "gordon", None)
         gordon.acquisition_verbs = ["get"]
@@ -28,10 +20,6 @@ class InventorySystemTests(BoneTestCase):
         )
 
     def test_fuller_reality_wall(self):
-        """
-        Evaluates the Object-Action Coupling. The system must hard-block actions
-        if the required topological item is missing from the inventory.
-        """
         engine = BoneAmanita({})
         gordon = getattr(engine.village, "gordon", None)
         gordon.action_coupling = {"unlock": ["key", "passcard"]}
@@ -43,10 +31,6 @@ class InventorySystemTests(BoneTestCase):
         self.assertIsNone(allow, "Gordon blocked a valid action despite the user possessing the required object.")
 
     def test_meadows_emergency_reflex(self):
-        """
-        Validates that passive inventory items can intercept terminal physical
-        states (like critical voltage) and consume themselves to save the host.
-        """
         engine = BoneAmanita({})
         gordon = getattr(engine.village, "gordon", None)
         gordon.register_dynamic_item("COOLANT_ROD", {
@@ -61,10 +45,6 @@ class InventorySystemTests(BoneTestCase):
         self.assertTrue(phys["voltage"] < 25.0, "Reflex consumed the item but failed to reset the physical voltage.")
 
     def test_schur_graceful_removal(self):
-        """
-        Ensures the system does not double-walk arrays and catches its own
-        ValueErrors gracefully when attempting to remove phantom items.
-        """
         engine = BoneAmanita({})
         gordon = getattr(engine.village, "gordon", None)
         gordon.inventory = ["REAL_ITEM"]

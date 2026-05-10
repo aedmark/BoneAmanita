@@ -1,26 +1,14 @@
 """
 constants.py
 
-The immutable laws of the universe.
 This module defines the structural primitives, visual vocabulary, and dimensional
-boundaries that the rest of the engine relies upon. By declaring these constants here,
-we enforce systemic consistency (Fuller's Tensegrity) and prevent magic strings from
-fracturing the codebase's logic.
+boundaries that the rest of the engine relies upon.
 """
 
 import re
 from enum import Enum
 
 class Prisma:
-    """
-    The System's Visual Cortex.
-    Prisma is responsible for the semantic coloring of output. Rather than spraying raw
-    ANSI escape codes throughout the execution layers (which causes immense syntactic friction
-    and cognitive bloat for the developer), we abstract the presentation layer here.
-
-    Whether the system is speaking to a terminal UI or a Web UI, Prisma handles the translation
-    seamlessly.
-    """
     RST = "\033[0m"
     RED, GRN, YEL, BLU = "\033[31m", "\033[32m", "\033[33m", "\033[34m"
     MAG, CYN, WHT, GRY = "\033[35m", "\033[36m", "\033[97m", "\033[90m"
@@ -37,12 +25,6 @@ class Prisma:
 
     @classmethod
     def enable_web_mode(cls):
-        """
-        The Presentation Pivot.
-        When the engine is deployed to a web environment, terminal ANSI codes are useless.
-        This class method overwrites the constant attributes dynamically, swapping escape
-        sequences for CSS classes without requiring a single change to the downstream code.
-        """
         cls.RST = "</span>"
         cls.RED = "<span class='prisma-red'>"
         cls.GRN = "<span class='prisma-grn'>"
@@ -62,30 +44,15 @@ class Prisma:
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
-        """
-        Applies semantic coloring to a string.
-        It safely wraps the text in the requested color code and ensures the reset sequence
-        is applied at the end so color bleed doesn't infect subsequent terminal lines.
-        """
         code = cls._COLOR_MAP.get(str(color_key)[0].upper(), cls.WHT)
         txt = "" if text is None else str(text)
         return f"{code}{txt}" if txt.endswith(cls.RST) else f"{code}{txt}{cls.RST}"
 
     @classmethod
     def strip(cls, text: str) -> str:
-        """
-        Removes all visual formatting from a string, returning the raw semantic payload.
-        Critical for memory storage; the Hippocampus only wants data, not CSS.
-        """
         return cls._STRIP_PATTERN.sub("", str(text)) if text is not None else ""
 
-
 class LoreCategory(Enum):
-    """
-    To prevent the Akashic record from becoming a chaotic vector dump, we enforce
-    strict categorical boundaries. When data is ingested, it must belong to one of
-    these specific domains, allowing targeted, lateral retrieval without systemic noise.
-    """
     LEXICON = "lexicon"
     SCENARIOS = "scenarios"
     GORDON = "gordon"
@@ -95,14 +62,7 @@ class LoreCategory(Enum):
     ALMANAC = "almanac"
     DREAMS = "dreams"
 
-
 class RealityLayer:
-    """
-    This defines the depth of the system's focus. It acts as a filtration layer
-    for the Global Workspace and Event Bus. By tagging events and logs with a reality layer,
-    the system knows what to broadcast to the user (Terminal), what to process quietly
-    (Village), and what is purely for the developer (Debug).
-    """
     TERMINAL = 0
     SIMULATION = 1
     VILLAGE = 2

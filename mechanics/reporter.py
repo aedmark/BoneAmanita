@@ -25,9 +25,9 @@ class PulseReader:
     @staticmethod
     def derive_mood(bio_state: Dict, config_ref=None) -> str:
         """Determines the overarching emotional state based on chemical dominance."""
-        cfg = getattr(config_ref or BoneConfig, "GUI", object())
-        c_warn = getattr(cfg, "CHEM_HIGH_WARN", 0.6)
-        a_warn = getattr(cfg, "ATP_EXHAUSTED_WARN", 20.0)
+        cfg = safe_get(config_ref or BoneConfig, "GUI", {})
+        c_warn = float(safe_get(cfg, "CHEM_HIGH_WARN", 0.6))
+        a_warn = float(safe_get(cfg, "ATP_EXHAUSTED_WARN", 20.0))
         chem = bio_state.get("chem", {})
         if chem.get("COR", 0) > c_warn:
             return ux("pulse_reader", "mood_defensive")
@@ -42,12 +42,12 @@ class PulseReader:
     @staticmethod
     def analyze_voltage(voltage: float, config_ref=None) -> Tuple[str, str]:
         """Translates the numeric Voltage metric into a narrative alert level."""
-        cfg = getattr(config_ref or BoneConfig, "GUI", object())
-        if voltage > getattr(cfg, "V_CRIT", 20.0):
+        cfg = safe_get(config_ref or BoneConfig, "GUI", {})
+        if voltage > float(safe_get(cfg, "V_CRIT", 20.0)):
             key = "voltage_critical"
-        elif voltage > getattr(cfg, "V_HIGH", 15.0):
+        elif voltage > float(safe_get(cfg, "V_HIGH", 15.0)):
             key = "voltage_high"
-        elif voltage < getattr(cfg, "V_LOW", 5.0):
+        elif voltage < float(safe_get(cfg, "V_LOW", 5.0)):
             key = "voltage_low"
         else:
             key = "voltage_nominal"
@@ -80,18 +80,26 @@ class GeodesicRenderer:
         bio = ctx.bio_result
         raw_dashboard = self.render_dashboard(ctx)
         soul_strip = self.soul_dashboard.render()
-        if soul_strip:
-            raw_dashboard = f"{soul_strip}\n{raw_dashboard}"
-        clean_ui = raw_dashboard
+        structured_logs = self.compose_logs(ctx.logs, current_events, tick)
+        hud_parts = []
+        if soul_strip: hud_parts.append(soul_strip.strip())
+        if raw_dashboard: hud_parts.append(raw_dashboard.strip())
+        if structured_logs: hud_parts.append("\n".join(structured_logs))
+        instant_hud = "\n\n".join(hud_parts)
+        cortex_text = getattr(ctx, "bureau_ui", "")
+        split_token = ux("main_strings", "ui_split_token") or "|||SPLIT|||"
+        if instant_hud:
+            clean_ui = f"{instant_hud}\n{split_token}\n{cortex_text}"
+        else:
+            clean_ui = cortex_text
         bureau = getattr(self.eng, "bureau", None)
         if bureau:
-            clean_ui, style_log = bureau.sanitize(raw_dashboard)
+            clean_ui, style_log = bureau.sanitize(clean_ui)
             if style_log:
                 self._punish_style_crime(style_log)
-                current_events.append({"text": style_log})
+                clean_ui = f"{style_log}\n{clean_ui}"
         ignore_msg = ux("renderer", "ignore_msg") or "The system is listening."
         clean_ui = clean_ui.replace(ignore_msg, "")
-        structured_logs = self.compose_logs(ctx.logs, current_events, tick)
         atp_val = bio.get("atp", 0.0) if isinstance(bio, dict) else 0.0
         return {"type": "GEODESIC_FRAME", "ui": clean_ui, "logs": structured_logs,
                 "metrics": self.eng.get_metrics(atp_val), }
@@ -106,8 +114,9 @@ class GeodesicRenderer:
         mode_settings = getattr(self.eng, "mode_settings", {})
         world_loc = "OMNIPRESENT"
         if mode_settings.get("show_location", True):
-            nav = getattr(self.eng, "navigator", None)
-            world_loc = getattr(nav.world_graph.get(nav.current_node_id) if nav else None, "name", "UNKNOWN")
+            village = getattr(self.eng, "village", None)
+            nav = getattr(village, "navigator", None) if village else None
+            world_loc = getattr(nav.world_graph.get(nav.current_node_id) if nav and hasattr(nav, "world_graph") else None, "name", "UNKNOWN")
         cfg = getattr(self.eng, "config", {})
         default_depth = safe_get(cfg, "default_ui_depth", "WARM")
         current_ui_depth = getattr(self.eng, "ui_mode", default_depth or mode_settings.get("default_ui_depth", "WARM"))
@@ -217,9 +226,9 @@ class CachedRenderer:
 
     def render_frame(self, ctx, tick: int, events: List[Dict]) -> Dict:
         voltage = float(safe_get(ctx.physics, "voltage", 0.0))
-        cfg = getattr(self.cfg, "GUI", object())
-        cache_expired = (tick - self._last_tick) >= getattr(cfg, "UI_CACHE_LIFETIME", 5)
-        if voltage > getattr(cfg, "HIGH_VOLTAGE_REFRESH", 15.0) or events or cache_expired:
+        cfg = safe_get(self.cfg, "GUI", {})
+        cache_expired = (tick - self._last_tick) >= int(safe_get(cfg, "UI_CACHE_LIFETIME", 5))
+        if voltage > float(safe_get(cfg, "HIGH_VOLTAGE_REFRESH", 15.0)) or events or cache_expired:
             frame = self._base.render_frame(ctx, tick, events)
             self._cached_ui_content = frame["ui"]
             self._last_tick = tick
@@ -241,7 +250,6 @@ def get_renderer(engine_ref, chroma_ref, strunk_ref, valve_ref=None, mode="STAND
     if mode == "PERFORMANCE":
         return CachedRenderer(base, config_ref=target_cfg)
     return base
-
 
 class AmbiguityDial:
     """Constants for the TruthRenderer modes."""
@@ -267,6 +275,17 @@ class TruthRenderer(GeodesicRenderer):
     @property
     def dial_setting(self):
         return getattr(self.engine, "ambiguity_dial", AmbiguityDial.BOARDROOM)
+
+    def render_frame(self, ctx, tick: int, current_events: List[Dict]) -> Dict[str, Any]:
+        """Intercepts the standard frame to apply epistemological formatting."""
+        frame = super().render_frame(ctx, tick, current_events)
+        council_log = getattr(ctx, "council_log", [])
+        trauma = getattr(self.engine, "trauma_accum", {})
+        trauma_cost = sum(trauma.values()) if trauma else 0.0
+        new_ui = self.render_truth(frame, council_log, trauma_cost)
+        if new_ui:
+            frame["ui"] = new_ui
+        return frame
 
     def render_truth(self, cortex_packet, council_log, trauma_cost):
         """Morphs the final output based on the user's requested level of systemic transparency."""

@@ -64,27 +64,27 @@ class ZenGarden:
         """
         vol = float(safe_get(physics, "voltage", 0.0))
         drag = float(safe_get(physics, "narrative_drag", 0.0))
-        cfg = getattr(self.cfg, "ZEN", object())
-        v_min = getattr(cfg, "VOLTAGE_MIN", 5.0)
-        v_max = getattr(cfg, "VOLTAGE_MAX", 12.0)
-        d_max = getattr(cfg, "DRAG_MAX", 2.0)
+        cfg = safe_get(self.cfg, "ZEN", {})
+        v_min = float(safe_get(cfg, "VOLTAGE_MIN", 5.0))
+        v_max = float(safe_get(cfg, "VOLTAGE_MAX", 12.0))
+        d_max = float(safe_get(cfg, "DRAG_MAX", 2.0))
         is_stable = (v_min <= vol <= v_max) and (drag <= d_max)
         if is_stable:
             self.stillness_streak += 1
             self.max_streak = max(self.max_streak, self.stillness_streak)
             efficiency_boost = min(
-                getattr(cfg, "EFFICIENCY_CAP", 0.5),
-                self.stillness_streak * getattr(cfg, "EFFICIENCY_SCALAR", 0.05)
+                float(safe_get(cfg, "EFFICIENCY_CAP", 0.5)),
+                self.stillness_streak * float(safe_get(cfg, "EFFICIENCY_SCALAR", 0.05))
             )
             msg = None
-            if self.stillness_streak == getattr(cfg, "ZEN_FIRST_TICK", 1):
+            if self.stillness_streak == int(safe_get(cfg, "ZEN_FIRST_TICK", 1)):
                 msg = f"{Prisma.GRY}{ux('protocol_strings', 'zen_enter')}{Prisma.RST}"
-            elif self.stillness_streak % getattr(cfg, "ZEN_MILESTONE_FREQ", 5) == 0:
+            elif self.stillness_streak % int(safe_get(cfg, "ZEN_MILESTONE_FREQ", 5)) == 0:
                 self.pebbles_collected += 1
                 koan = random.choice(self.koans)
                 msg = f"{Prisma.CYN}{ux_format('protocol_strings', 'zen_streak', default='Stillness {streak}: {koan} (+{boost}%)', streak=self.stillness_streak, koan=koan, boost=int(efficiency_boost * 100))}{Prisma.RST}"
             return efficiency_boost, msg
-        if self.stillness_streak > getattr(cfg, "STREAK_BREAK_THRESHOLD", 3):
+        if self.stillness_streak > int(safe_get(cfg, "STREAK_BREAK_THRESHOLD", 3)):
             break_msg = ux("protocol_strings", "zen_break")
             self.events.log(f"{Prisma.GRY}{break_msg}{Prisma.RST}", "SYS", )
         self.stillness_streak = 0

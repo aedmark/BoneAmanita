@@ -42,8 +42,8 @@ class TheCriticsCircle:
         Calculates a weighted score based on each critic's specific mathematical preferences.
         Returns a formatted string if a positive or negative threshold is breached.
         """
-        cfg = getattr(self.cfg, "CRITICS", object())
-        rev_cd = getattr(cfg, "REVIEW_COOLDOWN", 10)
+        cfg = safe_get(self.cfg, "CRITICS", {})
+        rev_cd = int(safe_get(cfg, "REVIEW_COOLDOWN", 10))
         if turn_count - self.last_review_turn < rev_cd:
             return None
         voltage = float(safe_get(physics, "voltage", 0.0))
@@ -53,9 +53,9 @@ class TheCriticsCircle:
             velocity = voltage * (1.0 / max(0.1, drag))
         best_match = None
         review_type = "neutral"
-        max_contrib = getattr(cfg, "MAX_METRIC_CONTRIB", 5.0)
-        pos_thresh = getattr(cfg, "POSITIVE_REVIEW_THRESH", 15.0)
-        neg_thresh = getattr(cfg, "NEGATIVE_REVIEW_THRESH", -15.0)
+        max_contrib = float(safe_get(cfg, "MAX_METRIC_CONTRIB", 5.0))
+        pos_thresh = float(safe_get(cfg, "POSITIVE_REVIEW_THRESH", 15.0))
+        neg_thresh = float(safe_get(cfg, "NEGATIVE_REVIEW_THRESH", -15.0))
         for key, critic in self.critics.items():
             if self.active_cooldowns.get(key, 0) > turn_count:
                 continue
@@ -85,7 +85,7 @@ class TheCriticsCircle:
         if best_match:
             key, critic = best_match
             self.last_review_turn = turn_count
-            self.active_cooldowns[key] = turn_count + (getattr(cfg, "CRITIC_COOLDOWN_TICKS", 50))
+            self.active_cooldowns[key] = turn_count + int(safe_get(cfg, "CRITIC_COOLDOWN_TICKS", 50))
             comment = random.choice(
                 critic.get("reviews", {}).get(review_type, ["Hrm."]))
             color = Prisma.GRN if review_type == "high" else Prisma.RED

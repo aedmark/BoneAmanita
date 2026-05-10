@@ -118,6 +118,7 @@ class NaviSADProtocol:
     def __init__(self, history_size: int = 10):
         self.history_size = history_size
         self.attention_proxy_history = deque(maxlen=history_size)
+        self.recent_texts = deque(maxlen=history_size)
 
     def calculate_semantic_dimension(self, efficiency_index: float, novelty: float) -> float:
         """
@@ -138,9 +139,13 @@ class NaviSADProtocol:
         if not words:
             self.attention_proxy_history.append(0.0)
             return 0.0
-
-        repetition_ratio = 1.0 - (len(set(words)) / len(words))
-        proxy_value = min(2.0, repetition_ratio * (current_drag / 3.0))
+        intra_repetition = 1.0 - (len(set(words)) / len(words))
+        cross_repetition = 0.0
+        if current_text in self.recent_texts:
+            cross_repetition = 1.0
+        self.recent_texts.append(current_text)
+        total_repetition = max(intra_repetition, cross_repetition)
+        proxy_value = min(2.0, total_repetition * max(1.0, current_drag / 3.0))
         self.attention_proxy_history.append(proxy_value)
         history_avg = sum(self.attention_proxy_history) / len(self.attention_proxy_history)
         return max(0.0, min(1.0, history_avg))

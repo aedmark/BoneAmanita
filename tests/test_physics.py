@@ -56,8 +56,10 @@ class TopologicalPrimitivesTest(BoneTestCase):
             )
             self.assertLess(self.engine.bio.mito.state.atp_pool, initial_atp,
                             "[FAIL] ATP was not burned to break the false cohesion.")
-            self.assertIn(
-                "omega_r", result.get("physics", {}),
+            phys_pkt = result.get("physics", {})
+            omega_in_pkt = "omega_r" in phys_pkt or "omega_r" in phys_pkt.get("energy", {})
+            self.assertTrue(
+                omega_in_pkt,
                 "[FAIL] Right-Brain Coherence (omega_r) was not appended to the physics packet."
             )
             print(

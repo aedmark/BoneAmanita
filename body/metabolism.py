@@ -26,10 +26,11 @@ class MitochondrialForge:
         self.cfg = config_ref or BoneConfig
         full_narrative = (LoreManifest.get_instance(config_ref=self.cfg).get("BIO_NARRATIVE") or {})
         self.narrative = full_narrative.get("MITO", {})
-        self.MAX_SAFE_BURN = getattr(self.cfg.BIO, "MAX_SAFE_BURN", 25.0)
-        self.ANAEROBIC_THRESHOLD = getattr(self.cfg.BIO, "ANAEROBIC_THRESHOLD", 40.0)
-        self.MAX_ATP = getattr(self.cfg, "MAX_ATP", 100.0)
-        self.ATP_COLLAPSE = getattr(self.cfg.BIO, "ATP_COLLAPSE", 0.0)
+        bio_cfg = safe_get(self.cfg, "BIO", {})
+        self.MAX_SAFE_BURN = float(safe_get(bio_cfg, "MAX_SAFE_BURN", 25.0))
+        self.ANAEROBIC_THRESHOLD = float(safe_get(bio_cfg, "ANAEROBIC_THRESHOLD", 40.0))
+        self.MAX_ATP = float(safe_get(self.cfg, "MAX_ATP", 100.0))
+        self.ATP_COLLAPSE = float(safe_get(bio_cfg, "ATP_COLLAPSE", 0.0))
 
     def get_status_report(self) -> str:
         """Translates raw ATP/ROS numbers into a human-readable systemic state."""
@@ -90,7 +91,7 @@ class MitochondrialForge:
         """
         if self.state.atp_pool > 95.0 and self.state.ros_buildup < 1.0:
             return MetabolicReceipt(0, 0, 0, 0, 0, "NOMINAL", "Fresh Start")
-        cfg = getattr(self.cfg, "BIO", None)
+        cfg = safe_get(self.cfg, "BIO", {})
         depth = float(safe_get(physics_packet, "depth", 0.3))
         connectivity = float(safe_get(physics_packet, "connectivity", 0.2))
         voltage = float(safe_get(physics_packet, "voltage", 30.0))
@@ -113,7 +114,7 @@ class MitochondrialForge:
                     f"{Prisma.MAG}[CHECKPOINT]: Amplification Tax applied (+{amplification_tax:.2f} ATP drag){Prisma.RST}",
                     "BIO_WARN")
         base_demand = base_cost + (math.log1p(max(0.0, self.state.ros_buildup)) * 2.0)
-        atp_crit = getattr(cfg, "ATP_CRITICAL", 20.0)
+        atp_crit = float(safe_get(cfg, "ATP_CRITICAL", 20.0))
         is_critical = self.state.atp_pool < atp_crit
         if is_critical:
             cognitive_load_tax = 0.0
@@ -268,10 +269,11 @@ class DigestiveTrack:
                 "heavy": "CELLULASE", "constructive": "CHITINASE",
                 "aerobic": "LIGNASE", "meat": "PROTEASE",
             })
-        self.SAMPLING_THRESHOLD = getattr(self.cfg.BIO, "SAMPLING_THRESHOLD", 1000)
-        self.BASE_WORD_VALUE = getattr(self.cfg.BIO, "BASE_WORD_VALUE", 0.5)
-        self.COMPLEX_WORD_BONUS = getattr(self.cfg.BIO, "COMPLEX_WORD_BONUS", 2.0)
-        self.CLICHE_TAX_RATE = getattr(self.cfg.BIO, "CLICHE_TAX_RATE", 0.5)
+        bio_cfg = safe_get(self.cfg, "BIO", {})
+        self.SAMPLING_THRESHOLD = int(safe_get(bio_cfg, "SAMPLING_THRESHOLD", 1000))
+        self.BASE_WORD_VALUE = float(safe_get(bio_cfg, "BASE_WORD_VALUE", 0.5))
+        self.COMPLEX_WORD_BONUS = float(safe_get(bio_cfg, "COMPLEX_WORD_BONUS", 2.0))
+        self.CLICHE_TAX_RATE = float(safe_get(bio_cfg, "CLICHE_TAX_RATE", 0.5))
 
     def harvest(self, phys: Any, logs: List[str]) -> Tuple[str, float, int]:
         """
@@ -319,33 +321,26 @@ class DigestiveTrack:
         """
         if not self.lex:
             return 0.0, [], 0.0, 0
-
         word_counts = Counter(words)
         cfg = getattr(self.cfg, "BIO", None)
         min_len = safe_get(cfg, "MIN_WORD_LENGTH", 4)
         comp_len = safe_get(cfg, "COMPLEX_WORD_LENGTH", 7)
         antigen_set = self.lex.get("antigen") or set()
-
         valid_words = {w: c for w, c in word_counts.items() if len(w) >= min_len or w in antigen_set}
         hits = sum(c for w, c in valid_words.items() if w not in antigen_set)
-
         if not valid_words:
             return 0.0, [], 0.0, hits
-
-        user_set = set(valid_words.keys())
-        kinetic_set = (self.lex.get("kinetic") or set()) | (self.lex.get("explosive") or set())
+        kinetic_set = frozenset((self.lex.get("kinetic") or set()) | (self.lex.get("explosive") or set()))
         atp_yield = 0.0
         enzymes = []
         cliche_tax = 0.0
-        antigens_found = user_set.intersection(antigen_set)
-        kinetics_found = user_set.intersection(kinetic_set)
         for word, count in valid_words.items():
-            if word in antigens_found:
+            if word in antigen_set:
                 cliche_tax += self.CLICHE_TAX_RATE * count
                 continue
             val = self.COMPLEX_WORD_BONUS if len(word) > comp_len else self.BASE_WORD_VALUE
             log_mult = 1.0 + math.log(count)
-            if word in kinetics_found:
+            if word in kinetic_set:
                 atp_yield += (val * 1.5) * log_mult
             else:
                 cat = self.lex.get_current_category(word)

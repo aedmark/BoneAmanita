@@ -6,7 +6,7 @@ from typing import Any
 from presets import BoneConfig
 from physics import apply_somatic_feedback
 from core import CycleContext
-from struts import ux, safe_set
+from struts import ux, safe_set, safe_get
 from mechanics.tools import TheTclWeaver
 from phases.base import SimulationPhase, _safe_dict
 
@@ -45,7 +45,7 @@ class MetabolismPhase(SimulationPhase):
             self.eng.events.log(gov_msg, "GOV")
         physics.manifold = self.eng.bio.governor.mode
         target_cfg = getattr(self.eng, "config", BoneConfig)
-        max_voltage = getattr(target_cfg.PHYSICS, "VOLTAGE_MAX", 20.0)
+        max_voltage = float(safe_get(safe_get(target_cfg, "PHYSICS", {}), "VOLTAGE_MAX", 20.0))
         bio_feedback = {"INTEGRITY": getattr(physics, "truth_ratio", 1.0),
                         "STATIC": getattr(physics, "repetition", 0.0),
                         "FORCE": getattr(physics, "voltage", 0.0) / max_voltage,
@@ -102,7 +102,7 @@ class MetabolismPhase(SimulationPhase):
         """
         atp = self.eng.bio.mito.state.atp_pool
         target_cfg = getattr(self.eng, "config", BoneConfig)
-        starvation = getattr(target_cfg.BIO, "ATP_STARVATION", 5.0)
+        starvation = float(safe_get(safe_get(target_cfg, "BIO", {}), "ATP_STARVATION", 5.0))
         trigger = (atp < (starvation * 0.5)) or (self.eng.tick_count > 0 and self.eng.tick_count % 100 == 0)
         if trigger and hasattr(self.eng.mind, "dreamer"):
             msg_sleep = ux("cycle_strings", "metabolism_sleep")
@@ -112,7 +112,7 @@ class MetabolismPhase(SimulationPhase):
             defrag_msg = self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
             if defrag_msg:
                 ctx.log(f"{Prisma.CYN}🧹 {defrag_msg}{Prisma.RST}")
-            reboot_val = getattr(target_cfg, "MAX_ATP", 100.0) * 0.33
+            reboot_val = float(safe_get(target_cfg, "MAX_ATP", 100.0)) * 0.33
             self.eng.bio.mito.state.atp_pool = reboot_val
             ctx.bio_result["atp"] = reboot_val
             msg_wake = ux("cycle_strings", "metabolism_waking")
@@ -140,7 +140,7 @@ class MetabolismPhase(SimulationPhase):
         ctx.log(msg)
         if evt == "FLOW_BOOST":
             target_cfg = getattr(self.eng, "config", BoneConfig)
-            max_atp = getattr(target_cfg, "MAX_ATP", 100.0)
+            max_atp = float(safe_get(target_cfg, "MAX_ATP", 100.0))
             boost = ctx.limits.get("HUBRIS_ATP_BOOST", 20.0)
             self.eng.bio.mito.state.atp_pool = min(max_atp, self.eng.bio.mito.state.atp_pool + boost)
         elif evt == "ICARUS_CRASH":
@@ -176,7 +176,7 @@ class MetabolismPhase(SimulationPhase):
                 target_cfg = getattr(self.eng, "config", BoneConfig)
                 if self.eng.bio.biometrics:
                     self.eng.bio.biometrics.stamina = min(
-                        target_cfg.MAX_STAMINA,
+                        float(safe_get(target_cfg, "MAX_STAMINA", 100.0)),
                         self.eng.bio.biometrics.stamina + ctx.limits.get("KINTSUGI_HEAL_AMT", 20.0))
         therapy_ref = getattr(self.eng.village, "therapy", None)
         if therapy_ref:
@@ -184,7 +184,7 @@ class MetabolismPhase(SimulationPhase):
             if therapy_ref.check_progress(ctx.physics, current_stamina, self.eng.trauma_accum, qualia):
                 ctx.log(f"{Prisma.GRN}{ux('cycle_strings', 'metabolism_therapy')}{Prisma.RST}")
                 if self.eng.bio and self.eng.bio.biometrics:
-                    self.eng.bio.biometrics.health = min(getattr(target_cfg, "MAX_HEALTH", 100.0),
+                    self.eng.bio.biometrics.health = min(float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
                                                          self.eng.bio.biometrics.health + ctx.limits.get(
                                                              "THERAPY_HEAL_AMT", 5.0))
 
@@ -194,7 +194,7 @@ class MetabolismPhase(SimulationPhase):
         the system 'eats' its own oldest or least useful memories to extract raw computational fuel.
         """
         target_cfg = getattr(self.eng, "config", BoneConfig)
-        starvation_thresh = getattr(target_cfg.BIO, "ATP_STARVATION", 5.0)
+        starvation_thresh = float(safe_get(safe_get(target_cfg, "BIO", {}), "ATP_STARVATION", 5.0))
         respiration = ctx.bio_result.get("respiration", "")
         current_atp = self.eng.bio.mito.state.atp_pool
         if current_atp <= starvation_thresh or current_atp <= 0.0 or respiration == "NECROSIS":
@@ -247,7 +247,7 @@ class SensationPhase(SimulationPhase):
         bio = getattr(self.eng, "bio", None)
         if impulse.stamina_impact != 0 and bio and bio.biometrics:
             target_cfg = getattr(self.eng, "config", BoneConfig)
-            max_s = float(getattr(target_cfg, "MAX_STAMINA", 100.0))
+            max_s = float(safe_get(target_cfg, "MAX_STAMINA", 100.0))
             current = float(bio.biometrics.stamina)
             bio.biometrics.stamina = max(0.0, min(max_s, current + float(impulse.stamina_impact)))
         return ctx

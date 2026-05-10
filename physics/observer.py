@@ -10,6 +10,7 @@ from physics.models import PhysicsPacket, SpatialState, MaterialState, EnergySta
 from physics.maths import CreativeDeterminantEngine, _native_permutation_entropy, _native_detect_false_cohesion, \
     _native_coincidence_length
 from physics.geodesics import GeodesicEngine
+from struts import safe_get
 
 
 @dataclass
@@ -46,14 +47,15 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any, config_re
     from core import LoreManifest
     t_cfg = config_ref or BoneConfig
     fb = physics_packet.snapshot()
-    deep_cfg = getattr(t_cfg, "PHYSICS_DEEP", None)
+    from struts import safe_get
+    deep_cfg = safe_get(t_cfg, "PHYSICS_DEEP", {})
 
     def apply_delta(key: str, amount: float):
         current_val = getattr(fb, key, 0.0)
         setattr(fb, key, current_val + amount)
 
     def get_deep_cfg(key: str, default: float):
-        return getattr(deep_cfg, key, default) if deep_cfg else default
+        return float(safe_get(deep_cfg, key, default))
 
     tone_effects = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TONE_EFFECTS") or {}
     for key, delta in tone_effects.get(qualia.tone, {}).items():
@@ -65,8 +67,9 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any, config_re
         apply_delta("valence", get_deep_cfg("SOMATIC_GLOW_VALENCE", 0.5))
         apply_delta("psi", get_deep_cfg("SOMATIC_GLOW_PSI", 0.2))
     fb.energy.voltage = max(0.0, min(fb.energy.voltage, 150.0))
-    drag_floor = getattr(t_cfg.PHYSICS, "DRAG_FLOOR", 1.0)
-    drag_halt = getattr(t_cfg.PHYSICS, "DRAG_HALT", 10.0)
+    phys_cfg = safe_get(t_cfg, "PHYSICS", {})
+    drag_floor = float(safe_get(phys_cfg, "DRAG_FLOOR", 1.0))
+    drag_halt = float(safe_get(phys_cfg, "DRAG_HALT", 10.0))
     fb.space.narrative_drag = max(drag_floor, min(fb.space.narrative_drag, drag_halt))
     return fb
 
@@ -74,7 +77,7 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any, config_re
 class QuantumObserver:
     """
     The 'Eye' of the system.
-    It 'gazes' at the user's prompt and collapses it into a concrete, multi-dimensional
+    It 'gazes' at the user's prompt and collapses it into a concrete, multidimensional
     PhysicsPacket. It measures structural entropy, detects pathological conversational loops,
     and calculates how much energy (Viability) the system has to respond.
     """
@@ -107,10 +110,7 @@ class QuantumObserver:
             geo.dimensions = GeodesicEngine.apply_path_reflection(geo.dimensions, self.Q_n)
         self.voltage_history.append(geo.tension)
         avg_voltage = round(sum(self.voltage_history) / len(self.voltage_history), 2)
-        entropy, beta, scope, depth, connectivity, resonance, silence, loop_quotient = self._calculate_metrics(text,
-                                                                                                               counts,
-                                                                                                               len(clean_words),
-                                                                                                               self.cfg)
+        entropy, beta, scope, depth, connectivity, resonance, silence, loop_quotient = self._calculate_metrics(text,counts,len(clean_words),self.cfg)
         v_hist = list(self.voltage_history)
         if len(v_hist) >= 3:
             true_chaos = _native_permutation_entropy(v_hist, window_size=3)
@@ -129,10 +129,10 @@ class QuantumObserver:
             if c_len > 2:
                 loop_quotient = min(1.0, loop_quotient + (c_len * 0.15))
         t_up, t_low = text.upper(), text.lower()
-        deep_cfg = getattr(self.cfg, "PHYSICS_DEEP", None)
+        deep_cfg = safe_get(self.cfg, "PHYSICS_DEEP", {})
 
         def get_deep(key: str, default: float) -> float:
-            return getattr(deep_cfg, key, default) if deep_cfg else default
+            return float(safe_get(deep_cfg, key, default))
 
         if text.count("!") >= 3 or "ACCELERATE" in t_up or "FASTER" in t_up:
             avg_voltage = max(avg_voltage, get_deep("ACCELERATE_VOLTAGE", 160.0))
@@ -161,6 +161,7 @@ class QuantumObserver:
         sustainable_capacity = max(0.1, 1.0 - (avg_voltage / 150.0) * entropy)
         current_debt = self.cd_engine.update_coherence_debt(actual_coherence, sustainable_capacity)
         viability = self.cd_engine.calculate_viability(kappa=resonance, gamma=gamma_idx, mu=beta)
+        delta_atp, delta_ros = self.cd_engine.execute_metabolic_tick(viability)
         strong_coherence_ideal = resonance * gamma_idx * beta
         generative_gap = abs(strong_coherence_ideal - actual_coherence)
         cd_drag = (geo.compression * 0.5) + (generative_gap * getattr(self.cfg.PHYSICS, "DRAG_HALT", 10.0) * 0.5)
@@ -174,6 +175,8 @@ class QuantumObserver:
         )
         safe_set(energy, "viability_potential", viability)
         safe_set(energy, "coherence_debt", current_debt)
+        safe_set(energy, "delta_atp", delta_atp)
+        safe_set(energy, "delta_ros", delta_ros)
         matter = MaterialState(clean_words=clean_words, raw_text=text, counts=counts, antigens=counts.get("antigen", 0),
                                vector=geo.dimensions, truth_ratio=0.5)
         space = SpatialState(narrative_drag=cd_drag, zone=self._determine_zone(geo.dimensions),
@@ -235,10 +238,11 @@ class QuantumObserver:
         """Calculates the raw floating-point ratios of the various semantic dimensions."""
         if not (length := len(text)):
             return 0.0, 0.0, 0.3, 0.3, 0.2, 0.0, 0.8, 0.0
-        cfg = getattr(config_ref or BoneConfig, "PHYSICS", None)
+        from struts import safe_get
+        cfg = safe_get(config_ref or BoneConfig, "PHYSICS", {})
 
         def get_cfg(key: str, default: float) -> float:
-            return getattr(cfg, key, default)
+            return float(safe_get(cfg, key, default))
 
         solvents = counts.get("solvents", 0)
         base_entropy = length / get_cfg("TEXT_LENGTH_SCALAR", 1500.0)
@@ -300,12 +304,14 @@ class CycleStabilizer:
     def __init__(self, events_ref, governor_ref, config_ref=None):
         self.events = events_ref
         self.governor = governor_ref
+        from struts import safe_get
         self.cfg = config_ref or BoneConfig
         self.last_tick_time = time.time()
         self.pending_drag = 0.0
-        self.manifolds = getattr(self.cfg.PHYSICS, "MANIFOLDS", {})
-        cfg_deep = getattr(self.cfg, "PHYSICS_DEEP", None)
-        self.HARD_FUSE_VOLTAGE = getattr(cfg_deep, "HARD_FUSE_VOLTAGE", 200.0)
+        phys_cfg = safe_get(self.cfg, "PHYSICS", {})
+        self.manifolds = safe_get(phys_cfg, "MANIFOLDS", {})
+        cfg_deep = safe_get(self.cfg, "PHYSICS_DEEP", {})
+        self.HARD_FUSE_VOLTAGE = float(safe_get(cfg_deep, "HARD_FUSE_VOLTAGE", 200.0))
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("DOMESTICATION_PENALTY", self._on_domestication_penalty)
 
@@ -349,9 +355,9 @@ class CycleStabilizer:
             target_v, target_d = safe_get(energy, "voltage", target_v), max(0.1, target_d * 0.5)
         self.governor.recalibrate(target_v, target_d)
         v_force, d_force = self.governor.regulate(physics, dt=dt, endocrine_state=endocrine_state)
-        phys_cfg = getattr(self.cfg, "PHYSICS", None)
-        v_limits = (getattr(phys_cfg, "VOLTAGE_FLOOR", 0.0), getattr(phys_cfg, "VOLTAGE_MAX", 150.0))
-        d_limits = (getattr(phys_cfg, "DRAG_FLOOR", 1.0), getattr(phys_cfg, "DRAG_HALT", 10.0))
+        phys_cfg = safe_get(self.cfg, "PHYSICS", {})
+        v_limits = (float(safe_get(phys_cfg, "VOLTAGE_FLOOR", 0.0)), float(safe_get(phys_cfg, "VOLTAGE_MAX", 150.0)))
+        d_limits = (float(safe_get(phys_cfg, "DRAG_FLOOR", 1.0)), float(safe_get(phys_cfg, "DRAG_HALT", 10.0)))
         voltage_applied = self._apply_force(physics, "voltage", v_force, v_limits)
         drag_applied = self._apply_force(physics, "narrative_drag", d_force, d_limits)
         return applied_correction or voltage_applied or drag_applied

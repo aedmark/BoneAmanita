@@ -81,16 +81,16 @@ class TheBureau:
         selected_form = None
         evidence = []
         tax = 0.0
-        cfg_bureau = getattr(self.cfg, "BUREAU", object())
-        tax_std = getattr(cfg_bureau, "TAX_STANDARD", 5.0)
-        tax_hvy = getattr(cfg_bureau, "TAX_HEAVY", 10.0)
+        cfg_bureau = safe_get(self.cfg, "BUREAU", {})
+        tax_std = float(safe_get(cfg_bureau, "TAX_STANDARD", 5.0))
+        tax_hvy = float(safe_get(cfg_bureau, "TAX_HEAVY", 10.0))
         chi = float(safe_get(physics, "chi", safe_get(physics, "entropy", 0.0)))
-        chaos_thresh = getattr(cfg_bureau, "CHAOS_TAX_THRESHOLD", 0.6)
+        chaos_thresh = float(safe_get(cfg_bureau, "CHAOS_TAX_THRESHOLD", 0.6))
         if raw_text and (crime := next((c for c in self.crimes if c["regex"].search(raw_text)), None)):
             selected_form, tax = f"VIOLATION: {crime['name']}", tax + crime["tax"]
             evidence.append(crime["msg"])
-        elif vol > getattr(cfg_bureau, "HIGH_VOLTAGE_TRIGGER", 18.0):
-            if truth < getattr(cfg_bureau, "LOW_TRUTH_TRIGGER", 0.4):
+        elif vol > float(safe_get(cfg_bureau, "HIGH_VOLTAGE_TRIGGER", 18.0)):
+            if truth < float(safe_get(cfg_bureau, "LOW_TRUTH_TRIGGER", 0.4)):
                 selected_form = ux("protocol_strings", "bureau_form_zoning")
                 evidence = [ux("protocol_strings", "bureau_ev_voltage"), ux("protocol_strings", "bureau_ev_fiction")]
                 tax = tax_hvy
@@ -103,7 +103,7 @@ class TheBureau:
                 ux("protocol_strings", "bureau_ev_chaos").format(thresh=chaos_thresh),
                 ux("protocol_strings", "bureau_ev_level").format(level=chi),
             ]
-            tax = getattr(cfg_bureau, "TAX_CHAOS", 12.0)
+            tax = float(safe_get(cfg_bureau, "TAX_CHAOS", 12.0))
         else:
             buzz_hits = [w for w in clean_words if w in self.buzzwords]
             cliche_hits = [c for c in self.cliches if c in raw_text.lower()]

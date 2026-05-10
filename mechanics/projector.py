@@ -164,12 +164,12 @@ class Projector:
 
     def _render_vital_strip(self, data: Dict, mind: tuple, labels: Dict) -> str:
         """Renders the biological health, stamina, ATP, and dignity reserves."""
-        maximum_health = float(getattr(self.cfg, "MAX_HEALTH", 100.0) or 100.0)
-        maximum_stamina = float(getattr(self.cfg, "MAX_STAMINA", 100.0) or 100.0)
-        gui_config = getattr(self.cfg, "GUI", object())
-        dignity_medium = getattr(gui_config, "DIGNITY_MED", 50.0)
-        dignity_high = getattr(gui_config, "DIGNITY_HIGH", 80.0)
-        role_truncation_length = getattr(gui_config, "ROLE_TRUNC_LEN", 30)
+        maximum_health = float(safe_get(self.cfg, "MAX_HEALTH", 100.0) or 100.0)
+        maximum_stamina = float(safe_get(self.cfg, "MAX_STAMINA", 100.0) or 100.0)
+        gui_config = safe_get(self.cfg, "GUI", {})
+        dignity_medium = float(safe_get(gui_config, "DIGNITY_MED", 50.0))
+        dignity_high = float(safe_get(gui_config, "DIGNITY_HIGH", 80.0))
+        role_truncation_length = int(safe_get(gui_config, "ROLE_TRUNC_LEN", 30))
         current_health = float(data.get("health") or maximum_health)
         current_stamina = float(data.get("stamina") or maximum_stamina)
         current_atp = float(data.get("bio", {}).get("atp") or 0.0)
@@ -330,15 +330,15 @@ class SoulDashboard:
         if not (anchor := getattr(soul, "anchor", None)):
             return f"{Prisma.GRY}{ux('soul_dashboard', 'anchor_lost') or 'No Anchor.'}{Prisma.RST}"
         dig = anchor.dignity_reserve
-        cfg = getattr(self.cfg, "GUI", object())
-        d_high = getattr(cfg, "DIGNITY_HIGH", 80.0)
-        d_med = getattr(cfg, "DIGNITY_MED", 50.0)
-        d_low = getattr(cfg, "DIGNITY_LOW", 30.0)
-        d_ratio = max(1, int(getattr(cfg, "DIGNITY_BAR_RATIO", 5)))
-        t_warn = getattr(cfg, "TENURE_WARN", 5)
-        t_crit = getattr(cfg, "TENURE_CRIT", 8)
+        cfg = safe_get(self.cfg, "GUI", {})
+        d_high = float(safe_get(cfg, "DIGNITY_HIGH", 80.0))
+        d_med = float(safe_get(cfg, "DIGNITY_MED", 50.0))
+        d_low = float(safe_get(cfg, "DIGNITY_LOW", 30.0))
+        d_ratio = max(1, int(safe_get(cfg, "DIGNITY_BAR_RATIO", 5)))
+        t_warn = int(safe_get(cfg, "TENURE_WARN", 5))
+        t_crit = int(safe_get(cfg, "TENURE_CRIT", 8))
         color = Prisma.GRN if dig > d_high else Prisma.OCHRE if dig > d_low else Prisma.RED
-        max_dig = getattr(cfg, "DIGNITY_MAX", 100.0)
+        max_dig = float(safe_get(cfg, "DIGNITY_MAX", 100.0))
         clamped_dig = max(0.0, min(max_dig, dig))
         max_bar_width = int(max_dig / d_ratio)
         filled = int(clamped_dig / d_ratio)

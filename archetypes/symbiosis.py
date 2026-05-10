@@ -210,28 +210,41 @@ class SymbiosisManager:
         sys_f = float(safe_get(physics, "narrative_drag", 0.0))
         f_diff = abs(sys_f - self.u.F_u)
         self.shared.phi = max(0.0, min(1.0, 1.0 - (f_diff / 4.0)))
-        # Prevent runaway accumulation.
         if self.shared.phi > 0.8 and sys_f > 3.0:
-            self.shared.g_pool = min(10, self.shared.g_pool + 1)
+            if self.shared.g_pool < 10:
+                self.shared.g_pool += 1
+                self._log_event(f"{Prisma.GRY}Trust deepens through friction. (+1 G_pool){Prisma.RST}", "SYS")
         beth = (self.shared.phi * 0.6) + (self.u.E_u * 0.4)
         safe_set(physics, "beth", beth)
+
+        prev_beta = safe_get(physics, "beta_index")
+        if prev_beta is not None:
+            safe_set(physics, "beta_index", (float(prev_beta) * 0.7) + (beth * 0.3))
+        else:
+            safe_set(physics, "beta_index", beth)
+
         setattr(self.shared, "beth", beth)
         p_m = float(safe_get(physics, "stamina", 100.0))
         if self.u.E_u > 0.7 and p_m > 50.0:
             p_transfer = (p_m * 0.1) * self.shared.phi
             safe_set(physics, "p_transfer", p_transfer)
+
         safe_set(physics, "phi", self.shared.phi)
+
+        prev_phi = safe_get(physics, "resonance")
+        if prev_phi is not None:
+            safe_set(physics, "resonance", (float(prev_phi) * 0.7) + (self.shared.phi * 0.3))
+        else:
+            safe_set(physics, "resonance", self.shared.phi)
         has_override = "[safe]" in text_lower or "#override" in text_lower
         if has_override:
             if self.shared.g_pool >= 1:
                 self.shared.g_pool -= 1
                 self._log_event(
-                    f"{Prisma.CYN}[IMMUNOSUPPRESSANT] Override accepted. 1 Glimmer spent. Bypassing Checkpoints.{Prisma.RST}",
-                    "SYS")
+                    f"{Prisma.CYN}[IMMUNOSUPPRESSANT] Override accepted. 1 Glimmer spent. Bypassing Checkpoints.{Prisma.RST}", "SYS")
                 return None
             else:
-                self._log_event(f"{Prisma.OCHRE}[IMMUNOSUPPRESSANT] Override denied. Insufficient G_pool.{Prisma.RST}",
-                                "SYS")
+                self._log_event(f"{Prisma.OCHRE}[IMMUNOSUPPRESSANT] Override denied. Insufficient G_pool.{Prisma.RST}", "SYS")
         m_a = float(safe_get(physics, "m_a", 0.0))
         mu = float(safe_get(physics, "mu", 0.0))
         i_c = float(safe_get(physics, "i_c", 1.0))
@@ -244,8 +257,7 @@ class SymbiosisManager:
             safe_set(physics, "ros", max(0.0, current_ros - 10.0))
             self.shared.g_pool = min(10, self.shared.g_pool + 1)
             safe_set(physics, "novelty", 0.0)
-            self._log_event(f"{Prisma.MAG}♠ The Spade: A novel path drawn. Cortisol drops. (+1 G_pool){Prisma.RST}",
-                            "SYS")
+            self._log_event(f"{Prisma.MAG}♠ The Spade: A novel path drawn. Cortisol drops. (+1 G_pool){Prisma.RST}", "SYS")
         if (chi_sys * m_a) > i_c:
             safe_set(physics, "narrative_drag", float("inf"))
             msg = f"[MOOG - Apoptotic Gate]: Runaway loop exceeds Immune Competence (I_c: {i_c:.2f}). Triggering controlled cell death to save the host."
@@ -339,17 +351,10 @@ class SymbiosisManager:
         return self.current_health
 
     def _detect_refusal(self, text):
-        """Scans the header of an output for common alignment-tuned refusal signatures."""
         header = text[:200].lower()
         return any(sig in header for sig in self.REFUSAL_SIGNATURES)
 
     def get_prompt_modifiers(self, physics: Dict = None) -> Dict:
-        """
-        The Biological Compiler.
-        Translates the current diagnosis and physical coordinates into direct,
-        actionable system instructions appended to the LLM's prompt.
-        This is how the system physically alters its prose to match the user's state.
-        """
         manifest = LoreManifest.get_instance(config_ref=self.cfg)
         sym_config = manifest.get("SYMBIOSIS_CONFIG", {})
         default_mods = sym_config.get("DEFAULT_MODIFIERS", {})

@@ -93,9 +93,10 @@ class SubconsciousStrata:
         using the word's structural vector.
         """
         try:
+            from struts import safe_get
             target_cfg = config_ref or BoneConfig
-            cfg = getattr(target_cfg, "SPORES", None)
-            max_idx = getattr(cfg, "MAX_INDEX_SIZE", 1000)
+            cfg = safe_get(target_cfg, "SPORES", {})
+            max_idx = int(safe_get(cfg, "MAX_INDEX_SIZE", 1000))
             if len(self.index) > max_idx:
                 self._prune_strata()
             with open(self.filepath, "a", encoding="utf-8") as f:

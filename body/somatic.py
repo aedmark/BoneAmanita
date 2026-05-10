@@ -104,7 +104,7 @@ class SynestheticCortex:
         """
         s = (LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG") or {}).get(
             "QUALIA_STRINGS", {}).get("reflexes", {})
-        arc_trigger = getattr(getattr(self.cfg, "CORTEX", None), "VOLTAGE_ARC_TRIGGER", 18.0)
+        arc_trigger = float(safe_get(safe_get(self.cfg, "CORTEX", {}), "VOLTAGE_ARC_TRIGGER", 18.0))
         psi = float(safe_get(physics, "psi", 0.0))
         entropy = float(safe_get(physics, "entropy", 0.0))
         voltage = float(safe_get(physics, "voltage", 0.0))

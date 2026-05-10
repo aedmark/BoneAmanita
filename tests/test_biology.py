@@ -8,6 +8,18 @@ from archetypes.village import DeathGen
 from tests.base import BoneTestCase
 
 class BiologyTests(BoneTestCase):
+    def test_fatal_fever_dream_starvation(self):
+        from brain.mind import DreamEngine
+        mock_lore = MagicMock()
+        mock_lore.get.return_value = {"NIGHTMARES": ["Test Nightmare {ghost}"]}
+        dreamer = DreamEngine(events=MagicMock(), lore_ref=mock_lore)
+        bio_state = {"mito": {"atp": 3.0}, "chem": {"cortisol": 0.0}}
+        with patch('random.random', return_value=0.1):
+            msg, shift = dreamer.enter_rem_cycle(soul_snapshot={}, bio_state=bio_state)
+            self.assertIn("fatal fever dream", msg, "[FAIL] DreamEngine failed to trigger the fatal fever dream on starvation.")
+            self.assertEqual(shift.get("voltage"), 100.0, "[FAIL] Thermal runaway voltage was not applied.")
+            self.assertEqual(shift.get("atp_drain"), 13.0, "[FAIL] Terminal starvation ATP drain was not calculated correctly.")
+
     def test_death_by_starvation(self):
             phys = PhysicsPacket(voltage=5.0, narrative_drag=1.0)
             bio_state = {"atp": 0.0}

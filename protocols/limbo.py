@@ -102,9 +102,9 @@ class LimboLayer:
         Returns:
             The original text, potentially suffixed with ghostly artifacts.
         """
-        cfg = getattr(self.cfg, "LIMBO", object())
-        l_chance = getattr(cfg, "LEAK_DECAY_CHANCE", 0.2)
-        l_amount = getattr(cfg, "LEAK_DECAY_AMOUNT", 0.5)
+        cfg = safe_get(self.cfg, "LIMBO", {})
+        l_chance = float(safe_get(cfg, "LEAK_DECAY_CHANCE", 0.2))
+        l_amount = float(safe_get(cfg, "LEAK_DECAY_AMOUNT", 0.5))
         if self.stasis_leak > 0:
             if random.random() < l_chance:
                 self.stasis_leak = max(0.0, self.stasis_leak - l_amount)

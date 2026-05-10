@@ -48,9 +48,9 @@ class TheFolly:
             A tuple containing the status flag, UI message, ATP yield (0.0), and loot (None).
         """
         voltage = float(safe_get(physics, "voltage", 0.0))
-        cfg = getattr(self.cfg, "FOLLY", object())
-        m_volt = getattr(cfg, "MAUSOLEUM_VOLTAGE", 80.0)
-        m_stam = getattr(cfg, "MAUSOLEUM_STAMINA", 20.0)
+        cfg = safe_get(self.cfg, "FOLLY", {})
+        m_volt = float(safe_get(cfg, "MAUSOLEUM_VOLTAGE", 80.0))
+        m_stam = float(safe_get(cfg, "MAUSOLEUM_STAMINA", 20.0))
         if voltage > m_volt and stamina > m_stam:
             msg1 = ux("protocol_strings", "folly_mausoleum")
             msg2 = ux("protocol_strings", "folly_dilation")
@@ -66,14 +66,16 @@ class TheFolly:
         Returns:
             A tuple: (Status Action, Flavor Message, ATP Yield Float, Item Loot)
         """
-        if not (0.0 < atp_pool < self.cfg.FOLLY.FEEDING_CAP):
+        folly_cfg = safe_get(self.cfg, "FOLLY", {})
+        feeding_cap = float(safe_get(folly_cfg, "FEEDING_CAP", 50.0))
+        if not (0.0 < atp_pool < feeding_cap):
             return None, None, 0.0, None
         meat_words = self._filter_meat_words(clean_words, lexicon)
         if not meat_words:
             return self._attempt_digest_abstract(clean_words, lexicon)
         fresh_meat = [w for w in meat_words if w not in self.gut_memory]
         if not fresh_meat:
-            penalty = self.cfg.FOLLY.PENALTY_REGURGITATION
+            penalty = float(safe_get(folly_cfg, "PENALTY_REGURGITATION", 15.0))
             msg = (f"{Prisma.OCHRE}{ux('protocol_strings', 'folly_reflex').format(target=meat_words[0])}{Prisma.RST}\n"
                    f"   {Prisma.RED}{ux('protocol_strings', 'folly_penalty').format(penalty=penalty)}{Prisma.RST}")
             return "REGURGITATION", msg, -penalty, None
@@ -89,19 +91,22 @@ class TheFolly:
         play_set = (lexicon_ref.get("play") or []) if lexicon_ref else []
         self.gut_memory.append(target)
         self.global_tastings[target] += 1
+        folly_cfg = safe_get(self.cfg, "FOLLY", {})
         if target in suburban_set:
             gags = ux("protocol_strings", "folly_gags")
-            return "INDIGESTION", f"{Prisma.MAG}{gags}{Prisma.RST}", -self.cfg.FOLLY.PENALTY_INDIGESTION, "THE_RED_STAPLER"
+            return "INDIGESTION", f"{Prisma.MAG}{gags}{Prisma.RST}", -float(
+                safe_get(folly_cfg, "PENALTY_INDIGESTION", 10.0)), "THE_RED_STAPLER"
         if target in play_set:
             chews = ux("protocol_strings", "folly_chews")
-            return "SUGAR_RUSH", f"{Prisma.VIOLET}{chews}{Prisma.RST}", self.cfg.FOLLY.SUGAR_RUSH_YIELD, "QUANTUM_GUM"
+            return "SUGAR_RUSH", f"{Prisma.VIOLET}{chews}{Prisma.RST}", float(
+                safe_get(folly_cfg, "SUGAR_RUSH_YIELD", 15.0)), "QUANTUM_GUM"
         times_eaten = self.global_tastings[target]
-        base_yield = getattr(self.cfg.FOLLY, "BASE_YIELD", 10.0)
-        decay_exp = getattr(self.cfg.FOLLY, "DECAY_EXPONENT", 0.8)
+        base_yield = float(safe_get(folly_cfg, "BASE_YIELD", 10.0))
+        decay_exp = float(safe_get(folly_cfg, "DECAY_EXPONENT", 0.8))
         decay_factor = decay_exp ** (times_eaten - 1)
         actual_yield = max(2.0, base_yield * decay_factor)
         loot = ("STABILITY_PIZZA"
-                if actual_yield >= self.cfg.FOLLY.PIZZA_THRESHOLD else None)
+                if actual_yield >= float(safe_get(folly_cfg, "PIZZA_THRESHOLD", 8.0)) else None)
         flavor_text = ""
         if times_eaten > 3:
             stale_str = ux("protocol_strings", "folly_stale_flavor")
@@ -134,7 +139,7 @@ class TheFolly:
         """
         abstract_set = set(lexicon_ref.get("abstract") or []) if lexicon_ref else set()
         if abstract_words := [w for w in clean_words if w in abstract_set]:
-            yield_val = self.cfg.FOLLY.YIELD_ABSTRACT
+            yield_val = float(safe_get(safe_get(self.cfg, "FOLLY", {}), "YIELD_ABSTRACT", 2.0))
             msg = (
                 f"{Prisma.GRY}{(ux('protocol_strings', 'folly_sighs') or '').format(target=random.choice(abstract_words).upper())}{Prisma.RST}\n"
                 f"   {Prisma.GRY}{(ux('protocol_strings', 'folly_chalk') or '').format(yield_val=yield_val)}{Prisma.RST}")

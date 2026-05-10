@@ -21,10 +21,6 @@ class GenesisContinuityTests(BoneTestCase):
             os.remove(self.test_legacy_file)
 
     def test_crystallize_existential_dread(self):
-        """
-        Ensures fatal systemic trauma bridges the generational gap.
-        If the organism dies highly traumatized, the next iteration must carry the scar.
-        """
         print("\n--- GENESIS 1: Trauma Crystallization ---")
         oro = TheOroboros(config_ref=self.test_config)
         mock_soul = MagicMock()
@@ -40,10 +36,6 @@ class GenesisContinuityTests(BoneTestCase):
         print("  [SUCCESS] Fatal trauma successfully crystallized into a generational scar.")
 
     def test_apply_legacy_karma(self):
-        """
-        Verifies that legacy scars actually apply systemic friction
-        and voltage penalties. This tests the logic exposed by the nested walrus bug.
-        """
         print("\n--- GENESIS 2: Legacy Karma Application ---")
         oro = TheOroboros(config_ref=self.test_config)
         oro.scars = [
@@ -60,10 +52,6 @@ class GenesisContinuityTests(BoneTestCase):
         print("  [SUCCESS] Scars successfully altered the physics of the new generation.")
 
     def test_apply_legacy_empty_state(self):
-        """
-        Ensures the engine doesn't crash if the previous generation
-        left no scars, or if the physics packet is completely empty.
-        """
         print("\n--- GENESIS 3: Void State Continuity ---")
         oro = TheOroboros(config_ref=self.test_config)
         oro.scars = []

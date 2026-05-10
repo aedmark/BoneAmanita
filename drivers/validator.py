@@ -50,5 +50,6 @@ class CongruenceValidator:
                 exact_hits = words_to_check.intersection(target_words)
                 hits = len(exact_hits)
                 if hits > 0:
-                    tone_score += safe_get(cfg, "CONGRUENCE_HIT_BONUS", 0.1) * hits
-        return min(safe_get(cfg, "CONGRUENCE_MAX_TONE", 1.5), tone_score)
+                    bonus = safe_get(cfg, "CONGRUENCE_HIT_BONUS", 0.1)
+                    tone_score += bonus * math.log1p(hits)
+        return min(safe_get(cfg, "CONGRUENCE_MAX_TONE", 2.0), tone_score)

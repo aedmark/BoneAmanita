@@ -1,11 +1,14 @@
 """
 inventory.py
+
 The Physical Constraint and Object Lifecycle Module.
 This module governs the 'GordonKnot'—the inventory and object interaction system.
 It enforces the physical reality of the narrative, ensuring actions cannot be
 taken without the requisite tools, and dynamically generates objects based on
 the metabolic and physical state of the active environment.
+
 """
+
 import random
 import re
 from dataclasses import dataclass, field
@@ -15,15 +18,8 @@ from core import LoreManifest
 from struts import ux, ux_format, safe_get, safe_set
 from constants import Prisma
 
-
 @dataclass
 class Item:
-    """
-    The Base Object Primitive (Pinker).
-    A strictly typed container for interactable objects. Passive traits dictate
-    how the item behaves in the system, while the 'consume_on_use' flag establishes
-    the thermodynamic cost of the object (does it persist, or is it destroyed?).
-    """
     name: str
     description: str
     function: str
@@ -36,31 +32,15 @@ class Item:
 
     @classmethod
     def from_dict(cls, name: str, data: Dict):
-        """Safely instantiates an item from a loosely typed JSON dictionary."""
         default_desc = ux("gordon_strings", "default_item_desc") or "Unknown Artifact"
         default_usage = ux("gordon_strings", "default_item_use") or f"You use the {name}."
         is_consumable = data.get("consume_on_use", False) or (data.get("cost") == "CONSUMABLE")
-        return cls(
-            name=name,
-            description=data.get("description", default_desc),
-            function=data.get("function", "MISC"),
-            passive_traits=data.get("passive_traits", []),
-            spawn_context=data.get("spawn_context", "COMMON"),
-            value=data.get("value", 1.0),
-            usage_msg=data.get("usage_msg", default_usage),
-            consume_on_use=is_consumable,
-            reflex_trigger=data.get("reflex_trigger", None),
-        )
-
+        return cls(name=name, description=data.get("description", default_desc), function=data.get("function", "MISC"),
+                   passive_traits=data.get("passive_traits", []), spawn_context=data.get("spawn_context", "COMMON"),
+                   value=data.get("value", 1.0), usage_msg=data.get("usage_msg", default_usage),
+                   consume_on_use=is_consumable, reflex_trigger=data.get("reflex_trigger", None), )
 
 class GordonKnot:
-    """
-    The Interactive Bounding Box (Fuller).
-    Manages state, limits, and object lifecycles. It acts as a physical 'weight'
-    on the user's intent, refusing to let them perform actions if they lack the
-    required localized items.
-    """
-
     def __init__(self, events=None, mode="ADVENTURE", config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.mode = mode.upper()
@@ -84,13 +64,6 @@ class GordonKnot:
         self.load_config()
 
     def enforce_object_action_coupling(self, user_input: str, current_zone: str) -> Optional[str]:
-        """
-        The Wall of Reality (Pinker/Fuller).
-        Parses the user's string to detect attempted actions (e.g., 'unlock door').
-        It cross-references this against the coupling dictionary. If the user tries
-        to unlock a door but doesn't have the 'KEY' in their inventory, this function
-        intercepts the action and returns a hard systemic refusal.
-        """
         if self.mode in ["CREATIVE", "CONVERSATION", "TECHNICAL"]:
             return None
         text = user_input.lower()
@@ -112,7 +85,8 @@ class GordonKnot:
             for i in self.registry:
                 if i.upper() not in self.inventory:
                     i_low = i.lower().replace('_', ' ')
-                    if i_low in text and re.search(rf"\b{re.escape(i_low)}\b", text):
+                    i_words = i_low.split()
+                    if all(w in tokens for w in i_words) and i_low in text:
                         return f"{Prisma.SLATE}{(ux('gordon_strings', 'premise_inv') or '').format(item=i_low)}{Prisma.RST}"
         return None
 
@@ -143,17 +117,10 @@ class GordonKnot:
         starters = data.get("STARTING_INVENTORY", [])
         if not self.inventory and starters:
             self.inventory = [s for s in starters if isinstance(s, str)]
-        if hasattr(self.cfg, "INVENTORY"):
-            self.max_slots = getattr(self.cfg.INVENTORY, "MAX_SLOTS", 10)
+        inv_cfg = safe_get(self.cfg, "INVENTORY", {})
+        self.max_slots = int(safe_get(inv_cfg, "MAX_SLOTS", 10))
 
     def process_loot_tags(self, text: str, user_input: str) -> Tuple[str, List[str]]:
-        """
-        The Explicit Extraction Parser (Pinker).
-        Searches the LLM's generated output for explicit internal commands like
-        [[LOOT: RUSTY_KEY]]. It extracts the intent, processes the acquisition,
-        and then securely strips the mechanical tags from the final string
-        before it is shown to the user.
-        """
         raw_loot = re.findall(r"\[\[LOOT:\s*(.*?)]]", text, re.IGNORECASE)
         raw_lost = re.findall(r"\[\[LOST:\s*(.*?)]]", text, re.IGNORECASE)
         combined_text = (user_input + " " + text).lower()
@@ -196,11 +163,9 @@ class GordonKnot:
         return clean_text.strip(), logs
 
     def get_item_data(self, item_name: str) -> Optional[Item]:
-        """Fetches the structured Item primitive from the registry."""
         return self.registry.get(item_name)
 
     def get_inventory_data(self) -> List[Dict]:
-        """Exports the active inventory as a list of serialized dictionaries."""
         inventory_data = []
         for name in self.inventory:
             item = self.registry.get(name)
@@ -209,10 +174,6 @@ class GordonKnot:
         return inventory_data
 
     def acquire(self, tool_name: str) -> str:
-        """
-        The Biological Acquisition Pipeline.
-        Evaluates carrying capacity. Prevents duplication. Records the transaction.
-        """
         tool_name = tool_name.strip().upper().replace(" ", "_") if tool_name else "UNKNOWN"
         if tool_name in self.inventory:
             msg = ux("gordon_strings", "inv_duplicate")
@@ -240,17 +201,8 @@ class GordonKnot:
             return False
 
     def rummage(self, physics_ref: Any, stamina_pool: float) -> Tuple[bool, str, float]:
-        """
-        Active Environmental Extraction (Meadows).
-        A metabolic gamble. The user spends Stamina to interact with the environment,
-        and the system queries the active Physics layers (Voltage, Drag) to determine
-        what kind of item is revealed. Highly toxic environments yield different items
-        than stable ones.
-        """
-        try:
-            cost = self.cfg.INVENTORY.RUMMAGE_COST
-        except AttributeError:
-            cost = 15.0
+        inv_cfg = safe_get(self.cfg, "INVENTORY", {})
+        cost = float(safe_get(inv_cfg, "RUMMAGE_COST", 15.0))
         if stamina_pool < cost:
             return False, f"{Prisma.OCHRE}{ux('gordon_strings', 'rummage_tired')}{Prisma.RST}", 0.0
         loot_table = self._get_loot_candidates(physics_ref)
@@ -259,18 +211,14 @@ class GordonKnot:
         return True, self.acquire(random.choice(loot_table)), cost
 
     def _get_loot_candidates(self, physics: Any) -> List[str]:
-        """
-        Filters the global item registry to find items whose `spawn_context`
-        matches the current mathematical tension of the environment.
-        """
         v = float(safe_get(physics, "voltage", 0.0))
         d = float(safe_get(physics, "narrative_drag", 0.0))
         p = float(safe_get(physics, "psi", 0.0))
-        cfg = getattr(self.cfg, "PHYSICS", object())
-        vh = getattr(cfg, "VOLTAGE_HIGH", 12.0)
-        vc = getattr(cfg, "VOLTAGE_CRITICAL", 15.0)
-        dh = getattr(cfg, "DRAG_HEAVY", 5.0)
-        ph = getattr(cfg, "PSI_HIGH", 0.6)
+        cfg = safe_get(self.cfg, "PHYSICS", {})
+        vh = float(safe_get(cfg, "VOLTAGE_HIGH", 12.0))
+        vc = float(safe_get(cfg, "VOLTAGE_CRITICAL", 15.0))
+        dh = float(safe_get(cfg, "DRAG_HEAVY", 5.0))
+        ph = float(safe_get(cfg, "PSI_HIGH", 0.6))
         return [item.name
                 for item in self.registry.values()
                 if (ctx := item.spawn_context) in ("COMMON", "STANDARD")
@@ -280,7 +228,6 @@ class GordonKnot:
                 or (ctx == "PSI_HIGH" and p > ph)]
 
     def register_dynamic_item(self, name: str, data: Dict):
-        """Allows the system to invent completely new items on the fly."""
         name = name.upper()
         if name not in self.registry:
             new_item = Item.from_dict(name, data)
@@ -290,13 +237,6 @@ class GordonKnot:
                 self.events.log(f"{Prisma.CYN}{msg.format(name=name)}{Prisma.RST}", "INV")
 
     def synthesize_item(self, physics_vector: Dict[str, float]) -> str:
-        """
-        Procedural Structural Generation (Fuller / Meadows).
-        If the environment generates a unique paradox or anomaly, this function
-        reads the dominant physics vector (e.g., 'ENTROPY' or 'GRAVITY') and
-        synthesizes a completely new grammatical object based on those forces.
-        It effectively solidifies abstract concepts into physical inventory weight.
-        """
         if not self.blueprints:
             self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
         bp = self.blueprints
@@ -321,27 +261,14 @@ class GordonKnot:
         full_name = f"{prefix} {base} {suffix}"
         clean_id = full_name.upper().replace(" ", "_")
         clamped_value = min(100.0, round(physics_vector.get(dom_dim, 0.0) * 10, 1))
-        item_data = {
-            "description": ux_format("gordon_strings", "synthesis_desc",
-                                     default="A {base} forged of {archetype} energy.", base=base.lower(),
-                                     archetype=archetype),
-            "function": "ARTIFACT",
-            "passive_traits": ["DYNAMIC"],
-            "value": clamped_value,
-            "spawn_context": "FORGED",
-        }
+        item_data = {"description": ux_format("gordon_strings", "synthesis_desc",
+                    default="A {base} forged of {archetype} energy.", base=base.lower(),
+                    archetype=archetype), "function": "ARTIFACT", "passive_traits": ["DYNAMIC"],
+                     "value": clamped_value, "spawn_context": "FORGED", }
         self.register_dynamic_item(clean_id, item_data)
         return clean_id
 
     def parse_loot(self, user_text: str, sys_text: str) -> Optional[str]:
-        """
-        Implicit Linguistic Extraction (Pinker).
-        If an explicit tag isn't found, this evaluates the raw text stream.
-        If the LLM mentions an item that exists in the global registry, AND the user
-        uses an acquisition verb ("I grab the", "I take"), this function identifies
-        the implied pickup, provided the user didn't immediately follow it with
-        an abandonment phrase like "nevermind, I put it back."
-        """
         combined_text = f"{user_text} {sys_text}".lower()
         if any(p in combined_text for p in self.abandonment_phrases) or any(
                 r in sys_text.lower() for r in self.refusal_markers):
@@ -365,12 +292,6 @@ class GordonKnot:
         return None
 
     def consume(self, item_name: str) -> Tuple[bool, str]:
-        """
-        Thermodynamic Object Destruction (Schur).
-        Invoked by the /use command. Verifies the item is designated as consumable
-        (like a healing item or a one-time reality anchor). If so, it processes
-        the effect and permanently purges the object from the biological state.
-        """
         item_name = item_name.upper()
         if item_name not in self.inventory:
             return False, f"{Prisma.OCHRE}{ux('gordon_strings', 'consume_missing')}{Prisma.RST}"
@@ -384,35 +305,25 @@ class GordonKnot:
         return True, f"{Prisma.CYN}{(ux('gordon_strings', 'consume_used') or '').format(item=item_name, usage_msg=item.usage_msg)}{Prisma.RST}"
 
     def emergency_reflex(self, physics_ref: Any) -> Tuple[bool, Optional[str]]:
-        """
-        The Homeostatic Override (Meadows).
-        Scans the inventory passively every turn. If the system's physics
-        (e.g., Voltage) cross a terminal threshold, and the user possesses an
-        item with a matching `reflex_trigger` (e.g., an automatic cooling rod),
-        the system consumes the item automatically to force systemic stabilization,
-        saving the host from a crash.
-        """
-        cfg = getattr(self.cfg, "INVENTORY", object())
+        cfg = safe_get(self.cfg, "INVENTORY", {})
         v = float(safe_get(physics_ref, "voltage", 0.0))
         d = float(safe_get(physics_ref, "narrative_drag", 0.0))
         k = float(safe_get(physics_ref, "kappa", 0.5))
         for name in list(self.inventory):
             item = self.get_item_data(name)
-            if not item:
+            if not item or not item.reflex_trigger:
                 continue
             trigger_type = item.reflex_trigger
-            if not trigger_type:
-                continue
-            if trigger_type == "VOLTAGE_CRITICAL" and v > getattr(cfg, "REFLEX_VOLTAGE_TRIGGER", 18.0):
+            if trigger_type == "VOLTAGE_CRITICAL" and v > float(safe_get(cfg, "REFLEX_VOLTAGE_TRIGGER", 18.0)):
                 self.safe_remove_item(name)
-                safe_set(physics_ref, "voltage", getattr(cfg, "REFLEX_VOLTAGE_RESET", 12.0))
+                safe_set(physics_ref, "voltage", float(safe_get(cfg, "REFLEX_VOLTAGE_RESET", 12.0)))
                 return True, f"{Prisma.CYN}{(ux('gordon_strings', 'reflex_voltage') or '').format(name=name)}{Prisma.RST}"
-            if trigger_type == "DRIFT_CRITICAL" and d > getattr(cfg, "REFLEX_DRAG_TRIGGER", 6.0):
+            if trigger_type == "DRIFT_CRITICAL" and d > float(safe_get(cfg, "REFLEX_DRAG_TRIGGER", 6.0)):
                 self.safe_remove_item(name)
-                safe_set(physics_ref, "narrative_drag", getattr(cfg, "REFLEX_DRAG_RESET", 0.0))
+                safe_set(physics_ref, "narrative_drag", float(safe_get(cfg, "REFLEX_DRAG_RESET", 0.0)))
                 return True, f"{Prisma.OCHRE}{(ux('gordon_strings', 'reflex_drift') or '').format(name=name)}{Prisma.RST}"
-            if trigger_type == "KAPPA_CRITICAL" and k < getattr(cfg, "REFLEX_KAPPA_TRIGGER", 0.2):
+            if trigger_type == "KAPPA_CRITICAL" and k < float(safe_get(cfg, "REFLEX_KAPPA_TRIGGER", 0.2)):
                 self.safe_remove_item(name)
-                safe_set(physics_ref, "kappa", getattr(cfg, "REFLEX_KAPPA_RESET", 0.8))
+                safe_set(physics_ref, "kappa", float(safe_get(cfg, "REFLEX_KAPPA_RESET", 0.8)))
                 return True, f"{Prisma.GRN}{(ux('gordon_strings', 'reflex_kappa') or '').format(name=name)}{Prisma.RST}"
         return False, None

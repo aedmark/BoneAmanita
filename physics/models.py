@@ -117,9 +117,10 @@ class PhysicsPacket:
     energy: EnergyState = field(default_factory=EnergyState)
     matter: MaterialState = field(default_factory=MaterialState)
     space: SpatialState = field(default_factory=SpatialState)
+    macro_policy: str = "UNKNOWN"
 
     _CORE_DOMAINS = ("energy", "space", "matter")
-    _BASE_FIELDS = frozenset({"energy", "matter", "space", "drag_profile"})
+    _BASE_FIELDS = frozenset({"energy", "matter", "space", "drag_profile", "macro_policy"})
 
     # Maps shorthand architectural aliases to their true paths.
     _ALIAS_MAP = {
@@ -215,7 +216,7 @@ class PhysicsPacket:
         Allows setting nested variables directly from the packet level.
         If an ALIAS is used (e.g., 'chi'), it may update multiple target variables simultaneously.
         """
-        if key in ("voltage", "narrative_drag", "psi", "chi", "ros"):
+        if key in ("voltage", "narrative_drag", "psi", "chi", "ros", "V", "F"):
             try:
                 value = max(0.0, float(value))
             except (TypeError, ValueError):
