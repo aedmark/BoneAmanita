@@ -2,6 +2,7 @@
 # BONEAMANITA DEPENDENCIES
 # ==========================================
 
+pytest
 #1. The Linguistics Vector
 markdown                  # Aids in markdown generation and rendering
 faiss-cpu>=1.13.2         # The O(logN) Cerebral Cortex for deep associative memory

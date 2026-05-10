@@ -17,9 +17,9 @@ class TheTheremin:
         self.cfg = config_ref or BoneConfig
         self.decoherence_buildup = 0.0
         self.classical_turns = 0
-        cfg = getattr(self.cfg, "MACHINE", None)
-        self.AMBER_THRESHOLD = safe_get(cfg, "THEREMIN_AMBER_THRESHOLD", 20.0)
-        self.SHATTER_POINT = safe_get(cfg, "THEREMIN_SHATTER_POINT", 100.0)
+        cfg = safe_get(self.cfg, "MACHINE", {})
+        self.AMBER_THRESHOLD = float(safe_get(cfg, "THEREMIN_AMBER_THRESHOLD", 20.0))
+        self.SHATTER_POINT = float(safe_get(cfg, "THEREMIN_SHATTER_POINT", 100.0))
         self.is_stuck = False
         self.logs = self._load_logs()
 
@@ -48,8 +48,8 @@ class TheTheremin:
             resin_flow = max(0.0, resin_flow - (voltage * 0.6))
         thermal_hits = counts.get("thermal", 0)
         theremin_msg = ""
-        cfg = getattr(self.cfg, "MACHINE", None)
-        melt_thresh = safe_get(cfg, "THEREMIN_MELT_THRESHOLD", 5.0)
+        cfg = safe_get(self.cfg, "MACHINE", {})
+        melt_thresh = float(safe_get(cfg, "THEREMIN_MELT_THRESHOLD", 5.0))
         critical_event = None
         if thermal_hits > 0 and self.decoherence_buildup > melt_thresh:
             dissolved = thermal_hits * 15.0

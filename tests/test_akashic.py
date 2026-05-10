@@ -25,10 +25,6 @@ class AkashicContinuityTests(BoneTestCase):
         super().tearDown()
 
     def test_epigenetic_load_balance(self):
-        """
-        Ensures both trauma (scars) AND success (boons)
-        are loaded into the system prompts. Prevents the 'Trauma Bias' regression.
-        """
         scars_path = os.path.join(self.akashic.data_dir, "akashic_scars.json")
         boons_path = os.path.join(self.akashic.data_dir, "akashic_boons.json")
         with open(scars_path, "w") as f:
@@ -43,9 +39,6 @@ class AkashicContinuityTests(BoneTestCase):
         self.assertEqual(len(prompts["EPIGENETIC_BOONS"]), 1)
 
     def test_recipe_amnesia_prevention(self):
-        """
-        Ensures uncompleted recipe candidates survive a system reboot.
-        """
         test_recipe = ("Iron", "Fire")
         self.akashic.recipe_candidates[test_recipe] = {"Molten Iron": 2}
         self.akashic._save_user_state()
@@ -53,15 +46,10 @@ class AkashicContinuityTests(BoneTestCase):
         rebooted_akashic.save_dir = self.save_dir
         rebooted_akashic.state_path = os.path.join(self.save_dir, "akashic_state.json")
         rebooted_akashic._load_mythos_state()
-        self.assertIn(test_recipe, rebooted_akashic.recipe_candidates,
-                      "[FAIL] Recipe candidates evaporated during reboot. Amnesic crafting detected.")
+        self.assertIn(test_recipe, rebooted_akashic.recipe_candidates, "[FAIL] Recipe candidates evaporated during reboot. Amnesic crafting detected.")
         self.assertEqual(rebooted_akashic.recipe_candidates[test_recipe]["Molten Iron"], 2)
 
     def test_atomic_write_integrity(self):
-        """
-        Verifies that save_to_disk does not leave lingering .tmp files,
-        confirming the atomic write swap completed cleanly without stranding partial data.
-        """
         category = "test_atomic"
         dummy_data = {"key": "value"}
         self.akashic.save_to_disk(category, dummy_data)

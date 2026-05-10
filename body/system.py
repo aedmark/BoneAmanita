@@ -88,11 +88,11 @@ class BioSystem:
         if not b:
             return []
         target_cfg = self.config_ref or BoneConfig
-        MAX_H = getattr(target_cfg, "MAX_HEALTH", 100.0)
-        MAX_S = getattr(target_cfg, "MAX_STAMINA", 100.0)
-        cfg = getattr(target_cfg, "BIO", None)
-        h_rec = safe_get(cfg, "REST_HEALTH_RECOVERY", 0.5)
-        s_rec = safe_get(cfg, "REST_STAMINA_RECOVERY", 1.0)
+        MAX_H = float(safe_get(target_cfg, "MAX_HEALTH", 100.0))
+        MAX_S = float(safe_get(target_cfg, "MAX_STAMINA", 100.0))
+        cfg = safe_get(target_cfg, "BIO", {})
+        h_rec = float(safe_get(cfg, "REST_HEALTH_RECOVERY", 0.5))
+        s_rec = float(safe_get(cfg, "REST_STAMINA_RECOVERY", 1.0))
         b.health = min(MAX_H, b.health + (h_rec * factor))
         b.stamina = min(MAX_S, b.stamina + (s_rec * factor))
         if self.endo:
@@ -137,8 +137,8 @@ class BioSystem:
         phi_val = vector.get("PHI", 0.0)
         em_field = math.hypot(ent_val, phi_val)
         target_cfg = self.config_ref or BoneConfig
-        cfg = getattr(target_cfg, "BIO", None)
-        base_ent_bias = safe_get(cfg, "ENTROPY_BASE_BIAS", 0.2)
+        cfg = safe_get(target_cfg, "BIO", {})
+        base_ent_bias = float(safe_get(cfg, "ENTROPY_BASE_BIAS", 0.2))
         shield_cap = safe_get(cfg, "SHIELD_MAX_STRENGTH", 0.8)
         shield_mult = safe_get(cfg, "SHIELD_MULTIPLIER", 0.1)
         heat_thresh = safe_get(cfg, "HEAT_THRESHOLD", 0.8)
@@ -218,7 +218,7 @@ class SomaticLoop:
             logs.append(f"{Prisma.RED}{msg.format(burn=receipt.total_burn)}{Prisma.RST}")
         safety_status = self.feedback.check_vital_signs(phys, b.stamina, logs)
         if safety_status == "MAUSOLEUM_CLAMP":
-            return self._package_result(receipt.status, logs)
+            return self._package_result(receipt.status, logs, chem_state=self.bio.endo.get_state())
         elif safety_status == "AUTOPHAGY":
             b.stamina = 10.0
         total_yield = 0.0

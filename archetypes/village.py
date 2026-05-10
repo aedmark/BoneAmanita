@@ -21,7 +21,7 @@ from physics.models import PhysicsPacket
 
 def _cfg_val(cfg_ref, section: str, key: str, default: float) -> float:
     """Helper to safely extract nested configuration floats with a fallback."""
-    return float(safe_get(getattr(cfg_ref or BoneConfig, section, None), key, default))
+    return float(safe_get(safe_get(cfg_ref or BoneConfig, section, {}), key, default))
 
 
 class TheTinkerer:
@@ -75,7 +75,7 @@ class TheTinkerer:
         """Randomly selects an item to absorb the systemic tension of the current turn."""
         if not inventory_list:
             return
-        cfg = getattr(self.cfg, "VILLAGE", None)
+        cfg = safe_get(self.cfg, "VILLAGE", {})
         v_chance = float(safe_get(cfg, "TINKER_TOOL_USE_VOLT_CHANCE", 0.1))
         # Avoid brittle dot-notation access. Use the existing safe getter.
         v_low = _cfg_val(self.cfg, "PHYSICS", "VOLTAGE_LOW", 5.0)
@@ -285,6 +285,10 @@ class TheCartographer:
 
     def to_dict(self) -> Dict[str, Any]:
         return {"nodes": {k: v.to_dict() for k, v in self.world_graph.items()}, "current_id": self.current_node_id}
+
+    def export_atlas(self) -> Dict[str, Any]:
+        """Legacy alias for Chronos continuity."""
+        return self.to_dict()
 
     def load_state(self, data: Dict[str, Any]):
         if not data:

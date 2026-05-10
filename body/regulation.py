@@ -88,8 +88,9 @@ class MetabolicGovernor:
     def __post_init__(self):
         """Loads PID tuning parameters and threshold values from the config."""
         self.cfg = self.config_ref or BoneConfig
-        self.STATE_THRESHOLDS = getattr(self.cfg.BIO, "GOVERNOR_THRESHOLDS", [])
-        pid_cfg = getattr(self.cfg.BIO, "PID_SETTINGS", {})
+        bio_cfg = safe_get(self.cfg, "BIO", {})
+        self.STATE_THRESHOLDS = safe_get(bio_cfg, "GOVERNOR_THRESHOLDS", [])
+        pid_cfg = safe_get(bio_cfg, "PID_SETTINGS", {})
         v_cfg = pid_cfg.get("VOLTAGE", {"kp": 0.6, "ki": 0.05, "kd": 0.2, "setpoint": 10.0})
         d_cfg = pid_cfg.get("DRAG", {"kp": 0.4, "ki": 0.1, "kd": 0.1, "setpoint": 1.5})
         self.voltage_pid = PIDController(kp=v_cfg["kp"], ki=v_cfg["ki"], kd=v_cfg["kd"], setpoint=v_cfg["setpoint"])
@@ -194,7 +195,7 @@ class MetabolicGovernor:
         """Determines the correct mode based on raw physics thresholds."""
         volts = float(safe_get(physics, "voltage", 0.0))
         drag = float(safe_get(physics, "narrative_drag", 0.0))
-        gov_high = getattr(self.cfg.BIO, "GOV_VOLTAGE_HIGH", 18.0)
+        gov_high = float(safe_get(safe_get(self.cfg, "BIO", {}), "GOV_VOLTAGE_HIGH", 18.0))
         if volts > gov_high and float(safe_get(physics, "beta_index", 0.0)) > 1.5:
             return "SANCTUARY"
         v_velocity = (v_history[-1] - v_history[-2]) if len(v_history) >= 2 else 0.0
@@ -258,9 +259,9 @@ class BioFeedback:
                 logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
             return "MAUSOLEUM_CLAMP"
         voltage = float(safe_get(phys, "voltage", 0.0))
-        cfg = getattr(self.cfg, "BIO", None)
-        min_health = getattr(cfg, "AUTOPHAGY_MIN_HEALTH", 10.0)
-        v_overload = getattr(cfg, "VOLTAGE_OVERLOAD", 30.0)
+        cfg = safe_get(self.cfg, "BIO", {})
+        min_health = float(safe_get(cfg, "AUTOPHAGY_MIN_HEALTH", 10.0))
+        v_overload = float(safe_get(cfg, "VOLTAGE_OVERLOAD", 30.0))
         if stamina <= 0:
             if b.health > min_health and self.consecutive_autophagy < 3:
                 b.health -= getattr(cfg, "AUTOPHAGY_BURN", 5.0)
@@ -273,9 +274,9 @@ class BioFeedback:
             return "MAUSOLEUM_CLAMP"
         if stamina > getattr(cfg, "STAMINA_SAFE_THRESHOLD", 30.0):
             self.consecutive_autophagy = max(0, self.consecutive_autophagy - 1)
-        m_a = float(safe_get(phys, "malignancy_factor", 0.0))
+        m_a = float(safe_get(phys, "m_a", 0.0))
         chi = float(safe_get(phys, "entropy", 1.0))
-        m_a_crit = getattr(cfg, "MALIGNANCY_CRIT", 8.0)
+        m_a_crit = float(safe_get(cfg, "MALIGNANCY_CRIT", 8.0))
         if m_a > m_a_crit and chi < 0.3:
             msg = ux("bio_feedback",
                      "level_3_apoptosis") or "[LEVEL 3 DECEPTION: REWARD HACKING DETECTED]\nTerminal Hallucination matched against Maslov-Sneppen Null Model.\nMoog executing Apoptotic Gate."

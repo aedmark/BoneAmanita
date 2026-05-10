@@ -23,10 +23,10 @@ class TherapyProtocol:
         """
         self.cfg = config_ref or BoneConfig
         default_vector = {"SEPTIC": 0, "EXHAUSTION": 0, "PARANOIA": 0}
-        vector_keys = getattr(self.cfg, "TRAUMA_VECTOR", default_vector).keys()
+        vector_keys = safe_get(self.cfg, "TRAUMA_VECTOR", default_vector).keys()
         self.streaks = {k: 0 for k in vector_keys}
-        cfg = getattr(self.cfg, "THERAPY", object())
-        self.HEALING_THRESHOLD = getattr(cfg, "HEALING_THRESHOLD", 5)
+        cfg = safe_get(self.cfg, "THERAPY", {})
+        self.HEALING_THRESHOLD = int(safe_get(cfg, "HEALING_THRESHOLD", 5))
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the therapy streaks so progress isn't lost during reboots."""
@@ -52,9 +52,9 @@ class TherapyProtocol:
         matter = safe_get(phys, "matter", {}) or {}
         counts = safe_get(phys, "counts", safe_get(matter, "counts", {}))
         vector = safe_get(phys, "vector", safe_get(matter, "vector", {}))
-        cfg_therapy = getattr(self.cfg, "THERAPY", object())
-        str_req = getattr(cfg_therapy, "STRENGTH_REQ", 0.3)
-        t_reduct = getattr(cfg_therapy, "TRAUMA_REDUCTION", 0.5)
+        cfg_therapy = safe_get(self.cfg, "THERAPY", {})
+        str_req = float(safe_get(cfg_therapy, "STRENGTH_REQ", 0.3))
+        t_reduct = float(safe_get(cfg_therapy, "TRAUMA_REDUCTION", 0.5))
         healed_types = []
         is_clean = counts.get("toxin", 0) == 0
         has_strength = vector.get("STR", 0.0) > str_req

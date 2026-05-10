@@ -1,8 +1,5 @@
 """
 tests/test_commands.py
-The Executive Torture Chamber.
-Validates that the CLI router correctly enforces metabolic limits, architectural bounds,
-and syntactic resilience when handling human input.
 """
 
 from unittest.mock import MagicMock
@@ -14,10 +11,6 @@ from mechanics.commands import CommandProcessor, ResourceTax, CommandStateInterf
 
 class CommandSystemTests(BoneTestCase):
     def test_meadows_metabolic_exhaustion_rejection(self):
-        """
-        The Tax Collector must completely reject high-cost commands if the system
-        is starving, and it must PREVENT partial deductions from bankrupting the ATP pool.
-        """
         engine = BoneAmanita({})
         engine.set_atp(5.0)
         processor = CommandProcessor(engine, Prisma)
@@ -28,10 +21,6 @@ class CommandSystemTests(BoneTestCase):
         self.assertEqual(final_atp, 5.0)
 
     def test_fuller_resource_clamping_integrity(self):
-        """
-        The Command Interface must absolutely respect the biological ceiling and floor.
-        You cannot have negative stamina, nor can you over-heal past the config max.
-        """
         engine = BoneAmanita({})
         processor = CommandProcessor(engine, Prisma)
         processor.interface.modify_resource("stamina", -500.0)
@@ -42,10 +31,6 @@ class CommandSystemTests(BoneTestCase):
                          "Stamina breached the architectural ceiling.")
 
     def test_gordon_reality_stack_lockout(self):
-        """
-        If the system is in a deep Reality Layer that forbids human intervention
-        (e.g., a fatal crash or deep REM cycle), the processor must bounce the command immediately.
-        """
         engine = BoneAmanita({})
         processor = CommandProcessor(engine, Prisma)
 
@@ -61,10 +46,6 @@ class CommandSystemTests(BoneTestCase):
         self.assertEqual(engine.health, 100.0, "Gordon failed to hold the wall. Command bypassed Reality Stack lock.")
 
     def test_pinker_syntactic_resilience(self):
-        """
-        The Command Registry must survive mangled spacing, missing arguments,
-        and entirely fabricated slash commands without throwing Python exceptions.
-        """
         engine = BoneAmanita({})
         processor = CommandProcessor(engine, Prisma)
         try:
@@ -77,10 +58,6 @@ class CommandSystemTests(BoneTestCase):
             self.fail(f"Syntactic noise shattered the command processor: {e}")
 
     def test_jester_shuffle_resets_drag(self):
-        """
-        Validates that the Jester's Gambit (/shuffle) successfully executes,
-        taxes the system, and explicitly zeroes out accumulated narrative drag.
-        """
         engine = BoneAmanita({})
         engine.set_atp(100.0)
 

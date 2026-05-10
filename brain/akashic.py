@@ -9,7 +9,7 @@ It also dynamically evolves the system's vocabulary and archetypal voices across
 import json, os, uuid
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
 from core import BoneJSONEncoder, LoreManifest
-from struts import ux, safe_get
+from struts import ux, safe_get, safe_set
 from presets import BoneConfig
 from constants import Prisma
 
@@ -28,14 +28,14 @@ class TheAkashicRecord:
         self.ingredient_affinity: Dict[str, int] = {}
         self.known_recipes: Set[Tuple[str, str]] = set()
         self.recipe_candidates: Dict[Tuple[str, str], Dict[str, int]] = {}
-        self.cfg_akashic = getattr(BoneConfig, "AKASHIC", object())
-        self.RECIPE_THRESHOLD = getattr(self.cfg_akashic, "RECIPE_THRESHOLD", 3)
-        self.HYBRID_LENS_THRESHOLD = getattr(self.cfg_akashic, "HYBRID_LENS_THRESHOLD", 5)
-        self.MAX_SHADOW_CAPACITY = getattr(self.cfg_akashic, "MAX_SHADOW_CAPACITY", 50)
+        self.cfg_akashic = safe_get(BoneConfig, "AKASHIC", {})
+        self.RECIPE_THRESHOLD = int(safe_get(self.cfg_akashic, "RECIPE_THRESHOLD", 3))
+        self.HYBRID_LENS_THRESHOLD = int(safe_get(self.cfg_akashic, "HYBRID_LENS_THRESHOLD", 5))
+        self.MAX_SHADOW_CAPACITY = int(safe_get(self.cfg_akashic, "MAX_SHADOW_CAPACITY", 50))
         self.lore = lore_manifest if lore_manifest else LoreManifest.get_instance()
         self.events = events_ref
-        self.save_dir = getattr(self.cfg_akashic, "SAVE_DIR", "saves")
-        self.state_path = os.path.join(self.save_dir, getattr(self.cfg_akashic, "STATE_FILE", "akashic_state.json"))
+        self.save_dir = safe_get(self.cfg_akashic, "SAVE_DIR", "saves")
+        self.state_path = os.path.join(self.save_dir, safe_get(self.cfg_akashic, "STATE_FILE", "akashic_state.json"))
         self.data_dir = getattr(self.lore, "DATA_DIR", "lore")
         self.shadow_stock: List[Dict] = []
         self.subconscious_strata: List[Dict] = []
@@ -78,15 +78,16 @@ class TheAkashicRecord:
         it physically consumes its own long-term memories or acquired vocabulary,
         converting the semantic mass back into raw energy to survive the turn.
         """
-        akashic_cfg = getattr(BoneConfig, "AKASHIC", None)
-        bio_cfg = getattr(BoneConfig, "BIO", None)
+        akashic_cfg = safe_get(BoneConfig, "AKASHIC", {})
+        bio_cfg = safe_get(BoneConfig, "BIO", {})
         if self.subconscious_strata:
             victim_data = self.subconscious_strata.pop(0)
             target = victim_data.get("concept", "Unknown Node")
-            mass = victim_data.get("data", {}).get("mass", 1.0)
+            mass = float(safe_get(victim_data.get("data", {}), "mass", 1.0))
             yield_val = min(50.0, 10.0 + (mass * 2.5))
-            if bio_cfg and hasattr(bio_cfg, "DEPTH_TAX_MULT"):
-                bio_cfg.DEPTH_TAX_MULT = max(0.5, bio_cfg.DEPTH_TAX_MULT - 0.02)
+            if bio_cfg:
+                current_tax = float(safe_get(bio_cfg, "DEPTH_TAX_MULT", 1.0))
+                safe_set(bio_cfg, "DEPTH_TAX_MULT", max(0.5, current_tax - 0.02))
             msg = f"Autophagy complete. Composted '{target}' (Mass: {mass:.1f}). Recovered {yield_val:.1f} ATP. Synaptic efficiency improved."
         elif self.discovered_words:
             target = next(iter(self.discovered_words))
@@ -95,7 +96,7 @@ class TheAkashicRecord:
             if category in lexicon_data and target in lexicon_data[category]:
                 lexicon_data[category].remove(target)
                 self.lore.inject("LEXICON", lexicon_data)
-            yield_val = getattr(akashic_cfg, "AUTOPHAGY_YIELD", 15.0)
+            yield_val = float(safe_get(akashic_cfg, "AUTOPHAGY_YIELD", 15.0))
             msg_template = ux("akashic_strings", "autophagy_lexical") or "Lexical purge: consumed {target}."
             msg = msg_template.format(target=target, word=target)
         else:
@@ -113,8 +114,8 @@ class TheAkashicRecord:
         it logs the exact physical/dimensional coordinates (Voltage, Entropy, Beta) of the failure.
         It then permanently injects an 'Avoidance Axiom' into the LLM's system prompt.
         """
-        cfg = getattr(BoneConfig, "AKASHIC", object())
-        cfg_defaults = getattr(cfg, "DEFAULT_SCAR_COORDS", {})
+        cfg = safe_get(BoneConfig, "AKASHIC", {})
+        cfg_defaults = safe_get(cfg, "DEFAULT_SCAR_COORDS", {})
         axis_map = {
             "E": ("exhaustion", 0.2), "beta": ("beta_index", 0.4), "S": ("scope", 0.3),
             "D": ("depth", 0.3), "C": ("connectivity", 0.2), "T": ("trauma", 0.0),
@@ -151,11 +152,11 @@ class TheAkashicRecord:
             axiom = f"STRUCTURAL SUCCESS [{concept.upper()}]: The system achieved deep resonance using this paradigm: '{paradigm}'. Prioritize this geometry in future calculations."
             if axiom not in epigenetic_list:
                 epigenetic_list.append(axiom)
-                max_epi = getattr(self.cfg_akashic, "MAX_EPIGENETIC_BOONS", 10)
+                max_epi = int(safe_get(self.cfg_akashic, "MAX_EPIGENETIC_BOONS", 10))
                 if len(epigenetic_list) > max_epi:
                     epigenetic_list.pop(0)
                 self.lore.inject("SYSTEM_PROMPTS", prompts)
-                self.save_to_disk("boons", epigenetic_list)
+                self.lore.save("SYSTEM_PROMPTS")
                 if self.events:
                     self.events.log(f"{Prisma.MAG}🧬 [EPIGENETICS] Boon '{concept}' compiled into flow.{Prisma.RST}",
                                     "SYS")
@@ -176,11 +177,11 @@ class TheAkashicRecord:
             axiom = f"SCAR TISSUE [{concept.upper()}]: The system previously collapsed here (Tension: {coords.get('beta', 0.0)}). You must structurally avoid repeating the failure that caused this."
             if axiom not in epigenetic_list:
                 epigenetic_list.append(axiom)
-                max_epi = getattr(self.cfg_akashic, "MAX_EPIGENETIC_SCARS", 10)
+                max_epi = int(safe_get(self.cfg_akashic, "MAX_EPIGENETIC_SCARS", 10))
                 if len(epigenetic_list) > max_epi:
                     epigenetic_list.pop(0)
                 self.lore.inject("SYSTEM_PROMPTS", prompts)
-                self.save_to_disk("scars", epigenetic_list)
+                self.lore.save("SYSTEM_PROMPTS")
                 if self.events:
                     self.events.log(f"{Prisma.VIOLET}[EPIGENETICS] Scar '{concept}' compiled into flow.{Prisma.RST}",
                                     "SYS")
@@ -191,7 +192,7 @@ class TheAkashicRecord:
     def bury_memory(self, concept: str, data: Dict):
         """Pushes a concept into deep storage, making it eligible for autophagy later."""
         self.subconscious_strata.append({"concept": concept, "data": data})
-        max_strata = getattr(self.cfg_akashic, "MAX_SUBCONSCIOUS_CAPACITY", 100)
+        max_strata = int(safe_get(self.cfg_akashic, "MAX_SUBCONSCIOUS_CAPACITY", 100))
         if len(self.subconscious_strata) > max_strata:
             self.subconscious_strata.pop(0)
 
@@ -274,8 +275,8 @@ class TheAkashicRecord:
             if vector.get(force, 0) > threshold_data.get("threshold", 0.5):
                 hazards.append(threshold_data.get("hazard_name"))
         desc_template = (ux("akashic_strings", "artifact_desc") or "A coalesced artifact of {dominant_force}.")
-        cfg = getattr(BoneConfig, "AKASHIC", None)
-        artifact_val = getattr(cfg, "ARTIFACT_VALUE", 50.0)
+        cfg = safe_get(BoneConfig, "AKASHIC", {})
+        artifact_val = float(safe_get(cfg, "ARTIFACT_VALUE", 50.0))
         new_data = {
             "name": new_name,
             "description": desc_template.format(dominant_force=dominant_force),
@@ -316,7 +317,7 @@ class TheAkashicRecord:
         try:
             os.makedirs(target_dir, exist_ok=True)
             os.makedirs(self.save_dir, exist_ok=True)
-            temp_path = f"{filepath}.tmp"
+            temp_path = f"{filepath}.{uuid.uuid4().hex}.tmp"
             with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, cls=BoneJSONEncoder)
                 f.flush()
@@ -350,6 +351,28 @@ class TheAkashicRecord:
             if recipes := gordon_data.get("RECIPES", []):
                 self.known_recipes.update((r.get("ingredient"), r.get("catalyst_category")) for r in recipes if
                                           r.get("ingredient") and r.get("catalyst_category"))
+        scars_path = os.path.join(self.data_dir, "akashic_scars.json")
+        boons_path = os.path.join(self.data_dir, "akashic_boons.json")
+        prompts = self.lore.get("SYSTEM_PROMPTS") or {}
+        needs_migration = False
+        if os.path.exists(scars_path):
+            try:
+                with open(scars_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    prompts.setdefault("GLOBAL_BASELINE", {})["EPIGENETIC_SCARS"] = data if isinstance(data, list) else []
+                    needs_migration = True
+            except Exception as e:
+                print(f"{Prisma.RED}[AKASHIC] Failed to migrate legacy scars: {e}.{Prisma.RST}")
+        if os.path.exists(boons_path):
+            try:
+                with open(boons_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    prompts.setdefault("GLOBAL_BASELINE", {})["EPIGENETIC_BOONS"] = data if isinstance(data, list) else []
+                    needs_migration = True
+            except Exception as e:
+                print(f"{Prisma.RED}[AKASHIC] Failed to migrate legacy boons: {e}.{Prisma.RST}")
+        if needs_migration:
+            self.lore.inject("SYSTEM_PROMPTS", prompts)
         words_path = os.path.join(self.data_dir, "akashic_discovered_words.json")
         if os.path.exists(words_path):
             try:
@@ -363,24 +386,6 @@ class TheAkashicRecord:
                     self.lore.inject("LEXICON", lexicon_data)
             except Exception as e:
                 print(f"{Prisma.RED}[AKASHIC] Failed to load discovered words: {e}. Keeping current state.{Prisma.RST}")
-        scars_path = os.path.join(self.data_dir, "akashic_scars.json")
-        boons_path = os.path.join(self.data_dir, "akashic_boons.json")
-        prompts = self.lore.get("SYSTEM_PROMPTS") or {}
-        if os.path.exists(scars_path):
-            try:
-                with open(scars_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    prompts.setdefault("GLOBAL_BASELINE", {})["EPIGENETIC_SCARS"] = data if isinstance(data, list) else []
-            except Exception as e:
-                print(f"{Prisma.RED}[AKASHIC] Failed to load scars: {e}.{Prisma.RST}")
-        if os.path.exists(boons_path):
-            try:
-                with open(boons_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    prompts.setdefault("GLOBAL_BASELINE", {})["EPIGENETIC_BOONS"] = data if isinstance(data, list) else []
-            except Exception as e:
-                print(f"{Prisma.RED}[AKASHIC] Failed to load boons: {e}.{Prisma.RST}")
-        self.lore.inject("SYSTEM_PROMPTS", prompts)
 
     def record_interaction(self, lenses_active: list, ingredients_used: Optional[list] = None):
         """
@@ -506,8 +511,8 @@ class TheAkashicRecord:
             self.lore.inject("LEXICON", lexicon_data)
             msg = ux("akashic_strings", "lexicon_expands") or "Lexicon expands: {category}"
             print(msg.format(category=category.upper()))
-            bloat_limit = getattr(self.cfg_akashic, "BLOAT_THRESHOLD", 50)
-            exempt_categories = getattr(self.cfg_akashic, "BLOAT_EXEMPT_CATEGORIES", ["heavy"])
+            bloat_limit = int(safe_get(self.cfg_akashic, "BLOAT_THRESHOLD", 50))
+            exempt_categories = safe_get(self.cfg_akashic, "BLOAT_EXEMPT_CATEGORIES", ["heavy"])
             if len(lexicon_data[category]) == bloat_limit + 1 and category not in exempt_categories:
                 bloat_msg = ux("akashic_strings", "lexicon_bloat",
                                default="[WARNING] Lexicon category '{category}' is bloated.")

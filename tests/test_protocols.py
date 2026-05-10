@@ -7,14 +7,9 @@ from protocols.bureau import TheBureau
 from protocols.zen import ZenGarden
 from protocols.grief import GriefProtocol
 
-
 class ProtocolLifecycleTests(BoneTestCase):
     @patch('core.LoreManifest.get_instance')
     def test_bureau_hydration_and_mercy(self, mock_manifest):
-        """
-        Verifies the Bureau hydrates its forms correctly, and proves
-        that the Mercy Override successfully waives the tax on a dying system.
-        """
         print("\n--- PROTOCOLS 1: Bureau Hydration & Mercy Override ---")
         mock_data = {
             "BUREAU_FORMS": ["Test Form 101"],
@@ -46,10 +41,6 @@ class ProtocolLifecycleTests(BoneTestCase):
 
     @patch('core.LoreManifest.get_instance')
     def test_zen_garden_milestones(self, mock_manifest):
-        """
-        Verifies the Zen Garden hydrates its Koans and properly
-        accumulates a Stillness Streak, generating pebbles and passive ATP.
-        """
         print("\n--- PROTOCOLS 2: Zen Garden Hydration & Milestones ---")
 
         def zen_side_effect(cat, section=None):
@@ -73,10 +64,6 @@ class ProtocolLifecycleTests(BoneTestCase):
         print("  [SUCCESS] Zen Garden successfully accumulated stillness and granted rewards.")
 
     def test_grief_protocol_wake(self):
-        """
-        Verifies the Grief Protocol successfully heals trauma
-        when the user spends a Glimmer to mourn an Autophagy event.
-        """
         print("\n--- PROTOCOLS 3: The Grief Protocol Wake ---")
         eng_mock = MagicMock()
         eng_mock.trauma_accum = {"SEPTIC": 5.0}
@@ -97,12 +84,9 @@ class ProtocolLifecycleTests(BoneTestCase):
 
     def test_sincerity_protocol_hard_routing(self):
         ambiguous_prompt = "I guess it's fine if we delete the backup. [!l]"
-        # Track cortisol, not chi, and access directly:
         initial_cortisol = self.engine.bio.endo.cortisol
-
         snapshot = self.engine.process_turn(ambiguous_prompt)
         logs = "\n".join(snapshot.get("logs", [])).upper()
-
         final_cortisol = self.engine.bio.endo.cortisol
         self.assertEqual(
             initial_cortisol, final_cortisol,
@@ -111,29 +95,16 @@ class ProtocolLifecycleTests(BoneTestCase):
         self.assertIn("LITERAL_MODE", logs, "[FAIL] Literal mode routing was not logged.")
 
     def test_grief_protocol_activation(self):
-        """
-        THE WAKE: Evaluating profound loss must yield a structural Glimmer.
-        """
-        # Bankrupt the system
         self.engine.bio.endo.glimmers = 0
-
-        # Seed a ghost of a heavy failure into the physical state
         self.engine.mind.mem.graph["project_fail"] = {"mass": 50.0}
-
-        # Explicitly trigger the wake
         snapshot = self.engine.process_turn("We lost the project. [grief]")
         final_glimmers = self.engine.bio.endo.glimmers
-
         self.assertGreater(
             final_glimmers, 0,
             "[FAIL] The Grief Protocol failed to yield a Glimmer."
         )
 
     def test_syntax_stress_penalty(self):
-        """
-        Syntactic friction (high punctuation density)
-        must spike grammatical stress and penalize the Omega (Order) target.
-        """
         from drivers.syntax import SyntaxModule
         from unittest.mock import MagicMock
         syntax = SyntaxModule(config_ref=self.test_config, lexicon_ref=MagicMock())

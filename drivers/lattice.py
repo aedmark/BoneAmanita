@@ -64,7 +64,8 @@ class SharedLatticeDriver:
         raw_phi = 1.0 - ((psi_diff + chi_diff + min(1.0, drag_diff)) / 3.0)
         self.shared.phi = (self.shared.phi * 0.7) + (raw_phi * 0.3)
         sys_phys.resonance = self.shared.phi
-        has_text = bool(text.strip() and not text.startswith("["))
+        system_command_headers = ("[VSL", "[SYSTEM", "[OVERRIDE")
+        has_text = bool(text.strip() and not any(text.startswith(h) for h in system_command_headers))
         if time_delta > 15.0 and has_text:
             self.shared.delta = min(1.0, time_delta / 300.0)
             if self.shared.phi > 0.7 and sys_beta > 0.6:

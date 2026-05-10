@@ -7,10 +7,8 @@ from machine.consolidator import TheConsolidator
 from brain.akashic import TheAkashicRecord
 from presets import BoneConfig
 
-
 class TestLearningLoop(unittest.TestCase):
     def setUp(self):
-        """Set up the mock environment and instantiate the Consolidator."""
         self.events = EventBus()
         self.memory = MagicMock()
         self.memory.memory_core = MagicMock()
@@ -18,10 +16,6 @@ class TestLearningLoop(unittest.TestCase):
         self.consolidator = TheConsolidator(self.events, self.memory, self.akashic)
 
     def test_shadow_engagement_reinforcement(self):
-        """
-        Tests that when the Cortex publishes a SHADOW_ENGAGED event,
-        the Consolidator catches it and physically strengthens the synaptic link.
-        """
         self.events.publish("SHADOW_ENGAGED", {
             "source": "quantum_mechanics",
             "target": "string_theory",
@@ -35,10 +29,6 @@ class TestLearningLoop(unittest.TestCase):
         )
 
     def test_epigenetic_boon_recording(self):
-        """
-        Tests that when the system achieves profound resonance,
-        it writes an Epigenetic Boon to the Akashic Record.
-        """
         self.events.publish("RESONANCE_ACHIEVED", {
             "result": "Dialectical Synthesis",
             "msg": "The user successfully merged two opposing architectural forces."
@@ -51,10 +41,6 @@ class TestLearningLoop(unittest.TestCase):
     @patch('brain.akashic.BoneConfig')
     @patch('brain.akashic.LoreManifest')
     def test_composting_autophagy(self, MockLore, MockConfig):
-        """
-        Tests the modified Autophagy logic. Higher mass memories should
-        yield more ATP and permanently increase engine efficiency.
-        """
         real_akashic = TheAkashicRecord(lore_manifest=MockLore.get_instance(), events_ref=self.events)
         MockConfig.BIO.DEPTH_TAX_MULT = 2.0
         real_akashic.subconscious_strata.append({
@@ -66,7 +52,6 @@ class TestLearningLoop(unittest.TestCase):
         self.assertIn("obsolete_syntax", msg)
         self.assertIn("Recovered 25.0 ATP", msg)
         self.assertEqual(MockConfig.BIO.DEPTH_TAX_MULT, 1.98)
-
 
 if __name__ == '__main__':
     unittest.main()

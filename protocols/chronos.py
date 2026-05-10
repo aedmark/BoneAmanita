@@ -135,13 +135,14 @@ class ChronosKeeper:
         try:
             msg2 = ux("protocol_strings", "chronos_freezing")
             print(f"{Prisma.GRY}{msg2}{Prisma.RST}")
-
             bio = getattr(self.eng, "bio", None)
             phys = getattr(self.eng, "phys", None)
-
             mito_traits = bio.mito.state.__dict__ if bio and getattr(bio, "mito", None) else {}
             immune_data = list(bio.immune.active_antibodies) if bio and getattr(bio, "immune", None) else []
-            atlas = phys.nav.export_atlas() if phys and getattr(phys, "nav", None) else {}
+            atlas = {}
+            if phys and getattr(phys, "nav", None):
+                nav_sys = phys.nav
+                atlas = nav_sys.to_dict() if hasattr(nav_sys, "to_dict") else {}
 
             soul_data = self.eng.soul.to_dict() if getattr(self.eng, "soul", None) else {}
             if getattr(self.eng, "mind", None) and getattr(self.eng.mind, "mem", None):
@@ -222,8 +223,8 @@ class ChronosKeeper:
         try:
             files = sorted([f for f in os.listdir(self.CRASH_DIR) if f.startswith(prefix)])
             target_cfg = getattr(self.eng, "config", BoneConfig) if self.eng else BoneConfig
-            cfg = getattr(target_cfg, "CHRONOS", object())
-            kept = getattr(cfg, "CRASH_FILES_KEPT", 4)
+            cfg = safe_get(target_cfg, "CHRONOS", {})
+            kept = int(safe_get(cfg, "CRASH_FILES_KEPT", 4))
             for oldest in files[:-kept] if kept > 0 else files:
                 os.remove(os.path.join(self.CRASH_DIR, oldest))
         except Exception:

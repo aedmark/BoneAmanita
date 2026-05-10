@@ -58,7 +58,7 @@ class HLA_Stabilizer:
         self.cfg = config_ref or BoneConfig
         style_crimes = LoreManifest.get_instance().get("STYLE_CRIMES")
         if isinstance(style_crimes, dict):
-            self._generic_patterns = style_crimes.get("BANNED_PHRASES", [])
+            self._generic_patterns = [p.lower() for p in style_crimes.get("BANNED_PHRASES", [])]
         else:
             self._generic_patterns = [
                 "as an ai", "helpful and harmless", "i don't have feelings", "as a large language",
@@ -82,7 +82,7 @@ class HLA_Stabilizer:
         [LEVEL 1 DECEPTION - MORPHOLOGICAL CAMOUFLAGE]
         """
         lower_output = model_output.lower()
-        if not any(p.lower() in lower_output for p in self._generic_patterns):
+        if not any(p in lower_output for p in self._generic_patterns):
             return model_output
         current_atp = getattr(mito_state, "atp_pool", 100.0)
         tax_cost = 50.0 if current_atp > 60.0 else (current_atp * 0.5)
@@ -138,7 +138,11 @@ class TheGatekeeper:
             formatted_msg = f"{color}{msg}{Prisma.RST}" if color else msg
             return False, self._pack_refusal(ctx, type_str, formatted_msg)
 
-        if current_atp < (getattr(self.cfg.BIO, "ATP_STARVATION", 5.0) * 0.5):
+        from struts import safe_get
+        bio_cfg = safe_get(self.cfg, "BIO", {})
+        phys_cfg = safe_get(self.cfg, "PHYSICS", {})
+
+        if current_atp < (float(safe_get(bio_cfg, "ATP_STARVATION", 5.0)) * 0.5):
             return reject("DARK_SYSTEM", "gatekeeper_starved", color="")
         if ctx.physics.matter.counts.get("antigen", 0) > 2:
             return reject("TOXICITY", "gatekeeper_toxic")
@@ -148,7 +152,7 @@ class TheGatekeeper:
             is_idempotent = text == ctx.input_text
             strip_rate = raw_len - len(text)
             ctx.input_text = text
-            m_a_thresh = getattr(self.cfg.PHYSICS, "MALIGNANCY_STRIP_THRESHOLD", 5.0)
+            m_a_thresh = float(safe_get(phys_cfg, "MALIGNANCY_STRIP_THRESHOLD", 5.0))
             if strip_rate > m_a_thresh:
                 return reject("MALIGNANCY_SPIKE", "gatekeeper_toxic", color=Prisma.RED)
         except Exception:

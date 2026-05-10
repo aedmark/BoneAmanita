@@ -45,8 +45,8 @@ class TheOroboros:
         self._load()
 
     def _cfg(self, key: str, default: Any) -> Any:
-        cfg_obj = getattr(self.cfg, "OROBOROS", None)
-        return getattr(cfg_obj, key, default)
+        val = safe_get(safe_get(self.cfg, "OROBOROS", {}), key, default)
+        return float(val) if isinstance(default, float) else int(val) if isinstance(default, int) else val
 
     def _load(self):
         if not os.path.exists(self.LEGACY_FILE):
@@ -75,9 +75,9 @@ class TheOroboros:
             if total_trauma > 10.0:
                 scar_val = min(20.0, total_trauma * 0.1)
                 new_scars.append(Scar(name="Existential Dread", stat_affected="trauma_baseline", value=scar_val,
-                                      description=f"The lattice remembers a heavy collapse (Trauma: {round(total_trauma, 1)})."))
+                    description=f"The lattice remembers a heavy collapse (Trauma: {round(total_trauma, 1)})."))
         if entry := death_data.get(cause_of_death):
-            verdict_map = {"TOXICITY": "TOXIC", "BOREDOM": "BORING", "STARVATION": "LIGHT"}
+            verdict_map = {"TOXICITY": "TOXIC", "BOREDOM": "BORING", "STARVATION": "LIGHT", "APOPTOSIS": "TOXIC"}
             v_key = verdict_map.get(cause_of_death, "HEAVY")
             v_list = death_data.get("VERDICTS", {}).get(v_key)
             desc = random.choice(v_list) if isinstance(v_list, list) and v_list else entry[3]

@@ -85,8 +85,8 @@ class BioParasite:
         self.lex = lexicon_ref
         self.cfg = config_ref or BoneConfig
         self.spores_deployed = 0
-        cfg = getattr(self.cfg, "SPORES", None)
-        self.MAX_SPORES = getattr(cfg, "PARASITE_MAX_SPORES", 8)
+        cfg = safe_get(self.cfg, "SPORES", {})
+        self.MAX_SPORES = int(safe_get(cfg, "PARASITE_MAX_SPORES", 8))
         self.name = "PARASITE"
         self.color = Prisma.RED
         self.archetypes = {"antigen", "toxin", "heavy", "meat", "void", "static", "rot", "decay", }
@@ -116,10 +116,10 @@ class BioParasite:
         This only occurs under specific metabolic conditions (low stamina, high abstraction).
         """
         psi = safe_get(physics_packet, "psi", 0.0)
-        cfg = getattr(self.cfg, "SPORES", object())
-        p_stam = getattr(cfg, "PARASITE_STAMINA_MAX", 40.0)
-        p_psi = getattr(cfg, "PARASITE_PSI_MIN", 0.6)
-        p_decay = getattr(cfg, "PARASITE_DECAY_CHANCE", 0.2)
+        cfg = safe_get(self.cfg, "SPORES", {})
+        p_stam = float(safe_get(cfg, "PARASITE_STAMINA_MAX", 40.0))
+        p_psi = float(safe_get(cfg, "PARASITE_PSI_MIN", 0.6))
+        p_decay = float(safe_get(cfg, "PARASITE_DECAY_CHANCE", 0.2))
         if stamina > p_stam and psi < p_psi:
             return False, None
         if self.spores_deployed >= self.MAX_SPORES:
@@ -145,8 +145,8 @@ class BioParasite:
         if not valid_pairs:
             return False, None
         host, parasite = random.choice(valid_pairs)
-        m_psi = getattr(cfg, "PARASITE_METAPHOR_PSI", 0.7)
-        p_wt = getattr(cfg, "PARASITE_WEIGHT", 8.88)
+        m_psi = float(safe_get(cfg, "PARASITE_METAPHOR_PSI", 0.7))
+        p_wt = float(safe_get(cfg, "PARASITE_WEIGHT", 8.88))
         is_metaphor = psi > m_psi
         weight = p_wt
         host_edges = graph[host].setdefault("edges", {})

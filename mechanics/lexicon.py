@@ -32,7 +32,8 @@ class LexiconStore:
 
     def __init__(self):
         from presets import BoneConfig
-        self.save_dir = getattr(getattr(BoneConfig, "AKASHIC", object()), "SAVE_DIR", "saves")
+        from struts import safe_get
+        self.save_dir = safe_get(safe_get(BoneConfig, "AKASHIC", {}), "SAVE_DIR", "saves")
         self.HIVE_FILENAME = os.path.join(self.save_dir, "cortex_hive.json")
         self.categories = set()
         self.VOCAB: Dict[str, Set[str]] = {}

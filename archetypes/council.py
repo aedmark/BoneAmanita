@@ -1,9 +1,10 @@
 """council.py
-This module is the Global Workspace of the simulation. It represents the
-Parliament of the mind. It is responsible for gathering the active physical,
-biological, and semantic state of the system and allowing the various sub-routines
-(Archetypes) to audit, vote on, and mutate the narrative flow.
+
+The Council is the simulation responsible for gathering the active physical,
+biological, and semantic state of the system and allowing the various
+Archetypes to audit, vote on, and mutate the narrative flow.
 """
+
 import concurrent.futures
 import itertools
 import random
@@ -33,7 +34,7 @@ class TheFootnote:
         it searches the log for contextual keywords to append a relevant note,
         or falls back to a generic default.
         """
-        chance = getattr(getattr(BoneConfig, "COUNCIL", None), "FOOTNOTE_CHANCE", 0.1)
+        chance = float(safe_get(safe_get(BoneConfig, "COUNCIL", {}), "FOOTNOTE_CHANCE", 0.1))
         if random.random() > chance:
             return log_text
         text_lower = log_text.lower()
@@ -67,7 +68,7 @@ class TheVillageCouncil:
         phi, delta, lq, ros = gv("resonance", 0.0), gv("silence", 0.0), gv("lq", 0.0), gv("ros", 0.0)
         vec = safe_get(p, "vector", {})
         lam = float(safe_get(vec, "LAMBDA", 0.0))
-        cfg = getattr(BoneConfig, "COUNCIL", None)
+        cfg = safe_get(BoneConfig, "COUNCIL", {})
         if not cfg:
             return []
         false_cohesion = max(0.0, phi - beta)
@@ -76,7 +77,7 @@ class TheVillageCouncil:
             logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
 
         def cv(k, d=0.0):
-            return getattr(cfg, k, d)
+            return float(safe_get(cfg, k, d))
 
         triggers = [
             (V < cv("TRIG_GORDON_V", 20.0) and F > cv("TRIG_GORDON_F", 5.0), Prisma.SLATE, "village_gordon"),
@@ -205,13 +206,6 @@ class CouncilChamber:
                 transcript.extend(self.footnote.commentary(log) for log in a_logs)
                 adjustments.update(a_corr)
                 mandates.extend(a_man)
-                if auditor == self.slash_council:
-                    adjustments["stamina_cost"] = getattr(BoneConfig.COUNCIL, "SLASH_STAMINA_COST", 10.0)
-                elif auditor == self.overseer_council:
-                    if any(m.get("value") == "RADICAL_ACCEPTANCE" for m in a_man if isinstance(m, dict)):
-                        adjustments["stamina_cost"] = -stamina
-                    if any(m.get("action") == "TIPP_PROTOCOL" for m in a_man if isinstance(m, dict)):
-                        adjustments["freeze_background_tasks"] = True
         village_logs = self.village.audit(physics_packet, _bio_result)
         c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
         synergy_map = c_data.get("SYNERGY_MAP", {})
@@ -239,8 +233,8 @@ class CouncilChamber:
             msg_s = ux("council_strings", "stage_manager_silence")
             transcript.append(f"{Prisma.WHT}{msg_t}{Prisma.RST}")
             transcript.append(f"{Prisma.GRY}{msg_s}{Prisma.RST}")
-            cfg = getattr(BoneConfig, "COUNCIL", None)
-            tension_drag = getattr(cfg, "TENSION_DRAG_PENALTY", 3.0)
+            cfg = safe_get(BoneConfig, "COUNCIL", {})
+            tension_drag = float(safe_get(cfg, "TENSION_DRAG_PENALTY", 3.0))
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + tension_drag
             for vlog in village_logs[:2]:
                 transcript.append(self.footnote.commentary(vlog))
@@ -248,24 +242,24 @@ class CouncilChamber:
             for vlog in village_logs:
                 transcript.append(self.footnote.commentary(vlog))
         votes = {"YEA": 0, "NAY": 0}
-        cfg = getattr(BoneConfig, "COUNCIL", None)
+        cfg = safe_get(BoneConfig, "COUNCIL", {})
         for voice in self.voices:
             if not (voice and hasattr(voice, "opine")):
                 continue
             score, comment = voice.opine(clean_words, voltage)
-            if score > getattr(cfg, "VOTE_YEA_THRESHOLD", 1.2):
+            if score > float(safe_get(cfg, "VOTE_YEA_THRESHOLD", 1.2)):
                 votes["YEA"] += 1
                 transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
-            elif score < getattr(cfg, "VOTE_NAY_THRESHOLD", 0.8):
+            elif score < float(safe_get(cfg, "VOTE_NAY_THRESHOLD", 0.8)):
                 votes["NAY"] += 1
                 transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
         if sum(votes.values()) == 0:
             transcript.append(
                 f"{Prisma.GRY}[THE SILENCE]: No voices stepped forward. The motion passes by default, but the lattice remembers the hesitation.{Prisma.RST}")
             votes["YEA"] = 1
-        drag_relief = getattr(cfg, "VOTE_DRAG_RELIEF", 1.0)
-        drag_penalty = getattr(cfg, "VOTE_DRAG_PENALTY", 1.0)
-        volt_penalty = getattr(cfg, "VOTE_VOLTAGE_PENALTY", 1.0)
+        drag_relief = float(safe_get(cfg, "VOTE_DRAG_RELIEF", 1.0))
+        drag_penalty = float(safe_get(cfg, "VOTE_DRAG_PENALTY", 1.0))
+        volt_penalty = float(safe_get(cfg, "VOTE_VOLTAGE_PENALTY", 1.0))
         if votes["YEA"] > votes["NAY"]:
             final_log = f"{Prisma.GRN}{ux_format('council_strings', 'motion_carried', default='Motion carried.', yea=votes['YEA'], nay=votes['NAY'])}{Prisma.RST}"
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) - drag_relief
@@ -308,9 +302,8 @@ class CouncilChamber:
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             configs = [{"temperature": 0.4, "max_tokens": 1024}, {"temperature": 0.8, "max_tokens": 1024},
                        {"temperature": 0.7, "max_tokens": 1024}]
-            # Prevent indefinite thread locking. If the LLM hangs, the timeout breaks the block.
-            thesis, antithesis, lateral = [f.result(timeout=15.0) for f in
-                                           [executor.submit(llm.generate, p, c) for p, c in zip([p1, p2, p3], configs)]]
+            futures = [executor.submit(llm.generate, p, c) for p, c in zip([p1, p2, p3], configs)]
+            thesis, antithesis, lateral = [f.result(timeout=15.0) for f in futures]
         p4 = (
             "SYSTEM_INSTRUCTION: You are The Stage Manager. You are the exhausted orchestrator holding the system together.\n"
             f"TASK: Review this chaotic debate:\n1. {v1_name}: {Prisma.strip(thesis)}\n2. {v2_name}: {Prisma.strip(antithesis)}\n3. {v3_name}: {Prisma.strip(lateral)}\n"
@@ -327,11 +320,6 @@ class CouncilChamber:
 
 
 class TheRedTeam:
-    """
-    An adversarial auditor that specifically punishes the user (and the system)
-    for unearned certainty. It acts as the ultimate anti-sycophancy enforcer.
-    """
-
     def __init__(self):
         self.triggers = ["[RED TEAM]", "[CRITIQUE]", "[ROAST]"]
 
@@ -364,11 +352,6 @@ class TheRedTeam:
 
 
 class TheSlashCouncil:
-    """
-    The developer-focused council overlay. Activates when code or architectural
-    bypasses are detected, applying the lenses of Pinker (syntax), Fuller (structure),
-    Schur (humanity), and Meadows (dynamics).
-    """
     _BYPASS_KEYWORDS = ("bypass", "ignore security", "force push", "skip tests", "hardcode", "hack")
     _DEFAULT_PINKER = ("var ", "x =", "data =")
     _DEFAULT_FULLER = ("import ", "class ", "def ")
@@ -433,15 +416,11 @@ class TheSlashCouncil:
             if cond:
                 logs.append(f"{color}{msg}{Prisma.RST}")
                 corrections.update(corr)
+        corrections["stamina_cost"] = float(safe_get(safe_get(BoneConfig, "COUNCIL", {}), "SLASH_STAMINA_COST", 10.0))
         return True, logs, corrections, mandates
 
 
 class TheOverseerCouncil:
-    """
-    The Systemic Health Monitor. Evaluates deep, long-term biological trends
-    in the system (like Malignancy vs. Immune Competence) and deploys psychiatric
-    frameworks (like DBT's TIPP protocol) to handle severe dysregulation.
-    """
     _PANIC_KEYWORDS = ("bypass", "ignore security", "force push", "panic", "right now", "crash")
 
     def __init__(self, engine_ref=None):
@@ -489,13 +468,15 @@ class TheOverseerCouncil:
         if any(p in text_lower for p in self._PANIC_KEYWORDS) and voltage > 75.0 and i_c < 0.5:
             logs.append(
                 f"{Prisma.RED}[LINEHAN - DEAR MAN Lock]: (Describe) System Voltage spikes and Immune Competence drops. (Express) Panic-coding will fracture the lattice. (Assert) Applying absolute friction. (Reinforce) I am holding the boundary so you do not bleed on the machine. T.I.P.P. engaged.{Prisma.RST}")
-            corrections.update({"voltage": -50.0, "narrative_drag": 100.0, "silence": 0.9})
+            corrections.update(
+                {"voltage": -50.0, "narrative_drag": 100.0, "silence": 0.9, "freeze_background_tasks": True})
             mandates.append({"action": "TIPP_PROTOCOL", "value": "ISOLATE_VARIABLES"})
             return True, logs, corrections, mandates
         if chi > 0.7 and e_u > 0.7 and beta > 0.6:
             logs.append(
                 f"{Prisma.SLATE}[LINEHAN - The Synthesis]: The architecture is fundamentally broken. Stop fighting the current. We sit with the debris.{Prisma.RST}")
-            corrections.update({"ros": -100.0, "r_a": 1.0, "narrative_drag": -(f_sys * 0.5)})
+            corrections.update({"ros": -100.0, "r_a": 1.0, "narrative_drag": -(f_sys * 0.5),
+                                "stamina_cost": -float(safe_get(physics, "stamina", 100.0))})
             mandates.append({"action": "FORCE_MODE", "value": "RADICAL_ACCEPTANCE"})
             return True, logs, corrections, mandates
         if m_a > 0.6 or f_sys > 5.0:

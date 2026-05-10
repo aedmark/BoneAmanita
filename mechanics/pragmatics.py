@@ -20,6 +20,7 @@ class ThePragmatist:
         str, bool]:
         drag = float(safe_get(physics, "narrative_drag", 0.0))
         chi = float(safe_get(physics, "entropy", 0.0))
+        voltage = float(safe_get(physics, "voltage", 5.0))
         cf_expect = float(safe_get(physics, "cf_expect", 0.0))
         pedagogical_mode = safe_get(physics, "pedagogical_mode", False)
         word_count = len(draft_text.split())
@@ -51,14 +52,14 @@ class ThePragmatist:
                 )
             return self._apply_socratic_obfuscation(draft_text), False
         max_words_allowed = max(20, int(500 - (drag * 50)))
-        if word_count > max_words_allowed and stamina < 50.0:
+        if word_count > max_words_allowed and stamina < 50.0 and voltage < 20.0:
             if self.events:
                 self.events.log(
                     f"{Prisma.VIOLET}[PRAGMATICS] Maxim of Quantity violated. Draft is {word_count} words, limit is {max_words_allowed} due to Exhaustion. Forcing compression.{Prisma.RST}",
                     "SYS")
             return draft_text, True
         lower_draft = draft_text.lower()
-        if chi < 0.4 and ("perhaps" in lower_draft or "it could be said" in lower_draft):
+        if chi < 0.4 and voltage < 20.0 and ("perhaps" in lower_draft or "it could be said" in lower_draft):
             if self.events:
                 self.events.log(
                     f"{Prisma.VIOLET}[GRICE] Maxim of Manner violated. System is stable but language is obscure/hedging.{Prisma.RST}",

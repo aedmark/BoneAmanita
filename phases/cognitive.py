@@ -1,8 +1,9 @@
 """phases/cognitive.py"""
+
 from constants import Prisma
 from presets import BoneConfig
 from core import LoreManifest, ArchetypeArbiter
-from struts import ux, safe_set
+from struts import ux, safe_set, safe_get
 from typing import Dict, List, Any
 from phases.base import SimulationPhase, _safe_dict, _deep_update
 
@@ -77,15 +78,14 @@ class CognitionPhase(SimulationPhase):
         self.eng.mind.mem.encode(ctx.clean_words, _safe_dict(ctx.physics), "GEODESIC")
         if ctx.is_alive and ctx.clean_words:
             target_cfg = getattr(self.eng, "config", BoneConfig)
-            max_h = getattr(target_cfg, "MAX_HEALTH", 100.0)
+            max_h = float(safe_get(target_cfg, "MAX_HEALTH", 100.0))
             current_h = max(0.0, self.eng.health)
             if self.eng.bio.biometrics:
                 current_h = max(0.0, self.eng.bio.biometrics.health)
             desperation = 1.0 - (current_h / max_h)
-            learn_mod = getattr(target_cfg, "PRIORITY_LEARNING_RATE", 1.0)
+            learn_mod = float(safe_get(target_cfg, "PRIORITY_LEARNING_RATE", 1.0))
             bury_msg, new_wells = self.eng.mind.mem.bury(ctx.clean_words, self.eng.tick_count,
-                                                         resonance=ctx.physics.voltage, desperation_level=desperation,
-                                                         learning_mod=learn_mod, )
+                    resonance=ctx.physics.voltage, desperation_level=desperation, learning_mod=learn_mod, )
             if bury_msg:
                 if "SATURATION" in bury_msg:
                     prefix = f"{Prisma.YEL}{ux('cycle_strings', 'cog_memory_warn').format(bury_msg=bury_msg)}{Prisma.RST}"
@@ -104,6 +104,25 @@ class CognitionPhase(SimulationPhase):
         thought = ctx.mind_state.get("context_msg", ctx.mind_state.get("thought"))
         if thought:
             ctx.log(thought)
+
+        # S.L.A.S.H. V3 RE-WIRING: The Core Inversion.
+        # Invoke the Cortex (DSPy LLM generation) *during* the CognitionPhase.
+        if hasattr(self.eng, "cortex") and self.eng.cortex:
+            if not getattr(ctx, "refusal_triggered", False):
+                cortex_packet = self.eng.cortex.process_context(ctx)
+
+                # Unpack the Cortex's mutated payload back into the CycleContext
+                ctx.bureau_ui = cortex_packet.get("ui", getattr(ctx, "bureau_ui", ""))
+                ctx.logs = cortex_packet.get("logs", ctx.logs)
+                if "mind" in cortex_packet:
+                    ctx.mind_state.update(cortex_packet["mind"])
+                if "physics" in cortex_packet and isinstance(cortex_packet["physics"], dict):
+                    for k, v in cortex_packet["physics"].items():
+                        setattr(ctx.physics, k, v)
+                if "type" in cortex_packet and cortex_packet["type"] != "SNAPSHOT":
+                    ctx.refusal_triggered = True
+                    ctx.refusal_packet = cortex_packet
+
         return ctx
 
 
@@ -247,7 +266,7 @@ class SoulPhase(SimulationPhase):
                     ctx.record_flux("SOUL", "VOLTAGE", old_volts, ctx.physics.voltage, "MYTH_BUFF")
                     if getattr(getattr(self.eng, "bio", None), "biometrics", None):
                         target_cfg = getattr(self.eng, "config", BoneConfig)
-                        max_s = getattr(target_cfg, "MAX_STAMINA", 100.0)
+                        max_s = float(safe_get(target_cfg, "MAX_STAMINA", 100.0))
                         self.eng.bio.biometrics.stamina = min(max_s, self.eng.bio.biometrics.stamina + 5.0)
                     break
         if getattr(self.eng, "gordon", None) and getattr(self.eng, "tinkerer", None):
@@ -396,8 +415,10 @@ class SimulationPreflightPhase(SimulationPhase):
             ctx.council_mandates.append({"action": "SYSTEM_DIRECTIVE", "value": "AUDIT_TRAIL",
                                          "log": f"{Prisma.GRY}[AUDIT]: Narrative illusion dropped. Coordinates exposed.{Prisma.RST}"})
         if "[GRIEF]" in upper_input:
-            if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "endo"):
-                self.eng.bio.endo.glimmers = getattr(self.eng.bio.endo, "glimmers", 0) + 1
+            if hasattr(self.eng, "shared_lattice") and getattr(self.eng, "shared_lattice", None):
+                self.eng.shared_lattice.shared.g_pool += 1
+            else:
+                phys_obj.G = getattr(phys_obj, "G", 0) + 1
             ctx.council_mandates.append({"action": "SYSTEM_DIRECTIVE", "value": "GRIEF_PROTOCOL",
                                          "log": f"{Prisma.MAG}[GRIEF]: Profound loss witnessed. Structural Glimmer yielded.{Prisma.RST}"})
         if "[NO_JUMP]" in upper_input or "[SILENCE]" in upper_input:
@@ -494,9 +515,9 @@ class SimulationPreflightPhase(SimulationPhase):
         if friction > 1.2 or chaos > 0.7 or voltage > 80.0:
             base_ros = mito.state.ros_buildup if mito else 0.0
             simulated_ros = base_ros + (friction * chaos * 20.0)
-            target_cfg = getattr(self.eng, "config", None)
-            bio_cfg = getattr(target_cfg, "BIO", None) if target_cfg else None
-            ros_limit = (getattr(bio_cfg, "ROS_PANIC_THRESHOLD", 100.0))
+            target_cfg = getattr(self.eng, "config", {}) or {}
+            bio_cfg = safe_get(target_cfg, "BIO", {})
+            ros_limit = float(safe_get(bio_cfg, "ROS_PANIC_THRESHOLD", 100.0))
             if simulated_ros >= ros_limit:
                 msg = "[PINKER - Executive Layer]: Counterfactual simulation indicates fatal ROS toxicity. I am silently rejecting this generation path before it executes."
                 log_msg = f"{Prisma.RED}{msg}{Prisma.RST}"

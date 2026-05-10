@@ -108,8 +108,8 @@ class MycelialNetwork:
         parasite_result = self.parasite.infect(physics, stamina)
         if len(parasite_result) > 1 and parasite_result[1]:
             logs.append(parasite_result[1])
-        cfg_spores = getattr(self.cfg, "SPORES", object())
-        if random.random() < getattr(cfg_spores, "CHORUS_CHANCE", 0.10):
+        cfg_spores = safe_get(self.cfg, "SPORES", {})
+        if random.random() < float(safe_get(cfg_spores, "CHORUS_CHANCE", 0.10)):
             chorus_log = self._poll_chorus(clean_words, physics)
             if chorus_log:
                 logs.append(chorus_log)
@@ -138,13 +138,13 @@ class MycelialNetwork:
             d_targ = safe_get(physics, "space", physics)
             curr_v = float(safe_get(v_targ, "voltage", 0.0))
             curr_d = float(safe_get(d_targ, "narrative_drag", 0.0))
-            phys_cfg = getattr(self.cfg, "PHYSICS", object())
-            max_v = getattr(phys_cfg, "VOLTAGE_MAX", 150.0)
-            max_d = getattr(phys_cfg, "DRAG_HALT", 10.0)
+            phys_cfg = safe_get(self.cfg, "PHYSICS", {})
+            max_v = float(safe_get(phys_cfg, "VOLTAGE_MAX", 150.0))
+            max_d = float(safe_get(phys_cfg, "DRAG_HALT", 10.0))
             safe_set(v_targ, "voltage", min(max_v, curr_v + total_voltage_boost))
             safe_set(d_targ, "narrative_drag", min(max_d, curr_d + total_drag_penalty))
-            cfg = getattr(self.cfg, "SPORES", object())
-            heavy_v = getattr(cfg, "ECHO_VOLTAGE_HEAVY", 4.0)
+            cfg = safe_get(self.cfg, "SPORES", {})
+            heavy_v = float(safe_get(cfg, "ECHO_VOLTAGE_HEAVY", 4.0))
             if total_voltage_boost > heavy_v:
                 if msg_h := ux_format("spore_strings", "net_echo_heavy", drag=total_drag_penalty):
                     return f"{Prisma.VIOLET}{msg_h}{Prisma.RST}"
@@ -157,8 +157,8 @@ class MycelialNetwork:
         """Manual invocation of memory consumption. Burns old ideas to recover ATP (stamina)."""
         victim, msg = self.memory_core.cannibalize(current_tick=int(time.time()))
         if victim:
-            cfg = getattr(self.cfg, "AKASHIC", object())
-            atp_gain = getattr(cfg, "AUTOPHAGY_YIELD", 15.0)
+            cfg = safe_get(self.cfg, "AKASHIC", {})
+            atp_gain = float(safe_get(cfg, "AUTOPHAGY_YIELD", 15.0))
             if hasattr(self.events, "publish"):
                 self.events.publish("AUTOPHAGY_EVENT", {"node": victim, "atp_gained": atp_gain})
             return atp_gain, msg
@@ -210,8 +210,8 @@ class MycelialNetwork:
                   "significance": significance, "wing_id": safe_get(physics, "scope_boundary", "GLOBAL"),
                   "room_id": "_".join(clean_words[:2]) if clean_words else "GENERAL",
                   "raw_verbatim_text": safe_get(physics, "raw_text", ""), "timestamp": time.time(), }
-        cfg = getattr(self.cfg, "SPORES", None)
-        consolidation = getattr(cfg, "CONSOLIDATION_THRESHOLD", 5.0)
+        cfg = safe_get(self.cfg, "SPORES", {})
+        consolidation = float(safe_get(cfg, "CONSOLIDATION_THRESHOLD", 5.0))
         if significance > consolidation:
             self.memory_core.short_term_buffer.append(engram)
             return True
@@ -223,9 +223,9 @@ class MycelialNetwork:
         a 'ghost' memory is pulled entirely out of the Subconscious and re-instantiated
         into the active Graph.
         """
-        cfg = getattr(self.cfg, "SPORES", object())
-        v_min = getattr(cfg, "RESURRECTION_VOLTAGE_MIN", 60.0)
-        r_chance = getattr(cfg, "RESURRECTION_CHANCE", 0.20)
+        cfg = safe_get(self.cfg, "SPORES", {})
+        v_min = float(safe_get(cfg, "RESURRECTION_VOLTAGE_MIN", 60.0))
+        r_chance = float(safe_get(cfg, "RESURRECTION_CHANCE", 0.20))
         if voltage < v_min or random.random() > r_chance:
             return None
         valid_ghosts = [w for w in input_words if w in self.subconscious.index]
@@ -248,14 +248,14 @@ class MycelialNetwork:
         if not clean_words:
             return None, []
         valuable = self._filter_valuable_matter(clean_words)
-        max_cap = getattr(self.cfg, "MAX_MEMORY_CAPACITY", 100)
+        max_cap = int(safe_get(self.cfg, "MAX_MEMORY_CAPACITY", 100))
         victims = []
         log_msg = None
         new_nodes_count = sum(1 for w in valuable if w not in self.graph)
         excess_mass = (len(self.graph) + new_nodes_count) - max_cap
         if excess_mass > 0:
-            cfg = getattr(self.cfg, "SPORES", object())
-            desp_thresh = getattr(cfg, "DESPERATION_SATURATION_THRESH", 0.6)
+            cfg = safe_get(self.cfg, "SPORES", {})
+            desp_thresh = float(safe_get(cfg, "DESPERATION_SATURATION_THRESH", 0.6))
             if desperation_level < desp_thresh:
                 return ux("spore_strings", "net_sat_high") or "", []
             for _ in range(excess_mass):
@@ -297,7 +297,7 @@ class MycelialNetwork:
     def _detect_new_wells(self, words, tick):
         """Identifies concepts that have grown dense enough to warrant permanent tracking."""
         new_wells = []
-        thresh = getattr(self.cfg, "SHAPLEY_MASS_THRESHOLD", 5.0)
+        thresh = float(safe_get(self.cfg, "SHAPLEY_MASS_THRESHOLD", 5.0))
         for w in words:
             if w in self.graph:
                 mass = self.memory_core.calculate_mass(w)
@@ -483,7 +483,7 @@ class MycelialNetwork:
         seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in self.seeds if not s.bloomed]
         if not any(s["q"] == future_seed_q for s in seed_list):
             seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
-        data = {"genome": "BA_01988", "session_id": self.session_id, "parent_id": self.session_id,
+        data = {"genome": "BA_01991", "session_id": self.session_id, "parent_id": self.session_id,
                 "meta": {"timestamp": time.time(), "final_health": health, "final_stamina": stamina, },
                 "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
                 "core_graph": core_graph, "mutations": mutations or {},
@@ -509,9 +509,9 @@ class MycelialNetwork:
         """Garbage collection for dead timelines to prevent local disk bloat."""
         files = self.loader.list_spores()
         removed = 0
-        cfg = getattr(self.cfg, "SPORES", object())
-        max_files = getattr(cfg, "MAX_FILES", 25)
-        max_age = getattr(cfg, "MAX_AGE_SECONDS", 86400)
+        cfg = safe_get(self.cfg, "SPORES", {})
+        max_files = int(safe_get(cfg, "MAX_FILES", 25))
+        max_age = float(safe_get(cfg, "MAX_AGE_SECONDS", 86400))
         current_time = time.time()
         for i, (path, age, fname) in enumerate(files):
             file_age = current_time - age

@@ -48,8 +48,8 @@ class KintsugiProtocol:
         Returns:
             A tuple of (Boolean triggered_state, Optional koan_string)
         """
-        cfg = getattr(self.cfg, "KINTSUGI", object())
-        s_trig = getattr(cfg, "STAMINA_TRIGGER", 15.0)
+        cfg = safe_get(self.cfg, "KINTSUGI", {})
+        s_trig = float(safe_get(cfg, "STAMINA_TRIGGER", 15.0))
         if stamina < s_trig and not self.active_koan:
             self.active_koan = random.choice(self.koans)
             return True, self.active_koan
@@ -75,11 +75,11 @@ class KintsugiProtocol:
             play_count = sum(1 for w in clean if w in target_sets)
             whimsy_score = play_count / max(1, len(clean))
         pathway = self.PATH_SCAR
-        cfg = getattr(self.cfg, "KINTSUGI", object())
-        al_v = getattr(cfg, "ALCHEMY_VOLTAGE", 15.0)
-        al_w = getattr(cfg, "ALCHEMY_WHIMSY", 0.4)
-        in_v = getattr(cfg, "INTEGRATION_VOLTAGE", 8.0)
-        in_w = getattr(cfg, "INTEGRATION_WHIMSY", 0.2)
+        cfg = safe_get(self.cfg, "KINTSUGI", {})
+        al_v = float(safe_get(cfg, "ALCHEMY_VOLTAGE", 15.0))
+        al_w = float(safe_get(cfg, "ALCHEMY_WHIMSY", 0.4))
+        in_v = float(safe_get(cfg, "INTEGRATION_VOLTAGE", 8.0))
+        in_w = float(safe_get(cfg, "INTEGRATION_WHIMSY", 0.2))
         if vol > al_v and whimsy_score > al_w:
             pathway = self.PATH_ALCHEMY
         elif vol > in_v and whimsy_score > in_w:
@@ -99,18 +99,18 @@ class KintsugiProtocol:
         target = max(trauma_accum, key=trauma_accum.get)
         severity = trauma_accum[target]
         healed_log = []
-        cfg = getattr(self.cfg, "KINTSUGI", object())
+        cfg = safe_get(self.cfg, "KINTSUGI", {})
         atp_gain = 0.0
         if pathway == self.PATH_ALCHEMY:
-            r_alc = getattr(cfg, "REDUCTION_ALCHEMY_FACTOR", 0.8)
+            r_alc = float(safe_get(cfg, "REDUCTION_ALCHEMY_FACTOR", 0.8))
             reduction = severity * r_alc
-            atp_gain = reduction * getattr(cfg, "ALCHEMY_ATP_FACTOR", 15.0)
+            atp_gain = reduction * float(safe_get(cfg, "ALCHEMY_ATP_FACTOR", 15.0))
             msg_raw = ux("protocol_strings", "kintsugi_alchemy")
             msg = f"{Prisma.VIOLET}{msg_raw.format(target=target, boost=atp_gain)}{Prisma.RST}"
             log_alc = ux("protocol_strings", "kintsugi_log_alchemy")
             if log_alc: healed_log.append(log_alc.format(target=target))
         elif pathway == self.PATH_INTEGRATION:
-            reduction = getattr(cfg, "REDUCTION_INTEGRATION", 2.0)
+            reduction = float(safe_get(cfg, "REDUCTION_INTEGRATION", 2.0))
             if soul_ref:
                 soul_ref.traits.adjust("WISDOM", 0.1)
                 log_wis = ux("protocol_strings", "kintsugi_log_wisdom")
@@ -120,7 +120,7 @@ class KintsugiProtocol:
             log_int = ux("protocol_strings", "kintsugi_log_integration")
             if log_int: healed_log.append(log_int.format(target=target))
         else:
-            reduction = getattr(cfg, "REDUCTION_SCAR", 0.5)
+            reduction = float(safe_get(cfg, "REDUCTION_SCAR", 0.5))
             msg_raw = ux("protocol_strings", "kintsugi_scar")
             msg = f"{Prisma.GRY}{msg_raw}{Prisma.RST}"
             log_scar = ux("protocol_strings", "kintsugi_log_scar")

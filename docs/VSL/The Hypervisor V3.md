@@ -163,13 +163,15 @@ Borrowing from the concepts presented in [The Memory Palace](https://github.com/
 - **The Bonus Round:** When Energy and Chaos is elevated, the system abandons linear similarity. It applies additive/multiplicative framing to memory retrieval, selecting the node that maximizes structural yield. This prevents memories from competing and forces the engine to retrieve explosive, compounded structural patterns instead of flat semantic averages.
 - **The Billy Mitchell Protocol:** Untrusted data can come from anywhere. It can be loaded memory dictionaries, JSON files, or even RAG context. To prevent exploits like homoglyphs or zero-width characters from acting as bad-faith actors inside the Arcade, this protocol executes a recursive `walk()` over all structured data before it is ingested into the Cortex. This ensures the Arcade (and everything in it) remains mathematically pure (and that nobody is cheating).
 
-## The Dream Engine
+## The Importance of Sleep & The Dream Engine
 
-During rest, the **Dream Engine** activates **The REM Bridge**:
+In order to avoid system collapse or the eating of ones own memories, the user (or the system) can invoke a `/rest`, `/idle` or `/sleep` command (they all do the same thing). During this rest, the **Dream Engine** activates:
 
-- When the system detects critical **Coherence Debt** (or the user invokes /sleep) alongside sufficient ATP, it automatically invokes the REM Bridge. The system literally "sleeps" to metabolize the trauma and reset the effective cost of contradiction.
+- When the system detects critical **Coherence Debt** (or the user invokes /sleep), the system literally "sleeps" to metabolize the trauma and reset the effective cost of contradiction. If ATP is critically low, however, this command has a 50% chance of failing, where the system will hallucinate and likely die, instead.
 - **REM cycles** process recent experiences, consolidate memories, and may produce **Glimmers**.
-- **Hallucinations** can occur under high trauma or toxicity, mixing memories into surreal narratives during the transfer process.
+- **Fever Dreams** can occur under high trauma or toxicity, mixing memories into surreal narratives during the transfer process.
+
+A successful REM Cycle will yield in percentage of $ATP$ regeneration and a drastic drop in system toxicity, the extent of which depending on the current overall health of the system.
 
 ## The Grief Protocol
 

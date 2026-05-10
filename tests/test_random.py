@@ -24,7 +24,6 @@ class RandomTest(BoneTestCase):
      side_effect=Exception("Simulated Core Simulator Collapse"),
             ):
                 result = self.engine.process_turn("Hello?")
-
             self.assertIn("ui", result, "Engine failed to return a UI packet during a crash.")
             self.assertIn("CRITICAL FAILURE", result.get("logs", []), "Engine did not log the critical failure.")
 
@@ -212,8 +211,6 @@ class RandomTest(BoneTestCase):
         self.engine.shared_lattice.u.T_u = 5.0
 
         user_input = "/grief"
-
-        # 1. Capture the result of the turn!
         result = self.engine.process_turn(user_input, is_system=False)
 
         self.assertEqual(self.engine.phys.G, 0,
@@ -223,8 +220,6 @@ class RandomTest(BoneTestCase):
             3.0,
             "Grief Protocol failed to heal user Trauma (T_u).",
         )
-
-        # 2. Assert against the logs array returned in the turn's result packet
         logs = result.get("logs", [])
         self.assertTrue(
             any("compost" in str(log) for log in logs),
@@ -371,8 +366,6 @@ class RandomTest(BoneTestCase):
             "world": {},
             "soul": {},
         }
-        self.engine.cortex.svc.orchestrator.run_turn = MagicMock(
-            return_value=clean_sim_result)
         self.engine.cortex.validator.validate = MagicMock(
             return_value={
                 "valid": False,
@@ -380,7 +373,15 @@ class RandomTest(BoneTestCase):
             })
         if hasattr(self.engine.cortex, "llm"):
             self.engine.cortex.llm.generate = MagicMock(return_value="Bad output")
-        result = self.engine.cortex.process("Hello, please tell me a simple story.",is_system=False)
+
+        from core import CycleContext
+        from physics.models import PhysicsPacket
+        ctx = CycleContext(input_text="Hello, please tell me a simple story.", is_system_event=False)
+        ctx.physics = PhysicsPacket()
+        ctx.bio_result = clean_sim_result["bio"]
+        ctx.mind_state = clean_sim_result["mind"]
+        ctx.world_state = clean_sim_result["world"]
+        result = self.engine.cortex.process_context(ctx)
         phys = self.engine.cortex.last_physics
         drag_val = (phys.get("narrative_drag") if isinstance(phys, dict) else getattr(phys, "narrative_drag", 0.0))
         self.assertEqual(drag_val, 0.0, "Mercy Rule failed to drop narrative drag to 0.0.")

@@ -9,11 +9,12 @@ from presets import BoneConfig
 
 class ThePacemaker:
     def __init__(self, config_ref=None):
+        from struts import safe_get
         self.cfg = config_ref or BoneConfig
         self.boredom_level = 0.0
         self.heart_rate = 60
-        cfg = getattr(self.cfg, "MACHINE", object())
-        self.BOREDOM_THRESHOLD = getattr(cfg, "PACEMAKER_BOREDOM_THRESHOLD", 10.0)
+        cfg = safe_get(self.cfg, "MACHINE", {})
+        self.BOREDOM_THRESHOLD = float(safe_get(cfg, "PACEMAKER_BOREDOM_THRESHOLD", 10.0))
 
     def beat(self, stress: float):
         """

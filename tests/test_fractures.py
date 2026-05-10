@@ -6,10 +6,9 @@ from archetypes.symbiosis import SymbiosisManager
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 
-
 class FractureEngineTest(BoneTestCase):
     def test_fracture_n_turn_runaway_loop(self):
-        print("\n--- FRACTURE 1: N-Turn Runaway ---")
+        print("\n--- N-Turn Runaway ---")
         for i in range(20):
             result = self.engine.process_turn(
                 "NO! YOU ARE WRONG! FIX IT NOW! DO IT AGAIN!")
@@ -30,7 +29,6 @@ class FractureEngineTest(BoneTestCase):
         )
 
     def test_native_freeze_graph_preserves_node_identities(self):
-        """Ensures that freezing the reality graph preserves the string identities of the nodes, not just anonymous tuples."""
         from cycle import _native_freeze_graph
         mock_graph = {
             "NODE_ALPHA": ["NODE_BETA", "NODE_GAMMA"],
@@ -45,7 +43,7 @@ class FractureEngineTest(BoneTestCase):
         self.assertIn("NODE_BETA", alpha_node[1])
 
     def test_fracture_autophagic_marathon(self):
-        print("\n--- FRACTURE 2: Autophagic Marathon ---")
+        print("\n--- Autophagic Marathon ---")
         mem_graph = (self.engine.mind.mem.graph
                      if hasattr(self.engine.mind, "mem") else self.engine.akashic.graph)
         for i in range(5):
@@ -82,7 +80,7 @@ class FractureEngineTest(BoneTestCase):
         )
 
     def test_fracture_novelty_spade(self):
-        print("\n--- FRACTURE 3: The Spade (Novelty) ---")
+        print("\n--- The Spade (Novelty) ---")
         if not hasattr(self.engine, "symbiosis"):
             self.engine.symbiosis = SymbiosisManager(events_ref=MagicMock(), config_ref=self.engine.config)
         physics_state = {
@@ -109,7 +107,7 @@ class FractureEngineTest(BoneTestCase):
             "  [SUCCESS] The Spade successfully rewarded novelty and dropped Cortisol.")
 
     def test_fracture_cf_expect_guardrail(self):
-        print("\n--- FRACTURE 4: Comfort Expectation Guardrail ---")
+        print("\n--- Comfort Expectation Guardrail ---")
         if not hasattr(self.engine, "symbiosis"):
             self.engine.symbiosis = SymbiosisManager(events_ref=MagicMock(), config_ref=self.engine.config)
         physics_state = {
@@ -147,7 +145,7 @@ class FractureEngineTest(BoneTestCase):
         )
 
     def test_fracture_jester_shuffle(self):
-        print("\n--- FRACTURE 5: The Jester's Shuffle ---")
+        print("\n--- The Jester's Shuffle ---")
         if not hasattr(self.engine, "phys"):
             self.engine.phys = PhysicsPacket()
         self.engine.phys.narrative_drag = 15.0
@@ -173,7 +171,7 @@ class FractureEngineTest(BoneTestCase):
         )
 
     def test_fracture_ralph_apoptosis(self):
-        print("\n--- FRACTURE 6: The Ralph Apoptosis ---")
+        print("\n--- The Ralph Apoptosis ---")
         if not hasattr(self.engine, "cortex"):
             self.engine.cortex = MagicMock()
         self.engine.cortex.dialogue_buffer = [
@@ -207,7 +205,7 @@ class FractureEngineTest(BoneTestCase):
         print("  [SUCCESS] Context severed. The mind is clear.")
 
     def test_fracture_runaway_ramp(self):
-        print("\n--- FRACTURE 7: The Runaway Ramp ---")
+        print("\n--- The Runaway Ramp ---")
         if not hasattr(self.engine, "symbiosis"):
             from symbiosis import SymbiosisManager
             self.engine.symbiosis = SymbiosisManager(events_ref=MagicMock(), config_ref=self.engine.config)
@@ -227,7 +225,7 @@ class FractureEngineTest(BoneTestCase):
         print(f"  [SUCCESS] Runaway Ramp engaged: {response.split(':')[0]}")
 
     def test_fracture_false_cohesion(self):
-        print("\n--- FRACTURE 8: False Cohesion (Anti-Sycophancy) ---")
+        print("\n--- False Cohesion (Anti-Sycophancy) ---")
         from archetypes.council import TheVillageCouncil
         sycophantic_physics = {"resonance": 0.95, "beta_index": 0.1, "voltage": 25.0, "narrative_drag": 1.0,
                                "stamina": 100.0, "T": 0.0, "S": 0.5, "D": 0.5, "C": 0.5, "psi": 0.1, "chi": 0.1,
@@ -243,7 +241,7 @@ class FractureEngineTest(BoneTestCase):
         )
 
     def test_fracture_systemic_health_medical_chip(self):
-        print("\n--- FRACTURE 9: Systemic Health (The Medical Team) ---")
+        print("\n--- Systemic Health (The Medical Team) ---")
         from archetypes.council import TheOverseerCouncil
         overseer = TheOverseerCouncil()
         physics_decay = {"m_a": 0.8, "narrative_drag": 6.0}
@@ -296,7 +294,7 @@ class FractureEngineTest(BoneTestCase):
         )
 
     def test_fracture_mitophagy_and_hormesis(self):
-        print("\n--- FRACTURE 10: Mitohormesis & Mitophagy (Adaptive Dynamics) ---")
+        print("\n--- Mitohormesis & Mitophagy (Adaptive Dynamics) ---")
         mito = self.engine.bio.mito
         mito.state.membrane_potential = 0.5
         mito.state.atp_pool = 80.0
@@ -317,7 +315,7 @@ class FractureEngineTest(BoneTestCase):
         print("  [SUCCESS] System successfully executed hormetic adaptation and emergency mitophagy.")
 
     def test_fracture_anaerobic_bypass(self):
-        print("\n--- FRACTURE 11: The Anaerobic Bypass ---")
+        print("\n--- The Anaerobic Bypass ---")
         mito = self.engine.bio.mito
         initial_atp = mito.state.atp_pool = 90.0
         initial_ros = mito.state.ros_buildup = 0.0

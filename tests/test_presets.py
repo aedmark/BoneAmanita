@@ -5,12 +5,7 @@ from genesis import BoneGenesis
 from unittest.mock import patch, MagicMock
 
 class PresetsBoundaryTests(BoneTestCase):
-
     def test_absolute_zero_reconciliation(self):
-        """
-        Ensures the rubber band allows the system to reach absolute zero.
-        Tests the fix for the phantom energy leak caused by Python's falsy 'or' evaluation.
-        """
         print("\n--- PRESETS 1: Absolute Zero Reconciliation ---")
         self.engine.config.PHYSICS.VOLTAGE_FLOOR = 0.0
         self.engine.config.PHYSICS.DRAG_FLOOR = 0.0
@@ -21,10 +16,6 @@ class PresetsBoundaryTests(BoneTestCase):
         print("  [SUCCESS] Engine successfully rested at absolute zero.")
 
     def test_oroboros_negative_drag_clamp(self):
-        """
-        Ensures a massive legacy boon applied during Genesis
-        does not cause Narrative Drag to underflow below 0.0.
-        """
         print("\n--- PRESETS 4: Oroboros Drag Underflow Clamping ---")
         with patch('soul.TheOroboros.apply_legacy') as mock_oroboros:
 
@@ -41,10 +32,6 @@ class PresetsBoundaryTests(BoneTestCase):
         print("  [SUCCESS] Genesis smoothly clamped the legacy boon at absolute zero.")
 
     def test_missing_json_keys(self):
-        """
-        Simulates a developer deleting a load-bearing key like DRAG_HALT
-        from the JSON file. The system must degrade gracefully, not crash.
-        """
         print("\n--- PRESETS 2: Missing Configuration Key ---")
         if hasattr(self.engine.config.PHYSICS, "DRAG_HALT"):
             delattr(self.engine.config.PHYSICS, "DRAG_HALT")
@@ -56,10 +43,6 @@ class PresetsBoundaryTests(BoneTestCase):
             self.fail(f"[FAIL] Missing key caused a fatal boot crash: {e}")
 
     def test_inverted_boundaries(self):
-        """
-        Setting a floor higher than a ceiling should clamp
-        the floor directly to the ceiling, preventing mathematically impossible negative states.
-        """
         print("\n--- PRESETS 3: Inverted Boundary Clamping ---")
         self.engine.config.PHYSICS.VOLTAGE_MAX = 0.0
         self.engine.config.PHYSICS.VOLTAGE_FLOOR = 10.0

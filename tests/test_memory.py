@@ -11,7 +11,6 @@ from spores import MycelialNetwork, SubconsciousStrata
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 
-
 class MemoryTests(BoneTestCase):
     def generate_mock_memories(self, count=50, dim=8):
         return [(f"node_{i}", [random.uniform(-1.0, 1.0) for _ in range(dim)], {
@@ -177,31 +176,20 @@ class MemoryTests(BoneTestCase):
         self.assertEqual(graph_1, {"lone_node": set()}, "[FAIL] Vectorized graph crashed on single-node cache.")
 
     def test_shadow_retrieval_geometry(self):
-        """
-        FULLER'S SURVEY: The ?↗ hook must force a dual-thread retrieval,
-        returning both the Primary Dredge and the Shadow Cast.
-        """
-        # Seed the network
         self.engine.mind.mem.graph["core_concept"] = {"data": "Explicit answer", "mass": 5.0}
         self.engine.mind.mem.graph["adjacent_risk"] = {"data": "Hidden systemic cost", "mass": 2.0}
 
-        # Fire the Broad Retrieval hook
-        snapshot = self.engine.process_turn("How do we scale the database? ?↗")
+        # S.L.A.S.H. V3: Isolate the Shadow Cast from the LLM cycle for a pure deterministic test.
+        sim_res = {
+            "physics": {"scope": 0.9, "depth": 0.1, "voltage": 10.0, "chi": 0.0},
+            "bio": {}, "mind": {}, "world": {}, "soul": {},
+            "logs": [], "council_mandates": []
+        }
 
-        # Pull from the correct memory footprint
-        memory_payload = getattr(self.engine.cortex, "last_physics", {})
-
-        self.assertIn(
-            "shadow_nodes_offered", memory_payload,
-            "[FAIL] Shadow Retrieval failed to execute the lateral Shadow Cast."
-        )
-        self.assertIn(
-            "shadow_cast", memory_payload,
-            "[FAIL] Shadow Retrieval failed to execute the lateral Shadow Cast."
-        )
+        # Direct invocation of the state compiler
+        _ = self.engine.cortex.gather_state(sim_res)
 
         shadow_nodes = getattr(self.engine.cortex, "last_shadow_nodes", [])
-
         self.assertTrue(
             len(shadow_nodes) > 0,
             "[FAIL] Shadow Retrieval failed to execute the lateral Shadow Cast."

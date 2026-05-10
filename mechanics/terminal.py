@@ -21,8 +21,9 @@ def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
     if not text:
         print(end=end, flush=True)
         return
-    cfg = getattr(BoneConfig, "GUI", object())
-    actual_speed = speed if speed is not None else getattr(cfg, "RENDER_SPEED_FAST", 0.00025)
+    from struts import safe_get
+    cfg = safe_get(BoneConfig, "GUI", {})
+    actual_speed = speed if speed is not None else float(safe_get(cfg, "RENDER_SPEED_FAST", 0.00025))
     if actual_speed < 0.001:
         print(text, end=end, flush=True)
         return
@@ -47,7 +48,7 @@ class SessionGuardian:
     """
     _HEADERS = (
         ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.8.8   │"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 19.9.1   │"),
         ("term_header_bot", "└──────────────────────────────────────────┘"),
     )
 
@@ -62,9 +63,10 @@ class SessionGuardian:
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         for key, default in self._HEADERS:
             print(Prisma.paint(ux("main_strings", key, default), "M"))
+        from struts import safe_get
         base_config = self.engine_instance.config if self.engine_instance else BoneConfig
-        cfg = getattr(base_config, "GUI", object())
-        boot_delay = getattr(cfg, "RENDER_SPEED_BOOT", 0.05)
+        cfg = safe_get(base_config, "GUI", {})
+        boot_delay = float(safe_get(cfg, "RENDER_SPEED_BOOT", 0.05))
         boot_logs = self.engine_instance.events.flush()
         for log in boot_logs:
             print(f"{Prisma.GRY}   >>> {log['text']}{Prisma.RST}")

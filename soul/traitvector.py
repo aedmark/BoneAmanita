@@ -1,16 +1,6 @@
 """/soul/traitvector.py"""
-import json
-import os
-import random
-import time
-from dataclasses import dataclass, field, fields
-from typing import List, Dict, Optional, Any, Tuple, ClassVar
-from brain.akashic import TheAkashicRecord
-from presets import BoneConfig
-from core import LoreManifest, EventBus
-from struts import ux, ux_format, safe_get, safe_set
-from mechanics.lexicon import LexiconService
-from constants import Prisma
+from dataclasses import dataclass
+from typing import Dict, ClassVar
 
 
 @dataclass
@@ -50,17 +40,15 @@ class TraitVector:
 
     def normalize(self, decay_rate: float):
         """
-        Meadows (Systems Dynamics): Homeostasis.
-        Traits naturally decay back toward their biological baselines over time.
-        Notice that wisdom decays to 0.1—true wisdom is metabolically expensive
-        to maintain and fades quickly without active reinforcement.
+        Meadows: Linear Homeostasis.
+        Ensures a consistent pull toward the biological baseline (0.1 for Wisdom, 0.5 for others)
+        without the 'resistance' trap that causes trait stagnation.
         """
         for t in self._TRAITS:
             val = getattr(self, t)
             target = 0.1 if t == "wisdom" else 0.5
-            resistance = 1.0 - (1.5 * abs(val - target))
-            actual_decay = decay_rate * max(0.1, min(1.0, resistance))
-            setattr(self, t, self._clamp(val + ((target - val) * actual_decay)))
+            # Pull the value toward the target by a fixed percentage of the distance.
+            setattr(self, t, self._clamp(val + ((target - val) * decay_rate)))
 
     def _clamp_all(self):
         for t in self._TRAITS:

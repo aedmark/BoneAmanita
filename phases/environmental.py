@@ -1,9 +1,10 @@
 """
 phases/environmental.py
-The Environmental and Observational execution phases.
+
 These phases handle how the system navigates topological space (Gravity, Zones),
 how it perceives user input (The Observer), and how it recovers during downtime (Sanctuary).
 """
+
 from constants import Prisma
 import random
 from presets import BoneConfig, BonePresets
@@ -13,14 +14,7 @@ from struts import ux, safe_get, safe_set
 from mechanics.tools import TheTclWeaver
 from phases.base import SimulationPhase, _safe_dict, _deep_update
 
-
 class NavigationPhase(SimulationPhase):
-    """
-    Handles spatial movement and cosmic gravity.
-    Calculates the topological drag, evaluates orbital states (e.g., Lagrange points),
-    and manages transitions between semantic zones based on inertia.
-    """
-
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "NAVIGATION"
@@ -88,8 +82,7 @@ class NavigationPhase(SimulationPhase):
         elif orbit_state == "WATERSHED_FLOW":
             physics.voltage += ctx.limits.get("NAV_WATERSHED_BOOST", 0.5)
         raw_zone = getattr(physics, "zone", "COURTYARD")
-        stabilization_result = self.eng.stabilizer.stabilize(proposed_zone=raw_zone, physics=phys_dict,
-                                                             cosmic_state=(orbit_state, drag_pen), )
+        stabilization_result = self.eng.stabilizer.stabilize(proposed_zone=raw_zone, physics=phys_dict, cosmic_state=(orbit_state, drag_pen), )
         if isinstance(stabilization_result, tuple):
             stabilized_zone = stabilization_result[0]
             if len(stabilization_result) > 1 and stabilization_result[1]:
@@ -104,15 +97,7 @@ class NavigationPhase(SimulationPhase):
         ctx.world_state["orbit"] = orbit_state
         return ctx
 
-
 class RealityFilterPhase(SimulationPhase):
-    """
-    The presentation layer modifier.
-    Translates the 8-dimensional thought vector into an I-Ching Trigram,
-    applying corresponding UI colors to the terminal output to visually
-    represent the current state of mind.
-    """
-
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "REALITY_FILTER"
@@ -134,13 +119,7 @@ class RealityFilterPhase(SimulationPhase):
                 ctx.log(f"{color}{msg.format(sym=sym, name=name)}{Prisma.RST}")
         return ctx
 
-
 class ObservationPhase(SimulationPhase):
-    """
-    The Sensory Ingestion layer.
-    Reads the user's prompt, processes silence/time delays, triggers retroactive
-    metabolism for long absences, and syncs the observed data into the active physics packet.
-    """
     _SYNC_KEYS = ("clean_words", "counts", "vector", "valence", "entropy", "beta", "S",
                   "D", "C", "PHI_RES", "DELTA", "LQ", "ROS", "G", "raw_text", "antigens",
                   "psi", "kappa", "zone", "flow_state", "repetition",)
@@ -160,10 +139,10 @@ class ObservationPhase(SimulationPhase):
                 target_cfg = getattr(self.eng, "config", BoneConfig)
                 if bio.biometrics:
                     bio.biometrics.health = min(
-                        getattr(target_cfg, "MAX_HEALTH", 100.0),
+                        float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
                         bio.biometrics.health + (hours_passed * 10.0))
                 bio.mito.state.atp_pool = min(
-                    getattr(target_cfg, "MAX_ATP", 100.0),
+                    float(safe_get(target_cfg, "MAX_ATP", 100.0)),
                     bio.mito.state.atp_pool + (hours_passed * 25.0))
                 ctx.log(
                     f"{Prisma.GRN}[BIO]: Retroactive metabolism applied for {hours_passed:.1f} hours of absence. ATP and Health restored.{Prisma.RST}")
@@ -221,9 +200,7 @@ class ObservationPhase(SimulationPhase):
                 ctx.log(f"{Prisma.OCHRE}{msg.format(diag=diag)}{Prisma.RST}")
         if getattr(self.eng, "shared_lattice", None) and not ctx.is_system_event:
             shared_logs, atp_cost = self.eng.shared_lattice.infer_and_couple(text=ctx.input_text,
-                                                                             sys_phys=ctx.physics,
-                                                                             input_phys=input_phys,
-                                                                             atp_pool=current_atp, )
+                sys_phys=ctx.physics, input_phys=input_phys, atp_pool=current_atp, )
             for s_log in shared_logs:
                 ctx.log(s_log)
             if atp_cost > 0 and self.eng.bio and self.eng.bio.mito:
@@ -233,21 +210,20 @@ class ObservationPhase(SimulationPhase):
         self.eng.tick_count += 1
         return ctx
 
-
 class SanctuaryPhase(SimulationPhase):
-    """
-    The Recovery layer.
-    If the system reaches a safe topological zone with low trauma, this phase
-    triggers rapid ATP restoration, trauma decay, and spontaneous REM sleep.
-    """
-
     def __init__(self, engine_ref, governor_ref):
         super().__init__(engine_ref)
         self.name = "SANCTUARY"
-        self.governor = governor_ref
+
+    @property
+    def bio_governor(self):
+        gov = getattr(self.eng.bio, "governor", None) if hasattr(self.eng, "bio") else None
+        if not gov:
+            raise RuntimeError("CRITICAL: Sanctuary Phase engaged, but the Biological Governor is missing or destroyed.")
+        return gov
 
     def run(self, ctx: CycleContext):
-        in_safe_zone, distance = self.governor.assess(ctx.physics)
+        in_safe_zone, distance = self.bio_governor.assess(ctx.physics)
         trauma_sum = sum(getattr(self.eng, "trauma_accum", {}).values())
         t_limit = ctx.limits.get("SANCTUARY_TRAUMA_LIMIT", 25.0)
         if in_safe_zone and trauma_sum < t_limit:

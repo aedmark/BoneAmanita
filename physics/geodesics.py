@@ -60,18 +60,19 @@ class GeodesicEngine:
         The heavy lifting of the physics engine. Calculates how the different
         types of semantic mass interact to create tension and drag.
         """
+        from struts import safe_get
         t_cfg = config_ref or BoneConfig
-        cfg = getattr(t_cfg, "PHYSICS", BoneConfig.PHYSICS)
+        cfg = safe_get(t_cfg, "PHYSICS", {})
         from core import LoreManifest
         gc_dict = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
 
         def get_cfg(key: str, default: float = 1.0) -> float:
-            return getattr(cfg, key, default)
+            return float(safe_get(cfg, key, default))
 
         def get_const(key: str, default: float = 1.0) -> float:
-            return gc_dict.get(key, default)
+            return float(safe_get(gc_dict, key, default))
 
-        shapley_thresh = getattr(t_cfg, "SHAPLEY_MASS_THRESHOLD", 5.0)
+        shapley_thresh = float(safe_get(t_cfg, "SHAPLEY_MASS_THRESHOLD", 5.0))
         safe_vol = volume
         tot_kin = masses["kinetic"] + masses["explosive"]
         raw_tension = (
@@ -90,17 +91,15 @@ class GeodesicEngine:
         visc = ((base_friction + heavy_friction) * shear) / lubrication
         lift = masses["play"] * get_const("PLAY_LIFT_MULT", 1.5) + (tot_kin * get_const("KINETIC_LIFT_RATIO", 0.8)) / (
                     masses["heavy"] * 0.5 + 1.0)
-        raw_comp = (
-                ((visc - lift) / safe_vol) * get_const("COMPRESSION_SCALAR", 2.0) * getattr(t_cfg,
-                                                                                            "SIGNAL_DRAG_MULTIPLIER",
-                                                                                            1.0)
-        )
+        signal_drag_mult = float(safe_get(t_cfg, "SIGNAL_DRAG_MULTIPLIER", 1.0))
+        kinetic_gain = float(safe_get(t_cfg, "KINETIC_GAIN", 1.0))
+
+        raw_comp = (((visc - lift) / safe_vol) * get_const("COMPRESSION_SCALAR", 2.0) * signal_drag_mult)
         str_mass = max(0.0, masses["heavy"] + masses["constructive"] + masses["harvest"] - masses["void"] * 0.5)
         coherence_val = min(1.0, str_mass / max(1.0, shapley_thresh))
         abstract_mass = masses["abstract"] + masses["liminal"] + masses["pareidolia"] + masses["void"]
         abstraction_val = min(1.0, (abstract_mass / safe_vol) + get_const("ABSTRACTION_BASE", 0.1))
-        max_tension = min(100.0, (raw_tension / safe_vol) * get_const("DENSITY_SCALAR") * getattr(t_cfg, "KINETIC_GAIN",
-                                                                                                  1.0) * mass_scalar)
+        max_tension = min(100.0, (raw_tension / safe_vol) * get_const("DENSITY_SCALAR") * kinetic_gain * mass_scalar)
         clamped_comp = max(-5.0, min(get_cfg("DRAG_HALT", 10.0), raw_comp * mass_scalar))
         return {"tension": round(max_tension, 2), "compression": round(clamped_comp, 2),
                 "coherence": round(coherence_val, 3), "abstraction": round(abstraction_val, 2), }

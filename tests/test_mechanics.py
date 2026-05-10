@@ -2,14 +2,9 @@
 
 from tests.base import BoneTestCase
 
-
 class MechanicsTests(BoneTestCase):
     def test_session_guardian_crash_immersion(self):
-        """
-        SessionGuardian must hide raw Python stack traces
-        from the player during a fatal crash to preserve narrative immersion,
-        unless specifically booted in TECHNICAL mode.
-        """
+
         from mechanics.terminal import SessionGuardian
         from unittest.mock import MagicMock
         import sys
@@ -31,10 +26,6 @@ class MechanicsTests(BoneTestCase):
                       "[FAIL] SessionGuardian failed to print the graceful narrative crash message.")
 
     def test_protocol_pragmatist_membrane(self):
-        """
-        Ensures The Pragmatist physically intercepts tropes,
-        metabolic bloat, and linguistic hedging before the UI renders.
-        """
         print("\n--- PROTOCOL 5: The Pragmatist Membrane ---")
         from mechanics.pragmatics import ThePragmatist
         pragmatist = ThePragmatist()
