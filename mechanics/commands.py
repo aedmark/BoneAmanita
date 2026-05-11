@@ -515,6 +515,28 @@ class CommandProcessor:
             f"{self.P.CYN}[SYSTEM] Engine idling. REM cycle initiated. ATP regenerating.{self.P.RST}{dream_log}")
         return True
 
+    def _cmd_sleep(self, parts):
+        """Alias for /idle."""
+        return self._cmd_idle(parts)
+
+    def _cmd_rest(self, _parts):
+        """A somatic reflex to sever context, drop drag, purge trauma, and restore Stamina."""
+        self.interface.modify_resource("stamina", 100.0)
+
+        if hasattr(self.interface.eng, "phys"):
+            self.interface.eng.phys.narrative_drag = 0.0
+
+        if hasattr(self.interface.eng, "trauma_accum"):
+            self.interface.eng.trauma_accum.clear()
+
+        self.interface.log(
+            f"{self.P.CYN}[SYSTEM] Somatic flush complete. Drag reset, trauma purged, stamina restored.{self.P.RST}", "SYS")
+        return True
+
+    def _cmd_flush(self, parts):
+        """Alias for /rest."""
+        return self._cmd_rest(parts)
+
     def _cmd_grief(self, _parts):
         """Forces the system to mourn a memory destroyed by autophagy."""
         if hasattr(self.interface.eng, "grief"):
