@@ -271,22 +271,22 @@ class SemanticEndocrinologist:
         """
         if not clean_words:
             return SemanticSignal()
+
         graph_ref = getattr(self.mem, "graph", {}) if self.mem else {}
-        cortical_stack = getattr(self.mem, "cortical_stack", []) if self.mem else []
-        cortical_set = None
-        safe_len = max(1, len(clean_words))
+        cortical_set = set(getattr(self.mem, "cortical_stack", [])) if self.mem else set()
+
+        word_count = len(clean_words)
         novel_count = 0
         hits = 0
+
         for w in clean_words:
             if graph_ref and w in graph_ref:
                 hits += 1
-            elif len(w) > 4:
-                if cortical_set is None:
-                    cortical_set = set(cortical_stack)
-                if w not in cortical_set:
-                    novel_count += 1
-        novelty_score = min(1.0, novel_count / safe_len)
-        resonance_score = min(1.0, hits / safe_len) if graph_ref else 0.0
+            elif len(w) > 4 and w not in cortical_set:
+                novel_count += 1
+
+        novelty_score = min(1.0, novel_count / word_count)
+        resonance_score = min(1.0, hits / word_count) if graph_ref else 0.0
         valence_score = 0.0
         if self.lex and hasattr(self.lex, "get_valence"):
             valence_score = self.lex.get_valence(clean_words)

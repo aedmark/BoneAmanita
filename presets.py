@@ -63,8 +63,7 @@ class BonePresets:
     LABORATORY = {"PHYSICS.VOLTAGE_FLOOR": 0.5,
         "PHYSICS.VOLTAGE_MAX": 15.0,
         "PHYSICS.DRAG_FLOOR": 2.0,
-        "BIO.DECAY_RATE": 0.0,
-        "COUNCIL.FOOTNOTE_CHANCE": 1.0,}
+        "BIO.DECAY_RATE": 0.0}
 
     # The absolute framework for User Experience.
     # Defines what UI elements render, what mechanics are allowed, and who is awake in the Village.
@@ -130,7 +129,7 @@ class BoneConfig:
         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2},}
 
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "19.9.1"
+    VERSION = "20.0.1"
     VERBOSE_LOGGING = True
 
     # Biological Maximums
@@ -139,6 +138,9 @@ class BoneConfig:
     MAX_ATP = 100.0
     STAMINA_REGEN = 1.0
     MAX_DRAG_LIMIT = 5.0
+
+    # System Lifecycle Limits
+    REM_IDLE_THRESHOLD = 300.0
 
     # Simulation Math Tolerances
     GEODESIC_STRENGTH = 10.0

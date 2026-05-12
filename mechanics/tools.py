@@ -311,8 +311,6 @@ class TheSubstrate:
                 logs.append(f"{Prisma.GRN}SUBSTRATE: Physically forged {s_path} ({kb_size:.1f} KB).{Prisma.RST}")
                 if self.events:
                     self.events.publish("SUBSTRATE_FORGED", {"cost": w_cost, "file": s_name})
-                if "podcast" in s_name.lower():
-                    self._trigger_tts(s_path)
             except Exception as e:
                 retries = w.get("retries", 0) + 1
                 if retries > self.config.get("MAX_RETRIES", 3):
@@ -324,23 +322,6 @@ class TheSubstrate:
                     retained_writes.append(w)
         self.pending_writes = retained_writes
         return logs, cost
-
-    def _trigger_tts(self, safe_path: str):
-        """Fires off an asynchronous thread to synthesize audio without blocking the main event loop."""
-        if not self._cords_instance:
-            self._cords_instance = TheVocalCords(self.events)
-
-        def _async_tts_task(path, events, cords_ref):
-            try:
-                cords_ref.synthesize_podcast(path)
-                if events:
-                    events.log(f"{Prisma.VIOLET}SUBSTRATE: TTS synthesis complete for {path}.{Prisma.RST}")
-            except Exception as e:
-                if events:
-                    events.log(f"{Prisma.RED}SUBSTRATE FAULT: TTS failed - {e}{Prisma.RST}", "CRIT")
-
-        threading.Thread(target=_async_tts_task, args=(safe_path, self.events, self._cords_instance),
-                         daemon=True).start()
 
 
 class TheTclWeaver:
@@ -396,94 +377,6 @@ class TheTclWeaver:
             return w
 
         return " ".join(_void(w) for w in text.split(" "))
-
-
-AUDIO_AVAILABLE = all(
-    importlib.util.find_spec(pkg) is not None
-    for pkg in ["kokoro", "soundfile", "numpy"])
-os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
-os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
-os.environ["TQDM_DISABLE"] = "True"
-logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
-logging.getLogger("torch").setLevel(logging.ERROR)
-
-
-class TheVocalCords:
-    """
-    Parses LLM-generated podcast scripts and feeds them through the Kokoro text-to-speech engine.
-    """
-
-    def __init__(self, events_ref=None):
-        self.events = events_ref
-        self.pipeline = None
-        self._synthesis_lock = threading.Lock()
-        from core import LoreManifest
-        manifest_voices = LoreManifest.get_instance().get("VOICE_MAP")
-        self.VOICE_MAP = manifest_voices if manifest_voices else {"DEFAULT": "af_bella"}
-
-    _ANSI_ESCAPE = re.compile(r"\x1B\[[0-9;]*[a-zA-Z]")
-    _SCRIPT_PATTERN = re.compile(r"^\[([^]]+)]:?\s*(.*?)(?=\n\[|\Z)", re.MULTILINE | re.DOTALL)
-
-    @staticmethod
-    def strip_ansi(text: str) -> str:
-        """Ensures the TTS engine doesn't try to pronounce terminal color codes."""
-        return TheVocalCords._ANSI_ESCAPE.sub("", text)
-
-    def parse_script(self, script_text: str) -> List[Dict[str, str]]:
-        """Extracts the speaker identification and their associated dialogue blocks."""
-        return [{"speaker": m.group(1).split("(")[0].strip().upper(),
-                 "text": m.group(2).strip()} for m in self._SCRIPT_PATTERN.finditer(self.strip_ansi(script_text))
-                if m.group(2).strip()]
-
-    def synthesize_podcast(self, file_path: str):
-        """Reads the script from the Substrate and generates a continuous, multi-voice .wav file."""
-        if not os.path.exists(file_path):
-            return
-        if not AUDIO_AVAILABLE:
-            if self.events:
-                self.events.log(
-                    f"{Prisma.OCHRE}[AUDIO OFFLINE]: TTS dependencies (kokoro, soundfile, numpy) not found. Skipping podcast synthesis.{Prisma.RST}",
-                    "SYS")
-            return
-        from kokoro import KPipeline
-        import soundfile as sf
-        import numpy as np
-        combined_audio = []
-        error_to_report = None
-        output_dir = os.path.dirname(file_path)
-        base_name = os.path.splitext(os.path.basename(file_path))[0]
-        master_file = os.path.join(output_dir, f"{base_name}_MASTER.wav")
-        with self._synthesis_lock:
-            with open(file_path, "r", encoding="utf-8") as f:
-                script_text = f.read()
-            segments = self.parse_script(script_text)
-            if not segments:
-                return
-            try:
-                with open(os.devnull, "w") as fnull, contextlib.redirect_stdout(
-                        fnull), contextlib.redirect_stderr(fnull):
-                    if not self.pipeline:
-                        self.pipeline = KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M")
-                    silence_pad = np.zeros(int(24000 * 0.6))
-                    for seg in segments:
-                        voice = self.VOICE_MAP.get(seg["speaker"], self.VOICE_MAP["DEFAULT"])
-                        generator = self.pipeline(seg["text"], voice=voice, speed=1.0)
-                        for _, _, audio in generator:
-                            if audio is not None and len(audio) > 0:
-                                combined_audio.append(np.array(audio).flatten())
-                        combined_audio.append(silence_pad)
-                    if combined_audio:
-                        sf.write(master_file, np.concatenate(combined_audio), 24000)
-            except Exception as e:
-                error_to_report = str(e)
-        if self.events:
-            if error_to_report:
-                self.events.log(
-                    f"{Prisma.RED}🎙️ AUDIO FAULT: {error_to_report}{Prisma.RST}", "SYS")
-            elif combined_audio:
-                self.events.log(f"{Prisma.MAG}🎙️ MASTER PODCAST FORGED: {os.path.basename(master_file)}{Prisma.RST}",
-                                "SYS")
-
 
 try:
     import dspy

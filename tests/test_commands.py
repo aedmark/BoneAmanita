@@ -10,16 +10,6 @@ from mechanics.commands import CommandProcessor, ResourceTax, CommandStateInterf
 
 
 class CommandSystemTests(BoneTestCase):
-    def test_meadows_metabolic_exhaustion_rejection(self):
-        engine = BoneAmanita({})
-        engine.set_atp(5.0)
-        processor = CommandProcessor(engine, Prisma)
-        initial_atp = engine.get_metrics().get("atp", 0.0)
-        processor.execute("/podcast The Nature of Technical Debt")
-        final_atp = engine.get_metrics().get("atp", 0.0)
-        self.assertEqual(initial_atp, final_atp)
-        self.assertEqual(final_atp, 5.0)
-
     def test_fuller_resource_clamping_integrity(self):
         engine = BoneAmanita({})
         processor = CommandProcessor(engine, Prisma)

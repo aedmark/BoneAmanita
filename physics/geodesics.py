@@ -63,8 +63,10 @@ class GeodesicEngine:
         from struts import safe_get
         t_cfg = config_ref or BoneConfig
         cfg = safe_get(t_cfg, "PHYSICS", {})
-        from core import LoreManifest
-        gc_dict = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
+        if GeodesicEngine._CACHED_CONSTANTS is None:
+            from core import LoreManifest
+            GeodesicEngine._CACHED_CONSTANTS = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
+        gc_dict = GeodesicEngine._CACHED_CONSTANTS
 
         def get_cfg(key: str, default: float = 1.0) -> float:
             return float(safe_get(cfg, key, default))
@@ -105,6 +107,10 @@ class GeodesicEngine:
                 "coherence": round(coherence_val, 3), "abstraction": round(abstraction_val, 2), }
 
     @staticmethod
+    def _clamp(v: float) -> float:
+        return max(0.0, min(1.0, v))
+
+    @staticmethod
     def _calculate_dimensions(masses, forces, counts, volume) -> Dict[str, float]:
         """
         Translates the physical masses into the 8 core dimensions of the system's mind state.
@@ -112,9 +118,7 @@ class GeodesicEngine:
         """
         inv_vol = 1.0 / volume
         base_mass = 0.1
-
-        def clamp(v: float) -> float:
-            return max(0.0, min(1.0, v))
+        clamp = GeodesicEngine._clamp
 
         return {
             "VEL": clamp((masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol),

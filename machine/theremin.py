@@ -1,16 +1,14 @@
 """machine/theremin.py
+
 The Theremin is the simulation's stagnation detector.
-It monitors the conversation for 'Decoherence'—the moment when a dynamic,
+It monitors the conversation for the moment when a dynamic,
 complex exchange flattens out into a repetitive or highly predictable loop.
-It metaphorically tracks this stagnation as 'Resin'. If resin builds up too much,
-the conversation fossilizes in 'Amber'. The system must then use turbulence,
-complexity, or thermal energy to shatter the amber and restore flow.
 """
+
 from typing import Tuple, Optional, Any
 from core import LoreManifest
 from struts import ux, safe_get, safe_set
 from presets import BoneConfig
-
 
 class TheTheremin:
     def __init__(self, config_ref=None):
@@ -28,7 +26,7 @@ class TheTheremin:
         manifest = LoreManifest.get_instance(config_ref=self.cfg).get("PHYSICS_STRINGS") or {}
         return manifest.get("THEREMIN_LOGS", {})
 
-    def listen(self, physics: Any, governor_mode="COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
+    def listen(self, physics: dict, governor_mode: str = "COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
         """
         The core observation loop. Evaluates the physical/semantic state of the prompt
         to calculate if the conversation is flowing freely or calcifying into a rut.

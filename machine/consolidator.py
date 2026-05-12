@@ -20,34 +20,26 @@ class TheConsolidator:
 
     def _on_syntax_corrected(self, payload):
         """Compiles a failed LLM generation and its correction into a permanent Few-Shot weight."""
-        import os
-        import json
         triplet = payload.get("triplet")
         if not triplet: return
 
-        weights_path = os.path.join("lore", "syntactic_weights.json")
-        weights = []
-        if os.path.exists(weights_path):
-            try:
-                with open(weights_path, "r", encoding="utf-8") as f:
-                    weights = json.load(f)
-            except Exception:
-                pass
+        from core import LoreManifest
+        lore = LoreManifest.get_instance()
+        weights = lore.get("SYNTACTIC_WEIGHTS") or []
+
+        if not isinstance(weights, list):
+            weights = []
 
         weights.append(triplet)
-        weights = weights[-50:]  # Retain only the 50 most recent lessons to prevent bloat
+        weights = weights[-50:]
 
         try:
-            with open(weights_path, "w", encoding="utf-8") as f:
-                json.dump(weights, f, indent=4)
+            lore.inject("SYNTACTIC_WEIGHTS", weights)
+            lore.save("SYNTACTIC_WEIGHTS")
             msg = f"Syntactic Compiler accrued 1 new Few-Shot weight. Total: {len(weights)}."
             self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "CORTEX")
-
-            # Hot-reload into the live engine
-            from core import LoreManifest
-            LoreManifest.get_instance()["syntactic_weights"] = weights
-        except Exception:
-            pass
+        except Exception as e:
+            self.events.log(f"{Prisma.RED}Failed to save syntactic weights: {e}{Prisma.RST}", "ERROR")
 
     def _on_shadow_engaged(self, payload):
         """When a user explores an adjacent shadow concept, strengthen the physical link."""

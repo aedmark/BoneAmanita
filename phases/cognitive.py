@@ -48,9 +48,8 @@ class CognitionPhase(SimulationPhase):
         if phi > 0.8:
             drag_relief = (phi - 0.5) * 2.0
             ctx.physics.narrative_drag = max(0.0, ctx.physics.narrative_drag - drag_relief)
-            if self.eng.bio and self.eng.bio.mito:
-                refund = 5.0 * phi
-                self.eng.bio.mito.adjust_atp(refund, "Harmonic Resonance")
+            refund = 5.0 * phi
+            self.eng.bio.mito.adjust_atp(refund, "Harmonic Resonance")
             msg = ux("cycle_strings", "cog_resonance")
             ctx.log(f"{Prisma.CYN}{msg.format(phi=phi)}{Prisma.RST}")
         if hasattr(self.eng, "consultant"):
@@ -70,11 +69,8 @@ class CognitionPhase(SimulationPhase):
             if flashback_msg:
                 ctx.log(f"{Prisma.MAG}{flashback_msg}{Prisma.RST}")
                 shock_cost = 5.0
-                if getattr(self.eng, "bio", None) and self.eng.bio.biometrics:
-                    self.eng.bio.biometrics.stamina = max(
-                        0.0, self.eng.bio.biometrics.stamina - shock_cost)
-                if hasattr(self.eng, "stamina"):
-                    self.eng.stamina = max(0.0, self.eng.stamina - shock_cost)
+                self.eng.bio.biometrics.stamina = max(0.0, self.eng.bio.biometrics.stamina - shock_cost)
+                self.eng.stamina = max(0.0, self.eng.stamina - shock_cost)
         self.eng.mind.mem.encode(ctx.clean_words, _safe_dict(ctx.physics), "GEODESIC")
         if ctx.is_alive and ctx.clean_words:
             target_cfg = getattr(self.eng, "config", BoneConfig)
@@ -167,14 +163,14 @@ class ArbitrationPhase(SimulationPhase):
             msg = (ux("cycle_strings", "arbiter_stage_manager_cut")
                    or "[GLOBAL WORKSPACE]: Democratic Tie-Breaker active.")
             ctx.log(f"{Prisma.WHT}{msg}{Prisma.RST}")
-            if getattr(self.eng, "bio", None) and getattr(self.eng.bio, "mito", None):
-                synthesis_cost = ctx.limits.get("ARB_SYNTHESIS_COST", 10.0)
-                self.eng.bio.mito.adjust_atp(-synthesis_cost, "Democratic Tie-Breaker (Synthesis)")
-                ctx.log(
-                    f"{Prisma.MAG}✨ The Stage Manager forces a Resonance Gestalt. Massive Shared Resonance (Φ) generated. (-{synthesis_cost} ATP){Prisma.RST}")
-                if hasattr(ctx.physics, "energy"):
-                    ctx.physics.energy.resonance = min(
-                        1.0, ctx.physics.energy.resonance + 0.3)
+
+            synthesis_cost = ctx.limits.get("ARB_SYNTHESIS_COST", 10.0)
+            self.eng.bio.mito.adjust_atp(-synthesis_cost, "Democratic Tie-Breaker (Synthesis)")
+            ctx.log(
+                f"{Prisma.MAG}✨ The Stage Manager forces a Resonance Gestalt. Massive Shared Resonance (Φ) generated. (-{synthesis_cost} ATP){Prisma.RST}")
+            if hasattr(ctx.physics, "energy"):
+                ctx.physics.energy.resonance = min(
+                    1.0, ctx.physics.energy.resonance + 0.3)
             msg_silence = (ux("cycle_strings", "arbiter_silence")
                            or "The cosmos holds its breath.")
             ctx.log(f"{Prisma.GRY}{msg_silence}{Prisma.RST}")
@@ -269,9 +265,9 @@ class SoulPhase(SimulationPhase):
                         max_s = float(safe_get(target_cfg, "MAX_STAMINA", 100.0))
                         self.eng.bio.biometrics.stamina = min(max_s, self.eng.bio.biometrics.stamina + 5.0)
                     break
-        if getattr(self.eng, "gordon", None) and getattr(self.eng, "tinkerer", None):
-            if self.eng.gordon.inventory:
-                self.eng.tinkerer.audit_tool_use(ctx.physics, self.eng.gordon.inventory)
+        if hasattr(self.eng, "village") and self.eng.village.gordon and self.eng.village.tinkerer:
+            if self.eng.village.gordon.inventory:
+                self.eng.village.tinkerer.audit_tool_use(ctx.physics, self.eng.village.gordon.inventory)
         council_mandates = self._consult_council(self.eng.soul.traits)
         if council_mandates:
             ctx.council_mandates = (getattr(ctx, "council_mandates", []) + council_mandates)

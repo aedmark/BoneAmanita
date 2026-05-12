@@ -189,7 +189,11 @@ class PhysicsPacket:
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the entire state packet for database storage or UI transmission."""
-        return asdict(self)
+        data = asdict(self)
+        for k, v in self.__dict__.items():
+            if k not in data and not k.startswith("_"):
+                data[k] = v
+        return data
 
     def get(self, key, default=None):
         return getattr(self, key, default)

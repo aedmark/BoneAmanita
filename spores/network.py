@@ -68,11 +68,7 @@ class MycelialNetwork:
         """
         concept = payload.get("concept")
         if concept:
-            v = _word_to_vector(concept)
-            H = _householder(v)
-            self.subconscious.Q_n = _mat_mul(H, self.subconscious.Q_n)
-            self.subconscious.Q_n = _reorthogonalize(self.subconscious.Q_n)  # Fuller: Prevent structural collapse
-            self.subconscious.save_matrix()
+            self.subconscious.apply_scar(concept)
             if hasattr(self.events, "publish"):
                 self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": self.subconscious.Q_n})
 
@@ -134,15 +130,11 @@ class MycelialNetwork:
                 total_drag_penalty += d_pen
                 echo_count += 1
         if echo_count > 0:
-            v_targ = safe_get(physics, "energy", physics)
-            d_targ = safe_get(physics, "space", physics)
-            curr_v = float(safe_get(v_targ, "voltage", 0.0))
-            curr_d = float(safe_get(d_targ, "narrative_drag", 0.0))
             phys_cfg = safe_get(self.cfg, "PHYSICS", {})
             max_v = float(safe_get(phys_cfg, "VOLTAGE_MAX", 150.0))
             max_d = float(safe_get(phys_cfg, "DRAG_HALT", 10.0))
-            safe_set(v_targ, "voltage", min(max_v, curr_v + total_voltage_boost))
-            safe_set(d_targ, "narrative_drag", min(max_d, curr_d + total_drag_penalty))
+            physics.voltage = min(max_v, float(getattr(physics, "voltage", 0.0)) + total_voltage_boost)
+            physics.narrative_drag = min(max_d, float(getattr(physics, "narrative_drag", 0.0)) + total_drag_penalty)
             cfg = safe_get(self.cfg, "SPORES", {})
             heavy_v = float(safe_get(cfg, "ECHO_VOLTAGE_HEAVY", 4.0))
             if total_voltage_boost > heavy_v:
@@ -184,14 +176,9 @@ class MycelialNetwork:
         total_v_shift = max(-15.0, min(15.0, total_v_shift))
         total_d_shift = max(-5.0, min(5.0, total_d_shift))
         if haunted_words:
-            v_targ = safe_get(physics, "energy", physics)
-            d_targ = safe_get(physics, "space", physics)
-            curr_v = float(safe_get(v_targ, "voltage", 0.0))
-            curr_d = float(safe_get(d_targ, "narrative_drag", 0.0))
-            safe_set(v_targ, "voltage", max(0.0, curr_v + total_v_shift))
-            safe_set(d_targ, "narrative_drag", max(0.0, curr_d + total_d_shift))
-            msg = ux_format("spore_strings", "net_ghost_haunt",
-                            "The ghosts of [{words}] alter the atmosphere (V:{v:+.2f}, D:{d:+.2f}).",
+            physics.voltage = max(0.0, float(getattr(physics, "voltage", 0.0)) + total_v_shift)
+            physics.narrative_drag = max(0.0, float(getattr(physics, "narrative_drag", 0.0)) + total_d_shift)
+            msg = ux_format("spore_strings", "net_ghost_haunt", "The ghosts of [{words}] alter the atmosphere (V:{v:+.2f}, D:{d:+.2f}).",
                             words=", ".join(haunted_words).upper(), v=total_v_shift, d=total_d_shift)
             return f"{Prisma.VIOLET}{msg}{Prisma.RST}"
         return None
@@ -216,28 +203,6 @@ class MycelialNetwork:
             self.memory_core.short_term_buffer.append(engram)
             return True
         return False
-
-    def check_for_resurrection(self, input_words: List[str], voltage: float) -> Optional[str]:
-        """
-        Under moments of extreme system chaos (high voltage), there is a chance that
-        a 'ghost' memory is pulled entirely out of the Subconscious and re-instantiated
-        into the active Graph.
-        """
-        cfg = safe_get(self.cfg, "SPORES", {})
-        v_min = float(safe_get(cfg, "RESURRECTION_VOLTAGE_MIN", 60.0))
-        r_chance = float(safe_get(cfg, "RESURRECTION_CHANCE", 0.20))
-        if voltage < v_min or random.random() > r_chance:
-            return None
-        valid_ghosts = [w for w in input_words if w in self.subconscious.index]
-        if valid_ghosts:
-            word = random.choice(valid_ghosts)
-            memory = self.subconscious.dredge(word)
-            if memory:
-                self.graph[word] = {"edges": memory["edges"], "last_tick": 0}
-                vibe_str = str(self.subconscious.dredge_vibe(word)[:3]).replace(" ", "")
-                msg = ux_format("spore_strings", "net_flashback", "A memory resurfaces: {word}.", word=word.upper())
-                return f"{msg} It carries a dark matter gravity of {vibe_str}."
-        return None
 
     def bury(self, clean_words: List[str], tick: int, resonance=5.0, learning_mod=1.0, desperation_level=0.0, ) -> \
     Tuple[Optional[str], List[str]]:
@@ -351,7 +316,7 @@ class MycelialNetwork:
                       "PHYSICS.WEIGHT_HEAVY", "PHYSICS.WEIGHT_KINETIC", "PHYSICS.VOLTAGE_FLOOR",
                       "PHYSICS.VOLTAGE_MAX", "BIO.CORTEX_SENSITIVITY", "BIO.ROS_CRITICAL",
                       "BIO.DECAY_RATE", "BIO.REWARD_MEDIUM", "METABOLISM.PHOTOSYNTHESIS_GAIN",
-                      "METABOLISM.ROS_GENERATION_FACTOR", "COUNCIL.FOOTNOTE_CHANCE",
+                      "METABOLISM.ROS_GENERATION_FACTOR",
                       "COUNCIL.MANIC_VOLTAGE_TRIGGER", "GRAVITY_WELL_THRESHOLD"}
 
     def _apply_epigenetics(self, data):
@@ -456,7 +421,6 @@ class MycelialNetwork:
              joy_history: List[Dict[str, Any]], mitochondria_traits=None, antibodies=None, soul_data=None,
              continuity=None, world_atlas=None, village_data=None, ):
         """
-        The Encapsulation Event (Death).
         Compiles the active metabolic state, the semantic graph, and the epigenetic
         changes into a static JSON Spore for future reincarnation or crossover.
         """
@@ -473,17 +437,13 @@ class MycelialNetwork:
             valid_edges = {t: round(w, 2)
                            for t, w in data.get("edges", {}).items() if w > 1.0}
             if valid_edges or data.get("is_diamond", False):
-                core_graph[k] = {
-                    "edges": valid_edges,
-                    "last_tick": 0,
-                    "strata": data.get("strata"),
-                    "is_diamond": data.get("is_diamond", False)
-                }
+                core_graph[k] = {"edges": valid_edges, "last_tick": 0, "strata": data.get("strata"),
+                                 "is_diamond": data.get("is_diamond", False)}
         future_seed_q = self._generate_future_seed(temp_health=health, trauma_vec=final_vector)
         seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in self.seeds if not s.bloomed]
         if not any(s["q"] == future_seed_q for s in seed_list):
             seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
-        data = {"genome": "BA_01991", "session_id": self.session_id, "parent_id": self.session_id,
+        data = {"genome": "BA_02001", "session_id": self.session_id, "parent_id": self.session_id,
                 "meta": {"timestamp": time.time(), "final_health": health, "final_stamina": stamina, },
                 "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
                 "core_graph": core_graph, "mutations": mutations or {},

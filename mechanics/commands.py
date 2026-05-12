@@ -145,8 +145,7 @@ class ResourceTax:
     """
     The Metabolic Tollkeeper (Meadows).
     A negative feedback loop. Prevents the user from spamming high-computation
-    commands (like /journal or /podcast) by charging ATP and Stamina.
-    If the system is starving, it outright refuses to act.
+    commands by charging ATP and Stamina. If the system is starving, it outright refuses to act.
     """
 
     def __init__(self, state: CommandStateInterface):
@@ -215,7 +214,6 @@ class CommandProcessor:
         "layer": "Manipulates the Reality Stack depth",
         "inject": "Forces payload into the EventBus",
         "trauma": "DEV: Spikes trauma and drops health to test The Therapist.",
-        "podcast": "Assembles the Parliament to generate a podcast script",
         "journal": "Generates a narrative diary entry of the session so far",
         "shuffle": "Explicit intent [ !s ]: The Jester's Gambit. Breaks loops, resets drag, lateral shift."
     }
@@ -601,7 +599,7 @@ class CommandProcessor:
     def _execute_substrate_write(self, file_name: str, content: str):
         """
         Internal Utility.
-        Writes generated content (like journals or podcasts) to the disk.
+        Writes generated content to the disk.
         Delegates the actual IO to the `TheSubstrate` module and deducts stamina.
         """
         substrate = getattr(self.interface.eng, "substrate", None)
@@ -615,36 +613,6 @@ class CommandProcessor:
         self.interface.modify_resource("stamina", -cost)
         for log in write_logs:
             self.interface.log(log)
-
-    def _cmd_podcast(self, parts):
-        """Triggers the LLM to generate a massive, multi-archetype debate, then writes it to disk."""
-        from struts import safe_get
-        if len(parts) < 2:
-            self.interface.log("Usage: /podcast <topic>")
-            return True
-        cost = float(safe_get(self.cmd_cfg, "COST_PODCAST", 20.0))
-        if not self.tax.levy("PODCAST", {"atp": cost}):
-            return True
-        topic = " ".join(parts[1:])
-        self.interface.log(f"{self.P.CYN}🎙️ Assembling the Parliament for topic: '{topic}'...{self.P.RST}")
-        cortex = getattr(self.interface.eng, "cortex", None)
-        llm = getattr(cortex, "llm", None)
-        village = getattr(self.interface.eng, "village", None)
-        council = getattr(village, "council", None)
-        if not llm or not council or not hasattr(council, "host_podcast"):
-            self.interface.log(
-                f"{self.P.RED}Error: Cortex LLM or Council 'host_podcast' method unavailable.{self.P.RST}")
-            return True
-        try:
-            script = council.host_podcast(topic, llm)
-            self.interface.log(f"\n{script}\n")
-            clean_chars = [c if c.isalnum() else "_" for c in topic]
-            safe_topic = "".join(clean_chars)[:25].strip("_")
-            file_name = f"podcast_{safe_topic}_{int(time.time())}.txt"
-            self._execute_substrate_write(file_name, script)
-        except Exception as e:
-            self.interface.log(f"{self.P.RED}Podcast generation failed: {e}{self.P.RST}")
-        return True
 
     def _cmd_journal(self, _parts):
         """Triggers the LLM to summarize the recent dialogue buffer into a surreal diary entry."""
