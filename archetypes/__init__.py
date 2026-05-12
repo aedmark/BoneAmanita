@@ -1,11 +1,10 @@
 """archetypes/__init__.py"""
 
-from .council import TheFootnote, TheVillageCouncil, CouncilChamber, TheRedTeam, TheSlashCouncil, TheOverseerCouncil
+from .council import TheVillageCouncil, CouncilChamber, TheRedTeam, TheSlashCouncil, TheOverseerCouncil
 from .symbiosis import SymbiontVoice
 from .village import DeathGen, TheTinkerer, TheTherapist, ParadoxSeed, GeniusLoci, TheCartographer, TownHall, TheGraveDigger
 
 __all__ = [
-    "TheFootnote",
     "TheVillageCouncil",
     "CouncilChamber",
     "TheRedTeam",

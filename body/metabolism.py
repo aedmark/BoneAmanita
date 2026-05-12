@@ -80,7 +80,7 @@ class MitochondrialForge:
         if self.events and (msg := ux("mito_forge", "anaerobic_bypass")):
             self.events.log(f"{Prisma.MAG}{msg.format(cost=raw_cost)}{Prisma.RST}", "BIO_WARN")
         return MetabolicReceipt(
-            base_cost=raw_cost, drag_tax=0.0, inefficiency_tax=0.0, total_burn=health_burn,
+            base_cost=raw_cost, drag_tax=0.0, inefficiency_tax=0.0, total_burn=20.0,
             waste_generated=2.0, status="ANAEROBIC", symptom="LACTATE_BUILDUP",
         )
 
@@ -126,12 +126,16 @@ class MitochondrialForge:
                     self.events.log(f"{Prisma.VIOLET}{icon}{msg}{Prisma.RST}", "BIO_CRIT")
                 self.state.retrograde_signal = "HIBERNATING"
         efficiency = max(0.35, self.state.membrane_potential)
-        raw_cost = ((base_demand + cognitive_load_tax) * modifier) / efficiency
+        ideal_cost = (base_demand + cognitive_load_tax) * modifier
+        raw_cost = ideal_cost / efficiency
+        inefficiency_tax = raw_cost - ideal_cost
+
         if raw_cost > self.ANAEROBIC_THRESHOLD:
             return self._trigger_anaerobic_bypass(raw_cost)
         if raw_cost > self.MAX_SAFE_BURN:
             excess = raw_cost - self.MAX_SAFE_BURN
             raw_cost = self.MAX_SAFE_BURN
+            inefficiency_tax = max(0.0, raw_cost - ideal_cost)
             if self.events:
                 msg = ux("mito_forge", "surge_protector")
                 if msg:
@@ -166,7 +170,7 @@ class MitochondrialForge:
                 self.events.publish("SYSTEM_STARVING", {})
         return MetabolicReceipt(
             base_cost=round(base_demand, 2), drag_tax=round(cognitive_load_tax, 2),
-            inefficiency_tax=round(total_metabolic_cost - (base_demand + cognitive_load_tax), 2),
+            inefficiency_tax=round(inefficiency_tax, 2),
             total_burn=round(total_metabolic_cost, 2), waste_generated=round(waste_generated, 2),
             status=status, symptom=self.state.retrograde_signal,
         )
@@ -326,18 +330,27 @@ class DigestiveTrack:
         min_len = safe_get(cfg, "MIN_WORD_LENGTH", 4)
         comp_len = safe_get(cfg, "COMPLEX_WORD_LENGTH", 7)
         antigen_set = self.lex.get("antigen") or set()
-        valid_words = {w: c for w, c in word_counts.items() if len(w) >= min_len or w in antigen_set}
-        hits = sum(c for w, c in valid_words.items() if w not in antigen_set)
-        if not valid_words:
-            return 0.0, [], 0.0, hits
         kinetic_set = frozenset((self.lex.get("kinetic") or set()) | (self.lex.get("explosive") or set()))
+
         atp_yield = 0.0
         enzymes = []
         cliche_tax = 0.0
-        for word, count in valid_words.items():
-            if word in antigen_set:
+        hits = 0
+
+        for word, count in word_counts.items():
+            is_antigen = word in antigen_set
+
+            # Filter out short, non-antigen words immediately
+            if not is_antigen and len(word) < min_len:
+                continue
+
+            if is_antigen:
                 cliche_tax += self.CLICHE_TAX_RATE * count
                 continue
+
+            hits += count
+            val = self.COMPLEX_WORD_BONUS if len(word) > comp_len else self.BASE_WORD_VALUE
+            log_mult = 1.0 + math.log(count)
             val = self.COMPLEX_WORD_BONUS if len(word) > comp_len else self.BASE_WORD_VALUE
             log_mult = 1.0 + math.log(count)
             if word in kinetic_set:

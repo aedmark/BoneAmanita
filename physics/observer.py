@@ -47,12 +47,11 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any, config_re
     from core import LoreManifest
     t_cfg = config_ref or BoneConfig
     fb = physics_packet.snapshot()
-    from struts import safe_get
     deep_cfg = safe_get(t_cfg, "PHYSICS_DEEP", {})
 
     def apply_delta(key: str, amount: float):
-        current_val = getattr(fb, key, 0.0)
-        setattr(fb, key, current_val + amount)
+        # Trigger root-level setattr to hit alias bindings
+        setattr(fb, key, getattr(fb, key, 0.0) + amount)
 
     def get_deep_cfg(key: str, default: float):
         return float(safe_get(deep_cfg, key, default))
@@ -60,17 +59,19 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any, config_re
     tone_effects = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TONE_EFFECTS") or {}
     for key, delta in tone_effects.get(qualia.tone, {}).items():
         apply_delta(key, delta)
+
     ss = qualia.somatic_sensation
     if "Gut Tightening" in ss: apply_delta("narrative_drag", get_deep_cfg("SOMATIC_GUT_DRAG", 0.7))
     if "Electric Vibration" in ss: apply_delta("voltage", get_deep_cfg("SOMATIC_ELEC_VOLT", 0.8))
     if "Golden Glow" in ss:
         apply_delta("valence", get_deep_cfg("SOMATIC_GLOW_VALENCE", 0.5))
         apply_delta("psi", get_deep_cfg("SOMATIC_GLOW_PSI", 0.2))
-    fb.energy.voltage = max(0.0, min(fb.energy.voltage, 150.0))
+
+    fb.voltage = max(0.0, min(fb.voltage, 150.0))
     phys_cfg = safe_get(t_cfg, "PHYSICS", {})
     drag_floor = float(safe_get(phys_cfg, "DRAG_FLOOR", 1.0))
     drag_halt = float(safe_get(phys_cfg, "DRAG_HALT", 10.0))
-    fb.space.narrative_drag = max(drag_floor, min(fb.space.narrative_drag, drag_halt))
+    fb.narrative_drag = max(drag_floor, min(fb.narrative_drag, drag_halt))
     return fb
 
 
@@ -102,7 +103,6 @@ class QuantumObserver:
         The core observation loop. Ingests text, calculates its semantic mass, forces, and entropy,
         and constructs the master PhysicsPacket that governs the LLM's upcoming generation phase.
         """
-        from struts import safe_set
         clean_words = self.lex.clean(text)
         counts = self._tally_categories(clean_words)
         geo = GeodesicEngine.collapse_wavefunction(clean_words, counts, self.cfg)
@@ -173,15 +173,17 @@ class QuantumObserver:
             sigma=sigma_synergy, eta=eta_humanity, theta=geo.coherence, upsilon=upsilon_integrity,
             mu=mu_friction, m_a=malignancy, i_c=immune_comp, cf_expect=cf_expect, novelty=novelty
         )
-        safe_set(energy, "viability_potential", viability)
-        safe_set(energy, "coherence_debt", current_debt)
-        safe_set(energy, "delta_atp", delta_atp)
-        safe_set(energy, "delta_ros", delta_ros)
         matter = MaterialState(clean_words=clean_words, raw_text=text, counts=counts, antigens=counts.get("antigen", 0),
                                vector=geo.dimensions, truth_ratio=0.5)
         space = SpatialState(narrative_drag=cd_drag, zone=self._determine_zone(geo.dimensions),
                              flow_state=self._determine_flow(avg_voltage, geo.coherence, self.cfg))
-        self.last_physics_packet = PhysicsPacket(energy=energy, matter=matter, space=space)
+
+        # Attach dynamic fields directly to the PhysicsPacket so they survive to_dict() serialization
+        self.last_physics_packet = PhysicsPacket(
+            energy=energy, matter=matter, space=space,
+            viability_potential=viability, coherence_debt=current_debt,
+            delta_atp=delta_atp, delta_ros=delta_ros
+        )
         if hasattr(self.events, "publish"):
             self.events.publish("PHYSICS_CALCULATED", self.last_physics_packet.to_dict())
         return {"physics": self.last_physics_packet, "clean_words": clean_words}

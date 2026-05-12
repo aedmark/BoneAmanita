@@ -8,10 +8,16 @@ It does NOT execute LLM calls directly; it prepares the biological soil for them
 import math
 import random
 import re
+import hashlib
 from collections import deque
 from dataclasses import dataclass
 from typing import Dict, Any, Tuple, Optional
 from brain.ann import MemoryConsolidator
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
 from constants import Prisma
 from struts import ux, safe_get
 from presets import BoneConfig
@@ -180,6 +186,9 @@ class NoeticLoop:
             if len(unique_words) >= 2:
                 w1, w2 = random.sample(unique_words, 2)
                 self._force_link(self.mind.mem.graph, w1, w2, self.cfg)
+                if hasattr(self.bio, "mito"):
+                    self.bio.mito.adjust_atp(-1.0, "Spontaneous Semantic Link")
+
         current_lens = str(safe_get(soul_ref, "archetype", "OBSERVER")).upper() if soul_ref else "OBSERVER"
         current_role = f"The {current_lens.title().replace('_', ' ')}"
         msg_cog = ux("brain_strings",
@@ -240,7 +249,7 @@ class DreamEngine:
                 shift["voltage"] = 100.0 # Force thermal runaway
                 fatal_msg = f"The system was too starved to enter REM. A fatal fever dream triggers an Apoptotic cascade: {death_hallucination}"
                 if self.events:
-                    self.events.log(f"{{Prisma.RED}}TERMINAL SLEEP FAILURE: {fatal_msg}{{Prisma.RST}}", "CRIT")
+                    self.events.log(f"{Prisma.RED}TERMINAL SLEEP FAILURE: {fatal_msg}{Prisma.RST}", "CRIT")
                 return fatal_msg, shift
         if self.eng and getattr(self.eng, "substrate", None) and self.eng.substrate.pending_writes:
             raw_payloads = [data for path, data in self.eng.substrate.pending_writes if "memory_queue" in path]
@@ -248,13 +257,16 @@ class DreamEngine:
             shift["atp_drain"] = s_cost
             if raw_payloads:
                 from spores import _word_to_vector
-                import hashlib
-                import numpy as np
                 vectors, metadata = [], []
                 for text in raw_payloads:
                     vec = _word_to_vector(text[:50])
                     vectors.append(vec)
-                    v_hash = hashlib.md5(np.array(vec, dtype=np.float32).tobytes()).hexdigest()[:8]
+
+                    if np is not None:
+                        v_hash = hashlib.md5(np.array(vec, dtype=np.float32).tobytes()).hexdigest()[:8]
+                    else:
+                        v_hash = hashlib.md5(str(vec).encode('utf-8')).hexdigest()[:8]
+
                     metadata.append({
                         "vector_hash": v_hash,
                         "raw_verbatim_text": text.replace("|||NEWLINE|||", "\n"),
@@ -263,7 +275,7 @@ class DreamEngine:
                 self.mem.cortex.add_memories(vectors, metadata)
                 s_logs.append(f"{len(raw_payloads)} Bedrock Nodes Indexed")
             dream_text = f"[{' | '.join(s_logs)} | ATP: -{s_cost:.1f} | Silent Logging Complete]"
-            if self.events: self.events.log(f"{{Prisma.MAG}}✨ [REM CYCLE]: {dream_text}{{Prisma.RST}}", "SYS")
+            if self.events: self.events.log(f"{Prisma.MAG}✨ [REM CYCLE]: {dream_text}{Prisma.RST}", "SYS")
             return dream_text, shift
         consolidator = MemoryConsolidator(self.mem.hippocampus, self.mem.cortex, self.events)
         nodes_moved, atp_cost = consolidator.trigger_rem_consolidation(available_atp)
@@ -275,7 +287,7 @@ class DreamEngine:
                 dream_text = f"The system enters Deep REM. {nodes_moved} synaptic structures dissolve from the active cache and permanently crystallize into the deep Cerebral Cortex."
                 if self.events:
                     self.events.log(
-                        f"{{Prisma.MAG}}✨ [REM CYCLE]: Synaptic Consolidation complete. {nodes_moved} nodes written to deep index. (-{atp_cost:.1f} ATP){{Prisma.RST}}",
+                        f"{Prisma.MAG}✨ [REM CYCLE]: Synaptic Consolidation complete. {nodes_moved} nodes written to deep index. (-{atp_cost:.1f} ATP){Prisma.RST}",
                         "SYS", )
         if self.dspy_critic and self.dspy_critic.enabled:
             if self.trauma_buffer:
@@ -296,8 +308,8 @@ class DreamEngine:
                         threshold = safe_get(safe_get(self.cfg, "CORTEX", {}), "EPIGENETIC_PRUNE_THRESHOLD", 12)
                         if len(dirs) > threshold:
                             compressed = getattr(self.dspy_critic, "compress_prompts", lambda x: None)(dirs)
-                            if compressed:
-                                disk_prompts[active_mode]["directives"] = compressed
+                        if compressed:
+                            disk_prompts[active_mode]["directives"] = [compressed] if isinstance(compressed, str) else compressed
                             if self.eng:
                                 self.eng.prompt_library = disk_prompts
                             self.lore.inject("SYSTEM_PROMPTS", disk_prompts)

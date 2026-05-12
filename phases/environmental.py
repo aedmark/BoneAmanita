@@ -71,7 +71,7 @@ class NavigationPhase(SimulationPhase):
                     ctx.log(
                         f"{Prisma.GRY}{msg.format(source=delta.source, operator=delta.operator, value=delta.value)}{Prisma.RST}")
         clean_words_safe = ctx.clean_words if ctx.clean_words else ["boot_sequence"]
-        orbit_state, drag_pen, orbit_msg = self.eng.cosmic.analyze_orbit(self.eng.mind.mem, clean_words_safe)
+        orbit_state, drag_pen, orbit_msg = self.eng.phys.dynamics.analyze_orbit(self.eng.mind.mem, clean_words_safe)
         if orbit_msg:
             ctx.log(orbit_msg)
         physics.narrative_drag += drag_pen
@@ -207,7 +207,6 @@ class ObservationPhase(SimulationPhase):
                 self.eng.bio.mito.adjust_atp(
                     -atp_cost, "Carrier Mode (System lent stamina to User)")
         self.eng.phys.dynamics.commit(ctx.physics.voltage)
-        self.eng.tick_count += 1
         return ctx
 
 class SanctuaryPhase(SimulationPhase):

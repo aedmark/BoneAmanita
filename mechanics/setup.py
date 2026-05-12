@@ -55,8 +55,8 @@ class ConfigWizard:
             os.rename(ConfigWizard.CONFIG_FILE, backup_name)
             msg = ux("main_strings", "config_backup")
             print(f"{Prisma.YEL}{msg.format(backup_name=backup_name)}{Prisma.RST}")
-        except:
-            pass
+        except Exception as e:
+            print(f"{Prisma.YEL}[WIZARD] Non-fatal issue archiving config: {e}{Prisma.RST}")
 
     @staticmethod
     def _run_setup():

@@ -159,20 +159,20 @@ class BoneArchitect:
 
         embryo.soul_legacy = soul_legacy or {}
         embryo.continuity = continuity
-        recovered_atlas = atlas or {}
-        if recovered_atlas and getattr(embryo.physics, "nav", None):
+        if atlas and embryo.physics.nav:
             try:
-                embryo.physics.nav.load_state(recovered_atlas)
+                embryo.physics.nav.load_state(atlas)
                 msg = ux("machine_strings", "arch_map_restored") or "[ARCHITECT]: World Map restored."
                 events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS")
             except Exception as e:
                 msg = ux("machine_strings", "arch_map_corrupt") or "[ARCHITECT]: Atlas corrupt, discarding map: {e}"
                 events.log(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}", "WARN")
-        if embryo.bio and embryo.bio.mito and embryo.bio.mito.state.atp_pool <= 0.0:
-            target_cfg = getattr(embryo.bio, "config_ref", None) or BoneConfig
-            cfg = safe_get(target_cfg, "METABOLISM", {})
+
+        if embryo.bio.mito.state.atp_pool <= 0.0:
+            cfg = safe_get(embryo.bio.config_ref, "METABOLISM", {})
             genesis_val = float(safe_get(cfg, "GENESIS_VOLTAGE", 100.0))
             msg = ux("machine_strings", "arch_cold_boot")
             events.log((msg.format(genesis_val=genesis_val) if msg else f"Cold Boot: {genesis_val} ATP"), "SYS")
             embryo.bio.mito.adjust_atp(genesis_val, reason="GENESIS")
+
         return embryo

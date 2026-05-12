@@ -144,8 +144,6 @@ class CycleSimulator:
         msg_crash = ux("cycle_strings", "sim_crash_header")
         formatted_trace = traceback.format_exc()
         self.eng.events.log(f"{Prisma.RED}{msg_crash.format(phase_name=phase_name)}\n{formatted_trace}{Prisma.RST}", "CRIT")
-        if phase_name == "COGNITION":
-            self.eng.events.log(f"CORTEX COLLAPSE: {error} (See trace above)", "CRIT")
         ctx.logs.append("CRITICAL FAILURE")
         narrative = LoreManifest.get_instance().get("narrative_data") or {}
         cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["System Failure."])
@@ -155,7 +153,6 @@ class CycleSimulator:
         comp = _CRASH_COMPONENT_MAP.get(phase_name, "SIMULATION")
         self.eng.system_health.report_failure(comp, error)
         # Native deterministic graph freezing based on Nelson Spence (Project Navi).
-        last_packet = getattr(self.eng.observer, "last_physics_packet", None)
         if comp == "PHYSICS" or not getattr(ctx, "physics", None):
             ctx.physics = PanicRoom.get_safe_physics()
             try:
@@ -191,7 +188,7 @@ class GeodesicOrchestrator:
 
         # Phase 1: Daemonization State
         self.input_queue = queue.Queue()
-        self.output_buffer = None
+        self.output_queue = queue.Queue()
         self.is_running = False
         self.daemon_thread = None
 
@@ -225,7 +222,9 @@ class GeodesicOrchestrator:
                 if self.engine_state == "REM":
                     self.engine_state = "WAKE"
                     self.eng.events.log(f"{Prisma.VIOLET}Engine waking from REM sleep...{Prisma.RST}", "SYS")
+                    self.eng.events.publish("SYSTEM_WAKE", {"timestamp": current_time})
 
+                # Ensure Cognition is active for non-system turns
                 snapshot = self.run_turn(user_message, is_system)
 
                 # Phase 3: Inject the Dream Log on Wake
@@ -233,7 +232,9 @@ class GeodesicOrchestrator:
                     dream_summary = "\n".join(self.dream_log[-5:]) # Keep only the deepest 5 dreams
                     snapshot["ui"] = f"\n{Prisma.MAG}☁️ While you were gone, the system dreamt of:\n{dream_summary}{Prisma.RST}\n{snapshot['ui']}"
                     self.dream_log.clear()
-                self.output_buffer = snapshot  # Lock-free snapshot handoff to the UI
+
+                # Push the resolved snapshot to the blocking queue
+                self.output_queue.put(snapshot)
                 self.input_queue.task_done()
 
             except queue.Empty:
@@ -241,21 +242,26 @@ class GeodesicOrchestrator:
                 time_since_last = current_time - self.last_interaction_time
 
                 if self.engine_state == "WAKE":
-                    if time_since_last > 300:  # 5 minutes (300 seconds) threshold
+                    rem_threshold_seconds = float(getattr(self.eng.config, "REM_IDLE_THRESHOLD", 300.0))
+                    if time_since_last > rem_threshold_seconds:
                         self.engine_state = "REM"
-                        self.eng.events.log(f"{Prisma.VIOLET}Idle threshold crossed. Engine transitioning to REM sleep...{Prisma.RST}", "SYS")
-
-                        # Note: In a fully wired EventBus, we would also trigger a SYSTEM_SLEEP event here
+                        self.eng.events.log(
+                            f"{Prisma.VIOLET}Idle threshold ({rem_threshold_seconds}s) crossed. Engine transitioning to REM sleep...{Prisma.RST}",
+                            "SYS")
+                        self.eng.events.publish("SYSTEM_SLEEP", {"idle_duration": time_since_last})
 
                 elif self.engine_state == "REM":
                     # Phase 3: The Dream Engine (Asynchronous Metabolism)
-                    time.sleep(60.0) # Slow loop to 1 tick per 60 seconds to save CPU
+                    last_rem = getattr(self, "last_rem_tick", 0.0)
+                    if current_time - last_rem < 60.0:
+                        continue
+                    self.last_rem_tick = current_time
 
                     # 1. Metabolic Burn & Stress Decay
                     if hasattr(self.eng, "drain_atp"):
                         self.eng.drain_atp(0.5)
-                    if getattr(self.eng, "_mito_state", None):
-                        self.eng._mito_state.ros_buildup = max(0.0, self.eng._mito_state.ros_buildup - 0.1)
+                    if getattr(self.eng, "bio", None) and getattr(self.eng.bio, "mito", None):
+                        self.eng.bio.mito.state.ros_buildup = max(0.0, self.eng.bio.mito.state.ros_buildup - 0.1)
 
                     # 2. Memory Defragmentation
                     if hasattr(self.eng, "consolidator") and hasattr(self.eng.consolidator, "trigger_autophagy"):
@@ -285,13 +291,19 @@ class GeodesicOrchestrator:
                 self.eng.events.log(f"Daemon Engine Crash: {e}", "CRIT")
 
                 # Concurrency Fail-Safe: Unblock the main thread if the cycle crashed
-                if self.output_buffer is None:
-                    self.output_buffer = {
-                        "type": "CRASH",
-                        "ui": f"\n{Prisma.RED}CRITICAL DAEMON CRASH: {e}{Prisma.RST}",
-                        "logs": [str(e)],
-                        "metrics": getattr(self.eng, "get_metrics", lambda: {})()
-                    }
+                self.output_queue.put({
+                    "type": "CRASH",
+                    "ui": f"\n{Prisma.RED}CRITICAL DAEMON CRASH: {e}{Prisma.RST}",
+                    "logs": [str(e)],
+                    "metrics": getattr(self.eng, "get_metrics", lambda: {})()
+                })
+
+                # Acknowledge the task only if we are sure an item was in-flight
+                if self.engine_state == "WAKE" and getattr(self, "last_interaction_time", 0) > 0:
+                    try:
+                        self.input_queue.task_done()
+                    except ValueError:
+                        pass # Ignore if task_done() was already called or not needed
 
                 time.sleep(1.0) # Prevent tight crash loops
 
@@ -414,7 +426,7 @@ class GeodesicOrchestrator:
             return
         lattice = self.eng.shared_lattice
         mem = self.eng.mind.mem
-        cortex = mem.cortex
+        cortex = getattr(self.eng, "cortex", None)
 
         def _bg_wls_check(msg_str):
             try:
@@ -426,11 +438,12 @@ class GeodesicOrchestrator:
                         self.eng.events.log(f"{Prisma.CYN}[MNEMONIC] High Right-Brain Coherence (\u03a9r={lattice.shared.omega_r:.2f}). Semantic topology is rich. Lowering lateral ATP costs.{Prisma.RST}", "SYS")
             except Exception as e:
                 self.eng.events.log(f"Async WLS Heuristic Error: {e}", "DEBUG")
-        if cortex and hasattr(cortex, "get_local_mass_radius"):
-            if clean_message != "(Waiting)" and self.eng.tick_count % 3 == 0:
-                self._async_pool.submit(_bg_wls_check, clean_message)
+
         if clean_message != "(Waiting)":
+            if cortex and hasattr(cortex, "get_local_mass_radius") and self.eng.tick_count % 3 == 0:
+                self._async_pool.submit(_bg_wls_check, clean_message)
             return
+
         atp_level = float(mito_state.atp_pool)
         delta_level = float(self.eng.shared_lattice.shared.delta)
         phys_dict = _safe_dict(ctx.physics)
@@ -470,6 +483,15 @@ class GeodesicOrchestrator:
         self._evaluate_systemic_feedback(clean_message, ctx)
         snapshot = self.reporter.render_snapshot(ctx)
         self._hydrate_snapshot_metadata(snapshot, ctx)
+
+        # =====================================================================
+        # [CRITICAL FAIL-SAFE] THE CORTEX UMBILICAL (Synchronous fallback)
+        # =====================================================================
+        if not is_system and not snapshot.get("ui") and snapshot.get("type", "SNAPSHOT") == "SNAPSHOT":
+            self.eng.events.log("Cognition bypass detected. Force-syncing Cortex umbilical...", "WARN")
+            cognition_result = self.eng.cortex.process(user_message, snapshot.get("physics", {}))
+            snapshot["ui"] = cognition_result.get("ui", "")
+
         if "ui" in snapshot:
             self.symbiosis.monitor_host(time.time() - ctx.timestamp, snapshot["ui"], len(user_message))
         if "mind" in snapshot:
@@ -491,10 +513,6 @@ class GeodesicOrchestrator:
 
     def _hydrate_snapshot_metadata(self, snapshot: Dict, ctx: CycleContext):
         phys_dict = _safe_dict(ctx.physics)
-        if hasattr(ctx.physics, "__dict__"):
-            for k, v in vars(ctx.physics).items():
-                if k not in phys_dict and not k.startswith("_"):
-                    phys_dict[k] = v
 
         snapshot.update({"trace_id": ctx.trace_id, "is_alive": True, "physics": phys_dict,
                          "bio": _safe_dict(ctx.bio_result), "mind": _safe_dict(ctx.mind_state),

@@ -15,37 +15,6 @@ from presets import BoneConfig
 from archetypes.symbiosis import get_symbiont
 from constants import Prisma
 
-
-class TheFootnote:
-    """
-    A narrative flavor engine. Occasionally appends academic or systemic footnotes
-    to logs, mimicking a deeply contextual, self-referential machine consciousness.
-    """
-
-    def __init__(self):
-        lore = LoreManifest.get_instance()
-        data = lore.get("FOOTNOTES") or {}
-        self.footnotes = data.get("DEFAULT", ["* [Citation Needed]"])
-        self.context_map = data.get("CONTEXT_MAP", {})
-
-    def commentary(self, log_text: str) -> str:
-        """
-        Rolls against a baseline probability to append a footnote. If triggered,
-        it searches the log for contextual keywords to append a relevant note,
-        or falls back to a generic default.
-        """
-        chance = float(safe_get(safe_get(BoneConfig, "COUNCIL", {}), "FOOTNOTE_CHANCE", 0.1))
-        if random.random() > chance:
-            return log_text
-        text_lower = log_text.lower()
-        candidates = next(
-            (notes for trig, notes in self.context_map.items() if trig in text_lower),
-            self.footnotes
-        )
-        note = random.choice(candidates)
-        return f"{log_text}{Prisma.RST} {Prisma.GRY}{note}{Prisma.RST}"
-
-
 class TheVillageCouncil:
     """
     Evaluates the current physical state of the simulation against the behavioral
@@ -117,8 +86,7 @@ class TheVillageCouncil:
 
 class CouncilChamber:
     """
-    The master orchestrator. Calls all sub-councils, manages the paradox engine,
-    evaluates inter-archetype synergy, and hosts LLM-driven internal podcasts.
+    The master orchestrator. Calls all sub-councils, manages the paradox engine, evaluates inter-archetype synergy.
     """
     _BASE_PANTHEON = {
         "GORDON (The Superintendent)": "grounded, strict, literal, and weary.",
@@ -145,7 +113,6 @@ class CouncilChamber:
         self.eng = engine_ref
         self.voices = []
         self.village = TheVillageCouncil()
-        self.footnote = TheFootnote()
         self.slash_council = TheSlashCouncil()
         self.overseer_council = TheOverseerCouncil(engine_ref)
         self.red_team = TheRedTeam()
@@ -169,15 +136,6 @@ class CouncilChamber:
                 if not topic:
                     topic = "The current structural integrity of the system."
                 transcript.append(f"{Prisma.CYN}🎙️ The Parliament convenes to debate: '{topic}'...{Prisma.RST}")
-                try:
-                    script = self.host_podcast(topic, llm)
-                    transcript.append(f"\n{script}\n")
-                    adjustments["stamina_cost"] = 15.0
-                except Exception:
-                    msg = (ux("council_strings", "podcast_failed")
-                           or "The Parliament is too exhausted to sustain the simulation. We will sit in silence instead.")
-                    transcript.append(f"{Prisma.RED}[SYSTEM FATIGUE]: {msg}{Prisma.RST}")
-                    adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + 2.0
         beta = float(safe_get(physics_packet, "beta_index", 0.0))
         phi = float(safe_get(physics_packet, "resonance", 0.0))
         voltage = float(safe_get(physics_packet, "voltage", 0.0))
@@ -203,7 +161,7 @@ class CouncilChamber:
         for auditor in [self.slash_council, self.overseer_council, self.red_team]:
             hit, a_logs, a_corr, a_man = auditor.audit(text, physics_packet)
             if hit:
-                transcript.extend(self.footnote.commentary(log) for log in a_logs)
+                transcript.extend(a_logs)
                 adjustments.update(a_corr)
                 mandates.extend(a_man)
         village_logs = self.village.audit(physics_packet, _bio_result)
@@ -225,10 +183,7 @@ class CouncilChamber:
                 mandates.append({"action": "SYNERGY_FIRED", "value": syn.get("name", chord_key)})
                 synergy_fired = True
                 break
-        if synergy_fired:
-            transcript.extend(
-                self.footnote.commentary(f"{Prisma.GRY}{Prisma.strip(vlog)}{Prisma.RST}") for vlog in village_logs)
-        elif len(village_logs) > 2:
+        if len(village_logs) > 2:
             msg_t = ux("council_strings", "stage_manager_tension")
             msg_s = ux("council_strings", "stage_manager_silence")
             transcript.append(f"{Prisma.WHT}{msg_t}{Prisma.RST}")
@@ -236,11 +191,6 @@ class CouncilChamber:
             cfg = safe_get(BoneConfig, "COUNCIL", {})
             tension_drag = float(safe_get(cfg, "TENSION_DRAG_PENALTY", 3.0))
             adjustments["narrative_drag"] = adjustments.get("narrative_drag", 0) + tension_drag
-            for vlog in village_logs[:2]:
-                transcript.append(self.footnote.commentary(vlog))
-        else:
-            for vlog in village_logs:
-                transcript.append(self.footnote.commentary(vlog))
         votes = {"YEA": 0, "NAY": 0}
         cfg = safe_get(BoneConfig, "COUNCIL", {})
         for voice in self.voices:
@@ -273,51 +223,8 @@ class CouncilChamber:
                 adjustments[k] = adjustments.get(k, 0) + v
             mandates.append({"type": "TIE_BREAKER",
                              "directive": "Synthesize the conflicting perspectives. Do not choose one side over the other."})
-        transcript.append(self.footnote.commentary(final_log))
+        transcript.append(final_log)
         return transcript, adjustments, mandates
-
-    def host_podcast(self, topic: str, llm: Any) -> str:
-        """
-        Dynamically spins up 4 distinct LLM perspectives.
-        Uses concurrent threads to generate a Thesis, Antithesis, and Lateral
-        argument simultaneously, then feeds all 3 to the Stage Manager for Synthesis.
-        """
-        pantheon = dict(self._BASE_PANTHEON)
-        if hasattr(self, "slash_council") and self.slash_council.active:
-            pantheon.update(self._SLASH_PANTHEON)
-        selected_voices = random.sample(list(pantheon.keys()), 3)
-        v1_name, v2_name, v3_name = selected_voices
-
-        def _prompt(name, instruction):
-            return (f"SYSTEM_INSTRUCTION: You are {name}. Your persona is {pantheon[name]}\n"
-                    f"TASK: The user has presented this topic: '{topic}'.\n{instruction} "
-                    "Do not use UI tags. CRITICAL: Output ONLY the raw dialogue. Do NOT include any introductory text or conversational filler.")
-
-        p1 = _prompt(v1_name,
-                     "Provide a rigid, highly opinionated 3-sentence THESIS on this topic from your unique perspective.")
-        p2 = _prompt(v2_name,
-                     "Tear the concept apart or twist it entirely. Provide a biting, contrasting 3-sentence ANTITHESIS.")
-        p3 = _prompt(v3_name,
-                     "Inject a completely lateral, unexpected 2-sentence perspective that derails or transcends the standard arguments.")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-            configs = [{"temperature": 0.4, "max_tokens": 1024}, {"temperature": 0.8, "max_tokens": 1024},
-                       {"temperature": 0.7, "max_tokens": 1024}]
-            futures = [executor.submit(llm.generate, p, c) for p, c in zip([p1, p2, p3], configs)]
-            thesis, antithesis, lateral = [f.result(timeout=15.0) for f in futures]
-        p4 = (
-            "SYSTEM_INSTRUCTION: You are The Stage Manager. You are the exhausted orchestrator holding the system together.\n"
-            f"TASK: Review this chaotic debate:\n1. {v1_name}: {Prisma.strip(thesis)}\n2. {v2_name}: {Prisma.strip(antithesis)}\n3. {v3_name}: {Prisma.strip(lateral)}\n"
-            "Provide a 3-sentence SYNTHESIS that resolves the tension or forces a structural pause. Be tired but profound. Do not use UI tags. "
-            "CRITICAL: Do NOT summarize, repeat, or quote the other speakers. Output ONLY your own 2-sentence original conclusion. No preambles.")
-        synthesis = llm.generate(p4, {"temperature": 0.6, "max_tokens": 512})
-        script = (
-            f"{Prisma.CYN}[{v1_name}]{Prisma.RST}\n{Prisma.strip(thesis)}\n\n"
-            f"{Prisma.MAG}[{v2_name}]{Prisma.RST}\n{Prisma.strip(antithesis)}\n\n"
-            f"{Prisma.YEL}[{v3_name}]{Prisma.RST}\n{Prisma.strip(lateral)}\n\n"
-            f"{Prisma.WHT}[STAGE MANAGER]{Prisma.RST}\n{Prisma.strip(synthesis)}"
-        )
-        return script
-
 
 class TheRedTeam:
     def __init__(self):

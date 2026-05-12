@@ -21,12 +21,6 @@ class TheCrucible:
         self.dampener_charges = int(safe_get(cfg, "CRUCIBLE_DAMPENER_CHARGES", 3))
         self.dampener_tolerance = float(safe_get(cfg, "DAMPENER_TOLERANCE", 15.0))
         self.instability_index = 0.0
-        self.logs = self._load_logs()
-
-    def _load_logs(self):
-        """Fetches the narrative strings used to report Crucible events to the user."""
-        manifest = LoreManifest.get_instance(config_ref=self.cfg).get("PHYSICS_STRINGS") or {}
-        return manifest.get("CRUCIBLE_LOGS", {})
 
     def dampener_status(self):
         """Reports the remaining stock of circuit breakers."""
@@ -39,16 +33,17 @@ class TheCrucible:
         If successful, it consumes a charge and reduces the incoming voltage.
         """
         if self.dampener_charges <= 0:
-            return False, self.logs.get("DAMPER_EMPTY", ""), 0.0
+            return False, ux("physics_strings", "crucible_damper_empty") or "", 0.0
         if voltage_spike > self.dampener_tolerance:
             factor, reason = 0.7, ux("machine_strings", "dampen_reason_circuit") or "Circuit Breaker"
         elif voltage_spike > 8.0 and stability_index < 0.3:
             factor, reason = 0.4, ux("machine_strings", "dampen_reason_instability") or "Instability"
         else:
-            return False, self.logs.get("HOLDING", ""), 0.0
+            return False, ux("physics_strings", "crucible_holding") or "", 0.0
+
         self.dampener_charges -= 1
         reduction = voltage_spike * factor
-        msg_template = self.logs.get("DAMPER_HIT") or "[CRUCIBLE]: Absorbed -{reduction:.1f} Voltage. Reason: {reason}"
+        msg_template = ux("physics_strings", "crucible_damper_hit") or "[CRUCIBLE]: Absorbed -{reduction:.1f} Voltage. Reason: {reason}"
         msg = msg_template.format(reduction=reduction, reason=reason)
         return True, msg, reduction
 
@@ -60,30 +55,38 @@ class TheCrucible:
         """
         current_drag = float(safe_get(physics, "narrative_drag", 0.0))
         if math.isinf(current_drag) or current_drag > 900.0:
-            return "LOCKED", 0.0, self.logs.get("HOLDING", "")
+            return "LOCKED", 0.0, ux("physics_strings", "crucible_holding") or ""
+
         voltage = float(safe_get(physics, "voltage", 0.0))
         structure = float(safe_get(physics, "kappa", 0.0))
         ideal_voltage = structure * 20.0
         delta = voltage - ideal_voltage
+
         self.instability_index = (self.instability_index * 0.7) + (delta * 0.3)
         if abs(self.instability_index) < 0.1:
             self.instability_index = 0.0
+
         adjustment = self.instability_index * 0.5
         if current_drag < 1.0 and adjustment < 0:
             adjustment *= 0.1
+
         final_drag = round(max(0.0, min(10.0, current_drag + adjustment)), 2)
         safe_set(physics, "narrative_drag", final_drag)
+
         msg = None
         if abs(adjustment) > 0.1:
             fallback = "TIGHTENING" if adjustment > 0 else "RELAXING"
             ux_key = "crucible_tightening" if adjustment > 0 else "crucible_relaxing"
             direction = ux("machine_strings", ux_key) or fallback
-            msg = self.logs.get("REGULATOR", "").format(direction=direction, current=current_drag, new=final_drag)
+            template = ux("physics_strings", "crucible_regulator") or "[REGULATOR]: {direction} | Drag: {current:.1f} -> {new:.1f}"
+            msg = template.format(direction=direction, current=current_drag, new=final_drag)
+
         surge = safe_get(physics, "system_surge_event", False)
         if surge:
             self.active_state = "SURGE"
-            msg_template = self.logs.get("SURGE") or "[SURGE]: Voltage spike detected ({voltage:.1f})."
+            msg_template = ux("physics_strings", "crucible_surge") or "[SURGE]: Voltage spike detected ({voltage:.1f})."
             return "SURGE", 0.0, msg_template.format(voltage=voltage)
+
         if voltage > 18.0:
             if structure > 0.5:
                 gain = voltage * 0.1
@@ -91,14 +94,13 @@ class TheCrucible:
                 base_cap = float(safe_get(cfg, "CRUCIBLE_VOLTAGE_CAP", 20.0))
                 self.max_voltage_cap = min(base_cap * 3.0, self.max_voltage_cap + gain)
                 self.active_state = "RITUAL"
-                msg_template = self.logs.get(
-                    "RITUAL") or "[RITUAL]: High tension converted to capacity. (+{gain:.1f} Cap)"
+                msg_template = ux("physics_strings", "crucible_ritual") or "[RITUAL]: High tension converted to capacity. (+{gain:.1f} Cap)"
                 return "RITUAL", gain, msg_template.format(gain=gain)
             else:
                 damage = voltage * 0.5
                 self.active_state = "MELTDOWN"
-                msg_template = self.logs.get(
-                    "MELTDOWN") or "[MELTDOWN]: Structure failing under voltage. ({damage:.1f} Damage)"
+                msg_template = ux("physics_strings", "crucible_meltdown") or "[MELTDOWN]: Structure failing under voltage. ({damage:.1f} Damage)"
                 return "MELTDOWN", damage, msg_template.format(damage=damage)
+
         self.active_state = "REGULATED"
         return "REGULATED", adjustment, msg

@@ -29,6 +29,10 @@ class TheParadoxEngine:
         The Biological Gatekeeper.
         Evaluates if the current conversational environment is ripe for a paradox.
         """
+        # THE THERMAL EXHAUST PORT: Hard-capped to fire exactly once per active sequence.
+        if self.is_active:
+            return False
+
         self.beta_max = max(0.0, self.beta_max - 0.05)
         if beta >= 0.7 and stamina >= 30.0:
             self.beta_max = max(self.beta_max, beta)
