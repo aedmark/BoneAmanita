@@ -9,12 +9,7 @@ from constants import Prisma
 from core import LoreManifest
 from mechanics.lexicon import LexiconService
 
-
 class TheEditor:
-    """
-    An internal adversarial critic. It reviews the system's own narrative chapters.
-    Used to prevent the LLM from falling into sycophantic, self-congratulatory loops.
-    """
     @staticmethod
     def critique(chapter_title: str, stress_mode: bool = False) -> str:
         manifest_data = LoreManifest.get_instance().get("NARRATIVE_DATA", {})

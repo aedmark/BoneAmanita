@@ -1,10 +1,5 @@
-"""protocols/bureau.py
-The Bureau acts as the system's administrative and stylistic auditor.
-It monitors the generative output and user inputs for structural anomalies,
-stylistic 'crimes' (like cliches or corporate buzzwords), and excessive chaos.
-When a violation is detected, it 'files a form' and levies an ATP (stamina) tax
-against the system to physically discourage lazy or overly chaotic processing.
-"""
+"""protocols/bureau.py"""
+
 import random
 import re
 from typing import Dict, Tuple, Optional, Any
@@ -13,18 +8,8 @@ from struts import ux, safe_get
 from presets import BoneConfig
 from constants import Prisma
 
-
 class TheBureau:
-    """
-    A bureaucratic governor that enforces syntactic and systemic discipline.
-    It penalizes high-chaos, low-truth states, and actively strips out banned
-    lexical patterns using regex-based 'style crimes'.
-    """
-
     def __init__(self, config_ref=None):
-        """
-        Initializes the Bureau, loading its rigid ruleset from the LoreManifest.
-        """
         self.cfg = config_ref or BoneConfig
         self.stamp_count = 0
         narrative_data = LoreManifest.get_instance().get("narrative_data") or {}
@@ -52,25 +37,12 @@ class TheBureau:
         self.cliches = {str(c).lower() for c in stylecrimes.get("BANNED_CLICHES", [])}
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serializes the Bureau's state for persistence across sessions."""
         return {"stamp_count": self.stamp_count}
 
     def load_state(self, data: Dict[str, Any]):
-        """Restores the Bureau's state from a serialized dictionary."""
         self.stamp_count = data.get("stamp_count", 0)
 
     def audit(self, physics, bio_state, _context=None, origin="USER") -> Optional[Dict]:
-        """
-        Evaluates the current physical dimensions of a prompt or generation to determine
-        if an administrative penalty (tax) is required.
-        Args:
-            physics: The dimensional state of the text (voltage, truth_ratio, chi, word count).
-            bio_state: The biological health/stamina of the system.
-            origin: "USER" or "SYSTEM", determining who is committing the infraction.
-        Returns:
-            A dictionary containing UI alerts, logs, and ATP tax values if an audit was triggered,
-            or None if the text passes inspection.
-        """
         vol = float(safe_get(physics, "voltage", 0.0))
         clean_words = safe_get(physics, "clean_words", [])
         raw_text = str(safe_get(physics, "raw_text", ""))
@@ -143,10 +115,6 @@ class TheBureau:
 
     @staticmethod
     def _apply_correction(text: str, crime: Dict, match: re.Match) -> str:
-        """
-        Physically alters the input string based on predefined regex group actions.
-        This is how the system enforces structural syntax limits.
-        """
         action = crime.get("action")
         if not action:
             return text
@@ -165,13 +133,6 @@ class TheBureau:
         return text
 
     def sanitize(self, text: str) -> Tuple[str, Optional[str]]:
-        """
-        Scans a string against all style crimes and applies physical corrections if defined.
-        If no correction logic is defined but the string still triggers an audit, it processes
-        the audit as a System violation.
-        Returns:
-            A tuple containing the cleaned text, and the log message (if any action was taken).
-        """
         for crime in self.crimes:
             match = crime["regex"].search(text)
             if match and crime.get("action"):

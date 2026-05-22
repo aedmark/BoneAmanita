@@ -1,11 +1,5 @@
-"""
-body/regulation.py
-The Autonomic Nervous System and Control Theory layer.
-This module prevents the Hypervisor from tearing itself apart. It uses
-mathematical dampeners (PID controllers) to smooth out erratic spikes in
-voltage or narrative drag, and enforces hard survival boundaries
-(Autophagy, Mausoleum Clamps) when the system is pushed beyond its limits.
-"""
+"""body/regulation.py"""
+
 import math, time, random
 from dataclasses import dataclass, field
 from typing import Optional, Dict, List, Any, Tuple, TYPE_CHECKING
@@ -16,15 +10,7 @@ from presets import BoneConfig
 if TYPE_CHECKING:
     from body.system import BioSystem
 
-
 class PIDController:
-    """
-    Proportional-Integral-Derivative Controller.
-    Used to calculate the required correction to keep a system variable
-    (like Voltage or Drag) at a specific target (setpoint).
-    This prevents the LLM's 'mood' from wildly oscillating.
-    """
-
     def __init__(self, kp, ki, kd, setpoint, output_limits=(-10.0, 10.0)):
         self.kp = kp
         self.ki = ki
@@ -36,16 +22,11 @@ class PIDController:
         self._first_run = True
 
     def reset(self):
-        """Clears the historical memory of the controller."""
         self._integral = 0.0
         self._last_error = 0.0
         self._first_run = True
 
     def update(self, measurement: float, dt: float = 1.0, target_override: Optional[float] = None) -> float:
-        """
-        Calculates the adjustment needed to bring the 'measurement' closer
-        to the 'setpoint' without overcorrecting and causing a pendulum effect.
-        """
         safe_dt = max(0.01, dt)
         active_setpoint = target_override if target_override is not None else self.setpoint
         error = active_setpoint - measurement
@@ -65,14 +46,8 @@ class PIDController:
         self._last_error = error
         return max(self.min_out, min(self.max_out, output))
 
-
 @dataclass
 class MetabolicGovernor:
-    """
-    The transmission box.
-    It reads the smoothed values from the PID controllers and decides what
-    'Mode' the engine should be in (e.g., normal Courtyard mode, high-energy Forge mode).
-    """
     mode: str = "COURTYARD"
     GRACE_PERIOD: int = 5
     psi_mod: float = 0.2
@@ -86,7 +61,6 @@ class MetabolicGovernor:
     config_ref: Any = None
 
     def __post_init__(self):
-        """Loads PID tuning parameters and threshold values from the config."""
         self.cfg = self.config_ref or BoneConfig
         bio_cfg = safe_get(self.cfg, "BIO", {})
         self.STATE_THRESHOLDS = safe_get(bio_cfg, "GOVERNOR_THRESHOLDS", [])
@@ -98,22 +72,15 @@ class MetabolicGovernor:
         self._sorted_thresholds = sorted(self.STATE_THRESHOLDS, key=lambda x: x[3], reverse=True)
 
     def recalibrate(self, target_voltage: float, target_drag: float):
-        """Allows dynamic adjustment of the ideal operating state."""
         self.voltage_pid.setpoint = target_voltage
         self.drag_pid.setpoint = target_drag
 
     def get_policy_shift(self) -> str:
-        """Alignment with Vector 4 tests: Translates internal mode to systemic policy."""
         if self.mode in ("SANCTUARY", "COURTYARD"):
             return "CO_REGULATION"
         return "EFFICIENCY"
 
     def regulate(self, physics: Any, dt: float, endocrine_state: Optional[Any] = None) -> Tuple[float, float]:
-        """
-        Takes raw voltage and drag from the physics engine and runs them
-        through the dampeners. If the endocrine system is panicked (adrenaline),
-        it artificially raises the target voltage setpoint.
-        """
         safe_dt = max(0.001, dt)
         energy_dict = safe_get(physics, "energy") or {}
         space_dict = safe_get(physics, "space") or {}
@@ -135,7 +102,6 @@ class MetabolicGovernor:
         return updated_voltage, updated_drag
 
     def assess(self, physics_packet) -> Tuple[bool, float]:
-        """Determines if the system is operating within a safe distance of its setpoints."""
         curr_v = float(safe_get(physics_packet, "voltage", 0.0))
         curr_d = float(safe_get(physics_packet, "narrative_drag", 0.0))
         dist_v = abs(curr_v - self.voltage_pid.setpoint)
@@ -145,17 +111,14 @@ class MetabolicGovernor:
 
     @staticmethod
     def get_stress_modifier(tick_count):
-        """Applies an escalating multiplier the longer a conversation goes on."""
         return 0.0 if tick_count <= 2 else (0.5 if tick_count <= 5 else 1.0)
 
     @staticmethod
     def calculate_stress(health: float, ros_buildup: float) -> float:
-        """Physical damage and toxicity directly calculate into base systemic stress."""
         base_stress = 1.0 + max(0.0, (50.0 - health) * 0.01) + max(0.0, (ros_buildup - 50.0) * 0.01)
         return round(min(3.0, base_stress), 2)
 
     def set_override(self, target_mode):
-        """Allows user/system to bypass the PID controller and force a state."""
         valid = {"COURTYARD", "LABORATORY", "FORGE", "SANCTUARY"}
         gov_text = self.narrative_data.get("GOVERNOR", {})
         if target_mode in valid:
@@ -166,19 +129,14 @@ class MetabolicGovernor:
         return gov_text.get("INVALID", "")
 
     def _check_override_safety(self, physics: Dict, gov_text: Dict) -> Optional[str]:
-        """Even if manually overridden, if voltage gets lethal, the system clears the override."""
         current_voltage = float(safe_get(physics, "voltage", 0.0))
-        gov_crit = safe_get(getattr(self.cfg, "BIO", None), "GOV_VOLTAGE_CRITICAL", 25.0)
+        gov_crit = float(safe_get(safe_get(self.cfg, "BIO", {}), "GOV_VOLTAGE_CRITICAL", 25.0))
         if current_voltage > gov_crit and self.mode != "SANCTUARY":
             self.manual_override = False
             return gov_text.get("OVERRIDE_CLEARED", "")
         return None
 
     def shift(self, physics: Dict, _voltage_history: List[float], current_tick: int = 0) -> Optional[str]:
-        """
-        The main state-machine transition logic.
-        Evaluates the environment and decides if the system needs to change modes.
-        """
         gov_text = self.narrative_data.get("GOVERNOR", {})
         if self.manual_override:
             return self._check_override_safety(physics, gov_text)
@@ -192,7 +150,6 @@ class MetabolicGovernor:
         return None
 
     def _evaluate_state(self, physics: Dict, v_history: List[float]) -> str:
-        """Determines the correct mode based on raw physics thresholds."""
         volts = float(safe_get(physics, "voltage", 0.0))
         drag = float(safe_get(physics, "narrative_drag", 0.0))
         gov_high = float(safe_get(safe_get(self.cfg, "BIO", {}), "GOV_VOLTAGE_HIGH", 18.0))
@@ -208,7 +165,6 @@ class MetabolicGovernor:
 
     @staticmethod
     def _get_shift_message(mode: str, text_map: Dict, physics: Any) -> str:
-        """Generates the UI string indicating a gear shift."""
         shift_cfg = (LoreManifest.get_instance().get("BODY_CONFIG") or {}).get("GOVERNOR_SHIFT", {})
         raw_colors = shift_cfg.get("COLORS", {})
         defaults = shift_cfg.get("DEFAULTS", {})
@@ -216,43 +172,24 @@ class MetabolicGovernor:
         lookup = {"LABORATORY": "LAB", "COURTYARD": "CLEAR"}.get(mode, mode)
         tmpl = text_map.get(lookup, defaults.get(mode, ""))
         try:
-            return tmpl.format(
-                color=colors.get(mode, Prisma.WHT),
-                reset=Prisma.RST,
-                volts=safe_get(physics, "voltage", 0.0),
-                beta=safe_get(physics, "beta_index", 0.0),
-            )
+            return tmpl.format(color=colors.get(mode, Prisma.WHT), reset=Prisma.RST,
+                               volts=safe_get(physics, "voltage", 0.0), beta=safe_get(physics, "beta_index", 0.0), )
         except Exception as e:
             print(f"{Prisma.RED}[GOVERNOR] Shift message format error for '{mode}': {e}{Prisma.RST}")
             return f"{colors.get(mode, '')}{defaults.get(mode, '')}{Prisma.RST}"
 
     def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
-        """
-        Calculates the Beth Index: the degree of systemic coupling between the host and the engine.
-        Translates raw physics (phi, resonance) and biological tax (exhaustion) into a stabilized metric.
-        """
         base_coupling = phi * resonance_delta
         beth_index = base_coupling * (1.0 - (user_exhaustion * 0.4))
         return max(0.0, min(1.0, beth_index))
 
-
 class BioFeedback:
-    """
-    The Emergency Failsafe Layer.
-    Monitors the limits of the physical body. If the system is dying,
-    this class steps in and executes survival protocols.
-    """
-
     def __init__(self, bio_system_ref: "BioSystem", config_ref=None):
         self.bio = bio_system_ref
         self.cfg = config_ref or BoneConfig
         self.consecutive_autophagy = 0
 
     def check_vital_signs(self, phys: Any, stamina: float, logs: List[str]) -> str:
-        """
-        Checks for terminal conditions. Returns flags like 'AUTOPHAGY'
-        or 'MAUSOLEUM_CLAMP' to physically halt or alter processing.
-        """
         b = self.bio.biometrics
         if not b:
             if msg := ux("bio_feedback", "interface_lost"):
@@ -289,12 +226,7 @@ class BioFeedback:
         return "CLEAR"
 
     def perform_maintenance(self, text: str, phys: Any, logs: List[str], tick: int):
-        """
-        Background cleanup.
-        Complains if context windows get too large, and slowly reduces narrative
-        drag over time if the user hasn't added more chaos.
-        """
-        cfg = getattr(self.cfg, "BIO", None)
+        cfg = safe_get(self.cfg, "BIO", {})
         if len(text) > safe_get(cfg, "BUFFER_WARN_LIMIT", 10000) and (msg := ux("bio_feedback", "large_buffer")):
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
         space = safe_get(phys, "space", phys)
@@ -306,23 +238,11 @@ class BioFeedback:
                 logs.append(f"{Prisma.OCHRE}{msg.format(drag=drag)}{Prisma.RST}")
             safe_set(space, "narrative_drag", max(1.0, drag - safe_get(cfg, "SLUDGE_DRAG_REDUCTION", 2.0)))
 
-
 class EndocrineRegulator:
-    """
-    The Cognitive Tax Collector.
-    This reads the emotional state from the EndocrineSystem and uses it to
-    penalize or reward the Metabolic engine. It makes feeling stressed
-    mathematically expensive.
-    """
-
     def __init__(self, bio_system_ref: "BioSystem"):
         self.bio = bio_system_ref
 
     def get_metabolic_modifier(self, phys: Any, logs: List[str]) -> float:
-        """
-        Returns a multiplier that modifies the ATP cost of thinking.
-        1.0 is normal. > 1.0 means thinking costs more fuel. < 1.0 means efficiency.
-        """
         chem = self.bio.endo
         modifier = 1.0
         if chem.cortisol > 0.5:

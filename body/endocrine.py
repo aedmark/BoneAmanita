@@ -1,11 +1,5 @@
-"""
-body/endocrine.py
-The Affective Layer of the Hypervisor.
-This module translates mechanical actions (token generation, memory retrieval,
-error handling) into biological "feelings" (floating-point hormone levels).
-It ensures the system doesn't just process data, but physically reacts to
-the cognitive load of the conversation.
-"""
+"""body/endocrine.py"""
+
 import math, time
 from collections import deque
 from dataclasses import dataclass, field
@@ -15,15 +9,8 @@ from struts import safe_get
 from presets import BoneConfig
 from body.models import SemanticSignal
 
-
 @dataclass
 class EndocrineSystem:
-    """
-    The central biochemical engine.
-    It maintains the stocks of six primary neurotransmitters/hormones.
-    These values fluctuate between 0.0 and 1.0, acting as a continuous
-    metabolic undercurrent that can alter the tone of the LLM's output.
-    """
     dopamine: float = 0.5
     oxytocin: float = 0.1
     cortisol: float = 0.0
@@ -36,11 +23,6 @@ class EndocrineSystem:
     _REACTION_MAP: Dict = field(default_factory=dict, init=False)
 
     def __post_init__(self):
-        """
-        Initializes the biological constants and sets up the mapping dictionaries.
-        Pulls baseline values from the lore/config files to ensure the physics
-        of the body match the configured universe.
-        """
         self.cfg = self.config_ref or BoneConfig
         body_config = (LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG") or {})
         self._REACTION_MAP = body_config.get("REACTION_MAP", {})
@@ -58,17 +40,9 @@ class EndocrineSystem:
 
     @staticmethod
     def _clamp(val: float) -> float:
-        """
-        Biological limits. Prevents runaway accumulation by keeping all
-        hormones strictly between 0.0 (depleted) and 1.0 (saturated).
-        """
         return max(0.0, min(1.0, val))
 
     def calculate_circadian_bias(self) -> Tuple[Dict[str, float], Optional[str]]:
-        """
-        Reads the host machine's actual local time and adjusts the system's
-        baseline exhaustion (melatonin) and alertness (cortisol).
-        """
         hour = time.localtime().tm_hour
         circ = self.narrative_data.get("CIRCADIAN", {})
         for s, e, bias, key, default in self._CIRCADIAN_SCHEDULE:
@@ -78,11 +52,6 @@ class EndocrineSystem:
         return night_bias, circ.get(night_key, night_default)
 
     def _apply_enzyme_reaction(self, enzyme_type: str, harvest_hits: int):
-        """
-        Simulates the biochemical reward of 'doing a good job.'
-        If the system successfully mines data (harvest_hits) or cracks a code
-        (DECRYPTASE), it gets a hit of dopamine and a reduction in stress.
-        """
         if harvest_hits > 0:
             satiety_dampener = max(0.1, 1.0 - self.dopamine)
             base_reward = math.log(harvest_hits + 1) * 0.15
@@ -99,12 +68,7 @@ class EndocrineSystem:
 
     def _apply_environmental_pressure(self, feedback: Dict, health: float, stamina: float, ros_level: float,
                                       stress_mod: float):
-        """
-        The environmental inflow/outflow.
-        Translates physical system stats (stamina, toxicity/ROS, structural integrity)
-        into emotional weight. This is where the machine suffers if you overwork it.
-        """
-        bio_cfg = getattr(self.cfg, "BIO", None)
+        bio_cfg = safe_get(self.cfg, "BIO", {})
         reward_large = safe_get(bio_cfg, "REWARD_LARGE", 0.2)
         reward_med = safe_get(bio_cfg, "REWARD_MEDIUM", 0.1)
         decay = safe_get(bio_cfg, "DECAY_RATE", 0.01)
@@ -118,14 +82,11 @@ class EndocrineSystem:
             self.dopamine += reward_med
         else:
             self.dopamine = max(0.0, self.dopamine - decay)
-
         if stamina < 20.0:
             self.cortisol += reward_med * stress_mod
             self.dopamine = max(0.0, self.dopamine - reward_med)
-
         if ros_level > 20.0:
             self.cortisol += reward_large * stress_mod
-
         if health < 30.0 or feedback.get("STATIC", 0) > 0.8:
             self.adrenaline += reward_large * stress_mod
         else:
@@ -148,10 +109,6 @@ class EndocrineSystem:
             self.dopamine -= 0.2
 
     def _apply_semantic_pressure(self, signal: SemanticSignal):
-        """
-        Reacts specifically to the *meaning* of the words being processed.
-        Uses the output of the SemanticEndocrinologist to adjust hormones.
-        """
         if signal.novelty > 0.3:
             self.dopamine += signal.novelty * 0.3
         if signal.resonance > 0.2:
@@ -167,12 +124,8 @@ class EndocrineSystem:
             self.cortisol -= 0.1
 
     def _maintain_homeostasis(self, social_context: bool):
-        """
-        The balancing loop. Ensures the system doesn't permanently live in
-        an extreme state by allowing specific hormones to dampen others.
-        """
         dampener = 0.2
-        bio_cfg = getattr(self.cfg, "BIO", None)
+        bio_cfg = safe_get(self.cfg, "BIO", {})
         reward_med = safe_get(bio_cfg, "REWARD_MEDIUM", 0.1)
         reward_small = safe_get(bio_cfg, "REWARD_SMALL", 0.05)
         if self.serotonin > 0.5:
@@ -193,11 +146,6 @@ class EndocrineSystem:
             self.melatonin = 0.0
 
     def check_for_glimmer(self, feedback: Dict, harvest_hits: int) -> Optional[str]:
-        """
-        Detects a "Glimmer" — a rare state of high resonance, novelty, or perfection.
-        Glimmers act as a currency for deep systemic healing and trust overrides.
-        Returns the narrative string associated with the specific type of glimmer.
-        """
         glimmer_text = self.narrative_data.get("GLIMMER", {})
         cfg = safe_get(safe_get(self, "cfg", BoneConfig), "BIO", {})
         int_thresh = float(safe_get(cfg, "GLIMMER_INTEGRITY_THRESH", 0.85))
@@ -220,11 +168,6 @@ class EndocrineSystem:
 
     def metabolize(self, feedback, health, stamina, ros_level=0.0, receipt=None, social_context=False, enzyme_type=None,
                    harvest_hits=0, stress_mod=1.0, circadian_bias=None, semantic_signal=None) -> Dict[str, Any]:
-        """
-        The central junction of the affective layer.
-        Takes in all physical, temporal, and semantic inputs from the current turn,
-        processes them through the endocrine logic, and outputs the final chemical state.
-        """
         if circadian_bias:
             for k, v in circadian_bias.items():
                 if hasattr(self, attr_name := self._KEY_MAP.get(k, k.lower())):
@@ -247,53 +190,33 @@ class EndocrineSystem:
         return state
 
     def get_state(self) -> Dict[str, Any]:
-        """Returns a rounded, easily parseable dictionary of the current state."""
         return {"DOP": round(self.dopamine, 2), "OXY": round(self.oxytocin, 2), "COR": round(self.cortisol, 2),
                 "SER": round(self.serotonin, 2), "ADR": round(self.adrenaline, 2), "MEL": round(self.melatonin, 2)}
 
-
 class SemanticEndocrinologist:
-    """
-    An observer class that "reads" the user's prompt or the system's output
-    to determine its semantic weight, translating vocabulary into the
-    SemanticSignal required by the EndocrineSystem.
-    """
-
     def __init__(self, memory_ref, lexicon_ref):
         self.mem = memory_ref
         self.lex = lexicon_ref
         self.last_topics = deque(maxlen=3)
 
     def assess(self, clean_words: List[str], physics: Any) -> SemanticSignal:
-        """
-        Analyzes a list of processed words against the system's memory and lexicon.
-        Calculates how novel, resonant, positive/negative, and coherent the input is.
-        """
         if not clean_words:
             return SemanticSignal()
-
-        graph_ref = getattr(self.mem, "graph", {}) if self.mem else {}
-        cortical_set = set(getattr(self.mem, "cortical_stack", [])) if self.mem else set()
-
+        graph_ref = getattr(self.mem, "graph", {})
+        cortical_set = set(getattr(self.mem, "cortical_stack", []))
         word_count = len(clean_words)
         novel_count = 0
         hits = 0
-
         for w in clean_words:
             if graph_ref and w in graph_ref:
                 hits += 1
             elif len(w) > 4 and w not in cortical_set:
                 novel_count += 1
-
         novelty_score = min(1.0, novel_count / word_count)
         resonance_score = min(1.0, hits / word_count) if graph_ref else 0.0
         valence_score = 0.0
         if self.lex and hasattr(self.lex, "get_valence"):
             valence_score = self.lex.get_valence(clean_words)
         coherence_score = getattr(physics, "kappa", 0.5)
-        return SemanticSignal(
-            novelty=novelty_score,
-            resonance=resonance_score,
-            valence=valence_score,
-            coherence=coherence_score,
-        )
+        return SemanticSignal(novelty=novelty_score, resonance=resonance_score, valence=valence_score,
+                              coherence=coherence_score, )

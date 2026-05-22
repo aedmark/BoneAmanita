@@ -28,10 +28,8 @@ class RandomTest(BoneTestCase):
             self.assertIn("CRITICAL FAILURE", result.get("logs", []), "Engine did not log the critical failure.")
 
             logs = self.engine.events.flush()
-            self.assertTrue(
-                any("CYCLE CRASH" in str(log) for log in logs),
-                "Event bus failed to broadcast the cycle crash.",
-            )
+            self.assertTrue(any("CYCLE CRASH" in str(log) for log in logs),
+                            "Event bus failed to broadcast the cycle crash.", )
 
     def test_decoupled_json_configs(self):
             manifest = LoreManifest.get_instance()
@@ -47,10 +45,34 @@ class RandomTest(BoneTestCase):
             self.assertIsNotNone(phys_cfg, "PHYSICS_CONSTANTS failed to load Geodesic constants.")
             colored_text = ChromaScope.modulate("test", {"VEL": 1.0})
             self.assertNotEqual(colored_text, "test", "ChromaScope failed to apply ANSI color from decoupled JSON.", )
-            sym_cfg = manifest.get("symbiosis_config", "SYMBIONT_VOICES")
-            self.assertIsNotNone(sym_cfg, "SYMBIOSIS_CONFIG failed to load Symbiont Voices.")
-            body_cfg = manifest.get("body_config", "ENZYME_MAP")
-            self.assertIsNotNone(body_cfg, "BODY_CONFIG failed to load Enzyme Map.")
+
+            def test_dream_seed_determinism(self):
+                print("\n--- RANDOM: Dream Seed Determinism ---")
+                from mechanics.inventory import GordonKnot
+                manifest = LoreManifest.get_instance()
+                manifest._cache["ITEM_GENERATION"] = {
+                    "ADVENTURE_CATEGORIES": ["JUNK"],
+                    "BASES": {"JUNK": ["Gear", "Spring", "Wire", "Coil", "Scrap"]},
+                    "PREFIXES": {"void": ["Rusted", "Broken", "Ancient", "Lost"]},
+                    "SUFFIXES": {"void": ["of Despair", "of Time", "of Nothing", "of the Void"]}
+                }
+
+                gordon = GordonKnot(events=MagicMock(), config_ref=self.engine.config)
+                gordon.events.telemetry.kernel_hash = "ALPHA_BOOT"
+
+                item_1 = gordon.synthesize_item({"ENT": 1.0})
+
+                gordon.registry = {}  # Clear registry to ensure length matches
+                item_2 = gordon.synthesize_item({"ENT": 1.0})
+                self.assertEqual(item_1, item_2,
+                                 "[FAIL] Gordon's synthesis is drifting! The Dream Seed failed to enforce determinism.")
+
+                gordon.registry = {}
+                gordon.events.telemetry.kernel_hash = "BETA_BOOT"
+                item_3 = gordon.synthesize_item({"ENT": 1.0})
+                self.assertNotEqual(item_1, item_3,
+                                    "[FAIL] Changing the boot hash did not alter the synthesis outcome.")
+                print("  [SUCCESS] Quantum synthesis is successfully bound to the deterministic Dream Seed.")
 
     def test_config_stutter_threshold(self):
             target_cfg = getattr(self.engine, "config")

@@ -1,16 +1,9 @@
 """drivers/syntax.py"""
+
 from presets import BoneConfig
 from struts import safe_get
 
-
 class SyntaxModule:
-    """
-    The SyntaxModule calculates Omega (Ω), representing 'Order' and 'Structure'.
-    It analyzes the physical properties of the text (word length, punctuation,
-    and specific 'buzzwords') to determine if the system should be fluid and
-    poetic (Low Omega) or rigid and bureaucratic (High Omega).
-    """
-
     def __init__(self, config_ref=None, lexicon_ref=None):
         self.cfg = config_ref or BoneConfig
         self.lex = lexicon_ref
@@ -19,10 +12,6 @@ class SyntaxModule:
         self.drivers_cfg = getattr(self.cfg, "DRIVERS", {})
 
     def analyze(self, text: str, narrative_drag: float) -> float:
-        """
-        Calculates the target Order (Omega) for the current turn by evaluating
-        lexical complexity and syntactic friction.
-        """
         words = text.split()
         if not words:
             return 1.0

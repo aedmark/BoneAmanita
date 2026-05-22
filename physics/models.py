@@ -5,115 +5,88 @@ from typing import List, Dict, Any, Optional
 
 @dataclass
 class DragProfile:
-    """
-    Measures the specific types of friction currently acting upon the system.
-    Rather than a single 'drag' number, the engine tracks exactly *why* the conversation is struggling to move forward.
-    """
-    semantic: float = 0.0     # Friction from dense, confusing, or contradictory wording.
-    emotional: float = 0.0    # Friction from user frustration or high-stakes emotional topics.
-    structural: float = 0.0   # Friction from broken logic or impossible architectural requests.
-    metabolic: float = 0.0    # Friction from the system's own ATP starvation.
-    trauma: float = 0.0       # Friction from navigating "scarred" or heavily guarded memory spaces.
+    semantic: float = 0.0
+    emotional: float = 0.0
+    structural: float = 0.0
+    metabolic: float = 0.0
+    trauma: float = 0.0
 
     def total(self) -> float:
-        """The absolute sum of all friction currently acting on the system's forward momentum."""
         return (self.semantic + self.emotional + self.structural + self.metabolic +
                 self.trauma)
 
 @dataclass
 class EnergyState:
-    """
-    The core metabolic and psychological profile of the machine.
-    This dataclass holds the "Greek Letters" and biological variables that dictate
-    how the AI behaves, shifts phases, and enforces its own boundaries.
-    """
-    voltage: float = 30.0        # The immediate processing intensity of the current thought.
-    health: float = 100.0        # Long-term structural integrity.
-    stamina: float = 100.0       # Short-term energy reserves (ATP pool).
-    trauma: float = 0.0          # Accumulated systemic damage from rejected states or memory purges.
-    ros: float = 0.0             # Reactive Oxygen Species (Toxicity). Builds up during sycophantic loops.
-    glimmers: int = 0            # Hard currency of insight. Earned through successful paradox resolution.
-    exhaustion: float = 0.2      # (E) Narrative weariness. High exhaustion degrades prose complexity.
-    contradiction: float = 0.4   # The system's current capacity to hold two opposing truths at once.
-    scope: float = 0.3           # (S) How wide the system is currently looking across the network.
-    depth: float = 0.3           # (D) How deep into the Cortex the system is currently dredging.
-    connectivity: float = 0.2    # (C) How well the current thought binds to existing memory.
+    voltage: float = 30.0
+    health: float = 100.0
+    stamina: float = 100.0
+    trauma: float = 0.0
+    ros: float = 0.0
+    glimmers: int = 0
+    exhaustion: float = 0.2
+    contradiction: float = 0.4
+    scope: float = 0.3
+    depth: float = 0.3
+    connectivity: float = 0.2
 
-    # Core Phase Variables
-    psi: float = 0.2             # (Ψ) The Void. High psi indicates drifting, liminality, or silence.
-    chi: float = 0.2             # (Χ) Chaos. High chi triggers the Jester or Apoptotic shutdowns.
-    valence: float = 0.0         # Emotional polarity (negative = hostile/cold, positive = warm/connective).
+    psi: float = 0.2
+    chi: float = 0.2
+    valence: float = 0.0
 
-    # Advanced Dynamics & Constraints
-    gamma: float = 0.0           # Generative drive.
-    sigma: float = 0.0           # Systemic stress / tension.
-    eta: float = 0.0             # Learning rate / adaptation speed.
-    theta: float = 0.0           # Rotational momentum (topic pivoting).
-    upsilon: float = 0.0         # Utility / Task-focus.
-    mu: float = 0.0              # Moral Friction (resistance to violating core axioms).
-    m_a: float = 0.0             # Malignancy/Amplification factor (runaway optimization detection).
-    i_c: float = 1.0             # Immune Competence (health of the Gatekeeper and filters).
-    h_s: float = 1.0             # Holistic state integrity.
-    omega_r: float = 1.0         # Right-brain coherence.
-    delta_t: float = 12.0        # Time decay factor for memories and toxicity.
-    s_y: float = 0.5             # Synergetic integrity.
-    r_a: float = 0.0             # Radical Acceptance (enforced by Linehan archetype).
+    gamma: float = 0.0
+    sigma: float = 0.0
+    eta: float = 0.0
+    theta: float = 0.0
+    upsilon: float = 0.0
+    mu: float = 0.0
+    m_a: float = 0.0
+    i_c: float = 1.0
+    h_s: float = 1.0
+    omega_r: float = 1.0
+    delta_t: float = 12.0
+    s_y: float = 0.5
+    r_a: float = 0.0
 
-    # Kinematics
-    entropy: float = 0.2         # Topological chaos (predictability of the semantic stream).
-    mass: float = 0.0            # The sheer conceptual weight of the current context window.
-    velocity: float = 0.0        # Speed of execution/generation.
-    beta_index: float = 0.4      # (β) The social/relational anchor.
-    turbulence: float = 0.0      # Environmental instability.
-    kappa: float = 0.0           # Capacity to hold Voltage without rupturing.
-    epsilon: float = 0.0         # Error rate / acceptable hallucination margin.
-    xi: float = 0.0              # (ξ) Friction coefficient.
-    lambda_val: float = 0.0      # (λ) Wavelength / frequency of thought.
-    omega: float = 0.0           # (Ω) Terminal state identifier.
+    entropy: float = 0.2
+    mass: float = 0.0
+    velocity: float = 0.0
+    beta_index: float = 0.4
+    turbulence: float = 0.0
+    kappa: float = 0.0
+    epsilon: float = 0.0
+    xi: float = 0.0
+    lambda_val: float = 0.0
+    omega: float = 0.0
 
-    # Affective / Village Triggers
-    resonance: float = 0.0       # (Φ) Shared human/machine connection. High resonance unlocks co-regulation.
-    silence: float = 0.0         # (Δ) Unstructured pause. Fuels the Orchard and Photosynthesis.
-    lq: float = 0.0              # Liminal Quotient.
-    perfection_streak: int = 0   # Tracks flawless execution loops (can lead to brittleness if too high).
-    cf_expect: float = 0.0       # Comfort Expectation. How badly the user wants to be validated.
-    novelty: float = 0.0         # How mathematically unique the current prompt is against the history.
+    resonance: float = 0.0
+    silence: float = 0.0
+    lq: float = 0.0
+    perfection_streak: int = 0
+    cf_expect: float = 0.0
+    novelty: float = 0.0
 
 @dataclass
 class MaterialState:
-    """
-    The physical representation of the user's prompt after it has been ingested
-    and processed by the CSF filter and the Geodesic Engine.
-    """
-    clean_words: List[str] = field(default_factory=list) # The sanitized token stream.
-    raw_text: str = ""                                   # The original, unfiltered input string.
-    counts: Dict[str, int] = field(default_factory=dict) # Frequency maps of semantic categories.
-    antigens: int = 0                                    # Count of detected toxic/sycophantic tropes.
-    vector: Dict[str, float] = field(default_factory=dict) # The 8-dimensional Geodesic Vector.
-    truth_ratio: float = 0.0                             # Ratio of structured logic to chaotic abstraction.
-    repetition: float = 0.0                              # Detection of user or systemic looping.
+    clean_words: List[str] = field(default_factory=list)
+    raw_text: str = ""
+    counts: Dict[str, int] = field(default_factory=dict)
+    antigens: int = 0
+    vector: Dict[str, float] = field(default_factory=dict)
+    truth_ratio: float = 0.0
+    repetition: float = 0.0
 
 @dataclass
 class SpatialState:
-    """
-    The topological coordinates of the current session. Dictates *where* the
-    conversation is taking place, which influences the physics of that space.
-    """
-    zone: str = "COURTYARD"        # The macro-location (e.g., THE_FORGE, AERIE, VOID, COURTYARD).
-    manifold: str = "DEFAULT"      # The geometric shape of the active memory architecture.
-    narrative_drag: float = 0.6    # Total compression force holding the conversation back.
-    friction: float = 0.6          # Environmental resistance to sudden topic changes.
-    atmosphere: str = "NEUTRAL"    # Ambient weather of the system (e.g., TOXIC, CHARGED, LAMINAR).
-    flow_state: str = "LAMINAR"    # Fluid dynamics of the conversation (LAMINAR = smooth, TURBULENT = chaotic).
-    godel_scar: Optional[tuple] = None # Coordinates to linguistic dark matter / traumatized zones.
+    zone: str = "COURTYARD"
+    manifold: str = "DEFAULT"
+    narrative_drag: float = 0.6
+    friction: float = 0.6
+    atmosphere: str = "NEUTRAL"
+    flow_state: str = "LAMINAR"
+    godel_scar: Optional[tuple] = None
 
 @dataclass
 class PhysicsPacket:
-    """
-    The master container for the system's state. Passed between almost all modules.
-    Implements a highly ephemeralized alias mapping system, allowing developers to
-    read/write deep variables (like `packet.V`) without knowing the underlying nested structure.
-    """
     energy: EnergyState = field(default_factory=EnergyState)
     matter: MaterialState = field(default_factory=MaterialState)
     space: SpatialState = field(default_factory=SpatialState)
@@ -122,7 +95,6 @@ class PhysicsPacket:
     _CORE_DOMAINS = ("energy", "space", "matter")
     _BASE_FIELDS = frozenset({"energy", "matter", "space", "drag_profile", "macro_policy"})
 
-    # Maps shorthand architectural aliases to their true paths.
     _ALIAS_MAP = {
         "E": [("energy", "exhaustion")],
         "beta": [("energy", "beta_index"), ("energy", "contradiction")],
@@ -143,7 +115,6 @@ class PhysicsPacket:
         "entropy": [("energy", "entropy"), ("energy", "chi")],
     }
 
-    # Automatically maps all fields in the sub-dataclasses to their respective domains.
     _DOMAIN_MAP = {
         **{k: "energy" for k in EnergyState.__dataclass_fields__},
         **{k: "matter" for k in MaterialState.__dataclass_fields__},
@@ -152,7 +123,6 @@ class PhysicsPacket:
 
     @staticmethod
     def _safe_init(cls, data):
-        """Safely initializes dataclasses from either dictionaries or existing objects."""
         if isinstance(data, cls): return data
         if not data: return cls()
         valid_keys = cls.__dataclass_fields__.keys()
@@ -169,14 +139,12 @@ class PhysicsPacket:
             setattr(self, k, v)
 
     def sync_drag(self):
-        """Updates the macro 'narrative_drag' spatial variable based on the detailed DragProfile."""
         if hasattr(self, "drag_profile") and self.drag_profile is not None:
             total = self.drag_profile.total()
             setattr(self, "narrative_drag", max(0.6, total))
 
     @classmethod
     def void_state(cls):
-        """Returns a factory-reset packet simulating total sensory deprivation (The Void)."""
         p = cls()
         p.space.atmosphere = "VOID"
         p.space.zone = "VOID"
@@ -184,11 +152,9 @@ class PhysicsPacket:
         return p
 
     def snapshot(self) -> "PhysicsPacket":
-        """Creates a deep copy of the current state."""
         return PhysicsPacket(**self.to_dict())
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serializes the entire state packet for database storage or UI transmission."""
         data = asdict(self)
         for k, v in self.__dict__.items():
             if k not in data and not k.startswith("_"):
@@ -198,13 +164,7 @@ class PhysicsPacket:
     def get(self, key, default=None):
         return getattr(self, key, default)
 
-    # --- MAGIC METHODS FOR STRUCTURAL ABSTRACTION ---
-
     def __getattr__(self, key):
-        """
-        Allows retrieving nested variables directly from the packet level.
-        e.g., `packet.voltage` automatically resolves to `packet.energy.voltage`.
-        """
         if key.startswith("_"):
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
         if key in self._ALIAS_MAP:
@@ -216,17 +176,20 @@ class PhysicsPacket:
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
     def __setattr__(self, key, value):
-        """
-        Allows setting nested variables directly from the packet level.
-        If an ALIAS is used (e.g., 'chi'), it may update multiple target variables simultaneously.
-        """
         if key in ("voltage", "narrative_drag", "psi", "chi", "ros", "V", "F"):
             try:
                 value = max(0.0, float(value))
             except (TypeError, ValueError):
                 value = 0.0
-
         if key in self._BASE_FIELDS:
+            if key == "energy":
+                value = self._safe_init(EnergyState, value)
+            elif key == "matter":
+                value = self._safe_init(MaterialState, value)
+            elif key == "space":
+                value = self._safe_init(SpatialState, value)
+            elif key == "drag_profile" and value is not None:
+                value = self._safe_init(DragProfile, value)
             super().__setattr__(key, value)
             return
         if key in self._ALIAS_MAP:
@@ -253,36 +216,29 @@ class PhysicsPacket:
 
 @dataclass
 class UserInferredState:
-    """
-    The system's biological simulation of the User.
-    The AI dynamically infers these values based on the user's prompt complexity,
-    sentiment, and repetition. Used to execute Second-Order Cybernetic Co-Regulation.
-    """
-    E_u: float = 0.5           # Inferred User Exhaustion. High = use short, direct answers.
-    beta_u: float = 0.5        # Inferred User Contradiction/Struggle.
-    S_u: float = 0.5           # User Scope (how broad their question is).
-    D_u: float = 0.3           # User Depth (how technical their question is).
-    C_u: float = 0.3           # User Connectivity (how well they are following the thread).
-    V_u: float = 50.0          # User Voltage (urgency/panic in the prompt).
-    F_u: float = 0.6           # User Friction (how hard they are fighting the current logic).
-    H_u: float = 100.0         # User inferred holistic health/patience.
-    P_u: float = 100.0         # User Stamina.
-    T_u: float = 0.0           # User Trauma/Frustration level.
-    ROS_u: float = 0.0         # User Toxicity (hostility towards the system).
-    G_u: int = 0               # User's pool of generated Glimmers (insights).
-    psi_u: float = 0.3         # User Void (drifting/lost state).
-    chi_u: float = 0.2         # User Chaos (unstructured/panicked input).
-    valence_u: float = 0.0     # User emotional tone.
+    E_u: float = 0.5
+    beta_u: float = 0.5
+    S_u: float = 0.5
+    D_u: float = 0.3
+    C_u: float = 0.3
+    V_u: float = 50.0
+    F_u: float = 0.6
+    H_u: float = 100.0
+    P_u: float = 100.0
+    T_u: float = 0.0
+    ROS_u: float = 0.0
+    G_u: int = 0
+    psi_u: float = 0.3
+    chi_u: float = 0.2
+    valence_u: float = 0.0
 
     def __getattr__(self, key):
-        """Allows querying `state.E` which automatically resolves to `state.E_u`."""
         u_key = f"{key}_u"
         if u_key in self.__dataclass_fields__:
             return getattr(self, u_key)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
     def __setattr__(self, key, value):
-        """Allows setting `state.E = 0.8` which automatically updates `state.E_u`."""
         u_key = f"{key}_u"
         if u_key in self.__dataclass_fields__ and key not in self.__dataclass_fields__:
             super().__setattr__(u_key, value)
@@ -294,20 +250,16 @@ class UserInferredState:
 
 @dataclass
 class SharedDynamics:
-    """
-    The relational space between the System (`PhysicsPacket`) and the User (`UserInferredState`).
-    This is where co-metabolization happens.
-    """
-    phi: float = 0.5               # Shared Resonance (The connection strength between AI and User).
-    delta: float = 0.0             # Shared Silence (The weight of the pauses between prompts).
-    lq: float = 0.0                # Shared Liminality.
-    null_coord: float = 0.0        # Alignment with the zero-point Void.
-    nabla: float = 0.0             # The gradient/velocity of change in the relationship.
-    presence: float = 0.0          # The degree to which the system is holding space vs 'doing tasks'.
-    g_pool: int = 0                # Shared Glimmers (Trust currency that can be spent to override safety protocols).
-    p_transfer: float = 0.0        # Rate of energy transfer (co-regulation) between user and system.
-    sigma_silence: int = 0         # Consecutive turns of accumulated silence.
-    lambda_silence: float = 0.2    # Quality/texture of the silence (Is it peaceful, or is it tense?).
+    phi: float = 0.5
+    delta: float = 0.0
+    lq: float = 0.0
+    null_coord: float = 0.0
+    nabla: float = 0.0
+    presence: float = 0.0
+    g_pool: int = 0
+    p_transfer: float = 0.0
+    sigma_silence: int = 0
+    lambda_silence: float = 0.2
 
     def snapshot(self) -> "SharedDynamics":
         return SharedDynamics(**asdict(self))

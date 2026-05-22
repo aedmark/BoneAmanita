@@ -1,13 +1,5 @@
-"""spores/memory.py
-This module governs the architecture of the engine's memory systems.
-It maps the transition of semantic data from volatile, highly connected
-short-term graph networks (MemoryCore) down into the permanent, compressed
-mathematical substrate of long-term storage (SubconsciousStrata).
-Classes:
-    - SubconsciousStrata: The deep, append-only fossil record and matrix space.
-    - MemoryCore: The active semantic graph (Hippocampus) that learns,
-      forgets, and occasionally cannibalizes its own nodes to survive.
-"""
+"""spores/memory.py"""
+
 import json
 import os
 import random
@@ -15,7 +7,7 @@ import time
 import tempfile
 from collections import deque
 from typing import List, Tuple, Optional, Dict
-from core import BoneJSONEncoder
+from core import JSONEncoder
 from struts import ux, ux_format
 from presets import BoneConfig
 import re
@@ -23,10 +15,6 @@ from typing import Any
 from spores.spore_utils import _identity, _word_to_vector, _mat_mul, _reorthogonalize, _householder
 
 def _billy_mitchell_protocol(data: Any) -> Any:
-    """
-    Recursive walk to purge zero-width characters, homoglyphs, and untrusted artifacts.
-    Ensures the Mnemonic Arcade remains mathematically pure and prevents data exploits.
-    """
     if isinstance(data, str):
         return re.sub(r'[\u200B-\u200D\uFEFF\u202A-\u202E]', '', data)
     elif isinstance(data, dict):
@@ -36,15 +24,7 @@ def _billy_mitchell_protocol(data: Any) -> Any:
         return [_billy_mitchell_protocol(i) for i in data]
     return data
 
-
 class SubconsciousStrata:
-    """
-    The deep substrate. When active memories are destroyed or repressed, they are "buried" here.
-    This class maintains two mathematical matrices (M_t and Q_n) that constantly rotate and decay.
-    This allows thesystem to retain the geometric signature of long-forgotten words
-    without keeping them in active memory.
-    """
-
     def __init__(self, filename="memories/subconscious.jsonl"):
         self.filepath = filename
         self.directory = os.path.dirname(filename)
@@ -58,7 +38,6 @@ class SubconsciousStrata:
         self.Q_n = self._load_q_matrix()
 
     def _load_json(self, path, default_factory):
-        """ If the file is locked or corrupt, return the default."""
         if os.path.exists(path):
             try:
                 with open(path, "r", encoding="utf-8") as f:
@@ -74,7 +53,6 @@ class SubconsciousStrata:
         return self._load_json(self.q_filepath, lambda: _identity(8))
 
     def apply_scar(self, concept: str):
-        """Mathematically flinches the matrix away from a traumatic concept vector."""
         v = _word_to_vector(concept)
         H = _householder(v)
         self.Q_n = _mat_mul(H, self.Q_n)
@@ -91,7 +69,6 @@ class SubconsciousStrata:
             pass
 
     def _iter_entries(self):
-        """Yields JSON records from the log line-by-line to prevent massive RAM spikes."""
         if not os.path.exists(self.filepath):
             return
         try:
@@ -110,24 +87,21 @@ class SubconsciousStrata:
         self.index = {e.get("word"): e for e in self._iter_entries() if e.get("word")}
 
     def bury(self, fossil_data: Dict, config_ref=None):
-        """
-        The act of permanent compression. Takes a dying active memory, appends it
-        to the JSONL fossil record (The Cabinets), and permanently warps the deep matrices.
-        """
         try:
             from struts import safe_get
-
-            # The Billy Mitchell Protocol: Sanitize before committing to the Cabinet
-            fossil_data = _billy_mitchell_protocol(fossil_data)
+            clean_fossil = _billy_mitchell_protocol(fossil_data)
             target_cfg = config_ref or BoneConfig
             cfg = safe_get(target_cfg, "SPORES", {})
             max_idx = int(safe_get(cfg, "MAX_INDEX_SIZE", 1000))
             if len(self.index) > max_idx:
                 self._prune_strata()
             with open(self.filepath, "a", encoding="utf-8") as f:
-                fossil_data["buried_at"] = time.time()
-                f.write(json.dumps(fossil_data, cls=BoneJSONEncoder) + "\n")
-            self.index[fossil_data["word"]] = fossil_data
+                clean_fossil["buried_at"] = time.time()
+                f.write(json.dumps(clean_fossil, cls=JSONEncoder) + "\n")
+            self.index[clean_fossil["word"]] = clean_fossil
+            word = clean_fossil["word"]
+            mass = clean_fossil.get("mass", 1.0)
+            fossil_data = clean_fossil # update local reference for matrix maths below
             word = fossil_data["word"]
             mass = fossil_data.get("mass", 1.0)
             K = _word_to_vector(word)
@@ -145,7 +119,6 @@ class SubconsciousStrata:
             return False
 
     def _prune_strata(self):
-        """Trims the JSONL file to keep only the most recent 90% of entries."""
         try:
             with open(self.filepath, "r", encoding="utf-8") as f:
                 lines = f.readlines()
@@ -162,18 +135,9 @@ class SubconsciousStrata:
             pass
 
     def dredge(self, trigger_word: str) -> Optional[Dict]:
-        """
-        Attempts to dig up the exact literal data of a buried word.
-        Uses the in-RAM index as a 'Cheat Sheet' to avoid O(N) file parsing of the Cabinets.
-        """
         return self.index.get(trigger_word)
 
     def dredge_vibe(self, trigger_word: str) -> list:
-        """
-        Retrieves the mathematical "ghost" of a word. By multiplying the word's
-        vector against the current M_t matrix, we get its structural relevance
-        to everything else the system has ever learned.
-        """
         Q = _word_to_vector(trigger_word)
         out = [0.0] * 8
         for i in range(8):
@@ -181,13 +145,7 @@ class SubconsciousStrata:
                 out[j] += Q[i] * self.M_t[i][j]
         return [round(val, 3) for val in out]
 
-
 class MemoryCore:
-    """
-    The active semantic graph (Hippocampus).
-    This is where current context lives. Words are nodes, and the frequency
-    at which they appear together form weighted synaptic edges.
-    """
     DIMENSION_MAP = {
         "STR": {"heavy", "constructive", "base"},
         "VEL": {"kinetic", "explosive", "mot"},
@@ -208,10 +166,6 @@ class MemoryCore:
         self.consolidation_threshold = 5.0
 
     def illuminate(self, vector: Dict[str, float], limit: int = 5) -> List[str]:
-        """
-        Retrieves graph memories that resonate with the current dimensional state.
-        Critically, the act of remembering mathematically alters the memory.
-        """
         if not self.graph:
             return []
         active_dims = {k: v for k, v in vector.items() if v > 0.4}
@@ -230,17 +184,11 @@ class MemoryCore:
                 if node_cats & active_dim_cats[dim]:
                     resonance_score += val * 1.5
             mass = sum(data.get("edges", {}).values())
-
-            # Ensure the node has a baseline structural weight before compounding
             base_mass_score = mass * 0.1
-
-            # The Bonus Round: If Entropy (Chaos) or Velocity (Energy) is highly elevated,
-            # abandon linear similarity and apply multiplicative framing to pull explosive patterns.
             if active_dims.get("ENT", 0.0) > 0.7 or active_dims.get("VEL", 0.0) > 0.7:
                 resonance_score = (resonance_score + base_mass_score) * (1.0 + (mass * 0.5))
             else:
                 resonance_score += base_mass_score
-
             if resonance_score > 0.5:
                 scored_memories.append((resonance_score, node, data))
         scored_memories.sort(key=lambda x: x[0], reverse=True)
@@ -273,13 +221,11 @@ class MemoryCore:
         return results
 
     def calculate_mass(self, node):
-        """Calculates the structural weight of a node based on its total synaptic bonds."""
         if node not in self.graph:
             return 0.0
         return sum(self.graph[node]["edges"].values())
 
     def strengthen_link(self, source, target, rate, decay):
-        """Reinforces the connection between two ideas. Capped at 10.0 to prevent runaway optimization."""
         if source not in self.graph:
             return
         edges = self.graph[source]["edges"]
@@ -287,11 +233,6 @@ class MemoryCore:
         edges[target] = min(10.0, current_weight + rate * (1.0 - current_weight * decay))
 
     def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
-        """
-        Global decay loop. Simulates the passage of time.
-        Edges weaken. If an edge drops below the threshold, it snaps.
-        If a node loses all its edges, the system forgets it entirely.
-        """
         pruned_count = total_decayed = 0
         for node in list(self.graph.keys()):
             edges = self.graph[node]["edges"]
@@ -311,11 +252,6 @@ class MemoryCore:
         return ux_format("spore_strings", "core_pruned", default="", total=total_decayed, pruned=pruned_count)
 
     def cannibalize(self, current_tick, preserve_current=None) -> Tuple[Optional[str], str]:
-        """
-        Autophagy mechanism. Activated when the system reaches critical cognitive load.
-        The system identifies the weakest, oldest, unprotected node in its graph,
-        destroys it to free up RAM/ATP, and dumps its corpse into the Subconscious strata.
-        """
         protected = set(self.cortical_stack)
         if preserve_current:
             protected.update(preserve_current if isinstance(preserve_current, list) else [preserve_current])
@@ -339,6 +275,8 @@ class MemoryCore:
             "death_tick": current_tick,
         }
         self.subconscious.bury(fossil_data, config_ref=self.cfg)
+        if hasattr(self, "events") and self.events:
+            self.events.publish("MEMORY_BURIED", {"fossil": fossil_data})
         del self.graph[victim]
         for node_data in self.graph.values():
             node_data["edges"].pop(victim, None)

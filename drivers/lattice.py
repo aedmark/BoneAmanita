@@ -1,19 +1,12 @@
 """drivers/lattice.py"""
+
 import time
 from typing import List, Any
 from constants import Prisma
 from physics.models import UserInferredState, SharedDynamics, PhysicsPacket
 from struts import ux, safe_get
 
-
 class SharedLatticeDriver:
-    """
-    The SharedLatticeDriver governs the 'Co-Metabolism' of the system.
-    It tracks the user's inferred state and compares it to the system's physical state.
-    It calculates Resonance (Phi), measures the weight of Silence, and allows the
-    machine to physically carry the cognitive load when the user is exhausted.
-    """
-
     def __init__(self):
         self.u = UserInferredState()
         self.shared = SharedDynamics()
@@ -21,18 +14,12 @@ class SharedLatticeDriver:
 
     @staticmethod
     def _get_f(obj, *keys, default=0.0):
-        """Helper to safely extract float values from deeply nested dynamic objects."""
         for k in keys:
             if (val := safe_get(obj, k)) is not None:
                 return float(val)
         return float(default)
 
-    def infer_and_couple(self, text: str, sys_phys: PhysicsPacket, input_phys: Any,
-                         atp_pool: float) -> tuple[List[str], float]:
-        """
-        The core synchronization loop. It calculates the friction of the user's input,
-        measures how aligned the human and machine are, and categorizes the silence between prompts.
-        """
+    def infer_and_couple(self, text: str, sys_phys: PhysicsPacket, input_phys: Any, atp_pool: float) -> tuple[List[str], float]:
         logs = []
         atp_deduction = 0.0
         now = time.time()
@@ -48,7 +35,7 @@ class SharedLatticeDriver:
         self.u.T_u = self._get_f(input_phys, "T", "trauma", default=getattr(self.u, "T_u", 0.0))
         sys_beta, sys_chi = sys_phys.beta, sys_phys.chi
         sys_val, sys_psi = sys_phys.valence, sys_phys.psi
-        sys_drag = sys_phys.narrative_drag or 1.0
+        sys_drag = float(sys_phys.narrative_drag) if sys_phys.narrative_drag is not None else 1.0
         dp_trauma = 0.0
         if sys_phys.drag_profile is not None:
             dp = sys_phys.drag_profile

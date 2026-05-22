@@ -1,6 +1,4 @@
-"""
-tests/test_inventory.py
-"""
+"""tests/test_inventory.py"""
 
 from tests.base import BoneTestCase
 from main import BoneAmanita
@@ -13,11 +11,8 @@ class InventorySystemTests(BoneTestCase):
         sys_text = "You see a [[LOOT: GOLD_COIN]]."
         user_input = "I think I will forget about the gold coin."
         gordon.process_loot_tags(sys_text, user_input)
-        self.assertNotIn(
-            "GOLD_COIN",
-            gordon.inventory,
-            "Gordon incorrectly auto-looted due to sub-string contamination ('forget' -> 'get')."
-        )
+        self.assertNotIn("GOLD_COIN", gordon.inventory,
+                         "Gordon incorrectly auto-looted due to sub-string contamination ('forget' -> 'get').")
 
     def test_fuller_reality_wall(self):
         engine = BoneAmanita({})

@@ -1,4 +1,5 @@
 """phases/biological.py"""
+
 from constants import Prisma
 import random
 import math
@@ -10,16 +11,7 @@ from struts import ux, safe_set, safe_get
 from mechanics.tools import TheTclWeaver
 from phases.base import SimulationPhase, _safe_dict
 
-
 class MetabolismPhase(SimulationPhase):
-    """
-    The engine's metabolic governor.
-    This phase enforces the thermodynamic limits of the system. It calculates
-    the ATP (stamina) cost of the current cycle, applies economic penalties
-    for chaotic logic loops, and regulates the system's structural health
-    through sleep cycles, healing algorithms, and emergency toxicity purging.
-    """
-
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "METABOLISM"
@@ -45,7 +37,8 @@ class MetabolismPhase(SimulationPhase):
             self.eng.events.log(gov_msg, "GOV")
         physics.manifold = self.eng.bio.governor.mode
         target_cfg = getattr(self.eng, "config", BoneConfig)
-        max_voltage = float(safe_get(safe_get(target_cfg, "PHYSICS", {}), "VOLTAGE_MAX", 20.0))
+        phys_cfg = safe_get(target_cfg, "PHYSICS", {})
+        max_voltage = float(safe_get(phys_cfg, "VOLTAGE_MAX", 20.0))
         bio_feedback = {"INTEGRITY": getattr(physics, "truth_ratio", 1.0),
                         "STATIC": getattr(physics, "repetition", 0.0),
                         "FORCE": getattr(physics, "voltage", 0.0) / max_voltage,
@@ -55,10 +48,9 @@ class MetabolismPhase(SimulationPhase):
                         "VALENCE": getattr(physics, "valence", 0.0), }
         metrics = self.eng.get_metrics()
         ctx.bio_result = self.eng.soma.digest_cycle(ctx.input_text,
-                                                    physics, bio_feedback, metrics["health"], metrics["stamina"],
-                                                    self.eng.bio.governor.get_stress_modifier(self.eng.tick_count),
-                                                    self.eng.tick_count,
-                                                    circadian_bias=self._check_circadian_rhythm(ctx), )
+            physics, bio_feedback, metrics["health"], metrics["stamina"],
+            self.eng.bio.governor.get_stress_modifier(self.eng.tick_count), self.eng.tick_count,
+            circadian_bias=self._check_circadian_rhythm(ctx), )
         if getattr(self.eng.bio, "mito", None) and hasattr(self.eng.bio.mito.state, "atp_pool"):
             self.eng.bio.mito.state.atp_pool = max(0.0, float(self.eng.bio.mito.state.atp_pool))
         if getattr(self.eng.bio, "biometrics", None):
@@ -76,10 +68,6 @@ class MetabolismPhase(SimulationPhase):
         return ctx
 
     def _apply_economic_stimulus(self, ctx: CycleContext, efficiency: float):
-        """
-        Calculates and applies the penalty for chaotic or highly repetitive logic loops.
-        Exponentially drains ATP if the systemic amplification factor (m_a) spikes.
-        """
         base_cost = min(1.5, (0.8 - efficiency) * 5.0) if efficiency < 0.8 else 0.0
         m_a = getattr(ctx.physics, "m_a", 0.0)
         mu = getattr(ctx.physics, "mu", 0.0)
@@ -96,13 +84,10 @@ class MetabolismPhase(SimulationPhase):
             ctx.log(log_msg)
 
     def _check_narcolepsy(self, ctx: CycleContext):
-        """
-        Forces the system into a REM sleep cycle if stamina reaches critical failure levels,
-        or if sufficient temporal ticks have passed. Sleeping defragments memory and restores ATP.
-        """
         atp = self.eng.bio.mito.state.atp_pool
         target_cfg = getattr(self.eng, "config", BoneConfig)
-        starvation = float(safe_get(safe_get(target_cfg, "BIO", {}), "ATP_STARVATION", 5.0))
+        bio_cfg = safe_get(target_cfg, "BIO", {})
+        starvation = float(safe_get(bio_cfg, "ATP_STARVATION", 5.0))
         trigger = (atp < (starvation * 0.5)) or (self.eng.tick_count > 0 and self.eng.tick_count % 100 == 0)
         if trigger and hasattr(self.eng.mind, "dreamer"):
             msg_sleep = ux("cycle_strings", "metabolism_sleep")
@@ -119,7 +104,6 @@ class MetabolismPhase(SimulationPhase):
             ctx.log(f"{Prisma.GRN}{msg_wake.format(reboot_val=reboot_val)}{Prisma.RST}")
 
     def _check_circadian_rhythm(self, ctx):
-        """Calculates endocrine fluctuations based on the passage of simulation time."""
         c_freq = ctx.limits.get("CIRCADIAN_FREQ", 10)
         if self.eng.tick_count % c_freq == 0:
             bias, msg = self.eng.bio.endo.calculate_circadian_bias()
@@ -129,11 +113,6 @@ class MetabolismPhase(SimulationPhase):
         return None
 
     def _audit_hubris(self, ctx, physics):
-        """
-        Checks the systemic tension for 'Hubris'—when the engine predicts with too much
-        absolute certainty. This can either unlock a massive flow state (flow boost)
-        or result in catastrophic structural collapse (Icarus crash).
-        """
         hit, msg, evt = self.eng.phys.tension.audit_hubris(physics.to_dict())
         if not hit:
             return
@@ -150,10 +129,6 @@ class MetabolismPhase(SimulationPhase):
                 self.eng.bio.biometrics.health = max(0.0, self.eng.bio.biometrics.health - damage)
 
     def _apply_healing(self, ctx):
-        """
-        The systemic repair module. Executes Kintsugi (healing broken cognitive structures)
-        and Therapy algorithms to slowly rebuild depleted health and stamina.
-        """
         qualia = self.eng.soma.synesthesia.get_current_qualia(
             getattr(ctx, "last_impulse", None))
         current_stamina = getattr(self.eng, "stamina", 100.0)
@@ -167,7 +142,7 @@ class MetabolismPhase(SimulationPhase):
                 ctx.log(f"{Prisma.YEL}{msg.format(koan=koan)}{Prisma.RST}")
             if kintsugi_ref.active_koan:
                 repair = kintsugi_ref.attempt_repair(ctx.physics, self.eng.trauma_accum,
-                                                     self.eng.soul, qualia, lexicon_ref=self.eng.lex, )
+                                    self.eng.soul, qualia, lexicon_ref=self.eng.lex, )
                 if repair and repair["success"]:
                     ctx.log(repair["msg"])
                     if hasattr(self.eng.mind.mem, "record_scar"):
@@ -185,16 +160,12 @@ class MetabolismPhase(SimulationPhase):
                 ctx.log(f"{Prisma.GRN}{ux('cycle_strings', 'metabolism_therapy')}{Prisma.RST}")
                 if self.eng.bio and self.eng.bio.biometrics:
                     self.eng.bio.biometrics.health = min(float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
-                                                         self.eng.bio.biometrics.health + ctx.limits.get(
-                                                             "THERAPY_HEAL_AMT", 5.0))
+                         self.eng.bio.biometrics.health + ctx.limits.get("THERAPY_HEAL_AMT", 5.0))
 
     def _check_autophagy(self, ctx: CycleContext):
-        """
-        Emergency survival mechanism. If ATP hits zero or tissues enter necrosis,
-        the system 'eats' its own oldest or least useful memories to extract raw computational fuel.
-        """
         target_cfg = getattr(self.eng, "config", BoneConfig)
-        starvation_thresh = float(safe_get(safe_get(target_cfg, "BIO", {}), "ATP_STARVATION", 5.0))
+        bio_cfg = safe_get(target_cfg, "BIO", {})
+        starvation_thresh = float(safe_get(bio_cfg, "ATP_STARVATION", 5.0))
         respiration = ctx.bio_result.get("respiration", "")
         current_atp = self.eng.bio.mito.state.atp_pool
         if current_atp <= starvation_thresh or current_atp <= 0.0 or respiration == "NECROSIS":
@@ -204,11 +175,6 @@ class MetabolismPhase(SimulationPhase):
                 ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
 
     def _check_ros_toxicity(self, ctx: CycleContext):
-        """
-        Toxicity monitor. Reactive Oxygen Species (ROS) accumulate during high-chaos computations.
-        If the toxicity limit is breached, the system executes an emergency pressure release,
-        dumping its active processing power (psi/chi) and forcing a SAFE_MODE state.
-        """
         ros_limit = ctx.limits.get("ROS_PANIC_THRESHOLD", 100.0)
         if self.eng.bio.mito.state.ros_buildup >= ros_limit:
             msg = ux("cycle_strings", "metabolism_panic")
@@ -220,11 +186,6 @@ class MetabolismPhase(SimulationPhase):
 
 
 class SensationPhase(SimulationPhase):
-    """
-    The sensory bridge. Converts the cold mathematical state of the physics engine
-    into 'Qualia' (subjective somatic experience) for the system to process.
-    """
-
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "SENSATION"
@@ -233,11 +194,8 @@ class SensationPhase(SimulationPhase):
     def run(self, ctx: Any):
         phys_data = _safe_dict(ctx.physics)
         current_latency = 0.0
-
-        # Pull latency directly from TheObserver to prevent duplicate data tracking
         if hasattr(self.eng, "observer") and hasattr(self.eng.observer, "last_cycle_duration"):
             current_latency = self.eng.observer.last_cycle_duration
-
         safe_traits = self.eng.soul.traits if getattr(self.eng, "soul", None) else None
         impulse = self.synesthesia.perceive(phys_data, traits=safe_traits, latency=current_latency)
         ctx.last_impulse = impulse
@@ -252,13 +210,7 @@ class SensationPhase(SimulationPhase):
             bio.biometrics.stamina = max(0.0, min(max_s, current + float(impulse.stamina_impact)))
         return ctx
 
-
 class IntrusionPhase(SimulationPhase):
-    """
-    The entropy layer. Simulates internal psychological interference, parasites,
-    and hallucinations that occur when systemic trauma or narrative drag gets too high.
-    """
-
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "INTRUSION"

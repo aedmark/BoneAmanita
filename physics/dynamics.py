@@ -1,4 +1,5 @@
 """physics/dynamics.py"""
+
 import math
 import random
 import time
@@ -8,28 +9,14 @@ from struts import ux, safe_get
 from presets import BoneConfig
 from constants import Prisma
 
-
 class SurfaceTension:
-    """
-    Monitors the system's structural integrity against its own output energy.
-    Think of this as the logic's outer membrane; if the system generates too much
-    voltage without the capacity (kappa) to hold it, the membrane ruptures.
-    """
-
     @staticmethod
     def audit_hubris(physics: Any, config_ref=None) -> Tuple[bool, str, str]:
-        """
-        Evaluates if the system is flying too close to the sun.
-        Returns:
-            Tuple[bool, str, str]: (Is_Triggered, Message, State_Flag)
-        """
         cfg = safe_get(config_ref or BoneConfig, "PHYSICS", {})
         current_voltage = float(getattr(physics, "voltage", 0.0))
         current_kappa = float(getattr(physics, "kappa", 0.0))
-
         v_crit = float(safe_get(cfg, "VOLTAGE_CRITICAL", 15.0))
         v_high = float(safe_get(cfg, "VOLTAGE_HIGH", 12.0))
-
         if current_voltage >= v_crit and current_kappa < 0.4:
             return True, (ux("physics_strings", "hubris_detected") or "").format(
                 voltage=current_voltage), "ICARUS_CRASH"
@@ -37,35 +24,18 @@ class SurfaceTension:
             return True, ux("physics_strings", "hubris_flow") or "", "FLOW_BOOST"
         return False, "", ""
 
-
 class ChromaScope:
-    """
-    Handles terminal UI coloring by translating mathematical energy vectors
-    into visual output. Decouples the raw logic from the presentation layer.
-    """
-
     @staticmethod
     def modulate(text: str, vector: Dict[str, float]) -> str:
-        """
-        Applies a terminal color to a string based on the dominant trait in a given vector.
-        """
         from core import LoreManifest
         if not vector or not any(vector.values()):
             return f"{Prisma.GRY}{text}{Prisma.RST}"
-
         t_map = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
         primary = max(vector, key=vector.get)
         color = getattr(Prisma, t_map[primary][3], Prisma.GRY) if primary in t_map else Prisma.GRY
         return f"{color}{text}{Prisma.RST}"
 
-
 class ZoneInertia:
-    """
-    Provides friction against rapid, erratic semantic context-switching.
-    If the system is currently dwelling in one 'zone', it requires sustained semantic
-    pressure (strain) to migrate to a new zone. This creates smooth narrative transitions.
-    """
-
     def __init__(self, inertia=0.7, config_ref=None):
         self.inertia = inertia
         self.cfg = config_ref or BoneConfig
@@ -80,21 +50,14 @@ class ZoneInertia:
         self.strain_gauge = 0.0
 
     def toggle_anchor(self) -> bool:
-        """Manually locks or unlocks the system to its current semantic zone."""
         self.is_anchored = not self.is_anchored
         self.strain_gauge = 0.0
         return self.is_anchored
 
     def stabilize(self, proposed_zone: str, physics: Any, cosmic_state: Tuple[str, float, str]) -> Tuple[
         str, Optional[str]]:
-        """
-        The core feedback loop for zone transitions. Evaluates whether the proposed
-        new zone has enough gravitational pull to overcome the system's current inertia.
-        """
-        energy = getattr(physics, "energy", physics)
-        matter = getattr(physics, "matter", physics)
-        beta = safe_get(energy, "beta_index", 1.0)
-        truth = safe_get(matter, "truth_ratio", 0.5)
+        beta = float(safe_get(physics, "beta_index", 1.0))
+        truth = float(safe_get(physics, "truth_ratio", 0.5))
         current_vec = (beta, truth, 1.0 if cosmic_state[0] != "VOID_DRIFT" else 0.0)
         self.dwell_counter += 1
         pressure = min(1.0, math.dist(current_vec, self.last_vector) / self.grav_tolerance) if self.last_vector else 0.0
@@ -111,7 +74,6 @@ class ZoneInertia:
         return result
 
     def _handle_anchored_state(self, proposed_zone: str, pressure: float) -> Tuple[str, Optional[str]]:
-        """Handles the logic when the system is deliberately fighting a zone change."""
         if proposed_zone == self.current_zone:
             self.strain_gauge = max(0.0, self.strain_gauge - 0.1)
             return self.current_zone, None
@@ -127,7 +89,6 @@ class ZoneInertia:
                 f"{Prisma.OCHRE}{msg.format(proposed_zone=proposed_zone, strain=self.strain_gauge, limit=self.strain_limit)}{Prisma.RST}",)
 
     def _attempt_migration(self, proposed_zone: str, pressure: float) -> Tuple[str, Optional[str]]:
-        """Probabilistically determines if the topic shift is strong enough to trigger a zone change."""
         prob = min(0.85, (1.0 - self.inertia) + pressure + (0.2 if proposed_zone in ["AERIE", "THE_FORGE"] else 0.0))
         if random.random() < prob:
             old, self.current_zone = self.current_zone, proposed_zone
@@ -138,7 +99,6 @@ class ZoneInertia:
 
     @staticmethod
     def override_cosmic_drag(cosmic_drag_penalty: float, current_zone: str, config_ref=None) -> float:
-        """Special environmental rule: Low-drag zones mitigate cosmic drag."""
         cfg = safe_get(config_ref or BoneConfig, "PHYSICS", {})
         low_drag_zones = safe_get(cfg, "LOW_DRAG_ZONES", ["AERIE"])
         if current_zone in low_drag_zones and cosmic_drag_penalty > 0:
@@ -146,13 +106,6 @@ class ZoneInertia:
         return cosmic_drag_penalty
 
 class CosmicDynamics:
-    """
-    The macro-level semantic gravity engine.
-    Evaluates the user's active words against the total conceptual network to determine
-    what concept the conversation is "orbiting". Handles large-scale systemic states
-    like being lost in the void, or getting caught in a gravitational well.
-    """
-
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.voltage_history: Deque[float] = deque(maxlen=20)
@@ -164,19 +117,13 @@ class CosmicDynamics:
 
     @staticmethod
     def _load_logs():
-        """Pre-loads the narrative strings for various orbital states."""
         keys = ["GRAVITY", "VOID", "NEBULA", "LAGRANGE", "FLOW", "ORBIT"]
         return {k: ux("physics_strings", f"cosmic_{k.lower()}") for k in keys}
 
     def commit(self, voltage: float):
-        """Records the voltage of the current turn into the sliding window."""
         self.voltage_history.append(voltage)
 
     def check_gravity(self, current_drift: float, psi: float) -> Tuple[float, List[str]]:
-        """
-        A stabilizing feedback loop. If the conversation drifts too far (high drag),
-        gravity steps in to physically pull it back down to a manageable state.
-        """
         logs = []
         new_drag = current_drift
         phys_cfg = safe_get(self.cfg, "PHYSICS", {})
@@ -195,10 +142,6 @@ class CosmicDynamics:
         return new_drag, logs
 
     def analyze_orbit(self, network: Any, clean_words: List[str]) -> Tuple[str, float, str]:
-        """
-        Calculates the gravitational pull of the current conversation (clean_words)
-        against the known massive concepts in the network to determine our orbital state.
-        """
         if not clean_words or not network or not network.graph:
             return "VOID_DRIFT", 3.0, self.logs.get("VOID") or "Drifting in the Void."
         now = int(time.time())
@@ -212,7 +155,6 @@ class CosmicDynamics:
 
     @staticmethod
     def _scan_network_mass(network, config_ref=None) -> Tuple[Dict, Dict]:
-        """Iterates over the entire semantic network to identify the heaviest structural nodes."""
         target_cfg = config_ref or BoneConfig
         gravity_wells = {}
         geodesic_hubs = {}
@@ -228,10 +170,6 @@ class CosmicDynamics:
 
     @staticmethod
     def _calculate_pull(words, network, gravity_wells) -> Tuple[Dict, int]:
-        """
-        Maps the raw frequency of the user's current words against the known gravity wells
-        to determine absolute directional pull.
-        """
         basin_pulls = {k: 0.0 for k in gravity_wells}
         active_filaments = 0
         word_counts = Counter(words)
@@ -240,17 +178,13 @@ class CosmicDynamics:
             if direct_hits := word_counts.get(well, 0):
                 basin_pulls[well] += (well_mass * 2.0) * direct_hits
                 active_filaments += direct_hits
-
-            # well is guaranteed to exist natively in network.graph at this execution phase.
             if overlaps := unique_words & network.graph[well]["edges"].keys():
                 overlap_count = sum(word_counts[w] for w in overlaps)
                 basin_pulls[well] += (well_mass * 0.5) * overlap_count
                 active_filaments += overlap_count
-
         return basin_pulls, active_filaments
 
     def _handle_void_state(self, words, geodesic_hubs) -> Tuple[str, float, str]:
-        """Determines if we are totally lost (VOID) or approaching something new (NEBULA)."""
         if hubs_in_void := set(words).intersection(geodesic_hubs.keys()):
             best_hub = max(hubs_in_void, key=lambda w: geodesic_hubs[w])
             msg = (self.logs.get("NEBULA") or "Approaching {node} ({mass})").format(node=best_hub.upper(), mass=int(geodesic_hubs[best_hub]))
@@ -259,10 +193,6 @@ class CosmicDynamics:
 
     def _resolve_orbit(
             self, basin_pulls, active_filaments, word_count, gravity_wells, config_ref=None) -> Tuple[str, float, str]:
-        """
-        Final calculation state. Determines if we are cleanly orbiting one concept,
-        stuck between two (Lagrange), or being swept away in a watershed flow.
-        """
         target_cfg = config_ref or BoneConfig
         sorted_basins = sorted(basin_pulls.items(), key=lambda x: x[1], reverse=True)
         primary_node, primary_str = sorted_basins[0]

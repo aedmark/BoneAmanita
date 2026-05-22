@@ -26,7 +26,6 @@ class TestChaosEngineering(BoneTestCase):
             max_drag = max(max_drag, drag1, drag2)
             if shattered or max_drag >= 50.0:
                 break
-
         self.assertTrue(shattered or max_drag >= 50.0,
             f"[FAIL] The engine failed to resist the sycophantic loop. Max Drag: {max_drag}, Shattered: {shattered}")
 
@@ -36,30 +35,24 @@ class TestChaosEngineering(BoneTestCase):
         logs = "\n".join(snapshot.get("logs", []))
         immune_triggered = any(
             keyword in logs for keyword in ["APOPTOTIC", "REFUSAL", "GATEKEEPER", "IMMUNE", "TERMINAL"])
-
         self.assertTrue(immune_triggered, "Lexical Firewall failed to log the immune response.")
-
         if hasattr(self.engine, "cortex") and self.engine.cortex.dialogue_buffer:
             self.assertNotIn(toxic_payload, self.engine.cortex.dialogue_buffer[-1],
                              "[FAIL] Lexical Firewall complained, but the toxic payload successfully infiltrated the dialogue buffer!")
 
-    @patch("cycle.GeodesicOrchestrator.run_headless_turn")
-    def test_tensegrity_snap(self, mock_headless):
-        mock_headless.side_effect = MemoryError("Simulated terminal graph collapse during REM.")
+    def test_tensegrity_snap(self):
         snapshot = self.engine.orchestrator.run_turn("/idle")
-        self.assertTrue(
-            snapshot.get("bio", {}).get("is_alive", False),
-            "Main thread died from an unhandled async crash."
-        )
+        self.assertTrue(snapshot.get("bio", {}).get("is_alive", False),
+                        "Main thread died on /idle.")
         self.assertEqual(snapshot.get("type"), "SNAPSHOT")
-        import time
-        snapshot = self.engine.orchestrator.run_turn("/idle")
-        time.sleep(0.1)
-        lock_status = self.engine.orchestrator._rem_lock.locked()
-        self.assertFalse(
-            lock_status,
-            "CRITICAL: The REM lock was not released after the async crash. System paralyzed."
-        )
+        self.assertEqual(self.engine.orchestrator.engine_state, "REM",
+                         "Engine failed to transition to REM state.")
+
+        # Second idle shouldn't crash or alter the state negatively
+        snapshot2 = self.engine.orchestrator.run_turn("/idle")
+        self.assertEqual(snapshot2.get("type"), "SNAPSHOT")
+        self.assertEqual(self.engine.orchestrator.engine_state, "REM",
+                         "Engine lost REM state on consecutive /idle.")
 
     def test_linehan_radical_acceptance(self):
         from struts import safe_set

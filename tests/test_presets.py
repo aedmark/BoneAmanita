@@ -20,7 +20,7 @@ class PresetsBoundaryTests(BoneTestCase):
         with patch('soul.TheOroboros.apply_legacy') as mock_oroboros:
 
             def side_effect(dummy_phys, bio_proxy):
-                dummy_phys["narrative_drag"] = -5.0
+                setattr(dummy_phys, "narrative_drag", -5.0)
                 return ["Massive Boon"]
 
             mock_oroboros.side_effect = side_effect

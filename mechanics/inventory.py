@@ -1,13 +1,4 @@
-"""
-inventory.py
-
-The Physical Constraint and Object Lifecycle Module.
-This module governs the 'GordonKnot'—the inventory and object interaction system.
-It enforces the physical reality of the narrative, ensuring actions cannot be
-taken without the requisite tools, and dynamically generates objects based on
-the metabolic and physical state of the active environment.
-
-"""
+"""inventory.py"""
 
 import random
 import re
@@ -17,6 +8,7 @@ from presets import BoneConfig
 from core import LoreManifest
 from struts import ux, ux_format, safe_get, safe_set
 from constants import Prisma
+from mechanics.tools import TheTclWeaver
 
 @dataclass
 class Item:
@@ -63,6 +55,23 @@ class GordonKnot:
         self.abandonment_phrases = []
         self.load_config()
 
+    def apply_filters(self, user_message: str, active_physics: dict) -> str:
+        has_comb = any("CUT_THE_CRAP" in (self.get_item_data(i).passive_traits if self.get_item_data(i) else []) for i in self.inventory)
+        if has_comb:
+            try:
+                current_chi = float(safe_get(active_physics, "entropy", safe_get(active_physics, "chi", 0.5)))
+                pruned = TheTclWeaver.get_instance().quantum_comb(user_message, chi=current_chi)
+                if pruned != user_message:
+                    if self.events:
+                        self.events.log(
+                            f"{Prisma.CYN}Gordon rakes the comb through your prompt. Fluff discarded. -> '{pruned}'{Prisma.RST}",
+                            "SYS"
+                        )
+                    return pruned
+            except ImportError:
+                pass
+        return user_message
+
     def enforce_object_action_coupling(self, user_input: str, current_zone: str) -> Optional[str]:
         if self.mode in ["CREATIVE", "CONVERSATION", "TECHNICAL"]:
             return None
@@ -75,7 +84,7 @@ class GordonKnot:
                     msg = ux("gordon_strings", "premise_loc")
                     return f"{Prisma.SLATE}{msg.format(loc=required_loc, zone=current_zone)}{Prisma.RST}"
         for action, req_objs in self.action_coupling.items():
-            if action in tokens and re.search(
+            if all(w in tokens for w in action.split()) and re.search(
                     rf"\b(?:i\s+(?:will\s+)?{action}|to\s+{action}|{action}\s+(?:the|a|an|my|some|it|this|that)|{action}ing)\b|^{action}\b",
                     text,
             ):
@@ -91,7 +100,6 @@ class GordonKnot:
         return None
 
     def load_config(self):
-        """Hydrates the inventory ruleset and registries from the Lore Manifest."""
         data = LoreManifest.get_instance().get("GORDON") or (
             LoreManifest.get_raw("gordon.json") if hasattr(LoreManifest, "get_raw") else {})
         self.action_coupling = data.get("ACTION_COUPLING", {})
@@ -102,8 +110,8 @@ class GordonKnot:
             self.loot_triggers = self.creative_loot_triggers
         else:
             self.loot_triggers = data.get("LOOT_TRIGGERS", [])
-        self.interaction_verbs = data.get("INTERACTION_VERBS", [])
-        self.acquisition_verbs = data.get("ACQUISITION_VERBS", [])
+        self.interaction_verbs = sorted(data.get("INTERACTION_VERBS", []), key=len, reverse=True)
+        self.acquisition_verbs = sorted(data.get("ACQUISITION_VERBS", []), key=len, reverse=True)
         lexicon_data = LoreManifest.get_instance().get("LEXICON") or {}
         if not lexicon_data and hasattr(LoreManifest, "get_raw"):
             lexicon_data = LoreManifest.get_raw("lexicon.json") or {}
@@ -142,8 +150,8 @@ class GordonKnot:
         lost_loot = normalize_loot(raw_lost)
         logs = []
         if new_loot:
-            tokens = set(re.findall(r'\b\w+\b', user_input.lower()))
-            has_intent = any(verb in tokens for verb in self.acquisition_verbs)
+            lower_input = user_input.lower()
+            has_intent = any(re.search(rf"\b{re.escape(verb)}\b", lower_input) for verb in self.acquisition_verbs)
             if has_intent:
                 for item in new_loot:
                     logs.append(self.acquire(item))
@@ -193,7 +201,6 @@ class GordonKnot:
         return f"{Prisma.GRN}{msg.format(item=tool_name)}{Prisma.RST}"
 
     def safe_remove_item(self, item_name: str) -> bool:
-        """Attempts to remove an item, failing gracefully if it does not exist."""
         try:
             self.inventory.remove(item_name.upper())
             return True
@@ -246,6 +253,10 @@ class GordonKnot:
         prefixes = bp.get("PREFIXES", {}).get(archetype, fb.get("PREFIX", ["Strange"]))
         suffixes = bp.get("SUFFIXES", {}).get(archetype, fb.get("SUFFIX", ["of Mystery"]))
         bases_dict = bp.get("BASES", {})
+        k_hash = getattr(getattr(self.events, "telemetry", None), "kernel_hash", "UNKNOWN")
+        seed_val = f"{k_hash}_{len(self.registry)}_{physics_vector.get(dom_dim, 0.0)}"
+        rng = random.Random(seed_val)
+
         if self.mode in ["CREATIVE", "CONVERSATION"]:
             base_cat = bp.get("CREATIVE_BASE_CAT", "ABSTRACT")
             bases = bases_dict.get(base_cat, fb.get("BASE", ["Concept"]))
@@ -254,10 +265,10 @@ class GordonKnot:
             suffixes = overrides.get("SUFFIXES") or suffixes
         else:
             adv_cats = bp.get("ADVENTURE_CATEGORIES", ["TOOL", "JUNK", "ARTIFACT"])
-            bases = bases_dict.get(random.choice(adv_cats), fb.get("BASE", ["Object"]))
-        base = random.choice(bases)
-        prefix = random.choice(prefixes)
-        suffix = random.choice(suffixes)
+            bases = bases_dict.get(rng.choice(adv_cats), fb.get("BASE", ["Object"]))
+        base = rng.choice(bases)
+        prefix = rng.choice(prefixes)
+        suffix = rng.choice(suffixes)
         full_name = f"{prefix} {base} {suffix}"
         clean_id = full_name.upper().replace(" ", "_")
         clamped_value = min(100.0, round(physics_vector.get(dom_dim, 0.0) * 10, 1))
@@ -274,21 +285,30 @@ class GordonKnot:
                 r in sys_text.lower() for r in self.refusal_markers):
             return None
         valid_triggers = [t for t in self.loot_triggers if t in combined_text]
-        if not valid_triggers:
-            return None
-        present_candidates = []
-        for name in self.registry.keys():
-            if name.upper() not in self.inventory:
-                clean = name.lower().replace("_", " ")
-                if clean in combined_text and re.search(rf"\b{re.escape(clean)}\b", combined_text):
-                    present_candidates.append((name, clean))
-        if not present_candidates:
-            return None
-        for t in sorted(valid_triggers, key=len, reverse=True):
-            t_escaped = re.escape(t)
-            for name, clean in present_candidates:
-                if re.search(rf"\b{t_escaped}\b.*?\b{re.escape(clean)}\b", combined_text, re.IGNORECASE):
-                    return name
+        if valid_triggers:
+            present_candidates = []
+            for name in self.registry.keys():
+                if name.upper() not in self.inventory:
+                    clean = name.lower().replace("_", " ")
+                    if clean in combined_text and re.search(rf"\b{re.escape(clean)}\b", combined_text):
+                        present_candidates.append((name, clean))
+            if present_candidates:
+                for t in sorted(valid_triggers, key=len, reverse=True):
+                    t_escaped = re.escape(t)
+                    for name, clean in present_candidates:
+                        if re.search(rf"\b{t_escaped}\b.*?\b{re.escape(clean)}\b", combined_text, re.IGNORECASE):
+                            return name
+        lower_user = user_text.lower()
+        for verb in self.acquisition_verbs:
+            match = re.search(
+                rf"\b{re.escape(verb)}\s+(?:the|a|an|some|my)?\s*([a-z0-9\'\-]+(?:\s+[a-z0-9\'\-]+){{0,2}})",
+                lower_user)
+            if match:
+                extracted = match.group(1).strip()
+                if len(extracted) > 2 and extracted not in ("it", "this", "that", "them", "him", "her"):
+                    clean_extracted = extracted.upper().replace(" ", "_")
+                    if clean_extracted not in self.inventory:
+                        return clean_extracted
         return None
 
     def consume(self, item_name: str) -> Tuple[bool, str]:
@@ -309,7 +329,7 @@ class GordonKnot:
         v = float(safe_get(physics_ref, "voltage", 0.0))
         d = float(safe_get(physics_ref, "narrative_drag", 0.0))
         k = float(safe_get(physics_ref, "kappa", 0.5))
-        for name in list(self.inventory):
+        for name in tuple(self.inventory):
             item = self.get_item_data(name)
             if not item or not item.reflex_trigger:
                 continue

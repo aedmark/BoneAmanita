@@ -1,13 +1,5 @@
-"""spores/genetics.py
-This module defines the evolutionary and reproductive systems of the engine.
-Instead of loading static configurations every time, the system can "reproduce"
-by saving its current state as a Spore. These spores carry genetic mutations,
-inherited trauma, and adapted vocabulary, allowing the system to evolve
-new conversational metabolisms over successive generations.
-Classes:
-    - LiteraryReproduction: The biological controller for spawning offspring states
-      (Mitosis) or merging two distinct session states (Crossover).
-"""
+"""spores/genetics.py"""
+
 import json
 import random
 from typing import Tuple, Dict
@@ -16,14 +8,7 @@ from struts import ux, safe_get
 from presets import BoneConfig
 from spores.spore_utils import _access_config_path
 
-
 class LiteraryReproduction:
-    """
-    Handles the genetic algorithms of the conversational engine.
-    It dictates how system parameters drift (mutate) and how
-    experiential data (like trauma vectors or specific lexicon adaptations)
-    are passed down to the next instance of the engine.
-    """
     MUTATIONS = {}
     JOY_CLADE = {}
     MUTATION_TABLE = [
@@ -41,10 +26,6 @@ class LiteraryReproduction:
 
     @classmethod
     def load_genetics(cls, config_ref=None):
-        """
-        Extracts foundational genetic structures and predetermined mutation profiles
-        from the overarching lore manifest.
-        """
         try:
             target_cfg = config_ref or BoneConfig
             genetics = (LoreManifest.get_instance(config_ref=target_cfg).get("GENETICS")
@@ -57,11 +38,6 @@ class LiteraryReproduction:
 
     @staticmethod
     def mutate_config(current_config):
-        """
-        Applies genetic drift (radiation) to the base configuration.
-        Iterates through the MUTATION_TABLE; if the probability check passes,
-        the parameter's value is slightly shifted (±10%) but clamped within safe bounds.
-        """
         mutated_config = {}
         for key, min_v, max_v, chance in LiteraryReproduction.MUTATION_TABLE:
             if random.random() < chance:
@@ -73,15 +49,9 @@ class LiteraryReproduction:
         return mutated_config
 
     def mitosis(self, parent_id, bio_state, physics):
-        """
-        Asexual reproduction. Spawns a child spore directly from the current session's state.
-        The child's "flavor" (trait) is heavily influenced by whatever semantic archetype
-        was dominant at the exact moment of reproduction.
-        """
         counts = safe_get(physics, "counts", {})
         dominant = max(counts, key=counts.get) if counts else "VOID"
-        mutation_data = LiteraryReproduction.MUTATIONS.get(dominant.upper(),
-                                                           {"trait": "NEUTRAL", "mod": {}, "lexicon": []})
+        mutation_data = LiteraryReproduction.MUTATIONS.get(dominant.upper(), {"trait": "NEUTRAL", "mod": {}, "lexicon": []})
         child_trait = mutation_data.get("trait", "NEUTRAL")
         child_id = f"{parent_id}_({child_trait})"
         config_mutations = LiteraryReproduction.mutate_config(self.cfg)
@@ -100,11 +70,6 @@ class LiteraryReproduction:
         return child_id, child_genome
 
     def crossover(self, parent_a_id, parent_a_bio, parent_b_path):
-        """
-        Sexual reproduction / Hybridization.
-        Merges the current session (Parent A) with a saved spore file (Parent B).
-        Traits, trauma, and metabolic enzymes are averaged or combined.
-        """
         try:
             with open(parent_b_path, "r", encoding="utf-8") as f:
                 parent_b_data = json.load(f)
@@ -140,11 +105,6 @@ class LiteraryReproduction:
         return child_id, child_genome
 
     def attempt_reproduction(self, engine_ref, mode="MITOSIS", target_spore=None) -> Tuple[str, Dict]:
-        """
-        The public orchestrator for initiating the reproduction sequence.
-        Extracts the necessary biological and semantic states from the live engine
-        and routes them to the appropriate reproductive function.
-        """
         mem = engine_ref.mind.mem
         mito_data = {}
         if getattr(engine_ref, "bio", None) and hasattr(engine_ref.bio, "mito"):

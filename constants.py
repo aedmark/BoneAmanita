@@ -1,9 +1,4 @@
-"""
-constants.py
-
-This module defines the structural primitives, visual vocabulary, and dimensional
-boundaries that the rest of the engine relies upon.
-"""
+"""constants.py"""
 
 import re
 from enum import Enum
@@ -44,7 +39,8 @@ class Prisma:
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
-        code = cls._COLOR_MAP.get(str(color_key)[0].upper(), cls.WHT)
+        k = str(color_key).strip()
+        code = cls._COLOR_MAP.get(k[0].upper() if k else "0", cls.WHT)
         txt = "" if text is None else str(text)
         return f"{code}{txt}" if txt.endswith(cls.RST) else f"{code}{txt}{cls.RST}"
 

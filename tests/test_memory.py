@@ -37,10 +37,6 @@ class MemoryTests(BoneTestCase):
         )
 
     def test_autophagy_phantom_generation(self):
-        """
-        When MemoryCore reaches critical load and executes Autophagy,
-        it must physically delete the active node but bury a fossil in the SubconsciousStrata.
-        """
         from spores.memory import MemoryCore, SubconsciousStrata
         from unittest.mock import MagicMock
         import os
@@ -95,79 +91,45 @@ class MemoryTests(BoneTestCase):
         )
 
     def test_billy_mitchell_protocol_sanitization(self):
-        """
-        Ensures the Mnemonic Arcade recursively purges invisible zero-width
-        characters from nested data structures before burial.
-        """
         from spores.memory import _billy_mitchell_protocol
 
         dirty_data = {
-            "word": "phantom\u200B",  # Zero-width space
-            "edges": {"echo\uFEFF": 1.0},  # Byte order mark
-            "tags": ["\u202Acorrupt\u202C", "clean"]  # Left-to-right embedding
+            "word": "phantom\u200B",
+            "edges": {"echo\uFEFF": 1.0},
+            "tags": ["\u202Acorrupt\u202C", "clean"]
         }
-
         clean_data = _billy_mitchell_protocol(dirty_data)
-
         self.assertEqual(clean_data["word"], "phantom")
         self.assertEqual(clean_data["edges"].get("echo", 0.0), 1.0)
         self.assertNotIn("echo\uFEFF", clean_data["edges"])
         self.assertEqual(clean_data["tags"][0], "corrupt")
         self.assertEqual(clean_data["tags"][1], "clean")
-
         print("\n--- The Billy Mitchell Protocol ---")
         print("  [SUCCESS] Invisible structural rot eradicated successfully.")
 
     def test_bonus_round_multiplicative_resonance(self):
-        """
-        Validates that high Chaos (ENT > 0.7) abandons linear retrieval and
-        forces multiplicative resonance scaling to pull explosive structural patterns.
-        """
         from spores.memory import MemoryCore
         from unittest.mock import MagicMock
-
-        # Setup a dummy MemoryCore with a heavy node
         core = MemoryCore(events_ref=MagicMock(), subconscious_ref=MagicMock())
         core.graph = {
-            "load_bearing_strut": {"edges": {"a": 2.0, "b": 3.0, "c": 5.0}}  # Total mass = 10.0
+            "load_bearing_strut": {"edges": {"a": 2.0, "b": 3.0, "c": 5.0}}
         }
-
-        # Simulate standard low-chaos state (Linear)
-        # linear_score = (0.2 * 1.5) + (10.0 * 0.1) = 0.3 + 1.0 = 1.3
         linear_results = core.illuminate({"ENT": 0.2})
-
-        # Simulate high-chaos Bonus Round (Multiplicative)
-        # multiplicative_score = (0.8 * 1.5) * (1.0 + (10.0 * 0.5)) = 1.2 * 6.0 = 7.2
         bonus_results = core.illuminate({"ENT": 0.8})
-
-        # We don't have the exact internal scores in the return strings, but we know
-        # the Bonus Round fundamentally scales the weight. If we had access to the raw
-        # tuples, we would assert 7.2 > 1.3. For now, we assert the phase shift runs without crashing.
         self.assertTrue(len(linear_results) > 0)
         self.assertTrue(len(bonus_results) > 0)
-
         print("\n--- The Bonus Round ---")
         print("  [SUCCESS] Multiplicative resonance threshold crossed cleanly.")
 
     def test_orchestrator_queue_blocking(self):
-        """
-        Ensures the Geodesic Orchestrator uses the blocking output_queue,
-        proving the synchronous busy-wait loop is dead.
-        """
         from cycle import GeodesicOrchestrator
         from unittest.mock import MagicMock
         import queue
-
         orch = GeodesicOrchestrator(engine_ref=MagicMock())
         orch.output_queue = queue.Queue()
-
-        # Manually push a snapshot
         orch.output_queue.put({"type": "SNAPSHOT", "ui": "Test passed."})
-
-        # Verify the get() pulls correctly without a while-sleep loop
         snapshot = orch.output_queue.get(timeout=1.0)
         self.assertEqual(snapshot["ui"], "Test passed.")
-
         print("\n--- Output Queue Blocking ---")
         print("  [SUCCESS] GeodesicOrchestrator successfully passed data via thread-safe queue.")
 
@@ -238,16 +200,12 @@ class MemoryTests(BoneTestCase):
         self.engine.mind.mem.graph["core_concept"] = {"data": "Explicit answer", "mass": 5.0}
         self.engine.mind.mem.graph["adjacent_risk"] = {"data": "Hidden systemic cost", "mass": 2.0}
 
-        # S.L.A.S.H. V3: Isolate the Shadow Cast from the LLM cycle for a pure deterministic test.
         sim_res = {
             "physics": {"scope": 0.9, "depth": 0.1, "voltage": 10.0, "chi": 0.0},
             "bio": {}, "mind": {}, "world": {}, "soul": {},
             "logs": [], "council_mandates": []
         }
-
-        # Direct invocation of the state compiler
         _ = self.engine.cortex.gather_state(sim_res)
-
         shadow_nodes = getattr(self.engine.cortex, "last_shadow_nodes", [])
         self.assertTrue(
             len(shadow_nodes) > 0,

@@ -39,16 +39,10 @@ class BiologyTests(BoneTestCase):
             with patch.object(target_cfg.BIO, 'REST_HEALTH_RECOVERY', 20.0), \
                     patch.object(target_cfg.BIO, 'REST_STAMINA_RECOVERY', 40.0):
                 self.engine.bio.rest(factor=1.0)
-                self.assertEqual(
-                    self.engine.bio.biometrics.health,
-                    70.0,
-                    "Health did not recover at the configured rate.",
-                )
-                self.assertEqual(
-                    self.engine.bio.biometrics.stamina,
-                    90.0,
-                    "Stamina did not recover at the configured rate.",
-                )
+                self.assertEqual(self.engine.bio.biometrics.health, 70.0,
+                                 "Health did not recover at the configured rate.", )
+                self.assertEqual(self.engine.bio.biometrics.stamina, 90.0,
+                                 "Stamina did not recover at the configured rate.", )
 
     def test_config_glimmer_yield(self):
             target_cfg = getattr(self.engine, "config")
@@ -125,3 +119,23 @@ class BiologyTests(BoneTestCase):
         finally:
             if shared_lattice_backup:
                 self.engine.shared_lattice = shared_lattice_backup
+
+    def test_bio_physical_coupling(self):
+        print("\n--- Bio-Physical Coupling (Governor) ---")
+        from core import CyberneticGovernor
+        gov = CyberneticGovernor()
+        gov.recalibrate(target_voltage=50.0, target_drag=5.0)
+        phys_mock = {"voltage": 100.0, "narrative_drag": 10.0}
+        v_shift_base, d_shift_base = gov.regulate(phys_mock, dt=1.0)
+
+        class MockEndo:
+            def __init__(self, glimmers):
+                self.glimmers = glimmers
+
+        endo_depleted = MockEndo(glimmers=0)
+        v_shift_dep, _ = gov.regulate(phys_mock, dt=1.0, endocrine_state=endo_depleted)
+        endo_rich = MockEndo(glimmers=2)
+        v_shift_rich, _ = gov.regulate(phys_mock, dt=1.0, endocrine_state=endo_rich)
+        self.assertTrue(abs(v_shift_dep) < abs(v_shift_base), "[FAIL] Depleted biology failed to throttle physics regulation.")
+        self.assertTrue(abs(v_shift_rich) > abs(v_shift_base), "[FAIL] High glimmers failed to accelerate physics regulation.")
+        print("  [SUCCESS] Endocrine state successfully modulates physics regulation speed.")

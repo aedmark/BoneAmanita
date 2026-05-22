@@ -1,6 +1,83 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 20.1.0 "The Temporal Determinism Pass"**
+
+**Added**
+
+- **Timeline Integrity (Chronos):** Re-weaponized the phantom `kernel_hash` to act as a permanent Boot Fingerprint. `ChronosKeeper` now mathematically verifies this hash during save hydration to detect and log temporal fractures.
+- **Telemetry Anchoring:** `DecisionCrystal` and `TelemetryService` now natively stamp all trace files and system event logs with the active session's `kernel_hash`, permanently eliminating cross-session data bleed.
+- **Quantum Determinism (The Dream Seed):** Cold-boot scenarios, `DreamEngine` LLM hallucinations, and `GordonKnot` physical item synthesis are now bound to the `kernel_hash` RNG seed, ensuring perfect determinism within a single lifecycle.
+
+**Changed**
+
+- **Structural Assertiveness:** Stripped heavy, deeply nested `hasattr`/`isinstance` paranoid checks from `main.py` (death/boot sequences) and `cycle.py` (active physics polling). The engine now trusts its own architectural guarantees.
+- **REM Daemon Optimization:** Flattened the monolithic `run_continuous` hot-loop in `GeodesicOrchestrator`. Autopoiesis, ATP drain, and background dreaming logic have been isolated into clean, scalable class methods.
+
+**Fixed**
+
+- **Cascading Panic Room Crash:** Mended a severed variable reference (`obs` to `self.eng.observer`) in the core cycle handoff. This resolves a critical pipeline collapse that previously wiped the `macro_policy` and falsely triggered the `PanicRoom` failsafe.
+- **Silent Data Destructor:** `LoreManifest` now strictly quarantines corrupt JSON data to `.corrupt.bak` extensions upon load, preventing the engine from persisting blank dictionaries and permanently erasing functional lore files on exit.
+- **System Health Exploits:** Closed a dangerous loop in `SystemHealth`'s dynamic attribute parser. Queries now normalize to lowercase and explicitly reject unmapped components rather than defaulting to a false `True` state.
+
+### **BONEAMANITA 20.0.5 "The Substrate Optimization Pass"**
+
+**Changed**
+
+- **Dynamic Allocation Trim (Presets):** Replaced memory-leaking dynamic class proxy generation (`type('ConfigSector'...)`) in `presets.py` with Python's native, highly optimized `types.SimpleNamespace`, heavily reducing object overhead during system boot.
+- **O(N) Traversal & Loop Compression:** Collapsed double-regex passes in the LLM `ResponseValidator`, fused WLS mathematics into single-pass loops (`cycle.py`), and excised double-array lookups across `inventory.py` and `village.py`. Memory iteration now utilizes `dict.fromkeys()` and immutable `tuple()` casting to reduce algorithmic drag.
+- **Cognitive Ergonomics:** Refactored heavy, unreadable list comprehensions (`brain/mind.py`) into clean iterative loops, and aligned massive tuple-trigger blocks (`council.py`) into strict, mathematically readable columns. Excised dead code (`check_pareidolia`) and ghost variables (`metabolism.py`).
+- **Dry State Management:** Streamlined verbose state clamping, duplicated variable lookups, and repetitive initialization blocks across `genesis.py`, `endocrine.py`, and `architect.py`. The engine now trusts `safe_get` to handle nulls natively instead of wrapping it in redundant `if/else` paranoia.
+
+**Fixed**
+
+- **Thread Safety & I/O Fractures (Core):** Deployed `RLock` threading wrappers in `core.py` to seal fatal event-loss vulnerabilities in the `EventBus` and redundant read/write race conditions during `LoreManifest` cache generation. 
+- **Silent Logic Bombs:** Fixed a mathematical anomaly in `lattice.py` where a perfect frictionless state (`0.0`) evaluated to falsy and was forcefully overwritten to `1.0`. Fixed the Symbiont Voice dilution penalty in `symbiosis.py` that artificially silenced voices due to un-normalized arrays. Woke up functionally dead code in `TheRedTeam` (`council.py`) by resolving an un-lowered uppercase string trigger.
+- **Vulnerable UX Formatting:** Routed blind `.format()` string generation across the `drivers`, `body`, and `machine` layers through the `ux_format` safety strut to prevent terminal crash loops when JSON lore values drift or drop brackets.
+- **UI Clipping & String Smashing:** Repaired the terminal formatting visual tear in the Projector's UI health bar by explicitly clamping filled variables before calculating empty space. Resolved the string-smashing output bug in the `Theremin` by dynamically appending to an array and joining with spacing.
+- **Dictionary Null-Pointers:** Switched `LEARNED_VOCAB` (`lexicon.py`) to a `defaultdict(dict)` to prevent runtime KeyError crashes on missing sub-dictionary access. Intercepted JSON `null` poisoning in `village.py` death eulogies with strict Boolean `or` fallbacks.
+
+---
+
+### **BONEAMANITA 20.0.4 "The Ephemeralization Pass"**
+
+**Changed**
+
+- **Architectural Ephemeralization (Presets):** Purged the `_ConfigNode` dynamic proxy bureaucracy in `presets.py`. Configuration now initializes using explicit, static class-level dictionary templates, eliminating the metabolic cost of deep `dir()` reflection during boot.
+- **Daemon Tensegrity (Cycle):** The `GeodesicOrchestrator` no longer blocks the main heartbeat during REM sleep. Dream generation and background autopoiesis are now safely offloaded to the async pool, allowing the system to wake instantly.
+- **Hot-Loop Friction (Core & Cycle):** Cached the `LoreManifest` singleton lock in the `ArchetypeArbiter` to prevent redundant locking, and hoisted inline `PhysicsPacket` imports out of the core execution loop to completely zero out compounding cognitive drag.
+- **Stagnation Valve (Main):** Introduced a strict timeout boundary on the orchestrator's output queue. If the daemon thread collapses silently, the main thread will now cascade into a catchable, graceful crash instead of hanging indefinitely.
+- **Topological Decoupling (Main & Chronos):** Erased hardcoded save paths and redundant nested `getattr` hunts. `main.py` now trusts `ChronosKeeper` to report its own state geometry, and Chronos directly queries the established `active_physics` leverage point instead of digging through the engine.
+- **Direct Mutation (Genesis):** Eliminated the bureaucratic proxy-dictionary math during Oroboros legacy karma application. The system now mutates the `embryo.physics` object directly and gracefully clamps biological boundaries post-execution.
+
+**Fixed**
+
+- **Static Tensegrity Restored (Presets):** Re-attached the static configuration sectors to the `BoneConfig` class definition. This restored the structural leverage for static methods like `TheVillageCouncil.audit()`, fixing a false-negative failure in `test_fracture_false_cohesion`.
+- **Linter Hallucinations (Cycle):** Silenced aggressive static-analysis false positives by structurally asserting `Optional[Exception]` in `_generate_crash_report` and flattening the traceback formatting logic.
+- **Uninitialized Biological Clocks (Cycle):** Instantiated the `last_rem_tick` baseline properly in the orchestrator's constructor, ensuring a stable, traceable biological clock from the moment of ignition.
+- **Object Mutation Mocks (Tests):** Updated `test_presets.py` to correctly apply `setattr()` logic when mocking legacy physics, aligning the tests with the newly enforced, strongly-typed `PhysSystem` object.
+
+---
+
+### **BONEAMANITA 20.0.3 "The Tensegrity Pass"**
+
+**Changed**
+
+- **Lexical & Protocol Tensegrity:** Stripped paranoid `getattr` calls and nested dictionary dives across `mechanics`, `spores`, `physics`, and `protocols`. The engine now inherently trusts the `PhysicsPacket` architecture and established `safe_get` boundaries.
+- **Cognitive Ergonomics:** Flattened deeply nested logic, inline Walrus (`:=`) operators, and complex ternary blocks across the `soul`, `drivers`, and `phases` layers to permanently reduce maintainer cognitive load.
+- **Demeter Defense:** Decoupled the Checkpoint Council, bootloader, and command interfaces from deep biological state traversal. Interactions now natively route through explicit top-level boundaries (e.g., `to_dict()`, `expend_glimmer()`, `apply_filters()`).
+- **Epigenetic Consolidation:** Unified redundant mutation functions in `TheAkashicRecord` into a single, lean `_mutate_epigenetics` handler.
+
+**Fixed**
+
+- **The Time-Bomb:** Defused a fatal `NameError` crash loop in `CongruenceValidator` by importing the missing `math` module and resolving brittle set unions before they could detonate.
+- **Death-Loop Crash:** Fortified legacy manifest parsing in `TheOroboros` to gracefully handle malformed or missing death data without throwing terminal `IndexError` exceptions.
+- **Live Organ Transplants:** Stripped unauthorized module dependency injections from `commands.py`, forcing the command layer to strictly signal the engine state rather than rewriting `mechanics.reporter` live.
+- **Signature Compliance:** Aligned `BoneJSONEncoder.default()` with standard `JSONEncoder` library specifications to enforce linguistic purity and eliminate static linting friction.
+- **Positional Brittleness:** Eradicated fragile tuple-unpacking in `QuantumObserver` and `BoneArchitect.awaken`, replacing them with resilient dictionary routing and explicit assignments.
+
+---
+
 ### **BONEAMANITA 20.0.2 "The Ephemeralization Pass"**
 
 **Changed**

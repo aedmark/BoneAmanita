@@ -1,16 +1,10 @@
 """drivers/liminal.py"""
+
 from typing import Dict
 from presets import BoneConfig
 from struts import safe_get
 
-
 class LiminalModule:
-    """
-    The LiminalModule calculates Lambda (Λ), representing the 'Liminality' or
-    metaphysical depth of the conversation. It tracks when the user pushes
-    the boundaries of formal logic, entering spaces of paradox, void, or deep abstraction.
-    """
-
     def __init__(self, config_ref=None, lexicon_ref=None):
         self.cfg = config_ref or BoneConfig
         self.lex = lexicon_ref
@@ -19,10 +13,6 @@ class LiminalModule:
         self.drivers_cfg = getattr(self.cfg, "DRIVERS", {})
 
     def analyze(self, text: str, physics_vector: Dict[str, float]) -> float:
-        """
-        Calculates the accumulation of liminal energy based on vocabulary,
-        syntactic collisions, and the underlying physics of the system.
-        """
         cfg = self.drivers_cfg
         words = text.lower().split()
         liminal_vocab = self.lex.get("liminal") if self.lex else set()

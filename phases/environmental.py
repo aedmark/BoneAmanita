@@ -1,9 +1,4 @@
-"""
-phases/environmental.py
-
-These phases handle how the system navigates topological space (Gravity, Zones),
-how it perceives user input (The Observer), and how it recovers during downtime (Sanctuary).
-"""
+"""phases/environmental.py"""
 
 from constants import Prisma
 import random

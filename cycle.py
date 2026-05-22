@@ -1,23 +1,24 @@
 """
 cycle.py
 
-This module defines the main execution loop (The Cycle) of the engine. It is responsible for
-orchestrating the linear progression of reality phases (Observation -> Metabolism -> Cognition, etc.)
-and managing the asynchronous biological rhythms (REM cycles, topological memory checks) that keep
-the system stable over time.
+NAVI FRACTAL NATIVE PRIMITIVES (Authored by Nelson Spence, Project Navi, Apache 2.0)
+These functions represent the lowest-level mathematical substrate of the engine.
+They operate outside the standard object-oriented paradigm to provide raw, optimized graph
+calculations for the memory topology.
 """
 
+import queue
 import random
 import threading
 import time
-import queue
-from concurrent.futures import ThreadPoolExecutor
 import traceback
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Optional
 from constants import Prisma
 from core import CycleContext, LoreManifest
 from drivers import CongruenceValidator
+from physics.models import PhysicsPacket
 from machine import PanicRoom
 from mechanics.reporter import CycleReporter
 from phases import (ObservationPhase, SanctuaryPhase, MaintenancePhase, GatekeeperPhase,
@@ -25,17 +26,9 @@ from phases import (ObservationPhase, SanctuaryPhase, MaintenancePhase, Gatekeep
                     IntrusionPhase, SoulPhase, ArbitrationPhase, SimulationPreflightPhase,
                     CognitionPhase, SensationPhase, StabilizationPhase, SimulationPhase, _safe_dict)
 from physics import CycleStabilizer
-from presets import BoneConfig
 from struts import ux
 
 _CRASH_COMPONENT_MAP = {"OBSERVE": "PHYSICS", "METABOLISM": "BIO", "COGNITION": "MIND"}
-
-# =============================================================================
-# NAVI FRACTAL NATIVE PRIMITIVES (Authored by Nelson Spence, Project Navi, Apache 2.0)
-# These functions represent the lowest-level mathematical substrate of the engine.
-# They operate outside the standard object-oriented paradigm to provide raw, optimized graph
-# calculations for the memory topology.
-# =============================================================================
 
 def _native_wls(x: list[float], y: list[float], weights: list[float]) -> float:
     """
@@ -46,10 +39,16 @@ def _native_wls(x: list[float], y: list[float], weights: list[float]) -> float:
     """
     sum_w = sum(weights)
     if sum_w == 0.0: return 0.0
-    mean_x = sum(w * xi for w, xi in zip(weights, x)) / sum_w
-    mean_y = sum(w * yi for w, yi in zip(weights, y)) / sum_w
-    ss_xx = sum(w * xi * xi for w, xi in zip(weights, x)) - sum_w * mean_x * mean_x
-    ss_xy = sum(w * xi * yi for w, xi, yi in zip(weights, x, y)) - sum_w * mean_x * mean_y
+    sum_wx = sum_wy = ss_xx = ss_xy = 0.0
+    for w, xi, yi in zip(weights, x, y):
+        sum_wx += w * xi
+        sum_wy += w * yi
+        ss_xx += w * xi * xi
+        ss_xy += w * xi * yi
+    mean_x, mean_y = sum_wx / sum_w, sum_wy / sum_w
+    ss_xx -= sum_w * mean_x * mean_x
+    ss_xy -= sum_w * mean_x * mean_y
+
     return ss_xy / ss_xx if ss_xx != 0.0 else 0.0
 
 
@@ -85,17 +84,12 @@ def _native_rewire(adj_dict: dict, n_swaps: int) -> dict:
     return adj
 
 def _native_freeze_graph(adj_dict: dict) -> tuple:
-    """
-    Immutability enforcer. Converts a mutable adjacency dictionary into a deeply nested,
-    hashed tuple. Used to permanently freeze a snapshot of the graph when the system crashes (The Gödel Scar).
-    """
+    if not isinstance(adj_dict, dict):
+        return ()
     try:
-        # Lock-free approximation: isolate keys first to survive concurrent mutation
-        keys = list(adj_dict.keys())
-        safe_items = [(k, adj_dict[k]) for k in keys if k in adj_dict]
+        safe_items = list(adj_dict.items())
     except Exception:
-        safe_items = []
-
+        return ()
     return tuple((k, tuple(sorted(neighbors, key=str))) for k, neighbors in sorted(safe_items, key=lambda x: str(x[0])))
 
 class PhaseExecutor:
@@ -113,7 +107,6 @@ class PhaseExecutor:
                 break
         return ctx
 
-
 class CycleSimulator:
     def __init__(self, engine_ref):
         self.eng = engine_ref
@@ -123,11 +116,16 @@ class CycleSimulator:
         self.stabilizer = CycleStabilizer(self.eng.events, self.cyb_governor, config_ref=target_cfg)
         self.executor = PhaseExecutor()
         self.full_pipeline: List[SimulationPhase] = [ObservationPhase(engine_ref), MaintenancePhase(engine_ref),
-            SensationPhase(engine_ref), GatekeeperPhase(engine_ref), SanctuaryPhase(engine_ref, self.bio_governor),
-            MetabolismPhase(engine_ref), NavigationPhase(engine_ref), MachineryPhase(engine_ref), RealityFilterPhase(engine_ref),
-            IntrusionPhase(engine_ref), SoulPhase(engine_ref), ArbitrationPhase(engine_ref), SimulationPreflightPhase(engine_ref),
-            CognitionPhase(engine_ref), StabilizationPhase(engine_ref, self.stabilizer), ]
-        self.system_pipeline = [p for p in self.full_pipeline if p.name in ["OBSERVE", "GATEKEEP", "STABILIZATION"]]
+                                                     SensationPhase(engine_ref), GatekeeperPhase(engine_ref),
+                                                     SanctuaryPhase(engine_ref, self.bio_governor),
+                                                     MetabolismPhase(engine_ref), NavigationPhase(engine_ref),
+                                                     MachineryPhase(engine_ref), RealityFilterPhase(engine_ref),
+                                                     IntrusionPhase(engine_ref), SoulPhase(engine_ref),
+                                                     ArbitrationPhase(engine_ref), SimulationPreflightPhase(engine_ref),
+                                                     CognitionPhase(engine_ref),
+                                                     StabilizationPhase(engine_ref, self.stabilizer), ]
+        self.system_pipeline = [p for p in self.full_pipeline if
+                                p.name in ["OBSERVE", "GATEKEEP", "COGNITION", "STABILIZATION"]]
 
     def run_simulation(self, ctx: CycleContext) -> CycleContext:
         ctx = self.executor.execute_phases(self, ctx)
@@ -152,7 +150,6 @@ class CycleSimulator:
         ctx.log(f"{Prisma.RED}{msg_eulogy.format(eulogy=eulogy)}{Prisma.RST}")
         comp = _CRASH_COMPONENT_MAP.get(phase_name, "SIMULATION")
         self.eng.system_health.report_failure(comp, error)
-        # Native deterministic graph freezing based on Nelson Spence (Project Navi).
         if comp == "PHYSICS" or not getattr(ctx, "physics", None):
             ctx.physics = PanicRoom.get_safe_physics()
             try:
@@ -171,7 +168,6 @@ class CycleSimulator:
         msg_panic = ux("cycle_strings", "sim_panic_switch")
         ctx.log(f"{Prisma.RED}{msg_panic.format(phase_name=phase_name)}{Prisma.RST}")
 
-
 class GeodesicOrchestrator:
     """
     This class manages the lifecycle of the Cycle Simulator. It wraps the raw turn logic in
@@ -183,19 +179,15 @@ class GeodesicOrchestrator:
         self.eng = engine_ref
         self.simulator = CycleSimulator(engine_ref)
         self.reporter = CycleReporter(engine_ref)
-        self._rem_lock = threading.Lock()
         self.symbiosis = self.eng.symbiosis
-
-        # Phase 1: Daemonization State
         self.input_queue = queue.Queue()
         self.output_queue = queue.Queue()
         self.is_running = False
         self.daemon_thread = None
-
-        # Phase 2 & 3: Circadian Rhythm State
         self.last_interaction_time = time.time()
         self.engine_state = "WAKE"
         self.dream_log = []
+        self.last_rem_tick = 0.0
         self._async_pool = ThreadPoolExecutor(max_workers=3, thread_name_prefix="CycleAsync")
         from drivers import SharedLatticeDriver
         if not hasattr(self.eng, "shared_lattice"):
@@ -203,44 +195,32 @@ class GeodesicOrchestrator:
         self.congruence_validator = CongruenceValidator()
 
     def start_daemon(self):
-        """Phase 1: Boot the background pacemaker thread."""
         if not self.is_running:
             self.is_running = True
             self.daemon_thread = threading.Thread(target=self.run_continuous, daemon=True, name="CycleDaemon")
             self.daemon_thread.start()
 
     def run_continuous(self):
-        """Phase 1 & 2: The infinite background execution loop with Circadian Rhythm."""
         while self.is_running:
             current_time = time.time()
+            task_acquired = False
             try:
-                # Poll the queue. Timeout allows the loop to breathe and process idle tasks.
                 user_message, is_system = self.input_queue.get(timeout=0.1)
-
-                # WAKE STATE: Process input
+                task_acquired = True
                 self.last_interaction_time = current_time
                 if self.engine_state == "REM":
                     self.engine_state = "WAKE"
                     self.eng.events.log(f"{Prisma.VIOLET}Engine waking from REM sleep...{Prisma.RST}", "SYS")
                     self.eng.events.publish("SYSTEM_WAKE", {"timestamp": current_time})
-
-                # Ensure Cognition is active for non-system turns
                 snapshot = self.run_turn(user_message, is_system)
-
-                # Phase 3: Inject the Dream Log on Wake
                 if self.dream_log and "ui" in snapshot:
-                    dream_summary = "\n".join(self.dream_log[-5:]) # Keep only the deepest 5 dreams
+                    dream_summary = "\n".join(self.dream_log[-5:])
                     snapshot["ui"] = f"\n{Prisma.MAG}☁️ While you were gone, the system dreamt of:\n{dream_summary}{Prisma.RST}\n{snapshot['ui']}"
                     self.dream_log.clear()
-
-                # Push the resolved snapshot to the blocking queue
                 self.output_queue.put(snapshot)
-                self.input_queue.task_done()
 
             except queue.Empty:
-                # Phase 2: PASSIVE METABOLISM & Idle Detection
                 time_since_last = current_time - self.last_interaction_time
-
                 if self.engine_state == "WAKE":
                     rem_threshold_seconds = float(getattr(self.eng.config, "REM_IDLE_THRESHOLD", 300.0))
                     if time_since_last > rem_threshold_seconds:
@@ -250,62 +230,57 @@ class GeodesicOrchestrator:
                             "SYS")
                         self.eng.events.publish("SYSTEM_SLEEP", {"idle_duration": time_since_last})
 
+
                 elif self.engine_state == "REM":
-                    # Phase 3: The Dream Engine (Asynchronous Metabolism)
-                    last_rem = getattr(self, "last_rem_tick", 0.0)
-                    if current_time - last_rem < 60.0:
+
+                    if current_time - self.last_rem_tick < 60.0:
                         continue
+
                     self.last_rem_tick = current_time
 
-                    # 1. Metabolic Burn & Stress Decay
-                    if hasattr(self.eng, "drain_atp"):
-                        self.eng.drain_atp(0.5)
-                    if getattr(self.eng, "bio", None) and getattr(self.eng.bio, "mito", None):
-                        self.eng.bio.mito.state.ros_buildup = max(0.0, self.eng.bio.mito.state.ros_buildup - 0.1)
-
-                    # 2. Memory Defragmentation
-                    if hasattr(self.eng, "consolidator") and hasattr(self.eng.consolidator, "trigger_autophagy"):
-                        try:
-                            self.eng.consolidator.trigger_autophagy()
-                        except Exception:
-                            pass
-
-                    # 3. Hallucination (Shadow Casts)
-                    try:
-                        trauma_level = sum(self.eng.trauma_accum.values()) if getattr(self.eng, "trauma_accum", None) else 0.0
-                        inv_ref = getattr(getattr(self.eng, "village", None), "gordon", None)
-                        objects = getattr(inv_ref, "inventory", ["static"]) if inv_ref else ["static"]
-
-                        if hasattr(self.eng, "mind") and hasattr(self.eng.mind, "dream_engine"):
-                            # Run a silent zero-UI DSPy generation
-                            dream_txt, _ = self.eng.mind.dream_engine.hallucinate({"chi": 0.85}, trauma_level=trauma_level)
-                            obj = random.choice(objects) if objects else "static"
-
-                            # Construct the surreal one-liner
-                            full_dream = f"  • {Prisma.strip(dream_txt)} (Shadow cast involving: {obj})"
-                            self.dream_log.append(full_dream)
-                    except Exception as e:
-                        self.eng.events.log(f"Dream generation failed in REM: {e}", "DEBUG")
-
+                    self._process_rem_tick()
             except Exception as e:
                 self.eng.events.log(f"Daemon Engine Crash: {e}", "CRIT")
-
-                # Concurrency Fail-Safe: Unblock the main thread if the cycle crashed
                 self.output_queue.put({
                     "type": "CRASH",
                     "ui": f"\n{Prisma.RED}CRITICAL DAEMON CRASH: {e}{Prisma.RST}",
                     "logs": [str(e)],
                     "metrics": getattr(self.eng, "get_metrics", lambda: {})()
                 })
+                time.sleep(1.0)
+            finally:
+                if task_acquired:
+                    self.input_queue.task_done()
 
-                # Acknowledge the task only if we are sure an item was in-flight
-                if self.engine_state == "WAKE" and getattr(self, "last_interaction_time", 0) > 0:
-                    try:
-                        self.input_queue.task_done()
-                    except ValueError:
-                        pass # Ignore if task_done() was already called or not needed
+    def _process_rem_tick(self):
+        """REM logic: Handles Autopoiesis, ATP drain, and Hallucinations."""
+        from struts import safe_get
+        bio_cfg = safe_get(self.eng.config, "BIO", {})
+        self.eng.drain_atp(float(safe_get(bio_cfg, "REM_ATP_DRAIN", 0.1)))
 
-                time.sleep(1.0) # Prevent tight crash loops
+        if hasattr(self.eng.bio, "mito"):
+            self.eng.bio.mito.state.ros_buildup = max(0.0, self.eng.bio.mito.state.ros_buildup - 0.1)
+
+        if self.eng.consolidator and hasattr(self.eng.consolidator, "trigger_autophagy"):
+            try:
+                self.eng.consolidator.trigger_autophagy()
+            except Exception:
+                pass
+
+        def _bg_hallucinate():
+            try:
+                trauma_level = sum(self.eng.trauma_accum.values()) if self.eng.trauma_accum else 0.0
+                gordon = getattr(self.eng.village, "gordon", None)
+                objects = gordon.inventory if gordon and hasattr(gordon, "inventory") else ["static"]
+
+                if hasattr(self.eng.mind, "dream_engine"):
+                    dream_txt, _ = self.eng.mind.dream_engine.hallucinate({"chi": 0.85}, trauma_level=trauma_level)
+                    self.dream_log.append(
+                        f"  • {Prisma.strip(dream_txt)} (Shadow cast involving: {random.choice(objects)})")
+            except Exception as e:
+                self.eng.events.log(f"Dream generation failed in REM: {e}", "DEBUG")
+
+        self._async_pool.submit(_bg_hallucinate)
 
     def _verify_semantic_topology(self, ctx: CycleContext):
         """
@@ -335,22 +310,18 @@ class GeodesicOrchestrator:
             except Exception as e:
                 self.eng.events.log(f"Async Topology Error: {e}", "WARN")
 
-        try:
-            safe_adj = {k: set(v) for k, v in list(actual_adj.items())}
-            self._async_pool.submit(_bg_topology_check, safe_adj)
-        except RuntimeError as e:
-            if "dictionary changed size" in str(e):
-                self.eng.events.log("Topology mutation detected during snapshot. Deferring check to next cycle.",
-                                    "DEBUG")
-            else:
+        frozen_tuples = _native_freeze_graph(actual_adj)
+        if frozen_tuples:
+            safe_adj = {k: set(v) for k, v in frozen_tuples}
+            try:
+                self._async_pool.submit(_bg_topology_check, safe_adj)
+            except RuntimeError as e:
                 self.eng.events.log(f"Async pool rejected topology check. Engine may be shutting down: {e}", "DEBUG")
 
     def _execute_core_cycle(self, user_message: str, is_system: bool = False) -> CycleContext:
         cycle_id = str(uuid.uuid4())[:8]
         self.eng.telemetry.start_cycle(cycle_id)
         try:
-            if not is_system:
-                self.eng.tick_count += 1
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
             ctx.trace_id = cycle_id
             ctx.time_delta = self.eng.current_time_delta
@@ -358,15 +329,13 @@ class GeodesicOrchestrator:
             ctx.user_state = lattice.u
             ctx.shared_dyn = lattice.shared
             ctx.limits = _safe_dict(getattr(self.eng.config, "CYCLE", {}))
-            obs = self.eng.observer
-            last_packet = getattr(obs, "last_physics_packet", None)
-            if last_packet:
-                ctx.physics = last_packet.snapshot()
+            phys_dict = self.eng.active_physics
+            if phys_dict:
+                ctx.physics = PhysicsPacket(**phys_dict)
             else:
-                ctx.physics = PanicRoom.get_safe_physics()
-                self.eng.events.log(
-                    ux("cycle_strings", "orch_physics_bypass", default="Initial physics bypass. Safe state engaged."),
-                    "SYS")
+                ctx.physics = PhysicsPacket.void_state()
+                msg = ux("cycle_strings", "orch_physics_init") or "Initial physics state established."
+                self.eng.events.log(f"{Prisma.GRY}{msg}{Prisma.RST}", "SYS")
             ctx.validator = self.congruence_validator
             ctx.reality_stack = self.eng.reality_stack
             ctx.user_name = self.eng.user_name
@@ -375,9 +344,14 @@ class GeodesicOrchestrator:
             if not getattr(ctx.physics, "vector", None):
                 ctx.physics.vector = {}
             usr_msg = user_message.lower()
+            if "[grief]" in usr_msg and getattr(self.eng, "bio", None) and hasattr(self.eng.bio, "endo"):
+                self.eng.bio.endo.glimmers = getattr(self.eng.bio.endo, "glimmers", 0) + 1
+                if self.eng.events:
+                    self.eng.events.log(f"{Prisma.MAG}Grief acknowledged. A glimmer is yielded.{Prisma.RST}", "SYS")
             ctx.physics.vector.update({"critique_mode": "[!r]" in usr_msg, "objective_mode": "[!q]" in usr_msg,
-                "healing_mode": "[!h]" in usr_msg, "void_mode": "[!v]" in usr_msg,
-                "lateral_shuffle": "[!s]" in usr_msg, "literal_mode": "[!l]" in usr_msg, "yeetinator_mode": "[!y]" in usr_msg})
+                                       "healing_mode": "[!h]" in usr_msg, "void_mode": "[!v]" in usr_msg,
+                                       "lateral_shuffle": "[!s]" in usr_msg, "literal_mode": "[!l]" in usr_msg,
+                                       "yeetinator_mode": "[!y]" in usr_msg})
             u_exhaustion = float(getattr(ctx.user_state, "E", 0.0))
             phi_val = float(getattr(ctx.shared_dyn, "phi", 0.0))
             res_delta = float(getattr(ctx.shared_dyn, "resonance_delta", 0.0))
@@ -387,8 +361,8 @@ class GeodesicOrchestrator:
             post_logs = [e["text"] for e in self.eng.events.flush()]
             ctx.logs.extend(post_logs)
             self._verify_semantic_topology(ctx)
-            if obs:
-                obs.last_physics_packet = ctx.physics.snapshot()
+            if getattr(self.eng, "observer", None):
+                self.eng.observer.last_physics_packet = ctx.physics.snapshot()
             return ctx
         except Exception as e:
             full_trace = traceback.format_exc()
@@ -401,15 +375,6 @@ class GeodesicOrchestrator:
             return ctx
         finally:
             self.eng.telemetry.finalize_cycle()
-
-    def _dispatch_rem_worker(self, log_msg: str):
-        try:
-            self.eng.events.log(log_msg, "SYS")
-            self.run_headless_turn("/idle")
-        except Exception as e:
-            self.eng.events.log(f"REM Engine Crash: {e}", "CRIT")
-        finally:
-            self._rem_lock.release()
 
     def _check_early_exit(self, ctx: CycleContext) -> Optional[Dict[str, Any]]:
         if not ctx.is_alive:
@@ -451,47 +416,27 @@ class GeodesicOrchestrator:
         debt = float(energy_node.get("coherence_debt", 0.0))
         is_standard_rem = (atp_level >= 80.0 and delta_level >= 0.6)
         is_debt_recovery = (debt > 1.5 and atp_level >= 30.0)
-        if (is_standard_rem or is_debt_recovery) and self._rem_lock.acquire(blocking=False):
+        if (is_standard_rem or is_debt_recovery) and self.engine_state != "REM":
             log_msg = "Automatic REM Bridge engaged: High Coherence Debt detected." if is_debt_recovery else "Automatic REM Bridge engaged: High ATP, High Silence."
-            try:
-                self._async_pool.submit(self._dispatch_rem_worker, log_msg)
-            except RuntimeError as e:
-                self._rem_lock.release()
-                self.eng.events.log(f"REM worker rejected by async pool: {e}", "DEBUG")
+            self.eng.events.log(log_msg, "SYS")
+            self.engine_state = "REM"
 
     def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
         clean_message = (user_message.strip() or "(Waiting)")
         if clean_message.lower() == "/idle":
-            if self._rem_lock.acquire(blocking=False):
-                try:
-                    self._async_pool.submit(self._dispatch_rem_worker, "Spawning detached worker for Dream Engine...")
-                except RuntimeError as e:
-                    self._rem_lock.release()
-                    self.eng.events.log(f"Dream worker rejected by async pool: {e}", "WARN")
-            else:
-                self.eng.events.log("Dream worker already active. Ignoring overlapping idle request.", "SYS")
-            packet = getattr(self.eng.observer, "last_physics_packet", None)
-            safe_phys = packet.snapshot().to_dict() if packet else PanicRoom.get_safe_physics().to_dict()
+            self.engine_state = "REM"
+            safe_phys = self.eng.active_physics or PhysicsPacket.void_state().to_dict()
             return {"type": "SNAPSHOT",
                     "ui": f"\n{Prisma.VIOLET}☁️ The system slips into deep background REM. Memory consolidation and epigenetic autopoiesis are running asynchronously...{Prisma.RST}",
                     "physics": safe_phys, "bio": {"is_alive": True},
                     "mind": {"lens": "DREAMER", "role": "The Dream Engine"}, "world": {},
-                    "logs": ["[SYSTEM] Triggered Asynchronous Autopoiesis."], }
+                    "logs": ["[SYSTEM] Triggered Asynchronous Autopoiesis. State set to REM."], }
         ctx = self._execute_core_cycle(clean_message, is_system)
         if exit_pkt := self._check_early_exit(ctx):
             return exit_pkt
         self._evaluate_systemic_feedback(clean_message, ctx)
         snapshot = self.reporter.render_snapshot(ctx)
         self._hydrate_snapshot_metadata(snapshot, ctx)
-
-        # =====================================================================
-        # [CRITICAL FAIL-SAFE] THE CORTEX UMBILICAL (Synchronous fallback)
-        # =====================================================================
-        if not is_system and not snapshot.get("ui") and snapshot.get("type", "SNAPSHOT") == "SNAPSHOT":
-            self.eng.events.log("Cognition bypass detected. Force-syncing Cortex umbilical...", "WARN")
-            cognition_result = self.eng.cortex.process(user_message, snapshot.get("physics", {}))
-            snapshot["ui"] = cognition_result.get("ui", "")
-
         if "ui" in snapshot:
             self.symbiosis.monitor_host(time.time() - ctx.timestamp, snapshot["ui"], len(user_message))
         if "mind" in snapshot:
@@ -512,24 +457,35 @@ class GeodesicOrchestrator:
             self._async_pool.shutdown(wait=False)
 
     def _hydrate_snapshot_metadata(self, snapshot: Dict, ctx: CycleContext):
-        phys_dict = _safe_dict(ctx.physics)
-
-        snapshot.update({"trace_id": ctx.trace_id, "is_alive": True, "physics": phys_dict,
-                         "bio": _safe_dict(ctx.bio_result), "mind": _safe_dict(ctx.mind_state),
-                         "world": _safe_dict(ctx.world_state), "soul": _safe_dict(getattr(self.eng, "soul", {})),
-                         "council_mandates": ctx.council_mandates, "dream": ctx.last_dream,
-                         "mutated_input": ctx.input_text, })
+        snapshot.update({
+            "trace_id": ctx.trace_id,
+            "physics": _safe_dict(ctx.physics),
+            "bio": _safe_dict(ctx.bio_result),
+            "mind": _safe_dict(ctx.mind_state),
+            "world": _safe_dict(ctx.world_state),
+            "soul": _safe_dict(getattr(self.eng, "soul", {})),
+            "council_mandates": ctx.council_mandates,
+            "dream": ctx.last_dream,
+            "mutated_input": ctx.input_text
+        })
 
     @staticmethod
-    def _generate_crash_report(e: Exception) -> Dict[str, Any]:
+    def _generate_crash_report(e: Optional[Exception]) -> Dict[str, Any]:
         if e is not None:
-            full_trace = "".join(traceback.format_exception(e))
+            full_trace = "".join(traceback.format_exception(type(e), e, getattr(e, "__traceback__", None)))
         else:
             full_trace = "Biological execution halted. No standard Python exception provided."
         safe_phys = PanicRoom.get_safe_physics()
         safe_bio = PanicRoom.get_safe_bio()
         msg = ux("cycle_strings", "orch_reality_fracture")
         ui_report = f"{Prisma.RED}{msg.format(error=e, trace=full_trace)}{Prisma.RST}"
-        return {"type": "CRASH", "ui": ui_report, "physics": safe_phys.to_dict(), "bio": safe_bio,
-                "mind": PanicRoom.get_safe_mind(), "world": {"orbit": ["VOID"], "loci_description": "System Failure"},
-                "logs": ["CRITICAL FAILURE", "SAFE MODE ACTIVE"], "is_alive": True, }
+        return {
+            "type": "CRASH",
+            "ui": ui_report,
+            "physics": safe_phys.to_dict(),
+            "bio": safe_bio,
+            "mind": PanicRoom.get_safe_mind(),
+            "world": {"orbit": ["VOID"], "loci_description": "System Failure"},
+            "logs": ["CRITICAL FAILURE", "SAFE MODE ACTIVE"],
+            "is_alive": True,
+        }

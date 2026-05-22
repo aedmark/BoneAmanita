@@ -1,31 +1,15 @@
-"""machine/tracer.py
-The Viral Tracer is the diagnostic arm of the cognitive immune system.
-It monitors the Mycelial Network (long-term memory and association) for
-'Terminal Hallucinations'—semantic dead-ends where the system gets trapped
-in an infinite, sycophantic loop repeating the same concept.
-"""
+"""machine/tracer.py"""
+
 import random
 from typing import Optional, List
 from struts import ux
 
-
 class ViralTracer:
     def __init__(self, memory_ref):
-        """
-        Binds the Tracer directly to the Mycelial Network so it can physically traverse
-        the memory graph to detect and tag sycophantic echo chambers before they calcify.
-        """
         self.memory = memory_ref
         self.active_loops = []
 
     def inject(self, start_node: str) -> Optional[List[str]]:
-        """
-        Diagnostic Injection (The 'Tracer Dye').
-        Simulates the injection of a concept into the network to test for structural
-        rigidity. There is a low probability (5%) that the concept gets trapped
-        in a theoretical gravity well (an echo chamber).
-        If trapped, the loop is logged for lateral rewiring.
-        """
         if random.random() < 0.05:
             loop = [start_node, "echo", "void", start_node]
             self.active_loops.append(loop)
@@ -33,13 +17,6 @@ class ViralTracer:
         return None
 
     def psilocybin_rewire(self, loop_path: List[str]) -> str:
-        """
-        The Lateral Shift.
-        When the Jester or the Paradox Engine detects a stagnant loop, this method
-        is invoked to forcefully dissolve the rigid pathway. It metaphorically applies
-        high-entropy 'psilocybin' to the network, allowing the trapped node to form
-        new, lateral connections.
-        """
         msg = ux("machine_strings", "tracer_rewire") or "Rewired path: {path}"
         try:
             self.active_loops.remove(loop_path)

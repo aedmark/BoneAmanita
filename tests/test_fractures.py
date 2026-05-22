@@ -150,9 +150,7 @@ class FractureEngineTest(BoneTestCase):
             self.engine.phys = PhysicsPacket()
         self.engine.phys.narrative_drag = 15.0
         self.engine.bio.mito.state.atp_pool = 50.0
-        cmd_proc = CommandProcessor(self.engine,
-                                    prisma_ref=MagicMock(),
-                                    config_ref=self.engine.config)
+        cmd_proc = CommandProcessor(self.engine, prisma_ref=MagicMock(), config_ref=self.engine.config)
         cmd_proc.interface.log = MagicMock()
         result = cmd_proc.execute("/shuffle")
         self.assertTrue(result, "[FAIL] /shuffle command was not recognized.")
@@ -181,10 +179,7 @@ class FractureEngineTest(BoneTestCase):
             "System: Me too",
         ]
         self.engine.stamina = 12.0
-        if (not hasattr(self.engine.cortex, "last_physics")
-                or not self.engine.cortex.last_physics):
-            self.engine.cortex.last_physics = MagicMock()
-        self.engine.cortex.last_physics.narrative_drag = 8.5
+        self.engine.cortex.last_physics = {"narrative_drag": 8.5}
         result = self.engine.process_turn("/zen", is_system=False)
         self.assertEqual(result.get("type"), "COMMAND", "Zen flush did not intercept the prompt.")
         self.assertEqual(
@@ -198,7 +193,7 @@ class FractureEngineTest(BoneTestCase):
             "[FAIL] Stamina not restored.",
         )
         self.assertEqual(
-            self.engine.cortex.last_physics.narrative_drag,
+            self.engine.cortex.last_physics.get("narrative_drag"),
             0.0,
             "[FAIL] Narrative Drag not dropped to 0.",
         )

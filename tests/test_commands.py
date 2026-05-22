@@ -1,13 +1,10 @@
-"""
-tests/test_commands.py
-"""
+"""tests/test_commands.py"""
 
 from unittest.mock import MagicMock
 from tests.base import BoneTestCase
 from main import BoneAmanita
 from constants import Prisma
 from mechanics.commands import CommandProcessor, ResourceTax, CommandStateInterface
-
 
 class CommandSystemTests(BoneTestCase):
     def test_fuller_resource_clamping_integrity(self):
@@ -17,8 +14,7 @@ class CommandSystemTests(BoneTestCase):
         self.assertEqual(processor.interface.get_resource("stamina"), 0.0, "Stamina failed to clamp at absolute zero.")
         max_stamina = engine.config.MAX_STAMINA
         processor.interface.modify_resource("stamina", 5000.0)
-        self.assertEqual(processor.interface.get_resource("stamina"), max_stamina,
-                         "Stamina breached the architectural ceiling.")
+        self.assertEqual(processor.interface.get_resource("stamina"), max_stamina, "Stamina breached the architectural ceiling.")
 
     def test_gordon_reality_stack_lockout(self):
         engine = BoneAmanita({})

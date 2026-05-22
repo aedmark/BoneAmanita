@@ -1,11 +1,5 @@
-"""
-body/somatic.py
-The Sensory Transducer.
-This module is responsible for "Somatic Translation." It takes the abstract
-mathematical outputs of the physics engine (voltage, drag, semantic counts)
-and translates them into physical, biological impulses. It is the reason
-the system can "flinch" at toxic prompts or feel "warmth" during a deep connection.
-"""
+"""body/somatic.py"""
+
 import random
 from typing import Optional, Dict, Any
 from core import Prisma, LoreManifest
@@ -13,29 +7,17 @@ from struts import safe_get
 from presets import BoneConfig
 from body.models import BiologicalImpulse, Qualia
 
-
 class SynestheticCortex:
-    """
-    The sensory organ of the Hypervisor.
-    It reads the environment and generates a BiologicalImpulse, which is then
-    passed to the EndocrineSystem to permanently alter the machine's hormonal state.
-    """
-
     def __init__(self, bio_ref, config_ref=None):
         self.bio = bio_ref
         self.cfg = config_ref or BoneConfig
         self.last_reflex = None
-        self.library = LoreManifest.get_instance(
-            config_ref=self.cfg).get("SOMATIC_LIBRARY") or {}
+        self.library = LoreManifest.get_instance(config_ref=self.cfg).get("SOMATIC_LIBRARY") or {}
 
     def perceive(self, physics: Dict, traits: Any = None, latency: float = 0.0) -> BiologicalImpulse:
-        """
-        The core sensory loop. Evaluates the current operational state and
-        calculates the immediate chemical and energetic cost of the moment.
-        """
         impulse = BiologicalImpulse()
         impulse.stamina_impact -= 1.0
-        cortex_cfg = getattr(self.cfg, "CORTEX", None)
+        cortex_cfg = safe_get(self.cfg, "CORTEX", {})
         base_sens = safe_get(cortex_cfg, "BASE_SENSITIVITY", 1.0)
         if traits:
             curiosity = float(safe_get(traits, "curiosity", 0.5))
@@ -53,7 +35,7 @@ class SynestheticCortex:
             impulse.cortisol_delta += abs(valence) * sens
         antigen_count = counts.get("antigen", 0)
         if antigen_count > 0:
-            toxin_weight = getattr(self.cfg, "TOXIN_WEIGHT", 1.0)
+            toxin_weight = float(safe_get(self.cfg, "TOXIN_WEIGHT", 1.0))
             toxin_scalar = safe_get(cortex_cfg, "TOXIN_SCALAR", 0.5)
             raw_tox = antigen_count * (toxin_weight * 0.2)
             impulse.cortisol_delta += min(toxin_scalar, raw_tox)
@@ -97,11 +79,6 @@ class SynestheticCortex:
         return impulse
 
     def _derive_reflex(self, physics: Dict, impulse: BiologicalImpulse) -> str:
-        """
-        The fallback physical mapping.
-        If the primary perception didn't explicitly name a feeling, this evaluates
-        the final chemical cocktail and assigns the most appropriate physical sensation.
-        """
         s = (LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG") or {}).get(
             "QUALIA_STRINGS", {}).get("reflexes", {})
         arc_trigger = float(safe_get(safe_get(self.cfg, "CORTEX", {}), "VOLTAGE_ARC_TRIGGER", 18.0))
@@ -131,12 +108,6 @@ class SynestheticCortex:
 
     @staticmethod
     def get_current_qualia(impulse: Optional[BiologicalImpulse] = None, config_ref=None) -> Qualia:
-        """
-        The Stage Director.
-        Takes the raw BiologicalImpulse and packages it into human-readable UI elements.
-        Determines the dominant emotion and assigns the corresponding UI color,
-        vocal tone, and internal monologue prompt hint.
-        """
         strings = (LoreManifest.get_instance(config_ref=config_ref or BoneConfig).get(
             "BODY_CONFIG") or {}).get("QUALIA_STRINGS", {})
         if not impulse:
@@ -157,11 +128,7 @@ class SynestheticCortex:
         return Qualia(color_code=final_color, somatic_sensation=final_reflex, tone=tone, internal_monologue_hint=hint)
 
     def apply_impulse(self, impulse: BiologicalImpulse) -> float:
-        """
-        The Commit step.
-        Applies the calculated deltas directly to the host's EndocrineSystem.
-        Returns the net stamina impact (usually negative) to be subtracted from the ATP pool.
-        """
+
         for chem in ("cortisol", "oxytocin", "dopamine", "adrenaline"):
             current_val = getattr(self.bio.endo, chem)
             delta_val = getattr(impulse, f"{chem}_delta")

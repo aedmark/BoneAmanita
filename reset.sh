@@ -5,7 +5,7 @@ rm -rf ./spores/__pycache__
 rm -rf ./physics/__pycache__
 rm -rf ./phases/__pycache__
 rm -rf ./body/__pycache__
-rm -rf ./rchetypes/__pycache__
+rm -rf ./archetypes/__pycache__
 rm -rf ./brain/__pycache__
 rm -rf ./mechanics/__pycache__
 rm -rf ./protocols/__pycache__
@@ -23,6 +23,7 @@ rm -f ./lore/akashic*
 rm -f ./legacy.json
 rm -rf ./output
 rm -rf ./tests/tests_isolated_legacy_void.json
+rm -rf ./tests_isolated_legacy_void.json
 rm -rf ./tests/logs
 rm -rf ./tests/saves
 rm -rf ./tests/tests

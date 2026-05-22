@@ -1,11 +1,5 @@
-"""
-lexicon.py
-The Linguistic Cortex and Semantic Vector Engine.
-This module fundamentally changes how the engine "reads" text. Rather than relying
-solely on LLM embedding vectors, this system performs biological parsing. It calculates
-the phonetic density of words, the syntactic turbulence of sentences, and maintains
-a 'Lexical Firewall' that actively strips out narrative clichés and corporate antigens.
-"""
+"""lexicon.py"""
+
 import json
 import os
 import random
@@ -19,25 +13,19 @@ from typing import Tuple, Dict, Set, Optional, List
 from core import Prisma, LoreManifest
 from struts import ux
 
-
 class LexiconStore:
-    """
-    The Epigenetic Dictionary (Fuller / Pinker).
-    Manages both the hardcoded baseline vocabulary ('VOCAB') and the dynamic,
-    user-taught vocabulary ('LEARNED_VOCAB' / The Hive). It builds an O(1) reverse
-    index so the engine can instantly know what semantic categories a word belongs to.
-    """
     _PUNCTUATION = string.punctuation.replace("_", "")
     _TRANSLATOR = str.maketrans(_PUNCTUATION, " " * len(_PUNCTUATION))
 
     def __init__(self):
         from presets import BoneConfig
         from struts import safe_get
-        self.save_dir = safe_get(safe_get(BoneConfig, "AKASHIC", {}), "SAVE_DIR", "saves")
+        akashic_cfg = safe_get(BoneConfig, "AKASHIC", {})
+        self.save_dir = safe_get(akashic_cfg, "SAVE_DIR", "saves")
         self.HIVE_FILENAME = os.path.join(self.save_dir, "cortex_hive.json")
         self.categories = set()
         self.VOCAB: Dict[str, Set[str]] = {}
-        self.LEARNED_VOCAB: Dict[str, Dict[str, int]] = {}
+        self.LEARNED_VOCAB: Dict[str, Dict[str, int]] = defaultdict(dict)
         self.USER_FLAGGED_BIAS = set()
         self.ANTIGEN_REPLACEMENTS = {}
         self.SOLVENTS = set()
@@ -45,12 +33,11 @@ class LexiconStore:
         self.hive_loaded = False
 
     def load_vocabulary(self):
-        """Ingests the structural dictionary and builds the initial reverse index."""
         data = LoreManifest.get_instance().get("LEXICON") or {}
         self.SOLVENTS = set(data.get("solvents", []))
         self.ANTIGEN_REPLACEMENTS = data.get("antigen_replacements", {})
         for cat, words in data.items():
-            if cat not in ["solvents", "antigen_replacements"]:
+            if cat not in ("solvents", "antigen_replacements"):
                 self.categories.add(cat)
                 word_set = set(words)
                 self.VOCAB[cat] = word_set
@@ -63,7 +50,6 @@ class LexiconStore:
         self.REVERSE_INDEX[word.lower()].add(category)
 
     def _load_hive(self):
-        """Loads previously learned words from disk, persisting linguistic growth."""
         if not os.path.exists(self.HIVE_FILENAME): return
         try:
             with open(self.HIVE_FILENAME, "r", encoding="utf-8") as f:
@@ -83,7 +69,6 @@ class LexiconStore:
                 print(f"{Prisma.OCHRE}{msg.format(e='Amnesia detected. Rebuilding pathways.')}{Prisma.RST}")
 
     def save_hive(self):
-        """Commits learned vocabulary back to the Akashic storage."""
         try:
             with open(self.HIVE_FILENAME, "w", encoding="utf-8") as f:
                 json.dump(self.LEARNED_VOCAB, f, indent=2)
@@ -103,18 +88,14 @@ class LexiconStore:
         return self.REVERSE_INDEX.get(word.lower(), set())
 
     def teach(self, word: str, category: str, tick: int) -> bool:
-        """
-        Dynamically adds a word to a semantic category.
-        Limits category size to 1000 to prevent infinite memory bloat.
-        """
         w = word.lower()
         cat_dict = self.LEARNED_VOCAB.setdefault(category, {})
         if w in cat_dict: return False
         if len(cat_dict) >= 1000:
             oldest_word = min(cat_dict, key=cat_dict.get)
             del cat_dict[oldest_word]
-            if oldest_word in self.REVERSE_INDEX and category in self.REVERSE_INDEX[oldest_word]:
-                self.REVERSE_INDEX[oldest_word].remove(category)
+            if oldest_word in self.REVERSE_INDEX:
+                self.REVERSE_INDEX[oldest_word].discard(category)
                 if not self.REVERSE_INDEX[oldest_word]:
                     del self.REVERSE_INDEX[oldest_word]
         cat_dict[w] = tick
@@ -122,7 +103,6 @@ class LexiconStore:
         return True
 
     def harvest(self, text: str) -> Dict[str, List[str]]:
-        """Scans a text block and bins every recognized word into its semantic categories."""
         if not text:
             return {}
         results = defaultdict(list)
@@ -131,26 +111,17 @@ class LexiconStore:
                 results[category].append(word)
         return dict(results)
 
-
 class LinguisticAnalyzer:
-    """
-    The Phonetic and Semantic Math Engine (Pinker).
-    This class performs the actual computational analysis of language. It calculates
-    how physically difficult a word is to pronounce, maps text to multi-dimensional
-    vectors, and acts as the execution layer for the Lexical Firewall (purging antigens).
-    """
-
     def __init__(self, store_ref):
         self.ANTIGEN_REGEX = None
         self.store = store_ref
-        self._TRANSLATOR = getattr(self.store, "_TRANSLATOR", None)
+        self._TRANSLATOR = store_ref._TRANSLATOR
         ling_data = LoreManifest.get_instance().get("LINGUISTICS") or {}
         raw_phonetics = ling_data.get("PHONETICS", {})
         self.PHONETICS = {k: set(v) for k, v in raw_phonetics.items()}
         raw_roots = ling_data.get("ROOTS", {})
         self.ROOTS = {k: tuple(v) for k, v in raw_roots.items()}
-        self.thresholds = ling_data.get("THRESHOLDS",
-                                        {"heavy_density": 0.55, "play_vitality": 0.6, "kinetic_flow": 0.6})
+        self.thresholds = ling_data.get("THRESHOLDS", {"heavy_density": 0.55, "play_vitality": 0.6, "kinetic_flow": 0.6})
         self.biases = ling_data.get("BIASES", {"heavy": 1.0, "play": 1.0, "kinetic": 1.0})
         self.dimension_map = ling_data.get("DIMENSION_MAP", {})
         self.char_to_sound = {char: sound for sound, chars in self.PHONETICS.items() for char in chars}
@@ -159,11 +130,7 @@ class LinguisticAnalyzer:
         self.compile_antigens()
 
     def compile_antigens(self):
-        """
-        Builds the Lexical Firewall regex.
-        Antigens are cliché or sycophantic words/phrases that cause semantic rot.
-        """
-        reps = getattr(self.store, "ANTIGEN_REPLACEMENTS", {})
+        reps = self.store.ANTIGEN_REPLACEMENTS
         if reps:
             patterns = sorted(reps.keys(), key=len, reverse=True)
             escaped = [rf"\b{re.escape(str(p))}\b" for p in patterns]
@@ -173,10 +140,6 @@ class LinguisticAnalyzer:
 
     @functools.lru_cache(maxsize=5000)
     def measure_viscosity(self, word: str) -> float:
-        """
-        Calculates the 'thickness' of a word based on hard consonants vs flowing vowels.
-        Used to determine the structural Drag of the user's input.
-        """
         if not word:
             return 0.0
         clean_word = word.lower()
@@ -192,10 +155,6 @@ class LinguisticAnalyzer:
 
     @staticmethod
     def get_turbulence(words: List[str]) -> float:
-        """
-        Measures the variance in sentence rhythm.
-        A highly turbulent sentence alternates long and short words wildly.
-        """
         word_count = len(words)
         if word_count < 2:
             return 0.0
@@ -208,10 +167,6 @@ class LinguisticAnalyzer:
     _VECTOR_DIMS = ("VEL", "STR", "CHI", "PHI", "PSI", "BET", "DEL", "LAMBDA", "ENT")
 
     def vectorize(self, text: str) -> Dict[str, float]:
-        """
-        Translates raw text into the system's core physics dimensions.
-        e.g., Aggressive words spike 'STR' (Structure), abstract words spike 'PSI'.
-        """
         if not (words := self.sanitize(text)): return {}
         dims = dict.fromkeys(self._VECTOR_DIMS, 0.0)
         for w in words:
@@ -225,7 +180,6 @@ class LinguisticAnalyzer:
 
     @staticmethod
     def calculate_flux(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float:
-        """Measures the mathematical distance (delta) between two semantic vectors."""
         if not vec_a or not vec_b:
             return 0.0
         keys = vec_a.keys() | vec_b.keys()
@@ -240,19 +194,14 @@ class LinguisticAnalyzer:
         return base_cat
 
     def sanitize(self, text: str) -> List[str]:
-        """
-        The Filter.
-        Normalizes unicode, strips punctuation, and violently replaces Lexical Antigens.
-        """
         if not text:
             return []
         try:
             normalized = unicodedata.normalize("NFKD", text).encode("ASCII", "ignore").decode("utf-8")
         except (TypeError, AttributeError):
             normalized = text
-        xlate = self._TRANSLATOR or str.maketrans("", "")
-        cleaned_text = normalized.translate(xlate).lower()
-        if getattr(self, "ANTIGEN_REGEX", None):
+        cleaned_text = normalized.translate(self._TRANSLATOR).lower()
+        if self.ANTIGEN_REGEX:
             cleaned_text = self.ANTIGEN_REGEX.sub(
                 lambda m: self.store.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""), cleaned_text
             )
@@ -261,7 +210,6 @@ class LinguisticAnalyzer:
 
     @functools.lru_cache(maxsize=5000)
     def classify_word(self, word: str) -> Tuple[Optional[str], float]:
-        """Heuristic fallback for words not in the global dictionary."""
         w = word.lower()
         if len(w) < 3:
             return None, 0.0
@@ -290,7 +238,6 @@ class LinguisticAnalyzer:
         return None, 0.0
 
     def measure_valence(self, words: List[str]) -> float:
-        """Determines the emotional charge (positive vs negative) of a string."""
         if not words: return 0.0
         score = 0.0
         prev_negator = False
@@ -304,25 +251,12 @@ class LinguisticAnalyzer:
         return max(-1.0, min(1.0, score / max(1.0, len(words) * 0.5)))
 
     def tune_sensitivity(self, voltage: float, drag: float):
-        """
-        Feedback Loop (Meadows).
-        Adjusts the literal thresholds of word classification based on the physical
-        tension of the environment. If Voltage is high, the system perceives text
-        as more 'kinetic' natively.
-        """
         kinetic_shift = 1.0 + ((10.0 - voltage) * 0.02)
         self.biases["kinetic"] = round(max(0.8, min(1.2, kinetic_shift)), 3)
         heavy_shift = 1.0 - ((drag - 2.0) * 0.05)
         self.biases["heavy"] = round(max(0.5, min(1.0, heavy_shift)), 3)
 
-
 class SemanticField:
-    """
-    The Conversation Weather Map (Fuller).
-    Instead of analyzing single sentences in a vacuum, this class tracks the
-    shifting semantic vectors of a conversation over time, tracking its momentum.
-    """
-
     def __init__(self, analyzer_ref):
         self.analyzer = analyzer_ref
         self.current_vector = {}
@@ -330,7 +264,6 @@ class SemanticField:
         self.history = deque(maxlen=10)
 
     def update(self, text: str) -> Dict[str, float]:
-        """Injects new text into the field, shifting the rolling average."""
         new_vector = self.analyzer.vectorize(text)
         if not new_vector:
             return self.current_vector
@@ -350,7 +283,6 @@ class SemanticField:
         return self.current_vector
 
     def get_atmosphere(self) -> str:
-        """Translates abstract vector math into a human-readable environmental state."""
         if not self.current_vector:
             return f"{Prisma.GRY}VOID{Prisma.RST}"
         dom = max(self.current_vector, key=self.current_vector.get)
@@ -358,14 +290,7 @@ class SemanticField:
             return f"{Prisma.VIOLET}Volatile {dom.upper()} Storm{Prisma.RST}"
         return f"{Prisma.CYN}Stable {dom.upper()} Atmosphere{Prisma.RST}"
 
-
 class LexiconService:
-    """
-    The Syntactic API Layer (Schur).
-    A clean, safely bounded facade. This is the only object the rest of the
-    engine touches, hiding the complex linguistics math behind simple method calls.
-    """
-
     def __init__(self, events_ref=None):
         self._INITIALIZED = False
         self._STORE = LexiconStore()
@@ -378,7 +303,6 @@ class LexiconService:
             events_ref.subscribe("MYTHOLOGY_UPDATE", self._on_mythology_update)
 
     def _on_mythology_update(self, payload: dict):
-        """Event listener. Allows other modules to teach the Lexicon new words on the fly."""
         if not payload or not isinstance(payload, dict): return
         if (word := payload.get("word")) and (category := payload.get("category")):
             self.teach(word, category, tick=int(time.time()))
@@ -416,7 +340,6 @@ class LexiconService:
         return self._ANALYZER.vectorize(text)
 
     def purge_toxins(self, text: str) -> str:
-        """The primary executor of Pinker's Lexical Firewall."""
         if not self._ANALYZER.ANTIGEN_REGEX or not text:
             return text
         return self._ANALYZER.ANTIGEN_REGEX.sub(
@@ -427,7 +350,6 @@ class LexiconService:
         return self._ANALYZER.sanitize(text)
 
     def taste(self, word: str) -> Tuple[Optional[str], float]:
-        """Tries to rigidly classify a word, falling back to phonetic heuristics if unknown."""
         known_cats = self._STORE.get_categories_for_word(word)
         if known_cats:
             for p_cat in self.PRIORITY_ORDER:

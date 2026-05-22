@@ -1,23 +1,13 @@
-"""machine/forge.py
-The Forge is the semantic alchemy engine of the simulation.
-It governs the creation and transformation of items based on the user's vocabulary.
-It listens to the 'clean_words' (the raw, structural tokens of the user's prompt)
-and checks if they act as catalysts to combine with existing inventory items,
-or if the sheer density of the speech spontaneous forges new base materials.
-"""
+"""machine/forge.py"""
+
 import random
 from typing import Tuple, Optional, List, Any
 from core import LoreManifest
 from struts import ux, safe_get
 from mechanics.lexicon import LexiconService
 
-
 class TheForge:
     def __init__(self, lex_ref=None):
-        """
-        Initializes the Forge by loading Gordon's recipe manifest.
-        Recipes are mapped by their base ingredient for O(1) lookup during the crafting loop.
-        """
         self.lex = lex_ref
         gordon_data = LoreManifest.get_instance().get("GORDON") or {}
         self.recipe_map = {}
@@ -27,12 +17,6 @@ class TheForge:
 
     @staticmethod
     def hammer_alloy(physics: Any) -> Tuple[bool, Optional[str], Optional[str]]:
-        """
-        Spontaneous Generation (No inventory required).
-        Evaluates the "weight" of the user's prompt. If the user uses a high density
-        of 'heavy' or 'kinetic' words during a high-voltage state, the system may
-        spontaneously forge a base item (like Lead Boots or Safety Scissors).
-        """
         counts = safe_get(physics, "counts", {})
         clean_words = safe_get(physics, "clean_words", [])
         if not clean_words:
@@ -50,15 +34,7 @@ class TheForge:
             return True, ux("machine_strings", "forge_safety_scissors"), "SAFETY_SCISSORS"
         return True, ux("machine_strings", "forge_anchor_stone"), "ANCHOR_STONE"
 
-    def attempt_crafting(
-            self, physics: Any, inventory_list: List[str]
-    ) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
-        """
-        Targeted Alchemy (Inventory Required).
-        Checks the user's current inventory against the words they just spoke.
-        If a spoken word belongs to a 'catalyst_category' required by an inventory item's
-        recipe, the forge attempts a transmutation.
-        """
+    def attempt_crafting(self, physics: Any, inventory_list: List[str]) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
         if not inventory_list or not (clean_words := safe_get(physics, "clean_words", [])):
             return False, None, None, None
         clean_set = set(clean_words)
@@ -84,19 +60,10 @@ class TheForge:
 
     @staticmethod
     def _calculate_entanglement(hit_count: int, voltage: float) -> float:
-        """
-        Calculates the probability curve of a successful craft.
-        Base chance (20%) + semantic resonance (10% per matching word) + systemic energy (voltage).
-        Capped at 100% (1.0).
-        """
         return min(1.0, 0.2 + (hit_count * 0.1) + (voltage / 133.0))
 
     @staticmethod
     def transmute(physics: Any) -> Optional[str]:
-        """
-        Environmental Check: Evaluates if the current state of the physics engine
-        is fundamentally hostile to forging, returning a failure message if so.
-        """
         counts = safe_get(physics, "counts", {})
         voltage = float(safe_get(physics, "voltage", 0.0))
         gamma = float(safe_get(physics, "gamma", 0.0))

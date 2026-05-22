@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 from tests.base import BoneTestCase
 from soul.oroboros import TheOroboros, Scar
 
-
 class GenesisContinuityTests(BoneTestCase):
     def setUp(self):
         super().setUp()

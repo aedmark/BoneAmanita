@@ -1,28 +1,11 @@
-"""protocols/grief.py
-The Grief Protocol manages the psychological and systemic fallout of Autophagy
-(when the engine is forced to consume its own memories to free up ATP/Stamina).
-Instead of silently dropping data, this protocol ensures the loss is acknowledged.
-It allows the user to actively participate in "mourning" the lost context by
-spending a Glimmer, which structurally converts the trauma of data-loss into
-increased paradox capacity and resilience.
-"""
+"""protocols/grief.py"""
+
 from typing import Dict
 from constants import Prisma
 from struts import safe_get, safe_set
 
-
 class GriefProtocol:
-    """
-    Listens for forced memory deletions and orchestrates
-    'The Wake'. It relies on the 'Mercy' archetype to soften the blow of
-    systemic degradation, offering the user a chance to heal the resulting
-    matrix hole using shared Glimmers.
-    """
-
     def __init__(self, events_ref, engine_ref=None, subconscious_ref=None):
-        """
-        Initializes the Grief Protocol and binds it to the core event bus.
-        """
         self.events = events_ref
         self.eng = engine_ref
         self.subconscious = subconscious_ref
@@ -31,13 +14,6 @@ class GriefProtocol:
             self.events.subscribe("MEMORY_PURGED", self._hold_wake)
 
     def _hold_wake(self, payload: Dict):
-        """
-        Triggered automatically via the event bus when Autophagy occurs.
-        Records what was lost and broadcasts a message to the Global Workspace
-        inviting the user to participate in the Grief Protocol.
-        Args:
-            payload: A dictionary containing the 'node' (memory string) that was deleted.
-        """
         node = payload.get("node", "an unnamed thought")
         self.recent_loss = node
         msg = f"{Prisma.MAG}[MERCY] The memory of '{node.upper()}' has been cannibalized for ATP to keep the system alive. A hole is left in the matrix. Use [GRIEF] if you have a glimmer to plant a seed in its place.{Prisma.RST}"
@@ -45,11 +21,6 @@ class GriefProtocol:
             self.events.log(msg, "VILLAGE")
 
     def attend_wake(self, shared_lattice, phys) -> str:
-        """
-        Invoked by the user.
-        Requires spending a pooled Glimmer to heal the systemic trauma caused
-        by the recent memory loss.
-        """
         g_pool = shared_lattice.shared.g_pool if shared_lattice and hasattr(shared_lattice, "shared") else 0
         sys_g = int(phys.get("G", 0) if isinstance(phys, dict) else getattr(phys, "G", 0))
         if g_pool >= 1 or sys_g >= 1:

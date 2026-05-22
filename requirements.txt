@@ -12,11 +12,6 @@ numpy>=1.24.0             # Required for FAISS vector contiguous arrays and matr
 dspy
 dspy-ai>=2.4.0            # Powers the Real-Time Critic, False Cohesion checks, and Epigenetic Pruning
 
-# 3. The Vocal Cords
-spacy>=3.8.9
-kokoro>=0.1.0             # TTS generation for the asynchronous podcast synthesizer
-soundfile>=0.1.0
-
-# 4. Neural Transports
+# 3. Neural Transports
 requests>=2.31.0          # Required for standard HTTP calls to local LLMs and OpenAI-compatible endpoints
 
