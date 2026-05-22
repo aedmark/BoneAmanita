@@ -1,4 +1,5 @@
 """mechanics/terminal.py"""
+
 import os
 import sys
 import time
@@ -12,12 +13,7 @@ from presets import BoneConfig
 
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
 
-
 def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
-    """
-    Prints text to the console character-by-character to simulate mechanical output.
-    Intelligently ignores ANSI color codes so formatting is applied instantly without disrupting the visual pacing.
-    """
     if not text:
         print(end=end, flush=True)
         return
@@ -39,16 +35,10 @@ def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
                 time.sleep(actual_speed)
     print(end=end, flush=True)
 
-
 class SessionGuardian:
-    """
-    A context manager that wraps the entire application runtime.
-    Ensures the terminal is properly initialized on boot, and gracefully handles
-    shutdowns, user interruptions (Ctrl+C), and fatal crashes without leaving the terminal in a broken state.
-    """
     _HEADERS = (
         ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 20.0.1   │"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 20.1.0   │"),
         ("term_header_bot", "└──────────────────────────────────────────┘"),
     )
 
@@ -56,10 +46,6 @@ class SessionGuardian:
         self.engine_instance = engine_ref
 
     def __enter__(self):
-        """
-        The Boot Sequence. Clears the screen, prints the headers, and slowly
-        flushes the engine's startup logs to establish the pacing of the session.
-        """
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         for key, default in self._HEADERS:
             print(Prisma.paint(ux("main_strings", key, default), "M"))
@@ -78,10 +64,7 @@ class SessionGuardian:
         return self.engine_instance
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        The Teardown Sequence. Executes regardless of whether the program ended naturally,
-        was interrupted by the user, or suffered a fatal Python exception.
-        """
+
         halt_msg = ux("main_strings", "sys_halt")
         print(f"\n{Prisma.paint(halt_msg, 'R')}")
         if self.engine_instance:

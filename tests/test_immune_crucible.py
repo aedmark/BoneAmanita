@@ -1,11 +1,9 @@
-"""
-test_immune_crucible.py
-"""
+"""test_immune_crucible.py"""
+
 import unittest
 from unittest.mock import patch, MagicMock
 from main import BoneAmanita
 from constants import RealityLayer
-
 
 class TestImmuneCrucible(unittest.TestCase):
     @patch("main.TheCortex")

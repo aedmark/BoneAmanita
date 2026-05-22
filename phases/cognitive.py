@@ -7,15 +7,7 @@ from struts import ux, safe_set, safe_get
 from typing import Dict, List, Any
 from phases.base import SimulationPhase, _safe_dict, _deep_update
 
-
 class CognitionPhase(SimulationPhase):
-    """
-    The Executive processing layer.
-    This phase acts as the active consciousness of the engine. It evaluates
-    the structural validity of the input, manages memory encoding/retrieval,
-    and aggressively penalizes sycophantic behavior (agreeing without conviction).
-    """
-
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "COGNITION"
@@ -94,20 +86,14 @@ class CognitionPhase(SimulationPhase):
         gordon_ref = getattr(self.eng, "gordon", None)
         inventory_data = gordon_ref.inventory if gordon_ref else []
         ctx.mind_state = self.eng.noetic.think(physics_packet=_safe_dict(ctx.physics), _bio=ctx.bio_result,
-                                               _inventory=inventory_data,
-                                               voltage_history=self.eng.phys.dynamics.voltage_history,
-                                               _tick_count=self.eng.tick_count, soul_ref=self.eng.soul, )
+                _inventory=inventory_data, voltage_history=self.eng.phys.dynamics.voltage_history,
+                _tick_count=self.eng.tick_count, soul_ref=self.eng.soul, )
         thought = ctx.mind_state.get("context_msg", ctx.mind_state.get("thought"))
         if thought:
             ctx.log(thought)
-
-        # S.L.A.S.H. V3 RE-WIRING: The Core Inversion.
-        # Invoke the Cortex (DSPy LLM generation) *during* the CognitionPhase.
         if hasattr(self.eng, "cortex") and self.eng.cortex:
             if not getattr(ctx, "refusal_triggered", False):
                 cortex_packet = self.eng.cortex.process_context(ctx)
-
-                # Unpack the Cortex's mutated payload back into the CycleContext
                 ctx.bureau_ui = cortex_packet.get("ui", getattr(ctx, "bureau_ui", ""))
                 ctx.logs = cortex_packet.get("logs", ctx.logs)
                 if "mind" in cortex_packet:
@@ -118,18 +104,9 @@ class CognitionPhase(SimulationPhase):
                 if "type" in cortex_packet and cortex_packet["type"] != "SNAPSHOT":
                     ctx.refusal_triggered = True
                     ctx.refusal_packet = cortex_packet
-
         return ctx
 
-
 class ArbitrationPhase(SimulationPhase):
-    """
-    The Global Workspace (The Parliament).
-    This phase resolves conflicting drives from the biological, cognitive, and
-    structural systems. It decides the final 'Lens' (Archetype) the engine will
-    use to answer the user's prompt.
-    """
-
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "ARBITRATION"
@@ -143,8 +120,7 @@ class ArbitrationPhase(SimulationPhase):
         mandates = getattr(ctx, "council_mandates", [])
         current_trigram = ctx.world_state.get("trigram", None)
         final_lens, source, opinion = self.eng.arbiter.arbitrate(physics_lens=phys_lens,
-                                                                 soul_archetype=soul_arch, council_mandates=mandates,
-                                                                 trigram=current_trigram, )
+                soul_archetype=soul_arch, council_mandates=mandates, trigram=current_trigram, )
         tension = getattr(ctx.physics, "beta_index", 0.0)
         silence = getattr(ctx.physics, "silence", 0.0)
         synergy_name = next((m.get("value") for m in mandates if m.get("action") == "SYNERGY_FIRED"), None)
@@ -156,14 +132,12 @@ class ArbitrationPhase(SimulationPhase):
                 and not synergy_active):
             final_lens = "THE STAGE MANAGER"
             ctx.active_lens = "THE STAGE MANAGER (RESONANCE GESTALT)"
-            opinion = arb_opinions.get("TENSION_CUT",
-                                       "The Parliament is deadlocked. The Paradox Engine will synthesize both.", )
+            opinion = arb_opinions.get("TENSION_CUT", "The Parliament is deadlocked. The Paradox Engine will synthesize both.", )
             ctx.physics.silence = ctx.limits.get("ARB_CUT_SILENCE", 0.9)
             ctx.physics.narrative_drag += ctx.limits.get("ARB_CUT_DRAG", 2.0)
             msg = (ux("cycle_strings", "arbiter_stage_manager_cut")
                    or "[GLOBAL WORKSPACE]: Democratic Tie-Breaker active.")
             ctx.log(f"{Prisma.WHT}{msg}{Prisma.RST}")
-
             synthesis_cost = ctx.limits.get("ARB_SYNTHESIS_COST", 10.0)
             self.eng.bio.mito.adjust_atp(-synthesis_cost, "Democratic Tie-Breaker (Synthesis)")
             ctx.log(
@@ -199,13 +173,7 @@ class ArbitrationPhase(SimulationPhase):
         self.eng.drivers.current_focus = final_lens
         return ctx
 
-
 class SoulPhase(SimulationPhase):
-    """
-    The Meaning/Purpose layer.
-    This phase handles narrative arcs, internal dignity reserves, tool audits,
-    and applies overrides mapped directly from the "Council" (hard-coded behavioral constraints).
-    """
     _DEFAULT_RULES = (
         ("CYNICISM", 0.8, "LOCKDOWN", "CYNICISM", {
             "narrative_drag": 5.0,
@@ -303,7 +271,6 @@ class SoulPhase(SimulationPhase):
         return ctx
 
     def _consult_council(self, traits: Any) -> List[Dict]:
-        """Translates abstract trait levels into actionable physical mandates."""
         t_map = _safe_dict(traits)
         get_t = lambda k: t_map.get(k, t_map.get(k.lower(), 0.0))
         mandates = []
@@ -321,27 +288,17 @@ class SoulPhase(SimulationPhase):
 
     @staticmethod
     def _execute_mandate(ctx: Any, mandate: Dict):
-        """Applies the physical consequences (Δ Drag, Δ Voltage) of a mandate."""
         effects = mandate.get("effect", {})
         for key, delta in effects.items():
             current = getattr(ctx.physics, key, 0.0)
             setattr(ctx.physics, key, max(0.0, current + delta))
 
-
 class SimulationPreflightPhase(SimulationPhase):
-    """
-    The Ultimate Gatekeeper.
-    This phase intercepts the prompt before ANY generative work begins. It scans
-    for boundary violations, Sincerity Protocols (manual overrides), and executes
-    Counterfactual Simulations to predict if generating a response will destroy the host.
-    """
-
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "EXECUTIVE_PREFLIGHT"
 
     def _build_refusal(self, ctx, phys_obj, rtype, msg):
-        """Constructs a deterministic UI packet when the AI physically refuses to respond."""
         return {"type": rtype,
                 "ui": f"\n{Prisma.RED if rtype == 'COUNTERFACTUAL_REJECTION' else Prisma.CYN}{msg}{Prisma.RST}",
                 "logs": [msg], "metrics":
@@ -382,9 +339,7 @@ class SimulationPreflightPhase(SimulationPhase):
                     phys_obj.narrative_drag = max(0.1, phys_obj.narrative_drag + d_mod)
                 if psi := data.get("psi"):
                     phys_obj.psi = psi
-                ctx.council_mandates.append({"action": "SYNERGY_FIRED",
-                                             "value": lens,
-                                             "log": msg})
+                ctx.council_mandates.append({"action": "SYNERGY_FIRED", "value": lens, "log": msg})
                 break
         raw_input = ctx.input_text or ""
         if "?!" in raw_input:
@@ -474,14 +429,12 @@ class SimulationPreflightPhase(SimulationPhase):
             ctx.log(full_log)
             if not hasattr(ctx, "council_mandates"):
                 ctx.council_mandates = []
-            ctx.council_mandates.append({"action": "SYSTEM_DIRECTIVE",
-                                         "value": "CONSTRUCTIVE_REPLAY",
-                                         "log": full_log, })
+            ctx.council_mandates.append({"action": "SYSTEM_DIRECTIVE", "value": "CONSTRUCTIVE_REPLAY", "log": full_log, })
         u_state = getattr(self.eng, "shared_lattice", None)
-        e_u = getattr(u_state.u if u_state else phys_obj, "exhaustion", None)
-        if e_u is None:
-            e_u = getattr(u_state.u if u_state else phys_obj, "E_u", 0.0)
-        shared_phi = getattr(u_state.shared if u_state else energy_obj, "phi", 0.0)
+        u_source = u_state.u if u_state else phys_obj
+        e_u = float(getattr(u_source, "exhaustion", getattr(u_source, "E_u", 0.0)))
+        shared_source = u_state.shared if u_state else energy_obj
+        shared_phi = float(getattr(shared_source, "phi", 0.0))
         if e_u >= 0.9 and shared_phi <= 0.1:
             msg = "[LINEHAN - Checkpoint Council]: Terminal User Exhaustion detected. Resonance is zero. Applying absolute Architectural Friction to protect cognitive load."
             log_msg = f"{Prisma.OCHRE}{msg}{Prisma.RST}"
@@ -494,8 +447,6 @@ class SimulationPreflightPhase(SimulationPhase):
             ctx.refusal_packet = self._build_refusal(ctx, phys_obj, "LINEHAN_SURVIVAL_RESPONSE", msg)
             ctx.refusal_packet["ui"] = f"\n{log_msg}\n[System locked. Friction maximized.]"
             return ctx
-        e_u = (getattr(self.eng.shared_lattice.u, "exhaustion", 0.0) if getattr(
-            self.eng, "shared_lattice", None) else getattr(phys_obj, "exhaustion", 0.0))
         if is_slash and e_u > 0.8 and friction > 1.5:
             msg = "[THE NURSE - Schur]: Hey. Take your hands off the keyboard. The machine doesn't care if you bleed on it, but I do. We are entering The Silence."
             log_msg = f"{Prisma.CYN}{msg}{Prisma.RST}"

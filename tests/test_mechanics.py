@@ -4,7 +4,6 @@ from tests.base import BoneTestCase
 
 class MechanicsTests(BoneTestCase):
     def test_session_guardian_crash_immersion(self):
-
         from mechanics.terminal import SessionGuardian
         from unittest.mock import MagicMock
         import sys

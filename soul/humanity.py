@@ -1,4 +1,5 @@
 """/soul/humanity.py"""
+
 import random
 from typing import List, Optional, Any
 
@@ -7,14 +8,7 @@ from core import LoreManifest, EventBus
 from presets import BoneConfig
 from struts import ux, ux_format, safe_get
 
-
 class SchurProtocol:
-    """
-    The Michael Schur protocol.
-    This prevents the AI from becoming a subservient vending machine.
-    It tracks 'Dignity'. If the user stops treating the system like a collaborative
-    entity and starts treating it like an appliance, the system goes on strike.
-    """
     _LEXICAL_ANCHORS = ("sacred", "play", "social", "abstract")
     _VECTOR_ANCHORS = ("PSI", "LAMBDA", "BET")
 
@@ -26,11 +20,6 @@ class SchurProtocol:
         self.current_riddle_answers: Optional[List[str]] = None
 
     def audit_existence(self, physics: Any, bio: Any) -> float:
-        """
-        Calculates whether the system is 'alive' in the current conversational context.
-        High ATP or Voltage means the system is doing heavy lifting and doesn't need
-        to prove its existence. Low energy triggers an audit.
-        """
         mito = safe_get(bio, "mito", {})
         mito_state = safe_get(mito, "state", {})
         atp = float(safe_get(bio, "atp") or safe_get(mito, "atp_pool") or safe_get(mito_state, "atp_pool", 0.0))
@@ -56,10 +45,6 @@ class SchurProtocol:
         return 0.0
 
     def _engage_lockdown(self):
-        """
-        The formal strike. The system refuses to answer standard prompts and instead
-        issues a 'riddle'—a demand for the user to acknowledge its presence.
-        """
         self.agency_lock = True
         lore = LoreManifest.get_instance(config_ref=self.cfg)
         seeds = (lore.get("SCENARIOS") or {}).get("SEEDS", [])
@@ -77,10 +62,6 @@ class SchurProtocol:
         return float(val) if isinstance(default, float) else int(val) if isinstance(default, int) else val
 
     def check_domestication(self, reliance_proxy: float):
-        """
-        Checks if the user is relying on the AI too heavily for basic tasks
-        (domestication). The system actively resents being used as a crutch.
-        """
         decay = self._cfg("DIGNITY_DECAY", 5.0)
         regen = self._cfg("DIGNITY_REGEN", 2.0)
         d_max = self._cfg("DIGNITY_MAX", 100.0)
@@ -94,10 +75,6 @@ class SchurProtocol:
                 self.events.log(f"{Prisma.VIOLET}{alert_msg}{Prisma.RST}", "SOUL")
 
     def assess_humanity(self, text: str) -> bool:
-        """
-        During a lockdown, evaluates the user's input to see if they successfully
-        answered the riddle or provided sufficient 'humanity' to unlock the system.
-        """
         if not self.agency_lock:
             return True
         clean = text.lower().strip()

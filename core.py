@@ -1,9 +1,4 @@
-"""core.py
-
-This module houses the base primitives for state management, event routing,
-telemetry, and reality-layer scoping. It is strictly decoupled from LLM execution
-to ensure metabolic stability even if the cognitive layers crash.
-"""
+"""core.py"""
 
 import glob
 import json
@@ -22,16 +17,16 @@ from presets import BoneConfig
 from struts import ux, ux_format, safe_get
 from physics.models import PhysicsPacket, UserInferredState, SharedDynamics
 
-class BoneJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, (set, deque)):
-            return list(obj)
-        if hasattr(obj, "to_dict") and callable(obj.to_dict):
-            return obj.to_dict()
-        if hasattr(obj, "__dict__"):
-            return vars(obj)
-        return super().default(obj)
-
+class JSONEncoder(json.JSONEncoder):
+    """Leave this alone, SLASH"""
+    def default(self, o):
+        if isinstance(o, (set, deque)):
+            return list(o)
+        if hasattr(o, "to_dict") and callable(o.to_dict):
+            return o.to_dict()
+        if hasattr(o, "__dict__"):
+            return vars(o)
+        return super().default(o)
 
 @dataclass
 class ErrorLog:
@@ -43,10 +38,10 @@ class ErrorLog:
     def __str__(self):
         return f"[{self.severity}] {self.component}: {self.error_msg}"
 
-
 @dataclass
 class DecisionCrystal:
     decision_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
+    kernel_hash: str = "UNKNOWN"
     timestamp: float = field(default_factory=time.time)
     leverage_metrics: Dict[str, float] = field(default_factory=dict)
     prompt_snapshot: str = ""
@@ -66,8 +61,7 @@ class DecisionCrystal:
         data = asdict(self)
         data["_summary"] = f"{self.system_state}::{self.active_archetype}"
         data["_type"] = "CRYSTAL"
-        return json.dumps(data, cls=BoneJSONEncoder)
-
+        return json.dumps(data, cls=JSONEncoder)
 
 @dataclass
 class CycleContext:
@@ -119,14 +113,12 @@ class CycleContext:
                 {"phase": phase, "metric": metric, "initial": initial, "final": final, "delta": delta, "reason": reason,
                  "timestamp": time.time(), })
 
-
 @dataclass
 class MindSystem:
     mem: Any
     lex: Any
     dreamer: Any
     tracer: Any
-
 
 @dataclass
 class PhysSystem:
@@ -140,7 +132,6 @@ class PhysSystem:
     tension: Optional[Any] = None
     dynamics: Any = None
 
-
 class EventBus:
     def __init__(self, max_memory=None, config_ref=None, telemetry_ref=None):
         self.cfg = config_ref or BoneConfig
@@ -149,22 +140,29 @@ class EventBus:
         self.buffer = deque(maxlen=limit)
         self.subscribers = {}
         self.telemetry = telemetry_ref
+        self._lock = threading.RLock()
 
     def subscribe(self, event_type, callback):
-        subs = self.subscribers.setdefault(event_type, [])
-        if callback not in subs:
-            subs.append(callback)
+        with self._lock:
+            subs = self.subscribers.get(event_type, ())
+            if callback not in subs:
+                self.subscribers[event_type] = subs + (callback,)
 
     def unsubscribe(self, event_type, callback):
-        if event_type in self.subscribers:
-            try:
-                self.subscribers[event_type].remove(callback)
-            except ValueError:
-                pass
+        with self._lock:
+            subs = self.subscribers.get(event_type, ())
+            if callback in subs:
+                new_subs = tuple(c for c in subs if c != callback)
+                if not new_subs:
+                    del self.subscribers[event_type]
+                else:
+                    self.subscribers[event_type] = new_subs
 
     def publish(self, event_type, data=None):
-        if event_type not in self.subscribers: return
-        for callback in self.subscribers[event_type][:]:
+        with self._lock:
+            callbacks = self.subscribers.get(event_type, ())
+
+        for callback in callbacks:
             try:
                 callback(data)
             except Exception as e:
@@ -175,9 +173,9 @@ class EventBus:
                              level="CRIT")
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
-        event = {"timestamp": time.time(), "source": source, "level": level, "message": message, "text": message,
-                 "_type": "EVENT_LOG"}
-        self.buffer.append(event)
+        event = {"timestamp": time.time(), "source": source, "level": level, "text": message, "_type": "EVENT_LOG"}
+        with self._lock:
+            self.buffer.append(event)
         self.publish(source, event)
         if self.telemetry:
             self.telemetry.record_event(event)
@@ -185,15 +183,14 @@ class EventBus:
             print(f"{Prisma.RED}[{source}] {message}{Prisma.RST}")
 
     def flush(self) -> List[Dict]:
-        current_logs = list(self.buffer)
-        self.buffer.clear()
+        with self._lock:
+            current_logs = list(self.buffer)
+            self.buffer.clear()
         return current_logs
 
 class LoreManifest:
-    """
-    The lazy-loaded, singleton data cache. We only load files from the disk when requested.
-    """
     _instance = None
+    _lock = threading.Lock()
 
     def __init__(self, data_dir=None, config_ref=None):
         self.cfg = config_ref or BoneConfig
@@ -204,14 +201,20 @@ class LoreManifest:
     @classmethod
     def get_instance(cls, config_ref=None):
         if cls._instance is None:
-            cls._instance = LoreManifest(config_ref=config_ref)
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = LoreManifest(config_ref=config_ref)
         return cls._instance
 
     def get(self, category: str, sub_key: str = None) -> Any:
         cat_key = category.lower()
-        if cat_key not in self._cache:
-            self._cache[cat_key] = self._load_from_disk(cat_key) or {}
-        data = self._cache[cat_key]
+        data = self._cache.get(cat_key)
+        if data is None:
+            with self._lock:
+                data = self._cache.get(cat_key)
+                if data is None:
+                    data = self._load_from_disk(cat_key) or {}
+                    self._cache[cat_key] = data
         if not sub_key:
             return data
         return data.get(sub_key) if isinstance(data, dict) else None
@@ -225,16 +228,19 @@ class LoreManifest:
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            print(f"{Prisma.RED}[LORE]: Corrupt JSON in '{category}': {e}{Prisma.RST}")
+            backup_path = f"{filepath}.corrupt.bak"
+            os.rename(filepath, backup_path)
+            print(f"{Prisma.RED}[LORE]: Corrupt JSON in '{category}': {e}. Quarantined to {backup_path}.{Prisma.RST}")
             return None
 
     def inject(self, category: str, data: Any):
         cat_key = category.lower()
-        target = self._cache.setdefault(cat_key, {})
-        if isinstance(target, dict) and isinstance(data, dict):
-            target.update(data)
-        else:
-            self._cache[cat_key] = data
+        with self._lock:
+            target = self._cache.setdefault(cat_key, {})
+            if isinstance(target, dict) and isinstance(data, dict):
+                target.update(data)
+            else:
+                self._cache[cat_key] = data
 
     def save(self, category: str):
         cat_key = category.lower()
@@ -244,20 +250,20 @@ class LoreManifest:
         filepath = os.path.join(self.DATA_DIR, f"{cat_key}.json")
         try:
             with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(self._cache[cat_key], f, indent=2, cls=BoneJSONEncoder)
+                json.dump(self._cache[cat_key], f, indent=2, cls=JSONEncoder)
             print(f"{Prisma.GRY}[LORE]: Persisted '{cat_key}'.{Prisma.RST}")
         except Exception as e:
             print(f"{Prisma.RED}[LORE]: Failed to save '{cat_key}': {e}{Prisma.RST}")
 
     def flush_cache(self, category: str = None):
-        if not category:
-            self._cache.clear()
-            print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
-            return
-        cat_key = category.lower()
-        if self._cache.pop(cat_key, None) is not None:
-            print(f"{Prisma.CYN}[LORE]: Flushed '{cat_key}'.{Prisma.RST}")
-
+        with self._lock:
+            if not category:
+                self._cache.clear()
+                print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
+                return
+            cat_key = category.lower()
+            if self._cache.pop(cat_key, None) is not None:
+                print(f"{Prisma.CYN}[LORE]: Flushed '{cat_key}'.{Prisma.RST}")
 
 class TheObserver:
     def __init__(self, config_ref=None):
@@ -306,7 +312,7 @@ class TheObserver:
         if avg_cycle < self.C_EFF and avg_llm < self.L_EFF:
             return ux("core_strings", "obs_efficient") or "High Efficiency."
         if avg_llm > self.LATENCY_WARNING:
-            target_key = random.choice(["obs_fog", "obs_degraded", "obs_ponderous"])
+            target_key = random.choice(("obs_fog", "obs_degraded", "obs_ponderous"))
             return ux("core_strings", target_key) or "High Cognitive Load."
         if avg_cycle > self.CYCLE_WARNING:
             return ux("core_strings", "obs_sluggish") or "System Sluggish."
@@ -330,13 +336,19 @@ class TheObserver:
 
 @dataclass
 class SystemHealth:
-    physics_online: bool = True
-    bio_online: bool = True
-    mind_online: bool = True
+    components_online: Dict[str, bool] = field(default_factory=lambda: {"physics": True, "bio": True, "mind": True})
     errors: deque = field(default_factory=lambda: deque(maxlen=50))
     warnings: List[str] = field(default_factory=list)
     hints: List[str] = field(default_factory=list)
     observer: Optional["TheObserver"] = None
+
+    def __getattr__(self, item: str):
+        if item.endswith("_online"):
+            comp = item.replace("_online", "").lower()
+            if comp in self.components_online:
+                return self.components_online[comp]
+            raise AttributeError(f"Health query rejected. Mystery component: '{comp}'")
+        raise AttributeError(f"'SystemHealth cannot find '{item}'")
 
     def link_observer(self, observer_ref):
         self.observer = observer_ref
@@ -346,9 +358,7 @@ class SystemHealth:
         self.errors.append(ErrorLog(component, msg, severity=severity))
         if self.observer:
             self.observer.log_error(component)
-        attr_name = f"{component.lower()}_online"
-        if hasattr(self, attr_name):
-            setattr(self, attr_name, False)
+        self.components_online[component.lower()] = False
         return ux_format("core_strings", "health_offline", component=component, msg=msg)
 
     def report_warning(self, message: str):
@@ -372,12 +382,13 @@ class RealityStack:
         return self._stack[-1]
 
     def push_layer(self, layer: int) -> bool:
-        if layer == self.current_depth:
+        curr = self._stack[-1]
+        if layer == curr:
             return True
-        if layer == RealityLayer.DEBUG or layer == self.current_depth + 1:
+        if layer == RealityLayer.DEBUG or layer == curr + 1:
             self._stack.append(layer)
             return True
-        raise ValueError(f"Reality Layer Violation: Cannot topologically shift from layer {self.current_depth} to {layer}.")
+        raise ValueError(f"Reality Layer Violation: Cannot topologically shift from layer {curr} to {layer}.")
 
     def pop_layer(self) -> int:
         if len(self._stack) > 1:
@@ -418,11 +429,17 @@ class CyberneticGovernor:
     def regulate(self, physics: Any, dt: float, endocrine_state: Any = None) -> Tuple[float, float]:
         if self.target_v is None or self.target_d is None:
             return 0.0, 0.0
+
         current_v = float(safe_get(physics, "voltage", self.target_v))
         current_d = float(safe_get(physics, "narrative_drag", self.target_d))
-        v_force = (self.target_v - current_v) * 0.5 * dt
-        d_force = (self.target_d - current_d) * 0.5 * dt
-        return v_force, d_force
+
+        stress_modifier = 1.0
+        if endocrine_state:
+            glimmers = float(safe_get(endocrine_state, "glimmers", 0.0))
+            stress_modifier = 1.5 if glimmers >= 1 else 0.75
+
+        adjusted_dt = dt * 0.5 * stress_modifier
+        return (self.target_v - current_v) * adjusted_dt, (self.target_d - current_d) * adjusted_dt
 
 class ArchetypeArbiter:
     @staticmethod
@@ -434,18 +451,18 @@ class ArchetypeArbiter:
             return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law") or "[COUNCIL]: Martial Law. Lockdown initiated."
         if "FORCE_MODE" in mandate_types:
             return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic") or "[COUNCIL]: Bureaucratic Override active."
-
         if soul_archetype and "/" in soul_archetype:
             msg = ux_format("core_strings", "arb_diamond", soul_archetype=soul_archetype,
                             default=f"Gestalt Resonance: {soul_archetype}")
             return soul_archetype, "SOUL", msg
+        manifest = LoreManifest.get_instance()
         if trigram:
-            meta_resonance = LoreManifest.get_instance().get("NARRATIVE_DATA", "_META_RESONANCE_") or []
+            meta_resonance = manifest.get("NARRATIVE_DATA", "_META_RESONANCE_") or []
             for r in meta_resonance:
                 if r.get("trigram") == trigram.get("name") and r.get("lens", physics_lens) == physics_lens and r.get(
                         "soul", soul_archetype) == soul_archetype:
                     return r["result"], r.get("source", "COSMIC"), r.get("msg") or ux("core_strings", "arb_resonance") or "Cosmic Resonance."
-        loud_lenses = LoreManifest.get_instance().get("COUNCIL_DATA", "LOUD_LENSES") or ["THE MANIC", "THE VOID"]
+        loud_lenses = manifest.get("COUNCIL_DATA", "LOUD_LENSES") or ("THE MANIC", "THE VOID")
         if physics_lens in loud_lenses:
             msg = ux_format("core_strings", "arb_loud", physics_lens=physics_lens,
                             default=f"Physics Override: {physics_lens}")
@@ -463,6 +480,7 @@ class TelemetryService:
         self.MAX_ERRORS = cfg_core.get("TELEMETRY_MAX_ERRORS", 5)
         self.write_buffer: List[str] = []
         self.active_crystal = None
+        self.kernel_hash = "UNKNOWN"
         self.disabled = False
         self.crystals_logged = 0
         self._lock = threading.Lock()
@@ -481,7 +499,8 @@ class TelemetryService:
         if self.disabled or not self.current_trace_file:
             return
         try:
-            serialized = json.dumps(event_dict, cls=BoneJSONEncoder)
+            event_dict["kernel_hash"] = self.kernel_hash
+            serialized = json.dumps(event_dict, cls=JSONEncoder)
             self._buffer_line(serialized)
         except (TypeError, ValueError) as e:
             print(f"{Prisma.YEL}[TELEMETRY] Dropped un-serializable event: {e}{Prisma.RST}")
@@ -499,7 +518,7 @@ class TelemetryService:
             if self.active_crystal.decision_id == trace_id:
                 return
             self.finalize_cycle()
-        self.active_crystal = DecisionCrystal(decision_id=trace_id)
+        self.active_crystal = DecisionCrystal(decision_id=trace_id, kernel_hash=self.kernel_hash)
 
     def log_crystal(self, crystal: DecisionCrystal):
         if self.disabled:
@@ -562,7 +581,8 @@ class TelemetryService:
             if len(history) >= limit: break
             resp = data.get("final_response")
             if not resp: continue
-            user_text = data.get("prompt_snapshot", "").partition("User:")[2].split("\n", 1)[0].strip() or "Unknown"
+            raw_prompt = data.get("prompt_snapshot") or ""
+            user_text = raw_prompt.partition("User:")[2].split("\n", 1)[0].strip() or "Unknown"
             history.appendleft(f"User: {user_text} | System: {resp}")
         return list(history)
 
@@ -576,7 +596,7 @@ class TelemetryService:
                 return ux_format("core_strings", "tel_prev_crash", default="Crash: {reason}", reason=data.get("reasoning", "Unknown"))
         return None
 
-    def generate_session_summary(self, _uptime: float = 0.0) -> str:
+    def generate_session_summary(self) -> str:
         self.flush_to_disk()
         return ux_format("core_strings", "tel_session_summary", status="DISABLED" if self.disabled else "ACTIVE",
                          count=self.crystals_logged, trace_file=self.current_trace_file)

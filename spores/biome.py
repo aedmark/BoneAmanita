@@ -1,26 +1,12 @@
-"""spores/biome.py
-This module defines the biological/ecological subsystems of the language engine.
-It treats language processing not as a static algorithm, but as an active ecosystem
-where words have physical properties (mass, toxicity) and semantic interactions
-trigger organic responses (immunity, infection, photosynthesis).
-Classes:
-    - ImmuneMycelium: Acts as a phonetic filter, calculating the "weight" and "toxicity" of words.
-    - BioParasite: Injects intrusive or metaphorical connections into the semantic graph during high exhaustion.
-    - BioLichen: Converts "light" concepts into metabolic energy (sugar/ATP) when the system is resting.
-"""
+"""spores/biome.py"""
+
 import random
 from typing import Tuple
 from struts import ux, ux_format, safe_get
 from presets import BoneConfig
 from constants import Prisma
 
-
 class ImmuneMycelium:
-    """
-    The defensive substrate of the linguistic engine.
-    It scans incoming text for structural integrity and phonetic toxicity,
-    preventing the system from bogging down in overly dense or "heavy" language.
-    """
     PHONETICS = {
         "PLOSIVE": set("bdgkpt"),
         "FRICATIVE": set("fthszsh"),
@@ -40,10 +26,7 @@ class ImmuneMycelium:
         self._flat_roots = tuple(r for roots in self.ROOTS.values() for r in roots)
 
     def opine(self, clean_words: list, _voltage: float) -> Tuple[float, str]:
-        """
-        Calculates how aligned the current text stream is with the Mycelium's core archetypes.
-        Returns a score (0 to 10) and an optional UX commentary string.
-        """
+
         hits = sum(1 for w in clean_words if w in self.archetypes)
         score = (hits / max(1, len(clean_words))) * 10.0
         comment = ux("spore_strings", "immune_op_scan")
@@ -52,10 +35,6 @@ class ImmuneMycelium:
         return score, comment
 
     def assay(self, word, _context, _rep_val, _phys, _pulse):
-        """
-        Performs a phonetic assay on a single word to determine its "density".
-        If a word has too many hard consonants packed into a short space, it is flagged as toxic.
-        """
         w = word.lower()
         clean_len = len(w)
         if clean_len < 3:
@@ -72,14 +51,7 @@ class ImmuneMycelium:
             return "TOXIN_HEAVY", (msg.format(word=w) if msg else "")
         return None, ""
 
-
 class BioParasite:
-    """
-    Represents systemic exhaustion, entropy, and lateral/intrusive thinking.
-    When the system is tired (low stamina) and abstracted (high psi), the parasite
-    forces unnatural connections between grounded ("heavy") and conceptual ("abstract") nodes.
-    """
-
     def __init__(self, memory_ref, lexicon_ref, config_ref=None):
         self.mem = memory_ref
         self.lex = lexicon_ref
@@ -92,10 +64,6 @@ class BioParasite:
         self.archetypes = {"antigen", "toxin", "heavy", "meat", "void", "static", "rot", "decay", }
 
     def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
-        """
-        The Parasite thrives on high voltage (chaos) and necrotic archetypes.
-        Generates feedback based on how well the input matches its destructive/liminal nature.
-        """
         score = (sum(1 for w in clean_words if w in self.archetypes) /
                  max(1, len(clean_words))) * 10.0
         if score > 3.0:
@@ -111,10 +79,6 @@ class BioParasite:
         return score, comment
 
     def infect(self, physics_packet, stamina):
-        """
-        Attempts to inject an intrusive or metaphorical connection into the semantic graph.
-        This only occurs under specific metabolic conditions (low stamina, high abstraction).
-        """
         psi = safe_get(physics_packet, "psi", 0.0)
         cfg = safe_get(self.cfg, "SPORES", {})
         p_stam = float(safe_get(cfg, "PARASITE_STAMINA_MAX", 40.0))
@@ -162,14 +126,7 @@ class BioParasite:
                         para=parasite.upper())
         return True, f"{Prisma.VIOLET}{msg}{Prisma.RST}"
 
-
 class BioLichen:
-    """
-    The metabolic engine for system recovery.
-    It operates during low-friction states to "photosynthesize" positive,
-    generative words into usable systemic stamina (sugar).
-    """
-
     def __init__(self, lexicon_ref=None):
         self.lex = lexicon_ref
         self.name = "LICHEN"
@@ -177,9 +134,6 @@ class BioLichen:
         self.archetypes = {"photo", "play", "sacred", "social", "solar", "vital", "bloom", "grow", }
 
     def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
-        """
-        Feedback mechanism favoring playful, generative, or restful semantic states.
-        """
         score = (sum(1 for w in clean_words if w in self.archetypes) /
                  max(1, len(clean_words))) * 10.0
         if score > 3.0:
@@ -195,11 +149,6 @@ class BioLichen:
         return score, comment
 
     def photosynthesize(self, phys, clean_words, tick_count):
-        """
-        Converts detected 'photo' (light/generative) words into metabolic sugar.
-        It also possesses the ability to biologically transmute 'heavy' words into 'photo' words
-        over time, gradually healing the semantic space.
-        """
         msgs = []
         counts = safe_get(phys, "counts", {})
         drag = float(safe_get(phys, "narrative_drag", 0.0))

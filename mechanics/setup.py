@@ -1,4 +1,5 @@
 """mechanics/setup.py"""
+
 import json
 import os
 import subprocess
@@ -9,14 +10,7 @@ from struts import ux
 from presets import BoneConfig
 from mechanics.terminal import typewriter
 
-
 class ConfigWizard:
-    """
-    The initial onboarding threshold.
-    Handles the creation, validation, and loading of the `config.json` file.
-    If the system is booting for the first time, or if the config is corrupted,
-    this wizard guides the user through setting their baseline reality.
-    """
     CONFIG_FILE = "config.json"
     _MODES = {"1": "ADVENTURE", "2": "CONVERSATION", "3": "CREATIVE", "4": "TECHNICAL"}
     _UI_MODES = {"1": "DEEP", "2": "CORE", "3": "LITE", "4": "MINIMAL", "5": "WARM"}
@@ -29,11 +23,6 @@ class ConfigWizard:
 
     @staticmethod
     def load_or_create():
-        """
-        The entry point for the boot sequence.
-        Attempts to read the existing configuration. If it fails, it archives the
-        broken file and immediately drops the user into the setup flow to rebuild it.
-        """
         if os.path.exists(ConfigWizard.CONFIG_FILE):
             try:
                 with open(ConfigWizard.CONFIG_FILE, encoding="utf-8") as f:
@@ -46,10 +35,6 @@ class ConfigWizard:
 
     @staticmethod
     def _backup_corrupt_file():
-        """
-        Preserves broken configurations for debugging rather than overwriting them.
-        Appends a Unix timestamp to prevent naming collisions.
-        """
         backup_name = f"{ConfigWizard.CONFIG_FILE}.{int(time.time())}.bak"
         try:
             os.rename(ConfigWizard.CONFIG_FILE, backup_name)
@@ -60,10 +45,7 @@ class ConfigWizard:
 
     @staticmethod
     def _run_setup():
-        """
-        The interactive CLI questionnaire.
-        Establishes Identity, Intent (Mode), Compute (Backend), and Interface constraints.
-        """
+
         from struts import safe_get
         cfg = safe_get(BoneConfig, "GUI", {})
         setup_speed = float(safe_get(cfg, "RENDER_SPEED_SETUP", 0.02))

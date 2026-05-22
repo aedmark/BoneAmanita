@@ -1,25 +1,18 @@
 """body/metabolism.py"""
+
 import math
 import random
 from collections import Counter
 from typing import Dict, List, Any, Tuple, TYPE_CHECKING
 from body.models import MitochondrialState, MetabolicReceipt
 from core import Prisma, LoreManifest
-from struts import ux, safe_get
+from struts import ux, ux_format, safe_get
 from presets import BoneConfig
 
 if TYPE_CHECKING:
     from body.system import BioSystem
 
-
 class MitochondrialForge:
-    """
-    The engine of systemic stamina.
-    In a standard LLM, generation is infinitely free. In this architecture, to think is
-    to burn ATP (energy) and generate ROS (toxicity). This class calculates the exact
-    thermodynamic cost of a prompt based on its structural complexity and chaos.
-    """
-
     def __init__(self, state_ref: MitochondrialState, events_ref, config_ref=None):
         self.state = state_ref
         self.events = events_ref
@@ -33,7 +26,6 @@ class MitochondrialForge:
         self.ATP_COLLAPSE = float(safe_get(bio_cfg, "ATP_COLLAPSE", 0.0))
 
     def get_status_report(self) -> str:
-        """Translates raw ATP/ROS numbers into a human-readable systemic state."""
         atp, ros = self.state.atp_pool, self.state.ros_buildup
         if atp < 5.0:
             key = "NECROSIS"
@@ -46,20 +38,17 @@ class MitochondrialForge:
         return self.narrative.get(key, "").format(cost=0.0, pool=atp)
 
     def adjust_atp(self, delta: float, reason: str = ""):
-        """Safely credits or debits the energy pool, clamping it to physical limits."""
         old = self.state.atp_pool
         self.state.atp_pool = max(self.ATP_COLLAPSE, min(self.MAX_ATP, old + delta))
         if reason and (abs(delta) > 5.0 or self.state.atp_pool > 90.0):
             self.events.log(f"[ATP]: {reason} ({delta:+.1f})", "BIO")
 
     def on_substrate_forged(self, payload: Dict):
-        """Deducts ATP when the system writes a new memory to the deep storage (Cortex)."""
         cost = payload.get("cost", 0.0)
         filename = payload.get("file", "unknown")
         self.adjust_atp(-cost, f"Substrate Forging [{filename}]")
 
     def _get_text(self, key, **kwargs):
-        """Safe retrieval of narrative strings."""
         tmpl = self.narrative.get(key, "")
         if not tmpl:
             return ""
@@ -70,25 +59,14 @@ class MitochondrialForge:
             return tmpl
 
     def _trigger_anaerobic_bypass(self, raw_cost: float) -> MetabolicReceipt:
-        """
-        Executes when the cognitive load of a prompt vastly exceeds the system's oxygen capacity.
-        It forcefully burns emergency energy, sacrificing structural health (ROS) for immediate output.
-        """
-        health_burn = 2.0
         self.state.ros_buildup += 2.0
         self.adjust_atp(-20.0, "Anaerobic Burn")
         if self.events and (msg := ux("mito_forge", "anaerobic_bypass")):
             self.events.log(f"{Prisma.MAG}{msg.format(cost=raw_cost)}{Prisma.RST}", "BIO_WARN")
-        return MetabolicReceipt(
-            base_cost=raw_cost, drag_tax=0.0, inefficiency_tax=0.0, total_burn=20.0,
-            waste_generated=2.0, status="ANAEROBIC", symptom="LACTATE_BUILDUP",
-        )
+        return MetabolicReceipt(base_cost=raw_cost, drag_tax=0.0, inefficiency_tax=0.0, total_burn=20.0,
+            waste_generated=2.0, status="ANAEROBIC", symptom="LACTATE_BUILDUP",)
 
     def process_cycle(self, physics_packet: Any, modifier: float = 1.0) -> MetabolicReceipt:
-        """
-        The core metabolic loop. This calculates exactly how much energy a specific prompt
-        requires to process, based on the shape, chaos, and tension of the data.
-        """
         if self.state.atp_pool > 95.0 and self.state.ros_buildup < 1.0:
             return MetabolicReceipt(0, 0, 0, 0, 0, "NOMINAL", "Fresh Start")
         cfg = safe_get(self.cfg, "BIO", {})
@@ -129,7 +107,6 @@ class MitochondrialForge:
         ideal_cost = (base_demand + cognitive_load_tax) * modifier
         raw_cost = ideal_cost / efficiency
         inefficiency_tax = raw_cost - ideal_cost
-
         if raw_cost > self.ANAEROBIC_THRESHOLD:
             return self._trigger_anaerobic_bypass(raw_cost)
         if raw_cost > self.MAX_SAFE_BURN:
@@ -176,11 +153,7 @@ class MitochondrialForge:
         )
 
     def _apply_adaptive_dynamics(self):
-        """
-        Manages Mitohormesis: The biological principle that small amounts of stress
-        make the system stronger, but chronic stress causes collapse.
-        """
-        cfg = getattr(self.cfg, "BIO", None)
+        cfg = safe_get(self.cfg, "BIO", {})
         ros_sig = safe_get(cfg, "ROS_SIGNAL", 5.0)
         ros_dam = safe_get(cfg, "ROS_DAMAGE", 20.0)
         ros_purge = safe_get(cfg, "ROS_PURGE", 60.0)
@@ -198,7 +171,6 @@ class MitochondrialForge:
             self._trigger_mitophagy()
 
     def adapt(self, stress_level: float):
-        """External hook for environmental stressors impacting the engine's capability."""
         old_potential = self.state.membrane_potential
         if stress_level > 5.0:
             self.state.membrane_potential = max(0.4, self.state.membrane_potential - 0.15)
@@ -213,12 +185,8 @@ class MitochondrialForge:
                 self.events.log(f"{Prisma.GRN}{msg}{Prisma.RST}", "BIO")
 
     def _trigger_mitophagy(self):
-        """
-        Emergency reset. The toxicity is terminal, so the system consumes its own
-        mitochondria to prevent the spread of bad data, costing massive energy.
-        """
-        cfg = getattr(self.cfg, "BIO", None)
-        self.adjust_atp(-safe_get(cfg, "MITOPHAGY_COST", 30.0), "Mitophagy")
+        cfg = safe_get(self.cfg, "BIO", {})
+        self.adjust_atp(-float(safe_get(cfg, "MITOPHAGY_COST", 30.0)), "Mitophagy")
         self.state.ros_buildup = 0.0
         self.state.membrane_potential = 0.6
         self.state.retrograde_signal = "MITOPHAGY_RESET"
@@ -228,7 +196,6 @@ class MitochondrialForge:
             self.events.log(f"{Prisma.RED}{icon}[MITO]: {msg}{Prisma.RST}", "BIO_CRIT")
 
     def apply_inheritance(self, traits: dict):
-        """Applies ancestral epigenetic traits to the current engine."""
         if not traits:
             return
         if traits.get("high_metabolism"):
@@ -236,10 +203,6 @@ class MitochondrialForge:
             self.events.log("[MITO]: Ancestral High Metabolism activated.", "GENETICS")
 
     def cellular_repair(self, survival_streak: int, g_pool: int, inherited_scars: dict) -> Tuple[bool, int, str]:
-        """
-        Converts Glimmers (relational trust/insight) into permanent healing,
-        erasing architectural scars inherited from past conversational trauma.
-        """
         if survival_streak < 50 or self.state.ros_buildup > 10.0 or not inherited_scars:
             return False, g_pool, ""
         if g_pool >= 1:
@@ -247,21 +210,13 @@ class MitochondrialForge:
             del inherited_scars[healed_scar]
             g_pool -= 1
             fallback = "Epigenetic Plasticity Achieved. Ancestral scar '{healed_scar}' permanently erased. (-1 Glimmer)"
-            msg_template = ux("mito_forge", "scar_healed") or fallback
-            msg = msg_template.format(healed_scar=healed_scar)
+            msg = ux_format("mito_forge", "scar_healed", default=fallback, healed_scar=healed_scar)
             if self.events:
                 self.events.log(f"{Prisma.MAG}✨ [MITO]: {msg}{Prisma.RST}", "BIO_HEAL")
             return True, g_pool, msg
         return False, g_pool, ""
 
-
 class DigestiveTrack:
-    """
-    Translates literal syntax (the user's prompt) into biological energy.
-    It parses incoming text, rewards dense/complex vocabulary with ATP,
-    and heavily penalizes clichés and LLM-isms (The Lexical Firewall).
-    """
-
     def __init__(self, bio_system_ref: "BioSystem", lexicon_ref=None, config_ref=None):
         self.bio = bio_system_ref
         self.lex = lexicon_ref
@@ -280,10 +235,6 @@ class DigestiveTrack:
         self.CLICHE_TAX_RATE = float(safe_get(bio_cfg, "CLICHE_TAX_RATE", 0.5))
 
     def harvest(self, phys: Any, logs: List[str]) -> Tuple[str, float, int]:
-        """
-        The main intake function. Returns the dominant enzyme used, the ATP yielded,
-        and the total number of valid words digested.
-        """
         clean_words = safe_get(phys, "clean_words", [])
         if not clean_words:
             return "NONE", 0.0, 0
@@ -297,8 +248,9 @@ class DigestiveTrack:
             self.bio.endo.cortisol += (scaled_tax * 0.02)
             if msg := ux("digestive_track", "cliche_tax"):
                 logs.append(f"{Prisma.OCHRE}{msg.format(tax=scaled_tax)}{Prisma.RST}")
-        v_thresh = getattr(self.cfg.BIO, "VOLTAGE_BONUS_THRESHOLD", 8.0)
-        p_bonus = getattr(self.cfg.BIO, "PROTEASE_BONUS", 5.0)
+        bio_cfg = safe_get(self.cfg, "BIO", {})
+        v_thresh = float(safe_get(bio_cfg, "VOLTAGE_BONUS_THRESHOLD", 8.0))
+        p_bonus = float(safe_get(bio_cfg, "PROTEASE_BONUS", 5.0))
         if float(safe_get(phys, "voltage", 0.0)) > v_thresh and found_enzymes:
             found_enzymes.append("PROTEASE")
             total_atp += p_bonus
@@ -309,7 +261,6 @@ class DigestiveTrack:
         return dominant, total_atp, total_hits
 
     def _sample_input(self, words: List[str], logs: List[str]) -> Tuple[List[str], float]:
-        """Optimizes digestion of massive texts by sampling a representative subset and scaling."""
         count = len(words)
         if count > self.SAMPLING_THRESHOLD:
             factor = count / self.SAMPLING_THRESHOLD
@@ -319,38 +270,26 @@ class DigestiveTrack:
         return words, 1.0
 
     def _digest_words(self, words: List[str]) -> Tuple[float, List[str], float, int]:
-        """
-        The molecular breakdown of syntax. Determines caloric value based on word length,
-        kinetic energy, and explicit penalization of "Semantic Antigens" (alignment tropes).
-        """
         if not self.lex:
             return 0.0, [], 0.0, 0
         word_counts = Counter(words)
-        cfg = getattr(self.cfg, "BIO", None)
+        cfg = safe_get(self.cfg, "BIO", {})
         min_len = safe_get(cfg, "MIN_WORD_LENGTH", 4)
         comp_len = safe_get(cfg, "COMPLEX_WORD_LENGTH", 7)
         antigen_set = self.lex.get("antigen") or set()
         kinetic_set = frozenset((self.lex.get("kinetic") or set()) | (self.lex.get("explosive") or set()))
-
         atp_yield = 0.0
         enzymes = []
         cliche_tax = 0.0
         hits = 0
-
         for word, count in word_counts.items():
             is_antigen = word in antigen_set
-
-            # Filter out short, non-antigen words immediately
             if not is_antigen and len(word) < min_len:
                 continue
-
             if is_antigen:
                 cliche_tax += self.CLICHE_TAX_RATE * count
                 continue
-
             hits += count
-            val = self.COMPLEX_WORD_BONUS if len(word) > comp_len else self.BASE_WORD_VALUE
-            log_mult = 1.0 + math.log(count)
             val = self.COMPLEX_WORD_BONUS if len(word) > comp_len else self.BASE_WORD_VALUE
             log_mult = 1.0 + math.log(count)
             if word in kinetic_set:

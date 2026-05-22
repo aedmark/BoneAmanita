@@ -1,11 +1,5 @@
-"""
-mechanics/reporter.py
-The Telemetry and Presentation Layer.
-This module acts as the final gateway before data reaches the user. It aggregates
-the raw physical, biological, and linguistic data from the engine's current tick
-and translates it into a cohesive "Snapshot". It handles mood derivation,
-UI caching, and the application of Truth modes (e.g., Red Team vs. Boardroom).
-"""
+"""mechanics/reporter.py"""
+
 from typing import Any, Dict, List, Tuple
 from core import Prisma
 from struts import safe_get, ux
@@ -13,18 +7,9 @@ from physics import ChromaScope
 from presets import BoneConfig
 from mechanics.projector import Projector, SoulDashboard
 
-
 class PulseReader:
-    """
-    The Biological Translator (Schur / Meadows).
-    Raw chemical levels (Cortisol, Dopamine) don't mean much to a user on their own.
-    This class acts as an emotional heuristic, translating the metabolic state into
-    a localized, human-readable "mood" string.
-    """
-
     @staticmethod
     def derive_mood(bio_state: Dict, config_ref=None) -> str:
-        """Determines the overarching emotional state based on chemical dominance."""
         cfg = safe_get(config_ref or BoneConfig, "GUI", {})
         c_warn = float(safe_get(cfg, "CHEM_HIGH_WARN", 0.6))
         a_warn = float(safe_get(cfg, "ATP_EXHAUSTED_WARN", 20.0))
@@ -41,7 +26,6 @@ class PulseReader:
 
     @staticmethod
     def analyze_voltage(voltage: float, config_ref=None) -> Tuple[str, str]:
-        """Translates the numeric Voltage metric into a narrative alert level."""
         cfg = safe_get(config_ref or BoneConfig, "GUI", {})
         if voltage > float(safe_get(cfg, "V_CRIT", 20.0)):
             key = "voltage_critical"
@@ -56,15 +40,7 @@ class PulseReader:
             res = ["NOMINAL", str(res) if res else "Voltage is nominal."]
         return res[0], res[1]
 
-
 class GeodesicRenderer:
-    """
-    The Master UI Compositor (Fuller).
-    This pulls together the Projector HUD, the Soul Dashboard, and the raw text logs.
-    It passes the assembled UI through the 'Bureau' to enforce stylistic compliance
-    before shipping the frame to the client.
-    """
-
     def __init__(self, engine_ref, chroma_ref, strunk_ref, valve_ref=None):
         self.eng = engine_ref
         target_cfg = getattr(self.eng, "config", BoneConfig)
@@ -75,7 +51,6 @@ class GeodesicRenderer:
         self.NOISE_PATTERNS = ux("renderer", "noise_patterns") or []
 
     def render_frame(self, ctx, tick: int, current_events: List[Dict]) -> Dict[str, Any]:
-        """Assembles the complete visual and logical state for the current turn."""
         physics = ctx.physics
         bio = ctx.bio_result
         raw_dashboard = self.render_dashboard(ctx)
@@ -105,7 +80,6 @@ class GeodesicRenderer:
                 "metrics": self.eng.get_metrics(atp_val), }
 
     def render_dashboard(self, ctx) -> str:
-        """Collects the nested variables required by the Projector to paint the HUD."""
         physics = ctx.physics
         mind = ctx.mind_state or {}
         mind_tuple = (mind.get("lens"), mind.get("thought"), mind.get("role"))
@@ -116,10 +90,13 @@ class GeodesicRenderer:
         if mode_settings.get("show_location", True):
             village = getattr(self.eng, "village", None)
             nav = getattr(village, "navigator", None) if village else None
-            world_loc = getattr(nav.world_graph.get(nav.current_node_id) if nav and hasattr(nav, "world_graph") else None, "name", "UNKNOWN")
+            if nav and hasattr(nav, "world_graph") and nav.current_node_id in nav.world_graph:
+                world_loc = getattr(nav.world_graph[nav.current_node_id], "name", "UNKNOWN")
+            else:
+                world_loc = "UNKNOWN"
         cfg = getattr(self.eng, "config", {})
-        default_depth = safe_get(cfg, "default_ui_depth", "WARM")
-        current_ui_depth = getattr(self.eng, "ui_mode", default_depth or mode_settings.get("default_ui_depth", "WARM"))
+        fallback_depth = mode_settings.get("default_ui_depth", safe_get(cfg, "default_ui_depth", "WARM"))
+        current_ui_depth = getattr(self.eng, "ui_mode", fallback_depth)
         soul = getattr(self.eng, "soul", None)
         anchor = getattr(soul, "anchor", None)
         dignity_val = getattr(anchor, "dignity_reserve", 100.0)
@@ -151,15 +128,14 @@ class GeodesicRenderer:
                                      labels=labels)
 
     def _calculate_lattice_strain(self, physics: Dict) -> float:
-        """Calculates the physical divergence (strain) between expectation and reality."""
-        q_matrix = safe_get(safe_get(physics, "observer"), "Q_n")
+        observer_data = safe_get(physics, "observer", {})
+        q_matrix = safe_get(observer_data, "Q_n", [])
         if not isinstance(q_matrix, list) or not q_matrix or not isinstance(q_matrix[0], list):
             return 0.0
         return sum(float(abs(v)) for i, row in enumerate(q_matrix) for j, v in enumerate(row) if i != j)
 
     @staticmethod
     def render_soul_strip(soul_ref) -> str:
-        """Renders the single-line obsession indicator (e.g., 'Currently thinking about: Cats')."""
         if not soul_ref or not soul_ref.current_obsession:
             return ""
         strip_format = ux("soul_dashboard", "obsession_strip") or "Currently thinking about: {obs}"
@@ -167,12 +143,6 @@ class GeodesicRenderer:
         return f"{Prisma.GRY}{formatted_strip}{Prisma.RST}"
 
     def compose_logs(self, logs: list, events: list, _tick: int = 0) -> List[str]:
-        """
-        The Event Stream Formatter (Pinker).
-        Aggregates raw system logs, strips out predictable/repetitive noise patterns,
-        and applies strict coloring logic based on keyword matching. Mutes highly
-        technical logs if the user is in WARM/IDLE mode to prevent cognitive overload.
-        """
         all_logs = [str(l) for l in logs if l is not None] + [e["text"] for e in events if e and e.get("text")]
         mode_settings = getattr(self.eng, "mode_settings", {}) if hasattr(self, "eng") else {}
         current_ui_depth = getattr(self.eng, "ui_mode", mode_settings.get("default_ui_depth", "WARM"))
@@ -205,19 +175,10 @@ class GeodesicRenderer:
         return structured
 
     def _punish_style_crime(self, log_msg):
-        """Records violations of the Lexical Firewall to the global event bus."""
         if hasattr(self.eng, "events"):
             self.eng.events.log(log_msg, "SYS")
 
-
 class CachedRenderer:
-    """
-    The Efficiency Membrane (Fuller).
-    Rendering complex UI strings every tick wastes computational resources (ATP).
-    This proxy class caches the UI and only forces a redraw if a critical event
-    occurs, if Voltage spikes past a threshold, or if the cache lifetime expires.
-    """
-
     def __init__(self, base_renderer, config_ref=None):
         self._base = base_renderer
         self.cfg = config_ref or BoneConfig
@@ -242,9 +203,7 @@ class CachedRenderer:
             "metrics": self._base.eng.get_metrics(atp),
         }
 
-
 def get_renderer(engine_ref, chroma_ref, strunk_ref, valve_ref=None, mode="STANDARD"):
-    """Factory function for instantiating the correct rendering pipeline."""
     target_cfg = getattr(engine_ref, "config", BoneConfig)
     base = GeodesicRenderer(engine_ref, chroma_ref, strunk_ref, valve_ref)
     if mode == "PERFORMANCE":
@@ -252,22 +211,12 @@ def get_renderer(engine_ref, chroma_ref, strunk_ref, valve_ref=None, mode="STAND
     return base
 
 class AmbiguityDial:
-    """Constants for the TruthRenderer modes."""
     BOARDROOM = 0
     WORKSHOP = 1
     RED_TEAM = 2
     PALIMPSEST = 3
 
-
 class TruthRenderer(GeodesicRenderer):
-    """
-    The Epistemological Modulator.
-    Overrides standard rendering to expose the system's *uncertainty*.
-    Instead of delivering a single, confident answer, this renderer can expose
-    the internal dissent (Red Team) or the discarded drafts (Palimpsest) that
-    led to the final output.
-    """
-
     def __init__(self, engine_ref):
         super().__init__(engine_ref, None, None)
         self.engine = engine_ref
@@ -277,7 +226,6 @@ class TruthRenderer(GeodesicRenderer):
         return getattr(self.engine, "ambiguity_dial", AmbiguityDial.BOARDROOM)
 
     def render_frame(self, ctx, tick: int, current_events: List[Dict]) -> Dict[str, Any]:
-        """Intercepts the standard frame to apply epistemological formatting."""
         frame = super().render_frame(ctx, tick, current_events)
         council_log = getattr(ctx, "council_log", [])
         trauma = getattr(self.engine, "trauma_accum", {})
@@ -288,7 +236,6 @@ class TruthRenderer(GeodesicRenderer):
         return frame
 
     def render_truth(self, cortex_packet, council_log, trauma_cost):
-        """Morphs the final output based on the user's requested level of systemic transparency."""
         ui_text = cortex_packet.get("ui", "")
         h_board = ux("truth_renderer", "boardroom_header")
         h_work = ux("truth_renderer", "workshop_header")
@@ -312,8 +259,7 @@ class TruthRenderer(GeodesicRenderer):
             return (f"{Prisma.paint(h_red, 'R')}\n"
                     f"{Prisma.paint(l_warn, 'Y')}\n"
                     f"{l_cost} {trauma_cost:.1f} Trauma Units\n"
-                    f"{l_conf}\n" + "\n".join(f"  > {d}" for d in dissent) + "\n"
-                                                                             f"---------------------\n{ui_text}\n")
+                    f"{l_conf}\n" + "\n".join(f"  > {d}" for d in dissent) + "\n" f"---------------------\n{ui_text}\n")
         elif self.dial_setting == AmbiguityDial.PALIMPSEST:
             drafts = cortex_packet.get("drafts", [])
             layer_view = ""
@@ -325,16 +271,7 @@ class TruthRenderer(GeodesicRenderer):
             return f"{Prisma.paint(h_pal, 'M')}\n{layer_view}{Prisma.paint(l_final, 'W')}\n{ui_text}\n"
         return None
 
-
 class CycleReporter:
-    """
-    The Main Presentation Gateway.
-    The engine calls this at the end of every tick. It inspects the context payload,
-    injects somatic (feeling) pulses and diagnostic hints into the log stream,
-    and handles edge-cases like 'Bureaucracy' holds or 'Refusal' triggers before
-    passing the data to the active Renderer.
-    """
-
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.vsl_chroma = ChromaScope()
@@ -344,7 +281,6 @@ class CycleReporter:
         self.switch_renderer("STANDARD")
 
     def switch_renderer(self, mode: str):
-        """Hotswaps the rendering pipeline (e.g., STANDARD vs PERFORMANCE)."""
         if self.current_mode == mode and self.renderer:
             return
         self.renderer = self.renderers.setdefault(
@@ -354,7 +290,6 @@ class CycleReporter:
         self.current_mode = mode
 
     def render_snapshot(self, ctx) -> Dict[str, Any]:
-        """The final assembly routine before returning data to the frontend."""
         try:
             if ctx.refusal_triggered and ctx.refusal_packet:
                 return ctx.refusal_packet
@@ -379,7 +314,6 @@ class CycleReporter:
             }
 
     def _inject_diagnostics(self, ctx):
-        """Pulls health hints (e.g., 'Warning: Structural decay detected') into the log."""
         if sh := getattr(self.eng, "system_health", None):
             fb = sh.flush_feedback()
             i_hint = ux("cycle_reporter", "diagnostic_hint_icon") or "[!]"
@@ -388,10 +322,6 @@ class CycleReporter:
             ctx.logs.extend(f"{Prisma.OCHRE}{i_warn} {w}{Prisma.RST}" for w in fb["warnings"])
 
     def _inject_somatic_pulse(self, ctx):
-        """
-        Injects the AI's internal 'feeling' (Qualia).
-        Makes the biological metaphor explicitly visible to the user.
-        """
         if not hasattr(self.eng, "somatic"):
             return
         qualia = self.eng.somatic.get_current_qualia(getattr(ctx, "last_impulse", None))
@@ -404,10 +334,6 @@ class CycleReporter:
 
     @staticmethod
     def _inject_flux_readout(ctx):
-        """
-        Visualizes drastic changes in physics (e.g., a massive spike in Drag).
-        Only reports statistically significant shifts to avoid spam.
-        """
         if not ctx.flux_log:
             return
         significant = []
@@ -433,7 +359,6 @@ class CycleReporter:
             ctx.logs[:0] = flux_block
 
     def _package_bureaucracy(self, ctx):
-        """Bypasses standard rendering if the system is waiting on a bureaucratic authorization."""
         if getattr(self.eng, "bureau", None) and (ctx.is_bureaucratic or ctx.bureau_ui):
             base = getattr(self.renderer, "base_renderer", self.renderer)
             return {

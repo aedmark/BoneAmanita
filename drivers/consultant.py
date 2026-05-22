@@ -1,21 +1,13 @@
 """drivers/consultant.py"""
+
 from typing import Dict, Optional, Any
 from presets import BoneConfig
-from struts import ux, safe_get
+from struts import ux, ux_format, safe_get
 from drivers.registry import VSLState
 from drivers.liminal import LiminalModule
 from drivers.syntax import SyntaxModule
 
-
 class BoneConsultant:
-    """
-    The BoneConsultant is the cybernetic governor of the VSL engine.
-    It does not generate text directly. Instead, it metabolizes the user's input,
-    the system's physical metrics, and biological fatigue, translating them into
-    a discrete cognitive state. It then formats these state variables into
-    the final behavioral directives that steer the LLM.
-    """
-
     def __init__(self, config_ref=None, lexicon_ref=None):
         self.cfg = config_ref or BoneConfig
         self.lex = lexicon_ref
@@ -26,20 +18,13 @@ class BoneConsultant:
 
     @staticmethod
     def engage():
-        """Returns the UX string to announce the system is actively monitoring."""
         return ux("driver_strings", "vsl_engage")
 
     @staticmethod
     def disengage():
-        """Returns the UX string to announce the system is offline."""
         return ux("driver_strings", "vsl_disengage")
 
     def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None, physics: Optional[Any] = None):
-        """
-        The metabolic engine (Meadows). This function calculates the flow of energy
-        and fatigue over time. It takes the external stimulus (user_text) and internal
-        friction (physics/bio_state) and updates the VSLState coordinates.
-        """
         cfg = getattr(self.cfg, "DRIVERS", None)
         e_growth = safe_get(cfg, "VSL_E_GROWTH_MULT", 0.002)
         fatigue_mult = safe_get(cfg, "VSL_FATIGUE_MULT", 0.3)
@@ -49,9 +34,9 @@ class BoneConsultant:
         self.state.E = min(1.0, self.state.E + (word_count * e_growth))
         if bio_state and "fatigue" in bio_state:
             self.state.E = max(self.state.E, bio_state["fatigue"] * fatigue_mult)
-        phys_beta = float(safe_get(physics, "beta", safe_get(physics, "beta_index", 0.0))) if physics else 0.0
-        phys_vec = safe_get(physics, "vector", {}) if physics else {}
-        drag = float(safe_get(physics, "narrative_drag", 0.0)) if physics else 0.0
+        phys_beta = float(safe_get(physics, "beta_index", 0.0))
+        phys_vec = safe_get(physics, "vector", {})
+        drag = float(safe_get(physics, "narrative_drag", 0.0))
         self.state.B = (self.state.B * b_decay) + (phys_beta * b_growth)
         self.state.L = self.liminal_mod.analyze(user_text, phys_vec)
         self.state.O = self.syntax_mod.analyze(user_text, drag)
@@ -62,10 +47,6 @@ class BoneConsultant:
                 self.state.active_modules.remove(mod)
 
     def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
-        """
-        Translates the current metabolic coordinates into English directives for the LLM.
-        Acts as a triage state-machine prioritizing Liminality -> Syntax -> Energy states.
-        """
         directives = []
         cfg = getattr(self.cfg, "DRIVERS", None)
         lim_thresh = safe_get(cfg, "VSL_LIMINAL_THRESHOLD", 0.7)
@@ -93,6 +74,7 @@ class BoneConsultant:
         if soul_snapshot:
             arch = soul_snapshot.get("archetype", "UNKNOWN")
             muse = (soul_snapshot.get("obsession") or {}).get("title", "None")
-            msg = ux("driver_strings", "vsl_layer_muse") or "Layer Focus: {arch} | Muse: {muse}"
-            directives.append(msg.format(arch=arch, muse=muse))
+            directives.append(
+                ux_format("driver_strings", "vsl_layer_muse", default="Layer Focus: {arch} | Muse: {muse}", arch=arch,
+                          muse=muse))
         return "\n".join(directives)

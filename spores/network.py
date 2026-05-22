@@ -1,38 +1,22 @@
-"""spores/network.py
-This module serves as the primary orchestrator (The Central Nervous System) for
-the entire biological and memory substrate of the engine. It binds the disparate
-subsystems (biome, genetics, memory, IO) into a cohesive feedback loop.
-Classes:
-    - MycelialNetwork: The master controller that manages memory ingestion,
-      ecosystem ticks (photosynthesis/infection), and the saving/loading of session spores.
-"""
+"""spores/network.py"""
+
 import random
 import time
 from collections import deque
 from typing import List, Tuple, Optional, Dict, Any
-from core import EventBus, LoreManifest
-from struts import ux, ux_format, safe_get, safe_set
-from brain.ann import HippocampalCache, CerebralIndex
-from presets import BoneConfig
-from constants import Prisma
 from archetypes.village import ParadoxSeed
-from spores.io import LocalFileSporeLoader
-from spores.memory import SubconsciousStrata, MemoryCore
-from spores.spore_utils import _word_to_vector, _householder, _mat_mul, _reorthogonalize
+from brain.ann import HippocampalCache, CerebralIndex
+from constants import Prisma
+from core import EventBus, LoreManifest
+from presets import BoneConfig
 from spores.biome import BioLichen, BioParasite, ImmuneMycelium
 from spores.genetics import LiteraryReproduction
-
+from spores.io import LocalFileSporeLoader
+from spores.memory import SubconsciousStrata, MemoryCore
+from struts import ux, ux_format, safe_get, safe_set
 
 class MycelialNetwork:
-    """
-    The Grand Orchestrator.
-    It maintains the boundaries between the volatile active memory (Hippocampus/Graph)
-    and the deep structural memory (Subconscious/Cortex). It also ticks the biological
-    agents (Lichen, Parasite, Mycelium) to dynamically adjust the engine's cognitive state.
-    """
-
-    def __init__(self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None,
-                 config_ref=None, lexicon_ref=None, ):
+    def __init__(self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None, config_ref=None, lexicon_ref=None, ):
         self.events = events
         self.cfg = config_ref or BoneConfig
         self.lex = lexicon_ref
@@ -61,11 +45,6 @@ class MycelialNetwork:
             self.events.subscribe("SCAR_RECORDED", self._on_scar_recorded)
 
     def _on_scar_recorded(self, payload):
-        """
-        When the system experiences a paradox or fatal contradiction (a scar),
-        we physically warp the deep subconscious matrix (Q_n) using a Householder reflection.
-        This ensures the system mathematically "flinches" away from this conceptual vector in the future.
-        """
         concept = payload.get("concept")
         if concept:
             self.subconscious.apply_scar(concept)
@@ -84,12 +63,7 @@ class MycelialNetwork:
         return self.memory_core.calculate_mass(node)
 
     def run_ecosystem(self, physics: Any, stamina: float, tick: int) -> List[str]:
-        """
-        The Metabolic Heartbeat.
-        Evaluates the current text output (`clean_words`) through the biological lenses.
-        Converts text into stamina, flags toxic text, or spawns intrusive thoughts.
-        """
-        clean_words = safe_get(physics, "clean_words") or safe_get(safe_get(physics, "matter", {}), "clean_words", [])
+        clean_words = safe_get(physics, "clean_words", [])
         logs = []
         lichen_result = self.lichen.photosynthesize(physics, clean_words, tick)
         lichen_log = lichen_result[1] if len(lichen_result) > 1 else None
@@ -115,11 +89,6 @@ class MycelialNetwork:
         return logs
 
     def _poll_chorus(self, clean_words: list, physics: Any) -> Optional[str]:
-        """
-        Feedback Loop: When the system uses words that it already heavily associates with,
-        it creates a 'gravity well'. This spikes the Voltage (excitement) but also
-        increases Drag (inflexibility), making the engine harder to steer away from the topic.
-        """
         total_voltage_boost = 0.0
         total_drag_penalty = 0.0
         echo_count = 0
@@ -133,8 +102,8 @@ class MycelialNetwork:
             phys_cfg = safe_get(self.cfg, "PHYSICS", {})
             max_v = float(safe_get(phys_cfg, "VOLTAGE_MAX", 150.0))
             max_d = float(safe_get(phys_cfg, "DRAG_HALT", 10.0))
-            physics.voltage = min(max_v, float(getattr(physics, "voltage", 0.0)) + total_voltage_boost)
-            physics.narrative_drag = min(max_d, float(getattr(physics, "narrative_drag", 0.0)) + total_drag_penalty)
+            safe_set(physics, "voltage", min(max_v, float(safe_get(physics, "voltage", 0.0)) + total_voltage_boost))
+            safe_set(physics, "narrative_drag", min(max_d, float(safe_get(physics, "narrative_drag", 0.0)) + total_drag_penalty))
             cfg = safe_get(self.cfg, "SPORES", {})
             heavy_v = float(safe_get(cfg, "ECHO_VOLTAGE_HEAVY", 4.0))
             if total_voltage_boost > heavy_v:
@@ -146,7 +115,6 @@ class MycelialNetwork:
         return None
 
     def trigger_autophagy(self) -> Tuple[float, str]:
-        """Manual invocation of memory consumption. Burns old ideas to recover ATP (stamina)."""
         victim, msg = self.memory_core.cannibalize(current_tick=int(time.time()))
         if victim:
             cfg = safe_get(self.cfg, "AKASHIC", {})
@@ -157,11 +125,6 @@ class MycelialNetwork:
         return 0.0, msg
 
     def _poll_ghosts(self, clean_words: list, physics: Any) -> Optional[str]:
-        """
-        Liminal Mechanics: If the active text happens to contain a word that was previously
-        destroyed by Autophagy (a ghost), we pull its mathematical 'vibe' from the Subconscious
-        and subtly alter the current physics state. The past silently haunts the present.
-        """
         total_v_shift = 0.0
         total_d_shift = 0.0
         haunted_words = []
@@ -176,8 +139,8 @@ class MycelialNetwork:
         total_v_shift = max(-15.0, min(15.0, total_v_shift))
         total_d_shift = max(-5.0, min(5.0, total_d_shift))
         if haunted_words:
-            physics.voltage = max(0.0, float(getattr(physics, "voltage", 0.0)) + total_v_shift)
-            physics.narrative_drag = max(0.0, float(getattr(physics, "narrative_drag", 0.0)) + total_d_shift)
+            safe_set(physics, "voltage", max(0.0, float(safe_get(physics, "voltage", 0.0)) + total_v_shift))
+            safe_set(physics, "narrative_drag", max(0.0, float(safe_get(physics, "narrative_drag", 0.0)) + total_d_shift))
             msg = ux_format("spore_strings", "net_ghost_haunt", "The ghosts of [{words}] alter the atmosphere (V:{v:+.2f}, D:{d:+.2f}).",
                             words=", ".join(haunted_words).upper(), v=total_v_shift, d=total_d_shift)
             return f"{Prisma.VIOLET}{msg}{Prisma.RST}"
@@ -187,8 +150,7 @@ class MycelialNetwork:
         return self.memory_core.prune_synapses(scaling_factor, prune_threshold)
 
     def encode(self, clean_words, physics, governor_mode):
-        """Creates a short-term memory Engram if the conversational voltage is high enough to warrant saving."""
-        significance = float(safe_get(physics, "voltage") or safe_get(safe_get(physics, "energy", {}), "voltage", 0.0))
+        significance = float(safe_get(physics, "voltage", 0.0))
         if governor_mode == "FORGE":
             significance *= 2.0
         elif governor_mode == "LABORATORY":
@@ -206,10 +168,6 @@ class MycelialNetwork:
 
     def bury(self, clean_words: List[str], tick: int, resonance=5.0, learning_mod=1.0, desperation_level=0.0, ) -> \
     Tuple[Optional[str], List[str]]:
-        """
-        The primary data pipeline for translating text into active Graph connections.
-        Forces the system to forget old things (cannibalize) if capacity is reached.
-        """
         if not clean_words:
             return None, []
         valuable = self._filter_valuable_matter(clean_words)
@@ -246,7 +204,6 @@ class MycelialNetwork:
         return log_msg, victims + new_wells
 
     def _filter_valuable_matter(self, words: List[str]) -> List[str]:
-        """Strips out structural syntax, leaving only high-value semantic nodes."""
         solvents = (self.lex.SOLVENTS
                     if self.lex and hasattr(self.lex, "SOLVENTS") else set())
 
@@ -260,7 +217,6 @@ class MycelialNetwork:
         return [w for w in words if is_valuable(w)]
 
     def _detect_new_wells(self, words, tick):
-        """Identifies concepts that have grown dense enough to warrant permanent tracking."""
         new_wells = []
         thresh = float(safe_get(self.cfg, "SHAPLEY_MASS_THRESHOLD", 5.0))
         for w in words:
@@ -278,7 +234,6 @@ class MycelialNetwork:
         return new_wells
 
     def _check_echo_well(self, node):
-        """Helper for Chorus polling. Returns Voltage Boost and Drag Penalty."""
         mass = self.calculate_mass(node)
         if mass > 8.0: return 2.0, 1.5
         if mass > 4.0: return 0.5, 0.5
@@ -286,7 +241,6 @@ class MycelialNetwork:
 
     @staticmethod
     def _load_seeds():
-        """Loads philosophical paradox triggers that the system attempts to resolve over time."""
         from archetypes.village import ParadoxSeed
         loaded_seeds = []
         try:
@@ -302,7 +256,6 @@ class MycelialNetwork:
         return loaded_seeds
 
     def tend_garden(self, current_words):
-        """Passes current semantic data over dormant paradox seeds."""
         bloom_msg = None
         for seed in self.seeds:
             is_ready = seed.water(current_words)
@@ -320,7 +273,6 @@ class MycelialNetwork:
                       "COUNCIL.MANIC_VOLTAGE_TRIGGER", "GRAVITY_WELL_THRESHOLD"}
 
     def _apply_epigenetics(self, data):
-        """Safely applies inherited genetic drifts (mutations) to the active runtime configuration."""
         from spores.spore_utils import _access_config_path
         mutations = data.get("config_mutations", {})
         if not mutations:
@@ -335,11 +287,6 @@ class MycelialNetwork:
             self.events.log(f"{Prisma.CYN}   {msg_ap}{Prisma.RST}")
 
     def ingest(self, target_file, current_tick=0):
-        """
-        The Reincarnation Cycle.
-        Takes a dormant JSON spore and maps its physical, semantic, and trauma structures
-        into the active network. Returns a tuple of legacy traits.
-        """
         data = self.loader.load_spore(target_file)
         if not isinstance(data, dict):
             error_msg = ux("spore_strings", "net_spore_not_found")
@@ -363,25 +310,26 @@ class MycelialNetwork:
         return self._extract_legacy_traits(data)
 
     def _process_lineage(self, data):
-        """Logs the ancestry of the ingested spore for debugging and structural tracking."""
         session_source = data.get("session_id", "UNKNOWN_ANCESTOR")
-        timestamp = data.get("meta", {}).get("timestamp", 0)
+        timestamp = (data.get("meta") or {}).get("timestamp", 0)
         time_ago = int((time.time() - timestamp) / 3600)
-        trauma_summary = {k: v for k, v in data.get("trauma_vector", {}).items() if v > 0.1}
-        mutation_count = sum(len(v) for v in data.get("mutations", {}).values())
+        trauma_raw = data.get("trauma_vector") or {}
+        trauma_summary = {k: v for k, v in trauma_raw.items() if v > 0.1}
+        mutations_raw = data.get("mutations") or {}
+        mutation_count = sum(len(v) if v else 0 for v in mutations_raw.values())
         self.lineage_log.append(
             {"source": session_source, "age_hours": time_ago, "trauma": trauma_summary, "mutations": mutation_count,
              "loaded_at": time.time(), })
 
     def _process_mutations(self, data):
-        """Teaches the active Lexicon new semantic categorizations inherited from the ancestor."""
-        mutations = data.get("mutations", {})
+        mutations = data.get("mutations") or {}
         if not mutations:
             return
         accepted_count = 0
         if not self.lex:
             return
         for cat, words in mutations.items():
+            if not words: continue
             for w in words:
                 current_cat = self.lex.get_current_category(w)
                 if not current_cat or current_cat == "unknown":
@@ -393,8 +341,7 @@ class MycelialNetwork:
                 self.events.log(f"{Prisma.CYN}{msg.format(count=accepted_count)}{Prisma.RST}")
 
     def _extract_legacy_traits(self, data):
-        """Extracts deep personality state, ancestral buffs, and dormant paradox seeds."""
-        self.village_legacy = data.get("village_data", {})
+        self.village_legacy = data.get("village_data") or {}
         if "joy_legacy" in data and isinstance(data["joy_legacy"], dict):
             joy = data["joy_legacy"]
             clade = LiteraryReproduction.JOY_CLADE.get(joy.get("flavor"))
@@ -404,26 +351,22 @@ class MycelialNetwork:
                 for stat, ancestral_bonus in clade.get("buff", {}).items():
                     if hasattr(self.cfg, stat):
                         setattr(self.cfg, stat, ancestral_bonus)
-        if "seeds" in data:
+        if seeds_data := data.get("seeds"):
             self.seeds = []
-            for s_data in data["seeds"]:
-                new_seed = ParadoxSeed(s_data["q"], set())
+            for s_data in seeds_data:
+                new_seed = ParadoxSeed(s_data.get("q", ""), set())
                 new_seed.maturity = s_data.get("m", 0.0)
                 new_seed.bloomed = s_data.get("b", False)
                 self.seeds.append(new_seed)
-        return (data.get("mitochondria", {}),
-                set(data.get("antibodies", [])),
-                data.get("soul_legacy", {}),
-                data.get("continuity", None),
-                data.get("world_atlas", {}),)
+        return (data.get("mitochondria") or {},
+                set(data.get("antibodies") or []),
+                data.get("soul_legacy") or {},
+                data.get("continuity"),
+                data.get("world_atlas") or {},)
 
     def save(self, health: float, stamina: float, mutations: dict, trauma_accum: dict,
              joy_history: List[Dict[str, Any]], mitochondria_traits=None, antibodies=None, soul_data=None,
              continuity=None, world_atlas=None, village_data=None, ):
-        """
-        Compiles the active metabolic state, the semantic graph, and the epigenetic
-        changes into a static JSON Spore for future reincarnation or crossover.
-        """
         final_vector = {k: min(1.0, v) for k, v in trauma_accum.items()}
         valid_joy = [j for j in joy_history if isinstance(j, dict)]
         top_joy = sorted(valid_joy, key=lambda x: x.get("resonance", 0), reverse=True)[:3]
@@ -443,7 +386,7 @@ class MycelialNetwork:
         seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in self.seeds if not s.bloomed]
         if not any(s["q"] == future_seed_q for s in seed_list):
             seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
-        data = {"genome": "BA_02001", "session_id": self.session_id, "parent_id": self.session_id,
+        data = {"genome": "BA_02010", "session_id": self.session_id, "parent_id": self.session_id,
                 "meta": {"timestamp": time.time(), "final_health": health, "final_stamina": stamina, },
                 "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
                 "core_graph": core_graph, "mutations": mutations or {},
@@ -454,7 +397,6 @@ class MycelialNetwork:
 
     @staticmethod
     def _generate_future_seed(temp_health, trauma_vec) -> str:
-        """Determines the core philosophical problem the *next* generation will need to wrestle with."""
         condition = "BALANCED"
         max_trauma = max(trauma_vec, key=trauma_vec.get) if trauma_vec else "NONE"
         if trauma_vec.get(max_trauma, 0) > 0.6 or temp_health < 30:
@@ -466,7 +408,6 @@ class MycelialNetwork:
         return seeds.get(condition, seed_def)
 
     def cleanup_old_sessions(self, limbo_layer=None):
-        """Garbage collection for dead timelines to prevent local disk bloat."""
         files = self.loader.list_spores()
         removed = 0
         cfg = safe_get(self.cfg, "SPORES", {})
@@ -490,7 +431,6 @@ class MycelialNetwork:
         return len(self.graph)
 
     def autoload_last_spore(self):
-        """Called on boot to seamlessly link the current instance to its immediate predecessor."""
         files = self.loader.list_spores()
         if not files:
             if msg := ux("spore_strings", "net_no_ancestor"):
@@ -501,11 +441,6 @@ class MycelialNetwork:
 
     def retrieve_semantic(self, trigger_word: str, query_vector: list, scope: float = 0.5,
                           resonance: float = 0.5, ) -> list:
-        """
-        The dual-stage knowledge retrieval interface.
-        Queries the fast, exact-match Hippocampus first. If the scope is wide enough,
-        it also queries the deep, fuzzy K-Nearest-Neighbor ANN inside the Cortex.
-        """
         results = []
         if exact_match := self.hippocampus.retrieve_exact(trigger_word):
             results.append({"source": "hippocampus", "data": exact_match})

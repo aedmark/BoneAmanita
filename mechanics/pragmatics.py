@@ -1,18 +1,11 @@
-"""
-mechanics/pragmatics.py
-The Gricean Filter.
-Enforces the Cooperative Principle (Quantity, Quality, Relation, Manner) on all
-generated output before it reaches the human interface.
-"""
+"""mechanics/pragmatics.py"""
+
 import re
 from typing import Dict, Any, Tuple
 from core import Prisma
 from struts import safe_get
 
-
 class ThePragmatist:
-    """Paul Grice as a Cybernetic Governor."""
-
     def __init__(self, events_ref=None):
         self.events = events_ref
 
@@ -77,7 +70,6 @@ class ThePragmatist:
         return draft_text, False
 
     def _apply_socratic_obfuscation(self, text: str) -> str:
-        """Cuts the definitive answer and leaves a guiding question."""
         lines = text.split('\n')
         safe_lines = [l for l in lines if not l.lower().startswith("solution:") and "```" not in l]
         safe_lines.append(

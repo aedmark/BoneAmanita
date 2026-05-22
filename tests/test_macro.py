@@ -1,6 +1,5 @@
-"""
-tests/test_macro.py
-"""
+"""tests/test_macro.py"""
+
 import os
 import unittest
 from unittest.mock import patch

@@ -43,10 +43,10 @@ class TestLearningLoop(unittest.TestCase):
     def test_composting_autophagy(self, MockLore, MockConfig):
         real_akashic = TheAkashicRecord(lore_manifest=MockLore.get_instance(), events_ref=self.events)
         MockConfig.BIO.DEPTH_TAX_MULT = 2.0
-        real_akashic.subconscious_strata.append({
-            "concept": "obsolete_syntax",
-            "data": {"mass": 6.0}
-        })
+        real_akashic.active_memory_core = MagicMock()
+        real_akashic.active_memory_core.subconscious.index = {
+            "obsolete_syntax": {"concept": "obsolete_syntax", "mass": 6.0}
+        }
         yield_val, msg = real_akashic.trigger_autophagy()
         self.assertEqual(yield_val, 25.0)
         self.assertIn("obsolete_syntax", msg)

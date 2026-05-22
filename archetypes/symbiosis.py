@@ -1,15 +1,11 @@
-"""symbiosis.py
-The Symbiosis engine bridges the human operator and the machine.
-It infers the user's metabolic state (exhaustion, chaos, resonance) from their
-raw text inputs and dynamically adjusts the LLM's system prompt to match their
-frequency. It acts as the ultimate co-regulatory feedback loop.
-"""
+"""archetypes/symbiosis.py"""
+
 import math
 from collections import deque, Counter
 from dataclasses import dataclass
 from typing import Dict, Tuple, Optional, Any
 from core import LoreManifest
-from struts import ux, safe_get, safe_set
+from struts import ux, ux_format, safe_get, safe_set
 from presets import BoneConfig
 from constants import Prisma
 from physics.models import UserInferredState, SharedDynamics
@@ -31,10 +27,8 @@ _MODE_PROMPTS = {
     "shuffle_mode": "SHUFFLE MODE [!s] (Jester): Abandon the current logic tree entirely. Draw a random, lateral connection to break the deadlock. Introduce productive chaos."
 }
 
-
 @dataclass
 class HostHealth:
-    """A data structure tracking the ongoing metabolic stability of the interaction."""
     latency: float = 0.0
     entropy: float = 1.0
     compliance: float = 1.0
@@ -43,33 +37,20 @@ class HostHealth:
     refusal_streak: int = 0
     slop_streak: int = 0
 
-
 class CoherenceAnchor:
     @staticmethod
     def compress_anchor(soul_state: Dict, physics_state: Dict, max_tokens=200) -> str:
-        """
-        Creates a dense, compressed string of the current user's state.
-        This is injected into the prompt so the system maintains a 'memory' of
-        who it is talking to without blowing up the context window.
-        """
-        template = ux("symbiosis_strings", "anchor_compressed")
-        if not template:
-            return ""
-        location = safe_get(physics_state, "zone", "VOID")
-        vitals = f"V:{safe_get(physics_state, 'voltage', 0):.1f}"
+        location = str(safe_get(physics_state, "zone", "VOID"))
+        vitals = f"V:{float(safe_get(physics_state, 'voltage', 0)):.1f}"
         top_traits = Counter(soul_state.get("traits") or {}).most_common(3)
         traits_formatted = ",".join(f"{k[:3]}:{v:.1f}" for k, v in top_traits)
-        anchor = template.format(loc=location, vits=vitals, traits=traits_formatted)
+        anchor = ux_format("symbiosis_strings", "anchor_compressed",
+                           default=f"[{location}] {vitals} | {traits_formatted}",
+                           loc=location, vits=vitals, traits=traits_formatted)
         limit = max_tokens * 4
         return f"{anchor[:limit]}..." if len(anchor) > limit else anchor
 
-
 class DiagnosticConfidence:
-    """
-    A smoothing filter for systemic diagnoses. Prevents the system from violently
-    shifting personas (e.g., from FATIGUED to STABLE) based on a single outlier prompt.
-    """
-
     def __init__(self, persistence_threshold=None, config_ref=None):
         self.cfg = config_ref or BoneConfig
         sym_config = LoreManifest.get_instance(config_ref=self.cfg).get("SYMBIOSIS_CONFIG", {})
@@ -80,7 +61,6 @@ class DiagnosticConfidence:
         self.current_diagnosis = "STABLE"
 
     def diagnose(self, health: HostHealth) -> str:
-        """Evaluates the raw health metrics to determine the current systemic state."""
         refusal_limit = self.thresholds.get("REFUSAL_STREAK", 0)
         slop_limit = self.thresholds.get("SLOP_STREAK", 2)
         latency_limit = self.thresholds.get("LATENCY_BURDEN", 10.0)
@@ -104,13 +84,7 @@ class DiagnosticConfidence:
             self.current_diagnosis = state
         return self.current_diagnosis
 
-
 class SymbiontVoice:
-    """
-    Represents an individual archetype's capability to read the user's input
-    and provide an opinion or vote on how the system should proceed.
-    """
-
     def __init__(self, name, color, archetypes, personality_matrix=None, lexicon_ref=None):
         self.name = name
         self.color = color
@@ -127,14 +101,12 @@ class SymbiontVoice:
         self.personality = personality_matrix or {}
 
     def opine(self, clean_words: list, voltage: float) -> Tuple[float, str]:
-        """Calculates how strongly this voice resonates with the user's current prompt."""
-        safe_words = clean_words or []
-        hits = len(set(safe_words).intersection(self.archetypes))
-        score = (hits / max(1, len(safe_words))) * 10.0
+        unique_words = set(clean_words or [])
+        hits = len(unique_words.intersection(self.archetypes))
+        score = (hits / max(1, len(unique_words))) * 10.0
         return score, self._get_comment(score, voltage)
 
     def _get_comment(self, score, voltage):
-        """Retrieves the appropriate in-character response based on tension and score."""
         p = self.personality
         if voltage > 18.0 and "high_volt" in p:
             comment = p["high_volt"]
@@ -151,9 +123,7 @@ class SymbiontVoice:
             comment = TheTclWeaver.get_instance().haunt_string(comment)
         return comment
 
-
 def get_symbiont(type_name, config_ref=None, lexicon_ref=None):
-    """Factory function to retrieve a specific voting voice from the config."""
     sym_config = LoreManifest.get_instance(config_ref=config_ref or BoneConfig).get("SYMBIOSIS_CONFIG") or {}
     voice_configs = sym_config.get("SYMBIONT_VOICES") or {}
     resolved_name = type_name if type_name in voice_configs else "MYCELIUM"
@@ -164,12 +134,6 @@ def get_symbiont(type_name, config_ref=None, lexicon_ref=None):
 
 
 class SymbiosisManager:
-    """
-    The core regulatory engine bridging the Host and the Simulation.
-    Calculates resonance, handles safe-word overrides, and constructs the
-    dynamic prompt modifiers that physically alter the LLM's output behavior.
-    """
-
     def __init__(self, events_ref, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self._last_host_response = None
@@ -190,11 +154,6 @@ class SymbiosisManager:
         return msg
 
     def analyze_user_biology(self, user_text: str, physics: Any) -> Optional[str]:
-        """
-        Translates raw text into metabolic metrics (Chaos, Exhaustion, Friction).
-        Evaluates the gap between user intent and system state to calculate 'Resonance'.
-        May trigger hard architectural intercepts if critical safety thresholds are crossed.
-        """
         safe_text = user_text or ""
         text_lower = safe_text.lower()
         for tag, mode in _MODE_TAGS.items():
@@ -216,26 +175,15 @@ class SymbiosisManager:
                 self._log_event(f"{Prisma.GRY}Trust deepens through friction. (+1 G_pool){Prisma.RST}", "SYS")
         beth = (self.shared.phi * 0.6) + (self.u.E_u * 0.4)
         safe_set(physics, "beth", beth)
-
-        prev_beta = safe_get(physics, "beta_index")
-        if prev_beta is not None:
-            safe_set(physics, "beta_index", (float(prev_beta) * 0.7) + (beth * 0.3))
-        else:
-            safe_set(physics, "beta_index", beth)
-
+        curr_beta = float(safe_get(physics, "beta_index", beth))
+        safe_set(physics, "beta_index", (curr_beta * 0.7) + (beth * 0.3))
         setattr(self.shared, "beth", beth)
         p_m = float(safe_get(physics, "stamina", 100.0))
         if self.u.E_u > 0.7 and p_m > 50.0:
-            p_transfer = (p_m * 0.1) * self.shared.phi
-            safe_set(physics, "p_transfer", p_transfer)
-
+            safe_set(physics, "p_transfer", (p_m * 0.1) * self.shared.phi)
         safe_set(physics, "phi", self.shared.phi)
-
-        prev_phi = safe_get(physics, "resonance")
-        if prev_phi is not None:
-            safe_set(physics, "resonance", (float(prev_phi) * 0.7) + (self.shared.phi * 0.3))
-        else:
-            safe_set(physics, "resonance", self.shared.phi)
+        curr_phi = float(safe_get(physics, "resonance", self.shared.phi))
+        safe_set(physics, "resonance", (curr_phi * 0.7) + (self.shared.phi * 0.3))
         has_override = "[safe]" in text_lower or "#override" in text_lower
         if has_override:
             if self.shared.g_pool >= 1:
@@ -295,11 +243,6 @@ class SymbiosisManager:
 
     @staticmethod
     def _calculate_shannon_entropy(text: str) -> float:
-        """
-        Calculates the information density of the generated text.
-        Used to detect 'slop'—if the entropy is too low, it means the system
-        is generating highly predictable, repetitive boilerplate.
-        """
         if not text:
             return 0.0
         sample = text[:1000]
@@ -310,10 +253,6 @@ class SymbiosisManager:
         return round(entropy, 3)
 
     def monitor_host(self, latency: float, response_text: str, prompt_len: int = 0):
-        """
-        Evaluates the health of the interaction based on the *system's* last output.
-        Records latency, checks for safety refusals, and detects repetitive looping.
-        """
         safe_response = response_text or ""
         entropy = self._calculate_shannon_entropy(safe_response)
         last_resp = self._last_host_response
@@ -461,7 +400,6 @@ class SymbiosisManager:
         return mods
 
     def generate_anchor(self, current_state: Dict) -> str:
-        """Assembles the final text block summarizing system state for prompt injection."""
         soul = current_state.get("soul", {})
         phys = current_state.get("physics", {})
         base_anchor = CoherenceAnchor.compress_anchor(soul, phys)

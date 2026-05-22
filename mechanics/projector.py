@@ -1,11 +1,5 @@
-"""
-mechanics/projector.py
-The Terminal Holography and UI Membrane Module.
-This module is responsible for taking the massive, complex internal state of the
-VSL engine (biology, physics, mind, soul) and rendering it as a coherent ASCII/ANSI
-HUD (Heads-Up Display). It scales its complexity from 'WARM' (invisible) to
-'DEEP' (exposing every hidden variable) based on the user's cognitive load.
-"""
+"""mechanics/projector.py"""
+
 import re
 from typing import Any, Dict, List
 import markdown
@@ -13,43 +7,20 @@ from core import Prisma
 from struts import safe_get, ux
 from presets import BoneConfig
 
-
 def render_markdown(text: str) -> str:
-    """Translates raw markdown into the terminal output format."""
     return markdown.markdown(text, extensions=["extra"])
-
 
 _THOUGHT_PATTERN = re.compile(r"<(?:think|thought)>(.*?)(?:</(?:think|thought)>|$)", re.DOTALL | re.IGNORECASE)
 
-
 def beautify_thoughts(text: str) -> str:
-    """
-    The Cognitive Substrate Window (Pinker).
-    Frontier LLMs natively output <thought> tags when reasoning. Unformatted,
-    this looks like garbage to the user. This function catches that raw cognitive
-    exhaust, parses it, and formats it as a beautiful, indented 'Substrate' block
-    using terminal structural pipes. It separates the 'thinking' from the 'speaking'
-    with absolute syntactic clarity.
-    """
-
     def replacer(match):
         if not (content := match.group(1).strip()): return ""
         inner = "\n".join(
             f"{Prisma.CYN}  │ {Prisma.GRY}{line.strip()}{Prisma.RST}" for line in content.split("\n") if line.strip())
         return f"{Prisma.CYN}  ┌─ {Prisma.MAG}[ COGNITIVE SUBSTRATE ]{Prisma.RST}\n{inner}\n{Prisma.CYN}  └─{Prisma.RST}"
-
     return _THOUGHT_PATTERN.sub(replacer, text)
 
-
 class Projector:
-    """
-    The Holographic Formatter (Fuller / Schur).
-    The Projector does not change the state of the system; it only observes and
-    paints it. It handles the dynamic layout of health bars, metabolic gauges,
-    and systemic friction readouts, ensuring the user has the feedback required
-    to co-regulate with the machine.
-    """
-
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.width = 80
@@ -57,7 +28,6 @@ class Projector:
 
     @staticmethod
     def _extract(physics_obj: Any, field: str, sub_field: str, default: Any = 0.0):
-        """Recursively pulls nested values out of the physics dictionary."""
         if (val := safe_get(physics_obj, sub_field)) is not None:
             return val
         if (val := safe_get(safe_get(physics_obj, field), sub_field)) is not None:
@@ -65,12 +35,6 @@ class Projector:
         return default
 
     def _render_clear_hud(self, physics: Any, data_ctx: Dict, mind: tuple) -> str:
-        """
-        The Diagnostic HUD (Schur).
-        A clean, explicitly readable status readout that avoids cryptic abbreviations
-        (like β or CHI) in favor of plain English metrics. Used when the system
-        detects the user is exhausted and needs simple, actionable data.
-        """
         energy = float(data_ctx.get("stamina", 100.0))
         friction = self._get_lattice_val(physics, ["narrative_drag", "friction", "F"], 0.0)
         chem = data_ctx.get("bio", {}).get("chemistry", {})
@@ -111,13 +75,7 @@ class Projector:
                 f"{Prisma.WHT}Stress:  {Prisma.RST} {bar(stress, 100, Prisma.OCHRE)} {int(stress)}% {Prisma.GRY}({s_txt}){Prisma.RST}\n"
                 f"{Prisma.WHT}Status:  {Prisma.RST} {Prisma.MAG}{st_txt}{Prisma.RST}\n")
 
-    def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1,
-               labels: Dict = None) -> str:
-        """
-        The Master Layout Orchestrator.
-        Assembles the different semantic strips (Vitals, Physics, Lattice) into
-        a single, coherent terminal block based on the current `ui_depth`.
-        """
+    def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1, labels: Dict = None) -> str:
         ui_depth = data_ctx.get("ui_depth", "IDLE")
         if ui_depth in ("WARM", "IDLE"):
             return ""
@@ -152,7 +110,6 @@ class Projector:
 
     @staticmethod
     def _get_role(mind: tuple) -> str:
-        """Extracts the active archetype or persona from the mind tuple."""
         raw_role = mind[2] if mind and len(mind) > 2 else None
         role = str(raw_role).upper() if raw_role else (ux("projector", "default_role") or "OBSERVER")
         return role.replace(ux("projector", "role_redundancy") or "THE THE ", "THE ")
@@ -163,7 +120,6 @@ class Projector:
         return f"  {Prisma.WHT}{sym.get('role', '')} {Projector._get_role(mind)}{Prisma.RST}"
 
     def _render_vital_strip(self, data: Dict, mind: tuple, labels: Dict) -> str:
-        """Renders the biological health, stamina, ATP, and dignity reserves."""
         maximum_health = float(safe_get(self.cfg, "MAX_HEALTH", 100.0) or 100.0)
         maximum_stamina = float(safe_get(self.cfg, "MAX_STAMINA", 100.0) or 100.0)
         gui_config = safe_get(self.cfg, "GUI", {})
@@ -196,7 +152,6 @@ class Projector:
         )
 
     def _render_physics_strip(self, physics: Any, vectors: Dict) -> str:
-        """Renders the Voltage, Drag, and active Semantic Vector of the conversation."""
         volt = float(self._extract(physics, "energy", "voltage", 0.0))
         drag = float(self._extract(physics, "space", "narrative_drag", 0.0))
         dp_str = ""
@@ -215,7 +170,6 @@ class Projector:
         return f"  {Prisma.CYN}VOLT:{Prisma.RST} {volt:04.1f}v   {Prisma.SLATE}DRAG:{Prisma.RST} {drag:04.1f}{dp_str}   {Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})"
 
     def _get_lattice_val(self, domains: List[Any], keys: List[str], default: float) -> float:
-        """Safely probes multiple data domains looking for a specific metric."""
         for k in keys:
             for dom in domains:
                 if dom and (val := safe_get(dom, k)) is not None:
@@ -226,12 +180,6 @@ class Projector:
         return default
 
     def _render_lattice_strip(self, physics: Any, data_ctx: Dict = None, depth: str = "DEEP") -> str:
-        """
-        The Deep Geometry Matrix.
-        Renders the most arcane and structural elements of the system: Entropy (CHI),
-        Abstractness (PSI), Resonance (PHI), Contradiction Capacity (Beta), and
-        active SLASH governance variables (Gamma, Sigma, etc.).
-        """
         if depth == "IDLE" or not physics:
             return ""
         data_ctx = data_ctx or {}
@@ -285,7 +233,6 @@ class Projector:
         return ""
 
     def render_technical(self, physics: Dict, data: Dict, mind: tuple) -> str:
-        """A raw, unformatted data dump used primarily when the engine crashes."""
         v = self._extract(physics, "energy", "voltage", 0.0)
         d = self._extract(physics, "space", "narrative_drag", 0.0)
         vec = data.get("vectors", {})
@@ -300,7 +247,6 @@ class Projector:
                 f"{l_bio} {str(data.get('bio', {}))[:60]}...")
 
     def _mini_bar(self, val, max_val, width, color):
-        """Constructs a tiny, fixed-width progress bar for the HUD."""
         if max_val == 0:
             return ""
         ratio = max(0.0, min(1.0, val / max_val))
@@ -312,14 +258,6 @@ class Projector:
 
 
 class SoulDashboard:
-    """
-    The Identity and Agency Interface (Schur).
-    Renders the state of the system's "Soul"—its active Dignity Reserve, its
-    current Archetype (Persona), how long it has held that Persona (Tenure),
-    and what Concept currently obsesses it. If Dignity drops too low, it displays
-    the 'FADING' warning or the 'AGENCY LOCKED' status.
-    """
-
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.cfg = getattr(self.eng, "config", BoneConfig)
@@ -341,7 +279,7 @@ class SoulDashboard:
         max_dig = float(safe_get(cfg, "DIGNITY_MAX", 100.0))
         clamped_dig = max(0.0, min(max_dig, dig))
         max_bar_width = int(max_dig / d_ratio)
-        filled = int(clamped_dig / d_ratio)
+        filled = min(max_bar_width, int(clamped_dig / d_ratio))
         empty = max(0, max_bar_width - filled)
         c_fill = ux("status_menu", "bar_filled") or "█"
         c_empty = ux("status_menu", "bar_empty") or "░"

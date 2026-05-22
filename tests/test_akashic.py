@@ -1,4 +1,5 @@
 """tests/test_akashic.py"""
+
 import os
 import json
 import tempfile
@@ -6,7 +7,6 @@ from unittest.mock import MagicMock
 from tests.base import BoneTestCase
 from brain.akashic import TheAkashicRecord
 from core import LoreManifest
-
 
 class AkashicContinuityTests(BoneTestCase):
     def setUp(self):

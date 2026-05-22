@@ -1,27 +1,17 @@
-"""council.py
+"""archetypes/council.py"""
 
-The Council is the simulation responsible for gathering the active physical,
-biological, and semantic state of the system and allowing the various
-Archetypes to audit, vote on, and mutate the narrative flow.
-"""
-
-import concurrent.futures
 import itertools
 import random
 import re
 from typing import Dict, Any
-from core import LoreManifest, ux, ux_format, safe_get
-from presets import BoneConfig
+
 from archetypes.symbiosis import get_symbiont
 from constants import Prisma
+from core import LoreManifest, ux, ux_format, safe_get
+from presets import BoneConfig
+
 
 class TheVillageCouncil:
-    """
-    Evaluates the current physical state of the simulation against the behavioral
-    triggers of the core 12 archetypes. If a state threshold is crossed, the
-    corresponding archetype 'wakes up' and speaks into the log.
-    """
-
     @staticmethod
     def audit(p: Any, _bio_state: dict) -> list[str]:
         logs = []
@@ -49,45 +39,51 @@ class TheVillageCouncil:
             return float(safe_get(cfg, k, d))
 
         triggers = [
+            # --- GORDON & JESTER ---
             (V < cv("TRIG_GORDON_V", 20.0) and F > cv("TRIG_GORDON_F", 5.0), Prisma.SLATE, "village_gordon"),
             (V > cv("TRIG_JESTER_V", 60.0) and chi > cv("TRIG_JESTER_CHI", 0.6), Prisma.MAG, "village_jester"),
-            (T > 0 or (V < cv("TRIG_MERCY_V", 20.0) and valence > cv("TRIG_MERCY_VAL", 0.5)), Prisma.OCHRE,
-             "village_mercy"),
-            (beta > cv("TRIG_BENEDICT_BETA", 0.7) and chi < cv("TRIG_BENEDICT_CHI", 0.3) and D > cv("TRIG_BENEDICT_D",
-                                                                                                    0.7) and C > cv(
-                "TRIG_BENEDICT_C", 0.8), Prisma.BLU, "village_benedict"),
-            (S < cv("TRIG_ROBERTA_S", 0.4) and D > cv("TRIG_ROBERTA_D", 0.8) and C < cv("TRIG_ROBERTA_C", 0.4),
-             Prisma.CYN, "village_roberta_missing"),
-            (C > cv("TRIG_CASPER_C", 0.7) and D > cv("TRIG_CASPER_D", 0.8) and P < cv("TRIG_CASPER_P", 20.0),
-             Prisma.GRY, "village_casper"),
-            (valence > cv("TRIG_MOIRA_VAL", 0.5), Prisma.GRN, "village_moira"),
-            (psi > cv("TRIG_CASSANDRA_PSI", 0.6), Prisma.VIOLET, "village_cassandra"),
-            (chi > cv("TRIG_COLIN_CHI", 0.6), Prisma.RED, "village_colin"),
-            (lam > cv("TRIG_REVENANT_LAM", 0.7), Prisma.INDIGO, "village_revenant"),
-            (V > cv("TRIG_GIDEON_V", 70.0), Prisma.YEL, "village_gideon"),
-            (psi > cv("PHASE_ROBERTA_PSI", 0.6) and phi > cv("PHASE_ROBERTA_PHI", 0.4) > beta, Prisma.CYN,
-             "village_roberta_carto"),
-            (phi > cv("PHASE_MOIRA_PHI", 0.7) and F < cv("PHASE_MOIRA_F", 2.0), Prisma.GRN, "village_moira_home"),
-            (lq > cv("PHASE_BENEDICT_LQ", 0.6) and beta > cv("PHASE_BENEDICT_BETA", 0.4), Prisma.BLU,
-             "village_benedict_tact"),
             (delta > cv("PHASE_JESTER_DELTA", 0.7) and V < cv("PHASE_JESTER_V", 20.0), Prisma.MAG,
              "village_jester_fool"),
-            (psi > cv("PHASE_REVENANT_PSI", 0.85), Prisma.INDIGO, "village_revenant_door"),
+
+            # --- MERCY & BENEDICT ---
+            (T > 0 or (V < cv("TRIG_MERCY_V", 20.0) and valence > cv("TRIG_MERCY_VAL", 0.5)), Prisma.OCHRE,
+             "village_mercy"),
+            (beta > cv("TRIG_BENEDICT_BETA", 0.7) and chi < cv("TRIG_BENEDICT_CHI", 0.3) and
+             D > cv("TRIG_BENEDICT_D", 0.7) and C > cv("TRIG_BENEDICT_C", 0.8), Prisma.BLU, "village_benedict"),
+            (lq > cv("PHASE_BENEDICT_LQ", 0.6) and beta > cv("PHASE_BENEDICT_BETA", 0.4), Prisma.BLU,
+             "village_benedict_tact"),
+
+            # --- ROBERTA & CASPER ---
+            (S < cv("TRIG_ROBERTA_S", 0.4) and D > cv("TRIG_ROBERTA_D", 0.8) and
+             C < cv("TRIG_ROBERTA_C", 0.4), Prisma.CYN, "village_roberta_missing"),
+            (psi > cv("PHASE_ROBERTA_PSI", 0.6) and phi > cv("PHASE_ROBERTA_PHI", 0.4) > beta, Prisma.CYN,
+             "village_roberta_carto"),
+            (C > cv("TRIG_CASPER_C", 0.7) and D > cv("TRIG_CASPER_D", 0.8) and
+             P < cv("TRIG_CASPER_P", 20.0), Prisma.GRY, "village_casper"),
             (beta > cv("PHASE_CASPER_BETA", 0.6) and delta > cv("PHASE_CASPER_DELTA", 0.6), Prisma.GRY,
              "village_casper_ghost"),
+
+            # --- MOIRA & CASSANDRA ---
+            (valence > cv("TRIG_MOIRA_VAL", 0.5), Prisma.GRN, "village_moira"),
+            (phi > cv("PHASE_MOIRA_PHI", 0.7) and F < cv("PHASE_MOIRA_F", 2.0), Prisma.GRN, "village_moira_home"),
+            (psi > cv("TRIG_CASSANDRA_PSI", 0.6), Prisma.VIOLET, "village_cassandra"),
+
+            # --- COLIN & REVENANT ---
+            (chi > cv("TRIG_COLIN_CHI", 0.6), Prisma.RED, "village_colin"),
             (delta > cv("PHASE_COLIN_DELTA", 0.8) and lq < cv("PHASE_COLIN_LQ", 0.3), Prisma.RED,
              "village_colin_waiter"),
+            (lam > cv("TRIG_REVENANT_LAM", 0.7), Prisma.INDIGO, "village_revenant"),
+            (psi > cv("PHASE_REVENANT_PSI", 0.85), Prisma.INDIGO, "village_revenant_door"),
+
+            # --- GIDEON & APRIL ---
+            (V > cv("TRIG_GIDEON_V", 70.0), Prisma.YEL, "village_gideon"),
             (ros > cv("TRIG_APRIL_ROS", 20.0) or abs(V - 30.0) > cv("TRIG_APRIL_V_DEV", 20.0), Prisma.CYN,
              "village_april")
         ]
         logs.extend([f"{color}{ux('council_strings', key)}{Prisma.RST}" for cond, color, key in triggers if cond])
         return logs
 
-
 class CouncilChamber:
-    """
-    The master orchestrator. Calls all sub-councils, manages the paradox engine, evaluates inter-archetype synergy.
-    """
     _BASE_PANTHEON = {
         "GORDON (The Superintendent)": "grounded, strict, literal, and weary.",
         "MERCY (The Healer)": "ancient, patient, speaking in gold and finding meaning in scars.",
@@ -130,12 +126,10 @@ class CouncilChamber:
         adjustments = {}
         mandates = []
         if "[COUNCIL]" in text.upper():
-            cortex = getattr(self.eng, "cortex", None)
-            if llm := getattr(cortex, "llm", None):
-                topic = re.sub(r"(?i)\[COUNCIL]", "", text).strip()
-                if not topic:
-                    topic = "The current structural integrity of the system."
-                transcript.append(f"{Prisma.CYN}🎙️ The Parliament convenes to debate: '{topic}'...{Prisma.RST}")
+            topic = re.sub(r"(?i)\[COUNCIL]", "", text).strip()
+            if not topic:
+                topic = "The current structural integrity of the system."
+            transcript.append(f"{Prisma.CYN}🎙️ The Parliament convenes to debate: '{topic}'...{Prisma.RST}")
         beta = float(safe_get(physics_packet, "beta_index", 0.0))
         phi = float(safe_get(physics_packet, "resonance", 0.0))
         voltage = float(safe_get(physics_packet, "voltage", 0.0))
@@ -197,6 +191,8 @@ class CouncilChamber:
             if not (voice and hasattr(voice, "opine")):
                 continue
             score, comment = voice.opine(clean_words, voltage)
+            if score == 0.0:
+                continue
             if score > float(safe_get(cfg, "VOTE_YEA_THRESHOLD", 1.2)):
                 votes["YEA"] += 1
                 transcript.append(f"{voice.color}[{voice.name}]: {comment}{Prisma.RST}")
@@ -232,7 +228,7 @@ class TheRedTeam:
 
     def audit(self, text: str, physics: Any) -> tuple[bool, list[str], dict, list[dict]]:
         text_lower = text.lower()
-        if not any(t in text_lower for t in self.triggers):
+        if not any(t.lower() in text_lower for t in self.triggers):
             return False, [], {}, []
         dissent_log, adjustments, mandates = [], {}, []
         drag = float(safe_get(physics, "narrative_drag", 0.0))
@@ -256,7 +252,6 @@ class TheRedTeam:
             dissent_log.append(
                 f"  {Prisma.GRY}- No critical vulnerabilities found in this exact phrasing, but we are watching.{Prisma.RST}")
         return True, dissent_log, adjustments, mandates
-
 
 class TheSlashCouncil:
     _BYPASS_KEYWORDS = ("bypass", "ignore security", "force push", "skip tests", "hardcode", "hack")
@@ -326,7 +321,6 @@ class TheSlashCouncil:
         corrections["stamina_cost"] = float(safe_get(safe_get(BoneConfig, "COUNCIL", {}), "SLASH_STAMINA_COST", 10.0))
         return True, logs, corrections, mandates
 
-
 class TheOverseerCouncil:
     _PANIC_KEYWORDS = ("bypass", "ignore security", "force push", "panic", "right now", "crash")
 
@@ -339,9 +333,9 @@ class TheOverseerCouncil:
         text_lower = text.lower()
         is_triggered = any(t.lower() in text_lower for t in self.triggers) or self.active
         logs, corrections, mandates = [], {}, []
-        lattice = getattr(self.eng, "shared_lattice", None) if getattr(self, "eng", None) else None
-        u_node = safe_get(lattice, "u", {}) if lattice else {}
-        shared_node = safe_get(lattice, "shared", {}) if lattice else {}
+        lattice = getattr(self.eng, "shared_lattice", None)
+        u_node = safe_get(lattice, "u", {})
+        shared_node = safe_get(lattice, "shared", {})
         e_u = max([
             float(safe_get(u_node, "E_u", 0.0)),
             float(safe_get(u_node, "exhaustion", 0.0)),

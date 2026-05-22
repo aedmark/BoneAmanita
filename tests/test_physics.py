@@ -38,33 +38,34 @@ class TopologicalPrimitivesTest(BoneTestCase):
                          "[FAIL] Orbit coincidence length miscalculated.")
 
     def test_semantic_dimension_formalization(self):
-            print("\n--- Semantic Dimension (fd-formalization) ---")
-            from physics import NaviSADProtocol
-            navi = NaviSADProtocol()
-            dim_flat = navi.calculate_semantic_dimension(efficiency_index=1.0, novelty=0.0)
-            self.assertAlmostEqual(dim_flat, 1.0, places=2, msg="[FAIL] Flat logic did not yield a dimension of 1.0.")
-            dim_fractal = navi.calculate_semantic_dimension(efficiency_index=0.5, novelty=0.8)
-            self.assertGreater(dim_fractal, 1.2, "[FAIL] Novel logic failed to expand the fractal dimension.")
-            initial_atp = self.engine.bio.mito.state.atp_pool
-            self.engine.host_stats.efficiency_index = 1.0
-            self.engine.tick_count = 6
-            with patch.object(self.engine.cortex.llm, 'generate', return_value="I agree completely."):
-                result = self.engine.process_turn("Do you agree?")
-            self.assertIn(
-                "FALSE COHESION BREAK", result.get("ui", ""),
-                "[FAIL] The Jester failed to shatter the mathematically proven point attractor."
-            )
-            self.assertLess(self.engine.bio.mito.state.atp_pool, initial_atp,
-                            "[FAIL] ATP was not burned to break the false cohesion.")
-            phys_pkt = result.get("physics", {})
-            omega_in_pkt = "omega_r" in phys_pkt or "omega_r" in phys_pkt.get("energy", {})
-            self.assertTrue(
-                omega_in_pkt,
-                "[FAIL] Right-Brain Coherence (omega_r) was not appended to the physics packet."
-            )
-            print(
-                "  [SUCCESS] Semantic dimension formalization correctly triggered the False Cohesion break."
-            )
+        print("\n--- Semantic Dimension (fd-formalization) ---")
+        from physics import NaviSADProtocol
+        navi = NaviSADProtocol()
+        dim_flat = navi.calculate_semantic_dimension(efficiency_index=1.0, novelty=0.0)
+        self.assertAlmostEqual(dim_flat, 1.0, places=2, msg="[FAIL] Flat logic did not yield a dimension of 1.0.")
+        dim_fractal = navi.calculate_semantic_dimension(efficiency_index=0.5, novelty=0.8)
+        self.assertGreater(dim_fractal, 1.2, "[FAIL] Novel logic failed to expand the fractal dimension.")
+        initial_atp = self.engine.bio.mito.state.atp_pool
+        self.engine.host_stats.efficiency_index = 1.0
+        self.engine.tick_count = 6
+        self.engine.cortex.dspy_critic.enabled = False
+        with patch.object(self.engine.cortex.llm, 'generate', return_value="I agree completely."):
+            result = self.engine.process_turn("Do you agree?")
+        self.assertIn(
+            "FALSE COHESION BREAK", result.get("ui", ""),
+            "[FAIL] The Jester failed to shatter the mathematically proven point attractor."
+        )
+        self.assertLess(self.engine.bio.mito.state.atp_pool, initial_atp,
+                        "[FAIL] ATP was not burned to break the false cohesion.")
+        phys_pkt = result.get("physics", {})
+        omega_in_pkt = "omega_r" in phys_pkt or "omega_r" in phys_pkt.get("energy", {})
+        self.assertTrue(
+            omega_in_pkt,
+            "[FAIL] Right-Brain Coherence (omega_r) was not appended to the physics packet."
+        )
+        print(
+            "  [SUCCESS] Semantic dimension formalization correctly triggered the False Cohesion break."
+        )
 
     def test_drag_profile(self):
             driver = SharedLatticeDriver()

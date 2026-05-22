@@ -1,18 +1,11 @@
 """drivers/souldriver.py"""
+
 import random
 from typing import Dict
 from core import LoreManifest
 from presets import BoneConfig
 
-
 class SoulDriver:
-    """
-    The SoulDriver acts as the 'Identity Intercept'.
-    It translates the user's permanent psychological profile (The Soul) into
-    biases that affect the Enneagram's persona selection. It ensures the machine
-    resonates with the user's specific archetype and current state of 'dignity'.
-    """
-
     def __init__(self, soul_ref, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.soul = soul_ref
@@ -20,10 +13,6 @@ class SoulDriver:
             "DRIVER_CONFIG", "ARCHETYPE_TO_PERSONA_WEIGHT") or {})
 
     def get_influence(self) -> Dict[str, float]:
-        """
-        Calculates the weight modification for each persona based on the Soul's stats.
-        Returns a dictionary of persona names and their calculated influence multipliers.
-        """
         ennea_weights = (LoreManifest.get_instance(config_ref=self.cfg).get(
             "DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {})
         base_weights = {persona: 0.0 for persona in ennea_weights.keys()}
