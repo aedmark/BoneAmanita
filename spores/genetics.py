@@ -79,10 +79,11 @@ class LiteraryReproduction:
         trauma_a = parent_a_bio.get("trauma_vector") or {}
         trauma_b = parent_b_data.get("trauma_vector") or {}
         all_keys = trauma_a.keys() | trauma_b.keys()
-        child_trauma = {
-            k: (trauma_a.get(k, 0) + trauma_b.get(k, 0)) / 2.0
-            for k in all_keys
-        }
+        child_trauma = {}
+        for k in all_keys:
+            avg_trauma = (trauma_a.get(k, 0) + trauma_b.get(k, 0)) / 2.0
+            if avg_trauma > 0.2:
+                child_trauma[k] = avg_trauma
         mito = parent_a_bio.get("mito") or {}
         hash_a = str(mito.get("mother_hash", "EVE")) if isinstance(mito, dict) else str(
             getattr(mito, "mother_hash", "EVE"))

@@ -1,4 +1,4 @@
-# MOD CHIP – THE FELLOWSHIP 3.0
+# MOD CHIP – THE FELLOWSHIP
 
 Activation: `[FELLOWSHIP]` or simply address "the fellowship" or individual members.
 

@@ -498,7 +498,7 @@
     "obs_sluggish": "SLUGGISH (The gears need oil)",
     "obs_nominal": "NOMINAL (Boringly adequate)",
     "health_offline": "[{component} OFFLINE]: {msg}",
-    "arb_martial_law": "Martial Law declared. Identity suppressed.",
+    "arb_martial_law": "Martial Law has been declared. Identity is now suppressed for safety.",
     "arb_bureaucratic": "Bureaucratic override active.",
     "arb_diamond": "The Diamond Soul refracts the physics ({soul_archetype}).",
     "arb_resonance": "Resonance detected.",

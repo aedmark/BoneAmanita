@@ -1,4 +1,4 @@
-# MOD CHIP – THE TRIAD 3.0
+# MOD CHIP – THE TRIAD
 
 Activation: `[TRIAD]` or simply address "the Triad" or specific, individual members.
 

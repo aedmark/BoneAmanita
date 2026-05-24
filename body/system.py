@@ -105,8 +105,7 @@ class BioSystem:
             self.mito.adjust_atp(shifts.get("MANIC", {}).get("atp", -10.0), "Neural Overclock")
 
     def apply_environmental_entropy(self, physics_packet):
-        matter = safe_get(physics_packet, "matter", physics_packet)
-        vector = safe_get(matter, "vector", {}) or {}
+        vector = safe_get(physics_packet, "vector", {}) or {}
         ent_val = vector.get("ENT", 0.0)
         phi_val = vector.get("PHI", 0.0)
         em_field = math.hypot(ent_val, phi_val)
@@ -186,8 +185,8 @@ class SomaticLoop:
         receipt = self.bio.mito.process_cycle(phys, modifier=modifier)
         if receipt.status == "ANAEROBIC":
             b.health = max(0.0, b.health - receipt.total_burn)
-            msg = ux("somatic_loop", "anaerobic_burn")
-            logs.append(f"{Prisma.RED}{msg.format(burn=receipt.total_burn)}{Prisma.RST}")
+            if msg := ux("somatic_loop", "anaerobic_burn"):
+                logs.append(f"{Prisma.RED}{msg.format(burn=receipt.total_burn)}{Prisma.RST}")
         safety_status = self.feedback.check_vital_signs(phys, b.stamina, logs)
         if safety_status == "MAUSOLEUM_CLAMP":
             return self._package_result(receipt.status, logs, chem_state=self.bio.endo.get_state())

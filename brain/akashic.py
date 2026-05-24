@@ -293,22 +293,16 @@ class TheAkashicRecord:
         boons_path = os.path.join(self.data_dir, "akashic_boons.json")
         prompts = self.lore.get("SYSTEM_PROMPTS") or {}
         needs_migration = False
-        if os.path.exists(scars_path):
-            try:
-                with open(scars_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    prompts.setdefault("GLOBAL_BASELINE", {})["EPIGENETIC_SCARS"] = data if isinstance(data, list) else []
-                    needs_migration = True
-            except Exception as e:
-                print(f"{Prisma.RED}[AKASHIC] Failed to migrate legacy scars: {e}.{Prisma.RST}")
-        if os.path.exists(boons_path):
-            try:
-                with open(boons_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    prompts.setdefault("GLOBAL_BASELINE", {})["EPIGENETIC_BOONS"] = data if isinstance(data, list) else []
-                    needs_migration = True
-            except Exception as e:
-                print(f"{Prisma.RED}[AKASHIC] Failed to migrate legacy boons: {e}.{Prisma.RST}")
+        for path, key in [(scars_path, "EPIGENETIC_SCARS"), (boons_path, "EPIGENETIC_BOONS")]:
+            if os.path.exists(path):
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        prompts.setdefault("GLOBAL_BASELINE", {})[key] = data if isinstance(data, list) else []
+                        needs_migration = True
+                    os.remove(path)
+                except Exception as e:
+                    print(f"{Prisma.RED}[AKASHIC] Failed to migrate legacy {key}: {e}.{Prisma.RST}")
         if needs_migration:
             self.lore.inject("SYSTEM_PROMPTS", prompts)
         words_path = os.path.join(self.data_dir, "akashic_discovered_words.json")

@@ -1,4 +1,4 @@
-# MOD CHIP - THE EXPANDED VILLAGE 2.0
+# MOD CHIP - THE EXPANDED VILLAGE
 
 Activation: `[VILLAGE]` or simply address "the village" or specific, individual members.
 

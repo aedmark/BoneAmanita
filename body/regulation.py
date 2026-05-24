@@ -82,10 +82,8 @@ class MetabolicGovernor:
 
     def regulate(self, physics: Any, dt: float, endocrine_state: Optional[Any] = None) -> Tuple[float, float]:
         safe_dt = max(0.001, dt)
-        energy_dict = safe_get(physics, "energy") or {}
-        space_dict = safe_get(physics, "space") or {}
-        v_val = float(safe_get(physics, "voltage") or energy_dict.get("voltage", 0.0))
-        d_val = float(safe_get(physics, "narrative_drag") or space_dict.get("narrative_drag", 0.0))
+        v_val = float(safe_get(physics, "voltage", 0.0))
+        d_val = float(safe_get(physics, "narrative_drag", 0.0))
         current_zone = str(safe_get(physics, "zone", "")).upper()
         if self.manual_override or self.mode == "SANCTUARY" or current_zone == "SANCTUARY":
             return v_val, d_val
@@ -201,7 +199,7 @@ class BioFeedback:
         v_overload = float(safe_get(cfg, "VOLTAGE_OVERLOAD", 30.0))
         if stamina <= 0:
             if b.health > min_health and self.consecutive_autophagy < 3:
-                b.health -= getattr(cfg, "AUTOPHAGY_BURN", 5.0)
+                b.health -= float(safe_get(cfg, "AUTOPHAGY_BURN", 5.0))
                 self.consecutive_autophagy += 1
                 if msg := ux("bio_feedback", "autophagy"):
                     logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
@@ -209,7 +207,7 @@ class BioFeedback:
             if msg := ux("bio_feedback", "fuel_depleted"):
                 logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
             return "MAUSOLEUM_CLAMP"
-        if stamina > getattr(cfg, "STAMINA_SAFE_THRESHOLD", 30.0):
+        if stamina > float(safe_get(cfg, "STAMINA_SAFE_THRESHOLD", 30.0)):
             self.consecutive_autophagy = max(0, self.consecutive_autophagy - 1)
         m_a = float(safe_get(phys, "m_a", 0.0))
         chi = float(safe_get(phys, "entropy", 1.0))
@@ -229,14 +227,13 @@ class BioFeedback:
         cfg = safe_get(self.cfg, "BIO", {})
         if len(text) > safe_get(cfg, "BUFFER_WARN_LIMIT", 10000) and (msg := ux("bio_feedback", "large_buffer")):
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
-        space = safe_get(phys, "space", phys)
-        drag = float(safe_get(space, "narrative_drag", 0.0))
+        drag = float(safe_get(phys, "narrative_drag", 0.0))
         sludge_thresh = safe_get(cfg, "SLUDGE_DRAG_THRESH", 8.0)
         sludge_mod = safe_get(cfg, "SLUDGE_TICK_MOD", 10)
         if drag > sludge_thresh and tick % sludge_mod == 0:
             if msg := ux("bio_feedback", "clearing_sludge"):
                 logs.append(f"{Prisma.OCHRE}{msg.format(drag=drag)}{Prisma.RST}")
-            safe_set(space, "narrative_drag", max(1.0, drag - safe_get(cfg, "SLUDGE_DRAG_REDUCTION", 2.0)))
+            safe_set(phys, "narrative_drag", max(1.0, drag - safe_get(cfg, "SLUDGE_DRAG_REDUCTION", 2.0)))
 
 class EndocrineRegulator:
     def __init__(self, bio_system_ref: "BioSystem"):

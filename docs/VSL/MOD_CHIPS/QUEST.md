@@ -1,4 +1,4 @@
-# MOD CHIP - QUEST 3.0
+# MOD CHIP - QUEST
 
 Activation: `[QUEST]` or simply address the group or specific, individual members.
 

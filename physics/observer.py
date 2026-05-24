@@ -140,7 +140,7 @@ class QuantumObserver:
         strong_coherence_ideal = resonance * gamma_idx * beta
         generative_gap = abs(strong_coherence_ideal - actual_coherence)
         phys_cfg = safe_get(self.cfg, "PHYSICS", {})
-        cd_drag = (geo.compression * 0.5) + (generative_gap * float(safe_get(phys_cfg, "DRAG_HALT", 10.0)) * 0.5)
+        cd_drag = (geo.compression * 0.5) + (generative_gap * 2.0)
         energy = EnergyState(
             voltage=avg_voltage, entropy=entropy, beta_index=beta, contradiction=beta, scope=scope, depth=depth,
             connectivity=connectivity, resonance=resonance, silence=silence, lq=loop_quotient, mass=graph_mass,

@@ -17,8 +17,7 @@ class NavigationPhase(SimulationPhase):
     def run(self, ctx: CycleContext):
         physics = ctx.physics
         mode_settings = getattr(self.eng, "mode_settings", {})
-        is_fresh_boot = (len(self.eng.cortex.dialogue_buffer) == 0 if hasattr(
-            self.eng, "cortex") else False)
+        is_fresh_boot = (len(self.eng.cortex.dialogue_buffer) == 0)
         if is_fresh_boot:
             ctx.log(
                 f"{Prisma.MAG}[NAVIGATION]: Fresh boot detected. Bypassing Orthogonal Attention Loss. Orienting to JSON bedrock.{Prisma.RST}")
@@ -127,27 +126,21 @@ class ObservationPhase(SimulationPhase):
         if ctx.time_delta > 10.0 and not ctx.is_system_event and ctx.physics:
             if nabla_msg := QuantumObserver.evaluate_silence(ctx.time_delta, ctx.physics):
                 ctx.log(f"{Prisma.GRY}*... {nabla_msg} ...*{Prisma.RST}")
-            bio = getattr(self.eng, "bio", None)
-            mito = getattr(bio, "mito", None) if bio else None
-            if ctx.time_delta > 600.0 and mito:
+            if ctx.time_delta > 600.0:
                 hours_passed = min(24.0, ctx.time_delta / 3600.0)
-                target_cfg = getattr(self.eng, "config", BoneConfig)
-                if bio.biometrics:
-                    bio.biometrics.health = min(
-                        float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
-                        bio.biometrics.health + (hours_passed * 10.0))
-                bio.mito.state.atp_pool = min(
+                target_cfg = self.eng.config
+                self.eng.bio.biometrics.health = min(
+                    float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
+                    self.eng.bio.biometrics.health + (hours_passed * 10.0))
+                self.eng.bio.mito.state.atp_pool = min(
                     float(safe_get(target_cfg, "MAX_ATP", 100.0)),
-                    bio.mito.state.atp_pool + (hours_passed * 25.0))
+                    self.eng.bio.mito.state.atp_pool + (hours_passed * 25.0))
                 ctx.log(
                     f"{Prisma.GRN}[BIO]: Retroactive metabolism applied for {hours_passed:.1f} hours of absence. ATP and Health restored.{Prisma.RST}")
-                mind = getattr(self.eng, "mind", None)
-                cortex = getattr(self.eng, "cortex", None)
-                dream_engine = getattr(mind, "dreamer", None) or getattr(cortex, "dreamer", None)
+                dream_engine = self.eng.mind.dreamer
                 if dream_engine:
-                    soul_snap = _safe_dict(getattr(self.eng, "soul", {}))
-                    bio_packet = {"chem": (self.eng.bio.endo.get_state() if hasattr(
-                        self.eng.bio, "endo") else {}), "mito": {
+                    soul_snap = _safe_dict(self.eng.soul)
+                    bio_packet = {"chem": self.eng.bio.endo.get_state(), "mito": {
                         "atp": self.eng.bio.mito.state.atp_pool,
                         "ros": self.eng.bio.mito.state.ros_buildup, }, }
                     dream_text, shift = dream_engine.enter_rem_cycle(

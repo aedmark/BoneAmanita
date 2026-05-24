@@ -59,16 +59,9 @@ class CreativeDeterminantEngine:
         return self.coherence_debt
 
     def execute_metabolic_tick(self, viability_potential: float) -> tuple[float, float]:
-        b = viability_potential
-        if b > 0:
-            power_divisor = max(0.001, self.p - 1.0)
-            max_regen_capacity = math.pow(b / self.c, 1.0 / power_divisor)
-            delta_atp = min(max_regen_capacity, 5.0)
-            delta_ros = -(b * 0.5)
-        else:
-            delta_atp = b * 2.0
-            delta_ros = abs(b) * 1.5
-        return delta_atp, delta_ros
+        if (b := viability_potential) > 0:
+            return min(math.pow(b / self.c, 1.0 / max(0.001, self.p - 1.0)), 5.0), -(b * 0.5)
+        return b * 2.0, math.log1p(abs(b)) * 1.5
 
 class NaviSADProtocol:
     def __init__(self, history_size: int = 10):

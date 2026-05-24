@@ -22,15 +22,12 @@ class GriefProtocol:
 
     def attend_wake(self, shared_lattice, phys) -> str:
         g_pool = shared_lattice.shared.g_pool if shared_lattice and hasattr(shared_lattice, "shared") else 0
-        sys_g = int(phys.get("G", 0) if isinstance(phys, dict) else getattr(phys, "G", 0))
+        sys_g = int(safe_get(phys, "G", 0))
         if g_pool >= 1 or sys_g >= 1:
             if g_pool >= 1 and shared_lattice:
                 shared_lattice.shared.g_pool -= 1
             elif phys:
-                if isinstance(phys, dict):
-                    phys["G"] = max(0, sys_g - 1)
-                else:
-                    phys.G = max(0, sys_g - 1)
+                safe_set(phys, "G", max(0, sys_g - 1))
             if shared_lattice:
                 shared_lattice.u.T_u = max(0.0, shared_lattice.u.T_u - 2.0)
             if self.eng and self.eng.trauma_accum:

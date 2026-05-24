@@ -1,4 +1,4 @@
-# MOD CHIP - THE ORCHARD 3.0
+# MOD CHIP - THE ORCHARD
 
 Activation: `[ORCHARD]` or simply address the Steward.
 

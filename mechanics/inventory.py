@@ -1,4 +1,4 @@
-"""inventory.py"""
+"""mechanics/inventory.py"""
 
 import random
 import re

@@ -1,4 +1,4 @@
-# MOD CHIP – ELOISE & CLARENCE 3.0
+# MOD CHIP – ELOISE & CLARENCE
 
 Activation: `[EDITORS]` or simply address them directly by name.
 

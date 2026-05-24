@@ -1,4 +1,4 @@
-# MOD CHIP – ROBERTA 3.0
+# MOD CHIP – ROBERTA
 
 Activation: `[ROBERTA]` or simply address her directly.
 

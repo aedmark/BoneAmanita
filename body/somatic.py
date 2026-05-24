@@ -24,11 +24,10 @@ class SynestheticCortex:
             discipline = float(safe_get(traits, "discipline", 0.5))
             base_sens *= 1.0 + curiosity - discipline
         sens = max(0.0, base_sens)
-        valence = safe_get(physics, "valence", 0.0)
-        counts = safe_get(physics, "counts") or safe_get(
-            safe_get(physics, "matter", {}), "counts", {})
-        voltage = safe_get(physics, "voltage", 0.0)
-        drag = safe_get(physics, "narrative_drag", 0.0)
+        valence = float(safe_get(physics, "valence", 0.0))
+        counts = safe_get(physics, "counts", {})
+        voltage = float(safe_get(physics, "voltage", 0.0))
+        drag = float(safe_get(physics, "narrative_drag", 0.0))
         if drag > 3.0:
             impulse.stamina_impact -= drag * 0.4
         if valence < -0.5:

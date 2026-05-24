@@ -1,4 +1,4 @@
-"""/tools/dspycritic.py"""
+"""/mechanics/dspycritic.py"""
 
 from typing import Any, cast, Callable
 from constants import Prisma

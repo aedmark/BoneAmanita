@@ -69,12 +69,6 @@ class MycelialNetwork:
         lichen_log = lichen_result[1] if len(lichen_result) > 1 else None
         if lichen_log:
             logs.append(lichen_log)
-        for w in clean_words:
-            _, immune_msg = self.immune.assay(w, None, None, physics, None)
-            if immune_msg:
-                formatted_msg = ux_format("spore_strings", "net_immune_resp", msg=immune_msg)
-                if formatted_msg:
-                    logs.append(f"{Prisma.CYN}{formatted_msg}{Prisma.RST}")
         parasite_result = self.parasite.infect(physics, stamina)
         if len(parasite_result) > 1 and parasite_result[1]:
             logs.append(parasite_result[1])

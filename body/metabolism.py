@@ -76,7 +76,7 @@ class MitochondrialForge:
         base_cost = safe_get(cfg, "BASE_ATP_YIELD", 2.0) + (voltage * safe_get(cfg, "VOLTAGE_TAX_MULT", 0.05))
         cognitive_load_tax = (depth * safe_get(cfg, "DEPTH_TAX_MULT", 2.0)) + (
                 connectivity * safe_get(cfg, "CONN_TAX_MULT", 3.0))
-        chaos_index = safe_get(physics_packet, "chi", safe_get(physics_packet, "entropy", 0.0))
+        chaos_index = float(safe_get(physics_packet, "entropy", safe_get(physics_packet, "chi", 0.0)))
         if chaos_index > safe_get(cfg, "CHAOS_TAX_THRESHOLD", 0.6):
             chaos_tax = safe_get(cfg, "CHAOS_TAX_MULT", 8.0) * chaos_index
             cognitive_load_tax += chaos_tax
@@ -277,7 +277,8 @@ class DigestiveTrack:
         min_len = safe_get(cfg, "MIN_WORD_LENGTH", 4)
         comp_len = safe_get(cfg, "COMPLEX_WORD_LENGTH", 7)
         antigen_set = self.lex.get("antigen") or set()
-        kinetic_set = frozenset((self.lex.get("kinetic") or set()) | (self.lex.get("explosive") or set()))
+        kin_set = self.lex.get("kinetic") or set()
+        exp_set = self.lex.get("explosive") or set()
         atp_yield = 0.0
         enzymes = []
         cliche_tax = 0.0
@@ -292,7 +293,7 @@ class DigestiveTrack:
             hits += count
             val = self.COMPLEX_WORD_BONUS if len(word) > comp_len else self.BASE_WORD_VALUE
             log_mult = 1.0 + math.log(count)
-            if word in kinetic_set:
+            if word in kin_set or word in exp_set:
                 atp_yield += (val * 1.5) * log_mult
             else:
                 cat = self.lex.get_current_category(word)
