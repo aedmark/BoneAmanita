@@ -4,7 +4,7 @@ import random
 from typing import Dict, Any
 from constants import Prisma
 from presets import BoneConfig
-from struts import ux, safe_get
+from struts import ux, ux_format, safe_get
 from core import LoreManifest
 
 class KintsugiProtocol:
@@ -70,26 +70,23 @@ class KintsugiProtocol:
             r_alc = float(safe_get(cfg, "REDUCTION_ALCHEMY_FACTOR", 0.8))
             reduction = severity * r_alc
             atp_gain = reduction * float(safe_get(cfg, "ALCHEMY_ATP_FACTOR", 15.0))
-            msg_raw = ux("protocol_strings", "kintsugi_alchemy")
-            msg = f"{Prisma.VIOLET}{msg_raw.format(target=target, boost=atp_gain)}{Prisma.RST}"
-            log_alc = ux("protocol_strings", "kintsugi_log_alchemy")
-            if log_alc: healed_log.append(log_alc.format(target=target))
+            msg = f"{Prisma.VIOLET}{ux_format('protocol_strings', 'kintsugi_alchemy', target=target, boost=atp_gain)}{Prisma.RST}"
+            if log_alc := ux_format("protocol_strings", "kintsugi_log_alchemy", target=target):
+                healed_log.append(log_alc)
         elif pathway == self.PATH_INTEGRATION:
             reduction = float(safe_get(cfg, "REDUCTION_INTEGRATION", 2.0))
             if soul_ref:
                 soul_ref.traits.adjust("WISDOM", 0.1)
-                log_wis = ux("protocol_strings", "kintsugi_log_wisdom")
-                if log_wis: healed_log.append(log_wis)
-            msg_raw = ux("protocol_strings", "kintsugi_mercy")
-            msg = f"{Prisma.OCHRE}{msg_raw.format(target=target)}{Prisma.RST}"
-            log_int = ux("protocol_strings", "kintsugi_log_integration")
-            if log_int: healed_log.append(log_int.format(target=target))
+                if log_wis := ux("protocol_strings", "kintsugi_log_wisdom"):
+                    healed_log.append(log_wis)
+            msg = f"{Prisma.OCHRE}{ux_format('protocol_strings', 'kintsugi_mercy', target=target)}{Prisma.RST}"
+            if log_int := ux_format("protocol_strings", "kintsugi_log_integration", target=target):
+                healed_log.append(log_int)
         else:
             reduction = float(safe_get(cfg, "REDUCTION_SCAR", 0.5))
-            msg_raw = ux("protocol_strings", "kintsugi_scar")
-            msg = f"{Prisma.GRY}{msg_raw}{Prisma.RST}"
-            log_scar = ux("protocol_strings", "kintsugi_log_scar")
-            if log_scar: healed_log.append(log_scar.format(target=target))
+            msg = f"{Prisma.GRY}{ux('protocol_strings', 'kintsugi_scar')}{Prisma.RST}"
+            if log_scar := ux_format("protocol_strings", "kintsugi_log_scar", target=target):
+                healed_log.append(log_scar)
         trauma_accum[target] = max(0.0, severity - reduction)
         result = {"success": True, "msg": msg, "healed": healed_log}
         if atp_gain > 0:

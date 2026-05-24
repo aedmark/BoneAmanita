@@ -15,7 +15,7 @@ from mechanics.projector import beautify_thoughts
 from mechanics.tools import RandomRetrievalNavigator, LibraryGraph
 from mechanics.pragmatics import ThePragmatist
 from presets import BoneConfig, BonePresets
-from struts import safe_get, safe_set, ux
+from struts import ux
 
 @dataclass
 class CortexServices:
@@ -45,7 +45,9 @@ class TheCortex:
         self.cfg = services.config_ref or BoneConfig
         self.events = services.events
         self.dialogue_buffer = []
-        self.MAX_HISTORY = int(safe_get(safe_get(self.cfg, "CORTEX", {}), "MAX_HISTORY_LENGTH", 15))
+        is_cfg_dict = isinstance(self.cfg, dict)
+        c_cfg = self.cfg.get("CORTEX", {}) if is_cfg_dict else getattr(self.cfg, "CORTEX", {})
+        self.MAX_HISTORY = int(c_cfg.get("MAX_HISTORY_LENGTH", 15) if isinstance(c_cfg, dict) else getattr(c_cfg, "MAX_HISTORY_LENGTH", 15))
         self.modulator = NeurotransmitterModulator(bio_ref=self.svc.bio, events_ref=self.events, config_ref=self.cfg)
         self.last_physics = {}
         self.last_shadow_nodes = []
@@ -65,7 +67,8 @@ class TheCortex:
         self.pragmatist = ThePragmatist(events_ref=self.events)
         from mechanics.dspycritic import DSPyCritic
         self.dspy_critic = DSPyCritic(config_ref=self.cfg)
-        if safe_get(self.cfg, "WEIGHT_CLASS", "HEAVYWEIGHT") == "LIGHTWEIGHT":
+        w_class = self.cfg.get("WEIGHT_CLASS", "HEAVYWEIGHT") if is_cfg_dict else getattr(self.cfg, "WEIGHT_CLASS", "HEAVYWEIGHT")
+        if w_class == "LIGHTWEIGHT":
             self.dspy_critic.enabled = False
             if self.events:
                 self.events.log(
@@ -126,15 +129,10 @@ class TheCortex:
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
         is_boot_sequence = "SYSTEM_BOOT" in user_input
-        context_limit = int(safe_get(safe_get(self.cfg, "CORTEX", {}), "MAX_INPUT_CHARS", 15000))
-        phys_proxy = {}
-        if isinstance(ctx.physics, dict):
-            phys_proxy = dict(ctx.physics)
-        else:
-            phys_proxy = ctx.physics.to_dict() if hasattr(ctx.physics, "to_dict") else {}
-            for k, v in vars(ctx.physics).items():
-                if not k.startswith("_") and k not in phys_proxy:
-                    phys_proxy[k] = v
+        is_cfg_dict = isinstance(self.cfg, dict)
+        c_cfg = self.cfg.get("CORTEX", {}) if is_cfg_dict else getattr(self.cfg, "CORTEX", {})
+        context_limit = int(c_cfg.get("MAX_INPUT_CHARS", 15000) if isinstance(c_cfg, dict) else getattr(c_cfg, "MAX_INPUT_CHARS", 15000))
+        phys_proxy = dict(ctx.physics) if isinstance(ctx.physics, dict) else (ctx.physics.to_dict() if hasattr(ctx.physics, "to_dict") else {k: v for k, v in vars(ctx.physics).items() if not k.startswith("_")})
         sim_result = {
             "physics": phys_proxy,
             "bio": getattr(ctx, "bio_result", {}),
@@ -185,8 +183,8 @@ class TheCortex:
         full_state = self.gather_state(sim_result)
         phys_state = full_state.get("physics", {})
         if self.svc.bio and hasattr(self.svc.bio, "mito"):
-            tick_atp = float(safe_get(phys_state, "delta_atp", 0.0))
-            tick_ros = float(safe_get(phys_state, "delta_ros", 0.0))
+            tick_atp = float(phys_state.get("delta_atp", 0.0))
+            tick_ros = float(phys_state.get("delta_ros", 0.0))
             if tick_atp != 0.0:
                 self.svc.bio.mito.adjust_atp(tick_atp, "Creative Determinant Tick")
             if tick_ros != 0.0:
@@ -194,19 +192,20 @@ class TheCortex:
         if not is_system:
             eng = self.svc.orchestrator.eng
             efficiency = getattr(self.svc.host_stats, "efficiency_index", 1.0) if self.svc.host_stats else 1.0
-            novelty = float(safe_get(phys_state, "novelty", 0.0))
+            novelty = float(phys_state.get("novelty", 0.0))
             dimension = eng.navi_sad.calculate_semantic_dimension(efficiency, novelty)
             phys_state["omega_r"] = dimension
             lattice_u = getattr(getattr(eng, "shared_lattice", None), "u", None)
-            user_exhaust = float(lattice_u.E) if lattice_u and hasattr(lattice_u, "E") else float(phys_state.get("exhaustion", 0.0))
+            user_exhaust = float(lattice_u.E) if lattice_u and hasattr(lattice_u, "E") else float(
+                phys_state.get("exhaustion", 0.0))
             resonance_delta = float(phys_state.get("resonance", 0.5))
             if hasattr(eng, "governor"):
                 beth_index = eng.governor.calculate_coupling(phi=min(1.0, dimension / 2.0), resonance_delta=resonance_delta, user_exhaustion=user_exhaust)
                 phys_state["beth_index"] = beth_index
                 phys_state["macro_policy"] = eng.governor.get_policy_shift()
-        f_drag = float(safe_get(phys_state, "narrative_drag", 0.0))
-        chi_val = float(safe_get(phys_state, "chi", safe_get(phys_state, "entropy", 0.0)))
-        m_a = float(safe_get(phys_state, "m_a", 0.0))
+        f_drag = float(phys_state.get("narrative_drag", 0.0))
+        chi_val = float(phys_state.get("chi", phys_state.get("entropy", 0.0)))
+        m_a = float(phys_state.get("m_a", 0.0))
         if f_drag > 1.5 or chi_val > 0.8:
             reject_msg = ux("cortex_strings", "gordon_anchor_lock", default="[GORDON - The Anchor]: Frequency too high. Tensegrity Anchor engaged. I am locking the architecture. Take a breath and lower your narrative friction before we proceed.")
             if self.events:
@@ -238,13 +237,14 @@ class TheCortex:
             self._apply_boot_overlay(full_state, user_input)
             modifiers["include_inventory"] = False
         phys = full_state.get("physics", {})
+        b_voltage = float(phys.get("voltage", 5.0))
         llm_params = self.modulator.modulate(
-            base_voltage=float(safe_get(phys, "voltage", 5.0)),
-            latency_penalty=(getattr(self.svc.host_stats, "latency", 0.0)
+            base_voltage=b_voltage, latency_penalty=(getattr(self.svc.host_stats, "latency", 0.0)
                              if self.svc.host_stats else 0.0), physics_state=phys, )
         if is_boot_sequence:
             llm_params.update({"temperature": 0.7, "top_p": 0.95})
-        if llm_params.get("max_tokens", 4096) < 300 or float(phys.get("p", 100.0)) < 20.0:
+        p_val = float(phys.get("p", 100.0))
+        if llm_params.get("max_tokens", 4096) < 300 or p_val < 20.0:
             full_state["mind"].setdefault("style_directives", []).append("CRITICAL: You are exhausted. You must conclude your thought in under 3 sentences.")
             llm_params["max_tokens"] = min(400, llm_params.get("max_tokens", 4096))
         user_input = sim_result.get("mutated_input", user_input)
@@ -281,7 +281,7 @@ class TheCortex:
                     raw_resp, user_input)
             else:
                 final_text, inv_logs = raw_resp, []
-            stamina_val = float(safe_get(phys_state, "p", 100.0))
+            stamina_val = float(phys_state.get("p", 100.0))
             final_text, needs_rewrite = self.pragmatist.enforce_maxims(final_text, user_input, phys_state, stamina_val)
             is_faithful, judge_reason = True, ""
             if needs_rewrite:
@@ -307,8 +307,8 @@ class TheCortex:
                                 f"{Prisma.OCHRE}[CRITIC OFFLINE]: DSPy failed to parse. Bypassing audit.{Prisma.RST}",
                                 "SYS")
                     if is_faithful:
-                        e_u = float(safe_get(phys_state, "exhaustion", 0.0))
-                        beta = float(safe_get(phys_state, "beta_index", safe_get(phys_state, "contradiction", 0.0)))
+                        e_u = float(phys_state.get("exhaustion", 0.0))
+                        beta = float(phys_state.get("beta_index", phys_state.get("contradiction", 0.0)))
                         if e_u > 0.6 or beta > 0.7:
                             is_faithful, judge_reason = self._run_affective_audit(
                                 user_input, final_text, e_u, beta)
@@ -344,14 +344,11 @@ class TheCortex:
                 final_output = ux("brain_strings", "cortex_tangled") or fallback_msg
                 extracted_logs.append(
                     "[SYSTEM MERCY RULE]: Rejection loop broken. Releasing tension. Dropping Drag to 0.0.")
-                eng_ref = getattr(self.svc.orchestrator, "eng", None)
-                obs_ref = getattr(eng_ref, "observer", None) if eng_ref else None
-                if obs_packet := getattr(obs_ref, "last_physics_packet", None):
-                    safe_set(obs_packet, "narrative_drag", 0.0)
                 if self.last_physics:
-                    safe_set(self.last_physics, "narrative_drag", 0.0)
-                if hasattr(ctx, "physics") and ctx.physics:
-                    safe_set(ctx.physics, "narrative_drag", 0.0)
+                    if isinstance(self.last_physics, dict):
+                        self.last_physics["narrative_drag"] = 0.0
+                    else:
+                        setattr(self.last_physics, "narrative_drag", 0.0)
                 break
             rejection_reason = val_res.get("feedback_instruction") or val_res.get(
                 "replacement", "Lattice structural crime.")
@@ -409,7 +406,10 @@ class TheCortex:
             if bureau and "BUREAU" not in suppressed:
                 try:
                     phys = full_state.get("physics", {})
-                    safe_set(phys, "raw_text", final_output)
+                    if isinstance(phys, dict):
+                        phys["raw_text"] = final_output
+                    else:
+                        setattr(phys, "raw_text", final_output)
                     audit = bureau.audit(phys, {"health": 100}, origin="SYSTEM")
                     if audit and "ui" in audit:
                         sim_result["ui"] += f"\n\n{audit['ui']}"
@@ -434,29 +434,46 @@ class TheCortex:
                 sim_result.setdefault("mind", {})["lens"] = "JESTER"
                 if "ui" in sim_result:
                     sim_result["ui"] += f"\n\n{Prisma.VIOLET}[FALSE COHESION BREAK: The Jester has seized the architecture.]{Prisma.RST}"
+        if not isinstance(ctx.physics, dict):
+            for k, v in sim_result.get("physics", {}).items():
+                setattr(ctx.physics, k, v)
+        elif isinstance(ctx.physics, dict):
+            ctx.physics.update(sim_result.get("physics", {}))
         return sim_result
 
+    def _run_council_debate(self, user_input: str) -> Tuple[str, List[str]]:
+        eng_ref = getattr(self.svc.orchestrator, "eng", None)
+        council_ref = getattr(eng_ref, "council", None) or getattr(self.svc.village, "council", None)
+        if not council_ref:
+            return "The Parliament doors are sealed. No voices respond.", [
+                "[COUNCIL ERROR]: CouncilChamber not found in architecture."]
+        phys = getattr(self, "last_physics", {})
+        bio_state = {
+            "stamina": getattr(getattr(self.svc.bio, "biometrics", None), "stamina", 100.0)} if self.svc.bio else {}
+        transcript, adjustments, mandates = council_ref.convene(user_input, phys, bio_state)
+        for key, val in adjustments.items():
+            curr_val = float(phys.get(key, 0.0))
+            phys[key] = curr_val + val
+        final_text = "\n\n".join(transcript)
+        meta_logs = [f"The Council's Latest Mandate: {m.get('action', m.get('type', 'UNKNOWN'))}" for m in mandates]
+        return final_text, meta_logs
+
     def _run_affective_audit(self, user_input: str, final_text: str, e_u: float, beta: float) -> Tuple[bool, str]:
-        affect_prompt = ("SYSTEM_INSTRUCTION: You are the Affective Real-Time Critic.\n"
-                         f"The user is currently highly exhausted or holding heavy emotional contradiction (Exhaustion: {e_u:.2f}, Tension: {beta:.2f}).\n"
-                         f"USER INPUT: '{user_input}'\n"
-                         f"SYSTEM OUTPUT: '{final_text}'\n\n"
-                         "EVALUATION: Does the system output demand too much cognitive load? Is it lecturing, overly verbose, pushing toxic positivity, or failing to hold the silence?\n"
-                         "If it is too heavy/demanding, output 'FAIL: [1 sentence reason]'. If it is appropriately gentle and spacious, output 'PASS'.")
+        affect_prompt = ("SYSTEM_INSTRUCTION: You are a Real-Time Emotion Critic.\n"
+            f"The user is currently highly exhausted or holding heavy emotional contradiction (Exhaustion: {e_u:.2f}, Tension: {beta:.2f}).\n"
+            f"USER INPUT: '{user_input}'\n"
+            f"SYSTEM OUTPUT: '{final_text}'\n\n"
+            "EVALUATION: Does the system output demand too much cognitive load? Is it lecturing, overly verbose, pushing toxic positivity, or failing to hold the silence?\n"
+            "If it is too heavy/demanding, output 'FAIL: [1 sentence reason]'. If it is appropriately gentle and spacious, output 'PASS'.")
         try:
-            affect_res = self.llm.generate(affect_prompt, {
-                "temperature": 0.1,
-                "max_tokens": 50
-            }).strip()
+            affect_res = self.llm.generate(affect_prompt, {"temperature": 0.1, "max_tokens": 50}).strip()
             upper_res = affect_res.upper()
             if "FAIL" in upper_res:
                 fail_idx = upper_res.find("FAIL")
                 judge_reason = affect_res[fail_idx + 4:].lstrip(":- ").strip()
                 self.modulator.current_chem.serotonin = min(1.0, self.modulator.current_chem.serotonin + 0.20)
                 if self.events:
-                    self.events.log(
-                        f"{Prisma.CYN}[AFFECTIVE GUARD]: Output was too heavy for the tired user. Generation blocked. Serotonin spiked (+0.20) to enforce calm and lucidity.{Prisma.RST}",
-                        "BIO")
+                    self.events.log(f"{Prisma.CYN}[AFFECTIVE GUARD]: Output was too heavy for the user. Generation blocked. Serotonin spiked to enforce calm and lucidity.{Prisma.RST}", "BIO")
                 return False, judge_reason
             return True, ""
         except Exception as e:
@@ -578,11 +595,14 @@ class TheCortex:
     def gather_state(self, sim_result: Dict[str, Any]) -> Dict[str, Any]:
         phys = sim_result.setdefault("physics", {})
         bio = sim_result.get("bio", {})
-        if bio:
-            mito_state = safe_get(bio.get("mito"), "state") or {}
-            phys["p"] = phys["stamina"] = safe_get(mito_state, "atp_pool", 100.0)
-            phys["ros"] = safe_get(mito_state, "ros_buildup", 0.0)
-            phys["h"] = safe_get(bio.get("biometrics"), "health", 100.0)
+        if bio and isinstance(bio, dict):
+            bio_mito = bio.get("mito", {})
+            mito_state = bio_mito.get("state", {}) if isinstance(bio_mito, dict) else getattr(bio_mito, "state", {})
+            is_ms_dict = isinstance(mito_state, dict)
+            phys["p"] = phys["stamina"] = mito_state.get("atp_pool", 100.0) if is_ms_dict else getattr(mito_state, "atp_pool", 100.0)
+            phys["ros"] = mito_state.get("ros_buildup", 0.0) if is_ms_dict else getattr(mito_state, "ros_buildup", 0.0)
+            bio_bio = bio.get("biometrics", {})
+            phys["h"] = bio_bio.get("health", 100.0) if isinstance(bio_bio, dict) else getattr(bio_bio, "health", 100.0)
         mind = sim_result.get("mind", {})
         world = sim_result.get("world", {})
         soul_data = sim_result.get("soul", {})
@@ -611,7 +631,7 @@ class TheCortex:
                 full_state)
         mind.setdefault("style_directives", [])
         traits = soul_data.get("traits", {})
-        if traits and isinstance(list(traits.values())[0], (int, float)):
+        if traits and isinstance(next(iter(traits.values())), (int, float)):
             dom_trait = max(traits, key=traits.get)
             if traits[dom_trait] > 0.6:
                 mind["style_directives"].append(
@@ -648,16 +668,16 @@ class TheCortex:
                     mind["style_directives"].append(msg)
         cortex_mem = getattr(self.svc.mind_memory, "ann", None)
         shadow_nodes = []
-        scope_val = float(safe_get(phys, "scope", 1.0))
-        depth_val = float(safe_get(phys, "depth", 0.0))
-        omega_r = float(safe_get(phys, "omega_r", 0.5))
-        query_vec = safe_get(phys, "vector", {})
+        scope_val = float(phys.get("scope", 1.0))
+        depth_val = float(phys.get("depth", 0.0))
+        omega_r = float(phys.get("omega_r", 0.5))
+        query_vec = phys.get("vector", {})
         if scope_val > 0.6 or depth_val > 0.6:
             if scope_val > 0.8:
                 phys["lateral_search"] = True
             if cortex_mem and getattr(cortex_mem, "is_trained", False) and query_vec:
                 ordered_keys = ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "E"]
-                q_list = [float(query_vec.get(k, 0.0)) for k in ordered_keys]
+                q_list = [float(query_vec.get(k, 0.0) if isinstance(query_vec, dict) else getattr(query_vec, k, 0.0)) for k in ordered_keys]
                 shadow_nodes = cortex_mem.query_neighborhood(q_list, k=2, resonance_threshold=max(0.2, 0.8 - omega_r), physics_state=phys)
             if not shadow_nodes and hasattr(self.svc.mind_memory, "graph") and self.svc.mind_memory.graph:
                 keys = list(self.svc.mind_memory.graph.keys())
@@ -668,8 +688,8 @@ class TheCortex:
             phys["shadow_nodes_offered"] = shadow_concepts
             phys["shadow_cast"] = shadow_str
             self.last_shadow_nodes = shadow_concepts
-            v_level = float(safe_get(phys, "voltage", 0.0))
-            chi_level = float(safe_get(phys, "chi", safe_get(phys, "entropy", 0.0)))
+            v_level = float(phys.get("voltage", 0.0))
+            chi_level = float(phys.get("chi", phys.get("entropy", 0.0)))
             if v_level > 80.0 and chi_level > 0.7:
                 mind["style_directives"].append(
                     f"OVERRIDE: Standard logic has failed. You are operating under extreme Voltage and Chaos. We have abandoned linear memory. Weave these highly explosive, orthogonal structural concepts into your answer to shatter the loop: [{shadow_str}].")

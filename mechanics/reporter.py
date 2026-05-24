@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Tuple
 from core import Prisma
-from struts import safe_get, ux
+from struts import ux
 from physics import ChromaScope
 from presets import BoneConfig
 from mechanics.projector import Projector, SoulDashboard
@@ -10,9 +10,11 @@ from mechanics.projector import Projector, SoulDashboard
 class PulseReader:
     @staticmethod
     def derive_mood(bio_state: Dict, config_ref=None) -> str:
-        cfg = safe_get(config_ref or BoneConfig, "GUI", {})
-        c_warn = float(safe_get(cfg, "CHEM_HIGH_WARN", 0.6))
-        a_warn = float(safe_get(cfg, "ATP_EXHAUSTED_WARN", 20.0))
+        cfg_obj = config_ref or BoneConfig
+        cfg = cfg_obj.get("GUI", {}) if isinstance(cfg_obj, dict) else getattr(cfg_obj, "GUI", {})
+        is_cfg_dict = isinstance(cfg, dict)
+        c_warn = float(cfg.get("CHEM_HIGH_WARN", 0.6) if is_cfg_dict else getattr(cfg, "CHEM_HIGH_WARN", 0.6))
+        a_warn = float(cfg.get("ATP_EXHAUSTED_WARN", 20.0) if is_cfg_dict else getattr(cfg, "ATP_EXHAUSTED_WARN", 20.0))
         chem = bio_state.get("chem", {})
         if chem.get("COR", 0) > c_warn:
             return ux("pulse_reader", "mood_defensive")
@@ -26,12 +28,17 @@ class PulseReader:
 
     @staticmethod
     def analyze_voltage(voltage: float, config_ref=None) -> Tuple[str, str]:
-        cfg = safe_get(config_ref or BoneConfig, "GUI", {})
-        if voltage > float(safe_get(cfg, "V_CRIT", 20.0)):
+        cfg_obj = config_ref or BoneConfig
+        cfg = cfg_obj.get("GUI", {}) if isinstance(cfg_obj, dict) else getattr(cfg_obj, "GUI", {})
+        is_cfg_dict = isinstance(cfg, dict)
+        v_crit = float(cfg.get("V_CRIT", 20.0) if is_cfg_dict else getattr(cfg, "V_CRIT", 20.0))
+        v_high = float(cfg.get("V_HIGH", 15.0) if is_cfg_dict else getattr(cfg, "V_HIGH", 15.0))
+        v_low = float(cfg.get("V_LOW", 5.0) if is_cfg_dict else getattr(cfg, "V_LOW", 5.0))
+        if voltage > v_crit:
             key = "voltage_critical"
-        elif voltage > float(safe_get(cfg, "V_HIGH", 15.0)):
+        elif voltage > v_high:
             key = "voltage_high"
-        elif voltage < float(safe_get(cfg, "V_LOW", 5.0)):
+        elif voltage < v_low:
             key = "voltage_low"
         else:
             key = "voltage_nominal"
@@ -95,7 +102,9 @@ class GeodesicRenderer:
             else:
                 world_loc = "UNKNOWN"
         cfg = getattr(self.eng, "config", {})
-        fallback_depth = mode_settings.get("default_ui_depth", safe_get(cfg, "default_ui_depth", "WARM"))
+        is_cfg_dict = isinstance(cfg, dict)
+        def_depth = cfg.get("default_ui_depth", "WARM") if is_cfg_dict else getattr(cfg, "default_ui_depth", "WARM")
+        fallback_depth = mode_settings.get("default_ui_depth", def_depth)
         current_ui_depth = getattr(self.eng, "ui_mode", fallback_depth)
         soul = getattr(self.eng, "soul", None)
         anchor = getattr(soul, "anchor", None)
@@ -110,26 +119,23 @@ class GeodesicRenderer:
             data_ctx["paradox"] = {"active": pe.is_active, "yield": pe.paradox_yield, "beta_max": pe.beta_max}
         consultant = getattr(self.eng, "consultant", None)
         if c_state := getattr(consultant, "state", None) if consultant else None:
-            data_ctx["vsl"] = {
-                "E": getattr(c_state, "E", 0.2),
-                "B": getattr(c_state, "B", 0.4),
-                "L": getattr(c_state, "L", 0.0),
-                "O": getattr(c_state, "O", 1.0),
-            }
+            data_ctx["vsl"] = {"E": getattr(c_state, "E", 0.2), "B": getattr(c_state, "B", 0.4),
+                               "L": getattr(c_state, "L", 0.0), "O": getattr(c_state, "O", 1.0), }
         data_ctx["lattice_strain"] = self._calculate_lattice_strain(physics)
-        mode = str(safe_get(cfg, "boot_mode", "ADVENTURE")).upper()
+        mode = str(cfg.get("boot_mode", "ADVENTURE") if is_cfg_dict else getattr(cfg, "boot_mode", "ADVENTURE")).upper()
         stack = getattr(ctx, "reality_stack", None)
         current_depth = getattr(stack, "current_depth", 1) if stack else 1
         if mode == "TECHNICAL":
             return self.projector.render_technical(physics, data_ctx, mind_tuple)
         labels = ux("renderer", f"mode_labels_{mode.lower()}", ux("projector", "default_labels", {})).copy()
         labels["SHOW_PHYSICS"] = mode_settings.get("allow_metrics", False)
-        return self.projector.render({"physics": physics}, data_ctx, mind_tuple, reality_depth=current_depth,
-                                     labels=labels)
+        return self.projector.render({"physics": physics}, data_ctx, mind_tuple, reality_depth=current_depth, labels=labels)
 
     def _calculate_lattice_strain(self, physics: Dict) -> float:
-        observer_data = safe_get(physics, "observer", {})
-        q_matrix = safe_get(observer_data, "Q_n", [])
+        is_phys_dict = isinstance(physics, dict)
+        observer_data = physics.get("observer", {}) if is_phys_dict else getattr(physics, "observer", {})
+        is_obs_dict = isinstance(observer_data, dict)
+        q_matrix = observer_data.get("Q_n", []) if is_obs_dict else getattr(observer_data, "Q_n", [])
         if not isinstance(q_matrix, list) or not q_matrix or not isinstance(q_matrix[0], list):
             return 0.0
         return sum(float(abs(v)) for i, row in enumerate(q_matrix) for j, v in enumerate(row) if i != j)
@@ -148,9 +154,11 @@ class GeodesicRenderer:
         current_ui_depth = getattr(self.eng, "ui_mode", mode_settings.get("default_ui_depth", "WARM"))
         if current_ui_depth in ("IDLE", "WARM"):
             cfg = getattr(self.eng, "config", {})
-            gui_cfg = safe_get(cfg, "GUI", {})
+            is_cfg_dict = isinstance(cfg, dict)
+            gui_cfg = cfg.get("GUI", {}) if is_cfg_dict else getattr(cfg, "GUI", {})
+            is_gui_dict = isinstance(gui_cfg, dict)
             default_tags = ("[BIO]", "[CRITIC]", "[SYS]", "[MERCY]", "(The system feels")
-            muted_tags = safe_get(gui_cfg, "MUTED_TAGS_WARM", default_tags)
+            muted_tags = gui_cfg.get("MUTED_TAGS_WARM", default_tags) if is_gui_dict else getattr(gui_cfg, "MUTED_TAGS_WARM", default_tags)
             all_logs = [l for l in all_logs if not any(tag in l for tag in muted_tags)]
         if not all_logs:
             return []
@@ -186,22 +194,22 @@ class CachedRenderer:
         self._last_tick = -1
 
     def render_frame(self, ctx, tick: int, events: List[Dict]) -> Dict:
-        voltage = float(safe_get(ctx.physics, "voltage", 0.0))
-        cfg = safe_get(self.cfg, "GUI", {})
-        cache_expired = (tick - self._last_tick) >= int(safe_get(cfg, "UI_CACHE_LIFETIME", 5))
-        if voltage > float(safe_get(cfg, "HIGH_VOLTAGE_REFRESH", 15.0)) or events or cache_expired:
+        is_phys_dict = isinstance(ctx.physics, dict)
+        voltage = float(ctx.physics.get("voltage", 0.0) if is_phys_dict else getattr(ctx.physics, "voltage", 0.0))
+        cfg = self.cfg.get("GUI", {}) if isinstance(self.cfg, dict) else getattr(self.cfg, "GUI", {})
+        is_cfg_dict = isinstance(cfg, dict)
+        cache_lifetime = int(cfg.get("UI_CACHE_LIFETIME", 5) if is_cfg_dict else getattr(cfg, "UI_CACHE_LIFETIME", 5))
+        cache_expired = (tick - self._last_tick) >= cache_lifetime
+        high_v_refresh = float(cfg.get("HIGH_VOLTAGE_REFRESH", 15.0) if is_cfg_dict else getattr(cfg, "HIGH_VOLTAGE_REFRESH", 15.0))
+        if voltage > high_v_refresh or events or cache_expired:
             frame = self._base.render_frame(ctx, tick, events)
             self._cached_ui_content = frame["ui"]
             self._last_tick = tick
             return frame
         bio = getattr(ctx, "bio_result", None)
         atp = bio.get("atp", 0.0) if isinstance(bio, dict) else 0.0
-        return {
-            "type": "GEODESIC_FRAME",
-            "ui": self._cached_ui_content,
-            "logs": self._base.compose_logs(ctx.logs, events, tick),
-            "metrics": self._base.eng.get_metrics(atp),
-        }
+        return {"type": "GEODESIC_FRAME", "ui": self._cached_ui_content,
+                "logs": self._base.compose_logs(ctx.logs, events, tick), "metrics": self._base.eng.get_metrics(atp), }
 
 def get_renderer(engine_ref, chroma_ref, strunk_ref, valve_ref=None, mode="STANDARD"):
     target_cfg = getattr(engine_ref, "config", BoneConfig)

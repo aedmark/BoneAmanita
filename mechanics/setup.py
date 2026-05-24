@@ -46,9 +46,11 @@ class ConfigWizard:
     @staticmethod
     def _run_setup():
 
-        from struts import safe_get
-        cfg = safe_get(BoneConfig, "GUI", {})
-        setup_speed = float(safe_get(cfg, "RENDER_SPEED_SETUP", 0.02))
+        cfg_obj = BoneConfig
+        cfg = cfg_obj.get("GUI", {}) if isinstance(cfg_obj, dict) else getattr(cfg_obj, "GUI", {})
+        is_cfg_dict = isinstance(cfg, dict)
+        setup_speed = float(
+            cfg.get("RENDER_SPEED_SETUP", 0.02) if is_cfg_dict else getattr(cfg, "RENDER_SPEED_SETUP", 0.02))
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         seq_msg = ux("main_strings", "init_seq")
         hyp_msg = ux("main_strings", "init_hypervisor")

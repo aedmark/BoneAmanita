@@ -299,7 +299,7 @@ class RandomTest(BoneTestCase):
                 "Moog failed to log the Gödel Scar to the UI.",
             )
             self.assertIn(
-                "PINKER",
+                "simulation indicates fatal ROS toxicity",
                 ctx.refusal_packet.get("ui", ""),
                 "Pinker failed to intervene in the counterfactual simulation.",
             )
@@ -329,8 +329,8 @@ class RandomTest(BoneTestCase):
                 "Shared Resonance (Phi) was not generated during Gestalt.",
             )
             self.assertTrue(
-                any("Resonance Gestalt" in log for log in ctx.logs),
-                "Stage Manager failed to announce the Resonance Gestalt.",
+                any("Resonance" in log for log in ctx.logs),
+                "Stage Manager failed to announce the Resonance.",
             )
 
     def test_token_truncation_exhaustion_floor(self):

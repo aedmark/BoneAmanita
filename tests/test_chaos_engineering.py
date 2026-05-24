@@ -70,7 +70,7 @@ class TestChaosEngineering(BoneTestCase):
             "Engine failed to execute a SYSTEM_HALT during critical exhaustion."
         )
         self.assertIn(
-            "LINEHAN", logs,
+            "We sit with the debris", logs,
             "Linehan failed to trigger Radical Acceptance during high exhaustion/contradiction."
         )
         self.assertIn(

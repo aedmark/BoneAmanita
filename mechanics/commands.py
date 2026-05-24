@@ -1,4 +1,4 @@
-"""commands.py"""
+"""mechanics/commands.py"""
 
 import time
 import shlex
@@ -513,8 +513,8 @@ class CommandProcessor:
             return True
         try:
             history = "\n".join(cortex.dialogue_buffer)
-            prompt = ("SYSTEM_INSTRUCTION: You are the archivist of a surreal cybernetic journey. "
-                      "Read the following recent dialogue history and write a whimsical, reflective, first-person diary entry (1-2 paragraphs) "
+            prompt = ("SYSTEM_INSTRUCTION: You are the archivist of a surreal journey. "
+                      "Read the following recent dialogue history and write a whimsical, reflective, first-person diary entry (1-5 paragraphs) "
                       "summarizing the events and emotional undercurrents so far. Focus on the mood, the strange tension, and the overarching theme. "
                       "DO NOT use AI-isms. Write like a traveler recording a dream.\n\n"
                       f"DIALOGUE HISTORY:\n{history}")

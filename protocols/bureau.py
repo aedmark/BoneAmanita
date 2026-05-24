@@ -4,7 +4,7 @@ import random
 import re
 from typing import Dict, Tuple, Optional, Any
 from core import LoreManifest
-from struts import ux, safe_get
+from struts import ux, ux_format, safe_get
 from presets import BoneConfig
 from constants import Prisma
 
@@ -100,16 +100,16 @@ class TheBureau:
             int_prefix_str = ux("protocol_strings", "bureau_prefix_internal")
             prefix = f"{Prisma.RED}{int_prefix_str}"
             bureau_resp = ux("protocol_strings", "bureau_sys_violation")
-        filed_msg = ux("protocol_strings", "bureau_filed")
-        ui_msg = f"{prefix}: {bureau_resp}{Prisma.RST}\n   {Prisma.WHT}{filed_msg.format(form=selected_form, origin=origin)}{Prisma.RST}"
+        filed_msg = ux_format("protocol_strings", "bureau_filed", form=selected_form, origin=origin)
+        ui_msg = f"{prefix}: {bureau_resp}{Prisma.RST}\n   {Prisma.WHT}{filed_msg}{Prisma.RST}"
         if evidence:
-            ev_msg = ux("protocol_strings", "bureau_evidence")
-            ui_msg += f"\n   {Prisma.RED}{ev_msg.format(evidence=', '.join(evidence))}{Prisma.RST}"
-        log_msg = ux("protocol_strings", "bureau_log")
+            ev_msg = ux_format("protocol_strings", "bureau_evidence", evidence=', '.join(evidence))
+            ui_msg += f"\n   {Prisma.RED}{ev_msg}{Prisma.RST}"
+        log_msg = ux_format("protocol_strings", "bureau_log", form=selected_form, origin=origin, tax=tax)
         return {
             "status": "AUDITED",
             "ui": ui_msg,
-            "log": log_msg.format(form=selected_form, origin=origin, tax=tax),
+            "log": log_msg,
             "atp_gain": -tax,
         }
 

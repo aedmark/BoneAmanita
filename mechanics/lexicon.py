@@ -1,4 +1,4 @@
-"""lexicon.py"""
+"""mechanics/lexicon.py"""
 
 import json
 import os

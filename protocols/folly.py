@@ -5,7 +5,7 @@ from collections import deque, Counter
 from typing import Dict, Tuple, Optional, Any
 from constants import Prisma
 from presets import BoneConfig
-from struts import ux, safe_get
+from struts import ux, ux_format, safe_get
 
 class TheFolly:
     def __init__(self, config_ref=None):
@@ -97,9 +97,9 @@ class TheFolly:
         if abstract_words := [w for w in clean_words if w in abstract_set]:
             folly_cfg = safe_get(self.cfg, "FOLLY", {})
             yield_val = float(safe_get(folly_cfg, "YIELD_ABSTRACT", 2.0))
-            msg = (
-                f"{Prisma.GRY}{(ux('protocol_strings', 'folly_sighs') or '').format(target=random.choice(abstract_words).upper())}{Prisma.RST}\n"
-                f"   {Prisma.GRY}{(ux('protocol_strings', 'folly_chalk') or '').format(yield_val=yield_val)}{Prisma.RST}")
+            msg1 = ux_format("protocol_strings", "folly_sighs", target=random.choice(abstract_words).upper())
+            msg2 = ux_format("protocol_strings", "folly_chalk", yield_val=yield_val)
+            msg = f"{Prisma.GRY}{msg1}{Prisma.RST}\n   {Prisma.GRY}{msg2}{Prisma.RST}"
             return "GRUEL", msg, yield_val, None
         msg = (f"{Prisma.OCHRE}{ux('protocol_strings', 'folly_indigestion') or ''}{Prisma.RST}\n"
                f"   {Prisma.GRY}{ux('protocol_strings', 'folly_cannot_grind') or ''}{Prisma.RST}\n"

@@ -50,13 +50,12 @@ class GatekeeperPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "GATEKEEP"
-        target_cfg = getattr(self.eng, "config", BoneConfig)
-        self.gatekeeper = TheGatekeeper(self.eng.lex, config_ref=target_cfg)
+        self.gatekeeper = TheGatekeeper(self.eng.lex, config_ref=self.eng.config)
 
     def run(self, ctx: CycleContext):
         if ctx.is_system_event:
             return ctx
-        anchor = getattr(getattr(self.eng, "soul", None), "anchor", None)
+        anchor = self.eng.soul.anchor
         if anchor and anchor.agency_lock:
             passed = anchor.assess_humanity(ctx.input_text)
             if not passed:
@@ -116,14 +115,15 @@ class MachineryPhase(SimulationPhase):
         if ctx.is_system_event:
             return ctx
         phys_dict = _safe_dict(ctx.physics)
-        if getattr(self.eng, "critics", None) and (
-        review := self.eng.critics.audit_performance(phys_dict, self.eng.tick_count)):
+        critics_ref = getattr(self.eng.village, "critics", None)
+        if critics_ref and (review := critics_ref.audit_performance(phys_dict, self.eng.tick_count)):
             ctx.log(review)
             good_icon = ux("cycle_strings", "machinery_critic_good_icon")
             ctx.physics.narrative_drag += -1.0 if good_icon in review else 1.0
         _, z_msg = 0.0, None
-        if getattr(self.eng, "zen", None):
-            boost, z_msg = self.eng.zen.raking_the_sand(phys_dict, ctx.bio_result)
+        zen_ref = getattr(self.eng.village, "zen", None)
+        if zen_ref:
+            boost, z_msg = zen_ref.raking_the_sand(phys_dict, ctx.bio_result)
             if z_msg: ctx.log(z_msg)
             if boost > 0:
                 self.eng.bio.mito.state.membrane_potential = min(2.0, self.eng.bio.mito.state.efficiency_mod + (boost * 0.1))

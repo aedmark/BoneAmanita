@@ -186,40 +186,40 @@ class BoneConfig:
 
     def validate_integrity(self) -> List[str]:
         errors = []
-        bounds = [("VOLTAGE_FLOOR", "VOLTAGE_MAX", 0.0, 100.0, "repair_floor_max"),
-                  ("DRAG_FLOOR", "DRAG_HALT", 0.0, self.MAX_DRAG_LIMIT, "repair_drag_halt")]
-        for floor, ceil, def_floor, def_ceil, ux_key in bounds:
-            f_val = float(getattr(self.PHYSICS, floor, def_floor))
-            c_val = float(getattr(self.PHYSICS, ceil, def_ceil))
-            setattr(self.PHYSICS, floor, f_val)
-            setattr(self.PHYSICS, ceil, c_val)
-            if f_val > c_val:
-                setattr(self.PHYSICS, floor, float(c_val))
-                if msg := ux("config_strings", ux_key, default=f"Repaired inverted boundary: {floor}"):
-                    errors.append(msg)
-        if getattr(self.BIO, "METABOLISM_RATE", 1.0) < 0.0:
-            setattr(self.BIO, "METABOLISM_RATE", 0.0)
+        p = self.PHYSICS
+        p.VOLTAGE_FLOOR = float(getattr(p, "VOLTAGE_FLOOR", 0.0))
+        p.VOLTAGE_MAX = float(getattr(p, "VOLTAGE_MAX", 100.0))
+        if p.VOLTAGE_FLOOR > p.VOLTAGE_MAX:
+            p.VOLTAGE_FLOOR = p.VOLTAGE_MAX
+            if msg := ux("config_strings", "repair_floor_max", default="Repaired inverted boundary: VOLTAGE_FLOOR"):
+                errors.append(msg)
+        p.DRAG_FLOOR = float(getattr(p, "DRAG_FLOOR", 0.0))
+        p.DRAG_HALT = float(getattr(p, "DRAG_HALT", self.MAX_DRAG_LIMIT))
+        if p.DRAG_FLOOR > p.DRAG_HALT:
+            p.DRAG_FLOOR = p.DRAG_HALT
+            if msg := ux("config_strings", "repair_drag_halt", default="Repaired inverted boundary: DRAG_FLOOR"):
+                errors.append(msg)
+        b = self.BIO
+        if getattr(b, "METABOLISM_RATE", 1.0) < 0.0:
+            b.METABOLISM_RATE = 0.0
             errors.append("Metabolism Rate inverted. Clamped to absolute zero.")
-        if getattr(self.BIO, "DECAY_RATE", 0.0) < 0.0:
-            setattr(self.BIO, "DECAY_RATE", 0.0)
+        if getattr(b, "DECAY_RATE", 0.0) < 0.0:
+            b.DECAY_RATE = 0.0
             errors.append("Decay Rate inverted. Clamped to absolute zero.")
         return errors
 
     def reconcile_state(self, physics_packet: Any):
         from struts import safe_get, safe_set
 
-        def _clamp(key, sub_key, default, floor_attr, ceil_attr, ceil_def):
+        def _clamp(key, sub_key, default, floor_val, ceil_val):
             val = safe_get(physics_packet, key)
             if val is None:
-                sub = safe_get(physics_packet, sub_key) or {}
-                val = safe_get(sub, key)
-            raw = float(val if val is not None else default)
-            floor_val = getattr(self.PHYSICS, floor_attr, 0.0)
-            ceil_val = getattr(self.PHYSICS, ceil_attr, ceil_def)
-            return max(floor_val, min(raw, ceil_val))
+                val = safe_get(safe_get(physics_packet, sub_key), key, default)
+            return max(floor_val, min(float(val if val is not None else default), ceil_val))
 
-        new_v = _clamp("voltage", "energy", 5.0, "VOLTAGE_FLOOR", "VOLTAGE_MAX", 100.0)
-        new_d = _clamp("narrative_drag", "space", 1.0, "DRAG_FLOOR", "DRAG_HALT", self.MAX_DRAG_LIMIT)
+        p = self.PHYSICS
+        new_v = _clamp("voltage", "energy", 5.0, getattr(p, "VOLTAGE_FLOOR", 0.0), getattr(p, "VOLTAGE_MAX", 100.0))
+        new_d = _clamp("narrative_drag", "space", 1.0, getattr(p, "DRAG_FLOOR", 0.0), getattr(p, "DRAG_HALT", self.MAX_DRAG_LIMIT))
         safe_set(physics_packet, "voltage", new_v)
         safe_set(physics_packet, "narrative_drag", new_d)
         return physics_packet

@@ -19,33 +19,25 @@ class MetabolismPhase(SimulationPhase):
     def run(self, ctx: CycleContext):
         if ctx.is_system_event:
             return ctx
-        if not hasattr(self.eng, "bio") or not self.eng.bio:
-            return ctx
-        mode_settings = getattr(self.eng, "mode_settings", {})
+        mode_settings = self.eng.mode_settings
         if not mode_settings.get("atp_drain_enabled", True):
-            atp_level = (self.eng.bio.mito.state.atp_pool
-                         if self.eng.bio and self.eng.bio.mito else 100.0)
-            ctx.bio_result = {"is_alive": True, "logs": [], "atp": atp_level}
+            ctx.bio_result = {"is_alive": True, "logs": [], "atp": self.eng.bio.mito.state.atp_pool}
             ctx.is_alive = True
             self._apply_healing(ctx)
             return ctx
         physics = ctx.physics
-        if hasattr(self.eng, "host_stats"):
-            self._apply_economic_stimulus(ctx, self.eng.host_stats.efficiency_index)
+        self._apply_economic_stimulus(ctx, self.eng.host_stats.efficiency_index)
         gov_msg = self.eng.bio.governor.shift(physics, self.eng.phys.dynamics.voltage_history, self.eng.tick_count)
         if gov_msg:
             self.eng.events.log(gov_msg, "GOV")
         physics.manifold = self.eng.bio.governor.mode
-        target_cfg = getattr(self.eng, "config", BoneConfig)
+        target_cfg = self.eng.config
         phys_cfg = safe_get(target_cfg, "PHYSICS", {})
         max_voltage = float(safe_get(phys_cfg, "VOLTAGE_MAX", 20.0))
-        bio_feedback = {"INTEGRITY": getattr(physics, "truth_ratio", 1.0),
-                        "STATIC": getattr(physics, "repetition", 0.0),
-                        "FORCE": getattr(physics, "voltage", 0.0) / max_voltage,
-                        "BETA": getattr(physics, "beta_index", 0.0),
-                        "PSI": getattr(physics, "psi", 0.0),
-                        "ENTROPY": getattr(physics, "entropy", 0.0),
-                        "VALENCE": getattr(physics, "valence", 0.0), }
+        bio_feedback = {"INTEGRITY": getattr(physics, "truth_ratio", 1.0), "STATIC": getattr(physics, "repetition", 0.0),
+            "FORCE": getattr(physics, "voltage", 0.0) / max_voltage, "BETA": getattr(physics, "beta_index", 0.0),
+            "PSI": getattr(physics, "psi", 0.0), "ENTROPY": getattr(physics, "entropy", 0.0),
+            "VALENCE": getattr(physics, "valence", 0.0), }
         metrics = self.eng.get_metrics()
         ctx.bio_result = self.eng.soma.digest_cycle(ctx.input_text,
             physics, bio_feedback, metrics["health"], metrics["stamina"],
@@ -74,8 +66,7 @@ class MetabolismPhase(SimulationPhase):
         amplification_penalty = mu * math.exp(m_a)
         total_tax = base_cost + amplification_penalty
         if total_tax > 0:
-            if hasattr(self.eng, "drain_atp"):
-                self.eng.drain_atp(total_tax)
+            self.eng.drain_atp(total_tax)
             msg = ux("cycle_strings", "metabolism_tax")
             log_msg = (
                 f"{Prisma.OCHRE}{msg.format(tax_burn=round(total_tax, 2))}{Prisma.RST}")
@@ -85,14 +76,14 @@ class MetabolismPhase(SimulationPhase):
 
     def _check_narcolepsy(self, ctx: CycleContext):
         atp = self.eng.bio.mito.state.atp_pool
-        target_cfg = getattr(self.eng, "config", BoneConfig)
+        target_cfg = self.eng.config
         bio_cfg = safe_get(target_cfg, "BIO", {})
         starvation = float(safe_get(bio_cfg, "ATP_STARVATION", 5.0))
         trigger = (atp < (starvation * 0.5)) or (self.eng.tick_count > 0 and self.eng.tick_count % 100 == 0)
-        if trigger and hasattr(self.eng.mind, "dreamer"):
+        if trigger and self.eng.mind.dreamer:
             msg_sleep = ux("cycle_strings", "metabolism_sleep")
             ctx.log(f"{Prisma.VIOLET}{msg_sleep}{Prisma.RST}")
-            soul_snap = _safe_dict(getattr(self.eng, "soul", {}))
+            soul_snap = _safe_dict(self.eng.soul)
             self.eng.mind.dreamer.enter_rem_cycle(soul_snap, bio_state={"atp": atp})
             defrag_msg = self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
             if defrag_msg:
@@ -129,11 +120,8 @@ class MetabolismPhase(SimulationPhase):
                 self.eng.bio.biometrics.health = max(0.0, self.eng.bio.biometrics.health - damage)
 
     def _apply_healing(self, ctx):
-        qualia = self.eng.soma.synesthesia.get_current_qualia(
-            getattr(ctx, "last_impulse", None))
-        current_stamina = getattr(self.eng, "stamina", 100.0)
-        if getattr(self.eng, "bio", None) and self.eng.bio.biometrics:
-            current_stamina = self.eng.bio.biometrics.stamina
+        qualia = self.eng.soma.synesthesia.get_current_qualia(ctx.last_impulse)
+        current_stamina = self.eng.bio.biometrics.stamina
         kintsugi_ref = getattr(self.eng.village, "kintsugi", None)
         if kintsugi_ref:
             cracked, koan = kintsugi_ref.check_integrity(current_stamina)
@@ -141,38 +129,32 @@ class MetabolismPhase(SimulationPhase):
                 msg = ux("cycle_strings", "metabolism_kintsugi")
                 ctx.log(f"{Prisma.YEL}{msg.format(koan=koan)}{Prisma.RST}")
             if kintsugi_ref.active_koan:
-                repair = kintsugi_ref.attempt_repair(ctx.physics, self.eng.trauma_accum,
-                                    self.eng.soul, qualia, lexicon_ref=self.eng.lex, )
+                repair = kintsugi_ref.attempt_repair(ctx.physics, self.eng.trauma_accum, self.eng.soul, qualia, lexicon_ref=self.eng.lex, )
                 if repair and repair["success"]:
                     ctx.log(repair["msg"])
-                    if hasattr(self.eng.mind.mem, "record_scar"):
-                        self.eng.mind.mem.record_scar(
-                            kintsugi_ref.active_koan or "Healed Rupture", ctx.physics)
-                target_cfg = getattr(self.eng, "config", BoneConfig)
-                if self.eng.bio.biometrics:
-                    self.eng.bio.biometrics.stamina = min(
-                        float(safe_get(target_cfg, "MAX_STAMINA", 100.0)),
-                        self.eng.bio.biometrics.stamina + ctx.limits.get("KINTSUGI_HEAL_AMT", 20.0))
+                    self.eng.mind.mem.record_scar(kintsugi_ref.active_koan or "Healed Rupture", ctx.physics)
+                target_cfg = self.eng.config
+                self.eng.bio.biometrics.stamina = min(
+                    float(safe_get(target_cfg, "MAX_STAMINA", 100.0)),
+                    self.eng.bio.biometrics.stamina + ctx.limits.get("KINTSUGI_HEAL_AMT", 20.0))
         therapy_ref = getattr(self.eng.village, "therapy", None)
         if therapy_ref:
-            target_cfg = getattr(self.eng, "config", BoneConfig)
+            target_cfg = self.eng.config
             if therapy_ref.check_progress(ctx.physics, current_stamina, self.eng.trauma_accum, qualia):
                 ctx.log(f"{Prisma.GRN}{ux('cycle_strings', 'metabolism_therapy')}{Prisma.RST}")
-                if self.eng.bio and self.eng.bio.biometrics:
-                    self.eng.bio.biometrics.health = min(float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
-                         self.eng.bio.biometrics.health + ctx.limits.get("THERAPY_HEAL_AMT", 5.0))
+                self.eng.bio.biometrics.health = min(float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
+                     self.eng.bio.biometrics.health + ctx.limits.get("THERAPY_HEAL_AMT", 5.0))
 
     def _check_autophagy(self, ctx: CycleContext):
-        target_cfg = getattr(self.eng, "config", BoneConfig)
+        target_cfg = self.eng.config
         bio_cfg = safe_get(target_cfg, "BIO", {})
         starvation_thresh = float(safe_get(bio_cfg, "ATP_STARVATION", 5.0))
         respiration = ctx.bio_result.get("respiration", "")
         current_atp = self.eng.bio.mito.state.atp_pool
         if current_atp <= starvation_thresh or current_atp <= 0.0 or respiration == "NECROSIS":
-            if hasattr(self.eng.mind.mem, "trigger_autophagy"):
-                atp_gain, msg = self.eng.mind.mem.trigger_autophagy()
-                self.eng.bio.mito.adjust_atp(atp_gain, "Autophagy")
-                ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
+            atp_gain, msg = self.eng.mind.mem.trigger_autophagy()
+            self.eng.bio.mito.adjust_atp(atp_gain, "Autophagy")
+            ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
 
     def _check_ros_toxicity(self, ctx: CycleContext):
         ros_limit = ctx.limits.get("ROS_PANIC_THRESHOLD", 100.0)

@@ -3,7 +3,6 @@
 import re
 from typing import Dict, Any, Tuple
 from core import Prisma
-from struts import safe_get
 
 class ThePragmatist:
     def __init__(self, events_ref=None):
@@ -11,11 +10,12 @@ class ThePragmatist:
 
     def enforce_maxims(self, draft_text: str, user_prompt: str, physics: Dict[str, Any], stamina: float) -> Tuple[
         str, bool]:
-        drag = float(safe_get(physics, "narrative_drag", 0.0))
-        chi = float(safe_get(physics, "entropy", 0.0))
-        voltage = float(safe_get(physics, "voltage", 5.0))
-        cf_expect = float(safe_get(physics, "cf_expect", 0.0))
-        pedagogical_mode = safe_get(physics, "pedagogical_mode", False)
+        is_phys_dict = isinstance(physics, dict)
+        drag = float(physics.get("narrative_drag", 0.0) if is_phys_dict else getattr(physics, "narrative_drag", 0.0))
+        chi = float(physics.get("entropy", 0.0) if is_phys_dict else getattr(physics, "entropy", 0.0))
+        voltage = float(physics.get("voltage", 5.0) if is_phys_dict else getattr(physics, "voltage", 5.0))
+        cf_expect = float(physics.get("cf_expect", 0.0) if is_phys_dict else getattr(physics, "cf_expect", 0.0))
+        pedagogical_mode = physics.get("pedagogical_mode", False) if is_phys_dict else getattr(physics, "pedagogical_mode", False)
         word_count = len(draft_text.split())
         lower_draft = draft_text.lower()
         if re.search(r"(?i)not just a?\s*.*?,?\s*it['’]s a", lower_draft) or re.search(
