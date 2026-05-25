@@ -15,12 +15,35 @@ def _native_detect_false_cohesion(history: List[float], window_size: int = 3) ->
     )
 
 
-def _native_permutation_entropy(time_series: List[float], window_size: int = 3) -> float:
+def _native_permutation_entropy(time_series: List[float], window_size: int = 3, epsilon: float = 1e-5) -> float:
     if len(time_series) < window_size:
         return 1.0
-    patterns = [
-        _native_ordinal_pattern(time_series[i: i + window_size]) for i in range(len(time_series) - window_size + 1)
-    ]
+
+    patterns = []
+    for i in range(len(time_series) - window_size + 1):
+        window = time_series[i: i + window_size]
+
+        # [navi-SAD PROTOCOL]: Tie-Exclusion
+        has_tie = False
+        for a in range(window_size):
+            if has_tie: break
+            for b in range(a + 1, window_size):
+                if abs(window[a] - window[b]) <= epsilon:
+                    has_tie = True
+                    break
+        if has_tie:
+            continue
+
+        indexed = [(window[j], j) for j in range(window_size)]
+        indexed.sort(key=lambda x: x[0])
+        permutation = [0] * window_size
+        for rank, (_, original_pos) in enumerate(indexed):
+            permutation[original_pos] = rank
+        patterns.append(tuple(permutation))
+
+    if not patterns:
+        return 0.0
+
     counts = Counter(patterns)
     total_patterns = len(patterns)
     entropy = -sum((c / total_patterns) * math.log2(c / total_patterns) for c in counts.values())

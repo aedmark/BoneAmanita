@@ -15,7 +15,7 @@ from mechanics.projector import beautify_thoughts
 from mechanics.tools import RandomRetrievalNavigator, LibraryGraph
 from mechanics.pragmatics import ThePragmatist
 from presets import BoneConfig, BonePresets
-from struts import ux
+from struts import ux, safe_get, safe_set
 
 @dataclass
 class CortexServices:
@@ -45,9 +45,8 @@ class TheCortex:
         self.cfg = services.config_ref or BoneConfig
         self.events = services.events
         self.dialogue_buffer = []
-        is_cfg_dict = isinstance(self.cfg, dict)
-        c_cfg = self.cfg.get("CORTEX", {}) if is_cfg_dict else getattr(self.cfg, "CORTEX", {})
-        self.MAX_HISTORY = int(c_cfg.get("MAX_HISTORY_LENGTH", 15) if isinstance(c_cfg, dict) else getattr(c_cfg, "MAX_HISTORY_LENGTH", 15))
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+        self.MAX_HISTORY = int(safe_get(c_cfg, "MAX_HISTORY_LENGTH", 15))
         self.modulator = NeurotransmitterModulator(bio_ref=self.svc.bio, events_ref=self.events, config_ref=self.cfg)
         self.last_physics = {}
         self.last_shadow_nodes = []
@@ -67,7 +66,7 @@ class TheCortex:
         self.pragmatist = ThePragmatist(events_ref=self.events)
         from mechanics.dspycritic import DSPyCritic
         self.dspy_critic = DSPyCritic(config_ref=self.cfg)
-        w_class = self.cfg.get("WEIGHT_CLASS", "HEAVYWEIGHT") if is_cfg_dict else getattr(self.cfg, "WEIGHT_CLASS", "HEAVYWEIGHT")
+        w_class = safe_get(self.cfg, "WEIGHT_CLASS", "HEAVYWEIGHT")
         if w_class == "LIGHTWEIGHT":
             self.dspy_critic.enabled = False
             if self.events:
@@ -129,9 +128,8 @@ class TheCortex:
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
         is_boot_sequence = "SYSTEM_BOOT" in user_input
-        is_cfg_dict = isinstance(self.cfg, dict)
-        c_cfg = self.cfg.get("CORTEX", {}) if is_cfg_dict else getattr(self.cfg, "CORTEX", {})
-        context_limit = int(c_cfg.get("MAX_INPUT_CHARS", 15000) if isinstance(c_cfg, dict) else getattr(c_cfg, "MAX_INPUT_CHARS", 15000))
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+        context_limit = int(safe_get(c_cfg, "MAX_INPUT_CHARS", 15000))
         phys_proxy = dict(ctx.physics) if isinstance(ctx.physics, dict) else (ctx.physics.to_dict() if hasattr(ctx.physics, "to_dict") else {k: v for k, v in vars(ctx.physics).items() if not k.startswith("_")})
         sim_result = {
             "physics": phys_proxy,
@@ -170,7 +168,7 @@ class TheCortex:
             sim_result["mutated_input"] = user_input
         if sim_result.get("physics"):
             self.last_physics = sim_result["physics"]
-        if hasattr(self, "last_shadow_nodes") and self.last_shadow_nodes:
+        if self.last_shadow_nodes:
             engaged = [node for node in self.last_shadow_nodes if node.lower() in user_input.lower()]
             for node in engaged:
                 if self.events:
@@ -345,15 +343,21 @@ class TheCortex:
                 extracted_logs.append(
                     "[SYSTEM MERCY RULE]: Rejection loop broken. Releasing tension. Dropping Drag to 0.0.")
                 if self.last_physics:
-                    if isinstance(self.last_physics, dict):
-                        self.last_physics["narrative_drag"] = 0.0
-                    else:
-                        setattr(self.last_physics, "narrative_drag", 0.0)
+                    safe_set(self.last_physics, "narrative_drag", 0.0)
                 break
             rejection_reason = val_res.get("feedback_instruction") or val_res.get(
                 "replacement", "Lattice structural crime.")
             if hasattr(self.dreamer, "trauma_buffer"):
                 self.dreamer.trauma_buffer.append(rejection_reason)
+
+            # [CD PROTOCOL]: Picard Damped Iteration for Generative Convergence
+            # Φⁿ⁺¹ ← (1-α)Φⁿ + αΦ̃ⁿ⁺¹ (Driving temperature and penalty toward stable center)
+            damping = 0.6
+            llm_params["temperature"] = round((1 - damping) * llm_params.get("temperature", 0.7) + damping * 0.2, 2)
+            llm_params["frequency_penalty"] = round(
+                (1 - damping) * llm_params.get("frequency_penalty", 0.0) + damping * 1.5, 2)
+            llm_params["top_p"] = round((1 - damping) * llm_params.get("top_p", 0.95) + damping * 0.5, 2)
+
             if self.events:
                 self.events.log(
                     f"{Prisma.OCHRE}{(ux('brain_strings', 'cortex_retry') or '').format(attempt=attempt + 1)}{Prisma.RST}",
@@ -406,10 +410,7 @@ class TheCortex:
             if bureau and "BUREAU" not in suppressed:
                 try:
                     phys = full_state.get("physics", {})
-                    if isinstance(phys, dict):
-                        phys["raw_text"] = final_output
-                    else:
-                        setattr(phys, "raw_text", final_output)
+                    safe_set(phys, "raw_text", final_output)
                     audit = bureau.audit(phys, {"health": 100}, origin="SYSTEM")
                     if audit and "ui" in audit:
                         sim_result["ui"] += f"\n\n{audit['ui']}"
@@ -434,11 +435,8 @@ class TheCortex:
                 sim_result.setdefault("mind", {})["lens"] = "JESTER"
                 if "ui" in sim_result:
                     sim_result["ui"] += f"\n\n{Prisma.VIOLET}[FALSE COHESION BREAK: The Jester has seized the architecture.]{Prisma.RST}"
-        if not isinstance(ctx.physics, dict):
-            for k, v in sim_result.get("physics", {}).items():
-                setattr(ctx.physics, k, v)
-        elif isinstance(ctx.physics, dict):
-            ctx.physics.update(sim_result.get("physics", {}))
+        for k, v in sim_result.get("physics", {}).items():
+            safe_set(ctx.physics, k, v)
         return sim_result
 
     def _run_council_debate(self, user_input: str) -> Tuple[str, List[str]]:
@@ -595,14 +593,13 @@ class TheCortex:
     def gather_state(self, sim_result: Dict[str, Any]) -> Dict[str, Any]:
         phys = sim_result.setdefault("physics", {})
         bio = sim_result.get("bio", {})
-        if bio and isinstance(bio, dict):
-            bio_mito = bio.get("mito", {})
-            mito_state = bio_mito.get("state", {}) if isinstance(bio_mito, dict) else getattr(bio_mito, "state", {})
-            is_ms_dict = isinstance(mito_state, dict)
-            phys["p"] = phys["stamina"] = mito_state.get("atp_pool", 100.0) if is_ms_dict else getattr(mito_state, "atp_pool", 100.0)
-            phys["ros"] = mito_state.get("ros_buildup", 0.0) if is_ms_dict else getattr(mito_state, "ros_buildup", 0.0)
-            bio_bio = bio.get("biometrics", {})
-            phys["h"] = bio_bio.get("health", 100.0) if isinstance(bio_bio, dict) else getattr(bio_bio, "health", 100.0)
+        if bio:
+            bio_mito = safe_get(bio, "mito", {})
+            mito_state = safe_get(bio_mito, "state", {})
+            phys["p"] = phys["stamina"] = safe_get(mito_state, "atp_pool", 100.0)
+            phys["ros"] = safe_get(mito_state, "ros_buildup", 0.0)
+            bio_bio = safe_get(bio, "biometrics", {})
+            phys["h"] = safe_get(bio_bio, "health", 100.0)
         mind = sim_result.get("mind", {})
         world = sim_result.get("world", {})
         soul_data = sim_result.get("soul", {})
@@ -677,7 +674,7 @@ class TheCortex:
                 phys["lateral_search"] = True
             if cortex_mem and getattr(cortex_mem, "is_trained", False) and query_vec:
                 ordered_keys = ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "E"]
-                q_list = [float(query_vec.get(k, 0.0) if isinstance(query_vec, dict) else getattr(query_vec, k, 0.0)) for k in ordered_keys]
+                q_list = [float(safe_get(query_vec, k, 0.0)) for k in ordered_keys]
                 shadow_nodes = cortex_mem.query_neighborhood(q_list, k=2, resonance_threshold=max(0.2, 0.8 - omega_r), physics_state=phys)
             if not shadow_nodes and hasattr(self.svc.mind_memory, "graph") and self.svc.mind_memory.graph:
                 keys = list(self.svc.mind_memory.graph.keys())

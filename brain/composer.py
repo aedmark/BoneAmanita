@@ -128,6 +128,29 @@ class LLMInterface:
     def generate(self, prompt: str, params: Dict[str, Any]) -> str:
         if not self._is_synapse_active():
             return self.mock_generation(prompt, reason="CIRCUIT_BROKEN")
+
+        # CD Eigenvalue Coupling Intercept. Project Navi, Apache 2.0
+
+        lam_match = re.search(r"<cd_lambda_1>([-\d.]+)</cd_lambda_1>", prompt)
+        if lam_match:
+            l1 = float(lam_match.group(1))
+            prompt = re.sub(r"\n?<cd_lambda_1>[-\d.]+</cd_lambda_1>", "", prompt)
+            if l1 > 0:
+                params["temperature"] = 0.0
+                params["top_p"] = 0.1
+                if self.events:
+                    self.events.log(
+                        f"{Prisma.RED}[CD GOVERNOR] Dissolution state (λ₁={l1:.2f} > 0). Thermal constraints locked to absolute deterministic logic.{Prisma.RST}",
+                        "SYS")
+            else:
+                heat = min(1.2, 0.7 + abs(l1))
+                params["temperature"] = heat
+                params["top_p"] = 0.95
+                if self.events:
+                    self.events.log(
+                        f"{Prisma.CYN}[CD GOVERNOR] Emergent state (λ₁={l1:.2f} < 0). Thermal constraints loosened for generative resonance (T={heat:.2f}).{Prisma.RST}",
+                        "SYS")
+
         if self.provider == "mock":
             return self.mock_generation(prompt)
         payload = {
@@ -540,8 +563,7 @@ class ResponseValidator:
                 self.compiled_patterns.append((re.compile(regex_str, re.IGNORECASE), p))
         self.rejection_pool = crimes.get("REJECTIONS", ["[System format rejected.]"])
         json_patterns = crimes.get("SCRUB_PATTERNS", [])
-        self.scrub_patterns = [(re.compile(p["regex"], re.DOTALL | re.IGNORECASE),
-                                p.get("replacement", ""),) for p in json_patterns]
+        self.scrub_patterns = [(re.compile(p["regex"], re.DOTALL | re.IGNORECASE), p.get("replacement", ""),) for p in json_patterns]
         self.meta_markers = crimes.get("META_MARKERS", [])
         self.toxic_keywords = crimes.get("TOXIC_KEYWORDS", [])
         self._meta_regex = re.compile(
@@ -551,10 +573,8 @@ class ResponseValidator:
         self._think_pattern = re.compile(
             r"<(?:think|thought|system_thinking)>(.*?)(?:</(?:think|thought|system_thinking)>|$)",
             re.DOTALL | re.IGNORECASE, )
-        self._internals_pattern = re.compile(r"<system_telemetry>(.*?)(?:</system_telemetry>|$)",
-                                             re.DOTALL | re.IGNORECASE, )
-        self._file_pattern = re.compile(r'<write_file\s+path=["\'](.*?)["\']\s*>(.*?)</write_file>',
-                                        re.DOTALL | re.IGNORECASE, )
+        self._internals_pattern = re.compile(r"<system_telemetry>(.*?)(?:</system_telemetry>|$)", re.DOTALL | re.IGNORECASE, )
+        self._file_pattern = re.compile(r'<write_file\s+path=["\'](.*?)["\']\s*>(.*?)</write_file>', re.DOTALL | re.IGNORECASE, )
 
     def _generate_dynamic_rejection(self, trigger: str) -> str:
         template = random.choice(self.rejection_pool)

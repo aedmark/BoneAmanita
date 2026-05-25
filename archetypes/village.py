@@ -392,13 +392,19 @@ class DeathGen:
             return "TRAUMA"
         if float(safe_get(mito_state, "atp_pool", safe_get(mito_state, "atp", 0.0))) <= _cfg_val(config_ref, "BIO", "ATP_STARVATION", 0.0):
             return "STARVATION"
-        if (p.chi * p.m_a) > p.i_c:
+        chi = float(safe_get(p, "chi", 0.0))
+        m_a = float(safe_get(p, "m_a", 0.0))
+        i_c = float(safe_get(p, "i_c", 1.0))
+        voltage = float(safe_get(p, "voltage", 0.0))
+        drag = float(safe_get(p, "narrative_drag", 0.0))
+        counts = safe_get(p, "counts", {}) or {}
+        if (chi * m_a) > i_c:
             return "APOPTOSIS"
-        if p.voltage > _cfg_val(config_ref, "PHYSICS", "VOLTAGE_CRITICAL", 100.0):
+        if voltage > _cfg_val(config_ref, "PHYSICS", "VOLTAGE_CRITICAL", 100.0):
             return "GLUTTONY"
-        if p.narrative_drag > _cfg_val(config_ref, "PHYSICS", "DRAG_HALT", 10.0):
+        if drag > _cfg_val(config_ref, "PHYSICS", "DRAG_HALT", 10.0):
             return "BOREDOM"
-        if (p.counts or {}).get("antigen", 0) > _cfg_val(config_ref, "VILLAGE", "DEATH_TOXICITY_CRIT", 5.0):
+        if counts.get("antigen", 0) > _cfg_val(config_ref, "VILLAGE", "DEATH_TOXICITY_CRIT", 5.0):
             return "TOXICITY"
         return "STARVATION"
 
@@ -408,9 +414,9 @@ class DeathGen:
             return "THERMAL"
         if cause in ("TOXICITY", "APOPTOSIS"):
             return "ENTROPY"
-        if getattr(p, "psi", 0.0) > _cfg_val(config_ref, "VILLAGE", "DEATH_ABSTRACT_PSI", 0.8):
+        if float(safe_get(p, "psi", 0.0)) > _cfg_val(config_ref, "VILLAGE", "DEATH_ABSTRACT_PSI", 0.8):
             return "ABSTRACT"
-        if getattr(p, "valence", 0.0) > _cfg_val(config_ref, "VILLAGE", "DEATH_JOY_VALENCE", 0.6):
+        if float(safe_get(p, "valence", 0.0)) > _cfg_val(config_ref, "VILLAGE", "DEATH_JOY_VALENCE", 0.6):
             return "JOY_CLADE"
         return "ENTROPY"
 

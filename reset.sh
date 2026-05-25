@@ -1,19 +1,6 @@
 
-rm -rf ./__pycache__
-rm -rf ./tests/__pycache__
-rm -rf ./spores/__pycache__
-rm -rf ./physics/__pycache__
-rm -rf ./phases/__pycache__
-rm -rf ./body/__pycache__
-rm -rf ./archetypes/__pycache__
-rm -rf ./brain/__pycache__
-rm -rf ./mechanics/__pycache__
-rm -rf ./protocols/__pycache__
-rm -rf ./drivers/__pycache__
-rm -rf ./machine/__pycache__
-rm -rf ./soul/__pycache__
-rm -rf ./MagicMock
-rm -rf ./tests/MagicMock
+find . -type d -name "__pycache__" -exec rm -rf {} +
+find . -type d -name "MagicMock" -exec rm -rf {} +
 rm -rf ./tests/memories
 rm -rf ./logs
 rm -rf ./memories

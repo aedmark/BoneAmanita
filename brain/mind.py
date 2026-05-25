@@ -36,7 +36,7 @@ class ChemicalState:
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
         inv_w = 1.0 - weight
         for short_k, long_k in [("DOP", "dopamine"), ("COR", "cortisol"), ("ADR", "adrenaline"), ("SER", "serotonin")]:
-            if (val := new_state.get(short_k, new_state.get(long_k))) is not None:
+            if (val := safe_get(new_state, short_k, safe_get(new_state, long_k))) is not None:
                 setattr(self, long_k, (getattr(self, long_k) * inv_w) + (val * weight))
 
 class NeurotransmitterModulator:
@@ -107,8 +107,8 @@ class NeurotransmitterModulator:
         base_temp = safe_get(cfg, "BASE_TEMP", 0.4)
         base_top_p = safe_get(cfg, "BASE_TOP_P", 0.95)
 
-        chi = float(physics_state.get("chi", physics_state.get("entropy", 0.2)))
-        beta = float(physics_state.get("contradiction", physics_state.get("beta_index", 0.4)))
+        chi = float(safe_get(physics_state, "chi", safe_get(physics_state, "entropy", 0.2)))
+        beta = float(safe_get(physics_state, "contradiction", safe_get(physics_state, "beta_index", 0.4)))
 
         ent_offset = safe_get(cfg, "TEMP_ENTROPY_OFFSET", 0.5)
         ent_scalar = safe_get(cfg, "TEMP_ENTROPY_SCALAR", 1.5)
@@ -159,8 +159,8 @@ class NoeticLoop:
         self.cfg = config_ref or BoneConfig
 
     def think(self, physics_packet, _bio, _inventory, voltage_history, _tick_count, soul_ref=None, ):
-        voltage = float(physics_packet.get("voltage", 0.0))
-        clean_words = physics_packet.get("clean_words", [])
+        voltage = float(safe_get(physics_packet, "voltage", 0.0))
+        clean_words = safe_get(physics_packet, "clean_words", [])
         avg_v = sum(voltage_history) / len(voltage_history) if voltage_history else 0
         cfg = safe_get(self.cfg, "CORTEX", {})
         v_div = max(1.0, safe_get(cfg, "IGNITION_V_DIV", 20.0))
@@ -177,7 +177,7 @@ class NoeticLoop:
                 if hasattr(self.bio, "mito"):
                     self.bio.mito.adjust_atp(-1.0, "Spontaneous Semantic Link")
 
-        current_lens = str(safe_get(soul_ref, "archetype", "OBSERVER")).upper() if soul_ref else "OBSERVER"
+        current_lens = str(safe_get(soul_ref, "archetype", "OBSERVER")).upper()
         current_role = f"The {current_lens.title().replace('_', ' ')}"
         msg_cog = ux("brain_strings", "noetic_ignition") or "Cognition active. Ignition: {ignition:.2f}"
 
@@ -210,9 +210,10 @@ class DreamEngine:
         self.dspy_critic = None
 
     def enter_rem_cycle(self, soul_snapshot: Dict[str, Any], bio_state: Dict[str, Any]) -> Tuple[str, Dict[str, float]]:
-        chem = bio_state.get("chem", {})
-        cortisol = chem.get("cortisol", 0.0)
-        available_atp = bio_state.get("mito", {}).get("atp", 0.0)
+        chem = safe_get(bio_state, "chem", {})
+        cortisol = float(safe_get(chem, "cortisol", 0.0))
+        mito_data = safe_get(bio_state, "mito", {})
+        available_atp = float(safe_get(mito_data, "atp", 0.0))
         dream_text = None
         is_deep_rem = False
         shift = ({"cortisol": -0.3, "dopamine": 0.1} if cortisol <= 0.6 else {"cortisol": 0.1})
@@ -385,8 +386,8 @@ class DreamEngine:
         from mechanics.tools import TheTclWeaver
         weaver = TheTclWeaver.get_instance()
         v = _vector or {}
-        active_chi = v.get("chi", v.get("entropy", 0.85))
-        active_v = v.get("voltage", 90.0)
+        active_chi = float(safe_get(v, "chi", safe_get(v, "entropy", 0.85)))
+        active_v = float(safe_get(v, "voltage", 90.0))
         txt = None
         if self.llm:
             lore_sample = ", ".join(random.sample(templates, min(3, len(templates))))
