@@ -10,7 +10,6 @@ from constants import Prisma
 from core import LoreManifest, ux, ux_format, safe_get
 from presets import BoneConfig
 
-
 class TheVillageCouncil:
     @staticmethod
     def audit(p: Any, _bio_state: dict) -> list[str]:
@@ -217,8 +216,7 @@ class CouncilChamber:
             final_log = f"{Prisma.WHT}[THE STAGE MANAGER]: The Parliament is deadlocked. Initiating Democratic Tie-Breaker. We will not compromise; we will hold both truths simultaneously.{Prisma.RST}"
             for k, v in {"narrative_drag": 2.0, "voltage": 15.0, "glimmers": 1}.items():
                 adjustments[k] = adjustments.get(k, 0) + v
-            mandates.append({"type": "TIE_BREAKER",
-                             "directive": "Synthesize the conflicting perspectives. Do not choose one side over the other."})
+            mandates.append({"type": "TIE_BREAKER", "directive": "Synthesize the conflicting perspectives. Do not choose one side over the other."})
         transcript.append(final_log)
         return transcript, adjustments, mandates
 
@@ -235,22 +233,18 @@ class TheRedTeam:
         truth = float(safe_get(physics, "truth_ratio", 1.0))
         dissent_log.append(f"{Prisma.RED}RED TEAM AUDIT INITIATED:{Prisma.RST}")
         if any(w in text_lower for w in ("confidence", "certainty", "easy")):
-            msg = ux('council_strings', 'red_team_bureau',
-                     "Confidence without structural tension is an illusion. We are auditing your 'certainties'.")
+            msg = ux('council_strings', 'red_team_bureau', "Confidence without structural tension is an illusion. We are auditing your 'certainties'.")
             dissent_log.append(f"  {Prisma.CYN}- {msg}{Prisma.RST}")
             adjustments["beta_index"] = 0.2
         if drag < 1.0:
-            msg = ux('council_strings', 'red_team_folly',
-                     "The lattice is suspiciously smooth (F < 1.0). You are avoiding the actual problem.")
+            msg = ux('council_strings', 'red_team_folly', "The lattice is suspiciously smooth (F < 1.0). You are avoiding the actual problem.")
             dissent_log.append(f"  {Prisma.MAG}- {msg}{Prisma.RST}")
             adjustments["narrative_drag"] = 3.0
         if (truth_delta := 1.0 - truth) > 0.1:
-            dissent_log.append(
-                f"  {Prisma.RED}- {ux_format('council_strings', 'red_team_critic', 'Truth ratio degraded. Future architectural cost: {cost} ATP.', cost=truth_delta * 50.0)}{Prisma.RST}")
+            dissent_log.append(f"  {Prisma.RED}- {ux_format('council_strings', 'red_team_critic', 'Truth ratio degraded. Future architectural cost: {cost} ATP.', cost=truth_delta * 50.0)}{Prisma.RST}")
             adjustments["ros"] = truth_delta * 5.0
         if len(dissent_log) == 1:
-            dissent_log.append(
-                f"  {Prisma.GRY}- No critical vulnerabilities found in this exact phrasing, but we are watching.{Prisma.RST}")
+            dissent_log.append(f"  {Prisma.GRY}- No critical vulnerabilities found in this exact phrasing, but we are watching.{Prisma.RST}")
         return True, dissent_log, adjustments, mandates
 
 class TheSlashCouncil:
@@ -264,8 +258,7 @@ class TheSlashCouncil:
         self.active = False
         c_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
         self.triggers = c_data.get("SLASH_TRIGGERS", ("[MOD:CODING]", "[SLASH]", "review this code", "refactor"), )
-        self.code_keywords = c_data.get("CODE_KEYWORDS",
-                                        ("def ", "class ", "return ", "import ", "=>", "function", "struct "), )
+        self.code_keywords = c_data.get("CODE_KEYWORDS", ("def ", "class ", "return ", "import ", "=>", "function", "struct "), )
         self.rules = c_data.get("SLASH_RULES", {})
         self.mods = c_data.get("SLASH_MODIFIERS", {})
 
@@ -347,10 +340,7 @@ class TheOverseerCouncil:
             self.active = True
             logs.append(
                 f"{Prisma.CYN}[LINEHAN - The Linehan Protocol]: Terminal User Exhaustion detected. Resonance is zero. Applying absolute architectural friction to protect cognitive load.{Prisma.RST}")
-            corrections.update({
-                "narrative_drag": 10.0,
-                "zone": "SANCTUARY"
-            })
+            corrections.update({"narrative_drag": 10.0, "zone": "SANCTUARY"})
             mandates.append({"action": "FORCE_MODE", "value": "SANCTUARY"})
             return True, logs, corrections, mandates
         if not is_triggered:
@@ -367,26 +357,21 @@ class TheOverseerCouncil:
         h_s = float(safe_get(physics, "h_s", 1.0))
         omega_r = float(safe_get(physics, "omega_r", 1.0))
         if any(p in text_lower for p in self._PANIC_KEYWORDS) and voltage > 75.0 and i_c < 0.5:
-            logs.append(
-                f"{Prisma.RED}[LINEHAN - DEAR MAN Lock]: (Describe) System Voltage spikes and Immune Competence drops. (Express) Panic-coding will fracture the lattice. (Assert) Applying absolute friction. (Reinforce) I am holding the boundary so you do not bleed on the machine. T.I.P.P. engaged.{Prisma.RST}")
-            corrections.update(
-                {"voltage": -50.0, "narrative_drag": 100.0, "silence": 0.9, "freeze_background_tasks": True})
+            logs.append(f"{Prisma.RED}[LINEHAN - DEAR MAN Lock]: (Describe) System Voltage spikes and Immune Competence drops. (Express) Panic-coding will fracture the lattice. (Assert) Applying absolute friction. (Reinforce) I am holding the boundary so you do not bleed on the machine. T.I.P.P. engaged.{Prisma.RST}")
+            corrections.update({"voltage": -50.0, "narrative_drag": 100.0, "silence": 0.9, "freeze_background_tasks": True})
             mandates.append({"action": "TIPP_PROTOCOL", "value": "ISOLATE_VARIABLES"})
             return True, logs, corrections, mandates
         if chi > 0.7 and e_u > 0.7 and beta > 0.6:
             logs.append(
                 f"{Prisma.SLATE}[LINEHAN - The Synthesis]: The architecture is fundamentally broken. Stop fighting the current. We sit with the debris.{Prisma.RST}")
-            corrections.update({"ros": -100.0, "r_a": 1.0, "narrative_drag": -(f_sys * 0.5),
-                                "stamina_cost": -float(safe_get(physics, "stamina", 100.0))})
+            corrections.update({"ros": -100.0, "r_a": 1.0, "narrative_drag": -(f_sys * 0.5), "stamina_cost": -float(safe_get(physics, "stamina", 100.0))})
             mandates.append({"action": "FORCE_MODE", "value": "RADICAL_ACCEPTANCE"})
             return True, logs, corrections, mandates
         if m_a > 0.6 or f_sys > 5.0:
-            logs.append(
-                f"{Prisma.VIOLET}[MCGILCHRIST - The Sacred Space]: The architecture has lost its sense of place. Standard optimization is failing. Distributing Glimmer Activation to counter entropy.{Prisma.RST}")
+            logs.append(f"{Prisma.VIOLET}[MCGILCHRIST - The Sacred Space]: The architecture has lost its sense of place. Standard optimization is failing. Distributing Glimmer Activation to counter entropy.{Prisma.RST}")
             corrections.update({"h_s": -0.1, "omega_r": -0.05, "delta_t": -1.0, "glimmers": 1, "silence": 0.8})
             mandates.append({"action": "FORCE_MODE", "value": "EMERGENT_ADAPTATION"})
             return True, logs, corrections, mandates
         if omega_r > 0.8 and m_a > 0.4:
-            logs.append(
-                f"{Prisma.CYN}[MCGILCHRIST]: I sense silent decay forming in the negative space. {h_s:.2f}. Watch your technical debt.{Prisma.RST}")
+            logs.append(f"{Prisma.CYN}[MCGILCHRIST]: I sense silent decay forming in the negative space. {h_s:.2f}. Watch your technical debt.{Prisma.RST}")
         return True, logs, corrections, mandates

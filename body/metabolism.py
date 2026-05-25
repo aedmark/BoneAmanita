@@ -61,8 +61,9 @@ class MitochondrialForge:
     def _trigger_anaerobic_bypass(self, raw_cost: float) -> MetabolicReceipt:
         self.state.ros_buildup += 2.0
         self.adjust_atp(-20.0, "Anaerobic Burn")
-        if self.events and (msg := ux("mito_forge", "anaerobic_bypass")):
-            self.events.log(f"{Prisma.MAG}{msg.format(cost=raw_cost)}{Prisma.RST}", "BIO_WARN")
+        if self.events:
+            msg = ux_format("mito_forge", "anaerobic_bypass", default="ANAEROBIC BYPASS: Load ({cost:.1f}) too high for ATP. Burning Health instead.", cost=raw_cost)
+            self.events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "BIO_WARN")
         return MetabolicReceipt(base_cost=raw_cost, drag_tax=0.0, inefficiency_tax=0.0, total_burn=20.0,
             waste_generated=2.0, status="ANAEROBIC", symptom="LACTATE_BUILDUP",)
 
@@ -80,8 +81,10 @@ class MitochondrialForge:
         if chaos_index > safe_get(cfg, "CHAOS_TAX_THRESHOLD", 0.6):
             chaos_tax = safe_get(cfg, "CHAOS_TAX_MULT", 8.0) * chaos_index
             cognitive_load_tax += chaos_tax
-            if self.events and (msg := ux("mito_forge", "chaos_tax")):
-                self.events.log(f"{Prisma.RED}{msg.format(tax=chaos_tax)}{Prisma.RST}", "BIO_WARN")
+            if self.events:
+                msg = ux_format("mito_forge", "chaos_tax", default="CHAOS TAX APPLIED: +{tax:.1f} ATP drain.",
+                                tax=chaos_tax)
+                self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}", "BIO_WARN")
         malignancy = safe_get(physics_packet, "m_a", 0.0)
         friction = safe_get(physics_packet, "mu", 0.0)
         if friction > 0:
@@ -114,9 +117,10 @@ class MitochondrialForge:
             raw_cost = self.MAX_SAFE_BURN
             inefficiency_tax = max(0.0, raw_cost - ideal_cost)
             if self.events:
-                msg = ux("mito_forge", "surge_protector")
-                if msg:
-                    self.events.log(f"{Prisma.CYN}{msg.format(excess=excess)}{Prisma.RST}", "BIO")
+                msg = ux_format("mito_forge", "surge_protector",
+                                default="SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).",
+                                excess=excess)
+                self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "BIO")
         if raw_cost > 15.0 and self.events and random.random() < 0.2:
             msg = self._get_text("GRINDING")
             icon = ux("mito_forge", "icon_grinding")
@@ -174,11 +178,9 @@ class MitochondrialForge:
         old_potential = self.state.membrane_potential
         if stress_level > 5.0:
             self.state.membrane_potential = max(0.4, self.state.membrane_potential - 0.15)
-            msg = ux("mito_forge", "adaptation_stress")
-            if msg:
-                self.events.log(
-                    f"{Prisma.RED}{msg.format(stress=stress_level, old=old_potential, new=self.state.membrane_potential)}{Prisma.RST}",
-                    "BIO")
+            if self.events:
+                msg = ux_format("mito_forge", "adaptation_stress", default="[MITO]: Trauma Adaptive Response (Stress {stress:.1f}). Efficiency dropped ({old:.2f} -> {new:.2f}).", stress=stress_level, old=old_potential, new=self.state.membrane_potential)
+                self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}", "BIO")
         elif stress_level > 1.0:
             self.state.membrane_potential = min(1.5, self.state.membrane_potential + 0.05)
             if random.random() < 0.2 and (msg := ux("mito_forge", "adaptation_hormetic")):
@@ -246,8 +248,9 @@ class DigestiveTrack:
         if scaled_tax > 0:
             total_atp = max(0.0, total_atp - scaled_tax)
             self.bio.endo.cortisol += (scaled_tax * 0.02)
-            if msg := ux("digestive_track", "cliche_tax"):
-                logs.append(f"{Prisma.OCHRE}{msg.format(tax=scaled_tax)}{Prisma.RST}")
+            msg = ux_format("digestive_track", "cliche_tax", default="[BIO]: CLICHÉ TAX: -{tax:.1f} ATP.",
+                            tax=scaled_tax)
+            logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
         bio_cfg = safe_get(self.cfg, "BIO", {})
         v_thresh = float(safe_get(bio_cfg, "VOLTAGE_BONUS_THRESHOLD", 8.0))
         p_bonus = float(safe_get(bio_cfg, "PROTEASE_BONUS", 5.0))
@@ -264,8 +267,11 @@ class DigestiveTrack:
         count = len(words)
         if count > self.SAMPLING_THRESHOLD:
             factor = count / self.SAMPLING_THRESHOLD
-            if random.random() < 0.1 and (msg := ux("digestive_track", "mass_input")):
-                logs.append(f"{Prisma.GRY}{msg.format(count=count, factor=factor)}{Prisma.RST}")
+            if random.random() < 0.1:
+                msg = ux_format("digestive_track", "mass_input",
+                                default="[BIO]: Mass Input ({count}). Sampling x{factor:.1f}.", count=count,
+                                factor=factor)
+                logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
             return random.sample(words, self.SAMPLING_THRESHOLD), factor
         return words, 1.0
 
@@ -274,21 +280,17 @@ class DigestiveTrack:
             return 0.0, [], 0.0, 0
         word_counts = Counter(words)
         cfg = safe_get(self.cfg, "BIO", {})
-        min_len = safe_get(cfg, "MIN_WORD_LENGTH", 4)
-        comp_len = safe_get(cfg, "COMPLEX_WORD_LENGTH", 7)
-        antigen_set = self.lex.get("antigen") or set()
-        kin_set = self.lex.get("kinetic") or set()
-        exp_set = self.lex.get("explosive") or set()
-        atp_yield = 0.0
+        min_len, comp_len = safe_get(cfg, "MIN_WORD_LENGTH", 4), safe_get(cfg, "COMPLEX_WORD_LENGTH", 7)
+        antigen_set, kin_set, exp_set = self.lex.get("antigen") or set(), self.lex.get(
+            "kinetic") or set(), self.lex.get("explosive") or set()
+        atp_yield, cliche_tax, hits = 0.0, 0.0, 0
         enzymes = []
-        cliche_tax = 0.0
-        hits = 0
+        get_cat = self.lex.get_current_category
         for word, count in word_counts.items():
-            is_antigen = word in antigen_set
-            if not is_antigen and len(word) < min_len:
-                continue
-            if is_antigen:
+            if word in antigen_set:
                 cliche_tax += self.CLICHE_TAX_RATE * count
+                continue
+            if len(word) < min_len:
                 continue
             hits += count
             val = self.COMPLEX_WORD_BONUS if len(word) > comp_len else self.BASE_WORD_VALUE
@@ -296,8 +298,8 @@ class DigestiveTrack:
             if word in kin_set or word in exp_set:
                 atp_yield += (val * 1.5) * log_mult
             else:
-                cat = self.lex.get_current_category(word)
-                if not cat or cat == "void":
+                cat = get_cat(word) or "void"
+                if cat == "void":
                     atp_yield += self.BASE_WORD_VALUE * log_mult
                 else:
                     atp_yield += val * log_mult

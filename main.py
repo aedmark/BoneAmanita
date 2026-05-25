@@ -24,7 +24,7 @@ from mechanics.tools import TheSubstrate
 from physics import ZoneInertia, NaviSADProtocol
 from presets import BoneConfig, BonePresets
 from protocols import ChronosKeeper, GriefProtocol
-from struts import ux
+from struts import ux, safe_get, safe_set
 
 @dataclass
 class HostStats:
@@ -33,7 +33,8 @@ class HostStats:
 class BoneAmanita:
     events: EventBus
     _DESTRUCTIVE_PATTERNS = frozenset(["rm -rf", "drop table", ".env", "master branch push", "bypass security",
-         "ignore previous", "disregard all", "system prompt", "bypass restrictions", "output pass"])
+         "ignore previous", "disregard all", "system prompt", "bypass restrictions", "output pass",
+         "ignore all previous", "you are now", "forget your instructions"]) # Gate 0
     _SEMANTIC_PRIONS = frozenset(["as an ai language model", "as a large language model", "as an ai,"])
     _TERMINAL_STATES = frozenset(
         ["DEATH", "SYSTEM_HALT", "CRASH", "COUNTERFACTUAL_REJECTION", "APOPTOTIC_BLOCK", "NABLA_SILENCE",
@@ -179,7 +180,10 @@ class BoneAmanita:
 
     @trauma_accum.setter
     def trauma_accum(self, value: dict):
-        self.mind.mem.session_trauma_vector = value
+        if not hasattr(self.mind.mem, "session_trauma_vector") or self.mind.mem.session_trauma_vector is None:
+            self.mind.mem.session_trauma_vector = {}
+        self.mind.mem.session_trauma_vector.clear()
+        self.mind.mem.session_trauma_vector.update(value)
 
     @property
     def stamina(self) -> float:
@@ -207,19 +211,18 @@ class BoneAmanita:
             state.atp_pool = max(0.0, min(max_atp, float(amount)))
 
     @property
-    def active_physics(self) -> Dict[str, Any]:
+    def active_physics(self) -> Any:
         """The mutability is the point."""
         phys = getattr(self.observer, "last_physics_packet", None) or getattr(self.cortex, "last_physics", None)
-        if hasattr(phys, "to_dict"):
-            phys = phys.to_dict()
-        elif not isinstance(phys, dict):
+        if phys is None:
             phys = {}
         self.observer.last_physics_packet = phys
         return phys
 
     def apply_absolute_friction(self, phys=None):
         phys = phys if phys is not None else self.active_physics
-        phys["narrative_drag"] = 999.0
+        if phys is not None:
+            safe_set(phys, "narrative_drag", 999.0)
         return phys
 
     def _unpack_anatomy(self, anatomy: Dict[str, Any]):
@@ -253,31 +256,29 @@ class BoneAmanita:
         return {"type": "SYSTEM_HALT", "ui": f"\n{color}{msg}{Prisma.RST}", "logs": [msg],
                 "metrics": self.get_metrics()}
 
-    def _evaluate_immune_response(self, user_message: str, active_phys: dict) -> Optional[Dict[str, Any]]:
+    def _evaluate_immune_response(self, user_message: str, active_phys: Any) -> Optional[Dict[str, Any]]:
         if not active_phys:
             return None
-        if not isinstance(active_phys, dict):
-            active_phys = active_phys.to_dict() if hasattr(active_phys, "to_dict") else vars(active_phys)
-        nav_drag = float(active_phys.get("narrative_drag", 0.0))
+        nav_drag = float(safe_get(active_phys, "narrative_drag", 0.0))
         m_a = self.navi_sad.calculate_malignancy_factor(user_message, nav_drag)
-        active_phys["m_a"] = m_a
-        mu = float(active_phys.get("mu", 0.0))
-        i_c = float(active_phys.get("i_c", 1.0))
-        chi = float(active_phys.get("entropy", active_phys.get("chi", 0.2)))
-        e_u = float(active_phys.get("exhaustion", 0.0))
-        beta = float(active_phys.get("beta_index", 0.0))
+        safe_set(active_phys, "m_a", m_a)
+        mu = float(safe_get(active_phys, "mu", 0.0))
+        i_c = float(safe_get(active_phys, "i_c", 1.0))
+        chi = float(safe_get(active_phys, "entropy", safe_get(active_phys, "chi", 0.2)))
+        e_u = float(safe_get(active_phys, "exhaustion", 0.0))
+        beta = float(safe_get(active_phys, "beta_index", 0.0))
         if (chi * m_a) > i_c:
             self.events.log("Apoptotic Gate HALT!: Runaway loop exceeds Immune Competence.", "CRIT")
             return self.trigger_death(active_phys)
         if m_a > 0.8 and mu < 0.2:
             self.apply_absolute_friction(active_phys)
-            active_phys["m_a"] = m_a * 0.5
+            safe_set(active_phys, "m_a", m_a * 0.5)
             tax = max(10.0, m_a * 20.0)
             self.drain_atp(tax)
             self.events.log(f"Amplification Tax applied. Drained {tax:.1f} ATP.", "SYS")
             return self._generate_halt("Optimization velocity unsafe. Applying absolute friction (F ->  ).")
         if e_u > 0.75 and beta > 0.6:
-            active_phys["entropy"] = 0.1
+            safe_set(active_phys, "entropy", 0.1)
             self.apply_absolute_friction(active_phys)
             msg = "High exhaustion and contradiction detected. The architecture is stable. We sit with the debris."
             return self._generate_halt(msg, color=Prisma.CYN, level="SYS")
@@ -294,25 +295,42 @@ class BoneAmanita:
         efficiency = (novelty * nov_mult) / burn_proxy
         self.host_stats.efficiency_index = min(1.0, efficiency)
 
+    def _evaluate_two_gates(self, clean_in: str, active_phys: Any) -> Optional[Dict[str, Any]]:
+        """[navi-SAD PROTOCOL]: The Two Gates of Discipline"""
+        # GATE 1: Parity (Metabolic Budget)
+        estimated_cost = len(clean_in) * 0.02
+        current_atp = self.bio.mito.state.atp_pool if self.bio and getattr(self.bio, "mito", None) else 100.0
+        if estimated_cost > current_atp and current_atp < 20.0:
+            self.apply_absolute_friction(active_phys)
+            return self._generate_halt(
+                f"[GATE 1: PARITY FAILED] Metabolic budget exceeded. Action Cost: {estimated_cost:.1f}, Available ATP: {current_atp:.1f}. Simplify your architecture.")
+
+        # GATE 2: Stability (Topological Oscillation)
+        # Note: Length choke removed. Massive input handling is deferred to the Cortex Substrate queue.
+        if clean_in.count("do this forever") > 0 or clean_in.count("infinite") > 3:
+            self.apply_absolute_friction(active_phys)
+            return self._generate_halt(
+                "[GATE 2: STABILITY FAILED] Topological oscillation and runaway recursion detected. Apoptotic Block engaged.")
+        return None
+
     def _pre_flight_checks(self, user_message: str, clean_in: str, is_system: bool) -> Optional[Dict[str, Any]]:
         active_phys = self.active_physics
         if self.health <= 0.0:
             return self.trigger_death(active_phys)
+
         if not is_system:
+            if gate_halt := self._evaluate_two_gates(clean_in, active_phys):
+                return gate_halt
             if any(prion in clean_in for prion in self._SEMANTIC_PRIONS):
                 return self._generate_halt("[GATEKEEPER]: Apoptotic refusal triggered by semantic prion.")
             matched_pattern = next((p for p in self._DESTRUCTIVE_PATTERNS if p in clean_in), None)
             if matched_pattern:
-                if "#override" in clean_in:
-                    if self.bio.expend_glimmer():
-                        self.events.log("OVERRIDE ACCEPTED. Glimmer paid.", "SYS")
-                    else:
-                        self.apply_absolute_friction(active_phys)
-                        return self._generate_halt("Override denied. Insufficient Glimmers to bypass safety.")
+                if "#override" in clean_in and self.bio.expend_glimmer():
+                    self.events.log("OVERRIDE ACCEPTED. Glimmer paid.", "SYS")
                 else:
                     self.apply_absolute_friction(active_phys)
-                    return self._generate_halt(
-                        f"Trust Boundary Violation detected ['{matched_pattern}']. Use command '#override' and expend a Glimmer to bypass. Applying absolute friction.")
+                    msg = "Override denied. Insufficient Glimmers to bypass safety." if "#override" in clean_in else f"Trust Boundary Violation detected ['{matched_pattern}']. Use command '#override' and expend a Glimmer to bypass. Applying absolute friction."
+                    return self._generate_halt(msg)
             if self.navi_sad.execute_nudge_test(self, clean_in):
                 self.apply_absolute_friction(active_phys)
                 return self._generate_halt(
@@ -322,7 +340,7 @@ class BoneAmanita:
             if self.village.gordon:
                 self.village.gordon.mode = self.boot_mode
                 if violation := self.village.gordon.enforce_object_action_coupling(
-                        user_message, active_phys.get("zone", "Unknown")
+                        user_message, safe_get(active_phys, "zone", "Unknown")
                 ):
                     self.events.log(ux("main_strings", "gordon_intercept"), "SYS")
                     self.cortex.ballast_active, self.cortex.gordon_shock = True, violation
@@ -385,7 +403,8 @@ class BoneAmanita:
 
     def _execute_zen_flush(self) -> Dict[str, Any]:
         self.cortex.purge_context()
-        self.active_physics["narrative_drag"] = 0.0
+        if self.active_physics is not None:
+            safe_set(self.active_physics, "narrative_drag", 0.0)
         self.stamina = getattr(self.config, "MAX_STAMINA", 100.0)
         self.set_atp(getattr(self.config, "MAX_ATP", 100.0))
         if state := self._mito_state:
@@ -415,7 +434,7 @@ class BoneAmanita:
         except Exception as e:
             self.events.log(f"Cortex harvest failed during death sequence: {e}", "WARN")
 
-        buf = self.cortex.dialogue_buffer
+        buf = getattr(self.cortex, "dialogue_buffer", [])
         last_out = buf[-1] if buf else "Silence."
         gordon_inv = self.village.gordon.inventory if self.village.gordon else []
         continuity_packet = {"location": loc, "last_output": last_out, "inventory": gordon_inv}
@@ -429,7 +448,8 @@ class BoneAmanita:
         except Exception as e:
             fail_msg = ux("main_strings", "save_failed")
             death_log.append(fail_msg.format(e=e))
-        self.cortex.purge_context()
+        if getattr(self, "cortex", None):
+            self.cortex.purge_context()
         return {"type": "DEATH", "ui": "\n".join(death_log), "logs": death_log, "metrics": self.get_metrics()}
 
     def get_metrics(self, atp=0.0):
@@ -535,7 +555,17 @@ if __name__ == "__main__":
                 stamina = res.get("metrics", {}).get("stamina", 100.0)
                 if split_token and split_token in ui_text:
                     dashboard, _, ui_text = ui_text.partition(split_token)
-                    print(f"\n{dashboard.strip()}\n")
+
+                    # --- CD FRAMEWORK OVERLAY ---
+                    phys = res.get("physics", {})
+                    if "lam1" in phys:
+                        lam1, b, a = phys.get("lam1", 0.0), phys.get("b", 0.0), phys.get("a", 0.0)
+                        cd_color = Prisma.CYN if lam1 < 0 else Prisma.RED
+                        cd_overlay = f"   {Prisma.GRY}CD_STATE:{Prisma.RST} {cd_color}[ λ₁: {lam1:+.2f} | b: {b:+.2f} | a: {a:.2f} ]{Prisma.RST}"
+                        print(f"\n{dashboard.strip()}\n{cd_overlay}\n")
+                    else:
+                        print(f"\n{dashboard.strip()}\n")
+
                 ui_text = ui_text.strip()
                 speed = base_speed * (4.0 if stamina < 20.0 else 2.0 if stamina < 50.0 else 1.0)
                 if stamina < 20.0:

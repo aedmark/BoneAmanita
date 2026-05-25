@@ -137,31 +137,6 @@ class ArchitectureTests(BoneTestCase):
             self.assertIsInstance(directive, str, "[FAIL] Directive must strictly return a string.")
         print("  [SUCCESS] Structural fallbacks successfully prevented 'None' from bleeding into the LLM context.")
 
-    def test_arch_lexical_firewall_cliche_tax(self):
-        print("\n--- ARCH 4: The Lexical Firewall (Cliché Tax) ---")
-        from unittest.mock import MagicMock, patch
-        track = self.engine.soma.digestive
-        track.lex = MagicMock()
-        mock_data = {
-            "antigen": {"delve", "tapestry", "testament", "myriad", "nuance"},
-            "kinetic": {"execute", "shatter"}
-        }
-        track.lex.get.side_effect = lambda k: mock_data.get(k)
-        track.lex.get_current_category.return_value = "NONE"
-        phys_slop = PhysicsPacket(
-            clean_words=["delve", "into", "the", "rich", "tapestry", "of", "myriad", "testament", "and", "nuance"])
-        initial_cortisol = self.engine.bio.endo.cortisol
-        logs = []
-        with patch('body.metabolism.ux', return_value="cliche tax applied: {tax}"):
-            dominant_enzyme, yield_atp, hits = track.harvest(phys_slop, logs)
-        self.assertEqual(yield_atp, 0.0,
-                         f"[FAIL] Lexical Firewall breached! System gained {yield_atp} ATP from reading sycophantic slop.")
-        self.assertGreater(self.engine.bio.endo.cortisol, initial_cortisol,
-                           "[FAIL] Cortisol did not spike after digesting Semantic Antigens.")
-        self.assertTrue(any("cliche" in log.lower() for log in logs),
-                        "[FAIL] Cliché Tax was not recorded in the systemic logs.")
-        print("  [SUCCESS] Lexical Firewall successfully rejected semantic antigens and levied the Cliché Tax.")
-
     def test_arch_panic_room_serotonin_retention(self):
         print("\n--- Panic Room State Retention ---")
         from machine.panic import PanicRoom

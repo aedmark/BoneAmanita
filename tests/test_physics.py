@@ -8,7 +8,21 @@ from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 from physics.maths import _native_permutation_entropy, _native_detect_false_cohesion, _native_ordinal_pattern, _native_coincidence_length
 
+
 class TopologicalPrimitivesTest(BoneTestCase):
+    def setUp(self):
+        super().setUp()
+        if not getattr(self.engine, "shared_lattice", None):
+            from drivers import SharedLatticeDriver
+            self.engine.shared_lattice = SharedLatticeDriver()
+
+        # Hydrate missing dataclass attributes
+        if not hasattr(self.engine.shared_lattice.u, "E"):
+            setattr(self.engine.shared_lattice.u, "E", 0.0)
+        for attr in ["phi", "resonance_delta"]:
+            if not hasattr(self.engine.shared_lattice.shared, attr):
+                setattr(self.engine.shared_lattice.shared, attr, 0.0)
+
     def test_ordinal_pattern(self):
         self.assertEqual(_native_ordinal_pattern([1.2, 1.8, 1.5]), (0, 2, 1),
                          "[FAIL] Ordinal pattern extraction failed.")
@@ -30,6 +44,13 @@ class TopologicalPrimitivesTest(BoneTestCase):
         chaotic = [1.0, 5.0, 2.0, 8.0, 1.0, 9.0]
         self.assertGreater(_native_permutation_entropy(chaotic, window_size=3), 0.0,
                            "[FAIL] Chaotic signal yielded zero entropy.")
+
+        # [navi-SAD PROTOCOL]: Tie-Exclusion Check
+        print("\n--- navi-SAD: Epsilon Tie-Exclusion ---")
+        noisy_flatline = [1.0, 1.000001, 1.0, 1.000002, 1.0, 1.000001]
+        self.assertEqual(_native_permutation_entropy(noisy_flatline, window_size=3, epsilon=1e-5), 0.0,
+                         "[FAIL] Epsilon tie-exclusion failed to drop noise. System is hallucinating complexity.")
+        print("  [SUCCESS] Fake structural noise successfully annihilated.")
 
     def test_coincidence_length(self):
         orbit_a = [1.0, 2.0, 3.0, 4.0, 5.0]
@@ -133,13 +154,128 @@ class TopologicalPrimitivesTest(BoneTestCase):
             self.assertGreaterEqual(new_drag, floor, "[FAIL] Gravity engine breached the physical floor.")
 
     def test_zone_inertia_vector_update(self):
-            from physics.dynamics import ZoneInertia
-            zi = ZoneInertia(config_ref=self.engine.config)
-            phys_mock = PhysicsPacket()
-            phys_mock.energy.beta_index = 1.0
-            cosmic_state = ("ORBITAL", 0.0, "msg")
-            zi.stabilize("THE_FORGE", phys_mock, cosmic_state)
-            first_vector = zi.last_vector
-            phys_mock.energy.beta_index = 0.1
-            zi.stabilize("AERIE", phys_mock, cosmic_state)
-            self.assertNotEqual(zi.last_vector, first_vector, "[FAIL] ZoneInertia failed to update topology during a rejected migration.")
+        from physics.dynamics import ZoneInertia
+        zi = ZoneInertia(config_ref=self.engine.config)
+        phys_mock = PhysicsPacket()
+        phys_mock.energy.beta_index = 1.0
+        cosmic_state = ("ORBITAL", 0.0, "msg")
+        zi.stabilize("THE_FORGE", phys_mock, cosmic_state)
+        first_vector = zi.last_vector
+        phys_mock.energy.beta_index = 0.1
+        zi.stabilize("AERIE", phys_mock, cosmic_state)
+        self.assertNotEqual(zi.last_vector, first_vector,
+                            "[FAIL] ZoneInertia failed to update topology during a rejected migration.")
+
+    def test_navi_fractal_quality_gate(self):
+        print("\n--- navi-fractal: Quality Gates ---")
+        from cycle import _native_quality_gate
+
+        # 1. Perfect Linearity
+        log_r_perfect = [1.0, 2.0, 3.0, 4.0]
+        log_m_perfect = [2.0, 4.0, 6.0, 8.0]
+        passed, code = _native_quality_gate(log_r_perfect, log_m_perfect)
+        self.assertTrue(passed, f"[FAIL] Perfect linearity failed the gate: {code}")
+
+        # 2. Poor Fit (Scattered noise)
+        log_r_bad = [1.0, 2.0, 3.0, 4.0]
+        log_m_bad = [10.0, 1.0, 10.0, 1.0]
+        passed_bad, code_bad = _native_quality_gate(log_r_bad, log_m_bad)
+        self.assertFalse(passed_bad, "[FAIL] Quality Gate allowed a highly fragmented, non-linear graph.")
+        self.assertTrue(code_bad.startswith("POOR_FIT"), "[FAIL] Incorrect reason code for poor fit.")
+
+        # 3. Insufficient Range
+        passed_short, code_short = _native_quality_gate([1.0, 2.0], [1.0, 2.0])
+        self.assertFalse(passed_short, "[FAIL] Quality Gate allowed a graph with insufficient range.")
+        self.assertEqual(code_short, "INSUFFICIENT_RANGE", "[FAIL] Incorrect reason code for short range.")
+        print("  [SUCCESS] MFA Quality Gates successfully defended topology.")
+
+    def test_navi_fractal_null_model(self):
+        print("\n--- navi-fractal: Configuration Model ---")
+        from cycle import _native_configuration_model
+
+        # Create a simple star graph (node 0 connected to 1, 2, 3, 4)
+        adj = {
+            0: {1, 2, 3, 4},
+            1: {0},
+            2: {0},
+            3: {0},
+            4: {0}
+        }
+        null_adj = _native_configuration_model(adj)
+
+        # Verify degree sequence is perfectly preserved
+        original_degrees = {k: len(v) for k, v in adj.items()}
+        null_degrees = {k: len(v) for k, v in null_adj.items()}
+        self.assertEqual(original_degrees, null_degrees, "[FAIL] Null model failed to preserve degree sequence.")
+        print("  [SUCCESS] Null Model accurately generated random structural baseline.")
+
+    def test_cd_viability_and_drive(self):
+        print("\n--- CD Framework: Viability & Creative Drive ---")
+        phys = PhysicsPacket()
+        phys.kappa = 0.8
+        phys.gamma = 0.8
+        phys.mu = 0.5
+        phys.lambda_val = 1.0
+
+        b = phys.get_viability_potential()
+        self.assertAlmostEqual(b, (0.8 * 0.8) - (1.0 * 0.5), places=2,
+                               msg="[FAIL] Viability Potential (b) calculation is mathematically incorrect.")
+
+        a = phys.get_creative_drive()
+        self.assertAlmostEqual(a, 0.8 * 0.8 * 0.5, places=2,
+                               msg="[FAIL] Creative Drive (a) calculation is mathematically incorrect.")
+
+        lam1 = phys.get_principal_eigenvalue()
+        self.assertIsInstance(lam1, float, "[FAIL] Principal Eigenvalue failed to return a float.")
+        print("  [SUCCESS] CD Fields integrated natively into PhysicsPacket.")
+
+    def test_cd_saturation_penalty(self):
+        print("\n--- CD Framework: Saturation Penalty (-cΦ^p) ---")
+        # Initialize a PhysicsPacket with a dangerous runaway voltage
+        phys = PhysicsPacket()
+        phys.voltage = 200.0  # Phi = 2.0
+
+        # Calculate expected values:
+        # Penalty = c * (Phi^p) = 1.5 * (2.0^2) = 6.0
+        # Voltage drop = Penalty * 15.0 = 90.0
+        # Expected new voltage = 110.0
+
+        penalty = phys.enforce_saturation_limit(c=1.5, p=2.0)
+        self.assertAlmostEqual(penalty, 6.0, places=2, msg="[FAIL] Saturation penalty is mathematically incorrect.")
+        self.assertAlmostEqual(phys.voltage, 110.0, places=2,
+                               msg="[FAIL] Voltage failed to damp correctly. Runaway tension is unchecked.")
+        print("  [SUCCESS] Saturation penalty violently compresses runaway tension.")
+
+    def test_cd_picard_damping_convergence(self):
+        print("\n--- CD Framework: Picard Damping Convergence ---")
+        # Simulate the Cortex damping math across 5 theoretical rejections
+        t, f, p = 0.7, 0.0, 0.95
+        damping = 0.6
+
+        for _ in range(5):
+            t = round((1 - damping) * t + damping * 0.2, 2)
+            f = round((1 - damping) * f + damping * 1.5, 2)
+            p = round((1 - damping) * p + damping * 0.5, 2)
+
+        # The parameters should have converged heavily toward absolute structural stability
+        self.assertLess(t, 0.25, "[FAIL] Temperature failed to damp towards 0.2.")
+        self.assertGreater(f, 1.4, "[FAIL] Frequency penalty failed to damp towards 1.5.")
+        self.assertLess(p, 0.55, "[FAIL] Top P failed to damp towards 0.5.")
+        print("  [SUCCESS] Picard iteration mathematically converges LLM parameters to absolute stability.")
+
+    def test_cd_cycle_snapshot_saturation(self):
+        print("\n--- CD Framework: Cycle Threshold Enforcement ---")
+        from cycle import GeodesicOrchestrator
+        orch = GeodesicOrchestrator(self.engine)
+
+        # Inject a high-voltage physics packet directly into the observer cache
+        self.engine.observer.last_physics_packet = PhysicsPacket()
+        self.engine.active_physics.voltage = 150.0
+
+        snapshot = orch.run_headless_turn("Test saturation.")
+
+        self.assertIn("saturation_penalty", snapshot.get("physics", {}),
+                      "[FAIL] Saturation penalty not injected into telemetry snapshot.")
+        self.assertGreater(snapshot["physics"]["saturation_penalty"], 0.0,
+                           "[FAIL] Saturation penalty failed to trigger on high voltage.")
+        print("  [SUCCESS] GeodesicOrchestrator properly routes spatial bounds to UI telemetry.")

@@ -1,7 +1,79 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
-### **BONEAMANITA 20.1.0 "The Temporal Determinism Pass"**
+### **BONEAMANITA 20.2.0 "The Nonlinear Immune & Creative Determinant Pass" (Hypervisor V3.2)**
+
+**Architectural Additions (Project Navi Integrations)**
+
+- **The Creative Determinant (CD) Framework:** Embedded foundational PDE mathematics directly into the `PhysicsPacket`. The system now natively calculates Viability Potential ($b = \kappa\gamma - \lambda\mu$), Creative Drive ($a = \kappa\gamma\mu$), and the Principal Eigenvalue ($\lambda_1$).
+- **Thermal Eigenvalue Lock:** LLM generation parameters (`temperature`, `top_p`) are now physically coupled to $\lambda_1$. Emergent states ($\lambda_1 < 0$) unlock generative dreaming, while dissolving states ($\lambda_1 > 0$) force an absolute deterministic lock (`temperature=0.0`) to survive the collapse.
+- **Semantic Autophagy:** Upgraded the biological starvation response. Instead of blindly deleting the oldest memory, the engine mathematically hunts and consumes the subconscious memory with the *lowest Viability Potential* (eating its own cognitive dissonance for ATP).
+- **Gradient-Descent RAG:** `dredge_creative_tension()` abandons semantic similarity. The Paradox Engine now retrieves memories that maximize *Creative Drive* ($a = \kappa\gamma\mu$) to provide mathematically optimal productive tension.
+- **Permutation Entropy (PE):** Wired `navi-SAD` ordinal pattern extraction into the background cycle to detect Point Attractors (sycophancy loops) by analyzing historical voltage. If entropy crashes, The Jester is forcefully summoned.
+- **Takens' Delay Coordinate Embedding:** The system now reconstructs the hidden multidimensional phase space of the conversation to track the topological volume of the attractor, predicting creative blocks before they occur.
+- **The Three Gates of Discipline:** Replaced naive destructive-pattern matching with absolute physical checkpoints in the pre-flight sequence (Gate 0: Noninterference, Gate 1: Parity, Gate 2: Stability).
+- **Dashboard Telemetry:** Wired raw CD metrics (`λ₁`, `b`, `a`) directly into the Terminal UI rendering and the `.jsonl` trace logs to monitor the mathematical heartbeat in real-time.
+- **The Geometry of Memory (`navi-fractal`):** Integrated Mass-Radius scaling and fractal dimension mathematics to evaluate the literal, physical weight of semantic networks.
+- **Hallucination of Depth (The Null Model):** The background cycle now scrambles active memory graphs into a random topology (preserving the degree sequence). If the actual memory's fractal dimension is indistinguishable from the random noise, the system strips coherence rewards, actively punishing fake complexity and sycophantic tangents.
+- **Topological Quality Gates:** Semantic topologies must now pass MFA Linearity ($R^2 \ge 0.90$) and Dynamic Range gates. If a memory graph is too fragmented, it throws a `POOR_FIT` error and dynamically mandates REM defragmentation.
+- **Subconscious Mass-Radius Scaling (Cognitive Density):** The Akashic record now uses Breadth-First Search (BFS) to measure the geometric mass of a recalled concept. Deeply tangled concepts yield a high fractal dimension, allowing the system to literally *feel* the weight of the cognitive load before it processes the thought.
+
+**Fixed & Refactored**
+
+- **The Eager Evaluation Trap:** Purged rigid dot-notation assumptions and redundant type-casts across `main.py` and `village.py`. Restored flexible duck typing (`safe_get`, `safe_set`) to allow raw `PhysicsPacket` objects and raw dictionaries to flow seamlessly across the boundary layers without unhandled `AttributeError` crashes.
+- **Death Sequence Amputation:** Fixed a terminal vulnerability where `trigger_death()` would attempt to read from a missing or severed `cortex` object. The engine can now successfully write its own eulogy and log the crash even if its memory pointer is violently destroyed (The "Bus Crash" failsafe).
+- **Severed Nervous System Pointers:** Fixed `trauma_accum` and `active_physics` to properly mutate existing memory references (`.update()`, `.clear()`) rather than overwriting them with static dictionary clones, which previously orphaned downstream modules and severed the live context feed.
+- **Topology Audit Crashes:** Implemented graceful degradation for `cycle.py` background tasks (`_verify_semantic_topology` and `_process_rem_tick`). The system no longer crashes if a core organ (like the Hippocampus) or an archetype is suppressed during a cycle.
+- **Idle Serialization:** Fixed a crash in the `/idle` command caused by the new object-persistence rules. Deep REM states now safely serialize the `PhysicsPacket` before passing the snapshot to the UI.
+- **Flattened Override Logic:** Simplified the `#override` Trust Boundary matrix in `main.py` using The Meadows Lens, eliminating redundant function calls and reducing cognitive drag.
+
+### **BONEAMANITA 20.1.0 "The S.L.A.S.H. Execution Pass"**
+
+**Optimized & Changed**
+
+- **Structural Tensegrity (Core & Phases):** Ruthlessly stripped out excessive, paranoid `getattr`, `hasattr`, and `isinstance` checks across `main.py`, `cycle.py`, and the entire `phases/` directory. The engine now trusts its own guaranteed genesis initialization, vastly reducing dynamic reflection overhead in the hot path.
+- **Cognitive Loop (Cycle & Composer):** Streamlined the core engine loop by removing nested function allocations, pre-compiling regexes for validation, and fast-failing Sincerity Protocol parsing before deep string evaluation.
+- **Metabolic Restructuring (Body & Physics):** Flattened Oxidative Stress (ROS) accumulation into a logarithmic curve (`math.log1p`) during negative viability states. Decoupled narrative drag from absolute systemic ceilings to prevent terminal friction during intense creative flow.
+- **Biological Homeostasis (Mind):** Centralized neurotransmitter drift calculations and state interpolation into clean, declarative tuple maps.
+- **Direct Configuration Routing:** Bypassed redundant disk-cached `LoreManifest` fetches inside core services (`EventBus`, `TheObserver`, `TelemetryService`). Background limits and metrics are now routed directly through `BoneConfig`'s native namespace (e.g., `self.cfg.CORE`).
+- **Orchestrator Stability:** Modified the `GeodesicOrchestrator` queue timeout handler. It now gracefully returns a packaged `CRASH` packet rather than blindly proceeding with unassigned snapshot variables, permanently eliminating the terminal `UnboundLocalError` logic bomb.
+
+**Fixed**
+
+- **Memory Ghost Allocations (Spores):** Patched a fatal `AttributeError` caused by null strata mappings during memory cannibalization. Excised a runaway recursive regex recompilation in the `_billy_mitchell_protocol()` and eliminated throwaway list allocations during node pruning.
+- **Model Slop Bleed (Composer):** Hardened the lexical regex nets (`_SLOP_PATTERN` and `_think_pattern`) to successfully intercept and suppress raw `<system_thinking>` and `</assistant>` monologue tags native to Hermes3.
+- **Telemetry Poisoning (Core):** Cloned the event dictionary payload during `record_event` serialization to prevent the kernel hash from mutating and polluting the upstream `EventBus` buffer.
+- **Thread Safety (Cycle & Genesis):** Eliminated an async race condition in the REM dream generator by strictly evaluating trauma limits on the main thread prior to pool submission. Prevented tight-coupling failures during Village genesis by routing instantiations explicitly.
+- **Legacy Akashic Hauntings (Cortex):** Forced the deletion of `akashic_scars.json` and `akashic_boons.json` post-migration, preventing the engine from perpetually re-ingesting the same ghost JSON on every single cold boot.
+- **Anaerobic Fatality (Body):** Bound the anaerobic fallback UX strings to a safety walrus operator, stopping a silent `NoneType` format crash during somatic burn cycles.
+- **The Great Disconnect (Cognitive Phase):** Re-established a protective boundary around the `check_for_resurrection` invocation. This prevents a fatal `AttributeError` when handling lateral memory substrates (like `MycelialNetwork`), which previously crashed the `CognitionPhase` and bypassed The Cortex entirely.
+- **The Silent Village (Machinery Phase):** Repaired a critical namespace disconnect where the `critics` and `zen` features were completely inaccessible due to faulty path routing.
+- **Equilibrium (Telemetry):** Migrated `_yield_historical_records` from synchronous `glob.glob` to iterative `glob.iglob` with a bounded deque array to eliminate catastrophic I/O choking on the main execution thread.
+- **Linguistic Transparency:** Destructive immune responses (`_pre_flight_checks`) no longer gaslight the user. The specific pattern that violated the Trust Boundary is explicitly rendered in the terminal.
+- **Somatic Purge:** The `/zen` flush now fully purges the `trauma_accum` dictionary in addition to restoring `$ATP` and Stamina, preventing false enlightenment.
+- **Identity Inheritance:** Gordon’s baseline archetype mode is now dynamically coupled to the Hypervisor's active `boot_mode` instead of rigidly defaulting to "ADVENTURE".
+- **Hydration Cascades:** Prevented fatal `AttributeError` crashes during cold boots by ensuring `self.bio.setup_listeners()`, `STARTING_ATP`, and `self.drivers.enneagram` safely evaluate `None` states.
+- **Type-Safety Leak:** Re-routed narrative disabled UI packets through the `_halt` helper function to explicitly assign `"type": "SYSTEM_HALT"`, preventing downstream UI routing failures.
+- **Floating-Point Biology:** Stabilized `TheObserver` dormancy checks with a biological buffer (`<= 0.001`) to prevent microsecond CPU clock drifts from falsely registering as high cognitive load.
+- **Cache Corruption Vector:** Prevented `LoreManifest` from persisting empty `{}` dictionaries to disk and wiping out functional lore files.
+
+### **BONEAMANITA 20.0.7 "The S.L.A.S.H. Execution Pass"**
+
+**Changed**
+
+- **Structural Tensegrity (Core & Phases):** Ruthlessly stripped out excessive, paranoid `getattr`, `hasattr`, and `isinstance` checks across `main.py`, `cycle.py`, and the entire `phases/` directory. The engine now trusts its own guaranteed genesis initialization, vastly reducing dynamic reflection overhead in the hot path.
+- **Direct Configuration Routing:** Bypassed redundant disk-cached `LoreManifest` fetches inside core services (`EventBus`, `TheObserver`, `TelemetryService`). Background limits and metrics are now routed directly through `BoneConfig`'s native namespace (e.g., `self.cfg.CORE`).
+- **Orchestrator Stability:** Modified the `GeodesicOrchestrator` queue timeout handler. It now gracefully returns a packaged `CRASH` packet rather than blindly proceeding with unassigned snapshot variables, permanently eliminating the terminal `UnboundLocalError` logic bomb.
+
+**Fixed**
+
+- **The Great Disconnect (Cognitive Phase):** Re-established a protective boundary around the `check_for_resurrection` invocation. This prevents a fatal `AttributeError` when handling lateral memory substrates (like `MycelialNetwork`), which previously crashed the `CognitionPhase` and bypassed The Cortex entirely.
+- **The Silent Village (Machinery Phase):** Repaired a critical namespace disconnect where the `critics` and `zen` features were completely bypassed because the engine was querying `self.eng` instead of `self.eng.village`.
+- **Gestalt Resonance Drop (Arbitration Phase):** Re-wired the mathematical resonance generation back into the Stage Manager's tie-breaker logic that was accidentally severed during refactoring, ensuring deadlocked parliaments successfully yield systemic resonance.
+
+---
+
+### **BONEAMANITA 20.0.6 "The Temporal Determinism Pass"**
 
 **Added**
 

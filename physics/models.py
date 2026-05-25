@@ -143,6 +143,29 @@ class PhysicsPacket:
             total = self.drag_profile.total()
             setattr(self, "narrative_drag", max(0.6, total))
 
+    def get_creative_drive(self) -> float:
+        """a(x) = κγμ. Project Navi, Apache 2.0"""
+        return float(self.kappa) * float(self.gamma) * float(self.mu)
+
+    def get_viability_potential(self) -> float:
+        """b = κγ - λμ. Project Navi, Apache 2.0"""
+        lam = float(self.lambda_val) if self.lambda_val > 0 else 1.0
+        return (float(self.kappa) * float(self.gamma)) - (lam * float(self.mu))
+
+    def get_principal_eigenvalue(self, L: float = 3.14159, beta: float = 1.0) -> float:
+        """λ₁ = (π/L)² - βb. If λ₁ < 0, nontrivial presence emerges. Project Navi, Apache 2.0"""
+        import math
+        b = self.get_viability_potential()
+        return ((math.pi / L) ** 2) - (beta * b)
+
+    def enforce_saturation_limit(self, c: float = 1.5, p: float = 2.0) -> float:
+        """Applies the Navi PDE saturation penalty: -c * Φ^p. Caps runway voltage/drag."""
+        phi = float(self.get("voltage", 0.0)) / 100.0  # Normalize voltage as topological presence
+        penalty = c * (max(0.0, phi) ** p)
+        # Violently drag down runaway tension if it exceeds capacity
+        self.voltage = max(0.0, float(self.get("voltage", 0.0)) - (penalty * 15.0))
+        return penalty
+
     @classmethod
     def void_state(cls):
         p = cls()
