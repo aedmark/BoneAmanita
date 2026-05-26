@@ -66,8 +66,7 @@ class EndocrineSystem:
                 if attr := self._KEY_MAP.get(k):
                     setattr(self, attr, getattr(self, attr) + v)
 
-    def _apply_environmental_pressure(self, feedback: Dict, health: float, stamina: float, ros_level: float,
-                                      stress_mod: float):
+    def _apply_environmental_pressure(self, feedback: Dict, health: float, stamina: float, ros_level: float, stress_mod: float):
         bio_cfg = safe_get(self.cfg, "BIO", {})
         reward_large = safe_get(bio_cfg, "REWARD_LARGE", 0.2)
         reward_med = safe_get(bio_cfg, "REWARD_MEDIUM", 0.1)
@@ -218,5 +217,4 @@ class SemanticEndocrinologist:
         if self.lex and hasattr(self.lex, "get_valence"):
             valence_score = self.lex.get_valence(clean_words)
         coherence_score = getattr(physics, "kappa", 0.5)
-        return SemanticSignal(novelty=novelty_score, resonance=resonance_score, valence=valence_score,
-                              coherence=coherence_score, )
+        return SemanticSignal(novelty=novelty_score, resonance=resonance_score, valence=valence_score, coherence=coherence_score, )

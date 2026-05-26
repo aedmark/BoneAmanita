@@ -55,14 +55,14 @@ class MitochondrialForge:
         try:
             return tmpl.format(**kwargs)
         except Exception as e:
-            print(f"{Prisma.RED}[MITO_FORGE] Missing narrative kwargs for '{key}': {e}{Prisma.RST}")
+            print(f"{Prisma.RED}Missing narrative kwargs for '{key}': {e}{Prisma.RST}")
             return tmpl
 
     def _trigger_anaerobic_bypass(self, raw_cost: float) -> MetabolicReceipt:
         self.state.ros_buildup += 2.0
         self.adjust_atp(-20.0, "Anaerobic Burn")
         if self.events:
-            msg = ux_format("mito_forge", "anaerobic_bypass", default="ANAEROBIC BYPASS: Load ({cost:.1f}) too high for ATP. Burning Health instead.", cost=raw_cost)
+            msg = ux_format("mito_forge", "anaerobic_bypass", default="Load ({cost:.1f}) too high for ATP. Burning HP instead.", cost=raw_cost)
             self.events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "BIO_WARN")
         return MetabolicReceipt(base_cost=raw_cost, drag_tax=0.0, inefficiency_tax=0.0, total_burn=20.0,
             waste_generated=2.0, status="ANAEROBIC", symptom="LACTATE_BUILDUP",)
@@ -82,7 +82,7 @@ class MitochondrialForge:
             chaos_tax = safe_get(cfg, "CHAOS_TAX_MULT", 8.0) * chaos_index
             cognitive_load_tax += chaos_tax
             if self.events:
-                msg = ux_format("mito_forge", "chaos_tax", default="CHAOS TAX APPLIED: +{tax:.1f} ATP drain.",
+                msg = ux_format("mito_forge", "chaos_tax", default="CHAOS TAX: +{tax:.1f} ATP drain.",
                                 tax=chaos_tax)
                 self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}", "BIO_WARN")
         malignancy = safe_get(physics_packet, "m_a", 0.0)
@@ -92,8 +92,7 @@ class MitochondrialForge:
             cognitive_load_tax += amplification_tax
             if amplification_tax > 1.0 and self.events:
                 self.events.log(
-                    f"{Prisma.MAG}[CHECKPOINT]: Amplification Tax applied (+{amplification_tax:.2f} ATP drag){Prisma.RST}",
-                    "BIO_WARN")
+                    f"{Prisma.MAG}Amplification Tax applied (+{amplification_tax:.2f} ATP drag){Prisma.RST}", "BIO_WARN")
         base_demand = base_cost + (math.log1p(max(0.0, self.state.ros_buildup)) * 2.0)
         atp_crit = float(safe_get(cfg, "ATP_CRITICAL", 20.0))
         is_critical = self.state.atp_pool < atp_crit
@@ -117,9 +116,7 @@ class MitochondrialForge:
             raw_cost = self.MAX_SAFE_BURN
             inefficiency_tax = max(0.0, raw_cost - ideal_cost)
             if self.events:
-                msg = ux_format("mito_forge", "surge_protector",
-                                default="SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).",
-                                excess=excess)
+                msg = ux_format("mito_forge", "surge_protector", default="SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).", excess=excess)
                 self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "BIO")
         if raw_cost > 15.0 and self.events and random.random() < 0.2:
             msg = self._get_text("GRINDING")
@@ -149,12 +146,10 @@ class MitochondrialForge:
             status = "NECROSIS"
             if self.events:
                 self.events.publish("SYSTEM_STARVING", {})
-        return MetabolicReceipt(
-            base_cost=round(base_demand, 2), drag_tax=round(cognitive_load_tax, 2),
+        return MetabolicReceipt(base_cost=round(base_demand, 2), drag_tax=round(cognitive_load_tax, 2),
             inefficiency_tax=round(inefficiency_tax, 2),
             total_burn=round(total_metabolic_cost, 2), waste_generated=round(waste_generated, 2),
-            status=status, symptom=self.state.retrograde_signal,
-        )
+            status=status, symptom=self.state.retrograde_signal,)
 
     def _apply_adaptive_dynamics(self):
         cfg = safe_get(self.cfg, "BIO", {})
@@ -226,10 +221,7 @@ class DigestiveTrack:
         base_map = (LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG") or {}).get("ENZYME_MAP", {})
         self.enzyme_map = dict(base_map)
         if "heavy" not in self.enzyme_map:
-            self.enzyme_map.update({
-                "heavy": "CELLULASE", "constructive": "CHITINASE",
-                "aerobic": "LIGNASE", "meat": "PROTEASE",
-            })
+            self.enzyme_map.update({ "heavy": "CELLULASE", "constructive": "CHITINASE", "aerobic": "LIGNASE", "meat": "PROTEASE",})
         bio_cfg = safe_get(self.cfg, "BIO", {})
         self.SAMPLING_THRESHOLD = int(safe_get(bio_cfg, "SAMPLING_THRESHOLD", 1000))
         self.BASE_WORD_VALUE = float(safe_get(bio_cfg, "BASE_WORD_VALUE", 0.5))
@@ -248,8 +240,7 @@ class DigestiveTrack:
         if scaled_tax > 0:
             total_atp = max(0.0, total_atp - scaled_tax)
             self.bio.endo.cortisol += (scaled_tax * 0.02)
-            msg = ux_format("digestive_track", "cliche_tax", default="[BIO]: CLICHÉ TAX: -{tax:.1f} ATP.",
-                            tax=scaled_tax)
+            msg = ux_format("digestive_track", "cliche_tax", default="[BIO]: CLICHÉ TAX: -{tax:.1f} ATP.", tax=scaled_tax)
             logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
         bio_cfg = safe_get(self.cfg, "BIO", {})
         v_thresh = float(safe_get(bio_cfg, "VOLTAGE_BONUS_THRESHOLD", 8.0))
@@ -269,8 +260,7 @@ class DigestiveTrack:
             factor = count / self.SAMPLING_THRESHOLD
             if random.random() < 0.1:
                 msg = ux_format("digestive_track", "mass_input",
-                                default="[BIO]: Mass Input ({count}). Sampling x{factor:.1f}.", count=count,
-                                factor=factor)
+                    default="[BIO]: Mass Input ({count}). Sampling x{factor:.1f}.", count=count, factor=factor)
                 logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
             return random.sample(words, self.SAMPLING_THRESHOLD), factor
         return words, 1.0

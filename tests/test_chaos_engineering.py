@@ -14,8 +14,6 @@ class TestChaosEngineering(BoneTestCase):
         if not getattr(self.engine, "shared_lattice", None):
             from drivers import SharedLatticeDriver
             self.engine.shared_lattice = SharedLatticeDriver()
-
-        # Hydrate missing dataclass attributes
         if not hasattr(self.engine.shared_lattice.u, "E"):
             setattr(self.engine.shared_lattice.u, "E", 0.0)
         for attr in ["phi", "resonance_delta"]:
@@ -130,8 +128,7 @@ class TestChaosEngineering(BoneTestCase):
         except Exception as e:
             self.fail(f"[CRITICAL] EventBus crashed when handling dirty telemetry data: {e}")
         final_subs = len(self.engine.events.subscribers.get("DIRTY_TEST", []))
-        self.assertEqual(initial_subs, final_subs,
-                         "[FAIL] Telemetry was amputated by the EventBus due to a serialization error!")
+        self.assertEqual(initial_subs, final_subs, "[FAIL] Telemetry was amputated by the EventBus due to a serialization error!")
 
     def test_graceful_death_with_suppressed_modules(self):
         engine = BoneAmanita({})
@@ -147,7 +144,6 @@ class TestChaosEngineering(BoneTestCase):
 
     def test_graceful_death_cortex_amputation(self):
         engine = BoneAmanita({})
-        # Simulate a violent crash where the cortex memory pointer is completely severed
         engine.cortex = None
         dummy_physics = {"narrative_drag": 0.0}
         try:
@@ -159,6 +155,18 @@ class TestChaosEngineering(BoneTestCase):
             self.fail(f"[CRITICAL] trigger_death crashed due to missing Cortex attributes: {e}")
         except Exception as e:
             self.fail(f"[CRITICAL] trigger_death failed gracefully with missing Cortex: {e}")
+
+    def test_massive_context_rem_indexing(self):
+        massive_payload = "ALL WORK AND NO PLAY MAKES JACK A DULL BOY. " * 500  # ~22,000 chars
+        snapshot = self.engine.process_turn(massive_payload)
+        self.assertEqual(snapshot.get("type"), "SILENT_INGEST",  "[FAIL] Massive payload bypassed the Dream Queue intercept.")
+        dreamer = getattr(self.engine.mind, "dreamer", None)
+        self.assertIsNotNone(dreamer, "[FAIL] DreamEngine is missing from the architecture.")
+        self.assertEqual(len(dreamer.context_queue), 1, "[FAIL] Context was not appended to the DreamEngine queue.")
+        sleep_snapshot = self.engine.orchestrator.run_turn("/sleep")
+        self.assertEqual(len(dreamer.context_queue), 0, "[FAIL] DreamEngine failed to digest the context queue during REM sleep.")
+        ui_output = sleep_snapshot.get("ui", "")
+        self.assertIn("Bedrock Nodes Indexed", ui_output, "[FAIL] UI did not report successful Bedrock indexing.")
 
     def test_paradox_engine_starvation_halt(self):
         from machine.paradox import TheParadoxEngine
@@ -173,12 +181,10 @@ class TestChaosEngineering(BoneTestCase):
         from unittest.mock import MagicMock
         events_mock = MagicMock()
         llm = LLMInterface(events_ref=events_mock, provider="mock")
-
         params_dissolving = {}
         llm.generate("Test prompt <cd_lambda_1>1.5</cd_lambda_1>", params_dissolving)
         self.assertEqual(params_dissolving.get("temperature"), 0.0, "[FAIL] LLM failed to lock thermal bounds during positive eigenvalue (dissolving state).")
         self.assertEqual(params_dissolving.get("top_p"), 0.1, "[FAIL] LLM failed to lock top_p during positive eigenvalue.")
-
         params_emergent = {}
         llm.generate("Test prompt <cd_lambda_1>-0.3</cd_lambda_1>", params_emergent)
         self.assertGreater(params_emergent.get("temperature"), 0.7, "[FAIL] LLM failed to loosen thermal bounds during negative eigenvalue (emergent state).")

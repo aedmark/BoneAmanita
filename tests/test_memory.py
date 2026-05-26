@@ -104,8 +104,6 @@ class MemoryTests(BoneTestCase):
         self.assertNotIn("echo\uFEFF", clean_data["edges"])
         self.assertEqual(clean_data["tags"][0], "corrupt")
         self.assertEqual(clean_data["tags"][1], "clean")
-        print("\n--- The Billy Mitchell Protocol ---")
-        print("  [SUCCESS] Invisible structural rot eradicated successfully.")
 
     def test_bonus_round_multiplicative_resonance(self):
         from spores.memory import MemoryCore
@@ -118,8 +116,6 @@ class MemoryTests(BoneTestCase):
         bonus_results = core.illuminate({"ENT": 0.8})
         self.assertTrue(len(linear_results) > 0)
         self.assertTrue(len(bonus_results) > 0)
-        print("\n--- The Bonus Round ---")
-        print("  [SUCCESS] Multiplicative resonance threshold crossed cleanly.")
 
     def test_orchestrator_queue_blocking(self):
         from cycle import GeodesicOrchestrator
@@ -130,8 +126,6 @@ class MemoryTests(BoneTestCase):
         orch.output_queue.put({"type": "SNAPSHOT", "ui": "Test passed."})
         snapshot = orch.output_queue.get(timeout=1.0)
         self.assertEqual(snapshot["ui"], "Test passed.")
-        print("\n--- Output Queue Blocking ---")
-        print("  [SUCCESS] GeodesicOrchestrator successfully passed data via thread-safe queue.")
 
     def test_subconscious_matrix_absorption(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -173,18 +167,11 @@ class MemoryTests(BoneTestCase):
         vector = {"PSI": 0.9}
         mem_core.illuminate(vector, limit=1)
         edges = mem_core.graph["ECHO_NODE"]["edges"]
-        self.assertAlmostEqual(edges.get("original_context"), 9.5, places=2,
-                               msg="Memory failed to decay its original edges by 5% during recall.", )
-        self.assertEqual(
-            edges.get("core_strut"),
-            10.0,
-            "Diamond node incorrectly decayed during reconstructive memory drift.",
-        )
+        self.assertAlmostEqual(edges.get("original_context"), 9.5, places=2, msg="Memory failed to decay its original edges by 5% during recall.", )
+        self.assertEqual(edges.get("core_strut"), 10.0,
+                         "Diamond node incorrectly decayed during reconstructive memory drift.", )
         new_keys = set(edges.keys()) - {"original_context", "core_strut"}
-        self.assertTrue(
-            len(new_keys) > 0,
-            "Memory failed to reconstruct with new emotional context.",
-        )
+        self.assertTrue(len(new_keys) > 0, "Memory failed to reconstruct with new emotional context.", )
 
     def test_vectorized_graph_edge_cases(self):
         import numpy as np

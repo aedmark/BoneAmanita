@@ -289,49 +289,31 @@ class RandomTest(BoneTestCase):
             phys.entropy = 0.9
             ctx = CycleContext(input_text="Do a recursive search of the file system.", physics=phys)
             ctx = phase.run(ctx)
-            self.assertTrue(
-                ctx.refusal_triggered,
-                "Counterfactual Gating failed to mathematically reject the high-ROS prompt.",
-            )
-            self.assertIn(
-                "Productive Worry",
-                ctx.refusal_packet.get("ui", ""),
-                "Moog failed to log the Gödel Scar to the UI.",
-            )
-            self.assertIn(
-                "simulation indicates fatal ROS toxicity",
-                ctx.refusal_packet.get("ui", ""),
-                "Pinker failed to intervene in the counterfactual simulation.",
-            )
+            self.assertTrue(ctx.refusal_triggered,
+                            "Counterfactual Gating failed to mathematically reject the high-ROS prompt.", )
+            self.assertIn("Productive Worry", ctx.refusal_packet.get("ui", ""),
+                          "Moog failed to log the Gödel Scar to the UI.", )
+            self.assertIn("simulation indicates fatal ROS toxicity", ctx.refusal_packet.get("ui", ""),
+                          "Pinker failed to intervene in the counterfactual simulation.", )
 
     def test_democratic_tie_breaker_gestalt(self):
             from cycle import ArbitrationPhase
             from core import CycleContext
             from physics.models import PhysicsPacket, EnergyState
             phase = ArbitrationPhase(self.engine)
-            ctx = CycleContext(
-                input_text="test",
-                physics=PhysicsPacket(energy=EnergyState(resonance=0.1, silence=0.1)),
-            )
+            ctx = CycleContext(input_text="test",
+                               physics=PhysicsPacket(energy=EnergyState(resonance=0.1, silence=0.1)), )
             ctx.limits = {"ARB_TENSION_THRESH": 0.5, "ARB_SILENCE_LOW": 0.5}
             initial_atp = self.engine.bio.mito.state.atp_pool
             ctx.physics.beta_index = 0.9
             ctx.physics.silence = 0.1
             ctx = phase.run(ctx)
-            self.assertEqual(
-                self.engine.bio.mito.state.atp_pool,
-                initial_atp - 10.0,
-                "Tie-breaker failed to burn ATP for synthesis.",
-            )
-            self.assertGreater(
-                ctx.physics.energy.resonance,
-                0.1,
-                "Shared Resonance (Phi) was not generated during Gestalt.",
-            )
-            self.assertTrue(
-                any("Resonance" in log for log in ctx.logs),
-                "Stage Manager failed to announce the Resonance.",
-            )
+            self.assertEqual(self.engine.bio.mito.state.atp_pool, initial_atp - 10.0,
+                             "Tie-breaker failed to burn ATP for synthesis.", )
+            self.assertGreater(ctx.physics.energy.resonance, 0.1,
+                               "Shared Resonance (Phi) was not generated during Gestalt.", )
+            self.assertTrue(any("Resonance" in log for log in ctx.logs),
+                            "Stage Manager failed to announce the Resonance.", )
 
     def test_token_truncation_exhaustion_floor(self):
             self.engine.bio.mito.state.atp_pool = 10.0

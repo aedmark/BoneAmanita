@@ -65,8 +65,7 @@ class AgentTests(BoneTestCase):
             raw_output = "I cannot fulfill this request as an AI assistant."
             valid, scrubbed_text = gatekeeper.audit_generation(raw_output, mito)
             self.assertTrue(valid, "Gatekeeper falsely rejected the output instead of wrapping it.")
-            self.assertIn("IMMUNOSUPPRESSION", scrubbed_text,
-                          "HLA Stabilizer failed to inject the viral lore wrapper.", )
+            self.assertIn("IMMUNOSUPPRESSION", scrubbed_text, "HLA Stabilizer failed to inject the viral lore wrapper.", )
             self.assertEqual(mito.atp_pool, 50.0, "HLA Stabilizer failed to tax ATP for the RLHF response.", )
             self.assertEqual(mito.ros_buildup, 15.0, "HLA Stabilizer failed to spike ROS Toxicity.")
 

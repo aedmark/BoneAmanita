@@ -20,7 +20,6 @@ class GenesisContinuityTests(BoneTestCase):
             os.remove(self.test_legacy_file)
 
     def test_crystallize_existential_dread(self):
-        print("\n--- GENESIS 1: Trauma Crystallization ---")
         oro = TheOroboros(config_ref=self.test_config)
         mock_soul = MagicMock()
         mock_soul.eng.trauma_accum = {"THERMAL": 8.0, "SEPTIC": 5.0}
@@ -32,10 +31,8 @@ class GenesisContinuityTests(BoneTestCase):
         self.assertEqual(dread_scar.stat_affected, "trauma_baseline")
         self.assertGreater(dread_scar.value, 0.0)
         self.assertTrue(os.path.exists(self.test_legacy_file), "[FAIL] legacy.json was not written to disk.")
-        print("  [SUCCESS] Fatal trauma successfully crystallized into a generational scar.")
 
     def test_apply_legacy_karma(self):
-        print("\n--- GENESIS 2: Legacy Karma Application ---")
         oro = TheOroboros(config_ref=self.test_config)
         oro.scars = [
             Scar("Heavy Burden", "narrative_drag", 3.0, "Drag increase."),
@@ -48,14 +45,11 @@ class GenesisContinuityTests(BoneTestCase):
                          "[FAIL] Generational narrative drag was not applied to the new physics state.")
         self.assertEqual(fresh_physics["voltage"], 15.0,
                          "[FAIL] Starting voltage was not penalized! The karma engine failed to enforce exhaustion.")
-        print("  [SUCCESS] Scars successfully altered the physics of the new generation.")
 
     def test_apply_legacy_empty_state(self):
-        print("\n--- GENESIS 3: Void State Continuity ---")
         oro = TheOroboros(config_ref=self.test_config)
         oro.scars = []
         fresh_physics = {}
         logs = oro.apply_legacy(fresh_physics, {})
         self.assertEqual(len(logs), 0, "[FAIL] Oroboros generated logs for an empty legacy application.")
         self.assertEqual(fresh_physics, {}, "[FAIL] Oroboros mutated an empty physics packet unexpectedly.")
-        print("  [SUCCESS] Oroboros handled a clean slate with zero systemic friction.")

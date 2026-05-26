@@ -25,7 +25,6 @@ class MechanicsTests(BoneTestCase):
                       "[FAIL] SessionGuardian failed to print the graceful narrative crash message.")
 
     def test_protocol_pragmatist_membrane(self):
-        print("\n--- PROTOCOL 5: The Pragmatist Membrane ---")
         from mechanics.pragmatics import ThePragmatist
         pragmatist = ThePragmatist()
         phys_state = {"narrative_drag": 0.0, "entropy": 0.0}
@@ -48,4 +47,3 @@ class MechanicsTests(BoneTestCase):
         self.assertNotIn("it could be said that", mutated, "[FAIL] Pragmatist failed to strip 'it could be said that'.")
         self.assertIn("the sky is blue.", mutated,
                       "[FAIL] Pragmatist stripped too much and destroyed the bedrock logic.")
-        print("  [SUCCESS] Pragmatism successfully enforced.")
