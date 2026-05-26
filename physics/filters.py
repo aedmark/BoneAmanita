@@ -126,7 +126,9 @@ class TheGatekeeper:
             return reject("CURSED_INPUT", "gatekeeper_cursed")
         if "```" in text or "{{" in text or "}}" in text or "CRITICAL_RENDER_FAIL" in text:
             return reject("SYNTAX_ERR", "gatekeeper_syntax")
-        if len(text) > 10000:
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+        context_limit = int(safe_get(c_cfg, "MAX_INPUT_CHARS", 15000))
+        if len(text) > max(10000, context_limit * 2):
             return reject("OVERLOAD", "gatekeeper_overload", color=Prisma.OCHRE)
         return True, None
 

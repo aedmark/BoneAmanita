@@ -1,4 +1,4 @@
-"""village.py"""
+"""archetypes/village.py"""
 
 import heapq
 import math
@@ -35,16 +35,12 @@ class TheTinkerer:
         if hl := counts.get("HEAVY_LOAD"):
             deltas.append(PhysicsDelta("ADD", "narrative_drag", math.log1p(hl) * _cfg_val(self.cfg, "VILLAGE", "TINKER_HEAVY_LOAD_MULT", 0.7), "Inventory", "Heavy Load"))
         if td := counts.get("TIME_DILATION"):
-            reduction = max(
-                _cfg_val(self.cfg, "VILLAGE", "TINKER_TIME_DILATION_MIN", 0.5),
-                _cfg_val(self.cfg, "VILLAGE", "TINKER_TIME_DILATION_BASE", 0.85) - (td * _cfg_val(self.cfg, "VILLAGE", "TINKER_TIME_DILATION_STEP", 0.05))
-            )
+            reduction = max(_cfg_val(self.cfg, "VILLAGE", "TINKER_TIME_DILATION_MIN", 0.5),
+                _cfg_val(self.cfg, "VILLAGE", "TINKER_TIME_DILATION_BASE", 0.85) - (td * _cfg_val(self.cfg, "VILLAGE", "TINKER_TIME_DILATION_STEP", 0.05)))
             deltas.append(PhysicsDelta("MULT", "narrative_drag", reduction, "Inventory", "Time Dilation"))
         if eb := counts.get("ENTROPY_BUFFER"):
-            buffer_str = max(
-                _cfg_val(self.cfg, "VILLAGE", "TINKER_ENTROPY_BUFFER_MIN", 0.2),
-                _cfg_val(self.cfg, "VILLAGE", "TINKER_ENTROPY_BUFFER_BASE", 0.5) / math.sqrt(eb)
-            )
+            buffer_str = max(_cfg_val(self.cfg, "VILLAGE", "TINKER_ENTROPY_BUFFER_MIN", 0.2),
+                _cfg_val(self.cfg, "VILLAGE", "TINKER_ENTROPY_BUFFER_BASE", 0.5) / math.sqrt(eb))
             deltas.append(PhysicsDelta("MULT", "turbulence", buffer_str, "Inventory", "Entropy Buffer"))
         self._inventory_hash, self._delta_cache = current_hash, deltas
         return deltas
@@ -72,8 +68,7 @@ class TheTinkerer:
             self._apply_resonance(item, _cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_TEMPER", 0.05))
 
     def _apply_resonance(self, item: str, amount: float):
-        self.tool_resonance[item] = min(_cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_MAX", 10.0),
-                                        self.tool_resonance[item] + amount)
+        self.tool_resonance[item] = min(_cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_MAX", 10.0), self.tool_resonance[item] + amount)
         if _cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_ANNOUNCE_MIN", 4.8) < self.tool_resonance[item] < _cfg_val(
                 self.cfg, "VILLAGE", "TINKER_RESONANCE_ANNOUNCE_MAX", 5.2):
             if random.random() < _cfg_val(self.cfg, "VILLAGE", "TINKER_RESONANCE_ANNOUNCE_CHANCE", 0.05):
@@ -358,12 +353,8 @@ class TownHall:
 class DeathGen:
     _FALLBACK_PROTOCOLS = {
         "PREFIXES": ["FATAL ERROR", "SYSTEM HALT", "THE END"],
-        "CAUSES": {
-            "DEFAULT": ["Unknown Error", "Entropy limit reached"]
-        },
-        "VERDICTS": {
-            "DEFAULT": ["End of Line.", "Reboot required."]
-        },
+        "CAUSES": {"DEFAULT": ["Unknown Error", "Entropy limit reached"]},
+        "VERDICTS": {"DEFAULT": ["End of Line.", "Reboot required."]},
     }
 
     @classmethod
@@ -430,8 +421,7 @@ class TheTherapist:
         health_threshold = _cfg_val(self.cfg, "VILLAGE", "THERAPY_HEALTH_THRESH", 50.0)
         if trauma_vector and sum(trauma_vector.values()) > trauma_threshold and health < health_threshold:
             max_trauma = str(max(trauma_vector, key=trauma_vector.get)).lower()
-            msg = (ux("village_strings",
-                      "therapist_intervention") or "The Therapist steps in to address the {trauma}.").format(
+            msg = (ux("village_strings", "therapist_intervention") or "The Therapist steps in to address the {trauma}.").format(
                 trauma=max_trauma)
             self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "THERAPY")
             return True, msg

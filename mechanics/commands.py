@@ -398,7 +398,11 @@ class CommandProcessor:
             soul = getattr(self.interface.eng, "soul", None)
             bio = getattr(self.interface.eng, "bio", None)
             snapshot = soul.to_dict() if soul else {}
-            bio_state = bio.endo.get_state() if bio and hasattr(bio, "endo") else {}
+            bio_state = {}
+            if bio:
+                bio_state["chem"] = bio.endo.get_state() if hasattr(bio, "endo") else {}
+                if hasattr(bio, "mito"):
+                    bio_state["mito"] = {"atp": bio.mito.state.atp_pool, "ros": bio.mito.state.ros_buildup}
             dream_text, effects = dreamer.enter_rem_cycle(snapshot, bio_state)
             if dream_text:
                 dream_log = f"\n\n{self.P.VIOLET}☁️ {dream_text}{self.P.RST}"

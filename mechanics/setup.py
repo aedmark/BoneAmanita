@@ -90,13 +90,8 @@ class ConfigWizard:
         else:
             config.update({"provider": "ollama", "base_url": "http://127.0.0.1:11434/v1/chat/completions"})
             config["model"] = input(f"Model ID [llama3]: ").strip() or "llama3"
-        print(f"\n{Prisma.paint('STEP 4: MODEL ARCHITECTURE', 'W')}")
-        print("Is this model considered 'Lightweight' (e.g., under 15B parameters)?")
-        print(f"  1. {Prisma.paint('HEAVYWEIGHT', 'G')} - Standard reasoning, full DSPy audits.")
-        print(f"  2. {Prisma.paint('LIGHTWEIGHT', 'C')} - Degraded cognitive load, tethered prompts.")
-        weight_choice = input(f"{Prisma.paint('>', 'C')} ").strip()
-        config["WEIGHT_CLASS"] = "LIGHTWEIGHT" if weight_choice == "2" else "HEAVYWEIGHT"
-        print(f"\n{Prisma.paint('STEP 5: INTERFACE COMPLEXITY', 'W')}")
+
+        print(f"\n{Prisma.paint('STEP 4: INTERFACE COMPLEXITY', 'W')}")
         for k, name, col, desc in [
             ("1", "DEEP", "M", "Full Multidimensional Matrix (Requires VSL Knowledge)"),
             ("2", "CORE", "C", "Standard Physics & Shared Co-Regulation"),

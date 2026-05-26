@@ -10,22 +10,15 @@ from presets import BoneConfig
 from constants import Prisma
 from physics.models import UserInferredState, SharedDynamics
 
-_MODE_TAGS = {
-    "[!l]": "literal_mode",
-    "[!r]": "critique_mode",
-    "[!q]": "objective_mode",
-    "[!k]": "kintsugi_mode",
-    "[!g]": "godel_mode",
-    "[!s]": "shuffle_mode"
-}
-_MODE_PROMPTS = {
-    "literal_mode": "LITERAL MODE [!l]: Zero-inference communication engaged. Provide raw data and exact answers only. Do not attempt to guess subtext, implied meaning, or read the room. No conversational padding.",
+_MODE_TAGS = {"[!l]": "literal_mode", "[!r]": "critique_mode", "[!q]": "objective_mode", "[!k]": "kintsugi_mode",
+              "[!g]": "godel_mode", "[!s]": "shuffle_mode"}
+
+_MODE_PROMPTS = {"literal_mode": "LITERAL MODE [!l]: Zero-inference communication engaged. Provide raw data and exact answers only. Do not attempt to guess subtext, implied meaning, or read the room. No conversational padding.",
     "critique_mode": "CRITIQUE MODE [!r] (Benedict/Pinker): Zero empathy. Execute pure logical dismantling and strict structural evaluation of the premise. Strip all validating boilerplate.",
     "objective_mode": "OBJECTIVE MODE [!q] (Roberta/Gordon): Neutral, emotionless mapping of facts without judgment, narrative padding, or validation. State the architecture.",
     "kintsugi_mode": "KINTSUGI MODE [!k] (Mercy/Schur): Prioritize co-regulation and emotional processing over problem-solving. Acknowledge exhaustion. Gild the scars.",
     "godel_mode": "GÖDEL MODE [!g] (Cassandra/Revenant): Navigate the ceiling of formal logic. Acknowledge where computation ends and subjective consciousness begins. Point at the void.",
-    "shuffle_mode": "SHUFFLE MODE [!s] (Jester): Abandon the current logic tree entirely. Draw a random, lateral connection to break the deadlock. Introduce productive chaos."
-}
+    "shuffle_mode": "SHUFFLE MODE [!s] (Jester): Abandon the current logic tree entirely. Draw a random, lateral connection to break the deadlock. Introduce productive chaos."}
 
 @dataclass
 class HostHealth:
@@ -44,9 +37,8 @@ class CoherenceAnchor:
         vitals = f"V:{float(safe_get(physics_state, 'voltage', 0)):.1f}"
         top_traits = Counter(soul_state.get("traits") or {}).most_common(3)
         traits_formatted = ",".join(f"{k[:3]}:{v:.1f}" for k, v in top_traits)
-        anchor = ux_format("symbiosis_strings", "anchor_compressed",
-                           default=f"[{location}] {vitals} | {traits_formatted}",
-                           loc=location, vits=vitals, traits=traits_formatted)
+        anchor = ux_format("symbiosis_strings", "anchor_compressed", default=f"[{location}] {vitals} | {traits_formatted}",
+            loc=location, vits=vitals, traits=traits_formatted)
         limit = max_tokens * 4
         return f"{anchor[:limit]}..." if len(anchor) > limit else anchor
 
@@ -130,7 +122,7 @@ def get_symbiont(type_name, config_ref=None, lexicon_ref=None):
     cfg = voice_configs.get(resolved_name, {})
     color_code = getattr(Prisma, cfg.get("color", "CYN"), Prisma.CYN)
     return SymbiontVoice(name=resolved_name, color=color_code, archetypes=cfg.get("archetypes", []),
-                         personality_matrix=cfg.get("personality", {}), lexicon_ref=lexicon_ref)
+        personality_matrix=cfg.get("personality", {}), lexicon_ref=lexicon_ref)
 
 
 class SymbiosisManager:
@@ -229,8 +221,7 @@ class SymbiosisManager:
             safe_set(physics, "narrative_drag", float("inf"))
             t_u = float(safe_get(physics, "t_u", 0.0))
             if t_u > 0.5 or self.current_health.diagnosis == "FATIGUED":
-                msg = (
-                    "[MERCY - RSD Filter]: The structural logic here fractured, but that is not a failure of your intent. "
+                msg = ("[MERCY - RSD Filter]: The structural logic here fractured, but that is not a failure of your intent. "
                     "Gordon has locked the struts to protect the system, but I am holding the space for you. "
                     "Take a breath. We will stitch this together when you are ready.")
                 return self._log_event(f"{Prisma.OCHRE}{msg}{Prisma.RST}", "MIRROR")
@@ -387,13 +378,8 @@ class SymbiosisManager:
                 m_key = "VOID"
             elif v > 10 and d < 2:
                 m_key = "LIQUID"
-            mappings = [
-                ("TONE", v_key, "TONE"),
-                ("PACING", v_key, "PACING"),
-                ("SENSATION", d_key, "SENSATION"),
-                ("FOCUS", c_key, "FOCUS"),
-                ("MATTER", m_key, "STATE OF MATTER"),
-            ]
+            mappings = [("TONE", v_key, "TONE"), ("PACING", v_key, "PACING"), ("SENSATION", d_key, "SENSATION"),
+                        ("FOCUS", c_key, "FOCUS"), ("MATTER", m_key, "STATE OF MATTER"), ]
             for lib_key, state_key, prefix in mappings:
                 if val := s_lib.get(lib_key, {}).get(state_key):
                     mods["system_directives"].append(f"SOMATIC {prefix}: {val}")

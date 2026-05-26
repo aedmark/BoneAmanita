@@ -10,7 +10,6 @@ from protocols.grief import GriefProtocol
 class ProtocolLifecycleTests(BoneTestCase):
     @patch('core.LoreManifest.get_instance')
     def test_bureau_hydration_and_mercy(self, mock_manifest):
-        print("\n--- PROTOCOLS 1: Bureau Hydration & Mercy Override ---")
         mock_data = {
             "BUREAU_FORMS": ["Test Form 101"],
             "BUREAU_RESPONSES": ["Test Response"],
@@ -37,11 +36,9 @@ class ProtocolLifecycleTests(BoneTestCase):
         self.assertIsNotNone(result, "[FAIL] Audit aborted entirely instead of returning a waived status.")
         self.assertEqual(result.get("status"), "WAIVED", "[FAIL] Bureau taxed a dying system! Mercy override failed.")
         self.assertEqual(result.get("atp_gain"), 0.0, "[FAIL] System was taxed despite the Mercy override.")
-        print("  [SUCCESS] Bureau successfully hydrated and waived the tax via Mercy Override.")
 
     @patch('core.LoreManifest.get_instance')
     def test_zen_garden_milestones(self, mock_manifest):
-        print("\n--- PROTOCOLS 2: Zen Garden Hydration & Milestones ---")
 
         def zen_side_effect(cat, section=None):
             if cat == "narrative_data": return {"ZEN_KOANS": ["A mock koan."]}
@@ -61,16 +58,13 @@ class ProtocolLifecycleTests(BoneTestCase):
         self.assertEqual(zen.pebbles_collected, 1, "[FAIL] Zen Garden failed to grant a pebble on Turn 5.")
         self.assertIsNotNone(msg, "[FAIL] Zen Garden failed to output a UI message on milestone.")
         self.assertIn("mock koan", msg, "[FAIL] Zen Garden failed to drop the hydrated Koan in the milestone message.")
-        print("  [SUCCESS] Zen Garden successfully accumulated stillness and granted rewards.")
 
     def test_grief_protocol_wake(self):
-        print("\n--- PROTOCOLS 3: The Grief Protocol Wake ---")
         eng_mock = MagicMock()
         eng_mock.trauma_accum = {"SEPTIC": 5.0}
         grief = GriefProtocol(events_ref=MagicMock(), engine_ref=eng_mock)
         grief._hold_wake({"node": "A beautiful sunset"})
-        self.assertEqual(grief.recent_loss, "A beautiful sunset",
-                         "[FAIL] Grief Protocol failed to register the lost node.")
+        self.assertEqual(grief.recent_loss, "A beautiful sunset","[FAIL] Grief Protocol failed to register the lost node.")
         lattice_mock = MagicMock()
         lattice_mock.shared.g_pool = 1
         lattice_mock.u.T_u = 10.0
@@ -80,7 +74,6 @@ class ProtocolLifecycleTests(BoneTestCase):
         self.assertEqual(eng_mock.trauma_accum["SEPTIC"], 3.0, "[FAIL] Systemic Trauma was not reduced by 2.0.")
         self.assertIsNone(grief.recent_loss, "[FAIL] recent_loss state was not cleared after a successful wake.")
         self.assertIn("A beautiful sunset", result_msg, "[FAIL] Result message failed to mention the lost node.")
-        print("  [SUCCESS] Grief Protocol successfully exchanged a Glimmer for trauma reduction.")
 
     def test_sincerity_protocol_hard_routing(self):
         ambiguous_prompt = "I guess it's fine if we delete the backup. [!l]"
@@ -90,46 +83,33 @@ class ProtocolLifecycleTests(BoneTestCase):
         final_cortisol = self.engine.bio.endo.cortisol
 
         def test_chronos_temporal_validation(self):
-            print("\n--- PROTOCOLS 4: Chronos Temporal Validation ---")
             from protocols.chronos import ChronosKeeper
             eng_mock = MagicMock()
             eng_mock.kernel_hash = "FRACTURE"
             eng_mock.active_physics = {"zone": "The Void"}
             eng_mock.village.gordon.inventory = []
             chronos = ChronosKeeper(eng_mock)
-
             packet = chronos._build_continuity_packet()
-            self.assertEqual(packet.get("kernel_hash"), "FRACTURE",
-                             "[FAIL] Chronos failed to anchor the kernel hash in the continuity packet.")
-
+            self.assertEqual(packet.get("kernel_hash"), "FRACTURE", "[FAIL] Chronos failed to anchor the kernel hash in the continuity packet.")
             import io
             import sys
             captured_out = io.StringIO()
             sys.stdout = captured_out
-
-            # Simulate loading into a new timeline
             eng_mock.kernel_hash = "NEW_BOOT"
             data = {"continuity": packet}
             saved_hash = data["continuity"].get("kernel_hash", "UNKNOWN")
             current_hash = getattr(chronos.eng, "kernel_hash", "UNKNOWN")
-
             if saved_hash != "UNKNOWN" and saved_hash != current_hash:
                 print(f"[CHRONOS] Temporal fracture detected. Bridging timeline [{saved_hash}] into [{current_hash}].")
-
             sys.stdout = sys.__stdout__
-            self.assertIn("Temporal fracture detected", captured_out.getvalue(),
-                          "[FAIL] Chronos failed to detect the timeline fracture.")
-            print("  [SUCCESS] Chronos successfully verified timeline continuity and detected temporal fractures.")
+            self.assertIn("Temporal fracture detected", captured_out.getvalue(), "[FAIL] Chronos failed to detect the timeline fracture.")
 
     def test_grief_protocol_activation(self):
         self.engine.bio.endo.glimmers = 0
         self.engine.mind.mem.graph["project_fail"] = {"mass": 50.0}
         snapshot = self.engine.process_turn("We lost the project. [grief]")
         final_glimmers = self.engine.bio.endo.glimmers
-        self.assertGreater(
-            final_glimmers, 0,
-            "[FAIL] The Grief Protocol failed to yield a Glimmer."
-        )
+        self.assertGreater(final_glimmers, 0, "[FAIL] The Grief Protocol failed to yield a Glimmer.")
 
     def test_syntax_stress_penalty(self):
         from drivers.syntax import SyntaxModule
@@ -139,6 +119,5 @@ class ProtocolLifecycleTests(BoneTestCase):
         initial_stress = syntax.grammatical_stress
         initial_omega = syntax.omega_val
         new_omega = syntax.analyze(toxic_text, narrative_drag=5.0)
-        self.assertGreater(syntax.grammatical_stress, initial_stress,
-                           "[FAIL] Grammatical stress did not spike in response to punctuation density.")
+        self.assertGreater(syntax.grammatical_stress, initial_stress, "[FAIL] Grammatical stress did not spike in response to punctuation density.")
         self.assertLess(new_omega, initial_omega, "[FAIL] Omega did not drop in response to high user stress.")

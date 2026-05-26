@@ -225,9 +225,7 @@ class LoreManifest:
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            backup_path = f"{filepath}.corrupt.bak"
-            os.rename(filepath, backup_path)
-            print(f"{Prisma.RED}[LORE]: Corrupt JSON in '{category}': {e}. Quarantined to {backup_path}.{Prisma.RST}")
+            print(f"{Prisma.RED}[LORE]: Parse error in '{category}': {e}. Returning empty structure without modifying disk.{Prisma.RST}")
             return None
 
     def inject(self, category: str, data: Any):
@@ -352,7 +350,8 @@ class SystemHealth:
         self.errors.append(ErrorLog(component, msg, severity=severity))
         if self.observer:
             self.observer.log_error(component)
-        self.components_online[component.lower()] = False
+        if severity == "CRITICAL":
+            self.components_online[component.lower()] = False
         return ux_format("core_strings", "health_offline", component=component, msg=msg)
 
     def report_warning(self, message: str):
@@ -376,13 +375,9 @@ class RealityStack:
         return self._stack[-1]
 
     def push_layer(self, layer: int) -> bool:
-        curr = self._stack[-1]
-        if layer == curr:
-            return True
-        if layer == RealityLayer.DEBUG or layer == curr + 1:
+        if layer != self._stack[-1]:
             self._stack.append(layer)
-            return True
-        raise ValueError(f"Reality Layer Violation: Cannot topologically shift from layer {curr} to {layer}.")
+        return True
 
     def pop_layer(self) -> int:
         if len(self._stack) > 1:

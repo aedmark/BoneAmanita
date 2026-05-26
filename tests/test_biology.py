@@ -39,10 +39,8 @@ class BiologyTests(BoneTestCase):
             with patch.object(target_cfg.BIO, 'REST_HEALTH_RECOVERY', 20.0), \
                     patch.object(target_cfg.BIO, 'REST_STAMINA_RECOVERY', 40.0):
                 self.engine.bio.rest(factor=1.0)
-                self.assertEqual(self.engine.bio.biometrics.health, 70.0,
-                                 "Health did not recover at the configured rate.", )
-                self.assertEqual(self.engine.bio.biometrics.stamina, 90.0,
-                                 "Stamina did not recover at the configured rate.", )
+                self.assertEqual(self.engine.bio.biometrics.health, 70.0, "Health did not recover at the configured rate.", )
+                self.assertEqual(self.engine.bio.biometrics.stamina, 90.0, "Stamina did not recover at the configured rate.", )
 
     def test_config_glimmer_yield(self):
             target_cfg = getattr(self.engine, "config")
@@ -61,7 +59,6 @@ class BiologyTests(BoneTestCase):
                 )
 
     def test_somatic_unity(self):
-            print("\n--- Somatic Unity (The Orphan Limb) ---")
             has_unified_cortex = hasattr(self.engine.bio, "synesthesia") or hasattr(
                 self.engine.soma, "synesthesia")
             self.assertTrue(
@@ -72,9 +69,6 @@ class BiologyTests(BoneTestCase):
             phase = SensationPhase(self.engine.orchestrator.eng)
             try:
                 phase.run(ctx)
-                print(
-                    "  [SUCCESS] SensationPhase ran using the centralized biological timeline without crashing."
-                )
             except AttributeError as e:
                 self.fail(f"[FAIL] Somatic unity fractured during execution: {e}")
 
@@ -121,7 +115,6 @@ class BiologyTests(BoneTestCase):
                 self.engine.shared_lattice = shared_lattice_backup
 
     def test_bio_physical_coupling(self):
-        print("\n--- Bio-Physical Coupling (Governor) ---")
         from core import CyberneticGovernor
         gov = CyberneticGovernor()
         gov.recalibrate(target_voltage=50.0, target_drag=5.0)
@@ -138,4 +131,3 @@ class BiologyTests(BoneTestCase):
         v_shift_rich, _ = gov.regulate(phys_mock, dt=1.0, endocrine_state=endo_rich)
         self.assertTrue(abs(v_shift_dep) < abs(v_shift_base), "[FAIL] Depleted biology failed to throttle physics regulation.")
         self.assertTrue(abs(v_shift_rich) > abs(v_shift_base), "[FAIL] High glimmers failed to accelerate physics regulation.")
-        print("  [SUCCESS] Endocrine state successfully modulates physics regulation speed.")

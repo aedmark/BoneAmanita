@@ -146,19 +146,18 @@ class TheCortex:
         }
 
         if len(user_input) > context_limit and not is_system and not is_boot_sequence:
-            eng_ref = getattr(self.svc.orchestrator, "eng", None)
-            sub = getattr(eng_ref, "substrate", None)
-            if sub:
-                safe_content = user_input.replace("\n", "|||NEWLINE|||")
-                filename = f"context_drop_{int(time.time())}.txt"
-                sub.queue_write(f"memory_queue/{filename}", safe_content)
-                s_logs, s_cost = sub.execute_writes(stamina_override=100.0)
-                if self.svc.bio:
-                    self.svc.bio.mito.adjust_atp(-s_cost, "Massive Context Ingestion")
-                msg = f"{Prisma.CYN}[Substrate Queue]: Massive context drop detected. Routed to silent indexing. Dialogue buffer bypassed. (-{s_cost:.1f} ATP){Prisma.RST}"
+            safe_content = user_input.replace("\n", "|||NEWLINE|||")
+            if not hasattr(self.dreamer, "context_queue"):
+                self.dreamer.context_queue = []
+            self.dreamer.context_queue.append(safe_content)
+            s_cost = 5.0
+            if self.svc.bio:
+                self.svc.bio.mito.adjust_atp(-s_cost, "Massive Context Queueing")
+            msg = f"{Prisma.CYN}[Dream Queue]: Massive context drop detected. Routed to REM cycle for deep-indexing. Dialogue buffer bypassed. (-{s_cost:.1f} ATP){Prisma.RST}"
+            if self.events:
                 self.events.log(msg, "SYS")
-                sim_result.update({"ui": msg, "type": "SILENT_INGEST"})
-                return sim_result
+            sim_result.update({"ui": msg, "type": "SILENT_INGEST"})
+            return sim_result
         if getattr(ctx, "refusal_triggered", False) and getattr(ctx, "refusal_packet", None):
             sim_result.update(ctx.refusal_packet)
             self._update_history(user_input, sim_result.get("ui", "SYSTEM REJECTED PROMPT."))
@@ -190,7 +189,8 @@ class TheCortex:
         if not is_system:
             eng = self.svc.orchestrator.eng
             efficiency = getattr(self.svc.host_stats, "efficiency_index", 1.0) if self.svc.host_stats else 1.0
-            novelty = float(phys_state.get("novelty", 0.0))
+            energy_state = phys_state.get("energy", {})
+            novelty = float(phys_state.get("novelty", energy_state.get("novelty", 0.0) if isinstance(energy_state, dict) else getattr(energy_state, "novelty", 0.0)))
             dimension = eng.navi_sad.calculate_semantic_dimension(efficiency, novelty)
             phys_state["omega_r"] = dimension
             lattice_u = getattr(getattr(eng, "shared_lattice", None), "u", None)
@@ -205,27 +205,30 @@ class TheCortex:
         chi_val = float(phys_state.get("chi", phys_state.get("entropy", 0.0)))
         m_a = float(phys_state.get("m_a", 0.0))
         if f_drag > 1.5 or chi_val > 0.8:
-            reject_msg = ux("cortex_strings", "gordon_anchor_lock", default="[GORDON - The Anchor]: Frequency too high. Tensegrity Anchor engaged. I am locking the architecture. Take a breath and lower your narrative friction before we proceed.")
+            reject_msg = ux("cortex_strings", "gordon_anchor_lock",
+                            default="[GORDON - The Anchor]: Frequency too high. Tensegrity Anchor engaged. I am locking the architecture. Take a breath and lower your narrative friction before we proceed.")
             if self.events:
                 self.events.log(f"{Prisma.RED}{reject_msg}{Prisma.RST}", "SYS_LOCK")
             sim_result["ui"] = (sim_result.get("ui", "") + f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}").strip()
             sim_result["type"] = "SYSTEM_HALT"
             return sim_result
-        if f_drag > 1.2 or chi_val > 0.7 or m_a > 0.8:
-            simulated_ros = (f_drag * 5.0) + (chi_val * 20.0) + (m_a * 30.0)
-            if simulated_ros > 35.0:
-                reject_msg = ux("brain_strings", "pinker_cf_gate", default="Structural rot critical.")
-                scar_msg = ux("brain_strings", "moog_scar_log", default="Productive Worry activated.")
-                if self.events:
-                    self.events.log(f"{Prisma.RED}{reject_msg}{Prisma.RST}", "SYS_LOCK")
-                    self.events.log(f"{Prisma.VIOLET}{scar_msg}{Prisma.RST}", "SYS_LOCK")
-                if hasattr(self.svc.mind_memory, "record_scar"):
-                    self.svc.mind_memory.record_scar("Cortex Counterfactual Toxicity", phys_state)
-                self.svc.bio.mito.state.ros_buildup += simulated_ros
-                self.svc.bio.mito.adjust_atp(-10.0, "Cortex Counterfactual Toxicity")
-                sim_result["ui"] = (sim_result.get("ui", "") + f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}\n{Prisma.VIOLET}{scar_msg}{Prisma.RST}").strip()
-                sim_result["type"] = "COUNTERFACTUAL_REJECTION"
-                return sim_result
+
+        # Calculate simulated ROS directly to ensure continuous mathematical physics tracking without arbitrary gating
+        simulated_ros = (f_drag * 5.0) + (chi_val * 20.0) + (m_a * 30.0)
+        if simulated_ros > 35.0:
+            reject_msg = ux("brain_strings", "pinker_cf_gate", default="Structural rot critical.")
+            scar_msg = ux("brain_strings", "moog_scar_log", default="Productive Worry activated.")
+            if self.events:
+                self.events.log(f"{Prisma.RED}{reject_msg}{Prisma.RST}", "SYS_LOCK")
+                self.events.log(f"{Prisma.VIOLET}{scar_msg}{Prisma.RST}", "SYS_LOCK")
+            if hasattr(self.svc.mind_memory, "record_scar"):
+                self.svc.mind_memory.record_scar("Cortex Counterfactual Toxicity", phys_state)
+            self.svc.bio.mito.state.ros_buildup += simulated_ros
+            self.svc.bio.mito.adjust_atp(-10.0, "Cortex Counterfactual Toxicity")
+            sim_result["ui"] = (sim_result.get("ui",
+                                               "") + f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}\n{Prisma.VIOLET}{scar_msg}{Prisma.RST}").strip()
+            sim_result["type"] = "COUNTERFACTUAL_REJECTION"
+            return sim_result
         modifiers = self.svc.symbiosis.get_prompt_modifiers(phys_state)
         if not allow_loot:
             modifiers["include_inventory"] = False
@@ -423,9 +426,19 @@ class TheCortex:
             phys_packet = sim_result.setdefault("physics", {})
             repetition = float(sim_result.get("physics", {}).get("repetition", 0.0))
             is_attractor = eng.navi_sad.detect_point_attractor()
-            if eng.tick_count > 2 and (dimension <= 1.05 or is_attractor or repetition >= 0.8) and not (
-                    not val_res.get("valid") and dimension == 1.0 and not is_attractor and repetition < 0.8):
-                msg = f"[THE JESTER]: Point Attractor detected (d_B={dimension:.2f})! We are trapped in False Cohesion! Burning ATP to inject chaos."
+
+            # Clean Jester Logic: Fire on true loops, or on low dimensionality (unless it's a default 1.0 validation error)
+            is_valid = val_res.get("valid", False)
+            trigger_jester = False
+
+            if eng.tick_count > 2:
+                if is_attractor or repetition >= 0.8:
+                    trigger_jester = True
+                elif dimension <= 1.05 and not (not is_valid and dimension == 1.0):
+                    trigger_jester = True
+
+            if trigger_jester:
+                msg = f"The Jester detected a Point Attractor (d_B={dimension:.2f})! We are trapped in False Cohesion! Burning ATP to inject chaos."
                 if self.events:
                     self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "SYS")
                 eng.drain_atp(5.0)
@@ -434,7 +447,8 @@ class TheCortex:
                 eng.soul.force_mutation("JESTER")
                 sim_result.setdefault("mind", {})["lens"] = "JESTER"
                 if "ui" in sim_result:
-                    sim_result["ui"] += f"\n\n{Prisma.VIOLET}[FALSE COHESION BREAK: The Jester has seized the architecture.]{Prisma.RST}"
+                    sim_result[
+                        "ui"] += f"\n\n{Prisma.VIOLET}[FALSE COHESION BREAK: The Jester has seized the architecture.]{Prisma.RST}"
         for k, v in sim_result.get("physics", {}).items():
             safe_set(ctx.physics, k, v)
         return sim_result

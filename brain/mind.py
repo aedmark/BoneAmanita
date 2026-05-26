@@ -171,9 +171,10 @@ class NoeticLoop:
 
         if voltage > link_v and random.random() < link_chance:
             unique_words = list(set(clean_words))
-            if len(unique_words) >= 2:
+            graph = getattr(self.mind.mem, "graph", None)
+            if graph is not None and len(unique_words) >= 2:
                 w1, w2 = random.sample(unique_words, 2)
-                self._force_link(self.mind.mem.graph, w1, w2, self.cfg)
+                self._force_link(graph, w1, w2, self.cfg)
                 if hasattr(self.bio, "mito"):
                     self.bio.mito.adjust_atp(-1.0, "Spontaneous Semantic Link")
 
@@ -207,6 +208,7 @@ class DreamEngine:
         self.cfg = config_ref or BoneConfig
         self.dream_lore = self.lore.get("DREAMS") or {}
         self.trauma_buffer = deque(maxlen=5)
+        self.context_queue = []
         self.dspy_critic = None
 
     def enter_rem_cycle(self, soul_snapshot: Dict[str, Any], bio_state: Dict[str, Any]) -> Tuple[str, Dict[str, float]]:
@@ -219,7 +221,6 @@ class DreamEngine:
         shift = ({"cortisol": -0.3, "dopamine": 0.1} if cortisol <= 0.6 else {"cortisol": 0.1})
         if available_atp < 5.0:
             if random.random() < 0.50:
-                # Fatal Hallucination
                 death_hallucination, _ = self.hallucinate({"chi": 0.99, "voltage": 100.0}, trauma_level=1.0)
                 shift["atp_drain"] = available_atp + 10.0
                 shift["voltage"] = 100.0
@@ -227,26 +228,25 @@ class DreamEngine:
                 if self.events:
                     self.events.log(f"{Prisma.RED}TERMINAL SLEEP FAILURE: {fatal_msg}{Prisma.RST}", "CRIT")
                 return fatal_msg, shift
-        if self.eng and getattr(self.eng, "substrate", None) and self.eng.substrate.pending_writes:
-            raw_payloads = [data for path, data in self.eng.substrate.pending_writes if "memory_queue" in path]
-            s_logs, s_cost = self.eng.substrate.execute_writes(available_atp)
+        if hasattr(self, "context_queue") and self.context_queue:
+            raw_payloads = self.context_queue
+            self.context_queue = []
+            s_cost = min(available_atp * 0.4, len(raw_payloads) * 10.0)
             shift["atp_drain"] = s_cost
-            if raw_payloads:
-                from spores import _word_to_vector
-                vectors, metadata = [], []
-                for text in raw_payloads:
-                    vec = _word_to_vector(text[:50])
-                    vectors.append(vec)
-                    if np is not None:
-                        v_hash = hashlib.md5(np.array(vec, dtype=np.float32).tobytes()).hexdigest()[:8]
-                    else:
-                        v_hash = hashlib.md5(str(vec).encode('utf-8')).hexdigest()[:8]
-                    metadata.append({"vector_hash": v_hash, "raw_verbatim_text": text.replace("|||NEWLINE|||", "\n"),
-                                     "wing_id": "GLOBAL"})
-                self.mem.cortex.add_memories(vectors, metadata)
-                s_logs.append(f"{len(raw_payloads)} Bedrock Nodes Indexed")
-            dream_text = f"[{' | '.join(s_logs)} | ATP: -{s_cost:.1f} | Silent Logging Complete]"
-            if self.events: self.events.log(f"{Prisma.MAG}✨ [REM CYCLE]: {dream_text}{Prisma.RST}", "SYS")
+            from spores import _word_to_vector
+            vectors, metadata = [], []
+            for text in raw_payloads:
+                vec = _word_to_vector(text[:50])
+                vectors.append(vec)
+                if np is not None:
+                    v_hash = hashlib.md5(np.array(vec, dtype=np.float32).tobytes()).hexdigest()[:8]
+                else:
+                    v_hash = hashlib.md5(str(vec).encode('utf-8')).hexdigest()[:8]
+                metadata.append({"vector_hash": v_hash, "raw_verbatim_text": text.replace("|||NEWLINE|||", "\n"), "wing_id": "GLOBAL"})
+            self.mem.cortex.add_memories(vectors, metadata)
+            dream_text = f"[Deep Context Digest | {len(raw_payloads)} Bedrock Nodes Indexed | ATP: -{s_cost:.1f}]"
+            if self.events:
+                self.events.log(f"{Prisma.MAG}[REM CYCLE]: {dream_text}{Prisma.RST}", "SYS")
             return dream_text, shift
         consolidator = MemoryConsolidator(self.mem.hippocampus, self.mem.cortex, self.events)
         nodes_moved, atp_cost = consolidator.trigger_rem_consolidation(available_atp)
@@ -258,7 +258,7 @@ class DreamEngine:
                 dream_text = f"The system enters Deep REM. {nodes_moved} synaptic structures dissolve from the active cache and permanently crystallize into the deep Cerebral Cortex."
                 if self.events:
                     self.events.log(
-                        f"{Prisma.MAG}✨ [REM CYCLE]: Synaptic Consolidation complete. {nodes_moved} nodes written to deep index. (-{atp_cost:.1f} ATP){Prisma.RST}",
+                        f"{Prisma.MAG}[REM CYCLE]: Synaptic Consolidation complete. {nodes_moved} nodes written to deep index. (-{atp_cost:.1f} ATP){Prisma.RST}",
                         "SYS", )
         if self.dspy_critic and self.dspy_critic.enabled:
             if self.trauma_buffer:

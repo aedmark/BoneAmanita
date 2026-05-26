@@ -5,6 +5,7 @@ from .memory import SubconsciousStrata, MemoryCore
 from .biome import ImmuneMycelium, BioParasite, BioLichen
 from .genetics import LiteraryReproduction
 from .network import MycelialNetwork
+from .spore_utils import _word_to_vector
 
 __all__ = [
     "LocalFileSporeLoader",
@@ -14,5 +15,6 @@ __all__ = [
     "BioParasite",
     "BioLichen",
     "LiteraryReproduction",
-    "MycelialNetwork"
+    "MycelialNetwork",
+    "_word_to_vector"
 ]
