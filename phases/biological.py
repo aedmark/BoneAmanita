@@ -43,11 +43,9 @@ class MetabolismPhase(SimulationPhase):
             physics, bio_feedback, metrics["health"], metrics["stamina"],
             self.eng.bio.governor.get_stress_modifier(self.eng.tick_count), self.eng.tick_count,
             circadian_bias=self._check_circadian_rhythm(ctx), )
-        if getattr(self.eng.bio, "mito", None) and hasattr(self.eng.bio.mito.state, "atp_pool"):
-            self.eng.bio.mito.state.atp_pool = max(0.0, float(self.eng.bio.mito.state.atp_pool))
-        if getattr(self.eng.bio, "biometrics", None):
-            self.eng.bio.biometrics.health = max(0.0, float(self.eng.bio.biometrics.health))
-            self.eng.bio.biometrics.stamina = max(0.0, float(self.eng.bio.biometrics.stamina))
+        self.eng.bio.mito.state.atp_pool = max(0.0, float(self.eng.bio.mito.state.atp_pool))
+        self.eng.bio.biometrics.health = max(0.0, float(self.eng.bio.biometrics.health))
+        self.eng.bio.biometrics.stamina = max(0.0, float(self.eng.bio.biometrics.stamina))
         ctx.is_alive = ctx.bio_result["is_alive"]
         for log in ctx.bio_result["logs"]:
             if any(x in str(log) for x in ("CRITICAL", "TAX", "Poison", "NECROSIS")):
@@ -60,7 +58,7 @@ class MetabolismPhase(SimulationPhase):
         return ctx
 
     def _apply_economic_stimulus(self, ctx: CycleContext, efficiency: float):
-        base_cost = min(1.5, (0.8 - efficiency) * 5.0) if efficiency < 0.8 else 0.0
+        base_cost = min(1.5, max(0.0, (0.8 - efficiency) * 5.0))
         m_a = getattr(ctx.physics, "m_a", 0.0)
         mu = getattr(ctx.physics, "mu", 0.0)
         amplification_penalty = mu * math.exp(m_a)
@@ -116,8 +114,7 @@ class MetabolismPhase(SimulationPhase):
         elif evt == "ICARUS_CRASH":
             damage = ctx.limits.get("HUBRIS_DAMAGE", 15.0)
             ctx.log(f"{Prisma.RED}{ux('cycle_strings', 'metabolism_impact').format(damage=damage)}{Prisma.RST}")
-            if self.eng.bio.biometrics:
-                self.eng.bio.biometrics.health = max(0.0, self.eng.bio.biometrics.health - damage)
+            self.eng.bio.biometrics.health = max(0.0, self.eng.bio.biometrics.health - damage)
 
     def _apply_healing(self, ctx):
         qualia = self.eng.soma.synesthesia.get_current_qualia(ctx.last_impulse)
@@ -151,7 +148,7 @@ class MetabolismPhase(SimulationPhase):
         starvation_thresh = float(safe_get(bio_cfg, "ATP_STARVATION", 5.0))
         respiration = ctx.bio_result.get("respiration", "")
         current_atp = self.eng.bio.mito.state.atp_pool
-        if current_atp <= starvation_thresh or current_atp <= 0.0 or respiration == "NECROSIS":
+        if current_atp <= starvation_thresh or respiration == "NECROSIS":
             atp_gain, msg = self.eng.mind.mem.trigger_autophagy()
             self.eng.bio.mito.adjust_atp(atp_gain, "Autophagy")
             ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
@@ -175,21 +172,17 @@ class SensationPhase(SimulationPhase):
 
     def run(self, ctx: Any):
         phys_data = _safe_dict(ctx.physics)
-        current_latency = 0.0
-        if hasattr(self.eng, "observer") and hasattr(self.eng.observer, "last_cycle_duration"):
-            current_latency = self.eng.observer.last_cycle_duration
-        safe_traits = self.eng.soul.traits if getattr(self.eng, "soul", None) else None
-        impulse = self.synesthesia.perceive(phys_data, traits=safe_traits, latency=current_latency)
+        current_latency = getattr(getattr(self.eng, "observer", None), "last_cycle_duration", 0.0)
+        impulse = self.synesthesia.perceive(phys_data, traits=self.eng.soul.traits, latency=current_latency)
         ctx.last_impulse = impulse
         qualia = self.synesthesia.get_current_qualia(impulse)
         ctx.physics = apply_somatic_feedback(ctx.physics, qualia)
         self.synesthesia.apply_impulse(impulse)
-        bio = getattr(self.eng, "bio", None)
-        if impulse.stamina_impact != 0 and bio and bio.biometrics:
+        if impulse.stamina_impact != 0:
             target_cfg = getattr(self.eng, "config", BoneConfig)
             max_s = float(safe_get(target_cfg, "MAX_STAMINA", 100.0))
-            current = float(bio.biometrics.stamina)
-            bio.biometrics.stamina = max(0.0, min(max_s, current + float(impulse.stamina_impact)))
+            current = float(self.eng.bio.biometrics.stamina)
+            self.eng.bio.biometrics.stamina = max(0.0, min(max_s, current + float(impulse.stamina_impact)))
         return ctx
 
 class IntrusionPhase(SimulationPhase):
@@ -258,9 +251,7 @@ class IntrusionPhase(SimulationPhase):
             weaver = TheTclWeaver.get_instance()
             ctx.input_text = weaver.consume_by_void(ctx.input_text, current_psi)
             safe_set(ctx.physics, "psi", min(1.0, current_psi + 0.1))
-            if getattr(getattr(self.eng, "bio", None), "biometrics", None):
-                self.eng.bio.biometrics.stamina = max(
-                    0.0, self.eng.bio.biometrics.stamina - 5.0)
-                msg_drain = ux("cycle_strings", "intrusion_hallucination_drain")
-                ctx.log(f"{Prisma.GRY}{msg_drain}{Prisma.RST}")
+            self.eng.bio.biometrics.stamina = max(0.0, self.eng.bio.biometrics.stamina - 5.0)
+            msg_drain = ux("cycle_strings", "intrusion_hallucination_drain")
+            ctx.log(f"{Prisma.GRY}{msg_drain}{Prisma.RST}")
         return ctx

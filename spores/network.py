@@ -19,6 +19,7 @@ class MycelialNetwork:
     def __init__(self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None, config_ref=None, lexicon_ref=None, ):
         self.events = events
         self.cfg = config_ref or BoneConfig
+        self.subconscious = SubconsciousStrata()
         self.lex = lexicon_ref
         self.loader = loader if loader else LocalFileSporeLoader()
         self.session_id = f"session_{int(time.time())}"
@@ -40,16 +41,20 @@ class MycelialNetwork:
         if seed_file:
             self.ingest(seed_file)
         if hasattr(self.events, "publish"):
-            self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": self.subconscious.Q_n})
+            safe_q_matrix = getattr(self.subconscious, "Q_n", [[0.0] * 8 for _ in range(8)])
+            self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": safe_q_matrix})
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("SCAR_RECORDED", self._on_scar_recorded)
 
     def _on_scar_recorded(self, payload):
         concept = payload.get("concept")
         if concept:
-            self.subconscious.apply_scar(concept)
+            # Safely check if apply_scar exists (it doesn't in the new native ordvec adaptation)
+            if hasattr(self.subconscious, "apply_scar"):
+                self.subconscious.apply_scar(concept)
             if hasattr(self.events, "publish"):
-                self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": self.subconscious.Q_n})
+                safe_q_matrix = getattr(self.subconscious, "Q_n", [[0.0] * 8 for _ in range(8)])
+                self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": safe_q_matrix})
 
     @property
     def graph(self):
@@ -124,12 +129,28 @@ class MycelialNetwork:
         haunted_words = []
         for w in clean_words:
             if w in self.subconscious.index:
-                vibe = self.subconscious.dredge_vibe(w)
-                v_shift = vibe[0] * 2.0
-                d_shift = vibe[1] * 0.5
+                # dredge_vibe now returns a list of dictionaries. We need to handle this gracefully
+                # instead of assuming it's a list of floats.
+                vibe_results = self.subconscious.dredge_vibe(w)
+
+                # If we get a result from the new ordvec logic, extract a generic v/d shift based on the score
+                if vibe_results and isinstance(vibe_results, list) and isinstance(vibe_results[0], dict):
+                    top_score = vibe_results[0].get("score", 0.0)
+                    v_shift = top_score * 2.0
+                    d_shift = top_score * 0.5
+                # Fallback for the old logic if it somehow returns a list of floats
+                elif vibe_results and isinstance(vibe_results, list) and isinstance(vibe_results[0], float):
+                    v_shift = vibe_results[0] * 2.0
+                    d_shift = vibe_results[1] * 0.5 if len(vibe_results) > 1 else 0.0
+                else:
+                    v_shift = 0.0
+                    d_shift = 0.0
+
                 total_v_shift += v_shift
                 total_d_shift += d_shift
-                haunted_words.append(w)
+                if v_shift > 0.1: # Only track if there's meaningful resonance
+                    haunted_words.append(w)
+
         total_v_shift = max(-15.0, min(15.0, total_v_shift))
         total_d_shift = max(-5.0, min(5.0, total_d_shift))
         if haunted_words:
@@ -183,8 +204,9 @@ class MycelialNetwork:
             if not victims:
                 return ux("spore_strings", "net_sat_lock") or "", []
             if hasattr(self.events, "publish"):
-                self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": self.subconscious.Q_n})
-            self.cortical_stack.extend(valuable)
+                safe_q_matrix = getattr(self.subconscious, "Q_n", [[0.0] * 8 for _ in range(8)])
+                self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": safe_q_matrix})
+        self.cortical_stack.extend(valuable)
         base_rate = 0.5 * (resonance / 5.0)
         learning_rate = max(0.1, min(1.0, base_rate * learning_mod))
         decay_rate = 0.1
@@ -380,7 +402,7 @@ class MycelialNetwork:
         seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in self.seeds if not s.bloomed]
         if not any(s["q"] == future_seed_q for s in seed_list):
             seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
-        data = {"genome": "BA_2020", "session_id": self.session_id, "parent_id": self.session_id,
+        data = {"genome": "BA_2030", "session_id": self.session_id, "parent_id": self.session_id,
                 "meta": {"timestamp": time.time(), "final_health": health, "final_stamina": stamina, },
                 "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
                 "core_graph": core_graph, "mutations": mutations or {},
@@ -431,7 +453,10 @@ class MycelialNetwork:
                 self.events.log(f"{Prisma.GRY}{msg}{Prisma.RST}")
             return None
         candidates = [f for f in files if self.session_id not in f[0]]
-        return self.ingest(candidates[0][0]) if candidates else None
+        for candidate in candidates:
+            if result := self.ingest(candidate[0]):
+                return result
+        return None
 
     def retrieve_semantic(self, trigger_word: str, query_vector: list, scope: float = 0.5,
                           resonance: float = 0.5, ) -> list:

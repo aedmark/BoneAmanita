@@ -32,7 +32,7 @@ class SyntaxModule:
             target_omega = t_low
         else:
             target_omega = t_mid
-        punctuation_density = sum(1 for c in text if c in ",;:-") / max(1, len(words))
+        punctuation_density = sum(text.count(c) for c in ",;:-") / max(1, len(words))
         if punctuation_density > safe_get(cfg, "SYNTAX_STRESS_PUNCTUATION", 0.2):
             self.grammatical_stress = min(1.0, self.grammatical_stress + safe_get(cfg, "SYNTAX_STRESS_INCREASE", 0.2))
             target_omega -= safe_get(cfg, "SYNTAX_OMEGA_PENALTY", 0.3)

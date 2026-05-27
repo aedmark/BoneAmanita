@@ -55,11 +55,8 @@ class LocalFileSporeLoader:
         if not os.path.exists(self.directory):
             return []
         try:
-            files = []
             with os.scandir(self.directory) as it:
-                for entry in it:
-                    if entry.is_file() and entry.name.endswith(".json") and entry.name.startswith("session_"):
-                        files.append((entry.path, entry.stat().st_mtime, entry.name))
+                files = [(e.path, e.stat().st_mtime, e.name) for e in it if e.is_file() and e.name.endswith(".json") and e.name.startswith("session_")]
             return sorted(files, key=lambda x: x[1], reverse=True)
         except OSError:
             return []

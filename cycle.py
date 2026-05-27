@@ -98,11 +98,8 @@ def _native_rewire(adj_dict: dict, n_swaps: int) -> dict:
 
 
 def _native_freeze_graph(adj_dict: dict) -> tuple:
-    try:
-        return tuple((k, tuple(sorted(neighbors, key=str))) for k, neighbors in
-                     sorted(adj_dict.items(), key=lambda x: str(x[0])))
-    except (AttributeError, RuntimeError):
-        return ()
+    if not adj_dict or not hasattr(adj_dict, "items"): return ()
+    return tuple((k, tuple(sorted(neighbors, key=str))) for k, neighbors in sorted(adj_dict.items(), key=lambda x: str(x[0])))
 
 
 def _native_permutation_entropy(time_series: list[float], m: int = 3, tau: int = 1, epsilon: float = 1e-5) -> float:
@@ -164,8 +161,7 @@ def _native_takens_volume(time_series: list[float], m: int = 3, tau: int = 1) ->
         return 1.0
 
     volume = 1.0
-    for dim in range(m):
-        dim_values = [p[dim] for p in points]
+    for dim_values in zip(*points):
         spread = max(dim_values) - min(dim_values)
         volume *= max(0.001, spread)
 
@@ -452,15 +448,12 @@ class GeodesicOrchestrator:
             if "[grief]" in usr_msg:  # NECESSARY GRIEF INTERCEPT
                 self.eng.bio.endo.glimmers += 1
                 self.eng.events.log(f"{Prisma.MAG}Grief acknowledged. A glimmer is yielded.{Prisma.RST}", "SYS")
-
-            base_tags = {"critique_mode": False, "objective_mode": False, "healing_mode": False, "void_mode": False,
-                         "lateral_shuffle": False, "literal_mode": False, "yeetinator_mode": False}
+            tags_map = {"critique_mode": "[!r]", "objective_mode": "[!q]", "healing_mode": "[!h]",
+                "void_mode": "[!v]", "lateral_shuffle": "[!s]", "literal_mode": "[!l]", "yeetinator_mode": "[!y]"}
             if "[!" in usr_msg:
-                base_tags.update({"critique_mode": "[!r]" in usr_msg, "objective_mode": "[!q]" in usr_msg,
-                                  "healing_mode": "[!h]" in usr_msg, "void_mode": "[!v]" in usr_msg,
-                                  "lateral_shuffle": "[!s]" in usr_msg, "literal_mode": "[!l]" in usr_msg,
-                                  "yeetinator_mode": "[!y]" in usr_msg})
-            ctx.physics.vector.update(base_tags)
+                ctx.physics.vector.update({k: (v in usr_msg) for k, v in tags_map.items()})
+            else:
+                ctx.physics.vector.update({k: False for k in tags_map})
             u_exhaustion = float(ctx.user_state.E)
             phi_val = float(ctx.shared_dyn.phi)
             res_delta = float(getattr(ctx.shared_dyn, "delta", getattr(ctx.shared_dyn, "resonance_delta", 0.0)))
@@ -472,7 +465,6 @@ class GeodesicOrchestrator:
             self._verify_semantic_topology(ctx)
             if self.eng.observer:
                 self.eng.observer.last_physics_packet = ctx.physics.snapshot()
-
             # [CD PROTOCOL] Inject metrics into the Telemetry Crystal
             if self.eng.telemetry.active_crystal and hasattr(ctx.physics, "get_principal_eigenvalue"):
                 self.eng.telemetry.active_crystal.leverage_metrics.update({
@@ -527,13 +519,9 @@ class GeodesicOrchestrator:
                             local_d = 1.0  # Flatten dimension on failure
                         else:
                             # Generate Null Model to detect Hallucinations of Depth
-                            null_adj = _native_configuration_model(actual_adj)
-                            # (In a full async pass, we'd calculate exact radii for the null graph. For cycle speed, we estimate the random limit)
                             null_d = 3.0  # A completely random graph trends toward infinite/high dimension
-
                             lattice.shared.omega_r = min(1.0, local_d / 2.0)
-
-                            if local_d > 1.5 and local_d < null_d:
+                            if 1.5 < local_d < null_d:
                                 self.eng.events.log(
                                     f"{Prisma.CYN}[NAVI-FRACTAL] True Coherence Verified (\u03a9r={lattice.shared.omega_r:.2f}). Dimension {local_d:.2f} is structurally deliberate, not random noise.{Prisma.RST}",
                                     "SYS")
@@ -546,8 +534,8 @@ class GeodesicOrchestrator:
                         if local_d < 0.2:
                             self.eng.events.log(f"{Prisma.RED}[CD CONDITION] Phase-space collapse detected (d={local_d:.2f}). Sycophancy Point Attractor identified. Spiking Contradiction (μ) to force generative tension.{Prisma.RST}", "CRIT")
                             if ctx.physics:
-                                ctx.physics.mu = min(1.0, getattr(ctx.physics, "mu", 0.0) + 0.5)
-                                ctx.physics.kappa = max(0.5, getattr(ctx.physics, "kappa", 0.0))
+                                ctx.physics.mu = min(1.0, float(getattr(ctx.physics, "mu", 0.0)) + 0.5)
+                                ctx.physics.kappa = max(0.5, float(getattr(ctx.physics, "kappa", 0.0)))
             except Exception as e:
                 self.eng.events.log(f"Async WLS Heuristic Error: {e}", "DEBUG")
 
@@ -558,12 +546,9 @@ class GeodesicOrchestrator:
             # [navi-SAD PROTOCOL]: Calculate Permutation Entropy & Takens Volume
             try:
                 v_history = getattr(self.eng.phys.dynamics, "voltage_history", []) if hasattr(self.eng, "phys") else []
-                # We need 10 points to calculate 9 differences
                 if len(v_history) >= 10:
                     recent_v = v_history[-10:]
-                    # First-differencing: removes the position confound (escalating tension trending to 0 entropy)
                     v_diff = [recent_v[i] - recent_v[i - 1] for i in range(1, len(recent_v))]
-
                     pe = _native_permutation_entropy(v_diff, m=3, tau=1, epsilon=1e-5)
                     vol = _native_takens_volume(v_diff, m=3, tau=1)
                     if pe < 0.4 or vol < 0.05:
@@ -573,7 +558,7 @@ class GeodesicOrchestrator:
                         ctx.council_mandates.append(
                             {"action": "SYNERGY_FIRED", "value": "JESTER", "log": "Sycophancy Loop Shattered."})
                         if ctx.physics:
-                            ctx.physics.entropy = min(1.0, getattr(ctx.physics, "entropy", 0.0) + 0.6)
+                            ctx.physics.entropy = min(1.0, float(getattr(ctx.physics, "entropy", 0.0)) + 0.6)
             except Exception as e:
                 self.eng.events.log(f"Async navi-SAD Evaluation Error: {e}", "DEBUG")
             return
@@ -595,17 +580,13 @@ class GeodesicOrchestrator:
             self.engine_state = "REM"
             safe_phys = self.eng.active_physics or PhysicsPacket.void_state()
             dream_log = ""
-            dreamer = getattr(self.eng.mind, "dreamer", None)
-            if dreamer:
-                soul = getattr(self.eng, "soul", None)
-                bio = getattr(self.eng, "bio", None)
-                snapshot_soul = soul.to_dict() if soul else {}
-                bio_packet = {}
-                if bio:
-                    bio_packet["chem"] = bio.endo.get_state() if hasattr(bio, "endo") else {}
-                    if hasattr(bio, "mito"):
-                        bio_packet["mito"] = {"atp": bio.mito.state.atp_pool, "ros": bio.mito.state.ros_buildup}
-                dream_text, _ = dreamer.enter_rem_cycle(snapshot_soul, bio_state=bio_packet)
+            if getattr(self.eng.mind, "dreamer", None):
+                snapshot_soul = self.eng.soul.to_dict()
+                bio_packet = {
+                    "chem": self.eng.bio.endo.get_state(),
+                    "mito": {"atp": self.eng.bio.mito.state.atp_pool, "ros": self.eng.bio.mito.state.ros_buildup}
+                }
+                dream_text, _ = self.eng.mind.dreamer.enter_rem_cycle(snapshot_soul, bio_state=bio_packet)
                 if dream_text:
                     dream_log = f"\n{Prisma.MAG}☁️ {dream_text}{Prisma.RST}"
             return {"type": "SNAPSHOT",

@@ -67,11 +67,12 @@ class TheOroboros:
             verdict_map = {"TOXICITY": "TOXIC", "BOREDOM": "BORING", "STARVATION": "LIGHT", "APOPTOSIS": "TOXIC"}
             v_key = verdict_map.get(cause_of_death, "HEAVY")
             v_list = death_data.get("VERDICTS", {}).get(v_key)
-            fallback_desc = entry[3] if len(entry) > 3 else "The system collapsed under unknown pressure."
+            entry_padded = list(entry) + [None] * (4 - len(entry))
+            scar_name = entry_padded[0] or "Unknown Scar"
+            stat_affected = entry_padded[1] or "voltage"
+            val = float(entry_padded[2] if entry_padded[2] is not None else 5.0)
+            fallback_desc = entry_padded[3] or "The system collapsed under unknown pressure."
             desc = random.choice(v_list) if isinstance(v_list, list) and v_list else fallback_desc
-            scar_name = entry[0] if len(entry) > 0 else "Unknown Scar"
-            stat_affected = entry[1] if len(entry) > 1 else "voltage"
-            val = float(entry[2]) if len(entry) > 2 else 5.0
             new_scars.append(Scar(scar_name, stat_affected, val, desc))
         if soul.core_memories:
             strongest = max(soul.core_memories, key=lambda m: m.impact_voltage)

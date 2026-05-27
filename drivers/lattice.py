@@ -14,8 +14,10 @@ class SharedLatticeDriver:
 
     @staticmethod
     def _get_f(obj, *keys, default=0.0):
+        is_dict = isinstance(obj, dict)
         for k in keys:
-            if (val := safe_get(obj, k)) is not None:
+            val = obj.get(k) if is_dict else getattr(obj, k, None)
+            if val is not None:
                 return float(val)
         return float(default)
 

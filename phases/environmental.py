@@ -1,13 +1,15 @@
 """phases/environmental.py"""
 
-from constants import Prisma
 import random
-from presets import BoneConfig, BonePresets
-from physics import QuantumObserver
+
+from constants import Prisma
 from core import LoreManifest, CycleContext
-from struts import ux, safe_get, safe_set
 from mechanics.tools import TheTclWeaver
 from phases.base import SimulationPhase, _safe_dict, _deep_update
+from physics import QuantumObserver
+from presets import BonePresets
+from struts import ux, safe_get, safe_set
+
 
 class NavigationPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -16,7 +18,7 @@ class NavigationPhase(SimulationPhase):
 
     def run(self, ctx: CycleContext):
         physics = ctx.physics
-        mode_settings = getattr(self.eng, "mode_settings", {})
+        mode_settings = self.eng.mode_settings
         is_fresh_boot = (len(self.eng.cortex.dialogue_buffer) == 0)
         if is_fresh_boot:
             ctx.log(
@@ -181,19 +183,17 @@ class ObservationPhase(SimulationPhase):
         if current_atp < atp_warn:
             msg = ux("cycle_strings", "observe_low_energy")
             ctx.log(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
-        if hasattr(self.eng, "symbiosis"):
-            diag = self.eng.symbiosis.current_health.diagnosis
-            if diag != "STABLE":
-                msg = ux("cycle_strings", "observe_symbiont")
-                ctx.log(f"{Prisma.OCHRE}{msg.format(diag=diag)}{Prisma.RST}")
-        if getattr(self.eng, "shared_lattice", None) and not ctx.is_system_event:
+        diag = self.eng.symbiosis.current_health.diagnosis
+        if diag != "STABLE":
+            msg = ux("cycle_strings", "observe_symbiont")
+            ctx.log(f"{Prisma.OCHRE}{msg.format(diag=diag)}{Prisma.RST}")
+        if self.eng.shared_lattice and not ctx.is_system_event:
             shared_logs, atp_cost = self.eng.shared_lattice.infer_and_couple(text=ctx.input_text,
                 sys_phys=ctx.physics, input_phys=input_phys, atp_pool=current_atp, )
             for s_log in shared_logs:
                 ctx.log(s_log)
-            if atp_cost > 0 and self.eng.bio and self.eng.bio.mito:
-                self.eng.bio.mito.adjust_atp(
-                    -atp_cost, "Carrier Mode (System lent stamina to User)")
+            if atp_cost > 0:
+                self.eng.bio.mito.adjust_atp(-atp_cost, "Carrier Mode (System lent stamina to User)")
         self.eng.phys.dynamics.commit(ctx.physics.voltage)
         return ctx
 
@@ -204,10 +204,7 @@ class SanctuaryPhase(SimulationPhase):
 
     @property
     def bio_governor(self):
-        gov = getattr(self.eng.bio, "governor", None) if hasattr(self.eng, "bio") else None
-        if not gov:
-            raise RuntimeError("CRITICAL: Sanctuary Phase engaged, but the Biological Governor is missing or destroyed.")
-        return gov
+        return self.eng.bio.governor
 
     def run(self, ctx: CycleContext):
         in_safe_zone, distance = self.bio_governor.assess(ctx.physics)
@@ -231,23 +228,19 @@ class SanctuaryPhase(SimulationPhase):
             ctx.log(f"{color}{msg}{Prisma.RST}")
 
     def _apply_restoration(self, ctx: CycleContext):
-        if self.eng.bio:
-            for log in self.eng.bio.rest(factor=1.0):
-                ctx.log(log)
-        if hasattr(self.eng, "trauma_accum"):
-            for key in list(self.eng.trauma_accum.keys()):
-                self.eng.trauma_accum[key] -= 0.1
-                if self.eng.trauma_accum[key] <= 0.0:
-                    del self.eng.trauma_accum[key]
+        for log in self.eng.bio.rest(factor=1.0):
+            ctx.log(log)
+        for key in list(self.eng.trauma_accum.keys()):
+            self.eng.trauma_accum[key] -= 0.1
+            if self.eng.trauma_accum[key] <= 0.0:
+                del self.eng.trauma_accum[key]
 
     def _trigger_dream(self, ctx: CycleContext):
-        if not hasattr(self.eng, "mind") or not hasattr(self.eng.mind, "dreamer"):
+        if not self.eng.mind.dreamer:
             return
-        if hasattr(self.eng.mind.mem, "replay_dreams"):
-            dream_log = self.eng.mind.mem.replay_dreams()
-            if dream_log:
-                ctx.log(f"{Prisma.VIOLET}{dream_log}{Prisma.RST}")
-        current_trauma_load = sum(getattr(self.eng, "trauma_accum", {}).values())
+        if dream_log := self.eng.mind.mem.replay_dreams():
+            ctx.log(f"{Prisma.VIOLET}{dream_log}{Prisma.RST}")
+        current_trauma_load = sum(self.eng.trauma_accum.values())
         bio_packet = {"chem":
                           self.eng.bio.endo.get_state(),
                       "mito": {"atp": self.eng.bio.mito.state.atp_pool,
@@ -263,12 +256,10 @@ class SanctuaryPhase(SimulationPhase):
             log_msg, effects = dream_packet
             ctx.log(f"{Prisma.VIOLET}☁️ {log_msg}{Prisma.RST}")
             if effects:
-                endo = getattr(self.eng.bio, "endo", None)
-                if endo:
-                    if adr := effects.get("adrenaline"):
-                        endo.adrenaline = max(0.0, endo.adrenaline + adr)
-                    if cor := effects.get("cortisol"):
-                        endo.cortisol = max(0.0, endo.cortisol + cor)
+                if adr := effects.get("adrenaline"):
+                    self.eng.bio.endo.adrenaline = max(0.0, self.eng.bio.endo.adrenaline + adr)
+                if cor := effects.get("cortisol"):
+                    self.eng.bio.endo.cortisol = max(0.0, self.eng.bio.endo.cortisol + cor)
                 if v := effects.get("voltage"):
                     ctx.physics.voltage = max(0.0, ctx.physics.voltage + v)
                 if (g := effects.get("glimmers")) and g > 0:
@@ -276,4 +267,4 @@ class SanctuaryPhase(SimulationPhase):
                         self.eng.shared_lattice.shared.g_pool += g
                     elif hasattr(ctx.physics, "G"):
                         ctx.physics.G += g
-                    ctx.log(f"{Prisma.MAG}✨ The dream yielded a Glimmer (+1 G_pool).{Prisma.RST}")
+                    ctx.log(f"{Prisma.MAG}The dream yielded a Glimmer (+1 G_pool).{Prisma.RST}")

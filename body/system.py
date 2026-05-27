@@ -36,20 +36,15 @@ class BioSystem:
             self.events.subscribe("SUBSTRATE_FORGED", self.mito.on_substrate_forged)
             self.events.subscribe("AUTOPHAGY_EVENT", self._on_autophagy_event)
             self.events.log("[BIO]: Vagus Nerve connected.", "SYS")
-        narrative = LoreManifest.get_instance().get("BIO_NARRATIVE") or {}
-        if self.mito:
-            self.mito.narrative = narrative.get("MITO", {})
-        if self.endo:
-            self.endo.narrative_map = narrative.get("CIRCADIAN", {})
-            self.endo.glimmer_map = narrative.get("GLIMMER", {})
-        if self.governor:
-            self.governor.text_map = narrative.get("GOVERNOR", {})
-            self.governor.tax_map = narrative.get("TAX", {})
+        narrative = LoreManifest.get_instance(config_ref=self.config_ref).get("BIO_NARRATIVE") or {}
+        self.mito.narrative = narrative.get("MITO", {})
+        self.endo.narrative_map = narrative.get("CIRCADIAN", {})
+        self.endo.glimmer_map = narrative.get("GLIMMER", {})
+        self.governor.text_map = narrative.get("GOVERNOR", {})
+        self.governor.tax_map = narrative.get("TAX", {})
 
     def _on_autophagy_event(self, payload):
-        atp_gained = payload.get("atp_gained", 15.0)
-        if self.mito:
-            self.mito.adjust_atp(atp_gained, "Emergency Autophagy")
+        self.mito.adjust_atp(payload.get("atp_gained", 15.0), "Emergency Autophagy")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -60,7 +55,7 @@ class BioSystem:
         }
 
     def expend_glimmer(self) -> bool:
-        if self.endo and getattr(self.endo, "glimmers", 0) >= 1:
+        if self.endo.glimmers >= 1:
             self.endo.glimmers -= 1
             return True
         return False
@@ -72,23 +67,30 @@ class BioSystem:
         target_cfg = self.config_ref or BoneConfig
         MAX_H = float(safe_get(target_cfg, "MAX_HEALTH", 100.0))
         MAX_S = float(safe_get(target_cfg, "MAX_STAMINA", 100.0))
-        cfg = safe_get(target_cfg, "BIO", {})
-        h_rec = float(safe_get(cfg, "REST_HEALTH_RECOVERY", 0.5))
-        s_rec = float(safe_get(cfg, "REST_STAMINA_RECOVERY", 1.0))
+        bio_cfg = getattr(target_cfg, "BIO", None)
+        if bio_cfg and not isinstance(bio_cfg, dict):
+            h_rec = float(getattr(bio_cfg, "REST_HEALTH_RECOVERY", 0.5))
+            s_rec = float(getattr(bio_cfg, "REST_STAMINA_RECOVERY", 1.0))
+            ser_boost = float(getattr(bio_cfg, "REST_SEROTONIN_BOOST", 0.05))
+            cor_drop = float(getattr(bio_cfg, "REST_CORTISOL_DROP", 0.05))
+        else:
+            cfg_dict = bio_cfg or {}
+            h_rec = float(cfg_dict.get("REST_HEALTH_RECOVERY", 0.5))
+            s_rec = float(cfg_dict.get("REST_STAMINA_RECOVERY", 1.0))
+            ser_boost = float(cfg_dict.get("REST_SEROTONIN_BOOST", 0.05))
+            cor_drop = float(cfg_dict.get("REST_CORTISOL_DROP", 0.05))
         b.health = min(MAX_H, b.health + (h_rec * factor))
         b.stamina = min(MAX_S, b.stamina + (s_rec * factor))
-        if self.endo:
-            ser_boost = safe_get(cfg, "REST_SEROTONIN_BOOST", 0.05)
-            cor_drop = safe_get(cfg, "REST_CORTISOL_DROP", 0.05)
-            self.endo.serotonin = min(1.0, self.endo.serotonin + (ser_boost * factor))
-            self.endo.cortisol = max(0.0, self.endo.cortisol - (cor_drop * factor))
+        self.endo.serotonin = min(1.0, self.endo.serotonin + (ser_boost * factor))
+        self.endo.cortisol = max(0.0, self.endo.cortisol - (cor_drop * factor))
+        self.endo.serotonin = min(1.0, self.endo.serotonin + (ser_boost * factor))
+        self.endo.cortisol = max(0.0, self.endo.cortisol - (cor_drop * factor))
         return []
 
     def _on_neural_shift(self, payload):
         state = payload.get("state", "NEUTRAL")
         bio_cfg = safe_get(self.config_ref or BoneConfig, "BIO", {})
         shifts = safe_get(bio_cfg, "NEURAL_SHIFTS", {})
-
         if state == "PANIC":
             cfg = shifts.get("PANIC", {"adr": 0.3, "cor": 0.2})
             self.endo.adrenaline = min(1.0, self.endo.adrenaline + cfg.get("adr", 0.3))
@@ -161,15 +163,12 @@ class SomaticLoop:
         voltage = float(safe_get(phys, "voltage", 0.0))
         entropy = float(safe_get(phys, "chi", safe_get(phys, "entropy", 0.0)))
         is_crisis = voltage > 85.0 or entropy > 0.85
-
-        if not is_crisis:
-            b.health = max(0.0, min(max_health, health + 3.0))
-            b.stamina = max(0.0, min(max_stamina, stamina + 10.0))
-            if self.bio.mito.state.atp_pool < 20.0:
-                self.bio.mito.adjust_atp(15.0, "Emergency Vagus Nerve Support")
-        else:
-            b.health = max(0.0, min(max_health, health))
-            b.stamina = max(0.0, min(max_stamina, stamina))
+        health_mod, stamina_mod = (0.0, 0.0) if is_crisis else (3.0, 10.0)
+        b.health = max(0.0, min(max_health, health + health_mod))
+        b.stamina = max(0.0, min(max_stamina, stamina + stamina_mod))
+        if not is_crisis and self.bio.mito.state.atp_pool < 20.0:
+            self.bio.mito.adjust_atp(15.0, "Emergency Vagus Nerve Support")
+        elif is_crisis:
             logs.append(f"{Prisma.RED}CRITICAL: Systemic crisis detected (V={voltage:.1f}, E={entropy:.2f}). Vagus nerve support severed.{Prisma.RST}")
         self.bio.apply_environmental_entropy(phys)
         modifier = self.regulator.get_metabolic_modifier(phys, logs)

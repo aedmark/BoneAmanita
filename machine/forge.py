@@ -53,9 +53,6 @@ class TheForge:
                 if random.random() < entanglement:
                     msg = ux("machine_strings", "forge_alchemy_success") or "Alchemy successful! {item} -> {result}"
                     return True, msg.format(result=recipe["result"], item=item), item, recipe["result"]
-                else:
-                    msg = ux("machine_strings", "forge_alchemy_fail") or "Alchemy failed. Entanglement: {entanglement}%"
-                    return False, msg.format(entanglement=int(entanglement * 100)), None, None
         return False, None, None, None
 
     @staticmethod

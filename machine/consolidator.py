@@ -25,11 +25,8 @@ class TheConsolidator:
         if not triplet: return
         from core import LoreManifest
         lore = LoreManifest.get_instance()
-        weights = lore.get("SYNTACTIC_WEIGHTS") or []
-        if not isinstance(weights, list):
-            weights = []
-        weights.append(triplet)
-        weights = weights[-50:]
+        weights = list(lore.get("SYNTACTIC_WEIGHTS") or [])
+        weights = (weights + [triplet])[-50:]
         try:
             lore.inject("SYNTACTIC_WEIGHTS", weights)
             lore.save("SYNTACTIC_WEIGHTS")

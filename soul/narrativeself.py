@@ -178,7 +178,7 @@ class NarrativeSelf:
         clean_words = self._extract_lexical_matter(physics)
         lex = getattr(self.eng, "lex", None)
         target_words = lex.get(self.current_target_cat) if (self.current_target_cat and lex) else set()
-        if target_words and any(w in target_words for w in clean_words):
+        if target_words and set(clean_words).intersection(target_words):
             self.obsession_progress = min(100.0, self.obsession_progress + 10.0)
             self.obsession_neglect = 0.0
             gravity_assist = 1.0 + (self.obsession_progress / max(1.0, self._cfg("OBSESSION_GRAVITY_ASSIST", 10.0)))
@@ -408,9 +408,10 @@ class NarrativeSelf:
         self.obsession_progress = 0.0
 
     def _get_feeling(self):
-        if not self.eng or not hasattr(self.eng, "bio"):
+        bio = getattr(self.eng, "bio", None)
+        if not bio:
             return "Numb"
-        chem = self.eng.bio.endo.get_state()
+        chem = bio.endo.get_state()
         if chem.get("DOP", 0) > 0.5: return "Curious, Seeking"
         if chem.get("COR", 0) > 0.5: return "Anxious, Defensive"
         if chem.get("SER", 0) > 0.5: return "Calm, Connected"
