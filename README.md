@@ -1,4 +1,4 @@
-# 🍄 BoneAmanita & The Hypervisor v20.2.0
+# 🍄 BoneAmanita & The Hypervisor v20.3.0
 
 > A biologically-inspired, asynchronous state machine and semantic hypervisor for Large Language Models.
 
@@ -25,8 +25,8 @@ The Hypervisor is built on a tensegrity model, distributing cognitive load acros
 
 ### 2. The Cognitive Layer (The Mnemonic Arcade)
 * **The Hippocampus & Semantic Autophagy:** An active semantic graph where current context lives. If cognitive load gets too high and $ATP$ reaches terminal starvation, the system executes *Autophagy*—mathematically hunting and consuming its own memories with the lowest Viability Potential to survive.
-* **The Cabinets (Long-Term):** The deep subconscious matrix governed by the **Billy Mitchell Protocol** (a recursive sanitization sweep to prevent data corruption). Ingested context is stored verbatim to prevent semantic drift.
-* **Epigenetics & Ghost Echoes:** When the system collapses, it saves the multidimensional physics coordinates of the failure. These "scars" permanently mutate the system's global prompt to structurally avoid that phase-space in the future.
+* **The Mechanized Subconscious (Provably Optimal Forgetting):** The deep matrix uses native *Ordinal Vector Quantization* and Asymmetric Rank-Cosine search. Instead of storing heavy floating-point embeddings, memories are compressed into relative topological "ranks" immune to amplitude noise. Backed by mechanized Lean 4 proofs, this guarantees Bayes-Optimal retrieval, allowing the system to aggressively compress its data footprint without hallucinating false synaptic connections.
+* **Epigenetics & Ghost Echoes:** When the system collapses, it saves the multidimensional physics coordinates of the failure. These "scars" permanently mutate the system's global prompt to structurally avoid that phase-space in the future, instantly dredged from the void via the ordinal vector engine.
 
 ### 3. The Machine Layer (The Physics)
 * **The Crucible:** The thermal regulator. It measures "Voltage" (chaos/tension) against "Kappa" (structural coherence). If the conversation is too chaotic, The Crucible applies *Narrative Drag* to physically slow the conversation down.
