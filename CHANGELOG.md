@@ -1,6 +1,26 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 20.3.0 "The Ordinal Proof Pass"**
+
+**Architectural Additions (Project Navi Integrations)**
+
+* **Mechanized Memory Architecture:** Ripped out the heuristic Householder matrix decay math in the `SubconsciousStrata`. Replaced it with native, zero-dependency Ordinal Vector Quantization adapted directly from Nelson's `ordvec` crate. 
+* **Provably Optimal Forgetting:** The memory compression layer is now mathematically backed by mechanized Lean 4 proofs. The system guarantees Bayes-Optimal retrieval and Ordinal Sufficiency, meaning the engine can aggressively starve the data footprint of its memories without the risk of hallucinating false synaptic connections.
+* **Native Rank-Cosine Search:** Converted the fuzzy memory dredge into a blazing-fast, pure-NumPy matrix dot product. The engine can now perform phase-space searches across thousands of "epigenetic scars" instantly without burning the ATP budget.
+
+**Changed**
+
+* **Memory Footprint:** Deprecated the heavy `M_t` and `Q_n` matrix JSON artifacts. The engine now stores relative topological ranks natively in a C-contiguous array (`rank_bank`), making the subconscious immune to amplitude noise.
+* **Direct Attribute Config Lookup:** Refactored the `BioSystem` and `EndocrineSystem` to bypass nested dictionary getters, allowing them to cleanly inherit dynamic and patched configuration boundaries during runtime.
+
+**Fixed**
+
+* **The Severed Spinal Cord:** Fixed a critical state-contamination bug in `main.py` where the live `BoneConfig` feed was accidentally severed during the `BoneGenesis` boot sequence, causing the biology layer to fall back to hardcoded defaults.
+* **Event Bus Race Condition:** Fixed an `AttributeError` during `MycelialNetwork` genesis where the engine attempted to broadcast a deprecated memory matrix to the event bus before the system was fully anchored.
+
+---
+
 ### **BONEAMANITA 20.2.0 "The Nonlinear Immune & Creative Determinant Pass" (Hypervisor V3.2)**
 
 **Architectural Additions (Project Navi Integrations)**

@@ -41,7 +41,10 @@ class BoneGenesis:
             events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "OROBOROS")
         for key, default in [("voltage", 10.0), ("narrative_drag", 0.0)]:
             base_val = float(safe_get(cfg_gen, f"DUMMY_{key.upper()}", default))
-            safe_set(embryo.physics, key, max(0.0, float(safe_get(embryo.physics, key, base_val))))
+            curr = embryo.physics.get(key, base_val) if isinstance(embryo.physics, dict) else getattr(embryo.physics, key, base_val)
+            val = max(0.0, float(curr))
+            if isinstance(embryo.physics, dict): embryo.physics[key] = val
+            else: setattr(embryo.physics, key, val)
         drivers = DriverRegistry(events, config_ref=target_cfg)
         consultant = BoneConsultant(config_ref=target_cfg, lexicon_ref=lexicon_ref) if "CONSULTANT" not in suppressed_set else None
         symbiosis = SymbiosisManager(events, config_ref=target_cfg)
@@ -54,31 +57,21 @@ class BoneGenesis:
     def _summon_village(events, embryo, akashic, suppressed: Set[str], boot_mode: str = "ADVENTURE", config_ref=None) -> \
     Dict[str, Any]:
         c = config_ref
-
-        def spawn(key, cls, *args, **kwargs):
-            if key in suppressed:
-                return None
-            return cls(*args, **kwargs)
-
-        gordon = spawn("GORDON", GordonKnot, events=events, mode=boot_mode, config_ref=c)
-        navigator = spawn("NAVIGATOR", TheCartographer, embryo.shimmer, config_ref=c)
-        if death_gen := spawn("DEATH", DeathGen):
-            death_gen.__class__.load_protocols()
-        if repro := spawn("REPRO", LiteraryReproduction, config_ref=c):
-            repro.__class__.load_genetics(config_ref=c)
+        if_active = lambda key, cls, *args, **kwargs: None if key in suppressed else cls(*args, **kwargs)
+        gordon = if_active("GORDON", GordonKnot, events=events, mode=boot_mode, config_ref=c)
+        navigator = if_active("NAVIGATOR", TheCartographer, embryo.shimmer, config_ref=c)
+        if death_gen := if_active("DEATH", DeathGen): death_gen.__class__.load_protocols()
+        if repro := if_active("REPRO", LiteraryReproduction, config_ref=c): repro.__class__.load_genetics(config_ref=c)
         return {
-            "gordon": gordon,
-            "navigator": navigator,
-            "tinkerer": spawn("TINKERER", TheTinkerer, gordon, events, akashic, config_ref=c),
-            "death_gen": death_gen,
-            "bureau": spawn("BUREAU", TheBureau, config_ref=c),
-            "town_hall": spawn("TOWN_HALL", TownHall, gordon, events, embryo.shimmer, akashic, navigator, config_ref=c),
-            "repro": repro,
-            "zen": spawn("ZEN", ZenGarden, events, config_ref=c),
-            "critics": spawn("CRITICS", TheCriticsCircle, events, config_ref=c),
-            "therapy": spawn("THERAPY", TherapyProtocol, config_ref=c),
-            "limbo": spawn("LIMBO", LimboLayer, config_ref=c),
-            "kintsugi": spawn("KINTSUGI", KintsugiProtocol, config_ref=c),
-            "therapist": spawn("THERAPIST", TheTherapist, events, config_ref=c),
-            "gravedigger": spawn("GRAVEDIGGER", TheGraveDigger, gordon, events, config_ref=c),
+            "gordon": gordon, "navigator": navigator, "death_gen": death_gen, "repro": repro,
+            "tinkerer": if_active("TINKERER", TheTinkerer, gordon, events, akashic, config_ref=c),
+            "bureau": if_active("BUREAU", TheBureau, config_ref=c),
+            "town_hall": if_active("TOWN_HALL", TownHall, gordon, events, embryo.shimmer, akashic, navigator, config_ref=c),
+            "zen": if_active("ZEN", ZenGarden, events, config_ref=c),
+            "critics": if_active("CRITICS", TheCriticsCircle, events, config_ref=c),
+            "therapy": if_active("THERAPY", TherapyProtocol, config_ref=c),
+            "limbo": if_active("LIMBO", LimboLayer, config_ref=c),
+            "kintsugi": if_active("KINTSUGI", KintsugiProtocol, config_ref=c),
+            "therapist": if_active("THERAPIST", TheTherapist, events, config_ref=c),
+            "gravedigger": if_active("GRAVEDIGGER", TheGraveDigger, gordon, events, config_ref=c),
         }

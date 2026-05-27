@@ -38,7 +38,7 @@ def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
 class SessionGuardian:
     _HEADERS = (
         ("term_header_top", "┌──────────────────────────────────────────┐"),
-        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 20.2.0   │"),
+        ("term_header_mid", "│ BONEAMANITA TERMINAL // VERSION 20.3.0   │"),
         ("term_header_bot", "└──────────────────────────────────────────┘"),
     )
 

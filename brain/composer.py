@@ -32,22 +32,10 @@ class LLMInterface:
         self.provider = (provider or prov_val).lower()
         key_val = self.cfg.get("API_KEY", self.cfg.get("api_key", "")) if is_cfg_dict else getattr(self.cfg, "API_KEY", getattr(self.cfg, "api_key", ""))
         self.api_key = api_key or key_val
-        mod_val = self.cfg.get("MODEL", self.cfg.get("model", "")) if is_cfg_dict else getattr(self.cfg, "MODEL", getattr(self.cfg, "model", ""))
+        mod_val = self.cfg.get("MODEL", self.cfg.get("model", "")) if is_cfg_dict else getattr(self.cfg, "MODEL",
+                                                                                               getattr(self.cfg,
+                                                                                                       "model", ""))
         self.model = model or mod_val
-        self.weight_class = "HEAVYWEIGHT"
-        lower_model = self.model.lower()
-        if param_match := re.search(r"(\d+(?:\.\d+)?)b\b", lower_model):
-            if float(param_match.group(1)) < 15.0:
-                self.weight_class = "LIGHTWEIGHT"
-        elif any(name in lower_model
-                 for name in ["gpt-3.5", "phi3", "phi-3", "haiku", "gemma-2b", "gemma-7b"]):
-            self.weight_class = "LIGHTWEIGHT"
-        if is_cfg_dict:
-            self.cfg["WEIGHT_CLASS"] = self.weight_class
-        else:
-            setattr(self.cfg, "WEIGHT_CLASS", self.weight_class)
-        if self.events:
-            self.events.log(f"[PARAMETER HEURISTIC] Model '{self.model}' classified as {self.weight_class}.", "SYS", )
         defaults = getattr(self.cfg, "DEFAULT_LLM_ENDPOINTS", {})
         self.base_url = (
                     env_url or base_url or defaults.get(self.provider, "https://api.openai.com/v1/chat/completions", ))
@@ -450,14 +438,6 @@ class PromptComposer:
         if e > 0.8:
             vsl_lines.append("CRITICAL: You are exhausted. You must conclude your thought in under 3 sentences.")
         persona_block.extend(vsl_lines)
-
-        w_class_val = self.cfg.get("WEIGHT_CLASS", "HEAVYWEIGHT") if is_cfg_dict else getattr(self.cfg, "WEIGHT_CLASS", "HEAVYWEIGHT")
-        if w_class_val == "LIGHTWEIGHT":
-            return [f"Role: {role}.", mood_note,
-                    "SYSTEM HEURISTIC: You are running on Lightweight Physics. Prioritize brief, direct, and grounded physical actions over deep philosophical analysis.",
-                    *[line for line in persona_block if
-                      any(k in line for k in ["CRITICAL", "ANTI-AI", "DIRECTIVE", "MANDATE"]) or line.startswith(
-                          "- ")]]
         return persona_block
 
     def _derive_bio_mood(self, chem: Dict) -> str:

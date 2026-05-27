@@ -81,10 +81,11 @@ class SchurProtocol:
         answers = self.current_riddle_answers or ("*",)
         min_words = self._cfg("RIDDLE_MIN_WORDS", 4)
         mercy_words = {"help", "tired", "stop", "pause", "please"}
-        if any(w in clean.split() for w in mercy_words):
+        words_set = set(clean.split())
+        if not words_set.isdisjoint(mercy_words):
             passed = True
         elif "*" in answers:
-            passed = len(clean.split()) > min_words and not clean.startswith("/")
+            passed = len(words_set) > min_words and not clean.startswith("/")
         else:
             passed = any(ans in clean for ans in answers)
         if passed:

@@ -89,14 +89,15 @@ class BoneArchitect:
             msg = ux("machine_strings", "arch_spore_fail") or "[ARCHITECT]: Spore resurrection failed: {e}"
             events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "CRIT")
             load_result = None
-        results = (list(load_result) + [None] * 5)[:5] if isinstance(load_result, (list, tuple)) else [None] * 5
-        mito_legacy, immune_legacy, soul_legacy, continuity, atlas = results
+        results = list(load_result) if isinstance(load_result, (list, tuple)) else []
+        results.extend([None] * (5 - len(results)))
+        mito_legacy, immune_legacy, soul_legacy, continuity, atlas = results[:5]
         soul_legacy = soul_legacy or {}
         if mito_legacy:
             embryo.bio.mito.apply_inheritance(mito_legacy)
         if immune_legacy and isinstance(immune_legacy, (list, set)):
             embryo.bio.immune.active_antibodies.update(immune_legacy)
-        embryo.soul_legacy = soul_legacy or {}
+        embryo.soul_legacy = soul_legacy
         embryo.continuity = continuity
         if atlas and embryo.physics.nav:
             try:

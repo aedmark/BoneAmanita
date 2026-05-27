@@ -1,13 +1,14 @@
 """phases/mechanical.py"""
 
-from constants import Prisma
 from typing import Any
-from presets import BoneConfig
-from physics import TheGatekeeper
+
+from constants import Prisma
 from core import LoreManifest, CycleContext
-from struts import ux
 from mechanics.projector import SoulDashboard
 from phases.base import SimulationPhase, _safe_dict, _deep_update
+from physics import TheGatekeeper
+from struts import ux
+
 
 class MaintenancePhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -34,16 +35,14 @@ class MaintenancePhase(SimulationPhase):
                     ctx.log(f"{Prisma.CYN}{msg.format(report=report)}{Prisma.RST}")
             session_snapshot = {"trauma_vector": self.eng.trauma_accum, "meta": {"final_health": self.eng.health}, }
             status, advice = self.eng.town_hall.diagnose_condition(session_data=session_snapshot,
-                            _host_health=self.eng.bio.biometrics if self.eng.bio else None, soul=self.eng.soul, )
+                            _host_health=self.eng.bio.biometrics, soul=self.eng.soul, )
             if status != "BALANCED":
                 msg = (ux("cycle_strings", "town_hall_vitals")
                        or "[TOWN HALL] {status}: {advice}")
                 ctx.log(f"{Prisma.OCHRE}{msg.format(status=status, advice=advice)}{Prisma.RST}")
-        if self.eng.mind and hasattr(self.eng.mind, "mem"):
-            if hasattr(self.eng.mind.mem, "run_ecosystem"):
-                eco_logs = self.eng.mind.mem.run_ecosystem(_safe_dict(ctx.physics), self.eng.stamina, self.eng.tick_count)
-                for log in eco_logs:
-                    ctx.log(log)
+        eco_logs = self.eng.mind.mem.run_ecosystem(_safe_dict(ctx.physics), self.eng.stamina, self.eng.tick_count)
+        for log in eco_logs:
+            ctx.log(log)
         return ctx
 
 class GatekeeperPhase(SimulationPhase):
@@ -93,12 +92,11 @@ class GatekeeperPhase(SimulationPhase):
                     ui_msg = audit_result.get("ui", ux("cycle_strings", "gatekeep_bureau_injunction"))
                     log_msg = ux("cycle_strings", "gatekeep_log_bureau_block")
                     ctx.refusal_packet = {"type": "BUREAU_BLOCK", "ui": ui_msg,
-                        "logs": [log_msg] if log_msg else [], "metrics": getattr(self.eng, "get_metrics", lambda: {})(), }
+                        "logs": [log_msg] if log_msg else [], "metrics": self.eng.get_metrics(), }
                     return ctx
-                if self.eng.bio and self.eng.bio.mito:
-                    self.eng.bio.mito.adjust_atp(
-                        audit_result.get("atp_gain", 0.0),
-                        ux("cycle_strings", "gatekeep_bureau_fine"), )
+                self.eng.bio.mito.adjust_atp(
+                    audit_result.get("atp_gain", 0.0),
+                    ux("cycle_strings", "gatekeep_bureau_fine"), )
                 if audit_result.get("log"):
                     ctx.log(audit_result["log"])
                 if audit_result.get("ui"):
@@ -129,7 +127,7 @@ class MachineryPhase(SimulationPhase):
                 self.eng.bio.mito.state.membrane_potential = min(2.0, self.eng.bio.mito.state.efficiency_mod + (boost * 0.1))
         gordon = getattr(self.eng.village, "gordon", None)
         if gordon and gordon.inventory:
-            self._process_crafting(ctx, phys_dict)
+            self._process_crafting(ctx, phys_dict, gordon)
         if t_msg := self.eng.phys.forge.transmute(phys_dict): ctx.log(t_msg)
         _, f_msg, new_item = self.eng.phys.forge.hammer_alloy(phys_dict)
         if f_msg: ctx.log(f_msg)
@@ -141,17 +139,13 @@ class MachineryPhase(SimulationPhase):
         self.eng.phys.pulse.update(getattr(ctx.physics, "repetition", 0.0), ctx.physics.voltage)
         c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(phys_dict)
         if c_msg: ctx.log(c_msg)
-        if c_state == "MELTDOWN" and getattr(self.eng, "bio", None) and hasattr(self.eng.bio, "biometrics"):
+        if c_state == "MELTDOWN":
             self.eng.bio.biometrics.health = max(0.0, self.eng.bio.biometrics.health - c_val)
         _deep_update(ctx.physics, phys_dict)
         return ctx
 
-    def _process_crafting(self, ctx, phys_dict):
-        gordon = getattr(self.eng.village, "gordon", None)
-        if not gordon:
-            return
-        is_craft, craft_msg, old_item, new_item = self.eng.phys.forge.attempt_crafting(
-            phys_dict, gordon.inventory)
+    def _process_crafting(self, ctx, phys_dict, gordon):
+        is_craft, craft_msg, old_item, new_item = self.eng.phys.forge.attempt_crafting(phys_dict, gordon.inventory)
         if is_craft:
             ctx.log(craft_msg)
             vec = ctx.physics.vector
@@ -163,16 +157,12 @@ class MachineryPhase(SimulationPhase):
 
     def _handle_theremin_discharge(self, ctx):
         from struts import safe_get
-        target_cfg = getattr(self.eng, "config", BoneConfig)
-        max_hp = float(safe_get(target_cfg, "MAX_HEALTH", 100.0))
+        max_hp = float(safe_get(self.eng.config, "MAX_HEALTH", 100.0))
         damage = max_hp * 0.20
-        if getattr(self.eng, "bio", None) and self.eng.bio.biometrics:
-            self.eng.bio.biometrics.health = max(
-                0.0, self.eng.bio.biometrics.health - damage)
+        self.eng.bio.biometrics.health = max(0.0, self.eng.bio.biometrics.health - damage)
         msg = ux("cycle_strings", "machinery_theremin")
         ctx.log(f"{Prisma.RED}{msg.format(damage=damage)}{Prisma.RST}")
-        if hasattr(self.eng.events, "publish"):
-            self.eng.events.publish("AIRSTRIKE", {"damage": damage, "source": "THEREMIN"})
+        self.eng.events.publish("AIRSTRIKE", {"damage": damage, "source": "THEREMIN"})
 
 class StabilizationPhase(SimulationPhase):
     def __init__(self, engine_ref, stabilizer_ref):
@@ -181,9 +171,7 @@ class StabilizationPhase(SimulationPhase):
         self.stabilizer = stabilizer_ref
 
     def run(self, ctx: Any):
-        if hasattr(self.stabilizer, "stabilize"):
-            endo = getattr(self.eng.bio, "endo", None) if getattr(self.eng, "bio", None) else None
-            applied = self.stabilizer.stabilize(ctx.physics, endocrine_state=endo)
-            if applied:
-                ctx.record_flux(self.name, "PID_CORRECTION", 0.0, 1.0, "STABILIZER_APPLIED")
+        applied = self.stabilizer.stabilize(ctx.physics, endocrine_state=self.eng.bio.endo)
+        if applied:
+            ctx.record_flux(self.name, "PID_CORRECTION", 0.0, 1.0, "STABILIZER_APPLIED")
         return ctx

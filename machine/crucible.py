@@ -53,12 +53,10 @@ class TheCrucible:
         safe_set(physics, "narrative_drag", final_drag)
         msg = None
         if abs(adjustment) > 0.1:
-            fallback = "TIGHTENING" if adjustment > 0 else "RELAXING"
-            ux_key = "crucible_tightening" if adjustment > 0 else "crucible_relaxing"
-            direction = ux("machine_strings", ux_key) or fallback
-            msg = ux_format("physics_strings", "crucible_regulator",
-                            default="[REGULATOR]: {direction} | Drag: {current:.1f} -> {new:.1f}",
-                            direction=direction, current=current_drag, new=final_drag)
+            is_tight = adjustment > 0
+            direction = ux("machine_strings", "crucible_tightening" if is_tight else "crucible_relaxing") or (
+                "TIGHTENING" if is_tight else "RELAXING")
+            msg = ux_format("physics_strings", "crucible_regulator", default="[REGULATOR]: {direction} | Drag: {current:.1f} -> {new:.1f}", direction=direction, current=current_drag, new=final_drag)
         surge = safe_get(physics, "system_surge_event", False)
         if surge:
             self.active_state = "SURGE"

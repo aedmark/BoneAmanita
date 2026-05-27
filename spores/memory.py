@@ -12,7 +12,12 @@ from struts import ux, ux_format
 from presets import BoneConfig
 import re
 from typing import Any
-from spores.spore_utils import _identity, _word_to_vector, _mat_mul, _reorthogonalize, _householder
+from spores.spore_utils import _word_to_vector
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 _ZERO_WIDTH_RE = re.compile(r'[\u200B-\u200D\uFEFF\u202A-\u202E]')
 def _billy_mitchell_protocol(data: Any) -> Any:
@@ -30,43 +35,18 @@ class SubconsciousStrata:
         self.directory = os.path.dirname(filename)
         if self.directory and not os.path.exists(self.directory):
             os.makedirs(self.directory)
-        self.index = set()
+        self.index = {}
+        self.metadata_log = []
+        self.rank_bank = None  # Native Ordinal Memory Matrix
         self._load_index()
-        self.matrix_filepath = os.path.join(self.directory, "m_t_matrix.json")
-        self.q_filepath = os.path.join(self.directory, "q_n_matrix.json")
-        self.M_t = self._load_matrix()
-        self.Q_n = self._load_q_matrix()
 
-    def _load_json(self, path, default_factory):
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                pass
-        return default_factory()
-
-    def _load_matrix(self):
-        return self._load_json(self.matrix_filepath, lambda: [[0.0] * 8 for _ in range(8)])
-
-    def _load_q_matrix(self):
-        return self._load_json(self.q_filepath, lambda: _identity(8))
-
-    def apply_scar(self, concept: str):
-        v = _word_to_vector(concept)
-        H = _householder(v)
-        self.Q_n = _mat_mul(H, self.Q_n)
-        self.Q_n = _reorthogonalize(self.Q_n)
-        self.save_matrix()
-
-    def save_matrix(self):
-        try:
-            with open(self.matrix_filepath, "w") as f:
-                json.dump(self.M_t, f)
-            with open(self.q_filepath, "w") as f:
-                json.dump(self.Q_n, f)
-        except Exception:
-            pass
+    def _rank_transform(self, vec: list) -> 'np.ndarray':
+        """The core of OrdVec: Convert absolute float vectors into noise-resistant ordinal ranks."""
+        if np is None:
+            return None
+        arr = np.array(vec, dtype=np.float32)
+        # Double argsort yields the rank of each element
+        return np.argsort(np.argsort(arr)).astype(np.float32)
 
     def _iter_entries(self):
         if not os.path.exists(self.filepath):
@@ -84,7 +64,18 @@ class SubconsciousStrata:
             pass
 
     def _load_index(self):
-        self.index = {e.get("word"): e for e in self._iter_entries() if e.get("word")}
+        self.index = {}
+        self.metadata_log = []
+        ranks = []
+        for e in self._iter_entries():
+            if e.get("word"):
+                self.index[e["word"]] = e
+                self.metadata_log.append(e)
+                if np is not None:
+                    vec = _word_to_vector(e["word"])
+                    ranks.append(self._rank_transform(vec))
+        if np is not None and ranks:
+            self.rank_bank = np.vstack(ranks)
 
     def bury(self, fossil_data: Dict, config_ref=None):
         try:
@@ -101,17 +92,14 @@ class SubconsciousStrata:
             self.index[clean_fossil["word"]] = clean_fossil
             fossil_data = clean_fossil
             word = fossil_data["word"]
-            mass = float(fossil_data.get("mass", 1.0))
-            K = _word_to_vector(word)
-            V = _word_to_vector(word + "_val")
-            scale = min(1.0, mass / 10.0)
-            decay = 0.99
-            self.M_t = [[(self.M_t[i][j] * decay) + (K[i] * V[j]) * scale for j in range(8)] for i in range(8)]
-            H = _householder(K)
-            self.Q_n = _mat_mul(H, self.Q_n)
-            self.Q_n = _reorthogonalize(self.Q_n)
-            if not fossil_data.get("reconstructive", False):
-                self.save_matrix()
+            self.metadata_log.append(fossil_data)
+            if np is not None:
+                K = _word_to_vector(word)
+                rank_vec = self._rank_transform(K)
+                if self.rank_bank is None:
+                    self.rank_bank = rank_vec.reshape(1, -1)
+                else:
+                    self.rank_bank = np.vstack([self.rank_bank, rank_vec])
             return True
         except IOError:
             return False
@@ -135,13 +123,20 @@ class SubconsciousStrata:
     def dredge(self, trigger_word: str) -> Optional[Dict]:
         return self.index.get(trigger_word)
 
-    def dredge_vibe(self, trigger_word: str) -> list:
+    def dredge_vibe(self, trigger_word: str, k: int = 3) -> list:
+        """Asymmetric Rank-Cosine Search."""
+        if np is None or self.rank_bank is None or len(self.rank_bank) == 0:
+            return []
         Q = _word_to_vector(trigger_word)
-        out = [0.0] * 8
-        for i in range(8):
-            for j in range(8):
-                out[j] += Q[i] * self.M_t[i][j]
-        return [round(val, 3) for val in out]
+        q_rank = self._rank_transform(Q)
+        scores = np.dot(self.rank_bank, q_rank)
+        top_k_idx = np.argsort(scores)[::-1][:k]
+        results = []
+        for idx in top_k_idx:
+            if 0 <= idx < len(self.metadata_log):
+                meta = self.metadata_log[idx]
+                results.append({"word": meta.get("word"), "score": float(scores[idx]), "data": meta})
+        return results
 
 class MemoryCore:
     DIMENSION_MAP = {

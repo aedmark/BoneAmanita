@@ -9,13 +9,13 @@ class SoulDriver:
     def __init__(self, soul_ref, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.soul = soul_ref
-        self.archetype_weights = (LoreManifest.get_instance(config_ref=self.cfg).get(
-            "DRIVER_CONFIG", "ARCHETYPE_TO_PERSONA_WEIGHT") or {})
+        manifest = LoreManifest.get_instance(config_ref=self.cfg)
+        driver_cfg = manifest.get("DRIVER_CONFIG") or {}
+        self.archetype_weights = driver_cfg.get("ARCHETYPE_TO_PERSONA_WEIGHT", {})
+        self.ennea_weights = driver_cfg.get("ENNEAGRAM_WEIGHTS", {})
 
     def get_influence(self) -> Dict[str, float]:
-        ennea_weights = (LoreManifest.get_instance(config_ref=self.cfg).get(
-            "DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {})
-        base_weights = {persona: 0.0 for persona in ennea_weights.keys()}
+        base_weights = {persona: 0.0 for persona in self.ennea_weights.keys()}
         if not self.soul:
             return base_weights
         archetype = getattr(self.soul, "archetype", "THE OBSERVER")

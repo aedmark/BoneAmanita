@@ -146,11 +146,19 @@ class EndocrineSystem:
 
     def check_for_glimmer(self, feedback: Dict, harvest_hits: int) -> Optional[str]:
         glimmer_text = self.narrative_data.get("GLIMMER", {})
-        cfg = safe_get(safe_get(self, "cfg", BoneConfig), "BIO", {})
-        int_thresh = float(safe_get(cfg, "GLIMMER_INTEGRITY_THRESH", 0.85))
-        nov_thresh = safe_get(cfg, "GLIMMER_NOVELTY_THRESH", 0.8)
-        harv_min = safe_get(cfg, "GLIMMER_HARVEST_MIN", 2)
-        dop_min = safe_get(cfg, "GLIMMER_DOPAMINE_MIN", 0.7)
+        target_cfg = getattr(self, "cfg", BoneConfig)
+        bio_cfg = getattr(target_cfg, "BIO", None)
+        if bio_cfg and not isinstance(bio_cfg, dict):
+            int_thresh = float(getattr(bio_cfg, "GLIMMER_INTEGRITY_THRESH", 0.85))
+            nov_thresh = getattr(bio_cfg, "GLIMMER_NOVELTY_THRESH", 0.8)
+            harv_min = getattr(bio_cfg, "GLIMMER_HARVEST_MIN", 2)
+            dop_min = getattr(bio_cfg, "GLIMMER_DOPAMINE_MIN", 0.7)
+        else:
+            cfg_dict = bio_cfg or {}
+            int_thresh = float(cfg_dict.get("GLIMMER_INTEGRITY_THRESH", 0.85))
+            nov_thresh = cfg_dict.get("GLIMMER_NOVELTY_THRESH", 0.8)
+            harv_min = cfg_dict.get("GLIMMER_HARVEST_MIN", 2)
+            dop_min = cfg_dict.get("GLIMMER_DOPAMINE_MIN", 0.7)
         if feedback.get("INTEGRITY", 0) > int_thresh:
             self.glimmers += 1
             self.serotonin += 0.2

@@ -16,11 +16,10 @@ class EnneagramDriver:
         self.stability_counter = 0
         cfg = getattr(self.cfg, "DRIVERS", None)
         self.HYSTERESIS_THRESHOLD = getattr(cfg, "ENNEAGRAM_HYSTERESIS", 3)
-
-    @property
-    def weights(self):
-        return (LoreManifest.get_instance(config_ref=self.cfg).get(
-            "DRIVER_CONFIG", "ENNEAGRAM_WEIGHTS") or {})
+        manifest = LoreManifest.get_instance(config_ref=self.cfg)
+        driver_cfg = manifest.get("DRIVER_CONFIG") or {}
+        self.weights_cfg = driver_cfg.get("ENNEAGRAM_WEIGHTS", {})
+        self.state_map = driver_cfg.get("PERSONA_STATE_MAP", {})
 
     def _calculate_raw_persona(self, physics: PhysicsPacket, soul_ref=None) -> Tuple[str, str, str]:
         p_vec = physics.vector or {}
@@ -28,7 +27,7 @@ class EnneagramDriver:
         p_drag = physics.narrative_drag
         p_coh = physics.kappa
         p_zone = str(physics.zone or "")
-        weights_cfg = self.weights
+        weights_cfg = self.weights_cfg
         if not isinstance(weights_cfg, dict) or len(weights_cfg) < 2:
             return "NARRATOR", "ACTIVE", "The persona matrix is fractured. Retreating to the baseline Narrator."
         scores = dict.fromkeys(weights_cfg, 0.0)
@@ -69,9 +68,8 @@ class EnneagramDriver:
             winner = f"{winner}/{runner_up} [HYBRID]"
         msg_winner = ux("driver_strings", "ennea_winner") or "Shift triggered: {winner}"
         reason = msg_winner.format(winner=winner, score=win_score, v=p_vol, d=p_drag)
-        state_map = (LoreManifest.get_instance(config_ref=self.cfg).get("DRIVER_CONFIG", "PERSONA_STATE_MAP") or {})
         primary_arch = winner.split("/")[0] if "HYBRID" in winner else winner
-        return winner, state_map.get(primary_arch, "ACTIVE"), reason
+        return winner, self.state_map.get(primary_arch, "ACTIVE"), reason
 
     def decide_persona(self, physics, soul_ref=None) -> Tuple[str, str, str]:
         candidate, state_desc, reason = self._calculate_raw_persona(physics, soul_ref)

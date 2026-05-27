@@ -163,11 +163,10 @@ class EventBus:
             try:
                 callback(data)
             except Exception as e:
-                cb_name = getattr(callback, "__name__", str(callback))
                 if event_type != "EVENT_FAILURE":
+                    cb_name = getattr(callback, "__name__", None) or str(callback)
                     tb_str = traceback.format_exc(limit=3)
-                    self.log(f"EVENT_FAILURE: Error in '{cb_name}': {e}\n{tb_str}", source="EVENT_FAILURE",
-                             level="CRIT")
+                    self.log(f"EVENT_FAILURE: Error in '{cb_name}': {e}\n{tb_str}", source="EVENT_FAILURE", level="CRIT")
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
         event = {"timestamp": time.time(), "source": source, "level": level, "text": message, "_type": "EVENT_LOG"}
@@ -219,11 +218,11 @@ class LoreManifest:
     def _load_from_disk(self, category: str) -> Optional[Dict]:
         safe_category = os.path.basename(category)
         filepath = os.path.join(self.DATA_DIR, f"{safe_category}.json")
-        if not os.path.exists(filepath):
-            return None
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
+        except FileNotFoundError:
+            return None
         except Exception as e:
             print(f"{Prisma.RED}[LORE]: Parse error in '{category}': {e}. Returning empty structure without modifying disk.{Prisma.RST}")
             return None
@@ -307,8 +306,7 @@ class TheObserver:
         if avg_cycle < self.C_EFF and avg_llm < self.L_EFF:
             return ux("core_strings", "obs_efficient") or "High Efficiency."
         if avg_llm > self.LATENCY_WARNING:
-            target_key = random.choice(("obs_fog", "obs_degraded", "obs_ponderous"))
-            return ux("core_strings", target_key) or "High Cognitive Load."
+            return ux("core_strings", random.choice(("obs_fog", "obs_degraded", "obs_ponderous"))) or "High Cognitive Load."
         if avg_cycle > self.CYCLE_WARNING:
             return ux("core_strings", "obs_sluggish") or "System Sluggish."
         if self.is_coupled:
@@ -418,8 +416,8 @@ class CyberneticGovernor:
     def regulate(self, physics: Dict[str, Any], dt: float, endocrine_state: Any = None) -> Tuple[float, float]:
         if self.target_v is None or self.target_d is None:
             return 0.0, 0.0
-        current_v = float(physics.get("voltage", self.target_v))
-        current_d = float(physics.get("narrative_drag", self.target_d))
+        current_v = float(safe_get(physics, "voltage", self.target_v))
+        current_d = float(safe_get(physics, "narrative_drag", self.target_d))
         stress_modifier = 1.0
         if endocrine_state:
             glimmers = float(safe_get(endocrine_state, "glimmers", 0.0))
@@ -512,12 +510,16 @@ class TelemetryService:
         if self.disabled: return
         with self._lock:
             self.write_buffer.append(json_str)
-            if len(self.write_buffer) >= self.BUFFER_SIZE: self.flush_to_disk_locked()
+            if len(self.write_buffer) >= self.BUFFER_SIZE:
+                lines_to_flush = self.write_buffer
+                self.write_buffer = []
+                if not self.disabled and self.current_trace_file:
+                    self._executor.submit(self._bg_write, lines_to_flush, self.current_trace_file)
 
     def flush_to_disk_locked(self):
         if self.disabled or not self.current_trace_file or not self.write_buffer: return
-        self._executor.submit(self._bg_write, list(self.write_buffer), self.current_trace_file)
-        self.write_buffer.clear()
+        lines, self.write_buffer = self.write_buffer, []
+        self._executor.submit(self._bg_write, lines, self.current_trace_file)
 
     def flush_to_disk(self):
         with self._lock:
@@ -537,7 +539,6 @@ class TelemetryService:
             self._executor.shutdown(wait=True)
 
     def _yield_historical_records(self, file_limit=5, lines_per_file=10):
-        if not os.path.exists(self.log_dir): return
         files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), reverse=True)
         for fpath in files[:file_limit]:
             try:
