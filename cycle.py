@@ -405,6 +405,8 @@ class GeodesicOrchestrator:
                     self.eng.events.log(
                         f"{Prisma.RED}Structural collapse detected. Semantic topology destroyed. Engine is flagged for terminal shutdown.{Prisma.RST}",
                         "BIO")
+                    if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "biometrics"):
+                        self.eng.bio.biometrics.health = 0.0
                     self.eng.health = 0.0
             except Exception as e:
                 self.eng.events.log(f"Async Topology Error: {e}", "WARN")
@@ -423,7 +425,9 @@ class GeodesicOrchestrator:
         try:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
             ctx.trace_id = cycle_id
-            ctx.time_delta = self.eng.current_time_delta
+            raw_delta = self.eng.current_time_delta
+            expected_reading_time = getattr(self.eng, "last_output_length", 0) / 4.0  # ~250 WPM
+            ctx.time_delta = max(0.1, raw_delta - expected_reading_time)
             lattice = self.eng.shared_lattice
             ctx.user_state = lattice.u
             ctx.shared_dyn = lattice.shared
@@ -602,6 +606,7 @@ class GeodesicOrchestrator:
         self._hydrate_snapshot_metadata(snapshot, ctx)
         if "ui" in snapshot:
             self.symbiosis.monitor_host(time.time() - ctx.timestamp, snapshot["ui"], len(user_message))
+            self.eng.last_output_length = len(snapshot["ui"].split())
         if "mind" in snapshot:
             snapshot["mind"]["lens"] = getattr(ctx, "active_lens", "NARRATOR")
         return snapshot

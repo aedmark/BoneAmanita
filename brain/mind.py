@@ -36,7 +36,7 @@ class ChemicalState:
     def mix(self, new_state: Dict[str, float], weight: float = 0.5):
         inv_w = 1.0 - weight
         for short_k, long_k in [("DOP", "dopamine"), ("COR", "cortisol"), ("ADR", "adrenaline"), ("SER", "serotonin")]:
-            if (val := safe_get(new_state, short_k, safe_get(new_state, long_k))) is not None:
+            if (val := new_state.get(short_k, new_state.get(long_k))) is not None:
                 setattr(self, long_k, (getattr(self, long_k) * inv_w) + (val * weight))
 
 class NeurotransmitterModulator:
@@ -96,8 +96,8 @@ class NeurotransmitterModulator:
         chemical_delta = ((c.dopamine * chem_weights.get("dop", 0.4)) - (c.adrenaline * chem_weights.get("adr", 0.3)) - ( c.cortisol * chem_weights.get("cor", 0.2)))
         base_temp = safe_get(cfg, "BASE_TEMP", 0.4)
         base_top_p = safe_get(cfg, "BASE_TOP_P", 0.95)
-        chi = float(safe_get(physics_state, "chi", safe_get(physics_state, "entropy", 0.2)))
-        beta = float(safe_get(physics_state, "contradiction", safe_get(physics_state, "beta_index", 0.4)))
+        chi = float(physics_state.get("chi", physics_state.get("entropy", 0.2)))
+        beta = float(physics_state.get("contradiction", physics_state.get("beta_index", 0.4)))
         ent_offset = safe_get(cfg, "TEMP_ENTROPY_OFFSET", 0.5)
         ent_scalar = safe_get(cfg, "TEMP_ENTROPY_SCALAR", 1.5)
         entropy_bonus = max(0.0, chi - ent_offset) * ent_scalar
@@ -246,14 +246,15 @@ class DreamEngine:
                 if new_axiom:
                     try:
                         disk_prompts = (self.eng.prompt_library if self.eng and hasattr(self.eng, "prompt_library") else None) or self.lore.get("SYSTEM_PROMPTS", {})
-                        dirs = disk_prompts.setdefault("GLOBAL_BASELINE", {}).setdefault("EVOLVED_AXIOMS", [])
+                        baseline_data = disk_prompts.setdefault("GLOBAL_BASELINE", {})
+                        dirs = baseline_data.setdefault("EVOLVED_AXIOMS", [])
                         if new_axiom not in dirs:
                             dirs.append(new_axiom)
                         threshold = safe_get(safe_get(self.cfg, "CORTEX", {}), "EPIGENETIC_PRUNE_THRESHOLD", 12)
                         if len(dirs) > threshold:
                             compressed = getattr(self.dspy_critic, "compress_prompts", lambda x: None)(dirs)
                             if compressed:
-                                base_data["EVOLVED_AXIOMS"] = [compressed] if isinstance(compressed, str) else compressed
+                                baseline_data["EVOLVED_AXIOMS"] = [compressed] if isinstance(compressed, str) else compressed
                         if self.eng:
                             self.eng.prompt_library = disk_prompts
                         self.lore.inject("SYSTEM_PROMPTS", disk_prompts)
@@ -352,8 +353,8 @@ class DreamEngine:
         from mechanics.tools import TheTclWeaver
         weaver = TheTclWeaver.get_instance()
         v = _vector or {}
-        active_chi = float(safe_get(v, "chi", safe_get(v, "entropy", 0.85)))
-        active_v = float(safe_get(v, "voltage", 90.0))
+        active_chi = float(v.get("chi", v.get("entropy", 0.85)))
+        active_v = float(v.get("voltage", 90.0))
         txt = None
         if self.llm:
             lore_sample = ", ".join(random.sample(templates, min(3, len(templates))))

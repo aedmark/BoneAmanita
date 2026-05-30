@@ -129,28 +129,18 @@ class MycelialNetwork:
         haunted_words = []
         for w in clean_words:
             if w in self.subconscious.index:
-                # dredge_vibe now returns a list of dictionaries. We need to handle this gracefully
-                # instead of assuming it's a list of floats.
                 vibe_results = self.subconscious.dredge_vibe(w)
-
-                # If we get a result from the new ordvec logic, extract a generic v/d shift based on the score
-                if vibe_results and isinstance(vibe_results, list) and isinstance(vibe_results[0], dict):
+                if vibe_results:
                     top_score = vibe_results[0].get("score", 0.0)
                     v_shift = top_score * 2.0
                     d_shift = top_score * 0.5
-                # Fallback for the old logic if it somehow returns a list of floats
-                elif vibe_results and isinstance(vibe_results, list) and isinstance(vibe_results[0], float):
-                    v_shift = vibe_results[0] * 2.0
-                    d_shift = vibe_results[1] * 0.5 if len(vibe_results) > 1 else 0.0
                 else:
                     v_shift = 0.0
                     d_shift = 0.0
-
                 total_v_shift += v_shift
                 total_d_shift += d_shift
-                if v_shift > 0.1: # Only track if there's meaningful resonance
+                if v_shift > 0.1:
                     haunted_words.append(w)
-
         total_v_shift = max(-15.0, min(15.0, total_v_shift))
         total_d_shift = max(-5.0, min(5.0, total_d_shift))
         if haunted_words:

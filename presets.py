@@ -46,7 +46,7 @@ class BonePresets:
         "BIO.DECAY_RATE": 0.0}
 
     MODES = {"ADVENTURE": {"description": "The default experience. Survival, inventory, exploration.",
-            "tuning": "STANDARD", "ui_layer": 1, "village_suppression": [],
+                           "tuning": "SANCTUARY", "ui_layer": 1, "village_suppression": [],
             "prompt_key": "ADVENTURE",
             "show_inventory": True, "show_location": True, "show_vitals": True,
             "allow_loot": True, "allow_metrics": False, "atp_drain_enabled": True,

@@ -10,7 +10,6 @@ from physics import QuantumObserver
 from presets import BonePresets
 from struts import ux, safe_get, safe_set
 
-
 class NavigationPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -155,17 +154,24 @@ class ObservationPhase(SimulationPhase):
                         if defrag_msg:
                             ctx.log(f"{Prisma.CYN}🧹 {defrag_msg}{Prisma.RST}")
         gordon_ref = getattr(self.eng.village, "gordon", None)
-        if gordon_ref and "GORDON" not in self.eng.suppressed_agents:
+        if gordon_ref and "GORDON" not in self.eng.suppressed_agents and not ctx.is_system_event:
             if "TCL9_QUANTUM_COMB" in gordon_ref.inventory:
                 weaver = TheTclWeaver.get_instance()
                 original_text = ctx.input_text
-                ctx.input_text = weaver.quantum_comb(ctx.input_text)
+                current_chi = float(safe_get(ctx.physics, "entropy", safe_get(ctx.physics, "chi", 0.5)))
+                ctx.input_text = weaver.quantum_comb(ctx.input_text, chi=current_chi)
                 if original_text != ctx.input_text:
                     ctx.log(f"{Prisma.CYN}🪮 QUANTUM COMB: Fluff stripped -> '{ctx.input_text}'{Prisma.RST}")
-            loot_candidate = gordon_ref.parse_loot(ctx.input_text, "")
-            if loot_candidate:
-                acquire_msg = gordon_ref.acquire(loot_candidate)
-                ctx.log(acquire_msg)
+            container_handled = False
+            if hasattr(gordon_ref, "process_container_commands"):
+                container_logs, container_handled = gordon_ref.process_container_commands(ctx.input_text)
+                for c_log in container_logs:
+                    ctx.log(c_log)
+            if not container_handled:
+                loot_candidate = gordon_ref.parse_loot(ctx.input_text, "")
+                if loot_candidate:
+                    acquire_msg = gordon_ref.acquire(loot_candidate)
+                    ctx.log(acquire_msg)
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
         input_phys = gaze_result["physics"]
         for k in self._SYNC_KEYS:
@@ -238,8 +244,12 @@ class SanctuaryPhase(SimulationPhase):
     def _trigger_dream(self, ctx: CycleContext):
         if not self.eng.mind.dreamer:
             return
-        if dream_log := self.eng.mind.mem.replay_dreams():
-            ctx.log(f"{Prisma.VIOLET}{dream_log}{Prisma.RST}")
+
+        # Wire replay to the Akashic Record
+        if hasattr(self.eng, "akashic") and hasattr(self.eng.akashic, "replay_dreams"):
+            if dream_log := self.eng.akashic.replay_dreams():
+                ctx.log(f"{Prisma.VIOLET}{dream_log}{Prisma.RST}")
+
         current_trauma_load = sum(self.eng.trauma_accum.values())
         bio_packet = {"chem":
                           self.eng.bio.endo.get_state(),
@@ -249,12 +259,18 @@ class SanctuaryPhase(SimulationPhase):
                       "trauma_vector": current_trauma_load, }
         soul_snapshot = _safe_dict(getattr(self.eng, "soul", {}))
         dream_packet = self.eng.mind.dreamer.enter_rem_cycle(soul_snapshot, bio_state=bio_packet)
+
+        dream_text_to_archive = None
+
         if isinstance(dream_packet, dict):
-            ctx.log(dream_packet.get("log", "The mind wanders..."))
+            dream_text_to_archive = dream_packet.get("log", "The mind wanders...")
+            ctx.log(dream_text_to_archive)
             ctx.last_dream = dream_packet
         elif isinstance(dream_packet, tuple):
             log_msg, effects = dream_packet
-            ctx.log(f"{Prisma.VIOLET}☁️ {log_msg}{Prisma.RST}")
+            dream_text_to_archive = log_msg
+            ctx.log(f"{Prisma.VIOLET}  {log_msg}{Prisma.RST}")
+            ctx.last_dream = dream_packet
             if effects:
                 if adr := effects.get("adrenaline"):
                     self.eng.bio.endo.adrenaline = max(0.0, self.eng.bio.endo.adrenaline + adr)
@@ -268,3 +284,6 @@ class SanctuaryPhase(SimulationPhase):
                     elif hasattr(ctx.physics, "G"):
                         ctx.physics.G += g
                     ctx.log(f"{Prisma.MAG}The dream yielded a Glimmer (+1 G_pool).{Prisma.RST}")
+        if dream_text_to_archive and hasattr(self.eng, "akashic") and hasattr(self.eng.akashic, "archive_dream"):
+            clean_dream = Prisma.strip(dream_text_to_archive)
+            self.eng.akashic.archive_dream(clean_dream)

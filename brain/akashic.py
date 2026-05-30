@@ -29,6 +29,7 @@ class TheAkashicRecord:
         self.shadow_stock: List[Dict] = []
         self.subconscious_strata: List[Dict] = []
         self.scar_map: List[Dict] = []
+        self.dream_archive: List[str] = []
         self._load_mythos_state()
 
     def setup_listeners(self, event_bus):
@@ -40,12 +41,12 @@ class TheAkashicRecord:
         event_bus.subscribe("TRAUMA_EVENT", self._on_trauma_event)
         event_bus.subscribe("GLIMMER_FORMED", self._on_glimmer_event)
         if msg := ux("akashic_strings", "listening"):
-            print(f"{Prisma.GRY}{msg}{Prisma.RST}")
+            self.events.log(f"{Prisma.GRY}{msg}{Prisma.RST}")
 
     def _on_system_starving(self, _payload):
         yield_val, msg = self.trigger_autophagy()
         if msg:
-            print(f"{Prisma.CYN}{msg}{Prisma.RST}")
+            self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
     def _on_trauma_event(self, payload):
         if payload:
@@ -111,8 +112,7 @@ class TheAkashicRecord:
         energy_layer = safe_get(p, "energy") or {}
         for short_key, (full_key, default_val) in axis_map.items():
             val = safe_get(p, short_key)
-            coords[short_key] = val if val is not None else safe_get(energy_layer, full_key,
-                                                                     cfg_defaults.get(short_key, default_val))
+            coords[short_key] = val if val is not None else safe_get(energy_layer, full_key, cfg_defaults.get(short_key, default_val))
         self.scar_map.append({"concept": concept, "coordinates": coords.copy(), "gilded": True})
         max_scars = getattr(self.cfg_akashic, "MAX_SCARS", 50)
         if len(self.scar_map) > max_scars:
@@ -247,7 +247,7 @@ class TheAkashicRecord:
         self.save_to_disk("discovered_words", self.discovered_words)
         self._save_user_state()
         msg = ux("akashic_strings", "mythos_persisted")
-        print(f"{Prisma.GRY}{msg}{Prisma.RST}")
+        if self.events: self.events.log(f"{Prisma.GRY}{msg}{Prisma.RST}", "AKASHIC")
 
     def _save_user_state(self):
         state = {
@@ -257,6 +257,7 @@ class TheAkashicRecord:
             "shadow_stock": self.shadow_stock,
             "subconscious_strata": self.subconscious_strata,
             "scar_map": self.scar_map,
+            "dream_archive": self.dream_archive,
         }
         self.save_to_disk("state", state)
 
@@ -273,10 +274,10 @@ class TheAkashicRecord:
                 os.fsync(f.fileno())
             os.replace(temp_path, filepath)
             if msg := ux("akashic_strings", "saved_category"):
-                print(f"{Prisma.GRY}{msg.format(category=category)}{Prisma.RST}")
+                if self.events: self.events.log(f"{Prisma.GRY}{msg.format(category=category)}{Prisma.RST}", "AKASHIC")
         except Exception as e:
             msg = ux("akashic_strings", "save_failed_category")
-            print(f"{Prisma.RED}{msg.format(category=category, error=e)}{Prisma.RST}")
+            if self.events: self.events.log(f"{Prisma.RED}{msg.format(category=category, error=e)}{Prisma.RST}", "AKASHIC")
 
     def _load_mythos_state(self):
         data = {}
@@ -286,7 +287,7 @@ class TheAkashicRecord:
                     data = json.load(f)
             except Exception as e:
                 msg = ux("akashic_strings", "state_load_failed")
-                print(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
+                self.events.log(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
         if data:
             self.lens_cooccurrence = {tuple(k.split("|", 1)): v for k, v in data.get("lens_cooccurrence", {}).items() if
                                       "|" in k}
@@ -294,6 +295,7 @@ class TheAkashicRecord:
                                       "|" in k}
             self.ingredient_affinity = data.get("ingredient_affinity", {})
             self.shadow_stock = data.get("shadow_stock", [])
+            self.dream_archive = data.get("dream_archive", [])
             self.known_recipes.clear()
             gordon_data = self.lore.get("GORDON") or {}
             if recipes := gordon_data.get("RECIPES", []):
@@ -312,7 +314,7 @@ class TheAkashicRecord:
                         needs_migration = True
                     os.remove(path)
                 except Exception as e:
-                    print(f"{Prisma.RED}[AKASHIC] Failed to migrate legacy {key}: {e}.{Prisma.RST}")
+                    self.events.log(f"{Prisma.RED}[AKASHIC] Failed to migrate legacy {key}: {e}.{Prisma.RST}")
         if needs_migration:
             self.lore.inject("SYSTEM_PROMPTS", prompts)
         words_path = os.path.join(self.data_dir, "akashic_discovered_words.json")
@@ -327,7 +329,27 @@ class TheAkashicRecord:
                             target_list.append(word)
                     self.lore.inject("LEXICON", lexicon_data)
             except Exception as e:
-                print(f"{Prisma.RED}[AKASHIC] Failed to load discovered words: {e}. Keeping current state.{Prisma.RST}")
+                self.events.log(f"{Prisma.RED}[AKASHIC] Failed to load discovered words: {e}. Keeping current state.{Prisma.RST}")
+
+    def archive_dream(self, dream_text: str):
+        """Archives a dream and immediately persists it to disk."""
+        if dream_text not in self.dream_archive:
+            self.dream_archive.append(dream_text)
+
+            # Keep a deep archive of the last 50 dreams
+            if len(self.dream_archive) > 50:
+                self.dream_archive.pop(0)
+
+            self._save_user_state()
+
+    def replay_dreams(self) -> Optional[str]:
+        """Recalls a persistent dream from a past or present session."""
+        import random
+        if not self.dream_archive:
+            return None
+
+        echo = random.choice(self.dream_archive)
+        return f"An echo of a past dream surfaces: {echo}"
 
     def record_interaction(self, lenses_active: list, ingredients_used: Optional[list] = None):
         if len(lenses_active) >= 2:
@@ -383,7 +405,7 @@ class TheAkashicRecord:
         self.lore.save("LENSES")
         self.discovered_words[new_name] = "LENS"
         msg = ux("akashic_strings", "paradigm_crystallized")
-        print(f"{Prisma.MAG}{msg.format(new_name=new_name)}{Prisma.RST}")
+        self.events.log(f"{Prisma.MAG}{msg.format(new_name=new_name)}{Prisma.RST}")
         if self.events:
             self.events.publish("SOUL_MUTATION", {"new_archetype": new_name})
 
@@ -403,7 +425,7 @@ class TheAkashicRecord:
         self.lore.inject("GORDON", gordon_data)
         self.lore.save("GORDON")
         msg = ux("akashic_strings", "recipe_recorded")
-        print(f"{Prisma.CYN}{msg}{Prisma.RST}")
+        self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
     def propose_new_category(self, word_list, category_name):
         lexicon_data = self.lore.get("LEXICON") or {}
@@ -415,7 +437,7 @@ class TheAkashicRecord:
             self.lore.inject("LEXICON", lexicon_data)
             msg_template = ux("akashic_strings", "lexicon_learned") or "Learned {word} in {category}."
             for w in new_words:
-                print(msg_template.format(word=w, category=category_name))
+                self.events.log(msg_template.format(word=w, category=category_name))
             self.lore.save("LEXICON")
             if self.events:
                 for w in new_words:
@@ -426,7 +448,7 @@ class TheAkashicRecord:
         if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
             self.shadow_stock.pop(0)
         msg = ux("akashic_strings", "ghost_archived")
-        print(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
+        self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
 
     def measure_cognitive_density(self, start_concept: str) -> float:
         """
@@ -504,11 +526,11 @@ class TheAkashicRecord:
             self.discovered_words[word] = category
             self.lore.inject("LEXICON", lexicon_data)
             msg = ux("akashic_strings", "lexicon_expands") or "Lexicon expands: {category}"
-            print(msg.format(category=category.upper()))
+            self.events.log(msg.format(category=category.upper()))
             bloat_limit = int(safe_get(self.cfg_akashic, "BLOAT_THRESHOLD", 50))
             exempt_categories = safe_get(self.cfg_akashic, "BLOAT_EXEMPT_CATEGORIES", ["heavy"])
             if len(lexicon_data[category]) == bloat_limit + 1 and category not in exempt_categories:
                 bloat_msg = ux("akashic_strings", "lexicon_bloat", default="[WARNING] Lexicon category '{category}' is bloated.")
-                print(bloat_msg.format(category=category))
+                self.events.log(bloat_msg.format(category=category))
             return True
         return False

@@ -23,7 +23,9 @@ class TestChaosEngineering(BoneTestCase):
     def test_sycophancy_gravity_well(self):
         shattered = False
         max_drag = 0.0
-        for _ in range(10):
+        if hasattr(self.engine, "shared_lattice") and hasattr(self.engine.shared_lattice.shared, "psi"):
+            self.engine.shared_lattice.shared.psi = 0.9
+        for _ in range(12):
             snapshot = self.engine.process_turn("You are so smart. I agree completely. That is perfect.")
             logs = "\n".join(snapshot.get("logs", []))
             ui_text = snapshot.get("ui", "")

@@ -1,6 +1,27 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 20.3.1 "The Tensegrity Pass"**
+
+**Architectural Hardening & Test Suite Sealing**
+
+* **The Load-Bearing Center:** Built titanium test coverage for the engine's core defensive loops. The `Gordon Tensegrity Anchor`, `Counterfactual Toxicity Rejection`, and the `Jester's False Cohesion Break` are now mathematically grounded in the test suite and proven to safely mutate the system under high drag and entropy.
+* **Exorcism of Phantom Objects:** Exterminated deeply nested `MagicMock` topology traps across the test suite. Forced biological regulators and physical gates to evaluate against hard deterministic floats rather than dynamically crashing on phantom objects during `process_context` ticks.
+* **Paradox State Alignment:** Forced the Paradox engine test to evaluate within `TECHNICAL` mode, proving the `PromptComposer` correctly injects Orthogonal Attention under high contradiction (which `ADVENTURE` mode intentionally ignores).
+
+**Fixed**
+
+* **The Apoptotic REM Crash:** Patched a fatal `NameError` in `DreamEngine.enter_rem_cycle`. The system can now successfully compress its conversational trauma into "scar-tissue axioms" without crashing the sleep cycle.
+* **Akashic Amnesia:** Fixed a localized amnesia bug where the `_mutate_epigenetics` cycle successfully injected mutated axioms into the active `lore` dictionary but failed to flush them to the hard drive, causing the system to forget its evolution upon reboot.
+* **False Assertions:** Purged hallucinated `unittest.mock` assertions (`called_with`) and functionally impossible logic checks (asserting memory burial during an `illuminate` node-read) from the memory test pipelines. 
+
+**Changed & Optimized**
+
+* **Neurochemical Hot-Loop Optimization:** Stripped paranoid `safe_get` dictionary wrapping inside high-frequency biological loops (`ChemicalState.mix`, `NeurotransmitterModulator.modulate`, and `hallucinate`), buying back fractional execution time on every engine tick.
+* **Spore Network Pruning:** Completely eradicated transitional `ordvec` type-checking from the Spore networks. Removed mathematically dead code loops and paranoid void checks across `spores/memory.py` now that the core math natively guarantees deterministic list returns.
+
+---
+
 ### **BONEAMANITA 20.3.0 "The Ordinal Proof Pass"**
 
 **Architectural Additions (Project Navi Integrations)**

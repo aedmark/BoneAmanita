@@ -21,6 +21,9 @@ class Item:
     usage_msg: str = "Used."
     consume_on_use: bool = False
     reflex_trigger: Optional[str] = None
+    is_container: bool = False
+    capacity: int = 3
+    contents: List[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, name: str, data: Dict):
@@ -30,7 +33,11 @@ class Item:
         return cls(name=name, description=data.get("description", default_desc), function=data.get("function", "MISC"),
                    passive_traits=data.get("passive_traits", []), spawn_context=data.get("spawn_context", "COMMON"),
                    value=data.get("value", 1.0), usage_msg=data.get("usage_msg", default_usage),
-                   consume_on_use=is_consumable, reflex_trigger=data.get("reflex_trigger", None), )
+                   consume_on_use=is_consumable, reflex_trigger=data.get("reflex_trigger", None),
+                   is_container=data.get("is_container", False),
+                   capacity=data.get("capacity", 3),
+                   contents=data.get("contents", [])
+                   )
 
 class GordonKnot:
     def __init__(self, events=None, mode="ADVENTURE", config_ref=None):
@@ -56,6 +63,8 @@ class GordonKnot:
         self.load_config()
 
     def apply_filters(self, user_message: str, active_physics: dict) -> str:
+        if self.mode == "ADVENTURE":
+            return user_message
         has_comb = any("CUT_THE_CRAP" in (self.get_item_data(i).passive_traits if self.get_item_data(i) else []) for i in self.inventory)
         if has_comb:
             try:
@@ -181,13 +190,110 @@ class GordonKnot:
                 inventory_data.append(item.__dict__)
         return inventory_data
 
+    def pack_item(self, item_name: str, container_name: str) -> Tuple[bool, str]:
+        item_name, container_name = item_name.upper(), container_name.upper()
+        if item_name not in self.inventory:
+            return False, f"{Prisma.OCHRE}You do not have the {item_name}.{Prisma.RST}"
+        if container_name not in self.inventory:
+            return False, f"{Prisma.OCHRE}You do not have the {container_name}.{Prisma.RST}"
+        if item_name == container_name:
+            return False, f"{Prisma.OCHRE}You cannot put an item inside itself.{Prisma.RST}"
+
+        container = self.get_item_data(container_name)
+        if not container or not container.is_container:
+            return False, f"{Prisma.OCHRE}The {container_name} is not a container.{Prisma.RST}"
+        if len(container.contents) >= container.capacity:
+            return False, f"{Prisma.OCHRE}The {container_name} is full.{Prisma.RST}"
+
+        # Physically move the item
+        self.inventory.remove(item_name)
+        container.contents.append(item_name)
+        return True, f"{Prisma.CYN}► Packed {item_name} into {container_name}.{Prisma.RST}"
+
+    def unpack_item(self, item_name: str, container_name: str) -> Tuple[bool, str]:
+        item_name, container_name = item_name.upper(), container_name.upper()
+        if container_name not in self.inventory:
+            return False, f"{Prisma.OCHRE}You do not have the {container_name}.{Prisma.RST}"
+
+        container = self.get_item_data(container_name)
+        if not container or not container.is_container:
+            return False, f"{Prisma.OCHRE}The {container_name} is not a container.{Prisma.RST}"
+        if item_name not in container.contents:
+            return False, f"{Prisma.OCHRE}The {item_name} is not inside the {container_name}.{Prisma.RST}"
+        if len(self.inventory) >= self.max_slots:
+            return False, f"{Prisma.OCHRE}Inventory full. Cannot unpack {item_name}.{Prisma.RST}"
+
+        # Physically move the item
+        container.contents.remove(item_name)
+        self.inventory.append(item_name)
+        return True, f"{Prisma.CYN}► Unpacked {item_name} from {container_name}.{Prisma.RST}"
+
+    def process_container_commands(self, text: str) -> Tuple[List[str], bool]:
+        logs = []
+        handled = False
+        lower_text = text.lower()
+
+        # Match "put [item] in [container]" using lazy matching (.*?)
+        put_match = re.search(
+            r"\b(?:put|place|store|stash)\s+(?:the|a|an|some|my)?\s*(.*?)\s+(?:in|inside|into)\s+(?:the|a|an|my)?\s*(.*)",
+            lower_text)
+        if put_match:
+            item_raw = put_match.group(1).strip()
+            container_raw = put_match.group(2).strip()
+
+            # Clean leading fluff words off the item and container names
+            item_raw = re.sub(r"^(?:(?:the|a|an|some|my)\s+)+", "", item_raw, flags=re.IGNORECASE).strip()
+            container_raw = re.sub(r"^(?:(?:the|a|an|some|my)\s+)+", "", container_raw, flags=re.IGNORECASE).strip()
+
+            # Clean trailing fluff words off the container name
+            container_raw = re.split(r"\s+\b(?:and|or|but|then|to|with|because|please)\b", container_raw, maxsplit=1)[
+                0].strip()
+
+            # FIX: Strip punctuation before capitalizing
+            item_clean = item_raw.strip(".,!?").upper().replace(" ", "_")
+            container_clean = container_raw.strip(".,!?").upper().replace(" ", "_")
+
+            success, msg = self.pack_item(item_clean, container_clean)
+            if success or "not a container" in msg or "full" in msg:
+                logs.append(msg)
+                handled = True
+
+        # Match "take [item] from [container]" using lazy matching (.*?)
+        take_match = re.search(
+            r"\b(?:take|remove|get|pull)\s+(?:the|a|an|some|my)?\s*(.*?)\s+(?:from|out of)\s+(?:the|a|an|my)?\s*(.*)",
+            lower_text)
+        if take_match:
+            item_raw = take_match.group(1).strip()
+            container_raw = take_match.group(2).strip()
+
+            # Clean leading fluff words off the item and container names
+            item_raw = re.sub(r"^(?:(?:the|a|an|some|my)\s+)+", "", item_raw, flags=re.IGNORECASE).strip()
+            container_raw = re.sub(r"^(?:(?:the|a|an|some|my)\s+)+", "", container_raw, flags=re.IGNORECASE).strip()
+
+            # Clean trailing fluff words off the container name
+            container_raw = re.split(r"\s+\b(?:and|or|but|then|to|with|because|please)\b", container_raw, maxsplit=1)[
+                0].strip()
+
+            # FIX: Strip punctuation before capitalizing
+            item_clean = item_raw.strip(".,!?").upper().replace(" ", "_")
+            container_clean = container_raw.strip(".,!?").upper().replace(" ", "_")
+
+            success, msg = self.unpack_item(item_clean, container_clean)
+            if success or "not inside" in msg:
+                logs.append(msg)
+                handled = True
+
+        return logs, handled
+
     def acquire(self, tool_name: str) -> str:
         tool_name = tool_name.strip().upper().replace(" ", "_") if tool_name else "UNKNOWN"
         if tool_name in self.inventory:
             msg = ux("gordon_strings", "inv_duplicate")
             return f"{Prisma.OCHRE}{msg.format(item=tool_name)}{Prisma.RST}"
         if not (self.get_item_data(tool_name) or self.get_item_data(tool_name.lower())):
-            new_item = Item(name=tool_name, description=ux("gordon_strings", "fallback_desc") or "???", function="MISC")
+            is_cont = any(word in tool_name for word in ["POUCH", "BAG", "BOX", "SATCHEL", "CASE", "PACK"])
+            new_item = Item(name=tool_name, description=ux("gordon_strings", "fallback_desc") or "???", function="MISC",
+                            is_container=is_cont)
             self.registry[tool_name] = new_item
         if len(self.inventory) >= self.max_slots:
             msg = ux("gordon_strings", "inv_full_reject") or "Inventory full. Cannot acquire {item}."
@@ -284,6 +390,9 @@ class GordonKnot:
         if any(p in combined_text for p in self.abandonment_phrases) or any(
                 r in sys_text.lower() for r in self.refusal_markers):
             return None
+        lower_user = user_text.lower()
+        if "system_init" in lower_user or "system_boot" in lower_user:
+            return None
         valid_triggers = [t for t in self.loot_triggers if t in combined_text]
         if valid_triggers:
             present_candidates = []
@@ -298,14 +407,20 @@ class GordonKnot:
                     for name, clean in present_candidates:
                         if re.search(rf"\b{t_escaped}\b.*?\b{re.escape(clean)}\b", combined_text, re.IGNORECASE):
                             return name
-        lower_user = user_text.lower()
         for verb in self.acquisition_verbs:
             match = re.search(
                 rf"\b{re.escape(verb)}\s+(?:the|a|an|some|my)?\s*([a-z0-9\'\-]+(?:\s+[a-z0-9\'\-]+){{0,2}})",
                 lower_user)
             if match:
                 extracted = match.group(1).strip()
-                if len(extracted) > 2 and extracted not in ("it", "this", "that", "them", "him", "her"):
+                extracted = re.sub(r"^(?:(?:up|out|off|down|in|on|the|a|an|some|my)\s+)+", "", extracted,
+                                   flags=re.IGNORECASE).strip()
+                extracted = \
+                re.split(r"\s+\b(?:and|or|but|then|to|with|because)\b", extracted, maxsplit=1, flags=re.IGNORECASE)[
+                    0].strip()
+                extracted = re.sub(r"\s+(?:of|in|on|at|to|for|with|from|instead|and|or|but|the|a|an)$", "", extracted,
+                                   flags=re.IGNORECASE).strip()
+                if len(extracted) > 2 and extracted not in ("it", "this", "that", "them", "him", "her", "there"):
                     clean_extracted = extracted.upper().replace(" ", "_")
                     if clean_extracted not in self.inventory:
                         return clean_extracted
