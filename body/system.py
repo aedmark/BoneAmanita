@@ -191,6 +191,15 @@ class SomaticLoop:
             return self._package_result(receipt.status, logs, chem_state=self.bio.endo.get_state())
         elif safety_status == "AUTOPHAGY":
             b.stamina = 10.0
+
+        # PID Homeostasis: Active healing when resting in the Safe Volume
+        is_safe, _ = self.bio.governor.assess(phys)
+        if is_safe:
+            b.stamina = min(max_stamina, b.stamina + 3.0)
+            self.bio.mito.adjust_atp(3.0, "PID Homeostasis")
+            self.bio.mito.state.ros_buildup = max(0.0, self.bio.mito.state.ros_buildup - 2.0)
+            logs.append(f"{Prisma.GRN}[BIO]: Homeostasis active. Resting in Safe Volume.{Prisma.RST}")
+
         total_yield = 0.0
         enzyme = "NONE"
         clean_words = safe_get(phys, "clean_words", [])

@@ -53,7 +53,7 @@ class CognitionPhase(SimulationPhase):
                         ctx.log(f"{Prisma.VIOLET}{msg.format(lambda_tax=lambda_tax)}{Prisma.RST}")
         if hasattr(self.eng.mind.mem, "check_for_resurrection"):
             if flashback_msg := self.eng.mind.mem.check_for_resurrection(ctx.clean_words, ctx.physics.voltage):
-                ctx.log(f"{Prisma.MAG}{flashback_msg}{Prisma.RST}")
+                ctx.log(f"{Prisma.VIOLET}An epigenetic scar tingles. The system remembers a past failure and braces itself.{Prisma.RST}")
                 shock_cost = 5.0
                 self.eng.bio.biometrics.stamina = max(0.0, self.eng.bio.biometrics.stamina - shock_cost)
                 self.eng.stamina = max(0.0, self.eng.stamina - shock_cost)
@@ -290,7 +290,7 @@ class SimulationPreflightPhase(SimulationPhase):
         current_atp = mito.state.atp_pool if mito else 100.0
         phys_obj = ctx.physics
         energy_obj = getattr(phys_obj, "energy", phys_obj)
-        silence = getattr(phys_obj, "DELTA", 0.0)
+        silence = float(getattr(phys_obj, "silence", getattr(energy_obj, "silence", 0.0)))
         friction = getattr(phys_obj, "narrative_drag", 0.0)
         chaos = getattr(phys_obj, "entropy", getattr(phys_obj, "chi", 0.0))
         voltage = getattr(phys_obj, "voltage", 0.0)

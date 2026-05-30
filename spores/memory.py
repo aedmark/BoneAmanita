@@ -1,18 +1,20 @@
-"""spores/memory.py"""
+"""spores/memory.py
+
+ORDVEC math provided by Nelson Spence and Project Navi via Apache 2.0 Licensing"""
 
 import json
 import os
-import random
-import time
-import tempfile
-from collections import deque
-from typing import List, Tuple, Optional, Dict
-from core import JSONEncoder
-from struts import ux, ux_format
-from presets import BoneConfig
 import re
+import tempfile
+import time
+from collections import deque
 from typing import Any
+from typing import List, Tuple, Optional, Dict
+
+from core import JSONEncoder
+from presets import BoneConfig
 from spores.spore_utils import _word_to_vector
+from struts import ux, ux_format
 
 try:
     import numpy as np
@@ -41,12 +43,12 @@ class SubconsciousStrata:
         self._load_index()
 
     def _rank_transform(self, vec: list) -> 'np.ndarray':
-        """The core of OrdVec: Convert absolute float vectors into noise-resistant ordinal ranks."""
+        """Convert absolute float vectors into noise-resistant ordinal ranks."""
         if np is None:
             return None
         arr = np.array(vec, dtype=np.float32)
-        # Double argsort yields the rank of each element
-        return np.argsort(np.argsort(arr)).astype(np.float32)
+        # Cast to uint16: Ranks are integers. Save 50% RAM in the rank_bank.
+        return np.argsort(np.argsort(arr)).astype(np.uint16)
 
     def _iter_entries(self):
         if not os.path.exists(self.filepath):
@@ -89,10 +91,9 @@ class SubconsciousStrata:
             with open(self.filepath, "a", encoding="utf-8") as f:
                 clean_fossil["buried_at"] = time.time()
                 f.write(json.dumps(clean_fossil, cls=JSONEncoder) + "\n")
-            self.index[clean_fossil["word"]] = clean_fossil
-            fossil_data = clean_fossil
-            word = fossil_data["word"]
-            self.metadata_log.append(fossil_data)
+            word = clean_fossil["word"]
+            self.index[word] = clean_fossil
+            self.metadata_log.append(clean_fossil)
             if np is not None:
                 K = _word_to_vector(word)
                 rank_vec = self._rank_transform(K)
@@ -123,13 +124,20 @@ class SubconsciousStrata:
     def dredge(self, trigger_word: str) -> Optional[Dict]:
         return self.index.get(trigger_word)
 
-    def dredge_vibe(self, trigger_word: str, k: int = 3) -> list:
-        """Asymmetric Rank-Cosine Search."""
+    def dredge_vibe_by_vector(self, query_vector, k: int = 3) -> list:
+        """Core Asymmetric Rank-Cosine Search accepting a raw vector."""
         if np is None or self.rank_bank is None or len(self.rank_bank) == 0:
             return []
-        Q = _word_to_vector(trigger_word)
-        q_rank = self._rank_transform(Q)
-        scores = np.dot(self.rank_bank, q_rank)
+        dim = self.rank_bank.shape[1]
+        mean = (dim - 1) / 2.0
+        norm = np.sqrt((dim * (dim**2 - 1.0)) / 12.0)
+        inv_norm = 1.0 / norm
+        Q_arr = np.array(query_vector, dtype=np.float32)
+        q_norm = np.linalg.norm(Q_arr)
+        q_unit = Q_arr / q_norm if q_norm > 0 else Q_arr
+        q_sum = np.sum(q_unit)
+        raw_scores = np.dot(self.rank_bank, q_unit)
+        scores = (raw_scores - (mean * q_sum)) * inv_norm
         top_k_idx = np.argsort(scores)[::-1][:k]
         results = []
         for idx in top_k_idx:
@@ -138,15 +146,15 @@ class SubconsciousStrata:
                 results.append({"word": meta.get("word"), "score": float(scores[idx]), "data": meta})
         return results
 
+    def dredge_vibe(self, trigger_word: str, k: int = 3) -> list:
+        """True Asymmetric Rank-Cosine Search."""
+        Q = _word_to_vector(trigger_word)
+        return self.dredge_vibe_by_vector(Q, k)
+
 class MemoryCore:
-    DIMENSION_MAP = {
-        "STR": {"heavy", "constructive", "base"},
-        "VEL": {"kinetic", "explosive", "mot"},
-        "ENT": {"antigen", "toxin", "broken"},
-        "PHI": {"thermal", "photo"},
-        "PSI": {"abstract", "sacred", "idea"},
-        "BET": {"social", "suburban", "play"},
-    }
+    DIMENSION_MAP = {"STR": {"heavy", "constructive", "base"}, "VEL": {"kinetic", "explosive", "mot"},
+                     "ENT": {"antigen", "toxin", "broken"}, "PHI": {"thermal", "photo"},
+                     "PSI": {"abstract", "sacred", "idea"}, "BET": {"social", "suburban", "play"}, }
 
     def __init__(self, events_ref, subconscious_ref, config_ref=None, lexicon_ref=None):
         self.events = events_ref
@@ -164,54 +172,80 @@ class MemoryCore:
         active_dims = {k: v for k, v in vector.items() if v > 0.4}
         if not active_dims and vector:
             top_dim = max(vector, key=vector.get)
-            if vector[top_dim] > 0.1:
-                active_dims = {top_dim: vector[top_dim]}
-            else:
-                active_dims = {"ENT": 0.2}
+            active_dims = {top_dim: vector[top_dim]} if vector[top_dim] > 0.1 else {"ENT": 0.2}
         active_dim_cats = {dim: self.DIMENSION_MAP.get(dim, set()) for dim in active_dims}
         scored_memories = []
+        ent_vel_boost = active_dims.get("ENT", 0.0) > 0.7 or active_dims.get("VEL", 0.0) > 0.7
         for node, data in self.graph.items():
             resonance_score = 0.0
             node_cats = self.lex.get_categories_for_word(node) if self.lex else set()
             for dim, val in active_dims.items():
-                if node_cats & active_dim_cats[dim]:
+                if not node_cats.isdisjoint(active_dim_cats[dim]):  # isdisjoint is faster than intersection &
                     resonance_score += val * 1.5
             mass = sum(data.get("edges", {}).values())
             base_mass_score = mass * 0.1
-            if active_dims.get("ENT", 0.0) > 0.7 or active_dims.get("VEL", 0.0) > 0.7:
+            if ent_vel_boost:
                 resonance_score = (resonance_score + base_mass_score) * (1.0 + (mass * 0.5))
             else:
                 resonance_score += base_mass_score
             if resonance_score > 0.5:
                 scored_memories.append((resonance_score, node, data))
         scored_memories.sort(key=lambda x: x[0], reverse=True)
+
         results = []
         res_prefix = ux("spore_strings", "core_illuminate_resonant") or "Resonant"
         assoc_prefix = ux("spore_strings", "core_illuminate_associated") or "Associated"
         fmt = (ux("spore_strings", "core_illuminate_format") or "{prefix} Engram: '{name}'{conn_str}")
+
         for score, name, data in scored_memories[:limit]:
             connections = list(data.get("edges", {}).keys())
-            if active_dims:
-                if not data.get("is_diamond", False):
-                    for edge_k, edge_v in data.get("edges", {}).items():
-                        if not self.graph.get(edge_k, {}).get("is_diamond", False):
-                            data["edges"][edge_k] = edge_v * 0.95
-                top_active_dim = max(active_dims, key=active_dims.get)
-                dim_words = list(self.DIMENSION_MAP.get(top_active_dim, {"static"}))
-                if dim_words:
-                    chosen_word = random.choice(dim_words)
-                    edges = data.setdefault("edges", {})
-                    edges[chosen_word] = edges.get(chosen_word, 0.0) + 1.0
-                try:
-                    self.subconscious.bury({"word": name, "mass": 1.0, "reconstructive": True}, config_ref=self.cfg)
-                except Exception:
-                    pass
+            if not data.get("is_diamond", False):
+                data["edges"] = {k: (v if self.graph.get(k, {}).get("is_diamond", False) else v * 0.95)
+                                 for k, v in data.get("edges", {}).items()}
             is_resonant = score > 0.5
             current_prefix = res_prefix if is_resonant else assoc_prefix
             connection_string = f" -> [{', '.join(connections[:2])}]" if connections else ""
-            formatted_result = fmt.format(prefix=current_prefix, name=name.upper(), conn_str=connection_string)
-            results.append(formatted_result)
+            results.append(fmt.format(prefix=current_prefix, name=name.upper(), conn_str=connection_string))
+        survivors = [name for score, name, data in scored_memories[:limit] if score > 0.5]
+        if len(survivors) > 1:
+            for i in range(len(survivors)):
+                for j in range(i + 1, len(survivors)):
+                    node_a = survivors[i]
+                    node_b = survivors[j]
+                    # Strengthen the bidirectional synapse
+                    self.graph[node_a].setdefault("edges", {})
+                    self.graph[node_b].setdefault("edges", {})
+                    # Increase edge weight, capped at 10.0
+                    current_a_to_b = self.graph[node_a]["edges"].get(node_b, 0.0)
+                    self.graph[node_a]["edges"][node_b] = min(10.0, current_a_to_b + 0.5)
+                    current_b_to_a = self.graph[node_b]["edges"].get(node_a, 0.0)
+                    self.graph[node_b]["edges"][node_a] = min(10.0, current_b_to_a + 0.5)
+        if len(survivors) >= 2:
+            self.hallucinate_from_subconscious(survivors)
         return results
+
+    def hallucinate_from_subconscious(self, active_nodes: List[str]):
+        """Vector Centroid Hallucination (The Deep Dredge)."""
+        if len(active_nodes) < 2 or np is None:
+            return
+        vectors = []
+        for node in active_nodes:
+            vec = _word_to_vector(node)
+            if vec is not None:
+                vectors.append(vec)
+        if not vectors:
+            return
+        centroid_vector = np.mean(vectors, axis=0)
+        recovered = self.subconscious.dredge_vibe_by_vector(centroid_vector, k=1)
+        if recovered:
+            phantom_word = recovered[0]["word"]
+            if phantom_word not in self.graph:
+                self.graph[phantom_word] = {"edges": {}, "is_diamond": False}
+            for node in active_nodes:
+                w_out = self.graph[node].setdefault("edges", {}).get(phantom_word, 0.0)
+                self.graph[node]["edges"][phantom_word] = min(10.0, w_out + 0.5)
+                w_in = self.graph[phantom_word].setdefault("edges", {}).get(node, 0.0)
+                self.graph[phantom_word]["edges"][node] = min(10.0, w_in + 0.5)
 
     def calculate_mass(self, node):
         if node not in self.graph:
@@ -227,6 +261,9 @@ class MemoryCore:
 
     def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
         pruned_count = total_decayed = 0
+        dead_nodes = set()
+
+        # First Pass: Decay and mark dead nodes
         for node in list(self.graph.keys()):
             edges = self.graph[node]["edges"]
             new_edges = {}
@@ -234,14 +271,21 @@ class MemoryCore:
                 decayed_w = w * (scaling_factor + (0.14 * min(1.0, w / 10.0)))
                 if decayed_w >= prune_threshold:
                     new_edges[t] = decayed_w
+
             total_decayed += len(edges)
             pruned_count += len(edges) - len(new_edges)
             self.graph[node]["edges"] = new_edges
+
             if not new_edges and not self.graph[node].get("is_diamond", False):
+                dead_nodes.add(node)
                 del self.graph[node]
-        valid_nodes = set(self.graph.keys())
-        for data in self.graph.values():
-            data["edges"] = {k: v for k, v in data["edges"].items() if k in valid_nodes}
+
+        # Second Pass: O(Dead) cleanup instead of O(N^2)
+        if dead_nodes:
+            for data in self.graph.values():
+                for dead in dead_nodes:
+                    data["edges"].pop(dead, None)
+
         return ux_format("spore_strings", "core_pruned", default="", total=total_decayed, pruned=pruned_count)
 
     def cannibalize(self, current_tick, preserve_current=None) -> Tuple[Optional[str], str]:

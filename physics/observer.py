@@ -229,14 +229,11 @@ class QuantumObserver:
         depth = min(1.0,
                     (counts.get("heavy", 0) + counts.get("constructive", 0)) / safe_len + get_cfg("DEPTH_BASE", 0.1))
         connectivity = min(1.0, (counts.get("social", 0) + solvents) / safe_len + get_cfg("CONN_BASE", 0.1))
-        resonance = min(
-            1.0,
-            ((counts.get("social", 0) * get_cfg("RES_SOCIAL_MULT", 2)) + counts.get("constructive", 0)) / safe_len
-            + (1.0 - e_metric),
-        )
+        resonance = min(1.0,((counts.get("social", 0) * get_cfg("RES_SOCIAL_MULT", 2)) + counts.get("constructive", 0)) / safe_len
+            + (1.0 - e_metric),)
         silence = 1.0 - min(1.0, (length / get_cfg("SILENCE_DIV", 100.0)) + (counts.get("action", 0) / safe_len))
         if length < get_cfg("SILENCE_SHORT_LIMIT", 10):
-            silence = max(silence, get_cfg("SILENCE_MIN", 0.8))
+            silence = max(silence, get_cfg("SILENCE_MIN", 0.4))
         loop_quotient = min(1.0, beta_index * depth * get_cfg("LQ_SCALAR", 1.5))
         return {"entropy": round(e_metric, 3), "beta": round(beta_index, 3), "scope": round(scope, 3),
                 "depth": round(depth, 3), "connectivity": round(connectivity, 3), "resonance": round(resonance, 3),

@@ -68,8 +68,8 @@
     "log_prefixes": {
       "critical": "► ",
       "bio": "• ",
-      "town_hall": "📜 ",
-      "paradox": "🌷 ",
+      "town_hall": "!! ",
+      "paradox": "!? ",
       "item": "★ ",
       "default": "• "
     }

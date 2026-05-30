@@ -104,7 +104,7 @@ class MetabolicGovernor:
         curr_d = float(safe_get(physics_packet, "narrative_drag", 0.0))
         dist_v = abs(curr_v - self.voltage_pid.setpoint)
         dist_d = abs(curr_d - self.drag_pid.setpoint)
-        is_safe = (dist_v < 3.0) and (dist_d < 1.5)
+        is_safe = (dist_v < 6.0) and (dist_d < 3.0)
         return is_safe, math.sqrt(dist_v ** 2 + dist_d ** 2)
 
     @staticmethod

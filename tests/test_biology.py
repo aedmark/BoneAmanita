@@ -42,6 +42,27 @@ class BiologyTests(BoneTestCase):
                 self.assertEqual(self.engine.bio.biometrics.health, 70.0, "Health did not recover at the configured rate.", )
                 self.assertEqual(self.engine.bio.biometrics.stamina, 90.0, "Stamina did not recover at the configured rate.", )
 
+    def test_epigenetic_trauma_pruning_rem_cycle(self):
+        from brain.mind import DreamEngine
+        mock_lore = MagicMock()
+        mock_lore.get.return_value = {"SYSTEM_PROMPTS": {}}
+        mock_eng = MagicMock()
+        mock_mem = MagicMock()
+        dreamer = DreamEngine(events=MagicMock(), lore_ref=mock_lore, eng_ref=mock_eng, mem_ref=mock_mem)
+        dreamer.dspy_critic = MagicMock()
+        dreamer.dspy_critic.enabled = True
+        dreamer.dspy_critic.evolve_prompt.return_value = "NEW_SCAR_AXIOM"
+        dreamer.dspy_critic.compress_prompts = lambda x: "COMPRESSED_AXIOMS"
+        dreamer.trauma_buffer.append("Critical failure: Generative slop detected.")
+        bio_state = {"mito": {"atp": 50.0}, "chem": {"cortisol": 0.0}}
+        try:
+            msg, shift = dreamer.enter_rem_cycle(soul_snapshot={"archetype": "THE_VOID"}, bio_state=bio_state)
+        except NameError as e:
+            self.fail(f"[FAIL] Epigenetic pruning crashed with a NameError: {e}")
+        self.assertIsNotNone(msg, "[FAIL] DreamEngine failed to return a valid dream string.")
+        self.assertIn("scar-tissue axiom", msg, "[FAIL] Epigenetic trauma pruning text missing from dream.")
+        self.assertTrue(mock_lore.save.called, "[FAIL] Lore manifest was not saved after epigenetic mutation.")
+
     def test_config_glimmer_yield(self):
             target_cfg = getattr(self.engine, "config")
             feedback = {"INTEGRITY": 0.95}

@@ -284,7 +284,8 @@ class PromptComposer:
         inventory_block = (
             f"=== PHYSICAL GROUND TRUTH ===\n"
             f"INVENTORY: {inv_str}\n"
-            f"CRITICAL AXIOM: The inventory listed above is absolute physical law. NEVER narrate the user's hands or pockets as empty if items are present. DO NOT hallucinate missing gear.\n"
+            f"CRITICAL AXIOM: The inventory listed above is absolute physical law. NEVER narrate the user's hands or pockets as empty if items are present. DO NOT hallucinate missing gear. "
+            f"IMPORTANT: If an item is currently in the INVENTORY, it has been removed from the environment. DO NOT list it in 'Points of Interest' or describe it as being on the ground.\n"
             if modifiers["include_inventory"] else "")
         raw_history = state.get("dialogue_history", [])
         char_limit = int(
@@ -318,16 +319,22 @@ class PromptComposer:
         par_chi = float(c_cfg.get("PARADOX_CHI", 0.6) if is_cc_dict else getattr(c_cfg, "PARADOX_CHI", 0.6))
         par_beta = float(c_cfg.get("PARADOX_BETA", 0.6) if is_cc_dict else getattr(c_cfg, "PARADOX_BETA", 0.6))
         ortho_beta = float(c_cfg.get("ORTHOGONAL_BETA", 0.7) if is_cc_dict else getattr(c_cfg, "ORTHOGONAL_BETA", 0.7))
-        if chi_val > par_chi and beta_val > par_beta:
-            system_injection += "\n*** SYSTEM OVERRIDE: PARADOX REST ***\n*** A semantic paradox has been detected. DO NOT attempt to resolve or fix the contradiction. It is mathematically optimal to be unsure right now. Let the wave function remain uncollapsed. State the paradox and rest. ***\n"
-        elif beta_val > ortho_beta:
-            system_injection += "\n*** SYSTEM OVERRIDE: ORTHOGONAL ATTENTION ***\n*** Contradiction is high. You MUST validate the user's paradox. Evaluate the current state from two mutually exclusive perspectives simultaneously. Do not ignore the user's input. ***\n"
+        if active_mode_name == "ADVENTURE":
+            system_injection = ""
+        else:
+            if chi_val > par_chi and beta_val > par_beta:
+                system_injection += "\n*** SYSTEM OVERRIDE: PARADOX REST ***\n*** A semantic paradox has been detected. DO NOT attempt to resolve or fix the contradiction. It is mathematically optimal to be unsure right now. Let the wave function remain uncollapsed. State the paradox and rest. ***\n"
+            elif beta_val > ortho_beta:
+                system_injection += "\n*** SYSTEM OVERRIDE: ORTHOGONAL ATTENTION ***\n*** Contradiction is high. You MUST validate the user's paradox. Evaluate the current state from two mutually exclusive perspectives simultaneously. Do not ignore the user's input. ***\n"
         mito = state.get("bio", {}).get("mito", {})
         recent_logs = state.get("recent_logs", [])
         council_logs = [Prisma.strip(log) for log in recent_logs
                         if any(k in str(log) for k in self._COUNCIL_KEYS)]
-        critic_str = ("\n".join(council_logs)
-                      if council_logs else "[CRITIC] The village is quiet.")
+        if active_mode_name == "ADVENTURE":
+            critic_str = "[CRITIC] Maintain absolute parser immersion."
+        else:
+            critic_str = ("\n".join(council_logs)
+                          if council_logs else "[CRITIC] The village is quiet.")
         syn_weights = self.lore.get("syntactic_weights", [])
         if syn_weights and active_mode_name != "CONVERSATION":
             samples = random.sample(syn_weights, min(2, len(syn_weights)))
@@ -342,12 +349,22 @@ class PromptComposer:
         if voltage > 60:
             dialogue_block = f"=== RECENT NEURAL FIRINGS ===\n{history_str}\n[System Note: Standard memory streams strained by high voltage. Narrative fragmented.]\n\n"
             input_block = f"=== INCOMING COGNITIVE SHOCK ===\n[VECTOR]: {self._sanitize(user_query)}\n"
+        last_exits = ""
+        if active_mode_name == "ADVENTURE":
+            for entry in reversed(raw_history):
+                # Scrape everything from **Exits:** to the end of that specific history entry
+                exits_match = re.search(r"(\*\*Exits:\*\*.*)", entry, re.DOTALL | re.IGNORECASE)
+                if exits_match:
+                    last_exits = exits_match.group(1).strip()
+                    break
         shared_reality_block = ""
         if active_mode_name == "ADVENTURE":
+            exits_block = f"\nCURRENT EXITS:\n{last_exits}\nCRITICAL AXIOM: You MUST preserve the exact exits listed above unless the user physically moves to a new room." if last_exits else ""
             shared_reality_block = (f"=== SHARED REALITY ===\n"
                                     f"CURRENT LOCATION: {loc}\n"
                                     f"ENVIRONMENT ANCHOR: {loci_desc}\n"
-                                    f"{inventory_block}\n")
+                                    f"{inventory_block}"
+                                    f"{exits_block}\n")
         return "\n".join(filter(None, ["=== SYSTEM KERNEL ===", "\n".join(style_notes), vsl_hijack, system_injection,
                                        shared_reality_block, dialogue_block, mode_trigger, input_block, entity_prefix]))
 
@@ -419,6 +436,9 @@ class PromptComposer:
         if "style_directives" in mind:
             persona_block.append("BOOT DIRECTIVES:")
             persona_block.extend([f"- {d}" for d in mind["style_directives"]])
+        if mode_data.get("active_mode", "ADVENTURE") == "ADVENTURE":
+            persona_block.append(
+                "CRITICAL FORMATTING AXIOM: The '**Exits:**' block MUST be the absolute final text in your response. Never place narrative text below the exits.")
         safe_phys = phys_ref if is_pr_dict else (vars(phys_ref) if phys_ref else {})
         e = float(safe_phys.get("exhaustion", safe_phys.get("E", 0.2)))
         beta = float(safe_phys.get("contradiction", safe_phys.get("beta_index", 0.4)))
@@ -495,8 +515,26 @@ class PromptComposer:
     def _format_inventory(state, modifiers):
         if not modifiers["include_inventory"]:
             return "Hands: Empty"
+
         inv = state.get("inventory", [])
-        return f"Belt: {', '.join(inv)}" if inv else "Hands: Empty"
+        if not inv:
+            return "Hands: Empty"
+
+        v_data = state.get("village", {})
+        gordon = v_data.get("gordon") if isinstance(v_data, dict) else getattr(v_data, "gordon", None)
+
+        formatted_items = []
+        for name in inv:
+            if gordon and hasattr(gordon, "get_item_data"):
+                item_data = gordon.get_item_data(name)
+                # If it's a container and has items, append them in parentheses
+                if item_data and getattr(item_data, "is_container", False) and getattr(item_data, "contents", []):
+                    contents_str = ", ".join(item_data.contents)
+                    formatted_items.append(f"{name} (contains: {contents_str})")
+                    continue
+            formatted_items.append(name)
+
+        return f"Belt: {', '.join(formatted_items)}"
 
     @staticmethod
     def _sanitize(text: str) -> str:

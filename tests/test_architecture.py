@@ -1,12 +1,13 @@
 """tests/test_architecture.py"""
 
-import os
 import ast
+import os
 from unittest.mock import patch
+
+from main import BoneAmanita
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
-from main import BoneAmanita
-from presets import BoneConfig
+
 
 class ArchitectureTests(BoneTestCase):
     def test_arch_type_agnostic_physics(self):
@@ -19,6 +20,71 @@ class ArchitectureTests(BoneTestCase):
         self.assertGreater(yield_obj, 0.0, "[FAIL] Digestive track starved when fed a PhysicsPacket object.")
         self.assertGreater(yield_dict, 0.0, "[FAIL] Digestive track starved when fed a serialized dictionary.")
         self.assertEqual(yield_obj, yield_dict, "[FAIL] Metabolic yield differs based on data type!")
+
+    def test_cortex_gordon_and_toxicity_rejection(self):
+        from brain.cortex import TheCortex
+        from core import CycleContext
+        from unittest.mock import MagicMock
+        mock_svc = MagicMock()
+        mock_svc.config_ref = None
+        mock_svc.bio.mito.state.ros_buildup = 0.0
+        del mock_svc.mind_memory.nodes
+        mock_svc.orchestrator.eng.navi_sad.calculate_semantic_dimension.return_value = 1.0
+        mock_svc.orchestrator.eng.shared_lattice = None
+        mock_svc.orchestrator.eng.governor.calculate_coupling.return_value = 0.5
+        mock_svc.orchestrator.eng.governor.get_policy_shift.return_value = "EFFICIENCY"
+
+        cortex = TheCortex(services=mock_svc, llm_client=MagicMock())
+        cortex.active_mode = "ADVENTURE"
+        ctx_gordon = CycleContext(input_text="Testing Gordon.", physics={"narrative_drag": 2.0, "chi": 0.5})
+        res_gordon = cortex.process_context(ctx_gordon)
+        self.assertEqual(res_gordon.get("type"), "SYSTEM_HALT", "[FAIL] Gordon failed to lock the architecture under high narrative drag.")
+        self.assertIn("Tensegrity Anchor engaged", res_gordon.get("ui", ""), "[FAIL] Missing Gordon UI rejection message.")
+        ctx_toxic = CycleContext(input_text="Testing Toxicity.", physics={"narrative_drag": 1.0, "chi": 0.5, "m_a": 1.0})
+        res_toxic = cortex.process_context(ctx_toxic)
+        self.assertEqual(res_toxic.get("type"), "COUNTERFACTUAL_REJECTION", "[FAIL] Cortex failed to detect Counterfactual Toxicity.")
+        self.assertTrue(mock_svc.mind_memory.record_scar.called, "[FAIL] Cortex failed to record a trauma scar upon toxicity rejection.")
+        self.assertEqual(mock_svc.bio.mito.adjust_atp.call_args[0][0], -10.0, "[FAIL] Toxicity did not accurately tax the ATP pool.")
+
+    def test_cortex_jester_false_cohesion_break(self):
+        from brain.cortex import TheCortex
+        from core import CycleContext
+        from unittest.mock import MagicMock
+        mock_svc = MagicMock()
+        mock_svc.config_ref = None
+        mock_svc.bio.endo.get_state.return_value = {}
+        mock_svc.host_stats.latency = 0.0
+        mock_svc.village = None
+        mock_svc.inventory = None
+        mock_svc.consultant = None
+        mock_svc.lore.get.return_value = {}
+        mock_svc.symbiosis.get_prompt_modifiers.return_value = {}
+        mock_svc.mind_memory.ann = None
+        mock_svc.mind_memory.graph = {}
+        del mock_svc.mind_memory.nodes
+        mock_eng = mock_svc.orchestrator.eng
+        mock_eng.tick_count = 3
+        mock_eng.navi_sad.detect_point_attractor.return_value = True
+        mock_eng.navi_sad.calculate_semantic_dimension.return_value = 1.0
+        mock_eng.shared_lattice = None
+        mock_eng.substrate = None
+        mock_eng.governor.calculate_coupling.return_value = 0.5
+        mock_eng.governor.get_policy_shift.return_value = "EFFICIENCY"
+        mock_eng.gatekeeper.audit_generation.return_value = (True, "Normal response.")
+        mock_llm = MagicMock()
+        mock_llm.generate.return_value = "Normal response."
+        cortex = TheCortex(services=mock_svc, llm_client=mock_llm)
+        cortex.active_mode = "ADVENTURE"
+        cortex.validator = MagicMock()
+        cortex.validator.validate.return_value = {"valid": True, "content": "Normal response."}
+        cortex.pragmatist.enforce_maxims = MagicMock(return_value=("Normal response.", False))
+        cortex.dspy_critic.enabled = False
+        ctx = CycleContext(input_text="Hello", is_system_event=False, physics={"repetition": 0.9, "voltage": 50.0})
+        res = cortex.process_context(ctx)
+        self.assertTrue(mock_eng.drain_atp.called, "[FAIL] Jester failed to drain ATP during False Cohesion.")
+        self.assertEqual(res["physics"]["entropy"], 0.99, "[FAIL] Jester failed to violently spike entropy to 0.99.")
+        mock_eng.soul.force_mutation.assert_called_with("JESTER")
+        self.assertEqual(res["mind"]["lens"], "JESTER", "[FAIL] The localized sim_result mind lens was not successfully overridden by JESTER.")
 
     def test_immune_evaluation_with_object_physics(self):
         class MockPhysicsPacket:
