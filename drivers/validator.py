@@ -21,11 +21,11 @@ class CongruenceValidator:
     def calculate_resonance(self, text: str, context: Any) -> float:
         if not text:
             return 0.0
-        cfg = getattr(self.cfg, "DRIVERS", None)
-        default_lens = getattr(cfg, "DEFAULT_LENS", "OBSERVER")
-        raw_lens = getattr(context, "active_lens", default_lens)
-        archetype = raw_lens.upper().replace("THE ", "")
-        tone_score = getattr(cfg, "CONGRUENCE_BASE_TONE", 0.8)
+        cfg = safe_get(self.cfg, "DRIVERS", {})
+        default_lens = safe_get(cfg, "DEFAULT_LENS", "OBSERVER")
+        raw_lens = safe_get(context, "active_lens", default_lens)
+        archetype = str(raw_lens).upper().replace("THE ", "")
+        tone_score = float(safe_get(cfg, "CONGRUENCE_BASE_TONE", 0.8))
         target_data = self.map.get(archetype, {})
         if isinstance(target_data, dict):
             vocab_str = target_data.get("vocab", "")

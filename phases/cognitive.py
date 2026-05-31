@@ -53,9 +53,9 @@ class CognitionPhase(SimulationPhase):
                         ctx.log(f"{Prisma.VIOLET}{msg.format(lambda_tax=lambda_tax)}{Prisma.RST}")
         if hasattr(self.eng.mind.mem, "check_for_resurrection"):
             if flashback_msg := self.eng.mind.mem.check_for_resurrection(ctx.clean_words, ctx.physics.voltage):
-                ctx.log(f"{Prisma.VIOLET}An epigenetic scar tingles. The system remembers a past failure and braces itself.{Prisma.RST}")
+                ctx.log(
+                    f"{Prisma.VIOLET}An epigenetic scar tingles. The system remembers a past failure and braces itself.{Prisma.RST}")
                 shock_cost = 5.0
-                self.eng.bio.biometrics.stamina = max(0.0, self.eng.bio.biometrics.stamina - shock_cost)
                 self.eng.stamina = max(0.0, self.eng.stamina - shock_cost)
         self.eng.mind.mem.encode(ctx.clean_words, _safe_dict(ctx.physics), "GEODESIC")
         if ctx.is_alive and ctx.clean_words:
@@ -199,7 +199,7 @@ class SoulPhase(SimulationPhase):
                     ctx.physics.voltage += 5.0
                     ctx.record_flux("SOUL", "VOLTAGE", old_volts, ctx.physics.voltage, "MYTH_BUFF")
                     max_s = float(safe_get(self.eng.config, "MAX_STAMINA", 100.0))
-                    self.eng.bio.biometrics.stamina = min(max_s, self.eng.bio.biometrics.stamina + 5.0)
+                    self.eng.stamina = min(max_s, self.eng.stamina + 5.0)
                     break
         if self.eng.village.gordon and self.eng.village.tinkerer:
             if self.eng.village.gordon.inventory:

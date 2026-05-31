@@ -84,10 +84,8 @@ class TheTinkerer:
             new_name, new_data = self.akashic.forge_new_item(vector)
             self.gordon.register_dynamic_item(new_name, new_data)
             self.gordon.acquire(new_name)
-            if hasattr(self.gordon, "remove_item"):
-                self.gordon.remove_item(old_name)
-            elif old_name in getattr(self.gordon, "inventory", []):
-                self.gordon.inventory.remove(old_name)
+            if hasattr(self.gordon, "safe_remove_item"):
+                self.gordon.safe_remove_item(old_name)
             if old_name in inventory_list:
                 inventory_list[inventory_list.index(old_name)] = new_name
             self.tool_resonance[new_name] = resonance / _cfg_val(self.cfg, "VILLAGE", "TINKER_ASCENSION_HALVE", 2.0)
@@ -340,13 +338,13 @@ class TownHall:
         from struts import ux_format
         trauma = session_data.get("trauma_vector") or {}
         if soul and float(safe_get(soul, "obsession_neglect", 0.0)) > _cfg_val(config_ref, "VILLAGE", "TOWN_NEGLECT_CRIT", 8.0):
-            return "HIGH_DRAG", ux_format("village_strings", "town_guilt", obsession=safe_get(soul, "current_obsession", "work"))
+            return "HIGH_DRAG", ux_format("village_strings", "town_guilt", obsession=safe_get(soul, "current_obsession", "work"), default="Guilt parameter breached: {obsession}")
         if trauma:
-            max_t_key = max(trauma, key=trauma.get)
-            if trauma[max_t_key] > _cfg_val(config_ref, "VILLAGE", "TOWN_TRAUMA_CRIT", 0.6):
-                return "HIGH_TRAUMA", ux_format("village_strings", "town_trauma", trauma=max_t_key)
+            max_t_key = max(trauma, key=lambda k: float(trauma[k]))
+            if float(trauma[max_t_key]) > _cfg_val(config_ref, "VILLAGE", "TOWN_TRAUMA_CRIT", 0.6):
+                return "HIGH_TRAUMA", ux_format("village_strings", "town_trauma", trauma=max_t_key, default="Trauma critical: {trauma}")
         meta_data = session_data.get("meta") or {}
-        if meta_data.get("final_health", 50) < _cfg_val(config_ref, "VILLAGE", "TOWN_HEALTH_CRIT", 30):
+        if float(safe_get(meta_data, "final_health", 50.0)) < _cfg_val(config_ref, "VILLAGE", "TOWN_HEALTH_CRIT", 30.0):
             return "HIGH_TRAUMA", ux("village_strings", "town_critical") or "The lattice is fractured. We are holding it together with sheer will."
         return "BALANCED", ux("village_strings", "town_nominal") or "The system hums quietly. All is well."
 
@@ -379,7 +377,7 @@ class DeathGen:
 
     @staticmethod
     def _determine_cause(p: PhysicsPacket, mito_state: Any, trauma_vector: Dict = None, config_ref=None) -> str:
-        if trauma_vector and sum(trauma_vector.values()) > _cfg_val(config_ref, "VILLAGE", "DEATH_TRAUMA_CRIT", 50.0):
+        if trauma_vector and sum(float(v) for v in trauma_vector.values()) > _cfg_val(config_ref, "VILLAGE", "DEATH_TRAUMA_CRIT", 50.0):
             return "TRAUMA"
         if float(safe_get(mito_state, "atp_pool", safe_get(mito_state, "atp", 0.0))) <= _cfg_val(config_ref, "BIO", "ATP_STARVATION", 0.0):
             return "STARVATION"
@@ -395,7 +393,7 @@ class DeathGen:
             return "GLUTTONY"
         if drag > _cfg_val(config_ref, "PHYSICS", "DRAG_HALT", 10.0):
             return "BOREDOM"
-        if counts.get("antigen", 0) > _cfg_val(config_ref, "VILLAGE", "DEATH_TOXICITY_CRIT", 5.0):
+        if float(safe_get(counts, "antigen", 0.0)) > _cfg_val(config_ref, "VILLAGE", "DEATH_TOXICITY_CRIT", 5.0):
             return "TOXICITY"
         return "STARVATION"
 
@@ -419,8 +417,8 @@ class TheTherapist:
     def evaluate_catharsis(self, trauma_vector: Dict[str, float], health: float) -> Tuple[bool, str]:
         trauma_threshold = _cfg_val(self.cfg, "VILLAGE", "THERAPY_TRAUMA_THRESH", 15.0)
         health_threshold = _cfg_val(self.cfg, "VILLAGE", "THERAPY_HEALTH_THRESH", 50.0)
-        if trauma_vector and sum(trauma_vector.values()) > trauma_threshold and health < health_threshold:
-            max_trauma = str(max(trauma_vector, key=trauma_vector.get)).lower()
+        if trauma_vector and sum(float(v) for v in trauma_vector.values()) > trauma_threshold and health < health_threshold:
+            max_trauma = str(max(trauma_vector, key=lambda k: float(trauma_vector[k]))).lower()
             msg = (ux("village_strings", "therapist_intervention") or "The Therapist steps in to address the {trauma}.").format(
                 trauma=max_trauma)
             self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "THERAPY")

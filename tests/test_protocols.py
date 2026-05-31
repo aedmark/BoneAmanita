@@ -81,6 +81,7 @@ class ProtocolLifecycleTests(BoneTestCase):
         snapshot = self.engine.process_turn(ambiguous_prompt)
         logs = "\n".join(snapshot.get("logs", [])).upper()
         final_cortisol = self.engine.bio.endo.cortisol
+        self.assertIn("LITERAL", logs, "[FAIL] Literal mode was not explicitly triggered in the logs.")
 
         def test_chronos_temporal_validation(self):
             from protocols.chronos import ChronosKeeper

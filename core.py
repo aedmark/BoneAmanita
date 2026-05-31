@@ -10,12 +10,14 @@ import traceback
 import uuid
 from collections import deque, Counter
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple
+
 from constants import Prisma, RealityLayer
+from physics.models import PhysicsPacket, UserInferredState, SharedDynamics
 from presets import BoneConfig
 from struts import ux, ux_format, safe_get
-from physics.models import PhysicsPacket, UserInferredState, SharedDynamics
+
 
 class JSONEncoder(json.JSONEncoder):
     """Leave this alone, SLASH"""
@@ -54,11 +56,10 @@ class DecisionCrystal:
 
     def __str__(self):
         e_val = self.leverage_metrics.get("E", 0.0)
-        return (f"CRYSTAL [{self.decision_id}] {self.system_state} | "
-                f"ARCHETYPE: {self.active_archetype} | E: {e_val:.2f}")
+        return f"CRYSTAL [{self.decision_id}] {self.system_state} | "f"ARCHETYPE: {self.active_archetype} | E: {e_val:.2f}"
 
     def crystallize(self) -> str:
-        data = asdict(self)
+        data = vars(self).copy()
         data["_summary"] = f"{self.system_state}::{self.active_archetype}"
         data["_type"] = "CRYSTAL"
         return json.dumps(data, cls=JSONEncoder)
@@ -149,16 +150,15 @@ class EventBus:
 
     def unsubscribe(self, event_type, callback):
         with self._lock:
-            if event_type in self.subscribers:
-                if new_subs := tuple(c for c in self.subscribers[event_type] if c != callback):
+            subs = self.subscribers.get(event_type)
+            if subs and callback in subs:
+                if new_subs := tuple(c for c in subs if c != callback):
                     self.subscribers[event_type] = new_subs
                 else:
                     del self.subscribers[event_type]
 
     def publish(self, event_type, data=None):
-        with self._lock:
-            callbacks = self.subscribers.get(event_type, ())
-
+        callbacks = self.subscribers.get(event_type, ())
         for callback in callbacks:
             try:
                 callback(data)
@@ -170,8 +170,8 @@ class EventBus:
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
         event = {"timestamp": time.time(), "source": source, "level": level, "text": message, "_type": "EVENT_LOG"}
-        with self._lock:
-            self.buffer.append(event)
+        # deque.append is thread-safe. Paranoid lock removed.
+        self.buffer.append(event)
         self.publish(source, event)
         if self.telemetry:
             self.telemetry.record_event(event)
@@ -336,8 +336,8 @@ class SystemHealth:
     observer: Optional["TheObserver"] = None
 
     def __getattr__(self, item: str):
-        if item.endswith("_online") and (comp := item[:-7].lower()) in self.components_online:
-            return self.components_online[comp]
+        if item.endswith("_online"):
+            return self.components_online.get(item[:-7].lower(), True)
         raise AttributeError(f"'SystemHealth' object has no attribute '{item}'")
 
     def link_observer(self, observer_ref):
@@ -428,7 +428,7 @@ class CyberneticGovernor:
 class ArchetypeArbiter:
     @staticmethod
     def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict],
-                  trigram: Dict = None) -> Tuple[str, str, str]:
+                  trigram: Any = None) -> Tuple[str, str, str]:
         mandate_types = {m.get("type", m.get("action")) for m in (council_mandates or [])}
         if "LOCKDOWN" in mandate_types:
             return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law") or "Martial Law."
@@ -436,11 +436,16 @@ class ArchetypeArbiter:
             return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic") or "[COUNCIL]: Bureaucratic Override active."
         if soul_archetype and "/" in soul_archetype:
             return soul_archetype, "SOUL", ux_format("core_strings", "arb_diamond", soul_archetype=soul_archetype, default=f"Gestalt Resonance: {soul_archetype}")
+
         manifest = LoreManifest.get_instance()
-        if trigram and (meta_resonance := manifest.get("NARRATIVE_DATA", "_META_RESONANCE_")):
+        # [Meadows Protocol]: Ensure trigram resolves safely against loosely typed payloads
+        tri_name = trigram.get("name") if isinstance(trigram, dict) else str(trigram) if trigram else None
+
+        if tri_name and (meta_resonance := manifest.get("NARRATIVE_DATA", "_META_RESONANCE_")):
             for r in meta_resonance:
-                if r.get("trigram") == trigram.get("name") and r.get("lens", physics_lens) == physics_lens and r.get("soul", soul_archetype) == soul_archetype:
+                if r.get("trigram") == tri_name and r.get("lens", physics_lens) == physics_lens and r.get("soul", soul_archetype) == soul_archetype:
                     return r["result"], r.get("source", "COSMIC"), r.get("msg") or ux("core_strings", "arb_resonance") or "Cosmic Resonance."
+
         if physics_lens in (manifest.get("COUNCIL_DATA", "LOUD_LENSES") or ("THE MANIC", "THE VOID")):
             return physics_lens, "PHYSICS", ux_format("core_strings", "arb_loud", physics_lens=physics_lens, default=f"Physics Override: {physics_lens}")
         return soul_archetype, "SOUL", ux("core_strings", "arb_soul") or "The soul speaks."
@@ -569,11 +574,11 @@ class TelemetryService:
 
     def get_last_fatal_error(self) -> Optional[str]:
         for data in self._yield_historical_records(file_limit=5, lines_per_file=50):
-            if "CRITICAL" in str(data.get("outcome", "")):
+            outcome = data.get("outcome")
+            if outcome and "CRITICAL" in str(outcome):
                 return ux_format("core_strings", "tel_prev_crash", default="Crash: {reason}", reason=data.get("reasoning", "Unknown"))
         return None
 
     def generate_session_summary(self) -> str:
         self.flush_to_disk()
-        return ux_format("core_strings", "tel_session_summary", status="DISABLED" if self.disabled else "ACTIVE",
-                         count=self.crystals_logged, trace_file=self.current_trace_file)
+        return ux_format("core_strings", "tel_session_summary", status="DISABLED" if self.disabled else "ACTIVE", count=self.crystals_logged, trace_file=self.current_trace_file)

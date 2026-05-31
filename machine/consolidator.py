@@ -16,12 +16,14 @@ class TheConsolidator:
         self.events.subscribe("MEMORY_BURIED", self._on_memory_buried)
 
     def _on_memory_buried(self, payload):
-        fossil = payload.get("fossil")
+        from struts import safe_get
+        fossil = safe_get(payload, "fossil")
         if fossil and self.akashic:
-            self.akashic.bury_memory(fossil.get("word", "Unknown"), fossil)
+            self.akashic.bury_memory(safe_get(fossil, "word", "Unknown"), fossil)
 
     def _on_syntax_corrected(self, payload):
-        triplet = payload.get("triplet")
+        from struts import safe_get
+        triplet = safe_get(payload, "triplet")
         if not triplet: return
         from core import LoreManifest
         lore = LoreManifest.get_instance()
@@ -36,8 +38,9 @@ class TheConsolidator:
             self.events.log(f"{Prisma.RED}Failed to save syntactic weights: {e}{Prisma.RST}", "ERROR")
 
     def _on_shadow_engaged(self, payload):
-        source = payload.get("source", "core")
-        target = payload.get("target")
+        from struts import safe_get
+        source = safe_get(payload, "source", "core")
+        target = safe_get(payload, "target")
         if not target:
             return
         self.memory.memory_core.strengthen_link(source=source, target=target, rate=2.0, decay=0.85)
@@ -45,6 +48,7 @@ class TheConsolidator:
         self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "MEMORY")
 
     def _on_resonance_achieved(self, payload):
-        result = payload.get("result", "Unknown Paradigm")
-        msg = payload.get("msg", "Resonance stabilized.")
+        from struts import safe_get
+        result = safe_get(payload, "result", "Unknown Paradigm")
+        msg = safe_get(payload, "msg", "Resonance stabilized.")
         self.akashic.record_glimmer(concept=result, paradigm=msg)

@@ -140,7 +140,7 @@ class MachineryPhase(SimulationPhase):
         c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(phys_dict)
         if c_msg: ctx.log(c_msg)
         if c_state == "MELTDOWN":
-            self.eng.bio.biometrics.health = max(0.0, self.eng.bio.biometrics.health - c_val)
+            self.eng.health = max(0.0, self.eng.health - c_val)
         _deep_update(ctx.physics, phys_dict)
         return ctx
 
@@ -159,7 +159,7 @@ class MachineryPhase(SimulationPhase):
         from struts import safe_get
         max_hp = float(safe_get(self.eng.config, "MAX_HEALTH", 100.0))
         damage = max_hp * 0.20
-        self.eng.bio.biometrics.health = max(0.0, self.eng.bio.biometrics.health - damage)
+        self.eng.health = max(0.0, self.eng.health - damage)
         msg = ux("cycle_strings", "machinery_theremin")
         ctx.log(f"{Prisma.RED}{msg.format(damage=damage)}{Prisma.RST}")
         self.eng.events.publish("AIRSTRIKE", {"damage": damage, "source": "THEREMIN"})

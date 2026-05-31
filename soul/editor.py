@@ -1,13 +1,12 @@
 """/soul/editor.py"""
 
 import random
-from typing import Any
 
 from constants import Prisma
 # The soul does not exist in a vacuum. It sits atop the physical layer (akashic, core, struts)
 # and translates metabolic states (ATP, voltage) into narrative meaning.
 from core import LoreManifest
-from mechanics.lexicon import LexiconService
+
 
 class TheEditor:
     @staticmethod

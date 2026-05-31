@@ -35,6 +35,22 @@ class FractureEngineTest(BoneTestCase):
         alpha_node = next(node for node in frozen_topology if node[0] == "NODE_ALPHA")
         self.assertIn("NODE_BETA", alpha_node[1])
 
+    def test_fracture_dual_null_topology_baseline(self):
+        from cycle import _native_rewire, _native_configuration_model
+        # Mock a star graph topology
+        adj = {
+            "center": ["n1", "n2", "n3", "n4"],
+            "n1": ["center"], "n2": ["center"], "n3": ["center"], "n4": ["center"]
+        }
+
+        null_rewire = _native_rewire(adj, n_swaps=10)
+        null_config = _native_configuration_model(adj)
+
+        # The most important math rule for a null model: Node degrees MUST remain identical
+        self.assertEqual(len(null_rewire["center"]), 4, "[FAIL] Maslov-Sneppen altered node degree!")
+        self.assertEqual(len(null_config["center"]), 4, "[FAIL] Configuration model altered node degree!")
+        self.assertEqual(len(null_config["n1"]), 1, "[FAIL] Configuration model altered edge node degree!")
+
     def test_fracture_autophagic_marathon(self):
         mem_graph = (self.engine.mind.mem.graph
                      if hasattr(self.engine.mind, "mem") else self.engine.akashic.graph)

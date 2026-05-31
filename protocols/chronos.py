@@ -20,15 +20,12 @@ class ChronosKeeper:
         active_phys = getattr(self.eng, "active_physics", {})
         space = safe_get(active_phys, "space", {}) or {}
         loc = safe_get(active_phys, "zone", safe_get(space, "zone", "Void"))
-        last_speech = "Silence."
-        if getattr(self.eng, "cortex", None) and getattr(self.eng.cortex, "dialogue_buffer", None):
-            last_speech = self.eng.cortex.dialogue_buffer[-1]
-        return {
-            "location": loc,
-            "last_output": last_speech,
-            "inventory": self.eng.village.gordon.inventory if getattr(self.eng.village, "gordon", None) else [],
-            "kernel_hash": getattr(self.eng, "kernel_hash", "UNKNOWN"),
-        }
+        cortex = safe_get(self.eng, "cortex")
+        buf = safe_get(cortex, "dialogue_buffer") if cortex else []
+        last_speech = buf[-1] if buf else "Silence."
+        return {"location": loc, "last_output": last_speech,
+                "inventory": self.eng.village.gordon.inventory if getattr(self.eng.village, "gordon", None) else [],
+                "kernel_hash": getattr(self.eng, "kernel_hash", "UNKNOWN"), }
 
     def save_checkpoint(self, history: list = None) -> str:
         try:
@@ -97,18 +94,32 @@ class ChronosKeeper:
         try:
             msg2 = ux("protocol_strings", "chronos_freezing")
             print(f"{Prisma.GRY}{msg2}{Prisma.RST}")
-            bio_dict = self.eng.bio.to_dict() if getattr(self.eng, "bio", None) and hasattr(self.eng.bio, "to_dict") else {}
+            bio = safe_get(self.eng, "bio")
+            bio_dict = bio.to_dict() if hasattr(bio, "to_dict") else {}
             mito_traits = bio_dict.get("mito", {})
-            immune_data = list(self.eng.bio.immune.active_antibodies) if getattr(self.eng, "bio", None) and hasattr(self.eng.bio, "immune") else []
-
-            atlas = self.eng.phys.nav.to_dict() if getattr(self.eng, "phys", None) and hasattr(self.eng.phys, "nav") else {}
-            soul_data = self.eng.soul.to_dict() if getattr(self.eng, "soul", None) else {}
-            if getattr(self.eng, "mind", None) and getattr(self.eng.mind, "mem", None):
-                self.eng.mind.mem.save(health=getattr(self.eng, "health", 0.0),
-                    stamina=getattr(self.eng, "stamina", 0.0), mutations={},
-                    trauma_accum=getattr(self.eng, "trauma_accum", {}), joy_history=[],
-                    mitochondria_traits=mito_traits, antibodies=immune_data, soul_data=soul_data,
-                    village_data=self._gather_village_state(), continuity=continuity_packet, world_atlas=atlas, )
+            immune = safe_get(bio, "immune")
+            immune_data = list(immune.active_antibodies) if immune else []
+            phys = safe_get(self.eng, "phys")
+            nav = safe_get(phys, "nav")
+            atlas = nav.to_dict() if hasattr(nav, "to_dict") else {}
+            soul = safe_get(self.eng, "soul")
+            soul_data = soul.to_dict() if hasattr(soul, "to_dict") else {}
+            mind = safe_get(self.eng, "mind")
+            mem = safe_get(mind, "mem")
+            if mem and hasattr(mem, "save"):
+                mem.save(
+                    health=float(safe_get(self.eng, "health", 0.0)),
+                    stamina=float(safe_get(self.eng, "stamina", 0.0)),
+                    mutations={},
+                    trauma_accum=safe_get(self.eng, "trauma_accum", {}),
+                    joy_history=[],
+                    mitochondria_traits=mito_traits,
+                    antibodies=immune_data,
+                    soul_data=soul_data,
+                    village_data=self._gather_village_state(),
+                    continuity=continuity_packet,
+                    world_atlas=atlas
+                )
         except Exception as e:
             msg3 = ux("protocol_strings", "chronos_mem_save_fail")
             print(f"{Prisma.RED}{msg3.format(e=e)}{Prisma.RST}")

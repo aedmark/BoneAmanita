@@ -25,11 +25,11 @@ class BoneConsultant:
         return ux("driver_strings", "vsl_disengage")
 
     def update_coordinates(self, user_text: str, bio_state: Optional[Dict] = None, physics: Optional[Any] = None):
-        cfg = getattr(self.cfg, "DRIVERS", None)
-        e_growth = safe_get(cfg, "VSL_E_GROWTH_MULT", 0.002)
-        fatigue_mult = safe_get(cfg, "VSL_FATIGUE_MULT", 0.3)
-        b_decay = safe_get(cfg, "VSL_B_DECAY", 0.8)
-        b_growth = safe_get(cfg, "VSL_B_GROWTH", 0.2)
+        cfg = safe_get(self.cfg, "DRIVERS", {})
+        e_growth = float(safe_get(cfg, "VSL_E_GROWTH_MULT", 0.002))
+        fatigue_mult = float(safe_get(cfg, "VSL_FATIGUE_MULT", 0.3))
+        b_decay = float(safe_get(cfg, "VSL_B_DECAY", 0.8))
+        b_growth = float(safe_get(cfg, "VSL_B_GROWTH", 0.2))
         word_count = len(user_text.split())
         self.state.E = min(1.0, self.state.E + (word_count * e_growth))
         if bio_state and "fatigue" in bio_state:
@@ -48,11 +48,11 @@ class BoneConsultant:
 
     def get_system_prompt(self, soul_snapshot: Optional[Dict] = None) -> str:
         directives = []
-        cfg = getattr(self.cfg, "DRIVERS", None)
-        lim_thresh = safe_get(cfg, "VSL_LIMINAL_THRESHOLD", 0.7)
-        syn_thresh = safe_get(cfg, "VSL_SYNTAX_THRESHOLD", 0.9)
-        bun_max = safe_get(cfg, "VSL_BUNNY_E_MAX", 0.3)
-        par_min = safe_get(cfg, "VSL_PARADOX_B_MIN", 0.6)
+        cfg = safe_get(self.cfg, "DRIVERS", {})
+        lim_thresh = float(safe_get(cfg, "VSL_LIMINAL_THRESHOLD", 0.7))
+        syn_thresh = float(safe_get(cfg, "VSL_SYNTAX_THRESHOLD", 0.9))
+        bun_max = float(safe_get(cfg, "VSL_BUNNY_E_MAX", 0.3))
+        par_min = float(safe_get(cfg, "VSL_PARADOX_B_MIN", 0.6))
         if "LIMINAL" in self.state.active_modules or self.state.L > lim_thresh:
             scar_template = ux("driver_strings", "vsl_scar_note") or " (Scars: {scars})"
             scar_note = scar_template.format(
@@ -75,6 +75,5 @@ class BoneConsultant:
             arch = soul_snapshot.get("archetype", "UNKNOWN")
             muse = (soul_snapshot.get("obsession") or {}).get("title", "None")
             directives.append(
-                ux_format("driver_strings", "vsl_layer_muse", default="Layer Focus: {arch} | Muse: {muse}", arch=arch,
-                          muse=muse))
+                ux_format("driver_strings", "vsl_layer_muse", default="Layer Focus: {arch} | Muse: {muse}", arch=arch, muse=muse))
         return "\n".join(directives)

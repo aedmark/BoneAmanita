@@ -61,8 +61,8 @@ class KintsugiProtocol:
                 "success": False,
                 "msg": ux("protocol_strings", "kintsugi_no_fissures"),
             }
-        target = max(trauma_accum, key=trauma_accum.get)
-        severity = trauma_accum[target]
+        target = max(trauma_accum, key=lambda k: float(trauma_accum[k]))
+        severity = float(trauma_accum[target])
         healed_log = []
         cfg = safe_get(self.cfg, "KINTSUGI", {})
         atp_gain = 0.0

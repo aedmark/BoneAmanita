@@ -1,5 +1,6 @@
 """mechanics/inventory.py"""
 
+import json
 import random
 import re
 from dataclasses import dataclass, field
@@ -24,6 +25,7 @@ class Item:
     is_container: bool = False
     capacity: int = 3
     contents: List[str] = field(default_factory=list)
+    location: str = "VOID"
 
     @classmethod
     def from_dict(cls, name: str, data: Dict):
@@ -36,7 +38,8 @@ class Item:
                    consume_on_use=is_consumable, reflex_trigger=data.get("reflex_trigger", None),
                    is_container=data.get("is_container", False),
                    capacity=data.get("capacity", 3),
-                   contents=data.get("contents", [])
+                   contents=data.get("contents", []),
+                   location=data.get("location", "VOID")
                    )
 
 class GordonKnot:
@@ -93,10 +96,7 @@ class GordonKnot:
                     msg = ux("gordon_strings", "premise_loc")
                     return f"{Prisma.SLATE}{msg.format(loc=required_loc, zone=current_zone)}{Prisma.RST}"
         for action, req_objs in self.action_coupling.items():
-            if all(w in tokens for w in action.split()) and re.search(
-                    rf"\b(?:i\s+(?:will\s+)?{action}|to\s+{action}|{action}\s+(?:the|a|an|my|some|it|this|that)|{action}ing)\b|^{action}\b",
-                    text,
-            ):
+            if all(w in tokens for w in action.split()) and re.search(rf"\b(?:i\s+(?:will\s+)?{action}|to\s+{action}|{action}\s+(?:the|a|an|my|some|it|this|that)|{action}ing)\b|^{action}\b", text,):
                 if not any(obj.upper() in self.inventory for obj in req_objs):
                     return f"{Prisma.SLATE}{(ux('gordon_strings', 'premise_req') or '').format(action=action, req_str=', '.join(req_objs))}{Prisma.RST}"
         if any(v in tokens for v in self.interaction_verbs):
@@ -107,6 +107,13 @@ class GordonKnot:
                     if all(w in tokens for w in i_words) and i_low in text:
                         return f"{Prisma.SLATE}{(ux('gordon_strings', 'premise_inv') or '').format(item=i_low)}{Prisma.RST}"
         return None
+
+    @staticmethod
+    def _clean_noun(raw_str: str) -> str:
+        clean_str = re.sub(r"^(?:(?:up|out|off|down|in|on|the|a|an|some|my)\s+)+", "", raw_str, flags=re.IGNORECASE).strip()
+        clean_str = re.split(r"\s+\b(?:and|or|but|then|to|with|because|please)\b", clean_str, maxsplit=1)[0].strip()
+        clean_str = re.sub(r"\s+(?:of|in|on|at|to|for|with|from|instead|and|or|but|the|a|an)$", "", clean_str, flags=re.IGNORECASE).strip()
+        return clean_str.strip(".,!?").upper().replace(" ", "_")
 
     def load_config(self):
         data = LoreManifest.get_instance().get("GORDON") or (
@@ -198,23 +205,21 @@ class GordonKnot:
             return False, f"{Prisma.OCHRE}You do not have the {container_name}.{Prisma.RST}"
         if item_name == container_name:
             return False, f"{Prisma.OCHRE}You cannot put an item inside itself.{Prisma.RST}"
-
         container = self.get_item_data(container_name)
         if not container or not container.is_container:
             return False, f"{Prisma.OCHRE}The {container_name} is not a container.{Prisma.RST}"
         if len(container.contents) >= container.capacity:
             return False, f"{Prisma.OCHRE}The {container_name} is full.{Prisma.RST}"
-
-        # Physically move the item
         self.inventory.remove(item_name)
         container.contents.append(item_name)
+        if item := self.get_item_data(item_name):
+            item.location = container_name
         return True, f"{Prisma.CYN}► Packed {item_name} into {container_name}.{Prisma.RST}"
 
     def unpack_item(self, item_name: str, container_name: str) -> Tuple[bool, str]:
         item_name, container_name = item_name.upper(), container_name.upper()
         if container_name not in self.inventory:
             return False, f"{Prisma.OCHRE}You do not have the {container_name}.{Prisma.RST}"
-
         container = self.get_item_data(container_name)
         if not container or not container.is_container:
             return False, f"{Prisma.OCHRE}The {container_name} is not a container.{Prisma.RST}"
@@ -222,67 +227,36 @@ class GordonKnot:
             return False, f"{Prisma.OCHRE}The {item_name} is not inside the {container_name}.{Prisma.RST}"
         if len(self.inventory) >= self.max_slots:
             return False, f"{Prisma.OCHRE}Inventory full. Cannot unpack {item_name}.{Prisma.RST}"
-
-        # Physically move the item
         container.contents.remove(item_name)
         self.inventory.append(item_name)
+        if item := self.get_item_data(item_name):
+            item.location = "inventory"
         return True, f"{Prisma.CYN}► Unpacked {item_name} from {container_name}.{Prisma.RST}"
 
     def process_container_commands(self, text: str) -> Tuple[List[str], bool]:
         logs = []
         handled = False
         lower_text = text.lower()
-
-        # Match "put [item] in [container]" using lazy matching (.*?)
         put_match = re.search(
             r"\b(?:put|place|store|stash)\s+(?:the|a|an|some|my)?\s*(.*?)\s+(?:in|inside|into)\s+(?:the|a|an|my)?\s*(.*)",
             lower_text)
         if put_match:
-            item_raw = put_match.group(1).strip()
-            container_raw = put_match.group(2).strip()
-
-            # Clean leading fluff words off the item and container names
-            item_raw = re.sub(r"^(?:(?:the|a|an|some|my)\s+)+", "", item_raw, flags=re.IGNORECASE).strip()
-            container_raw = re.sub(r"^(?:(?:the|a|an|some|my)\s+)+", "", container_raw, flags=re.IGNORECASE).strip()
-
-            # Clean trailing fluff words off the container name
-            container_raw = re.split(r"\s+\b(?:and|or|but|then|to|with|because|please)\b", container_raw, maxsplit=1)[
-                0].strip()
-
-            # FIX: Strip punctuation before capitalizing
-            item_clean = item_raw.strip(".,!?").upper().replace(" ", "_")
-            container_clean = container_raw.strip(".,!?").upper().replace(" ", "_")
-
+            item_clean = self._clean_noun(put_match.group(1))
+            container_clean = self._clean_noun(put_match.group(2))
             success, msg = self.pack_item(item_clean, container_clean)
             if success or "not a container" in msg or "full" in msg:
                 logs.append(msg)
                 handled = True
-
-        # Match "take [item] from [container]" using lazy matching (.*?)
         take_match = re.search(
             r"\b(?:take|remove|get|pull)\s+(?:the|a|an|some|my)?\s*(.*?)\s+(?:from|out of)\s+(?:the|a|an|my)?\s*(.*)",
             lower_text)
         if take_match:
-            item_raw = take_match.group(1).strip()
-            container_raw = take_match.group(2).strip()
-
-            # Clean leading fluff words off the item and container names
-            item_raw = re.sub(r"^(?:(?:the|a|an|some|my)\s+)+", "", item_raw, flags=re.IGNORECASE).strip()
-            container_raw = re.sub(r"^(?:(?:the|a|an|some|my)\s+)+", "", container_raw, flags=re.IGNORECASE).strip()
-
-            # Clean trailing fluff words off the container name
-            container_raw = re.split(r"\s+\b(?:and|or|but|then|to|with|because|please)\b", container_raw, maxsplit=1)[
-                0].strip()
-
-            # FIX: Strip punctuation before capitalizing
-            item_clean = item_raw.strip(".,!?").upper().replace(" ", "_")
-            container_clean = container_raw.strip(".,!?").upper().replace(" ", "_")
-
+            item_clean = self._clean_noun(take_match.group(1))
+            container_clean = self._clean_noun(take_match.group(2))
             success, msg = self.unpack_item(item_clean, container_clean)
             if success or "not inside" in msg:
                 logs.append(msg)
                 handled = True
-
         return logs, handled
 
     def acquire(self, tool_name: str) -> str:
@@ -301,14 +275,19 @@ class GordonKnot:
                 self.events.log(msg.format(item=tool_name), "INV")
             return f"{Prisma.OCHRE}{msg.format(item=tool_name)}{Prisma.RST}"
         self.inventory.append(tool_name)
+        if item := self.get_item_data(tool_name):
+            item.location = "inventory"
         if self.events:
             self.events.publish("ITEM_ACQUIRED", {"item": tool_name})
         msg = ux("gordon_strings", "acquired")
         return f"{Prisma.GRN}{msg.format(item=tool_name)}{Prisma.RST}"
 
-    def safe_remove_item(self, item_name: str) -> bool:
+    def safe_remove_item(self, item_name: str, new_location: str = "VOID") -> bool:
         try:
-            self.inventory.remove(item_name.upper())
+            clean_name = item_name.upper()
+            self.inventory.remove(clean_name)
+            if item := self.get_item_data(clean_name):
+                item.location = new_location
             return True
         except ValueError:
             return False
@@ -412,16 +391,8 @@ class GordonKnot:
                 rf"\b{re.escape(verb)}\s+(?:the|a|an|some|my)?\s*([a-z0-9\'\-]+(?:\s+[a-z0-9\'\-]+){{0,2}})",
                 lower_user)
             if match:
-                extracted = match.group(1).strip()
-                extracted = re.sub(r"^(?:(?:up|out|off|down|in|on|the|a|an|some|my)\s+)+", "", extracted,
-                                   flags=re.IGNORECASE).strip()
-                extracted = \
-                re.split(r"\s+\b(?:and|or|but|then|to|with|because)\b", extracted, maxsplit=1, flags=re.IGNORECASE)[
-                    0].strip()
-                extracted = re.sub(r"\s+(?:of|in|on|at|to|for|with|from|instead|and|or|but|the|a|an)$", "", extracted,
-                                   flags=re.IGNORECASE).strip()
-                if len(extracted) > 2 and extracted not in ("it", "this", "that", "them", "him", "her", "there"):
-                    clean_extracted = extracted.upper().replace(" ", "_")
+                clean_extracted = self._clean_noun(match.group(1))
+                if len(clean_extracted) > 2 and clean_extracted not in ("IT", "THIS", "THAT", "THEM", "HIM", "HER", "THERE"):
                     if clean_extracted not in self.inventory:
                         return clean_extracted
         return None
@@ -462,3 +433,40 @@ class GordonKnot:
                 safe_set(physics_ref, "kappa", float(safe_get(cfg, "REFLEX_KAPPA_RESET", 0.8)))
                 return True, f"{Prisma.GRN}{(ux('gordon_strings', 'reflex_kappa') or '').format(name=name)}{Prisma.RST}"
         return False, None
+
+    def export_fractal_state(self, cartographer_ref=None, title="BoneAmanita Manifest") -> str:
+        """The System Lens: Compile the distributed reality into a strict deterministic JSON for FractalOS."""
+        fractal = {
+            "title": title,
+            "startingRoomId": cartographer_ref.current_node_id if cartographer_ref else "GENESIS_POINT",
+            "winCondition": {"type": "none"},
+            "rooms": {},
+            "items": {},
+            "npcs": {}
+        }
+
+        # 1. Bake the Map
+        if cartographer_ref:
+            for node_id, node in cartographer_ref.world_graph.items():
+                fractal["rooms"][node_id] = {
+                    "id": node_id,
+                    "name": node.name,
+                    "description": f"{node.atmosphere} {node.smell}",
+                    "exits": {} # Kept open. Let FractalOS dynamically wire exits or leave it to standard generation.
+                }
+
+        # 2. Bake the Physical Registry
+        for name, item in self.registry.items():
+            clean_id = name.lower().replace(" ", "_")
+            fractal["items"][clean_id] = {
+                "id": clean_id,
+                "name": item.name.lower().replace("_", " "),
+                "noun": clean_id.split("_")[-1],
+                "description": item.description,
+                "location": item.location,
+                "canTake": not item.is_container,
+                "isContainer": item.is_container,
+                "contains": [c.lower().replace(" ", "_") for c in item.contents]
+            }
+
+        return json.dumps(fractal, indent=2)

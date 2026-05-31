@@ -48,16 +48,17 @@ class TheCriticsCircle:
                 if metric_str.startswith("counts_"):
                     category = metric_str.replace("counts_", "")
                     counts = safe_get(physics, "counts", {})
-                    raw_count = (counts.get(category, 0) if isinstance(counts, dict) else getattr(counts, category, 0))
+                    raw_count = float(safe_get(counts, category, 0.0))
                     current = min(max_contrib, raw_count * 0.5)
                 elif metric_str == "velocity":
-                    current = velocity
+                    current = float(velocity)
                 else:
                     current = float(safe_get(physics, metric_str, 0.0))
-                if target > 0:
-                    score += current * target
+                target_val = float(target)
+                if target_val > 0:
+                    score += current * target_val
                 else:
-                    score -= current * abs(target)
+                    score -= current * abs(target_val)
             if score > pos_thresh:
                 best_match = (key, critic)
                 review_type = "high"

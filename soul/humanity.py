@@ -11,6 +11,7 @@ from struts import ux, ux_format, safe_get
 class SchurProtocol:
     _LEXICAL_ANCHORS = ("sacred", "play", "social", "abstract")
     _VECTOR_ANCHORS = ("PSI", "LAMBDA", "BET")
+    _MERCY_WORDS = frozenset(["help", "tired", "stop", "pause", "please"])
 
     def __init__(self, events_ref: "EventBus", config_ref=None):
         self.events = events_ref
@@ -80,9 +81,8 @@ class SchurProtocol:
         clean = text.lower().strip()
         answers = self.current_riddle_answers or ("*",)
         min_words = self._cfg("RIDDLE_MIN_WORDS", 4)
-        mercy_words = {"help", "tired", "stop", "pause", "please"}
         words_set = set(clean.split())
-        if not words_set.isdisjoint(mercy_words):
+        if not words_set.isdisjoint(self._MERCY_WORDS):
             passed = True
         elif "*" in answers:
             passed = len(words_set) > min_words and not clean.startswith("/")

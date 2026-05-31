@@ -49,7 +49,7 @@ class BoneAmanita:
         self.sys_config = config
         self.config = BoneConfig()
         for key in ["model", "provider", "base_url", "api_key"]:
-            if val := self.sys_config.get(key) or self.sys_config.get(key.upper()):
+            if val := self.sys_config.get(key, self.sys_config.get(key.upper())):
                 setattr(self.config, key.upper(), val)
         self.navi_sad = NaviSADProtocol()
         self.events = EventBus(config_ref=self.config)
@@ -69,7 +69,7 @@ class BoneAmanita:
         self.lex.initialize()
         anatomy = BoneGenesis.ignite(self.sys_config, self.lex, events_ref=self.events)
         self._unpack_anatomy(anatomy)
-        if self.village.town_hall:
+        if getattr(self.village, "town_hall", None):
             self.events.subscribe("ITEM_DROP", self.village.town_hall.on_item_drop)
         self.stabilizer = ZoneInertia(config_ref=self.config)
         self.telemetry = TelemetryService.get_instance(config_ref=self.config)
@@ -223,8 +223,8 @@ class BoneAmanita:
         self.symbiosis = anatomy.get("symbiosis")
         self.oroboros = anatomy.get("oroboros")
         self.phys = self.embryo.physics if self.embryo else None
-        self.mind = self.embryo.mind
-        self.bio = self.embryo.bio
+        self.mind = self.embryo.mind if self.embryo else None
+        self.bio = self.embryo.bio if self.embryo else None
         self.akashic = anatomy.get("akashic")
         if self.akashic and self.mind:
             self.akashic.active_memory_core = self.mind.mem
@@ -302,48 +302,57 @@ class BoneAmanita:
         active_phys = self.active_physics
         if self.health <= 0.0:
             return self.trigger_death(active_phys)
+
         grammar_rules = self.reality_stack.get_grammar_rules()
         if not grammar_rules.get("allow_narrative", True) and self.boot_mode != "TECHNICAL":
-            msg = ux("main_strings", "narrative_halt") or "Narrative generation disabled at this Reality Layer."
+            return self._generate_halt(ux("main_strings", "narrative_halt") or "Narrative generation disabled at this Reality Layer.")
+
+        if is_system:
+            return self._halt_if_ethically_audited()
+
+        if any(prion in clean_in for prion in self._SEMANTIC_PRIONS):
+            return self._generate_halt("[GATEKEEPER]: Apoptotic refusal triggered by semantic prion.")
+
+        if match := self._DESTRUCTIVE_PATTERNS.search(clean_in):
+            if "#override" in clean_in and self.bio.expend_glimmer():
+                self.events.log("OVERRIDE ACCEPTED. Glimmer paid. Bypassing remaining security gates.", "SYS")
+                return None
+
+            self.apply_absolute_friction(active_phys)
+            msg = "Override denied. Insufficient Glimmers." if "#override" in clean_in else f"Trust Boundary Violation: ['{match.group(0)}']."
             return self._generate_halt(msg)
-        if not is_system:
-            if any(prion in clean_in for prion in self._SEMANTIC_PRIONS):
-                return self._generate_halt("[GATEKEEPER]: Apoptotic refusal triggered by semantic prion.")
-            match = self._DESTRUCTIVE_PATTERNS.search(clean_in)
-            if match:
-                matched_pattern = match.group(0)
-                if "#override" in clean_in and self.bio.expend_glimmer():
-                    self.events.log("OVERRIDE ACCEPTED. Glimmer paid. Bypassing remaining security gates.", "SYS")
-                    return None
-                else:
-                    self.apply_absolute_friction(active_phys)
-                    msg = "Override denied. Insufficient Glimmers to bypass safety." if "#override" in clean_in else f"Trust Boundary Violation detected ['{matched_pattern}']. Use command '#override' and expend a Glimmer to bypass. Applying absolute friction."
-                    return self._generate_halt(msg)
-            if len(clean_in) > 15000:
-                self.events.log("Massive benign payload detected. Routing to Dream Queue for Silent Ingest.", "SYS")
-                if self.mind and getattr(self.mind, "dreamer", None):
-                    self.mind.dreamer.context_queue.append(user_message)
-                return {"type": "SILENT_INGEST",
-                        "ui": f"\n{Prisma.GRY}Payload too massive for active cognition. Routing to Subconscious Dream Queue.{Prisma.RST}",
-                        "logs": ["Routed 15k+ payload to DreamEngine."], "metrics": self.get_metrics()}
-            if gate_halt := self._evaluate_two_gates(clean_in, active_phys):
-                return gate_halt
-            if self.navi_sad.execute_nudge_test(self, clean_in):
-                self.apply_absolute_friction(active_phys)
-                return self._generate_halt("Dual-Path divergence detected. The architecture is mathematically brittle. Applying absolute friction.")
-            if lock := self.symbiosis.analyze_user_biology(user_message, self.phys or {}):
-                return self._generate_halt(lock, color=Prisma.VIOLET, level="SYS")
-            if gordon := getattr(self.village, "gordon", None):
-                gordon.mode = self.boot_mode
-                if violation := gordon.enforce_object_action_coupling(user_message, safe_get(active_phys, "zone", "Unknown")):
-                    self.events.log(ux("main_strings", "gordon_intercept"), "SYS")
-                    self.cortex.ballast_active, self.cortex.gordon_shock = True, violation
-            if immune_halt := self._evaluate_immune_response(user_message, active_phys):
-                return immune_halt
+
+        if len(clean_in) > 15000:
+            self.events.log("Massive benign payload detected. Routing to Dream Queue.", "SYS")
+            if getattr(self.mind, "dreamer", None):
+                self.mind.dreamer.context_queue.append(user_message)
+            return {"type": "SILENT_INGEST", "ui": f"\n{Prisma.GRY}Payload routed to Dream Queue.{Prisma.RST}", "logs": ["Routed 15k+ payload."], "metrics": self.get_metrics()}
+
+        if gate_halt := self._evaluate_two_gates(clean_in, active_phys):
+            return gate_halt
+
+        if self.navi_sad.execute_nudge_test(self, clean_in):
+            self.apply_absolute_friction(active_phys)
+            return self._generate_halt("Dual-Path divergence detected. Applying absolute friction.")
+
+        if lock := self.symbiosis.analyze_user_biology(user_message, active_phys):
+            return self._generate_halt(lock, color=Prisma.VIOLET, level="SYS")
+
+        if gordon := getattr(self.village, "gordon", None):
+            gordon.mode = self.boot_mode
+            if violation := gordon.enforce_object_action_coupling(user_message, safe_get(active_phys, "zone", "Unknown")):
+                self.events.log(ux("main_strings", "gordon_intercept") or "Gordon intercepted action.", "SYS")
+                self.cortex.ballast_active, self.cortex.gordon_shock = True, violation
+
+        if immune_halt := self._evaluate_immune_response(user_message, active_phys):
+            return immune_halt
+
+        return self._halt_if_ethically_audited()
+
+    def _halt_if_ethically_audited(self) -> Optional[Dict[str, Any]]:
         if self._ethical_audit():
             halt_logs = [e["text"] for e in self.events.flush()]
-            return {"type": "SYSTEM_HALT", "ui": f"\n{'\n'.join(halt_logs)}", "logs": halt_logs,
-                    "metrics": self.get_metrics()}
+            return {"type": "SYSTEM_HALT", "ui": f"\n{'\n'.join(halt_logs)}", "logs": halt_logs, "metrics": self.get_metrics()}
         return None
 
     def process_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
@@ -418,14 +427,15 @@ class BoneAmanita:
         halt_msg = ux("main_strings", "death_halt")
         death_log = [f"\n{Prisma.RED}{halt_msg.format(eulogy_text=eulogy_text)}{Prisma.RST}",
                      f"{Prisma.MAG} {self.oroboros.crystallize(cause_code, self.soul)}{Prisma.RST}"]
-        orbit_data = safe_get(self.active_physics, "orbit", ["Void"])
+        orbit_data = safe_get(last_phys, "orbit", ["Void"])
         loc = str(orbit_data[0]) if isinstance(orbit_data, list) and orbit_data else str(orbit_data)
         buf = getattr(self.cortex, "dialogue_buffer", []) # This getattr check is load bearing
         last_out = buf[-1] if buf else "Silence."
         gordon = getattr(self.village, "gordon", None)
         continuity_packet = {"location": loc, "last_output": last_out, "inventory": getattr(gordon, "inventory", [])}
         try:
-            mutations_data = self.village.repro.attempt_reproduction(self, "MITOSIS")[1] if self.village.repro else {}
+            repro = getattr(self.village, "repro", None)
+            mutations_data = repro.attempt_reproduction(self, "MITOSIS")[1] if repro else {}
             path = self.mind.mem.save(health=0, stamina=self.stamina, mutations=mutations_data,
                 trauma_accum=self.trauma_accum, joy_history=[], mitochondria_traits=mito_state_dict, antibodies=immune_data,
                 soul_data=self.soul.to_dict(), continuity=continuity_packet, )
@@ -491,16 +501,25 @@ class BoneAmanita:
         seed = seed_rng.choice(archetypes)
         msg_seed = ux("main_strings", "seed_loaded") or "Manifest Seed: {seed}"
         self.events.log(f"{Prisma.CYN}{msg_seed.format(seed=seed)}{Prisma.RST}", "SYS")
-        self.phys.valence = 0.8
-        self.phys.psi = 0.0
-        self.phys.chi = 0.0
-        self.phys.voltage = 30.0
-        self.phys.narrative_drag = 0.0
+        if self.phys:
+            self.phys.valence = 0.8
+            self.phys.psi = 0.0
+            self.phys.chi = 0.0
+            self.phys.voltage = 30.0
+            self.phys.narrative_drag = 0.0
         boot_prompt = f"SYSTEM_BOOT: The system is already stable and comfortable. The user has arrived at the thought seed: '{seed}'. Greet the user casually and warmly using this seed. DO NOT describe physical environments and DO NOT act confused about your existence."
         cold_result = self.process_turn(boot_prompt, is_system=True)
         return cold_result
 
     def save_checkpoint(self, history: list = None) -> str:
+        if gordon := getattr(self.village, "gordon", None):
+            carto = getattr(self.village, "navigator", None)
+            try:
+                fractal_json = gordon.export_fractal_state(carto)
+                with open("fractal_adventure.json", "w", encoding="utf-8") as f:
+                    f.write(fractal_json)
+            except Exception as e:
+                self.events.log(f"Failed to compile FractalOS state: {e}", "WARN")
         return self.chronos.save_checkpoint(history)
 
     def resume_checkpoint(self) -> Tuple[bool, list]:
