@@ -1,6 +1,68 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 20.4.0 "The Fractal Synthesis"**
+
+**Architectural Amputations & Optimizations**
+
+* **Parser Normalization (The Brutalist Lens):** Stripped repetitive, fragile regex parsing across `GordonKnot` container, extraction, and implicit loot logic. Introduced a universal, deterministic `_clean_noun` static method to violently strip articles, prepositions, and trailing conjunctions before state mutation.
+* **Tinkerer Paranoia Purge:** Amputated dead-code `hasattr` checks in `TheTinkerer` that referenced deprecated inventory methods, routing to the unified `safe_remove_item` wrapper.
+
+**Added (Deterministic Symbiosis)**
+
+* **Strict Spatial Mechanics (The System Lens):** Excised spatial tracking from the LLM's hallucination matrix. The `Item` schema now possesses strict `location` properties, guaranteeing items are mathematically bound to the `inventory`, `VOID`, specific containers, or distinct map nodes.
+* **The Fractal Cartridge Compiler:** Built a master state compiler (`GordonKnot.export_fractal_state`) that fuses `TheCartographer`'s node graph and `GordonKnot`'s item registry into a strict JSON schema compatible with classical interactive fiction engines (FractalOS).
+* **Autopoiesis Save Hook:** The hypervisor now automatically dumps a `fractal_adventure.json` cartridge to the root directory during every system checkpoint, allowing zero-latency, synchronous play inside external environments.
+* **Adventure Tensegrity Validation:** Deployed `tests/test_adventure.py` to enforce strict boundaries. The test suite now violently verifies syntactic noun cleaning, recursive spatial container tracking, and final JSON schema compliance.
+
+---
+
+### **BONEAMANITA 20.3.3 "The Protocol Hardening Pass"**
+
+**Architectural Amputations & Optimizations**
+
+* **Chronos Ephemeralization:** Completely flattened the `perform_shutdown` serialization sequence. Eradicated deeply nested, paranoid `getattr`/`hasattr` inline traps and replaced them with sequential, readable `safe_get` extractions. The engine now gracefully persists its state even if major organs (like the Cortex or Navigator) have been physically amputated from the run loop.
+* **Test Suite Tensegrity:** Repaired a structural indentation collapse in `tests/test_protocols.py` that caused the Chronos validation test to be silently swallowed by the Sincerity test. Added terminal assertions to ensure the literal mode hard-routes correctly.
+
+**Fixed**
+
+* **The Stasis Scream Typo:** Patched a fatal `AttributeError` in `LimboLayer.trigger_stasis_failure` caused by a case-sensitive variable mismatch (`self.STASIS_SCREAMS` vs `self.stasis_screams`), restoring the engine's ability to haunt its own output during stasis leaks.
+* **Protocol Type-Safety Enforcement:** Eradicated silent string-math vulnerabilities across the entire `protocols/` directory. 
+  * `folly.py`: Enforced integer casting on `times_eaten` to prevent catastrophic string duplication during decay exponentiation.
+  * `critics.py`: Forced `float` casting on JSON-derived target metrics to prevent string-based multiplier crashes during literary reviews.
+  * `kintsugi.py` & `grief.py`: Safely cast `trauma_accum` dictionary values to floats before subtracting severity reductions.
+  * `zen.py` & `therapy.py`: Wrapped threshold markers in explicit `int(float())` casts to bulletproof the logic against loosely typed config payloads.
+  * `bureau.py`: Safely extracted `MIN_WORD_COUNT` to prevent `AttributeError` crashes when `BoneConfig` arrives as a dynamic dictionary rather than a namespace.
+* **Dialogue Buffer Protection:** Protected the Chronos `_build_continuity_packet` from throwing an `IndexError` when attempting to fetch the last system output from a completely empty dialogue buffer during cold boots.
+
+---
+
+### **BONEAMANITA 20.3.2 "The Deep Type-Safety Pass"**
+
+**Architectural Additions & Test Suite Sealing**
+
+* **Dual-Baseline Topology Enforcement:** Upgraded the `navi-fractal` semantic topology check to evaluate active memory graphs against *both* the Maslov-Sneppen (`_native_rewire`) and configuration model (`_native_configuration_model`) null models simultaneously. The system now takes the strictest clustering threshold of the two to mathematically guarantee a terminal false positive is impossible.
+* **Lexicon Sentiment Resurrection:** Uncovered and excised a massive logical blind spot in `LexiconStore.load_vocabulary` that previously prevented sentiment-based tokens from entering the Reverse Index. The `measure_valence` sentiment analyzer is now fully alive and actively grading inputs.
+* **Chaos Engineering Suites (`test_drivers.py` & `test_lexicon.py`):** Authored brutal new test coverage that intentionally blasts the drivers and linguistic analyzers with malformed, loosely typed `SimpleNamespace` objects and string-coerced JSON configuration numbers to guarantee the type-casting armor never yields to a `TypeError`.
+
+**Fixed**
+
+* **Permutation Entropy Blindness:** Fixed a silently swallowed `AttributeError` in the `GeodesicOrchestrator`. The `navi-SAD` protocol now natively tracks `voltage_history` inside the daemon loop rather than querying the downstream dataclass, restoring The Jester's ability to shatter Point-Attractors.
+* **Enneagram Baseline Paralysis:** Fixed a flaw in the hysteresis test suite that fed the driver a "perfect comfort" baseline, which mathematically caused it to refuse shifting to `THE MANIC` despite high voltage.
+* **Terminal Autophagy Race Condition:** Fixed `test_macro.py`'s `cannibalize` validation. The engine mathematically purges the oldest/lightest nodes first; the test now properly isolates the Genesis blueprint before evaluating the load-bearing wall against the typo.
+* **Subconscious Burial Data Leaks:** Patched `SubconsciousStrata.bury` to safely evaluate `word` keys before persisting to disk, preventing `KeyError` IO halts when archiving fractured thoughts.
+* **Cold Boot Crash:** Guarded `embryo.physics` manipulations with `safe_set` to prevent `NoneType` crashes during headless or purely API-driven engine boots.
+
+**Changed & Optimized**
+
+* **EAFP Over Paranoid Catching:** Executed a system-wide purge of nested `isinstance` and `hasattr` boilerplate across `reporter.py`, `genesis.py`, `core.py`, and `lexicon.py`, replacing them with explicit `safe_get` dynamic typing and clean scalar routing.
+* **String-Coerced JSON Armor:** Defended the entire `drivers/` directory (Enneagram, Consultant, Liminal, Syntax, Validator, UserProfile) against dynamic JSON typing by enforcing strict `float()` and `int()` casting on all physical thresholds, vectors, and config parameters.
+* **Exception Control Flow Excised:** Overhauled `SystemHealth.__getattr__` to cleanly return `.get(comp, True)` for online flags rather than leveraging Python's heavy `AttributeError` exception handler to act as the pipeline's circuit breaker control flow.
+* **Thread-Lock Fast-Failing:** Optimized `EventBus.unsubscribe` to verify subscriber existence before paying the allocation cost of launching generator comprehensions inside a global thread lock.
+* **Telemetry History Sweeps:** Optimized `TelemetryService.get_last_fatal_error` to verify the payload outcome exists before attempting to cast thousands of JSON lines into raw strings.
+
+---
+
 ### **BONEAMANITA 20.3.1 "The Tensegrity Pass"**
 
 **Architectural Hardening & Test Suite Sealing**

@@ -10,7 +10,7 @@ import urllib.request
 from typing import Dict, Any, Optional
 from presets import BoneConfig
 from core import Prisma, EventBus, JSONEncoder
-from struts import ux, ux_format
+from struts import ux, ux_format, safe_get
 
 class SynapseError(Exception):
     pass
@@ -27,23 +27,19 @@ class LLMInterface:
         self.cfg = config_ref or BoneConfig
         self.events = events_ref
         env_url = os.environ.get("OLLAMA_BASE_URL")
-        is_cfg_dict = isinstance(self.cfg, dict)
-        prov_val = self.cfg.get("PROVIDER", self.cfg.get("provider", "ollama")) if is_cfg_dict else getattr(self.cfg, "PROVIDER", getattr(self.cfg, "provider", "ollama"))
+        prov_val = safe_get(self.cfg, "PROVIDER", safe_get(self.cfg, "provider", "ollama"))
         self.provider = (provider or prov_val).lower()
-        key_val = self.cfg.get("API_KEY", self.cfg.get("api_key", "")) if is_cfg_dict else getattr(self.cfg, "API_KEY", getattr(self.cfg, "api_key", ""))
+        key_val = safe_get(self.cfg, "API_KEY", safe_get(self.cfg, "api_key", ""))
         self.api_key = api_key or key_val
-        mod_val = self.cfg.get("MODEL", self.cfg.get("model", "")) if is_cfg_dict else getattr(self.cfg, "MODEL",
-                                                                                               getattr(self.cfg,
-                                                                                                       "model", ""))
+        mod_val = safe_get(self.cfg, "MODEL", safe_get(self.cfg, "model", ""))
         self.model = model or mod_val
-        defaults = getattr(self.cfg, "DEFAULT_LLM_ENDPOINTS", {})
+        defaults = safe_get(self.cfg, "DEFAULT_LLM_ENDPOINTS", {})
         self.base_url = (
-                    env_url or base_url or defaults.get(self.provider, "https://api.openai.com/v1/chat/completions", ))
+                env_url or base_url or safe_get(defaults, self.provider, "https://api.openai.com/v1/chat/completions"))
         self.dreamer = dreamer
         self.failure_count = 0
-        c_cfg = self.cfg.get("CORTEX", {}) if is_cfg_dict else getattr(self.cfg, "CORTEX", {})
-        is_cc_dict = isinstance(c_cfg, dict)
-        self.failure_threshold = int(c_cfg.get("LLM_FAILURE_THRESHOLD", 3) if is_cc_dict else getattr(c_cfg, "LLM_FAILURE_THRESHOLD", 3))
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+        self.failure_threshold = int(safe_get(c_cfg, "LLM_FAILURE_THRESHOLD", 3))
         self.last_failure_time = 0.0
         self.circuit_state = "CLOSED"
 
@@ -52,9 +48,8 @@ class LLMInterface:
             return True
         if self.circuit_state == "OPEN":
             elapsed = time.time() - self.last_failure_time
-            is_cfg_dict = isinstance(self.cfg, dict)
-            c_cfg = self.cfg.get("CORTEX", {}) if is_cfg_dict else getattr(self.cfg, "CORTEX", {})
-            heal_time = float(c_cfg.get("LLM_CIRCUIT_HEAL_TIME", 10.0) if isinstance(c_cfg, dict) else getattr(c_cfg, "LLM_CIRCUIT_HEAL_TIME", 10.0))
+            c_cfg = safe_get(self.cfg, "CORTEX", {})
+            heal_time = float(safe_get(c_cfg, "LLM_CIRCUIT_HEAL_TIME", 10.0))
             if elapsed > heal_time:
                 self.circuit_state = "CLOSED"
                 if self.events:
@@ -149,9 +144,8 @@ class LLMInterface:
                                       "=== INITIATION DIRECTIVE ===", "\n\nTraveler:", "\nTraveler:",
                                       "Traveler:", "| System:", ], }
         payload.update(params)
-        is_cfg_dict = isinstance(self.cfg, dict)
-        c_cfg = self.cfg.get("CORTEX", {}) if is_cfg_dict else getattr(self.cfg, "CORTEX", {})
-        synapse_timeout = float(c_cfg.get("LLM_TIMEOUT", 180.0) if isinstance(c_cfg, dict) else getattr(c_cfg, "LLM_TIMEOUT", 180.0))
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+        synapse_timeout = float(safe_get(c_cfg, "LLM_TIMEOUT", 180.0))
         try:
             content = self._transmit(payload, timeout=synapse_timeout)
             if content:
@@ -193,13 +187,12 @@ class LLMInterface:
         return self.mock_generation(prompt, reason="SILENCE")
 
     def _local_fallback(self, base_payload: Dict) -> str:
-        is_cfg_dict = isinstance(self.cfg, dict)
-        url = os.environ.get("OLLAMA_BASE_URL") or (self.cfg.get("OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions") if is_cfg_dict else getattr(self.cfg, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions"))
+        url = os.environ.get("OLLAMA_BASE_URL") or safe_get(self.cfg, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
         fallback_payload = base_payload.copy()
-        fallback_payload["model"] = self.cfg.get("OLLAMA_MODEL_ID", "llama3") if is_cfg_dict else getattr(self.cfg, "OLLAMA_MODEL_ID", "llama3")
+        fallback_payload["model"] = safe_get(self.cfg, "OLLAMA_MODEL_ID", "llama3")
         try:
-            c_cfg = self.cfg.get("CORTEX", {}) if is_cfg_dict else getattr(self.cfg, "CORTEX", {})
-            fallback_timeout = float(c_cfg.get("LLM_FALLBACK_TIMEOUT", 60.0) if isinstance(c_cfg, dict) else getattr(c_cfg, "LLM_FALLBACK_TIMEOUT", 60.0))
+            c_cfg = safe_get(self.cfg, "CORTEX", {})
+            fallback_timeout = float(safe_get(c_cfg, "LLM_FALLBACK_TIMEOUT", 60.0))
             return self._transmit(fallback_payload, timeout=fallback_timeout, max_retries=1, override_url=url, override_key="ollama")
         except Exception:
             return None
@@ -254,15 +247,13 @@ class PromptComposer:
         scenarios = self.lore.get("scenarios") or {}
         banned = self.lore.get("style_crimes", "BANNED_CLICHES") or []
         ban_string = ", ".join(set(banned))
+        from struts import safe_get
         phys_ref = state.get("physics", {})
-        is_pr_dict = isinstance(phys_ref, dict)
-        voltage = float(phys_ref.get("voltage", 30.0) if is_pr_dict else getattr(phys_ref, "voltage", 30.0))
-        is_cfg_dict = isinstance(self.cfg, dict)
-        c_cfg = self.cfg.get("CORTEX", {}) if is_cfg_dict else getattr(self.cfg, "CORTEX", {})
-        is_cc_dict = isinstance(c_cfg, dict)
-        v_high = float(c_cfg.get("VOLTAGE_HIGH", 60.0) if is_cc_dict else getattr(c_cfg, "VOLTAGE_HIGH", 60.0))
-        v_manic = float(c_cfg.get("VOLTAGE_MANIC", 80.0) if is_cc_dict else getattr(c_cfg, "VOLTAGE_MANIC", 80.0))
-        v_low = float(c_cfg.get("VOLTAGE_LOW", 20.0) if is_cc_dict else getattr(c_cfg, "VOLTAGE_LOW", 20.0))
+        voltage = float(safe_get(phys_ref, "voltage", 30.0))
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+        v_high = float(safe_get(c_cfg, "VOLTAGE_HIGH", 60.0))
+        v_manic = float(safe_get(c_cfg, "VOLTAGE_MANIC", 80.0))
+        v_low = float(safe_get(c_cfg, "VOLTAGE_LOW", 20.0))
         if voltage > v_high:
             active_style_guide = high_voltage_data.get("style_guide", [])
         else:
@@ -288,8 +279,7 @@ class PromptComposer:
             f"IMPORTANT: If an item is currently in the INVENTORY, it has been removed from the environment. DO NOT list it in 'Points of Interest' or describe it as being on the ground.\n"
             if modifiers["include_inventory"] else "")
         raw_history = state.get("dialogue_history", [])
-        char_limit = int(
-            c_cfg.get("MAX_HISTORY_CHARS", 4096) if is_cc_dict else getattr(c_cfg, "MAX_HISTORY_CHARS", 4096))
+        char_limit = int(safe_get(c_cfg, "MAX_HISTORY_CHARS", 4096))
         current_chars = 0
         valid_history = []
         for entry in reversed(raw_history):
@@ -314,11 +304,11 @@ class PromptComposer:
             system_injection = (f"\n*** SYSTEM OVERRIDE: {shock_text}***\n"
                                 f"*** YOU MUST be literal, grounded, and refuse to deviate from the shared reality. Reject the impossible action coldly. DO NOT play along. ***\n")
             entity_prefix = f"\n*(Gordon steps in, halting the simulation)*"
-        beta_val = float(phys_ref.get("contradiction", phys_ref.get("beta_index", 0.4)) if is_pr_dict else getattr(phys_ref, "contradiction", getattr(phys_ref, "beta_index", 0.4)))
-        chi_val = float(phys_ref.get("chi", phys_ref.get("entropy", 0.2)) if is_pr_dict else getattr(phys_ref, "chi", getattr(phys_ref, "entropy", 0.2)))
-        par_chi = float(c_cfg.get("PARADOX_CHI", 0.6) if is_cc_dict else getattr(c_cfg, "PARADOX_CHI", 0.6))
-        par_beta = float(c_cfg.get("PARADOX_BETA", 0.6) if is_cc_dict else getattr(c_cfg, "PARADOX_BETA", 0.6))
-        ortho_beta = float(c_cfg.get("ORTHOGONAL_BETA", 0.7) if is_cc_dict else getattr(c_cfg, "ORTHOGONAL_BETA", 0.7))
+        beta_val = float(safe_get(phys_ref, "contradiction", safe_get(phys_ref, "beta_index", 0.4)))
+        chi_val = float(safe_get(phys_ref, "chi", safe_get(phys_ref, "entropy", 0.2)))
+        par_chi = float(safe_get(c_cfg, "PARADOX_CHI", 0.6))
+        par_beta = float(safe_get(c_cfg, "PARADOX_BETA", 0.6))
+        ortho_beta = float(safe_get(c_cfg, "ORTHOGONAL_BETA", 0.7))
         if active_mode_name == "ADVENTURE":
             system_injection = ""
         else:
@@ -374,23 +364,20 @@ class PromptComposer:
         lens_data = self.lenses.get(lens_key, {})
         role = lens_data.get("role", mind.get("role", "The Observer"))
         phys_ref = vsl_state or {}
-        is_pr_dict = isinstance(phys_ref, dict)
-        phi = float(phys_ref.get("phi", 0.5) if is_pr_dict else getattr(phys_ref, "phi", 0.5))
-        delta = float(phys_ref.get("delta", 0.2) if is_pr_dict else getattr(phys_ref, "delta", 0.2))
-        lq = float(phys_ref.get("lq", 0.1) if is_pr_dict else getattr(phys_ref, "lq", 0.1))
-        psi = float(phys_ref.get("psi", 0.2) if is_pr_dict else getattr(phys_ref, "psi", 0.2))
-        is_cfg_dict = isinstance(self.cfg, dict)
-        c_cfg = self.cfg.get("CORTEX", {}) if is_cfg_dict else getattr(self.cfg, "CORTEX", {})
-        is_cc_dict = isinstance(c_cfg, dict)
-        safe_cfg = lambda k, d: c_cfg.get(k, d) if is_cc_dict else getattr(c_cfg, k, d)
+        phi = float(safe_get(phys_ref, "phi", 0.5))
+        delta = float(safe_get(phys_ref, "delta", 0.2))
+        lq = float(safe_get(phys_ref, "lq", 0.1))
+        psi = float(safe_get(phys_ref, "psi", 0.2))
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+
         phase_shifts = [
-            (lens_key == "ROBERTA" and phi > safe_cfg("PHASE_ROBERTA_PHI", 0.6) and psi > safe_cfg("PHASE_ROBERTA_PSI", 0.5),
+            (lens_key == "ROBERTA" and phi > float(safe_get(c_cfg, "PHASE_ROBERTA_PHI", 0.6)) and psi > float(safe_get(c_cfg, "PHASE_ROBERTA_PSI", 0.5)),
              "The Cartographer", "phase_shift_roberta"),
-            (lens_key == "MOIRA" and phi > safe_cfg("PHASE_MOIRA_PHI", 0.7), "The Homesteader", "phase_shift_moira"),
-            (lens_key == "BENEDICT" and lq > safe_cfg("PHASE_BENEDICT_LQ", 0.7), "The Tactician",
+            (lens_key == "MOIRA" and phi > float(safe_get(c_cfg, "PHASE_MOIRA_PHI", 0.7)), "The Homesteader", "phase_shift_moira"),
+            (lens_key == "BENEDICT" and lq > float(safe_get(c_cfg, "PHASE_BENEDICT_LQ", 0.7)), "The Tactician",
              "phase_shift_benedict"),
-            (lens_key == "JESTER" and delta > safe_cfg("PHASE_JESTER_DELTA", 0.7), "The Fool", "phase_shift_jester"),
-            (lens_key == "COLIN" and delta > safe_cfg("PHASE_COLIN_DELTA", 0.8), "The Waiter", "phase_shift_colin"),
+            (lens_key == "JESTER" and delta > float(safe_get(c_cfg, "PHASE_JESTER_DELTA", 0.7)), "The Fool", "phase_shift_jester"),
+            (lens_key == "COLIN" and delta > float(safe_get(c_cfg, "PHASE_COLIN_DELTA", 0.8)), "The Waiter", "phase_shift_colin"),
         ]
         phase_shift_note = ""
         for condition, new_role, ux_key in phase_shifts:
@@ -414,19 +401,19 @@ class PromptComposer:
             persona_block.append(phase_shift_note)
         voltage = 30.0
         if vsl_state:
-            energy_layer = phys_ref.get("energy", {}) if is_pr_dict else getattr(phys_ref, "energy", {})
-            voltage = float(phys_ref.get("voltage", (energy_layer.get("voltage", 30.0) if isinstance(energy_layer, dict) else getattr(energy_layer, "voltage", 30.0))) if is_pr_dict else getattr(phys_ref, "voltage", 30.0))
+            energy_layer = safe_get(phys_ref, "energy", {})
+            voltage = float(safe_get(phys_ref, "voltage", safe_get(energy_layer, "voltage", 30.0)))
         if voltage > 60:
             mode_directives = high_voltage_data.get("directives", [])
         else:
             mode_directives = mode_data.get("directives", [])
-        respiration = bio.get("respiration", "RESPIRING") if isinstance(bio, dict) else getattr(bio, "respiration", "RESPIRING")
+        respiration = safe_get(bio, "respiration", "RESPIRING")
         if respiration == "ANAEROBIC":
             mood_note = ux("brain_strings", "bio_anaerobic")
         elif mood_override:
             mood_note = f"Current Biology: {mood_override}"
         else:
-            mood_note = self._derive_bio_mood(bio.get("chem", {}) if isinstance(bio, dict) else getattr(bio, "chem", {}))
+            mood_note = self._derive_bio_mood(safe_get(bio, "chem", {}))
         if mode_directives:
             persona_block.extend(mode_directives)
         else:
@@ -439,19 +426,21 @@ class PromptComposer:
         if mode_data.get("active_mode", "ADVENTURE") == "ADVENTURE":
             persona_block.append(
                 "CRITICAL FORMATTING AXIOM: The '**Exits:**' block MUST be the absolute final text in your response. Never place narrative text below the exits.")
-        safe_phys = phys_ref if is_pr_dict else (vars(phys_ref) if phys_ref else {})
-        e = float(safe_phys.get("exhaustion", safe_phys.get("E", 0.2)))
-        beta = float(safe_phys.get("contradiction", safe_phys.get("beta_index", 0.4)))
-        psi = float(safe_phys.get("psi", 0.2))
-        chi = float(safe_phys.get("chi", safe_phys.get("entropy", 0.2)))
-        valence = float(safe_phys.get("valence", 0.0))
+
+        e = float(safe_get(phys_ref, "exhaustion", safe_get(phys_ref, "E", 0.2)))
+        beta = float(safe_get(phys_ref, "contradiction", safe_get(phys_ref, "beta_index", 0.4)))
+        psi = float(safe_get(phys_ref, "psi", 0.2))
+        chi = float(safe_get(phys_ref, "chi", safe_get(phys_ref, "entropy", 0.2)))
+        valence = float(safe_get(phys_ref, "valence", 0.0))
+
         vsl_lines = ["\n[SYSTEM METRICS - INTERNAL USE ONLY. DO NOT RENDER OR PRINT THIS TO THE USER.]",
                      "MANDATE: Consume these metrics to shape your narrative and tone. DO NOT output these numbers or draw UI bars.",
                      f"METRICS: Voltage={voltage:.1f}/100, Exhaustion={e:.2f}, Contradiction={beta:.2f}, Void={psi:.2f}, Chaos={chi:.2f}, Valence={valence:.2f}", ]
-        cues_map = [(psi, getattr(c_cfg, "SOMATIC_PSI", 0.6) if is_cc_dict else getattr(c_cfg, "SOMATIC_PSI", 0.6), "somatic_adrenaline"),
-                    (chi, getattr(c_cfg, "SOMATIC_CHI", 0.6) if is_cc_dict else getattr(c_cfg, "SOMATIC_CHI", 0.6), "somatic_cortisol"),
-                    (beta, getattr(c_cfg, "SOMATIC_BETA", 0.7) if is_cc_dict else getattr(c_cfg, "SOMATIC_BETA", 0.7), "somatic_paradox"),
-                    (valence, getattr(c_cfg, "SOMATIC_VALENCE", 0.5) if is_cc_dict else getattr(c_cfg, "SOMATIC_VALENCE", 0.5), "somatic_oxytocin"), ]
+
+        cues_map = [(psi, float(safe_get(c_cfg, "SOMATIC_PSI", 0.6)), "somatic_adrenaline"),
+                    (chi, float(safe_get(c_cfg, "SOMATIC_CHI", 0.6)), "somatic_cortisol"),
+                    (beta, float(safe_get(c_cfg, "SOMATIC_BETA", 0.7)), "somatic_paradox"),
+                    (valence, float(safe_get(c_cfg, "SOMATIC_VALENCE", 0.5)), "somatic_oxytocin"), ]
         if somatic_cues := [msg for val, thresh, ux_key in cues_map if
                             val > thresh and (msg := ux("brain_strings", ux_key))]:
             vsl_lines.append("SOMATIC CUES: " + " | ".join(somatic_cues))
@@ -471,21 +460,20 @@ class PromptComposer:
     @staticmethod
     def _inject_resonances(style_notes, state, modifiers):
         v_data = state.get("village", {})
-        tinkerer_data = v_data.get("tinkerer", {}) if isinstance(v_data, dict) else getattr(v_data, "tinkerer", {})
-        resonances = tinkerer_data.get("tool_resonance", {}) if isinstance(tinkerer_data, dict) else getattr(tinkerer_data, "tool_resonance", {})
+        tinkerer_data = safe_get(v_data, "tinkerer", {})
+        resonances = safe_get(tinkerer_data, "tool_resonance", {})
         active_resonance = [f"» {t} (Lvl {int(l)})" for t, l in resonances.items() if l > 4.0] if isinstance(resonances, dict) else []
         if active_resonance:
             style_notes.append("\n=== HARMONIC RESONANCE ===")
             style_notes.extend(active_resonance)
         if modifiers.get("include_memories"):
             s_data = state.get("soul", {})
-            memories = s_data.get("core_memories", []) if isinstance(s_data, dict) else getattr(s_data, "core_memories", [])
+            memories = safe_get(s_data, "core_memories", [])
             if memories and isinstance(memories, list):
                 mem_strs = []
                 for m in memories:
-                    is_m_dict = isinstance(m, dict)
-                    lesson = m.get("lesson", "Unknown") if is_m_dict else getattr(m, "lesson", "Unknown")
-                    flavor = m.get("emotional_flavor", "NEUTRAL") if is_m_dict else getattr(m, "emotional_flavor", "NEUTRAL")
+                    lesson = safe_get(m, "lesson", "Unknown")
+                    flavor = safe_get(m, "emotional_flavor", "NEUTRAL")
                     mem_strs.append(f"» {lesson} [{flavor}]")
                 if mem_strs:
                     style_notes.append("\n=== CORE MEMORIES ===")
@@ -497,17 +485,15 @@ class PromptComposer:
         default_metrics = [("exhaustion", 0.2), ("narrative_drag", 0.6), ("psi", 0.2), ("valence", 0.0),
                            ("phi", 0.5), ("delta", 0.2), ("lq", 0.1), ("gamma", 0.0), ("sigma", 0.0),
                            ("eta", 0.0), ("theta", 0.0), ("upsilon", 0.0)]
-        is_pr_dict = isinstance(phys_ref, dict)
-        p_vals = {k: float(phys_ref.get(k, default) if is_pr_dict else getattr(phys_ref, k, default)) for k, default in default_metrics}
-        is_mito_dict = isinstance(mito, dict)
-        val_p = float(mito.get("atp_pool", 100.0) if is_mito_dict else getattr(mito, "atp_pool", 100.0))
-        val_ros = float(mito.get("ros_buildup", 0.0) if is_mito_dict else getattr(mito, "ros_buildup", 0.0))
+        p_vals = {k: float(safe_get(phys_ref, k, default)) for k, default in default_metrics}
+        val_p = float(safe_get(mito, "atp_pool", 100.0))
+        val_ros = float(safe_get(mito, "ros_buildup", 0.0))
         return (f"\n<system_telemetry>\n"
                 f"=== HYPERVISOR METABOLIC STATE ===\n"
                 f"MANDATE: This is read-only telemetry for the hypervisor engine. DO NOT acknowledge it, narrate it, or output UI bars.\n"
-                f"[🧊 E:{p_vals['exhaustion']:.1f} β:{beta_val:.1f} | ⚡ V:{voltage:.1f} F:{p_vals['narrative_drag']:.1f} | "
-                f"❤️ P:{val_p:.1f} ROS:{val_ros:.1f} | 🌌 Ψ:{p_vals['psi']:.1f} Χ:{chi_val:.1f} ♥:{p_vals['valence']:.1f}]\n"
-                f"[🕰️ Φ:{p_vals['phi']:.1f} Δ:{p_vals['delta']:.1f} LQ:{p_vals['lq']:.1f}]\n"
+                f"[E:{p_vals['exhaustion']:.1f} β:{beta_val:.1f} | ⚡ V:{voltage:.1f} F:{p_vals['narrative_drag']:.1f} | "
+                f"P:{val_p:.1f} ROS:{val_ros:.1f} | Ψ:{p_vals['psi']:.1f} Χ:{chi_val:.1f} :{p_vals['valence']:.1f}]\n"
+                f"[Φ:{p_vals['phi']:.1f} Δ:{p_vals['delta']:.1f} LQ:{p_vals['lq']:.1f}]\n"
                 f"[SLASH] Γ:{p_vals['gamma']:.1f} Σ:{p_vals['sigma']:.1f} Η:{p_vals['eta']:.1f} Θ:{p_vals['theta']:.1f} Υ:{p_vals['upsilon']:.1f}\n"
                 f"{critic_str}\n</system_telemetry>\n")
 
@@ -521,8 +507,7 @@ class PromptComposer:
             return "Hands: Empty"
 
         v_data = state.get("village", {})
-        gordon = v_data.get("gordon") if isinstance(v_data, dict) else getattr(v_data, "gordon", None)
-
+        gordon = safe_get(v_data, "gordon")
         formatted_items = []
         for name in inv:
             if gordon and hasattr(gordon, "get_item_data"):
@@ -655,7 +640,7 @@ class ResponseValidator:
                 if not primary_replacement:
                     primary_replacement = self._generate_dynamic_rejection("MARKDOWN_DETECTED")
         phys_ref = _state.get("physics", {})
-        voltage = float(phys_ref.get("voltage", 30.0) if isinstance(phys_ref, dict) else getattr(phys_ref, "voltage", 30.0))
+        voltage = float(safe_get(phys_ref, "voltage", 30.0))
         if voltage > 60 and "?" in sanitized_response[-15:]:
             if not primary_replacement:
                 primary_replacement = f"{self._generate_dynamic_rejection('QUESTION_ASKED')}{ux('brain_strings', 'val_gordon_question', '')}"
@@ -674,8 +659,7 @@ class ResponseValidator:
                     continue
                 if not primary_replacement:
                     error_msg = p.get("error_msg", "Cursed syntax detected.")
-                    msg_reg = ux_format("brain_strings", "val_gordon_regex", "\n*(Gordon steps in): {error_msg}*",
-                                        error_msg=error_msg)
+                    msg_reg = ux_format("brain_strings", "val_gordon_regex", "\n*(Gordon steps in): {error_msg}*", error_msg=error_msg)
                     primary_replacement = f"{self._generate_dynamic_rejection(p.get('name', 'REGEX_VIOLATION'))}{msg_reg}".replace(
                         "\\n", "\n")
                 errors_found.append(f"RULE VIOLATION: {error_msg}")
@@ -688,9 +672,8 @@ class ResponseValidator:
                     "replacement": primary_replacement or self._generate_dynamic_rejection("MULTIPLE_CRIMES"),
                     "feedback_instruction": feedback,
                     "meta_logs": extracted_meta_logs, }
-        is_cfg_dict = isinstance(self.cfg, dict)
-        c_cfg = self.cfg.get("CORTEX", {}) if is_cfg_dict else getattr(self.cfg, "CORTEX", {})
-        stutter_len = int(c_cfg.get("VALIDATOR_STUTTER_LENGTH", 5) if isinstance(c_cfg, dict) else getattr(c_cfg, "VALIDATOR_STUTTER_LENGTH", 5))
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+        stutter_len = int(safe_get(c_cfg, "VALIDATOR_STUTTER_LENGTH", 5))
         if len(sanitized_response.strip()) < stutter_len and not extracted_meta_logs:
             self.last_failed_attempt = response
             self.last_feedback = "RESPONSE TOO SHORT. STUTTER."
@@ -699,8 +682,7 @@ class ResponseValidator:
                     "meta_logs": extracted_meta_logs}
         learned_triplet = None
         if getattr(self, "last_failed_attempt", None):
-            learned_triplet = {"bad": self.last_failed_attempt, "instruction": self.last_feedback,
-                               "good": sanitized_response}
+            learned_triplet = {"bad": self.last_failed_attempt, "instruction": self.last_feedback, "good": sanitized_response}
             self.last_failed_attempt = None
             self.last_feedback = None
         return {"valid": True, "content": sanitized_response, "meta_logs": extracted_meta_logs, "learned_triplet": learned_triplet}

@@ -91,8 +91,9 @@ class SubconsciousStrata:
             with open(self.filepath, "a", encoding="utf-8") as f:
                 clean_fossil["buried_at"] = time.time()
                 f.write(json.dumps(clean_fossil, cls=JSONEncoder) + "\n")
-            word = clean_fossil["word"]
-            self.index[word] = clean_fossil
+            word = clean_fossil.get("word")
+            if word:
+                self.index[word] = clean_fossil
             self.metadata_log.append(clean_fossil)
             if np is not None:
                 K = _word_to_vector(word)
@@ -302,7 +303,7 @@ class MemoryCore:
         if not candidates:
             return None, ux("spore_strings", "core_lock") or ""
         victim, data, score = min(candidates, key=lambda x: x[2])
-        mass = sum(data["edges"].values())
+        mass = sum(data.get("edges", {}).values())
         lifespan = current_tick - (data.get("strata") or {}).get("birth_tick", current_tick)
         fossil_data = {"word": victim, "mass": round(mass, 2), "lifespan": lifespan, "edges": data["edges"],
                        "death_tick": current_tick, }

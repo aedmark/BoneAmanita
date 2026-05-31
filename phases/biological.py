@@ -43,9 +43,9 @@ class MetabolismPhase(SimulationPhase):
             physics, bio_feedback, metrics["health"], metrics["stamina"],
             self.eng.bio.governor.get_stress_modifier(self.eng.tick_count), self.eng.tick_count,
             circadian_bias=self._check_circadian_rhythm(ctx), )
-        self.eng.bio.mito.state.atp_pool = max(0.0, float(self.eng.bio.mito.state.atp_pool))
-        self.eng.bio.biometrics.health = max(0.0, float(self.eng.bio.biometrics.health))
-        self.eng.bio.biometrics.stamina = max(0.0, float(self.eng.bio.biometrics.stamina))
+        self.eng.set_atp(self.eng._mito_state.atp_pool if self.eng._mito_state else 0.0)
+        self.eng.health = max(0.0, self.eng.health)
+        self.eng.stamina = max(0.0, self.eng.stamina)
         ctx.is_alive = ctx.bio_result["is_alive"]
         for log in ctx.bio_result["logs"]:
             if any(x in str(log) for x in ("CRITICAL", "TAX", "Poison", "NECROSIS")):
@@ -87,7 +87,7 @@ class MetabolismPhase(SimulationPhase):
             if defrag_msg:
                 ctx.log(f"{Prisma.CYN}🧹 {defrag_msg}{Prisma.RST}")
             reboot_val = float(safe_get(target_cfg, "MAX_ATP", 100.0)) * 0.33
-            self.eng.bio.mito.state.atp_pool = reboot_val
+            self.eng.set_atp(reboot_val)
             ctx.bio_result["atp"] = reboot_val
             msg_wake = ux("cycle_strings", "metabolism_waking")
             ctx.log(f"{Prisma.GRN}{msg_wake.format(reboot_val=reboot_val)}{Prisma.RST}")
@@ -107,18 +107,16 @@ class MetabolismPhase(SimulationPhase):
             return
         ctx.log(msg)
         if evt == "FLOW_BOOST":
-            target_cfg = getattr(self.eng, "config", BoneConfig)
-            max_atp = float(safe_get(target_cfg, "MAX_ATP", 100.0))
             boost = ctx.limits.get("HUBRIS_ATP_BOOST", 20.0)
-            self.eng.bio.mito.state.atp_pool = min(max_atp, self.eng.bio.mito.state.atp_pool + boost)
+            self.eng.restore_atp(boost)
         elif evt == "ICARUS_CRASH":
             damage = ctx.limits.get("HUBRIS_DAMAGE", 15.0)
             ctx.log(f"{Prisma.RED}{ux('cycle_strings', 'metabolism_impact').format(damage=damage)}{Prisma.RST}")
-            self.eng.bio.biometrics.health = max(0.0, self.eng.bio.biometrics.health - damage)
+            self.eng.health = max(0.0, self.eng.health - damage)
 
     def _apply_healing(self, ctx):
         qualia = self.eng.soma.synesthesia.get_current_qualia(ctx.last_impulse)
-        current_stamina = self.eng.bio.biometrics.stamina
+        current_stamina = self.eng.stamina
         kintsugi_ref = getattr(self.eng.village, "kintsugi", None)
         if kintsugi_ref:
             cracked, koan = kintsugi_ref.check_integrity(current_stamina)
@@ -131,16 +129,16 @@ class MetabolismPhase(SimulationPhase):
                     ctx.log(repair["msg"])
                     self.eng.mind.mem.record_scar(kintsugi_ref.active_koan or "Healed Rupture", ctx.physics)
                 target_cfg = self.eng.config
-                self.eng.bio.biometrics.stamina = min(
+                self.eng.stamina = min(
                     float(safe_get(target_cfg, "MAX_STAMINA", 100.0)),
-                    self.eng.bio.biometrics.stamina + ctx.limits.get("KINTSUGI_HEAL_AMT", 20.0))
+                    self.eng.stamina + ctx.limits.get("KINTSUGI_HEAL_AMT", 20.0))
         therapy_ref = getattr(self.eng.village, "therapy", None)
         if therapy_ref:
             target_cfg = self.eng.config
             if therapy_ref.check_progress(ctx.physics, current_stamina, self.eng.trauma_accum, qualia):
                 ctx.log(f"{Prisma.GRN}{ux('cycle_strings', 'metabolism_therapy')}{Prisma.RST}")
-                self.eng.bio.biometrics.health = min(float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
-                     self.eng.bio.biometrics.health + ctx.limits.get("THERAPY_HEAL_AMT", 5.0))
+                self.eng.health = min(float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
+                     self.eng.health + ctx.limits.get("THERAPY_HEAL_AMT", 5.0))
 
     def _check_autophagy(self, ctx: CycleContext):
         target_cfg = self.eng.config
@@ -181,8 +179,8 @@ class SensationPhase(SimulationPhase):
         if impulse.stamina_impact != 0:
             target_cfg = getattr(self.eng, "config", BoneConfig)
             max_s = float(safe_get(target_cfg, "MAX_STAMINA", 100.0))
-            current = float(self.eng.bio.biometrics.stamina)
-            self.eng.bio.biometrics.stamina = max(0.0, min(max_s, current + float(impulse.stamina_impact)))
+            current = self.eng.stamina
+            self.eng.stamina = max(0.0, min(max_s, current + float(impulse.stamina_impact)))
         return ctx
 
 class IntrusionPhase(SimulationPhase):
@@ -251,7 +249,7 @@ class IntrusionPhase(SimulationPhase):
             weaver = TheTclWeaver.get_instance()
             ctx.input_text = weaver.consume_by_void(ctx.input_text, current_psi)
             safe_set(ctx.physics, "psi", min(1.0, current_psi + 0.1))
-            self.eng.bio.biometrics.stamina = max(0.0, self.eng.bio.biometrics.stamina - 5.0)
+            self.eng.stamina = max(0.0, self.eng.stamina - 5.0)
             msg_drain = ux("cycle_strings", "intrusion_hallucination_drain")
             ctx.log(f"{Prisma.GRY}{msg_drain}{Prisma.RST}")
         return ctx

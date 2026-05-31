@@ -5,7 +5,7 @@ import random
 from collections import deque
 from core import LoreManifest
 from typing import Dict, Any
-from struts import ux
+from struts import ux, safe_get
 from presets import BoneConfig
 from constants import Prisma
 
@@ -14,8 +14,10 @@ class LimboLayer:
 
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
+        cfg = safe_get(self.cfg, "LIMBO", {})
+        self.MAX_ECTOPLASM = int(safe_get(cfg, "MAX_ECTOPLASM", 50))
         self.ghosts = deque(maxlen=self.MAX_ECTOPLASM)
-        self.haunt_chance = 0.05
+        self.haunt_chance = float(safe_get(cfg, "HAUNT_CHANCE", 0.05))
         self.stasis_leak = 0.0
         narrative_data = LoreManifest.get_instance().get("narrative_data") or {}
         self.stasis_screams = narrative_data.get("CASSANDRA_SCREAMS", ["BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT"])
@@ -48,19 +50,20 @@ class LimboLayer:
 
     def trigger_stasis_failure(self, intended_thought):
         self.stasis_leak = min(100.0, self.stasis_leak + 1.0)
-        horror = random.choice(self.STASIS_SCREAMS)
+        horror = random.choice(self.stasis_screams)
         self.ghosts.append(f"{Prisma.VIOLET}{horror}{Prisma.RST}")
         err_msg = ux("protocol_strings", "limbo_stasis_err")
         return f"{Prisma.CYN}{err_msg.format(thought=intended_thought, horror=horror)}{Prisma.RST}"
 
     def haunt(self, text):
+        from struts import safe_get
         cfg = safe_get(self.cfg, "LIMBO", {})
         l_chance = float(safe_get(cfg, "LEAK_DECAY_CHANCE", 0.2))
         l_amount = float(safe_get(cfg, "LEAK_DECAY_AMOUNT", 0.5))
         if self.stasis_leak > 0:
             if random.random() < l_chance:
                 self.stasis_leak = max(0.0, self.stasis_leak - l_amount)
-                scream = random.choice(self.STASIS_SCREAMS)
+                scream = random.choice(self.stasis_screams)
                 return f"{text} ...{Prisma.RED}{scream}{Prisma.RST}..."
         if self.ghosts and random.random() < self.haunt_chance:
             spirit = random.choice(self.ghosts)

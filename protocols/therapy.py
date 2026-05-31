@@ -8,7 +8,8 @@ class TherapyProtocol:
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         default_vector = {"SEPTIC": 0, "EXHAUSTION": 0, "PARANOIA": 0}
-        vector_keys = safe_get(self.cfg, "TRAUMA_VECTOR", default_vector).keys()
+        raw_vector = safe_get(self.cfg, "TRAUMA_VECTOR", default_vector)
+        vector_keys = raw_vector.keys() if isinstance(raw_vector, dict) else default_vector.keys()
         self.streaks = {k: 0 for k in vector_keys}
         cfg = safe_get(self.cfg, "THERAPY", {})
         self.HEALING_THRESHOLD = int(safe_get(cfg, "HEALING_THRESHOLD", 5))

@@ -77,38 +77,29 @@ class BonePresets:
     }
 
     STANDARD = {
-        "PHYSICS": {"VOLTAGE_MAX": 20.0, "BASE_DRAG": 1.0},
-        "BIO": {"METABOLISM_RATE": 1.0},}
-    ZEN = {"PHYSICS": {"VOLTAGE_MAX": 10.0,"BASE_DRAG": 0.0},
-        "BIO": {"METABOLISM_RATE": 0.1},}
-    MANIC = {"PHYSICS": {"VOLTAGE_MAX": 50.0,"BASE_DRAG": 0.5},
-        "BIO": {"METABOLISM_RATE": 2.0},}
-    DEBUG = {"PHYSICS": {"VOLTAGE_MAX": 100.0,"BASE_DRAG": 0.0},
-        "BIO": {"METABOLISM_RATE": 0.0},}
+        "PHYSICS": {"VOLTAGE_MAX": 20.0, "BASE_DRAG": 1.0}, "BIO": {"METABOLISM_RATE": 1.0},}
+    ZEN = {"PHYSICS": {"VOLTAGE_MAX": 10.0,"BASE_DRAG": 0.0}, "BIO": {"METABOLISM_RATE": 0.1},}
+    MANIC = {"PHYSICS": {"VOLTAGE_MAX": 50.0,"BASE_DRAG": 0.5}, "BIO": {"METABOLISM_RATE": 2.0},}
+    DEBUG = {"PHYSICS": {"VOLTAGE_MAX": 100.0,"BASE_DRAG": 0.0}, "BIO": {"METABOLISM_RATE": 0.0},}
 
 class BoneConfig:
     GRAVITY_WELL_THRESHOLD = 15.0
     SHAPLEY_MASS_THRESHOLD = 5.0
 
     TRAIT_ARCHETYPES = {"THE POET": {"ABSTRACT": 0.6, "PHOTO": 0.3, "ENTROPY": 0.1},
-        "THE ENGINEER": {"CONSTRUCTIVE": 0.7, "HEAVY": 0.3},
-        "THE NIHILIST": {"ENTROPY": 0.8, "CRYO": 0.2},
-        "THE CRITIC": {"THERMAL": 0.5, "ABSTRACT": 0.5},
-        "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
+        "THE ENGINEER": {"CONSTRUCTIVE": 0.7, "HEAVY": 0.3}, "THE NIHILIST": {"ENTROPY": 0.8, "CRYO": 0.2},
+        "THE CRITIC": {"THERMAL": 0.5, "ABSTRACT": 0.5}, "THE EXPLORER": {"KINETIC": 0.6, "AEROBIC": 0.4},
         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2},}
 
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "20.3.0"
+    VERSION = "20.4.0"
     VERBOSE_LOGGING = True
-
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
     MAX_ATP = 100.0
     STAMINA_REGEN = 1.0
     MAX_DRAG_LIMIT = 5.0
-
-    REM_IDLE_THRESHOLD = 300.0
-
+    REM_IDLE_THRESHOLD = 2400.0
     GEODESIC_STRENGTH = 10.0
     BASE_IGNITION_THRESHOLD = 0.5
     MAX_REPETITION_LIMIT = 0.8
@@ -120,25 +111,19 @@ class BoneConfig:
     SIGNAL_DRAG_MULTIPLIER = 1.0
     KINETIC_GAIN = 1.0
     CRITICAL_ROS_LIMIT = 100.0
-
     MAX_MEMORY_CAPACITY = 100
     PRIORITY_LEARNING_RATE = 1.0
     ZONE_THRESHOLDS = {"LABORATORY": 1.5, "COURTYARD": 0.8}
     TOXIN_WEIGHT = 1.0
-
     ANTIGENS = ["basically", "actually", "literally", "utilize"]
-
     MAX_OUTPUT_TOKENS = 4096
     DEFAULT_LLM_ENDPOINTS = {"ollama": "http://127.0.0.1:11434/v1/chat/completions",
-                             "openai": "https://api.openai.com/v1/chat/completions",
-                             "lm_studio": "http://127.0.0.1:1234/v1/chat/completions",
-                             "mock": "N/A"}
+        "openai": "https://api.openai.com/v1/chat/completions", "lm_studio": "http://127.0.0.1:1234/v1/chat/completions", "mock": "N/A"}
     PROVIDER = "ollama"
     BASE_URL = None
     API_KEY = "ollama"
     MODEL = "mistral-nemo"
     OLLAMA_MODEL_ID = "llama3"
-
     _TEMPLATE_DATA = {}
 
     @classmethod

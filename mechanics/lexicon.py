@@ -9,9 +9,9 @@ import time
 import unicodedata
 import functools
 from collections import defaultdict, deque
-from typing import Tuple, Dict, Set, Optional, List
+from typing import Tuple, Dict, Set, Optional, List, Any
 from core import Prisma, LoreManifest
-from struts import ux
+from struts import ux, safe_get
 
 class LexiconStore:
     _PUNCTUATION = string.punctuation.replace("_", "")
@@ -41,9 +41,8 @@ class LexiconStore:
                 self.categories.add(cat)
                 word_set = set(words)
                 self.VOCAB[cat] = word_set
-                if not cat.startswith("sentiment"):
-                    for w in word_set:
-                        self._index_word(w, cat)
+                for w in word_set:
+                    self._index_word(w, cat)
         self._load_hive()
 
     def _index_word(self, word: str, category: str):
@@ -102,11 +101,11 @@ class LexiconStore:
         self._index_word(w, category)
         return True
 
-    def harvest(self, text: str) -> Dict[str, List[str]]:
+    def harvest(self, text: Any) -> Dict[str, List[str]]:
         if not text:
             return {}
         results = defaultdict(list)
-        for word in text.translate(self._TRANSLATOR).lower().split():
+        for word in str(text).translate(self._TRANSLATOR).lower().split():
             for category in self.get_categories_for_word(word):
                 results[category].append(word)
         return dict(results)
@@ -193,13 +192,11 @@ class LinguisticAnalyzer:
                 return "abstract"
         return base_cat
 
-    def sanitize(self, text: str) -> List[str]:
+    def sanitize(self, text: Any) -> List[str]:
         if not text:
             return []
-        try:
-            normalized = unicodedata.normalize("NFKD", text).encode("ASCII", "ignore").decode("utf-8")
-        except (TypeError, AttributeError):
-            normalized = text
+        text_str = str(text)
+        normalized = unicodedata.normalize("NFKD", text_str).encode("ASCII", "ignore").decode("utf-8")
         cleaned_text = normalized.translate(self._TRANSLATOR).lower()
         if self.ANTIGEN_REGEX:
             cleaned_text = self.ANTIGEN_REGEX.sub(
@@ -302,15 +299,15 @@ class LexiconService:
         if events_ref:
             events_ref.subscribe("MYTHOLOGY_UPDATE", self._on_mythology_update)
 
-    def _on_mythology_update(self, payload: dict):
-        if not payload or not isinstance(payload, dict): return
-        if (word := payload.get("word")) and (category := payload.get("category")):
+    def _on_mythology_update(self, payload: Any):
+        word = safe_get(payload, "word")
+        category = safe_get(payload, "category")
+        if word and category:
             self.teach(word, category, tick=int(time.time()))
-        total_words = sum(len(s) for s in self._STORE.VOCAB.values()) + sum(
-            len(s) for s in self._STORE.LEARNED_VOCAB.values())
-        msg = ux("lexicon_strings", "sys_nominal")
-        if msg:
-            print(f"{Prisma.GRN}{msg.format(total_words=total_words)}{Prisma.RST}")
+            total_words = sum(len(s) for s in self._STORE.VOCAB.values()) + sum(
+                len(s) for s in self._STORE.LEARNED_VOCAB.values())
+            if msg := ux("lexicon_strings", "sys_nominal"):
+                print(f"{Prisma.GRN}{msg.format(total_words=total_words)}{Prisma.RST}")
 
     def initialize(self):
         self._INITIALIZED = True
@@ -339,15 +336,18 @@ class LexiconService:
     def vectorize(self, text: str) -> Dict[str, float]:
         return self._ANALYZER.vectorize(text)
 
-    def purge_toxins(self, text: str) -> str:
-        if not self._ANALYZER.ANTIGEN_REGEX or not text:
-            return text
+    def purge_toxins(self, text: Any) -> str:
+        text_str = str(text) if text else ""
+        if not self._ANALYZER.ANTIGEN_REGEX or not text_str:
+            return text_str
         return self._ANALYZER.ANTIGEN_REGEX.sub(
             lambda m: self._STORE.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""),
-            text)
+            text_str)
 
     def sanitize(self, text: str) -> List[str]:
         return self._ANALYZER.sanitize(text)
+
+    clean = sanitize
 
     def taste(self, word: str) -> Tuple[Optional[str], float]:
         known_cats = self._STORE.get_categories_for_word(word)
@@ -357,9 +357,6 @@ class LexiconService:
                     return p_cat, 1.0
             return next(iter(known_cats)), 1.0
         return self._ANALYZER.classify_word(word)
-
-    def clean(self, text: str) -> List[str]:
-        return self._ANALYZER.sanitize(text)
 
     def create_field(self):
         return SemanticField(self._ANALYZER)

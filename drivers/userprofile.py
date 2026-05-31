@@ -12,21 +12,21 @@ class UserProfile:
         self.affinities = {"heavy": 0.0, "kinetic": 0.0, "abstract": 0.0, "photo": 0.0, "aerobic": 0.0,
                            "thermal": 0.0, "cryo": 0.0}
         self.confidence = 0
-        self.drivers_cfg = getattr(self.cfg, "DRIVERS", None)
-        self.file_path = getattr(self.drivers_cfg, "PROFILE_FILE_PATH", "user_profile.json")
+        self.drivers_cfg = safe_get(self.cfg, "DRIVERS", {})
+        self.file_path = safe_get(self.drivers_cfg, "PROFILE_FILE_PATH", "user_profile.json")
         self.load()
 
     def update(self, counts, total_words):
         cfg = self.drivers_cfg
-        if total_words < safe_get(cfg, "PROFILE_MIN_WORDS", 3):
+        if total_words < int(safe_get(cfg, "PROFILE_MIN_WORDS", 3)):
             return
         self.confidence += 1
-        threshold = safe_get(cfg, "PROFILE_CONFIDENCE_THRESHOLD", 50)
+        threshold = int(safe_get(cfg, "PROFILE_CONFIDENCE_THRESHOLD", 50))
         if self.confidence < threshold:
-            alpha = safe_get(cfg, "PROFILE_ALPHA_HIGH", 0.2)
+            alpha = float(safe_get(cfg, "PROFILE_ALPHA_HIGH", 0.2))
         else:
-            alpha = safe_get(cfg, "PROFILE_ALPHA_LOW", 0.05)
-        density_high = safe_get(cfg, "PROFILE_DENSITY_HIGH", 0.15)
+            alpha = float(safe_get(cfg, "PROFILE_ALPHA_LOW", 0.05))
+        density_high = float(safe_get(cfg, "PROFILE_DENSITY_HIGH", 0.15))
         for cat in self.affinities:
             density = counts.get(cat, 0) / total_words
             if density > density_high:
@@ -38,8 +38,8 @@ class UserProfile:
 
     def get_preferences(self):
         cfg = self.drivers_cfg
-        like_thresh = safe_get(cfg, "PROFILE_LIKE_THRESH", 0.3)
-        hate_thresh = safe_get(cfg, "PROFILE_HATE_THRESH", -0.2)
+        like_thresh = float(safe_get(cfg, "PROFILE_LIKE_THRESH", 0.3))
+        hate_thresh = float(safe_get(cfg, "PROFILE_HATE_THRESH", -0.2))
         return [k for k, v in self.affinities.items() if v > like_thresh], [k for k, v in self.affinities.items() if v < hate_thresh]
 
     def save(self):

@@ -1,11 +1,11 @@
 """drivers/enneagram.py"""
 
-from typing import Tuple
+from typing import Tuple, Any
 from core import LoreManifest
-from physics.models import PhysicsPacket
 from presets import BoneConfig
 from struts import ux, safe_get
 from drivers.souldriver import SoulDriver
+
 
 class EnneagramDriver:
     def __init__(self, events_ref, config_ref=None):
@@ -14,27 +14,31 @@ class EnneagramDriver:
         self.current_persona = "NARRATOR"
         self.pending_persona = None
         self.stability_counter = 0
-        cfg = getattr(self.cfg, "DRIVERS", None)
-        self.HYSTERESIS_THRESHOLD = getattr(cfg, "ENNEAGRAM_HYSTERESIS", 3)
+
+        cfg = safe_get(self.cfg, "DRIVERS", {})
+        self.HYSTERESIS_THRESHOLD = int(safe_get(cfg, "ENNEAGRAM_HYSTERESIS", 3))
         manifest = LoreManifest.get_instance(config_ref=self.cfg)
         driver_cfg = manifest.get("DRIVER_CONFIG") or {}
         self.weights_cfg = driver_cfg.get("ENNEAGRAM_WEIGHTS", {})
         self.state_map = driver_cfg.get("PERSONA_STATE_MAP", {})
 
-    def _calculate_raw_persona(self, physics: PhysicsPacket, soul_ref=None) -> Tuple[str, str, str]:
-        p_vec = physics.vector or {}
-        p_vol = physics.voltage
-        p_drag = physics.narrative_drag
-        p_coh = physics.kappa
-        p_zone = str(physics.zone or "")
+    def _calculate_raw_persona(self, physics: Any, soul_ref=None) -> Tuple[str, str, str]:
+        p_vec = safe_get(physics, "vector", {})
+        p_vol = float(safe_get(physics, "voltage", 0.0))
+        p_drag = float(safe_get(physics, "narrative_drag", 0.0))
+        p_coh = float(safe_get(physics, "kappa", 0.0))
+        p_zone = str(safe_get(physics, "zone", ""))
+
         weights_cfg = self.weights_cfg
         if not isinstance(weights_cfg, dict) or len(weights_cfg) < 2:
             return "NARRATOR", "ACTIVE", "The persona matrix is fractured. Retreating to the baseline Narrator."
+
         scores = dict.fromkeys(weights_cfg, 0.0)
         if "NARRATOR" in scores:
             scores["NARRATOR"] += 2.0
-        if p_zone == safe_get(getattr(self.cfg, "SANCTUARY", {}), "ZONE", "SANCTUARY") or (
-                4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5):
+
+        sanc_zone = safe_get(safe_get(self.cfg, "SANCTUARY", {}), "ZONE", "SANCTUARY")
+        if p_zone == sanc_zone or (4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5):
             for persona, mod in [("NARRATOR", 6.0), ("JESTER", 3.0), ("GORDON", -2.0)]:
                 if persona in scores: scores[persona] += mod
         for persona, criteria in weights_cfg.items():
@@ -62,7 +66,7 @@ class EnneagramDriver:
         sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         winner, win_score = sorted_scores[0]
         runner_up, run_score = sorted_scores[1]
-        cfg = getattr(self.cfg, "DRIVERS", None)
+        cfg = safe_get(self.cfg, "DRIVERS", {})
         hybrid_gap = float(safe_get(cfg, "ENNEAGRAM_HYBRID_GAP", 0.5))
         if (win_score - run_score) <= hybrid_gap and win_score > 0:
             winner = f"{winner}/{runner_up} [HYBRID]"

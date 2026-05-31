@@ -33,11 +33,17 @@ class TraitVector:
             setattr(self, t, self._clamp(getattr(self, t) + delta))
 
     def normalize(self, decay_rate: float):
-        for t in self._TRAITS:
-            val = getattr(self, t)
-            target = 0.1 if t == "wisdom" else 0.5
-            setattr(self, t, self._clamp(val + ((target - val) * decay_rate)))
+        self.curiosity = self._clamp(self.curiosity + ((0.5 - self.curiosity) * decay_rate))
+        self.cynicism = self._clamp(self.cynicism + ((0.5 - self.cynicism) * decay_rate))
+        self.hope = self._clamp(self.hope + ((0.5 - self.hope) * decay_rate))
+        self.discipline = self._clamp(self.discipline + ((0.5 - self.discipline) * decay_rate))
+        self.empathy = self._clamp(self.empathy + ((0.5 - self.empathy) * decay_rate))
+        self.wisdom = self._clamp(self.wisdom + ((0.1 - self.wisdom) * decay_rate))
 
     def _clamp_all(self):
-        for t in self._TRAITS:
-            setattr(self, t, self._clamp(getattr(self, t)))
+        self.curiosity = self._clamp(self.curiosity)
+        self.cynicism = self._clamp(self.cynicism)
+        self.hope = self._clamp(self.hope)
+        self.discipline = self._clamp(self.discipline)
+        self.empathy = self._clamp(self.empathy)
+        self.wisdom = self._clamp(self.wisdom)

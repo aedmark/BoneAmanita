@@ -130,12 +130,10 @@ class ObservationPhase(SimulationPhase):
             if ctx.time_delta > 600.0:
                 hours_passed = min(24.0, ctx.time_delta / 3600.0)
                 target_cfg = self.eng.config
-                self.eng.bio.biometrics.health = min(
+                self.eng.health = min(
                     float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
-                    self.eng.bio.biometrics.health + (hours_passed * 10.0))
-                self.eng.bio.mito.state.atp_pool = min(
-                    float(safe_get(target_cfg, "MAX_ATP", 100.0)),
-                    self.eng.bio.mito.state.atp_pool + (hours_passed * 25.0))
+                    self.eng.health + (hours_passed * 10.0))
+                self.eng.restore_atp(hours_passed * 25.0)
                 ctx.log(
                     f"{Prisma.GRN}[BIO]: Retroactive metabolism applied for {hours_passed:.1f} hours of absence. ATP and Health restored.{Prisma.RST}")
                 dream_engine = self.eng.mind.dreamer

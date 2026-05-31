@@ -43,14 +43,19 @@ class ZenGarden:
             efficiency_boost = min(float(safe_get(cfg, "EFFICIENCY_CAP", 0.5)),
                                    self.stillness_streak * float(safe_get(cfg, "EFFICIENCY_SCALAR", 0.05)))
             msg = None
-            if self.stillness_streak == int(safe_get(cfg, "ZEN_FIRST_TICK", 1)):
+            zen_first = int(float(safe_get(cfg, "ZEN_FIRST_TICK", 1)))
+            zen_freq = int(float(safe_get(cfg, "ZEN_MILESTONE_FREQ", 5)))
+
+            if self.stillness_streak == zen_first:
                 msg = f"{Prisma.GRY}{ux('protocol_strings', 'zen_enter')}{Prisma.RST}"
-            elif self.stillness_streak % int(safe_get(cfg, "ZEN_MILESTONE_FREQ", 5)) == 0:
+            elif self.stillness_streak % zen_freq == 0:
                 self.pebbles_collected += 1
                 koan = random.choice(self.koans)
                 msg = f"{Prisma.CYN}{ux_format('protocol_strings', 'zen_streak', default='Stillness {streak}: {koan} (+{boost}%)', streak=self.stillness_streak, koan=koan, boost=int(efficiency_boost * 100))}{Prisma.RST}"
             return efficiency_boost, msg
-        if self.stillness_streak > int(safe_get(cfg, "STREAK_BREAK_THRESHOLD", 3)):
+
+        break_thresh = int(float(safe_get(cfg, "STREAK_BREAK_THRESHOLD", 3)))
+        if self.stillness_streak > break_thresh:
             break_msg = ux("protocol_strings", "zen_break")
             self.events.log(f"{Prisma.GRY}{break_msg}{Prisma.RST}", "SYS", )
         self.stillness_streak = 0

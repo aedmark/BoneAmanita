@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Tuple
 from core import Prisma
-from struts import ux
+from struts import ux, safe_get
 from physics import ChromaScope
 from presets import BoneConfig
 from mechanics.projector import Projector, SoulDashboard
@@ -10,11 +10,9 @@ from mechanics.projector import Projector, SoulDashboard
 class PulseReader:
     @staticmethod
     def derive_mood(bio_state: Dict, config_ref=None) -> str:
-        cfg_obj = config_ref or BoneConfig
-        cfg = cfg_obj.get("GUI", {}) if isinstance(cfg_obj, dict) else getattr(cfg_obj, "GUI", {})
-        is_cfg_dict = isinstance(cfg, dict)
-        c_warn = float(cfg.get("CHEM_HIGH_WARN", 0.6) if is_cfg_dict else getattr(cfg, "CHEM_HIGH_WARN", 0.6))
-        a_warn = float(cfg.get("ATP_EXHAUSTED_WARN", 20.0) if is_cfg_dict else getattr(cfg, "ATP_EXHAUSTED_WARN", 20.0))
+        cfg = safe_get(config_ref or BoneConfig, "GUI", {})
+        c_warn = float(safe_get(cfg, "CHEM_HIGH_WARN", 0.6))
+        a_warn = float(safe_get(cfg, "ATP_EXHAUSTED_WARN", 20.0))
         chem = bio_state.get("chem", {})
         if chem.get("COR", 0) > c_warn:
             return ux("pulse_reader", "mood_defensive")
@@ -28,12 +26,10 @@ class PulseReader:
 
     @staticmethod
     def analyze_voltage(voltage: float, config_ref=None) -> Tuple[str, str]:
-        cfg_obj = config_ref or BoneConfig
-        cfg = cfg_obj.get("GUI", {}) if isinstance(cfg_obj, dict) else getattr(cfg_obj, "GUI", {})
-        is_cfg_dict = isinstance(cfg, dict)
-        v_crit = float(cfg.get("V_CRIT", 20.0) if is_cfg_dict else getattr(cfg, "V_CRIT", 20.0))
-        v_high = float(cfg.get("V_HIGH", 15.0) if is_cfg_dict else getattr(cfg, "V_HIGH", 15.0))
-        v_low = float(cfg.get("V_LOW", 5.0) if is_cfg_dict else getattr(cfg, "V_LOW", 5.0))
+        cfg = safe_get(config_ref or BoneConfig, "GUI", {})
+        v_crit = float(safe_get(cfg, "V_CRIT", 20.0))
+        v_high = float(safe_get(cfg, "V_HIGH", 15.0))
+        v_low = float(safe_get(cfg, "V_LOW", 5.0))
         if voltage > v_crit:
             key = "voltage_critical"
         elif voltage > v_high:
@@ -89,7 +85,7 @@ class GeodesicRenderer:
     def render_dashboard(self, ctx) -> str:
         physics = ctx.physics
         mind = ctx.mind_state or {}
-        mind_tuple = (mind.get("lens"), mind.get("thought"), mind.get("role"))
+        mind_tuple = (safe_get(mind, "lens"), safe_get(mind, "thought"), safe_get(mind, "role"))
         bio_data = ctx.bio_result or {}
         bio_data["atp"] = bio_data.get("atp", 0.0)
         mode_settings = getattr(self.eng, "mode_settings", {})
@@ -110,7 +106,7 @@ class GeodesicRenderer:
         anchor = getattr(soul, "anchor", None)
         dignity_val = getattr(anchor, "dignity_reserve", 100.0)
         data_ctx = {"health": self.eng.health, "stamina": self.eng.stamina, "bio": bio_data, "dignity": dignity_val,
-                    "vectors": physics.get("vector", {}), "ui_depth": current_ui_depth, "world_loc": world_loc,
+                    "vectors": safe_get(physics, "vector", {}), "ui_depth": current_ui_depth, "world_loc": world_loc,
                     "show_vitals": mode_settings.get("show_vitals", True),
                     "show_location": mode_settings.get("show_location", True), }
         if hasattr(ctx, "shared_dyn"):
@@ -132,10 +128,8 @@ class GeodesicRenderer:
         return self.projector.render({"physics": physics}, data_ctx, mind_tuple, reality_depth=current_depth, labels=labels)
 
     def _calculate_lattice_strain(self, physics: Dict) -> float:
-        is_phys_dict = isinstance(physics, dict)
-        observer_data = physics.get("observer", {}) if is_phys_dict else getattr(physics, "observer", {})
-        is_obs_dict = isinstance(observer_data, dict)
-        q_matrix = observer_data.get("Q_n", []) if is_obs_dict else getattr(observer_data, "Q_n", [])
+        observer_data = safe_get(physics, "observer", {})
+        q_matrix = safe_get(observer_data, "Q_n", [])
         if not isinstance(q_matrix, list) or not q_matrix or not isinstance(q_matrix[0], list):
             return 0.0
         return sum(float(abs(v)) for i, row in enumerate(q_matrix) for j, v in enumerate(row) if i != j)
@@ -194,13 +188,11 @@ class CachedRenderer:
         self._last_tick = -1
 
     def render_frame(self, ctx, tick: int, events: List[Dict]) -> Dict:
-        is_phys_dict = isinstance(ctx.physics, dict)
-        voltage = float(ctx.physics.get("voltage", 0.0) if is_phys_dict else getattr(ctx.physics, "voltage", 0.0))
-        cfg = self.cfg.get("GUI", {}) if isinstance(self.cfg, dict) else getattr(self.cfg, "GUI", {})
-        is_cfg_dict = isinstance(cfg, dict)
-        cache_lifetime = int(cfg.get("UI_CACHE_LIFETIME", 5) if is_cfg_dict else getattr(cfg, "UI_CACHE_LIFETIME", 5))
+        voltage = float(safe_get(ctx.physics, "voltage", 0.0))
+        cfg = safe_get(self.cfg, "GUI", {})
+        cache_lifetime = int(safe_get(cfg, "UI_CACHE_LIFETIME", 5))
         cache_expired = (tick - self._last_tick) >= cache_lifetime
-        high_v_refresh = float(cfg.get("HIGH_VOLTAGE_REFRESH", 15.0) if is_cfg_dict else getattr(cfg, "HIGH_VOLTAGE_REFRESH", 15.0))
+        high_v_refresh = float(safe_get(cfg, "HIGH_VOLTAGE_REFRESH", 15.0))
         if voltage > high_v_refresh or events or cache_expired:
             frame = self._base.render_frame(ctx, tick, events)
             self._cached_ui_content = frame["ui"]

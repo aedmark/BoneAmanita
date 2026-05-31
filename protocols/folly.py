@@ -68,10 +68,14 @@ class TheFolly:
         times_eaten = self.global_tastings[target]
         base_yield = float(safe_get(folly_cfg, "BASE_YIELD", 10.0))
         decay_exp = float(safe_get(folly_cfg, "DECAY_EXPONENT", 0.8))
-        decay_factor = decay_exp ** (times_eaten - 1)
+
+        # [Brutalist Enforcer]: Cast times_eaten to ensure string corruption doesn't explode math.
+        times_eaten_val = int(float(times_eaten))
+        decay_factor = decay_exp ** (times_eaten_val - 1)
+
         actual_yield = max(2.0, base_yield * decay_factor)
-        loot = ("STABILITY_PIZZA"
-                if actual_yield >= float(safe_get(folly_cfg, "PIZZA_THRESHOLD", 8.0)) else None)
+        pizza_thresh = float(safe_get(folly_cfg, "PIZZA_THRESHOLD", 8.0))
+        loot = "STABILITY_PIZZA" if actual_yield >= pizza_thresh else None
         flavor_text = ""
         if times_eaten > 3:
             stale_str = ux("protocol_strings", "folly_stale_flavor")

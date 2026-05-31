@@ -48,12 +48,13 @@ class TheBureau:
         raw_text = str(safe_get(physics, "raw_text", ""))
         truth = float(safe_get(physics, "truth_ratio", 0.0))
         word_count = len(raw_text.split())
-        if raw_text.startswith("/") or word_count < self.cfg.BUREAU.MIN_WORD_COUNT:
+        cfg_bureau = safe_get(self.cfg, "BUREAU", {})
+        min_words = int(safe_get(cfg_bureau, "MIN_WORD_COUNT", 4))
+        if raw_text.startswith("/") or word_count < min_words:
             return None
         selected_form = None
         evidence = []
         tax = 0.0
-        cfg_bureau = safe_get(self.cfg, "BUREAU", {})
         tax_std = float(safe_get(cfg_bureau, "TAX_STANDARD", 5.0))
         tax_hvy = float(safe_get(cfg_bureau, "TAX_HEAVY", 10.0))
         chi = float(safe_get(physics, "chi", safe_get(physics, "entropy", 0.0)))
@@ -85,7 +86,7 @@ class TheBureau:
                 selected_form, evidence, tax = ux("protocol_strings", "bureau_form_101"), cliche_hits, tax_hvy
         if not selected_form:
             return None
-        if bio_state.get("health", 100.0) < 20.0:
+        if float(safe_get(bio_state, "health", 100.0)) < 20.0:
             return {
                 "status": "WAIVED",
                 "ui": f"{Prisma.CYN}[BUREAU]: Audit waived due to critical systemic instability.{Prisma.RST}",

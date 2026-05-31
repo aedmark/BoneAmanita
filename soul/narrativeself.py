@@ -45,10 +45,9 @@ class NarrativeSelf:
         self.obsession_neglect: float = 0.0
         self.current_target_cat: str = "abstract"
         self.current_negate_cat: str = "none"
-        if hasattr(self.events, "subscribe"):
-            self.events.subscribe("DREAM_COMPLETE", self._on_dream)
-            self.events.subscribe("SOUL_MUTATION", self._on_soul_mutation)
-            self.events.subscribe("TRAUMA_EVENT", self._on_trauma)
+        self.events.subscribe("DREAM_COMPLETE", self._on_dream)
+        self.events.subscribe("SOUL_MUTATION", self._on_soul_mutation)
+        self.events.subscribe("TRAUMA_EVENT", self._on_trauma)
 
     def _cfg(self, key: str, default: Any) -> Any:
         val = safe_get(safe_get(self.cfg, "SOUL", {}), key, default)
@@ -178,7 +177,7 @@ class NarrativeSelf:
         clean_words = self._extract_lexical_matter(physics)
         lex = getattr(self.eng, "lex", None)
         target_words = lex.get(self.current_target_cat) if (self.current_target_cat and lex) else set()
-        if target_words and set(clean_words).intersection(target_words):
+        if target_words and not target_words.isdisjoint(clean_words):
             self.obsession_progress = min(100.0, self.obsession_progress + 10.0)
             self.obsession_neglect = 0.0
             gravity_assist = 1.0 + (self.obsession_progress / max(1.0, self._cfg("OBSESSION_GRAVITY_ASSIST", 10.0)))
@@ -213,23 +212,20 @@ class NarrativeSelf:
             resonance = float(safe_get(physics, "phi", 0.0))
             trauma = float(safe_get(physics, "T", 0.0))
             lq = float(safe_get(physics, "lq", 0.0))
-            physics_states = [
-                (silence > 0.7 and exhaustion > 0.7, "THE PURGER"),
-                (psi > 0.8, "THE CALM"),
-                (resonance > 0.7 and trauma > 0.5, "THE NURSE"),
-                (lq > 0.7 and silence > 0.7, "THE TAO")
-            ]
-            trait_states = [
-                (self.traits.empathy > 0.8 and self.traits.hope > 0.6, "THE HEALER"),
-                (self.traits.empathy > 0.7 and self.traits.discipline > 0.6, "THE GARDENER"),
-                (self.traits.hope > 0.7 and self.traits.curiosity > 0.6, "THE POET"),
-                (self.traits.discipline > 0.7 and self.traits.curiosity > 0.6, "THE ENGINEER"),
-                (self.traits.cynicism > 0.7 and self.traits.discipline > 0.6, "THE CRITIC"),
-                (self.traits.cynicism > 0.8 and self.traits.hope < 0.3, "THE NIHILIST"),
-                (self.traits.curiosity > 0.8, "THE EXPLORER")
-            ]
-            self.archetype = next((arch for cond, arch in physics_states if cond),
-                                  next((arch for cond, arch in trait_states if cond), "THE OBSERVER"))
+
+            if silence > 0.7 and exhaustion > 0.7: self.archetype = "THE PURGER"
+            elif psi > 0.8: self.archetype = "THE CALM"
+            elif resonance > 0.7 and trauma > 0.5: self.archetype = "THE NURSE"
+            elif lq > 0.7 and silence > 0.7: self.archetype = "THE TAO"
+            elif self.traits.empathy > 0.8 and self.traits.hope > 0.6: self.archetype = "THE HEALER"
+            elif self.traits.empathy > 0.7 and self.traits.discipline > 0.6: self.archetype = "THE GARDENER"
+            elif self.traits.hope > 0.7 and self.traits.curiosity > 0.6: self.archetype = "THE POET"
+            elif self.traits.discipline > 0.7 and self.traits.curiosity > 0.6: self.archetype = "THE ENGINEER"
+            elif self.traits.cynicism > 0.7 and self.traits.discipline > 0.6: self.archetype = "THE CRITIC"
+            elif self.traits.cynicism > 0.8 and self.traits.hope < 0.3: self.archetype = "THE NIHILIST"
+            elif self.traits.curiosity > 0.8: self.archetype = "THE EXPLORER"
+            else: self.archetype = "THE OBSERVER"
+
         if prev != self.archetype:
             msg_shift = ux("soul_strings", "soul_identity_shift")
             self.events.log(
@@ -293,14 +289,14 @@ class NarrativeSelf:
         packet = self._safe_get_packet()
         if not packet or not getattr(lex, "measure_viscosity", None):
             return None, None, "none"
-        candidates = [
+        candidates = (
             (w, lex.measure_viscosity(w) + 0.2, lex.get_current_category(w))
             for w in self._extract_lexical_matter(packet)
             if len(w) >= 4 and w.lower() not in self.SYSTEM_NOISE
-        ]
-        if candidates:
-            best_w, _, best_cat = max(candidates, key=lambda x: x[1])
-            return best_w, best_cat, "none"
+        )
+        best = max(candidates, key=lambda x: x[1], default=None)
+        if best:
+            return best[0], best[2], "none"
         return None, None, "none"
 
     def _seek_memory_focus(self, lex) -> Tuple[Optional[str], Optional[str], str]:

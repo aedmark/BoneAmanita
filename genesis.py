@@ -29,26 +29,26 @@ class BoneGenesis:
         mode_settings = config.get("mode_settings") or {}
         suppressed_set = set(mode_settings.get("village_suppression") or [])
         village_bundle = BoneGenesis._summon_village(events, embryo, akashic, suppressed_set, config.get("boot_mode", "ADVENTURE"), target_cfg)
-        soul = NarrativeSelf(engine_ref=None, events_ref=events, memory_ref=embryo.mind.mem, akashic_ref=akashic, config_ref=target_cfg)
-        if embryo.soul_legacy:
+        mem_ref = getattr(embryo.mind, "mem", None) if getattr(embryo, "mind", None) else None
+        soul = NarrativeSelf(engine_ref=None, events_ref=events, memory_ref=mem_ref, akashic_ref=akashic, config_ref=target_cfg)
+        if getattr(embryo, "soul_legacy", None):
             soul.load_from_dict(embryo.soul_legacy)
         oroboros = TheOroboros(config_ref=target_cfg)
         cfg_gen = safe_get(target_cfg, "GENESIS", {})
-        bio_proxy = {"trauma_vector": safe_get(embryo.mind.mem, "session_trauma_vector", {})}
+        bio_proxy = {"trauma_vector": safe_get(mem_ref, "session_trauma_vector", {})}
         if logs := oroboros.apply_legacy(embryo.physics, bio_proxy):
             msg = ux_format("genesis_strings", "legacy_scars", default="The lattice remembers. Inherited scars: {logs}",
                             logs=', '.join(logs))
             events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "OROBOROS")
-        for key, default in [("voltage", 10.0), ("narrative_drag", 0.0)]:
-            base_val = float(safe_get(cfg_gen, f"DUMMY_{key.upper()}", default))
-            curr = embryo.physics.get(key, base_val) if isinstance(embryo.physics, dict) else getattr(embryo.physics, key, base_val)
-            val = max(0.0, float(curr))
-            if isinstance(embryo.physics, dict): embryo.physics[key] = val
-            else: setattr(embryo.physics, key, val)
+        if embryo.physics is not None:
+            for key, default in [("voltage", 10.0), ("narrative_drag", 0.0)]:
+                base_val = float(safe_get(cfg_gen, f"DUMMY_{key.upper()}", default))
+                curr = safe_get(embryo.physics, key, base_val)
+                safe_set(embryo.physics, key, max(0.0, float(curr)))
         drivers = DriverRegistry(events, config_ref=target_cfg)
         consultant = BoneConsultant(config_ref=target_cfg, lexicon_ref=lexicon_ref) if "CONSULTANT" not in suppressed_set else None
         symbiosis = SymbiosisManager(events, config_ref=target_cfg)
-        consolidator = TheConsolidator(events_ref=events, memory_ref=embryo.mind.mem, akashic_ref=akashic)
+        consolidator = TheConsolidator(events_ref=events, memory_ref=mem_ref, akashic_ref=akashic)
         return {"events": events, "akashic": akashic, "embryo": embryo, "village": village_bundle, "soul": soul,
                 "oroboros": oroboros, "drivers": drivers, "consultant": consultant, "symbiosis": symbiosis,
                 "consolidator": consolidator}

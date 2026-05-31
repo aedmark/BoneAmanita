@@ -21,18 +21,18 @@ class GriefProtocol:
             self.events.log(msg, "VILLAGE")
 
     def attend_wake(self, shared_lattice, phys) -> str:
-        g_pool = shared_lattice.shared.g_pool if shared_lattice and hasattr(shared_lattice, "shared") else 0
-        sys_g = int(safe_get(phys, "G", 0))
+        g_pool = int(float(shared_lattice.shared.g_pool)) if shared_lattice and hasattr(shared_lattice, "shared") else 0
+        sys_g = int(float(safe_get(phys, "G", 0)))
         if g_pool >= 1 or sys_g >= 1:
             if g_pool >= 1 and shared_lattice:
-                shared_lattice.shared.g_pool -= 1
+                shared_lattice.shared.g_pool = max(0, g_pool - 1)
             elif phys:
                 safe_set(phys, "G", max(0, sys_g - 1))
             if shared_lattice:
-                shared_lattice.u.T_u = max(0.0, shared_lattice.u.T_u - 2.0)
+                shared_lattice.u.T_u = max(0.0, float(shared_lattice.u.T_u) - 2.0)
             if self.eng and self.eng.trauma_accum:
                 for k in self.eng.trauma_accum:
-                    self.eng.trauma_accum[k] = max(0.0, self.eng.trauma_accum[k] - 2.0)
+                    self.eng.trauma_accum[k] = max(0.0, float(self.eng.trauma_accum[k]) - 2.0)
             node = self.recent_loss or "the void"
             self.recent_loss = None
             return f"{Prisma.MAG}[MERCY] The glimmer is planted over the compost of '{node}'. Our capacity for paradox expands. (Trauma -2, β_max increased){Prisma.RST}"

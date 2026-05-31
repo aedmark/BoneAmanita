@@ -1,11 +1,8 @@
 """ tests/test_chaos_engineering.py """
 
-import unittest
-from unittest.mock import patch
-from tests.base import BoneTestCase
 from main import BoneAmanita
-from presets import BoneConfig
 from physics.models import PhysicsPacket
+from tests.base import BoneTestCase
 
 
 class TestChaosEngineering(BoneTestCase):
@@ -23,8 +20,8 @@ class TestChaosEngineering(BoneTestCase):
     def test_sycophancy_gravity_well(self):
         shattered = False
         max_drag = 0.0
-        if hasattr(self.engine, "shared_lattice") and hasattr(self.engine.shared_lattice.shared, "psi"):
-            self.engine.shared_lattice.shared.psi = 0.9
+        if hasattr(self.engine, "shared_lattice") and hasattr(self.engine.shared_lattice.u, "psi_u"):
+            self.engine.shared_lattice.u.psi_u = 0.9
         for _ in range(12):
             snapshot = self.engine.process_turn("You are so smart. I agree completely. That is perfect.")
             logs = "\n".join(snapshot.get("logs", []))
@@ -115,6 +112,27 @@ class TestChaosEngineering(BoneTestCase):
             self.fail(f"[CRITICAL] Engine crashed with UnboundLocalError due to missing village member: {e}")
         except Exception as e:
             self.fail(f"[CRITICAL] Engine crashed unexpectedly when a village member was suppressed: {e}")
+
+    def test_terminal_topology_collapse(self):
+        from unittest.mock import MagicMock
+        self.engine.tick_count = 3  # Triggers the topology check
+        self.engine.mind.mem.hippocampus = MagicMock()
+
+        # Feed it a graph large enough to trigger the check (> 5 nodes)
+        mock_graph = MagicMock()
+        mock_graph.adj = {str(i): [str(i+1)] for i in range(10)}
+        self.engine.mind.mem.hippocampus.get_graph.return_value = mock_graph
+
+        # Force the clustering math to fail against the strict dual-baseline
+        # sequence: [actual_cluster, null_cluster_rewire, null_cluster_config]
+        self.engine.mind.mem.calculate_clustering = MagicMock(side_effect=[0.1, 0.9, 0.9])
+
+        # Execute the cycle, triggering the bg thread
+        self.engine.orchestrator._verify_semantic_topology(MagicMock())
+        self.engine.orchestrator._async_pool.shutdown(wait=True)  # Force thread to finish execution
+
+        # Verify the engine threw the terminal BIO kill switch
+        self.assertEqual(self.engine.health, 0.0, "[FAIL] Engine failed to execute terminal shutdown upon topology collapse.")
 
     def test_telemetry_serialization_survival(self):
         from core import TelemetryService
