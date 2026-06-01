@@ -2,7 +2,7 @@
 
 ### Preamble:
 
-This Software represents a collaborative endeavor of human direction and artificial intelligence. The following terms and conditions apply to its use, modification, and distribution, reflecting the spirit of open access, shared innovation, and transparent acknowledgment of the novel means of its creation.
+This Software represents a collaborative endeavor of human direction and machine learning (artificial intelligence). The following terms and conditions apply to its use, modification, and distribution, reflecting the spirit of open access, shared innovation, and transparent acknowledgment of the novel means of its creation.
 
 ### Authorship and Contribution Acknowledgment:
 
