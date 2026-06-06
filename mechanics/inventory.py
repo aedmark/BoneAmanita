@@ -33,14 +33,10 @@ class Item:
         default_usage = ux("gordon_strings", "default_item_use") or f"You use the {name}."
         is_consumable = data.get("consume_on_use", False) or (data.get("cost") == "CONSUMABLE")
         return cls(name=name, description=data.get("description", default_desc), function=data.get("function", "MISC"),
-                   passive_traits=data.get("passive_traits", []), spawn_context=data.get("spawn_context", "COMMON"),
-                   value=data.get("value", 1.0), usage_msg=data.get("usage_msg", default_usage),
-                   consume_on_use=is_consumable, reflex_trigger=data.get("reflex_trigger", None),
-                   is_container=data.get("is_container", False),
-                   capacity=data.get("capacity", 3),
-                   contents=data.get("contents", []),
-                   location=data.get("location", "VOID")
-                   )
+            passive_traits=data.get("passive_traits", []), spawn_context=data.get("spawn_context", "COMMON"),
+            value=data.get("value", 1.0), usage_msg=data.get("usage_msg", default_usage),
+            consume_on_use=is_consumable, reflex_trigger=data.get("reflex_trigger", None), is_container=data.get("is_container", False),
+            capacity=data.get("capacity", 3), contents=data.get("contents", []), location=data.get("location", "VOID"))
 
 class GordonKnot:
     def __init__(self, events=None, mode="ADVENTURE", config_ref=None):
@@ -96,10 +92,23 @@ class GordonKnot:
                     msg = ux("gordon_strings", "premise_loc")
                     return f"{Prisma.SLATE}{msg.format(loc=required_loc, zone=current_zone)}{Prisma.RST}"
         for action, req_objs in self.action_coupling.items():
-            if all(w in tokens for w in action.split()) and re.search(rf"\b(?:i\s+(?:will\s+)?{action}|to\s+{action}|{action}\s+(?:the|a|an|my|some|it|this|that)|{action}ing)\b|^{action}\b", text,):
-                if not any(obj.upper() in self.inventory for obj in req_objs):
+            if all(w in tokens for w in action.split()) and re.search(
+                    rf"\b(?:i\s+(?:will\s+)?{action}|to\s+{action}|{action}\s+(?:the|a|an|my|some|it|this|that)|{action}ing)\b|^{action}\b",
+                    text, ):
+                has_required_item = False
+                environmental_actions = {"read", "inspect", "examine", "look", "push", "pull"}
+                for obj in req_objs:
+                    if obj.upper() in self.inventory:
+                        has_required_item = True
+                        break
+                    obj_clean = obj.lower().replace('_', ' ')
+                    if action in environmental_actions and obj_clean in text:
+                        has_required_item = True
+                        break
+                if not has_required_item:
                     return f"{Prisma.SLATE}{(ux('gordon_strings', 'premise_req') or '').format(action=action, req_str=', '.join(req_objs))}{Prisma.RST}"
-        if any(v in tokens for v in self.interaction_verbs):
+        environmental_verbs = {"read", "inspect", "examine", "look"}
+        if any(v in tokens for v in self.interaction_verbs) and not any(v in tokens for v in environmental_verbs):
             for i in self.registry:
                 if i.upper() not in self.inventory:
                     i_low = i.lower().replace('_', ' ')
@@ -333,7 +342,7 @@ class GordonKnot:
             self.blueprints = LoreManifest.get_instance().get("ITEM_GENERATION") or {}
         bp = self.blueprints
         fb = bp.get("FALLBACKS", {})
-        dom_dim = max(physics_vector, key=physics_vector.get) if physics_vector else "ENT"
+        dom_dim = max(physics_vector, key=lambda k: float(physics_vector[k])) if physics_vector else "ENT"
         archetype = bp.get("DIM_MAP", {}).get(dom_dim, "void")
         prefixes = bp.get("PREFIXES", {}).get(archetype, fb.get("PREFIX", ["Strange"]))
         suffixes = bp.get("SUFFIXES", {}).get(archetype, fb.get("SUFFIX", ["of Mystery"]))
@@ -382,13 +391,15 @@ class GordonKnot:
                         present_candidates.append((name, clean))
             if present_candidates:
                 for t in sorted(valid_triggers, key=len, reverse=True):
-                    t_escaped = re.escape(t)
+                    t_str = str(t)
+                    t_escaped = re.escape(t_str)
                     for name, clean in present_candidates:
                         if re.search(rf"\b{t_escaped}\b.*?\b{re.escape(clean)}\b", combined_text, re.IGNORECASE):
                             return name
         for verb in self.acquisition_verbs:
+            verb_str = str(verb)
             match = re.search(
-                rf"\b{re.escape(verb)}\s+(?:the|a|an|some|my)?\s*([a-z0-9\'\-]+(?:\s+[a-z0-9\'\-]+){{0,2}})",
+                rf"\b{re.escape(verb_str)}\s+(?:the|a|an|some|my)?\s*([a-z0-9\'\-]+(?:\s+[a-z0-9\'\-]+){{0,2}})",
                 lower_user)
             if match:
                 clean_extracted = self._clean_noun(match.group(1))
@@ -435,8 +446,7 @@ class GordonKnot:
         return False, None
 
     def export_fractal_state(self, cartographer_ref=None, title="BoneAmanita Manifest") -> str:
-        """The System Lens: Compile the distributed reality into a strict deterministic JSON for FractalOS."""
-        fractal = {
+        fractal: Dict[str, Any] = {
             "title": title,
             "startingRoomId": cartographer_ref.current_node_id if cartographer_ref else "GENESIS_POINT",
             "winCondition": {"type": "none"},
@@ -444,29 +454,12 @@ class GordonKnot:
             "items": {},
             "npcs": {}
         }
-
-        # 1. Bake the Map
         if cartographer_ref:
             for node_id, node in cartographer_ref.world_graph.items():
-                fractal["rooms"][node_id] = {
-                    "id": node_id,
-                    "name": node.name,
-                    "description": f"{node.atmosphere} {node.smell}",
-                    "exits": {} # Kept open. Let FractalOS dynamically wire exits or leave it to standard generation.
-                }
-
-        # 2. Bake the Physical Registry
+                fractal["rooms"][node_id] = {"id": node_id, "name": node.name, "description": f"{node.atmosphere} {node.smell}", "exits": {}}
         for name, item in self.registry.items():
             clean_id = name.lower().replace(" ", "_")
-            fractal["items"][clean_id] = {
-                "id": clean_id,
-                "name": item.name.lower().replace("_", " "),
-                "noun": clean_id.split("_")[-1],
-                "description": item.description,
-                "location": item.location,
-                "canTake": not item.is_container,
-                "isContainer": item.is_container,
-                "contains": [c.lower().replace(" ", "_") for c in item.contents]
-            }
-
+            fractal["items"][clean_id] = {"id": clean_id, "name": item.name.lower().replace("_", " "),
+                "noun": clean_id.split("_")[-1], "description": item.description, "location": item.location, "canTake": not item.is_container,
+                "isContainer": item.is_container, "contains": [c.lower().replace(" ", "_") for c in item.contents]}
         return json.dumps(fractal, indent=2)

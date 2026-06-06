@@ -1,12 +1,12 @@
 {
   "FORECASTS": {
     "HIGH_VOLTAGE": [
-      "The wire is hot. Write immediately, without editing.",
-      "Burn the fuel before it explodes. Speed is your friend.",
+      "The wire is hot. Write immediately, without editing, or risk destruction.",
+      "Quickly, now! Burn the fuel before it explodes.",
       "Do not seek structure. Seek impact."
     ],
     "HIGH_DRAG": [
-      "The mud is deep. Stop trying to run.",
+      "You are stuck in the mud. Stop trying to run.",
       "Focus on texture. Describe the weight of things.",
       "Slow down. The obstacle *is* the path."
     ],

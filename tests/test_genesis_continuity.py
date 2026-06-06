@@ -41,10 +41,8 @@ class GenesisContinuityTests(BoneTestCase):
         fresh_physics = {"voltage": 20.0, "narrative_drag": 1.0}
         fresh_bio = {"trauma_vector": {}}
         oro.apply_legacy(fresh_physics, fresh_bio)
-        self.assertEqual(fresh_physics["narrative_drag"], 4.0,
-                         "[FAIL] Generational narrative drag was not applied to the new physics state.")
-        self.assertEqual(fresh_physics["voltage"], 15.0,
-                         "[FAIL] Starting voltage was not penalized! The karma engine failed to enforce exhaustion.")
+        self.assertEqual(fresh_physics["narrative_drag"], 4.0, "[FAIL] Generational narrative drag was not applied to the new physics state.")
+        self.assertEqual(fresh_physics["voltage"], 15.0, "[FAIL] Starting voltage was not penalized! The karma engine failed to enforce exhaustion.")
 
     def test_apply_legacy_empty_state(self):
         oro = TheOroboros(config_ref=self.test_config)

@@ -40,20 +40,16 @@ class BoneArchitect:
 
     @staticmethod
     def _construct_bio(events, mind, lex, config_ref=None) -> BioSystem:
-        from body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, \
-            MetabolicGovernor
+        from body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, MetabolicGovernor
         from spores import ImmuneMycelium, BioLichen, BioParasite
         target_cfg = config_ref or BoneConfig
         cfg = safe_get(target_cfg, "METABOLISM", {})
         genesis_val = float(safe_get(cfg, "GENESIS_VOLTAGE", 100.0))
         mito_state = MitochondrialState(atp_pool=genesis_val)
-        bio_metrics = Biometrics(health=float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
-                                 stamina=float(safe_get(target_cfg, "MAX_STAMINA", 100.0)))
-        return BioSystem(mito=MitochondrialForge(mito_state, events, config_ref=target_cfg),
-                         endo=EndocrineSystem(config_ref=target_cfg), immune=ImmuneMycelium(),
-                         lichen=BioLichen(lexicon_ref=lex), governor=MetabolicGovernor(config_ref=target_cfg),
-                         parasite=BioParasite(mind.mem, lex, config_ref=target_cfg), events=events,
-                         biometrics=bio_metrics, config_ref=target_cfg, )
+        bio_metrics = Biometrics(health=float(safe_get(target_cfg, "MAX_HEALTH", 100.0)), stamina=float(safe_get(target_cfg, "MAX_STAMINA", 100.0)))
+        return BioSystem(mito=MitochondrialForge(mito_state, events, config_ref=target_cfg), endo=EndocrineSystem(config_ref=target_cfg), immune=ImmuneMycelium(),
+            lichen=BioLichen(lexicon_ref=lex), governor=MetabolicGovernor(config_ref=target_cfg),
+            parasite=BioParasite(mind.mem, lex, config_ref=target_cfg), events=events, biometrics=bio_metrics, config_ref=target_cfg, )
 
     @staticmethod
     def _construct_physics(events, bio, mind, lex, config_ref=None) -> PhysSystem:
@@ -62,10 +58,9 @@ class BoneArchitect:
         target_cfg = config_ref or BoneConfig
         gate = TheGatekeeper(lex, config_ref=target_cfg)
         return PhysSystem(observer=QuantumObserver(events, lex, config_ref=target_cfg), forge=TheForge(lex_ref=lex),
-                          crucible=TheCrucible(config_ref=target_cfg), theremin=TheTheremin(config_ref=target_cfg),
-                          pulse=ThePacemaker(config_ref=target_cfg),
-                          nav=TheCartographer(bio.shimmer, config_ref=target_cfg), gate=gate,
-                          tension=SurfaceTension(), dynamics=CosmicDynamics(config_ref=target_cfg), )
+            crucible=TheCrucible(config_ref=target_cfg), theremin=TheTheremin(config_ref=target_cfg),
+            pulse=ThePacemaker(config_ref=target_cfg), nav=TheCartographer(bio.shimmer, config_ref=target_cfg), gate=gate,
+            tension=SurfaceTension(), dynamics=CosmicDynamics(config_ref=target_cfg), )
 
     @staticmethod
     def incubate(events, lex, config_ref=None) -> SystemEmbryo:
@@ -86,7 +81,7 @@ class BoneArchitect:
             if hasattr(embryo.mind.mem, "autoload_last_spore"):
                 load_result = embryo.mind.mem.autoload_last_spore()
         except Exception as e:
-            msg = ux("machine_strings", "arch_spore_fail") or "[ARCHITECT]: Spore resurrection failed: {e}"
+            msg = ux("machine_strings", "arch_spore_fail") or "Spore resurrection failed: {e}"
             events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "CRIT")
             load_result = None
         results = list(load_result) if isinstance(load_result, (list, tuple)) else []
@@ -102,10 +97,10 @@ class BoneArchitect:
         if atlas and embryo.physics.nav:
             try:
                 embryo.physics.nav.load_state(atlas)
-                msg = ux("machine_strings", "arch_map_restored") or "[ARCHITECT]: World Map restored."
+                msg = ux("machine_strings", "arch_map_restored") or "World Map restored."
                 events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS")
             except Exception as e:
-                msg = ux("machine_strings", "arch_map_corrupt") or "[ARCHITECT]: Atlas corrupt, discarding map: {e}"
+                msg = ux("machine_strings", "arch_map_corrupt") or "Atlas corrupt, discarding map: {e}"
                 events.log(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}", "WARN")
         if embryo.bio.mito.state.atp_pool <= 0.0:
             cfg = safe_get(embryo.bio.config_ref, "METABOLISM", {})

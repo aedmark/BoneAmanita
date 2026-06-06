@@ -16,7 +16,7 @@ from spores.memory import SubconsciousStrata, MemoryCore
 from struts import ux, ux_format, safe_get, safe_set
 
 class MycelialNetwork:
-    def __init__(self, events: EventBus, loader: "LocalFileSporeLoader" = None, seed_file=None, config_ref=None, lexicon_ref=None, ):
+    def __init__(self, events: EventBus, loader: Optional["LocalFileSporeLoader"] = None, seed_file=None, config_ref=None, lexicon_ref=None, ):
         self.events = events
         self.cfg = config_ref or BoneConfig
         self.subconscious = SubconsciousStrata()
@@ -49,7 +49,6 @@ class MycelialNetwork:
     def _on_scar_recorded(self, payload):
         concept = payload.get("concept")
         if concept:
-            # Safely check if apply_scar exists (it doesn't in the new native ordvec adaptation)
             if hasattr(self.subconscious, "apply_scar"):
                 self.subconscious.apply_scar(concept)
             if hasattr(self.events, "publish"):
@@ -219,7 +218,6 @@ class MycelialNetwork:
             cat = self.lex.get_current_category(w) if self.lex else None
             if cat == "void": return False
             return bool(cat) or len(w) > 4
-
         return [w for w in words if is_valuable(w)]
 
     def _detect_new_wells(self, words, tick):
@@ -270,13 +268,10 @@ class MycelialNetwork:
         return bloom_msg
 
     SAFE_MUTATIONS = {"STAMINA_REGEN", "MAX_DRAG_LIMIT", "GEODESIC_STRENGTH", "SIGNAL_DRAG_MULTIPLIER", "KINETIC_GAIN",
-                      "TOXIN_WEIGHT", "FLASHPOINT_THRESHOLD", "MAX_MEMORY_CAPACITY",
-                      "PRIORITY_LEARNING_RATE", "ANVIL_TRIGGER_VOLTAGE", "MAX_REPETITION_LIMIT",
-                      "PHYSICS.WEIGHT_HEAVY", "PHYSICS.WEIGHT_KINETIC", "PHYSICS.VOLTAGE_FLOOR",
-                      "PHYSICS.VOLTAGE_MAX", "BIO.CORTEX_SENSITIVITY", "BIO.ROS_CRITICAL",
-                      "BIO.DECAY_RATE", "BIO.REWARD_MEDIUM", "METABOLISM.PHOTOSYNTHESIS_GAIN",
-                      "METABOLISM.ROS_GENERATION_FACTOR",
-                      "COUNCIL.MANIC_VOLTAGE_TRIGGER", "GRAVITY_WELL_THRESHOLD"}
+        "TOXIN_WEIGHT", "FLASHPOINT_THRESHOLD", "MAX_MEMORY_CAPACITY", "PRIORITY_LEARNING_RATE", "ANVIL_TRIGGER_VOLTAGE", "MAX_REPETITION_LIMIT",
+        "PHYSICS.WEIGHT_HEAVY", "PHYSICS.WEIGHT_KINETIC", "PHYSICS.VOLTAGE_FLOOR", "PHYSICS.VOLTAGE_MAX", "BIO.CORTEX_SENSITIVITY", "BIO.ROS_CRITICAL",
+        "BIO.DECAY_RATE", "BIO.REWARD_MEDIUM", "METABOLISM.PHOTOSYNTHESIS_GAIN", "METABOLISM.ROS_GENERATION_FACTOR",
+        "COUNCIL.MANIC_VOLTAGE_TRIGGER", "GRAVITY_WELL_THRESHOLD"}
 
     def _apply_epigenetics(self, data):
         from spores.spore_utils import _access_config_path
@@ -379,15 +374,13 @@ class MycelialNetwork:
         joy_legacy_data = None
         if top_joy:
             best_joy = top_joy[0]
-            joy_legacy_data = {"flavor": best_joy.get("dominant_flavor", "UNKNOWN"),
-                               "resonance": best_joy.get("resonance", 0), "timestamp": best_joy.get("timestamp", 0), }
+            joy_legacy_data = {"flavor": best_joy.get("dominant_flavor", "UNKNOWN"), "resonance": best_joy.get("resonance", 0), "timestamp": best_joy.get("timestamp", 0), }
         core_graph = {}
         for k, data in self.graph.items():
             valid_edges = {t: round(w, 2)
                            for t, w in data.get("edges", {}).items() if w > 1.0}
             if valid_edges or data.get("is_diamond", False):
-                core_graph[k] = {"edges": valid_edges, "last_tick": 0, "strata": data.get("strata"),
-                                 "is_diamond": data.get("is_diamond", False)}
+                core_graph[k] = {"edges": valid_edges, "last_tick": 0, "strata": data.get("strata"), "is_diamond": data.get("is_diamond", False)}
         future_seed_q = self._generate_future_seed(temp_health=health, trauma_vec=final_vector)
         seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in self.seeds if not s.bloomed]
         if not any(s["q"] == future_seed_q for s in seed_list):
@@ -411,7 +404,8 @@ class MycelialNetwork:
         seed_bal = ux("spore_strings", "future_seed_balanced")
         seed_def = ux("spore_strings", "future_seed_default")
         seeds = {"HIGH_TRAUMA": seed_high, "BALANCED": seed_bal}
-        return seeds.get(condition, seed_def)
+        result = seeds.get(condition, seed_def)
+        return result if isinstance(result, str) else "A new cycle begins."
 
     def cleanup_old_sessions(self, limbo_layer=None):
         files = self.loader.list_spores()
@@ -448,17 +442,14 @@ class MycelialNetwork:
                 return result
         return None
 
-    def retrieve_semantic(self, trigger_word: str, query_vector: list, scope: float = 0.5,
-                          resonance: float = 0.5, ) -> list:
+    def retrieve_semantic(self, trigger_word: str, query_vector: list, scope: float = 0.5, resonance: float = 0.5, ) -> list:
         results = []
         if exact_match := self.hippocampus.retrieve_exact(trigger_word):
             results.append({"source": "hippocampus", "data": exact_match})
             if scope < 0.3:
                 return results
         k_neighbors = max(1, int(scope * 10))
-        results.extend(
-            {"source": "cortex", "data": res}
+        results.extend({"source": "cortex", "data": res}
             for res in
-            self.cortex.query_neighborhood(query_vector=query_vector, k=k_neighbors, resonance_threshold=resonance)
-        )
+            self.cortex.query_neighborhood(query_vector=query_vector, k=k_neighbors, resonance_threshold=resonance))
         return results

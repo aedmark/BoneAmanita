@@ -8,27 +8,48 @@ import threading
 import time
 import traceback
 import uuid
+import logging
 from collections import deque, Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple
-
+import numpy as np
 from constants import Prisma, RealityLayer
 from physics.models import PhysicsPacket, UserInferredState, SharedDynamics
 from presets import BoneConfig
 from struts import ux, ux_format, safe_get
 
+try:
+    import ordvec
+    ORDVEC_AVAILABLE = True
+except ImportError:
+    ORDVEC_AVAILABLE = False
+
+logger = logging.getLogger("bone")
+if not logger.handlers:
+    _sh = logging.StreamHandler()
+    _sh.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler(_sh)
+    logger.setLevel(logging.INFO)
 
 class JSONEncoder(json.JSONEncoder):
-    """Leave this alone, SLASH"""
+    """Leave this alone unless you know what you're doing. S.L.A.S.H. Secured."""
     def default(self, o):
         if isinstance(o, (set, deque)):
             return list(o)
         if hasattr(o, "to_dict") and callable(o.to_dict):
             return o.to_dict()
         if hasattr(o, "__dict__"):
-            return vars(o)
-        return super().default(o)
+            safe_dict = {}
+            for k, v in vars(o).items():
+                if isinstance(v, (threading.Lock, threading.RLock, threading.Thread)):
+                    continue
+                safe_dict[k] = v
+            return safe_dict
+        try:
+            return super().default(o)
+        except TypeError:
+            return f"<Unserializable: {type(o).__name__}>"
 
 @dataclass
 class ErrorLog:
@@ -56,7 +77,7 @@ class DecisionCrystal:
 
     def __str__(self):
         e_val = self.leverage_metrics.get("E", 0.0)
-        return f"CRYSTAL [{self.decision_id}] {self.system_state} | "f"ARCHETYPE: {self.active_archetype} | E: {e_val:.2f}"
+        return f"CRYSTAL [{self.decision_id}] {self.system_state} | ARCHETYPE: {self.active_archetype} | E: {e_val:.2f}"
 
     def crystallize(self) -> str:
         data = vars(self).copy()
@@ -64,7 +85,7 @@ class DecisionCrystal:
         data["_type"] = "CRYSTAL"
         return json.dumps(data, cls=JSONEncoder)
 
-@dataclass
+@dataclass(slots=True)
 class CycleContext:
     input_text: str
     is_system_event: bool = False
@@ -114,6 +135,9 @@ class CycleContext:
                 {"phase": phase, "metric": metric, "initial": initial, "final": final, "delta": delta, "reason": reason,
                  "timestamp": time.time(), })
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {k: getattr(self, k) for k in self.__slots__ if hasattr(self, k)}
+
 @dataclass
 class MindSystem:
     mem: Any
@@ -141,6 +165,7 @@ class EventBus:
         self.subscribers = {}
         self.telemetry = telemetry_ref
         self._lock = threading.RLock()
+        self._publishing = threading.local()
 
     def subscribe(self, event_type, callback):
         with self._lock:
@@ -148,35 +173,51 @@ class EventBus:
             if callback not in subs:
                 self.subscribers[event_type] = subs + (callback,)
 
-    def unsubscribe(self, event_type, callback):
+    def unsubscribe(self, event_type: str, callback: Any):
         with self._lock:
-            subs = self.subscribers.get(event_type)
-            if subs and callback in subs:
+            subs = self.subscribers.get(event_type, ())
+            if callback in subs:
                 if new_subs := tuple(c for c in subs if c != callback):
                     self.subscribers[event_type] = new_subs
                 else:
                     del self.subscribers[event_type]
 
     def publish(self, event_type, data=None):
-        callbacks = self.subscribers.get(event_type, ())
-        for callback in callbacks:
-            try:
-                callback(data)
-            except Exception as e:
-                if event_type != "EVENT_FAILURE":
-                    cb_name = getattr(callback, "__name__", None) or str(callback)
-                    tb_str = traceback.format_exc(limit=3)
-                    self.log(f"EVENT_FAILURE: Error in '{cb_name}': {e}\n{tb_str}", source="EVENT_FAILURE", level="CRIT")
+        if getattr(self._publishing, 'active', False):
+            return
+        self._publishing.active = True
+        try:
+            callbacks = self.subscribers.get(event_type, ())
+            for callback in callbacks:
+                try:
+                    callback(data)
+                except Exception as e:
+                    if event_type != "EVENT_FAILURE":
+                        cb_name = getattr(callback, "__name__", str(callback))
+                        self.log(
+                            f"Subscriber '{cb_name}' failed: {e}",
+                            source="EVENT_FAILURE", level="CRIT"
+                        )
+        finally:
+            self._publishing.active = False
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
         event = {"timestamp": time.time(), "source": source, "level": level, "text": message, "_type": "EVENT_LOG"}
-        # deque.append is thread-safe. Paranoid lock removed.
         self.buffer.append(event)
         self.publish(source, event)
         if self.telemetry:
             self.telemetry.record_event(event)
-        if level in ("CRIT", "ERROR"):
-            print(f"{Prisma.RED}[{source}] {message}{Prisma.RST}")
+
+        # S.L.A.S.H. Dynamic routing: Send to structural logging cleanly.
+        # Note: INFO is deliberately mapped to DEBUG so it doesn't spam the standard terminal,
+        # but remains perfectly catchable by external log aggregators.
+        log_lvl = {"CRIT": logging.CRITICAL, "ERROR": logging.ERROR, "WARN": logging.WARNING}.get(level, logging.DEBUG)
+
+        if log_lvl >= logging.WARNING:
+            color = Prisma.RED if log_lvl >= logging.ERROR else Prisma.YEL
+            logger.log(log_lvl, f"{color}[{source}] {message}{Prisma.RST}")
+        else:
+            logger.log(log_lvl, f"[{source}] {message}")
 
     def flush(self) -> List[Dict]:
         with self._lock:
@@ -188,11 +229,11 @@ class LoreManifest:
     _instance = None
     _lock = threading.Lock()
 
-    def __init__(self, data_dir=None, config_ref=None):
+    def __init__(self, data_dir: Optional[str] = None, config_ref: Any = None):
         self.cfg = config_ref or BoneConfig
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.DATA_DIR = data_dir or os.path.join(base_dir, "lore")
-        self._cache = {}
+        self.DATA_DIR: str = data_dir or os.path.join(base_dir, "lore")
+        self._cache: Dict[str, Any] = {}
 
     @classmethod
     def get_instance(cls, config_ref=None):
@@ -202,7 +243,7 @@ class LoreManifest:
                     cls._instance = LoreManifest(config_ref=config_ref)
         return cls._instance
 
-    def get(self, category: str, sub_key: str = None) -> Any:
+    def get(self, category: str, sub_key: Optional[str] = None) -> Any:
         cat_key = category.lower()
         data = self._cache.get(cat_key)
         if data is None:
@@ -224,7 +265,10 @@ class LoreManifest:
         except FileNotFoundError:
             return None
         except Exception as e:
-            print(f"{Prisma.RED}[LORE]: Parse error in '{category}': {e}. Returning empty structure without modifying disk.{Prisma.RST}")
+            err_msg = f"Parse error in '{category}': {e}. Returning empty structure without modifying disk."
+            logger.error(f"{Prisma.RED}{err_msg}{Prisma.RST}")
+            if tel := TelemetryService.get_instance():
+                tel.record_event({"source": "LORE", "level": "CRIT", "text": err_msg, "_type": "EVENT_LOG"})
             return None
 
     def inject(self, category: str, data: Any):
@@ -239,25 +283,28 @@ class LoreManifest:
     def save(self, category: str):
         cat_key = category.lower()
         if cat_key not in self._cache or self._cache[cat_key] is None:
-            print(f"{Prisma.YEL}[LORE]: Refusing to save null cache for '{cat_key}'. Preserving disk state.{Prisma.RST}")
+            logger.warning(f"{Prisma.YEL}Refusing to save null cache for '{cat_key}'.{Prisma.RST}")
             return
         filepath = os.path.join(self.DATA_DIR, f"{cat_key}.json")
         try:
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(self._cache[cat_key], f, indent=2, cls=JSONEncoder)
-            print(f"{Prisma.GRY}[LORE]: Persisted '{cat_key}'.{Prisma.RST}")
+            logger.info(f"{Prisma.GRY}Persisted '{cat_key}'.{Prisma.RST}")
         except Exception as e:
-            print(f"{Prisma.RED}[LORE]: Failed to save '{cat_key}': {e}{Prisma.RST}")
+            err_msg = f"Failed to save '{cat_key}': {e}"
+            logger.critical(f"{Prisma.RED}{err_msg}{Prisma.RST}")
+            if tel := TelemetryService.get_instance():
+                tel.record_event({"source": "LORE", "level": "CRIT", "text": err_msg, "_type": "EVENT_LOG"})
 
-    def flush_cache(self, category: str = None):
+    def flush_cache(self, category: Optional[str] = None):
         with self._lock:
             if not category:
                 self._cache.clear()
-                print(f"{Prisma.CYN}[LORE]: Flushed Lore cache.{Prisma.RST}")
+                logger.info(f"{Prisma.CYN}Flushed Lore cache.{Prisma.RST}")
                 return
             cat_key = category.lower()
             if self._cache.pop(cat_key, None) is not None:
-                print(f"{Prisma.CYN}[LORE]: Flushed '{cat_key}'.{Prisma.RST}")
+                logger.info(f"{Prisma.CYN}Flushed '{cat_key}'.{Prisma.RST}")
 
 class TheObserver:
     def __init__(self, config_ref=None):
@@ -334,6 +381,19 @@ class SystemHealth:
     warnings: List[str] = field(default_factory=list)
     hints: List[str] = field(default_factory=list)
     observer: Optional["TheObserver"] = None
+    events: Optional["EventBus"] = None
+
+    @property
+    def physics_online(self) -> bool:
+        return self.components_online.get("physics", True)
+
+    @property
+    def bio_online(self) -> bool:
+        return self.components_online.get("bio", True)
+
+    @property
+    def mind_online(self) -> bool:
+        return self.components_online.get("mind", True)
 
     def __getattr__(self, item: str):
         if item.endswith("_online"):
@@ -348,6 +408,8 @@ class SystemHealth:
         self.errors.append(ErrorLog(component, msg, severity=severity))
         if self.observer:
             self.observer.log_error(component)
+        if self.events:
+            self.events.log(f"SystemHealth Failure [{component}]: {msg}", source="HEALTH", level=severity)
         if severity == "CRITICAL":
             self.components_online[component.lower()] = False
         return ux_format("core_strings", "health_offline", component=component, msg=msg)
@@ -357,6 +419,14 @@ class SystemHealth:
 
     def report_hint(self, message: str):
         self.hints.append(message)
+
+    def reboot_component(self, component: str) -> bool:
+        comp_key = component.lower()
+        if not self.components_online.get(comp_key, True):
+            self.components_online[comp_key] = True
+            self.report_hint(f"{component.upper()} subsystem explicitly rebooted and brought online.")
+            return True
+        return False
 
     def flush_feedback(self) -> Dict[str, List[str]]:
         feedback = {"warnings": list(self.warnings), "hints": list(self.hints)}
@@ -392,60 +462,197 @@ class RealityStack:
                 "raw_output": d == RealityLayer.DEEP_CX, "system_override": d == RealityLayer.DEBUG}
 
 class CyberneticGovernor:
-    def __init__(self, config_ref=None):
-        self.target_d = None
-        self.target_v = None
-        self.cfg = config_ref or BoneConfig
-        self.beth_index, self.order = 0.5, 1
+    """
+    Apex N-Dimensional Topological Manifold Governor.
+    Powered by natively bound AVX-512 Asymmetric Rank Transformations. Ordvec, Apache 2.0
+    """
+    PICARD_C = 10.0
+    BETA_SCALE = 1.2
+    BETA_STAR_UNIT = 0.5
+    PRUNE_SIZE = 50
+    PICARD_MAX_ITER = 100
+    PICARD_TOL = 1e-4
 
-    def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
-        coherence_debt = (user_exhaustion ** 1.5) * (1.0 - phi)
-        self.beth_index = max(0.0, min(1.0, (phi * 0.6) + (user_exhaustion * 0.4) + (coherence_debt * 0.3)))
-        self.order = 2 if self.beth_index >= 0.75 or (resonance_delta > 0.3 and user_exhaustion > 0.5) else 1
-        return self.beth_index
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref
+        self.target_v = None
+        self.target_d = None
+        self.beth_index, self.order = 0.5, 1
+        self.last_lam1 = 0.0
+        self.last_a = 0.0
+        self.last_b = 0.0
+        self.last_sol = 'trivial'
+        self.memory_bitmap = None
+        self.memory_rq = None
+        self.cached_nodes = []
+
+    def _sync_ordvec_indices(self, memory_core: Any):
+        if not ORDVEC_AVAILABLE or not memory_core or not hasattr(memory_core, "graph"):
+            return False
+        nodes = list(memory_core.graph.keys())
+        if self.cached_nodes == nodes and self.memory_rq is not None:
+            return True
+        from spores.spore_utils import _word_to_vector
+        matrix = []
+        valid_nodes = []
+        for node in nodes:
+            vec = _word_to_vector(node)
+            if vec is not None:
+                matrix.append(vec)
+                valid_nodes.append(node)
+        if len(matrix) < 3:
+            return False
+        fp32_matrix = np.ascontiguousarray(matrix, dtype=np.float32)
+        self.memory_bitmap = ordvec.SignBitmap(fp32_matrix)
+        self.memory_rq = ordvec.RankQuantIndex(fp32_matrix)
+        self.cached_nodes = valid_nodes
+        return True
+
+    def _solve_nd_picard(self, L: np.ndarray, a: float, beta_b: np.ndarray, c=10.0, max_iter=100, tol=1e-4) -> Tuple[np.ndarray, bool]:
+        N = L.shape[0]
+        b_mean = np.mean(beta_b)
+        phi_init = np.sqrt(max(0.01, a) / (b_mean + 1e-8)) if a > 0 else 0.1
+        Phi = np.ones(N) * phi_init
+        I = np.eye(N)
+        A = L + c * I
+        try:
+            A_inv = np.linalg.inv(A)
+        except np.linalg.LinAlgError:
+            A_inv = np.linalg.pinv(A)
+        converged = False
+        for _ in range(max_iter):
+            rhs = (c + a) * Phi - beta_b * (np.abs(Phi) * Phi)
+            Phi_new = A_inv @ rhs
+            if np.linalg.norm(Phi_new - Phi) < tol:
+                converged = True
+                Phi = Phi_new
+                break
+            Phi = Phi_new
+        return Phi, converged
 
     def get_policy_shift(self) -> str:
         if self.order == 2:
             return "CO_REGULATION"
+        if self.last_lam1 < 0 or self.last_sol == 'nontrivial':
+            return 'CO_REGULATION'
         return "EFFICIENCY"
 
-    def recalibrate(self, target_voltage: float, target_drag: float):
-        self.target_v = target_voltage
-        self.target_d = target_drag
+    def regulate(self, physics, dt, goal_vector=None, endocrine_state=None, memory_core=None, user_text="") -> Tuple[
+        float, float]:
+        if not memory_core or not user_text:
+            return self._pid_fallback(physics, dt, endocrine_state)
+        try:
+            return self._graph_regulation(physics, dt, memory_core, user_text, endocrine_state)
+        except Exception as e:
+            return self._pid_fallback(physics, dt, endocrine_state)
 
-    def regulate(self, physics: Dict[str, Any], dt: float, endocrine_state: Any = None) -> Tuple[float, float]:
-        if self.target_v is None or self.target_d is None:
-            return 0.0, 0.0
-        current_v = float(safe_get(physics, "voltage", self.target_v))
-        current_d = float(safe_get(physics, "narrative_drag", self.target_d))
-        stress_modifier = 1.0
+    def _graph_regulation(self, physics, dt, memory_core, user_text, endocrine_state) -> Tuple[float, float]:
+        from spores.spore_utils import _word_to_vector
+        import numpy as np
+
+        voltage = float(
+            physics.get('voltage', 30.0) if isinstance(physics, dict) else getattr(physics, 'voltage', 30.0))
+        drag = float(
+            physics.get('narrative_drag', 0.6) if isinstance(physics, dict) else getattr(physics, 'narrative_drag', 0.6))
+        p_cfg = getattr(self.cfg, "PHYSICS", None)
+        v_max = float(getattr(p_cfg, "VOLTAGE_MAX", 100.0))
+        v_floor = float(getattr(p_cfg, "VOLTAGE_FLOOR", 0.0))
+        v_base = v_floor + ((v_max - v_floor) * 0.3)
+        v_range = v_max - v_base
+        a_scalar = float(np.clip((voltage - v_base) / v_range, 0.0, 1.0) if v_range > 0 else 0.0)
+
+        if hasattr(self, '_sync_ordvec_indices'):
+            self._sync_ordvec_indices(memory_core)
+        u_vec = _word_to_vector(user_text)
+        if u_vec is None:
+            raise ValueError("Null vectorization payload.")
+        u_fp32 = np.ascontiguousarray(u_vec, dtype=np.float32)
+        candidate_ids = self.memory_bitmap.top_m_candidates(u_fp32, m=self.PRUNE_SIZE)
+        scores, global_ids = self.memory_rq.search_asymmetric_subset(u_fp32, candidate_ids, k=self.PRUNE_SIZE)
+        subset_nodes = [self.cached_nodes[i] for i in global_ids]
+        if len(subset_nodes) < 3:
+            raise ValueError("Insufficient subgraph density for Laplacian bounds.")
+
+        N_dim = len(subset_nodes)
+        node_indices = {str(node): i for i, node in enumerate(subset_nodes)}
+        W = np.zeros((N_dim, N_dim))
+        for i, node in enumerate(subset_nodes):
+            edges = memory_core.graph[node].get("edges", {})
+            for target, weight in edges.items():
+                if target in node_indices:
+                    W[i, node_indices[target]] = weight
+        W = np.maximum(W, W.T)
+        L_matrix = np.diag(np.sum(W, axis=1)) - W
+        b_field = np.maximum(0.01, scores)
+        beta_b = self.BETA_SCALE * self.BETA_STAR_UNIT * b_field * (1.0 + drag)
+
+        Phi, converged = self._solve_nd_picard(L_matrix, a_scalar, beta_b, c=self.PICARD_C, max_iter=self.PICARD_MAX_ITER, tol=self.PICARD_TOL)
+        if not converged:
+            raise ValueError("Picard algorithm failed to converge.")
+
+        b_mean = float(np.mean(beta_b))
+        phi_norm_sq = np.dot(Phi, Phi) + 1e-8
+        self.last_lam1 = float((Phi.T @ L_matrix @ Phi) / phi_norm_sq) - b_mean
+        self.last_b = b_mean
+        self.last_a = a_scalar
+        self.last_sol = 'nontrivial' if b_mean > 0.1 else 'trivial'
+        phi_mean = float(np.mean(np.abs(Phi)))
+        phi_std = float(np.std(np.abs(Phi)))
+        self.target_v = v_base + phi_mean * v_range
+        self.target_d = float(np.clip(phi_std * 2.0, 0.1, 1.0))
+        stress_mod = 1.0
         if endocrine_state:
-            glimmers = float(safe_get(endocrine_state, "glimmers", 0.0))
-            stress_modifier = 1.5 if glimmers >= 1 else 0.75
-        adjusted_dt = dt * 0.5 * stress_modifier
-        return (self.target_v - current_v) * adjusted_dt, (self.target_d - current_d) * adjusted_dt
+            glimmers = float(getattr(endocrine_state, 'glimmers', 0))
+            stress_mod = 1.5 if glimmers >= 1 else 0.75
+
+        adjusted_dt = dt * 0.5 * stress_mod
+        return (self.target_v - voltage) * adjusted_dt, (self.target_d - drag) * adjusted_dt
+
+    def _pid_fallback(self, physics: Dict[str, Any], dt: float, endocrine_state: Any = None) -> Tuple[float, float]:
+        active_tv = self.target_v if self.target_v is not None else 30.0
+        active_td = self.target_d if self.target_d is not None else 0.6
+        current_v = float(
+            physics.get("voltage", active_tv) if type(physics) is dict else getattr(physics, "voltage", active_tv))
+        current_d = float(
+            physics.get("narrative_drag", active_td) if type(physics) is dict else getattr(physics, "narrative_drag", active_td))
+        stress_mod = 1.0 if endocrine_state is None else (1.5 if float(getattr(endocrine_state, 'glimmers', 0)) >= 1 else 0.75)
+        adjusted_dt = dt * 0.5 * stress_mod
+        return (active_tv - current_v) * adjusted_dt, (active_td - current_d) * adjusted_dt
+
+    def recalibrate(self, target_voltage: float, target_drag: float):
+        self.target_v = float(target_voltage)
+        self.target_d = float(target_drag)
+
+    def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
+        if user_exhaustion > 0.8:
+            self.order = 2
+        else:
+            self.order = 1
+        self.beth_index = float(min(1.0, max(0.0, (phi + resonance_delta + user_exhaustion) / 3.0)))
+        return self.beth_index
 
 class ArchetypeArbiter:
     @staticmethod
-    def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict],
-                  trigram: Any = None) -> Tuple[str, str, str]:
-        mandate_types = {m.get("type", m.get("action")) for m in (council_mandates or [])}
+    def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Any = None) -> Tuple[str, str, str]:
+        mandate_types = set()
+        for m in (council_mandates or []):
+            val = m.get("type", m.get("action"))
+            if isinstance(val, list):
+                mandate_types.update(val)
+            elif val is not None:
+                mandate_types.add(val)
         if "LOCKDOWN" in mandate_types:
             return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law") or "Martial Law."
         if "FORCE_MODE" in mandate_types:
             return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic") or "[COUNCIL]: Bureaucratic Override active."
         if soul_archetype and "/" in soul_archetype:
             return soul_archetype, "SOUL", ux_format("core_strings", "arb_diamond", soul_archetype=soul_archetype, default=f"Gestalt Resonance: {soul_archetype}")
-
         manifest = LoreManifest.get_instance()
-        # [Meadows Protocol]: Ensure trigram resolves safely against loosely typed payloads
         tri_name = trigram.get("name") if isinstance(trigram, dict) else str(trigram) if trigram else None
-
         if tri_name and (meta_resonance := manifest.get("NARRATIVE_DATA", "_META_RESONANCE_")):
             for r in meta_resonance:
                 if r.get("trigram") == tri_name and r.get("lens", physics_lens) == physics_lens and r.get("soul", soul_archetype) == soul_archetype:
                     return r["result"], r.get("source", "COSMIC"), r.get("msg") or ux("core_strings", "arb_resonance") or "Cosmic Resonance."
-
         if physics_lens in (manifest.get("COUNCIL_DATA", "LOUD_LENSES") or ("THE MANIC", "THE VOID")):
             return physics_lens, "PHYSICS", ux_format("core_strings", "arb_loud", physics_lens=physics_lens, default=f"Physics Override: {physics_lens}")
         return soul_archetype, "SOUL", ux("core_strings", "arb_soul") or "The soul speaks."
@@ -470,7 +677,7 @@ class TelemetryService:
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="BoneTelemetry")
         except OSError as e:
             msg = ux("core_strings", "tel_disk_denied") or "Disk access denied for Telemetry."
-            print(f"{Prisma.OCHRE}[GRACEFUL DEGRADATION] {msg} - {e}. Telemetry offline.{Prisma.RST}")
+            logger.warning(f"{Prisma.OCHRE}[GRACEFUL DEGRADATION] {msg} - {e}. Telemetry offline.{Prisma.RST}")
             self.disabled = True
             self.current_trace_file = None
             self._executor = None
@@ -479,10 +686,10 @@ class TelemetryService:
         if self.disabled or not self.current_trace_file:
             return
         try:
-            payload = dict(event_dict, kernel_hash=self.kernel_hash)
+            payload = {**event_dict, "kernel_hash": self.kernel_hash}
             self._buffer_line(json.dumps(payload, cls=JSONEncoder))
         except (TypeError, ValueError) as e:
-            print(f"{Prisma.YEL}Oops! We dropped an un-serializable event: {e}{Prisma.RST}")
+            logger.warning(f"{Prisma.YEL}Oops! We dropped an un-serializable event: {e}{Prisma.RST}")
 
     @classmethod
     def get_instance(cls, config_ref=None):
@@ -536,19 +743,40 @@ class TelemetryService:
             with open(filepath, "a", encoding="utf-8") as f:
                 f.write("\n".join(lines) + "\n")
         except IOError as e:
-            print(f"{Prisma.RED}[TELEMETRY DECAY] Background write failed: {e}{Prisma.RST}")
+            logger.error(f"{Prisma.RED}[TELEMETRY DECAY] Background write failed: {e}{Prisma.RST}")
 
     def shutdown(self):
         self.flush_to_disk()
         if self._executor is not None:
             self._executor.shutdown(wait=True)
 
+    def _tail_file(self, filepath: str, n: int = 20) -> List[str]:
+        try:
+            with open(filepath, "rb") as f:
+                f.seek(0, 2)
+                file_size = f.tell()
+                if file_size == 0:
+                    return []
+                chunk_size = 8192
+                pos = max(0, file_size - chunk_size)
+                lines_found = []
+                while pos >= 0 and len(lines_found) < n:
+                    f.seek(pos)
+                    chunk = f.read(file_size - pos if pos == 0 else chunk_size)
+                    lines_found = chunk.decode("utf-8", errors="replace").splitlines() + lines_found
+                    if len(lines_found) >= n:
+                        break
+                    pos -= chunk_size
+                    file_size = pos + chunk_size
+                return lines_found[-n:]
+        except IOError:
+            return []
+
     def _yield_historical_records(self, file_limit=5, lines_per_file=10):
         files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), reverse=True)
         for fpath in files[:file_limit]:
             try:
-                with open(fpath, "r", encoding="utf-8") as f:
-                    tail_lines = reversed(deque(f, maxlen=lines_per_file))
+                tail_lines = reversed(self._tail_file(fpath, n=lines_per_file))
                 for line in tail_lines:
                     try:
                         yield json.loads(line)

@@ -16,7 +16,7 @@ class GriefProtocol:
     def _hold_wake(self, payload: Dict):
         node = payload.get("node", "an unnamed thought")
         self.recent_loss = node
-        msg = f"{Prisma.MAG}[MERCY] The memory of '{node.upper()}' has been cannibalized for ATP to keep the system alive. A hole is left in the matrix. Use [GRIEF] if you have a glimmer to plant a seed in its place.{Prisma.RST}"
+        msg = f"{Prisma.MAG}The memory of '{node.upper()}' has been eaten for system survival. Use command `[GRIEF]` if use a glimmer to plant a new seed.{Prisma.RST}"
         if self.events:
             self.events.log(msg, "VILLAGE")
 
@@ -35,6 +35,6 @@ class GriefProtocol:
                     self.eng.trauma_accum[k] = max(0.0, float(self.eng.trauma_accum[k]) - 2.0)
             node = self.recent_loss or "the void"
             self.recent_loss = None
-            return f"{Prisma.MAG}[MERCY] The glimmer is planted over the compost of '{node}'. Our capacity for paradox expands. (Trauma -2, β_max increased){Prisma.RST}"
+            return f"{Prisma.MAG}The glimmer is planted over the compost of '{node}'. Our capacity for paradox has expanded.{Prisma.RST}"
         else:
-            return f"{Prisma.GRY}[SYSTEM] Insufficient Glimmers to attend the wake. The hole in the lattice remains empty.{Prisma.RST}"
+            return f"{Prisma.GRY}Insufficient Glimmers. Your grief is noted, but the hole remains empty.{Prisma.RST}"

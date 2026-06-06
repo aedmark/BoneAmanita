@@ -15,6 +15,8 @@ from body.somatic import SynestheticCortex
 
 if TYPE_CHECKING:
     from body.endocrine import EndocrineSystem
+    from body.metabolism import MitochondrialForge
+    from body.regulation import MetabolicGovernor
 
 @dataclass
 class BioSystem:
@@ -35,7 +37,7 @@ class BioSystem:
             self.events.subscribe("NEURAL_STATE_SHIFT", self._on_neural_shift)
             self.events.subscribe("SUBSTRATE_FORGED", self.mito.on_substrate_forged)
             self.events.subscribe("AUTOPHAGY_EVENT", self._on_autophagy_event)
-            self.events.log("[BIO]: Vagus Nerve connected.", "SYS")
+            self.events.log("Vagus Nerve connected.", "SYS")
         narrative = LoreManifest.get_instance(config_ref=self.config_ref).get("BIO_NARRATIVE") or {}
         self.mito.narrative = narrative.get("MITO", {})
         self.endo.narrative_map = narrative.get("CIRCADIAN", {})
@@ -47,16 +49,12 @@ class BioSystem:
         self.mito.adjust_atp(payload.get("atp_gained", 15.0), "Emergency Autophagy")
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "mito": asdict(self.mito.state),
-            "endo": self.endo.get_state(),
-            "biometrics": asdict(self.biometrics) if self.biometrics else {},
-            "governor_mode": self.governor.mode,
-        }
+        return {"mito": asdict(self.mito.state), "endo": self.endo.get_state(),
+                "biometrics": asdict(self.biometrics) if self.biometrics else {}, "governor_mode": self.governor.mode, }
 
     def expend_glimmer(self) -> bool:
         if self.endo.glimmers >= 1:
-            self.endo.glimmers -= 1
+            self.endo.glimmers = self.endo.glimmers - 1
             return True
         return False
 
@@ -79,40 +77,41 @@ class BioSystem:
             s_rec = float(cfg_dict.get("REST_STAMINA_RECOVERY", 1.0))
             ser_boost = float(cfg_dict.get("REST_SEROTONIN_BOOST", 0.05))
             cor_drop = float(cfg_dict.get("REST_CORTISOL_DROP", 0.05))
+
         b.health = min(MAX_H, b.health + (h_rec * factor))
         b.stamina = min(MAX_S, b.stamina + (s_rec * factor))
-        self.endo.serotonin = min(1.0, self.endo.serotonin + (ser_boost * factor))
-        self.endo.cortisol = max(0.0, self.endo.cortisol - (cor_drop * factor))
         self.endo.serotonin = min(1.0, self.endo.serotonin + (ser_boost * factor))
         self.endo.cortisol = max(0.0, self.endo.cortisol - (cor_drop * factor))
         return []
 
     def _on_neural_shift(self, payload):
         state = payload.get("state", "NEUTRAL")
-        bio_cfg = safe_get(self.config_ref or BoneConfig, "BIO", {})
-        shifts = safe_get(bio_cfg, "NEURAL_SHIFTS", {})
+        bio_cfg = safe_get(self.config_ref or BoneConfig, "BIO") or {}
+        shifts = safe_get(bio_cfg, "NEURAL_SHIFTS") or {}
+
         if state == "PANIC":
-            cfg = shifts.get("PANIC", {"adr": 0.3, "cor": 0.2})
+            cfg = shifts.get("PANIC") or {"adr": 0.3, "cor": 0.2}
             self.endo.adrenaline = min(1.0, self.endo.adrenaline + cfg.get("adr", 0.3))
             self.endo.cortisol = min(1.0, self.endo.cortisol + cfg.get("cor", 0.2))
             if self.events and (msg := ux("vagus_nerve", "panic_spike")):
                 self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}", "BIO")
         elif state == "ZEN":
-            cfg = shifts.get("ZEN", {"cor": -0.3, "ser": 0.2})
+            cfg = shifts.get("ZEN") or {"cor": -0.3, "ser": 0.2}
             self.endo.cortisol = max(0.0, self.endo.cortisol + cfg.get("cor", -0.3))
             self.endo.serotonin = min(1.0, self.endo.serotonin + cfg.get("ser", 0.2))
             if self.events and (msg := ux("vagus_nerve", "lucid_calm")):
                 self.events.log(f"{Prisma.GRN}{msg}{Prisma.RST}", "BIO")
         elif state == "MANIC":
-            self.mito.adjust_atp(shifts.get("MANIC", {}).get("atp", -10.0), "Neural Overclock")
+            manic_cfg = shifts.get("MANIC") or {}
+            self.mito.adjust_atp(manic_cfg.get("atp", -10.0), "Neural Overclock")
 
     def apply_environmental_entropy(self, physics_packet):
-        vector = safe_get(physics_packet, "vector", {}) or {}
+        vector = safe_get(physics_packet, "vector") or {}
         ent_val = vector.get("ENT", 0.0)
         phi_val = vector.get("PHI", 0.0)
         em_field = math.hypot(ent_val, phi_val)
         target_cfg = self.config_ref or BoneConfig
-        cfg = safe_get(target_cfg, "BIO", {})
+        cfg = safe_get(target_cfg, "BIO") or {}
         base_ent_bias = float(safe_get(cfg, "ENTROPY_BASE_BIAS", 0.2))
         shield_cap = safe_get(cfg, "SHIELD_MAX_STRENGTH", 0.8)
         shield_mult = safe_get(cfg, "SHIELD_MULTIPLIER", 0.1)
@@ -132,7 +131,6 @@ class BioSystem:
         if shield_strength > 0.2 and self.events and (msg := ux("entropy_shield", "shield_active")):
             self.events.log(f"{Prisma.CYN}{msg.format(mitigation=int(shield_strength * 100))}{Prisma.RST}", "PHYS")
 
-
 class SomaticLoop:
     def __init__(self, bio_system_ref: BioSystem, memory_ref=None, lexicon_ref=None, events_ref=None, config_ref=None):
         self.bio = bio_system_ref
@@ -146,13 +144,13 @@ class SomaticLoop:
         self.narrative_data = (LoreManifest.get_instance(config_ref=self.cfg).get("BIO_NARRATIVE") or {})
         if not self.narrative_data:
             if self.events:
-                self.events.log(f"{Prisma.OCHRE}[BODY]: Warning - BIO_NARRATIVE missing.{Prisma.RST}", "SYS")
+                self.events.log(f"{Prisma.OCHRE}Warning - BIO_NARRATIVE missing.{Prisma.RST}", "SYS")
             self.narrative_data = {"symptoms": {}, "organs": {}, "GLIMMER": {}, "GOVERNOR": {}}
         self.bio.endo.narrative_data = self.narrative_data
         self.bio.governor.narrative_data = self.narrative_data
 
     def digest_cycle(self, text: str, physics_data: Any, fb_dict: Dict, health: float, stamina: float,
-                     stress_modifier: float, tick_count: int = 0, circadian_bias: Dict = None) -> Dict:
+                     stress_modifier: float, tick_count: int = 0, circadian_bias: Optional[Dict] = None) -> Dict:
         text = str(text or "")
         phys = physics_data
         logs = []
@@ -191,26 +189,26 @@ class SomaticLoop:
             return self._package_result(receipt.status, logs, chem_state=self.bio.endo.get_state())
         elif safety_status == "AUTOPHAGY":
             b.stamina = 10.0
-
-        # PID Homeostasis: Active healing when resting in the Safe Volume
         is_safe, _ = self.bio.governor.assess(phys)
         if is_safe:
             b.stamina = min(max_stamina, b.stamina + 3.0)
             self.bio.mito.adjust_atp(3.0, "PID Homeostasis")
             self.bio.mito.state.ros_buildup = max(0.0, self.bio.mito.state.ros_buildup - 2.0)
-            logs.append(f"{Prisma.GRN}[BIO]: Homeostasis active. Resting in Safe Volume.{Prisma.RST}")
+            logs.append(f"{Prisma.GRN}Homeostasis active. Resting in Safe Room.{Prisma.RST}")
 
         total_yield = 0.0
         enzyme = "NONE"
         clean_words = safe_get(phys, "clean_words", [])
+
         if self.bio.lichen:
             sugar, photo_log = self.bio.lichen.photosynthesize(phys, clean_words, tick_count)
             if sugar > 0:
-                total_yield += sugar
+                total_yield = total_yield + sugar
             if photo_log:
                 logs.append(photo_log)
+
         soma_enzyme, soma_yield, harvest_hits = self.digestive.harvest(phys, logs)
-        total_yield += soma_yield
+        total_yield = total_yield + soma_yield
         enzyme = soma_enzyme
         self.bio.mito.adjust_atp(total_yield, "Symbiotic Yield")
         self.feedback.perform_maintenance(text, phys, logs, tick_count)
@@ -219,18 +217,16 @@ class SomaticLoop:
         stamina_impact = self.synesthesia.apply_impulse(impulse)
         b.stamina = max(0.0, min(max_stamina, b.stamina + stamina_impact))
         qualia = self.synesthesia.get_current_qualia(impulse, config_ref=self.cfg)
-        fb_dict.update({
-            "PSI": float(safe_get(phys, "psi", 0.0)),
-            "CHI": float(safe_get(phys, "chi", 0.0)),
-            "VALENCE": float(safe_get(phys, "valence", 0.0)),
-            "INTEGRITY": semantic_sig.coherence,
-            "NOVELTY": semantic_sig.novelty,
-            "STATIC": float(safe_get(phys, "entropy", 0.0)),
-        })
+
+        fb_dict.update({"PSI": float(safe_get(phys, "psi", 0.0)), "CHI": float(safe_get(phys, "chi", 0.0)),
+                        "VALENCE": float(safe_get(phys, "valence", 0.0)), "INTEGRITY": semantic_sig.coherence,
+                        "NOVELTY": semantic_sig.novelty, "STATIC": float(safe_get(phys, "entropy", 0.0)), })
+
         chem_state = self.bio.endo.metabolize(feedback=fb_dict, health=b.health, stamina=b.stamina,
                 ros_level=self.bio.mito.state.ros_buildup, receipt=receipt,
                 harvest_hits=harvest_hits, stress_mod=stress_modifier, enzyme_type=enzyme,
                 circadian_bias=circadian_bias, semantic_signal=semantic_sig, )
+
         return self._package_result(receipt.status, logs, chem_state, enzyme, qualia)
 
     def _package_result(self, resp_status, logs, chem_state=None, enzyme="NONE", qualia=None):

@@ -9,7 +9,6 @@ from phases.base import SimulationPhase, _safe_dict, _deep_update
 from physics import TheGatekeeper
 from struts import ux
 
-
 class MaintenancePhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -126,7 +125,7 @@ class MachineryPhase(SimulationPhase):
             if boost > 0:
                 self.eng.bio.mito.state.membrane_potential = min(2.0, self.eng.bio.mito.state.efficiency_mod + (boost * 0.1))
         gordon = getattr(self.eng.village, "gordon", None)
-        if gordon and gordon.inventory:
+        if gordon is not None and getattr(gordon, "inventory", None):
             self._process_crafting(ctx, phys_dict, gordon)
         if t_msg := self.eng.phys.forge.transmute(phys_dict): ctx.log(t_msg)
         _, f_msg, new_item = self.eng.phys.forge.hammer_alloy(phys_dict)
@@ -144,12 +143,12 @@ class MachineryPhase(SimulationPhase):
         _deep_update(ctx.physics, phys_dict)
         return ctx
 
-    def _process_crafting(self, ctx, phys_dict, gordon):
+    def _process_crafting(self, ctx: Any, phys_dict: dict, gordon: Any):
         is_craft, craft_msg, old_item, new_item = self.eng.phys.forge.attempt_crafting(phys_dict, gordon.inventory)
         if is_craft:
             ctx.log(craft_msg)
             vec = ctx.physics.vector
-            catalyst_cat = max(vec, key=vec.get) if vec else "void"
+            catalyst_cat = max(vec, key=lambda k: float(vec[k])) if vec else "void"
             self.eng.events.publish("FORGE_SUCCESS", {"ingredient": old_item, "catalyst": catalyst_cat, "result": new_item}, )
             if old_item in gordon.inventory:
                 gordon.inventory.remove(old_item)

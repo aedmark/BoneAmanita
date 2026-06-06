@@ -54,16 +54,11 @@ class BoneConsultant:
         bun_max = float(safe_get(cfg, "VSL_BUNNY_E_MAX", 0.3))
         par_min = float(safe_get(cfg, "VSL_PARADOX_B_MIN", 0.6))
         if "LIMINAL" in self.state.active_modules or self.state.L > lim_thresh:
-            scar_template = ux("driver_strings", "vsl_scar_note") or " (Scars: {scars})"
-            scar_note = scar_template.format(
-                scars=self.liminal_mod.godel_scars) if self.liminal_mod.godel_scars > 0 else ""
-            rev_template = ux("driver_strings", "vsl_arch_revenant") or "Embrace the void.{scar_note}"
-            directives.append(rev_template.format(scar_note=scar_note))
+            scar_note = ux_format("driver_strings", "vsl_scar_note", default=" (Scars: {scars})", scars=self.liminal_mod.godel_scars) if self.liminal_mod.godel_scars > 0 else ""
+            directives.append(ux_format("driver_strings", "vsl_arch_revenant", default="Embrace the void.{scar_note}", scar_note=scar_note))
         elif "SYNTAX" in self.state.active_modules or self.state.O > syn_thresh:
-            stress_template = ux("driver_strings", "vsl_stress_note") or " (High Stress)"
-            stress_note = stress_template if self.syntax_mod.grammatical_stress > 0.5 else ""
-            bur_template = ux("driver_strings", "vsl_arch_bureau") or "Enforce structural syntax.{stress_note}"
-            directives.append(bur_template.format(stress_note=stress_note))
+            stress_note = (ux("driver_strings", "vsl_stress_note") or " (High Stress)") if self.syntax_mod.grammatical_stress > 0.5 else ""
+            directives.append(ux_format("driver_strings", "vsl_arch_bureau", default="Enforce structural syntax.{stress_note}", stress_note=stress_note))
         else:
             if self.state.E < bun_max:
                 directives.append(ux("driver_strings", "vsl_mode_bunny") or "High energy. Keep it fluid.")

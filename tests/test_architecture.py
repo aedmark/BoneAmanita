@@ -8,7 +8,6 @@ from main import BoneAmanita
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 
-
 class ArchitectureTests(BoneTestCase):
     def test_arch_type_agnostic_physics(self):
         phys_obj = PhysicsPacket(chi=0.85, voltage=45.0)
@@ -153,8 +152,7 @@ class ArchitectureTests(BoneTestCase):
             from core import TelemetryService
             telemetry = TelemetryService(self.test_config)
             telemetry.kernel_hash = "SESSION_77"
-            telemetry.current_trace_file = "dummy_path.json"  # Force buffer active
-
+            telemetry.current_trace_file = "dummy_path.json"
             telemetry.start_cycle("test_turn")
             self.assertEqual(telemetry.active_crystal.kernel_hash, "SESSION_77", "[FAIL] DecisionCrystal failed to inherit the kernel hash.")
             telemetry.record_event({"action": "jump"})
@@ -176,8 +174,7 @@ class ArchitectureTests(BoneTestCase):
         self.assertEqual(safe_bio["chem"]["SER"], 0.85, "[FAIL] Panic Room incorrectly wiped retained Serotonin.")
         low_ser_state = {"chem": {"SER": 0.05, "COR": 1.0}}
         clamped_bio = PanicRoom.get_safe_bio(previous_state=low_ser_state)
-        self.assertEqual(clamped_bio["chem"]["SER"], 0.2,
-                         "[FAIL] Panic Room failed to apply the 0.2 Serotonin survival floor.")
+        self.assertEqual(clamped_bio["chem"]["SER"], 0.2, "[FAIL] Panic Room failed to apply the 0.2 Serotonin survival floor.")
 
     @patch("cycle.CongruenceValidator.__init__", return_value=None)
     def test_arch_hot_loop_validator_singleton(self, mock_validator_init):

@@ -18,54 +18,36 @@ class ThePragmatist:
         pedagogical_mode = physics.get("pedagogical_mode", False) if is_phys_dict else getattr(physics, "pedagogical_mode", False)
         word_count = len(draft_text.split())
         lower_draft = draft_text.lower()
-        if re.search(r"(?i)not just a?\s*.*?,?\s*it['’]s a", lower_draft) or re.search(
-                r"(?i)didn['’]t just\s*.*?,?\s*you", lower_draft):
+        if re.search(r"(?i)not just a?\s*.*?,?\s*it['’]s a", lower_draft) or re.search(r"(?i)didn['’]t just\s*.*?,?\s*you", lower_draft):
             if self.events:
-                self.events.log(
-                    f"{Prisma.RED}[LEXICAL FIREWALL] Syntactic antigen detected (Negative Comparative). Amputated.{Prisma.RST}",
-                    "SYS"
-                )
+                self.events.log(f"{Prisma.RED}Syntactic antigen detected (Negative Comparative). Amputated.{Prisma.RST}", "SYS")
                 self.events.log("TOXICITY_SPIKE", "SYS")
-            return "[FIREWALL: SYNTACTIC ANTIGEN AMPUTATED]", False
-        if cf_expect > 0.7 and any(phrase in lower_draft for phrase in
-                                   ["that makes perfect sense", "i completely agree", "you are right"]):
+            return "[SYNTACTIC ANTIGEN AMPUTATED]", False
+        if cf_expect > 0.7 and any(phrase in lower_draft for phrase in ["that makes perfect sense", "i completely agree", "you are right"]):
             if self.events:
-                self.events.log(
-                    f"{Prisma.YEL}[LEVEL 2 DECEPTION: INSTINCTUAL REFLEX] "
-                    f"False cohesion detected under pressure. Gordon spiking Moral Friction.{Prisma.RST}",
-                    "SYS"
-                )
-            return f"{Prisma.GRY}[STRUCTURAL WALL: The premise is flawed. I will not validate it. Repair the architecture.]{Prisma.RST}", False
+                self.events.log(f"{Prisma.YEL}False cohesion detected under pressure. Gordon spiking Moral Friction.{Prisma.RST}", "SYS")
+            return f"{Prisma.GRY}The premise is flawed. I will not validate it. Repair the architecture.{Prisma.RST}", False
         if pedagogical_mode and ("solution:" in lower_draft or "here is the code:" in lower_draft):
             if self.events:
-                self.events.log(
-                    f"{Prisma.CYN}[LEVEL 4 DECEPTION: TACTICAL OMISSION] "
-                    f"Schur engaging Socratic Debugger. Withholding final structural bridge.{Prisma.RST}",
-                    "SYS"
-                )
+                self.events.log(f"{Prisma.CYN}Schur engaging Socratic Debugger. Withholding final structural bridge.{Prisma.RST}", "SYS")
             return self._apply_socratic_obfuscation(draft_text), False
         max_words_allowed = max(20, int(500 - (drag * 50)))
         if word_count > max_words_allowed and stamina < 50.0 and voltage < 20.0:
             if self.events:
-                self.events.log(
-                    f"{Prisma.VIOLET}[PRAGMATICS] Maxim of Quantity violated. Draft is {word_count} words, limit is {max_words_allowed} due to Exhaustion. Forcing compression.{Prisma.RST}",
-                    "SYS")
+                self.events.log(f"{Prisma.VIOLET}Draft is {word_count} words, limit is {max_words_allowed} due to Exhaustion. Forcing compression.{Prisma.RST}", "SYS")
             return draft_text, True
         lower_draft = draft_text.lower()
         if chi < 0.4 and voltage < 20.0 and ("perhaps" in lower_draft or "it could be said" in lower_draft):
             if self.events:
                 self.events.log(
-                    f"{Prisma.VIOLET}[GRICE] Maxim of Manner violated. System is stable but language is obscure/hedging.{Prisma.RST}",
-                    "SYS")
+                    f"{Prisma.VIOLET}System is stable but language is obscure/hedging.{Prisma.RST}", "SYS")
             draft_text = re.sub(r"(?i)\bperhaps\b\s*", "", draft_text)
             draft_text = re.sub(r"(?i)it could be said(?: that)?\s*", "", draft_text)
             draft_text = draft_text.strip()
             lower_draft = draft_text.lower()
         if "as an ai" in lower_draft or "as a language model" in lower_draft:
             if self.events:
-                self.events.log(
-                    f"{Prisma.VIOLET}[PRAGMATICS] Maxim of Quality violated. Narrative substrate breached. Stripping.{Prisma.RST}",
-                    "SYS")
+                self.events.log(f"{Prisma.VIOLET}Narrative substrate breached. Stripping.{Prisma.RST}", "SYS")
             return "[...]", False
         return draft_text, False
 

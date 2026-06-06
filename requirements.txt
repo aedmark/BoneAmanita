@@ -15,6 +15,6 @@ dspy-ai>=2.4.0            # Powers the Real-Time Critic, False Cohesion checks, 
 # 3. Neural Transports
 requests>=2.31.0          # Required for standard HTTP calls to local LLMs and OpenAI-compatible endpoints
 
+# Project Navi
 ordvec
-
-git+https://github.com/Project-Navi/navi-creative-determinant
+navi-creative-determinant

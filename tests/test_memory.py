@@ -6,20 +6,23 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from spores.memory import SubconsciousStrata, MemoryCore
+from tests.base import BoneTestCase
 
 try:
     import numpy as np
 except ImportError:
     np = None
 
-class TestSubconsciousStrata(unittest.TestCase):
+class TestSubconsciousStrata(BoneTestCase):
     def setUp(self):
+        super().setUp()
         self.temp_dir = tempfile.TemporaryDirectory()
         self.filepath = os.path.join(self.temp_dir.name, "subconscious.jsonl")
         self.strata = SubconsciousStrata(filename=self.filepath)
 
     def tearDown(self):
         self.temp_dir.cleanup()
+        super().tearDown()
 
     def test_initialization(self):
         self.assertEqual(len(self.strata.index), 0)
@@ -70,14 +73,14 @@ class TestSubconsciousStrata(unittest.TestCase):
         finally:
             spores.memory.np = original_np
 
-class TestMemoryCore(unittest.TestCase):
+class TestMemoryCore(BoneTestCase):
     def setUp(self):
+        super().setUp()
         self.mock_events = MagicMock()
         self.mock_subconscious = MagicMock()
         self.mock_lexicon = MagicMock()
         dummy_config = {"CORTEX": {"EPIGENETIC_PRUNE_THRESHOLD": 10}}
-        self.core = MemoryCore(events_ref=self.mock_events, subconscious_ref=self.mock_subconscious,
-                               lexicon_ref=self.mock_lexicon, config_ref=dummy_config)
+        self.core = MemoryCore(events_ref=self.mock_events, subconscious_ref=self.mock_subconscious, lexicon_ref=self.mock_lexicon, config_ref=dummy_config)
 
     def test_graph_initialization(self):
         self.assertEqual(len(self.core.graph), 0)
@@ -89,7 +92,6 @@ class TestMemoryCore(unittest.TestCase):
         self.assertEqual(mass, 5.0)
 
     def test_illuminate_resonance_and_batching(self):
-        """Verify isdisjoint lexical matching and batched I/O burial."""
         self.core.graph = {"monolith": {"edges": {"a": 5.0}, "is_diamond": False}, "whisper": {"edges": {"b": 1.0}, "is_diamond": False}}
         self.mock_lexicon.get_categories_for_word.side_effect = lambda w: {"heavy", "constructive"} if w == "monolith" else {"social"}
         results = self.core.illuminate({"STR": 0.9, "BET": 0.1}, limit=5)

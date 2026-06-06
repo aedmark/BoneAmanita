@@ -1,6 +1,6 @@
 """spores/memory.py
-
-ORDVEC math provided by Nelson Spence and Project Navi via Apache 2.0 Licensing"""
+ORDVEC math provided by Nelson Spence and Project Navi via Apache 2.0 Licensing
+"""
 
 import json
 import os
@@ -39,15 +39,14 @@ class SubconsciousStrata:
             os.makedirs(self.directory)
         self.index = {}
         self.metadata_log = []
-        self.rank_bank = None  # Native Ordinal Memory Matrix
+        self.rank_bank = None
         self._load_index()
 
-    def _rank_transform(self, vec: list) -> 'np.ndarray':
+    def _rank_transform(self, vec: list) -> Optional['np.ndarray']:
         """Convert absolute float vectors into noise-resistant ordinal ranks."""
         if np is None:
             return None
         arr = np.array(vec, dtype=np.float32)
-        # Cast to uint16: Ranks are integers. Save 50% RAM in the rank_bank.
         return np.argsort(np.argsort(arr)).astype(np.uint16)
 
     def _iter_entries(self):
@@ -172,7 +171,7 @@ class MemoryCore:
             return []
         active_dims = {k: v for k, v in vector.items() if v > 0.4}
         if not active_dims and vector:
-            top_dim = max(vector, key=vector.get)
+            top_dim = max(vector, key=vector.__getitem__)
             active_dims = {top_dim: vector[top_dim]} if vector[top_dim] > 0.1 else {"ENT": 0.2}
         active_dim_cats = {dim: self.DIMENSION_MAP.get(dim, set()) for dim in active_dims}
         scored_memories = []
@@ -183,7 +182,7 @@ class MemoryCore:
             for dim, val in active_dims.items():
                 if not node_cats.isdisjoint(active_dim_cats[dim]):  # isdisjoint is faster than intersection &
                     resonance_score += val * 1.5
-            mass = sum(data.get("edges", {}).values())
+            mass = float(sum(data.get("edges", {}).values()))
             base_mass_score = mass * 0.1
             if ent_vel_boost:
                 resonance_score = (resonance_score + base_mass_score) * (1.0 + (mass * 0.5))
@@ -213,10 +212,8 @@ class MemoryCore:
                 for j in range(i + 1, len(survivors)):
                     node_a = survivors[i]
                     node_b = survivors[j]
-                    # Strengthen the bidirectional synapse
                     self.graph[node_a].setdefault("edges", {})
                     self.graph[node_b].setdefault("edges", {})
-                    # Increase edge weight, capped at 10.0
                     current_a_to_b = self.graph[node_a]["edges"].get(node_b, 0.0)
                     self.graph[node_a]["edges"][node_b] = min(10.0, current_a_to_b + 0.5)
                     current_b_to_a = self.graph[node_b]["edges"].get(node_a, 0.0)
@@ -251,7 +248,7 @@ class MemoryCore:
     def calculate_mass(self, node):
         if node not in self.graph:
             return 0.0
-        return sum(self.graph[node]["edges"].values())
+        return float(sum(self.graph[node]["edges"].values()))
 
     def strengthen_link(self, source, target, rate, decay):
         if source not in self.graph:
@@ -263,8 +260,6 @@ class MemoryCore:
     def prune_synapses(self, scaling_factor=0.85, prune_threshold=0.5):
         pruned_count = total_decayed = 0
         dead_nodes = set()
-
-        # First Pass: Decay and mark dead nodes
         for node in list(self.graph.keys()):
             edges = self.graph[node]["edges"]
             new_edges = {}
@@ -272,21 +267,16 @@ class MemoryCore:
                 decayed_w = w * (scaling_factor + (0.14 * min(1.0, w / 10.0)))
                 if decayed_w >= prune_threshold:
                     new_edges[t] = decayed_w
-
             total_decayed += len(edges)
             pruned_count += len(edges) - len(new_edges)
             self.graph[node]["edges"] = new_edges
-
             if not new_edges and not self.graph[node].get("is_diamond", False):
                 dead_nodes.add(node)
                 del self.graph[node]
-
-        # Second Pass: O(Dead) cleanup instead of O(N^2)
         if dead_nodes:
             for data in self.graph.values():
                 for dead in dead_nodes:
                     data["edges"].pop(dead, None)
-
         return ux_format("spore_strings", "core_pruned", default="", total=total_decayed, pruned=pruned_count)
 
     def cannibalize(self, current_tick, preserve_current=None) -> Tuple[Optional[str], str]:
@@ -296,17 +286,16 @@ class MemoryCore:
         candidates = []
         for k, v in self.graph.items():
             if k not in protected and not v.get("is_diamond", False):
-                mass = sum(v.get("edges", {}).values())
+                mass = float(sum(v.get("edges", {}).values()))
                 age = max(1, current_tick - v.get("last_tick", 0))
                 score = (mass + 1.0) * (1.0 + (10.0 / age))
                 candidates.append((k, v, score))
         if not candidates:
             return None, ux("spore_strings", "core_lock") or ""
         victim, data, score = min(candidates, key=lambda x: x[2])
-        mass = sum(data.get("edges", {}).values())
+        mass = float(sum(data.get("edges", {}).values()))
         lifespan = current_tick - (data.get("strata") or {}).get("birth_tick", current_tick)
-        fossil_data = {"word": victim, "mass": round(mass, 2), "lifespan": lifespan, "edges": data["edges"],
-                       "death_tick": current_tick, }
+        fossil_data = {"word": victim, "mass": round(mass, 2), "lifespan": lifespan, "edges": data["edges"], "death_tick": current_tick, }
         self.subconscious.bury(fossil_data, config_ref=self.cfg)
         if hasattr(self, "events") and self.events:
             self.events.publish("MEMORY_BURIED", {"fossil": fossil_data})

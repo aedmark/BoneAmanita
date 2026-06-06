@@ -24,16 +24,14 @@ class SchurProtocol:
         mito = safe_get(bio, "mito", {})
         mito_state = safe_get(mito, "state", {})
         atp = float(safe_get(bio, "atp") or safe_get(mito, "atp_pool") or safe_get(mito_state, "atp_pool", 0.0))
-        if atp >= self._cfg("AUDIT_ATP_MIN", 5.0) or float(safe_get(physics, "voltage", 0.0)) >= self._cfg(
-                "AUDIT_VOLTAGE_MIN", 5.0):
+        if atp >= self._cfg("AUDIT_ATP_MIN", 5.0) or float(safe_get(physics, "voltage", 0.0)) >= self._cfg("AUDIT_VOLTAGE_MIN", 5.0):
             return 0.0
         vector = getattr(physics, "vector", {})
         counts = getattr(physics, "counts", {})
         vec_sum = sum(vector.get(k, 0.0) for k in self._VECTOR_ANCHORS)
         lex_sum = sum(counts.get(k, 0) for k in self._LEXICAL_ANCHORS) * self._cfg("AUDIT_LEXICAL_MULT", 0.5)
         if (vec_sum + lex_sum) > self._cfg("AUDIT_RESONANCE_THRESH", 0.3):
-            self.dignity_reserve = min(self._cfg("DIGNITY_MAX", 100.0),
-                                       self.dignity_reserve + self._cfg("DIGNITY_REGEN", 2.0))
+            self.dignity_reserve = min(self._cfg("DIGNITY_MAX", 100.0), self.dignity_reserve + self._cfg("DIGNITY_REGEN", 2.0))
             return 1.0
         self.dignity_reserve = max(0.0, self.dignity_reserve - self._cfg("DIGNITY_DECAY", 5.0))
         if not self.agency_lock:

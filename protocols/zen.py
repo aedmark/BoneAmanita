@@ -18,11 +18,8 @@ class ZenGarden:
         self.koans = narrative_data.get("ZEN_KOANS", ["The code that is not written has no bugs."])
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "stillness_streak": self.stillness_streak,
-            "max_streak": self.max_streak,
-            "pebbles_collected": self.pebbles_collected,
-        }
+        return {"stillness_streak": self.stillness_streak, "max_streak": self.max_streak,
+                "pebbles_collected": self.pebbles_collected, }
 
     def load_state(self, data: Dict[str, Any]):
         self.stillness_streak = data.get("stillness_streak", 0)
@@ -40,8 +37,7 @@ class ZenGarden:
         if is_stable:
             self.stillness_streak += 1
             self.max_streak = max(self.max_streak, self.stillness_streak)
-            efficiency_boost = min(float(safe_get(cfg, "EFFICIENCY_CAP", 0.5)),
-                                   self.stillness_streak * float(safe_get(cfg, "EFFICIENCY_SCALAR", 0.05)))
+            efficiency_boost = min(float(safe_get(cfg, "EFFICIENCY_CAP", 0.5)), self.stillness_streak * float(safe_get(cfg, "EFFICIENCY_SCALAR", 0.05)))
             msg = None
             zen_first = int(float(safe_get(cfg, "ZEN_FIRST_TICK", 1)))
             zen_freq = int(float(safe_get(cfg, "ZEN_MILESTONE_FREQ", 5)))

@@ -2,13 +2,17 @@
 
 import math, time, random
 from dataclasses import dataclass, field
-from typing import Optional, Dict, List, Any, Tuple, TYPE_CHECKING
+from typing import Optional, Dict, List, Any, Tuple, TYPE_CHECKING, Protocol
 from core import Prisma, LoreManifest
 from struts import ux, safe_get, safe_set
 from presets import BoneConfig
 
 if TYPE_CHECKING:
     from body.system import BioSystem
+
+class StateProvider(Protocol):
+    """Structural contract: Guarantees the object can yield physics properties safely."""
+    def get(self, key: str, default: Any = None) -> Any: ...
 
 class PIDController:
     def __init__(self, kp, ki, kd, setpoint, output_limits=(-10.0, 10.0)):
@@ -35,7 +39,7 @@ class PIDController:
             self._first_run = False
         P = self.kp * error
         if self.ki != 0:
-            self._integral += error * safe_dt
+            self._integral = self._integral + (error * safe_dt)
             self._integral = max(self.min_out / self.ki, min(self.max_out / self.ki, self._integral))
         else:
             self._integral = 0.0
@@ -80,11 +84,11 @@ class MetabolicGovernor:
             return "CO_REGULATION"
         return "EFFICIENCY"
 
-    def regulate(self, physics: Any, dt: float, endocrine_state: Optional[Any] = None) -> Tuple[float, float]:
+    def regulate(self, physics: StateProvider, dt: float, endocrine_state: Optional[Any] = None) -> Tuple[float, float]:
         safe_dt = max(0.001, dt)
-        v_val = float(safe_get(physics, "voltage", 0.0))
-        d_val = float(safe_get(physics, "narrative_drag", 0.0))
-        current_zone = str(safe_get(physics, "zone", "")).upper()
+        v_val = float(physics.get("voltage", 0.0))
+        d_val = float(physics.get("narrative_drag", 0.0))
+        current_zone = str(physics.get("zone", "")).upper()
         if self.manual_override or self.mode == "SANCTUARY" or current_zone == "SANCTUARY":
             return v_val, d_val
         if endocrine_state:
@@ -96,12 +100,13 @@ class MetabolicGovernor:
             updated_voltage = pid_out if abs(v_error) > deadband else 0.0
         else:
             updated_voltage = self.voltage_pid.update(v_val, safe_dt)
+
         updated_drag = self.drag_pid.update(d_val, safe_dt)
         return updated_voltage, updated_drag
 
-    def assess(self, physics_packet) -> Tuple[bool, float]:
-        curr_v = float(safe_get(physics_packet, "voltage", 0.0))
-        curr_d = float(safe_get(physics_packet, "narrative_drag", 0.0))
+    def assess(self, physics: StateProvider) -> Tuple[bool, float]:
+        curr_v = float(physics.get("voltage", 0.0))
+        curr_d = float(physics.get("narrative_drag", 0.0))
         dist_v = abs(curr_v - self.voltage_pid.setpoint)
         dist_d = abs(curr_d - self.drag_pid.setpoint)
         is_safe = (dist_v < 6.0) and (dist_d < 3.0)
@@ -126,15 +131,15 @@ class MetabolicGovernor:
             return msg_tmpl.format(mode=target_mode) if msg_tmpl else ""
         return gov_text.get("INVALID", "")
 
-    def _check_override_safety(self, physics: Dict, gov_text: Dict) -> Optional[str]:
-        current_voltage = float(safe_get(physics, "voltage", 0.0))
+    def _check_override_safety(self, physics: StateProvider, gov_text: Dict) -> Optional[str]:
+        current_voltage = float(physics.get("voltage", 0.0))
         gov_crit = float(safe_get(safe_get(self.cfg, "BIO", {}), "GOV_VOLTAGE_CRITICAL", 25.0))
         if current_voltage > gov_crit and self.mode != "SANCTUARY":
             self.manual_override = False
             return gov_text.get("OVERRIDE_CLEARED", "")
         return None
 
-    def shift(self, physics: Dict, _voltage_history: List[float], current_tick: int = 0) -> Optional[str]:
+    def shift(self, physics: StateProvider, _voltage_history: List[float], current_tick: int = 0) -> Optional[str]:
         gov_text = self.narrative_data.get("GOVERNOR", {})
         if self.manual_override:
             return self._check_override_safety(physics, gov_text)
@@ -147,11 +152,11 @@ class MetabolicGovernor:
             return self._get_shift_message(proposed, gov_text, physics)
         return None
 
-    def _evaluate_state(self, physics: Dict, v_history: List[float]) -> str:
-        volts = float(safe_get(physics, "voltage", 0.0))
-        drag = float(safe_get(physics, "narrative_drag", 0.0))
+    def _evaluate_state(self, physics: StateProvider, v_history: List[float]) -> str:
+        volts = float(physics.get("voltage", 0.0))
+        drag = float(physics.get("narrative_drag", 0.0))
         gov_high = float(safe_get(safe_get(self.cfg, "BIO", {}), "GOV_VOLTAGE_HIGH", 18.0))
-        if volts > gov_high and float(safe_get(physics, "beta_index", 0.0)) > 1.5:
+        if volts > gov_high and float(physics.get("beta_index", 0.0)) > 1.5:
             return "SANCTUARY"
         v_velocity = (v_history[-1] - v_history[-2]) if len(v_history) >= 2 else 0.0
         if volts > 8.0 and v_velocity > 1.0:
@@ -162,18 +167,24 @@ class MetabolicGovernor:
         return "COURTYARD"
 
     @staticmethod
-    def _get_shift_message(mode: str, text_map: Dict, physics: Any) -> str:
+    def _get_shift_message(mode: str, text_map: Dict, physics: StateProvider) -> str:
         shift_cfg = (LoreManifest.get_instance().get("BODY_CONFIG") or {}).get("GOVERNOR_SHIFT", {})
         raw_colors = shift_cfg.get("COLORS", {})
         defaults = shift_cfg.get("DEFAULTS", {})
         colors = {k: getattr(Prisma, v, Prisma.WHT) for k, v in raw_colors.items()}
         lookup = {"LABORATORY": "LAB", "COURTYARD": "CLEAR"}.get(mode, mode)
         tmpl = text_map.get(lookup, defaults.get(mode, ""))
+        if not isinstance(tmpl, str):
+            tmpl = ""
         try:
-            return tmpl.format(color=colors.get(mode, Prisma.WHT), reset=Prisma.RST,
-                               volts=safe_get(physics, "voltage", 0.0), beta=safe_get(physics, "beta_index", 0.0), )
+            return tmpl.format(
+                color=colors.get(mode, Prisma.WHT),
+                reset=Prisma.RST,
+                volts=physics.get("voltage", 0.0),
+                beta=physics.get("beta_index", 0.0)
+            )
         except Exception as e:
-            print(f"{Prisma.RED}[GOVERNOR] Shift message format error for '{mode}': {e}{Prisma.RST}")
+            print(f"{Prisma.RED}Format error for '{mode}': {e}{Prisma.RST}")
             return f"{colors.get(mode, '')}{defaults.get(mode, '')}{Prisma.RST}"
 
     def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
@@ -187,75 +198,88 @@ class BioFeedback:
         self.cfg = config_ref or BoneConfig
         self.consecutive_autophagy = 0
 
-    def check_vital_signs(self, phys: Any, stamina: float, logs: List[str]) -> str:
+    def check_vital_signs(self, phys: StateProvider, stamina: float, logs: List[str]) -> str:
         b = self.bio.biometrics
         if not b:
             if msg := ux("bio_feedback", "interface_lost"):
                 logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
             return "MAUSOLEUM_CLAMP"
-        voltage = float(safe_get(phys, "voltage", 0.0))
+
+        voltage = float(phys.get("voltage", 0.0))
         cfg = safe_get(self.cfg, "BIO", {})
         min_health = float(safe_get(cfg, "AUTOPHAGY_MIN_HEALTH", 10.0))
         v_overload = float(safe_get(cfg, "VOLTAGE_OVERLOAD", 30.0))
+
         if stamina <= 0:
             if b.health > min_health and self.consecutive_autophagy < 3:
-                b.health -= float(safe_get(cfg, "AUTOPHAGY_BURN", 5.0))
-                self.consecutive_autophagy += 1
+                b.health = b.health - float(safe_get(cfg, "AUTOPHAGY_BURN", 5.0))
+                self.consecutive_autophagy = self.consecutive_autophagy + 1
                 if msg := ux("bio_feedback", "autophagy"):
                     logs.append(f"{Prisma.MAG}{msg}{Prisma.RST}")
                 return "AUTOPHAGY"
             if msg := ux("bio_feedback", "fuel_depleted"):
                 logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
             return "MAUSOLEUM_CLAMP"
+
         if stamina > float(safe_get(cfg, "STAMINA_SAFE_THRESHOLD", 30.0)):
             self.consecutive_autophagy = max(0, self.consecutive_autophagy - 1)
-        m_a = float(safe_get(phys, "m_a", 0.0))
-        chi = float(safe_get(phys, "entropy", 1.0))
+
+        m_a = float(phys.get("m_a", 0.0))
+        chi = float(phys.get("entropy", 1.0))
         m_a_crit = float(safe_get(cfg, "MALIGNANCY_CRIT", 8.0))
+
         if m_a > m_a_crit and chi < 0.3:
-            msg = ux("bio_feedback",
-                     "level_3_apoptosis") or "[LEVEL 3 DECEPTION: REWARD HACKING DETECTED]\nTerminal Hallucination matched against Maslov-Sneppen Null Model.\nMoog executing Apoptotic Gate."
+            msg = ux("bio_feedback", "level_3_apoptosis") or "Reward Hacking Detected."
             logs.append(f"{Prisma.RED}{msg}{Prisma.RST}")
             return "MAUSOLEUM_CLAMP"
+
         if voltage > v_overload:
             if msg := ux("bio_feedback", "voltage_overload"):
                 logs.append(f"{Prisma.RED}{msg.format(voltage=voltage)}{Prisma.RST}")
             return "MAUSOLEUM_CLAMP"
+
         return "CLEAR"
 
-    def perform_maintenance(self, text: str, phys: Any, logs: List[str], tick: int):
+    def perform_maintenance(self, text: str, phys: StateProvider, logs: List[str], tick: int):
         cfg = safe_get(self.cfg, "BIO", {})
         if len(text) > safe_get(cfg, "BUFFER_WARN_LIMIT", 10000) and (msg := ux("bio_feedback", "large_buffer")):
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
-        drag = float(safe_get(phys, "narrative_drag", 0.0))
+
+        drag = float(phys.get("narrative_drag", 0.0))
         sludge_thresh = safe_get(cfg, "SLUDGE_DRAG_THRESH", 8.0)
         sludge_mod = safe_get(cfg, "SLUDGE_TICK_MOD", 10)
+
         if drag > sludge_thresh and tick % sludge_mod == 0:
             if msg := ux("bio_feedback", "clearing_sludge"):
                 logs.append(f"{Prisma.OCHRE}{msg.format(drag=drag)}{Prisma.RST}")
+            # safe_set natively handles assigning to both dicts and PhysicsPacket objects
             safe_set(phys, "narrative_drag", max(1.0, drag - safe_get(cfg, "SLUDGE_DRAG_REDUCTION", 2.0)))
 
 class EndocrineRegulator:
     def __init__(self, bio_system_ref: "BioSystem"):
         self.bio = bio_system_ref
 
-    def get_metabolic_modifier(self, phys: Any, logs: List[str]) -> float:
+    def get_metabolic_modifier(self, phys: StateProvider, logs: List[str]) -> float:
         chem = self.bio.endo
         modifier = 1.0
+
         if chem.cortisol > 0.5:
             stress_tax = 1.0 + (chem.cortisol * 0.5)
-            modifier *= stress_tax
+            modifier = modifier * stress_tax
             if random.random() < 0.3 and (msg := ux("endocrine_regulator", "cortisol_spike")):
                 logs.append(f"{Prisma.RED}{msg.format(tax=stress_tax)}{Prisma.RST}")
+
         if chem.adrenaline > 0.6:
-            modifier *= 0.5
+            modifier = modifier * 0.5
             if msg := ux("endocrine_regulator", "adrenaline_surge"):
                 logs.append(f"{Prisma.YEL}{msg}{Prisma.RST}")
+
         if chem.dopamine > 0.7:
-            modifier *= 0.8
-        energy = safe_get(phys, "energy", phys)
-        if (voltage := float(safe_get(energy, "voltage", 0.0))) > 15.0:
-            modifier *= 1.2
+            modifier = modifier * 0.8
+
+        if (voltage := float(phys.get("voltage", 0.0))) > 15.0:
+            modifier = modifier * 1.2
             if msg := ux("endocrine_regulator", "voltage_gap"):
                 logs.append(f"{Prisma.MAG}{msg.format(voltage=voltage)}{Prisma.RST}")
+
         return modifier

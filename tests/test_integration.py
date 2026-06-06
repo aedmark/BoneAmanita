@@ -11,8 +11,6 @@ class EngineConnectivityTests(BoneTestCase):
         if not getattr(self.engine, "shared_lattice", None):
             from drivers import SharedLatticeDriver
             self.engine.shared_lattice = SharedLatticeDriver()
-
-        # Hydrate missing dataclass attributes
         if not hasattr(self.engine.shared_lattice.u, "E"):
             setattr(self.engine.shared_lattice.u, "E", 0.0)
         for attr in ["phi", "resonance_delta"]:

@@ -26,11 +26,13 @@ class GeodesicEngine:
         forces = GeodesicEngine._calculate_forces(masses, counts, volume, target_cfg)
         dimensions = GeodesicEngine._calculate_dimensions(masses, forces, counts, volume)
         return GeodesicVector(tension=forces["tension"], compression=forces["compression"],
-                              coherence=forces["coherence"], abstraction=forces["abstraction"], dimensions=dimensions, )
+            coherence=forces["coherence"], abstraction=forces["abstraction"], dimensions=dimensions, )
 
+    # noinspection PyTypeChecker
     @staticmethod
     def _weigh_mass(counts: Dict[str, int]) -> Dict[str, float]:
-        return {k: float(counts.get(k, 0)) for k in GeodesicEngine._MASS_KEYS}
+        mass_dict: Dict[str, float] = {str(k): float(counts.get(k, 0)) for k in GeodesicEngine._MASS_KEYS}
+        return mass_dict
 
     @staticmethod
     def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int, config_ref=None) -> Dict[
@@ -51,12 +53,10 @@ class GeodesicEngine:
         shapley_thresh = float(safe_get(t_cfg, "SHAPLEY_MASS_THRESHOLD", 5.0))
         safe_vol = volume
         tot_kin = masses["kinetic"] + masses["explosive"]
-        raw_tension = (
-                masses["heavy"] * get_cfg("WEIGHT_HEAVY", 2.0)
+        raw_tension = (masses["heavy"] * get_cfg("WEIGHT_HEAVY", 2.0)
                 + tot_kin * get_cfg("WEIGHT_KINETIC", 1.5)
                 + masses["explosive"] * get_cfg("WEIGHT_EXPLOSIVE", 3.0)
-                + masses["constructive"] * get_cfg("WEIGHT_CONSTRUCTIVE", 1.2)
-        )
+                + masses["constructive"] * get_cfg("WEIGHT_CONSTRUCTIVE", 1.2))
         mass_scalar = min(1.0, safe_vol / (shapley_thresh * get_const("SQUELCH_LIMIT_MULT", 2.0)))
         if safe_vol < get_const("SAFE_VOL_THRESHOLD", 50):
             mass_scalar *= get_const("MIN_VOLUME_SCALAR", 0.5)
@@ -89,16 +89,12 @@ class GeodesicEngine:
         base_mass = 0.1
         clamp = GeodesicEngine._clamp
 
-        return {
-            "VEL": clamp((masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol),
+        return {"VEL": clamp((masses["kinetic"] * 2.0 - forces["compression"] + base_mass) * inv_vol),
             "STR": clamp((masses["heavy"] * 2.0 + masses["constructive"] + masses["harvest"] + base_mass) * inv_vol),
             "ENT": clamp(((counts.get("antigen", 0) * 3.0) + masses["meat"] + masses["crisis_term"]) * inv_vol),
-            "PHI": clamp((masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol),
-            "PSI": clamp(forces["abstraction"]),
-            "BET": clamp((masses["social"] * 2.0) * inv_vol),
-            "DEL": clamp((masses["play"] * 3.0) * inv_vol),
-            "E": clamp(counts.get("solvents", 0) * inv_vol),
-        }
+            "PHI": clamp((masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol), "PSI": clamp(forces["abstraction"]),
+            "BET": clamp((masses["social"] * 2.0) * inv_vol), "DEL": clamp((masses["play"] * 3.0) * inv_vol),
+            "E": clamp(counts.get("solvents", 0) * inv_vol),}
 
     @staticmethod
     def apply_path_reflection(dimensions: Dict[str, float], q_matrix: List[List[float]]) -> Dict[str, float]:

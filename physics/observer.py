@@ -4,14 +4,15 @@ import math
 import time
 from collections import Counter, deque
 from dataclasses import dataclass
-from typing import Dict, List, Any, Tuple, Optional, Deque
-from presets import BoneConfig
+from typing import Dict, List, Any, Optional, Deque
+
 from constants import Prisma
-from physics.models import PhysicsPacket, SpatialState, MaterialState, EnergyState
-from physics.maths import CreativeDeterminantEngine, _native_permutation_entropy, _native_detect_false_cohesion, \
-    _native_coincidence_length
 from physics.geodesics import GeodesicEngine
+from physics.maths import CreativeDeterminantEngine, _native_permutation_entropy, _native_detect_false_cohesion, _native_coincidence_length
+from physics.models import PhysicsPacket, SpatialState, MaterialState, EnergyState
+from presets import BoneConfig
 from struts import safe_get
+
 
 @dataclass
 class PhysicsDelta:
@@ -41,7 +42,7 @@ def apply_somatic_feedback(physics_packet: PhysicsPacket, qualia: Any, config_re
         return float(safe_get(deep_cfg, key, default))
 
     tone_effects = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TONE_EFFECTS") or {}
-    for key, delta in tone_effects.get(qualia.tone, {}).items():
+    for key, delta in (tone_effects.get(qualia.tone) or {}).items():
         apply_delta(key, delta)
     ss = qualia.somatic_sensation
     if "Gut Tightening" in ss: apply_delta("narrative_drag", get_deep_cfg("SOMATIC_GUT_DRAG", 0.7))
@@ -71,7 +72,7 @@ class QuantumObserver:
     def _on_q_matrix(self, payload):
         self.Q_n = payload.get("q_matrix")
 
-    def gaze(self, text: str, graph: Dict = None) -> Dict:
+    def gaze(self, text: str, graph: Optional[Dict] = None) -> Dict:
         if "SYSTEM_BOOT" in text:
             text = ""
         clean_words = self.lex.clean(text)
@@ -94,10 +95,8 @@ class QuantumObserver:
                 loop_quotient = max(loop_quotient, 0.95)
                 avg_voltage = max(1.0, avg_voltage * 0.5)
                 if hasattr(self.events, "log"):
-                    self.events.log(
-                        f"{Prisma.MAG}[TOPOLOGY] False Cohesion detected (Point Attractor). Spiking Loop Quotient.{Prisma.RST}",
-                        "PHYSICS",
-                    )
+                    self.events.log(f"{Prisma.MAG}False Cohesion detected. Spiking Loop Quotient.{Prisma.RST}",
+                        "PHYSICS",)
         if len(v_hist) >= 6:
             mid = len(v_hist) // 2
             c_len = _native_coincidence_length(v_hist[:mid], v_hist[mid:], tol=2.0)
@@ -108,7 +107,6 @@ class QuantumObserver:
 
         def get_deep(key: str, default: float) -> float:
             return float(safe_get(deep_cfg, key, default))
-
         if text.count("!") >= 3 or "ACCELERATE" in t_up or "FASTER" in t_up:
             avg_voltage = max(avg_voltage, get_deep("ACCELERATE_VOLTAGE", 160.0))
         if "RECURSIVE" in t_up or "LOOP" in t_up:
@@ -198,9 +196,7 @@ class QuantumObserver:
         if not graph:
             return 0.0
         word_freq = Counter(words)
-        return sum(
-            min(50.0, sum(graph[w].get("edges", {}).values())) * freq for w, freq in word_freq.items() if w in graph
-        )
+        return sum(min(50.0, float(sum(graph[w].get("edges", {}).values()))) * freq for w, freq in word_freq.items() if w in graph)
 
     @staticmethod
     def _calculate_metrics(text: str, counts: Dict[str, int], word_volume: int, config_ref=None) -> Dict[str, float]:
@@ -256,7 +252,7 @@ class QuantumObserver:
             return "COURTYARD"
         zone_map = {"PSI": "AERIE", "DEL": "AERIE", "STR": "THE_FORGE", "PHI": "THE_FORGE", "ENT": "THE_MUD",
                     "VEL": "THE_MUD"}
-        return zone_map.get(max(vector, key=vector.get), "COURTYARD")
+        return zone_map.get(max(vector, key=vector.__getitem__), "COURTYARD")
 
 class CycleStabilizer:
     def __init__(self, events_ref, governor_ref, config_ref=None):

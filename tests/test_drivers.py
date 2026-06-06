@@ -85,8 +85,8 @@ class TestDrivers(BoneTestCase):
     def test_syntax_stress_induction(self):
         syntax = SyntaxModule(config_ref=self.chaotic_config, lexicon_ref=self.mock_lexicon)
         stressful_text = "Wait, what? No; this cannot be... right?!"
-        omega = syntax.analyze(stressful_text, narrative_drag="5.0")
-        self.assertTrue(isinstance(omega, float), "[FAIL] Syntax analysis failed to coerce string drag.")
+        omega = syntax.analyze(stressful_text, narrative_drag=5.0)
+        self.assertTrue(isinstance(omega, float), "[FAIL] Syntax analysis failed to return a float.")
         self.assertGreater(syntax.grammatical_stress, 0.0, "[FAIL] Syntax module failed to induce grammatical stress.")
 
     def test_user_profile_affinity_shift(self):
@@ -96,12 +96,23 @@ class TestDrivers(BoneTestCase):
         profile.update(counts, total_words=10)
         self.assertGreater(profile.affinities["heavy"], 0.0, "[FAIL] Profile failed to apply high-alpha affinity shift.")
 
-    def test_validator_loose_context(self):
-        validator = CongruenceValidator(config_ref=self.chaotic_config)
-        loose_context = SimpleNamespace(active_lens="THE OBSERVER", clean_words=["watch", "witness", "void"])
-        resonance = validator.calculate_resonance("I watch the void.", loose_context)
-        self.assertTrue(isinstance(resonance, float), "[FAIL] Validator crashed evaluating loosely typed context.")
-        self.assertGreater(resonance, 0.0, "[FAIL] Validator failed to match vocab/keywords.")
+        def test_validator_loose_context(self):
+            validator = CongruenceValidator(config_ref=self.chaotic_config)
+            loose_context = SimpleNamespace(active_lens="THE OBSERVER", clean_words=["watch", "witness", "void"])
+            resonance = validator.calculate_resonance("I watch the void.", loose_context)
+            self.assertTrue(isinstance(resonance, float), "[FAIL] Validator crashed evaluating loosely typed context.")
+            self.assertGreater(resonance, 0.0, "[FAIL] Validator failed to match vocab/keywords.")
 
-if __name__ == "__main__":
-    unittest.main()
+        def test_validator_vocab_caching(self):
+            validator = CongruenceValidator(config_ref=self.chaotic_config)
+            loose_context = SimpleNamespace(active_lens="THE OBSERVER", clean_words=["watch", "witness", "void"])
+            self.assertNotIn("OBSERVER", validator._compiled_vocab)
+            validator.calculate_resonance("I watch the void.", loose_context)
+            self.assertIn("OBSERVER", validator._compiled_vocab, "[FAIL] Validator failed to compile and cache the vocabulary set.")
+            self.assertIn("witness", validator._compiled_vocab["OBSERVER"], "[FAIL] Compiled cache is missing keywords.")
+            validator.map["OBSERVER"] = {}
+            resonance = validator.calculate_resonance("I watch the void.", loose_context)
+            self.assertGreater(resonance, 0.8, "[FAIL] Validator recalculated from map instead of utilizing the compiled cache.")
+
+    if __name__ == "__main__":
+        unittest.main()

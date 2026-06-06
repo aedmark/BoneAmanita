@@ -1,7 +1,7 @@
 """mechanics/projector.py"""
 
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 import markdown
 from core import Prisma
 from struts import safe_get, ux
@@ -15,8 +15,7 @@ _THOUGHT_PATTERN = re.compile(r"<(?:think|thought)>(.*?)(?:</(?:think|thought)>|
 def beautify_thoughts(text: str) -> str:
     def replacer(match):
         if not (content := match.group(1).strip()): return ""
-        inner = "\n".join(
-            f"{Prisma.CYN}  │ {Prisma.GRY}{line.strip()}{Prisma.RST}" for line in content.split("\n") if line.strip())
+        inner = "\n".join(f"{Prisma.CYN}  │ {Prisma.GRY}{line.strip()}{Prisma.RST}" for line in content.split("\n") if line.strip())
         return f"{Prisma.CYN}  ┌─ {Prisma.MAG}[ COGNITIVE SUBSTRATE ]{Prisma.RST}\n{inner}\n{Prisma.CYN}  └─{Prisma.RST}"
     return _THOUGHT_PATTERN.sub(replacer, text)
 
@@ -75,7 +74,7 @@ class Projector:
                 f"{Prisma.WHT}Stress:  {Prisma.RST} {bar(stress, 100, Prisma.OCHRE)} {int(stress)}% {Prisma.GRY}({s_txt}){Prisma.RST}\n"
                 f"{Prisma.WHT}Status:  {Prisma.RST} {Prisma.MAG}{st_txt}{Prisma.RST}\n")
 
-    def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1, labels: Dict = None) -> str:
+    def render(self, physics_ctx: Dict, data_ctx: Dict, mind_ctx: tuple, reality_depth: int = 1, labels: Optional[Dict] = None) -> str:
         ui_depth = data_ctx.get("ui_depth", "IDLE")
         if ui_depth in ("WARM", "IDLE"):
             return ""
@@ -90,7 +89,7 @@ class Projector:
                        else self._render_minimal_strip(mind_ctx))
         physics_line = ""
         if labels.get("SHOW_PHYSICS", True):
-            physics_line = self._render_physics_strip(physics, data_ctx.get("vectors", {}))
+            physics_line = self._render_physics_strip(physics, data_ctx.get("vectors") or {})
         vsl_line = self._render_lattice_strip(physics, data_ctx=data_ctx, depth=ui_depth)
         lens = mind_ctx[0] if mind_ctx and mind_ctx[0] else (ux("projector", "default_lens") or "RAW")
         depth_map = ux("projector", "depth_map", {})
@@ -133,8 +132,7 @@ class Projector:
         health_bar = self._mini_bar(current_health, maximum_health, 6, Prisma.RED)
         stamina_bar = self._mini_bar(current_stamina, maximum_stamina, 6, Prisma.GRN)
         dignity_color = Prisma.VIOLET if current_dignity > dignity_medium else Prisma.GRY
-        dignity_icon = self.symbols.get("dig_high", "") if current_dignity > dignity_high else self.symbols.get(
-            "dig_low", "")
+        dignity_icon = self.symbols.get("dig_high", "") if current_dignity > dignity_high else self.symbols.get("dig_low", "")
         active_role = self._get_role(mind)
         if len(active_role) > role_truncation_length:
             active_role = f"{active_role[:role_truncation_length - 3]}..."
@@ -151,7 +149,9 @@ class Projector:
             f"{Prisma.YEL}ATP:{int(current_atp)}{Prisma.RST}"
         )
 
-    def _render_physics_strip(self, physics: Any, vectors: Dict) -> str:
+    def _render_physics_strip(self, physics: Any, vectors: Any) -> str:
+        # Cast vectors explicitly inside the method to silence the boundary check
+        safe_vectors = vectors if isinstance(vectors, dict) else {}
         volt = float(self._extract(physics, "energy", "voltage", 0.0))
         drag = float(self._extract(physics, "space", "narrative_drag", 0.0))
         dp_str = ""
@@ -165,9 +165,12 @@ class Projector:
                     parts.append(f"{lbl}:{val:.1f}")
             if parts:
                 dp_str = f" [{Prisma.GRY}{'|'.join(parts)}{Prisma.RST}]"
-        dom_vec = max(vectors, key=vectors.get) if vectors else "NEUTRAL"
-        dom_val = float(vectors.get(dom_vec, 0.0) or 0.0) if vectors else 0.0
-        return f"  {Prisma.CYN}VOLT:{Prisma.RST} {volt:04.1f}v   {Prisma.SLATE}DRAG:{Prisma.RST} {drag:04.1f}{dp_str}   {Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})"
+
+        dom_vec = max(safe_vectors, key=lambda k: float(safe_vectors[k])) if safe_vectors else "NEUTRAL"
+        dom_val = float(safe_vectors.get(dom_vec, 0.0) or 0.0) if safe_vectors else 0.0
+
+        return str(
+            f"  {Prisma.CYN}VOLT:{Prisma.RST} {volt:04.1f}v   {Prisma.SLATE}DRAG:{Prisma.RST} {drag:04.1f}{dp_str}   {Prisma.MAG}VEC:{Prisma.RST} {dom_vec} ({dom_val:.2f})")
 
     def _get_lattice_val(self, domains: List[Any], keys: List[str], default: float) -> float:
         for k in keys:
@@ -179,7 +182,7 @@ class Projector:
                         pass
         return default
 
-    def _render_lattice_strip(self, physics: Any, data_ctx: Dict = None, depth: str = "DEEP") -> str:
+    def _render_lattice_strip(self, physics: Any, data_ctx: Optional[Dict] = None, depth: str = "DEEP") -> str:
         if depth == "IDLE" or not physics:
             return ""
         data_ctx = data_ctx or {}
@@ -202,7 +205,7 @@ class Projector:
         i_trau = sym.get("trauma", "")
         i_deep = sym.get("deep", "")
         core = f"{Prisma.CYN}[{i_core} E:{exhaustion:.2f} β:{beta:.2f} | {i_volt} V:{voltage:.0f} F:{friction:.1f} | {i_hlth} H:{health:.0f} P:{stamina:.0f} | {i_trau} T:{trauma:.0f}]{Prisma.RST}"
-        deep = f"{Prisma.VIOLET} [{i_deep} Ψ:{psi:.2f} Χ:{chi:.2f} ♥:{valence:.2f}]{Prisma.RST}"
+        deep = f"{Prisma.VIOLET} [{i_deep} Ψ:{psi:.2f} Χ:{chi:.2f} HP:{valence:.2f}]{Prisma.RST}"
         shared_str = ""
         if shared := data_ctx.get("shared_dyn"):
             phi = safe_get(shared, "phi", 0.5)
@@ -235,7 +238,7 @@ class Projector:
     def render_technical(self, physics: Dict, data: Dict, mind: tuple) -> str:
         v = self._extract(physics, "energy", "voltage", 0.0)
         d = self._extract(physics, "space", "narrative_drag", 0.0)
-        vec = data.get("vectors", {})
+        vec = data.get("vectors") or {}
         vec_str = ", ".join(f"{k}:{v:.2f}" for k, v in vec.items() if v > 0.01)
         h_tech = ux("technical_projector", "header") or "[TECHNICAL PROJECTOR]"
         l_phys = ux("technical_projector", "physics_label") or "Physics"
@@ -255,7 +258,6 @@ class Projector:
         char_fill = self.symbols.get("bar_fill") or "█"
         char_empty = self.symbols.get("bar_empty") or "░"
         return f"{color}{char_fill * fill_count}{Prisma.GRY}{char_empty * empty_count}{Prisma.RST}"
-
 
 class SoulDashboard:
     def __init__(self, engine_ref):

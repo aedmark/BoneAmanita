@@ -1,7 +1,9 @@
 """physics/models.py"""
 
+import dataclasses
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Optional
+
 
 @dataclass
 class DragProfile:
@@ -122,10 +124,10 @@ class PhysicsPacket:
     }
 
     @staticmethod
-    def _safe_init(cls, data):
+    def _safe_init(cls: Any, data: Any) -> Any:
         if isinstance(data, cls): return data
         if not data: return cls()
-        valid_keys = cls.__dataclass_fields__.keys()
+        valid_keys = {f.name for f in dataclasses.fields(cls)}
         if isinstance(data, dict):
             return cls(**{k: v for k, v in data.items() if k in valid_keys and v is not None})
         return cls(**{k: getattr(data, k) for k in valid_keys if getattr(data, k, None) is not None})
@@ -160,10 +162,9 @@ class PhysicsPacket:
 
     def enforce_saturation_limit(self, c: float = 1.5, p: float = 2.0) -> float:
         """Applies the Navi PDE saturation penalty: -c * Φ^p. Caps runway voltage/drag."""
-        phi = float(self.get("voltage", 0.0)) / 100.0  # Normalize voltage as topological presence
+        phi = float(self.get("voltage", 0.0)) / 100.0
         penalty = c * (max(0.0, phi) ** p)
-        # Violently drag down runaway tension if it exceeds capacity
-        self.voltage = max(0.0, float(self.get("voltage", 0.0)) - (penalty * 15.0))
+        self.energy.voltage = max(0.0, float(self.get("voltage", 0.0)) - (penalty * 15.0))
         return penalty
 
     @classmethod
@@ -184,21 +185,21 @@ class PhysicsPacket:
                 data[k] = v
         return data
 
-    def get(self, key, default=None):
+    def get(self, key: str, default: Any = None) -> Any:
         return getattr(self, key, default)
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> Any:
         if key.startswith("_"):
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
         if key in self._ALIAS_MAP:
             domain, t_key = self._ALIAS_MAP[key][0]
             return getattr(getattr(self, domain), t_key)
         domain = self._DOMAIN_MAP.get(key)
-        if domain:
+        if isinstance(domain, str):
             return getattr(getattr(self, domain), key)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key: str, value: Any) -> None:
         if key in ("voltage", "narrative_drag", "psi", "chi", "ros", "V", "F"):
             try:
                 value = max(0.0, float(value))
@@ -220,7 +221,7 @@ class PhysicsPacket:
                 setattr(getattr(self, domain), t_key, value)
             return
         domain = self._DOMAIN_MAP.get(key)
-        if domain:
+        if isinstance(domain, str):
             setattr(getattr(self, domain), key, value)
             return
         super().__setattr__(key, value)
@@ -255,15 +256,16 @@ class UserInferredState:
     chi_u: float = 0.2
     valence_u: float = 0.0
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> Any:
         u_key = f"{key}_u"
-        if u_key in self.__dataclass_fields__:
+        if u_key in {f.name for f in dataclasses.fields(self)}:
             return getattr(self, u_key)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key: str, value: Any) -> None:
         u_key = f"{key}_u"
-        if u_key in self.__dataclass_fields__ and key not in self.__dataclass_fields__:
+        field_names = {f.name for f in dataclasses.fields(self)}
+        if u_key in field_names and key not in field_names:
             super().__setattr__(u_key, value)
         else:
             super().__setattr__(key, value)

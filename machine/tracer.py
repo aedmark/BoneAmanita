@@ -21,5 +21,5 @@ class ViralTracer:
         try:
             self.active_loops.remove(loop_path)
         except ValueError:
-            pass  # The pathway is already dissolved
+            pass
         return msg.format(path="->".join(loop_path))

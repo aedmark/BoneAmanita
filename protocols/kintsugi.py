@@ -57,10 +57,7 @@ class KintsugiProtocol:
 
     def _execute_pathway(self, pathway, trauma_accum, soul_ref):
         if not trauma_accum:
-            return {
-                "success": False,
-                "msg": ux("protocol_strings", "kintsugi_no_fissures"),
-            }
+            return {"success": False, "msg": ux("protocol_strings", "kintsugi_no_fissures"),}
         target = max(trauma_accum, key=lambda k: float(trauma_accum[k]))
         severity = float(trauma_accum[target])
         healed_log = []
@@ -88,7 +85,7 @@ class KintsugiProtocol:
             if log_scar := ux_format("protocol_strings", "kintsugi_log_scar", target=target):
                 healed_log.append(log_scar)
         trauma_accum[target] = max(0.0, severity - reduction)
-        result = {"success": True, "msg": msg, "healed": healed_log}
+        result: Dict[str, Any] = {"success": True, "msg": msg, "healed": healed_log}
         if atp_gain > 0:
             result["atp_gain"] = atp_gain
         return result

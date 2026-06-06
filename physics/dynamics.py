@@ -33,7 +33,7 @@ class ChromaScope:
         if not vector or not any(vector.values()):
             return f"{Prisma.GRY}{text}{Prisma.RST}"
         t_map = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
-        primary = max(vector, key=vector.get)
+        primary = max(vector, key=lambda k: float(vector[k]))
         color = getattr(Prisma, t_map[primary][3], Prisma.GRY) if primary in t_map else Prisma.GRY
         return f"{color}{text}{Prisma.RST}"
 

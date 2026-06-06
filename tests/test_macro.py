@@ -6,9 +6,16 @@ from unittest.mock import patch
 
 from main import BoneAmanita
 from presets import BoneConfig
+from tests.base import BoneTestCase
 
-class MacroLifecycleTests(unittest.TestCase):
+class MacroLifecycleTests(BoneTestCase):
     def setUp(self):
+        super().setUp()
+
+        # [SLASH] We must temporarily un-mock ChronosKeeper for this specific test suite
+        # so we can test actual file writing, overriding the global mock from BoneTestCase.
+        self.chronos_patcher.stop()
+
         self.config = {
             "boot_mode": "ADVENTURE",
             "config": BoneConfig,
@@ -19,6 +26,7 @@ class MacroLifecycleTests(unittest.TestCase):
         self.test_lore_dir = "tests/temp_lore"
         os.makedirs(self.test_save_dir, exist_ok=True)
         os.makedirs(self.test_lore_dir, exist_ok=True)
+
         if hasattr(self.engine, "akashic"):
             self.engine.akashic.save_dir = self.test_save_dir
             self.engine.akashic.data_dir = self.test_lore_dir
@@ -31,6 +39,11 @@ class MacroLifecycleTests(unittest.TestCase):
                 for f in os.listdir(d):
                     os.remove(os.path.join(d, f))
                 os.rmdir(d)
+
+        # [SLASH] Restart the mock before calling super() so the base class
+        # tearDown can cleanly stop it without throwing a RuntimeError.
+        self.chronos_patcher.start()
+        super().tearDown()
 
     def test_chronos_graceful_shutdown_and_hydration(self):
         self.engine.village.bureau.stamp_count = 99
@@ -64,14 +77,11 @@ class MacroLifecycleTests(unittest.TestCase):
 
     def test_autophagy_structural_survival(self):
         mem_core = self.engine.embryo.mind.mem.memory_core
-        # Isolate the environment so Genesis nodes don't intercept the autophagy trigger
         mem_core.graph.clear()
-
         mem_core.graph["LoadBearingWall"] = {"last_tick": 5, "edges": {"a": 10, "b": 10, "c": 10, "d": 20}}
         mem_core.graph["useless_typo"] = {"last_tick": 104, "edges": {}}
         target, _ = mem_core.cannibalize(current_tick=105)
-        self.assertEqual(target, "useless_typo",
-                         "FATAL: Autophagy ate the load-bearing wall instead of the useless recency node!")
+        self.assertEqual(target, "useless_typo", "FATAL: Autophagy ate the load-bearing wall instead of the useless recency node!")
 
 if __name__ == "__main__":
     unittest.main()

@@ -104,7 +104,8 @@ class ParadoxSeed:
         if self.bloomed:
             return False
         if hits := sum(word_counts[t] for t in self.triggers if t in word_counts):
-            self.maturity += hits * _cfg_val(config_ref, "VILLAGE", "SEED_MATURITY_STEP", 0.2)
+            self.maturity = float(self.maturity) + (
+                        float(hits) * _cfg_val(config_ref, "VILLAGE", "SEED_MATURITY_STEP", 0.2))
         return self.maturity >= _cfg_val(config_ref, "VILLAGE", "SEED_MATURITY_MAX", 5.0)
 
     def bloom(self) -> str:
@@ -162,7 +163,7 @@ class TheCartographer:
             if msg := ux("village_strings", "carto_env_static"):
                 logs.append(f"{Prisma.YEL}{msg.format(c_static=cv)}{Prisma.RST}")
         ce = _cfg_val(self.cfg, "VILLAGE", "CARTO_ENTROPY_STEP", 0.1)
-        node.entropy_buildup += ce
+        node.entropy_buildup = float(node.entropy_buildup) + ce
         if node.entropy_buildup > _cfg_val(self.cfg, "VILLAGE", "CARTO_ENTROPY_CAP", 5.0):
             if packet.vector is not None:
                 packet.vector["ENT"] = min(1.0, packet.vector.get("ENT", 0.0) + node.entropy_buildup)
@@ -291,7 +292,7 @@ class TownHall:
         if self.navigator and (node := self.navigator.world_graph.get(self.navigator.current_node_id)):
             loc_name = node.name
         if latency > _cfg_val(self.cfg, "VILLAGE", "TOWN_LATENCY_WARN", 3.0):
-            status, advice = "HIGH_LATENCY", ux("village_strings", "town_lag") or "The connection is fraying. Catch your breath."
+            status, advice = "HIGH_LATENCY", ux("village_strings", "town_lag") or "Catch your breath."
         elif packet.voltage > _cfg_val(self.cfg, "PHYSICS", "VOLTAGE_HIGH", 60.0):
             status, advice = "HIGH_VOLTAGE", random.choice(forecasts.get("HIGH_VOLTAGE", ["Manic energy."]))
         elif packet.narrative_drag > _cfg_val(self.cfg, "PHYSICS", "DRAG_HEAVY", 5.0):
@@ -345,8 +346,8 @@ class TownHall:
                 return "HIGH_TRAUMA", ux_format("village_strings", "town_trauma", trauma=max_t_key, default="Trauma critical: {trauma}")
         meta_data = session_data.get("meta") or {}
         if float(safe_get(meta_data, "final_health", 50.0)) < _cfg_val(config_ref, "VILLAGE", "TOWN_HEALTH_CRIT", 30.0):
-            return "HIGH_TRAUMA", ux("village_strings", "town_critical") or "The lattice is fractured. We are holding it together with sheer will."
-        return "BALANCED", ux("village_strings", "town_nominal") or "The system hums quietly. All is well."
+            return "HIGH_TRAUMA", ux("village_strings", "town_critical") or "We are holding it together with duct tape and prayers."
+        return "BALANCED", ux("village_strings", "town_nominal") or "All is well."
 
 class DeathGen:
     _FALLBACK_PROTOCOLS = {
@@ -361,22 +362,27 @@ class DeathGen:
             LoreManifest.get_instance().inject("DEATH", cls._FALLBACK_PROTOCOLS)
 
     @staticmethod
-    def eulogy(packet: PhysicsPacket, mito_state: Any, trauma_vector: Dict = None, config_ref=None, ) -> Tuple[
+    def eulogy(packet: PhysicsPacket, mito_state: Any, trauma_vector: Optional[Dict] = None, config_ref=None, ) -> \
+    Tuple[
         str, str]:
         death_data = LoreManifest.get_instance().get("DEATH")
         if not isinstance(death_data, dict):
             death_data = DeathGen._FALLBACK_PROTOCOLS
         cause = DeathGen._determine_cause(packet, mito_state, trauma_vector, config_ref)
         verdict_type = DeathGen._determine_verdict_type(packet, cause, config_ref)
-        causes_dict = death_data.get("CAUSES") or {}
-        verdicts_dict = death_data.get("VERDICTS") or {}
-        prefix = random.choice(death_data.get("PREFIXES") or ["Alas."])
+        c_data = death_data.get("CAUSES")
+        causes_dict: dict = c_data if isinstance(c_data, dict) else {}
+        v_data = death_data.get("VERDICTS")
+        verdicts_dict: dict = v_data if isinstance(v_data, dict) else {}
+        p_data = death_data.get("PREFIXES")
+        prefix = random.choice(list(p_data) if isinstance(p_data, (list, tuple)) else ["Alas."])
         causes = causes_dict.get(cause) or causes_dict.get("DEFAULT") or ["Error"]
         verdicts = verdicts_dict.get(verdict_type) or verdicts_dict.get("DEFAULT") or ["Done."]
         return f"{prefix} CAUSE: {random.choice(causes)}. {random.choice(verdicts)}", cause
 
     @staticmethod
-    def _determine_cause(p: PhysicsPacket, mito_state: Any, trauma_vector: Dict = None, config_ref=None) -> str:
+    def _determine_cause(p: PhysicsPacket, mito_state: Any, trauma_vector: Optional[Dict] = None,
+                         config_ref=None) -> str:
         if trauma_vector and sum(float(v) for v in trauma_vector.values()) > _cfg_val(config_ref, "VILLAGE", "DEATH_TRAUMA_CRIT", 50.0):
             return "TRAUMA"
         if float(safe_get(mito_state, "atp_pool", safe_get(mito_state, "atp", 0.0))) <= _cfg_val(config_ref, "BIO", "ATP_STARVATION", 0.0):

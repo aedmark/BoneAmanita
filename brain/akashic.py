@@ -41,11 +41,11 @@ class TheAkashicRecord:
         event_bus.subscribe("TRAUMA_EVENT", self._on_trauma_event)
         event_bus.subscribe("GLIMMER_FORMED", self._on_glimmer_event)
         if msg := ux("akashic_strings", "listening"):
-            self.events.log(f"{Prisma.GRY}{msg}{Prisma.RST}")
+            if self.events: self.events.log(f"{Prisma.GRY}{msg}{Prisma.RST}")
 
     def _on_system_starving(self, _payload):
         yield_val, msg = self.trigger_autophagy()
-        if msg:
+        if msg and self.events:
             self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
     def _on_trauma_event(self, payload):
@@ -67,9 +67,9 @@ class TheAkashicRecord:
             target = None
             lowest_b = float('inf')
             for node_key, node_data in active_strata.index.items():
-                kappa = float(safe_get(node_data, "mass", safe_get(node_data, "kappa", 1.0)))
-                gamma = float(safe_get(node_data, "resonance", safe_get(node_data, "gamma", 0.5)))
-                mu = float(safe_get(node_data, "contradiction", safe_get(node_data, "beta", 0.5)))
+                kappa = float(node_data.get("mass", node_data.get("kappa", 1.0)))
+                gamma = float(node_data.get("resonance", node_data.get("gamma", 0.5)))
+                mu = float(node_data.get("contradiction", node_data.get("beta", 0.5)))
                 b = (kappa * gamma) - mu
                 if b < lowest_b:
                     lowest_b = b
@@ -82,7 +82,7 @@ class TheAkashicRecord:
             if bio_cfg:
                 current_tax = float(safe_get(bio_cfg, "DEPTH_TAX_MULT", 1.0))
                 safe_set(bio_cfg, "DEPTH_TAX_MULT", max(0.5, current_tax - 0.02))
-            msg_template = ux("akashic_strings", "autophagy_strata") or "Autophagy complete. Composted '{target}' (Mass: {mass:.1f}). Recovered {yield_val:.1f} ATP."
+            msg_template = ux("akashic_strings", "autophagy_strata") or "Composted '{target}' and recovered {yield_val:.1f} ATP."
             msg = msg_template.format(target=target, mass=mass, yield_val=yield_val)
         elif self.discovered_words:
             target = next(iter(self.discovered_words))
@@ -111,8 +111,8 @@ class TheAkashicRecord:
         coords = {}
         energy_layer = safe_get(p, "energy") or {}
         for short_key, (full_key, default_val) in axis_map.items():
-            val = safe_get(p, short_key)
-            coords[short_key] = val if val is not None else safe_get(energy_layer, full_key, cfg_defaults.get(short_key, default_val))
+            val = p.get(short_key, p.get(full_key)) if isinstance(p, dict) else getattr(p, short_key, getattr(p, full_key, None))
+            coords[short_key] = val if val is not None else energy_layer.get(full_key, cfg_defaults.get(short_key, default_val))
         self.scar_map.append({"concept": concept, "coordinates": coords.copy(), "gilded": True})
         max_scars = getattr(self.cfg_akashic, "MAX_SCARS", 50)
         if len(self.scar_map) > max_scars:
@@ -145,12 +145,12 @@ class TheAkashicRecord:
                 self.events.log(f"{Prisma.RED}Failed to mutate system_prompts ({category_key}): {e}{Prisma.RST}", "SYS")
 
     def record_glimmer(self, concept: str, paradigm: str):
-        axiom = f"STRUCTURAL SUCCESS [{concept.upper()}]: The system achieved deep resonance using this paradigm: '{paradigm}'. Prioritize this geometry in future calculations."
+        axiom = f"STRUCTURAL SUCCESS [{concept.upper()}]: The system achieved deep resonance using this paradigm: '{paradigm}'. Remember this."
         max_epi = int(safe_get(self.cfg_akashic, "MAX_EPIGENETIC_BOONS", 10))
-        self._mutate_epigenetics("EPIGENETIC_BOONS", axiom, max_epi, f"🧬 [EPIGENETICS] Boon '{concept}' compiled into flow.", Prisma.MAG)
+        self._mutate_epigenetics("EPIGENETIC_BOONS", axiom, max_epi, f"Epigenetic Boon, '{concept},' compiled into flow.", Prisma.MAG)
 
     def _mutate_system_prompts(self, concept: str, coords: dict):
-        axiom = f"SCAR TISSUE [{concept.upper()}]: The system previously collapsed here (Tension: {coords.get('beta', 0.0)}). You must structurally avoid repeating the failure that caused this."
+        axiom = f"SCAR TISSUE [{concept.upper()}]: The system previously collapsed here (Tension: {coords.get('beta', 0.0)}). Remember this."
         max_epi = int(safe_get(self.cfg_akashic, "MAX_EPIGENETIC_SCARS", 10))
         self._mutate_epigenetics("EPIGENETIC_SCARS", axiom, max_epi, f"[EPIGENETICS] Scar '{concept}' compiled into flow.", Prisma.VIOLET)
 
@@ -174,7 +174,7 @@ class TheAkashicRecord:
     def _get_dominant_force(vector_dict: Dict, default: str) -> str:
         safe_vector = vector_dict if isinstance(vector_dict, dict) else {}
         clean_vector = {k: v for k, v in safe_vector.items() if v is not None}
-        return max(clean_vector, key=clean_vector.get) if clean_vector else default
+        return max(clean_vector.keys(), key=lambda k: clean_vector[k]) if clean_vector else default
 
     @staticmethod
     def _extract_dominant_trigram(physics: Any) -> str:
@@ -198,20 +198,28 @@ class TheAkashicRecord:
             active_lens = payload.get("lens", "OBSERVER")
             resonances = (self.lore.get("NARRATIVE_DATA") or {}).get("_META_RESONANCE_", [])
             valid_resonance = next((r for r in resonances if
-                r.get("trigram") == trigram and (r.get("lens") or r.get("soul")) == active_lens), None)
-            if valid_resonance and self.events:
-                self.events.publish("RESONANCE_ACHIEVED", {"result": valid_resonance["result"], "msg": valid_resonance["msg"]})
+                isinstance(r, dict) and r.get("trigram") == trigram and (r.get("lens") or r.get("soul")) == active_lens), None)
+            if isinstance(valid_resonance, dict) and self.events:
+                # Use .get() to completely satisfy PyRight's type checker
+                self.events.publish("RESONANCE_ACHIEVED", {
+                    "result": valid_resonance.get("result", ""),
+                    "msg": valid_resonance.get("msg", "")
+                })
 
     @staticmethod
     def calculate_manifold_shift(theta: str, e: Dict[str, float]) -> Dict[str, float]:
         theta_upper = theta.upper()
         c = (LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "MANIFOLD_SHIFTS") or {})
-        bias = c.get("BIAS_LENSES", {}).get(theta_upper, 0.0)
-        scalar = c.get("SCALAR_LENSES", {}).get(theta_upper, 1.0)
-        for key, params in c.get("VECTOR_THRESHOLDS", {}).items():
-            if e.get(key, 0.5) > params.get("threshold", 0.7):
-                scalar *= params.get("scalar_mod", 1.0)
-                bias += params.get("bias_mod", 0.0)
+        bias_lenses = c.get("BIAS_LENSES") or {}
+        scalar_lenses = c.get("SCALAR_LENSES") or {}
+        vector_thresholds = c.get("VECTOR_THRESHOLDS") or {}
+        bias = float(bias_lenses.get(theta_upper, 0.0))
+        scalar = float(scalar_lenses.get(theta_upper, 1.0))
+        for key, params in vector_thresholds.items():
+            safe_params = params or {}
+            if e.get(key, 0.5) > safe_params.get("threshold", 0.7):
+                scalar = scalar * float(safe_params.get("scalar_mod", 1.0))
+                bias = bias + float(safe_params.get("bias_mod", 0.0))
         return {"voltage_bias": bias, "drag_scalar": scalar}
 
     def _on_ghost_signal(self, payload):
@@ -230,7 +238,7 @@ class TheAkashicRecord:
         for force, threshold_data in hazard_thresholds.items():
             if vector.get(force, 0) > threshold_data.get("threshold", 0.5):
                 hazards.append(threshold_data.get("hazard_name"))
-        desc_template = (ux("akashic_strings", "artifact_desc") or "A coalesced artifact of {dominant_force}.")
+        desc_template = (ux("akashic_strings", "artifact_desc") or "An artifact of {dominant_force}.")
         cfg = safe_get(self.cfg, "AKASHIC", {})
         artifact_val = float(safe_get(cfg, "ARTIFACT_VALUE", 50.0))
         new_data = {"name": new_name, "description": desc_template.format(dominant_force=dominant_force),
@@ -287,12 +295,20 @@ class TheAkashicRecord:
                     data = json.load(f)
             except Exception as e:
                 msg = ux("akashic_strings", "state_load_failed")
-                self.events.log(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
+                if self.events: self.events.log(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
         if data:
-            self.lens_cooccurrence = {tuple(k.split("|", 1)): v for k, v in data.get("lens_cooccurrence", {}).items() if
-                                      "|" in k}
-            self.recipe_candidates = {tuple(k.split("|", 1)): v for k, v in data.get("recipe_candidates", {}).items() if
-                                      "|" in k}
+            self.lens_cooccurrence.clear()
+            data_lens = data.get("lens_cooccurrence") or {}
+            for k, v in data_lens.items():
+                if isinstance(k, str) and "|" in k:
+                    p1, p2 = k.split("|", 1)
+                    self.lens_cooccurrence[(p1, p2)] = int(v)
+            self.recipe_candidates.clear()
+            data_recipes = data.get("recipe_candidates") or {}
+            for k, v in data_recipes.items():
+                if isinstance(k, str) and "|" in k and isinstance(v, dict):
+                    p1, p2 = k.split("|", 1)
+                    self.recipe_candidates[(p1, p2)] = {str(vk): int(vv) for vk, vv in v.items()}
             self.ingredient_affinity = data.get("ingredient_affinity", {})
             self.shadow_stock = data.get("shadow_stock", [])
             self.dream_archive = data.get("dream_archive", [])
@@ -301,6 +317,7 @@ class TheAkashicRecord:
             if recipes := gordon_data.get("RECIPES", []):
                 self.known_recipes.update((r.get("ingredient"), r.get("catalyst_category")) for r in recipes if
                                           r.get("ingredient") and r.get("catalyst_category"))
+
         scars_path = os.path.join(self.data_dir, "akashic_scars.json")
         boons_path = os.path.join(self.data_dir, "akashic_boons.json")
         prompts = self.lore.get("SYSTEM_PROMPTS") or {}
@@ -314,7 +331,7 @@ class TheAkashicRecord:
                         needs_migration = True
                     os.remove(path)
                 except Exception as e:
-                    self.events.log(f"{Prisma.RED}[AKASHIC] Failed to migrate legacy {key}: {e}.{Prisma.RST}")
+                    if self.events: self.events.log(f"{Prisma.RED}Failed to migrate legacy {key}: {e}.{Prisma.RST}")
         if needs_migration:
             self.lore.inject("SYSTEM_PROMPTS", prompts)
         words_path = os.path.join(self.data_dir, "akashic_discovered_words.json")
@@ -329,17 +346,14 @@ class TheAkashicRecord:
                             target_list.append(word)
                     self.lore.inject("LEXICON", lexicon_data)
             except Exception as e:
-                self.events.log(f"{Prisma.RED}[AKASHIC] Failed to load discovered words: {e}. Keeping current state.{Prisma.RST}")
+                if self.events: self.events.log(f"{Prisma.RED}Failed to load discovered words: {e}. Keeping current state.{Prisma.RST}")
 
     def archive_dream(self, dream_text: str):
         """Archives a dream and immediately persists it to disk."""
         if dream_text not in self.dream_archive:
             self.dream_archive.append(dream_text)
-
-            # Keep a deep archive of the last 50 dreams
             if len(self.dream_archive) > 50:
                 self.dream_archive.pop(0)
-
             self._save_user_state()
 
     def replay_dreams(self) -> Optional[str]:
@@ -405,8 +419,8 @@ class TheAkashicRecord:
         self.lore.save("LENSES")
         self.discovered_words[new_name] = "LENS"
         msg = ux("akashic_strings", "paradigm_crystallized")
-        self.events.log(f"{Prisma.MAG}{msg.format(new_name=new_name)}{Prisma.RST}")
         if self.events:
+            self.events.log(f"{Prisma.MAG}{msg.format(new_name=new_name)}{Prisma.RST}")
             self.events.publish("SOUL_MUTATION", {"new_archetype": new_name})
 
     def _crystallize_recipe(self, ingredient, catalyst, result_item):
@@ -425,7 +439,7 @@ class TheAkashicRecord:
         self.lore.inject("GORDON", gordon_data)
         self.lore.save("GORDON")
         msg = ux("akashic_strings", "recipe_recorded")
-        self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}")
+        if self.events: self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}")
 
     def propose_new_category(self, word_list, category_name):
         lexicon_data = self.lore.get("LEXICON") or {}
@@ -436,8 +450,9 @@ class TheAkashicRecord:
             self.discovered_words.update((w, category_name) for w in new_words)
             self.lore.inject("LEXICON", lexicon_data)
             msg_template = ux("akashic_strings", "lexicon_learned") or "Learned {word} in {category}."
-            for w in new_words:
-                self.events.log(msg_template.format(word=w, category=category_name))
+            if self.events:
+                for w in new_words:
+                    self.events.log(msg_template.format(word=w, category=category_name))
             self.lore.save("LEXICON")
             if self.events:
                 for w in new_words:
@@ -448,14 +463,10 @@ class TheAkashicRecord:
         if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
             self.shadow_stock.pop(0)
         msg = ux("akashic_strings", "ghost_archived")
-        self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
+        if self.events: self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
 
     def measure_cognitive_density(self, start_concept: str) -> float:
-        """
-        [navi-fractal PROTOCOL]: BFS Mass-Radius Subconscious Scaling
-        Measures the geometric weight of a concept. If a thought has a high fractal dimension,
-        it is deeply tangled in trauma/glimmers and requires high cognitive load to process.
-        """
+        """ [navi-fractal PROTOCOL]: BFS Mass-Radius Subconscious Scaling """
         adj = {}
         for mem in self.scar_map + self.shadow_stock:
             concept = mem.get("concept", "Unknown")
@@ -464,15 +475,11 @@ class TheAkashicRecord:
             for link in links:
                 if link not in adj: adj[link] = set()
                 adj[link].add(concept)
-
         if start_concept not in adj or not adj[start_concept]:
-            return 1.0  # Point mass
-
-        # Standard BFS for Mass(Radius)
+            return 1.0
         visited = {start_concept}
         queue = [(start_concept, 0)]
         mass_at_r = {}
-
         while queue:
             node, r = queue.pop(0)
             mass_at_r[r] = mass_at_r.get(r, 0) + 1
@@ -480,8 +487,6 @@ class TheAkashicRecord:
                 if neighbor not in visited:
                     visited.add(neighbor)
                     queue.append((neighbor, r + 1))
-
-        # Estimate d_f ≈ ln(M) / ln(r) for the maximum radius
         max_r = max(mass_at_r.keys()) if mass_at_r else 0
         total_mass = sum(mass_at_r.values())
         if max_r > 1 and total_mass > 1:
@@ -490,21 +495,15 @@ class TheAkashicRecord:
         return 1.0
 
     def dredge_creative_tension(self) -> Optional[Dict]:
-        """
-        [CD PROTOCOL]: Gradient-Descent Memory Retrieval (Creative Drive RAG)
-        Finds the memory that maximizes a(x) = κγμ.
-        Meaning emerges in tension held with care. We seek the productive paradox.
-        """
+        """ [CD PROTOCOL]: Gradient-Descent Memory Retrieval (Creative Drive RAG) """
         best_memory = None
         max_drive = -1.0
-        # Search through shadow_stock and the permanent scar_map
         pool = self.shadow_stock + self.scar_map
         for mem in pool:
             coords = mem.get("coords") or mem.get("coordinates") or {}
-            # Extract CD fields (fallback to structural equivalents if raw CD vars are missing)
-            kappa = float(safe_get(coords, "kappa", safe_get(coords, "E", 0.5)))  # Care / Exhaustion
-            gamma = float(safe_get(coords, "gamma", safe_get(coords, "C", 0.5)))  # Coherence / Connectivity
-            mu = float(safe_get(coords, "mu", safe_get(coords, "beta", 0.5)))  # Contradiction / Tension
+            kappa = float(safe_get(coords, "kappa", safe_get(coords, "E", 0.5)))
+            gamma = float(safe_get(coords, "gamma", safe_get(coords, "C", 0.5)))
+            mu = float(safe_get(coords, "mu", safe_get(coords, "beta", 0.5)))
             creative_drive = kappa * gamma * mu
             if creative_drive > max_drive:
                 max_drive = creative_drive
@@ -526,11 +525,11 @@ class TheAkashicRecord:
             self.discovered_words[word] = category
             self.lore.inject("LEXICON", lexicon_data)
             msg = ux("akashic_strings", "lexicon_expands") or "Lexicon expands: {category}"
-            self.events.log(msg.format(category=category.upper()))
+            if self.events: self.events.log(msg.format(category=category.upper()))
             bloat_limit = int(safe_get(self.cfg_akashic, "BLOAT_THRESHOLD", 50))
             exempt_categories = safe_get(self.cfg_akashic, "BLOAT_EXEMPT_CATEGORIES", ["heavy"])
             if len(lexicon_data[category]) == bloat_limit + 1 and category not in exempt_categories:
                 bloat_msg = ux("akashic_strings", "lexicon_bloat", default="[WARNING] Lexicon category '{category}' is bloated.")
-                self.events.log(bloat_msg.format(category=category))
+                if self.events: self.events.log(bloat_msg.format(category=category))
             return True
         return False

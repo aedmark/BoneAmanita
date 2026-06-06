@@ -1,6 +1,46 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 20.4.6 "The Restorative Bridge"**
+
+**Architectural Patches & Optimizations**
+
+- **Topological Stability:** Re-engineered the `_native_configuration_model` in `cycle.py` to use a bounded retry-loop validation, ensuring degree sequence preservation for highly centralized graphs (e.g., star topologies) while avoiding infinite loops.
+- **Governor Resilience:** Decoupled `CyberneticGovernor` pipeline execution from routing logic. The solver now operates within a contiguous mathematical block, with a strict error-boundary that degrades gracefully to a PID fallback on any convergence failure.
+- **Schema Hardening:** Locked `CycleContext` using `slots=True`. This prevents unauthorized dynamic attribute injection from phases, reduces memory footprint, and enforces strict data flow contracts.
+- **Serialization Safety:** Updated `JSONEncoder` to intelligently filter toxic primitives (threading locks/pools) during telemetry recording, eliminating the silent loss of event payloads.
+
+**Fixed**
+
+- **Global State Poisoning (Prisma):** Removed the toxic class-level mutation in `Prisma.enable_web_mode()`. Color registries are now immutable; HTML translation is deferred to the web-boundary, preventing CLI/Web output corruption.
+- **Security OOM Vulnerability:** Patched a critical payload limit bypass in `main.py` where destructive pattern checks were executing before token-length enforcement.
+- **Component Auto-Heal:** Implemented `reboot_component()` within `SystemHealth`. Failed components now remain in a safe `PanicRoom` state until the system triggers a REM sleep cycle, where `Autophagy` logic now performs a restorative reboot of shattered manifolds.
+- **Sycophancy Loop:** Corrected the chaotic engineering test suite (`test_sycophancy_gravity_well`) by pre-seeding the orchestrator’s voltage history, allowing the point-attractor detection heuristic to trigger during short-turn unit tests.
+- **Voltage Mapping Bug:** Resolved a drift in `CyberneticGovernor` where hardcoded voltage ranges were overriding preset limits (e.g., `SANCTUARY` or `THUNDERDOME`), now correctly mapping targets to the active `VOLTAGE_MAX` preset bounds.
+- **Safe-State Crashes:** Added `None` guards to `_generate_halt` and biological reference checks to prevent fatal secondary crashes during system exceptions.
+
+---
+
+### **BONEAMANITA 20.4.5 "The Diagnostic Mirror"**
+
+**Architectural Patches & Optimizations**
+
+- **The Diagnostic Mirror (Composer):** Injected a regex-driven telemetry scraper directly into `mock_generation` to capture exact state variables (`Voltage`, `Exhaustion`, `Chaos`, `Void`, and `Biology`) immediately before REM triggers, providing high-fidelity debugging for the dream engine.
+- **Structural Test Coverage:** Deployed `test_composer.py` to mathematically prove the integrity of the diagnostic mirror, universally validate the amputation of internal `<think>` blocks, and isolate persona block generation.
+
+**Fixed**
+
+- **Lattice Telemetry Desynchronization:** Fixed a fatal blind spot in `cycle.py` where calculated Shared Lattice metrics (`resonance`, `beta_index`, `chi`) were not being synchronized back into the `PhysicsPacket`, blinding the Village Council to Sycophancy Point Attractors.
+- **Hallucinated BFS Method:** Rerouted `_evaluate_systemic_feedback` in `cycle.py` to properly query `AkashicRecord.measure_cognitive_density` instead of silently aborting against a non-existent Cortex method.
+- **Waking Narcolepsy:** Excised a legacy 30% trigger in `SanctuaryPhase` that forced the engine into a REM hallucination while the user was actively working.
+- **Raw JSON Dream Bleed:** Taught `Cortex.process_context` to properly unpack dream dictionaries instead of rendering raw JSON payload strings into the UI.
+- **Adventure Mode Leak:** Repaired `PromptComposer` to correctly pass the active mode down the stack, preventing MUD-style "Exits" blocks from bleeding into `CONVERSATION` and `TECHNICAL` modes.
+- **Contradictory Validator Mandates:** Removed the rule punishing the LLM for missing `<think>` tags in `TECHNICAL` mode, and ensured all internal `<think>` or `<system_telemetry>` blocks are universally amputated from the UI across all modes.
+- **Friendly Fire (Gordon's Comb):** Bounded `gordon.apply_filters` inside `main.py` so he no longer strips load-bearing structural words (like "warmly") out of the internal system boot instructions.
+- **Premature REM Cycles:** Adjusted the orchestrator's daemon thread to reset the `last_interaction_time` *after* heavy internal DSPyCritic computation, preventing the system from entering a dream state due to its own latency.
+
+---
+
 ### **BONEAMANITA 20.4.0 "The Fractal Synthesis"**
 
 **Architectural Amputations & Optimizations**

@@ -19,10 +19,8 @@ class MechanicsTests(BoneTestCase):
         finally:
             sys.stdout = old_stdout
         output = captured_output.getvalue()
-        self.assertNotIn("Traceback (most recent call last):", output,
-                         "[FAIL] Raw stack trace leaked to the terminal in NARRATIVE mode!")
-        self.assertIn("collapsed", output.lower(),
-                      "[FAIL] SessionGuardian failed to print the graceful narrative crash message.")
+        self.assertNotIn("Traceback (most recent call last):", output, "[FAIL] Raw stack trace leaked to the terminal in NARRATIVE mode!")
+        self.assertIn("collapsed", output.lower(), "[FAIL] SessionGuardian failed to print the graceful narrative crash message.")
 
     def test_protocol_pragmatist_membrane(self):
         from mechanics.pragmatics import ThePragmatist
@@ -41,9 +39,7 @@ class MechanicsTests(BoneTestCase):
                         "[FAIL] Pragmatist failed to trigger a rewrite on exhausted bloat. Cognitive overload imminent.")
         phys_state = {"narrative_drag": 0.0, "entropy": 0.1}
         hedging_draft = "Perhaps it could be said that the sky is blue."
-        mutated, needs_rewrite = pragmatist.enforce_maxims(hedging_draft, "What color is the sky?", phys_state,
-                                                           stamina=100.0)
+        mutated, needs_rewrite = pragmatist.enforce_maxims(hedging_draft, "What color is the sky?", phys_state, stamina=100.0)
         self.assertNotIn("Perhaps", mutated, "[FAIL] Pragmatist failed to strip 'Perhaps'.")
         self.assertNotIn("it could be said that", mutated, "[FAIL] Pragmatist failed to strip 'it could be said that'.")
-        self.assertIn("the sky is blue.", mutated,
-                      "[FAIL] Pragmatist stripped too much and destroyed the bedrock logic.")
+        self.assertIn("the sky is blue.", mutated, "[FAIL] Pragmatist stripped too much and destroyed the bedrock logic.")

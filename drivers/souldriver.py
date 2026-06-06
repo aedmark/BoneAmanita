@@ -1,7 +1,5 @@
-"""drivers/souldriver.py"""
-
 import random
-from typing import Dict
+from typing import Dict, Union
 from core import LoreManifest
 from presets import BoneConfig
 
@@ -14,18 +12,20 @@ class SoulDriver:
         self.archetype_weights = driver_cfg.get("ARCHETYPE_TO_PERSONA_WEIGHT", {})
         self.ennea_weights = driver_cfg.get("ENNEAGRAM_WEIGHTS", {})
 
-    def get_influence(self) -> Dict[str, float]:
-        base_weights = {persona: 0.0 for persona in self.ennea_weights.keys()}
+    def get_influence(self) -> Dict[str, Union[float, int]]:
+        # noinspection PyTypeChecker
+        base_weights: Dict[str, Union[float, int]] = {str(persona): 0.0 for persona in self.ennea_weights.keys()}
         if not self.soul:
             return base_weights
         archetype = getattr(self.soul, "archetype", "THE OBSERVER")
         mapping = self.archetype_weights.get(archetype, {"NARRATOR": 1.0})
         for persona, weight in mapping.items():
-            if persona in base_weights:
-                base_weights[persona] += weight
+            str_persona = str(persona)
+            if str_persona in base_weights:
+                base_weights[str_persona] += float(weight)
         paradox = getattr(self.soul, "paradox_accum", 0.0)
         chaos = min(0.5, (paradox - 5.0) * 0.05) if paradox > 5.0 else 0.0
         anchor = getattr(self.soul, "anchor", None)
         dignity = max(0.2, getattr(anchor, "dignity_reserve", 100.0) / 100.0) if anchor else 1.0
-        return {p: (w + random.uniform(-chaos, chaos)) * dignity
+        return {str(p): (float(w) + random.uniform(-chaos, chaos)) * dignity
                 for p, w in base_weights.items()}

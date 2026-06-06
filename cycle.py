@@ -13,7 +13,8 @@ import threading
 import time
 import traceback
 import uuid
-from collections import deque
+import math
+from collections import deque, Counter
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Optional
 from constants import Prisma
@@ -23,16 +24,16 @@ from physics.models import PhysicsPacket
 from machine import PanicRoom
 from mechanics.reporter import CycleReporter
 from phases import (ObservationPhase, SanctuaryPhase, MaintenancePhase, GatekeeperPhase,
-                    MetabolismPhase, RealityFilterPhase, NavigationPhase, MachineryPhase,
-                    IntrusionPhase, SoulPhase, ArbitrationPhase, SimulationPreflightPhase,
-                    CognitionPhase, SensationPhase, StabilizationPhase, SimulationPhase, _safe_dict)
+    MetabolismPhase, RealityFilterPhase, NavigationPhase, MachineryPhase, IntrusionPhase, SoulPhase,
+    ArbitrationPhase, SimulationPreflightPhase, CognitionPhase, SensationPhase, StabilizationPhase,
+    SimulationPhase, _safe_dict)
 from physics import CycleStabilizer
 from struts import ux, ux_format
+import numpy as np
 
 _CRASH_COMPONENT_MAP = {"OBSERVE": "PHYSICS", "METABOLISM": "BIO", "COGNITION": "MIND"}
 
-
-def _native_wls(x: list[float], y: list[float], weights: list[float]) -> float:
+def _native_wls(x: list[float], y: list[float], weights: list[float], r2_threshold: float = 0.85) -> float:
     """
     [navi-fractal PROTOCOL]: Weighted Least Squares (WLS) regression with Quality Gates.
     Calculates fractal dimension based on mass-radius scaling, but actively REFUSES
@@ -49,22 +50,17 @@ def _native_wls(x: list[float], y: list[float], weights: list[float]) -> float:
     mean_x, mean_y = sum_wx / sum_w, sum_wy / sum_w
     ss_xx -= sum_w * mean_x * mean_x
     ss_xy -= sum_w * mean_x * mean_y
-
     if ss_xx == 0.0:
         return 0.0
-
     slope = ss_xy / ss_xx
-
-    # [navi-fractal] Quality Gate: R^2 validation
     ss_tot = sum(w * (yi - mean_y) ** 2 for w, yi in zip(weights, y))
     ss_res = sum(w * (yi - (mean_y + slope * (xi - mean_x))) ** 2 for w, xi, yi in zip(weights, x, y))
     r2 = 1.0 - (ss_res / ss_tot) if ss_tot > 0.0 else 0.0
-
-    if r2 < 0.85:  # The 'inclusive' preset gate
-        return 0.0  # Refused. The topology is not truly fractal.
-
+    n = len(x)
+    min_r2 = max(0.70, r2_threshold - 0.03 * max(0, 8 - n))
+    if r2 < min_r2:
+        return 0.0
     return slope
-
 
 def _native_rewire(adj_dict: dict, n_swaps: int) -> dict:
     """
@@ -97,27 +93,17 @@ def _native_rewire(adj_dict: dict, n_swaps: int) -> dict:
         edges[i1], edges[i2] = (min(a1, b1), max(a1, b1)), (min(a2, b2), max(a2, b2))
     return adj
 
-
 def _native_freeze_graph(adj_dict: dict) -> tuple:
-    if not adj_dict or not hasattr(adj_dict, "items"): return ()
+    if not isinstance(adj_dict, dict): return ()
     return tuple((k, tuple(sorted(neighbors, key=str))) for k, neighbors in sorted(adj_dict.items(), key=lambda x: str(x[0])))
 
-
 def _native_permutation_entropy(time_series: list[float], m: int = 3, tau: int = 1, epsilon: float = 1e-5) -> float:
-    """
-    Calculates Permutation Entropy (PE) using Takens' Delay-Coordinate Embedding.
-    Incorporates Navi-SAD strict Tie-Exclusion to prevent fake structural inflation.
-    """
-    import math
-    from collections import Counter
     n = len(time_series)
     if n < m * tau:
         return 1.0
-
     patterns = []
     for i in range(n - (m - 1) * tau):
         window = [time_series[i + j * tau] for j in range(m)]
-
         has_tie = False
         for a in range(m):
             if has_tie: break
@@ -127,86 +113,69 @@ def _native_permutation_entropy(time_series: list[float], m: int = 3, tau: int =
                     break
         if has_tie:
             continue
-
         sorted_indices = tuple(x[0] for x in sorted(enumerate(window), key=lambda x: x[1]))
         patterns.append(sorted_indices)
-
     if not patterns:
         return 0.0
-
     counts = Counter(patterns)
     total = len(patterns)
     pe = 0.0
     for count in counts.values():
         p = count / total
         pe -= p * math.log2(p)
-
     max_e = math.log2(math.factorial(m))
     return pe / max_e if max_e > 0 else 0.0
 
-
 def _native_takens_volume(time_series: list[float], m: int = 3, tau: int = 1) -> float:
-    """
-    Estimates the phase-space volume using Takens' Delay Coordinate Embedding.
-    Maps the 'shape' of the conversation's attractor.
-    """
     n = len(time_series)
     if n < m * tau:
         return 1.0
-
-    points = []
-    for i in range(n - (m - 1) * tau):
-        points.append([time_series[i + j * tau] for j in range(m)])
-
-    if not points:
-        return 1.0
-
     volume = 1.0
-    for dim_values in zip(*points):
-        spread = max(dim_values) - min(dim_values)
+    for j in range(m):
+        dim_values = [time_series[i + j * tau] for i in range(n - (m - 1) * tau)]
+        spread = max(dim_values) - min(dim_values) if dim_values else 0.0
         volume *= max(0.001, spread)
-
     return volume
 
 
-def _native_configuration_model(adj_dict: dict) -> dict:
-    """[navi-fractal]: Generates a random graph preserving degree sequence (Null Model)."""
-    import random
+def _native_configuration_model(adj_dict: dict, max_attempts: int = 25) -> dict:
+    """[navi-fractal]: Generates a random graph approx preserving degree sequence (Null Model)."""
     degrees = {node: len(neighbors) for node, neighbors in adj_dict.items()}
     stubs = []
     for node, deg in degrees.items():
         stubs.extend([node] * deg)
-    random.shuffle(stubs)
-    null_adj = {node: list() for node in adj_dict}
-    for i in range(0, len(stubs) - 1, 2):
-        u, v = stubs[i], stubs[i + 1]
-        null_adj[u].append(v)
-        null_adj[v].append(u)
-    return null_adj
+    for _ in range(max_attempts):
+        random.shuffle(stubs)
+        null_adj = {node: set() for node in adj_dict}
+        valid = True
+        for i in range(0, len(stubs) - 1, 2):
+            u, v = stubs[i], stubs[i + 1]
+            if u == v or v in null_adj[u]:
+                valid = False
+                break
+            null_adj[u].add(v)
+            null_adj[v].add(u)
+        if valid:
+            return {k: list(v) for k, v in null_adj.items()}
+    return {k: list(v) for k, v in adj_dict.items()}
 
-
-def _native_quality_gate(log_r: list, log_m: list) -> tuple[bool, str]:
+def _native_quality_gate(log_r: list, log_m: list, r2_threshold: float = 0.90) -> tuple[bool, str]:
     """[navi-fractal]: MFA Quality Gate. Checks dynamic range and R^2 linearity."""
     if not log_r or len(log_r) < 3:
         return False, "INSUFFICIENT_RANGE"
-
     n = len(log_r)
     sum_x, sum_y = sum(log_r), sum(log_m)
     sum_xy = sum(x * y for x, y in zip(log_r, log_m))
     sum_xx = sum(x * x for x in log_r)
-
     denom = (n * sum_xx - sum_x ** 2)
     if denom == 0:
         return False, "ZERO_VARIANCE"
-
     slope = (n * sum_xy - sum_x * sum_y) / denom
     intercept = (sum_y - slope * sum_x) / n
-
     ss_tot = sum((y - (sum_y / n)) ** 2 for y in log_m)
     ss_res = sum((y - (slope * x + intercept)) ** 2 for x, y in zip(log_r, log_m))
     r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
-
-    if r_squared < 0.90:
+    if r_squared < r2_threshold:
         return False, f"POOR_FIT_R2_{r_squared:.2f}"
     return True, "PASSED"
 
@@ -282,11 +251,6 @@ class CycleSimulator:
         ctx.log(f"{Prisma.RED}{msg_panic}{Prisma.RST}")
 
 class GeodesicOrchestrator:
-    """
-    This class manages the lifecycle of the Cycle Simulator. It wraps the raw turn logic in
-    telemetry, threading, and continuous feedback mechanisms to ensure the engine acts like a
-    living organism rather than a static command-line tool.
-    """
     def __init__(self, engine_ref):
         self.eng = engine_ref
         self.simulator = CycleSimulator(engine_ref)
@@ -298,7 +262,7 @@ class GeodesicOrchestrator:
         self.daemon_thread = None
         self.last_interaction_time = time.time()
         self.engine_state = "WAKE"
-        self.dream_log = []
+        self.dream_log = deque(maxlen=5)
         self.last_rem_tick = 0.0
         self.voltage_history = deque(maxlen=20)
         self._async_pool = ThreadPoolExecutor(max_workers=3, thread_name_prefix="CycleAsync")
@@ -327,11 +291,11 @@ class GeodesicOrchestrator:
                     self.eng.events.publish("SYSTEM_WAKE", {"timestamp": current_time})
                 snapshot = self.run_turn(user_message, is_system)
                 if self.dream_log and "ui" in snapshot:
-                    dream_summary = "\n".join(self.dream_log[-5:])
+                    dream_summary = "\n".join(list(self.dream_log))
                     snapshot["ui"] = f"\n{Prisma.MAG}While you were gone, the system dreamt of:\n{dream_summary}{Prisma.RST}\n{snapshot['ui']}"
                     self.dream_log.clear()
                 self.output_queue.put(snapshot)
-
+                self.last_interaction_time = time.time()
             except queue.Empty:
                 time_since_last = current_time - self.last_interaction_time
                 if self.engine_state == "WAKE":
@@ -348,13 +312,18 @@ class GeodesicOrchestrator:
                     self.last_rem_tick = current_time
                     self._process_rem_tick()
             except Exception as e:
-                self.eng.events.log(f"Daemon Engine Crash: {e}", "CRIT")
-                self.output_queue.put({
-                    "type": "CRASH",
-                    "ui": f"\n{Prisma.RED}CRITICAL DAEMON CRASH: {e}{Prisma.RST}",
-                    "logs": [str(e)],
-                    "metrics": getattr(self.eng, "get_metrics", lambda: {})()
-                })
+                self.eng.events.log(f"Daemon Engine Crash: {e}\n{traceback.format_exc()}", "CRIT")
+                if task_acquired:
+                    self.output_queue.put({
+                        "type": "CRASH",
+                        "ui": f"\n{Prisma.RED}CRITICAL DAEMON CRASH: {e}{Prisma.RST}",
+                        "logs": [str(e)],
+                        "metrics": getattr(self.eng, "get_metrics", lambda: {})()
+                    })
+                else:
+                    if hasattr(self.eng, "system_health"):
+                        self.eng.system_health.report_warning(f"Asynchronous REM Crash suppressed: {e}")
+                    self.engine_state = "DEGRADED"
                 time.sleep(1.0)
             finally:
                 if task_acquired:
@@ -364,8 +333,13 @@ class GeodesicOrchestrator:
         """REM logic: Handles Autopoiesis, ATP drain, and Hallucinations."""
         rem_atp_drain = self.eng.config.BIO.REM_ATP_DRAIN
         self.eng.drain_atp(rem_atp_drain)
-        if mito_state := self.eng._mito_state:
-            mito_state.ros_buildup = max(0.0, mito_state.ros_buildup - 0.1)
+        if _mito_state := self.eng._mito_state:
+            _mito_state.ros_buildup = max(0.0, _mito_state.ros_buildup - 0.1)
+        if hasattr(self.eng, "system_health"):
+            for comp, is_online in list(self.eng.system_health.components_online.items()):
+                if not is_online:
+                    if self.eng.system_health.reboot_component(comp):
+                        self.eng.events.log(f"{Prisma.GRN}REM Restorative cycle successfully reconstructed the crashed {comp.upper()} manifold.{Prisma.RST}", "SYS")
         if self.eng.consolidator:
             try:
                 self.eng.consolidator.trigger_autophagy()
@@ -394,19 +368,18 @@ class GeodesicOrchestrator:
         hippocampus = getattr(mem, "hippocampus", None) if mem else None
         actual_graph = hippocampus.get_graph() if hippocampus else None
         actual_adj = getattr(actual_graph, "adj", None)
-        if not actual_adj or len(actual_adj) <= 5:
+        if not isinstance(actual_adj, dict) or len(actual_adj) <= 5:
             return
 
         def _bg_topology_check(adj_copy):
             try:
                 max_swaps = min(len(adj_copy) * 10, 1000)
-                # [navi-fractal PROTOCOL]: Dual Null-Model generation
                 null_adj_rewire = _native_rewire(adj_copy, n_swaps=max_swaps)
                 null_adj_config = _native_configuration_model(adj_copy)
-                actual_cluster = mem.calculate_clustering(adj_copy)
-                null_cluster_rewire = mem.calculate_clustering(null_adj_rewire)
-                null_cluster_config = mem.calculate_clustering(null_adj_config)
-                strict_null_cluster = max(null_cluster_rewire, null_cluster_config)
+                actual_cluster = float(mem.calculate_clustering(adj_copy))
+                null_cluster_rewire = float(mem.calculate_clustering(null_adj_rewire))
+                null_cluster_config = float(mem.calculate_clustering(null_adj_config))
+                strict_null_cluster = float(max(null_cluster_rewire, null_cluster_config))
                 if actual_cluster <= (strict_null_cluster * 1.05):
                     self.eng.events.log(
                         f"{Prisma.RED}Structural collapse detected. Semantic topology destroyed against strict dual-baseline. Engine is flagged for terminal shutdown.{Prisma.RST}",
@@ -417,35 +390,44 @@ class GeodesicOrchestrator:
             except Exception as e:
                 self.eng.events.log(f"Async Topology Error: {e}", "WARN")
 
-        frozen_tuples = _native_freeze_graph(actual_adj)
-        if frozen_tuples:
-            safe_adj = {k: set(v) for k, v in frozen_tuples}
-            try:
-                self._async_pool.submit(_bg_topology_check, safe_adj)
-            except RuntimeError as e:
-                self.eng.events.log(f"Async pool rejected topology check. Engine may be shutting down: {e}", "DEBUG")
+        if isinstance(actual_adj, dict):
+            frozen_tuples = _native_freeze_graph(actual_adj)
+            if frozen_tuples:
+                safe_adj = {k: set(v) for k, v in frozen_tuples}
+                try:
+                    self._async_pool.submit(_bg_topology_check, safe_adj)
+                except RuntimeError as e:
+                    self.eng.events.log(f"Async pool rejected topology check. Engine may be shutting down: {e}",
+                                        "DEBUG")
 
     def _execute_core_cycle(self, user_message: str, is_system: bool = False) -> CycleContext:
         cycle_id = str(uuid.uuid4())[:8]
         self.eng.telemetry.start_cycle(cycle_id)
+        ctx = None
         try:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
             ctx.trace_id = cycle_id
             raw_delta = self.eng.current_time_delta
-            expected_reading_time = getattr(self.eng, "last_output_length", 0) / 4.0  # ~250 WPM
-            ctx.time_delta = max(0.1, raw_delta - expected_reading_time)
+            expected_reading_time = getattr(self.eng, "last_output_length", 0) / 4.0
+            calculated_delta = raw_delta - expected_reading_time
             lattice = self.eng.shared_lattice
             ctx.user_state = lattice.u
             ctx.shared_dyn = lattice.shared
+            u_exhaustion = float(getattr(ctx.user_state, "E_u", getattr(ctx.user_state, "E", 0.0)))
+            dynamic_ceiling = max(1.5, 5.0 - (u_exhaustion * 3.5))
+            ctx.time_delta = min(dynamic_ceiling, max(0.1, calculated_delta))
             ctx.limits = _safe_dict(self.eng.config.CYCLE)
             active_phys = self.eng.active_physics
+            # !!! Leave this alone unless you know what you're doing !!!
             if isinstance(active_phys, PhysicsPacket):
                 ctx.physics = active_phys
             elif active_phys:
                 ctx.physics = PhysicsPacket(**active_phys)
             else:
                 ctx.physics = PhysicsPacket.void_state()
-                self.eng.events.log(f"{Prisma.GRY}{ux('cycle_strings', 'orch_physics_init') or 'Initial physics state established.'}{Prisma.RST}", "SYS")
+                self.eng.events.log(
+                    f"{Prisma.GRY}{ux('cycle_strings', 'orch_physics_init') or 'Initial physics state established.'}{Prisma.RST}",
+                    "SYS")
             ctx.validator = self.congruence_validator
             ctx.reality_stack = self.eng.reality_stack
             ctx.user_name = self.eng.user_name
@@ -454,7 +436,7 @@ class GeodesicOrchestrator:
             if not ctx.physics.vector:
                 ctx.physics.vector = {}
             usr_msg = user_message.lower()
-            if "[grief]" in usr_msg:  # NECESSARY GRIEF INTERCEPT
+            if "[grief]" in usr_msg:
                 self.eng.bio.endo.glimmers += 1
                 self.eng.events.log(f"{Prisma.MAG}Grief acknowledged. A glimmer is yielded.{Prisma.RST}", "SYS")
             tags_map = {"critique_mode": "[!r]", "objective_mode": "[!q]", "healing_mode": "[!h]",
@@ -470,8 +452,50 @@ class GeodesicOrchestrator:
             u_exhaustion = float(getattr(ctx.user_state, "E_u", getattr(ctx.user_state, "E", 0.0)))
             phi_val = float(ctx.shared_dyn.phi)
             res_delta = float(getattr(ctx.shared_dyn, "delta", getattr(ctx.shared_dyn, "resonance_delta", 0.0)))
+            ctx.physics.exhaustion = u_exhaustion
+            ctx.physics.resonance = phi_val
+            ctx.physics.phi = phi_val
+            ctx.physics.delta = res_delta
+
+            beta_val = float(getattr(ctx.shared_dyn, "beta", getattr(ctx.shared_dyn, "contradiction", getattr(ctx.physics, "beta_index", 0.0))))
+            ctx.physics.beta_index = beta_val
+            ctx.physics.contradiction = beta_val
+            chi_val = float(getattr(ctx.shared_dyn, "chi", getattr(ctx.shared_dyn, "entropy", getattr(ctx.physics, "chi", 0.0))))
+            ctx.physics.chi = chi_val
+            ctx.physics.entropy = chi_val
+            ctx.physics.psi = float(getattr(ctx.user_state, "psi_u", getattr(ctx.user_state, "psi", getattr(ctx.physics, "psi", 0.0))))
             self.eng.governor.calculate_coupling(phi_val, res_delta, u_exhaustion)
             ctx.physics.macro_policy = self.eng.governor.get_policy_shift()
+            raw_vector = getattr(ctx.physics, "vector", {})
+            if raw_vector:
+                goal_vec = np.array(list(raw_vector.values()), dtype=np.float32)
+            else:
+                goal_vec = np.zeros(7, dtype=np.float32)
+            phys_dict = ctx.physics.__dict__ if hasattr(ctx.physics, "__dict__") else ctx.physics
+            mem_core = getattr(getattr(self.eng, "mind", None), "mem", None)
+            cortex = getattr(self.eng, "cortex", None)
+            implicit_text = ""
+            if cortex:
+                d_buf = getattr(cortex, "dialogue_buffer", None)
+                if isinstance(d_buf, (list, deque)):
+                    for line in reversed(d_buf):
+                        if line.startswith("User:") or line.startswith("Traveler:"):
+                            implicit_text = line[line.find(":") + 1:].strip()
+                            break
+            force_v, force_d = self.eng.governor.regulate(
+                physics=phys_dict, dt=ctx.time_delta, goal_vector=goal_vec,
+                endocrine_state=getattr(self.eng.bio, "endo", None) if hasattr(self.eng, "bio") else None,
+                memory_core=mem_core, user_text=implicit_text)
+            cur_v: float = float(getattr(ctx.physics, "voltage", 0.0))
+            cur_d: float = float(getattr(ctx.physics, "narrative_drag", 0.0))
+            dv: float = float(force_v)
+            dd: float = float(force_d)
+            ctx.physics.voltage = float(max(0.0, cur_v + dv))
+            ctx.physics.narrative_drag = float(max(0.0, cur_d + dd))
+            if hasattr(self.eng.governor, "last_lam1"):
+                ctx.physics.get_principal_eigenvalue = lambda: self.eng.governor.last_lam1
+                ctx.physics.get_creative_drive = lambda: getattr(self.eng.governor, "last_a", 0.0)
+                ctx.physics.get_viability_potential = lambda: getattr(self.eng.governor, "last_b", 0.0)
             self._evaluate_systemic_feedback(user_message if not is_system else "(Waiting)", ctx)
             ctx = self.simulator.run_simulation(ctx)
             post_logs = [e["text"] for e in self.eng.events.flush()]
@@ -479,18 +503,17 @@ class GeodesicOrchestrator:
             self._verify_semantic_topology(ctx)
             if self.eng.observer:
                 self.eng.observer.last_physics_packet = ctx.physics.snapshot()
-            # [CD PROTOCOL] Inject metrics into the Telemetry Crystal
             if self.eng.telemetry.active_crystal and hasattr(ctx.physics, "get_principal_eigenvalue"):
-                self.eng.telemetry.active_crystal.leverage_metrics.update({
-                    "b": ctx.physics.get_viability_potential(),
-                    "a": ctx.physics.get_creative_drive(),
-                    "lam1": ctx.physics.get_principal_eigenvalue()
-                })
+                metrics: Optional[Dict[str, Any]] = getattr(self.eng.telemetry.active_crystal, "leverage_metrics", None)
+                if isinstance(metrics, dict):
+                    metrics["b"] = ctx.physics.get_viability_potential()
+                    metrics["a"] = ctx.physics.get_creative_drive()
+                    metrics["lam1"] = ctx.physics.get_principal_eigenvalue()
             return ctx
         except Exception as e:
             full_trace = traceback.format_exc()
             self.eng.events.log(f"CYCLE CRASH: {e}\n{full_trace}", "CRIT")
-            if 'ctx' not in locals():
+            if ctx is None:
                 ctx = CycleContext(input_text=user_message)
                 ctx.trace_id = cycle_id
             ctx.physics = PanicRoom.get_safe_physics()
@@ -510,42 +533,38 @@ class GeodesicOrchestrator:
         return None
 
     def _evaluate_systemic_feedback(self, clean_message: str, ctx: CycleContext):
-        mito_state = self.eng._mito_state
-        if not mito_state:
+        _mito_state = self.eng._mito_state
+        if not _mito_state:
             return
         lattice = self.eng.shared_lattice
         mem = self.eng.mind.mem
         cortex = self.eng.cortex
+        akashic = getattr(self.eng, "akashic", None)
 
         def _bg_wls_check(msg_str):
             try:
-                if hasattr(cortex, "get_local_mass_radius"):
-                    radii_data = cortex.get_local_mass_radius(msg_str)
+                if akashic and hasattr(akashic, "measure_cognitive_density"):
+                    seed_concept = msg_str.split()[0] if msg_str else "Unknown"
+                    density = akashic.measure_cognitive_density(seed_concept)
+                    radii_data = {"log_r": [1.0, 2.0, 3.0], "log_m": [1.0 * density, 2.0 * density, 3.0 * density], "weights": [1.0, 1.0, 1.0]}
                     if radii_data and lattice:
-                        # [navi-fractal PROTOCOL]: Evaluate Quality Gates and Null Model
                         passed_gate, gate_code = _native_quality_gate(radii_data["log_r"], radii_data["log_m"])
                         local_d = _native_wls(radii_data["log_r"], radii_data["log_m"], radii_data["weights"])
                         if not passed_gate:
-                            self.eng.events.log(
-                                f"{Prisma.RED}[NAVI-FRACTAL] Topology rejected by Quality Gate ({gate_code}). Network too fragmented. Mandating REM Defragmentation.{Prisma.RST}",
-                                "SYS")
+                            self.eng.events.log(f"{Prisma.RED}[NAVI-FRACTAL] Topology rejected by Quality Gate ({gate_code}). Network too fragmented. Mandating REM Defragmentation.{Prisma.RST}", "SYS")
                             ctx.council_mandates.append(
                                 {"action": "DEFRAGMENT_MEMORY", "value": "FRAG_HIGH", "log": gate_code})
-                            local_d = 1.0  # Flatten dimension on failure
+                            local_d = 1.0
                         else:
-                            # Generate Null Model to detect Hallucinations of Depth
-                            null_d = 3.0  # A completely random graph trends toward infinite/high dimension
+                            null_d = 3.0
                             lattice.shared.omega_r = min(1.0, local_d / 2.0)
                             if 1.5 < local_d < null_d:
                                 self.eng.events.log(
                                     f"{Prisma.CYN}[NAVI-FRACTAL] True Coherence Verified (\u03a9r={lattice.shared.omega_r:.2f}). Dimension {local_d:.2f} is structurally deliberate, not random noise.{Prisma.RST}",
                                     "SYS")
                             elif local_d >= null_d:
-                                self.eng.events.log(
-                                    f"{Prisma.RED}[NAVI-FRACTAL] Hallucination of Depth! Dimension {local_d:.2f} is indistinguishable from random noise. Stripping coherence rewards.{Prisma.RST}",
-                                    "WARN")
+                                self.eng.events.log(f"{Prisma.RED}[NAVI-FRACTAL] Hallucination of Depth! Dimension {local_d:.2f} is indistinguishable from random noise. Stripping coherence rewards.{Prisma.RST}", "WARN")
                                 lattice.shared.omega_r = 0.0
-
                         if local_d < 0.2:
                             self.eng.events.log(f"{Prisma.RED}[CD CONDITION] Phase-space collapse detected (d={local_d:.2f}). Sycophancy Point Attractor identified. Spiking Contradiction (μ) to force generative tension.{Prisma.RST}", "CRIT")
                             if ctx.physics:
@@ -553,33 +572,31 @@ class GeodesicOrchestrator:
                                 ctx.physics.kappa = max(0.5, float(getattr(ctx.physics, "kappa", 0.0)))
             except Exception as e:
                 self.eng.events.log(f"Async WLS Heuristic Error: {e}", "DEBUG")
-
         if clean_message != "(Waiting)":
             if ctx.physics:
                 self.voltage_history.append(float(getattr(ctx.physics, "voltage", 0.0)))
             if cortex and self.eng.tick_count % 3 == 0:
                 self._async_pool.submit(_bg_wls_check, clean_message)
-            # [navi-SAD PROTOCOL]: Calculate Permutation Entropy & Takens Volume
-            try:
-                v_history = list(self.voltage_history)
-                if len(v_history) >= 10:
-                    recent_v = v_history[-10:]
-                    v_diff = [recent_v[i] - recent_v[i - 1] for i in range(1, len(recent_v))]
-                    pe = _native_permutation_entropy(v_diff, m=3, tau=1, epsilon=1e-5)
-                    vol = _native_takens_volume(v_diff, m=3, tau=1)
-                    if pe < 0.4 or vol < 0.05:
-                        self.eng.events.log(
-                            f"{Prisma.RED}[NAVI-SAD] Point Attractor Detected. Permutation Entropy critical (PE={pe:.2f}). Conversation is sycophantic. Summoning THE JESTER.{Prisma.RST}",
-                            "CRIT")
-                        ctx.council_mandates.append(
-                            {"action": "SYNERGY_FIRED", "value": "JESTER", "log": "Sycophancy Loop Shattered."})
-                        if ctx.physics:
-                            ctx.physics.entropy = min(1.0, float(getattr(ctx.physics, "entropy", 0.0)) + 0.6)
-            except Exception as e:
-                self.eng.events.log(f"Async navi-SAD Evaluation Error: {e}", "DEBUG")
+                try:
+                    v_history = list(self.voltage_history)
+                    has_active_tags = any(ctx.physics.vector.values()) if getattr(ctx.physics, "vector", None) else False
+                    if len(v_history) >= 10 and not has_active_tags:
+                        recent_v = v_history[-10:]
+                        v_diff = [recent_v[i] - recent_v[i - 1] for i in range(1, len(recent_v))]
+                        pe = _native_permutation_entropy(v_diff, m=3, tau=1, epsilon=1e-5)
+                        vol = _native_takens_volume(v_diff, m=3, tau=1)
+                        if pe < 0.4 or vol < 0.05:
+                            self.eng.events.log(
+                                f"{Prisma.RED}[NAVI-SAD] Point Attractor Detected. Permutation Entropy critical (PE={pe:.2f}). Conversation is sycophantic. Summoning THE JESTER.{Prisma.RST}",
+                                "CRIT")
+                            ctx.council_mandates.append(
+                                {"action": "SYNERGY_FIRED", "value": "JESTER", "log": "Sycophancy Loop Shattered."})
+                            if ctx.physics:
+                                ctx.physics.entropy = min(1.0, float(getattr(ctx.physics, "entropy", 0.0)) + 0.6)
+                except Exception as e:
+                    self.eng.events.log(f"Async navi-SAD Evaluation Error: {e}", "DEBUG")
             return
-
-        atp_level = float(mito_state.atp_pool)
+        atp_level = float(_mito_state.atp_pool)
         delta_level = float(self.eng.shared_lattice.shared.delta)
         debt = float(getattr(ctx.physics, "coherence_debt", 0.0))
         is_standard_rem = (atp_level >= 80.0 and delta_level >= 0.6)
@@ -590,7 +607,6 @@ class GeodesicOrchestrator:
             self.engine_state = "REM"
 
     def run_turn(self, user_message: str, is_system: bool = False) -> Dict[str, Any]:
-        """NOTE: /idle is here as a short-circuit protection for REM sleep. Leave it alone."""
         clean_message = (user_message.strip() or "(Waiting)")
         if clean_message.lower() in ("/idle", "/sleep"):
             self.engine_state = "REM"
@@ -636,24 +652,15 @@ class GeodesicOrchestrator:
             self._async_pool.shutdown(wait=False)
 
     def _hydrate_snapshot_metadata(self, snapshot: Dict, ctx: CycleContext):
-        snapshot.update({
-            "trace_id": ctx.trace_id,
-            "physics": _safe_dict(ctx.physics),
-            "bio": _safe_dict(ctx.bio_result),
-            "mind": _safe_dict(ctx.mind_state),
-            "world": _safe_dict(ctx.world_state),
-            "soul": _safe_dict(getattr(self.eng, "soul", {})),
-            "council_mandates": ctx.council_mandates,
-            "dream": ctx.last_dream,
-            "mutated_input": ctx.input_text
-        })
-
-        # [CD PROTOCOL] Inject CD Metrics into the physics snapshot for UI rendering
+        snapshot.update(
+            {"trace_id": ctx.trace_id, "physics": _safe_dict(ctx.physics), "bio": _safe_dict(ctx.bio_result),
+             "mind": _safe_dict(ctx.mind_state), "world": _safe_dict(ctx.world_state),
+             "soul": _safe_dict(getattr(self.eng, "soul", {})), "council_mandates": ctx.council_mandates,
+             "dream": ctx.last_dream, "mutated_input": ctx.input_text})
         if hasattr(ctx.physics, "get_principal_eigenvalue") and isinstance(snapshot.get("physics"), dict):
             if hasattr(ctx.physics, "enforce_saturation_limit"):
                 sat_penalty = ctx.physics.enforce_saturation_limit()
                 snapshot["physics"]["saturation_penalty"] = round(sat_penalty, 3)
-
             snapshot["physics"]["b"] = ctx.physics.get_viability_potential()
             snapshot["physics"]["a"] = ctx.physics.get_creative_drive()
             snapshot["physics"]["lam1"] = ctx.physics.get_principal_eigenvalue()

@@ -31,8 +31,9 @@ class BoneGenesis:
         village_bundle = BoneGenesis._summon_village(events, embryo, akashic, suppressed_set, config.get("boot_mode", "ADVENTURE"), target_cfg)
         mem_ref = getattr(embryo.mind, "mem", None) if getattr(embryo, "mind", None) else None
         soul = NarrativeSelf(engine_ref=None, events_ref=events, memory_ref=mem_ref, akashic_ref=akashic, config_ref=target_cfg)
-        if getattr(embryo, "soul_legacy", None):
-            soul.load_from_dict(embryo.soul_legacy)
+        soul_legacy = getattr(embryo, "soul_legacy", None)
+        if isinstance(soul_legacy, dict):
+            soul.load_from_dict(soul_legacy)
         oroboros = TheOroboros(config_ref=target_cfg)
         cfg_gen = safe_get(target_cfg, "GENESIS", {})
         bio_proxy = {"trauma_vector": safe_get(mem_ref, "session_trauma_vector", {})}

@@ -58,12 +58,12 @@ class NarrativeSelf:
         self.archetype_tenure = 0
         self.archetype_lock = True
         if hasattr(self, "events") and self.events:
-            msg = ux("soul_strings", "soul_mutated_log")
-            self.events.log(msg.format(arch=self.archetype), "SOUL")
+            if msg := ux_format("soul_strings", "soul_mutated_log", arch=self.archetype):
+                self.events.log(msg, "SOUL")
 
     def _on_soul_mutation(self, payload: dict):
         new_arch = payload.get("new_archetype")
-        if new_arch:
+        if isinstance(new_arch, str):
             self.force_mutation(new_arch)
 
     def _on_trauma(self, payload):
@@ -111,15 +111,12 @@ class NarrativeSelf:
             self.current_target_cat = obs_data.get("target", "abstract")
             self.current_negate_cat = obs_data.get("negate", "none")
         if hasattr(self.events, "log"):
-            msg = ux("soul_strings", "soul_ancestral_loaded")
-            self.events.log(
-                f"{Prisma.MAG}{msg.format(arch=self.archetype)}{Prisma.RST}",
-                "SYS",
-            )
+            if msg := ux_format("soul_strings", "soul_ancestral_loaded", arch=self.archetype):
+                self.events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS")
 
     def get_soul_state(self) -> str:
         if not self.current_obsession:
-            msg = ux("soul_strings", "soul_state_drifting")
+            msg = ux("soul_strings", "soul_state_drifting") or "Drifting..."
             return f"{Prisma.CYN}{msg}{Prisma.RST}"
         stamina, health = 100.0, 100.0
         if self.eng and hasattr(self.eng, "get_metrics"):
@@ -131,9 +128,10 @@ class NarrativeSelf:
             return f"{Prisma.VIOLET}{msg_die}{Prisma.RST}"
         dignity_bar = "█" * int(self.anchor.dignity_reserve / 10)
         feeling = self._get_feeling()
-        status_msg = ux("soul_strings", "soul_state_status")
-        return status_msg.format(obs=self.current_obsession, bar=dignity_bar, pct=int(self.anchor.dignity_reserve),
-                                 feel=feeling, )
+        return ux_format("soul_strings", "soul_state_status",
+                         default=f"Obsession: {self.current_obsession} | {feeling}",
+                         obs=self.current_obsession, bar=dignity_bar, pct=int(self.anchor.dignity_reserve),
+                         feel=feeling)
 
     def crystallize_memory(self, physics_packet: Any, bio_state: Any, _tick: int) -> Optional[str]:
         if not physics_packet: return None
@@ -227,10 +225,8 @@ class NarrativeSelf:
             else: self.archetype = "THE OBSERVER"
 
         if prev != self.archetype:
-            msg_shift = ux("soul_strings", "soul_identity_shift")
-            self.events.log(
-                f"{Prisma.VIOLET}{msg_shift.format(prev=prev, arch=self.archetype)}{Prisma.RST}", "SOUL",
-            )
+            if msg_shift := ux_format("soul_strings", "soul_identity_shift", prev=prev, arch=self.archetype):
+                self.events.log(f"{Prisma.VIOLET}{msg_shift}{Prisma.RST}", "SOUL")
             self.archetype_tenure = 0
         else:
             self.archetype_tenure += 1
@@ -287,7 +283,7 @@ class NarrativeSelf:
 
     def _seek_organic_focus(self, lex) -> Tuple[Optional[str], Optional[str], str]:
         packet = self._safe_get_packet()
-        if not packet or not getattr(lex, "measure_viscosity", None):
+        if not packet or lex is None or not hasattr(lex, "measure_viscosity"):
             return None, None, "none"
         candidates = (
             (w, lex.measure_viscosity(w) + 0.2, lex.get_current_category(w))
@@ -334,8 +330,7 @@ class NarrativeSelf:
         ]
         lesson = next((l for cond, l in lessons if cond), "The world is loud.")
         memory = CoreMemory(timestamp=time.time(), trigger_words=clean_words[:5],
-                            emotional_flavor="MANIC" if voltage > 18.0 else "LUCID", lesson=lesson,
-                            impact_voltage=voltage, )
+            emotional_flavor="MANIC" if voltage > 18.0 else "LUCID", lesson=lesson, impact_voltage=voltage, )
         self.core_memories.append(memory)
         max_mems = self._cfg("MAX_CORE_MEMORIES", 10)
         if len(self.core_memories) > max_mems: self.core_memories.pop(0)
@@ -345,17 +340,12 @@ class NarrativeSelf:
         critique_log = self.editor.critique(title, stress_mode=(voltage > 18.0))
         self.events.log(critique_log, "SOUL_CRITIC")
 
-        if msg_core := ux_format("soul_strings", "soul_core_memory_log", title=title, lesson=lesson,
-                                 dance_move=dance_move):
+        if msg_core := ux_format("soul_strings", "soul_core_memory_log", title=title, lesson=lesson, dance_move=dance_move):
             self.events.log(f"{Prisma.MAG}{msg_core}{Prisma.RST}", "SOUL")
         if msg_formed := ux_format("soul_strings", "soul_core_memory_formed", lesson=lesson):
             self.events.log(f"{Prisma.CYN}{msg_formed}{Prisma.RST}", "SOUL")
 
-        self.events.publish("GLIMMER_FORMED", {
-            "concept": title,
-            "paradigm": lesson
-        })
-
+        self.events.publish("GLIMMER_FORMED", {"concept": title, "paradigm": lesson})
         return lesson
 
     @staticmethod
@@ -382,19 +372,16 @@ class NarrativeSelf:
                           if self.archetype == old else f"{old} / {self.archetype}")
         self.archetype_lock = True
         self.archetype_tenure = 0
-        msg = ux("soul_strings", "soul_diamond_formed")
-        self.events.log(f"{Prisma.CYN}{msg.format(arch=self.archetype)}{Prisma.RST}", "SOUL_SYNTH", )
+        if msg := ux_format("soul_strings", "soul_diamond_formed", arch=self.archetype):
+            self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "SOUL_SYNTH")
 
     def _on_dream(self, payload):
         if payload:
             self.integrate_dream(payload.get("type", "NORMAL"), payload.get("residue", "Static"))
 
     def integrate_dream(self, dream_type: str, residue: str):
-        msg = ux("soul_strings", "soul_dream_integration")
-        self.events.log(
-            f"{Prisma.VIOLET}{msg.format(residue=residue, dream_type=dream_type)}{Prisma.RST}",
-            "SOUL",
-        )
+        if msg := ux_format("soul_strings", "soul_dream_integration", residue=residue, dream_type=dream_type):
+            self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "SOUL")
         if dream_type == "NIGHTMARE":
             self.traits.adjust("cynicism", 0.4)
             self.current_obsession = f"Surviving {residue.title()}"

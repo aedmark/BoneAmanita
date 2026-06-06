@@ -4,49 +4,84 @@ import re
 from enum import Enum
 
 class Prisma:
-    RST = "\033[0m"
-    RED, GRN, YEL, BLU = "\033[31m", "\033[32m", "\033[33m", "\033[34m"
-    MAG, CYN, WHT, GRY = "\033[35m", "\033[36m", "\033[97m", "\033[90m"
-
+    """
+    Immutable color registry.
+    The engine speaks ANSI exclusively. Web consumers must translate at the boundary.
+    """
+    # Static, immutable ANSI codes. Load-bearing for engine f-strings.
+    RED = "\033[31m"
+    GRN = "\033[32m"
+    YEL = "\033[33m"
+    BLU = "\033[34m"
+    MAG = "\033[35m"
+    CYN = "\033[36m"
+    WHT = "\033[97m"
+    GRY = "\033[90m"
     INDIGO = "\033[34;1m"
     OCHRE = "\033[33;2m"
     VIOLET = "\033[35;2m"
     SLATE = "\033[30;1m"
+    RST = "\033[0m"
 
-    _STRIP_PATTERN = re.compile(r"<span class='[^']+'>|</span>|\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    _ANSI_MAP = {
+        "R": RED, "G": GRN, "Y": YEL, "B": BLU,
+        "M": MAG, "C": CYN, "W": WHT, "0": GRY,
+        "I": INDIGO, "O": OCHRE, "V": VIOLET, "S": SLATE
+    }
 
-    _COLOR_MAP = {"R": RED, "G": GRN, "Y": YEL, "B": BLU, "M": MAG, "C": CYN, "W": WHT, "0": GRY, "I": INDIGO,
-                  "O": OCHRE, "V": VIOLET, "S": SLATE, }
+    _STRIP_PATTERN = re.compile(
+        r"<span class='[^']+'>|</span>"
+        r"|\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"
+    )
 
-    @classmethod
-    def enable_web_mode(cls):
-        cls.RST = "</span>"
-        cls.RED = "<span class='prisma-red'>"
-        cls.GRN = "<span class='prisma-grn'>"
-        cls.YEL = "<span class='prisma-yel'>"
-        cls.BLU = "<span class='prisma-blu'>"
-        cls.MAG = "<span class='prisma-mag'>"
-        cls.CYN = "<span class='prisma-cyn'>"
-        cls.WHT = "<span class='prisma-wht'>"
-        cls.GRY = "<span class='prisma-gry'>"
-        cls.INDIGO = "<span class='prisma-indigo'>"
-        cls.OCHRE = "<span class='prisma-ochre'>"
-        cls.VIOLET = "<span class='prisma-violet'>"
-        cls.SLATE = "<span class='prisma-slate'>"
-        cls._COLOR_MAP = {"R": cls.RED, "G": cls.GRN, "Y": cls.YEL, "B": cls.BLU, "M": cls.MAG, "C": cls.CYN,
-                          "W": cls.WHT, "0": cls.GRY, "I": cls.INDIGO, "O": cls.OCHRE, "V": cls.VIOLET,
-                          "S": cls.SLATE, }
+    # Fast ANSI-to-HTML translation map for the web boundary
+    _ANSI_TO_HTML = {
+        RED: "<span class='prisma-red'>",
+        GRN: "<span class='prisma-grn'>",
+        YEL: "<span class='prisma-yel'>",
+        BLU: "<span class='prisma-blu'>",
+        MAG: "<span class='prisma-mag'>",
+        CYN: "<span class='prisma-cyn'>",
+        WHT: "<span class='prisma-wht'>",
+        GRY: "<span class='prisma-gry'>",
+        INDIGO: "<span class='prisma-indigo'>",
+        OCHRE: "<span class='prisma-ochre'>",
+        VIOLET: "<span class='prisma-violet'>",
+        SLATE: "<span class='prisma-slate'>",
+        RST: "</span>"
+    }
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
+        """Standard CLI painting."""
         k = str(color_key).strip()
-        code = cls._COLOR_MAP.get(k[0].upper() if k else "0", cls.WHT)
+        code = cls._ANSI_MAP.get(k[0].upper() if k else "0", cls.WHT)
         txt = "" if text is None else str(text)
-        return f"{code}{txt}" if txt.endswith(cls.RST) else f"{code}{txt}{cls.RST}"
+        if txt.endswith(cls.RST):
+            return f"{code}{txt}"
+        return f"{code}{txt}{cls.RST}"
 
     @classmethod
     def strip(cls, text: str) -> str:
-        return cls._STRIP_PATTERN.sub("", str(text)) if text is not None else ""
+        """Removes all ANSI and HTML tags."""
+        return cls._STRIP_PATTERN.sub("", str(text)) if text else ""
+
+    @classmethod
+    def translate_to_web(cls, text: str) -> str:
+        """
+        [WEB BOUNDARY OVERRIDE]
+        Replaces ANSI codes with corresponding HTML span classes.
+        Call this in your Web API response formatter, NOT inside the engine.
+        """
+        if not text:
+            return ""
+        # Replace the reset code first to avoid partial matches
+        result = text.replace(cls.RST, cls._ANSI_TO_HTML[cls.RST])
+        for ansi_code, html_span in cls._ANSI_TO_HTML.items():
+            if ansi_code != cls.RST:
+                result = result.replace(ansi_code, html_span)
+        return result
+
 
 class LoreCategory(Enum):
     LEXICON = "lexicon"
@@ -57,6 +92,7 @@ class LoreCategory(Enum):
     DEATH = "death"
     ALMANAC = "almanac"
     DREAMS = "dreams"
+
 
 class RealityLayer:
     TERMINAL = 0

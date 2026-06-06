@@ -217,8 +217,6 @@ class SanctuaryPhase(SimulationPhase):
         if in_safe_zone and trauma_sum < t_limit:
             self._enter_sanctuary(ctx)
             self._apply_restoration(ctx)
-            if random.random() < 0.3:
-                self._trigger_dream(ctx)
         return ctx
 
     @staticmethod
@@ -242,12 +240,9 @@ class SanctuaryPhase(SimulationPhase):
     def _trigger_dream(self, ctx: CycleContext):
         if not self.eng.mind.dreamer:
             return
-
-        # Wire replay to the Akashic Record
         if hasattr(self.eng, "akashic") and hasattr(self.eng.akashic, "replay_dreams"):
             if dream_log := self.eng.akashic.replay_dreams():
                 ctx.log(f"{Prisma.VIOLET}{dream_log}{Prisma.RST}")
-
         current_trauma_load = sum(self.eng.trauma_accum.values())
         bio_packet = {"chem":
                           self.eng.bio.endo.get_state(),
@@ -257,9 +252,7 @@ class SanctuaryPhase(SimulationPhase):
                       "trauma_vector": current_trauma_load, }
         soul_snapshot = _safe_dict(getattr(self.eng, "soul", {}))
         dream_packet = self.eng.mind.dreamer.enter_rem_cycle(soul_snapshot, bio_state=bio_packet)
-
         dream_text_to_archive = None
-
         if isinstance(dream_packet, dict):
             dream_text_to_archive = dream_packet.get("log", "The mind wanders...")
             ctx.log(dream_text_to_archive)
@@ -268,8 +261,8 @@ class SanctuaryPhase(SimulationPhase):
             log_msg, effects = dream_packet
             dream_text_to_archive = log_msg
             ctx.log(f"{Prisma.VIOLET}  {log_msg}{Prisma.RST}")
-            ctx.last_dream = dream_packet
-            if effects:
+            ctx.last_dream = {"log": log_msg, "effects": effects}
+            if hasattr(effects, "get"):
                 if adr := effects.get("adrenaline"):
                     self.eng.bio.endo.adrenaline = max(0.0, self.eng.bio.endo.adrenaline + adr)
                 if cor := effects.get("cortisol"):

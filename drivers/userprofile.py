@@ -9,8 +9,7 @@ class UserProfile:
     def __init__(self, name="USER", config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.name = name
-        self.affinities = {"heavy": 0.0, "kinetic": 0.0, "abstract": 0.0, "photo": 0.0, "aerobic": 0.0,
-                           "thermal": 0.0, "cryo": 0.0}
+        self.affinities = {"heavy": 0.0, "kinetic": 0.0, "abstract": 0.0, "photo": 0.0, "aerobic": 0.0, "thermal": 0.0, "cryo": 0.0}
         self.confidence = 0
         self.drivers_cfg = safe_get(self.cfg, "DRIVERS", {})
         self.file_path = safe_get(self.drivers_cfg, "PROFILE_FILE_PATH", "user_profile.json")

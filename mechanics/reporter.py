@@ -297,7 +297,7 @@ class CycleReporter:
             self._inject_flux_readout(ctx)
             self._inject_somatic_pulse(ctx)
             if ctx.is_bureaucratic:
-                return self._package_bureaucracy(ctx)
+                return self._package_bureaucracy(ctx) or {}
             return self.renderer.render_frame(ctx, self.eng.tick_count, self.eng.events.flush())
         except Exception as e:
             import traceback

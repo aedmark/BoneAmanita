@@ -87,12 +87,9 @@ class TheBureau:
         if not selected_form:
             return None
         if float(safe_get(bio_state, "health", 100.0)) < 20.0:
-            return {
-                "status": "WAIVED",
-                "ui": f"{Prisma.CYN}[BUREAU]: Audit waived due to critical systemic instability.{Prisma.RST}",
-                "log": "Audit waived (Mercy).",
-                "atp_gain": 0.0,
-            }
+            return {"status": "WAIVED",
+                    "ui": f"{Prisma.CYN}Audit waived due to critical systemic instability.{Prisma.RST}",
+                    "log": "Audit waived.", "atp_gain": 0.0, }
         self.stamp_count += 1
         bureau_resp = random.choice(self.responses)
         prefix_str = ux("protocol_strings", "bureau_prefix_normal")
@@ -107,12 +104,7 @@ class TheBureau:
             ev_msg = ux_format("protocol_strings", "bureau_evidence", evidence=', '.join(evidence))
             ui_msg += f"\n   {Prisma.RED}{ev_msg}{Prisma.RST}"
         log_msg = ux_format("protocol_strings", "bureau_log", form=selected_form, origin=origin, tax=tax)
-        return {
-            "status": "AUDITED",
-            "ui": ui_msg,
-            "log": log_msg,
-            "atp_gain": -tax,
-        }
+        return {"status": "AUDITED", "ui": ui_msg, "log": log_msg, "atp_gain": -tax, }
 
     @staticmethod
     def _apply_correction(text: str, crime: Dict, match: re.Match) -> str:
