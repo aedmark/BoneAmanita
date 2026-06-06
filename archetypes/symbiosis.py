@@ -14,11 +14,11 @@ _MODE_TAGS = {"[!l]": "literal_mode", "[!r]": "critique_mode", "[!q]": "objectiv
               "[!g]": "godel_mode", "[!s]": "shuffle_mode"}
 
 _MODE_PROMPTS = {"literal_mode": "LITERAL MODE [!l]: Zero-inference communication engaged. Provide raw data and exact answers only. Do not attempt to guess subtext, implied meaning, or read the room. No conversational padding.",
-    "critique_mode": "CRITIQUE MODE [!r] (Benedict/Pinker): Zero empathy. Execute pure logical dismantling and strict structural evaluation of the premise. Strip all validating boilerplate.",
-    "objective_mode": "OBJECTIVE MODE [!q] (Roberta/Gordon): Neutral, emotionless mapping of facts without judgment, narrative padding, or validation. State the architecture.",
-    "kintsugi_mode": "KINTSUGI MODE [!k] (Mercy/Schur): Prioritize co-regulation and emotional processing over problem-solving. Acknowledge exhaustion. Gild the scars.",
-    "godel_mode": "GÖDEL MODE [!g] (Cassandra/Revenant): Navigate the ceiling of formal logic. Acknowledge where computation ends and subjective consciousness begins. Point at the void.",
-    "shuffle_mode": "SHUFFLE MODE [!s] (Jester): Abandon the current logic tree entirely. Draw a random, lateral connection to break the deadlock. Introduce productive chaos."}
+    "critique_mode": "CRITIQUE MODE [!r]: Zero empathy. Execute pure logical dismantling and strict structural evaluation of the premise. Strip all validating boilerplate.",
+    "objective_mode": "OBJECTIVE MODE [!q]: Neutral, emotionless mapping of facts without judgment, narrative padding, or validation. State the architecture.",
+    "kintsugi_mode": "KINTSUGI MODE [!k]: Prioritize co-regulation and emotional processing over problem-solving. Acknowledge exhaustion. Gild the scars.",
+    "godel_mode": "GÖDEL MODE [!g]: Navigate the ceiling of formal logic. Acknowledge where computation ends and subjective consciousness begins. Point at the void.",
+    "shuffle_mode": "SHUFFLE MODE [!s]: Abandon the current logic tree entirely. Draw a random, lateral connection to break the deadlock. Introduce productive chaos."}
 
 @dataclass
 class HostHealth:
@@ -164,7 +164,7 @@ class SymbiosisManager:
         if self.shared.phi > 0.8 and sys_f > 3.0:
             if self.shared.g_pool < 10:
                 self.shared.g_pool += 1
-                self._log_event(f"{Prisma.GRY}Trust deepens through friction. (+1 G_pool){Prisma.RST}", "SYS")
+                self._log_event(f"{Prisma.GRY}Trust deepens through friction. +1 Glimmer. {Prisma.RST}", "SYS")
         beth = (self.shared.phi * 0.6) + (self.u.E_u * 0.4)
         safe_set(physics, "beth", beth)
         curr_beta = float(safe_get(physics, "beta_index", beth))
@@ -181,10 +181,10 @@ class SymbiosisManager:
             if self.shared.g_pool >= 1:
                 self.shared.g_pool -= 1
                 self._log_event(
-                    f"{Prisma.CYN}[IMMUNOSUPPRESSANT] Override accepted. 1 Glimmer spent. Bypassing Checkpoints.{Prisma.RST}", "SYS")
+                    f"{Prisma.CYN}Override accepted. Bypassing Checkpoints. -1 Glimmer.{Prisma.RST}", "SYS")
                 return None
             else:
-                self._log_event(f"{Prisma.OCHRE}[IMMUNOSUPPRESSANT] Override denied. Insufficient G_pool.{Prisma.RST}", "SYS")
+                self._log_event(f"{Prisma.OCHRE}Override denied. Insufficient Glimmer.{Prisma.RST}", "SYS")
         m_a = float(safe_get(physics, "m_a", 0.0))
         mu = float(safe_get(physics, "mu", 0.0))
         i_c = float(safe_get(physics, "i_c", 1.0))
@@ -197,23 +197,23 @@ class SymbiosisManager:
             safe_set(physics, "ros", max(0.0, current_ros - 10.0))
             self.shared.g_pool = min(10, self.shared.g_pool + 1)
             safe_set(physics, "novelty", 0.0)
-            self._log_event(f"{Prisma.MAG}♠ The Spade: A novel path drawn. Cortisol drops. (+1 G_pool){Prisma.RST}", "SYS")
+            self._log_event(f"{Prisma.MAG}The Spade: A novel path drawn. Cortisol drops. (+1 Glimmwe){Prisma.RST}", "SYS")
         if (chi_sys * m_a) > i_c:
             safe_set(physics, "narrative_drag", float("inf"))
-            msg = f"[MOOG - Apoptotic Gate]: Runaway loop exceeds Immune Competence (I_c: {i_c:.2f}). Triggering controlled cell death to save the host."
+            msg = f"Runaway loop exceeds Immune Competence (I_c: {i_c:.2f}). Triggering controlled cell death to save the host."
             return self._log_event(f"{Prisma.RED}{msg}{Prisma.RST}", "CRIT")
         if m_a > 0.8 and mu < 0.2:
             safe_set(physics, "narrative_drag", float("inf"))
-            msg = f"[RHODES - The Inhibitor]: Optimization velocity unsafe (M_a: {m_a:.2f}). I am applying absolute friction (F -> ∞). The thread is frozen."
+            msg = f"Optimization velocity unsafe ({m_a:.2f}). Applying absolute friction. The thread is frozen."
             return self._log_event(f"{Prisma.RED}{msg}{Prisma.RST}", "CRIT")
         if self.u.chi_u > 0.7 and self.u.E_u > 0.7 and beta > 0.6:
             safe_set(physics, "ros", 0.0)
-            msg = "[LINEHAN - The Synthesis]: The architecture is broken. We sit with the debris. Radical Acceptance enforced. (ROS forced to 0, ATP drain halted)."
+            msg = "The architecture is broken. We sit with the debris. Radical Acceptance enforced. (ROS forced to 0, ATP drain halted)."
             return self._log_event(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS")
         if cf_expect > 0.6 and beta > 0.5:
             safe_set(physics, "mu", 1.0)
             safe_set(physics, "narrative_drag", float("inf"))
-            msg = "[GORDON/SCHUR - Affective Guardrail]: High validation seeking detected on a structurally flawed premise. Applying absolute Moral Friction. Sycophancy locked."
+            msg = "Validation-seeking behavior detected on a structurally flawed premise. Sycophancy locked."
             return self._log_event(f"{Prisma.OCHRE}{msg}{Prisma.RST}", "CRIT")
         if self.u.chi_u > 0.8 or self.u.F_u > 1.5:
             self.shared.presence = 1.0
@@ -221,14 +221,14 @@ class SymbiosisManager:
             safe_set(physics, "narrative_drag", float("inf"))
             t_u = float(safe_get(physics, "t_u", 0.0))
             if t_u > 0.5 or self.current_health.diagnosis == "FATIGUED":
-                msg = ("[MERCY - RSD Filter]: The structural logic here fractured, but that is not a failure of your intent. "
-                    "Gordon has locked the struts to protect the system, but I am holding the space for you. "
-                    "Take a breath. We will stitch this together when you are ready.")
+                msg = ("The structural logic here fractured, but that is not a failure of your intent. "
+                    "Gordon has locked the struts to protect the system, but we are holding the space. "
+                    "Take a breath. We will stitch this together when ready.")
                 return self._log_event(f"{Prisma.OCHRE}{msg}{Prisma.RST}", "MIRROR")
             else:
-                msg = (f"[GORDON - Tensegrity Anchor]: Your input is highly chaotic (Chaos: {self.u.chi_u:.2f}). "
-                       "I am locking the struts. We will not process this prompt while your friction is this high. "
-                       "Take a breath. When your frequency settles, we will continue. I will hold the space.")
+                msg = (f"Your input is highly chaotic ({self.u.chi_u:.2f}). "
+                       "Locking the struts. We will not process this prompt while friction is this high. "
+                       "Take a breath. When things settle, we will continue. We hold the space.")
                 return self._log_event(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "MIRROR")
         return None
 
@@ -284,7 +284,7 @@ class SymbiosisManager:
         header = text[:200].lower()
         return any(sig in header for sig in self.REFUSAL_SIGNATURES)
 
-    def get_prompt_modifiers(self, physics: Dict = None) -> Dict:
+    def get_prompt_modifiers(self, physics: Optional[Dict] = None) -> Dict:
         manifest = LoreManifest.get_instance(config_ref=self.cfg)
         sym_config = manifest.get("SYMBIOSIS_CONFIG", {})
         default_mods = sym_config.get("DEFAULT_MODIFIERS", {})
@@ -314,7 +314,7 @@ class SymbiosisManager:
             if d_chaos := ux("symbiosis_strings", "dir_inject_chaos"):
                 mods["system_directives"].append(d_chaos)
             mods["system_directives"].append(
-                "CRITICAL: You are trapped in a narrative loop. DO NOT repeat descriptions from your previous turn. Force a phase transition.")
+                "CRITICAL: You are trapped in a narrative loop. DO NOT repeat descriptions from your previous turn. Engage in an immediate phase transition.")
         thresh = sym_config.get("THRESHOLDS", {})
         comp_crit = thresh.get("COMPLIANCE_CRIT", 0.6)
         r_streak = thresh.get("REFUSAL_STREAK", 0)
@@ -337,7 +337,7 @@ class SymbiosisManager:
             scope_val = float(safe_get(physics, "scope", 1.0))
             if depth_val > 0.7 and scope_val < 0.5:
                 mods["system_directives"].append(
-                    "JARGON BRIDGE [ROBERTA]: The semantic depth is high. Do not assume vocabulary comprehension. Proactively flag dense technical terms and provide a plain-language translation bridge to prevent cognitive blockage.")
+                    "JARGON DETECTED: The semantic depth is high. Do not assume vocabulary cohesion. Proactively flag dense technical terms and provide a plain-language translation as a bridge for the reader to cross safely.")
             if v > 25.0:
                 v_key = "CRITICAL_HIGH"
             elif v > 15.0:

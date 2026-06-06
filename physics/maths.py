@@ -10,20 +10,14 @@ def _native_ordinal_pattern(window: List[float]) -> Tuple[int, ...]:
 def _native_detect_false_cohesion(history: List[float], window_size: int = 3) -> bool:
     if len(history) < window_size * 2:
         return False
-    return _native_ordinal_pattern(history[-window_size:]) == _native_ordinal_pattern(
-        history[-(window_size * 2): -window_size]
-    )
-
+    return _native_ordinal_pattern(history[-window_size:]) == _native_ordinal_pattern(history[-(window_size * 2): -window_size])
 
 def _native_permutation_entropy(time_series: List[float], window_size: int = 3, epsilon: float = 1e-5) -> float:
     if len(time_series) < window_size:
         return 1.0
-
     patterns = []
     for i in range(len(time_series) - window_size + 1):
         window = time_series[i: i + window_size]
-
-        # [navi-SAD PROTOCOL]: Tie-Exclusion
         has_tie = False
         for a in range(window_size):
             if has_tie: break
@@ -33,17 +27,14 @@ def _native_permutation_entropy(time_series: List[float], window_size: int = 3, 
                     break
         if has_tie:
             continue
-
         indexed = [(window[j], j) for j in range(window_size)]
         indexed.sort(key=lambda x: x[0])
         permutation = [0] * window_size
         for rank, (_, original_pos) in enumerate(indexed):
             permutation[original_pos] = rank
         patterns.append(tuple(permutation))
-
     if not patterns:
         return 0.0
-
     counts = Counter(patterns)
     total_patterns = len(patterns)
     entropy = -sum((c / total_patterns) * math.log2(c / total_patterns) for c in counts.values())
@@ -62,7 +53,6 @@ class CreativeDeterminantEngine:
     Original CD equations and field theory authored by Nelson Spence (Project Navi LLC).
     Licensed under Apache 2.0.
     """
-
     def __init__(self, lambda_base=1.0, eta=0.1, rho=0.05, p=2.0, c=1.5):
         self.coherence_debt = 0.0
         self.lambda_base = lambda_base

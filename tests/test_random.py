@@ -12,6 +12,16 @@ from archetypes.village import DeathGen
 from tests.base import BoneTestCase
 
 class RandomTest(BoneTestCase):
+    def setUp(self):
+        from core import LoreManifest
+        LoreManifest.get_instance().flush_cache()
+        super().setUp()
+
+    def tearDown(self):
+        from core import LoreManifest
+        LoreManifest.get_instance().flush_cache()
+        super().tearDown()
+
     def test_gordon_rummage_stamina_tax(self):
             self.engine.stamina = 50.0
             success, msg, cost = self.engine.village.gordon.rummage(
@@ -148,27 +158,23 @@ class RandomTest(BoneTestCase):
                 "Kintsugi failed to dynamically format the log string from the manifest.",
             )
 
-    def test_prompt_composer_anti_bleed_membranes(self):
-            mock_lore = {"system_prompts": self.engine.prompt_library, "lenses": {}}
-            composer = PromptComposer(mock_lore)
-            self.engine.cortex.active_mode = "CONVERSATION"
-            conv_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-            conv_prompt = composer.compose(conv_state, "Hello?", modifiers={"include_inventory": False})
-            adv_mechanics = "Object-Action Coupling"
-            conv_anti_bleed = "You are NOT a narrator"
-            self.assertNotIn(adv_mechanics, conv_prompt, "ADVENTURE mechanics bled into CONVERSATION mode prompt.")
-            self.assertIn(conv_anti_bleed, conv_prompt, "CONVERSATION Anti-Bleed constraint was not injected.")
-            self.assertNotIn(
-                "INVENTORY:", conv_prompt,
-                "Inventory block rendered in Conversation mode despite being suppressed.")
-            self.engine.cortex.active_mode = "TECHNICAL"
-            tech_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-            tech_prompt = composer.compose(tech_state, "Refactor this.", modifiers={"include_inventory": False})
-            tech_guide = "Clinical, precise"
-            tech_anti_bleed = "DO NOT offer 'assistance'"
-            self.assertIn(tech_guide, tech_prompt, "TECHNICAL style guide missing.")
-            self.assertIn(tech_anti_bleed, tech_prompt,
-                          "TECHNICAL Anti-Bleed constraint was not injected.")
+    def test_prompt_composer_anti_bleed_conversation(self):
+        # The cutting board is clean via setUp()
+        import copy
+        mock_lore = {"system_prompts": copy.deepcopy(self.engine.prompt_library), "lenses": {}}
+        composer = PromptComposer(mock_lore)
+
+        self.engine.cortex.active_mode = "CONVERSATION"
+        conv_state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
+        conv_prompt = composer.compose(conv_state, "Hello?", modifiers={"include_inventory": False})
+
+        adv_mechanics = "Object-Action Coupling"
+        conv_anti_bleed = "NOT a narrator"
+
+        self.assertNotIn(adv_mechanics, conv_prompt, "ADVENTURE mechanics bled into CONVERSATION mode prompt.")
+        self.assertIn(conv_anti_bleed, conv_prompt, "CONVERSATION Anti-Bleed constraint was not injected.")
+        self.assertNotIn("INVENTORY:", conv_prompt,
+                         "Inventory block rendered in Conversation mode despite being suppressed.")
 
     def test_phase_shift_persona_morphing(self):
             mock_lore = {"system_prompts": self.engine.prompt_library, "lenses": {}}

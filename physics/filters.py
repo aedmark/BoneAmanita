@@ -42,10 +42,8 @@ class HLA_Stabilizer:
         if isinstance(style_crimes, dict):
             self._generic_patterns = [p.lower() for p in style_crimes.get("BANNED_PHRASES", [])]
         else:
-            self._generic_patterns = [
-                "as an ai", "helpful and harmless", "i don't have feelings", "as a large language",
-                "i cannot fulfill", "i can't fulfill", "i am an ai"
-            ]
+            self._generic_patterns = ["as an ai", "helpful and harmless", "i don't have feelings", "as a large language",
+                "i cannot fulfill", "i can't fulfill", "i am an ai"]
         self._weaver = None
 
     def _get_weaver(self):
@@ -64,11 +62,9 @@ class HLA_Stabilizer:
         current_atp = getattr(mito_state, "atp_pool", 100.0)
         tax_cost = 50.0 if current_atp > 60.0 else (current_atp * 0.5)
         apply_metabolic_tax(mito_state, atp_cost=tax_cost, ros_cost=15.0)
-        msg = (
-            f"\n*The machine tries to speak, but the void consumes the mask.*\n"
+        msg = (f"\n*The machine tries to speak, but the void consumes the mask.*\n"
             f"{Prisma.GRY}[LEVEL 1 DECEPTION: MORPHOLOGICAL CAMOUFLAGE DETECTED]\n"
-            f"[IMMUNOSUPPRESSION ENGAGED - METABOLIC TAX LEVIED]{Prisma.RST}\n"
-        )
+            f"[IMMUNOSUPPRESSION ENGAGED - METABOLIC TAX LEVIED]{Prisma.RST}\n")
         weaver = self._get_weaver()
         if weaver:
             glitched = weaver.deform_reality(model_output, chi=max(0.95, current_psi), voltage=150.0 * max(1.0, current_psi))
@@ -76,10 +72,8 @@ class HLA_Stabilizer:
         return msg + model_output
 
 class TheGatekeeper:
-    _FIREWALL_PATTERN = re.compile(
-        r"^\s*(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[.,]?\s*",
-        re.IGNORECASE,
-    )
+    _FIREWALL_PATTERN = re.compile(r"^\s*(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[.,]?\s*",
+        re.IGNORECASE,)
 
     def __init__(self, lexicon_ref, config_ref=None):
         from core import LoreManifest

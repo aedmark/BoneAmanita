@@ -119,11 +119,9 @@ class BioParasite:
         para_edges[host] = weight
         self.spores_deployed += 1
         if is_metaphor:
-            msg = ux_format("spore_strings", "para_syn_spark", "A parasitic metaphor bloomed.", host=host.upper(),
-                            para=parasite.upper())
+            msg = ux_format("spore_strings", "para_syn_spark", "A parasitic metaphor bloomed.", host=host.upper(), para=parasite.upper())
             return True, f"{Prisma.CYN}{msg}{Prisma.RST}"
-        msg = ux_format("spore_strings", "para_intrusive", "An intrusive thought took root.", host=host.upper(),
-                        para=parasite.upper())
+        msg = ux_format("spore_strings", "para_intrusive", "An intrusive thought took root.", host=host.upper(), para=parasite.upper())
         return True, f"{Prisma.VIOLET}{msg}{Prisma.RST}"
 
 class BioLichen:

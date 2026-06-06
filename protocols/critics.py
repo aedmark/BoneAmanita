@@ -72,8 +72,8 @@ class TheCriticsCircle:
             comment = random.choice(
                 critic.get("reviews", {}).get(review_type, ["Hrm."]))
             color = Prisma.GRN if review_type == "high" else Prisma.RED
-            icon_good = ux("council_strings", "critic_good_icon") or "🌟"
-            icon_bad = ux("council_strings", "critic_bad_icon") or "🥀"
+            icon_good = ux("council_strings", "critic_good_icon") or "Gold Star!"
+            icon_bad = ux("council_strings", "critic_bad_icon") or "Sad Face!"
             icon = icon_good if review_type == "high" else icon_bad
             rev_msg = ux("protocol_strings", "critic_review") or "[{icon}] {name}: {comment}"
             return f"{color}{rev_msg.format(icon=icon, name=critic.get('name', key), comment=comment)}{Prisma.RST}"

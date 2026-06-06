@@ -58,10 +58,8 @@ class CommandStateInterface:
         nav = getattr(village, "navigator", None)
         atlas_data = nav.export_atlas() if nav else None
         payload = {"health": self.eng.health, "stamina": self.eng.stamina, "mutations": {},
-                   "trauma_accum": getattr(self.eng, "trauma_accum", {}), "joy_history": [],
-                   "mitochondria_traits": mito_traits, "antibodies": antibodies,
-                   "soul_data": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None,
-                   "continuity": continuity_packet, "world_atlas": atlas_data, "village_data": None}
+            "trauma_accum": getattr(self.eng, "trauma_accum", {}), "joy_history": [], "mitochondria_traits": mito_traits, "antibodies": antibodies,
+            "soul_data": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None, "continuity": continuity_packet, "world_atlas": atlas_data, "village_data": None}
         try:
             return self.eng.mind.mem.save(**payload)
         except Exception as e:
@@ -126,10 +124,11 @@ class CommandRegistry:
         self.help_text[name] = help_str
 
     def execute(self, text: str) -> bool:
+        clean_text = text.strip()
         try:
-            parts = shlex.split(text)
+            parts = shlex.split(clean_text)
         except ValueError:
-            parts = text.split()
+            parts = clean_text.split()
         if not parts:
             return True
         cmd = parts[0].lower()
@@ -367,10 +366,10 @@ class CommandProcessor:
             return True
         mode = parts[1].upper()
         hud_configs = {
-            "WARM": f"{self.P.GRY}[SYSTEM] The veil falls. HUD muted.{self.P.RST}",
-            "LITE": f"{self.P.CYN}[SYSTEM] LITE HUD engaged.{self.P.RST}",
-            "CORE": f"{self.P.CYN}[SYSTEM] CORE HUD engaged.{self.P.RST}",
-            "DEEP": f"{self.P.VIOLET}[SYSTEM] DEEP HUD engaged. Full lattice visible.{self.P.RST}",
+            "WARM": f"{self.P.GRY}The veil falls. HUD muted.{self.P.RST}",
+            "LITE": f"{self.P.CYN}LITE HUD engaged.{self.P.RST}",
+            "CORE": f"{self.P.CYN}CORE HUD engaged.{self.P.RST}",
+            "DEEP": f"{self.P.VIOLET}DEEP HUD engaged. Full lattice visible.{self.P.RST}",
         }
         if mode in hud_configs:
             self.interface.eng.mode_settings["default_ui_depth"] = mode
@@ -386,8 +385,7 @@ class CommandProcessor:
             if hasattr(self.interface.eng, "phys"):
                 drag = getattr(self.interface.eng.phys, "narrative_drag", 0.0)
                 self.interface.eng.phys.narrative_drag = min(10.0, drag + 1.0)
-                self.interface.log(
-                    f"{self.P.GRY}[SYSTEM] The host is fully rested. Oversleeping induces lethargy. (Drag +1.0){self.P.RST}")
+                self.interface.log(f"{self.P.GRY}[SYSTEM] The host is fully rested. Oversleeping induces lethargy. (Drag +1.0){self.P.RST}")
             return True
         self.interface.modify_resource("stamina", 15.0)
         self.interface.modify_resource("atp", 20.0)
@@ -413,9 +411,9 @@ class CommandProcessor:
                         shared.g_pool += g_yield
                     elif phys := getattr(self.interface.eng, "phys", None):
                         phys.G = getattr(phys, "G", 0) + g_yield
-                    dream_log += f"\n{self.P.MAG}✨ The dream yielded a Glimmer (+{g_yield} G_pool).{self.P.RST}"
+                    dream_log += f"\n{self.P.MAG}The dream yielded a Glimmer (+{g_yield} G_pool).{self.P.RST}"
         self.interface.log(
-            f"{self.P.CYN}[SYSTEM] Engine idling. REM cycle initiated. ATP regenerating.{self.P.RST}{dream_log}")
+            f"{self.P.CYN}Engine idling. REM cycle initiated. ATP regenerating.{self.P.RST}{dream_log}")
         return True
 
     def _cmd_sleep(self, parts):
@@ -428,7 +426,7 @@ class CommandProcessor:
         if hasattr(self.interface.eng, "trauma_accum"):
             self.interface.eng.trauma_accum.clear()
         self.interface.log(
-            f"{self.P.CYN}[SYSTEM] Somatic flush complete. Drag reset, trauma purged, stamina restored.{self.P.RST}", "SYS")
+            f"{self.P.CYN}Somatic flush complete. Drag reset, trauma purged, stamina restored.{self.P.RST}", "SYS")
         return True
 
     def _cmd_flush(self, parts):
@@ -443,7 +441,7 @@ class CommandProcessor:
             self.interface.log(wake_msg)
         else:
             self.interface.log(
-                f"{self.P.GRY}(We stand in silence for the lost memory. No protocol active.){self.P.RST}")
+                f"{self.P.GRY}We stand in silence for the lost memory. No protocol active.{self.P.RST}")
         return True
 
     def _cmd_layer(self, parts):
@@ -488,7 +486,7 @@ class CommandProcessor:
         if hasattr(self.interface.eng, "events"):
             self.interface.eng.events.publish("TRAUMA_EVENT", {"magnitude": 50.0})
         self.interface.log(
-            f"{self.P.RED}[DEV] Health dropped to 20. Trauma spiked to 50. Proceed to next turn.{self.P.RST}",
+            f"{self.P.RED}Health dropped to 20. Trauma spiked to 50. Proceed to next turn.{self.P.RST}",
             "SYS", )
         return True
 
@@ -539,7 +537,7 @@ class CommandProcessor:
         if hasattr(self.interface.eng, "phys"):
             self.interface.eng.phys.narrative_drag = 0.0
         self.interface.log(
-            f"{self.P.VIOLET}🃏 [ !s ] THE SHUFFLE: Jester summoned. Lateral shift initiated.{self.P.RST}")
+            f"{self.P.VIOLET}🃏 [ !s ] THE SHUFFLE: Lateral shift initiated.{self.P.RST}")
         self.interface.log(
             f"{self.P.GRY}Control illusion shattered. Narrative drag reset to 0. (Cost: {cost} ATP){self.P.RST}")
         return True

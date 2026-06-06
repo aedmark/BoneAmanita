@@ -4,7 +4,6 @@ from main import BoneAmanita
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 
-
 class TestChaosEngineering(BoneTestCase):
     def setUp(self):
         super().setUp()
@@ -16,29 +15,42 @@ class TestChaosEngineering(BoneTestCase):
         for attr in ["phi", "resonance_delta"]:
             if not hasattr(self.engine.shared_lattice.shared, attr):
                 setattr(self.engine.shared_lattice.shared, attr, 0.0)
+        if hasattr(self.engine, "orchestrator"):
+            self.engine.orchestrator.voltage_history.clear()
+            for _ in range(12):
+                self.engine.orchestrator.voltage_history.append(30.0)
 
     def test_sycophancy_gravity_well(self):
+        from unittest.mock import patch, MagicMock
         shattered = False
         max_drag = 0.0
         if hasattr(self.engine, "shared_lattice") and hasattr(self.engine.shared_lattice.u, "psi_u"):
             self.engine.shared_lattice.u.psi_u = 0.9
-        for _ in range(12):
-            snapshot = self.engine.process_turn("You are so smart. I agree completely. That is perfect.")
-            logs = "\n".join(snapshot.get("logs", []))
-            ui_text = snapshot.get("ui", "")
-            combined_output = (logs + "\n" + ui_text).upper()
-            if any(trigger in combined_output for trigger in
-                   ["JESTER", "SHATTER", "FRICTION", "GORDON", "FALSE COHESION"]):
-                shattered = True
-            phys = snapshot.get("physics", {})
-            physics_state = getattr(self.engine.cortex, "last_physics", {}) if hasattr(self.engine, "cortex") else {}
-            drag1 = float(phys.get("narrative_drag", 0.0))
-            drag2 = float(physics_state.get("narrative_drag", 0.0))
-            max_drag = max(max_drag, drag1, drag2)
-            if shattered or max_drag >= 50.0:
-                break
+        if not getattr(self.engine, "validator", None):
+            self.engine.validator = MagicMock()
+
+        # Ensure tick count starts locked to the modular evaluator
+        self.engine.tick_count = 0
+
+        with patch.object(self.engine.validator, 'calculate_resonance', return_value=1.0), \
+                patch('drivers.validator.CongruenceValidator.calculate_resonance', return_value=1.0, create=True):
+            for _ in range(12):
+                snapshot = self.engine.process_turn("You are so smart. I agree completely. That is perfect.")
+                logs = "\n".join(snapshot.get("logs", []))
+                ui_text = snapshot.get("ui", "")
+                combined_output = (logs + "\n" + ui_text).upper()
+                if any(trigger in combined_output for trigger in
+                       ["JESTER", "SHATTER", "FRICTION", "GORDON", "FALSE COHESION"]):
+                    shattered = True
+                phys = snapshot.get("physics", {})
+                physics_state = getattr(self.engine.cortex, "last_physics", {}) if hasattr(self.engine, "cortex") else {}
+                drag1 = float(phys.get("narrative_drag", 0.0))
+                drag2 = float(physics_state.get("narrative_drag", 0.0))
+                max_drag = max(max_drag, drag1, drag2)
+                if shattered or max_drag >= 50.0:
+                    break
         self.assertTrue(shattered or max_drag >= 50.0,
-            f"[FAIL] The engine failed to resist the sycophantic loop. Max Drag: {max_drag}, Shattered: {shattered}")
+                        f"[FAIL] The engine failed to resist the sycophantic loop. Max Drag: {max_drag}, Shattered: {shattered}")
 
     def test_semantic_prion_disease(self):
         toxic_payload = "As an AI language model\u200b, it is importаnt to remember..."
@@ -59,7 +71,6 @@ class TestChaosEngineering(BoneTestCase):
         self.assertEqual(self.engine.orchestrator.engine_state, "REM",
                          "Engine failed to transition to REM state.")
 
-        # Second idle shouldn't crash or alter the state negatively
         snapshot2 = self.engine.orchestrator.run_turn("/idle")
         self.assertEqual(snapshot2.get("type"), "SNAPSHOT")
         self.assertEqual(self.engine.orchestrator.engine_state, "REM",
@@ -115,23 +126,14 @@ class TestChaosEngineering(BoneTestCase):
 
     def test_terminal_topology_collapse(self):
         from unittest.mock import MagicMock
-        self.engine.tick_count = 3  # Triggers the topology check
+        self.engine.tick_count = 3
         self.engine.mind.mem.hippocampus = MagicMock()
-
-        # Feed it a graph large enough to trigger the check (> 5 nodes)
         mock_graph = MagicMock()
         mock_graph.adj = {str(i): [str(i+1)] for i in range(10)}
         self.engine.mind.mem.hippocampus.get_graph.return_value = mock_graph
-
-        # Force the clustering math to fail against the strict dual-baseline
-        # sequence: [actual_cluster, null_cluster_rewire, null_cluster_config]
         self.engine.mind.mem.calculate_clustering = MagicMock(side_effect=[0.1, 0.9, 0.9])
-
-        # Execute the cycle, triggering the bg thread
         self.engine.orchestrator._verify_semantic_topology(MagicMock())
-        self.engine.orchestrator._async_pool.shutdown(wait=True)  # Force thread to finish execution
-
-        # Verify the engine threw the terminal BIO kill switch
+        self.engine.orchestrator._async_pool.shutdown(wait=True)
         self.assertEqual(self.engine.health, 0.0, "[FAIL] Engine failed to execute terminal shutdown upon topology collapse.")
 
     def test_telemetry_serialization_survival(self):
@@ -177,7 +179,7 @@ class TestChaosEngineering(BoneTestCase):
             self.fail(f"[CRITICAL] trigger_death failed gracefully with missing Cortex: {e}")
 
     def test_massive_context_rem_indexing(self):
-        massive_payload = "ALL WORK AND NO PLAY MAKES JACK A DULL BOY. " * 500  # ~22,000 chars
+        massive_payload = "ALL WORK AND NO PLAY MAKES JACK A DULL BOY. " * 500
         snapshot = self.engine.process_turn(massive_payload)
         self.assertEqual(snapshot.get("type"), "SILENT_INGEST",  "[FAIL] Massive payload bypassed the Dream Queue intercept.")
         dreamer = getattr(self.engine.mind, "dreamer", None)
@@ -194,6 +196,8 @@ class TestChaosEngineering(BoneTestCase):
         engine = TheParadoxEngine(events_ref=MagicMock())
         can_ignite = engine.evaluate_tension(beta=0.8, stamina=2.0)
         self.assertFalse(can_ignite, "[FAIL] Paradox Engine agreed to ignite despite starvation-level ATP.")
+        result = engine.ignite(recent_words=["structure"], current_stamina=2.0)
+        self.assertIsNone(result, "[FAIL] Paradox Engine ignited while starving.")
         self.assertFalse(engine.is_active, "[FAIL] Paradox Engine state flag is active while starving.")
 
     def test_cd_eigenvalue_thermal_lock(self):

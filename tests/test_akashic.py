@@ -100,5 +100,4 @@ class AkashicContinuityTests(BoneTestCase):
 ]
         best_mem = self.akashic.dredge_creative_tension()
         self.assertIsNotNone(best_mem, "[FAIL] Gradient descent RAG failed to return a memory.")
-        self.assertEqual(best_mem["concept"], "Tense",
-                         "[FAIL] Gradient descent RAG did not retrieve the memory with the highest creative drive.")
+        self.assertEqual(best_mem["concept"], "Tense", "[FAIL] Gradient descent RAG did not retrieve the memory with the highest creative drive.")

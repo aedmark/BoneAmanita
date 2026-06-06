@@ -24,4 +24,4 @@ class TestPragmatics(BoneTestCase):
         logs = "\n".join(e["text"] for e in bus.flush())
         self.assertIn("Amputated", logs, "[FAIL] Pragmatist failed to amputate Syntactic Antigen.")
         self.assertIn("TOXICITY_SPIKE", logs, "[FAIL] Antigen failed to trigger toxicity spike.")
-        self.assertIn("FIREWALL", result, "[FAIL] Antigen replacement text not found in output.")
+        self.assertIn("ANTIGEN AMPUTATED", result, "[FAIL] Antigen replacement text not found in output.")

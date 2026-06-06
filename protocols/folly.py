@@ -14,10 +14,7 @@ class TheFolly:
         self.global_tastings = Counter()
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "gut_memory": list(self.gut_memory),
-            "global_tastings": dict(self.global_tastings),
-        }
+        return {"gut_memory": list(self.gut_memory), "global_tastings": dict(self.global_tastings),}
 
     def load_state(self, data: Dict[str, Any]):
         self.gut_memory = deque(data.get("gut_memory", []), maxlen=50)
@@ -68,11 +65,8 @@ class TheFolly:
         times_eaten = self.global_tastings[target]
         base_yield = float(safe_get(folly_cfg, "BASE_YIELD", 10.0))
         decay_exp = float(safe_get(folly_cfg, "DECAY_EXPONENT", 0.8))
-
-        # [Brutalist Enforcer]: Cast times_eaten to ensure string corruption doesn't explode math.
         times_eaten_val = int(float(times_eaten))
         decay_factor = decay_exp ** (times_eaten_val - 1)
-
         actual_yield = max(2.0, base_yield * decay_factor)
         pizza_thresh = float(safe_get(folly_cfg, "PIZZA_THRESHOLD", 8.0))
         loot = "STABILITY_PIZZA" if actual_yield >= pizza_thresh else None
@@ -82,14 +76,12 @@ class TheFolly:
             flavor_text = stale_str.format(times=times_eaten)
         msg1 = ux("protocol_strings", "folly_caffeine")
         msg2 = ux("protocol_strings", "folly_yield")
-        msg = (
-            f"{Prisma.RED}{msg1.format(target=target.upper(), flavor_text=flavor_text)}{Prisma.RST}\n"
+        msg = (f"{Prisma.RED}{msg1.format(target=target.upper(), flavor_text=flavor_text)}{Prisma.RST}\n"
             f"   {Prisma.WHT}{msg2.format(yield_val=actual_yield)}{Prisma.RST}")
         return "MEAT_GRINDER", msg, actual_yield, loot
 
     @staticmethod
     def _filter_meat_words(clean_words: list, lexicon_ref: Any) -> list:
-
         if not lexicon_ref:
             return clean_words
         valid_set = set(lexicon_ref.get("heavy") or []) | set(lexicon_ref.get("kinetic") or []) | set(

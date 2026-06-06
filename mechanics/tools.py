@@ -1,14 +1,14 @@
 """mechanics/tools.py"""
 
-import math, random, os, logging
-import contextlib
-import warnings
+import math
+import os
+import random
 import re
-import threading
 import time
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Optional, List, Dict, Tuple
-import importlib.util
+
 from constants import Prisma
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -155,19 +155,16 @@ class RandomRetrievalNavigator:
             rel = self._vector_similarity(n.vector, query_vector, query_mag)
             ser = r_val * (i / path_len) * 0.7
             final = (rel * (1.0 - (i / path_len) * 0.5)) + ser
-            return RetrievalResult(
-                node_id=n.id, title=n.title, content=n.content, coords=n.coords,
-                path_position=i, relevance_score=rel, serendipity_bonus=ser,
-                final_score=final, snippet=n.content[:150] + "..."
-            )
-
+            return RetrievalResult(node_id=n.id, title=n.title, content=n.content, coords=n.coords,
+                path_position=i, relevance_score=rel, serendipity_bonus=ser, final_score=final, snippet=n.content[:150] + "...")
         results = [_build_result(i, n) for i, n in enumerate(path)]
         return sorted(results, key=lambda x: x.final_score, reverse=True)
 
-    def _vector_similarity(self, v1: list[float], v2: list[float], v2_mag: float = None) -> float:
+    def _vector_similarity(self, v1: list[float], v2: list[float], v2_mag: Optional[float] = None) -> float:
         if not v1 or not v2: return 0.5
         dot = sum(a * b for a, b in zip(v1, v2))
-        mag = math.hypot(*v1) * (v2_mag if v2_mag is not None else math.hypot(*v2))
+        m2 = float(v2_mag) if v2_mag is not None else math.hypot(*v2)
+        mag = math.hypot(*v1) * m2
         return ((dot / mag) + 1.0) / 2.0 if mag != 0 else 0.5
 
     def _calculate_serendipity(self, results: list[RetrievalResult], query_coords: Coordinates) -> list[
@@ -181,21 +178,19 @@ class RandomRetrievalNavigator:
 
     def _get_mode(self, r_val: float) -> dict[str, str]:
         return next(
-            ({"name": name, "description": spec["desc"]}
+            ({"name": str(name), "description": str(spec["desc"])}
              for name, spec in self._MODES.items()
-             if spec["range"][0] <= r_val <= spec["range"][1]),
+             if float(spec["range"][0]) <= r_val <= float(spec["range"][1])),
             {"name": "TOURIST", "description": "Default mode"}
         )
 
     def _generate_path_note(self, mode: dict[str, str], results: list[RetrievalResult]) -> str:
         surprising_count = sum(1 for r in results if r.is_surprising)
-        notes = {
-            "PURIST": "Staying on the beaten path. Nothing wasted, nothing unexpected.",
+        notes = {"PURIST": "Staying on the beaten path. Nothing wasted, nothing unexpected.",
             "TOURIST": "Took a small detour. Found a nice view.",
             "EXPLORER": "Went where the path was thin. Came back with something odd.",
             "FLANEUR": "The library started talking. I just listened.",
-            "CHAOS": "At this point, the books are reading you.",
-        }
+            "CHAOS": "At this point, the books are reading you.",}
         base_note = notes.get(mode["name"], "Wandering...")
         if surprising_count > 0:
             gem_str = "gem" if surprising_count == 1 else "gems"
@@ -204,30 +199,18 @@ class RandomRetrievalNavigator:
 
     def set_randomness(self, value: float) -> dict[str, Any]:
         self.randomness_dial = max(0.0, min(1.0, float(value)))
-        return {
-            "new_value": self.randomness_dial,
-            "mode": self._get_mode(self.randomness_dial)["name"],
-            "message": f"Random retrieval dial set to {self.randomness_dial:.2f}",
-        }
+        return {"new_value": self.randomness_dial, "mode": self._get_mode(self.randomness_dial)["name"], "message": f"Random retrieval dial set to {self.randomness_dial:.2f}",}
 
     def get_state(self) -> dict[str, Any]:
-        return {
-            "randomness_dial": self.randomness_dial,
-            "mode": self._get_mode(self.randomness_dial),
-            "traversal_history": self.traversal_history[-3:]
-        }
+        return {"randomness_dial": self.randomness_dial, "mode": self._get_mode(self.randomness_dial), "traversal_history": self.traversal_history[-3:]}
 
 class TheSubstrate:
     def __init__(self, events_ref):
         self.events = events_ref
-        self.pending_writes: List[Dict[str, str]] = []
+        self.pending_writes: List[Dict[str, Any]] = []
         self._cords_instance = None
         from core import LoreManifest
-        self.config = LoreManifest.get_instance().get("SUBSTRATE_CONFIG") or {
-            "ATP_COST_PER_CHAR": 0.02,
-            "MAX_ATP_PER_FILE": 100.0,
-            "MAX_RETRIES": 3
-        }
+        self.config = LoreManifest.get_instance().get("SUBSTRATE_CONFIG") or {"ATP_COST_PER_CHAR": 0.02, "MAX_ATP_PER_FILE": 100.0, "MAX_RETRIES": 3}
 
     def queue_write(self, path: str, content: str):
         self.pending_writes.append({"path": path, "content": content, "retries": 0})
@@ -243,21 +226,21 @@ class TheSubstrate:
             s_name = os.path.basename(s_path)
             if not s_path.startswith(base_dir):
                 logs.append(
-                    f"{Prisma.VIOLET}SUBSTRATE FATAL: Path traversal breach detected ({w['path']}). Purged.{Prisma.RST}")
+                    f"{Prisma.VIOLET}FATAL ERROR: Path traversal breach detected ({w['path']}). Purged.{Prisma.RST}")
                 continue
             w_cost = len(w["content"]) * self.config.get("ATP_COST_PER_CHAR", 0.02)
             if w_cost > self.config.get("MAX_ATP_PER_FILE", 100.0):
                 logs.append(
-                    f"{Prisma.VIOLET}SUBSTRATE FATAL: {s_name} exceeds absolute biological carrying capacity (Cost: {w_cost:.1f} ATP). Purged from system.{Prisma.RST}")
+                    f"{Prisma.VIOLET}FATAL ERROR: {s_name} exceeds absolute biological carrying capacity (Cost: {w_cost:.1f} ATP). Purged from system.{Prisma.RST}")
                 continue
             if stamina_pool - cost < w_cost:
                 retries = w.get("retries", 0) + 1
                 if retries > self.config.get("MAX_RETRIES", 3):
                     logs.append(
-                        f"{Prisma.VIOLET}SUBSTRATE FATAL: {s_name} starved for ATP 3 times. Dropping file.{Prisma.RST}")
+                        f"{Prisma.VIOLET}FATAL ERROR: {s_name} starved for ATP 3 times. Dropping file.{Prisma.RST}")
                 else:
                     logs.append(
-                        f"{Prisma.OCHRE}SUBSTRATE FAULT: Insufficient stamina to forge {s_name}. Retaining in queue ({retries}/3).{Prisma.RST}")
+                        f"{Prisma.OCHRE}CRITICAL FAULT: Insufficient stamina to forge {s_name}. Retaining in queue ({retries}/3).{Prisma.RST}")
                     w["retries"] = retries
                     retained_writes.append(w)
                 continue
@@ -267,16 +250,16 @@ class TheSubstrate:
                     f.write(w["content"])
                 cost += w_cost
                 kb_size = len(w['content']) / 1024.0
-                logs.append(f"{Prisma.GRN}SUBSTRATE: Physically forged {s_path} ({kb_size:.1f} KB).{Prisma.RST}")
+                logs.append(f"{Prisma.GRN}Physically forged {s_path} ({kb_size:.1f} KB).{Prisma.RST}")
                 if self.events:
                     self.events.publish("SUBSTRATE_FORGED", {"cost": w_cost, "file": s_name})
             except Exception as e:
                 retries = w.get("retries", 0) + 1
                 if retries > self.config.get("MAX_RETRIES", 3):
                     logs.append(
-                        f"{Prisma.VIOLET}SUBSTRATE FATAL: Write failed 3 times for {s_name} - {e}. Purging corrupted matter.{Prisma.RST}")
+                        f"{Prisma.VIOLET}FATAL ERROR: Write failed 3 times for {s_name} - {e}. Purging corrupted matter.{Prisma.RST}")
                 else:
-                    logs.append(f"{Prisma.RED}SUBSTRATE FAULT: Write failed - {e}. Retrying ({retries}/3).{Prisma.RST}")
+                    logs.append(f"{Prisma.RED}CRITICAL FAULT: Write failed - {e}. Retrying ({retries}/3).{Prisma.RST}")
                     w["retries"] = retries
                     retained_writes.append(w)
         self.pending_writes = retained_writes
@@ -314,7 +297,7 @@ class TheTclWeaver:
         if chi < 0.5 or not text:
             return text
         return " ".join(w for w in text.split(" ")
-                        if w and not (len(w) > 5 and random.random() < chi and self._QUANTUM_REGEX.search(w)))
+            if w and not (len(w) > 5 and random.random() < chi and self._QUANTUM_REGEX.search(w)))
 
     def consume_by_void(self, text: str, psi: float) -> str:
         def _void(w):

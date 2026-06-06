@@ -4,7 +4,7 @@ from typing import Tuple, Optional
 
 from core import LoreManifest
 from presets import BoneConfig
-from struts import ux, safe_get, safe_set
+from struts import ux, safe_get
 
 
 class TheTheremin:
@@ -23,13 +23,13 @@ class TheTheremin:
         return manifest.get("THEREMIN_LOGS", {})
 
     def listen(self, physics: dict, governor_mode: str = "COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
-        counts = safe_get(physics, "counts", {})
-        voltage = float(safe_get(physics, "voltage", 0.0))
-        turb = float(safe_get(physics, "turbulence", 0.0))
-        rep = float(safe_get(physics, "repetition", 0.0))
-        complexity = float(safe_get(physics, "truth_ratio", 0.0))
-        ancient_mass = counts.get("heavy", 0) + counts.get("thermal", 0) + counts.get("cryo", 0)
-        modern_mass = counts.get("abstract", 0)
+        counts = physics.get("counts", {})
+        voltage = float(physics.get("voltage", 0.0))
+        turb = float(physics.get("turbulence", 0.0))
+        rep = float(physics.get("repetition", 0.0))
+        complexity = float(physics.get("truth_ratio", 0.0))
+        ancient_mass = float(counts.get("heavy", 0)) + float(counts.get("thermal", 0)) + float(counts.get("cryo", 0))
+        modern_mass = float(counts.get("abstract", 0))
         raw_mix = min(ancient_mass, modern_mass)
         resin_flow = raw_mix * 2.0
         if governor_mode == "LABORATORY":
@@ -65,15 +65,15 @@ class TheTheremin:
             msg_parts.append(self.logs.get("TURBULENCE", "").format(val=shatter_amt))
             self.classical_turns = 0
         elif turb < 0.2:
-            current_drag = float(safe_get(physics, "narrative_drag", 0.0))
-            safe_set(physics, "narrative_drag", max(0.0, current_drag - 1.0))
+            current_drag = float(physics.get("narrative_drag", 0.0))
+            physics["narrative_drag"] = max(0.0, current_drag - 1.0)
         if self.decoherence_buildup > self.SHATTER_POINT:
             self.decoherence_buildup = 0.0
             self.classical_turns = 0
             self.is_stuck = False
-            current_drag = float(safe_get(physics, "narrative_drag", 0.0))
-            safe_set(physics, "narrative_drag", max(current_drag + 20.0, 20.0))
-            safe_set(physics, "voltage", 0.0)
+            current_drag = float(physics.get("narrative_drag", 0.0))
+            physics["narrative_drag"] = max(current_drag + 20.0, 20.0)
+            physics["voltage"] = 0.0
             return False, resin_flow, self.logs.get("COLLAPSE", ""), "AIRSTRIKE"
         if self.classical_turns > 3:
             critical_event = "CORROSION"

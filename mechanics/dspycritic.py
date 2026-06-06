@@ -1,6 +1,7 @@
 """/mechanics/dspycritic.py"""
 
-from typing import Any, cast, Callable
+from typing import Any
+
 from constants import Prisma
 
 try:
@@ -47,20 +48,18 @@ class DSPyCritic:
                     val_lower = safe_get(self.cfg, key.lower())
                     if val_lower is not None: return val_lower
                     return getattr(BoneConfig, key.upper(), default)
-
                 provider = get_cfg("provider", "ollama")
                 model_name = get_cfg("model", "hermes3")
                 raw_url = get_cfg("base_url", "http://127.0.0.1:11434/v1") or "http://127.0.0.1:11434/v1"
                 clean_url = raw_url.replace("/chat/completions", "")
                 if provider in ("ollama", "lm_studio"):
-                    self.lm = dspy.LM(model=f"openai/{model_name}", api_base=clean_url,
-                                      api_key="local-model-doesnt-need-a-key")
+                    self.lm = dspy.LM(model=f"openai/{model_name}", api_base=clean_url, api_key="local-model-doesnt-need-a-key")
                 else:
                     self.lm = dspy.LM(model=model_name)
                 dspy.settings.configure(lm=self.lm)
-                self.judge = cast(Callable, cast(object, dspy.ChainOfThought(AssessFaithfulness)))
-                self.evolver = cast(Callable, cast(object, dspy.ChainOfThought(EvolveSystemPrompt)))
-                self.compressor = cast(Callable, cast(object, dspy.ChainOfThought(CompressAxioms)))
+                self.judge = dspy.ChainOfThought(AssessFaithfulness)  # type: ignore
+                self.evolver = dspy.ChainOfThought(EvolveSystemPrompt)  # type: ignore
+                self.compressor = dspy.ChainOfThought(CompressAxioms)  # type: ignore
                 from physics.maths import NaviSADProtocol
                 self.navi_sad = NaviSADProtocol(history_size=5)
                 print(f"{Prisma.CYN}[DSPy]: Real-Time Critic Online. Model: {model_name} via {provider}{Prisma.RST}")
@@ -68,6 +67,7 @@ class DSPyCritic:
                 print(f"{Prisma.RED}[DSPy INIT FAULT]: {e}{Prisma.RST}")
                 self.enabled = False
 
+    # noinspection PyCallingNonCallable
     def audit_generation(self, user_query: str, memory_context: str, generated_response: str,
                          active_mode: str = "UNKNOWN") -> tuple[bool, str]:
         if not self.enabled:
@@ -83,9 +83,10 @@ class DSPyCritic:
                 return False, getattr(result, "reasoning", "No reasoning provided.")
             return True, "Faithful."
         except Exception as e:
-            print(f"\n{Prisma.RED}⚖️ DSPy JUDGE OFFLINE: {e} - Failing open.{Prisma.RST}")
+            print(f"\n{Prisma.RED}DSPy JUDGE OFFLINE: {e} - Failing open.{Prisma.RST}")
             return True, "Critic failed to open."
 
+    # noinspection PyCallingNonCallable
     def evolve_prompt(self, current_configuration: str, failure_context: str) -> str:
         if not self.enabled:
             return ""
@@ -95,25 +96,26 @@ class DSPyCritic:
             malignancy = self.navi_sad.calculate_malignancy_factor(directive, current_drag=10.0)
             if malignancy > 0.5:
                 print(
-                    f"\n{Prisma.RED}⚖️ DSPy EVOLVER REJECTED: Mutation mathematically malignant (Score: {malignancy:.2f}). Discarding rot.{Prisma.RST}")
+                    f"\n{Prisma.RED}DSPy EVOLVER REJECTED: Mutation mathematically malignant (Score: {malignancy:.2f}). Discarding rot.{Prisma.RST}")
                 return ""
             print(f"\n{Prisma.CYN}[Epigenetic Mutation]: {directive}{Prisma.RST}")
             return directive
         except Exception as e:
-            print(f"\n{Prisma.RED}⚖️ DSPy EVOLVER FAULT: {e}{Prisma.RST}")
+            print(f"\n{Prisma.RED}DSPy EVOLVER FAULT: {e}{Prisma.RST}")
             return ""
 
+    # noinspection PyCallingNonCallable
     def compress_prompts(self, directives: list) -> list:
         if not self.enabled or not directives: return directives
         print(
-            f"\n{Prisma.MAG}🧬 [EPIGENETIC LOAD HIGH]: Compressing {len(directives)} directives into foundational axioms...{Prisma.RST}")
+            f"\n{Prisma.MAG}Compressing {len(directives)} directives into foundational axioms...{Prisma.RST}")
         try:
             raw_output = str(self.compressor(current_directives="\n".join(directives)).compressed_axioms).split("\n")
             new_rules = [line.strip()
                          for line in raw_output if "STRUCTURAL TRUTH:" in line.upper() or "REMEMBER:" in line.upper()
                          ] or [line.strip() for line in raw_output if line.strip()]
-            print(f"{Prisma.GRN}🧬 [COMPRESSION SUCCESS]: Reduced to {len(new_rules)} axioms.{Prisma.RST}")
+            print(f"{Prisma.GRN}COMPRESSION SUCCESS: Reduced to {len(new_rules)} axioms.{Prisma.RST}")
             return new_rules
         except Exception as e:
-            print(f"\n{Prisma.RED}⚖️ DSPy COMPRESSOR FATAL ERROR: {e}{Prisma.RST}")
+            print(f"\n{Prisma.RED}DSPy COMPRESSOR FATAL ERROR: {e}{Prisma.RST}")
             return directives

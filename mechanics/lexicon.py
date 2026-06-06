@@ -91,7 +91,7 @@ class LexiconStore:
         cat_dict = self.LEARNED_VOCAB.setdefault(category, {})
         if w in cat_dict: return False
         if len(cat_dict) >= 1000:
-            oldest_word = min(cat_dict, key=cat_dict.get)
+            oldest_word = min(cat_dict, key=lambda k: int(cat_dict[k]))
             del cat_dict[oldest_word]
             if oldest_word in self.REVERSE_INDEX:
                 self.REVERSE_INDEX[oldest_word].discard(category)
@@ -114,6 +114,7 @@ class LinguisticAnalyzer:
     def __init__(self, store_ref):
         self.ANTIGEN_REGEX = None
         self.store = store_ref
+        # noinspection PyProtectedMember
         self._TRANSLATOR = store_ref._TRANSLATOR
         ling_data = LoreManifest.get_instance().get("LINGUISTICS") or {}
         raw_phonetics = ling_data.get("PHONETICS", {})
@@ -187,10 +188,10 @@ class LinguisticAnalyzer:
     def contextualize(self, word: str, field_vector: Dict[str, float]) -> str:
         base_cat, _ = self.classify_word(word)
         if field_vector and base_cat == "heavy":
-            dom = max(field_vector, key=field_vector.get)
+            dom = max(field_vector, key=lambda k: float(field_vector[k]))
             if dom == "PSI" and field_vector.get(dom, 0.0) > 0.8:
                 return "abstract"
-        return base_cat
+        return str(base_cat) if base_cat else "unknown"
 
     def sanitize(self, text: Any) -> List[str]:
         if not text:
@@ -199,9 +200,7 @@ class LinguisticAnalyzer:
         normalized = unicodedata.normalize("NFKD", text_str).encode("ASCII", "ignore").decode("utf-8")
         cleaned_text = normalized.translate(self._TRANSLATOR).lower()
         if self.ANTIGEN_REGEX:
-            cleaned_text = self.ANTIGEN_REGEX.sub(
-                lambda m: self.store.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""), cleaned_text
-            )
+            cleaned_text = self.ANTIGEN_REGEX.sub(lambda m: self.store.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""), cleaned_text)
         bias_set = getattr(self.store, "USER_FLAGGED_BIAS", set())
         return [w for w in cleaned_text.split() if w not in bias_set]
 
@@ -282,7 +281,7 @@ class SemanticField:
     def get_atmosphere(self) -> str:
         if not self.current_vector:
             return f"{Prisma.GRY}VOID{Prisma.RST}"
-        dom = max(self.current_vector, key=self.current_vector.get)
+        dom = max(self.current_vector, key=lambda k: float(self.current_vector[k]))
         if self.momentum > 0.5:
             return f"{Prisma.VIOLET}Volatile {dom.upper()} Storm{Prisma.RST}"
         return f"{Prisma.CYN}Stable {dom.upper()} Atmosphere{Prisma.RST}"

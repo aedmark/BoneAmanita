@@ -5,8 +5,9 @@ from unittest.mock import patch, MagicMock
 from drivers.validator import CongruenceValidator
 from protocols.therapy import TherapyProtocol
 from soul.oroboros import TheOroboros
+from tests.base import BoneTestCase
 
-class EdgeBranchCoverageTests(unittest.TestCase):
+class EdgeBranchCoverageTests(BoneTestCase):
     @patch("drivers.validator.LoreManifest")
     def test_congruence_validator_bonus_branch(self, MockLore):
         mock_lore_instance = MagicMock()

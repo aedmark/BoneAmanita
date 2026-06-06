@@ -3,12 +3,11 @@
 import json
 import os
 import time
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Optional
 
 from constants import Prisma
 from presets import BoneConfig
 from struts import ux, safe_get
-
 
 class ChronosKeeper:
     def __init__(self, engine_ref):
@@ -27,21 +26,14 @@ class ChronosKeeper:
                 "inventory": self.eng.village.gordon.inventory if getattr(self.eng.village, "gordon", None) else [],
                 "kernel_hash": getattr(self.eng, "kernel_hash", "UNKNOWN"), }
 
-    def save_checkpoint(self, history: list = None) -> str:
+    def save_checkpoint(self, history: Optional[list] = None) -> str:
         try:
             os.makedirs(self.SAVE_DIR, exist_ok=True)
             continuity_packet = self._build_continuity_packet()
             start_history = (history if history is not None else self.eng.cortex.dialogue_buffer)
-            state_data = {
-                "health": self.eng.health,
-                "stamina": self.eng.stamina,
-                "trauma_accum": self.eng.trauma_accum,
-                "soul_data": self.eng.soul.to_dict(),
-                "village_data": self._gather_village_state(),
-                "continuity": continuity_packet,
-                "timestamp": time.time(),
-                "chat_history": start_history,
-            }
+            state_data = {"health": self.eng.health, "stamina": self.eng.stamina, "trauma_accum": self.eng.trauma_accum,
+                          "soul_data": self.eng.soul.to_dict(), "village_data": self._gather_village_state(),
+                          "continuity": continuity_packet, "timestamp": time.time(), "chat_history": start_history, }
             path = os.path.join(self.SAVE_DIR, "quicksave.json")
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(state_data, f, indent=2, default=str)
@@ -74,9 +66,9 @@ class ChronosKeeper:
                 saved_hash = data["continuity"].get("kernel_hash", "UNKNOWN")
                 current_hash = getattr(self.eng, "kernel_hash", "UNKNOWN")
                 if saved_hash != "UNKNOWN" and saved_hash != current_hash:
-                    print(f"{Prisma.VIOLET}[CHRONOS] Temporal fracture detected. Bridging timeline [{saved_hash}] into [{current_hash}].{Prisma.RST}")
+                    print(f"{Prisma.VIOLET}Temporal fracture detected. Bridging timeline [{saved_hash}] into [{current_hash}].{Prisma.RST}")
                 else:
-                    print(f"{Prisma.GRY}[CHRONOS] Timeline absolute. Kernel Hash [{current_hash}] locked.{Prisma.RST}")
+                    print(f"{Prisma.GRY}Timeline absolute. Kernel Hash [{current_hash}] locked.{Prisma.RST}")
             restored_history = data.get("chat_history", [])
             msg2 = ux("protocol_strings", "chronos_resume_success")
             print(f"{Prisma.GRN}{msg2}{Prisma.RST}")
@@ -107,19 +99,11 @@ class ChronosKeeper:
             mind = safe_get(self.eng, "mind")
             mem = safe_get(mind, "mem")
             if mem and hasattr(mem, "save"):
-                mem.save(
-                    health=float(safe_get(self.eng, "health", 0.0)),
-                    stamina=float(safe_get(self.eng, "stamina", 0.0)),
-                    mutations={},
-                    trauma_accum=safe_get(self.eng, "trauma_accum", {}),
-                    joy_history=[],
-                    mitochondria_traits=mito_traits,
-                    antibodies=immune_data,
-                    soul_data=soul_data,
-                    village_data=self._gather_village_state(),
-                    continuity=continuity_packet,
-                    world_atlas=atlas
-                )
+                mem.save(health=float(safe_get(self.eng, "health", 0.0)),
+                         stamina=float(safe_get(self.eng, "stamina", 0.0)), mutations={},
+                         trauma_accum=safe_get(self.eng, "trauma_accum", {}), joy_history=[],
+                         mitochondria_traits=mito_traits, antibodies=immune_data, soul_data=soul_data,
+                         village_data=self._gather_village_state(), continuity=continuity_packet, world_atlas=atlas)
         except Exception as e:
             msg3 = ux("protocol_strings", "chronos_mem_save_fail")
             print(f"{Prisma.RED}{msg3.format(e=e)}{Prisma.RST}")
@@ -138,16 +122,12 @@ class ChronosKeeper:
                     if hasattr(self.eng, "events"):
                         self.eng.events.log(
                             f"Subsystem Persistence Error [{name}]: {e}", "SYS_ERR")
-                    print(
-                        f"{Prisma.OCHRE}{msg5.format(name=name, e='The connection severed before it could be written.')}{Prisma.RST}"
-                    )
+                    print(f"{Prisma.OCHRE}{msg5.format(name=name, e='The connection severed before it could be written.')}{Prisma.RST}")
 
     def _gather_village_state(self) -> Dict[str, Any]:
-        return {
-            name: comp.to_dict()
+        return {name: comp.to_dict()
             for name, comp in vars(self.eng.village).items()
-            if comp and hasattr(comp, "to_dict")
-        }
+            if comp and hasattr(comp, "to_dict")}
 
     def _restore_village_state(self, state_data: Dict[str, Any]):
         if not state_data:

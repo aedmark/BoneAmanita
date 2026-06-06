@@ -320,7 +320,7 @@ class SimulationPreflightPhase(SimulationPhase):
         if "?⤓" in raw_input:
             safe_set(phys_obj, "omega_r", min(1.0, float(getattr(phys_obj, "omega_r", 0.5)) + 0.5))
             ctx.council_mandates.append({"action": "SYSTEM_DIRECTIVE", "value": "DEEP_RETRIEVAL",
-                    "log": f"{Prisma.MAG}? ANN ghosts summoned.{Prisma.RST}"})
+                    "log": f"{Prisma.MAG}? Memory ghosts summoned.{Prisma.RST}"})
         if "?↗" in raw_input:
             safe_set(phys_obj, "scope", min(1.0, float(getattr(phys_obj, "scope", 0.5)) + 0.5))
             ctx.council_mandates.append({"action": "SYSTEM_DIRECTIVE", "value": "BROAD_RETRIEVAL",

@@ -12,15 +12,6 @@ class SharedLatticeDriver:
         self.shared = SharedDynamics()
         self.last_timestamp = time.time()
 
-    @staticmethod
-    def _get_f(obj, *keys, default=0.0):
-        is_dict = isinstance(obj, dict)
-        for k in keys:
-            val = obj.get(k) if is_dict else getattr(obj, k, None)
-            if val is not None:
-                return float(val)
-        return float(default)
-
     def infer_and_couple(self, text: str, sys_phys: PhysicsPacket, input_phys: Any, atp_pool: float) -> tuple[List[str], float]:
         logs = []
         atp_deduction = 0.0
@@ -30,11 +21,11 @@ class SharedLatticeDriver:
         word_cost = len(text.split()) * 0.5
         self.u.P_u = max(0.0, self.u.P_u - word_cost + 5.0)
         self.u.E_u = min(1.0, self.u.E_u + 0.1) if self.u.P_u < 30 else max(0.0, self.u.E_u - 0.05)
-        self.u.V_u = self._get_f(input_phys, "voltage", default=self.u.V_u)
-        self.u.psi_u = self._get_f(input_phys, "psi", default=self.u.psi_u)
-        self.u.chi_u = self._get_f(input_phys, "chi", "entropy", default=self.u.chi_u)
-        self.u.F_u = self._get_f(input_phys, "narrative_drag", default=self.u.F_u)
-        self.u.T_u = self._get_f(input_phys, "T", "trauma", default=getattr(self.u, "T_u", 0.0))
+        self.u.V_u = float(safe_get(input_phys, "voltage", self.u.V_u))
+        self.u.psi_u = float(safe_get(input_phys, "psi", self.u.psi_u))
+        self.u.chi_u = float(safe_get(input_phys, "chi", self.u.chi_u))
+        self.u.F_u = float(safe_get(input_phys, "narrative_drag", self.u.F_u))
+        self.u.T_u = float(safe_get(input_phys, "T", getattr(self.u, "T_u", 0.0)))
         sys_beta, sys_chi = sys_phys.beta, sys_phys.chi
         sys_val, sys_psi = sys_phys.valence, sys_phys.psi
         sys_drag = float(sys_phys.narrative_drag) if sys_phys.narrative_drag is not None else 1.0
@@ -71,7 +62,7 @@ class SharedLatticeDriver:
                 msg_key = {1: "silence_pregnant",
                            2: "silence_exhausted",
                            3: "silence_reverent",
-                           4: "silence_strategic"}.get(self.shared.sigma_silence)
+                           4: "silence_strategic"}.get(self.shared.sigma_silence, "silence_strategic")
                 logs.append(f"{Prisma.GRY}... {ux('driver_strings', msg_key) or 'The silence settles.'}{Prisma.RST}")
         elif has_text:
             self.shared.delta = max(0.0, self.shared.delta - 0.1)
@@ -93,5 +84,5 @@ class SharedLatticeDriver:
             self.shared.p_transfer = 15.0
             self.u.P_u += 15.0
             atp_deduction = 15.0
-            logs.append(f"{Prisma.CYN}[CARRIER MODE] I'll carry this part. Rest a moment.{Prisma.RST}")
+            logs.append(f"{Prisma.CYN}We'll carry this part. Rest a moment.{Prisma.RST}")
         return logs, atp_deduction

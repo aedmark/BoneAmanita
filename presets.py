@@ -128,7 +128,7 @@ class BoneConfig:
 
     @classmethod
     def _load_class_defaults(cls):
-        base_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = str(os.path.dirname(os.path.abspath(__file__)))
         preset_path = os.path.join(base_dir, "lore", "tuning_presets.json")
         tuning_data = {}
         if os.path.exists(preset_path):
@@ -227,4 +227,6 @@ class BoneConfig:
         return (ux("config_strings", "tune_success") or "Tuned {sector}.{parameter} to {value}.").format(
             sector=sector, parameter=parameter, value=value)
 
+
+# noinspection PyProtectedMember
 BoneConfig._load_class_defaults()

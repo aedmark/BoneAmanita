@@ -3,19 +3,19 @@
 import json
 import os
 import tempfile
-from typing import List, Tuple
+from typing import List, Tuple, Any, Optional
 from core import JSONEncoder
 from struts import ux_format
 from constants import Prisma
 
 class LocalFileSporeLoader:
-    def __init__(self, directory="memories"):
+    def __init__(self, directory: str = "memories"):
         self.directory = directory
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-    def save_spore(self, filename, data):
-        temp_path = None
+    def save_spore(self, filename: str, data: Any) -> Optional[str]:
+        temp_path: Optional[str] = None
         if os.path.isabs(filename) or os.path.dirname(filename) == self.directory:
             final_path = filename
         else:
@@ -27,7 +27,8 @@ class LocalFileSporeLoader:
                 json.dump(data, f, indent=2, cls=JSONEncoder)
                 f.flush()
                 os.fsync(f.fileno())
-            os.replace(temp_path, final_path)
+            if isinstance(temp_path, str):
+                os.replace(temp_path, final_path)
             return final_path
         except (IOError, OSError, TypeError) as e:
             if msg := ux_format("spore_strings", "loader_save_err", e=e):
@@ -37,7 +38,7 @@ class LocalFileSporeLoader:
             return None
 
     @staticmethod
-    def load_spore(filepath):
+    def load_spore(filepath: str) -> Optional[Any]:
         if not os.path.exists(filepath):
             if msg := ux_format("spore_strings", "loader_not_found", filepath=filepath):
                 print(f"{Prisma.RED}{msg}{Prisma.RST}")

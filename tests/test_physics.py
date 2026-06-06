@@ -21,18 +21,14 @@ class TopologicalPrimitivesTest(BoneTestCase):
                 setattr(self.engine.shared_lattice.shared, attr, 0.0)
 
     def test_ordinal_pattern(self):
-        self.assertEqual(_native_ordinal_pattern([1.2, 1.8, 1.5]), (0, 2, 1),
-                         "[FAIL] Ordinal pattern extraction failed.")
-        self.assertEqual(_native_ordinal_pattern([3.0, 2.0, 1.0]), (2, 1, 0),
-                         "[FAIL] Descending pattern extraction failed.")
+        self.assertEqual(_native_ordinal_pattern([1.2, 1.8, 1.5]), (0, 2, 1), "[FAIL] Ordinal pattern extraction failed.")
+        self.assertEqual(_native_ordinal_pattern([3.0, 2.0, 1.0]), (2, 1, 0), "[FAIL] Descending pattern extraction failed.")
 
     def test_false_cohesion(self):
         history_stuck = [1.0, 5.0, 2.0, 1.0, 5.0, 2.0]
-        self.assertTrue(_native_detect_false_cohesion(history_stuck, window_size=3),
-                        "[FAIL] Point Attractor went undetected.")
+        self.assertTrue(_native_detect_false_cohesion(history_stuck, window_size=3), "[FAIL] Point Attractor went undetected.")
         history_changing = [1.0, 2.0, 3.0, 3.0, 2.0, 1.0]
-        self.assertFalse(_native_detect_false_cohesion(history_changing, window_size=3),
-                         "[FAIL] False positive on Cohesion trigger.")
+        self.assertFalse(_native_detect_false_cohesion(history_changing, window_size=3), "[FAIL] False positive on Cohesion trigger.")
 
     def test_permutation_entropy(self):
         flatline = [1.0, 2.0, 3.0, 4.0, 5.0]
@@ -48,8 +44,7 @@ class TopologicalPrimitivesTest(BoneTestCase):
     def test_coincidence_length(self):
         orbit_a = [1.0, 2.0, 3.0, 4.0, 5.0]
         orbit_b = [1.0, 2.0, 3.0, 9.0, 9.0]
-        self.assertEqual(_native_coincidence_length(orbit_a, orbit_b, tol=0.1), 3,
-                         "[FAIL] Orbit coincidence length miscalculated.")
+        self.assertEqual(_native_coincidence_length(orbit_a, orbit_b, tol=0.1), 3, "[FAIL] Orbit coincidence length miscalculated.")
 
     def test_semantic_dimension_formalization(self):
         from physics import NaviSADProtocol
@@ -162,7 +157,6 @@ class TopologicalPrimitivesTest(BoneTestCase):
 
     def test_cd_picard_damping_convergence(self):
         print("")
-        # Simulate the Cortex damping math across 5 theoretical rejections
         t, f, p = 0.7, 0.0, 0.95
         damping = 0.6
         for _ in range(5):

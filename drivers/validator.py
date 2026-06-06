@@ -11,6 +11,7 @@ class CongruenceValidator:
         self.cfg = config_ref or BoneConfig
         self.last_phi = 1.0
         self._archetype_map = None
+        self._compiled_vocab = {}
 
     @property
     def map(self):
@@ -26,17 +27,20 @@ class CongruenceValidator:
         raw_lens = safe_get(context, "active_lens", default_lens)
         archetype = str(raw_lens).upper().replace("THE ", "")
         tone_score = float(safe_get(cfg, "CONGRUENCE_BASE_TONE", 0.8))
-        target_data = self.map.get(archetype, {})
-        if isinstance(target_data, dict):
-            vocab_str = target_data.get("vocab", "")
-            vocab_set = {w.strip().lower() for w in vocab_str.split(",") if w}
-            keyword_set = {k.lower() for k in target_data.get("keywords", [])}
-            target_words = vocab_set | keyword_set
-            if target_words and hasattr(context, "clean_words"):
-                words_to_check = set(w.lower() for w in context.clean_words)
-                exact_hits = words_to_check.intersection(target_words)
-                hits = len(exact_hits)
-                if hits > 0:
-                    bonus = safe_get(cfg, "CONGRUENCE_HIT_BONUS", 0.1)
-                    tone_score += bonus * math.log1p(hits)
+        if archetype not in self._compiled_vocab:
+            target_data = self.map.get(archetype, {})
+            if isinstance(target_data, dict):
+                vocab_str = target_data.get("vocab", "")
+                vocab_set = {w.strip().lower() for w in vocab_str.split(",") if w}
+                keyword_set = {k.lower() for k in target_data.get("keywords", [])}
+                self._compiled_vocab[archetype] = vocab_set | keyword_set
+            else:
+                self._compiled_vocab[archetype] = set()
+        target_words = self._compiled_vocab[archetype]
+        if target_words and hasattr(context, "clean_words"):
+            words_to_check = set(w.lower() for w in context.clean_words)
+            hits = len(words_to_check.intersection(target_words))
+            if hits > 0:
+                bonus = safe_get(cfg, "CONGRUENCE_HIT_BONUS", 0.1)
+                tone_score += bonus * math.log1p(hits)
         return min(safe_get(cfg, "CONGRUENCE_MAX_TONE", 2.0), tone_score)

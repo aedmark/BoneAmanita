@@ -114,9 +114,9 @@
     "bio_dump_label": "BIO_DUMP:"
   },
   "soul_dashboard": {
-    "anchor_lost": "[SOUL DETECTED - ANCHOR LOST]",
+    "anchor_lost": "[SOUL DETECTED | ANCHOR LOST]",
     "agency_locked": "[AGENCY LOCKED]",
-    "fading": "[⚠FADING]",
+    "fading": "[FADING]",
     "soul_prefix": "SOUL:",
     "driver_prefix": "DRIVER:",
     "muse_prefix": "MUSE:",
@@ -355,7 +355,7 @@
     "intrusion_nightmare": "NIGHTMARE: {dream_text}",
     "intrusion_daydream": " DAYDREAM: {dream_text}",
     "intrusion_relief": "   (Psychic pressure released: -{relief:.1f} {target})",
-    "intrusion_pareidolia": "PAREIDOLIA: The patterns are watching back (PSI {current_psi:.2f}).",
+    "intrusion_pareidolia": "The patterns are watching back (PSI {current_psi:.2f}).",
     "intrusion_hallucination_drain": "   (The hallucination drains 5.0 Stamina)",
     "soul_dignity_low": "DIGNITY CRITICAL: The narrative feels heavy. (Drag x1.5)",
     "soul_dignity_high": "DIGNITY HIGH: The soul is sovereign. (Flow Optimized)",

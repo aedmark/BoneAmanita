@@ -17,10 +17,6 @@ except ImportError:
     from tests.base import BaseTest as BoneTestCase
 
 class PhaseBoundaryTests(BoneTestCase):
-    """
-    Stress-testing the newly unified Hypervisor feedback loops across the Simulation Phases.
-    We are validating that deeply nested phase logic correctly utilizes self.eng bounds.
-    """
     def setUp(self):
         super().setUp()
         self.ctx = CycleContext(input_text="The void stares back.")
@@ -30,7 +26,6 @@ class PhaseBoundaryTests(BoneTestCase):
         self.engine.set_atp(100.0)
 
     def test_metabolism_clamping(self):
-        """Metabolism should strictly clamp values using the hypervisor properties."""
         phase = MetabolismPhase(self.engine)
         self.engine.bio.biometrics.stamina = -50.0
         self.engine.bio.biometrics.health = -99.0
@@ -41,7 +36,6 @@ class PhaseBoundaryTests(BoneTestCase):
         self.assertGreaterEqual(self.engine._mito_state.atp_pool, 0.0, "ATP failed to clamp to 0.")
 
     def test_sensation_stamina_impact(self):
-        """Sensation should cleanly alter the hypervisor stamina without bypassing it."""
         phase = SensationPhase(self.engine)
         self.engine.stamina = 50.0
         self.ctx.physics.narrative_drag = 10.0
@@ -51,7 +45,6 @@ class PhaseBoundaryTests(BoneTestCase):
         self.assertLessEqual(self.engine.stamina, 100.0)
 
     def test_intrusion_hallucination_drain(self):
-        """Intrusion Phase should drain stamina natively via self.eng.stamina."""
         phase = IntrusionPhase(self.engine)
         self.engine.stamina = 10.0
         self.ctx.physics.psi = 0.95
@@ -59,7 +52,6 @@ class PhaseBoundaryTests(BoneTestCase):
         self.assertGreaterEqual(self.engine.stamina, 0.0)
 
     def test_sanctuary_healing(self):
-        """Sanctuary Phase must utilize unified hypervisor recovery methods."""
         phase = SanctuaryPhase(self.engine, self.engine.bio.governor)
         self.engine.health = 40.0
         self.engine.set_atp(20.0)
@@ -71,14 +63,12 @@ class PhaseBoundaryTests(BoneTestCase):
         self.assertLess(self.engine.trauma_accum.get("abandonment", 5.0), 5.0)
 
     def test_cognitive_double_hit_removed(self):
-        """Ensure Cognition Phase no longer double-taxes stamina on epigenetic scars."""
         phase = CognitionPhase(self.engine)
         self.engine.stamina = 100.0
         self.ctx.clean_words = ["death", "failure", "collapse"]
         self.ctx.physics.voltage = 100.0
         phase.run(self.ctx)
-        self.assertTrue(self.engine.stamina in (100.0, 95.0),
-                        f"Stamina dropped to {self.engine.stamina}. Double hit or unhandled decay detected.")
+        self.assertTrue(self.engine.stamina in (100.0, 95.0), f"Stamina dropped to {self.engine.stamina}. Double hit or unhandled decay detected.")
 
 if __name__ == '__main__':
     unittest.main()

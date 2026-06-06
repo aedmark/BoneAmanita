@@ -69,7 +69,7 @@ class MetabolismPhase(SimulationPhase):
             log_msg = (
                 f"{Prisma.OCHRE}{msg.format(tax_burn=round(total_tax, 2))}{Prisma.RST}")
             if amplification_penalty > 1.0:
-                log_msg += f"\n{Prisma.RED}[RUNAWAY RAMP]: Amplification Tax applied (-{round(amplification_penalty, 2)} ATP){Prisma.RST}"
+                log_msg += f"\n{Prisma.RED}[RUNAWAY RAMP] Amplification Tax applied (-{round(amplification_penalty, 2)} ATP){Prisma.RST}"
             ctx.log(log_msg)
 
     def _check_narcolepsy(self, ctx: CycleContext):
@@ -85,7 +85,7 @@ class MetabolismPhase(SimulationPhase):
             self.eng.mind.dreamer.enter_rem_cycle(soul_snap, bio_state={"atp": atp})
             defrag_msg = self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
             if defrag_msg:
-                ctx.log(f"{Prisma.CYN}🧹 {defrag_msg}{Prisma.RST}")
+                ctx.log(f"{Prisma.CYN}{defrag_msg}{Prisma.RST}")
             reboot_val = float(safe_get(target_cfg, "MAX_ATP", 100.0)) * 0.33
             self.eng.set_atp(reboot_val)
             ctx.bio_result["atp"] = reboot_val
@@ -97,7 +97,7 @@ class MetabolismPhase(SimulationPhase):
         if self.eng.tick_count % c_freq == 0:
             bias, msg = self.eng.bio.endo.calculate_circadian_bias()
             if msg:
-                self.eng.events.log(f"{Prisma.CYN}🕒 {msg}{Prisma.RST}", "BIO")
+                self.eng.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "BIO")
             return bias
         return None
 
@@ -161,7 +161,6 @@ class MetabolismPhase(SimulationPhase):
             self.eng.bio.mito.state.ros_buildup *= 0.5
             ctx.physics.flow_state = "SAFE_MODE"
 
-
 class SensationPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -210,12 +209,9 @@ class IntrusionPhase(SimulationPhase):
                 rewire_msg = self.eng.mind.tracer.psilocybin_rewire(loop_path)
                 if rewire_msg:
                     msg = ux("cycle_strings", "intrusion_immune")
-                    ctx.log(
-                        f"{Prisma.CYN}{msg.format(rewire_msg=rewire_msg)}{Prisma.RST}")
-                    self.eng.bio.endo.dopamine += ctx.limits.get(
-                        "INTRUSION_REWIRE_DOP", 0.2)
-                    ctx.physics.narrative_drag = max(
-                        0.0, drag - ctx.limits.get("INTRUSION_REWIRE_RELIEF", 2.0))
+                    ctx.log(f"{Prisma.CYN}{msg.format(rewire_msg=rewire_msg)}{Prisma.RST}")
+                    self.eng.bio.endo.dopamine += ctx.limits.get("INTRUSION_REWIRE_DOP", 0.2)
+                    ctx.physics.narrative_drag = max(0.0, drag - ctx.limits.get("INTRUSION_REWIRE_RELIEF", 2.0))
         trauma_sum = sum(getattr(self.eng, "trauma_accum", {}).values())
         is_bored = self.eng.phys.pulse.is_bored()
         if (trauma_sum > ctx.limits.get("INTRUSION_NIGHTMARE_THRESH", 10.0)
@@ -244,8 +240,7 @@ class IntrusionPhase(SimulationPhase):
         current_psi = getattr(ctx.physics, "psi", 0.0)
         if current_psi > 0.6 and random.random() < current_psi:
             msg_p = ux("cycle_strings", "intrusion_pareidolia")
-            ctx.log(
-                f"{Prisma.VIOLET}{msg_p.format(current_psi=current_psi)}{Prisma.RST}")
+            ctx.log(f"{Prisma.VIOLET}{msg_p.format(current_psi=current_psi)}{Prisma.RST}")
             weaver = TheTclWeaver.get_instance()
             ctx.input_text = weaver.consume_by_void(ctx.input_text, current_psi)
             safe_set(ctx.physics, "psi", min(1.0, current_psi + 0.1))
