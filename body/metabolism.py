@@ -70,37 +70,37 @@ class MitochondrialForge:
     def process_cycle(self, physics_packet: Any, modifier: float = 1.0) -> MetabolicReceipt:
         if self.state.atp_pool > 95.0 and self.state.ros_buildup < 1.0:
             return MetabolicReceipt(0, 0, 0, 0, 0, "NOMINAL", "Fresh Start")
+        is_steering_retry = safe_get(physics_packet, "is_steering_retry", False)
+        burn_rate = 0.2 if is_steering_retry else 1.0
+        modifier = modifier * burn_rate
         cfg = safe_get(self.cfg, "BIO", {})
         depth = float(safe_get(physics_packet, "depth", 0.3))
         connectivity = float(safe_get(physics_packet, "connectivity", 0.2))
         voltage = float(safe_get(physics_packet, "voltage", 30.0))
         base_cost = safe_get(cfg, "BASE_ATP_YIELD", 2.0) + (voltage * safe_get(cfg, "VOLTAGE_TAX_MULT", 0.05))
-        cognitive_load_tax = (depth * safe_get(cfg, "DEPTH_TAX_MULT", 2.0)) + (
-                connectivity * safe_get(cfg, "CONN_TAX_MULT", 3.0))
+        cognitive_load_tax = (depth * float(safe_get(cfg, "DEPTH_TAX_MULT", 0.5))) + (
+                connectivity * float(safe_get(cfg, "CONN_TAX_MULT", 1.0)))
         chaos_index = float(safe_get(physics_packet, "entropy", safe_get(physics_packet, "chi", 0.0)))
-
         if chaos_index > safe_get(cfg, "CHAOS_TAX_THRESHOLD", 0.6):
-            chaos_tax = safe_get(cfg, "CHAOS_TAX_MULT", 8.0) * chaos_index
+            chaos_mult = float(safe_get(cfg, "CHAOS_TAX_MULT", 2.0 if chaos_index < 0.8 else 5.0))
+            chaos_tax = chaos_mult * chaos_index
             cognitive_load_tax = cognitive_load_tax + chaos_tax
             if self.events:
                 msg = ux_format("mito_forge", "chaos_tax", default="CHAOS TAX: +{tax:.1f} ATP drain.",
                                 tax=chaos_tax)
                 self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}", "BIO_WARN")
-
         malignancy = safe_get(physics_packet, "m_a", 0.0)
         friction = safe_get(physics_packet, "mu", 0.0)
-
         if friction > 0:
             amplification_tax = friction * math.exp(malignancy)
             cognitive_load_tax = cognitive_load_tax + amplification_tax
             if amplification_tax > 1.0 and self.events:
                 self.events.log(
                     f"{Prisma.MAG}Amplification Tax applied (+{amplification_tax:.2f} ATP drag){Prisma.RST}", "BIO_WARN")
-
-        base_demand = base_cost + (math.log1p(max(0.0, self.state.ros_buildup)) * 2.0)
+        ros_mult = float(safe_get(cfg, "ROS_BURDEN_MULT", 0.5))
+        base_demand = base_cost + (math.log1p(max(0.0, self.state.ros_buildup)) * ros_mult)
         atp_crit = float(safe_get(cfg, "ATP_CRITICAL", 20.0))
         is_critical = self.state.atp_pool < atp_crit
-
         if is_critical:
             cognitive_load_tax = 0.0
             modifier = modifier * 0.5
@@ -110,15 +110,12 @@ class MitochondrialForge:
                 if msg:
                     self.events.log(f"{Prisma.VIOLET}{icon}{msg}{Prisma.RST}", "BIO_CRIT")
                 self.state.retrograde_signal = "HIBERNATING"
-
         efficiency = max(0.35, self.state.membrane_potential)
         ideal_cost = (base_demand + cognitive_load_tax) * modifier
         raw_cost = ideal_cost / efficiency
         inefficiency_tax = raw_cost - ideal_cost
-
         if raw_cost > self.ANAEROBIC_THRESHOLD:
             return self._trigger_anaerobic_bypass(raw_cost)
-
         if raw_cost > self.MAX_SAFE_BURN:
             excess = raw_cost - self.MAX_SAFE_BURN
             raw_cost = self.MAX_SAFE_BURN
@@ -126,13 +123,11 @@ class MitochondrialForge:
             if self.events:
                 msg = ux_format("mito_forge", "surge_protector", default="SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).", excess=excess)
                 self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "BIO")
-
         if raw_cost > 15.0 and self.events and random.random() < 0.2:
             msg = self._get_text("GRINDING")
             icon = ux("mito_forge", "icon_grinding")
             if msg:
                 self.events.log(f"{Prisma.OCHRE}{icon}{msg}{Prisma.RST}", "BIO_WARN")
-
         total_metabolic_cost = raw_cost
         abstraction = float(safe_get(physics_packet, "psi", 0.0))
         waste_generated = 0.0
@@ -140,29 +135,22 @@ class MitochondrialForge:
         chaos_mult = safe_get(cfg, "WASTE_CHI_MULT", 5.0)
         volt_div = safe_get(cfg, "WASTE_VOLT_DIV", 20.0)
         base_red = safe_get(cfg, "WASTE_BASE_REDUCTION", 2.0)
-
         if abstraction > 0.3 or chaos_index > 0.3:
             waste_generated = waste_generated + (abstraction * abstraction_mult) + (chaos_index * chaos_mult)
         if voltage > 60.0:
             waste_generated = waste_generated + (voltage / volt_div)
-
         waste_generated = waste_generated - base_red
         waste_generated = max(-float(self.state.ros_buildup), float(waste_generated))
-
         self.state.ros_buildup = float(self.state.ros_buildup) + float(waste_generated)
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
-
         if total_metabolic_cost >= self.MAX_SAFE_BURN and not is_critical:
             self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.005)
-
         self._apply_adaptive_dynamics()
         status = "LOW_POWER" if is_critical else "RESPIRING"
-
         if self.state.atp_pool <= safe_get(cfg, "ATP_COLLAPSE", 0.0):
             status = "NECROSIS"
             if self.events:
                 self.events.publish("SYSTEM_STARVING", {})
-
         return MetabolicReceipt(base_cost=round(base_demand, 2), drag_tax=round(cognitive_load_tax, 2),
             inefficiency_tax=round(inefficiency_tax, 2),
             total_burn=round(total_metabolic_cost, 2), waste_generated=round(waste_generated, 2),

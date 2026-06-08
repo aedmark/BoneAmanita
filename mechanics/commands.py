@@ -221,6 +221,26 @@ class CommandProcessor:
         ]))
         return True
 
+    def _cmd_report(self, _parts):
+        try:
+            report_text = self.interface.eng.telemetry.get_report()
+            summary_text = self.interface.eng.telemetry.generate_session_summary()
+            self.interface.log(f"{self.P.CYN}=== SYSTEM REPORT ==={self.P.RST}\n{report_text}")
+            self.interface.log(f"{self.P.CYN}=== SESSION SUMMARY ==={self.P.RST}\n{summary_text}")
+        except Exception as e:
+            self.interface.log(f"{self.P.RED}Failed to generate report: {e}{self.P.RST}")
+        return True
+
+    def _cmd_diag(self, _parts):
+        try:
+            fatal = self.interface.eng.telemetry.get_last_fatal_error()
+            thoughts = self.interface.eng.telemetry.get_last_thoughts()
+            self.interface.log(f"{self.P.RED}=== LAST FATAL ERROR ==={self.P.RST}\n{fatal}")
+            self.interface.log(f"{self.P.YEL}=== LAST THOUGHTS ==={self.P.RST}\n{thoughts}")
+        except Exception as e:
+            self.interface.log(f"{self.P.RED}Diag failure: {e}{self.P.RST}")
+        return True
+
     def _cmd_mode(self, parts):
         if len(parts) < 2:
             self.interface.log(ux("command_alerts", "mode_usage"))

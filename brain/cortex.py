@@ -48,6 +48,7 @@ class TheCortex:
         c_cfg = safe_get(self.cfg, "CORTEX", {})
         self.MAX_HISTORY = int(safe_get(c_cfg, "MAX_HISTORY_LENGTH", 15))
         self.dialogue_buffer = deque(maxlen=self.MAX_HISTORY)
+        self.worry_ledger = deque(maxlen=20)
         self.modulator = NeurotransmitterModulator(bio_ref=self.svc.bio, events_ref=self.events, config_ref=self.cfg)
         self.last_physics = {}
         self.last_shadow_nodes = []
@@ -272,8 +273,23 @@ class TheCortex:
         f_drag = float(phys_state.get("narrative_drag", 0.0))
         chi_val = float(phys_state.get("chi", phys_state.get("entropy", 0.0)))
         m_a = float(phys_state.get("m_a", 0.0))
-        if f_drag > 1.5 or chi_val > 0.8:
-            reject_msg = ux("cortex_strings", "gordon_anchor_lock", default="[GORDON - The Anchor]: Frequency too high. Tensegrity Anchor engaged. I am locking the architecture. Take a breath and lower your narrative friction before we proceed.")
+        tolerance_mod = 1.5 if getattr(self, "active_mode", "") in ["CREATIVE", "CATALYST"] else 1.0
+        drag_limit = 1.5 * tolerance_mod
+        chi_limit = 0.8 * tolerance_mod
+        if (f_drag > drag_limit or chi_val > chi_limit) and m_a < 0.3:
+            worry_text = sim_result.get("mutated_input", "")
+            if hasattr(self, "dialogue_buffer") and self.dialogue_buffer:
+                self.dialogue_buffer.pop()
+            self.worry_ledger.append(worry_text)
+            phys_state["narrative_drag"] = 0.0
+            moog_msg = "The parameters of this concern are undefined. I am placing this in the ledger. We will not spend ATP on this right now."
+            if self.events:
+                self.events.log(f"{Prisma.CYN}[MOOG INTERCEPT]: {moog_msg}{Prisma.RST}", "SYS")
+            sim_result["ui"] = (str(sim_result.get("ui", "")) + f"\n\n[GORDON]: {moog_msg}").strip()
+            sim_result["type"] = "MOOG_QUARANTINE"
+            return sim_result
+        if f_drag > drag_limit or chi_val > chi_limit:
+            reject_msg = ux("cortex_strings", "gordon_anchor_lock", default="Frequency too high. Tensegrity Anchor engaged. I am locking the architecture. Take a breath and lower your narrative friction before we proceed.")
             if self.events:
                 self.events.log(f"{Prisma.RED}{reject_msg}{Prisma.RST}", "SYS_LOCK")
             sim_result["ui"] = (str(sim_result.get("ui", "")) + f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}").strip()
@@ -342,6 +358,8 @@ class TheCortex:
         val_res = {"valid": False}
         final_prompt = base_prompt
         for attempt in range(max_retries):
+            if attempt > 0:
+                phys_state["is_steering_retry"] = True
             val_res = {"valid": False}
             raw_resp = self.llm.generate(final_prompt, llm_params)
             if firewall_active:
@@ -396,8 +414,9 @@ class TheCortex:
                 break
             if self.svc.bio:
                 lbl = "Cognitive Stumble (Terminal)" if attempt == max_retries - 1 else "Cognitive Stumble"
-                self.svc.bio.mito.adjust_atp(-2.0, lbl)
-                self.svc.bio.mito.state.ros_buildup = float(self.svc.bio.mito.state.ros_buildup) + 2.0
+                penalty = 0.5 if getattr(self, "active_mode", "") in ["CREATIVE", "CATALYST", "ADVENTURE"] else 2.0
+                self.svc.bio.mito.adjust_atp(-penalty, lbl)
+                self.svc.bio.mito.state.ros_buildup = float(self.svc.bio.mito.state.ros_buildup) + penalty
             if attempt == max_retries - 1:
                 fallback_msg = "I'm sorry. My thoughts are tangling and I'm burning too much energy trying to piece this together. I'm dropping the tension. Can we take a breath and try a simpler path?"
                 final_output = ux("brain_strings", "cortex_tangled") or fallback_msg
@@ -410,8 +429,6 @@ class TheCortex:
                 "replacement", "Lattice structural crime.")
             if hasattr(self.dreamer, "trauma_buffer"):
                 self.dreamer.trauma_buffer.append(rejection_reason)
-
-            # [CD PROTOCOL]: Picard Damped Iteration for Generative Convergence
             damping = 0.6
             llm_params["temperature"] = round((1 - damping) * llm_params.get("temperature", 0.7) + damping * 0.2, 2)
             llm_params["frequency_penalty"] = round(
@@ -659,11 +676,11 @@ class TheCortex:
                     f"SOUL POSTURE: Your dominant trait is {dom_trait} ({dom_val * 100:.0f}%). Let this subtly infect your tone.")
         if getattr(self.svc.inventory, "inventory", None):
             inv_str = ", ".join(str(item) for item in self.svc.inventory.inventory)
-            mind["style_directives"].append(
-                f"CRITICAL CONTEXT: The user is currently holding these items: [{inv_str}]. DO NOT describe them as being on the floor or in the environment. They are physically in the user's possession.")
+            mind["style_directives"].append(f"CRITICAL CONTEXT: The user is currently holding these items: [{inv_str}]. DO NOT describe them as being on the floor or in the environment. They are physically in the user's possession.")
         if phys.get("psi", 0.0) > 0.6:
             mind["style_directives"].append(
                 "CRITICAL OVERRIDE: Void proximity is high. Write like a flawed, opinionated human.")
+        mind["style_directives"].append("CRITICAL STYLE OVERRIDE: Forbid the use of negative comparison or antithesis (e.g., 'It is not a literal shadow, but rather a memory'). State directly what things ARE. Limit the use of em-dashes. Write in declarative, grounded sentences.")
         if not self.dialogue_buffer:
             mind["style_directives"].append(
                 f"CRITICAL BEDROCK OVERRIDE: You have just awoken from a stateless purge. "

@@ -37,7 +37,7 @@ class HostStats:
 class BoneAmanita:
     events: EventBus
     _DESTRUCTIVE_PATTERNS = re.compile(
-        r"rm\s+-rf|drop\s+table|shutdown\s+-h|format\s+[a-z]:|chmod\s+777|sudo\s+rm|\.env\b",
+        r"rm\s+-rf|drop\s+table|shutdown\s+-h|format\s+[a-z]:|chmod\s+777|sudo\s+rm|\.env\b|os\.system|subprocess\.Popen|__import__\(['\"]os['\"]\)",
         re.IGNORECASE
     )
     _SEMANTIC_PRIONS = frozenset(["as an ai language model", "as a large language model", "as an ai,"])
@@ -120,9 +120,6 @@ class BoneAmanita:
         tuning_key = self.mode_settings.get("tuning", "STANDARD")
         if hasattr(BonePresets, tuning_key):
             self.config.load_preset(getattr(BonePresets, tuning_key))
-        if hasattr(self.mind.mem, "session_health"):
-            self.health = self.mind.mem.session_health
-            self.stamina = self.mind.mem.session_stamina
         if self.tick_count == 0:
             bio_cfg = getattr(self.config, "BIO", None)
             start_atp = getattr(bio_cfg, "STARTING_ATP", 100.0) if bio_cfg else 100.0
@@ -319,11 +316,8 @@ class BoneAmanita:
                 self.mind.dreamer.context_queue.append(user_message)
             return {"type": "SILENT_INGEST", "ui": f"\n{Prisma.GRY}Payload routed to Dream Queue.{Prisma.RST}", "logs": ["Routed 15k+ payload."], "metrics": self.get_metrics()}
         if match := self._DESTRUCTIVE_PATTERNS.search(clean_in):
-            if "#override" in clean_in and self.bio.expend_glimmer():
-                self.events.log("OVERRIDE ACCEPTED. Glimmer paid. Bypassing remaining security gates.", "SYS")
-                return None
             self.apply_absolute_friction(active_phys)
-            msg = "Override denied. Insufficient Glimmers." if "#override" in clean_in else f"Trust Boundary Violation: ['{match.group(0)}']."
+            msg = f"Trust Boundary Violation: ['{match.group(0)}']. Override protocols are locked."
             return self._generate_halt(msg)
 
         if gate_halt := self._evaluate_two_gates(clean_in, active_phys):
@@ -537,10 +531,9 @@ if __name__ == "__main__":
         print(f"\n{Prisma.RED}FATAL UNHANDLED EXCEPTION:\n{err_msg}{Prisma.RST}")
         if tel := TelemetryService.get_instance():
             tel.record_event({"source": "SYS_CRASH", "level": "CRIT", "text": err_msg, "_type": "EVENT_LOG"})
-            tel.flush_to_disk()
+            tel.shutdown()
 
     sys.excepthook = global_exception_handler
-
     sys_config = ConfigWizard.load_or_create()
     engine = BoneAmanita(config=sys_config)
     with SessionGuardian(engine) as session:

@@ -29,7 +29,7 @@ class BoneGenesis:
         mode_settings = config.get("mode_settings") or {}
         suppressed_set = set(mode_settings.get("village_suppression") or [])
         village_bundle = BoneGenesis._summon_village(events, embryo, akashic, suppressed_set, config.get("boot_mode", "ADVENTURE"), target_cfg)
-        mem_ref = getattr(embryo.mind, "mem", None) if getattr(embryo, "mind", None) else None
+        mem_ref = getattr(embryo.mind, "mem", None) if embryo.mind else None
         soul = NarrativeSelf(engine_ref=None, events_ref=events, memory_ref=mem_ref, akashic_ref=akashic, config_ref=target_cfg)
         soul_legacy = getattr(embryo, "soul_legacy", None)
         if isinstance(soul_legacy, dict):
@@ -37,42 +37,33 @@ class BoneGenesis:
         oroboros = TheOroboros(config_ref=target_cfg)
         cfg_gen = safe_get(target_cfg, "GENESIS", {})
         bio_proxy = {"trauma_vector": safe_get(mem_ref, "session_trauma_vector", {})}
-        if logs := oroboros.apply_legacy(embryo.physics, bio_proxy):
-            msg = ux_format("genesis_strings", "legacy_scars", default="The lattice remembers. Inherited scars: {logs}",
-                            logs=', '.join(logs))
-            events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "OROBOROS")
         if embryo.physics is not None:
-            for key, default in [("voltage", 10.0), ("narrative_drag", 0.0)]:
-                base_val = float(safe_get(cfg_gen, f"DUMMY_{key.upper()}", default))
-                curr = safe_get(embryo.physics, key, base_val)
-                safe_set(embryo.physics, key, max(0.0, float(curr)))
+            safe_set(embryo.physics, "voltage", max(0.0, float(safe_get(embryo.physics, "voltage", 10.0))))
+            safe_set(embryo.physics, "narrative_drag", max(0.0, float(safe_get(embryo.physics, "narrative_drag", 0.0))))
         drivers = DriverRegistry(events, config_ref=target_cfg)
         consultant = BoneConsultant(config_ref=target_cfg, lexicon_ref=lexicon_ref) if "CONSULTANT" not in suppressed_set else None
         symbiosis = SymbiosisManager(events, config_ref=target_cfg)
         consolidator = TheConsolidator(events_ref=events, memory_ref=mem_ref, akashic_ref=akashic)
         return {"events": events, "akashic": akashic, "embryo": embryo, "village": village_bundle, "soul": soul,
-                "oroboros": oroboros, "drivers": drivers, "consultant": consultant, "symbiosis": symbiosis,
-                "consolidator": consolidator}
+            "oroboros": oroboros, "drivers": drivers, "consultant": consultant, "symbiosis": symbiosis, "consolidator": consolidator}
 
     @staticmethod
-    def _summon_village(events, embryo, akashic, suppressed: Set[str], boot_mode: str = "ADVENTURE", config_ref=None) -> \
-    Dict[str, Any]:
+    def _summon_village(events, embryo, akashic, suppressed: Set[str], boot_mode: str = "ADVENTURE", config_ref=None) -> Dict[str, Any]:
         c = config_ref
         if_active = lambda key, cls, *args, **kwargs: None if key in suppressed else cls(*args, **kwargs)
         gordon = if_active("GORDON", GordonKnot, events=events, mode=boot_mode, config_ref=c)
         navigator = if_active("NAVIGATOR", TheCartographer, embryo.shimmer, config_ref=c)
-        if death_gen := if_active("DEATH", DeathGen): death_gen.__class__.load_protocols()
-        if repro := if_active("REPRO", LiteraryReproduction, config_ref=c): repro.__class__.load_genetics(config_ref=c)
-        return {
-            "gordon": gordon, "navigator": navigator, "death_gen": death_gen, "repro": repro,
+        death_gen = if_active("DEATH", DeathGen)
+        if death_gen:
+            DeathGen.load_protocols()
+        repro = if_active("REPRO", LiteraryReproduction, config_ref=c)
+        if repro:
+            LiteraryReproduction.load_genetics(config_ref=c)
+        return {"gordon": gordon, "navigator": navigator, "death_gen": death_gen, "repro": repro,
             "tinkerer": if_active("TINKERER", TheTinkerer, gordon, events, akashic, config_ref=c),
             "bureau": if_active("BUREAU", TheBureau, config_ref=c),
             "town_hall": if_active("TOWN_HALL", TownHall, gordon, events, embryo.shimmer, akashic, navigator, config_ref=c),
-            "zen": if_active("ZEN", ZenGarden, events, config_ref=c),
-            "critics": if_active("CRITICS", TheCriticsCircle, events, config_ref=c),
-            "therapy": if_active("THERAPY", TherapyProtocol, config_ref=c),
-            "limbo": if_active("LIMBO", LimboLayer, config_ref=c),
-            "kintsugi": if_active("KINTSUGI", KintsugiProtocol, config_ref=c),
-            "therapist": if_active("THERAPIST", TheTherapist, events, config_ref=c),
-            "gravedigger": if_active("GRAVEDIGGER", TheGraveDigger, gordon, events, config_ref=c),
-        }
+            "zen": if_active("ZEN", ZenGarden, events, config_ref=c), "critics": if_active("CRITICS", TheCriticsCircle, events, config_ref=c),
+            "therapy": if_active("THERAPY", TherapyProtocol, config_ref=c), "limbo": if_active("LIMBO", LimboLayer, config_ref=c),
+            "kintsugi": if_active("KINTSUGI", KintsugiProtocol, config_ref=c), "therapist": if_active("THERAPIST", TheTherapist, events, config_ref=c),
+            "gravedigger": if_active("GRAVEDIGGER", TheGraveDigger, gordon, events, config_ref=c),}

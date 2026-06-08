@@ -190,6 +190,9 @@ class TheAkashicRecord:
 
     def _on_mythology_update(self, payload):
         if not payload: return
+        if (words := payload.get("words")) and (category := payload.get("category")):
+            self.propose_new_category(words, category)
+            return
         if (word := payload.get("word")) and (category := payload.get("category")):
             self.register_word(word, category)
             return

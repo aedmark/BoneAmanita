@@ -263,6 +263,11 @@ class EndocrineRegulator:
         chem = self.bio.endo
         modifier = 1.0
 
+        if hasattr(self.bio, "biometrics") and hasattr(self.bio, "mito"):
+            health = getattr(self.bio.biometrics, "health", 100.0)
+            ros = getattr(self.bio.mito.state, "ros_buildup", 0.0)
+            modifier *= MetabolicGovernor.calculate_stress(health, ros)
+
         if chem.cortisol > 0.5:
             stress_tax = 1.0 + (chem.cortisol * 0.5)
             modifier = modifier * stress_tax

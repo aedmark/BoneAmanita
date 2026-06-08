@@ -1,6 +1,35 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 20.5.0 "The Moog Protocol"**
+
+**Feature Additions**
+
+* **The Moog Protocol (cortex.py & cycle.py):** Integrated a cognitive quarantine system (`worry_ledger`) into `TheCortex`. The engine now intercepts high-drag, high-chaos loops before they trigger an Apoptotic Crash, physically amputating the text from the `dialogue_buffer`.
+* **Headless Worry Processing (cycle.py):** Wired the `worry_ledger` into the `GeodesicOrchestrator`'s asynchronous background daemon (`_process_rem_tick`). Worries are processed during REM sleep without blocking the main user thread.
+* **Metabolic Yield & Dark Matter:** Implemented a binary actionability filter for quarantined worries. Actionable items are converted directly into strict Council Mandates. Uncontrollable/existential concerns are permanently stripped of narrative weight, stamped into the Akashic Record as "Dark Matter", and yield a massive ROS purge and a Glimmer.
+
+**Test Suite & Architecture Hardening**
+
+* **Python 3.12 Sequence Fortification:** Grounded unconfigured `MagicMock` injections in the `test_architecture.py` suite. Fixed strict sequence validation errors (`random.sample()`) and tuple-unpacking crashes (`ValueError: not enough values to unpack`) across the `Composer`, `Gatekeeper`, and `Inventory` mocks.
+* **Gordon Anchor Restoration:** Fixed a physical leak in `_evaluate_toxicity` where the `SYSTEM_HALT` return statement was accidentally bypassed, restoring Gordon's ability to cleanly lock the architecture under high narrative friction.
+* **Typing Convergence:** Resolved cascading `TypeError` collapses in the test runner by explicitly hydrating the engine mocks with concrete floats and integers for mathematical limits (`tick_count`, `m_a`, `latency`, `calculate_coupling`). All 211 tests now run green.
+
+---
+
+### **BONEAMANITA 20.4.7 "The Moog Protocol Preparation"**
+
+**Architectural Patches & Optimizations**
+
+* **Lambda Decoupling (cycle.py):** Excised fragile lambda-closure injections from `GeodesicOrchestrator` to fix telemetry memory leakage. Orchestrator metrics now pull directly from the `CyberneticGovernor`, resolving orphan-key errors in snapshot metadata.
+* **Redundancy Pruning (cycle.py):** Removed redundant variable aliasing in the physics packet, reducing object bloat in the `CycleContext`.
+* **Topology Check Optimization (cycle.py):** Eliminated the redundant tuple round-trip in `_verify_semantic_topology`. The system now directly processes dictionary sets, improving throughput during semantic rewiring.
+* **EventBus Recursion Fix (core.py):** Refactored `EventBus.publish` to use a set-based lock (`active_events`). This resolves a critical "swallowing" bug where failure logs were being blocked by their own recursion guards.
+* **Telemetry I/O Hardening (core.py):** Replaced byte-chunking logic in `TelemetryService._tail_file` with native line-buffered streaming. This prevents JSON character corruption at file boundaries.
+* **Trust Boundary Hardening (main.py):** Expanded `_DESTRUCTIVE_PATTERNS` to include Python-native structural breakout attempts (`os.system`, `subprocess`, dynamic imports), shielding the engine against deeper runtime exploits.
+
+---
+
 ### **BONEAMANITA 20.4.6 "The Restorative Bridge"**
 
 **Architectural Patches & Optimizations**

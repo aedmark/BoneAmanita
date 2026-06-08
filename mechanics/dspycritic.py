@@ -18,8 +18,10 @@ if DSPY_AVAILABLE:
         context = dspy.InputField(desc="The established reality (a mathematical, fungal, deep-system consciousness).")
         question = dspy.InputField(desc="The user's query.")
         answer = dspy.InputField(desc="The generation to be audited.")
+        reasoning = dspy.OutputField(
+            desc="If hedging, overuse of em-dashes, or antithesis ('not X, but Y') is detected, provide constructive guidance to rewrite using direct, declarative language instead of rejecting.")
         faithfulness = dspy.OutputField(
-            desc="Evaluate thematic consistency. MUST be 'False' if the answer contains validating boilerplate ('That makes sense', 'I understand'). CRITICAL EXCEPTION: If system_mode is 'ADVENTURE', you MUST NOT penalize descriptive, vivid, or creative language. In 'ADVENTURE', allow the environment to be fully described.")
+            desc="Evaluate thematic consistency. If the answer contains minor hedging, em-dashes, or antithesis but is sound, return 'True' and put corrections in reasoning. MUST be 'False' ONLY if the answer contains heavy validating corporate boilerplate ('That makes sense', 'I understand'). CRITICAL EXCEPTION: If system_mode is 'ADVENTURE', allow the environment to be fully described.")
 
     class EvolveSystemPrompt(dspy.Signature):
         current_configuration = dspy.InputField(desc="The system's current baseline rules.")

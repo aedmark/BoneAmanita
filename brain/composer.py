@@ -189,7 +189,7 @@ class LLMInterface:
     def _local_fallback(self, base_payload: Dict) -> Optional[str]:
         url = os.environ.get("OLLAMA_BASE_URL") or safe_get(self.cfg, "OLLAMA_URL", "http://127.0.0.1:11434/v1/chat/completions")
         fallback_payload = base_payload.copy()
-        fallback_payload["model"] = safe_get(self.cfg, "OLLAMA_MODEL_ID", "llama3")
+        fallback_payload["model"] = safe_get(self.cfg, "OLLAMA_FALLBACK", "llama3.1:8b")
         try:
             c_cfg = safe_get(self.cfg, "CORTEX", {})
             fallback_timeout = float(safe_get(c_cfg, "LLM_FALLBACK_TIMEOUT", 60.0))

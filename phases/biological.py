@@ -43,6 +43,17 @@ class MetabolismPhase(SimulationPhase):
             physics, bio_feedback, metrics["health"], metrics["stamina"],
             self.eng.bio.governor.get_stress_modifier(self.eng.tick_count), self.eng.tick_count,
             circadian_bias=self._check_circadian_rhythm(ctx), )
+
+        if hasattr(self.eng, "village") and hasattr(self.eng.village, "gordon"):
+            scars = getattr(self.eng.village.gordon, "scar_tissue", {})
+            if scars:
+                streak = getattr(self.eng.observer, "user_turns", 0)
+                healed, new_g_pool, msg = self.eng.bio.mito.cellular_repair(streak, self.eng.bio.endo.glimmers, scars)
+                if healed:
+                    self.eng.bio.endo.glimmers = new_g_pool
+                    if msg:
+                        ctx.bio_result.setdefault("logs", []).append(msg)
+
         self.eng.set_atp(self.eng._mito_state.atp_pool if self.eng._mito_state else 0.0)
         self.eng.health = max(0.0, self.eng.health)
         self.eng.stamina = max(0.0, self.eng.stamina)

@@ -270,11 +270,8 @@ class SanctuaryPhase(SimulationPhase):
                 if v := effects.get("voltage"):
                     ctx.physics.voltage = max(0.0, ctx.physics.voltage + v)
                 if (g := effects.get("glimmers")) and g > 0:
-                    if hasattr(self.eng, "shared_lattice"):
-                        self.eng.shared_lattice.shared.g_pool += g
-                    elif hasattr(ctx.physics, "G"):
-                        ctx.physics.G += g
-                    ctx.log(f"{Prisma.MAG}The dream yielded a Glimmer (+1 G_pool).{Prisma.RST}")
+                    self.eng.shared_lattice.shared.g_pool += g
+                    ctx.log(f"{Prisma.MAG}The dream yielded a Glimmer (+{g} G_pool).{Prisma.RST}")
         if dream_text_to_archive and hasattr(self.eng, "akashic") and hasattr(self.eng.akashic, "archive_dream"):
             clean_dream = Prisma.strip(dream_text_to_archive)
             self.eng.akashic.archive_dream(clean_dream)

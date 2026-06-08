@@ -385,7 +385,7 @@ class MycelialNetwork:
         seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in self.seeds if not s.bloomed]
         if not any(s["q"] == future_seed_q for s in seed_list):
             seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
-        data = {"genome": "BA_2040", "session_id": self.session_id, "parent_id": self.session_id,
+        data = {"genome": "BA_2050", "session_id": self.session_id, "parent_id": self.session_id,
                 "meta": {"timestamp": time.time(), "final_health": health, "final_stamina": stamina, },
                 "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
                 "core_graph": core_graph, "mutations": mutations or {},
@@ -449,7 +449,16 @@ class MycelialNetwork:
             if scope < 0.3:
                 return results
         k_neighbors = max(1, int(scope * 10))
-        results.extend({"source": "cortex", "data": res}
-            for res in
-            self.cortex.query_neighborhood(query_vector=query_vector, k=k_neighbors, resonance_threshold=resonance))
+        cortex_results = self.cortex.query_neighborhood(query_vector=query_vector, k=k_neighbors, resonance_threshold=resonance)
+        
+        for res in cortex_results:
+            if not res.get("raw_text") and (vh := res.get("vector_hash")):
+                if phantom_text := self.cortex.resolve_phantom(vh):
+                    res["raw_text"] = phantom_text
+
+        radius_data = self.cortex.get_local_mass_radius(trigger_word)
+        if radius_data:
+            results.append({"source": "cortex_radius", "data": radius_data})
+
+        results.extend({"source": "cortex", "data": res} for res in cortex_results)
         return results

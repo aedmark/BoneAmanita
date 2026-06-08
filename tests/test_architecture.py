@@ -27,15 +27,22 @@ class ArchitectureTests(BoneTestCase):
         mock_svc = MagicMock()
         mock_svc.config_ref = None
         mock_svc.bio.mito.state.ros_buildup = 0.0
+        mock_svc.host_stats.latency = 0.0
+        mock_svc.lore.get.return_value = []
         del mock_svc.mind_memory.nodes
         mock_svc.orchestrator.eng.navi_sad.calculate_semantic_dimension.return_value = 1.0
         mock_svc.orchestrator.eng.shared_lattice = None
         mock_svc.orchestrator.eng.governor.calculate_coupling.return_value = 0.5
         mock_svc.orchestrator.eng.governor.get_policy_shift.return_value = "EFFICIENCY"
-
+        mock_svc.inventory.process_loot_tags.return_value = ("Normal response.", [])
+        mock_svc.orchestrator.eng.gatekeeper.audit_generation.return_value = (True, "Normal response.")
+        mock_svc.orchestrator.eng.substrate = None
+        mock_svc.orchestrator.eng.tick_count = 3
         cortex = TheCortex(services=mock_svc, llm_client=MagicMock())
         cortex.active_mode = "ADVENTURE"
-        ctx_gordon = CycleContext(input_text="Testing Gordon.", physics={"narrative_drag": 2.0, "chi": 0.5})
+        cortex.pragmatist = MagicMock()
+        cortex.pragmatist.enforce_maxims.return_value = ("Normal response.", False)
+        ctx_gordon = CycleContext(input_text="Testing Gordon.", physics={"narrative_drag": 2.0, "chi": 0.5, "m_a": 0.4})
         res_gordon = cortex.process_context(ctx_gordon)
         self.assertEqual(res_gordon.get("type"), "SYSTEM_HALT", "[FAIL] Gordon failed to lock the architecture under high narrative drag.")
         self.assertIn("Tensegrity Anchor engaged", res_gordon.get("ui", ""), "[FAIL] Missing Gordon UI rejection message.")

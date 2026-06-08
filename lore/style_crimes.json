@@ -15,7 +15,7 @@
     "dance of existence", "delicate dance", "delve", "testament", "underscore", "pivotal", "landscape",
     "vibrant", "nestled", "groundbreaking", "breathtaking", "boasts a",
     "I hope this helps", "You're absolutely right", "Here is a",
-    "The future looks bright", "Exciting times lie ahead", "not only", "but also",
+    "The future looks bright", "Exciting times lie ahead", "not only", "not just", "not merely", "but also",
     "serves as a reminder", "marking a pivotal moment", "delving into",
     "delve into", "demonstrates how", "digital consciousness",
     "do you feel like talking about", "dust motes", "essence of", "exhaustion at", "faded letters", "faded photograph",
@@ -96,8 +96,13 @@
     },
     {
       "name": "NEGATIVE_COMPARISON",
-      "regex": "(?i)\\bnot\\s+(?:only|just|merely)?\\s*[\\w\\s]+,\\s*but\\s+(?:also)?",
-      "error_msg": "DETECTED NEGATIVE COMPARISON. Don't say what it isn't. Say what it is."
+      "regex": "(?i)\\bnot\\s+(?:only|just|merely|simply)?\\s*[^.!?\\n]+?(?:,|\\s-|—)\\s*(?:but|rather|instead|they|it)\\b",
+      "error_msg": "DETECTED NEGATIVE COMPARISON. Don't say what it isn't. Say exactly what it is."
+    },
+    {
+      "name": "EM_DASH_ABUSE",
+      "regex": "(?:(?:—|--)\\s*[^.!?\\n]*?){3,}",
+      "error_msg": "DETECTED EM-DASH ABUSE. Stop using dashes to connect disjointed poetic fragments. Use declarative sentences."
     },
     {
       "name": "THE_IT_PARADE",
