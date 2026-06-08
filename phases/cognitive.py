@@ -14,7 +14,7 @@ class CognitionPhase(SimulationPhase):
         self.name = "COGNITION"
 
     def run(self, ctx: Any):
-        if ctx.is_bureaucratic or "refactor" in (ctx.input_text or "").lower():
+        if ctx.is_bureaucratic or "refactor" in ctx.input_text.lower():
             old_drag = ctx.physics.narrative_drag
             ctx.physics.narrative_drag = max(1.0, ctx.physics.narrative_drag * 0.5)
             if old_drag - ctx.physics.narrative_drag > 1.0:
@@ -426,9 +426,8 @@ class SimulationPreflightPhase(SimulationPhase):
         if friction > 1.2 or chaos > 0.7 or voltage > 80.0:
             base_ros = mito.state.ros_buildup if mito else 0.0
             simulated_ros = base_ros + (friction * chaos * 20.0)
-            target_cfg = getattr(self.eng, "config", {}) or {}
-            bio_cfg = safe_get(target_cfg, "BIO", {})
-            ros_limit = float(safe_get(bio_cfg, "ROS_PANIC_THRESHOLD", 100.0))
+            bio_cfg = getattr(self.eng.config, "BIO", object())
+            ros_limit = float(getattr(bio_cfg, "ROS_PANIC_THRESHOLD", 100.0))
             if simulated_ros >= ros_limit:
                 msg = "Counterfactual simulation indicates fatal ROS toxicity. We are silently rejecting this generation path before it executes."
                 log_msg = f"{Prisma.RED}{msg}{Prisma.RST}"

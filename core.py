@@ -183,9 +183,13 @@ class EventBus:
                     del self.subscribers[event_type]
 
     def publish(self, event_type, data=None):
-        if getattr(self._publishing, 'active', False):
+        active_events = getattr(self._publishing, 'active_events', None)
+        if active_events is None:
+            active_events = set()
+            self._publishing.active_events = active_events
+        if event_type in active_events:
             return
-        self._publishing.active = True
+        active_events.add(event_type)
         try:
             callbacks = self.subscribers.get(event_type, ())
             for callback in callbacks:
@@ -194,12 +198,9 @@ class EventBus:
                 except Exception as e:
                     if event_type != "EVENT_FAILURE":
                         cb_name = getattr(callback, "__name__", str(callback))
-                        self.log(
-                            f"Subscriber '{cb_name}' failed: {e}",
-                            source="EVENT_FAILURE", level="CRIT"
-                        )
+                        self.log(f"Subscriber '{cb_name}' failed: {e}", source="EVENT_FAILURE", level="CRIT")
         finally:
-            self._publishing.active = False
+            active_events.discard(event_type)
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
         event = {"timestamp": time.time(), "source": source, "level": level, "text": message, "_type": "EVENT_LOG"}
@@ -207,12 +208,7 @@ class EventBus:
         self.publish(source, event)
         if self.telemetry:
             self.telemetry.record_event(event)
-
-        # S.L.A.S.H. Dynamic routing: Send to structural logging cleanly.
-        # Note: INFO is deliberately mapped to DEBUG so it doesn't spam the standard terminal,
-        # but remains perfectly catchable by external log aggregators.
         log_lvl = {"CRIT": logging.CRITICAL, "ERROR": logging.ERROR, "WARN": logging.WARNING}.get(level, logging.DEBUG)
-
         if log_lvl >= logging.WARNING:
             color = Prisma.RED if log_lvl >= logging.ERROR else Prisma.YEL
             logger.log(log_lvl, f"{color}[{source}] {message}{Prisma.RST}")
@@ -383,18 +379,6 @@ class SystemHealth:
     observer: Optional["TheObserver"] = None
     events: Optional["EventBus"] = None
 
-    @property
-    def physics_online(self) -> bool:
-        return self.components_online.get("physics", True)
-
-    @property
-    def bio_online(self) -> bool:
-        return self.components_online.get("bio", True)
-
-    @property
-    def mind_online(self) -> bool:
-        return self.components_online.get("mind", True)
-
     def __getattr__(self, item: str):
         if item.endswith("_online"):
             return self.components_online.get(item[:-7].lower(), True)
@@ -550,10 +534,8 @@ class CyberneticGovernor:
         from spores.spore_utils import _word_to_vector
         import numpy as np
 
-        voltage = float(
-            physics.get('voltage', 30.0) if isinstance(physics, dict) else getattr(physics, 'voltage', 30.0))
-        drag = float(
-            physics.get('narrative_drag', 0.6) if isinstance(physics, dict) else getattr(physics, 'narrative_drag', 0.6))
+        voltage = float(safe_get(physics, 'voltage', 30.0))
+        drag = float(safe_get(physics, 'narrative_drag', 0.6))
         p_cfg = getattr(self.cfg, "PHYSICS", None)
         v_max = float(getattr(p_cfg, "VOLTAGE_MAX", 100.0))
         v_floor = float(getattr(p_cfg, "VOLTAGE_FLOOR", 0.0))
@@ -611,10 +593,8 @@ class CyberneticGovernor:
     def _pid_fallback(self, physics: Dict[str, Any], dt: float, endocrine_state: Any = None) -> Tuple[float, float]:
         active_tv = self.target_v if self.target_v is not None else 30.0
         active_td = self.target_d if self.target_d is not None else 0.6
-        current_v = float(
-            physics.get("voltage", active_tv) if type(physics) is dict else getattr(physics, "voltage", active_tv))
-        current_d = float(
-            physics.get("narrative_drag", active_td) if type(physics) is dict else getattr(physics, "narrative_drag", active_td))
+        current_v = float(safe_get(physics, "voltage", active_tv))
+        current_d = float(safe_get(physics, "narrative_drag", active_td))
         stress_mod = 1.0 if endocrine_state is None else (1.5 if float(getattr(endocrine_state, 'glimmers', 0)) >= 1 else 0.75)
         adjusted_dt = dt * 0.5 * stress_mod
         return (active_tv - current_v) * adjusted_dt, (active_td - current_d) * adjusted_dt
@@ -752,23 +732,8 @@ class TelemetryService:
 
     def _tail_file(self, filepath: str, n: int = 20) -> List[str]:
         try:
-            with open(filepath, "rb") as f:
-                f.seek(0, 2)
-                file_size = f.tell()
-                if file_size == 0:
-                    return []
-                chunk_size = 8192
-                pos = max(0, file_size - chunk_size)
-                lines_found = []
-                while pos >= 0 and len(lines_found) < n:
-                    f.seek(pos)
-                    chunk = f.read(file_size - pos if pos == 0 else chunk_size)
-                    lines_found = chunk.decode("utf-8", errors="replace").splitlines() + lines_found
-                    if len(lines_found) >= n:
-                        break
-                    pos -= chunk_size
-                    file_size = pos + chunk_size
-                return lines_found[-n:]
+            with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+                return list(deque(f, maxlen=n))
         except IOError:
             return []
 

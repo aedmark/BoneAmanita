@@ -55,13 +55,15 @@ class GeodesicRenderer:
 
     def render_frame(self, ctx, tick: int, current_events: List[Dict]) -> Dict[str, Any]:
         physics = ctx.physics
-        bio = ctx.bio_result
+        bio = ctx.bio_result if isinstance(ctx.bio_result, dict) else {}
         raw_dashboard = self.render_dashboard(ctx)
         soul_strip = self.soul_dashboard.render()
+        mood_str = PulseReader.derive_mood(bio, getattr(self.eng, "config", None))
         structured_logs = self.compose_logs(ctx.logs, current_events, tick)
         hud_parts = []
         if soul_strip: hud_parts.append(soul_strip.strip())
         if raw_dashboard: hud_parts.append(raw_dashboard.strip())
+        if mood_str and "NEUTRAL" not in mood_str.upper(): hud_parts.append(f"{Prisma.MGT}[PULSE: {mood_str}]{Prisma.RST}")
         if structured_logs: hud_parts.append("\n".join(structured_logs))
         instant_hud = "\n\n".join(hud_parts)
         cortex_text = getattr(ctx, "bureau_ui", "")
@@ -205,7 +207,10 @@ class CachedRenderer:
 
 def get_renderer(engine_ref, chroma_ref, strunk_ref, valve_ref=None, mode="STANDARD"):
     target_cfg = getattr(engine_ref, "config", BoneConfig)
-    base = GeodesicRenderer(engine_ref, chroma_ref, strunk_ref, valve_ref)
+    if hasattr(engine_ref, "ambiguity_dial"):
+        base = TruthRenderer(engine_ref, chroma_ref, strunk_ref, valve_ref)
+    else:
+        base = GeodesicRenderer(engine_ref, chroma_ref, strunk_ref, valve_ref)
     if mode == "PERFORMANCE":
         return CachedRenderer(base, config_ref=target_cfg)
     return base
@@ -217,8 +222,8 @@ class AmbiguityDial:
     PALIMPSEST = 3
 
 class TruthRenderer(GeodesicRenderer):
-    def __init__(self, engine_ref):
-        super().__init__(engine_ref, None, None)
+    def __init__(self, engine_ref, chroma_ref, strunk_ref, valve_ref=None):
+        super().__init__(engine_ref, chroma_ref, strunk_ref, valve_ref)
         self.engine = engine_ref
 
     @property
