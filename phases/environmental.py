@@ -217,6 +217,7 @@ class SanctuaryPhase(SimulationPhase):
         if in_safe_zone and trauma_sum < t_limit:
             self._enter_sanctuary(ctx)
             self._apply_restoration(ctx)
+            self._trigger_dream(ctx)
         return ctx
 
     @staticmethod

@@ -100,3 +100,17 @@ class RealityLayer:
     VILLAGE = 2
     DEBUG = 3
     DEEP_CX = 4
+
+    @classmethod
+    def get_rules(cls, depth: int, boot_mode: str = "ADVENTURE") -> dict:
+        """Absolute source of truth for Grammar Policies."""
+        rules = {
+            "allow_narrative": depth in (cls.SIMULATION, cls.DEEP_CX, cls.DEBUG),
+            "allow_commands": depth >= cls.SIMULATION,
+            "allow_meta": depth >= cls.DEBUG,
+            "raw_output": depth == cls.DEEP_CX,
+            "system_override": depth == cls.DEBUG
+        }
+        if boot_mode == "TECHNICAL":
+            rules["allow_narrative"] = True
+        return rules

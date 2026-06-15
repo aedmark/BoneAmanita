@@ -334,14 +334,7 @@ class SimulationPreflightPhase(SimulationPhase):
                     "log": f"{Prisma.OCHRE}[CASCADE]: Counterfactual math explicitly demanded.{Prisma.RST}"})
         if "[AUDIT]" in upper_input:
             ctx.council_mandates.append({"action": "SYSTEM_DIRECTIVE", "value": "AUDIT_TRAIL",
-                    "log": f"{Prisma.GRY}[AUDIT]: Narrative illusion dropped. Coordinates exposed.{Prisma.RST}"})
-        if "[GRIEF]" in upper_input:
-            if self.eng.shared_lattice:
-                self.eng.shared_lattice.shared.g_pool += 1
-            else:
-                phys_obj.G = getattr(phys_obj, "G", 0) + 1
-            ctx.council_mandates.append({"action": "SYSTEM_DIRECTIVE", "value": "GRIEF_PROTOCOL",
-                "log": f"{Prisma.MAG}[GRIEF]: Profound loss witnessed. Structural Glimmer yielded.{Prisma.RST}"})
+                                         "log": f"{Prisma.GRY}[AUDIT]: Narrative illusion dropped. Coordinates exposed.{Prisma.RST}"})
         if "[NO_JUMP]" in upper_input or "[SILENCE]" in upper_input:
             phys_obj.silence = 1.0
             msg = "Silence engaged. Stopping token prediction. Waiting for a mathematical rupture."

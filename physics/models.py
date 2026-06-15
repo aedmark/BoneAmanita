@@ -1,6 +1,7 @@
 """physics/models.py"""
 
 import dataclasses
+import math
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Optional
 
@@ -156,7 +157,6 @@ class PhysicsPacket:
 
     def get_principal_eigenvalue(self, L: float = 3.14159, beta: float = 1.0) -> float:
         """λ₁ = (π/L)² - βb. If λ₁ < 0, nontrivial presence emerges. Project Navi, Apache 2.0"""
-        import math
         b = self.get_viability_potential()
         return ((math.pi / L) ** 2) - (beta * b)
 

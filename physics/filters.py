@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 from constants import Prisma
 from physics.observer import apply_metabolic_tax
 from presets import BoneConfig
+from struts import safe_get, ux
 
 class CerebrospinalFluidFilter:
     INVISIBLE_REGEX = re.compile(
@@ -91,12 +92,12 @@ class TheGatekeeper:
         self._default_rejections = style_crimes.get("REJECTIONS", ["[CRITICAL: BANNED_SYNTAX '{trigger}' DETECTED. CSF FILTER TRIGGERED APOPTOTIC BLOCK.]"])
 
     def check_entry(self, ctx: 'CycleContext', current_atp: float = 20.0) -> Tuple[bool, Optional[Dict]]:
-        from struts import ux
+
         def reject(type_str: str, msg_key: str, color: str = Prisma.RED) -> Tuple[bool, Dict]:
             msg = ux("physics_strings", msg_key)
             formatted_msg = f"{color}{msg}{Prisma.RST}" if color else msg
             return False, self._pack_refusal(ctx, type_str, formatted_msg)
-        from struts import safe_get
+
         bio_cfg = safe_get(self.cfg, "BIO", {})
         phys_cfg = safe_get(self.cfg, "PHYSICS", {})
         if current_atp < (float(safe_get(bio_cfg, "ATP_STARVATION", 5.0)) * 0.5):

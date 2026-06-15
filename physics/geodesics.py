@@ -4,6 +4,7 @@ import math
 from dataclasses import dataclass
 from typing import Dict, List
 from presets import BoneConfig
+from struts import safe_get
 
 @dataclass
 class GeodesicVector:
@@ -28,7 +29,6 @@ class GeodesicEngine:
         return GeodesicVector(tension=forces["tension"], compression=forces["compression"],
             coherence=forces["coherence"], abstraction=forces["abstraction"], dimensions=dimensions, )
 
-    # noinspection PyTypeChecker
     @staticmethod
     def _weigh_mass(counts: Dict[str, int]) -> Dict[str, float]:
         mass_dict: Dict[str, float] = {str(k): float(counts.get(k, 0)) for k in GeodesicEngine._MASS_KEYS}
@@ -37,7 +37,6 @@ class GeodesicEngine:
     @staticmethod
     def _calculate_forces(masses: Dict[str, float], counts: Dict[str, int], volume: int, config_ref=None) -> Dict[
         str, float]:
-        from struts import safe_get
         t_cfg = config_ref or BoneConfig
         cfg = safe_get(t_cfg, "PHYSICS", {})
 

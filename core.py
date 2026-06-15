@@ -439,12 +439,6 @@ class RealityStack:
     def stabilize_at(self, layer: int):
         self._stack = [layer]
 
-    def get_grammar_rules(self) -> Dict[str, bool]:
-        d = self.current_depth
-        return {"allow_narrative": d in (RealityLayer.SIMULATION, RealityLayer.DEEP_CX, RealityLayer.DEBUG),
-                "allow_commands": d >= RealityLayer.SIMULATION, "allow_meta": d >= RealityLayer.DEBUG,
-                "raw_output": d == RealityLayer.DEEP_CX, "system_override": d == RealityLayer.DEBUG}
-
 class CyberneticGovernor:
     """
     Apex N-Dimensional Topological Manifold Governor.
@@ -515,10 +509,8 @@ class CyberneticGovernor:
         return Phi, converged
 
     def get_policy_shift(self) -> str:
-        if self.order == 2:
+        if self.order == 2 or self.last_lam1 < 0 or self.last_sol == 'nontrivial':
             return "CO_REGULATION"
-        if self.last_lam1 < 0 or self.last_sol == 'nontrivial':
-            return 'CO_REGULATION'
         return "EFFICIENCY"
 
     def regulate(self, physics, dt, goal_vector=None, endocrine_state=None, memory_core=None, user_text="") -> Tuple[
@@ -532,7 +524,6 @@ class CyberneticGovernor:
 
     def _graph_regulation(self, physics, dt, memory_core, user_text, endocrine_state) -> Tuple[float, float]:
         from spores.spore_utils import _word_to_vector
-        import numpy as np
 
         voltage = float(safe_get(physics, 'voltage', 30.0))
         drag = float(safe_get(physics, 'narrative_drag', 0.6))
@@ -543,8 +534,7 @@ class CyberneticGovernor:
         v_range = v_max - v_base
         a_scalar = float(np.clip((voltage - v_base) / v_range, 0.0, 1.0) if v_range > 0 else 0.0)
 
-        if hasattr(self, '_sync_ordvec_indices'):
-            self._sync_ordvec_indices(memory_core)
+        self._sync_ordvec_indices(memory_core)
         u_vec = _word_to_vector(user_text)
         if u_vec is None:
             raise ValueError("Null vectorization payload.")

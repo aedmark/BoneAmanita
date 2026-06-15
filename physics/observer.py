@@ -11,7 +11,7 @@ from physics.geodesics import GeodesicEngine
 from physics.maths import CreativeDeterminantEngine, _native_permutation_entropy, _native_detect_false_cohesion, _native_coincidence_length
 from physics.models import PhysicsPacket, SpatialState, MaterialState, EnergyState
 from presets import BoneConfig
-from struts import safe_get
+from struts import safe_get, safe_set, ux
 
 
 @dataclass
@@ -162,7 +162,6 @@ class QuantumObserver:
 
     @staticmethod
     def evaluate_silence(time_delta: float, last_phys: Any) -> Optional[str]:
-        from struts import safe_get, safe_set, ux
         if time_delta < 90.0 or not last_phys: return None
         if safe_get(last_phys, "stamina", 50.0) < 30.0:
             safe_set(last_phys, "sigma", 2)
@@ -203,7 +202,6 @@ class QuantumObserver:
         if not (length := len(text)):
             return {"entropy": 0.0, "beta": 0.0, "scope": 0.3, "depth": 0.3,
                     "connectivity": 0.2, "resonance": 0.0, "silence": 0.8, "loop_quotient": 0.0}
-        from struts import safe_get
         cfg = safe_get(config_ref or BoneConfig, "PHYSICS", {})
 
         def get_cfg(key: str, default: float) -> float:
@@ -258,7 +256,6 @@ class CycleStabilizer:
     def __init__(self, events_ref, governor_ref, config_ref=None):
         self.events = events_ref
         self.governor = governor_ref
-        from struts import safe_get
         self.cfg = config_ref or BoneConfig
         self.last_tick_time = time.time()
         self.pending_drag = 0.0
@@ -274,7 +271,6 @@ class CycleStabilizer:
         self.pending_drag = min(50.0, self.pending_drag + amount)
 
     def stabilize(self, physics: Any, endocrine_state: Any = None) -> bool:
-        from struts import safe_get, ux
         applied_correction = False
         if self.pending_drag > 0:
             current_drag = getattr(physics, "narrative_drag", 0.0)
