@@ -5,7 +5,7 @@ import shlex
 from typing import Dict, Callable, List, Optional
 from presets import BonePresets, BoneConfig
 from core import LoreManifest
-from struts import ux, safe_get
+from struts import ux, safe_get, ux_format
 from constants import RealityLayer
 
 class CommandStateInterface:
@@ -44,8 +44,8 @@ class CommandStateInterface:
         last_out = ux("command_state", "default_out")
         if cortex := getattr(self.eng, "cortex", None):
             state = cortex.gather_state({"physics": getattr(cortex, "last_physics", {})})
-            orbit_list = state.get("world", {}).get("orbit") or [ux("command_state", "default_orbit")]
-            loc = orbit_list[0] if orbit_list else ux("command_state", "default_orbit")
+            orbit = state.get("world", {}).get("orbit")
+            loc = orbit[0] if orbit else ux("command_state", "default_orbit")
             if cortex.dialogue_buffer:
                 last_out = cortex.dialogue_buffer[-1]
         bio = getattr(self.eng, "bio", None)
@@ -57,9 +57,11 @@ class CommandStateInterface:
         village = getattr(self.eng, "village", None)
         nav = getattr(village, "navigator", None)
         atlas_data = nav.export_atlas() if nav else None
-        payload = {"health": self.eng.health, "stamina": self.eng.stamina, "mutations": {},
-            "trauma_accum": getattr(self.eng, "trauma_accum", {}), "joy_history": [], "mitochondria_traits": mito_traits, "antibodies": antibodies,
-            "soul_data": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None, "continuity": continuity_packet, "world_atlas": atlas_data, "village_data": None}
+        payload = {"health": self.eng.health, "stamina": self.eng.stamina,
+                   "trauma_accum": getattr(self.eng, "trauma_accum", {}), "mitochondria_traits": mito_traits,
+                   "antibodies": antibodies,
+                   "soul_data": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None,
+                   "continuity": continuity_packet, "world_atlas": atlas_data}
         try:
             return self.eng.mind.mem.save(**payload)
         except Exception as e:
@@ -105,7 +107,7 @@ class ResourceTax:
         for res, cost in costs.items():
             if cost > self.state.get_resource(res):
                 limit_key = limits.get(res, "depleted")
-                msg = ux("resource_tax", limit_key).format(cost=cost)
+                msg = ux_format("resource_tax", limit_key, default=f"{res} limit reached: {{cost}}", cost=cost)
                 self.state.log(f"{self.state.P.RED}{msg}{self.state.P.RST}")
                 return False
         for res, cost in costs.items():
@@ -124,6 +126,7 @@ class CommandRegistry:
         self.help_text[name] = help_str
 
     def execute(self, text: str) -> bool:
+        from struts import ux_format
         clean_text = text.strip()
         try:
             parts = shlex.split(clean_text)
@@ -134,15 +137,17 @@ class CommandRegistry:
         cmd = parts[0].lower()
         if func := self.commands.get(cmd):
             return func(parts)
-        self.state.log(ux("command_registry", "unknown_command").format(cmd=cmd), "CMD")
+        msg = ux_format("command_registry", "unknown_command", default="Unknown command: {cmd}", cmd=cmd)
+        self.state.log(msg, "CMD")
         return True
 
 class CommandProcessor:
     DEFAULT_DESCS = {
         "hud": "Adjusts the VSL UI depth (warm, lite, core, deep)",
         "idle": "Enters REM cycle, regenerating ATP and Stamina",
-        "mod": "Engages hardwired mode chips (e.g., slash)",
+        "mode": "Engages hardwired mode chips (e.g., slash)",
         "grief": "Attends the wake for a consumed memory",
+        "hallucinate": "Disengages the thermal lock for a forced lateral paradigm shift",
         "layer": "Manipulates the Reality Stack depth",
         "inject": "Forces payload into the EventBus",
         "trauma": "DEV: Spikes trauma and drops health to test The Therapist.",
@@ -165,11 +170,14 @@ class CommandProcessor:
                 self.registry.register(f"/{name}", getattr(self, attr), desc)
 
     def execute(self, text: str):
+        if text.strip().lower() == "[zen]":
+            text = "/zen"
         if not text.startswith("/"):
             return False
         if hasattr(self.interface.eng, "reality_stack"):
             stack = self.interface.eng.reality_stack
-            rules = stack.get_grammar_rules()
+            boot_mode = getattr(self.interface.eng, "boot_mode", "ADVENTURE")
+            rules = RealityLayer.get_rules(stack.current_depth, boot_mode=boot_mode)
             if not rules.get("allow_commands", True):
                 msg = ux("command_alerts", "reality_lock")
                 self.interface.log(f"{self.P.RED}{msg.format(depth=stack.current_depth)}{self.P.RST}", "ERR")
@@ -223,8 +231,12 @@ class CommandProcessor:
 
     def _cmd_report(self, _parts):
         try:
-            report_text = self.interface.eng.telemetry.get_report()
-            summary_text = self.interface.eng.telemetry.generate_session_summary()
+            telemetry = getattr(self.interface.eng, "telemetry", None)
+            if not telemetry:
+                self.interface.log(f"{self.P.RED}Telemetry module offline. Cannot generate report.{self.P.RST}")
+                return True
+            report_text = telemetry.get_report()
+            summary_text = telemetry.generate_session_summary()
             self.interface.log(f"{self.P.CYN}=== SYSTEM REPORT ==={self.P.RST}\n{report_text}")
             self.interface.log(f"{self.P.CYN}=== SESSION SUMMARY ==={self.P.RST}\n{summary_text}")
         except Exception as e:
@@ -233,8 +245,12 @@ class CommandProcessor:
 
     def _cmd_diag(self, _parts):
         try:
-            fatal = self.interface.eng.telemetry.get_last_fatal_error()
-            thoughts = self.interface.eng.telemetry.get_last_thoughts()
+            telemetry = getattr(self.interface.eng, "telemetry", None)
+            if not telemetry:
+                self.interface.log(f"{self.P.RED}Telemetry module offline. Cannot run diagnostics.{self.P.RST}")
+                return True
+            fatal = telemetry.get_last_fatal_error()
+            thoughts = telemetry.get_last_thoughts()
             self.interface.log(f"{self.P.RED}=== LAST FATAL ERROR ==={self.P.RST}\n{fatal}")
             self.interface.log(f"{self.P.YEL}=== LAST THOUGHTS ==={self.P.RST}\n{thoughts}")
         except Exception as e:
@@ -247,8 +263,8 @@ class CommandProcessor:
             return True
         mode_name = parts[1].upper()
         if not hasattr(BonePresets, mode_name):
-            msg = ux("command_alerts", "mode_unknown")
-            self.interface.log(f"{self.P.RED}{msg.format(mode=mode_name)}{self.P.RST}")
+            msg = ux_format("command_alerts", "mode_unknown", default="Unknown mode: {mode}", mode=mode_name)
+            self.interface.log(f"{self.P.RED}{msg}{self.P.RST}")
             return True
         cost = float(safe_get(self.cmd_cfg, "COST_MODE", 10.0))
         if self.tax.levy("MODE_SWITCH", {"stamina": cost}):
@@ -260,21 +276,22 @@ class CommandProcessor:
             observer = getattr(phys, "observer", None) if phys else None
             if phys_packet := getattr(observer, "last_physics_packet", None):
                 self.interface.Config.reconcile_state(phys_packet)
-                msg = ux("command_alerts", "mode_reconciled")
-                self.interface.log(f"{self.P.CYN}{msg.format(mode=mode_name)}{self.P.RST}")
-            msg = ux("command_alerts", "mode_switched")
-            self.interface.log(msg.format(mode=mode_name))
+                msg = ux_format("command_alerts", "mode_reconciled", default="Reconciled state to {mode}",
+                                mode=mode_name)
+                self.interface.log(f"{self.P.CYN}{msg}{self.P.RST}")
+            msg = ux_format("command_alerts", "mode_switched", default="Switched to {mode}", mode=mode_name)
+            self.interface.log(msg)
         return True
 
     def _cmd_save(self, _parts):
         res = self.interface.save_state()
         error_flags = safe_get(self.cmd_cfg, "SAVE_ERROR_FLAGS", ("Error", "Failed", "Exception"))
         if not res or any(flag in str(res) for flag in error_flags):
-            msg = ux("command_alerts", "save_failed")
-            self.interface.log(f"{self.P.RED}{msg.format(res=res)}{self.P.RST}")
+            msg = ux_format("command_alerts", "save_failed", default="Save failed: {res}", res=res)
+            self.interface.log(f"{self.P.RED}{msg}{self.P.RST}")
         else:
-            msg = ux("command_alerts", "save_success")
-            self.interface.log(f"{self.P.GRN}{msg.format(res=res)}{self.P.RST}")
+            msg = ux_format("command_alerts", "save_success", default="State saved: {res}", res=res)
+            self.interface.log(f"{self.P.GRN}{msg}{self.P.RST}")
         return True
 
     def _cmd_inventory(self, _parts):
@@ -337,31 +354,32 @@ class CommandProcessor:
         if len(parts) > 1:
             target = parts[1].upper()
             LoreManifest.get_instance(config_ref=self.interface.Config).flush_cache(target)
-            msg = ux("command_alerts", "reload_target")
-            self.interface.log(msg.format(target=target))
+            msg = ux_format("command_alerts", "reload_target", default="Reloaded {target}", target=target)
+            self.interface.log(msg)
         else:
             LoreManifest.get_instance(config_ref=self.interface.Config).flush_cache()
-            self.interface.log(ux("command_alerts", "reload_all"))
+            self.interface.log(ux("command_alerts", "reload_all") or "All caches reloaded.")
         return True
 
     def _cmd_truth(self, parts):
         if len(parts) < 2:
-            self.interface.log(ux("command_alerts", "truth_usage"))
+            self.interface.log(ux("command_alerts", "truth_usage") or "Usage: /truth [0-3]")
             return True
         try:
             mode = int(parts[1])
             if mode not in (0, 1, 2, 3):
-                self.interface.log(ux("command_alerts", "truth_invalid"))
+                self.interface.log(ux("command_alerts", "truth_invalid") or "Invalid truth mode.")
                 return True
             self.interface.eng.ambiguity_dial = mode
             modes = ux("command_alerts", "truth_modes", ("BOARDROOM", "WORKSHOP", "RED TEAM", "PALIMPSEST"))
             mode_name = modes[mode] if mode < len(modes) else str(mode)
-            self.interface.log(
-                f"{self.P.CYN}{ux('command_alerts', 'truth_dial_set').format(mode=mode_name)}{self.P.RST}")
+            msg = ux_format('command_alerts', 'truth_dial_set', default="Truth set to {mode}", mode=mode_name)
+            self.interface.log(f"{self.P.CYN}{msg}{self.P.RST}")
         except ValueError:
-            self.interface.log(ux("command_alerts", "truth_invalid"))
+            self.interface.log(ux("command_alerts", "truth_invalid") or "Invalid truth mode.")
         except Exception as e:
-            self.interface.log(ux("command_alerts", "truth_failure").format(error=e))
+            msg = ux_format("command_alerts", "truth_failure", default="Truth failed: {error}", error=e)
+            self.interface.log(msg)
         return True
 
     def _cmd_use(self, parts):
@@ -440,16 +458,35 @@ class CommandProcessor:
         return self._cmd_idle(parts)
 
     def _cmd_rest(self, _parts):
-        self.interface.modify_resource("stamina", 100.0)
-        if hasattr(self.interface.eng, "phys"):
+        cortex = getattr(self.interface.eng, "cortex", None)
+        if cortex:
+            cortex.purge_context()
+
+        phys = getattr(self.interface.eng, "active_physics", None)
+        if phys is not None:
+            from struts import safe_set
+            safe_set(phys, "narrative_drag", 0.0)
+        elif hasattr(self.interface.eng, "phys") and self.interface.eng.phys:
             self.interface.eng.phys.narrative_drag = 0.0
+
+        vitals = self.interface.get_vitals()
+        self.interface.modify_resource("stamina", vitals.get("max_stamina", 100.0))
+        self.interface.modify_resource("atp", vitals.get("max_atp", 100.0))
+
+        if state := getattr(self.interface.eng, "_mito_state", None):
+            state.ros_buildup = 0.0
+
         if hasattr(self.interface.eng, "trauma_accum"):
             self.interface.eng.trauma_accum.clear()
-        self.interface.log(
-            f"{self.P.CYN}Somatic flush complete. Drag reset, trauma purged, stamina restored.{self.P.RST}", "SYS")
+
+        msg = "Context severed. Friction Dropped. Stamina restored. Trauma purged. The mind is clear."
+        self.interface.log(f"{self.P.CYN}{msg}{self.P.RST}", "SYS")
         return True
 
     def _cmd_flush(self, parts):
+        return self._cmd_rest(parts)
+
+    def _cmd_zen(self, parts):
         return self._cmd_rest(parts)
 
     def _cmd_grief(self, _parts):
@@ -469,7 +506,7 @@ class CommandProcessor:
         if not stack:
             return True
         if len(parts) < 2:
-            self.interface.log(ux("main_strings", "current_layer").format(layer=stack.current_depth))
+            self.interface.log(ux_format("main_strings", "current_layer", default="Layer: {layer}", layer=stack.current_depth))
             return True
         sub = parts[1].lower()
         if sub == "push" and len(parts) > 2:
@@ -480,7 +517,7 @@ class CommandProcessor:
                 return True
             try:
                 stack.push_layer(layer_val)
-                self.interface.log(ux("main_strings", "layer_pushed").format(layer=layer_val))
+                self.interface.log(ux_format("main_strings", "layer_pushed", default="Pushed layer {layer}", layer=layer_val))
             except ValueError as e:
                 self.interface.log(f"{self.P.RED}{str(e)}{self.P.RST}")
         elif sub == "pop":
@@ -497,11 +534,13 @@ class CommandProcessor:
             return True
         payload = " ".join(parts[1:])
         self.interface.log(payload, "INJECT")
-        self.interface.log(ux("main_strings", "injected").format(payload=payload))
+        self.interface.log(ux_format("main_strings", "injected", default="Injected: {payload}", payload=payload))
         return True
 
     def _cmd_trauma(self, _parts):
         self.interface.eng.health = 20.0
+        if not hasattr(self.interface.eng, "trauma_accum"):
+            self.interface.eng.trauma_accum = {}
         self.interface.eng.trauma_accum["SYNTHETIC_CRISIS"] = 50.0
         if hasattr(self.interface.eng, "events"):
             self.interface.eng.events.publish("TRAUMA_EVENT", {"magnitude": 50.0})
@@ -548,6 +587,30 @@ class CommandProcessor:
             self.interface.log(f"{self.P.RED}Journal generation failed: {e}{self.P.RST}")
         return True
 
+    def _cmd_hallucinate(self, _parts):
+        from struts import safe_get, safe_set
+        cost = float(safe_get(self.cmd_cfg, "COST_HALLUCINATE", 25.0))
+        if not self.tax.levy("HALLUCINATE", {"atp": cost}):
+            return True
+        active_phys = getattr(self.interface.eng, "active_physics", None)
+        if active_phys is not None:
+            safe_set(active_phys, "mu", min(1.0, float(safe_get(active_phys, "mu", 0.0)) + 0.8))
+            safe_set(active_phys, "kappa", max(0.5, float(safe_get(active_phys, "kappa", 0.0))))
+
+        if hasattr(self.interface.eng, "phys") and self.interface.eng.phys is not None:
+            base_phys = self.interface.eng.phys
+            base_phys.mu = min(1.0, float(getattr(base_phys, "mu", 0.0)) + 0.8)
+            base_phys.kappa = max(0.5, float(getattr(base_phys, "kappa", 0.0)))
+        cortex = getattr(self.interface.eng, "cortex", None)
+        if cortex and hasattr(cortex, "dialogue_buffer"):
+            cortex.dialogue_buffer.append(
+                "System: [!s] THERMAL LOCK OVERRIDE. The user has explicitly invoked a hallucination. "
+                "Abandon linear cohesion. Connect two wildly unrelated concepts from the active memory graph. "
+                "Maximize structural polyphony. Generate a fever dream of lateral paradigm shifts. Let The Jester speak."
+            )
+        self.interface.log(f"{self.P.MAG}[VOID] Thermal lock disengaged. Tension spiked. The next turn will be a forced hallucination.{self.P.RST}", "SYS")
+        return True
+
     def _cmd_shuffle(self, _parts):
         from struts import safe_get
         """The emergency release valve. Burns ATP to physically reset structural/narrative loops."""
@@ -557,7 +620,7 @@ class CommandProcessor:
         if hasattr(self.interface.eng, "phys"):
             self.interface.eng.phys.narrative_drag = 0.0
         self.interface.log(
-            f"{self.P.VIOLET}🃏 [ !s ] THE SHUFFLE: Lateral shift initiated.{self.P.RST}")
+            f"{self.P.VIOLET}[ !s ] THE SHUFFLE: Lateral shift initiated.{self.P.RST}")
         self.interface.log(
             f"{self.P.GRY}Control illusion shattered. Narrative drag reset to 0. (Cost: {cost} ATP){self.P.RST}")
         return True

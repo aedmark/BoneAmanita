@@ -49,7 +49,8 @@ class BoneAmanita:
         self.sys_config = config
         self.config = BoneConfig()
         for key in ["model", "provider", "base_url", "api_key"]:
-            if val := self.sys_config.get(key, self.sys_config.get(key.upper())):
+            val = self.sys_config.get(key) or self.sys_config.get(key.upper())
+            if val:
                 setattr(self.config, key.upper(), val)
         self.navi_sad = NaviSADProtocol()
         self.events = EventBus(config_ref=self.config)
@@ -112,9 +113,6 @@ class BoneAmanita:
         self.orchestrator.cortex = self.cortex
         self.orchestrator.start_daemon()
         self.mind.mem.lex = self.lex
-        for c in ("parasite", "memory_core", "lichen"):
-            if sub := getattr(self.mind.mem, c, None):
-                sub.lex = self.lex
 
     def _validate_state(self):
         tuning_key = self.mode_settings.get("tuning", "STANDARD")
@@ -296,16 +294,18 @@ class BoneAmanita:
                 f"[PARITY GATE FAILED] Metabolic budget exceeded. Action Cost: {estimated_cost:.1f}, Available ATP: {current_atp:.1f}. Simplify your architecture.")
         if clean_in.count("do this forever") > 0 or clean_in.count("infinite") > 3:
             self.apply_absolute_friction(active_phys)
-            return self._generate_halt("[STABILITY GATE FAILED] Topological oscillation and runaway recursion detected. Apoptotic Block engaged.")
+            return self._generate_halt(
+                "[STABILITY GATE FAILED] Topological oscillation and runaway recursion detected. Apoptotic Block engaged.")
         return None
 
     def _pre_flight_checks(self, user_message: str, clean_in: str, is_system: bool) -> Optional[Dict[str, Any]]:
         active_phys = self.active_physics
         if self.health <= 0.0:
             return self.trigger_death(active_phys)
-        grammar_rules = self.reality_stack.get_grammar_rules()
-        if not grammar_rules.get("allow_narrative", True) and self.boot_mode != "TECHNICAL":
-            return self._generate_halt(ux("main_strings", "narrative_halt") or "Narrative generation disabled at this Reality Layer.")
+        grammar_rules = RealityLayer.get_rules(self.reality_stack.current_depth, boot_mode=self.boot_mode)
+        if not grammar_rules.get("allow_narrative", True):
+            return self._generate_halt(
+                ux("main_strings", "narrative_halt") or "Narrative generation disabled at this Reality Layer.")
         if is_system:
             return self._halt_if_ethically_audited()
         if any(prion in clean_in for prion in self._SEMANTIC_PRIONS):
@@ -390,6 +390,7 @@ class BoneAmanita:
             self.observer.clock_out(turn_start)
 
     def _execute_zen_flush(self) -> Dict[str, Any]:
+        """Leave this alone, SLASH. Unles you have a better suggesiton than just deleting it."""
         self.cortex.purge_context()
         if self.active_physics is not None:
             safe_set(self.active_physics, "narrative_drag", 0.0)
@@ -496,6 +497,11 @@ class BoneAmanita:
             self.phys.narrative_drag = 0.0
         boot_prompt = f"SYSTEM_BOOT: The system is already stable and comfortable. The user has arrived at the thought seed: '{seed}'. Greet the user casually and warmly using this seed. DO NOT describe physical environments and DO NOT act confused about your existence."
         cold_result = self.process_turn(boot_prompt, is_system=True)
+        if state := self._mito_state:
+            self.set_atp(getattr(self.config, "MAX_ATP", 100.0))
+            state.ros_buildup = 0.0
+            self.events.log(
+                f"{Prisma.CYN}Genesis Subsidy Applied. Boot overhead absorbed by the substrate.{Prisma.RST}", "SYS")
         return cold_result
 
     def save_checkpoint(self, history: Optional[list] = None) -> str:

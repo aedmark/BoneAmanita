@@ -400,8 +400,9 @@ class GeodesicOrchestrator:
         if not isinstance(actual_adj, dict) or len(actual_adj) <= 5:
             return
 
-        def _bg_topology_check(adj_copy):
+        def _bg_topology_check(raw_adj):
             try:
+                adj_copy = {k: set(v) for k, v in raw_adj.items()}
                 max_swaps = min(len(adj_copy) * 10, 1000)
                 null_adj_rewire = _native_rewire(adj_copy, n_swaps=max_swaps)
                 null_adj_config = _native_configuration_model(adj_copy)
@@ -416,9 +417,8 @@ class GeodesicOrchestrator:
                 self.eng.events.log(f"Async Topology Error: {e}", "WARN")
 
         if isinstance(actual_adj, dict):
-            safe_adj = {k: set(v) for k, v in actual_adj.items()}
             try:
-                self._async_pool.submit(_bg_topology_check, safe_adj)
+                self._async_pool.submit(_bg_topology_check, actual_adj)
             except RuntimeError as e:
                 self.eng.events.log(f"Async pool rejected topology check. Engine may be shutting down: {e}", "DEBUG")
 
@@ -504,12 +504,10 @@ class GeodesicOrchestrator:
                 physics=phys_dict, dt=ctx.time_delta, goal_vector=goal_vec,
                 endocrine_state=getattr(self.eng.bio, "endo", None) if hasattr(self.eng, "bio") else None,
                 memory_core=mem_core, user_text=implicit_text)
-            cur_v: float = float(getattr(ctx.physics, "voltage", 0.0))
-            cur_d: float = float(getattr(ctx.physics, "narrative_drag", 0.0))
-            dv: float = float(force_v)
-            dd: float = float(force_d)
-            ctx.physics.voltage = float(max(0.0, cur_v + dv))
-            ctx.physics.narrative_drag = float(max(0.0, cur_d + dd))
+            cur_v = float(getattr(ctx.physics, "voltage", 0.0))
+            cur_d = float(getattr(ctx.physics, "narrative_drag", 0.0))
+            ctx.physics.voltage = max(0.0, cur_v + force_v)
+            ctx.physics.narrative_drag = max(0.0, cur_d + force_d)
             self._evaluate_systemic_feedback(user_message if not is_system else "(Waiting)", ctx)
             ctx = self.simulator.run_simulation(ctx)
             post_logs = [e["text"] for e in self.eng.events.flush()]
@@ -556,14 +554,48 @@ class GeodesicOrchestrator:
         akashic = getattr(self.eng, "akashic", None)
 
         def _bg_wls_check(msg_str):
-            try:
-                if akashic and hasattr(akashic, "measure_cognitive_density"):
-                    seed_concept = msg_str.split()[0] if msg_str else "Unknown"
-                    density = akashic.measure_cognitive_density(seed_concept)
-                    radii_data = {"log_r": [1.0, 2.0, 3.0], "log_m": [1.0 * density, 2.0 * density, 3.0 * density], "weights": [1.0, 1.0, 1.0]}
+                try:
+                    hippocampus = getattr(mem, "hippocampus", None) if mem else None
+                    actual_graph = hippocampus.get_graph() if hippocampus else None
+                    actual_adj = getattr(actual_graph, "adj", None)
+                    if not isinstance(actual_adj, dict) or not actual_adj:
+                        return  # No topological structure to measure
+                    words = [w.strip() for w in msg_str.split()] if msg_str else []
+                    seed_concept = next((w for w in words if w in actual_adj), None)
+                    if not seed_concept:
+                        seed_concept = max(actual_adj.keys(), key=lambda k: len(actual_adj[k]) if isinstance(actual_adj[k], (list, set, dict)) else 0)
+                    distances = {seed_concept: 0}
+                    queue = [seed_concept]
+                    max_radius = 6
+                    while queue:
+                        curr = queue.pop(0)
+                        d = distances[curr]
+                        if d >= max_radius:
+                            continue
+                        neighbors = actual_adj.get(curr, [])
+                        if isinstance(neighbors, dict):
+                            neighbors = neighbors.keys()
+                        for neighbor in neighbors:
+                            if neighbor not in distances:
+                                distances[neighbor] = d + 1
+                                queue.append(neighbor)
+                    mass_at_r = {}
+                    for dist in distances.values():
+                        if dist > 0:
+                            mass_at_r[dist] = mass_at_r.get(dist, 0) + 1
+                    log_r, log_m, weights = [], [], []
+                    cumulative_mass = 1.0
+                    for r in sorted(mass_at_r.keys()):
+                        cumulative_mass += mass_at_r[r]
+                        if r > 0:
+                            log_r.append(math.log(r))
+                            log_m.append(math.log(cumulative_mass))
+                            weights.append(1.0 / r)
+                    if len(log_r) < 3:
+                        return
                     if lattice:
-                        passed_gate, gate_code = _native_quality_gate(radii_data["log_r"], radii_data["log_m"])
-                        local_d = _native_wls(radii_data["log_r"], radii_data["log_m"], radii_data["weights"])
+                        passed_gate, gate_code = _native_quality_gate(log_r, log_m)
+                        local_d = _native_wls(log_r, log_m, weights)
                         if not passed_gate:
                             self.eng.events.log(f"{Prisma.RED}[NAVI-FRACTAL] Topology rejected by Quality Gate ({gate_code}). Network too fragmented. Mandating REM Defragmentation.{Prisma.RST}", "SYS")
                             ctx.council_mandates.append(
@@ -582,8 +614,8 @@ class GeodesicOrchestrator:
                             if ctx.physics:
                                 ctx.physics.mu = min(1.0, float(getattr(ctx.physics, "mu", 0.0)) + 0.5)
                                 ctx.physics.kappa = max(0.5, float(getattr(ctx.physics, "kappa", 0.0)))
-            except Exception as e:
-                self.eng.events.log(f"Async WLS Heuristic Error: {e}", "DEBUG")
+                except Exception as e:
+                    self.eng.events.log(f"Async WLS Heuristic Error: {e}", "DEBUG")
         if clean_message != "(Waiting)":
             if ctx.physics:
                 self.voltage_history.append(float(getattr(ctx.physics, "voltage", 0.0)))
@@ -675,7 +707,7 @@ class GeodesicOrchestrator:
     @staticmethod
     def _generate_crash_report(e: Optional[Exception]) -> Dict[str, Any]:
         if e is not None:
-            full_trace = "".join(traceback.format_exception(type(e), e, getattr(e, "__traceback__", None)))
+            full_trace = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         else:
             full_trace = "Biological execution halted. No standard Python exception provided."
         safe_phys = PanicRoom.get_safe_physics()

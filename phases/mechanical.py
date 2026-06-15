@@ -7,7 +7,7 @@ from core import LoreManifest, CycleContext
 from mechanics.projector import SoulDashboard
 from phases.base import SimulationPhase, _safe_dict, _deep_update
 from physics import TheGatekeeper
-from struts import ux
+from struts import ux, safe_get
 
 class MaintenancePhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -155,7 +155,6 @@ class MachineryPhase(SimulationPhase):
             ctx.log(gordon.acquire(new_item))
 
     def _handle_theremin_discharge(self, ctx):
-        from struts import safe_get
         max_hp = float(safe_get(self.eng.config, "MAX_HEALTH", 100.0))
         damage = max_hp * 0.20
         self.eng.health = max(0.0, self.eng.health - damage)

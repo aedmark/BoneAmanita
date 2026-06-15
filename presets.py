@@ -76,8 +76,7 @@ class BonePresets:
             "active_mods": ["CODING", "SYNTAX"], "default_ui_depth": "DEEP",}
     }
 
-    STANDARD = {
-        "PHYSICS": {"VOLTAGE_MAX": 20.0, "BASE_DRAG": 1.0}, "BIO": {"METABOLISM_RATE": 1.0},}
+    STANDARD = {"PHYSICS": {"VOLTAGE_MAX": 20.0, "BASE_DRAG": 1.0}, "BIO": {"METABOLISM_RATE": 1.0},}
     ZEN = {"PHYSICS": {"VOLTAGE_MAX": 10.0,"BASE_DRAG": 0.0}, "BIO": {"METABOLISM_RATE": 0.1},}
     MANIC = {"PHYSICS": {"VOLTAGE_MAX": 50.0,"BASE_DRAG": 0.5}, "BIO": {"METABOLISM_RATE": 2.0},}
     DEBUG = {"PHYSICS": {"VOLTAGE_MAX": 100.0,"BASE_DRAG": 0.0}, "BIO": {"METABOLISM_RATE": 0.0},}
@@ -99,7 +98,7 @@ class BoneConfig:
     MAX_ATP = 100.0
     STAMINA_REGEN = 1.0
     MAX_DRAG_LIMIT = 5.0
-    REM_IDLE_THRESHOLD = 2400.0
+    REM_IDLE_THRESHOLD = 4800.0
     GEODESIC_STRENGTH = 10.0
     BASE_IGNITION_THRESHOLD = 0.5
     MAX_REPETITION_LIMIT = 0.8

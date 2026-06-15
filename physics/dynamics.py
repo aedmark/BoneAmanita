@@ -13,12 +13,11 @@ class SurfaceTension:
     @staticmethod
     def audit_hubris(physics: Any, config_ref=None) -> Tuple[bool, str, str]:
         cfg_obj = config_ref or BoneConfig
-        cfg = cfg_obj.get("PHYSICS", {}) if isinstance(cfg_obj, dict) else getattr(cfg_obj, "PHYSICS", {})
+        cfg = safe_get(cfg_obj, "PHYSICS", {})
         current_voltage = float(getattr(physics, "voltage", 0.0))
         current_kappa = float(getattr(physics, "kappa", 0.0))
-        is_cfg_dict = isinstance(cfg, dict)
-        v_crit = float(cfg.get("VOLTAGE_CRITICAL", 15.0) if is_cfg_dict else getattr(cfg, "VOLTAGE_CRITICAL", 15.0))
-        v_high = float(cfg.get("VOLTAGE_HIGH", 12.0) if is_cfg_dict else getattr(cfg, "VOLTAGE_HIGH", 12.0))
+        v_crit = float(safe_get(cfg, "VOLTAGE_CRITICAL", 15.0))
+        v_high = float(safe_get(cfg, "VOLTAGE_HIGH", 12.0))
         if current_voltage >= v_crit and current_kappa < 0.4:
             return True, (ux("physics_strings", "hubris_detected") or "").format(
                 voltage=current_voltage), "ICARUS_CRASH"
@@ -41,11 +40,10 @@ class ZoneInertia:
     def __init__(self, inertia=0.7, config_ref=None):
         self.inertia = inertia
         self.cfg = config_ref or BoneConfig
-        cfg = self.cfg.get("PHYSICS", {}) if isinstance(self.cfg, dict) else getattr(self.cfg, "PHYSICS", {})
-        is_cfg_dict = isinstance(cfg, dict)
-        self.min_dwell = int(cfg.get("ZONE_MIN_DWELL", 2) if is_cfg_dict else getattr(cfg, "ZONE_MIN_DWELL", 2))
-        self.strain_limit = float(cfg.get("ZONE_STRAIN_LIMIT", 2.5) if is_cfg_dict else getattr(cfg, "ZONE_STRAIN_LIMIT", 2.5))
-        self.grav_tolerance = float(cfg.get("ZONE_GRAV_PULL_TOLERANCE", 2.0) if is_cfg_dict else getattr(cfg, "ZONE_GRAV_PULL_TOLERANCE", 2.0))
+        cfg = safe_get(self.cfg, "PHYSICS", {})
+        self.min_dwell = int(safe_get(cfg, "ZONE_MIN_DWELL", 2))
+        self.strain_limit = float(safe_get(cfg, "ZONE_STRAIN_LIMIT", 2.5))
+        self.grav_tolerance = float(safe_get(cfg, "ZONE_GRAV_PULL_TOLERANCE", 2.0))
         self.current_zone = "COURTYARD"
         self.dwell_counter = 0
         self.last_vector: Optional[Tuple[float, float, float]] = None
@@ -58,9 +56,8 @@ class ZoneInertia:
         return self.is_anchored
 
     def stabilize(self, proposed_zone: str, physics: Any, cosmic_state: Tuple[str, float, str]) -> Tuple[str, Optional[str]]:
-        is_phys_dict = isinstance(physics, dict)
-        beta = float(physics.get("beta_index", 1.0) if is_phys_dict else getattr(physics, "beta_index", 1.0))
-        truth = float(physics.get("truth_ratio", 0.5) if is_phys_dict else getattr(physics, "truth_ratio", 0.5))
+        beta = float(safe_get(physics, "beta_index", 1.0))
+        truth = float(safe_get(physics, "truth_ratio", 0.5))
         current_vec = (beta, truth, 1.0 if cosmic_state[0] != "VOID_DRIFT" else 0.0)
         self.dwell_counter += 1
         pressure = min(1.0, math.dist(current_vec, self.last_vector) / self.grav_tolerance) if self.last_vector else 0.0
@@ -127,10 +124,9 @@ class CosmicDynamics:
         logs = []
         new_drag = current_drift
         cfg_obj = self.cfg
-        phys_cfg = cfg_obj.get("PHYSICS", {}) if isinstance(cfg_obj, dict) else getattr(cfg_obj, "PHYSICS", {})
-        is_phys_dict = isinstance(phys_cfg, dict)
-        drag_floor = float(phys_cfg.get("DRAG_FLOOR", 1.0) if is_phys_dict else getattr(phys_cfg, "DRAG_FLOOR", 1.0))
-        CRITICAL_DRIFT = float(phys_cfg.get("DRAG_CRITICAL", 8.0) if is_phys_dict else getattr(phys_cfg, "DRAG_CRITICAL", 8.0))
+        phys_cfg = safe_get(cfg_obj, "PHYSICS", {})
+        drag_floor = float(safe_get(phys_cfg, "DRAG_FLOOR", 1.0))
+        CRITICAL_DRIFT = float(safe_get(phys_cfg, "DRAG_CRITICAL", 8.0))
         if psi > 0.5:
             reduction = (psi - 0.5) * 0.2
             new_drag -= reduction
@@ -158,9 +154,8 @@ class CosmicDynamics:
         target_cfg = config_ref or BoneConfig
         gravity_wells = {}
         geodesic_hubs = {}
-        is_dict = isinstance(target_cfg, dict)
-        well_threshold = float(target_cfg.get("GRAVITY_WELL_THRESHOLD", 15.0) if is_dict else getattr(target_cfg, "GRAVITY_WELL_THRESHOLD", 15.0))
-        geo_strength = float(target_cfg.get("GEODESIC_STRENGTH", 10.0) if is_dict else getattr(target_cfg, "GEODESIC_STRENGTH", 10.0))
+        well_threshold = float(safe_get(target_cfg, "GRAVITY_WELL_THRESHOLD", 15.0))
+        geo_strength = float(safe_get(target_cfg, "GEODESIC_STRENGTH", 10.0))
         for node in network.graph:
             mass = network.calculate_mass(node)
             if mass >= well_threshold:
@@ -195,10 +190,9 @@ class CosmicDynamics:
     def _resolve_orbit(
             self, basin_pulls, active_filaments, word_count, gravity_wells, config_ref=None) -> Tuple[str, float, str]:
         target_cfg = config_ref or BoneConfig
-        is_dict = isinstance(target_cfg, dict)
         sorted_basins = sorted(basin_pulls.items(), key=lambda x: x[1], reverse=True)
         primary_node, primary_str = sorted_basins[0]
-        lagrange_tol = float(target_cfg.get("LAGRANGE_TOLERANCE", 2.0) if is_dict else getattr(target_cfg, "LAGRANGE_TOLERANCE", 2.0))
+        lagrange_tol = float(safe_get(target_cfg, "LAGRANGE_TOLERANCE", 2.0))
         if len(sorted_basins) > 1:
             secondary_node, secondary_str = sorted_basins[1]
             if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:
@@ -206,7 +200,7 @@ class CosmicDynamics:
                     p=primary_node.upper(), s=secondary_node.upper())
                 return "LAGRANGE_POINT", 0.0, msg
         flow_ratio = active_filaments / max(1, word_count)
-        well_threshold = float(target_cfg.get("GRAVITY_WELL_THRESHOLD", 15.0) if is_dict else getattr(target_cfg, "GRAVITY_WELL_THRESHOLD", 15.0))
+        well_threshold = float(safe_get(target_cfg, "GRAVITY_WELL_THRESHOLD", 15.0))
         if flow_ratio > 0.5 and primary_str < (well_threshold * 2):
             msg = (self.logs.get("FLOW") or "Caught in the flow of {node}").format(node=primary_node.upper())
             return "WATERSHED_FLOW", 0.0, msg
