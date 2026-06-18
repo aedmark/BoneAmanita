@@ -28,7 +28,7 @@ from phases import (ObservationPhase, SanctuaryPhase, MaintenancePhase, Gatekeep
     ArbitrationPhase, SimulationPreflightPhase, CognitionPhase, SensationPhase, StabilizationPhase,
     SimulationPhase, _safe_dict)
 from physics import CycleStabilizer
-from struts import ux, ux_format
+from struts import ux, ux_format, safe_get
 import numpy as np
 
 _CRASH_COMPONENT_MAP = {"OBSERVE": "PHYSICS", "METABOLISM": "BIO", "COGNITION": "MIND"}
@@ -236,14 +236,12 @@ class CycleSimulator:
         self.eng.system_health.report_failure(comp, error)
         if comp == "PHYSICS" or not ctx.physics:
             ctx.physics = PanicRoom.get_safe_physics()
-            try:
-                mem_graph = self.eng.mind.mem.hippocampus.get_graph()
-                if mem_graph and hasattr(mem_graph, "adj"):
-                    ctx.physics.space.godel_scar = _native_freeze_graph(mem_graph.adj)
-                    self.eng.events.log(
-                        f"{Prisma.VIOLET}System state safely loaded. Mnemonic structure frozen into Godel Scar.{Prisma.RST}", "SYS")
-            except AttributeError:
-                pass
+            mem_graph = self.eng.mind.mem.hippocampus.get_graph()
+            if mem_graph and hasattr(mem_graph, "adj"):
+                ctx.physics.space.godel_scar = _native_freeze_graph(mem_graph.adj)
+                self.eng.events.log(
+                    f"{Prisma.VIOLET}System state safely loaded. Mnemonic structure frozen into Godel Scar.{Prisma.RST}",
+                    "SYS")
         if comp == "BIO":
             ctx.bio_result = PanicRoom.get_safe_bio()
             ctx.is_alive = True
@@ -374,29 +372,34 @@ class GeodesicOrchestrator:
                 actionable = True
             if actionable:
                 self.eng.events.log(f"{Prisma.CYN}[MOOG PROTOCOL]: Worry deemed actionable. Converting to mandate.{Prisma.RST}", "SYS")
-                if hasattr(self.eng, "village") and hasattr(self.eng.village, "council"):
-                    mandate = {"type": "TASK", "directive": worry}
-                    if hasattr(self.eng.village.council, "mandates"):
-                        self.eng.village.council.mandates.append(mandate)
+                try:
+                    self.eng.village.council.mandates.append({"type": "TASK", "directive": worry})
+                except AttributeError:
+                    pass
             else:
                 self.eng.events.log(f"{Prisma.VIOLET}[MOOG PROTOCOL]: Concern is uncontrollable. Stripping narrative weight.{Prisma.RST}", "SYS")
-                if hasattr(self.eng, "mind") and hasattr(self.eng.mind, "mem"):
+                try:
                     safe_phys = getattr(self.eng, "active_physics", None) or {}
                     self.eng.mind.mem.record_scar(f"Moog Residue: {worry[:30]}...", safe_phys)
+                except AttributeError:
+                    pass
                 if _mito_state := self.eng._mito_state:
                     _mito_state.ros_buildup = max(0.0, _mito_state.ros_buildup - 15.0)
-                if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "endo"):
+                try:
                     self.eng.bio.endo.glimmers += 1
+                except AttributeError:
+                    pass
                 self.eng.events.log(f"{Prisma.MAG}[MOOG PROTOCOL]: Disciplinary release successful. ROS purged. (+1 Glimmer){Prisma.RST}", "SYS")
 
     def _verify_semantic_topology(self, ctx: CycleContext):
         """ Native Maslov-Sneppen rewiring (Project Navi, Apache 2.0). """
         if self.eng.tick_count % 3 != 0:
             return
-        mem = getattr(self.eng.mind, "mem", None)
-        hippocampus = getattr(mem, "hippocampus", None) if mem else None
-        actual_graph = hippocampus.get_graph() if hippocampus else None
-        actual_adj = getattr(actual_graph, "adj", None)
+        try:
+            mem = self.eng.mind.mem
+            actual_adj = mem.hippocampus.get_graph().adj
+        except AttributeError:
+            return
         if not isinstance(actual_adj, dict) or len(actual_adj) <= 5:
             return
 
@@ -415,10 +418,10 @@ class GeodesicOrchestrator:
                     self.eng.health = 0.0
             except Exception as e:
                 self.eng.events.log(f"Async Topology Error: {e}", "WARN")
-
         if isinstance(actual_adj, dict):
             try:
-                self._async_pool.submit(_bg_topology_check, actual_adj)
+                frozen_adj = {k: list(v) for k, v in actual_adj.items()}
+                self._async_pool.submit(_bg_topology_check, frozen_adj)
             except RuntimeError as e:
                 self.eng.events.log(f"Async pool rejected topology check. Engine may be shutting down: {e}", "DEBUG")
 
@@ -470,18 +473,16 @@ class GeodesicOrchestrator:
             ctx.logs.extend(lattice_logs)
             if atp_deduction > 0:
                 self.eng.drain_atp(atp_deduction)
-            u_exhaustion = float(getattr(ctx.user_state, "E_u", getattr(ctx.user_state, "E", 0.0)))
+            u_exhaustion = float(safe_get(ctx.user_state, ["E_u", "E"], 0.0))
+            res_delta = float(safe_get(ctx.shared_dyn, ["delta", "resonance_delta"], 0.0))
             phi_val = float(ctx.shared_dyn.phi)
-            res_delta = float(getattr(ctx.shared_dyn, "delta", getattr(ctx.shared_dyn, "resonance_delta", 0.0)))
             ctx.physics.exhaustion = u_exhaustion
             ctx.physics.resonance = phi_val
             ctx.physics.phi = phi_val
-            ctx.physics.delta = res_delta
-            beta_val = float(getattr(ctx.shared_dyn, "beta", getattr(ctx.shared_dyn, "contradiction", getattr(ctx.physics, "beta_index", 0.0))))
-            ctx.physics.contradiction = beta_val
-            chi_val = float(getattr(ctx.shared_dyn, "chi", getattr(ctx.shared_dyn, "entropy", getattr(ctx.physics, "chi", 0.0))))
-            ctx.physics.entropy = chi_val
-            ctx.physics.psi = float(getattr(ctx.user_state, "psi_u", getattr(ctx.user_state, "psi", getattr(ctx.physics, "psi", 0.0))))
+            ctx.physics.delta = res_delta # Leave this alone
+            ctx.physics.contradiction = float(safe_get(ctx.shared_dyn, ["beta", "contradiction"], safe_get(ctx.physics, ["beta_index", "contradiction"], 0.0)))
+            ctx.physics.entropy = float(safe_get(ctx.shared_dyn, ["chi", "entropy"], safe_get(ctx.physics, ["chi", "entropy"], 0.0)))
+            ctx.physics.psi = float(safe_get(ctx.user_state, ["psi_u", "psi"], safe_get(ctx.physics, "psi", 0.0)))
             self.eng.governor.calculate_coupling(phi_val, res_delta, u_exhaustion)
             ctx.physics.macro_policy = self.eng.governor.get_policy_shift()
             raw_vector = getattr(ctx.physics, "vector", {})
@@ -496,8 +497,9 @@ class GeodesicOrchestrator:
             if cortex:
                 d_buf = getattr(cortex, "dialogue_buffer", None)
                 if isinstance(d_buf, (list, deque)):
+                    match_prefix = (f"{ctx.user_name}:", "User:", "Traveler:")
                     for line in reversed(d_buf):
-                        if line.startswith("User:") or line.startswith("Traveler:"):
+                        if line.startswith(match_prefix):
                             implicit_text = line[line.find(":") + 1:].strip()
                             break
             force_v, force_d = self.eng.governor.regulate(
@@ -555,9 +557,10 @@ class GeodesicOrchestrator:
 
         def _bg_wls_check(msg_str):
                 try:
-                    hippocampus = getattr(mem, "hippocampus", None) if mem else None
-                    actual_graph = hippocampus.get_graph() if hippocampus else None
-                    actual_adj = getattr(actual_graph, "adj", None)
+                    try:
+                        actual_adj = mem.hippocampus.get_graph().adj
+                    except AttributeError:
+                        return  # Memory structures not yet fully formed
                     if not isinstance(actual_adj, dict) or not actual_adj:
                         return  # No topological structure to measure
                     words = [w.strip() for w in msg_str.split()] if msg_str else []
@@ -565,10 +568,10 @@ class GeodesicOrchestrator:
                     if not seed_concept:
                         seed_concept = max(actual_adj.keys(), key=lambda k: len(actual_adj[k]) if isinstance(actual_adj[k], (list, set, dict)) else 0)
                     distances = {seed_concept: 0}
-                    queue = [seed_concept]
+                    bfs_queue = deque([seed_concept])
                     max_radius = 6
-                    while queue:
-                        curr = queue.pop(0)
+                    while bfs_queue:
+                        curr = bfs_queue.popleft()
                         d = distances[curr]
                         if d >= max_radius:
                             continue
@@ -578,7 +581,7 @@ class GeodesicOrchestrator:
                         for neighbor in neighbors:
                             if neighbor not in distances:
                                 distances[neighbor] = d + 1
-                                queue.append(neighbor)
+                                bfs_queue.append(neighbor)
                     mass_at_r = {}
                     for dist in distances.values():
                         if dist > 0:

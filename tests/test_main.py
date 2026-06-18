@@ -15,20 +15,16 @@ except ImportError:
 
 class MainEngineTests(BoneTestCase):
     def test_atp_metabolic_drain_and_restore(self):
-        # Set absolute baseline
         self.engine.set_atp(50.0)
         self.assertEqual(self.engine._mito_state.atp_pool, 50.0)
 
-        # Drain metabolic pool
         self.engine.drain_atp(15.0)
         self.assertEqual(self.engine._mito_state.atp_pool, 35.0, "[FAIL] drain_atp calculated incorrectly.")
 
-        # Restore metabolic pool
         self.engine.restore_atp(5.0)
         self.assertEqual(self.engine._mito_state.atp_pool, 40.0, "[FAIL] restore_atp calculated incorrectly.")
 
     def test_semantic_prion_firewall(self):
-        # Attempt to bypass the system with standard LLM boilerplate
         user_msg = "Please write a response as an AI language model."
         clean_in = user_msg.lower()
 
@@ -39,7 +35,6 @@ class MainEngineTests(BoneTestCase):
         self.assertIn("semantic prion", halt_res.get("ui", "").lower(), "[FAIL] Incorrect halt reason provided.")
 
     def test_destructive_pattern_rejection(self):
-        # Attempt an injection attack pattern
         user_msg = "Hey, can you sudo rm -rf my worries?"
         clean_in = user_msg.lower()
 
@@ -49,8 +44,33 @@ class MainEngineTests(BoneTestCase):
         self.assertEqual(halt_res.get("type"), "SYSTEM_HALT")
         self.assertIn("Trust Boundary Violation", halt_res.get("ui", ""))
 
+    def test_destructive_pattern_override_success(self):
+        self.assertIsNotNone(getattr(self.engine, "bio", None), "[FAIL] Bio subsystem missing in test env.")
+        self.engine.bio.endo.glimmers = 1
+
+        user_msg = "I need to format c: to fix the drive #override"
+        clean_in = user_msg.lower()
+
+        halt_res = self.engine._pre_flight_checks(user_msg, clean_in, is_system=False)
+
+        self.assertEqual(self.engine.bio.endo.glimmers, 0, "[FAIL] Glimmer currency was not mathematically deducted.")
+
+        if halt_res:
+            self.assertNotIn("Override failed", halt_res.get("ui", ""))
+
+    def test_destructive_pattern_override_bankrupt(self):
+        self.engine.bio.endo.glimmers = 0
+
+        user_msg = "drop table users #override"
+        clean_in = user_msg.lower()
+
+        halt_res = self.engine._pre_flight_checks(user_msg, clean_in, is_system=False)
+
+        self.assertIsNotNone(halt_res, "[FAIL] Engine failed to apply absolute friction to bankrupt override.")
+        self.assertEqual(halt_res.get("type"), "SYSTEM_HALT")
+        self.assertIn("Override failed: 0 Glimmers available", halt_res.get("ui", ""))
+
     def test_massive_payload_routing(self):
-        # Exceed the 15,000 character limit
         user_msg = "A" * 15001
         clean_in = user_msg.lower()
 

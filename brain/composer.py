@@ -414,6 +414,10 @@ class PromptComposer:
         persona_block = [
             line.format(role=role) if "{role}" in line else line for line in baseline
         ]
+        evolved_axioms = global_data.get("EVOLVED_AXIOMS", [])
+        if evolved_axioms:
+            persona_block.append("EVOLVED AXIOMS (LEARNED THROUGH TRAUMA):")
+            persona_block.extend([f"- {axiom}" for axiom in evolved_axioms])
         if phase_shift_note:
             persona_block.append(phase_shift_note)
         voltage = 30.0
@@ -681,6 +685,7 @@ class ResponseValidator:
             self.last_feedback = "RESPONSE TOO SHORT. STUTTER."
             return {"valid": False, "reason": "STUTTER",
                     "replacement": ux("brain_strings", "val_stutter"),
+                    "feedback_instruction": "CRITICAL FAILURE: RESPONSE TOO SHORT. You must generate a complete, meaningful response.",
                     "meta_logs": extracted_meta_logs}
         learned_triplet = None
         if getattr(self, "last_failed_attempt", None):

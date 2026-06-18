@@ -37,7 +37,7 @@ class HostStats:
 class BoneAmanita:
     events: EventBus
     _DESTRUCTIVE_PATTERNS = re.compile(
-        r"rm\s+-rf|drop\s+table|shutdown\s+-h|format\s+[a-z]:|chmod\s+777|sudo\s+rm|\.env\b|os\.system|subprocess\.Popen|__import__\(['\"]os['\"]\)",
+        r"rm\s+-rf|drop\s+table|shutdown\s+-h|format\s+[a-z]:|chmod\s+777|sudo\s+rm|\.env\b|os\.system|subprocess\.Popen|__import__\(['\"]os['\"]\)|eval\s*\(|exec\s*\(|import\s+(os|pty|sys)\b",
         re.IGNORECASE
     )
     _SEMANTIC_PRIONS = frozenset(["as an ai language model", "as a large language model", "as an ai,"])
@@ -168,10 +168,13 @@ class BoneAmanita:
 
     @trauma_accum.setter
     def trauma_accum(self, value: dict):
-        if not hasattr(self.mind.mem, "session_trauma_vector"):
-            self.mind.mem.session_trauma_vector = {}
-        self.mind.mem.session_trauma_vector.clear()
-        self.mind.mem.session_trauma_vector.update(value)
+        mem = getattr(getattr(self, "mind", None), "mem", None)
+        if not mem:
+            return
+        if not hasattr(mem, "session_trauma_vector"):
+            mem.session_trauma_vector = {}
+        mem.session_trauma_vector.clear()
+        mem.session_trauma_vector.update(value)
 
     @property
     def stamina(self) -> float:
@@ -228,7 +231,7 @@ class BoneAmanita:
             self.akashic.active_memory_core = self.mind.mem
         self.drivers = anatomy.get("drivers")
         self.consultant = anatomy.get("consultant")
-        self.consolidator = anatomy.get("consolidator")
+        self.consolidator = anatomy.get("consolidator") # Memory anchor for EventBus
         if self.bio:
             self.bio.setup_listeners()
         v = anatomy.get("village", {})
@@ -244,10 +247,14 @@ class BoneAmanita:
     def _generate_halt(self, msg: str, color: str = Prisma.RED, level: str = "CRIT") -> Dict[str, Any]:
         self.events.log(msg, level)
         phys = self.active_physics
-        if phys is None:
-            phys_dict = {}
-        else:
-            phys_dict = phys.to_dict() if hasattr(phys, "to_dict") else (phys if isinstance(phys, dict) else vars(phys))
+        phys_dict = {}
+        if phys is not None:
+            if hasattr(phys, "to_dict"):
+                phys_dict = phys.to_dict()
+            elif isinstance(phys, dict):
+                phys_dict = phys
+            else:
+                phys_dict = vars(phys) if hasattr(phys, '__dict__') else {}
         return {"type": "SYSTEM_HALT", "ui": f"\n{color}{msg}{Prisma.RST}", "logs": [msg], "metrics": self.get_metrics(), "physics": phys_dict}
 
     def _evaluate_immune_response(self, user_message: str, active_phys: Any) -> Optional[Dict[str, Any]]:
@@ -316,9 +323,22 @@ class BoneAmanita:
                 self.mind.dreamer.context_queue.append(user_message)
             return {"type": "SILENT_INGEST", "ui": f"\n{Prisma.GRY}Payload routed to Dream Queue.{Prisma.RST}", "logs": ["Routed 15k+ payload."], "metrics": self.get_metrics()}
         if match := self._DESTRUCTIVE_PATTERNS.search(clean_in):
-            self.apply_absolute_friction(active_phys)
-            msg = f"Trust Boundary Violation: ['{match.group(0)}']. Override protocols are locked."
-            return self._generate_halt(msg)
+            if "#override" in clean_in:
+                endo = getattr(self.bio, "endo", None)
+                glimmers = getattr(endo, "glimmers", 0) if endo else 0
+                if glimmers >= 1:
+                    endo.glimmers -= 1
+                    self.events.log(
+                        f"Architect's Override Accepted. Glimmer spent. Executing destructive pattern: [{match.group(0)}].",
+                        "SYS")
+                else:
+                    self.apply_absolute_friction(active_phys)
+                    return self._generate_halt(
+                        f"Trust Boundary Violation: ['{match.group(0)}']. Override failed: 0 Glimmers available.")
+            else:
+                self.apply_absolute_friction(active_phys)
+                msg = f"Trust Boundary Violation: ['{match.group(0)}']. Override protocols are locked. Append #override and spend a Glimmer to bypass."
+                return self._generate_halt(msg)
 
         if gate_halt := self._evaluate_two_gates(clean_in, active_phys):
             return gate_halt
@@ -406,7 +426,6 @@ class BoneAmanita:
     def trigger_death(self, last_phys) -> Dict:
         self.bio.mito.adapt(0)
         mito_state_dict = vars(self.bio.mito.state)
-        immune_data = list(self.bio.immune.active_antibodies)
         if death_gen := getattr(self.village, "death_gen", None):
             eulogy_text, cause_code = death_gen.eulogy(last_phys, mito_state_dict, self.trauma_accum)
         else:

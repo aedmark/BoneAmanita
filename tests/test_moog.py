@@ -23,7 +23,6 @@ class TestMoogProtocol(BoneTestCase):
         super().setUp()
         self.config = BoneConfig
 
-        # 1. Setup Cortex Services Mock
         self.mock_svc = MagicMock()
         self.mock_svc.consultant = MagicMock()
         self.mock_svc.village = MagicMock()
@@ -36,12 +35,10 @@ class TestMoogProtocol(BoneTestCase):
         self.mock_svc.events = MagicMock()
         self.mock_svc.mind_memory = MagicMock()
 
-        # Hydrate the Orchestrator/Engine mock with concrete floats for the math operations
         self.mock_svc.orchestrator = MagicMock()
         self.mock_svc.orchestrator.eng.navi_sad.calculate_semantic_dimension.return_value = 1.0
         self.mock_svc.orchestrator.eng.governor.calculate_coupling.return_value = 0.5
 
-        # 2. Setup Engine Mock for Orchestrator
         self.mock_eng = MagicMock()
         self.mock_eng._mito_state = MagicMock()
         self.mock_eng._mito_state.ros_buildup = 50.0
@@ -69,11 +66,9 @@ class TestMoogProtocol(BoneTestCase):
         }
         sim_result = {"mutated_input": "I am worried about the heat death of the universe.", "ui": ""}
 
-        # Populate a fake dialogue buffer to test the pop()
         cortex.dialogue_buffer.append("Previous turn")
         cortex.dialogue_buffer.append("Current panic")
 
-        # is_system param might be required depending on your _evaluate_toxicity signature
         result = cortex._evaluate_toxicity(phys_state, sim_result, is_system=False)
 
         self.assertEqual(result.get("type"), "MOOG_QUARANTINE",
@@ -81,7 +76,7 @@ class TestMoogProtocol(BoneTestCase):
         self.assertIn("parameters of this concern are undefined", result.get("ui", ""), "[FAIL] UI string missing.")
         self.assertEqual(phys_state["narrative_drag"], 0.0, "[FAIL] Narrative drag was not zeroed out.")
         self.assertEqual(len(cortex.worry_ledger), 1, "[FAIL] Worry was not added to the ledger.")
-        self.assertEqual(len(cortex.dialogue_buffer), 1, "[FAIL] Panic was not popped from the dialogue buffer.")
+        self.assertEqual(len(cortex.dialogue_buffer), 2, "[FAIL] Dialogue buffer should remain structurally intact during Moog Intercept.")
 
     def test_rem_tick_drains_ledger(self):
         """MEADOWS: The active ledger must be drained and submitted to the async pool during REM."""

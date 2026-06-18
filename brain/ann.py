@@ -18,7 +18,7 @@ class HippocampalCache:
 
     def encode(self, node_id: str, vector: List[float], metadata: Dict[str, Any]):
         self.nodes.pop(node_id, None)
-        short_hash = hashlib.md5(np.array(vector, dtype=np.float32).tobytes()).hexdigest()[:8]
+        short_hash = hashlib.sha256(np.array(vector, dtype=np.float32).tobytes()).hexdigest()[:8]
         self.nodes[node_id] = {"phantom": {
             "vector_hash": short_hash,
             "wing_id": metadata.get("wing_id", "GLOBAL"),
@@ -50,11 +50,9 @@ class HippocampalCache:
         i_idx, j_idx = np.where(sim_matrix > 0.75)
         for i, j in zip(i_idx, j_idx):
             if i != j:
-                # Type Narrowing: int() proves to PyRight that this is a single index lookup, not a slice
                 idx_i, idx_j = int(i), int(j)
                 adj[keys[idx_i]].add(keys[idx_j])
         return adj
-
 
 class CerebralIndex:
     def __init__(self, dimension: int = 8):
@@ -74,13 +72,10 @@ class CerebralIndex:
             return
         np_vectors = np.array(vectors, dtype=np.float32)
         self._index.add(np_vectors)
-
         for p in metadata_payloads:
-            # Type Narrowing: Prove to the linter that the key is definitively a string
             v_hash = p.get("vector_hash")
             if isinstance(v_hash, str) and v_hash:
                 self._phantom_lookup[v_hash] = str(p.get("raw_verbatim_text", ""))
-
         self._payloads.extend(metadata_payloads)
         self.total_nodes = self.total_nodes + len(vectors)
         self.is_trained = True
@@ -88,10 +83,8 @@ class CerebralIndex:
     def lateral_ofc_retrieval(self, physics_state: Dict[str, Any], k: int = 2) -> List[Dict]:
         if not self._payloads:
             return []
-
         if not isinstance(physics_state, dict):
             physics_state = {}
-
         base_omega = float(physics_state.get("omega", 0.5))
         base_omega_r = float(physics_state.get("omega_r", 0.5))
 
@@ -109,36 +102,26 @@ class CerebralIndex:
                            physics_state: Optional[Dict[str, Any]] = None) -> List[Dict]:
         if not self.is_trained or self.total_nodes == 0 or len(query_vector) != self.dimension:
             return []
-
         target_wing, is_lateral = None, False
-
         if isinstance(physics_state, dict):
             if float(physics_state.get("voltage", 0.0)) > 80.0 and float(physics_state.get("chi", 0.0)) > 0.7:
                 return self.lateral_ofc_retrieval(physics_state, k=k)
             target_wing = physics_state.get("wing_id", "GLOBAL")
             is_lateral = bool(physics_state.get("lateral_search", False))
-
         np_query = np.array([query_vector], dtype=np.float32)
         distances, indices = self._index.search(np_query, min(k, self.total_nodes))
         results = []
-
         for dist, idx in zip(distances[0], indices[0]):
             if idx == -1:
                 continue
-
             payload = self._payloads[idx]
-
-            # Type Narrowing: Prove to the linter that the payload is definitively a dict
             if not isinstance(payload, dict):
                 continue
-
             if target_wing and not is_lateral and payload.get("wing_id", "GLOBAL") != target_wing:
                 continue
-
             resonance = 1.0 / (1.0 + float(dist))
             if resonance >= resonance_threshold:
                 results.append({**payload, "resonance": resonance})
-
         return results
 
     def get_local_mass_radius(self, query_text: str = "") -> Optional[Dict[str, List[float]]]:
@@ -157,31 +140,3 @@ class CerebralIndex:
             return None
         return {"log_r": [math.log(d) for d in valid_dists],
                 "log_m": [math.log(i + 1) for i in range(len(valid_dists))], "weights": [1.0] * len(valid_dists)}
-
-class MemoryConsolidator:
-    def __init__(self, hippocampus: HippocampalCache, cortex: CerebralIndex, events: EventBus):
-        self.hippocampus = hippocampus
-        self.cortex = cortex
-        self.events = events
-
-    def trigger_rem_consolidation(self, available_atp: float) -> Tuple[int, float]:
-        if available_atp < 20.0:
-            return 0, 0.0
-        max_nodes = int((available_atp - 20.0) / 0.1)
-        if max_nodes < 1:
-            return 0, 0.0
-        pending_nodes = self.hippocampus.extract_for_consolidation(limit=max_nodes)
-        vectors, payloads = [], []
-        for k, n in pending_nodes:
-            if "vector" in n:
-                vectors.append(n["vector"])
-                payloads.append(
-                    {"id": k, "vector_hash": n.get("phantom", {}).get("vector_hash", ""), **n.get("meta", {})})
-        if not vectors:
-            return 0, 0.0
-        self.cortex.add_memories(vectors, payloads)
-        count = len(vectors)
-        atp_cost = 20.0 + (len(vectors) * 0.1)
-        if self.events:
-            self.events.publish("SYNAPTIC_CONSOLIDATION", {"count": count, "atp_burned": atp_cost})
-        return count, atp_cost

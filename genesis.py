@@ -35,8 +35,6 @@ class BoneGenesis:
         if isinstance(soul_legacy, dict):
             soul.load_from_dict(soul_legacy)
         oroboros = TheOroboros(config_ref=target_cfg)
-        cfg_gen = safe_get(target_cfg, "GENESIS", {})
-        bio_proxy = {"trauma_vector": safe_get(mem_ref, "session_trauma_vector", {})}
         if embryo.physics is not None:
             safe_set(embryo.physics, "voltage", max(0.0, float(safe_get(embryo.physics, "voltage", 10.0))))
             safe_set(embryo.physics, "narrative_drag", max(0.0, float(safe_get(embryo.physics, "narrative_drag", 0.0))))

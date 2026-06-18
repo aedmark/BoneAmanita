@@ -115,11 +115,11 @@ class TheBureau:
             idx = match.lastindex
             if idx is not None:
                 seg = match.group(idx)
-                if isinstance(seg, str):
+                if seg:
                     return seg.strip()
         elif action == "STRIP_PREFIX" and len(match.groups()) >= 3:
-            prefix = match.group(1) if isinstance(match.group(1), str) else ""
-            suffix = match.group(3) if isinstance(match.group(3), str) else ""
+            prefix = match.group(1) or ""
+            suffix = match.group(3) or ""
             if not prefix.strip() and suffix:
                 suffix = suffix[0].upper() + suffix[1:]
             return f"{prefix}{suffix}".strip()

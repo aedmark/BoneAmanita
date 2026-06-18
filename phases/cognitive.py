@@ -75,11 +75,11 @@ class CognitionPhase(SimulationPhase):
             if new_wells:
                 msg = ux("cycle_strings", "cog_gravity_well")
                 ctx.log(f"{Prisma.CYN}{msg.format(new_wells=new_wells)}{Prisma.RST}")
-        gordon_ref = getattr(self.eng.village, "gordon", None) if hasattr(self.eng, "village") else None
-        inventory_data = gordon_ref.inventory if gordon_ref else []
-        ctx.mind_state = self.eng.noetic.think(physics_packet=_safe_dict(ctx.physics), _bio=ctx.bio_result,
-                _inventory=inventory_data, voltage_history=self.eng.phys.dynamics.voltage_history,
-                _tick_count=self.eng.tick_count, soul_ref=self.eng.soul, )
+        ctx.mind_state = self.eng.noetic.think(
+            physics_packet=_safe_dict(ctx.physics),
+            voltage_history=self.eng.phys.dynamics.voltage_history,
+            soul_ref=self.eng.soul
+        )
         thought = ctx.mind_state.get("context_msg", ctx.mind_state.get("thought"))
         if thought:
             ctx.log(thought)

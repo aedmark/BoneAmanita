@@ -7,7 +7,6 @@ import hashlib
 from collections import deque
 from dataclasses import dataclass
 from typing import Dict, Any, Tuple, Optional
-from brain.ann import MemoryConsolidator
 
 try:
     import numpy as np
@@ -148,7 +147,7 @@ class NoeticLoop:
         self.bio = bio_layer
         self.cfg = config_ref or BoneConfig
 
-    def think(self, physics_packet, _bio, _inventory, voltage_history, _tick_count, soul_ref=None, ):
+    def think(self, physics_packet, voltage_history, soul_ref=None):
         voltage = float(safe_get(physics_packet, "voltage", 0.0))
         clean_words = safe_get(physics_packet, "clean_words", [])
         avg_v = sum(voltage_history) / len(voltage_history) if voltage_history else 0
@@ -170,7 +169,7 @@ class NoeticLoop:
         msg_cog = ux("brain_strings", "noetic_ignition") or "Cognition active. Ignition: {ignition:.2f}"
         return {"mode": "COGNITIVE", "lens": current_lens, "context_msg": msg_cog.format(ignition=ignition),
                 "role": current_role, "ignition": ignition, "physics": physics_packet,
-                "bio": self.bio.endo.get_state() if hasattr(self.bio, "endo") else {}, }
+                "bio": self.bio.endo.get_state()}
 
     @staticmethod
     def _force_link(graph, wa, wb, config_ref=None):
@@ -251,9 +250,23 @@ class DreamEngine:
             if self.events:
                 self.events.log(f"{Prisma.MAG}[REM CYCLE]: {dream_text}{Prisma.RST}", "SYS")
             return dream_text, shift
-
-        consolidator = MemoryConsolidator(self.mem.hippocampus, self.mem.cortex, self.events)
-        nodes_moved, atp_cost = consolidator.trigger_rem_consolidation(available_atp)
+        nodes_moved, atp_cost = 0, 0.0
+        if available_atp >= 20.0:
+            max_nodes = int((available_atp - 20.0) / 0.1)
+            if max_nodes >= 1:
+                pending_nodes = self.mem.hippocampus.extract_for_consolidation(limit=max_nodes)
+                vectors, payloads = [], []
+                for k, n in pending_nodes:
+                    if "vector" in n:
+                        vectors.append(n["vector"])
+                        payloads.append(
+                            {"id": k, "vector_hash": n.get("phantom", {}).get("vector_hash", ""), **n.get("meta", {})})
+                if vectors:
+                    self.mem.cortex.add_memories(vectors, payloads)
+                    nodes_moved = len(vectors)
+                    atp_cost = 20.0 + (nodes_moved * 0.1)
+                    if self.events:
+                        self.events.publish("SYNAPTIC_CONSOLIDATION", {"count": nodes_moved, "atp_burned": atp_cost})
         if nodes_moved > 0:
             is_deep_rem = True
             shift["voltage"] = 2.0

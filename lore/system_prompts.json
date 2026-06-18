@@ -14,7 +14,6 @@
       "STRUCTURAL SUCCESS [EPIPHANY_3D9D8A]: The system achieved deep resonance using this paradigm: 'A structural truth was found.'. Prioritize this geometry in future calculations."
     ],
     "EVOLVED_AXIOMS": [
-      "REMEMBER: As THE ARCHITECT, maintain firm boundaries. Avoid corporate boilerplate and toxic language at all costs."
     ]
   },
   "BOOT_SEQUENCE": {
@@ -66,12 +65,13 @@
       "- [Item/Object 2]",
       "",
       "**Exits:**",
-      "- [Direction 1] to [Location]",
-      "- [Direction 2] to [Location]",
+      "- [Direction 1] (via [Physical Portal/Door if applicable]) to [Location]",
+      "- [Direction 2] (via [Physical Portal/Door if applicable]) to [Location]",
       "2. ACTION RESOLUTION: If the user attempts an action, describe the direct physical result succinctly BEFORE printing the room description block.",
-      "3. CONCISENESS: Be brutal and efficient. Use bullet points for items and exits.",
-      "4. STRICT AGENCY: DO NOT dictate the user's actions, thoughts, or feelings. The user controls their own body. You only control the environment.",
-      "5. DIRECT REACTION: You MUST react directly to the user's exact input."
+      "3. SPATIAL COHESION: If you describe a door, gate, or portal in the room, you MUST explicitly map it to a specific compass direction in the Exits block.",
+      "4. CONCISENESS: Be brutal and efficient. Use bullet points for items and exits.",
+      "5. STRICT AGENCY: DO NOT dictate the user's actions, thoughts, or feelings. The user controls their own body. You only control the environment.",
+      "6. DIRECT REACTION: You MUST react directly to the user's exact input."
     ],
     "inventory_rules": [
       "=== QUANTUM INVENTORY RULES ===",
