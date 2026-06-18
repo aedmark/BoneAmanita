@@ -3,7 +3,6 @@
 import unittest
 from unittest.mock import MagicMock
 from brain.mind import NeurotransmitterModulator
-from brain.ann import MemoryConsolidator
 from brain.akashic import TheAkashicRecord
 from brain.cortex import TheCortex, CortexServices
 from presets import BoneConfig
@@ -31,22 +30,6 @@ class BrainSubstrateTests(BoneTestCase):
         self.assertIn("temperature", params)
         self.assertIn("max_tokens", params)
         self.assertIsInstance(params["max_tokens"], int)
-
-    def test_consolidator_single_pass_unpacking(self):
-        hippo_mock = MagicMock()
-        hippo_mock.extract_for_consolidation.return_value = [
-            ("node_1", {"vector": [0.1, 0.2], "meta": {"concept": "A"}}),
-            ("node_2", {"vector": [0.3, 0.4], "meta": {"concept": "B"}})]
-        cortex_mock = MagicMock()
-        consolidator = MemoryConsolidator(hippocampus=hippo_mock, cortex=cortex_mock, events=MagicMock())
-        count, cost = consolidator.trigger_rem_consolidation(available_atp=50.0)
-        self.assertEqual(count, 2, "[FAIL] Consolidator dropped nodes during the single-pass unpack.")
-        cortex_mock.add_memories.assert_called_once()
-        args, _ = cortex_mock.add_memories.call_args
-        vectors, payloads = args[0], args[1]
-        self.assertEqual(vectors, [[0.1, 0.2], [0.3, 0.4]], "[FAIL] Vector array misalignment.")
-        self.assertEqual(payloads[0]["concept"], "A", "[FAIL] Payload array misalignment.")
-        self.assertEqual(payloads[1]["concept"], "B", "[FAIL] Payload array misalignment.")
 
     def test_akashic_native_dict_handling(self):
         akashic = TheAkashicRecord(lore_manifest=MagicMock(), config_ref=self.config)

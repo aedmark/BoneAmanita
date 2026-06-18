@@ -9,7 +9,7 @@ from brain.ann import HippocampalCache, CerebralIndex
 from constants import Prisma
 from core import EventBus, LoreManifest
 from presets import BoneConfig
-from spores.biome import BioLichen, BioParasite, ImmuneMycelium
+from spores.biome import BioLichen, BioParasite
 from spores.genetics import LiteraryReproduction
 from spores.io import LocalFileSporeLoader
 from spores.memory import SubconsciousStrata, MemoryCore
@@ -28,9 +28,6 @@ class MycelialNetwork:
         self.cortex = CerebralIndex(dimension=8)
         self.subconscious = SubconsciousStrata(filename=f"memories/subconscious_{self.session_id}.jsonl")
         self.memory_core = MemoryCore(events, self.subconscious, config_ref=self.cfg, lexicon_ref=self.lex)
-        self.lichen = BioLichen(lexicon_ref=self.lex)
-        self.parasite = BioParasite(self, self.lex, config_ref=self.cfg)
-        self.immune = ImmuneMycelium()
         self.repro = LiteraryReproduction(config_ref=self.cfg)
         self.fossils = deque(maxlen=200)
         self.lineage_log = deque(maxlen=50)
@@ -40,20 +37,20 @@ class MycelialNetwork:
         self.session_trauma_vector = {}
         if seed_file:
             self.ingest(seed_file)
-        if hasattr(self.events, "publish"):
-            safe_q_matrix = getattr(self.subconscious, "Q_n", [[0.0] * 8 for _ in range(8)])
-            self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": safe_q_matrix})
+        self._sync_q_matrix()
         if hasattr(self.events, "subscribe"):
             self.events.subscribe("SCAR_RECORDED", self._on_scar_recorded)
 
+    def _sync_q_matrix(self):
+        if hasattr(self.events, "publish"):
+            safe_q_matrix = getattr(self.subconscious, "Q_n", [[0.0] * 8 for _ in range(8)])
+            self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": safe_q_matrix})
+
     def _on_scar_recorded(self, payload):
-        concept = payload.get("concept")
-        if concept:
+        if concept := payload.get("concept"):
             if hasattr(self.subconscious, "apply_scar"):
                 self.subconscious.apply_scar(concept)
-            if hasattr(self.events, "publish"):
-                safe_q_matrix = getattr(self.subconscious, "Q_n", [[0.0] * 8 for _ in range(8)])
-                self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": safe_q_matrix})
+            self._sync_q_matrix()
 
     @property
     def graph(self):
@@ -69,13 +66,6 @@ class MycelialNetwork:
     def run_ecosystem(self, physics: Any, stamina: float, tick: int) -> List[str]:
         clean_words = safe_get(physics, "clean_words", [])
         logs = []
-        lichen_result = self.lichen.photosynthesize(physics, clean_words, tick)
-        lichen_log = lichen_result[1] if len(lichen_result) > 1 else None
-        if lichen_log:
-            logs.append(lichen_log)
-        parasite_result = self.parasite.infect(physics, stamina)
-        if len(parasite_result) > 1 and parasite_result[1]:
-            logs.append(parasite_result[1])
         cfg_spores = safe_get(self.cfg, "SPORES", {})
         if random.random() < float(safe_get(cfg_spores, "CHORUS_CHANCE", 0.10)):
             chorus_log = self._poll_chorus(clean_words, physics)
@@ -192,9 +182,7 @@ class MycelialNetwork:
                 log_msg = l_msg
             if not victims:
                 return ux("spore_strings", "net_sat_lock") or "", []
-            if hasattr(self.events, "publish"):
-                safe_q_matrix = getattr(self.subconscious, "Q_n", [[0.0] * 8 for _ in range(8)])
-                self.events.publish("Q_MATRIX_UPDATED", {"q_matrix": safe_q_matrix})
+            self._sync_q_matrix()
         self.cortical_stack.extend(valuable)
         base_rate = 0.5 * (resonance / 5.0)
         learning_rate = max(0.1, min(1.0, base_rate * learning_mod))
@@ -209,16 +197,19 @@ class MycelialNetwork:
         return log_msg, victims + new_wells
 
     def _filter_valuable_matter(self, words: List[str]) -> List[str]:
-        solvents = (self.lex.SOLVENTS
-                    if self.lex and hasattr(self.lex, "SOLVENTS") else set())
+        solvents = self.lex.SOLVENTS if self.lex and hasattr(self.lex, "SOLVENTS") else set()
+        get_cat = self.lex.get_current_category if self.lex else lambda w: None
 
-        def is_valuable(w):
+        valuable = []
+        for w in words:
             if len(w) <= 4 and w in solvents:
-                return False
-            cat = self.lex.get_current_category(w) if self.lex else None
-            if cat == "void": return False
-            return bool(cat) or len(w) > 4
-        return [w for w in words if is_valuable(w)]
+                continue
+            cat = get_cat(w)
+            if cat == "void":
+                continue
+            if cat or len(w) > 4:
+                valuable.append(w)
+        return valuable
 
     def _detect_new_wells(self, words, tick):
         new_wells = []
@@ -360,7 +351,7 @@ class MycelialNetwork:
                 new_seed.bloomed = s_data.get("b", False)
                 self.seeds.append(new_seed)
         return (data.get("mitochondria") or {},
-                set(data.get("antibodies") or []),
+                set(),
                 data.get("soul_legacy") or {},
                 data.get("continuity"),
                 data.get("world_atlas") or {},)
@@ -389,7 +380,7 @@ class MycelialNetwork:
                 "meta": {"timestamp": time.time(), "final_health": health, "final_stamina": stamina, },
                 "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
                 "core_graph": core_graph, "mutations": mutations or {},
-                "antibodies": list(antibodies) if antibodies else [], "mitochondria": mitochondria_traits,
+                "mitochondria": mitochondria_traits,
                 "soul_legacy": soul_data, "continuity": continuity, "world_atlas": world_atlas or {},
                 "village_data": village_data, "seeds": seed_list, "fossils": list(self.fossils)}
         return self.loader.save_spore(self.filename, data)

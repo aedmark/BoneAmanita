@@ -22,13 +22,20 @@ except ImportError:
     np = None
 
 _ZERO_WIDTH_RE = re.compile(r'[\u200B-\u200D\uFEFF\u202A-\u202E]')
-def _billy_mitchell_protocol(data: Any) -> Any:
+
+def _billy_mitchell_protocol(data: Any, seen: set = None) -> Any:
+    if seen is None:
+        seen = set()
+    if id(data) in seen:
+        return data
+    if isinstance(data, (dict, list)):
+        seen.add(id(data))
     if isinstance(data, str):
         return _ZERO_WIDTH_RE.sub('', data)
     elif isinstance(data, dict):
-        return {_billy_mitchell_protocol(k): _billy_mitchell_protocol(v) for k, v in data.items()}
+        return {_billy_mitchell_protocol(k, seen): _billy_mitchell_protocol(v, seen) for k, v in data.items()}
     elif isinstance(data, list):
-        return [_billy_mitchell_protocol(i) for i in data]
+        return [_billy_mitchell_protocol(i, seen) for i in data]
     return data
 
 class SubconsciousStrata:
@@ -117,7 +124,13 @@ class SubconsciousStrata:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temp_path, self.filepath)
-            self._load_index()
+            if keep_count:
+                self.metadata_log = self.metadata_log[-keep_count:]
+                self.index = {e["word"]: e for e in self.metadata_log if "word" in e}
+                if self.rank_bank is not None and len(self.rank_bank) >= keep_count:
+                    self.rank_bank = self.rank_bank[-keep_count:]
+            else:
+                self.metadata_log, self.index, self.rank_bank = [], {}, None
         except Exception:
             pass
 
@@ -138,7 +151,11 @@ class SubconsciousStrata:
         q_sum = np.sum(q_unit)
         raw_scores = np.dot(self.rank_bank, q_unit)
         scores = (raw_scores - (mean * q_sum)) * inv_norm
-        top_k_idx = np.argsort(scores)[::-1][:k]
+        if len(scores) <= k:
+            top_k_idx = np.argsort(scores)[::-1]
+        else:
+            top_k_idx = np.argpartition(scores, -k)[-k:]
+            top_k_idx = top_k_idx[np.argsort(scores[top_k_idx])[::-1]]
         results = []
         for idx in top_k_idx:
             if 0 <= idx < len(self.metadata_log):
@@ -191,12 +208,10 @@ class MemoryCore:
             if resonance_score > 0.5:
                 scored_memories.append((resonance_score, node, data))
         scored_memories.sort(key=lambda x: x[0], reverse=True)
-
         results = []
         res_prefix = ux("spore_strings", "core_illuminate_resonant") or "Resonant"
         assoc_prefix = ux("spore_strings", "core_illuminate_associated") or "Associated"
         fmt = (ux("spore_strings", "core_illuminate_format") or "{prefix} Engram: '{name}'{conn_str}")
-
         for score, name, data in scored_memories[:limit]:
             connections = list(data.get("edges", {}).keys())
             if not data.get("is_diamond", False):
@@ -208,16 +223,14 @@ class MemoryCore:
             results.append(fmt.format(prefix=current_prefix, name=name.upper(), conn_str=connection_string))
         survivors = [name for score, name, data in scored_memories[:limit] if score > 0.5]
         if len(survivors) > 1:
-            for i in range(len(survivors)):
-                for j in range(i + 1, len(survivors)):
-                    node_a = survivors[i]
-                    node_b = survivors[j]
-                    self.graph[node_a].setdefault("edges", {})
-                    self.graph[node_b].setdefault("edges", {})
-                    current_a_to_b = self.graph[node_a]["edges"].get(node_b, 0.0)
-                    self.graph[node_a]["edges"][node_b] = min(10.0, current_a_to_b + 0.5)
-                    current_b_to_a = self.graph[node_b]["edges"].get(node_a, 0.0)
-                    self.graph[node_b]["edges"][node_a] = min(10.0, current_b_to_a + 0.5)
+            import itertools
+            for node_a, node_b in itertools.combinations(survivors, 2):
+                self.graph[node_a].setdefault("edges", {})
+                self.graph[node_b].setdefault("edges", {})
+                current_a_to_b = self.graph[node_a]["edges"].get(node_b, 0.0)
+                self.graph[node_a]["edges"][node_b] = min(10.0, current_a_to_b + 0.5)
+                current_b_to_a = self.graph[node_b]["edges"].get(node_a, 0.0)
+                self.graph[node_b]["edges"][node_a] = min(10.0, current_b_to_a + 0.5)
         if len(survivors) >= 2:
             self.hallucinate_from_subconscious(survivors)
         return results
@@ -275,24 +288,26 @@ class MemoryCore:
                 del self.graph[node]
         if dead_nodes:
             for data in self.graph.values():
-                for dead in dead_nodes:
-                    data["edges"].pop(dead, None)
+                if edges := data.get("edges"):
+                    for dead in dead_nodes.intersection(edges.keys()):
+                        del edges[dead]
         return ux_format("spore_strings", "core_pruned", default="", total=total_decayed, pruned=pruned_count)
 
     def cannibalize(self, current_tick, preserve_current=None) -> Tuple[Optional[str], str]:
         protected = set(self.cortical_stack)
         if preserve_current:
             protected.update(preserve_current) if isinstance(preserve_current, list) else protected.add(preserve_current)
-        candidates = []
+        victim, min_data, min_score = None, None, float('inf')
         for k, v in self.graph.items():
             if k not in protected and not v.get("is_diamond", False):
                 mass = float(sum(v.get("edges", {}).values()))
                 age = max(1, current_tick - v.get("last_tick", 0))
                 score = (mass + 1.0) * (1.0 + (10.0 / age))
-                candidates.append((k, v, score))
-        if not candidates:
+                if score < min_score:
+                    victim, min_data, min_score = k, v, score
+        if not victim:
             return None, ux("spore_strings", "core_lock") or ""
-        victim, data, score = min(candidates, key=lambda x: x[2])
+        data, score = min_data, min_score
         mass = float(sum(data.get("edges", {}).values()))
         lifespan = current_tick - (data.get("strata") or {}).get("birth_tick", current_tick)
         fossil_data = {"word": victim, "mass": round(mass, 2), "lifespan": lifespan, "edges": data["edges"], "death_tick": current_tick, }

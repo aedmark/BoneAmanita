@@ -212,17 +212,6 @@ class IntrusionPhase(SimulationPhase):
                 ctx.log(limbo_ref.haunt(msg))
         drag = getattr(ctx.physics, "narrative_drag", 0.0)
         kappa = getattr(ctx.physics, "kappa", 1.0)
-        if (drag > ctx.limits.get("INTRUSION_DRAG_THRESH", 4.0) or kappa
-            < ctx.limits.get("INTRUSION_KAPPA_THRESH", 0.3)) and ctx.clean_words:
-            start_node = random.choice(ctx.clean_words)
-            loop_path = self.eng.mind.tracer.inject(start_node)
-            if loop_path:
-                rewire_msg = self.eng.mind.tracer.psilocybin_rewire(loop_path)
-                if rewire_msg:
-                    msg = ux("cycle_strings", "intrusion_immune")
-                    ctx.log(f"{Prisma.CYN}{msg.format(rewire_msg=rewire_msg)}{Prisma.RST}")
-                    self.eng.bio.endo.dopamine += ctx.limits.get("INTRUSION_REWIRE_DOP", 0.2)
-                    ctx.physics.narrative_drag = max(0.0, drag - ctx.limits.get("INTRUSION_REWIRE_RELIEF", 2.0))
         trauma_sum = sum(getattr(self.eng, "trauma_accum", {}).values())
         is_bored = self.eng.phys.pulse.is_bored()
         if (trauma_sum > ctx.limits.get("INTRUSION_NIGHTMARE_THRESH", 10.0)

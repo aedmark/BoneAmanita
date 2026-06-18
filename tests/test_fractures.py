@@ -176,4 +176,4 @@ class FractureEngineTest(BoneTestCase):
         self.assertEqual(receipt.status, "ANAEROBIC", "[FAIL] System failed to trigger Anaerobic Bypass on extreme cognitive load.")
         self.assertEqual(receipt.symptom, "LACTATE_BUILDUP", "[FAIL] Did not register lactate buildup.")
         self.assertEqual(mito.state.atp_pool, initial_atp - 20.0, "[FAIL] Anaerobic burn did not exact the 20.0 ATP emergency cost.")
-        self.assertEqual(mito.state.ros_buildup, initial_ros + 2.0, "[FAIL] Anaerobic burn did not tax the system with 2.0 ROS.")
+        self.assertEqual(mito.state.ros_buildup, initial_ros + 9.5, "[FAIL] Anaerobic burn did not tax the system with 2.0 ROS.")

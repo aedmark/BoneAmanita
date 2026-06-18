@@ -7,7 +7,7 @@ from typing import Optional, Dict, List, Any, TYPE_CHECKING
 from core import Prisma, LoreManifest
 from struts import ux, safe_get, safe_set
 from presets import BoneConfig
-from spores import ImmuneMycelium, BioLichen, BioParasite
+from spores import BioLichen, BioParasite
 from body.metabolism import DigestiveTrack
 from body.regulation import EndocrineRegulator, BioFeedback
 from body.endocrine import SemanticEndocrinologist
@@ -23,7 +23,6 @@ class BioSystem:
     mito: "MitochondrialForge"
     endo: "EndocrineSystem"
     governor: "MetabolicGovernor"
-    immune: Optional[ImmuneMycelium] = None
     lichen: Optional[BioLichen] = None
     parasite: Optional[BioParasite] = None
     plasticity: Any = None
@@ -65,19 +64,11 @@ class BioSystem:
         target_cfg = self.config_ref or BoneConfig
         MAX_H = float(safe_get(target_cfg, "MAX_HEALTH", 100.0))
         MAX_S = float(safe_get(target_cfg, "MAX_STAMINA", 100.0))
-        bio_cfg = getattr(target_cfg, "BIO", None)
-        if bio_cfg and not isinstance(bio_cfg, dict):
-            h_rec = float(getattr(bio_cfg, "REST_HEALTH_RECOVERY", 0.5))
-            s_rec = float(getattr(bio_cfg, "REST_STAMINA_RECOVERY", 1.0))
-            ser_boost = float(getattr(bio_cfg, "REST_SEROTONIN_BOOST", 0.05))
-            cor_drop = float(getattr(bio_cfg, "REST_CORTISOL_DROP", 0.05))
-        else:
-            cfg_dict = bio_cfg or {}
-            h_rec = float(cfg_dict.get("REST_HEALTH_RECOVERY", 0.5))
-            s_rec = float(cfg_dict.get("REST_STAMINA_RECOVERY", 1.0))
-            ser_boost = float(cfg_dict.get("REST_SEROTONIN_BOOST", 0.05))
-            cor_drop = float(cfg_dict.get("REST_CORTISOL_DROP", 0.05))
-
+        bio_cfg = safe_get(target_cfg, "BIO", {})
+        h_rec = float(safe_get(bio_cfg, "REST_HEALTH_RECOVERY", 0.5))
+        s_rec = float(safe_get(bio_cfg, "REST_STAMINA_RECOVERY", 1.0))
+        ser_boost = float(safe_get(bio_cfg, "REST_SEROTONIN_BOOST", 0.05))
+        cor_drop = float(safe_get(bio_cfg, "REST_CORTISOL_DROP", 0.05))
         b.health = min(MAX_H, b.health + (h_rec * factor))
         b.stamina = min(MAX_S, b.stamina + (s_rec * factor))
         self.endo.serotonin = min(1.0, self.endo.serotonin + (ser_boost * factor))

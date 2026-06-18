@@ -35,12 +35,15 @@ class TheForge:
             return True, ux("machine_strings", "forge_safety_scissors"), "SAFETY_SCISSORS"
         return True, ux("machine_strings", "forge_anchor_stone"), "ANCHOR_STONE"
 
-    def attempt_crafting(self, physics: dict, inventory_list: List[str]) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
+    def attempt_crafting(self, physics: dict, inventory_list: List[str]) -> Tuple[
+        bool, Optional[str], Optional[str], Optional[str]]:
         if not inventory_list or not (clean_words := physics.get("clean_words", [])):
             return False, None, None, None
+        if self.lex is None:
+            from mechanics.lexicon import LexiconService
+            self.lex = LexiconService()
         clean_set = set(clean_words)
         voltage = float(physics.get("voltage", 0.0))
-        lex_srv = self.lex or LexiconService()
         cat_cache = {}
         for item in inventory_list:
             for recipe in self.recipe_map.get(item, []):

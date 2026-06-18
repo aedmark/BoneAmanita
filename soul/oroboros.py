@@ -3,6 +3,7 @@
 import json
 import os
 import random
+import tempfile
 from dataclasses import dataclass
 from typing import List, Any
 from constants import Prisma
@@ -87,9 +88,9 @@ class TheOroboros:
         self.myths = self.myths[-self._cfg("MAX_MYTHS", 10):]
         payload = {"generation": self.generation_count + 1, "scars": [vars(s) for s in self.scars],
                    "myths": [vars(m) for m in self.myths]}
-        temp_path = f"{self.LEGACY_FILE}.tmp"
         try:
-            with open(temp_path, "w", encoding="utf-8") as f:
+            fd, temp_path = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(self.LEGACY_FILE)) or '.', text=True)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2)
                 f.flush()
                 os.fsync(f.fileno())

@@ -128,7 +128,10 @@ class PhysicsPacket:
     def _safe_init(cls: Any, data: Any) -> Any:
         if isinstance(data, cls): return data
         if not data: return cls()
-        valid_keys = {f.name for f in dataclasses.fields(cls)}
+        valid_keys = getattr(cls, "_valid_keys_cache", None)
+        if valid_keys is None:
+            valid_keys = {f.name for f in dataclasses.fields(cls)}
+            cls._valid_keys_cache = valid_keys
         if isinstance(data, dict):
             return cls(**{k: v for k, v in data.items() if k in valid_keys and v is not None})
         return cls(**{k: getattr(data, k) for k in valid_keys if getattr(data, k, None) is not None})
@@ -201,10 +204,7 @@ class PhysicsPacket:
 
     def __setattr__(self, key: str, value: Any) -> None:
         if key in ("voltage", "narrative_drag", "psi", "chi", "ros", "V", "F"):
-            try:
-                value = max(0.0, float(value))
-            except (TypeError, ValueError):
-                value = 0.0
+            value = max(0.0, float(value))
         if key in self._BASE_FIELDS:
             if key == "energy":
                 value = self._safe_init(EnergyState, value)

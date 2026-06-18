@@ -5,7 +5,6 @@ from .paradox import TheParadoxEngine
 from .forge import TheForge
 from .theremin import TheTheremin
 from .panic import PanicRoom
-from .tracer import ViralTracer
 from .pacemaker import ThePacemaker
 from .architect import SystemEmbryo, BoneArchitect
 from .consolidator import TheConsolidator
@@ -16,7 +15,6 @@ __all__ = [
     "TheForge",
     "TheTheremin",
     "PanicRoom",
-    "ViralTracer",
     "ThePacemaker",
     "SystemEmbryo",
     "TheConsolidator",

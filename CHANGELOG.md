@@ -1,7 +1,81 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
-### **BONEAMANITA 20.5.0 "The Moog Protocol"**
+### **BONEAMANITA 20.5.1 "The Deep Tissue Massage"**
+
+**Security & Immunity**
+- **Cryptographic Upgrade:** Upgraded `HippocampalCache` hashing from computationally compromised MD5 to SHA-256 for robust neural cache hygiene (`brain/ann.py`).
+- **Atomic State Swaps:** Patched `soul/oroboros.py` to use Python's secure `tempfile` library for writing legacy states, eliminating hardcoded `.tmp` path race conditions and symlink vulnerabilities.
+- **Loud Failure Protocol:** Stripped silent `TypeError` catching from `PhysicsPacket.__setattr__` (`physics/models.py`). Toxic string injections into critical energy floats (like `voltage`) will now fail loudly to prevent corrupted state masking.
+
+**Performance & Architecture**
+- **The Big O Overhaul:** Drastically reduced computational overhead in `MemoryCore` (`spores/memory.py`):
+  - Replaced massive list allocation and $O(N \log N)$ `min()` scans with $O(N)$ running minimums in `cannibalize()`.
+  - Replaced $O(N \log N)$ `np.argsort` with $O(N)$ `np.argpartition` for lightning-fast Subconscious Dredging.
+  - Amputated nested $O(N^2)$ iteration in `prune_synapses` in favor of C-level `set.intersection`.
+  - Replaced boilerplate nested index loops with `itertools.combinations` in `illuminate()`.
+- **I/O Apocalypse Averted:** Blocked two catastrophic disk-read bottlenecks:
+  - Cached `LexiconService` in `machine/forge.py` to prevent reloading JSON from disk every time crafting is attempted.
+  - Amputated `_load_index()` from `_prune_strata()` (`spores/memory.py`), slicing arrays directly in RAM instead of triggering a full disk re-parse and re-vectorization during deep memory pruning.
+- **Paranoia Purge:** Removed redundant, CPU-wasting "paranoid programming" checks:
+  - Optimized `safe_get` (`struts.py`) to bypass explicit `hasattr` loops, defaulting to native `dict.get` and `getattr` in $O(1)$ time.
+  - Removed `hasattr` checks in `CycleContext.to_dict` (`core.py`), trusting `@dataclass(slots=True)` memory constraints.
+  - Amputated pure-Python matrix math abstractions (`_identity`, `_mat_mul`, etc.) in `spores/spore_utils.py` to defer all linear algebra directly to NumPy.
+- **Reflection Bottleneck:** Cached `dataclasses.fields(cls)` in `PhysicsPacket._safe_init` (`physics/models.py`), eliminating dynamic class reflection overhead during high-volume packet instantiation.
+
+**Bug Fixes**
+- **The Infinite Recursion Trap:** Patched the Mitchell Protocol (`spores/memory.py`) to track object `id()` hashes, preventing fatal `RecursionError` crashes when encountering circular references.
+- **Combinatorial Scope Crash:** Fixed a critical indentation bug in `MemoryCore.illuminate` where `itertools` pairing was accidentally scoped inside the memory-scoring loop, triggering `UnboundLocalError` on zero-resonance inputs and severing the phase pipeline.
+- **Event Redundancy:** Consolidated `Q_MATRIX_UPDATED` broadcasts into a centralized `_sync_q_matrix()` method in `spores/network.py` to uphold DRY principles and prevent desyncs.
+
+
+### **BONEAMANITA 20.5.0 "The S.L.A.S.H. Audit"**
+
+**Security & Immunity**
+
+- **The Lexical Firewall Hardening:** Expanded `_DESTRUCTIVE_PATTERNS` in `main.py` to intercept raw `eval()`, `exec()`, and native system imports (`pty`, `sys`), physically blocking adversarial python injection prior to cognitive load.
+- **API Key Redaction:** Overhauled `core.py`'s `JSONEncoder` to actively scrub dictionaries for terms like "api_key", "secret", "token", and "password". Toxic payload data is now cleanly replaced with `[REDACTED]` before being flushed to telemetry logs.
+
+**Refactoring & Optimization**
+
+- **The Syntactic Purge:** Upgraded `safe_get` in `struts.py` to support array-based key fallbacks, allowing the system to amputate deeply nested, paranoid `getattr()` chains throughout the cognitive cycle.
+- **$O(1)$ Graph Traversal:** Ripped out the $O(N)$ `list.pop(0)` operation inside the `cycle.py` background WLS thread and replaced it with a `collections.deque` topological BFS queue, preventing the thread from choking as the spatial memory radius expands.
+- **EAFP Logic Shifts:** Replaced paranoid, multi-tier object inspection in `_verify_semantic_topology` and `purge_context` with clean, pythonic 'Easier to Ask for Forgiveness than Permission' `try-except` boundary blocks.
+
+**Fixed**
+
+- **The Reality Fracture (`NameError`):** Fixed a load-bearing amputation in `cycle.py` where the Cybernetic Governor's native variable demands (`res_delta`, `u_exhaustion`) were accidentally severed from the local namespace, instantly shunting the system into Safe Mode.
+- **The Override Currency Bug:** Re-routed the Architect's `#override` gate in `main.py` to target the correct endocrine pathway (`self.bio.endo.glimmers`), allowing the user to properly spend their currency to assert agency. Introduced mathematical proofs in the test suite to validate both successful expenditures and bankrupt rejections.
+- **The Moog Memory Erasure:** Fixed an architectural flaw in `brain/cortex.py` where the system prematurely popped the `dialogue_buffer` upon detecting un-actionable toxicity. High-drag prompts are now properly quarantined in the worry ledger without accidentally deleting the previous, healthy conversational turn.
+- **The Anaerobic Chaos Leak:** Plugged a massive accounting error in `body/metabolism.py`. Heavy structural payloads (`chi` > 0.8, `psi` > 0.8) were dodging their biological tax because the `ANAEROBIC_THRESHOLD` bypass fired before the waste was calculated. Chaos waste is now dynamically calculated and actively poisons the `ros_buildup` even when the system burns HP instead of ATP.
+- **Silent Asynchronous Failures:** Re-bound the `mem` local variable inside the background topology WLS thread so the engine can properly execute apoptosis (terminal shutdown) when it detects structural rot, rather than the shutdown command crashing silently.
+
+---
+
+### **BONEAMANITA 20.4.9 "The Jester's Gambit"**
+
+**Feature Additions**
+
+* **The Void (`/hallucinate`):** Integrated a native hallucination command into the `CommandProcessor`. It levies a strict 25 ATP tax to mathematically bypass the thermal locks, physically spiking phase-space tension ($\mu \approx 0.9$) and creative drive ($\kappa \ge 0.5$). It injects a hardcoded cognitive mandate directly into the `dialogue_buffer` to summon The Jester and force a lateral paradigm shift.
+* **Topological Reality Validation:** Ripped out the performative abstraction (mock linear data) in `_bg_wls_check` inside `cycle.py`. Wired in a true Breadth-First Search (BFS) algorithm to calculate the actual Mass-Radius scaling and fractal geometry of the `hippocampus` memory graph. 
+
+**Refactoring & Optimization**
+
+* **Reality Stack Tensegrity:** Cleaned a structural dependency leak in `core.py`. Decoupled grammar rules from the mutable `RealityStack` object and centralized them into the static `RealityLayer` class as the absolute source of truth. Altered the test harness to respect the decoupled architecture.
+* **Command Migration & Interrupts:** Stripped the hardcoded `/zen` and `/flush` commands out of `main.py`'s primary `process_turn` loop, routing them gracefully through `CommandProcessor` under the unified `_cmd_rest` protocol.
+* **Data Amputation:** Purged dead-weight state tracking (`village_data`, `joy_history`, `mutations: {}`) from the `save_state` serialization payload, optimizing memory output and disk I/O.
+* **Asynchronous Latency:** Offloaded the synchronous `actual_adj` dictionary comprehension in the `_verify_semantic_topology` check to the async worker pool, preventing main thread blocking and subsequent `queue.Empty` crashes.
+
+**Fixed**
+
+* **The Null Exception Minefield:** Executed a global syntactic purge across `commands.py`, replacing reckless `ux().format()` chained calls with the safe `ux_format()` utility. This prevents fatal `AttributeError` engine crashes if a string is ever missing from `ux_strings.json`.
+* **Dictionary vs. Object Fallback:** Resolved a silent assignment failure where `safe_set` failed to mutate the `MockPhys` class object because it was originally designed for the `active_physics` dictionary. Explicitly separated the live state update from the base engine update.
+* **Telemetry Crash Trap:** Hardened the `/report` and `/diag` commands with safe `getattr` boundary checks to prevent the engine from fatally crashing if the telemetry module boots offline.
+* **The Apoptotic Test Trigger:** Restored the `do this forever` trap to `main.py`'s execution loop explicitly as a load-bearing pillar for the Apoptotic Crash test harness.
+
+---
+
+### **BONEAMANITA 20.4.8 "The Moog Protocol"**
 
 **Feature Additions**
 

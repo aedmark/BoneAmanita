@@ -133,7 +133,8 @@ class MetabolicGovernor:
 
     def _check_override_safety(self, physics: StateProvider, gov_text: Dict) -> Optional[str]:
         current_voltage = float(physics.get("voltage", 0.0))
-        gov_crit = float(safe_get(safe_get(self.cfg, "BIO", {}), "GOV_VOLTAGE_CRITICAL", 25.0))
+        bio_cfg = safe_get(self.cfg, "BIO", {})
+        gov_crit = float(safe_get(bio_cfg, "GOV_VOLTAGE_CRITICAL", 25.0))
         if current_voltage > gov_crit and self.mode != "SANCTUARY":
             self.manual_override = False
             return gov_text.get("OVERRIDE_CLEARED", "")
@@ -155,7 +156,8 @@ class MetabolicGovernor:
     def _evaluate_state(self, physics: StateProvider, v_history: List[float]) -> str:
         volts = float(physics.get("voltage", 0.0))
         drag = float(physics.get("narrative_drag", 0.0))
-        gov_high = float(safe_get(safe_get(self.cfg, "BIO", {}), "GOV_VOLTAGE_HIGH", 18.0))
+        bio_cfg = safe_get(self.cfg, "BIO", {})
+        gov_high = float(safe_get(bio_cfg, "GOV_VOLTAGE_HIGH", 18.0))
         if volts > gov_high and float(physics.get("beta_index", 0.0)) > 1.5:
             return "SANCTUARY"
         v_velocity = (v_history[-1] - v_history[-2]) if len(v_history) >= 2 else 0.0

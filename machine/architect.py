@@ -8,7 +8,6 @@ from struts import ux, safe_get
 from presets import BoneConfig
 from protocols import LimboLayer
 from constants import Prisma
-from machine.tracer import ViralTracer
 from machine.forge import TheForge
 from machine.crucible import TheCrucible
 from machine.theremin import TheTheremin
@@ -35,19 +34,19 @@ class BoneArchitect:
         limbo = LimboLayer(config_ref=target_cfg)
         _mem.cleanup_old_sessions(limbo)
         lore = LoreManifest.get_instance(config_ref=target_cfg)
-        mind = MindSystem(mem=_mem, lex=lex, dreamer=DreamEngine(events, lore, config_ref=target_cfg), tracer=ViralTracer(_mem), )
+        mind = MindSystem(mem=_mem, lex=lex, dreamer=DreamEngine(events, lore, config_ref=target_cfg))
         return mind, limbo
 
     @staticmethod
     def _construct_bio(events, mind, lex, config_ref=None) -> BioSystem:
         from body import BioSystem, MitochondrialState, Biometrics, MitochondrialForge, EndocrineSystem, MetabolicGovernor
-        from spores import ImmuneMycelium, BioLichen, BioParasite
+        from spores import BioLichen, BioParasite
         target_cfg = config_ref or BoneConfig
         cfg = safe_get(target_cfg, "METABOLISM", {})
         genesis_val = float(safe_get(cfg, "GENESIS_VOLTAGE", 100.0))
         mito_state = MitochondrialState(atp_pool=genesis_val)
         bio_metrics = Biometrics(health=float(safe_get(target_cfg, "MAX_HEALTH", 100.0)), stamina=float(safe_get(target_cfg, "MAX_STAMINA", 100.0)))
-        return BioSystem(mito=MitochondrialForge(mito_state, events, config_ref=target_cfg), endo=EndocrineSystem(config_ref=target_cfg), immune=ImmuneMycelium(),
+        return BioSystem(mito=MitochondrialForge(mito_state, events, config_ref=target_cfg), endo=EndocrineSystem(config_ref=target_cfg),
             lichen=BioLichen(lexicon_ref=lex), governor=MetabolicGovernor(config_ref=target_cfg),
             parasite=BioParasite(mind.mem, lex, config_ref=target_cfg), events=events, biometrics=bio_metrics, config_ref=target_cfg, )
 
@@ -86,12 +85,10 @@ class BoneArchitect:
             load_result = None
         results = list(load_result) if isinstance(load_result, (list, tuple)) else []
         results.extend([None] * (5 - len(results)))
-        mito_legacy, immune_legacy, soul_legacy, continuity, atlas = results[:5]
+        mito_legacy, _, soul_legacy, continuity, atlas = results[:5]
         soul_legacy = soul_legacy or {}
         if mito_legacy:
             embryo.bio.mito.apply_inheritance(mito_legacy)
-        if immune_legacy and isinstance(immune_legacy, (list, set)):
-            embryo.bio.immune.active_antibodies.update(immune_legacy)
         embryo.soul_legacy = soul_legacy
         embryo.continuity = continuity
         if atlas and embryo.physics.nav:

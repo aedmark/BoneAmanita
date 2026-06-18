@@ -58,14 +58,15 @@ class MitochondrialForge:
             print(f"{Prisma.RED}Missing narrative kwargs for '{key}': {e}{Prisma.RST}")
             return tmpl
 
-    def _trigger_anaerobic_bypass(self, raw_cost: float) -> MetabolicReceipt:
-        self.state.ros_buildup = float(self.state.ros_buildup) + 2.0
+    def _trigger_anaerobic_bypass(self, raw_cost: float, chaos_waste: float = 0.0) -> MetabolicReceipt:
+        total_waste = 2.0 + max(0.0, chaos_waste)
+        self.state.ros_buildup = float(self.state.ros_buildup) + total_waste
         self.adjust_atp(-20.0, "Anaerobic Burn")
         if self.events:
             msg = ux_format("mito_forge", "anaerobic_bypass", default="Load ({cost:.1f}) too high for ATP. Burning HP instead.", cost=raw_cost)
             self.events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "BIO_WARN")
         return MetabolicReceipt(base_cost=raw_cost, drag_tax=0.0, inefficiency_tax=0.0, total_burn=20.0,
-            waste_generated=2.0, status="ANAEROBIC", symptom="LACTATE_BUILDUP",)
+            waste_generated=total_waste, status="ANAEROBIC", symptom="LACTATE_BUILDUP",)
 
     def process_cycle(self, physics_packet: Any, modifier: float = 1.0) -> MetabolicReceipt:
         if self.state.atp_pool > 95.0 and self.state.ros_buildup < 1.0:
@@ -114,21 +115,8 @@ class MitochondrialForge:
         ideal_cost = (base_demand + cognitive_load_tax) * modifier
         raw_cost = ideal_cost / efficiency
         inefficiency_tax = raw_cost - ideal_cost
-        if raw_cost > self.ANAEROBIC_THRESHOLD:
-            return self._trigger_anaerobic_bypass(raw_cost)
-        if raw_cost > self.MAX_SAFE_BURN:
-            excess = raw_cost - self.MAX_SAFE_BURN
-            raw_cost = self.MAX_SAFE_BURN
-            inefficiency_tax = max(0.0, raw_cost - ideal_cost)
-            if self.events:
-                msg = ux_format("mito_forge", "surge_protector", default="SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).", excess=excess)
-                self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "BIO")
-        if raw_cost > 15.0 and self.events and random.random() < 0.2:
-            msg = self._get_text("GRINDING")
-            icon = ux("mito_forge", "icon_grinding")
-            if msg:
-                self.events.log(f"{Prisma.OCHRE}{icon}{msg}{Prisma.RST}", "BIO_WARN")
-        total_metabolic_cost = raw_cost
+
+        # Pre-calculate waste so high-chaos queries don't dodge the tax via Anaerobic Bypass
         abstraction = float(safe_get(physics_packet, "psi", 0.0))
         waste_generated = 0.0
         abstraction_mult = safe_get(cfg, "WASTE_PSI_MULT", 5.0)
@@ -140,6 +128,26 @@ class MitochondrialForge:
         if voltage > 60.0:
             waste_generated = waste_generated + (voltage / volt_div)
         waste_generated = waste_generated - base_red
+
+        if raw_cost > self.ANAEROBIC_THRESHOLD:
+            return self._trigger_anaerobic_bypass(raw_cost, chaos_waste=waste_generated)
+
+        if raw_cost > self.MAX_SAFE_BURN:
+            excess = raw_cost - self.MAX_SAFE_BURN
+            raw_cost = self.MAX_SAFE_BURN
+            inefficiency_tax = max(0.0, raw_cost - ideal_cost)
+            if self.events:
+                msg = ux_format("mito_forge", "surge_protector",
+                                default="SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).",
+                                excess=excess)
+                self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "BIO")
+        if raw_cost > 15.0 and self.events and random.random() < 0.2:
+            msg = self._get_text("GRINDING")
+            icon = ux("mito_forge", "icon_grinding")
+            if msg:
+                self.events.log(f"{Prisma.OCHRE}{icon}{msg}{Prisma.RST}", "BIO_WARN")
+
+        total_metabolic_cost = raw_cost
         waste_generated = max(-float(self.state.ros_buildup), float(waste_generated))
         self.state.ros_buildup = float(self.state.ros_buildup) + float(waste_generated)
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
