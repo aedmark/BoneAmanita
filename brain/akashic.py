@@ -1,7 +1,9 @@
 """brain/akashic.py"""
 
 import json
+import math
 import os
+import random
 import uuid
 from typing import Any, Dict, List, Optional, Set, Tuple
 from constants import Prisma
@@ -22,6 +24,14 @@ class TheAkashicRecord:
         self.HYBRID_LENS_THRESHOLD = int(safe_get(self.cfg_akashic, "HYBRID_LENS_THRESHOLD", 5))
         self.MAX_SHADOW_CAPACITY = int(safe_get(self.cfg_akashic, "MAX_SHADOW_CAPACITY", 50))
         self.lore = lore_manifest if lore_manifest else LoreManifest.get_instance()
+        phys_const = self.lore.get("PHYSICS_CONSTANTS") or {}
+        self.manifold_shifts = phys_const.get("MANIFOLD_SHIFTS") or {}
+        self.trigram_map = phys_const.get("TRIGRAM_MAP") or {}
+        self.fallback_trigrams = phys_const.get("FALLBACK_TRIGRAMS") or {}
+        self.fallback_default = phys_const.get("FALLBACK_DEFAULT", "KAN")
+        narrative_data = self.lore.get("NARRATIVE_DATA") or {}
+        self.meta_resonance = narrative_data.get("_META_RESONANCE_", [])
+        self.item_gen_data = self.lore.get("ITEM_GENERATION") or {}
         self.events = events_ref
         self.save_dir = safe_get(self.cfg_akashic, "SAVE_DIR", "saves")
         self.state_path = os.path.join(self.save_dir, safe_get(self.cfg_akashic, "STATE_FILE", "akashic_state.json"))
@@ -172,21 +182,17 @@ class TheAkashicRecord:
 
     @staticmethod
     def _get_dominant_force(vector_dict: Dict, default: str) -> str:
-        safe_vector = vector_dict if isinstance(vector_dict, dict) else {}
-        clean_vector = {k: v for k, v in safe_vector.items() if v is not None}
-        return max(clean_vector.keys(), key=lambda k: clean_vector[k]) if clean_vector else default
+        if not isinstance(vector_dict, dict):
+            return default
+        valid_keys = [k for k, v in vector_dict.items() if v is not None]
+        return max(valid_keys, key=lambda k: vector_dict[k]) if valid_keys else default
 
-    @staticmethod
-    def _extract_dominant_trigram(physics: Any) -> str:
+    def _extract_dominant_trigram(self, physics: Any) -> str:
         vector = safe_get(physics, "vector", {})
-        dom = TheAkashicRecord._get_dominant_force(vector, "KAN")
-        constants = LoreManifest.get_instance().get("PHYSICS_CONSTANTS") or {}
-        trigrams = constants.get("TRIGRAM_MAP", {})
-        if dom in trigrams and len(trigrams[dom]) > 1:
-            return trigrams[dom][1]
-        fallbacks = constants.get("FALLBACK_TRIGRAMS", {})
-        default_trigram = constants.get("FALLBACK_DEFAULT", "KAN")
-        return fallbacks.get(dom, default_trigram)
+        dom = self._get_dominant_force(vector, "KAN")
+        if dom in self.trigram_map and len(self.trigram_map[dom]) > 1:
+            return self.trigram_map[dom][1]
+        return self.fallback_trigrams.get(dom, self.fallback_default)
 
     def _on_mythology_update(self, payload):
         if not payload: return
@@ -199,9 +205,9 @@ class TheAkashicRecord:
         if "physics" in payload:
             trigram = self._extract_dominant_trigram(payload["physics"])
             active_lens = payload.get("lens", "OBSERVER")
-            resonances = (self.lore.get("NARRATIVE_DATA") or {}).get("_META_RESONANCE_", [])
-            valid_resonance = next((r for r in resonances if
-                isinstance(r, dict) and r.get("trigram") == trigram and (r.get("lens") or r.get("soul")) == active_lens), None)
+            valid_resonance = next((r for r in self.meta_resonance if
+                                    isinstance(r, dict) and r.get("trigram") == trigram and (
+                                                r.get("lens") or r.get("soul")) == active_lens), None)
             if isinstance(valid_resonance, dict) and self.events:
                 # Use .get() to completely satisfy PyRight's type checker
                 self.events.publish("RESONANCE_ACHIEVED", {
@@ -209,10 +215,9 @@ class TheAkashicRecord:
                     "msg": valid_resonance.get("msg", "")
                 })
 
-    @staticmethod
-    def calculate_manifold_shift(theta: str, e: Dict[str, float]) -> Dict[str, float]:
+    def calculate_manifold_shift(self, theta: str, e: Dict[str, float]) -> Dict[str, float]:
         theta_upper = theta.upper()
-        c = (LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "MANIFOLD_SHIFTS") or {})
+        c = self.manifold_shifts
         bias_lenses = c.get("BIAS_LENSES") or {}
         scalar_lenses = c.get("SCALAR_LENSES") or {}
         vector_thresholds = c.get("VECTOR_THRESHOLDS") or {}
@@ -231,7 +236,7 @@ class TheAkashicRecord:
 
     def forge_new_item(self, vector: Dict[str, float]) -> Tuple[str, Dict]:
         dominant_force = self._get_dominant_force(vector, "CHI")
-        item_gen_data = self.lore.get("ITEM_GENERATION") or {}
+        item_gen_data = self.item_gen_data
         prefixes = item_gen_data.get("PREFIXES", {})
         prefix = prefixes.get(dominant_force, item_gen_data.get("FALLBACK_PREFIX", "Ascended"))
         unique_suffix = str(uuid.uuid4())[:4].upper()
@@ -361,10 +366,8 @@ class TheAkashicRecord:
 
     def replay_dreams(self) -> Optional[str]:
         """Recalls a persistent dream from a past or present session."""
-        import random
         if not self.dream_archive:
             return None
-
         echo = random.choice(self.dream_archive)
         return f"An echo of a past dream surfaces: {echo}"
 
@@ -465,8 +468,15 @@ class TheAkashicRecord:
         self.shadow_stock.append(memory_data)
         if len(self.shadow_stock) > self.MAX_SHADOW_CAPACITY:
             self.shadow_stock.pop(0)
-        msg = ux("akashic_strings", "ghost_archived")
-        if self.events: self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
+        concept = memory_data.get("concept", "An unknown echo")
+        msg = ux("akashic_strings",
+                 "ghost_archived") or f"A load-bearing memory refused to die. [{concept.upper()}] has entered the Shadow Archive."
+        if self.events:
+            try:
+                formatted_msg = msg.format(concept=concept)
+            except KeyError:
+                formatted_msg = msg
+            self.events.log(f"{Prisma.VIOLET}{formatted_msg}{Prisma.RST}", "AKASHIC")
 
     def measure_cognitive_density(self, start_concept: str) -> float:
         """ [navi-fractal PROTOCOL]: BFS Mass-Radius Subconscious Scaling """
@@ -493,7 +503,6 @@ class TheAkashicRecord:
         max_r = max(mass_at_r.keys()) if mass_at_r else 0
         total_mass = sum(mass_at_r.values())
         if max_r > 1 and total_mass > 1:
-            import math
             return math.log(total_mass) / math.log(max_r)
         return 1.0
 
@@ -504,9 +513,9 @@ class TheAkashicRecord:
         pool = self.shadow_stock + self.scar_map
         for mem in pool:
             coords = mem.get("coords") or mem.get("coordinates") or {}
-            kappa = float(safe_get(coords, "kappa", safe_get(coords, "E", 0.5)))
-            gamma = float(safe_get(coords, "gamma", safe_get(coords, "C", 0.5)))
-            mu = float(safe_get(coords, "mu", safe_get(coords, "beta", 0.5)))
+            kappa = float(coords.get("kappa", coords.get("E", 0.5)))
+            gamma = float(coords.get("gamma", coords.get("C", 0.5)))
+            mu = float(coords.get("mu", coords.get("beta", 0.5)))
             creative_drive = kappa * gamma * mu
             if creative_drive > max_drive:
                 max_drive = creative_drive

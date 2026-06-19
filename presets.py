@@ -91,7 +91,7 @@ class BoneConfig:
         "THE OBSERVER": {"VOID": 0.5, "ABSTRACT": 0.2},}
 
     TRAUMA_VECTOR = {"THERMAL": 0.0, "CRYO": 0.0, "SEPTIC": 0.0, "BARIC": 0.0}
-    VERSION = "20.5.0"
+    VERSION = "20.6.0"
     VERBOSE_LOGGING = True
     MAX_HEALTH = 100.0
     MAX_STAMINA = 100.0
@@ -121,8 +121,8 @@ class BoneConfig:
     PROVIDER = "ollama"
     BASE_URL = None
     API_KEY = "ollama"
-    MODEL = "hermes3"
-    OLLAMA_FALLBACK = "llama3.1:8b"
+    MODEL = "mistral-nemo"
+    OLLAMA_FALLBACK = ""
     _TEMPLATE_DATA = {}
 
     @classmethod

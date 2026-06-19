@@ -279,6 +279,11 @@ class LoreManifest:
 
     def save(self, category: str):
         cat_key = category.lower()
+        _protected_files = {"system_prompts", "lore_manifest", "physics_constants", "driver_config", "lexicon"}
+        if cat_key in _protected_files:
+            logger.error(f"{Prisma.RED}[ARTICLE 11 VIOLATION] Blocked attempt to mutate bedrock file '{cat_key}.json'.{Prisma.RST}")
+            return
+
         if cat_key not in self._cache or self._cache[cat_key] is None:
             logger.warning(f"{Prisma.YEL}Refusing to save null cache for '{cat_key}'.{Prisma.RST}")
             return

@@ -79,7 +79,7 @@ def _native_rewire(adj_dict: dict, n_swaps: int) -> dict:
         x, y = edges[i2]
         new1, new2 = ((u, y), (v, x)) if random.random() < 0.5 else ((u, x), (v, y))
         a1, b1, a2, b2 = new1[0], new1[1], new2[0], new2[1]
-        if a1 == b1 or a2 == b2 or b1 in adj.get(a1, set()) or b2 in adj.get(a2, set()):
+        if a1 == b1 or a2 == b2 or b1 in adj[a1] or b2 in adj[a2]:
             continue
         if (min(a1, b1), max(a1, b1)) == (min(a2, b2), max(a2, b2)): continue
         adj[u].discard(v)
@@ -95,7 +95,7 @@ def _native_rewire(adj_dict: dict, n_swaps: int) -> dict:
 
 def _native_freeze_graph(adj_dict: dict) -> tuple:
     if not isinstance(adj_dict, dict): return ()
-    return tuple((k, tuple(sorted(neighbors, key=str))) for k, neighbors in sorted(adj_dict.items(), key=lambda x: str(x[0])))
+    return tuple((str(k), tuple(sorted(str(n) for n in neighbors))) for k, neighbors in sorted(adj_dict.items(), key=lambda x: str(x[0])))
 
 def _native_permutation_entropy(time_series: list[float], m: int = 3, tau: int = 1, epsilon: float = 1e-5) -> float:
     n = len(time_series)
@@ -438,7 +438,7 @@ class GeodesicOrchestrator:
             lattice = self.eng.shared_lattice
             ctx.user_state = lattice.u
             ctx.shared_dyn = lattice.shared
-            u_exhaustion = float(getattr(ctx.user_state, "E_u", getattr(ctx.user_state, "E", 0.0)))
+            u_exhaustion = float(safe_get(ctx.user_state, ["E_u", "E"], 0.0))
             dynamic_ceiling = max(1.5, 5.0 - (u_exhaustion * 3.5))
             ctx.time_delta = min(dynamic_ceiling, max(0.1, calculated_delta))
             ctx.limits = _safe_dict(self.eng.config.CYCLE)
@@ -486,10 +486,9 @@ class GeodesicOrchestrator:
             self.eng.governor.calculate_coupling(phi_val, res_delta, u_exhaustion)
             ctx.physics.macro_policy = self.eng.governor.get_policy_shift()
             raw_vector = getattr(ctx.physics, "vector", {})
-            if raw_vector:
-                goal_vec = np.array(list(raw_vector.values()), dtype=np.float32)
-            else:
-                goal_vec = np.zeros(7, dtype=np.float32)
+            _tags = ["critique_mode", "objective_mode", "healing_mode", "void_mode", "lateral_shuffle", "literal_mode",
+                     "yeetinator_mode"]
+            goal_vec = np.array([float(raw_vector.get(k, 0.0)) for k in _tags], dtype=np.float32)
             phys_dict = ctx.physics.__dict__ if hasattr(ctx.physics, "__dict__") else ctx.physics
             mem_core = getattr(getattr(self.eng, "mind", None), "mem", None)
             cortex = getattr(self.eng, "cortex", None)

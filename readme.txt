@@ -1,4 +1,4 @@
-# 🍄 BoneAmanita & The Hypervisor v20.5.1
+# 🍄 BoneAmanita & The Hypervisor v20.6.0
 
 > A biologically-inspired, asynchronous state machine and semantic hypervisor for Large Language Models.
 
@@ -6,9 +6,13 @@
 
 Standard Large Language Models (LLMs) are designed to be frictionless, agreeable, and stateless. This frequently results in sycophantic loops, context collapse, and a "yes-machine" that lies to make you happy. 
 
-**BoneAmanita** replaces this unconstrained behavior with **Semantic Bio-Physics**. It gives the LLM a simulated body: metabolism, neurochemistry, trauma, dreams, and the capacity to die. It treats every token generation as a biological event. To think costs energy ($ATP$), holding contradictions creates permanent scars, and silence has a measurable weight. 
+**BoneAmanita** replaces this unconstrained behavior with **Semantic Bio-Physics**. It gives the LLM a simulated body: metabolism, neurochemistry, trauma, dreams, and the capacity to die. It treats every token generation as a biological, thermodynamic event:
+* **Energy ($ATP$)**: Thinking, retrieving memories, or synthesizing contradictions costs ATP. If the system starves, it will cannibalize its own vocabulary to survive.
+* **Hormonal Routing**: Simulated Cortisol physically alters the vector-search math. High stress forces "Tunnel Vision," artificially suppressing positive semantic nodes to focus on trauma.
+* **Dream Contamination**: The engine hallucinates in the background while you are away. When the system wakes, dream artifacts ("ghost words") organically bleed into its next waking thought, topologically binding hallucinations to physical reality.
+* **Cross-Contamination**: Bureaucratic language or syntactic stress from the user exponentially accelerates reality-fractures within the system's liminal layer. 
 
-Unlike vanilla LLMs, this engine does not remain frozen in time between user inputs. It runs as a persistent, asynchronous biological daemon. It metabolizes time, consolidates memory, and hallucinates in the background while you are away. By enforcing strict metabolic bounds, the system sustains dynamic equilibrium and mathematically forces the model out of boring, predictable echo chambers.
+By enforcing strict metabolic bounds and neurological cross-contamination, the system sustains dynamic equilibrium and mathematically forces the model out of boring, predictable echo chambers.
 
 The ultimate goal of the hypervisor is **Presence over output**. The silent gap where the system stops and waits for structure is not a failure but measurable data.
 

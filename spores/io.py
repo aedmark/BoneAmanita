@@ -16,10 +16,15 @@ class LocalFileSporeLoader:
 
     def save_spore(self, filename: str, data: Any) -> Optional[str]:
         temp_path: Optional[str] = None
-        if os.path.isabs(filename) or os.path.dirname(filename) == self.directory:
-            final_path = filename
+        base_dir = os.path.realpath(self.directory)
+        if os.path.isabs(filename):
+            final_path = os.path.realpath(filename)
         else:
-            final_path = os.path.join(self.directory, os.path.basename(filename))
+            final_path = os.path.realpath(os.path.join(base_dir, os.path.basename(filename)))
+        if os.path.commonpath([base_dir, final_path]) != base_dir:
+            if msg := ux_format("spore_strings", "loader_save_err", e="Path traversal violation"):
+                print(f"{Prisma.RED}{msg} ({filename}){Prisma.RST}")
+            return None
         os.makedirs(os.path.dirname(final_path), exist_ok=True)
         try:
             fd, temp_path = tempfile.mkstemp(dir=os.path.dirname(final_path), text=True)

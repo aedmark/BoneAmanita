@@ -243,7 +243,7 @@ class IntrusionPhase(SimulationPhase):
             ctx.log(f"{Prisma.VIOLET}{msg_p.format(current_psi=current_psi)}{Prisma.RST}")
             weaver = TheTclWeaver.get_instance()
             ctx.input_text = weaver.consume_by_void(ctx.input_text, current_psi)
-            safe_set(ctx.physics, "psi", min(1.0, current_psi + 0.1))
+            ctx.physics.psi = min(1.0, current_psi + 0.1)
             self.eng.stamina = max(0.0, self.eng.stamina - 5.0)
             msg_drain = ux("cycle_strings", "intrusion_hallucination_drain")
             ctx.log(f"{Prisma.GRY}{msg_drain}{Prisma.RST}")

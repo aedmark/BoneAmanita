@@ -21,6 +21,8 @@ class EnneagramDriver:
         driver_cfg = manifest.get("DRIVER_CONFIG") or {}
         self.weights_cfg = driver_cfg.get("ENNEAGRAM_WEIGHTS", {})
         self.state_map = driver_cfg.get("PERSONA_STATE_MAP", {})
+        self.sanc_zone = safe_get(safe_get(self.cfg, "SANCTUARY", {}), "ZONE", "SANCTUARY")
+        self.hybrid_gap = float(safe_get(cfg, "ENNEAGRAM_HYBRID_GAP", 0.5))
 
     def _calculate_raw_persona(self, physics: Any, soul_ref=None) -> Tuple[str, str, str]:
         p_vec = safe_get(physics, "vector", {})
@@ -37,8 +39,7 @@ class EnneagramDriver:
         if "NARRATOR" in scores:
             scores["NARRATOR"] += 2.0
 
-        sanc_zone = safe_get(safe_get(self.cfg, "SANCTUARY", {}), "ZONE", "SANCTUARY")
-        if p_zone == sanc_zone or (4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5):
+        if p_zone == self.sanc_zone or (4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5):
             for persona, mod in [("NARRATOR", 6.0), ("JESTER", 3.0), ("GORDON", -2.0)]:
                 if persona in scores: scores[persona] += mod
         for persona, criteria in weights_cfg.items():
@@ -66,9 +67,7 @@ class EnneagramDriver:
         sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         winner, win_score = sorted_scores[0]
         runner_up, run_score = sorted_scores[1]
-        cfg = safe_get(self.cfg, "DRIVERS", {})
-        hybrid_gap = float(safe_get(cfg, "ENNEAGRAM_HYBRID_GAP", 0.5))
-        if (win_score - run_score) <= hybrid_gap and win_score > 0:
+        if (win_score - run_score) <= self.hybrid_gap and win_score > 0:
             winner = f"{winner}/{runner_up} [HYBRID]"
         msg_winner = ux("driver_strings", "ennea_winner") or "Shift triggered: {winner}"
         reason = msg_winner.format(winner=winner, score=win_score, v=p_vol, d=p_drag)

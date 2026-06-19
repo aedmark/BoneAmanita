@@ -1,0 +1,84 @@
+# CHANGELOG.md
+-----------------------------------------------------------
+
+### **BONEAMANITA 20.6.0 "The Subconscious Bridge"**
+
+**Cognitive Evolution (Domain Implementations)**
+- **Vector 1: The Tunnel Vision Protocol:** Cortisol is no longer a passive biometric. High cortisol now mechanically restricts N-Dimensional memory dredging, mathematically suppressing lateral/positive topological nodes and violently narrowing the Akashic retrieval beam during RAG execution.
+- **Vector 2: Cross-Driver Contamination:** The `SyntaxModule` and `LiminalModule` have been topologically linked. High bureaucratic or grammatical stress now acts as an exponential multiplier in the Liminal layer, violently accelerating the creation of `godel_scars` and reality fractures.
+- **Vector 3: Waking Dream Injection:** Sleep is no longer isolated. Waking from a deep REM cycle now triggers "Brain Fog" (spikes in `chi` and `narrative_drag` during the `CognitionPhase`). The system mechanically extracts "ghost words" from the dream residue and blindly fuses them into the waking user prompt, topologically linking hallucination to physical reality.
+- **Vector 4: Shadow Archival Transcedence:** Article 8 has been fully implemented in `MemoryCore.cannibalize()`. When the memory graph reaches critical mass, nodes with a topological mass ≥ 25.0 bypass the standard JSON graveyard. Instead, they fire a `GHOST_SIGNAL`, transcending into the Akashic `shadow_stock` to permanently haunt the Dream Engine.
+
+**Performance & Architecture (The Paranoia Purge: Part II)**
+- **Fortified Geometric Containment:** Secured `LocalFileSporeLoader.save_spore` against directory traversal attacks using strict `os.path.realpath` and `os.path.commonpath` evaluations.
+- **Bedrock Pre-Compilation:** Excised dynamic singleton queries (`LoreManifest.get_instance()`), inline imports, and nested `safe_get` wrappers from the $O(N)$ hot loops inside `SubconsciousStrata`, `NoeticLoop`, `MetabolicGovernor`, `TheAkashicRecord`, `SyntaxModule`, and `EnneagramDriver`. All bedrock constants are now rigidly cached at genesis. 
+
+---
+
+### **BONEAMANITA 20.5.2 "The Paranoia Purge"**
+
+**Security & Containment**
+- **Strict Geometric Containment:** Patched a silent directory traversal vulnerability in `TheSubstrate.execute_writes` (`mechanics/tools.py`) by replacing `os.path.abspath` and `startswith()` string checks with strict `os.path.realpath` and `os.path.commonpath` evaluations.
+
+**Performance & Architecture**
+- **O(N) Amputations & Memory Optimizations:**
+  - **Garbage Collection Relief:** Eradicated massive object instantiation inside the `_native_rewire` graph topology loop (`cycle.py`) and `ChemicalState.homeostasis` tick loop (`brain/mind.py`) by moving maps to class constants and bypassing eager dictionary `get()` defaults.
+  - **Hash Traversal Rescue:** Converted `O(N)` list iterations to `O(1)` hash sets for vocabulary scanning in `drivers/syntax.py` and `drivers/liminal.py`.
+  - **Native C-Level Execution:** Dropped redundant python-level `in` checks guarding `.replace()` calls in `brain/cortex.py`, letting the C-level string operations natively handle the workload.
+- **The Vector Array Collapse:** Stabilized `goal_vec` matrix generation in the `GeodesicOrchestrator` (`cycle.py`) by rigidly mapping tag indices, neutralizing catastrophic mathematical misalignments if downstream modules inject rogue dictionary keys into the physics vector.
+- **Config Pre-compilation:** Purged real-time `LoreManifest` JSON fetching from hot loops. Constant references (e.g., the Sincerity Map, Drag Maximums, Liminal Weights) are now strictly pre-compiled in `__init__` functions across the `phases/` and `drivers/` modules.
+- **Type Paranoia Drift Remediation:** Systematically removed "paranoid" syntax logic. Stripped abstraction wrappers (`safe_get`/`safe_set`), redundant type-casting (e.g., `str()` on strings), and explicit string lowercasing where variables were mathematically guaranteed to be sanitized or strictly typed.
+- **Graph Traversal Short-Circuits:** Restructured heavy boolean logic in `RandomRetrievalNavigator` into a short-circuited condition block, drastically reducing the operation weight during deep-library topological scans.
+- **Object Bloat Removal:** Collapsed redundant intermediate dictionary generation in `TheAkashicRecord._get_dominant_force` down to a memory-efficient list comprehension.
+- **Hardened Array Extraction:** Explicitly bound variable padding in `BoneArchitect.awaken` with `max(0, 5 - len(results))` to prevent Python's negative-multiplier quirk from swallowing silent array extraction index errors.
+
+---
+
+### **BONEAMANITA 20.5.1 "The Deep Tissue Massage"**
+
+**Security & Immunity**
+- **Cryptographic Upgrade:** Upgraded `HippocampalCache` hashing from computationally compromised MD5 to SHA-256 for robust neural cache hygiene (`brain/ann.py`).
+- **Atomic State Swaps:** Patched `soul/oroboros.py` to use Python's secure `tempfile` library for writing legacy states, eliminating hardcoded `.tmp` path race conditions and symlink vulnerabilities.
+- **Loud Failure Protocol:** Stripped silent `TypeError` catching from `PhysicsPacket.__setattr__` (`physics/models.py`). Toxic string injections into critical energy floats (like `voltage`) will now fail loudly to prevent corrupted state masking.
+
+**Performance & Architecture**
+- **The Big O Overhaul:** Drastically reduced computational overhead in `MemoryCore` (`spores/memory.py`):
+  - Replaced massive list allocation and $O(N \log N)$ `min()` scans with $O(N)$ running minimums in `cannibalize()`.
+  - Replaced $O(N \log N)$ `np.argsort` with $O(N)$ `np.argpartition` for lightning-fast Subconscious Dredging.
+  - Amputated nested $O(N^2)$ iteration in `prune_synapses` in favor of C-level `set.intersection`.
+  - Replaced boilerplate nested index loops with `itertools.combinations` in `illuminate()`.
+- **I/O Apocalypse Averted:** Blocked two catastrophic disk-read bottlenecks:
+  - Cached `LexiconService` in `machine/forge.py` to prevent reloading JSON from disk every time crafting is attempted.
+  - Amputated `_load_index()` from `_prune_strata()` (`spores/memory.py`), slicing arrays directly in RAM instead of triggering a full disk re-parse and re-vectorization during deep memory pruning.
+- **Paranoia Purge:** Removed redundant, CPU-wasting "paranoid programming" checks:
+  - Optimized `safe_get` (`struts.py`) to bypass explicit `hasattr` loops, defaulting to native `dict.get` and `getattr` in $O(1)$ time.
+  - Removed `hasattr` checks in `CycleContext.to_dict` (`core.py`), trusting `@dataclass(slots=True)` memory constraints.
+  - Amputated pure-Python matrix math abstractions (`_identity`, `_mat_mul`, etc.) in `spores/spore_utils.py` to defer all linear algebra directly to NumPy.
+- **Reflection Bottleneck:** Cached `dataclasses.fields(cls)` in `PhysicsPacket._safe_init` (`physics/models.py`), eliminating dynamic class reflection overhead during high-volume packet instantiation.
+
+**Bug Fixes**
+- **The Infinite Recursion Trap:** Patched the Mitchell Protocol (`spores/memory.py`) to track object `id()` hashes, preventing fatal `RecursionError` crashes when encountering circular references.
+- **Combinatorial Scope Crash:** Fixed a critical indentation bug in `MemoryCore.illuminate` where `itertools` pairing was accidentally scoped inside the memory-scoring loop, triggering `UnboundLocalError` on zero-resonance inputs and severing the phase pipeline.
+- **Event Redundancy:** Consolidated `Q_MATRIX_UPDATED` broadcasts into a centralized `_sync_q_matrix()` method in `spores/network.py` to uphold DRY principles and prevent desyncs.
+
+
+### **BONEAMANITA 20.5.0 "The S.L.A.S.H. Audit"**
+
+**Security & Immunity**
+
+- **The Lexical Firewall Hardening:** Expanded `_DESTRUCTIVE_PATTERNS` in `main.py` to intercept raw `eval()`, `exec()`, and native system imports (`pty`, `sys`), physically blocking adversarial python injection prior to cognitive load.
+- **API Key Redaction:** Overhauled `core.py`'s `JSONEncoder` to actively scrub dictionaries for terms like "api_key", "secret", "token", and "password". Toxic payload data is now cleanly replaced with `[REDACTED]` before being flushed to telemetry logs.
+
+**Refactoring & Optimization**
+
+- **The Syntactic Purge:** Upgraded `safe_get` in `struts.py` to support array-based key fallbacks, allowing the system to amputate deeply nested, paranoid `getattr()` chains throughout the cognitive cycle.
+- **$O(1)$ Graph Traversal:** Ripped out the $O(N)$ `list.pop(0)` operation inside the `cycle.py` background WLS thread and replaced it with a `collections.deque` topological BFS queue, preventing the thread from choking as the spatial memory radius expands.
+- **EAFP Logic Shifts:** Replaced paranoid, multi-tier object inspection in `_verify_semantic_topology` and `purge_context` with clean, pythonic 'Easier to Ask for Forgiveness than Permission' `try-except` boundary blocks.
+
+**Fixed**
+
+- **The Reality Fracture (`NameError`):** Fixed a load-bearing amputation in `cycle.py` where the Cybernetic Governor's native variable demands (`res_delta`, `u_exhaustion`) were accidentally severed from the local namespace, instantly shunting the system into Safe Mode.
+- **The Override Currency Bug:** Re-routed the Architect's `#override` gate in `main.py` to target the correct endocrine pathway (`self.bio.endo.glimmers`), allowing the user to properly spend their currency to assert agency. Introduced mathematical proofs in the test suite to validate both successful expenditures and bankrupt rejections.
+- **The Moog Memory Erasure:** Fixed an architectural flaw in `brain/cortex.py` where the system prematurely popped the `dialogue_buffer` upon detecting un-actionable toxicity. High-drag prompts are now properly quarantined in the worry ledger without accidentally deleting the previous, healthy conversational turn.
+- **The Anaerobic Chaos Leak:** Plugged a massive accounting error in `body/metabolism.py`. Heavy structural payloads (`chi` > 0.8, `psi` > 0.8) were dodging their biological tax because the `ANAEROBIC_THRESHOLD` bypass fired before the waste was calculated. Chaos waste is now dynamically calculated and actively poisons the `ros_buildup` even when the system burns HP instead of ATP.
+- **Silent Asynchronous Failures:** Re-bound the `mem` local variable inside the background topology WLS thread so the engine can properly execute apoptosis (terminal shutdown) when it detects structural rot, rather than the shutdown command crashing silently.

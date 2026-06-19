@@ -750,8 +750,7 @@ class TheCortex:
         if not history:
             return
         self.dialogue_buffer.clear()
-        self.dialogue_buffer.extend((line.replace("User: ", "Traveler: ").replace(" | System: ",
-            "\nSystem: ") if " | System: " in line else line) for line in history[-self.MAX_HISTORY:])
+        self.dialogue_buffer.extend(line.replace("User: ", "Traveler: ").replace(" | System: ", "\nSystem: ") for line in history[-self.MAX_HISTORY:])
         if self.events:
             msg = ux("brain_strings", "cortex_resequenced")
             self.events.log(msg.format(count=len(self.dialogue_buffer)), "BRAIN")

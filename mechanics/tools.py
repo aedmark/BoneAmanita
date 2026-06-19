@@ -116,11 +116,10 @@ class RandomRetrievalNavigator:
         refs_set = set(node.refs)
         neighbors = []
         for n in self.library.nodes:
-            is_parent = (n.id == node.parent_id)
-            is_child = (n.parent_id == node.id)
-            is_sibling = (node.parent_id and n.parent_id == node.parent_id and n.id != node.id)
-            is_referenced = (n.id in refs_set)
-            if is_parent or is_child or is_sibling or is_referenced:
+            if (n.id == node.parent_id) or \
+                    (n.parent_id == node.id) or \
+                    (node.parent_id and n.parent_id == node.parent_id and n.id != node.id) or \
+                    (n.id in refs_set):
                 neighbors.append(n)
         return neighbors
 
@@ -219,12 +218,12 @@ class TheSubstrate:
         logs, cost = [], 0.0
         if not self.pending_writes: return logs, cost
         os.makedirs("output", exist_ok=True)
-        base_dir = os.path.abspath("output")
+        base_dir = os.path.realpath("output")
         retained_writes = []
         for w in self.pending_writes:
-            s_path = os.path.abspath(os.path.join(base_dir, w["path"].lstrip("/")))
+            s_path = os.path.realpath(os.path.join(base_dir, w["path"].lstrip("/")))
             s_name = os.path.basename(s_path)
-            if not s_path.startswith(base_dir):
+            if os.path.commonpath([base_dir, s_path]) != base_dir:
                 logs.append(
                     f"{Prisma.VIOLET}FATAL ERROR: Path traversal breach detected ({w['path']}). Purged.{Prisma.RST}")
                 continue

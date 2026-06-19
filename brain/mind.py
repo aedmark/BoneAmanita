@@ -23,11 +23,12 @@ class ChemicalState:
     adrenaline: float = 0.1
     serotonin: float = 0.2
     config_ref: Any = None
+    _HOMEOSTASIS_MAP = (("dopamine", "RESTING_DOPAMINE", 0.2), ("cortisol", "RESTING_CORTISOL", 0.1), ("adrenaline", "RESTING_ADRENALINE", 0.1), ("serotonin", "RESTING_SEROTONIN", 0.2))
 
     def homeostasis(self, rate: float = 0.1):
         safe_rate = max(0.0, min(1.0, rate))
         cfg = safe_get(self.config_ref or BoneConfig, "CORTEX", {})
-        for attr, key, default in [("dopamine", "RESTING_DOPAMINE", 0.2), ("cortisol", "RESTING_CORTISOL", 0.1), ("adrenaline", "RESTING_ADRENALINE", 0.1), ("serotonin", "RESTING_SEROTONIN", 0.2)]:
+        for attr, key, default in self._HOMEOSTASIS_MAP:
             target = float(safe_get(cfg, key, default))
             setattr(self, attr, getattr(self, attr) + (target - getattr(self, attr)) * safe_rate)
 
@@ -141,28 +142,35 @@ class NeurotransmitterModulator:
             return ux("brain_strings", "mood_defensive") or "You feel defensive and on edge."
         return ux("brain_strings", "mood_neutral") or ""
 
+
 class NoeticLoop:
     def __init__(self, mind_layer, bio_layer, _events, config_ref=None):
         self.mind = mind_layer
         self.bio = bio_layer
         self.cfg = config_ref or BoneConfig
+        cfg = safe_get(self.cfg, "CORTEX", {})
+        self.b = {
+            "IGNITION_V_DIV": max(1.0, float(safe_get(cfg, "IGNITION_V_DIV", 20.0))),
+            "IGNITION_W_DIV": max(1.0, float(safe_get(cfg, "IGNITION_W_DIV", 10.0))),
+            "LINK_VOLTAGE_THRESH": float(safe_get(cfg, "LINK_VOLTAGE_THRESH", 12.0)),
+            "LINK_CHANCE": float(safe_get(cfg, "LINK_CHANCE", 0.15)),
+            "LINK_MAX_WEIGHT": float(safe_get(cfg, "LINK_MAX_WEIGHT", 10.0)),
+            "LINK_BOOST": float(safe_get(cfg, "LINK_BOOST", 2.5))
+        }
 
     def think(self, physics_packet, voltage_history, soul_ref=None):
         voltage = float(safe_get(physics_packet, "voltage", 0.0))
         clean_words = safe_get(physics_packet, "clean_words", [])
         avg_v = sum(voltage_history) / len(voltage_history) if voltage_history else 0
-        cfg = safe_get(self.cfg, "CORTEX", {})
-        v_div = max(1.0, float(safe_get(cfg, "IGNITION_V_DIV", 20.0)))
-        w_div = max(1.0, float(safe_get(cfg, "IGNITION_W_DIV", 10.0)))
-        link_v = float(safe_get(cfg, "LINK_VOLTAGE_THRESH", 12.0))
-        link_chance = float(safe_get(cfg, "LINK_CHANCE", 0.15))
-        ignition = min(1.0, (avg_v / v_div) * (len(clean_words) / w_div))
-        if voltage > link_v and random.random() < link_chance:
+        b = self.b
+
+        ignition = min(1.0, (avg_v / b["IGNITION_V_DIV"]) * (len(clean_words) / b["IGNITION_W_DIV"]))
+        if voltage > b["LINK_VOLTAGE_THRESH"] and random.random() < b["LINK_CHANCE"]:
             unique_words = list(set(clean_words))
             graph = getattr(self.mind.mem, "graph", None)
             if graph is not None and len(unique_words) >= 2:
                 w1, w2 = random.sample(unique_words, 2)
-                self._force_link(graph, w1, w2, self.cfg)
+                self._force_link(graph, w1, w2)
                 self.bio.mito.adjust_atp(-1.0, "Spontaneous Semantic Link")
         current_lens = str(safe_get(soul_ref, "archetype", "OBSERVER")).upper()
         current_role = f"The {current_lens.title().replace('_', ' ')}"
@@ -171,19 +179,15 @@ class NoeticLoop:
                 "role": current_role, "ignition": ignition, "physics": physics_packet,
                 "bio": self.bio.endo.get_state()}
 
-    @staticmethod
-    def _force_link(graph, wa, wb, config_ref=None):
+    def _force_link(self, graph, wa, wb):
         if graph is None:
             return
-        target_cfg = config_ref or BoneConfig
-        cfg = safe_get(target_cfg, "CORTEX", {})
-        max_edge = float(safe_get(cfg, "LINK_MAX_WEIGHT", 10.0))
-        edge_boost = float(safe_get(cfg, "LINK_BOOST", 2.5))
-        for a, b in [(wa, wb), (wb, wa)]:
+        b = self.b
+        for a, b_node in [(wa, wb), (wb, wa)]:
             if a not in graph:
                 graph[a] = {"edges": {}, "last_tick": 0}
             edges = graph[a].setdefault("edges", {})
-            edges[b] = min(max_edge, float(edges.get(b, 0)) + edge_boost)
+            edges[b_node] = min(b["LINK_MAX_WEIGHT"], float(edges.get(b_node, 0)) + b["LINK_BOOST"])
 
 class DreamEngine:
     def __init__(self, events, lore_ref, llm_ref=None, mem_ref=None, eng_ref=None, config_ref=None, ):
@@ -325,6 +329,8 @@ class DreamEngine:
             if self.eng and getattr(self.eng, "akashic", None): # This getattr is load bearing
                 recent_shadows = self.eng.akashic.shadow_stock[-10:]
                 index.extend(g.get("concept", "Forgotten Echo") for g in recent_shadows if "concept" in g)
+            if cortisol > 0.6 and len(index) > 4:
+                index = index[-max(2, int(len(index) * 0.3)):]
             if len(index) >= 2:
                 ghost1, ghost2 = random.sample(index, 2)
                 k_hash = getattr(self.eng, "kernel_hash", "UNKNOWN")
@@ -439,7 +445,7 @@ class DreamEngine:
         if not memory_system.graph:
             return ux("brain_strings", "defrag_empty")
         graph = memory_system.graph
-        prunable = ((n, sum(float(v) for v in safe_get(d, "edges", {}).values())) for n, d in graph.items() if not safe_get(d, "is_diamond", False))
+        prunable = ((n, sum(float(v) for v in d.get("edges", {}).values())) for n, d in graph.items() if not d.get("is_diamond", False))
         weak_nodes = [(n, mass) for n, mass in prunable if mass < 2.0]
         pruned = [n for n, _ in sorted(weak_nodes, key=lambda x: x[1])[:limit]]
         for node in pruned:

@@ -28,11 +28,11 @@ class LLMInterface:
         self.cfg = config_ref or BoneConfig
         self.events = events_ref
         env_url = os.environ.get("OLLAMA_BASE_URL")
-        prov_val = safe_get(self.cfg, "PROVIDER", safe_get(self.cfg, "provider", "ollama"))
+        prov_val = safe_get(self.cfg, ["PROVIDER", "provider"], "ollama")
         self.provider = (provider or prov_val).lower()
-        key_val = safe_get(self.cfg, "API_KEY", safe_get(self.cfg, "api_key", ""))
+        key_val = safe_get(self.cfg, ["API_KEY", "api_key"], "")
         self.api_key = api_key or key_val
-        mod_val = safe_get(self.cfg, "MODEL", safe_get(self.cfg, "model", ""))
+        mod_val = safe_get(self.cfg, ["MODEL", "model"], "")
         self.model = model or mod_val
         defaults = safe_get(self.cfg, "DEFAULT_LLM_ENDPOINTS", {})
         self.base_url = (

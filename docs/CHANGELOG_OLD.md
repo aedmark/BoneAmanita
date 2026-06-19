@@ -1,6 +1,25 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 20.5.2 "The Paranoia Purge"**
+
+**Security & Containment**
+- **Strict Geometric Containment:** Patched a silent directory traversal vulnerability in `TheSubstrate.execute_writes` (`mechanics/tools.py`) by replacing `os.path.abspath` and `startswith()` string checks with strict `os.path.realpath` and `os.path.commonpath` evaluations.
+
+**Performance & Architecture**
+- **O(N) Amputations & Memory Optimizations:**
+  - **Garbage Collection Relief:** Eradicated massive object instantiation inside the `_native_rewire` graph topology loop (`cycle.py`) and `ChemicalState.homeostasis` tick loop (`brain/mind.py`) by moving maps to class constants and bypassing eager dictionary `get()` defaults.
+  - **Hash Traversal Rescue:** Converted `O(N)` list iterations to `O(1)` hash sets for vocabulary scanning in `drivers/syntax.py` and `drivers/liminal.py`.
+  - **Native C-Level Execution:** Dropped redundant python-level `in` checks guarding `.replace()` calls in `brain/cortex.py`, letting the C-level string operations natively handle the workload.
+- **The Vector Array Collapse:** Stabilized `goal_vec` matrix generation in the `GeodesicOrchestrator` (`cycle.py`) by rigidly mapping tag indices, neutralizing catastrophic mathematical misalignments if downstream modules inject rogue dictionary keys into the physics vector.
+- **Config Pre-compilation:** Purged real-time `LoreManifest` JSON fetching from hot loops. Constant references (e.g., the Sincerity Map, Drag Maximums, Liminal Weights) are now strictly pre-compiled in `__init__` functions across the `phases/` and `drivers/` modules.
+- **Type Paranoia Drift Remediation:** Systematically removed "paranoid" syntax logic. Stripped abstraction wrappers (`safe_get`/`safe_set`), redundant type-casting (e.g., `str()` on strings), and explicit string lowercasing where variables were mathematically guaranteed to be sanitized or strictly typed.
+- **Graph Traversal Short-Circuits:** Restructured heavy boolean logic in `RandomRetrievalNavigator` into a short-circuited condition block, drastically reducing the operation weight during deep-library topological scans.
+- **Object Bloat Removal:** Collapsed redundant intermediate dictionary generation in `TheAkashicRecord._get_dominant_force` down to a memory-efficient list comprehension.
+- **Hardened Array Extraction:** Explicitly bound variable padding in `BoneArchitect.awaken` with `max(0, 5 - len(results))` to prevent Python's negative-multiplier quirk from swallowing silent array extraction index errors.
+
+---
+
 ### **BONEAMANITA 20.5.1 "The Deep Tissue Massage"**
 
 **Security & Immunity**

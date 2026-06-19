@@ -49,6 +49,7 @@ class GatekeeperPhase(SimulationPhase):
         super().__init__(engine_ref)
         self.name = "GATEKEEP"
         self.gatekeeper = TheGatekeeper(self.eng.lex, config_ref=self.eng.config)
+        self.max_drag = float(LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "DRAG_MAX") or 100.0)
 
     def run(self, ctx: CycleContext):
         if ctx.is_system_event:
@@ -71,10 +72,17 @@ class GatekeeperPhase(SimulationPhase):
                 ctx.input_text, current_zone)
             if coupling_error:
                 log_msg = (ux("cycle_strings", "gatekeep_log_premise") or f"Premise Violation: {coupling_error}")
-                ctx.log(f"{Prisma.OCHRE}[GORDON] {log_msg}. Applying massive Narrative Drag.{Prisma.RST}")
+                ctx.log(
+                    f"{Prisma.OCHRE}[GORDON] {log_msg}. Applying massive Narrative Drag and Somatic Shock.{Prisma.RST}")
                 current_drag = float(getattr(ctx.physics, "narrative_drag", 0.0))
-                max_drag = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "DRAG_MAX") or 100.0
-                setattr(ctx.physics, "narrative_drag", min(float(max_drag), current_drag + 50.0))
+                ctx.physics.narrative_drag = min(self.max_drag, current_drag + 50.0)
+                shock_damage = 15.0
+                if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
+                    self.eng.bio.mito.state.atp_pool = max(0.0, self.eng.bio.mito.state.atp_pool - shock_damage)
+                    ctx.log(f"{Prisma.RED}[BIOLOGY] Somatic Shock detected. Burned {shock_damage} ATP.{Prisma.RST}")
+                elif hasattr(self.eng, "stamina"):
+                    self.eng.stamina = max(0.0, self.eng.stamina - shock_damage)
+                    ctx.log(f"{Prisma.RED}[BIOLOGY] Somatic Shock detected. Burned {shock_damage} Stamina.{Prisma.RST}")
                 ctx.council_mandates.append({"action": "STYLE_INJECTION", "log": f"CRITICAL CONTEXT: The user attempted an impossible action ({coupling_error}). Do NOT fulfill the action. React to their failure in-character based on your current archetype."})
         is_allowed, refusal_packet = self.gatekeeper.check_entry(ctx)
         if not is_allowed:
