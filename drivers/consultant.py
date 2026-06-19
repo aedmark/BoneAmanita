@@ -38,8 +38,12 @@ class BoneConsultant:
         phys_vec = safe_get(physics, "vector", {})
         drag = float(safe_get(physics, "narrative_drag", 0.0))
         self.state.B = (self.state.B * b_decay) + (phys_beta * b_growth)
-        self.state.L = self.liminal_mod.analyze(user_text, phys_vec)
         self.state.O = self.syntax_mod.analyze(user_text, drag)
+        self.state.L = self.liminal_mod.analyze(
+            user_text,
+            phys_vec,
+            grammatical_stress=self.syntax_mod.grammatical_stress
+        )
         for mod in ("LIMINAL", "SYNTAX"):
             if f"[VSL_{mod}]" in user_text and mod not in self.state.active_modules:
                 self.state.active_modules.append(mod)

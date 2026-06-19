@@ -24,14 +24,14 @@ class SyntaxModule:
             "o_dec": float(safe_get(cfg, "SYNTAX_OMEGA_DECAY", 0.8)),
             "o_gro": float(safe_get(cfg, "SYNTAX_OMEGA_GROWTH", 0.2)),
             "o_min": float(safe_get(cfg, "SYNTAX_OMEGA_MIN", 0.1)),}
+        self.bureau_vocab = set(self.lex.get("bureau_buzzwords") or []) if self.lex else set()
 
     def analyze(self, text: str, narrative_drag: float) -> float:
         words = text.split()
         if not words:
             return 1.0
         b = self.bounds
-        bureau_vocab = self.lex.get("bureau_buzzwords") if self.lex else set()
-        buzz_count = sum(1 for w in words if w.lower() in bureau_vocab)
+        buzz_count = sum(1 for w in words if w.lower() in self.bureau_vocab)
         avg_len = sum(len(w) for w in words) / len(words)
         if (avg_len > b["len_hi"] and narrative_drag > b["drag_hi"]) or buzz_count > 0:
             target_omega = b["t_hi"]

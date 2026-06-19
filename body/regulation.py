@@ -68,6 +68,7 @@ class MetabolicGovernor:
         self.cfg = self.config_ref or BoneConfig
         bio_cfg = safe_get(self.cfg, "BIO", {})
         self.STATE_THRESHOLDS = safe_get(bio_cfg, "GOVERNOR_THRESHOLDS", [])
+        self.shift_cfg = safe_get(safe_get(self.cfg, "BODY_CONFIG", {}), "GOVERNOR_SHIFT", {})
         pid_cfg = safe_get(bio_cfg, "PID_SETTINGS", {})
         v_cfg = pid_cfg.get("VOLTAGE", {"kp": 0.6, "ki": 0.05, "kd": 0.2, "setpoint": 10.0})
         d_cfg = pid_cfg.get("DRAG", {"kp": 0.4, "ki": 0.1, "kd": 0.1, "setpoint": 1.5})
@@ -168,9 +169,8 @@ class MetabolicGovernor:
                 return mode
         return "COURTYARD"
 
-    @staticmethod
-    def _get_shift_message(mode: str, text_map: Dict, physics: StateProvider) -> str:
-        shift_cfg = (LoreManifest.get_instance().get("BODY_CONFIG") or {}).get("GOVERNOR_SHIFT", {})
+    def _get_shift_message(self, mode: str, text_map: Dict, physics: StateProvider) -> str:
+        shift_cfg = self.shift_cfg
         raw_colors = shift_cfg.get("COLORS", {})
         defaults = shift_cfg.get("DEFAULTS", {})
         colors = {k: getattr(Prisma, v, Prisma.WHT) for k, v in raw_colors.items()}

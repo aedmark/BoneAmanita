@@ -145,8 +145,8 @@ class ObservationPhase(SimulationPhase):
                     dream_text, shift = dream_engine.enter_rem_cycle(
                         soul_snap, bio_state=bio_packet)
                     if dream_text:
-                        ctx.log(f"{Prisma.VIOLET}☁️ While you were gone: {dream_text}{Prisma.RST}")
-                        ctx.last_dream = dream_text
+                        ctx.log(f"{Prisma.VIOLET}☁While you were gone: {dream_text}{Prisma.RST}")
+                        ctx.last_dream = {"log": dream_text, "source": "RETROACTIVE_SLEEP"}
                     if hours_passed > 4.0:
                         defrag_msg = dream_engine.run_defragmentation(self.eng.mind.mem)
                         if defrag_msg:
@@ -173,14 +173,14 @@ class ObservationPhase(SimulationPhase):
         gaze_result = self.eng.phys.observer.gaze(ctx.input_text, self.eng.mind.mem.graph)
         input_phys = gaze_result["physics"]
         for k in self._SYNC_KEYS:
-            if (val := safe_get(input_phys, k)) is not None:
-                safe_set(ctx.physics, k, val)
-        observed_voltage = safe_get(input_phys, "voltage", 0.0)
+            if (val := input_phys.get(k)) is not None:
+                setattr(ctx.physics, k, val)
+        observed_voltage = input_phys.get("voltage", 0.0)
         if observed_voltage > 0:
             ctx.physics.voltage += observed_voltage * 0.5
-        current_drag = max(0.1, safe_get(ctx.physics, "narrative_drag", 0.1))
-        input_drag = safe_get(input_phys, "narrative_drag", 0.0)
-        safe_set(ctx.physics, "narrative_drag", (current_drag * 0.7) + (input_drag * 0.3))
+        current_drag = max(0.1, getattr(ctx.physics, "narrative_drag", 0.1))
+        input_drag = input_phys.get("narrative_drag", 0.0)
+        ctx.physics.narrative_drag = (current_drag * 0.7) + (input_drag * 0.3)
         ctx.clean_words = gaze_result["clean_words"]
         current_atp = self.eng.bio.mito.state.atp_pool
         atp_warn = ctx.limits.get("OBSERVE_ATP_WARN", 15.0)
@@ -240,6 +240,8 @@ class SanctuaryPhase(SimulationPhase):
 
     def _trigger_dream(self, ctx: CycleContext):
         if not self.eng.mind.dreamer:
+            return
+        if getattr(self.eng, "tick_count", 0) <= 2 or random.random() > 0.15:
             return
         if hasattr(self.eng, "akashic") and hasattr(self.eng.akashic, "replay_dreams"):
             if dream_log := self.eng.akashic.replay_dreams():

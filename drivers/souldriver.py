@@ -27,5 +27,5 @@ class SoulDriver:
         chaos = min(0.5, (paradox - 5.0) * 0.05) if paradox > 5.0 else 0.0
         anchor = getattr(self.soul, "anchor", None)
         dignity = max(0.2, getattr(anchor, "dignity_reserve", 100.0) / 100.0) if anchor else 1.0
-        return {str(p): (float(w) + random.uniform(-chaos, chaos)) * dignity
+        return {p: (float(w) + random.uniform(-chaos, chaos)) * dignity
                 for p, w in base_weights.items()}

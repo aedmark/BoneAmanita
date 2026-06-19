@@ -38,7 +38,7 @@ class CongruenceValidator:
                 self._compiled_vocab[archetype] = set()
         target_words = self._compiled_vocab[archetype]
         if target_words and hasattr(context, "clean_words"):
-            words_to_check = set(w.lower() for w in context.clean_words)
+            words_to_check = set(context.clean_words)
             hits = len(words_to_check.intersection(target_words))
             if hits > 0:
                 bonus = safe_get(cfg, "CONGRUENCE_HIT_BONUS", 0.1)

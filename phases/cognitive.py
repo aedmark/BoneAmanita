@@ -1,5 +1,7 @@
 """phases/cognitive.py"""
 
+import random
+import re
 from typing import Dict, List, Any
 
 from constants import Prisma
@@ -57,6 +59,17 @@ class CognitionPhase(SimulationPhase):
                     f"{Prisma.VIOLET}An epigenetic scar tingles. The system remembers a past failure and braces itself.{Prisma.RST}")
                 shock_cost = 5.0
                 self.eng.stamina = max(0.0, self.eng.stamina - shock_cost)
+        if getattr(ctx, "last_dream", None) and isinstance(ctx.last_dream, dict):
+            dream_log = ctx.last_dream.get("log")
+            if dream_log:
+                ctx.log(f"{Prisma.MAG}The residue of a dream bleeds into waking cognition...{Prisma.RST}")
+                ctx.physics.chi = min(1.0, getattr(ctx.physics, "chi", 0.0) + 0.15)
+                ctx.physics.narrative_drag += 1.0
+                dream_words = [w.lower() for w in re.findall(r'\b\w+\b', dream_log) if len(w) > 3]
+                if dream_words:
+                    ghost_words = random.sample(dream_words, min(3, len(dream_words)))
+                    ctx.clean_words = ghost_words + ctx.clean_words
+            ctx.last_dream = None
         self.eng.mind.mem.encode(ctx.clean_words, _safe_dict(ctx.physics), "GEODESIC")
         if ctx.is_alive and ctx.clean_words:
             target_cfg = self.eng.config
@@ -262,6 +275,8 @@ class SimulationPreflightPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "EXECUTIVE_PREFLIGHT"
+        raw_map = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "SINCERITY_MAP") or {}
+        self.sincerity_map = {k.upper(): v for k, v in raw_map.items()}
 
     def _build_refusal(self, ctx, phys_obj, rtype, msg):
         color = Prisma.RED if rtype == 'COUNTERFACTUAL_REJECTION' else Prisma.CYN
@@ -297,9 +312,8 @@ class SimulationPreflightPhase(SimulationPhase):
         upper_input = (ctx.input_text or "").upper()
         is_slash = ("[SLASH]" in upper_input or "[MOD:CODE]" in upper_input or "/SLASH" in upper_input)
         clean_input = upper_input.replace(" ", "")
-        sincerity_map = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "SINCERITY_MAP") or {}
-        for tag, data in sincerity_map.items():
-            if tag.upper() in clean_input:
+        for tag, data in self.sincerity_map.items():
+            if tag in clean_input:
                 lens = data.get("slash") if is_slash else data.get("core")
                 msg = f"[SINCERITY PROTOCOL]: {data.get('desc')} Summoning {lens}."
                 col_code = getattr(Prisma, data.get("col", "GRY"), Prisma.GRY)

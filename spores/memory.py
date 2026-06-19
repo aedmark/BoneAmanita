@@ -87,11 +87,10 @@ class SubconsciousStrata:
 
     def bury(self, fossil_data: Dict, config_ref=None):
         try:
-            from struts import safe_get
             clean_fossil = _billy_mitchell_protocol(fossil_data)
             target_cfg = config_ref or BoneConfig
-            cfg = safe_get(target_cfg, "SPORES", {})
-            max_idx = int(safe_get(cfg, "MAX_INDEX_SIZE", 1000))
+            cfg = target_cfg.get("SPORES", {}) if isinstance(target_cfg, dict) else getattr(target_cfg, "SPORES", {})
+            max_idx = int(cfg.get("MAX_INDEX_SIZE", 1000) if isinstance(cfg, dict) else 1000)
             if len(self.index) > max_idx:
                 self._prune_strata()
             with open(self.filepath, "a", encoding="utf-8") as f:
@@ -137,10 +136,12 @@ class SubconsciousStrata:
     def dredge(self, trigger_word: str) -> Optional[Dict]:
         return self.index.get(trigger_word)
 
-    def dredge_vibe_by_vector(self, query_vector, k: int = 3) -> list:
+    def dredge_vibe_by_vector(self, query_vector, k: int = 3, cortisol: float = 0.0) -> list:
         """Core Asymmetric Rank-Cosine Search accepting a raw vector."""
         if np is None or self.rank_bank is None or len(self.rank_bank) == 0:
             return []
+        effective_k = max(1, int(k * (1.0 - (cortisol * 0.75)))) if cortisol > 0.4 else k
+        min_score_threshold = cortisol * 0.3
         dim = self.rank_bank.shape[1]
         mean = (dim - 1) / 2.0
         norm = np.sqrt((dim * (dim**2 - 1.0)) / 12.0)
@@ -151,22 +152,24 @@ class SubconsciousStrata:
         q_sum = np.sum(q_unit)
         raw_scores = np.dot(self.rank_bank, q_unit)
         scores = (raw_scores - (mean * q_sum)) * inv_norm
-        if len(scores) <= k:
+        if len(scores) <= effective_k:
             top_k_idx = np.argsort(scores)[::-1]
         else:
-            top_k_idx = np.argpartition(scores, -k)[-k:]
+            top_k_idx = np.argpartition(scores, -effective_k)[-effective_k:]
             top_k_idx = top_k_idx[np.argsort(scores[top_k_idx])[::-1]]
         results = []
         for idx in top_k_idx:
             if 0 <= idx < len(self.metadata_log):
-                meta = self.metadata_log[idx]
-                results.append({"word": meta.get("word"), "score": float(scores[idx]), "data": meta})
+                score = float(scores[idx])
+                if score >= min_score_threshold:
+                    meta = self.metadata_log[idx]
+                    results.append({"word": meta.get("word"), "score": score, "data": meta})
         return results
 
-    def dredge_vibe(self, trigger_word: str, k: int = 3) -> list:
+    def dredge_vibe(self, trigger_word: str, k: int = 3, cortisol: float = 0.0) -> list:
         """True Asymmetric Rank-Cosine Search."""
         Q = _word_to_vector(trigger_word)
-        return self.dredge_vibe_by_vector(Q, k)
+        return self.dredge_vibe_by_vector(Q, k, cortisol)
 
 class MemoryCore:
     DIMENSION_MAP = {"STR": {"heavy", "constructive", "base"}, "VEL": {"kinetic", "explosive", "mot"},
@@ -183,9 +186,12 @@ class MemoryCore:
         self.short_term_buffer = deque(maxlen=10)
         self.consolidation_threshold = 5.0
 
-    def illuminate(self, vector: Dict[str, float], limit: int = 5) -> List[str]:
+    def illuminate(self, vector: Dict[str, float], limit: int = 5, cortisol: float = 0.0) -> List[str]:
         if not self.graph:
             return []
+        effective_limit = max(1, int(limit * (1.0 - (cortisol * 0.6)))) if cortisol > 0.3 else limit
+        positive_cats = {"constructive", "play", "social"}
+        dynamic_threshold = 0.5 + (cortisol * 0.4)
         active_dims = {k: v for k, v in vector.items() if v > 0.4}
         if not active_dims and vector:
             top_dim = max(vector, key=vector.__getitem__)
@@ -196,8 +202,10 @@ class MemoryCore:
         for node, data in self.graph.items():
             resonance_score = 0.0
             node_cats = self.lex.get_categories_for_word(node) if self.lex else set()
+            if cortisol > 0.5 and not node_cats.isdisjoint(positive_cats):
+                resonance_score -= (cortisol * 0.8)
             for dim, val in active_dims.items():
-                if not node_cats.isdisjoint(active_dim_cats[dim]):  # isdisjoint is faster than intersection &
+                if not node_cats.isdisjoint(active_dim_cats[dim]):
                     resonance_score += val * 1.5
             mass = float(sum(data.get("edges", {}).values()))
             base_mass_score = mass * 0.1
@@ -205,23 +213,23 @@ class MemoryCore:
                 resonance_score = (resonance_score + base_mass_score) * (1.0 + (mass * 0.5))
             else:
                 resonance_score += base_mass_score
-            if resonance_score > 0.5:
+            if resonance_score > dynamic_threshold:
                 scored_memories.append((resonance_score, node, data))
         scored_memories.sort(key=lambda x: x[0], reverse=True)
         results = []
         res_prefix = ux("spore_strings", "core_illuminate_resonant") or "Resonant"
         assoc_prefix = ux("spore_strings", "core_illuminate_associated") or "Associated"
         fmt = (ux("spore_strings", "core_illuminate_format") or "{prefix} Engram: '{name}'{conn_str}")
-        for score, name, data in scored_memories[:limit]:
+        for score, name, data in scored_memories[:effective_limit]:
             connections = list(data.get("edges", {}).keys())
             if not data.get("is_diamond", False):
                 data["edges"] = {k: (v if self.graph.get(k, {}).get("is_diamond", False) else v * 0.95)
                                  for k, v in data.get("edges", {}).items()}
-            is_resonant = score > 0.5
+            is_resonant = score > dynamic_threshold
             current_prefix = res_prefix if is_resonant else assoc_prefix
             connection_string = f" -> [{', '.join(connections[:2])}]" if connections else ""
             results.append(fmt.format(prefix=current_prefix, name=name.upper(), conn_str=connection_string))
-        survivors = [name for score, name, data in scored_memories[:limit] if score > 0.5]
+        survivors = [name for score, name, data in scored_memories[:effective_limit] if score > dynamic_threshold]
         if len(survivors) > 1:
             import itertools
             for node_a, node_b in itertools.combinations(survivors, 2):
@@ -232,10 +240,10 @@ class MemoryCore:
                 current_b_to_a = self.graph[node_b]["edges"].get(node_a, 0.0)
                 self.graph[node_b]["edges"][node_a] = min(10.0, current_b_to_a + 0.5)
         if len(survivors) >= 2:
-            self.hallucinate_from_subconscious(survivors)
+            self.hallucinate_from_subconscious(survivors, cortisol)
         return results
 
-    def hallucinate_from_subconscious(self, active_nodes: List[str]):
+    def hallucinate_from_subconscious(self, active_nodes: List[str], cortisol: float = 0.0):
         """Vector Centroid Hallucination (The Deep Dredge)."""
         if len(active_nodes) < 2 or np is None:
             return
@@ -247,7 +255,7 @@ class MemoryCore:
         if not vectors:
             return
         centroid_vector = np.mean(vectors, axis=0)
-        recovered = self.subconscious.dredge_vibe_by_vector(centroid_vector, k=1)
+        recovered = self.subconscious.dredge_vibe_by_vector(centroid_vector, k=1, cortisol=cortisol)
         if recovered:
             phantom_word = recovered[0]["word"]
             if phantom_word not in self.graph:
@@ -310,10 +318,24 @@ class MemoryCore:
         data, score = min_data, min_score
         mass = float(sum(data.get("edges", {}).values()))
         lifespan = current_tick - (data.get("strata") or {}).get("birth_tick", current_tick)
-        fossil_data = {"word": victim, "mass": round(mass, 2), "lifespan": lifespan, "edges": data["edges"], "death_tick": current_tick, }
-        self.subconscious.bury(fossil_data, config_ref=self.cfg)
-        if hasattr(self, "events") and self.events:
-            self.events.publish("MEMORY_BURIED", {"fossil": fossil_data})
+        cortex_cfg = safe_get(self.cfg, "CORTEX", {})
+        shadow_mass_threshold = float(safe_get(cortex_cfg, "SHADOW_MASS_THRESHOLD", 25.0))
+        fossil_data = {"word": victim, "mass": round(mass, 2), "lifespan": lifespan, "edges": data["edges"],
+                       "death_tick": current_tick}
+        if mass >= shadow_mass_threshold:
+            if hasattr(self, "events") and self.events:
+                # Provide standard 'coords' to satisfy Akashic RAG (Creative Drive) requirements
+                self.events.publish("GHOST_SIGNAL", {
+                    "concept": victim,
+                    "mass": round(mass, 2),
+                    "lifespan": lifespan,
+                    "links": list(data["edges"].keys()),
+                    "coords": {"kappa": min(1.0, mass / 50.0), "gamma": 0.8, "mu": 0.5}
+                })
+        else:
+            self.subconscious.bury(fossil_data, config_ref=self.cfg)
+            if hasattr(self, "events") and self.events:
+                self.events.publish("MEMORY_BURIED", {"fossil": fossil_data})
         del self.graph[victim]
         for node_data in self.graph.values():
             node_data["edges"].pop(victim, None)

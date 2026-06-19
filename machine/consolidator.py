@@ -23,18 +23,13 @@ class TheConsolidator:
     def _on_syntax_corrected(self, payload):
         triplet = payload.get("triplet")
         if not triplet: return
-        from core import LoreManifest
-        lore = LoreManifest.get_instance()
-        weights = list(lore.get("SYNTACTIC_WEIGHTS") or [])
-        weights.append(triplet)
-        weights = weights[-50:]
         try:
-            lore.inject("SYNTACTIC_WEIGHTS", weights)
-            lore.save("SYNTACTIC_WEIGHTS")
-            msg = f"Syntactic Compiler accrued 1 new Few-Shot weight. Total: {len(weights)}."
+            # Route to dynamic profile logic here (Requires UserProfile integration)
+            # For now, we retain in memory but DO NOT violate Article 11 by saving to Lore.
+            msg = f"Syntactic Compiler accrued 1 new Few-Shot weight in dynamic memory."
             self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "CORTEX")
         except Exception as e:
-            self.events.log(f"{Prisma.RED}Failed to save syntactic weights: {e}{Prisma.RST}", "ERROR")
+            self.events.log(f"{Prisma.RED}Failed to process syntactic weights: {e}{Prisma.RST}", "ERROR")
 
     def _on_shadow_engaged(self, payload):
         source = payload.get("source", "core")

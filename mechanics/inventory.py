@@ -119,9 +119,13 @@ class GordonKnot:
 
     @staticmethod
     def _clean_noun(raw_str: str) -> str:
-        clean_str = re.sub(r"^(?:(?:up|out|off|down|in|on|the|a|an|some|my)\s+)+", "", raw_str, flags=re.IGNORECASE).strip()
+        clean_str = re.sub(
+            r"^(?:(?:it|this|that|them|him|her|up|out|off|down|in|on|the|a|an|some|my|and|or|but|then)\b\s*)+", "",
+            raw_str, flags=re.IGNORECASE).strip()
         clean_str = re.split(r"\s+\b(?:and|or|but|then|to|with|because|please)\b", clean_str, maxsplit=1)[0].strip()
-        clean_str = re.sub(r"\s+(?:of|in|on|at|to|for|with|from|instead|and|or|but|the|a|an)$", "", clean_str, flags=re.IGNORECASE).strip()
+        clean_str = re.sub(
+            r"\s+\b(?:of|in|on|at|to|for|with|from|instead|and|or|but|the|a|an|up|out|off|down|it|this|that|them|him|her)\b$",
+            "", clean_str, flags=re.IGNORECASE).strip()
         return clean_str.strip(".,!?").upper().replace(" ", "_")
 
     def load_config(self):
@@ -252,20 +256,22 @@ class GordonKnot:
         if put_match:
             item_clean = self._clean_noun(put_match.group(1))
             container_clean = self._clean_noun(put_match.group(2))
-            success, msg = self.pack_item(item_clean, container_clean)
-            if success or "not a container" in msg or "full" in msg:
-                logs.append(msg)
-                handled = True
+            if item_clean and container_clean:
+                success, msg = self.pack_item(item_clean, container_clean)
+                if success or "not a container" in msg or "full" in msg:
+                    logs.append(msg)
+                    handled = True
         take_match = re.search(
             r"\b(?:take|remove|get|pull)\s+(?:the|a|an|some|my)?\s*(.*?)\s+(?:from|out of)\s+(?:the|a|an|my)?\s*(.*)",
             lower_text)
         if take_match:
             item_clean = self._clean_noun(take_match.group(1))
             container_clean = self._clean_noun(take_match.group(2))
-            success, msg = self.unpack_item(item_clean, container_clean)
-            if success or "not inside" in msg:
-                logs.append(msg)
-                handled = True
+            if item_clean and container_clean:
+                success, msg = self.unpack_item(item_clean, container_clean)
+                if success or "not inside" in msg:
+                    logs.append(msg)
+                    handled = True
         return logs, handled
 
     def acquire(self, tool_name: str) -> str:
@@ -399,11 +405,13 @@ class GordonKnot:
         for verb in self.acquisition_verbs:
             verb_str = str(verb)
             match = re.search(
-                rf"\b{re.escape(verb_str)}\s+(?:the|a|an|some|my)?\s*([a-z0-9\'\-]+(?:\s+[a-z0-9\'\-]+){{0,2}})",
+                rf"\b{re.escape(verb_str)}\s+(?:up|out|off|down|in|on|from)?\s*(?:the|a|an|some|my)?\s*([a-z0-9\'\-]+(?:\s+[a-z0-9\'\-]+){{0,3}})",
                 lower_user)
             if match:
                 clean_extracted = self._clean_noun(match.group(1))
-                if len(clean_extracted) > 2 and clean_extracted not in ("IT", "THIS", "THAT", "THEM", "HIM", "HER", "THERE"):
+                invalid_nouns = {"IT", "THIS", "THAT", "THEM", "HIM", "HER", "THERE", "ALL", "SOME", "MORE", "TAKE",
+                                 "GET", "DROP", "LEAVE", "PICK", "PULL", "PUT", "USE"}
+                if len(clean_extracted) > 2 and clean_extracted not in invalid_nouns:
                     if clean_extracted not in self.inventory:
                         return clean_extracted
         return None

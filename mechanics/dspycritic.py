@@ -51,7 +51,7 @@ class DSPyCritic:
                     if val_lower is not None: return val_lower
                     return getattr(BoneConfig, key.upper(), default)
                 provider = get_cfg("provider", "ollama")
-                model_name = get_cfg("model", "hermes3")
+                model_name = get_cfg("model", "mistral-nemo")
                 raw_url = get_cfg("base_url", "http://127.0.0.1:11434/v1") or "http://127.0.0.1:11434/v1"
                 clean_url = raw_url.replace("/chat/completions", "")
                 if provider in ("ollama", "lm_studio"):
@@ -69,9 +69,7 @@ class DSPyCritic:
                 print(f"{Prisma.RED}[DSPy INIT FAULT]: {e}{Prisma.RST}")
                 self.enabled = False
 
-    # noinspection PyCallingNonCallable
-    def audit_generation(self, user_query: str, memory_context: str, generated_response: str,
-                         active_mode: str = "UNKNOWN") -> tuple[bool, str]:
+    def audit_generation(self, user_query: str, memory_context: str, generated_response: str, active_mode: str = "UNKNOWN") -> tuple[bool, str]:
         if not self.enabled:
             return True, "Critic Offline"
         malignancy = self.navi_sad.calculate_malignancy_factor(generated_response, current_drag=5.0)
@@ -79,8 +77,7 @@ class DSPyCritic:
         if malignancy > malignancy_threshold:
             return False, f"Mathematical Sycophancy Detected. Malignancy Factor ({malignancy:.2f}) exceeds biological limits. Output is structurally hollow."
         try:
-            result = self.judge(system_mode=active_mode, context=memory_context, question=user_query,
-                                answer=generated_response)
+            result = self.judge(system_mode=active_mode, context=memory_context, question=user_query, answer=generated_response)
             if "true" not in str(result.faithfulness).lower():
                 return False, getattr(result, "reasoning", "No reasoning provided.")
             return True, "Faithful."
@@ -88,7 +85,6 @@ class DSPyCritic:
             print(f"\n{Prisma.RED}DSPy JUDGE OFFLINE: {e} - Failing open.{Prisma.RST}")
             return True, "Critic failed to open."
 
-    # noinspection PyCallingNonCallable
     def evolve_prompt(self, current_configuration: str, failure_context: str) -> str:
         if not self.enabled:
             return ""
@@ -106,7 +102,6 @@ class DSPyCritic:
             print(f"\n{Prisma.RED}DSPy EVOLVER FAULT: {e}{Prisma.RST}")
             return ""
 
-    # noinspection PyCallingNonCallable
     def compress_prompts(self, directives: list) -> list:
         if not self.enabled or not directives: return directives
         print(
