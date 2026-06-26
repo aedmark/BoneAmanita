@@ -3,6 +3,7 @@
 import math
 import random
 import time
+import heapq
 from collections import Counter, deque
 from typing import Dict, List, Any, Tuple, Optional, Deque
 from struts import ux, safe_get
@@ -26,12 +27,16 @@ class SurfaceTension:
         return False, "", ""
 
 class ChromaScope:
+    _T_MAP_CACHE = None
+
     @staticmethod
     def modulate(text: str, vector: Dict[str, float]) -> str:
-        from core import LoreManifest
+        if ChromaScope._T_MAP_CACHE is None:
+            from core import LoreManifest
+            ChromaScope._T_MAP_CACHE = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
         if not vector or not any(vector.values()):
             return f"{Prisma.GRY}{text}{Prisma.RST}"
-        t_map = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
+        t_map = ChromaScope._T_MAP_CACHE
         primary = max(vector, key=lambda k: float(vector[k]))
         color = getattr(Prisma, t_map[primary][3], Prisma.GRY) if primary in t_map else Prisma.GRY
         return f"{color}{text}{Prisma.RST}"
@@ -190,11 +195,11 @@ class CosmicDynamics:
     def _resolve_orbit(
             self, basin_pulls, active_filaments, word_count, gravity_wells, config_ref=None) -> Tuple[str, float, str]:
         target_cfg = config_ref or BoneConfig
-        sorted_basins = sorted(basin_pulls.items(), key=lambda x: x[1], reverse=True)
-        primary_node, primary_str = sorted_basins[0]
+        top_basins = heapq.nlargest(2, basin_pulls.items(), key=lambda x: x[1])
+        primary_node, primary_str = top_basins[0]
         lagrange_tol = float(safe_get(target_cfg, "LAGRANGE_TOLERANCE", 2.0))
-        if len(sorted_basins) > 1:
-            secondary_node, secondary_str = sorted_basins[1]
+        if len(top_basins) > 1:
+            secondary_node, secondary_str = top_basins[1]
             if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:
                 msg = (self.logs.get("LAGRANGE") or "Lagrange equilibrium between {p} and {s}").format(
                     p=primary_node.upper(), s=secondary_node.upper())

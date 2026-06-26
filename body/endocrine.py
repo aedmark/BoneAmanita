@@ -123,23 +123,23 @@ class EndocrineSystem:
     def _maintain_homeostasis(self, social_context: bool):
         dampener = 0.2
         bio_cfg = safe_get(self.cfg, "BIO", {})
-        reward_med = safe_get(bio_cfg, "REWARD_MEDIUM", 0.1)
-        reward_small = safe_get(bio_cfg, "REWARD_SMALL", 0.05)
-        if float(self.serotonin) > 0.5:
-            excess = float(self.serotonin) - 0.5
-            self.cortisol = float(self.cortisol) - (excess * 0.2 * dampener)
+        reward_med = float(safe_get(bio_cfg, "REWARD_MEDIUM", 0.1))
+        reward_small = float(safe_get(bio_cfg, "REWARD_SMALL", 0.05))
+        if self.serotonin > 0.5:
+            excess = self.serotonin - 0.5
+            self.cortisol -= (excess * 0.2 * dampener)
         if social_context:
-            self.oxytocin = float(self.oxytocin) + reward_med
-            self.cortisol = float(self.cortisol) - reward_med
-        if float(self.cortisol) > 0.6:
-            suppression = (float(self.cortisol) - 0.6) * 0.5
-            self.oxytocin = float(self.oxytocin) - (suppression * dampener)
-        if float(self.oxytocin) > 0.5:
-            relief = (float(self.oxytocin) - 0.5) * 0.8
-            self.cortisol = float(self.cortisol) - (relief * dampener)
-        if float(self.adrenaline) < 0.2:
-            self.melatonin = float(self.melatonin) + (reward_small / 2.0)
-        elif float(self.adrenaline) > 0.8:
+            self.oxytocin += reward_med
+            self.cortisol -= reward_med
+        if self.cortisol > 0.6:
+            suppression = (self.cortisol - 0.6) * 0.5
+            self.oxytocin -= (suppression * dampener)
+        if self.oxytocin > 0.5:
+            relief = (self.oxytocin - 0.5) * 0.8
+            self.cortisol -= (relief * dampener)
+        if self.adrenaline < 0.2:
+            self.melatonin += (reward_small / 2.0)
+        elif self.adrenaline > 0.8:
             self.melatonin = 0.0
 
     def check_for_glimmer(self, feedback: Dict, harvest_hits: int) -> Optional[str]:
@@ -189,15 +189,15 @@ class EndocrineSystem:
         self._maintain_homeostasis(social_context)
         glimmer_msg = self.check_for_glimmer(feedback, harvest_hits)
         for chem in ("dopamine", "oxytocin", "cortisol", "serotonin", "adrenaline", "melatonin"):
-            setattr(self, chem, self._clamp(float(getattr(self, chem))))
+            setattr(self, chem, self._clamp(getattr(self, chem)))
         state = self.get_state()
         if glimmer_msg:
             state["glimmer_msg"] = glimmer_msg
         return state
 
     def get_state(self) -> Dict[str, Any]:
-        return {"DOP": round(float(self.dopamine), 2), "OXY": round(float(self.oxytocin), 2), "COR": round(float(self.cortisol), 2),
-                "SER": round(float(self.serotonin), 2), "ADR": round(float(self.adrenaline), 2), "MEL": round(float(self.melatonin), 2)}
+        return {"DOP": round(self.dopamine, 2), "OXY": round(self.oxytocin, 2), "COR": round(self.cortisol, 2),
+                "SER": round(self.serotonin, 2), "ADR": round(self.adrenaline, 2), "MEL": round(self.melatonin, 2)}
 
 class SemanticEndocrinologist:
     def __init__(self, memory_ref, lexicon_ref):

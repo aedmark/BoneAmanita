@@ -8,9 +8,17 @@ from presets import BoneConfig
 from mechanics.projector import Projector, SoulDashboard
 
 class PulseReader:
+    _GUI_CFG_CACHE = None
+
+    @staticmethod
+    def _get_gui_cfg(config_ref=None):
+        if PulseReader._GUI_CFG_CACHE is None:
+            PulseReader._GUI_CFG_CACHE = safe_get(config_ref or BoneConfig, "GUI", {})
+        return PulseReader._GUI_CFG_CACHE
+
     @staticmethod
     def derive_mood(bio_state: Dict, config_ref=None) -> str:
-        cfg = safe_get(config_ref or BoneConfig, "GUI", {})
+        cfg = PulseReader._get_gui_cfg(config_ref)
         c_warn = float(safe_get(cfg, "CHEM_HIGH_WARN", 0.6))
         a_warn = float(safe_get(cfg, "ATP_EXHAUSTED_WARN", 20.0))
         chem = bio_state.get("chem", {})
@@ -26,8 +34,8 @@ class PulseReader:
 
     @staticmethod
     def analyze_voltage(voltage: float, config_ref=None) -> Tuple[str, str]:
-        cfg = safe_get(config_ref or BoneConfig, "GUI", {})
-        v_crit = float(safe_get(cfg, "V_CRIT", 20.0))
+        cfg = PulseReader._get_gui_cfg(config_ref)
+        v_crit = float(safe_get(cfg, "VOLTAGE_CRITICAL", 80.0))
         v_high = float(safe_get(cfg, "V_HIGH", 15.0))
         v_low = float(safe_get(cfg, "V_LOW", 5.0))
         if voltage > v_crit:

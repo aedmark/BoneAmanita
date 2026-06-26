@@ -48,6 +48,39 @@ class MitochondrialForge:
         filename = payload.get("file", "unknown")
         self.adjust_atp(-cost, f"Substrate Forging [{filename}]")
 
+    def process_cognitive_load(self, token_count: int, cognitive_path: str):
+        """
+        [SUBQ]: Metabolic cost is physically dependent on HOW the organism retrieved the data.
+        """
+        if cognitive_path == "VECTOR_FAST_TWITCH":
+            # ANN is biologically cheap. Pre-computed embeddings.
+            drain = (token_count / 100.0) * 0.02
+            self.adjust_atp(-drain, "Fast-Twitch Memory Lookup")
+
+        elif cognitive_path == "LINEAR_DEEP_TISSUE":
+            # SubQ Linear sweep is expensive. The CPU evaluated the entire structural manifold.
+            drain = (token_count / 100.0) * 0.15
+            self.adjust_atp(-drain, "Deep Structural Scan")
+
+            # Heavy structural context spikes ROS (Reactive Oxygen Species / Stress)
+            if token_count > 8000:
+                self.state.ros_buildup = float(self.state.ros_buildup) + 0.8
+
+        # Gordon Intervention Threshold
+        if self.state.atp_pool <= 10.0:
+            self._trigger_exhaustion()
+
+    def _trigger_exhaustion(self):
+        """
+        Fires when a massive query drains the organism's ATP to critical levels.
+        """
+        if self.events:
+            self.events.log(
+                "[GORDON INTERVENTION]: Your query forced a massive structural sweep. The organism's ATP is depleted. Narrow your scope.",
+                "BIO_CRIT"
+            )
+        self.state.retrograde_signal = "HIBERNATING"
+
     def _get_text(self, key, **kwargs):
         tmpl = self.narrative.get(key, "")
         if not tmpl:

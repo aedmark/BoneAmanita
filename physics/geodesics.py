@@ -15,6 +15,7 @@ class GeodesicVector:
     dimensions: Dict[str, float]
 
 class GeodesicEngine:
+    _GC_CACHE = None
     _DIM_ORDER = ("VEL", "STR", "ENT", "PHI", "PSI", "BET", "DEL", "E")
     _MASS_KEYS = ("heavy", "kinetic", "constructive", "abstract", "play", "social", "explosive", "void", "liminal",
                   "meat", "harvest", "pareidolia", "crisis_term")
@@ -43,8 +44,10 @@ class GeodesicEngine:
         def get_cfg(key: str, default: float = 1.0) -> float:
             return float(safe_get(cfg, key, default))
 
-        from core import LoreManifest
-        gc_dict = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
+        if GeodesicEngine._GC_CACHE is None:
+            from core import LoreManifest
+            GeodesicEngine._GC_CACHE = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "GEODESIC_CONSTANTS") or {}
+        gc_dict = GeodesicEngine._GC_CACHE
 
         def get_const(key: str, default: float = 1.0) -> float:
             return float(safe_get(gc_dict, key, default))

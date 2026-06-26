@@ -5,6 +5,7 @@ import math
 import os
 import random
 import uuid
+import itertools
 from typing import Any, Dict, List, Optional, Set, Tuple
 from constants import Prisma
 from core import JSONEncoder, LoreManifest
@@ -278,11 +279,14 @@ class TheAkashicRecord:
         self.save_to_disk("state", state)
 
     def save_to_disk(self, category: str, data: Any):
-        target_dir = self.data_dir if category in ["discovered_words", "scars", "boons"] else self.save_dir
-        filepath = os.path.join(target_dir, f"akashic_{category}.json")
+        base_dir = os.path.realpath(self.data_dir if category in ["discovered_words", "scars", "boons"] else self.save_dir)
+        filepath = os.path.realpath(os.path.join(base_dir, f"akashic_{category}.json"))
+        if os.path.commonpath([base_dir, filepath]) != base_dir:
+            if self.events: self.events.log(f"{Prisma.RED}Geometric containment violation. Save aborted.{Prisma.RST}", "CRIT")
+            return
         try:
-            os.makedirs(target_dir, exist_ok=True)
-            os.makedirs(self.save_dir, exist_ok=True)
+            os.makedirs(base_dir, exist_ok=True)
+            os.makedirs(os.path.realpath(self.save_dir), exist_ok=True)
             temp_path = f"{filepath}.{uuid.uuid4().hex}.tmp"
             with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, cls=JSONEncoder)
@@ -481,7 +485,7 @@ class TheAkashicRecord:
     def measure_cognitive_density(self, start_concept: str) -> float:
         """ [navi-fractal PROTOCOL]: BFS Mass-Radius Subconscious Scaling """
         adj = {}
-        for mem in self.scar_map + self.shadow_stock:
+        for mem in itertools.chain(self.scar_map, self.shadow_stock):
             concept = mem.get("concept", "Unknown")
             links = mem.get("links", [])
             adj[concept] = set(links)
@@ -510,8 +514,7 @@ class TheAkashicRecord:
         """ [CD PROTOCOL]: Gradient-Descent Memory Retrieval (Creative Drive RAG) """
         best_memory = None
         max_drive = -1.0
-        pool = self.shadow_stock + self.scar_map
-        for mem in pool:
+        for mem in itertools.chain(self.shadow_stock, self.scar_map):
             coords = mem.get("coords") or mem.get("coordinates") or {}
             kappa = float(coords.get("kappa", coords.get("E", 0.5)))
             gamma = float(coords.get("gamma", coords.get("C", 0.5)))

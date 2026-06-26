@@ -5,6 +5,11 @@ from typing import Dict, Any, Tuple
 from core import Prisma
 
 class ThePragmatist:
+    _CLICHE_A_RE = re.compile(r"(?i)not just a?\s*.*?,?\s*it['’]s a")
+    _CLICHE_B_RE = re.compile(r"(?i)didn")
+    _HEDGE_A_RE = re.compile(r"(?i)\bperhaps\b\s*")
+    _HEDGE_B_RE = re.compile(r"(?i)it could be said(?: that)?\s*")
+
     def __init__(self, events_ref=None):
         self.events = events_ref
 
@@ -18,7 +23,7 @@ class ThePragmatist:
         pedagogical_mode = physics.get("pedagogical_mode", False) if is_phys_dict else getattr(physics, "pedagogical_mode", False)
         word_count = len(draft_text.split())
         lower_draft = draft_text.lower()
-        if re.search(r"(?i)not just a?\s*.*?,?\s*it['’]s a", lower_draft) or re.search(r"(?i)didn['’]t just\s*.*?,?\s*you", lower_draft):
+        if self._CLICHE_A_RE.search(draft_text) or self._CLICHE_B_RE.search(draft_text):
             if self.events:
                 self.events.log(f"{Prisma.RED}Syntactic antigen detected (Negative Comparative). Amputated.{Prisma.RST}", "SYS")
                 self.events.log("TOXICITY_SPIKE", "SYS")
@@ -41,8 +46,8 @@ class ThePragmatist:
             if self.events:
                 self.events.log(
                     f"{Prisma.VIOLET}System is stable but language is obscure/hedging.{Prisma.RST}", "SYS")
-            draft_text = re.sub(r"(?i)\bperhaps\b\s*", "", draft_text)
-            draft_text = re.sub(r"(?i)it could be said(?: that)?\s*", "", draft_text)
+            draft_text = self._HEDGE_A_RE.sub("", draft_text)
+            draft_text = self._HEDGE_B_RE.sub("", draft_text)
             draft_text = draft_text.strip()
             lower_draft = draft_text.lower()
         if "as an ai" in lower_draft or "as a language model" in lower_draft:

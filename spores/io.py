@@ -42,14 +42,19 @@ class LocalFileSporeLoader:
                 os.remove(temp_path)
             return None
 
-    @staticmethod
-    def load_spore(filepath: str) -> Optional[Any]:
-        if not os.path.exists(filepath):
-            if msg := ux_format("spore_strings", "loader_not_found", filepath=filepath):
+    def load_spore(self, filepath: str) -> Optional[Any]:
+        base_dir = os.path.realpath(self.directory)
+        final_path = os.path.realpath(os.path.join(base_dir, os.path.basename(filepath)))
+        if os.path.commonpath([base_dir, final_path]) != base_dir:
+            if msg := ux_format("spore_strings", "loader_read_err", e="Path containment violation"):
+                print(f"{Prisma.RED}{msg}{Prisma.RST}")
+            return None
+        if not os.path.exists(final_path):
+            if msg := ux_format("spore_strings", "loader_not_found", filepath=final_path):
                 print(f"{Prisma.RED}{msg}{Prisma.RST}")
             return None
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(final_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError) as e:
             err_type = "loader_corrupt" if isinstance(e, json.JSONDecodeError) else "loader_read_err"
@@ -67,10 +72,13 @@ class LocalFileSporeLoader:
         except OSError:
             return []
 
-    @staticmethod
-    def delete_spore(filepath):
+    def delete_spore(self, filepath: str):
+        base_dir = os.path.realpath(self.directory)
+        final_path = os.path.realpath(os.path.join(base_dir, os.path.basename(filepath)))
+        if os.path.commonpath([base_dir, final_path]) != base_dir:
+            return False
         try:
-            os.remove(filepath)
+            os.remove(final_path)
             return True
         except OSError:
             return False

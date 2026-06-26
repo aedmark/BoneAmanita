@@ -60,8 +60,8 @@ class EnneagramDriver:
                     if val > 0.2:
                         scores[persona] += val * float(weight)
         if soul_ref:
-            soul_driver = SoulDriver(soul_ref)
-            influence = soul_driver.get_influence()
+            influence = soul_ref.get_influence() if hasattr(soul_ref, "get_influence") else SoulDriver(
+                soul_ref).get_influence()
             for persona, weight in influence.items():
                 scores[persona] += weight * 2.0
         sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)

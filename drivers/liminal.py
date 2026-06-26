@@ -35,8 +35,15 @@ class LiminalModule:
         lexical_lambda = min(1.0, void_hits * w["lexical"])
         dark_matter_sparks = 0
         if len(words) > 1 and hasattr(self.lex, "get_categories_for_word"):
-            flags = [1 if (cats := set(self.lex.get_categories_for_word(wd) or [])) & self._PHYS_SET
-                     else (2 if cats & self._VOID_SET else 0) for wd in words]
+            flags = []
+            for wd in words:
+                cats = self.lex.get_categories_for_word(wd) or []
+                if any(c in self._PHYS_SET for c in cats):
+                    flags.append(1)
+                elif any(c in self._VOID_SET for c in cats):
+                    flags.append(2)
+                else:
+                    flags.append(0)
             dark_matter_sparks = sum(
                 1 for i in range(len(flags) - 1)
                 if flags[i] and flags[i + 1] and flags[i] != flags[i + 1])

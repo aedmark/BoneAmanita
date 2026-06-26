@@ -3,6 +3,8 @@
 import random
 import re
 import time
+import json
+from brain.linear_cortex import LinearCortexRouter
 from collections import deque
 from dataclasses import dataclass
 from typing import Dict, Any, List, Tuple, Optional
@@ -74,6 +76,10 @@ class TheCortex:
             self.navigator = RandomRetrievalNavigator(library_graph=graph)
         else:
             self.navigator = None
+
+        # [SUBQ]: Initialize the Corpus Callosum (Linear Deep Tissue)
+        self.linear_router = LinearCortexRouter(token_budget=12000)
+        self.is_linear_stocked = False
 
     @classmethod
     def from_engine(cls, engine_ref, llm_client=None):
@@ -171,6 +177,18 @@ class TheCortex:
         if llm_params.get("max_tokens", 4096) < 300 or p_val < 20.0:
             full_state["mind"].setdefault("style_directives", []).append("CRITICAL: You are exhausted. You must conclude your thought in under 3 sentences.")
             llm_params["max_tokens"] = min(400, llm_params.get("max_tokens", 4096))
+
+        # [SUBQ]: Dual-Tier Memory Routing
+        structural_ctx, cognitive_path, token_cost = self._route_dual_memory(user_input)
+        if structural_ctx:
+            # Inject the raw, un-shattered code dependencies directly into the mind's directives
+            full_state["mind"].setdefault("style_directives", []).append(
+                f"CRITICAL STRUCTURAL CONTEXT (Linear Sweep):\n{structural_ctx}"
+            )
+            # Send the metabolic bill to the Mitochondria (we will wire this next)
+            if hasattr(self.svc.bio.mito, "process_cognitive_load"):
+                self.svc.bio.mito.process_cognitive_load(token_cost, cognitive_path)
+
         final_prompt = self.composer.compose(full_state, user_input, ballast=self.ballast_active, modifiers=modifiers, mood_override=self.modulator.get_mood_directive())
         start_time = time.time()
         max_retries = 5
@@ -754,3 +772,32 @@ class TheCortex:
         if self.events:
             msg = ux("brain_strings", "cortex_resequenced")
             self.events.log(msg.format(count=len(self.dialogue_buffer)), "BRAIN")
+
+    def _route_dual_memory(self, query: str) -> Tuple[str, str, int]:
+        """
+        The Corpus Callosum: Routes to Vector (ANN) or Linear Sweep (SubQ).
+        Returns: (sparse_context, cognitive_path, token_cost)
+        """
+        heavy_keywords = ['code', 'debug', 'architecture', 'file', 'script', 'system', 'class ', 'def ', 'blueprint']
+        is_heavy_lift = any(k in query.lower() for k in heavy_keywords)
+
+        if not is_heavy_lift and len(query.split()) < 20:
+            # PATH 1: THE CEREBELLUM (Vector/ANN)
+            # We return empty here because your existing _compile_style_directives
+            # naturally handles the fast-twitch ANN shadow_nodes search.
+            return "", "VECTOR_FAST_TWITCH", 0
+        else:
+            # PATH 2: THE PREFRONTAL CORTEX (SubQ Linear Sweep)
+            if not self.is_linear_stocked:
+                try:
+                    with open("body/metabolism.py", "r", encoding="utf-8") as f:
+                        self.linear_router.ingest_artifact("metabolism.py", f.read())
+                    with open("brain/akashic.py", "r", encoding="utf-8") as f:
+                        self.linear_router.ingest_artifact("akashic.py", f.read())
+                    self.is_linear_stocked = True
+                except FileNotFoundError:
+                    pass  # Failsafe if run from wrong directory
+
+            sparse_mask = self.linear_router.route_attention(query)
+            consumed_tokens = len(sparse_mask.split())
+            return sparse_mask, "LINEAR_DEEP_TISSUE", consumed_tokens

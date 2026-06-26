@@ -266,7 +266,10 @@ class TheSubstrate:
 
 class TheTclWeaver:
     _instance = None
-    _QUANTUM_REGEX = re.compile(r"(?i).*(?:ous|ful|ic|ish|ly)[.,!?]*$")
+    _HTML_TAG_RE = re.compile(r"<[^>]+>")
+    _PUNC_RE = re.compile(r"[^\w\s\.,!?]*$")
+    _WORD_SPLIT_RE = re.compile(r"\W+")
+    _CLEAN_RE = re.compile(r"[^a-zA-Z0-9]")
 
     @classmethod
     def get_instance(cls):
@@ -286,10 +289,10 @@ class TheTclWeaver:
         return " ".join(_warp(w) for w in text.split(" "))
 
     def haunt_string(self, text: str) -> str:
-        words = [w for w in re.split(r"\W+", text) if w]
+        words = [w for w in self._WORD_SPLIT_RE.split(text) if w]
         if not words:
             return text
-        clean = re.sub(r"[^a-zA-Z0-9]", "", words[-1]).lower()
+        clean = self._CLEAN_RE.sub("", words[-1]).lower()
         return f"{text}... {clean}..." if clean else f"{text}..."
 
     def quantum_comb(self, text: str, chi: float) -> str:

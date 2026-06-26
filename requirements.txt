@@ -16,5 +16,4 @@ dspy-ai>=2.4.0            # Powers the Real-Time Critic, False Cohesion checks, 
 requests>=2.31.0          # Required for standard HTTP calls to local LLMs and OpenAI-compatible endpoints
 
 # Project Navi
-ordvec
-navi-creative-determinant
+ordvec>=0.5.0
