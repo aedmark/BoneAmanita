@@ -46,9 +46,3 @@ We would like to explicitly acknowledge the following individuals and architectu
 
 ### The Forge Methodology - https://github.com/arenixdev/forge
 * **Creator: Arenix / Larry Diffey** - The foundational documentation architecture of BoneAmanita was heavily adapted from the Forge methodology. By utilizing immutable Constitutions, TONIC (Technically Obvious, Not Intended Choice) conventions, explicit Glossary constraints, and Decision-tracked Architecture Domain Docs with "WHY NOT" blocks, Forge provided the blueprint to make this hypervisor "Agent-Proof." It ensures that stochastic AI agents respect the raw physics and poetic variables of the system without attempting to normalize them into standard enterprise frameworks.
-
-***
-
-*"The bedrock remembers not only what was, but that it was, and that it is gone."*
-
-Thank you for helping us build the physics of the room.

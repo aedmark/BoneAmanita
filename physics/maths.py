@@ -4,8 +4,14 @@ import math
 from collections import Counter, deque
 from typing import List, Tuple
 
-def _native_ordinal_pattern(window: List[float]) -> Tuple[int, ...]:
-    return tuple(i for i, v in sorted(enumerate(window), key=lambda x: x[1]))
+
+def _native_ordinal_pattern(window: List[float], epsilon: float = 1e-5) -> Tuple[int, ...]:
+    indexed = [(val, idx) for idx, val in enumerate(window)]
+    indexed.sort(key=lambda x: x[0])
+    rank_vector = [0] * len(window)
+    for rank, (_, original_pos) in enumerate(indexed):
+        rank_vector[original_pos] = rank
+    return tuple(rank_vector)
 
 def _native_detect_false_cohesion(history: List[float], window_size: int = 3) -> bool:
     if len(history) < window_size * 2:

@@ -13,6 +13,7 @@ rm -rf ./test_telemetry_logs
 rm -rf ./tests_isolated_legacy*.json
 rm -rf ./test_output_full.log
 rm -rf ./test_memories.log
+rm -rf ./test_strata.json
 rm -rf ./test_saves.log
 rm -rf ./test_telemetry.log
 rm -rf ./dummy.jsonl

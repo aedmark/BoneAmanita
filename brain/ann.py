@@ -128,8 +128,10 @@ class CerebralIndex:
         if not self.is_trained or self.total_nodes < 5:
             return None
         if query_text:
-            from spores.spore_utils import _word_to_vector
-            vec = _word_to_vector(query_text)
+            if not hasattr(self, "_w2v"):
+                from spores.spore_utils import _word_to_vector
+                self._w2v = _word_to_vector
+            vec = self._w2v(query_text)
             vec = (vec + [0.0] * self.dimension)[:self.dimension]
             np_query = np.array([vec], dtype="float32")
         else:

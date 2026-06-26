@@ -48,15 +48,34 @@ Simultaneously, the engine maintains a continuous biological `ChemicalState` (`m
 
 **WHY NOT:** MD5 is slightly faster, but corrupted memory graphs require a total Genesis reset to fix. 
 
-
 ### [DEC-05] The Tunnel Vision Protocol
+
 **Decision:** Cortisol actively restricts the N-Dimensional topological beam. High cortisol artificially shrinks the $K$ limit of returned vectors and mechanically penalizes semantic nodes mapped to positive dimensions (`constructive`, `play`, `social`).
+
 **WHY:** Under biological stress, the mind hyper-fixates on trauma. This guarantees the LLM physically cannot access "happy" or "lateral" thoughts when it is panicking, forcing a mathematically authentic trauma response.
 
 ### [DEC-06] Shadow Archival Thresholds (Article 8)
+
 **Decision:** When the graph is capped, any pruned memory with a topological mass $\ge 25.0$ bypasses the standard JSON graveyard. It fires a `GHOST_SIGNAL` and ascends to the Akashic `shadow_stock`.
+
 **WHY:** A node that has accumulated 25+ connections is no longer noise; it is structural lore. Transcending it to the Shadow Archive allows it to permanently haunt the Dream Engine.
+
+### [DEC-07] Zero-Allocation Chemical Homeostasis
+
+**Decision:** The `ChemicalState` establishes `_targets` during `__post_init__` to run mathematical homeostasis without hitting the config bedrock on every tick. 
+
+**WHY:** Endocrine updates run continuously. Sourcing the config targets mid-loop created a thermodynamic leak.
+
+### [DEC-08] Zero-Allocation Semantic Chaining
+
+**Decision:** Akashic memory stock is evaluated using `itertools.chain()` instead of list concatenation (`+`).
+
+**WHY:** Array concatenation creates a fully duplicated object in RAM, devastating the Python garbage collector as the memory graph scales.
 
 ## 3. Open Questions
 
-*(Currently no open architectural questions for Domain 02. The topological memory graph is stable.)*
+### [OQ-2] Dynamic FAISS Limits Under Stress
+
+**Status:** `Active`
+
+**Question:** Now that the `MemoryCore` is structurally unbottlenecked, what is the hard limit on FAISS vector retrieval before we bleed ATP? Should `HippocampalCache` actively dial down its `max_capacity` and precision mapping when `cortisol` exceeds 0.8 to simulate biological stress blindness?

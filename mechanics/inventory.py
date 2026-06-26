@@ -119,14 +119,25 @@ class GordonKnot:
 
     @staticmethod
     def _clean_noun(raw_str: str) -> str:
-        clean_str = re.sub(
-            r"^(?:(?:it|this|that|them|him|her|up|out|off|down|in|on|the|a|an|some|my|and|or|but|then)\b\s*)+", "",
-            raw_str, flags=re.IGNORECASE).strip()
+        clean_str = re.sub(r"^(?:(?:it|this|that|them|him|her|up|out|off|down|in|on|the|a|an|some|my|and|or|but|then)\b\s*)+", "", raw_str, flags=re.IGNORECASE).strip()
         clean_str = re.split(r"\s+\b(?:and|or|but|then|to|with|because|please)\b", clean_str, maxsplit=1)[0].strip()
-        clean_str = re.sub(
-            r"\s+\b(?:of|in|on|at|to|for|with|from|instead|and|or|but|the|a|an|up|out|off|down|it|this|that|them|him|her)\b$",
-            "", clean_str, flags=re.IGNORECASE).strip()
+        clean_str = re.sub(r"\s+\b(?:of|in|on|at|to|for|with|from|instead|and|or|but|the|a|an|up|out|off|down|it|this|that|them|him|her)\b$", "", clean_str, flags=re.IGNORECASE).strip()
         return clean_str.strip(".,!?").upper().replace(" ", "_")
+
+    def _resolve_pronoun(self, text_context: str, must_not_be_owned: bool = False, must_be_owned: bool = False) -> str:
+        """Deterministically maps a pronoun to the most recently mentioned valid noun in the text context."""
+        candidates = []
+        for name in self.registry.keys():
+            if must_not_be_owned and name in self.inventory: continue
+            if must_be_owned and name not in self.inventory: continue
+            clean_name = name.lower().replace("_", " ")
+            matches = list(re.finditer(rf"\b{re.escape(clean_name)}\b", text_context.lower()))
+            if matches:
+                candidates.append((name, matches[-1].end()))
+        if candidates:
+            candidates.sort(key=lambda x: x[1], reverse=True)
+            return candidates[0][0]
+        return ""
 
     def load_config(self):
         data = LoreManifest.get_instance().get("GORDON") or (
@@ -254,8 +265,11 @@ class GordonKnot:
             r"\b(?:put|place|store|stash)\s+(?:the|a|an|some|my)?\s*(.*?)\s+(?:in|inside|into)\s+(?:the|a|an|my)?\s*(.*)",
             lower_text)
         if put_match:
+            raw_item = put_match.group(1).upper()
             item_clean = self._clean_noun(put_match.group(1))
             container_clean = self._clean_noun(put_match.group(2))
+            if not item_clean and any(p in raw_item.split() for p in {"IT", "THIS", "THAT", "THEM"}):
+                item_clean = self._resolve_pronoun(text, must_be_owned=True)
             if item_clean and container_clean:
                 success, msg = self.pack_item(item_clean, container_clean)
                 if success or "not a container" in msg or "full" in msg:
@@ -265,8 +279,11 @@ class GordonKnot:
             r"\b(?:take|remove|get|pull)\s+(?:the|a|an|some|my)?\s*(.*?)\s+(?:from|out of)\s+(?:the|a|an|my)?\s*(.*)",
             lower_text)
         if take_match:
+            raw_item = take_match.group(1).upper()
             item_clean = self._clean_noun(take_match.group(1))
             container_clean = self._clean_noun(take_match.group(2))
+            if not item_clean and any(p in raw_item.split() for p in {"IT", "THIS", "THAT", "THEM"}):
+                item_clean = self._resolve_pronoun(text)
             if item_clean and container_clean:
                 success, msg = self.unpack_item(item_clean, container_clean)
                 if success or "not inside" in msg:
@@ -408,9 +425,16 @@ class GordonKnot:
                 rf"\b{re.escape(verb_str)}\s+(?:up|out|off|down|in|on|from)?\s*(?:the|a|an|some|my)?\s*([a-z0-9\'\-]+(?:\s+[a-z0-9\'\-]+){{0,3}})",
                 lower_user)
             if match:
+                raw_target = match.group(1).upper()
                 clean_extracted = self._clean_noun(match.group(1))
-                invalid_nouns = {"IT", "THIS", "THAT", "THEM", "HIM", "HER", "THERE", "ALL", "SOME", "MORE", "TAKE",
-                                 "GET", "DROP", "LEAVE", "PICK", "PULL", "PUT", "USE"}
+                invalid_nouns = {"IT", "THIS", "THAT", "THEM", "HIM", "HER", "THERE", "ALL", "SOME", "MORE", "TAKE", "GET", "DROP", "LEAVE", "PICK", "PULL", "PUT", "USE"}
+
+                # [PRONOUN RESOLUTION]: If the noun was entirely stripped into an empty string, check for pronouns
+                if not clean_extracted and any(p in raw_target.split() for p in {"IT", "THIS", "THAT", "THEM", "HIM", "HER"}):
+                    resolved = self._resolve_pronoun(combined_text, must_not_be_owned=True)
+                    if resolved:
+                        return resolved
+
                 if len(clean_extracted) > 2 and clean_extracted not in invalid_nouns:
                     if clean_extracted not in self.inventory:
                         return clean_extracted

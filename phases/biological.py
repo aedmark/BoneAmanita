@@ -15,6 +15,14 @@ class MetabolismPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "METABOLISM"
+        cfg = getattr(self.eng, "config", BoneConfig)
+        phys_cfg = safe_get(cfg, "PHYSICS", {})
+        bio_cfg = safe_get(cfg, "BIO", {})
+        self.max_voltage = float(safe_get(phys_cfg, "VOLTAGE_MAX", 20.0))
+        self.max_stamina = float(safe_get(cfg, "MAX_STAMINA", 100.0))
+        self.max_health = float(safe_get(cfg, "MAX_HEALTH", 100.0))
+        self.max_atp = float(safe_get(cfg, "MAX_ATP", 100.0))
+        self.starvation_thresh = float(safe_get(bio_cfg, "ATP_STARVATION", 5.0))
 
     def run(self, ctx: CycleContext):
         if ctx.is_system_event:
@@ -31,11 +39,10 @@ class MetabolismPhase(SimulationPhase):
         if gov_msg:
             self.eng.events.log(gov_msg, "GOV")
         physics.manifold = self.eng.bio.governor.mode
-        target_cfg = self.eng.config
-        phys_cfg = safe_get(target_cfg, "PHYSICS", {})
-        max_voltage = float(safe_get(phys_cfg, "VOLTAGE_MAX", 20.0))
-        bio_feedback = {"INTEGRITY": getattr(physics, "truth_ratio", 1.0), "STATIC": getattr(physics, "repetition", 0.0),
-            "FORCE": getattr(physics, "voltage", 0.0) / max_voltage, "BETA": getattr(physics, "beta_index", 0.0),
+        bio_feedback = {"INTEGRITY": getattr(physics, "truth_ratio", 1.0),
+                        "STATIC": getattr(physics, "repetition", 0.0),
+                        "FORCE": getattr(physics, "voltage", 0.0) / self.max_voltage,
+                        "BETA": getattr(physics, "beta_index", 0.0),
             "PSI": getattr(physics, "psi", 0.0), "ENTROPY": getattr(physics, "entropy", 0.0),
             "VALENCE": getattr(physics, "valence", 0.0), }
         metrics = self.eng.get_metrics()
@@ -85,10 +92,7 @@ class MetabolismPhase(SimulationPhase):
 
     def _check_narcolepsy(self, ctx: CycleContext):
         atp = self.eng.bio.mito.state.atp_pool
-        target_cfg = self.eng.config
-        bio_cfg = safe_get(target_cfg, "BIO", {})
-        starvation = float(safe_get(bio_cfg, "ATP_STARVATION", 5.0))
-        trigger = (atp < (starvation * 0.5)) or (self.eng.tick_count > 0 and self.eng.tick_count % 100 == 0)
+        trigger = (atp < (self.starvation_thresh * 0.5)) or (self.eng.tick_count > 0 and self.eng.tick_count % 100 == 0)
         if trigger and self.eng.mind.dreamer:
             msg_sleep = ux("cycle_strings", "metabolism_sleep")
             ctx.log(f"{Prisma.VIOLET}{msg_sleep}{Prisma.RST}")
@@ -97,7 +101,7 @@ class MetabolismPhase(SimulationPhase):
             defrag_msg = self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
             if defrag_msg:
                 ctx.log(f"{Prisma.CYN}{defrag_msg}{Prisma.RST}")
-            reboot_val = float(safe_get(target_cfg, "MAX_ATP", 100.0)) * 0.33
+            reboot_val = self.max_atp * 0.33
             self.eng.set_atp(reboot_val)
             ctx.bio_result["atp"] = reboot_val
             msg_wake = ux("cycle_strings", "metabolism_waking")
@@ -139,25 +143,19 @@ class MetabolismPhase(SimulationPhase):
                 if repair and repair["success"]:
                     ctx.log(repair["msg"])
                     self.eng.mind.mem.record_scar(kintsugi_ref.active_koan or "Healed Rupture", ctx.physics)
-                target_cfg = self.eng.config
                 self.eng.stamina = min(
-                    float(safe_get(target_cfg, "MAX_STAMINA", 100.0)),
+                    self.max_stamina,
                     self.eng.stamina + ctx.limits.get("KINTSUGI_HEAL_AMT", 20.0))
         therapy_ref = getattr(self.eng.village, "therapy", None)
         if therapy_ref:
-            target_cfg = self.eng.config
             if therapy_ref.check_progress(ctx.physics, current_stamina, self.eng.trauma_accum, qualia):
                 ctx.log(f"{Prisma.GRN}{ux('cycle_strings', 'metabolism_therapy')}{Prisma.RST}")
-                self.eng.health = min(float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
-                     self.eng.health + ctx.limits.get("THERAPY_HEAL_AMT", 5.0))
+                self.eng.health = min(self.max_health, self.eng.health + ctx.limits.get("THERAPY_HEAL_AMT", 5.0))
 
     def _check_autophagy(self, ctx: CycleContext):
-        target_cfg = self.eng.config
-        bio_cfg = safe_get(target_cfg, "BIO", {})
-        starvation_thresh = float(safe_get(bio_cfg, "ATP_STARVATION", 5.0))
         respiration = ctx.bio_result.get("respiration", "")
         current_atp = self.eng.bio.mito.state.atp_pool
-        if current_atp <= starvation_thresh or respiration == "NECROSIS":
+        if current_atp <= self.starvation_thresh or respiration == "NECROSIS":
             atp_gain, msg = self.eng.mind.mem.trigger_autophagy()
             self.eng.bio.mito.adjust_atp(atp_gain, "Autophagy")
             ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
@@ -177,9 +175,10 @@ class SensationPhase(SimulationPhase):
         super().__init__(engine_ref)
         self.name = "SENSATION"
         self.synesthesia = self.eng.soma.synesthesia
+        self.max_stamina = float(safe_get(getattr(self.eng, "config", BoneConfig), "MAX_STAMINA", 100.0))
 
     def run(self, ctx: Any):
-        phys_data = _safe_dict(ctx.physics)
+        phys_data = ctx.physics.to_dict()
         current_latency = getattr(getattr(self.eng, "observer", None), "last_cycle_duration", 0.0)
         impulse = self.synesthesia.perceive(phys_data, traits=self.eng.soul.traits, latency=current_latency)
         ctx.last_impulse = impulse
@@ -187,10 +186,8 @@ class SensationPhase(SimulationPhase):
         ctx.physics = apply_somatic_feedback(ctx.physics, qualia)
         self.synesthesia.apply_impulse(impulse)
         if impulse.stamina_impact != 0:
-            target_cfg = getattr(self.eng, "config", BoneConfig)
-            max_s = float(safe_get(target_cfg, "MAX_STAMINA", 100.0))
             current = self.eng.stamina
-            self.eng.stamina = max(0.0, min(max_s, current + float(impulse.stamina_impact)))
+            self.eng.stamina = max(0.0, min(self.max_stamina, current + float(impulse.stamina_impact)))
         return ctx
 
 class IntrusionPhase(SimulationPhase):
@@ -199,7 +196,7 @@ class IntrusionPhase(SimulationPhase):
         self.name = "INTRUSION"
 
     def run(self, ctx: Any):
-        phys_data = _safe_dict(ctx.physics)
+        phys_data = ctx.physics.to_dict()
         p_active, p_log = self.eng.bio.parasite.infect(phys_data, self.eng.stamina)
         if p_active:
             ctx.log(p_log)

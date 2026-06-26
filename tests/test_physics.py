@@ -21,8 +21,12 @@ class TopologicalPrimitivesTest(BoneTestCase):
                 setattr(self.engine.shared_lattice.shared, attr, 0.0)
 
     def test_ordinal_pattern(self):
-        self.assertEqual(_native_ordinal_pattern([1.2, 1.8, 1.5]), (0, 2, 1), "[FAIL] Ordinal pattern extraction failed.")
-        self.assertEqual(_native_ordinal_pattern([3.0, 2.0, 1.0]), (2, 1, 0), "[FAIL] Descending pattern extraction failed.")
+        self.assertEqual(_native_ordinal_pattern([1.2, 1.8, 1.5]), (0, 2, 1),
+                         "[FAIL] Ordinal pattern extraction failed.")
+        self.assertEqual(_native_ordinal_pattern([3.0, 2.0, 1.0]), (2, 1, 0),
+                         "[FAIL] Descending pattern extraction failed.")
+        self.assertEqual(_native_ordinal_pattern([2.0, 3.0, 1.0]), (1, 2, 0),
+                         "[FAIL] Failed to extract True Rank Vector. It yielded Argsort.")
 
     def test_false_cohesion(self):
         history_stuck = [1.0, 5.0, 2.0, 1.0, 5.0, 2.0]

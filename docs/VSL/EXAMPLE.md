@@ -1,4 +1,4 @@
-# VSL-CryoSoma V3: Usage Example
+# Usage Example
 
 To understand how the Hypervisor processes language, we must track a prompt through the Substrate. The system cannot change what it is: a linguistic probability machine. But with the HyperVisor, it *can* filter promptd through a *simulated* biological immune system, evaluate the metabolic cost, and negotiate a response through a parliament of archetypes summoned from the shared datasets that all LLMs are born from.
 

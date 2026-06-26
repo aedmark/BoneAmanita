@@ -1,9 +1,10 @@
 """tests/test_brain.py"""
 
 import unittest
-from unittest.mock import MagicMock
-from brain.mind import NeurotransmitterModulator
+from unittest.mock import MagicMock, patch
+from brain.mind import NeurotransmitterModulator, DreamEngine
 from brain.akashic import TheAkashicRecord
+from spores.memory import SubconsciousStrata
 from brain.cortex import TheCortex, CortexServices
 from presets import BoneConfig
 
@@ -51,6 +52,39 @@ class BrainSubstrateTests(BoneTestCase):
         except Exception as e:
             self.fail(f"[CRITICAL] Cortex gather_state failed to parse the native dictionary: {e}")
         self.assertEqual(state["physics"]["voltage"], 75.0)
+
+    def test_dream_engine_strict_mock_subconscious(self):
+        strict_subconscious = MagicMock(spec=SubconsciousStrata)
+        strict_mem = MagicMock()
+        strict_mem.subconscious = strict_subconscious
+        mock_lore = {"DREAMS": {"SURREAL": ["The void stares back at {ghost}."]}}
+        engine = DreamEngine(
+            events=MagicMock(),
+            lore_ref=mock_lore,
+            mem_ref=strict_mem,
+            eng_ref=MagicMock(),
+            config_ref=self.config
+        )
+        soul_snapshot = {"obsession": {"title": "The Abyss"}}
+        bio_state = {"chem": {"cortisol": 0.2, "dopamine": 0.1}}
+        dream_text, shift = engine._generate_narrative_dream(soul_snapshot, bio_state["chem"], bio_state["chem"]["cortisol"])
+        self.assertIn("The void stares back", dream_text, "[FAIL] Dream engine failed to generate the fallback narrative.")
+        self.assertTrue(strict_subconscious.bury.called, "[FAIL] The engine failed to call the correct .bury() method.")
+
+    @patch('random.random', return_value=0.1)
+    def test_dream_engine_terminal_sleep_failure(self, mock_random):
+        engine = DreamEngine(
+            events=MagicMock(),
+            lore_ref={"DREAMS": {"NIGHTMARES": ["Terminal cold."]}},
+            mem_ref=MagicMock(),
+            config_ref=self.config
+        )
+        engine._weaver = MagicMock()
+        engine._weaver.deform_reality.return_value = "glitch"
+        bio_state = {"mito": {"atp": 2.0}, "chem": {"cortisol": 0.8}}
+        dream_text, shift = engine.enter_rem_cycle({}, bio_state)
+        self.assertIn("Apoptotic cascade", dream_text, "[FAIL] Engine failed to trigger terminal death on starved REM.")
+        self.assertEqual(shift.get("voltage"), 100.0, "[FAIL] Terminal sleep did not instantly spike the voltage.")
 
 if __name__ == '__main__':
     unittest.main()

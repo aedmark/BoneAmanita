@@ -1,4 +1,4 @@
-# 🍄 BoneAmanita & The Hypervisor (v4.1)
+# 🍄 BoneAmanita & The Hypervisor (v5.0)
 
 > A continuous state space where thoughts have coordinates and metabolic costs.
 

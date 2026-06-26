@@ -57,6 +57,18 @@ Simultaneously, specialized constraint modules analyze the text:
 
 **WHY:** Corporate jargon, bureaucratic syntax, and aggressive semantic friction naturally accelerate the system's descent into madness and reality-fracture. They are not mathematically isolated.
 
+### [DEC-06] SoulDriver Instantiation Suppression
+
+**Decision:** The `EnneagramDriver` checks if `soul_ref` has native `get_influence` methods before instantiating a new `SoulDriver` wrapper.
+
+**WHY:** The persona evaluator runs continuously; generating ghost objects to wrap existing soul data wastes memory.
+
+### [DEC-07] Topological Set Union Bans
+
+**Decision:** The `LinguisticAnalyzer` iterates natively over the static `_VECTOR_DIMS` tuple rather than executing `keys = vec_a.keys() | vec_b.keys()`.
+
+**WHY:** Dynamically allocating set unions during high-frequency flux calculations causes allocation thrash.
+
 ## 3. Open Questions
 
 ### [OQ-1] User Profile Affinity Decay
@@ -64,3 +76,9 @@ Simultaneously, specialized constraint modules analyze the text:
 **Status:** `Backlog`
 
 **Question:** The `UserProfile` (`userprofile.json`) tracks semantic affinities over time. How fast should it "forget" an affinity if the user stops using those concepts? Does the decay rate scale with `chi` (entropy), or is it a flat chronological decay?
+
+### [OQ-2] Semantic Volatility Decay
+
+**Status:** `Active`
+
+**Question:** The `SemanticField` currently leverages a `momentum` float based on flux. Should a sustained high momentum (storm) actively accelerate the decay rate of the `LiminalModule`'s $O(1)$ Godel scars, or should trauma remain permanent regardless of current conversational flow?

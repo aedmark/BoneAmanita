@@ -182,8 +182,8 @@ class LinguisticAnalyzer:
     def calculate_flux(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float:
         if not vec_a or not vec_b:
             return 0.0
-        keys = vec_a.keys() | vec_b.keys()
-        return round(sum((vec_a.get(k, 0.0) - vec_b.get(k, 0.0)) ** 2 for k in keys) ** 0.5, 3)
+        return round(sum((vec_a.get(k, 0.0) - vec_b.get(k, 0.0)) ** 2 for k in LinguisticAnalyzer._VECTOR_DIMS) ** 0.5,
+                     3)
 
     def contextualize(self, word: str, field_vector: Dict[str, float]) -> str:
         base_cat, _ = self.classify_word(word)
@@ -201,7 +201,7 @@ class LinguisticAnalyzer:
         cleaned_text = normalized.translate(self._TRANSLATOR).lower()
         if self.ANTIGEN_REGEX:
             cleaned_text = self.ANTIGEN_REGEX.sub(lambda m: self.store.ANTIGEN_REPLACEMENTS.get(m.group(0).lower(), ""), cleaned_text)
-        bias_set = getattr(self.store, "USER_FLAGGED_BIAS", set())
+        bias_set = self.store.USER_FLAGGED_BIAS
         return [w for w in cleaned_text.split() if w not in bias_set]
 
     @functools.lru_cache(maxsize=5000)

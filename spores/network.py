@@ -376,7 +376,7 @@ class MycelialNetwork:
         seed_list = [{"q": s.question, "m": s.maturity, "b": s.bloomed} for s in self.seeds if not s.bloomed]
         if not any(s["q"] == future_seed_q for s in seed_list):
             seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
-        data = {"genome": "BA_2050", "session_id": self.session_id, "parent_id": self.session_id,
+        data = {"genome": "BA_2063", "session_id": self.session_id, "parent_id": self.session_id,
                 "meta": {"timestamp": time.time(), "final_health": health, "final_stamina": stamina, },
                 "trauma_vector": final_vector, "joy_vectors": top_joy or [], "joy_legacy": joy_legacy_data,
                 "core_graph": core_graph, "mutations": mutations or {},
