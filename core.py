@@ -2,24 +2,27 @@
 
 import glob
 import json
+import logging
 import os
 import random
 import threading
 import time
 import uuid
-import logging
-from collections import deque, Counter
+from collections import Counter, deque
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
+
 from constants import Prisma, RealityLayer
-from physics.models import PhysicsPacket, UserInferredState, SharedDynamics
+from physics.models import PhysicsPacket, SharedDynamics, UserInferredState
 from presets import BoneConfig
-from struts import ux, ux_format, safe_get
+from struts import safe_get, ux, ux_format
 
 try:
     import ordvec
+
     ORDVEC_AVAILABLE = True
 except ImportError:
     ORDVEC_AVAILABLE = False
@@ -31,8 +34,10 @@ if not logger.handlers:
     logger.addHandler(_sh)
     logger.setLevel(logging.INFO)
 
+
 class JSONEncoder(json.JSONEncoder):
     """Leave this alone unless you know what you're doing. S.L.A.S.H. Secured."""
+
     def default(self, o):
         if isinstance(o, (set, deque)):
             return list(o)
@@ -43,7 +48,10 @@ class JSONEncoder(json.JSONEncoder):
             for k, v in vars(o).items():
                 if isinstance(v, (threading.Lock, threading.RLock, threading.Thread)):
                     continue
-                if any(sec in k.lower() for sec in ("api_key", "secret", "token", "password")):
+                if any(
+                    sec in k.lower()
+                    for sec in ("api_key", "secret", "token", "password")
+                ):
                     safe_dict[k] = "[REDACTED]"
                 else:
                     safe_dict[k] = v
@@ -52,6 +60,7 @@ class JSONEncoder(json.JSONEncoder):
             return super().default(o)
         except TypeError:
             return f"<Unserializable: {type(o).__name__}>"
+
 
 @dataclass
 class ErrorLog:
@@ -62,6 +71,7 @@ class ErrorLog:
 
     def __str__(self):
         return f"[{self.severity}] {self.component}: {self.error_msg}"
+
 
 @dataclass
 class DecisionCrystal:
@@ -87,6 +97,7 @@ class DecisionCrystal:
         data["_type"] = "CRYSTAL"
         return json.dumps(data, cls=JSONEncoder)
 
+
 @dataclass(slots=True)
 class CycleContext:
     input_text: str
@@ -105,7 +116,9 @@ class CycleContext:
     mind_state: Dict = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
     bureau_ui: str = ""
-    user_profile: Dict = field(default_factory=lambda: {"name": "TRAVELER", "confidence": 0})
+    user_profile: Dict = field(
+        default_factory=lambda: {"name": "TRAVELER", "confidence": 0}
+    )
     last_impulse: Any = None
     reality_stack: Any = None
     active_lens: str = "NARRATOR"
@@ -130,21 +143,33 @@ class CycleContext:
     def log(self, message: str):
         self.logs.append(message)
 
-    def record_flux(self, phase: str, metric: str, initial: float, final: float, reason: str = ""):
+    def record_flux(
+        self, phase: str, metric: str, initial: float, final: float, reason: str = ""
+    ):
         delta = final - initial
         if abs(delta) > 0.001:
             self.flux_log.append(
-                {"phase": phase, "metric": metric, "initial": initial, "final": final, "delta": delta, "reason": reason,
-                 "timestamp": time.time(), })
+                {
+                    "phase": phase,
+                    "metric": metric,
+                    "initial": initial,
+                    "final": final,
+                    "delta": delta,
+                    "reason": reason,
+                    "timestamp": time.time(),
+                }
+            )
 
     def to_dict(self) -> Dict[str, Any]:
         return {k: getattr(self, k) for k in self.__slots__}
+
 
 @dataclass
 class MindSystem:
     mem: Any
     lex: Any
     dreamer: Any
+
 
 @dataclass
 class PhysSystem:
@@ -157,6 +182,7 @@ class PhysSystem:
     gate: Optional[Any] = None
     tension: Optional[Any] = None
     dynamics: Any = None
+
 
 class EventBus:
     def __init__(self, max_memory=None, config_ref=None, telemetry_ref=None):
@@ -184,7 +210,7 @@ class EventBus:
                     del self.subscribers[event_type]
 
     def publish(self, event_type, data=None):
-        active_events = getattr(self._publishing, 'active_events', None)
+        active_events = getattr(self._publishing, "active_events", None)
         if active_events is None:
             active_events = set()
             self._publishing.active_events = active_events
@@ -199,17 +225,31 @@ class EventBus:
                 except Exception as e:
                     if event_type != "EVENT_FAILURE":
                         cb_name = getattr(callback, "__name__", str(callback))
-                        self.log(f"Subscriber '{cb_name}' failed: {e}", source="EVENT_FAILURE", level="CRIT")
+                        self.log(
+                            f"Subscriber '{cb_name}' failed: {e}",
+                            source="EVENT_FAILURE",
+                            level="CRIT",
+                        )
         finally:
             active_events.discard(event_type)
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
-        event = {"timestamp": time.time(), "source": source, "level": level, "text": message, "_type": "EVENT_LOG"}
+        event = {
+            "timestamp": time.time(),
+            "source": source,
+            "level": level,
+            "text": message,
+            "_type": "EVENT_LOG",
+        }
         self.buffer.append(event)
         self.publish(source, event)
         if self.telemetry:
             self.telemetry.record_event(event)
-        log_lvl = {"CRIT": logging.CRITICAL, "ERROR": logging.ERROR, "WARN": logging.WARNING}.get(level, logging.DEBUG)
+        log_lvl = {
+            "CRIT": logging.CRITICAL,
+            "ERROR": logging.ERROR,
+            "WARN": logging.WARNING,
+        }.get(level, logging.DEBUG)
         if log_lvl >= logging.WARNING:
             color = Prisma.RED if log_lvl >= logging.ERROR else Prisma.YEL
             logger.log(log_lvl, f"{color}[{source}] {message}{Prisma.RST}")
@@ -221,6 +261,7 @@ class EventBus:
             current_logs = list(self.buffer)
             self.buffer.clear()
         return current_logs
+
 
 class LoreManifest:
     _instance = None
@@ -265,7 +306,14 @@ class LoreManifest:
             err_msg = f"Parse error in '{category}': {e}. Returning empty structure without modifying disk."
             logger.error(f"{Prisma.RED}{err_msg}{Prisma.RST}")
             if tel := TelemetryService.get_instance():
-                tel.record_event({"source": "LORE", "level": "CRIT", "text": err_msg, "_type": "EVENT_LOG"})
+                tel.record_event(
+                    {
+                        "source": "LORE",
+                        "level": "CRIT",
+                        "text": err_msg,
+                        "_type": "EVENT_LOG",
+                    }
+                )
             return None
 
     def inject(self, category: str, data: Any):
@@ -279,13 +327,23 @@ class LoreManifest:
 
     def save(self, category: str):
         cat_key = category.lower()
-        _protected_files = {"system_prompts", "lore_manifest", "physics_constants", "driver_config", "lexicon"}
+        _protected_files = {
+            "system_prompts",
+            "lore_manifest",
+            "physics_constants",
+            "driver_config",
+            "lexicon",
+        }
         if cat_key in _protected_files:
-            logger.error(f"{Prisma.RED}[ARTICLE 11 VIOLATION] Blocked attempt to mutate bedrock file '{cat_key}.json'.{Prisma.RST}")
+            logger.error(
+                f"{Prisma.RED}[ARTICLE 11 VIOLATION] Blocked attempt to mutate bedrock file '{cat_key}.json'.{Prisma.RST}"
+            )
             return
 
         if cat_key not in self._cache or self._cache[cat_key] is None:
-            logger.warning(f"{Prisma.YEL}Refusing to save null cache for '{cat_key}'.{Prisma.RST}")
+            logger.warning(
+                f"{Prisma.YEL}Refusing to save null cache for '{cat_key}'.{Prisma.RST}"
+            )
             return
         filepath = os.path.join(self.DATA_DIR, f"{cat_key}.json")
         try:
@@ -296,7 +354,14 @@ class LoreManifest:
             err_msg = f"Failed to save '{cat_key}': {e}"
             logger.critical(f"{Prisma.RED}{err_msg}{Prisma.RST}")
             if tel := TelemetryService.get_instance():
-                tel.record_event({"source": "LORE", "level": "CRIT", "text": err_msg, "_type": "EVENT_LOG"})
+                tel.record_event(
+                    {
+                        "source": "LORE",
+                        "level": "CRIT",
+                        "text": err_msg,
+                        "_type": "EVENT_LOG",
+                    }
+                )
 
     def flush_cache(self, category: Optional[str] = None):
         with self._lock:
@@ -307,6 +372,7 @@ class LoreManifest:
             cat_key = category.lower()
             if self._cache.pop(cat_key, None) is not None:
                 logger.info(f"{Prisma.CYN}Flushed '{cat_key}'.{Prisma.RST}")
+
 
 class TheObserver:
     def __init__(self, config_ref=None):
@@ -355,11 +421,21 @@ class TheObserver:
         if avg_cycle < self.C_EFF and avg_llm < self.L_EFF:
             return ux("core_strings", "obs_efficient") or "High Efficiency."
         if avg_llm > self.LATENCY_WARNING:
-            return ux("core_strings", random.choice(("obs_fog", "obs_degraded", "obs_ponderous"))) or "High Cognitive Load."
+            return (
+                ux(
+                    "core_strings",
+                    random.choice(("obs_fog", "obs_degraded", "obs_ponderous")),
+                )
+                or "High Cognitive Load."
+            )
         if avg_cycle > self.CYCLE_WARNING:
             return ux("core_strings", "obs_sluggish") or "System Sluggish."
         if self.is_coupled:
-            return ux_format("core_strings", "obs_coupled", default="Harmonic Resonance: Presence Active.")
+            return ux_format(
+                "core_strings",
+                "obs_coupled",
+                default="Harmonic Resonance: Presence Active.",
+            )
         return ux("core_strings", "obs_nominal") or "Nominal."
 
     @property
@@ -372,13 +448,22 @@ class TheObserver:
 
     def get_report(self):
         c_avg, l_avg = self.avg_cycle, self.avg_llm
-        return {"uptime_sec": int(self.uptime), "turns": self.user_turns, "avg_cycle_sec": round(c_avg, 2),
-                "avg_llm_sec": round(l_avg, 2), "status": self.pass_judgment(c_avg, l_avg), "errors": dict(self.error_counts),
-                "graph_size": self.memory_snapshots[-1] if self.memory_snapshots else 0}
+        return {
+            "uptime_sec": int(self.uptime),
+            "turns": self.user_turns,
+            "avg_cycle_sec": round(c_avg, 2),
+            "avg_llm_sec": round(l_avg, 2),
+            "status": self.pass_judgment(c_avg, l_avg),
+            "errors": dict(self.error_counts),
+            "graph_size": self.memory_snapshots[-1] if self.memory_snapshots else 0,
+        }
+
 
 @dataclass
 class SystemHealth:
-    components_online: Dict[str, bool] = field(default_factory=lambda: {"physics": True, "bio": True, "mind": True})
+    components_online: Dict[str, bool] = field(
+        default_factory=lambda: {"physics": True, "bio": True, "mind": True}
+    )
     errors: deque = field(default_factory=lambda: deque(maxlen=50))
     warnings: List[str] = field(default_factory=list)
     hints: List[str] = field(default_factory=list)
@@ -399,7 +484,11 @@ class SystemHealth:
         if self.observer:
             self.observer.log_error(component)
         if self.events:
-            self.events.log(f"SystemHealth Failure [{component}]: {msg}", source="HEALTH", level=severity)
+            self.events.log(
+                f"SystemHealth Failure [{component}]: {msg}",
+                source="HEALTH",
+                level=severity,
+            )
         if severity in ("CRITICAL", "ERROR"):
             self.components_online[component.lower()] = False
         return ux_format("core_strings", "health_offline", component=component, msg=msg)
@@ -414,7 +503,9 @@ class SystemHealth:
         comp_key = component.lower()
         if not self.components_online.get(comp_key, True):
             self.components_online[comp_key] = True
-            self.report_hint(f"{component.upper()} subsystem explicitly rebooted and brought online.")
+            self.report_hint(
+                f"{component.upper()} subsystem explicitly rebooted and brought online."
+            )
             return True
         return False
 
@@ -423,6 +514,7 @@ class SystemHealth:
         self.warnings.clear()
         self.hints.clear()
         return feedback
+
 
 class RealityStack:
     def __init__(self):
@@ -445,11 +537,13 @@ class RealityStack:
     def stabilize_at(self, layer: int):
         self._stack = [layer]
 
+
 class CyberneticGovernor:
     """
     Apex N-Dimensional Topological Manifold Governor.
     Powered by natively bound AVX-512 Asymmetric Rank Transformations. Ordvec, Apache 2.0
     """
+
     PICARD_C = 10.0
     BETA_SCALE = 1.2
     BETA_STAR_UNIT = 0.5
@@ -465,7 +559,7 @@ class CyberneticGovernor:
         self.last_lam1 = 0.0
         self.last_a = 0.0
         self.last_b = 0.0
-        self.last_sol = 'trivial'
+        self.last_sol = "trivial"
         self.memory_bitmap = None
         self.memory_rq = None
         self.cached_nodes = []
@@ -477,6 +571,7 @@ class CyberneticGovernor:
         if self.cached_nodes == nodes and self.memory_rq is not None:
             return True
         from spores.spore_utils import _word_to_vector
+
         matrix = []
         valid_nodes = []
         for node in nodes:
@@ -492,7 +587,15 @@ class CyberneticGovernor:
         self.cached_nodes = valid_nodes
         return True
 
-    def _solve_nd_picard(self, L: np.ndarray, a: float, beta_b: np.ndarray, c=10.0, max_iter=100, tol=1e-4) -> Tuple[np.ndarray, bool]:
+    def _solve_nd_picard(
+        self,
+        L: np.ndarray,
+        a: float,
+        beta_b: np.ndarray,
+        c=10.0,
+        max_iter=100,
+        tol=1e-4,
+    ) -> Tuple[np.ndarray, bool]:
         N = L.shape[0]
         b_mean = np.mean(beta_b)
         phi_init = np.sqrt(max(0.01, a) / (b_mean + 1e-8)) if a > 0 else 0.1
@@ -515,30 +618,43 @@ class CyberneticGovernor:
         return Phi, converged
 
     def get_policy_shift(self) -> str:
-        if self.order == 2 or self.last_lam1 < 0 or self.last_sol == 'nontrivial':
+        if self.order == 2 or self.last_lam1 < 0 or self.last_sol == "nontrivial":
             return "CO_REGULATION"
         return "EFFICIENCY"
 
-    def regulate(self, physics, dt, goal_vector=None, endocrine_state=None, memory_core=None, user_text="") -> Tuple[
-        float, float]:
+    def regulate(
+        self,
+        physics,
+        dt,
+        goal_vector=None,
+        endocrine_state=None,
+        memory_core=None,
+        user_text="",
+    ) -> Tuple[float, float]:
         if not memory_core or not user_text:
             return self._pid_fallback(physics, dt, endocrine_state)
         try:
-            return self._graph_regulation(physics, dt, memory_core, user_text, endocrine_state)
+            return self._graph_regulation(
+                physics, dt, memory_core, user_text, endocrine_state
+            )
         except Exception as e:
             return self._pid_fallback(physics, dt, endocrine_state)
 
-    def _graph_regulation(self, physics, dt, memory_core, user_text, endocrine_state) -> Tuple[float, float]:
+    def _graph_regulation(
+        self, physics, dt, memory_core, user_text, endocrine_state
+    ) -> Tuple[float, float]:
         from spores.spore_utils import _word_to_vector
 
-        voltage = float(safe_get(physics, 'voltage', 30.0))
-        drag = float(safe_get(physics, 'narrative_drag', 0.6))
+        voltage = float(safe_get(physics, "voltage", 30.0))
+        drag = float(safe_get(physics, "narrative_drag", 0.6))
         p_cfg = getattr(self.cfg, "PHYSICS", None)
         v_max = float(getattr(p_cfg, "VOLTAGE_MAX", 100.0))
         v_floor = float(getattr(p_cfg, "VOLTAGE_FLOOR", 0.0))
         v_base = v_floor + ((v_max - v_floor) * 0.3)
         v_range = v_max - v_base
-        a_scalar = float(np.clip((voltage - v_base) / v_range, 0.0, 1.0) if v_range > 0 else 0.0)
+        a_scalar = float(
+            np.clip((voltage - v_base) / v_range, 0.0, 1.0) if v_range > 0 else 0.0
+        )
 
         self._sync_ordvec_indices(memory_core)
         u_vec = _word_to_vector(user_text)
@@ -546,7 +662,9 @@ class CyberneticGovernor:
             raise ValueError("Null vectorization payload.")
         u_fp32 = np.ascontiguousarray(u_vec, dtype=np.float32)
         candidate_ids = self.memory_bitmap.top_m_candidates(u_fp32, m=self.PRUNE_SIZE)
-        scores, global_ids = self.memory_rq.search_asymmetric_subset(u_fp32, candidate_ids, k=self.PRUNE_SIZE)
+        scores, global_ids = self.memory_rq.search_asymmetric_subset(
+            u_fp32, candidate_ids, k=self.PRUNE_SIZE
+        )
         subset_nodes = [self.cached_nodes[i] for i in global_ids]
         if len(subset_nodes) < 3:
             raise ValueError("Insufficient subgraph density for Laplacian bounds.")
@@ -564,7 +682,14 @@ class CyberneticGovernor:
         b_field = np.maximum(0.01, scores)
         beta_b = self.BETA_SCALE * self.BETA_STAR_UNIT * b_field * (1.0 + drag)
 
-        Phi, converged = self._solve_nd_picard(L_matrix, a_scalar, beta_b, c=self.PICARD_C, max_iter=self.PICARD_MAX_ITER, tol=self.PICARD_TOL)
+        Phi, converged = self._solve_nd_picard(
+            L_matrix,
+            a_scalar,
+            beta_b,
+            c=self.PICARD_C,
+            max_iter=self.PICARD_MAX_ITER,
+            tol=self.PICARD_TOL,
+        )
         if not converged:
             raise ValueError("Picard algorithm failed to converge.")
 
@@ -573,65 +698,137 @@ class CyberneticGovernor:
         self.last_lam1 = float((Phi.T @ L_matrix @ Phi) / phi_norm_sq) - b_mean
         self.last_b = b_mean
         self.last_a = a_scalar
-        self.last_sol = 'nontrivial' if b_mean > 0.1 else 'trivial'
+        self.last_sol = "nontrivial" if b_mean > 0.1 else "trivial"
         phi_mean = float(np.mean(np.abs(Phi)))
         phi_std = float(np.std(np.abs(Phi)))
         self.target_v = v_base + phi_mean * v_range
         self.target_d = float(np.clip(phi_std * 2.0, 0.1, 1.0))
         stress_mod = 1.0
         if endocrine_state:
-            glimmers = float(getattr(endocrine_state, 'glimmers', 0))
+            glimmers = float(getattr(endocrine_state, "glimmers", 0))
             stress_mod = 1.5 if glimmers >= 1 else 0.75
 
         adjusted_dt = dt * 0.5 * stress_mod
-        return (self.target_v - voltage) * adjusted_dt, (self.target_d - drag) * adjusted_dt
+        return (self.target_v - voltage) * adjusted_dt, (
+            self.target_d - drag
+        ) * adjusted_dt
 
-    def _pid_fallback(self, physics: Dict[str, Any], dt: float, endocrine_state: Any = None) -> Tuple[float, float]:
+    def _pid_fallback(
+        self, physics: Dict[str, Any], dt: float, endocrine_state: Any = None
+    ) -> Tuple[float, float]:
         active_tv = self.target_v if self.target_v is not None else 30.0
         active_td = self.target_d if self.target_d is not None else 0.6
         current_v = float(safe_get(physics, "voltage", active_tv))
         current_d = float(safe_get(physics, "narrative_drag", active_td))
-        stress_mod = 1.0 if endocrine_state is None else (1.5 if float(getattr(endocrine_state, 'glimmers', 0)) >= 1 else 0.75)
+        stress_mod = (
+            1.0
+            if endocrine_state is None
+            else (1.5 if float(getattr(endocrine_state, "glimmers", 0)) >= 1 else 0.75)
+        )
         adjusted_dt = dt * 0.5 * stress_mod
-        return (active_tv - current_v) * adjusted_dt, (active_td - current_d) * adjusted_dt
+        return (active_tv - current_v) * adjusted_dt, (
+            active_td - current_d
+        ) * adjusted_dt
 
     def recalibrate(self, target_voltage: float, target_drag: float):
         self.target_v = float(target_voltage)
         self.target_d = float(target_drag)
 
-    def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
+    def calculate_coupling(
+        self, phi: float, resonance_delta: float, user_exhaustion: float
+    ) -> float:
         if user_exhaustion > 0.8:
             self.order = 2
         else:
             self.order = 1
-        self.beth_index = float(min(1.0, max(0.0, (phi + resonance_delta + user_exhaustion) / 3.0)))
+        self.beth_index = float(
+            min(1.0, max(0.0, (phi + resonance_delta + user_exhaustion) / 3.0))
+        )
         return self.beth_index
+
 
 class ArchetypeArbiter:
     @staticmethod
-    def arbitrate(physics_lens: str, soul_archetype: str, council_mandates: List[Dict], trigram: Any = None) -> Tuple[str, str, str]:
+    def arbitrate(
+        physics_lens: str,
+        soul_archetype: str,
+        council_mandates: List[Dict],
+        trigram: Any = None,
+    ) -> Tuple[str, str, str]:
         mandate_types = set()
-        for m in (council_mandates or []):
+        for m in council_mandates or []:
             val = m.get("type", m.get("action"))
             if isinstance(val, list):
                 mandate_types.update(val)
             elif val is not None:
                 mandate_types.add(val)
         if "LOCKDOWN" in mandate_types:
-            return "THE CENSOR", "COUNCIL", ux("core_strings", "arb_martial_law") or "Martial Law."
+            return (
+                "THE CENSOR",
+                "COUNCIL",
+                ux("core_strings", "arb_martial_law") or "Martial Law.",
+            )
         if "FORCE_MODE" in mandate_types:
-            return "THE MACHINE", "COUNCIL", ux("core_strings", "arb_bureaucratic") or "[COUNCIL]: Bureaucratic Override active."
+            return (
+                "THE MACHINE",
+                "COUNCIL",
+                ux("core_strings", "arb_bureaucratic")
+                or "[COUNCIL]: Bureaucratic Override active.",
+            )
         if soul_archetype and "/" in soul_archetype:
-            return soul_archetype, "SOUL", ux_format("core_strings", "arb_diamond", soul_archetype=soul_archetype, default=f"Gestalt Resonance: {soul_archetype}")
+            return (
+                soul_archetype,
+                "SOUL",
+                ux_format(
+                    "core_strings",
+                    "arb_diamond",
+                    soul_archetype=soul_archetype,
+                    default=f"Gestalt Resonance: {soul_archetype}",
+                ),
+            )
         manifest = LoreManifest.get_instance()
-        tri_name = trigram.get("name") if isinstance(trigram, dict) else str(trigram) if trigram else None
-        if tri_name and (meta_resonance := manifest.get("NARRATIVE_DATA", "_META_RESONANCE_")):
+        tri_name = (
+            trigram.get("name")
+            if isinstance(trigram, dict)
+            else str(trigram)
+            if trigram
+            else None
+        )
+        if tri_name and (
+            meta_resonance := manifest.get("NARRATIVE_DATA", "_META_RESONANCE_")
+        ):
             for r in meta_resonance:
-                if r.get("trigram") == tri_name and r.get("lens", physics_lens) == physics_lens and r.get("soul", soul_archetype) == soul_archetype:
-                    return r["result"], r.get("source", "COSMIC"), r.get("msg") or ux("core_strings", "arb_resonance") or "Cosmic Resonance."
-        if physics_lens in (manifest.get("COUNCIL_DATA", "LOUD_LENSES") or ("THE MANIC", "THE VOID")):
-            return physics_lens, "PHYSICS", ux_format("core_strings", "arb_loud", physics_lens=physics_lens, default=f"Physics Override: {physics_lens}")
-        return soul_archetype, "SOUL", ux("core_strings", "arb_soul") or "The soul speaks."
+                if (
+                    r.get("trigram") == tri_name
+                    and r.get("lens", physics_lens) == physics_lens
+                    and r.get("soul", soul_archetype) == soul_archetype
+                ):
+                    return (
+                        r["result"],
+                        r.get("source", "COSMIC"),
+                        r.get("msg")
+                        or ux("core_strings", "arb_resonance")
+                        or "Cosmic Resonance.",
+                    )
+        if physics_lens in (
+            manifest.get("COUNCIL_DATA", "LOUD_LENSES") or ("THE MANIC", "THE VOID")
+        ):
+            return (
+                physics_lens,
+                "PHYSICS",
+                ux_format(
+                    "core_strings",
+                    "arb_loud",
+                    physics_lens=physics_lens,
+                    default=f"Physics Override: {physics_lens}",
+                ),
+            )
+        return (
+            soul_archetype,
+            "SOUL",
+            ux("core_strings", "arb_soul") or "The soul speaks.",
+        )
+
 
 class TelemetryService:
     _tracer_instance = None
@@ -651,11 +848,20 @@ class TelemetryService:
         self._lock = threading.Lock()
         try:
             os.makedirs(self.log_dir, exist_ok=True)
-            self.current_trace_file = os.path.join(self.log_dir, f"trace_{int(time.time())}.jsonl")
-            self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="BoneTelemetry")
+            self.current_trace_file = os.path.join(
+                self.log_dir, f"trace_{int(time.time())}.jsonl"
+            )
+            self._executor = ThreadPoolExecutor(
+                max_workers=1, thread_name_prefix="BoneTelemetry"
+            )
         except OSError as e:
-            msg = ux("core_strings", "tel_disk_denied") or "Disk access denied for Telemetry."
-            logger.warning(f"{Prisma.OCHRE}[GRACEFUL DEGRADATION] {msg} - {e}. Telemetry offline.{Prisma.RST}")
+            msg = (
+                ux("core_strings", "tel_disk_denied")
+                or "Disk access denied for Telemetry."
+            )
+            logger.warning(
+                f"{Prisma.OCHRE}[GRACEFUL DEGRADATION] {msg} - {e}. Telemetry offline.{Prisma.RST}"
+            )
             self.disabled = True
             self.current_trace_file = None
             self._executor = None
@@ -667,7 +873,9 @@ class TelemetryService:
             payload = {**event_dict, "kernel_hash": self.kernel_hash}
             self._buffer_line(json.dumps(payload, cls=JSONEncoder))
         except (TypeError, ValueError) as e:
-            logger.warning(f"{Prisma.YEL}Oops! We dropped an un-serializable event: {e}{Prisma.RST}")
+            logger.warning(
+                f"{Prisma.YEL}Oops! We dropped an un-serializable event: {e}{Prisma.RST}"
+            )
 
     @classmethod
     def get_instance(cls, config_ref=None):
@@ -684,7 +892,9 @@ class TelemetryService:
             if self.active_crystal.decision_id == trace_id:
                 return
             self.finalize_cycle()
-        self.active_crystal = DecisionCrystal(decision_id=trace_id, kernel_hash=self.kernel_hash)
+        self.active_crystal = DecisionCrystal(
+            decision_id=trace_id, kernel_hash=self.kernel_hash
+        )
 
     def log_crystal(self, crystal: DecisionCrystal):
         if self.disabled:
@@ -699,14 +909,16 @@ class TelemetryService:
         self.flush_to_disk()
 
     def _buffer_line(self, json_str: str):
-        if self.disabled: return
+        if self.disabled:
+            return
         with self._lock:
             self.write_buffer.append(json_str)
             if len(self.write_buffer) >= self.BUFFER_SIZE:
                 self.flush_to_disk_locked()
 
     def flush_to_disk_locked(self):
-        if self.disabled or not self.current_trace_file or not self.write_buffer: return
+        if self.disabled or not self.current_trace_file or not self.write_buffer:
+            return
         lines, self.write_buffer = self.write_buffer, []
         self._executor.submit(self._bg_write, lines, self.current_trace_file)
 
@@ -720,7 +932,9 @@ class TelemetryService:
             with open(filepath, "a", encoding="utf-8") as f:
                 f.write("\n".join(lines) + "\n")
         except IOError as e:
-            logger.error(f"{Prisma.RED}[TELEMETRY DECAY] Background write failed: {e}{Prisma.RST}")
+            logger.error(
+                f"{Prisma.RED}[TELEMETRY DECAY] Background write failed: {e}{Prisma.RST}"
+            )
 
     def shutdown(self):
         self.flush_to_disk()
@@ -735,7 +949,9 @@ class TelemetryService:
             return []
 
     def _yield_historical_records(self, file_limit=5, lines_per_file=10):
-        files = sorted(glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), reverse=True)
+        files = sorted(
+            glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), reverse=True
+        )
         for fpath in files[:file_limit]:
             try:
                 tail_lines = reversed(self._tail_file(fpath, n=lines_per_file))
@@ -750,11 +966,15 @@ class TelemetryService:
     def read_recent_history(self, limit=4) -> List[str]:
         history = deque(maxlen=limit)
         for data in self._yield_historical_records(lines_per_file=limit * 2):
-            if len(history) >= limit: break
+            if len(history) >= limit:
+                break
             resp = data.get("final_response")
-            if not resp: continue
+            if not resp:
+                continue
             raw_prompt = data.get("prompt_snapshot") or ""
-            user_text = raw_prompt.partition("User:")[2].split("\n", 1)[0].strip() or "Unknown"
+            user_text = (
+                raw_prompt.partition("User:")[2].split("\n", 1)[0].strip() or "Unknown"
+            )
             history.appendleft(f"User: {user_text} | System: {resp}")
         return list(history)
 
@@ -766,9 +986,20 @@ class TelemetryService:
         for data in self._yield_historical_records(file_limit=5, lines_per_file=50):
             outcome = data.get("outcome")
             if outcome and "CRITICAL" in str(outcome):
-                return ux_format("core_strings", "tel_prev_crash", default="Crash: {reason}", reason=data.get("reasoning", "Unknown"))
+                return ux_format(
+                    "core_strings",
+                    "tel_prev_crash",
+                    default="Crash: {reason}",
+                    reason=data.get("reasoning", "Unknown"),
+                )
         return None
 
     def generate_session_summary(self) -> str:
         self.flush_to_disk()
-        return ux_format("core_strings", "tel_session_summary", status="DISABLED" if self.disabled else "ACTIVE", count=self.crystals_logged, trace_file=self.current_trace_file)
+        return ux_format(
+            "core_strings",
+            "tel_session_summary",
+            status="DISABLED" if self.disabled else "ACTIVE",
+            count=self.crystals_logged,
+            trace_file=self.current_trace_file,
+        )
