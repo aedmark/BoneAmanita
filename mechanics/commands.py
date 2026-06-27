@@ -1,12 +1,14 @@
 """mechanics/commands.py"""
 
-import time
 import shlex
-from typing import Dict, Callable, List, Optional
-from presets import BonePresets, BoneConfig
-from core import LoreManifest
-from struts import ux, safe_get, ux_format
+import time
+from typing import Callable, Dict, List, Optional
+
 from constants import RealityLayer
+from core import LoreManifest
+from presets import BoneConfig, BonePresets
+from struts import safe_get, ux, ux_format
+
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
