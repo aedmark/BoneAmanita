@@ -3,7 +3,7 @@
 **Domain Scope:** This document covers the behavioral algorithms within the `drivers/` directory, which govern persona shifting, vocabulary analysis, and tone constraints.
 
 
-## 1. Specification
+## Specification
 
 The "Steering Column" operates between the raw Physics Engine and the generative AI layer. It is responsible for continuously calculating vector weights and scanning vocabulary to govern *how* BoneAmanita speaks and behaves.
 
@@ -16,7 +16,7 @@ Simultaneously, specialized constraint modules analyze the text:
 * **`CongruenceValidator`:** Ensures that the generative output structurally resonates with the active archetype's intended vocabulary and tone.
 
 
-## 2. Decided
+## Decided
 
 ### [DEC-01] Pre-Compiled Driver Weights
 
@@ -69,16 +69,11 @@ Simultaneously, specialized constraint modules analyze the text:
 
 **WHY:** Dynamically allocating set unions during high-frequency flux calculations causes allocation thrash.
 
-## 3. Open Questions
+## Open Questions
 
 ### [OQ-1] User Profile Affinity Decay
 
-**Status:** `Backlog`
+**Status:** `Active`
 
 **Question:** The `UserProfile` (`userprofile.json`) tracks semantic affinities over time. How fast should it "forget" an affinity if the user stops using those concepts? Does the decay rate scale with `chi` (entropy), or is it a flat chronological decay?
 
-### [OQ-2] Semantic Volatility Decay
-
-**Status:** `Active`
-
-**Question:** The `SemanticField` currently leverages a `momentum` float based on flux. Should a sustained high momentum (storm) actively accelerate the decay rate of the `LiminalModule`'s $O(1)$ Godel scars, or should trauma remain permanent regardless of current conversational flow?

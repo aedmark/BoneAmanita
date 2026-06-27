@@ -3,7 +3,7 @@
 from .akashic import TheAkashicRecord
 from .composer import PromptComposer
 from .cortex import TheCortex
-from .mind import DreamEngine, ChemicalState, NeurotransmitterModulator, NoeticLoop
+from .mind import ChemicalState, DreamEngine, NeurotransmitterModulator, NoeticLoop
 
 __all__ = [
     "TheAkashicRecord",

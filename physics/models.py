@@ -2,8 +2,8 @@
 
 import dataclasses
 import math
-from dataclasses import dataclass, field, asdict
-from typing import List, Dict, Any, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -15,8 +15,14 @@ class DragProfile:
     trauma: float = 0.0
 
     def total(self) -> float:
-        return (self.semantic + self.emotional + self.structural + self.metabolic +
-                self.trauma)
+        return (
+            self.semantic
+            + self.emotional
+            + self.structural
+            + self.metabolic
+            + self.trauma
+        )
+
 
 @dataclass
 class EnergyState:
@@ -68,6 +74,7 @@ class EnergyState:
     cf_expect: float = 0.0
     novelty: float = 0.0
 
+
 @dataclass
 class MaterialState:
     clean_words: List[str] = field(default_factory=list)
@@ -77,6 +84,7 @@ class MaterialState:
     vector: Dict[str, float] = field(default_factory=dict)
     truth_ratio: float = 0.0
     repetition: float = 0.0
+
 
 @dataclass
 class SpatialState:
@@ -88,6 +96,7 @@ class SpatialState:
     flow_state: str = "LAMINAR"
     godel_scar: Optional[tuple] = None
 
+
 @dataclass
 class PhysicsPacket:
     energy: EnergyState = field(default_factory=EnergyState)
@@ -96,7 +105,9 @@ class PhysicsPacket:
     macro_policy: str = "UNKNOWN"
 
     _CORE_DOMAINS = ("energy", "space", "matter")
-    _BASE_FIELDS = frozenset({"energy", "matter", "space", "drag_profile", "macro_policy"})
+    _BASE_FIELDS = frozenset(
+        {"energy", "matter", "space", "drag_profile", "macro_policy"}
+    )
 
     _ALIAS_MAP = {
         "E": [("energy", "exhaustion")],
@@ -126,21 +137,39 @@ class PhysicsPacket:
 
     @staticmethod
     def _safe_init(cls: Any, data: Any) -> Any:
-        if isinstance(data, cls): return data
-        if not data: return cls()
+        if isinstance(data, cls):
+            return data
+        if not data:
+            return cls()
         valid_keys = getattr(cls, "_valid_keys_cache", None)
         if valid_keys is None:
             valid_keys = {f.name for f in dataclasses.fields(cls)}
             cls._valid_keys_cache = valid_keys
         if isinstance(data, dict):
-            return cls(**{k: v for k, v in data.items() if k in valid_keys and v is not None})
-        return cls(**{k: getattr(data, k) for k in valid_keys if getattr(data, k, None) is not None})
+            return cls(
+                **{k: v for k, v in data.items() if k in valid_keys and v is not None}
+            )
+        return cls(
+            **{
+                k: getattr(data, k)
+                for k in valid_keys
+                if getattr(data, k, None) is not None
+            }
+        )
 
-    def __init__(self, energy: Optional[Any] = None, matter: Optional[Any] = None, space: Optional[Any] = None, **kwargs):
+    def __init__(
+        self,
+        energy: Optional[Any] = None,
+        matter: Optional[Any] = None,
+        space: Optional[Any] = None,
+        **kwargs,
+    ):
         self.energy = self._safe_init(EnergyState, energy)
         self.matter = self._safe_init(MaterialState, matter)
         self.space = self._safe_init(SpatialState, space)
-        self.drag_profile = self._safe_init(DragProfile, kwargs.pop("drag_profile", None))
+        self.drag_profile = self._safe_init(
+            DragProfile, kwargs.pop("drag_profile", None)
+        )
         for k, v in kwargs.items():
             setattr(self, k, v)
 
@@ -167,7 +196,9 @@ class PhysicsPacket:
         """Applies the Navi PDE saturation penalty: -c * Φ^p. Caps runway voltage/drag."""
         phi = float(self.get("voltage", 0.0)) / 100.0
         penalty = c * (max(0.0, phi) ** p)
-        self.energy.voltage = max(0.0, float(self.get("voltage", 0.0)) - (penalty * 15.0))
+        self.energy.voltage = max(
+            0.0, float(self.get("voltage", 0.0)) - (penalty * 15.0)
+        )
         return penalty
 
     @classmethod
@@ -193,14 +224,18 @@ class PhysicsPacket:
 
     def __getattr__(self, key: str) -> Any:
         if key.startswith("_"):
-            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute '{key}'"
+            )
         if key in self._ALIAS_MAP:
             domain, t_key = self._ALIAS_MAP[key][0]
             return getattr(getattr(self, domain), t_key)
         domain = self._DOMAIN_MAP.get(key)
         if isinstance(domain, str):
             return getattr(getattr(self, domain), key)
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{key}'"
+        )
 
     def __setattr__(self, key: str, value: Any) -> None:
         if key in ("voltage", "narrative_drag", "psi", "chi", "ros", "V", "F"):
@@ -236,7 +271,12 @@ class PhysicsPacket:
         setattr(self, key, value)
 
     def __contains__(self, key):
-        return key in self._BASE_FIELDS or key in self._ALIAS_MAP or key in self._DOMAIN_MAP
+        return (
+            key in self._BASE_FIELDS
+            or key in self._ALIAS_MAP
+            or key in self._DOMAIN_MAP
+        )
+
 
 @dataclass
 class UserInferredState:
@@ -260,7 +300,9 @@ class UserInferredState:
         u_key = f"{key}_u"
         if u_key in {f.name for f in dataclasses.fields(self)}:
             return getattr(self, u_key)
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{key}'"
+        )
 
     def __setattr__(self, key: str, value: Any) -> None:
         u_key = f"{key}_u"
@@ -272,6 +314,7 @@ class UserInferredState:
 
     def snapshot(self) -> "UserInferredState":
         return UserInferredState(**asdict(self))
+
 
 @dataclass
 class SharedDynamics:

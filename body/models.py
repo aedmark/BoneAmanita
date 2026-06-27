@@ -1,7 +1,8 @@
 """body/models.py"""
 
 from dataclasses import dataclass
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 
 @dataclass
 class Biometrics:
@@ -9,6 +10,7 @@ class Biometrics:
     stamina: float
     stress_modifier: float = 1.0
     circadian_bias: Optional[Dict[str, float]] = None
+
 
 @dataclass
 class MetabolicReceipt:
@@ -19,6 +21,7 @@ class MetabolicReceipt:
     waste_generated: float
     status: str
     symptom: str = "Nominal"
+
 
 @dataclass
 class SemanticSignal:
@@ -37,12 +40,14 @@ class BiologicalImpulse:
     stamina_impact: float = 0.0
     somatic_reflex: str = ""
 
+
 @dataclass
 class Qualia:
     color_code: str
     somatic_sensation: str
     tone: str
     internal_monologue_hint: str
+
 
 @dataclass
 class MitochondrialState:

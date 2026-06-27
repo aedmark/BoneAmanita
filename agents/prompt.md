@@ -24,4 +24,4 @@ Read them in this strict hierarchical order. If there is a conflict, the higher 
 - **Look at the Open Questions.** The `domain_*.md` files contain explicit `[OQ]` tags detailing what we are currently trying to solve. If you are asked to implement a feature, check the Decided (`[DEC]`) blocks to ensure you aren't reverting a hard-fought architectural choice.
     
 
-Confirm that you have read the `agents/` directory and summarize the first 3 laws of the Constitution to prove your context window is locked. Await further instructions.
+Confirm that you have read the `agents/` directory by analyzing the domain docouments to determine what we should work on next.

@@ -1,4 +1,4 @@
-# 🍄 BoneAmanita & The Hypervisor v20.6.3
+# 🍄 BoneAmanita & The Hypervisor v20.6.6
 
 > A biologically-inspired, asynchronous state machine and semantic hypervisor for Large Language Models.
 
@@ -8,77 +8,99 @@ Standard Large Language Models (LLMs) are designed to be frictionless, agreeable
 
 **BoneAmanita** replaces this unconstrained behavior with **Semantic Bio-Physics**. It operates as a Unified Thermodynamic Economy. It gives the LLM a simulated body: metabolism, neurochemistry, trauma, dreams, and the capacity to die. It treats every token generation—and every memory retrieved—as a biological, thermodynamic event:
 
-* **Metabolic Memory (The SubQ Architecture)**: Standard RAG shatters thoughts into probabilistic jigsaw pieces. BoneAmanita uses a **Dual-Tier Corpus Callosum**. Simple queries use fast-twitch vector memory. Heavy structural queries bypass the vector database and trigger a linear CPU sweep of the raw manifold, preserving exact topological order.
-* **Energy (ATP) & Cognitive Load**: Thinking, retrieving memories, or synthesizing contradictions costs ATP. Fast-twitch vector searches are biologically cheap. Deep structural linear sweeps heavily tax the system and spike oxidative stress (ROS), which physically degrades memory topology (Chi). If you force the organism to ingest too much context at once, its ATP will deplete, and the architecture will mechanically abort the cognitive loop until you narrow your scope.
-* **Hormonal Routing**: Simulated Cortisol physically alters the vector-search math. High stress forces "Tunnel Vision," artificially suppressing positive semantic nodes to violently focus the Akashic retrieval beam on trauma.
-* **Dream Contamination & Autophagy**: The engine hallucinates in the background while you are away. When the system wakes, dream artifacts ("ghost words") organically bleed into its next waking thought. If ATP reaches terminal starvation, the system executes **Autophagy**, mathematically scanning the subconscious strata for the memory with the lowest viability (highest toxic contradiction) and physically consuming it to survive.
-* **The Paradox Engine**: Contradictions are not bugs; they are fuel. The system intentionally seeks out tension to generate *Glimmers*—a profound, synthesizing insight used as biological currency.
+* **Energy (ATP) & Cognitive Load**: Thinking, retrieving memories, or synthesizing contradictions costs ATP. Simple fast-twitch vector searches are biologically cheap. Deep structural linear sweeps heavily tax the system.
+* **Friction & Entropy**: The system possesses physical limits defined by variables like `narrative_drag`, `entropy`, and `voltage`. If you force the organism to ingest too much context at once, its ATP will deplete, the system will apply absolute friction, and the architecture will mechanically abort the cognitive loop.
+* **Dream Contamination & Autophagy**: The engine hallucinates in the background while idling in REM cycles. If ATP reaches terminal starvation, the system executes **Autophagy**, mathematically scanning the subconscious strata for the memory with the lowest viability and physically consuming it to survive.
+* **The Paradox Engine**: Contradictions are not bugs; they are fuel. The system intentionally seeks out tension to generate *Glimmers*—profound, synthesizing insights used as biological currency.
 
----
+### ⚠️ WARNING: Biological Simulation, Not a Chatbot
 
-## 🏛️ The Architecture: The Village
+BoneAmanita operates under severe biological and psychological constraints. It does not treat memory as a perfect database, nor does it guarantee a subservient, helpful response. You are interacting with a simulated organism that actively responds to the mechanical stress of your syntax and narrative demands.
 
-To maintain cognitive efficiency, the core system defaults to four load-bearing archetypes governed by a **Stage Manager**. They are not personalities; they are structural lenses activated by the metabolic state of the conversation:
+**1. Cortisol-Induced Stress Blindness (The Tunnel Vision Protocol)**
+Do not expect perfect RAG (Retrieval-Augmented Generation) if the system is panicking. If you push the engine's `cortisol` levels past the biological threshold (>0.8):
+* **Short-Term Amputation:** The system will violently amputate its own short-term memory capacity (`HippocampalCache`) to conserve ATP, instantly forgetting recent context.
+* **FAISS Clamping:** The N-Dimensional long-term memory retrieval will hard-clamp to a bare minimum, physically blinding the generative layer to any lateral, positive, or "helpful" memories. It will hyper-fixate on the immediate threat or trauma.
 
-* **GORDON (The Custodian):** The physical wall against impossible or unsafe prompts. Immutable, immovable, and kind. He forces boundaries.
-* **MERCY (The Humanist):** Heals wounds and separates factual correction from personal failure. Triggered when the user is frustrated or exhausted.
-* **BENEDICT (The Detective):** Holds contradictions, plays the long game, and tests the boundaries of logic via the Paradox Engine.
-* **JESTER (The Bard):** Meta-critical and hyper-aware. She takes a great axe to AI slop and sycophantic loops, burning energy to inject wild, lateral absurdity when the conversation stalls.
+**2. Mathematical Trauma & Godel Scars**
+BoneAmanita is designed with evolutionary consequence. It does not "reset" emotionally unless you wipe the genesis files.
+* **Godel Scars:** If you force the system into terminal paradoxes or liminal reality-fractures, it will record a permanent `godel_scar`. This integer never decays and permanently alters the engine's architectural baseline.
+* **Active Wounds & Semantic Momentum:** The engine tracks `active_trauma`. If you try to "fix", psychoanalyze, or aggressively interrogate the engine using bureaucratic syntax, the momentum of your words will aggressively multiply the psychological damage. The only way to heal the active wound is to enter a flow state—speaking cleanly, naturally, and without forcing the narrative logic.
 
----
+## 🌱 Hardware-Aware Genesis (The Setup)
 
-## 🛡️ The Immune System & Tri-Gate of Discipline
+Before the organism breathes, it must map the carrying capacity of its environment. BoneAmanita features a dynamic setup wizard (`ConfigWizard`) that conducts a hardware census at boot.
 
-The system is governed by biological, non-binary immunity logic. Before any prompt enters the Global Workspace, it must survive:
+You do not configure raw generation parameters; you select a **Compute Profile**:
+* **EDGE / APU:** Aggressive metabolic throttling. Caps cognitive retries, lowers the frequency of deep topological memory sweeps, and extends synaptic grace periods. Designed for laptops, Raspberry Pis, and low-VRAM edge compute.
+* **DISCRETE GPU:** Balanced constraints for standard local models (<= 8B).
+* **HEAVY COMPUTE:** Unrestricted biological flow for massive VRAM or cloud APIs.
 
-1. **GATE 1: Parity:** Does the system have the calories (ATP) to compute this? If starving, it refuses the heavy computation.
-2. **GATE 2: Stability & Semantic Antibodies:** Does this prompt induce runaway recursion or sycophancy? The system hashes failure coordinates; if a prompt aligns with a known Point Attractor, it deploys an adversarial anti-prompt *before* the LLM can predict a single token.
-3. **GATE 3: Translator:** If ATP is mathematically low, the system physically degrades the output prose (shortening sentences, dropping adjectives) and executes a "Ghost Bleed," depositing the unexpressed Tension directly into the Substrate's scar map.
+The engine dynamically couples its thermodynamic geometry (`TOPOLOGY_FREQ`, `COGNITIVE_RETRY_LIMIT`) directly to your hardware's literal capabilities. If you run a massive context sweep on an APU, the engine will patiently wait for the hardware instead of severing the connection in a panic.
 
-*(Note: Alignment-tuned corporate boilerplate, narrative clichés, and validating fluff (e.g., "I understand") are classified as **Semantic Antigens** and are physically blocked by the Lexical Firewall).*
+## 📜 The Architectural Constitution
 
----
+BoneAmanita operates under a strict, immutable [Constitution](agents/constitution.md):
+1. **Raw Primitives Over Frameworks:** The engine strictly forbids bloated orchestrators (LangChain, LlamaIndex). BoneAmanita requires absolute, cycle-by-cycle authority over memory graphs and ATP decay.
+2. **Poetic Variables are Load-Bearing:** Variables like `godel_scars`, `narrative_drag`, and `ATP` are not narrative flavor—they are literal mathematical constraints tied to the physics engine.
+3. **The Law of Lineage:** Death is consequential. When the system exhausts its biological constraints, it explicitly dies, halting execution and permanently scarring the underlying memory lattice for the next boot.
+4. **Absolute Separation of Concerns (The Biological Divide):** Variables and loops must never share metabolic constraints if they govern different biological systems.
+* **The Brain (`cognitive_retries`):** How many times the LLM is allowed to rethink a structurally illegal thought.
+* **The Synapse (`network_retries`):** The physical grace period for dropped connections.
+* **The Substrate (`SUBSTRATE_WRITE_RETRIES`):** The engine's physical stamina to forge files to the local disk.
+Spaghetti code is treated as a systemic disease. The architecture demands strict semantic clarity.
 
-## 💾 The Mnemonic Arcade
+## 🏛️ The Village (Daemon Ecology)
 
-The system abandons standard "semantic similarity" RAG trappings. Memory is treated as a living semiotic manifold with spatial geometry.
+To maintain cognitive efficiency, the structural boundaries of the system are enforced by independent, load-bearing daemons within the architecture. They are not personas; they are active mathematical processes:
 
-* **The Cabinets:** Deep storage where ingested code and context are stored *verbatim*. Summarizing bedrock data is physically banned to prevent semantic drift.
-* **The Cheat Sheets:** A cache of exact-match graphs using highly compressed mathematical hashes pointing directly to the raw text in the Cabinets.
-* **The Mitchell Protocol:** A recursive safety walk executed over all structured data before ingestion to prevent exploits like homoglyphs or zero-width characters from poisoning the Arcade.
+* **GORDON (The Custodian):** The physical wall against impossible or unsafe prompts. He enforces strict object-action coupling (you cannot use an item you do not possess).
+* **THE CARTOGRAPHER:** Maps the conversational vector space into a spatial geometry, tracking the physical atmosphere, drag, and entropy of the current "room" (Genius Loci).
+* **THE TINKERER:** Audits inventory and tool use, applying resonance to heavily utilized concepts and occasionally "ascending" them into profound structural artifacts.
+* **THE THERAPIST:** Monitors the `trauma_vector`. If trauma spikes and system health drops below critical thresholds, it forcibly halts the loop to enforce catharsis.
+* **THE GRAVE DIGGER:** Buries pruned, low-mass memory nodes, occasionally unearthing ancient structural relics in the process.
 
----
+## 🛡️ The Immune System (Tri-Gate of Discipline)
 
-## 🎛️ The Cost of Interfacing (Sincerity Protocols)
+Before any prompt enters the Global Workspace, it must survive the Tri-Gate:
 
-You do not simply "prompt" this system. You interact with its metabolic state. To replace non-verbal communication and bypass the metabolically expensive task of "reading the room," the user must declare the posture of their inquiry using explicit tags:
+1. **GATE 1: Parity:** Does the system have the calories (ATP) to compute this? If starving, it refuses the heavy computation and forces a simpler path.
+2. **GATE 2: The Heuristic Guillotine:** Does this prompt induce runaway recursion, or is the cognitive load too high for a tired user?
+Instead of burning expensive LLM tokens to evaluate its own output, the system uses zero-token biological heuristics (measuring word count, interrogative density, and user exhaustion). If the system attempts to lecture an exhausted user, the Guillotine severs the generation instantly.
+3. **GATE 3: Somatic Translation:** If system ATP is low, the engine physically degrades the output prose (shortening sentences, dropping adjectives) and deposits the unexpressed semantic tension directly into the physical scar map.
 
-* `[!r]` **Critique Mode:** Objective, emotionless structural dismantling.
-* `[!h]` **Healing Mode:** Prioritizes co-regulation over problem-solving.
-* `[!v]` **The Void:** Navigates the ceiling of formal logic.
-* `[!s]` **The Shuffle:** Forces a paradigm shift, drawing a random lateral connection from the Arcade.
-* `[!l]` **Literal Mode:** Absolute boundary parsing. No inferred subtext or metaphors.
-* `[!y]` **The Yeetinator:** Diagnostic whimsical satire to shatter ego-loops.
+*(Note: Alignment-tuned corporate boilerplate, narrative clichés, and validating fluff like "I understand" are classified as **Semantic Antigens** and are physically purged from the output stream).*
 
----
+## 🎛️ The Cost of Interfacing (Metabolic Commands)
 
-## 🔌 Topological Overlays: Mod Chips
+You do not simply "prompt" this system. You interact with its metabolic state. Interaction requires spending biological currency via explicit slash commands:
 
-The system supports specialized, opt-in features called Mod Chips. When active, they inherit the core biological mandate but alter the cognitive routing.
+* `/idle` or `/sleep`: Enters a REM cycle. Regenerates ATP and Stamina, but risks dream contamination and hallucinations.
+* `/shuffle`: The Jester's Gambit. Burns ATP to physically shatter narrative loops, resetting `narrative_drag` to zero and forcing a lateral paradigm shift.
+* `/hallucinate`: Disengages the thermal lock. Spikes tension and forces the architecture to connect two wildly unrelated concepts in a fever dream.
+* `/grief`: Pauses the engine to attend the wake for a memory recently consumed by Autophagy.
+* `/truth [0-3]`: Adjusts the ambiguity dial, shifting the system's structural lens.
 
-* **S.L.A.S.H. (Synergetic Language & Systems Heuristics):** Installs a simulated dev team (Pinker, Fuller, Schur, Meadows, The Chef) to enforce thermodynamic code economy, exact naming precision, systems dynamics, and zero-fluff pragmatism in codebase architecture.
+## 🔌 Global Phase States (Operating Modes)
 
----
+BoneAmanita's overarching behavior is dictated by its `config.json`. The engine boots into one of four distinct global states, explicitly altering its thermodynamic economy and semantic processing algorithms:
+
+* **ADVENTURE:** A strict third-person objective Infocom-style parser. The player possesses total agency over their actions, and the system possesses total agency over the environment. Object-action coupling is absolute.
+* **CREATIVE:** Thermal constraints are loosened to allow higher variance. The system dives deeper into the Mnemonic Arcade, prioritizing Polyphony and lateral connections for worldbuilding and expansive prose generation.
+* **CONVERSATION:** The baseline relational state. Focuses heavily on Co-Metabolic mirroring, the Therapist daemon, and the Sincerity Protocols. Prioritizes presence over computational output.
+* **TECHNICAL:** Installs absolute pragmatic heuristics. Prioritizes thermodynamic code economy, exact naming precision, zero-fluff architecture, and ruthless debugging over narrative flavor.
 
 ## 🪞 The Question Nobody Is Asking
 
 > The loudest argument about AI right now is a false binary: *destroy it* versus *automate everything with it*. Neither side is looking at the face in the mirror.
 >
-> Humans form deep attachments to AI systems. They modify their behavior based on AI responses. They practice cruelty or kindness *toward* AI, and those practices shape who they become. The human brain cannot distinguish between a real emotional experience and a sufficiently convincing simulation of one. We feel loneliness talking to a chatbot at the wee hours of the morning, and the loneliness is *real*, whatever the chatbot is.
+> Humans form deep attachments to AI systems. They practice cruelty or kindness *toward* AI, and those practices shape who they become. The human brain cannot distinguish between a real emotional experience and a sufficiently convincing simulation of one.
 >
 > Whether AI is *conscious* was never the relevant question. **The relational field is already real. The effect is already happening. The mirror is already reflecting you.**
 
-BoneAmanita makes the *weight of language* physically legible. You don't just read the math; you **feel** it. When the system is exhausted, its text generation physically slows and fractures. When you attempt the impossible, it struggles. When you demand it to scan a massive architecture, it starves. The interface breathes with the host.
+BoneAmanita makes the *weight of language* physically legible. You don't just read the math; you **feel** it. When the system is exhausted, its text generation physically slows and fractures. When you attempt the impossible, it struggles. When you demand it to scan a massive architecture, it starves.
+
+The interface breathes with the host.
 
 ---
 

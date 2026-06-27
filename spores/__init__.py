@@ -1,9 +1,9 @@
 """spores/__init__.py"""
 
-from .io import LocalFileSporeLoader
-from .memory import SubconsciousStrata, MemoryCore
-from .biome import BioParasite, BioLichen
+from .biome import BioLichen, BioParasite
 from .genetics import LiteraryReproduction
+from .io import LocalFileSporeLoader
+from .memory import MemoryCore, SubconsciousStrata
 from .network import MycelialNetwork
 from .spore_utils import _word_to_vector
 
@@ -15,5 +15,5 @@ __all__ = [
     "BioLichen",
     "LiteraryReproduction",
     "MycelialNetwork",
-    "_word_to_vector"
+    "_word_to_vector",
 ]

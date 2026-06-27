@@ -2,6 +2,7 @@
 
 import unittest
 from unittest.mock import MagicMock
+
 from tests.base import BoneTestCase
 
 
@@ -10,6 +11,7 @@ class EngineConnectivityTests(BoneTestCase):
         super().setUp()
         if not getattr(self.engine, "shared_lattice", None):
             from drivers import SharedLatticeDriver
+
             self.engine.shared_lattice = SharedLatticeDriver()
         if not hasattr(self.engine.shared_lattice.u, "E"):
             setattr(self.engine.shared_lattice.u, "E", 0.0)
@@ -24,11 +26,12 @@ class EngineConnectivityTests(BoneTestCase):
         snapshot = self.engine.process_turn("This is a structural integration test.")
         self.assertTrue(
             mock_process.called,
-            "[FAIL] THE GREAT DISCONNECT: GeodesicOrchestrator bypassed The Cortex entirely."
+            "[FAIL] THE GREAT DISCONNECT: GeodesicOrchestrator bypassed The Cortex entirely.",
         )
         self.assertIn(
-            "ui", snapshot,
-            "[FAIL] GeodesicOrchestrator failed to package the Cortex's UI payload."
+            "ui",
+            snapshot,
+            "[FAIL] GeodesicOrchestrator failed to package the Cortex's UI payload.",
         )
         self.engine.cortex.process_context = original_process
 
@@ -44,12 +47,14 @@ class EngineConnectivityTests(BoneTestCase):
         snapshot = self.engine.process_turn("Trace this packet through the cycle.")
         phys_packet = snapshot.get("physics", {})
         self.assertIn(
-            "tracer_particle", phys_packet,
-            "[FAIL] STRUCTURAL ROT: The phase pipeline dropped dynamic attributes during phase handoff."
+            "tracer_particle",
+            phys_packet,
+            "[FAIL] STRUCTURAL ROT: The phase pipeline dropped dynamic attributes during phase handoff.",
         )
         self.assertEqual(
-            phys_packet["tracer_particle"], 84.0,
-            "[FAIL] The phase pipeline mutated a locked attribute without authorization."
+            phys_packet["tracer_particle"],
+            84.0,
+            "[FAIL] The phase pipeline mutated a locked attribute without authorization.",
         )
         self.engine.cortex.gather_state = original_gather
 
@@ -61,23 +66,30 @@ class EngineConnectivityTests(BoneTestCase):
             memory_core.trigger_autophagy()
             new_atp = self.engine.bio.mito.state.atp_pool
             self.assertGreater(
-                new_atp, initial_atp,
-                "[FAIL] SEVERED NERVE: Memory layer failed to propagate ATP refund to the Mitochondrial layer."
+                new_atp,
+                initial_atp,
+                "[FAIL] SEVERED NERVE: Memory layer failed to propagate ATP refund to the Mitochondrial layer.",
             )
 
     def test_benign_full_cycle_integration(self):
         self.engine.active_physics["contextual_anchor"] = "TEST_SURVIVOR"
-        snapshot = self.engine.process_turn("Hello. This is a clean, benign integration test.")
+        snapshot = self.engine.process_turn(
+            "Hello. This is a clean, benign integration test."
+        )
         self.assertNotIn(
             snapshot.get("type"),
             ["SYSTEM_HALT", "DEATH", "CRASH"],
-            f"[FAIL] The engine halted or crashed on a benign input. Type: {snapshot.get('type')}"
+            f"[FAIL] The engine halted or crashed on a benign input. Type: {snapshot.get('type')}",
         )
-        self.assertIn("ui", snapshot, "[FAIL] The orchestrator failed to return a UI payload.")
-        self.assertIn("physics", snapshot, "[FAIL] The orchestrator stripped the physics payload.")
+        self.assertIn(
+            "ui", snapshot, "[FAIL] The orchestrator failed to return a UI payload."
+        )
+        self.assertIn(
+            "physics", snapshot, "[FAIL] The orchestrator stripped the physics payload."
+        )
         surviving_physics = snapshot.get("physics", {})
         self.assertEqual(
             surviving_physics.get("contextual_anchor"),
             "TEST_SURVIVOR",
-            "[FAIL] Physics Amnesia detected. The cycle daemon wiped the running physics context."
+            "[FAIL] Physics Amnesia detected. The cycle daemon wiped the running physics context.",
         )

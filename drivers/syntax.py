@@ -3,6 +3,7 @@
 from presets import BoneConfig
 from struts import safe_get
 
+
 class SyntaxModule:
     def __init__(self, config_ref=None, lexicon_ref=None):
         self.cfg = config_ref or BoneConfig
@@ -10,7 +11,8 @@ class SyntaxModule:
         self.omega_val = 1.0
         self.grammatical_stress = 0.0
         cfg = safe_get(self.cfg, "DRIVERS", {})
-        self.bounds = {"len_hi": float(safe_get(cfg, "SYNTAX_AVG_LEN_HIGH", 6.0)),
+        self.bounds = {
+            "len_hi": float(safe_get(cfg, "SYNTAX_AVG_LEN_HIGH", 6.0)),
             "drag_hi": float(safe_get(cfg, "SYNTAX_DRAG_HIGH", 5.0)),
             "len_lo": float(safe_get(cfg, "SYNTAX_AVG_LEN_LOW", 3.5)),
             "drag_lo": float(safe_get(cfg, "SYNTAX_DRAG_LOW", 1.0)),
@@ -23,8 +25,11 @@ class SyntaxModule:
             "o_pen": float(safe_get(cfg, "SYNTAX_OMEGA_PENALTY", 0.1)),
             "o_dec": float(safe_get(cfg, "SYNTAX_OMEGA_DECAY", 0.8)),
             "o_gro": float(safe_get(cfg, "SYNTAX_OMEGA_GROWTH", 0.2)),
-            "o_min": float(safe_get(cfg, "SYNTAX_OMEGA_MIN", 0.1)),}
-        self.bureau_vocab = set(self.lex.get("bureau_buzzwords") or []) if self.lex else set()
+            "o_min": float(safe_get(cfg, "SYNTAX_OMEGA_MIN", 0.1)),
+        }
+        self.bureau_vocab = (
+            set(self.lex.get("bureau_buzzwords") or []) if self.lex else set()
+        )
 
     def analyze(self, text: str, narrative_drag: float) -> float:
         words = text.split()
@@ -46,5 +51,6 @@ class SyntaxModule:
         else:
             self.grammatical_stress = max(0.0, self.grammatical_stress - b["s_dec"])
         self.omega_val = (self.omega_val * b["o_dec"]) + (
-                max(b["o_min"], target_omega) * b["o_gro"])
+            max(b["o_min"], target_omega) * b["o_gro"]
+        )
         return self.omega_val

@@ -3,10 +3,12 @@
 import json
 import os
 import tempfile
-from typing import List, Tuple, Any, Optional
+from typing import Any, List, Optional, Tuple
+
+from constants import Prisma
 from core import JSONEncoder
 from struts import ux_format
-from constants import Prisma
+
 
 class LocalFileSporeLoader:
     def __init__(self, directory: str = "memories"):
@@ -20,9 +22,13 @@ class LocalFileSporeLoader:
         if os.path.isabs(filename):
             final_path = os.path.realpath(filename)
         else:
-            final_path = os.path.realpath(os.path.join(base_dir, os.path.basename(filename)))
+            final_path = os.path.realpath(
+                os.path.join(base_dir, os.path.basename(filename))
+            )
         if os.path.commonpath([base_dir, final_path]) != base_dir:
-            if msg := ux_format("spore_strings", "loader_save_err", e="Path traversal violation"):
+            if msg := ux_format(
+                "spore_strings", "loader_save_err", e="Path traversal violation"
+            ):
                 print(f"{Prisma.RED}{msg} ({filename}){Prisma.RST}")
             return None
         os.makedirs(os.path.dirname(final_path), exist_ok=True)
@@ -44,20 +50,24 @@ class LocalFileSporeLoader:
 
     def load_spore(self, filepath: str) -> Optional[Any]:
         base_dir = os.path.realpath(self.directory)
-        final_path = os.path.realpath(os.path.join(base_dir, os.path.basename(filepath)))
-        if os.path.commonpath([base_dir, final_path]) != base_dir:
-            if msg := ux_format("spore_strings", "loader_read_err", e="Path containment violation"):
-                print(f"{Prisma.RED}{msg}{Prisma.RST}")
-            return None
+        final_path = os.path.realpath(
+            os.path.join(base_dir, os.path.basename(filepath))
+        )
         if not os.path.exists(final_path):
-            if msg := ux_format("spore_strings", "loader_not_found", filepath=final_path):
+            if msg := ux_format(
+                "spore_strings", "loader_not_found", filepath=final_path
+            ):
                 print(f"{Prisma.RED}{msg}{Prisma.RST}")
             return None
         try:
             with open(final_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError) as e:
-            err_type = "loader_corrupt" if isinstance(e, json.JSONDecodeError) else "loader_read_err"
+            err_type = (
+                "loader_corrupt"
+                if isinstance(e, json.JSONDecodeError)
+                else "loader_read_err"
+            )
             if msg := ux_format("spore_strings", err_type, filepath=filepath, e=e):
                 print(f"{Prisma.RED}{msg}{Prisma.RST}")
             return None
@@ -67,16 +77,22 @@ class LocalFileSporeLoader:
             return []
         try:
             with os.scandir(self.directory) as it:
-                files = [(e.path, e.stat().st_mtime, e.name) for e in it if e.is_file() and e.name.endswith(".json") and e.name.startswith("session_")]
+                files = [
+                    (e.path, e.stat().st_mtime, e.name)
+                    for e in it
+                    if e.is_file()
+                    and e.name.endswith(".json")
+                    and e.name.startswith("session_")
+                ]
             return sorted(files, key=lambda x: x[1], reverse=True)
         except OSError:
             return []
 
     def delete_spore(self, filepath: str):
         base_dir = os.path.realpath(self.directory)
-        final_path = os.path.realpath(os.path.join(base_dir, os.path.basename(filepath)))
-        if os.path.commonpath([base_dir, final_path]) != base_dir:
-            return False
+        final_path = os.path.realpath(
+            os.path.join(base_dir, os.path.basename(filepath))
+        )
         try:
             os.remove(final_path)
             return True

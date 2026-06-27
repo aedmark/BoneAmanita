@@ -3,7 +3,7 @@
 **Domain Scope:** This document covers the cognitive structures of BoneAmanita, primarily residing in the `brain/` (`akashic.py`, `mind.py`, `ann.py`) and `spores/` (`memory.py`) directories. 
 
 
-## 1. Specification
+## Specification
 
 The Mind in BoneAmanita does not treat memory as a flat database. It treats memory as a biological topology—a weighted graph of concepts, synapses, and vectors. 
 
@@ -14,7 +14,7 @@ As interactions age, they sink into the `MemoryCore` (`spores/memory.py`). When 
 Simultaneously, the engine maintains a continuous biological `ChemicalState` (`mind.py`) tracking Dopamine, Cortisol, Adrenaline, and Serotonin. These floats are updated continuously in a high-frequency `homeostasis` tick loop, subtly coloring the context retrieval process [OQ-1].
 
 
-## 2. Decided
+## Decided
 
 ### [DEC-01] Zero-Allocation Chemical Homeostasis
 
@@ -71,11 +71,3 @@ Simultaneously, the engine maintains a continuous biological `ChemicalState` (`m
 **Decision:** Akashic memory stock is evaluated using `itertools.chain()` instead of list concatenation (`+`).
 
 **WHY:** Array concatenation creates a fully duplicated object in RAM, devastating the Python garbage collector as the memory graph scales.
-
-## 3. Open Questions
-
-### [OQ-2] Dynamic FAISS Limits Under Stress
-
-**Status:** `Active`
-
-**Question:** Now that the `MemoryCore` is structurally unbottlenecked, what is the hard limit on FAISS vector retrieval before we bleed ATP? Should `HippocampalCache` actively dial down its `max_capacity` and precision mapping when `cortisol` exceeds 0.8 to simulate biological stress blindness?

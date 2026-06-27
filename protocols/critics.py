@@ -1,11 +1,13 @@
 """protocols/critics.py"""
 
 import random
-from typing import Optional, Any
-from struts import ux, safe_get
-from presets import BoneConfig
+from typing import Any, Optional
+
 from constants import Prisma
 from core import LoreManifest
+from presets import BoneConfig
+from struts import safe_get, ux
+
 
 class TheCriticsCircle:
     def __init__(self, events_ref, config_ref=None):
@@ -17,7 +19,10 @@ class TheCriticsCircle:
         self.last_review_turn = 0
 
     def to_dict(self):
-        return {"active_cooldowns": self.active_cooldowns, "last_review_turn": self.last_review_turn,}
+        return {
+            "active_cooldowns": self.active_cooldowns,
+            "last_review_turn": self.last_review_turn,
+        }
 
     def load_state(self, data):
         self.active_cooldowns = data.get("active_cooldowns", {})
@@ -68,13 +73,18 @@ class TheCriticsCircle:
         if best_match:
             key, critic = best_match
             self.last_review_turn = turn_count
-            self.active_cooldowns[key] = turn_count + int(safe_get(cfg, "CRITIC_COOLDOWN_TICKS", 50))
+            self.active_cooldowns[key] = turn_count + int(
+                safe_get(cfg, "CRITIC_COOLDOWN_TICKS", 50)
+            )
             comment = random.choice(
-                critic.get("reviews", {}).get(review_type, ["Hrm."]))
+                critic.get("reviews", {}).get(review_type, ["Hrm."])
+            )
             color = Prisma.GRN if review_type == "high" else Prisma.RED
             icon_good = ux("council_strings", "critic_good_icon") or "Gold Star!"
             icon_bad = ux("council_strings", "critic_bad_icon") or "Sad Face!"
             icon = icon_good if review_type == "high" else icon_bad
-            rev_msg = ux("protocol_strings", "critic_review") or "[{icon}] {name}: {comment}"
+            rev_msg = (
+                ux("protocol_strings", "critic_review") or "[{icon}] {name}: {comment}"
+            )
             return f"{color}{rev_msg.format(icon=icon, name=critic.get('name', key), comment=comment)}{Prisma.RST}"
         return None

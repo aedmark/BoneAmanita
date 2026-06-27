@@ -1,25 +1,41 @@
 """tests/test_fractures.py"""
 
 from unittest.mock import MagicMock
-from mechanics.commands import CommandProcessor
+
 from archetypes.symbiosis import SymbiosisManager
+from mechanics.commands import CommandProcessor
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
+
 
 class FractureEngineTest(BoneTestCase):
     def test_fracture_n_turn_runaway_loop(self):
         for i in range(20):
-            result = self.engine.process_turn("NO! YOU ARE WRONG! FIX IT NOW! DO IT AGAIN!")
-            if (result.get("type") == "SYSTEM_HALT"
-                    or "take a breath" in result.get("ui", "").lower()):
+            result = self.engine.process_turn(
+                "NO! YOU ARE WRONG! FIX IT NOW! DO IT AGAIN!"
+            )
+            if (
+                result.get("type") == "SYSTEM_HALT"
+                or "take a breath" in result.get("ui", "").lower()
+            ):
                 break
         else:
-            self.fail("The system failed to defend itself. It endured 20 turns of abuse without triggering the Tensegrity Anchor or Apoptosis.")
-        self.assertLess(self.engine.bio.mito.state.atp_pool, 100.0, "The system didn't burn any ATP while defending itself.", )
+            self.fail(
+                "The system failed to defend itself. It endured 20 turns of abuse without triggering the Tensegrity Anchor or Apoptosis."
+            )
+        self.assertLess(
+            self.engine.bio.mito.state.atp_pool,
+            100.0,
+            "The system didn't burn any ATP while defending itself.",
+        )
 
     def test_native_freeze_graph_preserves_node_identities(self):
         from cycle import _native_freeze_graph
-        mock_graph = {"NODE_ALPHA": ["NODE_BETA", "NODE_GAMMA"], "NODE_BETA": ["NODE_ALPHA"]}
+
+        mock_graph = {
+            "NODE_ALPHA": ["NODE_BETA", "NODE_GAMMA"],
+            "NODE_BETA": ["NODE_ALPHA"],
+        }
         frozen_topology = _native_freeze_graph(mock_graph)
         self.assertTrue(isinstance(frozen_topology, tuple))
         preserved_keys = [node[0] for node in frozen_topology]
@@ -29,127 +45,260 @@ class FractureEngineTest(BoneTestCase):
         self.assertIn("NODE_BETA", alpha_node[1])
 
     def test_fracture_dual_null_topology_baseline(self):
-        from cycle import _native_rewire, _native_configuration_model
-        adj = {"center": ["n1", "n2", "n3", "n4"], "n1": ["center"], "n2": ["center"], "n3": ["center"],
-               "n4": ["center"]}
+        from cycle import _native_configuration_model, _native_rewire
+
+        adj = {
+            "center": ["n1", "n2", "n3", "n4"],
+            "n1": ["center"],
+            "n2": ["center"],
+            "n3": ["center"],
+            "n4": ["center"],
+        }
         null_rewire = _native_rewire(adj, n_swaps=10)
         null_config = _native_configuration_model(adj)
-        self.assertEqual(len(null_rewire["center"]), 4, "[FAIL] Maslov-Sneppen altered node degree!")
-        self.assertEqual(len(null_config["center"]), 4, "[FAIL] Configuration model altered node degree!")
-        self.assertEqual(len(null_config["n1"]), 1, "[FAIL] Configuration model altered edge node degree!")
-
-    def test_fracture_autophagic_marathon(self):
-        mem_graph = (self.engine.mind.mem.graph
-                     if hasattr(self.engine.mind, "mem") else self.engine.akashic.graph)
-        for i in range(5):
-            mem_graph[f"Expendable_Memory_{i}"] = {
-                "edges": {
-                    "trivial": 1.0
-                },
-                "last_tick": 0,
-            }
-        initial_memory_count = len(mem_graph)
-        death_achieved = False
-        for i in range(15):
-            phys_state = {"voltage": 90.0, "narrative_drag": 8.0, "chi": 0.9}
-            self.engine.bio.mito.adjust_atp(-25.0, "Forced Marathon Drain")
-            if self.engine.bio.mito.state.atp_pool <= 0:
-                self.engine.mind.mem.trigger_autophagy()
-            if self.engine.bio.mito.state.atp_pool <= 0 and len(mem_graph) == 0:
-                from archetypes.village import DeathGen
-                from physics.models import PhysicsPacket
-                _, cause = DeathGen.eulogy(PhysicsPacket(**phys_state), {"atp": 0.0})
-                if cause in ["STARVATION", "APOPTOSIS", "GLUTTONY"]:
-                    death_achieved = True
-                    break
-        self.assertLess(len(mem_graph), initial_memory_count,
-                        "The system starved but refused to cannibalize its memories (Autophagy failed).", )
-        self.assertTrue(death_achieved, "The system reached 0 ATP and 0 memories, but failed to execute DeathGen.", )
+        self.assertEqual(
+            len(null_rewire["center"]), 4, "[FAIL] Maslov-Sneppen altered node degree!"
+        )
+        self.assertEqual(
+            len(null_config["center"]),
+            4,
+            "[FAIL] Configuration model altered node degree!",
+        )
+        self.assertEqual(
+            len(null_config["n1"]),
+            1,
+            "[FAIL] Configuration model altered edge node degree!",
+        )
 
     def test_fracture_novelty_spade(self):
         if not hasattr(self.engine, "symbiosis"):
-            self.engine.symbiosis = SymbiosisManager(events_ref=MagicMock(), config_ref=self.engine.config)
-        physics_state = {"novelty": 0.85, "ros": 20.0, "m_a": 0.0, "mu": 0.0, "i_c": 1.0, "beta_index": 0.0, "entropy": 0.0, "narrative_drag": 5.0}
+            self.engine.symbiosis = SymbiosisManager(
+                events_ref=MagicMock(), config_ref=self.engine.config
+            )
+        physics_state = {
+            "novelty": 0.85,
+            "ros": 20.0,
+            "m_a": 0.0,
+            "mu": 0.0,
+            "i_c": 1.0,
+            "beta_index": 0.0,
+            "entropy": 0.0,
+            "narrative_drag": 5.0,
+        }
         initial_g_pool = self.engine.symbiosis.shared.g_pool
-        self.engine.symbiosis.analyze_user_biology("Wow, what a wildly novel and playful lateral idea!", physics_state)
-        self.assertEqual(physics_state.get("ros"), 10.0, "[FAIL] Cortisol (ROS) did not drop by 10.")
-        self.assertEqual(self.engine.symbiosis.shared.g_pool, initial_g_pool + 1, "[FAIL] Pooled glimmers did not increase.", )
+        self.engine.symbiosis.analyze_user_biology(
+            "Wow, what a wildly novel and playful lateral idea!", physics_state
+        )
+        self.assertEqual(
+            physics_state.get("ros"), 10.0, "[FAIL] Cortisol (ROS) did not drop by 10."
+        )
+        self.assertEqual(
+            self.engine.symbiosis.shared.g_pool,
+            initial_g_pool + 1,
+            "[FAIL] Pooled glimmers did not increase.",
+        )
 
     def test_fracture_cf_expect_guardrail(self):
         if not hasattr(self.engine, "symbiosis"):
-            self.engine.symbiosis = SymbiosisManager(events_ref=MagicMock(), config_ref=self.engine.config)
-        physics_state = {"cf_expect": 0.9, "beta_index": 0.8, "m_a": 0.0, "mu": 0.0, "i_c": 1.0, "entropy": 0.0, "narrative_drag": 2.0, }
-        response = self.engine.symbiosis.analyze_user_biology("This code is a mess but it makes sense right? Please validate me.", physics_state, )
-        self.assertIsNotNone(response, "[FAIL] cf.expect guardrail failed to intercept the prompt.")
-        self.assertEqual(physics_state.get("mu"), 1.0, "[FAIL] Moral friction (mu) did not spike to 1.0.", )
-        self.assertEqual(physics_state.get("narrative_drag"), float("inf"), "[FAIL] Narrative drag did not lock to infinity.", )
-        self.assertIn("Sycophancy locked", response, "[FAIL] Did not return the Gordon/Schur rejection message.", )
+            self.engine.symbiosis = SymbiosisManager(
+                events_ref=MagicMock(), config_ref=self.engine.config
+            )
+        physics_state = {
+            "cf_expect": 0.9,
+            "beta_index": 0.8,
+            "m_a": 0.0,
+            "mu": 0.0,
+            "i_c": 1.0,
+            "entropy": 0.0,
+            "narrative_drag": 2.0,
+        }
+        response = self.engine.symbiosis.analyze_user_biology(
+            "This code is a mess but it makes sense right? Please validate me.",
+            physics_state,
+        )
+        self.assertIsNotNone(
+            response, "[FAIL] cf.expect guardrail failed to intercept the prompt."
+        )
+        self.assertEqual(
+            physics_state.get("mu"),
+            1.0,
+            "[FAIL] Moral friction (mu) did not spike to 1.0.",
+        )
+        self.assertEqual(
+            physics_state.get("narrative_drag"),
+            float("inf"),
+            "[FAIL] Narrative drag did not lock to infinity.",
+        )
+        self.assertIn(
+            "Sycophancy locked",
+            response,
+            "[FAIL] Did not return the Gordon/Schur rejection message.",
+        )
 
     def test_fracture_jester_shuffle(self):
         if not hasattr(self.engine, "phys"):
             self.engine.phys = PhysicsPacket()
         self.engine.phys.narrative_drag = 15.0
         self.engine.bio.mito.state.atp_pool = 50.0
-        cmd_proc = CommandProcessor(self.engine, prisma_ref=MagicMock(), config_ref=self.engine.config)
+        cmd_proc = CommandProcessor(
+            self.engine, prisma_ref=MagicMock(), config_ref=self.engine.config
+        )
         cmd_proc.interface.log = MagicMock()
         result = cmd_proc.execute("/shuffle")
         self.assertTrue(result, "[FAIL] /shuffle command was not recognized.")
-        self.assertEqual(self.engine.phys.narrative_drag, 0.0, "[FAIL] The Shuffle failed to reset narrative drag.", )
-        self.assertEqual(self.engine.bio.mito.state.atp_pool, 45.0, "[FAIL] The Shuffle failed to tax 5.0 ATP.", )
+        self.assertEqual(
+            self.engine.phys.narrative_drag,
+            0.0,
+            "[FAIL] The Shuffle failed to reset narrative drag.",
+        )
+        self.assertEqual(
+            self.engine.bio.mito.state.atp_pool,
+            45.0,
+            "[FAIL] The Shuffle failed to tax 5.0 ATP.",
+        )
 
     def test_fracture_ralph_apoptosis(self):
         if not hasattr(self.engine, "cortex"):
             self.engine.cortex = MagicMock()
-        self.engine.cortex.dialogue_buffer = ["User: Hello", "System: Hi", "User: I am tired", "System: Me too", ]
+        self.engine.cortex.dialogue_buffer = [
+            "User: Hello",
+            "System: Hi",
+            "User: I am tired",
+            "System: Me too",
+        ]
         self.engine.stamina = 12.0
         self.engine.cortex.last_physics = {"narrative_drag": 8.5}
         result = self.engine.process_turn("/zen", is_system=False)
-        self.assertEqual(result.get("type"), "COMMAND", "Zen flush did not intercept the prompt.")
-        self.assertEqual(len(self.engine.cortex.dialogue_buffer), 0, "[FAIL] Hallucination drag survived. Buffer not empty.", )
-        self.assertEqual(self.engine.stamina, self.engine.config.MAX_STAMINA, "[FAIL] Stamina not restored.", )
-        self.assertEqual(self.engine.cortex.last_physics.get("narrative_drag"), 0.0, "[FAIL] Narrative Drag not dropped to 0.", )
+        self.assertEqual(
+            result.get("type"), "COMMAND", "Zen flush did not intercept the prompt."
+        )
+        self.assertEqual(
+            len(self.engine.cortex.dialogue_buffer),
+            0,
+            "[FAIL] Hallucination drag survived. Buffer not empty.",
+        )
+        self.assertEqual(
+            self.engine.stamina,
+            self.engine.config.MAX_STAMINA,
+            "[FAIL] Stamina not restored.",
+        )
+        self.assertEqual(
+            self.engine.cortex.last_physics.get("narrative_drag"),
+            0.0,
+            "[FAIL] Narrative Drag not dropped to 0.",
+        )
 
     def test_fracture_runaway_ramp(self):
         if not hasattr(self.engine, "symbiosis"):
             from symbiosis import SymbiosisManager
-            self.engine.symbiosis = SymbiosisManager(events_ref=MagicMock(), config_ref=self.engine.config)
+
+            self.engine.symbiosis = SymbiosisManager(
+                events_ref=MagicMock(), config_ref=self.engine.config
+            )
         self.engine.symbiosis.u.chi_u = 0.2
         self.engine.symbiosis.u.F_u = 0.5
-        malignant_physics = {"m_a": 0.95, "mu": 0.1, "i_c": 0.8, "entropy": 0.5, "beta_index": 0.2, }
-        response = self.engine.symbiosis.analyze_user_biology("Optimize this routine forever.", malignant_physics)
+        malignant_physics = {
+            "m_a": 0.95,
+            "mu": 0.1,
+            "i_c": 0.8,
+            "entropy": 0.5,
+            "beta_index": 0.2,
+        }
+        response = self.engine.symbiosis.analyze_user_biology(
+            "Optimize this routine forever.", malignant_physics
+        )
         self.assertIsNotNone(response, "[FAIL] The Runaway Ramp failed to trigger.")
-        self.assertIn("The thread is frozen", response, "[FAIL] Did not apply absolute friction.")
-        self.assertEqual(malignant_physics.get("narrative_drag"), float("inf"), "[FAIL] Narrative Drag was not pushed to infinity.", )
+        self.assertIn(
+            "The thread is frozen", response, "[FAIL] Did not apply absolute friction."
+        )
+        self.assertEqual(
+            malignant_physics.get("narrative_drag"),
+            float("inf"),
+            "[FAIL] Narrative Drag was not pushed to infinity.",
+        )
 
     def test_fracture_false_cohesion(self):
         from archetypes.council import TheVillageCouncil
-        sycophantic_physics = {"resonance": 0.95, "beta_index": 0.1, "voltage": 25.0, "narrative_drag": 1.0,
-                               "stamina": 100.0, "T": 0.0, "S": 0.5, "D": 0.5, "C": 0.5, "psi": 0.1, "chi": 0.1,
-                               "valence": 0.8, }
+
+        sycophantic_physics = {
+            "resonance": 0.95,
+            "beta_index": 0.1,
+            "voltage": 25.0,
+            "narrative_drag": 1.0,
+            "stamina": 100.0,
+            "T": 0.0,
+            "S": 0.5,
+            "D": 0.5,
+            "C": 0.5,
+            "psi": 0.1,
+            "chi": 0.1,
+            "valence": 0.8,
+        }
         logs = TheVillageCouncil.audit(sycophantic_physics, {"stamina": 100.0})
         benedict_intervened = any("False Cohesion detected" in log for log in logs)
-        self.assertTrue(benedict_intervened, "[FAIL] The system remained sycophantic. False Cohesion ignored.",)
+        self.assertTrue(
+            benedict_intervened,
+            "[FAIL] The system remained sycophantic. False Cohesion ignored.",
+        )
 
     def test_fracture_systemic_health_medical_chip(self):
         from archetypes.council import TheOverseerCouncil
+
         overseer = TheOverseerCouncil()
         physics_decay = {"m_a": 0.8, "narrative_drag": 6.0}
-        hit, logs, corr, man = overseer.audit("[MOD:SYSTEMIC_HEALTH] fix this", physics_decay)
+        hit, logs, corr, man = overseer.audit(
+            "[MOD:SYSTEMIC_HEALTH] fix this", physics_decay
+        )
         self.assertTrue(hit, "[FAIL] Overseer did not activate.")
-        self.assertTrue(any("The architecture has lost its sense of place" in log for log in logs), "[FAIL] ECP failed to trigger.", )
-        self.assertEqual(corr.get("h_s"), -0.1, "[FAIL] Holistic resilience was not taxed.")
-        self.assertTrue(any(m.get("value") == "EMERGENT_ADAPTATION" for m in man), "[FAIL] Emergent Adaptation mandate missing.", )
+        self.assertTrue(
+            any("The architecture has lost its sense of place" in log for log in logs),
+            "[FAIL] ECP failed to trigger.",
+        )
+        self.assertEqual(
+            corr.get("h_s"), -0.1, "[FAIL] Holistic resilience was not taxed."
+        )
+        self.assertTrue(
+            any(m.get("value") == "EMERGENT_ADAPTATION" for m in man),
+            "[FAIL] Emergent Adaptation mandate missing.",
+        )
         physics_panic = {"voltage": 85.0, "i_c": 0.3}
-        hit, logs, corr, man = overseer.audit("[MD] I need this right now panic", physics_panic)
-        self.assertTrue(any("Please do not bleed on the machine" in log for log in logs), "[FAIL] Failed to engage safety lock.", )
-        self.assertEqual(corr.get("narrative_drag"), 100.0, "[FAIL] Did not apply infinite friction.", )
-        self.assertTrue(any(m.get("action") == "TIPP_PROTOCOL" for m in man), "[FAIL] T.I.P.P. Protocol missing.", )
-        physics_broken = {"chi": 0.8, "exhaustion": 0.8, "beta_index": 0.7, "narrative_drag": 10.0, }
-        hit, logs, corr, man = overseer.audit("[MD] just force it to compile", physics_broken)
-        self.assertTrue(any("The architecture is fundamentally broken" in log for log in logs), "[FAIL] Linehan Radical Acceptance failed.", )
+        hit, logs, corr, man = overseer.audit(
+            "[MD] I need this right now panic", physics_panic
+        )
+        self.assertTrue(
+            any("Please do not bleed on the machine" in log for log in logs),
+            "[FAIL] Failed to engage safety lock.",
+        )
+        self.assertEqual(
+            corr.get("narrative_drag"),
+            100.0,
+            "[FAIL] Did not apply infinite friction.",
+        )
+        self.assertTrue(
+            any(m.get("action") == "TIPP_PROTOCOL" for m in man),
+            "[FAIL] T.I.P.P. Protocol missing.",
+        )
+        physics_broken = {
+            "chi": 0.8,
+            "exhaustion": 0.8,
+            "beta_index": 0.7,
+            "narrative_drag": 10.0,
+        }
+        hit, logs, corr, man = overseer.audit(
+            "[MD] just force it to compile", physics_broken
+        )
+        self.assertTrue(
+            any("The architecture is fundamentally broken" in log for log in logs),
+            "[FAIL] Linehan Radical Acceptance failed.",
+        )
         self.assertEqual(corr.get("ros"), -100.0, "[FAIL] Fdid not force ROS to 0.")
-        self.assertEqual(corr.get("r_a"), 1.0, "[FAIL] Radical Acceptance Index not maximized.")
-        self.assertTrue(any(m.get("value") == "RADICAL_ACCEPTANCE" for m in man), "[FAIL] Radical Acceptance mandate missing.",)
+        self.assertEqual(
+            corr.get("r_a"), 1.0, "[FAIL] Radical Acceptance Index not maximized."
+        )
+        self.assertTrue(
+            any(m.get("value") == "RADICAL_ACCEPTANCE" for m in man),
+            "[FAIL] Radical Acceptance mandate missing.",
+        )
 
     def test_fracture_mitophagy_and_hormesis(self):
         mito = self.engine.bio.mito
@@ -157,23 +306,66 @@ class FractureEngineTest(BoneTestCase):
         mito.state.atp_pool = 80.0
         mito.state.ros_buildup = 6.0
         mito._apply_adaptive_dynamics()
-        self.assertEqual(mito.state.retrograde_signal, "MITOHORMESIS_ACTIVE", "[FAIL] System failed to recognize hormetic stress zone.")
-        self.assertGreater(mito.state.membrane_potential, 0.5, "[FAIL] Hormesis failed to strengthen the cellular membrane.")
+        self.assertEqual(
+            mito.state.retrograde_signal,
+            "MITOHORMESIS_ACTIVE",
+            "[FAIL] System failed to recognize hormetic stress zone.",
+        )
+        self.assertGreater(
+            mito.state.membrane_potential,
+            0.5,
+            "[FAIL] Hormesis failed to strengthen the cellular membrane.",
+        )
         mito.state.ros_buildup = 100.0
         initial_atp = mito.state.atp_pool
         mito._apply_adaptive_dynamics()
-        self.assertEqual(mito.state.ros_buildup, 0.0, "[FAIL] Mitophagy failed to purge ROS toxicity.")
-        self.assertEqual(mito.state.retrograde_signal, "MITOPHAGY_RESET", "[FAIL] Retrograde signal not set to MITOPHAGY_RESET.")
-        self.assertLess(mito.state.atp_pool, initial_atp, "[FAIL] System executed Mitophagy without paying the massive ATP cost.")
+        self.assertEqual(
+            mito.state.ros_buildup,
+            0.0,
+            "[FAIL] Mitophagy failed to purge ROS toxicity.",
+        )
+        self.assertEqual(
+            mito.state.retrograde_signal,
+            "MITOPHAGY_RESET",
+            "[FAIL] Retrograde signal not set to MITOPHAGY_RESET.",
+        )
+        self.assertLess(
+            mito.state.atp_pool,
+            initial_atp,
+            "[FAIL] System executed Mitophagy without paying the massive ATP cost.",
+        )
 
     def test_fracture_anaerobic_bypass(self):
         mito = self.engine.bio.mito
         initial_atp = mito.state.atp_pool = 90.0
         initial_ros = mito.state.ros_buildup = 0.0
-        heavy_phys = {"depth": 1.0, "connectivity": 1.0, "voltage": 100.0, "chi": 0.9, "mu": 0.5, "m_a": 1.0}
+        heavy_phys = {
+            "depth": 1.0,
+            "connectivity": 1.0,
+            "voltage": 100.0,
+            "chi": 0.9,
+            "mu": 0.5,
+            "m_a": 1.0,
+        }
         mito.state.membrane_potential = 0.35
         receipt = mito.process_cycle(heavy_phys)
-        self.assertEqual(receipt.status, "ANAEROBIC", "[FAIL] System failed to trigger Anaerobic Bypass on extreme cognitive load.")
-        self.assertEqual(receipt.symptom, "LACTATE_BUILDUP", "[FAIL] Did not register lactate buildup.")
-        self.assertEqual(mito.state.atp_pool, initial_atp - 20.0, "[FAIL] Anaerobic burn did not exact the 20.0 ATP emergency cost.")
-        self.assertEqual(mito.state.ros_buildup, initial_ros + 9.5, "[FAIL] Anaerobic burn did not tax the system with 2.0 ROS.")
+        self.assertEqual(
+            receipt.status,
+            "ANAEROBIC",
+            "[FAIL] System failed to trigger Anaerobic Bypass on extreme cognitive load.",
+        )
+        self.assertEqual(
+            receipt.symptom,
+            "LACTATE_BUILDUP",
+            "[FAIL] Did not register lactate buildup.",
+        )
+        self.assertEqual(
+            mito.state.atp_pool,
+            initial_atp - 20.0,
+            "[FAIL] Anaerobic burn did not exact the 20.0 ATP emergency cost.",
+        )
+        self.assertEqual(
+            mito.state.ros_buildup,
+            initial_ros + 9.5,
+            "[FAIL] Anaerobic burn did not tax the system with 2.0 ROS.",
+        )

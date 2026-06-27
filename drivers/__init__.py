@@ -4,7 +4,7 @@ from .consultant import BoneConsultant
 from .enneagram import EnneagramDriver
 from .lattice import SharedLatticeDriver
 from .liminal import LiminalModule
-from .registry import VSLState, DriverRegistry
+from .registry import DriverRegistry, VSLState
 from .souldriver import SoulDriver
 from .syntax import SyntaxModule
 from .userprofile import UserProfile

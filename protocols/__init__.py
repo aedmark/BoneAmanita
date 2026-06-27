@@ -10,7 +10,6 @@ from .limbo import LimboLayer
 from .therapy import TherapyProtocol
 from .zen import ZenGarden
 
-
 __all__ = [
     "TheBureau",
     "TheCriticsCircle",
@@ -20,5 +19,5 @@ __all__ = [
     "LimboLayer",
     "ZenGarden",
     "ChronosKeeper",
-    "TherapyProtocol"
+    "TherapyProtocol",
 ]

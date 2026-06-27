@@ -2,9 +2,7 @@
 
 import random
 from typing import Tuple, Optional, List
-
 from core import LoreManifest
-from mechanics.lexicon import LexiconService
 from struts import ux
 
 class TheForge:
@@ -49,7 +47,7 @@ class TheForge:
             for recipe in self.recipe_map.get(item, []):
                 cat = recipe["catalyst_category"]
                 if cat not in cat_cache:
-                    cat_cache[cat] = set(lex_srv.get(cat) or [])
+                    cat_cache[cat] = set(self.lex.get(cat) or [])
                 overlap = clean_set & cat_cache[cat]
                 if not overlap:
                     continue

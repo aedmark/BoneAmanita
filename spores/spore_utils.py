@@ -2,17 +2,20 @@
 
 import hashlib
 
+
 def _word_to_vector(word: str, dim: int = 8) -> list:
     h = hashlib.shake_256(word.encode("utf-8")).digest(dim)
     return [(b / 127.5) - 1.0 for b in h]
+
 
 def _access_config_path(root, path, value=None, set_mode=False):
     target = root
     parts = path.split(".")
     try:
         for part in parts[:-1]:
-            target = (target.get(part) if isinstance(target, dict) else getattr(
-                target, part))
+            target = (
+                target.get(part) if isinstance(target, dict) else getattr(target, part)
+            )
             if target is None:
                 return None
         leaf = parts[-1]

@@ -3,21 +3,27 @@
 import math
 import random
 from collections import Counter
-from typing import Dict, List, Any, Tuple, TYPE_CHECKING
-from body.models import MitochondrialState, MetabolicReceipt
-from core import Prisma, LoreManifest
-from struts import ux, ux_format, safe_get
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+
+from body.models import MetabolicReceipt, MitochondrialState
+from core import LoreManifest, Prisma
 from presets import BoneConfig
+from struts import safe_get, ux, ux_format
 
 if TYPE_CHECKING:
     from body.system import BioSystem
+
 
 class MitochondrialForge:
     def __init__(self, state_ref: MitochondrialState, events_ref, config_ref=None):
         self.state = state_ref
         self.events = events_ref
         self.cfg = config_ref or BoneConfig
-        full_narrative = (LoreManifest.get_instance(config_ref=self.cfg).get("BIO_NARRATIVE") or {})
+        if hasattr(self.events, "subscribe"):
+            self.events.subscribe("AUTOPHAGY_EVENT", self._on_autophagy_event)
+        full_narrative = (
+            LoreManifest.get_instance(config_ref=self.cfg).get("BIO_NARRATIVE") or {}
+        )
         self.narrative = full_narrative.get("MITO", {})
         bio_cfg = safe_get(self.cfg, "BIO", {})
         self.MAX_SAFE_BURN = float(safe_get(bio_cfg, "MAX_SAFE_BURN", 25.0))
@@ -48,25 +54,36 @@ class MitochondrialForge:
         filename = payload.get("file", "unknown")
         self.adjust_atp(-cost, f"Substrate Forging [{filename}]")
 
+    def _on_autophagy_event(self, payload: Dict):
+        """Catches the energy yielded from the Akashic record burning a memory."""
+        if not payload:
+            return
+        yield_val = float(payload.get("atp_gained", 0.0))
+        node = payload.get("node", "Unknown")
+        if yield_val > 0:
+            self.adjust_atp(yield_val, f"Cognitive Autophagy [{node}]")
+            if self.events:
+                msg = ux_format(
+                    "mito_forge",
+                    "autophagy_success",
+                    default="[SURVIVAL] Cannibalized memory '{node}' to synthesize {yield_val:.1f} ATP.",
+                    node=node,
+                    yield_val=yield_val,
+                )
+                self.events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "BIO_HEAL")
+
     def process_cognitive_load(self, token_count: int, cognitive_path: str):
-        """
-        [SUBQ]: Metabolic cost is physically dependent on HOW the organism retrieved the data.
-        """
         if cognitive_path == "VECTOR_FAST_TWITCH":
-            # ANN is biologically cheap. Pre-computed embeddings.
             drain = (token_count / 100.0) * 0.02
             self.adjust_atp(-drain, "Fast-Twitch Memory Lookup")
 
         elif cognitive_path == "LINEAR_DEEP_TISSUE":
-            # SubQ Linear sweep is expensive. The CPU evaluated the entire structural manifold.
             drain = (token_count / 100.0) * 0.15
             self.adjust_atp(-drain, "Deep Structural Scan")
 
-            # Heavy structural context spikes ROS (Reactive Oxygen Species / Stress)
             if token_count > 8000:
                 self.state.ros_buildup = float(self.state.ros_buildup) + 0.8
 
-        # Gordon Intervention Threshold
         if self.state.atp_pool <= 10.0:
             self._trigger_exhaustion()
 
@@ -77,7 +94,7 @@ class MitochondrialForge:
         if self.events:
             self.events.log(
                 "[GORDON INTERVENTION]: Your query forced a massive structural sweep. The organism's ATP is depleted. Narrow your scope.",
-                "BIO_CRIT"
+                "BIO_CRIT",
             )
         self.state.retrograde_signal = "HIBERNATING"
 
@@ -91,17 +108,33 @@ class MitochondrialForge:
             print(f"{Prisma.RED}Missing narrative kwargs for '{key}': {e}{Prisma.RST}")
             return tmpl
 
-    def _trigger_anaerobic_bypass(self, raw_cost: float, chaos_waste: float = 0.0) -> MetabolicReceipt:
+    def _trigger_anaerobic_bypass(
+        self, raw_cost: float, chaos_waste: float = 0.0
+    ) -> MetabolicReceipt:
         total_waste = 2.0 + max(0.0, chaos_waste)
         self.state.ros_buildup = float(self.state.ros_buildup) + total_waste
         self.adjust_atp(-20.0, "Anaerobic Burn")
         if self.events:
-            msg = ux_format("mito_forge", "anaerobic_bypass", default="Load ({cost:.1f}) too high for ATP. Burning HP instead.", cost=raw_cost)
+            msg = ux_format(
+                "mito_forge",
+                "anaerobic_bypass",
+                default="Load ({cost:.1f}) too high for ATP. Burning HP instead.",
+                cost=raw_cost,
+            )
             self.events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "BIO_WARN")
-        return MetabolicReceipt(base_cost=raw_cost, drag_tax=0.0, inefficiency_tax=0.0, total_burn=20.0,
-            waste_generated=total_waste, status="ANAEROBIC", symptom="LACTATE_BUILDUP",)
+        return MetabolicReceipt(
+            base_cost=raw_cost,
+            drag_tax=0.0,
+            inefficiency_tax=0.0,
+            total_burn=20.0,
+            waste_generated=total_waste,
+            status="ANAEROBIC",
+            symptom="LACTATE_BUILDUP",
+        )
 
-    def process_cycle(self, physics_packet: Any, modifier: float = 1.0) -> MetabolicReceipt:
+    def process_cycle(
+        self, physics_packet: Any, modifier: float = 1.0
+    ) -> MetabolicReceipt:
         if self.state.atp_pool > 95.0 and self.state.ros_buildup < 1.0:
             return MetabolicReceipt(0, 0, 0, 0, 0, "NOMINAL", "Fresh Start")
         is_steering_retry = safe_get(physics_packet, "is_steering_retry", False)
@@ -111,17 +144,28 @@ class MitochondrialForge:
         depth = float(safe_get(physics_packet, "depth", 0.3))
         connectivity = float(safe_get(physics_packet, "connectivity", 0.2))
         voltage = float(safe_get(physics_packet, "voltage", 30.0))
-        base_cost = safe_get(cfg, "BASE_ATP_YIELD", 2.0) + (voltage * safe_get(cfg, "VOLTAGE_TAX_MULT", 0.05))
+        base_cost = safe_get(cfg, "BASE_ATP_YIELD", 2.0) + (
+            voltage * safe_get(cfg, "VOLTAGE_TAX_MULT", 0.05)
+        )
         cognitive_load_tax = (depth * float(safe_get(cfg, "DEPTH_TAX_MULT", 0.5))) + (
-                connectivity * float(safe_get(cfg, "CONN_TAX_MULT", 1.0)))
-        chaos_index = float(safe_get(physics_packet, "entropy", safe_get(physics_packet, "chi", 0.0)))
+            connectivity * float(safe_get(cfg, "CONN_TAX_MULT", 1.0))
+        )
+        chaos_index = float(
+            safe_get(physics_packet, "entropy", safe_get(physics_packet, "chi", 0.0))
+        )
         if chaos_index > safe_get(cfg, "CHAOS_TAX_THRESHOLD", 0.6):
-            chaos_mult = float(safe_get(cfg, "CHAOS_TAX_MULT", 2.0 if chaos_index < 0.8 else 5.0))
+            chaos_mult = float(
+                safe_get(cfg, "CHAOS_TAX_MULT", 2.0 if chaos_index < 0.8 else 5.0)
+            )
             chaos_tax = chaos_mult * chaos_index
             cognitive_load_tax = cognitive_load_tax + chaos_tax
             if self.events:
-                msg = ux_format("mito_forge", "chaos_tax", default="CHAOS TAX: +{tax:.1f} ATP drain.",
-                                tax=chaos_tax)
+                msg = ux_format(
+                    "mito_forge",
+                    "chaos_tax",
+                    default="CHAOS TAX: +{tax:.1f} ATP drain.",
+                    tax=chaos_tax,
+                )
                 self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}", "BIO_WARN")
         malignancy = safe_get(physics_packet, "m_a", 0.0)
         friction = safe_get(physics_packet, "mu", 0.0)
@@ -130,26 +174,33 @@ class MitochondrialForge:
             cognitive_load_tax = cognitive_load_tax + amplification_tax
             if amplification_tax > 1.0 and self.events:
                 self.events.log(
-                    f"{Prisma.MAG}Amplification Tax applied (+{amplification_tax:.2f} ATP drag){Prisma.RST}", "BIO_WARN")
+                    f"{Prisma.MAG}Amplification Tax applied (+{amplification_tax:.2f} ATP drag){Prisma.RST}",
+                    "BIO_WARN",
+                )
         ros_mult = float(safe_get(cfg, "ROS_BURDEN_MULT", 0.5))
-        base_demand = base_cost + (math.log1p(max(0.0, self.state.ros_buildup)) * ros_mult)
+        base_demand = base_cost + (
+            math.log1p(max(0.0, self.state.ros_buildup)) * ros_mult
+        )
         atp_crit = float(safe_get(cfg, "ATP_CRITICAL", 20.0))
         is_critical = self.state.atp_pool < atp_crit
         if is_critical:
             cognitive_load_tax = 0.0
             modifier = modifier * 0.5
             if self.events and self.state.retrograde_signal != "HIBERNATING":
-                msg = self._get_text("NECROSIS", cost=base_demand, pool=self.state.atp_pool)
+                msg = self._get_text(
+                    "NECROSIS", cost=base_demand, pool=self.state.atp_pool
+                )
                 icon = ux("mito_forge", "icon_necrosis")
                 if msg:
-                    self.events.log(f"{Prisma.VIOLET}{icon}{msg}{Prisma.RST}", "BIO_CRIT")
+                    self.events.log(
+                        f"{Prisma.VIOLET}{icon}{msg}{Prisma.RST}", "BIO_CRIT"
+                    )
                 self.state.retrograde_signal = "HIBERNATING"
         efficiency = max(0.35, self.state.membrane_potential)
         ideal_cost = (base_demand + cognitive_load_tax) * modifier
         raw_cost = ideal_cost / efficiency
         inefficiency_tax = raw_cost - ideal_cost
 
-        # Pre-calculate waste so high-chaos queries don't dodge the tax via Anaerobic Bypass
         abstraction = float(safe_get(physics_packet, "psi", 0.0))
         waste_generated = 0.0
         abstraction_mult = safe_get(cfg, "WASTE_PSI_MULT", 5.0)
@@ -157,7 +208,11 @@ class MitochondrialForge:
         volt_div = safe_get(cfg, "WASTE_VOLT_DIV", 20.0)
         base_red = safe_get(cfg, "WASTE_BASE_REDUCTION", 2.0)
         if abstraction > 0.3 or chaos_index > 0.3:
-            waste_generated = waste_generated + (abstraction * abstraction_mult) + (chaos_index * chaos_mult)
+            waste_generated = (
+                waste_generated
+                + (abstraction * abstraction_mult)
+                + (chaos_index * chaos_mult)
+            )
         if voltage > 60.0:
             waste_generated = waste_generated + (voltage / volt_div)
         waste_generated = waste_generated - base_red
@@ -170,9 +225,12 @@ class MitochondrialForge:
             raw_cost = self.MAX_SAFE_BURN
             inefficiency_tax = max(0.0, raw_cost - ideal_cost)
             if self.events:
-                msg = ux_format("mito_forge", "surge_protector",
-                                default="SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).",
-                                excess=excess)
+                msg = ux_format(
+                    "mito_forge",
+                    "surge_protector",
+                    default="SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).",
+                    excess=excess,
+                )
                 self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "BIO")
         if raw_cost > 15.0 and self.events and random.random() < 0.2:
             msg = self._get_text("GRINDING")
@@ -185,17 +243,24 @@ class MitochondrialForge:
         self.state.ros_buildup = float(self.state.ros_buildup) + float(waste_generated)
         self.adjust_atp(-total_metabolic_cost, "Metabolic Burn")
         if total_metabolic_cost >= self.MAX_SAFE_BURN and not is_critical:
-            self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.005)
+            self.state.membrane_potential = max(
+                0.1, self.state.membrane_potential - 0.005
+            )
         self._apply_adaptive_dynamics()
         status = "LOW_POWER" if is_critical else "RESPIRING"
         if self.state.atp_pool <= safe_get(cfg, "ATP_COLLAPSE", 0.0):
             status = "NECROSIS"
             if self.events:
                 self.events.publish("SYSTEM_STARVING", {})
-        return MetabolicReceipt(base_cost=round(base_demand, 2), drag_tax=round(cognitive_load_tax, 2),
+        return MetabolicReceipt(
+            base_cost=round(base_demand, 2),
+            drag_tax=round(cognitive_load_tax, 2),
             inefficiency_tax=round(inefficiency_tax, 2),
-            total_burn=round(total_metabolic_cost, 2), waste_generated=round(waste_generated, 2),
-            status=status, symptom=self.state.retrograde_signal,)
+            total_burn=round(total_metabolic_cost, 2),
+            waste_generated=round(waste_generated, 2),
+            status=status,
+            symptom=self.state.retrograde_signal,
+        )
 
     def _apply_adaptive_dynamics(self):
         cfg = safe_get(self.cfg, "BIO", {})
@@ -203,14 +268,20 @@ class MitochondrialForge:
         ros_dam = safe_get(cfg, "ROS_DAMAGE", 20.0)
         ros_purge = safe_get(cfg, "ROS_PURGE", 60.0)
         if self.state.ros_buildup < ros_sig:
-            self.state.membrane_potential = max(0.5, self.state.membrane_potential - 0.001)
+            self.state.membrane_potential = max(
+                0.5, self.state.membrane_potential - 0.001
+            )
             self.state.retrograde_signal = "QUIET"
         elif self.state.ros_buildup < ros_dam:
-            self.state.membrane_potential = min(1.0, self.state.membrane_potential + 0.005)
+            self.state.membrane_potential = min(
+                1.0, self.state.membrane_potential + 0.005
+            )
             self.state.retrograde_signal = "MITOHORMESIS_ACTIVE"
             self.state.ros_buildup = max(0.0, self.state.ros_buildup - 0.5)
         else:
-            self.state.membrane_potential = max(0.1, self.state.membrane_potential - 0.02)
+            self.state.membrane_potential = max(
+                0.1, self.state.membrane_potential - 0.02
+            )
             self.state.retrograde_signal = "OXIDATIVE_STRESS"
         if self.state.ros_buildup > ros_purge:
             self._trigger_mitophagy()
@@ -218,13 +289,26 @@ class MitochondrialForge:
     def adapt(self, stress_level: float):
         old_potential = self.state.membrane_potential
         if stress_level > 5.0:
-            self.state.membrane_potential = max(0.4, self.state.membrane_potential - 0.15)
+            self.state.membrane_potential = max(
+                0.4, self.state.membrane_potential - 0.15
+            )
             if self.events:
-                msg = ux_format("mito_forge", "adaptation_stress", default="Trauma Adaptive Response ({stress:.1f}). Efficiency dropped ({old:.2f} -> {new:.2f}).", stress=stress_level, old=old_potential, new=self.state.membrane_potential)
+                msg = ux_format(
+                    "mito_forge",
+                    "adaptation_stress",
+                    default="Trauma Adaptive Response ({stress:.1f}). Efficiency dropped ({old:.2f} -> {new:.2f}).",
+                    stress=stress_level,
+                    old=old_potential,
+                    new=self.state.membrane_potential,
+                )
                 self.events.log(f"{Prisma.RED}{msg}{Prisma.RST}", "BIO")
         elif stress_level > 1.0:
-            self.state.membrane_potential = min(1.5, self.state.membrane_potential + 0.05)
-            if random.random() < 0.2 and (msg := ux("mito_forge", "adaptation_hormetic")):
+            self.state.membrane_potential = min(
+                1.5, self.state.membrane_potential + 0.05
+            )
+            if random.random() < 0.2 and (
+                msg := ux("mito_forge", "adaptation_hormetic")
+            ):
                 self.events.log(f"{Prisma.GRN}{msg}{Prisma.RST}", "BIO")
 
     def _trigger_mitophagy(self):
@@ -245,7 +329,9 @@ class MitochondrialForge:
             self.state.membrane_potential = 1.1
             self.events.log("Ancestral High Metabolism activated.", "GENETICS")
 
-    def cellular_repair(self, survival_streak: int, g_pool: int, inherited_scars: dict) -> Tuple[bool, int, str]:
+    def cellular_repair(
+        self, survival_streak: int, g_pool: int, inherited_scars: dict
+    ) -> Tuple[bool, int, str]:
         if survival_streak < 50 or self.state.ros_buildup > 10.0 or not inherited_scars:
             return False, g_pool, ""
         if g_pool >= 1:
@@ -253,21 +339,33 @@ class MitochondrialForge:
             del inherited_scars[healed_scar]
             g_pool = g_pool - 1
             fallback = "Epigenetic Plasticity Achieved. Ancestral scar '{healed_scar}' permanently erased. (-1 Glimmer)"
-            msg = ux_format("mito_forge", "scar_healed", default=fallback, healed_scar=healed_scar)
+            msg = ux_format(
+                "mito_forge", "scar_healed", default=fallback, healed_scar=healed_scar
+            )
             if self.events:
                 self.events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "BIO_HEAL")
             return True, g_pool, msg
         return False, g_pool, ""
+
 
 class DigestiveTrack:
     def __init__(self, bio_system_ref: "BioSystem", lexicon_ref=None, config_ref=None):
         self.bio = bio_system_ref
         self.lex = lexicon_ref
         self.cfg = config_ref or BoneConfig
-        base_map = (LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG") or {}).get("ENZYME_MAP", {})
+        base_map = (
+            LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG") or {}
+        ).get("ENZYME_MAP", {})
         self.enzyme_map = dict(base_map)
         if "heavy" not in self.enzyme_map:
-            self.enzyme_map.update({ "heavy": "CELLULASE", "constructive": "CHITINASE", "aerobic": "LIGNASE", "meat": "PROTEASE",})
+            self.enzyme_map.update(
+                {
+                    "heavy": "CELLULASE",
+                    "constructive": "CHITINASE",
+                    "aerobic": "LIGNASE",
+                    "meat": "PROTEASE",
+                }
+            )
         bio_cfg = safe_get(self.cfg, "BIO", {})
         self.SAMPLING_THRESHOLD = int(safe_get(bio_cfg, "SAMPLING_THRESHOLD", 1000))
         self.BASE_WORD_VALUE = float(safe_get(bio_cfg, "BASE_WORD_VALUE", 0.5))
@@ -279,7 +377,9 @@ class DigestiveTrack:
         if not clean_words:
             return "NONE", 0.0, 0
         words_to_process, scaling_factor = self._sample_input(clean_words, logs)
-        raw_yield, found_enzymes, cliche_tax, raw_hits = self._digest_words(words_to_process)
+        raw_yield, found_enzymes, cliche_tax, raw_hits = self._digest_words(
+            words_to_process
+        )
         total_atp = raw_yield * scaling_factor
         scaled_tax = cliche_tax * scaling_factor
         total_hits = int(raw_hits * scaling_factor)
@@ -287,8 +387,12 @@ class DigestiveTrack:
         if scaled_tax > 0:
             total_atp = max(0.0, total_atp - scaled_tax)
             self.bio.endo.cortisol = float(self.bio.endo.cortisol) + (scaled_tax * 0.02)
-            msg = ux_format("digestive_track", "cliche_tax", default="[BIO]: CLICHÉ TAX: -{tax:.1f} ATP.",
-                            tax=scaled_tax)
+            msg = ux_format(
+                "digestive_track",
+                "cliche_tax",
+                default="[BIO]: CLICHÉ TAX: -{tax:.1f} ATP.",
+                tax=scaled_tax,
+            )
             logs.append(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
 
         bio_cfg = safe_get(self.cfg, "BIO", {})
@@ -305,13 +409,20 @@ class DigestiveTrack:
             dominant = "NONE"
         return dominant, total_atp, total_hits
 
-    def _sample_input(self, words: List[str], logs: List[str]) -> Tuple[List[str], float]:
+    def _sample_input(
+        self, words: List[str], logs: List[str]
+    ) -> Tuple[List[str], float]:
         count = len(words)
         if count > self.SAMPLING_THRESHOLD:
             factor = count / self.SAMPLING_THRESHOLD
             if random.random() < 0.1:
-                msg = ux_format("digestive_track", "mass_input",
-                    default="Mass Input ({count}). Sampling x{factor:.1f}.", count=count, factor=factor)
+                msg = ux_format(
+                    "digestive_track",
+                    "mass_input",
+                    default="Mass Input ({count}). Sampling x{factor:.1f}.",
+                    count=count,
+                    factor=factor,
+                )
                 logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
             return random.sample(words, self.SAMPLING_THRESHOLD), factor
         return words, 1.0
@@ -321,9 +432,15 @@ class DigestiveTrack:
             return 0.0, [], 0.0, 0
         word_counts = Counter(words)
         cfg = safe_get(self.cfg, "BIO", {})
-        min_len, comp_len = safe_get(cfg, "MIN_WORD_LENGTH", 4), safe_get(cfg, "COMPLEX_WORD_LENGTH", 7)
-        antigen_set, kin_set, exp_set = self.lex.get("antigen") or set(), self.lex.get(
-            "kinetic") or set(), self.lex.get("explosive") or set()
+        min_len, comp_len = (
+            safe_get(cfg, "MIN_WORD_LENGTH", 4),
+            safe_get(cfg, "COMPLEX_WORD_LENGTH", 7),
+        )
+        antigen_set, kin_set, exp_set = (
+            self.lex.get("antigen") or set(),
+            self.lex.get("kinetic") or set(),
+            self.lex.get("explosive") or set(),
+        )
         atp_yield, cliche_tax, hits = 0.0, 0.0, 0
         enzymes = []
         get_cat = self.lex.get_current_category
@@ -334,7 +451,11 @@ class DigestiveTrack:
             if len(word) < min_len:
                 continue
             hits = hits + count
-            val = self.COMPLEX_WORD_BONUS if len(word) > comp_len else self.BASE_WORD_VALUE
+            val = (
+                self.COMPLEX_WORD_BONUS
+                if len(word) > comp_len
+                else self.BASE_WORD_VALUE
+            )
             log_mult = 1.0 + math.log(count)
             if word in kin_set or word in exp_set:
                 atp_yield = atp_yield + ((val * 1.5) * log_mult)

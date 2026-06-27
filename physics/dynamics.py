@@ -1,14 +1,16 @@
 """physics/dynamics.py"""
 
+import heapq
 import math
 import random
 import time
-import heapq
 from collections import Counter, deque
-from typing import Dict, List, Any, Tuple, Optional, Deque
-from struts import ux, safe_get
-from presets import BoneConfig
+from typing import Any, Deque, Dict, List, Optional, Tuple
+
 from constants import Prisma
+from presets import BoneConfig
+from struts import safe_get, ux
+
 
 class SurfaceTension:
     @staticmethod
@@ -20,11 +22,17 @@ class SurfaceTension:
         v_crit = float(safe_get(cfg, "VOLTAGE_CRITICAL", 15.0))
         v_high = float(safe_get(cfg, "VOLTAGE_HIGH", 12.0))
         if current_voltage >= v_crit and current_kappa < 0.4:
-            return True, (ux("physics_strings", "hubris_detected") or "").format(
-                voltage=current_voltage), "ICARUS_CRASH"
+            return (
+                True,
+                (ux("physics_strings", "hubris_detected") or "").format(
+                    voltage=current_voltage
+                ),
+                "ICARUS_CRASH",
+            )
         if current_voltage > v_high and current_kappa > 0.8:
             return True, ux("physics_strings", "hubris_flow") or "", "FLOW_BOOST"
         return False, "", ""
+
 
 class ChromaScope:
     _T_MAP_CACHE = None
@@ -33,13 +41,22 @@ class ChromaScope:
     def modulate(text: str, vector: Dict[str, float]) -> str:
         if ChromaScope._T_MAP_CACHE is None:
             from core import LoreManifest
-            ChromaScope._T_MAP_CACHE = LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP") or {}
+
+            ChromaScope._T_MAP_CACHE = (
+                LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP")
+                or {}
+            )
         if not vector or not any(vector.values()):
             return f"{Prisma.GRY}{text}{Prisma.RST}"
         t_map = ChromaScope._T_MAP_CACHE
         primary = max(vector, key=lambda k: float(vector[k]))
-        color = getattr(Prisma, t_map[primary][3], Prisma.GRY) if primary in t_map else Prisma.GRY
+        color = (
+            getattr(Prisma, t_map[primary][3], Prisma.GRY)
+            if primary in t_map
+            else Prisma.GRY
+        )
         return f"{color}{text}{Prisma.RST}"
+
 
 class ZoneInertia:
     def __init__(self, inertia=0.7, config_ref=None):
@@ -60,12 +77,18 @@ class ZoneInertia:
         self.strain_gauge = 0.0
         return self.is_anchored
 
-    def stabilize(self, proposed_zone: str, physics: Any, cosmic_state: Tuple[str, float, str]) -> Tuple[str, Optional[str]]:
+    def stabilize(
+        self, proposed_zone: str, physics: Any, cosmic_state: Tuple[str, float, str]
+    ) -> Tuple[str, Optional[str]]:
         beta = float(safe_get(physics, "beta_index", 1.0))
         truth = float(safe_get(physics, "truth_ratio", 0.5))
         current_vec = (beta, truth, 1.0 if cosmic_state[0] != "VOID_DRIFT" else 0.0)
         self.dwell_counter += 1
-        pressure = min(1.0, math.dist(current_vec, self.last_vector) / self.grav_tolerance) if self.last_vector else 0.0
+        pressure = (
+            min(1.0, math.dist(current_vec, self.last_vector) / self.grav_tolerance)
+            if self.last_vector
+            else 0.0
+        )
         if self.is_anchored:
             result = self._handle_anchored_state(proposed_zone, pressure)
         elif proposed_zone == self.current_zone:
@@ -78,7 +101,9 @@ class ZoneInertia:
         self.last_vector = current_vec
         return result
 
-    def _handle_anchored_state(self, proposed_zone: str, pressure: float) -> Tuple[str, Optional[str]]:
+    def _handle_anchored_state(
+        self, proposed_zone: str, pressure: float
+    ) -> Tuple[str, Optional[str]]:
         if proposed_zone == self.current_zone:
             self.strain_gauge = max(0.0, self.strain_gauge - 0.1)
             return self.current_zone, None
@@ -90,22 +115,45 @@ class ZoneInertia:
             msg = ux("physics_strings", "anchor_failed")
             return proposed_zone, f"{Prisma.RED}{msg}{Prisma.RST}"
         msg = ux("physics_strings", "anchor_holding")
-        return (self.current_zone,
-                f"{Prisma.OCHRE}{msg.format(proposed_zone=proposed_zone, strain=self.strain_gauge, limit=self.strain_limit)}{Prisma.RST}",)
+        return (
+            self.current_zone,
+            f"{Prisma.OCHRE}{msg.format(proposed_zone=proposed_zone, strain=self.strain_gauge, limit=self.strain_limit)}{Prisma.RST}",
+        )
 
-    def _attempt_migration(self, proposed_zone: str, pressure: float) -> Tuple[str, Optional[str]]:
-        prob = min(0.85, (1.0 - self.inertia) + pressure + (0.2 if proposed_zone in ["AERIE", "THE_FORGE"] else 0.0))
+    def _attempt_migration(
+        self, proposed_zone: str, pressure: float
+    ) -> Tuple[str, Optional[str]]:
+        prob = min(
+            0.85,
+            (1.0 - self.inertia)
+            + pressure
+            + (0.2 if proposed_zone in ["AERIE", "THE_FORGE"] else 0.0),
+        )
         if random.random() < prob:
             old, self.current_zone = self.current_zone, proposed_zone
             self.dwell_counter = 0
             msg = ux("physics_strings", "zone_migration")
-            return self.current_zone, f"{Prisma.CYN}{msg.format(old=old, proposed_zone=proposed_zone)}{Prisma.RST}"
+            return (
+                self.current_zone,
+                f"{Prisma.CYN}{msg.format(old=old, proposed_zone=proposed_zone)}{Prisma.RST}",
+            )
         return self.current_zone, None
 
     @staticmethod
-    def override_cosmic_drag(cosmic_drag_penalty: float, current_zone: str, config_ref=None) -> float:
-        low_drag = safe_get(safe_get(config_ref or BoneConfig, "PHYSICS", {}), "LOW_DRAG_ZONES", ["AERIE"])
-        return cosmic_drag_penalty * 0.3 if current_zone in low_drag and cosmic_drag_penalty > 0 else cosmic_drag_penalty
+    def override_cosmic_drag(
+        cosmic_drag_penalty: float, current_zone: str, config_ref=None
+    ) -> float:
+        low_drag = safe_get(
+            safe_get(config_ref or BoneConfig, "PHYSICS", {}),
+            "LOW_DRAG_ZONES",
+            ["AERIE"],
+        )
+        return (
+            cosmic_drag_penalty * 0.3
+            if current_zone in low_drag and cosmic_drag_penalty > 0
+            else cosmic_drag_penalty
+        )
+
 
 class CosmicDynamics:
     def __init__(self, config_ref=None):
@@ -125,7 +173,9 @@ class CosmicDynamics:
     def commit(self, voltage: float):
         self.voltage_history.append(voltage)
 
-    def check_gravity(self, current_drift: float, psi: float) -> Tuple[float, List[str]]:
+    def check_gravity(
+        self, current_drift: float, psi: float
+    ) -> Tuple[float, List[str]]:
         logs = []
         new_drag = current_drift
         cfg_obj = self.cfg
@@ -142,17 +192,25 @@ class CosmicDynamics:
         new_drag = max(drag_floor, new_drag)
         return new_drag, logs
 
-    def analyze_orbit(self, network: Any, clean_words: List[str]) -> Tuple[str, float, str]:
+    def analyze_orbit(
+        self, network: Any, clean_words: List[str]
+    ) -> Tuple[str, float, str]:
         if not clean_words or not network or not network.graph:
             return "VOID_DRIFT", 3.0, self.logs.get("VOID") or "Drifting in the Void."
         now = int(time.time())
         if not self.cached_wells or (now - self.last_scan_time) > self.SCAN_INTERVAL:
-            self.cached_wells, self.cached_hubs = self._scan_network_mass(network, self.cfg)
+            self.cached_wells, self.cached_hubs = self._scan_network_mass(
+                network, self.cfg
+            )
             self.last_scan_time = now
-        basin_pulls, active_filaments = self._calculate_pull(clean_words, network, self.cached_wells)
+        basin_pulls, active_filaments = self._calculate_pull(
+            clean_words, network, self.cached_wells
+        )
         if not any(basin_pulls.values()):
             return self._handle_void_state(clean_words, self.cached_hubs)
-        return self._resolve_orbit(basin_pulls, active_filaments, len(clean_words), self.cached_wells, self.cfg)
+        return self._resolve_orbit(
+            basin_pulls, active_filaments, len(clean_words), self.cached_wells, self.cfg
+        )
 
     @staticmethod
     def _scan_network_mass(network, config_ref=None) -> Tuple[Dict, Dict]:
@@ -188,12 +246,15 @@ class CosmicDynamics:
     def _handle_void_state(self, words, geodesic_hubs) -> Tuple[str, float, str]:
         if hubs_in_void := set(words).intersection(geodesic_hubs.keys()):
             best_hub = max(hubs_in_void, key=lambda w: geodesic_hubs[w])
-            msg = (self.logs.get("NEBULA") or "Approaching {node} ({mass})").format(node=best_hub.upper(), mass=int(geodesic_hubs[best_hub]))
+            msg = (self.logs.get("NEBULA") or "Approaching {node} ({mass})").format(
+                node=best_hub.upper(), mass=int(geodesic_hubs[best_hub])
+            )
             return "PROTO_COSMOS", 1.0, msg
         return "VOID_DRIFT", 3.0, self.logs.get("VOID") or "Drifting in the Void."
 
     def _resolve_orbit(
-            self, basin_pulls, active_filaments, word_count, gravity_wells, config_ref=None) -> Tuple[str, float, str]:
+        self, basin_pulls, active_filaments, word_count, gravity_wells, config_ref=None
+    ) -> Tuple[str, float, str]:
         target_cfg = config_ref or BoneConfig
         top_basins = heapq.nlargest(2, basin_pulls.items(), key=lambda x: x[1])
         primary_node, primary_str = top_basins[0]
@@ -201,13 +262,19 @@ class CosmicDynamics:
         if len(top_basins) > 1:
             secondary_node, secondary_str = top_basins[1]
             if secondary_str > 0 and (primary_str - secondary_str) < lagrange_tol:
-                msg = (self.logs.get("LAGRANGE") or "Lagrange equilibrium between {p} and {s}").format(
-                    p=primary_node.upper(), s=secondary_node.upper())
+                msg = (
+                    self.logs.get("LAGRANGE")
+                    or "Lagrange equilibrium between {p} and {s}"
+                ).format(p=primary_node.upper(), s=secondary_node.upper())
                 return "LAGRANGE_POINT", 0.0, msg
         flow_ratio = active_filaments / max(1, word_count)
         well_threshold = float(safe_get(target_cfg, "GRAVITY_WELL_THRESHOLD", 15.0))
         if flow_ratio > 0.5 and primary_str < (well_threshold * 2):
-            msg = (self.logs.get("FLOW") or "Caught in the flow of {node}").format(node=primary_node.upper())
+            msg = (self.logs.get("FLOW") or "Caught in the flow of {node}").format(
+                node=primary_node.upper()
+            )
             return "WATERSHED_FLOW", 0.0, msg
-        msg = (self.logs.get("ORBIT") or "Orbiting {node} ({mass})").format(node=primary_node.upper(), mass=int(gravity_wells[primary_node]))
+        msg = (self.logs.get("ORBIT") or "Orbiting {node} ({mass})").format(
+            node=primary_node.upper(), mass=int(gravity_wells[primary_node])
+        )
         return "ORBITAL", 0.0, msg

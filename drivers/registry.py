@@ -2,8 +2,10 @@
 
 from dataclasses import dataclass, field
 from typing import List
-from presets import BoneConfig
+
 from drivers.enneagram import EnneagramDriver
+from presets import BoneConfig
+
 
 @dataclass
 class VSLState:
@@ -13,6 +15,7 @@ class VSLState:
     L: float = 0.0
     O: float = 1.0
     active_modules: List[str] = field(default_factory=list)
+
 
 class DriverRegistry:
     def __init__(self, events_ref, config_ref=None):
