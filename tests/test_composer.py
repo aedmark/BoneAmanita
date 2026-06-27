@@ -2,14 +2,15 @@
 
 import unittest
 from unittest.mock import MagicMock
-from brain.composer import LLMInterface, ResponseValidator, PromptComposer
+
+from brain.composer import LLMInterface, PromptComposer, ResponseValidator
 from constants import Prisma
 from tests.base import BoneTestCase
+
 
 class TestComposerLogging(BoneTestCase):
     def setUp(self):
         super().setUp()
-        # Isolate the EventBus
         self.mock_events = MagicMock()
         self.llm = LLMInterface(events_ref=self.mock_events, provider="mock")
         self.llm.failure_count = 2
@@ -33,8 +34,7 @@ class TestComposerLogging(BoneTestCase):
             "Failures: 2 | Circuit: CLOSED | Trigger: STRESS_TEST"
         )
         self.mock_events.log.assert_any_call(
-            f"{Prisma.GRY}{expected_log}{Prisma.RST}",
-            "DEBUG"
+            f"{Prisma.GRY}{expected_log}{Prisma.RST}", "DEBUG"
         )
 
     def test_mock_generation_handles_missing_data(self):
@@ -46,9 +46,9 @@ class TestComposerLogging(BoneTestCase):
             "Failures: 2 | Circuit: CLOSED | Trigger: SIMULATION"
         )
         self.mock_events.log.assert_any_call(
-            f"{Prisma.GRY}{expected_log}{Prisma.RST}",
-            "DEBUG"
+            f"{Prisma.GRY}{expected_log}{Prisma.RST}", "DEBUG"
         )
+
 
 class TestResponseValidator(BoneTestCase):
     def setUp(self):
@@ -58,7 +58,9 @@ class TestResponseValidator(BoneTestCase):
         self.validator = ResponseValidator(lore_ref=self.mock_lore)
 
     def test_universally_strips_think_tags(self):
-        raw_response = "<think>\nI am calculating the matrix.\n</think>\nHere is the matrix."
+        raw_response = (
+            "<think>\nI am calculating the matrix.\n</think>\nHere is the matrix."
+        )
         state = {"meta": {"active_mode": "TECHNICAL"}}
         result = self.validator.validate(raw_response, state)
         self.assertTrue(result.get("valid", False))
@@ -66,7 +68,9 @@ class TestResponseValidator(BoneTestCase):
         self.assertNotIn("<think>", result.get("content", ""))
 
     def test_universally_strips_system_telemetry_tags(self):
-        raw_response = "<system_telemetry>V: 90 E: 1.0</system_telemetry>\nThe world burns."
+        raw_response = (
+            "<system_telemetry>V: 90 E: 1.0</system_telemetry>\nThe world burns."
+        )
         state = {"meta": {"active_mode": "CONVERSATION"}}
         result = self.validator.validate(raw_response, state)
         self.assertTrue(result.get("valid", False))
@@ -77,7 +81,10 @@ class TestResponseValidator(BoneTestCase):
         state = {"meta": {"active_mode": "TECHNICAL"}}
         result = self.validator.validate(raw_response, state)
         self.assertTrue(result.get("valid", False))
-        self.assertNotIn("CRITICAL: You failed to include the <think>...</think> block", result.get("feedback_instruction", ""))
+        self.assertNotIn(
+            "CRITICAL: You failed to include the <think>...</think> block",
+            result.get("feedback_instruction", ""),
+        )
 
 
 class TestPromptComposer(BoneTestCase):
@@ -90,21 +97,32 @@ class TestPromptComposer(BoneTestCase):
     def test_composer_respects_active_mode_exits_rule(self):
         mind_state = {"role": "The Architect"}
         adv_block = self.composer._build_persona_block(
-            mind=mind_state, bio={}, mood_override="",
-            mode_data={}, global_data={}, high_voltage_data={},
-            vsl_state={}, active_mode_name="ADVENTURE"
+            mind=mind_state,
+            bio={},
+            mood_override="",
+            mode_data={},
+            global_data={},
+            high_voltage_data={},
+            vsl_state={},
+            active_mode_name="ADVENTURE",
         )
         adv_text = "\n".join(adv_block)
         self.assertIn("CRITICAL FORMATTING AXIOM", adv_text)
         self.assertIn("**Exits:**", adv_text)
         conv_block = self.composer._build_persona_block(
-            mind=mind_state, bio={}, mood_override="",
-            mode_data={}, global_data={}, high_voltage_data={},
-            vsl_state={}, active_mode_name="CONVERSATION"
+            mind=mind_state,
+            bio={},
+            mood_override="",
+            mode_data={},
+            global_data={},
+            high_voltage_data={},
+            vsl_state={},
+            active_mode_name="CONVERSATION",
         )
         conv_text = "\n".join(conv_block)
         self.assertNotIn("CRITICAL FORMATTING AXIOM", conv_text)
         self.assertNotIn("**Exits:**", conv_text)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

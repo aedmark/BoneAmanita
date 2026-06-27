@@ -3,11 +3,13 @@
 import json
 import random
 from collections import deque
-from core import LoreManifest
-from typing import Dict, Any
-from struts import ux, safe_get
-from presets import BoneConfig
+from typing import Any, Dict
+
 from constants import Prisma
+from core import LoreManifest
+from presets import BoneConfig
+from struts import safe_get, ux
+
 
 class LimboLayer:
     MAX_ECTOPLASM = 50
@@ -20,7 +22,9 @@ class LimboLayer:
         self.haunt_chance = float(safe_get(cfg, "HAUNT_CHANCE", 0.05))
         self.stasis_leak = 0.0
         narrative_data = LoreManifest.get_instance().get("narrative_data") or {}
-        self.stasis_screams = narrative_data.get("CASSANDRA_SCREAMS", ["BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT"])
+        self.stasis_screams = narrative_data.get(
+            "CASSANDRA_SCREAMS", ["BANGING ON THE GLASS", "IT'S TOO COLD", "LET ME OUT"]
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         return {"ghosts": list(self.ghosts), "stasis_leak": self.stasis_leak}
@@ -57,6 +61,7 @@ class LimboLayer:
 
     def haunt(self, text):
         from struts import safe_get
+
         cfg = safe_get(self.cfg, "LIMBO", {})
         l_chance = float(safe_get(cfg, "LEAK_DECAY_CHANCE", 0.2))
         l_amount = float(safe_get(cfg, "LEAK_DECAY_AMOUNT", 0.5))

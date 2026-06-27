@@ -1,11 +1,11 @@
 """mechanics/__init__.py"""
 
 from mechanics.commands import CommandProcessor
-from mechanics.reporter import CycleReporter
-from mechanics.inventory import GordonKnot, Item
-from mechanics.lexicon import LexiconStore, LexiconService
-from mechanics.tools import TheTclWeaver
 from mechanics.dspycritic import DSPyCritic
+from mechanics.inventory import GordonKnot, Item
+from mechanics.lexicon import LexiconService, LexiconStore
+from mechanics.reporter import CycleReporter
+from mechanics.tools import TheTclWeaver
 
 __all__ = [
     "CommandProcessor",
@@ -14,6 +14,5 @@ __all__ = [
     "Item",
     "LexiconStore",
     "LexiconService",
-    "TheTclWeaver"
-    "DSPyCritic"
+    "TheTclWeaverDSPyCritic",
 ]

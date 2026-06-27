@@ -1,18 +1,24 @@
 """body/regulation.py"""
 
-import math, time, random
+import math
+import random
+import time
 from dataclasses import dataclass, field
-from typing import Optional, Dict, List, Any, Tuple, TYPE_CHECKING, Protocol
-from core import Prisma, LoreManifest
-from struts import ux, safe_get, safe_set
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Protocol, Tuple
+
+from core import LoreManifest, Prisma
 from presets import BoneConfig
+from struts import safe_get, safe_set, ux
 
 if TYPE_CHECKING:
     from body.system import BioSystem
 
+
 class StateProvider(Protocol):
     """Structural contract: Guarantees the object can yield physics properties safely."""
+
     def get(self, key: str, default: Any = None) -> Any: ...
+
 
 class PIDController:
     def __init__(self, kp, ki, kd, setpoint, output_limits=(-10.0, 10.0)):
@@ -30,9 +36,16 @@ class PIDController:
         self._last_error = 0.0
         self._first_run = True
 
-    def update(self, measurement: float, dt: float = 1.0, target_override: Optional[float] = None) -> float:
+    def update(
+        self,
+        measurement: float,
+        dt: float = 1.0,
+        target_override: Optional[float] = None,
+    ) -> float:
         safe_dt = max(0.01, dt)
-        active_setpoint = target_override if target_override is not None else self.setpoint
+        active_setpoint = (
+            target_override if target_override is not None else self.setpoint
+        )
         error = active_setpoint - measurement
         if self._first_run:
             self._last_error = error
@@ -40,7 +53,9 @@ class PIDController:
         P = self.kp * error
         if self.ki != 0:
             self._integral = self._integral + (error * safe_dt)
-            self._integral = max(self.min_out / self.ki, min(self.max_out / self.ki, self._integral))
+            self._integral = max(
+                self.min_out / self.ki, min(self.max_out / self.ki, self._integral)
+            )
         else:
             self._integral = 0.0
         I = self.ki * self._integral
@@ -49,6 +64,7 @@ class PIDController:
         output = P + I + D
         self._last_error = error
         return max(self.min_out, min(self.max_out, output))
+
 
 @dataclass
 class MetabolicGovernor:
@@ -68,13 +84,23 @@ class MetabolicGovernor:
         self.cfg = self.config_ref or BoneConfig
         bio_cfg = safe_get(self.cfg, "BIO", {})
         self.STATE_THRESHOLDS = safe_get(bio_cfg, "GOVERNOR_THRESHOLDS", [])
-        self.shift_cfg = safe_get(safe_get(self.cfg, "BODY_CONFIG", {}), "GOVERNOR_SHIFT", {})
+        self.shift_cfg = safe_get(
+            safe_get(self.cfg, "BODY_CONFIG", {}), "GOVERNOR_SHIFT", {}
+        )
         pid_cfg = safe_get(bio_cfg, "PID_SETTINGS", {})
-        v_cfg = pid_cfg.get("VOLTAGE", {"kp": 0.6, "ki": 0.05, "kd": 0.2, "setpoint": 10.0})
+        v_cfg = pid_cfg.get(
+            "VOLTAGE", {"kp": 0.6, "ki": 0.05, "kd": 0.2, "setpoint": 10.0}
+        )
         d_cfg = pid_cfg.get("DRAG", {"kp": 0.4, "ki": 0.1, "kd": 0.1, "setpoint": 1.5})
-        self.voltage_pid = PIDController(kp=v_cfg["kp"], ki=v_cfg["ki"], kd=v_cfg["kd"], setpoint=v_cfg["setpoint"])
-        self.drag_pid = PIDController(kp=d_cfg["kp"], ki=d_cfg["ki"], kd=d_cfg["kd"], setpoint=d_cfg["setpoint"])
-        self._sorted_thresholds = sorted(self.STATE_THRESHOLDS, key=lambda x: x[3], reverse=True)
+        self.voltage_pid = PIDController(
+            kp=v_cfg["kp"], ki=v_cfg["ki"], kd=v_cfg["kd"], setpoint=v_cfg["setpoint"]
+        )
+        self.drag_pid = PIDController(
+            kp=d_cfg["kp"], ki=d_cfg["ki"], kd=d_cfg["kd"], setpoint=d_cfg["setpoint"]
+        )
+        self._sorted_thresholds = sorted(
+            self.STATE_THRESHOLDS, key=lambda x: x[3], reverse=True
+        )
 
     def recalibrate(self, target_voltage: float, target_drag: float):
         self.voltage_pid.setpoint = target_voltage
@@ -85,19 +111,27 @@ class MetabolicGovernor:
             return "CO_REGULATION"
         return "EFFICIENCY"
 
-    def regulate(self, physics: StateProvider, dt: float, endocrine_state: Optional[Any] = None) -> Tuple[float, float]:
+    def regulate(
+        self, physics: StateProvider, dt: float, endocrine_state: Optional[Any] = None
+    ) -> Tuple[float, float]:
         safe_dt = max(0.001, dt)
         v_val = float(physics.get("voltage", 0.0))
         d_val = float(physics.get("narrative_drag", 0.0))
         current_zone = str(physics.get("zone", "")).upper()
-        if self.manual_override or self.mode == "SANCTUARY" or current_zone == "SANCTUARY":
+        if (
+            self.manual_override
+            or self.mode == "SANCTUARY"
+            or current_zone == "SANCTUARY"
+        ):
             return v_val, d_val
         if endocrine_state:
             adr_spike = getattr(endocrine_state, "adrenaline", 0.0) * 2.0
             active_setpoint = self.voltage_pid.setpoint + adr_spike
             deadband = 1.0 + (getattr(endocrine_state, "cortisol", 0.0) * 2.0)
             v_error = active_setpoint - v_val
-            pid_out = self.voltage_pid.update(v_val, safe_dt, target_override=active_setpoint)
+            pid_out = self.voltage_pid.update(
+                v_val, safe_dt, target_override=active_setpoint
+            )
             updated_voltage = pid_out if abs(v_error) > deadband else 0.0
         else:
             updated_voltage = self.voltage_pid.update(v_val, safe_dt)
@@ -111,7 +145,7 @@ class MetabolicGovernor:
         dist_v = abs(curr_v - self.voltage_pid.setpoint)
         dist_d = abs(curr_d - self.drag_pid.setpoint)
         is_safe = (dist_v < 6.0) and (dist_d < 3.0)
-        return is_safe, math.sqrt(dist_v ** 2 + dist_d ** 2)
+        return is_safe, math.sqrt(dist_v**2 + dist_d**2)
 
     @staticmethod
     def get_stress_modifier(tick_count):
@@ -119,7 +153,11 @@ class MetabolicGovernor:
 
     @staticmethod
     def calculate_stress(health: float, ros_buildup: float) -> float:
-        base_stress = 1.0 + max(0.0, (50.0 - health) * 0.01) + max(0.0, (ros_buildup - 50.0) * 0.01)
+        base_stress = (
+            1.0
+            + max(0.0, (50.0 - health) * 0.01)
+            + max(0.0, (ros_buildup - 50.0) * 0.01)
+        )
         return round(min(3.0, base_stress), 2)
 
     def set_override(self, target_mode):
@@ -132,7 +170,9 @@ class MetabolicGovernor:
             return msg_tmpl.format(mode=target_mode) if msg_tmpl else ""
         return gov_text.get("INVALID", "")
 
-    def _check_override_safety(self, physics: StateProvider, gov_text: Dict) -> Optional[str]:
+    def _check_override_safety(
+        self, physics: StateProvider, gov_text: Dict
+    ) -> Optional[str]:
         current_voltage = float(physics.get("voltage", 0.0))
         bio_cfg = safe_get(self.cfg, "BIO", {})
         gov_crit = float(safe_get(bio_cfg, "GOV_VOLTAGE_CRITICAL", 25.0))
@@ -141,7 +181,12 @@ class MetabolicGovernor:
             return gov_text.get("OVERRIDE_CLEARED", "")
         return None
 
-    def shift(self, physics: StateProvider, _voltage_history: List[float], current_tick: int = 0) -> Optional[str]:
+    def shift(
+        self,
+        physics: StateProvider,
+        _voltage_history: List[float],
+        current_tick: int = 0,
+    ) -> Optional[str]:
         gov_text = self.narrative_data.get("GOVERNOR", {})
         if self.manual_override:
             return self._check_override_safety(physics, gov_text)
@@ -169,7 +214,9 @@ class MetabolicGovernor:
                 return mode
         return "COURTYARD"
 
-    def _get_shift_message(self, mode: str, text_map: Dict, physics: StateProvider) -> str:
+    def _get_shift_message(
+        self, mode: str, text_map: Dict, physics: StateProvider
+    ) -> str:
         shift_cfg = self.shift_cfg
         raw_colors = shift_cfg.get("COLORS", {})
         defaults = shift_cfg.get("DEFAULTS", {})
@@ -183,16 +230,19 @@ class MetabolicGovernor:
                 color=colors.get(mode, Prisma.WHT),
                 reset=Prisma.RST,
                 volts=physics.get("voltage", 0.0),
-                beta=physics.get("beta_index", 0.0)
+                beta=physics.get("beta_index", 0.0),
             )
         except Exception as e:
             print(f"{Prisma.RED}Format error for '{mode}': {e}{Prisma.RST}")
             return f"{colors.get(mode, '')}{defaults.get(mode, '')}{Prisma.RST}"
 
-    def calculate_coupling(self, phi: float, resonance_delta: float, user_exhaustion: float) -> float:
+    def calculate_coupling(
+        self, phi: float, resonance_delta: float, user_exhaustion: float
+    ) -> float:
         base_coupling = phi * resonance_delta
         beth_index = base_coupling * (1.0 - (user_exhaustion * 0.4))
         return max(0.0, min(1.0, beth_index))
+
 
 class BioFeedback:
     def __init__(self, bio_system_ref: "BioSystem", config_ref=None):
@@ -200,7 +250,9 @@ class BioFeedback:
         self.cfg = config_ref or BoneConfig
         self.consecutive_autophagy = 0
 
-    def check_vital_signs(self, phys: StateProvider, stamina: float, logs: List[str]) -> str:
+    def check_vital_signs(
+        self, phys: StateProvider, stamina: float, logs: List[str]
+    ) -> str:
         b = self.bio.biometrics
         if not b:
             if msg := ux("bio_feedback", "interface_lost"):
@@ -242,9 +294,13 @@ class BioFeedback:
 
         return "CLEAR"
 
-    def perform_maintenance(self, text: str, phys: StateProvider, logs: List[str], tick: int):
+    def perform_maintenance(
+        self, text: str, phys: StateProvider, logs: List[str], tick: int
+    ):
         cfg = safe_get(self.cfg, "BIO", {})
-        if len(text) > safe_get(cfg, "BUFFER_WARN_LIMIT", 10000) and (msg := ux("bio_feedback", "large_buffer")):
+        if len(text) > safe_get(cfg, "BUFFER_WARN_LIMIT", 10000) and (
+            msg := ux("bio_feedback", "large_buffer")
+        ):
             logs.append(f"{Prisma.GRY}{msg}{Prisma.RST}")
 
         drag = float(phys.get("narrative_drag", 0.0))
@@ -254,8 +310,12 @@ class BioFeedback:
         if drag > sludge_thresh and tick % sludge_mod == 0:
             if msg := ux("bio_feedback", "clearing_sludge"):
                 logs.append(f"{Prisma.OCHRE}{msg.format(drag=drag)}{Prisma.RST}")
-            # safe_set natively handles assigning to both dicts and PhysicsPacket objects
-            safe_set(phys, "narrative_drag", max(1.0, drag - safe_get(cfg, "SLUDGE_DRAG_REDUCTION", 2.0)))
+            safe_set(
+                phys,
+                "narrative_drag",
+                max(1.0, drag - safe_get(cfg, "SLUDGE_DRAG_REDUCTION", 2.0)),
+            )
+
 
 class EndocrineRegulator:
     def __init__(self, bio_system_ref: "BioSystem"):
@@ -273,7 +333,9 @@ class EndocrineRegulator:
         if chem.cortisol > 0.5:
             stress_tax = 1.0 + (chem.cortisol * 0.5)
             modifier = modifier * stress_tax
-            if random.random() < 0.3 and (msg := ux("endocrine_regulator", "cortisol_spike")):
+            if random.random() < 0.3 and (
+                msg := ux("endocrine_regulator", "cortisol_spike")
+            ):
                 logs.append(f"{Prisma.RED}{msg.format(tax=stress_tax)}{Prisma.RST}")
 
         if chem.adrenaline > 0.6:

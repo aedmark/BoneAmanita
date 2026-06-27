@@ -3,12 +3,13 @@
 import re
 from enum import Enum
 
+
 class Prisma:
     """
     Immutable color registry.
     The engine speaks ANSI exclusively. Web consumers must translate at the boundary.
     """
-    # Static, immutable ANSI codes. Load-bearing for engine f-strings.
+
     RED = "\033[31m"
     GRN = "\033[32m"
     YEL = "\033[33m"
@@ -24,9 +25,18 @@ class Prisma:
     RST = "\033[0m"
 
     _ANSI_MAP = {
-        "R": RED, "G": GRN, "Y": YEL, "B": BLU,
-        "M": MAG, "C": CYN, "W": WHT, "0": GRY,
-        "I": INDIGO, "O": OCHRE, "V": VIOLET, "S": SLATE
+        "R": RED,
+        "G": GRN,
+        "Y": YEL,
+        "B": BLU,
+        "M": MAG,
+        "C": CYN,
+        "W": WHT,
+        "0": GRY,
+        "I": INDIGO,
+        "O": OCHRE,
+        "V": VIOLET,
+        "S": SLATE,
     }
 
     _STRIP_PATTERN = re.compile(
@@ -34,7 +44,6 @@ class Prisma:
         r"|\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"
     )
 
-    # Fast ANSI-to-HTML translation map for the web boundary
     _ANSI_TO_HTML = {
         RED: "<span class='prisma-red'>",
         GRN: "<span class='prisma-grn'>",
@@ -48,7 +57,7 @@ class Prisma:
         OCHRE: "<span class='prisma-ochre'>",
         VIOLET: "<span class='prisma-violet'>",
         SLATE: "<span class='prisma-slate'>",
-        RST: "</span>"
+        RST: "</span>",
     }
 
     @classmethod
@@ -75,7 +84,6 @@ class Prisma:
         """
         if not text:
             return ""
-        # Replace the reset code first to avoid partial matches
         result = text.replace(cls.RST, cls._ANSI_TO_HTML[cls.RST])
         for ansi_code, html_span in cls._ANSI_TO_HTML.items():
             if ansi_code != cls.RST:
@@ -109,7 +117,7 @@ class RealityLayer:
             "allow_commands": depth >= cls.SIMULATION,
             "allow_meta": depth >= cls.DEBUG,
             "raw_output": depth == cls.DEEP_CX,
-            "system_override": depth == cls.DEBUG
+            "system_override": depth == cls.DEBUG,
         }
         if boot_mode == "TECHNICAL":
             rules["allow_narrative"] = True

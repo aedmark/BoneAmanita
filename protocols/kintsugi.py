@@ -1,11 +1,13 @@
 """protocols/kintsugi.py"""
 
 import random
-from typing import Dict, Any
+from typing import Any, Dict
+
 from constants import Prisma
-from presets import BoneConfig
-from struts import ux, ux_format, safe_get
 from core import LoreManifest
+from presets import BoneConfig
+from struts import safe_get, ux, ux_format
+
 
 class KintsugiProtocol:
     PATH_SCAR = "SCAR"
@@ -16,7 +18,9 @@ class KintsugiProtocol:
         self.cfg = config_ref or BoneConfig
         self.active_koan = None
         narrative_data = LoreManifest.get_instance().get("narrative_data") or {}
-        self.koans = narrative_data.get("KINTSUGI_KOANS", ["The crack is where the light enters."])
+        self.koans = narrative_data.get(
+            "KINTSUGI_KOANS", ["The crack is where the light enters."]
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         return {"active_koan": self.active_koan}
@@ -32,7 +36,9 @@ class KintsugiProtocol:
             return True, self.active_koan
         return False, None
 
-    def attempt_repair(self, phys, trauma_accum, soul_ref=None, _qualia=None, lexicon_ref=None):
+    def attempt_repair(
+        self, phys, trauma_accum, soul_ref=None, _qualia=None, lexicon_ref=None
+    ):
         if not self.active_koan:
             return {"success": False, "msg": "No active koan.", "healed": []}
         vol = float(safe_get(phys, "voltage", 0.0))
@@ -40,7 +46,9 @@ class KintsugiProtocol:
         whimsy_score = 0.0
         if lexicon_ref:
             clean = lexicon_ref.sanitize(raw_text)
-            target_sets = set(lexicon_ref.get("play") or []) | set(lexicon_ref.get("abstract") or [])
+            target_sets = set(lexicon_ref.get("play") or []) | set(
+                lexicon_ref.get("abstract") or []
+            )
             play_count = sum(1 for w in clean if w in target_sets)
             whimsy_score = play_count / max(1, len(clean))
         pathway = self.PATH_SCAR
@@ -57,7 +65,10 @@ class KintsugiProtocol:
 
     def _execute_pathway(self, pathway, trauma_accum, soul_ref):
         if not trauma_accum:
-            return {"success": False, "msg": ux("protocol_strings", "kintsugi_no_fissures"),}
+            return {
+                "success": False,
+                "msg": ux("protocol_strings", "kintsugi_no_fissures"),
+            }
         target = max(trauma_accum, key=lambda k: float(trauma_accum[k]))
         severity = float(trauma_accum[target])
         healed_log = []
@@ -68,7 +79,9 @@ class KintsugiProtocol:
             reduction = severity * r_alc
             atp_gain = reduction * float(safe_get(cfg, "ALCHEMY_ATP_FACTOR", 15.0))
             msg = f"{Prisma.VIOLET}{ux_format('protocol_strings', 'kintsugi_alchemy', target=target, boost=atp_gain)}{Prisma.RST}"
-            if log_alc := ux_format("protocol_strings", "kintsugi_log_alchemy", target=target):
+            if log_alc := ux_format(
+                "protocol_strings", "kintsugi_log_alchemy", target=target
+            ):
                 healed_log.append(log_alc)
         elif pathway == self.PATH_INTEGRATION:
             reduction = float(safe_get(cfg, "REDUCTION_INTEGRATION", 2.0))
@@ -77,12 +90,16 @@ class KintsugiProtocol:
                 if log_wis := ux("protocol_strings", "kintsugi_log_wisdom"):
                     healed_log.append(log_wis)
             msg = f"{Prisma.OCHRE}{ux_format('protocol_strings', 'kintsugi_mercy', target=target)}{Prisma.RST}"
-            if log_int := ux_format("protocol_strings", "kintsugi_log_integration", target=target):
+            if log_int := ux_format(
+                "protocol_strings", "kintsugi_log_integration", target=target
+            ):
                 healed_log.append(log_int)
         else:
             reduction = float(safe_get(cfg, "REDUCTION_SCAR", 0.5))
             msg = f"{Prisma.GRY}{ux('protocol_strings', 'kintsugi_scar')}{Prisma.RST}"
-            if log_scar := ux_format("protocol_strings", "kintsugi_log_scar", target=target):
+            if log_scar := ux_format(
+                "protocol_strings", "kintsugi_log_scar", target=target
+            ):
                 healed_log.append(log_scar)
         trauma_accum[target] = max(0.0, severity - reduction)
         result: Dict[str, Any] = {"success": True, "msg": msg, "healed": healed_log}

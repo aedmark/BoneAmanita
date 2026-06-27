@@ -6,12 +6,11 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import spores.memory
-from spores.memory import SubconsciousStrata, MemoryCore
-from tests.base import BoneTestCase
-from brain.linear_cortex import LinearCortexRouter
 from body.metabolism import MitochondrialForge
 from body.models import MitochondrialState
-from unittest.mock import MagicMock
+from brain.linear_cortex import LinearCortexRouter
+from spores.memory import MemoryCore, SubconsciousStrata
+from tests.base import BoneTestCase
 
 try:
     import numpy as np
@@ -22,6 +21,7 @@ try:
     import ordvec
 except ImportError:
     ordvec = None
+
 
 class TestSubconsciousStrata(BoneTestCase):
     def setUp(self):
@@ -49,7 +49,7 @@ class TestSubconsciousStrata(BoneTestCase):
         self.strata.bury({"word": "void", "mass": 7.0})
         self.assertIsNotNone(self.strata.rank_bank)
         self.assertEqual(self.strata.rank_bank.shape[0], 3)
-        self.assertTrue(self.strata.rank_bank.flags['C_CONTIGUOUS'])
+        self.assertTrue(self.strata.rank_bank.flags["C_CONTIGUOUS"])
         self.assertIsNone(self.strata.quantizer)
         results = self.strata.dredge_vibe("silence", k=2)
         self.assertEqual(len(results), 2)
@@ -57,8 +57,11 @@ class TestSubconsciousStrata(BoneTestCase):
         self.assertEqual(top_result["word"], "silence")
         self.assertIn("score", top_result)
 
-    @unittest.skipIf(ordvec is None or np is None, "ordvec 0.5.0 is not installed; skipping Fastscan tests.")
-    @patch('spores.memory._word_to_vector')
+    @unittest.skipIf(
+        ordvec is None or np is None,
+        "ordvec 0.5.0 is not installed; skipping Fastscan tests.",
+    )
+    @patch("spores.memory._word_to_vector")
     def test_fastscan_ignition_and_add(self, mock_w2v):
         """Tests the training-free structural memory state."""
         rng = np.random.RandomState(42)
@@ -70,7 +73,9 @@ class TestSubconsciousStrata(BoneTestCase):
                 v /= norm
             mock_vecs[f"node_{i}"] = v
 
-        mock_w2v.side_effect = lambda w: mock_vecs.get(w, rng.randn(128).astype(np.float32))
+        mock_w2v.side_effect = lambda w: mock_vecs.get(
+            w, rng.randn(128).astype(np.float32)
+        )
 
         for i in range(35):
             self.strata.bury({"word": f"node_{i}", "mass": float(i)})
@@ -98,6 +103,7 @@ class TestSubconsciousStrata(BoneTestCase):
         finally:
             spores.memory.ordvec = original_ordvec
 
+
 class TestMemoryCore(BoneTestCase):
     def setUp(self):
         super().setUp()
@@ -105,7 +111,12 @@ class TestMemoryCore(BoneTestCase):
         self.mock_subconscious = MagicMock()
         self.mock_lexicon = MagicMock()
         dummy_config = {"CORTEX": {"EPIGENETIC_PRUNE_THRESHOLD": 10}}
-        self.core = MemoryCore(events_ref=self.mock_events, subconscious_ref=self.mock_subconscious, lexicon_ref=self.mock_lexicon, config_ref=dummy_config)
+        self.core = MemoryCore(
+            events_ref=self.mock_events,
+            subconscious_ref=self.mock_subconscious,
+            lexicon_ref=self.mock_lexicon,
+            config_ref=dummy_config,
+        )
 
     def test_graph_initialization(self):
         self.assertEqual(len(self.core.graph), 0)
@@ -117,41 +128,84 @@ class TestMemoryCore(BoneTestCase):
         self.assertEqual(mass, 5.0)
 
     def test_illuminate_resonance_and_batching(self):
-        self.core.graph = {"monolith": {"edges": {"a": 5.0}, "is_diamond": False}, "whisper": {"edges": {"b": 1.0}, "is_diamond": False}}
-        self.mock_lexicon.get_categories_for_word.side_effect = lambda w: {"heavy", "constructive"} if w == "monolith" else {"social"}
+        self.core.graph = {
+            "monolith": {"edges": {"a": 5.0}, "is_diamond": False},
+            "whisper": {"edges": {"b": 1.0}, "is_diamond": False},
+        }
+        self.mock_lexicon.get_categories_for_word.side_effect = lambda w: (
+            {"heavy", "constructive"} if w == "monolith" else {"social"}
+        )
         results = self.core.illuminate({"STR": 0.9, "BET": 0.1}, limit=5)
         self.assertTrue(any("MONOLITH" in res for res in results))
 
     @unittest.skipIf(np is None, "NumPy is not installed; skipping centroid math.")
-    @patch('spores.memory._word_to_vector')
+    @patch("spores.memory._word_to_vector")
     def test_hebbian_wiring_and_deep_dredge(self, mock_w2v):
         mock_w2v.side_effect = lambda w: [1.0, 0.0] if w == "node_a" else [0.0, 1.0]
-        self.core.graph = {"node_a": {"edges": {}, "is_diamond": False}, "node_b": {"edges": {}, "is_diamond": False}}
+        self.core.graph = {
+            "node_a": {"edges": {}, "is_diamond": False},
+            "node_b": {"edges": {}, "is_diamond": False},
+        }
         self.mock_lexicon.get_categories_for_word.return_value = {"heavy"}
         self.mock_subconscious.dredge_vibe_by_vector.return_value = [
-            {"word": "phantom_memory", "score": 0.88, "data": {}}]
+            {"word": "phantom_memory", "score": 0.88, "data": {}}
+        ]
         self.core.illuminate({"STR": 1.0}, limit=5)
-        self.assertIn("node_b", self.core.graph["node_a"]["edges"], "Hebbian wiring failed on node_a.")
-        self.assertIn("node_a", self.core.graph["node_b"]["edges"], "Hebbian wiring failed on node_b.")
+        self.assertIn(
+            "node_b",
+            self.core.graph["node_a"]["edges"],
+            "Hebbian wiring failed on node_a.",
+        )
+        self.assertIn(
+            "node_a",
+            self.core.graph["node_b"]["edges"],
+            "Hebbian wiring failed on node_b.",
+        )
         self.assertEqual(self.core.graph["node_a"]["edges"]["node_b"], 0.5)
-        self.assertTrue(self.mock_subconscious.dredge_vibe_by_vector.called, "The Deep Dredge was never triggered.")
-        self.assertIn("phantom_memory", self.core.graph, "Phantom memory was not injected into the graph.")
+        self.assertTrue(
+            self.mock_subconscious.dredge_vibe_by_vector.called,
+            "The Deep Dredge was never triggered.",
+        )
+        self.assertIn(
+            "phantom_memory",
+            self.core.graph,
+            "Phantom memory was not injected into the graph.",
+        )
         self.assertIn("phantom_memory", self.core.graph["node_a"]["edges"])
         self.assertIn("phantom_memory", self.core.graph["node_b"]["edges"])
         self.assertIn("node_a", self.core.graph["phantom_memory"]["edges"])
         self.assertIn("node_b", self.core.graph["phantom_memory"]["edges"])
 
     def test_prune_synapses_two_pass(self):
-        self.core.graph = {"strong_node": {"edges": {"weak_node": 10.0}, "is_diamond": False}, "weak_node": {"edges": {"strong_node": 0.1}, "is_diamond": False}, "diamond_node": {"edges": {}, "is_diamond": True}}
+        self.core.graph = {
+            "strong_node": {"edges": {"weak_node": 10.0}, "is_diamond": False},
+            "weak_node": {"edges": {"strong_node": 0.1}, "is_diamond": False},
+            "diamond_node": {"edges": {}, "is_diamond": True},
+        }
         self.core.prune_synapses(scaling_factor=0.1, prune_threshold=0.5)
         self.assertNotIn("weak_node", self.core.graph)
         self.assertIn("strong_node", self.core.graph)
         self.assertIn("diamond_node", self.core.graph)
         self.assertNotIn("weak_node", self.core.graph["strong_node"]["edges"])
 
-class TestRankQuantAccuracy(unittest.TestCase):
+    def test_forge_diamond_topology(self):
+        """Ensures forge_diamond locks specific edges and bypasses synaptic decay."""
+        self.core.graph = {
+            "anchor": {"edges": {"fossil": 10.0, "weak": 2.0}, "is_diamond": False},
+            "fossil": {"edges": {"anchor": 10.0}, "is_diamond": False},
+            "weak": {"edges": {"anchor": 2.0}, "is_diamond": False}
+        }
+        success = self.core.forge_diamond("anchor", "fossil")
+        self.assertTrue(success, "[FAIL] Diamond forge rejected valid nodes.")
+        self.assertTrue(self.core.graph["anchor"]["is_diamond"])
+        self.assertIn("fossil", self.core.graph["anchor"]["diamond_edges"])
+        self.core.prune_synapses(scaling_factor=0.1, prune_threshold=5.0)
+        self.assertIn("fossil", self.core.graph["anchor"]["edges"])
+        self.assertEqual(self.core.graph["anchor"]["edges"]["fossil"], 10.0, "[FAIL] Diamond edge suffered decay.")
+        self.assertNotIn("weak", self.core.graph["anchor"]["edges"], "[FAIL] Standard edge resisted pruning.")
 
-    @patch('spores.memory._word_to_vector')
+class TestRankQuantAccuracy(unittest.TestCase):
+    @patch("spores.memory._word_to_vector")
     def test_fastscan_recall_accuracy(self, mock_w2v):
         """Ensures the 4-bit RankQuant retrieves mathematically accurate results."""
         rng = np.random.RandomState(42)
@@ -168,7 +222,9 @@ class TestRankQuantAccuracy(unittest.TestCase):
             v /= np.linalg.norm(v)
             mock_vecs[f"concept_{i}"] = v
 
-        mock_w2v.side_effect = lambda w: mock_vecs.get(w, rng.randn(dim).astype(np.float32))
+        mock_w2v.side_effect = lambda w: mock_vecs.get(
+            w, rng.randn(dim).astype(np.float32)
+        )
 
         strata = SubconsciousStrata("test_strata.json")
         for i in range(total_memories):
@@ -196,14 +252,13 @@ class TestRankQuantAccuracy(unittest.TestCase):
         self.assertGreaterEqual(
             recall_rate,
             0.80,
-            f"[FAIL] Fastscan Recall degraded heavily! Only {recall_rate * 100}% matched exact math."
+            f"[FAIL] Fastscan Recall degraded heavily! Only {recall_rate * 100}% matched exact math.",
         )
 
 
 class TestLinearCortexRouter(BoneTestCase):
     def setUp(self):
         super().setUp()
-        # Restrict the budget heavily to force the sparsity mask to prove its worth
         self.router = LinearCortexRouter(token_budget=50)
 
     def test_ingest_and_structural_sweep(self):
@@ -217,29 +272,22 @@ class TestLinearCortexRouter(BoneTestCase):
         )
         self.router.ingest_artifact("metabolism.py", codebase)
 
-        # Query should heavily boost 'ATP' and structural keywords ('class', 'def')
         sparse_mask = self.router.route_attention("How is ATP initialized?")
 
-        # The mask should contain the class definition, the init definition, and the ATP line.
-        # It should completely ignore the "print('hello')" line because it has 0 resonance.
         self.assertIn("[metabolism.py_L0]", sparse_mask)
         self.assertIn("[metabolism.py_L2]", sparse_mask)
         self.assertNotIn("print('hello')", sparse_mask)
 
-        # [FULLER]: Check topological tensegrity. L0 must come before L2.
         idx_l0 = sparse_mask.find("metabolism.py_L0")
         idx_l2 = sparse_mask.find("metabolism.py_L2")
         self.assertLess(idx_l0, idx_l2)
 
     def test_token_budget_enforcement(self):
-        # Create a massive, highly resonant artifact
         codebase = "\n".join([f"line {i} ATP" for i in range(100)])
         self.router.ingest_artifact("big.py", codebase)
 
         mask = self.router.route_attention("ATP")
 
-        # The budget is 50 tokens. Each returned line is ~3-4 tokens including the ID tag.
-        # It should cap out and refuse to append all 100 lines.
         tokens_used = len(mask.split())
         self.assertLessEqual(tokens_used, 55)
 
@@ -254,36 +302,29 @@ class TestMetabolicRouting(BoneTestCase):
         self.forge = MitochondrialForge(self.state, self.events)
 
     def test_fast_twitch_vector_cost(self):
-        # Simulate a 2000 token FAISS retrieval
         self.forge.process_cognitive_load(2000, "VECTOR_FAST_TWITCH")
 
-        # 2000 tokens / 100 * 0.02 = 0.4 ATP drain
         self.assertAlmostEqual(self.state.atp_pool, 99.6)
         self.assertEqual(self.state.ros_buildup, 0.0)
 
     def test_deep_tissue_linear_cost(self):
-        # Simulate a heavy 10,000 token CPU codebase sweep
         self.forge.process_cognitive_load(10000, "LINEAR_DEEP_TISSUE")
 
-        # 10000 tokens / 100 * 0.15 = 15.0 ATP drain
         self.assertAlmostEqual(self.state.atp_pool, 85.0)
-        # Contexts over 8000 tokens spike the ROS (stress) by 0.8
         self.assertAlmostEqual(self.state.ros_buildup, 0.8)
 
     def test_gordon_intervention_exhaustion(self):
-        # Drop the organism's ATP near the critical threshold
         self.state.atp_pool = 12.0
 
-        # Fire a medium-heavy sweep (5000 / 100 * 0.15 = 7.5 drain)
         self.forge.process_cognitive_load(5000, "LINEAR_DEEP_TISSUE")
 
-        # New ATP should be 4.5. This crosses the <= 10.0 threshold.
         self.assertLess(self.state.atp_pool, 10.0)
         self.assertEqual(self.state.retrograde_signal, "HIBERNATING")
         self.events.log.assert_called_with(
             "[GORDON INTERVENTION]: Your query forced a massive structural sweep. The organism's ATP is depleted. Narrow your scope.",
-            "BIO_CRIT"
+            "BIO_CRIT",
         )
+
 
 if __name__ == "__main__":
     unittest.main()

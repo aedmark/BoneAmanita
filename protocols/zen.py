@@ -1,11 +1,13 @@
 """protocols/zen.py"""
 
 import random
-from typing import Dict, Tuple, Optional, Any
-from core import LoreManifest
-from struts import ux, safe_get, ux_format
-from presets import BoneConfig
+from typing import Any, Dict, Optional, Tuple
+
 from constants import Prisma
+from core import LoreManifest
+from presets import BoneConfig
+from struts import safe_get, ux, ux_format
+
 
 class ZenGarden:
     def __init__(self, events_ref, config_ref=None):
@@ -15,11 +17,16 @@ class ZenGarden:
         self.max_streak = 0
         self.pebbles_collected = 0
         narrative_data = LoreManifest.get_instance().get("narrative_data") or {}
-        self.koans = narrative_data.get("ZEN_KOANS", ["The code that is not written has no bugs."])
+        self.koans = narrative_data.get(
+            "ZEN_KOANS", ["The code that is not written has no bugs."]
+        )
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"stillness_streak": self.stillness_streak, "max_streak": self.max_streak,
-                "pebbles_collected": self.pebbles_collected, }
+        return {
+            "stillness_streak": self.stillness_streak,
+            "max_streak": self.max_streak,
+            "pebbles_collected": self.pebbles_collected,
+        }
 
     def load_state(self, data: Dict[str, Any]):
         self.stillness_streak = data.get("stillness_streak", 0)
@@ -37,7 +44,10 @@ class ZenGarden:
         if is_stable:
             self.stillness_streak += 1
             self.max_streak = max(self.max_streak, self.stillness_streak)
-            efficiency_boost = min(float(safe_get(cfg, "EFFICIENCY_CAP", 0.5)), self.stillness_streak * float(safe_get(cfg, "EFFICIENCY_SCALAR", 0.05)))
+            efficiency_boost = min(
+                float(safe_get(cfg, "EFFICIENCY_CAP", 0.5)),
+                self.stillness_streak * float(safe_get(cfg, "EFFICIENCY_SCALAR", 0.05)),
+            )
             msg = None
             zen_first = int(float(safe_get(cfg, "ZEN_FIRST_TICK", 1)))
             zen_freq = int(float(safe_get(cfg, "ZEN_MILESTONE_FREQ", 5)))
@@ -53,6 +63,9 @@ class ZenGarden:
         break_thresh = int(float(safe_get(cfg, "STREAK_BREAK_THRESHOLD", 3)))
         if self.stillness_streak > break_thresh:
             break_msg = ux("protocol_strings", "zen_break")
-            self.events.log(f"{Prisma.GRY}{break_msg}{Prisma.RST}", "SYS", )
+            self.events.log(
+                f"{Prisma.GRY}{break_msg}{Prisma.RST}",
+                "SYS",
+            )
         self.stillness_streak = 0
         return 0.0, None

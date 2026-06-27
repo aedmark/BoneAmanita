@@ -2,6 +2,7 @@
 
 from constants import Prisma
 
+
 class TheConsolidator:
     def __init__(self, events_ref, memory_ref, akashic_ref):
         self.events = events_ref
@@ -22,21 +23,25 @@ class TheConsolidator:
 
     def _on_syntax_corrected(self, payload):
         triplet = payload.get("triplet")
-        if not triplet: return
+        if not triplet:
+            return
         try:
-            # Route to dynamic profile logic here (Requires UserProfile integration)
-            # For now, we retain in memory but DO NOT violate Article 11 by saving to Lore.
             msg = f"Syntactic Compiler accrued 1 new Few-Shot weight in dynamic memory."
             self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "CORTEX")
         except Exception as e:
-            self.events.log(f"{Prisma.RED}Failed to process syntactic weights: {e}{Prisma.RST}", "ERROR")
+            self.events.log(
+                f"{Prisma.RED}Failed to process syntactic weights: {e}{Prisma.RST}",
+                "ERROR",
+            )
 
     def _on_shadow_engaged(self, payload):
         source = payload.get("source", "core")
         target = payload.get("target")
         if not target:
             return
-        self.memory.memory_core.strengthen_link(source=source, target=target, rate=2.0, decay=0.85)
+        self.memory.memory_core.strengthen_link(
+            source=source, target=target, rate=2.0, decay=0.85
+        )
         msg = f"User engaged shadow concept '{target}'. Synaptic link {source} -> {target} strengthened."
         self.events.log(f"{Prisma.CYN}{msg}{Prisma.RST}", "MEMORY")
 

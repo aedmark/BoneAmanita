@@ -1,7 +1,8 @@
 """/soul/traitvector.py"""
 
 from dataclasses import dataclass
-from typing import Dict, ClassVar
+from typing import ClassVar, Dict
+
 
 @dataclass
 class TraitVector:
@@ -11,7 +12,14 @@ class TraitVector:
     discipline: float = 0.5
     wisdom: float = 0.1
     empathy: float = 0.5
-    _TRAITS: ClassVar[set] = {"curiosity", "cynicism", "hope", "discipline", "wisdom", "empathy", }
+    _TRAITS: ClassVar[set] = {
+        "curiosity",
+        "cynicism",
+        "hope",
+        "discipline",
+        "wisdom",
+        "empathy",
+    }
 
     def __post_init__(self):
         self._clamp_all()

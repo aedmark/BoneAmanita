@@ -1,16 +1,22 @@
 """body/__init__.py"""
 
 from body.endocrine import EndocrineSystem, SemanticEndocrinologist
-from .metabolism import MitochondrialForge, DigestiveTrack
 from body.models import (
+    BiologicalImpulse,
     Biometrics,
     MetabolicReceipt,
-    SemanticSignal,
-    BiologicalImpulse,
+    MitochondrialState,
     Qualia,
-    MitochondrialState
+    SemanticSignal,
 )
-from .regulation import PIDController, MetabolicGovernor, BioFeedback, EndocrineRegulator
+
+from .metabolism import DigestiveTrack, MitochondrialForge
+from .regulation import (
+    BioFeedback,
+    EndocrineRegulator,
+    MetabolicGovernor,
+    PIDController,
+)
 from .somatic import SynestheticCortex
 from .system import BioSystem, SomaticLoop
 
@@ -31,5 +37,5 @@ __all__ = [
     "BioFeedback",
     "SynestheticCortex",
     "BioSystem",
-    "SomaticLoop"
+    "SomaticLoop",
 ]

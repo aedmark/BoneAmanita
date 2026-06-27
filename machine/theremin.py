@@ -1,10 +1,10 @@
 """machine/theremin.py"""
 
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 from core import LoreManifest
 from presets import BoneConfig
-from struts import ux, safe_get
+from struts import safe_get, ux
 
 
 class TheTheremin:
@@ -19,16 +19,24 @@ class TheTheremin:
         self.logs = self._load_logs()
 
     def _load_logs(self):
-        manifest = LoreManifest.get_instance(config_ref=self.cfg).get("PHYSICS_STRINGS") or {}
+        manifest = (
+            LoreManifest.get_instance(config_ref=self.cfg).get("PHYSICS_STRINGS") or {}
+        )
         return manifest.get("THEREMIN_LOGS", {})
 
-    def listen(self, physics: dict, governor_mode: str = "COURTYARD") -> Tuple[bool, float, Optional[str], Optional[str]]:
+    def listen(
+        self, physics: dict, governor_mode: str = "COURTYARD"
+    ) -> Tuple[bool, float, Optional[str], Optional[str]]:
         counts = physics.get("counts", {})
         voltage = float(physics.get("voltage", 0.0))
         turb = float(physics.get("turbulence", 0.0))
         rep = float(physics.get("repetition", 0.0))
         complexity = float(physics.get("truth_ratio", 0.0))
-        ancient_mass = float(counts.get("heavy", 0)) + float(counts.get("thermal", 0)) + float(counts.get("cryo", 0))
+        ancient_mass = (
+            float(counts.get("heavy", 0))
+            + float(counts.get("thermal", 0))
+            + float(counts.get("cryo", 0))
+        )
         modern_mass = float(counts.get("abstract", 0))
         raw_mix = min(ancient_mass, modern_mass)
         resin_flow = raw_mix * 2.0
@@ -50,7 +58,11 @@ class TheTheremin:
             self.classical_turns += 1
             slag = self.classical_turns * 2.0
             self.decoherence_buildup += slag
-            msg_parts.append(self.logs.get("CALCIFY", "").format(turns=self.classical_turns, val=slag))
+            msg_parts.append(
+                self.logs.get("CALCIFY", "").format(
+                    turns=self.classical_turns, val=slag
+                )
+            )
         elif complexity > 0.4 and self.classical_turns > 0:
             self.classical_turns = 0
             relief = 15.0
@@ -77,13 +89,13 @@ class TheTheremin:
             return False, resin_flow, self.logs.get("COLLAPSE", ""), "AIRSTRIKE"
         if self.classical_turns > 3:
             critical_event = "CORROSION"
-            msg_parts.append(ux('machine_strings', 'theremin_corrosion') or '')
+            msg_parts.append(ux("machine_strings", "theremin_corrosion") or "")
         if self.decoherence_buildup > self.AMBER_THRESHOLD:
             self.is_stuck = True
-            msg_parts.append(ux('machine_strings', 'theremin_stuck') or '')
+            msg_parts.append(ux("machine_strings", "theremin_stuck") or "")
         elif self.is_stuck and self.decoherence_buildup < 5.0:
             self.is_stuck = False
-            msg_parts.append(ux('machine_strings', 'theremin_free') or '')
+            msg_parts.append(ux("machine_strings", "theremin_free") or "")
         theremin_msg = " ".join(filter(None, msg_parts)).strip()
         return self.is_stuck, resin_flow, theremin_msg, critical_event
 

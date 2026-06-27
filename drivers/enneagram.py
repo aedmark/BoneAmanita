@@ -1,10 +1,11 @@
 """drivers/enneagram.py"""
 
-from typing import Tuple, Any
+from typing import Any, Tuple
+
 from core import LoreManifest
-from presets import BoneConfig
-from struts import ux, safe_get
 from drivers.souldriver import SoulDriver
+from presets import BoneConfig
+from struts import safe_get, ux
 
 
 class EnneagramDriver:
@@ -21,10 +22,14 @@ class EnneagramDriver:
         driver_cfg = manifest.get("DRIVER_CONFIG") or {}
         self.weights_cfg = driver_cfg.get("ENNEAGRAM_WEIGHTS", {})
         self.state_map = driver_cfg.get("PERSONA_STATE_MAP", {})
-        self.sanc_zone = safe_get(safe_get(self.cfg, "SANCTUARY", {}), "ZONE", "SANCTUARY")
+        self.sanc_zone = safe_get(
+            safe_get(self.cfg, "SANCTUARY", {}), "ZONE", "SANCTUARY"
+        )
         self.hybrid_gap = float(safe_get(cfg, "ENNEAGRAM_HYBRID_GAP", 0.5))
 
-    def _calculate_raw_persona(self, physics: Any, soul_ref=None) -> Tuple[str, str, str]:
+    def _calculate_raw_persona(
+        self, physics: Any, soul_ref=None
+    ) -> Tuple[str, str, str]:
         p_vec = safe_get(physics, "vector", {})
         p_vol = float(safe_get(physics, "voltage", 0.0))
         p_drag = float(safe_get(physics, "narrative_drag", 0.0))
@@ -33,7 +38,11 @@ class EnneagramDriver:
 
         weights_cfg = self.weights_cfg
         if not isinstance(weights_cfg, dict) or len(weights_cfg) < 2:
-            return "NARRATOR", "ACTIVE", "The persona matrix is fractured. Retreating to the baseline Narrator."
+            return (
+                "NARRATOR",
+                "ACTIVE",
+                "The persona matrix is fractured. Retreating to the baseline Narrator.",
+            )
 
         scores = dict.fromkeys(weights_cfg, 0.0)
         if "NARRATOR" in scores:
@@ -41,7 +50,8 @@ class EnneagramDriver:
 
         if p_zone == self.sanc_zone or (4.0 <= p_vol <= 10.0 and 0.5 <= p_drag <= 3.5):
             for persona, mod in [("NARRATOR", 6.0), ("JESTER", 3.0), ("GORDON", -2.0)]:
-                if persona in scores: scores[persona] += mod
+                if persona in scores:
+                    scores[persona] += mod
         for persona, criteria in weights_cfg.items():
             if not isinstance(criteria, dict):
                 continue
@@ -60,8 +70,11 @@ class EnneagramDriver:
                     if val > 0.2:
                         scores[persona] += val * float(weight)
         if soul_ref:
-            influence = soul_ref.get_influence() if hasattr(soul_ref, "get_influence") else SoulDriver(
-                soul_ref).get_influence()
+            influence = (
+                soul_ref.get_influence()
+                if hasattr(soul_ref, "get_influence")
+                else SoulDriver(soul_ref).get_influence()
+            )
             for persona, weight in influence.items():
                 scores[persona] += weight * 2.0
         sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
@@ -85,11 +98,24 @@ class EnneagramDriver:
         else:
             self.pending_persona = candidate
             self.stability_counter = 1
-        msg_shift = (ux("driver_strings", "ennea_shift") or "Shifted persona. Reason: {reason}")
+        msg_shift = (
+            ux("driver_strings", "ennea_shift") or "Shifted persona. Reason: {reason}"
+        )
         if self.stability_counter >= self.HYSTERESIS_THRESHOLD:
             self.current_persona = candidate
             self.stability_counter = 0
             self.pending_persona = None
             return self.current_persona, state_desc, msg_shift.format(reason=reason)
-        msg_resisting = (ux("driver_strings", "ennea_resisting") or "Resisting shift to {candidate} ({count}/{thresh})")
-        return self.current_persona, "STABLE", msg_resisting.format(candidate=candidate, count=self.stability_counter, thresh=self.HYSTERESIS_THRESHOLD)
+        msg_resisting = (
+            ux("driver_strings", "ennea_resisting")
+            or "Resisting shift to {candidate} ({count}/{thresh})"
+        )
+        return (
+            self.current_persona,
+            "STABLE",
+            msg_resisting.format(
+                candidate=candidate,
+                count=self.stability_counter,
+                thresh=self.HYSTERESIS_THRESHOLD,
+            ),
+        )

@@ -2,11 +2,13 @@
 
 import json
 import random
-from typing import Tuple, Dict
+from typing import Dict, Tuple
+
 from core import LoreManifest
-from struts import ux, safe_get
 from presets import BoneConfig
 from spores.spore_utils import _access_config_path
+from struts import safe_get, ux
+
 
 class LiteraryReproduction:
     MUTATIONS = {}
@@ -18,7 +20,7 @@ class LiteraryReproduction:
         ("PHYSICS.VOLTAGE_MAX", 10.0, 100.0, 0.2),
         ("BIO.REWARD_MEDIUM", 0.01, 1.0, 0.2),
         ("COUNCIL.MANIC_VOLTAGE_TRIGGER", 10.0, 50.0, 0.1),
-        ("PRIORITY_LEARNING_RATE", 0.5, 5.0, 0.15)
+        ("PRIORITY_LEARNING_RATE", 0.5, 5.0, 0.15),
     ]
 
     def __init__(self, config_ref=None):
@@ -28,8 +30,9 @@ class LiteraryReproduction:
     def load_genetics(cls, config_ref=None):
         try:
             target_cfg = config_ref or BoneConfig
-            genetics = (LoreManifest.get_instance(config_ref=target_cfg).get("GENETICS")
-                        or {})
+            genetics = (
+                LoreManifest.get_instance(config_ref=target_cfg).get("GENETICS") or {}
+            )
             cls.MUTATIONS = genetics.get("MUTATIONS", {})
             cls.JOY_CLADE = genetics.get("JOY_CLADE", {})
         except Exception:
@@ -51,16 +54,24 @@ class LiteraryReproduction:
     def mitosis(self, parent_id, bio_state, physics):
         counts = safe_get(physics, "counts", {})
         dominant = max(counts, key=counts.get) if counts else "VOID"
-        mutation_data = LiteraryReproduction.MUTATIONS.get(dominant.upper(), {"trait": "NEUTRAL", "mod": {}, "lexicon": []})
+        mutation_data = LiteraryReproduction.MUTATIONS.get(
+            dominant.upper(), {"trait": "NEUTRAL", "mod": {}, "lexicon": []}
+        )
         child_trait = mutation_data.get("trait", "NEUTRAL")
         child_id = f"{parent_id}_({child_trait})"
         config_mutations = LiteraryReproduction.mutate_config(self.cfg)
         config_mutations.update(mutation_data.get("mod", {}))
         lexicon_mutations = {dominant.lower(): mutation_data.get("lexicon", [])}
         trauma_vec = bio_state.get("trauma_vector", {})
-        child_genome = {"source": "MITOSIS", "parent_a": parent_id, "parent_b": None,
-                        "lexicon_mutations": lexicon_mutations, "config_mutations": config_mutations,
-                        "dominant_flavor": dominant, "trauma_inheritance": trauma_vec, }
+        child_genome = {
+            "source": "MITOSIS",
+            "parent_a": parent_id,
+            "parent_b": None,
+            "lexicon_mutations": lexicon_mutations,
+            "config_mutations": config_mutations,
+            "dominant_flavor": dominant,
+            "trauma_inheritance": trauma_vec,
+        }
         return child_id, child_genome
 
     def crossover(self, parent_a_id, parent_a_bio, parent_b_path):
@@ -79,7 +90,11 @@ class LiteraryReproduction:
             if avg_trauma > 0.2:
                 child_trauma[k] = avg_trauma
         mito = parent_a_bio.get("mito") or {}
-        hash_a = str(mito.get("mother_hash", "EVE")) if isinstance(mito, dict) else str(getattr(mito, "mother_hash", "EVE"))
+        hash_a = (
+            str(mito.get("mother_hash", "EVE"))
+            if isinstance(mito, dict)
+            else str(getattr(mito, "mother_hash", "EVE"))
+        )
         mito_b = parent_b_data.get("mitochondria") or {}
         hash_b = str(mito_b.get("mother_hash", "EVE"))
         child_lineage = f"{hash_a[:4]}_{hash_b[:4]}"
@@ -87,18 +102,33 @@ class LiteraryReproduction:
         short_a = parent_a_id[-4:]
         short_b = parent_b_id[-4:]
         child_id = f"HYBRID_{short_a}x{short_b}"
-        child_genome = {"source": "CROSSOVER", "parent_a": parent_a_id, "parent_b": parent_b_id,
-            "trauma_inheritance": child_trauma, "config_mutations": config_mutations, "inherited_lineage": child_lineage, "lexicon_mutations": {}, }
+        child_genome = {
+            "source": "CROSSOVER",
+            "parent_a": parent_a_id,
+            "parent_b": parent_b_id,
+            "trauma_inheritance": child_trauma,
+            "config_mutations": config_mutations,
+            "inherited_lineage": child_lineage,
+            "lexicon_mutations": {},
+        }
         return child_id, child_genome
 
-    def attempt_reproduction(self, engine_ref, mode="MITOSIS", target_spore=None) -> Tuple[str, Dict]:
+    def attempt_reproduction(
+        self, engine_ref, mode="MITOSIS", target_spore=None
+    ) -> Tuple[str, Dict]:
         mem = engine_ref.mind.mem
-        mito_state = getattr(getattr(getattr(engine_ref, "bio", None), "mito", None), "state", None)
-        bio_state = {"trauma_vector": getattr(engine_ref, "trauma_accum", {}),
-                     "mito": getattr(mito_state, "__dict__", {}), }
-        phys_packet = getattr(getattr(engine_ref, "cortex", None), "last_physics", None)
+        bio = getattr(engine_ref, "bio", None)
+        mito = getattr(bio, "mito", None)
+        mito_state = getattr(mito, "state", None)
+        bio_state = {
+            "trauma_vector": getattr(engine_ref, "trauma_accum", {}),
+            "mito": getattr(mito_state, "__dict__", {}),
+        }
+        cortex = getattr(engine_ref, "cortex", None)
+        phys_packet = getattr(cortex, "last_physics", None)
         if not phys_packet:
-            phys_packet = getattr(getattr(engine_ref, "observer", None), "last_physics_packet", {}) or {}
+            observer = getattr(engine_ref, "observer", None)
+            phys_packet = getattr(observer, "last_physics_packet", {}) or {}
         genome = {}
         child_id = "UNKNOWN"
         if mode == "MITOSIS":

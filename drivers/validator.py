@@ -2,9 +2,11 @@
 
 import math
 from typing import Any
+
 from core import LoreManifest
 from presets import BoneConfig
 from struts import safe_get
+
 
 class CongruenceValidator:
     def __init__(self, config_ref=None):
@@ -16,7 +18,9 @@ class CongruenceValidator:
     @property
     def map(self):
         if self._archetype_map is None:
-            self._archetype_map = LoreManifest.get_instance(config_ref=self.cfg).get("LENSES") or {}
+            self._archetype_map = (
+                LoreManifest.get_instance(config_ref=self.cfg).get("LENSES") or {}
+            )
         return self._archetype_map
 
     def calculate_resonance(self, text: str, context: Any) -> float:

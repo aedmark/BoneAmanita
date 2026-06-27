@@ -2,8 +2,8 @@
 
 from .editor import TheEditor
 from .humanity import SchurProtocol
-from .narrativeself import NarrativeSelf, CoreMemory
-from .oroboros import TheOroboros, Scar, Myth
+from .narrativeself import CoreMemory, NarrativeSelf
+from .oroboros import Myth, Scar, TheOroboros
 from .traitvector import TraitVector
 
 __all__ = [
