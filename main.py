@@ -68,6 +68,7 @@ class BoneAmanita:
             "AFFECTIVE_INTERVENTION",
         ]
     )
+    _INVISIBLE_CHARS = re.compile(r"[\u200B-\u200D\uFEFF\u202A-\u202E]")
 
     def __init__(self, config: Dict[str, Any]):
         self.sys_config = config
@@ -251,14 +252,15 @@ class BoneAmanita:
 
     @property
     def active_physics(self) -> Any:
-        """Leave this alone unless you know what you're doing"""
+        """Read-only evaluation of current physics state."""
         phys = getattr(self.observer, "last_physics_packet", None) or getattr(
             self.cortex, "last_physics", None
         )
-        if phys is None:
-            phys = getattr(self, "physics_state", {})
-        self.observer.last_physics_packet = phys
-        return phys
+        return phys if phys is not None else getattr(self, "physics_state", {})
+
+    def _sync_physics_to_observer(self):
+        """Explicitly sync state when a turn resolves."""
+        self.observer.last_physics_packet = self.active_physics
 
     def apply_absolute_friction(self, phys=None):
         phys = phys if phys is not None else self.active_physics
@@ -308,7 +310,10 @@ class BoneAmanita:
             elif isinstance(phys, dict):
                 phys_dict = phys
             else:
-                phys_dict = vars(phys) if hasattr(phys, "__dict__") else {}
+                try:
+                    phys_dict = vars(phys)
+                except TypeError:
+                    phys_dict = {k: getattr(phys, k) for k in getattr(phys, "__slots__", [])}
         return {
             "type": "SYSTEM_HALT",
             "ui": f"\n{color}{msg}{Prisma.RST}",
@@ -325,7 +330,7 @@ class BoneAmanita:
         nav_drag = float(safe_get(active_phys, "narrative_drag", 0.0))
         m_a = self.navi_sad.calculate_malignancy_factor(user_message, nav_drag)
         safe_set(active_phys, "m_a", m_a)
-        chi = float(safe_get(active_phys, "entropy", safe_get(active_phys, "chi", 0.2)))
+        chi = float(safe_get(active_phys, ["entropy", "chi"], 0.2))
         if (chi * m_a) > float(safe_get(active_phys, "i_c", 1.0)):
             self.events.log(
                 "Apoptotic Gate HALT!: Runaway loop exceeds Immune Competence.", "CRIT"
@@ -476,8 +481,7 @@ class BoneAmanita:
             clean_in = (
                 ""
                 if is_system
-                else re.sub(
-                    r"[\u200B-\u200D\uFEFF\u202A-\u202E]",
+                else self._INVISIBLE_CHARS.sub(
                     "",
                     user_message.lower().strip(),
                 )
@@ -516,8 +520,13 @@ class BoneAmanita:
                 getattr(self.config, "ORCHESTRATOR_TIMEOUT", llm_timeout + 60.0)
             )
             try:
-                self.orchestrator.input_queue.put((user_message, is_system))
-                snapshot = self.orchestrator.output_queue.get(timeout=timeout_val)
+                turn_ticket = f"TICK_{self.tick_count}_{time.time()}"
+                self.orchestrator.input_queue.put((user_message, is_system, turn_ticket))
+                while True:
+                    snapshot = self.orchestrator.output_queue.get(timeout=timeout_val)
+                    if snapshot.get("_ticket") == turn_ticket or snapshot.get("type") in self._TERMINAL_STATES:
+                        break
+                    self.events.log("Discarded stale async snapshot [Ticket mismatch].", "DEBUG")
             except (queue.Empty, Exception) as e:
                 err_msg = (
                     f"Cognitive Loop Timeout ({timeout_val}s). The engine was paralyzed by overthinking."
@@ -553,22 +562,29 @@ class BoneAmanita:
             if self.health <= 0.0:
                 return self.trigger_death(snapshot.get("physics", {}))
             self.save_checkpoint()
-            self.last_turn_end = time.time()
             if not is_system:
                 self.tick_count += 1
+            self._sync_physics_to_observer()
             return snapshot
         finally:
+            if not is_system:
+                self.last_turn_end = time.time()
             self.observer.clock_out(turn_start)
 
     def _execute_zen_flush(self) -> Dict[str, Any]:
-        """Leave this alone, SLASH. Unles you have a better suggesiton than just deleting it."""
         self.cortex.purge_context()
-        if self.active_physics is not None:
-            safe_set(self.active_physics, "narrative_drag", 0.0)
-        self.stamina = getattr(self.config, "MAX_STAMINA", 100.0)
-        self.set_atp(getattr(self.config, "MAX_ATP", 100.0))
-        if state := self._mito_state:
+        safe_set(self.active_physics, "narrative_drag", 0.0)
+
+        max_stam = getattr(self.config, "MAX_STAMINA", 100.0)
+        max_atp = getattr(self.config, "MAX_ATP", 100.0)
+        self.stamina = max_stam
+        self.set_atp(max_atp)
+
+        if hasattr(self.bio.mito, "force_flush"):
+            self.bio.mito.force_flush()
+        elif state := self._mito_state:
             state.ros_buildup = 0.0
+
         self.trauma_accum = {}
         msg = "Context severed. Friction Dropped. Stamina restored. Trauma purged. The mind is clear."
         self.events.log(msg, "SYS")
@@ -581,7 +597,10 @@ class BoneAmanita:
 
     def trigger_death(self, last_phys) -> Dict:
         self.bio.mito.adapt(0)
-        mito_state_dict = vars(self.bio.mito.state)
+        try:
+            mito_state_dict = vars(self.bio.mito.state)
+        except TypeError:
+            mito_state_dict = {k: getattr(self.bio.mito.state, k) for k in getattr(self.bio.mito.state, "__slots__", [])}
         if death_gen := getattr(self.village, "death_gen", None):
             eulogy_text, cause_code = death_gen.eulogy(
                 last_phys, mito_state_dict, self.trauma_accum

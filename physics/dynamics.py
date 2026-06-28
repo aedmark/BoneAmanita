@@ -186,9 +186,9 @@ class CosmicDynamics:
             reduction = (psi - 0.5) * 0.2
             new_drag -= reduction
         if new_drag > CRITICAL_DRIFT:
+            new_drag -= (new_drag - CRITICAL_DRIFT) * 0.5
             if random.random() < 0.3 and (msg := self.logs.get("GRAVITY")):
                 logs.append(f"{Prisma.GRY}{msg.format(drag=new_drag)}{Prisma.RST}")
-            new_drag -= (new_drag - CRITICAL_DRIFT) * 0.5
         new_drag = max(drag_floor, new_drag)
         return new_drag, logs
 

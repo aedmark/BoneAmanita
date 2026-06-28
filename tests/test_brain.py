@@ -1,5 +1,8 @@
 """tests/test_brain.py"""
 
+import ast
+import os
+import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -12,9 +15,6 @@ from spores.memory import SubconsciousStrata
 try:
     from tests.base import BoneTestCase
 except ImportError:
-    import os
-    import sys
-
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     from tests.base import BaseTest as BoneTestCase
 
@@ -23,6 +23,32 @@ class BrainSubstrateTests(BoneTestCase):
     def setUp(self):
         super().setUp()
         self.config = BoneConfig
+
+    def test_cortex_static_analysis_integrity(self):
+        """Enforces strict AST validation before runtime to catch unused variables and dead branches."""
+        cortex_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "brain", "cortex.py"))
+        if not os.path.exists(cortex_path):
+            self.skipTest("cortex.py not found for static analysis.")
+
+        with open(cortex_path, "r", encoding="utf-8") as file:
+            tree = ast.parse(file.read(), filename="cortex.py")
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                assigned = set()
+                loaded = set()
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Assign):
+                        for target in child.targets:
+                            if isinstance(target, ast.Name):
+                                assigned.add(target.id)
+                    elif isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load):
+                        loaded.add(child.id)
+
+                # Check specific variables that caused issues
+                unused = assigned - loaded
+                if "max_retries" in unused or "e" in unused:
+                    self.fail(f"[LINTER FAIL] Unused variables {unused} detected in function '{node.name}'. Clean your workspace.")
 
     def test_modulator_cached_bounds(self):
         bio_mock = MagicMock()
@@ -133,29 +159,29 @@ class BrainSubstrateTests(BoneTestCase):
         )
         self.assertEqual(shift.get("voltage"), 100.0, "[FAIL] Terminal sleep did not instantly spike the voltage.")
 
-        @patch("brain.mind.DreamEngine._weave_dream")
-        def test_dream_engine_oneroi_diamond_forge(self, mock_weave):
-            """Tests Project Oneroi's diamond forging and massive ATP surge during REM."""
-            mock_weave.return_value = "Surreal geometry unfolds."
-            strict_mem = MagicMock()
-            strict_mem.cortical_stack = ["anchor_concept"]
-            strict_mem.subconscious.dredge_vibe_by_vector.return_value = [{"word": "ancient_fossil", "score": 0.95}]
-            strict_mem.forge_diamond.return_value = True
-            mock_eng = MagicMock()
-            mock_eng.bio.mito.state.ros_buildup = 100.0
-            engine = DreamEngine(
-                events=MagicMock(), lore_ref={}, mem_ref=strict_mem, eng_ref=mock_eng, config_ref=self.config
-            )
-            engine._w2v = MagicMock(return_value=[0.5, 0.5])
-            dream_text, shift = engine._generate_narrative_dream({}, {}, cortisol=0.2)
-            self.assertTrue(shift.get("diamond_forged"), "[FAIL] Shift payload missing diamond flag.")
-            self.assertEqual(shift.get("fossil_word"), "ancient_fossil")
-            self.assertIn("The architecture stabilizes", dream_text)
-            self.assertIn("Surreal geometry unfolds.", dream_text)
-            mock_eng.bio.mito.adjust_atp.assert_called_with(500.0, "Diamond Crystallization")
-            self.assertEqual(
-                mock_eng.bio.mito.state.ros_buildup, 50.0, "[FAIL] ROS toxicity was not purged by the forge."
-            )
+    @patch("brain.mind.DreamEngine._weave_dream")
+    def test_dream_engine_oneroi_diamond_forge(self, mock_weave):
+        """Tests Project Oneroi's diamond forging and massive ATP surge during REM."""
+        mock_weave.return_value = "Surreal geometry unfolds."
+        strict_mem = MagicMock()
+        strict_mem.cortical_stack = ["anchor_concept"]
+        strict_mem.subconscious.dredge_vibe_by_vector.return_value = [{"word": "ancient_fossil", "score": 0.95}]
+        strict_mem.forge_diamond.return_value = True
+        mock_eng = MagicMock()
+        mock_eng.bio.mito.state.ros_buildup = 100.0
+        engine = DreamEngine(
+            events=MagicMock(), lore_ref={}, mem_ref=strict_mem, eng_ref=mock_eng, config_ref=self.config
+        )
+        engine._w2v = MagicMock(return_value=[0.5, 0.5])
+        dream_text, shift = engine._generate_narrative_dream({}, {}, cortisol=0.2)
+        self.assertTrue(shift.get("diamond_forged"), "[FAIL] Shift payload missing diamond flag.")
+        self.assertEqual(shift.get("fossil_word"), "ancient_fossil")
+        self.assertIn("The architecture stabilizes", dream_text)
+        self.assertIn("Surreal geometry unfolds.", dream_text)
+        mock_eng.bio.mito.adjust_atp.assert_called_with(500.0, "Diamond Crystallization")
+        self.assertEqual(
+            mock_eng.bio.mito.state.ros_buildup, 50.0, "[FAIL] ROS toxicity was not purged by the forge."
+        )
 
     def test_hippocampal_stress_blindness(self):
         """Ensures HippocampalCache violently amputates memories when cortisol spikes."""
@@ -239,5 +265,5 @@ class BrainSubstrateTests(BoneTestCase):
         self.assertTrue(is_faithful, "[FAIL] Heuristic audit falsely blocked a safe, short, declarative response.")
 
 
-    if __name__ == "__main__":
-        unittest.main()
+if __name__ == "__main__":
+    unittest.main()

@@ -31,22 +31,26 @@ except ImportError:
 _ZERO_WIDTH_RE = re.compile(r"[\u200B-\u200D\uFEFF\u202A-\u202E]")
 
 
-def _billy_mitchell_protocol(data: Any, seen: set = None) -> Any:
-    if seen is None:
-        seen = set()
-    if id(data) in seen:
-        return data
-    if isinstance(data, (dict, list)):
-        seen.add(id(data))
+def _billy_mitchell_protocol(data: Any, memo: dict = None) -> Any:
+    if memo is None:
+        memo = {}
+    if id(data) in memo:
+        return memo[id(data)]
+
     if isinstance(data, str):
         return _ZERO_WIDTH_RE.sub("", data)
     elif isinstance(data, dict):
-        return {
-            _billy_mitchell_protocol(k, seen): _billy_mitchell_protocol(v, seen)
-            for k, v in data.items()
-        }
+        clean_dict = {}
+        memo[id(data)] = clean_dict
+        for k, v in data.items():
+            clean_dict[_billy_mitchell_protocol(k, memo)] = _billy_mitchell_protocol(v, memo)
+        return clean_dict
     elif isinstance(data, list):
-        return [_billy_mitchell_protocol(i, seen) for i in data]
+        clean_list = []
+        memo[id(data)] = clean_list
+        for i in data:
+            clean_list.append(_billy_mitchell_protocol(i, memo))
+        return clean_list
     return data
 
 

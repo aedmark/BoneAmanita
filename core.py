@@ -1,3 +1,4 @@
+# ruff: noqa: E741
 """core.py"""
 
 import glob
@@ -43,10 +44,31 @@ class JSONEncoder(json.JSONEncoder):
             return list(o)
         if hasattr(o, "to_dict") and callable(o.to_dict):
             return o.to_dict()
+        if hasattr(o, "__slots__"):
+            safe_dict = {}
+            for k in o.__slots__:
+                try:
+                    v = getattr(o, k)
+                    if any(
+                        sec in k.lower()
+                        for sec in ("api_key", "secret", "token", "password")
+                    ):
+                        safe_dict[k] = "[REDACTED]"
+                    else:
+                        safe_dict[k] = v
+                except AttributeError:
+                    pass
+            return safe_dict
+
         if hasattr(o, "__dict__"):
             safe_dict = {}
+            _lock_types = (
+                type(threading.Lock()),
+                type(threading.RLock()),
+                threading.Thread,
+            )
             for k, v in vars(o).items():
-                if isinstance(v, (threading.Lock, threading.RLock, threading.Thread)):
+                if isinstance(v, _lock_types):
                     continue
                 if any(
                     sec in k.lower()
@@ -56,6 +78,7 @@ class JSONEncoder(json.JSONEncoder):
                 else:
                     safe_dict[k] = v
             return safe_dict
+
         try:
             return super().default(o)
         except TypeError:
@@ -564,18 +587,29 @@ class CyberneticGovernor:
         self.memory_rq = None
         self.cached_nodes = []
 
+    def _get_vectorizer(self):
+        """Abstracts the vectorization dependency."""
+        try:
+            from spores.spore_utils import _word_to_vector
+            return _word_to_vector
+        except ImportError:
+            return None
+
     def _sync_ordvec_indices(self, memory_core: Any):
         if not ORDVEC_AVAILABLE or not memory_core or not hasattr(memory_core, "graph"):
             return False
         nodes = list(memory_core.graph.keys())
         if self.cached_nodes == nodes and self.memory_rq is not None:
             return True
-        from spores.spore_utils import _word_to_vector
+
+        vectorizer = self._get_vectorizer()
+        if not vectorizer:
+            return False
 
         matrix = []
         valid_nodes = []
         for node in nodes:
-            vec = _word_to_vector(node)
+            vec = vectorizer(node)
             if vec is not None:
                 matrix.append(vec)
                 valid_nodes.append(node)
@@ -583,7 +617,7 @@ class CyberneticGovernor:
             return False
         fp32_matrix = np.ascontiguousarray(matrix, dtype=np.float32)
         self.memory_bitmap = ordvec.SignBitmap(fp32_matrix)
-        self.memory_rq = ordvec.RankQuantIndex(fp32_matrix)
+        self.memory_rq = ordvec.RankQuantIndex(fp32_matrix, bits=8)
         self.cached_nodes = valid_nodes
         return True
 
@@ -638,6 +672,7 @@ class CyberneticGovernor:
                 physics, dt, memory_core, user_text, endocrine_state
             )
         except Exception as e:
+            logger.warning(f"{Prisma.YEL}Graph regulation failed, falling back to PID: {e}{Prisma.RST}")
             return self._pid_fallback(physics, dt, endocrine_state)
 
     def _graph_regulation(
@@ -920,14 +955,14 @@ class TelemetryService:
         if self.disabled or not self.current_trace_file or not self.write_buffer:
             return
         lines, self.write_buffer = self.write_buffer, []
-        self._executor.submit(self._bg_write, lines, self.current_trace_file)
+        self._executor.submit(TelemetryService._bg_write, lines, self.current_trace_file)
 
     def flush_to_disk(self):
         with self._lock:
             self.flush_to_disk_locked()
 
     @staticmethod
-    def _bg_write(lines, filepath):
+    def _bg_write(lines: List[str], filepath: str):
         try:
             with open(filepath, "a", encoding="utf-8") as f:
                 f.write("\n".join(lines) + "\n")
@@ -958,7 +993,7 @@ class TelemetryService:
                 for line in tail_lines:
                     try:
                         yield json.loads(line)
-                    except json.JSONDecodeError:
+                    except json.JSONDecodeError as _:
                         continue
             except IOError:
                 continue
