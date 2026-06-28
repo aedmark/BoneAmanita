@@ -1,6 +1,6 @@
 """brian/cortex.py"""
 
-import json
+import os
 import random
 import re
 import time
@@ -270,7 +270,6 @@ class TheCortex:
                 "content": final_output,
                 "meta_logs": extracted_logs,
             }
-            max_retries = 0
         mandates_raw = sim_result.get("council_mandates", [])
         firewall_active = any(
             m.get("action") == "LEXICAL_FIREWALL_STRICT" for m in mandates_raw
@@ -632,7 +631,7 @@ class TheCortex:
                                 f"DSPy Critic Objected: {judge_reason.split('.')[0][:60]}...",
                                 "SYS",
                             )
-                except Exception as e:
+                except Exception:
                     if self.events:
                         self.events.log(
                             f"{Prisma.OCHRE}[CRITIC OFFLINE]: DSPy parse failed. Bypassing.{Prisma.RST}",
@@ -1212,14 +1211,22 @@ class TheCortex:
         else:
             if not self.is_linear_stocked:
                 try:
-                    with open("body/metabolism.py", "r", encoding="utf-8") as f:
-                        self.linear_router.ingest_artifact("metabolism.py", f.read())
-                    with open("brain/akashic.py", "r", encoding="utf-8") as f:
-                        self.linear_router.ingest_artifact("akashic.py", f.read())
+                    base_dir = os.path.dirname(os.path.dirname(__file__))
+                    for module in ["body/metabolism.py", "brain/akashic.py"]:
+                        path = os.path.join(base_dir, module)
+                        if os.path.exists(path):
+                            with open(path, "r", encoding="utf-8") as f:
+                                self.linear_router.ingest_artifact(
+                                    os.path.basename(module), f.read()
+                                )
+                except Exception as e:
+                    if self.events:
+                        self.events.log(
+                            f"[CORTEX] Linear stock ingestion failed: {e}. Linear memory is barren.",
+                            "WARN",
+                        )
+                finally:
                     self.is_linear_stocked = True
-                except FileNotFoundError:
-                    pass
-
             sparse_mask = self.linear_router.route_attention(query)
             consumed_tokens = len(sparse_mask.split())
             return sparse_mask, "LINEAR_DEEP_TISSUE", consumed_tokens

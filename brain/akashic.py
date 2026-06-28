@@ -459,6 +459,7 @@ class TheAkashicRecord:
         boons_path = os.path.join(self.data_dir, "akashic_boons.json")
         prompts = self.lore.get("SYSTEM_PROMPTS") or {}
         needs_migration = False
+        paths_to_remove = []
         for path, key in [
             (scars_path, "EPIGENETIC_SCARS"),
             (boons_path, "EPIGENETIC_BOONS"),
@@ -471,14 +472,23 @@ class TheAkashicRecord:
                             data if isinstance(data, list) else []
                         )
                         needs_migration = True
-                    os.remove(path)
+                        paths_to_remove.append(path)
                 except Exception as e:
                     if self.events:
                         self.events.log(
                             f"{Prisma.RED}Failed to migrate legacy {key}: {e}.{Prisma.RST}"
                         )
         if needs_migration:
-            self.lore.inject("SYSTEM_PROMPTS", prompts)
+            try:
+                self.lore.inject("SYSTEM_PROMPTS", prompts)
+                self.lore.save("SYSTEM_PROMPTS")
+                for p in paths_to_remove:
+                    os.remove(p)
+            except Exception as e:
+                if self.events:
+                    self.events.log(
+                        f"{Prisma.RED}Migration save failed: {e}. Legacy files kept intact.{Prisma.RST}"
+                    )
         words_path = os.path.join(self.data_dir, "akashic_discovered_words.json")
         if os.path.exists(words_path):
             try:

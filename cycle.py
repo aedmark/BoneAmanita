@@ -321,9 +321,11 @@ class CycleSimulator:
         self.eng.system_health.report_failure(comp, error)
         if comp == "PHYSICS" or not ctx.physics:
             ctx.physics = PanicRoom.get_safe_physics()
-            mem_graph = self.eng.mind.mem.hippocampus.get_graph()
-            if mem_graph and hasattr(mem_graph, "adj"):
-                ctx.physics.space.godel_scar = _native_freeze_graph(mem_graph.adj)
+            try:
+                mem_graph = self.eng.mind.mem.hippocampus.get_graph()
+                if mem_graph and hasattr(mem_graph, "adj"):
+                    ctx.physics.space.godel_scar = _native_freeze_graph(mem_graph.adj)
+            except AttributeError:
                 self.eng.events.log(
                     f"{Prisma.VIOLET}System state safely loaded. Mnemonic structure frozen into Godel Scar.{Prisma.RST}",
                     "SYS",
@@ -379,8 +381,10 @@ class GeodesicOrchestrator:
             current_time = time.time()
             task_acquired = False
             try:
-                user_message, is_system = self.input_queue.get(timeout=0.1)
+                task_data = self.input_queue.get(timeout=0.1)
                 task_acquired = True
+                user_message, is_system = task_data[0], task_data[1]
+                turn_ticket = task_data[2] if len(task_data) > 2 else None
                 self.last_interaction_time = current_time
                 if self.engine_state == "REM":
                     self.engine_state = "WAKE"
@@ -390,6 +394,8 @@ class GeodesicOrchestrator:
                     )
                     self.eng.events.publish("SYSTEM_WAKE", {"timestamp": current_time})
                 snapshot = self.run_turn(user_message, is_system)
+                if turn_ticket:
+                    snapshot["_ticket"] = turn_ticket
                 if self.dream_log and "ui" in snapshot:
                     dream_summary = "\n".join(list(self.dream_log))
                     snapshot["ui"] = (
@@ -401,7 +407,9 @@ class GeodesicOrchestrator:
             except queue.Empty:
                 time_since_last = current_time - self.last_interaction_time
                 if self.engine_state == "WAKE":
-                    rem_threshold_seconds = self.eng.config.REM_IDLE_THRESHOLD
+                    rem_threshold_seconds = getattr(
+                        self.eng.config, "REM_IDLE_THRESHOLD", 300.0
+                    )
                     if time_since_last > rem_threshold_seconds:
                         self.engine_state = "REM"
                         self.eng.events.log(
@@ -442,7 +450,8 @@ class GeodesicOrchestrator:
 
     def _process_rem_tick(self):
         """REM logic: Handles Autopoiesis, ATP drain, and Hallucinations."""
-        rem_atp_drain = self.eng.config.BIO.REM_ATP_DRAIN
+        bio_cfg = getattr(self.eng.config, "BIO", None)
+        rem_atp_drain = float(getattr(bio_cfg, "REM_ATP_DRAIN", 2.0))
         self.eng.drain_atp(rem_atp_drain)
         if _mito_state := self.eng._mito_state:
             _mito_state.ros_buildup = max(0.0, _mito_state.ros_buildup - 0.1)
@@ -479,8 +488,9 @@ class GeodesicOrchestrator:
                     dream_txt, _ = self.eng.mind.dreamer.hallucinate(
                         {"chi": 0.85}, trauma_level=trauma
                     )
+                    safe_obj = random.choice(objs) if objs else "the void"
                     self.dream_log.append(
-                        f"  • {Prisma.strip(dream_txt)} (Shadow cast involving: {random.choice(objs)})"
+                        f"  • {Prisma.strip(dream_txt)} (Shadow cast involving: {safe_obj})"
                     )
             except Exception as e:
                 self.eng.events.log(f"Dream generation failed in REM: {e}", "DEBUG")
@@ -490,13 +500,8 @@ class GeodesicOrchestrator:
     def _bg_process_moog_ledger(self, worries: list):
         """Headless evaluation of the Moog Protocol worry ledger."""
         for worry in worries:
-            actionable = False
-            if (
-                "fix" in worry.lower()
-                or "do" in worry.lower()
-                or "how" in worry.lower()
-            ):
-                actionable = True
+            w_lower = worry.lower()
+            actionable = any(kw in w_lower for kw in ("fix", "do", "how"))
             if actionable:
                 self.eng.events.log(
                     f"{Prisma.CYN}[MOOG PROTOCOL]: Worry deemed actionable. Converting to mandate.{Prisma.RST}",
@@ -752,38 +757,31 @@ class GeodesicOrchestrator:
         lattice = self.eng.shared_lattice
         mem = self.eng.mind.mem
         cortex = self.eng.cortex
-        akashic = getattr(self.eng, "akashic", None)
 
-        def _bg_wls_check(msg_str):
+        def _bg_wls_check(msg_str, frozen_adj):
             try:
-                try:
-                    actual_adj = mem.hippocampus.get_graph().adj
-                except AttributeError:
-                    return
-                if not isinstance(actual_adj, dict) or not actual_adj:
+                if not isinstance(frozen_adj, dict) or not frozen_adj:
                     return
                 words = [w.strip() for w in msg_str.split()] if msg_str else []
-                seed_concept = next((w for w in words if w in actual_adj), None)
+                seed_concept = next((w for w in words if w in frozen_adj), None)
+                actual_adj = frozen_adj
                 if not seed_concept:
                     seed_concept = max(
                         actual_adj.keys(),
-                        key=lambda k: (
-                            len(actual_adj[k])
-                            if isinstance(actual_adj[k], (list, set, dict))
-                            else 0
-                        ),
+                        key=lambda k: len(actual_adj[k]),
                     )
                 distances = {seed_concept: 0}
                 bfs_queue = deque([seed_concept])
                 max_radius = 6
-                while bfs_queue:
+                max_nodes = 500
+                nodes_visited = 0
+                while bfs_queue and nodes_visited < max_nodes:
                     curr = bfs_queue.popleft()
+                    nodes_visited += 1
                     d = distances[curr]
                     if d >= max_radius:
                         continue
                     neighbors = actual_adj.get(curr, [])
-                    if isinstance(neighbors, dict):
-                        neighbors = neighbors.keys()
                     for neighbor in neighbors:
                         if neighbor not in distances:
                             distances[neighbor] = d + 1
@@ -810,13 +808,16 @@ class GeodesicOrchestrator:
                             f"{Prisma.RED}[NAVI-FRACTAL] Topology rejected by Quality Gate ({gate_code}). Network too fragmented. Mandating REM Defragmentation.{Prisma.RST}",
                             "SYS",
                         )
-                        ctx.council_mandates.append(
-                            {
-                                "action": "DEFRAGMENT_MEMORY",
-                                "value": "FRAG_HIGH",
-                                "log": gate_code,
-                            }
-                        )
+                        try:
+                            self.eng.village.council.mandates.append(
+                                {
+                                    "action": "DEFRAGMENT_MEMORY",
+                                    "value": "FRAG_HIGH",
+                                    "log": gate_code,
+                                }
+                            )
+                        except AttributeError:
+                            pass
                         local_d = 1.0
                     else:
                         null_d = 3.0
@@ -837,12 +838,19 @@ class GeodesicOrchestrator:
                             f"{Prisma.RED}[CD CONDITION] Phase-space collapse detected (d={local_d:.2f}). Sycophancy Point Attractor identified. Spiking Contradiction (μ) to force generative tension.{Prisma.RST}",
                             "CRIT",
                         )
-                        if ctx.physics:
-                            ctx.physics.mu = min(
-                                1.0, float(getattr(ctx.physics, "mu", 0.0)) + 0.5
+                        active_phys = getattr(self.eng, "active_physics", None)
+                        if active_phys:
+                            from struts import safe_set
+
+                            safe_set(
+                                active_phys,
+                                "mu",
+                                min(1.0, float(getattr(active_phys, "mu", 0.0)) + 0.5),
                             )
-                            ctx.physics.kappa = max(
-                                0.5, float(getattr(ctx.physics, "kappa", 0.0))
+                            safe_set(
+                                active_phys,
+                                "kappa",
+                                max(0.5, float(getattr(active_phys, "kappa", 0.0))),
                             )
             except Exception as e:
                 self.eng.events.log(f"Async WLS Heuristic Error: {e}", "DEBUG")
@@ -852,7 +860,17 @@ class GeodesicOrchestrator:
                 self.voltage_history.append(float(getattr(ctx.physics, "voltage", 0.0)))
             check_freq = int(getattr(self.eng.config.CORE, "WLS_FREQ", 8))
             if cortex and self.eng.tick_count % check_freq == 0:
-                self._async_pool.submit(_bg_wls_check, clean_message)
+                try:
+                    graph = mem.hippocampus.get_graph()
+                    raw_adj = getattr(graph, "adj", {})
+                except AttributeError:
+                    raw_adj = {}
+
+                frozen_adj = {
+                    k: list(v.keys()) if isinstance(v, dict) else list(v)
+                    for k, v in raw_adj.items()
+                }
+                self._async_pool.submit(_bg_wls_check, clean_message, frozen_adj)
                 try:
                     v_history = list(self.voltage_history)
                     has_active_tags = (

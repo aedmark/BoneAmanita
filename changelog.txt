@@ -1,6 +1,30 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 20.6.7 "The S.L.A.S.H. Stabilization Update"**
+
+**Thermodynamic Optimizations & Loop Economy**
+
+- **The Regex Leak:** Extracted the invisible character regex compiler (`_INVISIBLE_CHARS`) out of the `process_turn` hot loop in `main.py`. The expression is now a statically compiled class constant, preventing runaway ROS buildup and metabolic waste during long conversational sessions.
+- **Runaway BFS Containment:** Imposed a strict carrying capacity (`max_nodes = 500`) on the Breadth-First Search used by the background topology WLS checker (`cycle.py`). Graph traversals can no longer infinitely accumulate and starve the CPU during massive memory sessions.
+- **String Allocation Collapses:** Reduced redundant `.lower()` string allocations inside `_bg_process_moog_ledger` to optimize the engine's background worry processing.
+
+**Structural Tensegrity & Thread Safety**
+
+- **Unlocked Persistence:** Secured the `LoreManifest` save mechanics in `core.py` with an explicit thread lock (`with self._lock:`). This prevents fatal `RuntimeError: dictionary changed size during iteration` crashes when the asynchronous dream engine attempts to mutate the memory cache during a disk write.
+- **Ephemeral Mutation Race Conditions:** Fixed a timeline sync issue in `cycle.py` where background threads were actively writing structural mutations into ghost `ctx` objects that had already been returned to the user and garbage collected. Topology mandates now correctly target the live `active_physics` state.
+- **The Time Dilation Leak:** Fixed a temporal bug in `main.py` where headless system ticks (like REM dreams) were overwriting the system's `last_turn_end`. The engine no longer steals the user's real-world idle delta while they are away.
+
+**Biology, Daemons, & Post-Mortem Hardening**
+
+- **Slotted Object Amnesia:** Updated the JSON Encoder (`core.py`) and the system halt/death sequences (`main.py`) to explicitly support `__slots__`. The engine will no longer silently void memory or throw fatal `TypeError` exceptions when attempting to serialize or post-mortem a slotted class.
+- **Fragile REM Recovery:** The `GeodesicOrchestrator` in `cycle.py` now uses safe biological baselines (`getattr`) for its REM triggers and ATP drains, preventing silent daemon deaths when configuration payloads are missing.
+- **The Empty Plate Exception:** Hardened the Dream Engine's hallucination caster against empty Gordon inventories. Generating a shadow cast with `[]` no longer throws a silent `IndexError` but gracefully falls back to "the void."
+- **Double-Fault Panic Room:** Fixed the `_generate_halt` sequence in `cycle.py`. If the system crashes before the MIND subsystem is fully initialized, it will gracefully bypass the Godel Scar freeze instead of throwing an unhandled `AttributeError` and killing the Panic Room fallback.
+- **Graceful safe_set De-escalation:** Re-engineered `safe_set` (`struts.py`) to operate as a true safety net. Instead of throwing a pipeline-killing `ValueError` when targeting a `None` object, it now executes a graceful no-op and logs the structural miss. Updated `test_struts.py` to formally enforce this logic.
+
+---
+
 ### **BONEAMANITA 20.6.6 "The Edge Compute & Tensegrity Update"**
 
 **Hardware-Aware Metabolism & Edge Compute Optimization**
