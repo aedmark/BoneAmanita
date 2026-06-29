@@ -180,6 +180,52 @@ class BiologyArchitectureTests(BoneTestCase):
             "[FAIL] Endocrine regulator failed to clamp lower bounds.",
         )
 
+    def test_anaerobic_bypass_adaptive_dynamics(self):
+        self.state.atp_pool = 90.0
+        self.state.ros_buildup = 0.0
+        self.state.membrane_potential = 0.5
+        physics_packet = {
+            "voltage": 500.0,
+        }
+        receipt = self.mito.process_cycle(physics_packet)
+        self.assertEqual(
+            receipt.status, "ANAEROBIC", "[FAIL] Did not trigger anaerobic bypass."
+        )
+        self.assertLess(
+            self.state.membrane_potential,
+            0.5,
+            "[FAIL] Anaerobic bypass skipped adaptive dynamics! The system is blinding itself to waste.",
+        )
+
+    def test_mitophagy_suicide_prevention(self):
+        self.state.atp_pool = 15.0
+        self.state.ros_buildup = 100.0
+        self.mito._trigger_mitophagy()
+        self.assertEqual(
+            self.state.atp_pool,
+            1.0,
+            "[FAIL] Mitophagy committed cellular suicide by draining ATP into necrosis.",
+        )
+        self.assertEqual(
+            self.state.ros_buildup, 0.0, "[FAIL] Mitophagy failed to clear ROS."
+        )
+
+    def test_circadian_drift_fractional_pull(self):
+        self.endo.melatonin = 0.5
+        self.endo.metabolize(
+            feedback={}, health=100.0, stamina=100.0, circadian_bias={"MEL": 0.3}
+        )
+        self.assertLess(
+            self.endo.melatonin,
+            0.7,
+            "[FAIL] Circadian bias administered a flat overdose!",
+        )
+        self.assertGreater(
+            self.endo.melatonin,
+            0.5,
+            "[FAIL] Circadian bias failed to apply fractional pull.",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

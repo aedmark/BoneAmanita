@@ -212,7 +212,9 @@ class EndocrineSystem:
             for k, v in circadian_bias.items():
                 attr_name = self._KEY_MAP.get(k) or str(k).lower()
                 if isinstance(attr_name, str) and hasattr(self, attr_name):
-                    setattr(self, attr_name, float(getattr(self, attr_name)) + float(v))
+                    current_val = float(getattr(self, attr_name))
+                    drift = float(v) * 0.1
+                    setattr(self, attr_name, current_val + drift)
         self._apply_enzyme_reaction(enzyme_type, harvest_hits)
         self._apply_environmental_pressure(
             feedback, health, stamina, ros_level, stress_mod

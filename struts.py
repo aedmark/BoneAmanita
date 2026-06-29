@@ -38,6 +38,16 @@ def safe_get(obj: Any, key: Any, default: Any = None) -> Any:
     return default
 
 
+def dump_state(obj: Any) -> dict:
+    if hasattr(obj, "to_dict") and callable(obj.to_dict):
+        return obj.to_dict()
+    elif isinstance(obj, dict):
+        return obj
+    try:
+        return vars(obj)
+    except TypeError:
+        return {k: getattr(obj, k) for k in getattr(obj, "__slots__", []) if hasattr(obj, k)}
+
 def safe_set(obj: Any, key: str, value: Any) -> None:
     if obj is None:
         import logging

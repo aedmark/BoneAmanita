@@ -122,6 +122,7 @@ class MitochondrialForge:
                 cost=raw_cost,
             )
             self.events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "BIO_WARN")
+        self._apply_adaptive_dynamics()
         return MetabolicReceipt(
             base_cost=raw_cost,
             drag_tax=0.0,
@@ -313,7 +314,13 @@ class MitochondrialForge:
 
     def _trigger_mitophagy(self):
         cfg = safe_get(self.cfg, "BIO", {})
-        self.adjust_atp(-float(safe_get(cfg, "MITOPHAGY_COST", 30.0)), "Mitophagy")
+        mito_cost = float(safe_get(cfg, "MITOPHAGY_COST", 30.0))
+        actual_cost = (
+            mito_cost
+            if self.state.atp_pool > (mito_cost + 1.0)
+            else max(0.0, self.state.atp_pool - 1.0)
+        )
+        self.adjust_atp(-actual_cost, "Mitophagy (Cellular Reset)")
         self.state.ros_buildup = 0.0
         self.state.membrane_potential = 0.6
         self.state.retrograde_signal = "MITOPHAGY_RESET"

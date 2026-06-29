@@ -40,10 +40,10 @@ def _billy_mitchell_protocol(data: Any, memo: dict = None) -> Any:
     if isinstance(data, str):
         return _ZERO_WIDTH_RE.sub("", data)
     elif isinstance(data, dict):
-        clean_dict = {}
-        memo[id(data)] = clean_dict
+        memo[id(data)] = clean_dict = {}
         for k, v in data.items():
-            clean_dict[_billy_mitchell_protocol(k, memo)] = _billy_mitchell_protocol(v, memo)
+            clean_k = _ZERO_WIDTH_RE.sub("", k) if isinstance(k, str) else k
+            clean_dict[clean_k] = _billy_mitchell_protocol(v, memo)
         return clean_dict
     elif isinstance(data, list):
         clean_list = []
@@ -177,25 +177,27 @@ class SubconsciousStrata:
         try:
             with open(self.filepath, "r", encoding="utf-8") as f:
                 lines = f.readlines()
-            keep_count = int(len(lines) * 0.9)
-            survivors = lines[-keep_count:] if keep_count else []
+            file_keep_count = int(len(lines) * 0.9)
+            survivors = lines[-file_keep_count:] if file_keep_count else []
             fd, temp_path = tempfile.mkstemp(dir=self.directory, text=True)
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.writelines(survivors)
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temp_path, self.filepath)
-            if keep_count:
-                self.metadata_log = self.metadata_log[-keep_count:]
+            if self.metadata_log:
+                meta_keep = int(len(self.metadata_log) * 0.9)
+                self.metadata_log = self.metadata_log[-meta_keep:] if meta_keep else []
                 self.index = {e["word"]: e for e in self.metadata_log if "word" in e}
-            if self.rank_bank is not None and len(self.rank_bank) >= keep_count:
-                self.rank_bank = np.ascontiguousarray(
-                    self.rank_bank[-keep_count:], dtype=np.float32
-                )
-                self._rebuild_ordvec("Prune Rebuild")
-            else:
-                self.metadata_log, self.index, self.rank_bank = [], {}, None
-                self.bitmap, self.quantizer = None, None
+            if self.rank_bank is not None:
+                rank_keep = int(len(self.rank_bank) * 0.9)
+                if rank_keep > 0:
+                    self.rank_bank = np.ascontiguousarray(
+                        self.rank_bank[-rank_keep:], dtype=np.float32
+                    )
+                    self._rebuild_ordvec("Prune Rebuild")
+                else:
+                    self.rank_bank, self.bitmap, self.quantizer = None, None, None
         except Exception:
             pass
 

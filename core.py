@@ -38,7 +38,6 @@ if not logger.handlers:
 
 class JSONEncoder(json.JSONEncoder):
     """Leave this alone unless you know what you're doing. S.L.A.S.H. Secured."""
-
     def default(self, o):
         if isinstance(o, (set, deque)):
             return list(o)
@@ -678,7 +677,9 @@ class CyberneticGovernor:
     def _graph_regulation(
         self, physics, dt, memory_core, user_text, endocrine_state
     ) -> Tuple[float, float]:
-        from spores.spore_utils import _word_to_vector
+        vectorizer = self._get_vectorizer()
+        if not vectorizer:
+            raise ValueError("S.L.A.S.H. Intercept: Vectorizer unavailable. Aborting graph regulation to preserve structural tensegrity.")
 
         voltage = float(safe_get(physics, "voltage", 30.0))
         drag = float(safe_get(physics, "narrative_drag", 0.6))
@@ -692,7 +693,7 @@ class CyberneticGovernor:
         )
 
         self._sync_ordvec_indices(memory_core)
-        u_vec = _word_to_vector(user_text)
+        u_vec = vectorizer(user_text)
         if u_vec is None:
             raise ValueError("Null vectorization payload.")
         u_fp32 = np.ascontiguousarray(u_vec, dtype=np.float32)

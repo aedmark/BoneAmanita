@@ -34,14 +34,14 @@ from mechanics.tools import TheSubstrate
 from physics import NaviSADProtocol, ZoneInertia
 from physics.models import PhysicsPacket
 from presets import BoneConfig, BonePresets
+from machine.pacemaker import ThePacemaker
 from protocols import ChronosKeeper, GriefProtocol
-from struts import safe_get, safe_set, ux
+from struts import dump_state, safe_get, safe_set, ux
 
 
 @dataclass
 class HostStats:
     """Don't touch this unless you've got a plan to replace it with something better."""
-
     efficiency_index: float
 
 
@@ -108,6 +108,7 @@ class BoneAmanita:
         self._load_system_prompts()
         self.host_stats = HostStats(efficiency_index=1.0)
         self.physics_state = PhysicsPacket.void_state()
+        self.pacemaker = ThePacemaker(config_ref=self.config)
         self._initialize_cognition()
         self.last_turn_end = time.time()
         self.current_time_delta = 0.0
@@ -305,15 +306,7 @@ class BoneAmanita:
         phys = self.active_physics
         phys_dict = {}
         if phys is not None:
-            if hasattr(phys, "to_dict"):
-                phys_dict = phys.to_dict()
-            elif isinstance(phys, dict):
-                phys_dict = phys
-            else:
-                try:
-                    phys_dict = vars(phys)
-                except TypeError:
-                    phys_dict = {k: getattr(phys, k) for k in getattr(phys, "__slots__", [])}
+            phys_dict = dump_state(phys)
         return {
             "type": "SYSTEM_HALT",
             "ui": f"\n{color}{msg}{Prisma.RST}",
@@ -561,6 +554,16 @@ class BoneAmanita:
                 soul_anchor.check_domestication(reliance)
             if self.health <= 0.0:
                 return self.trigger_death(snapshot.get("physics", {}))
+            active_phys = snapshot.get("physics", {})
+            self.pacemaker.beat(float(safe_get(active_phys, "exhaustion", 0.0)))
+            self.pacemaker.update(
+                repetition_score=float(safe_get(active_phys, "narrative_drag", 0.0)),
+                voltage=float(safe_get(active_phys, "voltage", 30.0))
+            )
+            if self.pacemaker.is_bored():
+                self.events.log("Pacemaker detected terminal stagnation. Forcing a novelty spike.", "SYS")
+                current_novelty = float(safe_get(self.active_physics, "novelty", 0.0))
+                safe_set(self.active_physics, "novelty", min(1.0, current_novelty + 0.3))
             self.save_checkpoint()
             if not is_system:
                 self.tick_count += 1
@@ -597,10 +600,7 @@ class BoneAmanita:
 
     def trigger_death(self, last_phys) -> Dict:
         self.bio.mito.adapt(0)
-        try:
-            mito_state_dict = vars(self.bio.mito.state)
-        except TypeError:
-            mito_state_dict = {k: getattr(self.bio.mito.state, k) for k in getattr(self.bio.mito.state, "__slots__", [])}
+        mito_state_dict = dump_state(self.bio.mito.state)
         if death_gen := getattr(self.village, "death_gen", None):
             eulogy_text, cause_code = death_gen.eulogy(
                 last_phys, mito_state_dict, self.trauma_accum

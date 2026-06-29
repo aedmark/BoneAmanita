@@ -554,7 +554,9 @@ class TheAkashicRecord:
             self.recipe_candidates[recipe_key].get(result_name, 0) + 1
         )
         if self.recipe_candidates[recipe_key][result_name] == self.RECIPE_THRESHOLD:
-            self._crystallize_recipe(ingredient_name, catalyst_type, result_item)
+            self._crystallize_recipe(
+                ingredient_name, catalyst_type, result_item, result_name
+            )
 
     def _hybridize_lenses(self, lens_a: str, lens_b: str):
         if lens_a == lens_b:
@@ -596,18 +598,21 @@ class TheAkashicRecord:
             self.events.log(f"{Prisma.MAG}{msg.format(new_name=new_name)}{Prisma.RST}")
             self.events.publish("SOUL_MUTATION", {"new_archetype": new_name})
 
-    def _crystallize_recipe(self, ingredient, catalyst, result_item):
+    def _crystallize_recipe(self, ingredient, catalyst, result_item, result_name: str = "Unknown"):
         self.known_recipes.add((ingredient, catalyst))
         msg_template = (
             ux("akashic_strings", "recipe_msg")
-            or "Forged {result_item} from {ingredient}."
+            or "Forged {result_name} from {ingredient}."
         )
         new_recipe = {
             "ingredient": ingredient,
             "catalyst_category": catalyst,
             "result": result_item,
             "msg": msg_template.format(
-                ingredient=ingredient, catalyst=catalyst, result_item=result_item
+                ingredient=ingredient,
+                catalyst=catalyst,
+                result_name=result_name,
+                result_item=result_name
             ),
         }
         gordon_data = self.lore.get("GORDON") or {}

@@ -41,9 +41,39 @@ class TestSubconsciousStrata(BoneTestCase):
         self.assertIsNone(self.strata.bitmap)
         self.assertIsNone(self.strata.quantizer)
 
+    def test_billy_mitchell_key_optimization(self):
+        from spores.memory import _billy_mitchell_protocol
+
+        dirty_dict = {"ghost\u200b_key": "toxic\u200d_value"}
+        clean_dict = _billy_mitchell_protocol(dirty_dict)
+        self.assertIn(
+            "ghost_key",
+            clean_dict,
+            "[FAIL] Zero-width character remained in dictionary key.",
+        )
+        self.assertEqual(
+            clean_dict["ghost_key"],
+            "toxic_value",
+            "[FAIL] Zero-width character remained in dictionary value.",
+        )
+
+    def test_prune_strata_amnesia_prevention(self):
+        for i in range(10):
+            self.strata.bury({"word": f"mem_{i}", "mass": 1.0})
+        self.assertEqual(len(self.strata.metadata_log), 10)
+        with open(self.strata.filepath, "w", encoding="utf-8") as f:
+            f.write('{"word": "corrupted"}\n')
+        self.strata._prune_strata()
+        self.assertEqual(
+            len(self.strata.metadata_log),
+            9,
+            "[FAIL] Total Amnesia triggered! Memory arrays were wiped by a file mismatch.",
+        )
+        if self.strata.rank_bank is not None:
+            self.assertEqual(len(self.strata.rank_bank), 9)
+
     @unittest.skipIf(np is None, "NumPy is not installed; skipping exact math tests.")
     def test_cold_start_burial_and_exact_dredge(self):
-        """Tests the Phase 1 infant-memory state (< 32 items)."""
         self.strata.bury({"word": "echo", "mass": 2.0})
         self.strata.bury({"word": "silence", "mass": 10.0})
         self.strata.bury({"word": "void", "mass": 7.0})
@@ -63,7 +93,6 @@ class TestSubconsciousStrata(BoneTestCase):
     )
     @patch("spores.memory._word_to_vector")
     def test_fastscan_ignition_and_add(self, mock_w2v):
-        """Tests the training-free structural memory state."""
         rng = np.random.RandomState(42)
         mock_vecs = {}
         for i in range(35):
