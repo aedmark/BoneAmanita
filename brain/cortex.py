@@ -37,7 +37,6 @@ class CortexServices:
     village: Any = None
     config_ref: Any = None
 
-
 class TheCortex:
     LEXICAL_PURGE_PATTERN = re.compile(
         r"(?im)^\s*(that makes sense|i understand|you bring up|great point|good point|certainly|absolutely|i hear you|yes, )[.,!]*\s*"
@@ -148,7 +147,7 @@ class TheCortex:
             )
 
     def process_context(self, ctx: Any) -> Dict[str, Any]:
-        user_input = ctx.input_text
+        user_input = ctx.input_text or ""
         is_system = getattr(ctx, "is_system_event", False)
         mode_settings = BonePresets.MODES.get(
             self.active_mode, BonePresets.MODES["ADVENTURE"]
