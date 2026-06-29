@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 from machine.crucible import TheCrucible
 from machine.forge import TheForge
+from machine.pacemaker import ThePacemaker
 from machine.panic import PanicRoom
 from machine.theremin import TheTheremin
 from presets import BoneConfig
@@ -60,6 +61,21 @@ class MachineContractTests(BoneTestCase):
         state, metric, msg = crucible.audit_fire(raw_physics)
         self.assertEqual(state, "RITUAL")
         self.assertIn("narrative_drag", raw_physics)
+
+    def test_pacemaker_mechanics(self):
+        pacemaker = ThePacemaker(config_ref=self.config)
+        self.assertEqual(pacemaker.boredom_level, 0.0)
+        self.assertEqual(pacemaker.heart_rate, 60)
+        pacemaker.beat(0.5)
+        self.assertEqual(pacemaker.heart_rate, 70.0)
+        pacemaker.update(repetition_score=0.8, voltage=4.0)
+        self.assertEqual(pacemaker.boredom_level, 1.0)
+        pacemaker.boredom_level = pacemaker.BOREDOM_THRESHOLD + 1.0
+        self.assertTrue(pacemaker.is_bored())
+        self.assertEqual(pacemaker.boredom_level, 0.0)
+        pacemaker.boredom_level = 5.0
+        pacemaker.update(repetition_score=0.1, voltage=50.0)
+        self.assertEqual(pacemaker.boredom_level, 3.0)
 
     def test_panic_room_dict_preservation(self):
         previous_state = {"chem": {"SER": 0.85, "DOP": 0.5}}

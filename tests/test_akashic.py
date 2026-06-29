@@ -63,6 +63,19 @@ class AkashicContinuityTests(BoneTestCase):
             rebooted_akashic.recipe_candidates[test_recipe]["Molten Iron"], 2
         )
 
+    def test_crystallize_recipe_ux_formatting(self):
+        ingredient = "Iron"
+        catalyst = "Fire"
+        result_payload = {"name": "Ascended_Artifact", "value": 50.0}
+        for _ in range(3):
+            self.akashic.track_successful_forge(ingredient, catalyst, result_payload)
+        gordon_data = self.mock_lore.get("GORDON") or {}
+        recipes = gordon_data.get("RECIPES", [])
+        self.assertTrue(len(recipes) > 0, "[FAIL] Recipe did not crystallize.")
+        crystallized_msg = recipes[-1].get("msg", "")
+        self.assertNotIn("{", crystallized_msg, "[FAIL] UX Sludge detected! Raw dictionary leaked into UI string.")
+        self.assertIn("Ascended_Artifact", crystallized_msg, "[FAIL] Result name was not properly extracted for the UI.")
+
     def test_atomic_write_integrity(self):
         category = "test_atomic"
         dummy_data = {"key": "value"}
@@ -78,17 +91,13 @@ class AkashicContinuityTests(BoneTestCase):
         )
 
     def test_targeted_viability_autophagy(self):
-        from unittest.mock import MagicMock
-
         self.akashic.active_memory_core = MagicMock()
         self.akashic.active_memory_core.subconscious.index = {
             "Mem1_Safe": {"kappa": 0.8, "gamma": 0.8, "beta": 0.1},
             "Mem2_Toxic": {"kappa": 0.5, "gamma": 0.2, "beta": 0.9},
             "Mem3_Neutral": {"kappa": 0.5, "gamma": 0.5, "beta": 0.5},
         }
-
         yield_val, msg = self.akashic.trigger_autophagy()
-
         index_keys = self.akashic.active_memory_core.subconscious.index.keys()
         self.assertNotIn(
             "Mem2_Toxic",
