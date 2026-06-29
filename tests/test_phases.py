@@ -18,7 +18,6 @@ except ImportError:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     from tests.base import BaseTest as BoneTestCase
 
-
 class PhaseBoundaryTests(BoneTestCase):
     def setUp(self):
         super().setUp()
@@ -39,22 +38,17 @@ class PhaseBoundaryTests(BoneTestCase):
         self.assertGreaterEqual(self.engine._mito_state.atp_pool, 0.0, "ATP failed to clamp to 0.")
 
     def test_metabolism_homeostasis_reward(self):
-        """Ensures the Autonomic Governor applies Q-Matrix rewards and penalties."""
         if not hasattr(self.engine.config, "Q_MATRIX_REWARD"):
             self.engine.config.Q_MATRIX_REWARD = 0.0
-
         phase = MetabolismPhase(self.engine)
-
         self.ctx.physics.resonance = 0.8
         self.engine.trauma_accum = {"fear": 5.0}
         self.engine.bio.mito.state.atp_pool = 50.0
         self.engine.stamina = 50.0
-
         phase._calculate_homeostasis_reward(self.ctx)
         self.assertEqual(
             self.engine.config.Q_MATRIX_REWARD, 1.0, "[FAIL] Positive reward was not applied for healthy homeostasis."
         )
-
         self.ctx.physics.resonance = 0.0
         self.engine.bio.mito.state.atp_pool = 1.0
         phase._calculate_homeostasis_reward(self.ctx)
@@ -102,6 +96,57 @@ class PhaseBoundaryTests(BoneTestCase):
             f"Stamina dropped to {self.engine.stamina}. Double hit or unhandled decay detected.",
         )
 
+    def test_cognition_nonetype_input_safeguard(self):
+        phase = CognitionPhase(self.engine)
+        self.ctx.input_text = None
+        self.ctx.is_bureaucratic = False
+        try:
+            phase.run(self.ctx)
+        except AttributeError as e:
+            self.fail(f"[FAIL] CognitionPhase crashed on NoneType input: {e}")
+
+    def test_cognition_sycophancy_spiral_break(self):
+        phase = CognitionPhase(self.engine)
+        self.engine.sycophancy_streak = 3
+        self.ctx.input_text = "I completely agree with everything you say."
+        self.ctx.physics.resonance = 0.95
+        phase.run(self.ctx)
+        self.assertEqual(
+            self.engine.sycophancy_streak,
+            0,
+            "[FAIL] The Jester triggered, but the streak didn't reset. Infinite loop risk!",
+        )
+
+    def test_cognition_liminal_tax_organ_check(self):
+        from unittest.mock import MagicMock
+        phase = CognitionPhase(self.engine)
+        self.ctx.input_text = "Drifting into liminal space."
+        self.engine.consultant = MagicMock()
+        self.engine.consultant.state.active_modules = ["LIMINAL"]
+        self.engine.consultant.state.L = 0.5
+        self.engine.bio = None
+        try:
+            phase.run(self.ctx)
+        except AttributeError as e:
+            self.fail(
+                f"[FAIL] CognitionPhase crashed trying to tax non-existent biology: {e}"
+            )
+
+    def test_cognition_dream_leak_concatenation(self):
+        phase = CognitionPhase(self.engine)
+        self.ctx.input_text = "Waking up..."
+        self.ctx.clean_words = None  # Simulate an uninitialized context state
+        self.ctx.last_dream = {"log": "A vivid dream about fractal geometry."}
+        try:
+            phase.run(self.ctx)
+        except TypeError as e:
+            self.fail(
+                f"[FAIL] CognitionPhase crashed concatenating dream words with NoneType: {e}"
+            )
+        self.assertIsNotNone(self.ctx.clean_words, "[FAIL] clean_words remained None.")
+        self.assertTrue(
+            len(self.ctx.clean_words) > 0, "[FAIL] Ghost words were not appended."
+        )
 
 if __name__ == "__main__":
     unittest.main()

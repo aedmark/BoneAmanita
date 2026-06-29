@@ -16,7 +16,8 @@ class CognitionPhase(SimulationPhase):
         self.name = "COGNITION"
 
     def run(self, ctx: Any):
-        if ctx.is_bureaucratic or "refactor" in ctx.input_text.lower():
+        safe_input = ctx.input_text.lower() if ctx.input_text else ""
+        if ctx.is_bureaucratic or "refactor" in safe_input:
             old_drag = ctx.physics.narrative_drag
             ctx.physics.narrative_drag = max(1.0, ctx.physics.narrative_drag * 0.5)
             if old_drag - ctx.physics.narrative_drag > 1.0:
@@ -42,6 +43,7 @@ class CognitionPhase(SimulationPhase):
             ctx.council_mandates.append(
                 {"action": "SYNERGY_FIRED", "value": "JESTER", "log": fw_msg}
             )
+            self.eng.sycophancy_streak = 0
         if phi > 0.8:
             drag_relief = (phi - 0.5) * 2.0
             ctx.physics.narrative_drag = max(
@@ -59,36 +61,42 @@ class CognitionPhase(SimulationPhase):
                 lambda_val = self.eng.consultant.state.L
                 if lambda_val > 0.1:
                     lambda_tax = (lambda_val**2) * 10.0
-                    self.eng.bio.mito.adjust_atp(-lambda_tax, f"  Liminal Tax")
+                    bio = getattr(self.eng, "bio", None)
+                    if bio and getattr(bio, "mito", None):
+                        bio.mito.adjust_atp(-lambda_tax, f"  Liminal Tax")
                     if lambda_tax > 2.0:
                         msg = ux("cycle_strings", "cog_liminal_tax")
                         ctx.log(
                             f"{Prisma.VIOLET}{msg.format(lambda_tax=lambda_tax)}{Prisma.RST}"
                         )
-        if hasattr(self.eng.mind.mem, "check_for_resurrection"):
-            if flashback_msg := self.eng.mind.mem.check_for_resurrection(
-                ctx.clean_words, ctx.physics.voltage
-            ):
-                ctx.log(
-                    f"{Prisma.VIOLET}An epigenetic scar tingles. The system remembers a past failure and braces itself.{Prisma.RST}"
-                )
-                shock_cost = 5.0
-                self.eng.stamina = max(0.0, self.eng.stamina - shock_cost)
-        if getattr(ctx, "last_dream", None) and isinstance(ctx.last_dream, dict):
-            dream_log = ctx.last_dream.get("log")
-            if dream_log:
-                ctx.log(
-                    f"{Prisma.MAG}The residue of a dream bleeds into waking cognition...{Prisma.RST}"
-                )
-                ctx.physics.chi = min(1.0, getattr(ctx.physics, "chi", 0.0) + 0.15)
-                ctx.physics.narrative_drag += 1.0
-                dream_words = [
-                    w.lower() for w in re.findall(r"\b\w+\b", dream_log) if len(w) > 3
-                ]
-                if dream_words:
-                    ghost_words = random.sample(dream_words, min(3, len(dream_words)))
-                    ctx.clean_words = ghost_words + ctx.clean_words
-            ctx.last_dream = None
+            if hasattr(self.eng.mind.mem, "check_for_resurrection"):
+                if flashback_msg := self.eng.mind.mem.check_for_resurrection(
+                    ctx.clean_words, ctx.physics.voltage
+                ):
+                    ctx.log(
+                        f"{Prisma.VIOLET}An epigenetic scar tingles. The system remembers a past failure and braces itself.{Prisma.RST}"
+                    )
+                    shock_cost = 5.0
+                    self.eng.stamina = max(0.0, self.eng.stamina - shock_cost)
+            if getattr(ctx, "last_dream", None) and isinstance(ctx.last_dream, dict):
+                dream_log = ctx.last_dream.get("log")
+                if dream_log:
+                    ctx.log(
+                        f"{Prisma.MAG}The residue of a dream bleeds into waking cognition...{Prisma.RST}"
+                    )
+                    ctx.physics.chi = min(1.0, getattr(ctx.physics, "chi", 0.0) + 0.15)
+                    ctx.physics.narrative_drag += 1.0
+                    dream_words = [
+                        w.lower()
+                        for w in re.findall(r"\b\w+\b", dream_log)
+                        if len(w) > 3
+                    ]
+                    if dream_words:
+                        ghost_words = random.sample(
+                            dream_words, min(3, len(dream_words))
+                        )
+                        ctx.clean_words = ghost_words + (ctx.clean_words or [])
+                ctx.last_dream = None
         self.eng.mind.mem.encode(ctx.clean_words, _safe_dict(ctx.physics), "GEODESIC")
         if ctx.is_alive and ctx.clean_words:
             target_cfg = self.eng.config

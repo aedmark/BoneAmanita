@@ -32,6 +32,7 @@ class BoneConsultant:
         bio_state: Optional[Dict] = None,
         physics: Optional[Any] = None,
     ):
+        user_text = user_text or ""
         cfg = safe_get(self.cfg, "DRIVERS", {})
         e_growth = float(safe_get(cfg, "VSL_E_GROWTH_MULT", 0.002))
         fatigue_mult = float(safe_get(cfg, "VSL_FATIGUE_MULT", 0.3))

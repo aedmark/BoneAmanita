@@ -1,6 +1,38 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 20.6.8 "The S.L.A.S.H. Architectural Overhaul"**
+
+**Cognitive & Execution Layers**
+
+- **The Infinite Sycophancy Spiral:** Fixed a critical logic loop in `phases/cognitive.py` where the Jester's intervention failed to reset the `sycophancy_streak`, causing an infinite tension cascade that eventually forced system suicide.
+- **The Downstream Void Cascade:** Sealed multiple `NoneType` vulnerabilities across `phases/cognitive.py`, `drivers/consultant.py`, and `brain/cortex.py`. Background systemic WLS thoughts lacking string inputs no longer shatter the execution pipeline when attempting `.split()` or `.lower()` string methods.
+- **The Organ Assumption:** Added biological existence checks to the Liminal Tax logic. The cognitive layer now gracefully degrades without throwing an `AttributeError` if the `mito` organ is absent during lightweight script runs.
+
+**Biological & Thermodynamic Economy**
+
+- **The Autophagic Suicide Loop:** Patched `body/metabolism.py` so that emergency Mitophagy caps its ATP drain at `1.0`. The system will no longer instantly trigger necrosis (death) to clean its own cellular walls if the available ATP pool is critically low.
+- **The Anaerobic Blindspot:** Forced the anaerobic bypass to correctly process `_apply_adaptive_dynamics()`. The engine can no longer generate infinite ROS waste without mathematically registering the oxidative stress.
+- **The Circadian Overdose:** Converted the flat circadian injection in `body/endocrine.py` into a fractional drift (`v * 0.1`). The system now gently winds down at night rather than violently crashing its chemistry in a single turn.
+
+**Memory & Akashic Strata**
+
+- **The Amnesia Bug:** Severed in-memory array pruning from file I/O in `spores/memory.py` (`_prune_strata()`). Truncation desyncs on the disk will no longer trigger a runaway panic loop that permanently wipes the live memory matrices.
+- **UX Sludge Sanitization:** Routed `result_name` explicitly through `_crystallize_recipe()` in `brain/akashic.py` via a dual-key mapping. Raw dictionary payloads will no longer leak directly into the user interface.
+- **Recursive Hashing Bloat:** Optimized the `_billy_mitchell_protocol` exploit sanitizer to clean dictionary keys without recursively passing strings through the exact-match graph cache.
+
+**Core Architecture & Wiring**
+
+- **The Orphaned Pacemaker:** Wired `machine/pacemaker.py` directly into the thermodynamic economy in `main.py`, allowing the engine to mathematically track repetition and force a novelty spike if the conversation stagnates.
+- **Paranoid Programming Purge:** Replaced brittle `__slots__` extractions in `main.py` with a unified `dump_state` heuristic routed through `struts.py`, drastically reducing syntactic noise and failure points.
+- **The Governor's Fracture:** Sealed a structural leak in `CyberneticGovernor._graph_regulation` (`core.py`) to safely fall back to PID regulation if the dynamic `spores` environment is absent, preventing unhandled `ImportError` crashes.
+
+**Test Suite Hardening**
+
+- Deployed comprehensive mathematical boundaries across `test_machine.py`, `test_body.py`, `test_phases.py`, `test_akashic.py`, and `test_memory.py` to assert correct thermodynamic clamping, dictionary sanitation, and graceful void-state degradation.
+
+---
+
 ### **BONEAMANITA 20.6.7 "The S.L.A.S.H. Stabilization Update"**
 
 **Thermodynamic Optimizations & Loop Economy**
@@ -196,6 +228,7 @@
 - **Combinatorial Scope Crash:** Fixed a critical indentation bug in `MemoryCore.illuminate` where `itertools` pairing was accidentally scoped inside the memory-scoring loop, triggering `UnboundLocalError` on zero-resonance inputs and severing the phase pipeline.
 - **Event Redundancy:** Consolidated `Q_MATRIX_UPDATED` broadcasts into a centralized `_sync_q_matrix()` method in `spores/network.py` to uphold DRY principles and prevent desyncs.
 
+---
 
 ### **BONEAMANITA 20.5.0 "The S.L.A.S.H. Audit"**
 

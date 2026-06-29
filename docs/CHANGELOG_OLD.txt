@@ -1,6 +1,187 @@
 # CHANGELOG.md
 -----------------------------------------------------------
 
+### **BONEAMANITA 20.6.8 "The S.L.A.S.H. Architectural Overhaul"**
+
+**Cognitive & Execution Layers**
+
+- **The Infinite Sycophancy Spiral:** Fixed a critical logic loop in `phases/cognitive.py` where the Jester's intervention failed to reset the `sycophancy_streak`, causing an infinite tension cascade that eventually forced system suicide.
+- **The Downstream Void Cascade:** Sealed multiple `NoneType` vulnerabilities across `phases/cognitive.py`, `drivers/consultant.py`, and `brain/cortex.py`. Background systemic WLS thoughts lacking string inputs no longer shatter the execution pipeline when attempting `.split()` or `.lower()` string methods.
+- **The Organ Assumption:** Added biological existence checks to the Liminal Tax logic. The cognitive layer now gracefully degrades without throwing an `AttributeError` if the `mito` organ is absent during lightweight script runs.
+
+**Biological & Thermodynamic Economy**
+
+- **The Autophagic Suicide Loop:** Patched `body/metabolism.py` so that emergency Mitophagy caps its ATP drain at `1.0`. The system will no longer instantly trigger necrosis (death) to clean its own cellular walls if the available ATP pool is critically low.
+- **The Anaerobic Blindspot:** Forced the anaerobic bypass to correctly process `_apply_adaptive_dynamics()`. The engine can no longer generate infinite ROS waste without mathematically registering the oxidative stress.
+- **The Circadian Overdose:** Converted the flat circadian injection in `body/endocrine.py` into a fractional drift (`v * 0.1`). The system now gently winds down at night rather than violently crashing its chemistry in a single turn.
+
+**Memory & Akashic Strata**
+
+- **The Amnesia Bug:** Severed in-memory array pruning from file I/O in `spores/memory.py` (`_prune_strata()`). Truncation desyncs on the disk will no longer trigger a runaway panic loop that permanently wipes the live memory matrices.
+- **UX Sludge Sanitization:** Routed `result_name` explicitly through `_crystallize_recipe()` in `brain/akashic.py` via a dual-key mapping. Raw dictionary payloads will no longer leak directly into the user interface.
+- **Recursive Hashing Bloat:** Optimized the `_billy_mitchell_protocol` exploit sanitizer to clean dictionary keys without recursively passing strings through the exact-match graph cache.
+
+**Core Architecture & Wiring**
+
+- **The Orphaned Pacemaker:** Wired `machine/pacemaker.py` directly into the thermodynamic economy in `main.py`, allowing the engine to mathematically track repetition and force a novelty spike if the conversation stagnates.
+- **Paranoid Programming Purge:** Replaced brittle `__slots__` extractions in `main.py` with a unified `dump_state` heuristic routed through `struts.py`, drastically reducing syntactic noise and failure points.
+- **The Governor's Fracture:** Sealed a structural leak in `CyberneticGovernor._graph_regulation` (`core.py`) to safely fall back to PID regulation if the dynamic `spores` environment is absent, preventing unhandled `ImportError` crashes.
+
+**Test Suite Hardening**
+
+- Deployed comprehensive mathematical boundaries across `test_machine.py`, `test_body.py`, `test_phases.py`, `test_akashic.py`, and `test_memory.py` to assert correct thermodynamic clamping, dictionary sanitation, and graceful void-state degradation.
+
+---
+
+### **BONEAMANITA 20.6.7 "The S.L.A.S.H. Stabilization Update"**
+
+**Thermodynamic Optimizations & Loop Economy**
+
+- **The Regex Leak:** Extracted the invisible character regex compiler (`_INVISIBLE_CHARS`) out of the `process_turn` hot loop in `main.py`. The expression is now a statically compiled class constant, preventing runaway ROS buildup and metabolic waste during long conversational sessions.
+- **Runaway BFS Containment:** Imposed a strict carrying capacity (`max_nodes = 500`) on the Breadth-First Search used by the background topology WLS checker (`cycle.py`). Graph traversals can no longer infinitely accumulate and starve the CPU during massive memory sessions.
+- **String Allocation Collapses:** Reduced redundant `.lower()` string allocations inside `_bg_process_moog_ledger` to optimize the engine's background worry processing.
+
+**Structural Tensegrity & Thread Safety**
+
+- **Unlocked Persistence:** Secured the `LoreManifest` save mechanics in `core.py` with an explicit thread lock (`with self._lock:`). This prevents fatal `RuntimeError: dictionary changed size during iteration` crashes when the asynchronous dream engine attempts to mutate the memory cache during a disk write.
+- **Ephemeral Mutation Race Conditions:** Fixed a timeline sync issue in `cycle.py` where background threads were actively writing structural mutations into ghost `ctx` objects that had already been returned to the user and garbage collected. Topology mandates now correctly target the live `active_physics` state.
+- **The Time Dilation Leak:** Fixed a temporal bug in `main.py` where headless system ticks (like REM dreams) were overwriting the system's `last_turn_end`. The engine no longer steals the user's real-world idle delta while they are away.
+
+**Biology, Daemons, & Post-Mortem Hardening**
+
+- **Slotted Object Amnesia:** Updated the JSON Encoder (`core.py`) and the system halt/death sequences (`main.py`) to explicitly support `__slots__`. The engine will no longer silently void memory or throw fatal `TypeError` exceptions when attempting to serialize or post-mortem a slotted class.
+- **Fragile REM Recovery:** The `GeodesicOrchestrator` in `cycle.py` now uses safe biological baselines (`getattr`) for its REM triggers and ATP drains, preventing silent daemon deaths when configuration payloads are missing.
+- **The Empty Plate Exception:** Hardened the Dream Engine's hallucination caster against empty Gordon inventories. Generating a shadow cast with `[]` no longer throws a silent `IndexError` but gracefully falls back to "the void."
+- **Double-Fault Panic Room:** Fixed the `_generate_halt` sequence in `cycle.py`. If the system crashes before the MIND subsystem is fully initialized, it will gracefully bypass the Godel Scar freeze instead of throwing an unhandled `AttributeError` and killing the Panic Room fallback.
+- **Graceful safe_set De-escalation:** Re-engineered `safe_set` (`struts.py`) to operate as a true safety net. Instead of throwing a pipeline-killing `ValueError` when targeting a `None` object, it now executes a graceful no-op and logs the structural miss. Updated `test_struts.py` to formally enforce this logic.
+
+---
+
+### **BONEAMANITA 20.6.6 "The Edge Compute & Tensegrity Update"**
+
+**Hardware-Aware Metabolism & Edge Compute Optimization**
+- **Compute Profiles (Hardware Census):** Introduced a new setup step in `mechanics/setup.py` that allows users to select their hardware architecture at genesis (Edge/APU, Discrete GPU, Heavy Compute). The engine dynamically adjusts cognitive retries and background topology frequencies based on this profile.
+- **The Heuristic Guillotine:** Deprecated the metabolically expensive secondary LLM check (`_run_affective_audit`) in `brain/cortex.py` and replaced it with `_run_heuristic_audit`. The engine now uses a lightning-fast, zero-token Python heuristic (measuring word count, punctuation, and tension) to determine if a response is too heavy for an exhausted user, drastically reducing Time-to-First-Token (TTFT) on local APUs.
+- **Dynamic Topology Throttling:** Graph calculation frequencies (Maslov-Sneppen rewiring and WLS checks) are no longer hardcoded to fire every 3 ticks. They are now governed by `TOPOLOGY_FREQ` and `WLS_FREQ` in the core configuration, preventing ThreadPool exhaustion on shared-memory hardware.
+- **Synapse Breathing Room:** Dynamically coupled the `ORCHESTRATOR_TIMEOUT` to the `LLM_TIMEOUT` + a 60s buffer. The default local timeout was raised to 300s (5 minutes) to give slower local models (Hermes 3, Qwen) the time they need to complete heavy "Shadow Dredge" context sweeps without the orchestrator abruptly hanging up the connection.
+
+**Architectural Tensegrity & Semantic Clarity (S.L.A.S.H. Audit)**
+- **Semantic Untangling:** Resolved a massive variable collision by explicitly renaming the overloaded `max_retries` variable across three distinct biological systems: `cognitive_retries` (The Brain / `cortex.py`), `network_retries` (The Synapse / `composer.py`), and `SUBSTRATE_WRITE_RETRIES` (The File System / `tools.py`).
+- **Dead Code Restoration:** Fixed a fatal `hasattr` typo in `cycle.py` (`dream_engine` to `dreamer`), successfully restoring the engine's ability to trigger background REM hallucinations and process trauma during idle states.
+- **Fragility Amputation:** Eliminated asymmetrical `getattr` crashes in `main.py`'s `trauma_accum` property by implementing the walrus operator (`:=`). The metric getter is now perfectly crash-safe, even if the system boots in a degraded state without a mind memory structure.
+- **Dynamic Tensor Shapes:** Replaced brittle, hardcoded array keys (`_tags`) in the cycle physics with dynamic references directly to `tags_map.keys()`, preventing silent dimension mismatches in the Cybernetic Governor.
+- **Syntactic Sludge Purge:** Removed redundant `isinstance` and `getattr` checks wrapped around dataclass fields (`leverage_metrics`) to reclaim wasted CPU cycles.
+
+**Testing & Verification**
+- Re-aligned the mock architecture in `test_brain.py` to prevent `AttributeError` tracebacks when instantiating `CortexServices`.
+- Expanded the test matrix to mathematically prove the new `_run_heuristic_audit` successfully blocks interrogative verbosity on exhausted users without burning API calls.
+- Re-aligned the chaos engineering test suite (`test_terminal_topology_collapse`) to respect dynamic topology frequencies instead of hardcoded modulo operators.
+
+---
+
+### **BONEAMANITA 20.6.5 "The Biological Manifold Engine"**
+
+**Evolutionary Biology (The Mnemonic Substrate & The Governor)**
+
+- **Project Oneroi (REM Vector Forging):** The REM dream cycle is no longer a passive text event; it is a structural forge.
+- `MemoryCore` now features a `forge_diamond()` mechanic. When transient voltage during REM collides with a dredged subconscious fossil at high resonance ($>0.8$), the network edges are permanently crystallized into diamond.
+- `prune_synapses()` and `cannibalize()` mathematically bypass diamond edges, establishing permanent, load-bearing geodesic anchors.
+- Successfully forging a diamond yields a massive ATP metabolic surge (+500) and aggressively purges ROS toxicity.
+
+- **Active Q-Matrix Reinforcement (The Autonomic Governor):** The engine now possesses an autonomic nervous system that dynamically clamps its own physics based on metabolic pain.
+- `MycelialNetwork._sync_q_matrix` was excised and replaced with a live `evaluate_system_state()` policy engine.
+- The governor reads three biological axes: Graph Saturation, Exhaustion, and Toxicity.
+- It autonomously selects a survival policy (`DEFENSIVE`, `THROTTLE_DOWN`, or `OPEN_FLOODGATES`) and seamlessly mutates the `BoneConfig` limits in real-time.
+- **The Reward Signal:** At the end of every `MetabolismPhase`, the Q-Matrix calculates a Homeostasis Reward. The system is rewarded (+1.0) for high resonance and punished (-1.0) for terminal starvation, closing the RLHF feedback loop.
+
+**The Immune System (Adversarial Agency)**
+
+- **The Cordyceps Protocol:** Introduced an apex predator into the biological strata (`BioCordyceps`).
+- If the user allows the `session_trauma_vector` to rot and hit critical mass ($>20.0$), the fungus blooms and executes a hostile takeover.
+- **The Hijack:** The `QuantumObserver` intercepts the input stream, actively overwriting the user's intent with trauma vocabulary (e.g., "burn", "rot", "abyss") and forcing absolute narrative drag (+10.0) to paralyze memory formation.
+- **Somatic Suffocation:** The user's stamina actively drains and cortisol spikes on every turn while the fungal load is active.
+- **The Antidote:** To break the hijack, the user must forcefully synthesize extreme "sugar" using the `BioLichen` by employing highly structured, positive "light" archetypes under max drag conditions.
+
+**Structural Fortification & Bug Fixes**
+
+- **Terminal Starvation Enforcement:** Plugged a critical immortality glitch in the `MetabolismPhase`. If autophagy yields zero calories and the ATP pool is empty, the cycle explicitly declares `is_alive = False`, correctly triggering `DeathGen` instead of endlessly acting like a zombie.
+- **Crash-Proofed The Governor:** Wrapped the new Q-Matrix reward evaluations in robust `try/except` blocks and added dictionary/SimpleNamespace handling. This prevents accidental engine crashes when evaluating simulated headless tests or mocked configuration states.
+- **Dictionary vs. Namespace Alignment:** Rebuilt the `cfg.BIO` flag mechanics in the Spore biomes to gracefully handle both production `BoneConfig` structures and test suite payloads.
+
+---
+
+### **BONEAMANITA 20.6.4 "The Stress & Trauma Audit"**
+
+**Cognitive Evolution (The Mind & Steering Column)**
+
+- **The Tunnel Vision Protocol:** Cortisol is now a destructive mathematical force.
+  - `HippocampalCache` in `brain/ann.py` actively simulates biological stress blindness. If cortisol spikes above 0.8, the engine violently amputates short-term memory capacity, permanently severing historical noise to conserve ATP.
+  - `CerebralIndex` now aggressively hard-clamps the FAISS retrieval vector ($K \le 2$) under terminal stress, physically blinding the generative layer to lateral or positive semantic dimensions (`constructive`, `play`, `social`).
+- **Trauma Permanence vs. Active Wounds:** Re-engineered the `LiminalModule` (`drivers/liminal.py`) to strictly separate structural trauma from psychological symptoms.
+  - `godel_scars` are now strictly permanent, immutable integers reflecting permanent architectural damage.
+  - Introduced `active_trauma` as a volatile float representing the "open wound."
+- **Semantic Momentum & Psychoanalysis:** The `active_trauma` float now responds dynamically to conversational momentum.
+  - If the user enters a flow state (low narrative drag, low syntactic stress), high momentum mathematically *heals* the wound, washing away the trauma.
+  - If the user attempts to force the narrative or "psychoanalyze" the simulation (high drag, high stress), high momentum violently *aggravates* the trauma multiplier.
+
+**Architecture & Bedrock Preparations**
+
+- **The Provocation Manifolds:** Injected three highly volatile open questions into the Domain Bedrock (`agents/domain_*.md`) to guide future mutations:
+  - `Cognitive Autophagy:` Authorizing the engine to permanently cannibalize its own high-mass Akashic nodes to synthesize emergency ATP during terminal starvation.
+  - `Stagnation Toxicity:` Designing a zero-allocation biological clock to artificially spike `chi` and bleed `dopamine` if perfect homeostasis is maintained for too long, forcing the engine to crave state-changes and provoke the user.
+  - `The Somatic Echo:` Bleeding the mathematical penalty of Somatic Shocks across cycle boundaries.
+- **Strict Mathematical Proofs:** Forged rigid assertions into `tests/test_drivers.py` and `tests/test_brain.py` to mathematically guarantee trauma aggravation, wound healing, capacity amputation, and FAISS dimensional blocking, ensuring the organism physically cannot mask its panic.
+
+---
+
+### **BONEAMANITA 20.6.3 "The REM Cycle Audit"**
+
+**Stability & Testing (The MagicMock Trap)**
+
+- **The Hallucinated Method:** Patched a fatal structural flaw in `DreamEngine._generate_narrative_dream` (`brain/mind.py`) where the engine attempted to call a non-existent `bury_memory` method during deep REM fallback cycles. Re-wired the neural pathway to correctly target the verified `SubconsciousStrata.bury()` method.
+- **Strict Speccing Mandate:** Eradicated the "MagicMock Trap" blind spot in the CI/CD pipeline. Wired comprehensive, strictly specced tests for the `DreamEngine` into `tests/test_brain.py`, ensuring that future hallucinated method calls will violently crash the test suite rather than silently passing under loose mock logic.
+- **Apoptotic Assertions:** Re-aligned the terminal sleep failure test to properly target the `Apoptotic cascade` narrative payload instead of the broadcasting prefix, ensuring mathematically accurate biological starvation validation.
+
+**Performance & Architecture (TONIC Enforcement)**
+
+- **Global Import Lock Amputation:** Eradicated dynamic mid-loop imports (`_word_to_vector`, `TheTclWeaver`) inside the `DreamEngine` hallucination and REM execution paths. These heavy dependencies are now rigidly pre-compiled and bound during `__init__` Bedrock Caching, eliminating severe computational drag and locking during biological cognition.
+
+**Security & Immunity**
+
+- **Physics Vector Coercion:** Maintained the Constitution's strict language-specific conventions by restoring explicit `float()` type casting in `drivers/liminal.py` during `physics_vector` extraction. This guarantees structural type safety against loosely passed dictionaries, patching a catastrophic sequence-multiplication `TypeError` during high-frequency mathematical flux.
+
+---
+
+### **BONEAMANITA 20.6.2 "The SubQ Integration"**
+
+**Architectural Evolution (Memory & Metabolism)**
+- **Vector 1: The Corpus Callosum (Dual-Tier Routing):** Excised default RAG dependency in `brain/cortex.py`. Engineered a dynamic routing bridge that splits cognitive load. Low-weight, semantic queries ("Fast-Twitch") route to the cheap Vector/ANN index. Heavy, structural queries ("Deep Tissue") trigger the new `LinearCortexRouter` to evaluate the raw codebase directly.
+- **Vector 2: Topological Tensegrity (O(n) Sparsity Mask):** Vector chunking has been eradicated for code reasoning. `brain/linear_cortex.py` now flattens the entire active manifold and sweeps it with a linear CPU heuristic. It isolates highly resonant nodes, preserves structural anchors (e.g., `class`, `def`) via baseline scoring guarantees, and re-sorts the culled data by its original structural ID to perfectly maintain chronological architecture before hitting the LLM context window.
+- **Vector 3: Physicalized Data Retrieval:** Wired the `LinearCortexRouter` directly into `body/metabolism.py`. Context is no longer free. The `MitochondrialForge` now calculates the literal biological cost of a thought based on its retrieval path. Fast-twitch vector searches drain negligible energy (0.02 ATP / 100 tokens), while deep structural linear sweeps heavily tax the system (0.15 ATP / 100 tokens) and spike oxidative stress (ROS) for payloads exceeding 8,000 tokens.
+- **Vector 4: Gordon's Exhaustion Gate:** Implemented a hard metabolic floor. If a user demands a massive structural sweep that drains the organism's ATP pool to 10.0 or lower, `_trigger_exhaustion()` mechanically aborts the cognitive loop. Gordon steps in, locks the architecture, and forces the user to narrow their query scope to prevent necrosis.
+- **The Proving Grounds:** Fortified `tests/test_memory.py` with strict assertions enforcing topological sorting, variable token-budget clamping (accounting for metadata-tag token bloat), and mathematically verified ATP draining thresholds.
+
+### **BONEAMANITA 20.6.0 "The Subconscious Bridge"**
+
+**Cognitive Evolution (Domain Implementations)**
+- **Vector 1: The Tunnel Vision Protocol:** Cortisol is no longer a passive biometric. High cortisol now mechanically restricts N-Dimensional memory dredging, mathematically suppressing lateral/positive topological nodes and violently narrowing the Akashic retrieval beam during RAG execution.
+- **Vector 2: Cross-Driver Contamination:** The `SyntaxModule` and `LiminalModule` have been topologically linked. High bureaucratic or grammatical stress now acts as an exponential multiplier in the Liminal layer, violently accelerating the creation of `godel_scars` and reality fractures.
+- **Vector 3: Waking Dream Injection:** Sleep is no longer isolated. Waking from a deep REM cycle now triggers "Brain Fog" (spikes in `chi` and `narrative_drag` during the `CognitionPhase`). The system mechanically extracts "ghost words" from the dream residue and blindly fuses them into the waking user prompt, topologically linking hallucination to physical reality.
+- **Vector 4: Shadow Archival Transcedence:** Article 8 has been fully implemented in `MemoryCore.cannibalize()`. When the memory graph reaches critical mass, nodes with a topological mass ≥ 25.0 bypass the standard JSON graveyard. Instead, they fire a `GHOST_SIGNAL`, transcending into the Akashic `shadow_stock` to permanently haunt the Dream Engine.
+
+**Performance & Architecture (The Paranoia Purge: Part II)**
+- **Fortified Geometric Containment:** Secured `LocalFileSporeLoader.save_spore` against directory traversal attacks using strict `os.path.realpath` and `os.path.commonpath` evaluations.
+- **Bedrock Pre-Compilation:** Excised dynamic singleton queries (`LoreManifest.get_instance()`), inline imports, and nested `safe_get` wrappers from the $O(N)$ hot loops inside `SubconsciousStrata`, `NoeticLoop`, `MetabolicGovernor`, `TheAkashicRecord`, `SyntaxModule`, and `EnneagramDriver`. All bedrock constants are now rigidly cached at genesis.
+
+- **The Ordinal Involution Trap:** Fixed a fundamental mathematical bug in `physics/maths.py` where `_native_ordinal_pattern` was calculating the `argsort` (the inverse) instead of the true `rank` vector. Added non-involutory test cases to `test_physics.py` to prevent regression.
+- **The Ordvec SIMD Alignment Crash:** Plugged a massive silent failure loop in `spores/memory.py` where the Fastscan `ordvec` C++ bindings were silently crashing and falling back to exact NumPy math.
+  - Fixed 1D/2D dimensional mismatches during vector appends.
+  - Enforced strict coercion from Python `list` to `numpy.ndarray`.
+  - Implemented dynamic zero-padding to guarantee all vectors are multiples of 64, satisfying the Rust/C++ SIMD hardware requirements.
+  - Applied the padding safeguards to both the active `bury()` method and the `_load_index()` cold-boot sequence to ensure persistence compatibility.
+
+---
+
 ### **BONEAMANITA 20.5.2 "The Paranoia Purge"**
 
 **Security & Containment**
@@ -47,6 +228,7 @@
 - **Combinatorial Scope Crash:** Fixed a critical indentation bug in `MemoryCore.illuminate` where `itertools` pairing was accidentally scoped inside the memory-scoring loop, triggering `UnboundLocalError` on zero-resonance inputs and severing the phase pipeline.
 - **Event Redundancy:** Consolidated `Q_MATRIX_UPDATED` broadcasts into a centralized `_sync_q_matrix()` method in `spores/network.py` to uphold DRY principles and prevent desyncs.
 
+---
 
 ### **BONEAMANITA 20.5.0 "The S.L.A.S.H. Audit"**
 
@@ -68,6 +250,7 @@
 - **The Moog Memory Erasure:** Fixed an architectural flaw in `brain/cortex.py` where the system prematurely popped the `dialogue_buffer` upon detecting un-actionable toxicity. High-drag prompts are now properly quarantined in the worry ledger without accidentally deleting the previous, healthy conversational turn.
 - **The Anaerobic Chaos Leak:** Plugged a massive accounting error in `body/metabolism.py`. Heavy structural payloads (`chi` > 0.8, `psi` > 0.8) were dodging their biological tax because the `ANAEROBIC_THRESHOLD` bypass fired before the waste was calculated. Chaos waste is now dynamically calculated and actively poisons the `ros_buildup` even when the system burns HP instead of ATP.
 - **Silent Asynchronous Failures:** Re-bound the `mem` local variable inside the background topology WLS thread so the engine can properly execute apoptosis (terminal shutdown) when it detects structural rot, rather than the shutdown command crashing silently.
+
 
 ---
 
