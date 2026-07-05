@@ -19,7 +19,7 @@ from mechanics.pragmatics import ThePragmatist
 from mechanics.projector import beautify_thoughts
 from mechanics.tools import LibraryGraph, RandomRetrievalNavigator
 from presets import BoneConfig, BonePresets
-from struts import safe_get, safe_set, ux
+from struts import dump_state, safe_get, safe_set, ux
 
 
 @dataclass
@@ -167,15 +167,7 @@ class TheCortex:
         if self.consultant and "/vsl" in user_input.lower():
             return self._handle_vsl_command(user_input)
         is_boot_sequence = "SYSTEM_BOOT" in user_input
-        if isinstance(ctx.physics, dict):
-            phys_proxy = ctx.physics
-        elif ctx.physics is not None:
-            try:
-                phys_proxy = ctx.physics.to_dict()
-            except (AttributeError, TypeError):
-                phys_proxy = vars(ctx.physics).copy()
-        else:
-            phys_proxy = {}
+        phys_proxy = dump_state(ctx.physics) if ctx.physics is not None else {}
         sim_result = {
             "physics": phys_proxy,
             "bio": getattr(ctx, "bio_result", {}),
@@ -295,6 +287,23 @@ class TheCortex:
                     cognitive_retries,
                 )
             )
+            if self.svc.bio and raw_resp:
+                gen_tokens = max(1, len(raw_resp) // 4)
+                ros_yield = gen_tokens * 0.015
+                atp_burn = gen_tokens * 0.025
+
+                try:
+                    current_ros = float(self.svc.bio.mito.state.ros_buildup)
+                    self.svc.bio.mito.state.ros_buildup = min(
+                        100.0, current_ros + ros_yield
+                    )
+                except (TypeError, ValueError, AttributeError):
+                    pass
+
+                try:
+                    self.svc.bio.mito.adjust_atp(-atp_burn, "LLM Token Generation")
+                except (TypeError, AttributeError):
+                    pass
         if val_res["valid"] and phys_state.get("psi", 0.0) > 0.6 and allow_loot:
             if self.svc.bio:
                 self.svc.bio.mito.adjust_atp(-1.0, "Anti-AI Substrate Filter")
@@ -742,7 +751,7 @@ class TheCortex:
                     path, _, safe_content = data.partition(":::")
                     if path and safe_content:
                         clean_path = path.strip()
-                        if ".." in clean_path or clean_path.startswith("/"):
+                        if ".." in clean_path or os.path.isabs(clean_path):
                             raise ValueError(
                                 f"Path traversal blocked by Cortex Sentinel: {clean_path}"
                             )
@@ -1025,9 +1034,10 @@ class TheCortex:
                 self.active_mode, ("ARCHITECT", "The Architect")
             )
         else:
-            mind["role"] = mind.get(
-                "role", f"The {str(current_lens).title().replace('_', ' ')}"
-            )
+            raw_lens = str(current_lens).title().replace("_", " ")
+            if raw_lens.upper().startswith("THE "):
+                raw_lens = raw_lens[4:]
+            mind["role"] = mind.get("role", f"The {raw_lens}")
         full_state = {
             "bio": bio,
             "physics": phys,
@@ -1192,6 +1202,9 @@ class TheCortex:
         The Corpus Callosum: Routes to Vector (ANN) or Linear Sweep (SubQ).
         Returns: (sparse_context, cognitive_path, token_cost)
         """
+        if not query.strip():
+            return "", "LINGUISTIC_DARK_MATTER", 0
+
         heavy_keywords = [
             "code",
             "debug",

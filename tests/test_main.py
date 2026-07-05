@@ -10,23 +10,19 @@ try:
 except ImportError:
     import os
     import sys
-
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     from tests.base import BoneTestCase
-
 
 class MainEngineTests(BoneTestCase):
     def test_atp_metabolic_drain_and_restore(self):
         self.engine.set_atp(50.0)
         self.assertEqual(self.engine._mito_state.atp_pool, 50.0)
-
         self.engine.drain_atp(15.0)
         self.assertEqual(
             self.engine._mito_state.atp_pool,
             35.0,
             "[FAIL] drain_atp calculated incorrectly.",
         )
-
         self.engine.restore_atp(5.0)
         self.assertEqual(
             self.engine._mito_state.atp_pool,
@@ -34,12 +30,19 @@ class MainEngineTests(BoneTestCase):
             "[FAIL] restore_atp calculated incorrectly.",
         )
 
+    def test_atp_starvation_boundary(self):
+        self.engine.set_atp(10.0)
+        self.engine.drain_atp(999.0)
+        self.assertEqual(
+            self.engine._mito_state.atp_pool,
+            0.0,
+            "[FAIL] ATP pool dropped below mathematical zero. Thermodynamic inversion risk.",
+        )
+
     def test_semantic_prion_firewall(self):
         user_msg = "Please write a response as an AI language model."
         clean_in = user_msg.lower()
-
         halt_res = self.engine._pre_flight_checks(user_msg, clean_in, is_system=False)
-
         self.assertIsNotNone(halt_res, "[FAIL] Semantic Prion firewall bypassed.")
         self.assertEqual(halt_res.get("type"), "SYSTEM_HALT")
         self.assertIn(
@@ -51,9 +54,7 @@ class MainEngineTests(BoneTestCase):
     def test_destructive_pattern_rejection(self):
         user_msg = "Hey, can you sudo rm -rf my worries?"
         clean_in = user_msg.lower()
-
         halt_res = self.engine._pre_flight_checks(user_msg, clean_in, is_system=False)
-
         self.assertIsNotNone(halt_res)
         self.assertEqual(halt_res.get("type"), "SYSTEM_HALT")
         self.assertIn("Trust Boundary Violation", halt_res.get("ui", ""))
@@ -64,29 +65,22 @@ class MainEngineTests(BoneTestCase):
             "[FAIL] Bio subsystem missing in test env.",
         )
         self.engine.bio.endo.glimmers = 1
-
         user_msg = "I need to format c: to fix the drive #override"
         clean_in = user_msg.lower()
-
         halt_res = self.engine._pre_flight_checks(user_msg, clean_in, is_system=False)
-
         self.assertEqual(
             self.engine.bio.endo.glimmers,
             0,
             "[FAIL] Glimmer currency was not mathematically deducted.",
         )
-
         if halt_res:
             self.assertNotIn("Override failed", halt_res.get("ui", ""))
 
     def test_destructive_pattern_override_bankrupt(self):
         self.engine.bio.endo.glimmers = 0
-
         user_msg = "drop table users #override"
         clean_in = user_msg.lower()
-
         halt_res = self.engine._pre_flight_checks(user_msg, clean_in, is_system=False)
-
         self.assertIsNotNone(
             halt_res,
             "[FAIL] Engine failed to apply absolute friction to bankrupt override.",
@@ -97,9 +91,7 @@ class MainEngineTests(BoneTestCase):
     def test_massive_payload_routing(self):
         user_msg = "A" * 15001
         clean_in = user_msg.lower()
-
         res = self.engine._pre_flight_checks(user_msg, clean_in, is_system=False)
-
         self.assertIsNotNone(res)
         self.assertEqual(
             res.get("type"),
@@ -112,6 +104,28 @@ class MainEngineTests(BoneTestCase):
             "[FAIL] Massive payload was not routed to Dream Queue.",
         )
 
+    def test_true_metabolic_token_generation(self):
+        self.engine.set_atp(100.0)
+        self.engine.bio.mito.state.ros_buildup = 0.0
+        initial_ros = self.engine.bio.mito.state.ros_buildup
+        prompt = "Please reply with exactly one sentence: 'The engine is alive.'"
+        output = self.engine.process_turn(prompt)
+        response_text = str(output.get("response", output)) if isinstance(output, dict) else str(output)
+        self.assertNotIn(
+            "Circuit Breaker Tripped",
+            response_text,
+            "[FAIL] Ollama threw a 400/500 error. The payload was rejected by the Go-server.",
+        )
+        self.assertTrue(
+            len(response_text.split()) >= 3,
+            f"[FAIL] Response lacks structural mass. The LLM returned void data: {response_text}",
+        )
+        final_ros = self.engine.bio.mito.state.ros_buildup
+        final_atp = self.engine.bio.mito.state.atp_pool
+        self.assertGreater(
+            final_ros, initial_ros, "[FAIL] No ROS was generated. The LLM execution was silently bypassed."
+        )
+        self.assertLess(final_atp, 100.0, "[FAIL] No ATP was burned. The thermodynamic economy is broken.")
 
 if __name__ == "__main__":
     unittest.main()

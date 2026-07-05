@@ -33,6 +33,60 @@ def beautify_thoughts(text: str) -> str:
     return _THOUGHT_PATTERN.sub(replacer, text)
 
 
+def parse_spatial_reality(raw_text: str) -> Dict[str, Any]:
+    """
+    Extracts Room Name, Points of Interest, and Exits from the LLM's raw text block.
+    """
+    node_data = {
+        "room_name": "Uncharted Zone",
+        "pois": [],
+        "exits": []
+    }
+
+    room_match = re.search(
+        r"(?:Room Name|Location|Room|Zone):\s*([^\n]+)", raw_text, re.IGNORECASE
+    )
+    if room_match:
+        node_data["room_name"] = room_match.group(1).replace("*", "").strip()
+
+    poi_match = re.search(
+        r"(?:Points of Interest|POIs|Notice|Looking around):\s*([^\n]+)",
+        raw_text,
+        re.IGNORECASE,
+    )
+    if poi_match:
+        pois_raw = poi_match.group(1).replace("*", "").strip()
+        node_data["pois"] = [
+            p.strip() for p in re.split(r",|\band\b", pois_raw) if p.strip()
+        ]
+
+    exits_match = re.search(
+        r"(?:Exits|Paths|Doors):\s*([^\n]+)", raw_text, re.IGNORECASE
+    )
+    if exits_match:
+        exits_raw = exits_match.group(1).replace("*", "").strip()
+        node_data["exits"] = [
+            e.strip() for e in re.split(r",|\band\b", exits_raw) if e.strip()
+        ]
+
+    return node_data
+
+
+def anchor_to_bedrock(engine: Any, raw_text: str) -> None:
+    """
+    Executes the spatial parser and anchors the output to the structural JSON bedrock.
+    """
+    new_node = parse_spatial_reality(raw_text)
+
+    if not hasattr(engine, "world_atlas") or engine.world_atlas is None:
+        engine.world_atlas = {"nodes": []}
+
+    if "nodes" not in engine.world_atlas:
+        engine.world_atlas["nodes"] = []
+
+    engine.world_atlas["nodes"].append(new_node)
+
+
 class Projector:
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig

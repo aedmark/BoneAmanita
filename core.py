@@ -23,7 +23,6 @@ from struts import safe_get, ux, ux_format
 
 try:
     import ordvec
-
     ORDVEC_AVAILABLE = True
 except ImportError:
     ORDVEC_AVAILABLE = False
@@ -35,54 +34,98 @@ if not logger.handlers:
     logger.addHandler(_sh)
     logger.setLevel(logging.INFO)
 
+_LOCK_TYPES = (type(threading.Lock()), type(threading.RLock()), threading.Thread)
+
+def _redact_secrets(obj, memo=None):
+    """Walks safe standard collections to redact keys. Defers custom objects to default()."""
+    if memo is None:
+        memo = set()
+    obj_id = id(obj)
+    if obj_id in memo:
+        return "<Circular Reference>"
+    if isinstance(obj, dict):
+        memo.add(obj_id)
+        res = {}
+        for k, v in obj.items():
+            if isinstance(v, _LOCK_TYPES):
+                continue
+            if isinstance(k, str):
+                k_low = k.lower()
+                is_secret = any(
+                    sec in k_low for sec in ("api_key", "secret", "token", "password")
+                )
+                is_safe = any(
+                    safe in k_low
+                    for safe in (
+                        "max_tokens",
+                        "prompt_tokens",
+                        "completion_tokens",
+                        "total_tokens",
+                    )
+                )
+                if is_secret and not is_safe:
+                    res[k] = "[REDACTED]"
+                    continue
+            res[k] = _redact_secrets(v, memo)
+        memo.remove(obj_id)
+        return res
+    if isinstance(obj, list):
+        memo.add(obj_id)
+        res = [
+            _redact_secrets(item, memo)
+            for item in obj
+            if not isinstance(item, _LOCK_TYPES)
+        ]
+        memo.remove(obj_id)
+        return res
+    if isinstance(obj, tuple):
+        memo.add(obj_id)
+        res = tuple(
+            _redact_secrets(item, memo)
+            for item in obj
+            if not isinstance(item, _LOCK_TYPES)
+        )
+        memo.remove(obj_id)
+        return res
+    return obj
+
 
 class JSONEncoder(json.JSONEncoder):
-    """Leave this alone unless you know what you're doing. S.L.A.S.H. Secured."""
+    def encode(self, o):
+        return super().encode(_redact_secrets(o))
+
+    def iterencode(self, o, _one_shot=False):
+        return super().iterencode(_redact_secrets(o), _one_shot)
+
     def default(self, o):
         if isinstance(o, (set, deque)):
             return list(o)
         if hasattr(o, "to_dict") and callable(o.to_dict):
-            return o.to_dict()
+            return _redact_secrets(o.to_dict())
+
         if hasattr(o, "__slots__"):
             safe_dict = {}
-            for k in o.__slots__:
+            slots = o.__slots__
+            if isinstance(slots, str):
+                slots = [slots]
+            for k in slots:
                 try:
-                    v = getattr(o, k)
-                    if any(
-                        sec in k.lower()
-                        for sec in ("api_key", "secret", "token", "password")
-                    ):
-                        safe_dict[k] = "[REDACTED]"
-                    else:
-                        safe_dict[k] = v
+                    val = getattr(o, k)
+                    if not isinstance(val, _LOCK_TYPES):
+                        safe_dict[k] = val
                 except AttributeError:
                     pass
-            return safe_dict
+            return _redact_secrets(safe_dict)
 
         if hasattr(o, "__dict__"):
-            safe_dict = {}
-            _lock_types = (
-                type(threading.Lock()),
-                type(threading.RLock()),
-                threading.Thread,
+            return _redact_secrets(
+                {k: v for k, v in vars(o).items() if not isinstance(v, _LOCK_TYPES)}
             )
-            for k, v in vars(o).items():
-                if isinstance(v, _lock_types):
-                    continue
-                if any(
-                    sec in k.lower()
-                    for sec in ("api_key", "secret", "token", "password")
-                ):
-                    safe_dict[k] = "[REDACTED]"
-                else:
-                    safe_dict[k] = v
-            return safe_dict
 
         try:
             return super().default(o)
         except TypeError:
             return f"<Unserializable: {type(o).__name__}>"
-
 
 @dataclass
 class ErrorLog:
@@ -585,14 +628,18 @@ class CyberneticGovernor:
         self.memory_bitmap = None
         self.memory_rq = None
         self.cached_nodes = []
+        self._cached_vectorizer = self._resolve_vectorizer()
 
-    def _get_vectorizer(self):
-        """Abstracts the vectorization dependency."""
+    def _resolve_vectorizer(self):
+        """Abstracts the vectorization dependency at boot to avoid hot-path ROS."""
         try:
-            from spores.spore_utils import _word_to_vector
+            from struts import _word_to_vector
             return _word_to_vector
         except ImportError:
             return None
+
+    def _get_vectorizer(self):
+        return self._cached_vectorizer
 
     def _sync_ordvec_indices(self, memory_core: Any):
         if not ORDVEC_AVAILABLE or not memory_core or not hasattr(memory_core, "graph"):
@@ -974,6 +1021,7 @@ class TelemetryService:
 
     def shutdown(self):
         self.flush_to_disk()
+        self.disabled = True
         if self._executor is not None:
             self._executor.shutdown(wait=True)
 

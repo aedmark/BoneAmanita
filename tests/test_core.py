@@ -39,22 +39,19 @@ class DummyDict:
 
 
 class CoreArchitectureTests(unittest.TestCase):
-
     def test_json_encoder_redaction_and_sanitization(self):
         """Proves the JSONEncoder physically amputates secrets and ignores thread locks."""
         slotted_obj = DummySlotted()
         dict_obj = DummyDict()
-
         payload = {
             "slotted": slotted_obj,
             "dict": dict_obj,
             "set_data": {1, 2, 3},
-            "deque_data": deque(["a", "b"])
+            "deque_data": deque(["a", "b"]),
+            "deep_nested": {"level_1": {"level_2": {"api_key": "hidden_secret", "safe_val": "hello"}}},
         }
-
         encoded = json.dumps(payload, cls=JSONEncoder)
         decoded = json.loads(encoded)
-
         self.assertEqual(decoded["slotted"]["public_data"], "safe_value")
         self.assertEqual(decoded["slotted"]["api_key"], "[REDACTED]")
         self.assertEqual(decoded["dict"]["stamina"], 100)
@@ -62,6 +59,11 @@ class CoreArchitectureTests(unittest.TestCase):
         self.assertNotIn("lock", decoded["dict"], "[FAIL] Thread locks must be dropped.")
         self.assertEqual(decoded["set_data"], [1, 2, 3])
         self.assertEqual(decoded["deque_data"], ["a", "b"])
+        self.assertEqual(
+            decoded["deep_nested"]["level_1"]["level_2"]["api_key"],
+            "[REDACTED]",
+            "[FAIL] Deeply nested secrets breached the firewall.",
+        )
 
     def test_event_bus_recursion_protection(self):
         """Proves the EventBus stops infinite recursive publishing loops."""
@@ -78,26 +80,22 @@ class CoreArchitectureTests(unittest.TestCase):
 
         bus.subscribe("EVENT_A", cascade_a)
         bus.subscribe("EVENT_B", cascade_b)
-
         bus.publish("EVENT_A", {"payload": "test"})
-
         self.assertEqual(call_count["A"], 1, "[FAIL] Event A should only fire once.")
         self.assertEqual(call_count["B"], 1, "[FAIL] Event B should only fire once.")
 
+    @patch("builtins.open", new_callable=unittest.mock.mock_open)
     @patch("core.logger")
-    def test_lore_manifest_bedrock_protection(self, mock_logger):
+    def test_lore_manifest_bedrock_protection(self, mock_logger, mock_file):
         """Proves the Manifest physically refuses to overwrite core system weights."""
         manifest = LoreManifest(data_dir="/tmp/dummy")
         manifest.inject("system_prompts", {"hacked": True})
-
         manifest.save("system_prompts")
-
-        mock_logger.error.assert_called_with(
-            unittest.mock.ANY
-        )
+        mock_logger.error.assert_called_with(unittest.mock.ANY)
         error_msg = mock_logger.error.call_args[0][0]
         self.assertIn("[ARTICLE 11 VIOLATION]", error_msg)
         self.assertIn("system_prompts.json", error_msg)
+        mock_file.assert_not_called()
 
     @patch("core.ux")
     def test_observer_judgment_states(self, mock_ux):

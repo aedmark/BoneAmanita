@@ -1,16 +1,20 @@
 """struts.py"""
 
+import hashlib
+import logging
 from typing import Any
-
 from constants import Prisma
 
+logger = logging.getLogger("bone")
+
+def _word_to_vector(word: str, dim: int = 8) -> list:
+    h = hashlib.shake_256(word.encode("utf-8")).digest(dim)
+    return [(b / 127.5) - 1.0 for b in h]
 
 def ux(section: str, key: str, default: Any = "") -> Any:
     from core import LoreManifest
-
     data = LoreManifest.get_instance().get("ux_strings", section)
     return data.get(key, default) if isinstance(data, dict) else default
-
 
 def ux_format(section: str, key: str, default: str = "", **kwargs) -> str:
     msg = ux(section, key, default) or default
@@ -19,12 +23,10 @@ def ux_format(section: str, key: str, default: str = "", **kwargs) -> str:
     try:
         return str(msg).format(**kwargs)
     except (KeyError, ValueError, IndexError, AttributeError, TypeError) as e:
-        import logging
-        logging.getLogger("bone").warning(
+        logger.warning(
             f"{Prisma.GRY}[UX] Formatting mismatch ({e}) in {section}.{key}. Falling back to raw string.{Prisma.RST}"
         )
         return str(msg)
-
 
 def safe_get(obj: Any, key: Any, default: Any = None) -> Any:
     if obj is None:
@@ -36,7 +38,6 @@ def safe_get(obj: Any, key: Any, default: Any = None) -> Any:
         if val is not None:
             return val
     return default
-
 
 def dump_state(obj: Any) -> dict:
     if hasattr(obj, "to_dict") and callable(obj.to_dict):
@@ -50,8 +51,7 @@ def dump_state(obj: Any) -> dict:
 
 def safe_set(obj: Any, key: str, value: Any) -> None:
     if obj is None:
-        import logging
-        logging.getLogger("bone").debug(f"Ignored safe_set for '{key}'; target object is None.")
+        logger.debug(f"Ignored safe_set for '{key}'; target object is None.")
         return
     if isinstance(obj, dict):
         obj[key] = value

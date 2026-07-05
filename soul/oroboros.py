@@ -73,6 +73,15 @@ class TheOroboros:
         eng = getattr(soul, "eng", None)
         if eng and getattr(eng, "trauma_accum", None):
             total_trauma = float(sum(eng.trauma_accum.values()))
+            if 5.0 < total_trauma <= 10.0:
+                new_scars.append(
+                    Scar(
+                        name="Latent Grey Area Tension",
+                        stat_affected="voltage_cap",
+                        value=total_trauma * 0.05,
+                        description="Subconscious processing registered a tilt without crossing the waking threshold.",
+                    )
+                )
             if total_trauma > 10.0:
                 scar_val = min(20.0, total_trauma * 0.1)
                 new_scars.append(

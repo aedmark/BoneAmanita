@@ -3,10 +3,8 @@
 import json
 import random
 from typing import Dict, Tuple
-
 from core import LoreManifest
 from presets import BoneConfig
-from spores.spore_utils import _access_config_path
 from struts import safe_get, ux
 
 
@@ -44,7 +42,11 @@ class LiteraryReproduction:
         mutated_config = {}
         for key, min_v, max_v, chance in LiteraryReproduction.MUTATION_TABLE:
             if random.random() < chance:
-                current_val = _access_config_path(current_config, key)
+                current_val = current_config
+                for part in key.split("."):
+                    current_val = safe_get(current_val, part)
+                    if current_val is None:
+                        break
                 if current_val is not None:
                     mutated_val = current_val * random.uniform(0.9, 1.1)
                     clamped_val = max(min_v, min(max_v, mutated_val))

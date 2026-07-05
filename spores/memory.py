@@ -287,6 +287,15 @@ class MemoryCore:
         self.cortical_stack = deque(maxlen=15)
         self.short_term_buffer = deque(maxlen=10)
         self.consolidation_threshold = 5.0
+        self.current_doorway_zone = None
+
+    def execute_doorway_flush(self, new_zone: str):
+        if self.current_doorway_zone and self.current_doorway_zone != new_zone:
+            self.short_term_buffer.clear()
+            self.cortical_stack.clear()
+            if self.events:
+                self.events.log(f"Doorway crossed into {new_zone}. Working memory flushed.", "MEMORY")
+        self.current_doorway_zone = new_zone
 
     def illuminate(
         self, vector: Dict[str, float], limit: int = 5, cortisol: float = 0.0
