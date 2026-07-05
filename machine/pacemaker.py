@@ -19,12 +19,13 @@ class ThePacemaker:
         self.heart_rate = 60 + (stress * 20)
 
     def update(self, repetition_score: float, voltage: float):
+        step = self.BOREDOM_THRESHOLD * 0.1
         if repetition_score > 0.5 or voltage < 5.0:
             self.boredom_level = min(
-                self.BOREDOM_THRESHOLD * 2.0, self.boredom_level + 1.0
+                self.BOREDOM_THRESHOLD * 2.0, self.boredom_level + step
             )
         else:
-            self.boredom_level = max(0.0, self.boredom_level - 2.0)
+            self.boredom_level = max(0.0, self.boredom_level - (step * 2.0))
 
     def is_bored(self) -> bool:
         if self.boredom_level > self.BOREDOM_THRESHOLD:

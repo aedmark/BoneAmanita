@@ -116,11 +116,19 @@ class LexiconStore:
     def harvest(self, text: Any) -> Dict[str, List[str]]:
         if not text:
             return {}
+        text_str = str(text).translate(self._TRANSLATOR).lower()
+        chunk_hash = hash(text_str)
+        if hasattr(self, "_chunk_cache") and chunk_hash in self._chunk_cache:
+            return self._chunk_cache[chunk_hash]
         results = defaultdict(list)
-        for word in str(text).translate(self._TRANSLATOR).lower().split():
+        for word in text_str.split():
             for category in self.get_categories_for_word(word):
                 results[category].append(word)
-        return dict(results)
+        final_results = dict(results)
+        if not hasattr(self, "_chunk_cache"):
+            self._chunk_cache = {}
+        self._chunk_cache[chunk_hash] = final_results
+        return final_results
 
 
 class LinguisticAnalyzer:

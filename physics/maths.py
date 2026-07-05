@@ -4,7 +4,6 @@ import math
 from collections import Counter, deque
 from typing import List, Tuple
 
-
 def _native_ordinal_pattern(
     window: List[float], epsilon: float = 1e-5
 ) -> Tuple[int, ...]:
@@ -15,14 +14,12 @@ def _native_ordinal_pattern(
         rank_vector[original_pos] = rank
     return tuple(rank_vector)
 
-
 def _native_detect_false_cohesion(history: List[float], window_size: int = 3) -> bool:
     if len(history) < window_size * 2:
         return False
     return _native_ordinal_pattern(history[-window_size:]) == _native_ordinal_pattern(
         history[-(window_size * 2) : -window_size]
     )
-
 
 def _native_permutation_entropy(
     time_series: List[float], window_size: int = 3, epsilon: float = 1e-5

@@ -127,7 +127,10 @@ class BoneArchitect:
             )
             events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "CRIT")
             load_result = None
-        results = list(load_result) if isinstance(load_result, (list, tuple)) else []
+        try:
+            results = list(load_result) if load_result else []
+        except TypeError:
+            results = []
         results.extend([None] * max(0, 5 - len(results)))
         mito_legacy, _, soul_legacy, continuity, atlas = results[:5]
         soul_legacy = soul_legacy or {}

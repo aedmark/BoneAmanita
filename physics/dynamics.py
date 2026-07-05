@@ -197,6 +197,14 @@ class CosmicDynamics:
     ) -> Tuple[str, float, str]:
         if not clean_words or not network or not network.graph:
             return "VOID_DRIFT", 3.0, self.logs.get("VOID") or "Drifting in the Void."
+        unique_word_count = len(set(clean_words))
+        fractal_density = unique_word_count / max(1, len(clean_words))
+        if fractal_density > 0.85 and len(clean_words) > 50:
+            return (
+                "FRACTAL_OVERLOAD",
+                5.0,
+                "Context density critical. The water tank is empty. Flush or simplify.",
+            )
         now = int(time.time())
         if not self.cached_wells or (now - self.last_scan_time) > self.SCAN_INTERVAL:
             self.cached_wells, self.cached_hubs = self._scan_network_mass(

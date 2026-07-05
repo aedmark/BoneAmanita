@@ -57,6 +57,20 @@ class MycelialNetwork:
     def _sync_q_matrix(self):
         pass
 
+    def _mutate_config(self, path: str, value: Any) -> bool:
+        parts = path.split('.')
+        target = self.cfg
+        for part in parts[:-1]:
+            target = safe_get(target, part)
+            if target is None:
+                return False
+        leaf = parts[-1]
+        try:
+            safe_set(target, leaf, value)
+            return True
+        except Exception:
+            return False
+
     def evaluate_system_state(self, stamina: float, trauma_vector: dict):
         """The State Sensor & Policy Engine"""
         try:
@@ -68,25 +82,18 @@ class MycelialNetwork:
                 if isinstance(trauma_vector, dict) and trauma_vector
                 else 0.0
             )
-            from spores.spore_utils import _access_config_path
             if toxicity > 0.6:
                 action = "DEFENSIVE"
-                _access_config_path(self.cfg, "BIO.ROS_CRITICAL", 150.0, set_mode=True)
-                _access_config_path(self.cfg, "STAMINA_REGEN", 15.0, set_mode=True)
+                self._mutate_config("BIO.ROS_CRITICAL", 150.0)
+                self._mutate_config("STAMINA_REGEN", 15.0)
             elif exhaustion > 0.6 or saturation > 0.8:
                 action = "THROTTLE_DOWN"
-                _access_config_path(
-                    self.cfg, "PHYSICS.VOLTAGE_MAX", 50.0, set_mode=True
-                )
-                _access_config_path(self.cfg, "PHYSICS.DRAG_HALT", 20.0, set_mode=True)
+                self._mutate_config("PHYSICS.VOLTAGE_MAX", 50.0)
+                self._mutate_config("PHYSICS.DRAG_HALT", 20.0)
             else:
                 action = "OPEN_FLOODGATES"
-                _access_config_path(
-                    self.cfg, "SHAPLEY_MASS_THRESHOLD", 2.0, set_mode=True
-                )
-                _access_config_path(
-                    self.cfg, "AKASHIC.AUTOPHAGY_YIELD", 30.0, set_mode=True
-                )
+                self._mutate_config("SHAPLEY_MASS_THRESHOLD", 2.0)
+                self._mutate_config("AKASHIC.AUTOPHAGY_YIELD", 30.0)
 
             if hasattr(self.events, "log") and action != getattr(
                 self, "last_governor_action", None
@@ -402,8 +409,6 @@ class MycelialNetwork:
     }
 
     def _apply_epigenetics(self, data):
-        from spores.spore_utils import _access_config_path
-
         mutations = data.get("config_mutations", {})
         if not mutations:
             return
@@ -411,9 +416,7 @@ class MycelialNetwork:
             self.events.log(f"{Prisma.MAG}{msg}{Prisma.RST}")
         valid_mutations = 0
         for k, v in mutations.items():
-            if k in self.SAFE_MUTATIONS and _access_config_path(
-                self.cfg, k, v, set_mode=True
-            ):
+            if k in self.SAFE_MUTATIONS and self._mutate_config(k, v):
                 valid_mutations += 1
         if valid_mutations > 0 and (
             msg_ap := ux_format(
@@ -561,7 +564,7 @@ class MycelialNetwork:
         if not any(s["q"] == future_seed_q for s in seed_list):
             seed_list.append({"q": future_seed_q, "m": 0.0, "b": False})
         data = {
-            "genome": "BA_2065",
+            "genome": "BA_2070",
             "session_id": self.session_id,
             "parent_id": self.session_id,
             "meta": {

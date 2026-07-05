@@ -7,7 +7,7 @@ from typing import Callable, Dict, List, Optional
 from constants import RealityLayer
 from core import LoreManifest
 from presets import BoneConfig, BonePresets
-from struts import safe_get, ux, ux_format
+from struts import safe_get, safe_set, ux, ux_format
 
 
 class CommandStateInterface:
@@ -63,7 +63,7 @@ class CommandStateInterface:
                    "trauma_accum": getattr(self.eng, "trauma_accum", {}), "mitochondria_traits": mito_traits,
                    "antibodies": antibodies,
                    "soul_data": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None,
-                   "continuity": continuity_packet, "world_atlas": atlas_data}
+                   "continuity": continuity_packet, "world_atlas": atlas_data,"mutations": getattr(self.eng, "mutations", {}), "joy_history": getattr(self.eng, "joy_history", [])}
         try:
             return self.eng.mind.mem.save(**payload)
         except Exception as e:
@@ -286,6 +286,12 @@ class CommandProcessor:
         return True
 
     def _cmd_save(self, _parts):
+        cortex = getattr(self.interface.eng, "cortex", None)
+        if cortex and hasattr(cortex, "dialogue_buffer") and cortex.dialogue_buffer:
+            last_response = cortex.dialogue_buffer[-1]
+            from mechanics.projector import anchor_to_bedrock
+            anchor_to_bedrock(self.interface.eng, last_response)
+
         res = self.interface.save_state()
         error_flags = safe_get(self.cmd_cfg, "SAVE_ERROR_FLAGS", ("Error", "Failed", "Exception"))
         if not res or any(flag in str(res) for flag in error_flags):
@@ -463,24 +469,17 @@ class CommandProcessor:
         cortex = getattr(self.interface.eng, "cortex", None)
         if cortex:
             cortex.purge_context()
-
-        phys = getattr(self.interface.eng, "active_physics", None)
-        if phys is not None:
-            from struts import safe_set
-            safe_set(phys, "narrative_drag", 0.0)
-        elif hasattr(self.interface.eng, "phys") and self.interface.eng.phys:
-            self.interface.eng.phys.narrative_drag = 0.0
-
+        for p_attr in ("active_physics", "phys"):
+            p_obj = getattr(self.interface.eng, p_attr, None)
+            if p_obj is not None:
+                safe_set(p_obj, "narrative_drag", 0.0)
         vitals = self.interface.get_vitals()
         self.interface.modify_resource("stamina", vitals.get("max_stamina", 100.0))
         self.interface.modify_resource("atp", vitals.get("max_atp", 100.0))
-
         if state := getattr(self.interface.eng, "_mito_state", None):
             state.ros_buildup = 0.0
-
         if hasattr(self.interface.eng, "trauma_accum"):
             self.interface.eng.trauma_accum.clear()
-
         msg = "Context severed. Friction Dropped. Stamina restored. Trauma purged. The mind is clear."
         self.interface.log(f"{self.P.CYN}{msg}{self.P.RST}", "SYS")
         return True
@@ -590,19 +589,14 @@ class CommandProcessor:
         return True
 
     def _cmd_hallucinate(self, _parts):
-        from struts import safe_get, safe_set
         cost = float(safe_get(self.cmd_cfg, "COST_HALLUCINATE", 25.0))
         if not self.tax.levy("HALLUCINATE", {"atp": cost}):
             return True
-        active_phys = getattr(self.interface.eng, "active_physics", None)
-        if active_phys is not None:
-            safe_set(active_phys, "mu", min(1.0, float(safe_get(active_phys, "mu", 0.0)) + 0.8))
-            safe_set(active_phys, "kappa", max(0.5, float(safe_get(active_phys, "kappa", 0.0))))
-
-        if hasattr(self.interface.eng, "phys") and self.interface.eng.phys is not None:
-            base_phys = self.interface.eng.phys
-            base_phys.mu = min(1.0, float(getattr(base_phys, "mu", 0.0)) + 0.8)
-            base_phys.kappa = max(0.5, float(getattr(base_phys, "kappa", 0.0)))
+        for p_attr in ("active_physics", "phys"):
+            p_obj = getattr(self.interface.eng, p_attr, None)
+            if p_obj is not None:
+                safe_set(p_obj, "mu", min(1.0, float(safe_get(p_obj, "mu", 0.0)) + 0.8))
+                safe_set(p_obj, "kappa", max(0.5, float(safe_get(p_obj, "kappa", 0.0))))
         cortex = getattr(self.interface.eng, "cortex", None)
         if cortex and hasattr(cortex, "dialogue_buffer"):
             cortex.dialogue_buffer.append(
@@ -614,13 +608,14 @@ class CommandProcessor:
         return True
 
     def _cmd_shuffle(self, _parts):
-        from struts import safe_get
         """The emergency release valve. Burns ATP to physically reset structural/narrative loops."""
         cost = float(safe_get(self.cmd_cfg, "COST_SHUFFLE", 5.0))
         if not self.tax.levy("SHUFFLE", {"atp": cost}):
             return True
-        if hasattr(self.interface.eng, "phys"):
-            self.interface.eng.phys.narrative_drag = 0.0
+        for p_attr in ("active_physics", "phys"):
+            p_obj = getattr(self.interface.eng, p_attr, None)
+            if p_obj is not None:
+                safe_set(p_obj, "narrative_drag", 0.0)
         self.interface.log(
             f"{self.P.VIOLET}[ !s ] THE SHUFFLE: Lateral shift initiated.{self.P.RST}")
         self.interface.log(

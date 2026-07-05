@@ -95,15 +95,10 @@ class StrutsUtilityTests(BoneTestCase):
             target.health, 20.0, "[FAIL] safe_set failed to mutate object attribute."
         )
 
-    @patch("logging.getLogger")
-    def test_safe_set_none_noop(self, mock_get_logger):
-        mock_logger = MagicMock()
-        mock_get_logger.return_value = mock_logger
-
+    @patch("struts.logger")
+    def test_safe_set_none_noop(self, mock_logger):
         safe_set(None, "voltage", 10.0)
-
         mock_logger.debug.assert_called_once_with("Ignored safe_set for 'voltage'; target object is None.")
-
 
 if __name__ == "__main__":
     unittest.main()

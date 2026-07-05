@@ -10,7 +10,6 @@ from constants import Prisma
 from core import LoreManifest, safe_get, ux, ux_format
 from presets import BoneConfig
 
-
 class TheVillageCouncil:
     @staticmethod
     def audit(p: Any, _bio_state: dict) -> list[str]:

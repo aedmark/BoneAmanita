@@ -1,11 +1,14 @@
 
 find . -type d -name "__pycache__" -exec rm -rf {} +
 find . -type d -name "MagicMock" -exec rm -rf {} +
+rm -rf ./tests/.pytest_cache
+rm -rf .pytest_cache
 rm -rf ./logs
 rm -rf ./memories
+rm -rf ./tests/memories
 rm -rf ./saves
 rm -f ./lore/lenses.json
-rm -f ./lore/akashic*
+rm -f ./lore/akashic_discovered_words.json
 rm -f ./legacy.json
 rm -f ./fractal_adventure.json
 rm -rf ./output
