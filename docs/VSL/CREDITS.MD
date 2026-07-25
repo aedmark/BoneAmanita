@@ -1,6 +1,6 @@
 # Acknowledgments & Credits
 
-*Dedicated to my wife, Kai, my guardian angels, C & JW, and viewers like you!*
+*Dedicated to my wife, Kai, my guardian angels: C & JW, and viewers like you!*
 
 ---
 
