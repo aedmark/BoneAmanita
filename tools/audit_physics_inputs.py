@@ -43,12 +43,26 @@ def main():
     lex = LexiconService()
     lex.initialize()
 
-    known = tasted = unknown = 0
+    # Solvents resolve through LexiconService.SOLVENTS, not the category map, so
+    # counting only get_categories_for_word hides them and overstates the gap.
+    solvents = getattr(lex, "SOLVENTS", None) or set()
+    known = solvent = resonant = tasted = unknown = 0
     taste_dist = collections.Counter()
+    resonance_dist = collections.Counter()
+    # Mirrors QuantumObserver._tally_categories_static: filler, curated lexicon
+    # and its inflections, semantic resonance, then the phonosemantic guess.
     for line in CORPUS:
         for word in lex.clean(line):
+            if word in solvents:
+                solvent += 1
+                continue
             if lex.get_categories_for_word(word):
                 known += 1
+                continue
+            if hasattr(lex, "resolve_unknown") and (found := lex.resolve_unknown(word)):
+                resonant += 1
+                for category in found:
+                    resonance_dist[category] += 1
                 continue
             category, confidence = lex.taste(word)
             if category and confidence > 0.5:
@@ -56,11 +70,17 @@ def main():
                 taste_dist[category] += 1
             else:
                 unknown += 1
-    total = known + tasted + unknown
+    total = known + solvent + resonant + tasted + unknown
+    resolved = known + solvent + resonant
     print(f"word resolution over {len(CORPUS)} lines, {total} words")
     print(f"  lexicon   : {known:4d}  ({known / total * 100:5.1f}%)")
-    print(f"  taste     : {tasted:4d}  ({tasted / total * 100:5.1f}%)")
+    print(f"  solvents  : {solvent:4d}  ({solvent / total * 100:5.1f}%)  grammatical filler")
+    print(f"  resonance : {resonant:4d}  ({resonant / total * 100:5.1f}%)  embedding centroids")
+    print(f"  resolved  : {resolved:4d}  ({resolved / total * 100:5.1f}%)  <- not guessed")
+    print(f"  taste     : {tasted:4d}  ({tasted / total * 100:5.1f}%)  phonosemantic guess")
     print(f"  unresolved: {unknown:4d}  ({unknown / total * 100:5.1f}%)")
+    if resonance_dist:
+        print(f"  resonance verdicts: {dict(resonance_dist.most_common(8))}")
     if taste_dist:
         top = taste_dist.most_common(1)[0]
         share = top[1] / max(1, sum(taste_dist.values())) * 100

@@ -50,6 +50,10 @@ class LexiconStore:
 
     def _index_word(self, word: str, category: str):
         self.REVERSE_INDEX[word.lower()].add(category)
+        # _morphological_lookup caches misses, so a word learned after a failed
+        # lookup would stay invisible until restart. Matters most for the
+        # self-growing lexicon path (register_word -> MYTHOLOGY_UPDATE).
+        self._morphological_lookup.cache_clear()
 
     def _load_hive(self):
         if not os.path.exists(self.HIVE_FILENAME):
@@ -94,8 +98,46 @@ class LexiconStore:
         combined = base | learned
         return combined - self.USER_FLAGGED_BIAS
 
+    # Suffixes stripped when a word is not indexed directly, longest first so
+    # "ingly" is tried before "ly". Purely inflectional: no attempt at
+    # derivation, which changes meaning and would cross category boundaries.
+    _SUFFIXES = ("ingly", "edly", "ing", "ers", "est", "ies", "ed", "es", "er", "ly", "s")
+
     def get_categories_for_word(self, word: str) -> Set[str]:
-        return self.REVERSE_INDEX.get(word.lower(), set())
+        w = word.lower()
+        if direct := self.REVERSE_INDEX.get(w):
+            return direct
+        return self._morphological_lookup(w)
+
+    @functools.lru_cache(maxsize=20000)
+    def _morphological_lookup(self, w: str) -> Set[str]:
+        """Resolve an inflection to its root's categories.
+
+        Every lexicon entry then covers its whole inflectional family, so
+        "forge" answers for "forging" and "forged" without either appearing in
+        the file. This multiplies the effective vocabulary without growing it,
+        and every root added later inherits the same reach.
+
+        Cached because this sits in the per-turn hot loop and the same words
+        recur constantly. Misses are cached too, which is the common case.
+        """
+        for suffix in self._SUFFIXES:
+            if not w.endswith(suffix):
+                continue
+            base = w[: -len(suffix)]
+            if len(base) < 3:
+                continue
+            # "forging" -> "forg" -> "forge"; "running" -> "runn" -> "run";
+            # "cries" -> "cri" -> "cry".
+            candidates = [base, base + "e"]
+            if len(base) > 1 and base[-1] == base[-2]:
+                candidates.append(base[:-1])
+            if base.endswith("i"):
+                candidates.append(base[:-1] + "y")
+            for candidate in candidates:
+                if found := self.REVERSE_INDEX.get(candidate):
+                    return found
+        return set()
 
     def teach(self, word: str, category: str, tick: int) -> bool:
         w = word.lower()
@@ -374,6 +416,7 @@ class LexiconService:
         self._STORE.load_vocabulary()
         self._ANALYZER = LinguisticAnalyzer(self._STORE)
         self.SOLVENTS = self._STORE.SOLVENTS
+        self._RESONANCE = None
         ling_data = LoreManifest.get_instance().get("LINGUISTICS") or {}
         self.PRIORITY_ORDER = ling_data.get("PRIORITY_ORDER", [])
         if events_ref:
@@ -401,6 +444,48 @@ class LexiconService:
 
     def get_categories_for_word(self, word: str) -> Set[str]:
         return self._STORE.get_categories_for_word(word)
+
+    def ensure_resonance(self) -> bool:
+        """Build the embedding centroids once, on first use."""
+        if self._RESONANCE is None:
+            from mechanics.resonance import ResonanceClassifier
+
+            margin = float(os.environ.get("BONE_RESONANCE_MARGIN") or 0.05)
+            classifier = ResonanceClassifier(margin=margin)
+            classifier.build(self._STORE.VOCAB, getattr(self, "events", None))
+            self._RESONANCE = classifier
+        return self._RESONANCE.ready
+
+    def resolve_unknown(self, word: str) -> Set[str]:
+        """Classify a word the lexicon does not know, by meaning, and remember it.
+
+        Consulted after the curated lexicon and its inflections, before the
+        phonosemantic fallback. A confident verdict is taught into the separate
+        LEARNED_VOCAB hive rather than written into lore/lexicon.json, so the
+        curated file stays hand-authored and every machine guess is capped,
+        evictable and revertable by deleting the hive.
+
+        Teaching also means the embedding cost is paid once per word for the
+        life of the hive: the next occurrence resolves through the normal index.
+        """
+        if not word or not self.ensure_resonance():
+            return set()
+        category, _margin = self._RESONANCE.classify(word)
+        if not category:
+            return set()
+        self._STORE.teach(word, category, int(time.time()))
+        return {category}
+
+    def warm_resonance(self, words: List[str]) -> None:
+        """Embed a turn's unknown words in one round trip rather than N."""
+        if not words or not self.ensure_resonance():
+            return
+        try:
+            from spores.embeddings import SemanticEmbedder
+
+            SemanticEmbedder.get_instance().embed_batch(words)
+        except Exception:
+            pass
 
     def get_current_category(self, word: str) -> Optional[str]:
         categories = self._STORE.get_categories_for_word(word)

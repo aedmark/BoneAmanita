@@ -56,9 +56,10 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 376 passed, 0 failed, 1 skipped**, about a minute. Green.
-  Needs `ordvec` from PyPI and `mistral-nemo` in Ollama; a red suite now
-  means something.
+- **Test suite: 391 passed, 0 failed, 5 skipped**, about a minute. Green.
+  Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. Four of the skips
+  are live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that
+  set when touching embeddings or the resonance classifier.
 - **Module boundaries are genuinely clean.** `physics/`, `body/`,
   `brain/`, `phases/`, `mechanics/`, `spores/`, `soul/`, `archetypes/`
   are real separations. Config is externalized to `lore/*.json`. Most
@@ -348,6 +349,26 @@ future session should not treat them as a specification:
   the invariants: the fallback stays a minority, no single category
   dominates it, DEL does not saturate, and at least three zones stay
   reachable.
+- **Word resolution has four stages, in trust order**, and the order
+  matters: grammatical filler (`SOLVENTS`), the curated lexicon plus its
+  inflections, semantic resonance against embedding centroids, then the
+  phonosemantic guess. 81% of ordinary English now resolves without
+  guessing, up from 13%.
+  - **A word with a semantic category must never be a solvent.** The
+    solvent check runs first, so a word in both loses its category
+    silently. `i`/`me`/`we` are the `meat` mass key, `not`/`never` are
+    negation, `very`/`really` are intensifiers, `none`/`without` are the
+    `void` mass key. There is a test.
+  - **Machine-learned words go to `teach()`, never `register_word()`.**
+    `teach` fills the separate capped `LEARNED_VOCAB` hive
+    (`saves/cortex_hive.json`); `register_word` writes `lore/lexicon.json`
+    and would make guesses indistinguishable from your curation. Delete
+    the hive to revert everything the engine has learned.
+  - **Embedding margins need mean centring.** Raw single-word embeddings
+    share a large common component, so everything resembles everything
+    and margins collapse to ~0.03. This is the same compression that made
+    the 0.75 hippocampus edge threshold wrong. Gate on margin, never on
+    absolute similarity.
 - **A mass key with no lexicon category is silently always zero.**
   `social` and `void` were weighed by `_weigh_mass` and had no category,
   so BET was structurally zero for the life of the project. There is now

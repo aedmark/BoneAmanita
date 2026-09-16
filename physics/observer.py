@@ -316,13 +316,31 @@ class QuantumObserver:
         # be non-zero, which made the E dimension structurally dead. The real set
         # is exposed as LexiconService.SOLVENTS.
         solvents = getattr(lex, "SOLVENTS", None) or lex.get("solvents") or set()
-        for w, freq in Counter(clean_words).items():
+        tally = Counter(clean_words)
+
+        # Resolution order, most trustworthy first: grammatical filler, the
+        # curated lexicon and its inflections, semantic resonance against the
+        # category centroids, then the phonosemantic guess. Unknown words are
+        # embedded as one batch rather than one call each.
+        unknown = [
+            w for w in tally if w not in solvents and not lex.get_categories_for_word(w)
+        ]
+        if unknown and hasattr(lex, "warm_resonance"):
+            lex.warm_resonance(unknown)
+
+        for w, freq in tally.items():
             if w in solvents:
                 counts["solvents"] += freq
-            elif cats := lex.get_categories_for_word(w):
+                continue
+            if cats := lex.get_categories_for_word(w):
                 for cat in cats:
                     counts[cat] += freq
-            elif (taste := lex.taste(w)) and taste[0] and taste[1] >= floor:
+                continue
+            if hasattr(lex, "resolve_unknown") and (resolved := lex.resolve_unknown(w)):
+                for cat in resolved:
+                    counts[cat] += freq
+                continue
+            if (taste := lex.taste(w)) and taste[0] and taste[1] >= floor:
                 counts[taste[0]] += freq
         return counts
 

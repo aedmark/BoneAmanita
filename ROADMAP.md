@@ -55,7 +55,8 @@ you whether it ran.
 | **C1** hippocampus | **done**: write path, graph contract, amputation, 11 tests |
 | **A3** receipts | next |
 | **C2** `wing_id` zones | **done**: tagged, scoped, doorway wired, 14 tests |
-| **A5** physics input balance | **done**: all four fixes, 11 tests, scorecard tool |
+| **A5** physics input balance | **done**: all four fixes, scorecard tool |
+| **A6** close the guessing gap | **done**: 13% -> 81% resolved, 37 tests |
 
 Suite: **331 passed, 2 failed, 2 skipped**. Both failures are the
 long-standing environmental ones (no chat model pulled in Ollama; `ordvec`
@@ -630,13 +631,87 @@ keeps solvents out of the general category map, so `lex.get("solvents")`
 is empty by construction, and the tally was reading that instead of
 `LexiconService.SOLVENTS`. The `E` dimension was structurally dead.
 
-### Still true
+### A6. Closing the gap without bloat or dependencies
 
-63% of ordinary English is still unresolved by the lexicon and
-deliberately contributes nothing. That is the honest state: unknown words
-should not be guessed at. Growing `lore/lexicon.json` is the ongoing way
-to raise the signal, and `tools/audit_physics_inputs.py` is the scorecard
-for it.
+The 63% left unresolved after A5 was not one problem. Measured, it was
+three populations wanting three different answers:
+
+```
+                        share of ordinary English
+function words                    39.6%
+inflections of known words         7.1%
+genuinely novel vocabulary        22.1%
+```
+
+**Function words are filler, not unknowns.** `the, a, is, at, and, because`.
+English has roughly 150 and does not acquire new ones, so enumerating the
+closed class is a one-time paste that cannot bloat. `solvents` held 12
+entries and now holds 201. This is also what the `E` dimension has always
+been for, and E was structurally dead until A5.
+
+One trap worth recording: `_tally_categories` checks solvents FIRST, so a
+word that is both filler and semantic loses its category silently. The
+first pass made `i`, `me`, `we` (the `meat` mass key), `not`, `never`
+(negation), `very`, `really` (intensifiers) and `none`, `without` (the
+`void` mass key) into filler and would have killed all of it. **A word
+with a semantic category is never a solvent**, and a test enforces it.
+
+**Morphology costs about twenty lines.** `LexiconStore.get_categories_for_word`
+falls back to stripping inflectional suffixes and looking up the root, so
+`forge` answers for `forging` and `forged`. The file grows in roots, not
+forms, and every root added later inherits the same reach. Cached, with
+invalidation on `_index_word`, because misses are cached too and a word
+learned after a failed lookup would otherwise stay invisible until
+restart.
+
+**The remaining 22% resolves by meaning, using the embedder already
+running.** `mechanics/resonance.py` builds one centroid per curated
+category and assigns unknown words to the nearest, then teaches the
+verdict. No new dependency: arithmetic over vectors from
+`SemanticEmbedder`. No bloat: categories stay curated and small, the
+centroid generalises.
+
+Two details, both measured rather than assumed:
+
+  * **Mean centring is required.** Raw centroids rank correctly and
+    separate uselessly: margins averaged 0.03 and bottomed at 0.001
+    (`afternoon` beat its runner-up by 0.004). Single-word embeddings
+    share a large common component. Subtracting the global mean lifts the
+    average margin to 0.109. Same near-tie compression that made the 0.75
+    hippocampus threshold wrong.
+  * **Gate on margin, not similarity.** After centring, confident cases
+    separate cleanly (glacier/cryo 0.471, night/photo 0.332) from
+    genuinely ambiguous ones (letter 0.001, laughter 0.003). Absolute
+    similarity does not distinguish those. A word between two categories
+    stays unresolved, which is correct: `letter` really is poised between
+    social and sacred.
+
+**Learned words go to `LexiconStore.teach()`, not `register_word`.** That
+machinery already existed and was fully wired (persist, publish
+`MYTHOLOGY_UPDATE`, live-update the index) with nothing ever deciding a
+category; this supplied the missing decider. `teach` puts them in the
+separate `LEARNED_VOCAB` hive, capped at 1000 per category with LRU
+eviction. `register_word` writes `lore/lexicon.json` directly, which
+would make machine guesses indistinguishable from hand curation. Deleting
+`saves/cortex_hive.json` reverts everything the engine ever learned.
+
+### Result
+
+| | before A5 | after A6 |
+|---|---|---|
+| curated lexicon | 13.0% | 34.4% |
+| solvents (filler) | 0% | 39.6% |
+| resonance | 0% | 7.1% |
+| **resolved without guessing** | **13.0%** | **81.2%** |
+| phonosemantic guess | 67.5% | 2.6% |
+| unresolved | 19.5% | 16.2% |
+
+The phonosemantic classifier survives as the offline fallback: steps 1
+and 2 need no server at all, so the degraded path improved too.
+
+16% still unresolved is the honest remainder, and it should stay
+unresolved rather than be guessed at. `tools/audit_physics_inputs.py` is
+the scorecard.
 
 ## C3. Co-regulation (the actual goal)
 

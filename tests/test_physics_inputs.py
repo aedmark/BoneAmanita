@@ -172,5 +172,115 @@ class DimensionBalance(unittest.TestCase):
         )
 
 
+class FunctionWords(unittest.TestCase):
+    """The English closed class is filler, not unclassified vocabulary. It is
+    finite, so enumerating it cannot bloat the lexicon the way an open category
+    would, and it is what the E dimension measures."""
+
+    def setUp(self):
+        self.lexicon = json.load(open("lore/lexicon.json", encoding="utf-8"))
+        self.solvents = {w.lower() for w in self.lexicon["solvents"]}
+
+    def test_common_function_words_are_solvents(self):
+        for word in ("the", "a", "of", "in", "to", "and", "but", "because",
+                     "is", "was", "have", "would", "which", "through"):
+            self.assertIn(word, self.solvents, f"[FAIL] {word!r} is not filler.")
+
+    def test_solvents_never_shadow_a_semantic_category(self):
+        """_tally_categories checks solvents FIRST, so a word in both loses its
+        category silently. `i`, `me`, `we` are the `meat` mass key; `not`,
+        `never` are negation; `very`, `really` are intensifiers; `none`,
+        `without` are the `void` mass key."""
+        semantic = set()
+        for category, words in self.lexicon.items():
+            if category in ("solvents", "antigen_replacements"):
+                continue
+            if isinstance(words, list):
+                semantic |= {str(w).lower() for w in words}
+        collisions = sorted(self.solvents & semantic)
+        self.assertEqual(
+            collisions,
+            [],
+            f"[FAIL] These are both filler and semantic, so their category is "
+            f"silently dropped: {collisions}",
+        )
+
+    def test_embodied_and_negation_words_kept_their_meaning(self):
+        lex = LexiconService()
+        lex.initialize()
+        for word, category in (("i", "meat"), ("me", "meat"), ("we", "meat"),
+                               ("not", "sentiment_negators"),
+                               ("never", "sentiment_negators"),
+                               ("very", "gradient_stop")):
+            self.assertIn(
+                category,
+                lex.get_categories_for_word(word),
+                f"[FAIL] {word!r} lost its {category} classification.",
+            )
+
+
+class Morphology(unittest.TestCase):
+    """Every lexicon entry should cover its inflectional family, so the file
+    grows in roots rather than in forms."""
+
+    def setUp(self):
+        self.lex = LexiconService()
+        self.lex.initialize()
+
+    def test_inflections_resolve_to_their_root(self):
+        for word, category in (
+            ("forging", "constructive"),
+            ("building", "constructive"),
+            ("hammering", "heavy"),
+            ("exploding", "explosive"),
+            ("running", "kinetic"),
+            ("tomatoes", "harvest"),
+            ("concepts", "abstract"),
+        ):
+            self.assertIn(
+                category,
+                self.lex.get_categories_for_word(word),
+                f"[FAIL] {word!r} did not resolve to its root.",
+            )
+
+    def test_unknown_roots_stay_unresolved(self):
+        """Stripping suffixes must not invent a match."""
+        for word in ("xyzzyqq", "blorping", "frobnicated"):
+            self.assertEqual(self.lex.get_categories_for_word(word), set(), word)
+
+    def test_short_stems_are_not_over_stripped(self):
+        """`as`, `is`, `us` must not be read as inflections of a 1-2 char root."""
+        for word in ("as", "us", "res"):
+            self.assertIsInstance(self.lex.get_categories_for_word(word), set)
+
+    def test_a_newly_taught_root_reaches_its_inflections(self):
+        """Regression: misses are cached, so a word learned after a failed
+        lookup would stay invisible until restart. Matters for the
+        self-growing lexicon path."""
+        self.assertEqual(self.lex.get_categories_for_word("sprockets"), set())
+        self.lex._STORE._index_word("sprocket", "heavy")
+        self.assertIn("heavy", self.lex.get_categories_for_word("sprockets"))
+
+
+class OverallResolution(unittest.TestCase):
+    def test_most_of_ordinary_english_is_resolved(self):
+        lex = LexiconService()
+        lex.initialize()
+        solvents = getattr(lex, "SOLVENTS", None) or set()
+        total = resolved = 0
+        for line in CORPUS:
+            for word in lex.clean(line):
+                total += 1
+                if word in solvents or lex.get_categories_for_word(word):
+                    resolved += 1
+        share = resolved / max(1, total)
+        self.assertGreater(
+            share,
+            0.65,
+            f"[FAIL] Only {share:.0%} of ordinary English resolves without "
+            f"guessing. Run tools/audit_physics_inputs.py.",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
