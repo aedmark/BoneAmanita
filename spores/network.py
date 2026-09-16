@@ -11,6 +11,7 @@ from spores.spore_utils import _word_to_vector, _words_to_matrix
 from constants import Prisma
 from core import EventBus, LoreManifest
 from presets import BoneConfig
+from receipts import issue as issue_receipt
 from spores.genetics import LiteraryReproduction
 from spores.io import LocalFileSporeLoader
 from spores.memory import MemoryCore, SubconsciousStrata
@@ -723,9 +724,18 @@ class MycelialNetwork:
         resonance: float = 0.5,
     ) -> list:
         results = []
+        exact_hit = False
         if exact_match := self.hippocampus.retrieve_exact(trigger_word):
+            exact_hit = True
             results.append({"source": "hippocampus", "data": exact_match})
             if scope < 0.3:
+                issue_receipt(
+                    "memory.retrieve_semantic",
+                    "exact hippocampal hit, narrow scope, stopped early",
+                    result_count=len(results),
+                    degraded=False,
+                    inputs={"trigger": trigger_word, "scope": round(float(scope), 3)},
+                )
                 return results
         k_neighbors = max(1, int(scope * 10))
         cortex_results = self.cortex.query_neighborhood(
@@ -742,4 +752,19 @@ class MycelialNetwork:
             results.append({"source": "cortex_radius", "data": radius_data})
 
         results.extend({"source": "cortex", "data": res} for res in cortex_results)
+        issue_receipt(
+            "memory.retrieve_semantic",
+            "exact and semantic recall",
+            result_count=len(results),
+            degraded=False,
+            inputs={
+                "trigger": trigger_word,
+                "exact_hit": exact_hit,
+                "semantic_hits": len(cortex_results),
+                "k": k_neighbors,
+                "scope": round(float(scope), 3),
+                "resonance": round(float(resonance), 3),
+                "query_dim": len(query_vector or []),
+            },
+        )
         return results

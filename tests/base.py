@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 from constants import Prisma
 from core import LoreManifest, TelemetryService
+from receipts import ReceiptLedger
 from main import BoneAmanita
 from spores.embeddings import SemanticEmbedder
 
@@ -56,6 +57,7 @@ class TeeOutput:
 class BoneTestCase(unittest.TestCase):
     def setUp(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
+        ReceiptLedger.reset_instance()
         # Pin the suite to the offline hash backend. The real embedding backends
         # need a reachable server or an optional package, and a test run must not
         # depend on either. `tests/test_embeddings.py` covers the live paths with
@@ -125,13 +127,12 @@ class BoneTestCase(unittest.TestCase):
         print(f"{Prisma.GRN}<<< COMPLETED TEST: {self.id()}{Prisma.RST}\n")
         try:
             if hasattr(self, "real_telemetry"):
-                self.real_telemetry.flush_to_disk()
-                if self.real_telemetry._executor:
-                    self.real_telemetry._executor.shutdown(wait=True)
+                self.real_telemetry.shutdown()
             LoreManifest.get_instance().flush_cache()
         finally:
             sys.stdout = self.original_stdout
             self.tee.close()
+        ReceiptLedger.reset_instance()
         self.lore_patcher.stop()
         self.chronos_patcher.stop()
         self.spore_patcher.stop()

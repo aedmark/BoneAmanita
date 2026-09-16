@@ -16,6 +16,7 @@ from physics.maths import (
 )
 from physics.models import EnergyState, MaterialState, PhysicsPacket, SpatialState
 from presets import BoneConfig
+from receipts import issue as issue_receipt
 from struts import safe_get, safe_set, ux
 
 
@@ -328,20 +329,50 @@ class QuantumObserver:
         if unknown and hasattr(lex, "warm_resonance"):
             lex.warm_resonance(unknown)
 
+        stages = Counter()
         for w, freq in tally.items():
             if w in solvents:
                 counts["solvents"] += freq
+                stages["solvent"] += freq
                 continue
             if cats := lex.get_categories_for_word(w):
                 for cat in cats:
                     counts[cat] += freq
+                stages["lexicon"] += freq
                 continue
             if hasattr(lex, "resolve_unknown") and (resolved := lex.resolve_unknown(w)):
                 for cat in resolved:
                     counts[cat] += freq
+                stages["resonance"] += freq
                 continue
             if (taste := lex.taste(w)) and taste[0] and taste[1] >= floor:
                 counts[taste[0]] += freq
+                stages["taste"] += freq
+                continue
+            stages["unresolved"] += freq
+
+        volume = sum(tally.values())
+        resolved = volume - stages["unresolved"]
+        # `degraded` here means the phonosemantic guesser carried the turn. That
+        # is the state where the physics is real but its inputs are invented,
+        # which is what pinned every conversation to the same zone for a year.
+        guessed = stages["taste"]
+        issue_receipt(
+            "physics.word_resolution",
+            "resolved words to lexicon categories",
+            result_count=resolved,
+            degraded=bool(volume) and guessed > resolved / 2,
+            inputs={
+                "words": volume,
+                "distinct": len(tally),
+                "solvent": stages["solvent"],
+                "lexicon": stages["lexicon"],
+                "resonance": stages["resonance"],
+                "taste": guessed,
+                "unresolved": stages["unresolved"],
+            },
+            detail=f"{guessed} of {volume} guessed from spelling" if guessed else "",
+        )
         return counts
 
     def _tally_categories(self, clean_words: List[str]) -> Counter:

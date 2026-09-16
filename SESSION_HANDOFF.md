@@ -56,7 +56,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 395 passed, 0 failed, 5 skipped**, about a minute. Green.
+- **Test suite: 415 passed, 0 failed, 5 skipped**, about two minutes. Green.
   Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.
@@ -86,6 +86,13 @@ aren't there. See "Claims vs. code" below.
 - **Failures are visible.** Crashes surface with tracebacks, missing
   config is named at boot, a degraded embedder announces itself in
   `/status`.
+- **Subsystems issue receipts.** Seven of them record what they were
+  handed and what came back, every turn, in their own voice. `/diag`
+  prints the turn's receipts plus anything silent, chronically degraded
+  or chronically empty; `tools/audit_receipts.py` prints the same table
+  without booting the organism. `result_count` and `degraded` are set by
+  the code that did the work, never by its caller and never inferred from
+  whether an exception was raised.
 - **The `agents/` docs are unusually disciplined.** `constitution.md`
   with explicit "WHY NOT" blocks is better design documentation than
   most commercial codebases have. They are load-bearing: read them
@@ -131,6 +138,18 @@ measurements; this is the shape of it.
    now uses that instead of the scalar approximation B1 wired in.
 8. **A5 and A6, the physics inputs.** The largest finding, and the only
    one that was not a disconnected wire. See below.
+9. **A3, receipts.** `receipts.py` plus instrumentation in seven
+   subsystems. It found two live bugs on its first real turn, which is
+   the whole case for it. The bigger one: `cycle.py` never handed
+   `regulate()` the utterance it already had, scraping one instead out of
+   a dialogue buffer that is not written until after the model has
+   replied, so the Creative Determinant had been anchoring its subgraph
+   on the PREVIOUS turn every turn, and on nothing at all on the first
+   turn of a session. B3 fixed the solve; this was the separate question
+   of what it was solving about. The smaller one: `_sync_ordvec_indices`
+   returned a bare `False` for four different conditions and its only
+   caller ignored it, so an empty memory surfaced as an `AttributeError`
+   on a `None` index. Each case now raises with its own name.
 
 **A5/A6 is the one to understand if you read only one.** Word category
 counts drive every number in the engine. They came 82% from a
@@ -167,6 +186,16 @@ Three habits came out of that and are worth keeping:
   and the 80% recall assertion were all correct once and silently wrong
   later. When a mechanism is inert, suspect its constants before its
   wiring.
+- **A subsystem that declines to act must say so.** Silence cannot
+  distinguish "correctly gated off" from "dead code", and the second one
+  is what this whole document is about. `cortex.recall` now issues a
+  receipt on its skip path naming which condition stopped it. Copy that
+  wherever a guard returns early.
+- **Collapsing several conditions into one return value throws away the
+  diagnosis.** `_sync_ordvec_indices` returned a bare `False` for four
+  unrelated problems and its only caller ignored it. Prefer a named
+  exception per condition; the cost is one line and the payoff is a
+  receipt that reads as a state rather than a stack trace.
 
 ## Earlier: real embeddings
 
@@ -524,6 +553,7 @@ trusted:
 python tools/audit_handlers.py         # silent handlers, muted severity logs
 python tools/audit_safe_get.py         # runtime safe_get default hit-rate
 python tools/audit_physics_inputs.py   # how much vocabulary the engine knows
+python tools/audit_receipts.py         # which subsystems reported real work
 ```
 
 The short list below is what a session should know without reading it.
@@ -546,12 +576,16 @@ The short list below is what a session should know without reading it.
    this layer was rebuilt to escape. Add roots to `lore/lexicon.json` if
    you want the number lower, and watch it with the physics audit. Do not
    close the gap by loosening a threshold.
-5. **Nothing else is known-broken.** Picking this up cold: make a venv,
+5. **Receipts are honest about work, not about correctness.** A receipt
+   saying `retrieved 3` from a semantically meaningless index is true and
+   still useless. They make the engine auditable, not right. Closing that
+   gap is A4, the state-asserting tests, which is not done.
+6. **Nothing else is known-broken.** Picking this up cold: make a venv,
    install including `ordvec`, pull both Ollama models, run the suite and
-   expect **391 passed, 0 failed, 5 skipped** (the skips are live-backend
+   expect **415 passed, 0 failed, 5 skipped** (the skips are live-backend
    tests behind `BONE_EMBED_LIVE_TEST=1`). Then boot headless in mock
-   mode and confirm `/status` reports the Arcade nominal rather than
-   `DEGRADED`.
+   mode, confirm `/status` reports the Arcade nominal rather than
+   `DEGRADED`, and run `/diag` to see the turn's receipts.
 
 ## Future ideas (not started, no urgency)
 

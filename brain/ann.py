@@ -12,6 +12,7 @@ import faiss
 import numpy as np
 
 from core import EventBus
+from receipts import issue as issue_receipt
 
 
 class HippocampalCache:
@@ -174,6 +175,27 @@ class CerebralIndex:
             or self.total_nodes == 0
             or len(query_vector) != self.dimension
         ):
+            # Each of these is a different illness and they read identically
+            # from the outside: an empty list. The receipt separates them.
+            issue_receipt(
+                "cortex.query_neighborhood",
+                "declined to search",
+                result_count=0,
+                degraded=True,
+                inputs={
+                    "trained": self.is_trained,
+                    "total_nodes": self.total_nodes,
+                    "query_dim": len(query_vector),
+                    "index_dim": self.dimension,
+                },
+                detail=(
+                    "index untrained"
+                    if not self.is_trained
+                    else "index empty"
+                    if self.total_nodes == 0
+                    else "query dimension does not match the index"
+                ),
+            )
             return []
         target_wing, is_lateral = None, False
         cortisol = 0.0
@@ -219,6 +241,20 @@ class CerebralIndex:
             resonance = 1.0 / (1.0 + float(dist))
             if resonance >= resonance_threshold:
                 results.append({**payload, "resonance": resonance})
+        issue_receipt(
+            "cortex.query_neighborhood",
+            "searched the cortical index",
+            result_count=len(results),
+            degraded=False,
+            inputs={
+                "k": k,
+                "wing": target_wing or "GLOBAL",
+                "lateral": is_lateral,
+                "resonance_threshold": round(float(resonance_threshold), 3),
+                "total_nodes": self.total_nodes,
+                "cortisol": round(cortisol, 3),
+            },
+        )
         return results
 
     def get_local_mass_radius(

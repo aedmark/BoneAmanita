@@ -268,6 +268,7 @@ class CommandProcessor:
         return True
 
     def _cmd_diag(self, _parts):
+        self._report_receipts()
         try:
             telemetry = getattr(self.interface.eng, "telemetry", None)
             if not telemetry:
@@ -280,6 +281,36 @@ class CommandProcessor:
         except Exception as e:
             self.interface.log(f"{self.P.RED}Diag failure: {e}{self.P.RST}")
         return True
+
+    def _report_receipts(self):
+        """Print last turn's receipts, then the three ways a subsystem lies by omission.
+
+        Silent, chronically degraded and chronically empty are different
+        illnesses that produce the same symptom (fluent prose), which is why
+        they are listed separately rather than rolled into one health score.
+        """
+        from receipts import ReceiptLedger
+
+        P = self.P
+        card = ReceiptLedger.get_instance().scorecard()
+        self.interface.log(
+            f"{P.CYN}=== RECEIPTS (turn {card['turn']}, {card['total']} held) ==={P.RST}"
+        )
+        if not card["this_turn"]:
+            self.interface.log(f"{P.YEL}  No subsystem reported work this turn.{P.RST}")
+        for receipt in card["this_turn"]:
+            colour = P.YEL if receipt.degraded else (P.GRY if receipt.is_empty() else P.GRN)
+            self.interface.log(f"{colour}  {receipt}{P.RST}")
+            if receipt.inputs:
+                detail = ", ".join(f"{k}={v}" for k, v in receipt.inputs.items())
+                self.interface.log(f"{P.GRY}      given: {detail}{P.RST}")
+        for label, names, colour in (
+            ("NEVER REPORTED (wired to nothing, or never called)", card["silent"], P.RED),
+            ("ALWAYS DEGRADED (running on a fallback every time)", card["chronic_degraded"], P.YEL),
+            ("ALWAYS EMPTY (runs, returns nothing, ever)", card["chronic_empty"], P.YEL),
+        ):
+            if names:
+                self.interface.log(f"{colour}  {label}: {', '.join(names)}{P.RST}")
 
     def _cmd_mode(self, parts):
         if len(parts) < 2:

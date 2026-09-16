@@ -34,6 +34,7 @@ from mechanics.tools import TheSubstrate
 from physics import NaviSADProtocol, ZoneInertia
 from physics.models import PhysicsPacket
 from presets import BoneConfig, BonePresets
+from receipts import CORE_SUBSYSTEMS, ReceiptLedger
 from machine.pacemaker import ThePacemaker
 from protocols import ChronosKeeper, GriefProtocol
 from struts import dump_state, safe_get, safe_set, ux
@@ -100,6 +101,7 @@ class BoneAmanita:
         self.stabilizer = ZoneInertia(config_ref=self.config)
         self.telemetry = TelemetryService.get_instance(config_ref=self.config)
         self.events.telemetry = self.telemetry
+        self._wire_receipts()
         self.system_health = SystemHealth(events=self.events)
         self.observer = TheObserver(config_ref=self.config)
         self.system_health.link_observer(self.observer)
@@ -116,6 +118,22 @@ class BoneAmanita:
         self.telemetry.kernel_hash = self.kernel_hash
         self._validate_state()
         self._apply_boot_mode()
+
+    def _wire_receipts(self):
+        """Open the roll call and route receipts into the telemetry stream.
+
+        The ledger is deliberately ignorant of telemetry: `receipts.py` imports
+        no engine code so that any subsystem can report without risking an
+        import cycle. Delivery is installed here instead, which is also the only
+        place that knows telemetry exists yet.
+        """
+        ledger = ReceiptLedger.get_instance()
+        for name in CORE_SUBSYSTEMS:
+            ledger.expect(name)
+        telemetry = self.telemetry
+        ledger.sink = lambda receipt: telemetry.record_event(
+            {"event": "RECEIPT", **receipt.to_dict()}
+        )
 
     def _load_system_prompts(self):
         try:
@@ -774,6 +792,7 @@ class BoneAmanita:
         self.chronos.perform_shutdown()
         if hasattr(self, "telemetry") and self.telemetry:
             self.telemetry.shutdown()
+            ReceiptLedger.get_instance().sink = None
 
 if __name__ == "__main__":
     import sys

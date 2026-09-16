@@ -18,7 +18,7 @@ OpenAI-compatible /v1/embeddings endpoint plus an optional local transformer.
 No orchestration framework is introduced and the control loop stays ours.
 
 IMPORT DISCIPLINE: this module imports nothing from BoneAmanita except
-`constants`. Both `struts._word_to_vector` and `spores.spore_utils._word_to_vector`
+`constants` and `receipts`, both of which are leaves that import no engine code. Both `struts._word_to_vector` and `spores.spore_utils._word_to_vector`
 delegate here, and `struts` is imported by nearly every module in the tree, so a
 project-level import would close a cycle.
 """
@@ -32,6 +32,7 @@ from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Sequence
 
 from constants import Prisma
+from receipts import issue as issue_receipt
 
 LEGACY_HASH_DIM = 8
 
@@ -359,7 +360,23 @@ class SemanticEmbedder:
                 for slot in pending_slots[text]:
                     results[slot] = final
 
-        return [r if r is not None else [0.0] * self.dimension for r in results]
+        vectors = [r if r is not None else [0.0] * self.dimension for r in results]
+        if pending:
+            # Only backend-touching sweeps issue a receipt; a pure cache hit did
+            # no work and a receipt for it would drown the ones that matter.
+            issue_receipt(
+                "embeddings.embed_batch",
+                f"vectorized via {self.backend}",
+                result_count=len(pending),
+                degraded=self.degraded,
+                inputs={
+                    "requested": len(cleaned),
+                    "cache_hits": len(cleaned) - len(pending),
+                    "dimension": self.dimension,
+                },
+                detail=self.detail if self.degraded else "",
+            )
+        return vectors
 
     def describe(self) -> str:
         state = "DEGRADED" if self.degraded else "NOMINAL"

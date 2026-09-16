@@ -45,6 +45,7 @@ from phases import (
     _safe_dict,
 )
 from physics import CycleStabilizer
+from receipts import ReceiptLedger
 from physics.models import PhysicsPacket
 from struts import safe_get, ux, ux_format
 
@@ -587,6 +588,7 @@ class GeodesicOrchestrator:
         self, user_message: str, is_system: bool = False
     ) -> CycleContext:
         cycle_id = str(uuid.uuid4())[:8]
+        ReceiptLedger.get_instance().begin_turn()
         self.eng.telemetry.start_cycle(cycle_id)
         ctx = None
         try:
@@ -693,8 +695,24 @@ class GeodesicOrchestrator:
             )
             mem_core = getattr(getattr(self.eng, "mind", None), "mem", None)
             cortex = getattr(self.eng, "cortex", None)
-            implicit_text = ""
-            if cortex:
+            # The utterance the Creative Determinant anchors its subgraph on.
+            #
+            # This was scraped out of the cortex dialogue buffer, and the scrape
+            # could never see the current turn. The buffer is only written from
+            # inside the cortex response path, by
+            # `_update_history(user_input, final_output)`, which cannot run
+            # until the model has already replied. So the PDE solved around the
+            # PREVIOUS utterance on every turn, and fell back to PID entirely on
+            # the first turn of every session, one turn behind the conversation
+            # it was steering. Nothing said so: a PID loop and a solved manifold
+            # both return two floats.
+            #
+            # A receipt reporting `user_text=False` while `memory_core=True` is
+            # what surfaced it, which is the whole argument for A3 in one line.
+            implicit_text = "" if ctx.is_system_event else (ctx.input_text or "").strip()
+            if not implicit_text and cortex:
+                # A system-driven turn has no human utterance of its own, so the
+                # last real one in the buffer is the correct anchor for it.
                 d_buf = getattr(cortex, "dialogue_buffer", None)
                 if isinstance(d_buf, (list, deque)):
                     match_prefix = (f"{ctx.user_name}:", "User:", "Traveler:")

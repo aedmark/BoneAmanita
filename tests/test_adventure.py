@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 from constants import Prisma
 from core import LoreManifest, TelemetryService
+from receipts import ReceiptLedger
 from main import BoneAmanita
 
 
@@ -55,6 +56,7 @@ class TeeOutput:
 class BoneTestCase(unittest.TestCase):
     def setUp(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
+        ReceiptLedger.reset_instance()
         self.original_stdout = sys.stdout
         self.tee = TeeOutput(sys.stdout, "test_output_full.log")
         sys.stdout = self.tee
@@ -126,13 +128,12 @@ class BoneTestCase(unittest.TestCase):
         print(f"{Prisma.GRN}<<< COMPLETED TEST: {self.id()}{Prisma.RST}\n")
         try:
             if hasattr(self, "real_telemetry"):
-                self.real_telemetry.flush_to_disk()
-                if self.real_telemetry._executor:
-                    self.real_telemetry._executor.shutdown(wait=True)
+                self.real_telemetry.shutdown()
             LoreManifest.get_instance().flush_cache()
         finally:
             sys.stdout = self.original_stdout
             self.tee.close()
+        ReceiptLedger.reset_instance()
         self.lore_patcher.stop()
         self.chronos_patcher.stop()
         self.spore_patcher.stop()

@@ -19,6 +19,7 @@ import numpy as np
 from constants import Prisma, RealityLayer
 from physics.models import PhysicsPacket, SharedDynamics, UserInferredState
 from presets import BoneConfig
+from receipts import issue as issue_receipt
 from struts import safe_get, ux, ux_format
 
 try:
@@ -661,15 +662,25 @@ class CyberneticGovernor:
         return self._cached_vectorizer
 
     def _sync_ordvec_indices(self, memory_core: Any):
-        if not ORDVEC_AVAILABLE or not memory_core or not hasattr(memory_core, "graph"):
-            return False
+        """Build the ordvec indexes over the memory graph.
+
+        Raises rather than returning False. Every reason this can fail is worth
+        telling apart (an optional dependency missing, a memory with nothing in
+        it yet, a dead vectorizer), and the only caller cannot act on a bare
+        boolean: it goes straight on to dereference the indexes this method was
+        supposed to have built.
+        """
+        if not ORDVEC_AVAILABLE:
+            raise ValueError("ordvec is not installed; the memory manifold cannot be indexed.")
+        if not memory_core or not hasattr(memory_core, "graph"):
+            raise ValueError("Memory core exposes no graph to index.")
         nodes = list(memory_core.graph.keys())
         if self.cached_nodes == nodes and self.memory_rq is not None:
             return True
 
         vectorizer = self._get_vectorizer()
         if not vectorizer:
-            return False
+            raise ValueError("Vectorizer unavailable; cannot embed memory nodes.")
 
         matrix = []
         valid_nodes = []
@@ -679,7 +690,9 @@ class CyberneticGovernor:
                 matrix.append(vec)
                 valid_nodes.append(node)
         if len(matrix) < 3:
-            return False
+            raise ValueError(
+                f"Memory holds {len(matrix)} vectorizable node(s); the Laplacian needs at least 3."
+            )
         fp32_matrix = np.ascontiguousarray(matrix, dtype=np.float32)
         # ordvec indexes are constructed with a DIMENSION and then fed vectors.
         # This passed the matrix straight to the constructor, where `dim` is
@@ -742,12 +755,42 @@ class CyberneticGovernor:
         user_text="",
     ) -> Tuple[float, float]:
         if not memory_core or not user_text:
+            if memory_core or user_text:
+                # Exactly one of the two arrived. That is a wiring fault at the
+                # call site, not a caller who wanted a PID loop.
+                issue_receipt(
+                    "governor.creative_determinant",
+                    "PID fallback, incomplete inputs",
+                    result_count=0,
+                    degraded=True,
+                    inputs={
+                        "memory_core": bool(memory_core),
+                        "user_text": bool(user_text),
+                    },
+                    detail=(
+                        "no utterance to anchor the subgraph on"
+                        if memory_core
+                        else "no memory core to build a Laplacian from"
+                    ),
+                )
             return self._pid_fallback(physics, dt, endocrine_state)
         try:
             return self._graph_regulation(
                 physics, dt, memory_core, user_text, endocrine_state
             )
         except Exception as e:
+            # This is the handler that hid the Creative Determinant for the
+            # life of the project: it swallowed a constructor TypeError every
+            # turn and served a PID loop wearing the PDE's skin. The receipt is
+            # what makes that state impossible to hold silently again.
+            issue_receipt(
+                "governor.creative_determinant",
+                "PID fallback, graph solve raised",
+                result_count=0,
+                degraded=True,
+                inputs={"nodes_cached": len(getattr(self, "cached_nodes", []) or [])},
+                detail=f"{type(e).__name__}: {e}",
+            )
             logger.warning(f"{Prisma.YEL}Graph regulation failed, falling back to PID: {e}{Prisma.RST}")
             return self._pid_fallback(physics, dt, endocrine_state)
 
@@ -809,6 +852,18 @@ class CyberneticGovernor:
         b_mean = float(np.mean(beta_b))
         phi_norm_sq = np.dot(Phi, Phi) + 1e-8
         self.last_lam1 = float((Phi.T @ L_matrix @ Phi) / phi_norm_sq) - b_mean
+        issue_receipt(
+            "governor.creative_determinant",
+            "solved the elliptic BVP on the memory subgraph",
+            result_count=N_dim,
+            degraded=False,
+            inputs={
+                "subgraph_nodes": N_dim,
+                "edges": int(np.count_nonzero(W)),
+                "a": round(a_scalar, 4),
+            },
+            detail=f"lam1={self.last_lam1:+.4f} b={b_mean:+.4f}",
+        )
         self.last_b = b_mean
         self.last_a = a_scalar
         self.last_sol = "nontrivial" if b_mean > 0.1 else "trivial"

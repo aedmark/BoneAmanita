@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 
 from core import EventBus, JSONEncoder, Prisma
 from presets import BoneConfig
+from receipts import issue as issue_receipt
 from struts import safe_get, ux, ux_format
 
 
@@ -509,23 +510,38 @@ class PromptComposer:
         # heat proportional to |lambda_1|. The tag never reaches the model.
         lam_1 = phys_ref.get("cd_lambda_1") if isinstance(phys_ref, dict) else None
         cd_block = f"<cd_lambda_1>{float(lam_1):.4f}</cd_lambda_1>" if lam_1 is not None else ""
-        return "\n".join(
-            filter(
-                None,
-                [
-                    "=== SYSTEM KERNEL ===",
-                    "\n".join(style_notes),
-                    vsl_hijack,
-                    system_injection,
-                    shared_reality_block,
-                    dialogue_block,
-                    mode_trigger,
-                    input_block,
-                    entity_prefix,
-                    cd_block,
-                ],
-            )
+        blocks = [
+            ("kernel", "=== SYSTEM KERNEL ==="),
+            ("persona", "\n".join(style_notes)),
+            ("vsl_hijack", vsl_hijack),
+            ("directives", system_injection),
+            ("shared_reality", shared_reality_block),
+            ("dialogue", dialogue_block),
+            ("mode_trigger", mode_trigger),
+            ("input", input_block),
+            ("entity_prefix", entity_prefix),
+            ("thermal_lock", cd_block),
+        ]
+        parts = [text for _, text in blocks if text]
+        prompt = "\n".join(parts)
+        # The composer is the only place the whole turn converges, so its
+        # receipt is the one that says whether the physics reached the model at
+        # all. A missing thermal lock means the Creative Determinant ran (or did
+        # not) and its answer was dropped on the floor between here and there.
+        issue_receipt(
+            "composer.compose",
+            "assembled the system prompt",
+            result_count=len(parts),
+            degraded=lam_1 is None,
+            inputs={
+                "chars": len(prompt),
+                "directives": len(style_notes),
+                "mode": active_mode_name,
+                "blocks": [name for name, text in blocks if text],
+            },
+            detail="" if lam_1 is not None else "no cd_lambda_1 on the physics packet",
         )
+        return prompt
 
     def _build_persona_block(
         self,

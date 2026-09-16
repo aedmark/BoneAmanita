@@ -14,6 +14,7 @@ from brain.linear_cortex import LinearCortexRouter
 from brain.mind import DreamEngine, NeurotransmitterModulator
 from constants import Prisma
 from core import DecisionCrystal, EventBus, LoreManifest, TelemetryService
+from receipts import issue as issue_receipt
 from mechanics.dspycritic import DSPyCritic
 from mechanics.pragmatics import ThePragmatist
 from mechanics.projector import beautify_thoughts
@@ -1080,6 +1081,14 @@ class TheCortex:
         mem = self.svc.mind_memory
         resonance = max(0.2, 0.8 - omega_r)
         if not hasattr(mem, "retrieve_semantic"):
+            issue_receipt(
+                "cortex.recall",
+                "semantic-only fallback, no mycelial network attached",
+                result_count=0,
+                degraded=True,
+                inputs={"mind_memory": type(mem).__name__},
+                detail="mind_memory has no retrieve_semantic; exact recall skipped",
+            )
             return cortex_mem.query_neighborhood(
                 cortex_mem.embed(query_text),
                 k=2,
@@ -1104,6 +1113,19 @@ class TheCortex:
                 nodes.append(data.get("meta") or data)
             elif source == "cortex" and isinstance(data, dict):
                 nodes.append(data)
+        issue_receipt(
+            "cortex.recall",
+            "unwrapped recall hits into memory nodes",
+            result_count=len(nodes),
+            degraded=False,
+            inputs={
+                "raw_hits": len(hits),
+                "clean_words": len(clean_words),
+                "wing": phys.get("wing_id", "GLOBAL"),
+                "scope": round(float(scope_val), 3),
+                "resonance": round(float(resonance), 3),
+            },
+        )
         return nodes
 
     def _attach_wing(self, phys: Dict[str, Any]) -> None:
@@ -1269,6 +1291,38 @@ class TheCortex:
                 shadow_nodes = self._recall(
                     query_text, phys, scope_val, omega_r, cortex_mem
                 )
+            else:
+                # Silence from `cortex.recall` is otherwise ambiguous between
+                # "correctly declined" and "dead code", which is exactly the
+                # distinction the receipts exist to draw.
+                issue_receipt(
+                    "cortex.recall",
+                    "declined to recall",
+                    result_count=0,
+                    degraded=False,
+                    inputs={
+                        "index_trained": bool(getattr(cortex_mem, "is_trained", False)),
+                        "has_query": bool(query_text),
+                        "scope": round(scope_val, 3),
+                        "depth": round(depth_val, 3),
+                    },
+                    detail=(
+                        "no cortical index attached"
+                        if not cortex_mem
+                        else "index untrained, nothing has been stored yet"
+                        if not getattr(cortex_mem, "is_trained", False)
+                        else "nothing to query with"
+                    ),
+                )
+        else:
+            issue_receipt(
+                "cortex.recall",
+                "declined to recall",
+                result_count=0,
+                degraded=False,
+                inputs={"scope": round(scope_val, 3), "depth": round(depth_val, 3)},
+                detail="scope and depth both below the 0.6 recall threshold",
+            )
             if (
                 not shadow_nodes
                 and hasattr(self.svc.mind_memory, "graph")

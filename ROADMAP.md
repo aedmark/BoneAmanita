@@ -54,16 +54,19 @@ you whether it ran.
 | **A1b** unmute severity logs | **done**: 25 sites fixed, 0 remain, lint test added |
 | **A1** strict config + boot manifest | **done**: 10 keys promoted, audit wired into genesis |
 | **C1** hippocampus | **done**: write path, graph contract, amputation, 11 tests |
-| **A3** receipts | next |
+| **A3** receipts | **done**: ledger, roll call, 7 subsystems, `/diag`, 20 tests |
 | **C2** `wing_id` zones | **done**: tagged, scoped, doorway wired, 14 tests |
 | **A5** physics input balance | **done**: all four fixes, scorecard tool |
 | **A6** close the guessing gap | **done**: 13% -> 81% resolved, 37 tests |
 | **B3** the manifold | **done**: was built and broken; PDE solves, 395 tests |
 | **B4** make the credits true | **done**: all three overclaims corrected |
 
-Suite: **331 passed, 2 failed, 2 skipped**. Both failures are the
-long-standing environmental ones (no chat model pulled in Ollama; `ordvec`
-not installed), unchanged in message from before this work.
+Next: **A2**, retire the silent handlers, including the ones in
+`spores/embeddings.py`, plus the regression lint.
+
+Suite: **415 passed, 5 skipped**. The skips are the environmental ones (no
+chat model pulled in Ollama). Re-run `tools/audit_receipts.py` after touching
+any instrumented subsystem.
 
 ---
 
@@ -200,10 +203,14 @@ Triage all 73 into three buckets:
 non-test source, so this does not silently regrow. The AST script used
 for the count above is the basis for it.
 
-## A3. Receipts
+## A3. Receipts, **DONE**
 
 The highest-leverage item in this track, because it is what would have
 caught every subsystem in the table above.
+
+**It caught two on its first real turn.** Both are recorded under "What it
+found" below. Neither was crashing, neither was logged, and neither was
+visible in the prose.
 
 ### Why not just a liveness flag
 
@@ -257,16 +264,81 @@ The point is not that receipts raise alarms. It is that a subsystem
 cannot produce a healthy-looking record of unhealthy work without
 someone writing a deliberate lie into the receipt line.
 
-### Scope
+### As built
 
-- `TelemetryService` already records events and already has the ring
-  buffer; receipts are a typed event, not new infrastructure.
-- `/diag` reads receipts instead of flags: last turn's receipts, any
-  subsystem with no receipt this session, any subsystem whose receipts
-  are consistently `degraded` or `result_count == 0`.
-- Boot self-test runs one synthetic turn and prints the receipt table.
-  A subsystem missing from it is dead; one reporting zeros is wired to
-  nothing.
+`receipts.py` holds `Receipt` and `ReceiptLedger`. It imports no engine
+code at all, so any subsystem can report without risking an import cycle;
+`main._wire_receipts` installs a sink that forwards each receipt into
+`TelemetryService` as a typed event, which is the only place that knows
+telemetry exists. `cycle._execute_core_cycle` calls `begin_turn()`, so
+every receipt is attributed to the turn that produced it.
+
+`CORE_SUBSYSTEMS` is the roll call: the seven subsystems that have agreed
+to report. `tests/test_receipts.py::TestRollCall` parses the tree with
+`ast` and fails if the roll call and the actual `issue_receipt` call sites
+drift apart in either direction. A name on the list that nothing issues
+would read as permanently silent and turn the signal into noise; a
+subsystem issuing under a name not on the list would go silent one day
+with nothing watching.
+
+`/diag` reports last turn's receipts, then the three ways a subsystem lies
+by omission, kept separate because they are different illnesses with the
+same symptom:
+
+| | meaning |
+|---|---|
+| **silent** | expected to report, never did; wired to nothing, or never called |
+| **chronic degraded** | ran every time, on a fallback path every time |
+| **chronic empty** | ran every time, returned nothing every time |
+
+`tools/audit_receipts.py` drives the instrumented subsystems over a
+synthetic utterance and prints the same table without booting the
+organism.
+
+### What it found
+
+Two bugs on the first real turn, which is the entire argument for the item.
+
+**1. The Creative Determinant was solving one turn behind the conversation.**
+`cycle.py` did not pass `regulate()` the utterance it already had. It
+scraped one back out of the cortex dialogue buffer by prefix match. That
+buffer is only written from inside the cortex response path, by
+`_update_history(user_input, final_output)`, which cannot run until the
+model has already replied. So the scrape could never see the current turn:
+the PDE anchored its subgraph on the PREVIOUS utterance every turn, and
+fell back to PID entirely on the first turn of every session. B3 fixed the
+solve; this is the separate question of what it was solving about, and the
+answer was "the thing you said before this one". A PID loop and a solved
+manifold both return two floats, so nothing anywhere could have said so.
+The receipt reporting `memory_core=True, user_text=False` is what surfaced
+it. Fixed: the turn's own text is used, with the buffer scrape kept for
+system-driven turns, which have no human utterance of their own.
+
+**2. `_sync_ordvec_indices` collapsed four conditions into a bare `False`.**
+ordvec missing, no memory core, no vectorizer, and fewer than three
+vectorizable nodes all returned the same value, and the only caller ignored
+it before dereferencing an index that was therefore still `None`. The first
+receipt read `AttributeError: 'NoneType' object has no attribute
+'top_m_candidates'`, which looks like a code fault and is usually just an
+empty memory. Each case now raises a named `ValueError`, so the receipt
+reads `Memory holds 0 vectorizable node(s); the Laplacian needs at least 3`.
+
+A third thing turned up that was not a bug and is worth recording anyway:
+`cortex.recall` was silent on a fresh engine because it is correctly gated
+behind `is_trained`. Silence could not distinguish that from dead code, so
+the gate now issues a receipt saying it declined and why. That is the
+pattern to copy: a subsystem that chose not to act should say so, because
+the alternative is indistinguishable from a subsystem that could not.
+
+### A note on the test harness
+
+`tests/base.py` and `tests/test_adventure.py` shut telemetry down by
+reaching past its public API into `_executor`, which left a service that
+reported itself enabled and raised on the next write. Nothing wrote to it
+after teardown, so the inconsistency was invisible until the receipt sink
+outlived the engine that installed it. Both now call
+`TelemetryService.shutdown()`, and both reset the ledger singleton between
+tests.
 
 ### What it does not do
 
@@ -878,9 +950,9 @@ shippable and each makes the next one verifiable.
    and stops the whole class of bug.
 4. ~~**C1**: connect the hippocampus~~, **done**. Explicitly requested;
    REM consolidation and cortisol amputation both work now.
-5. **A3**: receipts. The permanent fix for the failure mode that
-   produced this entire document: a subsystem cannot report healthy work
-   it did not do.
+5. ~~**A3**: receipts~~, **done**. The permanent fix for the failure mode
+   that produced this entire document: a subsystem cannot report healthy
+   work it did not do. Found two live bugs on its first turn.
 6. ~~**C2**: populate `wing_id`~~ **done**. Cheap, compounding.
 7. **A2**: retire the silent handlers, including mine in
    `spores/embeddings.py`, plus the regression lint.
