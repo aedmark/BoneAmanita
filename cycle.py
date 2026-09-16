@@ -716,6 +716,20 @@ class GeodesicOrchestrator:
             cur_d = float(getattr(ctx.physics, "narrative_drag", 0.0))
             ctx.physics.voltage = max(0.0, cur_v + force_v)
             ctx.physics.narrative_drag = max(0.0, cur_d + force_d)
+            # Carry the governor's principal eigenvalue onto the packet while it
+            # is still fresh. This is the real one: a Rayleigh quotient over the
+            # graph Laplacian of the memory subgraph, from the Creative
+            # Determinant solve in _graph_regulation. It used to surface only in
+            # the post-turn snapshot, which is after the cortex has already
+            # composed the prompt, so the thermal lock could not see it and fell
+            # back to a scalar approximation of the same quantity.
+            if self.eng.governor is not None:
+                ctx.physics.lam1 = float(
+                    getattr(self.eng.governor, "last_lam1", 0.0) or 0.0
+                )
+                ctx.physics.lam1_solution = str(
+                    getattr(self.eng.governor, "last_sol", "") or ""
+                )
             self._evaluate_systemic_feedback(
                 user_message if not is_system else "(Waiting)", ctx
             )

@@ -1121,16 +1121,37 @@ class TheCortex:
     def _attach_principal_eigenvalue(self, phys: Dict[str, Any]) -> None:
         """Flatten the Creative Determinant eigenvalue onto the physics dict.
 
-        The CD fields live under the nested `energy` block; the composer needs a
-        single scalar to emit as <cd_lambda_1>, which LLMInterface.generate reads
-        to set the thermal lock. Computing it here keeps the physics in
-        physics/models.py and the plumbing in one place.
+        The composer emits this as <cd_lambda_1>, which LLMInterface.generate
+        reads to set the thermal lock: lambda_1 >= 0 collapses generation to
+        deterministic logic, lambda_1 < 0 opens heat.
+
+        Two eigenvalues exist and they are not equally good.
+
+        `energy.lam1` is the real one: a Rayleigh quotient
+        (Phi^T L Phi)/(Phi^T Phi) - b_mean taken over the Laplacian of the
+        memory subgraph, from CyberneticGovernor._graph_regulation solving the
+        nonlinear elliptic BVP by Picard iteration. Prefer it whenever a solve
+        has actually happened.
+
+        The scalar `-beta * (kappa*gamma - lambda*mu)` is the fallback. It states
+        Theorem 3.16's sign condition correctly but over three per-turn scalars
+        rather than a field on a manifold, so it cannot see memory structure at
+        all. It is what runs on a cold first turn, before there is enough
+        dialogue history for the governor to build a subgraph, and whenever the
+        solve declines to converge.
         """
         energy = phys.get("energy")
         if not isinstance(energy, dict):
             return
         cd_cfg = safe_get(self.cfg, "CD", {})
         beta = float(safe_get(cd_cfg, "BETA", 1.0))
+
+        solved = float(energy.get("lam1", 0.0) or 0.0)
+        if solved != 0.0:
+            phys["cd_lambda_1"] = solved
+            phys["cd_lambda_1_source"] = "graph_laplacian"
+            return
+
         phys["cd_lambda_1"] = principal_eigenvalue(
             kappa=float(energy.get("kappa", 0.0)),
             gamma=float(energy.get("gamma", 0.0)),
@@ -1140,6 +1161,7 @@ class TheCortex:
             ),
             beta=beta,
         )
+        phys["cd_lambda_1_source"] = "scalar_fallback"
 
     @staticmethod
     def _label_shadow_node(node: Any) -> str:

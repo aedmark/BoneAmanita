@@ -14,7 +14,7 @@ Three tracks, in dependency order:
 
 ## The thesis: all three problems are one problem
 
-Ten times now, a subsystem has been found doing nothing while looking
+Eleven times now, a subsystem has been found doing nothing while looking
 perfectly healthy:
 
 | Subsystem | How it was dead | How long |
@@ -29,6 +29,7 @@ perfectly healthy:
 | `HippocampalCache` | wired readers, no writer; cache permanently empty | unknown |
 | `get_graph()` consumers | all three asked for `.adj`; it returns a plain dict | unknown |
 | Edge threshold `0.75` | a hash-vector constant, above every real embedding similarity | since embeddings |
+| The CD PDE solve | ordvec indexes built with the wrong constructor; every call raised into a PID fallback | since inception |
 
 None of these produced an error, a log line, or a test failure. They
 could not have: **the engine's only output is prose, and prose looks the
@@ -36,7 +37,7 @@ same whether the physics ran or returned a default.** A crash is a gift
 here; silence is the expensive failure mode. Every one of them was found
 by looking, not by anything the engine said.
 
-All ten are now fixed: the first two in `7e90a74`, the rest in the work
+All eleven are now fixed: the first two in `7e90a74`, the rest in the work
 logged under Status below. Three of them were found only because fixing
 the one above them removed the cover it was hiding under.
 
@@ -57,6 +58,8 @@ you whether it ran.
 | **C2** `wing_id` zones | **done**: tagged, scoped, doorway wired, 14 tests |
 | **A5** physics input balance | **done**: all four fixes, scorecard tool |
 | **A6** close the guessing gap | **done**: 13% -> 81% resolved, 37 tests |
+| **B3** the manifold | **done**: was built and broken; PDE solves, 395 tests |
+| **B4** make the credits true | **done**: all three overclaims corrected |
 
 Suite: **331 passed, 2 failed, 2 skipped**. Both failures are the
 long-standing environmental ones (no chat model pulled in Ollama; `ordvec`
@@ -356,11 +359,12 @@ and I was wrong about it.** What is actually present and live:
 coherence index, contradiction), not placeholders. So the metabolic half
 of the CD framework is genuinely load-bearing.
 
-What is *not* true is `credits.txt`'s "mathematically verified Partial
-Differential Equations" and "lean4 certified algorithms under the hood"
-(the latter in `docs/The Hypervisor/README.MD`). There is no Lean
-verification in this repo, and the manifold is a single scalar triple
-per turn rather than a field. Both claims become defensible after B2–B3.
+`credits.txt` claimed "mathematically verified Partial Differential
+Equations" and `docs/README.MD` claimed "lean4 certified algorithms under
+the hood". Both claimed the verification for BoneAmanita. The verified
+code is Spence's: `ordvec` is Lean 4 verified and the Creative
+Determinant has its own formalisation, but our Python implementation of
+the equations carries no proofs of its own. Corrected in **B4**.
 
 ## B1. Emit λ₁ (do this first, it is nearly free)
 
@@ -405,36 +409,105 @@ at `Project-Navi/cd-formalization` for the Lean 4 proofs. That is what
 makes "verified" an honest word: not that this repo proves anything, but
 that it implements something proved elsewhere and says exactly where.
 
-## B3. Build the actual manifold, and why this was impossible before
+## B3. The manifold, **which already existed and was broken**
 
-The CD framework is a field theory on a compact Riemannian manifold. In
-BoneAmanita, M should be the conversation's own semantic manifold, with
-κ, γ, μ as fields over it rather than three scalars per turn.
+**Correcting this entry.** It previously said the manifold had to be
+built, called it the largest single piece of work in the document, and
+described building a graph Laplacian from embedding similarity as future
+work. That was wrong. `CyberneticGovernor._graph_regulation` in `core.py`
+had been doing all of it since before this project was picked back up:
 
-**This is the payoff from the embeddings work, and the reason these two
-tracks are ordered this way.** Building a graph Laplacian requires a
-meaningful notion of distance between memories. Under SHAKE-256 that
-distance was noise, so there was no manifold to solve on and no honest
-way to build one. With real embeddings there is: nodes are memories,
-edge weights come from embedding similarity (`HippocampalCache.get_graph`
-already does cosine thresholding at 0.75), and `L` is the resulting
-graph Laplacian.
+- ordvec selects a subgraph of memory nodes near the current utterance
+- the weighted adjacency comes from the memory graph's real edges,
+  symmetrised as `W = max(W, W^T)`
+- the graph Laplacian is formed as `L = D - W`
+- `b` comes from the ordvec similarity scores, scaled by narrative drag
+- `_solve_nd_picard` solves the nonlinear elliptic BVP by Picard iteration
+- λ₁ is taken as a Rayleigh quotient, `(Phi^T L Phi)/(Phi^T Phi) - b_mean`
+- Φ sets the engine's target voltage and target drag, and the sign of λ₁
+  selects the macro policy
 
-Then κ/γ/μ become per-node fields (care, coherence, contradiction
-localized to regions of the conversation), Φ is a presence field over
-memory rather than a single voltage, and λ₁ genuinely reports whether
-*this* conversation can currently sustain a coherent structure.
+That is the field theory on the manifold, not an approximation of it.
 
-That is the version worth the name. It is also the largest single piece
-of work in this document, treat B1 as the deliverable that proves the
-idea and B3 as the one that earns the claim.
+**It had never run.** `_sync_ordvec_indices` built its indexes as
+`ordvec.SignBitmap(fp32_matrix)` and
+`ordvec.RankQuantIndex(fp32_matrix, bits=8)`. Both are wrong: ordvec
+indexes take a dimension and are then fed vectors, and RankQuant accepts
+1, 2 or 4 bits, not 8. Every call raised, `regulate()` caught it and fell
+back to a plain PID controller, and the Creative Determinant solve was
+dead for the life of the project. The engine was running a PID loop under
+the name of a PDE.
 
-## B4. Make the credits true
+Fixed. First real solve, over 23 memory nodes: λ₁ = -0.4196,
+b̄ = +0.4276, Picard converged, nontrivial solution, target voltage 20.53,
+target drag 1.00, policy CO_REGULATION.
 
-Once B1–B3 land, update `credits.txt` and
-`docs/The Hypervisor/README.MD` to describe what the code does, with
-theorem references. Until then, soften them. Nelson Spence's work
-deserves an accurate citation more than a flattering one.
+This is the eleventh instance of the pattern in the table at the top, and
+the most consequential one: the single most sophisticated piece of
+mathematics in the project, silently replaced by a fallback.
+
+### Reconciled with the thermal lock
+
+B1 wired a *scalar* λ₁ (`-beta * (kappa*gamma - lambda*mu)`) into the
+sampling temperature, because at the time the graph solve appeared not to
+exist. Two eigenvalues therefore coexisted, and the worse one was driving
+generation while the better one reached only the post-turn snapshot,
+which is assembled after the prompt has already been composed.
+
+Now: the governor's λ₁ is carried onto `ctx.physics.lam1` immediately
+after `regulate()`, which is before `run_simulation` runs the cortex, so
+the composer sees it. `_attach_principal_eigenvalue` prefers it whenever
+a solve has happened and records which one it used in
+`cd_lambda_1_source`. Verified end to end: a solve at λ₁ = -0.4196
+produced sampling temperature 1.1196.
+
+The scalar remains the honest fallback for a cold first turn, before
+there is enough dialogue history for the governor to anchor a subgraph,
+and for any turn where Picard declines to converge. It states the right
+sign condition over three per-turn scalars; it simply cannot see memory
+structure.
+
+### What is genuinely still open here
+
+Not the manifold. What remains is that κ, γ and μ are still per-turn
+scalars fed into a field equation, rather than per-node fields over the
+graph. `b` varies across nodes (it comes from the similarity scores) but
+the care/coherence/contradiction triple does not. Making those genuinely
+local is the remaining piece, and it is a much smaller piece than this
+entry used to claim.
+
+## B4. Make the credits true, **DONE**
+
+`credits.txt` and `docs/CREDITS.MD` claimed "mathematically verified
+Partial Differential Equations"; `docs/README.MD` claimed "lean4 certified
+algorithms under the hood" and "real, verified math". None of that was
+true as stated: BoneAmanita's own implementation carries no proofs, and
+until B3 the PDE was not executing at all.
+
+All three now describe what the code actually does, which turns out to be
+the better credit anyway: the graph Laplacian, the Picard solve, the
+Rayleigh quotient, and Theorem 3.16 gating both the macro policy and the
+model's sampling temperature.
+
+Verification is attributed correctly, and the correct version is stronger
+than either the overclaim or my first attempt at fixing it. **`ordvec` is
+itself Lean 4 verified**
+([ordvec-formalization](https://github.com/Project-Navi/ordvec-formalization),
+declared in the package's own metadata), so the candidate selection under
+both the subconscious search and the governor's subgraph extraction rests
+on machine-checked code. The Creative Determinant has its own
+formalisation in
+[cd-formalization](https://github.com/Project-Navi/cd-formalization).
+What carries no proofs is BoneAmanita's own Python implementation of
+those equations.
+
+My first correction said flatly that there was "no Lean verification"
+involved, which swung too far the other way: it disclaimed verification
+that genuinely is underneath us, just not ours. Each file now says the
+overstatement was ours rather than a claim Spence made.
+
+The `navi-SAD` and `navi-fractal` contributions are now credited too;
+they were doing work in the engine and were not mentioned at all.
 
 ---
 

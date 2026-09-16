@@ -74,6 +74,12 @@ class EnergyState:
     s_y: float = 0.5
     r_a: float = 0.0
 
+    # Principal eigenvalue from CyberneticGovernor's Creative Determinant solve:
+    # (Phi^T L Phi)/(Phi^T Phi) - b_mean over the memory subgraph Laplacian. The
+    # authoritative lambda_1 when a solve has happened; 0.0 means it has not.
+    lam1: float = 0.0
+    lam1_solution: str = ""
+
     entropy: float = 0.2
     mass: float = 0.0
     velocity: float = 0.0

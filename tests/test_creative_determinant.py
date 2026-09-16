@@ -101,6 +101,59 @@ class ThermalLockProducer(BoneTestCase):
         self.assertIsNone(TAG.search(composer.compose(state, "a test utterance")))
 
 
+class EigenvalueProvenance(BoneTestCase):
+    """Two eigenvalues exist and they are not equally good.
+
+    The governor solves the nonlinear elliptic BVP by Picard iteration over the
+    Laplacian of a memory subgraph and takes lambda_1 as a Rayleigh quotient.
+    That is the real one. The scalar -beta*(kappa*gamma - lambda*mu) states the
+    same sign condition over three per-turn scalars and cannot see memory
+    structure at all; it is the cold-start fallback.
+    """
+
+    def test_solved_eigenvalue_is_preferred(self):
+        phys = {
+            "energy": {
+                "kappa": 0.6, "gamma": 0.97, "mu": 0.88,
+                "lambda_val": 0.5, "lam1": -0.4196,
+            }
+        }
+        self.engine.cortex._attach_principal_eigenvalue(phys)
+        self.assertAlmostEqual(phys["cd_lambda_1"], -0.4196, places=4)
+        self.assertEqual(phys["cd_lambda_1_source"], "graph_laplacian")
+
+    def test_scalar_fallback_before_any_solve(self):
+        phys = {
+            "energy": {
+                "kappa": 0.6, "gamma": 0.97, "mu": 0.88,
+                "lambda_val": 0.5, "lam1": 0.0,
+            }
+        }
+        self.engine.cortex._attach_principal_eigenvalue(phys)
+        self.assertEqual(phys["cd_lambda_1_source"], "scalar_fallback")
+        self.assertNotEqual(phys["cd_lambda_1"], 0.0)
+
+    def test_the_two_can_disagree_and_the_solve_wins(self):
+        """Regression: the scalar shipped to the thermal lock while the governor
+        computed a better value that only ever reached the post-turn snapshot,
+        which is after the prompt has been composed."""
+        energy = {"kappa": 0.9, "gamma": 0.9, "mu": 0.1, "lambda_val": 0.5}
+        scalar_only = {"energy": dict(energy, lam1=0.0)}
+        solved = {"energy": dict(energy, lam1=0.25)}
+        self.engine.cortex._attach_principal_eigenvalue(scalar_only)
+        self.engine.cortex._attach_principal_eigenvalue(solved)
+        self.assertLess(scalar_only["cd_lambda_1"], 0.0)
+        self.assertGreater(solved["cd_lambda_1"], 0.0)
+
+    def test_packet_carries_the_field(self):
+        from physics.models import PhysicsPacket
+
+        packet = PhysicsPacket()
+        self.assertEqual(packet.lam1, 0.0)
+        packet.lam1 = -0.3
+        self.assertIn("lam1", packet.to_dict().get("energy", packet.to_dict()))
+
+
 class ThermalLockConsumer(unittest.TestCase):
     """generate() must act on the tag and must never forward it to the model."""
 

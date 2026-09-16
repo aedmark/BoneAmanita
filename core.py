@@ -681,8 +681,19 @@ class CyberneticGovernor:
         if len(matrix) < 3:
             return False
         fp32_matrix = np.ascontiguousarray(matrix, dtype=np.float32)
-        self.memory_bitmap = ordvec.SignBitmap(fp32_matrix)
-        self.memory_rq = ordvec.RankQuantIndex(fp32_matrix, bits=8)
+        # ordvec indexes are constructed with a DIMENSION and then fed vectors.
+        # This passed the matrix straight to the constructor, where `dim` is
+        # expected, and asked for 8-bit quantisation, which ordvec rejects (it
+        # accepts 1, 2 or 4). Both raised on every call, so _graph_regulation
+        # always fell back to PID and the Creative Determinant solve on the
+        # memory Laplacian had never once run.
+        dim = int(fp32_matrix.shape[1])
+        bitmap = ordvec.SignBitmap(dim)
+        bitmap.add(fp32_matrix)
+        quantizer = ordvec.RankQuant(dim, 4)
+        quantizer.add(fp32_matrix)
+        self.memory_bitmap = bitmap
+        self.memory_rq = quantizer
         self.cached_nodes = valid_nodes
         return True
 

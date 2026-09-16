@@ -56,10 +56,10 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 391 passed, 0 failed, 5 skipped**, about a minute. Green.
-  Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. Four of the skips
-  are live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that
-  set when touching embeddings or the resonance classifier.
+- **Test suite: 395 passed, 0 failed, 5 skipped**, about a minute. Green.
+  Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
+  live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
+  when touching embeddings or the resonance classifier.
 - **Module boundaries are genuinely clean.** `physics/`, `body/`,
   `brain/`, `phases/`, `mechanics/`, `spores/`, `soul/`, `archetypes/`
   are real separations. Config is externalized to `lore/*.json`. Most
@@ -75,7 +75,11 @@ aren't there. See "Claims vs. code" below.
   semantic, scoped to zones, with short-term memory feeding REM
   consolidation and cortisol genuinely amputating it.
 - **The Creative Determinant steers generation.** Project Navi's math
-  drives ATP/ROS and now also the thermal lock on temperature.
+  drives ATP/ROS, and the nonlinear elliptic BVP is solved each turn by
+  Picard iteration over the Laplacian of a memory subgraph. The solution
+  sets target voltage and drag; its principal eigenvalue, taken as a
+  Rayleigh quotient, selects the macro policy and gates sampling
+  temperature.
 - **Word resolution is 81% unguessed**, up from 13%: grammatical filler,
   the curated lexicon plus inflections, embedding resonance, then a
   last-resort spelling guess at under 3%.
@@ -118,7 +122,14 @@ measurements; this is the shape of it.
    so exact recall was reachable only through dead code.
 6. **C2, zones.** `wing_id` read a key defined nowhere, the query side
    never set it, and the Doorway Effect had no caller.
-7. **A5 and A6, the physics inputs.** The largest finding, and the only
+7. **B3, the CD solve.** `_sync_ordvec_indices` built its ordvec indexes
+   with the wrong constructor (`SignBitmap(matrix)` where a dimension is
+   expected, and `bits=8` which ordvec rejects), so every call raised,
+   `regulate()` caught it, and the engine ran a plain PID controller
+   under the name of a PDE for the life of the project. Fixed; first real
+   solve gave lambda_1 = -0.4196 over 23 memory nodes. The thermal lock
+   now uses that instead of the scalar approximation B1 wired in.
+8. **A5 and A6, the physics inputs.** The largest finding, and the only
    one that was not a disconnected wire. See below.
 
 **A5/A6 is the one to understand if you read only one.** Word category
@@ -226,11 +237,15 @@ server unreachable.
 corrected as part of the work above. These remain overstated and a
 future session should not treat them as a specification:
 
-- **`credits.txt` credits "mathematically verified Partial Differential
-  Equations."** There are none. There is polynomial arithmetic over word
-  counts with tuned coefficients, e.g. `physics/geodesics.py:117`.
-  Heuristics with physics names, which is fine as a design; just don't
-  go hunting for the math.
+- **Verification belongs to Spence's libraries, not to us.** `ordvec` is
+  Lean 4 verified ([ordvec-formalization](https://github.com/Project-Navi/ordvec-formalization),
+  declared in its package metadata) and the Creative Determinant has its
+  own formalisation. BoneAmanita's Python implementation of those
+  equations carries no proofs. `credits.txt` and `docs/README.MD` used to
+  claim the verification for this repo; corrected, along with a note in
+  each that the overstatement was ours. Do not re-inflate it, and do not
+  overcorrect to "no verification involved" either, which is equally
+  wrong.
 - **"Semantic Bio-Physics" as a unified economy** is, concretely, ~247
   magic float literals in `phases/` alone driving if-statements.
 - The engine's *behaviour* claims (exhaustion affecting prose, trauma
@@ -420,6 +435,16 @@ future session should not treat them as a specification:
     and margins collapse to ~0.03. This is the same compression that made
     the 0.75 hippocampus edge threshold wrong. Gate on margin, never on
     absolute similarity.
+- **There are two lambda_1 values; make sure you know which one you have.**
+  `ctx.physics.lam1` (and `energy.lam1` in the serialized packet) is the
+  real one: a Rayleigh quotient over the memory subgraph Laplacian from
+  the governor's Picard solve. `PhysicsPacket.get_principal_eigenvalue()`
+  is a scalar over three per-turn values that states the same sign
+  condition and cannot see memory structure. The cortex prefers the
+  solved one and records which it used in `cd_lambda_1_source`. The
+  governor runs at `cycle.py:705`, before `run_simulation`, which is why
+  the value is available to the composer at all; it used to surface only
+  in the post-turn snapshot, too late to matter.
 - **A mass key with no lexicon category is silently always zero.**
   `social` and `void` were weighed by `_weigh_mass` and had no category,
   so BET was structurally zero for the life of the project. There is now
