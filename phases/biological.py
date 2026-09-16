@@ -40,6 +40,7 @@ class MetabolismPhase(SimulationPhase):
             self._apply_healing(ctx)
             return ctx
         physics = ctx.physics
+        self._apply_stress_blindness(ctx)
         self._apply_economic_stimulus(ctx, self.eng.host_stats.efficiency_index)
         gov_msg = self.eng.bio.governor.shift(
             physics, self.eng.phys.dynamics.voltage_history, self.eng.tick_count
@@ -167,6 +168,36 @@ class MetabolismPhase(SimulationPhase):
             ctx.bio_result["atp"] = reboot_val
             msg_wake = ux("cycle_strings", "metabolism_waking")
             ctx.log(f"{Prisma.GRN}{msg_wake.format(reboot_val=reboot_val)}{Prisma.RST}")
+
+    def _apply_stress_blindness(self, ctx):
+        """Amputate short-term memory capacity under cortisol.
+
+        The Tunnel Vision Protocol in the README: past the biological threshold
+        the system sheds recent context to conserve ATP. HippocampalCache
+        implemented this and nothing ever called it, so the amputation never
+        happened on any turn. It is only meaningful now that the cache has a
+        writer (MycelialNetwork._encode_hippocampal).
+        """
+        mem = getattr(self.eng.mind, "mem", None)
+        hippocampus = getattr(mem, "hippocampus", None)
+        if hippocampus is None:
+            return
+        cortisol = float(getattr(self.eng.bio.endo, "cortisol", 0.0))
+        before = len(hippocampus.nodes)
+        hippocampus.apply_stress_blindness(cortisol)
+        shed = before - len(hippocampus.nodes)
+        if shed > 0:
+            msg = ux("cycle_strings", "stress_amputation")
+            ctx.log(
+                f"{Prisma.RED}"
+                + (
+                    msg.format(shed=shed, cortisol=cortisol)
+                    if msg
+                    else f"TUNNEL VISION: cortisol {cortisol:.2f} amputated "
+                    f"{shed} recent memories to conserve ATP."
+                )
+                + f"{Prisma.RST}"
+            )
 
     def _check_circadian_rhythm(self, ctx):
         c_freq = ctx.limits.get("CIRCADIAN_FREQ", 10)

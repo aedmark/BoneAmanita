@@ -298,7 +298,28 @@ class EventBus:
         finally:
             active_events.discard(event_type)
 
+    _SEVERITY_LEVELS = {
+        "CRIT": logging.CRITICAL,
+        "CRITICAL": logging.CRITICAL,
+        "ERROR": logging.ERROR,
+        "WARN": logging.WARNING,
+        "WARNING": logging.WARNING,
+    }
+
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
+        """Record an event. Signature is (message, source, level).
+
+        Guard: nearly every call site passes a *source* tag second ("BIO",
+        "CORTEX", "SYS"), which is correct. A number of sites historically
+        passed a severity there instead, which left `level` at its "INFO"
+        default and routed the line to logger.debug, below the handler
+        threshold. That silently muted 25 call sites including the daemon's own
+        crash handler, so a dying turn formatted a full traceback and then threw
+        it away. Accept the two-argument severity spelling rather than dropping
+        it on the floor.
+        """
+        if level == "INFO" and source in self._SEVERITY_LEVELS:
+            source, level = "SYSTEM", source
         event = {
             "timestamp": time.time(),
             "source": source,
@@ -310,11 +331,9 @@ class EventBus:
         self.publish(source, event)
         if self.telemetry:
             self.telemetry.record_event(event)
-        log_lvl = {
-            "CRIT": logging.CRITICAL,
-            "ERROR": logging.ERROR,
-            "WARN": logging.WARNING,
-        }.get(level, logging.DEBUG)
+        # Unknown levels stay at DEBUG: the TUI renders self.buffer, so routine
+        # lines must not also flood stderr. Only real severities escalate.
+        log_lvl = self._SEVERITY_LEVELS.get(level, logging.DEBUG)
         if log_lvl >= logging.WARNING:
             color = Prisma.RED if log_lvl >= logging.ERROR else Prisma.YEL
             logger.log(log_lvl, f"{color}[{source}] {message}{Prisma.RST}")

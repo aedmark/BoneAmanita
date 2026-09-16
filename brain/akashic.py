@@ -392,7 +392,7 @@ class TheAkashicRecord:
             if self.events:
                 self.events.log(
                     f"{Prisma.RED}Geometric containment violation. Save aborted.{Prisma.RST}",
-                    "CRIT",
+                    "AKASHIC", "CRIT",
                 )
             return
         try:

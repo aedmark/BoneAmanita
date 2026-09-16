@@ -304,7 +304,7 @@ class CycleSimulator:
         )
         formatted_trace = traceback.format_exc()
         self.eng.events.log(
-            f"{Prisma.RED}{msg_crash}\n{formatted_trace}{Prisma.RST}", "CRIT"
+            f"{Prisma.RED}{msg_crash}\n{formatted_trace}{Prisma.RST}", "CYCLE", "CRIT"
         )
         ctx.logs.append("CRITICAL FAILURE")
         narrative = LoreManifest.get_instance().get("narrative_data") or {}
@@ -322,9 +322,12 @@ class CycleSimulator:
         if comp == "PHYSICS" or not ctx.physics:
             ctx.physics = PanicRoom.get_safe_physics()
             try:
+                # get_graph() returns the adjacency dict itself. This used to
+                # guard on `hasattr(mem_graph, "adj")`, which a dict never has,
+                # so the Godel scar was never frozen from real topology.
                 mem_graph = self.eng.mind.mem.hippocampus.get_graph()
-                if mem_graph and hasattr(mem_graph, "adj"):
-                    ctx.physics.space.godel_scar = _native_freeze_graph(mem_graph.adj)
+                if mem_graph:
+                    ctx.physics.space.godel_scar = _native_freeze_graph(mem_graph)
             except AttributeError:
                 self.eng.events.log(
                     f"{Prisma.VIOLET}System state safely loaded. Mnemonic structure frozen into Godel Scar.{Prisma.RST}",
@@ -426,7 +429,7 @@ class GeodesicOrchestrator:
                     self._process_rem_tick()
             except Exception as e:
                 self.eng.events.log(
-                    f"Daemon Engine Crash: {e}\n{traceback.format_exc()}", "CRIT"
+                    f"Daemon Engine Crash: {e}\n{traceback.format_exc()}", "CYCLE", "CRIT"
                 )
                 if task_acquired:
                     self.output_queue.put(
@@ -543,7 +546,7 @@ class GeodesicOrchestrator:
             return
         try:
             mem = self.eng.mind.mem
-            actual_adj = mem.hippocampus.get_graph().adj
+            actual_adj = mem.hippocampus.get_graph()
         except AttributeError:
             return
         if not isinstance(actual_adj, dict) or len(actual_adj) <= 5:
@@ -568,7 +571,7 @@ class GeodesicOrchestrator:
                     )
                     self.eng.health = 0.0
             except Exception as e:
-                self.eng.events.log(f"Async Topology Error: {e}", "WARN")
+                self.eng.events.log(f"Async Topology Error: {e}", "CYCLE", "WARN")
 
         if isinstance(actual_adj, dict):
             try:
@@ -730,7 +733,7 @@ class GeodesicOrchestrator:
             return ctx
         except Exception as e:
             full_trace = traceback.format_exc()
-            self.eng.events.log(f"CYCLE CRASH: {e}\n{full_trace}", "CRIT")
+            self.eng.events.log(f"CYCLE CRASH: {e}\n{full_trace}", "CYCLE", "CRIT")
             if ctx is None:
                 ctx = CycleContext(input_text=user_message)
                 ctx.trace_id = cycle_id
@@ -830,13 +833,13 @@ class GeodesicOrchestrator:
                         elif local_d >= null_d:
                             self.eng.events.log(
                                 f"{Prisma.RED}[NAVI-FRACTAL] Hallucination of Depth! Dimension {local_d:.2f} is indistinguishable from random noise. Stripping coherence rewards.{Prisma.RST}",
-                                "WARN",
+                                "CYCLE", "WARN",
                             )
                             lattice.shared.omega_r = 0.0
                     if local_d < 0.2:
                         self.eng.events.log(
                             f"{Prisma.RED}[CD CONDITION] Phase-space collapse detected (d={local_d:.2f}). Sycophancy Point Attractor identified. Spiking Contradiction (μ) to force generative tension.{Prisma.RST}",
-                            "CRIT",
+                            "CYCLE", "CRIT",
                         )
                         active_phys = getattr(self.eng, "active_physics", None)
                         if active_phys:
@@ -861,8 +864,7 @@ class GeodesicOrchestrator:
             check_freq = int(getattr(self.eng.config.CORE, "WLS_FREQ", 8))
             if cortex and self.eng.tick_count % check_freq == 0:
                 try:
-                    graph = mem.hippocampus.get_graph()
-                    raw_adj = getattr(graph, "adj", {})
+                    raw_adj = mem.hippocampus.get_graph()
                 except AttributeError:
                     raw_adj = {}
 
@@ -891,7 +893,7 @@ class GeodesicOrchestrator:
                         if pe < 0.4 or vol < 0.05:
                             self.eng.events.log(
                                 f"{Prisma.RED}[NAVI-SAD] Point Attractor Detected. Permutation Entropy critical (PE={pe:.2f}). Conversation is sycophantic. Summoning THE JESTER.{Prisma.RST}",
-                                "CRIT",
+                                "CYCLE", "CRIT",
                             )
                             ctx.council_mandates.append(
                                 {

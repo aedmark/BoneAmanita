@@ -219,6 +219,7 @@ class QuantumObserver:
             theta=geo.coherence,
             upsilon=upsilon_integrity,
             mu=mu_friction,
+            lambda_val=float(safe_get(safe_get(self.cfg, "CD", {}), "LAMBDA", 0.5)),
             m_a=malignancy,
             i_c=immune_comp,
             cf_expect=cf_expect,

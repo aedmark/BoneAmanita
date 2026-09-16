@@ -242,15 +242,32 @@ class SubconsciousStrata:
         Q_arr = np.ascontiguousarray(Q_arr, dtype=np.float32)
         top_indices, scores = [], []
 
-        if ordvec is not None and self.quantizer is not None:
+        if ordvec is not None and self.quantizer is not None and self.bitmap is not None:
             coarse_k = min(effective_k * 8, total_memories)
             try:
-                candidate_indices = self.bitmap.scan(Q_arr, coarse_k)
-                top_indices, scores = self.quantizer.rerank(
-                    Q_arr, candidate_indices, effective_k
+                # ordvec 0.5.0 API. This previously called bitmap.scan() and
+                # quantizer.rerank(), neither of which exists on SignBitmap or
+                # RankQuant; every call raised AttributeError straight into a
+                # bare `except: pass`, so the accelerated path had never once
+                # executed and every search silently fell back to exact numpy.
+                # Note the return order: (scores, indices), not (indices, scores).
+                candidates = np.ascontiguousarray(
+                    self.bitmap.top_m_candidates(Q_arr, coarse_k).astype(np.uint32)
+                )
+                scores, top_indices = self.quantizer.search_asymmetric_subset(
+                    Q_arr, candidates, effective_k
                 )
             except Exception as e:
-                pass
+                # Falling back to exact math is correct, but doing it silently is
+                # how the above went unnoticed. Say it once per process.
+                if not getattr(SubconsciousStrata, "_ordvec_warned", False):
+                    SubconsciousStrata._ordvec_warned = True
+                    print(
+                        f"[ORDVEC] Fastscan unavailable ({type(e).__name__}: {e}). "
+                        f"Falling back to exact cosine; results stay correct, "
+                        f"searches are O(N)."
+                    )
+                top_indices, scores = [], []
 
         if not len(top_indices):
             norm_q = np.linalg.norm(Q_arr)

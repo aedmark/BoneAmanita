@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from archetypes.village import ParadoxSeed
 from brain.ann import CerebralIndex, HippocampalCache
-from spores.spore_utils import _words_to_matrix
+from spores.spore_utils import _word_to_vector, _words_to_matrix
 from constants import Prisma
 from core import EventBus, LoreManifest
 from presets import BoneConfig
@@ -32,7 +32,17 @@ class MycelialNetwork:
         self.loader = loader if loader else LocalFileSporeLoader()
         self.session_id = f"session_{int(time.time())}"
         self.filename = f"{self.session_id}.json"
-        self.hippocampus = HippocampalCache(max_capacity=500)
+        spore_cfg = safe_get(self.cfg, "SPORES", {})
+        self.hippocampus = HippocampalCache(
+            max_capacity=int(safe_get(spore_cfg, "HIPPOCAMPAL_CAPACITY", 500)),
+            edge_threshold=float(
+                safe_get(
+                    spore_cfg,
+                    "HIPPOCAMPAL_EDGE_THRESHOLD",
+                    HippocampalCache.DEFAULT_EDGE_THRESHOLD,
+                )
+            ),
+        )
         self.cortex = CerebralIndex()
         self.subconscious = SubconsciousStrata(
             filename=f"memories/subconscious_{self.session_id}.jsonl"
@@ -108,7 +118,7 @@ class MycelialNetwork:
             return action
         except Exception as e:
             if hasattr(self.events, "log"):
-                self.events.log(f"[AUTONOMIC GOVERNOR ERROR]: {e}", "WARN")
+                self.events.log(f"[AUTONOMIC GOVERNOR ERROR]: {e}", "MYCELIUM", "WARN")
             return "ERROR"
 
     def _on_scar_recorded(self, payload):
@@ -258,7 +268,7 @@ class MycelialNetwork:
             "context": governor_mode,
             "significance": significance,
             "wing_id": safe_get(physics, "scope_boundary", "GLOBAL"),
-            "room_id": "_".join(clean_words[:2]) if clean_words else "GENERAL",
+            "room_id": self.room_key(clean_words),
             "raw_verbatim_text": safe_get(physics, "raw_text", ""),
             "timestamp": time.time(),
         }
@@ -266,8 +276,52 @@ class MycelialNetwork:
         consolidation = float(safe_get(cfg, "CONSOLIDATION_THRESHOLD", 5.0))
         if significance > consolidation:
             self.memory_core.short_term_buffer.append(engram)
+            self._encode_hippocampal(engram)
             return True
         return False
+
+    @staticmethod
+    def room_key(clean_words: Optional[List[str]]) -> str:
+        """Exact-recall key for a turn.
+
+        encode() and retrieve_semantic() must derive this identically or the
+        hippocampus can be written and never hit: the cache is keyed by room,
+        so a lookup built any other way misses every time regardless of how
+        much is stored.
+        """
+        return "_".join(clean_words[:2]) if clean_words else "GENERAL"
+
+    def _encode_hippocampal(self, engram: Dict) -> None:
+        """Mirror a significant engram into the short-term cache.
+
+        HippocampalCache shipped with wired readers and no writer at all: REM
+        consolidation (brain/mind.py) drained it, the topology checks in
+        cycle.py graphed it, and apply_stress_blindness amputated it, but
+        nothing ever put a node in. extract_for_consolidation therefore always
+        returned [], get_graph always returned {}, and the cortisol amputation
+        described in the README was amputating an empty buffer.
+
+        This is the write half. Engrams land here first and REM promotes the
+        survivors into the CerebralIndex, which is the short-term to long-term
+        path the biology has always claimed to have.
+        """
+        text = str(engram.get("raw_verbatim_text") or "").strip()
+        if not text:
+            text = " ".join(str(w) for w in (engram.get("trigger") or []))
+        if not text:
+            return
+        node_id = str(engram.get("room_id") or "")[:64] or text[:64]
+        self.hippocampus.encode(
+            node_id,
+            _word_to_vector(text),
+            {**engram, "id": node_id, "raw_verbatim_text": text},
+        )
+
+    def apply_stress_blindness(self, cortisol: float) -> int:
+        """Shrink short-term capacity under cortisol. Returns nodes amputated."""
+        before = len(self.hippocampus.nodes)
+        self.hippocampus.apply_stress_blindness(cortisol)
+        return before - len(self.hippocampus.nodes)
 
     def bury(
         self,

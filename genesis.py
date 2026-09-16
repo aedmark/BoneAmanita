@@ -28,10 +28,33 @@ from protocols import (
 )
 from soul import NarrativeSelf, TheOroboros
 from spores import LiteraryReproduction
-from struts import safe_get, safe_set, ux, ux_format
+from struts import audit_cfg, safe_get, safe_set, ux, ux_format
 
 
 class BoneGenesis:
+    @staticmethod
+    def _audit_config(target_cfg: Any, events: Any) -> list:
+        """Verify every required config constant resolves, and say so if not.
+
+        Ten constants were absent from every config file for the life of the
+        project. Each subsystem silently used its inline fallback, so tuning
+        them did nothing and nobody could tell. This reports the full list in
+        one line rather than failing on the first miss.
+        """
+        manifest = safe_get(target_cfg, "REQUIRED_CONFIG", {}) or {}
+        if not manifest:
+            return []
+        missing = audit_cfg(manifest, lambda block: safe_get(target_cfg, block, {}))
+        if missing:
+            events.log(
+                f"{Prisma.RED}Missing config constants ({len(missing)}): "
+                f"{', '.join(missing)}. Those subsystems are running on inline "
+                f"fallbacks and cannot be tuned.{Prisma.RST}",
+                "GENESIS",
+                "WARN",
+            )
+        return missing
+
     @staticmethod
     def _ignite_embedder(target_cfg: Any, events: Any):
         """Probe and latch the embedding backend for the process."""
@@ -60,6 +83,7 @@ class BoneGenesis:
         # Resolve the semantic coordinate system FIRST. Every index built below
         # sizes itself to the embedder's native dimensionality, so probing after
         # incubation would leave the Arcade pinned to the fallback width.
+        BoneGenesis._audit_config(target_cfg, events)
         BoneGenesis._ignite_embedder(target_cfg, events)
         akashic = TheAkashicRecord(
             lore_manifest=LoreManifest.get_instance(config_ref=target_cfg),

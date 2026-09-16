@@ -11,6 +11,13 @@ the project-specific content is obviously all BoneAmanita's. Where that
 file and this one describe the same working habit, they should stay in
 sync, those habits are not project-specific.
 
+## Start here if you are cold
+
+`OVERVIEW.md` explains what BoneAmanita is in plain language, with no
+jargon and no assumption that you remember how any of it works. Read that
+first if you have been away; this file assumes you already have the
+shape of the thing in your head.
+
 ## What this is
 
 BoneAmanita is a **stateful prompt-construction engine with a
@@ -49,9 +56,10 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 306 passed, 2 failed, 2 skipped.** Both failures are
-  environmental and predate any recent work, details under Environment.
-  Baseline before the embeddings work was 282 passed / 2 failed.
+- **Test suite: 351 passed, 0 failed, 1 skipped.** Fully green, and it
+  runs in about a minute rather than four. Both long-standing failures
+  are resolved by installing the two optional pieces: `ordvec` from PyPI
+  and `mistral-nemo` in Ollama. A red suite now means something.
 - **Module boundaries are genuinely clean.** `physics/`, `body/`,
   `brain/`, `phases/`, `mechanics/`, `spores/`, `soul/`, `archetypes/`
   are real separations. Config is externalized to `lore/*.json`. Most
@@ -71,7 +79,34 @@ aren't there. See "Claims vs. code" below.
   before touching anything, in the order `agents/prompt.md` specifies
   (constitution → conventions → glossary → domain_*).
 
-## What changed most recently: real embeddings
+## What changed most recently: the Creative Determinant went live
+
+After the embeddings work, three items from `ROADMAP.md` landed:
+
+- **λ₁ now steers generation (B1).** `<cd_lambda_1>` had a parser in
+  `LLMInterface.generate` and no producer anywhere, so the thermal lock
+  was dead. Wiring it exposed two deeper faults: `gamma` and `mu` were
+  computed by the observer and then dropped, because only `kappa` was
+  listed in `ObservationPhase._SYNC_KEYS`; and `λ₁ = (π/L)² - βb` with
+  L defaulting to π made the constant term exactly 1.0, which put the
+  coherent regime out of reach for every state the engine could produce.
+  λ₁ is now `-βb` (Theorem 3.16 stated directly), λ (contradiction cost)
+  ships at 0.5 in `BoneConfig.CD`, and a real turn measurably opens heat:
+  λ₁ = -0.14 produced temperature 0.84.
+- **Severity logs unmuted (A1b).** See item 3b below.
+- **Strict config (A1).** Ten constants that existed in no config file
+  were promoted into `lore/tuning_presets.json` at their inline defaults
+  (no behaviour change, but they are now tunable and discoverable), and
+  `BoneConfig.REQUIRED_CONFIG` plus `BoneGenesis._audit_config` report
+  every miss at boot in one line. Also fixed: `body/regulation.py` read
+  `BODY_CONFIG` off `BoneConfig`, where it has never lived, so
+  `GOVERNOR_SHIFT` resolved to `{}` on every boot.
+
+**The λ calibration was the user's call, not mine**: 0.5 was chosen
+from a measured sensitivity table. Don't change it casually; the roadmap
+records the alternatives that were on the table.
+
+## Earlier: real embeddings
 
 `_word_to_vector` used to derive memory coordinates from
 `shake_256(word)`. A cryptographic digest is designed to destroy input
@@ -207,23 +242,19 @@ future session should not treat them as a specification:
   ```bash
   python3 -m venv .venv && .venv/bin/pip install pytest numpy faiss-cpu requests markdown
   ```
-  `dspy` and `ordvec` are *not* installable/installed here; both are
-  optional and the engine degrades cleanly without them (`[DSPY OFFLINE]`
-  prints at import, epigenetic learning and the DSPy critic just don't run).
-- **Ollama is running on `127.0.0.1:11434` with exactly one model
-  pulled: `nomic-embed-text:latest` (768d).** That is an *embedding*
-  model only, there is no chat model installed, which is why
-  `test_main.py::test_true_metabolic_token_generation` fails: it needs a
-  live chat completion and `BoneConfig.MODEL` defaults to
-  `mistral-nemo`, which isn't pulled. Fix by `ollama pull mistral-nemo`
-  (or whatever chat model is wanted) if that test needs to pass.
-- **The other failing test**, `test_memory.py::TestRankQuantAccuracy::test_fastscan_recall_accuracy`,
-  fails with "Quantizer failed to boot" purely because `ordvec` is not
-  installed. Both failures are environmental. If either fails with a
-  *different* message than those two, that is new and worth
-  investigating, in particular a dimension-mismatch `ValueError` from
-  `np.vstack` in that test means the boot-load and `bury()` vector paths
-  have diverged again (see Findings).
+  `ordvec` IS on PyPI and installs cleanly (`pip install 'ordvec>=0.5.0'`,
+  version 0.5.0): it is Nelson Spence's, still published, and ships as a
+  compiled abi3 wheel that works on Python 3.14. Install it; the suite is
+  not fully green without it. `dspy` is still not installed here, stays
+  optional, and the engine degrades cleanly without it (`[DSPY OFFLINE]`
+  prints at import; epigenetic learning and the DSPy critic do not run).
+- **Ollama runs on `127.0.0.1:11434` with both models pulled**:
+  `nomic-embed-text:latest` (768d, used for memory) and
+  `mistral-nemo:latest` (chat, matching `BoneConfig.MODEL`). Both are
+  needed for a green suite.
+- A dimension-mismatch `ValueError` from
+  `np.vstack` in `tests/test_memory.py` means the boot-load and `bury()`
+  vector paths have diverged again (see Findings).
 - **Running the engine**: `python main.py`. First run triggers
   `ConfigWizard` (`mechanics/setup.py`) which writes `config.json`
   (not in the repo, generated). Driving it headlessly for testing is
@@ -282,17 +313,32 @@ future session should not treat them as a specification:
   defaults. When debugging, assert on state directly rather than
   inferring from output. Note this cuts against `conventions.md`'s
   "Fail loudly" rule, which the codebase does not consistently follow.
-- **Two paths are dead code, deliberately left alone.** Worth knowing so
-  a future session doesn't waste time or assume they work:
-  - `HippocampalCache.encode()` is never called anywhere in production.
-    The short-term cache is never populated, so
-    `extract_for_consolidation()` always returns empty and the only
-    route into the cortex is `mind.py`'s `context_queue`.
-  - Shadow casting is gated on `scope > 0.6 or depth > 0.6`, so it fires
-    only sometimes, and `cortex.last_shadow_nodes` persists between
-    turns. Stale values there are expected, not a retrieval failure.
-    Confirm retrieval by querying the index directly rather than by
-    reading `last_shadow_nodes`.
+- **A fix can uncover a second fault that was hiding behind it.** The
+  hippocampus is the clearest case: it had no writer, which hid the fact
+  that all three `get_graph()` consumers asked for a `.adj` attribute the
+  method never returned, which in turn hid an edge threshold (`0.75`)
+  calibrated for hash vectors and therefore above every similarity real
+  embeddings produce. Three layers, each invisible until the one above it
+  was repaired. Expect this pattern; do not assume one fix finishes an
+  area. Re-verify end to end with real values rather than unit-testing
+  the layer you touched.
+- **A passing test can encode a bug.** `test_terminal_topology_collapse`
+  mocked `get_graph()` as an object exposing `.adj`, matching what
+  `cycle.py` asked for and not what `HippocampalCache` has ever returned.
+  Production and test shared the same wrong assumption, so the suite was
+  green while the real path was dead. When a test breaks after a
+  contract fix, check which side was actually wrong.
+- **Exact and semantic recall now both run** through
+  `TheCortex._recall`, which calls `MycelialNetwork.retrieve_semantic`.
+  The exact path is keyed by `MycelialNetwork.room_key(clean_words)` and
+  **write and read must derive that key through that one method**; if
+  they drift, the cache fills and never hits, which is the same silent
+  failure this codebase specialises in.
+- **Still dead, deliberately**: shadow casting is gated on
+  `scope > 0.6 or depth > 0.6`, so it fires only sometimes and
+  `cortex.last_shadow_nodes` persists between turns. Stale values there
+  are expected, not a retrieval failure. Confirm retrieval by querying
+  the index directly.
 - **Typographic Unicode is a live hazard in output paths.** `main.py`
   strips `_INVISIBLE_CHARS` and `spores/memory.py` has `_ZERO_WIDTH_RE`
   for a reason, and `brain/composer.py` instructs the model to limit
@@ -311,6 +357,15 @@ future session should not treat them as a specification:
 
 These come from the T.R.S. handoff and apply the same way here.
 
+- **No em dashes.** Gordon's explicit preference, in chat, in repo
+  documents, in code comments and in commit messages. Use commas,
+  semicolons or parentheses; if a sentence only works with a dash it
+  usually wants to be two sentences. He does not type them, so they read
+  as not-his-voice in his own repo. This is also already the project's
+  own rule: the Hypervisor v7 Lexical Firewall says "certainly no em
+  dashes unless it is academically required", and `brain/composer.py`
+  instructs the model to limit them. Earlier drafts of `ROADMAP.md` and
+  this file were full of them, which contradicted the system's own axiom.
 - **Distinguish confirmed from suspected, in writing.** "Confirmed by
   running X" and "suspected, not verified" are different claims and the
   difference is the whole value of a handoff. Don't promote a hypothesis
@@ -341,6 +396,14 @@ These come from the T.R.S. handoff and apply the same way here.
 
 ## Open items: what's actually left
 
+**Read `ROADMAP.md` A3 before proposing any "cannot fabricate" or
+provenance mechanism.** It records why "require a non-model source" is a
+dependency declaration rather than a governance mechanism, and the three
+conditions (a mechanical oracle, a source-admission boundary the model
+cannot cross, and serialization across check/verify/commit) that would
+have to hold first. The short version: validation at nomination time is
+an optimization, validation at commit time is the guarantee.
+
 **See `ROADMAP.md`** for the full plan behind these: three tracks
 (Observability, the Creative Determinant, the Biological Harness) with
 sequencing and the measurements behind each claim. The audits are
@@ -361,10 +424,12 @@ The short list below is what a session should know without reading it.
    check before changing any BIO constants. Flagged, not diagnosed.
 3. **No `.gitignore`** (see Environment). Cheap to fix, mildly annoying
    until then.
-3b. **25 `events.log` calls pass a severity where `source` belongs**, so
-   they route to DEBUG and never display, including the daemon's own
-   crash handler at `cycle.py:427`. See ROADMAP A1b. This is the reason
-   to distrust "no errors appeared" as evidence of anything.
+3b. ~~25 `events.log` calls pass a severity where `source` belongs~~,
+   **done**. All 25 corrected to the three-argument form, `EventBus.log`
+   now accepts the legacy two-argument spelling rather than dropping it,
+   and `tests/test_observability.py` fails if one reappears. The daemon's
+   crash handler at `cycle.py:427` now surfaces a full traceback at
+   CRITICAL, verified by forcing a turn to explode.
 4. ~~`main.py`'s archetype fallback still carrying the `"THE "` prefix
    after the other four entries lost it~~, **done** in `7e90a74`.
    `main.py:182` now reads `mutations.get(self.boot_mode, "ARCHITECT")`.

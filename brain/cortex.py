@@ -18,6 +18,7 @@ from mechanics.dspycritic import DSPyCritic
 from mechanics.pragmatics import ThePragmatist
 from mechanics.projector import beautify_thoughts
 from mechanics.tools import LibraryGraph, RandomRetrievalNavigator
+from physics.models import principal_eigenvalue
 from presets import BoneConfig, BonePresets
 from struts import dump_state, safe_get, safe_set, ux
 
@@ -1006,6 +1007,7 @@ class TheCortex:
 
     def gather_state(self, sim_result: Dict[str, Any]) -> Dict[str, Any]:
         phys = sim_result.setdefault("physics", {})
+        self._attach_principal_eigenvalue(phys)
         bio = sim_result.get("bio", {})
         if bio:
             bio_mito = safe_get(bio, "mito", {})
@@ -1064,6 +1066,67 @@ class TheCortex:
         mind.setdefault("style_directives", [])
         self._compile_style_directives(full_state, phys, sim_result)
         return full_state
+
+    def _recall(
+        self,
+        query_text: str,
+        phys: Dict[str, Any],
+        scope_val: float,
+        omega_r: float,
+        cortex_mem: Any,
+    ) -> list:
+        """Exact + semantic recall for this turn, in one pass."""
+        mem = self.svc.mind_memory
+        resonance = max(0.2, 0.8 - omega_r)
+        if not hasattr(mem, "retrieve_semantic"):
+            return cortex_mem.query_neighborhood(
+                cortex_mem.embed(query_text),
+                k=2,
+                resonance_threshold=resonance,
+                physics_state=phys,
+            )
+        clean_words = (phys.get("matter") or {}).get("clean_words") or []
+        if not clean_words and self.svc.lexicon:
+            clean_words = self.svc.lexicon.clean(query_text)
+        hits = mem.retrieve_semantic(
+            trigger_word=mem.room_key(clean_words),
+            query_vector=cortex_mem.embed(query_text),
+            scope=scope_val,
+            resonance=resonance,
+        )
+        # retrieve_semantic returns tagged wrappers of mixed shape. Unwrap the
+        # two that name a memory; cortex_radius is fractal geometry, not recall.
+        nodes = []
+        for hit in hits:
+            source, data = hit.get("source"), hit.get("data")
+            if source == "hippocampus" and isinstance(data, dict):
+                nodes.append(data.get("meta") or data)
+            elif source == "cortex" and isinstance(data, dict):
+                nodes.append(data)
+        return nodes
+
+    def _attach_principal_eigenvalue(self, phys: Dict[str, Any]) -> None:
+        """Flatten the Creative Determinant eigenvalue onto the physics dict.
+
+        The CD fields live under the nested `energy` block; the composer needs a
+        single scalar to emit as <cd_lambda_1>, which LLMInterface.generate reads
+        to set the thermal lock. Computing it here keeps the physics in
+        physics/models.py and the plumbing in one place.
+        """
+        energy = phys.get("energy")
+        if not isinstance(energy, dict):
+            return
+        cd_cfg = safe_get(self.cfg, "CD", {})
+        beta = float(safe_get(cd_cfg, "BETA", 1.0))
+        phys["cd_lambda_1"] = principal_eigenvalue(
+            kappa=float(energy.get("kappa", 0.0)),
+            gamma=float(energy.get("gamma", 0.0)),
+            mu=float(energy.get("mu", 0.0)),
+            lambda_val=float(
+                energy.get("lambda_val", safe_get(cd_cfg, "LAMBDA", 0.5))
+            ),
+            beta=beta,
+        )
 
     @staticmethod
     def _label_shadow_node(node: Any) -> str:
@@ -1156,17 +1219,20 @@ class TheCortex:
                 and getattr(cortex_mem, "is_trained", False)
                 and query_text
             ):
+                # Route BOTH recall paths through MycelialNetwork.retrieve_semantic:
+                # exact recall from the hippocampus (have we stood in this room
+                # before) and semantic recall from the cortex. That method existed
+                # with no production caller, which left retrieve_exact reachable
+                # only through dead code.
+                #
                 # Query in the SAME space the index was built from. This formerly
                 # assembled a vector out of physics coordinates (STR/VEL/PSI/...)
                 # and searched an index of text vectors, which cannot return a
                 # meaningful neighbour under any conditions. Physics still steers
                 # retrieval, but through `physics_state` (cortisol clamping, wing
                 # scoping, lateral search) rather than by impersonating a vector.
-                shadow_nodes = cortex_mem.query_neighborhood(
-                    cortex_mem.embed(query_text),
-                    k=2,
-                    resonance_threshold=max(0.2, 0.8 - omega_r),
-                    physics_state=phys,
+                shadow_nodes = self._recall(
+                    query_text, phys, scope_val, omega_r, cortex_mem
                 )
             if (
                 not shadow_nodes
@@ -1261,7 +1327,7 @@ class TheCortex:
                     if self.events:
                         self.events.log(
                             f"[CORTEX] Linear stock ingestion failed: {e}. Linear memory is barren.",
-                            "WARN",
+                            "CORTEX", "WARN",
                         )
                 finally:
                     self.is_linear_stocked = True

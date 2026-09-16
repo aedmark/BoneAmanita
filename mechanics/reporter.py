@@ -454,7 +454,7 @@ class CycleReporter:
             l_crash = ux("cycle_reporter", "crash_prefix") or "CRITICAL FAILURE:"
             err_msg = f"{l_crash} {e}\n{full_trace}"
             if hasattr(self.eng, "events"):
-                self.eng.events.log(f"{Prisma.RED}{err_msg}{Prisma.RST}", "CRIT")
+                self.eng.events.log(f"{Prisma.RED}{err_msg}{Prisma.RST}", "REPORTER", "CRIT")
             return {
                 "type": "CRITICAL_RENDER_FAIL",
                 "ui": f"{Prisma.RED}{err_msg}{Prisma.RST}",

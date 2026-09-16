@@ -125,7 +125,7 @@ class BoneArchitect:
                 ux("machine_strings", "arch_spore_fail")
                 or "Spore resurrection failed: {e}"
             )
-            events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "CRIT")
+            events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "ARCHITECT", "CRIT")
             load_result = None
         try:
             results = list(load_result) if load_result else []
@@ -150,7 +150,7 @@ class BoneArchitect:
                     ux("machine_strings", "arch_map_corrupt")
                     or "Atlas corrupt, discarding map: {e}"
                 )
-                events.log(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}", "WARN")
+                events.log(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}", "ARCHITECT", "WARN")
         if embryo.bio.mito.state.atp_pool <= 0.0:
             cfg = safe_get(embryo.bio.config_ref, "METABOLISM", {})
             genesis_val = float(safe_get(cfg, "GENESIS_VOLTAGE", 100.0))

@@ -156,7 +156,16 @@ class ObservationPhase(SimulationPhase):
         "raw_text",
         "antigens",
         "psi",
+        # The Creative Determinant fields. The observer computes all three
+        # (observer.py builds EnergyState with kappa=geo.coherence,
+        # gamma=gamma_idx, mu=mu_friction), but only `kappa` used to be
+        # listed here, so gamma and mu were recomputed every turn and then
+        # dropped on the floor. That left b = kappa*gamma - lambda*mu
+        # identically 0 and lambda_1 pinned at its ceiling forever.
         "kappa",
+        "gamma",
+        "mu",
+        "lambda_val",
         "zone",
         "flow_state",
         "repetition",

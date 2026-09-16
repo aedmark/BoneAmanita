@@ -205,7 +205,7 @@ class LLMInterface:
             self.last_failure_time = time.time()
             if self.events:
                 msg = ux("brain_strings", "synapse_auth_severed")
-                self.events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "CRIT")
+                self.events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "SYNAPSE", "CRIT")
             auth_fail = ux("brain_strings", "synapse_auth_failure")
             return auth_fail.format(e=e)
         except Exception as e:
@@ -227,7 +227,7 @@ class LLMInterface:
                 self.circuit_state = "OPEN"
                 if self.events and (msg := ux("brain_strings", "synapse_overload")):
                     self.events.log(
-                        f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "CRIT"
+                        f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "SYNAPSE", "CRIT"
                     )
                 return self.mock_generation(prompt, reason="SEVERED")
         return self.mock_generation(prompt, reason="SILENCE")
@@ -502,6 +502,13 @@ class PromptComposer:
                 f"{inventory_block}"
                 f"{exits_block}\n"
             )
+        # Creative Determinant thermal lock. LLMInterface.generate reads this
+        # tag, strips it from the prompt, and sets temperature/top_p from it:
+        # lambda_1 >= 0 means no coherent configuration exists (Theorem 3.16),
+        # so generation collapses to deterministic logic; lambda_1 < 0 opens
+        # heat proportional to |lambda_1|. The tag never reaches the model.
+        lam_1 = phys_ref.get("cd_lambda_1") if isinstance(phys_ref, dict) else None
+        cd_block = f"<cd_lambda_1>{float(lam_1):.4f}</cd_lambda_1>" if lam_1 is not None else ""
         return "\n".join(
             filter(
                 None,
@@ -515,6 +522,7 @@ class PromptComposer:
                     mode_trigger,
                     input_block,
                     entity_prefix,
+                    cd_block,
                 ],
             )
         )

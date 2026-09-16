@@ -202,6 +202,44 @@ class BoneConfig:
     MODEL = "mistral-nemo"
     OLLAMA_FALLBACK = ""
 
+    # Config constants the engine reads at boot and expects to resolve.
+    # BoneGenesis.ignite audits this once and reports every miss at once, so a
+    # key that quietly vanishes from tuning_presets.json surfaces immediately
+    # instead of leaving a subsystem on an inline fallback forever. Add a key
+    # here when you add a config read that has no sensible default.
+    # See ROADMAP.md track A1.
+    REQUIRED_CONFIG = {
+        "CORTEX": [
+            "BASE_TOKENS",
+            "MAX_TOKENS",
+            "SELF_CARE_THRESHOLD",
+            "LLM_FAILURE_THRESHOLD",
+            "MAX_HISTORY_LENGTH",
+            "MOOD_THRESHOLDS",
+        ],
+        "MACHINE": ["PACEMAKER_BOREDOM_THRESHOLD"],
+        "DRIVERS": [
+            "LIMINAL_SCAR_RELIEF",
+            "LIMINAL_TRAUMA_HEAL",
+            "LIMINAL_TRAUMA_AGGRAVATE",
+            "LIMINAL_STRESS_THRESH",
+        ],
+        "BIO": ["GOVERNOR_THRESHOLDS", "PID_SETTINGS"],
+        "CD": ["LAMBDA", "BETA"],
+        "EMBEDDINGS": ["BACKEND", "MODEL", "URL"],
+    }
+
+    # Creative Determinant coupling (Project Navi, Apache 2.0).
+    # LAMBDA is the contradiction-cost weight in b = kappa*gamma - lambda*mu.
+    # BETA scales the principal eigenvalue lambda_1 = -BETA*b, which drives the
+    # thermal lock in LLMInterface.generate: lambda_1 >= 0 collapses generation
+    # to deterministic logic, lambda_1 < 0 opens generative heat proportional to
+    # |lambda_1|. See ROADMAP.md track B.
+    CD = {
+        "LAMBDA": 0.5,
+        "BETA": 1.0,
+    }
+
     # The Mnemonic Arcade's coordinate system. BACKEND "auto" probes the HTTP
     # endpoint first, then a local sentence-transformers model, then falls back
     # to the legacy SHAKE-256 hash (which has no semantic signal and disables

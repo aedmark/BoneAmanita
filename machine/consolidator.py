@@ -31,7 +31,7 @@ class TheConsolidator:
         except Exception as e:
             self.events.log(
                 f"{Prisma.RED}Failed to process syntactic weights: {e}{Prisma.RST}",
-                "ERROR",
+                "CONSOLIDATOR", "ERROR",
             )
 
     def _on_shadow_engaged(self, payload):

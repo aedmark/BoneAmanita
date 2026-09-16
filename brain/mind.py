@@ -386,7 +386,7 @@ class DreamEngine:
             if self.events:
                 self.events.log(
                     f"{Prisma.RED}TERMINAL SLEEP FAILURE: {fatal_msg}{Prisma.RST}",
-                    "CRIT",
+                    "MIND", "CRIT",
                 )
             return fatal_msg, shift
         if self.context_queue:
@@ -503,7 +503,7 @@ class DreamEngine:
                         if self.events:
                             self.events.log(
                                 f"{Prisma.RED}[EPIGENETIC ERROR] {err_msg}{Prisma.RST}",
-                                "CRIT",
+                                "MIND", "CRIT",
                             )
                         else:
                             print(err_msg)

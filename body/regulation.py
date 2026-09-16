@@ -84,9 +84,14 @@ class MetabolicGovernor:
         self.cfg = self.config_ref or BoneConfig
         bio_cfg = safe_get(self.cfg, "BIO", {})
         self.STATE_THRESHOLDS = safe_get(bio_cfg, "GOVERNOR_THRESHOLDS", [])
-        self.shift_cfg = safe_get(
-            safe_get(self.cfg, "BODY_CONFIG", {}), "GOVERNOR_SHIFT", {}
-        )
+        # BODY_CONFIG lives in the LoreManifest (lore/body_config.json), not on
+        # BoneConfig. This used to read it off self.cfg, which never has that
+        # key, so GOVERNOR_SHIFT resolved to {} on every boot and the governor's
+        # zone colours and shift strings were never applied. endocrine.py,
+        # metabolism.py and somatic.py all source it correctly.
+        self.shift_cfg = (
+            LoreManifest.get_instance(config_ref=self.cfg).get("BODY_CONFIG") or {}
+        ).get("GOVERNOR_SHIFT", {})
         pid_cfg = safe_get(bio_cfg, "PID_SETTINGS", {})
         v_cfg = pid_cfg.get(
             "VOLTAGE", {"kp": 0.6, "ki": 0.05, "kd": 0.2, "setpoint": 10.0}

@@ -15,9 +15,23 @@ from core import EventBus
 
 
 class HippocampalCache:
-    def __init__(self, max_capacity: int = 500):
+    # Cosine above which two short-term memories are considered adjacent.
+    # 0.75 was calibrated for the SHAKE-256 hash vectors, where similarity was
+    # noise near zero and 0.75 meant "suspiciously identical". Real embeddings
+    # moved the distribution: measured over 4 topics x 4 memories with
+    # nomic-embed-text, within-topic cosine averages 0.48 and cross-topic 0.38,
+    # so 0.75 sat above every meaningful pair and the graph was always empty.
+    # 0.50 keeps ~33% of true topical links at ~3% false ones, and matches the
+    # resonance_threshold already used by CerebralIndex.query_neighborhood
+    # (resonance 0.5 <-> cosine 0.5 on unit vectors).
+    DEFAULT_EDGE_THRESHOLD = 0.50
+
+    def __init__(self, max_capacity: int = 500, edge_threshold: float = None):
         self.base_capacity = max_capacity
         self.current_capacity = max_capacity
+        self.edge_threshold = (
+            self.DEFAULT_EDGE_THRESHOLD if edge_threshold is None else float(edge_threshold)
+        )
         self.nodes: Dict[str, Any] = {}
 
     def apply_stress_blindness(self, cortisol: float):
@@ -69,7 +83,7 @@ class HippocampalCache:
         norms[norms == 0] = 1.0
         normalized = vectors / norms
         sim_matrix = np.dot(normalized, normalized.T)
-        i_idx, j_idx = np.where(sim_matrix > 0.75)
+        i_idx, j_idx = np.where(sim_matrix > self.edge_threshold)
         for i, j in zip(i_idx, j_idx):
             if i != j:
                 idx_i, idx_j = int(i), int(j)

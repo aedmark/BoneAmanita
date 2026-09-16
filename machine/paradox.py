@@ -34,7 +34,7 @@ class TheParadoxEngine:
         if current_stamina < 30.0:
             if self.events:
                 self.events.log(
-                    "Paradox Engine refused ignition: Critical Starvation.", "WARN"
+                    "Paradox Engine refused ignition: Critical Starvation.", "PARADOX", "WARN"
                 )
             return None
         self.is_active = True

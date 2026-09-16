@@ -131,12 +131,12 @@ class BoneAmanita:
             else:
                 self.events.log(
                     f"{Prisma.YEL}{ux('main_strings', 'prompt_lib_warn')}{Prisma.RST}",
-                    "WARN",
+                    "KERNEL", "WARN",
                 )
         except Exception as e:
             self.events.log(
                 f"{Prisma.RED}{ux('main_strings', 'prompt_lib_crit').format(e=e)}{Prisma.RST}",
-                "CRIT",
+                "KERNEL", "CRIT",
             )
             self.prompt_library = {}
 
@@ -188,7 +188,7 @@ class BoneAmanita:
             self.events.log(msg_align.format(prompt_key=prompt_key), "CORTEX")
         else:
             msg_warn = ux("main_strings", "prompt_not_found")
-            self.events.log(msg_warn.format(prompt_key=prompt_key), "WARN")
+            self.events.log(msg_warn.format(prompt_key=prompt_key), "KERNEL", "WARN")
         active_mods = self.mode_settings.get("active_mods", [])
         if active_mods and self.consultant:
             for mod in active_mods:
@@ -326,7 +326,7 @@ class BoneAmanita:
         chi = float(safe_get(active_phys, ["entropy", "chi"], 0.2))
         if (chi * m_a) > float(safe_get(active_phys, "i_c", 1.0)):
             self.events.log(
-                "Apoptotic Gate HALT!: Runaway loop exceeds Immune Competence.", "CRIT"
+                "Apoptotic Gate HALT!: Runaway loop exceeds Immune Competence.", "KERNEL", "CRIT"
             )
             return self.trigger_death(active_phys)
         if m_a > 0.8 and float(safe_get(active_phys, "mu", 0.0)) < 0.2:
@@ -528,7 +528,7 @@ class BoneAmanita:
                 )
                 self.events.log(
                     f"ORCHESTRATOR COLLAPSE: {err_msg}\n{traceback.format_exc()}",
-                    "CRIT",
+                    "KERNEL", "CRIT",
                 )
                 return {
                     "ui": f"{Prisma.RED}CRITICAL ORCHESTRATOR FAILURE: {err_msg}{Prisma.RST}",
@@ -760,7 +760,7 @@ class BoneAmanita:
                 with open("fractal_adventure.json", "w", encoding="utf-8") as f:
                     f.write(fractal_json)
             except Exception as e:
-                self.events.log(f"Failed to compile FractalOS state: {e}", "WARN")
+                self.events.log(f"Failed to compile FractalOS state: {e}", "KERNEL", "WARN")
         return self.chronos.save_checkpoint(history)
 
     def resume_checkpoint(self) -> Tuple[bool, list]:

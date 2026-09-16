@@ -189,9 +189,14 @@ class TestChaosEngineering(BoneTestCase):
         check_freq = int(getattr(self.engine.config.CORE, "TOPOLOGY_FREQ", 10))
         self.engine.tick_count = check_freq
         self.engine.mind.mem.hippocampus = MagicMock()
-        mock_graph = MagicMock()
-        mock_graph.adj = {str(i): [str(i + 1)] for i in range(10)}
-        self.engine.mind.mem.hippocampus.get_graph.return_value = mock_graph
+        # get_graph() returns the adjacency dict itself. This mock used to wrap
+        # it in an object exposing `.adj`, matching what cycle.py asked for and
+        # not what HippocampalCache has ever returned; the test passed because
+        # production shared the same wrong assumption, so the real code path
+        # was dead while the test exercised the mock's version of it.
+        self.engine.mind.mem.hippocampus.get_graph.return_value = {
+            str(i): {str(i + 1)} for i in range(10)
+        }
         self.engine.mind.mem.calculate_clustering = MagicMock(
             side_effect=[0.1, 0.9, 0.9]
         )

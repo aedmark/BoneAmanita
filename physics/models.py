@@ -6,6 +6,24 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
 
+def principal_eigenvalue(
+    kappa: float,
+    gamma: float,
+    mu: float,
+    lambda_val: float = 0.5,
+    beta: float = 1.0,
+) -> float:
+    """λ₁ = -β(κγ - λμ). Project Navi, Apache 2.0.
+
+    Free function so callers holding a serialized physics dict rather than a
+    PhysicsPacket can compute the same quantity without rehydrating one.
+    PhysicsPacket.get_principal_eigenvalue delegates here.
+    """
+    return -float(beta) * (
+        (float(kappa) * float(gamma)) - (float(lambda_val) * float(mu))
+    )
+
+
 @dataclass
 class DragProfile:
     semantic: float = 0.0
@@ -64,7 +82,12 @@ class EnergyState:
     kappa: float = 0.0
     epsilon: float = 0.0
     xi: float = 0.0
-    lambda_val: float = 0.0
+    # Contradiction-cost weight in b = kappa*gamma - lambda*mu. Set from
+    # BoneConfig.CD["LAMBDA"]. 0.5 is calibrated, not arbitrary: kappa*gamma is
+    # a product of two [0,1] fields and mu is a blend, so at lambda=1.0 the
+    # viability b is negative on essentially every turn and the coherent regime
+    # is unreachable. 0.0 is a legitimate setting meaning "contradiction is free".
+    lambda_val: float = 0.5
     omega: float = 0.0
 
     resonance: float = 0.0
@@ -183,14 +206,34 @@ class PhysicsPacket:
         return float(self.kappa) * float(self.gamma) * float(self.mu)
 
     def get_viability_potential(self) -> float:
-        """b = κγ - λμ. Project Navi, Apache 2.0"""
-        lam = float(self.lambda_val) if self.lambda_val > 0 else 1.0
-        return (float(self.kappa) * float(self.gamma)) - (lam * float(self.mu))
+        """b = κγ - λμ. Project Navi, Apache 2.0
 
-    def get_principal_eigenvalue(self, L: float = 3.14159, beta: float = 1.0) -> float:
-        """λ₁ = (π/L)² - βb. If λ₁ < 0, nontrivial presence emerges. Project Navi, Apache 2.0"""
-        b = self.get_viability_potential()
-        return ((math.pi / L) ** 2) - (beta * b)
+        Uses lambda_val as given. It used to substitute 1.0 whenever the field
+        was <= 0, which silently overrode a deliberate setting of 0 and masked
+        the fact that nothing ever populated the field at all.
+        """
+        return (float(self.kappa) * float(self.gamma)) - (
+            float(self.lambda_val) * float(self.mu)
+        )
+
+    def get_principal_eigenvalue(self, beta: float = 1.0) -> float:
+        """λ₁ = -βb. Project Navi, Apache 2.0
+
+        Theorem 3.16: nontrivial coherent configurations exist iff
+        λ₁(-Δ - b; M) < 0. With λ₁ = -βb that reduces to exactly `b > 0`,
+        which is the existence condition stated directly.
+
+        This previously read `λ₁ = (π/L)² - βb` with L defaulting to π, making
+        the constant term exactly 1.0. Since b <= κγ <= 1 by construction, λ₁
+        was then non-negative for every reachable state and the coherent regime
+        could not be entered under any input. (π/L)² is the first Dirichlet
+        eigenvalue of a 1-D interval, a placeholder for a manifold the engine
+        does not yet have; it returns in ROADMAP B3 as the base eigenvalue of
+        the real graph Laplacian built over embedded memory.
+        """
+        return principal_eigenvalue(
+            self.kappa, self.gamma, self.mu, self.lambda_val, beta
+        )
 
     def enforce_saturation_limit(self, c: float = 1.5, p: float = 2.0) -> float:
         """Applies the Navi PDE saturation penalty: -c * Φ^p. Caps runway voltage/drag."""
