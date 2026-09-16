@@ -269,16 +269,40 @@ class LinguisticAnalyzer:
         length_mod = 1.0 if len(w) > 5 else 1.5
         final_density = (density_score / len(w)) * length_mod
         final_vitality = (vitality_score / len(w)) * length_mod
-        heavy_thresh = self.thresholds["heavy_density"] * self.biases["heavy"]
-        play_thresh = self.thresholds["play_vitality"] * self.biases["play"]
-        kinetic_thresh = self.thresholds["kinetic_flow"] * self.biases["kinetic"]
-        if final_density > heavy_thresh:
-            return "heavy", round(final_density, 2)
-        if final_vitality > play_thresh:
-            return "play", round(final_vitality, 2)
-        if (flow_score / len(w)) > kinetic_thresh:
-            return "kinetic", 0.5
-        return None, 0.0
+        final_flow = flow_score / len(w)
+
+        # Score each category by how far ABOVE its threshold it sits, relative to
+        # that threshold, then take the strongest. Two bugs lived in the previous
+        # version (see ROADMAP A5):
+        #
+        #  1. It returned the raw score as the confidence. `apart` came back as
+        #     ("play", 1.2). Callers compared that against 0.5 as though it were
+        #     a probability, so anything above threshold at all read as highly
+        #     confident. English is vowel-dense, so vitality clears its threshold
+        #     for most words and 69% of all fallback verdicts were "play".
+        #  2. It returned the FIRST category over threshold, in a fixed order, so
+        #     a word comfortably over two thresholds was assigned by ordering
+        #     rather than by strength of signal.
+        #
+        # The margin is normalised into [0, 1]: 0.0 exactly at threshold, 1.0 at
+        # twice threshold. A caller's `>= 0.5` now means "half again above the
+        # threshold", which is a statement about this word rather than about the
+        # scale the score happens to use.
+        candidates = (
+            ("heavy", final_density, self.thresholds["heavy_density"] * self.biases["heavy"]),
+            ("play", final_vitality, self.thresholds["play_vitality"] * self.biases["play"]),
+            ("kinetic", final_flow, self.thresholds["kinetic_flow"] * self.biases["kinetic"]),
+        )
+        best_category, best_margin = None, 0.0
+        for category, score, threshold in candidates:
+            if threshold <= 0 or score <= threshold:
+                continue
+            margin = (score - threshold) / threshold
+            if margin > best_margin:
+                best_category, best_margin = category, margin
+        if best_category is None:
+            return None, 0.0
+        return best_category, round(min(1.0, best_margin), 2)
 
     def measure_valence(self, words: List[str]) -> float:
         if not words:

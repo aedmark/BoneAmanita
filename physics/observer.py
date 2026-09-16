@@ -235,7 +235,16 @@ class QuantumObserver:
         )
         space = SpatialState(
             narrative_drag=cd_drag,
-            zone=self._determine_zone(geo.dimensions),
+            zone=self._determine_zone(
+                geo.dimensions,
+                float(
+                    safe_get(
+                        safe_get(self.cfg, "PHYSICS", {}),
+                        "ZONE_MARGIN",
+                        self.ZONE_MARGIN,
+                    )
+                ),
+            ),
             flow_state=self._determine_flow(avg_voltage, geo.coherence, self.cfg),
         )
         self.last_physics_packet = PhysicsPacket(
@@ -288,18 +297,44 @@ class QuantumObserver:
             )
         return None
 
-    def _tally_categories(self, clean_words: List[str]) -> Counter:
+    # Minimum calibrated confidence before the phonosemantic fallback is allowed
+    # to assign a category. See ROADMAP A5: the fallback was classifying 82% of
+    # ordinary English, two thirds of it as "play", because the value it returns
+    # was a raw score rather than a confidence and the comparison here was made
+    # against an arbitrary scale.
+    TASTE_CONFIDENCE_FLOOR = 0.5
+
+    @staticmethod
+    def _tally_categories_static(
+        lex: Any, clean_words: List[str], floor: float = TASTE_CONFIDENCE_FLOOR
+    ) -> Counter:
+        """Resolve words to lexicon categories. Shared with the A5 audit tool."""
         counts = Counter()
-        solvents = self.lex.get("solvents") or set()
+        # LexiconStore deliberately keeps solvents OUT of the general category
+        # map, so lex.get("solvents") is empty by construction and this read
+        # always produced an empty set. counts["solvents"] could therefore never
+        # be non-zero, which made the E dimension structurally dead. The real set
+        # is exposed as LexiconService.SOLVENTS.
+        solvents = getattr(lex, "SOLVENTS", None) or lex.get("solvents") or set()
         for w, freq in Counter(clean_words).items():
             if w in solvents:
                 counts["solvents"] += freq
-            elif cats := self.lex.get_categories_for_word(w):
+            elif cats := lex.get_categories_for_word(w):
                 for cat in cats:
                     counts[cat] += freq
-            elif (taste := self.lex.taste(w)) and taste[1] > 0.5:
+            elif (taste := lex.taste(w)) and taste[0] and taste[1] >= floor:
                 counts[taste[0]] += freq
         return counts
+
+    def _tally_categories(self, clean_words: List[str]) -> Counter:
+        floor = float(
+            safe_get(
+                safe_get(self.cfg, "PHYSICS", {}),
+                "TASTE_CONFIDENCE_FLOOR",
+                self.TASTE_CONFIDENCE_FLOOR,
+            )
+        )
+        return self._tally_categories_static(self.lex, clean_words, floor)
 
     @staticmethod
     def _calculate_graph_mass(words: List[str], graph: Optional[Dict]) -> float:
@@ -408,8 +443,23 @@ class QuantumObserver:
             return "TURBULENT"
         return "LAMINAR"
 
+    ZONE_MARGIN = 0.15
+
     @staticmethod
-    def _determine_zone(vector: Dict[str, float]) -> str:
+    def _determine_zone(vector: Dict[str, float], margin: float = ZONE_MARGIN) -> str:
+        """Pick the zone from the dominant geodesic dimension.
+
+        This used to be a bare `max()`, which meant whichever dimension happened
+        to have the largest scale won regardless of whether it carried any real
+        signal. DEL was computed with the biggest amplifier of any dimension and
+        fed by an inflated play mass, so it saturated at 1.0 and every
+        conversation was AERIE (see ROADMAP A5).
+
+        The dominant dimension must now lead the runner-up by `margin` of its
+        own value. Otherwise there is no dominant character and we return
+        COURTYARD, which is what that zone is for: previously it was only
+        reachable from an empty vector, so it never occurred in practice.
+        """
         if not vector:
             return "COURTYARD"
         zone_map = {
@@ -420,7 +470,24 @@ class QuantumObserver:
             "ENT": "THE_MUD",
             "VEL": "THE_MUD",
         }
-        return zone_map.get(max(vector, key=vector.__getitem__), "COURTYARD")
+        # Rank only dimensions that actually name a zone. E (solvent density)
+        # and BET have no mapping, so letting them win the argmax silently
+        # forced COURTYARD and conflated "no dominant character" with "the
+        # dominant dimension is not a zone dimension". E in particular is high
+        # for all natural English, so it would otherwise win constantly.
+        ranked = sorted(
+            ((k, float(v)) for k, v in vector.items() if k in zone_map),
+            key=lambda kv: -kv[1],
+        )
+        if not ranked:
+            return "COURTYARD"
+        top_key, top_value = ranked[0]
+        if top_value <= 0.0:
+            return "COURTYARD"
+        runner_up = ranked[1][1] if len(ranked) > 1 else 0.0
+        if (top_value - runner_up) < (margin * top_value):
+            return "COURTYARD"
+        return zone_map.get(top_key, "COURTYARD")
 
 
 class CycleStabilizer:

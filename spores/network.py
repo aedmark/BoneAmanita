@@ -267,7 +267,7 @@ class MycelialNetwork:
             "trigger": clean_words[:3] if clean_words else ["void"],
             "context": governor_mode,
             "significance": significance,
-            "wing_id": safe_get(physics, "scope_boundary", "GLOBAL"),
+            "wing_id": self.current_wing(physics),
             "room_id": self.room_key(clean_words),
             "raw_verbatim_text": safe_get(physics, "raw_text", ""),
             "timestamp": time.time(),
@@ -279,6 +279,26 @@ class MycelialNetwork:
             self._encode_hippocampal(engram)
             return True
         return False
+
+    @staticmethod
+    def current_wing(physics: Any) -> str:
+        """The zone this memory belongs to, used as its `wing_id`.
+
+        Reads the stabilized zone (ZoneInertia applies hysteresis, so this does
+        not flap turn to turn). This previously read a `scope_boundary` key that
+        is not defined anywhere in the project, so every memory ever written was
+        tagged "GLOBAL" and the zone filter in CerebralIndex.query_neighborhood
+        had nothing to filter on.
+
+        Falls back to "GLOBAL", which the filter treats as a wildcard, so an
+        unreadable physics packet degrades to unscoped rather than unreachable.
+        """
+        space = safe_get(physics, "space", None)
+        zone = safe_get(space, "zone", None) if space is not None else None
+        if zone is None:
+            zone = safe_get(physics, "zone", None)
+        zone = str(zone).strip().upper() if zone else ""
+        return zone or "GLOBAL"
 
     @staticmethod
     def room_key(clean_words: Optional[List[str]]) -> str:

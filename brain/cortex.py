@@ -1008,6 +1008,7 @@ class TheCortex:
     def gather_state(self, sim_result: Dict[str, Any]) -> Dict[str, Any]:
         phys = sim_result.setdefault("physics", {})
         self._attach_principal_eigenvalue(phys)
+        self._attach_wing(phys)
         bio = sim_result.get("bio", {})
         if bio:
             bio_mito = safe_get(bio, "mito", {})
@@ -1104,6 +1105,18 @@ class TheCortex:
             elif source == "cortex" and isinstance(data, dict):
                 nodes.append(data)
         return nodes
+
+    def _attach_wing(self, phys: Dict[str, Any]) -> None:
+        """Flatten the current zone onto the physics dict as `wing_id`.
+
+        CerebralIndex.query_neighborhood reads `physics_state["wing_id"]` to
+        scope retrieval to the zone the conversation is actually in. Nothing
+        ever set it, so it always defaulted to "GLOBAL" and the scoping was
+        inert in both directions.
+        """
+        from spores.network import MycelialNetwork
+
+        phys["wing_id"] = MycelialNetwork.current_wing(phys)
 
     def _attach_principal_eigenvalue(self, phys: Dict[str, Any]) -> None:
         """Flatten the Creative Determinant eigenvalue onto the physics dict.

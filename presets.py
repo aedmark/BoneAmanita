@@ -225,6 +225,7 @@ class BoneConfig:
             "LIMINAL_STRESS_THRESH",
         ],
         "BIO": ["GOVERNOR_THRESHOLDS", "PID_SETTINGS"],
+        "PHYSICS": ["TASTE_CONFIDENCE_FLOOR", "ZONE_MARGIN"],
         "CD": ["LAMBDA", "BETA"],
         "EMBEDDINGS": ["BACKEND", "MODEL", "URL"],
     }

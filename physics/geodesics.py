@@ -187,7 +187,10 @@ class GeodesicEngine:
             "PHI": clamp((masses["heavy"] + masses["kinetic"] + base_mass) * inv_vol),
             "PSI": clamp(forces["abstraction"]),
             "BET": clamp((masses["social"] * 2.0) * inv_vol),
-            "DEL": clamp((masses["play"] * 3.0) * inv_vol),
+            # 3.0 was the largest amplifier of any dimension, so DEL dominated
+            # `max()` in _determine_zone whenever play mass was non-trivial.
+            # Matched to STR/VEL. See ROADMAP A5.
+            "DEL": clamp((masses["play"] * 2.0) * inv_vol),
             "E": clamp(counts.get("solvents", 0) * inv_vol),
         }
 

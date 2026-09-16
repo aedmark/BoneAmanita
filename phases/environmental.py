@@ -12,6 +12,20 @@ from struts import safe_get, safe_set, ux
 
 
 class NavigationPhase(SimulationPhase):
+    def _cross_doorway(self, ctx, stabilized_zone: str) -> None:
+        """Flush working memory when the conversation changes zone."""
+        core = getattr(getattr(self.eng.mind, "mem", None), "memory_core", None)
+        if core is None or not hasattr(core, "execute_doorway_flush"):
+            return
+        zone = str(stabilized_zone or "COURTYARD").upper()
+        previous = getattr(core, "current_doorway_zone", None)
+        core.execute_doorway_flush(zone)
+        if previous and previous != zone:
+            ctx.log(
+                f"{Prisma.VIOLET}DOORWAY: {previous} -> {zone}. "
+                f"Working memory flushed.{Prisma.RST}"
+            )
+
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
         self.name = "NAVIGATION"
@@ -100,6 +114,13 @@ class NavigationPhase(SimulationPhase):
         else:
             stabilized_zone = stabilization_result
         physics.zone = stabilized_zone
+        # The Doorway Effect. Crossing from one zone into another flushes
+        # working memory, which is what makes zones a boundary rather than a
+        # label. execute_doorway_flush existed with no production caller, so
+        # this had never once run. Keyed off the STABILIZED zone: the raw
+        # per-turn zone flaps, and flushing on every flap would just be
+        # amnesia.
+        self._cross_doorway(ctx, stabilized_zone)
         adjusted_drag = self.eng.stabilizer.override_cosmic_drag(
             drag_pen, stabilized_zone
         )

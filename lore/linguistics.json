@@ -8,27 +8,83 @@
   },
   "ROOTS": {
     "HEAVY": [
-      "lith", "ferr", "petr", "dens", "grav", "struct", "base", "fund", "mound"
+      "lith",
+      "ferr",
+      "petr",
+      "dens",
+      "grav",
+      "struct",
+      "base",
+      "fund",
+      "mound"
     ],
     "KINETIC": [
-      "mot", "mov", "ject", "tract", "pel", "crat", "dynam", "flux"
+      "mot",
+      "mov",
+      "ject",
+      "tract",
+      "pel",
+      "crat",
+      "dynam",
+      "flux"
     ],
     "ABSTRACT": [
-      "tion", "ism", "ence", "ance", "ity", "ology", "ness", "ment", "idea"
+      "tion",
+      "ism",
+      "ence",
+      "ance",
+      "ity",
+      "ology",
+      "ness",
+      "ment",
+      "idea"
     ],
     "SUBURBAN": [
-      "norm", "comm", "stand", "pol", "reg", "mod"
+      "norm",
+      "comm",
+      "stand",
+      "pol",
+      "reg",
+      "mod"
     ],
     "VITAL": [
-      "viv", "vita", "spir", "anim", "bio", "luc", "lum", "phot", "phon", "surg", "bloom"
+      "viv",
+      "vita",
+      "spir",
+      "anim",
+      "bio",
+      "luc",
+      "lum",
+      "phot",
+      "phon",
+      "surg",
+      "bloom"
     ],
     "TOXIN": [
-      "necro", "path", "tox", "vir", "mort", "rot", "rupt", "flict", "plasm", "fester", "decay", "plagu", "tumor", "bleed", "blood", "sick", "carcin", "pus", "bile"
+      "necro",
+      "path",
+      "tox",
+      "vir",
+      "mort",
+      "rot",
+      "rupt",
+      "flict",
+      "plasm",
+      "fester",
+      "decay",
+      "plagu",
+      "tumor",
+      "bleed",
+      "blood",
+      "sick",
+      "carcin",
+      "pus",
+      "bile"
     ]
   },
   "THRESHOLDS": {
-    "heavy_density": 0.55,
-    "play_vitality": 0.6,
+    "heavy_density": 0.7,
+    "play_vitality": 0.95,
     "kinetic_flow": 0.6
   },
   "BIASES": {
@@ -60,8 +116,21 @@
     "cursed": "CHI"
   },
   "PRIORITY_ORDER": [
-    "toxin", "heavy", "kinetic", "explosive", "thermal", "cryo", "sacred",
-    "antigen", "meat", "void", "liminal", "pareidolia", "play", "suburban", "abstract"
-  ]
+    "toxin",
+    "heavy",
+    "kinetic",
+    "explosive",
+    "thermal",
+    "cryo",
+    "sacred",
+    "antigen",
+    "meat",
+    "void",
+    "liminal",
+    "pareidolia",
+    "play",
+    "suburban",
+    "abstract"
+  ],
+  "_THRESHOLD_NOTE": "play_vitality was 0.6. English is vowel-dense, so vitality cleared that threshold for most words and the fallback classified 72% of unknown words as 'play', saturating the DEL dimension and pinning every conversation to the AERIE zone. Measured over a 16-line corpus: at 0.6 the fallback claimed 38% of all words with a 72% play share; at 0.95 it claims 12% with an 11% play share, DEL stops saturating, and zone distribution balances across THE_FORGE/AERIE/THE_MUD. See ROADMAP A5 and tools/audit_physics_inputs.py. heavy_density was 0.55 and inherited the same skew once play was fixed (72% of fallback verdicts). Raised to 0.70, which keeps plosive-density as a real signal while leaving the fallback a minor contributor; 0.85 removes the heavy verdict entirely, which is too aggressive."
 }
-

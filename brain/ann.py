@@ -197,10 +197,17 @@ class CerebralIndex:
             payload = self._payloads[idx]
             if not isinstance(payload, dict):
                 continue
+            # GLOBAL is a wildcard on BOTH sides, not a zone name. A memory
+            # tagged GLOBAL is unscoped (or predates zoning) and stays reachable
+            # from anywhere; a query from GLOBAL sees every zone. Without this,
+            # switching zoning on would strand every memory written before it.
+            payload_wing = payload.get("wing_id", "GLOBAL")
             if (
                 target_wing
                 and not is_lateral
-                and payload.get("wing_id", "GLOBAL") != target_wing
+                and target_wing != "GLOBAL"
+                and payload_wing != "GLOBAL"
+                and payload_wing != target_wing
             ):
                 continue
             if cortisol > 0.8:

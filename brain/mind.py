@@ -398,6 +398,11 @@ class DreamEngine:
             # hash text[:50], which made a memory retrievable only by a query
             # sharing its exact opening 50 characters.
             vectors = self._embed_batch(raw_payloads)
+            wing_id = str(
+                safe_get(safe_get(bio_state, "space", {}), "zone", "")
+                or safe_get(bio_state, "wing_id", "")
+                or "GLOBAL"
+            ).upper()
             metadata = []
             for text, vec in zip(raw_payloads, vectors):
                 byte_data = (
@@ -410,7 +415,10 @@ class DreamEngine:
                     {
                         "vector_hash": v_hash,
                         "raw_verbatim_text": text.replace("|||NEWLINE|||", "\n"),
-                        "wing_id": "GLOBAL",
+                        # Zone this passage belongs to. Hardcoding GLOBAL here
+                        # meant every consolidated memory landed unscoped even
+                        # once the rest of the pipeline knew its zone.
+                        "wing_id": wing_id,
                     }
                 )
             self.mem.cortex.add_memories(vectors, metadata)

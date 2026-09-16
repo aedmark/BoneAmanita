@@ -54,7 +54,8 @@ you whether it ran.
 | **A1** strict config + boot manifest | **done**: 10 keys promoted, audit wired into genesis |
 | **C1** hippocampus | **done**: write path, graph contract, amputation, 11 tests |
 | **A3** receipts | next |
-| **C2** `wing_id` zones | next |
+| **C2** `wing_id` zones | **done**: tagged, scoped, doorway wired, 14 tests |
+| **A5** physics input balance | **done**: all four fixes, 11 tests, scorecard tool |
 
 Suite: **331 passed, 2 failed, 2 skipped**. Both failures are the
 long-standing environmental ones (no chat model pulled in Ollama; `ordvec`
@@ -514,19 +515,128 @@ Fix: route `encode()` through the hippocampus, or collapse the two
 buffers into one. Then REM has something to consolidate, and the
 cortisol amputation becomes a real consequence.
 
-## C2. Zones
+## C2. Zones, **DONE**
 
 v7: *"Distinct projects and people live in separate Zones; when the
 conversation crosses from one to another, the old Zone goes out of
 scope."*
 
-`wing_id` exists throughout `CerebralIndex` and is always `"GLOBAL"`.
-The filtering logic in `query_neighborhood` is written and correct; it
-has nothing to filter on. Populate `wing_id` from the Cartographer's
-current zone at ingestion, and the Doorway Effect gets a real boundary
-instead of a metaphorical one.
+Three disconnected pieces, now joined:
 
-Cheap, and it makes retrieval noticeably better as memory grows.
+1. **Tagging.** `wing_id` was read from `safe_get(physics,
+   "scope_boundary", ...)`, and `scope_boundary` is defined nowhere in
+   the project, so every memory ever written was tagged `GLOBAL`. Now
+   `MycelialNetwork.current_wing()` reads the stabilized zone (the one
+   `ZoneInertia` produces, so it does not flap turn to turn), and both
+   ingestion paths use it: engrams in `network.py` and REM consolidation
+   in `mind.py`, which had `"wing_id": "GLOBAL"` hardcoded.
+2. **Scoping.** `query_neighborhood` filters on
+   `physics_state["wing_id"]` and nothing ever set it, so the filter was
+   inert in both directions. `TheCortex._attach_wing` now flattens it
+   onto the physics dict beside `cd_lambda_1`.
+3. **The doorway.** `MemoryCore.execute_doorway_flush` had no production
+   caller, so crossing a zone never flushed working memory. Now called
+   from `NavigationPhase` on the stabilized zone, not the raw one:
+   flushing on every per-turn flap would just be amnesia.
+
+**`GLOBAL` is a wildcard on both sides, not a zone name.** A memory
+tagged GLOBAL stays reachable from anywhere, and a query from GLOBAL sees
+every zone. Without that, switching zoning on would have stranded every
+memory written before it, which is a migration cliff rather than a
+feature. There is a regression test for exactly this.
+
+Verified: a THE_FORGE query returns THE_FORGE and GLOBAL and not AERIE;
+a GLOBAL query returns all three; the doorway does not flush on first
+entry and does flush on a real transition.
+
+When this landed, zoning was correct and still nearly inert, because its
+input was saturated: 11 of 12 varied inputs classified as AERIE. That was
+not a zoning bug, and chasing it produced **A5** below, which fixed the
+cause. Zones now distribute across all four.
+
+## A5. Physics input balance, **DONE**
+
+Found while wiring C2. The first finding this week that was not a
+disconnected wire: this was connected, running, and doing the wrong
+thing, which made it both more serious and harder to see.
+
+`QuantumObserver._tally_categories` resolves each word three ways: the
+solvents list, the lexicon, then `lex.taste()`, a phonosemantic fallback
+for unknown words. The fallback was deciding the physics.
+
+All four fixes were applied together, because each one alone just moves
+the imbalance somewhere else. Measured with
+`tools/audit_physics_inputs.py` over a 16-line corpus of ordinary
+conversational English:
+
+| | before | after |
+|---|---|---|
+| resolved by `lore/lexicon.json` | 13.0% | 27.3% |
+| decided by the fallback | 67.5% | 9.1% |
+| `play` share of fallback verdicts | 69% | 14% |
+| DEL saturated at 1.0 | 15 of 16 lines | 0 of 16 |
+| DEL mean | 0.994 | 0.025 |
+| zones reachable | 2 of 4 | **4 of 4** |
+| zone distribution | AERIE 15, FORGE 1 | COURTYARD 5, AERIE 5, MUD 4, FORGE 2 |
+
+### 1. The classifier returned a score where a confidence was expected
+
+`classify_word` returned `round(final_vitality, 2)` as its second value,
+so `apart` came back as `("play", 1.2)`. Callers compared that against
+0.5 as though it were a probability, which meant anything over threshold
+at all read as highly confident. It also returned the FIRST category over
+threshold in a fixed order, so a word comfortably over two thresholds was
+assigned by ordering rather than by strength of signal.
+
+Now it scores every category by margin above its own threshold,
+normalised into [0, 1] (0.0 at threshold, 1.0 at twice threshold), and
+returns the strongest. A caller's `>= 0.5` finally means something about
+the word rather than about the scale.
+
+### 2. The thresholds were calibrated for the wrong language
+
+`play_vitality` was 0.6. English is vowel-dense, so vitality cleared that
+for most words. Swept against zone balance: at 0.6 the fallback claimed
+38% of words with a 72% play share; at **0.95** it claims 12% with an 11%
+play share and DEL stops saturating. `heavy_density` inherited exactly
+the same skew once play was fixed (72% of verdicts), so it moved 0.55 ->
+**0.70**; 0.85 removes the heavy verdict entirely, which is too far.
+
+### 3. The lexicon was supplying 13% of its own physics
+
+Two mass keys, **`social` and `void`, had no lexicon category at all**,
+so `BET` was structurally zero and `void` never subtracted from
+structural mass. Added both, plus growth across every physics-bearing
+category (`heavy`, `kinetic`, `constructive`, `abstract`, `liminal`,
+`harvest`, `explosive`, `meat`, `thermal`, `cryo`, `photo`, sentiment,
+and `crisis_term`, which a new test caught at 7 words).
+
+### 4. DEL could dominate zone selection by scale alone
+
+`DEL` used a `* 3.0` amplifier, the largest of any dimension, so it won
+`max()` whenever play mass was non-trivial. Matched to STR/VEL at `2.0`.
+
+`_determine_zone` was also a bare `max()`, which meant the largest-scaled
+dimension won regardless of whether it carried signal. It now requires
+the leader to beat the runner-up by `ZONE_MARGIN` (0.15) of its own
+value, and ranks **only dimensions that name a zone**. COURTYARD becomes
+what it should always have been: no dominant character. Previously it was
+reachable only from an empty vector, so it never occurred.
+
+### Found along the way
+
+`counts["solvents"]` could never be non-zero. `LexiconStore` deliberately
+keeps solvents out of the general category map, so `lex.get("solvents")`
+is empty by construction, and the tally was reading that instead of
+`LexiconService.SOLVENTS`. The `E` dimension was structurally dead.
+
+### Still true
+
+63% of ordinary English is still unresolved by the lexicon and
+deliberately contributes nothing. That is the honest state: unknown words
+should not be guessed at. Growing `lore/lexicon.json` is the ongoing way
+to raise the signal, and `tools/audit_physics_inputs.py` is the scorecard
+for it.
 
 ## C3. Co-regulation (the actual goal)
 
@@ -623,7 +733,7 @@ shippable and each makes the next one verifiable.
 5. **A3**: receipts. The permanent fix for the failure mode that
    produced this entire document: a subsystem cannot report healthy work
    it did not do.
-6. **C2**: populate `wing_id`. Cheap, compounding.
+6. ~~**C2**: populate `wing_id`~~ **done**. Cheap, compounding.
 7. **A2**: retire the silent handlers, including mine in
    `spores/embeddings.py`, plus the regression lint.
 

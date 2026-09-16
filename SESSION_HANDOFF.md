@@ -56,10 +56,9 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 351 passed, 0 failed, 1 skipped.** Fully green, and it
-  runs in about a minute rather than four. Both long-standing failures
-  are resolved by installing the two optional pieces: `ordvec` from PyPI
-  and `mistral-nemo` in Ollama. A red suite now means something.
+- **Test suite: 376 passed, 0 failed, 1 skipped**, about a minute. Green.
+  Needs `ordvec` from PyPI and `mistral-nemo` in Ollama; a red suite now
+  means something.
 - **Module boundaries are genuinely clean.** `physics/`, `body/`,
   `brain/`, `phases/`, `mechanics/`, `spores/`, `soul/`, `archetypes/`
   are real separations. Config is externalized to `lore/*.json`. Most
@@ -339,6 +338,21 @@ future session should not treat them as a specification:
   `cortex.last_shadow_nodes` persists between turns. Stale values there
   are expected, not a retrieval failure. Confirm retrieval by querying
   the index directly.
+- **The physics inputs are calibrated, and the calibration is fragile.**
+  Word-category counts drive every number in the engine. They came 82%
+  from a phonosemantic fallback classifier that thought two thirds of
+  English was "play" (ROADMAP A5, now fixed). Before touching
+  `lore/lexicon.json`, `lore/linguistics.json`, `classify_word`, or the
+  dimension formulas, run `python tools/audit_physics_inputs.py` and
+  compare against the table in A5. `tests/test_physics_inputs.py` guards
+  the invariants: the fallback stays a minority, no single category
+  dominates it, DEL does not saturate, and at least three zones stay
+  reachable.
+- **A mass key with no lexicon category is silently always zero.**
+  `social` and `void` were weighed by `_weigh_mass` and had no category,
+  so BET was structurally zero for the life of the project. There is now
+  a test that every `GeodesicEngine._MASS_KEYS` entry exists in the
+  lexicon. Adding a mass key means adding its words too.
 - **Typographic Unicode is a live hazard in output paths.** `main.py`
   strips `_INVISIBLE_CHARS` and `spores/memory.py` has `_ZERO_WIDTH_RE`
   for a reason, and `brain/composer.py` instructs the model to limit
