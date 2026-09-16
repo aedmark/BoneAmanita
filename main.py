@@ -174,12 +174,12 @@ class BoneAmanita:
         self.events.log(msg.format(boot_mode=self.boot_mode))
         layer = self.mode_settings.get("ui_layer", RealityLayer.SIMULATION)
         mutations = {
-            "CONVERSATION": "THE CONVERSATIONALIST",
-            "ADVENTURE": "THE ARCHITECT",
-            "TECHNICAL": "THE SYSTEM_KERNEL",
-            "CREATIVE": "THE CATALYST",
+            "CONVERSATION": "CONVERSATIONALIST",
+            "ADVENTURE": "ARCHITECT",
+            "TECHNICAL": "SYSTEM_KERNEL",
+            "CREATIVE": "CATALYST",
         }
-        self.soul.force_mutation(mutations.get(self.boot_mode, "THE ARCHITECT"))
+        self.soul.force_mutation(mutations.get(self.boot_mode, "ARCHITECT"))
         self.reality_stack.stabilize_at(layer)
         prompt_key = self.mode_settings.get("prompt_key", "ADVENTURE")
         if self.prompt_library and prompt_key in self.prompt_library:

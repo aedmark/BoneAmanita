@@ -384,7 +384,7 @@ class PromptComposer:
         )
         if active_mode_name == "CONVERSATION":
             style_notes.append(
-                "CRITICAL OVERRIDE: You are a conservation partner, NOT a narrator."
+                "CRITICAL OVERRIDE: You are a conversation partner, NOT a narrator."
             )
         if modifiers["include_inventory"]:
             style_notes.extend(mode_data.get("inventory_rules", []))
@@ -396,7 +396,7 @@ class PromptComposer:
         inventory_block = (
             f"=== PHYSICALLY GROUNDING TRUTH ===\n"
             f"INVENTORY: {inv_str}\n"
-            f"CRITICAL AXIOM: The inventory listed above is absolute, immutable truth. You do not need to constantly mention the inventory or pockets, and you absolutely cannoy make any items up. Always check this list. "
+            f"CRITICAL AXIOM: The inventory listed above is absolute, immutable truth. You do not need to constantly mention the inventory or pockets, and you absolutely cannot make any items up. Always check this list. "
             f"IMPORTANT: If an item is currently in the INVENTORY, it has been removed from the environment. DO NOT list it in 'Points of Interest' or describe it as being on the ground.\n"
             if modifiers["include_inventory"]
             else ""

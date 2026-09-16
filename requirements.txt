@@ -8,6 +8,21 @@ markdown                  # Aids in markdown generation and rendering
 faiss-cpu>=1.13.2         # The O(logN) Cerebral Cortex for deep associative memory
 numpy>=1.24.0             # Required for FAISS vector contiguous arrays and matrix math
 
+# The Mnemonic Arcade's coordinate system. NO package is required by default:
+# spores/embeddings.py talks to an OpenAI-compatible /v1/embeddings endpoint over
+# `requests` (Ollama, LM Studio, llama.cpp, OpenAI all serve one). Pull a model:
+#
+#     ollama pull nomic-embed-text
+#
+# Override with BONE_EMBED_URL / BONE_EMBED_MODEL, or BoneConfig.EMBEDDINGS.
+# For a fully offline embedder instead, install the optional package below; the
+# engine will detect and prefer it over the hash fallback.
+#
+# sentence-transformers>=2.2.0   # optional: local embeddings, no server needed
+#
+# With neither reachable, the engine boots on the legacy SHAKE-256 projection and
+# reports itself DEGRADED: associative recall is disabled, not merely degraded.
+
 # 2. The Affective Layer & Immune System
 dspy
 dspy-ai>=2.4.0            # Powers the Real-Time Critic, False Cohesion checks, and Epigenetic Pruning

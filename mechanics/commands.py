@@ -229,7 +229,29 @@ class CommandProcessor:
             render("stamina_label", "Stamina: ", v['stamina'], v['max_stamina'], self.P.GRN),
             render("energy_label", "Energy:  ", v['atp'], v['max_atp'], self.P.YEL)
         ]))
+        self.interface.log(self._render_arcade_status())
         return True
+
+    def _render_arcade_status(self) -> str:
+        """Report the Mnemonic Arcade's coordinate system.
+
+        A degraded embedder cannot be inferred from the prose the engine emits,
+        so it has to be stated outright: the organism sounds exactly the same
+        whether its recall is associative or arbitrary.
+        """
+        try:
+            from spores.embeddings import SemanticEmbedder
+
+            e = SemanticEmbedder.get_instance()
+            if e.degraded:
+                return (
+                    f"Memory:  {self.P.YEL}{e.backend} @ {e.dimension}d [DEGRADED]{self.P.RST}\n"
+                    f"         {self.P.YEL}No embedding backend. Associative recall is "
+                    f"arbitrary, not approximate.{self.P.RST}"
+                )
+            return f"Memory:  {self.P.GRN}{e.model} @ {e.dimension}d{self.P.RST}"
+        except Exception as ex:
+            return f"Memory:  {self.P.GRY}unavailable ({ex}){self.P.RST}"
 
     def _cmd_report(self, _parts):
         try:

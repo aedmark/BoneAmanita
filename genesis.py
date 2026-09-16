@@ -33,6 +33,23 @@ from struts import safe_get, safe_set, ux, ux_format
 
 class BoneGenesis:
     @staticmethod
+    def _ignite_embedder(target_cfg: Any, events: Any):
+        """Probe and latch the embedding backend for the process."""
+        from spores.embeddings import SemanticEmbedder
+
+        settings = safe_get(target_cfg, "EMBEDDINGS", {}) or {}
+        if not isinstance(settings, dict):
+            settings = {}
+        embedder = SemanticEmbedder.configure(events_ref=events, **settings)
+        if embedder.degraded:
+            msg = (
+                "Mnemonic Arcade running on hash coordinates. Associative recall "
+                "is disabled until an embedding backend is reachable."
+            )
+            events.log(f"{Prisma.YEL}[GENESIS] {msg}{Prisma.RST}", "EMBED", "WARN")
+        return embedder
+
+    @staticmethod
     def ignite(
         config: Dict[str, Any], lexicon_ref: Any, events_ref: Any = None
     ) -> Dict[str, Any]:
@@ -40,6 +57,10 @@ class BoneGenesis:
         events = events_ref or EventBus(config_ref=target_cfg)
         log_msg = ux("genesis_strings", "ignite_log") or "Igniting lattice..."
         events.log(f"{Prisma.CYN}{log_msg}{Prisma.RST}", "GENESIS")
+        # Resolve the semantic coordinate system FIRST. Every index built below
+        # sizes itself to the embedder's native dimensionality, so probing after
+        # incubation would leave the Arcade pinned to the fallback width.
+        BoneGenesis._ignite_embedder(target_cfg, events)
         akashic = TheAkashicRecord(
             lore_manifest=LoreManifest.get_instance(config_ref=target_cfg),
             events_ref=events,

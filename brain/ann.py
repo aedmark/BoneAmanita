@@ -78,13 +78,36 @@ class HippocampalCache:
 
 
 class CerebralIndex:
-    def __init__(self, dimension: int = 8):
-        self.dimension = dimension
+    def __init__(self, dimension: Optional[int] = None):
+        """Long-term associative store.
+
+        `dimension` defaults to the active embedder's native width. Pass an
+        explicit value only to pin the index for a fixture or a test; a value
+        that disagrees with the embedder guarantees empty recall, because
+        `query_neighborhood` drops any query of the wrong length.
+        """
+        from spores.embeddings import SemanticEmbedder
+
+        self._embedder = SemanticEmbedder.get_instance()
+        self.dimension = int(dimension or self._embedder.dimension)
         self.is_trained = False
         self.total_nodes = 0
         self._index = faiss.IndexHNSWFlat(self.dimension, 32)
         self._payloads: List[Dict] = []
         self._phantom_lookup: Dict[str, str] = {}
+
+    def embed(self, text: str) -> List[float]:
+        """Project text into this index's coordinate system.
+
+        Anything queried against this index MUST come through here. The index is
+        populated from passage embeddings, so a query assembled from any other
+        space (physics coordinates, for instance) is not merely inaccurate, it is
+        meaningless.
+        """
+        vec = self._embedder.embed(text)
+        if len(vec) == self.dimension:
+            return vec
+        return (list(vec) + [0.0] * self.dimension)[: self.dimension]
 
     def resolve_phantom(self, vector_hash: str) -> str:
         return self._phantom_lookup.get(vector_hash, "")
@@ -183,13 +206,7 @@ class CerebralIndex:
         if not self.is_trained or self.total_nodes < 5:
             return None
         if query_text:
-            if not hasattr(self, "_w2v"):
-                from spores.spore_utils import _word_to_vector
-
-                self._w2v = _word_to_vector
-            vec = self._w2v(query_text)
-            vec = (vec + [0.0] * self.dimension)[: self.dimension]
-            np_query = np.array([vec], dtype="float32")
+            np_query = np.array([self.embed(query_text)], dtype="float32")
         else:
             np_query = np.zeros((1, self.dimension), dtype="float32")
         distances, _ = self._index.search(np_query, min(50, self.total_nodes))

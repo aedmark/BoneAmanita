@@ -1065,6 +1065,19 @@ class TheCortex:
         self._compile_style_directives(full_state, phys, sim_result)
         return full_state
 
+    @staticmethod
+    def _label_shadow_node(node: Any) -> str:
+        """Render one retrieved memory as a short concept label for the prompt."""
+        if not isinstance(node, dict):
+            return str(node or "").strip()
+        if node_id := str(node.get("id") or "").strip():
+            return node_id
+        raw = str(node.get("raw_verbatim_text") or "").strip().replace("\n", " ")
+        if not raw:
+            return ""
+        words = raw.split()
+        return " ".join(words[:8]) + ("..." if len(words) > 8 else "")
+
     def _compile_style_directives(
         self,
         full_state: Dict[str, Any],
@@ -1124,12 +1137,16 @@ class TheCortex:
                     msg = directive_map.get(val)
                     if msg:
                         mind["style_directives"].append(msg)
-        cortex_mem = getattr(self.svc.mind_memory, "ann", None)
+        # The long-term store hangs off MycelialNetwork as `cortex`; `ann` is kept
+        # as a fallback for duck-typed doubles that expose it under that name.
+        cortex_mem = getattr(self.svc.mind_memory, "cortex", None) or getattr(
+            self.svc.mind_memory, "ann", None
+        )
         shadow_nodes = []
         scope_val = float(phys.get("scope", 1.0))
         depth_val = float(phys.get("depth", 0.0))
         omega_r = float(phys.get("omega_r", 0.5))
-        query_vec = phys.get("vector", {})
+        query_text = str(sim_result.get("mutated_input") or "").strip()
         if scope_val > 0.6 or depth_val > 0.6:
             if scope_val > 0.8:
                 phys["lateral_search"] = True
@@ -1137,12 +1154,16 @@ class TheCortex:
                 cortex_mem
                 and hasattr(cortex_mem, "query_neighborhood")
                 and getattr(cortex_mem, "is_trained", False)
-                and query_vec
+                and query_text
             ):
-                ordered_keys = ["STR", "VEL", "PSI", "ENT", "PHI", "BET", "DEL", "E"]
-                q_list = [float(query_vec.get(k, 0.0)) for k in ordered_keys]
+                # Query in the SAME space the index was built from. This formerly
+                # assembled a vector out of physics coordinates (STR/VEL/PSI/...)
+                # and searched an index of text vectors, which cannot return a
+                # meaningful neighbour under any conditions. Physics still steers
+                # retrieval, but through `physics_state` (cortisol clamping, wing
+                # scoping, lateral search) rather than by impersonating a vector.
                 shadow_nodes = cortex_mem.query_neighborhood(
-                    q_list,
+                    cortex_mem.embed(query_text),
                     k=2,
                     resonance_threshold=max(0.2, 0.8 - omega_r),
                     physics_state=phys,
@@ -1159,7 +1180,12 @@ class TheCortex:
                     else []
                 )
         if shadow_nodes:
-            shadow_concepts = [n.get("id", "Unknown") for n in shadow_nodes]
+            # Cortex payloads carry `raw_verbatim_text`; graph fallbacks carry `id`.
+            # Reading only `id` labelled every recovered memory "Unknown".
+            shadow_concepts = [
+                self._label_shadow_node(n) for n in shadow_nodes
+            ]
+            shadow_concepts = [s for s in shadow_concepts if s]
             shadow_str = ", ".join(shadow_concepts)
             phys["shadow_nodes_offered"] = shadow_concepts
             phys["shadow_cast"] = shadow_str

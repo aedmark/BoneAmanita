@@ -201,6 +201,19 @@ class BoneConfig:
     API_KEY = "ollama"
     MODEL = "mistral-nemo"
     OLLAMA_FALLBACK = ""
+
+    # The Mnemonic Arcade's coordinate system. BACKEND "auto" probes the HTTP
+    # endpoint first, then a local sentence-transformers model, then falls back
+    # to the legacy SHAKE-256 hash (which has no semantic signal and disables
+    # associative recall). Env vars BONE_EMBED_* override these at boot.
+    EMBEDDINGS = {
+        "BACKEND": "auto",
+        "MODEL": "nomic-embed-text",
+        "URL": "http://127.0.0.1:11434/v1/embeddings",
+        "API_KEY": "ollama",
+        "TIMEOUT": 20.0,
+        "MAX_CHARS": 2048,
+    }
     _TEMPLATE_DATA = {}
 
     @classmethod

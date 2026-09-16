@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from archetypes.village import ParadoxSeed
 from brain.ann import CerebralIndex, HippocampalCache
+from spores.spore_utils import _words_to_matrix
 from constants import Prisma
 from core import EventBus, LoreManifest
 from presets import BoneConfig
@@ -32,7 +33,7 @@ class MycelialNetwork:
         self.session_id = f"session_{int(time.time())}"
         self.filename = f"{self.session_id}.json"
         self.hippocampus = HippocampalCache(max_capacity=500)
-        self.cortex = CerebralIndex(dimension=8)
+        self.cortex = CerebralIndex()
         self.subconscious = SubconsciousStrata(
             filename=f"memories/subconscious_{self.session_id}.jsonl"
         )
@@ -198,6 +199,11 @@ class MycelialNetwork:
         total_v_shift = 0.0
         total_d_shift = 0.0
         haunted_words = []
+        # Warm the whole turn's vocabulary in one round trip before the loop.
+        # dredge_vibe() embeds per call, so an un-warmed loop costs one request
+        # per novel word on every single turn.
+        if haunted := [w for w in clean_words if w in self.subconscious.index]:
+            _words_to_matrix(haunted)
         for w in clean_words:
             if w in self.subconscious.index:
                 vibe_results = self.subconscious.dredge_vibe(w)

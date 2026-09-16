@@ -1,15 +1,25 @@
 """struts.py"""
 
-import hashlib
 import logging
 from typing import Any
 from constants import Prisma
 
 logger = logging.getLogger("bone")
 
-def _word_to_vector(word: str, dim: int = 8) -> list:
-    h = hashlib.shake_256(word.encode("utf-8")).digest(dim)
-    return [(b / 127.5) - 1.0 for b in h]
+def _word_to_vector(word: str, dim: int = 0) -> list:
+    """Project a word or passage into the active semantic space.
+
+    Delegates to the single embedder in `spores.embeddings` so that `struts` and
+    `spores.spore_utils` can never drift into two different coordinate systems.
+    The import is deferred: `spores.embeddings` lives inside the `spores`
+    package, so importing it at module scope would execute `spores/__init__`,
+    which imports modules that import `struts`.
+    """
+    from spores.embeddings import SemanticEmbedder, _hash_to_vector
+
+    if dim:
+        return _hash_to_vector(word, dim)
+    return SemanticEmbedder.get_instance().embed(word)
 
 def ux(section: str, key: str, default: Any = "") -> Any:
     from core import LoreManifest

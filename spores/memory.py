@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from core import JSONEncoder
 from presets import BoneConfig
-from spores.spore_utils import _word_to_vector
+from spores.spore_utils import _word_to_vector, _words_to_matrix
 from struts import safe_get, ux, ux_format
 
 try:
@@ -99,18 +99,38 @@ class SubconsciousStrata:
         self.index = {}
         self.metadata_log = []
         raw_vectors = []
+        words = []
         for e in self._iter_entries():
             if e.get("word"):
                 self.index[e["word"]] = e
                 self.metadata_log.append(e)
-                if np is not None:
-                    raw_vec = _word_to_vector(e["word"])
-                    if raw_vec is not None:
-                        vec = np.array(raw_vec, dtype=np.float32)
-                        remainder = vec.shape[0] % 64
-                        if remainder != 0:
-                            vec = np.pad(vec, (0, 64 - remainder), mode="constant")
-                        raw_vectors.append(vec)
+                words.append(e["word"])
+
+        if np is not None and words:
+            # Warm the embedder cache with one batched round trip, then resolve
+            # each word through _word_to_vector. Both steps matter:
+            #
+            #   - the warm avoids a request per buried word at every boot;
+            #   - going through _word_to_vector keeps this path in the SAME space
+            #     as bury(), which is the only guarantee that rank_bank rows stay
+            #     mutually comparable. Calling the batch helper directly here let
+            #     the two paths diverge in width.
+            #
+            # The warm is advisory, so a failure is not fatal: the per-word calls
+            # below degrade on their own terms.
+            try:
+                _words_to_matrix(words)
+            except Exception:
+                pass
+            # One row per word, in order, so rank_bank stays index-aligned with
+            # metadata_log. Skipping a row would shift every later lookup onto
+            # the wrong memory.
+            for word in words:
+                vec = np.array(_word_to_vector(word), dtype=np.float32)
+                remainder = vec.shape[0] % 64
+                if remainder != 0:
+                    vec = np.pad(vec, (0, 64 - remainder), mode="constant")
+                raw_vectors.append(vec)
 
         if np is not None and raw_vectors:
             self.rank_bank = np.ascontiguousarray(

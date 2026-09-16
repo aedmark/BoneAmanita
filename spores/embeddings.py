@@ -1,0 +1,414 @@
+"""spores/embeddings.py
+
+Semantic vectorization for the Mnemonic Arcade.
+
+The engine used to derive its "vectors" from SHAKE-256 digests of the source
+string. A cryptographic digest is built to destroy input correlation, so those
+coordinates carried no semantic signal whatsoever: `dog` and `canine` landed
+further apart than `dog` and `asphalt`. Every associative sweep over that space
+was noise wearing the costume of memory.
+
+This module resolves a real embedding backend once at boot and caches it.
+Backends are probed in descending order of fidelity; the legacy hash survives as
+the terminal fallback so the organism still boots with no server reachable and
+no optional packages installed. It is degraded in that state, and it says so.
+
+CONSTITUTIONAL NOTE (Article 1): this is a ~40-line HTTP call against an
+OpenAI-compatible /v1/embeddings endpoint plus an optional local transformer.
+No orchestration framework is introduced and the control loop stays ours.
+
+IMPORT DISCIPLINE: this module imports nothing from BoneAmanita except
+`constants`. Both `struts._word_to_vector` and `spores.spore_utils._word_to_vector`
+delegate here, and `struts` is imported by nearly every module in the tree, so a
+project-level import would close a cycle.
+"""
+
+import hashlib
+import math
+import os
+import threading
+import time
+from collections import OrderedDict
+from typing import Any, Dict, List, Optional, Sequence
+
+from constants import Prisma
+
+LEGACY_HASH_DIM = 8
+
+_CACHE_CAPACITY = 4096
+_MAX_CONSECUTIVE_FAILURES = 3
+_PROBE_TEXT = "the cartographer maps the room"
+
+_DEFAULTS: Dict[str, Any] = {
+    "BACKEND": "auto",
+    "MODEL": "nomic-embed-text",
+    "URL": "http://127.0.0.1:11434/v1/embeddings",
+    "API_KEY": "ollama",
+    "TIMEOUT": 20.0,
+    "MAX_CHARS": 2048,
+    "NORMALIZE": True,
+}
+
+_ENV_KEYS = {
+    "BACKEND": "BONE_EMBED_BACKEND",
+    "MODEL": "BONE_EMBED_MODEL",
+    "URL": "BONE_EMBED_URL",
+    "API_KEY": "BONE_EMBED_API_KEY",
+    "TIMEOUT": "BONE_EMBED_TIMEOUT",
+    "MAX_CHARS": "BONE_EMBED_MAX_CHARS",
+}
+
+
+def _hash_to_vector(text: str, dim: int = LEGACY_HASH_DIM) -> List[float]:
+    """The original SHAKE-256 projection. Deterministic, offline, and semantically blind.
+
+    Retained verbatim so the engine degrades to its historical behaviour rather
+    than to a crash, and so tests have a backend that needs no server.
+    """
+    h = hashlib.shake_256(text.encode("utf-8")).digest(dim)
+    return [(b / 127.5) - 1.0 for b in h]
+
+
+def _l2_normalize(vec: Sequence[float]) -> List[float]:
+    """Unit-length projection.
+
+    FAISS IndexHNSWFlat scores by squared L2. On unit vectors that is a monotone
+    function of cosine similarity (d^2 = 2 - 2*cos), which is what makes the
+    `resonance_threshold` knobs in CerebralIndex mean anything consistent across
+    backends of differing dimensionality and scale.
+    """
+    norm = math.sqrt(sum(float(v) * float(v) for v in vec))
+    if norm <= 1e-12:
+        return [float(v) for v in vec]
+    return [float(v) / norm for v in vec]
+
+
+class SemanticEmbedder:
+    """Resolves and owns one embedding backend for the lifetime of the process."""
+
+    _instance: Optional["SemanticEmbedder"] = None
+    _instance_lock = threading.Lock()
+
+    def __init__(self, events_ref=None, **overrides):
+        self.events = events_ref
+        self._lock = threading.RLock()
+        self._cache: "OrderedDict[str, List[float]]" = OrderedDict()
+        self._settings = self._resolve_settings(overrides)
+        self.backend = "hash"
+        self.model = ""
+        self.dimension = LEGACY_HASH_DIM
+        self.degraded = True
+        self.detail = "not yet resolved"
+        self._consecutive_failures = 0
+        self._st_model = None
+        self._warned = set()
+        self._resolve_backend()
+
+    # ------------------------------------------------------------------ setup
+
+    @staticmethod
+    def _resolve_settings(overrides: Dict[str, Any]) -> Dict[str, Any]:
+        # Precedence, lowest to highest: module defaults, then BoneConfig.EMBEDDINGS
+        # (passed in as overrides), then BONE_EMBED_* env vars. The env wins
+        # because it is the per-run knob: BoneConfig.EMBEDDINGS ships populated,
+        # so letting it outrank the environment would make BONE_EMBED_URL a no-op.
+        settings = dict(_DEFAULTS)
+        for key, val in (overrides or {}).items():
+            if val not in (None, ""):
+                settings[str(key).upper()] = val
+        for key, env_name in _ENV_KEYS.items():
+            raw = os.environ.get(env_name)
+            if raw not in (None, ""):
+                settings[key] = raw
+        for numeric in ("TIMEOUT", "MAX_CHARS"):
+            try:
+                settings[numeric] = float(settings[numeric])
+            except (TypeError, ValueError):
+                settings[numeric] = _DEFAULTS[numeric]
+        settings["MAX_CHARS"] = max(64, int(settings["MAX_CHARS"]))
+        settings["BACKEND"] = str(settings["BACKEND"]).strip().lower()
+        return settings
+
+    def _log(self, message: str, level: str = "INFO"):
+        """Emit through the EventBus when one is attached.
+
+        EventBus.log's signature is (message, source, level) - passing the level
+        positionally lands it in `source` and silently demotes every warning to
+        DEBUG, which is how a degraded Arcade would boot without saying so.
+        """
+        if self.events is not None and hasattr(self.events, "log"):
+            try:
+                self.events.log(message, "EMBED", level)
+                return
+            except Exception:
+                pass
+        print(message)
+
+    def _resolve_backend(self):
+        """Probe backends in descending order of fidelity. Never raises."""
+        requested = self._settings["BACKEND"]
+        failures: List[str] = []
+        order = (
+            ["http", "sentence_transformers"]
+            if requested in ("auto", "")
+            else [requested]
+        )
+        for candidate in order:
+            if candidate == "hash":
+                break  # A deliberate selection, not a failure. Fall through quietly.
+            probe = getattr(self, f"_probe_{candidate}", None)
+            if probe is None:
+                self._log(
+                    f"{Prisma.YEL}Unknown backend '{candidate}'. Falling through.{Prisma.RST}",
+                    "WARN",
+                )
+                continue
+            try:
+                if probe():
+                    self.degraded = False
+                    self.detail = f"resolved via {candidate}"
+                    self._log(
+                        f"{Prisma.GRN}Semantic cortex online: "
+                        f"{self.backend}:{self.model} @ {self.dimension}d.{Prisma.RST}",
+                        "INFO",
+                    )
+                    return
+            except Exception as e:
+                failures.append(f"{candidate}: {type(e).__name__}: {e}")
+                continue
+            failures.append(f"{candidate}: {self.detail}")
+        self.backend = "hash"
+        self.model = "shake_256"
+        self.dimension = LEGACY_HASH_DIM
+        self.degraded = True
+        if requested == "hash":
+            self.detail = "hash backend requested explicitly"
+            return
+        self.detail = "; ".join(failures) or "no backends probed"
+        self._log(
+            f"{Prisma.YEL}No embedding backend reachable ({self.detail}). "
+            f"Falling back to the SHAKE-256 hash: associative recall is DISABLED, "
+            f"retrieval will be effectively arbitrary. Set BONE_EMBED_URL/BONE_EMBED_MODEL "
+            f"or install sentence-transformers to restore it.{Prisma.RST}",
+            "WARN",
+        )
+
+    def _probe_http(self) -> bool:
+        try:
+            import requests  # noqa: F401
+        except ImportError:
+            self.detail = "requests is not installed"
+            return False
+        vectors = self._http_embed([_PROBE_TEXT])
+        if not vectors or not vectors[0]:
+            return False
+        self.backend = "http"
+        self.model = str(self._settings["MODEL"])
+        self.dimension = len(vectors[0])
+        with self._lock:
+            self._cache[self._cache_key(_PROBE_TEXT)] = self._finalize(vectors[0])
+        return True
+
+    def _probe_sentence_transformers(self) -> bool:
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError:
+            self.detail = "sentence-transformers is not installed"
+            return False
+        name = str(self._settings["MODEL"])
+        if name == _DEFAULTS["MODEL"]:
+            # The Ollama-flavoured default is not a valid HuggingFace repo id.
+            name = "sentence-transformers/all-MiniLM-L6-v2"
+        self._st_model = SentenceTransformer(name)
+        probe = self._st_model.encode([_PROBE_TEXT])
+        self.backend = "sentence_transformers"
+        self.model = name
+        self.dimension = int(len(probe[0]))
+        return True
+
+    # -------------------------------------------------------------- transport
+
+    def _http_embed(self, texts: List[str]) -> List[List[float]]:
+        import requests
+
+        headers = {"Content-Type": "application/json"}
+        api_key = self._settings.get("API_KEY")
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        payload = {"model": self._settings["MODEL"], "input": texts}
+        resp = requests.post(
+            str(self._settings["URL"]),
+            json=payload,
+            headers=headers,
+            timeout=float(self._settings["TIMEOUT"]),
+        )
+        resp.raise_for_status()
+        body = resp.json()
+        rows = body.get("data")
+        if not isinstance(rows, list) or len(rows) != len(texts):
+            raise ValueError(
+                f"embeddings endpoint returned {len(rows) if isinstance(rows, list) else 'no'} "
+                f"rows for {len(texts)} inputs"
+            )
+        ordered = sorted(rows, key=lambda r: int(r.get("index", 0)))
+        return [list(r.get("embedding") or []) for r in ordered]
+
+    def _raw_embed(self, texts: List[str]) -> List[List[float]]:
+        if self.backend == "http":
+            return self._http_embed(texts)
+        if self.backend == "sentence_transformers":
+            encoded = self._st_model.encode(texts)
+            return [list(map(float, row)) for row in encoded]
+        return [_hash_to_vector(t, self.dimension) for t in texts]
+
+    def _degrade(self, error: Exception):
+        """Latch to the hash only after repeated failure, so a blip is not fatal."""
+        self._consecutive_failures += 1
+        if self._consecutive_failures < _MAX_CONSECUTIVE_FAILURES:
+            return
+        if self.backend != "hash":
+            self._log(
+                f"{Prisma.RED}Backend '{self.backend}' failed "
+                f"{self._consecutive_failures}x ({error}). Severing to hash fallback; "
+                f"associative recall is now arbitrary.{Prisma.RST}",
+                "CRIT",
+            )
+        self.backend = "hash"
+        self.model = "shake_256"
+        self.dimension = LEGACY_HASH_DIM
+        self.degraded = True
+
+    # ------------------------------------------------------------------- API
+
+    def _cache_key(self, text: str) -> str:
+        return f"{self.backend}:{self.model}:{text}"
+
+    def _finalize(self, vec: Sequence[float]) -> List[float]:
+        if self._settings.get("NORMALIZE", True):
+            return _l2_normalize(vec)
+        return [float(v) for v in vec]
+
+    def _clean(self, text: Any) -> str:
+        return str(text or "").strip()[: int(self._settings["MAX_CHARS"])]
+
+    def _cache_get(self, key: str) -> Optional[List[float]]:
+        with self._lock:
+            hit = self._cache.get(key)
+            if hit is not None:
+                self._cache.move_to_end(key)
+                return list(hit)
+        return None
+
+    def _cache_put(self, key: str, vec: List[float]):
+        with self._lock:
+            self._cache[key] = list(vec)
+            self._cache.move_to_end(key)
+            while len(self._cache) > _CACHE_CAPACITY:
+                self._cache.popitem(last=False)
+
+    def embed(self, text: Any) -> List[float]:
+        return self.embed_batch([text])[0]
+
+    def embed_batch(self, texts: Sequence[Any]) -> List[List[float]]:
+        """Embed many strings, hitting the backend only for cache misses.
+
+        Never raises: a failed backend yields hash vectors of the CURRENT
+        dimension so callers stacking these into a matrix always get a
+        rectangular result.
+        """
+        cleaned = [self._clean(t) for t in texts]
+        results: List[Optional[List[float]]] = [None] * len(cleaned)
+        pending: List[str] = []
+        pending_slots: Dict[str, List[int]] = {}
+
+        for i, text in enumerate(cleaned):
+            if not text:
+                results[i] = [0.0] * self.dimension
+                continue
+            key = self._cache_key(text)
+            if (hit := self._cache_get(key)) is not None:
+                results[i] = hit
+                continue
+            if text in pending_slots:
+                pending_slots[text].append(i)
+                continue
+            pending_slots[text] = [i]
+            pending.append(text)
+
+        if pending:
+            try:
+                raw = self._raw_embed(pending)
+                self._consecutive_failures = 0
+            except Exception as e:
+                self.detail = f"{type(e).__name__}: {e}"
+                if "embed_failure" not in self._warned:
+                    self._warned.add("embed_failure")
+                    self._log(
+                        f"{Prisma.YEL}Vectorization failed ({self.detail}). "
+                        f"Serving hash coordinates for this sweep.{Prisma.RST}",
+                        "WARN",
+                    )
+                self._degrade(e)
+                raw = [_hash_to_vector(t, self.dimension) for t in pending]
+
+            for text, vec in zip(pending, raw):
+                if not vec or len(vec) != self.dimension:
+                    vec = _hash_to_vector(text, self.dimension)
+                final = self._finalize(vec)
+                self._cache_put(self._cache_key(text), final)
+                for slot in pending_slots[text]:
+                    results[slot] = final
+
+        return [r if r is not None else [0.0] * self.dimension for r in results]
+
+    def describe(self) -> str:
+        state = "DEGRADED" if self.degraded else "NOMINAL"
+        return f"{self.backend}:{self.model} {self.dimension}d [{state}]"
+
+    def stats(self) -> Dict[str, Any]:
+        with self._lock:
+            cached = len(self._cache)
+        return {
+            "backend": self.backend,
+            "model": self.model,
+            "dimension": self.dimension,
+            "degraded": self.degraded,
+            "cached": cached,
+            "detail": self.detail,
+        }
+
+    # -------------------------------------------------------------- singleton
+
+    @classmethod
+    def get_instance(cls, events_ref=None, **overrides) -> "SemanticEmbedder":
+        if cls._instance is None:
+            with cls._instance_lock:
+                if cls._instance is None:
+                    cls._instance = cls(events_ref=events_ref, **overrides)
+        elif events_ref is not None and cls._instance.events is None:
+            cls._instance.events = events_ref
+        return cls._instance
+
+    @classmethod
+    def configure(cls, events_ref=None, **overrides) -> "SemanticEmbedder":
+        """Rebuild the singleton against new settings. Called once from genesis."""
+        with cls._instance_lock:
+            cls._instance = cls(events_ref=events_ref, **overrides)
+        return cls._instance
+
+    @classmethod
+    def reset(cls):
+        with cls._instance_lock:
+            cls._instance = None
+
+
+def embed(text: Any) -> List[float]:
+    return SemanticEmbedder.get_instance().embed(text)
+
+
+def embed_batch(texts: Sequence[Any]) -> List[List[float]]:
+    return SemanticEmbedder.get_instance().embed_batch(texts)
+
+
+def embedding_dimension() -> int:
+    return SemanticEmbedder.get_instance().dimension

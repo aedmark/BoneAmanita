@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 from constants import Prisma
 from core import LoreManifest, TelemetryService
 from main import BoneAmanita
+from spores.embeddings import SemanticEmbedder
 
 
 class AppendLogger:
@@ -55,6 +56,12 @@ class TeeOutput:
 class BoneTestCase(unittest.TestCase):
     def setUp(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
+        # Pin the suite to the offline hash backend. The real embedding backends
+        # need a reachable server or an optional package, and a test run must not
+        # depend on either. `tests/test_embeddings.py` covers the live paths with
+        # mocked transport plus an opt-in integration test.
+        os.environ["BONE_EMBED_BACKEND"] = "hash"
+        SemanticEmbedder.reset()
         self.original_stdout = sys.stdout
         self.tee = TeeOutput(sys.stdout, "test_output_full.log")
         sys.stdout = self.tee

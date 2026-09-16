@@ -335,9 +335,10 @@ class DreamEngine:
             safe_get(safe_get(self.cfg, "CORTEX", {}), "EPIGENETIC_PRUNE_THRESHOLD", 12)
         )
         from mechanics.tools import TheTclWeaver
-        from spores.spore_utils import _word_to_vector
+        from spores.spore_utils import _word_to_vector, _words_to_matrix
 
         self._w2v = _word_to_vector
+        self._embed_batch = _words_to_matrix
         self._weaver = TheTclWeaver.get_instance()
 
     def enter_rem_cycle(
@@ -393,10 +394,12 @@ class DreamEngine:
             self.context_queue = []
             s_cost = min(available_atp * 0.4, len(raw_payloads) * 10.0)
             shift["atp_drain"] = s_cost
-            vectors, metadata = [], []
-            for text in raw_payloads:
-                vec = self._w2v(text[:50])
-                vectors.append(vec)
+            # Embed the passage itself, in one batched round trip. This used to
+            # hash text[:50], which made a memory retrievable only by a query
+            # sharing its exact opening 50 characters.
+            vectors = self._embed_batch(raw_payloads)
+            metadata = []
+            for text, vec in zip(raw_payloads, vectors):
                 byte_data = (
                     np.array(vec, dtype=np.float32).tobytes()
                     if np is not None
