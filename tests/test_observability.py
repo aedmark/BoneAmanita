@@ -84,7 +84,10 @@ class SilentExceptionHandlers(unittest.TestCase):
     """A budget, not a ban. Some catches are legitimate (backend probes, cache
     warms); the point is that the count cannot quietly grow."""
 
-    BUDGET = 73
+    # A ratchet, not a ceiling: lower it when the count drops, never raise it.
+    # It has already caught one regression (the resonance classifier shipped
+    # with three silent catches and this test refused them).
+    BUDGET = 72
 
     def test_silent_handler_count_does_not_grow(self):
         silent = []

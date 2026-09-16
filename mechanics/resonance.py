@@ -68,6 +68,7 @@ class ResonanceClassifier:
         self.mean: List[float] = []
         self.ready = False
         self.detail = "not built"
+        self._warned = False
 
     def build(self, vocab: Dict[str, Sequence[str]], events: Any = None) -> bool:
         """Embed every curated category once and cache its centred centroid.
@@ -129,6 +130,15 @@ class ResonanceClassifier:
         except Exception as e:
             self.detail = f"{type(e).__name__}: {e}"
             self.ready = False
+            if events is not None and hasattr(events, "log"):
+                events.log(
+                    f"Resonance classifier unavailable ({self.detail}). Unknown "
+                    f"words fall back to the phonosemantic classifier.",
+                    "LEXICON",
+                    "WARN",
+                )
+            else:
+                print(f"[RESONANCE] Unavailable: {self.detail}")
             return False
 
     def classify(self, word: str) -> Tuple[Optional[str], float]:
@@ -139,7 +149,15 @@ class ResonanceClassifier:
             from spores.embeddings import SemanticEmbedder
 
             raw = SemanticEmbedder.get_instance().embed(word)
-        except Exception:
+        except Exception as e:
+            # Degrading to the phonosemantic guess is correct here, but doing it
+            # silently is how this class of fault survives. Say it once.
+            if not self._warned:
+                self._warned = True
+                print(
+                    f"[RESONANCE] Embedding failed ({type(e).__name__}: {e}). "
+                    f"Unknown words fall back to the phonosemantic classifier."
+                )
             return None, 0.0
         if not raw or len(raw) != len(self.mean):
             return None, 0.0

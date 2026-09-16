@@ -71,40 +71,91 @@ aren't there. See "Claims vs. code" below.
   "rich tapestry" via deny-list plus retry is a real anti-slop mechanism
   and is the single highest-value thing in the codebase.
 - **Circuit breaker and local fallback work** (`brain/composer.py:235`).
-- **The Mnemonic Arcade now does real associative recall** (new, see
-  below).
+- **The Mnemonic Arcade does real associative recall**, exact and
+  semantic, scoped to zones, with short-term memory feeding REM
+  consolidation and cortisol genuinely amputating it.
+- **The Creative Determinant steers generation.** Project Navi's math
+  drives ATP/ROS and now also the thermal lock on temperature.
+- **Word resolution is 81% unguessed**, up from 13%: grammatical filler,
+  the curated lexicon plus inflections, embedding resonance, then a
+  last-resort spelling guess at under 3%.
+- **Failures are visible.** Crashes surface with tracebacks, missing
+  config is named at boot, a degraded embedder announces itself in
+  `/status`.
 - **The `agents/` docs are unusually disciplined.** `constitution.md`
   with explicit "WHY NOT" blocks is better design documentation than
   most commercial codebases have. They are load-bearing: read them
   before touching anything, in the order `agents/prompt.md` specifies
-  (constitution → conventions → glossary → domain_*).
+  (constitution, conventions, glossary, then domain_*).
 
-## What changed most recently: the Creative Determinant went live
+## What changed most recently
 
-After the embeddings work, three items from `ROADMAP.md` landed:
+Work landed in this order. `ROADMAP.md` has the detail and the
+measurements; this is the shape of it.
 
-- **λ₁ now steers generation (B1).** `<cd_lambda_1>` had a parser in
-  `LLMInterface.generate` and no producer anywhere, so the thermal lock
-  was dead. Wiring it exposed two deeper faults: `gamma` and `mu` were
-  computed by the observer and then dropped, because only `kappa` was
-  listed in `ObservationPhase._SYNC_KEYS`; and `λ₁ = (π/L)² - βb` with
-  L defaulting to π made the constant term exactly 1.0, which put the
-  coherent regime out of reach for every state the engine could produce.
-  λ₁ is now `-βb` (Theorem 3.16 stated directly), λ (contradiction cost)
-  ships at 0.5 in `BoneConfig.CD`, and a real turn measurably opens heat:
-  λ₁ = -0.14 produced temperature 0.84.
-- **Severity logs unmuted (A1b).** See item 3b below.
-- **Strict config (A1).** Ten constants that existed in no config file
-  were promoted into `lore/tuning_presets.json` at their inline defaults
-  (no behaviour change, but they are now tunable and discoverable), and
-  `BoneConfig.REQUIRED_CONFIG` plus `BoneGenesis._audit_config` report
-  every miss at boot in one line. Also fixed: `body/regulation.py` read
-  `BODY_CONFIG` off `BoneConfig`, where it has never lived, so
-  `GOVERNOR_SHIFT` resolved to `{}` on every boot.
+1. **B1, the Creative Determinant went live.** `<cd_lambda_1>` had a
+   parser in `LLMInterface.generate` and no producer, so the thermal
+   lock was dead. Wiring it exposed two deeper faults: `gamma` and `mu`
+   were computed by the observer and dropped, because only `kappa` was
+   in `ObservationPhase._SYNC_KEYS`; and the `(pi/L)^2` term with L
+   defaulting to pi made the constant exactly 1.0, putting the coherent
+   regime out of reach for every state the engine could produce. Lambda
+   is now `-beta*b` (Theorem 3.16 stated directly), the contradiction
+   weight ships at 0.5 in `BoneConfig.CD`, and a real turn measurably
+   opens heat.
+2. **A1b, severity logs unmuted.** 25 call sites passed a severity where
+   `source` belongs, routing them to DEBUG. Including the daemon's own
+   crash handler, which formatted a full traceback and discarded it.
+3. **A1, strict config.** Ten constants existed in no config file. Every
+   subsystem reading them used an inline fallback, so tuning them did
+   nothing, forever. Promoted at their existing values, with a boot-time
+   audit that names any miss.
+4. **C1, the hippocampus.** Three faults stacked: no writer at all, then
+   all three `get_graph()` consumers asking for a `.adj` attribute the
+   method never returned, then an edge threshold calibrated for hash
+   vectors and therefore above every similarity real embeddings produce.
+5. **Retrieval, both paths.** `retrieve_semantic` had no caller either,
+   so exact recall was reachable only through dead code.
+6. **C2, zones.** `wing_id` read a key defined nowhere, the query side
+   never set it, and the Doorway Effect had no caller.
+7. **A5 and A6, the physics inputs.** The largest finding, and the only
+   one that was not a disconnected wire. See below.
 
-**The λ calibration was the user's call, not mine**: 0.5 was chosen
-from a measured sensitivity table. Don't change it casually; the roadmap
-records the alternatives that were on the table.
+**A5/A6 is the one to understand if you read only one.** Word category
+counts drive every number in the engine. They came 82% from a
+phonosemantic classifier that thought two thirds of English was "play",
+which saturated one dimension and pinned every conversation to one zone.
+Fixed in two passes: calibrate the classifier and the thresholds, grow
+the lexicon, normalise the dimension and the zone selection; then close
+the function-word class, add morphological lookup, and resolve what
+remains by embedding resonance. Word resolution went from **13% to 81%**
+without guessing.
+
+Everything else this week was reconnecting something already built.
+A5/A6 was connected, running, and confidently wrong, which is why it
+survived so long: nothing looks broken when the output is prose.
+
+## The pattern worth carrying forward
+
+Twelve subsystems were found doing nothing while looking healthy. None
+produced an error, a log line, or a failing test, and they could not
+have: **the only output is prose, and prose looks identical whether the
+physics ran or quietly returned defaults.**
+
+Three habits came out of that and are worth keeping:
+
+- **A fix often uncovers a second fault that was hiding behind it.** The
+  hippocampus was three deep. Do not assume one repair finishes an area;
+  re-measure end to end with real values afterwards.
+- **A passing test can encode a bug.** `test_terminal_topology_collapse`
+  mocked a contract that never existed, matching production's own wrong
+  assumption. When a test breaks after a contract fix, check which side
+  was actually wrong before "fixing" the code back.
+- **Calibration constants outlive the thing they were calibrated for.**
+  The 0.75 edge threshold, the 0.6 play threshold, the `(pi/L)^2` term
+  and the 80% recall assertion were all correct once and silently wrong
+  later. When a mechanism is inert, suspect its constants before its
+  wiring.
 
 ## Earlier: real embeddings
 
@@ -439,42 +490,43 @@ cannot cross, and serialization across check/verify/commit) that would
 have to hold first. The short version: validation at nomination time is
 an optimization, validation at commit time is the guarantee.
 
-**See `ROADMAP.md`** for the full plan behind these: three tracks
-(Observability, the Creative Determinant, the Biological Harness) with
-sequencing and the measurements behind each claim. The audits are
-re-runnable rather than trusted: `python tools/audit_handlers.py`
-(silent exception handlers, muted severity logs) and
-`python tools/audit_safe_get.py` (runtime `safe_get` default hit-rate).
+**See `ROADMAP.md`** for the full plan: three tracks (Observability, the
+Creative Determinant, the Biological Harness) with sequencing and the
+measurement behind every claim. The audits are re-runnable rather than
+trusted:
+
+```bash
+python tools/audit_handlers.py         # silent handlers, muted severity logs
+python tools/audit_safe_get.py         # runtime safe_get default hit-rate
+python tools/audit_physics_inputs.py   # how much vocabulary the engine knows
+```
+
 The short list below is what a session should know without reading it.
 
-1. **Embedding calls are not metered into ATP.** Every other retrieval
-   in the engine has a thermodynamic cost; `SemanticEmbedder` calls
-   don't. This is a deliberate open question rather than an oversight:
-   Constitution Article 2 says these costs are load-bearing, so
-   arguably they should be. Not done because it's a tuning decision.
+1. **Embedding calls are not metered into ATP.** Every other retrieval in
+   the engine has a thermodynamic cost; `SemanticEmbedder` calls do not,
+   and word resolution now makes them on novel words too. Constitution
+   Article 2 says these costs are load-bearing, so arguably they should
+   be. Left alone because it is a tuning decision, not a repair.
 2. **The metabolic economy may be mistuned toward immediate death.**
-   Observed in mock mode: three turns took ATP 60 → 0 and ROS 0 → 100.
-   That may be an artifact of mock generation length and has **not**
-   been confirmed against a real chat model, which is the first thing to
-   check before changing any BIO constants. Flagged, not diagnosed.
-3. **No `.gitignore`** (see Environment). Cheap to fix, mildly annoying
+   Observed in mock mode: three turns took ATP from 60 to 0 and ROS from
+   0 to 100. That may be an artifact of mock generation length and has
+   **not** been confirmed against a real chat model, which is the first
+   thing to check before changing any BIO constants. Flagged, not
+   diagnosed.
+3. **No `.gitignore`.** See Environment. Cheap to fix, mildly annoying
    until then.
-3b. ~~25 `events.log` calls pass a severity where `source` belongs~~,
-   **done**. All 25 corrected to the three-argument form, `EventBus.log`
-   now accepts the legacy two-argument spelling rather than dropping it,
-   and `tests/test_observability.py` fails if one reappears. The daemon's
-   crash handler at `cycle.py:427` now surfaces a full traceback at
-   CRITICAL, verified by forcing a turn to explode.
-4. ~~`main.py`'s archetype fallback still carrying the `"THE "` prefix
-   after the other four entries lost it~~, **done** in `7e90a74`.
-   `main.py:182` now reads `mutations.get(self.boot_mode, "ARCHITECT")`.
-   It was unreachable anyway (`boot_mode` is validated against
-   `BonePresets.MODES` upstream), so this was cosmetic.
-5. **Nothing else is known-broken.** If picking this up cold, the sanity
-   check is: make a venv, run the suite, expect 306/2/2 with those two
-   specific environmental failures; then boot headless in mock mode and
-   confirm `/status` reports the Arcade as nominal (not `DEGRADED`)
-   with Ollama up.
+4. **About 16% of ordinary English stays unresolved, on purpose.** Nobody
+   knows all of English, and an engine that pretends to is the failure
+   this layer was rebuilt to escape. Add roots to `lore/lexicon.json` if
+   you want the number lower, and watch it with the physics audit. Do not
+   close the gap by loosening a threshold.
+5. **Nothing else is known-broken.** Picking this up cold: make a venv,
+   install including `ordvec`, pull both Ollama models, run the suite and
+   expect **391 passed, 0 failed, 5 skipped** (the skips are live-backend
+   tests behind `BONE_EMBED_LIVE_TEST=1`). Then boot headless in mock
+   mode and confirm `/status` reports the Arcade nominal rather than
+   `DEGRADED`.
 
 ## Future ideas (not started, no urgency)
 

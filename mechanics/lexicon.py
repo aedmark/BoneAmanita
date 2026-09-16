@@ -2,6 +2,7 @@
 
 import functools
 import json
+import logging
 import os
 import random
 import re
@@ -13,6 +14,8 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from core import LoreManifest, Prisma
 from struts import safe_get, ux
+
+logger = logging.getLogger("bone")
 
 
 class LexiconStore:
@@ -484,8 +487,13 @@ class LexiconService:
             from spores.embeddings import SemanticEmbedder
 
             SemanticEmbedder.get_instance().embed_batch(words)
-        except Exception:
-            pass
+        except Exception as e:
+            # Warming is an optimisation, so a failure is survivable; the
+            # per-word path degrades on its own terms. It still gets said.
+            logger.warning(
+                f"[RESONANCE] Batch warm failed ({type(e).__name__}: {e}); "
+                f"unknown words will resolve one at a time."
+            )
 
     def get_current_category(self, word: str) -> Optional[str]:
         categories = self._STORE.get_categories_for_word(word)
