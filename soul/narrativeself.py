@@ -1,5 +1,6 @@
 """/soul/narrativeself.py"""
 
+import logging
 import random
 import time
 from dataclasses import dataclass, field, fields
@@ -12,6 +13,8 @@ from presets import BoneConfig
 from soul import SchurProtocol, TheEditor
 from soul.traitvector import TraitVector
 from struts import safe_get, safe_set, ux, ux_format
+
+logger = logging.getLogger("bone")
 
 
 @dataclass
@@ -134,8 +137,11 @@ class NarrativeSelf:
                 self.core_memories.append(
                     CoreMemory(**{k: v for k, v in m.items() if k in valid_keys})
                 )
-            except TypeError:
-                pass
+            except TypeError as e:
+                logger.warning(
+                    f"A core memory could not be restored and has been dropped: "
+                    f"{type(e).__name__}: {e}"
+                )
         obs_data = data.get("obsession", {})
         if obs_data.get("title"):
             self.current_obsession = obs_data["title"]

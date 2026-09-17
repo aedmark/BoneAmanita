@@ -1,5 +1,6 @@
 """brain/akashic.py"""
 
+import logging
 import itertools
 import json
 import math
@@ -12,6 +13,8 @@ from constants import Prisma
 from core import JSONEncoder, LoreManifest
 from presets import BoneConfig
 from struts import safe_get, safe_set, ux
+
+logger = logging.getLogger("bone")
 
 
 class TheAkashicRecord:
@@ -659,7 +662,11 @@ class TheAkashicRecord:
         if self.events:
             try:
                 formatted_msg = msg.format(concept=concept)
-            except KeyError:
+            except KeyError as e:
+                logger.warning(
+                    f"Ghost echo template expects placeholder {e} which is not supplied; "
+                    f"rendering it raw. Fix the template in lore/."
+                )
                 formatted_msg = msg
             self.events.log(f"{Prisma.VIOLET}{formatted_msg}{Prisma.RST}", "AKASHIC")
 

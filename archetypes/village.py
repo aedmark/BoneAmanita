@@ -1,5 +1,6 @@
 """archetypes/village.py"""
 
+import logging
 import heapq
 import math
 import random
@@ -14,6 +15,8 @@ from physics import PhysicsDelta
 from physics.models import PhysicsPacket
 from presets import BoneConfig
 
+logger = logging.getLogger("bone")
+
 
 def _cfg_val(cfg_ref, section: str, key: str, default: float) -> float:
     return float(safe_get(safe_get(cfg_ref or BoneConfig, section, {}), key, default))
@@ -26,6 +29,33 @@ class TheTinkerer:
         self.akashic = akashic_ref
         self.cfg = config_ref or BoneConfig
         self.tool_resonance: Dict[str, float] = {}
+        self._delta_cache = None
+        self._inventory_hash = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize the learned tool resonance.
+
+        This did not exist, and its absence was silent in three separate places
+        at once. `TheCortex.gather_state` called `tinkerer.to_dict()` inside a
+        handler that caught AttributeError and substituted `{}`, so the
+        composer's HARMONIC RESONANCE block read an empty `tool_resonance` and
+        never once appeared in a prompt. `ChronosKeeper._gather_village_state`
+        filters on `hasattr(comp, "to_dict")`, so resonance was never saved
+        either, and `_restore_village_state` dispatches on `load_state`, so it
+        was never restored. One missing pair of methods, three dead paths, and
+        no error anywhere.
+        """
+        return {"tool_resonance": dict(self.tool_resonance)}
+
+    def load_state(self, data: Dict[str, Any]):
+        if not data:
+            return
+        resonance = data.get("tool_resonance") or {}
+        if not isinstance(resonance, dict):
+            raise TypeError(
+                f"Tinkerer resonance must be a mapping of tool to level, got {type(resonance).__name__}."
+            )
+        self.tool_resonance = {str(k): float(v) for k, v in resonance.items()}
         self._delta_cache = None
         self._inventory_hash = 0
 
@@ -339,8 +369,11 @@ class TheCartographer:
         for nid, n_data in data.get("nodes", {}).items():
             try:
                 self.world_graph[nid] = GeniusLoci.from_dict(n_data)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"World node {nid!r} could not be restored and has been dropped "
+                    f"from the atlas: {type(e).__name__}: {e}"
+                )
         self.current_node_id = data.get("current_id", "GENESIS_POINT")
         if "GENESIS_POINT" not in self.world_graph:
             self._init_genesis()

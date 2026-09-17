@@ -126,3 +126,67 @@ class TestArchetypes(BoneTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTinkererPersistence(BoneTestCase):
+    """The Tinkerer had no `to_dict` and no `load_state`, and nothing said so.
+
+    `TheCortex.gather_state` called `tinkerer.to_dict()` inside a handler that
+    caught AttributeError and substituted `{}`. Three paths died on that one
+    missing pair: the composer's HARMONIC RESONANCE block read an empty
+    `tool_resonance` and never once rendered, `ChronosKeeper` filters the save
+    on `hasattr(comp, "to_dict")` so resonance never persisted, and the restore
+    dispatches on `load_state` so it never came back.
+    """
+
+    def _tinkerer(self):
+        tinkerer = getattr(self.engine.village, "tinkerer", None)
+        self.assertIsNotNone(tinkerer, "the village has no tinkerer to test")
+        return tinkerer
+
+    def test_resonance_survives_a_round_trip(self):
+        tinkerer = self._tinkerer()
+        tinkerer.tool_resonance = {"hammer": 6.0, "lens": 2.5}
+        payload = tinkerer.to_dict()
+        self.assertEqual(payload["tool_resonance"], {"hammer": 6.0, "lens": 2.5})
+
+        tinkerer.tool_resonance = {}
+        tinkerer.load_state(payload)
+        self.assertEqual(tinkerer.tool_resonance, {"hammer": 6.0, "lens": 2.5})
+
+    def test_load_state_refuses_a_shape_it_cannot_use(self):
+        """Silently accepting the wrong shape is how the original bug survived."""
+        with self.assertRaises(TypeError):
+            self._tinkerer().load_state({"tool_resonance": ["hammer", "lens"]})
+
+    def test_chronos_now_includes_the_tinkerer_in_the_save(self):
+        """The save filters on hasattr(comp, "to_dict"), so this was skipped."""
+        tinkerer = self._tinkerer()
+        tinkerer.tool_resonance = {"hammer": 7.0}
+        village_state = self.engine.chronos._gather_village_state()
+        self.assertIn("tinkerer", village_state)
+        self.assertEqual(
+            village_state["tinkerer"]["tool_resonance"], {"hammer": 7.0}
+        )
+
+    def test_mastered_tools_reach_the_composed_prompt(self):
+        """The end of the path: resonance above level 4 becomes a directive."""
+        from brain.composer import PromptComposer
+
+        style_notes = []
+        state = {"village": {"tinkerer": {"tool_resonance": {"hammer": 6.0, "twig": 1.0}}}}
+        PromptComposer._inject_resonances(style_notes, state, {})
+        rendered = "\n".join(style_notes)
+        self.assertIn("HARMONIC RESONANCE", rendered)
+        self.assertIn("hammer", rendered)
+        self.assertNotIn("twig", rendered, "a level 1 tool is not mastery")
+
+    def test_gather_state_carries_resonance_rather_than_an_empty_dict(self):
+        tinkerer = self._tinkerer()
+        tinkerer.tool_resonance = {"hammer": 6.0}
+        state = self.engine.cortex.gather_state({})
+        self.assertEqual(
+            state["village"]["tinkerer"]["tool_resonance"],
+            {"hammer": 6.0},
+            "gather_state is handing the composer an empty tinkerer again",
+        )

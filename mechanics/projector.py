@@ -1,5 +1,6 @@
 """mechanics/projector.py"""
 
+import logging
 import re
 from typing import Any, Dict, List, Optional
 
@@ -8,6 +9,8 @@ import markdown
 from core import Prisma
 from presets import BoneConfig
 from struts import safe_get, ux
+
+logger = logging.getLogger("bone")
 
 
 def render_markdown(text: str) -> str:
@@ -299,7 +302,10 @@ class Projector:
                     try:
                         return float(val)
                     except (ValueError, TypeError):
-                        pass
+                        logger.warning(
+                            f"Lattice field {k!r} holds {val!r}, which is not a number; "
+                            f"falling through to the next source."
+                        )
         return default
 
     def _render_lattice_strip(

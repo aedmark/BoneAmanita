@@ -127,10 +127,7 @@ class BoneArchitect:
             )
             events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "ARCHITECT", "CRIT")
             load_result = None
-        try:
-            results = list(load_result) if load_result else []
-        except TypeError:
-            results = []
+        results = list(load_result) if load_result else []
         results.extend([None] * max(0, 5 - len(results)))
         mito_legacy, _, soul_legacy, continuity, atlas = results[:5]
         soul_legacy = soul_legacy or {}

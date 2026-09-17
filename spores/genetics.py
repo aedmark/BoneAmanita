@@ -1,11 +1,14 @@
 """spores/genetics.py"""
 
 import json
+import logging
 import random
 from typing import Dict, Tuple
 from core import LoreManifest
 from presets import BoneConfig
 from struts import safe_get, ux
+
+logger = logging.getLogger("bone")
 
 
 class LiteraryReproduction:
@@ -33,9 +36,14 @@ class LiteraryReproduction:
             )
             cls.MUTATIONS = genetics.get("MUTATIONS", {})
             cls.JOY_CLADE = genetics.get("JOY_CLADE", {})
-        except Exception:
+        except Exception as e:
             cls.MUTATIONS = {}
             cls.JOY_CLADE = {}
+            logger.error(
+                f"GENETICS lore failed to load ({type(e).__name__}: {e}). "
+                "Mutation and the joy clade are disabled for this session; this is "
+                "indistinguishable from a run where nothing happened to mutate."
+            )
 
     @staticmethod
     def mutate_config(current_config):
@@ -80,7 +88,11 @@ class LiteraryReproduction:
         try:
             with open(parent_b_path, "r", encoding="utf-8") as f:
                 parent_b_data = json.load(f)
-        except Exception:
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as e:
+            logger.warning(
+                f"Crossover could not read parent spore {parent_b_path}: "
+                f"{type(e).__name__}: {e}"
+            )
             return None, ux("spore_strings", "repro_corrupt_spore")
         parent_b_id = parent_b_data.get("session_id", "UNKNOWN")
         trauma_a = parent_a_bio.get("trauma_vector") or {}

@@ -1,7 +1,9 @@
 """physics/filters.py"""
 
+import logging
 import random
 import re
+import traceback
 import unicodedata
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
@@ -11,6 +13,8 @@ from constants import Prisma
 from physics.observer import apply_metabolic_tax
 from presets import BoneConfig
 from struts import safe_get, ux
+
+logger = logging.getLogger("bone")
 
 
 class CerebrospinalFluidFilter:
@@ -104,10 +108,7 @@ class HLA_Stabilizer:
         from mechanics.tools import TheTclWeaver
 
         if self._weaver is None:
-            try:
-                self._weaver = TheTclWeaver.get_instance()
-            except ImportError:
-                self._weaver = False
+            self._weaver = TheTclWeaver.get_instance()
         return self._weaver
 
     def mitigate_rejection(
@@ -196,7 +197,12 @@ class TheGatekeeper:
             m_a_thresh = float(safe_get(phys_cfg, "MALIGNANCY_STRIP_THRESHOLD", 5.0))
             if strip_rate > m_a_thresh:
                 return reject("MALIGNANCY_SPIKE", "gatekeeper_toxic", color=Prisma.RED)
-        except Exception:
+        except Exception as e:
+            logger.error(
+                f"{Prisma.RED}CSF wash raised on {raw_len} chars of input; "
+                f"rejecting the turn as FATAL_ENCODING.{Prisma.RST}\n"
+                + "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            )
             return reject("FATAL_ENCODING", "gatekeeper_cursed")
         if strip_rate > 0:
             ctx.clean_words = self.lex.clean(ctx.input_text)

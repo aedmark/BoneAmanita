@@ -60,13 +60,13 @@ you whether it ran.
 | **A6** close the guessing gap | **done**: 13% -> 81% resolved, 37 tests |
 | **B3** the manifold | **done**: was built and broken; PDE solves, 395 tests |
 | **B4** make the credits true | **done**: all three overclaims corrected |
+| **A2** retire the silent handlers | **done**: 72 -> 28, pass-only banned, 2 ratchet tests |
 
-Next: **A2**, retire the silent handlers, including the ones in
-`spores/embeddings.py`, plus the regression lint.
+Next: **A4**, tests that assert state rather than absence of crash.
 
-Suite: **415 passed, 5 skipped**. The skips are the environmental ones (no
+Suite: **422 passed, 5 skipped**. The skips are the environmental ones (no
 chat model pulled in Ollama). Re-run `tools/audit_receipts.py` after touching
-any instrumented subsystem.
+any instrumented subsystem, and `tools/audit_handlers.py` after adding a catch.
 
 ---
 
@@ -182,7 +182,79 @@ options, and the second is better:
 Do this before A3, because receipts are worth much less if their
 warnings land in the same silent channel.
 
-## A2. Retire the silent handlers
+## A2. Retire the silent handlers, **DONE**
+
+72 silent handlers went to 28, and the unambiguous subset (a handler whose
+entire body is `pass` or `continue`) went from 30 to 3, all three named in
+an allowlist with a written reason.
+
+Most of the 28 that remain are not silent at all; they report through a
+house helper the AST walk cannot recognise (`self._log`,
+`self._dream_failed`, `simulator.handle_phase_crash`, an `err` string
+carried into a later `raise`). The budget test keeps its number as a
+ratchet, and the pass-only ban is the measure that actually means
+something.
+
+### What it found
+
+**`TheTinkerer` had no `to_dict` and no `load_state`.** `TheCortex.gather_state`
+called `tinkerer.to_dict()` inside a handler catching AttributeError and
+substituting `{}`. One missing pair of methods, three dead paths:
+
+- The composer's `_inject_resonances` reads `village.tinkerer.tool_resonance`
+  and emits a HARMONIC RESONANCE directive for any tool above level 4. It
+  always read `{}`, so that block has never once appeared in a prompt.
+- `ChronosKeeper._gather_village_state` filters on `hasattr(comp, "to_dict")`,
+  so tool resonance was never saved.
+- `_restore_village_state` dispatches on `load_state`, so it was never
+  restored.
+
+Nothing raised, nothing logged, and the Tinkerer appeared to work: it
+accumulates resonance correctly, it just had no way to tell anyone. This is
+number thirteen, and the only one found by deleting a handler rather than
+by measuring.
+
+**The async pool was a silent-failure sink with no handler in it at all.**
+All four background submissions in `cycle.py` were fire-and-forget.
+`ThreadPoolExecutor.submit` captures any exception into the Future and
+discards it when nobody calls `.result()`, and nobody did. That is worse
+than a bare `except: pass`, because there is no handler for an audit to
+find and no line of code to point at. `_submit_background` now attaches a
+done-callback that logs the traceback, which is what made it safe to delete
+the defensive handlers inside those tasks.
+
+### The three buckets, as applied
+
+1. **Genuinely optional**: `ordvec` and `sentence-transformers`, and nothing
+   else. `numpy`, `faiss-cpu`, `requests` and `markdown` are in the install
+   line, so guarding them only relocates the failure (`np = None` does not
+   make the engine run without numpy; it makes it fail later, somewhere
+   confusing). `ordvec` is now probed once, in `core`, and `spores.memory`
+   reads `ORDVEC_AVAILABLE` rather than probing again.
+2. **Defensive by habit**: the majority, deleted. Two were guarding
+   `ImportError` around code containing no import, so they could never have
+   fired. One converted a structural fault into in-fiction flavour text
+   ("The Parliament doors are sealed"), which is the worst available
+   outcome: the bug becomes content. One guarded
+   `self.svc.bio.mito.adjust_atp(...)` eight lines above an identical
+   unguarded call to the same method.
+3. **Load-bearing barriers**: kept, and made to report. The CSF gatekeeper
+   still rejects a turn it cannot wash (hostile input should not kill the
+   session) but now logs the traceback, so a code fault is no longer
+   indistinguishable from a cursed string.
+
+### The deliverable
+
+`tests/test_observability.py` gained two tests beside the existing budget:
+
+- **`test_no_new_pass_only_handlers`**: zero tolerance on a handler whose
+  whole body is `pass` or `continue`, with a three-entry allowlist keyed by
+  file, each with a written reason a reviewer can disagree with.
+- **`test_the_allowlist_has_not_gone_stale`**: an allowlist entry for a file
+  that no longer needs one silently re-permits the pattern across that whole
+  file. This fails when an entry stops being necessary.
+
+### The original triage
 
 Triage all 73 into three buckets:
 
@@ -954,8 +1026,8 @@ shippable and each makes the next one verifiable.
    that produced this entire document: a subsystem cannot report healthy
    work it did not do. Found two live bugs on its first turn.
 6. ~~**C2**: populate `wing_id`~~ **done**. Cheap, compounding.
-7. **A2**: retire the silent handlers, including mine in
-   `spores/embeddings.py`, plus the regression lint.
+7. ~~**A2**: retire the silent handlers~~, **done**. 72 to 28, pass-only
+   banned outright, and it found the Tinkerer.
 
 **Long term**: each is a project, not a task.
 

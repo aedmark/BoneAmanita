@@ -1,6 +1,7 @@
 """protocols/chronos.py"""
 
 import json
+import logging
 import os
 import time
 from typing import Any, Dict, Optional, Tuple
@@ -8,6 +9,8 @@ from typing import Any, Dict, Optional, Tuple
 from constants import Prisma
 from presets import BoneConfig
 from struts import safe_get, ux
+
+logger = logging.getLogger("bone")
 
 
 class ChronosKeeper:
@@ -195,8 +198,11 @@ class ChronosKeeper:
             kept = int(safe_get(cfg, "CRASH_FILES_KEPT", 4))
             for oldest in files[:-kept] if kept > 0 else files:
                 os.remove(os.path.join(self.CRASH_DIR, oldest))
-        except Exception:
-            pass
+        except OSError as e:
+            logger.warning(
+                f"{Prisma.YEL}Could not prune old crash dumps in {self.CRASH_DIR}: "
+                f"{type(e).__name__}: {e}. The dump itself is unaffected.{Prisma.RST}"
+            )
         return os.path.join(self.CRASH_DIR, f"{prefix}_{int(time.time())}.json")
 
     @staticmethod

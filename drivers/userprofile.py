@@ -1,10 +1,13 @@
 """drivers/userprofile.py"""
 
+import logging
 import json
 import os
 
 from presets import BoneConfig
 from struts import safe_get
+
+logger = logging.getLogger("bone")
 
 
 class UserProfile:
@@ -75,8 +78,11 @@ class UserProfile:
                     },
                     f,
                 )
-        except IOError:
-            pass
+        except IOError as e:
+            logger.warning(
+                f"User profile could not be saved to {self.file_path}: "
+                f"{type(e).__name__}: {e}. Affinities learned this session are lost."
+            )
 
     def load(self):
         if os.path.exists(self.file_path):
@@ -86,5 +92,10 @@ class UserProfile:
                     if "affinities" in data:
                         self.affinities.update(data["affinities"])
                     self.confidence = data.get("confidence", 0)
-            except (IOError, json.JSONDecodeError):
+            except FileNotFoundError:
                 pass
+            except (IOError, json.JSONDecodeError) as e:
+                logger.warning(
+                    f"User profile at {self.file_path} exists but could not be read: "
+                    f"{type(e).__name__}: {e}. Starting from an empty profile."
+                )

@@ -1,5 +1,6 @@
 """spores/network.py"""
 
+import logging
 import random
 import time
 from collections import deque
@@ -16,6 +17,8 @@ from spores.genetics import LiteraryReproduction
 from spores.io import LocalFileSporeLoader
 from spores.memory import MemoryCore, SubconsciousStrata
 from struts import safe_get, safe_set, ux, ux_format
+
+logger = logging.getLogger("bone")
 
 
 class MycelialNetwork:
@@ -80,7 +83,11 @@ class MycelialNetwork:
         try:
             safe_set(target, leaf, value)
             return True
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"Config mutation {leaf!r} -> {value!r} did not apply: "
+                f"{type(e).__name__}: {e}"
+            )
             return False
 
     def evaluate_system_state(self, stamina: float, trauma_vector: dict):
@@ -449,7 +456,11 @@ class MycelialNetwork:
                 t = set(item.get("triggers", []))
                 seed = ParadoxSeed(q, t)
                 loaded_seeds.append(seed)
-        except Exception:
+        except Exception as e:
+            logger.error(
+                f"SCENARIOS.SEEDS failed to load ({type(e).__name__}: {e}). Falling back "
+                "to one hardcoded paradox; everything authored in lore/ is inert."
+            )
             loaded_seeds = [
                 ParadoxSeed("Does the mask eat the face?", {"mask", "face", "hide"})
             ]
@@ -696,8 +707,10 @@ class MycelialNetwork:
                         limbo_layer.absorb_dead_timeline(path)
                     if self.loader.delete_spore(path):
                         removed += 1
-                except (OSError, AttributeError):
-                    pass
+                except (OSError, AttributeError) as e:
+                    logger.warning(
+                        f"Could not retire old session {path}: {type(e).__name__}: {e}"
+                    )
         if removed and (msg := ux("spore_strings", "net_pruned_lines")):
             self.events.log(f"{Prisma.GRY}{msg.format(removed=removed)}{Prisma.RST}")
 

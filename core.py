@@ -22,18 +22,27 @@ from presets import BoneConfig
 from receipts import issue as issue_receipt
 from struts import safe_get, ux, ux_format
 
-try:
-    import ordvec
-    ORDVEC_AVAILABLE = True
-except ImportError:
-    ORDVEC_AVAILABLE = False
-
 logger = logging.getLogger("bone")
 if not logger.handlers:
     _sh = logging.StreamHandler()
     _sh.setFormatter(logging.Formatter("%(message)s"))
     logger.addHandler(_sh)
     logger.setLevel(logging.INFO)
+
+# The one genuinely optional dependency. Everything else in the install line is
+# required, and guarding a required import only relocates its failure. This is
+# the single probe for the whole tree: spores.memory reads ORDVEC_AVAILABLE from
+# here rather than probing again, so "is ordvec present" has one answer.
+try:
+    import ordvec
+
+    ORDVEC_AVAILABLE = True
+except ImportError:
+    ORDVEC_AVAILABLE = False
+    logger.warning(
+        "ordvec is not installed. Fastscan retrieval and the Creative Determinant's "
+        "subgraph pruning are unavailable; install with `pip install 'ordvec>=0.5.0'`."
+    )
 
 _LOCK_TYPES = (type(threading.Lock()), type(threading.RLock()), threading.Thread)
 
@@ -651,12 +660,16 @@ class CyberneticGovernor:
         self._cached_vectorizer = self._resolve_vectorizer()
 
     def _resolve_vectorizer(self):
-        """Abstracts the vectorization dependency at boot to avoid hot-path ROS."""
-        try:
-            from struts import _word_to_vector
-            return _word_to_vector
-        except ImportError:
-            return None
+        """Abstracts the vectorization dependency at boot to avoid hot-path ROS.
+
+        Deliberately unguarded. `struts` is first-party and universally imported,
+        so an ImportError here is a real structural fault (most plausibly the
+        cycle its own docstring warns about) and must not be reported downstream
+        as "Vectorizer unavailable", which names a different illness entirely.
+        """
+        from struts import _word_to_vector
+
+        return _word_to_vector
 
     def _get_vectorizer(self):
         return self._cached_vectorizer
@@ -1114,23 +1127,36 @@ class TelemetryService:
         try:
             with open(filepath, "r", encoding="utf-8", errors="replace") as f:
                 return list(deque(f, maxlen=n))
-        except IOError:
+        except IOError as e:
+            logger.warning(
+                f"Telemetry trace {filepath} could not be read: {type(e).__name__}: {e}. "
+                "/diag will show no history, which is not the same as no history."
+            )
             return []
 
     def _yield_historical_records(self, file_limit=5, lines_per_file=10):
         files = sorted(
             glob.glob(os.path.join(self.log_dir, "trace_*.jsonl")), reverse=True
         )
+        malformed = 0
         for fpath in files[:file_limit]:
             try:
                 tail_lines = reversed(self._tail_file(fpath, n=lines_per_file))
                 for line in tail_lines:
                     try:
                         yield json.loads(line)
-                    except json.JSONDecodeError as _:
+                    except json.JSONDecodeError:
+                        malformed += 1
                         continue
-            except IOError:
+            except IOError as e:
+                logger.warning(
+                    f"Skipping unreadable telemetry trace {fpath}: {type(e).__name__}: {e}"
+                )
                 continue
+        if malformed:
+            logger.warning(
+                f"Skipped {malformed} malformed telemetry record(s) while reading history."
+            )
 
     def read_recent_history(self, limit=4) -> List[str]:
         history = deque(maxlen=limit)

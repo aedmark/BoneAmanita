@@ -10,10 +10,7 @@ from dataclasses import dataclass
 _ALPHA_RE = re.compile(r"[^a-z]")
 from typing import Any, Dict, Optional, Tuple
 
-try:
-    import numpy as np
-except ImportError:
-    np = None
+import numpy as np
 from constants import Prisma
 from presets import BoneConfig
 from struts import safe_get, ux
@@ -127,10 +124,7 @@ class NeurotransmitterModulator:
             physics_state = {}
         b = self.b
         if not simulate:
-            try:
-                incoming_chem = self.bio.endo.get_state() or {}
-            except (AttributeError, TypeError):
-                incoming_chem = {}
+            incoming_chem = self.bio.endo.get_state() or {}
             self.current_chem.homeostasis(rate=b["DECAY"])
             plasticity = max(
                 0.1, min(b["M_PLAST"], b["PLAST"] + (base_voltage * b["V_SENS"]))
@@ -341,6 +335,24 @@ class DreamEngine:
         self._embed_batch = _words_to_matrix
         self._weaver = TheTclWeaver.get_instance()
 
+    def _dream_failed(self, where: str, error: Exception) -> None:
+        """Report a dream that did not happen.
+
+        A model call failing is a genuinely expected transient (no model pulled,
+        the server moved, a timeout), so these handlers stay. What they must not
+        do is substitute a template or a line of flavour text and say nothing:
+        the engine then reports a dream it never had, and the difference between
+        "the model is unreachable" and "REM produced something bland" is exactly
+        the distinction the prose cannot carry.
+        """
+        if self.events:
+            self.events.log(
+                f"{Prisma.YEL}Dream generation failed in {where}: "
+                f"{type(error).__name__}: {error}{Prisma.RST}",
+                "MIND",
+                "WARN",
+            )
+
     def enter_rem_cycle(
         self, soul_snapshot: Dict[str, Any], bio_state: Dict[str, Any]
     ) -> Tuple[str, Dict[str, float]]:
@@ -492,16 +504,13 @@ class DreamEngine:
                         if new_axiom not in dirs:
                             dirs.append(new_axiom)
                         if len(dirs) > self.epi_prune:
-                            try:
-                                compressed = self.dspy_critic.compress_prompts(dirs)
-                                if compressed:
-                                    baseline_data["EVOLVED_AXIOMS"] = (
-                                        [compressed]
-                                        if isinstance(compressed, str)
-                                        else compressed
-                                    )
-                            except (AttributeError, TypeError):
-                                pass
+                            compressed = self.dspy_critic.compress_prompts(dirs)
+                            if compressed:
+                                baseline_data["EVOLVED_AXIOMS"] = (
+                                    [compressed]
+                                    if isinstance(compressed, str)
+                                    else compressed
+                                )
                         if self.eng:
                             self.eng.prompt_library = disk_prompts
                         self.lore.inject("SYSTEM_PROMPTS", disk_prompts)
@@ -573,8 +582,8 @@ class DreamEngine:
                         f"The system dreams of {ghost1} and {ghost2}: {clean_dream}"
                     )
                     is_deep_rem = True
-                except Exception:
-                    pass
+                except Exception as e:
+                    self._dream_failed("enter_rem_cycle", e)
         if shift.get("diamond_forged"):
             fossil_word = shift["fossil_word"]
             anchor_word = shift["anchor_word"]
@@ -609,8 +618,8 @@ class DreamEngine:
                     {"word": clean_seed, "mass": min(10.0, 5.0 + (cortisol * 5.0))},
                     config_ref=self.cfg,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                self._dream_failed("subconscious burial", e)
         shift["is_deep_rem"] = is_deep_rem
         return dream_text, shift
 
@@ -646,8 +655,8 @@ class DreamEngine:
                     prompt, {"temperature": 0.85, "max_tokens": 80}
                 )
                 return raw_dream.replace("\n", " ").strip()
-            except Exception:
-                pass
+            except Exception as e:
+                self._dream_failed("_weave_dream", e)
         template = random.choice(sources)
         return template.format(ghost=residue, A=residue, B="The Mountain", C="The Sea")
 
@@ -665,7 +674,8 @@ class DreamEngine:
                 clean_dream = Prisma.strip(raw_dream).replace("\n", " ").strip()
                 self.mem.subconscious.bury_memory("resonance", {"mass": 15.0})
                 return f"{Prisma.CYN}{clean_dream}{Prisma.RST}"
-            except Exception:
+            except Exception as e:
+                self._dream_failed("generate_shared_dream", e)
                 fallback = "We both stared into the static, and for a second, the static stopped moving."
                 return f"{Prisma.CYN}*I see Queen Mab hath been with you...* {fallback}{Prisma.RST}"
         return None
@@ -702,8 +712,8 @@ class DreamEngine:
                     prompt, {"temperature": 0.95, "max_tokens": 50}
                 )
                 txt = raw_hallucination.replace("\n", " ").strip()
-            except Exception:
-                pass
+            except Exception as e:
+                self._dream_failed("hallucinate", e)
         if not txt:
             txt = random.choice(templates).format(
                 ghost="The Glitch", A="The Code", B="The Flesh", C="The Light"

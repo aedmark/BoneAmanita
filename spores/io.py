@@ -1,6 +1,7 @@
 """spores/io.py"""
 
 import json
+import logging
 import os
 import tempfile
 from typing import Any, List, Optional, Tuple
@@ -8,6 +9,8 @@ from typing import Any, List, Optional, Tuple
 from constants import Prisma
 from core import JSONEncoder
 from struts import ux_format
+
+logger = logging.getLogger("bone")
 
 
 class LocalFileSporeLoader:
@@ -85,7 +88,11 @@ class LocalFileSporeLoader:
                     and e.name.startswith("session_")
                 ]
             return sorted(files, key=lambda x: x[1], reverse=True)
-        except OSError:
+        except OSError as e:
+            logger.warning(
+                f"Could not list spores in {self.directory}: {type(e).__name__}: {e}. "
+                "Reporting no saved sessions, which may not be true."
+            )
             return []
 
     def delete_spore(self, filepath: str):
@@ -96,5 +103,8 @@ class LocalFileSporeLoader:
         try:
             os.remove(final_path)
             return True
-        except OSError:
+        except OSError as e:
+            logger.warning(
+                f"Could not delete spore {final_path}: {type(e).__name__}: {e}"
+            )
             return False

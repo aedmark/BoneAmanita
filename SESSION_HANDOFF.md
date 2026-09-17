@@ -56,7 +56,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 415 passed, 0 failed, 5 skipped**, about two minutes. Green.
+- **Test suite: 422 passed, 0 failed, 5 skipped**, about two minutes. Green.
   Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.
@@ -86,6 +86,11 @@ aren't there. See "Claims vs. code" below.
 - **Failures are visible.** Crashes surface with tracebacks, missing
   config is named at boot, a degraded embedder announces itself in
   `/status`.
+- **Failures are not swallowed.** Silent exception handlers went from 72
+  to 28, and handlers whose entire body is `pass` went from 30 to 3, each
+  of those three named in an allowlist with a written reason. Background
+  tasks on the async pool now report their own exceptions, which they
+  previously discarded into an unread Future.
 - **Subsystems issue receipts.** Seven of them record what they were
   handed and what came back, every turn, in their own voice. `/diag`
   prints the turn's receipts plus anything silent, chronically degraded
@@ -150,6 +155,18 @@ measurements; this is the shape of it.
    returned a bare `False` for four different conditions and its only
    caller ignored it, so an empty memory surfaced as an `AttributeError`
    on a `None` index. Each case now raises with its own name.
+10. **A2, the silent handlers.** 72 to 28; handlers whose whole body is
+   `pass` went 30 to 3, each named in an allowlist with a reason. It found
+   the thirteenth dead subsystem: `TheTinkerer` has no `to_dict` and no
+   `load_state`, and `gather_state` called `tinkerer.to_dict()` inside a
+   handler that caught the AttributeError and substituted `{}`. One
+   missing pair of methods killed three paths at once (the composer's
+   HARMONIC RESONANCE block never rendered, tool resonance never saved,
+   and never restored). It also found that the async pool in `cycle.py`
+   was a silent-failure sink with no handler in it at all: four
+   fire-and-forget `submit()` calls whose exceptions went into a Future
+   nobody read. That is worse than `except: pass`, because there is no
+   handler for an audit to find.
 
 **A5/A6 is the one to understand if you read only one.** Word category
 counts drive every number in the engine. They came 82% from a
@@ -191,6 +208,26 @@ Three habits came out of that and are worth keeping:
   is what this whole document is about. `cortex.recall` now issues a
   receipt on its skip path naming which condition stopped it. Copy that
   wherever a guard returns early.
+- **Check whether a handler can fire at all before arguing about it.**
+  Two `except ImportError` blocks guarded code containing no import; the
+  imports were at module scope. A handler that cannot fire is not
+  protection, it is decoration, and it reads as protection to everyone
+  after you.
+- **A guard next to an identical unguarded call is superstition.**
+  `self.svc.bio.mito.adjust_atp(...)` was wrapped in
+  `except (TypeError, AttributeError)` eight lines above a bare call to
+  the same method on the same object. When you find one of these, the
+  unguarded copy is the evidence.
+- **Fire-and-forget on an executor is the quietest failure available.**
+  `ThreadPoolExecutor.submit` parks the exception in a Future and drops it
+  if nobody calls `.result()`. There is no `except` for an audit to count
+  and no line to point at. `GeodesicOrchestrator._submit_background`
+  attaches a done-callback that logs the traceback; use it rather than
+  `self._async_pool.submit` directly.
+- **A fault that becomes flavour text is the worst outcome, not the
+  kindest.** Catching an AttributeError and returning "The Parliament
+  doors are sealed" makes the bug indistinguishable from content, in a
+  system whose only output is prose. If a barrier must stay, it logs.
 - **Collapsing several conditions into one return value throws away the
   diagnosis.** `_sync_ordvec_indices` returned a bare `False` for four
   unrelated problems and its only caller ignored it. Prefer a named
@@ -582,7 +619,7 @@ The short list below is what a session should know without reading it.
    gap is A4, the state-asserting tests, which is not done.
 6. **Nothing else is known-broken.** Picking this up cold: make a venv,
    install including `ordvec`, pull both Ollama models, run the suite and
-   expect **415 passed, 0 failed, 5 skipped** (the skips are live-backend
+   expect **422 passed, 0 failed, 5 skipped** (the skips are live-backend
    tests behind `BONE_EMBED_LIVE_TEST=1`). Then boot headless in mock
    mode, confirm `/status` reports the Arcade nominal rather than
    `DEGRADED`, and run `/diag` to see the turn's receipts.

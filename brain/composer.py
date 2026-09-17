@@ -220,8 +220,14 @@ class LLMInterface:
                                 "SYS",
                             )
                         return fallback
-                except Exception:
-                    pass
+                except Exception as fallback_error:
+                    if self.events:
+                        self.events.log(
+                            f"{Prisma.YEL}Local fallback also failed: "
+                            f"{type(fallback_error).__name__}: {fallback_error}{Prisma.RST}",
+                            "SYS",
+                            "WARN",
+                        )
             self.failure_count += 1
             self.last_failure_time = time.time()
             if self.failure_count >= self.failure_threshold:
@@ -249,7 +255,14 @@ class LLMInterface:
                 override_url=url,
                 override_key="ollama",
             )
-        except Exception:
+        except Exception as e:
+            if self.events:
+                self.events.log(
+                    f"{Prisma.YEL}Local fallback transmit failed ({url}): "
+                    f"{type(e).__name__}: {e}{Prisma.RST}",
+                    "SYS",
+                    "WARN",
+                )
             return None
 
     def mock_generation(self, prompt: str, reason: str = "SIMULATION") -> str:
@@ -292,8 +305,14 @@ class LLMInterface:
                     reason=reason,
                     hallucination=hallucination,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                if self.events:
+                    self.events.log(
+                        f"{Prisma.YEL}Mock generation could not reach the dreamer: "
+                        f"{type(e).__name__}: {e}. Falling back to static.{Prisma.RST}",
+                        "SYS",
+                        "WARN",
+                    )
         return ux_format(
             "brain_strings", "mock_static", default=f"[{reason}] ...", reason=reason
         )

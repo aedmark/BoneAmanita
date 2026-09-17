@@ -94,7 +94,8 @@ class SemanticEmbedder:
         self.events = events_ref
         self._lock = threading.RLock()
         self._cache: "OrderedDict[str, List[float]]" = OrderedDict()
-        self._settings = self._resolve_settings(overrides)
+        self._settings_faults: List[str] = []
+        self._settings = self._resolve_settings(overrides, self._settings_faults)
         self.backend = "hash"
         self.model = ""
         self.dimension = LEGACY_HASH_DIM
@@ -103,12 +104,16 @@ class SemanticEmbedder:
         self._consecutive_failures = 0
         self._st_model = None
         self._warned = set()
+        for fault in self._settings_faults:
+            self._log(
+                f"{Prisma.YEL}Embedding config ignored: {fault}.{Prisma.RST}", "WARN"
+            )
         self._resolve_backend()
 
     # ------------------------------------------------------------------ setup
 
     @staticmethod
-    def _resolve_settings(overrides: Dict[str, Any]) -> Dict[str, Any]:
+    def _resolve_settings(overrides: Dict[str, Any], faults: Optional[List[str]] = None) -> Dict[str, Any]:
         # Precedence, lowest to highest: module defaults, then BoneConfig.EMBEDDINGS
         # (passed in as overrides), then BONE_EMBED_* env vars. The env wins
         # because it is the per-run knob: BoneConfig.EMBEDDINGS ships populated,
@@ -121,11 +126,16 @@ class SemanticEmbedder:
             raw = os.environ.get(env_name)
             if raw not in (None, ""):
                 settings[key] = raw
+        faults = [] if faults is None else faults
         for numeric in ("TIMEOUT", "MAX_CHARS"):
+            raw_value = settings[numeric]
             try:
-                settings[numeric] = float(settings[numeric])
+                settings[numeric] = float(raw_value)
             except (TypeError, ValueError):
                 settings[numeric] = _DEFAULTS[numeric]
+                faults.append(
+                    f"{numeric}={raw_value!r} is not a number; using {_DEFAULTS[numeric]}"
+                )
         settings["MAX_CHARS"] = max(64, int(settings["MAX_CHARS"]))
         settings["BACKEND"] = str(settings["BACKEND"]).strip().lower()
         return settings

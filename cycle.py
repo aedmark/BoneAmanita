@@ -476,7 +476,7 @@ class GeodesicOrchestrator:
                 self.eng.events.log(f"REM Autophagy failure: {e}", "DEBUG")
         cortex = getattr(self.eng, "cortex", None)
         if cortex and hasattr(cortex, "worry_ledger") and cortex.worry_ledger:
-            self._async_pool.submit(
+            self._submit_background(
                 self._bg_process_moog_ledger, list(cortex.worry_ledger)
             )
             cortex.worry_ledger.clear()
@@ -499,7 +499,38 @@ class GeodesicOrchestrator:
             except Exception as e:
                 self.eng.events.log(f"Dream generation failed in REM: {e}", "DEBUG")
 
-        self._async_pool.submit(_bg_hallucinate, trauma_level, objects)
+        self._submit_background(_bg_hallucinate, trauma_level, objects)
+
+    def _submit_background(self, fn, *args):
+        """Run `fn` on the async pool and refuse to let its failure disappear.
+
+        `ThreadPoolExecutor.submit` captures any exception into the Future and
+        discards it if nobody calls `.result()`. Nobody here does, so every
+        background task in this file was a silent-failure sink: worse than a
+        bare `except: pass`, because there is no handler for an audit to find
+        and no line of code to point at. The done-callback is what makes it
+        safe to delete the defensive handlers inside these tasks.
+        """
+
+        def _report(future):
+            if future.cancelled():
+                return
+            error = future.exception()
+            if error is None:
+                return
+            detail = "".join(
+                traceback.format_exception(type(error), error, error.__traceback__)
+            )
+            self.eng.events.log(
+                f"{Prisma.RED}Background task {getattr(fn, '__name__', fn)!s} failed:"
+                f"{Prisma.RST}\n{detail}",
+                "CYCLE",
+                "ERROR",
+            )
+
+        future = self._async_pool.submit(fn, *args)
+        future.add_done_callback(_report)
+        return future
 
     def _bg_process_moog_ledger(self, worries: list):
         """Headless evaluation of the Moog Protocol worry ledger."""
@@ -511,30 +542,21 @@ class GeodesicOrchestrator:
                     f"{Prisma.CYN}[MOOG PROTOCOL]: Worry deemed actionable. Converting to mandate.{Prisma.RST}",
                     "SYS",
                 )
-                try:
-                    self.eng.village.council.mandates.append(
-                        {"type": "TASK", "directive": worry}
-                    )
-                except AttributeError:
-                    pass
+                self.eng.village.council.mandates.append(
+                    {"type": "TASK", "directive": worry}
+                )
             else:
                 self.eng.events.log(
                     f"{Prisma.VIOLET}[MOOG PROTOCOL]: Concern is uncontrollable. Stripping narrative weight.{Prisma.RST}",
                     "SYS",
                 )
-                try:
-                    safe_phys = getattr(self.eng, "active_physics", None) or {}
-                    self.eng.mind.mem.record_scar(
-                        f"Moog Residue: {worry[:30]}...", safe_phys
-                    )
-                except AttributeError:
-                    pass
+                safe_phys = getattr(self.eng, "active_physics", None) or {}
+                self.eng.mind.mem.record_scar(
+                    f"Moog Residue: {worry[:30]}...", safe_phys
+                )
                 if _mito_state := self.eng._mito_state:
                     _mito_state.ros_buildup = max(0.0, _mito_state.ros_buildup - 15.0)
-                try:
-                    self.eng.bio.endo.glimmers += 1
-                except AttributeError:
-                    pass
+                self.eng.bio.endo.glimmers += 1
                 self.eng.events.log(
                     f"{Prisma.MAG}[MOOG PROTOCOL]: Disciplinary release successful. ROS purged. (+1 Glimmer){Prisma.RST}",
                     "SYS",
@@ -545,11 +567,8 @@ class GeodesicOrchestrator:
         check_freq = int(getattr(self.eng.config.CORE, "TOPOLOGY_FREQ", 10))
         if self.eng.tick_count % check_freq != 0:
             return
-        try:
-            mem = self.eng.mind.mem
-            actual_adj = mem.hippocampus.get_graph()
-        except AttributeError:
-            return
+        mem = self.eng.mind.mem
+        actual_adj = mem.hippocampus.get_graph()
         if not isinstance(actual_adj, dict) or len(actual_adj) <= 5:
             return
 
@@ -577,7 +596,7 @@ class GeodesicOrchestrator:
         if isinstance(actual_adj, dict):
             try:
                 frozen_adj = {k: list(v) for k, v in actual_adj.items()}
-                self._async_pool.submit(_bg_topology_check, frozen_adj)
+                self._submit_background(_bg_topology_check, frozen_adj)
             except RuntimeError as e:
                 self.eng.events.log(
                     f"Async pool rejected topology check. Engine may be shutting down: {e}",
@@ -843,16 +862,13 @@ class GeodesicOrchestrator:
                             f"{Prisma.RED}[NAVI-FRACTAL] Topology rejected by Quality Gate ({gate_code}). Network too fragmented. Mandating REM Defragmentation.{Prisma.RST}",
                             "SYS",
                         )
-                        try:
-                            self.eng.village.council.mandates.append(
-                                {
-                                    "action": "DEFRAGMENT_MEMORY",
-                                    "value": "FRAG_HIGH",
-                                    "log": gate_code,
-                                }
-                            )
-                        except AttributeError:
-                            pass
+                        self.eng.village.council.mandates.append(
+                            {
+                                "action": "DEFRAGMENT_MEMORY",
+                                "value": "FRAG_HIGH",
+                                "log": gate_code,
+                            }
+                        )
                         local_d = 1.0
                     else:
                         null_d = 3.0
@@ -895,16 +911,13 @@ class GeodesicOrchestrator:
                 self.voltage_history.append(float(getattr(ctx.physics, "voltage", 0.0)))
             check_freq = int(getattr(self.eng.config.CORE, "WLS_FREQ", 8))
             if cortex and self.eng.tick_count % check_freq == 0:
-                try:
-                    raw_adj = mem.hippocampus.get_graph()
-                except AttributeError:
-                    raw_adj = {}
+                raw_adj = mem.hippocampus.get_graph()
 
                 frozen_adj = {
                     k: list(v.keys()) if isinstance(v, dict) else list(v)
                     for k, v in raw_adj.items()
                 }
-                self._async_pool.submit(_bg_wls_check, clean_message, frozen_adj)
+                self._submit_background(_bg_wls_check, clean_message, frozen_adj)
                 try:
                     v_history = list(self.voltage_history)
                     has_active_tags = (

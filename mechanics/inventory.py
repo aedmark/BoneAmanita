@@ -87,24 +87,19 @@ class GordonKnot:
             for i in self.inventory
         )
         if has_comb:
-            try:
-                current_chi = float(
-                    safe_get(
-                        active_physics, "entropy", safe_get(active_physics, "chi", 0.5)
+            current_chi = float(
+                safe_get(active_physics, "entropy", safe_get(active_physics, "chi", 0.5))
+            )
+            pruned = TheTclWeaver.get_instance().quantum_comb(
+                user_message, chi=current_chi
+            )
+            if pruned != user_message:
+                if self.events:
+                    self.events.log(
+                        f"{Prisma.CYN}Gordon rakes the comb through your prompt. Fluff discarded. -> '{pruned}'{Prisma.RST}",
+                        "SYS",
                     )
-                )
-                pruned = TheTclWeaver.get_instance().quantum_comb(
-                    user_message, chi=current_chi
-                )
-                if pruned != user_message:
-                    if self.events:
-                        self.events.log(
-                            f"{Prisma.CYN}Gordon rakes the comb through your prompt. Fluff discarded. -> '{pruned}'{Prisma.RST}",
-                            "SYS",
-                        )
-                    return pruned
-            except ImportError:
-                pass
+                return pruned
         return user_message
 
     def enforce_object_action_coupling(

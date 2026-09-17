@@ -138,10 +138,7 @@ class TheCortex:
         self.last_shadow_nodes = []
         self.dialogue_buffer.clear()
         self.last_physics.clear()
-        try:
-            self.dreamer.trauma_buffer.clear()
-        except AttributeError:
-            pass
+        self.dreamer.trauma_buffer.clear()
         if self.events:
             self.events.log(
                 "Context array purged. Stateless bedrock re-established.",
@@ -294,18 +291,11 @@ class TheCortex:
                 ros_yield = gen_tokens * 0.015
                 atp_burn = gen_tokens * 0.025
 
-                try:
-                    current_ros = float(self.svc.bio.mito.state.ros_buildup)
-                    self.svc.bio.mito.state.ros_buildup = min(
-                        100.0, current_ros + ros_yield
-                    )
-                except (TypeError, ValueError, AttributeError):
-                    pass
-
-                try:
-                    self.svc.bio.mito.adjust_atp(-atp_burn, "LLM Token Generation")
-                except (TypeError, AttributeError):
-                    pass
+                current_ros = float(self.svc.bio.mito.state.ros_buildup)
+                self.svc.bio.mito.state.ros_buildup = min(
+                    100.0, current_ros + ros_yield
+                )
+                self.svc.bio.mito.adjust_atp(-atp_burn, "LLM Token Generation")
         if val_res["valid"] and phys_state.get("psi", 0.0) > 0.6 and allow_loot:
             if self.svc.bio:
                 self.svc.bio.mito.adjust_atp(-1.0, "Anti-AI Substrate Filter")
@@ -800,14 +790,9 @@ class TheCortex:
             if self.svc.bio
             else {}
         )
-        try:
-            transcript, adjustments, mandates = council_ref.convene(
-                user_input, phys, bio_state
-            )
-        except (AttributeError, TypeError):
-            return "The Parliament doors are sealed. No voices respond.", [
-                "[COUNCIL ERROR]: CouncilChamber not found in architecture."
-            ]
+        transcript, adjustments, mandates = council_ref.convene(
+            user_input, phys, bio_state
+        )
         for key, val in adjustments.items():
             curr_val = float(phys.get(key, 0.0))
             phys[key] = curr_val + val
@@ -1025,10 +1010,7 @@ class TheCortex:
         if self.svc.village:
             tinkerer = getattr(self.svc.village, "tinkerer", None)
             if tinkerer is not None:
-                try:
-                    village_data["tinkerer"] = tinkerer.to_dict()
-                except (AttributeError, TypeError):
-                    village_data["tinkerer"] = {}
+                village_data["tinkerer"] = tinkerer.to_dict()
         mode_settings = BonePresets.MODES.get(
             self.active_mode, BonePresets.MODES["ADVENTURE"]
         )

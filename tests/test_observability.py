@@ -87,7 +87,13 @@ class SilentExceptionHandlers(unittest.TestCase):
     # A ratchet, not a ceiling: lower it when the count drops, never raise it.
     # It has already caught one regression (the resonance classifier shipped
     # with three silent catches and this test refused them).
-    BUDGET = 72
+    #
+    # A2 took this from 72 to 28. Most of what remains reports through a house
+    # helper this AST walk cannot see (`self._log`, `self._dream_failed`,
+    # `handle_phase_crash`, an `err` string carried to a later raise), so the
+    # number overstates the problem. The unambiguous measure is the
+    # pass-only ban below, which is at zero tolerance.
+    BUDGET = 28
 
     def test_silent_handler_count_does_not_grow(self):
         silent = []
@@ -121,6 +127,86 @@ class SilentExceptionHandlers(unittest.TestCase):
             f"[FAIL] Silent exception handlers grew to {len(silent)} (budget "
             f"{self.BUDGET}). A new catch must log or re-raise. Run "
             f"`python tools/audit_handlers.py` to see them all.",
+        )
+
+    # The three handlers whose entire body is `pass`, and why each one is right.
+    # This is an allowlist rather than a budget because every entry has to be
+    # argued for in writing, and a reviewer can disagree with a line of it.
+    PASS_ONLY_ALLOWED = {
+        "core.py": (
+            "JSONEncoder.default walks __slots__, and a declared-but-unset slot "
+            "raises AttributeError by design. Skipping it IS the algorithm."
+        ),
+        "drivers/userprofile.py": (
+            "No profile on first run is the normal state, not a fault. The "
+            "unreadable and corrupt cases were split out and do report."
+        ),
+        "spores/embeddings.py": (
+            "SemanticEmbedder._log is the logger of last resort: if the EventBus "
+            "raises, it falls through to print() and the message still arrives. "
+            "There is nowhere to report a failure to report."
+        ),
+    }
+
+    def test_no_new_pass_only_handlers(self):
+        """A handler whose whole body is `pass` or `continue` and nothing else.
+
+        This is the unambiguous half of the problem: whatever a reader might
+        argue about a handler that sets a flag or returns a default, a body of
+        `pass` provably discards the exception and leaves no trace anywhere.
+        Every one that survives here is named above with its reason.
+        """
+        offenders = []
+        for path in _source_files():
+            try:
+                tree = ast.parse(open(path, encoding="utf-8").read())
+            except SyntaxError:
+                continue
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ExceptHandler):
+                    continue
+                if len(node.body) != 1:
+                    continue
+                if not isinstance(node.body[0], (ast.Pass, ast.Continue)):
+                    continue
+                if path in self.PASS_ONLY_ALLOWED:
+                    continue
+                exc = ast.unparse(node.type) if node.type else "BARE"
+                offenders.append(f"{path}:{node.lineno} (except {exc})")
+        self.assertEqual(
+            offenders,
+            [],
+            "[FAIL] These handlers discard an exception and leave no trace:\n  "
+            + "\n  ".join(offenders)
+            + "\n\nEither log it, re-raise it, or add the file to "
+            "PASS_ONLY_ALLOWED with a written reason.",
+        )
+
+    def test_the_allowlist_has_not_gone_stale(self):
+        """An allowlist entry for a file that no longer needs one is a lie.
+
+        Left unchecked it silently re-permits the pattern in that whole file,
+        which is how an exception list becomes an exception.
+        """
+        pass_only_files = set()
+        for path in _source_files():
+            try:
+                tree = ast.parse(open(path, encoding="utf-8").read())
+            except SyntaxError:
+                continue
+            for node in ast.walk(tree):
+                if (
+                    isinstance(node, ast.ExceptHandler)
+                    and len(node.body) == 1
+                    and isinstance(node.body[0], (ast.Pass, ast.Continue))
+                ):
+                    pass_only_files.add(path)
+        stale = sorted(set(self.PASS_ONLY_ALLOWED) - pass_only_files)
+        self.assertEqual(
+            stale,
+            [],
+            f"[FAIL] These files are on PASS_ONLY_ALLOWED but no longer contain a "
+            f"pass-only handler: {stale}. Remove them from the allowlist.",
         )
 
 

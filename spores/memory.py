@@ -2,6 +2,7 @@
 ORDVEC math provided by Nelson Spence and Project Navi via Apache 2.0 Licensing
 """
 
+import logging
 import heapq
 import itertools
 import json
@@ -12,20 +13,22 @@ import time
 from collections import deque
 from typing import Any, Dict, List, Optional, Tuple
 
-from core import JSONEncoder
+import numpy as np
+
+from core import ORDVEC_AVAILABLE, JSONEncoder
 from presets import BoneConfig
 from spores.spore_utils import _word_to_vector, _words_to_matrix
 from struts import safe_get, ux, ux_format
 
-try:
-    import numpy as np
-except ImportError:
-    np = None
+logger = logging.getLogger("bone")
 
-try:
+# `core` already probed for ordvec and announced its absence. Probing again here
+# would be a second source of truth for the same question and a second silent
+# handler; read the answer instead.
+if ORDVEC_AVAILABLE:
     import ordvec
     from ordvec import RankQuant, SignBitmap
-except ImportError:
+else:
     ordvec = None
 
 _ZERO_WIDTH_RE = re.compile(r"[\u200B-\u200D\uFEFF\u202A-\u202E]")
@@ -83,6 +86,7 @@ class SubconsciousStrata:
     def _iter_entries(self):
         if not os.path.exists(self.filepath):
             return
+        corrupt = 0
         try:
             with open(self.filepath, "r", encoding="utf-8") as f:
                 for line in f:
@@ -91,9 +95,17 @@ class SubconsciousStrata:
                         try:
                             yield json.loads(line)
                         except json.JSONDecodeError:
-                            pass
-        except IOError:
-            pass
+                            corrupt += 1
+        except IOError as e:
+            logger.error(
+                f"Subconscious strata at {self.filepath} could not be read: "
+                f"{type(e).__name__}: {e}. Every buried memory is unavailable this session."
+            )
+        if corrupt:
+            logger.warning(
+                f"Skipped {corrupt} unparseable line(s) in {self.filepath}. "
+                "Those memories are lost and will be pruned on the next write."
+            )
 
     def _load_index(self):
         self.index = {}
@@ -120,8 +132,11 @@ class SubconsciousStrata:
             # below degrade on their own terms.
             try:
                 _words_to_matrix(words)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    f"Batch vector warm failed for {len(words)} word(s) "
+                    f"({type(e).__name__}: {e}); falling back to one call per word."
+                )
             # One row per word, in order, so rank_bank stays index-aligned with
             # metadata_log. Skipping a row would shift every later lookup onto
             # the wrong memory.
@@ -190,7 +205,11 @@ class SubconsciousStrata:
                                 self.bitmap = None
                                 self.quantizer = None
             return True
-        except IOError:
+        except IOError as e:
+            logger.error(
+                f"Could not bury a memory in {self.filepath}: {type(e).__name__}: {e}. "
+                "The memory was NOT persisted."
+            )
             return False
 
     def _prune_strata(self):
@@ -218,8 +237,11 @@ class SubconsciousStrata:
                     self._rebuild_ordvec("Prune Rebuild")
                 else:
                     self.rank_bank, self.bitmap, self.quantizer = None, None, None
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(
+                f"Strata pruning failed ({type(e).__name__}: {e}). {self.filepath} is "
+                "no longer bounded and will keep growing until this is fixed."
+            )
 
     def dredge_vibe_by_vector(
         self, query_vector, k: int = 3, cortisol: float = 0.0
