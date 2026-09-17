@@ -115,8 +115,10 @@ tuning preset, and only Adventure has an inventory and a world to move through.
    tracking the shape of a conversation.
 
 3. **Thresholds pick sentences.** If contradiction is high, a sentence about
-   holding paradox goes into the instruction sheet. If energy is low, an
-   instruction to write shorter sentences goes in. This assembly happens in
+   holding paradox goes into the instruction sheet. If energy runs out, an
+   instruction to write breathless prose goes in; if you seem worn out, one
+   to keep replies to three sentences. Whether the model obeys is a separate
+   question, measured below under Honest limits. This assembly happens in
    `brain/composer.py`, and the result is about 900 tokens.
 
 4. **One request goes out.** A single HTTP call to whatever model you have
@@ -268,17 +270,25 @@ the plan for what is next.
 - Receipts record what a subsystem did, not whether it was right. They make the
   engine auditable, not correct.
 - The metabolic economy has not been tuned against a real chat model end to end.
+- The body changes the prose less than the names suggest. Measured on two local
+  models (`tools/audit_somatic.py`), the low-energy instruction makes sentences
+  about 10% shorter and no shorter overall, and one of the two models mostly
+  responds by writing about its breathing. The "three sentences or less"
+  instruction is not obeyed: neither model got shorter, and one wrote more
+  sentences under it than without it. The instructions reach the model every
+  time; what the model does with them is weak, and for exhaustion it is wrong.
 
 ## Checking it yourself
 
 Run these rather than trusting the numbers in any document, including this one:
 
 ```bash
-.venv/bin/python -m pytest -q                      # 484 passed, 5 skipped
+.venv/bin/python -m pytest -q                      # 489 passed, 5 skipped
 .venv/bin/python tools/audit_physics_inputs.py     # how much vocabulary it knows
 .venv/bin/python tools/audit_receipts.py           # which subsystems did real work
 .venv/bin/python tools/audit_handlers.py           # silent exception handlers
 .venv/bin/python tools/audit_safe_get.py           # runtime default hit-rate
+.venv/bin/python tools/audit_somatic.py            # does the model obey its body (live, ~15 min)
 ```
 
 If replies ever start feeling generic, `audit_receipts.py` is the first thing to

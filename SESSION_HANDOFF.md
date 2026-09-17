@@ -1,9 +1,10 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
 Paste this into a fresh context window to resume. Written at the point
-where `ROADMAP.md` is complete apart from C5: every subsystem the document
-listed as disconnected is now connected, and what remains is one
-measurement against a live model rather than any more building.
+where `ROADMAP.md` is complete: every subsystem the document listed as
+disconnected is connected, and C5, the one measurement against a live model,
+has been run and written up. What it found is a design question, not a
+repair.
 
 Structure and working conventions here are inherited from the T.R.S. →
 SCI0 handoff (`/home/gordonk/RiderProjects/TRS_SCI/SESSION_HANDOFF.md`);
@@ -18,21 +19,30 @@ jargon and no assumption that you remember how any of it works. Read that
 first if you have been away; this file assumes you already have the
 shape of the thing in your head.
 
-**The next task is C5**, and its full brief is in this file under "Next
-session: C5, and it is a different kind of work". It is a measurement, not
-a build, and it is the only remaining item on `ROADMAP.md`. Read that
-section, the C5 entry in `ROADMAP.md`, and `tests/test_physics_to_prompt.py`
-(which is the rig to copy), in that order.
+**C5 is done.** The result is in `ROADMAP.md` under C5, and the short form is
+in "What changed most recently" below. There is no queued task. The two open
+threads it left are the exhaustion directive, which the model does not obey
+as written, and a stop-list bug that serves mock prose to reasoning models
+(Open items 7 and 8).
+
+Note: `agents/` was removed deliberately in `070d105`. References to
+`agents/*.md` below and in `README.md` describe documents that are no longer
+in the tree; do not go looking for them.
 
 Before starting anything, run the suite and the audits. The numbers in this
 document are re-derivable on purpose and should never be taken on trust:
 
 ```bash
-.venv/bin/python -m pytest -q                      # expect 484 passed, 5 skipped
+.venv/bin/python -m pytest -q                      # expect 489 passed, 5 skipped
 .venv/bin/python tools/audit_receipts.py           # which subsystems did real work
 .venv/bin/python tools/audit_handlers.py           # 28 silent, 3 pass-only
 .venv/bin/python tools/audit_physics_inputs.py     # vocabulary coverage, zone spread
+.venv/bin/python tools/audit_somatic.py --analyze-only  # C5 tables from the cached generations
 ```
+
+`audit_somatic.py --analyze-only` needs `logs/audit_somatic.jsonl`, which is
+runtime output and deleted by `reset.sh`. Without it, run the tool without the
+flag (about 15 minutes per model against local Ollama).
 
 ## What this is
 
@@ -72,7 +82,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 484 passed, 0 failed, 5 skipped**, about three minutes. Green.
+- **Test suite: 489 passed, 0 failed, 5 skipped**, about three minutes. Green.
   Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.
@@ -151,7 +161,31 @@ aren't there. See "Claims vs. code" below.
 
 ## What changed most recently
 
-Work landed in this order. `ROADMAP.md` has the detail and the
+**C5, the somatic measurement (latest).** `tools/audit_somatic.py` composes
+four arms from one state dict (respiration by exhaustion, straddling the 0.8
+gate), refuses to run if the prompts differ in any line other than the
+directives, and calls the model directly with the thermal tag stripped and one
+seed per message and repeat. 640 generations each on mistral-nemo and
+gemma4:e4b. Confirmed by running it:
+
+- The anaerobic directive shortens sentences by about 10% on both models,
+  with total length unchanged. Small, real, replicated.
+- "Conclude your thought in 3 sentences or less" is not obeyed. No detectable
+  shortening on either model; on gemma the share of replies within three
+  sentences fell from 60% to 37% (26% with both directives). On mistral it
+  nearly doubled validator rejections instead, mostly negative comparisons.
+- mistral-nemo narrates breathing under ANAEROBIC (breath and body words up
+  about 5x), which the kernel prompt forbids. Gemma does not.
+- The smoke run's reversal (9.2 against 4.1 words per sentence) did not
+  survive. It was noise.
+
+`README.md` and `credits.txt` (and its `docs/CREDITS.MD` copy) were softened to
+match. Suspected, not tested: the exhaustion directive sits inside the
+`[INTERNAL USE ONLY]` metrics block, which tells the model to "consume these
+metrics to shape your narrative and tone", and may be read as characterisation
+rather than as a constraint.
+
+Earlier work landed in this order. `ROADMAP.md` has the detail and the
 measurements; this is the shape of it.
 
 1. **B1, the Creative Determinant went live.** `<cd_lambda_1>` had a
@@ -321,6 +355,20 @@ Three habits came out of that and are worth keeping:
   kindest.** Catching an AttributeError and returning "The Parliament
   doors are sealed" makes the bug indistinguishable from content, in a
   system whose only output is prose. If a barrier must stay, it logs.
+- **An instruction reaching the prompt proves nothing about compliance.**
+  A4 pinned both somatic directives into the prompt; C5 found one weakly
+  obeyed and the other not obeyed, and on one model reversed. For anything
+  in the prompt that claims to change behaviour, measure the behaviour.
+- **A reply with no visible prose scores as perfect obedience.** An
+  all-`<think>` reply is zero sentences after the validator strips it, which
+  a naive count reads as "3 sentences or less". Count empty outcomes on their
+  own.
+- **`generate` never fails loudly on empty content.** It returns mock prose.
+  Anything measuring or relying on real model output should make
+  `mock_generation` raise, as `audit_somatic.py` does.
+- **A resume cache must key on everything that varies between runs.** The
+  prompts are identical across models, so a key without the model name made
+  the second model's run skip every generation and report success.
 - **Collapsing several conditions into one return value throws away the
   diagnosis.** `_sync_ordvec_indices` returned a bare `False` for four
   unrelated problems and its only caller ignored it. Prefer a named
@@ -666,9 +714,20 @@ These come from the T.R.S. handoff and apply the same way here.
 - **Keep regression checklists next to the area they cover**, so picking
   the work back up cold has an obvious first move.
 
-## Next session: C5, and it is a different kind of work
+## C5: the original brief (done; result in `ROADMAP.md`)
 
-**Everything else on `ROADMAP.md` is done.** Tracks A and B are finished,
+Kept because it records why the experiment is shaped the way it is. The
+design below is what `tools/audit_somatic.py` implements, with three changes
+found in practice: exhaustion straddles its gate (0.79 / 0.81) rather than
+being set far above it, so the METRICS line barely moves; empty visible
+replies are their own outcome; and gemma had to run with
+`reasoning_effort=none` (see Open items 8). The "Where it should live" advice
+on a gated live test was not taken: a pass/fail test on a 10% effect needs
+hundreds of generations and would be flaky, and the audit itself is the
+re-runnable artifact. The offline measurement rules are pinned in
+`tests/test_audit_somatic.py`.
+
+**Everything else on `ROADMAP.md` was done at the time.** Tracks A and B are finished,
 and C is finished apart from this. C5 is not a build task; it is a
 measurement, and it is the only item in the whole document that cannot be
 settled against mocks.
@@ -871,10 +930,21 @@ The short list below is what a session should know without reading it.
    gap is A4, the state-asserting tests, which is not done.
 6. **Nothing else is known-broken.** Picking this up cold: make a venv,
    install including `ordvec`, pull both Ollama models, run the suite and
-   expect **484 passed, 0 failed, 5 skipped** (the skips are live-backend
+   expect **489 passed, 0 failed, 5 skipped** (the skips are live-backend
    tests behind `BONE_EMBED_LIVE_TEST=1`). Then boot headless in mock
    mode, confirm `/status` reports the Arcade nominal rather than
    `DEGRADED`, and run `/diag` to see the turn's receipts.
+7. **The exhaustion directive is not obeyed as written** (C5). Either reword
+   it, most obviously as a hard budget stated outside the `[INTERNAL USE
+   ONLY]` block, and re-measure with `tools/audit_somatic.py`, or stop
+   describing it as a constraint anywhere. The threshold is `e > 0.8`,
+   hardcoded in `brain/composer.py`, not in `BoneConfig`.
+8. **Reasoning models on Ollama get mock prose.** `LLMInterface.generate`'s
+   stop list (`Traveler:` and others) also cuts a thinking model's reasoning
+   stream, content comes back empty, and `generate` returns
+   `mock_generation(reason="SILENCE")` without counting a failure. Confirmed
+   with gemma4:e4b; `reasoning_effort=none` avoids it and `think: false` on
+   the `/v1` endpoint does not. Not fixed. mistral-nemo is unaffected.
 
 ## Future ideas (not started, no urgency)
 

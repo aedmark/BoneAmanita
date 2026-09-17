@@ -64,13 +64,14 @@ you whether it ran.
 | **A4** state-asserting tests | **done**: physics-to-prompt pinned end to end, 20 tests |
 | **C3** co-regulation | **done**: found the severed serialization; user model now first-class |
 | **C4** Stage Manager and Silence | **done**: Tension is a state, Silence is an outcome, 21 tests |
+| **C5** somatic translation | **measured**: anaerobic shortens sentences ~10%; "3 sentences or less" is not obeyed |
 
-Next: **C5**, the somatic translation measurement. It is a half-day
-experiment against a real model rather than a mock, and it settles a
-load-bearing claim. Tracks A and B are finished, and C is finished except
-for that measurement.
+Tracks A, B and C are finished. C5's result is a
+finding against a claim rather than a repair, and the follow-up it points to
+(rewording or relocating the exhaustion directive) is a design decision,
+not a listed task.
 
-Suite: **484 passed, 5 skipped**. The five skips are the live-embedding tests
+Suite: **489 passed, 5 skipped**. The five skips are the live-embedding tests
 behind `BONE_EMBED_LIVE_TEST=1`, not a missing chat model. Re-run
 `tools/audit_receipts.py` after touching any instrumented subsystem, and
 `tools/audit_handlers.py` after adding a catch.
@@ -1200,7 +1201,95 @@ simply erroring out. Worth an explicit decision before implementation.
 
 ## C5. Verify somatic translation actually happens
 
-**Full brief in `SESSION_HANDOFF.md` under "Next session: C5".** It covers
+**Measured, 2026-09-17.** `tools/audit_somatic.py`, 1,280 generations over two
+models. Re-run it rather than trusting this table.
+
+Design: four arms composed from one state dict, crossed respiration
+(RESPIRING / ANAEROBIC) by exhaustion (0.79 / 0.81, straddling the `> 0.8`
+gate so the METRICS line barely moves). The tool diffs the prompts and refuses
+to run if any line other than the directive and its metric changed. Thermal tag
+stripped, identical sampling, one seed per (message, repeat) across arms, the
+model called directly so the validator cannot resample. 20 messages x 8 repeats
+x 4 arms per model. Effects are arm minus control, paired within message, 95%
+bootstrap CI over messages; an interval crossing zero is reported as no
+detectable difference.
+
+| Contrast | mistral-nemo | gemma4:e4b (reasoning off) |
+|---|---|---|
+| ANAEROBIC, words per sentence | **-0.97** [-1.74, -0.20], -11% | **-0.65** [-0.89, -0.43], -10% |
+| ANAEROBIC, total words | -6.5 [-15.6, +1.8], none detectable | -0.1 [-2.3, +2.0], none detectable |
+| ANAEROBIC, breath and body words /100w | **+1.31** [+0.56, +2.25], 4.8x | +0.06 [-0.20, +0.32], none detectable |
+| EXHAUSTED, share within 3 sentences | +0.07 [-0.00, +0.14], none detectable (38% -> 45%) | **-0.23** [-0.37, -0.09] (60% -> 37%) |
+| EXHAUSTED, sentence count | -0.45 [-1.07, +0.12], none detectable | +0.27 [-0.16, +0.68], none detectable |
+| EXHAUSTED, validator would reject | **+0.17** [+0.06, +0.29] (19% -> 37%) | +0.02 [-0.03, +0.07], none detectable |
+| BOTH, share within 3 sentences | -0.01 [-0.10, +0.08], none detectable | **-0.34** [-0.49, -0.20] (60% -> 26%) |
+
+What that says, in order of how much weight it will bear:
+
+1. **The anaerobic directive does something small and real.** Sentences get
+   about 10% shorter in both models, with intervals clear of zero in both.
+   Total length does not change: the model chops, it does not compress.
+   The four-generation smoke run that pointed the other way (9.2 against 4.1
+   words per sentence) was noise, as it said it might be.
+2. **The exhaustion directive does not do what it says.** "Conclude your
+   thought in 3 sentences or less" produced no detectable drop in sentence
+   count in either model. On gemma it **reversed** its own target: replies
+   within three sentences fell from 60% to 37%, and to 26% with both
+   directives present, because the model answered "be brief" with more,
+   shorter sentences. On mistral-nemo it did not shorten anything and nearly
+   doubled the replies the Lexical Firewall would reject, mostly negative
+   comparisons ("not X, but Y"), which in production means more retries.
+   Checked that the gemma reversal is not a splitter artifact: 1-2% of its
+   replies contain a line break, and ignoring line breaks gives the same
+   shares.
+3. **mistral-nemo performs the state instead of writing in it.** Under
+   ANAEROBIC it uses nearly five times as many breath and body words
+   ("inhales", "lungs", "breathless"), which the kernel prompt forbids
+   ("Embody your state in the structure of your words, do not describe it").
+   Gemma does not. This is the "licence for atmosphere" reading the smoke run
+   suggested, and it is real on one model of two.
+
+Limits, stated so nobody inflates this later. Twelve measures, three
+contrasts and two models make 72 intervals, so two or three will clear zero
+by chance; weight the effects that replicate across models (item 1) above
+the ones that appear on one (items 2 and 3). All text measures are coarse
+proxies: sentences are split on punctuation, and the adjective column counts
+suffixes. Gemma was run with `reasoning_effort=none` because with reasoning on
+it produced no content at all (see "Found on the way"), so its row describes
+gemma without thinking. Neither model is large; a frontier model may obey
+"3 sentences" outright. The thermal tag was stripped, so this measures the
+instructions and not the deployed temperature coupling.
+
+Verdict: the somatic layer is partly decoration. Metabolic state measurably
+reaches the prose through respiration, weakly. The exhaustion instruction is
+not obeyed as written and should either be reworded (a hard word or sentence
+budget stated outside the `[INTERNAL USE ONLY]` block is the obvious first
+try, and `audit_somatic.py` will measure it) or stop being described as a
+constraint. `README.md` and `credits.txt` now say this.
+
+**Found on the way.** Three failures of this document's usual kind, each
+silent:
+
+- **Reasoning models get fabricated replies.** `LLMInterface.generate` sends a
+  stop list that includes `Traveler:`. Ollama applies stop sequences to a
+  thinking model's reasoning too, gemma quotes `Traveler:` while reasoning,
+  generation ends with empty content, and `generate` answers with
+  `mock_generation(reason="SILENCE")` without counting a failure. Any thinking
+  model on Ollama would be served mock prose indistinguishable from a reply.
+  Not fixed here; filed as its own task. The audit makes `mock_generation`
+  raise, which is how this surfaced at all.
+- **An all-`<think>` reply looks like perfect obedience.** mistral-nemo often
+  puts its entire reply inside `<think>`, which the validator strips, leaving
+  nothing visible. Scored naively that is zero sentences, i.e. compliance with
+  "3 sentences or less". The audit reports empty replies as their own outcome
+  and excludes them from every prose measure; there is a test.
+- **A resume cache keyed without the model skips the second model.** Every
+  model is sent identical prompts, so the first gemma run found mistral's
+  replies under the same key and generated nothing. It surfaced only because
+  the analysis refused to print a table with no rows.
+
+The original brief, kept for the design rationale, is in `SESSION_HANDOFF.md`
+under "Next session: C5". That brief covers
 the rig (smoke tested against `mistral-nemo`), the three confounds that make
 a naive A/B void, how to measure without adding a POS tagger, and sizing.
 
@@ -1254,8 +1343,8 @@ shippable and each makes the next one verifiable.
     Found the severed serialization on the way in.
 11. ~~**C4**: the Stage Manager, Tension, Silence~~, **done**. The ATP and
     telemetry design is settled and written down under C4.
-12. ~~**A4**: physics-to-prompt golden-path tests~~, **done**. **C5**, the
-    somatic translation measurement, is still open.
+12. ~~**A4**: physics-to-prompt golden-path tests~~, **done**. ~~**C5**, the
+    somatic translation measurement~~, **measured**: see C5.
 13. **B4**: rewrite the credits once they are true.
 
 # Things deliberately not on this list
