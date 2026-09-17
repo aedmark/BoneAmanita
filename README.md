@@ -237,7 +237,7 @@ codebase, and it is what most of the recent work was about.
 ## Project status
 
 Working and in active development. The test suite is **484 passing, 5 skipped**
-(the skips need a chat model pulled in Ollama).
+(the five skips are live-embedding tests, run them with `BONE_EMBED_LIVE_TEST=1`).
 
 Recent work was almost entirely archaeology rather than features. Large parts of
 this program were running correctly and connected to nothing: not crashed, not

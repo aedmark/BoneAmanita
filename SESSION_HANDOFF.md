@@ -1,9 +1,9 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
 Paste this into a fresh context window to resume. Written at the point
-where the Mnemonic Arcade was given a real coordinate system (see
-"What changed most recently"), which is the first change in a while that
-altered what the engine actually *does* rather than how it is tuned.
+where `ROADMAP.md` is complete apart from C5: every subsystem the document
+listed as disconnected is now connected, and what remains is one
+measurement against a live model rather than any more building.
 
 Structure and working conventions here are inherited from the T.R.S. →
 SCI0 handoff (`/home/gordonk/RiderProjects/TRS_SCI/SESSION_HANDOFF.md`);
@@ -17,6 +17,22 @@ sync, those habits are not project-specific.
 jargon and no assumption that you remember how any of it works. Read that
 first if you have been away; this file assumes you already have the
 shape of the thing in your head.
+
+**The next task is C5**, and its full brief is in this file under "Next
+session: C5, and it is a different kind of work". It is a measurement, not
+a build, and it is the only remaining item on `ROADMAP.md`. Read that
+section, the C5 entry in `ROADMAP.md`, and `tests/test_physics_to_prompt.py`
+(which is the rig to copy), in that order.
+
+Before starting anything, run the suite and the audits. The numbers in this
+document are re-derivable on purpose and should never be taken on trust:
+
+```bash
+.venv/bin/python -m pytest -q                      # expect 484 passed, 5 skipped
+.venv/bin/python tools/audit_receipts.py           # which subsystems did real work
+.venv/bin/python tools/audit_handlers.py           # 28 silent, 3 pass-only
+.venv/bin/python tools/audit_physics_inputs.py     # vocabulary coverage, zone spread
+```
 
 ## What this is
 
@@ -649,6 +665,163 @@ These come from the T.R.S. handoff and apply the same way here.
   as-is" is a decision, not an oversight.
 - **Keep regression checklists next to the area they cover**, so picking
   the work back up cold has an obvious first move.
+
+## Next session: C5, and it is a different kind of work
+
+**Everything else on `ROADMAP.md` is done.** Tracks A and B are finished,
+and C is finished apart from this. C5 is not a build task; it is a
+measurement, and it is the only item in the whole document that cannot be
+settled against mocks.
+
+### The claim being tested
+
+At low metabolic headroom the engine tells the model to change how it
+writes. Two directives do this, and `tests/test_physics_to_prompt.py`
+already proves both reach the prompt:
+
+| Trigger | Directive |
+|---|---|
+| `respiration == "ANAEROBIC"` | "Current Biology: ANAEROBIC STATE. Raw, breathless, efficient prose." |
+| `exhaustion > 0.8` | "CRITICAL: You are exhausted. You must conclude your thought in 3 sentences or less." |
+
+Those tests assert the instruction **arrives**. They say nothing about
+whether the model **obeys**, and that is the whole of C5. If the effect is
+not measurable then the somatic layer is decoration, and either the
+instruction needs strengthening or `README.md` and `credits.txt` need their
+claims softened. Both are acceptable outcomes. Finding no effect and saying
+so is a success.
+
+### Preconditions, all currently satisfied
+
+- `mistral-nemo:latest` (7.1GB) and `nomic-embed-text:latest` are pulled and
+  Ollama answers on `http://localhost:11434`. `gemma4:e4b` is also present if
+  you want a second model to check the effect is not one model's quirk.
+- `BoneConfig.MODEL` is `mistral-nemo`, `PROVIDER` is `ollama`.
+- `BIO.ANAEROBIC_THRESHOLD` is 40.0, `BIO.ATP_STARVATION` is 5.0.
+
+### The experimental design, and the three traps in it
+
+**Do not A/B by running real turns.** The engine's state is coupled: driving
+ATP down also moves voltage, drag, contradiction and the zone, so a low-ATP
+turn differs from a high-ATP turn in a dozen ways at once and the somatic
+directive is not the variable you measured. Compose both arms from the
+**same state dict**, changing only `bio["respiration"]` (and/or
+`physics["exhaustion"]`), then call the model on both with the same user
+message. `PhysicsToPromptCase.compose_with` in
+`tests/test_physics_to_prompt.py` is the rig to copy.
+
+**Pin the temperature, and know why.** `LLMInterface.generate` reads a
+`<cd_lambda_1>` tag out of the prompt and OVERRIDES whatever
+`params["temperature"]` you passed: positive lambda forces 0.0, negative
+opens heat proportional to the magnitude. If the two arms carry different
+tags they are sampled differently and the comparison is void. Either strip
+the tag from both and pass an identical `params`, or ensure both carry the
+same value. Stripping is cleaner for isolating the instruction; keeping the
+real tag measures the deployed behaviour instead. They answer different
+questions, so pick one deliberately and say which in the writeup.
+
+**Call `llm.generate` directly, not through the cortex.** The
+`ResponseValidator` discards a reply containing a banned phrase and asks
+again, so going through the full path silently resamples some responses and
+biases whichever arm trips it more often.
+
+### Measuring it without adding a dependency
+
+There is no POS tagger in the tree and none of the 35 lexicon categories is
+adjectival, so "adjective density" as the roadmap words it has no cheap
+exact implementation. Constitution Article 1 says do not add a framework for
+this. Suggested approach: measure several coarse proxies rather than one
+fragile precise one, and report them separately.
+
+- Mean sentence length in words. This is the primary measure and the one the
+  "3 sentences or less" directive speaks to most directly.
+- Mean word length in characters.
+- Type-token ratio.
+- Commas per sentence, as a clause-density proxy.
+- A suffix-based adjective proxy (`-ous -ful -ive -al -ic -less -able -ible
+  -ish -y`), reported as a proxy and never as a count of adjectives.
+
+**Apply the project's own quality gate.** `navi-fractal` refuses to return a
+dimension when R squared says the data will not support one, and that habit
+is the single most useful thing this codebase has taken from Project Navi.
+Do the same here: compute an effect size with a confidence interval across
+repeats, and decline to declare an effect whose interval crosses zero. A
+measurement that reports "no detectable difference, n=120, CI [-0.4, 1.1]
+words per sentence" is worth far more than one that reports a number it
+cannot stand behind.
+
+### The rig, smoke tested against the live model
+
+These are the moves, confirmed working against `mistral-nemo` on
+2026-09-17. Both arms come from one state dict and differ in one field:
+
+```python
+composer = PromptComposer({"system_prompts": eng.prompt_library, "lenses": {}})
+llm = eng.cortex.llm
+
+for arm in ("RESPIRING", "ANAEROBIC"):
+    eng.cortex.active_mode = "CONVERSATION"
+    state = eng.cortex.gather_state({"physics": {"voltage": 30.0}})
+    state.setdefault("meta", {})["active_mode"] = "CONVERSATION"
+    state["bio"] = {"respiration": arm}
+    prompt = composer.compose(state, msg, modifiers={"include_inventory": False})
+    # Strip the thermal lock so both arms sample identically.
+    prompt = re.sub(r"\n?<cd_lambda_1>[-\d.]+</cd_lambda_1>", "", prompt)
+    assert ("ANAEROBIC STATE" in prompt) == (arm == "ANAEROBIC")
+    reply = llm.generate(prompt, {"temperature": 0.7, "top_p": 0.95, "max_tokens": 220})
+```
+
+The assertion is worth keeping. It is the cheap guard that the arms are
+actually distinct, and without it a silent change to the bio block would
+turn the whole experiment into a comparison of a thing against itself.
+
+### One preliminary observation, which is NOT a result
+
+The smoke run was two messages per arm, one repeat, at temperature 0.7.
+That is four generations from a 7B model and it is noise, not evidence.
+Recording it only because of which way it pointed:
+
+```
+RESPIRING: mean words/sentence = 4.1
+ANAEROBIC: mean words/sentence = 9.2
+```
+
+ANAEROBIC, the arm told to write raw, breathless and efficient prose,
+produced sentences **more than twice as long**. If that survives a properly
+powered run, the finding is not "the instruction has no effect" but "the
+instruction has the opposite effect", which is a different and more
+interesting problem: a directive about being breathless may be read as a
+licence for atmosphere rather than an instruction to compress.
+
+Design the experiment to be able to detect a reversal, not just an absence.
+A one-sided test or a measurement that reports only the magnitude of a
+difference would miss this entirely. Report the signed effect.
+
+### Sizing
+
+One sample per arm is noise; a local 7B model is not deterministic even at
+low temperature. Something like 10 to 15 user messages, varied in length and
+register, times 4 or 5 repeats, times 2 arms, so roughly 100 to 150
+generations. At a few seconds each that is well under an hour of wall clock.
+Cache the raw generations to disk so the analysis can be rerun without
+regenerating.
+
+### Where it should live
+
+`tools/audit_somatic.py`, matching the other audits, so it is re-runnable
+rather than a number someone once wrote in a document. If it produces a
+durable result, add a gated test behind an env var in the style of
+`tests/test_embeddings.py` (`BONE_EMBED_LIVE_TEST`) rather than in the main
+suite, since it needs a live model and takes minutes.
+
+### When it is done
+
+Update `ROADMAP.md` C5 with the measurement, and then reconcile the claims
+in `README.md` (the "Honest limits" section already flags this as untested)
+and `credits.txt`. If the effect is real, say how large. If it is not, say
+that plainly and soften the claim. The precedent for this is B4 and the Lean
+4 correction: the overstatement was ours and the fix was to write down that
+it was ours.
 
 ## Open items: what's actually left
 

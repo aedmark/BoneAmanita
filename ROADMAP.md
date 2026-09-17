@@ -70,9 +70,10 @@ experiment against a real model rather than a mock, and it settles a
 load-bearing claim. Tracks A and B are finished, and C is finished except
 for that measurement.
 
-Suite: **484 passed, 5 skipped**. The skips are the environmental ones (no
-chat model pulled in Ollama). Re-run `tools/audit_receipts.py` after touching
-any instrumented subsystem, and `tools/audit_handlers.py` after adding a catch.
+Suite: **484 passed, 5 skipped**. The five skips are the live-embedding tests
+behind `BONE_EMBED_LIVE_TEST=1`, not a missing chat model. Re-run
+`tools/audit_receipts.py` after touching any instrumented subsystem, and
+`tools/audit_handlers.py` after adding a catch.
 
 ---
 
@@ -1198,6 +1199,18 @@ failure, and it must be distinguishable in telemetry from the engine
 simply erroring out. Worth an explicit decision before implementation.
 
 ## C5. Verify somatic translation actually happens
+
+**Full brief in `SESSION_HANDOFF.md` under "Next session: C5".** It covers
+the rig (smoke tested against `mistral-nemo`), the three confounds that make
+a naive A/B void, how to measure without adding a POS tagger, and sizing.
+
+One thing worth repeating here. A four-generation smoke run, which is noise
+and not a result, pointed the wrong way: the ANAEROBIC arm, told to write
+"raw, breathless, efficient prose", averaged 9.2 words per sentence against
+the control's 4.1. If that survives a powered run the finding is not "no
+effect" but "opposite effect", so the experiment has to be able to detect a
+reversal. Report the signed effect, not the magnitude.
+
 
 Gate 3 claims to degrade prose at low ATP (shorter sentences, fewer
 adjectives). It is an instruction in the prompt, so whether it *happens*
