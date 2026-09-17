@@ -659,7 +659,7 @@ class CyberneticGovernor:
     PICARD_TOL = 1e-4
 
     def __init__(self, config_ref=None):
-        self.cfg = config_ref
+        self.cfg = config_ref or BoneConfig
         self.target_v = None
         self.target_d = None
         self.beth_index, self.order = 0.5, 1
