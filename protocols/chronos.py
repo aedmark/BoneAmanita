@@ -1,5 +1,6 @@
 """protocols/chronos.py"""
 
+import dataclasses
 import json
 import logging
 import os
@@ -48,6 +49,7 @@ class ChronosKeeper:
                 "trauma_accum": self.eng.trauma_accum,
                 "soul_data": self.eng.soul.to_dict(),
                 "village_data": self._gather_village_state(),
+                "user_model": self._gather_user_model(),
                 "continuity": continuity_packet,
                 "timestamp": time.time(),
                 "chat_history": start_history,
@@ -82,6 +84,8 @@ class ChronosKeeper:
                 self.eng.soul.load_from_dict(data["soul_data"])
             if "village_data" in data:
                 self._restore_village_state(data["village_data"])
+            if "user_model" in data:
+                self._restore_user_model(data["user_model"])
             if "continuity" in data:
                 self.eng.embryo.continuity = data["continuity"]
                 saved_hash = data["continuity"].get("kernel_hash", "UNKNOWN")
@@ -166,6 +170,30 @@ class ChronosKeeper:
             for name, comp in vars(self.eng.village).items()
             if comp and hasattr(comp, "to_dict")
         }
+
+    def _gather_user_model(self) -> Dict[str, Any]:
+        """Persist what the engine has inferred about the PERSON.
+
+        ROADMAP C3. The body, the soul and the village all survived a session
+        boundary; the user model did not, so an engine that had spent an hour
+        learning you were running low woke up assuming you were fresh. That is
+        the one piece of state co-regulation is actually about.
+        """
+        lattice = getattr(self.eng, "shared_lattice", None)
+        u = getattr(lattice, "u", None)
+        if u is None:
+            return {}
+        return {f.name: getattr(u, f.name) for f in dataclasses.fields(u)}
+
+    def _restore_user_model(self, data: Dict[str, Any]):
+        lattice = getattr(self.eng, "shared_lattice", None)
+        u = getattr(lattice, "u", None)
+        if u is None or not data:
+            return
+        known = {f.name for f in dataclasses.fields(u)}
+        for key, value in data.items():
+            if key in known:
+                setattr(u, key, value)
 
     def _restore_village_state(self, state_data: Dict[str, Any]):
         if not state_data:

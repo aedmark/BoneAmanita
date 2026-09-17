@@ -230,7 +230,36 @@ class CommandProcessor:
             render("energy_label", "Energy:  ", v['atp'], v['max_atp'], self.P.YEL)
         ]))
         self.interface.log(self._render_arcade_status())
+        self.interface.log(self._render_user_model())
         return True
+
+    def _render_user_model(self) -> str:
+        """Report what the engine currently believes about the PERSON.
+
+        ROADMAP C3. `SharedLatticeDriver` has always inferred this and nothing
+        ever showed it, so the one model whose whole purpose is co-regulation
+        was the only one you could not inspect. Worth reading skeptically: it is
+        an inference from word count and timing, not something you told it.
+        """
+        lattice = getattr(self.interface.eng, "shared_lattice", None)
+        u = getattr(lattice, "u", None)
+        if u is None:
+            return f"You:     {self.P.GRY}no user model attached{self.P.RST}"
+        exhaustion = float(getattr(u, "E_u", 0.0))
+        stamina = float(getattr(u, "P_u", 0.0))
+        shared = getattr(lattice, "shared", None)
+        resonance = float(getattr(shared, "phi", 0.0)) if shared else 0.0
+        read = (
+            "flagging" if exhaustion > 0.7
+            else "tiring" if exhaustion > 0.4
+            else "steady"
+        )
+        tone = self.P.YEL if exhaustion > 0.4 else self.P.GRN
+        return (
+            f"You:     {tone}{read}{self.P.RST}  "
+            f"{self.P.GRY}(exhaustion {exhaustion:.2f}, stamina {stamina:.0f}, "
+            f"resonance {resonance:.2f}){self.P.RST}"
+        )
 
     def _render_arcade_status(self) -> str:
         """Report the Mnemonic Arcade's coordinate system.

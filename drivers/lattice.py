@@ -1,34 +1,152 @@
 """drivers/lattice.py"""
 
 import time
-from typing import Any, List
+from collections import deque
+from typing import Any, Deque, List
 
 from constants import Prisma
+from presets import BoneConfig
+from receipts import ReceiptLedger
 from physics.models import PhysicsPacket, SharedDynamics, UserInferredState
+from receipts import issue as issue_receipt
 from struts import safe_get, ux
 
 
 class SharedLatticeDriver:
-    def __init__(self):
+    def __init__(self, config_ref=None):
+        self.cfg = config_ref or BoneConfig
         self.u = UserInferredState()
         self.shared = SharedDynamics()
         self.last_timestamp = time.time()
+        window = int(self._user_cfg("BASELINE_WINDOW", 8))
+        # What "your normal message" looks like, for this person, recently.
+        # Disengagement is a change from your own baseline, not an absolute
+        # length: someone who always writes tersely is not tired, they just
+        # write that way.
+        self._length_baseline: Deque[int] = deque(maxlen=window)
+        self._recent_texts: Deque[str] = deque(maxlen=window)
+        self._last_learned_turn = -1
+
+    def _user_cfg(self, key: str, default: float) -> float:
+        return float(safe_get(safe_get(self.cfg, "USER", {}), key, default))
+
+    def stamina_ceiling(self) -> float:
+        """The current ceiling on P_u, which breathes with the conversation.
+
+        A flat 100 would do, but the ceiling is the one number here that can
+        honestly say "this conversation is costing you more than usual". High
+        shared resonance buys headroom; accumulated trauma spends it. The floor
+        keeps it from collapsing to nothing however heavy things get.
+        """
+        base = self._user_cfg("STAMINA_MAX", 100.0)
+        headroom = self._user_cfg("STAMINA_RESONANCE_HEADROOM", 25.0)
+        # phi is 0..1 and sits near 0.5 in a neutral conversation, so only the
+        # half above neutral buys anything.
+        resonance_gain = headroom * max(0.0, (float(self.shared.phi) - 0.5) * 2.0)
+        trauma_cost = self._user_cfg("STAMINA_TRAUMA_COST", 4.0) * float(self.u.T_u)
+        floor = base * self._user_cfg("STAMINA_FLOOR_FRACTION", 0.5)
+        return max(floor, min(base + headroom, base + resonance_gain - trauma_cost))
+
+    def read_disengagement(self, text: str) -> float:
+        """How much this message reads as withdrawal rather than engagement.
+
+        Two signals, whichever is stronger. Brevity relative to this person's
+        own recent baseline, and repetition (within the message, or the message
+        repeating a recent one).
+
+        Repetition is measured here rather than read from `m_a`, which measures
+        the same thing elsewhere. That is deliberate: `m_a` is written onto a
+        packet during pre-flight and reaches this code only if the ordering
+        happens to work out, and a signal that silently reads 0.0 when the
+        ordering changes is exactly the failure this whole codebase keeps
+        having. Six local lines with no ordering dependency is the cheaper bet.
+        """
+        words = text.split()
+        if not words:
+            return 1.0
+
+        intra = 1.0 - (len(set(w.lower() for w in words)) / len(words))
+        cross = 1.0 if text.strip() in self._recent_texts else 0.0
+        repetition = max(intra, cross)
+
+        baseline = (
+            sum(self._length_baseline) / len(self._length_baseline)
+            if self._length_baseline
+            else float(len(words))
+        )
+        brevity_floor = max(0.01, self._user_cfg("BREVITY_FLOOR", 0.5))
+        ratio = len(words) / max(1.0, baseline)
+        # 1.0 when the message has collapsed to nothing, 0.0 once it is back at
+        # `brevity_floor` of your usual length or longer.
+        brevity = max(0.0, min(1.0, 1.0 - (ratio / brevity_floor)))
+        return max(brevity, repetition)
 
     def infer_and_couple(
-        self, text: str, sys_phys: PhysicsPacket, input_phys: Any, atp_pool: float
+        self,
+        text: str,
+        sys_phys: PhysicsPacket,
+        input_phys: Any,
+        atp_pool: float,
+        is_user_turn: bool = True,
     ) -> tuple[List[str], float]:
         logs = []
         atp_deduction = 0.0
         now = time.time()
         time_delta = now - self.last_timestamp
         self.last_timestamp = now
-        word_cost = len(text.split()) * 0.5
-        self.u.P_u = max(0.0, self.u.P_u - word_cost + 5.0)
-        self.u.E_u = (
-            min(1.0, self.u.E_u + 0.1)
-            if self.u.P_u < 30
-            else max(0.0, self.u.E_u - 0.05)
-        )
+        # `infer_and_couple` is called twice per turn, from
+        # `ObservationPhase.run` and again from `_execute_core_cycle`. Reading
+        # the state twice is harmless; LEARNING from it twice is not. The
+        # second pass drained P_u again for the same message, and found the
+        # text already in `_recent_texts` from the first pass, so every
+        # utterance scored as a repeat of itself and read as total
+        # disengagement. Learn once per turn, whoever asks.
+        ledger_turn = ReceiptLedger.get_instance().turn
+        first_pass_this_turn = ledger_turn != self._last_learned_turn
+        if first_pass_this_turn:
+            self._last_learned_turn = ledger_turn
+
+        # P_u is EFFORT SPENT: writing a lot drains it, resting returns it.
+        # Low P_u is what triggers the engine to carry part of the load further
+        # down this method, so a long hard message lowering it is the supportive
+        # path, not a penalty.
+        word_count = len(text.split())
+        if first_pass_this_turn:
+            word_cost = word_count * self._user_cfg("STAMINA_WORD_COST", 0.5)
+            recovery = self._user_cfg("STAMINA_RECOVERY", 5.0)
+            self.u.P_u = min(
+                self.stamina_ceiling(), max(0.0, self.u.P_u - word_cost + recovery)
+            )
+
+        # E_u is DISENGAGEMENT, and it is a separate question from effort.
+        #
+        # It used to be neither: E_u rose only once P_u fell below 30, so
+        # writing long searching prose was the thing that made the engine read
+        # you as exhausted and start cutting its replies to three sentences,
+        # while "ok, sure, fine" restored you to full. That is backwards.
+        # Someone working hard on something difficult is who this engine is
+        # for. Withdrawal is what should make it drop its energy to match and
+        # hold space, which is what ROADMAP C3 asked for.
+        #
+        # Only a turn the PERSON drove may move this or teach the baseline. The
+        # boot sequence runs through here as a system turn carrying a prompt
+        # hundreds of words long, and it was being learned as "your normal
+        # message". Every real thing you then typed measured short against it,
+        # so the engine read a fully engaged user as withdrawing from the very
+        # first word.
+        if is_user_turn and first_pass_this_turn:
+            disengagement = self.read_disengagement(text)
+            rate = (
+                self._user_cfg("DISENGAGEMENT_RATE", 0.15)
+                if disengagement > self.u.E_u
+                else self._user_cfg("REENGAGEMENT_RATE", 0.10)
+            )
+            self.u.E_u = max(
+                0.0, min(1.0, self.u.E_u + (disengagement - self.u.E_u) * rate)
+            )
+            if text.strip():
+                self._length_baseline.append(word_count)
+                self._recent_texts.append(text.strip())
         self.u.V_u = float(safe_get(input_phys, "voltage", self.u.V_u))
         self.u.psi_u = float(safe_get(input_phys, "psi", self.u.psi_u))
         self.u.chi_u = float(safe_get(input_phys, "chi", self.u.chi_u))
@@ -110,4 +228,24 @@ class SharedLatticeDriver:
             logs.append(
                 f"{Prisma.CYN}We'll carry this part. Rest a moment.{Prisma.RST}"
             )
+        issue_receipt(
+            "lattice.infer_and_couple",
+            "inferred the user's state and coupled to it",
+            result_count=len(logs),
+            degraded=False,
+            inputs={
+                "words": len(text.split()),
+                "E_u": round(float(self.u.E_u), 3),
+                "P_u": round(float(self.u.P_u), 1),
+                "P_ceiling": round(self.stamina_ceiling(), 1),
+                "baseline_words": round(
+                    sum(self._length_baseline) / len(self._length_baseline), 1
+                )
+                if self._length_baseline
+                else 0.0,
+                "phi": round(float(self.shared.phi), 3),
+                "silence": self.shared.sigma_silence,
+                "atp_transferred": atp_deduction,
+            },
+        )
         return logs, atp_deduction

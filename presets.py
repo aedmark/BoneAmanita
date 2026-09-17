@@ -228,6 +228,57 @@ class BoneConfig:
         "PHYSICS": ["TASTE_CONFIDENCE_FLOOR", "ZONE_MARGIN"],
         "CD": ["LAMBDA", "BETA"],
         "EMBEDDINGS": ["BACKEND", "MODEL", "URL"],
+        "USER": [
+            "STAMINA_MAX",
+            "STAMINA_RESONANCE_HEADROOM",
+            "STAMINA_TRAUMA_COST",
+            "STAMINA_FLOOR_FRACTION",
+            "BASELINE_WINDOW",
+            "BREVITY_FLOOR",
+            "DISENGAGEMENT_RATE",
+            "REENGAGEMENT_RATE",
+        ],
+    }
+
+    # The engine's model of the PERSON (ROADMAP C3). Two separate signals, and
+    # keeping them separate is the point.
+    #
+    # P_u is EFFORT SPENT. It drains with how much you write and recovers when
+    # you rest. Low P_u is what triggers the engine to carry some of the load
+    # for you, so writing a lot should lower it: that is the supportive path,
+    # not a penalty.
+    #
+    # E_u is DISENGAGEMENT. It rises when your messages get short, blunt or
+    # repetitive RELATIVE TO YOUR OWN BASELINE, and falls when you write at
+    # length. It is what shortens the engine's replies to match you.
+    #
+    # These used to be one signal: E_u rose only when P_u fell below a floor,
+    # which meant writing long searching prose was what made the engine read you
+    # as exhausted and start cutting its answers to three sentences. That is
+    # backwards. Someone working hard on something difficult is the person this
+    # engine exists for, and terse "ok, sure, fine" restored them to full.
+    USER = {
+        # Ceiling for P_u. Modulated per turn; see STAMINA_* below.
+        "STAMINA_MAX": 100.0,
+        # Extra headroom at full shared resonance. A conversation that is
+        # landing costs you less than one that is not.
+        "STAMINA_RESONANCE_HEADROOM": 25.0,
+        # Headroom lost per unit of accumulated user trauma (T_u).
+        "STAMINA_TRAUMA_COST": 4.0,
+        # The ceiling never falls below this fraction of STAMINA_MAX, however
+        # heavy the conversation gets.
+        "STAMINA_FLOOR_FRACTION": 0.5,
+        # Stamina returned per turn, before the per-word cost.
+        "STAMINA_RECOVERY": 5.0,
+        "STAMINA_WORD_COST": 0.5,
+        # How many recent messages define "your normal length".
+        "BASELINE_WINDOW": 8,
+        # A message shorter than this fraction of your baseline starts reading
+        # as disengagement. 0.5 means "half your usual length".
+        "BREVITY_FLOOR": 0.5,
+        # How fast E_u moves toward the disengagement reading, per turn.
+        "DISENGAGEMENT_RATE": 0.15,
+        "REENGAGEMENT_RATE": 0.10,
     }
 
     # Creative Determinant coupling (Project Navi, Apache 2.0).

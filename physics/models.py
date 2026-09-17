@@ -261,11 +261,53 @@ class PhysicsPacket:
     def snapshot(self) -> "PhysicsPacket":
         return PhysicsPacket(**self.to_dict())
 
+    # Layers whose fields are also projected flat by to_dict(). No collisions
+    # between them and none shadowing a PhysicsPacket field, so the projection
+    # is unambiguous.
+    #
+    # `matter` is deliberately NOT projected. Its fields are mutable containers
+    # (`counts` is a Counter, `clean_words` a list, `vector` a dict), and
+    # `CognitivePhase` writes every key of this dict straight back onto a packet
+    # with `setattr(ctx.physics, k, v)`. Round-tripping a Counter through that
+    # rewraps its keys one tuple deeper on every turn, so the word tally that
+    # drives the whole physics layer degrades into
+    # `Counter({((('play', 1), 1), 1): 1})` and then measures nothing. Nothing
+    # flat reads a `matter` field anyway; the composer reaches them through the
+    # nested shape, which is preserved.
+    _FLATTENED_LAYERS = ("energy", "space")
+
     def to_dict(self) -> Dict[str, Any]:
+        """Serialize, with the nested layers ALSO projected to the top level.
+
+        Attribute access on the packet is alias-routed: `packet.exhaustion`
+        resolves through `_DOMAIN_MAP` to `energy.exhaustion`, and writes route
+        back the same way. `asdict` knows nothing about that routing, so the
+        serialized form kept only the nested shape.
+
+        Every consumer downstream reads the flat shape.
+        `PromptComposer.compose` asks `safe_get(phys_ref, "exhaustion", 0.2)`,
+        and `safe_get` on a dict does one flat `.get`. So sixteen measured
+        fields (exhaustion, contradiction, psi, chi, valence, narrative_drag,
+        scope, depth, connectivity, lq, gamma, sigma, eta, theta, upsilon,
+        beta_index) never reached the prompt and every directive gated on them
+        read a hardcoded default instead. A turn measuring contradiction 1.0
+        composed a prompt saying Contradiction=0.40.
+
+        Nothing caught it because attribute access always worked: any test
+        touching `packet.exhaustion` passed, and only the serialized dict was
+        broken. The nested shape is kept as well, so existing readers of
+        `data["energy"]["exhaustion"]` are unaffected, and `setdefault` means an
+        explicitly assigned top-level value still wins.
+        """
         data = asdict(self)
         for k, v in self.__dict__.items():
             if k not in data and not k.startswith("_"):
                 data[k] = v
+        for layer in self._FLATTENED_LAYERS:
+            nested = data.get(layer)
+            if isinstance(nested, dict):
+                for field_name, value in nested.items():
+                    data.setdefault(field_name, value)
         return data
 
     def get(self, key: str, default: Any = None) -> Any:

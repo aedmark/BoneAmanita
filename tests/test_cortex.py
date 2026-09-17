@@ -6,6 +6,22 @@ from unittest.mock import MagicMock
 from brain.cortex import CortexServices, TheCortex
 from presets import BoneConfig
 
+
+def _drag_over_limit() -> float:
+    """A narrative_drag value guaranteed to trip the cortex toxicity gates.
+
+    `narrative_drag` runs from DRAG_FLOOR to DRAG_HALT, not 0..1, and the gates
+    compare it against CORTEX.DRAG_STRESS_THRESHOLD. Deriving the fixture from
+    that constant means retuning the threshold moves the test with it, instead
+    of leaving a literal that once cleared a limit nobody uses any more.
+    """
+    from presets import BoneConfig
+    from struts import safe_get
+
+    return float(safe_get(safe_get(BoneConfig(), "CORTEX", {}), "DRAG_STRESS_THRESHOLD", 8.0)) + 1.0
+
+
+
 try:
     from tests.base import BoneTestCase
 except ImportError:
@@ -61,7 +77,15 @@ class CortexArchitectTests(BoneTestCase):
         )
 
     def test_evaluate_toxicity_system_halt(self):
-        phys_state = {"narrative_drag": 2.5, "chi": 0.5, "m_a": 0.5}
+        # Above CORTEX.DRAG_STRESS_THRESHOLD, read rather than hardcoded. The
+        # literal 2.5 here cleared a limit of 1.5 that sat near the floor of the
+        # real drag range and had never fired in production, because the
+        # serialized physics packet did not carry `narrative_drag` at all.
+        phys_state = {
+            "narrative_drag": _drag_over_limit(),
+            "chi": 0.5,
+            "m_a": 0.5,
+        }
         sim_result = {"ui": "Standard interface output."}
 
         halt_res = self.cortex._evaluate_toxicity(

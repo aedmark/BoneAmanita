@@ -369,7 +369,12 @@ class GeodesicOrchestrator:
         from drivers import SharedLatticeDriver
 
         if not hasattr(self.eng, "shared_lattice"):
-            self.eng.shared_lattice = SharedLatticeDriver()
+            self.eng.shared_lattice = SharedLatticeDriver(
+                config_ref=getattr(self.eng, "config", None)
+            )
+        symbiosis = getattr(self.eng, "symbiosis", None)
+        if symbiosis is not None and hasattr(symbiosis, "attach_lattice"):
+            symbiosis.attach_lattice(self.eng.shared_lattice)
         self.congruence_validator = CongruenceValidator()
 
     def start_daemon(self):
@@ -668,6 +673,7 @@ class GeodesicOrchestrator:
                 atp_pool=float(
                     self.eng._mito_state.atp_pool if self.eng._mito_state else 100.0
                 ),
+                is_user_turn=not ctx.is_system_event,
             )
             ctx.logs.extend(lattice_logs)
             if atp_deduction > 0:

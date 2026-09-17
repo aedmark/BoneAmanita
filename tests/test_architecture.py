@@ -9,6 +9,22 @@ from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 
 
+def _drag_over_limit() -> float:
+    """A narrative_drag value guaranteed to trip the cortex toxicity gates.
+
+    `narrative_drag` runs from DRAG_FLOOR to DRAG_HALT, not 0..1, and the gates
+    compare it against CORTEX.DRAG_STRESS_THRESHOLD. Deriving the fixture from
+    that constant means retuning the threshold moves the test with it, instead
+    of leaving a literal that once cleared a limit nobody uses any more.
+    """
+    from presets import BoneConfig
+    from struts import safe_get
+
+    return float(safe_get(safe_get(BoneConfig(), "CORTEX", {}), "DRAG_STRESS_THRESHOLD", 8.0)) + 1.0
+
+
+
+
 class ArchitectureTests(BoneTestCase):
     def test_arch_type_agnostic_physics(self):
         phys_obj = PhysicsPacket(chi=0.85, voltage=45.0)
@@ -66,7 +82,11 @@ class ArchitectureTests(BoneTestCase):
         cortex.pragmatist.enforce_maxims.return_value = ("Normal response.", False)
         ctx_gordon = CycleContext(
             input_text="Testing Gordon.",
-            physics={"narrative_drag": 2.0, "chi": 0.5, "m_a": 0.4},
+            physics={
+                "narrative_drag": _drag_over_limit(),
+                "chi": 0.5,
+                "m_a": 0.4,
+            },
         )
         res_gordon = cortex.process_context(ctx_gordon)
         self.assertEqual(

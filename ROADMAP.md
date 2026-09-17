@@ -62,13 +62,13 @@ you whether it ran.
 | **B4** make the credits true | **done**: all three overclaims corrected |
 | **A2** retire the silent handlers | **done**: 72 -> 28, pass-only banned, 2 ratchet tests |
 | **A4** state-asserting tests | **done**: physics-to-prompt pinned end to end, 20 tests |
+| **C3** co-regulation | **done**: found the severed serialization; user model now first-class |
 
-Next: Track C. **C3** (the user-state model as a first-class object) and
-**C4** (the Stage Manager, Tension, Silence) are the remaining work toward
-the stated goal; **C5** is a half-day experiment that settles a load-bearing
-claim. Track A is finished.
+Next: **C4** (the Stage Manager, Tension, Silence) is the remaining design
+work toward the stated goal; **C5** is a half-day experiment that settles a
+load-bearing claim. Track A is finished.
 
-Suite: **442 passed, 5 skipped**. The skips are the environmental ones (no
+Suite: **452 passed, 5 skipped**. The skips are the environmental ones (no
 chat model pulled in Ollama). Re-run `tools/audit_receipts.py` after touching
 any instrumented subsystem, and `tools/audit_handlers.py` after adding a catch.
 
@@ -985,7 +985,152 @@ and 2 need no server at all, so the degraded path improved too.
 unresolved rather than be guessed at. `tools/audit_physics_inputs.py` is
 the scorecard.
 
-## C3. Co-regulation (the actual goal)
+## C3. Co-regulation (the actual goal), **DONE**
+
+**Measuring this first turned up the largest single fault in the project.**
+
+`SharedLatticeDriver` infers `E_u`, how tired the person is, on every turn,
+and it does it correctly: driven to maximum it reported `E_u = 1.00`. The
+prompt composed on that same turn said `Exhaustion=0.20`, which is the
+composer's hardcoded fallback.
+
+### The serialization was severed
+
+`PhysicsPacket` routes attribute access through an alias map, so
+`packet.exhaustion` resolves into `energy.exhaustion` and writes route back
+the same way. `to_dict()` used `asdict()`, which knows nothing about that
+routing, so the serialized form carried only the nested shape. Every
+consumer downstream reads flat, via `safe_get(phys_ref, "exhaustion", 0.2)`,
+and `safe_get` on a dict does exactly one flat `.get`.
+
+**Sixteen measured fields never reached the prompt**: exhaustion,
+contradiction, beta_index, psi, chi, entropy, valence, narrative_drag,
+scope, depth, connectivity, lq, gamma, sigma, eta, theta, upsilon. A turn
+measuring contradiction 1.0 composed a prompt saying `Contradiction=0.40`.
+Five of the six numbers in the VSL metrics line were hardcoded defaults.
+
+So every directive pinned in A4 the day before (the paradox gate, the
+orthogonal gate, all four somatic cues) had never once fired in a real
+conversation. The gates were correct and nothing arrived at them. The A4
+tests passed because they hand the composer a flat dict directly and step
+straight over the boundary that was broken, which is a real weakness in
+how they were written and the reason a suite built to catch exactly this
+did not.
+
+Nothing else caught it either, and could not have: attribute access always
+worked. Any test touching `packet.exhaustion` passed. Only the serialized
+dict was wrong.
+
+### Fixing it woke two things that had never run
+
+**The Moog quarantine.** `brain/cortex.py` gated Gordon's "I am placing
+this in the ledger" on `narrative_drag > 1.5`. But drag runs from
+DRAG_FLOOR to DRAG_HALT, 0 to 10 as shipped, and measures 1.4 to 8.6 on
+ordinary input. With real values arriving it fired on 8 turns out of 10 and
+the engine deferred everything. The limit now reads
+`CORTEX.DRAG_STRESS_THRESHOLD`, which is not a number invented here:
+`body/somatic.py` already used that same constant to mean "drag is
+extreme". Moog now fires once in ten turns, on genuine saturation.
+
+**`matter` must not be flattened.** `CognitivePhase` writes every key of
+the serialized dict back onto a packet with `setattr(ctx.physics, k, v)`.
+Projecting `matter` flat exposed its mutable containers to that round trip,
+and a Counter fed through it gains a tuple wrapper on every pass, so the
+word tally that drives the entire physics layer degraded into
+`Counter({((('play', 1), 1), 1): 1})` and measured nothing. Only the scalar
+layers (`energy`, `space`) are projected; the nested shape is preserved in
+full, so existing readers are untouched.
+
+### What C3 actually delivers
+
+`tests/test_physics_to_prompt.py` gained ten tests, four of which fail if
+the serialization is reverted:
+
+- Every field a composer gate reads survives `to_dict()`.
+- The nested shape is preserved alongside the flat one.
+- `matter` is explicitly NOT flattened, with the Counter corruption named.
+- A measured value reaches the prompt through a real turn, no hand-built
+  dict anywhere in the path.
+- A tired user shortens the engine; a fresh one does not.
+
+And the user model is now first-class in the three ways this entry asked
+for. It persists: `ChronosKeeper` saves and restores it, so an engine that
+spent an hour learning you were running low no longer wakes up assuming you
+are fresh. It reports: `lattice.infer_and_couple` files a receipt carrying
+`E_u`, `P_u`, `phi` and the silence classification. It is visible: `/status`
+prints "You: steady / tiring / flagging" with the numbers behind it.
+
+### Better built than this entry claimed
+
+Two things the original text listed as missing already existed. The lattice
+has a silence classifier with four kinds (pregnant, exhausted, reverent,
+strategic), triggered by a conversational pause over fifteen seconds. And
+there is a real ATP transfer: at low user stamina with decent resonance the
+engine spends its own energy and says "We'll carry this part. Rest a
+moment." Both were live. Neither could be seen, which is the theme.
+
+### Realigning what "tired" means
+
+The inference answered this entry's own spec backwards, and fixing it turned
+up three more faults.
+
+**The model was "typing is work".** Every word drained `P_u`, and `E_u` rose
+only once `P_u` fell below 30. So writing three searching paragraphs about
+something hard was what made the engine read you as exhausted and start
+cutting its replies to three sentences, while "ok. sure. fine." restored you
+to full. Backwards for an engine whose stated purpose is supporting the
+first person.
+
+Now two signals, deliberately separate:
+
+- **`P_u` is effort spent.** Long messages still drain it, because low `P_u`
+  is what triggers the engine to offer to carry part of the load. Draining
+  it is the supportive path, not a penalty.
+- **`E_u` is disengagement**, measured against this person's own recent
+  baseline rather than an absolute length, with repetition as the second
+  term. Someone who always writes tersely has a style, not a mood; someone
+  whose messages went from eighty words to three has withdrawn.
+
+Measured across three input shapes, `E_u` now falls 0.45 to 0.24 on
+consistently terse input, falls 0.47 to 0.36 on long searching prose while
+`P_u` drains 95 to 81, and rises 0.52 to 0.78 on blunt repetition.
+
+**The ceiling.** `P_u` had none and climbed to 172 from a starting 100.
+Every other pool in the engine clamps. It now clamps to a ceiling that moves:
+high shared resonance buys headroom, accumulated trauma (`T_u`) spends it,
+and a floor fraction stops it collapsing however heavy things get. All of it
+is in `BoneConfig.USER` and `lore/tuning_presets.json`.
+
+### Three faults found on the way
+
+**There were two user models.** `SymbiosisManager` built its own
+`UserInferredState` and wrote exhaustion into it from a raw character count,
+while `SharedLatticeDriver` kept a separate one. Only the lattice's ever
+reached the prompt, so every reading Symbiosis made was computed and
+discarded, and it wrote `beth`, `phi` and `beta_index` onto the physics
+packet from a model nothing else agreed with. `attach_lattice` now shares one
+object, and the lattice owns exhaustion.
+
+**The boot sequence was teaching the baseline.** `infer_and_couple` runs on
+system turns too, and the boot prompt is hundreds of words. It was learned as
+"your normal message", so everything you actually typed measured short
+against it and the engine read a fully engaged user as withdrawing from the
+first word. Learning is now gated on `is_user_turn`.
+
+**Every message was scoring as a repeat of itself.** `infer_and_couple` is
+called twice per turn, from `ObservationPhase.run` and again from
+`_execute_core_cycle`. Reading the state twice is harmless; learning from it
+twice is not. The second pass drained `P_u` again for the same message and
+found the text already in `_recent_texts` from the first pass, so every
+utterance scored maximal repetition. Learning is now idempotent per turn,
+keyed on the receipt ledger's turn counter.
+
+That last one is worth noting as a pattern: the duplicate call was harmless
+for as long as the method only read state, and became a bug the moment it
+started learning. A method called from two places should say whether calling
+it twice is meant to be free.
+
+### The original entry
 
 This is the least-built part of the vision and the most valuable. v7
 specifies behaviour that is currently only partly present:
@@ -1090,8 +1235,8 @@ shippable and each makes the next one verifiable.
    fields, Φ as a presence field over memory.
 9. **B2**: vendor the Navi solver, extract λ₁ properly, cite the Lean
    theorems.
-10. **C3**: the user-state model as a first-class object beside
-    `PhysicsPacket`.
+10. ~~**C3**: the user-state model as a first-class object~~, **done**.
+    Found the severed serialization on the way in.
 11. **C4**: the Stage Manager, Tension as a named state, and Silence as
     a real outcome. Settle the ATP/telemetry design before building.
 12. ~~**A4**: physics-to-prompt golden-path tests~~, **done**. **C5**, the

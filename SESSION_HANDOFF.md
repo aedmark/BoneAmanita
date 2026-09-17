@@ -56,7 +56,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 442 passed, 0 failed, 5 skipped**, about two minutes. Green.
+- **Test suite: 463 passed, 0 failed, 5 skipped**, about three minutes. Green.
   Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.
@@ -91,6 +91,21 @@ aren't there. See "Claims vs. code" below.
   of those three named in an allowlist with a written reason. Background
   tasks on the async pool now report their own exceptions, which they
   previously discarded into an unread Future.
+- **The physics actually reaches the prompt now.** Until C3 it did not:
+  `PhysicsPacket.to_dict()` emitted only the nested shape while every
+  consumer read flat, so sixteen measured fields never arrived and a turn
+  measuring contradiction 1.0 composed a prompt saying 0.40. Every
+  physics-driven directive read a hardcoded default instead.
+- **The engine co-regulates, in the right direction.** The user model
+  carries two separate signals now. `P_u` is effort spent, so long messages
+  drain it and that is what makes the engine offer to carry part of the
+  load. `E_u` is disengagement, measured against this person's own recent
+  baseline plus repetition, and it is what shortens the engine's replies.
+  It used to be one signal pointing the wrong way: writing at length made
+  the engine read you as exhausted and cut its answers to three sentences,
+  while "ok, sure, fine" restored you to full. The model persists across
+  sessions, files a receipt, and shows in `/status` as "You: steady /
+  tiring / flagging". All the constants are in `BoneConfig.USER`.
 - **Physics reaching the prompt is pinned end to end.**
   `tests/test_physics_to_prompt.py` asserts that each measured state
   produces its specific directive and, just as importantly, that a calm
@@ -208,6 +223,40 @@ Three habits came out of that and are worth keeping:
   and the 80% recall assertion were all correct once and silently wrong
   later. When a mechanism is inert, suspect its constants before its
   wiring.
+- **Two objects modelling the same thing will disagree in silence.**
+  `SymbiosisManager` and `SharedLatticeDriver` each held their own
+  `UserInferredState`. Only the lattice's reached the prompt, so every
+  reading Symbiosis made was discarded, while it wrote `beth`, `phi` and
+  `beta_index` onto the packet from a model nothing agreed with. They share
+  one object now via `attach_lattice`. When you find a second copy of a
+  model, find out which one is load bearing before assuming both are.
+- **A method called from two places must say whether calling it twice is
+  free.** `infer_and_couple` runs once from `ObservationPhase` and again
+  from `_execute_core_cycle`. That was harmless while it only read state,
+  and became a bug the moment it started learning: it drained stamina twice
+  and found each message already in its own history, so every utterance
+  scored as a repeat of itself. Learning is now idempotent per turn, keyed
+  on the receipt ledger's turn counter.
+- **System turns are not the person speaking.** The boot prompt runs
+  through the lattice like any other turn and is hundreds of words long. It
+  was being learned as "your normal message length", so everything you
+  actually typed measured short against it. Anything that learns from input
+  needs `is_user_turn`.
+- **Attribute access working proves nothing about serialization.**
+  `packet.exhaustion` resolved correctly through the alias map the whole
+  time; only `to_dict()` was wrong, and every test touching the attribute
+  passed. When a value is computed correctly and has no effect, check the
+  boundary it crosses, not the arithmetic.
+- **A test that builds its own fixture steps over the bug.** The A4 tests
+  hand the composer a flat dict directly, which is exactly the shape the
+  broken serialization failed to produce. They proved the gates correct and
+  could never have proved the values arrive. At least one test per contract
+  has to travel the real path.
+- **`matter` is never flattened onto the physics dict.** `CognitivePhase`
+  writes every key back onto the packet with `setattr`, and a Counter fed
+  through that round trip gains a tuple wrapper each turn until the word
+  tally reads `Counter({((('play', 1), 1), 1): 1})` and measures nothing.
+  Only `energy` and `space` are projected flat. There is a test.
 - **Mutation test anything that guards a contract.** Five deliberate
   breaks were put into `brain/composer.py` to check the A4 tests were load
   bearing. Four failed immediately; the fifth passed, because the test was
@@ -640,7 +689,7 @@ The short list below is what a session should know without reading it.
    gap is A4, the state-asserting tests, which is not done.
 6. **Nothing else is known-broken.** Picking this up cold: make a venv,
    install including `ordvec`, pull both Ollama models, run the suite and
-   expect **442 passed, 0 failed, 5 skipped** (the skips are live-backend
+   expect **463 passed, 0 failed, 5 skipped** (the skips are live-backend
    tests behind `BONE_EMBED_LIVE_TEST=1`). Then boot headless in mock
    mode, confirm `/status` reports the Arcade nominal rather than
    `DEGRADED`, and run `/diag` to see the turn's receipts.

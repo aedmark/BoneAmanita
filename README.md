@@ -76,7 +76,7 @@ tuning preset, and only Adventure has an inventory and a world to move through.
 
 | Command | What it does |
 |---|---|
-| `/status` | Check vitals: health, stamina, energy, and the memory backend. |
+| `/status` | Vitals: health, stamina, energy, the memory backend, and what it believes about you. |
 | `/diag` | This turn's receipts, plus anything silent or degraded. See below. |
 | `/save` | Persist state to disk. |
 | `/mode <name>` | Switch operational mode. |
@@ -202,7 +202,17 @@ codebase, and it is what most of the recent work was about.
   named at startup, and a degraded memory backend announces itself rather than
   quietly serving nonsense.
 
-- **Subsystems say what they did.** Seven of them file a short record every turn:
+- **It adapts to you, not just to itself.** The engine keeps a running guess
+  at how tired *you* are. It reads withdrawal rather than volume: messages
+  getting shorter or blunter *than your own normal* is the signal, so someone
+  who simply writes tersely is not mistaken for someone who has gone quiet.
+  When it reads you as flagging it shortens its own replies to match. Writing
+  at length does the opposite; it counts as effort spent, and when you have
+  spent enough the engine offers to carry part of the load. The guess
+  survives between sessions, and `/status` shows what it currently believes
+  ("You: steady", "tiring", "flagging") so you can disagree with it.
+
+- **Subsystems say what they did.** Eight of them file a short record every turn:
   what they were handed, what came back, and whether they ran normally or on a
   fallback. `/diag` prints the turn's records plus three lists that matter more:
   anything that promised to report and never did, anything on its fallback path
@@ -217,7 +227,7 @@ codebase, and it is what most of the recent work was about.
 
 ## Project status
 
-Working and in active development. The test suite is **442 passing, 5 skipped**
+Working and in active development. The test suite is **463 passing, 5 skipped**
 (the skips need a chat model pulled in Ollama).
 
 Recent work was almost entirely archaeology rather than features. Large parts of
@@ -255,7 +265,7 @@ the plan for what is next.
 Run these rather than trusting the numbers in any document, including this one:
 
 ```bash
-.venv/bin/python -m pytest -q                      # 442 passed, 5 skipped
+.venv/bin/python -m pytest -q                      # 463 passed, 5 skipped
 .venv/bin/python tools/audit_physics_inputs.py     # how much vocabulary it knows
 .venv/bin/python tools/audit_receipts.py           # which subsystems did real work
 .venv/bin/python tools/audit_handlers.py           # silent exception handlers

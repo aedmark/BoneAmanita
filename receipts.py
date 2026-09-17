@@ -43,6 +43,7 @@ CORE_SUBSYSTEMS = (
     "cortex.recall",
     "embeddings.embed_batch",
     "governor.creative_determinant",
+    "lattice.infer_and_couple",
     "memory.retrieve_semantic",
     "physics.word_resolution",
 )

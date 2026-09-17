@@ -378,6 +378,7 @@ class TheCortex:
     def _evaluate_toxicity(
         self, phys_state: Dict[str, Any], sim_result: Dict[str, Any], is_system: bool
     ) -> Optional[Dict[str, Any]]:
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
         tick_atp = float(phys_state.get("delta_atp", 0.0))
         tick_ros = float(phys_state.get("delta_ros", 0.0))
         if tick_atp != 0.0:
@@ -433,7 +434,20 @@ class TheCortex:
         tolerance_mod = (
             1.5 if getattr(self, "active_mode", "") in ["CREATIVE", "CATALYST"] else 1.0
         )
-        drag_limit = 1.5 * tolerance_mod
+        # `chi` genuinely runs 0..1, so 0.8 is a sane "chaos is extreme" test.
+        # `narrative_drag` does not: it runs from DRAG_FLOOR to DRAG_HALT (0..10
+        # as shipped) and measures 1.4 to 7.0 on ordinary input. This limit was
+        # hardcoded at 1.5, which is near the FLOOR of the real range, so once
+        # the physics dict actually started delivering `narrative_drag` the Moog
+        # quarantine fired on 8 turns out of 10 and Gordon deferred everything.
+        #
+        # It had never fired before that, because the serialized packet did not
+        # carry the field at all and this read 0.0 forever. The number is not
+        # invented here: CORTEX.DRAG_STRESS_THRESHOLD is the engine's existing
+        # answer to "is drag extreme", used the same way by body/somatic.py.
+        drag_limit = (
+            float(safe_get(c_cfg, "DRAG_STRESS_THRESHOLD", 8.0)) * tolerance_mod
+        )
         chi_limit = 0.8 * tolerance_mod
         if (f_drag > drag_limit or chi_val > chi_limit) and m_a < 0.3:
             worry_text = sim_result.get("mutated_input", "")
