@@ -184,6 +184,9 @@ class CycleContext:
     is_alive: bool = True
     refusal_triggered: bool = False
     refusal_packet: Optional[Dict] = None
+    # What the Stage Manager decided this turn: which voices were in the room,
+    # whether they were paired, and whether anyone got the floor at all.
+    stage_verdict: Optional[Any] = None
     is_bureaucratic: bool = False
     bio_result: Dict = field(default_factory=dict)
     bio_snapshot: Optional[Dict] = None

@@ -56,7 +56,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 463 passed, 0 failed, 5 skipped**, about three minutes. Green.
+- **Test suite: 484 passed, 0 failed, 5 skipped**, about three minutes. Green.
   Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.
@@ -96,6 +96,15 @@ aren't there. See "Claims vs. code" below.
   consumer read flat, so sixteen measured fields never arrived and a turn
   measuring contradiction 1.0 composed a prompt saying 0.40. Every
   physics-driven directive read a hardcoded default instead.
+- **The engine can decline to answer.** More than one voice triggered at
+  once is Tension, and the Stage Manager negotiates it before anyone
+  speaks: it pairs them if a fusion exists, and holds otherwise. A held
+  turn sets `refusal_triggered` in `ArbitrationPhase`, which runs
+  immediately before `CognitionPhase`, so the model is never called. The
+  packet is typed `SILENCE` with `is_alive: True` and is deliberately not
+  built through `_build_refusal`, because a refusal is something being
+  rejected and this is the engine declining to speak yet. Every verdict
+  carries a mandatory reason, and negotiation is deterministic.
 - **The engine co-regulates, in the right direction.** The user model
   carries two separate signals now. `P_u` is effort spent, so long messages
   drain it and that is what makes the engine offer to carry part of the
@@ -689,7 +698,7 @@ The short list below is what a session should know without reading it.
    gap is A4, the state-asserting tests, which is not done.
 6. **Nothing else is known-broken.** Picking this up cold: make a venv,
    install including `ordvec`, pull both Ollama models, run the suite and
-   expect **463 passed, 0 failed, 5 skipped** (the skips are live-backend
+   expect **484 passed, 0 failed, 5 skipped** (the skips are live-backend
    tests behind `BONE_EMBED_LIVE_TEST=1`). Then boot headless in mock
    mode, confirm `/status` reports the Arcade nominal rather than
    `DEGRADED`, and run `/diag` to see the turn's receipts.

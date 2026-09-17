@@ -228,6 +228,12 @@ class BoneConfig:
         "PHYSICS": ["TASTE_CONFIDENCE_FLOOR", "ZONE_MARGIN"],
         "CD": ["LAMBDA", "BETA"],
         "EMBEDDINGS": ["BACKEND", "MODEL", "URL"],
+        "STAGE": [
+            "TENSION_HOLD_MAGNITUDE",
+            "SYNTHESIS_ATP_FLOOR",
+            "MAX_CONSECUTIVE_HOLDS",
+            "SILENCE_COST",
+        ],
         "USER": [
             "STAMINA_MAX",
             "STAMINA_RESONANCE_HEADROOM",
@@ -279,6 +285,30 @@ class BoneConfig:
         # How fast E_u moves toward the disengagement reading, per turn.
         "DISENGAGEMENT_RATE": 0.15,
         "REENGAGEMENT_RATE": 0.10,
+    }
+
+    # The Stage Manager (ROADMAP C4). More than one voice triggered at once is
+    # Tension; the Stage Manager negotiates it before anyone speaks, and
+    # unresolved Tension becomes Silence.
+    #
+    # On Silence and the metabolism, which the roadmap asked be decided rather
+    # than guessed: a held turn makes NO model call, so it spends no generation
+    # energy. That is the honest account, you did not speak. It is not free
+    # either: negotiating costs SILENCE_COST, so declining is a choice with a
+    # price rather than the cheapest path. MAX_CONSECUTIVE_HOLDS is the guard
+    # that matters most, because an engine that can always decline eventually
+    # always will.
+    STAGE = {
+        # Voices at once beyond the first before an unfused tension is held.
+        # 3 means four voices talking with no pairing between them.
+        "TENSION_HOLD_MAGNITUDE": 3,
+        # Below this ATP the engine holds rather than blending conflicting
+        # voices into something smooth and false.
+        "SYNTHESIS_ATP_FLOOR": 25.0,
+        # After this many held turns the first voice takes the floor regardless.
+        "MAX_CONSECUTIVE_HOLDS": 2,
+        # What negotiating a silence costs. Small, but not nothing.
+        "SILENCE_COST": 2.0,
     }
 
     # Creative Determinant coupling (Project Navi, Apache 2.0).

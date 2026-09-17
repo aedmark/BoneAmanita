@@ -202,6 +202,15 @@ codebase, and it is what most of the recent work was about.
   named at startup, and a degraded memory backend announces itself rather than
   quietly serving nonsense.
 
+- **It can decline to answer.** The Village is a cast of voices, each
+  triggered by a different shape of conversation. When several are triggered
+  at once the Stage Manager negotiates before anyone speaks: certain pairs
+  have a named fusion and merge, and when there is no resolution it holds the
+  floor empty rather than blending them into something smooth and false. A
+  held turn never reaches the model at all. This is the one behaviour here
+  with no mainstream equivalent, and it is rare on purpose; most turns have
+  one voice in the room and nothing to negotiate.
+
 - **It adapts to you, not just to itself.** The engine keeps a running guess
   at how tired *you* are. It reads withdrawal rather than volume: messages
   getting shorter or blunter *than your own normal* is the signal, so someone
@@ -227,7 +236,7 @@ codebase, and it is what most of the recent work was about.
 
 ## Project status
 
-Working and in active development. The test suite is **463 passing, 5 skipped**
+Working and in active development. The test suite is **484 passing, 5 skipped**
 (the skips need a chat model pulled in Ollama).
 
 Recent work was almost entirely archaeology rather than features. Large parts of
@@ -265,7 +274,7 @@ the plan for what is next.
 Run these rather than trusting the numbers in any document, including this one:
 
 ```bash
-.venv/bin/python -m pytest -q                      # 463 passed, 5 skipped
+.venv/bin/python -m pytest -q                      # 484 passed, 5 skipped
 .venv/bin/python tools/audit_physics_inputs.py     # how much vocabulary it knows
 .venv/bin/python tools/audit_receipts.py           # which subsystems did real work
 .venv/bin/python tools/audit_handlers.py           # silent exception handlers

@@ -63,12 +63,14 @@ you whether it ran.
 | **A2** retire the silent handlers | **done**: 72 -> 28, pass-only banned, 2 ratchet tests |
 | **A4** state-asserting tests | **done**: physics-to-prompt pinned end to end, 20 tests |
 | **C3** co-regulation | **done**: found the severed serialization; user model now first-class |
+| **C4** Stage Manager and Silence | **done**: Tension is a state, Silence is an outcome, 21 tests |
 
-Next: **C4** (the Stage Manager, Tension, Silence) is the remaining design
-work toward the stated goal; **C5** is a half-day experiment that settles a
-load-bearing claim. Track A is finished.
+Next: **C5**, the somatic translation measurement. It is a half-day
+experiment against a real model rather than a mock, and it settles a
+load-bearing claim. Tracks A and B are finished, and C is finished except
+for that measurement.
 
-Suite: **452 passed, 5 skipped**. The skips are the environmental ones (no
+Suite: **484 passed, 5 skipped**. The skips are the environmental ones (no
 chat model pulled in Ollama). Re-run `tools/audit_receipts.py` after touching
 any instrumented subsystem, and `tools/audit_handlers.py` after adding a catch.
 
@@ -1237,8 +1239,8 @@ shippable and each makes the next one verifiable.
    theorems.
 10. ~~**C3**: the user-state model as a first-class object~~, **done**.
     Found the severed serialization on the way in.
-11. **C4**: the Stage Manager, Tension as a named state, and Silence as
-    a real outcome. Settle the ATP/telemetry design before building.
+11. ~~**C4**: the Stage Manager, Tension, Silence~~, **done**. The ATP and
+    telemetry design is settled and written down under C4.
 12. ~~**A4**: physics-to-prompt golden-path tests~~, **done**. **C5**, the
     somatic translation measurement, is still open.
 13. **B4**: rewrite the credits once they are true.

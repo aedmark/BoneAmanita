@@ -12,8 +12,21 @@ from presets import BoneConfig
 
 class TheVillageCouncil:
     @staticmethod
-    def audit(p: Any, _bio_state: dict) -> list[str]:
-        logs = []
+    def _evaluate(p: Any, _bio_state: dict) -> tuple:
+        """Every voice trigger, with its condition already resolved.
+
+        This used to be inlined in `audit`, which flattened the results
+        straight into coloured log strings and returned those. The engine
+        therefore knew exactly which voices had fired and kept only the prose,
+        so nothing downstream could count them. The Stage Manager needs the
+        count: more than one voice triggered at once is Tension, and Tension is
+        what it negotiates.
+
+        Returns `(triggers, extra_logs)`. False Cohesion is reported here too
+        but belongs to no single voice, so it stays out of the trigger list
+        rather than being attributed to one.
+        """
+        extra_logs = []
 
         def gv(k, d=0.0):
             return float(safe_get(p, k, d))
@@ -42,11 +55,11 @@ class TheVillageCouncil:
         lam = float(safe_get(vec, "LAMBDA", 0.0))
         cfg = safe_get(BoneConfig, "COUNCIL", {})
         if not cfg:
-            return []
+            return [], extra_logs
         false_cohesion = max(0.0, phi - beta)
         if false_cohesion > 0.65:
             msg = "False Cohesion detected. Resonance is artificially high. The system is agreeing merely to smooth the lattice. I am forcing a structural contradiction."
-            logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
+            extra_logs.append(f"{Prisma.BLU}{msg}{Prisma.RST}")
 
         def cv(k, d=0.0):
             return float(safe_get(cfg, k, d))
@@ -143,14 +156,37 @@ class TheVillageCouncil:
                 "village_april",
             ),
         ]
-        logs.extend(
-            [
-                f"{color}{ux('council_strings', key)}{Prisma.RST}"
-                for cond, color, key in triggers
-                if cond
-            ]
-        )
-        return logs
+        return triggers, extra_logs
+
+    @staticmethod
+    def audit(p: Any, _bio_state: dict) -> list[str]:
+        triggers, extra_logs = TheVillageCouncil._evaluate(p, _bio_state)
+        return extra_logs + [
+            f"{color}{ux('council_strings', key)}{Prisma.RST}"
+            for cond, color, key in triggers
+            if cond
+        ]
+
+    @staticmethod
+    def audit_voices(p: Any, _bio_state: dict) -> tuple:
+        """Which voices are triggered right now, by name and without duplicates.
+
+        Several voices have more than one trigger (Roberta has a cartographic
+        one and a missing-structure one), and a voice firing twice is still one
+        voice in the room. Order is preserved so the first to trigger reads as
+        the one with the floor.
+        """
+        seen = []
+        triggers, _extra = TheVillageCouncil._evaluate(p, _bio_state)
+        for cond, _color, key in triggers:
+            if not cond:
+                continue
+            # Keys are `village_<name>` or `village_<name>_<variant>`.
+            parts = str(key).split("_")
+            voice = parts[1].upper() if len(parts) > 1 else str(key).upper()
+            if voice not in seen:
+                seen.append(voice)
+        return tuple(seen)
 
 
 class CouncilChamber:

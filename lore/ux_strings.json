@@ -31,9 +31,20 @@
   },
   "renderer": {
     "noise_patterns": [
-      "stabilizer:", "pid_", "flux", "phase execution", "vector collapse", "manifold",
-      "orbit:", "update_coordinates", "active correction", "drag reduced", "voltage spiked",
-      "live state mirror", "auto_trace", "wayfinder"
+      "stabilizer:",
+      "pid_",
+      "flux",
+      "phase execution",
+      "vector collapse",
+      "manifold",
+      "orbit:",
+      "update_coordinates",
+      "active correction",
+      "drag reduced",
+      "voltage spiked",
+      "live state mirror",
+      "auto_trace",
+      "wayfinder"
     ],
     "ignore_msg": "The system is listening.",
     "mode_labels_conversation": {
@@ -243,7 +254,12 @@
     "truth_dial_set": "Ambiguity Dial set to: {mode}",
     "truth_invalid": "Invalid mode. Use 0-3.",
     "truth_failure": "Truth Dial Failure: {error}",
-    "truth_modes": ["BOARDROOM", "WORKSHOP", "RED TEAM", "PALIMPSEST"],
+    "truth_modes": [
+      "BOARDROOM",
+      "WORKSHOP",
+      "RED TEAM",
+      "PALIMPSEST"
+    ],
     "use_usage": "Usage: /use [ITEM_NAME]",
     "use_no_inv": "Inventory system offline."
   },
@@ -385,7 +401,8 @@
     "gatekeep_log_premise": "Premise Violation: Object-Action Coupling Failed",
     "gatekeep_bureau_injunction": "Bureaucratic Injunction.",
     "gatekeep_log_bureau_block": "Bureaucratic Block Triggered",
-    "gatekeep_bureau_fine": "Bureaucratic Fine (User)"
+    "gatekeep_bureau_fine": "Bureaucratic Fine (User)",
+    "stage_manager_silence": "The Stage Manager holds the floor empty. Nothing here is ready to be said yet."
   },
   "brain_strings": {
     "self_care": "SELF-CARE: Dopamine starvation detected. Injecting small reward.",
@@ -476,7 +493,7 @@
     "critic_good_icon": "🌟",
     "critic_bad_icon": "🥀",
     "slash_pinker": "👓 PINKER: 'The nomenclature is opaque. Avoid cognitive grunts like 'x' or 'data'.'",
-    "slash_fuller": "FULLER: 'A new strut in the tensegrity. Ensure ephemeralization\u2014do more with less.'",
+    "slash_fuller": "FULLER: 'A new strut in the tensegrity. Ensure ephemeralization—do more with less.'",
     "slash_schur": "SCHUR: 'Good catch on the error. Putting a bench here for the tired hikers. (+1 Glimmer)'",
     "slash_meadows": "MEADOWS: 'A reinforcing loop detected. Does this stock have a balancing outflow or timeout?'",
     "slash_integrity": "[SLASH]: System integrity dropping due to semantic drag. Refactoring recommended."

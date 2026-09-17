@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 from constants import Prisma
 from core import ArchetypeArbiter, LoreManifest
 from phases.base import SimulationPhase, _deep_update, _safe_dict
+from receipts import issue as issue_receipt
 from struts import safe_get, safe_set, ux
 
 
@@ -150,7 +151,103 @@ class ArbitrationPhase(SimulationPhase):
         super().__init__(engine_ref)
         self.name = "ARBITRATION"
 
+    def _stage_manager(self):
+        """Lazily held on the engine, because `consecutive_holds` is state.
+
+        A Stage Manager rebuilt each turn could never notice that it had
+        already held the last two, which is the one thing stopping Silence
+        from becoming a habit.
+        """
+        existing = getattr(self.eng, "stage_manager", None)
+        if existing is not None:
+            return existing
+        from archetypes.stage import StageManager
+
+        council_data = LoreManifest.get_instance().get("COUNCIL_DATA") or {}
+        manager = StageManager(
+            config_ref=getattr(self.eng, "config", None),
+            synergy_map=council_data.get("SYNERGY_MAP") or {},
+        )
+        self.eng.stage_manager = manager
+        return manager
+
+    def _hold_the_silence(self, ctx: Any, verdict: Any) -> None:
+        """Turn a HOLD verdict into an actual refusal to speak.
+
+        Silence used to be a label: `ArbitrationPhase` could name the lens THE
+        STAGE MANAGER, log that the cosmos was holding its breath, and then the
+        engine generated a paragraph anyway. Setting `refusal_triggered` here
+        breaks the phase loop before `CognitionPhase`, so no model call happens
+        at all.
+
+        It is deliberately NOT routed through `_build_refusal`. A refusal is
+        something being rejected; this is the engine declining to speak yet, and
+        the two must not be confused in the transcript or in telemetry.
+        """
+        cost = float(
+            safe_get(safe_get(self.eng.config, "STAGE", {}), "SILENCE_COST", 2.0)
+        )
+        self.eng.bio.mito.adjust_atp(-cost, "Stage Manager: negotiated silence")
+        held = (
+            ux("cycle_strings", "stage_manager_silence")
+            or "The Stage Manager holds the floor empty. Nothing here is ready to be said."
+        )
+        ctx.log(f"{Prisma.GRY}{held}{Prisma.RST}")
+        ctx.log(f"{Prisma.GRY}   {verdict.reason}.{Prisma.RST}")
+        ctx.active_lens = "THE STAGE MANAGER"
+        ctx.refusal_triggered = True
+        ctx.refusal_packet = {
+            "type": "SILENCE",
+            "ui": f"\n{Prisma.GRY}{held}{Prisma.RST}",
+            "logs": [held, verdict.reason],
+            "metrics": getattr(self.eng, "get_metrics", lambda: {})(),
+            "physics": _safe_dict(ctx.physics),
+            "bio": getattr(ctx, "bio_result", {}),
+            "mind": {
+                "lens": "THE STAGE MANAGER",
+                "role": "The Stage Manager",
+                "thought": str(verdict.tension),
+                "context_msg": verdict.reason,
+            },
+            "world": getattr(ctx, "world_state", {}),
+            # Silence is a considered outcome, not a fault. Anything reading
+            # this packet must be able to tell it from a crash or a rejection.
+            "is_alive": True,
+            "is_silence": True,
+            "tension": list(verdict.tension.voices),
+        }
+
     def run(self, ctx: Any):
+        # The Stage Manager gets the room before anyone else does. If it holds,
+        # the turn ends here and the model is never called.
+        stage = self._stage_manager()
+        tension = stage.read_tension(ctx.physics, getattr(ctx, "bio_result", {}))
+        atp = float(
+            self.eng.bio.mito.state.atp_pool
+            if getattr(self.eng, "_mito_state", None)
+            else 100.0
+        )
+        verdict = stage.negotiate(tension, ctx.physics, atp=atp)
+        ctx.stage_verdict = verdict
+        issue_receipt(
+            "stage.negotiate",
+            f"{verdict.outcome.lower()} after reading the room",
+            result_count=len(tension.voices),
+            degraded=False,
+            inputs={
+                "voices": list(tension.voices),
+                "magnitude": tension.magnitude,
+                "outcome": verdict.outcome,
+                "voice": verdict.voice,
+                "atp": round(atp, 1),
+                "consecutive_holds": stage.consecutive_holds,
+            },
+            detail=verdict.reason,
+        )
+        if verdict.is_silence:
+            self._hold_the_silence(ctx, verdict)
+            return ctx
+
         safe_soul = self.eng.soul
         phys_lens, _, _ = self.eng.drivers.enneagram.decide_persona(
             ctx.physics, soul_ref=safe_soul

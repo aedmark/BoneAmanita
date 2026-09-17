@@ -46,6 +46,7 @@ CORE_SUBSYSTEMS = (
     "lattice.infer_and_couple",
     "memory.retrieve_semantic",
     "physics.word_resolution",
+    "stage.negotiate",
 )
 
 
